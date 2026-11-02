@@ -10,6 +10,7 @@ enum RailJourneyRecognizer {
         var span: TimeSpan
         var route: SubwayRoutePath
         var stationNames: [String]
+        var likelihood: RailRideLikelihood.Assessment
     }
 
     static let stationRadiusMeters = SubwayEvidenceGate.stationRadiusMeters
@@ -22,10 +23,8 @@ enum RailJourneyRecognizer {
     private static let maximumStepsPerMinute = 40.0
     /// 환승까지 한 번의 탑승으로 잇는 간격.
     private static let maximumLegGap: TimeInterval = 25 * 60
-    private static let stoppedSpeed = 3.0
-    private static let stopDetectionWindow: TimeInterval = 90
-    /// 이만큼은 서 있어야 정차로 본다. 감속 중 한 표본만 느린 것은 빠진다.
-    private static let minimumStopDuration: TimeInterval = 20
+    /// 차량 오디오는 탑승 앞뒤로 이만큼까지 본다. 주차장에서 끊긴 연결도 차를 탔다는 뜻이다.
+    private static let carAudioContext: TimeInterval = 5 * 60
     private static let minimumGPSLossShare = 0.35
     private static let dwellExemptStations = 3
 
@@ -55,7 +54,33 @@ enum RailJourneyRecognizer {
             }
         }
         if chain.count >= 2 { chains.append(chain) }
-        return chains.compactMap { journey(from: $0, readings: ordered) }
+        return chains.compactMap { journey(from: $0, readings: ordered) { _ in } }
+    }
+
+    /// 후보 탑승이 왜 빠졌는지 읽는다. 재생 판정과 진단에만 쓴다.
+    static func rejections(readings: [SensorReading]) -> [String] {
+        let ordered = readings
+            .filter { RouteTimelineTimestamp.isValid($0.timestamp) }
+            .sorted { $0.timestamp < $1.timestamp }
+        var result: [String] = []
+        var chain: [Visit] = []
+        func finish() {
+            if chain.count >= 2 { _ = journey(from: chain, readings: ordered) { result.append($0) } }
+            chain = []
+        }
+        let visits = stationVisits(ordered)
+        result.append("방문 \(visits.map(\.name).joined(separator: ">"))")
+        for (from, to) in zip(visits, visits.dropFirst()) {
+            if isRide(from: from, to: to, readings: ordered) {
+                if chain.isEmpty { chain = [from] }
+                chain.append(to)
+            } else if !(chain.count >= 2 && from.name == to.name && to.first.timeIntervalSince(from.last) <= maximumLegGap) {
+                if from.name != to.name { result.append("\(from.name)>\(to.name): 역 사이 이동 아님 \(Int(to.first.timeIntervalSince(from.last)))초") }
+                finish()
+            }
+        }
+        finish()
+        return result
     }
 
     /// 인식한 탑승으로 겹치는 자동 차량 구간을 바꾼다. 걷기(환승)와 사용자가 고른 수단은 그대로 둔다.
@@ -67,6 +92,7 @@ enum RailJourneyRecognizer {
         guard !journeys.isEmpty else { return segments }
         func isReplaceable(_ segment: TravelSegment) -> Bool {
             segment.mode != .walking && segment.mode != .running && segment.mode != .cycling
+                && !segment.isConfirmed
                 && !segment.evidence.contains { $0.hasPrefix("사용자 확인") }
                 && !corrections.contains { $0.span.overlapsMostly(segment.span) }
         }
@@ -85,7 +111,8 @@ enum RailJourneyRecognizer {
                         "지하철 노선 후보 확정",
                         "노선 " + journey.route.lineNames.joined(separator: " → "),
                         "역 감지 " + journey.stationNames.joined(separator: " · "),
-                    ],
+                        String(format: "철도 대 도로 %+.1f", journey.likelihood.logLikelihoodRatio),
+                    ] + journey.likelihood.evidence,
                     isConfirmed: false,
                     subwayRoute: journey.route
                 ))
@@ -121,7 +148,9 @@ enum RailJourneyRecognizer {
                   (0...maximumAccuracyMeters).contains(point.horizontalAccuracy),
                   let station = SubwayStationCatalog.nearest(to: point, maximumDistanceMeters: stationRadiusMeters)
             else { continue }
-            if let last = visits.last, last.name == station.stationName {
+            // 오래 비었다가 같은 역이면 다른 방문이다. 아침에 지나간 역이 저녁 탑승의 대기로 세이지 않게 한다.
+            if let last = visits.last, last.name == station.stationName,
+               reading.timestamp.timeIntervalSince(last.last) <= maximumLegGap {
                 visits[visits.count - 1].last = reading.timestamp
             } else {
                 visits.append(Visit(name: station.stationName, first: reading.timestamp, last: reading.timestamp))
@@ -149,10 +178,20 @@ enum RailJourneyRecognizer {
         }
     }
 
-    private static func journey(from visits: [Visit], readings: [SensorReading]) -> Journey? {
+    private static func journey(from visits: [Visit], readings: [SensorReading], rejected: (String) -> Void) -> Journey? {
         guard let first = visits.first, let last = visits.last,
               let route = SubwayStationCatalog.route(for: visits.map(\.name)),
               SubwayStationCatalog.isValid(route) else { return nil }
+        // 차량 오디오가 1순위 근거다. 다른 조건을 볼 것도 없이 차다.
+        let carContext = readings.filter {
+            $0.timestamp >= first.last.addingTimeInterval(-carAudioContext)
+                && $0.timestamp <= last.first.addingTimeInterval(carAudioContext)
+        }
+        let label = visits.map(\.name).joined(separator: ">")
+        if carContext.contains(where: { $0.carAudioRouteName?.isEmpty == false }) {
+            rejected("\(label): 차량 오디오")
+            return nil
+        }
         let inside = readings.filter { $0.timestamp >= first.first && $0.timestamp <= last.last }
         // 역 출입의 오르내림은 승차 전·하차 후에 일어난다.
         let altitudeContext = readings.filter {
@@ -162,27 +201,40 @@ enum RailJourneyRecognizer {
         let hasAltitudeData = altitudeContext.contains { $0.pressureKilopascals != nil || $0.relativeAltitudeMeters != nil }
         let after = readings.filter { $0.timestamp > last.last }
         let hasAlighted = hasLeftStation(after, from: last.name)
-        let stops = visits.dropFirst().filter { hasStop(at: $0, readings: readings) }.count
-        let offStationStops = stopsBetweenStations(first: first, last: last, readings: readings)
-        let gpsLost = !inside.isEmpty && Double(inside.filter { !$0.gpsAvailable }.count) / Double(inside.count) >= minimumGPSLossShare
+        let boardingDwell = first.last.timeIntervalSince(first.first) + leftAfter(first, readings: readings)
+        let likelihood = RailRideLikelihood.assess(
+            route: route, boarding: first.last, alighting: last.first, hasAlighted: hasAlighted,
+            boardingDwell: boardingDwell, readings: readings
+        )
+        guard likelihood.logLikelihoodRatio >= RailRideLikelihood.minimumLogLikelihoodRatio else {
+            rejected("\(label): 가능도 \(likelihood.logLikelihoodRatio) \(likelihood.evidence)")
+            return nil
+        }
+        let stationCount = Set(visits.map(\.name)).count
+        let gpsLost = likelihood.gpsLossShare >= minimumGPSLossShare
         // 역을 순서대로 세 곳 지나며 멈췄으면 타고 간 것이 분명하다. 빨리 나간 날에도 자동차로 돌아가지 않는다(대표 결정).
         // 차는 역이 아닌 곳에서도 신호에 멈추므로, 역 사이에서 멈췄으면 면제하지 않는다.
-        let isDwellExempt = Set(visits.map(\.name)).count >= dwellExemptStations && stops >= 1 && offStationStops == 0
+        let isDwellExempt = stationCount >= dwellExemptStations
+            && likelihood.stopsAtStations >= 1 && likelihood.stopsBetweenStations == 0
         let gate = SubwayEvidenceGate.Input(
             hasBoardingToAlightingRoute: true,
-            sensedStationCount: Set(visits.map(\.name)).count,
+            sensedStationCount: stationCount,
             hasAltitudeChange: !hasAltitudeData
                 || TravelModeClassifier.altitudeChangeMeters(altitudeContext) >= TravelModeClassifier.subwayAltitudeChangeMeters,
-            transitSpecificSignals: max(0, stops - offStationStops) + (gpsLost ? 1 : 0),
+            transitSpecificSignals: likelihood.stopsAtStations + (gpsLost ? 1 : 0),
             supportingSignals: stepsPerMinute(inside) <= maximumStepsPerMinute ? 1 : 0,
-            boardingDwell: isDwellExempt ? nil : first.last.timeIntervalSince(first.first) + leftAfter(first, readings: readings),
+            boardingDwell: isDwellExempt ? nil : boardingDwell,
             alightingDwell: isDwellExempt || !hasAlighted ? nil : last.last.timeIntervalSince(last.first)
         )
-        guard SubwayEvidenceGate.missingConditions(gate).isEmpty else { return nil }
+        let missing = SubwayEvidenceGate.missingConditions(gate)
+        guard missing.isEmpty else {
+            rejected("\(label): 조건 \(missing) 가능도 \(likelihood.logLikelihoodRatio) \(likelihood.evidence)")
+            return nil
+        }
         let end = hasAlighted ? last.first : (readings.last?.timestamp ?? last.last)
         let start = first.last
         guard end > start else { return nil }
-        return Journey(span: TimeSpan(start: start, end: end), route: route, stationNames: visits.map(\.name))
+        return Journey(span: TimeSpan(start: start, end: end), route: route, stationNames: visits.map(\.name), likelihood: likelihood)
     }
 
     /// 마지막 역 이후 표본이 역을 벗어났으면 내린 것이다. 표본이 없으면 아직 타고 있는 것으로 본다.
@@ -199,45 +251,6 @@ enum RailJourneyRecognizer {
         let silence = next.timestamp.timeIntervalSince(visit.last)
         let hasSilentReadings = readings.contains { $0.timestamp > visit.last && $0.timestamp < next.timestamp }
         return hasSilentReadings || silence >= 60 ? silence : 0
-    }
-
-    /// 역 근처에서 멈췄는가. 빠르게 다시 출발할 때까지 잰다.
-    private static func hasStop(at visit: Visit, readings: [SensorReading]) -> Bool {
-        let window = readings.filter {
-            $0.timestamp >= visit.first.addingTimeInterval(-stopDetectionWindow)
-                && $0.timestamp <= visit.last.addingTimeInterval(stopDetectionWindow)
-        }
-        return !stops(in: window).isEmpty
-    }
-
-    /// 첫 역과 마지막 역 사이, 어느 역에서도 먼 곳에서 멈춘 횟수.
-    private static func stopsBetweenStations(first: Visit, last: Visit, readings: [SensorReading]) -> Int {
-        let window = readings.filter { $0.timestamp >= first.last && $0.timestamp <= last.first }
-        return stops(in: window).filter { reading in
-            guard reading.gpsAvailable, let point = reading.point,
-                  (0...maximumAccuracyMeters).contains(point.horizontalAccuracy) else { return false }
-            return SubwayStationCatalog.nearest(to: point, maximumDistanceMeters: stationRadiusMeters * 2) == nil
-        }.count
-    }
-
-    /// 속도가 낮아진 표본에서 다시 빨라질 때까지 정차 시간 이상 걸린 곳의 첫 표본들.
-    private static func stops(in readings: [SensorReading]) -> [SensorReading] {
-        var result: [SensorReading] = []
-        var slowStart: SensorReading?
-        for reading in readings {
-            guard let speed = reading.speedMetersPerSecond, speed >= 0 else { continue }
-            if speed <= stoppedSpeed {
-                if slowStart == nil { slowStart = reading }
-            } else if let start = slowStart {
-                if reading.timestamp.timeIntervalSince(start.timestamp) >= minimumStopDuration { result.append(start) }
-                slowStart = nil
-            }
-        }
-        if let start = slowStart, let last = readings.last,
-           last.timestamp.timeIntervalSince(start.timestamp) >= minimumStopDuration {
-            result.append(start)
-        }
-        return result
     }
 
     private static func stepsPerMinute(_ readings: [SensorReading]) -> Double {
