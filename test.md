@@ -5269,3 +5269,7 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 ## MEA1102A01 회사 반경 안 식당 식사 우선 (2026-11-02, 커밋 전)
 - 단위(시뮬레이터): `testSmallerRadiusPlaceWinsAndMealIsCarvedFromWork` 포함 위 691건 통과. 반경이 겹치면 작은 장소를 고르고 식사를 자동 업무에서 잘라 내는 것을 확인했다.
 - 실제 데이터: 11-02는 11:52~13:04 위치 기록이 없어 오늘 점심은 식사로 바뀌지 않는다. 내보낸 원본에 설정이 없어 식당 등록 여부도 확인하지 못했다. 기기에서 점심 기록 확인이 남았다.
+
+## TFB1102A02 TestFlight 빌드 258 (2026-11-02)
+- `release.sh --yes`: 빌드 258 업로드, 처리 상태 VALID, `TP Taption Plan 내부 테스트` 그룹 연결·테스터 노출 1명 확인(`build/validation/TFB1102A02/testflight-report.json`). 코드 기준은 `94035188`(CNT1102A01, MEA1102A01 포함).
+- 기기 설치·실행과 기능 확인은 아직 하지 않았다.
