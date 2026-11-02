@@ -19,13 +19,21 @@ enum ChargingInactivitySleepEngine {
         guard !watchAvailable else { return [] }
         let observed = TimeSpan(start: span.start, end: min(span.end, asOf))
         guard observed.duration >= minimumDuration else { return [] }
+        // 걸음 수는 누적값이다. 낮에 걸은 만큼 쌓인 값이 아니라 표본 사이 늘어난 만큼을 본다.
+        var lastSteps: Int?
         let samples = readings
             .filter {
                 RouteTimelineTimestamp.isValid($0.timestamp)
                     && observed.contains($0.timestamp)
-                    && isInactiveCharging($0)
             }
             .sorted { $0.timestamp < $1.timestamp }
+            .filter { reading in
+                let increase = reading.stepCount.flatMap { count in
+                    lastSteps.map { DeviceStepCounter.stepIncrease(from: $0, to: count) }
+                } ?? 0
+                lastSteps = reading.stepCount ?? lastSteps
+                return isInactiveCharging(reading, stepIncrease: increase)
+            }
         guard samples.count >= 3 else { return [] }
 
         let allowedGap = max(20 * 60, maximumSampleGap)
@@ -78,9 +86,9 @@ enum ChargingInactivitySleepEngine {
         }
     }
 
-    private static func isInactiveCharging(_ reading: SensorReading) -> Bool {
+    private static func isInactiveCharging(_ reading: SensorReading, stepIncrease: Int) -> Bool {
         guard reading.powerState?.isCharging == true,
-              (reading.stepCount ?? 0) <= 2 else { return false }
+              stepIncrease <= 2 else { return false }
         if reading.motion == .stationary { return true }
         guard reading.motion == .unknown,
               let summary = reading.deviceMotionSummary,
@@ -219,6 +227,7 @@ enum PhoneSleepWakeEngine {
         var wakeCandidateStart: Date?
         var wakeCandidateSteps: Int?
         var lastWakeExpectedAt: Date?
+        var lastStepCount: Int?
     }
 
     private static func advance(
@@ -233,9 +242,13 @@ enum PhoneSleepWakeEngine {
             state.sleepCandidateStart = nil
             state.wakeCandidateStart = nil
         }
+        let stepsSincePrevious = reading.stepCount.flatMap { count in
+            state.lastStepCount.map { DeviceStepCounter.stepIncrease(from: $0, to: count) }
+        } ?? 0
+        state.lastStepCount = reading.stepCount ?? state.lastStepCount
 
         if state.sleepStartedAt != nil {
-            if isWakeSignal(reading) {
+            if isWakeSignal(reading, stepIncrease: stepsSincePrevious) {
                 if state.wakeCandidateStart == nil { state.wakeCandidateSteps = reading.stepCount }
                 state.wakeCandidateStart = state.wakeCandidateStart ?? reading.timestamp
                 state.lastWakeExpectedAt = state.wakeCandidateStart
@@ -251,7 +264,7 @@ enum PhoneSleepWakeEngine {
                     state.wakeCandidateStart = nil
                     state.wakeCandidateSteps = nil
                 }
-            } else if isSleepSignal(reading) || blocked {
+            } else if isSleepSignal(reading, stepIncrease: stepsSincePrevious) || blocked {
                 // A brief awakening that settles before confirmation is part
                 // of the same sleep session; a later movement can start a new
                 // wake candidate.
@@ -262,7 +275,7 @@ enum PhoneSleepWakeEngine {
             return
         }
 
-        guard !blocked, isSleepSignal(reading) else {
+        guard !blocked, isSleepSignal(reading, stepIncrease: stepsSincePrevious) else {
             state.sleepCandidateStart = nil
             state.sleepExpectedAt = nil
             state.sleepCharging = false
@@ -286,13 +299,13 @@ enum PhoneSleepWakeEngine {
         state.wakeCandidateStart = nil
     }
 
-    private static func isSleepSignal(_ reading: SensorReading) -> Bool {
+    private static func isSleepSignal(_ reading: SensorReading, stepIncrease: Int) -> Bool {
         let inactive: Bool
         switch reading.motion {
         case .stationary: inactive = true
         case .unknown:
             let summary = reading.deviceMotionSummary
-            inactive = (reading.stepCount ?? 0) <= 2
+            inactive = stepIncrease <= 2
                 && (summary == nil
                     || (summary?.userAccelerationStandardDeviationG ?? 1) <= 0.01
                     && (summary?.meanRotationRateRadiansPerSecond ?? 1) <= 0.03)
@@ -309,9 +322,9 @@ enum PhoneSleepWakeEngine {
         return inactive && screenOff && dark
     }
 
-    private static func isWakeSignal(_ reading: SensorReading) -> Bool {
+    private static func isWakeSignal(_ reading: SensorReading, stepIncrease: Int) -> Bool {
         reading.motion.isMovement
-            || reading.stepCount.map { $0 > 0 } == true
+            || stepIncrease > 0
             || reading.screenIsOn == true
             || reading.screenBrightness.map { $0 >= brightBrightness } == true
     }
