@@ -19,6 +19,10 @@ struct FrequentPlaceResolutionEngine: Sendable {
                     to: point,
                     candidates: candidates,
                     readings: readingIndex.readings(in: place.span)
+                  ) ?? zoneMatch(
+                    candidates: candidates,
+                    span: place.span,
+                    readings: readingIndex.readings(in: place.span)
                   ) else {
                 return place
             }
@@ -70,6 +74,21 @@ struct FrequentPlaceResolutionEngine: Sendable {
             updated.isConfirmed = true
             return updated
         }
+    }
+
+    /// 체류 중심이 반경 밖이어도 표본이 세 원 판정으로 체류의 절반 넘게 그 안에 있었으면 그 장소다.
+    /// 반경을 줄인 장소에서 표본 몇 개가 중심을 끌어 머문 것을 놓치지 않게 한다.
+    private func zoneMatch(
+        candidates: [FrequentPlace],
+        span: TimeSpan,
+        readings: [SensorReading]
+    ) -> FrequentPlace? {
+        return candidates.filter { place in
+            guard let center = place.point else { return false }
+            let covered = PlaceZoneStayTracker.stays(readings: readings, center: center, radius: place.radiusMeters)
+                .reduce(0) { $0 + ($1.span.intersection(with: span)?.duration ?? 0) }
+            return covered >= span.duration / 2
+        }.min { $0.radiusMeters < $1.radiusMeters }
     }
 
     /// 기준점을 고친 뒤, 이미 저장된 이 장소의 체류를 새 기준으로 다시
@@ -164,9 +183,9 @@ struct FrequentPlaceResolutionEngine: Sendable {
         frequentPlaces.reduce(into: [:]) { $0[$1.stablePlaceKey] = $1.kind }
     }
 
-    /// 반경이 겹치면 더 작은 반경의 장소가 우선이다. 회사 반경 안의 식당에 있으면 식당이다(대표 지시).
-    /// 반경이 겹칠 때만 높이를 본다. 체류 고도가 장소의 층과 어긋나는 후보를 빼서, 5층 자리가 1층 식당이 되지 않게 한다.
-    /// 높이 근거가 없으면 수평 판정 그대로이고, 하나만 남는 경우 그 하나를 높이로 지우지는 않는다.
+    /// 반경 안 후보를 점수로 고른다(ALG1102A01). 회사 반경 안의 식당에 있으면 식당이 이긴다.
+    /// 높이가 어긋나는 후보는 빼서 5층 사무실이 1층 식당으로 잡히지 않게 하고, 하나만 남는 경우 그 하나를 높이로 지우지 않는다.
+    /// 사용자가 정한 장소의 좌표·키는 바꾸지 않는다. 판정 입력일 뿐이다.
     func nearestMatch(
         to point: GeoPoint,
         candidates: [FrequentPlace],
@@ -181,16 +200,29 @@ struct FrequentPlaceResolutionEngine: Sendable {
         }
         let places = containing.map(\.0)
         let atHeight = containing.filter { !PlaceHeightMatch.isAtOtherHeight($0.0, among: places, readings: readings) }
+        let accuracy = point.horizontalAccuracy >= 0 ? point.horizontalAccuracy : 0
         return (atHeight.isEmpty ? containing : atHeight)
-            .min(by: { $0.0.radiusMeters != $1.0.radiusMeters ? $0.0.radiusMeters < $1.0.radiusMeters : $0.1 < $1.1 })?
+            .max(by: {
+                let left = Self.matchScore(distance: $0.1, radius: $0.0.radiusMeters, accuracy: accuracy)
+                let right = Self.matchScore(distance: $1.1, radius: $1.0.radiusMeters, accuracy: accuracy)
+                return left != right ? left < right : $0.0.stablePlaceKey > $1.0.stablePlaceKey
+            })?
             .0
+    }
+
+    /// 위치 오차를 감안해 반경 안에 있을 확률에 장소 크기 가중을 곱한다. 작은 장소가 더 구체적인 답이라
+    /// 식당(30m)은 회사(100m 이상) 반경 안에서도 이기고, 크기가 비슷하면 거리와 정확도가 가른다.
+    static func matchScore(distance: Double, radius: Double, accuracy: Double) -> Double {
+        let sigma = max(5, accuracy)
+        let inside = 0.5 * erfc(-(radius - distance) / (sigma * 2.0.squareRoot()))
+        return inside * 100 / (30 + radius)
     }
 }
 
 /// 지정 장소의 층·기준 고도와 체류 고도를 견준다(ALT1102A01).
 enum PlaceHeightMatch {
-    /// 기압 절대값은 날씨로 수십 미터씩 움직이므로 기준을 잡은 지 이 안에서만 믿는다.
-    private static let pressureReferenceLifetime: TimeInterval = 6 * 60 * 60
+    /// 기압 절대값은 날씨로 몇 시간 만에 수십 미터씩 움직인다. 기준을 그 방문 안에서 잰 경우만 비교한다(ALG1102A01).
+    private static let visitMargin: TimeInterval = 30 * 60
     private static let gpsToleranceMeters = 12.0
 
     static func isAtOtherHeight(_ place: FrequentPlace, among places: [FrequentPlace], readings: [SensorReading]) -> Bool {
@@ -200,9 +232,11 @@ enum PlaceHeightMatch {
         let sources = own.isEmpty ? places.filter { $0.id != place.id }.flatMap(references) : own
         guard let reference = sources.min(by: { abs($0.0.floor - targetFloor) < abs($1.0.floor - targetFloor) }) else { return false }
         let floorHeight = max(2.2, reference.1)
+        let times = readings.map(\.timestamp)
+        let visit = (times.min() ?? .distantPast)...(times.max() ?? .distantFuture)
         let measured = readings.compactMap { reading -> (meters: Double, source: AltitudeDelta.Source)? in
             guard let delta = AltitudeDelta.between(
-                sample(reference.0, at: reading.timestamp),
+                sample(reference.0, visit: visit),
                 and: currentSample(reading)
             ) else { return nil }
             return (delta.meters, delta.source)
@@ -225,10 +259,12 @@ enum PlaceHeightMatch {
             .map { ($0, place.floorHeightMeters) }
     }
 
-    private static func sample(_ reference: FloorCalibrationPoint, at time: Date) -> AltitudeDelta.Sample {
+    private static func sample(_ reference: FloorCalibrationPoint, visit: ClosedRange<Date>) -> AltitudeDelta.Sample {
         var value = AltitudeDelta.Sample(reference)
         if reference.point.verticalAccuracy < 0 { value.altitudeMeters = nil }
-        if abs(time.timeIntervalSince(reference.capturedAt)) > pressureReferenceLifetime { value.pressureKilopascals = nil }
+        let isSameVisit = reference.capturedAt >= visit.lowerBound.addingTimeInterval(-visitMargin)
+            && reference.capturedAt <= visit.upperBound.addingTimeInterval(visitMargin)
+        if !isSameVisit { value.pressureKilopascals = nil }
         return value
     }
 

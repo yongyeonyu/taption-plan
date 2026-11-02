@@ -125,6 +125,7 @@
 		A5B1102A020000000000004C /* PredictedRoutePersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000004B /* PredictedRoutePersistenceTests.swift */; };
 		A5B1102A020000000000004A /* NLETrackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000049 /* NLETrackTests.swift */; };
 		A1102A0100000000000000B1 /* RailRideLikelihoodTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1102A0100000000000000F2 /* RailRideLikelihoodTests.swift */; };
+		A1102A0100000000000000B5 /* PlaceZoneStayTrackerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1102A0100000000000000FA /* PlaceZoneStayTrackerTests.swift */; };
 		A5B1102A0200000000000048 /* MapHomeCounterTimelinePolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000047 /* MapHomeCounterTimelinePolicyTests.swift */; };
 		A5B1102A0200000000000046 /* MapHomePlaybackContinuityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000045 /* MapHomePlaybackContinuityTests.swift */; };
 		A5B1102A0200000000000044 /* MapHomeDateStripTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000043 /* MapHomeDateStripTests.swift */; };
@@ -366,6 +367,7 @@
 		1C417B9717B86DB458FABD4C /* SubwayEvidenceGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 224225E0023E3C60D75BF00C /* SubwayEvidenceGate.swift */; };
 		A1102A0100000000000000A1 /* RailRideLikelihood.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1102A0100000000000000F1 /* RailRideLikelihood.swift */; };
 		A1102A0100000000000000A4 /* WalkingDistanceBreakdown.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1102A0100000000000000F7 /* WalkingDistanceBreakdown.swift */; };
+		A1102A0100000000000000A5 /* PlaceZoneStayTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1102A0100000000000000F9 /* PlaceZoneStayTracker.swift */; };
 		1C417B9717B86DB458FABFBC /* RailJourneyRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 224225E0023E3C60D75BFFBC /* RailJourneyRecognizer.swift */; };
 		A1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift */; };
 		A51002000000000000000003 /* PlanDaySeal.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000003 /* PlanDaySeal.swift */; };
@@ -560,6 +562,7 @@
 		F5B1102A020000000000004B /* PredictedRoutePersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PredictedRoutePersistenceTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000049 /* NLETrackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NLETrackTests.swift; sourceTree = "<group>"; };
 		A1102A0100000000000000F2 /* RailRideLikelihoodTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RailRideLikelihoodTests.swift; sourceTree = "<group>"; };
+		A1102A0100000000000000FA /* PlaceZoneStayTrackerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceZoneStayTrackerTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000047 /* MapHomeCounterTimelinePolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCounterTimelinePolicyTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000045 /* MapHomePlaybackContinuityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaybackContinuityTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000043 /* MapHomeDateStripTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeDateStripTests.swift; sourceTree = "<group>"; };
@@ -777,6 +780,7 @@
 		224225E0023E3C60D75BF00C /* SubwayEvidenceGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubwayEvidenceGate.swift; sourceTree = "<group>"; };
 		A1102A0100000000000000F1 /* RailRideLikelihood.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RailRideLikelihood.swift; sourceTree = "<group>"; };
 		A1102A0100000000000000F7 /* WalkingDistanceBreakdown.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalkingDistanceBreakdown.swift; sourceTree = "<group>"; };
+		A1102A0100000000000000F9 /* PlaceZoneStayTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceZoneStayTracker.swift; sourceTree = "<group>"; };
 		224225E0023E3C60D75BFFBC /* RailJourneyRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RailJourneyRecognizer.swift; sourceTree = "<group>"; };
 		F1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCarAudioSheet.swift; sourceTree = "<group>"; };
 		F100000000000000000000F4 /* MapHomeSectionDetailEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeSectionDetailEngine.swift; sourceTree = "<group>"; };
@@ -943,6 +947,7 @@
 				F5B1102A020000000000004B /* PredictedRoutePersistenceTests.swift */,
 				F5B1102A0200000000000049 /* NLETrackTests.swift */,
 				A1102A0100000000000000F2 /* RailRideLikelihoodTests.swift */,
+				A1102A0100000000000000FA /* PlaceZoneStayTrackerTests.swift */,
 				F5B1102A0200000000000047 /* MapHomeCounterTimelinePolicyTests.swift */,
 				F5B1102A0200000000000045 /* MapHomePlaybackContinuityTests.swift */,
 				F5B1102A0200000000000043 /* MapHomeDateStripTests.swift */,
@@ -1191,6 +1196,7 @@
 				224225E0023E3C60D75BF00C /* SubwayEvidenceGate.swift */,
 				A1102A0100000000000000F1 /* RailRideLikelihood.swift */,
 				A1102A0100000000000000F7 /* WalkingDistanceBreakdown.swift */,
+				A1102A0100000000000000F9 /* PlaceZoneStayTracker.swift */,
 				224225E0023E3C60D75BFFBC /* RailJourneyRecognizer.swift */,
 				F1000000000000000000001C /* SleepAnalysisEngine.swift */,
 				F1000000000000000000001D /* SensorDataServices.swift */,
@@ -1731,6 +1737,7 @@
 				1C417B9717B86DB458FABD4C /* SubwayEvidenceGate.swift in Sources */,
 				A1102A0100000000000000A1 /* RailRideLikelihood.swift in Sources */,
 				A1102A0100000000000000A4 /* WalkingDistanceBreakdown.swift in Sources */,
+				A1102A0100000000000000A5 /* PlaceZoneStayTracker.swift in Sources */,
 				1C417B9717B86DB458FABFBC /* RailJourneyRecognizer.swift in Sources */,
 				A1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift in Sources */,
 				A100000000000000000000F4 /* MapHomeSectionDetailEngine.swift in Sources */,
@@ -1863,6 +1870,7 @@
 				A5B1102A020000000000004C /* PredictedRoutePersistenceTests.swift in Sources */,
 				A5B1102A020000000000004A /* NLETrackTests.swift in Sources */,
 				A1102A0100000000000000B1 /* RailRideLikelihoodTests.swift in Sources */,
+				A1102A0100000000000000B5 /* PlaceZoneStayTrackerTests.swift in Sources */,
 				A5B1102A0200000000000048 /* MapHomeCounterTimelinePolicyTests.swift in Sources */,
 				A5B1102A0200000000000046 /* MapHomePlaybackContinuityTests.swift in Sources */,
 				A5B1102A0200000000000044 /* MapHomeDateStripTests.swift in Sources */,
