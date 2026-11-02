@@ -5255,3 +5255,7 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 단위: 전체 1,763건 중 통과 1,758, 실패 0, 건너뜀 5(`build/validation/PAW1102A03/final.log`, 시뮬레이터). 화면 시험 전체는 다시 돌리지 않았다. 가드 2개 통과.
 - 코드 리뷰(읽기 전용)에서 나온 5건 중 3건 수정(다른 날 보정 보존, 위치 간격 초기화 제거, 잴 수 없는 역 체류), 2건은 `temp.md` REV1102A01로 남겼다.
 - 시트 전후 측정과 실기기 120Hz는 빌드업 뒤로 미뤘다(대표 지시).
+
+## TFB1102A01 TestFlight 빌드 257 (2026-11-02)
+- `release.sh --yes`: 빌드 257 업로드, 처리 상태 VALID, `TP Taption Plan 내부 테스트` 그룹 연결·테스터 노출 확인(`build/validation/TFB1102A01/testflight-report.json`).
+- 기기 설치·실행과 기능 확인은 아직 하지 않았다.
