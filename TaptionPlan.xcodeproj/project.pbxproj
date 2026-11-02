@@ -125,7 +125,9 @@
 		A5B1102A020000000000004C /* PredictedRoutePersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000004B /* PredictedRoutePersistenceTests.swift */; };
 		A5B1102A020000000000004A /* NLETrackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000049 /* NLETrackTests.swift */; };
 		A1102A0100000000000000B1 /* RailRideLikelihoodTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1102A0100000000000000F2 /* RailRideLikelihoodTests.swift */; };
+		A1102A0100000000000000B2 /* RawSensorReplayVerdictTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1102A0100000000000000F3 /* RawSensorReplayVerdictTests.swift */; };
 		A1102A0100000000000000B3 /* UnobservedStayEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1102A0100000000000000F6 /* UnobservedStayEngineTests.swift */; };
+		A1102A0100000000000000B4 /* AlgorithmUpgradeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1102A0100000000000000F8 /* AlgorithmUpgradeTests.swift */; };
 		A1102A0100000000000000B5 /* PlaceZoneStayTrackerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1102A0100000000000000FA /* PlaceZoneStayTrackerTests.swift */; };
 		A5B1102A0200000000000048 /* MapHomeCounterTimelinePolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000047 /* MapHomeCounterTimelinePolicyTests.swift */; };
 		A5B1102A0200000000000046 /* MapHomePlaybackContinuityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000045 /* MapHomePlaybackContinuityTests.swift */; };
@@ -565,7 +567,9 @@
 		F5B1102A020000000000004B /* PredictedRoutePersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PredictedRoutePersistenceTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000049 /* NLETrackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NLETrackTests.swift; sourceTree = "<group>"; };
 		A1102A0100000000000000F2 /* RailRideLikelihoodTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RailRideLikelihoodTests.swift; sourceTree = "<group>"; };
+		A1102A0100000000000000F3 /* RawSensorReplayVerdictTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RawSensorReplayVerdictTests.swift; sourceTree = "<group>"; };
 		A1102A0100000000000000F6 /* UnobservedStayEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnobservedStayEngineTests.swift; sourceTree = "<group>"; };
+		A1102A0100000000000000F8 /* AlgorithmUpgradeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlgorithmUpgradeTests.swift; sourceTree = "<group>"; };
 		A1102A0100000000000000FA /* PlaceZoneStayTrackerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceZoneStayTrackerTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000047 /* MapHomeCounterTimelinePolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCounterTimelinePolicyTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000045 /* MapHomePlaybackContinuityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaybackContinuityTests.swift; sourceTree = "<group>"; };
@@ -953,7 +957,9 @@
 				F5B1102A020000000000004B /* PredictedRoutePersistenceTests.swift */,
 				F5B1102A0200000000000049 /* NLETrackTests.swift */,
 				A1102A0100000000000000F2 /* RailRideLikelihoodTests.swift */,
+				A1102A0100000000000000F3 /* RawSensorReplayVerdictTests.swift */,
 				A1102A0100000000000000F6 /* UnobservedStayEngineTests.swift */,
+				A1102A0100000000000000F8 /* AlgorithmUpgradeTests.swift */,
 				A1102A0100000000000000FA /* PlaceZoneStayTrackerTests.swift */,
 				F5B1102A0200000000000047 /* MapHomeCounterTimelinePolicyTests.swift */,
 				F5B1102A0200000000000045 /* MapHomePlaybackContinuityTests.swift */,
@@ -1881,7 +1887,9 @@
 				A5B1102A020000000000004C /* PredictedRoutePersistenceTests.swift in Sources */,
 				A5B1102A020000000000004A /* NLETrackTests.swift in Sources */,
 				A1102A0100000000000000B1 /* RailRideLikelihoodTests.swift in Sources */,
+				A1102A0100000000000000B2 /* RawSensorReplayVerdictTests.swift in Sources */,
 				A1102A0100000000000000B3 /* UnobservedStayEngineTests.swift in Sources */,
+				A1102A0100000000000000B4 /* AlgorithmUpgradeTests.swift in Sources */,
 				A1102A0100000000000000B5 /* PlaceZoneStayTrackerTests.swift in Sources */,
 				A5B1102A0200000000000048 /* MapHomeCounterTimelinePolicyTests.swift in Sources */,
 				A5B1102A0200000000000046 /* MapHomePlaybackContinuityTests.swift in Sources */,
