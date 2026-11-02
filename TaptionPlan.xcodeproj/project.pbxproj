@@ -7,6 +7,14 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A1FA1112A607AAE0D257EB50 /* ReviewView+Data.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11C7507774332BFCF985 /* ReviewView+Data.swift */; };
+		A1FA1157BD1F0CCB182AD1A6 /* ReviewView+Records.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11A657AF32CE7A175D27 /* ReviewView+Records.swift */; };
+		A1FA11B6B565DF24CA6FBDD1 /* ReviewView+Charts.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1159882F936CEF458785 /* ReviewView+Charts.swift */; };
+		A1FA11960E1E776FA2AFA426 /* ReviewView+Clock.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1101B4DB128D658751C3 /* ReviewView+Clock.swift */; };
+		A1FA11E4C6FF2DAB60DE4004 /* ActivityCorrectionViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA117EA23DE1FEEF9455F6 /* ActivityCorrectionViews.swift */; };
+		A1FA113BFE3B1AB153E86D43 /* SubwayRouteTimelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11DEB6F30038E0A3D825 /* SubwayRouteTimelineView.swift */; };
+		A1FA11046C5838880ADF9D7F /* RecordDetailViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA119C66A7B1A8125E76E3 /* RecordDetailViews.swift */; };
+		A1FA1100D0A3E914D10FEC81 /* ReviewSupportTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA113778B8EB03DD952E89 /* ReviewSupportTypes.swift */; };
 		A1FA11B788DDFF62F309512F /* TimelineRowModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11B51558DBA397EDEB19 /* TimelineRowModels.swift */; };
 		A1FA11356EDD0F1965709226 /* TimelineRowViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11DCE35698B9D5CBB801 /* TimelineRowViews.swift */; };
 		A1FA11A3B8DAE991AEA02AAF /* TimelineBoard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11A8410BD26D37F70F6C /* TimelineBoard.swift */; };
@@ -492,6 +500,14 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		F1FA11C7507774332BFCF985 /* ReviewView+Data.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReviewView+Data.swift"; sourceTree = "<group>"; };
+		F1FA11A657AF32CE7A175D27 /* ReviewView+Records.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReviewView+Records.swift"; sourceTree = "<group>"; };
+		F1FA1159882F936CEF458785 /* ReviewView+Charts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReviewView+Charts.swift"; sourceTree = "<group>"; };
+		F1FA1101B4DB128D658751C3 /* ReviewView+Clock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReviewView+Clock.swift"; sourceTree = "<group>"; };
+		F1FA117EA23DE1FEEF9455F6 /* ActivityCorrectionViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityCorrectionViews.swift; sourceTree = "<group>"; };
+		F1FA11DEB6F30038E0A3D825 /* SubwayRouteTimelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubwayRouteTimelineView.swift; sourceTree = "<group>"; };
+		F1FA119C66A7B1A8125E76E3 /* RecordDetailViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordDetailViews.swift; sourceTree = "<group>"; };
+		F1FA113778B8EB03DD952E89 /* ReviewSupportTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewSupportTypes.swift; sourceTree = "<group>"; };
 		F1FA11B51558DBA397EDEB19 /* TimelineRowModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineRowModels.swift; sourceTree = "<group>"; };
 		F1FA11DCE35698B9D5CBB801 /* TimelineRowViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineRowViews.swift; sourceTree = "<group>"; };
 		F1FA11A8410BD26D37F70F6C /* TimelineBoard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineBoard.swift; sourceTree = "<group>"; };
@@ -1140,6 +1156,14 @@
 				F1FA11013C73958F69782D38 /* TimelineSelection.swift */,
 				F10000000000000000000007 /* GoalsView.swift */,
 				F10000000000000000000008 /* ReviewView.swift */,
+				F1FA11C7507774332BFCF985 /* ReviewView+Data.swift */,
+				F1FA11A657AF32CE7A175D27 /* ReviewView+Records.swift */,
+				F1FA1159882F936CEF458785 /* ReviewView+Charts.swift */,
+				F1FA1101B4DB128D658751C3 /* ReviewView+Clock.swift */,
+				F1FA117EA23DE1FEEF9455F6 /* ActivityCorrectionViews.swift */,
+				F1FA11DEB6F30038E0A3D825 /* SubwayRouteTimelineView.swift */,
+				F1FA119C66A7B1A8125E76E3 /* RecordDetailViews.swift */,
+				F1FA113778B8EB03DD952E89 /* ReviewSupportTypes.swift */,
 				F10000000000000000000009 /* SettingsView.swift */,
 				F1000000000000000000000A /* AddPlanSheet.swift */,
 				5A00000000000000000000F1 /* PlanTextSuggestion.swift */,
@@ -1814,6 +1838,14 @@
 				A100000000000000000000F4 /* MapHomeSectionDetailEngine.swift in Sources */,
 				A10000000000000000000007 /* GoalsView.swift in Sources */,
 				A10000000000000000000008 /* ReviewView.swift in Sources */,
+				A1FA1112A607AAE0D257EB50 /* ReviewView+Data.swift in Sources */,
+				A1FA1157BD1F0CCB182AD1A6 /* ReviewView+Records.swift in Sources */,
+				A1FA11B6B565DF24CA6FBDD1 /* ReviewView+Charts.swift in Sources */,
+				A1FA11960E1E776FA2AFA426 /* ReviewView+Clock.swift in Sources */,
+				A1FA11E4C6FF2DAB60DE4004 /* ActivityCorrectionViews.swift in Sources */,
+				A1FA113BFE3B1AB153E86D43 /* SubwayRouteTimelineView.swift in Sources */,
+				A1FA11046C5838880ADF9D7F /* RecordDetailViews.swift in Sources */,
+				A1FA1100D0A3E914D10FEC81 /* ReviewSupportTypes.swift in Sources */,
 				A10000000000000000000009 /* SettingsView.swift in Sources */,
 				A1000000000000000000000A /* AddPlanSheet.swift in Sources */,
 				5A00000000000000000000A1 /* PlanTextSuggestion.swift in Sources */,
