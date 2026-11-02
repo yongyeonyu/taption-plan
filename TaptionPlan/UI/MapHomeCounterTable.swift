@@ -146,9 +146,9 @@ enum MapHomeCounterTimelinePolicy {
     /// 실제로 하루를 다시 세는 일은 1분에 한 번이다.
     static let refreshSeconds: TimeInterval = 10
 
-    /// 재생 중일 때만 자를 시각을 준다(멈춰 있으면 하루 전체 합계).
-    static func cutoff(dayStart: Date, minute: Double?, isRunning: Bool) -> Date? {
-        guard isRunning, let minute, minute.isFinite, minute > 0 else { return nil }
+    /// 재생 시각이나 사이드바 핸들 시각까지 자른다. 둘 다 없으면 nil(하루 전체 합계).
+    static func cutoff(dayStart: Date, minute: Double?) -> Date? {
+        guard let minute, minute.isFinite, minute >= 0 else { return nil }
         return dayStart.addingTimeInterval(min(minute, 24 * 60) * 60)
     }
 
@@ -159,17 +159,34 @@ enum MapHomeCounterTimelinePolicy {
         return ClassifierAdapter.stepCount(readings: scoped, in: TimeSpan(start: first, end: last.addingTimeInterval(1)))
     }
 
+    static func daySpan(of date: Date) -> TimeSpan {
+        let calendar = MapHomeGrowthPolicy.localCalendar
+        let start = calendar.startOfDay(for: date)
+        return TimeSpan(start: start, end: calendar.date(byAdding: .day, value: 1, to: start) ?? start.addingTimeInterval(86_400))
+    }
+
     /// 이동 거리: 끝난 구간은 그대로, 지나가는 중인 구간은 지난 만큼만 센다.
-    static func travelMeters(segments: [TravelSegment], cutoff: Date?) -> Double {
-        guard let cutoff else {
-            return MapHomeDayTravelSummary.entries(from: segments).reduce(0) { $0 + $1.meters }
+    static func travelMeters(segments: [TravelSegment], cutoff: Date?, day: TimeSpan? = nil) -> Double {
+        let visible = visibleSegments(segments, cutoff: cutoff, day: day)
+        guard cutoff != nil else {
+            return MapHomeDayTravelSummary.entries(from: visible).reduce(0) { $0 + $1.meters }
         }
-        return segments.reduce(0) { total, segment in
-            guard segment.distanceMeters.isFinite, segment.distanceMeters > 0 else { return total }
-            if segment.span.end <= cutoff { return total + segment.distanceMeters }
-            guard segment.span.start < cutoff, segment.span.duration > 0 else { return total }
-            let passed = cutoff.timeIntervalSince(segment.span.start) / segment.span.duration
-            return total + segment.distanceMeters * min(1, max(0, passed))
+        return visible.reduce(0) { $0 + $1.distanceMeters }
+    }
+
+    /// 보이는 시간만큼 거리를 나눈 구간들. 자정을 넘긴 구간은 이 날 몫만, 먼저 센 구간과 겹친 시간은 빼고 센다.
+    static func visibleSegments(_ segments: [TravelSegment], cutoff: Date?, day: TimeSpan? = nil) -> [TravelSegment] {
+        var countedUntil = Date.distantPast
+        return segments.sorted { $0.span.start < $1.span.start }.compactMap { segment in
+            guard segment.distanceMeters.isFinite, segment.distanceMeters > 0 else { return nil }
+            let start = max(segment.span.start, day?.start ?? .distantPast, countedUntil)
+            let end = min(segment.span.end, day?.end ?? .distantFuture, cutoff ?? .distantFuture)
+            guard start < end, segment.span.duration > 0 else { return nil }
+            countedUntil = end
+            var value = segment
+            value.distanceMeters = segment.distanceMeters * min(1, end.timeIntervalSince(start) / segment.span.duration)
+            value.span = TimeSpan(start: start, end: end)
+            return value
         }
     }
 }
@@ -218,6 +235,8 @@ final class MapHomeCounterBadgeThrottle {
         var day: Date
         var kinds: [MapHomeCounterKind]
         var english: Bool
+        /// 멈춰 있을 때의 사이드바 핸들 분.
+        var handleMinute: Int? = nil
     }
 
     private var lastKey: Key?

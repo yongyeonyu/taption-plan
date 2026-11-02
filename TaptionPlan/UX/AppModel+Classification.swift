@@ -763,6 +763,10 @@ extension AppModel {
             return false
         }
         applyInferredGapRecords(readings: input.gapReadings, travel: snapshot.travel, inside: span)
+        let carved = RestaurantMealActualEngine.carvingMeals(
+            from: snapshot.actuals, activityCorrections: snapshot.settings.activityCorrections, asOf: span.end
+        )
+        if carved != snapshot.actuals { snapshot.actuals = carved.sorted { $0.startedAt < $1.startedAt } }
         await applyClassificationScores(readings: input.classifiedReadings, inside: span)
         return !Task.isCancelled
     }

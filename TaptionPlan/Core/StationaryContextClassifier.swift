@@ -1017,6 +1017,45 @@ enum RestaurantMealActualEngine {
             .sorted { $0.startedAt < $1.startedAt }
     }
 
+    /// 식사 시간을 자동 업무·수업 기록에서 잘라 낸다. 회사 반경 안 식당에 머문 시간은 업무가 아니다(대표 지시).
+    /// 사용자가 직접 고치거나 넣은 기록은 건드리지 않는다.
+    static func carvingMeals(
+        from actuals: [ActualRecord],
+        activityCorrections: [UUID: ActivityCorrection] = [:],
+        asOf: Date = .now
+    ) -> [ActualRecord] {
+        let meals = actuals.filter {
+            $0.source == .location && AutomaticModelVersion.matches($0.modelVersion, modelVersion)
+        }.map { $0.span(asOf: asOf) }.sorted { $0.start < $1.start }
+        guard !meals.isEmpty else { return actuals }
+        return actuals.flatMap { actual -> [ActualRecord] in
+            guard actual.categoryID == "work" || actual.categoryID == "study",
+                  !ActualRecord.userOwned(actual, activityCorrections: activityCorrections)
+            else { return [actual] }
+            var pieces = [actual.span(asOf: asOf)]
+            for meal in meals {
+                pieces = pieces.flatMap { piece -> [TimeSpan] in
+                    guard piece.intersection(with: meal) != nil else { return [piece] }
+                    return [
+                        TimeSpan(start: piece.start, end: min(piece.end, meal.start)),
+                        TimeSpan(start: max(piece.start, meal.end), end: piece.end),
+                    ].filter { $0.duration >= minimumCarvedPiece }
+                }
+            }
+            if pieces.count == 1, pieces[0] == actual.span(asOf: asOf) { return [actual] }
+            return pieces.enumerated().map { index, piece in
+                var value = actual
+                // 첫 조각은 원래 id를 지켜 재계산해도 같은 기록으로 이어진다.
+                if index > 0 { value.id = stableUUID("carved|\(actual.id.uuidString)|\(Int(piece.start.timeIntervalSinceReferenceDate))") }
+                value.startedAt = piece.start
+                value.endedAt = piece.end
+                return value
+            }
+        }
+    }
+
+    private static let minimumCarvedPiece: TimeInterval = 60
+
     private static func watchEvidence(
         summaries: [TaptionWatchSensorSummary],
         rawSamples: [TaptionWatchAccelerationSample],
@@ -1075,9 +1114,14 @@ enum RestaurantMealActualEngine {
         restaurant: FrequentPlace,
         span: TimeSpan
     ) -> UUID {
-        let key = "\(modelVersion)|\(restaurant.id.uuidString)|"
-            + "\(Int(span.start.timeIntervalSinceReferenceDate.rounded()))|"
-            + "\(Int(span.end.timeIntervalSinceReferenceDate.rounded()))"
+        stableUUID(
+            "\(modelVersion)|\(restaurant.id.uuidString)|"
+                + "\(Int(span.start.timeIntervalSinceReferenceDate.rounded()))|"
+                + "\(Int(span.end.timeIntervalSinceReferenceDate.rounded()))"
+        )
+    }
+
+    private static func stableUUID(_ key: String) -> UUID {
         var hash: UInt64 = 14_695_981_039_346_656_037
         var bytes = [UInt8](repeating: 0, count: 16)
         for byte in key.utf8 {

@@ -2212,7 +2212,8 @@ struct FrequentPlaceResolutionEngine: Sendable {
         frequentPlaces.reduce(into: [:]) { $0[$1.stablePlaceKey] = $1.kind }
     }
 
-    private func nearestMatch(
+    /// 반경이 겹치면 더 작은 반경의 장소가 우선이다. 회사 반경 안의 식당에 있으면 식당이다(대표 지시).
+    func nearestMatch(
         to point: GeoPoint,
         candidates: [FrequentPlace]
     ) -> FrequentPlace? {
@@ -2223,7 +2224,7 @@ struct FrequentPlaceResolutionEngine: Sendable {
                 ? (frequent, distance)
                 : nil
         }
-        .min(by: { $0.1 < $1.1 })?
+        .min(by: { $0.0.radiusMeters != $1.0.radiusMeters ? $0.0.radiusMeters < $1.0.radiusMeters : $0.1 < $1.1 })?
         .0
     }
 }

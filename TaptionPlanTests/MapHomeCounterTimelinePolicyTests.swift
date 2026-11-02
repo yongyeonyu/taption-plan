@@ -10,20 +10,18 @@ import TaptionPlanCore
 final class MapHomeCounterTimelinePolicyTests: XCTestCase {
     private let dayStart = Date(timeIntervalSince1970: 1_700_000_000)
 
-    func testCutoffOnlyExistsWhilePlaybackRuns() {
-        XCTAssertNil(MapHomeCounterTimelinePolicy.cutoff(dayStart: dayStart, minute: 90, isRunning: false))
-        XCTAssertNil(MapHomeCounterTimelinePolicy.cutoff(dayStart: dayStart, minute: nil, isRunning: true))
-        XCTAssertNil(MapHomeCounterTimelinePolicy.cutoff(dayStart: dayStart, minute: 0, isRunning: true))
-        XCTAssertNil(MapHomeCounterTimelinePolicy.cutoff(dayStart: dayStart, minute: .nan, isRunning: true))
+    func testCutoffFollowsGivenMinute() {
+        XCTAssertNil(MapHomeCounterTimelinePolicy.cutoff(dayStart: dayStart, minute: nil))
+        XCTAssertNil(MapHomeCounterTimelinePolicy.cutoff(dayStart: dayStart, minute: .nan))
         XCTAssertEqual(
-            MapHomeCounterTimelinePolicy.cutoff(dayStart: dayStart, minute: 90, isRunning: true),
+            MapHomeCounterTimelinePolicy.cutoff(dayStart: dayStart, minute: 90),
             dayStart.addingTimeInterval(90 * 60)
         )
     }
 
     func testCutoffStopsAtEndOfDay() {
         XCTAssertEqual(
-            MapHomeCounterTimelinePolicy.cutoff(dayStart: dayStart, minute: 2_000, isRunning: true),
+            MapHomeCounterTimelinePolicy.cutoff(dayStart: dayStart, minute: 2_000),
             dayStart.addingTimeInterval(24 * 60 * 60)
         )
     }
@@ -179,5 +177,62 @@ final class MapHomeCounterTimelinePolicyTests: XCTestCase {
         }
         XCTAssertEqual(workSeconds(at: start.addingTimeInterval(600)), 600, accuracy: 1)
         XCTAssertEqual(workSeconds(at: start.addingTimeInterval(1_200)), 1_200, accuracy: 1)
+    }
+
+    /// 자정을 넘긴 구간은 이 날 몫만, 겹친 구간은 한 번만 센다. 핸들 시각을 움직이면 거리도 따라 바뀐다.
+    func testTravelMetersClipsToDayAndCountsOverlapOnce() {
+        let dayStart = Date(timeIntervalSince1970: 1_800_000_000)
+        let day = TimeSpan(start: dayStart, end: dayStart.addingTimeInterval(86_400))
+        func segment(_ from: Double, _ to: Double, meters: Double) -> TravelSegment {
+            TravelSegment(
+                mode: .car, span: TimeSpan(start: dayStart.addingTimeInterval(from * 60), end: dayStart.addingTimeInterval(to * 60)),
+                distanceMeters: meters, confidence: .high, evidence: []
+            )
+        }
+        // 전날 23:30~오늘 00:30, 1,000m 중 오늘 몫은 500m.
+        XCTAssertEqual(MapHomeCounterTimelinePolicy.travelMeters(segments: [segment(-30, 30, meters: 1_000)], cutoff: nil, day: day), 500, accuracy: 0.5)
+        // 똑같은 구간이 두 번 저장돼도 한 번만 센다.
+        let twice = [segment(60, 120, meters: 1_000), segment(60, 120, meters: 1_000)]
+        XCTAssertEqual(MapHomeCounterTimelinePolicy.travelMeters(segments: twice, cutoff: nil, day: day), 1_000, accuracy: 0.5)
+        // 핸들이 첫 구간 절반에 있으면 그만큼만, 시작 전이면 0.
+        XCTAssertEqual(MapHomeCounterTimelinePolicy.travelMeters(segments: [segment(60, 120, meters: 1_000)], cutoff: dayStart.addingTimeInterval(90 * 60), day: day), 500, accuracy: 0.5)
+        XCTAssertEqual(MapHomeCounterTimelinePolicy.travelMeters(segments: [segment(60, 120, meters: 1_000)], cutoff: dayStart, day: day), 0)
+        XCTAssertEqual(MapHomeCounterTimelinePolicy.cutoff(dayStart: dayStart, minute: 0), dayStart)
+        XCTAssertNil(MapHomeCounterTimelinePolicy.cutoff(dayStart: dayStart, minute: nil))
+    }
+
+    /// 회사 반경 안 식당에 머물면 식당이 우선이고, 식사 시간은 자동 업무에서 빠진다(MEA1102A01).
+    func testSmallerRadiusPlaceWinsAndMealIsCarvedFromWork() {
+        func geo(_ latitude: Double) -> GeoPoint {
+            GeoPoint(latitude: latitude, longitude: 127, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: 10)
+        }
+        var company = FrequentPlace(kind: .company)
+        company.point = geo(37.5)
+        company.radiusMeters = 300
+        var restaurant = FrequentPlace(kind: .restaurant)
+        restaurant.point = geo(37.5015)
+        restaurant.radiusMeters = 50
+        let engine = FrequentPlaceResolutionEngine()
+        // 식당 자리: 회사 반경 안(약 167m)이어도 식당.
+        XCTAssertEqual(engine.nearestMatch(to: geo(37.5015), candidates: [company, restaurant])?.kind, .restaurant)
+        // 회사 자리: 식당 반경 밖이면 회사.
+        XCTAssertEqual(engine.nearestMatch(to: geo(37.5), candidates: [company, restaurant])?.kind, .company)
+
+        let nine = dayStart.addingTimeInterval(9 * 3_600)
+        func hours(_ value: Double) -> Date { nine.addingTimeInterval(value * 3_600) }
+        let work = ActualRecord(planID: nil, title: "근무", categoryID: "work", startedAt: nine, endedAt: hours(8), source: .location, modelVersion: "classifier-v1/context")
+        let meal = ActualRecord(planID: nil, title: "식사", categoryID: "eating", startedAt: hours(3), endedAt: hours(4), source: .location, modelVersion: RestaurantMealActualEngine.modelVersion)
+        let carved = RestaurantMealActualEngine.carvingMeals(from: [work, meal], asOf: hours(9))
+        let pieces = carved.filter { $0.categoryID == "work" }.sorted { $0.startedAt < $1.startedAt }
+        XCTAssertEqual(pieces.map(\.startedAt), [nine, hours(4)])
+        XCTAssertEqual(pieces.map(\.endedAt), [hours(3), hours(8)])
+        XCTAssertEqual(pieces.first?.id, work.id)
+        XCTAssertEqual(Set(carved.map(\.id)).count, carved.count)
+        // 다시 돌려도 같다.
+        XCTAssertEqual(RestaurantMealActualEngine.carvingMeals(from: carved, asOf: hours(9)), carved)
+        // 사용자가 고친 업무는 그대로 둔다.
+        var manual = work
+        manual.manuallyCorrected = true
+        XCTAssertEqual(RestaurantMealActualEngine.carvingMeals(from: [manual, meal], asOf: hours(9)).filter { $0.categoryID == "work" }.count, 1)
     }
 }

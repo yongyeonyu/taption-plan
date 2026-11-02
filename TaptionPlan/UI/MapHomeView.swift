@@ -3391,7 +3391,9 @@ struct MapHomeView: View {
         case .salary:
             let live = salaryLive
             let workSeconds: TimeInterval
-            if calendar.isDateInToday(model.selectedDate), let live {
+            if let minute = counterCutoffMinute {
+                workSeconds = MapHomeSalaryPolicy.workSeconds(in: salaryWorkSpans[dayStart] ?? [], until: dayStart + minute * 60)
+            } else if calendar.isDateInToday(model.selectedDate), let live {
                 workSeconds = MapHomeSalaryPolicy.liveWorkSeconds(
                     base: live.todayWorkSeconds, baseDate: live.measuredAt, isWorking: live.isWorking, now: now, tick: 1
                 )
@@ -3408,7 +3410,7 @@ struct MapHomeView: View {
                 language: language
             )
         case .allowance:
-            return MapHomeAllowancePolicy.detail(day: dayStart, playbackMinute: isDayPlaybackRunning ? dayPlaybackCurrentMinute : nil, now: now, language: language)
+            return MapHomeAllowancePolicy.detail(day: dayStart, playbackMinute: counterCutoffMinute, now: now, language: language)
         case .kind(let kind):
             let total = badges.first(where: { $0.kind == kind })?.text ?? "–"
             switch kind {
@@ -3418,10 +3420,12 @@ struct MapHomeView: View {
                 )
             case .distance:
                 return MapHomeCounterDetailBuilder.distance(
-                    segments: displayDayDataSnapshot?.travel ?? [], total: total, language: language
+                    segments: MapHomeCounterTimelinePolicy.visibleSegments(
+                        displayDayDataSnapshot?.travel ?? [], cutoff: counterCutoffDate, day: selectedDaySpan
+                    ), total: total, language: language
                 )
             case .work, .study, .hobby, .exercise:
-                let seconds = kind.categoryID.flatMap { daySummaryCategorySeconds(asOf: nil, now: now)[$0] } ?? 0
+                let seconds = kind.categoryID.flatMap { daySummaryCategorySeconds(asOf: counterCutoffDate, now: now)[$0] } ?? 0
                 return MapHomeCounterDetailBuilder.time(
                     kind: kind,
                     actuals: displayDayDataSnapshot?.actuals ?? [],
@@ -5628,7 +5632,7 @@ struct MapHomeView: View {
             let tick = TimeInterval(max(1, salaryTickSeconds))
             let calendar = MapHomeGrowthPolicy.localCalendar
             let day = calendar.startOfDay(for: model.selectedDate)
-            if isDayPlaybackRunning, let minute = dayPlaybackCurrentMinute {
+            if let minute = counterCutoffMinute {
                 let seconds = MapHomeSalaryPolicy.workSeconds(in: salaryWorkSpans[day] ?? [], until: day + minute * 60)
                 counterTable(now: now, salarySeconds: MapHomeSalaryPolicy.quantized(seconds, tick: tick), isWorking: false)
             } else if calendar.isDateInToday(model.selectedDate) {
@@ -5658,7 +5662,7 @@ struct MapHomeView: View {
             salaryLive.map { MapHomeCounterSalary.earned(seconds: seconds, hourlyRate: $0.hourlyRate, isWorking: isWorking, language: language) }
         }
         let allowance = !showsSalaryCounter ? nil : MapHomeAllowancePolicy.counterLine(
-            day: model.selectedDate, playbackMinute: isDayPlaybackRunning ? dayPlaybackCurrentMinute : nil,
+            day: model.selectedDate, playbackMinute: counterCutoffMinute,
             now: now, tick: TimeInterval(max(1, salaryTickSeconds)), language: language
         )
         let badges = mapCounterBadges(asOf: now)
@@ -5689,7 +5693,8 @@ struct MapHomeView: View {
             revision: model.dayProjectionRevision,
             day: model.selectedDate,
             kinds: enabledCounterKinds,
-            english: language == .english
+            english: language == .english,
+            handleMinute: isDayPlaybackRunning ? nil : selectedTimelineMinute
         )
         return counterBadgeThrottle.badges(
             key: key,
@@ -5707,33 +5712,41 @@ struct MapHomeView: View {
         ) { daySummaryCategorySeconds(asOf: $0, now: now) }
         let steps = MapHomeCounterTimelinePolicy.stepCount(readings: currentDayReadings, cutoff: cutoff)
         let meters = MapHomeCounterTimelinePolicy.travelMeters(
-            segments: displayDayDataSnapshot?.travel ?? [], cutoff: cutoff)
+            segments: displayDayDataSnapshot?.travel ?? [], cutoff: cutoff, day: selectedDaySpan)
         return enabledCounterKinds.compactMap { kind in
-            counterText(kind, seconds: seconds, steps: steps, meters: meters)
+            counterText(kind, seconds: seconds, steps: steps, meters: meters, showsZero: cutoff != nil)
                 .map { MapHomeCounterBadge(kind: kind, text: $0) }
         }
     }
 
-    /// 재생 중이면 지금 재생 시각, 멈춰 있으면 nil(하루 전체 합계).
+    /// 재생 중이면 재생 시각, 아니면 사이드바 핸들 시각. 핸들을 놓아 둔 게 없으면 nil(하루 전체 합계).
+    private var counterCutoffMinute: Double? {
+        isDayPlaybackRunning ? dayPlaybackCurrentMinute : selectedTimelineMinute.map(Double.init)
+    }
+
     private var counterCutoffDate: Date? {
         MapHomeCounterTimelinePolicy.cutoff(
             dayStart: MapHomeGrowthPolicy.localCalendar.startOfDay(for: model.selectedDate),
-            minute: dayPlaybackCurrentMinute, isRunning: isDayPlaybackRunning
+            minute: counterCutoffMinute
         )
     }
+
+    private var selectedDaySpan: TimeSpan { MapHomeCounterTimelinePolicy.daySpan(of: model.selectedDate) }
 
     private func counterText(
         _ kind: MapHomeCounterKind,
         seconds categorySeconds: [String: TimeInterval],
         steps: Int?,
-        meters: Double
+        meters: Double,
+        showsZero: Bool
     ) -> String? {
+        // 핸들·재생 시각을 움직이는 동안 0이라고 줄을 없애면 창이 들썩인다.
         switch kind {
         case .steps:
-            guard let steps, steps > 0 else { return nil }
-            return steps.formatted()
+            guard showsZero || (steps ?? 0) > 0 else { return nil }
+            return (steps ?? 0).formatted()
         case .distance:
-            guard meters > 0 else { return nil }
+            guard showsZero || meters > 0 else { return nil }
             return MapHomeDayTravelSummary.distanceText(meters)
         case .work, .study, .hobby, .exercise:
             // 켜 둔 시간 카운터는 위치와 상관없이 늘 보인다. 값이 없으면 0으로 보이고, 사라졌다 나타나지 않는다(대표 지시, ARC1030A07).
