@@ -145,16 +145,6 @@ actor PlanDayDatabase {
         try await store.appendRawEvents(try chunks.map(Self.watchAccelerationEvent))
     }
 
-    func validateWatchAccelerationChunks(
-        _ chunks: [TaptionWatchAccelerationChunk]
-    ) async throws {
-        guard !chunks.isEmpty else { return }
-        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
-        defer { lock.unlock() }
-        try checkDataGeneration()
-        try await store.validateRawEvents(try chunks.map(Self.watchAccelerationEvent))
-    }
-
     func watchAccelerationChunks(
         in span: TimeSpan
     ) async throws -> [TaptionWatchAccelerationChunk] {
@@ -193,27 +183,6 @@ actor PlanDayDatabase {
             }
             return $0.capturedAt < $1.capturedAt
         }
-    }
-
-    /// 워치 원본이 있는 날짜(앞뒤 하루 포함). 저장 당시 시간대가 달랐을 수 있어 이웃 날짜도 넣는다.
-    func backupDates(calendar: Calendar) async throws -> Set<Date> {
-        var result = Set<Date>()
-        for kind in [TaptionRawEvent.Kind.watchSummary, TaptionRawEvent.Kind.watchAcceleration] {
-            for range in try await store.rawEventDayRanges(kind: kind) {
-                var day = calendar.startOfDay(for: range.lowerBound)
-                let last = calendar.startOfDay(for: range.upperBound)
-                while day <= last {
-                    for offset in -1...1 {
-                        if let neighbor = calendar.date(byAdding: .day, value: offset, to: day) {
-                            result.insert(neighbor)
-                        }
-                    }
-                    guard let next = calendar.date(byAdding: .day, value: 1, to: day), next > day else { break }
-                    day = next
-                }
-            }
-        }
-        return result
     }
 
     // MARK: 보조
@@ -505,26 +474,6 @@ final class PlanDayLoadCoordinator {
             }
         }
         return result
-    }
-
-    func prefetchMonth(
-        containing date: Date,
-        source: TaptionDataSnapshot,
-        sourceRevision: UInt64,
-        sensorLoader: @escaping (Date) async -> SensorReadingsLoadResult,
-        progress: ((Double) -> Void)? = nil
-    ) {
-        prefetchTask?.cancel()
-        prefetchTask = Task { @MainActor [weak self, source] in
-            guard let self else { return }
-            await self.preloadMonth(
-                containing: date,
-                source: source,
-                sourceRevision: sourceRevision,
-                sensorLoader: sensorLoader,
-                progress: progress
-            )
-        }
     }
 
     func preloadMonth(

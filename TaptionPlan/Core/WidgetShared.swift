@@ -123,11 +123,6 @@ enum TaptionLiveActivityStickmanStyle {
         green: 100.0 / 255.0,
         blue: 70.0 / 255.0
     )
-    static let headFill = Color(
-        red: 183.0 / 255.0,
-        green: 177.0 / 255.0,
-        blue: 168.0 / 255.0
-    )
 }
 
 enum TaptionLiveActivityStickmanAction: String, CaseIterable, Codable, Hashable, Sendable {
@@ -211,29 +206,6 @@ enum TaptionLiveActivityStickmanAction: String, CaseIterable, Codable, Hashable,
         if has(["활동", "activity"]) { return .activity }
         if has(["이동", "movement"]) { return .movement }
         return .activity
-    }
-
-    var accessibilityTitle: String {
-        switch self {
-        case .activity: "활동"
-        case .computer: "컴퓨터 사용"
-        case .reading: "책 읽기"
-        case .hobby: "취미"
-        case .sleeping: "수면"
-        case .movement: "이동"
-        case .eating: "식사"
-        case .exercise: "운동"
-        case .unconfirmed: "미확인"
-        case .walking: "걷기"
-        case .running: "달리기"
-        case .car: "자동차 탑승"
-        case .subway: "지하철 탑승"
-        case .privateVehicle: "자가용"
-        case .bus: "버스 탑승"
-        case .ship: "배"
-        case .airplane: "비행기"
-        case .cycling: "자전거"
-        }
     }
 
     /// 지금 활동의 대분류 이름. 다이나믹 아일랜드·잠금화면·워치가 같은 값을 쓴다.
@@ -1687,21 +1659,6 @@ enum SensorCollectionMeterModel {
             / Double(SensorCollectionActivityPolicy.sensorMeterWidth)
     }
 
-    static func aggregateLevel(
-        state: SensorCollectionActivityAttributes.ContentState
-    ) -> Double {
-        let kinds = state.collectionKinds.isEmpty
-            ? orderedKinds
-            : SensorCollectionActivityPolicy.uniqueSensorKinds(
-                state.collectionKinds
-            )
-        guard !kinds.isEmpty else { return 0 }
-        let total = kinds.reduce(0.0) { partialResult, kind in
-            partialResult + level(mask: state.sensorMeterMasks?[kind])
-        }
-        return total / Double(kinds.count)
-    }
-
     static func label(for kind: String) -> String {
         switch kind {
         case "location": return "GPS"
@@ -2957,10 +2914,6 @@ enum TaptionWidgetSharedStore {
         FileManager.default.containerURL(
             forSecurityApplicationGroupIdentifier: appGroupIdentifier
         )
-    }
-
-    static func fileURLForDiagnostics(_ name: String) -> URL {
-        fileURL(name)
     }
 
     private static func fileURL(_ name: String) -> URL {

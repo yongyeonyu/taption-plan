@@ -3861,13 +3861,6 @@ extension MapDisplayStyle {
         }
     }
 
-    static func styles(for provider: MapDisplayProvider) -> [Self] {
-        switch provider {
-        case .apple: appleStyles
-        case .openFreeMap: openFreeMapStyles
-        }
-    }
-
     static func defaultStyle(for provider: MapDisplayProvider) -> Self {
         switch provider {
         case .apple: .standard

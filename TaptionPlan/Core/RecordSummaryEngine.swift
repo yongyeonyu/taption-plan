@@ -318,17 +318,6 @@ enum RecordAnalysisCategoryPolicy {
         }
     }
 
-    static func canonicalized(
-        _ actuals: [ActualRecord]
-    ) -> [ActualRecord] {
-        actuals.map { actual in
-            var value = actual
-            value.categoryID = categoryID(for: actual)
-            value.title = detailTitle(for: actual)
-            return value
-        }
-    }
-
     private static func normalized(_ value: String) -> String {
         value
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -2056,22 +2045,6 @@ enum DayPhase: String, CaseIterable, Sendable {
         case "hobby": .hobby
         case "unconfirmed": .unconfirmed
         default: .activity
-        }
-    }
-
-    /// 집 반대편에 등록해 둔 곳이 오가는 길의 이름을 정한다. 취미·운동은
-    /// 오가는 일이 아니라 그 자체가 하루의 한 대목이라 출퇴근 같은 말 대신
-    /// 시작·종료로 적는다. 집이나 이름 없는 곳은 여기서 아무 말도 만들지
-    /// 않고, 부르는 말을 정지 문맥에 넘긴다.
-    static func roundTrip(
-        to kind: FrequentPlaceKind
-    ) -> (there: DayPhase, back: DayPhase)? {
-        switch kind {
-        case .company: (.commuteToWork, .commuteHomeFromWork)
-        case .school: (.commuteToSchool, .commuteHomeFromSchool)
-        case .academy: (.commuteToAcademy, .commuteHomeFromAcademy)
-        case .hobby, .exercise: (.activityDeparture, .activityReturn)
-        case .home, .restaurant, .custom: nil
         }
     }
 

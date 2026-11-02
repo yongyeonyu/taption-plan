@@ -160,14 +160,6 @@ public struct HealthKitSyncOverview: Codable, Hashable, Sendable {
         states.reduce(0) { $0 + $1.sampleCount }
     }
 
-    public var totalAddedCount: Int {
-        states.reduce(0) { $0 + $1.addedCount }
-    }
-
-    public var totalUpdatedCount: Int {
-        states.reduce(0) { $0 + $1.updatedCount }
-    }
-
     public var totalDeletedCount: Int {
         states.reduce(0) { $0 + $1.deletedCount }
     }
@@ -196,7 +188,6 @@ public struct HealthKitSyncOverview: Codable, Hashable, Sendable {
 /// 샘플은 가져온 값(`imported`)이며, 본문 JSON에 출처 앱·기기 정보가 그대로 남는다.
 public actor HealthKitImportStore {
     public static let eventDomain = "healthkit-sample"
-    public static let applicationGroupIdentifier = TaptionPlanSharedContainer.appGroupIdentifier
 
     private static let stateKind = "healthkit-sync-state"
     private static let maximumRecordDurationMetadataKey =

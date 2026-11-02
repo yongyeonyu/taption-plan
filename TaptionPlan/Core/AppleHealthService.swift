@@ -217,22 +217,6 @@ final class AppleHealthService: @unchecked Sendable {
         return completed
     }
 
-    func startWatchWorkout(kind: TrackingKind) async throws -> Bool {
-        guard HKHealthStore.isHealthDataAvailable() else { return false }
-        let configuration = HKWorkoutConfiguration()
-        configuration.activityType = kind == .running ? .running : .walking
-        configuration.locationType = .outdoor
-        return try await withCheckedThrowingContinuation { continuation in
-            store.startWatchApp(with: configuration) { success, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                } else {
-                    continuation.resume(returning: success)
-                }
-            }
-        }
-    }
-
     func startObservingChanges(
         onUpdate: @escaping @Sendable () async -> Void
     ) {
@@ -403,10 +387,6 @@ final class AppleHealthService: @unchecked Sendable {
         )
     }
 
-    func importOverview() async throws -> HealthKitSyncOverview {
-        try await importCoordinator.overview()
-    }
-
     func deleteImportedData(generation: UInt64? = nil) async throws {
         try await importCoordinator.deleteAll(generation: generation)
         clearPendingObservedChanges()
@@ -450,12 +430,6 @@ final class AppleHealthService: @unchecked Sendable {
             from: try await sleepSegments(in: span),
             inside: span
         )
-    }
-
-    func healthDetails(in span: TimeSpan) async throws -> [HealthActual] {
-        async let workouts = workoutDetails(in: span)
-        async let sleeps = sleepDetails(in: span)
-        return try await workouts + sleeps
     }
 
     func movementEvidence(
@@ -506,35 +480,6 @@ final class AppleHealthService: @unchecked Sendable {
                 confidence: .high,
                 evidence: evidence,
                 modelVersion: "healthkit-sleep-v1"
-            )
-        }
-    }
-
-    private func mindfulSessionActuals(
-        in span: TimeSpan
-    ) async throws -> [ActualRecord] {
-        guard let type = HKObjectType.categoryType(
-            forIdentifier: .mindfulSession
-        ) else {
-            return []
-        }
-        let values = try await samples(type: type, span: span)
-        return values.compactMap { sample in
-            guard let overlap = TimeSpan(
-                start: sample.startDate,
-                end: sample.endDate
-            ).intersection(with: span) else {
-                return nil
-            }
-            return ActualRecord(
-                id: sample.uuid,
-                planID: nil,
-                title: "마음챙김",
-                categoryID: "health",
-                startedAt: overlap.start,
-                endedAt: overlap.end,
-                source: .healthKit,
-                confidence: .high
             )
         }
     }

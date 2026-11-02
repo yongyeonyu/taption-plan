@@ -923,12 +923,6 @@ final class AppleSensorDataService {
         try await archivedReadingsLoader(span)
     }
 
-    func archivedReadingsLoadResult(
-        in span: TimeSpan
-    ) async throws -> (readings: [SensorReading], isComplete: Bool) {
-        try await archive.readingsLoadResult(in: span)
-    }
-
     func archivedRouteReadings(
         in span: TimeSpan
     ) async throws -> [SensorReading] {
@@ -939,10 +933,6 @@ final class AppleSensorDataService {
         in span: TimeSpan
     ) async throws -> (readings: [SensorReading], isComplete: Bool) {
         try await archive.routeReadingsLoadResult(in: span)
-    }
-
-    func allArchivedRouteReadings() async throws -> [SensorReading] {
-        try await archive.allReadingsForMigration()
     }
 
     func archivedReadings(
@@ -990,11 +980,6 @@ final class AppleSensorDataService {
         if !inserted.isEmpty {
             onReadingsPersisted?(inserted)
         }
-    }
-
-    func validateExternalReadings(_ readings: [SensorReading]) async throws {
-        guard !isDataDeletionActive else { throw CancellationError() }
-        try await archive.validateAppend(readings)
     }
 
     func motionActivities(

@@ -92,7 +92,6 @@ public enum HealthKitTypeCatalog {
     public static let quantities = all.filter { $0.queryKind == .quantity }
     public static let categories = all.filter { $0.queryKind == .category }
     public static let characteristics = all.filter { $0.queryKind == .characteristic }
-    public static let correlations = all.filter { $0.queryKind == .correlation }
     public static let documents = all.filter { $0.queryKind == .document }
     public static let clinicalRecords = all.filter { $0.queryKind == .clinical }
     public static let observableDescriptors = all.filter { $0.queryKind.isObservableSample }
@@ -171,12 +170,6 @@ public enum HealthKitTypeCatalog {
         }
     }
 
-    public static func readObjectTypes(
-        on version: OperatingSystemVersion = ProcessInfo.processInfo.operatingSystemVersion
-    ) -> [HKObjectType] {
-        all.filter { isAvailable($0, on: version) }.compactMap(readObjectType(for:))
-    }
-
     /// The standard authorization sheet rejects correlation types and vision
     /// prescriptions, which use component-type and per-object authorization.
     public static func standardAuthorizationObjectTypes(
@@ -192,14 +185,6 @@ public enum HealthKitTypeCatalog {
     public static func observableSampleType(for descriptor: HealthKitTypeDescriptor) -> HKSampleType? {
         guard descriptor.queryKind.isObservableSample else { return nil }
         return readObjectType(for: descriptor) as? HKSampleType
-    }
-
-    public static func observableSampleTypes(
-        on version: OperatingSystemVersion = ProcessInfo.processInfo.operatingSystemVersion
-    ) -> [HKSampleType] {
-        observableDescriptors
-            .filter { isAvailable($0, on: version) }
-            .compactMap(observableSampleType(for:))
     }
 
     private static func make(_ raw: Raw, kind: HealthKitQueryKind) -> HealthKitTypeDescriptor {

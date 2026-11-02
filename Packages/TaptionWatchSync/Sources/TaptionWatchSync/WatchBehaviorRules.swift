@@ -372,33 +372,6 @@ public struct WatchBehaviorWindowFeatures: Codable, Hashable, Sendable {
     }
 }
 
-/// A labelled window for personal calibration or Create ML training.
-/// Classifier guesses are never written back as labels.
-public struct WatchBehaviorTrainingSample: Codable, Hashable, Sendable {
-    public var id: UUID
-    public var capturedAt: Date
-    public var features: WatchBehaviorWindowFeatures
-    public var label: WatchBehaviorKind
-    public var source: String
-    public var labelConfidence: Double
-
-    public init(
-        id: UUID = UUID(),
-        capturedAt: Date,
-        features: WatchBehaviorWindowFeatures,
-        label: WatchBehaviorKind,
-        source: String,
-        labelConfidence: Double = 1
-    ) {
-        self.id = id
-        self.capturedAt = capturedAt
-        self.features = features
-        self.label = label
-        self.source = source
-        self.labelConfidence = min(1, max(0, labelConfidence))
-    }
-}
-
 public struct WatchBehaviorSegment: Identifiable, Codable, Hashable, Sendable {
     public var id: UUID
     public var startedAt: Date

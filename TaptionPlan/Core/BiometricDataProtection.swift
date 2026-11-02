@@ -256,13 +256,6 @@ final class BiometricProtectedSnapshotStore {
         }
     }
 
-    private let archiveEncoder: JSONEncoder = {
-        let value = JSONEncoder()
-        value.outputFormatting = [.sortedKeys]
-        value.dateEncodingStrategy = .secondsSince1970
-        return value
-    }()
-
     private let archiveDecoder: JSONDecoder = {
         let value = JSONDecoder()
         value.dateDecodingStrategy = .secondsSince1970

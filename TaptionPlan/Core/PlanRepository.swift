@@ -174,20 +174,6 @@ enum TaptionDataDeletionFence {
     private static let repositoryDeletionPendingKey =
         "TaptionPlan.repositoryDeletionPending"
 
-    static func beginRepositoryDeletion() {
-        defaults.set(true, forKey: repositoryDeletionPendingKey)
-        defaults.synchronize()
-    }
-
-    static func finishRepositoryDeletion() {
-        defaults.removeObject(forKey: repositoryDeletionPendingKey)
-        defaults.synchronize()
-    }
-
-    static func repositoryDeletionIsPending() -> Bool {
-        defaults.bool(forKey: repositoryDeletionPendingKey)
-    }
-
     static func cutoff() -> Date? {
         defaults.object(forKey: cutoffKey) as? Date
     }
@@ -301,9 +287,6 @@ enum TaptionSnapshotCompression {
     private static let headerSize = magic.count + 8
     private static let minimumSize = 4 * 1024
     static let maximumUncompressedSize = 64 * 1_024 * 1_024
-    // ponytail: one monthly raw JSON caps at 256 MiB; split by retention unit
-    // when growth requires it.
-    static let maximumRawSensorUncompressedSize = 256 * 1_024 * 1_024
 
     static func encode(
         _ json: Data,

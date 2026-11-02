@@ -28,8 +28,6 @@ struct NLEClip: Identifiable, Hashable, Sendable {
             || option.behavior != origin.option.behavior
     }
 
-    var spanMinutes: Range<Int> { startMinute..<max(startMinute, endMinute) }
-
     func contains(minute: Int) -> Bool {
         startMinute <= minute && minute < endMinute
     }

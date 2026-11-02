@@ -435,15 +435,6 @@ final class TimelineSelectionIndexCache {
         )
     }
 
-    func automaticActual(containing date: Date) -> ActualRecord? {
-        nearestContaining(
-            date,
-            in: automaticActuals,
-            prefixMaximumEnds: automaticActualMaxEnds,
-            span: { $0.span() }
-        )
-    }
-
     func categoryName(for categoryID: String) -> String? {
         categoryNames[categoryID]
     }

@@ -589,11 +589,6 @@ struct GPSLoggingPreferences: Codable, Hashable, Sendable {
         max(1, Int(ceil(Double(intervalSeconds) / 60)))
     }
 
-    @available(*, deprecated, message: "Use effectiveIntervalSeconds")
-    var effectiveIntervalMinutes: Int {
-        max(1, Int(ceil(Double(effectiveIntervalSeconds) / 60)))
-    }
-
     private enum CodingKeys: String, CodingKey {
         case isBatteryMinimal
         case intervalSeconds
@@ -672,10 +667,6 @@ struct GPSLoggingPreferences: Codable, Hashable, Sendable {
         )
     }
 
-    @available(*, deprecated, message: "Use clampedSeconds")
-    static func clampedMinutes(_ value: Int) -> Int {
-        max(1, Int(ceil(Double(clampedSeconds(value * 60)) / 60)))
-    }
 }
 
 /// SSIDs used by the carrier-operated subway Wi-Fi networks.  This is an
