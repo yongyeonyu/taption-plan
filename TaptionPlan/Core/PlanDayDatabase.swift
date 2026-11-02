@@ -476,48 +476,6 @@ final class PlanDayLoadCoordinator {
         return result
     }
 
-    func preloadMonth(
-        containing date: Date,
-        source: TaptionDataSnapshot,
-        sourceRevision: UInt64,
-        sensorLoader: @escaping (Date) async -> SensorReadingsLoadResult,
-        progress: ((Double) -> Void)? = nil
-    ) async {
-        let calendar = Calendar.autoupdatingCurrent
-        let monthStart = calendar.date(
-            from: calendar.dateComponents([.year, .month], from: date)
-        ) ?? calendar.startOfDay(for: date)
-        let count = calendar.range(of: .day, in: .month, for: monthStart)?.count ?? 0
-        let days = (0..<count).compactMap {
-            calendar.date(byAdding: .day, value: $0, to: monthStart)
-        }
-        progress?(0)
-        for (index, day) in days.enumerated() {
-            guard !Task.isCancelled else { return }
-            let sourceFingerprint = await Self.sourceFingerprint(
-                date: day,
-                source: source
-            )
-            guard !Task.isCancelled else { return }
-            let key = CacheKey(
-                day: TaptionPlanDayKey(date: day),
-                sourceFingerprint: sourceFingerprint
-                    ?? "revision:\(sourceRevision)",
-                projectionVersion: TaptionPlanV3Store.projectionVersion
-            )
-            if cache.peek(key) == nil {
-                _ = await load(
-                    day: day,
-                    source: source,
-                    sourceRevision: sourceRevision,
-                    sensorLoader: sensorLoader
-                )
-            }
-            progress?(Double(index + 1) / Double(max(1, days.count)))
-            guard !Task.isCancelled else { return }
-        }
-    }
-
 
     func invalidate(day: Date) {
         let dayKey = TaptionPlanDayKey(date: day)

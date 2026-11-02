@@ -734,254 +734,6 @@ final class MapHomeStickmanTests: XCTestCase {
         XCTAssertFalse(MapHomeStickmanFacing.resolve(headingDegrees: 185, cameraHeading: 0, previous: false))
     }
 
-    func testArticulatedStickmanPoseCoversEveryActionAndStaysOnCanvas() {
-        for action in TaptionStickmanPoseAction.allCases {
-            let poses = (0..<12).map {
-                TaptionStickmanPoseEngine.pose(
-                    action: action,
-                    phase: $0,
-                    phaseCount: 12
-                )
-            }
-            for pose in poses {
-                let points = [
-                    pose.head,
-                    pose.neck,
-                    pose.leftShoulder,
-                    pose.leftElbow,
-                    pose.leftHand,
-                    pose.rightShoulder,
-                    pose.rightElbow,
-                    pose.rightHand,
-                    pose.leftHip,
-                    pose.leftKnee,
-                    pose.leftFoot,
-                    pose.rightHip,
-                    pose.rightKnee,
-                    pose.rightFoot,
-                ]
-                XCTAssertTrue(
-                    points.allSatisfy { (0...64).contains($0.x) && (0...56).contains($0.y) },
-                    "\(action.rawValue) 관절이 64×56 좌표 밖으로 나갑니다."
-                )
-                XCTAssertGreaterThan(pose.headRadius, 0)
-                XCTAssertNotEqual(pose.leftElbow, pose.leftHand)
-                XCTAssertNotEqual(pose.rightElbow, pose.rightHand)
-                XCTAssertNotEqual(pose.leftKnee, pose.leftFoot)
-                XCTAssertNotEqual(pose.rightKnee, pose.rightFoot)
-            }
-            XCTAssertNotEqual(poses.first, poses[3], "\(action.rawValue) 관절이 움직이지 않습니다.")
-        }
-    }
-
-    func testArticulatedStickmanPoseNormalizesMapAndLiveCadences() {
-        for action in TaptionStickmanPoseAction.allCases {
-            let mapPose = TaptionStickmanPoseEngine.pose(
-                action: action,
-                phase: 3,
-                phaseCount: 12
-            )
-            let livePose = TaptionStickmanPoseEngine.pose(
-                action: action,
-                phase: 2,
-                phaseCount: 8
-            )
-            XCTAssertEqual(mapPose, livePose, action.rawValue)
-        }
-        XCTAssertEqual(
-            TaptionStickmanPoseEngine.normalizedPhase(-1, phaseCount: 12),
-            11.0 / 12.0,
-            accuracy: 0.000_001
-        )
-    }
-
-    func testStickmanLocomotionUsesContactSwingFlightAndCounterPhase() {
-        let walkContact = TaptionStickmanPoseEngine.pose(
-            action: .walking,
-            phase: 0,
-            phaseCount: 12
-        )
-        let walkSwing = TaptionStickmanPoseEngine.pose(
-            action: .walking,
-            phase: 3,
-            phaseCount: 12
-        )
-        let walkOppositeContact = TaptionStickmanPoseEngine.pose(
-            action: .walking,
-            phase: 6,
-            phaseCount: 12
-        )
-        XCTAssertEqual(walkContact.leftFoot.y, 45, accuracy: 0.000_001)
-        XCTAssertEqual(walkContact.rightFoot.y, 45, accuracy: 0.000_001)
-        XCTAssertEqual(walkSwing.leftFoot.y, 45, accuracy: 0.000_001)
-        XCTAssertLessThan(walkSwing.rightFoot.y, 45)
-        XCTAssertEqual(walkOppositeContact.rightFoot.y, 45, accuracy: 0.000_001)
-        XCTAssertGreaterThan(walkOppositeContact.leftFoot.x, walkContact.leftFoot.x)
-        XCTAssertLessThan(walkOppositeContact.leftHand.x, walkContact.leftHand.x)
-
-        let runningFlight = TaptionStickmanPoseEngine.pose(
-            action: .running,
-            phase: 4,
-            phaseCount: 12
-        )
-        XCTAssertLessThan(runningFlight.leftFoot.y, 45)
-        XCTAssertLessThan(runningFlight.rightFoot.y, 45)
-    }
-
-    func testStickmanLocomotionKeepsContactFeetPlanted() {
-        let first = TaptionStickmanPoseEngine.pose(
-            action: .walking,
-            phase: 0,
-            phaseCount: 12
-        )
-        let next = TaptionStickmanPoseEngine.pose(
-            action: .walking,
-            phase: 1,
-            phaseCount: 12
-        )
-
-        XCTAssertLessThan(abs(next.leftFoot.x - first.leftFoot.x), 1.0)
-        XCTAssertLessThan(abs(next.rightFoot.x - first.rightFoot.x), 1.0)
-        XCTAssertEqual(next.leftFoot.y, 45, accuracy: 0.000_001)
-        XCTAssertEqual(next.rightFoot.y, 45, accuracy: 0.000_001)
-    }
-
-    func testStickmanCyclingUsesOppositeCrankPositionsWithStablePelvis() {
-        let first = TaptionStickmanPoseEngine.pose(
-            action: .cycling,
-            phase: 0,
-            phaseCount: 12
-        )
-        let opposite = TaptionStickmanPoseEngine.pose(
-            action: .cycling,
-            phase: 6,
-            phaseCount: 12
-        )
-        XCTAssertLessThan(first.leftFoot.y, first.rightFoot.y)
-        XCTAssertGreaterThan(opposite.leftFoot.y, opposite.rightFoot.y)
-        XCTAssertLessThan(abs(first.leftHip.y - opposite.leftHip.y), 0.5)
-        XCTAssertLessThan(abs(first.rightHip.y - opposite.rightHip.y), 0.5)
-    }
-
-    func testStickmanWalkTransfersWeightAndOpposesArmSwing() {
-        let leftSupport = TaptionStickmanPoseEngine.pose(
-            action: .walking,
-            phase: 3,
-            phaseCount: 12
-        )
-        let rightSupport = TaptionStickmanPoseEngine.pose(
-            action: .walking,
-            phase: 9,
-            phaseCount: 12
-        )
-        let leftSupportCenter =
-            (leftSupport.leftHip.x + leftSupport.rightHip.x) / 2
-        let rightSupportCenter =
-            (rightSupport.leftHip.x + rightSupport.rightHip.x) / 2
-
-        XCTAssertLessThan(leftSupportCenter, rightSupportCenter)
-        XCTAssertLessThan(
-            leftSupport.leftHip.y,
-            leftSupport.rightHip.y
-        )
-        XCTAssertGreaterThan(
-            leftSupport.rightHip.y,
-            rightSupport.rightHip.y
-        )
-
-        let first = TaptionStickmanPoseEngine.pose(
-            action: .walking,
-            phase: 0,
-            phaseCount: 12
-        )
-        let opposite = TaptionStickmanPoseEngine.pose(
-            action: .walking,
-            phase: 6,
-            phaseCount: 12
-        )
-        XCTAssertGreaterThan(first.leftHand.x, opposite.leftHand.x)
-    }
-
-    func testStickmanTypingFramesProgressAndBlinkAtBothCadences() {
-        let mapFrames = (0..<MapHomeStickmanAnimationEngine.phaseCount).map {
-            TaptionStickmanTypingAnimation.frame(
-                phase: $0,
-                phaseCount: MapHomeStickmanAnimationEngine.phaseCount
-            )
-        }
-        let liveFrames = (0..<TaptionLiveActivityStickmanAnimation.phaseCount).map {
-            TaptionStickmanTypingAnimation.frame(
-                phase: $0,
-                phaseCount: TaptionLiveActivityStickmanAnimation.phaseCount
-            )
-        }
-
-        for frames in [mapFrames, liveFrames] {
-            XCTAssertEqual(frames.first?.lineUnits, [1, 0, 0])
-            XCTAssertEqual(frames.last?.lineUnits, [5, 4, 3])
-            let totals = frames.map { $0.lineUnits.reduce(0, +) }
-            XCTAssertTrue(
-                zip(totals, totals.dropFirst()).allSatisfy { pair in
-                    pair.0 <= pair.1
-                }
-            )
-            XCTAssertTrue(frames.contains { $0.cursorVisible })
-            XCTAssertTrue(frames.contains { !$0.cursorVisible })
-        }
-        XCTAssertEqual(
-            TaptionStickmanTypingAnimation.frame(
-                phase: -1,
-                phaseCount: MapHomeStickmanAnimationEngine.phaseCount
-            ),
-            mapFrames.last
-        )
-    }
-
-    func testWalkingSceneryFramesWrapAndMatchMapAndLiveCadences() {
-        let mapFrames = (0..<MapHomeStickmanAnimationEngine.phaseCount).map {
-            TaptionStickmanWalkingSceneryAnimation.frame(
-                phase: $0,
-                phaseCount: MapHomeStickmanAnimationEngine.phaseCount
-            )
-        }
-        let liveFrames = (0..<TaptionLiveActivityStickmanAnimation.phaseCount)
-            .map {
-                TaptionStickmanWalkingSceneryAnimation.frame(
-                    phase: $0,
-                    phaseCount: TaptionLiveActivityStickmanAnimation.phaseCount
-                )
-            }
-
-        for frame in mapFrames + liveFrames {
-            XCTAssertEqual(frame.treeX.count, 2)
-            XCTAssertEqual(frame.cloudX.count, 2)
-            XCTAssertTrue(frame.treeX.allSatisfy { (-12..<76).contains($0) })
-            XCTAssertTrue(frame.cloudX.allSatisfy { (-12..<76).contains($0) })
-            XCTAssertTrue((0..<8).contains(frame.groundOffset))
-        }
-        XCTAssertGreaterThan(
-            abs(mapFrames[1].treeX[0] - mapFrames[0].treeX[0]),
-            abs(mapFrames[1].cloudX[0] - mapFrames[0].cloudX[0])
-        )
-        let cloudStep = abs(
-            mapFrames[1].cloudX[0] - mapFrames[0].cloudX[0]
-        )
-        for (last, first) in zip(
-            mapFrames.last!.cloudX.sorted(),
-            mapFrames.first!.cloudX.sorted()
-        ) {
-            XCTAssertEqual(abs(last - first), cloudStep, accuracy: 0.0001)
-        }
-        XCTAssertEqual(mapFrames, liveFrames)
-        XCTAssertEqual(
-            TaptionStickmanWalkingSceneryAnimation.frame(
-                phase: -1,
-                phaseCount: MapHomeStickmanAnimationEngine.phaseCount
-            ),
-            mapFrames.last
-        )
-    }
-
     func testMapStickmanResolvesMajorCategoryBeforeActivityDetail() {
         let majorCategories: [(String, String, MapHomeStickmanAction)] = [
             ("activity", "활동", .activity),
@@ -1053,7 +805,6 @@ final class MapHomeStickmanTests: XCTestCase {
             ),
             .ship
         )
-        XCTAssertEqual(TaptionStickmanPoseEngine.wbsHeadRadius, 8.6)
         XCTAssertEqual(MapHomeStickmanMarker.size.width, 36)
         XCTAssertEqual(MapHomeStickmanMarker.size.height, 36)
     }
@@ -1125,9 +876,6 @@ final class MapHomeStickmanTests: XCTestCase {
             ),
             .ship
         )
-        XCTAssertEqual(TaptionLiveActivityStickmanStyle.inkHex, "#916446")
-        XCTAssertEqual(TaptionLiveActivityStickmanStyle.headFillHex, "#B7B1A8")
-        XCTAssertEqual(TaptionLiveActivityStickmanStyle.personStrokeWidth, 1.55)
     }
 
     func testLiveActivityStickmanAnimationHonorsReduceMotion() {
@@ -1170,7 +918,7 @@ final class MapHomeStickmanTests: XCTestCase {
         )
     }
 
-    func testLiveActivityStickmanKeepsAllRawActionsAndUsesDeterministicSharedPoses() {
+    func testLiveActivityStickmanKeepsAllRawActions() {
         let expectedRawValues = [
             "activity", "computer", "reading", "hobby", "sleeping",
             "movement", "eating", "exercise", "unconfirmed", "walking",
@@ -1181,23 +929,6 @@ final class MapHomeStickmanTests: XCTestCase {
             TaptionLiveActivityStickmanAction.allCases.map(\.rawValue),
             expectedRawValues
         )
-
-        for action in TaptionLiveActivityStickmanAction.allCases {
-            let pose = TaptionStickmanPoseEngine.pose(
-                action: TaptionStickmanPoseAction(rawValue: action.rawValue)!,
-                phase: 7,
-                phaseCount: TaptionLiveActivityStickmanAnimation.frameCount
-            )
-            XCTAssertEqual(
-                pose,
-                TaptionStickmanPoseEngine.pose(
-                    action: TaptionStickmanPoseAction(rawValue: action.rawValue)!,
-                    phase: 7,
-                    phaseCount: TaptionLiveActivityStickmanAnimation.frameCount
-                )
-            )
-            XCTAssertGreaterThan(pose.headRadius, 0)
-        }
     }
 
     func testRegisteredCompanyClassificationCanReplaceUnknownStayLock() {

@@ -499,31 +499,6 @@ final class FeatureEngineTests: XCTestCase, UTCDateFixture {
         XCTAssertEqual(rollup.plannedDuration, month.span.duration)
     }
 
-    func testSummaryHierarchyProvidesExpectedLowerLevels() {
-        let date = makeDate(2026, 7, 15)
-        let engine = TimelineAggregationEngine(calendar: utcCalendar)
-
-        let week = engine.hierarchySummaries(
-            for: .week,
-            containing: date,
-            plans: [],
-            actuals: [],
-            photos: []
-        )
-        XCTAssertEqual(week[.day]?.count, 7)
-
-        let year = engine.hierarchySummaries(
-            for: .year,
-            containing: date,
-            plans: [],
-            actuals: [],
-            photos: []
-        )
-        XCTAssertEqual(year[.month]?.count, 12)
-        XCTAssertNotNil(year[.week])
-        XCTAssertNotNil(year[.day])
-    }
-
     func testTimeSliderUsesOneMinuteAndTenMinutePrecision() {
         let base = makeDate(2026, 7, 30, 9, 0)
         let span = TimeSpan(start: base, end: base.addingTimeInterval(hour))

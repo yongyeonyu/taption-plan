@@ -1193,38 +1193,6 @@ struct TimelineAggregationEngine: Sendable {
         )
     }
 
-    func hierarchySummaries(
-        for level: TimelineLevel,
-        containing date: Date,
-        plans: [PlanRecord],
-        actuals: [ActualRecord],
-        photos: [PhotoMoment],
-        asOf: Date = .now
-    ) -> [TimelineLevel: [SummaryBucket]] {
-        let childLevels: [TimelineLevel] = switch level {
-        case .day: []
-        case .week: [.day]
-        case .month: [.week, .day]
-        case .year: [.month, .week, .day]
-        }
-        let outer = interval(for: level, containing: date)
-        return Dictionary(
-            uniqueKeysWithValues: childLevels.map { childLevel in
-                (
-                    childLevel,
-                    buckets(
-                        of: childLevel,
-                        inside: outer,
-                        plans: plans,
-                        actuals: actuals,
-                        photos: photos,
-                        asOf: asOf
-                    )
-                )
-            }
-        )
-    }
-
     func buckets(
         of unit: TimelineLevel,
         inside outerSpan: TimeSpan,
@@ -2387,7 +2355,6 @@ struct RecordRelationshipGraph: Sendable {
     let nodes: [RecordGraphNode]
     let edges: [RecordGraphEdge]
     var isEmpty: Bool { nodes.isEmpty }
-    var hasConnections: Bool { !edges.isEmpty }
 }
 
 /// Keeps automatic evidence, a routine, and its concrete action as separate
@@ -3069,66 +3036,5 @@ enum WeatherTimelineEngine {
         default:
             return false
         }
-    }
-}
-
-enum TimelineCoordinateMapper {
-    static func fraction(
-        for date: Date,
-        in viewport: TimelineViewport
-    ) -> Double {
-        let visibleStart = viewport.dayStart.addingTimeInterval(
-            viewport.horizontalOffset
-        )
-        return date.timeIntervalSince(visibleStart) / viewport.visibleSpan
-    }
-
-    static func date(
-        at fraction: Double,
-        in viewport: TimelineViewport
-    ) -> Date {
-        viewport.dayStart.addingTimeInterval(
-            viewport.horizontalOffset + fraction * viewport.visibleSpan
-        )
-    }
-
-    static func pan(
-        _ viewport: TimelineViewport,
-        by interval: TimeInterval
-    ) -> TimelineViewport {
-        var value = viewport
-        value.horizontalOffset = max(0, value.horizontalOffset + interval)
-        value.followsCurrentTime = false
-        return value
-    }
-
-    static func zoom(
-        _ viewport: TimelineViewport,
-        factor: Double,
-        anchor: Double = 0.5
-    ) -> TimelineViewport {
-        var value = viewport
-        let oldSpan = viewport.visibleSpan
-        let newSpan = min(86_400, max(15 * 60, oldSpan / max(0.1, factor)))
-        let anchorOffset = viewport.horizontalOffset + oldSpan * anchor
-        value.visibleSpan = newSpan
-        value.horizontalOffset = max(0, anchorOffset - newSpan * anchor)
-        value.followsCurrentTime = false
-        return value
-    }
-
-    static func followNow(
-        _ viewport: TimelineViewport,
-        now: Date = .now,
-        anchor: Double = 0.6
-    ) -> TimelineViewport {
-        var value = viewport
-        value.currentTime = now
-        value.horizontalOffset = max(
-            0,
-            now.timeIntervalSince(viewport.dayStart) - viewport.visibleSpan * anchor
-        )
-        value.followsCurrentTime = true
-        return value
     }
 }
