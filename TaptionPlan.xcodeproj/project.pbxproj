@@ -7,6 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A1FA11B788DDFF62F309512F /* TimelineRowModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11B51558DBA397EDEB19 /* TimelineRowModels.swift */; };
+		A1FA11356EDD0F1965709226 /* TimelineRowViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11DCE35698B9D5CBB801 /* TimelineRowViews.swift */; };
+		A1FA11A3B8DAE991AEA02AAF /* TimelineBoard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11A8410BD26D37F70F6C /* TimelineBoard.swift */; };
+		A1FA113C605017A9D1288BA2 /* GroupGanttView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1151C89CDAB2BD35E340 /* GroupGanttView.swift */; };
+		A1FA113C5869FE29648957F6 /* TimelineDetailPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA114C9607F825D87DDABD /* TimelineDetailPanel.swift */; };
+		A1FA11A8E4B16F54E10FE9B1 /* RouteMapViewport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA111EE25EBDA22F51D42E /* RouteMapViewport.swift */; };
+		A1FA11EB640567D972E12891 /* TimelineSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11013C73958F69782D38 /* TimelineSelection.swift */; };
 		A1FA11CAD2B1A327A31670AB /* AppFeatureSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11B07DD51FA2F1E98EE8 /* AppFeatureSettings.swift */; };
 		A1FA11A945DE6CB52FDFD7AF /* AppFeatureSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11B07DD51FA2F1E98EE8 /* AppFeatureSettings.swift */; };
 		A1FA1149ABD1E6845D6CAAC0 /* MapDisplayModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11FA168BA095E34D6938 /* MapDisplayModels.swift */; };
@@ -485,6 +492,13 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		F1FA11B51558DBA397EDEB19 /* TimelineRowModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineRowModels.swift; sourceTree = "<group>"; };
+		F1FA11DCE35698B9D5CBB801 /* TimelineRowViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineRowViews.swift; sourceTree = "<group>"; };
+		F1FA11A8410BD26D37F70F6C /* TimelineBoard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineBoard.swift; sourceTree = "<group>"; };
+		F1FA1151C89CDAB2BD35E340 /* GroupGanttView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupGanttView.swift; sourceTree = "<group>"; };
+		F1FA114C9607F825D87DDABD /* TimelineDetailPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineDetailPanel.swift; sourceTree = "<group>"; };
+		F1FA111EE25EBDA22F51D42E /* RouteMapViewport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteMapViewport.swift; sourceTree = "<group>"; };
+		F1FA11013C73958F69782D38 /* TimelineSelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineSelection.swift; sourceTree = "<group>"; };
 		F1FA11B07DD51FA2F1E98EE8 /* AppFeatureSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFeatureSettings.swift; sourceTree = "<group>"; };
 		F1FA11FA168BA095E34D6938 /* MapDisplayModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapDisplayModels.swift; sourceTree = "<group>"; };
 		F1FA11910B5837616D11C071 /* ReviewModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewModels.swift; sourceTree = "<group>"; };
@@ -1117,6 +1131,13 @@
 				F10000000000000000000087 /* MapHomeLocationPresentation.swift */,
 				F10000000000000000000005 /* AppShellView.swift */,
 				F10000000000000000000006 /* ScheduleView.swift */,
+				F1FA11B51558DBA397EDEB19 /* TimelineRowModels.swift */,
+				F1FA11DCE35698B9D5CBB801 /* TimelineRowViews.swift */,
+				F1FA11A8410BD26D37F70F6C /* TimelineBoard.swift */,
+				F1FA1151C89CDAB2BD35E340 /* GroupGanttView.swift */,
+				F1FA114C9607F825D87DDABD /* TimelineDetailPanel.swift */,
+				F1FA111EE25EBDA22F51D42E /* RouteMapViewport.swift */,
+				F1FA11013C73958F69782D38 /* TimelineSelection.swift */,
 				F10000000000000000000007 /* GoalsView.swift */,
 				F10000000000000000000008 /* ReviewView.swift */,
 				F10000000000000000000009 /* SettingsView.swift */,
@@ -1700,6 +1721,13 @@
 				A10000000000000000000004 /* Theme.swift in Sources */,
 				A10000000000000000000005 /* AppShellView.swift in Sources */,
 				A10000000000000000000006 /* ScheduleView.swift in Sources */,
+				A1FA11B788DDFF62F309512F /* TimelineRowModels.swift in Sources */,
+				A1FA11356EDD0F1965709226 /* TimelineRowViews.swift in Sources */,
+				A1FA11A3B8DAE991AEA02AAF /* TimelineBoard.swift in Sources */,
+				A1FA113C605017A9D1288BA2 /* GroupGanttView.swift in Sources */,
+				A1FA113C5869FE29648957F6 /* TimelineDetailPanel.swift in Sources */,
+				A1FA11A8E4B16F54E10FE9B1 /* RouteMapViewport.swift in Sources */,
+				A1FA11EB640567D972E12891 /* TimelineSelection.swift in Sources */,
 				A1000000000000000000007D /* MapHomeView.swift in Sources */,
 				A100000000000000C1102A1F /* MapHomeAppleMapAnnotations.swift in Sources */,
 				A100000000000000C1102A01 /* AirQualityDetailSheet.swift in Sources */,

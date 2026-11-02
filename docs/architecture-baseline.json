@@ -50,8 +50,9 @@
     "TaptionPlan/UI/MapHomeVectorMap.swift": 1443,
     "TaptionPlan/UI/MapHomeView.swift": 11635,
     "TaptionPlan/UI/ReviewView.swift": 4724,
-    "TaptionPlan/UI/ScheduleView.swift": 9727,
     "TaptionPlan/UI/SettingsView.swift": 2238,
+    "TaptionPlan/UI/TimelineBoard.swift": 3344,
+    "TaptionPlan/UI/TimelineDetailPanel.swift": 3418,
     "TaptionPlanWatch/WatchConnectivityController.swift": 1623,
     "TaptionPlanWatch/WatchWorkoutManager.swift": 2349
   },
