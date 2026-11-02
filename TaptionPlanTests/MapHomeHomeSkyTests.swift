@@ -284,7 +284,7 @@ final class MapHomeHomeSkyTests: XCTestCase {
             }
         })
 
-        let levels = [1, 40, 120, 250, 366]
+        let levels = [14, 120, 157, 335, 361]
         try writeSheet("sky-levels.png", VStack(spacing: 6) {
             ForEach(levels, id: \.self) { level in
                 HStack(spacing: 6) {

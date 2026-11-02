@@ -181,7 +181,6 @@ def hallgrim(c):
 @d
 def peace_gate(c):
     c.shadow(50, 86)
-    c.sun(92, 16, 4)
     # 네 무리의 굵은 콘크리트 기둥
     for x in (16, 26, 66, 76):
         c.p(f"M{x} 104L{x + 1} 60H{x + 7}L{x + 8} 104z", "#D9D8D2", s=1.5)
@@ -459,7 +458,6 @@ def petronas(c):
 
 @d
 def burj_arab(c):
-    c.sun(84, 16, 4.5)
     # 바다와 인공섬, 둑길
     c.water(4, 105, 90, 8, "#62BBDB")
     c.p("M14 104L18 97H82L86 104z", "#EAD9A8", s=1.4)
@@ -569,7 +567,6 @@ def gherkin(c):
 @d
 def disney_hall(c):
     m, m2, m3 = "#E8ECEF", "#BEC6CC", "#F7F8F9"
-    c.sun(86, 18, 4.5)
     c.shadow(50, 84)
     # 석회암 기단과 계단
     c.p("M6 104V90H90V104z", "#E3D5B8", s=1.5)
@@ -941,7 +938,6 @@ def marina_bay(c):
 @d
 def capital_gate(c):
     a, b, ln = "#BBDAE8", "#8DBAD0", "#F2FAFC"
-    c.sun(84, 22, 4.5)
     c.shadow(48, 62)
     # 전시장 낮은 지붕
     c.p("M6 104V94Q36 88 62 94V104z", "#DAD8CC", s=1.4)
@@ -1294,7 +1290,6 @@ def elbphil(c):
 @d
 def louvre_ad(c):
     a, b, ln = "#D7DDE0", "#AFB9BE", "#6F7C84"
-    c.sun(86, 14, 4)
     c.water(4, 105, 90, 8, "#6DC1D8")
     # 흰 메디나 상자들(돔 그늘 안으로 들어간다)
     for x, y, w, f in ((12, 80, 16, "#FAF8F2"), (26, 72, 14, "#F0EDE5"), (38, 76, 18, "#FAF8F2"), (54, 70, 12, "#E9E6DD"), (64, 76, 16, "#F7F5EE"), (78, 82, 12, "#EAE7DE")):

@@ -480,7 +480,6 @@ def sainte_chapelle(c):
 @d
 def moai(c):
     S, S2, P = "#857D72", "#6A6359", "#AF5F47"
-    c.sun(86, 20, 5)
     c.p("M10 94V84Q50 78 90 82V94z", "#7CC4D8", s=1.1)
     c.p("M70 86h12M50 84h8", s=.8, col="#fff")
     # 아후 제단
@@ -671,7 +670,6 @@ def palazzo_vecchio(c):
 @d
 def djenne(c):
     A, A2, K = "#CE9F6D", "#AD7F52", "#6E4A2E"
-    c.sun(86, 18, 5)
     c.shadow(50, 86)
     # 긴 진흙 벽
     W = "M7 104V60Q7 56 10 56H90Q93 56 93 60V104z"

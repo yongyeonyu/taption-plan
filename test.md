@@ -5304,3 +5304,4 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 앱 Debug 빌드(generic iOS): 성공(`build-device2.log`). 가드: 경계 통과, 구조 지표 통과(`guard-metrics2.log`).
 - 실행하지 않은 것: 실제 앱 화면에서의 애니메이션(`-pinPreview`, 지도 위 집), 재생 중 프레임 측정, 저전력·동작 줄이기·조도 낮음 분기, 실기기. Apple 지도에서 집이 화면 밖일 때 그림이 멈추는지는 MapKit이 주석 뷰를 치우는 동작에 기대며 측정하지 않았다(벡터 지도는 마커 컬링을 코드로 확인).
 - 시트는 정오 호·달 호·날씨 겹침만 보여 주며, 시간 흐름에 따른 실제 움직임의 느낌은 대표 확인이 필요하다.
+- 집 그림 해 장식 제거(대표 지시, 2026-11-03): `c.sun` 15곳과 `kit._sun`을 지우고 `tools/generate_home_evolution.py`로 다시 생성. SVG는 Lv.14·16·33·43·57·67·113·120·157·161·325·335·337·350·361 15개만 바뀌었고, 366개 모두 서로 다르며 `--check` 통과. `--fit`은 돌리지 않아 집 크기는 그대로다. 시뮬레이터 단위: `MapHomeHomeSkyTests` 10건·`MapHomeGrowthPolicyTests` 30건 통과, 실패 0(`unit7.log`). Debug 빌드 성공(`build-device3.log`), 가드 2개 통과. 시트 `sheets-nosun/sky-levels.png`로 5개 레벨을 눈으로 확인했고 나머지 10개는 그림을 보지 않았다. 실기기와 성장 카드 화면은 확인하지 않았다.
