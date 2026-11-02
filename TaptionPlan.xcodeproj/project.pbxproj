@@ -7,6 +7,38 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A1FA11CAD2B1A327A31670AB /* AppFeatureSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11B07DD51FA2F1E98EE8 /* AppFeatureSettings.swift */; };
+		A1FA11A945DE6CB52FDFD7AF /* AppFeatureSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11B07DD51FA2F1E98EE8 /* AppFeatureSettings.swift */; };
+		A1FA1149ABD1E6845D6CAAC0 /* MapDisplayModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11FA168BA095E34D6938 /* MapDisplayModels.swift */; };
+		A1FA11E5401FED61219701DE /* MapDisplayModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11FA168BA095E34D6938 /* MapDisplayModels.swift */; };
+		A1FA11A34B1439834812A887 /* ReviewModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11910B5837616D11C071 /* ReviewModels.swift */; };
+		A1FA11D1FC078F2BA7021A4D /* ReviewModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11910B5837616D11C071 /* ReviewModels.swift */; };
+		A1FA115BFD9ADB6D5F57D8C1 /* SensorReadingModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11E186E821582D4654B6 /* SensorReadingModels.swift */; };
+		A1FA11AD460494BD2B675105 /* SensorReadingModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11E186E821582D4654B6 /* SensorReadingModels.swift */; };
+		A1FA1107FF30EF2056E8191C /* PlaceModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA113B2D357EDE2DE6E507 /* PlaceModels.swift */; };
+		A1FA11EC47982D3A8ADE45AF /* PlaceModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA113B2D357EDE2DE6E507 /* PlaceModels.swift */; };
+		A1FA118242B8712F9D574BBC /* FloorModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11394045A2B8089E0F2B /* FloorModels.swift */; };
+		A1FA11E70638CC9F3E7CE988 /* FloorModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11394045A2B8089E0F2B /* FloorModels.swift */; };
+		A1FA11CFA6D7380E55EB070B /* WeatherModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA115A910260F58FF7F92E /* WeatherModels.swift */; };
+		A1FA1161490F313AB4EA7A10 /* WeatherModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA115A910260F58FF7F92E /* WeatherModels.swift */; };
+		A1FA11A2F30B45C9270544DE /* CategoryAndCalendarModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11CE7058A74AF1E107F4 /* CategoryAndCalendarModels.swift */; };
+		A1FA116BC2165347E80C24D2 /* CategoryAndCalendarModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11CE7058A74AF1E107F4 /* CategoryAndCalendarModels.swift */; };
+		A1FA11722220BF7B935DF783 /* PermissionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11F4F448671427F5CF63 /* PermissionModels.swift */; };
+		A1FA111A34D824E3FF935346 /* PermissionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11F4F448671427F5CF63 /* PermissionModels.swift */; };
+		A1FA11D22B6CBCB2D06B20BD /* MovementModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11B6A70821ACA42221C4 /* MovementModels.swift */; };
+		A1FA11410095F413CF485193 /* MovementModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11B6A70821ACA42221C4 /* MovementModels.swift */; };
+		A1FA1124DD573AF2E6504C87 /* MemoModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11FBAFEB3EBA930C92B6 /* MemoModels.swift */; };
+		A1FA1158AD01103B0F4B8E6F /* MemoModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11FBAFEB3EBA930C92B6 /* MemoModels.swift */; };
+		A1FA113FD9DDDEB769707B2B /* ActualRecordModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA116BCD975D7F671E960D /* ActualRecordModels.swift */; };
+		A1FA1162814341AED9240569 /* ActualRecordModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA116BCD975D7F671E960D /* ActualRecordModels.swift */; };
+		A1FA119B398AC34A1F78055C /* PlanRecordModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1157352882250214647A /* PlanRecordModels.swift */; };
+		A1FA11EE9F352FA3C4B9FA2A /* PlanRecordModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1157352882250214647A /* PlanRecordModels.swift */; };
+		A1FA11515918A194B7DF1F5E /* ActivityCorrectionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11D8CD1BE6FF0212D336 /* ActivityCorrectionModels.swift */; };
+		A1FA1104470CBE8F59EA3A0F /* ActivityCorrectionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11D8CD1BE6FF0212D336 /* ActivityCorrectionModels.swift */; };
+		A1FA11BED1B1B68238CFA5CF /* RecordClassificationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA115AD7683D2897E2C76E /* RecordClassificationModels.swift */; };
+		A1FA11594047CE96DEF10AF6 /* RecordClassificationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA115AD7683D2897E2C76E /* RecordClassificationModels.swift */; };
+		A1FA118E6661E4ED3D1ED73A /* TimelineModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1138653005BEA1D8CBB0 /* TimelineModels.swift */; };
+		A1FA11D738A8A0AC7B013DD9 /* TimelineModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1138653005BEA1D8CBB0 /* TimelineModels.swift */; };
 		A1FA11802C58F99DE64AB619 /* LocationPrivacyAndTravelDistance.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA111188F70B2A1E222FD0 /* LocationPrivacyAndTravelDistance.swift */; };
 		A1FA116E96B03A38CF1271CF /* MotionActivityActualEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA114B38DDE757537287B5 /* MotionActivityActualEngine.swift */; };
 		A1FA11E1742C84FD2F207091 /* InferredSleepEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11666D556A4283945D7E /* InferredSleepEngines.swift */; };
@@ -453,6 +485,22 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		F1FA11B07DD51FA2F1E98EE8 /* AppFeatureSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFeatureSettings.swift; sourceTree = "<group>"; };
+		F1FA11FA168BA095E34D6938 /* MapDisplayModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapDisplayModels.swift; sourceTree = "<group>"; };
+		F1FA11910B5837616D11C071 /* ReviewModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewModels.swift; sourceTree = "<group>"; };
+		F1FA11E186E821582D4654B6 /* SensorReadingModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorReadingModels.swift; sourceTree = "<group>"; };
+		F1FA113B2D357EDE2DE6E507 /* PlaceModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceModels.swift; sourceTree = "<group>"; };
+		F1FA11394045A2B8089E0F2B /* FloorModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloorModels.swift; sourceTree = "<group>"; };
+		F1FA115A910260F58FF7F92E /* WeatherModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherModels.swift; sourceTree = "<group>"; };
+		F1FA11CE7058A74AF1E107F4 /* CategoryAndCalendarModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryAndCalendarModels.swift; sourceTree = "<group>"; };
+		F1FA11F4F448671427F5CF63 /* PermissionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionModels.swift; sourceTree = "<group>"; };
+		F1FA11B6A70821ACA42221C4 /* MovementModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovementModels.swift; sourceTree = "<group>"; };
+		F1FA11FBAFEB3EBA930C92B6 /* MemoModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoModels.swift; sourceTree = "<group>"; };
+		F1FA116BCD975D7F671E960D /* ActualRecordModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActualRecordModels.swift; sourceTree = "<group>"; };
+		F1FA1157352882250214647A /* PlanRecordModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanRecordModels.swift; sourceTree = "<group>"; };
+		F1FA11D8CD1BE6FF0212D336 /* ActivityCorrectionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityCorrectionModels.swift; sourceTree = "<group>"; };
+		F1FA115AD7683D2897E2C76E /* RecordClassificationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordClassificationModels.swift; sourceTree = "<group>"; };
+		F1FA1138653005BEA1D8CBB0 /* TimelineModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineModels.swift; sourceTree = "<group>"; };
 		F1FA111188F70B2A1E222FD0 /* LocationPrivacyAndTravelDistance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationPrivacyAndTravelDistance.swift; sourceTree = "<group>"; };
 		F1FA114B38DDE757537287B5 /* MotionActivityActualEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionActivityActualEngine.swift; sourceTree = "<group>"; };
 		F1FA11666D556A4283945D7E /* InferredSleepEngines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InferredSleepEngines.swift; sourceTree = "<group>"; };
@@ -1128,6 +1176,22 @@
 			children = (
 				F10000000000000000000003 /* PlanItem.swift */,
 				F1000000000000000000000F /* FeatureModels.swift */,
+				F1FA11B07DD51FA2F1E98EE8 /* AppFeatureSettings.swift */,
+				F1FA11FA168BA095E34D6938 /* MapDisplayModels.swift */,
+				F1FA11910B5837616D11C071 /* ReviewModels.swift */,
+				F1FA11E186E821582D4654B6 /* SensorReadingModels.swift */,
+				F1FA113B2D357EDE2DE6E507 /* PlaceModels.swift */,
+				F1FA11394045A2B8089E0F2B /* FloorModels.swift */,
+				F1FA115A910260F58FF7F92E /* WeatherModels.swift */,
+				F1FA11CE7058A74AF1E107F4 /* CategoryAndCalendarModels.swift */,
+				F1FA11F4F448671427F5CF63 /* PermissionModels.swift */,
+				F1FA11B6A70821ACA42221C4 /* MovementModels.swift */,
+				F1FA11FBAFEB3EBA930C92B6 /* MemoModels.swift */,
+				F1FA116BCD975D7F671E960D /* ActualRecordModels.swift */,
+				F1FA1157352882250214647A /* PlanRecordModels.swift */,
+				F1FA11D8CD1BE6FF0212D336 /* ActivityCorrectionModels.swift */,
+				F1FA115AD7683D2897E2C76E /* RecordClassificationModels.swift */,
+				F1FA1138653005BEA1D8CBB0 /* TimelineModels.swift */,
 				F10000000000000000000010 /* PlanRepository.swift */,
 				FBD100600000000000000001 /* PlanActualStorage.swift */,
 				FBD100700000000000000001 /* SensorReadingStorage.swift */,
@@ -1729,6 +1793,22 @@
 				A1000000000000000000000D /* DraftComponents.swift in Sources */,
 				A1000000000000000000000E /* DetailViews.swift in Sources */,
 				A1000000000000000000000F /* FeatureModels.swift in Sources */,
+				A1FA11A945DE6CB52FDFD7AF /* AppFeatureSettings.swift in Sources */,
+				A1FA11E5401FED61219701DE /* MapDisplayModels.swift in Sources */,
+				A1FA11D1FC078F2BA7021A4D /* ReviewModels.swift in Sources */,
+				A1FA11AD460494BD2B675105 /* SensorReadingModels.swift in Sources */,
+				A1FA11EC47982D3A8ADE45AF /* PlaceModels.swift in Sources */,
+				A1FA11E70638CC9F3E7CE988 /* FloorModels.swift in Sources */,
+				A1FA1161490F313AB4EA7A10 /* WeatherModels.swift in Sources */,
+				A1FA116BC2165347E80C24D2 /* CategoryAndCalendarModels.swift in Sources */,
+				A1FA111A34D824E3FF935346 /* PermissionModels.swift in Sources */,
+				A1FA11410095F413CF485193 /* MovementModels.swift in Sources */,
+				A1FA1158AD01103B0F4B8E6F /* MemoModels.swift in Sources */,
+				A1FA1162814341AED9240569 /* ActualRecordModels.swift in Sources */,
+				A1FA11EE9F352FA3C4B9FA2A /* PlanRecordModels.swift in Sources */,
+				A1FA1104470CBE8F59EA3A0F /* ActivityCorrectionModels.swift in Sources */,
+				A1FA11594047CE96DEF10AF6 /* RecordClassificationModels.swift in Sources */,
+				A1FA11D738A8A0AC7B013DD9 /* TimelineModels.swift in Sources */,
 				A10000000000000000000010 /* PlanRepository.swift in Sources */,
 				ABD100600000000000000001 /* PlanActualStorage.swift in Sources */,
 				ABD100700000000000000001 /* SensorReadingStorage.swift in Sources */,
@@ -1903,6 +1983,22 @@
 				C0FFEE000000000000000045 /* TaptionLiveActivityCat.swift in Sources */,
 				A10000000000000000000020 /* WidgetShared.swift in Sources */,
 				A10000000000000000000022 /* FeatureModels.swift in Sources */,
+				A1FA11CAD2B1A327A31670AB /* AppFeatureSettings.swift in Sources */,
+				A1FA1149ABD1E6845D6CAAC0 /* MapDisplayModels.swift in Sources */,
+				A1FA11A34B1439834812A887 /* ReviewModels.swift in Sources */,
+				A1FA115BFD9ADB6D5F57D8C1 /* SensorReadingModels.swift in Sources */,
+				A1FA1107FF30EF2056E8191C /* PlaceModels.swift in Sources */,
+				A1FA118242B8712F9D574BBC /* FloorModels.swift in Sources */,
+				A1FA11CFA6D7380E55EB070B /* WeatherModels.swift in Sources */,
+				A1FA11A2F30B45C9270544DE /* CategoryAndCalendarModels.swift in Sources */,
+				A1FA11722220BF7B935DF783 /* PermissionModels.swift in Sources */,
+				A1FA11D22B6CBCB2D06B20BD /* MovementModels.swift in Sources */,
+				A1FA1124DD573AF2E6504C87 /* MemoModels.swift in Sources */,
+				A1FA113FD9DDDEB769707B2B /* ActualRecordModels.swift in Sources */,
+				A1FA119B398AC34A1F78055C /* PlanRecordModels.swift in Sources */,
+				A1FA11515918A194B7DF1F5E /* ActivityCorrectionModels.swift in Sources */,
+				A1FA11BED1B1B68238CFA5CF /* RecordClassificationModels.swift in Sources */,
+				A1FA118E6661E4ED3D1ED73A /* TimelineModels.swift in Sources */,
 				A10000000000000000000023 /* HealthAndSensorModels.swift in Sources */,
 				A10000000000000000000024 /* PlanningEngine.swift in Sources */,
 				A10000000000000000000025 /* PlanRepository.swift in Sources */,

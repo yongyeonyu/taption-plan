@@ -29,7 +29,6 @@
   },
   "frozen_files": {
     "Packages/TaptionPlanCore/Sources/TaptionPlanCore/DayStoreV3.swift": 2408,
-    "TaptionPlan/Core/FeatureModels.swift": 4701,
     "TaptionPlan/Core/HealthKitImportCoordinator.swift": 1387,
     "TaptionPlan/Core/PlanRepository.swift": 1374,
     "TaptionPlan/Core/PlanningEngine.swift": 3134,
