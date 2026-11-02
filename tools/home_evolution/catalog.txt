@@ -1,0 +1,371 @@
+# 키|한국어|영어|나라|연도(음수=기원전)|계열|권리(T=상표·이미지 관리 주의, F=영화 IP)
+# 일자는 generate_home_evolution.py가 연도순 + 같은 계열·나라 연속 회피로 정한다.
+@고대
+ggantija|간티야 신전|Ggantija|몰타|-3600|stone|
+gobekli|괴베클리 테페|Gobekli Tepe|튀르키예|-9500|stone|
+catalhoyuk|차탈회위크|Catalhoyuk|튀르키예|-7000|mud|
+newgrange|뉴그레인지|Newgrange|아일랜드|-3200|mound|
+skara_brae|스카라 브레|Skara Brae|영국|-3100|mud|
+djoser|조세르 계단 피라미드|Pyramid of Djoser|이집트|-2670|pyramid|
+caral|카랄 대피라미드|Caral|페루|-2600|pyramid|
+bent|굴절 피라미드|Bent Pyramid|이집트|-2600|pyramid|
+giza|기자 대피라미드|Great Pyramid of Giza|이집트|-2560|pyramid|
+sphinx|대스핑크스|Great Sphinx|이집트|-2500|statue|
+stonehenge|스톤헨지|Stonehenge|영국|-2500|stone|
+mohenjo|모헨조다로 대욕장|Mohenjo-daro|파키스탄|-2500|ruin|
+ur|우르 지구라트|Ziggurat of Ur|이라크|-2100|ziggurat|
+knossos|크노소스 궁전|Knossos|그리스|-1900|palace|
+karnak|카르나크 신전|Karnak Temple|이집트|-1500|hypostyle|
+nuraghe|수 누락시|Su Nuraxi|이탈리아|-1500|tower|
+hatshepsut|하트셉수트 장제전|Temple of Hatshepsut|이집트|-1470|terrace|
+luxor|룩소르 신전|Luxor Temple|이집트|-1400|pylon|
+hattusa|하투샤 사자문|Hattusa Lion Gate|튀르키예|-1400|gate|
+memnon|멤논의 거상|Colossi of Memnon|이집트|-1350|statue|
+abu_simbel|아부심벨 대신전|Abu Simbel|이집트|-1260|rockcut|
+mycenae|미케네 사자문|Lion Gate of Mycenae|그리스|-1250|gate|
+dolmen|고창 고인돌|Gochang Dolmen|대한민국|-1000|stone|
+olmec|라 벤타 거대 두상|La Venta Colossal Head|멕시코|-900|statue|
+hanging|바빌론 공중정원|Hanging Gardens of Babylon|이라크|-600|terrace|
+etemenanki|에테메난키(바벨탑)|Etemenanki|이라크|-600|ziggurat|
+ishtar|이슈타르 문|Ishtar Gate|이라크|-575|gate|
+artemis|에페소스 아르테미스 신전|Temple of Artemis|튀르키예|-550|temple|
+paestum|파에스툼 헤라 신전|Temple of Hera Paestum|이탈리아|-550|temple2|
+cyrus|키루스 대왕 무덤|Tomb of Cyrus|이란|-530|tomb|
+persepolis|페르세폴리스|Persepolis|이란|-515|columns|
+bam|아르게 밤|Arg-e Bam|이란|-500|fortress|
+naqsh|낙시 에 로스탐|Naqsh-e Rostam|이란|-500|rockcut|
+sounion|수니온 포세이돈 신전|Temple of Poseidon Sounion|그리스|-440|ruin|
+parthenon|파르테논 신전|Parthenon|그리스|-438|temple|
+erechtheion|에레크테이온|Erechtheion|그리스|-406|caryatid|
+delphi|델포이 톨로스|Tholos of Delphi|그리스|-380|tholos|
+mausoleum|할리카르나소스 마우솔레움|Mausoleum at Halicarnassus|튀르키예|-350|tomb|
+epidaurus|에피다우로스 극장|Epidaurus Theatre|그리스|-340|theatre|
+meroe|메로에 피라미드|Pyramids of Meroe|수단|-300|pyramid|
+monte_alban|몬테 알반|Monte Alban|멕시코|-300|platform|
+lighthouse|알렉산드리아 등대|Lighthouse of Alexandria|이집트|-280|lighthouse|
+colossus|로도스 거상|Colossus of Rhodes|그리스|-280|statue|
+philae|필레 신전|Philae Temple|이집트|-280|pylon|
+sanchi|산치 대탑|Great Stupa at Sanchi|인도|-250|stupa|
+edfu|에드푸 신전|Temple of Edfu|이집트|-237|pylon|
+great_wall|만리장성|Great Wall|중국|-220|wall|
+terracotta|진시황 병마용|Terracotta Army|중국|-210|statue|
+pergamon|페르가몬 제단|Pergamon Altar|튀르키예|-170|altar|
+ruwanweli|루완웰리 세야|Ruwanwelisaya|스리랑카|-140|stupa|
+ajanta|아잔타 석굴|Ajanta Caves|인도|-100|rockcut|
+petra|페트라 알카즈네|Al-Khazneh, Petra|요르단|-100|rockcut2|
+dendera|덴데라 신전|Dendera Temple|이집트|-54|hypostyle|
+masada|마사다 요새|Masada|이스라엘|-30|fortress|
+western_wall|서쪽 벽|Western Wall|예루살렘|-19|wall|
+maison_carree|메종 카레|Maison Carree|프랑스|-16|temple|
+ise|이세 신궁|Ise Grand Shrine|일본|-4|shrine|
+pont_du_gard|퐁 뒤 가르|Pont du Gard|프랑스|50|aqueduct|
+baalbek|바알베크 주피터 신전|Baalbek|레바논|60|ruin|
+pula|풀라 아레나|Pula Arena|크로아티아|68|arena|
+bath|바스 로마 목욕탕|Roman Baths, Bath|영국|70|bath|
+pompeii|폼페이 포룸|Pompeii|이탈리아|79|ruin|
+colosseum|콜로세움|Colosseum|이탈리아|80|arena|
+titus|티투스 개선문|Arch of Titus|이탈리아|81|arch|
+teotihuacan|태양의 피라미드|Pyramid of the Sun|멕시코|100|pyramid|
+segovia|세고비아 수도교|Aqueduct of Segovia|스페인|100|aqueduct|
+izumo|이즈모 타이샤|Izumo Taisha|일본|100|shrine|
+alcantara|알칸타라 다리|Alcantara Bridge|스페인|106|bridge|
+hercules|헤라클레스 탑|Tower of Hercules|스페인|110|lighthouse|
+trajan|트라야누스 기둥|Trajan's Column|이탈리아|113|column|
+celsus|켈수스 도서관|Library of Celsus|튀르키예|117|facade|
+pantheon|판테온|Pantheon|이탈리아|126|dome|
+palmyra|팔미라 유적|Palmyra|시리아|130|ruin|
+castel|산탄젤로 성|Castel Sant'Angelo|이탈리아|139|castle|
+porta_nigra|포르타 니그라|Porta Nigra|독일|170|gate|
+caracalla|카라칼라 욕장|Baths of Caracalla|이탈리아|216|bath|
+el_djem|엘젬 원형경기장|Amphitheatre of El Jem|튀니지|238|arena|
+ctesiphon|크테시폰 아치|Taq Kasra|이라크|240|arch|
+aksum|악숨 오벨리스크|Obelisk of Aksum|에티오피아|300|obelisk|
+diocletian|디오클레티아누스 궁전|Diocletian's Palace|크로아티아|305|palace|
+constantine|콘스탄티누스 개선문|Arch of Constantine|이탈리아|315|arch|
+general_tomb|장군총|General's Tomb|중국(고구려)|400|pyramid|
+daisen|다이센 고분|Daisen Kofun|일본|450|mound|
+mahabodhi|마하보디 사원|Mahabodhi Temple|인도|450|shikhara|
+swayambhu|스와얌부나트|Swayambhunath|네팔|460|stupa|
+yungang|윈강 석굴|Yungang Grottoes|중국|470|rockcut|
+sigiriya|시기리야|Sigiriya|스리랑카|477|rock|
+@중세
+tiwanaku|티와나쿠 태양의 문|Gate of the Sun|볼리비아|500|gate|
+songyue|쑹웨사 탑|Songyue Pagoda|중국|523|pagoda|
+hagia|하기아 소피아|Hagia Sophia|튀르키예|537|dome|
+san_vitale|산 비탈레 성당|San Vitale|이탈리아|547|byzantine|
+palenque|팔렝케 비문의 신전|Palenque|멕시코|600|maya|
+jeongnimsa|정림사지 5층 석탑|Jeongnimsa Pagoda|대한민국|600|stonepagoda|
+zhaozhou|자오저우교(안지교)|Zhaozhou Bridge|중국|605|bridge|
+horyuji|호류지 5층탑|Horyu-ji|일본|607|pagoda|
+cheomseong|첨성대|Cheomseongdae|대한민국|634|observatory|
+mireuksa|미륵사지 석탑|Mireuksa Pagoda|대한민국|639|stonepagoda|
+hwangnyong|황룡사 9층 목탑|Hwangnyongsa Pagoda|대한민국|645|pagoda|
+dayan|대안탑|Giant Wild Goose Pagoda|중국|652|pagoda2|
+kairouan|카이라완 대모스크|Great Mosque of Kairouan|튀니지|670|mosque|
+dome_rock|바위의 돔|Dome of the Rock|예루살렘|691|dome|
+tikal|티칼 1호 신전|Tikal Temple I|과테말라|700|maya|
+umayyad|우마이야 모스크|Umayyad Mosque|시리아|715|mosque|
+dabo|불국사 다보탑|Dabotap, Bulguksa|대한민국|751|stonepagoda|
+todaiji|도다이지 대불전|Todai-ji|일본|752|hall|
+kailasa|카일라사 사원|Kailasa Temple|인도|756|shikhara|
+seokguram|석굴암|Seokguram|대한민국|774|cave|
+cordoba|코르도바 메스키타|Mezquita of Cordoba|스페인|785|mosque|
+borobudur|보로부두르|Borobudur|인도네시아|800|stupa|
+aachen|아헨 대성당|Aachen Cathedral|독일|805|byzantine|
+prambanan|프람바난|Prambanan|인도네시아|850|shikhara|
+samarra|사마라 나선탑|Malwiya, Samarra|이라크|852|minaret|
+uxmal|우슈말 마법사의 피라미드|Pyramid of the Magician|멕시코|900|maya|
+chichen|치첸이트사 엘 카스티요|El Castillo, Chichen Itza|멕시코|1000|maya|
+brihadisvara|브리하디스와라 사원|Brihadisvara Temple|인도|1010|shikhara|
+mont_michel|몽생미셸|Mont-Saint-Michel|프랑스|1023|island|
+khajuraho|카주라호 칸다리야|Khajuraho|인도|1030|shikhara|
+byodoin|보도인 봉황당|Byodo-in|일본|1053|hall|
+st_mark|산 마르코 대성당|St Mark's Basilica|이탈리아|1063|byzantine|
+windsor|윈저성|Windsor Castle|영국|1070|castle|
+tower_london|런던탑|Tower of London|영국|1078|keep|
+ananda|바간 아난다 사원|Ananda Temple|미얀마|1105|shikhara|
+alcazar|세고비아 알카사르|Alcazar of Segovia|스페인|1120|castle2|
+kalyan|칼얀 미나렛|Kalyan Minaret|우즈베키스탄|1127|minaret|
+krak|크라크 데 슈발리에|Krak des Chevaliers|시리아|1142|fortress|
+angkor|앙코르와트|Angkor Wat|캄보디아|1150|prang|
+koutoubia|쿠투비아 모스크|Koutoubia|모로코|1150|minaret|
+notre|노트르담 대성당|Notre-Dame de Paris|프랑스|1163|gothic|
+itsukushima|이쓰쿠시마 도리이|Itsukushima Torii|일본|1168|torii|
+pisa|피사의 사탑|Leaning Tower of Pisa|이탈리아|1173|bell|
+borgund|보르군 스타브 교회|Borgund Stave Church|노르웨이|1180|stave|
+bayon|바욘 사원|Bayon|캄보디아|1190|prang|
+chartres|샤르트르 대성당|Chartres Cathedral|프랑스|1194|gothic|
+giralda|히랄다 탑|La Giralda|스페인|1198|minaret2|
+qutub|쿠트브 미나르|Qutb Minar|인도|1199|minaret|
+carcassonne|카르카손|Carcassonne|프랑스|1200|citadel|
+lalibela|랄리벨라 성 게오르기우스|Church of St George, Lalibela|에티오피아|1200|rockcut|
+nan_madol|난 마돌|Nan Madol|미크로네시아|1200|ruin|
+tulum|툴룸|Tulum|멕시코|1200|ruin2|
+reims|랭스 대성당|Reims Cathedral|프랑스|1211|gothic|
+siena|시에나 대성당|Siena Cathedral|이탈리아|1215|italian|
+eilean|에일린 도난 성|Eilean Donan|영국|1220|keep|
+salisbury|솔즈베리 대성당|Salisbury Cathedral|영국|1220|gothic2|
+alhambra|알람브라 궁전|Alhambra|스페인|1238|palace|
+westminster|웨스트민스터 사원|Westminster Abbey|영국|1245|gothic|
+cologne|쾰른 대성당|Cologne Cathedral|독일|1248|gothic2|
+sainte_chapelle|생트샤펠|Sainte-Chapelle|프랑스|1248|chapel|
+moai|이스터섬 모아이|Moai, Easter Island|칠레|1250|statue|
+konark|코나르크 태양 사원|Konark Sun Temple|인도|1250|shikhara|
+malbork|말보르크 성|Malbork Castle|폴란드|1274|citadel|
+florence|피렌체 대성당|Florence Cathedral|이탈리아|1296|italian|
+palazzo_vecchio|베키오 궁전|Palazzo Vecchio|이탈리아|1299|bell|
+djenne|젠네 대모스크|Great Mosque of Djenne|말리|1300|mudmosque|
+great_zimbabwe|그레이트 짐바브웨|Great Zimbabwe|짐바브웨|1300|wall|
+tulou|푸젠 토루|Fujian Tulou|중국|1300|round|
+doge|두칼레 궁전|Doge's Palace|이탈리아|1340|palace|
+ponte_vecchio|폰테 베키오|Ponte Vecchio|이탈리아|1345|bridge|
+galata|갈라타 탑|Galata Tower|튀르키예|1348|tower|
+sukhothai|수코타이 왓 마하탓|Wat Mahathat Sukhothai|태국|1350|stupa|
+meteora|메테오라 수도원|Meteora|그리스|1350|rock|
+charles_bridge|카를교|Charles Bridge|체코|1357|bridge|
+sultan_hassan|술탄 하산 모스크|Sultan Hassan Mosque|이집트|1363|mosque|
+buseoksa|부석사 무량수전|Buseoksa|대한민국|1376|hall|
+bran|브란 성|Bran Castle|루마니아|1377|castle2|
+milan|밀라노 대성당|Milan Cathedral|이탈리아|1386|gothic|
+jongmyo|종묘 정전|Jongmyo|대한민국|1394|hall2|
+gyeongbok|경복궁 근정전|Geunjeongjeon, Gyeongbokgung|대한민국|1395|hall|
+kinkakuji|긴카쿠지(금각사)|Kinkaku-ji|일본|1397|hall|
+sungnyemun|숭례문|Sungnyemun|대한민국|1398|gatehouse|
+shwedagon|쉐다곤 파고다|Shwedagon Pagoda|미얀마|1400|stupa|
+gur_emir|구르 에 아미르|Gur-e-Amir|우즈베키스탄|1404|tomb|
+forbidden|자금성 태화전|Forbidden City|중국|1420|hall|
+heaven|천단 기년전|Temple of Heaven|중국|1420|round|
+registan|레기스탄 울루그베그|Registan|우즈베키스탄|1420|madrasa|
+nanjing|남경 대보은사 유리탑|Porcelain Tower of Nanjing|중국|1431|pagoda2|
+sacsay|삭사이와만|Sacsayhuaman|페루|1440|wall|
+machu|마추픽추|Machu Picchu|페루|1450|ruin2|
+topkapi|톱카프 궁전|Topkapi Palace|튀르키예|1478|palace|
+kremlin|모스크바 크렘린|Moscow Kremlin|러시아|1485|citadel|
+haeinsa|해인사 장경판전|Haeinsa Janggyeong Panjeon|대한민국|1488|hall2|
+@근대
+st_peter|성 베드로 대성당|St Peter's Basilica|바티칸|1506|baroque|
+seville|세비야 대성당|Seville Cathedral|스페인|1507|gothic|
+belem|벨렝 탑|Belem Tower|포르투갈|1519|tower|
+chambord|샹보르 성|Chateau de Chambord|프랑스|1519|chateau|
+suleymaniye|쉴레이마니예 모스크|Suleymaniye Mosque|튀르키예|1550|ottoman|
+st_basil|성 바실리 대성당|St Basil's Cathedral|러시아|1555|russian|
+mostar|모스타르 다리|Stari Most|보스니아|1566|bridge|
+humayun|후마윤 묘|Humayun's Tomb|인도|1570|mughal|
+dosan|도산서원|Dosan Seowon|대한민국|1574|hall2|
+compania|쿠스코 라 콤파니아|La Compania, Cusco|페루|1576|baroque|
+kronborg|크론보르 성|Kronborg|덴마크|1585|chateau|
+morro|아바나 모로 요새|Morro Castle, Havana|쿠바|1589|fortress|
+rialto|리알토 다리|Rialto Bridge|이탈리아|1591|bridge|
+amber|암베르 성|Amber Fort|인도|1592|mughal|
+matsumoto|마쓰모토 성|Matsumoto Castle|일본|1594|jcastle|
+si_o_se|시오세 다리|Si-o-se-pol|이란|1602|bridge|
+golden_temple|황금 사원|Golden Temple|인도|1604|mughal|
+himeji|히메지 성|Himeji Castle|일본|1609|jcastle|
+blue_mosque|블루 모스크|Blue Mosque|튀르키예|1609|ottoman|
+shah_mosque|이맘 모스크|Shah Mosque, Isfahan|이란|1611|persian|
+namhansan|남한산성 수어장대|Namhansanseong|대한민국|1624|gatehouse|
+palsangjeon|법주사 팔상전|Palsangjeon, Beopjusa|대한민국|1626|pagoda|
+taj|타지마할|Taj Mahal|인도|1632|mughal|
+kiyomizu|기요미즈데라|Kiyomizu-dera|일본|1633|stilt|
+nikko|닛코 도쇼구 요메이몬|Nikko Toshogu|일본|1636|gatehouse|
+fasil|파실 게비|Fasil Ghebbi|에티오피아|1636|castle|
+red_fort|델리 붉은 성|Red Fort|인도|1639|fortress|
+potala|포탈라궁|Potala Palace|중국(티베트)|1645|palace|
+cape_coast|케이프코스트 성|Cape Coast Castle|가나|1653|fortress|
+versailles|베르사유 궁전|Palace of Versailles|프랑스|1682|palace|
+tiger_nest|탁상 사원|Paro Taktsang|부탄|1692|rock|
+schonbrunn|쇤부른 궁전|Schonbrunn Palace|오스트리아|1696|palace2|
+invalides|앵발리드|Les Invalides|프랑스|1706|baroque|
+st_paul|세인트 폴 대성당|St Paul's Cathedral|영국|1710|baroque|
+peterhof|페테르고프 궁전|Peterhof|러시아|1714|palace2|
+kizhi|키지 목조 교회|Kizhi Pogost|러시아|1714|russian|
+zwinger|츠빙거 궁전|Zwinger|독일|1728|palace|
+kinderdijk|킨더다이크 풍차|Kinderdijk Windmills|네덜란드|1740|windmill|
+sanssouci|상수시 궁전|Sanssouci|독일|1747|palace2|
+radcliffe|래드클리프 카메라|Radcliffe Camera|영국|1749|rotunda|
+summer_palace|이화원 불향각|Summer Palace|중국|1750|pagoda2|
+independence|독립기념관|Independence Hall|미국|1753|colonial|
+trevi|트레비 분수|Trevi Fountain|이탈리아|1762|fountain|
+winter_palace|겨울 궁전|Winter Palace|러시아|1762|palace2|
+ouro_preto|오루프레투 성 프란치스코 성당|Sao Francisco, Ouro Preto|브라질|1766|baroque|
+pantheon_paris|파리 팡테옹|Pantheon, Paris|프랑스|1790|rotunda|
+brandenburg|브란덴부르크 문|Brandenburg Gate|독일|1791|gate|
+hwaseong|수원 화성 팔달문|Hwaseong Fortress|대한민국|1796|gatehouse|
+hawa|하와 마할|Hawa Mahal|인도|1799|mughal|
+white_house|백악관|White House|미국|1800|colonial|
+hue|후에 황성 오문|Hue Imperial City|베트남|1805|gatehouse|
+monticello|몬티첼로|Monticello|미국|1809|colonial|
+pavilion|브라이턴 로열 파빌리온|Royal Pavilion|영국|1823|fantasy|
+arc_triomphe|개선문|Arc de Triomphe|프랑스|1836|arch|
+wat_arun|왓 아룬|Wat Arun|태국|1842|prang|
+crystal|수정궁|Crystal Palace|영국|1851|glasshall|
+pena|페나 궁전|Pena Palace|포르투갈|1854|fantasy|
+dolmabahce|돌마바흐체 궁전|Dolmabahce Palace|튀르키예|1856|palace|
+st_isaac|성 이삭 대성당|St Isaac's Cathedral|러시아|1858|rotunda|
+big_ben|빅벤|Big Ben|영국|1859|clock|
+capitol|미국 국회의사당|US Capitol|미국|1866|capitol|
+hohenzollern|호엔촐레른 성|Hohenzollern Castle|독일|1867|fantasy|
+albert_hall|로열 앨버트 홀|Royal Albert Hall|영국|1871|round|
+garnier|오페라 가르니에|Palais Garnier|프랑스|1875|opera|
+milan_galleria|비토리오 에마누엘레 2세 갤러리아|Galleria Vittorio Emanuele II|이탈리아|1877|glasshall|
+sagrada|사그라다 파밀리아|Sagrada Familia|스페인|1882|gaudi|
+brooklyn|브루클린 다리|Brooklyn Bridge|미국|1883|suspension|
+savior_blood|피의 구세주 성당|Church of the Savior on Blood|러시아|1883|russian|
+washington|워싱턴 기념탑|Washington Monument|미국|1884|obelisk|
+neuschwanstein|노이슈반슈타인 성|Neuschwanstein Castle|독일|1886|fantasy|
+liberty|자유의 여신상|Statue of Liberty|미국|1886|statue|
+cst|차트라파티 시바지 역|Chhatrapati Shivaji Terminus|인도|1888|station|
+eiffel|에펠탑|Eiffel Tower|프랑스|1889|lattice|
+forth|포스 철교|Forth Bridge|영국|1890|truss|
+tower_bridge|타워 브리지|Tower Bridge|영국|1894|bridge2|
+reichstag|독일 국회의사당|Reichstag|독일|1894|capitol|
+dongnimmun|독립문|Independence Gate|대한민국|1897|arch|
+myeongdong|명동성당|Myeongdong Cathedral|대한민국|1898|gothic2|
+@현대
+flatiron|플랫아이언 빌딩|Flatiron Building|미국|1902|tower1900|
+budapest|헝가리 국회의사당|Hungarian Parliament|헝가리|1904|capitol|
+casa_mila|카사 밀라|Casa Mila|스페인|1910|gaudi|
+seokjojeon|덕수궁 석조전|Seokjojeon, Deoksugung|대한민국|1910|capitol|
+mysore|마이소르 궁전|Mysore Palace|인도|1912|mughal|
+woolworth|울워스 빌딩|Woolworth Building|미국|1913|tower1900|
+grand_central|그랜드 센트럴 터미널|Grand Central Terminal|미국|1913|station|
+sacre|사크레쾨르 대성당|Sacre-Coeur|프랑스|1914|domes|
+tokyo_station|도쿄역 마루노우치|Tokyo Station|일본|1914|station|
+jeondong|전동성당|Jeondong Cathedral|대한민국|1914|domes|
+einstein|아인슈타인 탑|Einstein Tower|독일|1921|expression|
+gateway_india|인디아 게이트웨이|Gateway of India|인도|1924|arch|
+seoul_station|구 서울역|Old Seoul Station|대한민국|1925|station|
+bauhaus|데사우 바우하우스|Bauhaus Dessau|독일|1926|box|
+chrysler|크라이슬러 빌딩|Chrysler Building|미국|1930|deco|T
+christ|구원의 그리스도상|Christ the Redeemer|브라질|1931|statue|T
+empire|엠파이어 스테이트 빌딩|Empire State Building|미국|1931|deco|T
+villa_savoye|빌라 사부아|Villa Savoye|프랑스|1931|box|
+harbour|시드니 하버 브리지|Sydney Harbour Bridge|호주|1932|truss|
+hoover|후버 댐|Hoover Dam|미국|1936|dam|
+golden_gate|금문교|Golden Gate Bridge|미국|1937|suspension|T
+fallingwater|낙수장|Fallingwater|미국|1939|cantilever|T
+rushmore|러시모어산|Mount Rushmore|미국|1941|statue|
+moscow_u|모스크바 국립대학교|Moscow State University|러시아|1953|stalin|
+ronchamp|롱샹 성당|Notre-Dame du Haut|프랑스|1955|expression|
+atomium|아토미움|Atomium|벨기에|1958|novelty|T
+tokyo_tower|도쿄 타워|Tokyo Tower|일본|1958|lattice|T
+guggenheim_ny|구겐하임 미술관(뉴욕)|Solomon R. Guggenheim Museum|미국|1959|spiral|T
+space_needle|스페이스 니들|Space Needle|미국|1962|needle|T
+twa|TWA 터미널|TWA Flight Center|미국|1962|shell|T
+gateway_arch|세인트루이스 게이트웨이 아치|Gateway Arch|미국|1965|arch2|
+motherland|조국의 어머니상|The Motherland Calls|러시아|1967|statue|
+habitat|해비타트 67|Habitat 67|캐나다|1967|cubes|
+fernsehturm|베를린 TV 타워|Berlin TV Tower|독일|1969|needle|
+brasilia|브라질리아 대성당|Cathedral of Brasilia|브라질|1970|crown|
+azadi|아자디 타워|Azadi Tower|이란|1971|arch2|
+transamerica|트랜스아메리카 피라미드|Transamerica Pyramid|미국|1972|spike|T
+munich|뮌헨 올림픽 경기장|Munich Olympic Stadium|독일|1972|tent|
+nakagin|나카긴 캡슐 타워|Nakagin Capsule Tower|일본|1972|cubes|
+willis|윌리스 타워|Willis Tower|미국|1973|slab|T
+sydney|시드니 오페라하우스|Sydney Opera House|호주|1973|shell|T
+n_seoul|N서울타워|N Seoul Tower|대한민국|1975|needle|T
+cn|CN 타워|CN Tower|캐나다|1976|needle|T
+pompidou|퐁피두 센터|Centre Pompidou|프랑스|1977|hightech|T
+cube_houses|로테르담 큐브 하우스|Cube Houses|네덜란드|1984|novelty|
+sixty_three|63빌딩|63 Building|대한민국|1985|slab|T
+hundertwasser|훈데르트바서 하우스|Hundertwasserhaus|오스트리아|1985|novelty|
+lotus|로터스 사원|Lotus Temple|인도|1986|crown|
+hallgrim|할그림스키르캬|Hallgrimskirkja|아이슬란드|1986|spike|
+peace_gate|올림픽 평화의 문|World Peace Gate|대한민국|1988|arch2|
+louvre|루브르 피라미드|Louvre Pyramid|프랑스|1989|pyramid|T
+bank_china|중국은행 타워|Bank of China Tower|중국(홍콩)|1990|spike|
+hassan_ii|하산 2세 모스크|Hassan II Mosque|모로코|1993|minaret|
+pearl|동방명주|Oriental Pearl Tower|중국|1994|needle|
+dancing|댄싱 하우스|Dancing House|체코|1996|novelty|
+bilbao|구겐하임 빌바오|Guggenheim Bilbao|스페인|1997|deconstruct|T
+rong_khun|왓 롱쿤(백색 사원)|Wat Rong Khun|태국|1997|fantasy|
+petronas|페트로나스 트윈 타워|Petronas Towers|말레이시아|1998|twin|T
+burj_arab|부르즈 알 아랍|Burj Al Arab|아랍에미리트|1999|sail|T
+london_eye|런던 아이|London Eye|영국|2000|wheel|T
+gherkin|거킨(30 세인트 메리 액스)|The Gherkin|영국|2003|ovoid|T
+disney_hall|월트 디즈니 콘서트홀|Walt Disney Concert Hall|미국|2003|deconstruct|T
+taipei101|타이베이 101|Taipei 101|대만|2004|pagodasky|T
+crooked|크루키드 하우스|Crooked House|폴란드|2004|novelty|
+turning|터닝 토르소|Turning Torso|스웨덴|2005|twist|
+akshardham|악샤르담|Akshardham|인도|2005|shikhara|
+sheikh_zayed|셰이크 자이드 모스크|Sheikh Zayed Grand Mosque|아랍에미리트|2007|domes|
+birds_nest|베이징 국가체육장(냐오차오)|Beijing National Stadium|중국|2008|bowl|T
+oslo_opera|오슬로 오페라하우스|Oslo Opera House|노르웨이|2008|wedge|
+incheon|인천대교|Incheon Bridge|대한민국|2009|cable|
+burj|부르즈 할리파|Burj Khalifa|아랍에미리트|2010|megatall|T
+marina_bay|마리나 베이 샌즈|Marina Bay Sands|싱가포르|2010|bridgehotel|T
+capital_gate|캐피털 게이트|Capital Gate|아랍에미리트|2011|tilt|
+gardens_bay|가든스 바이 더 베이 슈퍼트리|Gardens by the Bay|싱가포르|2012|tree|T
+skytree|도쿄 스카이트리|Tokyo Skytree|일본|2012|lattice|T
+shard|더 샤드|The Shard|영국|2012|spike|T
+cctv|CCTV 본사|CCTV Headquarters|중국|2012|loop|
+heydar|헤이다르 알리예프 센터|Heydar Aliyev Center|아제르바이잔|2012|fluid|
+abraj|아브라즈 알 바이트 시계탑|Abraj Al Bait|사우디아라비아|2012|clock|
+ddp|동대문디자인플라자|Dongdaemun Design Plaza|대한민국|2014|fluid|T
+one_wtc|원 월드 트레이드 센터|One World Trade Center|미국|2014|spike|T
+shanghai_tower|상하이 타워|Shanghai Tower|중국|2015|twist|
+elbphil|엘프필하모니|Elbphilharmonie|독일|2017|crystal|
+louvre_ad|루브르 아부다비|Louvre Abu Dhabi|아랍에미리트|2017|bowl|T
+dubai_frame|두바이 프레임|Dubai Frame|아랍에미리트|2018|novelty|T
+unity|통일의 상|Statue of Unity|인도|2018|statue|
+vessel|베슬|Vessel|미국|2019|novelty|T
+merdeka|메르데카 118|Merdeka 118|말레이시아|2023|megatall|
+@영화
+metropolis|메트로폴리스 신 바벨탑|New Tower of Babel, Metropolis (1927)|영화|1927|film|F
+oz|오즈의 에메랄드 시티|Emerald City, The Wizard of Oz (1939)|영화|1939|film|F
+cinderella|신데렐라 성|Cinderella Castle (1950)|영화|1950|film|F
+bates|베이츠 저택|Bates House, Psycho (1960)|영화|1960|film|F
+ghostbusters|고스트버스터즈 소방서|Ghostbusters Firehouse (1984)|영화|1984|film|F
+laputa|천공의 성 라퓨타|Castle in the Sky (1986)|영화|1986|film|F
+nakatomi|나카토미 플라자|Nakatomi Plaza, Die Hard (1988)|영화|1988|film|F
+jurassic|쥬라기 공원 정문|Jurassic Park Gate (1993)|영화|1993|film|F
+spirited|센과 치히로의 온천장|Bathhouse, Spirited Away (2001)|영화|2001|film|F
+hogwarts|호그와트 성|Hogwarts (2001)|영화|2001|film|F
+minas|미나스 티리스|Minas Tirith (2003)|영화|2003|film|F
+bag_end|백 엔드 호빗 집|Bag End (2001)|영화|2001|film|F
+howl|하울의 움직이는 성|Howl's Moving Castle (2004)|영화|2004|film|F
+up|업의 풍선 집|Carl's House, Up (2009)|영화|2009|film|F
+avengers|어벤져스 타워|Avengers Tower (2012)|영화|2012|film|F
+grand_budapest|그랜드 부다페스트 호텔|The Grand Budapest Hotel (2014)|영화|2014|film|F
+wakanda|와칸다 황금 도시|Wakanda (2018)|영화|2018|film|F
+parasite|기생충 저택|Parasite House (2019)|영화|2019|film|F

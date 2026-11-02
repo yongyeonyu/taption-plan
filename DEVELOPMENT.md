@@ -158,7 +158,7 @@ HealthKit 운동 경로를 보완할 때는 기존 위치와 20초 시간 중복
 
 ## 검증 명령
 
-집 성장 그림은 `HomeEvolution001...366` 자산명과 기존 저장 레벨을 유지합니다. `scripts/home_evolution_artwork_manifest.json`이 승인한 122종 × 3레벨 원본 해시와 매핑을 기록합니다. `python3 scripts/generate_home_evolution_artwork.py --check`로 현재 자산을 대조하고, `--write`는 manifest에 지정된 디자인 원본을 기존 자산에 반영합니다. 512px 출력 원본의 내부 도형/viewBox를 유지하며 앱 벡터 기준 크기는 128pt, vector representation은 보존합니다. 성장·보상 회귀와 실제 번들 그림의 48pt 렌더 검사는 `MapHomeGrowthPolicyTests`에 있습니다.
+집 성장 그림은 `HomeEvolution001...366` 자산명과 기존 저장 레벨을 유지합니다. `tools/generate_home_evolution.py`가 `tools/home_evolution/catalog.txt`(건물 목록)와 `draw_*.py`(건물별 벡터 그림)로 자산과 `docs/HOME_EVOLUTION_LIST.md`를 만듭니다(`--check` 목록·그림 검사, `--fit` 화면 안 맞춤 배율 재계산). SVG viewBox는 128이고 기준 크기는 72pt입니다. 표시 최대가 68pt라 기준 크기를 낮춰 카탈로그의 @2x·@3x 래스터 용량을 줄였습니다. 존재·인접 일자 그림 차이·성장 회귀는 `MapHomeGrowthPolicyTests`에 있습니다. 이전 도구 `scripts/generate_home_evolution_artwork.py`와 manifest는 옛 그림 기준이라 쓰지 않습니다.
 
 현재 scheme과 target은 프로젝트에서 확인합니다.
 

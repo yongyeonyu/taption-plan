@@ -371,9 +371,16 @@ struct MapHomePinPreviewHost: View {
         }.allowsHitTesting(false)
     }
 
+    /// `-pinPreviewLevel=N`으로 집 그림 단계를 바꿔 본다.
+    private var previewLevel: Int {
+        ProcessInfo.processInfo.arguments
+            .first { $0.hasPrefix("-pinPreviewLevel=") }
+            .flatMap { Int($0.dropFirst("-pinPreviewLevel=".count)) } ?? 365
+    }
+
     private func marker(showsCatAtHome: Bool, weather: Bool) -> some View {
         MapHomePlacePin(
-            name: "집", floor: nil, destination: .home, growthLevel: 365,
+            name: "집", floor: nil, destination: .home, growthLevel: previewLevel,
             isLeapDay: false, growthStatus: "오늘도 채웠어요",
             isGrowthQualifiedToday: true, growthStreak: 12, pendingWeeklyRewards: 1,
             showsCatAtHome: showsCatAtHome, catAction: .activity,

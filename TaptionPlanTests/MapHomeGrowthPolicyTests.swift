@@ -340,7 +340,7 @@ final class MapHomeGrowthPolicyTests: XCTestCase {
                     XCTFail("Missing bundled illustration: \(name)")
                     return
                 }
-                XCTAssertEqual(image.size, CGSize(width: 128, height: 128), name)
+                XCTAssertEqual(image.size, CGSize(width: 72, height: 72), name)
                 let thumbnail = renderer.image { _ in
                     image.draw(in: CGRect(origin: .zero, size: size))
                 }
@@ -374,6 +374,47 @@ final class MapHomeGrowthPolicyTests: XCTestCase {
         attachment.name = "HomeEvolution366-Bundled-48pt"
         attachment.lifetime = .keepAlways
         add(attachment)
+    }
+
+    /// 대표 기준: 적어도 이틀에 한 번은 눈에 띄게 바뀐다. 더 엄격하게 하루 차이로 검사한다.
+    func testAdjacentEvolutionArtworkChangesVisibly() {
+        let side = 48
+        func pixels(level: Int) -> [UInt8]? {
+            guard let image = UIImage(named: MapHomeGrowthPolicy.artworkName(level: level), in: Bundle.main, with: nil),
+                  let context = CGContext(
+                    data: nil, width: side, height: side, bitsPerComponent: 8, bytesPerRow: side * 4,
+                    space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+                  ) else { return nil }
+            context.setFillColor(red: 0.992, green: 0.973, blue: 0.925, alpha: 1)
+            context.fill(CGRect(x: 0, y: 0, width: side, height: side))
+            UIGraphicsPushContext(context)
+            context.translateBy(x: 0, y: CGFloat(side))
+            context.scaleBy(x: 1, y: -1)
+            image.draw(in: CGRect(x: 0, y: 0, width: side, height: side))
+            UIGraphicsPopContext()
+            guard let data = context.data else { return nil }
+            return Array(UnsafeBufferPointer(start: data.assumingMemoryBound(to: UInt8.self), count: side * side * 4))
+        }
+        func changedShare(_ a: [UInt8], _ b: [UInt8]) -> Double {
+            var changed = 0
+            for i in stride(from: 0, to: a.count, by: 4) {
+                let delta = abs(Int(a[i]) - Int(b[i])) + abs(Int(a[i + 1]) - Int(b[i + 1])) + abs(Int(a[i + 2]) - Int(b[i + 2]))
+                if delta > 60 { changed += 1 }
+            }
+            return Double(changed) / Double(side * side)
+        }
+        var previous: [UInt8]?
+        for level in 1...366 {
+            guard let current = pixels(level: level) else {
+                XCTFail("Cannot render level \(level)")
+                continue
+            }
+            if let previous {
+                let share = changedShare(previous, current)
+                XCTAssertGreaterThanOrEqual(share, 0.08, "Lv.\(level - 1)→\(level) 그림 차이 \(share)")
+            }
+            previous = current
+        }
     }
 
     func testYearChangeArchivesPreviousHouseAndStartsAtLevelOne() {
