@@ -5369,3 +5369,11 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 분류: 표 v4. 활동 장보기·친구 만남·데이트·가족·통화, 취미 독서·게임·음악·영상 보기·반려동물 돌보기, 건강관리 낮잠·명상·병원·미용실, 집안일 빨래를 더했고 요리는 기존 항목을 쓴다. 모두 직접 고르는 항목이다. v3 항목 유지, 저장 JSON 왕복, 대분류 유지를 시험했다. 저장 스키마는 바꾸지 않았다.
 - 낮잠: 활동에 두면 `ActualRecordCategoryResolver`가 글자로 수면으로 바꿔 수면 통계에 섞여 건강관리에 뒀다. 자동으로 잡으려면 HealthKit `SleepSession`이 있어 낮 시간 짧은 수면 조건을 더할 수 있으나, 엔진을 고치지 않았고 실제 데이터로 재 보지도 않았다.
 - 제한: 실기기 설치·화면, 앱에서 직접 골라 저장하는 흐름은 확인하지 않았다. 재생 `.stay` 프레임은 대분류 장면이 나온다. `accessoryEscape`의 `clipped` 계산은 비트맵 행이 위아래로 뒤집혀 있어 아래쪽 잘림을 제대로 재지 못한다(기존 시험, 고치지 않음).
+## SKY1103A01 집 아이콘 하늘 (2026-11-03)
+- 시뮬레이터 단위(iPhone 17 Pro, iOS 27.0): `MapHomeHomeSkyTests` 10건 통과, `MapHomeStickmanTests` 56건 중 55건 통과·건너뜀 1건(`testWriteGroomingSheetWhenRequested`, 요청 시에만 시트 작성), 실패 0(`build/validation/SKY1103A01/unit6.log`). 전체 테스트는 돌리지 않았다.
+- 계산 근거: 서울 춘분·하지·동지 일출·일몰이 기억해 둔 공개값과 3분 안, 정오 고도 0.6° 안. 공개값은 이번에 원문을 다시 대조하지 않았다. 달 위상은 2026-08-12 일식(삭)·2025-03-14 월식(망)·2025-04 상현·하현 시각과 비교. 롱위에아르뷔엔 백야·극야, 극점·날짜 변경선에서 NaN 없음.
+- 시트(테스트 안 `ImageRenderer`로 합성, 실제 핀 뷰가 아니다): `build/validation/SKY1103A01/sheets3/` — `sky-times-weather.png`(새벽·일출·낮·일몰·노을·밤 × 맑음·흐림·비·눈), `sky-day-heading.png`(2시간 간격, 지도 0°·180°·90°), `sky-moon-phases.png`, `sky-levels.png`, `sky-motion.png`. 눈으로 보고 삭 무렵 달, 정오 해 높이, 90° 호, 일몰 땅색을 고쳤다.
+- 앱 Debug 빌드(generic iOS): 성공(`build-device2.log`). 가드: 경계 통과, 구조 지표 통과(`guard-metrics2.log`).
+- 실행하지 않은 것: 실제 앱 화면에서의 애니메이션(`-pinPreview`, 지도 위 집), 재생 중 프레임 측정, 저전력·동작 줄이기·조도 낮음 분기, 실기기. Apple 지도에서 집이 화면 밖일 때 그림이 멈추는지는 MapKit이 주석 뷰를 치우는 동작에 기대며 측정하지 않았다(벡터 지도는 마커 컬링을 코드로 확인).
+- 시트는 정오 호·달 호·날씨 겹침만 보여 주며, 시간 흐름에 따른 실제 움직임의 느낌은 대표 확인이 필요하다.
+- 집 그림 해 장식 제거(대표 지시, 2026-11-03): `c.sun` 15곳과 `kit._sun`을 지우고 `tools/generate_home_evolution.py`로 다시 생성. SVG는 Lv.14·16·33·43·57·67·113·120·157·161·325·335·337·350·361 15개만 바뀌었고, 366개 모두 서로 다르며 `--check` 통과. `--fit`은 돌리지 않아 집 크기는 그대로다. 시뮬레이터 단위: `MapHomeHomeSkyTests` 10건·`MapHomeGrowthPolicyTests` 30건 통과, 실패 0(`unit7.log`). Debug 빌드 성공(`build-device3.log`), 가드 2개 통과. 시트 `sheets-nosun/sky-levels.png`로 5개 레벨을 눈으로 확인했고 나머지 10개는 그림을 보지 않았다. 실기기와 성장 카드 화면은 확인하지 않았다.

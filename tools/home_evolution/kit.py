@@ -312,13 +312,6 @@ def _cloud(self, x, y, k=1, f="#FFFFFF"):
     self.p(f"M{n(x)} {n(y)}a{n(4 * k)} {n(4 * k)} 0 0 1 {n(3 * k)}-{n(6 * k)}a{n(5 * k)} {n(5 * k)} 0 0 1 {n(9 * k)}-{n(1 * k)}a{n(4 * k)} {n(4 * k)} 0 0 1 {n(5 * k)} {n(7 * k)}z", f, s=1)
 
 
-def _sun(self, x, y, r=6):
-    d = "".join(f"M{n(x + (r + 1.6) * math.cos(a))} {n(y + (r + 1.6) * math.sin(a))}L{n(x + (r + 4) * math.cos(a))} {n(y + (r + 4) * math.sin(a))}"
-                for a in [i * math.pi / 4 for i in range(8)])
-    self.p(d, s=1)
-    self.c(x, y, r, "#F5C65A", s=1.2)
-
-
 def _birds(self, x, y):
     self.p(f"M{x} {y}q2-2 4 0q2-2 4 0M{x + 12} {y - 5}q1.6-1.6 3 0q1.4-1.6 3 0", s=.9)
 
@@ -352,5 +345,5 @@ def _fluted(self, x, y, w, h, k, f=MARBLE, f2=MARBLE2):
     self.p("".join(f"M{n(x + gap * i - .8)} {n(y + 1)}h{n(cw + 1.6)}" for i in range(k)), s=1.2)
 
 
-C.blocks, C.shadow, C.cloud, C.sun, C.birds = _blocks, _shadow, _cloud, _sun, _birds
+C.blocks, C.shadow, C.cloud, C.birds = _blocks, _shadow, _cloud, _birds
 C.cypress, C.palm, C.water, C.people, C.fluted = _cypress, _palm, _water, _people, _fluted

@@ -2510,6 +2510,7 @@ struct MapHomeView: View {
             fogReveals: appleFogReveals,
             fogOpacity: CGFloat(fogStrength.opacity),
             onCameraFrame: { frame, locationPoint, isFinal in
+                MapHomeHomeSkyHeading.current = frame.camera.heading
                 MapHomeInteractionMonitor.shared.touch("map_gesture")
                 let now = ProcessInfo.processInfo.systemUptime
                 // 화랑이 점은 지도와 같은 프레임에 옮긴다. 아래 읽기 값은 0.25초마다라 여기서 기다리면 카운터가 뒤처진다.
@@ -3666,6 +3667,7 @@ struct MapHomeView: View {
                                     catAction: place.catAction,
                                     equippedAccessoryID: place.equippedAccessoryID,
                                     weatherBadge: place.weatherBadge,
+                                    homeSky: place.homeSky,
                                     onOpenDaySummary: { isDaySummaryPresented = true }
                                 )
                                 .fixedSize()
@@ -4288,6 +4290,7 @@ struct MapHomeView: View {
         isFinal: Bool
     ) {
         guard scenePhase == .active else { return }
+        MapHomeHomeSkyHeading.current = viewport.heading
         MapHomeInteractionMonitor.shared.touch("map_gesture")
         let now = ProcessInfo.processInfo.systemUptime
         // 구동기 재생 중에는 화면 값을 간격마다만 관찰 값으로 올리고, 화랑이 점은 구동기가 맡는다(PLY1029A03·PLY1029A05).
@@ -8218,7 +8221,13 @@ struct MapHomeView: View {
                 catAction: displayedStickmanAction,
                 equippedAccessoryID: homeGrowthHistory.season.equippedAccessory,
                 coordinate: CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude),
-                weatherBadge: destination == .home ? homeWeather : nil
+                weatherBadge: destination == .home ? homeWeather : nil,
+                homeSky: destination == .home ? MapHomeHomeSkyInput(
+                    coordinate: CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude),
+                    selectedDay: model.selectedDate,
+                    progress: playbackProgress,
+                    isPlaybackRunning: isDayPlaybackRunning
+                ) : nil
             )
         }
     }

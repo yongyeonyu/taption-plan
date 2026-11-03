@@ -68,22 +68,33 @@ extension MapHomeHomeWeatherKind {
     }
 }
 
-/// 날씨 애니메이션. 화랑이와 같은 시계·같은 갱신 간격으로 움직인다.
+extension MapHomeHomeWeatherKind {
+    /// 해·달은 하늘 그림이 맡으므로 맑으면 겹칠 것이 없다.
+    var isClear: Bool { self == .sun || self == .moon }
+}
+
+/// 날씨 애니메이션. 집 위에 겹치며 화랑이와 같은 시계·같은 갱신 간격으로 움직인다.
 struct MapHomeHomeWeatherArt: View {
     let kind: MapHomeHomeWeatherKind
     var windSpeed: Double = 0
+    var sky: MapHomeHomeSkyInput? = nil
     var size: CGFloat = MapHomePlacePinLayout.avatarSize
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.isLuminanceReduced) private var isLuminanceReduced
 
     var body: some View {
-        let isStatic = reduceMotion || isLuminanceReduced
-        TimelineView(.animation(minimumInterval: 1.0 / 24, paused: isStatic)) { context in
-            MapHomeHomeWeatherFrame(kind: kind, sec: isStatic ? 1 : HwarangClock.seconds(at: context.date), windSpeed: windSpeed, size: size)
+        if !kind.isClear || windSpeed >= MapHomeHomeWeatherFrame.visibleWindSpeed {
+            MapHomeHomeArtClock(progress: sky?.progress) { date, sec in
+                MapHomeHomeWeatherFrame(
+                    kind: kind,
+                    sec: sec,
+                    windSpeed: windSpeed,
+                    shade: sky.map { MapHomeSkyShade(state: $0.state(now: date)) },
+                    size: size
+                )
+            }
+            .frame(width: size, height: size)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
         }
-        .frame(width: size, height: size)
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
     }
 }
 
@@ -93,6 +104,8 @@ struct MapHomeHomeWeatherFrame: View {
     let sec: Double
     /// 초속(m/s). 바람 그림 속도와 비·눈이 기우는 정도를 정한다.
     var windSpeed: Double = 0
+    /// 시간대에 맞춰 구름·안개에 덧칠하는 색.
+    var shade: MapHomeSkyShade? = nil
     var size: CGFloat = MapHomePlacePinLayout.avatarSize
 
     /// 이 풍속부터는 맑은 날에도 바람 줄기를 함께 그린다.
@@ -105,7 +118,7 @@ struct MapHomeHomeWeatherFrame: View {
 
     private var slant: CGFloat { CGFloat(min(22, windSpeed * 1.1)) }
 
-    private static let outline = Color(hex: "#5A4033")
+    static let outline = Color(hex: "#5A4033")
 
     var body: some View {
         Canvas { context, canvasSize in
@@ -124,38 +137,39 @@ struct MapHomeHomeWeatherFrame: View {
         return r < 0 ? r + modulus : r
     }
 
+    /// 구름이 원을 가로질러 흘러간다. 원 밖으로 나가면 반대쪽에서 다시 들어온다.
+    private func sail(_ t: CGFloat, from base: CGFloat, rate: CGFloat) -> CGFloat {
+        wrap(base - t * rate * Self.windMotion(speed: windSpeed), 118) - 40
+    }
+
     private func draw(_ c: inout GraphicsContext, t: CGFloat) {
         switch kind {
-        case .sun:
-            sun(&c, t: t, x: 18, y: 24, r: 8)
+        case .sun, .moon:
+            break
         case .partlyCloudy:
-            sun(&c, t: t, x: 18, y: 22, r: 7)
-            cloud(&c, x: 30 + sin(t * 0.5) * 4, y: 27, k: 0.95, color: Color(hex: "#FFFFFF"))
-        case .moon:
-            sky(&c, Color(hex: "#27306B"), 0.28)
-            moon(&c, t: t)
+            cloud(&c, x: sail(t, from: 62, rate: 4), y: 27, k: 0.95, color: Color(hex: "#FFFFFF"))
         case .cloud:
             sky(&c, Color(hex: "#7B8794"), 0.12)
-            cloud(&c, x: 10 + sin(t * 0.4) * 3, y: 25, k: 1, color: Color(hex: "#C8D0D8"))
-            cloud(&c, x: 38 - sin(t * 0.5) * 4, y: 29, k: 1.05, color: Color(hex: "#E4E8EC"))
+            cloud(&c, x: sail(t, from: 30, rate: 3.4), y: 25, k: 1, color: Color(hex: "#C8D0D8"))
+            cloud(&c, x: sail(t, from: 90, rate: 5), y: 31, k: 1.05, color: Color(hex: "#E4E8EC"))
         case .fog:
             sky(&c, Color(hex: "#9AA5AE"), 0.2)
             fog(&c, t: t)
         case .rain:
             sky(&c, Color(hex: "#5F7486"), 0.2)
             rain(&c, t: t, count: 9, slant: 3 + slant, speed: 62)
-            cloud(&c, x: 8 + sin(t * 0.4) * 2, y: 24, k: 1.1, color: Color(hex: "#98A5B1"))
-            cloud(&c, x: 36 - sin(t * 0.45) * 3, y: 26, k: 1.1, color: Color(hex: "#AEBAC4"))
+            cloud(&c, x: 8 + sin(t * 0.7) * 7, y: 24, k: 1.1, color: Color(hex: "#98A5B1"))
+            cloud(&c, x: 36 - sin(t * 0.8) * 8, y: 26, k: 1.1, color: Color(hex: "#AEBAC4"))
         case .heavyRain:
             sky(&c, Color(hex: "#46586A"), 0.3)
             rain(&c, t: t, count: 16, slant: 6 + slant, speed: 92)
-            cloud(&c, x: 6 + sin(t * 0.5) * 2, y: 24, k: 1.2, color: Color(hex: "#6F7D8A"))
-            cloud(&c, x: 36 - sin(t * 0.55) * 3, y: 25, k: 1.2, color: Color(hex: "#7F8D9A"))
+            cloud(&c, x: 6 + sin(t * 0.9) * 6, y: 24, k: 1.2, color: Color(hex: "#6F7D8A"))
+            cloud(&c, x: 36 - sin(t * 1) * 7, y: 25, k: 1.2, color: Color(hex: "#7F8D9A"))
         case .snow:
             sky(&c, Color(hex: "#A9C3D8"), 0.2)
             snow(&c, t: t)
-            cloud(&c, x: 10 + sin(t * 0.4) * 3, y: 24, k: 1, color: Color(hex: "#DDE5EC"))
-            cloud(&c, x: 38 - sin(t * 0.4) * 3, y: 27, k: 1, color: Color(hex: "#EEF2F6"))
+            cloud(&c, x: 10 + sin(t * 0.6) * 7, y: 24, k: 1, color: Color(hex: "#DDE5EC"))
+            cloud(&c, x: 38 - sin(t * 0.7) * 7, y: 27, k: 1, color: Color(hex: "#EEF2F6"))
         case .thunder:
             sky(&c, Color(hex: "#303A4A"), 0.34)
             rain(&c, t: t, count: 11, slant: 5 + slant, speed: 84)
@@ -166,8 +180,8 @@ struct MapHomeHomeWeatherFrame: View {
                     c.fill(Path(CGRect(x: 0, y: 0, width: 78, height: 78)), with: .color(.white.opacity(0.42)))
                 }
             }
-            cloud(&c, x: 7, y: 24, k: 1.2, color: Color(hex: "#59636F"))
-            cloud(&c, x: 36, y: 25, k: 1.2, color: Color(hex: "#6B7581"))
+            cloud(&c, x: 7 + sin(t * 1.1) * 4, y: 24, k: 1.2, color: Color(hex: "#59636F"))
+            cloud(&c, x: 36 - sin(t * 1.2) * 4, y: 25, k: 1.2, color: Color(hex: "#6B7581"))
         case .wind:
             wind(&c, t: t)
         case .typhoon:
@@ -181,42 +195,23 @@ struct MapHomeHomeWeatherFrame: View {
         c.fill(Path(CGRect(x: 0, y: 0, width: 78, height: 78)), with: .color(color.opacity(alpha)))
     }
 
-    private func sun(_ c: inout GraphicsContext, t: CGFloat, x: CGFloat, y: CGFloat, r: CGFloat) {
-        var rays = Path()
-        for i in 0..<8 {
-            let a = t * 0.7 + CGFloat(i) * .pi / 4
-            let reach = r + 5 + sin(t * 2 + CGFloat(i)) * 1
-            rays.move(to: CGPoint(x: x + cos(a) * (r + 2), y: y + sin(a) * (r + 2)))
-            rays.addLine(to: CGPoint(x: x + cos(a) * reach, y: y + sin(a) * reach))
-        }
-        c.stroke(rays, with: .color(Color(hex: "#F2A93B")), style: StrokeStyle(lineWidth: 2, lineCap: .round))
-        let disk = Path(ellipseIn: CGRect(x: x - r, y: y - r, width: r * 2, height: r * 2))
-        c.fill(disk, with: .color(Color(hex: "#FFD24D")))
-        c.stroke(disk, with: .color(Self.outline), lineWidth: 1)
-    }
-
-    private func moon(_ c: inout GraphicsContext, t: CGFloat) {
-        var crescent = Path()
-        crescent.addArc(center: CGPoint(x: 20, y: 24), radius: 9, startAngle: .degrees(60), endAngle: .degrees(-60 + 360), clockwise: false)
-        crescent.addQuadCurve(to: CGPoint(x: 24.5, y: 31.8), control: CGPoint(x: 15, y: 24))
-        crescent.closeSubpath()
-        c.fill(crescent, with: .color(Color(hex: "#FFE08A")))
-        c.stroke(crescent, with: .color(Self.outline), lineWidth: 1)
-        for (i, star) in [CGPoint(x: 38, y: 19), CGPoint(x: 50, y: 25), CGPoint(x: 62, y: 18), CGPoint(x: 32, y: 32)].enumerated() {
-            let r = 1 + (sin(t * 2.4 + CGFloat(i) * 1.7) + 1) * 0.55
-            c.fill(Path(ellipseIn: CGRect(x: star.x - r, y: star.y - r, width: r * 2, height: r * 2)), with: .color(.white))
-        }
-    }
-
-    private func cloud(_ c: inout GraphicsContext, x: CGFloat, y: CGFloat, k: CGFloat, color: Color) {
+    static func cloudShape(x: CGFloat, y: CGFloat, k: CGFloat) -> Path {
         var shape = Path()
         for (dx, dy, r) in [(CGFloat(5), CGFloat(3), CGFloat(5)), (13, -1, 7.5), (23, 1, 6), (30, 4, 4.5)] {
             shape.addEllipse(in: CGRect(x: x + (dx - r) * k, y: y + (dy - r) * k, width: r * 2 * k, height: r * 2 * k))
         }
         shape.addRoundedRect(in: CGRect(x: x + 1 * k, y: y + 3 * k, width: 33 * k, height: 5.5 * k), cornerSize: CGSize(width: 2.7 * k, height: 2.7 * k))
+        return shape
+    }
+
+    private func cloud(_ c: inout GraphicsContext, x: CGFloat, y: CGFloat, k: CGFloat, color: Color) {
+        let shape = Self.cloudShape(x: x, y: y, k: k)
         // 겹친 원 안쪽 선이 보이지 않게 윤곽을 먼저 그리고 면으로 덮는다.
         c.stroke(shape, with: .color(Self.outline), lineWidth: 2)
         c.fill(shape, with: .color(color))
+        if let shade {
+            c.fill(shape, with: .color(shade.color.opacity(shade.opacity)))
+        }
     }
 
     private func rain(_ c: inout GraphicsContext, t: CGFloat, count: Int, slant: CGFloat, speed: CGFloat) {
@@ -295,10 +290,10 @@ struct MapHomeHomeWeatherFrame: View {
             let n = CGFloat(i)
             let y = 22 + n * 13
             var band = Path()
-            let shift = sin(t * 0.6 + n) * 7
+            let shift = sin(t * 0.9 + n) * 10
             band.move(to: CGPoint(x: 4 + shift, y: y))
             band.addCurve(to: CGPoint(x: 74 + shift, y: y), control1: CGPoint(x: 26 + shift, y: y - 3), control2: CGPoint(x: 50 + shift, y: y + 3))
-            c.stroke(band, with: .color(.white.opacity(0.78)), style: StrokeStyle(lineWidth: 4.4, lineCap: .round))
+            c.stroke(band, with: .color(.white.opacity(0.78 * (shade?.brightness ?? 1))), style: StrokeStyle(lineWidth: 4.4, lineCap: .round))
         }
     }
 

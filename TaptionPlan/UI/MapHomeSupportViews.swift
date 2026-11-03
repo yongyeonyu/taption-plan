@@ -367,6 +367,19 @@ struct MapHomePinPreviewHost: View {
             .flatMap { Int($0.dropFirst("-pinPreviewLevel=".count)) } ?? 365
     }
 
+    /// `-pinPreviewMinute=N`으로 하늘 시각을 고정한다. 좌표는 서울시청.
+    private var previewSky: MapHomeHomeSkyInput {
+        let progress = MapHomePlaybackProgress()
+        progress.rawSelectedMinute = ProcessInfo.processInfo.arguments
+            .first { $0.hasPrefix("-pinPreviewMinute=") }
+            .flatMap { Int($0.dropFirst("-pinPreviewMinute=".count)) }
+        return MapHomeHomeSkyInput(
+            coordinate: CLLocationCoordinate2D(latitude: 37.5665, longitude: 126.9780),
+            selectedDay: .now,
+            progress: progress
+        )
+    }
+
     private func marker(showsCatAtHome: Bool, weather: Bool) -> some View {
         MapHomePlacePin(
             name: "집", floor: nil, destination: .home, growthLevel: previewLevel,
@@ -378,6 +391,7 @@ struct MapHomePinPreviewHost: View {
                 ? MapHomeHomeWeatherBadge(
                     symbolName: "cloud.sun.fill", temperatureText: "19°", condition: "구름 조금")
                 : nil,
+            homeSky: previewSky,
             onOpenDaySummary: {}
         )
         .fixedSize()
