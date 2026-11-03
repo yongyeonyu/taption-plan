@@ -102,6 +102,17 @@ final class RouteTimelineDataTests: XCTestCase {
     /// 자동으로 분류된 지하철(사용자가 확정하지 않은 구간)도 재생 중에는 노선 위를 달린다.
     /// `isConfirmed`는 "모드를 직접 고쳤다"는 뜻이라 자동 구간은 늘 false이고, 예전에는
     /// 그 구간에서 재생 프레임도 확정 노선도 없어 화랑이가 사라졌다(대표 지적, 2026-10-28).
+    func testRecognizedSubwayDrawsRouteWithoutUserConfirmation() throws {
+        var (segment, _) = confirmedSubwayFixture()
+        segment.subwayRoute = try XCTUnwrap(SubwayStationCatalog.route(for: ["가정역", "마곡나루역"]))
+        segment.isConfirmed = false
+        segment.confidence = .high
+        segment.evidence = ["지하철 노선 후보 확정"]
+        XCTAssertTrue(RouteConfirmedSubwayIntervalIndex.isConfirmedSubway(segment))
+        segment.evidence = ["Core Motion 자동차 후보"]
+        XCTAssertFalse(RouteConfirmedSubwayIntervalIndex.isConfirmedSubway(segment), "근거 없는 지하철은 노선을 그리지 않는다")
+    }
+
     func testPlaybackRidesSubwayRouteEvenWhenNotConfirmed() throws {
         let (fixture, _) = confirmedSubwayFixture()
         var confirmed = fixture

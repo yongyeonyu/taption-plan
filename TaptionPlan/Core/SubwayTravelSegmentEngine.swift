@@ -16,7 +16,7 @@ enum SubwayTravelSegmentEngine {
         for segment: TravelSegment,
         readingIndex: SensorEvidenceTimeIndex
     ) -> TravelSegment? {
-        guard segment.mode == .subway, segment.isConfirmed else { return nil }
+        guard RouteConfirmedSubwayIntervalIndex.hasTrustedSubwayRoute(segment) else { return nil }
         if segment.subwayRoute.map(SubwayStationCatalog.isValid) == true { return segment }
         let context = TimeSpan(start: segment.span.start.addingTimeInterval(-2 * 60),
             end: segment.span.end.addingTimeInterval(2 * 60))

@@ -353,8 +353,7 @@ enum MapHomeSubwayRouteOverlayEngine {
         let readingIndex = SensorEvidenceTimeIndex(readings: observedReadings)
         let subwaySegments = travel
             .filter {
-                $0.mode == .subway
-                    && $0.isConfirmed
+                RouteConfirmedSubwayIntervalIndex.hasTrustedSubwayRoute($0)
                     && $0.span.start <= cutoff
                     && $0.span.intersection(with: day) != nil
             }

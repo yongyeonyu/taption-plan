@@ -98,9 +98,18 @@ struct RouteConfirmedSubwayIntervalIndex {
     }
 
     static func isConfirmedSubway(_ segment: TravelSegment) -> Bool {
-        segment.mode == .subway
-            && segment.isConfirmed
+        hasTrustedSubwayRoute(segment)
             && segment.subwayRoute.map(SubwayStationCatalog.isValid) == true
+    }
+
+    /// 사용자가 확인했거나 하루 판정이 역 → 역으로 확정한 지하철만 노선을 그린다(SUB1103A01).
+    /// 자동 판정은 `isConfirmed`를 쓰지 않아, 이것만 보면 지하철을 타도 예상 경로가 사라진다.
+    static func hasTrustedSubwayRoute(_ segment: TravelSegment) -> Bool {
+        guard segment.mode == .subway else { return false }
+        return segment.isConfirmed
+            || (segment.confidence == .high
+                && segment.evidence.contains("지하철 노선 후보 확정")
+                && !ActivityClassificationLockEngine.isRememberedOnlySubway(segment))
     }
 
     private func segment(
