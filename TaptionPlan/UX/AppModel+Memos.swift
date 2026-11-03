@@ -272,6 +272,14 @@ extension AppModel {
         if let mapPoint { snapshot.memos[index].mapPoint = mapPoint }
     }
 
+    /// 초안의 아이콘을 저장소에 쓰지 않고 바꾼다(위치를 고르고 돌아와도 고른 아이콘이 남는다).
+    func updateMemoDraftSticker(_ memoID: UUID, symbol: String?, colorHex: String?) {
+        guard pendingMapMemoIDs.contains(memoID),
+              let index = snapshot.memos.firstIndex(where: { $0.id == memoID }) else { return }
+        snapshot.memos[index].stickerSymbol = symbol
+        snapshot.memos[index].stickerColorHex = symbol == nil ? nil : colorHex
+    }
+
     func isMemoDraft(_ memoID: UUID) -> Bool { pendingMapMemoIDs.contains(memoID) }
 
     func discardMapMemoDraft(_ memoID: UUID) {

@@ -176,6 +176,7 @@
 		A5C1103A010000000000000A /* StructurePerformanceProbeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5C1103A010000000000000A /* StructurePerformanceProbeTests.swift */; };
 		A5B1102A020000000000005C /* FeatureEngineTestFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000005B /* FeatureEngineTestFixtures.swift */; };
 		A1000000000000000B1103D3 /* MapHomeHomeSkyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1103D3 /* MapHomeHomeSkyTests.swift */; };
+		A1000000000000000B1104B1 /* StickerCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1104B1 /* StickerCatalogTests.swift */; };
 		A5B1102A020000000000005A /* MapHomeStickmanTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000059 /* MapHomeStickmanTests.swift */; };
 		A1A11102A0100000000000A2 /* MemoTextPolishTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A11102A0100000000000F2 /* MemoTextPolishTests.swift */; };
 		A5B1102A0200000000000058 /* CategoryCacheBenchmarkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000057 /* CategoryCacheBenchmarkTests.swift */; };
@@ -363,6 +364,18 @@
 		A100000000000000C1102A14 /* MapHomeSectionEditSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A14 /* MapHomeSectionEditSheet.swift */; };
 		A100000000000000C1102A15 /* MapHomeSettingsSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A15 /* MapHomeSettingsSheets.swift */; };
 		A100000000000000C1102A16 /* MapHomeStickerEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A16 /* MapHomeStickerEditor.swift */; };
+		A100000000000000C1104B01 /* MapHomeStickerPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1104B01 /* MapHomeStickerPicker.swift */; };
+		A100000000000000C1104B02 /* StickerArtEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1104B02 /* StickerArtEngine.swift */; };
+		A100000000000000C1104B03 /* StickerCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1104B03 /* StickerCatalog.swift */; };
+		A100000000000000C1104B04 /* StickerArtBasics.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1104B04 /* StickerArtBasics.swift */; };
+		A100000000000000C1104B05 /* StickerArtCats.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1104B05 /* StickerArtCats.swift */; };
+		A100000000000000C1104B06 /* StickerArtAnimals.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1104B06 /* StickerArtAnimals.swift */; };
+		A100000000000000C1104B07 /* StickerArtMood.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1104B07 /* StickerArtMood.swift */; };
+		A100000000000000C1104B08 /* StickerArtFood.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1104B08 /* StickerArtFood.swift */; };
+		A100000000000000C1104B09 /* StickerArtPlans.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1104B09 /* StickerArtPlans.swift */; };
+		A100000000000000C1104B10 /* StickerArtTravel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1104B10 /* StickerArtTravel.swift */; };
+		A100000000000000C1104B11 /* StickerArtPhrases.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1104B11 /* StickerArtPhrases.swift */; };
+		A100000000000000C1104B12 /* StickerArtPlaces.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1104B12 /* StickerArtPlaces.swift */; };
 		A100000000000000C1102A17 /* MapHomeSupportViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A17 /* MapHomeSupportViews.swift */; };
 		A100000000000000C1102A18 /* MapHomeTransitRefreshPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A18 /* MapHomeTransitRefreshPolicy.swift */; };
 		A100000000000000C1102A19 /* MapHomeTransitSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A19 /* MapHomeTransitSheets.swift */; };
@@ -690,6 +703,7 @@
 		F5C1103A010000000000000A /* StructurePerformanceProbeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StructurePerformanceProbeTests.swift; sourceTree = "<group>"; };
 		F5B1102A020000000000005B /* FeatureEngineTestFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureEngineTestFixtures.swift; sourceTree = "<group>"; };
 		F1000000000000000B1103D3 /* MapHomeHomeSkyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeHomeSkyTests.swift; sourceTree = "<group>"; };
+		F1000000000000000B1104B1 /* StickerCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickerCatalogTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000059 /* MapHomeStickmanTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeStickmanTests.swift; sourceTree = "<group>"; };
 		F1A11102A0100000000000F2 /* MemoTextPolishTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoTextPolishTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000057 /* CategoryCacheBenchmarkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryCacheBenchmarkTests.swift; sourceTree = "<group>"; };
@@ -862,6 +876,18 @@
 		F100000000000000C1102A14 /* MapHomeSectionEditSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeSectionEditSheet.swift; sourceTree = "<group>"; };
 		F100000000000000C1102A15 /* MapHomeSettingsSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeSettingsSheets.swift; sourceTree = "<group>"; };
 		F100000000000000C1102A16 /* MapHomeStickerEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeStickerEditor.swift; sourceTree = "<group>"; };
+		F100000000000000C1104B01 /* MapHomeStickerPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeStickerPicker.swift; sourceTree = "<group>"; };
+		F100000000000000C1104B02 /* StickerArtEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickerArtEngine.swift; sourceTree = "<group>"; };
+		F100000000000000C1104B03 /* StickerCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickerCatalog.swift; sourceTree = "<group>"; };
+		F100000000000000C1104B04 /* StickerArtBasics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickerArtBasics.swift; sourceTree = "<group>"; };
+		F100000000000000C1104B05 /* StickerArtCats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickerArtCats.swift; sourceTree = "<group>"; };
+		F100000000000000C1104B06 /* StickerArtAnimals.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickerArtAnimals.swift; sourceTree = "<group>"; };
+		F100000000000000C1104B07 /* StickerArtMood.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickerArtMood.swift; sourceTree = "<group>"; };
+		F100000000000000C1104B08 /* StickerArtFood.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickerArtFood.swift; sourceTree = "<group>"; };
+		F100000000000000C1104B09 /* StickerArtPlans.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickerArtPlans.swift; sourceTree = "<group>"; };
+		F100000000000000C1104B10 /* StickerArtTravel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickerArtTravel.swift; sourceTree = "<group>"; };
+		F100000000000000C1104B11 /* StickerArtPhrases.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickerArtPhrases.swift; sourceTree = "<group>"; };
+		F100000000000000C1104B12 /* StickerArtPlaces.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickerArtPlaces.swift; sourceTree = "<group>"; };
 		F100000000000000C1102A17 /* MapHomeSupportViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeSupportViews.swift; sourceTree = "<group>"; };
 		F100000000000000C1102A18 /* MapHomeTransitRefreshPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeTransitRefreshPolicy.swift; sourceTree = "<group>"; };
 		F100000000000000C1102A19 /* MapHomeTransitSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeTransitSheets.swift; sourceTree = "<group>"; };
@@ -1110,6 +1136,7 @@
 				F5B1102A020000000000005B /* FeatureEngineTestFixtures.swift */,
 				F5C1103A010000000000000A /* StructurePerformanceProbeTests.swift */,
 				F1000000000000000B1103D3 /* MapHomeHomeSkyTests.swift */,
+				F1000000000000000B1104B1 /* StickerCatalogTests.swift */,
 				F5B1102A0200000000000059 /* MapHomeStickmanTests.swift */,
 				F1A11102A0100000000000F2 /* MemoTextPolishTests.swift */,
 				F5B1102A0200000000000057 /* CategoryCacheBenchmarkTests.swift */,
@@ -1204,6 +1231,18 @@
 				F100000000000000C1102A14 /* MapHomeSectionEditSheet.swift */,
 				F100000000000000C1102A15 /* MapHomeSettingsSheets.swift */,
 				F100000000000000C1102A16 /* MapHomeStickerEditor.swift */,
+				F100000000000000C1104B01 /* MapHomeStickerPicker.swift */,
+				F100000000000000C1104B02 /* StickerArtEngine.swift */,
+				F100000000000000C1104B03 /* StickerCatalog.swift */,
+				F100000000000000C1104B04 /* StickerArtBasics.swift */,
+				F100000000000000C1104B05 /* StickerArtCats.swift */,
+				F100000000000000C1104B06 /* StickerArtAnimals.swift */,
+				F100000000000000C1104B07 /* StickerArtMood.swift */,
+				F100000000000000C1104B08 /* StickerArtFood.swift */,
+				F100000000000000C1104B09 /* StickerArtPlans.swift */,
+				F100000000000000C1104B10 /* StickerArtTravel.swift */,
+				F100000000000000C1104B11 /* StickerArtPhrases.swift */,
+				F100000000000000C1104B12 /* StickerArtPlaces.swift */,
 				F100000000000000C1102A17 /* MapHomeSupportViews.swift */,
 				F100000000000000C1102A18 /* MapHomeTransitRefreshPolicy.swift */,
 				F100000000000000C1102A19 /* MapHomeTransitSheets.swift */,
@@ -1931,6 +1970,18 @@
 				A100000000000000C1102A14 /* MapHomeSectionEditSheet.swift in Sources */,
 				A100000000000000C1102A15 /* MapHomeSettingsSheets.swift in Sources */,
 				A100000000000000C1102A16 /* MapHomeStickerEditor.swift in Sources */,
+				A100000000000000C1104B01 /* MapHomeStickerPicker.swift in Sources */,
+				A100000000000000C1104B02 /* StickerArtEngine.swift in Sources */,
+				A100000000000000C1104B03 /* StickerCatalog.swift in Sources */,
+				A100000000000000C1104B04 /* StickerArtBasics.swift in Sources */,
+				A100000000000000C1104B05 /* StickerArtCats.swift in Sources */,
+				A100000000000000C1104B06 /* StickerArtAnimals.swift in Sources */,
+				A100000000000000C1104B07 /* StickerArtMood.swift in Sources */,
+				A100000000000000C1104B08 /* StickerArtFood.swift in Sources */,
+				A100000000000000C1104B09 /* StickerArtPlans.swift in Sources */,
+				A100000000000000C1104B10 /* StickerArtTravel.swift in Sources */,
+				A100000000000000C1104B11 /* StickerArtPhrases.swift in Sources */,
+				A100000000000000C1104B12 /* StickerArtPlaces.swift in Sources */,
 				A100000000000000C1102A17 /* MapHomeSupportViews.swift in Sources */,
 				A100000000000000C1102A18 /* MapHomeTransitRefreshPolicy.swift in Sources */,
 				A100000000000000C1102A19 /* MapHomeTransitSheets.swift in Sources */,
@@ -2172,6 +2223,7 @@
 				A5B1102A020000000000005C /* FeatureEngineTestFixtures.swift in Sources */,
 				A5C1103A010000000000000A /* StructurePerformanceProbeTests.swift in Sources */,
 				A1000000000000000B1103D3 /* MapHomeHomeSkyTests.swift in Sources */,
+				A1000000000000000B1104B1 /* StickerCatalogTests.swift in Sources */,
 				A5B1102A020000000000005A /* MapHomeStickmanTests.swift in Sources */,
 				A1A11102A0100000000000A2 /* MemoTextPolishTests.swift in Sources */,
 				A5B1102A0200000000000058 /* CategoryCacheBenchmarkTests.swift in Sources */,

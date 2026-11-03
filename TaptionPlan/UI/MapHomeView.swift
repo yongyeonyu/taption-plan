@@ -1626,14 +1626,13 @@ struct MapHomeView: View {
         )
     }
 
-    /// 선택한 날의 시간이 있는 메모(지도 핀이 아닌 것). 사이드바에 메모 아이콘으로 기본 표시한다.
+    /// 선택한 날의 시간이 있는 메모(지도 메모 포함). 사이드바에 메모 아이콘으로 기본 표시한다.
     private var timedMemosForSelectedDate: [ActionMemo] { memoDisplayMode == .hidden ? [] : timedMemoCache }
 
     /// 선택한 날의 시간 메모 목록을 한 번만 계산해 둔다(배지마다 전체 메모를 다시 훑지 않도록).
     private func refreshTimedMemoCache() {
         timedMemoCache = model.snapshot.memos.filter {
             $0.isTimeless != true
-                && $0.mapPoint == nil
                 && !model.isMemoDraft($0.id)
                 && Self.hasText($0)
                 && Calendar.autoupdatingCurrent.isDate($0.occurredAt, inSameDayAs: model.selectedDate)
@@ -2039,7 +2038,7 @@ struct MapHomeView: View {
 
     private func memoCard(_ memo: ActionMemo, showsTime: Bool) -> some View {
         HStack(alignment: .top, spacing: 10) {
-            Image(systemName: showsTime ? "clock.fill" : "note.text")
+            StickerGlyph(symbol: memo.iconSymbol(fallback: showsTime ? "clock.fill" : "note.text"), colorHex: memo.iconColorHex, size: 24)
                 .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))
                 .foregroundStyle(Color.tpReferenceBlue)
                 .frame(width: 26, height: 26)
@@ -6485,7 +6484,7 @@ struct MapHomeView: View {
                             if isStickerMode { selectedMapStickerEditor = .sticker(sticker.id); return }
                             toggleSidebarNote(.sticker(sticker, minute: minute, badgeOffset: scheduleBadgeOffset(minute: minute, isEvent: false)))
                         } label: {
-                            Image(systemName: sticker.systemImage)
+                            StickerGlyph(symbol: sticker.systemImage, colorHex: sticker.colorHex, size: 20)
                                 .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
                                 .foregroundStyle(Color(hex: sticker.colorHex))
                                 .frame(width: 22, height: 22)
@@ -6523,17 +6522,11 @@ struct MapHomeView: View {
                         Button {
                             toggleSidebarNote(.memo(memo, minute: minute, badgeOffset: scheduleBadgeOffset(minute: minute, isEvent: false)))
                         } label: {
-                            Group {
-                                if let symbol = memo.stickerSymbol {
-                                    Image(systemName: symbol)
-                                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
-                                        .foregroundStyle(Color(hex: memo.stickerColorHex ?? "#F28FA9"))
-                                } else {
-                                    TaptionBarIcon(systemImage: "note.text", size: 15)
-                                }
-                            }
-                            .frame(width: 22, height: 22)
-                            .taptionRaised(.circle, fill: .white)
+                            StickerGlyph(symbol: memo.iconSymbol(), colorHex: memo.iconColorHex, size: 20)
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
+                                .foregroundStyle(memo.isSticker ? Color(hex: memo.stickerColorHex ?? "#F28FA9") : Color.tpInk)
+                                .frame(width: 22, height: 22)
+                                .taptionRaised(.circle, fill: .white)
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("\(memo.text) 메모")

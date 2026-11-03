@@ -15,6 +15,9 @@ struct MapHomeSidebarNote: Equatable {
     var detail: String? = nil
     let minute: Int
     let badgeOffset: CGFloat
+    /// 말풍선 왼쪽 아이콘. 구글 일정은 로고를 따로 그린다.
+    var symbol: String? = nil
+    var colorHex: String = StickerCatalog.defaultMemoColorHex
 
     private static func clock(_ date: Date) -> String { date.formatted(date: .omitted, time: .shortened) }
 
@@ -23,11 +26,11 @@ struct MapHomeSidebarNote: Equatable {
     }
 
     static func memo(_ memo: ActionMemo, minute: Int, badgeOffset: CGFloat) -> Self {
-        Self(id: "memo-\(memo.id)", source: .memo(memo.id), title: memo.text, time: clock(memo.occurredAt), minute: minute, badgeOffset: badgeOffset)
+        Self(id: "memo-\(memo.id)", source: .memo(memo.id), title: memo.text, time: clock(memo.occurredAt), minute: minute, badgeOffset: badgeOffset, symbol: memo.iconSymbol(), colorHex: memo.iconColorHex)
     }
 
     static func sticker(_ sticker: MapSticker, minute: Int, badgeOffset: CGFloat) -> Self {
-        Self(id: "sticker-\(sticker.id)", source: .sticker(sticker.id), title: sticker.title, time: clock(sticker.occurredAt), detail: sticker.memo, minute: minute, badgeOffset: badgeOffset)
+        Self(id: "sticker-\(sticker.id)", source: .sticker(sticker.id), title: sticker.title, time: clock(sticker.occurredAt), detail: sticker.memo, minute: minute, badgeOffset: badgeOffset, symbol: sticker.systemImage, colorHex: sticker.colorHex)
     }
 
     /// 말풍선을 눌러 편집 창을 열 수 있는지. 구글 일정은 앱에서 고치지 않는다.
@@ -59,6 +62,12 @@ struct MapHomeSidebarNoteBubble: View {
 
     var body: some View {
         Button(action: onTap) {
+            HStack(alignment: .top, spacing: 6) {
+                if let symbol = note.symbol {
+                    StickerGlyph(symbol: symbol, colorHex: note.colorHex, size: 28)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(Color.tpInk)
+                }
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 5) {
                     if note.source == .event {
@@ -79,6 +88,7 @@ struct MapHomeSidebarNoteBubble: View {
                         .foregroundStyle(Color.tpSecondary)
                         .lineLimit(6)
                 }
+            }
             }
             .frame(width: MapHomeSidebarNoteLayout.width - 20, alignment: .leading)
             .padding(10)

@@ -24,23 +24,18 @@ struct MapHomeMapStickerMarker: View {
     let sticker: MapSticker
 
     var body: some View {
-        VStack(spacing: 3) {
-            Image(systemName: sticker.systemImage)
+        VStack(spacing: 2) {
+            StickerGlyph(symbol: sticker.systemImage, colorHex: sticker.colorHex, size: 34)
                 .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
+                .foregroundStyle(Color(hex: sticker.colorHex))
             Text(sticker.title)
                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold))
                 .lineLimit(1)
-        }
-        .foregroundStyle(Color.tpInk)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
-        .background(
-            Color(hex: sticker.colorHex).opacity(0.92),
-            in: RoundedRectangle(cornerRadius: 11, style: .continuous)
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: 11, style: .continuous)
-                .stroke(Color.white.opacity(0.9), lineWidth: 1)
+                .foregroundStyle(Color.tpInk)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(Color.white.opacity(0.94), in: Capsule())
+                .overlay { Capsule().stroke(Color.black, lineWidth: 1) }
         }
         .shadow(color: .black.opacity(0.12), radius: 4, y: 2)
         .fixedSize()
@@ -57,7 +52,7 @@ struct MapHomeMapMemoMarker: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 4) {
-                Image(systemName: "note.text")
+                StickerGlyph(symbol: memo.iconSymbol(), colorHex: memo.iconColorHex, size: 24)
                     .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
                 Text(memo.occurredAt.formatted(date: .omitted, time: .shortened))
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .bold))
@@ -123,12 +118,11 @@ struct MapHomeStickerEditorSheet: View {
     @State private var memoText = ""
     @State private var hasTime = false
     @State private var showsAsSticker = false
-    @State private var showsMapStickerNeedsLocation = false
     @State private var keepsDraft = false
     @State private var memoKind: MemoKind = .idea
     @State private var placement: MapStickerPlacement = .map
-    @State private var systemImage = "star.fill"
-    @State private var colorHex = "#F28FA9"
+    @State private var systemImage = StickerCatalog.defaultSymbol
+    @State private var colorHex = StickerCatalog.defaultColorHex
     @State private var latitudeText = ""
     @State private var longitudeText = ""
     @State private var occurredAt = Date()
@@ -140,15 +134,7 @@ struct MapHomeStickerEditorSheet: View {
     @State private var isDictationStarting = false
     @State private var memoFocusToken = 0
     @State private var polish = MemoPolishController()
-
-    private let symbols = [
-        "star.fill", "heart.fill", "flag.fill", "pin.fill",
-        "sparkles", "leaf.fill"
-    ]
-    private let colors = [
-        "#F28FA9", "#A9CFF0", "#8FD9C5", "#F2D58D",
-        "#C2B4E9", "#F2B18D"
-    ]
+    @State private var isStickerPickerPresented = false
 
     private var isSticker: Bool {
         if case .sticker = target { return true }
@@ -168,6 +154,11 @@ struct MapHomeStickerEditorSheet: View {
         if !isSticker { return true }
         if placement == .schedule { return true }
         return editedPoint != nil
+    }
+
+    /// 메모에 저장할 아이콘. 위치가 있으면 항상 있다.
+    private var chosenMemoSymbol: String? {
+        showsAsSticker || editedPoint != nil ? systemImage : nil
     }
 
     private var editedPoint: GeoPoint? {
@@ -204,15 +195,6 @@ struct MapHomeStickerEditorSheet: View {
             .background(Color.tpBackground)
             .safeAreaInset(edge: .bottom) { dictationBar }
             .tint(Color.tpAccent)
-            .alert(
-                language.text("위치를 먼저 고르세요", "Choose a location first"),
-                isPresented: $showsMapStickerNeedsLocation
-            ) {
-                Button(language.text("위치 고르기", "Choose location")) { requestLocation() }
-                Button(language.text("취소", "Cancel"), role: .cancel) {}
-            } message: {
-                Text(language.text("지도 스티커는 위치가 있어야 지도에 보여요. 위치를 고르거나 추가 위치를 일정으로 바꾸세요.", "A map sticker needs a location to show on the map. Pick a location or change the placement to schedule."))
-            }
             .navigationTitle(
                 language.text(
                     isSticker
@@ -508,10 +490,18 @@ struct MapHomeStickerEditorSheet: View {
                 stickerOptions
             }
         } else {
+            // 위치가 있는 메모는 곧 지도 메모다. 아이콘이 항상 있고, 위치가 없을 때만 켜고 끈다.
             editorCard {
-                Toggle(language.text("스티커로 표시", "Show as sticker"), isOn: $showsAsSticker)
-                if showsAsSticker {
-                    stickerOptions
+                if editedPoint == nil {
+                    Toggle(language.text("아이콘 표시", "Show an icon"), isOn: $showsAsSticker)
+                }
+                if showsAsSticker || editedPoint != nil {
+                    stickerPickerRow
+                }
+                if editedPoint != nil {
+                    Text(language.text("지도와 사이드바에 이 아이콘으로 보여요.", "This icon shows on the map and in the sidebar."))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
+                        .foregroundStyle(Color.tpSecondary)
                 }
             }
         }
@@ -581,8 +571,7 @@ struct MapHomeStickerEditorSheet: View {
             Text(language.text("지도", "Map")).tag(MapStickerPlacement.map)
             Text(language.text("일정", "Schedule")).tag(MapStickerPlacement.schedule)
         }
-        symbolPicker
-        colorPicker
+        stickerPickerRow
     }
 
     /// 위치 고르기: 지금까지 쓴 내용을 임시로 남기고 편집 화면을 닫는다. 핀을 고르면 다시 열린다.
@@ -597,6 +586,7 @@ struct MapHomeStickerEditorSheet: View {
                 isTimeless: !hasTime,
                 mapPoint: .some(editedPoint)
             )
+            model.updateMemoDraftSticker(id, symbol: chosenMemoSymbol, colorHex: colorHex)
             dismiss()
             onRequestLocation?(id)
         case .memo(let id):
@@ -611,6 +601,7 @@ struct MapHomeStickerEditorSheet: View {
                     isTimeless: !hasTime
                 )
             }
+            model.setMemoSticker(id, symbol: chosenMemoSymbol, colorHex: colorHex)
             dismiss()
             onRequestLocation?(id)
         case .sticker:
@@ -618,58 +609,28 @@ struct MapHomeStickerEditorSheet: View {
         }
     }
 
-    private var symbolPicker: some View {
-        HStack(spacing: 9) {
-            ForEach(symbols, id: \.self) { symbol in
-                Button {
-                    systemImage = symbol
-                } label: {
-                    Image(systemName: symbol)
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
-                        .foregroundStyle(Color(hex: colorHex))
-                        .frame(width: 34, height: 34)
-                        .background(
-                            systemImage == symbol
-                                ? Color(hex: colorHex).opacity(0.18)
-                                : Color.black.opacity(0.05),
-                            in: RoundedRectangle(cornerRadius: 8)
-                        )
-                        .taptionHitOutset(horizontal: 5, vertical: 5)
-                }
-                .buttonStyle(.plain)
-                .accessibilityAddTraits(systemImage == symbol ? .isSelected : [])
+    /// 고른 스티커를 보여 주고 분류별 고르기 화면을 연다. 색은 단색 스티커일 때 그 화면에서 고른다.
+    private var stickerPickerRow: some View {
+        Button {
+            isStickerPickerPresented = true
+        } label: {
+            HStack(spacing: 12) {
+                StickerGlyph(symbol: systemImage, colorHex: colorHex, size: 48)
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(22)), weight: .bold))
+                    .foregroundStyle(Color(hex: colorHex))
+                    .frame(width: 60, height: 60)
+                    .background(Color(hex: "#FFF9EC"), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                Text(language.text("스티커 고르기", "Choose a sticker"))
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .foregroundStyle(Color.tpSecondary)
             }
+            .contentShape(Rectangle())
         }
-    }
-
-    private var colorPicker: some View {
-        HStack(spacing: 10) {
-            ForEach(colors, id: \.self) { color in
-                Button {
-                    colorHex = color
-                } label: {
-                    Circle()
-                        .fill(Color(hex: color))
-                        .frame(width: 24, height: 24)
-                        .overlay {
-                            Circle()
-                                .stroke(
-                                    colorHex == color ? Color.tpInk : .white,
-                                    lineWidth: colorHex == color ? 2 : 1
-                                )
-                        }
-                        .taptionHitOutset(horizontal: 10, vertical: 10)
-                }
-                .buttonStyle(.plain)
-                // 색만 그린 단추는 읽어 줄 이름이 없다. 순서로 이름을 붙이고 고른 것을 알린다.
-                .accessibilityLabel(
-                    language.text(
-                        "색 \((colors.firstIndex(of: color) ?? 0) + 1)",
-                        "Color \((colors.firstIndex(of: color) ?? 0) + 1)"
-                    )
-                )
-                .accessibilityAddTraits(colorHex == color ? .isSelected : [])
-            }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("sticker-picker-button")
+        .sheet(isPresented: $isStickerPickerPresented) {
+            MapHomeStickerPickerSheet(symbol: $systemImage, colorHex: $colorHex, language: language)
         }
     }
 
@@ -696,11 +657,10 @@ struct MapHomeStickerEditorSheet: View {
             memoKind = memo.kind
             occurredAt = memo.occurredAt
             hasTime = memo.isTimeless != true
-            // 저장된 스티커 정보가 있으면 스티커 토글과 종류·색을 그대로 보여 준다.
+            // 저장된 스티커 정보가 있으면 그대로 보여 주고, 없으면 기본 메모 아이콘에서 시작한다.
             showsAsSticker = memo.isSticker
-            if let symbol = memo.stickerSymbol { systemImage = symbol }
-            if let color = memo.stickerColorHex { colorHex = color }
-            placement = .schedule
+            systemImage = memo.stickerSymbol ?? StickerCatalog.defaultMemoSymbol
+            colorHex = memo.iconColorHex
             if let point = memo.mapPoint {
                 latitudeText = String(format: "%.6f", point.latitude)
                 longitudeText = String(format: "%.6f", point.longitude)
@@ -724,25 +684,16 @@ struct MapHomeStickerEditorSheet: View {
                 occurredAt: occurredAt
             ) else { return }
         case .memo(let id), .newMemo(let id):
-            // 메모 하나가 스티커 정보를 함께 가진다. 스티커를 끄면 일반 메모가 된다.
-            if showsAsSticker, placement == .map, editedPoint == nil {
-                showsMapStickerNeedsLocation = true
-                return
-            }
-            let pinsToMap = showsAsSticker && placement == .schedule ? nil : editedPoint
+            // 위치를 넣으면 그 자리에 지도 메모로 뜬다. 아이콘을 끈 메모는 위치가 없을 때만 일반 메모로 남는다.
             guard model.updateMapMemo(
                 id,
                 text: memoText,
                 kind: memoKind,
-                mapPoint: pinsToMap,
+                mapPoint: editedPoint,
                 occurredAt: occurredAt,
                 isTimeless: !hasTime
             ) else { return }
-            model.setMemoSticker(
-                id,
-                symbol: showsAsSticker ? systemImage : nil,
-                colorHex: showsAsSticker ? colorHex : nil
-            )
+            model.setMemoSticker(id, symbol: chosenMemoSymbol, colorHex: colorHex)
             didSave = true
         }
         dismiss()
