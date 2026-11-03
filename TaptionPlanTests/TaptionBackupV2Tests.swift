@@ -1558,6 +1558,7 @@ final class TaptionBackupV2Tests: XCTestCase {
         try fake.evict(name: october.fileName, in: made.folder, placeholder: false)
         try fake.evict(name: september.fileName, in: made.folder)
         fake.neverMaterialize = true
+        let copiesBeforeListing = fake.copies
 
         let thisDevice = try makeHarness()
         let localOnly = readings(day: date(2026, 10, 20), count: 4, startIndex: 500)
@@ -1573,7 +1574,7 @@ final class TaptionBackupV2Tests: XCTestCase {
         XCTAssertTrue(rows.allSatisfy(\.isReadable), "내려받기 전에도 불러오기를 누를 수 있다")
         XCTAssertEqual(rows[1].size, octoberSize, "메타데이터의 크기를 쓴다")
         XCTAssertEqual(Set(fake.started), [september.fileName, october.fileName], "목록을 열면 내려받기를 요청한다")
-        XCTAssertEqual(fake.copies, 0)
+        XCTAssertEqual(fake.copies, copiesBeforeListing, "목록은 파일을 내려받아 복사하지 않는다")
 
         fake.neverMaterialize = false
         let summary = try await adapter.restore(.month(october), password: password)
