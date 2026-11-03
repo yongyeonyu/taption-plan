@@ -249,6 +249,11 @@ final class AppModel {
     var backupActivity: PlanBackupActivity = .idle
     var backupListings: [PlanBackupListingRow] = []
     var backupListingError: String?
+    var isRefreshingBackupListings = false
+    /// 지금 형식으로 열 수 없어 목록에서 뺀 백업 파일 수.
+    var backupUnsupportedFileCount = 0
+    /// 겹친 새로고침 중 마지막 요청의 결과만 화면에 올린다.
+    var backupListingGeneration = 0
     var lastBackupReport: PlanBackupReport?
     /// 기록 ID → 앱 토큰. 스크린 타임 데이터는 민감하므로 저장하지 않고
     /// 새로 고칠 때마다 메모리에만 채운다.

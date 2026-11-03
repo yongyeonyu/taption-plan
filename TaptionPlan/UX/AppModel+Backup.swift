@@ -20,20 +20,33 @@ extension AppModel {
         try securityService.verifyPIN(password, unlocking: false)
     }
 
-    /// iCloud Drive의 백업 파일 목록. 비밀번호를 넣기 전에는 월 이름과 파일 크기만 보이고,
-    /// 행 수·마지막 시각은 비밀번호를 넣은 뒤(`password`)에만 채운다.
+    /// iCloud Drive의 백업 파일 목록. 비밀번호(`password`)를 넣은 뒤에만 보여 준다.
+    /// 겹쳐 부르면 마지막 요청의 결과만 올린다.
     func refreshBackupListings(password: String? = nil) async {
-        guard let backupService else {
-            backupListings = []
+        backupListingGeneration &+= 1
+        let generation = backupListingGeneration
+        guard let backupService, let password, !password.isEmpty else {
+            applyBackupListings([], unsupported: 0, error: nil)
+            isRefreshingBackupListings = false
             return
         }
+        isRefreshingBackupListings = true
         do {
-            backupListings = try await backupService.listings(password: password)
-            backupListingError = nil
+            let rows = try await backupService.listings(password: password)
+            let unsupported = await backupService.unsupportedFileCount()
+            guard generation == backupListingGeneration else { return }
+            applyBackupListings(rows, unsupported: unsupported, error: nil)
         } catch {
-            backupListings = []
-            backupListingError = PlanBackupPresenter.message(for: error)
+            guard generation == backupListingGeneration else { return }
+            applyBackupListings([], unsupported: 0, error: PlanBackupPresenter.message(for: error))
         }
+        isRefreshingBackupListings = false
+    }
+
+    private func applyBackupListings(_ rows: [PlanBackupListingRow], unsupported: Int, error: String?) {
+        if backupListings != rows { backupListings = rows }
+        if backupUnsupportedFileCount != unsupported { backupUnsupportedFileCount = unsupported }
+        if backupListingError != error { backupListingError = error }
     }
 
     /// 저장소가 바뀐 뒤(복원·로컬 정리) 메모리 상태를 저장소에서 다시 만든다.

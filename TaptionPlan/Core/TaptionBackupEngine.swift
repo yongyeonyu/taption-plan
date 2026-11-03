@@ -86,6 +86,8 @@ actor TaptionBackupEngine {
         enum State: Equatable, Sendable {
             /// 비밀번호를 주지 않아 메타데이터를 열지 않았다.
             case locked
+            /// iCloud에만 있어 아직 열지 않았다. 내려받기는 요청해 뒀고, 복원을 누르면 받은 뒤 진행한다.
+            case notDownloaded
             case unreadable
             case wrongPassword
             case ok
@@ -151,6 +153,7 @@ actor TaptionBackupEngine {
     private let configuration: Configuration
     private var calendar: Calendar
     private var keyCache: [String: SymmetricKey] = [:]
+    private var unrecognizedFileCount = 0
     private var didCleanUploads = false
     private var isBusy = false
     private var waiters: [CheckedContinuation<Void, Never>] = []
@@ -210,12 +213,23 @@ actor TaptionBackupEngine {
     // MARK: 목록
 
     /// 비밀번호 없이는 월 이름·파일 크기만(`state == .locked`). 비밀번호를 주면 헤더 블록을 열어 행 수·마지막 시각 등을 채운다.
+    /// 내려받지 않은 파일은 기다리지 않고 `.notDownloaded`로 올린 뒤 내려받기만 요청한다.
     func listBackups(password: String? = nil) async throws -> [Listing] {
         var listings: [Listing] = []
+        var unrecognized = 0
         for info in try await destination.list() {
-            guard let scope = TaptionBackupScope(fileName: info.name) else { continue }
+            guard let scope = TaptionBackupScope(fileName: info.name) else {
+                unrecognized += 1
+                continue
+            }
             var listing = Listing(info: info, scope: scope, state: .locked, header: nil)
             if let password, !password.isEmpty {
+                if !info.isDownloaded {
+                    listing.state = .notDownloaded
+                    await destination.requestDownload(name: info.name)
+                    listings.append(listing)
+                    continue
+                }
                 do {
                     let prefix = try await destination.fetchPrefix(
                         name: info.name, length: TaptionBackupFileReader.headerPrefixBytes
@@ -231,7 +245,14 @@ actor TaptionBackupEngine {
             listings.append(listing)
         }
         keyCache = [:]
+        unrecognizedFileCount = unrecognized
         return listings.sorted { $0.info.name < $1.info.name }
+    }
+
+    /// 지금 형식으로 열 수 없어 목록에서 뺀 파일 수: 이전 엔진 폴더의 파일과, 마지막 목록에서 이름이 규칙에 맞지 않은 파일.
+    func unsupportedFileCount() async -> Int {
+        let legacy = await destination.legacyFileCount()
+        return legacy + unrecognizedFileCount
     }
 
     func isSealed(_ month: TaptionBackupMonth) async throws -> Bool {

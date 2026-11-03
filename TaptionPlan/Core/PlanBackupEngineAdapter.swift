@@ -26,10 +26,14 @@ struct PlanBackupEngineAdapter: Sendable {
                 createdAt: header.map { Date(timeIntervalSince1970: $0.createdAt) },
                 isOffloaded: offloaded,
                 metadataShown: showsMetadata,
-                isReadable: !showsMetadata || listing.state == .ok
+                state: listing.state
             ))
         }
         return rows
+    }
+
+    func unsupportedFileCount() async -> Int {
+        await engine.unsupportedFileCount()
     }
 
     func backupAll(

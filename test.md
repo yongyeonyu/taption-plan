@@ -5591,3 +5591,8 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - `acbc069f`·`c4e3e6c4`·`1c300f6a` 포함: 단위 시험 전체와 클립 화면 시험 3개 클래스 1,993건 중 1,980건 통과, 실패 0, 건너뜀 13 (`build/validation/TFB1104A01/check5.xcresult`).
 - 대표 결정 B(같은 구간은 최신 하나만 남긴다). 정리 전 자동 백업은 없다. 옛 빌드가 만든 실제 백업 복원, 실기기 저장·손 감각, iCloud 병합은 미확인이다. 세션 로그는 같은 ID 폴더로 옮겼다.
 - 배포 조건: 시작 중 저장 틈 처리와 대표의 "지금 백업" 뒤에만 TestFlight·실기기에 넣는다.
+## BKL1104A01 다른 기기 iCloud 백업 목록·복원(2026-11-04, 중간 커밋)
+- 앱 target 시뮬레이터 Debug 컴파일·링크 성공(`build/validation/BKL1104A01/tests-1.log`). 그 실행은 테스트 파일의 동시성 오류 1곳으로 테스트가 돌지 않았다. 오류를 고친 뒤 재실행(`tests-2.log`)은 기기 잠금 대기 중이라 **단위 테스트는 아직 한 건도 실행하지 못했다.**
+- 구조 지표 기준선 통과.
+- 실제 상태(Mac, 이름·크기만 읽음, brctl 마지막 동기화 2026-11-03 23:47): `Documents/TaptionBackup` 0개. `Documents/Taption Plan`에 이전 엔진 파일(`.taptionbackup`, `.dailycomplete`)만 있다. 내용은 열지 않았다.
+- 미검증: `NSMetadataQuery` 시스템 구현과 실제 기기 간 내려받기·복원(실기기 없음), 화면 손 확인.

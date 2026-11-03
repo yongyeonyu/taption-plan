@@ -132,6 +132,8 @@ struct MapHomeSecuritySheet: View {
     @State private var pin = ""
     @State private var confirmation = ""
     @State private var backupPassword = ""
+    /// 복원 카드에서 넣는 비밀번호. 앱 비밀번호가 없는 기기나 다른 비밀번호로 만든 백업을 열 때 쓴다.
+    @State private var restorePassword = ""
     @State private var remembered: String?
     @State private var message: String?
     @State private var restoreTarget: PlanBackupListingRow?
@@ -141,7 +143,7 @@ struct MapHomeSecuritySheet: View {
     @State var developerMailStatus = ""
     @FocusState private var focusedField: PINField?
 
-    private enum PINField { case pin, confirmation, backup }
+    private enum PINField { case pin, confirmation, backup, restore }
     /// 등록된 비밀번호는 다시 보여줄 수 없으므로, 등록돼 있으면 빈 칸 대신 점 6개로 표시한다.
     private var registeredPINDots: String { String(repeating: "●", count: securityPINDigits) }
 
@@ -156,6 +158,14 @@ struct MapHomeSecuritySheet: View {
     /// 기기에 보관된 비밀번호가 있으면 그것을, 없으면(기존 사용자 첫 1회) 입력한 값을 쓴다.
     private var password: String { remembered ?? backupPassword }
     private var needsPasswordEntry: Bool { hasPIN && remembered == nil }
+    /// 목록·복원에 쓸 비밀번호. 복원 카드에 넣은 값이 먼저다.
+    private var listingPassword: String? {
+        [restorePassword, password].first { $0.count == securityPINDigits }
+    }
+    private var showsRestorePasswordField: Bool {
+        !needsPasswordEntry && (remembered == nil || model.backupListings.contains(where: \.needsAnotherPassword))
+    }
+    private var hasDownloadingBackups: Bool { model.backupListings.contains(where: \.isDownloading) }
     private var canUseBackupPassword: Bool {
         hasPIN && password.count == securityPINDigits && !isBusy
     }
@@ -333,7 +343,15 @@ struct MapHomeSecuritySheet: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .background(Color.tpSurface)
-        .task { await model.refreshBackupListings() }
+        .task { await model.refreshBackupListings(password: listingPassword) }
+        .task(id: hasDownloadingBackups) {
+            guard hasDownloadingBackups else { return }
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 10_000_000_000)
+                guard !Task.isCancelled, !isBusy else { continue }
+                await model.refreshBackupListings(password: listingPassword)
+            }
+        }
         .onAppear { refreshRemembered() }
         .onChange(of: isBusy) { _, _ in refreshRemembered() }
         .onChange(of: hasPIN) { _, _ in refreshRemembered() }
@@ -457,27 +475,50 @@ struct MapHomeSecuritySheet: View {
     private var restoreCard: some View {
         card(language.text("백업 목록과 복원", "Backups and restore")) {
             Text(language.text(
-                "월 이름과 파일 크기는 바로 보이고, 행 수와 마지막 기록 시각은 비밀번호를 넣은 뒤 보입니다. 백업은 앱 비밀번호와 같은 비밀번호로 열립니다.",
-                "Row counts and times appear once the password is known. Backups open with your app password."
+                "비밀번호를 넣으면 같은 iCloud의 다른 기기에서 만든 백업까지 보입니다. 백업을 만들 때 쓴 비밀번호로 열립니다.",
+                "Enter the password to see backups from every device on this iCloud account. They open with the password used when they were made."
             ))
             .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
             .foregroundStyle(.secondary)
+            if showsRestorePasswordField {
+                SecureField(language.text("백업 비밀번호", "Backup password"), text: $restorePassword)
+                    .keyboardType(.numberPad)
+                    .focused($focusedField, equals: .restore)
+                    .textContentType(.password)
+                    .onChange(of: restorePassword) { _, value in
+                        let digits = numericPIN(value)
+                        if digits != value { restorePassword = digits }
+                        guard digits.count == securityPINDigits || digits.isEmpty else { return }
+                        Task { await model.refreshBackupListings(password: listingPassword) }
+                    }
+            }
             if case .restoring(let name) = activity {
                 ProgressView(language.text("\(name) 불러오는 중", "Restoring \(name)"))
                     .controlSize(.small)
             }
             if model.backupListings.isEmpty {
-                Text(model.backupListingError
-                    ?? language.text("iCloud에 백업 파일이 없습니다.", "No backup files in iCloud."))
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
-                    .foregroundStyle(.secondary)
+                if model.isRefreshingBackupListings {
+                    ProgressView(language.text("iCloud에서 목록을 읽는 중", "Reading the list from iCloud"))
+                        .controlSize(.small)
+                } else {
+                    Text(emptyListingText)
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
             }
             ForEach(model.backupListings) { row in
                 listingRow(row)
             }
+            if model.backupUnsupportedFileCount > 0 {
+                Text(language.text(
+                    "이전 버전에서 만든 백업 \(model.backupUnsupportedFileCount)개는 이 버전에서 열 수 없어 목록에서 뺐습니다. 파일은 그대로 있습니다.",
+                    "\(model.backupUnsupportedFileCount) backups from an earlier version cannot be opened here and are not listed. The files are untouched."
+                ))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
+                .foregroundStyle(.secondary)
+            }
             Button {
-                let shown = password.count == securityPINDigits ? password : nil
-                Task { await model.refreshBackupListings(password: shown) }
+                Task { await model.refreshBackupListings(password: listingPassword) }
             } label: {
                 Label(language.text("목록 새로고침", "Refresh list"), systemImage: "arrow.clockwise")
             }
@@ -505,7 +546,7 @@ struct MapHomeSecuritySheet: View {
             }
             Spacer(minLength: 8)
             Button(language.text("불러오기", "Restore")) {
-                guard !password.isEmpty else {
+                guard listingPassword != nil else {
                     message = language.text(
                         "비밀번호를 먼저 입력해 주세요.",
                         "Enter your password first."
@@ -611,7 +652,7 @@ struct MapHomeSecuritySheet: View {
     private func restoreConfirmed() {
         guard let target = restoreTarget else { return }
         restoreTarget = nil
-        let password = self.password
+        guard let password = listingPassword else { return }
         Task { await model.restoreBackup(target.scope, password: password) }
     }
 
@@ -634,14 +675,28 @@ struct MapHomeSecuritySheet: View {
         }
     }
 
+    private var emptyListingText: String {
+        if let error = model.backupListingError { return error }
+        if listingPassword == nil {
+            return language.text("비밀번호 \(securityPINDigits)자리를 넣으면 iCloud 백업이 보입니다.", "Enter your \(securityPINDigits)-digit password to see iCloud backups.")
+        }
+        return language.text("iCloud에 백업 파일이 없습니다.", "No backup files in iCloud.")
+    }
+
     private func listingDetail(_ row: PlanBackupListingRow) -> String {
         let size = ByteCountFormatter.string(fromByteCount: Int64(row.size), countStyle: .file)
-        guard row.metadataShown else {
-            return language.text("\(size) · 비밀번호를 넣으면 행 수와 시각이 보입니다", "\(size) · enter the password to see rows and times")
+        switch row.state {
+        case .notDownloaded:
+            let status = language.text("iCloud에서 내려받는 중 · 불러오기를 눌러도 됩니다", "Downloading from iCloud · you can tap Restore")
+            return row.size > 0 ? "\(size) · \(status)" : status
+        case .wrongPassword:
+            return language.text("\(size) · 다른 비밀번호로 만든 백업입니다. 위에 그 비밀번호를 넣어 주세요", "\(size) · made with another password. Enter that password above")
+        case .locked, .unreadable:
+            return language.text("\(size) · 열 수 없음(손상되었거나 충돌 버전이 있음)", "\(size) · unreadable (damaged or has conflicting versions)")
+        case .ok:
+            break
         }
-        guard row.isReadable, let rows = row.rowCount else {
-            return language.text("\(size) · 열 수 없음(내려받는 중이거나 손상됨)", "\(size) · unreadable (still downloading or damaged)")
-        }
+        guard let rows = row.rowCount else { return size }
         var parts = [size, language.text("\(rows)행", "\(rows) rows")]
         if let last = row.lastDataAt {
             parts.append(language.text("마지막 기록 \(formatted(last))", "last record \(formatted(last))"))

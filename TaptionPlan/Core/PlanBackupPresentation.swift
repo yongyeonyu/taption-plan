@@ -56,8 +56,11 @@ struct PlanBackupListingRow: Equatable, Identifiable, Sendable {
     var isOffloaded: Bool
     /// 행 수·시각 같은 헤더 메타데이터를 채웠는지(비밀번호를 넣은 뒤에만 true).
     var metadataShown: Bool
-    /// 메타데이터를 보여 준 상태에서 헤더를 읽었는지(깨졌거나 아직 내려받지 못한 파일은 false).
-    var isReadable: Bool
+    var state: TaptionBackupEngine.Listing.State
+    /// 불러오기를 누를 수 있는지. 내려받지 않은 파일은 받은 뒤 복원한다.
+    var isReadable: Bool { state == .ok || state == .notDownloaded }
+    var isDownloading: Bool { state == .notDownloaded }
+    var needsAnotherPassword: Bool { state == .wrongPassword }
 }
 
 enum PlanBackupPresenter {
@@ -183,6 +186,11 @@ extension TaptionBackupError {
             return AppLanguagePreference.text("암호 키를 만들지 못했습니다.", "Could not derive the encryption key.")
         case .fileMissing:
             return AppLanguagePreference.text("백업 파일을 찾지 못했습니다.", "The backup file was not found.")
+        case .destinationUnavailable(let reason) where reason.hasPrefix("download timed out"):
+            return AppLanguagePreference.text(
+                "iCloud에서 아직 내려받지 못했습니다. 네트워크를 확인하고 잠시 뒤 다시 눌러 주세요.",
+                "The backup has not finished downloading from iCloud. Check your network and try again shortly."
+            )
         case .destinationUnavailable:
             return AppLanguagePreference.text(
                 "iCloud Drive를 사용할 수 없습니다. iCloud 로그인과 설정의 iCloud Drive를 확인해 주세요.",

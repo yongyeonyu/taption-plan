@@ -1403,15 +1403,25 @@ final class TaptionBackupV2Tests: XCTestCase {
         var materializeAfterPolls = 2
         var neverMaterialize = false
         var copies = 0
+        private var discovered: [TaptionUbiquityItem] = []
 
         init(container: URL) { self.container = container }
 
-        func evict(name: String, in folder: URL) throws {
+        /// `placeholder`가 false면 다른 기기가 막 올린 상태처럼 폴더에 아무것도 없고 메타데이터로만 보인다.
+        func evict(name: String, in folder: URL, placeholder: Bool = true) throws {
             let url = folder.appendingPathComponent(name)
-            lock.withLock { stash[name] = try? Data(contentsOf: url) }
+            let data = try Data(contentsOf: url)
+            lock.withLock {
+                stash[name] = data
+                if !placeholder {
+                    discovered.append(TaptionUbiquityItem(url: url, size: data.count, modifiedAt: Date(timeIntervalSince1970: 1_790_000_000), isDownloaded: false))
+                }
+            }
             try FileManager.default.removeItem(at: url)
-            try Data().write(to: folder.appendingPathComponent(".\(name).icloud"))
+            if placeholder { try Data().write(to: folder.appendingPathComponent(".\(name).icloud")) }
         }
+
+        func discoverItems() async -> [TaptionUbiquityItem] { lock.withLock { discovered } }
 
         func containerURL(identifier: String?) async -> URL? { container }
 
@@ -1530,6 +1540,94 @@ final class TaptionBackupV2Tests: XCTestCase {
         XCTAssertEqual(summary.newReadings, 15)
         XCTAssertFalse(fake.started.isEmpty, "다운로드를 요청해야 한다")
         XCTAssertGreaterThan(fake.copies, 0, "조정된 읽기로 임시 사본을 만든다")
+    }
+
+    func testBackupFromAnotherDeviceIsListedBeforeDownloadAndRestoresWithoutTouchingLocalData() async throws {
+        let fake = FakeUbiquity(container: try makeDirectory())
+        let made = try makeICloudDestination(fake: fake)
+        let otherDevice = try makeHarness()
+        let october = TaptionBackupMonth(year: 2026, month: 10)
+        let september = TaptionBackupMonth(year: 2026, month: 9)
+        try await otherDevice.store.upsertReadings(readings(day: date(2026, 10, 3), count: 15))
+        try await otherDevice.store.upsertReadings(readings(day: date(2026, 9, 3), count: 6, startIndex: 100))
+        let writer = engine(otherDevice, destination: made.destination)
+        _ = try await writer.backup(month: october, password: password, now: date(2026, 10, 5))
+        _ = try await writer.backup(month: september, password: password, now: date(2026, 10, 5))
+        let octoberSize = try fileBytes(made.folder.appendingPathComponent(october.fileName)).count
+        // 10월은 메타데이터로만, 9월은 자리표시자로만 이 기기에 보인다.
+        try fake.evict(name: october.fileName, in: made.folder, placeholder: false)
+        try fake.evict(name: september.fileName, in: made.folder)
+        fake.neverMaterialize = true
+
+        let thisDevice = try makeHarness()
+        let localOnly = readings(day: date(2026, 10, 20), count: 4, startIndex: 500)
+        try await thisDevice.store.upsertReadings(localOnly)
+        let adapter = PlanBackupEngineAdapter(engine: engine(thisDevice, destination: made.destination))
+
+        let hidden = try await adapter.listings(password: nil)
+        XCTAssertEqual(hidden, [], "비밀번호를 넣기 전에는 보여 주지 않는다")
+
+        let rows = try await adapter.listings(password: password)
+        XCTAssertEqual(rows.map(\.name), [september.fileName, october.fileName])
+        XCTAssertEqual(rows.map(\.state), [.notDownloaded, .notDownloaded], "내려받기를 기다리지 않고 바로 보인다")
+        XCTAssertTrue(rows.allSatisfy(\.isReadable), "내려받기 전에도 불러오기를 누를 수 있다")
+        XCTAssertEqual(rows[1].size, octoberSize, "메타데이터의 크기를 쓴다")
+        XCTAssertEqual(Set(fake.started), [september.fileName, october.fileName], "목록을 열면 내려받기를 요청한다")
+        XCTAssertEqual(fake.copies, 0)
+
+        fake.neverMaterialize = false
+        let summary = try await adapter.restore(.month(october), password: password)
+        XCTAssertEqual(summary.newReadings, 15)
+        let restored = try await allReadings(thisDevice.store)
+        XCTAssertEqual(restored.count, 15 + localOnly.count, "복원은 이 기기의 데이터를 지우지 않는다")
+        XCTAssertTrue(Set(restored).isSuperset(of: Set(localOnly)))
+
+        let after = try await adapter.listings(password: password)
+        XCTAssertEqual(after.first { $0.name == october.fileName }?.state, .ok)
+        XCTAssertEqual(after.first { $0.name == october.fileName }?.rowCount, 15)
+    }
+
+    func testBackupMadeWithAnotherPasswordStaysListedAndOpensWithThatPassword() async throws {
+        let fake = FakeUbiquity(container: try makeDirectory())
+        let made = try makeICloudDestination(fake: fake)
+        let otherDevice = try makeHarness()
+        let month = TaptionBackupMonth(year: 2026, month: 10)
+        try await otherDevice.store.upsertReadings(readings(day: date(2026, 10, 3), count: 9))
+        _ = try await engine(otherDevice, destination: made.destination).backup(month: month, password: password, now: date(2026, 10, 5))
+
+        let adapter = PlanBackupEngineAdapter(engine: engine(try makeHarness(), destination: made.destination))
+        let wrong = try await adapter.listings(password: "000000")
+        XCTAssertEqual(wrong.map(\.state), [.wrongPassword], "빈 목록이 아니라 비밀번호가 다르다고 알린다")
+        XCTAssertTrue(wrong[0].needsAnotherPassword)
+        XCTAssertFalse(wrong[0].isReadable)
+        let opened = try await adapter.listings(password: password)
+        XCTAssertEqual(opened[0].rowCount, 9)
+    }
+
+    func testFilesThisVersionCannotOpenAreCountedInsteadOfSilentlyDropped() async throws {
+        let fake = FakeUbiquity(container: try makeDirectory())
+        let made = try makeICloudDestination(fake: fake)
+        let source = try makeHarness()
+        let month = TaptionBackupMonth(year: 2026, month: 10)
+        try await source.store.upsertReadings(readings(day: date(2026, 10, 3), count: 5))
+        let adapter = PlanBackupEngineAdapter(engine: engine(source, destination: made.destination))
+        _ = try await adapter.backupAll(password: password, now: date(2026, 10, 5))
+        // iCloud가 만든 충돌 사본 이름과 이전 엔진 폴더의 파일.
+        try Data("x".utf8).write(to: made.folder.appendingPathComponent("2026-10 2.taptionbackup"))
+        let legacy = made.folder.deletingLastPathComponent()
+            .appendingPathComponent(TaptionICloudDriveBackupDestination.legacyFolderName, isDirectory: true)
+        try FileManager.default.createDirectory(at: legacy, withIntermediateDirectories: true)
+        let legacyNames = ["2026-09.1790778849053.ID.taptionbackup", ".2026-08-04.1792068086138.ID.taptionbackup.icloud", "2026-08-04.dailycomplete"]
+        for name in legacyNames { try Data("old".utf8).write(to: legacy.appendingPathComponent(name)) }
+
+        let rows = try await adapter.listings(password: password)
+        XCTAssertTrue(rows.map(\.name).contains(month.fileName))
+        XCTAssertFalse(rows.map(\.name).contains("2026-10 2.taptionbackup"))
+        let count = await adapter.unsupportedFileCount()
+        XCTAssertEqual(count, 3, "충돌 사본 1개 + 이전 엔진 백업 2개(완료 표식 제외)")
+        for name in legacyNames {
+            XCTAssertTrue(FileManager.default.fileExists(atPath: legacy.appendingPathComponent(name).path), "옛 파일을 건드리지 않는다")
+        }
     }
 
     func testICloudDownloadTimeoutAndConflictsAreRefusedWithoutTouchingTheFile() async throws {

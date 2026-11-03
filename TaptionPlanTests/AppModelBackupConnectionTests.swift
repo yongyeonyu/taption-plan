@@ -154,6 +154,17 @@ final class AppModelBackupConnectionTests: XCTestCase {
         let detailed = try XCTUnwrap(model.backupListings.first { $0.name == "2026-07.taptionbackup" })
         XCTAssertEqual(detailed.rowCount, 2)
         XCTAssertTrue(detailed.metadataShown)
+        XCTAssertEqual(detailed.state, .ok)
+        XCTAssertFalse(model.isRefreshingBackupListings)
+        // 겹친 요청: 먼저 시작한 새로고침의 늦은 결과가 마지막 요청의 결과를 덮지 않는다.
+        let password = self.password
+        let slow = Task { @MainActor in await model.refreshBackupListings(password: password) }
+        await Task.yield()
+        XCTAssertTrue(model.isRefreshingBackupListings)
+        await model.refreshBackupListings()
+        await slow.value
+        XCTAssertTrue(model.backupListings.isEmpty, "마지막 요청(비밀번호 없음)의 결과가 남는다")
+        await model.refreshBackupListings(password: password)
 
         // 로컬 정리: 기본값으로 이번 달과 지난달만 남긴다.
         XCTAssertEqual(model.securityStatus.localMonthsToKeep, 2)

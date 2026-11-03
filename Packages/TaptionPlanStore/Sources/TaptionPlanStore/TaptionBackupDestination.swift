@@ -4,15 +4,19 @@ public struct TaptionBackupFileInfo: Equatable, Sendable {
     public var name: String
     public var size: Int
     public var modifiedAt: Date
+    /// 지금 이 기기에서 바로 읽을 수 있는지. iCloud에만 있으면 false다.
+    public var isDownloaded: Bool
 
     public init(
         name: String,
         size: Int,
-        modifiedAt: Date
+        modifiedAt: Date,
+        isDownloaded: Bool = true
     ) {
         self.name = name
         self.size = size
         self.modifiedAt = modifiedAt
+        self.isDownloaded = isDownloaded
     }
 }
 
@@ -32,11 +36,17 @@ public protocol TaptionBackupDestination: Sendable {
     func remove(name: String) async throws
     /// 이전 실행이 남긴 업로드 임시 파일을 치운다. 기본 구현은 아무것도 하지 않는다.
     func cleanupStaleUploads() async
+    /// 기다리지 않고 내려받기만 요청한다. 기본 구현은 아무것도 하지 않는다.
+    func requestDownload(name: String) async
+    /// 이전 엔진이 다른 폴더에 남긴, 지금 형식으로 열 수 없는 백업 파일 수. 기본값은 0이다.
+    func legacyFileCount() async -> Int
 }
 
 extension TaptionBackupDestination {
     public func release(fetched: URL) async {}
     public func cleanupStaleUploads() async {}
+    public func requestDownload(name: String) async {}
+    public func legacyFileCount() async -> Int { 0 }
 
     public func fetchPrefix(name: String, length: Int) async throws -> Data {
         let url = try await fetch(name: name)
@@ -191,6 +201,21 @@ public enum TaptionUbiquityItemState: Equatable, Sendable {
     case current
 }
 
+/// iCloud 메타데이터로 찾은 항목. 이 기기에 파일이나 자리표시자가 아직 없어도 나온다.
+public struct TaptionUbiquityItem: Equatable, Sendable {
+    public var url: URL
+    public var size: Int
+    public var modifiedAt: Date
+    public var isDownloaded: Bool
+
+    public init(url: URL, size: Int, modifiedAt: Date, isDownloaded: Bool) {
+        self.url = url
+        self.size = size
+        self.modifiedAt = modifiedAt
+        self.isDownloaded = isDownloaded
+    }
+}
+
 /// iCloud(ubiquity) 관련 시스템 호출을 감싼 얇은 층. 실제 구현은 기기에서만 동작하므로, 테스트는 같은 규약을 흉내 내는
 /// 구현을 끼워 넣어 목적지 로직(자리표시자·다운로드 대기·충돌·조정 읽기)을 로컬 폴더에서 확인한다.
 public protocol TaptionUbiquityFileSystem: Sendable {
@@ -204,10 +229,44 @@ public protocol TaptionUbiquityFileSystem: Sendable {
     func coordinatedReadPrefix(of url: URL, length: Int) throws -> Data
     func coordinatedReplace(target: URL, with staging: URL) throws
     func coordinatedRemove(_ url: URL) throws
+    /// 컨테이너 Documents 안의 백업 파일을 iCloud 메타데이터에서 찾는다. 다른 기기가 올린 파일을 여기서 알게 된다.
+    func discoverItems() async -> [TaptionUbiquityItem]
 }
 
 public struct TaptionSystemUbiquityFileSystem: TaptionUbiquityFileSystem {
+    /// 메타데이터 수집을 기다리는 최대 시간(초). 넘기면 그때까지 모은 항목만 쓴다.
+    private static let discoveryTimeout: TimeInterval = 5
+
     public init() {}
+
+    public func discoverItems() async -> [TaptionUbiquityItem] {
+        await Self.gatherItems()
+    }
+
+    @MainActor
+    private static func gatherItems() async -> [TaptionUbiquityItem] {
+        let query = NSMetadataQuery()
+        query.searchScopes = [NSMetadataQueryUbiquitousDocumentsScope]
+        query.predicate = NSPredicate(format: "%K LIKE %@", NSMetadataItemFSNameKey, "*.\(TaptionBackupMonth.fileExtension)")
+        guard query.start() else { return [] }
+        defer { query.stop() }
+        let deadline = Date().addingTimeInterval(discoveryTimeout)
+        while query.isGathering, Date() < deadline {
+            try? await Task.sleep(nanoseconds: 100_000_000)
+        }
+        query.disableUpdates()
+        return query.results.compactMap { result in
+            guard let item = result as? NSMetadataItem,
+                  let url = item.value(forAttribute: NSMetadataItemURLKey) as? URL else { return nil }
+            let status = item.value(forAttribute: NSMetadataUbiquitousItemDownloadingStatusKey) as? String
+            return TaptionUbiquityItem(
+                url: url,
+                size: (item.value(forAttribute: NSMetadataItemFSSizeKey) as? NSNumber)?.intValue ?? 0,
+                modifiedAt: item.value(forAttribute: NSMetadataItemFSContentChangeDateKey) as? Date ?? .distantPast,
+                isDownloaded: status == NSMetadataUbiquitousItemDownloadingStatusCurrent
+            )
+        }
+    }
 
     public func containerURL(identifier: String?) async -> URL? {
         await Task.detached { FileManager.default.url(forUbiquityContainerIdentifier: identifier) }.value
@@ -291,12 +350,12 @@ public struct TaptionSystemUbiquityFileSystem: TaptionUbiquityFileSystem {
 /// iCloud Documents entitlement(`com.apple.developer.icloud-container-identifiers`,
 /// `com.apple.developer.ubiquity-container-identifiers`)가 있는 서명된 앱에서만 주소를 돌려주며,
 /// 시뮬레이터·테스트 호스트·entitlement 없는 빌드에서는 nil이라 `destinationUnavailable`을 던진다.
-/// 이 저장소의 entitlement는 아직 설정하지 않았고, 시스템 구현(`TaptionSystemUbiquityFileSystem`)은 실기기에서 검증하지 못했다.
+/// 시스템 구현(`TaptionSystemUbiquityFileSystem`)의 기기 간 동작은 실기기에서 검증하지 못했다.
 /// 목적지 로직은 `TaptionUbiquityFileSystem` 뒤에 있어 흉내 구현으로 로컬 폴더에서 규약을 시험한다.
 ///
 /// 규칙:
-/// - 내려받지 않은 파일은 `.이름.icloud` 자리표시자로 보인다. 목록에는 실제 이름으로 올리고, 읽기 전에
-///   `startDownloadingUbiquitousItem` 후 다운로드가 끝날 때까지(최대 `downloadTimeout`) 기다린다.
+/// - 다른 기기가 올린 파일은 이 기기에 없거나 `.이름.icloud` 자리표시자로만 보일 수 있다. 폴더 나열과 `NSMetadataQuery`를
+///   합쳐 실제 이름으로 목록에 올리고(`isDownloaded == false`), 읽기 전에 `startDownloadingUbiquitousItem` 후 다운로드가 끝날 때까지(최대 `downloadTimeout`) 기다린다.
 /// - 읽기는 파일 조정(`NSFileCoordinator`)을 거쳐 임시 사본에 복사한 뒤 그 사본을 돌려준다. 호출자는 사본으로 검증·복원을
 ///   한 번만 열고 `release(fetched:)`로 돌려준다.
 /// - 풀리지 않은 충돌 버전(`ubiquitousItemHasUnresolvedConflicts`/`NSFileVersion`)이 있으면 읽기·쓰기를
@@ -310,6 +369,8 @@ public struct TaptionICloudDriveBackupDestination: TaptionBackupDestination {
     public let fileSystem: any TaptionUbiquityFileSystem
     public let temporaryDirectory: URL
     public let stagingDirectory: URL?
+    /// 이전 엔진이 백업을 두던 폴더. 읽지 않고 파일 수만 알린다.
+    public static let legacyFolderName = "Taption Plan"
 
     public init(
         containerIdentifier: String? = "iCloud.com.taption.plan", folderName: String = "TaptionBackup", downloadTimeout: TimeInterval = 120,
@@ -347,25 +408,40 @@ public struct TaptionICloudDriveBackupDestination: TaptionBackupDestination {
 
     public func list() async throws -> [TaptionBackupFileInfo] {
         let directory = try await folder()
-        var infos = try await TaptionLocalFolderBackupDestination(directory: directory).list()
+        var infos: [String: TaptionBackupFileInfo] = [:]
+        for var info in try await TaptionLocalFolderBackupDestination(directory: directory).list() {
+            info.isDownloaded = fileSystem.state(of: directory.appendingPathComponent(info.name)) == .current
+            infos[info.name] = info
+        }
         // 내려받지 않은 파일은 실제 이름이 아닌 자리표시자로만 보인다.
-        let known = Set(infos.map(\.name))
         let names = (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? []
         for entry in names {
-            guard let name = Self.realName(fromPlaceholder: entry), !known.contains(name) else { continue }
+            guard let name = Self.realName(fromPlaceholder: entry), infos[name] == nil else { continue }
             let modified = (try? directory.appendingPathComponent(entry)
                 .resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
-            infos.append(TaptionBackupFileInfo(name: name, size: 0, modifiedAt: modified ?? .distantPast))
+            infos[name] = TaptionBackupFileInfo(name: name, size: 0, modifiedAt: modified ?? .distantPast, isDownloaded: false)
         }
-        return infos.sorted { $0.name < $1.name }
+        // 다른 기기가 올린 파일은 폴더에 아직 안 보일 수 있다. 자리표시자에는 없는 크기도 여기서 얻는다.
+        for item in await discoveredItems() {
+            let name = item.url.lastPathComponent
+            if let existing = infos[name], existing.isDownloaded || existing.size > 0 { continue }
+            infos[name] = TaptionBackupFileInfo(name: name, size: item.size, modifiedAt: item.modifiedAt, isDownloaded: item.isDownloaded)
+        }
+        return infos.values.sorted { $0.name < $1.name }
+    }
+
+    private func discoveredItems() async -> [TaptionUbiquityItem] {
+        await fileSystem.discoverItems().filter { $0.url.deletingLastPathComponent().lastPathComponent == folderName }
     }
 
     /// 내려받기를 끝낸 실제 파일 주소. 자리표시자만 있어도 받아 온다.
     private func downloadedURL(name: String, in directory: URL) async throws -> URL {
         let target = directory.appendingPathComponent(name, isDirectory: false)
         let placeholder = directory.appendingPathComponent(Self.placeholderName(for: name), isDirectory: false)
-        guard fileSystem.state(of: target) != .missing || FileManager.default.fileExists(atPath: placeholder.path) else {
-            throw TaptionBackupError.fileMissing(name)
+        if fileSystem.state(of: target) == .missing, !FileManager.default.fileExists(atPath: placeholder.path) {
+            guard await discoveredItems().contains(where: { $0.url.lastPathComponent == name }) else {
+                throw TaptionBackupError.fileMissing(name)
+            }
         }
         if fileSystem.state(of: target) != .current {
             try fileSystem.startDownloading(target)
@@ -432,5 +508,17 @@ public struct TaptionICloudDriveBackupDestination: TaptionBackupDestination {
     public func cleanupStaleUploads() async {
         guard let directory = try? await folder() else { return }
         TaptionBackupStaging.removeStaleUploads(in: directory)
+    }
+
+    public func requestDownload(name: String) async {
+        guard let directory = try? await folder() else { return }
+        try? fileSystem.startDownloading(directory.appendingPathComponent(name, isDirectory: false))
+    }
+
+    public func legacyFileCount() async -> Int {
+        guard let directory = try? await folder() else { return 0 }
+        let legacy = directory.deletingLastPathComponent().appendingPathComponent(Self.legacyFolderName, isDirectory: true)
+        let names = (try? FileManager.default.contentsOfDirectory(atPath: legacy.path)) ?? []
+        return names.filter { $0.hasSuffix("." + TaptionBackupMonth.fileExtension) || Self.realName(fromPlaceholder: $0) != nil }.count
     }
 }
