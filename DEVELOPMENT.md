@@ -11,6 +11,9 @@
 | 공통 캐시·입력 예산·UUID 순서 | `Packages/TaptionPlanCore/Sources/TaptionPlanCore/RuntimeEfficiency.swift` |
 | 지도 카메라·터치 정책 | `TaptionPlan/UI/MapHomeInteractionPolicy.swift` |
 | 지도·시간축·시간표 UI | `TaptionPlan/UI/MapHomeView.swift`, `MapHomeTimeSidebar.swift`, `MapHomeTimeSidebarHandleMath.swift`(손잡이 세로 위치), `MapHomeSectionDetailEngine.swift`(상세활동 목록), `ScheduleView.swift` |
+| 넓은 화면(폭 600pt 이상) 왼쪽 패널·두 열 배치 | `TaptionPlan/UI/MapHomeWideLayoutPolicy.swift`, 구성안은 `docs/IPAD_UI.md` |
+| 집 아이콘의 위치 기준 하늘(해·달·노을) | `TaptionPlan/UI/MapHomeHomeSkyMath.swift`, `MapHomeHomeSkyArt.swift` |
+| 화랑이 장면·소품 | `TaptionPlan/UI/HwarangRig.swift`, `HwarangRigProps.swift`, `HwarangRigDailyScenes.swift`, `HwarangRigAccessories.swift` |
 | 지도 안개(세기 정책·벡터/Apple 지도 렌더러) | `TaptionPlan/UI/MapHomeFogLayer.swift` |
 | 지도 카운터 표·재생 끊김 보정·라이브액티비티 현재 활동 | `TaptionPlan/UI/MapHomeCounterTable.swift`, `MapHomePlaybackContinuity.swift`, `LiveActivityCurrentActivity.swift` |
 | 클립 만들기·표기 도우미(편집기 화면 본문과 분리) | `TaptionPlan/UI/MapHomeNLEClipFactory.swift`, `TaptionPlan/UI/MapHomeNLEClipEditor.swift` |
@@ -18,9 +21,10 @@
 | 활동 기록 배열의 저장소 공유·바이트 단위 동일성 비교 | `TaptionPlan/Core/PlanActualStorage.swift` |
 | 센서 레코드 직접 바이너리 저장·복원 | `TaptionPlan/Core/SensorReadingStorage.swift`, `Packages/TaptionPlanCore/Sources/TaptionPlanCore/CanonicalStorage.swift` |
 | 센서·HealthKit·Apple 연동 | `TaptionPlan/Core/SensorDataServices.swift`, `HealthKitImportCoordinator.swift`, `HealthKitImportStore.swift`, `AppleIntegrations.swift` |
+| 지하철 하루 판정 | `TaptionPlan/Core/RailJourneyRecognizer.swift`(역 → 역 사슬, 환승 뒤 구간), `RailRideLikelihood.swift`, `SubwayEvidenceGate.swift` |
 | 앱과 엔진 연결 | `TaptionPlan/Core/RouteTimelineData.swift`, `TaptionRouteEngineAdapter.swift`, `TaptionActivityEngineAdapter.swift` |
 | 공유 엔진 | `Packages/TaptionPlanCore/`, `Packages/TaptionActivityEngine/`, `Packages/TaptionRouteEngine/`, `Packages/TaptionClassifierEngine/`, `Packages/TaptionPlanEngine/`, `Packages/TaptionPlanStore/`, `Packages/TaptionWatchSync/` |
-| 분류 알고리즘(분류표 v3·키워드·창 특징·수단 점수·HMM·구간·장소·맥락·수면·파생 지표) | `Packages/TaptionClassifierEngine/`, 앱 쪽 어댑터는 `TaptionActivityEngineAdapter.swift`의 `ClassifierAdapter`·`ClassificationRecomputeCoordinator` |
+| 분류 알고리즘(분류표 v4·키워드·창 특징·수단 점수·HMM·구간·장소·맥락·수면·파생 지표) | `Packages/TaptionClassifierEngine/`, 앱 쪽 어댑터는 `TaptionActivityEngineAdapter.swift`의 `ClassifierAdapter`·`ClassificationRecomputeCoordinator` |
 | Watch·위젯 | `TaptionPlanWatch/`, `TaptionPlanWidget/`(일정 위젯·`SensorCollectionLiveActivity`·`TaptionPlanLiveActivity`·고양이는 앱 아틀라스), `TaptionPlanWatchWidget/` |
 | 워치 공유 모델·언어 설정 | `Packages/TaptionWatchSync/`(명령 프로토콜·측정값·outbox/spool·행동 규칙·`AppLanguagePreference`, `Core/WatchSyncModels.swift`가 네 target에 다시 내보낸다), CoreML 행동 모델은 `TaptionWatchBehaviorML`(워치 앱만 링크), replay·개인화는 `TaptionPlan/Core/WatchActivityReplay.swift` |
 | 회귀 테스트 | `TaptionPlanTests/`, 각 package의 `Tests/` |
@@ -149,11 +153,11 @@ HealthKit 운동 경로를 보완할 때는 기존 위치와 20초 시간 중복
 - 덮기와 합치기는 **한 창**에 둡니다. BOKKI STUDIO의 자막 합치기와 같은 자리이고, 덮은 뒤 같은 분류가 된 이웃을 붙이는 것이 실제로 원하는 결과입니다. `NLETrack.mergeAdjacent`는 `origin`이 이어져 있으면 합친 구간으로 넓히므로 가르기→합치기는 저장할 것이 없는 왕복이 되고, 한쪽이라도 분류를 바꿨으면 합쳐진 구간 전체가 바뀐 것으로 남습니다. 합칠 곳이 없으면 「합치기만」을 내밀지 않습니다.
 - 하루 재생은 하루를 24초에 지나갑니다(정지 120분/초). 재생 화면을 시험할 때는 하루 끝까지 남은 구간을 먼저 셉니다. 남은 구간이 짧으면 재생이 1초 만에 스스로 끝나 단추 상태를 볼 수 없으므로, 화면 시험은 시간 레일을 이른 아침으로 먼저 옮겨 재생 구간을 넉넉히 만듭니다. 앱이 멈춘 것으로 오해하지 않도록, 두 번째 재생은 앱을 새로 켜 자정부터 시작합니다.
 - 시작 로딩은 단계별로 남깁니다(`launch_gate` 이벤트, `AppShellLaunchGateRecorder`). "시작이 너무 길다"는 지적을 받으면 먼저 이 기록으로 어느 단계가 마지막까지 남는지 확인합니다 — `initial_launch_ready`의 `duration_ms`는 합계만 줍니다. 스플래시는 저장소 적재·보안·첫 화면이 갖춰지면 걷고, 지도가 오늘 경로를 더 읽는 중이면 0.6초 유예 뒤 걷습니다(`scheduleMapShellGraceIfNeeded` · `AppShellInitialLaunchGate.mapShellGraceElapsed`). 경로는 그 위에 채워집니다. 권한 준비(이벤트킷·건강 읽기, 안내 시트)는 스플래시가 걷힌 뒤로 미룹니다 — 시작 화면 뒤에서 메인 스레드를 먼저 잡으면 지도 첫 화면이 그만큼 늦어집니다.
-- 지도 스타일은 「애플맵」(`standard`)·「위성」(`hybrid`)과 벡터 네 종입니다. 벡터는 「야간」(검정 바탕·형광 파랑 도로), 「실외(고대비)」(노란 도로·연녹 땅), 「산책」(밝은 색), 「판타지 지도」입니다. 밝게·파스텔은 없앴고, 저장된 `mapLibreLight`·`mapLibrePastel` 값은 `MapDisplayStyle` 디코딩에서 산책으로 읽습니다(`retiredRawValues`). 스타일을 더하거나 없앨 때는 `TimeScaleTests`의 스타일 목록·레이어 기대값을 함께 고칩니다.
+- 지도 스타일은 「애플맵」(`standard`)·「위성」(`hybrid`)과 벡터 네 종입니다. 벡터는 「야간」(검정 바탕·형광 파랑 도로), 「실외(고대비)」(노란 도로·연녹 땅), 「산책」(파스텔 핑크), 「판타지 지도」입니다. 밝게·파스텔은 없앴고, 저장된 `mapLibreLight`·`mapLibrePastel` 값은 `MapDisplayStyle` 디코딩에서 산책으로 읽습니다(`retiredRawValues`). 스타일을 더하거나 없앨 때는 `TimeScaleTests`의 스타일 목록·레이어 기대값을 함께 고칩니다.
 - 표시 > 사이드바에는 날씨·사진·메모 표시와 시간 표시·시간 간격을 한 묶음으로 둡니다. 시간 표시(`MapHomeSidebarTimeFormat`, `mapHomeSidebarTimeFormat`)는 24시간이 기본이고, 12시간이면 정시 눈금에만 오전·오후를 붙이며 손잡이 시각은 위에 작게 적습니다. 시간 간격(`MapHomeSidebarRulerInterval`, `mapHomeSidebarRulerInterval`)은 눈금 글자의 최소 간격이며, `minuteRulerStep(minimumStep:)`이 화면 높이로 정한 간격과 고른 값 중 넓은 쪽을 씁니다.
-- 앱 색 테마는 지도 스타일이 정합니다(`TaptionUITheme.forMap`). 따로 고르는 메뉴는 없고, 판타지·애플맵·위성은 기본 양피지, 야간은 남색, 산책은 보라, 실외(고대비)는 갈색입니다. 테마가 바뀌면 앱 화면을 새로 그리며(`AppShellView`의 `.id`), 타일을 붙이는 동안 잠깐 산책 지도로 바뀌는 때는 테마를 유지합니다(`mapHomeAutoLandStyleState`). 활동 분류 색은 테마를 따르지 않습니다. 고정 색을 새로 쓰지 말고 `tpCard`·`tpPrimaryFill`·`tpGlassTint` 같은 토큰을 씁니다. 위젯·워치·스플래시는 테마를 따르지 않습니다.
+- 앱 색 테마는 지도 스타일이 정합니다(`TaptionUITheme.forMap`). 따로 고르는 메뉴는 없고, 판타지·애플맵·위성은 기본 양피지, 야간은 남색, 산책은 파스텔 핑크, 실외(고대비)는 갈색입니다. 어두운 색 구성은 `TaptionUITheme.isDark`로 판단하고 산책은 밝게 그립니다. 테마가 바뀌면 앱 화면을 새로 그리며(`AppShellView`의 `.id`), 타일을 붙이는 동안 잠깐 산책 지도로 바뀌는 때는 테마를 유지합니다(`mapHomeAutoLandStyleState`). 활동 분류 색은 테마를 따르지 않습니다. 고정 색을 새로 쓰지 말고 `tpCard`·`tpPrimaryFill`·`tpGlassTint` 같은 토큰을 씁니다. 위젯·워치·스플래시는 테마를 따르지 않습니다.
 - 지도 마커와 행동 분류 글리프의 화랑이는 코드로 그립니다(`HwarangRig.swift`, 세계 좌표 가로 146). `MapHomeStickmanAction.hwarangScene`이 장면을 정하고, 행동 분류마다 장면이 달라야 합니다(`testEveryMajorCategoryHasItsOwnHwarangScene`). 장면 하나는 동작 여러 개를 이어 재생하며, 동작 사이는 0.45초 동안 자세를 섞습니다. 지도에서 움직이는 동안은 멈추지 않는 `walkLoop`·`runLoop`만 쓰고, 화면 왼쪽으로 갈 때 뒤집습니다(`MapHomeStickmanFacing`). 위젯·워치·Live Activity는 기존 스프라이트(`TaptionCatAtlasSprite`)를 그대로 씁니다. 재생 영상의 화랑이는 아직 오른쪽만 봅니다.
-- 화랑이 액세서리는 랜드마크별 모자 52개입니다(`Assets.xcassets/Hats`, 벡터 SVG). 그림 정의는 `tools/generate_hwarang_hats.py`에 있고, 고친 뒤 이 스크립트로 자산을 다시 만듭니다. 저장값은 기존 `cat.accessory.<랜드마크 id>`를 유지하고, 랜드마크를 못 찾는 옛 값은 심볼로 보입니다.
+- 화랑이 액세서리는 랜드마크별 모자 17개·스카프 17개·꼬리 리본 18개입니다(모자는 `Assets.xcassets/Hats`, 벡터 SVG. 스카프·리본은 `HwarangRigAccessories.swift`). 그림 정의는 `tools/generate_hwarang_hats.py`에 있고, 고친 뒤 이 스크립트로 자산을 다시 만듭니다. 저장값은 기존 `cat.accessory.<랜드마크 id>`를 유지하고, 랜드마크를 못 찾는 옛 값은 심볼로 보입니다.
 - 「현재 위치」 단추는 배율 80으로 고정하며(`focusCurrentLocationAtFixedScale`) 하루요약 시트가 덮은 높이만큼 중심을 아래로 내려 화랑이가 가려지지 않은 영역의 가운데에 둡니다. 이 경로는 `liveZoomGovernor`를 20초 멈춰, 속도에 따른 자동 줌이 방금 맞춘 배율을 덮지 않게 합니다.
 
 ## 검증 명령
