@@ -592,7 +592,7 @@ extension FeatureEngineTests {
         XCTAssertEqual(scene(style: "white"), .cooking)
         XCTAssertEqual(scene(style: "mackerel"), .cooking)
         XCTAssertNil(scene(style: "black"))
-        XCTAssertNil(scene(title: "회의"))
+        XCTAssertNil(scene(title: "근무"))
         XCTAssertNil(scene(action: .walking))
         XCTAssertNil(scene(action: .running))
         XCTAssertNil(scene(action: .startled))

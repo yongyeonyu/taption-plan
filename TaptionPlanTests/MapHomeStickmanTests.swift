@@ -100,14 +100,13 @@ final class MapHomeStickmanTests: XCTestCase {
         XCTAssertNil(old.animation, "옛 설정도 읽는다")
     }
 
-    func testMenuQuotesChangeWeeklyAndAreTwo() throws {
+    func testMenuQuoteChangesWeekly() throws {
         var calendar = Calendar(identifier: .iso8601)
         calendar.timeZone = TimeZone(identifier: "Asia/Seoul") ?? .current
         let start = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 11, day: 2)))
-        let week = MapHomeMenuHeaderTitle.quotes(on: start, calendar: calendar).map(\.text)
-        XCTAssertEqual(Set(week).count, 2)
-        XCTAssertEqual(MapHomeMenuHeaderTitle.quotes(on: start.addingTimeInterval(86_400 * 3), calendar: calendar).map(\.text), week)
-        XCTAssertNotEqual(MapHomeMenuHeaderTitle.quotes(on: start.addingTimeInterval(86_400 * 7), calendar: calendar).map(\.text), week)
+        let week = MapHomeMenuHeaderTitle.quote(on: start, calendar: calendar).text
+        XCTAssertEqual(MapHomeMenuHeaderTitle.quote(on: start.addingTimeInterval(86_400 * 3), calendar: calendar).text, week)
+        XCTAssertNotEqual(MapHomeMenuHeaderTitle.quote(on: start.addingTimeInterval(86_400 * 7), calendar: calendar).text, week)
     }
 
     func testDictationFollowsDeviceLanguageWhenAutomatic() {
@@ -211,7 +210,7 @@ final class MapHomeStickmanTests: XCTestCase {
     /// 대표 결정 16개 분류(RIG1103A02): (대분류, 제목, behavior, 행동, 장면). 요리는 이미 있던 상세 분류다.
     private static let dailyCategories: [(String, String, String, MapHomeStickmanAction, HwarangScene)] = [
         ("sleep", "낮잠", "nap", .nap, .nap), ("housework", "요리", "cooking", .cooking, .cook),
-        ("work", "회의", "meeting", .meeting, .meeting), ("housework", "설거지", "dishes", .dishes, .dishes),
+        ("work", "회의", "meeting", .meeting, .meeting), ("housework", "설거지", "dishes", .dishes, .dishes), ("eating", "커피·티타임", "coffee", .coffee, .coffee),
         ("housework", "장보기", "groceries", .groceries, .groceries), ("housework", "빨래", "laundry", .laundry, .laundry),
         ("activity", "친구 만남", "friends", .friends, .friends), ("activity", "데이트", "dating", .date, .date),
         ("activity", "가족", "family", .family, .family), ("activity", "통화", "phoneCall", .phoneCall, .phoneCall),
@@ -236,7 +235,7 @@ final class MapHomeStickmanTests: XCTestCase {
         }
         let others = MapHomeStickmanAction.allCases.filter { candidate in !Self.dailyCategories.contains { $0.3 == candidate } }
         let otherScenes = Set(others.map(\.hwarangScene))
-        XCTAssertEqual(Set(Self.dailyCategories.map(\.4)).count, 18)
+        XCTAssertEqual(Set(Self.dailyCategories.map(\.4)).count, 19)
         XCTAssertTrue(otherScenes.isDisjoint(with: Self.dailyCategories.map(\.4)))
         XCTAssertEqual(Set(HwarangScene.dailyScenes), Set(Self.dailyCategories.map(\.4)))
     }
@@ -353,7 +352,7 @@ final class MapHomeStickmanTests: XCTestCase {
         XCTAssertFalse(activity.contains("집안일"))
         XCTAssertFalse(activity.contains("장보기"))
         XCTAssertEqual(MapHomeCategoryDetailRows.details(for: "housework").map(\.title), ["집안일", "빨래", "장보기", "요리", "설거지"])
-        XCTAssertEqual(MapHomeCategoryDetailRows.details(for: "eating").map(\.title), ["식사"])
+        XCTAssertEqual(MapHomeCategoryDetailRows.details(for: "eating").map(\.title), ["식사", "커피·티타임"])
         XCTAssertTrue(activity.contains("샤워"))
         XCTAssertFalse(RecordClassificationCatalog.categoryIDs.contains("shower"))
         XCTAssertEqual(MapHomeCategoryDetailRows.details(for: "work").map(\.title).contains("회의"), true)
@@ -1269,9 +1268,9 @@ final class MapHomeStickmanTests: XCTestCase {
                 "\(title) 상세가 이동 대분류를 덮었습니다."
             )
         }
-        XCTAssertEqual(MapHomeStickmanAction.allCases.count, 53)
-        XCTAssertEqual(Set(MapHomeStickmanAction.allCases).count, 53)
-        XCTAssertEqual(Set(MapHomeStickmanAction.allCases.map(\.title)).count, 53)
+        XCTAssertEqual(MapHomeStickmanAction.allCases.count, 54)
+        XCTAssertEqual(Set(MapHomeStickmanAction.allCases).count, 54)
+        XCTAssertEqual(Set(MapHomeStickmanAction.allCases.map(\.title)).count, 54)
         XCTAssertEqual(MapHomeStickmanActionResolver.action(for: TravelMode.running), .running)
         XCTAssertEqual(
             MapHomeStickmanActionResolver.action(

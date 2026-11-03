@@ -150,6 +150,7 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
     case walkInPlace
     case meeting
     case dishes
+    case coffee
     case walking
     case running
     case car
@@ -227,6 +228,7 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
         case .mapReading: .atlas
         case .meeting: .meeting
         case .dishes: .dishes
+        case .coffee: .coffee
         case .walkInPlace: .walkLoop
         }
     }
@@ -248,7 +250,7 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
         case .computer, .company, .school, .reading, .hobby, .sleeping, .deepSleep, .remSleep, .recovery, .medication, .restStarfish, .restCroissant, .restDonut, .restLoaf, .restBox, .eating,
              .activity, .exercise, .health, .unconfirmed, .shower, .housework,
              .nap, .cooking, .groceries, .laundry, .friends, .date, .family, .phoneCall,
-             .meditation, .hospital, .salon, .bookReading, .game, .music, .video, .petCare, .mapReading, .walkInPlace, .meeting, .dishes:
+             .meditation, .hospital, .salon, .bookReading, .game, .music, .video, .petCare, .mapReading, .walkInPlace, .meeting, .dishes, .coffee:
             true
         default:
             isMoving
@@ -297,6 +299,7 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
         case .mapReading: return t("지도 보기", "Reading a map")
         case .meeting: return t("회의", "Meeting")
         case .dishes: return t("설거지", "Dishes")
+        case .coffee: return t("커피·티타임", "Coffee & tea")
         case .walkInPlace: return t("제자리 걷기", "Walking in place")
         case .remSleep: return t("REM 수면", "REM sleep")
         case .movement: return t("이동", "Movement")
@@ -727,7 +730,7 @@ enum MapHomeStickmanActionResolver {
     /// 직접 고르는 상세 분류(RIG1103A02). 제목이나 behavior가 정확히 같을 때만 대분류보다 먼저 자기 장면을 쓴다.
     private static let dailyActions: [String: MapHomeStickmanAction] = [
         "깊은 수면": .deepSleep, "deep": .deepSleep, "rem 수면": .remSleep, "rem": .remSleep,
-        "회의": .meeting, "meeting": .meeting, "설거지": .dishes, "dishes": .dishes, "멍때리기": .restBox, "zoningout": .restBox, "회복": .recovery, "recovery": .recovery, "투약": .medication, "medication": .medication,
+        "회의": .meeting, "meeting": .meeting, "설거지": .dishes, "dishes": .dishes, "커피·티타임": .coffee, "coffee": .coffee, "멍때리기": .restBox, "zoningout": .restBox, "회복": .recovery, "recovery": .recovery, "투약": .medication, "medication": .medication,
         "샤워": .shower, "shower": .shower, "showering": .shower,
         "집안일": .housework, "housework": .housework, "chores": .housework,
         "낮잠": .nap, "nap": .nap, "요리": .cooking, "cooking": .cooking,

@@ -132,7 +132,7 @@ struct MapHomeMenuCatPicker: View {
     }
 }
 
-/// 메뉴 머리글의 시간 명언 두 개. 주마다 바뀌고 영어로만 보여 준다(출처가 분명한 문장만 둔다).
+/// 메뉴 머리글의 시간 명언 한 개. 주마다 바뀌고 영어로만 보여 준다(출처가 분명한 문장만 둔다).
 struct MapHomeMenuHeaderTitle: View {
     let language: MapHomeLanguage
 
@@ -148,21 +148,18 @@ struct MapHomeMenuHeaderTitle: View {
         ("Time is the most valuable thing a man can spend.", "Theophrastus")
     ]
 
-    static func quotes(on date: Date, calendar: Calendar = .autoupdatingCurrent) -> [(text: String, author: String)] {
+    static func quote(on date: Date, calendar: Calendar = .autoupdatingCurrent) -> (text: String, author: String) {
         let week = calendar.component(.weekOfYear, from: date) + calendar.component(.yearForWeekOfYear, from: date) * 53
-        return [quotes[(week * 2) % quotes.count], quotes[(week * 2 + 1) % quotes.count]]
+        return quotes[week % quotes.count]
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            ForEach(Self.quotes(on: .now), id: \.text) { quote in
-                Text("“\(quote.text)” — \(quote.author)")
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
-                    .foregroundStyle(Color.tpInk)
-                    .lineLimit(3)
-                    .minimumScaleFactor(0.85)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
+        let quote = Self.quote(on: .now)
+        Text("“\(quote.text)” — \(quote.author)")
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
+            .foregroundStyle(Color.tpInk)
+            .lineLimit(3)
+            .minimumScaleFactor(0.85)
+            .fixedSize(horizontal: false, vertical: true)
     }
 }

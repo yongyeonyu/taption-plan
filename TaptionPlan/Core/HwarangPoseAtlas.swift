@@ -7,13 +7,13 @@ import UIKit
 enum TaptionHwarangPose: String, CaseIterable, Sendable {
     case deepSleep, remSleep, recovery, medication, hospital
     case restStarfish, restCroissant, restDonut, restLoaf, restBox
-    case nap, meditation, salon, cooking, groceries, laundry, dishes, housework, shower
+    case nap, meditation, salon, cooking, groceries, laundry, dishes, coffee, housework, shower
     case meeting, friends, date, family, phoneCall, bookReading, game, music, video, petCare
 
     private static let titles: [String: TaptionHwarangPose] = [
         "깊은 수면": .deepSleep, "rem 수면": .remSleep, "회복": .recovery, "투약": .medication, "병원": .hospital,
         "집에서 휴식": .restBox, "낮잠": .nap, "명상": .meditation, "미용실": .salon,
-        "요리": .cooking, "장보기": .groceries, "빨래": .laundry, "설거지": .dishes, "멍때리기": .restBox, "집안일": .housework, "샤워": .shower,
+        "요리": .cooking, "장보기": .groceries, "빨래": .laundry, "설거지": .dishes, "커피·티타임": .coffee, "멍때리기": .restBox, "집안일": .housework, "샤워": .shower,
         "회의": .meeting, "친구 만남": .friends, "데이트": .date, "가족": .family, "통화": .phoneCall,
         "독서": .bookReading, "게임": .game, "음악": .music, "영상 보기": .video, "반려동물 돌보기": .petCare
     ]

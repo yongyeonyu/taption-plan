@@ -3,7 +3,7 @@ import CoreGraphics
 /// 직접 고르는 일상 분류(낮잠·요리…)의 화랑이 장면(RIG1103A02). 장면마다 뚜렷한 동작 하나를 되풀이한다.
 extension HwarangScene {
     static let dailyScenes: [HwarangScene] = [
-        .nap, .cook, .groceries, .laundry, .dishes, .meeting, .friends, .date, .family, .phoneCall,
+        .nap, .cook, .groceries, .laundry, .dishes, .coffee, .meeting, .friends, .date, .family, .phoneCall,
         .meditate, .hospital, .salon, .readBook, .game, .music, .video, .petCare
     ]
 
@@ -323,10 +323,12 @@ func dailyPose(_ scene: HwarangScene, s: CGFloat) -> Pose {
     case .laundry:
         return sit(s, HeadPose(tilt: sin(s * 2.6) * 0.1, look: 3, eye: blink(s, 2.4)))
     case .meeting:
-        // 회의: 앞발을 휘두르며 서로 대든다.
-        let swipe = (sin(s * 11) + 1) / 2
-        var p = sit(s, HeadPose(tilt: 0.1 + sin(s * 9) * 0.05, look: 2.6, mouthOpen: 0.5 + swipe * 0.5, eye: .half))
-        p.fn = P(lerp(88, 112, swipe), lerp(52, 40, swipe))
+        // 회의: 불꽃을 등지고 서로 노려본다. 앞발은 휘두르지 않는다.
+        return sit(s, HeadPose(tilt: 0.06 + sin(s * 2.4) * 0.03, look: 2.6, mouthOpen: max(0, sin(s * 3)) * 0.4, eye: .half))
+    case .coffee:
+        // 카페: 앞발로 잔을 들어 천천히 마신다.
+        var p = sit(s, HeadPose(tilt: sin(s * 0.9) * 0.05, look: 2.2, mouthOpen: 0.08, eye: blink(s, 3.4)))
+        p.fn = P(92, 78)
         return p
     case .friends:
         let wave = sin(s * 7)
@@ -385,6 +387,7 @@ extension HwarangPainter {
             napCushion()
             sun(sec)
         case .laundry: washer(sec)
+        case .meeting: meetingFlames(sec)
         case .dishes: sink(sec)
         case .meditate: zafu(sec)
         case .hospital: crossSign()
@@ -398,9 +401,7 @@ extension HwarangPainter {
     mutating func dailyCompanions(_ scene: HwarangScene, sec: CGFloat) {
         switch scene {
         case .meeting:
-            let swipe = (sin(sec * 11 + .pi) + 1) / 2
-            var p = sit(sec + 1.3, HeadPose(tilt: 0.1 - sin(sec * 9) * 0.05, look: 2.4, mouthOpen: 0.5 + swipe * 0.5, eye: .half))
-            p.fn = P(lerp(88, 112, swipe), lerp(52, 40, swipe)); p.tp = sec * 6; p.tw = 0.9
+            let p = sit(sec + 1.3, HeadPose(tilt: 0.06 - sin(sec * 2.4) * 0.03, look: 2.4, mouthOpen: max(0, sin(sec * 3 + 1)) * 0.4, eye: .half))
             companion(p, x: 92, scale: 0.72, ground: groundY, bow: 0xE5484D)
         case .friends:
             var p = sit(sec + 1.3, HeadPose(tilt: -0.04, look: 2.2, mouthOpen: max(0, sin(sec * 5 + .pi)) * 0.7, eye: wrap(sec, 3.6) < 1.2 ? .happy : blink(sec, 2.7)))
@@ -450,7 +451,7 @@ extension HwarangPainter {
     func dailyForeground(_ scene: HwarangScene, sec: CGFloat) {
         c.setLineJoin(.round); c.setLineCap(.round)
         switch scene {
-        case .meeting: fightSparks(sec)
+        case .coffee: cafeTable(sec)
         case .nap:
             let z = wrap(sec * 0.4, 1)
             napLetter(102 + z * 7, 58 - z * 14, size: 6 + z * 3, alpha: 1 - z)
@@ -532,19 +533,32 @@ extension HwarangPainter {
         c.drawPath(using: .fillStroke)
     }
 
-    /// 두 고양이 사이의 불꽃과 머리 위 뿔난 표시.
-    private func fightSparks(_ sec: CGFloat) {
-        c.setLineCap(.round)
-        for i in 0..<5 {
-            let a = CGFloat(i) * tau / 5 + sec * 5, r = 8 + sin(sec * 13 + CGFloat(i)) * 4, q = P(62, 56)
-            stroke(i % 2 == 0 ? 0xF2B705 : 0xE5484D, 2.4); c.beginPath()
-            c.move(to: P(q.x + cos(a) * r, q.y + sin(a) * r)); c.addLine(to: P(q.x + cos(a) * (r + 7), q.y + sin(a) * (r + 7))); c.strokePath()
+    /// 회의 배경: 두 고양이 뒤로 타오르는 불꽃.
+    private func meetingFlames(_ sec: CGFloat) {
+        for (x, height, phase) in [(CGFloat(-2), CGFloat(52), CGFloat(0)), (24, 74, 1.1), (54, 84, 2.3), (84, 72, 3.2), (116, 54, 4.4)] {
+            let sway = sin(sec * 7 + phase) * 4, h = height + sin(sec * 11 + phase) * 6
+            for (scale, color) in [(CGFloat(1), UInt32(0xE5484D)), (0.68, 0xF28C28), (0.38, 0xF9D648)] {
+                let w = 19 * scale, tip = h * scale
+                fill(color, 0.92); c.beginPath(); c.move(to: P(x - w, groundY))
+                cubic(x - w, groundY - tip * 0.45, x + sway - w * 0.35, groundY - tip * 0.7, x + sway, groundY - tip)
+                cubic(x + sway + w * 0.35, groundY - tip * 0.7, x + w, groundY - tip * 0.45, x + w, groundY)
+                c.closePath(); c.fillPath()
+            }
         }
-        stroke(0xE5484D, 2); c.beginPath()
-        for x: CGFloat in [32, 92] {
-            c.move(to: P(x - 4, 22)); c.addLine(to: P(x + 4, 28)); c.move(to: P(x + 4, 22)); c.addLine(to: P(x - 4, 28))
+    }
+
+    /// 카페 탁자와 찻잔, 올라오는 김.
+    private func cafeTable(_ sec: CGFloat) {
+        rounded(84, 86, 48, 6, 3, fillHex: 0xC78A5B, line: 2)
+        stroke(outline, 3); c.beginPath(); c.move(to: P(108, 92)); c.addLine(to: P(108, groundY)); c.strokePath()
+        rounded(98, 72, 18, 14, 4, fillHex: 0xFFFDF4, line: 2)
+        stroke(outline, 1.8); c.beginPath(); oval(118, 79, 3.6, 4.4); c.strokePath()
+        fill(0x7A4A2E); c.beginPath(); oval(107, 74, 7, 1.6); c.fillPath()
+        stroke(0xB9A794, 1.6, 0.8); c.setLineCap(.round)
+        for (i, x) in [CGFloat(103), 110].enumerated() {
+            let w = sin(sec * 2 + CGFloat(i)) * 1.6
+            c.beginPath(); c.move(to: P(x, 68)); c.addCurve(to: P(x, 54), control1: P(x + 3 + w, 64), control2: P(x - 3 - w, 59)); c.strokePath()
         }
-        c.strokePath()
     }
 
     private func bubble(_ q: CGPoint, sec: CGFloat) {

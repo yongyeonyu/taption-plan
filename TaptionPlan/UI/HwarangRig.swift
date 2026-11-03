@@ -8,7 +8,7 @@ enum HwarangScene: CaseIterable, Hashable, Sendable {
     case stroll, groom, work, study, yarn, sleep, eat, wheel, stretch, confused
     case shower, robotVacuum, carFront, subway, train, bus, bicycle, airplane, boat, atlas
     case sleepBelly, sleepEyeMask, recoverySuperman, medicated, restStarfish, restCroissant, restDonut, restLoaf, restBox
-    case nap, cook, groceries, laundry, dishes, meeting, friends, date, family, phoneCall, meditate, hospital, salon, readBook, game, music, video, petCare
+    case nap, cook, groceries, laundry, dishes, coffee, meeting, friends, date, family, phoneCall, meditate, hospital, salon, readBook, game, music, video, petCare
 
     /// 장면의 동작별 길이(초)와 배경 이동 속도.
     fileprivate var beats: [(duration: CGFloat, speed: CGFloat)] {
@@ -33,7 +33,7 @@ enum HwarangScene: CaseIterable, Hashable, Sendable {
         case .airplane: [(5, 26)]
         case .boat: [(5, 22)]
         case .atlas: [(6, 0)]
-        case .sleepBelly, .sleepEyeMask, .recoverySuperman, .medicated, .restStarfish, .restCroissant, .restDonut, .restLoaf, .restBox, .nap, .cook, .groceries, .laundry, .dishes, .meeting, .friends, .date, .family, .phoneCall, .meditate, .hospital, .salon, .readBook, .game, .music, .video, .petCare: [(6, 0)]
+        case .sleepBelly, .sleepEyeMask, .recoverySuperman, .medicated, .restStarfish, .restCroissant, .restDonut, .restLoaf, .restBox, .nap, .cook, .groceries, .laundry, .dishes, .coffee, .meeting, .friends, .date, .family, .phoneCall, .meditate, .hospital, .salon, .readBook, .game, .music, .video, .petCare: [(6, 0)]
         }
     }
 
@@ -475,7 +475,7 @@ private func pose(_ scene: HwarangScene, beat i: Int, s: CGFloat, u: CGFloat) ->
         var p = study(s, turn: sin(s * 0.7) * 0.5, flip: 0, eye: blink(s, 2.9))
         p.prop = .map
         return p
-    case .sleepBelly, .sleepEyeMask, .recoverySuperman, .medicated, .restStarfish, .restCroissant, .restDonut, .restLoaf, .restBox, .nap, .cook, .groceries, .laundry, .dishes, .meeting, .friends, .date, .family, .phoneCall, .meditate, .hospital, .salon, .readBook, .game, .music, .video, .petCare:
+    case .sleepBelly, .sleepEyeMask, .recoverySuperman, .medicated, .restStarfish, .restCroissant, .restDonut, .restLoaf, .restBox, .nap, .cook, .groceries, .laundry, .dishes, .coffee, .meeting, .friends, .date, .family, .phoneCall, .meditate, .hospital, .salon, .readBook, .game, .music, .video, .petCare:
         return dailyPose(scene, s: s)
     }
 }
@@ -1135,7 +1135,7 @@ struct HwarangPainter {
             yarn(y.0, y.1, y.2)
         case .eat: bowl()
         case .sleepBelly, .sleepEyeMask: sleepLetters(sec)
-        case .nap, .cook, .groceries, .meeting, .friends, .date, .meditate, .salon, .game, .music, .video, .petCare: dailyForeground(scene, sec: sec)
+        case .nap, .cook, .groceries, .coffee, .friends, .date, .meditate, .salon, .game, .music, .video, .petCare: dailyForeground(scene, sec: sec)
         case .confused: questionMark(sec)
         case .shower: waterStreams(sec, xs: [52, 64, 76, 84], alpha: 0.5)
         case .atlas:

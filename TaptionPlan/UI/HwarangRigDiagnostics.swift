@@ -39,6 +39,7 @@ enum HwarangDiagnostics {
         case .groceries: .groceries
         case .laundry: .laundry
         case .dishes: .dishes
+        case .coffee: .coffee
         case .housework: .robotVacuum
         case .shower: .shower
         case .friends: .friends

@@ -42,6 +42,7 @@ enum CalendarTitleClassification {
         ("health.salon", ["미용실", "헤어", "커트", "네일"], ["salon", "haircut"]),
         ("study.academy", ["학원"], ["academy"]),
         ("study.academy", ["수업", "강의", "세미나"], ["class", "lecture", "seminar"]),
+        ("eating.coffee", ["커피", "티타임", "카페"], ["coffee", "cafe"]),
         ("eating.meal", ["점심", "저녁", "아침", "식사", "회식", "브런치"], ["lunch", "dinner", "breakfast", "brunch"]),
         ("housework.groceries", ["장보기", "마트"], ["groceries"]),
         ("housework.laundry", ["빨래"], ["laundry"]),

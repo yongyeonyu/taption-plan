@@ -83,7 +83,8 @@
       "title": "식사",
       "systemImage": "fork.knife",
       "details": [
-        { "id": "eating.meal", "title": "식사", "behavior": "meal", "systemImage": "fork.knife" }
+        { "id": "eating.meal", "title": "식사", "behavior": "meal", "systemImage": "fork.knife" },
+        { "id": "eating.coffee", "title": "커피·티타임", "behavior": "coffee", "systemImage": "cup.and.saucer.fill" }
       ]
     },
     {
