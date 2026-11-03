@@ -5467,3 +5467,6 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 시뮬레이터(실기기 아님) 전체 단위: 1,927건 중 통과 1,917, 실패 0, 건너뜀 10 (`build/validation/SEA1103A01/simfull2.xcresult`).
 - 집안일은 합성 양·음성 시험만 통과했다. 실제 라벨이 없어 실제 정확도는 재지 못했고 체류 전체에 붙는 구조는 그대로다. 클립 편집 읽기 전용·세부 표시·6시간 줌은 화면으로 확인하지 못했다.
 - 워치 샤워: 코드 규칙(집·Water Lock·60초)은 있으나 워치 앱이 배포되지 않고 원본에 워치 표본이 없어 동작하지 않는다.
+
+## TFB1103A04 TestFlight 빌드 263 (2026-11-03)
+- `release.sh --yes` 종료 코드 0. 보고서 `build/validation/TFB1103A04/testflight-report.json`. 기기 동작 확인은 아니다.
