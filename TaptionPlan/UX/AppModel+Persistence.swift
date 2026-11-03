@@ -463,6 +463,7 @@ extension AppModel {
     }
 
     func schedulePostSaveRefresh() {
+        scheduleNearbyMemoSync()
         postSaveRefreshRequested = true
         guard isSceneActive, postSaveRefreshTask == nil else { return }
         postSaveRefreshTask = Task { @MainActor [weak self] in

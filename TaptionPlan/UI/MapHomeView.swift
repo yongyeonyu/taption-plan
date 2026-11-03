@@ -1192,7 +1192,7 @@ struct MapHomeView: View {
             .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $isAlarmSettingsPresented) {
-            MapHomeAlarmSettingsSheet(language: language)
+            MapHomeAlarmSettingsSheet(language: language) { model.scheduleNearbyMemoSync() }
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }

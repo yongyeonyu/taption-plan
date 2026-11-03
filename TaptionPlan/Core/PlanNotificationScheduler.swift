@@ -121,7 +121,8 @@ actor PlanNotificationScheduler {
 }
 
 enum PlanNotificationPolicy {
-    static let maximumPendingPlanReminders = 60
+    /// 근처 메모 알림(`NearbyMemoPolicy.maximumPlaces`)과 예약 알림 자리를 나눠 쓴다.
+    static let maximumPendingPlanReminders = 50
 
     static func reminderPlans(
         from plans: [PlanRecord],

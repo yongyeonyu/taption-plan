@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A1000000000000000D1104A3 /* NearbyMemoNotificationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000D1104A3 /* NearbyMemoNotificationTests.swift */; };
+		A1000000000000000D1104A2 /* AppModel+NearbyMemos.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000D1104A2 /* AppModel+NearbyMemos.swift */; };
+		A1000000000000000D1104A1 /* NearbyMemoNotifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000D1104A1 /* NearbyMemoNotifications.swift */; };
 		A10000000000000000CA1003 /* AppModel+CalendarTitles.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000CA1003 /* AppModel+CalendarTitles.swift */; };
 		A10000000000000000CA1001 /* CalendarTitleClassification.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000CA1001 /* CalendarTitleClassification.swift */; };
 		A10000000000000000CA1000 /* HomeChorePattern.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000CA1000 /* HomeChorePattern.swift */; };
@@ -566,6 +569,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		F1000000000000000D1104A3 /* NearbyMemoNotificationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NearbyMemoNotificationTests.swift"; sourceTree = "<group>"; };
+		F1000000000000000D1104A2 /* AppModel+NearbyMemos.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+NearbyMemos.swift"; sourceTree = "<group>"; };
+		F1000000000000000D1104A1 /* NearbyMemoNotifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NearbyMemoNotifications.swift"; sourceTree = "<group>"; };
 		F10000000000000000CA1003 /* AppModel+CalendarTitles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+CalendarTitles.swift"; sourceTree = "<group>"; };
 		F10000000000000000CA1001 /* CalendarTitleClassification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CalendarTitleClassification.swift"; sourceTree = "<group>"; };
 		F10000000000000000CA1000 /* HomeChorePattern.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HomeChorePattern.swift"; sourceTree = "<group>"; };
@@ -1136,6 +1142,7 @@
 				F5B1102A020000000000005B /* FeatureEngineTestFixtures.swift */,
 				F5C1103A010000000000000A /* StructurePerformanceProbeTests.swift */,
 				F1000000000000000B1103D3 /* MapHomeHomeSkyTests.swift */,
+				F1000000000000000D1104A3 /* NearbyMemoNotificationTests.swift */,
 				F1000000000000000B1104B1 /* StickerCatalogTests.swift */,
 				F5B1102A0200000000000059 /* MapHomeStickmanTests.swift */,
 				F1A11102A0100000000000F2 /* MemoTextPolishTests.swift */,
@@ -1379,6 +1386,7 @@
 				F5B1102A020000000000001C /* AppModel+Lifecycle.swift */,
 				F5B1102A020000000000001A /* AppModel+LocationCollection.swift */,
 				F5B1102A0200000000000018 /* AppModel+MapEditing.swift */,
+				F1000000000000000D1104A2 /* AppModel+NearbyMemos.swift */,
 				F5B1102A0200000000000016 /* AppModel+Memos.swift */,
 				F5B1102A0200000000000014 /* AppModel+Navigation.swift */,
 				F5B1102A0200000000000012 /* AppModel+Permissions.swift */,
@@ -1461,6 +1469,7 @@
 				F5B1102A0200000000000007 /* AppleMotionHistoryService.swift */,
 				F5B1102A0200000000000005 /* AppleTransportContextService.swift */,
 				F5B1102A0200000000000003 /* VoiceMemoServices.swift */,
+				F1000000000000000D1104A1 /* NearbyMemoNotifications.swift */,
 				F5B1102A0200000000000001 /* PlanNotificationScheduler.swift */,
 				F1000000000000000B1101A3 /* SensorEfficiencyPolicies.swift */,
 				F1000000000000000000F0C1 /* GoogleCalendarAccount.swift */,
@@ -1924,6 +1933,7 @@
 				A5B1102A020000000000001D /* AppModel+Lifecycle.swift in Sources */,
 				A5B1102A020000000000001B /* AppModel+LocationCollection.swift in Sources */,
 				A5B1102A0200000000000019 /* AppModel+MapEditing.swift in Sources */,
+				A1000000000000000D1104A2 /* AppModel+NearbyMemos.swift in Sources */,
 				A5B1102A0200000000000017 /* AppModel+Memos.swift in Sources */,
 				A5B1102A0200000000000015 /* AppModel+Navigation.swift in Sources */,
 				A5B1102A0200000000000013 /* AppModel+Permissions.swift in Sources */,
@@ -2145,6 +2155,7 @@
 				A5B1102A0200000000000008 /* AppleMotionHistoryService.swift in Sources */,
 				A5B1102A0200000000000006 /* AppleTransportContextService.swift in Sources */,
 				A5B1102A0200000000000004 /* VoiceMemoServices.swift in Sources */,
+				A1000000000000000D1104A1 /* NearbyMemoNotifications.swift in Sources */,
 				A5B1102A0200000000000002 /* PlanNotificationScheduler.swift in Sources */,
 				A1000000000000000B1101A3 /* SensorEfficiencyPolicies.swift in Sources */,
 				A1000000000000000000F0C1 /* GoogleCalendarAccount.swift in Sources */,
@@ -2223,6 +2234,7 @@
 				A5B1102A020000000000005C /* FeatureEngineTestFixtures.swift in Sources */,
 				A5C1103A010000000000000A /* StructurePerformanceProbeTests.swift in Sources */,
 				A1000000000000000B1103D3 /* MapHomeHomeSkyTests.swift in Sources */,
+				A1000000000000000D1104A3 /* NearbyMemoNotificationTests.swift in Sources */,
 				A1000000000000000B1104B1 /* StickerCatalogTests.swift in Sources */,
 				A5B1102A020000000000005A /* MapHomeStickmanTests.swift in Sources */,
 				A1A11102A0100000000000A2 /* MemoTextPolishTests.swift in Sources */,

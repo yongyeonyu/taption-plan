@@ -406,6 +406,8 @@ final class AppModel {
     @ObservationIgnored let voiceMemoPlayer: VoiceMemoPlayer
     @ObservationIgnored let liveActivityController: TaptionLiveActivityController
     @ObservationIgnored let notificationScheduler: PlanNotificationScheduler
+    @ObservationIgnored let nearbyMemoScheduler = NearbyMemoNotificationScheduler()
+    @ObservationIgnored var nearbyMemoSyncTask: Task<Void, Never>?
     @ObservationIgnored let watchConnectivityService: AppleWatchConnectivityService
     @ObservationIgnored let airPodsActivityService: AirPodsActivityService
     @ObservationIgnored let screenTimeUsageService: ScreenTimeUsageService

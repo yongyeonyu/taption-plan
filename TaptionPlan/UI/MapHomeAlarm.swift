@@ -463,6 +463,9 @@ final class MapHomeAlarmCenter {
 /// 알림 설정: 종류별 켜고 끄기, 권한 상태.
 struct MapHomeAlarmSettingsSheet: View {
     let language: MapHomeLanguage
+    var onNearbyMemoChange: () -> Void = {}
+    @AppStorage(NearbyMemoPolicy.enabledKey) private var isNearbyMemoEnabled = true
+    @State private var nearbyMemoAvailability: NearbyMemoAvailability?
     @AppStorage(MapHomeAlarmSettings.storageKey) private var raw = MapHomeAlarmSettings().rawValue
     @AppStorage(MapHomeAlarmSettings.dailyCardHourKey) private var cardHour = 8
     @AppStorage(MapHomeAlarmSettings.dailyCardMinuteKey) private var cardMinute = 0
@@ -530,11 +533,56 @@ struct MapHomeAlarmSettingsSheet: View {
                         .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
                 }
+                nearbyMemoRow
             }
             .padding(22)
         }
         .background(Color.tpBackground)
         .task { isAuthorized = await MapHomeAlarmCenter.shared.isAuthorized() }
+        .task(id: isNearbyMemoEnabled) { nearbyMemoAvailability = await NearbyMemoAvailability.current().availability }
+    }
+
+    private var nearbyMemoRow: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(language.text("메모", "Memos"))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
+                .foregroundStyle(Color.tpSecondary)
+            Toggle(isOn: $isNearbyMemoEnabled) {
+                HStack(spacing: 10) {
+                    Image(systemName: "mappin.and.ellipse")
+                        .foregroundStyle(Color.tpAccent)
+                        .frame(width: 22)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(language.text("근처에 남긴 메모", "Memos left nearby"))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
+                        Text(nearbyMemoDetail)
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11))))
+                            .foregroundStyle(Color.tpSecondary)
+                    }
+                }
+            }
+            .tint(Color.tpAccent)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 14)
+            .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .onChange(of: isNearbyMemoEnabled) { _, _ in onNearbyMemoChange() }
+        }
+    }
+
+    private var nearbyMemoDetail: String {
+        switch nearbyMemoAvailability {
+        case .notificationsNotAllowed:
+            language.text("알림 권한이 꺼져 있어 보내지 않아요.", "Off because notifications aren't allowed.")
+        case .locationNotAllowed:
+            language.text("위치 권한이 없어 보내지 않아요.", "Off because location isn't allowed.")
+        case .approximateLocation:
+            language.text("정확한 위치가 꺼져 있어 보내지 않아요.", "Off because Precise Location is off.")
+        default:
+            language.text(
+                "아이콘을 고른 지난 위치 메모의 근처에 가면 iOS가 알려요. 메모 글이 잠금 화면에 보여요.",
+                "iOS alerts you near past location memos with a chosen icon. Memo text shows on the Lock Screen."
+            )
+        }
     }
 
     private var cardTimeBinding: Binding<Date> {

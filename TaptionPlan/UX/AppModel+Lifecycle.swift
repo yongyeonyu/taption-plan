@@ -33,6 +33,7 @@ extension AppModel {
             setExternalPrivacyLocked(false)
         }
         guard !wasSceneActive else { return }
+        scheduleNearbyMemoSync()
         // 비활성이라 미뤄 둔 기록 정리·저장을 여기서 이어서 끝낸다.
         scheduleBootstrapPreparation()
         if !pendingSensorAnalysisRevisions.isEmpty {

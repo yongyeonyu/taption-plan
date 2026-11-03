@@ -490,6 +490,7 @@ extension AppModel {
         syncSensorBackgroundState()
         isSensorCollecting = false
         await notificationScheduler.cancelAllPlanReminders()
+        await nearbyMemoScheduler.cancelAll()
 
         let defaults = AppFeatureSettings.defaults
         var reset = snapshot
