@@ -37,6 +37,9 @@ final class RawSensorReplayTests: XCTestCase {
                 print("REPLAY rail-journey \(formatter.string(from: journey.span.start))–\(formatter.string(from: journey.span.end)) "
                     + "stations=\(journey.stationNames.joined(separator: ">")) lines=\(journey.route.lineNames.joined(separator: ">"))")
             }
+            for line in RailJourneyRecognizer.rejections(readings: readings) {
+                print("REPLAY rail-reject \(line)")
+            }
             // 원본 표본만으로 역 궤적 엔진이 지하철을 새로 찾는지 본다(EXP1029A02 — 자차 출근에 회색 지하철 경로).
             for detected in SubwayTravelSegmentEngine.segments(from: readings) {
                 print("REPLAY detected-subway \(formatter.string(from: detected.span.start))–\(formatter.string(from: detected.span.end)) "

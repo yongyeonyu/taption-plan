@@ -104,6 +104,56 @@ final class RailRideLikelihoodTests: XCTestCase {
         XCTAssertTrue(RailJourneyRecognizer.journeys(readings: rail).isEmpty)
     }
 
+    private func rideWithLastStop() throws -> (readings: [SensorReading], last: SubwayRouteStop, minute: Double) {
+        let stops = try stops()
+        let platform = reading(stops[0].latitude!, stops[0].longitude!, minute: -7, speed: 1.2, motion: .walking)
+        let rail = [platform] + dwellAtBoarding(stops[0], minutes: 6)
+            + drive(stops: stops, minutesPerLeg: 4, startMinute: 0, stopAtStations: true)
+        let minute = try XCTUnwrap(rail.last).timestamp.timeIntervalSince(start) / 60
+        return (rail, try XCTUnwrap(stops.last), minute)
+    }
+
+    /// 환승역에서 다시 달리는 표본. 역을 지나지 않는 방향으로 간다.
+    private func nextTrain(from stop: SubwayRouteStop, minute: Double, minutes: Double, car: String? = nil) -> [SensorReading] {
+        var result = [reading(stop.latitude!, stop.longitude!, minute: minute + 5, speed: 0.5, motion: .stationary, car: car)]
+        for step in 1...Int(minutes * 4) {
+            let elapsed = Double(step) / 4
+            result.append(reading(
+                stop.latitude! + 0.004 * elapsed, stop.longitude! + 0.003 * elapsed,
+                minute: minute + 5 + elapsed, speed: 9, car: car
+            ))
+        }
+        return result
+    }
+
+    /// 마지막 역 근처에 머물면 내린 것이다. 저녁 탑승이 밤까지 늘어나면 안 된다(SUB1103A01).
+    func testStayingNearTheLastStationEndsTheRide() throws {
+        let ride = try rideWithLastStop()
+        let stay = [60.0, 120, 300].map {
+            reading(ride.last.latitude!, ride.last.longitude!, minute: ride.minute + $0, speed: 0, motion: .stationary)
+        }
+        let journey = try XCTUnwrap(RailJourneyRecognizer.journeys(readings: ride.readings + stay).first)
+        XCTAssertLessThanOrEqual(journey.span.end, start.addingTimeInterval(ride.minute * 60))
+    }
+
+    /// 환승 뒤 다음 역 전까지 자동차로 단정하지 않는다(SUB1103A01).
+    func testNextTrainAfterTransferIsSubwayBeforeTheNextStation() throws {
+        let ride = try rideWithLastStop()
+        let readings = ride.readings + nextTrain(from: ride.last, minute: ride.minute, minutes: 3)
+        let tail = try XCTUnwrap(RailJourneyRecognizer.journeys(readings: readings).last)
+        XCTAssertNotNil(tail.measuredMeters)
+        XCTAssertEqual(tail.span.end, readings.last?.timestamp)
+    }
+
+    /// 차량 오디오가 있거나 10분이 지나도 역이 안 잡히면 환승 뒤 구간은 지하철이 아니다.
+    func testCarAfterStationIsNotContinued() throws {
+        let ride = try rideWithLastStop()
+        let audio = ride.readings + nextTrain(from: ride.last, minute: ride.minute, minutes: 3, car: "내 차")
+        XCTAssertFalse(RailJourneyRecognizer.journeys(readings: audio).contains { $0.measuredMeters != nil })
+        let long = ride.readings + nextTrain(from: ride.last, minute: ride.minute, minutes: 12)
+        XCTAssertFalse(RailJourneyRecognizer.journeys(readings: long).contains { $0.measuredMeters != nil })
+    }
+
     /// 역마다 서고 탑승역까지 걸어온 탑승은 차량 근거가 없으면 철도다.
     func testAlignedStationStopsScoreAsRail() throws {
         let stops = try stops()

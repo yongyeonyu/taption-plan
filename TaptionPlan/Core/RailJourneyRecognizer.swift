@@ -11,6 +11,8 @@ enum RailJourneyRecognizer {
         var route: SubwayRoutePath
         var stationNames: [String]
         var likelihood: RailRideLikelihood.Assessment
+        /// 환승 뒤 다음 역에 닿기 전 구간의 실측 거리. 노선을 모르는 구간에만 있다.
+        var measuredMeters: Double?
     }
 
     static let stationRadiusMeters = SubwayEvidenceGate.stationRadiusMeters
@@ -27,6 +29,11 @@ enum RailJourneyRecognizer {
     private static let carAudioContext: TimeInterval = 5 * 60
     private static let minimumGPSLossShare = 0.35
     private static let dwellExemptStations = 3
+    /// 마지막 역 반경에 이보다 오래 있으면 타고 있는 것이 아니라 내린 것이다. 집 근처 역에서 밤까지 탑승으로 늘어나지 않게 한다.
+    private static let maximumOngoingStationStay: TimeInterval = 10 * 60
+    /// 환승 뒤 이 시간 안에 다음 역이 잡히지 않으면 지하철이라고 볼 수 없다.
+    private static let maximumUnconfirmedLeg: TimeInterval = 10 * 60
+    private static let minimumBoardedSpeed = 5.0
 
     private struct Visit {
         var name: String
@@ -54,7 +61,39 @@ enum RailJourneyRecognizer {
             }
         }
         if chain.count >= 2 { chains.append(chain) }
-        return chains.compactMap { journey(from: $0, readings: ordered) { _ in } }
+        var found = chains.compactMap { journey(from: $0, readings: ordered) { _ in } }
+        if let last = found.last, let next = transferContinuation(after: last, readings: ordered) {
+            found.append(next)
+        }
+        return found
+    }
+
+    /// 환승해 다음 열차를 탄 직후는 역이 하나도 안 잡혀 사슬이 생기지 않고, 모션은 자동차라고 한다(SUB1103A01).
+    /// 다음 역이 잡히면 사슬로 이어지고, 정해진 시간 안에 안 잡히면 이 구간은 사라져 자동차로 돌아간다.
+    private static func transferContinuation(after previous: Journey, readings: [SensorReading]) -> Journey? {
+        // 앞 열차가 역에 들어오며 감속하는 표본은 건너뛰고, 멈춘 뒤부터 다음 열차를 찾는다.
+        let after = Array(readings.filter { $0.timestamp > previous.span.end }
+            .drop { ($0.speedMetersPerSecond ?? 0) >= RailRideLikelihood.stoppedSpeed })
+        guard let now = after.last?.timestamp,
+              let index = after.firstIndex(where: {
+                  ($0.speedMetersPerSecond ?? 0) >= minimumBoardedSpeed && $0.motion != .walking && $0.motion != .running
+              }), index > 0,
+              let platform = after[index - 1].point,
+              SubwayStationCatalog.nearest(to: platform, maximumDistanceMeters: stationRadiusMeters) != nil else { return nil }
+        let boarded = after[index - 1].timestamp
+        guard boarded.timeIntervalSince(previous.span.end) <= maximumLegGap,
+              (60...maximumUnconfirmedLeg).contains(now.timeIntervalSince(boarded)) else { return nil }
+        let context = readings.filter { $0.timestamp >= previous.span.end.addingTimeInterval(-carAudioContext) }
+        guard !context.contains(where: { $0.carAudioRouteName?.isEmpty == false }) else { return nil }
+        let ride = after.filter { $0.timestamp >= boarded }
+        guard ride.allSatisfy({ ($0.speedMetersPerSecond ?? 0) <= maximumRideSpeed }),
+              stepsPerMinute(ride) <= maximumStepsPerMinute else { return nil }
+        let points = ride.filter(\.gpsAvailable).compactMap(\.point)
+        var value = previous
+        value.span = TimeSpan(start: boarded, end: now)
+        value.stationNames = []
+        value.measuredMeters = zip(points, points.dropFirst()).reduce(0) { $0 + meters($1.0, $1.1) }
+        return value
     }
 
     /// 후보 탑승이 왜 빠졌는지 읽는다. 재생 판정과 진단에만 쓴다.
@@ -105,16 +144,17 @@ enum RailJourneyRecognizer {
                 result.append(TravelSegment(
                     mode: .subway,
                     span: span,
-                    distanceMeters: routeMeters(journey.route) * span.duration / max(1, journey.span.duration),
+                    distanceMeters: journey.measuredMeters.map { $0 * span.duration / max(1, journey.span.duration) }
+                        ?? routeMeters(journey.route) * span.duration / max(1, journey.span.duration),
                     confidence: .high,
-                    evidence: [
+                    evidence: journey.measuredMeters != nil ? ["환승 뒤 다음 역 확인 전"] : [
                         "지하철 노선 후보 확정",
                         "노선 " + journey.route.lineNames.joined(separator: " → "),
                         "역 감지 " + journey.stationNames.joined(separator: " · "),
                         String(format: "철도 대 도로 %+.1f", journey.likelihood.logLikelihoodRatio),
                     ] + journey.likelihood.evidence,
                     isConfirmed: false,
-                    subwayRoute: journey.route
+                    subwayRoute: journey.measuredMeters != nil ? nil : journey.route
                 ))
             }
         }
@@ -201,6 +241,7 @@ enum RailJourneyRecognizer {
         let hasAltitudeData = altitudeContext.contains { $0.pressureKilopascals != nil || $0.relativeAltitudeMeters != nil }
         let after = readings.filter { $0.timestamp > last.last }
         let hasAlighted = hasLeftStation(after, from: last.name)
+            || (readings.last?.timestamp ?? last.last).timeIntervalSince(last.first) > maximumOngoingStationStay
         let boardingDwell = first.last.timeIntervalSince(first.first) + leftAfter(first, readings: readings)
         let likelihood = RailRideLikelihood.assess(
             route: route, boarding: first.last, alighting: last.first, hasAlighted: hasAlighted,
@@ -222,7 +263,10 @@ enum RailJourneyRecognizer {
             hasAltitudeChange: !hasAltitudeData
                 || TravelModeClassifier.altitudeChangeMeters(altitudeContext) >= TravelModeClassifier.subwayAltitudeChangeMeters,
             // 지하철은 역 사이에 거의 서지 않는다. 역 밖 정차 하나가 역 정차 둘을 지운다.
-            transitSpecificSignals: max(0, likelihood.stopsAtStations - likelihood.stopsBetweenStations * 2) + (gpsLost ? 1 : 0),
+            // 지하철 Wi-Fi와 역 주변 수직 이동도 지하철에서만 나타난다. GPS가 살아 정차를 못 잡은 날의 근거다(SUB1103A01).
+            transitSpecificSignals: max(0, likelihood.stopsAtStations - likelihood.stopsBetweenStations * 2) + (gpsLost ? 1 : 0)
+                + (likelihood.evidence.contains("지하철 Wi-Fi") ? 1 : 0)
+                + (likelihood.evidence.contains { $0.hasSuffix("수직 이동") } ? 1 : 0),
             supportingSignals: stepsPerMinute(inside) <= maximumStepsPerMinute ? 1 : 0,
             boardingDwell: isDwellExempt ? nil : boardingDwell,
             alightingDwell: isDwellExempt || !hasAlighted ? nil : last.last.timeIntervalSince(last.first)
