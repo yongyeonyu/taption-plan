@@ -368,4 +368,11 @@ enum MapHomeBenchHomeZoom {
         return parts.count == 2 ? CLLocationCoordinate2D(latitude: parts[0], longitude: parts[1]) : nil
     }
 }
+#else
+/// 출시 빌드의 `-autoBenchMapPan` 경로가 쓰는 자리. 측정 스타일을 다시 입히지 않는다.
+@MainActor
+enum MapHomeBenchHomeZoom {
+    static let playbackWaitTicks = 120
+    static func reapplyStyle(model: AppModel) {}
+}
 #endif
