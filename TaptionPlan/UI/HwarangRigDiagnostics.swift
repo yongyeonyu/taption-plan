@@ -24,6 +24,36 @@ enum HwarangDiagnostics {
         alphaMap(scene: scene, sec: sec, hat: hat.flatMap { UIImage(named: $0) }, side: side, scale: 1).reduce(0) { $0 + ($1 > 0 ? 1 : 0) }
     }
 
+    /// 시험용: 세계 좌표 한 점에 그림이 칠해졌는지. 캔버스 안(x -14...132, y 8...142)만 잰다.
+    static func isPainted(scene: HwarangScene, sec: Double, at point: CGPoint) -> Bool {
+        let map = alphaMap(scene: scene, sec: sec, hat: nil, side: 146, scale: 1)
+        // 비트맵 메모리는 아래 행부터 쌓인다.
+        return map[(145 - (Int(point.y) - 8)) * 146 + Int(point.x) + 14] > 0
+    }
+
+    /// 시험용: 식사 장면에서 머리와 밥그릇이 함께 칠한 화소 수.
+    static func faceBowlOverlap(sec: Double) -> Int {
+        func mask(bowlOnly: Bool) -> [UInt8] {
+            drawnAlpha(side: 200, scale: 2) { HwarangPainter(c: $0, small: false).drawEatPart(bowlOnly: bowlOnly, sec: CGFloat(sec)) }
+        }
+        return zip(mask(bowlOnly: false), mask(bowlOnly: true)).reduce(0) { $0 + ($1.0 > 0 && $1.1 > 0 ? 1 : 0) }
+    }
+
+    private static func drawnAlpha(side: Int, scale: CGFloat, _ draw: (CGContext) -> Void) -> [UInt8] {
+        let pixelSide = Int(CGFloat(side) * scale)
+        var pixels = [UInt8](repeating: 0, count: pixelSide * pixelSide * 4)
+        pixels.withUnsafeMutableBytes { raw in
+            guard let context = CGContext(
+                data: raw.baseAddress, width: pixelSide, height: pixelSide, bitsPerComponent: 8, bytesPerRow: pixelSide * 4,
+                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            ) else { return }
+            context.scaleBy(x: scale, y: scale)
+            context.translateBy(x: 30, y: 16)
+            draw(context)
+        }
+        return stride(from: 3, to: pixels.count, by: 4).map { pixels[$0] }
+    }
+
     private static let accessoryMapSide: CGFloat = 200, accessoryMapLeft: CGFloat = 30, accessoryMapTop: CGFloat = 16
 
     /// 시험용: 장식을 걸친 그림에서 맨몸 윤곽을 `margin`(세계 좌표)만큼 넓힌 범위 밖으로 나간 화소 수.

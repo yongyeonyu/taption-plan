@@ -319,6 +319,8 @@
 		A1000000000000000B1102E7 /* GPSLoggingIntervalSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102E7 /* GPSLoggingIntervalSlider.swift */; };
 		A1000000000000000B1102F1 /* MapHomeHomeWeatherArt.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102F1 /* MapHomeHomeWeatherArt.swift */; };
 		A1000000000000000B1102F2 /* HwarangRigVehicles.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102F2 /* HwarangRigVehicles.swift */; };
+		A1000000000000000B1103A3 /* HwarangRigProps.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1103A3 /* HwarangRigProps.swift */; };
+		A1000000000000000B1103A2 /* HwarangRigDailyScenes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1103A2 /* HwarangRigDailyScenes.swift */; };
 		A1000000000000000B1102F3 /* HwarangRigAccessories.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102F3 /* HwarangRigAccessories.swift */; };
 		A1000000000000000B1102F4 /* HwarangRigAccessoryStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102F4 /* HwarangRigAccessoryStyles.swift */; };
 		A1000000000000000B1102F5 /* HwarangRigDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102F5 /* HwarangRigDiagnostics.swift */; };
@@ -712,6 +714,8 @@
 		F1000000000000000B1102E7 /* GPSLoggingIntervalSlider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GPSLoggingIntervalSlider.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102F1 /* MapHomeHomeWeatherArt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeHomeWeatherArt.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102F2 /* HwarangRigVehicles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HwarangRigVehicles.swift; sourceTree = "<group>"; };
+		F1000000000000000B1103A3 /* HwarangRigProps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HwarangRigProps.swift; sourceTree = "<group>"; };
+		F1000000000000000B1103A2 /* HwarangRigDailyScenes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HwarangRigDailyScenes.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102F3 /* HwarangRigAccessories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HwarangRigAccessories.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102F4 /* HwarangRigAccessoryStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HwarangRigAccessoryStyles.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102F5 /* HwarangRigDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HwarangRigDiagnostics.swift; sourceTree = "<group>"; };
@@ -1013,6 +1017,8 @@
 				F1000000000000000B1102E7 /* GPSLoggingIntervalSlider.swift */,
 				F1000000000000000B1102F1 /* MapHomeHomeWeatherArt.swift */,
 				F1000000000000000B1102F2 /* HwarangRigVehicles.swift */,
+				F1000000000000000B1103A3 /* HwarangRigProps.swift */,
+				F1000000000000000B1103A2 /* HwarangRigDailyScenes.swift */,
 				F1000000000000000B1102F3 /* HwarangRigAccessories.swift */,
 				F1000000000000000B1102F4 /* HwarangRigAccessoryStyles.swift */,
 				F1000000000000000B1102F5 /* HwarangRigDiagnostics.swift */,
@@ -1649,6 +1655,8 @@
 				A1000000000000000B1102E7 /* GPSLoggingIntervalSlider.swift in Sources */,
 				A1000000000000000B1102F1 /* MapHomeHomeWeatherArt.swift in Sources */,
 				A1000000000000000B1102F2 /* HwarangRigVehicles.swift in Sources */,
+				A1000000000000000B1103A3 /* HwarangRigProps.swift in Sources */,
+				A1000000000000000B1103A2 /* HwarangRigDailyScenes.swift in Sources */,
 				A1000000000000000B1102F3 /* HwarangRigAccessories.swift in Sources */,
 				A1000000000000000B1102F4 /* HwarangRigAccessoryStyles.swift in Sources */,
 				A1000000000000000B1102F5 /* HwarangRigDiagnostics.swift in Sources */,

@@ -1,4 +1,5 @@
 import CoreGraphics
+import UIKit
 
 /// 화랑이가 걸치는 천 장식의 색과 무늬(ACC1102A01). 표는 `HwarangRigAccessoryStyles.swift`에 있다.
 enum HwarangClothPattern: Sendable {
@@ -227,6 +228,36 @@ extension HwarangPainter {
 
     /// 꼬리 중심선을 받아 끝 근처에 띠를 감고 나비매듭을 묶는다. 끈은 꼬리 흔들림을 조금 늦게 따른다.
     /// `along`은 꼬리 뿌리(0)에서 끝(1) 사이 묶는 자리다.
+    /// 샤워 장면의 옷걸이. 모자는 기둥 위에, 스카프는 고리에 걸고, 리본은 기둥에 묶는다. 벗어 둔 것이 없으면 그리지 않는다.
+    func hangAccessories(hat: UIImage?, scarf: HwarangClothStyle?, ribbon: HwarangClothStyle?) {
+        guard hat != nil || scarf != nil || ribbon != nil else { return }
+        let x: CGFloat = 3, top: CGFloat = 32
+        c.setLineJoin(.round); c.setLineCap(.round)
+        stroke(outline, 5); c.beginPath(); c.move(to: P(x, top)); c.addLine(to: P(x, groundY)); c.move(to: P(x - 9, groundY)); c.addLine(to: P(x + 9, groundY)); c.move(to: P(x, top + 14)); c.addLine(to: P(x + 10, top + 10)); c.strokePath()
+        stroke(0xC78A5B, 2.6); c.beginPath(); c.move(to: P(x, top)); c.addLine(to: P(x, groundY)); c.move(to: P(x - 9, groundY)); c.addLine(to: P(x + 9, groundY)); c.move(to: P(x, top + 14)); c.addLine(to: P(x + 10, top + 10)); c.strokePath()
+        fill(0xC78A5B); stroke(outline, 1.4); c.beginPath(); circle(x, top, 3); c.drawPath(using: .fillStroke)
+        if let scarf {
+            // 고리에 반으로 접어 걸어 양 끝이 늘어진다.
+            for (dx, length) in [(CGFloat(-3.2), CGFloat(30)), (3.2, 24)] {
+                let rect = CGRect(x: x + 9 + dx - 3, y: top + 9, width: 6, height: length)
+                fill(dx < 0 ? scarf.shade : scarf.base); stroke(outline, 1.3); c.beginPath(); c.addRect(rect); c.drawPath(using: .fillStroke)
+                stroke(scarf.accent, 1.3); c.beginPath()
+                for y in stride(from: rect.minY + 5, to: rect.maxY - 1, by: 6) { c.move(to: P(rect.minX + 0.8, y)); c.addLine(to: P(rect.maxX - 0.8, y)) }
+                c.strokePath()
+                stroke(scarf.trim, 1.1); c.beginPath()
+                for fx in stride(from: rect.minX + 1, through: rect.maxX - 1, by: 2) { c.move(to: P(fx, rect.maxY + 0.6)); c.addLine(to: P(fx, rect.maxY + 3.2)) }
+                c.strokePath()
+            }
+        }
+        if let ribbon { drawTailRibbon(ribbon, tail: [P(x, 84), P(x, 78), P(x, 72)], radius: 2.8, sway: 0.1, phase: 0, along: 0.5) }
+        if let hat {
+            let w: CGFloat = 28, h = w * 60 / 68
+            UIGraphicsPushContext(c)
+            hat.draw(in: CGRect(x: x - w / 2, y: top + 2 - h, width: w, height: h))
+            UIGraphicsPopContext()
+        }
+    }
+
     func drawTailRibbon(_ style: HwarangClothStyle, tail: [CGPoint], radius: CGFloat, sway: CGFloat, phase: CGFloat, along: CGFloat = 0.74) {
         guard tail.count >= 3 else { return }
         let index = max(1, min(Int((CGFloat(tail.count - 1) * along).rounded()), tail.count - 2))
