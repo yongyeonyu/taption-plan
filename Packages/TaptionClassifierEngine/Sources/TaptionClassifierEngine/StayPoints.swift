@@ -7,6 +7,13 @@ public struct StayPoint: Codable, Hashable, Sendable {
     public var sampleCount: Int
     public var meanAccuracy: Double
 
+    public init(interval: ClassifierInterval, center: ClassifierPoint, sampleCount: Int, meanAccuracy: Double) {
+        self.interval = interval
+        self.center = center
+        self.sampleCount = sampleCount
+        self.meanAccuracy = meanAccuracy
+    }
+
     /// 예전 장소 키(소수 넷째 자리 반올림). 등록 장소와 기존 기록을 잇는 별칭.
     public var legacyKey: String {
         String(format: "%.4f,%.4f", center.latitude, center.longitude)

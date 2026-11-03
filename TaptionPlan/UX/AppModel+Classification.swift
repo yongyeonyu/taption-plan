@@ -614,7 +614,7 @@ extension AppModel {
             snapshot.settings.recentCarAudioNames = recentCarAudio
         }
         let railJourneys = RailJourneyRecognizer.journeys(readings: readings)
-        let travel = CarAudioTravelConfirmation.enforcingRegisteredCar(
+        let recognizedTravel = CarAudioTravelConfirmation.enforcingRegisteredCar(
             RailJourneyRecognizer.applying(
                 railJourneys,
                 to: ActivityClassificationLockEngine.mergingLockedTravel(
@@ -628,6 +628,8 @@ extension AppModel {
             registered: Set(settings.registeredCarAudioNames),
             corrections: snapshot.settings.movementCorrections
         )
+        let travel = WalkingDistanceBreakdown.make(travel: recognizedTravel, readings: readings)
+            .annotating(recognizedTravel)
 
         // A photo location is only a fallback anchor. It must not erase a
         // previously recorded route when the sensor archive is temporarily
@@ -774,12 +776,35 @@ extension AppModel {
             return false
         }
         applyInferredGapRecords(readings: input.gapReadings, travel: snapshot.travel, inside: span)
+        applyUnobservedMealCandidates(readings: input.mealReadings, motionActivities: input.motionActivities, inside: span)
         let carved = RestaurantMealActualEngine.carvingMeals(
             from: snapshot.actuals, activityCorrections: snapshot.settings.activityCorrections, asOf: span.end
         )
         if carved != snapshot.actuals { snapshot.actuals = carved.sorted { $0.startedAt < $1.startedAt } }
         await applyClassificationScores(readings: input.classifiedReadings, inside: span)
         return !Task.isCancelled
+    }
+
+    /// 위치가 끊긴 식사 시간을 낮은 신뢰도 후보로 둔다. 사용자가 확인·수정한 후보는 그대로 남고, 지운 후보는 되살리지 않는다.
+    private func applyUnobservedMealCandidates(
+        readings: [SensorReading],
+        motionActivities: [MotionActivityRecord],
+        inside span: TimeSpan
+    ) {
+        guard !readings.isEmpty else { return }
+        let corrections = snapshot.settings.activityCorrections
+        var kept = snapshot.actuals.filter { actual in
+            guard AutomaticModelVersion.matches(actual.modelVersion, UnobservedStayEngine.modelVersion),
+                  !ActualRecord.userOwned(actual, activityCorrections: corrections) else { return true }
+            return actual.span(asOf: span.end).intersection(with: span) == nil
+        }
+        let footSpans = motionActivities.filter { $0.motion == .walking || $0.motion == .running }.map(\.span)
+        let fresh = UnobservedStayEngine.mealCandidates(
+            readings: readings, footSpans: footSpans, actuals: kept, activityCorrections: corrections, inside: span
+        ).filter { !snapshot.settings.suppressedActualIDs.contains($0.id) }
+        kept.append(contentsOf: fresh)
+        kept.sort { $0.startedAt < $1.startedAt }
+        if kept != snapshot.actuals { snapshot.actuals = kept }
     }
 
     /// 분류 패키지 HMM의 사후 확률을 자동 이동 기록의 `classificationScore`로 남긴다.

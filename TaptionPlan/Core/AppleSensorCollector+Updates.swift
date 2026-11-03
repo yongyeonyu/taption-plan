@@ -23,6 +23,7 @@ extension AppleSensorCollector {
                 && age < 5 * 60
         }.sorted { $0.timestamp < $1.timestamp }
         guard let newestLocation = validLocations.last else { return }
+        resumeLocationUpdatesIfLeftPauseRegion(manager, location: newestLocation)
         // 휴대폰이 가속도·회전 센서로 확실히 멈춰 있으면 새 위치를 반영하지 않는다.
         if StationaryLocationGate.shouldIgnoreFixes(
             isTrulyStill: stillnessTracker.isTrulyStill(at: now),
@@ -244,6 +245,7 @@ extension AppleSensorCollector {
             verticalAccuracy: -1,
             timestamp: date
         )
+        resumeLocationUpdatesIfLeftPauseRegion(manager, location: location)
         latestLocation = location
         latestPreciseLocation = location.horizontalAccuracy
             <= TrackingSessionPolicy.activeHorizontalAccuracyLimit

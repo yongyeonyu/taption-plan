@@ -398,6 +398,22 @@ enum TaptionRouteEngineAdapter {
         }
     }
 
+    /// 차를 탄 채 표본만 드문 틈은 빠진 이동이 아니다. 실제 경로로 잇고 임시 경로를 만들지 않는다(ALG1102A01).
+    static func isSparseVehicleGap(from lhs: SensorReading, to rhs: SensorReading, readings: ArraySlice<SensorReading>) -> Bool {
+        guard let start = lhs.point, let end = rhs.point else { return false }
+        let duration = rhs.timestamp.timeIntervalSince(lhs.timestamp)
+        guard duration <= RouteGapKind.maximumSparseDuration else { return false }
+        let meters = ClassifierPoint(latitude: start.latitude, longitude: start.longitude)
+            .distance(to: ClassifierPoint(latitude: end.latitude, longitude: end.longitude))
+        return RouteGapKind.classify(
+            duration: duration,
+            distanceMeters: meters,
+            before: routeMode(for: lhs),
+            after: routeMode(for: rhs),
+            inside: readings.filter { $0.timestamp > lhs.timestamp && $0.timestamp < rhs.timestamp }.map(routeMode)
+        ) == .sparse
+    }
+
     private static func routeMode(for reading: SensorReading) -> RouteTravelMode {
         if reading.matchesRailRoute
             || SubwayWiFiSSID.hasContinuousEvidence(

@@ -407,6 +407,7 @@ enum ClassifierAdapter {
 enum AutomaticModelVersion {
     static let context = ClassifierPipeline.modelVersion("context")
     static let restaurantMeal = ClassifierPipeline.modelVersion("meal")
+    static let mealCandidate = ClassifierPipeline.modelVersion("meal-candidate")
     static let placeActivity = ClassifierPipeline.modelVersion("place")
     static let inferredGap = ClassifierPipeline.modelVersion("gap")
     static let classifiedActivity = ClassifierPipeline.modelVersion("activity")
