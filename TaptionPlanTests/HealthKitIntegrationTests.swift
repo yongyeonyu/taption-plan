@@ -1034,6 +1034,10 @@ final class HealthKitIntegrationTests: XCTestCase {
             Set(health?.details.map(\.id) ?? []),
             [
                 "health.wellness",
+                "health.nap",
+                "health.meditation",
+                "health.hospital",
+                "health.salon",
                 "health.vitals",
                 "health.recovery",
                 "health.medication",

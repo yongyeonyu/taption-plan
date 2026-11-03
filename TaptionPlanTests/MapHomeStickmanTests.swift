@@ -238,7 +238,7 @@ final class MapHomeStickmanTests: XCTestCase {
                 var added = 0
                 for frame in 0..<8 {
                     let sec = Double(scene.totalDuration) * (Double(frame) + 0.37) / 8
-                    let result = HwarangDiagnostics.accessoryEscape(scene: scene, sec: sec, scarf: scarf, ribbon: ribbon, margin: 6, small: small)
+                    let result = autoreleasepool { HwarangDiagnostics.accessoryEscape(scene: scene, sec: sec, scarf: scarf, ribbon: ribbon, margin: 6, small: small) }
                     added = max(added, result.added)
                     // 샤워 때는 장식을 벗어 옷걸이에 걸어 몸 밖에 있는 것이 맞다.
                     if scene != .shower { XCTAssertLessThanOrEqual(result.escaped, 12, "\(scene) \(frame) small=\(small)") }
@@ -954,7 +954,10 @@ final class MapHomeStickmanTests: XCTestCase {
             XCTAssertGreaterThan(scene.totalDuration, 0)
             var time = 0.0
             while time < Double(scene.totalDuration) + 1 {
-                XCTAssertGreaterThan(HwarangDiagnostics.paintedPixels(scene: scene, sec: time), 500, "\(scene) \(time)")
+                // 장면이 늘어 그림을 쌓아 두면 기기에서 메모리로 강제 종료된다.
+                autoreleasepool {
+                    XCTAssertGreaterThan(HwarangDiagnostics.paintedPixels(scene: scene, sec: time), 500, "\(scene) \(time)")
+                }
                 time += 0.73
             }
         }
