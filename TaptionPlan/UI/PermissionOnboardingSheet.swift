@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 private struct PermissionOnboardingStep: Identifiable {
     let feature: PermissionFeature
@@ -34,54 +35,64 @@ struct PermissionOnboardingSheet: View {
     @State private var skipped: Set<String> = []
     /// 처음 실행 튜토리얼 안에 들어가면 제목과 끝내기 단추는 튜토리얼이 맡는다.
     private let isEmbedded: Bool
+    private let language = MapHomeLanguage.current
+    @Environment(\.scenePhase) private var scenePhase
 
-    private static let steps: [PermissionOnboardingStep] = [
-        PermissionOnboardingStep(
-            feature: .location,
-            icon: "mappin.and.ellipse",
-            title: "위치 · 이동",
-            detail: "머문 장소와 이동 경로를 자동으로 남깁니다. ‘항상 허용’이어야 앱을 닫은 뒤에도 기록됩니다."
-        ),
-        PermissionOnboardingStep(
-            feature: .motion,
-            icon: "figure.walk.motion",
-            title: "동작 · 피트니스",
-            detail: "걷기·달리기 같은 이동 상태와 걸음, 층수 변화를 추정합니다."
-        ),
-        PermissionOnboardingStep(
-            feature: .health,
-            icon: "heart.text.square",
-            title: "건강 데이터",
-            detail: "iPhone 건강 앱과 승인된 건강 앱의 걸음·운동·수면을 읽습니다. Apple Watch 기록도 함께 반영합니다."
-        ),
-        PermissionOnboardingStep(
-            feature: .photos,
-            icon: "photo.on.rectangle",
-            title: "사진",
-            detail: "사진을 찍은 위치와 시각에 맞춰 지도에 보여주고, 재생 화면 녹화 영상을 사진 앱에 저장합니다."
-        ),
-        PermissionOnboardingStep(
-            feature: .calendar,
-            icon: "calendar",
-            title: "캘린더",
-            detail: "이미 잡혀 있는 일정을 시간표에 함께 보여줍니다."
-        ),
-        PermissionOnboardingStep(
-            feature: .notifications,
-            icon: "bell.badge",
-            title: "알림",
-            detail: "계획한 시각에 맞춰 알려줍니다."
-        ),
-    ]
+    private static let features: [PermissionFeature] = [.location, .motion, .health, .photos, .calendar, .notifications]
+
+    private var steps: [PermissionOnboardingStep] {
+        [
+            PermissionOnboardingStep(
+                feature: .location,
+                icon: "mappin.and.ellipse",
+                title: language.text("위치 · 이동", "Location · Travel"),
+                detail: language.text("머문 장소와 이동 경로를 자동으로 남깁니다. ‘항상 허용’이어야 앱을 닫은 뒤에도 기록됩니다.", "Records places and routes automatically. Only ‘Always’ keeps recording after you close the app.")
+            ),
+            PermissionOnboardingStep(
+                feature: .motion,
+                icon: "figure.walk.motion",
+                title: language.text("동작 · 피트니스", "Motion · Fitness"),
+                detail: language.text("걷기·달리기 같은 이동 상태와 걸음, 층수 변화를 추정합니다.", "Estimates walking, running, steps, and floor changes.")
+            ),
+            PermissionOnboardingStep(
+                feature: .health,
+                icon: "heart.text.square",
+                title: language.text("건강 데이터", "Health"),
+                detail: language.text("iPhone 건강 앱과 승인된 건강 앱의 걸음·운동·수면을 읽습니다. Apple Watch 기록도 함께 반영합니다.", "Reads steps, workouts, and sleep from Health and approved apps, including Apple Watch.")
+            ),
+            PermissionOnboardingStep(
+                feature: .photos,
+                icon: "photo.on.rectangle",
+                title: language.text("사진", "Photos"),
+                detail: language.text("사진을 찍은 위치와 시각에 맞춰 지도에 보여주고, 재생 화면 녹화 영상을 사진 앱에 저장합니다.", "Shows photos on the map by place and time, and saves playback videos to Photos.")
+            ),
+            PermissionOnboardingStep(
+                feature: .calendar,
+                icon: "calendar",
+                title: language.text("캘린더", "Calendar"),
+                detail: language.text("이미 잡혀 있는 일정을 시간표에 함께 보여줍니다.", "Shows your existing events alongside your schedule.")
+            ),
+            PermissionOnboardingStep(
+                feature: .notifications,
+                icon: "bell.badge",
+                title: language.text("알림", "Notifications"),
+                detail: language.text("계획한 시각에 맞춰 알려줍니다.", "Reminds you at planned times.")
+            ),
+        ]
+    }
 
     init(model: AppModel, initialFeature: PermissionFeature? = nil, isEmbedded: Bool = false) {
         self.model = model
         self.isEmbedded = isEmbedded
+        // 튜토리얼로 돌아오면 이미 답한 권한을 다시 묻지 않는다.
+        let firstUnanswered = isEmbedded
+            ? Self.features.firstIndex { model.permissionState(for: $0) == .notDetermined } ?? Self.features.count
+            : 0
         _progress = State(
             initialValue: PermissionOnboardingProgress(
                 index: initialFeature.flatMap { feature in
-                    Self.steps.firstIndex { $0.feature == feature }
-                } ?? 0
+                    Self.features.firstIndex(of: feature)
+                } ?? firstUnanswered
             )
         )
     }
@@ -92,10 +103,18 @@ struct PermissionOnboardingSheet: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 9) {
                     ForEach(
-                        Array(Self.steps.enumerated()),
+                        Array(steps.enumerated()),
                         id: \.element.id
                     ) { offset, step in
                         stepCard(step, offset: offset)
+                    }
+                    if isEmbedded, hasDeniedPermission {
+                        Button(language.text("iOS 설정에서 바꾸기", "Change in iOS Settings")) {
+                            if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+                        }
+                        .font(.taption(size: 10, weight: .bold))
+                        .frame(minHeight: 44)
+                        .accessibilityIdentifier("firstRunOpenSettings")
                     }
                 }
                 .padding(.horizontal, 13)
@@ -104,14 +123,18 @@ struct PermissionOnboardingSheet: View {
             if !isEmbedded || !isFinished { footer }
         }
         .background(Color.tpBackground)
+        // iOS 설정에 다녀온 뒤에도 실제 값을 보여 준다.
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active, isEmbedded { Task { await model.refreshPermissions() } }
+        }
     }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: TaptionSpacing.compact) {
-            Text("하루는 알아서 기록됩니다")
+            Text(language.text("하루는 알아서 기록됩니다", "Your day records itself"))
                 .font(.taption(size: 15, weight: .black))
                 .foregroundStyle(Color.tpInk)
-            Text("BOKKI Plan은 위치·건강·캘린더를 읽어 하루를 대신 적습니다. 필요한 것만 허용해도 되고, 설정에서 언제든 바꿀 수 있습니다.")
+            Text(language.text("BOKKI Plan은 위치·건강·캘린더를 읽어 하루를 대신 적습니다. 필요한 것만 허용해도 되고, 설정에서 언제든 바꿀 수 있습니다.", "BOKKI Plan reads location, health, and calendar to write your day for you. Allow only what you need and change it anytime in Settings."))
                 .font(.taption(size: 9))
                 .foregroundStyle(Color.tpSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -124,26 +147,26 @@ struct PermissionOnboardingSheet: View {
     private var footer: some View {
         HStack(spacing: TaptionSpacing.regular) {
             if isFinished {
-                Button("시작하기") { finish() }
+                Button(language.text("시작하기", "Get started")) { finish() }
                     .font(.taption(size: 11, weight: .bold))
                     .buttonStyle(.borderedProminent)
                     .tint(Color.tpPrimaryFill)
                     .frame(maxWidth: .infinity)
             } else {
-                Button("모두 허용") { requestRemaining() }
+                Button(language.text("모두 허용", "Allow all")) { requestRemaining() }
                     .font(.taption(size: 10, weight: .bold))
                     .buttonStyle(.plain)
                     .foregroundStyle(Color.tpInk)
                     .disabled(isRequesting || model.isRequestingPermission)
                 if !isEmbedded {
-                    Button("전체 건너뛰기") { finish() }
+                    Button(language.text("전체 건너뛰기", "Skip all")) { finish() }
                         .font(.taption(size: 10, weight: .bold))
                         .buttonStyle(.plain)
                         .foregroundStyle(Color.tpSecondary)
                         .disabled(isRequesting || model.isRequestingPermission)
                 }
                 Spacer(minLength: 4)
-                Text("\(progress.index + 1) / \(Self.steps.count)")
+                Text("\(progress.index + 1) / \(steps.count)")
                     .font(.taption(size: 9, weight: .bold))
                     .foregroundStyle(Color.tpSecondary)
             }
@@ -185,13 +208,13 @@ struct PermissionOnboardingSheet: View {
             }
             if isCurrent {
                 HStack(spacing: 10) {
-                    Button("허용하기") {
+                    Button(language.text("허용하기", "Allow")) {
                         Task { await request(step) }
                     }
                     .font(.taption(size: 10, weight: .bold))
                     .buttonStyle(.borderedProminent)
                     .tint(Color.tpPrimaryFill)
-                    Button("건너뛰기") {
+                    Button(language.text("건너뛰기", "Skip")) {
                         skipped.insert(step.id)
                         requestError = nil
                         progress.skipCurrentStep()
@@ -223,17 +246,22 @@ struct PermissionOnboardingSheet: View {
         .opacity(offset > progress.index ? 0.5 : 1)
     }
 
-    private var isFinished: Bool { progress.index >= Self.steps.count }
+    private var isFinished: Bool { progress.index >= Self.features.count }
+
+    private var hasDeniedPermission: Bool {
+        Self.features.contains { model.permissionState(for: $0) == .denied }
+    }
 
     private func stateText(_ step: PermissionOnboardingStep) -> String {
-        if skipped.contains(step.id) { return "나중에" }
+        if skipped.contains(step.id) { return language.text("나중에", "Later") }
         let state = model.permissionState(for: step.feature)
-        if step.feature == .health, !model.settings.healthEnabled {
-            return state == .denied || state == .unavailable
-                ? state.settingsLabel
-                : "연결 필요"
-        }
-        return state == .notDetermined ? "" : state.settingsLabel
+        if state == .notDetermined { return "" }
+        return FirstRunTutorialPolicy.permissionLabel(
+            step.feature,
+            state: state,
+            isLocationAlways: model.sensorService?.hasAlwaysLocationAuthorization() == true,
+            language: language
+        )
     }
 
     private func request(_ step: PermissionOnboardingStep) async {
@@ -247,7 +275,7 @@ struct PermissionOnboardingSheet: View {
             // 상태 문구로 보여주고 안내 문구는 지운다.
             model.clearError()
         } else {
-            requestError = "요청을 완료하지 못했습니다. 다시 시도해 주세요."
+            requestError = language.text("요청을 완료하지 못했습니다. 다시 시도해 주세요.", "Couldn't finish the request. Please try again.")
         }
         isRequesting = false
     }
@@ -281,16 +309,16 @@ struct PermissionOnboardingSheet: View {
         guard !isRequesting else { return }
         isRequesting = true
         Task {
-            while progress.index < Self.steps.count {
+            while progress.index < Self.features.count {
                 let didComplete = await requestPermission(
-                    for: Self.steps[progress.index]
+                    for: steps[progress.index]
                 )
                 progress.completeRequest(didComplete)
                 if didComplete {
                     requestError = nil
                     model.clearError()
                 } else {
-                    requestError = "요청을 완료하지 못했습니다. 다시 시도해 주세요."
+                    requestError = language.text("요청을 완료하지 못했습니다. 다시 시도해 주세요.", "Couldn't finish the request. Please try again.")
                     break
                 }
             }

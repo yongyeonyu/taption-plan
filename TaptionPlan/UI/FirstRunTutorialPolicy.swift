@@ -1,18 +1,60 @@
 import Foundation
 
-/// 처음 실행 튜토리얼 단계. 순서는 대표 지시(FRT1102A01).
-enum FirstRunTutorialStep: Int, CaseIterable, Identifiable {
+/// 처음 실행 튜토리얼의 묶음. 무엇부터 할지 이 순서로 알려 준다(FRT1104A01).
+enum FirstRunTutorialChapter: Int, CaseIterable {
+    case start
+    case setup
+    case learn
+    case connect
+    case finish
+}
+
+/// 처음 실행 튜토리얼 단계. 저장 값이 이름이라 순서를 바꿔도 이어 보기가 어긋나지 않는다.
+enum FirstRunTutorialStep: String, CaseIterable, Identifiable {
+    case welcome
     case permissions
     case home
     case workAndSchool
     case salary
-    case password
+    case cat
+    case map
+    case playback
+    case sidebarCalendar
     case clipEditor
+    case memos
+    case summary
     case counters
+    case calendar
+    case password
+    case finish
 
-    var id: Int { rawValue }
-    var next: FirstRunTutorialStep? { Self(rawValue: rawValue + 1) }
-    var previous: FirstRunTutorialStep? { Self(rawValue: rawValue - 1) }
+    /// FRT1102A01이 번호로 저장하던 단계.
+    static let legacyOrder: [FirstRunTutorialStep] = [
+        .permissions, .home, .workAndSchool, .salary, .password, .clipEditor, .counters,
+    ]
+
+    var id: String { rawValue }
+    var number: Int { Self.allCases.firstIndex(of: self)! + 1 }
+    var next: FirstRunTutorialStep? { number < Self.allCases.count ? Self.allCases[number] : nil }
+    var previous: FirstRunTutorialStep? { number > 1 ? Self.allCases[number - 2] : nil }
+
+    var chapter: FirstRunTutorialChapter {
+        switch self {
+        case .welcome: .start
+        case .permissions, .home, .workAndSchool, .salary, .cat: .setup
+        case .map, .playback, .sidebarCalendar, .clipEditor, .memos, .summary, .counters: .learn
+        case .calendar, .password: .connect
+        case .finish: .finish
+        }
+    }
+
+    /// 입력이 있는 단계에만 건너뛰기를 둔다. 설명 단계는 다음이 곧 건너뛰기다.
+    var hasInput: Bool {
+        switch self {
+        case .permissions, .home, .workAndSchool, .salary, .cat, .counters, .calendar, .password: true
+        default: false
+        }
+    }
 }
 
 /// 튜토리얼이 어떻게 끝났는지. 값이 있으면 다시 띄우지 않는다.
@@ -50,8 +92,10 @@ struct FirstRunTutorialStore {
     }
 
     var savedStep: FirstRunTutorialStep? {
-        guard defaults.object(forKey: Self.stepKey) != nil else { return nil }
-        return FirstRunTutorialStep(rawValue: defaults.integer(forKey: Self.stepKey))
+        guard let raw = defaults.string(forKey: Self.stepKey) else { return nil }
+        if let step = FirstRunTutorialStep(rawValue: raw) { return step }
+        let legacy = FirstRunTutorialStep.legacyOrder
+        return Int(raw).flatMap { legacy.indices.contains($0) ? legacy[$0] : nil }
     }
 
     func save(step: FirstRunTutorialStep) {
@@ -84,7 +128,7 @@ enum FirstRunTutorialPolicy {
         if outcome != nil { return .none }
         if let savedStep { return .present(savedStep) }
         if permissionOnboardingDone || hasUserData { return .markExistingUser }
-        return .present(.permissions)
+        return .present(.welcome)
     }
 
     /// 등록된 비밀번호는 덮어쓰지 않는다. 다시 설치해도 Keychain에 남아 있을 수 있다.
@@ -103,5 +147,31 @@ enum FirstRunTutorialPolicy {
         if pin.isEmpty, confirmation.isEmpty { return .keepCurrent }
         guard PlanPINVerifier.isValid(pin), PlanPINVerifier.isValid(confirmation) else { return .incomplete }
         return pin == confirmation ? .save(pin) : .mismatch
+    }
+
+    /// 권한 줄의 상태 문구. iOS가 알려 준 값만 말한다. 건강 읽기는 iOS가 허용 여부를 알려 주지 않아 요청 사실만 말한다.
+    static func permissionLabel(
+        _ feature: PermissionFeature,
+        state: PermissionState,
+        isLocationAlways: Bool,
+        language: MapHomeLanguage
+    ) -> String {
+        switch state {
+        case .notDetermined:
+            return language.text("아직 안 물음", "Not asked")
+        case .denied:
+            return language.text("허용 안 함", "Not allowed")
+        case .limited:
+            return language.text("일부 허용", "Partly allowed")
+        case .unavailable:
+            return language.text("사용 불가", "Unavailable")
+        case .authorized:
+            switch feature {
+            case .location where isLocationAlways: return language.text("항상 허용", "Always")
+            case .location: return language.text("앱 사용 중에만", "While using")
+            case .health: return language.text("요청함", "Requested")
+            default: return language.text("허용됨", "Allowed")
+            }
+        }
     }
 }

@@ -19,14 +19,70 @@ final class FirstRunTutorialTests: XCTestCase {
     func testStepsFollowRequestedOrder() {
         XCTAssertEqual(
             FirstRunTutorialStep.allCases,
-            [.permissions, .home, .workAndSchool, .salary, .password, .clipEditor, .counters]
+            [
+                .welcome, .permissions, .home, .workAndSchool, .salary, .cat,
+                .map, .playback, .sidebarCalendar, .clipEditor, .memos, .summary, .counters,
+                .calendar, .password, .finish,
+            ]
         )
-        XCTAssertNil(FirstRunTutorialStep.permissions.previous)
-        XCTAssertNil(FirstRunTutorialStep.counters.next)
+        XCTAssertNil(FirstRunTutorialStep.welcome.previous)
+        XCTAssertNil(FirstRunTutorialStep.finish.next)
+        XCTAssertEqual(FirstRunTutorialStep.welcome.next, .permissions)
+        XCTAssertEqual(FirstRunTutorialStep.finish.previous, .password)
     }
 
-    func testFreshInstallStartsAtPermissions() {
-        XCTAssertEqual(decision(), .present(.permissions))
+    func testChaptersRunInOrderWithoutGoingBack() {
+        let chapters = FirstRunTutorialStep.allCases.map(\.chapter.rawValue)
+        XCTAssertEqual(chapters, chapters.sorted())
+        XCTAssertEqual(Set(chapters).count, FirstRunTutorialChapter.allCases.count)
+    }
+
+    func testFreshInstallStartsAtWelcome() {
+        XCTAssertEqual(decision(), .present(.welcome))
+    }
+
+    func testOnlyInputStepsOfferStepSkip() {
+        let skippable = FirstRunTutorialStep.allCases.filter(\.hasInput)
+        XCTAssertEqual(skippable, [.permissions, .home, .workAndSchool, .salary, .cat, .counters, .calendar, .password])
+    }
+
+    func testEveryGuideStepHasRowsInBothLanguages() {
+        for step in FirstRunTutorialStep.allCases where FirstRunGuideCatalog.isGuide(step) {
+            let korean = FirstRunGuideCatalog.rows(for: step, language: .korean)
+            let english = FirstRunGuideCatalog.rows(for: step, language: .english)
+            XCTAssertFalse(korean.isEmpty, step.rawValue)
+            XCTAssertEqual(korean.count, english.count, step.rawValue)
+            for (ko, en) in zip(korean, english) {
+                XCTAssertNotEqual(ko.title, en.title, step.rawValue)
+                XCTAssertNotEqual(ko.detail, en.detail, step.rawValue)
+            }
+        }
+    }
+
+    func testLegacyNumberedStepResumesAtSameContent() {
+        let store = FirstRunTutorialStore(defaults: defaults)
+        defaults.set(4, forKey: FirstRunTutorialStore.stepKey)
+        XCTAssertEqual(store.savedStep, .password)
+        defaults.set(6, forKey: FirstRunTutorialStore.stepKey)
+        XCTAssertEqual(store.savedStep, .counters)
+        defaults.set(99, forKey: FirstRunTutorialStore.stepKey)
+        XCTAssertNil(store.savedStep)
+    }
+
+    func testPermissionLabelClaimsOnlyWhatIOSReported() {
+        func label(_ feature: PermissionFeature, _ state: PermissionState, always: Bool = false) -> String {
+            FirstRunTutorialPolicy.permissionLabel(feature, state: state, isLocationAlways: always, language: .korean)
+        }
+        XCTAssertEqual(label(.location, .authorized), "앱 사용 중에만")
+        XCTAssertEqual(label(.location, .authorized, always: true), "항상 허용")
+        // iOS는 건강 읽기 허용 여부를 알려 주지 않는다.
+        XCTAssertEqual(label(.health, .authorized), "요청함")
+        XCTAssertEqual(label(.calendar, .authorized), "허용됨")
+        XCTAssertEqual(label(.photos, .limited), "일부 허용")
+        for feature in [PermissionFeature.location, .health, .calendar] {
+            XCTAssertEqual(label(feature, .denied), "허용 안 함")
+            XCTAssertEqual(label(feature, .notDetermined), "아직 안 물음")
+        }
     }
 
     func testExistingInstallIsNotInterrupted() {
@@ -51,8 +107,8 @@ final class FirstRunTutorialTests: XCTestCase {
         XCTAssertNil(store.outcome)
         store.save(step: .permissions)
         XCTAssertEqual(store.savedStep, .permissions)
-        store.save(step: .clipEditor)
-        XCTAssertEqual(store.savedStep, .clipEditor)
+        store.save(step: .sidebarCalendar)
+        XCTAssertEqual(store.savedStep, .sidebarCalendar)
         store.finish(.skipped)
         XCTAssertEqual(store.outcome, .skipped)
         XCTAssertNil(store.savedStep)

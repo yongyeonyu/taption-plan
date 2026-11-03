@@ -2,10 +2,14 @@ import MapKit
 import SwiftUI
 import UIKit
 
-/// 처음 실행 튜토리얼(FRT1102A01). 설정 화면을 새로 만들지 않고 기존 화면과 모델 함수를 쓴다.
+/// 처음 실행 튜토리얼(FRT1102A01, FRT1104A01). 설정 화면을 새로 만들지 않고 기존 화면과 모델 함수를 쓴다.
 /// 입력은 그 자리에서 저장되므로, 도중에 앱을 닫아도 지금까지 고른 값은 남는다.
 struct FirstRunTutorialView: View {
+    /// 다시 보기는 처음 실행 기록과 초기 비밀번호를 건드리지 않는다.
+    enum Mode { case firstRun, replay }
+
     @Bindable var model: AppModel
+    let mode: Mode
     let onFinished: () -> Void
 
     @State private var step: FirstRunTutorialStep
@@ -17,22 +21,26 @@ struct FirstRunTutorialView: View {
     private let store = FirstRunTutorialStore()
     private let language = MapHomeLanguage.current
 
-    init(model: AppModel, onFinished: @escaping () -> Void) {
+    init(model: AppModel, mode: Mode = .firstRun, onFinished: @escaping () -> Void) {
         self.model = model
+        self.mode = mode
         self.onFinished = onFinished
-        _step = State(initialValue: FirstRunTutorialStore().savedStep ?? .permissions)
+        _step = State(initialValue: mode == .replay ? .welcome : FirstRunTutorialStore().savedStep ?? .welcome)
     }
 
     var body: some View {
         VStack(spacing: 0) {
             topBar
-            header
+            if step != .welcome { header }
             page
                 .id(step)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .scrollDismissesKeyboard(.interactively)
             bottomBar
         }
+        // 넓은 화면에서 글줄이 너무 길어지지 않게 묶는다.
+        .frame(maxWidth: 640)
+        .frame(maxWidth: .infinity)
         .background(Color.tpBackground.ignoresSafeArea())
         .disabled(isFinishing)
         .accessibilityIdentifier("firstRunTutorial")
@@ -56,15 +64,16 @@ struct FirstRunTutorialView: View {
             .disabled(step.previous == nil)
             .accessibilityLabel(language.text("이전", "Back"))
 
-            HStack(spacing: 5) {
+            HStack(spacing: 3) {
                 ForEach(FirstRunTutorialStep.allCases) { item in
                     Capsule()
-                        .fill(item.rawValue <= step.rawValue ? Color.tpAccent : Color.tpLine)
+                        .fill(item.number <= step.number ? Color.tpAccent : Color.tpLine)
                         .frame(height: 4)
                 }
             }
             .accessibilityElement()
-            .accessibilityLabel("\(step.rawValue + 1) / \(FirstRunTutorialStep.allCases.count)")
+            .accessibilityLabel("\(step.number) / \(FirstRunTutorialStep.allCases.count)")
+            .accessibilityIdentifier("firstRunProgress")
 
             Button(language.text("전체 건너뛰기", "Skip all")) {
                 finish(.skipped)
@@ -73,6 +82,9 @@ struct FirstRunTutorialView: View {
             .foregroundStyle(Color.tpSecondary)
             .buttonStyle(.plain)
             .frame(minHeight: 44)
+            .opacity(step == .finish ? 0 : 1)
+            .disabled(step == .finish)
+            .accessibilityIdentifier("firstRunSkipAll")
         }
         .padding(.horizontal, 12)
     }
@@ -81,6 +93,9 @@ struct FirstRunTutorialView: View {
         HStack(spacing: 12) {
             FirstRunMascot(scene: scene(of: step), size: 72)
             VStack(alignment: .leading, spacing: 4) {
+                Text("\(chapterTitle(step.chapter)) · \(step.number) / \(FirstRunTutorialStep.allCases.count)")
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.caption), weight: .bold))
+                    .foregroundStyle(Color.tpAccent)
                 Text(title(of: step))
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.display), weight: .bold))
                     .foregroundStyle(Color.tpInk)
@@ -97,37 +112,67 @@ struct FirstRunTutorialView: View {
 
     private func scene(of step: FirstRunTutorialStep) -> HwarangScene {
         switch step {
-        case .permissions: .groom
-        case .home: .sleep
-        case .workAndSchool: .work
-        case .salary: .eat
-        case .password: .study
+        case .welcome, .permissions, .cat: .groom
+        case .home, .summary: .sleep
+        case .workAndSchool, .calendar: .work
+        case .salary, .finish: .eat
+        case .map: .atlas
+        case .playback: .stroll
+        case .sidebarCalendar, .memos, .password: .study
         case .clipEditor: .yarn
         case .counters: .stretch
         }
     }
 
+    private func chapterTitle(_ chapter: FirstRunTutorialChapter) -> String {
+        switch chapter {
+        case .start: language.text("시작", "Start")
+        case .setup: language.text("기본 설정", "Setup")
+        case .learn: language.text("화면 익히기", "Learn the screen")
+        case .connect: language.text("연결과 보호", "Connect and protect")
+        case .finish: language.text("마무리", "Done")
+        }
+    }
+
     private func title(of step: FirstRunTutorialStep) -> String {
         switch step {
+        case .welcome: "BOKKI Plan"
         case .permissions: language.text("권한 허용", "Permissions")
         case .home: language.text("집 위치", "Home")
         case .workAndSchool: language.text("회사 · 학교", "Work · School")
         case .salary: language.text("연봉 설정", "Salary")
-        case .password: language.text("비밀번호", "Password")
+        case .cat: language.text("고양이 고르기", "Pick your cat")
+        case .map: language.text("지도 보는 법", "Reading the map")
+        case .playback: language.text("재생과 녹화", "Play and record")
+        case .sidebarCalendar: language.text("사이드바와 달력", "Sidebar and calendar")
         case .clipEditor: language.text("클립 편집", "Clip editor")
+        case .memos: language.text("메모 · 지도 메모", "Memos · Map memos")
+        case .summary: language.text("하루 요약과 집 성장", "Day summary and home growth")
         case .counters: language.text("카운터", "Counters")
+        case .calendar: language.text("캘린더 연결", "Connect calendars")
+        case .password: language.text("백업 비밀번호", "Backup password")
+        case .finish: language.text("준비됐습니다", "You're ready")
         }
     }
 
     private func detail(of step: FirstRunTutorialStep) -> String {
         switch step {
+        case .welcome: ""
         case .permissions: language.text("하루를 자동으로 기록하는 데 씁니다. 필요한 것만 허용해도 됩니다.", "Used to record your day automatically. Allow only what you need.")
         case .home: language.text("집에 머문 시간을 자동으로 구분합니다.", "Time at home is recognized automatically.")
         case .workAndSchool: language.text("업무와 학습 시간을 구분하는 기준이 됩니다.", "Used to tell work and study time apart.")
         case .salary: language.text("업무 시간에만 번 돈이 쌓입니다. 금액은 이 기기에만 저장됩니다.", "Earnings grow only during work time. Stored only on this device.")
-        case .password: language.text("앱 잠금과 iCloud 백업에 같은 비밀번호를 씁니다.", "App lock and iCloud backup share this password.")
+        case .cat: language.text("지도에서 하루를 함께 걸을 고양이입니다.", "This cat walks through your day on the map.")
+        case .map: language.text("앱의 첫 화면입니다. 하루가 지도 위에 그려집니다.", "This is the main screen. Your day is drawn on the map.")
+        case .playback: language.text("하루를 다시 보고 영상으로 남깁니다.", "Replay your day and keep it as a video.")
+        case .sidebarCalendar: language.text("오른쪽 시간 막대로 하루를, 달력으로 지난 날을 봅니다.", "See the day on the right time bar and past days in the calendar.")
         case .clipEditor: language.text("자동 기록이 틀렸으면 영상 편집처럼 고칩니다.", "Fix automatic records the way you edit a video.")
-        case .counters: language.text("화랑이 머리 위에 보여 줄 것을 고릅니다.", "Choose what appears above Hwarang.")
+        case .memos: language.text("생각과 장소를 그 시각에 남깁니다.", "Keep thoughts and places at the moment they happen.")
+        case .summary: language.text("기록을 마친 날이 쌓이면 집이 자랍니다.", "Your home grows as you complete days.")
+        case .counters: language.text("지도 위 고양이 곁에 보여 줄 것을 고릅니다.", "Choose what appears next to the cat on the map.")
+        case .calendar: language.text("일정을 하루 기록과 함께 봅니다. 읽기만 합니다.", "See events with your day. Read only.")
+        case .password: language.text("앱 잠금과 iCloud 백업에 같은 비밀번호를 씁니다.", "App lock and iCloud backup share this password.")
+        case .finish: language.text("지금 상태입니다. 비어 있는 것은 나중에 해도 됩니다.", "Here's where things stand. Anything open can wait.")
         }
     }
 
@@ -136,6 +181,8 @@ struct FirstRunTutorialView: View {
     @ViewBuilder
     private var page: some View {
         switch step {
+        case .welcome:
+            FirstRunWelcomePage(language: language)
         case .permissions:
             PermissionOnboardingSheet(model: model, isEmbedded: true)
         case .home:
@@ -162,14 +209,21 @@ struct FirstRunTutorialView: View {
             FirstRunPasswordPage(
                 model: model,
                 language: language,
+                registersDefaultPIN: mode == .firstRun,
                 pin: $pin,
                 confirmation: $confirmation,
                 message: $passwordMessage
             )
-        case .clipEditor:
-            FirstRunClipEditorPage(language: language)
+        case .cat:
+            FirstRunCatPage(model: model, language: language)
+        case .map, .playback, .sidebarCalendar, .clipEditor, .memos, .summary:
+            FirstRunGuidePage(step: step, date: model.selectedDate, language: language)
         case .counters:
             FirstRunCountersPage(language: language)
+        case .calendar:
+            FirstRunCalendarPage(model: model, language: language)
+        case .finish:
+            FirstRunFinishPage(model: model, language: language)
         }
     }
 
@@ -177,24 +231,41 @@ struct FirstRunTutorialView: View {
 
     private var bottomBar: some View {
         HStack(spacing: 12) {
-            Button(language.text("건너뛰기", "Skip")) { skipStep() }
-                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.bodyStrong), weight: .semibold))
-                .foregroundStyle(Color.tpSecondary)
-                .buttonStyle(.plain)
-                .frame(minWidth: 88, minHeight: 50)
+            if step == .welcome {
+                Button(language.text("바로 시작", "Start now")) { finish(.skipped) }
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.bodyStrong), weight: .semibold))
+                    .foregroundStyle(Color.tpSecondary)
+                    .buttonStyle(.plain)
+                    .frame(minWidth: 88, minHeight: 50)
+                    .accessibilityIdentifier("firstRunStartNow")
+            } else if step.hasInput {
+                Button(language.text("건너뛰기", "Skip")) { skipStep() }
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.bodyStrong), weight: .semibold))
+                    .foregroundStyle(Color.tpSecondary)
+                    .buttonStyle(.plain)
+                    .frame(minWidth: 88, minHeight: 50)
+                    .accessibilityIdentifier("firstRunSkip")
+            }
             Button { confirmStep() } label: {
-                Text(step.next == nil
-                    ? language.text("시작하기", "Get started")
-                    : language.text("다음", "Next"))
+                Text(primaryTitle)
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.bodyStrong), weight: .bold))
                     .foregroundStyle(Color.tpSurface)
                     .frame(maxWidth: .infinity, minHeight: 50)
                     .background(Color.tpPrimaryFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("firstRunNext")
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 10)
+    }
+
+    private var primaryTitle: String {
+        switch step {
+        case .welcome: language.text("차근차근 따라 하기", "Walk me through")
+        case .finish: mode == .replay ? language.text("닫기", "Close") : language.text("시작하기", "Get started")
+        default: language.text("다음", "Next")
+        }
     }
 
     private func confirmStep() {
@@ -222,7 +293,7 @@ struct FirstRunTutorialView: View {
 
     private func move(to target: FirstRunTutorialStep) {
         dismissKeyboard()
-        store.save(step: target)
+        if mode == .firstRun { store.save(step: target) }
         withAnimation(.snappy) { step = target }
     }
 
@@ -252,7 +323,7 @@ struct FirstRunTutorialView: View {
     }
 
     private func registerDefaultPINIfNeeded() {
-        guard let value = FirstRunTutorialPolicy.pinToRegister(hasPIN: model.securityStatus.hasPIN) else { return }
+        guard mode == .firstRun, let value = FirstRunTutorialPolicy.pinToRegister(hasPIN: model.securityStatus.hasPIN) else { return }
         try? model.configureBackupPIN(value)
     }
 
@@ -260,6 +331,11 @@ struct FirstRunTutorialView: View {
         guard !isFinishing else { return }
         isFinishing = true
         dismissKeyboard()
+        if mode == .replay {
+            model.clearError()
+            onFinished()
+            return
+        }
         registerDefaultPINIfNeeded()
         store.finish(outcome)
         // 건너뛴 사람에게 다음 실행에 권한 시트를 다시 올리지 않는다.
@@ -277,7 +353,7 @@ struct FirstRunTutorialView: View {
     }
 }
 
-private struct FirstRunMascot: View {
+struct FirstRunMascot: View {
     let scene: HwarangScene
     let size: CGFloat
 
@@ -480,6 +556,7 @@ private struct FirstRunPlacePicker: View {
 private struct FirstRunPasswordPage: View {
     @Bindable var model: AppModel
     let language: MapHomeLanguage
+    let registersDefaultPIN: Bool
     @Binding var pin: String
     @Binding var confirmation: String
     @Binding var message: String?
@@ -496,6 +573,10 @@ private struct FirstRunPasswordPage: View {
                         Text(language.text("등록된 비밀번호가 있습니다", "A password is already set"))
                             .font(.taptionFixed(size: TaptionType.scaled(TaptionType.title), weight: .bold))
                         note(language.text("바꾸지 않으면 그대로 씁니다.", "It stays as is unless you change it."))
+                    } else if !registersDefaultPIN, !security.hasPIN {
+                        Text(language.text("아직 비밀번호가 없습니다", "No password yet"))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.title), weight: .bold))
+                        note(language.text("아래에 적고 다음을 누르면 저장됩니다.", "Enter one below and tap Next to save it."))
                     } else {
                         Text(language.text("초기 비밀번호", "Default password"))
                             .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .semibold))
@@ -570,7 +651,7 @@ private struct FirstRunPasswordPage: View {
     private func setAppLock(_ enabled: Bool) {
         do {
             // 앱 잠금은 비밀번호가 있어야 켜진다.
-            if enabled, let value = FirstRunTutorialPolicy.pinToRegister(hasPIN: security.hasPIN) {
+            if enabled, registersDefaultPIN, let value = FirstRunTutorialPolicy.pinToRegister(hasPIN: security.hasPIN) {
                 try model.configureBackupPIN(value)
             }
             var settings = security.settings
@@ -583,56 +664,10 @@ private struct FirstRunPasswordPage: View {
     }
 }
 
-// MARK: - 클립 편집 소개
-
-private struct FirstRunClipEditorPage: View {
-    let language: MapHomeLanguage
-
-    private var rows: [(icon: String, title: String, detail: String)] {
-        [
-            ("pencil", language.text("여는 법", "Open"), language.text("시간 막대 아래 연필을 누르거나 막대를 두 번 누릅니다.", "Tap the pencil under the time bar, or double-tap the bar.")),
-            ("arrow.up.and.down", language.text("옮기고 자르기", "Move and trim"), language.text("클립을 끌어 옮기고, 양 끝을 잡아 길이를 줄입니다.", "Drag a clip to move it. Drag its ends to trim.")),
-            ("scissors", language.text("가르기", "Split"), language.text("재생 헤드 자리에서 클립을 둘로 나눕니다.", "Split a clip at the playhead.")),
-            ("rectangle.stack", language.text("전체 덮기", "Overwrite all"), language.text("나뉜 클립을 한 번에 같은 분류로 바꿉니다.", "Change split clips to one category at once.")),
-        ]
-    }
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                FirstRunClipIllustration()
-                    .frame(height: 96)
-                    .frame(maxWidth: .infinity)
-                    .padding(14)
-                    .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                ForEach(rows, id: \.title) { row in
-                    HStack(alignment: .top, spacing: 12) {
-                        Image(systemName: row.icon)
-                            .font(.system(size: TaptionType.scaled(TaptionType.bodyStrong), weight: .semibold))
-                            .foregroundStyle(Color.tpAccent)
-                            .frame(width: 28, height: 28)
-                            .accessibilityHidden(true)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(row.title)
-                                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.bodyStrong), weight: .bold))
-                                .foregroundStyle(Color.tpInk)
-                            Text(row.detail)
-                                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.body), weight: .medium))
-                                .foregroundStyle(Color.tpSecondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        Spacer(minLength: 0)
-                    }
-                    .accessibilityElement(children: .combine)
-                }
-            }
-            .padding(18)
-        }
-    }
-}
+// MARK: - 클립 편집 그림
 
 /// 클립 경계를 끌어 자르는 모습을 되풀이한다.
-private struct FirstRunClipIllustration: View {
+struct FirstRunClipIllustration: View {
     private let cycle = 4.0
 
     var body: some View {

@@ -7866,6 +7866,8 @@ struct MapHomeView: View {
                 .accessibilityLabel(language.text("데이터 보호 열기", "Open data protection"))
                 .padding(.leading, 12)
 
+                FirstRunTutorialReplayRow(model: model, language: language).padding(.leading, 12)
+
                 Button { isSettingsResetConfirmationPresented = true } label: {
                     HStack(spacing: 10) {
                         Image(systemName: "arrow.counterclockwise")

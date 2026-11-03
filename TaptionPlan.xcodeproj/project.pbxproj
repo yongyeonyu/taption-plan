@@ -397,6 +397,7 @@
 		A1000000000000000B1101C1 /* HwarangRig.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1101C1 /* HwarangRig.swift */; };
 		A1000000000000000B1102E1 /* FirstRunTutorialPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102E1 /* FirstRunTutorialPolicy.swift */; };
 		A1000000000000000B1102E2 /* FirstRunTutorialView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102E2 /* FirstRunTutorialView.swift */; };
+		A1000000000000000B1104E1 /* FirstRunTutorialGuides.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1104E1 /* FirstRunTutorialGuides.swift */; };
 		A1000000000000000B1102E4 /* PermissionOnboardingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102E4 /* PermissionOnboardingSheet.swift */; };
 		A1000000000000000B1102E8 /* MapHomeAllowancePolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102E8 /* MapHomeAllowancePolicy.swift */; };
 		A1000000000000000B1102F7 /* MapHomeWideLayoutPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102F7 /* MapHomeWideLayoutPolicy.swift */; };
@@ -881,6 +882,7 @@
 		F1000000000000000B1101C1 /* HwarangRig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HwarangRig.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102E1 /* FirstRunTutorialPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstRunTutorialPolicy.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102E2 /* FirstRunTutorialView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstRunTutorialView.swift; sourceTree = "<group>"; };
+		F1000000000000000B1104E1 /* FirstRunTutorialGuides.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstRunTutorialGuides.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102E4 /* PermissionOnboardingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionOnboardingSheet.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102E8 /* MapHomeAllowancePolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeAllowancePolicy.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102F7 /* MapHomeWideLayoutPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeWideLayoutPolicy.swift; sourceTree = "<group>"; };
@@ -1218,6 +1220,7 @@
 				F10000000000000000CA2003 /* HwarangCoat.swift */,
 				F1000000000000000B1102E1 /* FirstRunTutorialPolicy.swift */,
 				F1000000000000000B1102E2 /* FirstRunTutorialView.swift */,
+				F1000000000000000B1104E1 /* FirstRunTutorialGuides.swift */,
 				F1000000000000000B1102E4 /* PermissionOnboardingSheet.swift */,
 				F1000000000000000B1102E8 /* MapHomeAllowancePolicy.swift */,
 				F1000000000000000B1102F7 /* MapHomeWideLayoutPolicy.swift */,
@@ -1939,6 +1942,7 @@
 				A1000000000000000B1101C1 /* HwarangRig.swift in Sources */,
 				A1000000000000000B1102E1 /* FirstRunTutorialPolicy.swift in Sources */,
 				A1000000000000000B1102E2 /* FirstRunTutorialView.swift in Sources */,
+				A1000000000000000B1104E1 /* FirstRunTutorialGuides.swift in Sources */,
 				A1000000000000000B1102E4 /* PermissionOnboardingSheet.swift in Sources */,
 				A1000000000000000B1102E8 /* MapHomeAllowancePolicy.swift in Sources */,
 				A1000000000000000B1102F7 /* MapHomeWideLayoutPolicy.swift in Sources */,
