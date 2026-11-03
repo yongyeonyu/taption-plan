@@ -5546,3 +5546,8 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 단위 시험 TaptionPlanTests 전체: 1,972건 중 1,961건 통과, 실패 0, 건너뜀 11 (`build/validation/TFB1104A01/check2.xcresult`). 앱 target도 이 시험 빌드로 컴파일됨.
 - 장면 시트로 회의·커피 프레임을 눈으로 확인 (`build/validation/TFB1104A01/daily-scenes.png`).
 - 실기기 미확인.
+
+## TFB1104A01 TestFlight 264 (2026-11-04)
+- 첫 아카이브 실패: `MapHomeBenchHomeZoom`이 Debug 전용인데 출시 코드에서 호출(`f7429090`로 수정). 재시도 한 번은 번호 지정 실수로 빌드 전 중단.
+- 빌드 264: 처리 상태 VALID, `TP Taption Plan 내부 테스트` 그룹 연결·테스터 노출을 `release.sh` 9단계에서 읽어 확인 (`build/validation/TFB1104A01/testflight-report.json`).
+- 포함: 127cf569까지. 다른 세션 작업은 미포함. 저장소 읽기 전 저장 경로(질문 중)는 그대로 있다. 기기 기능 시험은 이 항목에 포함하지 않는다.
