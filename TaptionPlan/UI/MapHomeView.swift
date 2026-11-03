@@ -7014,7 +7014,7 @@ struct MapHomeView: View {
                                     size: 36,
                                     equippedAccessoryID: homeGrowthHistory.season.equippedAccessory
                                 )
-                                .frame(width: 60, height: homeGrowthHistory.season.equippedAccessory == nil ? 46 : 60)
+                                .frame(width: 60, height: MapHomeGrowthAccessoryCatalog.hatAssetName(for: homeGrowthHistory.season.equippedAccessory) == nil ? 46 : 60)
                                 .clipped()
                                 Text(category.localizedTitle(language))
                                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
