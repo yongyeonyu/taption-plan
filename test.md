@@ -5673,3 +5673,6 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 단위(시뮬레이터 BOKKI-iPhone11): `MapHomeRangePlaybackTests` 18건·`PlaybackVideoTimelineTests` 7건, 25건 통과(`unit5.xcresult`). 렌더 측정 시험은 넣지 않았고 전체 단위 테스트는 실행하지 않았다.
 - 구조 지표 `--check` 통과.
 - 시뮬레이터 렌더 재시도는 대표 선택 B로 중단. 렌더 완주·영상 파일·프레임 눈 확인·사진 저장·실기기 수치는 없고 메인 세션 실기기 확인으로 넘긴다. 구간 선택 화면도 직접 띄워 보지 않았다.
+
+## PLR1104A01 메인 합치기 뒤 전체 단위 시험 (2026-11-04, 시뮬레이터)
+- 2,017건 중 2,003건 통과, 실패 0, 건너뜀 14 (`build/validation/SAV1104A01/check8.xcresult`). 구조 지표·엔진 경계 통과. 렌더 완주·구간 화면·사진 저장은 실기기에서 아직 확인하지 않았다.
