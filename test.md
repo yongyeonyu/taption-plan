@@ -5538,4 +5538,5 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 빌드(코드 서명 끔, generic 대상): `TaptionPlanWidget`·`TaptionPlan`(iOS), `TaptionPlanWatchWidget`·`TaptionPlanWatch`(watchOS) 모두 `BUILD SUCCEEDED`. 시뮬레이터 산출물 위젯 `Assets.car`에 `TaptionPoseAtlas` 3종이 들어 있다.
 - 그림 확인: 커밋하지 않은 임시 테스트로 스프라이트를 렌더링했다. 털색 3종·자세 4종이 맞는 칸으로 잘렸고, 윗줄 그림이 번져 위아래 0.5pt를 잘라 내 없앴다.
 - 미확인: 실제 홈 화면 위젯 표시와 타임라인 재생. 실기기 설치·TestFlight는 하지 않았다. 워치는 코드 변경이 없고 위 빌드 통과만 뜻한다.
+- 결정(대표): 워치에는 고양이를 넣지 않는다.
 - 로그: `build/validation/WGP1103A01/`
