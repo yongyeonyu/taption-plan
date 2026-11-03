@@ -355,16 +355,11 @@ final class AlgorithmUpgradeTests: XCTestCase {
         XCTAssertNil(CalendarTitleClassification.ruleDetailID(for: "Classic concert"), "영어는 단어 전체가 같아야 한다")
         XCTAssertEqual(CalendarTitleClassification.verdict(for: "팀 회의", stored: [:]), .init(detailID: "work.meeting", origin: .rule))
         XCTAssertEqual(
-            CalendarTitleClassification.verdict(for: "팀 회의", stored: [key: .init(detailID: "study.class", source: .appleIntelligence)]),
-            .init(detailID: "study.class", origin: .appleIntelligence)
+            CalendarTitleClassification.verdict(for: "팀 회의", stored: [key: .init(detailID: "study.class")]),
+            .init(detailID: "study.class", origin: .user)
         )
         XCTAssertEqual(
-            CalendarTitleClassification.verdict(for: "팀 회의", stored: [key: .init(detailID: nil, source: .appleIntelligence)]),
-            .init(detailID: "work.meeting", origin: .rule),
-            "AI가 모르겠다고 하면 단어 규칙이 남는다"
-        )
-        XCTAssertEqual(
-            CalendarTitleClassification.verdict(for: "팀 회의", stored: [key: .init(detailID: nil, source: .user)]),
+            CalendarTitleClassification.verdict(for: "팀 회의", stored: [key: .init(detailID: nil)]),
             .init(detailID: nil, origin: .user)
         )
     }
@@ -377,9 +372,6 @@ final class AlgorithmUpgradeTests: XCTestCase {
         XCTAssertFalse(ids.contains("work.route"))
         XCTAssertFalse(ids.contains("work.rest"))
         XCTAssertFalse(ids.contains("exercise.workout"), "운동은 건강 앱 기록으로만 정한다")
-        XCTAssertEqual(CalendarTitleIntelligence.answer(from: "none", allowed: ids), CalendarTitleIntelligence.Answer.none)
-        XCTAssertEqual(CalendarTitleIntelligence.answer(from: "work.meeting", allowed: ids), .detail("work.meeting"))
-        XCTAssertNil(CalendarTitleIntelligence.answer(from: "movement.car", allowed: ids))
         for rule in ["팀 회의", "치과 진료", "미용실", "학원", "수업", "점심", "장보기", "빨래", "요리", "청소", "명상", "독서", "데이트", "가족", "친구", "통화"] {
             XCTAssertTrue(ids.contains(CalendarTitleClassification.ruleDetailID(for: rule) ?? ""), rule)
         }
@@ -399,16 +391,16 @@ final class AlgorithmUpgradeTests: XCTestCase {
 
     func testAutomaticTitleVerdictRespectsThePlace() {
         XCTAssertFalse(titledRecords([event("병원 예약", 1, 3)], place: .home).contains { $0.behavior == "hospital" }, "집에 있었으면 가지 않은 것이다")
-        let company = titledRecords([event("데이트", 1, 3)], place: .company, stored: ["데이트": .init(detailID: "activity.date", source: .appleIntelligence)])
+        let company = titledRecords([event("데이트", 1, 3)], place: .company)
         XCTAssertTrue(company.contains { $0.behavior == "meeting" }, "회사에서 일정이 있으면 회의다")
         XCTAssertFalse(company.contains { $0.behavior == "dating" })
     }
 
     func testUserTitleChoiceWins() {
         let title = "주간 공유"
-        let chosen = titledRecords([event(title, 1, 3)], place: .company, stored: [title: .init(detailID: "study.class", source: .user)])
+        let chosen = titledRecords([event(title, 1, 3)], place: .company, stored: [title: .init(detailID: "study.class")])
         XCTAssertTrue(chosen.contains { $0.behavior == "class" && $0.categoryID == "study" })
-        let ignored = titledRecords([event(title, 1, 3)], place: .company, stored: [title: .init(detailID: nil, source: .user)])
+        let ignored = titledRecords([event(title, 1, 3)], place: .company, stored: [title: .init(detailID: nil)])
         XCTAssertEqual(ignored.map(\.behavior), ["work"], "분류 안 함이면 회의로 보지 않는다")
     }
 
@@ -447,7 +439,7 @@ final class AlgorithmUpgradeTests: XCTestCase {
     func testCalendarTitleDetailsDecodeFromOldSettingsAndStayOffCloud() throws {
         var settings = AppFeatureSettings.defaults
         XCTAssertEqual(settings.calendarTitleDetails, [:])
-        settings.calendarTitleDetails["팀 회의"] = .init(detailID: "work.meeting", source: .user)
+        settings.calendarTitleDetails["팀 회의"] = .init(detailID: "work.meeting")
         let data = try JSONEncoder().encode(settings)
         XCTAssertEqual(try JSONDecoder().decode(AppFeatureSettings.self, from: data).calendarTitleDetails, settings.calendarTitleDetails)
         var old = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])

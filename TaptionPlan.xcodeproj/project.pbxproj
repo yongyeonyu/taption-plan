@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		A10000000000000000CA1003 /* AppModel+CalendarTitles.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000CA1003 /* AppModel+CalendarTitles.swift */; };
-		A10000000000000000CA1002 /* CalendarTitleIntelligence.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000CA1002 /* CalendarTitleIntelligence.swift */; };
 		A10000000000000000CA1001 /* CalendarTitleClassification.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000CA1001 /* CalendarTitleClassification.swift */; };
 		A10000000000000000CA1000 /* HomeChorePattern.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000CA1000 /* HomeChorePattern.swift */; };
 		5624A4986B94396ED9FEC9D5 /* MovementNameTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 769EE77192CF9EC73E324782 /* MovementNameTests.swift */; };
@@ -539,7 +538,6 @@
 
 /* Begin PBXFileReference section */
 		F10000000000000000CA1003 /* AppModel+CalendarTitles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+CalendarTitles.swift"; sourceTree = "<group>"; };
-		F10000000000000000CA1002 /* CalendarTitleIntelligence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CalendarTitleIntelligence.swift"; sourceTree = "<group>"; };
 		F10000000000000000CA1001 /* CalendarTitleClassification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CalendarTitleClassification.swift"; sourceTree = "<group>"; };
 		F10000000000000000CA1000 /* HomeChorePattern.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HomeChorePattern.swift"; sourceTree = "<group>"; };
 		769EE77192CF9EC73E324782 /* MovementNameTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovementNameTests.swift; sourceTree = "<group>"; };
@@ -1384,7 +1382,6 @@
 				F5B1102A0200000000000001 /* PlanNotificationScheduler.swift */,
 				F1000000000000000B1101A3 /* SensorEfficiencyPolicies.swift */,
 				F1000000000000000000F0C1 /* GoogleCalendarAccount.swift */,
-				F10000000000000000CA1002 /* CalendarTitleIntelligence.swift */,
 				F10000000000000000CA1001 /* CalendarTitleClassification.swift */,
 				F10000000000000000CA1000 /* HomeChorePattern.swift */,
 				F60000000000000000000001 /* HealthKitTypeCatalog.swift */,
@@ -2048,7 +2045,6 @@
 				A1000000000000000B1101A3 /* SensorEfficiencyPolicies.swift in Sources */,
 				A1000000000000000000F0C1 /* GoogleCalendarAccount.swift in Sources */,
 				A10000000000000000CA1003 /* AppModel+CalendarTitles.swift in Sources */,
-				A10000000000000000CA1002 /* CalendarTitleIntelligence.swift in Sources */,
 				A10000000000000000CA1001 /* CalendarTitleClassification.swift in Sources */,
 				A10000000000000000CA1000 /* HomeChorePattern.swift in Sources */,
 				A60000000000000000000001 /* HealthKitTypeCatalog.swift in Sources */,

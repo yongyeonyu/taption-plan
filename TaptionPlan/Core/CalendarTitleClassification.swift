@@ -1,8 +1,8 @@
 import Foundation
 
-/// 일정 제목 → 상세활동(CAL1103A01). 사용자가 고른 값 > Apple AI > 단어 규칙 순서다.
+/// 일정 제목 → 상세활동(CAL1103A01). 사용자가 고른 값 > 단어 규칙 순서다.
 enum CalendarTitleClassification {
-    enum Origin: Equatable, Sendable { case user, appleIntelligence, rule }
+    enum Origin: Equatable, Sendable { case user, rule }
 
     struct Verdict: Equatable, Sendable {
         var detailID: String?
@@ -63,10 +63,7 @@ enum CalendarTitleClassification {
     }
 
     static func verdict(for title: String, stored: [String: CalendarTitleDetail]) -> Verdict? {
-        if let value = stored[key(title)] {
-            if value.source == .user { return Verdict(detailID: value.detailID, origin: .user) }
-            if let id = value.detailID { return Verdict(detailID: id, origin: .appleIntelligence) }
-        }
+        if let value = stored[key(title)] { return Verdict(detailID: value.detailID, origin: .user) }
         return ruleDetailID(for: title).map { Verdict(detailID: $0, origin: .rule) }
     }
 
@@ -74,8 +71,7 @@ enum CalendarTitleClassification {
     static func counted(_ events: [CalendarRecord], stored: [String: CalendarTitleDetail]) -> [CalendarRecord] {
         guard !stored.isEmpty else { return events }
         return events.filter {
-            guard let value = stored[key($0.title)], value.source == .user else { return true }
-            return value.detailID != nil
+            stored[key($0.title)].map { $0.detailID != nil } ?? true
         }
     }
 
@@ -93,7 +89,6 @@ enum CalendarTitleClassification {
               verdict.origin == .user || fits(id, categoryID: categoryID, at: place) else { return nil }
         let origin = switch verdict.origin {
         case .user: "직접 정함"
-        case .appleIntelligence: "Apple AI"
         case .rule: "단어 규칙"
         }
         return Resolved(detail: detail, categoryID: categoryID, evidence: "\(evidencePrefix)'\(title)' · \(origin)")

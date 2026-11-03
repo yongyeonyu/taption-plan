@@ -55,7 +55,6 @@ struct MapHomeCalendarTitleMenu: View {
               }).first else { return language.text("분류 안 함", "Not categorized") }
         let origin = switch verdict.origin {
         case .user: language.text("직접", "You")
-        case .appleIntelligence: "AI"
         case .rule: language.text("자동", "Auto")
         }
         return "\(pair.0.title) - \(pair.1.title) · \(origin)"

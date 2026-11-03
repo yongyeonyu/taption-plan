@@ -37,7 +37,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
     var dismissedPlaceSuggestions: [DismissedPlaceSuggestion]
     var movementCorrections: [TravelModeCorrection]
     var suppressedActualIDs: Set<UUID>
-    /// 일정 제목(정규화)별 상세활동. Apple AI 결과와 사용자가 고른 값이다. 기기에만 둔다(CAL1103A01).
+    /// 일정 제목(정규화)별 상세활동. 사용자가 고른 값이다. 기기에만 둔다(CAL1103A01).
     var calendarTitleDetails: [String: CalendarTitleDetail]
     /// Prevents a deliberate deletion from being mistaken for local data loss
     /// when an older CloudKit snapshot is used as a recovery source.
@@ -528,7 +528,5 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
 
 /// 일정 제목에 붙인 상세활동. `detailID`가 nil이면 "분류 안 함"이다.
 struct CalendarTitleDetail: Codable, Hashable, Sendable {
-    enum Source: String, Codable, Sendable { case user, appleIntelligence }
     var detailID: String?
-    var source: Source
 }
