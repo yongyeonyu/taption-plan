@@ -150,7 +150,8 @@ final class MapHomePlaybackVideoRenderer: NSObject, @preconcurrency MLNMapViewDe
     static let styleTimeout: TimeInterval = 15
     static let stickmanCacheLimit = 256
 
-    let timeline: MapHomePlaybackTimeline
+    private let makeFrames: (Int) -> [MapHomePlaybackTimeline.Frame]
+    private let overlay: MapHomePlaybackVideoOverlay?
     /// 지도 크기(pt). 출력 픽셀은 `size × scale`(기본 360×640pt × 3 = 1080×1920).
     let size: CGSize
     let scale: CGFloat
@@ -168,7 +169,7 @@ final class MapHomePlaybackVideoRenderer: NSObject, @preconcurrency MLNMapViewDe
     private var isStyleLoaded = false
     private var stickmanCache: [String: UIImage] = [:]
     private var lastCamera: (coordinate: CLLocationCoordinate2D, distance: Double)?
-    private var timeoutCount = 0
+    private(set) var timeoutCount = 0
 
     init(
         style: MapHomeVectorStyle,
@@ -180,12 +181,31 @@ final class MapHomePlaybackVideoRenderer: NSObject, @preconcurrency MLNMapViewDe
         stickman: @escaping (Double) -> MapHomePlaybackVideoStickman?
     ) {
         self.style = style
-        self.timeline = timeline
+        makeFrames = { Array(timeline.frames(fps: $0)) }
+        overlay = nil
         self.size = size
         self.scale = scale
         self.pitch = pitch
         self.heading = heading
         self.stickman = stickman
+    }
+
+    /// 여행 영상처럼 프레임과 오버레이를 직접 주는 경우(PLR1104A01). 화랑이는 오버레이가 정한 좌표에 놓는다.
+    init(
+        style: MapHomeVectorStyle,
+        frames: @escaping (Int) -> [MapHomePlaybackTimeline.Frame],
+        overlay: MapHomePlaybackVideoOverlay,
+        size: CGSize = CGSize(width: 360, height: 640),
+        scale: CGFloat = 3
+    ) {
+        self.style = style
+        makeFrames = frames
+        self.overlay = overlay
+        self.size = size
+        self.scale = scale
+        pitch = 0
+        heading = 0
+        stickman = { _ in nil }
     }
 
     var pixelWidth: Int { Int((size.width * scale).rounded()) }
@@ -195,7 +215,7 @@ final class MapHomePlaybackVideoRenderer: NSObject, @preconcurrency MLNMapViewDe
 
     /// 영상을 만들어 임시 `.mov` 위치를 돌려준다. 취소하면 `CancellationError`.
     func render(progress: @escaping (Double) -> Void) async throws -> URL {
-        let frames = Array(timeline.frames(fps: Self.fps))
+        let frames = makeFrames(Self.fps)
         guard !frames.isEmpty else { throw MapHomePlaybackVideoError.empty }
         let started = ProcessInfo.processInfo.systemUptime
         defer { tearDownMap() }
@@ -383,7 +403,46 @@ final class MapHomePlaybackVideoRenderer: NSObject, @preconcurrency MLNMapViewDe
         UIColor(Color(hex: style.backgroundHex)).setFill()
         UIRectFill(bounds)
         mapView?.drawHierarchy(in: bounds, afterScreenUpdates: true)
-        drawStickman(minute: minute, videoSeconds: videoSeconds)
+        if let overlay, let mapView {
+            overlay.drawBelowMarker(atSecond: videoSeconds, mapView: mapView, size: size, context: context)
+            drawOverlayStickman(overlay, mapView: mapView, videoSeconds: videoSeconds)
+            overlay.drawAboveMarker(atSecond: videoSeconds, size: size)
+        } else {
+            drawStickman(minute: minute, videoSeconds: videoSeconds)
+        }
+        drawAttribution()
+    }
+
+    /// 공유되는 영상이라 지도 출처를 화면에 직접 넣는다(지도 출처 단추는 영상에 나오지 않는다).
+    private func drawAttribution() {
+        let text = "© OpenFreeMap © OpenMapTiles © OpenStreetMap" as NSString
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 8, weight: .medium),
+            .foregroundColor: UIColor.white,
+            .shadow: {
+                let shadow = NSShadow()
+                shadow.shadowColor = UIColor.black.withAlphaComponent(0.7)
+                shadow.shadowBlurRadius = 2
+                shadow.shadowOffset = .zero
+                return shadow
+            }(),
+        ]
+        let textSize = text.size(withAttributes: attributes)
+        text.draw(at: CGPoint(x: 8, y: size.height - textSize.height - 6), withAttributes: attributes)
+    }
+
+    private func drawOverlayStickman(_ overlay: MapHomePlaybackVideoOverlay, mapView: MLNMapView, videoSeconds: Double) {
+        guard let state = overlay.stickman(atSecond: videoSeconds),
+              let coordinate = overlay.markerCoordinate(atSecond: videoSeconds) else { return }
+        let image = stickmanImage(state, phase: Self.animationPhase(state, videoSeconds: videoSeconds))
+        let point = mapView.convert(coordinate, toPointTo: mapView)
+        let offset = MapHomeStickmanAnnotationLayout.centerOffset
+        image.draw(in: CGRect(
+            x: point.x + offset.x - image.size.width / 2,
+            y: point.y + offset.y - image.size.height / 2,
+            width: image.size.width,
+            height: image.size.height
+        ))
     }
 
     private func drawStickman(minute: Double, videoSeconds: Double) {

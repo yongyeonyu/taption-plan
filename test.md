@@ -5654,3 +5654,8 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 ## MTG1103A01 회의 상대를 다른 고양이로 (2026-11-04, 시뮬레이터)
 - 대표 선택: 화랑이의 상대는 춘향이, 춘향이의 상대는 윤복이, 윤복이의 상대는 화랑이. 위젯 아틀라스 3장을 다시 만들어 회의 줄을 눈으로 확인(`build/validation/SAV1104A01/sheet/meeting-rival.png`).
 - 전체 단위 시험: 1,998건 중 1,985건 통과, 실패 0, 건너뜀 13 (`build/validation/SAV1104A01/check7.xcresult`). 실기기 결과 없음.
+## PLR1104A01 · 여러 날 여행 영상 1단계 중간 (2026-11-04)
+- 단위(시뮬레이터 BOKKI-iPhone11): `MapHomeRangePlaybackTests`·`PlaybackVideoTimelineTests` 23건 통과(`build/validation/PLR1104A01/unit3.xcresult`). 전체 단위 테스트는 실행하지 않았다.
+- 앱 Debug 빌드(generic iOS, 구간 선택 화면 제외 상태): 성공(`debug-build.log`).
+- 렌더 측정 실패: 합성 3박 4일 12초(`MapHomeRangeRenderBenchTests`, 시뮬레이터)가 16초 뒤 `mapLoadFailed`(`bench1.log`). 지도 스타일 15초 대기 초과이며 원인은 아직 모른다. 영상 파일·프레임·메모리·타일 초과 수치는 없다.
+- 미검증: 실기기 설치·렌더·사진 저장, 구간 선택 화면, 경로선·날짜·지도 출처의 실제 그림.
