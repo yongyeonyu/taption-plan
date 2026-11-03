@@ -5566,3 +5566,8 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - `e07dbb01` 포함: 1,975건 중 1,962건 통과, 실패 0, 건너뜀 13 (`build/validation/TFB1104A01/check4.xcresult`). 늘어난 건너뜀 2건은 시트 생성용 환경 변수가 없는 시험이다.
 - 이전 실행 check3는 시뮬레이터 앱 실행 실패(`Host is down`)로 시험 0건 실행, 코드 실패 아님.
 - 세션 로그는 `build/validation/ICN1104A01/`로 옮겼다. 야간·계절 테마 일부와 실기기 체감은 미확인이라 temp.md 항목을 유지한다.
+## NLE1103A04 클립 편집 수동 기록 중복 저장 수정 (2026-11-04)
+- 시뮬레이터 `RFA1102A01`(실기기 아님) 단위: `NLETrackTests`·`NLESubActivityTests`·`NLEMultiDayTests`·`TimeScaleTests` 242건 통과(`build/validation/NLE1103A04/unit1.xcresult`), `FeatureEngineTests` 679건 통과(`unit2.xcresult`). 전체 단위 테스트는 실행하지 않았다.
+- 앱 Debug 빌드(시뮬레이터 대상) 성공(`build.log`).
+- 아이폰 18 내보낸 기록 `raw2.json`을 저장소 밖에서 같은 규칙으로 계산(앱 실행 아님): 11-02 구간 편집 48건 → 17건, 11-03 44건 → 11건. 자동·기타 수동 기록 138건은 그대로. 11-02에 구간이 일부만 겹치는 구간 편집 쌍 4개는 남는다(정확히 같은 구간만 지운다).
+- 확인 못 함: 실기기 저장·불러오기, iCloud 병합 실제 동작. 저장 ID가 지워진 뒤 SQLite 행 삭제는 코드(`sync`의 deletes)로만 확인했다.

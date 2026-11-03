@@ -582,7 +582,22 @@ struct NLETrack: Hashable, Sendable {
                 touched.insert(parent)
             }
         }
-        return touched
+        // 상세 층은 같은 구간의 클립마다 원본 ID가 달라 부모가 여럿이다. 구간으로 묶어야 조각이 여러 벌 저장되지 않는다.
+        let dirtyParents = Set(dirty.map(\.parent))
+        return Dictionary(grouping: touched) { [$0.startMinute, $0.endMinute] }
+            .values
+            .map { group -> NLEClipParent in
+                let ordered = group.sorted { $0.stableKey < $1.stableKey }
+                let owner = ordered.first(where: dirtyParents.contains) ?? ordered[0]
+                var seen = Set<UUID>()
+                return NLEClipParent(
+                    startMinute: owner.startMinute,
+                    endMinute: owner.endMinute,
+                    sourceIDs: ordered.flatMap(\.sourceIDs).filter { seen.insert($0).inserted },
+                    option: owner.option,
+                    fillOption: owner.fillOption
+                )
+            }
             .sorted { $0.startMinute < $1.startMinute }
             .compactMap { parent in
                 // 이 구간의 요청은 이 구간의 시간만 덮는다. 넘어온 조각은 여기서 잘린다.

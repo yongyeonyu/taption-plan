@@ -353,6 +353,7 @@ extension AppModel {
             from: value.actuals,
             suppressedIDs: value.settings.suppressedActualIDs
         )
+        value.actuals = ActivitySectionOverrideEngine.deduplicatedOverrides(value.actuals)
         value.actuals = ActivityCorrectionEngine.applying(
             value.settings.activityCorrections,
             to: value.actuals

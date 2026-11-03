@@ -295,6 +295,10 @@ extension AppModel {
             sourceIDs.contains(actual.id)
                 && ActivitySectionOverrideEngine.isEditableOverride(actual)
         }
+        snapshot.actuals = ActivitySectionOverrideEngine.removingOverrides(
+            from: snapshot.actuals,
+            sameSpanAs: records
+        )
         snapshot.actuals.append(contentsOf: preservedPieces)
         snapshot.actuals.append(contentsOf: records)
         snapshot.actuals.sort { $0.startedAt < $1.startedAt }

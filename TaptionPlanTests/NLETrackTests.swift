@@ -984,4 +984,140 @@ final class NLETrackTests: XCTestCase {
         XCTAssertEqual(result.track.clips.count, 3)
         XCTAssertTrue(result.track.editRequests(dayStart: dayStart()).isEmpty)
     }
+
+    // MARK: - 수동 기록 중복 (NLE1103A04)
+
+    /// 한 대분류 구간의 상세 5개 중 하나만 고쳐도 요청은 하나이고, 저장 기록의 구간이 겹치지 않는다.
+    func testDetailsInOneSegmentProduceOneRequest() throws {
+        let detailIDs = (0..<5).map { _ in UUID() }
+        let details = detailIDs.enumerated().map { index, id in
+            MapHomeSectionDetail(
+                id: id, title: "상세\(index)", categoryID: "work", behavior: "detail\(index)",
+                startMinute: 600 + index * 20, endMinute: 610 + index * 20
+            )
+        }
+        let segment = MapHomeTimeRailSegment(
+            startMinute: 600, endMinute: 1_000, categoryID: "work", title: "근무"
+        )
+        var track = MapHomeNLEClipEditor.makeSubTrack(details: details, segments: [segment])
+        let target = try XCTUnwrap(track.clip(atMinute: 620))
+        let main = MapHomeNLEClipEditor.option(forCategoryID: "study", title: "공부", behavior: nil)
+        track.replace(
+            620..<630,
+            with: MapHomeNLEClipEditor.option(forCategoryID: "work", title: "회의", behavior: "meeting"),
+            parent: target.parent
+        )
+        let dirtyID = try XCTUnwrap(track.clips.first { $0.isDirty }?.id)
+        track.setFillOption(main, forClipID: dirtyID)
+
+        let dayStart = Calendar.autoupdatingCurrent.startOfDay(for: Date())
+        let requests = track.editRequests(dayStart: dayStart)
+
+        let request = try XCTUnwrap(requests.first)
+        XCTAssertEqual(requests.count, 1)
+        XCTAssertEqual(Set(request.sourceIDs), Set(detailIDs))
+        guard case let .cover(pieces, fill) = request.mode else {
+            return XCTFail("덮어쓰기 요청이 아니다")
+        }
+        XCTAssertEqual(pieces.count, 5)
+        XCTAssertEqual(fill, main, "채움은 바뀐 클립이 받은 대분류여야 한다")
+        let records = ActivitySectionOverrideEngine.records(for: request)
+        XCTAssertEqual(Set(records.map { $0.span() }).count, records.count)
+    }
+
+    private func sectionOverride(
+        _ title: String,
+        start: Int,
+        end: Int,
+        createdAt: Int,
+        modelVersion: String? = ActivitySectionOverrideEngine.modelVersion,
+        source: ActualSource = .manual,
+        manual: Bool = true
+    ) -> ActualRecord {
+        let base = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        return ActualRecord(
+            id: UUID(), planID: nil, title: title, categoryID: "work",
+            startedAt: base.addingTimeInterval(Double(start) * 60),
+            endedAt: base.addingTimeInterval(Double(end) * 60),
+            source: source, confidence: .high,
+            createdAt: base.addingTimeInterval(Double(createdAt)),
+            modelVersion: modelVersion, manuallyCorrected: manual
+        )
+    }
+
+    func testDeduplicationKeepsNewestPerSpanAndOnlyTouchesSectionOverrides() {
+        let old = sectionOverride("근무", start: 0, end: 60, createdAt: 1)
+        let copy = sectionOverride("근무", start: 0, end: 60, createdAt: 2)
+        let newest = sectionOverride("업무", start: 0, end: 60, createdAt: 3)
+        let partial = sectionOverride("지하철", start: 0, end: 30, createdAt: 1)
+        let automatic = sectionOverride(
+            "자동", start: 0, end: 60, createdAt: 1, modelVersion: "auto", source: .motion, manual: false
+        )
+        let otherManual = sectionOverride("직접", start: 0, end: 60, createdAt: 1, modelVersion: nil)
+        let input = [old, copy, newest, partial, automatic, otherManual]
+
+        let result = ActivitySectionOverrideEngine.deduplicatedOverrides(input)
+
+        XCTAssertEqual(Set(result.map(\.id)), Set([newest, partial, automatic, otherManual].map(\.id)))
+        XCTAssertEqual(ActivitySectionOverrideEngine.deduplicatedOverrides(result), result)
+    }
+
+    /// 같은 시각에 저장된 사본은 기기가 달라도 같은 하나가 남는다.
+    func testDeduplicationIsOrderIndependentForEqualCreatedAt() {
+        let first = sectionOverride("근무", start: 0, end: 60, createdAt: 1)
+        let second = sectionOverride("근무", start: 0, end: 60, createdAt: 1)
+        XCTAssertEqual(
+            ActivitySectionOverrideEngine.deduplicatedOverrides([first, second]).map(\.id),
+            ActivitySectionOverrideEngine.deduplicatedOverrides([second, first]).map(\.id)
+        )
+    }
+
+    func testSavingReplacesOnlyOverridesWithTheSameSpan() {
+        let same = sectionOverride("근무", start: 0, end: 60, createdAt: 1)
+        let inside = sectionOverride("회의", start: 10, end: 20, createdAt: 1)
+        let automatic = sectionOverride(
+            "자동", start: 0, end: 60, createdAt: 1, modelVersion: "auto", source: .motion, manual: false
+        )
+        let new = sectionOverride("업무", start: 0, end: 60, createdAt: 2)
+
+        let result = ActivitySectionOverrideEngine.removingOverrides(
+            from: [same, inside, automatic],
+            sameSpanAs: [new]
+        )
+
+        XCTAssertEqual(Set(result.map(\.id)), Set([inside.id, automatic.id]))
+    }
+
+    /// 예전 빌드가 저장한 사본은 불러올 때 사라진다. 자동 기록은 남는다.
+    func testLoadedSnapshotRemovesStoredDuplicateOverrides() throws {
+        let old = sectionOverride("근무", start: 0, end: 60, createdAt: 1)
+        let newest = sectionOverride("업무", start: 0, end: 60, createdAt: 2)
+        let automatic = sectionOverride(
+            "자동", start: 0, end: 60, createdAt: 1, modelVersion: "auto", source: .motion, manual: false
+        )
+        var snapshot = TaptionDataSnapshot.empty
+        snapshot.actuals = [old, newest, automatic]
+
+        let loaded = AppModel.preparedLoadedSnapshot(snapshot, cancellationCheck: {})
+
+        let ids = Set(loaded.actuals.map(\.id))
+        XCTAssertFalse(ids.contains(old.id))
+        XCTAssertTrue(ids.contains(newest.id))
+        XCTAssertTrue(ids.contains(automatic.id))
+    }
+
+    /// 시작이 같은 사본이 겹치면 리뷰도 지도처럼 최신 저장본을 보여 준다.
+    func testReviewCoveragePrefersNewestOnTies() throws {
+        let older = sectionOverride("지하철", start: 0, end: 30, createdAt: 1)
+        let newer = sectionOverride("지하철 탑승", start: 0, end: 40, createdAt: 2)
+        let span = TimeSpan(start: older.startedAt, end: try XCTUnwrap(newer.endedAt))
+
+        let result = ReviewCoverageEngine.records(
+            actuals: [older, newer],
+            in: [span],
+            asOf: span.end.addingTimeInterval(60)
+        )
+
+        XCTAssertEqual(result.map(\.title), ["지하철 탑승"])
+    }
 }

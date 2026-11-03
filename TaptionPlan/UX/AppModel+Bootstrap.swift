@@ -39,6 +39,7 @@ extension AppModel {
             from: loaded.actuals,
             suppressedIDs: loaded.settings.suppressedActualIDs
         )
+        loaded.actuals = ActivitySectionOverrideEngine.deduplicatedOverrides(loaded.actuals)
         try cancellationCheck()
         loaded.settings.confirmedSleepSpans =
             TaptionActivityEngineAdapter.migratedConfirmedSleepSpans(
