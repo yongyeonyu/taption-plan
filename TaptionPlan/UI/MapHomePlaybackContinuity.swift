@@ -108,7 +108,8 @@ extension MapHomePlaybackLocation {
     /// 지도에 예상 노선이 그려져 있으면 화랑이는 그 선을 타고 가야 한다.
     static func subwayCoordinate(
         at date: Date,
-        travel: [TravelSegment]
+        travel: [TravelSegment],
+        readings: [SensorReading] = []
     ) -> GeoPoint? {
         let active = travel.filter { segment in
             segment.mode == .subway
@@ -118,12 +119,107 @@ extension MapHomePlaybackLocation {
         guard var segment = active.max(by: { $0.span.start < $1.span.start }) else {
             return nil
         }
+        if let point = subwayGapCoordinate(at: date, segment: segment, readings: readings) { return point }
         // 확정 구간과 **같은 계산**을 쓰려고 확정 표시만 세운다. 좌표 계산에는 쓰이지 않는다.
         segment.isConfirmed = true
         return RouteTimelineDataEngine.confirmedSubwayCoordinates(
             for: segment,
             through: date
         ).last
+    }
+}
+
+/// 표본이 빈 지하철 구간(PLB1103A01). 앞뒤 표본을 노선에 투영해 그 사이를 거리÷시간의 예상 속도로 잇는다.
+extension MapHomePlaybackLocation {
+    private static let trustedAccuracyMeters = 150.0
+
+    /// 지하철 구간 안에서 모션이 자동차라고 해도 지하철이다. 환승 걷기는 그대로 둔다.
+    static func ridingMode(_ mode: TravelMode?, at date: Date, travel: [TravelSegment]) -> TravelMode? {
+        guard mode != .walking, mode != .running, mode != .cycling,
+              travel.contains(where: { $0.mode == .subway && $0.span.contains(date) }) else { return mode }
+        return .subway
+    }
+
+    static func subwayGapCoordinate(at date: Date, segment: TravelSegment, readings: [SensorReading]) -> GeoPoint? {
+        guard let points = segment.subwayRoute?.coordinates, points.count >= 2 else { return nil }
+        var before: SensorReading?
+        var after: SensorReading?
+        var lower = 0, upper = readings.count
+        while lower < upper {
+            let middle = (lower + upper) / 2
+            if readings[middle].timestamp <= date { lower = middle + 1 } else { upper = middle }
+        }
+        func trusted(_ reading: SensorReading) -> Bool {
+            reading.gpsAvailable && segment.span.contains(reading.timestamp)
+                && (reading.point?.horizontalAccuracy ?? .infinity) <= trustedAccuracyMeters
+        }
+        before = readings[..<lower].last(where: trusted)
+        after = readings[lower...].first(where: trusted)
+        let lengths = zip(points, points.dropFirst()).map { meters($0.0, $0.1) }
+        let total = lengths.reduce(0, +)
+        guard total > 0 else { return nil }
+        let startMeters = before?.point.map { position(of: $0, on: points, lengths: lengths) } ?? 0
+        let endMeters = after?.point.map { position(of: $0, on: points, lengths: lengths) } ?? total
+        let startDate = before?.timestamp ?? segment.span.start
+        let endDate = after?.timestamp ?? segment.span.end
+        let duration = endDate.timeIntervalSince(startDate)
+        guard duration > 0 else { return point(atMeters: startMeters, on: points, lengths: lengths) }
+        let progress = min(1, max(0, date.timeIntervalSince(startDate) / duration))
+        // 투영이 잠깐 뒤로 잡혀도 열차는 뒤로 가지 않는다.
+        let target = startMeters + max(0, endMeters - startMeters) * progress
+        return point(atMeters: target, on: points, lengths: lengths)
+    }
+
+    private static func position(of point: GeoPoint, on points: [GeoPoint], lengths: [Double]) -> Double {
+        var best = (distance: Double.infinity, meters: 0.0)
+        var traversed = 0.0
+        let scale = cos(point.latitude * .pi / 180) * 111_320
+        for index in lengths.indices {
+            let ax = (points[index].longitude - point.longitude) * scale, ay = (points[index].latitude - point.latitude) * 111_320
+            let bx = (points[index + 1].longitude - point.longitude) * scale, by = (points[index + 1].latitude - point.latitude) * 111_320
+            let dx = bx - ax, dy = by - ay, square = dx * dx + dy * dy
+            let t = square > 0 ? min(1, max(0, -(ax * dx + ay * dy) / square)) : 0
+            let x = ax + dx * t, y = ay + dy * t, distance = x * x + y * y
+            if distance < best.distance { best = (distance, traversed + lengths[index] * t) }
+            traversed += lengths[index]
+        }
+        return best.meters
+    }
+
+    private static func point(atMeters target: Double, on points: [GeoPoint], lengths: [Double]) -> GeoPoint {
+        var traversed = 0.0
+        for index in lengths.indices {
+            let next = traversed + lengths[index]
+            if target <= next, lengths[index] > 0 {
+                let t = (target - traversed) / lengths[index]
+                let a = points[index], b = points[index + 1]
+                return GeoPoint(
+                    latitude: a.latitude + (b.latitude - a.latitude) * t,
+                    longitude: a.longitude + (b.longitude - a.longitude) * t,
+                    altitude: a.altitude, horizontalAccuracy: a.horizontalAccuracy, verticalAccuracy: a.verticalAccuracy
+                )
+            }
+            traversed = next
+        }
+        return points[points.count - 1]
+    }
+
+    private static func meters(_ a: GeoPoint, _ b: GeoPoint) -> Double {
+        let y = (a.latitude - b.latitude) * 111_320
+        let x = (a.longitude - b.longitude) * 111_320 * cos(a.latitude * .pi / 180)
+        return (x * x + y * y).squareRoot()
+    }
+}
+
+extension RouteConfirmedSubwayIntervalIndex {
+    /// 사용자가 확인했거나 하루 판정이 역 → 역으로 확정한 지하철만 노선을 그린다(SUB1103A01).
+    /// 자동 판정은 `isConfirmed`를 쓰지 않아, 이것만 보면 지하철을 타도 예상 경로가 사라진다.
+    static func hasTrustedSubwayRoute(_ segment: TravelSegment) -> Bool {
+        guard segment.mode == .subway else { return false }
+        return segment.isConfirmed
+            || (segment.confidence == .high
+                && segment.evidence.contains("지하철 노선 후보 확정")
+                && !ActivityClassificationLockEngine.isRememberedOnlySubway(segment))
     }
 }
 

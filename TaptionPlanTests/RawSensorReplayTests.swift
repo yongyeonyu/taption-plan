@@ -61,6 +61,47 @@ final class RawSensorReplayTests: XCTestCase {
         }
     }
 
+    /// 재생할 때 시각마다 화랑이 위치·동작이 어떻게 정해지는지 찍는다(PLB1103A01). `TAPTION_REPLAY_WINDOW`는 "HH:mm-HH:mm".
+    func testDumpPlaybackTimeline() throws {
+        let environment = ProcessInfo.processInfo.environment
+        guard let path = environment["TAPTION_RAW_REPLAY"], !path.isEmpty,
+              let window = environment["TAPTION_REPLAY_WINDOW"] else {
+            throw XCTSkip("TAPTION_REPLAY_WINDOW 없음")
+        }
+        let data = try Data(contentsOf: URL(fileURLWithPath: path))
+        let days = try (try? JSONDecoder().decode([TodaySensorRawExport].self, from: data))
+            ?? [try JSONDecoder().decode(TodaySensorRawExport.self, from: data)]
+        let day = try XCTUnwrap(days.last)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul") ?? .current
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm:ss"
+        formatter.timeZone = calendar.timeZone
+        let parts = window.split(separator: "-").map { $0.split(separator: ":").compactMap { Int($0) } }
+        let minutes = parts.map { $0[0] * 60 + $0[1] }
+        let readings = day.readings.sorted { $0.timestamp < $1.timestamp }
+        let projection = MapHomeWBSPlaybackProjection.make(
+            selectedDate: day.day, places: day.places ?? [], travel: day.travel, readings: readings,
+            actuals: day.actuals ?? [], calendar: calendar
+        )
+        let normalized = readings
+        var date = day.day.addingTimeInterval(Double(minutes[0]) * 60)
+        let end = day.day.addingTimeInterval(Double(minutes[1]) * 60)
+        while date <= end {
+            let frame = projection.frame(at: date, preferredForecastLegIDs: [])
+            let location = MapHomePlaybackLocation.resolveOrGap(
+                at: date, frame: frame, normalizedReadings: normalized, travel: day.travel,
+                places: day.places ?? [], calendar: calendar
+            )
+            let action = MapHomeStickmanActionResolver.action(
+                at: date, actuals: day.actuals ?? [], travel: day.travel, places: day.places ?? [],
+                frequentPlaces: [], readings: readings, sleepSessions: []
+            )
+            print("REPLAY playback \(formatter.string(from: date)) frame=\(frame.map { "\($0.activity)/\($0.mode?.rawValue ?? "-")/\($0.routePhase)/\($0.legID.prefix(12))" } ?? "nil") location=\(location != nil) fallback=\(action)")
+            date = date.addingTimeInterval(30)
+        }
+    }
+
     /// 저장된 이동 구간(예전 규칙)과 분류 패키지 HMM 구간을 분 단위로 맞댄다(RPL1101A01).
     /// `TAPTION_REPLAY_OUT`이 있으면 요약 JSON을 그 경로에 쓴다. 판정은 기록만 하고 단정하지 않는다.
     func testCompareStoredTravelWithClassifierTimeline() throws {

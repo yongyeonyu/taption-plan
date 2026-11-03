@@ -102,16 +102,6 @@ struct RouteConfirmedSubwayIntervalIndex {
             && segment.subwayRoute.map(SubwayStationCatalog.isValid) == true
     }
 
-    /// 사용자가 확인했거나 하루 판정이 역 → 역으로 확정한 지하철만 노선을 그린다(SUB1103A01).
-    /// 자동 판정은 `isConfirmed`를 쓰지 않아, 이것만 보면 지하철을 타도 예상 경로가 사라진다.
-    static func hasTrustedSubwayRoute(_ segment: TravelSegment) -> Bool {
-        guard segment.mode == .subway else { return false }
-        return segment.isConfirmed
-            || (segment.confidence == .high
-                && segment.evidence.contains("지하철 노선 후보 확정")
-                && !ActivityClassificationLockEngine.isRememberedOnlySubway(segment))
-    }
-
     private func segment(
         at date: Date,
         operationCount: inout Int?
@@ -535,7 +525,7 @@ struct MapHomePlaybackLocation: Equatable {
         }
         // 지하철은 확정 여부와 상관없이 노선 위에 올린다. 자동 분류 구간은 `isConfirmed`가
         // 늘 false라, 예전에는 노선이 그려져 있어도 화랑이가 그 구간에서 사라졌다.
-        let subwayPoint = Self.subwayCoordinate(at: date, travel: confirmedTravel)
+        let subwayPoint = Self.subwayCoordinate(at: date, travel: confirmedTravel, readings: normalizedReadings)
         if let point = subwayPoint ?? expectedCoordinate {
             return Self(coordinate: point)
         }
@@ -748,7 +738,7 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
                     coordinates: [source.1, target.1],
                     routePhase: .actual,
                     activity: .movement,
-                    mode: movementMode(source.0, target.0),
+                    mode: MapHomePlaybackLocation.ridingMode(movementMode(source.0, target.0), at: source.0.timestamp, travel: travel),
                     categoryID: "movement"
                 )
             )

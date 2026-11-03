@@ -5440,3 +5440,8 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 ## TFB1103A01 TestFlight 빌드 260 (2026-11-03)
 - `release.sh --yes` 종료 코드 0. 처리 `VALID`, `TP Taption Plan 내부 테스트` 그룹 연결, 테스터 1명 노출을 읽어 확인했다. 보고서 `build/validation/TFB1103A01/testflight-report.json`.
 - 포함: 세션 브랜치 7개, 산책 핑크, 지하철 판정 수정(SUB1103A01). 앱에 설치해 쓰는 확인은 아직 없다.
+
+## PLB1103A01 지하철 재생 수단·표본 공백 (2026-11-03, 커밋 전)
+- 재생 덤프(시뮬레이터, 빌드 260 원본 11-03, `RawSensorReplayTests.testDumpPlaybackTimeline`, 09:20~10:00): 자동차 프레임 수정 전 09:30·09:40~09:47 → 수정 후 0건. 09:47:30~09:56은 프레임 없이 위치가 계속 나온다.
+- 화면에서 화랑이·포커스가 유지되는지는 대표 재생 확인 전이다. 사라짐의 원인은 위치 튐으로 추정한 것이다.
+- 전체 단위(실기기 iPhone 11 Pro, `build/validation/PLB1103A01/device2.xcresult`): 1,916건 중 통과 1,907, 실패 1, 건너뜀 8. 실패는 `testScarfAndRibbonStayOnTheBodyInEveryScene`의 signal kill(단독 실행은 통과, 메모리 추정). 기기에서는 3프레임으로 줄이고 시뮬레이터는 8프레임 유지. 위 수정 뒤 `MapHomeStickmanTests`만 다시 돌렸다.

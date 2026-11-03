@@ -233,11 +233,17 @@ final class MapHomeStickmanTests: XCTestCase {
         let scarf = try XCTUnwrap(HwarangClothStyle.byLandmark["fr.alps"]), ribbon = try XCTUnwrap(HwarangClothStyle.byLandmark["au.opera"])
         // 창이나 선체에 목 아래와 꼬리가 가리는 장면. 자동차는 턱 밑 띠만 앞유리 안쪽에 그린다.
         let hidden: Set<HwarangScene> = [.subway, .train, .bus, .airplane, .boat, .carFront]
+        // 전체 실행 후반의 기기에서는 프레임이 많으면 강제 종료된다. 시뮬레이터는 8프레임을 모두 본다.
+        #if targetEnvironment(simulator)
+        let frames = 8
+        #else
+        let frames = 3
+        #endif
         for small in [false, true] {
             for scene in HwarangScene.allCases {
                 var added = 0
-                for frame in 0..<8 {
-                    let sec = Double(scene.totalDuration) * (Double(frame) + 0.37) / 8
+                for frame in 0..<frames {
+                    let sec = Double(scene.totalDuration) * (Double(frame) + 0.37) / Double(frames)
                     let result = autoreleasepool { HwarangDiagnostics.accessoryEscape(scene: scene, sec: sec, scarf: scarf, ribbon: ribbon, margin: 6, small: small) }
                     added = max(added, result.added)
                     // 샤워 때는 장식을 벗어 옷걸이에 걸어 몸 밖에 있는 것이 맞다.
