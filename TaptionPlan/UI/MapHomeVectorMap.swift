@@ -69,6 +69,15 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         }
     }
 
+    var labelPalette: MapHomeVectorLabels.Palette {
+        switch self {
+        case .night: .night
+        case .contrast: .contrast
+        case .casual: .season(TaptionSeasonStore.current.colors.map)
+        case .rpg: .rpg
+        }
+    }
+
     private var name: String {
         switch self {
         case .night: "Taption Vector Night"
@@ -306,6 +315,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
               "source": "openmaptiles",
               "source-layer": "poi",
               "minzoom": 13,
+              "maxzoom": 14,
               "filter": ["in", "class", "cafe", "restaurant", "bakery", "shop", "supermarket"],
               "paint": {
                 "circle-color": "#8A6A3E",
@@ -313,69 +323,6 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
                 "circle-radius": 3.2,
                 "circle-stroke-color": "#ECDFC0",
                 "circle-stroke-width": 1
-              }
-            },
-            {
-              "id": "rpg-place-label",
-              "type": "symbol",
-              "source": "openmaptiles",
-              "source-layer": "place",
-              "minzoom": 5,
-              "filter": ["in", "class", "city", "town", "village", "suburb", "neighbourhood"],
-              "layout": {
-                "text-field": ["coalesce", ["get", "name:ko"], ["get", "name:en"], ["get", "name"]],
-                "text-font": ["Noto Sans Regular"],
-                "text-size": ["interpolate", ["linear"], ["zoom"], 5, 10, 10, 13, 14, 17],
-                "text-max-width": 8,
-                "text-padding": 4,
-                "text-allow-overlap": false,
-                "text-ignore-placement": false
-              },
-              "paint": {
-                "text-color": "#5A4A2E",
-                "text-halo-color": "#ECDFC0",
-                "text-halo-width": 2.2,
-                "text-halo-blur": 0.15
-              }
-            },
-            {
-              "id": "rpg-road-label",
-              "type": "symbol",
-              "source": "openmaptiles",
-              "source-layer": "transportation_name",
-              "minzoom": 12,
-              "layout": {
-                "symbol-placement": "line",
-                "text-field": ["coalesce", ["get", "name:ko"], ["get", "name:en"], ["get", "name"]],
-                "text-font": ["Noto Sans Regular"],
-                "text-size": ["interpolate", ["linear"], ["zoom"], 12, 9, 16, 12],
-                "text-padding": 3,
-                "text-max-angle": 30,
-                "text-keep-upright": true
-              },
-              "paint": {
-                "text-color": "#6E5B3E",
-                "text-halo-color": "#ECDFC0",
-                "text-halo-width": 1.8,
-                "text-halo-blur": 0.1
-              }
-            },
-            {
-              "id": "rpg-water-label",
-              "type": "symbol",
-              "source": "openmaptiles",
-              "source-layer": "water_name",
-              "minzoom": 10,
-              "layout": {
-                "text-field": ["coalesce", ["get", "name:ko"], ["get", "name:en"], ["get", "name"]],
-                "text-font": ["Noto Sans Regular"],
-                "text-size": ["interpolate", ["linear"], ["zoom"], 10, 10, 14, 14],
-                "text-padding": 4
-              },
-              "paint": {
-                "text-color": "#2F6F90",
-                "text-halo-color": "#86C3E0",
-                "text-halo-width": 1.8
               }
             }
             """#
@@ -416,6 +363,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
           "source": "openmaptiles",
           "source-layer": "poi",
           "minzoom": 13,
+          "maxzoom": 14,
           "filter": ["in", "class", "cafe", "restaurant", "bakery", "shop", "supermarket"],
           "paint": {
             "circle-color": "\#(TaptionSeasonStore.current.colors.map.poi)",
@@ -423,87 +371,6 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
             "circle-radius": 3.2,
             "circle-stroke-color": "\#(TaptionSeasonStore.current.colors.map.halo)",
             "circle-stroke-width": 1
-          }
-        },
-        {
-          "id": "casual-place-label",
-          "type": "symbol",
-          "source": "openmaptiles",
-          "source-layer": "place",
-          "minzoom": 5,
-          "filter": ["in", "class", "city", "town", "village", "suburb", "neighbourhood"],
-          "layout": {
-            "text-field": ["coalesce", ["get", "name:ko"], ["get", "name:en"], ["get", "name"]],
-            "text-font": ["Noto Sans Regular"],
-            "text-size": ["interpolate", ["linear"], ["zoom"], 5, 10, 10, 13, 14, 17],
-            "text-max-width": 8,
-            "text-padding": 4,
-            "text-allow-overlap": false,
-            "text-ignore-placement": false
-          },
-          "paint": {
-            "text-color": "\#(TaptionSeasonStore.current.colors.map.label)",
-            "text-halo-color": "\#(TaptionSeasonStore.current.colors.map.halo)",
-            "text-halo-width": 2.2,
-            "text-halo-blur": 0.15
-          }
-        },
-        {
-          "id": "casual-road-label",
-          "type": "symbol",
-          "source": "openmaptiles",
-          "source-layer": "transportation_name",
-          "minzoom": 12,
-          "layout": {
-            "symbol-placement": "line",
-            "text-field": ["coalesce", ["get", "name:ko"], ["get", "name:en"], ["get", "name"]],
-            "text-font": ["Noto Sans Regular"],
-            "text-size": ["interpolate", ["linear"], ["zoom"], 12, 9, 16, 12],
-            "text-padding": 3,
-            "text-max-angle": 30,
-            "text-keep-upright": true
-          },
-          "paint": {
-            "text-color": "\#(TaptionSeasonStore.current.colors.map.roadLabel)",
-            "text-halo-color": "\#(TaptionSeasonStore.current.colors.map.halo)",
-            "text-halo-width": 1.8,
-            "text-halo-blur": 0.1
-          }
-        },
-        {
-          "id": "casual-water-label",
-          "type": "symbol",
-          "source": "openmaptiles",
-          "source-layer": "water_name",
-          "minzoom": 10,
-          "layout": {
-            "text-field": ["coalesce", ["get", "name:ko"], ["get", "name:en"], ["get", "name"]],
-            "text-font": ["Noto Sans Regular"],
-            "text-size": ["interpolate", ["linear"], ["zoom"], 10, 10, 14, 14],
-            "text-padding": 4
-          },
-          "paint": {
-            "text-color": "\#(TaptionSeasonStore.current.colors.map.waterLabel)",
-            "text-halo-color": "\#(TaptionSeasonStore.current.colors.map.waterHalo)",
-            "text-halo-width": 1.8
-          }
-        },
-        {
-          "id": "casual-park-label",
-          "type": "symbol",
-          "source": "openmaptiles",
-          "source-layer": "park",
-          "minzoom": 12,
-          "layout": {
-            "text-field": ["coalesce", ["get", "name:ko"], ["get", "name:en"], ["get", "name"]],
-            "text-font": ["Noto Sans Regular"],
-            "text-size": ["interpolate", ["linear"], ["zoom"], 12, 9, 15, 12],
-            "text-padding": 4
-          },
-          "paint": {
-            "text-color": "\#(TaptionSeasonStore.current.colors.map.parkLabel)",
-            "text-halo-color": "\#(TaptionSeasonStore.current.colors.map.parkHalo)",
-            "text-halo-width": 1.6
           }
         }
         """#
@@ -522,6 +389,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         }
       },
       "glyphs": "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
+      "sprite": "\#(MapHomeVectorLabels.spriteURL)",
       "layers": [
         {
           "id": "background",
@@ -583,7 +451,8 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
             "line-opacity": ["interpolate", ["linear"], ["zoom"], 5, 0.58, 12, 0.82, 17, 0.96],
             "line-width": ["interpolate", ["linear"], ["zoom"], 5, 0.3, 11, 1.0, 16, 3.5, 20, 10]
           }
-        }\#(casualOverlayLayersJSON)
+        }\#(casualOverlayLayersJSON),
+        \#(MapHomeVectorLabels.json(palette: labelPalette))
       ]
     }
     """#
@@ -825,10 +694,11 @@ struct MapHomeVectorMap: UIViewRepresentable {
             for (id, hex) in [("road-casing", map.casing), ("road", map.road), ("casual-waterway", map.waterway), ("casual-building-outline", map.buildingOutline)] {
                 (style.layer(withIdentifier: id) as? MLNLineStyleLayer)?.lineColor = color(hex)
             }
-            for (id, hex, halo) in [("casual-place-label", map.label, map.halo), ("casual-road-label", map.roadLabel, map.halo), ("casual-water-label", map.waterLabel, map.waterHalo), ("casual-park-label", map.parkLabel, map.parkHalo)] {
-                let layer = style.layer(withIdentifier: id) as? MLNSymbolStyleLayer
-                layer?.textColor = color(hex)
-                layer?.textHaloColor = color(halo)
+            let labels = MapHomeVectorLabels.Palette.season(map)
+            for label in MapHomeVectorLabels.layers {
+                let layer = style.layer(withIdentifier: label.id) as? MLNSymbolStyleLayer
+                layer?.textColor = color(labels.text(label.tone))
+                layer?.textHaloColor = color(labels.halo(label.tone))
             }
             for (id, hex) in [("casual-place-marker", map.marker), ("casual-poi-marker", map.poi)] {
                 let layer = style.layer(withIdentifier: id) as? MLNCircleStyleLayer
@@ -949,6 +819,9 @@ struct MapHomeVectorMap: UIViewRepresentable {
             singleTapGesture = singleTap
             attachTapDependencies(in: mapView)
             updateContent(in: mapView)
+            // 스타일 JSON을 바로 넘기면 스타일 완료 알림이 위임자를 놓기 전에 지나가므로 여기서 건다(MAP1104A01).
+            observeBenchPan(on: mapView)
+            MapHomeVectorDebugCamera.apply(to: mapView)
         }
 
         func detach(from mapView: MLNMapView) {
@@ -1110,7 +983,6 @@ struct MapHomeVectorMap: UIViewRepresentable {
             attachPanGestures(in: mapView)
             attachCameraGestures(in: mapView)
             attachTapDependencies(in: mapView)
-            observeBenchPan(on: mapView)
             publishViewport(from: mapView, force: true)
         }
 

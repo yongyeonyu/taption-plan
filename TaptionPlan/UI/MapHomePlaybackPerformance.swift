@@ -378,6 +378,24 @@ struct MapHomeMarkerProjector {
     }
 }
 
+/// 측정·화면 확인용 카메라(`-debugMapCamera=위도,경도,줌`, MAP1104A01). 실행 인자가 없으면 쓰이지 않는다.
+/// 시작 때 앱의 카메라 명령이 덮어쓰므로 측정이 시작되기 전까지 몇 번 다시 맞춘다.
+@MainActor
+enum MapHomeVectorDebugCamera {
+    static func apply(to mapView: MLNMapView) {
+        guard let argument = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix("-debugMapCamera=") }) else { return }
+        let values = argument.dropFirst("-debugMapCamera=".count).split(separator: ",").compactMap { Double($0) }
+        guard values.count == 3 else { return }
+        let center = CLLocationCoordinate2D(latitude: values[0], longitude: values[1])
+        Task { [weak mapView] in
+            for _ in 0..<4 {
+                mapView?.setCenter(center, zoomLevel: values[2], animated: false)
+                try? await Task.sleep(for: .seconds(6))
+            }
+        }
+    }
+}
+
 /// 측정용 자동 지도 이동(`-autoBenchMapPan`, PRF1030A02). 손가락 팬처럼 프레임마다 지도를 옮기고
 /// 뷰포트를 `force: false`로 내보낸다. 실행 인자가 없으면 쓰이지 않는다. 벡터 지도 코디네이터에서 옮겨 왔다.
 @MainActor

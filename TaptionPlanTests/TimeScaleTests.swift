@@ -4970,6 +4970,7 @@ final class TimeScaleTests: XCTestCase {
             let source = try XCTUnwrap(sources["openmaptiles"] as? [String: Any])
             let layers = try XCTUnwrap(object["layers"] as? [[String: Any]])
             let layerIDs = layers.compactMap { $0["id"] as? String }
+            let labelIDs = MapHomeVectorLabels.layers.map(\.id)
             let expectedLayerIDs: [String]
             switch style {
             case .casual:
@@ -4986,11 +4987,7 @@ final class TimeScaleTests: XCTestCase {
                     "casual-waterway",
                     "casual-place-marker",
                     "casual-poi-marker",
-                    "casual-place-label",
-                    "casual-road-label",
-                    "casual-water-label",
-                    "casual-park-label",
-                ]
+                ] + labelIDs
             case .rpg:
                 expectedLayerIDs = [
                     "background",
@@ -5012,12 +5009,9 @@ final class TimeScaleTests: XCTestCase {
                     "rpg-waterway",
                     "rpg-place-marker",
                     "rpg-poi-marker",
-                    "rpg-place-label",
-                    "rpg-road-label",
-                    "rpg-water-label",
-                ]
+                ] + labelIDs
             default:
-                expectedLayerIDs = baseLayerIDs
+                expectedLayerIDs = baseLayerIDs + labelIDs
             }
 
             XCTAssertEqual(object["version"] as? Int, 8, style.rawValue)
@@ -5036,11 +5030,8 @@ final class TimeScaleTests: XCTestCase {
                 style.rawValue
             )
             XCTAssertEqual(layerIDs, expectedLayerIDs, style.rawValue)
-            XCTAssertEqual(
-                layers.contains { $0["type"] as? String == "symbol" },
-                style == .casual || style == .rpg,
-                style.rawValue
-            )
+            XCTAssertEqual(object["sprite"] as? String, MapHomeVectorLabels.spriteURL, style.rawValue)
+            XCTAssertEqual(layers.filter { $0["type"] as? String == "symbol" }.count, labelIDs.count, style.rawValue)
 
             let background = try XCTUnwrap(
                 layers.first { $0["id"] as? String == "background" }?["paint"]
@@ -5129,6 +5120,60 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(MapDisplayStyle.standard.runtimeStyle, .standard)
         for style in MapDisplayStyle.allCases {
             XCTAssertEqual(style.runtimeStyle, style)
+        }
+    }
+
+    func testMapHomeVectorLabelsPreferKoreanAndCoverEveryNamedLayer() throws {
+        let json = MapHomeVectorStyle.night.json
+        XCTAssertFalse(json.contains("name:en"))
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any])
+        let layers = try XCTUnwrap(object["layers"] as? [[String: Any]])
+        let symbols = layers.filter { $0["type"] as? String == "symbol" }
+        XCTAssertEqual(
+            Set(symbols.compactMap { $0["source-layer"] as? String }),
+            ["housenumber", "transportation_name", "waterway", "poi", "park", "water_name", "mountain_peak", "place", "aerodrome_label"]
+        )
+        for layer in symbols where layer["source-layer"] as? String != "housenumber" {
+            let id = String(describing: layer["id"])
+            let field = try XCTUnwrap((layer["layout"] as? [String: Any])?["text-field"] as? [Any], id)
+            XCTAssertEqual(field[1] as? [String], ["get", "name:ko"], id)
+        }
+        // 역이 가장 먼저 자리를 차지하도록 맨 위에 둔다.
+        XCTAssertEqual(MapHomeVectorLabels.layers.last?.id, "label-station")
+        XCTAssertEqual(Set(MapHomeVectorLabels.layers.map(\.id)).count, MapHomeVectorLabels.layers.count)
+    }
+
+    func testMapHomeVectorLabelColorsStayReadableInEveryStyleAndSeason() throws {
+        func luminance(_ hex: String) throws -> Double {
+            let value = try XCTUnwrap(UInt32(hex.dropFirst().prefix(6), radix: 16), hex)
+            let channels = [value >> 16 & 0xFF, value >> 8 & 0xFF, value & 0xFF].map { channel -> Double in
+                let c = Double(channel) / 255
+                return c <= 0.03928 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4)
+            }
+            return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2]
+        }
+        func contrast(_ a: String, _ b: String) throws -> Double {
+            let (x, y) = try (luminance(a), luminance(b))
+            return (max(x, y) + 0.05) / (min(x, y) + 0.05)
+        }
+        var palettes: [(String, MapHomeVectorLabels.Palette)] = [
+            ("night", .night), ("contrast", .contrast), ("rpg", .rpg),
+        ]
+        // 달마다 하나씩 보면 계절이 섞이는 끝 달(5·8·11·2월)도 들어간다.
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "Asia/Seoul"))
+        for month in 1...12 {
+            let date = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: month, day: 20)))
+            palettes.append(("season-\(month)", .season(TaptionSeason.colors(on: date, calendar: calendar).map)))
+        }
+        for (name, palette) in palettes {
+            for tone in MapHomeVectorLabels.Tone.allCases {
+                // 물·공원은 큰 글자 기준(3:1), 나머지는 본문 기준(4.5:1).
+                let minimum = tone == .water || tone == .park ? 3.0 : 4.5
+                XCTAssertGreaterThanOrEqual(
+                    try contrast(palette.text(tone), palette.halo(tone)), minimum, "\(name) \(tone)"
+                )
+            }
         }
     }
 

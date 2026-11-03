@@ -372,6 +372,7 @@
 		A100000000000000C1102A1D /* TimelineFrameBudgetProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A1D /* TimelineFrameBudgetProbe.swift */; };
 		A100000000000000C1102A1E /* TwoFingerGestureAttachments.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A1E /* TwoFingerGestureAttachments.swift */; };
 		A50000000000000000000001 /* MapHomeVectorMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = F50000000000000000000001 /* MapHomeVectorMap.swift */; };
+		A5000000000000000000A002 /* MapHomeVectorLabels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F50000000000000000000002 /* MapHomeVectorLabels.swift */; };
 		A50000000000000000000002 /* MapLibre in Frameworks */ = {isa = PBXBuildFile; productRef = X50000000000000000000002 /* MapLibre */; };
 		A60000000000000000000001 /* HealthKitTypeCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F60000000000000000000001 /* HealthKitTypeCatalog.swift */; };
 		A60000000000000000000002 /* HealthKitImportStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F60000000000000000000002 /* HealthKitImportStore.swift */; };
@@ -864,6 +865,7 @@
 		F100000000000000C1102A1D /* TimelineFrameBudgetProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineFrameBudgetProbe.swift; sourceTree = "<group>"; };
 		F100000000000000C1102A1E /* TwoFingerGestureAttachments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TwoFingerGestureAttachments.swift; sourceTree = "<group>"; };
 		F50000000000000000000001 /* MapHomeVectorMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeVectorMap.swift; sourceTree = "<group>"; };
+		F50000000000000000000002 /* MapHomeVectorLabels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeVectorLabels.swift; sourceTree = "<group>"; };
 		F60000000000000000000001 /* HealthKitTypeCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitTypeCatalog.swift; sourceTree = "<group>"; };
 		F60000000000000000000002 /* HealthKitImportStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitImportStore.swift; sourceTree = "<group>"; };
 		F60000000000000000000003 /* HealthKitImportCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitImportCoordinator.swift; sourceTree = "<group>"; };
@@ -1199,6 +1201,7 @@
 				F51002000000000000000002 /* MapHomeInteractionPolicy.swift */,
 				F52000000000000000000001 /* MapHomeLiveMapPolicies.swift */,
 				F50000000000000000000001 /* MapHomeVectorMap.swift */,
+				F50000000000000000000002 /* MapHomeVectorLabels.swift */,
 				F1000000000000000000007F /* MapHomeCalendarSheet.swift */,
 				F1FA115C43BF0F705C0CC3E6 /* MapHomeDailyCard.swift */,
 				F1FA11050C8C616822F8DF6B /* MapHomeAlarm.swift */,
@@ -1921,6 +1924,7 @@
 				A51002000000000000000002 /* MapHomeInteractionPolicy.swift in Sources */,
 				A52000000000000000000001 /* MapHomeLiveMapPolicies.swift in Sources */,
 				A50000000000000000000001 /* MapHomeVectorMap.swift in Sources */,
+				A5000000000000000000A002 /* MapHomeVectorLabels.swift in Sources */,
 				A1000000000000000000007F /* MapHomeCalendarSheet.swift in Sources */,
 				A1FA111D146A9C217935CC51 /* MapHomeDailyCard.swift in Sources */,
 				A1FA1128A1FC3A9AF08DED56 /* MapHomeAlarm.swift in Sources */,

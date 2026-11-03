@@ -11,17 +11,23 @@ pull() {
     --source "$SRC" --destination "$OUT/logs" > /dev/null 2>&1 || true
 }
 pull
-BEFORE=$(ls -t "$OUT"/logs/*.gz 2>/dev/null | head -1 || true)
+STARTED=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 xcrun devicectl device process launch --device "$UDID" --terminate-existing com.taption.plan -- -autoBenchMapPan "${EXTRA[@]+"${EXTRA[@]}"}" > "$OUT/launch.log" 2>&1
-# 앱 읽기 대기(25초) → 자동 이동(12초) → 로그 만들기. 새 패키지가 나올 때까지 기다린다.
+# 앱 읽기 대기(25초) → 자동 이동(12초) → 로그 만들기. 앱은 시작 직후에도 패키지를 만들므로
+# 이번 실행의 12초 측정이 들어 있는 패키지가 나올 때까지 기다린다(MAP1104A01).
+F=""
 for _ in $(seq 1 24); do
   sleep 5
   pull
   NEW=$(ls -t "$OUT"/logs/*.gz 2>/dev/null | head -1 || true)
-  [ -n "$NEW" ] && [ "$NEW" != "$BEFORE" ] && break
+  if [ -n "$NEW" ] && gunzip -c "$NEW" | STARTED="$STARTED" python3 -c '
+import json, os, sys
+started = os.environ["STARTED"]
+rows = [json.loads(l) for l in sys.stdin if l.startswith("{") and "bench_pan" in l]
+sys.exit(0 if any(d.get("timestamp", "") > started and d["metrics"]["wall_ms"] > 10000 for d in rows) else 1)
+'; then F="$NEW"; break; fi
 done
-F=$(ls -t "$OUT"/logs/*.gz | head -1)
-[ "$F" != "$BEFORE" ] || { echo "새 로그 패키지가 없습니다" >&2; exit 1; }
+[ -n "$F" ] || { echo "이번 실행의 측정이 든 로그 패키지가 없습니다" >&2; exit 1; }
 gunzip -c "$F" > "$OUT/latest.txt"
 echo "package: $(basename "$F")"
 python3 - "$OUT/latest.txt" <<'PY'
