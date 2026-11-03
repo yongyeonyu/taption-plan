@@ -112,9 +112,10 @@ enum TaptionUITheme: String, CaseIterable, Identifiable, Sendable {
     var id: String { rawValue }
 
     /// 어두운 테마는 유리·시트도 어둡게 그려야 밝은 글자가 읽힌다.
-    var colorScheme: ColorScheme { self == .classic ? .light : .dark }
+    var isDark: Bool { self == .navy || self == .brown }
+    var colorScheme: ColorScheme { isDark ? .dark : .light }
 
-    /// 판타지·애플맵·위성은 기본 양피지, 야간은 남색, 산책은 보라, 실외(고대비)는 갈색.
+    /// 판타지·애플맵·위성은 기본 양피지, 야간은 남색, 산책은 파스텔 핑크, 실외(고대비)는 갈색.
     static func forMap(_ style: MapDisplayStyle) -> TaptionUITheme {
         switch style.runtimeStyle {
         case .mapLibreNight: .navy
@@ -131,13 +132,13 @@ enum TaptionUITheme: String, CaseIterable, Identifiable, Sendable {
         if theme != current { apply(theme) }
     }
 
-    /// 6단 색상표: 가장 어두운 색부터 배경·면·선·강조·보조 글자·글자. 각 지도의 물·도로 색 계열에 맞췄다.
+    /// 6단 색상표: 배경·면·선·강조·보조 글자·글자. 각 지도의 물·도로 색 계열에 맞췄다.
     /// 강조 색은 흰 글자 4.5:1 이상, 면 위 3:1 이상을 지킨다.
     var palette: Palette? {
         switch self {
         case .classic: nil
         case .navy: Self.palette("#0A101E", "#141D33", "#2A3D63", "#2A74C6", "#A9C4E0", "#F5F9FF")
-        case .purple: Self.palette("#191426", "#2A2240", "#4A3E6B", "#7A5FC6", "#CBC0E6", "#F8F5FF")
+        case .purple: Self.palette("#FFF0F5", "#FFE3EC", "#F5BCD0", "#B8487A", "#8A4A68", "#4F2238")
         case .brown: Self.palette("#17130E", "#2A241C", "#54483A", "#99690F", "#D8CBB4", "#FFFBF4")
         }
     }
@@ -178,11 +179,11 @@ extension Color {
     static let classicAccent = Color(red: 168 / 255, green: 68 / 255, blue: 47 / 255)
     /// 사이드바 시간 글자. 어두운 테마에서는 투명도 때문에 회색으로 가라앉아 흰 톤으로 올린다(UIX1101B05, 대표).
     static func tpSidebarTime(_ opacity: Double) -> Color {
-        TaptionUITheme.current.palette == nil ? classicInk.opacity(opacity) : Color.white.opacity(0.8 + opacity * 0.2)
+        TaptionUITheme.current.isDark ? Color.white.opacity(0.8 + opacity * 0.2) : tpInk.opacity(opacity)
     }
     /// 날짜 배지·날짜 줄의 토요일·일요일 글자. 어두운 테마에서는 밝은 파랑·밝은 분홍(UIX1101B06, 대표).
-    static var tpSaturdayText: Color { TaptionUITheme.current.palette == nil ? tpReferenceBlue : Color(hex: "#8CCBFF") }
-    static var tpSundayText: Color { TaptionUITheme.current.palette == nil ? tpHoliday : Color(hex: "#FF9EC4") }
+    static var tpSaturdayText: Color { TaptionUITheme.current.isDark ? Color(hex: "#8CCBFF") : tpReferenceBlue }
+    static var tpSundayText: Color { TaptionUITheme.current.isDark ? Color(hex: "#FF9EC4") : tpHoliday }
     /// 카운터 창 아이콘. 어두운 테마의 액센트는 면과 대비가 2.6~2.9:1이라 보조 글자 색(5.7~6.3:1)을 쓴다.
     static var tpCounterIcon: Color { TaptionUITheme.current.palette?.secondary ?? classicAccent }
 
@@ -202,7 +203,7 @@ extension Color {
     // every legacy surface.
     /// 메뉴 아이콘 색. 지도 양피지와 어울리는 흙빛 계열이고, 어두운 테마에서는 면과 대비가 나도록 밝혀 쓴다.
     static func tpMenuChip(_ hex: String) -> Color {
-        TaptionUITheme.current.palette == nil ? Color(hex: hex) : Color(hex: hex).mix(with: .white, by: 0.42)
+        TaptionUITheme.current.isDark ? Color(hex: hex).mix(with: .white, by: 0.42) : Color(hex: hex)
     }
     static let tpReferenceBlue = Color(hex: "#2D9BF0")
     static let tpReferenceRose = Color(hex: "#F15C80")
@@ -265,8 +266,8 @@ extension Color {
     static var tpFieldFill: Color { TaptionUITheme.current.palette.map { $0.line.opacity(0.3) } ?? Color(red: 0.965, green: 0.965, blue: 0.975) }
     static var tpControlStroke: Color { TaptionUITheme.current.palette?.line ?? Color(red: 0.89, green: 0.89, blue: 0.91) }
     static var tpTrackFill: Color { TaptionUITheme.current.palette.map { $0.line.opacity(0.6) } ?? Color(red: 0.93, green: 0.93, blue: 0.94) }
-    static var tpWarningTint: Color { TaptionUITheme.current.palette == nil ? Color(red: 1.00, green: 0.95, blue: 0.85) : Color(hex: "#4A3A16") }
-    static var tpSuccessTint: Color { TaptionUITheme.current.palette == nil ? Color(red: 0.93, green: 0.96, blue: 0.91) : Color(hex: "#1F3A24") }
+    static var tpWarningTint: Color { TaptionUITheme.current.isDark ? Color(hex: "#4A3A16") : Color(red: 1.00, green: 0.95, blue: 0.85) }
+    static var tpSuccessTint: Color { TaptionUITheme.current.isDark ? Color(hex: "#1F3A24") : Color(red: 0.93, green: 0.96, blue: 0.91) }
 
     init(hex: String) {
         let clean = hex

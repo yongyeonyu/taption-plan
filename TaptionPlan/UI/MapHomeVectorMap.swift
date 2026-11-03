@@ -19,7 +19,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         switch self {
         case .night: "#05070D"
         case .contrast: "#FFFFFF"
-        case .casual: "#FFFEF8"
+        case .casual: "#FFF6F9"
         case .rpg: "#ECDFC0"
         }
     }
@@ -28,7 +28,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         switch self {
         case .night: "#06264D"
         case .contrast: "#0057FF"
-        case .casual: "#9FE3FF"
+        case .casual: "#CFDDF5"
         case .rpg: "#86C3E0"
         }
     }
@@ -37,7 +37,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         switch self {
         case .night: "#0B1424"
         case .contrast: "#CDEBC0"
-        case .casual: "#C9F5B8"
+        case .casual: "#FBE3EA"
         case .rpg: "#DCCB9E"
         }
     }
@@ -46,7 +46,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         switch self {
         case .night: "#13223D"
         case .contrast: "#000000"
-        case .casual: "#FFE0C2"
+        case .casual: "#FFE1EA"
         case .rpg: "#CBAE7C"
         }
     }
@@ -64,7 +64,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         switch self {
         case .night: "#2FD6FF"
         case .contrast: "#D9BE6A"
-        case .casual: "#FFB37F"
+        case .casual: "#F7A8C4"
         case .rpg: "#9A7B4A"
         }
     }
@@ -161,7 +161,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
           "source-layer": "landcover",
           "filter": ["in", "class", "wood", "grass", "scrub"],
           "paint": {
-            "fill-color": "#CDECCF",
+            "fill-color": "#F9DCE6",
             "fill-opacity": 0.72
           }
         },
@@ -171,7 +171,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
           "source": "openmaptiles",
           "source-layer": "park",
           "paint": {
-            "fill-color": "#B8E5B1",
+            "fill-color": "#F5CBDC",
             "fill-opacity": 0.84
           }
         }
@@ -220,7 +220,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
           "minzoom": 13,
           "layout": { "line-cap": "round", "line-join": "round" },
           "paint": {
-            "line-color": "#E5B48D",
+            "line-color": "#F2B8CC",
             "line-opacity": 0.46,
             "line-width": ["interpolate", ["linear"], ["zoom"], 13, 0.35, 17, 1.2]
           }
@@ -391,7 +391,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
           "minzoom": 8,
           "layout": { "line-cap": "round", "line-join": "round" },
           "paint": {
-            "line-color": "#86CFE2",
+            "line-color": "#B9CDEE",
             "line-opacity": 0.78,
             "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.6, 14, 2.8]
           }
@@ -406,7 +406,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
           "paint": {
             "circle-color": "#F28FA9",
             "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 2.4, 10, 3.8, 14, 5.5],
-            "circle-stroke-color": "#FFF8EC",
+            "circle-stroke-color": "#FFF6F9",
             "circle-stroke-width": 1.5
           }
         },
@@ -418,10 +418,10 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
           "minzoom": 13,
           "filter": ["in", "class", "cafe", "restaurant", "bakery", "shop", "supermarket"],
           "paint": {
-            "circle-color": "#B965C8",
+            "circle-color": "#C77BB0",
             "circle-opacity": 0.68,
             "circle-radius": 3.2,
-            "circle-stroke-color": "#FFF8EC",
+            "circle-stroke-color": "#FFF6F9",
             "circle-stroke-width": 1
           }
         },
@@ -442,8 +442,8 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
             "text-ignore-placement": false
           },
           "paint": {
-            "text-color": "#6B5B53",
-            "text-halo-color": "#FFF8EC",
+            "text-color": "#7A4A60",
+            "text-halo-color": "#FFF6F9",
             "text-halo-width": 2.2,
             "text-halo-blur": 0.15
           }
@@ -464,8 +464,8 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
             "text-keep-upright": true
           },
           "paint": {
-            "text-color": "#8A6C5C",
-            "text-halo-color": "#FFF8EC",
+            "text-color": "#8F5A72",
+            "text-halo-color": "#FFF6F9",
             "text-halo-width": 1.8,
             "text-halo-blur": 0.1
           }
@@ -483,8 +483,8 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
             "text-padding": 4
           },
           "paint": {
-            "text-color": "#5B93A2",
-            "text-halo-color": "#BFE8F0",
+            "text-color": "#5F7FB0",
+            "text-halo-color": "#DCE6F8",
             "text-halo-width": 1.8
           }
         },
@@ -501,8 +501,8 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
             "text-padding": 4
           },
           "paint": {
-            "text-color": "#5A8F65",
-            "text-halo-color": "#B8E5B1",
+            "text-color": "#A8557E",
+            "text-halo-color": "#F5CBDC",
             "text-halo-width": 1.6
           }
         }

@@ -6050,7 +6050,15 @@ final class TaptionUIThemeMapTests: XCTestCase {
         XCTAssertEqual(TaptionUITheme.forMap(.hybrid), .classic)
     }
 
-    func testDarkPalettesKeepReadableContrast() throws {
+    func testWalkThemeIsLightPink() throws {
+        XCTAssertEqual(TaptionUITheme.purple.colorScheme, .light)
+        XCTAssertFalse(TaptionUITheme.purple.isDark)
+        XCTAssertTrue(TaptionUITheme.navy.isDark)
+        XCTAssertTrue(TaptionUITheme.brown.isDark)
+        XCTAssertFalse(TaptionUITheme.classic.isDark)
+    }
+
+    func testPalettesKeepReadableContrast() throws {
         for theme in [TaptionUITheme.navy, .purple, .brown] {
             let palette = try XCTUnwrap(theme.palette)
             XCTAssertGreaterThanOrEqual(contrast(.white, palette.accent), 4.5, "\(theme) 강조 위 흰 글자")
