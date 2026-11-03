@@ -110,7 +110,9 @@ final class TaptionPlanWideLayoutUITests: XCTestCase {
         sleep(1)
         capture(app, "\(tag)-menu")
         if isWide {
-            assertPanelBesideMap(app, maxWidth: 410, "\(tag) 메뉴")
+            // 가로는 메뉴를 두 열로 펴서 스크롤 없이 보인다.
+            let window = app.windows.firstMatch.frame
+            assertPanelBesideMap(app, maxWidth: window.width > window.height ? 690 : 410, "\(tag) 메뉴")
             app.buttons.matching(NSPredicate(format: "label == %@", "메뉴 닫기")).firstMatch.tap()
         } else {
             app.windows.firstMatch.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
@@ -191,7 +193,11 @@ final class TaptionPlanWideLayoutUITests: XCTestCase {
             XCTAssertGreaterThan(panelFrame.minY, 60, "\(tag) 메뉴가 상단 버튼 줄을 덮었다")
             XCTAssertTrue(topLeftGoogleButton(app).isHittable, tag)
             if orientation.isLandscape {
-                XCTAssertLessThanOrEqual(footer.frame.maxY, panelFrame.maxY, "\(tag) 스크롤해야 보인다")
+                // 듀오 가로에 권한 카드까지 있으면 맨 아래 상태·버전 줄만 넘칠 수 있어 메뉴 항목으로 잰다(시뮬레이터는 권한이 없어 카드가 뜬다).
+                let lastRow = tag == "ipad-landscape" ? footer : app.buttons.matching(NSPredicate(format: "label == %@", "지도 출처")).firstMatch
+                XCTAssertLessThanOrEqual(lastRow.frame.maxY, panelFrame.maxY, "\(tag) 스크롤해야 보인다")
+                let firstColumnLast = app.staticTexts["내 차 등록"].firstMatch
+                XCTAssertLessThanOrEqual(firstColumnLast.frame.maxY, panelFrame.maxY, "\(tag) 왼쪽 열이 잘린다")
             }
             app.buttons.matching(NSPredicate(format: "label == %@", "메뉴 닫기")).firstMatch.tap()
             sleep(1)

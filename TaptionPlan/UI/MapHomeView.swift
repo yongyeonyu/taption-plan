@@ -6736,7 +6736,7 @@ struct MapHomeView: View {
             }
             .padding(.bottom, 8)
 
-            if !sensorCollectionPermissionGate.sensorCollectionReady {
+            if !sensorCollectionPermissionGate.sensorCollectionReady, menuPanelKind.columns == 1 {
                 sensorPermissionCard
                     .padding(.bottom, 10)
             }
@@ -6755,7 +6755,6 @@ struct MapHomeView: View {
                 menuGroupDivider
                 TaptionFontMenuRow(language: language)
             }
-            } trailing: {
             menuGroupLabel(language.text("연결", "Connections"))
             menuGroupCard {
                 appleWatchMenuItem
@@ -6763,6 +6762,8 @@ struct MapHomeView: View {
                 // 차량 오디오(블루투스·CarPlay)가 연결된 이동은 자동차로 확정한다(CAR1029A01).
                 menuRowButton("car.fill", language.text("내 차 등록", "My car"), tint: .tpMenuChip("#4F86B8")) { isCarAudioSheetPresented = true }
             }
+            } trailing: {
+            if !sensorCollectionPermissionGate.sensorCollectionReady, menuPanelKind.columns > 1 { sensorPermissionCard.padding(.bottom, 10) }
             menuGroupLabel(language.text("앱", "App"))
             menuGroupCard {
                 settingsMenuItem

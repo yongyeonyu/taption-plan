@@ -343,9 +343,13 @@ extension View {
         let width = UserDefaults.standard.double(forKey: "debugViewportWidth")
         if width > 0 {
             let height = UserDefaults.standard.double(forKey: "debugViewportHeight")
-            frame(width: width, height: height > 0 ? height : nil)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .background(Color.black)
+            if height > 0 {
+                frame(width: width, height: height)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .background(Color.black)
+            } else {
+                frame(width: width).frame(maxWidth: .infinity, alignment: .leading).background(Color.black)
+            }
         } else {
             self
         }
