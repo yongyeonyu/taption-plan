@@ -1,19 +1,6 @@
 import SwiftUI
 
 /// 세 줄의 너비. 대분류가 가장 넓고, 센서 원본과 상세활동이 오른쪽에 나란히 선다.
-struct NLELaneWidths {
-    let main: CGFloat
-    /// 상세활동과 합쳐 따로 칸을 두지 않는다(NLE1103A01).
-    let sensor: CGFloat = 0
-    let detail: CGFloat
-
-    init(total: CGFloat, gutter: CGFloat, gap: CGFloat) {
-        let usable = max(90, total - gutter - gap * 2)
-        main = max(40, (usable * 0.5).rounded())
-        detail = max(26, usable - main)
-    }
-}
-
 /// 상세활동 구간에 겹친 센서 근거 한 줄(NLE1103A01).
 enum NLESensorEvidenceText {
     static func summary(_ segments: [MapHomeNLESensorSegment], start: Int, end: Int, categoryID: String) -> (text: String, differs: Bool) {
@@ -28,48 +15,6 @@ enum NLESensorEvidenceText {
                 && $0.behavior != MotionKind.stationary.rawValue
         }
         return (titles.prefix(6).joined(separator: " · "), differs)
-    }
-}
-
-struct NLERawDetail: Identifiable, Equatable {
-    let id = UUID()
-    let title: String
-    let lines: [String]
-}
-
-/// 고른 시각에 가장 가까운 측정값 하나의 모든 값을 줄 단위로 보여 준다.
-struct NLERawDetailSheet: View {
-    let detail: NLERawDetail
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text(detail.title)
-                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(18)), weight: .bold))
-                .foregroundStyle(Color.tpInk)
-                .padding(.horizontal, 20)
-                .padding(.top, 26)
-                .padding(.bottom, 12)
-            ScrollView {
-                VStack(spacing: 0) {
-                    ForEach(Array(detail.lines.enumerated()), id: \.offset) { index, line in
-                        if index > 0 { Divider().padding(.leading, 16) }
-                        Text(line)
-                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .medium))
-                            .foregroundStyle(Color.tpInk)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
-                    }
-                }
-                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .padding(.horizontal, 20)
-                .padding(.bottom, 24)
-            }
-        }
-        .background(Color.tpBackground)
-        .presentationDetents([.medium, .large])
-        .presentationDragIndicator(.visible)
-        .accessibilityIdentifier("mapHomeNLERawDetailSheet")
     }
 }
 

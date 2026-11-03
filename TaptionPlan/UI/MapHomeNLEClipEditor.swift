@@ -3,7 +3,7 @@ import SwiftUI
 /// 행동 구간을 동영상 편집기(NLE)처럼 다루는 화면.
 ///
 /// * 대분류는 하루 24시간을 빈틈없이 채우는 전체 클립이다.
-/// * 상세활동은 고른 클립 아래 서브클립 줄에 놓인다.
+/// * 왼쪽 줄은 머문 장소, 오른쪽 줄은 비어 있다. 재생 헤드는 눈금 띠의 핸들로 움직인다.
 /// * 클립을 끌어 옮기고, 양 끝을 잡아 자르고, 재생 헤드에서 가르고, 지운다.
 /// * 모든 편집은 원본 구간 안에서만 일어나고, 적용할 때 원본 구간별로 한 번에 저장된다.
 struct MapHomeNLEClipEditor: View {
@@ -54,16 +54,12 @@ struct MapHomeNLEClipEditor: View {
     /// 가장자리 자동 스크롤 타이머와 방향.
     @State private var scrollTask: Task<Void, Never>?
     @State private var scrollDirection: CGFloat = 0
-    /// 센서 원본이나 상세활동에서 집어 든 결과. 대분류에 바로 반영할 수 있다.
-    @State private var pick: NLEPick?
-    /// 센서 원본 다섯 줄을 펼쳤는가. 평소에는 한 줄로 접어 클립 칸을 넓힌다.
     /// 클립 옆 빠른 메뉴를 띄운 분. 끌기 시작하면 닫는다.
     @State private var quickMenuMinute: Int?
-    @State var sensorEvidence: [MapHomeNLESensorSegment] = []
-    /// 센서 원본 줄을 세운 그날의 측정값. 고른 시각의 원본 값을 풀어 보여 주는 데 쓴다.
-    @State private var sensorReadings: [SensorReading] = []
-    /// 「원본 값」 창에 보일 내용.
-    @State private var rawDetail: NLERawDetail?
+    /// 장소 줄. 머문 기록에서 파생한 읽기 전용 값이다(NLE1104A01).
+    @State var placeSegments: [NLEPlaceSegment] = []
+    /// 핸들을 잡을 때의 재생 헤드와 손가락 자리(분).
+    @State private var scrubAnchor: (playhead: Double, touch: Double)?
     /// 전체 덮기 창. 여러 개로 나뉜 클립을 한 번에 같은 분류로 바꾼다.
     @State private var isOverwritePresented = false
     /// 경계 손잡이를 이웃의 먼 쪽 끝까지 가져갔을 때 묻는 합치기 확인.
@@ -103,7 +99,7 @@ struct MapHomeNLEClipEditor: View {
 
     var body: some View {
         // 하루는 위에서 아래로 흐른다. 왼쪽 눈금 옆으로 세 줄이 나란히 선다:
-        // 내가 고치는 대분류, 센서가 그대로 기록한 원본, 그리고 상세활동 기록.
+        // 머문 장소, 내가 고치는 대분류, 그리고 아직 비어 있는 줄.
         //
         // 클립 줄만 화면 밖까지 넓혀 그린다. 하루가 화면 폭에 끼어 잘리는 대신
         // 위아래로 끝없이 이어지는 타임라인처럼 보이게 하려는 것이다. 머리말·
@@ -144,13 +140,10 @@ struct MapHomeNLEClipEditor: View {
         .padding(.bottom, 10)
         .background(Color.tpBackground.ignoresSafeArea())
         .task(id: date) {
-            let loaded = await loadSensorEvidence()
-            sensorEvidence = loaded.segments
-            sensorReadings = loaded.readings
-            installSubActivities(await NLEDayWindow.loadSubActivities(model: model, date: date, segments: segments))
-        }
-        .sheet(item: $rawDetail) { detail in
-            NLERawDetailSheet(detail: detail)
+            let dayStart = Calendar.autoupdatingCurrent.startOfDay(for: date)
+            let places = await NLEDayWindow.loadPlaces(model: model, date: date)
+            placeSegments = placeSegments.filter { $0.startMinute < 0 }
+                + NLEPlaceLane.segments(places: places, dayStart: dayStart)
         }
         .alert(
             language.text("합칠까요?", "Merge?"),
@@ -247,23 +240,17 @@ struct MapHomeNLEClipEditor: View {
 
     /// 줄 이름표. 타임라인과 같은 너비 계산을 써서 세로줄과 딱 맞춘다.
     func laneHeader(width: CGFloat) -> some View {
-        let lanes = NLELaneWidths(total: width, gutter: gutterWidth, gap: laneGap)
+        let lanes = laneWidths(width)
         return HStack(spacing: laneGap) {
             Color.clear.frame(width: gutterWidth, height: 1)
+            laneTitle(language.text("장소", "Place"), width: lanes.place)
             laneTitle(language.text("대분류", "Main"), width: lanes.main)
-                .overlay(alignment: .trailing) {
-                    if differingSegmentCount > 0 {
-                        Text("\(differingSegmentCount)")
-                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .bold))
-                            .foregroundStyle(Color.tpAccent)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1)
-                            .background(Color.tpAccent.opacity(0.14), in: Capsule())
-                    }
-                }
-            Color.clear.frame(width: lanes.sensor, height: 1)
-            laneTitle(language.text("상세·센서", "Details · sensor"), width: lanes.detail)
+            Color.clear.frame(width: lanes.right, height: 1)
         }
+    }
+
+    private func laneWidths(_ width: CGFloat) -> NLELaneWidths {
+        NLELaneWidths(total: width, gutter: gutterWidth, gap: laneGap, overflow: Self.railBleed * 2)
     }
 
     private func laneTitle(_ text: String, width: CGFloat) -> some View {
@@ -273,18 +260,6 @@ struct MapHomeNLEClipEditor: View {
             .lineLimit(1)
             .minimumScaleFactor(0.7)
             .frame(width: width, alignment: .leading)
-    }
-
-    /// 센서 기록과 달라진 구간 수. 이름표 옆에 작게 붙는다.
-    private var differingSegmentCount: Int { differingSegments.count }
-
-    private var differingSegments: [MapHomeNLESensorSegment] {
-        sourceSegments.filter { $0.channel.isRestorable }.filter { segment in
-            let last = max(segment.startMinute, segment.endMinute - 1)
-            return [segment.startMinute, last].contains { minute in
-                track.clip(atMinute: minute)?.option.categoryID != segment.categoryID
-            }
-        }
     }
 
     /// 누른 클립 옆에 뜨는 분류·가르기·지우기 알약.
@@ -307,18 +282,15 @@ struct MapHomeNLEClipEditor: View {
         }
     }
 
-    /// 센서 원본 열 머리: 줄마다 아이콘으로 무슨 정보인지 알린다(움직임·헬스·화면·연결·장소).
     /// 하루 24시간을 세로로 세운 타임라인.
     ///
     /// 위에서 아래로 시간이 흐르고, 클립은 하루를 빈틈없이 채우며 쌓인다.
-    /// 대분류만 고칠 수 있고, 센서 원본은 그대로 두고 견주어 보는 줄이다.
+    /// 대분류만 고칠 수 있고, 장소는 머문 기록을 보여 주기만 하며, 오른쪽 줄은 비어 있다.
     var verticalRail: some View {
         GeometryReader { proxy in
             let width = max(1, proxy.size.width)
             let height = max(120, proxy.size.height)
-            let lanes = NLELaneWidths(total: width, gutter: gutterWidth, gap: laneGap)
-            let sensorX = gutterWidth + lanes.main + laneGap
-            let detailX = sensorX + lanes.sensor + laneGap
+            let lanes = laneWidths(width)
             let geometry = NLETimelineGeometry(
                 minuteWidth: minuteHeight,
                 visibleStartMinute: visibleStartMinute,
@@ -327,12 +299,13 @@ struct MapHomeNLEClipEditor: View {
             ZStack(alignment: .topLeading) {
                 Color.tpSurface
                 hourGrid(geometry: geometry, width: width)
-                laneDivider(at: sensorX - laneGap / 2, height: height)
-                mainColumn(geometry: geometry, x: gutterWidth, width: lanes.main)
-                sourceColumn(geometry: geometry, x: detailX, width: lanes.detail)
-                detailColumn(geometry: geometry, x: detailX, width: lanes.detail)
+                laneDivider(at: lanes.mainX - laneGap / 2, height: height)
+                laneDivider(at: lanes.rightX - laneGap / 2, height: height)
+                placeColumn(geometry: geometry, x: lanes.placeX, width: lanes.place)
+                mainColumn(geometry: geometry, x: lanes.mainX, width: lanes.main)
                 playheadLine(geometry: geometry, width: width)
-                quickMenu(geometry: geometry, x: gutterWidth, width: lanes.main, height: height)
+                playheadHandle(geometry: geometry, minute: playheadMinute)
+                quickMenu(geometry: geometry, x: lanes.mainX, width: lanes.main, height: height)
             }
             // 줄 안의 클립이 화면 밖까지 길어도 카드 밖으로 새지 않게 크기를 못 박는다.
             .frame(width: width, height: height, alignment: .topLeading)
@@ -347,11 +320,6 @@ struct MapHomeNLEClipEditor: View {
             .onAppear {
                 containerHeight = height
                 fitWholeDayIfNeeded(height: height)
-                #if DEBUG
-                if ProcessInfo.processInfo.arguments.contains("-nlePick"), pick == nil {
-                    pick = sensorSegment(atMinute: playheadMinute).map { .sensor($0.id, playheadMinute) }
-                }
-                #endif
             }
             .onChange(of: height) { _, newValue in
                 containerHeight = newValue
@@ -454,41 +422,18 @@ struct MapHomeNLEClipEditor: View {
     }
 
     private func playheadLine(geometry: NLETimelineGeometry, width: CGFloat) -> some View {
-        let y = geometry.y(forMinute: Double(playheadMinute))
-        return ZStack(alignment: .leading) {
-            Rectangle()
-                .fill(Color.tpAccent)
-                .frame(width: width, height: 1.5)
-            Text(Self.minuteLabel(playheadMinute))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .bold, design: .monospaced))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 5)
-                .padding(.vertical, 2)
-                .background(Color.tpAccent, in: Capsule())
-                .offset(x: gutterWidth + 12, y: -9)
-        }
-        .frame(width: width, height: 1.5, alignment: .leading)
-        .offset(y: y - 0.75)
-        .allowsHitTesting(false)
+        Rectangle()
+            .fill(Color.tpAccent)
+            .frame(width: max(0, width - gutterWidth), height: 1.5)
+            .offset(x: gutterWidth, y: geometry.y(forMinute: Double(playheadMinute)) - 0.75)
+            .allowsHitTesting(false)
     }
 
     // MARK: - 선택 정보
 
-    /// 집어 든 결과. 센서 원본 구간이거나 상세활동 기록이다.
-    private enum NLEPick: Equatable {
-        /// 센서 원본 구간(id)과 누른 분.
-        case sensor(String, Int)
-        /// 구간은 없지만 그 분의 원본 값을 보고 싶을 때.
-        case sensorMinute(Int)
-        case detail(String)
-    }
-
     var selectionSummary: some View {
-        let clip = selectedClip
-        return HStack(spacing: 8) {
-            if let pick {
-                pickRow(pick)
-            } else if let clip {
+        HStack(spacing: 8) {
+            if let clip = selectedClip {
                 Circle()
                     .fill(Self.tint(for: clip.option.categoryID))
                     .frame(width: 10, height: 10)
@@ -498,30 +443,9 @@ struct MapHomeNLEClipEditor: View {
                 Text(Self.rangeLabel(clip.startMinute, clip.endMinute))
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
                     .foregroundStyle(Color.tpSecondary)
-                if let sensor = sensorSegment(atMinute: clip.startMinute),
-                   sensor.categoryID != clip.option.categoryID {
-                    // 센서는 이렇게 기록했는데 지금은 다르다. 눌러서 되돌린다.
-                    Button {
-                        self.pick = .sensor(sensor.id, clip.startMinute)
-                    } label: {
-                        HStack(spacing: 3) {
-                            Image(systemName: "arrow.uturn.backward")
-                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(8)), weight: .bold))
-                            Text(language.text("센서 \(sensor.title)", "Sensor \(sensor.title)"))
-                                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold))
-                                .lineLimit(1)
-                        }
-                        .foregroundStyle(Color.tpAccent)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
-                        .background(Color.tpAccent.opacity(0.12), in: Capsule())
-                    }
-                    .buttonStyle(.plain)
-                } else {
-                    Text(Self.durationLabel(clip.lengthMinutes, language: language))
-                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
-                        .foregroundStyle(Color.tpSecondary)
-                }
+                Text(Self.durationLabel(clip.lengthMinutes, language: language))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
+                    .foregroundStyle(Color.tpSecondary)
                 if clip.isGap {
                     Text(language.text("미확인", "Unconfirmed"))
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold))
@@ -541,113 +465,6 @@ struct MapHomeNLEClipEditor: View {
                 .foregroundStyle(Color.tpAccent)
         }
         .frame(height: Self.selectionRowHeight)
-    }
-
-    @ViewBuilder
-    private func pickRow(_ pick: NLEPick) -> some View {
-        switch pick {
-        case .sensor(let id, let minute):
-            if let segment = sourceSegments.first(where: { $0.id == id }) {
-                pickContent(
-                    tint: Self.sensorTint(segment),
-                    lane: segment.channel.title(language),
-                    title: segment.title,
-                    range: Self.rangeLabel(segment.startMinute, segment.endMinute),
-                    rawMinute: minute,
-                    apply: segment.channel.isRestorable ? { restoreSensorSegment(segment) } : nil
-                )
-            }
-        case .sensorMinute(let minute):
-            pickContent(
-                tint: Color.tpSecondary,
-                lane: language.text("센서 원본", "Sensor"),
-                title: language.text("이 시각의 원본 값", "Raw values at this time"),
-                range: Self.minuteLabel(minute),
-                rawMinute: minute,
-                apply: nil
-            )
-        case .detail(let id):
-            if let sub = subTrack.clip(id) {
-                pickContent(
-                    tint: Self.tint(for: sub.option.categoryID),
-                    lane: subProvenance[sub.id]?.origin == .manual
-                        ? language.text("상세 · 수동", "Details · manual")
-                        : language.text("상세 · 자동", "Details · auto"),
-                    title: sub.option.title,
-                    range: Self.rangeLabel(sub.startMinute, sub.endMinute),
-                    rawMinute: nil,
-                    apply: { promoteDetail(sub) }
-                )
-            }
-        }
-    }
-
-    private func pickContent(
-        tint: Color,
-        lane: String,
-        title: String,
-        range: String,
-        rawMinute: Int?,
-        apply: (() -> Void)?
-    ) -> some View {
-        HStack(spacing: 7) {
-            Circle()
-                .fill(tint)
-                .frame(width: 9, height: 9)
-            Text(lane)
-                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold))
-                .foregroundStyle(Color.tpSecondary)
-                .lineLimit(1)
-            Text(title)
-                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))
-                .lineLimit(1)
-            Text(range)
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold, design: .monospaced))
-                .foregroundStyle(Color.tpSecondary)
-                .lineLimit(1)
-            if let rawMinute {
-                Button {
-                    showRawValues(atMinute: rawMinute)
-                } label: {
-                    Image(systemName: "list.bullet.rectangle")
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))
-                        .foregroundStyle(Color.tpAccent)
-                        .frame(width: TaptionMenuMetrics.minimumHitSize, height: TaptionMenuMetrics.minimumHitSize)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(language.text("원본 값 보기", "Show raw values"))
-            }
-            if let apply {
-            Button(action: apply) {
-                HStack(spacing: 3) {
-                    Image(systemName: "arrow.down.to.line")
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold))
-                    Text(language.text("반영", "Use"))
-                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
-                        .lineLimit(1)
-                        .fixedSize()
-                }
-                .foregroundStyle(.white)
-                .padding(.horizontal, 12)
-                .frame(minWidth: 64, minHeight: TaptionMenuMetrics.minimumHitSize)
-                .background(Color.tpAccent, in: Capsule())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(language.text("이 구간을 대분류로 반영", "Use this range as main"))
-            }
-            Button {
-                self.pick = nil
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
-                    .foregroundStyle(Color.tpSecondary)
-                    .frame(width: TaptionMenuMetrics.minimumHitSize, height: TaptionMenuMetrics.minimumHitSize)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(language.text("집기 취소", "Cancel pick"))
-        }
     }
 
     // MARK: - 도구
@@ -806,7 +623,7 @@ struct MapHomeNLEClipEditor: View {
                     let deltaMinutes = Double(value.location.y - panAnchorY) / Double(max(0.01, minuteHeight))
                     setVisibleStart(panBaseStartMinute - deltaMinutes)
                 case .scrub:
-                    playheadMinute = min(max(minute, track.rangeStartMinute), track.rangeEndMinute)
+                    applyScrub(rawMinute: rawMinute)
                 case let .move(lane, id, originMinute, grabMinute):
                     // 몸통은 0.4초를 누르고 있어야 집어 든다(BOKKI STUDIO 계약).
                     guard isLifted else { break }
@@ -833,11 +650,12 @@ struct MapHomeNLEClipEditor: View {
                     switch dragMode {
                     case let .trimStart(lane, id): applyTrim(lane: lane, id: id, edge: .start, minute: minute)
                     case let .trimEnd(lane, id): applyTrim(lane: lane, id: id, edge: .end, minute: minute)
+                    case .scrub: applyScrub(rawMinute: geometry.minute(forY: value.location.y) + dragScrollShift)
                     default: break
                     }
                 }
                 if !leftSlop, dragMode != .scrub, dragMode != .none {
-                    handleTap(at: value.startLocation, geometry: geometry, width: width)
+                    handleTap(at: value.startLocation, geometry: geometry)
                 }
                 // 제자리로 돌아와 손을 떼면 되돌리기 한 칸을 남기지 않는다(BOKKI STUDIO 계약).
                 if didPushUndoForDrag, let before = undoStack.last, before.main == track.snapshot(),
@@ -848,6 +666,22 @@ struct MapHomeNLEClipEditor: View {
                 if mergePrompt == nil { askToMergeIfReachedNeighborEnd() }
                 resetDragState()
             }
+    }
+
+    /// 핸들을 잡은 자리에서 손이 움직인 만큼만 재생 헤드를 옮긴다. 세그먼트 경계에 다가가면 붙는다.
+    private func applyScrub(rawMinute: Double) {
+        let anchor = scrubAnchor ?? (Double(playheadMinute), rawMinute)
+        scrubAnchor = anchor
+        let next = NLEPlayheadPolicy.minute(
+            raw: anchor.playhead + rawMinute - anchor.touch,
+            track: track,
+            minuteHeight: minuteHeight
+        )
+        guard next != playheadMinute else { return }
+        playheadMinute = next
+        if NLEPlayheadPolicy.isSegmentBoundary(next, track: track) {
+            UISelectionFeedbackGenerator().selectionChanged()
+        }
     }
 
     private func applyTrim(lane: NLEEditorLane, id: String, edge: NLEClipEdge, minute: Int) {
@@ -866,6 +700,7 @@ struct MapHomeNLEClipEditor: View {
         dragScrollShift = 0
         touchLeftTapSlop = false
         selectedAtTouchStart = nil
+        scrubAnchor = nil
     }
 
     /// 대분류 경계를 끌어 한쪽 클립이 최소 길이까지 눌린 채 손을 뗐으면 "합칠까요?"를 묻는다.
@@ -1031,7 +866,7 @@ struct MapHomeNLEClipEditor: View {
                 "Pinch to zoom · grab an edge to trim"
             )
         }
-        return language.text("대분류 · 상세·센서", "Main · details · sensor")
+        return language.text("장소 · 대분류", "Place · main")
     }
 
     private var isFittedToWholeDay: Bool {
@@ -1104,7 +939,7 @@ struct MapHomeNLEClipEditor: View {
         }
     }
 
-    /// 몸통을 잡았으면 0.4초를 세어 집어 든다. 경계 다듬기와 재생 헤드는 곧바로 움직인다.
+    /// 몸통을 잡았으면 0.4초를 세어 집어 들고 그때 고른다. 경계 다듬기와 재생 헤드는 곧바로 움직인다.
     private func beginLiftHoldIfNeeded() {
         guard case let .move(lane, id, originMinute, _) = dragMode else { return }
         reorderCandidate = dragMode
@@ -1114,6 +949,7 @@ struct MapHomeNLEClipEditor: View {
             // 집어 든 뒤에는 지금 손가락 아래를 기준으로 삼아 클립이 튀지 않게 한다.
             dragMode = .move(lane: lane, id: id, originMinute: originMinute, grabMinute: lastDragMinute)
             isLifted = true
+            selectedClipID = id
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         }
     }
@@ -1130,54 +966,40 @@ struct MapHomeNLEClipEditor: View {
         return id
     }
 
+    /// 손을 댄 자리로 이번 끌기의 뜻을 정한다. 여기서는 아무것도 고르지 않는다.
+    /// 재생 헤드는 핸들로, 경계 다듬기는 고른 클립으로만 받고 나머지 끌기는 화면을 민다.
     private func resolveDragMode(
         at point: CGPoint,
         geometry: NLETimelineGeometry,
         width: CGFloat
     ) -> NLEEditorDragMode {
-        let minute = Int(geometry.minute(forY: point.y).rounded())
-        // 왼쪽 눈금 띠를 끌면 재생 헤드가 움직인다.
-        if point.x <= gutterWidth { return .scrub }
-        // 재생 헤드 선을 잡으면 어느 줄에서든 헤드가 따라온다. 다만 손가락이 클립 경계에
-        // 닿아 있으면 자르기가 먼저다. 경계에서 가르고 바로 다듬는 흐름이 막히면 안 된다.
-        if abs(geometry.y(forMinute: Double(playheadMinute)) - point.y) <= 9,
-           !isNearClipBoundary(at: point, geometry: geometry) {
-            return .scrub
-        }
-        let lanes = NLELaneWidths(total: width, gutter: gutterWidth, gap: laneGap)
-        let sensorX = gutterWidth + lanes.main + laneGap
-        // 상세·센서 칸은 읽기 전용이다. 끌면 화면만 움직이고, 누르면 값을 본다(NLE1103A02).
-        if point.x >= sensorX - laneGap {
-            selectedSubClipID = nil
-            if let clip = track.clip(atMinute: minute) { selectedClipID = clip.id }
+        switch laneWidths(width).lane(atX: point.x) {
+        case .gutter:
+            let playheadY = geometry.y(forMinute: Double(playheadMinute))
+            return NLEPlayheadPolicy.grabsHandle(touchY: point.y, playheadY: playheadY) ? .scrub : .pan
+        case .place, .right:
             return .pan
+        case .main:
+            break
         }
-        guard let clip = track.clip(atMinute: minute) else {
-            selectedSubClipID = nil
-            return .pan
+        if let selectedClip, let trim = trimMode(at: point, clip: selectedClip, geometry: geometry) {
+            return trim
         }
-        selectedClipID = clip.id
-        selectedSubClipID = nil
-        // 경계는 고르지 않은 클립이라도 바로 다듬기다(BOKKI STUDIO 계약: 경계=Trim, 몸통=옮기기).
-        // 짧아 경계 두 곳이 겹치는 클립은 맞닿은 이웃의 경계로 대신 민다.
+        let minute = geometry.minute(forY: point.y)
+        guard let clip = track.clip(atMinute: Int(minute.rounded(.down))) else { return .pan }
+        return .move(lane: .main, id: clip.id, originMinute: clip.startMinute, grabMinute: Int(minute.rounded()))
+    }
+
+    /// 고른 클립의 경계를 잡았는가. 짧아 경계 두 곳이 겹치는 클립은 맞닿은 이웃의 경계로 대신 민다.
+    private func trimMode(at point: CGPoint, clip: NLEClip, geometry: NLETimelineGeometry) -> NLEEditorDragMode? {
         if geometry.height(minutes: Double(clip.lengthMinutes)) >= Self.trimReach * 3 {
             let topY = geometry.y(forMinute: Double(clip.startMinute))
             let bottomY = geometry.y(forMinute: Double(clip.endMinute))
             if abs(point.y - topY) <= Self.trimReach { return .trimStart(lane: .main, id: clip.id) }
             if abs(point.y - bottomY) <= Self.trimReach { return .trimEnd(lane: .main, id: clip.id) }
+            return nil
         }
-        if let boundary = shortClipBoundary(at: point, clip: clip, geometry: geometry) {
-            return boundary
-        }
-        return .move(lane: .main, id: clip.id, originMinute: clip.startMinute, grabMinute: minute)
-    }
-
-    /// 손가락이 어느 클립의 시작·끝 가까이에 있는가. 경계를 잡으려는 손인지 가리는 데 쓴다.
-    private func isNearClipBoundary(at point: CGPoint, geometry: NLETimelineGeometry) -> Bool {
-        track.clips.contains { clip in
-            abs(point.y - geometry.y(forMinute: Double(clip.startMinute))) <= Self.trimReach
-                || abs(point.y - geometry.y(forMinute: Double(clip.endMinute))) <= Self.trimReach
-        }
+        return shortClipBoundary(at: point, clip: clip, geometry: geometry)
     }
 
     /// 하루 전체를 볼 때처럼 클립이 짧아 자기 손잡이를 둘 수 없으면,
@@ -1203,67 +1025,17 @@ struct MapHomeNLEClipEditor: View {
             : .trimStart(lane: .main, id: neighbor.id)
     }
 
-    /// 그 시각을 덮는 센서 원본 구간.
-    private func sensorSegment(atMinute minute: Int) -> MapHomeNLESensorSegment? {
-        let covering = sourceSegments.filter { $0.channel.isRestorable && minute >= $0.startMinute && minute < $0.endMinute }
-        return covering.first { $0.channel == .health } ?? covering.first
-    }
-
-    /// 센서 원본 구간을 그대로 대분류에 되돌린다. 그 구간은 다시 한 덩어리가 된다.
-    private func restoreSensorSegment(_ segment: MapHomeNLESensorSegment) {
-        guard let anchor = track.clip(atMinute: segment.startMinute) else { return }
-        pushUndo()
-        let option = Self.option(
-            forCategoryID: segment.categoryID,
-            title: segment.title,
-            behavior: segment.behavior
-        )
-        track.replace(segment.startMinute..<segment.endMinute, with: option, parent: anchor.parent, crossesParents: true)
-        selectedClipID = track.clip(atMinute: segment.startMinute)?.id
-        selectedSubClipID = nil
-        pick = nil
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-    }
-
-    /// 상세활동 기록을 그 구간의 대분류로 올린다.
-    private func promoteDetail(_ sub: NLEClip) {
-        guard let anchor = track.clip(atMinute: sub.startMinute) else { return }
-        pushUndo()
-        track.replace(sub.startMinute..<sub.endMinute, with: sub.option, parent: anchor.parent, crossesParents: true)
-        selectedClipID = track.clip(atMinute: sub.startMinute)?.id
-        selectedSubClipID = nil
-        pick = nil
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-    }
-
-    /// 손가락이 거의 움직이지 않았으면 누른 것이다. 줄에 따라 집어 든다.
-    private func handleTap(at point: CGPoint, geometry: NLETimelineGeometry, width: CGFloat) {
-        let minute = Int(geometry.minute(forY: point.y).rounded())
-        defer { UISelectionFeedbackGenerator().selectionChanged() }
-        let lanes = NLELaneWidths(total: width, gutter: gutterWidth, gap: laneGap)
-        let sensorX = gutterWidth + lanes.main + laneGap
-        let detailX = sensorX + lanes.sensor + laneGap
-        if point.x >= detailX - laneGap {
-            let segment = sourceSegments.first { minute >= $0.startMinute && minute < $0.endMinute }
-            let clip = subTrack.clip(atMinute: minute)
-            if let clip {
-                pick = .detail(clip.id)
-            } else {
-                pick = segment.map { .sensor($0.id, minute) } ?? .sensorMinute(minute)
-            }
-            // 상세와 센서가 한 칸이라 누르면 그 시각의 근거와 원본 값도 바로 보여 준다.
-            let origin = clip.flatMap { detail in
-                subProvenance[detail.id].map { "\(detail.option.title) · \($0.label(language))" }
-            }
-            showRawValues(atMinute: minute, segment: segment, leading: origin.map { [$0] } ?? [])
-            return
-        }
-        pick = nil
+    /// 손가락이 거의 움직이지 않았으면 누른 것이다. 선택은 여기서만 바뀐다(NLE1104A01).
+    private func handleTap(at point: CGPoint, geometry: NLETimelineGeometry) {
+        guard dragMode.touchesMainLane else { return }
+        let minute = Int(geometry.minute(forY: point.y).rounded(.down))
+        guard let clip = track.clip(atMinute: minute) else { return }
+        UISelectionFeedbackGenerator().selectionChanged()
         // 고른 클립을 다시 눌렀으면 선택을 푼다(NLE1103A03).
         if NLESelectionTapPolicy.clearsSelection(
             selectedAtTouchStart: selectedAtTouchStart,
-            touchedClipID: selectedClipID,
-            isMainLaneTouch: dragMode.touchesMainLane,
+            touchedClipID: clip.id,
+            isMainLaneTouch: true,
             leftSlop: touchLeftTapSlop,
             didEdit: didPushUndoForDrag,
             isLifted: isLifted
@@ -1272,18 +1044,9 @@ struct MapHomeNLEClipEditor: View {
             quickMenuMinute = nil
             return
         }
+        selectedClipID = clip.id
+        selectedSubClipID = nil
         quickMenuMinute = quickMenuMinute == nil ? minute : nil
-    }
-
-    /// 고른 분에 가장 가까운 측정값의 모든 값을 창으로 띄운다. 구간을 눌렀으면 그 구간의 이름과 시간을 먼저 적는다.
-    private func showRawValues(atMinute minute: Int, segment: MapHomeNLESensorSegment? = nil, leading: [String] = []) {
-        let dayStart = Calendar.autoupdatingCurrent.startOfDay(for: date)
-        let title = segment.map { "\($0.channel.title(language)) · \(Self.rangeLabel($0.startMinute, $0.endMinute))" }
-            ?? language.text("원본 값 · ", "Raw values · ") + Self.minuteLabel(minute)
-        let reading = MapHomeNLESensorEvidence.nearestReading(atMinute: minute, in: sensorReadings, dayStart: dayStart)
-        let values = reading.map { MapHomeNLESensorEvidence.rawLines(for: $0, language: language) }
-            ?? [language.text("이 시각 전후 10분 안에 측정값이 없습니다.", "No reading within 10 minutes of this time.")]
-        rawDetail = NLERawDetail(title: title, lines: leading + (segment.map { [$0.title] } ?? []) + values)
     }
 
     /// 자석 거리는 화면에서 10pt. 1분 편집 배율에서는 0분이 되어 1분씩 그대로 움직인다.
@@ -1360,7 +1123,6 @@ struct MapHomeNLEClipEditor: View {
     private func applyCategory(_ category: MapHomeSidebarMajorCategory) {
         guard let clip = activeClip else { return }
         pushUndo()
-        pick = nil
         let option = Self.option(for: category, language: language)
         if isSubClipActive {
             subTrack.setOption(clip.id, to: option)
@@ -1461,4 +1223,3 @@ struct NLEMergePrompt: Equatable {
     let neighborTitle: String
 }
 
-/// 「원본 값」 창에 보일 내용.

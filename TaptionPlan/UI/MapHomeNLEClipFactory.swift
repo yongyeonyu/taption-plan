@@ -198,21 +198,6 @@ extension MapHomeNLEClipEditor {
         )
     }
 
-    /// 「센서 원본」 열을 그날의 원본 표본·HealthKit 수면으로 세운다.
-    func loadSensorEvidence() async -> (segments: [MapHomeNLESensorSegment], readings: [SensorReading]) {
-        #if DEBUG
-        if let preview = NLEDayWindow.previewSensors[Calendar.autoupdatingCurrent.startOfDay(for: date)] {
-            return (preview, [])
-        }
-        #endif
-        let day = await model.planDayDataSnapshot(for: date, forceReload: false)
-        let segments = MapHomeNLESensorEvidence.channelSegments(
-            readings: day.readings, sleepSessions: model.sleepSessions,
-            healthActuals: day.actuals, dayStart: Calendar.autoupdatingCurrent.startOfDay(for: date)
-        )
-        return (segments, day.readings)
-    }
-
     static func tint(for categoryID: String) -> Color {
         Color(hex: MapHomePastelPalette.hex(categoryID))
     }

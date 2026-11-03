@@ -1120,4 +1120,75 @@ final class NLETrackTests: XCTestCase {
 
         XCTAssertEqual(result.map(\.title), ["지하철 탑승"])
     }
+
+    // MARK: - 세 줄·재생 헤드 (NLE1104A01)
+
+    func testLanesPutPlaceLeftMainCenterAndKeepRightEmpty() {
+        let lanes = NLELaneWidths(total: 421, gutter: 60, gap: 5, overflow: 28)
+        XCTAssertEqual(lanes.lane(atX: 30), .gutter)
+        XCTAssertEqual(lanes.lane(atX: lanes.placeX + 1), .place)
+        XCTAssertEqual(lanes.lane(atX: lanes.mainX + 1), .main)
+        XCTAssertEqual(lanes.lane(atX: lanes.rightX + 1), .right)
+        XCTAssertGreaterThan(lanes.main, lanes.place)
+        XCTAssertEqual(lanes.rightX + lanes.right, 421, accuracy: 0.5)
+    }
+
+    private func stay(_ key: String, _ name: String, _ start: Int, _ end: Int, dayStart: Date) -> PlaceStay {
+        PlaceStay(
+            placeKey: key,
+            displayName: name,
+            span: TimeSpan(
+                start: dayStart.addingTimeInterval(Double(start) * 60),
+                end: dayStart.addingTimeInterval(Double(end) * 60)
+            ),
+            confidence: .high
+        )
+    }
+
+    func testPlaceSegmentsClipToTheDayResolveOverlapsAndJoinSamePlace() {
+        let dayStart = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        let segments = NLEPlaceLane.segments(
+            places: [
+                stay("home", "집", -60, 100, dayStart: dayStart),
+                stay("home", "집", 100, 200, dayStart: dayStart),
+                stay("office", "회사", 300, 500, dayStart: dayStart),
+                stay("cafe", "카페", 450, 1_500, dayStart: dayStart),
+                stay("next", "다음 날", 1_500, 1_600, dayStart: dayStart),
+            ],
+            dayStart: dayStart
+        )
+        XCTAssertEqual(segments.map(\.title), ["집", "회사", "카페"])
+        XCTAssertEqual(segments.map(\.startMinute), [0, 300, 450])
+        XCTAssertEqual(segments.map(\.endMinute), [200, 450, 1_440])
+
+        let yesterday = NLEPlaceLane.segments(
+            places: [stay("home", "집", 0, 60, dayStart: dayStart)],
+            dayStart: dayStart,
+            dayOffset: -1
+        )
+        XCTAssertEqual(yesterday.first?.startMinute, -1_440)
+    }
+
+    func testPlayheadSnapsWeaklyToSegmentBoundaries() {
+        let track = MapHomeNLEClipEditor.makeMainTrack(segments: [
+            MapHomeTimeRailSegment(startMinute: 0, endMinute: 600, categoryID: "sleep", title: "수면", sourceIDs: [UUID()]),
+            MapHomeTimeRailSegment(startMinute: 600, endMinute: 1_440, categoryID: "work", title: "업무", sourceIDs: [UUID()]),
+        ])
+        // 2pt/분이면 자석은 3분이다.
+        XCTAssertEqual(NLEPlayheadPolicy.minute(raw: 597.4, track: track, minuteHeight: 2), 600)
+        XCTAssertEqual(NLEPlayheadPolicy.minute(raw: 596, track: track, minuteHeight: 2), 596)
+        // 1분 편집 배율에서는 붙지 않는다.
+        XCTAssertEqual(NLEPlayheadPolicy.minute(raw: 599, track: track, minuteHeight: 18), 599)
+        // 멀리 줄여도 자석은 10분을 넘지 않는다.
+        XCTAssertEqual(NLEPlayheadPolicy.snapThreshold(minuteHeight: 0.22), 10)
+        // 범위 밖으로 나가지 않는다.
+        XCTAssertEqual(NLEPlayheadPolicy.minute(raw: 1_600, track: track, minuteHeight: 18), 1_440)
+        XCTAssertTrue(NLEPlayheadPolicy.isSegmentBoundary(600, track: track))
+        XCTAssertFalse(NLEPlayheadPolicy.isSegmentBoundary(601, track: track))
+    }
+
+    func testHandleGrabReachIsAFingerAroundThePlayhead() {
+        XCTAssertTrue(NLEPlayheadPolicy.grabsHandle(touchY: 120, playheadY: 100))
+        XCTAssertFalse(NLEPlayheadPolicy.grabsHandle(touchY: 130, playheadY: 100))
+    }
 }

@@ -469,18 +469,19 @@ final class TaptionPlanClipRollUITests: XCTestCase {
     }
 
     /// 고른 클립을 다시 누르면 손잡이가 사라지고, 끌기는 선택을 풀지 않는다(NLE1103A03).
-    /// 업무 구간에는 근거가 있는 하위 행동이, 센서 층에는 원본 근거가 함께 보인다(NLE1103A02).
-    func testSecondTapClearsSelectionAndDragKeepsIt() throws {
+    /// 선택이 풀린 뒤 위아래로 쓸어도 고르지 않고, 탭만 고른다(NLE1104A01).
+    func testTapSelectsButVerticalSwipeDoesNot() throws {
         let app = launchEditor()
         let handle = app.descendants(matching: .any)
             .matching(NSPredicate(format: "label == %@", "시작 자르기"))
             .firstMatch
         XCTAssertTrue(handle.waitForExistence(timeout: 5), "처음에 고른 클립의 손잡이가 없다")
-        XCTAssertTrue(app.staticTexts["회의"].waitForExistence(timeout: 5), "업무 구간에 회의가 없다")
-        XCTAssertTrue(app.staticTexts["메일 정리"].exists, "업무 구간에 일정 제목이 없다")
-        XCTAssertTrue(app.staticTexts["정지 · iPhone"].exists, "센서 층 근거가 없다")
-        attach(app, name: "selected-with-subactivities")
-        // 재생 헤드(10:00)를 피해 클립 몸통을 누른다.
+        XCTAssertTrue(app.staticTexts["대분류"].exists, "가운데 줄 이름이 없다")
+        XCTAssertTrue(app.staticTexts["장소"].exists, "왼쪽 줄 이름이 없다")
+        XCTAssertTrue(app.staticTexts["회사"].waitForExistence(timeout: 5), "장소 줄에 머문 곳이 없다")
+        XCTAssertFalse(app.staticTexts["회의"].exists, "상세 층이 남아 있다")
+        XCTAssertFalse(app.staticTexts["정지 · iPhone"].exists, "센서 층이 남아 있다")
+        attach(app, name: "three-lanes")
         let frame = handle.frame
         let body = app.coordinate(withNormalizedOffset: .zero)
             .withOffset(CGVector(dx: frame.midX, dy: frame.midY + 110))
@@ -489,12 +490,43 @@ final class TaptionPlanClipRollUITests: XCTestCase {
         XCTAssertFalse(handle.waitForExistence(timeout: 1), "다시 눌러도 선택이 풀리지 않았다")
         attach(app, name: "selection-cleared")
 
+        body.press(forDuration: 0.05, thenDragTo: body.withOffset(CGVector(dx: 0, dy: 60)))
+        XCTAssertFalse(handle.waitForExistence(timeout: 1), "아래로 쓸었는데 골랐다")
+        body.press(forDuration: 0.05, thenDragTo: body.withOffset(CGVector(dx: 0, dy: -60)))
+        XCTAssertFalse(handle.waitForExistence(timeout: 1), "위로 쓸었는데 골랐다")
+        attach(app, name: "swiped-without-selection")
+
         body.tap()
-        XCTAssertTrue(handle.waitForExistence(timeout: 2), "다시 고르지 못했다")
+        XCTAssertTrue(handle.waitForExistence(timeout: 2), "눌러도 고르지 못했다")
         attach(app, name: "selected-again")
 
         body.press(forDuration: 0.05, thenDragTo: body.withOffset(CGVector(dx: 0, dy: 60)))
         XCTAssertTrue(handle.waitForExistence(timeout: 2), "끌기가 선택을 풀었다")
+    }
+
+    /// 눈금 띠의 핸들을 끌면 재생 헤드가 움직이고, 세그먼트 경계에 다가가면 붙는다(NLE1104A01).
+    func testPlayheadHandleMovesAndSnapsToSegmentBoundary() throws {
+        let app = launchEditor()
+        let handle = app.descendants(matching: .any)["nlePlayheadHandle"]
+        XCTAssertTrue(handle.waitForExistence(timeout: 5), "재생 헤드 핸들이 없다")
+        let before = handle.value as? String
+        let start = handle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        start.press(forDuration: 0.1, thenDragTo: start.withOffset(CGVector(dx: 0, dy: 60)))
+        sleep(1)
+        attach(app, name: "playhead-moved")
+        XCTAssertNotEqual(handle.value as? String, before, "핸들을 끌어도 재생 헤드가 그대로다")
+
+        // 10:00에서 12:00 경계까지 재서 거의 닿게 끌면 12:00에 붙어야 한다.
+        let end = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label == %@", "끝 자르기"))
+            .firstMatch
+        XCTAssertTrue(end.waitForExistence(timeout: 5), "업무 끝 손잡이가 없다")
+        let moved = handle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        let toBoundary = end.frame.maxY + 3 - handle.frame.midY
+        moved.press(forDuration: 0.1, thenDragTo: moved.withOffset(CGVector(dx: 0, dy: toBoundary - 3)))
+        sleep(1)
+        attach(app, name: "playhead-snapped")
+        XCTAssertEqual(handle.value as? String, "12:00", "경계 가까이에서 붙지 않았다")
     }
 
     /// 하루 전체를 볼 때 1시간짜리 클립(식사)은 제목도 손잡이도 그리지 않는다(높이 22pt).
@@ -510,7 +542,7 @@ final class TaptionPlanClipRollUITests: XCTestCase {
 
         // 경계에서 2pt 아래, 대분류 줄 한가운데를 잡는다 — 제목이 없어 좌표로만 닿는다.
         let start = app.coordinate(withNormalizedOffset: .zero)
-            .withOffset(CGVector(dx: 100, dy: boundaryY + 2))
+            .withOffset(CGVector(dx: endHandle.frame.midX, dy: boundaryY + 2))
         start.press(forDuration: 0.15, thenDragTo: start.withOffset(CGVector(dx: 0, dy: -40)))
         sleep(1)
         attach(app, name: "short-clip-after")
@@ -530,7 +562,7 @@ final class TaptionPlanClipRollUITests: XCTestCase {
     }
 }
 
-/// 클립 편집기 도구가 이름으로 드러나고, 확대가 단추로도 되고, 집기가 한 번에 끝나는지 화면에서 확인한다.
+/// 클립 편집기 도구가 이름으로 드러나고, 확대가 단추로도 되는지 화면에서 확인한다.
 ///
 /// 예전에는 도구가 아이콘뿐이라 눌러 봐야 알 수 있었고, 확대는 두 손가락만이라
 /// 하루 전체 화면(1시간 클립 9pt)에서 경계 손잡이가 나타나지 않는 이유를 알 길이 없었다.
@@ -557,7 +589,7 @@ final class TaptionPlanClipEditorToolsUITests: XCTestCase {
     /// 도구 막대의 여섯 단추가 이름으로 드러나고 높이가 44pt 이상인가.
     func testEveryToolHasANameAndAFortyFourPointTarget() throws {
         let app = launchEditor()
-        for name in ["분류", "가르기", "지우기", "되돌리기", "다시", "확대"] {
+        for name in ["분류", "가르기", "지우기", "되돌리기", "다시", "더 확대"] {
             let button = app.buttons[name]
             XCTAssertTrue(button.waitForExistence(timeout: 5), "\(name) 단추가 이름으로 드러나지 않는다")
             XCTAssertGreaterThanOrEqual(
@@ -569,51 +601,21 @@ final class TaptionPlanClipEditorToolsUITests: XCTestCase {
         attach(app, name: "tools")
     }
 
-    /// 확대 단추가 '확대 → 더 확대 → 전체'로 돌고, 이름이 다음에 할 일을 적는다.
-    func testZoomButtonCyclesFromWholeDayAndBack() throws {
+    /// 처음에는 6시간(하루 전체의 4배)을 보여 주므로 단추가 '더 확대 → 1분 → 전체 → 확대'로 돈다.
+    func testZoomButtonCyclesFromSixHoursAndBack() throws {
         let app = launchEditor()
-        let zoom = app.buttons["확대"]
-        XCTAssertTrue(zoom.waitForExistence(timeout: 5), "하루 전체에서 확대 단추가 '확대'가 아니다")
+        let zoom = app.buttons["더 확대"]
+        XCTAssertTrue(zoom.waitForExistence(timeout: 5), "처음 6시간 배율에서 단추가 '더 확대'가 아니다")
         zoom.tap()
-        XCTAssertTrue(app.buttons["더 확대"].waitForExistence(timeout: 5), "한 번 눌러도 4배로 가지 않는다")
-        attach(app, name: "zoom-4x")
-        app.buttons["더 확대"].tap()
-        XCTAssertTrue(app.buttons["1분"].waitForExistence(timeout: 5), "두 번 눌러도 12배로 가지 않는다")
+        XCTAssertTrue(app.buttons["1분"].waitForExistence(timeout: 5), "한 번 눌러도 12배로 가지 않는다")
         attach(app, name: "zoom-12x")
         // 마지막 단계는 1분 편집 배율이다(NLEZoomPolicy.minuteEditHeight).
         app.buttons["1분"].tap()
-        XCTAssertTrue(app.buttons["전체"].waitForExistence(timeout: 5), "세 번 눌러도 1분 배율로 가지 않는다")
+        XCTAssertTrue(app.buttons["전체"].waitForExistence(timeout: 5), "두 번 눌러도 1분 배율로 가지 않는다")
         attach(app, name: "zoom-minute")
         app.buttons["전체"].tap()
         XCTAssertTrue(app.buttons["확대"].waitForExistence(timeout: 5), "전체를 눌러도 하루 전체로 돌아오지 않는다")
         attach(app, name: "zoom-fit")
-    }
-
-    /// 상세활동을 누르고 '반영' 한 번이면 대분류가 되고, 되돌리기 한 번이면 원래대로 돌아온다.
-    func testPromotingDetailIsOneStepAndUndoPutsItBack() throws {
-        let app = launchEditor()
-        let detail = app.staticTexts["회의"].firstMatch
-        XCTAssertTrue(detail.waitForExistence(timeout: 5), "상세활동 '회의'가 화면에 없다")
-        detail.tap()
-
-        let use = app.buttons["이 구간을 대분류로 반영"]
-        XCTAssertTrue(use.waitForExistence(timeout: 5), "상세활동을 눌러도 집기 줄이 열리지 않는다")
-        XCTAssertGreaterThanOrEqual(use.frame.height, 44, "반영 단추 높이가 \(use.frame.height)pt다")
-        attach(app, name: "pick-detail")
-        use.tap()
-
-        let changed = app.staticTexts
-            .matching(NSPredicate(format: "label CONTAINS %@", "바뀐 클립"))
-            .firstMatch
-        XCTAssertTrue(changed.waitForExistence(timeout: 5), "반영했는데 저장 대기 안내가 없다")
-        attach(app, name: "after-promote")
-
-        let undo = app.buttons["되돌리기"]
-        XCTAssertTrue(undo.isEnabled, "반영했는데 되돌리기가 꺼져 있다")
-        undo.tap()
-        sleep(1)
-        XCTAssertFalse(changed.exists, "되돌렸는데 저장 대기 안내가 남아 있다")
-        attach(app, name: "after-undo")
     }
 }
 

@@ -405,7 +405,7 @@
 		A1000000000000000B110301 /* MapHomeHomeNames.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B110301 /* MapHomeHomeNames.swift */; };
 		A1000000000000000B110300 /* TaptionFont.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B110300 /* TaptionFont.swift */; };
 		A1000000000000000B1103F1 /* MapHomeNLESubActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1103F1 /* MapHomeNLESubActivity.swift */; };
-		A1000000000000000B1103F2 /* MapHomeNLEDetailLane.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1103F2 /* MapHomeNLEDetailLane.swift */; };
+		A1000000000000000B1103F2 /* MapHomeNLEPlaceLane.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1103F2 /* MapHomeNLEPlaceLane.swift */; };
 		A1000000000000000B1102F9 /* MapHomeNLERawDetail.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102F9 /* MapHomeNLERawDetail.swift */; };
 		A1000000000000000B1102FA /* TaptionCuteIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102FA /* TaptionCuteIcon.swift */; };
 		A1000000000000000B1104C1 /* TaptionRaisedFace.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1104C1 /* TaptionRaisedFace.swift */; };
@@ -888,7 +888,7 @@
 		F1000000000000000B110301 /* MapHomeHomeNames.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeHomeNames.swift; sourceTree = "<group>"; };
 		F1000000000000000B110300 /* TaptionFont.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionFont.swift; sourceTree = "<group>"; };
 		F1000000000000000B1103F1 /* MapHomeNLESubActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeNLESubActivity.swift; sourceTree = "<group>"; };
-		F1000000000000000B1103F2 /* MapHomeNLEDetailLane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeNLEDetailLane.swift; sourceTree = "<group>"; };
+		F1000000000000000B1103F2 /* MapHomeNLEPlaceLane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeNLEPlaceLane.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102F9 /* MapHomeNLERawDetail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeNLERawDetail.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102FA /* TaptionCuteIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionCuteIcon.swift; sourceTree = "<group>"; };
 		F1000000000000000B1104C1 /* TaptionRaisedFace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionRaisedFace.swift; sourceTree = "<group>"; };
@@ -1224,7 +1224,7 @@
 				F1000000000000000B110301 /* MapHomeHomeNames.swift */,
 				F1000000000000000B110300 /* TaptionFont.swift */,
 				F1000000000000000B1103F1 /* MapHomeNLESubActivity.swift */,
-				F1000000000000000B1103F2 /* MapHomeNLEDetailLane.swift */,
+				F1000000000000000B1103F2 /* MapHomeNLEPlaceLane.swift */,
 				F1000000000000000B1102F9 /* MapHomeNLERawDetail.swift */,
 				F1000000000000000B1102FA /* TaptionCuteIcon.swift */,
 				F1000000000000000B1104C1 /* TaptionRaisedFace.swift */,
@@ -1944,7 +1944,7 @@
 				A1000000000000000B110301 /* MapHomeHomeNames.swift in Sources */,
 				A1000000000000000B110300 /* TaptionFont.swift in Sources */,
 				A1000000000000000B1103F1 /* MapHomeNLESubActivity.swift in Sources */,
-				A1000000000000000B1103F2 /* MapHomeNLEDetailLane.swift in Sources */,
+				A1000000000000000B1103F2 /* MapHomeNLEPlaceLane.swift in Sources */,
 				A1000000000000000B1102F9 /* MapHomeNLERawDetail.swift in Sources */,
 				A1000000000000000B1102FA /* TaptionCuteIcon.swift in Sources */,
 				A1000000000000000B1104C1 /* TaptionRaisedFace.swift in Sources */,

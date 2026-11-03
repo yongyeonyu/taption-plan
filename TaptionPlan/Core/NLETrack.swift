@@ -819,6 +819,35 @@ struct NLETrack: Hashable, Sendable {
 }
 
 /// 자석처럼 붙는 지점. 동영상 편집기의 스냅과 같은 규칙을 쓴다.
+/// 재생 헤드 핸들. 손가락이 닿는 여유와 세그먼트 경계의 약한 자석(NLE1104A01).
+enum NLEPlayheadPolicy {
+    static let grabPoints: CGFloat = 22
+    static let snapPoints: CGFloat = 6
+    static let maxSnapMinutes = 10
+
+    static func grabsHandle(touchY: CGFloat, playheadY: CGFloat) -> Bool {
+        abs(touchY - playheadY) <= grabPoints
+    }
+
+    /// 자석은 화면 거리로 잰다. 1분 편집 배율에서는 0분이 되어 1분씩 그대로 움직인다.
+    static func snapThreshold(minuteHeight: CGFloat) -> Int {
+        min(maxSnapMinutes, Int((snapPoints / max(0.01, minuteHeight)).rounded(.down)))
+    }
+
+    static func minute(raw: Double, track: NLETrack, minuteHeight: CGFloat) -> Int {
+        let snapped = NLESnapPolicy.snapped(
+            Int(raw.rounded()),
+            to: NLESnapPolicy.targets(for: track),
+            threshold: snapThreshold(minuteHeight: minuteHeight)
+        )
+        return min(max(snapped, track.rangeStartMinute), track.rangeEndMinute)
+    }
+
+    static func isSegmentBoundary(_ minute: Int, track: NLETrack) -> Bool {
+        track.clips.contains { $0.startMinute == minute || $0.endMinute == minute }
+    }
+}
+
 enum NLESnapPolicy {
     static let thresholdMinutes = 3
 

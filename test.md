@@ -5571,3 +5571,18 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 앱 Debug 빌드(시뮬레이터 대상) 성공(`build.log`).
 - 아이폰 18 내보낸 기록 `raw2.json`을 저장소 밖에서 같은 규칙으로 계산(앱 실행 아님): 11-02 구간 편집 48건 → 17건, 11-03 44건 → 11건. 자동·기타 수동 기록 138건은 그대로. 11-02에 구간이 일부만 겹치는 구간 편집 쌍 4개는 남는다(정확히 같은 구간만 지운다).
 - 확인 못 함: 실기기 저장·불러오기, iCloud 병합 실제 동작. 저장 ID가 지워진 뒤 SQLite 행 삭제는 코드(`sync`의 deletes)로만 확인했다.
+- 후속(구조 지표): 위 커밋 `246b5369`은 `RecordSummaryEngine.swift`가 기준 2,988줄을 넘어 지표 검사에 실패한다(커밋 때 미실행). 정리 함수를 `NLETrack.swift`로 옮겨 통과했다(`build/validation/NLE1104A01/unit4.log` 실행 직전 `METRICS 0`).
+- 옛 기록·백업 호환(시뮬레이터 `RFA1102A01`, 실기기 아님): `testOldBackupWithDuplicateOverridesRestoresCleanly` 통과(`build/validation/NLE1104A01/unit4.xcresult`). 사본이 든 저장소와 그 상태로 만든 백업에서 시작해 불러오기 정리 → 저장 → 다시 백업 성공 → 같은 기기에 옛 파일 복원 → 빈 새 기기에 옛 파일 복원 → 저장까지, 모두 최신 1개·자동·다른 수동 기록만 남는다.
+- 호환 시험의 한계: "옛 백업"은 사본을 넣어 현재 엔진으로 만든 파일이다. 이전 빌드가 실제로 만든 파일은 쓰지 않았다. 이번 변경은 백업 형식·스키마를 바꾸지 않는다. 불러오기 정리 때 `reviewArchives`는 무효화하지 않는다.
+- 대표 결정(메인 세션 전달): "B. 같은 구간은 최신 하나만 남기기". 내용이 다른 이전 편집도 지워지며, 정리 직전 백업을 따로 만들지 않는다.
+- 정리된 기록이 시작 중 덮어쓰기로 사라질 수 있는지(코드·시험 틀 확인, 실제 앱 재현 아님): 불러오기 실패 뒤에는 막히지만, 불러오기가 끝나기 전에는 `persist`가 막히지 않는다. 처음 작성한 복원 시험이 이 순서로 저장소를 비워 실패했고(`unit2.xcresult`), 시험은 앱의 정상 순서로 고쳤다. 앱 쪽은 고치지 않았고 대표 결정 대기다.
+- 확인 못 함: 실기기 저장·불러오기, iCloud 병합, 전체 단위 테스트.
+
+## NLE1104A01 클립 편집 세 줄·타임 핸들 (2026-11-04)
+- 전부 시뮬레이터 `RFA1102A01` 결과이며 실기기 설치·손 감각은 확인하지 않았다(이 세션은 실기기 설치 금지). 화면 자료는 미리보기 표본이다.
+- 최종 소스 단위: `NLETrackTests`·`NLESubActivityTests`·`NLEMultiDayTests`·`AppModelBackupConnectionTests`·`TaptionBackupV2Tests` 114건 통과(`build/validation/NLE1104A01/unit4.xcresult`).
+- 최종 소스 화면: `TaptionPlanClipRollUITests`·`TaptionPlanClipEditorToolsUITests`·`TaptionPlanOverwriteUITests` 7건 통과(`ui4.xcresult`). 스와이프로 선택 안 됨·탭 선택·재탭 취소, 핸들 이동과 12:00 경계 붙기를 포함한다.
+- 구조 지표 `scripts/architecture-metrics.py --check docs/architecture-baseline.json` 통과.
+- 앱 Debug 빌드: 최종 소스의 단독 `xcodebuild build`는 실행되지 않았다. 장치 잠금 대기 1시간 초과로 종료 코드 75였다(`build4.log`, 빌드 실패 아님). 디스크 여유 4.4GB로 기준 8GB 미만이라 다시 돌리지 않았다. 대신 `unit4`가 같은 소스로 앱을 Debug arm64 시뮬레이터용으로 컴파일했고, 소스 수정 시각은 모두 그 시험 전이다. 앞 단계 소스의 단독 빌드는 성공했다(`build.log`, `build3.log`).
+- 앞선 실행: `unit1` 312건 중 311건 통과·1건 건너뜀(`testWriteGroomingSheetWhenRequested`). `unit2` 96건 중 95건 통과·복원 시험 1건 실패(위 덮어쓰기 순서). `unit3` 96건 통과(시험 순서를 고치기 전 판). `ui3` 7건 중 5건 통과·2건 실패: 처음 배율이 6시간으로 바뀐 뒤 남은 확대 단추 시험이며 고쳐서 `ui4`에서 통과했다.
+- 확인 못 함: 실기기 손 감각, 실제 기록의 장소 줄, 전체 단위 테스트.

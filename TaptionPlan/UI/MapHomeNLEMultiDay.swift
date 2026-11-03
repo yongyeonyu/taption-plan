@@ -4,6 +4,7 @@ import Foundation
 struct NLEDayInput: Equatable {
     var segments: [MapHomeTimeRailSegment]
     var details: [MapHomeSectionDetail]
+    var places: [PlaceStay] = []
 }
 
 /// 하루치 클립. 대분류 줄과 상세활동 줄.
@@ -203,7 +204,7 @@ struct NLEDayWindow: Equatable {
     #if DEBUG
     /// 미리보기(`-nlePreviewMultiDay`)가 심어 두는 지난 날. 키는 그 날의 00:00이다.
     @MainActor static var previewDays: [Date: NLEDayInput] = [:]
-    @MainActor static var previewSensors: [Date: [MapHomeNLESensorSegment]] = [:]
+    @MainActor static var previewPlaces: [Date: [PlaceStay]] = [:]
     #endif
 
     /// 그 날의 구간·상세활동을 기준일과 같은 방법으로 읽는다. 원본은 고치지 않는다.
@@ -218,23 +219,18 @@ struct NLEDayWindow: Equatable {
         let segments = MapHomeTimeRailSegmentEngine.segments(from: day.actuals, travel: day.travel, on: date)
         return NLEDayInput(
             segments: segments,
-            details: subActivities(model: model, day: day, segments: segments, dayStart: dayStart)
+            details: subActivities(model: model, day: day, segments: segments, dayStart: dayStart),
+            places: day.places
         )
     }
 
-    /// 화면이 이미 든 구간 위에 그 날의 하위 행동을 고른다.
+    /// 그 날 머문 기록. 장소 줄이 쓴다.
     @MainActor
-    static func loadSubActivities(
-        model: AppModel,
-        date: Date,
-        segments: [MapHomeTimeRailSegment]
-    ) async -> [MapHomeSectionDetail] {
-        let dayStart = Calendar.autoupdatingCurrent.startOfDay(for: date)
+    static func loadPlaces(model: AppModel, date: Date) async -> [PlaceStay] {
         #if DEBUG
-        if let preview = previewDays[dayStart] { return preview.details }
+        if let preview = previewPlaces[Calendar.autoupdatingCurrent.startOfDay(for: date)] { return preview }
         #endif
-        let day = await model.planDayDataSnapshot(for: date, forceReload: false)
-        return subActivities(model: model, day: day, segments: segments, dayStart: dayStart)
+        return await model.planDayDataSnapshot(for: date, forceReload: false).places
     }
 
     @MainActor

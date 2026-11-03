@@ -16,7 +16,7 @@ struct NLEClipEditorPreviewHost: View {
             segments: Self.segments,
             details: NLESubActivityEngine.details(Self.sampleEvidence(dayStart: today))
         )
-        NLEDayWindow.previewSensors[today] = Self.sampleSensors
+        NLEDayWindow.previewPlaces[today] = Self.samplePlaces(dayStart: today)
         guard ProcessInfo.processInfo.arguments.contains("-nlePreviewMultiDay") else { return }
         let calendar = Calendar.autoupdatingCurrent
         guard let yesterday = calendar.date(byAdding: .day, value: -1, to: calendar.startOfDay(for: Date()))
@@ -134,20 +134,19 @@ struct NLEClipEditorPreviewHost: View {
         )
     }
 
-    /// 센서 층 예시. 대분류·상세와 달리 걷기·정지 같은 원본 근거만 적는다.
-    private static var sampleSensors: [MapHomeNLESensorSegment] {
-        func motion(_ start: Int, _ end: Int, _ title: String, _ category: String, _ kind: MotionKind) -> MapHomeNLESensorSegment {
-            MapHomeNLESensorSegment(
-                channel: .motion, startMinute: start, endMinute: end, title: title,
-                categoryID: category, behavior: kind.rawValue
+    /// 장소 줄 예시.
+    private static func samplePlaces(dayStart: Date) -> [PlaceStay] {
+        func stay(_ key: String, _ name: String, _ start: Int, _ end: Int) -> PlaceStay {
+            PlaceStay(
+                placeKey: key, displayName: name,
+                span: TimeSpan(
+                    start: dayStart.addingTimeInterval(Double(start) * 60),
+                    end: dayStart.addingTimeInterval(Double(end) * 60)
+                ),
+                confidence: .high
             )
         }
-        return [
-            motion(420, 470, "정지 · iPhone", "activity", .stationary),
-            motion(470, 485, "걷기 · iPhone", "movement", .walking),
-            motion(485, 720, "정지 · iPhone", "activity", .stationary),
-            motion(960, 1_020, "차량 · GPS 속도", "movement", .automotive),
-        ]
+        return [stay("home", "집", 0, 470), stay("office", "회사", 485, 960), stay("home", "집", 1_020, 1_440)]
     }
 
     private static var details: [MapHomeSectionDetail] {
