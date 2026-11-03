@@ -726,8 +726,9 @@ struct MapHomeView: View {
         ZStack(alignment: .top) {
             // 지도·사이드 레일·재생 HUD는 분을 읽는다. 분이 바뀔 때 이 조각만 다시 그리게 따로 감싼다(ARC1030A01).
             MapHomeObservingView {
+                // 이 화면의 제네릭 타입이 너무 깊으면 실행 시 타입 해석에서 스택이 넘친다(MRG1103A01). 큰 조각은 타입을 끊는다.
                 // 정지 상태 확대는 지도 화면이 떠 있는 동안만 2초마다 한 걸음(전역 타이머·지도별 중복 구독 대신, PRF1101A01).
-                map.task {
+                AnyView(map).task {
                     while !Task.isCancelled {
                         try? await Task.sleep(for: .seconds(2))
                         advanceStationaryZoomIfNeeded()
@@ -744,7 +745,7 @@ struct MapHomeView: View {
                 .ignoresSafeArea()
                 .zIndex(MapHomeLayerPriority.map)
 
-            if !Self.benchHidden("rails") { MapHomeObservingView { mapSideRails } }
+            if !Self.benchHidden("rails") { MapHomeObservingView { AnyView(mapSideRails) } }
 
             if isPlacingMapMemo {
                 mapMemoPlacementOverlay
@@ -752,7 +753,7 @@ struct MapHomeView: View {
             }
 
             if !isScreenRecording, !Self.benchHidden("topleft") {
-                coarseRegion { topLeftControls }
+                coarseRegion { AnyView(topLeftControls) }
                     .zIndex(MapHomeLayerPriority.loading)
             }
 
@@ -792,7 +793,7 @@ struct MapHomeView: View {
             .zIndex(MapHomeLayerPriority.search)
 
             if isMenuOpen, !isScreenRecording {
-                Group { if isWideLayout { sidebarContent.mapHomeWidePanelFrame(viewportWidth: mapViewportSize.width, kind: menuPanelKind) } else { menu } }
+                Group { if isWideLayout { AnyView(sidebarContent).mapHomeWidePanelFrame(viewportWidth: mapViewportSize.width, kind: menuPanelKind) } else { menu } }
                     .transition(.move(edge: .leading).combined(with: .opacity))
                     .zIndex(MapHomeLayerPriority.menu)
             }
@@ -825,7 +826,7 @@ struct MapHomeView: View {
             if !isScreenRecording, !isMenuOpen || isWideLayout, layoutStyle.movesActionsToBottom {
                 VStack(spacing: 0) {
                     Spacer(minLength: 0)
-                    bottomActionBar
+                    AnyView(bottomActionBar)
                         .mapHomeWideActionBar(viewportWidth: mapViewportSize.width)
                 }
                 .zIndex(MapHomeLayerPriority.header)
