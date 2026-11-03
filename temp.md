@@ -1945,3 +1945,13 @@
 - 원인: 사이트 문구가 제품 현황보다 뒤처짐(Encoder 1.1.9 표기, Chart·CAM 상태, Editor 페이지 없음, Plan 이미지가 일러스트). 원본이 임시 폴더에만 있어 사라짐.
 - 해결: 실제 사이트로 공용 원본 `~/Documents/bokkiyaw-site`를 만들고 제품별 세션이 자기 페이지를, 메인 세션이 홈·Encoder·Plan을 고친다. Plan 화면은 세션 합친 뒤 시뮬레이터·시연 데이터로 찍는다.
 - 검증 기준: 미리보기에서 전체 링크 200·이미지 로드, 개인 위치 없음, 대표 승인 후 실제 사이트 반영과 읽기 확인.
+## RFA1102A01 · 리팩토링 기계적 항목 (2026-11-02)
+- 요청(대표, 세션 A): 계획의 M 항목 12, 3, 4, 5, 6, 7, 9, 14, 15, 16, 17, 18. 동작 변경 없음, Codable 키와 저장 ID 출력 불변, 항목마다 커밋.
+- 원인: 거대 파일과 중복·죽은 코드가 수정 비용을 키운다(`SensorFusion`, `ScheduleView`, `ReviewView`, `FeatureModels`, `MapHomeCalendarSheet`).
+- 해결: 파일 분할은 줄을 그대로 옮기고, 삭제는 심볼마다 컴파일로 확인하고, 저장 ID는 고정값 테스트를 먼저 쓴다.
+- 검증 기준: 관련 단위 테스트, 앱 Debug 빌드, `check-app-engine-import-boundary.sh`, `architecture-metrics.py --check` 통과, 줄어든 예산 낮추기, `test.md` 기록.
+- 진행(11-03): 12, 3, 4, 5, 7, 9, 14, 15, 16, 17, 18 커밋. 결과는 `test.md`의 RFA1102A01 절.
+- 남음: 6번은 일부만 끝났다. 저장소 actor·열 코덱·`PlanRepository`의 나머지는 `SensorReading`·`TaptionDataSnapshot`에 묶여 있어, 로드맵이 UX 마이그레이션 뒤로 미룬 Phase 2가 끝나야 옮길 수 있다.
+- 다른 세션 소유라 두었다: `SleepAnalysisEngine`·`MapHomeView`의 `unionDuration` 사본, `StationaryContextClassifier`의 저장 ID 해시 2벌.
+- 합친 뒤 확인: `testRailJourneyIsJudgedOverTheWholeRide` 포함 단위 테스트 전체, 네 제품 빌드, 기준선 재작성.
+

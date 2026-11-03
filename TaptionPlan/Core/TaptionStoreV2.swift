@@ -750,20 +750,6 @@ actor TaptionStoreV2 {
                 optional(2), optional(3))
     }
 
-    /// 데이터가 있는 가장 이른·늦은 시각(센서 원본과 시작 시각이 있는 기록).
-    func dataTimeBounds() throws -> (first: Double, last: Double)? {
-        let db = try handle()
-        let statement = try prepare(db, """
-            SELECT MIN(v), MAX(w) FROM (
-              SELECT MIN(ts) AS v, MAX(ts) AS w FROM readings
-              UNION ALL SELECT MIN(start_ts), MAX(start_ts) FROM records)
-            """)
-        defer { sqlite3_finalize(statement) }
-        guard sqlite3_step(statement) == SQLITE_ROW,
-              sqlite3_column_type(statement, 0) != SQLITE_NULL else { return nil }
-        return (sqlite3_column_double(statement, 0), sqlite3_column_double(statement, 1))
-    }
-
     /// 백업용 기록 행. 삭제 표시 행과 순서(`ord`)까지 포함하고 결정적 순서(종류, id)로 돌려준다.
     func recordsForBackup(from: Double, to: Double) throws -> [TaptionStoreRecord] {
         try loadBackupRecords(where: "start_ts >= ? AND start_ts < ?", bindings: [.real(from), .real(to)])

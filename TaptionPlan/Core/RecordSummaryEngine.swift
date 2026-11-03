@@ -318,17 +318,6 @@ enum RecordAnalysisCategoryPolicy {
         }
     }
 
-    static func canonicalized(
-        _ actuals: [ActualRecord]
-    ) -> [ActualRecord] {
-        actuals.map { actual in
-            var value = actual
-            value.categoryID = categoryID(for: actual)
-            value.title = detailTitle(for: actual)
-            return value
-        }
-    }
-
     private static func normalized(_ value: String) -> String {
         value
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -984,21 +973,7 @@ enum ReviewCoverageEngine {
     }
 
     private static func stableID(_ seed: String) -> UUID {
-        var bytes = Array(repeating: UInt8(0), count: 16)
-        var hash = UInt64(14_695_981_039_346_656_037)
-        for (index, byte) in seed.utf8.enumerated() {
-            hash ^= UInt64(byte)
-            hash = hash &* 1_099_511_628_211
-            bytes[index % bytes.count] ^= UInt8(truncatingIfNeeded: hash >> 24)
-        }
-        bytes[6] = (bytes[6] & 0x0F) | 0x50
-        bytes[8] = (bytes[8] & 0x3F) | 0x80
-        return UUID(uuid: (
-            bytes[0], bytes[1], bytes[2], bytes[3],
-            bytes[4], bytes[5], bytes[6], bytes[7],
-            bytes[8], bytes[9], bytes[10], bytes[11],
-            bytes[12], bytes[13], bytes[14], bytes[15]
-        ))
+        StableRecordID.foldedFNV(seed)
     }
 }
 
@@ -1050,21 +1025,7 @@ enum ActivityFragmentCorrectionEngine {
             (span.end.timeIntervalSince1970 * 1_000).rounded()
         )
         let seed = "activity-fragment.\(sourceID.uuidString).\(start).\(end)"
-        var bytes = Array(repeating: UInt8(0), count: 16)
-        var hash = UInt64(14_695_981_039_346_656_037)
-        for (index, byte) in seed.utf8.enumerated() {
-            hash ^= UInt64(byte)
-            hash = hash &* 1_099_511_628_211
-            bytes[index % bytes.count] ^= UInt8(truncatingIfNeeded: hash >> 24)
-        }
-        bytes[6] = (bytes[6] & 0x0F) | 0x50
-        bytes[8] = (bytes[8] & 0x3F) | 0x80
-        return UUID(uuid: (
-            bytes[0], bytes[1], bytes[2], bytes[3],
-            bytes[4], bytes[5], bytes[6], bytes[7],
-            bytes[8], bytes[9], bytes[10], bytes[11],
-            bytes[12], bytes[13], bytes[14], bytes[15]
-        ))
+        return StableRecordID.foldedFNV(seed)
     }
 }
 
@@ -1329,21 +1290,7 @@ enum ActivitySectionOverrideEngine {
             piece.option.behavior ?? "",
             piece.option.title,
         ].joined(separator: ".")
-        var bytes = Array(repeating: UInt8(0), count: 16)
-        var hash = UInt64(14_695_981_039_346_656_037)
-        for (index, byte) in seed.utf8.enumerated() {
-            hash ^= UInt64(byte)
-            hash = hash &* 1_099_511_628_211
-            bytes[index % bytes.count] ^= UInt8(truncatingIfNeeded: hash >> 24)
-        }
-        bytes[6] = (bytes[6] & 0x0F) | 0x50
-        bytes[8] = (bytes[8] & 0x3F) | 0x80
-        return UUID(uuid: (
-            bytes[0], bytes[1], bytes[2], bytes[3],
-            bytes[4], bytes[5], bytes[6], bytes[7],
-            bytes[8], bytes[9], bytes[10], bytes[11],
-            bytes[12], bytes[13], bytes[14], bytes[15]
-        ))
+        return StableRecordID.foldedFNV(seed)
     }
 
     private static func milliseconds(_ date: Date) -> String {
@@ -2056,22 +2003,6 @@ enum DayPhase: String, CaseIterable, Sendable {
         case "hobby": .hobby
         case "unconfirmed": .unconfirmed
         default: .activity
-        }
-    }
-
-    /// 집 반대편에 등록해 둔 곳이 오가는 길의 이름을 정한다. 취미·운동은
-    /// 오가는 일이 아니라 그 자체가 하루의 한 대목이라 출퇴근 같은 말 대신
-    /// 시작·종료로 적는다. 집이나 이름 없는 곳은 여기서 아무 말도 만들지
-    /// 않고, 부르는 말을 정지 문맥에 넘긴다.
-    static func roundTrip(
-        to kind: FrequentPlaceKind
-    ) -> (there: DayPhase, back: DayPhase)? {
-        switch kind {
-        case .company: (.commuteToWork, .commuteHomeFromWork)
-        case .school: (.commuteToSchool, .commuteHomeFromSchool)
-        case .academy: (.commuteToAcademy, .commuteHomeFromAcademy)
-        case .hobby, .exercise: (.activityDeparture, .activityReturn)
-        case .home, .restaurant, .custom: nil
         }
     }
 

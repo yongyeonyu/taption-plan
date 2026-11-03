@@ -63,10 +63,6 @@ struct PlanPINVerifier: Codable, Equatable, Sendable {
         return Self.constantTimeEqual(digest, candidate)
     }
 
-    /// PBKDF output is retained only as a verifier and key-encryption key; the
-    /// PIN itself never leaves the call stack.
-    var keyMaterial: Data { digest }
-
     static func isValid(_ pin: String, digits: Int = currentDigits) -> Bool {
         pin.utf8.count == digits && pin.utf8.allSatisfy { $0 >= 48 && $0 <= 57 }
     }

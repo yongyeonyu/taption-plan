@@ -436,12 +436,6 @@ actor SensorReadingArchive {
         try await store.allReadingsLoadResult().readings
     }
 
-    func allReadingsForMigration() async throws -> [SensorReading] {
-        let result = try await store.allReadingsLoadResult()
-        guard result.isComplete else { throw Error.conflictingReading }
-        return result.readings
-    }
-
     /// 새 저장소는 보존 기간 정리를 하지 않는다(백업 단계에서 다룬다).
     func compact(now: Date = .now) async throws {
         _ = now
@@ -923,12 +917,6 @@ final class AppleSensorDataService {
         try await archivedReadingsLoader(span)
     }
 
-    func archivedReadingsLoadResult(
-        in span: TimeSpan
-    ) async throws -> (readings: [SensorReading], isComplete: Bool) {
-        try await archive.readingsLoadResult(in: span)
-    }
-
     func archivedRouteReadings(
         in span: TimeSpan
     ) async throws -> [SensorReading] {
@@ -939,10 +927,6 @@ final class AppleSensorDataService {
         in span: TimeSpan
     ) async throws -> (readings: [SensorReading], isComplete: Bool) {
         try await archive.routeReadingsLoadResult(in: span)
-    }
-
-    func allArchivedRouteReadings() async throws -> [SensorReading] {
-        try await archive.allReadingsForMigration()
     }
 
     func archivedReadings(
@@ -990,11 +974,6 @@ final class AppleSensorDataService {
         if !inserted.isEmpty {
             onReadingsPersisted?(inserted)
         }
-    }
-
-    func validateExternalReadings(_ readings: [SensorReading]) async throws {
-        guard !isDataDeletionActive else { throw CancellationError() }
-        try await archive.validateAppend(readings)
     }
 
     func motionActivities(

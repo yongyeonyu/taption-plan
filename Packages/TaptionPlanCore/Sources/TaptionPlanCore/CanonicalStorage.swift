@@ -129,19 +129,6 @@ public enum TaptionPlanCanonicalStorage {
         }
     }
 
-    /// Used only by a repair transaction to rewrite a verified pre-binary record.
-    public static func decodePropertyListForMigration<Value: TaptionPlanBinaryRecord>(
-        _ type: Value.Type, from encoded: TaptionPlanEncodedPayload
-    ) throws -> Value {
-        try autoreleasepool {
-            let raw = try validatedBytes(from: encoded)
-            guard raw.starts(with: Data("bplist00".utf8)) else {
-                throw TaptionPlanCanonicalStorageError.invalidPayload
-            }
-            return try PropertyListDecoder().decode(type, from: raw)
-        }
-    }
-
     private static func validatedBytes(from encoded: TaptionPlanEncodedPayload) throws -> Data {
         guard (0...maximumUncompressedSize).contains(encoded.uncompressedSize),
               encoded.isCompressed || encoded.data.count == encoded.uncompressedSize else {

@@ -594,5 +594,5 @@ rg -n 'private var bottomActionBar' TaptionPlan/UI/MapHomeView.swift
 rg -n 'private var sidebarContent'  TaptionPlan/UI/MapHomeView.swift
 
 # 7. 权限类别
-rg -n -A12 'enum PermissionFeature' TaptionPlan/Core/FeatureModels.swift
+rg -n -A12 'enum PermissionFeature' TaptionPlan/Core/PermissionModels.swift
 ```

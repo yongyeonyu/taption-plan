@@ -2,22 +2,6 @@ import CoreMotion
 import Foundation
 import TaptionPlanCore
 
-/// 걸음 측정 응답과 시간 초과 중 먼저 온 쪽으로 한 번만 이어 간다.
-private final class PedometerResumeOnce: @unchecked Sendable {
-    let lock = NSLock()
-    private var continuation: CheckedContinuation<Double?, Never>?
-
-    init(_ continuation: CheckedContinuation<Double?, Never>) { self.continuation = continuation }
-
-    func resume(_ value: Double?) {
-        lock.lock()
-        let pending = continuation
-        continuation = nil
-        lock.unlock()
-        pending?.resume(returning: value)
-    }
-}
-
 extension AppModel {
     /// 달력 지표용: 그 달 날짜별 걸음 수. 건강 앱(HealthKit) 일별 합계를 우선하고, 센서 기록의 누적 걸음 수
     /// (그날 최댓값)가 더 크면 그 값을 쓴다. 둘 다 없으면 빈 딕셔너리.
@@ -60,11 +44,11 @@ extension AppModel {
         guard CMPedometer.isStepCountingAvailable(), !FirstRunTutorialStore().defersPermissionPrompts,
               CMPedometer.authorizationStatus() == .authorized else { return nil }
         return await withCheckedContinuation { continuation in
-            let once = PedometerResumeOnce(continuation)
+            let once = OneShotReply(continuation)
             todayPedometer.queryPedometerData(from: start, to: .now) { data, _ in
-                once.resume(data.map { Double($0.numberOfSteps.intValue) })
+                once.finish(data.map { Double($0.numberOfSteps.intValue) })
             }
-            DispatchQueue.global().asyncAfter(deadline: .now() + 3) { once.resume(nil) }
+            DispatchQueue.global().asyncAfter(deadline: .now() + 3) { once.finish(nil) }
         }
     }
 }

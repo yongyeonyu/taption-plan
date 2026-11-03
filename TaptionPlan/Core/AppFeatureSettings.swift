@@ -1,0 +1,517 @@
+import Foundation
+import TaptionPlanCore
+
+struct AppFeatureSettings: Codable, Hashable, Sendable {
+    var startScale: TimelineLevel
+    var rememberLastScale: Bool
+    var catStyle: CatStyle
+    var reduceMotion: Bool
+    var showsPhotos: Bool
+    var showsPhotosInWidgets: Bool
+    var selectedCalendarIDs: [String]
+    var healthEnabled: Bool
+    var locationEnabled: Bool
+    var backgroundPreciseLocationEnabled: Bool
+    var sensorCollectionProfile: SensorCollectionProfile
+    var gpsLoggingPreferences: GPSLoggingPreferences
+    /// Optional user-selected overrides for the automatic major
+    /// categories. Missing values intentionally keep the shared defaults.
+    var mapCategoryColors: [String: String]
+    var mapUserActivityCategories: [MapUserActivityCategory]
+    // RPG 판타지 지도(무료 OpenFreeMap 벡터)를 기본으로 쓴다. 예전에는 벡터
+    // 재생 경로가 준비되지 않아 항상 .standard(Apple)로 되돌렸으나, 이제
+    // 벡터 스타일 선택을 허용한다. 알 수 없는 값만 안전값으로 보정.
+    var mapDisplayStyle: MapDisplayStyle
+    var mapMemoDisplayFilter: MapMemoDisplayFilter
+    var watchAccelerationProfile: TaptionWatchAccelerationProfile
+    var watchDataSyncProfile: TaptionWatchDataSyncProfile
+    var floorCalibration: FloorCalibration?
+    var floorCalibrationHistory: [FloorCalibrationEvent]
+    var frequentPlaces: [FrequentPlace]
+    var userTransitLocations: [UserTransitLocation]
+    /// 지도상의 3분 이상 교통 장소 후보에 대한 사용자 확인·삭제 기록.
+    /// 원본 센서와 지도 POI는 저장하지 않고 이 결정만 기기에 남긴다.
+    var transitBoardingDecisions: [TransitBoardingDecision]
+    var predictedRouteDecisions: [MapPredictedRouteDecision]
+    /// 기기 위치 기록에서만 나오는 값이라 iCloud로 내보내지 않는다.
+    var dismissedPlaceSuggestions: [DismissedPlaceSuggestion]
+    var movementCorrections: [TravelModeCorrection]
+    var suppressedActualIDs: Set<UUID>
+    /// Prevents a deliberate deletion from being mistaken for local data loss
+    /// when an older CloudKit snapshot is used as a recovery source.
+    var cloudDeletedRecordKeys: Set<String>
+    /// A full reset invalidates every cloud record written before this time.
+    var cloudResetAt: Date?
+    var weatherEnabled: Bool
+    var weatherSidebarVisible: Bool
+    var notificationsEnabled: Bool
+    var permissions: [PermissionFeature: PermissionState]
+    var timelineRowOrder: [String]
+    /// 사용자 교정은 원본 센서와 분리한 표시용 파생값이다.
+    var activityCorrections: [UUID: ActivityCorrection]
+    var customActivityLabels: [String]
+    /// UUID가 바뀌는 자동 재분류 뒤에도 유지되는 사용자 확인 수면 구간.
+    var confirmedSleepSpans: [TimeSpan]
+    /// 내 차로 등록한 차량 오디오 기기 이름. 연결된 이동은 자동차로 확정한다(CAR1029A01).
+    var registeredCarAudioNames: [String]
+    /// 연결·해제가 이동과 맞아떨어진 미등록 기기, 최근 순 최대 10개.
+    var recentCarAudioNames: [String]
+
+    static let defaults = AppFeatureSettings(
+        startScale: .day,
+        rememberLastScale: false,
+        catStyle: .calico,
+        reduceMotion: false,
+        showsPhotos: false,
+        showsPhotosInWidgets: false,
+        selectedCalendarIDs: [],
+        healthEnabled: false,
+        locationEnabled: false,
+        backgroundPreciseLocationEnabled: false,
+        sensorCollectionProfile: .balanced,
+        gpsLoggingPreferences: .standard,
+        mapCategoryColors: [:],
+        mapUserActivityCategories: [],
+        mapDisplayStyle: .mapLibreRPG,
+        mapMemoDisplayFilter: .all,
+        watchAccelerationProfile: .off,
+        watchDataSyncProfile: .off,
+        floorCalibration: nil,
+        floorCalibrationHistory: [],
+        frequentPlaces: FrequentPlace.defaults,
+        userTransitLocations: [],
+        transitBoardingDecisions: [],
+        dismissedPlaceSuggestions: [],
+        movementCorrections: [],
+        suppressedActualIDs: [],
+        cloudDeletedRecordKeys: [],
+        cloudResetAt: nil,
+        weatherEnabled: false,
+        weatherSidebarVisible: true,
+        notificationsEnabled: false,
+        permissions: Dictionary(
+            uniqueKeysWithValues: PermissionFeature.allCases.map { ($0, .notDetermined) }
+        ),
+        timelineRowOrder: TimelineRowOrder.defaults,
+        activityCorrections: [:],
+        customActivityLabels: [],
+        confirmedSleepSpans: [],
+        registeredCarAudioNames: [],
+        recentCarAudioNames: []
+    )
+
+    init(
+        startScale: TimelineLevel,
+        rememberLastScale: Bool,
+        catStyle: CatStyle,
+        reduceMotion: Bool,
+        showsPhotos: Bool,
+        showsPhotosInWidgets: Bool,
+        selectedCalendarIDs: [String],
+        healthEnabled: Bool,
+        locationEnabled: Bool,
+        backgroundPreciseLocationEnabled: Bool,
+        sensorCollectionProfile: SensorCollectionProfile,
+        gpsLoggingPreferences: GPSLoggingPreferences = .standard,
+        mapCategoryColors: [String: String] = [:],
+        mapUserActivityCategories: [MapUserActivityCategory] = [],
+        mapDisplayStyle: MapDisplayStyle = .standard,
+        mapMemoDisplayFilter: MapMemoDisplayFilter = .all,
+        watchAccelerationProfile: TaptionWatchAccelerationProfile = .off,
+        watchDataSyncProfile: TaptionWatchDataSyncProfile = .off,
+        floorCalibration: FloorCalibration? = nil,
+        floorCalibrationHistory: [FloorCalibrationEvent] = [],
+        frequentPlaces: [FrequentPlace] = FrequentPlace.defaults,
+        userTransitLocations: [UserTransitLocation] = [],
+        transitBoardingDecisions: [TransitBoardingDecision] = [],
+        predictedRouteDecisions: [MapPredictedRouteDecision] = [],
+        dismissedPlaceSuggestions: [DismissedPlaceSuggestion] = [],
+        movementCorrections: [TravelModeCorrection] = [],
+        suppressedActualIDs: Set<UUID> = [],
+        cloudDeletedRecordKeys: Set<String> = [],
+        cloudResetAt: Date? = nil,
+        weatherEnabled: Bool,
+        weatherSidebarVisible: Bool = true,
+        notificationsEnabled: Bool,
+        permissions: [PermissionFeature: PermissionState],
+        timelineRowOrder: [String] = TimelineRowOrder.defaults,
+        activityCorrections: [UUID: ActivityCorrection] = [:],
+        customActivityLabels: [String] = [],
+        confirmedSleepSpans: [TimeSpan] = [],
+        registeredCarAudioNames: [String] = [],
+        recentCarAudioNames: [String] = []
+    ) {
+        self.startScale = startScale
+        self.rememberLastScale = rememberLastScale
+        self.catStyle = catStyle
+        self.reduceMotion = reduceMotion
+        self.showsPhotos = showsPhotos
+        self.showsPhotosInWidgets = showsPhotosInWidgets
+        self.selectedCalendarIDs = selectedCalendarIDs
+        self.healthEnabled = healthEnabled
+        self.locationEnabled = locationEnabled
+        self.backgroundPreciseLocationEnabled = backgroundPreciseLocationEnabled
+        self.sensorCollectionProfile = sensorCollectionProfile
+        self.gpsLoggingPreferences = gpsLoggingPreferences
+        self.mapCategoryColors = Self.normalizedMapCategoryColors(
+            mapCategoryColors
+        )
+        self.mapUserActivityCategories = Self.normalizedMapUserActivityCategories(
+            mapUserActivityCategories
+        )
+        self.mapDisplayStyle = mapDisplayStyle.runtimeStyle
+        self.mapMemoDisplayFilter = mapMemoDisplayFilter
+        self.watchAccelerationProfile = watchAccelerationProfile
+        self.watchDataSyncProfile = watchDataSyncProfile
+        self.floorCalibration = floorCalibration
+        self.floorCalibrationHistory = floorCalibrationHistory
+        self.frequentPlaces = Self.mergedFrequentPlaces(frequentPlaces)
+        self.userTransitLocations = userTransitLocations.map {
+            var value = $0
+            value.radiusMeters = 100
+            return value
+        }
+        self.transitBoardingDecisions = transitBoardingDecisions
+        self.predictedRouteDecisions = predictedRouteDecisions
+        self.dismissedPlaceSuggestions = dismissedPlaceSuggestions
+        self.movementCorrections = movementCorrections
+        self.suppressedActualIDs = suppressedActualIDs
+        self.cloudDeletedRecordKeys = cloudDeletedRecordKeys
+        self.cloudResetAt = cloudResetAt
+        self.weatherEnabled = weatherEnabled
+        self.weatherSidebarVisible = weatherSidebarVisible
+        self.notificationsEnabled = notificationsEnabled
+        self.permissions = permissions
+        self.timelineRowOrder = Self.normalizedTimelineRowOrder(timelineRowOrder)
+        self.activityCorrections = activityCorrections
+        self.customActivityLabels = Self.normalizedActivityLabels(customActivityLabels)
+        self.confirmedSleepSpans = Self.normalizedConfirmedSleepSpans(
+            confirmedSleepSpans
+        )
+        self.registeredCarAudioNames = Self.normalizedCarAudioNames(registeredCarAudioNames)
+        self.recentCarAudioNames = Self.normalizedCarAudioNames(recentCarAudioNames)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case startScale
+        case rememberLastScale
+        case catStyle
+        case reduceMotion
+        case showsPhotos
+        case showsPhotosInWidgets
+        case selectedCalendarIDs
+        case healthEnabled
+        case locationEnabled
+        case backgroundPreciseLocationEnabled
+        case sensorCollectionProfile
+        case gpsLoggingPreferences
+        case mapCategoryColors
+        case mapUserActivityCategories
+        case mapDisplayStyle
+        case mapMemoDisplayFilter
+        case watchAccelerationProfile
+        case watchDataSyncProfile
+        case floorCalibration
+        case floorCalibrationHistory
+        case frequentPlaces
+        case userTransitLocations
+        case transitBoardingDecisions
+        case predictedRouteDecisions
+        case dismissedPlaceSuggestions
+        case movementCorrections
+        case suppressedActualIDs
+        case cloudDeletedRecordKeys
+        case cloudResetAt
+        case weatherEnabled
+        case weatherSidebarVisible
+        case notificationsEnabled
+        case permissions
+        case timelineRowOrder
+        case activityCorrections
+        case customActivityLabels
+        case confirmedSleepSpans
+        case registeredCarAudioNames
+        case recentCarAudioNames
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        let defaults = Self.defaults
+        startScale = try values.decodeIfPresent(
+            TimelineLevel.self,
+            forKey: .startScale
+        ) ?? defaults.startScale
+        rememberLastScale = try values.decodeIfPresent(
+            Bool.self,
+            forKey: .rememberLastScale
+        ) ?? defaults.rememberLastScale
+        catStyle = try values.decodeIfPresent(
+            CatStyle.self,
+            forKey: .catStyle
+        ) ?? defaults.catStyle
+        reduceMotion = try values.decodeIfPresent(
+            Bool.self,
+            forKey: .reduceMotion
+        ) ?? defaults.reduceMotion
+        showsPhotos = try values.decodeIfPresent(
+            Bool.self,
+            forKey: .showsPhotos
+        ) ?? defaults.showsPhotos
+        showsPhotosInWidgets = try values.decodeIfPresent(
+            Bool.self,
+            forKey: .showsPhotosInWidgets
+        ) ?? defaults.showsPhotosInWidgets
+        selectedCalendarIDs = try values.decodeIfPresent(
+            [String].self,
+            forKey: .selectedCalendarIDs
+        ) ?? defaults.selectedCalendarIDs
+        healthEnabled = try values.decodeIfPresent(
+            Bool.self,
+            forKey: .healthEnabled
+        ) ?? defaults.healthEnabled
+        locationEnabled = try values.decodeIfPresent(
+            Bool.self,
+            forKey: .locationEnabled
+        ) ?? defaults.locationEnabled
+        backgroundPreciseLocationEnabled = try values.decodeIfPresent(
+            Bool.self,
+            forKey: .backgroundPreciseLocationEnabled
+        ) ?? defaults.backgroundPreciseLocationEnabled
+        sensorCollectionProfile = try values.decodeIfPresent(
+            SensorCollectionProfile.self,
+            forKey: .sensorCollectionProfile
+        ) ?? defaults.sensorCollectionProfile
+        gpsLoggingPreferences = try values.decodeIfPresent(
+            GPSLoggingPreferences.self,
+            forKey: .gpsLoggingPreferences
+        ) ?? defaults.gpsLoggingPreferences
+        mapCategoryColors = Self.normalizedMapCategoryColors(
+            try values.decodeIfPresent(
+                [String: String].self,
+                forKey: .mapCategoryColors
+            ) ?? defaults.mapCategoryColors
+        )
+        mapUserActivityCategories = Self.normalizedMapUserActivityCategories(
+            try values.decodeIfPresent(
+                [MapUserActivityCategory].self,
+                forKey: .mapUserActivityCategories
+            ) ?? defaults.mapUserActivityCategories
+        )
+        mapDisplayStyle = (try values.decodeIfPresent(
+            MapDisplayStyle.self,
+            forKey: .mapDisplayStyle
+        ) ?? defaults.mapDisplayStyle).runtimeStyle
+        mapMemoDisplayFilter = try values.decodeIfPresent(
+            MapMemoDisplayFilter.self,
+            forKey: .mapMemoDisplayFilter
+        ) ?? defaults.mapMemoDisplayFilter
+        watchAccelerationProfile = try values.decodeIfPresent(
+            TaptionWatchAccelerationProfile.self,
+            forKey: .watchAccelerationProfile
+        ) ?? defaults.watchAccelerationProfile
+        watchDataSyncProfile = try values.decodeIfPresent(
+            TaptionWatchDataSyncProfile.self,
+            forKey: .watchDataSyncProfile
+        ) ?? defaults.watchDataSyncProfile
+        floorCalibration = try values.decodeIfPresent(
+            FloorCalibration.self,
+            forKey: .floorCalibration
+        ) ?? defaults.floorCalibration
+        floorCalibrationHistory = try values.decodeIfPresent(
+            [FloorCalibrationEvent].self,
+            forKey: .floorCalibrationHistory
+        ) ?? defaults.floorCalibrationHistory
+        frequentPlaces = Self.mergedFrequentPlaces(
+            try values.decodeIfPresent(
+                [FrequentPlace].self,
+                forKey: .frequentPlaces
+            ) ?? defaults.frequentPlaces
+        )
+        userTransitLocations = try values.decodeIfPresent(
+            [UserTransitLocation].self,
+            forKey: .userTransitLocations
+        ) ?? defaults.userTransitLocations
+        transitBoardingDecisions = try values.decodeIfPresent(
+            [TransitBoardingDecision].self,
+            forKey: .transitBoardingDecisions
+        ) ?? defaults.transitBoardingDecisions
+        predictedRouteDecisions = try values.decodeIfPresent(
+            [MapPredictedRouteDecision].self, forKey: .predictedRouteDecisions
+        ) ?? defaults.predictedRouteDecisions
+        dismissedPlaceSuggestions = try values.decodeIfPresent(
+            [DismissedPlaceSuggestion].self,
+            forKey: .dismissedPlaceSuggestions
+        ) ?? defaults.dismissedPlaceSuggestions
+        movementCorrections = try values.decodeIfPresent(
+            [TravelModeCorrection].self,
+            forKey: .movementCorrections
+        ) ?? defaults.movementCorrections
+        suppressedActualIDs = try values.decodeIfPresent(
+            Set<UUID>.self,
+            forKey: .suppressedActualIDs
+        ) ?? defaults.suppressedActualIDs
+        cloudDeletedRecordKeys = try values.decodeIfPresent(
+            Set<String>.self,
+            forKey: .cloudDeletedRecordKeys
+        ) ?? defaults.cloudDeletedRecordKeys
+        cloudResetAt = try values.decodeIfPresent(
+            Date.self,
+            forKey: .cloudResetAt
+        ) ?? defaults.cloudResetAt
+        weatherEnabled = try values.decodeIfPresent(
+            Bool.self,
+            forKey: .weatherEnabled
+        ) ?? defaults.weatherEnabled
+        weatherSidebarVisible = try values.decodeIfPresent(
+            Bool.self,
+            forKey: .weatherSidebarVisible
+        ) ?? defaults.weatherSidebarVisible
+        notificationsEnabled = try values.decodeIfPresent(
+            Bool.self,
+            forKey: .notificationsEnabled
+        ) ?? defaults.notificationsEnabled
+        permissions = try values.decodeIfPresent(
+            [PermissionFeature: PermissionState].self,
+            forKey: .permissions
+        ) ?? defaults.permissions
+        timelineRowOrder = Self.normalizedTimelineRowOrder(
+            try values.decodeIfPresent(
+                [String].self,
+                forKey: .timelineRowOrder
+            ) ?? defaults.timelineRowOrder
+        )
+        activityCorrections = try values.decodeIfPresent(
+            [UUID: ActivityCorrection].self,
+            forKey: .activityCorrections
+        ) ?? defaults.activityCorrections
+        customActivityLabels = Self.normalizedActivityLabels(
+            try values.decodeIfPresent(
+                [String].self,
+                forKey: .customActivityLabels
+            ) ?? defaults.customActivityLabels
+        )
+        confirmedSleepSpans = Self.normalizedConfirmedSleepSpans(
+            try values.decodeIfPresent(
+                [TimeSpan].self,
+                forKey: .confirmedSleepSpans
+            ) ?? defaults.confirmedSleepSpans
+        )
+        registeredCarAudioNames = Self.normalizedCarAudioNames(
+            try values.decodeIfPresent([String].self, forKey: .registeredCarAudioNames)
+                ?? defaults.registeredCarAudioNames
+        )
+        recentCarAudioNames = Self.normalizedCarAudioNames(
+            try values.decodeIfPresent([String].self, forKey: .recentCarAudioNames)
+                ?? defaults.recentCarAudioNames
+        )
+        for feature in PermissionFeature.allCases
+        where permissions[feature] == nil {
+            permissions[feature] = .notDetermined
+        }
+    }
+
+    static func mergedFrequentPlaces(
+        _ places: [FrequentPlace]
+    ) -> [FrequentPlace] {
+        var result = places
+        for item in FrequentPlace.defaults where !result.contains(where: {
+            $0.kind == item.kind && $0.kind != .custom
+        }) {
+            result.append(item)
+        }
+        return result
+    }
+
+    static func normalizedTimelineRowOrder(_ ids: [String]) -> [String] {
+        var result: [String] = []
+        for id in ids + TimelineRowOrder.defaults
+        where !id.isEmpty && !result.contains(id) {
+            result.append(id)
+        }
+        return result
+    }
+
+    static func normalizedActivityLabels(_ labels: [String]) -> [String] {
+        var result: [String] = []
+        for label in labels {
+            let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty,
+                  !result.contains(where: {
+                      $0.localizedCaseInsensitiveCompare(trimmed) == .orderedSame
+                  }) else { continue }
+            result.append(trimmed)
+        }
+        return result
+    }
+
+    /// 기기 이름은 iOS가 보고한 그대로 두고 공백·중복만 거른다.
+    static func normalizedCarAudioNames(_ names: [String]) -> [String] {
+        var result: [String] = []
+        for name in names {
+            let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty, !result.contains(trimmed) else { continue }
+            result.append(trimmed)
+        }
+        return result
+    }
+
+    static func normalizedConfirmedSleepSpans(
+        _ spans: [TimeSpan]
+    ) -> [TimeSpan] {
+        let ordered = spans
+            .filter { $0.duration > 0 }
+            .sorted { $0.start < $1.start }
+        var result: [TimeSpan] = []
+        for span in ordered {
+            guard let previous = result.last,
+                  span.start <= previous.end else {
+                result.append(span)
+                continue
+            }
+            result[result.count - 1] = TimeSpan(
+                start: previous.start,
+                end: max(previous.end, span.end)
+            )
+        }
+        return result
+    }
+
+    static func normalizedMapUserActivityCategories(
+        _ categories: [MapUserActivityCategory]
+    ) -> [MapUserActivityCategory] {
+        var result: [MapUserActivityCategory] = []
+        for category in categories {
+            var value = category
+            value.title = value.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            value.systemImage = value.systemImage.trimmingCharacters(in: .whitespacesAndNewlines)
+            value.hex = value.hex.uppercased()
+            guard !value.title.isEmpty,
+                  !value.systemImage.isEmpty,
+                  value.hex.count == 7,
+                  value.hex.first == "#",
+                  value.hex.dropFirst().allSatisfy({ $0.isHexDigit }),
+                  !result.contains(where: {
+                      $0.title.localizedCaseInsensitiveCompare(value.title) == .orderedSame
+                  })
+            else { continue }
+            result.append(value)
+        }
+        return result
+    }
+
+    static func normalizedMapCategoryColors(
+        _ values: [String: String]
+    ) -> [String: String] {
+        let allowed = Set(RecordClassificationCatalog.categories.map(\.id))
+        return values.reduce(into: [:]) { result, item in
+            let hex = item.value.uppercased()
+            guard allowed.contains(item.key),
+                  hex.count == 7,
+                  hex.first == "#",
+                  hex.dropFirst().allSatisfy({ $0.isHexDigit }) else {
+                return
+            }
+            result[item.key] = hex
+        }
+    }
+}

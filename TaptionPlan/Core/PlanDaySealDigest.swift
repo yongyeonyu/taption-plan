@@ -33,7 +33,7 @@ extension TaptionSealedDayBuilder {
             .map { $0.span(asOf: now) }
             .compactMap { $0.intersection(with: day) }
         guard !eatingSpans.isEmpty else { return totalsByID }
-        let eatingTotal = unionDuration(eatingSpans)
+        let eatingTotal = TimeSpan.unionDuration(eatingSpans)
         let activityPhaseSpans = phases
             .filter { RecordAnalysisCategoryPolicy.canonicalPhase($0.phase).rawValue == "activity" }
             .map(\.span)
@@ -43,7 +43,7 @@ extension TaptionSealedDayBuilder {
                 if let overlap = phaseSpan.intersection(with: eating) { overlaps.append(overlap) }
             }
         }
-        let movedSeconds = min(unionDuration(overlaps), totalsByID["activity"] ?? 0)
+        let movedSeconds = min(TimeSpan.unionDuration(overlaps), totalsByID["activity"] ?? 0)
         if movedSeconds > 0 {
             totalsByID["activity", default: 0] -= movedSeconds
             if (totalsByID["activity"] ?? 0) <= 0 { totalsByID["activity"] = nil }
@@ -59,21 +59,5 @@ extension TaptionSealedDayBuilder {
         }
         totalsByID["eating", default: 0] += eatingTotal - remaining
         return totalsByID
-    }
-
-    /// 겹치는 구간을 병합한 총 시간(같은 초를 두 번 세지 않는다).
-    static func unionDuration(_ spans: [TimeSpan]) -> TimeInterval {
-        let ordered = spans.filter { $0.duration > 0 }.sorted { $0.start < $1.start }
-        guard var current = ordered.first else { return 0 }
-        var total: TimeInterval = 0
-        for span in ordered.dropFirst() {
-            if span.start <= current.end {
-                current.end = max(current.end, span.end)
-            } else {
-                total += current.duration
-                current = span
-            }
-        }
-        return total + current.duration
     }
 }

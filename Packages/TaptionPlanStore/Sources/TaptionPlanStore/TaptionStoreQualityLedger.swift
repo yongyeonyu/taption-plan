@@ -34,8 +34,6 @@ public final class TaptionStoreQualityLedger: Sendable {
         public var driftedDays = 0
         public var driftedRows = 0
 
-        public var demotedTotal: Int { demotedColumns.values.reduce(0, +) }
-
         public init(
             demotedColumns: [String: Int] = [:],
             unreadableRows: Int = 0,

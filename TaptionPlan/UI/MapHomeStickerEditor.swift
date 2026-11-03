@@ -611,15 +611,6 @@ struct MapHomeStickerEditorSheet: View {
         }
     }
 
-    private var coordinateFields: some View {
-        Group {
-            TextField(language.text("위도", "Latitude"), text: $latitudeText)
-                .keyboardType(.decimalPad)
-            TextField(language.text("경도", "Longitude"), text: $longitudeText)
-                .keyboardType(.decimalPad)
-        }
-    }
-
     private var symbolPicker: some View {
         HStack(spacing: 9) {
             ForEach(symbols, id: \.self) { symbol in
@@ -771,12 +762,4 @@ struct MapHomeStickerEditorSheet: View {
         dismiss()
     }
 
-    private func memoKindTitle(_ kind: MemoKind) -> String {
-        switch kind {
-        case .decision: language.text("결정", "Decision")
-        case .idea: language.text("아이디어", "Idea")
-        case .blocker: language.text("장애물", "Blocker")
-        case .nextAction: language.text("다음 행동", "Next action")
-        }
-    }
 }

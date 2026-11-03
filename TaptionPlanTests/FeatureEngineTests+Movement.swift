@@ -3089,24 +3089,6 @@ extension FeatureEngineTests {
         XCTAssertTrue(WalkingLocationEngine().build(readings: readings).isEmpty)
     }
 
-    func testTimelineRouteUsesSameClockCoordinates() {
-        let base = makeDate(2026, 7, 30)
-        let viewport = TimelineViewport(
-            dayStart: base,
-            visibleSpan: 10 * hour,
-            horizontalOffset: 6 * hour,
-            currentTime: base.addingTimeInterval(8 * hour)
-        )
-        XCTAssertEqual(
-            TimelineCoordinateMapper.fraction(
-                for: base.addingTimeInterval(8 * hour),
-                in: viewport
-            ),
-            0.2,
-            accuracy: 0.0001
-        )
-    }
-
     func testCatMotionRespectsReduceMotion() {
         XCTAssertEqual(
             CatMotionPolicy.resolve(

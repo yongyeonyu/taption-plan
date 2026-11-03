@@ -116,7 +116,7 @@ enum TaptionWidgetPayloadFactory {
             .map { travel in
                 TaptionWidgetItem(
                     id: travel.id,
-                    title: travelModeName(travel.mode),
+                    title: MovementPresentation.title(for: travel.mode),
                     categoryID: "movement",
                     startsAt: travel.span.start,
                     endsAt: travel.span.end,
@@ -252,18 +252,4 @@ enum TaptionWidgetPayloadFactory {
         )
     }
 
-    private static func travelModeName(_ mode: TravelMode) -> String {
-        switch mode {
-        case .walking: "걷기"
-        case .running: "달리기"
-        case .cycling: "자전거"
-        case .bus: "버스"
-        case .subway: "지하철"
-        case .taxi: "택시"
-        case .car: "자동차"
-        case .train: "기차"
-        case .airplane: "비행기"
-        case .ship: "배"
-        }
-    }
 }

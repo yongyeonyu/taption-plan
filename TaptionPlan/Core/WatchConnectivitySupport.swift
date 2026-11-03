@@ -450,40 +450,6 @@ struct AppleWatchOnboardingStore {
 }
 
 final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @unchecked Sendable {
-    private final class DiagnosticsReplyGate: @unchecked Sendable {
-        private let lock = NSLock()
-        private var continuation: CheckedContinuation<String?, Never>?
-
-        init(_ continuation: CheckedContinuation<String?, Never>) {
-            self.continuation = continuation
-        }
-
-        func finish(_ value: String?) {
-            lock.lock()
-            let pending = continuation
-            continuation = nil
-            lock.unlock()
-            pending?.resume(returning: value)
-        }
-    }
-
-    private final class BooleanReplyGate: @unchecked Sendable {
-        private let lock = NSLock()
-        private var continuation: CheckedContinuation<Bool, Never>?
-
-        init(_ continuation: CheckedContinuation<Bool, Never>) {
-            self.continuation = continuation
-        }
-
-        func finish(_ value: Bool) {
-            lock.lock()
-            let pending = continuation
-            continuation = nil
-            lock.unlock()
-            pending?.resume(returning: value)
-        }
-    }
-
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
     private let commandDefaults: UserDefaults
@@ -639,26 +605,6 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         }
     }
 
-    func requestWorkout(_ request: TaptionWatchWorkoutRequest) throws {
-        guard WCSession.isSupported() else { return }
-        let data = try encoder.encode(request)
-        let envelope: [String: Any] = [
-            TaptionWatchEnvelope.workoutRequestKey: data,
-        ]
-        let session = WCSession.default
-        guard session.activationState == .activated, session.isPaired else {
-            return
-        }
-        session.transferUserInfo(envelope)
-        if session.isReachable {
-            session.sendMessage(
-                envelope,
-                replyHandler: nil,
-                errorHandler: nil
-            )
-        }
-    }
-
     @discardableResult
     func requestWatchDataSync(requestID requestedRequestID: String? = nil) -> Bool {
         let logger = TaptionPlanDiagnosticsLogger.shared
@@ -781,7 +727,7 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
             return false
         }
         return await withCheckedContinuation { continuation in
-            let gate = BooleanReplyGate(continuation)
+            let gate = OneShotReply(continuation)
             session.sendMessage(
                 envelope,
                 replyHandler: { reply in
@@ -874,7 +820,7 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         session.transferUserInfo(request)
         guard session.isReachable else { return cached }
         return await withCheckedContinuation { continuation in
-            let gate = DiagnosticsReplyGate(continuation)
+            let gate = OneShotReply(continuation)
             session.sendMessage(
                 request,
                 replyHandler: { reply in

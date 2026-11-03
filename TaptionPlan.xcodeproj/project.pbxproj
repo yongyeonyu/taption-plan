@@ -7,6 +7,83 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5624A4986B94396ED9FEC9D5 /* MovementNameTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 769EE77192CF9EC73E324782 /* MovementNameTests.swift */; };
+		A1FA11A6B07C6C7A479E67EE /* StableRecordID.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11518EFE631FA33E137B /* StableRecordID.swift */; };
+		A1FA1169BA887967E6373290 /* StableRecordID.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11518EFE631FA33E137B /* StableRecordID.swift */; };
+		A1FA113776B4F655CB131CBA /* StableRecordIDTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11C58FA9883A9A7F8673 /* StableRecordIDTests.swift */; };
+		A1FA11D356722EEA8B293A50 /* OneShotReply.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11F96060E8351D906AA8 /* OneShotReply.swift */; };
+		A1FA111D146A9C217935CC51 /* MapHomeDailyCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA115C43BF0F705C0CC3E6 /* MapHomeDailyCard.swift */; };
+		A1FA1128A1FC3A9AF08DED56 /* MapHomeAlarm.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11050C8C616822F8DF6B /* MapHomeAlarm.swift */; };
+		A1FA11D67A6BAA407D371199 /* MapHomeSalaryPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11B9733FBC139C6D2716 /* MapHomeSalaryPolicy.swift */; };
+		A1FA119C943D414BBBC9CDA9 /* MapHomeStride.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11501F768BFA9562791B /* MapHomeStride.swift */; };
+		A1FA114B649575874095E7E4 /* MapHomeCalendarPolicies.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1117C18536CF5C5AE2C0 /* MapHomeCalendarPolicies.swift */; };
+		A1FA1112A607AAE0D257EB50 /* ReviewView+Data.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11C7507774332BFCF985 /* ReviewView+Data.swift */; };
+		A1FA1157BD1F0CCB182AD1A6 /* ReviewView+Records.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11A657AF32CE7A175D27 /* ReviewView+Records.swift */; };
+		A1FA11B6B565DF24CA6FBDD1 /* ReviewView+Charts.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1159882F936CEF458785 /* ReviewView+Charts.swift */; };
+		A1FA11960E1E776FA2AFA426 /* ReviewView+Clock.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1101B4DB128D658751C3 /* ReviewView+Clock.swift */; };
+		A1FA11E4C6FF2DAB60DE4004 /* ActivityCorrectionViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA117EA23DE1FEEF9455F6 /* ActivityCorrectionViews.swift */; };
+		A1FA113BFE3B1AB153E86D43 /* SubwayRouteTimelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11DEB6F30038E0A3D825 /* SubwayRouteTimelineView.swift */; };
+		A1FA11046C5838880ADF9D7F /* RecordDetailViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA119C66A7B1A8125E76E3 /* RecordDetailViews.swift */; };
+		A1FA1100D0A3E914D10FEC81 /* ReviewSupportTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA113778B8EB03DD952E89 /* ReviewSupportTypes.swift */; };
+		A1FA11B788DDFF62F309512F /* TimelineRowModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11B51558DBA397EDEB19 /* TimelineRowModels.swift */; };
+		A1FA11356EDD0F1965709226 /* TimelineRowViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11DCE35698B9D5CBB801 /* TimelineRowViews.swift */; };
+		A1FA11A3B8DAE991AEA02AAF /* TimelineBoard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11A8410BD26D37F70F6C /* TimelineBoard.swift */; };
+		A1FA113C605017A9D1288BA2 /* GroupGanttView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1151C89CDAB2BD35E340 /* GroupGanttView.swift */; };
+		A1FA113C5869FE29648957F6 /* TimelineDetailPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA114C9607F825D87DDABD /* TimelineDetailPanel.swift */; };
+		A1FA11A8E4B16F54E10FE9B1 /* RouteMapViewport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA111EE25EBDA22F51D42E /* RouteMapViewport.swift */; };
+		A1FA11EB640567D972E12891 /* TimelineSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11013C73958F69782D38 /* TimelineSelection.swift */; };
+		A1FA11CAD2B1A327A31670AB /* AppFeatureSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11B07DD51FA2F1E98EE8 /* AppFeatureSettings.swift */; };
+		A1FA11A945DE6CB52FDFD7AF /* AppFeatureSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11B07DD51FA2F1E98EE8 /* AppFeatureSettings.swift */; };
+		A1FA1149ABD1E6845D6CAAC0 /* MapDisplayModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11FA168BA095E34D6938 /* MapDisplayModels.swift */; };
+		A1FA11E5401FED61219701DE /* MapDisplayModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11FA168BA095E34D6938 /* MapDisplayModels.swift */; };
+		A1FA11A34B1439834812A887 /* ReviewModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11910B5837616D11C071 /* ReviewModels.swift */; };
+		A1FA11D1FC078F2BA7021A4D /* ReviewModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11910B5837616D11C071 /* ReviewModels.swift */; };
+		A1FA115BFD9ADB6D5F57D8C1 /* SensorReadingModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11E186E821582D4654B6 /* SensorReadingModels.swift */; };
+		A1FA11AD460494BD2B675105 /* SensorReadingModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11E186E821582D4654B6 /* SensorReadingModels.swift */; };
+		A1FA1107FF30EF2056E8191C /* PlaceModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA113B2D357EDE2DE6E507 /* PlaceModels.swift */; };
+		A1FA11EC47982D3A8ADE45AF /* PlaceModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA113B2D357EDE2DE6E507 /* PlaceModels.swift */; };
+		A1FA118242B8712F9D574BBC /* FloorModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11394045A2B8089E0F2B /* FloorModels.swift */; };
+		A1FA11E70638CC9F3E7CE988 /* FloorModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11394045A2B8089E0F2B /* FloorModels.swift */; };
+		A1FA11CFA6D7380E55EB070B /* WeatherModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA115A910260F58FF7F92E /* WeatherModels.swift */; };
+		A1FA1161490F313AB4EA7A10 /* WeatherModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA115A910260F58FF7F92E /* WeatherModels.swift */; };
+		A1FA11A2F30B45C9270544DE /* CategoryAndCalendarModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11CE7058A74AF1E107F4 /* CategoryAndCalendarModels.swift */; };
+		A1FA116BC2165347E80C24D2 /* CategoryAndCalendarModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11CE7058A74AF1E107F4 /* CategoryAndCalendarModels.swift */; };
+		A1FA11722220BF7B935DF783 /* PermissionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11F4F448671427F5CF63 /* PermissionModels.swift */; };
+		A1FA111A34D824E3FF935346 /* PermissionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11F4F448671427F5CF63 /* PermissionModels.swift */; };
+		A1FA11D22B6CBCB2D06B20BD /* MovementModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11B6A70821ACA42221C4 /* MovementModels.swift */; };
+		A1FA11410095F413CF485193 /* MovementModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11B6A70821ACA42221C4 /* MovementModels.swift */; };
+		A1FA1124DD573AF2E6504C87 /* MemoModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11FBAFEB3EBA930C92B6 /* MemoModels.swift */; };
+		A1FA1158AD01103B0F4B8E6F /* MemoModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11FBAFEB3EBA930C92B6 /* MemoModels.swift */; };
+		A1FA113FD9DDDEB769707B2B /* ActualRecordModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA116BCD975D7F671E960D /* ActualRecordModels.swift */; };
+		A1FA1162814341AED9240569 /* ActualRecordModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA116BCD975D7F671E960D /* ActualRecordModels.swift */; };
+		A1FA119B398AC34A1F78055C /* PlanRecordModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1157352882250214647A /* PlanRecordModels.swift */; };
+		A1FA11EE9F352FA3C4B9FA2A /* PlanRecordModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1157352882250214647A /* PlanRecordModels.swift */; };
+		A1FA11515918A194B7DF1F5E /* ActivityCorrectionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11D8CD1BE6FF0212D336 /* ActivityCorrectionModels.swift */; };
+		A1FA1104470CBE8F59EA3A0F /* ActivityCorrectionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11D8CD1BE6FF0212D336 /* ActivityCorrectionModels.swift */; };
+		A1FA11BED1B1B68238CFA5CF /* RecordClassificationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA115AD7683D2897E2C76E /* RecordClassificationModels.swift */; };
+		A1FA11594047CE96DEF10AF6 /* RecordClassificationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA115AD7683D2897E2C76E /* RecordClassificationModels.swift */; };
+		A1FA118E6661E4ED3D1ED73A /* TimelineModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1138653005BEA1D8CBB0 /* TimelineModels.swift */; };
+		A1FA11D738A8A0AC7B013DD9 /* TimelineModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1138653005BEA1D8CBB0 /* TimelineModels.swift */; };
+		A1FA11802C58F99DE64AB619 /* LocationPrivacyAndTravelDistance.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA111188F70B2A1E222FD0 /* LocationPrivacyAndTravelDistance.swift */; };
+		A1FA116E96B03A38CF1271CF /* MotionActivityActualEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA114B38DDE757537287B5 /* MotionActivityActualEngine.swift */; };
+		A1FA11E1742C84FD2F207091 /* InferredSleepEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11666D556A4283945D7E /* InferredSleepEngines.swift */; };
+		A1FA11A00497E7D3361DB92E /* AppleWatchSensorActivityEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1151247FC986DC41E95E /* AppleWatchSensorActivityEngine.swift */; };
+		A1FA111C1F655A1871DB4D34 /* AppleDeviceGroundTruthEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11708F96142164B021A5 /* AppleDeviceGroundTruthEngine.swift */; };
+		A1FA1193B2C4F0AD672B142C /* MovementCorrectionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA119DA32DBD6AB39B3BE3 /* MovementCorrectionEngine.swift */; };
+		A1FA110A2C1A611F96DD0ED7 /* TravelSegmentGroupingEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11A12192E38998ADD56B /* TravelSegmentGroupingEngine.swift */; };
+		A1FA110EBBED07CD4916D6CC /* SubwayTravelSegmentEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA119B2AC36CF8F4E6694B /* SubwayTravelSegmentEngine.swift */; };
+		A1FA11F4130A02CEBA74BA89 /* MovementRouteBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1122B2E958DFAB98D0F4 /* MovementRouteBuilder.swift */; };
+		A1FA11E346325DE9124646F2 /* SensorEvidenceTimeIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1114DFD1B4E129D9D260 /* SensorEvidenceTimeIndex.swift */; };
+		A1FA11E73D8EF4A0D46BA75B /* TransitBoardingEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1191E387639DDBE62829 /* TransitBoardingEngines.swift */; };
+		A1FA11E539E87EF9BECCEED3 /* PlaceDetectionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11F6DF3994BF0EFB09B0 /* PlaceDetectionEngine.swift */; };
+		A1FA116E94306EBCD83FA237 /* UnregisteredPlaceSuggestionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA112726691A677BFF352A /* UnregisteredPlaceSuggestionEngine.swift */; };
+		A1FA11F2247EED1E851FD89B /* FrequentPlaceResolutionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11317768AD20F051874E /* FrequentPlaceResolutionEngine.swift */; };
+		A1FA110A399BEE8BE6C8AE89 /* FloorTimelineEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA118E292B101C6B3AA5B8 /* FloorTimelineEngine.swift */; };
+		A1FA11E4380CB5D4F762AEC2 /* FloorCalibrationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11B1FD975D785F7EC03B /* FloorCalibrationEngine.swift */; };
+		A1FA112F8C296037CA105A07 /* HealthRouteMergeEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1129C5ED9AABE2A196A8 /* HealthRouteMergeEngine.swift */; };
+		A1FA115CC4A39B133D2E9310 /* FloorEstimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11592F09D5F78DE5B901 /* FloorEstimator.swift */; };
+		A1FA112678FE13ABA3A562E7 /* TravelModeClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11CF2BF9E0148DBF14F0 /* TravelModeClassifier.swift */; };
+		A1FA1117E59F5515E80AEB17 /* RealtimeSensorMapProjection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11F59DB022FC67C16D22 /* RealtimeSensorMapProjection.swift */; };
 		ABD100600000000000000001 /* PlanActualStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBD100600000000000000001 /* PlanActualStorage.swift */; };
 		ABD100700000000000000001 /* SensorReadingStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBD100700000000000000001 /* SensorReadingStorage.swift */; };
 		ABD100600000000000000002 /* PlanActualStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBD100600000000000000001 /* PlanActualStorage.swift */; };
@@ -74,7 +151,6 @@
 		A10000000000000000000010 /* PlanRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000010 /* PlanRepository.swift */; };
 		A10000000000000000000011 /* PlanningEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000011 /* PlanningEngine.swift */; };
 		A10000000000000000000012 /* TemplatesAndSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000012 /* TemplatesAndSettings.swift */; };
-		A10000000000000000000013 /* SensorFusion.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000013 /* SensorFusion.swift */; };
 		A10000000000000000000071 /* StationaryContextClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000071 /* StationaryContextClassifier.swift */; };
 		A5B1102A020000000000001E /* AppleIntegrationPolicies.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000001D /* AppleIntegrationPolicies.swift */; };
 		A5B1102A020000000000001C /* AppleCalendarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000001B /* AppleCalendarService.swift */; };
@@ -160,7 +236,6 @@
 		A1000000000000000000002F /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002E /* ContentView.swift */; };
 		A10000000000000000000030 /* WatchSyncModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000029 /* WatchSyncModels.swift */; };
 		A10000000000000000000031 /* TaptionPlanWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = C10000000000000000000004 /* TaptionPlanWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		A10000000000000000000032 /* PhotoGalleryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000032 /* PhotoGalleryView.swift */; };
 		A10000000000000000000033 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000033 /* Assets.xcassets */; };
 		A10000000000000000000078 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000078 /* Assets.xcassets */; };
 		A10000000000000000000079 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000033 /* Assets.xcassets */; };
@@ -435,6 +510,66 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		769EE77192CF9EC73E324782 /* MovementNameTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovementNameTests.swift; sourceTree = "<group>"; };
+		F1FA11518EFE631FA33E137B /* StableRecordID.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StableRecordID.swift; sourceTree = "<group>"; };
+		F1FA11C58FA9883A9A7F8673 /* StableRecordIDTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StableRecordIDTests.swift; sourceTree = "<group>"; };
+		F1FA11F96060E8351D906AA8 /* OneShotReply.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OneShotReply.swift; sourceTree = "<group>"; };
+		F1FA115C43BF0F705C0CC3E6 /* MapHomeDailyCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeDailyCard.swift; sourceTree = "<group>"; };
+		F1FA11050C8C616822F8DF6B /* MapHomeAlarm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeAlarm.swift; sourceTree = "<group>"; };
+		F1FA11B9733FBC139C6D2716 /* MapHomeSalaryPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeSalaryPolicy.swift; sourceTree = "<group>"; };
+		F1FA11501F768BFA9562791B /* MapHomeStride.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeStride.swift; sourceTree = "<group>"; };
+		F1FA1117C18536CF5C5AE2C0 /* MapHomeCalendarPolicies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCalendarPolicies.swift; sourceTree = "<group>"; };
+		F1FA11C7507774332BFCF985 /* ReviewView+Data.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReviewView+Data.swift"; sourceTree = "<group>"; };
+		F1FA11A657AF32CE7A175D27 /* ReviewView+Records.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReviewView+Records.swift"; sourceTree = "<group>"; };
+		F1FA1159882F936CEF458785 /* ReviewView+Charts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReviewView+Charts.swift"; sourceTree = "<group>"; };
+		F1FA1101B4DB128D658751C3 /* ReviewView+Clock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReviewView+Clock.swift"; sourceTree = "<group>"; };
+		F1FA117EA23DE1FEEF9455F6 /* ActivityCorrectionViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityCorrectionViews.swift; sourceTree = "<group>"; };
+		F1FA11DEB6F30038E0A3D825 /* SubwayRouteTimelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubwayRouteTimelineView.swift; sourceTree = "<group>"; };
+		F1FA119C66A7B1A8125E76E3 /* RecordDetailViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordDetailViews.swift; sourceTree = "<group>"; };
+		F1FA113778B8EB03DD952E89 /* ReviewSupportTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewSupportTypes.swift; sourceTree = "<group>"; };
+		F1FA11B51558DBA397EDEB19 /* TimelineRowModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineRowModels.swift; sourceTree = "<group>"; };
+		F1FA11DCE35698B9D5CBB801 /* TimelineRowViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineRowViews.swift; sourceTree = "<group>"; };
+		F1FA11A8410BD26D37F70F6C /* TimelineBoard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineBoard.swift; sourceTree = "<group>"; };
+		F1FA1151C89CDAB2BD35E340 /* GroupGanttView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupGanttView.swift; sourceTree = "<group>"; };
+		F1FA114C9607F825D87DDABD /* TimelineDetailPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineDetailPanel.swift; sourceTree = "<group>"; };
+		F1FA111EE25EBDA22F51D42E /* RouteMapViewport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteMapViewport.swift; sourceTree = "<group>"; };
+		F1FA11013C73958F69782D38 /* TimelineSelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineSelection.swift; sourceTree = "<group>"; };
+		F1FA11B07DD51FA2F1E98EE8 /* AppFeatureSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFeatureSettings.swift; sourceTree = "<group>"; };
+		F1FA11FA168BA095E34D6938 /* MapDisplayModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapDisplayModels.swift; sourceTree = "<group>"; };
+		F1FA11910B5837616D11C071 /* ReviewModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewModels.swift; sourceTree = "<group>"; };
+		F1FA11E186E821582D4654B6 /* SensorReadingModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorReadingModels.swift; sourceTree = "<group>"; };
+		F1FA113B2D357EDE2DE6E507 /* PlaceModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceModels.swift; sourceTree = "<group>"; };
+		F1FA11394045A2B8089E0F2B /* FloorModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloorModels.swift; sourceTree = "<group>"; };
+		F1FA115A910260F58FF7F92E /* WeatherModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherModels.swift; sourceTree = "<group>"; };
+		F1FA11CE7058A74AF1E107F4 /* CategoryAndCalendarModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryAndCalendarModels.swift; sourceTree = "<group>"; };
+		F1FA11F4F448671427F5CF63 /* PermissionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionModels.swift; sourceTree = "<group>"; };
+		F1FA11B6A70821ACA42221C4 /* MovementModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovementModels.swift; sourceTree = "<group>"; };
+		F1FA11FBAFEB3EBA930C92B6 /* MemoModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoModels.swift; sourceTree = "<group>"; };
+		F1FA116BCD975D7F671E960D /* ActualRecordModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActualRecordModels.swift; sourceTree = "<group>"; };
+		F1FA1157352882250214647A /* PlanRecordModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanRecordModels.swift; sourceTree = "<group>"; };
+		F1FA11D8CD1BE6FF0212D336 /* ActivityCorrectionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityCorrectionModels.swift; sourceTree = "<group>"; };
+		F1FA115AD7683D2897E2C76E /* RecordClassificationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordClassificationModels.swift; sourceTree = "<group>"; };
+		F1FA1138653005BEA1D8CBB0 /* TimelineModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineModels.swift; sourceTree = "<group>"; };
+		F1FA111188F70B2A1E222FD0 /* LocationPrivacyAndTravelDistance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationPrivacyAndTravelDistance.swift; sourceTree = "<group>"; };
+		F1FA114B38DDE757537287B5 /* MotionActivityActualEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionActivityActualEngine.swift; sourceTree = "<group>"; };
+		F1FA11666D556A4283945D7E /* InferredSleepEngines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InferredSleepEngines.swift; sourceTree = "<group>"; };
+		F1FA1151247FC986DC41E95E /* AppleWatchSensorActivityEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleWatchSensorActivityEngine.swift; sourceTree = "<group>"; };
+		F1FA11708F96142164B021A5 /* AppleDeviceGroundTruthEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleDeviceGroundTruthEngine.swift; sourceTree = "<group>"; };
+		F1FA119DA32DBD6AB39B3BE3 /* MovementCorrectionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovementCorrectionEngine.swift; sourceTree = "<group>"; };
+		F1FA11A12192E38998ADD56B /* TravelSegmentGroupingEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelSegmentGroupingEngine.swift; sourceTree = "<group>"; };
+		F1FA119B2AC36CF8F4E6694B /* SubwayTravelSegmentEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubwayTravelSegmentEngine.swift; sourceTree = "<group>"; };
+		F1FA1122B2E958DFAB98D0F4 /* MovementRouteBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovementRouteBuilder.swift; sourceTree = "<group>"; };
+		F1FA1114DFD1B4E129D9D260 /* SensorEvidenceTimeIndex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorEvidenceTimeIndex.swift; sourceTree = "<group>"; };
+		F1FA1191E387639DDBE62829 /* TransitBoardingEngines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransitBoardingEngines.swift; sourceTree = "<group>"; };
+		F1FA11F6DF3994BF0EFB09B0 /* PlaceDetectionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceDetectionEngine.swift; sourceTree = "<group>"; };
+		F1FA112726691A677BFF352A /* UnregisteredPlaceSuggestionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnregisteredPlaceSuggestionEngine.swift; sourceTree = "<group>"; };
+		F1FA11317768AD20F051874E /* FrequentPlaceResolutionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrequentPlaceResolutionEngine.swift; sourceTree = "<group>"; };
+		F1FA118E292B101C6B3AA5B8 /* FloorTimelineEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloorTimelineEngine.swift; sourceTree = "<group>"; };
+		F1FA11B1FD975D785F7EC03B /* FloorCalibrationEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloorCalibrationEngine.swift; sourceTree = "<group>"; };
+		F1FA1129C5ED9AABE2A196A8 /* HealthRouteMergeEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthRouteMergeEngine.swift; sourceTree = "<group>"; };
+		F1FA11592F09D5F78DE5B901 /* FloorEstimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloorEstimator.swift; sourceTree = "<group>"; };
+		F1FA11CF2BF9E0148DBF14F0 /* TravelModeClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelModeClassifier.swift; sourceTree = "<group>"; };
+		F1FA11F59DB022FC67C16D22 /* RealtimeSensorMapProjection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeSensorMapProjection.swift; sourceTree = "<group>"; };
 		FBD100600000000000000001 /* PlanActualStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanActualStorage.swift; sourceTree = "<group>"; };
 		FBD100700000000000000001 /* SensorReadingStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorReadingStorage.swift; sourceTree = "<group>"; };
 		C10000000000000000000001 /* TaptionPlan.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TaptionPlan.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -487,7 +622,6 @@
 		F10000000000000000000010 /* PlanRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanRepository.swift; sourceTree = "<group>"; };
 		F10000000000000000000011 /* PlanningEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanningEngine.swift; sourceTree = "<group>"; };
 		F10000000000000000000012 /* TemplatesAndSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplatesAndSettings.swift; sourceTree = "<group>"; };
-		F10000000000000000000013 /* SensorFusion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorFusion.swift; sourceTree = "<group>"; };
 		F10000000000000000000071 /* StationaryContextClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationaryContextClassifier.swift; sourceTree = "<group>"; };
 		F5B1102A020000000000001D /* AppleIntegrationPolicies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleIntegrationPolicies.swift; sourceTree = "<group>"; };
 		F5B1102A020000000000001B /* AppleCalendarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleCalendarService.swift; sourceTree = "<group>"; };
@@ -573,7 +707,6 @@
 		F1000000000000000000002F /* TaptionPlanWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TaptionPlanWatch.entitlements; sourceTree = "<group>"; };
 		F10000000000000000000030 /* TaptionPlanWatchDebug.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TaptionPlanWatchDebug.entitlements; sourceTree = "<group>"; };
 		F10000000000000000000031 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		F10000000000000000000032 /* PhotoGalleryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoGalleryView.swift; sourceTree = "<group>"; };
 		F10000000000000000000033 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F10000000000000000000078 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F10000000000000000000034 /* TaptionPlanWatchWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanWatchWidget.swift; sourceTree = "<group>"; };
@@ -887,6 +1020,8 @@
 			children = (
 				F1000000000000000000000C /* TimeScaleTests.swift */,
 				F10000000000000000000016 /* FeatureEngineTests.swift */,
+				F1FA11C58FA9883A9A7F8673 /* StableRecordIDTests.swift */,
+				769EE77192CF9EC73E324782 /* MovementNameTests.swift */,
 				F5B1102A020000000000005B /* FeatureEngineTestFixtures.swift */,
 				F5B1102A0200000000000059 /* MapHomeStickmanTests.swift */,
 				F1A11102A0100000000000F2 /* MemoTextPolishTests.swift */,
@@ -984,6 +1119,11 @@
 				F52000000000000000000001 /* MapHomeLiveMapPolicies.swift */,
 				F50000000000000000000001 /* MapHomeVectorMap.swift */,
 				F1000000000000000000007F /* MapHomeCalendarSheet.swift */,
+				F1FA115C43BF0F705C0CC3E6 /* MapHomeDailyCard.swift */,
+				F1FA11050C8C616822F8DF6B /* MapHomeAlarm.swift */,
+				F1FA11B9733FBC139C6D2716 /* MapHomeSalaryPolicy.swift */,
+				F1FA11501F768BFA9562791B /* MapHomeStride.swift */,
+				F1FA1117C18536CF5C5AE2C0 /* MapHomeCalendarPolicies.swift */,
 				F1000000000000000000F0A1 /* MapHomeScreenRecording.swift */,
 				F51002000000000000000006 /* MapHomeNLEClipEditor.swift */,
 				F1000000000000000000F0B1 /* MapHomeTodayCalendar.swift */,
@@ -1033,8 +1173,23 @@
 				F10000000000000000000087 /* MapHomeLocationPresentation.swift */,
 				F10000000000000000000005 /* AppShellView.swift */,
 				F10000000000000000000006 /* ScheduleView.swift */,
+				F1FA11B51558DBA397EDEB19 /* TimelineRowModels.swift */,
+				F1FA11DCE35698B9D5CBB801 /* TimelineRowViews.swift */,
+				F1FA11A8410BD26D37F70F6C /* TimelineBoard.swift */,
+				F1FA1151C89CDAB2BD35E340 /* GroupGanttView.swift */,
+				F1FA114C9607F825D87DDABD /* TimelineDetailPanel.swift */,
+				F1FA111EE25EBDA22F51D42E /* RouteMapViewport.swift */,
+				F1FA11013C73958F69782D38 /* TimelineSelection.swift */,
 				F10000000000000000000007 /* GoalsView.swift */,
 				F10000000000000000000008 /* ReviewView.swift */,
+				F1FA11C7507774332BFCF985 /* ReviewView+Data.swift */,
+				F1FA11A657AF32CE7A175D27 /* ReviewView+Records.swift */,
+				F1FA1159882F936CEF458785 /* ReviewView+Charts.swift */,
+				F1FA1101B4DB128D658751C3 /* ReviewView+Clock.swift */,
+				F1FA117EA23DE1FEEF9455F6 /* ActivityCorrectionViews.swift */,
+				F1FA11DEB6F30038E0A3D825 /* SubwayRouteTimelineView.swift */,
+				F1FA119C66A7B1A8125E76E3 /* RecordDetailViews.swift */,
+				F1FA113778B8EB03DD952E89 /* ReviewSupportTypes.swift */,
 				F10000000000000000000009 /* SettingsView.swift */,
 				F1000000000000000000000A /* AddPlanSheet.swift */,
 				5A00000000000000000000F1 /* PlanTextSuggestion.swift */,
@@ -1045,7 +1200,6 @@
 				F10000000000000000000024 /* CategoryManagerView.swift */,
 				F10000000000000000000025 /* PlanEditorSheet.swift */,
 				F10000000000000000000026 /* PhotoClusterSheet.swift */,
-				F10000000000000000000032 /* PhotoGalleryView.swift */,
 				F1000000000000000000003A /* TimelineBlockStyleViews.swift */,
 			);
 			path = UI;
@@ -1093,17 +1247,54 @@
 			children = (
 				F10000000000000000000003 /* PlanItem.swift */,
 				F1000000000000000000000F /* FeatureModels.swift */,
+				F1FA11B07DD51FA2F1E98EE8 /* AppFeatureSettings.swift */,
+				F1FA11FA168BA095E34D6938 /* MapDisplayModels.swift */,
+				F1FA11910B5837616D11C071 /* ReviewModels.swift */,
+				F1FA11E186E821582D4654B6 /* SensorReadingModels.swift */,
+				F1FA113B2D357EDE2DE6E507 /* PlaceModels.swift */,
+				F1FA11394045A2B8089E0F2B /* FloorModels.swift */,
+				F1FA115A910260F58FF7F92E /* WeatherModels.swift */,
+				F1FA11CE7058A74AF1E107F4 /* CategoryAndCalendarModels.swift */,
+				F1FA11F4F448671427F5CF63 /* PermissionModels.swift */,
+				F1FA11B6A70821ACA42221C4 /* MovementModels.swift */,
+				F1FA11FBAFEB3EBA930C92B6 /* MemoModels.swift */,
+				F1FA116BCD975D7F671E960D /* ActualRecordModels.swift */,
+				F1FA1157352882250214647A /* PlanRecordModels.swift */,
+				F1FA11D8CD1BE6FF0212D336 /* ActivityCorrectionModels.swift */,
+				F1FA115AD7683D2897E2C76E /* RecordClassificationModels.swift */,
+				F1FA1138653005BEA1D8CBB0 /* TimelineModels.swift */,
 				F10000000000000000000010 /* PlanRepository.swift */,
 				FBD100600000000000000001 /* PlanActualStorage.swift */,
 				FBD100700000000000000001 /* SensorReadingStorage.swift */,
 				F10000000000000000000011 /* PlanningEngine.swift */,
+				F1FA11518EFE631FA33E137B /* StableRecordID.swift */,
 				F10000000000000000000012 /* TemplatesAndSettings.swift */,
-				F10000000000000000000013 /* SensorFusion.swift */,
+				F1FA111188F70B2A1E222FD0 /* LocationPrivacyAndTravelDistance.swift */,
+				F1FA114B38DDE757537287B5 /* MotionActivityActualEngine.swift */,
+				F1FA11666D556A4283945D7E /* InferredSleepEngines.swift */,
+				F1FA1151247FC986DC41E95E /* AppleWatchSensorActivityEngine.swift */,
+				F1FA11708F96142164B021A5 /* AppleDeviceGroundTruthEngine.swift */,
+				F1FA119DA32DBD6AB39B3BE3 /* MovementCorrectionEngine.swift */,
+				F1FA11A12192E38998ADD56B /* TravelSegmentGroupingEngine.swift */,
+				F1FA119B2AC36CF8F4E6694B /* SubwayTravelSegmentEngine.swift */,
+				F1FA1122B2E958DFAB98D0F4 /* MovementRouteBuilder.swift */,
+				F1FA1114DFD1B4E129D9D260 /* SensorEvidenceTimeIndex.swift */,
+				F1FA1191E387639DDBE62829 /* TransitBoardingEngines.swift */,
+				F1FA11F6DF3994BF0EFB09B0 /* PlaceDetectionEngine.swift */,
+				F1FA112726691A677BFF352A /* UnregisteredPlaceSuggestionEngine.swift */,
+				F1FA11317768AD20F051874E /* FrequentPlaceResolutionEngine.swift */,
+				F1FA118E292B101C6B3AA5B8 /* FloorTimelineEngine.swift */,
+				F1FA11B1FD975D785F7EC03B /* FloorCalibrationEngine.swift */,
+				F1FA1129C5ED9AABE2A196A8 /* HealthRouteMergeEngine.swift */,
+				F1FA11592F09D5F78DE5B901 /* FloorEstimator.swift */,
+				F1FA11CF2BF9E0148DBF14F0 /* TravelModeClassifier.swift */,
+				F1FA11F59DB022FC67C16D22 /* RealtimeSensorMapProjection.swift */,
 				F10000000000000000000071 /* StationaryContextClassifier.swift */,
 				F5B1102A020000000000001D /* AppleIntegrationPolicies.swift */,
 				F5B1102A020000000000001B /* AppleCalendarService.swift */,
 				F5B1102A0200000000000019 /* ApplePhotoLibraryService.swift */,
 				F5B1102A0200000000000017 /* AppleHealthService.swift */,
+				F1FA11F96060E8351D906AA8 /* OneShotReply.swift */,
 				F5B1102A0200000000000015 /* AppleWeatherContextService.swift */,
 				F5B1102A0200000000000013 /* AirQualityContextService.swift */,
 				F5B1102A0200000000000011 /* AirPodsActivityService.swift */,
@@ -1582,6 +1773,13 @@
 				A10000000000000000000004 /* Theme.swift in Sources */,
 				A10000000000000000000005 /* AppShellView.swift in Sources */,
 				A10000000000000000000006 /* ScheduleView.swift in Sources */,
+				A1FA11B788DDFF62F309512F /* TimelineRowModels.swift in Sources */,
+				A1FA11356EDD0F1965709226 /* TimelineRowViews.swift in Sources */,
+				A1FA11A3B8DAE991AEA02AAF /* TimelineBoard.swift in Sources */,
+				A1FA113C605017A9D1288BA2 /* GroupGanttView.swift in Sources */,
+				A1FA113C5869FE29648957F6 /* TimelineDetailPanel.swift in Sources */,
+				A1FA11A8E4B16F54E10FE9B1 /* RouteMapViewport.swift in Sources */,
+				A1FA11EB640567D972E12891 /* TimelineSelection.swift in Sources */,
 				A1000000000000000000007D /* MapHomeView.swift in Sources */,
 				A100000000000000C1102A1F /* MapHomeAppleMapAnnotations.swift in Sources */,
 				A100000000000000C1102A01 /* AirQualityDetailSheet.swift in Sources */,
@@ -1618,6 +1816,11 @@
 				A52000000000000000000001 /* MapHomeLiveMapPolicies.swift in Sources */,
 				A50000000000000000000001 /* MapHomeVectorMap.swift in Sources */,
 				A1000000000000000000007F /* MapHomeCalendarSheet.swift in Sources */,
+				A1FA111D146A9C217935CC51 /* MapHomeDailyCard.swift in Sources */,
+				A1FA1128A1FC3A9AF08DED56 /* MapHomeAlarm.swift in Sources */,
+				A1FA11D67A6BAA407D371199 /* MapHomeSalaryPolicy.swift in Sources */,
+				A1FA119C943D414BBBC9CDA9 /* MapHomeStride.swift in Sources */,
+				A1FA114B649575874095E7E4 /* MapHomeCalendarPolicies.swift in Sources */,
 				A1000000000000000000F0A1 /* MapHomeScreenRecording.swift in Sources */,
 				A1000000000000000000F0B1 /* MapHomeTodayCalendar.swift in Sources */,
 				A1000000000000000000F0A2 /* MapHomePhotoLayer.swift in Sources */,
@@ -1668,6 +1871,14 @@
 				A100000000000000000000F4 /* MapHomeSectionDetailEngine.swift in Sources */,
 				A10000000000000000000007 /* GoalsView.swift in Sources */,
 				A10000000000000000000008 /* ReviewView.swift in Sources */,
+				A1FA1112A607AAE0D257EB50 /* ReviewView+Data.swift in Sources */,
+				A1FA1157BD1F0CCB182AD1A6 /* ReviewView+Records.swift in Sources */,
+				A1FA11B6B565DF24CA6FBDD1 /* ReviewView+Charts.swift in Sources */,
+				A1FA11960E1E776FA2AFA426 /* ReviewView+Clock.swift in Sources */,
+				A1FA11E4C6FF2DAB60DE4004 /* ActivityCorrectionViews.swift in Sources */,
+				A1FA113BFE3B1AB153E86D43 /* SubwayRouteTimelineView.swift in Sources */,
+				A1FA11046C5838880ADF9D7F /* RecordDetailViews.swift in Sources */,
+				A1FA1100D0A3E914D10FEC81 /* ReviewSupportTypes.swift in Sources */,
 				A10000000000000000000009 /* SettingsView.swift in Sources */,
 				A1000000000000000000000A /* AddPlanSheet.swift in Sources */,
 				5A00000000000000000000A1 /* PlanTextSuggestion.swift in Sources */,
@@ -1675,17 +1886,54 @@
 				A1000000000000000000000D /* DraftComponents.swift in Sources */,
 				A1000000000000000000000E /* DetailViews.swift in Sources */,
 				A1000000000000000000000F /* FeatureModels.swift in Sources */,
+				A1FA11A945DE6CB52FDFD7AF /* AppFeatureSettings.swift in Sources */,
+				A1FA11E5401FED61219701DE /* MapDisplayModels.swift in Sources */,
+				A1FA11D1FC078F2BA7021A4D /* ReviewModels.swift in Sources */,
+				A1FA11AD460494BD2B675105 /* SensorReadingModels.swift in Sources */,
+				A1FA11EC47982D3A8ADE45AF /* PlaceModels.swift in Sources */,
+				A1FA11E70638CC9F3E7CE988 /* FloorModels.swift in Sources */,
+				A1FA1161490F313AB4EA7A10 /* WeatherModels.swift in Sources */,
+				A1FA116BC2165347E80C24D2 /* CategoryAndCalendarModels.swift in Sources */,
+				A1FA111A34D824E3FF935346 /* PermissionModels.swift in Sources */,
+				A1FA11410095F413CF485193 /* MovementModels.swift in Sources */,
+				A1FA1158AD01103B0F4B8E6F /* MemoModels.swift in Sources */,
+				A1FA1162814341AED9240569 /* ActualRecordModels.swift in Sources */,
+				A1FA11EE9F352FA3C4B9FA2A /* PlanRecordModels.swift in Sources */,
+				A1FA1104470CBE8F59EA3A0F /* ActivityCorrectionModels.swift in Sources */,
+				A1FA11594047CE96DEF10AF6 /* RecordClassificationModels.swift in Sources */,
+				A1FA11D738A8A0AC7B013DD9 /* TimelineModels.swift in Sources */,
 				A10000000000000000000010 /* PlanRepository.swift in Sources */,
 				ABD100600000000000000001 /* PlanActualStorage.swift in Sources */,
 				ABD100700000000000000001 /* SensorReadingStorage.swift in Sources */,
 				A10000000000000000000011 /* PlanningEngine.swift in Sources */,
+				A1FA1169BA887967E6373290 /* StableRecordID.swift in Sources */,
 				A10000000000000000000012 /* TemplatesAndSettings.swift in Sources */,
-				A10000000000000000000013 /* SensorFusion.swift in Sources */,
+				A1FA11802C58F99DE64AB619 /* LocationPrivacyAndTravelDistance.swift in Sources */,
+				A1FA116E96B03A38CF1271CF /* MotionActivityActualEngine.swift in Sources */,
+				A1FA11E1742C84FD2F207091 /* InferredSleepEngines.swift in Sources */,
+				A1FA11A00497E7D3361DB92E /* AppleWatchSensorActivityEngine.swift in Sources */,
+				A1FA111C1F655A1871DB4D34 /* AppleDeviceGroundTruthEngine.swift in Sources */,
+				A1FA1193B2C4F0AD672B142C /* MovementCorrectionEngine.swift in Sources */,
+				A1FA110A2C1A611F96DD0ED7 /* TravelSegmentGroupingEngine.swift in Sources */,
+				A1FA110EBBED07CD4916D6CC /* SubwayTravelSegmentEngine.swift in Sources */,
+				A1FA11F4130A02CEBA74BA89 /* MovementRouteBuilder.swift in Sources */,
+				A1FA11E346325DE9124646F2 /* SensorEvidenceTimeIndex.swift in Sources */,
+				A1FA11E73D8EF4A0D46BA75B /* TransitBoardingEngines.swift in Sources */,
+				A1FA11E539E87EF9BECCEED3 /* PlaceDetectionEngine.swift in Sources */,
+				A1FA116E94306EBCD83FA237 /* UnregisteredPlaceSuggestionEngine.swift in Sources */,
+				A1FA11F2247EED1E851FD89B /* FrequentPlaceResolutionEngine.swift in Sources */,
+				A1FA110A399BEE8BE6C8AE89 /* FloorTimelineEngine.swift in Sources */,
+				A1FA11E4380CB5D4F762AEC2 /* FloorCalibrationEngine.swift in Sources */,
+				A1FA112F8C296037CA105A07 /* HealthRouteMergeEngine.swift in Sources */,
+				A1FA115CC4A39B133D2E9310 /* FloorEstimator.swift in Sources */,
+				A1FA112678FE13ABA3A562E7 /* TravelModeClassifier.swift in Sources */,
+				A1FA1117E59F5515E80AEB17 /* RealtimeSensorMapProjection.swift in Sources */,
 				A10000000000000000000071 /* StationaryContextClassifier.swift in Sources */,
 				A5B1102A020000000000001E /* AppleIntegrationPolicies.swift in Sources */,
 				A5B1102A020000000000001C /* AppleCalendarService.swift in Sources */,
 				A5B1102A020000000000001A /* ApplePhotoLibraryService.swift in Sources */,
 				A5B1102A0200000000000018 /* AppleHealthService.swift in Sources */,
+				A1FA11D356722EEA8B293A50 /* OneShotReply.swift in Sources */,
 				A5B1102A0200000000000016 /* AppleWeatherContextService.swift in Sources */,
 				A5B1102A0200000000000014 /* AirQualityContextService.swift in Sources */,
 				A5B1102A0200000000000012 /* AirPodsActivityService.swift in Sources */,
@@ -1721,7 +1969,6 @@
 				A80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift in Sources */,
 				A1000000000000000000002B /* WatchConnectivitySupport.swift in Sources */,
 				C0FFEE000000000000000031 /* WatchActivityReplay.swift in Sources */,
-				A10000000000000000000032 /* PhotoGalleryView.swift in Sources */,
 				A10000000000000000000039 /* TimelineBoardModels.swift in Sources */,
 				A1000000000000000000003A /* TimelineBlockStyleViews.swift in Sources */,
 				A1000000000000000000003B /* WidgetPayloadFactory.swift in Sources */,
@@ -1764,6 +2011,8 @@
 			files = (
 				A1000000000000000000000C /* TimeScaleTests.swift in Sources */,
 				A10000000000000000000016 /* FeatureEngineTests.swift in Sources */,
+				A1FA113776B4F655CB131CBA /* StableRecordIDTests.swift in Sources */,
+				5624A4986B94396ED9FEC9D5 /* MovementNameTests.swift in Sources */,
 				A5B1102A020000000000005C /* FeatureEngineTestFixtures.swift in Sources */,
 				A5B1102A020000000000005A /* MapHomeStickmanTests.swift in Sources */,
 				A1A11102A0100000000000A2 /* MemoTextPolishTests.swift in Sources */,
@@ -1831,8 +2080,25 @@
 				C0FFEE000000000000000045 /* TaptionLiveActivityCat.swift in Sources */,
 				A10000000000000000000020 /* WidgetShared.swift in Sources */,
 				A10000000000000000000022 /* FeatureModels.swift in Sources */,
+				A1FA11CAD2B1A327A31670AB /* AppFeatureSettings.swift in Sources */,
+				A1FA1149ABD1E6845D6CAAC0 /* MapDisplayModels.swift in Sources */,
+				A1FA11A34B1439834812A887 /* ReviewModels.swift in Sources */,
+				A1FA115BFD9ADB6D5F57D8C1 /* SensorReadingModels.swift in Sources */,
+				A1FA1107FF30EF2056E8191C /* PlaceModels.swift in Sources */,
+				A1FA118242B8712F9D574BBC /* FloorModels.swift in Sources */,
+				A1FA11CFA6D7380E55EB070B /* WeatherModels.swift in Sources */,
+				A1FA11A2F30B45C9270544DE /* CategoryAndCalendarModels.swift in Sources */,
+				A1FA11722220BF7B935DF783 /* PermissionModels.swift in Sources */,
+				A1FA11D22B6CBCB2D06B20BD /* MovementModels.swift in Sources */,
+				A1FA1124DD573AF2E6504C87 /* MemoModels.swift in Sources */,
+				A1FA113FD9DDDEB769707B2B /* ActualRecordModels.swift in Sources */,
+				A1FA119B398AC34A1F78055C /* PlanRecordModels.swift in Sources */,
+				A1FA11515918A194B7DF1F5E /* ActivityCorrectionModels.swift in Sources */,
+				A1FA11BED1B1B68238CFA5CF /* RecordClassificationModels.swift in Sources */,
+				A1FA118E6661E4ED3D1ED73A /* TimelineModels.swift in Sources */,
 				A10000000000000000000023 /* HealthAndSensorModels.swift in Sources */,
 				A10000000000000000000024 /* PlanningEngine.swift in Sources */,
+				A1FA11A6B07C6C7A479E67EE /* StableRecordID.swift in Sources */,
 				A10000000000000000000025 /* PlanRepository.swift in Sources */,
 				ABD100600000000000000002 /* PlanActualStorage.swift in Sources */,
 				ABD100700000000000000002 /* SensorReadingStorage.swift in Sources */,

@@ -28,17 +28,6 @@ enum CatCoat: String, CaseIterable, Identifiable {
         }
     }
 
-    var baseColor: Color {
-        switch self {
-        case .white: Color(red: 1, green: 0.996, blue: 0.98)
-        case .calico: Color(red: 0.97, green: 0.95, blue: 0.91)
-        case .mackerel: Color(red: 0.56, green: 0.58, blue: 0.60)
-        case .black: Color(red: 0.13, green: 0.13, blue: 0.14)
-        case .gray: Color(red: 0.64, green: 0.65, blue: 0.67)
-        case .cheese: Color(red: 0.90, green: 0.63, blue: 0.30)
-        case .cow: Color(red: 1, green: 0.996, blue: 0.98)
-        }
-    }
 }
 
 struct CatMotionPolicy: Equatable, Sendable {

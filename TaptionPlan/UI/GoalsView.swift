@@ -443,8 +443,8 @@ enum GoalDetailEngine {
             : descendants.filter { child in
                 !descendants.contains(where: { $0.parentID == child.id })
             }
-        let plannedDuration = unionDuration(plannedLeaves.map(\.span))
-        let actualDuration = unionDuration(
+        let plannedDuration = TimeSpan.unionDuration(plannedLeaves.map(\.span))
+        let actualDuration = TimeSpan.unionDuration(
             scopedActuals.map { $0.span(asOf: referenceDate) }
         )
         let week = calendar.dateInterval(
@@ -465,10 +465,10 @@ enum GoalDetailEngine {
             let day = TimeSpan(start: date, end: dayEnd)
             return GoalHabitDay(
                 date: date,
-                planned: unionDuration(
+                planned: TimeSpan.unionDuration(
                     plannedLeaves.compactMap { $0.span.intersection(with: day) }
                 ),
-                actual: unionDuration(
+                actual: TimeSpan.unionDuration(
                     scopedActuals.compactMap {
                         $0.span(asOf: referenceDate).intersection(with: day)
                     }
@@ -487,7 +487,7 @@ enum GoalDetailEngine {
                 to: end
             ) ?? end.addingTimeInterval(-7 * 86_400)
             let span = TimeSpan(start: start, end: end)
-            return unionDuration(
+            return TimeSpan.unionDuration(
                 scopedActuals.compactMap {
                     $0.span(asOf: referenceDate).intersection(with: span)
                 }
@@ -536,23 +536,6 @@ enum GoalDetailEngine {
             fourWeekActuals: fourWeekActuals,
             evidence: evidence
         )
-    }
-
-    static func unionDuration(_ spans: [TimeSpan]) -> TimeInterval {
-        let ordered = spans
-            .filter { $0.duration > 0 }
-            .sorted { $0.start < $1.start }
-        guard var current = ordered.first else { return 0 }
-        var total: TimeInterval = 0
-        for span in ordered.dropFirst() {
-            if span.start <= current.end {
-                current.end = max(current.end, span.end)
-            } else {
-                total += current.duration
-                current = span
-            }
-        }
-        return total + current.duration
     }
 }
 

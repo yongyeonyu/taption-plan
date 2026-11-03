@@ -53,26 +53,6 @@ actor HealthBackgroundRefreshCoordinator {
     }
 }
 
-private final class HealthObserverCompletion: @unchecked Sendable {
-    private let callback: () -> Void
-    private let lock = NSLock()
-    private var hasCompleted = false
-
-    init(_ callback: @escaping () -> Void) {
-        self.callback = callback
-    }
-
-    /// HealthKit accepts one completion per delivery, so a deadline and the
-    /// finished work can both call this safely.
-    func callAsFunction() {
-        lock.lock()
-        let isFirst = !hasCompleted
-        hasCompleted = true
-        lock.unlock()
-        if isFirst { callback() }
-    }
-}
-
 struct HealthKitObservedChangeQueue: Sendable, Equatable {
     private var pending: Set<String> = []
 
@@ -125,24 +105,6 @@ final class AppleHealthService: @unchecked Sendable {
             let result = values
             lock.unlock()
             return result
-        }
-    }
-
-    private final class RouteLocationsReplyGate: @unchecked Sendable {
-        private let lock = NSLock()
-        private var continuation:
-            CheckedContinuation<[CLLocation], Never>?
-
-        init(_ continuation: CheckedContinuation<[CLLocation], Never>) {
-            self.continuation = continuation
-        }
-
-        func finish(_ value: [CLLocation]) {
-            lock.lock()
-            let pending = continuation
-            continuation = nil
-            lock.unlock()
-            pending?.resume(returning: value)
         }
     }
 
@@ -217,22 +179,6 @@ final class AppleHealthService: @unchecked Sendable {
         return completed
     }
 
-    func startWatchWorkout(kind: TrackingKind) async throws -> Bool {
-        guard HKHealthStore.isHealthDataAvailable() else { return false }
-        let configuration = HKWorkoutConfiguration()
-        configuration.activityType = kind == .running ? .running : .walking
-        configuration.locationType = .outdoor
-        return try await withCheckedThrowingContinuation { continuation in
-            store.startWatchApp(with: configuration) { success, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                } else {
-                    continuation.resume(returning: success)
-                }
-            }
-        }
-    }
-
     func startObservingChanges(
         onUpdate: @escaping @Sendable () async -> Void
     ) {
@@ -247,17 +193,18 @@ final class AppleHealthService: @unchecked Sendable {
                 sampleType: sampleType,
                 predicate: nil
             ) { [weak self] _, completion, error in
-                let completion = HealthObserverCompletion(completion)
+                // HealthKit은 전달마다 완료 호출을 한 번만 받는다. 마감 시간과 작업 끝이 모두 부를 수 있다.
+                let finish = OneShotReply<Void> { _ in completion() }
                 Task {
                     guard error == nil else {
-                        completion()
+                        finish.finish(())
                         return
                     }
                     // Release HealthKit even if the refresh outlives the wake
                     // window, so delivery is not throttled for slow work.
                     let deadline = Task {
                         try await Task.sleep(for: .seconds(20))
-                        completion()
+                        finish.finish(())
                     }
                     #if os(iOS) && !TAPTION_WIDGET
                     let assertion = await MainActor.run {
@@ -269,7 +216,7 @@ final class AppleHealthService: @unchecked Sendable {
                     self?.markObservedChange(typeIdentifier)
                     await onUpdate()
                     deadline.cancel()
-                    completion()
+                    finish.finish(())
                     #if os(iOS) && !TAPTION_WIDGET
                     await assertion.end()
                     #endif
@@ -403,10 +350,6 @@ final class AppleHealthService: @unchecked Sendable {
         )
     }
 
-    func importOverview() async throws -> HealthKitSyncOverview {
-        try await importCoordinator.overview()
-    }
-
     func deleteImportedData(generation: UInt64? = nil) async throws {
         try await importCoordinator.deleteAll(generation: generation)
         clearPendingObservedChanges()
@@ -450,12 +393,6 @@ final class AppleHealthService: @unchecked Sendable {
             from: try await sleepSegments(in: span),
             inside: span
         )
-    }
-
-    func healthDetails(in span: TimeSpan) async throws -> [HealthActual] {
-        async let workouts = workoutDetails(in: span)
-        async let sleeps = sleepDetails(in: span)
-        return try await workouts + sleeps
     }
 
     func movementEvidence(
@@ -506,35 +443,6 @@ final class AppleHealthService: @unchecked Sendable {
                 confidence: .high,
                 evidence: evidence,
                 modelVersion: "healthkit-sleep-v1"
-            )
-        }
-    }
-
-    private func mindfulSessionActuals(
-        in span: TimeSpan
-    ) async throws -> [ActualRecord] {
-        guard let type = HKObjectType.categoryType(
-            forIdentifier: .mindfulSession
-        ) else {
-            return []
-        }
-        let values = try await samples(type: type, span: span)
-        return values.compactMap { sample in
-            guard let overlap = TimeSpan(
-                start: sample.startDate,
-                end: sample.endDate
-            ).intersection(with: span) else {
-                return nil
-            }
-            return ActualRecord(
-                id: sample.uuid,
-                planID: nil,
-                title: "마음챙김",
-                categoryID: "health",
-                startedAt: overlap.start,
-                endedAt: overlap.end,
-                source: .healthKit,
-                confidence: .high
             )
         }
     }
@@ -689,7 +597,7 @@ final class AppleHealthService: @unchecked Sendable {
             let collected = RouteLocationsAccumulator(
                 maximumCount: Self.maximumRouteLocations
             )
-            let gate = RouteLocationsReplyGate(continuation)
+            let gate = OneShotReply(continuation)
             let query = HKWorkoutRouteQuery(
                 route: route
             ) { _, locations, done, error in
@@ -818,20 +726,6 @@ final class AppleHealthService: @unchecked Sendable {
         sample.device?.name
             ?? sample.device?.model
             ?? sample.sourceRevision.productType
-    }
-
-    private func sleepDetails(in span: TimeSpan) async throws -> [HealthActual] {
-        try await sleepSessions(in: span).map { session in
-            return HealthActual(
-                id: session.id,
-                kind: "수면",
-                span: session.span,
-                duration: session.asleepDuration,
-                distanceMeters: nil,
-                energyKilocalories: nil,
-                sourceName: session.sourceNames.joined(separator: ", ")
-            )
-        }
     }
 
     private func samples(

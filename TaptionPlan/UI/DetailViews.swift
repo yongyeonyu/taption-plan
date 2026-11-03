@@ -2760,33 +2760,11 @@ private extension MemoKind {
 
 private extension TravelMode {
     var systemImage: String {
-        switch self {
-        case .walking: "figure.walk"
-        case .running: "figure.run"
-        case .cycling: "bicycle"
-        case .bus: "bus"
-        case .subway: "tram"
-        case .taxi: "car.side"
-        case .car: "car"
-        case .train: "train.side.front.car"
-        case .airplane: "airplane"
-        case .ship: "ferry"
-        }
+        outlineSymbolName
     }
 
     var displayName: String {
-        switch self {
-        case .walking: "걷기"
-        case .running: "달리기"
-        case .cycling: "자전거"
-        case .bus: "버스"
-        case .subway: "지하철"
-        case .taxi: "택시"
-        case .car: "자동차"
-        case .train: "기차"
-        case .airplane: "비행기"
-        case .ship: "배"
-        }
+        MovementPresentation.title(for: self)
     }
 
     var routeColor: Color {

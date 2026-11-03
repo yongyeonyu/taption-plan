@@ -1958,7 +1958,7 @@ extension FeatureEngineTests {
             .empty
         )
         XCTAssertEqual(
-            GoalDetailEngine.unionDuration([
+            TimeSpan.unionDuration([
                 TimeSpan(start: start, end: start.addingTimeInterval(hour)),
                 TimeSpan(
                     start: start.addingTimeInterval(30 * 60),

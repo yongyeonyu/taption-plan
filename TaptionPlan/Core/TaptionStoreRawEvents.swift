@@ -105,21 +105,6 @@ extension TaptionStoreV2 {
         return result
     }
 
-    func rawEventIDs(kind: String, ids: [String]) throws -> Set<String> {
-        let db = try handle()
-        let statement = try prepare(db, "SELECT 1 FROM raw_events WHERE kind = ? AND id = ?")
-        defer { sqlite3_finalize(statement) }
-        var found = Set<String>()
-        for id in ids {
-            sqlite3_reset(statement)
-            sqlite3_clear_bindings(statement)
-            bind(statement, 1, .text(kind))
-            bind(statement, 2, .text(id))
-            if sqlite3_step(statement) == SQLITE_ROW { found.insert(id) }
-        }
-        return found
-    }
-
     func rawEventCount(kind: String) throws -> Int {
         let db = try handle()
         let statement = try prepare(db, "SELECT COUNT(*) FROM raw_events WHERE kind = ?")

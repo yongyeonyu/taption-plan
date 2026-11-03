@@ -679,21 +679,7 @@ enum MovementDisplayEngine {
     }
 
     private static func remainderID(_ id: UUID, offset: Int) -> UUID {
-        var bytes = withUnsafeBytes(of: id.uuid) { Array($0) }
-        var hash = UInt64(14_695_981_039_346_656_037) &+ UInt64(offset)
-        for index in bytes.indices {
-            hash ^= UInt64(bytes[index])
-            hash = hash &* 1_099_511_628_211
-            bytes[index] = UInt8(truncatingIfNeeded: hash >> 24)
-        }
-        bytes[6] = (bytes[6] & 0x0F) | 0x50
-        bytes[8] = (bytes[8] & 0x3F) | 0x80
-        return UUID(uuid: (
-            bytes[0], bytes[1], bytes[2], bytes[3],
-            bytes[4], bytes[5], bytes[6], bytes[7],
-            bytes[8], bytes[9], bytes[10], bytes[11],
-            bytes[12], bytes[13], bytes[14], bytes[15]
-        ))
+        StableRecordID.remainder(of: id, offset: offset)
     }
 }
 
@@ -757,21 +743,7 @@ enum RestSleepDisplayEngine {
     /// 같은 기록을 다시 잘라도 같은 값이 나와야 화면 갱신마다 선택이 풀리지
     /// 않는다. 자동 기록의 안정된 식별자와 같은 방식으로 만든다.
     private static func remainderID(of id: UUID, offset: Int) -> UUID {
-        var bytes = withUnsafeBytes(of: id.uuid) { Array($0) }
-        var hash = UInt64(14_695_981_039_346_656_037) &+ UInt64(offset)
-        for index in bytes.indices {
-            hash ^= UInt64(bytes[index])
-            hash = hash &* 1_099_511_628_211
-            bytes[index] = UInt8(truncatingIfNeeded: hash >> 24)
-        }
-        bytes[6] = (bytes[6] & 0x0F) | 0x50
-        bytes[8] = (bytes[8] & 0x3F) | 0x80
-        return UUID(uuid: (
-            bytes[0], bytes[1], bytes[2], bytes[3],
-            bytes[4], bytes[5], bytes[6], bytes[7],
-            bytes[8], bytes[9], bytes[10], bytes[11],
-            bytes[12], bytes[13], bytes[14], bytes[15]
-        ))
+        StableRecordID.remainder(of: id, offset: offset)
     }
 }
 
@@ -953,21 +925,7 @@ enum SleepActualReconciliationEngine {
     }
 
     private static func remainderID(of id: UUID, offset: Int) -> UUID {
-        var bytes = withUnsafeBytes(of: id.uuid) { Array($0) }
-        var hash = UInt64(14_695_981_039_346_656_037) &+ UInt64(offset)
-        for index in bytes.indices {
-            hash ^= UInt64(bytes[index])
-            hash = hash &* 1_099_511_628_211
-            bytes[index] = UInt8(truncatingIfNeeded: hash >> 24)
-        }
-        bytes[6] = (bytes[6] & 0x0F) | 0x50
-        bytes[8] = (bytes[8] & 0x3F) | 0x80
-        return UUID(uuid: (
-            bytes[0], bytes[1], bytes[2], bytes[3],
-            bytes[4], bytes[5], bytes[6], bytes[7],
-            bytes[8], bytes[9], bytes[10], bytes[11],
-            bytes[12], bytes[13], bytes[14], bytes[15]
-        ))
+        StableRecordID.remainder(of: id, offset: offset)
     }
 }
 
@@ -1190,38 +1148,6 @@ struct TimelineAggregationEngine: Sendable {
                 planned: plannedByCategory,
                 actual: actualByCategory
             )
-        )
-    }
-
-    func hierarchySummaries(
-        for level: TimelineLevel,
-        containing date: Date,
-        plans: [PlanRecord],
-        actuals: [ActualRecord],
-        photos: [PhotoMoment],
-        asOf: Date = .now
-    ) -> [TimelineLevel: [SummaryBucket]] {
-        let childLevels: [TimelineLevel] = switch level {
-        case .day: []
-        case .week: [.day]
-        case .month: [.week, .day]
-        case .year: [.month, .week, .day]
-        }
-        let outer = interval(for: level, containing: date)
-        return Dictionary(
-            uniqueKeysWithValues: childLevels.map { childLevel in
-                (
-                    childLevel,
-                    buckets(
-                        of: childLevel,
-                        inside: outer,
-                        plans: plans,
-                        actuals: actuals,
-                        photos: photos,
-                        asOf: asOf
-                    )
-                )
-            }
         )
     }
 
@@ -2339,25 +2265,8 @@ enum GoalActivityMatchingEngine {
             return nil
         }
         guard plan.span.duration > 0 else { return 0 }
-        let covered = unionDuration(spans)
+        let covered = TimeSpan.unionDuration(spans)
         return min(1, max(0, covered / plan.span.duration))
-    }
-
-    static func unionDuration(_ spans: [TimeSpan]) -> TimeInterval {
-        let ordered = spans
-            .filter { $0.duration > 0 }
-            .sorted { $0.start < $1.start }
-        guard var current = ordered.first else { return 0 }
-        var total: TimeInterval = 0
-        for span in ordered.dropFirst() {
-            if span.start <= current.end {
-                current.end = max(current.end, span.end)
-            } else {
-                total += current.duration
-                current = span
-            }
-        }
-        return total + current.duration
     }
 }
 
@@ -2387,7 +2296,6 @@ struct RecordRelationshipGraph: Sendable {
     let nodes: [RecordGraphNode]
     let edges: [RecordGraphEdge]
     var isEmpty: Bool { nodes.isEmpty }
-    var hasConnections: Bool { !edges.isEmpty }
 }
 
 /// Keeps automatic evidence, a routine, and its concrete action as separate
@@ -2455,7 +2363,7 @@ enum RecordRelationshipEngine {
             append(RecordGraphNode(
                 id: "automatic.travel.\(segment.id.uuidString)",
                 layer: .automatic,
-                title: travelTitle(segment.mode),
+                title: MovementPresentation.title(for: segment.mode),
                 span: segment.span,
                 categoryID: "movement"
             ))
@@ -2663,20 +2571,6 @@ enum RecordRelationshipEngine {
         return nodeID
     }
 
-    private static func travelTitle(_ mode: TravelMode) -> String {
-        switch mode {
-        case .walking: "걷기"
-        case .running: "달리기"
-        case .cycling: "자전거"
-        case .bus: "버스"
-        case .subway: "지하철"
-        case .taxi: "택시"
-        case .car: "자동차"
-        case .train: "기차"
-        case .airplane: "비행기"
-        case .ship: "배"
-        }
-    }
 }
 
 /// 지난 날의 날씨를 그 시각의 GPS 위치 기준으로 고정한다(WTH1020C01). 미래는 현재 위치 예보, 과거는 GPS 위치의 실제 날씨.
@@ -3069,66 +2963,5 @@ enum WeatherTimelineEngine {
         default:
             return false
         }
-    }
-}
-
-enum TimelineCoordinateMapper {
-    static func fraction(
-        for date: Date,
-        in viewport: TimelineViewport
-    ) -> Double {
-        let visibleStart = viewport.dayStart.addingTimeInterval(
-            viewport.horizontalOffset
-        )
-        return date.timeIntervalSince(visibleStart) / viewport.visibleSpan
-    }
-
-    static func date(
-        at fraction: Double,
-        in viewport: TimelineViewport
-    ) -> Date {
-        viewport.dayStart.addingTimeInterval(
-            viewport.horizontalOffset + fraction * viewport.visibleSpan
-        )
-    }
-
-    static func pan(
-        _ viewport: TimelineViewport,
-        by interval: TimeInterval
-    ) -> TimelineViewport {
-        var value = viewport
-        value.horizontalOffset = max(0, value.horizontalOffset + interval)
-        value.followsCurrentTime = false
-        return value
-    }
-
-    static func zoom(
-        _ viewport: TimelineViewport,
-        factor: Double,
-        anchor: Double = 0.5
-    ) -> TimelineViewport {
-        var value = viewport
-        let oldSpan = viewport.visibleSpan
-        let newSpan = min(86_400, max(15 * 60, oldSpan / max(0.1, factor)))
-        let anchorOffset = viewport.horizontalOffset + oldSpan * anchor
-        value.visibleSpan = newSpan
-        value.horizontalOffset = max(0, anchorOffset - newSpan * anchor)
-        value.followsCurrentTime = false
-        return value
-    }
-
-    static func followNow(
-        _ viewport: TimelineViewport,
-        now: Date = .now,
-        anchor: Double = 0.6
-    ) -> TimelineViewport {
-        var value = viewport
-        value.currentTime = now
-        value.horizontalOffset = max(
-            0,
-            now.timeIntervalSince(viewport.dayStart) - viewport.visibleSpan * anchor
-        )
-        value.followsCurrentTime = true
-        return value
     }
 }
