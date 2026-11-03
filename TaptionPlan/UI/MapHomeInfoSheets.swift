@@ -265,6 +265,8 @@ struct MapHomeDaySummarySheet: View {
     /// 시트 높이. 접힌 절반과 펼친 전체 두 단계뿐이다.
     @Binding var detent: PresentationDetent
     @State private var isGrowthPresented = false
+    @State private var isGrowthInPanel = false
+    @Environment(\.mapHomeIsWidePanel) private var isWidePanel
     private static let bottomPadding: CGFloat = 40
 
     /// 집 아이콘을 눌렀을 때 처음 올라오는 높이(화면 절반). 위로 펼치면 지금의 전체 화면이다.
@@ -376,6 +378,13 @@ struct MapHomeDaySummarySheet: View {
             [Self.collapsedDetent, Self.expandedDetent],
             selection: $detent
         )
+        .overlay {
+            if isGrowthInPanel {
+                MapHomeWidePanelPage(language: language, onBack: { isGrowthInPanel = false }) {
+                    MapHomeGrowthSheet(growthData: $growthData, language: language)
+                }
+            }
+        }
         .sheet(isPresented: $isGrowthPresented) {
             MapHomeGrowthSheet(
                 growthData: $growthData,
@@ -419,12 +428,12 @@ struct MapHomeDaySummarySheet: View {
                             .foregroundStyle(Color.tpSecondary)
                     }
                     Spacer(minLength: 8)
-                    expandButton
+                    if !isWidePanel { expandButton }
                 }
                 HStack {
                     Spacer()
                     Button {
-                        isGrowthPresented = true
+                        if isWidePanel { isGrowthInPanel = true } else { isGrowthPresented = true }
                     } label: {
                         Label(
                             language.text("집 성장", "Home growth"),

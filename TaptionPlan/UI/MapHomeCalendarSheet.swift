@@ -31,6 +31,7 @@ struct MapHomeCalendarSheet: View {
     @State private var visits: [MapHomeCalendarPlaceVisit] = []
     /// 켜면 지표 칩과 큰 숫자를 고른 날이 아니라 이번 달 하루 평균으로 보여 준다.
     @State private var showsMonthAverage = false
+    @Environment(\.mapHomeWidePanelColumns) private var panelColumns
 
     @MainActor
     init(
@@ -68,45 +69,51 @@ struct MapHomeCalendarSheet: View {
         self._contentHeight = State(initialValue: MapHomeCalendarMonthMemory.shared.contentHeight)
     }
 
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                header
-                    .padding(.horizontal, 20)
-                    .padding(.top, 18)
+    @ViewBuilder
+    private var monthSection: some View {
+        header
+            .padding(.horizontal, 20)
+            .padding(.top, 18)
 
-                weekdayHeader
-                    .padding(.horizontal, 16)
-                    .padding(.top, 18)
+        weekdayHeader
+            .padding(.horizontal, 16)
+            .padding(.top, 18)
 
-                monthGrid
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-                    // 좌우로 쓸면 다음 달/지난 달. 날짜 탭과 세로 스크롤은 그대로 둔다.
-                    .simultaneousGesture(
-                        DragGesture(minimumDistance: 24)
-                            .onEnded { value in
-                                let dx = value.translation.width, dy = value.translation.height
-                                guard abs(dx) > 50, abs(dx) > abs(dy) * 1.5 else { return }
-                                withAnimation(.easeInOut(duration: 0.2)) { shiftMonth(by: dx < 0 ? 1 : -1) }
-                            }
-                    )
+        monthGrid
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            // 좌우로 쓸면 다음 달/지난 달. 날짜 탭과 세로 스크롤은 그대로 둔다.
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 24)
+                    .onEnded { value in
+                        let dx = value.translation.width, dy = value.translation.height
+                        guard abs(dx) > 50, abs(dx) > abs(dy) * 1.5 else { return }
+                        withAnimation(.easeInOut(duration: 0.2)) { shiftMonth(by: dx < 0 ? 1 : -1) }
+                    }
+            )
+    }
 
-                timeMenu
+    @ViewBuilder
+    private var summarySection: some View {
+        timeMenu
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+
+        if let selectedKind {
+            timePanel(for: selectedKind)
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
+            if selectedKind == .places {
+                placeVisitList
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
-
-                if let selectedKind {
-                    timePanel(for: selectedKind)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 12)
-                    if selectedKind == .places {
-                        placeVisitList
-                            .padding(.horizontal, 16)
-                            .padding(.top, 12)
-                    }
-                }
             }
+        }
+    }
+
+    var body: some View {
+        ScrollView {
+            MapHomeWidePanelColumns(columns: panelColumns) { monthSection } trailing: { summarySection }
             .padding(.bottom, 40)
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
                 guard abs(height - contentHeight) >= 0.5 else { return }

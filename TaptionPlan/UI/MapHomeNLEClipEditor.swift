@@ -115,6 +115,7 @@ struct MapHomeNLEClipEditor: View {
             )
             let bleed = Self.railBleed
             let railWidth = proxy.size.width + bleed * 2
+            if MapHomeWideLayoutPolicy.usesClipColumns(width: proxy.size.width) { wideLayout(size: proxy.size, headerHeight: headerHeight, spacing: spacing) } else {
             VStack(spacing: spacing) {
                 header
                     .padding(.horizontal, bleed)
@@ -133,6 +134,7 @@ struct MapHomeNLEClipEditor: View {
                     .padding(.horizontal, bleed)
             }
             .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
+            }
         }
         .padding(.top, 8)
         .padding(.bottom, 10)
@@ -169,7 +171,7 @@ struct MapHomeNLEClipEditor: View {
     }
 
     /// 클립 줄이 화면 양옆으로 삐져나오는 폭.
-    private static let railBleed: CGFloat = 14
+    static let railBleed: CGFloat = 14
     /// 클립 경계를 '다듬기'로 받아 주는 손가락 여유. 예전 12pt는 손가락에 너무 좁았다.
     private static let trimReach: CGFloat = 16
     /// 이보다 얇게 눌린 클립은 이웃에 합칠지 묻는다.
@@ -179,7 +181,7 @@ struct MapHomeNLEClipEditor: View {
     private static let selectionRowHeight: CGFloat = 44
     private static let toolbarHeight: CGFloat = 44
 
-    private var header: some View {
+    var header: some View {
         HStack {
             Button {
                 dismiss()
@@ -239,7 +241,7 @@ struct MapHomeNLEClipEditor: View {
     private var laneGap: CGFloat { 5 }
 
     /// 줄 이름표. 타임라인과 같은 너비 계산을 써서 세로줄과 딱 맞춘다.
-    private func laneHeader(width: CGFloat) -> some View {
+    func laneHeader(width: CGFloat) -> some View {
         let lanes = NLELaneWidths(total: width, gutter: gutterWidth, gap: laneGap, sensorExpanded: isSensorExpanded)
         return HStack(spacing: laneGap) {
             Color.clear.frame(width: gutterWidth, height: 1)
@@ -344,7 +346,7 @@ struct MapHomeNLEClipEditor: View {
     ///
     /// 위에서 아래로 시간이 흐르고, 클립은 하루를 빈틈없이 채우며 쌓인다.
     /// 대분류만 고칠 수 있고, 센서 원본은 그대로 두고 견주어 보는 줄이다.
-    private var verticalRail: some View {
+    var verticalRail: some View {
         GeometryReader { proxy in
             let width = max(1, proxy.size.width)
             let height = max(120, proxy.size.height)
@@ -605,7 +607,7 @@ struct MapHomeNLEClipEditor: View {
         case detail(String)
     }
 
-    private var selectionSummary: some View {
+    var selectionSummary: some View {
         let clip = selectedClip
         return HStack(spacing: 8) {
             if let pick {
@@ -774,7 +776,7 @@ struct MapHomeNLEClipEditor: View {
 
     /// 도구 막대. 아이콘만 두면 무엇을 하는 단추인지 눌러 봐야 알 수 있어 이름을 함께 적는다.
     /// 확대는 두 손가락만으로는 찾기 어려워서 단추로도 돌 수 있게 했다.
-    private var toolbar: some View {
+    var toolbar: some View {
         HStack(spacing: 6) {
             categoryMenu
             NLEToolButton(
