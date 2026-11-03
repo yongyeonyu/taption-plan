@@ -5650,3 +5650,7 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 
 ## SAV1104A01·FRT1104A01 메인 합치기 뒤 전체 단위 시험 (2026-11-04, 시뮬레이터)
 - 튜토리얼까지 합친 뒤: 1,998건 중 1,985건 통과, 실패 0, 건너뜀 13 (`build/validation/SAV1104A01/check6.xcresult`). 구조 지표·엔진 경계 통과. 실기기 결과 없음.
+
+## MTG1103A01 회의 상대를 다른 고양이로 (2026-11-04, 시뮬레이터)
+- 대표 선택: 화랑이의 상대는 춘향이, 춘향이의 상대는 윤복이, 윤복이의 상대는 화랑이. 위젯 아틀라스 3장을 다시 만들어 회의 줄을 눈으로 확인(`build/validation/SAV1104A01/sheet/meeting-rival.png`).
+- 전체 단위 시험: 1,998건 중 1,985건 통과, 실패 0, 건너뜀 13 (`build/validation/SAV1104A01/check7.xcresult`). 실기기 결과 없음.

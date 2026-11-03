@@ -402,7 +402,11 @@ extension HwarangPainter {
         switch scene {
         case .meeting:
             let p = sit(sec + 1.3, HeadPose(tilt: 0.06 - sin(sec * 2.4) * 0.03, look: 2.4, mouthOpen: max(0, sin(sec * 3 + 1)) * 0.4, eye: .half))
+            // 회의 상대는 고른 고양이와 다른 털색으로 그린다.
+            let chosen = coat
+            coat = chosen.meetingRival
             companion(p, x: 92, scale: 0.72, ground: groundY, bow: 0xE5484D)
+            coat = chosen
         case .friends:
             var p = sit(sec + 1.3, HeadPose(tilt: -0.04, look: 2.2, mouthOpen: max(0, sin(sec * 5 + .pi)) * 0.7, eye: wrap(sec, 3.6) < 1.2 ? .happy : blink(sec, 2.7)))
             p.tp = sec * 3; p.tw = 0.5

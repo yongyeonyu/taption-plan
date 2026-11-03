@@ -32,6 +32,12 @@ struct HwarangCoat {
     /// 앱에서 고를 수 있는 캐릭터. 옛 설정의 다른 털색은 기존 그림을 그대로 쓴다.
     static let characters = ["white", "calico", "mackerel"]
 
+    /// 회의 장면의 상대: 화랑이에게는 춘향이, 춘향이에게는 윤복이, 윤복이에게는 화랑이.
+    var meetingRival: HwarangCoat {
+        if fur == Self.white.fur { return Self.chunhyang }
+        return fur == Self.chunhyang.fur ? Self.yunbok : Self.white
+    }
+
     static func named(_ style: String) -> HwarangCoat {
         switch style {
         case "calico": return chunhyang
