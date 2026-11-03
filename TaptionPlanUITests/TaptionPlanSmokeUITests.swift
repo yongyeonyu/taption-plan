@@ -454,7 +454,8 @@ final class TaptionPlanClipRollUITests: XCTestCase {
             .firstMatch
         XCTAssertTrue(handle.waitForExistence(timeout: 5), "경계 손잡이가 접근성에 드러나지 않는다")
         let start = handle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-        start.press(forDuration: 0.1, thenDragTo: start.withOffset(CGVector(dx: 0, dy: -10)))
+        // 6시간 배율의 자석 거리(약 10pt)를 넘겨 끈다. 누르기만 해서는 경계가 움직이지 않는다(NLE1103A03).
+        start.press(forDuration: 0.1, thenDragTo: start.withOffset(CGVector(dx: 0, dy: -30)))
         sleep(1)
         attach(app, name: "roll-after")
 
@@ -465,6 +466,35 @@ final class TaptionPlanClipRollUITests: XCTestCase {
             after.contains { $0.hasSuffix("–12:00") && $0 != "07:00–12:00" },
             "업무 끝이 12:00에서 따라 움직였다: \(after)"
         )
+    }
+
+    /// 고른 클립을 다시 누르면 손잡이가 사라지고, 끌기는 선택을 풀지 않는다(NLE1103A03).
+    /// 업무 구간에는 근거가 있는 하위 행동이, 센서 층에는 원본 근거가 함께 보인다(NLE1103A02).
+    func testSecondTapClearsSelectionAndDragKeepsIt() throws {
+        let app = launchEditor()
+        let handle = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label == %@", "시작 자르기"))
+            .firstMatch
+        XCTAssertTrue(handle.waitForExistence(timeout: 5), "처음에 고른 클립의 손잡이가 없다")
+        XCTAssertTrue(app.staticTexts["회의"].waitForExistence(timeout: 5), "업무 구간에 회의가 없다")
+        XCTAssertTrue(app.staticTexts["메일 정리"].exists, "업무 구간에 일정 제목이 없다")
+        XCTAssertTrue(app.staticTexts["정지 · iPhone"].exists, "센서 층 근거가 없다")
+        attach(app, name: "selected-with-subactivities")
+        // 재생 헤드(10:00)를 피해 클립 몸통을 누른다.
+        let frame = handle.frame
+        let body = app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: frame.midX, dy: frame.midY + 110))
+
+        body.tap()
+        XCTAssertFalse(handle.waitForExistence(timeout: 1), "다시 눌러도 선택이 풀리지 않았다")
+        attach(app, name: "selection-cleared")
+
+        body.tap()
+        XCTAssertTrue(handle.waitForExistence(timeout: 2), "다시 고르지 못했다")
+        attach(app, name: "selected-again")
+
+        body.press(forDuration: 0.05, thenDragTo: body.withOffset(CGVector(dx: 0, dy: 60)))
+        XCTAssertTrue(handle.waitForExistence(timeout: 2), "끌기가 선택을 풀었다")
     }
 
     /// 하루 전체를 볼 때 1시간짜리 클립(식사)은 제목도 손잡이도 그리지 않는다(높이 22pt).
