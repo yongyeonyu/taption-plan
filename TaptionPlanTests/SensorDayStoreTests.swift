@@ -466,7 +466,8 @@ final class SensorDayStoreTests: XCTestCase {
         service: AppleWatchConnectivityService,
         snapshot: TaptionDataSnapshot = .empty,
         readingArchive: SensorReadingArchive? = nil,
-        repository: (any PlanDataRepository)? = nil
+        repository: (any PlanDataRepository)? = nil,
+        loaded: Bool = true
     ) throws -> AppModel {
         let readings: SensorReadingArchive
         if let readingArchive {
@@ -479,7 +480,7 @@ final class SensorDayStoreTests: XCTestCase {
         let rawData = try RawDeviceDataDayArchive(
             databaseURL: directory.appendingPathComponent("raw.sqlite")
         )
-        return AppModel(
+        let model = AppModel(
             repository: repository
                 ?? InMemoryPlanRepository(snapshot: snapshot),
             sensorService: AppleSensorDataService(archive: readings),
@@ -489,6 +490,8 @@ final class SensorDayStoreTests: XCTestCase {
             registersHealthBackgroundHandler: false,
             dayDatabase: database
         )
+        model.isBootstrapped = loaded
+        return model
     }
 
     private func deliverWatchSummary(
@@ -1967,7 +1970,8 @@ final class SensorDayStoreTests: XCTestCase {
             directory: root,
             database: database,
             service: service,
-            snapshot: source
+            snapshot: source,
+            loaded: false
         )
         await model.bootstrap()
         try deliverWatchSummary(higher, through: service)

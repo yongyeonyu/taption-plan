@@ -77,6 +77,11 @@ extension AppModel {
             )
     }
 
+    /// 저장소는 스냅샷에 없는 행을 지운다. 전체 기록을 읽기 전의 스냅샷은 저장하면 안 된다.
+    var hasLoadedFullSnapshot: Bool {
+        isBootstrapped && !isStartupSnapshotPartial
+    }
+
     private func assignTimestampOnlySnapshot(_ value: TaptionDataSnapshot) {
         // Persisting a sensor snapshot updates only the envelope timestamp.
         // Mark that assignment so didSet does not compare every historical
@@ -90,10 +95,17 @@ extension AppModel {
         _ value: TaptionDataSnapshot,
         expectedRevision: UInt64? = nil,
         requiresCurrentRevision: Bool = true,
-        actualEdit: PlanActualEdit? = nil
+        actualEdit: PlanActualEdit? = nil,
+        allowingDeletion: Bool = false
     ) async throws -> Bool {
         guard hasCurrentDataGeneration else {
             throw RepositoryError.staleGeneration
+        }
+        guard allowingDeletion || hasLoadedFullSnapshot else {
+            Self.integrationLogger.error(
+                "Persistence blocked before the full snapshot loaded; preserving existing data"
+            )
+            return false
         }
         if let expectedRevision, expectedRevision != snapshotRevision {
             return false
@@ -149,7 +161,8 @@ extension AppModel {
                 value,
                 expectedRevision: sourceRevision,
                 requiresCurrentRevision: false,
-                actualEdit: actualEdit
+                actualEdit: actualEdit,
+                allowingDeletion: allowingDeletion
             ) else { return false }
             if snapshotRevision == sourceRevision {
                 assignTimestampOnlySnapshot(visibleValue)
@@ -507,7 +520,7 @@ extension AppModel {
 
     @discardableResult
     func persistDeviceLocalSnapshot(force: Bool = false) async -> Bool {
-        guard acceptsDataMutation() else { return false }
+        guard acceptsDataMutation(), hasLoadedFullSnapshot else { return false }
         guard !isSensorTimelineRefreshing else {
             scheduleTrailingDeviceLocalPersist()
             return false

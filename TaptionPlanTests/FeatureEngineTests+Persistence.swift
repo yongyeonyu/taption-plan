@@ -350,6 +350,56 @@ extension FeatureEngineTests {
         XCTAssertFalse(model.activeTrackingSession?.wasAutomaticallyDetected == true)
     }
 
+    /// SAV1104A01: 저장소는 스냅샷에 없는 행을 지우므로 전체 기록을 읽기 전에는 저장하지 않는다.
+    @MainActor
+    func testPersistBlocksSaveBeforeFullSnapshotLoads() async throws {
+        let date = Date(timeIntervalSince1970: 1_783_000_000)
+        var source = TaptionDataSnapshot.empty
+        source.categories = CategoryCatalog.builtIn
+        source.actuals = [ActualRecord(planID: nil, title: "기존 기록", categoryID: "work",
+            startedAt: date, endedAt: date.addingTimeInterval(60), source: .manual)]
+        let repository = GatedStartupPlanRepository(snapshot: source)
+        let model = AppModel(repository: repository, cloudSyncService: nil,
+            registersHealthBackgroundHandler: false)
+
+        let beforeAnyLoad = await model.persist()
+        let deviceBeforeAnyLoad = await model.persistDeviceLocalSnapshot(force: true)
+        XCTAssertFalse(beforeAnyLoad)
+        XCTAssertFalse(deviceBeforeAnyLoad)
+
+        await model.prepareStartupSettings()
+        XCTAssertTrue(model.hasPreparedStartupSettings)
+        let whilePartial = await model.persist()
+        let deviceWhilePartial = await model.persistDeviceLocalSnapshot(force: true)
+        XCTAssertFalse(whilePartial)
+        XCTAssertFalse(deviceWhilePartial)
+        let savesBeforeLoad = await repository.saves
+        XCTAssertEqual(savesBeforeLoad, 0)
+
+        await repository.releaseHistory()
+        await model.prepareLocalDataForDisplay()
+        await model.waitForBootstrapPreparation()
+        XCTAssertEqual(model.snapshot.actuals.map(\.id), source.actuals.map(\.id))
+        let afterLoad = await model.persist()
+        XCTAssertTrue(afterLoad)
+        let stored = try await repository.load()
+        XCTAssertEqual(stored.actuals.map(\.id), source.actuals.map(\.id))
+    }
+
+    /// 전체 삭제가 쓰는 빈 저장본은 기록을 읽기 전에도 저장된다.
+    @MainActor
+    func testDeletionSnapshotSavesBeforeLoad() async throws {
+        var source = TaptionDataSnapshot.empty
+        source.categories = CategoryCatalog.builtIn
+        let repository = GatedStartupPlanRepository(snapshot: source)
+        let model = AppModel(repository: repository, cloudSyncService: nil,
+            registersHealthBackgroundHandler: false)
+        let saved = await model.persist(allowingDeletion: true)
+        XCTAssertTrue(saved)
+        let saves = await repository.saves
+        XCTAssertEqual(saves, 1)
+    }
+
     @MainActor
     func testLateStartupSettingsCannotReplaceLoadedHistory() async throws {
         let date = Date(timeIntervalSince1970: 1_791_250_000)
@@ -1411,6 +1461,7 @@ extension FeatureEngineTests {
             cloudSyncService: nil,
             registersHealthBackgroundHandler: false
         )
+        model.isBootstrapped = true
         let snapshotRevision = model.snapshotRevision
         let dayRevision = model.dayProjectionRevision
         let timelineRevision = model.timelineRevision

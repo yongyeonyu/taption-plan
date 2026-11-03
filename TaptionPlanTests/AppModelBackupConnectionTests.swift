@@ -49,7 +49,7 @@ final class AppModelBackupConnectionTests: XCTestCase {
         let defaults: UserDefaults
     }
 
-    private func makeHarness() throws -> Harness {
+    private func makeHarness(loaded: Bool = true) throws -> Harness {
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent("taption-connect-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
@@ -84,6 +84,7 @@ final class AppModelBackupConnectionTests: XCTestCase {
             rawDeviceDataArchive: try RawDeviceDataDayArchive(store: store),
             dayDatabase: PlanDayDatabase(store: store)
         )
+        model.isBootstrapped = loaded
         return Harness(model: model, store: store, engine: engine, backupDirectory: backups, defaults: defaults)
     }
 
@@ -271,7 +272,7 @@ final class AppModelBackupConnectionTests: XCTestCase {
     /// 사본이 든 옛 백업: 정리한 뒤에도 백업이 되고, 옛 파일을 복원해도 사본이 되살아나지 않으며,
     /// 새 기기에 복원해도 최신 저장본과 자동 기록만 남는다.
     func testOldBackupWithDuplicateOverridesRestoresCleanly() async throws {
-        let source = try makeHarness()
+        let source = try makeHarness(loaded: false)
         let model = source.model
         try model.configureBackupPIN(password)
         let start = date(2026, 7, 15)

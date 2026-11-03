@@ -52,7 +52,7 @@ extension AppModel {
     /// 저장소가 바뀐 뒤(복원·로컬 정리) 메모리 상태를 저장소에서 다시 만든다.
     /// repository의 known 캐시도 `load()`가 함께 갱신한다.
     private func beginBackupOperation(_ activity: PlanBackupActivity) -> Bool {
-        guard !backupActivity.isBusy, acceptsDataMutation() else { return false }
+        guard !backupActivity.isBusy, acceptsDataMutation(), hasLoadedFullSnapshot else { return false }
         backupActivity = activity
         activeDataMutationCount += 1
         return true
