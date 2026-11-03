@@ -54,8 +54,8 @@ struct MapHomeDateStrip: View {
             dayArea(width: dayAreaWidth)
         }
         .frame(width: width, height: MapHomeWeekStripMath.height)
-        .mapHomeGlass(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .taptionRaised(.rounded(18), gloss: false)
     }
 
     /// 펼친 줄의 맨 왼쪽에 보이는 가운데 날짜의 달. 어느 달인지 헷갈리지 않게 한다.
@@ -134,8 +134,11 @@ struct MapHomeDateStrip: View {
             .frame(width: MapHomeWeekStripMath.dayWidth, height: MapHomeWeekStripMath.height - 8)
             .background {
                 if isCentered {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(Color.tpReferenceBlue.opacity(0.22))
+                    TaptionRaisedFace(
+                        shape: .rounded(14),
+                        fill: Color.tpSurface.mix(with: .tpReferenceBlue, by: 0.3),
+                        lineWidth: 1
+                    )
                 }
             }
             .overlay(alignment: .bottom) {

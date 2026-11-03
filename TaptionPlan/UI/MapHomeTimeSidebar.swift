@@ -1265,9 +1265,7 @@ struct MapHomeTimeSidebar: View {
                                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
                                 .foregroundStyle(Color.tpInk)
                                 .frame(width: 26, height: 26)
-                                .background(MapHomeTimeSidebarStyle.panelBackground, in: Circle())
-                                .overlay(Circle().stroke(MapHomeTimeSidebarStyle.panelBorder, lineWidth: 1))
-                                .shadow(color: .black.opacity(0.08), radius: 3, y: 1)
+                                .taptionRaised(.circle, fill: .tpSurface)
                             if group.count > 1 {
                                 Text("\(group.count)")
                                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .bold))
@@ -1355,24 +1353,12 @@ struct MapHomeTimeSidebar: View {
             ZStack(alignment: .topLeading) {
                 ZStack(alignment: .topLeading) {
                     if !Self.benchHidden("glass") {
-                    panelShape
-                        .fill(Color.clear)
+                    TaptionRaisedFace(shape: .rounded(22), gloss: false)
                         .frame(width: railWidth, height: railHeight)
-                        .mapHomeGlass(in: panelShape)
                         .position(
                             x: railOriginX + railWidth / 2,
                             y: railHeight / 2
                         )
-                        .overlay {
-                            panelShape
-                                .stroke(MapHomeTimeSidebarStyle.panelBorder, lineWidth: 1)
-                                .frame(width: railWidth, height: railHeight)
-                                .position(
-                                    x: railOriginX + railWidth / 2,
-                                    y: railHeight / 2
-                                )
-                        }
-                        .shadow(color: .black.opacity(0.05), radius: 7, y: 2)
                         .allowsHitTesting(false)
                     }
 
@@ -1474,6 +1460,15 @@ struct MapHomeTimeSidebar: View {
                 }
                 .frame(width: activeRailWidth, height: trackHeight)
                 .clipShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
+                // 왼쪽 위에서 빛을 받는 둥근 막대처럼 보이게 한 겹만 덧칠한다.
+                .overlay {
+                    LinearGradient(
+                        colors: [.white.opacity(0.32), .clear, .black.opacity(0.16)],
+                        startPoint: .leading, endPoint: .trailing
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
+                    .allowsHitTesting(false)
+                }
                 .position(
                     x: trackX,
                     y: verticalInset + trackHeight / 2
@@ -1669,8 +1664,7 @@ struct MapHomeTimeSidebar: View {
                             .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
                             .foregroundStyle(Color.tpInk.opacity(0.85))
                             .frame(width: 26, height: 26)
-                            .background(Circle().fill(Color.tpSurface.opacity(0.94)))
-                            .overlay(Circle().stroke(Color.tpLine.opacity(0.5), lineWidth: 0.6))
+                            .taptionRaised(.circle, fill: .tpSurface)
                             .frame(width: railWidth, height: verticalInset)
                             .contentShape(Rectangle())
                     }
@@ -1688,8 +1682,7 @@ struct MapHomeTimeSidebar: View {
                             .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
                             .foregroundStyle(Color.tpInk.opacity(0.85))
                             .frame(width: 26, height: 26)
-                            .background(Circle().fill(Color.tpSurface.opacity(0.94)))
-                            .overlay(Circle().stroke(Color.tpLine.opacity(0.5), lineWidth: 0.6))
+                            .taptionRaised(.circle, fill: .tpSurface)
                             .frame(width: railWidth, height: verticalInset)
                             .contentShape(Rectangle())
                     }
@@ -1853,20 +1846,11 @@ struct MapHomeTimeSidebar: View {
                 width: MapHomeTimeSidebarMath.selectionTimeBlockWidth,
                 height: 36
             )
-            .background(
-                MapHomeTimeSidebarStyle.handleBackground,
-                in: RoundedRectangle(
-                    cornerRadius: MapHomeTimeSidebarStyle.handleCornerRadius,
-                    style: .continuous
-                )
+            .taptionRaised(
+                .rounded(MapHomeTimeSidebarStyle.handleCornerRadius),
+                fill: MapHomeTimeSidebarStyle.handleBackground,
+                line: MapHomeTimeSidebarStyle.handleBorder
             )
-            .overlay {
-                RoundedRectangle(
-                    cornerRadius: MapHomeTimeSidebarStyle.handleCornerRadius,
-                    style: .continuous
-                )
-                .stroke(MapHomeTimeSidebarStyle.handleBorder, lineWidth: 1)
-            }
             .accessibilityHidden(true)
             .zIndex(2)
             .position(
@@ -2550,27 +2534,12 @@ struct MapHomeWeatherSidebar: View {
                             width: itemWidth,
                             height: MapHomeWeatherRailLayout.itemHeight
                         )
-                        .background {
-                            if !isPastSpan {
-                                // 활성(남은) 칸은 테마 색으로 채우고, 글자·아이콘은 흰색.
-                                Capsule().fill(Color(hex: MapHomeHomeWeatherKind(symbolName: entry.context.symbolName).sidebarFillHex))
-                            } else {
-                                Color.clear.mapHomeGlass(in: Capsule())
-                            }
-                        }
-                        .overlay {
-                            Capsule()
-                                .stroke(
-                                    isSelected ? Color.tpPastelRose : Color.tpLine.opacity(0.8),
-                                    lineWidth: MapHomeWeatherRailLayout.scaled(
-                                        isSelected ? 1.2 : 0.8
-                                    )
-                                )
-                        }
-                        .shadow(
-                            color: .black.opacity(0.10),
-                            radius: MapHomeWeatherRailLayout.scaled(3),
-                            y: MapHomeWeatherRailLayout.scaled(1)
+                        // 활성(남은) 칸은 테마 색으로 채우고, 글자·아이콘은 흰색.
+                        .taptionRaised(
+                            .capsule,
+                            fill: isPastSpan ? nil : Color(hex: MapHomeHomeWeatherKind(symbolName: entry.context.symbolName).sidebarFillHex),
+                            line: isSelected ? .tpPastelRose : nil,
+                            lineWidth: isSelected ? 1.4 : 1
                         )
                         .position(
                             x: MapHomeWeatherRailLayout.itemCenterX(

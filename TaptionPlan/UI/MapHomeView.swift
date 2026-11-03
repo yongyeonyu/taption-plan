@@ -4860,7 +4860,7 @@ struct MapHomeView: View {
         }
         .padding(.vertical, isPlain ? 0 : 4)
         .frame(width: timeRailWidth)
-        .mapHomeGlass(in: RoundedRectangle(cornerRadius: isPlain ? 18 : 22, style: .continuous))
+        .taptionRaised(.rounded(isPlain ? 18 : 22), gloss: false)
         .taptionHitOutset(vertical: isPlain ? max(0, (TaptionMenuMetrics.minimumHitSize - Layout.dateBadgeSize) / 2) : 0)
         return HStack(alignment: .top, spacing: 6) {
             if isDateWeekExpanded {
@@ -6489,8 +6489,7 @@ struct MapHomeView: View {
                                 .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
                                 .foregroundStyle(Color(hex: sticker.colorHex))
                                 .frame(width: 22, height: 22)
-                                .background(Color.white.opacity(0.96), in: Circle())
-                                .overlay(Circle().stroke(Color(hex: sticker.colorHex), lineWidth: 1))
+                                .taptionRaised(.circle, fill: .white)
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel(
@@ -6524,12 +6523,17 @@ struct MapHomeView: View {
                         Button {
                             toggleSidebarNote(.memo(memo, minute: minute, badgeOffset: scheduleBadgeOffset(minute: minute, isEvent: false)))
                         } label: {
-                            Image(systemName: memo.stickerSymbol ?? "note.text")
-                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
-                                .foregroundStyle(memo.isSticker ? Color(hex: memo.stickerColorHex ?? "#F28FA9") : Color.tpInk)
-                                .frame(width: 22, height: 22)
-                                .background(Color.white.opacity(0.96), in: Circle())
-                                .overlay(Circle().stroke((memo.isSticker ? Color(hex: memo.stickerColorHex ?? "#F28FA9") : Color.tpInk).opacity(0.5), lineWidth: 1))
+                            Group {
+                                if let symbol = memo.stickerSymbol {
+                                    Image(systemName: symbol)
+                                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
+                                        .foregroundStyle(Color(hex: memo.stickerColorHex ?? "#F28FA9"))
+                                } else {
+                                    TaptionBarIcon(systemImage: "note.text", size: 15)
+                                }
+                            }
+                            .frame(width: 22, height: 22)
+                            .taptionRaised(.circle, fill: .white)
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("\(memo.text) 메모")
@@ -6554,8 +6558,7 @@ struct MapHomeView: View {
                             MapHomeCalendarSourceLogo()
                                 .padding(3)
                                 .frame(width: 22, height: 22)
-                                .background(Color.white.opacity(0.96), in: Circle())
-                                .overlay(Circle().stroke(Color.black.opacity(0.12), lineWidth: 1))
+                                .taptionRaised(.circle, fill: .white)
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("\(event.title) 일정")
