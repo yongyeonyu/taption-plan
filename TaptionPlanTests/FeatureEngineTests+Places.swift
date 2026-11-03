@@ -162,11 +162,11 @@ extension FeatureEngineTests {
         let categories = MapHomeSidebarMajorCategory.all
 
         XCTAssertEqual(categories.map(\.id), CanonicalCategoryPalette.orderedIDs)
-        XCTAssertEqual(Set(categories.map(\.hex)).count, 12)
-        XCTAssertEqual(Set(categories.map(\.systemImage)).count, 12)
+        XCTAssertEqual(Set(categories.map(\.hex)).count, 11)
+        XCTAssertEqual(Set(categories.map(\.systemImage)).count, 11)
         XCTAssertEqual(
             categories.map(\.title),
-            ["활동", "업무", "수업", "취미", "수면", "이동", "식사", "운동", "건강관리", "샤워", "집안일", "미확인"]
+            ["활동", "업무", "수업", "취미", "수면", "이동", "식사", "운동", "건강관리", "집안일", "미확인"]
         )
     }
 

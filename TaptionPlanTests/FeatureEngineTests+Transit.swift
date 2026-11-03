@@ -363,12 +363,12 @@ extension FeatureEngineTests {
         let records: [ActualRecord] = [
             ActualRecord(
                 planID: nil,
-                title: "집안일",
+                title: "휴식",
                 categoryID: "activity",
                 startedAt: day,
                 endedAt: day.addingTimeInterval(3 * hour),
                 source: .motion,
-                behavior: WatchBehaviorKind.housework.rawValue
+                behavior: WatchBehaviorKind.stationary.rawValue
             ),
             ActualRecord(
                 planID: nil,
@@ -433,17 +433,8 @@ extension FeatureEngineTests {
                 title: "건강관리",
                 categoryID: "health",
                 startedAt: day.addingTimeInterval(22 * hour),
-                endedAt: day.addingTimeInterval(22.5 * hour),
-                source: .healthKit
-            ),
-            ActualRecord(
-                planID: nil,
-                title: "샤워",
-                categoryID: "shower",
-                startedAt: day.addingTimeInterval(22.5 * hour),
                 endedAt: day.addingTimeInterval(22.75 * hour),
-                source: .manual,
-                manuallyCorrected: true
+                source: .healthKit
             ),
             ActualRecord(
                 planID: nil,

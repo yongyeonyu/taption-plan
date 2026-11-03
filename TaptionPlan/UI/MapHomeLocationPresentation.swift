@@ -139,6 +139,9 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
     case reading
     case hobby
     case sleeping
+    case deepSleep, remSleep
+    case recovery, medication
+    case restStarfish, restCroissant, restDonut, restLoaf, restBox
     case movement
     case eating
     case exercise
@@ -200,6 +203,15 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
         case .video: .video
         case .petCare: .petCare
         case .sleeping: .sleep
+        case .deepSleep: .sleepBelly
+        case .recovery: .recoverySuperman
+        case .medication: .medicated
+        case .restStarfish: .restStarfish
+        case .restCroissant: .restCroissant
+        case .restDonut: .restDonut
+        case .restLoaf: .restLoaf
+        case .restBox: .restBox
+        case .remSleep: .sleepEyeMask
         case .eating: .eat
         case .computer, .company: .work
         case .reading, .school: .study
@@ -225,7 +237,7 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
 
     var animatesPresentation: Bool {
         switch self {
-        case .computer, .company, .school, .reading, .hobby, .sleeping, .eating,
+        case .computer, .company, .school, .reading, .hobby, .sleeping, .deepSleep, .remSleep, .recovery, .medication, .restStarfish, .restCroissant, .restDonut, .restLoaf, .restBox, .eating,
              .activity, .exercise, .health, .unconfirmed, .shower, .housework,
              .nap, .cooking, .groceries, .laundry, .friends, .date, .family, .phoneCall,
              .meditation, .hospital, .salon, .bookReading, .game, .music, .video, .petCare:
@@ -266,6 +278,15 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
         case .reading: return t("수업", "Class")
         case .hobby: return t("취미", "Hobby")
         case .sleeping: return t("수면", "Sleep")
+        case .deepSleep: return t("깊은 수면", "Deep sleep")
+        case .recovery: return t("회복", "Recovery")
+        case .medication: return t("투약", "Medication")
+        case .restStarfish: return t("휴식", "Rest")
+        case .restCroissant: return t("업무 휴식", "Work break")
+        case .restDonut: return t("수업 휴식", "Study break")
+        case .restLoaf: return t("취미 휴식", "Hobby break")
+        case .restBox: return t("집에서 휴식", "Rest at home")
+        case .remSleep: return t("REM 수면", "REM sleep")
         case .movement: return t("이동", "Movement")
         case .eating: return t("식사", "Meal")
         case .exercise: return t("운동", "Exercise")
@@ -394,7 +415,7 @@ enum MapHomeStickmanActionResolver {
                actuals: actuals,
                sleepSessions: sleepSessions
            ) {
-            return .sleeping
+            return sleepStageAction(at: date, actuals: actuals, sleepSessions: sleepSessions)
         }
 
         // 사용자가 직접 정한 머무는 분류는 센서가 이동으로 본 구간에서도 그대로 보여 준다.
@@ -438,7 +459,7 @@ enum MapHomeStickmanActionResolver {
         let placeAction = activePlaces.lazy.compactMap { action(for: $0, frequentPlaces: frequentPlaces) }.first
         if let candidate = activeActuals.max(by: higherPriority) {
             // 자동 기록의 일반 활동보다 식당·회사 같은 장소가 더 구체적이다(CAT1103A01).
-            if candidate.1 == .activity, let placeAction { return placeAction }
+            if candidate.1 == .activity || candidate.1 == .restStarfish || candidate.1 == .restBox, let placeAction { return placeAction }
             return candidate.1
         }
         return placeAction ?? .activity
@@ -465,6 +486,26 @@ enum MapHomeStickmanActionResolver {
         case .home, .custom: .activity
         case .hobby: .hobby
         case .exercise: .exercise
+        }
+    }
+
+    /// 건강 앱 수면 단계에 맞는 장면. 깊은 수면과 REM 말고는 평소 수면 장면이다.
+    static func sleepStageAction(
+        at date: Date,
+        actuals: [ActualRecord],
+        sleepSessions: [SleepSession]
+    ) -> MapHomeStickmanAction {
+        let stage = sleepSessions.lazy
+            .filter { $0.span.contains(date) }
+            .flatMap(\.segments)
+            .first { $0.span.contains(date) && $0.stage.isAsleep }?.stage
+        switch stage {
+        case .deep: return .deepSleep
+        case .rem: return .remSleep
+        case .some: return .sleeping
+        case nil:
+            let staged = actuals.lazy.filter { active($0, at: date) }.compactMap { dailyAction(title: $0.title, behavior: $0.behavior) }
+            return staged.first { $0 == .deepSleep || $0 == .remSleep } ?? .sleeping
         }
     }
 
@@ -532,6 +573,27 @@ enum MapHomeStickmanActionResolver {
         let categoryRoot = category.split(separator: ".", maxSplits: 1).first.map(String.init) ?? category
         let value = "\(category) \(label)".lowercased()
         if let daily = dailyAction(title: label, behavior: nil) { return daily }
+        let detailMappings: [(String, MapHomeStickmanAction)] = [
+            ("activity.rest", .restStarfish),
+            ("work.rest", .restCroissant),
+            ("study.rest", .restDonut),
+            ("hobby.rest", .restLoaf),
+            ("health.recovery", .recovery),
+            ("health.medication", .medication),
+            ("sleep.deep", .deepSleep),
+            ("sleep.rem", .remSleep),
+            ("movement.walking", .walking),
+            ("movement.running", .running),
+            ("movement.car", .car),
+            ("movement.subway", .subway),
+            ("movement.train", .train),
+            ("movement.privatevehicle", .car),
+            ("movement.bus", .bus),
+            ("movement.ship", .ship),
+            ("movement.airplane", .airplane),
+            ("movement.cycling", .cycling)
+        ]
+        if let mapping = detailMappings.first(where: { category == $0.0 }) { return mapping.1 }
         if categoryRoot == "company" || value.contains("company") { return .company }
         if categoryRoot == "school" || value.contains("school") { return .school }
         if let action = majorCategoryAction(for: categoryRoot) {
@@ -548,20 +610,6 @@ enum MapHomeStickmanActionResolver {
         // 사용자가 추가한 분류 이름. "housework"가 아래 "work"에 걸리지 않게 먼저 본다.
         if value.contains("샤워") || value.contains("shower") { return .shower }
         if value.contains("집안일") || value.contains("청소") || value.contains("housework") { return .housework }
-        let detailMappings: [(String, MapHomeStickmanAction)] = [
-            ("movement.walking", .walking),
-            ("movement.running", .running),
-            ("movement.car", .car),
-            ("movement.subway", .subway),
-            ("movement.privatevehicle", .car),
-            ("movement.bus", .bus),
-            ("movement.ship", .ship),
-            ("movement.airplane", .airplane),
-            ("movement.cycling", .cycling)
-        ]
-        if let mapping = detailMappings.first(where: { value.contains($0.0) }) {
-            return mapping.1
-        }
         if categoryRoot == "unconfirmed" || categoryRoot == "unknown"
             || value.contains("unconfirmed") || value.contains("unknown")
             || value.contains("미확인") {
@@ -652,6 +700,10 @@ enum MapHomeStickmanActionResolver {
 
     /// 직접 고르는 상세 분류(RIG1103A02). 제목이나 behavior가 정확히 같을 때만 대분류보다 먼저 자기 장면을 쓴다.
     private static let dailyActions: [String: MapHomeStickmanAction] = [
+        "깊은 수면": .deepSleep, "deep": .deepSleep, "rem 수면": .remSleep, "rem": .remSleep,
+        "회복": .recovery, "recovery": .recovery, "투약": .medication, "medication": .medication,
+        "샤워": .shower, "shower": .shower, "showering": .shower,
+        "집안일": .housework, "housework": .housework, "chores": .housework,
         "낮잠": .nap, "nap": .nap, "요리": .cooking, "cooking": .cooking,
         "장보기": .groceries, "groceries": .groceries, "빨래": .laundry, "laundry": .laundry,
         "친구 만남": .friends, "friends": .friends, "데이트": .date, "dating": .date,
@@ -662,6 +714,21 @@ enum MapHomeStickmanActionResolver {
         "영상 보기": .video, "video": .video, "반려동물 돌보기": .petCare, "petcare": .petCare
     ]
 
+    /// 휴식 상세활동은 대분류마다 자세가 다르다. 집에서 쉬는 자동 기록은 상자 안이다.
+    private static func restAction(categoryRoot: String, title: String, behavior: String?) -> MapHomeStickmanAction? {
+        let name = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if behavior == StationaryContextKind.homeRest.rawValue || name == "집에서 휴식" { return .restBox }
+        let isRest = behavior == "stationary" || name == "휴식"
+        guard isRest else { return nil }
+        switch categoryRoot {
+        case "work": return .restCroissant
+        case "study": return .restDonut
+        case "hobby": return .restLoaf
+        case "activity", "rest": return .restStarfish
+        default: return nil
+        }
+    }
+
     private static func dailyAction(title: String, behavior: String?) -> MapHomeStickmanAction? {
         behavior.flatMap { dailyActions[$0.lowercased()] }
             ?? dailyActions[title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()]
@@ -671,6 +738,7 @@ enum MapHomeStickmanActionResolver {
         if let daily = dailyAction(title: actual.title, behavior: actual.behavior) { return daily }
         let category = actual.categoryID.lowercased()
         let categoryRoot = category.split(separator: ".", maxSplits: 1).first.map(String.init) ?? category
+        if let rest = restAction(categoryRoot: categoryRoot, title: actual.title, behavior: actual.behavior) { return rest }
         if let action = majorCategoryAction(for: categoryRoot) {
             return action
         }

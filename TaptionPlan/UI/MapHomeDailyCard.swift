@@ -19,6 +19,8 @@ struct MapHomeDailyCardData: Equatable {
     var routePoints: [GeoPoint] = []
     /// 사용자가 골라 넣은 항목(최대 4개). 비어 있으면 통계 줄을 그리지 않는다.
     var metrics: [MapHomeCardMetric] = []
+    /// 화랑이 왼쪽에 그리는 지금 집 레벨. 없으면 집을 그리지 않는다.
+    var homeLevel: Int? = nil
 }
 
 /// 하루 카드에 올릴 달력 항목 하나.
@@ -46,6 +48,7 @@ struct MapHomeDailyCardContent {
         placeKinds: [String: FrequentPlaceKind],
         hourlyRate: Double?,
         accessoryID: String?,
+        homeLevel: Int? = nil,
         memos: [ActionMemo],
         language: MapHomeLanguage,
         now: Date = .now,
@@ -104,7 +107,8 @@ struct MapHomeDailyCardContent {
             memoText: dayMemos.isEmpty
                 ? nil
                 : language.text("메모 \(dayMemos.count)개 · 지도 \(mapMemoCount)개", "Memos \(dayMemos.count) · map \(mapMemoCount)"),
-            routePoints: routePoints
+            routePoints: routePoints,
+            homeLevel: homeLevel
         )
         var values = MapHomeCalendarTimeTotalsPolicy.totals(
             actuals: snapshot.actuals, travel: snapshot.travel, stays: snapshot.places,
@@ -216,6 +220,7 @@ struct MapHomeDailyCardView: View {
                         Text(data.weekdayText).font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(18)), weight: .semibold)).foregroundStyle(Color.tpSecondary)
                     }
                     Spacer()
+                    if let level = data.homeLevel { homeBadge(level: level) }
                     MapHomeDailyCardCat(seedText: data.dateText, accessoryID: data.accessoryID)
                 }
                 if !data.metrics.isEmpty {
@@ -259,6 +264,24 @@ struct MapHomeDailyCardView: View {
             .foregroundStyle(Color.tpInk)
         }
         .frame(width: Self.side, height: Self.side)
+    }
+
+    private func homeBadge(level: Int) -> some View {
+        VStack(spacing: 2) {
+            Image(MapHomeGrowthPolicy.artworkName(level: level))
+                .resizable()
+                .scaledToFit()
+                .frame(width: 78, height: 78)
+            Text("Lv.\(level)")
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
+                .foregroundStyle(Color.tpInk)
+            Text(MapHomeGrowthPolicy.homeName(level: level, language: language))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
+                .foregroundStyle(Color.tpSecondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: 110)
     }
 
     private func stat(_ title: String, _ value: String, _ symbol: String) -> some View {

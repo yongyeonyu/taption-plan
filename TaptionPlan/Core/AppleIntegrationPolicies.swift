@@ -40,13 +40,36 @@ enum CalendarSyncPolicy {
         let freshIDs = Set(fetched.map(\.id))
         let freshOccurrences = Set(fetched.map(eventIdentityKey))
         var merged = existing.filter {
-            liveCalendarIDs.contains($0.calendarID)
+            // 구글 직접 연동 일정은 기기 캘린더 새로고침과 상관없이 남는다.
+            $0.isGoogleAccountEvent || (liveCalendarIDs.contains($0.calendarID)
                 && !freshIDs.contains($0.id)
                 && !freshOccurrences.contains(eventIdentityKey($0))
-                && $0.span.intersection(with: span) == nil
+                && $0.span.intersection(with: span) == nil)
         }
         merged.append(contentsOf: fetched.filter { $0.isCancelled != true })
-        return deduplicatedEvents(merged).sorted { $0.span.start < $1.span.start }
+        return droppingGoogleCopies(deduplicatedEvents(merged)).sorted { $0.span.start < $1.span.start }
+    }
+
+    /// 구글 직접 연동으로 읽은 하루치 일정을 갈아 끼운다(CAL1103A01).
+    static func mergingGoogleEvents(
+        existing: [CalendarRecord],
+        fresh: [CalendarRecord],
+        in span: TimeSpan
+    ) -> [CalendarRecord] {
+        let kept = existing.filter { !$0.isGoogleAccountEvent || $0.span.intersection(with: span) == nil }
+        return droppingGoogleCopies(kept + fresh.filter { $0.isCancelled != true }).sorted {
+            $0.span.start == $1.span.start ? $0.id < $1.id : $0.span.start < $1.span.start
+        }
+    }
+
+    /// 같은 구글 계정을 기기 캘린더에도 추가했으면 같은 일정이 둘이 된다. 참석자 정보가 있는 기기 쪽을 남긴다.
+    private static func droppingGoogleCopies(_ events: [CalendarRecord]) -> [CalendarRecord] {
+        struct Occurrence: Hashable { var title: String; var start: Date; var end: Date }
+        func occurrence(_ event: CalendarRecord) -> Occurrence {
+            Occurrence(title: event.title, start: event.span.start, end: event.span.end)
+        }
+        let device = Set(events.filter { !$0.isGoogleAccountEvent }.map(occurrence))
+        return events.filter { !$0.isGoogleAccountEvent || !device.contains(occurrence($0)) }
     }
 
     static func eventIdentityKey(_ event: CalendarRecord) -> String {

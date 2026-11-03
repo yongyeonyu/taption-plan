@@ -375,7 +375,7 @@ extension View {
 enum CanonicalCategoryPalette {
     static let orderedIDs = [
         "activity", "work", "study", "hobby",
-        "sleep", "movement", "eating", "exercise", "health", "shower", "housework", "unconfirmed",
+        "sleep", "movement", "eating", "exercise", "health", "housework", "unconfirmed",
     ]
 
     static let hexes: [String: String] = [

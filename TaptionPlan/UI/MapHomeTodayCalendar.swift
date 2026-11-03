@@ -6,6 +6,84 @@ enum MapHomeCalendarAccessProblem: Equatable {
     case permissionDenied
 }
 
+/// 그날 일정을 읽는다. 구글을 직접 연결했으면 구글, 아니면 기기 캘린더다.
+enum MapHomeDayCalendarLoader {
+    @MainActor
+    static func events(
+        on day: Date,
+        calendar: Calendar,
+        service: AppleCalendarService
+    ) async -> ([CalendarRecord], MapHomeCalendarAccessProblem?) {
+        if GoogleCalendarAccount.shared.isConnected {
+            do {
+                return (try await GoogleCalendarAccount.shared.events(on: day, calendar: calendar), nil)
+            } catch {
+                return ([], .googleFailed)
+            }
+        }
+        let permission = service.permissionState()
+        if [.denied, .unavailable].contains(permission) { return ([], .permissionDenied) }
+        guard permission == .authorized else { return ([], nil) }
+        let start = calendar.startOfDay(for: day)
+        let end = calendar.date(byAdding: .day, value: 1, to: start) ?? start
+        return (await service.events(in: TimeSpan(start: start, end: end), selectedCalendarIDs: []) ?? [], nil)
+    }
+}
+
+enum MapHomeCalendarTitleChoice: Equatable {
+    case automatic
+    case none
+    case detail(String)
+}
+
+/// 일정 제목의 상세활동을 보여 주고 고치는 메뉴. 대분류 아래 상세활동 2단계다(CAL1103A01).
+struct MapHomeCalendarTitleMenu: View {
+    let title: String
+    let stored: [String: CalendarTitleDetail]
+    let language: MapHomeLanguage
+    let onChoose: (MapHomeCalendarTitleChoice) -> Void
+
+    private var verdict: CalendarTitleClassification.Verdict? {
+        CalendarTitleClassification.verdict(for: title, stored: stored)
+    }
+
+    private var label: String {
+        guard let verdict else { return language.text("분류 없음", "No category") }
+        guard let id = verdict.detailID,
+              let pair = CalendarTitleClassification.selectableCategories.lazy.compactMap({ category in
+                  category.details.first { $0.id == id }.map { (category, $0) }
+              }).first else { return language.text("분류 안 함", "Not categorized") }
+        let origin = switch verdict.origin {
+        case .user: language.text("직접", "You")
+        case .appleIntelligence: "AI"
+        case .rule: language.text("자동", "Auto")
+        }
+        return "\(pair.0.title) - \(pair.1.title) · \(origin)"
+    }
+
+    var body: some View {
+        Menu {
+            Button(language.text("자동으로 판정", "Automatic")) { onChoose(.automatic) }
+            Button(language.text("분류 안 함", "Don't categorize")) { onChoose(.none) }
+            ForEach(CalendarTitleClassification.selectableCategories) { category in
+                Menu(category.title) {
+                    ForEach(category.details) { detail in
+                        Button(detail.title) { onChoose(.detail(detail.id)) }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 3) {
+                Text(label)
+                Image(systemName: "chevron.up.chevron.down")
+            }
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
+            .foregroundStyle(Color.tpReferenceBlue)
+        }
+        .accessibilityLabel(Text("\(title) \(language.text("상세활동", "activity")): \(label)"))
+    }
+}
+
 /// 왼쪽 상단의 일정 버튼. 구글 캘린더(구글 계정이 추가된 기기 캘린더) 아이콘이다.
 struct MapHomeCalendarButton: View {
     let isExpanded: Bool
@@ -52,6 +130,9 @@ struct MapHomeTodayCalendarList: View {
     let service: AppleCalendarService
     /// 이 목록이 보여 줄 날짜. 지도에서 고른 날짜를 그대로 받는다.
     let date: Date
+    /// 일정 제목별로 저장한 상세활동과, 사용자가 고쳤을 때 알리는 곳(CAL1103A01).
+    var titleDetails: [String: CalendarTitleDetail] = [:]
+    var onChooseDetail: (String, MapHomeCalendarTitleChoice) -> Void = { _, _ in }
 
     @State private var state: LoadState = .loading
     /// 지금 화면에 올라와 있는 목록이 어느 날짜 것인지. 날짜가 바뀌면 곧바로 로딩으로 돌린다.
@@ -113,6 +194,11 @@ struct MapHomeTodayCalendarList: View {
                                     .foregroundStyle(Color.tpSecondary)
                                     .lineLimit(6)
                                     .fixedSize(horizontal: false, vertical: true)
+                            }
+                            if !event.isAllDay {
+                                MapHomeCalendarTitleMenu(title: event.title, stored: titleDetails, language: language) { choice in
+                                    onChooseDetail(event.title, choice)
+                                }
                             }
                         }
                 }

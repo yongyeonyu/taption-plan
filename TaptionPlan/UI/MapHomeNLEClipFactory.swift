@@ -102,7 +102,7 @@ extension MapHomeNLEClipEditor {
             }
             let detailOption = option(
                 forCategoryID: detail.categoryID,
-                title: detail.title,
+                title: RecordClassificationCatalog.detailTitle(categoryID: detail.categoryID, behavior: detail.behavior) ?? detail.title,
                 behavior: detail.behavior
             )
             let fill = owner.map {
@@ -311,7 +311,7 @@ enum MapHomeNLESensorEvidence {
         switch reading.motion {
         case .stationary: return Label(title: "정지 · iPhone", categoryID: "activity", behavior: MotionKind.stationary.rawValue)
         case .walking: return Label(title: "걷기 · iPhone", categoryID: "movement", behavior: MotionKind.walking.rawValue)
-        case .running: return Label(title: "달리기 · iPhone", categoryID: "exercise", behavior: MotionKind.running.rawValue)
+        case .running: return Label(title: "달리기 · iPhone", categoryID: "movement", behavior: MotionKind.running.rawValue)
         case .cycling: return Label(title: "자전거 · iPhone", categoryID: "movement", behavior: MotionKind.cycling.rawValue)
         case .automotive: return Label(title: "차량 · iPhone", categoryID: "movement", behavior: MotionKind.automotive.rawValue)
         case .unknown: return nil

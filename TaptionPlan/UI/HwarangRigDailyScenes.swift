@@ -7,6 +7,14 @@ extension HwarangScene {
         .meditate, .hospital, .salon, .readBook, .game, .music, .video, .petCare
     ]
 
+    /// 관절 자세 대신 누운 몸통을 직접 그리는 장면(SLP1103A01).
+    var drawsLyingBody: Bool {
+        switch self {
+        case .sleepBelly, .sleepEyeMask, .recoverySuperman, .medicated, .hospital, .restStarfish, .restCroissant, .restDonut, .restLoaf, .restBox: true
+        default: false
+        }
+    }
+
     /// 곁에 다른 고양이를 함께 그려 화랑이를 작게 비켜 앉히는 장면의 배율과 왼쪽 이동.
     var companionLayout: (scale: CGFloat, shift: CGFloat)? {
         switch self {
@@ -18,8 +26,271 @@ extension HwarangScene {
     }
 }
 
+extension HwarangPainter {
+    func lyingBody(_ scene: HwarangScene, pose p: Pose, sec: CGFloat) {
+        switch scene {
+        case .sleepBelly: bellyUp(p)
+        case .sleepEyeMask: eyeMaskSleep(p)
+        case .recoverySuperman: superman(p)
+        case .medicated: sickLoaf(p, sec: sec); pillBottle()
+        case .hospital:
+            sickLoaf(p, sec: sec)
+            hospitalGear(sickHead, tilt: p.h.tilt)
+        case .restStarfish: starfish(p)
+        case .restCroissant: croissant(p)
+        case .restDonut: donut(p)
+        case .restLoaf: restingLoaf(p)
+        case .restBox: boxRest(p)
+        default: break
+        }
+    }
+
+    private func tailBlobs(_ points: [CGPoint]) -> (points: [CGPoint], blobs: [Blob]) {
+        let path = catmull(points)
+        return (path, path.enumerated().map { i, q in Blob(x: q.x, y: q.y, r: lerp(7, 6, CGFloat(i) / CGFloat(path.count - 1))) })
+    }
+
+    private func finish(_ p: Pose, tail: [CGPoint]?, head q: CGPoint, shoulder: CGPoint) {
+        if let tail, let ribbon { drawTailRibbon(ribbon, tail: tail, radius: 6.3, sway: 0.22, phase: p.tp * 1.1, along: Self.canvasEdgeRibbonAlong) }
+        if let scarf { drawScarf(scarf, neck: HwarangNeck(head: q, shoulder: shoulder, tilt: p.h.tilt), swing: [], wind: 0, phase: 0) }
+        head(q.x, q.y, p.h)
+    }
+
+    /// 슈퍼맨: 배를 깔고 앞발과 뒷발을 앞뒤로 쭉 뻗는다. 힘든 활동 뒤의 회복.
+    private func superman(_ p: Pose) {
+        let top = 74 - p.breath, tw = sin(p.tp * 1.1) * 2
+        let tail = tailBlobs([P(26, groundY - 14), P(12, groundY - 22), P(4, groundY - 32 + tw), P(-1, groundY - 44 + tw)])
+        let hind = limb([P(38, groundY - 9), P(20, groundY - 6), P(4, groundY - 5)], radius: 5.6)
+        let fore = limb([P(64, groundY - 9), P(94, groundY - 6), P(118, groundY - 5)], radius: 5.6)
+        unionBody({
+            c.beginPath(); c.move(to: P(28, groundY))
+            cubic(16, groundY, 18, 84, 32, 80); cubic(44, top, 62, top, 72, 80)
+            cubic(82, 86, 84, groundY, 74, groundY); c.closePath()
+        }, parts: tail.blobs + hind + fore)
+        crease([P(30, 86), P(40, 92), P(40, groundY - 7)])
+        toes(at: P(118, groundY - 5))
+        toes(at: P(4, groundY - 5))
+        finish(p, tail: tail.points, head: P(80, groundY - 30 + p.breath * 0.3), shoulder: P(66, 86))
+    }
+
+    private var sickHead: CGPoint { P(74, groundY - 19) }
+
+    /// 아픈 식빵 자세: 머리를 바닥까지 떨구고 몸을 웅크린다.
+    private func sickLoaf(_ p: Pose, sec: CGFloat) {
+        let top = 64 - p.breath, tail = tailBlobs([P(28, groundY - 4), P(40, groundY - 1), P(54, groundY - 1)])
+        unionBody({
+            c.beginPath(); c.move(to: P(26, groundY + 1))
+            cubic(12, groundY + 1, 12, 82, 24, 74); cubic(34, top, 58, top, 68, 76)
+            cubic(78, 86, 78, groundY + 1, 70, groundY + 1); c.closePath()
+        }, parts: tail.blobs)
+        finish(p, tail: tail.points, head: sickHead, shoulder: P(64, 90))
+        // 끙끙 앓는 물결선.
+        stroke(0x7A8CB0, 1.8, 0.8); c.setLineCap(.round)
+        for (i, x) in [CGFloat(34), 44].enumerated() {
+            let w = sin(sec * 2.4 + CGFloat(i)) * 1.5, y: CGFloat = 56 - CGFloat(i) * 2
+            c.beginPath(); c.move(to: P(x, y)); c.addCurve(to: P(x + 2, y - 14), control1: P(x + 5 + w, y - 4), control2: P(x - 3 - w, y - 9)); c.strokePath()
+        }
+    }
+
+    private func pillBottle() {
+        rounded(107, groundY - 22, 15, 22, 3, fillHex: 0xE9A04B, line: 1.8)
+        rounded(105, groundY - 28, 19, 7, 2, fillHex: white, line: 1.8)
+        rounded(109, groundY - 15, 11, 8, 1, fillHex: 0xFFF6E2, line: 1)
+        c.saveGState(); c.translateBy(x: 127, y: groundY - 3); c.rotate(by: -0.3)
+        rounded(-5, -2.6, 10, 5.2, 2.6, fillHex: 0xE5484D, line: 1.3)
+        c.restoreGState()
+    }
+
+    /// 불가사리: 옆으로 벌렁 누워 네 다리를 사방으로 편다.
+    private func starfish(_ p: Pose) {
+        let top = 72 - p.breath, tw = sin(p.tp) * 2
+        let tail = tailBlobs([P(24, 94), P(8, 94 + tw), P(-6, 88 + tw)])
+        let legs = limb([P(30, 84), P(16, 72), P(10, 58)], radius: 5.4)
+            + limb([P(54, 80), P(46, 64), P(50, 48)], radius: 5.2)
+            + limb([P(70, groundY - 6), P(96, groundY - 3), P(120, groundY - 5)], radius: 5.2)
+        unionBody({
+            c.beginPath(); c.move(to: P(24, groundY + 1))
+            cubic(12, groundY + 1, 14, 86, 26, 80); cubic(38, top, 60, top, 72, 78)
+            cubic(84, 86, 82, groundY + 1, 72, groundY + 1); c.closePath()
+        }, parts: tail.blobs + legs)
+        fill(0xFFE3DC, 0.7); c.beginPath(); oval(46, top + 15, 15, 7 + p.breath * 0.4); c.fillPath()
+        finish(p, tail: tail.points, head: P(90, groundY - 23 + p.breath * 0.3), shoulder: P(72, 88))
+    }
+
+    /// 크루아상: 등을 둥글게 말고 옆으로 눕는다.
+    private func croissant(_ p: Pose) {
+        let b = p.breath
+        let tail = tailBlobs([P(18, groundY - 8), P(26, groundY - 2), P(40, groundY - 2), P(50, groundY - 5)])
+        let back = catmull([P(24, groundY - 12), P(30, 76 - b), P(52, 66 - b), P(72, 76 - b), P(74, groundY - 14)])
+        unionBody({
+            c.beginPath(); c.move(to: P(14, groundY - 8))
+            cubic(12, 70, 34, 54 - b, 54, 54 - b); cubic(72, 54 - b, 86, 70, 84, groundY - 12)
+            cubic(70, groundY - 12, 66, 84, 50, 84); cubic(36, 84, 34, groundY - 4, 28, groundY)
+            cubic(20, groundY + 1, 15, groundY - 2, 14, groundY - 8); c.closePath()
+        }, parts: tail.blobs + back.map { Blob(x: $0.x, y: $0.y, r: 5) })
+        foldedLeg([P(66, 86), P(58, 94), P(62, groundY - 3)], radius: 5)
+        finish(p, tail: tail.points, head: P(84, groundY - 19), shoulder: P(72, 84))
+    }
+
+    /// 도넛: 코끝이 꼬리에 닿게 동그랗게 만다.
+    private func donut(_ p: Pose) {
+        let b = p.breath
+        unionBody({ c.beginPath(); oval(52, 80 - b * 0.4, 37, 24 + b * 0.4); c.closePath() }, parts: [])
+        finish(p, tail: nil, head: P(70, groundY - 21), shoulder: P(58, 80))
+        let tail = catmull([P(18, groundY - 12), P(30, groundY - 2), P(54, groundY), P(78, groundY - 5), P(92, groundY - 13)])
+        limpLeg(tail, radius: 5.2)
+        if let ribbon { drawTailRibbon(ribbon, tail: tail, radius: 5.5, sway: 0.2, phase: p.tp, along: 0.25) }
+    }
+
+    /// 박스 안: 상자에 쏙 들어가 턱을 걸치고 쉰다.
+    private func boxRest(_ p: Pose) {
+        let rim = groundY - 30
+        // 뒤쪽 날개
+        fill(0xC98F58); stroke(outline, outlineWidth); c.setLineJoin(.round)
+        poly([P(36, rim), P(46, rim - 11), P(92, rim - 11), P(102, rim)]); c.drawPath(using: .fillStroke)
+        unionBody({ c.beginPath(); oval(58, rim - 7 - p.breath, 26, 15 + p.breath * 0.4); c.closePath() }, parts: [])
+        finish(p, tail: nil, head: P(76, rim - 21 + p.breath * 0.3), shoulder: P(68, rim - 3))
+        // 앞면과 양쪽 날개
+        fill(0xE0AC72); stroke(outline, outlineWidth)
+        poly([P(36, rim), P(102, rim), P(102, groundY), P(36, groundY)]); c.drawPath(using: .fillStroke)
+        fill(0xEEC08A)
+        poly([P(36, rim), P(24, rim + 11), P(50, rim + 11), P(58, rim)]); c.drawPath(using: .fillStroke)
+        poly([P(102, rim), P(114, rim + 11), P(88, rim + 11), P(80, rim)]); c.drawPath(using: .fillStroke)
+        limpLeg([P(68, rim - 1), P(70, rim + 3)], radius: 4.6)
+        limpLeg([P(86, rim - 1), P(88, rim + 3)], radius: 4.6)
+        let tail = catmull([P(40, rim - 2), P(26, rim + 2), P(20, rim + 14), P(26, rim + 24)])
+        limpLeg(tail, radius: 4.8)
+        if let ribbon { drawTailRibbon(ribbon, tail: tail, radius: 5, sway: 0.2, phase: p.tp, along: 0.5) }
+    }
+
+    /// 식빵: 발을 안으로 넣고 편하게 웅크린다.
+    private func restingLoaf(_ p: Pose) {
+        let top = 62 - p.breath * 1.2, tail = tailBlobs([P(30, groundY - 4), P(44, groundY - 1), P(60, groundY - 1)])
+        unionBody({
+            c.beginPath(); c.move(to: P(30, groundY + 1))
+            cubic(14, groundY + 1, 14, 84, 26, 74); cubic(34, top, 62, top, 72, 74)
+            cubic(82, 84, 84, groundY + 1, 74, groundY + 1); c.closePath()
+        }, parts: tail.blobs)
+        finish(p, tail: tail.points, head: P(84, 72 + p.breath * 0.5), shoulder: P(70, 90))
+    }
+
+    /// 몸통과 한 윤곽으로 합쳐 그릴 다리. 관절 경계선이 생기지 않는다.
+    private func limb(_ points: [CGPoint], radius r: CGFloat) -> [Blob] {
+        catmull(points, seg: 24).map { Blob(x: $0.x, y: $0.y, r: r) }
+    }
+
+    private func toes(at q: CGPoint) {
+        stroke(outline, 1.2); c.setLineCap(.round); c.beginPath()
+        for dx: CGFloat in [-1.8, 1.8] { c.move(to: P(q.x + dx, q.y + 1.5)); c.addLine(to: P(q.x + dx, q.y + 4.4)) }
+        c.strokePath()
+    }
+
+    /// 몸통 안쪽의 근육 주름. 양 끝을 열어 둔다.
+    private func crease(_ points: [CGPoint]) {
+        stroke(outline, outlineWidth * 0.7); c.setLineCap(.round)
+        c.beginPath(); c.addLines(between: catmull(points)); c.strokePath()
+    }
+
+    /// 몸 위에 포갠 발. 뿌리의 선을 지워 몸통에서 이어져 나오게 한다.
+    private func foldedLeg(_ points: [CGPoint], radius r: CGFloat) {
+        limpLeg(points, radius: r)
+        let path = catmull(points)
+        stroke(white, r * 2 + outlineWidth * 2); c.setLineCap(.butt)
+        c.beginPath(); c.addLines(between: Array(path.prefix(max(2, path.count * 2 / 5)))); c.strokePath()
+        c.setLineCap(.round)
+    }
+
+    /// 앞발·뒷발 하나를 몸 위나 바닥에 늘어뜨린다. 몸통 윤곽 위에 겹쳐 그린다.
+    private func limpLeg(_ points: [CGPoint], radius r: CGFloat) {
+        let path = catmull(points)
+        c.setLineCap(.round); c.setLineJoin(.round)
+        for (color, width) in [(outline, r * 2 + outlineWidth * 2), (white, r * 2)] {
+            stroke(color, width); c.beginPath(); c.addLines(between: path); c.strokePath()
+        }
+    }
+
+    /// 배를 까고 베개에 누운 자세. 앞발은 가슴에 얹고 뒷발은 힘 없이 내린 채 숨 쉴 때 배만 오르내린다.
+    func bellyUp(_ p: Pose) {
+        let top = 72 - p.breath * 1.4, sag = p.breath * 0.4, tw = sin(p.tp * 1.1) * 2.2
+        rounded(64, groundY - 22, 62, 22, 10, fillHex: 0xBFD8EE, line: outlineWidth)
+        let tail = tailBlobs([P(24, groundY - 6), P(11, groundY - 3), P(0, groundY - 5), P(-6, groundY - 13 + tw)])
+        unionBody({
+            c.beginPath(); c.move(to: P(26, groundY + 1))
+            cubic(12, groundY + 1, 14, 86, 28, 80); cubic(38, top, 60, top, 72, 80)
+            cubic(82, 86, 82, groundY + 1, 72, groundY + 1); c.closePath()
+        }, parts: tail.blobs)
+        fill(0xFFE3DC, 0.75); c.beginPath(); oval(44, top + 14 - p.breath * 0.2, 15, 7 + p.breath * 0.4); c.fillPath()
+        crease([P(26, 86), P(36, 92), P(36, groundY - 4)])
+        foldedLeg([P(70, 88 + sag), P(56, 84 + sag), P(47, 90 + sag)], radius: 4.4)
+        finish(p, tail: tail.points, head: P(88, groundY - 28 + p.breath * 0.3), shoulder: P(72, 88))
+    }
+
+    /// 머리를 떨구고 수면 안대를 낀 채 잔다.
+    func eyeMaskSleep(_ p: Pose) {
+        let top = 66 - p.breath * 1.3, tail = tailBlobs([P(28, groundY - 5), P(14, groundY - 3), P(2, groundY - 5), P(-6, groundY - 12), P(-3, groundY - 20 + sin(p.tp) * 2)])
+        unionBody({
+            c.beginPath(); c.move(to: P(26, groundY + 1))
+            cubic(14, groundY + 1, 14, 86, 24, 76); cubic(32, top + 1, 56, top, 66, 76)
+            cubic(76, 84, 78, groundY + 1, 70, groundY + 1); c.closePath()
+        }, parts: tail.blobs)
+        let q = P(80, groundY - 20)
+        finish(p, tail: tail.points, head: q, shoulder: P(64, 88))
+        let hs: CGFloat = small ? 1.72 : 1.5
+        c.saveGState(); c.translateBy(x: q.x, y: q.y); c.rotate(by: p.h.tilt); c.scaleBy(x: hs, y: hs)
+        sleepMask()
+        c.restoreGState()
+    }
+
+    /// 머리 좌표계의 안대. 끈이 머리 옆으로 돌아가고 눈 자리에 감은 눈을 수놓았다.
+    private func sleepMask() {
+        let line = outlineWidth / (small ? 1.72 : 1.5)
+        c.setLineCap(.round); c.setLineJoin(.round)
+        // 끈은 머리 양옆까지만 잇고, 안대는 코 위로 살짝 파인 둥근 띠 하나로 그린다.
+        stroke(0x8E7CC3, line * 1.1); c.beginPath(); c.move(to: P(-16.8, -1)); c.addLine(to: P(16.8, -1)); c.strokePath()
+        fill(0xCDBEF0); stroke(outline, line * 0.8)
+        c.beginPath(); c.move(to: P(-9, -3.6))
+        c.addLine(to: P(9, -3.6))
+        c.addCurve(to: P(9, 4.6), control1: P(17.5, -3.6), control2: P(17.5, 4.6))
+        c.addCurve(to: P(-9, 4.6), control1: P(4, 4.6), control2: P(-4, 4.6))
+        c.addCurve(to: P(-9, -3.6), control1: P(-17.5, 4.6), control2: P(-17.5, -3.6))
+        c.closePath(); c.drawPath(using: .fillStroke)
+        stroke(outline, line * 0.8); c.beginPath()
+        for x: CGFloat in [-8.5, 8.5] { c.move(to: P(x - 3.6, -0.2)); c.addQuadCurve(to: P(x + 3.6, -0.2), control: P(x, 2.6)) }
+        c.strokePath()
+    }
+}
+
 func dailyPose(_ scene: HwarangScene, s: CGFloat) -> Pose {
     switch scene {
+    case .sleepBelly:
+        var p = Pose()
+        p.breath = sin(s * tau / 3.6); p.tp = s * 0.8
+        p.h = HeadPose(tilt: 0.42, ear: sin(s * 0.7) * 0.05, mouthOpen: 0.12, eye: .closed)
+        return p
+    case .recoverySuperman, .restLoaf, .restStarfish, .restCroissant, .restDonut, .restBox:
+        var p = Pose()
+        p.breath = sin(s * tau / 3.8); p.tp = s * 0.7
+        let tilt: CGFloat = switch scene {
+        case .recoverySuperman: 0.04
+        case .restStarfish: 0.55
+        case .restCroissant: 0.5
+        case .restDonut: 0.46
+        case .restBox: 0.03
+        default: 0.05
+        }
+        p.h = HeadPose(tilt: tilt, ear: sin(s * 0.7) * 0.05, eye: .closed)
+        return p
+    case .medicated, .hospital:
+        // 아플 때: 머리를 떨군 채 눈을 반쯤 감고 잘게 떤다.
+        var p = Pose()
+        p.breath = sin(s * tau / 2.6) * 0.7; p.tp = s * 0.4
+        p.h = HeadPose(tilt: 0.14 + sin(s * 1.1) * 0.02, ear: -0.28, eye: .half)
+        return p
+    case .sleepEyeMask:
+        var p = Pose()
+        p.breath = sin(s * tau / 3.8); p.tp = s * 0.8
+        p.h = HeadPose(tilt: 0.3, ear: sin(s * 0.8) * 0.06, eye: .closed)
+        return p
     case .nap:
         var p = Pose()
         p.breath = sin(s * tau / 3.4) * 1.1; p.tp = s * 0.7
@@ -56,8 +327,6 @@ func dailyPose(_ scene: HwarangScene, s: CGFloat) -> Pose {
         p.sh.y -= breath; p.head.y -= breath * 2; p.rm = 1 + breath * 0.6
         p.tw = 0.05; p.tp = s * 0.5; p.tc = -1.2
         return p
-    case .hospital:
-        return sit(s, HeadPose(tilt: -0.06 + sin(s * 1.1) * 0.03, look: 1.2, eye: wrap(s, 3.4) < 1.2 ? .half : blink(s, 3.4)))
     case .salon:
         return sit(s, HeadPose(tilt: sin(s * 0.9) * 0.05, look: 2.4, eye: wrap(s, 3) < 1 ? .closed : .open))
     case .readBook:
@@ -142,7 +411,6 @@ extension HwarangPainter {
         c.setLineJoin(.round); c.setLineCap(.round)
         switch scene {
         case .phoneCall: phone(P(99, 50 + sin(sec * 1.5)), sec: sec)
-        case .hospital: hospitalGear(head, tilt: pose.h.tilt, sec: sec)
         case .salon: scissors(head, sec: sec)
         case .readBook: heldBook(sec)
         case .game: console(sec)
@@ -317,15 +585,11 @@ extension HwarangPainter {
         fill(0xE5484D); c.fill(CGRect(x: 112.5, y: 33, width: 7, height: 18)); c.fill(CGRect(x: 107, y: 38.5, width: 18, height: 7))
     }
 
-    private func hospitalGear(_ head: CGPoint, tilt: CGFloat, sec: CGFloat) {
-        // 이마에 붙인 반창고와 입에 문 체온계.
+    private func hospitalGear(_ head: CGPoint, tilt: CGFloat) {
+        // 이마에 붙인 반창고.
         c.saveGState(); c.translateBy(x: head.x, y: head.y); c.rotate(by: tilt)
         c.saveGState(); c.translateBy(x: -13, y: -14); c.rotate(by: -0.6)
         rounded(-8, -2.8, 16, 5.6, 2.6, fillHex: 0xF4D9B0, line: 1.3)
-        c.restoreGState()
-        c.saveGState(); c.translateBy(x: 3, y: 19); c.rotate(by: 0.42)
-        rounded(0, -1.6, 20, 3.2, 1.6, fillHex: white, line: 1.2)
-        fill(0xE5484D); c.beginPath(); circle(20, 0, 2.3); c.fillPath()
         c.restoreGState()
         c.restoreGState()
     }

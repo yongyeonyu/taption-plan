@@ -280,7 +280,7 @@ extension FeatureEngineTests {
                 for: "activity",
                 behavior: "cooking"
             ),
-            "eating"
+            "housework"
         )
         XCTAssertEqual(
             RecordAnalysisCategoryNormalizer.categoryID(

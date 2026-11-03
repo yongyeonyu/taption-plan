@@ -7,6 +7,7 @@ enum HwarangScene: CaseIterable, Hashable, Sendable {
     case walkLoop, runLoop
     case stroll, groom, work, study, yarn, sleep, eat, wheel, stretch, confused
     case shower, robotVacuum, carFront, subway, train, bus, bicycle, airplane, boat, atlas
+    case sleepBelly, sleepEyeMask, recoverySuperman, medicated, restStarfish, restCroissant, restDonut, restLoaf, restBox
     case nap, cook, groceries, laundry, friends, date, family, phoneCall, meditate, hospital, salon, readBook, game, music, video, petCare
 
     /// 장면의 동작별 길이(초)와 배경 이동 속도.
@@ -32,7 +33,7 @@ enum HwarangScene: CaseIterable, Hashable, Sendable {
         case .airplane: [(5, 26)]
         case .boat: [(5, 22)]
         case .atlas: [(6, 0)]
-        case .nap, .cook, .groceries, .laundry, .friends, .date, .family, .phoneCall, .meditate, .hospital, .salon, .readBook, .game, .music, .video, .petCare: [(6, 0)]
+        case .sleepBelly, .sleepEyeMask, .recoverySuperman, .medicated, .restStarfish, .restCroissant, .restDonut, .restLoaf, .restBox, .nap, .cook, .groceries, .laundry, .friends, .date, .family, .phoneCall, .meditate, .hospital, .salon, .readBook, .game, .music, .video, .petCare: [(6, 0)]
         }
     }
 
@@ -474,7 +475,7 @@ private func pose(_ scene: HwarangScene, beat i: Int, s: CGFloat, u: CGFloat) ->
         var p = study(s, turn: sin(s * 0.7) * 0.5, flip: 0, eye: blink(s, 2.9))
         p.prop = .map
         return p
-    case .nap, .cook, .groceries, .laundry, .friends, .date, .family, .phoneCall, .meditate, .hospital, .salon, .readBook, .game, .music, .video, .petCare:
+    case .sleepBelly, .sleepEyeMask, .recoverySuperman, .medicated, .restStarfish, .restCroissant, .restDonut, .restLoaf, .restBox, .nap, .cook, .groceries, .laundry, .friends, .date, .family, .phoneCall, .meditate, .hospital, .salon, .readBook, .game, .music, .video, .petCare:
         return dailyPose(scene, s: s)
     }
 }
@@ -510,7 +511,7 @@ private func sceneState(_ scene: HwarangScene, _ sec: CGFloat) -> SceneState {
 
 // MARK: - 그리기
 
-private struct Blob { var x: CGFloat, y: CGFloat, r: CGFloat }
+struct Blob { var x: CGFloat, y: CGFloat, r: CGFloat }
 
 struct HwarangPainter {
     let c: CGContext
@@ -755,7 +756,7 @@ struct HwarangPainter {
     private func mapPaw(_ q: CGPoint) -> CGPoint { P(58 + (q.x - 58) * 1.04, groundY - (groundY - q.y) * 0.86) }
 
     /// 몸·꼬리·앞다리를 한 윤곽으로 그린다. 윤곽을 먼저 그린 뒤 면을 덮어 안쪽 선을 없앤다.
-    private func unionBody(_ body: () -> Void, parts: [Blob]) {
+    func unionBody(_ body: () -> Void, parts: [Blob]) {
         let w = outlineWidth
         c.setLineJoin(.round); c.setLineCap(.round)
         stroke(outline, w * 2); body(); c.strokePath()
@@ -765,7 +766,7 @@ struct HwarangPainter {
     }
 
     /// 엎드린 자세의 꼬리 끝은 캔버스 왼쪽 끝에 가까워 리본을 뿌리 쪽으로 옮겨 잘리지 않게 한다.
-    private static let canvasEdgeRibbonAlong: CGFloat = 0.42
+    static let canvasEdgeRibbonAlong: CGFloat = 0.42
 
     private mutating func deskCat(_ p: Pose) {
         let br = sin(p.tp * 0.9) * 0.7, top = 59 - br, tw = sin(p.tp * 0.8) * 2
@@ -1021,7 +1022,7 @@ struct HwarangPainter {
     /// 머리·귀가 몸을 조금 늦게 따라오고, 내려앉을 때 살짝 눌린다.
     private func laggedState(_ scene: HwarangScene, _ sec: CGFloat) -> SceneState {
         var st = sceneState(scene, sec)
-        guard scene != .sleep, scene != .nap else { return st }
+        guard scene != .sleep, scene != .nap, !scene.drawsLyingBody else { return st }
         let dt: CGFloat = 0.09
         let previous = sceneState(scene, max(0, sec - dt)).pose
         let vy = (st.pose.hip.y - previous.hip.y) / dt, hv = (st.pose.head.y - previous.head.y) / dt
@@ -1080,6 +1081,8 @@ struct HwarangPainter {
             sleepLetters(sec)
         case .nap:
             loaf(st.pose)
+        case _ where scene.drawsLyingBody:
+            lyingBody(scene, pose: st.pose, sec: sec)
         default:
             let q = st.pose.squash
             c.saveGState()
@@ -1117,6 +1120,7 @@ struct HwarangPainter {
             let y = yarnPosition(st.beat, sec, st.u)
             yarn(y.0, y.1, y.2)
         case .eat: bowl()
+        case .sleepBelly, .sleepEyeMask: sleepLetters(sec)
         case .nap, .cook, .groceries, .friends, .date, .meditate, .salon, .game, .music, .video, .petCare: dailyForeground(scene, sec: sec)
         case .confused: questionMark(sec)
         case .shower: waterStreams(sec, xs: [52, 64, 76, 84], alpha: 0.5)

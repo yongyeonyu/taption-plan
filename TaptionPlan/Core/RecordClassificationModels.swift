@@ -28,7 +28,8 @@ enum RecordAnalysisCategoryNormalizer {
         let rawValue = rawCategoryID.lowercased()
             .replacingOccurrences(of: " ", with: "")
         // 사용자가 직접 고르는 분류라 글자 추정으로 바꾸지 않는다.
-        if rawValue == "shower" || rawValue == "housework" { return rawValue }
+        if rawValue == "shower" { return "activity" }
+        if rawValue == "housework" { return rawValue }
         if rawCategoryID == "unconfirmed"
             || value.contains("unconfirmed-activity")
             || value.contains("unconfirmed-movement")
@@ -36,8 +37,10 @@ enum RecordAnalysisCategoryNormalizer {
             || value.contains("미확인") {
             return "unconfirmed"
         }
-        if value.contains("housework") || value.contains("집안일") {
-            return "activity"
+        if value.contains("housework") || value.contains("집안일")
+            || value.contains("groceries") || value.contains("장보기")
+            || value.contains("cooking") || value.contains("요리") {
+            return "housework"
         }
         if value.contains("sleep") || value.contains("수면")
             || value.contains("코어") || value.contains("깊은")
@@ -54,11 +57,10 @@ enum RecordAnalysisCategoryNormalizer {
             return "hobby"
         }
         if rawValue == "food" || rawValue.contains("meal") || rawValue.contains("eating")
-            || rawValue.contains("cooking")
             || value.contains("meal") || value.contains("eating")
             || value.contains("dining") || value.contains("food")
-            || value.contains("cooking") || value.contains("식사")
-            || value.contains("밥") || value.contains("요리")
+            || value.contains("식사")
+            || value.contains("밥")
             || value.contains("음식") || value.contains("먹")
             || value.contains("아침") || value.contains("점심")
             || value.contains("저녁") || value.contains("간식")
@@ -158,6 +160,27 @@ enum RecordClassificationCatalog {
         }
     }
 
+    /// 분류표에서 자리를 옮긴 상세활동의 지난 저장값을 지금 대분류로 읽는다(v5). 저장값은 고치지 않는다.
+    static func relocatedCategoryID(from categoryID: String, behavior: String?) -> String? {
+        switch (categoryID, behavior) {
+        case ("shower", _): "activity"
+        case ("activity", "housework"), ("activity", "groceries"), ("routine", "housework"),
+             ("eating", "cooking"), ("food", "cooking"),
+             ("housework", "cooking"), ("housework", "groceries"): "housework"
+        default: nil
+        }
+    }
+
+    /// 판정 값을 분류표의 상세활동 이름으로 맞춘다. 분류표에 없는 값은 원래 이름을 그대로 쓴다.
+    static func detailTitle(categoryID: String, behavior: String?) -> String? {
+        guard let behavior else { return nil }
+        let aliases = ["homeRest": "stationary", "cafe": "stationary", "waiting": "stationary",
+                       "call": "phoneCall", "mealPlace": "meal", "showering": "shower",
+                       "housework": "chores", "gymFacility": "exercise"]
+        let target = aliases[behavior] ?? behavior
+        return categories.first { $0.id == categoryID }?.details.first { $0.behavior == target }?.title
+    }
+
     private static func load() -> RecordClassificationFile {
         ActivityTaxonomyResource.data.flatMap {
             try? JSONDecoder().decode(RecordClassificationFile.self, from: $0)
@@ -176,7 +199,6 @@ enum RecordClassificationCatalog {
             category("eating", "식사", "fork.knife"),
             category("exercise", "운동", "figure.strengthtraining.traditional"),
             category("health", "건강관리", "heart.text.square.fill"),
-            category("shower", "샤워", "shower.fill"),
             category("housework", "집안일", "house.fill"),
             category("unconfirmed", "미확인", "questionmark.circle.fill"),
         ]

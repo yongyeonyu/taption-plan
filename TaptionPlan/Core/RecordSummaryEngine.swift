@@ -127,8 +127,8 @@ enum RecordAnalysisCategoryPolicy {
     }
 
     private static func _computeCategoryID(for actual: ActualRecord) -> String {
-        if (actual.manuallyCorrected || actual.source == .manual),
-           categoryIDs.contains(actual.categoryID) {
+        if let relocated = RecordClassificationCatalog.relocatedCategoryID(from: actual.categoryID, behavior: actual.behavior) { return relocated }
+        if actual.manuallyCorrected || actual.source == .manual, categoryIDs.contains(actual.categoryID) {
             return actual.categoryID
         }
         if actual.categoryID == ReviewCoverageEngine.unconfirmedCategoryID
@@ -144,7 +144,7 @@ enum RecordAnalysisCategoryPolicy {
             || actual.behavior == StationaryContextKind.housework.rawValue
             || value.contains("집안일")
             || value.contains("housework") {
-            return "activity"
+            return "housework"
         }
 
         if ["work", "study", "hobby"].contains(actual.categoryID),
@@ -2164,7 +2164,7 @@ enum DayPhaseEngine {
                 asOf: asOf,
                 // "eating"이 빠지면 자동 식사 기록이 미확인으로 남았다.
                 categoryIDs: [
-                    "activity", "rest", "routine", "food", "eating",
+                    "activity", "rest", "routine", "housework", "food", "eating",
                     "relationship", "health", "appUsage",
                 ]
             ),

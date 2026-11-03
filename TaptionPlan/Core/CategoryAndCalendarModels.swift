@@ -202,3 +202,9 @@ struct PhotoCluster: Identifiable, Codable, Hashable, Sendable {
     var capturedAt: Date { representative.capturedAt }
     var additionalCount: Int { max(0, photos.count - 1) }
 }
+
+extension CalendarRecord {
+    /// 구글 로그인으로 직접 읽은 일정. 기기 캘린더 권한과 따로 관리한다.
+    static let googleAccountCalendarID = "google-primary"
+    var isGoogleAccountEvent: Bool { calendarID == Self.googleAccountCalendarID }
+}

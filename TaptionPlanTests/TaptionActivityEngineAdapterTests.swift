@@ -1006,7 +1006,7 @@ final class ClassifierMigrationTests: XCTestCase {
 
     func testAppCatalogReadsTheSingleTaxonomyResource() {
         XCTAssertNotNil(ActivityTaxonomyResource.data, "분류표는 TaptionPlanCore 리소스 하나다(v4)")
-        XCTAssertEqual(RecordClassificationCatalog.file.version, 4)
+        XCTAssertEqual(RecordClassificationCatalog.file.version, 5)
         XCTAssertTrue(RecordClassificationCatalog.options.contains { $0.id == "detail.study.academy" })
     }
 

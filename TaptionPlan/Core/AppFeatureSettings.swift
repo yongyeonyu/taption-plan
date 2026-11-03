@@ -37,6 +37,8 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
     var dismissedPlaceSuggestions: [DismissedPlaceSuggestion]
     var movementCorrections: [TravelModeCorrection]
     var suppressedActualIDs: Set<UUID>
+    /// 일정 제목(정규화)별 상세활동. Apple AI 결과와 사용자가 고른 값이다. 기기에만 둔다(CAL1103A01).
+    var calendarTitleDetails: [String: CalendarTitleDetail]
     /// Prevents a deliberate deletion from being mistaken for local data loss
     /// when an older CloudKit snapshot is used as a recovery source.
     var cloudDeletedRecordKeys: Set<String>
@@ -84,6 +86,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         dismissedPlaceSuggestions: [],
         movementCorrections: [],
         suppressedActualIDs: [],
+        calendarTitleDetails: [:],
         cloudDeletedRecordKeys: [],
         cloudResetAt: nil,
         weatherEnabled: false,
@@ -128,6 +131,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         dismissedPlaceSuggestions: [DismissedPlaceSuggestion] = [],
         movementCorrections: [TravelModeCorrection] = [],
         suppressedActualIDs: Set<UUID> = [],
+        calendarTitleDetails: [String: CalendarTitleDetail] = [:],
         cloudDeletedRecordKeys: Set<String> = [],
         cloudResetAt: Date? = nil,
         weatherEnabled: Bool,
@@ -176,6 +180,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         self.dismissedPlaceSuggestions = dismissedPlaceSuggestions
         self.movementCorrections = movementCorrections
         self.suppressedActualIDs = suppressedActualIDs
+        self.calendarTitleDetails = calendarTitleDetails
         self.cloudDeletedRecordKeys = cloudDeletedRecordKeys
         self.cloudResetAt = cloudResetAt
         self.weatherEnabled = weatherEnabled
@@ -220,6 +225,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         case dismissedPlaceSuggestions
         case movementCorrections
         case suppressedActualIDs
+        case calendarTitleDetails
         case cloudDeletedRecordKeys
         case cloudResetAt
         case weatherEnabled
@@ -350,6 +356,10 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
             Set<UUID>.self,
             forKey: .suppressedActualIDs
         ) ?? defaults.suppressedActualIDs
+        calendarTitleDetails = try values.decodeIfPresent(
+            [String: CalendarTitleDetail].self,
+            forKey: .calendarTitleDetails
+        ) ?? defaults.calendarTitleDetails
         cloudDeletedRecordKeys = try values.decodeIfPresent(
             Set<String>.self,
             forKey: .cloudDeletedRecordKeys
@@ -514,4 +524,11 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
             result[item.key] = hex
         }
     }
+}
+
+/// 일정 제목에 붙인 상세활동. `detailID`가 nil이면 "분류 안 함"이다.
+struct CalendarTitleDetail: Codable, Hashable, Sendable {
+    enum Source: String, Codable, Sendable { case user, appleIntelligence }
+    var detailID: String?
+    var source: Source
 }

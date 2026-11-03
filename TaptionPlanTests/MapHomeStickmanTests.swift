@@ -119,8 +119,8 @@ final class MapHomeStickmanTests: XCTestCase {
 
     /// 대표 결정 16개 분류(RIG1103A02): (대분류, 제목, behavior, 행동, 장면). 요리는 이미 있던 상세 분류다.
     private static let dailyCategories: [(String, String, String, MapHomeStickmanAction, HwarangScene)] = [
-        ("health", "낮잠", "nap", .nap, .nap), ("eating", "요리", "cooking", .cooking, .cook),
-        ("activity", "장보기", "groceries", .groceries, .groceries), ("housework", "빨래", "laundry", .laundry, .laundry),
+        ("health", "낮잠", "nap", .nap, .nap), ("housework", "요리", "cooking", .cooking, .cook),
+        ("housework", "장보기", "groceries", .groceries, .groceries), ("housework", "빨래", "laundry", .laundry, .laundry),
         ("activity", "친구 만남", "friends", .friends, .friends), ("activity", "데이트", "dating", .date, .date),
         ("activity", "가족", "family", .family, .family), ("activity", "통화", "phoneCall", .phoneCall, .phoneCall),
         ("health", "명상", "meditation", .meditation, .meditate), ("health", "병원", "hospital", .hospital, .hospital),
@@ -177,19 +177,18 @@ final class MapHomeStickmanTests: XCTestCase {
     /// v3 분류표의 항목과 그 항목으로 저장된 지난 기록은 v4에서도 그대로다.
     func testPreviousTaxonomyEntriesAndOldRecordsAreUnchanged() throws {
         let v3: [String: [(String, String)]] = [
-            "activity": [("activity.rest", "stationary"), ("activity.housework", "housework")],
+            "activity": [("activity.rest", "stationary")],
             "work": [("work.route", "work"), ("work.rest", "stationary"), ("work.walking", "walking")],
             "study": [("study.route", "study"), ("study.class", "class"), ("study.academy", "academy"), ("study.rest", "stationary"), ("study.walking", "walking")],
             "hobby": [("hobby.route", "hobby"), ("hobby.rest", "stationary"), ("hobby.walking", "walking")],
             "sleep": [("sleep.core", "core"), ("sleep.deep", "deep"), ("sleep.rem", "rem")],
-            "eating": [("eating.meal", "meal"), ("eating.cooking", "cooking")],
+            "eating": [("eating.meal", "meal")],
             "exercise": [("exercise.workout", "exercise")],
             "health": [("health.wellness", "wellness"), ("health.vitals", "vitals"), ("health.recovery", "recovery"), ("health.medication", "medication")],
-            "shower": [("shower.wash", "shower")],
             "housework": [("housework.chores", "chores")],
             "unconfirmed": [("unconfirmed.automatic", "unconfirmed")]
         ]
-        XCTAssertEqual(RecordClassificationCatalog.categoryIDs, ["activity", "work", "study", "hobby", "sleep", "movement", "eating", "exercise", "health", "shower", "housework", "unconfirmed"])
+        XCTAssertEqual(RecordClassificationCatalog.categoryIDs, ["activity", "work", "study", "hobby", "sleep", "movement", "eating", "exercise", "health", "housework", "unconfirmed"])
         for (category, details) in v3 {
             let current = try XCTUnwrap(RecordClassificationCatalog.categories.first { $0.id == category })
             for (id, behavior) in details {
@@ -201,8 +200,8 @@ final class MapHomeStickmanTests: XCTestCase {
         XCTAssertEqual(RecordClassificationCatalog.options.first { $0.id == "phase.health" }?.isAutomaticOnly, true)
         let start = Date(timeIntervalSince1970: 1_800_000_000)
         let old: [(String, String, String?, MapHomeStickmanAction)] = [
-            ("sleep", "수면", "core", .sleeping), ("hobby", "취미", nil, .hobby), ("health", "회복", "recovery", .health),
-            ("activity", "휴식", "stationary", .activity), ("housework", "집안일", "chores", .housework), ("eating", "식사", "meal", .eating)
+            ("sleep", "수면", "core", .sleeping), ("hobby", "취미", nil, .hobby), ("health", "회복", "recovery", .recovery),
+            ("activity", "휴식", "stationary", .restStarfish), ("housework", "집안일", "chores", .housework), ("eating", "식사", "meal", .eating)
         ]
         for (category, title, behavior, action) in old {
             var record = ActualRecord(planID: nil, title: title, categoryID: category, startedAt: start, endedAt: start.addingTimeInterval(600), source: .manual)
@@ -210,6 +209,95 @@ final class MapHomeStickmanTests: XCTestCase {
             XCTAssertEqual(RecordAnalysisCategoryPolicy.categoryID(for: record), category)
             XCTAssertEqual(MapHomeStickmanActionResolver.action(at: start.addingTimeInterval(60), actuals: [record], travel: [], places: [], frequentPlaces: []), action, title)
         }
+    }
+
+    /// 집안일은 활동에서 빠져 자기 대분류에만 있고 장보기는 그 아래로 옮겼다(HWK1103A01).
+    func testRestAndHealthDetailsHaveTheirOwnPoses() {
+        let expected: [(String, String, MapHomeStickmanAction, HwarangScene)] = [
+            ("activity.rest", "휴식", .restStarfish, .restStarfish),
+            ("work.rest", "휴식", .restCroissant, .restCroissant),
+            ("study.rest", "휴식", .restDonut, .restDonut),
+            ("hobby.rest", "휴식", .restLoaf, .restLoaf),
+            ("health.recovery", "회복", .recovery, .recoverySuperman),
+            ("health.medication", "투약", .medication, .medicated)
+        ]
+        for (category, title, action, scene) in expected {
+            XCTAssertEqual(MapHomeStickmanActionResolver.action(for: category, label: title), action, category)
+            XCTAssertEqual(action.hwarangScene, scene)
+            XCTAssertGreaterThan(HwarangDiagnostics.paintedPixels(scene: scene, sec: 1), 1_000, category)
+        }
+        XCTAssertGreaterThan(HwarangDiagnostics.paintedPixels(scene: .hospital, sec: 1), 1_000)
+        XCTAssertGreaterThan(HwarangDiagnostics.paintedPixels(scene: .restBox, sec: 1), 1_000)
+        XCTAssertEqual(MapHomeStickmanAction.restBox.hwarangScene, .restBox)
+    }
+
+    func testSleepStagesPickTheirOwnScenes() {
+        let start = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        func segment(_ stage: SleepStage, _ minute: Double) -> SleepSegment {
+            SleepSegment(stage: stage, span: TimeSpan(start: start.addingTimeInterval(minute * 60), end: start.addingTimeInterval((minute + 10) * 60)), sourceName: "Apple Watch")
+        }
+        let session = SleepSession(
+            id: UUID(), span: TimeSpan(start: start, end: start.addingTimeInterval(1_800)),
+            asleepDuration: 1_800, awakeDuration: 0, inBedDuration: 1_800, stageDurations: [:],
+            sourceNames: ["Apple Watch"], segments: [segment(.core, 0), segment(.deep, 10), segment(.rem, 20)]
+        )
+        func action(_ minute: Double) -> MapHomeStickmanAction {
+            MapHomeStickmanActionResolver.sleepStageAction(at: start.addingTimeInterval(minute * 60 + 30), actuals: [], sleepSessions: [session])
+        }
+        XCTAssertEqual(action(0), .sleeping)
+        XCTAssertEqual(action(10), .deepSleep)
+        XCTAssertEqual(action(20), .remSleep)
+        XCTAssertEqual(MapHomeStickmanAction.deepSleep.hwarangScene, .sleepBelly)
+        XCTAssertEqual(MapHomeStickmanAction.remSleep.hwarangScene, .sleepEyeMask)
+        XCTAssertEqual(MapHomeStickmanActionResolver.action(for: "sleep.deep", label: "깊은 수면"), .deepSleep)
+        XCTAssertEqual(MapHomeStickmanActionResolver.action(for: "sleep.rem", label: "REM 수면"), .remSleep)
+        XCTAssertEqual(MapHomeStickmanActionResolver.action(for: "sleep.core", label: "코어 수면"), .sleeping)
+        for scene in [HwarangScene.sleepBelly, .sleepEyeMask] {
+            XCTAssertGreaterThan(HwarangDiagnostics.paintedPixels(scene: scene, sec: 1), 1_000)
+        }
+    }
+
+    func testHouseworkAndGroceriesLiveUnderHousework() {
+        let activity = MapHomeCategoryDetailRows.details(for: "activity").map(\.title)
+        XCTAssertFalse(activity.contains("집안일"))
+        XCTAssertFalse(activity.contains("장보기"))
+        XCTAssertEqual(MapHomeCategoryDetailRows.details(for: "housework").map(\.title), ["집안일", "빨래", "장보기", "요리"])
+        XCTAssertEqual(MapHomeCategoryDetailRows.details(for: "eating").map(\.title), ["식사"])
+        XCTAssertTrue(activity.contains("샤워"))
+        XCTAssertFalse(RecordClassificationCatalog.categoryIDs.contains("shower"))
+        XCTAssertEqual(MapHomeCategoryDetailRows.details(for: "work").map(\.title).contains("회의"), true)
+        XCTAssertEqual(MapHomeStickmanActionResolver.action(for: "housework", label: "집안일").hwarangScene, .robotVacuum)
+    }
+
+    /// 지난 저장값은 고치지 않고 옮긴 대분류로 읽는다(HWK1103A01).
+    func testOldRecordsReadIntoRelocatedCategories() {
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        let old: [(String, String, String?, String, MapHomeStickmanAction)] = [
+            ("shower", "샤워", "shower", "activity", .shower), ("activity", "장보기", "groceries", "housework", .groceries),
+            ("eating", "요리", "cooking", "housework", .cooking), ("activity", "집안일", "housework", "housework", .housework),
+            ("routine", "집안일", "housework", "housework", .housework)
+        ]
+        for (category, title, behavior, expected, action) in old {
+            var record = ActualRecord(planID: nil, title: title, categoryID: category, startedAt: start, endedAt: start.addingTimeInterval(600), source: .manual)
+            record.behavior = behavior
+            XCTAssertEqual(RecordAnalysisCategoryPolicy.categoryID(for: record), expected, title)
+            XCTAssertEqual(record.categoryID, category)
+            XCTAssertEqual(MapHomeStickmanActionResolver.action(at: start.addingTimeInterval(60), actuals: [record], travel: [], places: [], frequentPlaces: []), action, title)
+        }
+    }
+
+    /// 이동 상세는 메뉴와 재생 모두 수단별 장면을 쓴다(HWK1103A01).
+    func testMovementDetailsHaveTheirOwnScenes() {
+        let expected: [String: MapHomeStickmanAction] = [
+            "movement.walking": .walking, "movement.running": .running, "movement.car": .car, "movement.subway": .subway,
+            "movement.train": .train, "movement.privateVehicle": .car, "movement.bus": .bus, "movement.ship": .ship,
+            "movement.airplane": .airplane, "movement.cycling": .cycling
+        ]
+        for detail in MapHomeCategoryDetailRows.details(for: "movement") {
+            XCTAssertEqual(MapHomeStickmanActionResolver.action(for: detail.id, label: detail.title), expected[detail.id], detail.id)
+        }
+        let modes: [(TravelMode, MapHomeStickmanAction)] = [(.walking, .walking), (.subway, .subway), (.bus, .bus), (.airplane, .airplane)]
+        for (mode, action) in modes { XCTAssertEqual(MapHomeStickmanActionResolver.action(for: mode), action) }
     }
 
     /// 장식을 걸쳤을 때만 샤워 옷걸이가 나타나고 장식이 그 위에 걸린다(RIG1103A01).
@@ -290,7 +378,7 @@ final class MapHomeStickmanTests: XCTestCase {
         XCTAssertEqual(action(), .eating)
         generic.source = .manual
         generic.manuallyCorrected = true
-        XCTAssertEqual(action(), .activity, "사용자가 고른 활동은 그대로다")
+        XCTAssertEqual(action(), .restStarfish, "사용자가 고른 휴식은 그대로다")
     }
 
     func testScarfAndRibbonStayOnTheBodyInEveryScene() throws {
@@ -953,7 +1041,7 @@ final class MapHomeStickmanTests: XCTestCase {
         XCTAssertEqual(MapHomeStickmanActionResolver.action(for: "custom:1", label: "집안일"), .housework)
     }
 
-    /// 직접 고른 분류가 이동 구간보다 앞서고, 자동 집안일 기록은 활동으로 남는다.
+    /// 직접 고른 분류가 이동 구간보다 앞서고, 자동 집안일 판정도 집안일 장면을 쓴다(HWK1103A01).
     func testChosenCategoryWinsOverTravelAndHouseworkIsNotAutomatic() {
         let now = Date(timeIntervalSince1970: 1_800_000_000)
         func actual(category: String, source: ActualSource, title: String) -> ActualRecord {
@@ -968,7 +1056,7 @@ final class MapHomeStickmanTests: XCTestCase {
         ), .shower)
         XCTAssertEqual(MapHomeStickmanActionResolver.action(
             at: now, actuals: [actual(category: "activity", source: .appleWatch, title: "집안일")], travel: [], places: [], frequentPlaces: []
-        ), .activity)
+        ), .housework)
     }
 
     /// 탈것 표시를 켜면 탈것 장면, 끄면 속도에 따라 걷기·달리기. 달리기는 항상 달린다.
@@ -1073,9 +1161,9 @@ final class MapHomeStickmanTests: XCTestCase {
                 "\(title) 상세가 이동 대분류를 덮었습니다."
             )
         }
-        XCTAssertEqual(MapHomeStickmanAction.allCases.count, 40)
-        XCTAssertEqual(Set(MapHomeStickmanAction.allCases).count, 40)
-        XCTAssertEqual(Set(MapHomeStickmanAction.allCases.map(\.title)).count, 40)
+        XCTAssertEqual(MapHomeStickmanAction.allCases.count, 49)
+        XCTAssertEqual(Set(MapHomeStickmanAction.allCases).count, 49)
+        XCTAssertEqual(Set(MapHomeStickmanAction.allCases.map(\.title)).count, 49)
         XCTAssertEqual(MapHomeStickmanActionResolver.action(for: TravelMode.running), .running)
         XCTAssertEqual(
             MapHomeStickmanActionResolver.action(

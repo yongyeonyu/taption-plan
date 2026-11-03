@@ -1863,7 +1863,17 @@ struct MapHomeView: View {
                         MapHomeTodayCalendarList(
                             language: language,
                             service: calendarService,
-                            date: model.selectedDate
+                            date: model.selectedDate,
+                            titleDetails: model.snapshot.settings.calendarTitleDetails,
+                            onChooseDetail: { title, choice in
+                                Task {
+                                    switch choice {
+                                    case .automatic: await model.clearCalendarTitleDetail(title: title, on: model.selectedDate)
+                                    case .none: await model.setCalendarTitleDetail(nil, title: title, on: model.selectedDate)
+                                    case .detail(let id): await model.setCalendarTitleDetail(id, title: title, on: model.selectedDate)
+                                    }
+                                }
+                            }
                         )
                             .transition(.opacity.combined(with: .move(edge: .top)))
                     }
@@ -1935,29 +1945,13 @@ struct MapHomeView: View {
             dayCalendarEvents = []
             dayCalendarEventsDate = nil
         }
-        var loaded: [CalendarRecord] = []
-        var problem: MapHomeCalendarAccessProblem?
-        if GoogleCalendarAccount.shared.isConnected {
-            do {
-                loaded = try await GoogleCalendarAccount.shared.events(on: day, calendar: calendar)
-            } catch {
-                problem = .googleFailed
-            }
-        } else if [.denied, .unavailable].contains(calendarService.permissionState()) {
-            problem = .permissionDenied
-        } else if calendarService.permissionState() == .authorized {
-            let start = calendar.startOfDay(for: day)
-            let end = calendar.date(byAdding: .day, value: 1, to: start) ?? start
-            loaded = await calendarService.events(
-                in: TimeSpan(start: start, end: end),
-                selectedCalendarIDs: []
-            ) ?? []
-        }
+        let (loaded, problem) = await MapHomeDayCalendarLoader.events(on: day, calendar: calendar, service: calendarService)
         // 날짜를 빠르게 넘기면 이전 날짜의 늦은 응답이 올 수 있으므로 지금 날짜와 같을 때만 반영한다.
         guard calendar.isDate(day, inSameDayAs: model.selectedDate) else { return }
         dayCalendarEvents = loaded
         dayCalendarEventsDate = day
         if calendarAccessProblem != problem { calendarAccessProblem = problem }
+        if problem == nil { await model.applyDayCalendarEvents(loaded, on: day, fromGoogle: GoogleCalendarAccount.shared.isConnected) }
     }
 
     /// 메모 목록 패널. 폭은 일정 패널과 같은 280으로 맞춘다.
@@ -4593,7 +4587,8 @@ struct MapHomeView: View {
             memoText: dayMemoCounts.total > 0
                 ? language.text("메모 \(dayMemoCounts.total)개 · 지도 \(dayMemoCounts.map)개", "Memos \(dayMemoCounts.total) · map \(dayMemoCounts.map)")
                 : nil,
-            routePoints: daySummaryRoutePoints
+            routePoints: daySummaryRoutePoints,
+            homeLevel: homeGrowthHistory.season.level
         )
     }
 
@@ -4610,6 +4605,7 @@ struct MapHomeView: View {
             placeKinds: FrequentPlaceResolutionEngine().kindsByPlaceKey(model.snapshot.settings.frequentPlaces),
             hourlyRate: salaryLive?.hourlyRate,
             accessoryID: homeGrowthHistory.season.equippedAccessory,
+            homeLevel: homeGrowthHistory.season.level,
             memos: model.snapshot.memos,
             language: language,
             entries: { daySummaryEntries(from: $0) }
@@ -9656,7 +9652,7 @@ struct MapHomeView: View {
             actuals: actuals,
             sleepSessions: sleepSessions
         ) {
-            return .sleeping
+            return MapHomeStickmanActionResolver.sleepStageAction(at: displayedLocationDate, actuals: actuals, sleepSessions: sleepSessions)
         }
         if let frame = wbsPlaybackFrame {
             switch frame.activity {

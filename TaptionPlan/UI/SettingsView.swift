@@ -287,7 +287,7 @@ struct SettingsView: View {
                         ) {
                             Task {
                                 if GoogleCalendarAccount.shared.isConnected {
-                                    GoogleCalendarAccount.shared.disconnect()
+                                    await model.disconnectGoogleCalendar()
                                     return
                                 }
                                 do {

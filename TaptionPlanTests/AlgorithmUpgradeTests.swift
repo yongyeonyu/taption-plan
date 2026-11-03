@@ -304,4 +304,155 @@ final class AlgorithmUpgradeTests: XCTestCase {
         XCTAssertFalse(uncalibrated.isStrideCalibrated)
         XCTAssertTrue(uncalibrated.annotating([inside.0])[0].evidence.contains { $0.contains("기본 보폭") })
     }
+
+    /// 회사에서 일정이 있는 시간만 회의가 되고 나머지는 근무로 남는다(HWK1103A01).
+    func testCompanyStaySplitsIntoMeetingAtCalendarEvent() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        let start = calendar.date(from: DateComponents(year: 2026, month: 11, day: 3, hour: 9))!
+        let hour: TimeInterval = 3_600
+        let span = TimeSpan(start: start, end: start.addingTimeInterval(9 * hour))
+        func event(_ title: String, _ from: TimeInterval, _ to: TimeInterval) -> CalendarRecord {
+            CalendarRecord(id: title, calendarID: "c", title: title, span: TimeSpan(start: start.addingTimeInterval(from * hour), end: start.addingTimeInterval(to * hour)), isAllDay: false, calendarTitle: "업무")
+        }
+        let stay = PlaceStay(placeKey: "office", displayName: "회사", span: span, confidence: .high)
+        let records = StationaryContextActualEngine.records(
+            stays: [stay], placeKinds: ["office": .company],
+            calendarEvents: [event("주간 공유", 1, 2), event("점심 식사", 3, 4)],
+            inside: span, calendar: calendar, now: span.end
+        )
+        XCTAssertEqual(records.map(\.behavior), ["work", "meeting", "work"])
+        XCTAssertEqual(records.map(\.categoryID), ["work", "work", "work"])
+        XCTAssertEqual(records[1].startedAt, start.addingTimeInterval(hour))
+        XCTAssertEqual(records[1].endedAt, start.addingTimeInterval(2 * hour))
+    }
+
+    // MARK: 일정 제목 분류 (CAL1103A01)
+
+    private func event(_ title: String, _ from: TimeInterval, _ to: TimeInterval, calendarID: String = "c") -> CalendarRecord {
+        CalendarRecord(id: "\(calendarID)-\(title)", calendarID: calendarID, title: title, span: TimeSpan(start: start.addingTimeInterval(from * 3_600), end: start.addingTimeInterval(to * 3_600)), isAllDay: false, calendarTitle: "", calendarColorHex: nil, sourceTitle: nil)
+    }
+
+    private func titledRecords(
+        _ events: [CalendarRecord],
+        place: FrequentPlaceKind?,
+        stored: [String: CalendarTitleDetail] = [:]
+    ) -> [ActualRecord] {
+        let span = TimeSpan(start: start, end: start.addingTimeInterval(6 * 3_600))
+        let stay = PlaceStay(placeKey: "place", displayName: "어딘가", span: span, confidence: .high)
+        return StationaryContextActualEngine.records(
+            stays: [stay], placeKinds: place.map { ["place": $0] } ?? [:],
+            calendarEvents: events, calendarTitleDetails: stored,
+            inside: span, now: span.end
+        )
+    }
+
+    func testCalendarTitleVerdictOrder() {
+        let key = CalendarTitleClassification.key(" 팀 회의 ")
+        XCTAssertEqual(key, "팀 회의")
+        XCTAssertEqual(CalendarTitleClassification.ruleDetailID(for: "팀 회의"), "work.meeting")
+        XCTAssertEqual(CalendarTitleClassification.ruleDetailID(for: "Team lunch"), "eating.meal")
+        XCTAssertNil(CalendarTitleClassification.ruleDetailID(for: "Classic concert"), "영어는 단어 전체가 같아야 한다")
+        XCTAssertEqual(CalendarTitleClassification.verdict(for: "팀 회의", stored: [:]), .init(detailID: "work.meeting", origin: .rule))
+        XCTAssertEqual(
+            CalendarTitleClassification.verdict(for: "팀 회의", stored: [key: .init(detailID: "study.class", source: .appleIntelligence)]),
+            .init(detailID: "study.class", origin: .appleIntelligence)
+        )
+        XCTAssertEqual(
+            CalendarTitleClassification.verdict(for: "팀 회의", stored: [key: .init(detailID: nil, source: .appleIntelligence)]),
+            .init(detailID: "work.meeting", origin: .rule),
+            "AI가 모르겠다고 하면 단어 규칙이 남는다"
+        )
+        XCTAssertEqual(
+            CalendarTitleClassification.verdict(for: "팀 회의", stored: [key: .init(detailID: nil, source: .user)]),
+            .init(detailID: nil, origin: .user)
+        )
+    }
+
+    func testSelectableDetailsAreRealTwoLevelDetails() {
+        let ids = CalendarTitleClassification.selectableDetailIDs
+        XCTAssertTrue(ids.contains("work.meeting"))
+        XCTAssertTrue(ids.contains("health.hospital"))
+        XCTAssertFalse(ids.contains { $0.hasPrefix("movement.") || $0.hasPrefix("sleep.") || $0.hasPrefix("unconfirmed.") })
+        XCTAssertFalse(ids.contains("work.route"))
+        XCTAssertFalse(ids.contains("work.rest"))
+        XCTAssertFalse(ids.contains("exercise.workout"), "운동은 건강 앱 기록으로만 정한다")
+        XCTAssertEqual(CalendarTitleIntelligence.answer(from: "none", allowed: ids), CalendarTitleIntelligence.Answer.none)
+        XCTAssertEqual(CalendarTitleIntelligence.answer(from: "work.meeting", allowed: ids), .detail("work.meeting"))
+        XCTAssertNil(CalendarTitleIntelligence.answer(from: "movement.car", allowed: ids))
+        for rule in ["팀 회의", "치과 진료", "미용실", "학원", "수업", "점심", "장보기", "빨래", "요리", "청소", "명상", "독서", "데이트", "가족", "친구", "통화"] {
+            XCTAssertTrue(ids.contains(CalendarTitleClassification.ruleDetailID(for: rule) ?? ""), rule)
+        }
+    }
+
+    func testCalendarTitleBecomesDetailOnlyDuringEvent() {
+        let records = titledRecords([event("치과 진료", 1, 3)], place: nil)
+        XCTAssertEqual(records.map(\.behavior).filter { $0 == "hospital" }.count, 1)
+        let hospital = records.first { $0.behavior == "hospital" }
+        XCTAssertEqual(hospital?.categoryID, "health")
+        XCTAssertEqual(hospital?.title, "병원")
+        XCTAssertEqual(hospital?.startedAt, start.addingTimeInterval(3_600))
+        XCTAssertEqual(hospital?.endedAt, start.addingTimeInterval(3 * 3_600))
+        XCTAssertTrue(hospital?.evidence.contains { $0.contains("치과 진료") && $0.contains("단어 규칙") } == true)
+        XCTAssertNotNil(hospital.map(CalendarTitleClassification.isCalendarDerived))
+    }
+
+    func testAutomaticTitleVerdictRespectsThePlace() {
+        XCTAssertFalse(titledRecords([event("병원 예약", 1, 3)], place: .home).contains { $0.behavior == "hospital" }, "집에 있었으면 가지 않은 것이다")
+        let company = titledRecords([event("데이트", 1, 3)], place: .company, stored: ["데이트": .init(detailID: "activity.date", source: .appleIntelligence)])
+        XCTAssertTrue(company.contains { $0.behavior == "meeting" }, "회사에서 일정이 있으면 회의다")
+        XCTAssertFalse(company.contains { $0.behavior == "dating" })
+    }
+
+    func testUserTitleChoiceWins() {
+        let title = "주간 공유"
+        let chosen = titledRecords([event(title, 1, 3)], place: .company, stored: [title: .init(detailID: "study.class", source: .user)])
+        XCTAssertTrue(chosen.contains { $0.behavior == "class" && $0.categoryID == "study" })
+        let ignored = titledRecords([event(title, 1, 3)], place: .company, stored: [title: .init(detailID: nil, source: .user)])
+        XCTAssertEqual(ignored.map(\.behavior), ["work"], "분류 안 함이면 회의로 보지 않는다")
+    }
+
+    func testGoogleEventsSurviveDeviceCalendarRefreshAndAreNotDoubled() {
+        let google = event("팀 회의", 1, 2, calendarID: CalendarRecord.googleAccountCalendarID)
+        let span = TimeSpan(start: start, end: start.addingTimeInterval(24 * 3_600))
+        let stored = CalendarSyncPolicy.mergingGoogleEvents(existing: [], fresh: [google], in: span)
+        XCTAssertEqual(stored, [google])
+        XCTAssertEqual(CalendarSyncPolicy.mergingEvents(existing: stored, fresh: [], in: span, liveCalendarIDs: ["c"]), [google])
+        XCTAssertEqual(CalendarSyncPolicy.mergingGoogleEvents(existing: stored, fresh: [], in: span), [], "구글에서 지운 일정은 사라진다")
+        let device = event("팀 회의", 1, 2)
+        XCTAssertEqual(CalendarSyncPolicy.mergingEvents(existing: stored, fresh: [device], in: span, liveCalendarIDs: ["c"]), [device])
+        XCTAssertEqual(CalendarSyncPolicy.mergingGoogleEvents(existing: [device], fresh: [google], in: span), [device])
+    }
+
+    func testLockedRecordFollowsCalendarUnlessUserOwned() {
+        let span = TimeSpan(start: start, end: start.addingTimeInterval(3_600))
+        func record(_ title: String, _ behavior: String, evidence: [String]) -> ActualRecord {
+            ActualRecord(id: UUID(), planID: nil, routineID: nil, title: title, categoryID: "work", startedAt: span.start, endedAt: span.end, source: .location, confidence: .high, createdAt: span.start, behavior: behavior, evidence: evidence, modelVersion: "t")
+        }
+        var locked = record("근무", "work", evidence: ["자주가는 곳: 회사"])
+        locked.isClassificationLocked = true
+        let meeting = record("회의", "meeting", evidence: ["캘린더 일정 '주간 공유'"])
+        let adopted = ActivityClassificationLockEngine.mergingLockedClassifications(existing: [locked], fresh: [meeting], inside: span)
+        XCTAssertEqual(adopted.map(\.behavior), ["meeting"])
+        var lockedMeeting = meeting
+        lockedMeeting.isClassificationLocked = true
+        let removed = ActivityClassificationLockEngine.mergingLockedClassifications(existing: [lockedMeeting], fresh: [record("근무", "work", evidence: [])], inside: span)
+        XCTAssertEqual(removed.map(\.behavior), ["work"], "일정을 지우면 회의도 사라진다")
+        var corrected = lockedMeeting
+        corrected.manuallyCorrected = true
+        let kept = ActivityClassificationLockEngine.mergingLockedClassifications(existing: [corrected], fresh: [record("근무", "work", evidence: [])], inside: span)
+        XCTAssertEqual(kept.map(\.behavior), ["meeting"], "사용자가 고친 기록은 그대로다")
+    }
+
+    func testCalendarTitleDetailsDecodeFromOldSettingsAndStayOffCloud() throws {
+        var settings = AppFeatureSettings.defaults
+        XCTAssertEqual(settings.calendarTitleDetails, [:])
+        settings.calendarTitleDetails["팀 회의"] = .init(detailID: "work.meeting", source: .user)
+        let data = try JSONEncoder().encode(settings)
+        XCTAssertEqual(try JSONDecoder().decode(AppFeatureSettings.self, from: data).calendarTitleDetails, settings.calendarTitleDetails)
+        var old = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        old.removeValue(forKey: "calendarTitleDetails")
+        let decoded = try JSONDecoder().decode(AppFeatureSettings.self, from: JSONSerialization.data(withJSONObject: old))
+        XCTAssertEqual(decoded.calendarTitleDetails, [:], "옛 설정도 읽는다")
+    }
 }

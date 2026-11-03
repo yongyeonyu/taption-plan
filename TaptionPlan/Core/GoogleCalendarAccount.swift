@@ -263,7 +263,7 @@ final class GoogleCalendarAccount: NSObject, ASWebAuthenticationPresentationCont
             let isAllDay = start.dateTime == nil
             return CalendarRecord(
                 id: "google-\(id)",
-                calendarID: "google-primary",
+                calendarID: CalendarRecord.googleAccountCalendarID,
                 title: summary ?? "(제목 없음)",
                 span: TimeSpan(start: startDate, end: max(endDate, startDate)),
                 isAllDay: isAllDay,

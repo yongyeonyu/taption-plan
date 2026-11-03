@@ -5470,3 +5470,20 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 
 ## TFB1103A04 TestFlight 빌드 263 (2026-11-03)
 - `release.sh --yes` 종료 코드 0. 보고서 `build/validation/TFB1103A04/testflight-report.json`. 기기 동작 확인은 아니다.
+
+## HWK1103A01 분류표 v5, 회사 일정 회의, 이동 장면, 하루 카드 집 (2026-11-03, 커밋 전)
+- 시뮬레이터(실기기 아님) 전체 단위: 1,931건 중 통과 1,921, 실패 0, 건너뜀 10 (`build/validation/HWK1103A01/full3.xcresult`).
+- 구조 지표 검사는 실패 상태다: `StationaryContextClassifier.swift` 1,217줄(예산 1,200), `RecordSummaryEngine.swift`·`MapHomeView.swift` 소폭 증가. 커밋 전에 정리한다.
+- 메뉴·클립 편집·하루 카드 화면은 보지 못했다. 회의 판정은 합성 시험만 통과했고 `snapshot.calendarEvents`만 읽으므로 구글 일정은 아직 판정에 들어가지 않는다. 지난 기록은 읽을 때만 새 대분류로 해석한다.
+
+## SLP1103A01 · CAL1103A01 (2026-11-03)
+- 시뮬레이터 전체 단위 테스트 `build/validation/CAL1103A01/full3.xcresult`: 1,941건 중 통과 1,932, 실패 0, 건너뜀 9. 시트 작성 시험을 켜고 돌린 결과다. 실기기 실행 없음(BOKKI Cam 벤치마크 종료 보고 전).
+- 앱 Debug 빌드: 위 시험의 시뮬레이터 빌드로 성공(서명 끔). 구조 지표·엔진 경계 검사 통과.
+- `FoundationModels`는 `LC_LOAD_WEAK_DYLIB`로 연결됨을 `otool`로 확인. iOS 18 기기에서 실행해 보지는 않았다.
+- 장면 시트 `build/validation/CAL1103A01/sheet/lying.png`를 눈으로 확인: 깊은 수면(베개·배), REM(안대), 회복(슈퍼맨), 투약, 병원, 휴식 4종, 집에서 휴식(상자).
+- 대표 수정 후 다시 그림: 병원 체온계 제거, 슈퍼맨·불가사리 다리를 몸통과 한 윤곽으로, 배 까기는 뒷다리 생략, 안대를 둥근 띠로. 시트 `build/validation/CAL1103A01/sheet-h/lying.png`, 시뮬레이터 화랑이 시험 `pose-h.xcresult` 66건 전부 통과. 구조 지표·엔진 경계 통과. 도중 `pose-c`~`g`는 새 함수가 선 끝 설정을 남겨 Z 글자 모양이 달라져 실패했고 설정을 되돌렸다. 전체 단위 테스트는 이 수정 뒤 다시 돌리지 않았고 앱 화면과 실기기에서는 보지 않았다.
+- SLP1103A01 완료: 대표가 `sheet-h/lying.png` 그림을 이대로 두기로 했다(2026-11-03). 시트 확인·행동 단위 테스트·시뮬레이터 앱 Debug 빌드 기준 충족, 실기기 미확인.
+- 그림 수정 뒤 시뮬레이터 전체 단위 테스트 `build/validation/CAL1103A01/full-final.xcresult`: 1,941건 중 통과 1,931, 실패 0, 건너뜀 10(이전 대비 시트 작성 시험 1건이 환경변수가 없어 건너뜀). 실기기 실행 없음.
+- 발견: `accessoryEscape`의 `clipped`는 비트맵 행을 위에서 세어 캔버스와 비교한다. `isPainted` 주석대로 행이 아래부터 쌓이면 y가 뒤집힌 채 검사하는 것이다(추정). 고치지 않았다.
+- 시뮬레이터 화면: 하루 요약 시트만 열어 봄. 하루 카드의 집 표시, 일정 메뉴, 클립 편집은 화면으로 확인하지 못했다.
+- 미검증: 실제 구글 계정 연결, Apple Intelligence 모델 응답(기기 필요), 실제 회사 일정의 회의 판정.

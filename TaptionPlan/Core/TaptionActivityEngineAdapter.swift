@@ -1639,10 +1639,8 @@ enum ActivityClassificationLockEngine {
             guard let previous = bestMatch?.record else {
                 return value
             }
-            guard !shouldAdoptFreshDestinationClassification(
-                previous: previous,
-                candidate: candidate
-            ) else {
+            guard !CalendarTitleClassification.freshWins(previous: previous, candidate: candidate),
+                  !shouldAdoptFreshDestinationClassification(previous: previous, candidate: candidate) else {
                 return value
             }
             value.categoryID = previous.categoryID

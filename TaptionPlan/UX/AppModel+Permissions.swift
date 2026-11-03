@@ -391,7 +391,7 @@ extension AppModel {
                     forKey: Self.calendarAutomaticRefreshKey
                 )
             } else {
-                snapshot.calendarEvents.removeAll()
+                snapshot.calendarEvents.removeAll { !$0.isGoogleAccountEvent }
                 calendarStoreRefreshTask?.cancel()
                 calendarStoreRefreshTask = nil
                 calendarStoreRefreshRequiresWide = false
@@ -402,7 +402,7 @@ extension AppModel {
             let state = calendarService.permissionState()
             snapshot.settings.permissions[.calendar] = state
             if !state.isGranted {
-                snapshot.calendarEvents.removeAll()
+                snapshot.calendarEvents.removeAll { !$0.isGoogleAccountEvent }
                 calendarStoreRefreshTask?.cancel()
                 calendarStoreRefreshTask = nil
                 calendarStoreRefreshRequiresWide = false
@@ -424,7 +424,7 @@ extension AppModel {
         calendarStoreRefreshTask = nil
         calendarStoreRefreshRequiresWide = false
         snapshot.settings.selectedCalendarIDs = []
-        snapshot.calendarEvents = []
+        snapshot.calendarEvents.removeAll { !$0.isGoogleAccountEvent }
         await persist()
     }
 
@@ -652,7 +652,7 @@ extension AppModel {
             calendarStoreRefreshTask?.cancel()
             calendarStoreRefreshTask = nil
             calendarStoreRefreshRequiresWide = false
-            if !snapshot.calendarEvents.isEmpty { snapshot.calendarEvents = [] }
+            if snapshot.calendarEvents.contains(where: { !$0.isGoogleAccountEvent }) { snapshot.calendarEvents.removeAll { !$0.isGoogleAccountEvent } }
         }
         if healthState == .authorized {
             UserDefaults.standard.set(true, forKey: Self.healthAuthorizationRequestedKey)

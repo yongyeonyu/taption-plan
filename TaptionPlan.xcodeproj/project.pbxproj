@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A10000000000000000CA1003 /* AppModel+CalendarTitles.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000CA1003 /* AppModel+CalendarTitles.swift */; };
+		A10000000000000000CA1002 /* CalendarTitleIntelligence.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000CA1002 /* CalendarTitleIntelligence.swift */; };
+		A10000000000000000CA1001 /* CalendarTitleClassification.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000CA1001 /* CalendarTitleClassification.swift */; };
+		A10000000000000000CA1000 /* HomeChorePattern.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000CA1000 /* HomeChorePattern.swift */; };
 		5624A4986B94396ED9FEC9D5 /* MovementNameTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 769EE77192CF9EC73E324782 /* MovementNameTests.swift */; };
 		A1FA11A6B07C6C7A479E67EE /* StableRecordID.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11518EFE631FA33E137B /* StableRecordID.swift */; };
 		A1FA1169BA887967E6373290 /* StableRecordID.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11518EFE631FA33E137B /* StableRecordID.swift */; };
@@ -534,6 +538,10 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		F10000000000000000CA1003 /* AppModel+CalendarTitles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+CalendarTitles.swift"; sourceTree = "<group>"; };
+		F10000000000000000CA1002 /* CalendarTitleIntelligence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CalendarTitleIntelligence.swift"; sourceTree = "<group>"; };
+		F10000000000000000CA1001 /* CalendarTitleClassification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CalendarTitleClassification.swift"; sourceTree = "<group>"; };
+		F10000000000000000CA1000 /* HomeChorePattern.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HomeChorePattern.swift"; sourceTree = "<group>"; };
 		769EE77192CF9EC73E324782 /* MovementNameTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovementNameTests.swift; sourceTree = "<group>"; };
 		F1FA11518EFE631FA33E137B /* StableRecordID.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StableRecordID.swift; sourceTree = "<group>"; };
 		F1FA11C58FA9883A9A7F8673 /* StableRecordIDTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StableRecordIDTests.swift; sourceTree = "<group>"; };
@@ -1282,6 +1290,7 @@
 				F5B1102A020000000000002C /* AppModel+Backup.swift */,
 				F5B1102A020000000000002A /* AppModel+Bootstrap.swift */,
 				F5B1102A0200000000000028 /* AppModel+Classification.swift */,
+				F10000000000000000CA1003 /* AppModel+CalendarTitles.swift */,
 				F5B1102A0200000000000026 /* AppModel+DayData.swift */,
 				F5B1102A0200000000000024 /* AppModel+EditHistory.swift */,
 				F5B1102A0200000000000022 /* AppModel+Export.swift */,
@@ -1375,6 +1384,9 @@
 				F5B1102A0200000000000001 /* PlanNotificationScheduler.swift */,
 				F1000000000000000B1101A3 /* SensorEfficiencyPolicies.swift */,
 				F1000000000000000000F0C1 /* GoogleCalendarAccount.swift */,
+				F10000000000000000CA1002 /* CalendarTitleIntelligence.swift */,
+				F10000000000000000CA1001 /* CalendarTitleClassification.swift */,
+				F10000000000000000CA1000 /* HomeChorePattern.swift */,
 				F60000000000000000000001 /* HealthKitTypeCatalog.swift */,
 				F60000000000000000000002 /* HealthKitImportStore.swift */,
 				F60000000000000000000003 /* HealthKitImportCoordinator.swift */,
@@ -2035,6 +2047,10 @@
 				A5B1102A0200000000000002 /* PlanNotificationScheduler.swift in Sources */,
 				A1000000000000000B1101A3 /* SensorEfficiencyPolicies.swift in Sources */,
 				A1000000000000000000F0C1 /* GoogleCalendarAccount.swift in Sources */,
+				A10000000000000000CA1003 /* AppModel+CalendarTitles.swift in Sources */,
+				A10000000000000000CA1002 /* CalendarTitleIntelligence.swift in Sources */,
+				A10000000000000000CA1001 /* CalendarTitleClassification.swift in Sources */,
+				A10000000000000000CA1000 /* HomeChorePattern.swift in Sources */,
 				A60000000000000000000001 /* HealthKitTypeCatalog.swift in Sources */,
 				A60000000000000000000002 /* HealthKitImportStore.swift in Sources */,
 				A60000000000000000000003 /* HealthKitImportCoordinator.swift in Sources */,

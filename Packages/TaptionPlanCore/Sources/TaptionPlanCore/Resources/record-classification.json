@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "categories": [
     {
       "id": "activity",
@@ -7,8 +7,7 @@
       "systemImage": "sparkles",
       "details": [
         { "id": "activity.rest", "title": "휴식", "behavior": "stationary", "systemImage": "pause.circle.fill" },
-        { "id": "activity.housework", "title": "집안일", "behavior": "housework", "systemImage": "washer.fill", "automaticOnly": true },
-        { "id": "activity.groceries", "title": "장보기", "behavior": "groceries", "systemImage": "cart.fill" },
+        { "id": "activity.shower", "title": "샤워", "behavior": "shower", "systemImage": "shower.fill" },
         { "id": "activity.friends", "title": "친구 만남", "behavior": "friends", "systemImage": "person.2.fill" },
         { "id": "activity.date", "title": "데이트", "behavior": "dating", "systemImage": "heart.fill" },
         { "id": "activity.family", "title": "가족", "behavior": "family", "systemImage": "figure.2.and.child.holdinghands" },
@@ -21,6 +20,7 @@
       "systemImage": "briefcase.fill",
       "details": [
         { "id": "work.route", "title": "업무(집 - 회사)", "behavior": "work", "systemImage": "briefcase.fill" },
+        { "id": "work.meeting", "title": "회의", "behavior": "meeting", "systemImage": "person.3.fill" },
         { "id": "work.rest", "title": "휴식", "behavior": "stationary", "systemImage": "pause.circle.fill" },
         { "id": "work.walking", "title": "걷기", "behavior": "walking", "systemImage": "figure.walk" }
       ]
@@ -85,8 +85,7 @@
       "title": "식사",
       "systemImage": "fork.knife",
       "details": [
-        { "id": "eating.meal", "title": "식사", "behavior": "meal", "systemImage": "fork.knife" },
-        { "id": "eating.cooking", "title": "요리", "behavior": "cooking", "systemImage": "frying.pan" }
+        { "id": "eating.meal", "title": "식사", "behavior": "meal", "systemImage": "fork.knife" }
       ]
     },
     {
@@ -115,20 +114,14 @@
       ]
     },
     {
-      "id": "shower",
-      "title": "샤워",
-      "systemImage": "shower.fill",
-      "details": [
-        { "id": "shower.wash", "title": "샤워", "behavior": "shower", "systemImage": "shower.fill" }
-      ]
-    },
-    {
       "id": "housework",
       "title": "집안일",
       "systemImage": "house.fill",
       "details": [
         { "id": "housework.chores", "title": "집안일", "behavior": "chores", "systemImage": "house.fill" },
-        { "id": "housework.laundry", "title": "빨래", "behavior": "laundry", "systemImage": "washer.fill" }
+        { "id": "housework.laundry", "title": "빨래", "behavior": "laundry", "systemImage": "washer.fill" },
+        { "id": "housework.groceries", "title": "장보기", "behavior": "groceries", "systemImage": "cart.fill" },
+        { "id": "housework.cooking", "title": "요리", "behavior": "cooking", "systemImage": "frying.pan" }
       ]
     },
     {

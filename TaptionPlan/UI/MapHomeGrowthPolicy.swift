@@ -364,8 +364,13 @@ enum MapHomeGrowthPolicy {
 
     /// "우리집 (경복궁)". 그날의 집이 무슨 건물인지 함께 적는다.
     static func homeTitle(level: Int, language: MapHomeLanguage) -> String {
+        let name = homeName(level: level, language: language)
+        return language.text("우리집 (\(name))", "Our home (\(name))")
+    }
+
+    static func homeName(level: Int, language: MapHomeLanguage) -> String {
         let name = MapHomeHomeNames.names[min(max(level, 1), MapHomeHomeNames.names.count) - 1]
-        return language.text("우리집 (\(name.korean))", "Our home (\(name.english))")
+        return language.text(name.korean, name.english)
     }
 
     static func artworkName(level: Int) -> String {

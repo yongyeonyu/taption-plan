@@ -37,6 +37,7 @@ extension AppModel {
             stationarySpans: stationarySpans,
             readings: readings,
             calendarEvents: snapshot.calendarEvents,
+            calendarTitleDetails: snapshot.settings.calendarTitleDetails,
             actuals: snapshot.actuals,
             travel: travel.filter {
                 $0.span.intersection(with: span) != nil

@@ -224,6 +224,7 @@ extension AppModel {
         value.settings.transitBoardingDecisions = []
         value.settings.predictedRouteDecisions = []
         value.settings.movementCorrections = []
+        value.settings.calendarTitleDetails = [:]
         value.settings.activityCorrections = [:]
         // 거절한 자리는 이 기기의 위치 기록에서만 나온 좌표다. 자주가는 곳
         // 자체와 달리 사용자가 적은 값이 아니므로 기기에 남긴다.
@@ -311,6 +312,8 @@ extension AppModel {
         value.settings.predictedRouteDecisions = local.settings.predictedRouteDecisions
         value.settings.movementCorrections =
             local.settings.movementCorrections
+        value.settings.calendarTitleDetails =
+            local.settings.calendarTitleDetails
         value.settings.activityCorrections =
             local.settings.activityCorrections
         value.settings.confirmedSleepSpans =
