@@ -473,7 +473,7 @@ extension AppModel {
         let hidesSensitiveContent = hidesSensitiveContent
             ?? TaptionExternalPrivacyStore.isLocked
         // 같은 기록·같은 분·같은 잠금이면 위젯 payload를 다시 만들지 않는다(PRF1101A01).
-        let input = [snapshot.updatedAt.timeIntervalSinceReferenceDate, (now.timeIntervalSinceReferenceDate / 60).rounded(.down),
+        let input = [Double(snapshotContentRevision), (now.timeIntervalSinceReferenceDate / 60).rounded(.down),
                      hidesSensitiveContent ? 1 : 0]
         guard input != lastWidgetPayloadInput else { return publishWatchPayload(now: now, calendar: calendar) }
         lastWidgetPayloadInput = input

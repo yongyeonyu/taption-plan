@@ -39,7 +39,12 @@ struct AppShellView: View {
     @State private var biometricPromptInterruptedScene = false
     @State private var isFirstRunTutorialPending = false
 
+    /// 사슬이 길면 타입 검사가 17초 걸려(ARC1103A01) 세 덩어리로 나눈다. 수식어 순서는 그대로다.
     private var appLifecycleContent: some View {
+        appStateObservers(appEventObservers(appRootWithSheets))
+    }
+
+    private var appRootWithSheets: some View {
         NavigationStack {
             Group {
                 if proAccess.grantsAccess {
@@ -77,6 +82,10 @@ struct AppShellView: View {
         .font(.taption(size: 17))
         .tint(Color.tpPrimaryFill)
         .preferredColorScheme((TaptionUITheme(rawValue: uiThemeRaw) ?? .classic).colorScheme)
+    }
+
+    private func appEventObservers(_ content: some View) -> some View {
+        content
         .task {
             await performInitialLaunchPreparation()
             TaptionUITheme.follow(mapStyle: model.settings.mapDisplayStyle)
@@ -109,6 +118,10 @@ struct AppShellView: View {
         .onChange(of: scenePhase) { _, phase in
             handleScenePhaseChange(phase)
         }
+    }
+
+    private func appStateObservers(_ content: some View) -> some View {
+        content
         .onChange(of: proAccess.state) { _, _ in
             dismissInitialLaunchOverlayIfReady()
         }
@@ -143,7 +156,7 @@ struct AppShellView: View {
         .onChange(of: model.sensorCollectionSessionID) { _, _ in
             Task { await reconcileSensorLiveActivity() }
         }
-        .onChange(of: model.snapshot.updatedAt) { _, _ in
+        .onChange(of: model.snapshotSavedAt) { _, _ in
             Task { await reconcileSensorLiveActivity() }
         }
         .onReceive(Self.liveActivityTicker) { _ in

@@ -5319,3 +5319,12 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 가드: `check-app-engine-import-boundary.sh`, `architecture-metrics.py --check` 통과. 기준선은 이 브랜치 기준으로 다시 썼다.
 - 항목별 시험의 한계: 12·3·4·5·7·9·14·15번은 커밋할 때 빌드만 확인했고, 단위 테스트는 마지막에 전체로 한 번 돌렸다. 화면 시험(UI 테스트)은 돌리지 않았다.
 - 파일 분할 중 삭제·분할 스크립트 오류로 빌드가 여러 번 실패해 되돌려 다시 적용했다. 분할은 정렬한 줄 비교로 원본과 같음을 확인했다(`FeatureModels`, `ScheduleView`, `ReviewView`). `MapHomeCalendarSheet`는 비교 없이 빌드만 확인했다.
+## ARC1103A01 전체 구조 성능 개선 (2026-11-03, worktree `claude/structure-performance-e6fb21`)
+- 안 목록과 전후 수치: `docs/STRUCTURE_PERFORMANCE.md`. 측정 시험: `StructurePerformanceProbeTests`, 계약 시험: `SnapshotObservationTests`(6건 통과).
+- 단위(시뮬레이터 iPhone 17 Pro `ARC1103A01`, 병렬 끔, Debug): `build/validation/ARC1103A01/after-1.xcresult` 전체 1,839건 중 통과 1,832 · 실패 1 · 건너뜀 6. 실패는 `SensorDayStoreTests.testThirtyDayAppColdAndWarmLoadP95StaysInteractive`(warm P95 7.76ms, 기준 5ms) 시간 판정이다.
+- 그 실패의 원인은 가르지 못했다. 단독 재실행은 시뮬레이터 잠금 대기 1시간 초과(rc 75)로 돌지 못했다. Mac 부하가 큰 때의 일시 실패인지 이번 변경 때문인지 미확인이며, 합친 뒤 다시 돌려야 한다. 이 시험이 지나는 경로에 이번 변경(`snapshot` 접근자)이 포함될 수 있어 무관하다고 단정하지 않는다.
+- 측정 환경: 시뮬레이터 Debug, 합성 자료(기기 로그의 행 수 기준). 기기 시작 수치(`repository_local_load` 등)는 지난 로그 `CRS1101A01`의 집계이고, 이번 변경으로 다시 재지 못했다.
+- 빌드: 위 단위 시험의 시뮬레이터 Debug 빌드만 했다. generic iOS 빌드·위젯·워치 제품 빌드는 안 했다. 실기기 설치·재생 벤치는 안 했다.
+- 가드: `architecture-metrics.py --check`, `check-app-engine-import-boundary.sh` 통과.
+- 저장 포맷: 바꾸지 않았다. `known`·`lastSynced`는 메모리 값이다. 시험: `testUnchangedSaveEncodesNothingAndChangedRowsStillReachDisk`, `testRevertingARowToItsEarlierValueReachesDisk`.
+- 미적용: 안 6번(`@State` 묶기), "합친 뒤" A~D안. 저장소 메모리 감소는 재지 못했다.

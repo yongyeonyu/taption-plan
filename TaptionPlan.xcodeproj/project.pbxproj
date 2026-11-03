@@ -170,6 +170,7 @@
 		A1000000000000000B1101A3 /* SensorEfficiencyPolicies.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1101A3 /* SensorEfficiencyPolicies.swift */; };
 		A10000000000000000000015 /* LiveActivitySupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000015 /* LiveActivitySupport.swift */; };
 		A10000000000000000000016 /* FeatureEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000016 /* FeatureEngineTests.swift */; };
+		A5C1103A010000000000000A /* StructurePerformanceProbeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5C1103A010000000000000A /* StructurePerformanceProbeTests.swift */; };
 		A5B1102A020000000000005C /* FeatureEngineTestFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000005B /* FeatureEngineTestFixtures.swift */; };
 		A5B1102A020000000000005A /* MapHomeStickmanTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000059 /* MapHomeStickmanTests.swift */; };
 		A1A11102A0100000000000A2 /* MemoTextPolishTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A11102A0100000000000F2 /* MemoTextPolishTests.swift */; };
@@ -641,6 +642,7 @@
 		F1000000000000000B1101A3 /* SensorEfficiencyPolicies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorEfficiencyPolicies.swift; sourceTree = "<group>"; };
 		F10000000000000000000015 /* LiveActivitySupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivitySupport.swift; sourceTree = "<group>"; };
 		F10000000000000000000016 /* FeatureEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureEngineTests.swift; sourceTree = "<group>"; };
+		F5C1103A010000000000000A /* StructurePerformanceProbeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StructurePerformanceProbeTests.swift; sourceTree = "<group>"; };
 		F5B1102A020000000000005B /* FeatureEngineTestFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureEngineTestFixtures.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000059 /* MapHomeStickmanTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeStickmanTests.swift; sourceTree = "<group>"; };
 		F1A11102A0100000000000F2 /* MemoTextPolishTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoTextPolishTests.swift; sourceTree = "<group>"; };
@@ -1023,6 +1025,7 @@
 				F1FA11C58FA9883A9A7F8673 /* StableRecordIDTests.swift */,
 				769EE77192CF9EC73E324782 /* MovementNameTests.swift */,
 				F5B1102A020000000000005B /* FeatureEngineTestFixtures.swift */,
+				F5C1103A010000000000000A /* StructurePerformanceProbeTests.swift */,
 				F5B1102A0200000000000059 /* MapHomeStickmanTests.swift */,
 				F1A11102A0100000000000F2 /* MemoTextPolishTests.swift */,
 				F5B1102A0200000000000057 /* CategoryCacheBenchmarkTests.swift */,
@@ -2014,6 +2017,7 @@
 				A1FA113776B4F655CB131CBA /* StableRecordIDTests.swift in Sources */,
 				5624A4986B94396ED9FEC9D5 /* MovementNameTests.swift in Sources */,
 				A5B1102A020000000000005C /* FeatureEngineTestFixtures.swift in Sources */,
+				A5C1103A010000000000000A /* StructurePerformanceProbeTests.swift in Sources */,
 				A5B1102A020000000000005A /* MapHomeStickmanTests.swift in Sources */,
 				A1A11102A0100000000000A2 /* MemoTextPolishTests.swift in Sources */,
 				A5B1102A0200000000000058 /* CategoryCacheBenchmarkTests.swift in Sources */,

@@ -1955,3 +1955,7 @@
 - 다른 세션 소유라 두었다: `SleepAnalysisEngine`·`MapHomeView`의 `unionDuration` 사본, `StationaryContextClassifier`의 저장 ID 해시 2벌.
 - 합친 뒤 확인: `testRailJourneyIsJudgedOverTheWholeRide` 포함 단위 테스트 전체, 네 제품 빌드, 기준선 재작성.
 
+## ARC1103A01 · 전체 구조 성능 개선
+- 원인: 재생·지도 경로는 앞선 작업으로 줄었으나 나머지 구조 병목이 재지 않은 채 남아 있었다. 측정 결과 타입 검사 43초·17초, 시각만 바뀐 저장의 지도 홈 전체 재평가, 저장마다 전체 해시, 저장마다 main 위젯 계산, 저장소 actor의 본문 상주가 나왔다.
+- 해결: `docs/STRUCTURE_PERFORMANCE.md`의 안을 효과 순으로 적용한다. 다른 세션 파일이 필요한 안은 "합친 뒤"로 적어 둔다.
+- 검증 기준: 항목별 커밋과 전후 수치, 사용자 기록·저장 포맷 불변, 관련 단위 테스트, 앱 Debug 빌드, 가드 2개 통과. 실기기 수치는 이 세션에서 재지 않으며 대표 확인 전까지 이 항목을 지우지 않는다.
