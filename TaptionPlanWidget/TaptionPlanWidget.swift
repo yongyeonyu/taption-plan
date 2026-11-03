@@ -286,6 +286,7 @@ private struct TaptionScheduleWidgetView: View {
                         payload: payload,
                         metrics: metrics,
                         catStyle: payload.catStyle,
+                        catActivity: catActivity(at: playbackDate, payload: payload),
                         reducesMotion: payload.reducesMotion ?? false,
                         walkPose: TaptionWidgetCatWalkEngine.pose(
                             at: playbackDate,
@@ -367,6 +368,7 @@ private struct TaptionScheduleWidgetView: View {
         payload: TaptionWidgetPayload,
         metrics: TaptionScheduleWidgetMetrics,
         catStyle: String,
+        catActivity: TaptionWidgetItem?,
         reducesMotion: Bool,
         walkPose: TaptionWidgetCatWalkPose
     ) -> some View {
@@ -390,6 +392,7 @@ private struct TaptionScheduleWidgetView: View {
             Link(destination: URL(string: "taptionplan://cats")!) {
                 WidgetWalkingCat(
                     style: catStyle,
+                    activity: catActivity,
                     reducesMotion: reducesMotion,
                     pose: walkPose
                 )
@@ -499,16 +502,23 @@ private struct TaptionScheduleWidgetView: View {
             ?? actionableItems.last
     }
 
-    private func preferredCatAction(
+    private func catActivity(
         at date: Date,
         payload: TaptionWidgetPayload
-    ) -> TaptionWidgetCatAction? {
-        guard let item = visibleItems(in: payload).first(where: {
+    ) -> TaptionWidgetItem? {
+        visibleItems(in: payload).first(where: {
             $0.resolvedLane == .action
                 && !$0.isFixed
                 && $0.startsAt <= date
                 && date < $0.endsAt
-        }) else {
+        })
+    }
+
+    private func preferredCatAction(
+        at date: Date,
+        payload: TaptionWidgetPayload
+    ) -> TaptionWidgetCatAction? {
+        guard let item = catActivity(at: date, payload: payload) else {
             return nil
         }
         return TaptionWidgetCatActionSelector.preferredAction(
@@ -919,6 +929,7 @@ private struct PrototypeWidgetTrack: View {
 
 private struct WidgetWalkingCat: View {
     let style: String
+    let activity: TaptionWidgetItem?
     let reducesMotion: Bool
     let pose: TaptionWidgetCatWalkPose
 
@@ -957,13 +968,26 @@ private struct WidgetWalkingCat: View {
                 TaptionCatAnimationView(
                     style: style,
                     pose: sharedPose,
-                    reducesMotion: reducesMotion
+                    reducesMotion: reducesMotion,
+                    scene: scene
                 )
             }
         }
         .accessibilityLabel(
             "\(catName) 고양이가 \(actionLabel)"
         )
+    }
+
+    private var scene: TaptionHwarangPose? {
+        activity.flatMap {
+            TaptionHwarangPose.widgetScene(
+                style: style,
+                categoryID: $0.categoryID,
+                title: $0.title,
+                action: pose.action,
+                reducesMotion: reducesMotion
+            )
+        }
     }
 
     private var catName: String {
@@ -979,7 +1003,8 @@ private struct WidgetWalkingCat: View {
     }
 
     private var actionLabel: String {
-        switch reducesMotion ? .sitting : pose.action {
+        if scene != nil, let activity { return "\(activity.title) 중" }
+        return switch reducesMotion ? .sitting : pose.action {
         case .walking: "걷는 중"
         case .running: "달리는 중"
         case .sitting: "앉아 있는 중"

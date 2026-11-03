@@ -274,6 +274,7 @@ struct TaptionCatAnimationView: View {
     let style: String
     let pose: TaptionCatAnimationPose
     let reducesMotion: Bool
+    var scene: TaptionHwarangPose? = nil
 
     var body: some View {
         GeometryReader { proxy in
@@ -300,7 +301,8 @@ struct TaptionCatAnimationView: View {
             TaptionCatFigure(
                 style: style,
                 pose: pose,
-                reducesMotion: reducesMotion
+                reducesMotion: reducesMotion,
+                scene: scene
             )
             .frame(width: catWidth, height: 32)
             .scaleEffect(x: pose.facesLeft ? -1 : 1, y: 1)
@@ -314,13 +316,23 @@ private struct TaptionCatFigure: View {
     let style: String
     let pose: TaptionCatAnimationPose
     let reducesMotion: Bool
+    let scene: TaptionHwarangPose?
 
     var body: some View {
-        TaptionCatAtlasIllustration(
-            style: style,
-            pose: pose,
-            reducesMotion: reducesMotion
-        )
+        if let scene {
+            TaptionCatPoseSprite(
+                style: style,
+                pose: scene,
+                frame: reducesMotion ? 0 : pose.phase
+            )
+            .frame(width: 52, height: 32)
+        } else {
+            TaptionCatAtlasIllustration(
+                style: style,
+                pose: pose,
+                reducesMotion: reducesMotion
+            )
+        }
     }
 }
 
@@ -400,6 +412,55 @@ struct TaptionCatAtlasSprite: View {
                 transaction.animation = nil
                 transaction.disablesAnimations = true
             }
+    }
+}
+
+/// 홈 화면 위젯의 상세활동 장면. 위젯은 큰 비트맵 대신 잘라 보여 주는 트리를 쓴다(`TaptionCatAtlasSprite`와 같다).
+struct TaptionCatPoseSprite: View {
+    let style: String
+    let pose: TaptionHwarangPose
+    let frame: Int
+
+    var body: some View {
+        let count = TaptionHwarangPose.frameCount
+        let column = ((frame % count) + count) % count
+        Image(TaptionHwarangPose.assetName(style: style), bundle: TaptionCatAtlasBundle.current)
+            .resizable()
+            .interpolation(.high)
+            .frame(
+                width: 52 * CGFloat(count),
+                height: 32 * CGFloat(TaptionHwarangPose.allCases.count)
+            )
+            .offset(
+                x: -CGFloat(column) * 52,
+                y: -CGFloat(pose.row) * 32
+            )
+            .frame(width: 52, height: 32, alignment: .topLeading)
+            // 칸 끝까지 찬 그림이 확대 보간으로 옆 줄에 번지지 않게 위아래를 조금 덜어 낸다.
+            .clipped()
+            .mask(Rectangle().padding(.vertical, 0.5))
+            .transaction { transaction in
+                transaction.animation = nil
+                transaction.disablesAnimations = true
+            }
+    }
+}
+
+extension TaptionHwarangPose {
+    private static let atlasStyles: Set<String> = ["white", "calico", "mackerel"]
+
+    /// 위젯 고양이가 지금 그릴 장면. 트랙을 오가거나 놀라는 순간과 장면 그림이 없는 털색은 기존 동작 그림을 쓴다.
+    static func widgetScene(
+        style: String,
+        categoryID: String,
+        title: String,
+        action: TaptionWidgetCatAction,
+        reducesMotion: Bool
+    ) -> Self? {
+        guard atlasStyles.contains(style),
+              reducesMotion || !(action.movesAcrossTrack || action == .startled)
+        else { return nil }
+        return resolve(categoryID: categoryID, title: title)
     }
 }
 

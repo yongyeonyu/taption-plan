@@ -572,6 +572,44 @@ extension FeatureEngineTests {
         XCTAssertEqual(dates, dates.sorted())
     }
 
+    func testWidgetCatShowsDetailSceneOnlyWhileRestingWithAtlasCoat() {
+        func scene(
+            style: String = "calico",
+            title: String = "요리",
+            action: TaptionWidgetCatAction = .eating,
+            reducesMotion: Bool = false
+        ) -> TaptionHwarangPose? {
+            TaptionHwarangPose.widgetScene(
+                style: style,
+                categoryID: "routine",
+                title: title,
+                action: action,
+                reducesMotion: reducesMotion
+            )
+        }
+
+        XCTAssertEqual(scene(), .cooking)
+        XCTAssertEqual(scene(style: "white"), .cooking)
+        XCTAssertEqual(scene(style: "mackerel"), .cooking)
+        XCTAssertNil(scene(style: "black"))
+        XCTAssertNil(scene(title: "회의"))
+        XCTAssertNil(scene(action: .walking))
+        XCTAssertNil(scene(action: .running))
+        XCTAssertNil(scene(action: .startled))
+        XCTAssertEqual(scene(action: .walking, reducesMotion: true), .cooking)
+
+        // 20초 주기 안에서 장면이 실제로 나오는 칸이 있어야 한다.
+        let reference = Date(timeIntervalSinceReferenceDate: 0)
+        let resting = (0..<TaptionWidgetCatWalkEngine.stepCount).filter { step in
+            let pose = TaptionWidgetCatWalkEngine.pose(
+                at: reference.addingTimeInterval(Double(step) * TaptionWidgetCatWalkEngine.defaultStepDuration),
+                preferredAction: .eating
+            )
+            return scene(action: pose.action) != nil
+        }
+        XCTAssertEqual(resting, Array(20..<24) + Array(30..<34))
+    }
+
     func testCatPickerPreviewIncludesAndAnimatesEveryWidgetAction() {
         let reference = Date(timeIntervalSinceReferenceDate: 0)
         let actions = TaptionWidgetCatAction.allCases

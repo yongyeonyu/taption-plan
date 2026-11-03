@@ -5531,3 +5531,11 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 시뮬레이터 전체 단위 테스트 `build/validation/CHR1103A01/full-final.xcresult`: 1,962건 중 통과 1,952, 실패 0, 건너뜀 10. 클립 편집 변경 포함, 애플 지도 작업 미포함. 구조 지표 통과. UI 테스트와 실기기 동작은 이 묶음에서 돌리지 않았다.
 - AI 다듬기: 이 Mac 기기 안 모델로 표본 3건 측정(`polish.txt`, 말투 문구 추가 전). 맞춤법은 고치지만 논리 오류는 못 고치는 경우가 있었다. 아이폰 미측정.
 
+## WGP1103A01 · 홈 화면 위젯 새 자세 (2026-11-03)
+- 조사: 위젯 `WidgetWalkingCat`은 벡터가 아니라 옛 12동작 아틀라스(`TaptionCatAtlas*`)를 쓴다. 워치 앱·워치 컴플리케이션은 고양이를 그리지 않는다(SF Symbols만 사용, `CatAnimationShared.swift`도 워치 타깃에 없음). `TaptionPlanWatch/Assets.xcassets`의 아틀라스 7종은 코드에서 참조되지 않는다.
+- 변경: 위젯이 트랙 끝에서 멈춘 칸(20초 주기 중 4초)과 동작 줄이기 상태에서, 진행 중인 항목의 제목이 `TaptionHwarangPose`에 있고 털색이 화랑이·춘향이·윤복이면 자세 아틀라스를 그린다(`TaptionCatPoseSprite`). 걷기·달리기·놀람, 그 밖의 털색과 제목은 기존 그림이다. 자세 아틀라스·`HwarangPoseAtlas.swift`는 메인 폴더 미커밋(CHR1103A01)의 사본이다.
+- 단위 테스트(시뮬레이터 BOKKI-iPhone11): `testWidgetCatShowsDetailSceneOnlyWhileRestingWithAtlasCoat`·`testCatPickerPreviewIncludesAndAnimatesEveryWidgetAction` 2건 통과. 전체 단위 테스트는 실행하지 않았다.
+- 빌드(코드 서명 끔, generic 대상): `TaptionPlanWidget`·`TaptionPlan`(iOS), `TaptionPlanWatchWidget`·`TaptionPlanWatch`(watchOS) 모두 `BUILD SUCCEEDED`. 시뮬레이터 산출물 위젯 `Assets.car`에 `TaptionPoseAtlas` 3종이 들어 있다.
+- 그림 확인: 커밋하지 않은 임시 테스트로 스프라이트를 렌더링했다. 털색 3종·자세 4종이 맞는 칸으로 잘렸고, 윗줄 그림이 번져 위아래 0.5pt를 잘라 내 없앴다.
+- 미확인: 실제 홈 화면 위젯 표시와 타임라인 재생. 실기기 설치·TestFlight는 하지 않았다. 워치는 코드 변경이 없고 위 빌드 통과만 뜻한다.
+- 로그: `build/validation/WGP1103A01/`
