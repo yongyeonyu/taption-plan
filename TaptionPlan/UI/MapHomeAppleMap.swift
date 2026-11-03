@@ -25,6 +25,11 @@ struct MapHomeAppleMap: UIViewRepresentable {
     let fogReveals: [MapHomeFogReveal]?
     /// 안개가 지도를 덮는 불투명도. 벡터 지도와 같은 값을 쓴다.
     let fogOpacity: CGFloat
+    /// 화랑이 점이 움직일 때마다(최대 120Hz). 구독한 UIKit 뷰만 옮기고 SwiftUI는 깨우지 않는다.
+    let onLiveStickmanPoint: (CGPoint?) -> Void
+    /// 카운터를 화랑이 마커의 자식으로 붙이는 연결.
+    var counterAttachment: MapHomeMarkerAttachment? = nil
+    /// SwiftUI로 가는 카메라 값(최대 60Hz).
     let onCameraFrame: (MapHomeCameraFrame, CGPoint?, Bool) -> Void
     let onSingleFingerPanBegan: () -> Void
     let onUserCameraGesture: () -> Void
@@ -58,6 +63,7 @@ struct MapHomeAppleMap: UIViewRepresentable {
     }
 
     func updateUIView(_ mapView: MKMapView, context: Context) {
+        let probe = MapHomePlaybackProbe.begin("apple.updateUIView"); defer { MapHomePlaybackProbe.end(probe) }
         context.coordinator.parent = self
         context.coordinator.isApplyingSwiftUIUpdate = true
         defer { context.coordinator.isApplyingSwiftUIUpdate = false }
@@ -72,6 +78,7 @@ struct MapHomeAppleMap: UIViewRepresentable {
         context.coordinator.updateContent(in: mapView)
         context.coordinator.applyCameraCommandIfNeeded(to: mapView)
         context.coordinator.applyViewportCommandIfNeeded(to: mapView)
+        context.coordinator.finishPlaybackIfEnded(in: mapView)
         playbackDriver?.sink = context.coordinator
     }
 
@@ -99,16 +106,16 @@ struct MapHomeAppleMap: UIViewRepresentable {
         private var lastFogDrawUptime: TimeInterval = 0
         private var isFogRedrawScheduled = false
 
-        /// 지도가 움직이는 동안 안개는 최대 30Hz로 다시 그린다. 마지막 값은 0.034초 뒤 한 번 더 그려 놓치지 않는다.
+        /// 지도가 움직이는 동안 안개는 최대 20Hz로 다시 그린다. 부드러운 그라데이션이라 카메라(120Hz)보다 늦어도 티가 적다. 마지막 값은 한 번 더 그려 놓치지 않는다.
         private func redrawFogThrottled() {
             guard let fogView else { return }
             let now = ProcessInfo.processInfo.systemUptime
-            if now - lastFogDrawUptime >= 1.0 / 30.0 {
+            if now - lastFogDrawUptime >= 1.0 / 20.0 {
                 lastFogDrawUptime = now
                 fogView.setNeedsDisplay()
             } else if !isFogRedrawScheduled {
                 isFogRedrawScheduled = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0 / 30.0) { [weak self] in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0 / 20.0) { [weak self] in
                     guard let self else { return }
                     self.isFogRedrawScheduled = false
                     self.lastFogDrawUptime = ProcessInfo.processInfo.systemUptime
@@ -129,6 +136,13 @@ struct MapHomeAppleMap: UIViewRepresentable {
         private var cameraFramePublishPending = false
         private var cameraFramePublishIsFinal = false
         private var lastCameraPublishUptime = -Double.infinity
+        /// 카운터 채널로 마지막에 보낸 화랑이 점(측정용).
+        private var lastPublishedLocationPoint: CGPoint?
+        /// 재생 프레임을 놓는 중이면 지도 콜백을 무시한다(끝에 한 번만 보낸다).
+        private var isApplyingPlaybackFrame = false
+        private var hasRunPlayback = false
+        private var annotationRevisions: [String: Int] = [:]
+        private var fallbackAnchorCoordinate: CLLocationCoordinate2D?
 
         init(parent: MapHomeAppleMap) {
             self.parent = parent
@@ -183,6 +197,7 @@ struct MapHomeAppleMap: UIViewRepresentable {
         func detach(from mapView: MKMapView) {
             if let walkerTapGesture { mapView.removeGestureRecognizer(walkerTapGesture) }
             walkerTapGesture = nil
+            parent.counterAttachment?.attach(nil)
             walkerView?.removeFromSuperview()
             walkerView = nil
             observedPanGestures.removeAll(target: self, action: #selector(handlePan(_:)))
@@ -276,18 +291,29 @@ struct MapHomeAppleMap: UIViewRepresentable {
         /// 재생 한 프레임: 카메라를 그 자리에 바로 놓고 화랑이와 안개 구멍을 같은 좌표로 옮긴다. SwiftUI를 거치지 않는다.
         func applyPlaybackFrame(_ frame: MapHomePlaybackDriverFrame) {
             guard let mapView, mapView.bounds.width > 0, let coordinate = frame.coordinate else { return }
+            let probe = MapHomePlaybackProbe.begin("apple.frame"); defer { MapHomePlaybackProbe.end(probe) }
+            hasRunPlayback = true
+            // 카메라·화랑이를 다 옮긴 뒤 점을 한 번만 보낸다. 벡터 지도와 같은 순서다.
+            isApplyingPlaybackFrame = true
+            walkerAnnotation?.coordinate = coordinate
             MapHomeAppleCameraCommand.center(
                 coordinate, at: parent.playbackTargetPoint, distance: frame.cameraDistance, on: mapView
             )
-            if let walkerAnnotation {
-                walkerAnnotation.coordinate = coordinate
-                updateWalkerPosition(in: mapView)
-            }
-            if let fogView, let last = fogView.reveals.last, last.radius == MapHomeFogStrength.currentLocationRadius {
-                var reveals = fogView.reveals
-                reveals[reveals.count - 1] = MapHomeFogReveal(coordinate: coordinate, radius: last.radius)
-                fogView.reveals = reveals
-            }
+            isApplyingPlaybackFrame = false
+            updateWalkerPosition(in: mapView)
+            fogView?.moveCurrentLocationReveal(to: coordinate)
+            redrawFogThrottled()
+            sendLiveStickmanPoint(in: mapView)
+            publishCameraFrame(from: mapView, isFinal: false)
+            MapHomeAppleCounterDriftProbe.note(published: lastPublishedLocationPoint, actual: walkerPoint(in: mapView))
+        }
+
+        /// 재생이 끝나면 멈춘 카메라를 SwiftUI에 한 번 올린다. 재생 중에는 "이동 완료"를 올리지 않는다.
+        func finishPlaybackIfEnded(in mapView: MKMapView) {
+            guard hasRunPlayback, parent.playbackDriver == nil else { return }
+            hasRunPlayback = false
+            fogView?.setNeedsDisplay()
+            publishCameraFrameAfterUpdate(from: mapView, isFinal: true)
         }
 
         func applyCameraCommandIfNeeded(to mapView: MKMapView) {
@@ -345,8 +371,15 @@ struct MapHomeAppleMap: UIViewRepresentable {
         }
 
         func mapViewDidChangeVisibleRegion(_ mapView: MKMapView) {
-            guard benchPanLink == nil else { return }
+            guard benchPanLink == nil, !isApplyingPlaybackFrame else { return }
+            cameraMoved(in: mapView)
+        }
+
+        /// 지도가 움직인 한 프레임: 화랑이·카운터는 프레임마다, SwiftUI 값은 60Hz로 묶어 올린다.
+        private func cameraMoved(in mapView: MKMapView) {
             redrawFogThrottled()
+            updateWalkerPosition(in: mapView)
+            sendLiveStickmanPoint(in: mapView)
             publishCameraFrame(from: mapView, isFinal: false)
         }
 
@@ -369,6 +402,7 @@ struct MapHomeAppleMap: UIViewRepresentable {
             guard let mapView, benchPanLink == nil else { return }
             benchPanStart = (ProcessInfo.processInfo.systemUptime, mapView.centerCoordinate, mapView.region.span.longitudeDelta)
             let link = CADisplayLink(target: self, selector: #selector(benchPanTick))
+            link.preferredFrameRateRange = CAFrameRateRange(minimum: 80, maximum: 120, preferred: 120)
             link.add(to: .main, forMode: .common)
             benchPanLink = link
         }
@@ -388,8 +422,7 @@ struct MapHomeAppleMap: UIViewRepresentable {
                 CLLocationCoordinate2D(latitude: start.center.latitude, longitude: start.center.longitude + offset),
                 animated: false
             )
-            redrawFogThrottled()
-            publishCameraFrame(from: mapView, isFinal: false)
+            cameraMoved(in: mapView)
         }
 
         func mapView(_: MKMapView, regionWillChangeAnimated _: Bool) {
@@ -398,9 +431,12 @@ struct MapHomeAppleMap: UIViewRepresentable {
         }
 
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
-            guard benchPanLink == nil else { return }
+            guard benchPanLink == nil, !isApplyingPlaybackFrame else { return }
+            // 애니메이션 없이 놓은 재생 카메라는 프레임마다 "이동 완료"를 알린다. 그대로 올리면 화면 전체가 프레임마다 다시 평가된다.
+            guard parent.playbackDriver == nil else { return cameraMoved(in: mapView) }
             fogView?.setNeedsDisplay()
             updateWalkerPosition(in: mapView)
+            sendLiveStickmanPoint(in: mapView)
             publishCameraFrame(from: mapView, isFinal: true)
         }
 
@@ -533,6 +569,7 @@ struct MapHomeAppleMap: UIViewRepresentable {
         }
 
         private func updateRoutes(in mapView: MKMapView) {
+            let probe = MapHomePlaybackProbe.begin("apple.routes"); defer { MapHomePlaybackProbe.end(probe) }
             let routeSignatures = Dictionary(
                 parent.routes.map { route in
                     (route.id, MapHomeContentRevision.of(
@@ -603,6 +640,20 @@ struct MapHomeAppleMap: UIViewRepresentable {
                     guard let mapView, let view else { return .zero }
                     return mapView.convert(coordinate, toPointTo: view)
                 }
+                view.projection = { [weak mapView, weak view] in
+                    guard let mapView, let view, mapView.camera.pitch < 1 else { return nil }
+                    let origin = MKMapPoint(mapView.centerCoordinate)
+                    let step = max(mapView.visibleMapRect.width / 4, 1)
+                    let originPoint = mapView.convert(origin.coordinate, toPointTo: view)
+                    let x = mapView.convert(MKMapPoint(x: origin.x + step, y: origin.y).coordinate, toPointTo: view)
+                    let y = mapView.convert(MKMapPoint(x: origin.x, y: origin.y + step).coordinate, toPointTo: view)
+                    return MapHomeFogProjection(
+                        origin: origin,
+                        originPoint: originPoint,
+                        xAxis: CGVector(dx: (x.x - originPoint.x) / step, dy: (x.y - originPoint.y) / step),
+                        yAxis: CGVector(dx: (y.x - originPoint.x) / step, dy: (y.y - originPoint.y) / step)
+                    )
+                }
                 mapView.addSubview(view)
                 fogView = view
             }
@@ -613,16 +664,28 @@ struct MapHomeAppleMap: UIViewRepresentable {
         }
 
         private func updateAnnotations(in mapView: MKMapView) {
+            let probe = MapHomePlaybackProbe.begin("apple.annotations"); defer { MapHomePlaybackProbe.end(probe) }
             var hasher = Hasher()
+            var revisions: [String: Int] = [:]
+            revisions.reserveCapacity(parent.annotations.count)
             for annotation in parent.annotations {
-                hasher.combine(MapHomeContentRevision.of(
-                    annotation.id, annotation.coordinate.latitude, annotation.coordinate.longitude,
-                    annotation.isInteractive, annotation.accessibilityLabel, String(describing: annotation.kind)
-                ))
+                var item = Hasher()
+                item.combine(annotation.coordinate.latitude)
+                item.combine(annotation.coordinate.longitude)
+                item.combine(annotation.isInteractive)
+                item.combine(annotation.accessibilityLabel)
+                annotation.kind.combineContent(into: &item)
+                let revision = item.finalize()
+                revisions[annotation.id] = revision
+                hasher.combine(annotation.id)
+                hasher.combine(revision)
             }
             let signature = hasher.finalize()
             guard signature != lastAnnotationsSignature else { return }
             lastAnnotationsSignature = signature
+            let previousRevisions = annotationRevisions
+            annotationRevisions = revisions
+            fallbackAnchorCoordinate = Self.fallbackAnchor(in: parent.annotations)
             let existing = mapView.annotations.compactMap { $0 as? MapHomeAppleMapAnnotation }
             let byID = Dictionary(existing.map { ($0.identifier, $0) }, uniquingKeysWith: { first, _ in first })
             let wantedIDs = Set(parent.annotations.map(\.id))
@@ -632,6 +695,8 @@ struct MapHomeAppleMap: UIViewRepresentable {
             }
             for annotation in parent.annotations {
                 if let existing = byID[annotation.id] {
+                    // 바뀐 표식만 다시 구성한다. 재생 중 1분마다 발자국 전체와 집 핀 호스팅을 다시 만들지 않는다.
+                    guard previousRevisions[annotation.id] != revisions[annotation.id] else { continue }
                     existing.update(from: annotation)
                     if let view = mapView.view(for: existing) as? MapHomeAppleHostedAnnotationView {
                         configure(view, annotation: existing)
@@ -662,6 +727,7 @@ struct MapHomeAppleMap: UIViewRepresentable {
             lastPlaybackSignature = playbackSignature
             lastCentersPlayback = parent.centersPlayback
             guard let playback else {
+                parent.counterAttachment?.attach(nil)
                 walkerView?.removeFromSuperview()
                 walkerView = nil
                 walkerAnnotation = nil
@@ -689,6 +755,8 @@ struct MapHomeAppleMap: UIViewRepresentable {
             }
             configureWalker(view, annotation: walker, cameraHeading: mapView.camera.heading)
             updateWalkerPosition(in: mapView)
+            let markerOffset = MapHomeStickmanAnnotationLayout.centerOffset
+            parent.counterAttachment?.attach(view, markerOffset: CGSize(width: markerOffset.x, height: markerOffset.y))
             if !parent.centersPlayback {
                 lastCenteredPlaybackCoordinate = nil
                 lastCenteredPlaybackTargetPoint = nil
@@ -753,7 +821,8 @@ struct MapHomeAppleMap: UIViewRepresentable {
             view.superview?.bringSubviewToFront(view)
             view.isEnabled = false
             view.isUserInteractionEnabled = false
-            view.isAccessibilityElement = true
+            // 카운터가 자식으로 붙으면 VoiceOver가 카운터를 읽도록 마커를 요소에서 뺀다. 화랑이는 화면의 탭 대상이 읽는다.
+            view.isAccessibilityElement = parent.counterAttachment == nil
             view.accessibilityTraits = .image
             view.accessibilityLabel = annotation.label
         }
@@ -764,7 +833,7 @@ struct MapHomeAppleMap: UIViewRepresentable {
         ) {
             guard case .pawprint(let paw) = annotation.kind else { return }
             let color: Color = paw.isSelectedRoute ? .orange
-                : paw.isPredicted ? Color.gray.opacity(0.68)
+                : paw.isPredicted ? MapHomePawprintSpeedColor.unconfirmedColor(forMetersPerSecond: paw.speedMetersPerSecond)
                 : MapHomePawprintSpeedColor.color(forMetersPerSecond: paw.speedMetersPerSecond)
             view.annotation = annotation
             view.apply(paw, color: UIColor(color))
@@ -794,6 +863,11 @@ struct MapHomeAppleMap: UIViewRepresentable {
                 view.collisionMode = .none
                 view.zPriority = .min
                 view.selectedZPriority = .min
+            } else if case .place(let place) = annotation.kind {
+                view.displayPriority = MapHomePlaceDisplayPolicy.priority(for: place.destination)
+                view.collisionMode = .rectangle
+                view.zPriority = MapHomePlaceDisplayPolicy.zPriority(for: place.destination)
+                view.selectedZPriority = view.zPriority
             } else {
                 view.displayPriority = .defaultHigh
                 view.collisionMode = .rectangle
@@ -818,10 +892,14 @@ struct MapHomeAppleMap: UIViewRepresentable {
                     view.selectedZPriority = .min
                     view.layer.zPosition = MapHomeAppleAnnotationLayerPriority.userLocation
                 } else if let hosted = annotation as? MapHomeAppleMapAnnotation {
-                    let isPawprint: Bool
-                    if case .pawprint = hosted.kind { isPawprint = true } else { isPawprint = false }
-                    view.zPriority = isPawprint ? .min : .defaultUnselected
-                    view.selectedZPriority = isPawprint ? .min : .defaultUnselected
+                    let zPriority: MKAnnotationViewZPriority
+                    switch hosted.kind {
+                    case .pawprint: zPriority = .min
+                    case .place(let place): zPriority = MapHomePlaceDisplayPolicy.zPriority(for: place.destination)
+                    default: zPriority = .defaultUnselected
+                    }
+                    view.zPriority = zPriority
+                    view.selectedZPriority = zPriority
                     view.layer.zPosition = MapHomeAppleAnnotationLayerPriority.place
                 }
             }
@@ -929,7 +1007,7 @@ struct MapHomeAppleMap: UIViewRepresentable {
                 )
             case .pawprint(let paw):
                 let color: Color = paw.isSelectedRoute ? .orange
-                    : paw.isPredicted ? Color.gray.opacity(0.68)
+                    : paw.isPredicted ? MapHomePawprintSpeedColor.unconfirmedColor(forMetersPerSecond: paw.speedMetersPerSecond)
                     : MapHomePawprintSpeedColor.color(forMetersPerSecond: paw.speedMetersPerSecond)
                 return MapHomeAppleHostedDescriptor(
                     rootView: AnyView(
@@ -964,7 +1042,8 @@ struct MapHomeAppleMap: UIViewRepresentable {
                 return
             }
             let now = ProcessInfo.processInfo.systemUptime
-            guard isFinal || now - lastCameraPublishUptime >= 1.0 / 60.0 else {
+            // 표시 링크 틱의 흔들림으로 한 틱씩 건너뛰지 않게 2ms 여유를 둔다(벡터 지도와 같다).
+            guard isFinal || now - lastCameraPublishUptime >= 1.0 / 60.0 - 0.002 else {
                 return
             }
             lastCameraPublishUptime = now
@@ -979,23 +1058,33 @@ struct MapHomeAppleMap: UIViewRepresentable {
                 camera: camera,
                 region: mapView.region
             )
-            let displayedCoordinate = walkerAnnotation?.coordinate
-                ?? parent.annotations.first(where: { annotation in
-                    guard case .place(let place) = annotation.kind else {
-                        return false
-                    }
-                    return place.destination == .home
-                })?.coordinate
-                ?? parent.annotations.first(where: { annotation in
-                    guard case .place(let place) = annotation.kind else {
-                        return false
-                    }
-                    return place.destination == .user
-                })?.coordinate
-            let locationPoint = displayedCoordinate.map {
-                mapView.convert($0, toPointTo: mapView)
-            }
+            let locationPoint = sendLiveStickmanPoint(in: mapView)
+            let probe = MapHomePlaybackProbe.begin(isFinal ? "apple.publishFinal" : "apple.publishMoving")
+            defer { MapHomePlaybackProbe.end(probe) }
             parent.onCameraFrame(frame, locationPoint, isFinal)
+        }
+
+        /// 카운터가 따라갈 화면 점을 보낸다. 값이 같으면 채널이 거른다.
+        @discardableResult
+        private func sendLiveStickmanPoint(in mapView: MKMapView) -> CGPoint? {
+            let coordinate = walkerAnnotation?.coordinate ?? fallbackAnchorCoordinate
+            let point = coordinate.map { mapView.convert($0, toPointTo: mapView) }
+            lastPublishedLocationPoint = point.map {
+                CGPoint(x: $0.x + MapHomeStickmanAnnotationLayout.centerOffset.x, y: $0.y + MapHomeStickmanAnnotationLayout.centerOffset.y)
+            }
+            parent.onLiveStickmanPoint(point)
+            return point
+        }
+
+        /// 화랑이가 없을 때 카운터가 붙는 자리(집, 없으면 사용자 위치).
+        private static func fallbackAnchor(in annotations: [MapHomeAppleAnnotation]) -> CLLocationCoordinate2D? {
+            var user: CLLocationCoordinate2D?
+            for annotation in annotations {
+                guard case .place(let place) = annotation.kind else { continue }
+                if place.destination == .home { return annotation.coordinate }
+                if place.destination == .user, user == nil { user = annotation.coordinate }
+            }
+            return user
         }
 
         private func publishCameraFrameAfterUpdate(

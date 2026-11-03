@@ -22,7 +22,8 @@ extension AppModel {
     func addMapUserActivityCategory(
         title: String,
         systemImage: String,
-        hex: String
+        hex: String,
+        animation: MapUserActivityAnimation? = nil
     ) -> Bool {
         guard acceptsDataMutation() else { return false }
         guard MapUserActivityIconCatalog.available(
@@ -40,7 +41,8 @@ extension AppModel {
                     id: UUID(),
                     title: title,
                     systemImage: systemImage,
-                    hex: hex
+                    hex: hex,
+                    animation: animation
                 ),
             ]
         )
@@ -48,6 +50,7 @@ extension AppModel {
             return false
         }
         snapshot.settings.mapUserActivityCategories = next
+        MapHomeCustomAnimations.register(next)
         Task { await persist() }
         return true
     }

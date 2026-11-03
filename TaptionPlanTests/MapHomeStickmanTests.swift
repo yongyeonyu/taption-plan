@@ -33,15 +33,106 @@ final class MapHomeStickmanTests: XCTestCase {
     }
 
     func testCategoryMenuShowsDailyDetailsWithOwnScenes() {
-        let health = MapHomeCategoryDetailRows.details(for: "health").map(\.title)
-        XCTAssertTrue(health.contains("낮잠"))
+        XCTAssertTrue(MapHomeCategoryDetailRows.details(for: "sleep").map(\.title).contains("낮잠"))
         XCTAssertTrue(MapHomeCategoryDetailRows.details(for: "unconfirmed").isEmpty)
-        XCTAssertEqual(MapHomeStickmanActionResolver.action(for: "health.nap", label: "낮잠"), .nap)
+        XCTAssertEqual(MapHomeStickmanActionResolver.action(for: "sleep.nap", label: "낮잠"), .nap)
         XCTAssertEqual(MapHomeStickmanActionResolver.action(for: "eating.cooking", label: "요리"), .cooking)
     }
 
     /// `TAPTION_RIG_SHEET=<폴더>`일 때 그루밍 장면을 시트 한 장으로 쓴다. 자세를 눈으로 보려는 도구다.
     /// 장면 22종을 각 8프레임씩 그린 검토 시트. 장식을 걸친 큰 그림·지도 마커 크기 그림·장식 도감을 쓴다(ACC1102A01).
+    /// 위젯 에셋을 다시 만든다. `TAPTION_POSE_ATLAS=<TaptionPlanWidget/Assets.xcassets 경로>`로 켠다.
+    func testWritePoseAtlasWhenRequested() throws {
+        guard let root = ProcessInfo.processInfo.environment["TAPTION_POSE_ATLAS"], !root.isEmpty else {
+            throw XCTSkip("TAPTION_POSE_ATLAS 없음")
+        }
+        let cell = TaptionHwarangPose.cellPixels, poses = TaptionHwarangPose.allCases
+        for style in HwarangCoat.characters {
+            let format = UIGraphicsImageRendererFormat()
+            format.scale = 1
+            format.opaque = false
+            let size = CGSize(width: cell.width * TaptionHwarangPose.frameCount, height: cell.height * poses.count)
+            let atlas = UIGraphicsImageRenderer(size: size, format: format).image { _ in
+                for pose in poses {
+                    for column in 0..<TaptionHwarangPose.frameCount {
+                        HwarangDiagnostics.poseFrame(pose, column: column, style: style)
+                            .draw(at: CGPoint(x: column * cell.width, y: pose.row * cell.height))
+                    }
+                }
+            }
+            let folder = URL(fileURLWithPath: root).appendingPathComponent(TaptionHwarangPose.assetName(style: style) + ".imageset")
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            try XCTUnwrap(atlas.pngData()).write(to: folder.appendingPathComponent("atlas.png"))
+            let contents = #"{"images":[{"filename":"atlas.png","idiom":"universal"}],"info":{"author":"xcode","version":1}}"#
+            try Data(contents.utf8).write(to: folder.appendingPathComponent("Contents.json"))
+        }
+    }
+
+    /// 캐릭터 검토 시트(CHR1103A01). 화랑이·춘향이·윤복이를 같은 장면으로 나란히 그린다.
+    func testWriteCharacterSheetWhenRequested() throws {
+        guard let folder = ProcessInfo.processInfo.environment["TAPTION_CHARACTER_SHEET"], !folder.isEmpty else {
+            throw XCTSkip("TAPTION_CHARACTER_SHEET 없음")
+        }
+        let scenes: [(HwarangScene, Double)] = [(.stroll, 1.2), (.eat, 7), (.work, 2), (.friends, 2), (.sleep, 2), (.recoverySuperman, 1), (.restBox, 1), (.medicated, 1)]
+        let side: CGFloat = 300
+        let image = UIGraphicsImageRenderer(size: CGSize(width: side * CGFloat(scenes.count), height: side * 3)).image { renderer in
+            UIColor(white: 0.93, alpha: 1).setFill()
+            renderer.fill(CGRect(x: 0, y: 0, width: side * CGFloat(scenes.count), height: side * 3))
+            for (row, style) in HwarangCoat.characters.enumerated() {
+                for (column, item) in scenes.enumerated() {
+                    HwarangDiagnostics.frame(scene: item.0, sec: item.1, side: side, coat: .named(style))
+                        .draw(at: CGPoint(x: CGFloat(column) * side, y: CGFloat(row) * side))
+                }
+            }
+        }
+        try XCTUnwrap(image.pngData()).write(to: URL(fileURLWithPath: folder).appendingPathComponent("characters.png"))
+    }
+
+    func testUnusedAnimationsReachCustomCategories() throws {
+        let category = MapUserActivityCategory(id: UUID(), title: "산책", systemImage: "leaf.fill", hex: "#29A383", animation: .mapReading)
+        defer { MapHomeCustomAnimations.register([]) }
+        MapHomeCustomAnimations.register([category])
+        let start = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        let actual = ActualRecord(planID: nil, title: "산책", categoryID: "custom:\(category.id.uuidString)", startedAt: start, endedAt: start.addingTimeInterval(600), source: .manual)
+        XCTAssertEqual(MapHomeStickmanActionResolver.action(at: start.addingTimeInterval(60), actuals: [actual], travel: [], places: [], frequentPlaces: []), .mapReading)
+        XCTAssertEqual(MapHomeStickmanAction.mapReading.hwarangScene, .atlas)
+        let old = try JSONDecoder().decode(MapUserActivityCategory.self, from: Data(##"{"id":"\##(UUID().uuidString)","title":"옛","systemImage":"leaf.fill","hex":"#29A383"}"##.utf8))
+        XCTAssertNil(old.animation, "옛 설정도 읽는다")
+    }
+
+    func testMenuQuotesChangeWeeklyAndAreTwo() throws {
+        var calendar = Calendar(identifier: .iso8601)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul") ?? .current
+        let start = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 11, day: 2)))
+        let week = MapHomeMenuHeaderTitle.quotes(on: start, calendar: calendar).map(\.text)
+        XCTAssertEqual(Set(week).count, 2)
+        XCTAssertEqual(MapHomeMenuHeaderTitle.quotes(on: start.addingTimeInterval(86_400 * 3), calendar: calendar).map(\.text), week)
+        XCTAssertNotEqual(MapHomeMenuHeaderTitle.quotes(on: start.addingTimeInterval(86_400 * 7), calendar: calendar).map(\.text), week)
+    }
+
+    func testDictationFollowsDeviceLanguageWhenAutomatic() {
+        XCTAssertEqual(MapHomeDictation.matchedSpeechLocale(preferred: "ja-KR", supported: ["en-US", "ja-JP", "ko-KR"]), "ja-JP")
+        XCTAssertEqual(MapHomeDictation.matchedSpeechLocale(preferred: "ko-KR", supported: ["en-US", "ko-KR"]), "ko-KR")
+        XCTAssertEqual(MapHomeDictation.matchedSpeechLocale(preferred: "xx-YY", supported: ["en-US"]), "en-US")
+        XCTAssertEqual(MapHomeDictation.languageName(forLocale: "ko-KR"), "한국어")
+    }
+
+    func testUnconfirmedPawsFollowAverageSpeed() throws {
+        let line = [CLLocationCoordinate2D(latitude: 37.5, longitude: 127), CLLocationCoordinate2D(latitude: 37.51, longitude: 127)]
+        let speed = try XCTUnwrap(MapHomeUnconfirmedPaws.speed(points: line, seconds: 100))
+        XCTAssertEqual(speed, 11.1, accuracy: 0.2)
+        XCTAssertNil(MapHomeUnconfirmedPaws.speed(points: line, seconds: 0))
+    }
+
+    func testLiveActivityPoseFollowsDetailTitle() {
+        XCTAssertEqual(TaptionHwarangPose.resolve(categoryID: "health", title: "회복"), .recovery)
+        XCTAssertEqual(TaptionHwarangPose.resolve(categoryID: "health", title: "병원"), .hospital)
+        XCTAssertEqual(TaptionHwarangPose.resolve(categoryID: "rest", title: "집에서 휴식"), .restBox)
+        XCTAssertEqual(TaptionHwarangPose.resolve(categoryID: "work", title: "휴식"), .restCroissant)
+        XCTAssertEqual(TaptionHwarangPose.resolve(categoryID: "activity", title: "휴식"), .restStarfish)
+        XCTAssertNil(TaptionHwarangPose.resolve(categoryID: "work", title: "업무"))
+    }
+
     func testWriteGroomingSheetWhenRequested() throws {
         guard let folder = ProcessInfo.processInfo.environment["TAPTION_RIG_SHEET"], !folder.isEmpty else {
             throw XCTSkip("TAPTION_RIG_SHEET 없음")
@@ -119,7 +210,8 @@ final class MapHomeStickmanTests: XCTestCase {
 
     /// 대표 결정 16개 분류(RIG1103A02): (대분류, 제목, behavior, 행동, 장면). 요리는 이미 있던 상세 분류다.
     private static let dailyCategories: [(String, String, String, MapHomeStickmanAction, HwarangScene)] = [
-        ("health", "낮잠", "nap", .nap, .nap), ("housework", "요리", "cooking", .cooking, .cook),
+        ("sleep", "낮잠", "nap", .nap, .nap), ("housework", "요리", "cooking", .cooking, .cook),
+        ("work", "회의", "meeting", .meeting, .meeting), ("housework", "설거지", "dishes", .dishes, .dishes),
         ("housework", "장보기", "groceries", .groceries, .groceries), ("housework", "빨래", "laundry", .laundry, .laundry),
         ("activity", "친구 만남", "friends", .friends, .friends), ("activity", "데이트", "dating", .date, .date),
         ("activity", "가족", "family", .family, .family), ("activity", "통화", "phoneCall", .phoneCall, .phoneCall),
@@ -144,7 +236,7 @@ final class MapHomeStickmanTests: XCTestCase {
         }
         let others = MapHomeStickmanAction.allCases.filter { candidate in !Self.dailyCategories.contains { $0.3 == candidate } }
         let otherScenes = Set(others.map(\.hwarangScene))
-        XCTAssertEqual(Set(Self.dailyCategories.map(\.4)).count, 16)
+        XCTAssertEqual(Set(Self.dailyCategories.map(\.4)).count, 18)
         XCTAssertTrue(otherScenes.isDisjoint(with: Self.dailyCategories.map(\.4)))
         XCTAssertEqual(Set(HwarangScene.dailyScenes), Set(Self.dailyCategories.map(\.4)))
     }
@@ -179,12 +271,12 @@ final class MapHomeStickmanTests: XCTestCase {
         let v3: [String: [(String, String)]] = [
             "activity": [("activity.rest", "stationary")],
             "work": [("work.route", "work"), ("work.rest", "stationary"), ("work.walking", "walking")],
-            "study": [("study.route", "study"), ("study.class", "class"), ("study.academy", "academy"), ("study.rest", "stationary"), ("study.walking", "walking")],
-            "hobby": [("hobby.route", "hobby"), ("hobby.rest", "stationary"), ("hobby.walking", "walking")],
+            "study": [("study.academy", "academy"), ("study.rest", "stationary"), ("study.walking", "walking")],
+            "hobby": [("hobby.route", "hobby"), ("hobby.rest", "stationary")],
             "sleep": [("sleep.core", "core"), ("sleep.deep", "deep"), ("sleep.rem", "rem")],
             "eating": [("eating.meal", "meal")],
             "exercise": [("exercise.workout", "exercise")],
-            "health": [("health.wellness", "wellness"), ("health.vitals", "vitals"), ("health.recovery", "recovery"), ("health.medication", "medication")],
+            "health": [("health.recovery", "recovery"), ("health.medication", "medication")],
             "housework": [("housework.chores", "chores")],
             "unconfirmed": [("unconfirmed.automatic", "unconfirmed")]
         ]
@@ -196,7 +288,6 @@ final class MapHomeStickmanTests: XCTestCase {
             }
         }
         // 전에 있던 자동 전용 표시는 그대로이고, 건강 대분류 자체를 직접 고를 수도 없다.
-        XCTAssertEqual(RecordClassificationCatalog.options.first { $0.id == "detail.health.wellness" }?.isAutomaticOnly, true)
         XCTAssertEqual(RecordClassificationCatalog.options.first { $0.id == "phase.health" }?.isAutomaticOnly, true)
         let start = Date(timeIntervalSince1970: 1_800_000_000)
         let old: [(String, String, String?, MapHomeStickmanAction)] = [
@@ -261,7 +352,7 @@ final class MapHomeStickmanTests: XCTestCase {
         let activity = MapHomeCategoryDetailRows.details(for: "activity").map(\.title)
         XCTAssertFalse(activity.contains("집안일"))
         XCTAssertFalse(activity.contains("장보기"))
-        XCTAssertEqual(MapHomeCategoryDetailRows.details(for: "housework").map(\.title), ["집안일", "빨래", "장보기", "요리"])
+        XCTAssertEqual(MapHomeCategoryDetailRows.details(for: "housework").map(\.title), ["집안일", "빨래", "장보기", "요리", "설거지"])
         XCTAssertEqual(MapHomeCategoryDetailRows.details(for: "eating").map(\.title), ["식사"])
         XCTAssertTrue(activity.contains("샤워"))
         XCTAssertFalse(RecordClassificationCatalog.categoryIDs.contains("shower"))
@@ -381,10 +472,27 @@ final class MapHomeStickmanTests: XCTestCase {
         XCTAssertEqual(action(), .restStarfish, "사용자가 고른 휴식은 그대로다")
     }
 
+    /// 집에 있어도 쉬는 자세가 일반 활동에 밀리지 않고, 운동 직후에는 회복 자세다.
+    func testHomeRestAndRecoveryReachTheScreen() {
+        let start = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        let center = GeoPoint(latitude: 37.5, longitude: 127, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: 5)
+        var home = FrequentPlace(kind: .home, name: "집")
+        home.setMapLocation(center)
+        let stay = PlaceStay(placeKey: home.stablePlaceKey, displayName: "집", span: TimeSpan(start: start, end: start.addingTimeInterval(7200)), confidence: .high)
+        let rest = ActualRecord(planID: nil, title: "집에서 휴식", categoryID: "rest", startedAt: start, endedAt: start.addingTimeInterval(7200), source: .location)
+        let workout = ActualRecord(planID: nil, title: "운동", categoryID: "exercise", startedAt: start.addingTimeInterval(-1800), endedAt: start, source: .healthKit)
+        func action(_ actuals: [ActualRecord], after seconds: TimeInterval) -> MapHomeStickmanAction {
+            MapHomeStickmanActionResolver.action(at: start.addingTimeInterval(seconds), actuals: actuals, travel: [], places: [stay], frequentPlaces: [home])
+        }
+        XCTAssertEqual(action([rest], after: 600), .restBox)
+        XCTAssertEqual(action([rest, workout], after: 600), .recovery)
+        XCTAssertEqual(action([rest, workout], after: 3600), .restBox, "30분이 지나면 평소 휴식이다")
+    }
+
     func testScarfAndRibbonStayOnTheBodyInEveryScene() throws {
         let scarf = try XCTUnwrap(HwarangClothStyle.byLandmark["fr.alps"]), ribbon = try XCTUnwrap(HwarangClothStyle.byLandmark["au.opera"])
         // 창이나 선체에 목 아래와 꼬리가 가리는 장면. 자동차는 턱 밑 띠만 앞유리 안쪽에 그린다.
-        let hidden: Set<HwarangScene> = [.subway, .train, .bus, .airplane, .boat, .carFront]
+        let hidden: Set<HwarangScene> = [.subway, .train, .bus, .airplane, .boat]
         for small in [false, true] {
             for scene in HwarangScene.allCases {
                 var added = 0
@@ -1161,9 +1269,9 @@ final class MapHomeStickmanTests: XCTestCase {
                 "\(title) 상세가 이동 대분류를 덮었습니다."
             )
         }
-        XCTAssertEqual(MapHomeStickmanAction.allCases.count, 49)
-        XCTAssertEqual(Set(MapHomeStickmanAction.allCases).count, 49)
-        XCTAssertEqual(Set(MapHomeStickmanAction.allCases.map(\.title)).count, 49)
+        XCTAssertEqual(MapHomeStickmanAction.allCases.count, 53)
+        XCTAssertEqual(Set(MapHomeStickmanAction.allCases).count, 53)
+        XCTAssertEqual(Set(MapHomeStickmanAction.allCases.map(\.title)).count, 53)
         XCTAssertEqual(MapHomeStickmanActionResolver.action(for: TravelMode.running), .running)
         XCTAssertEqual(
             MapHomeStickmanActionResolver.action(

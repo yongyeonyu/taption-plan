@@ -436,28 +436,15 @@ struct MapHomeDaySummarySheet: View {
                     Spacer(minLength: 8)
                     if !isWidePanel { expandButton }
                 }
-                HStack {
-                    Spacer()
-                    Button {
-                        if isWidePanel { isGrowthInPanel = true } else { isGrowthPresented = true }
-                    } label: {
-                        Label(
-                            language.text("집 성장", "Home growth"),
-                            systemImage: "house.and.flag.fill"
-                        )
-                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
-                        .foregroundStyle(Color.tpAccent)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(Color.tpAccent.opacity(0.10), in: Capsule())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityHint(language.text("주간 보상과 집 성장 기록을 엽니다", "Opens weekly rewards and your house history"))
-                }
             }
 
             if let growthCard {
-                growthCardView(growthCard)
+                // 레벨 상자를 누르면 우리 집 성장으로 간다.
+                Button {
+                    if isWidePanel { isGrowthInPanel = true } else { isGrowthPresented = true }
+                } label: { growthCardView(growthCard) }
+                .buttonStyle(.plain)
+                .accessibilityHint(language.text("주간 보상과 집 성장 기록을 엽니다", "Opens weekly rewards and home growth"))
             }
 
             if let salary {

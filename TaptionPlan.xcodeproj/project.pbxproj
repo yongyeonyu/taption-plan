@@ -197,6 +197,7 @@
 		A5B1102A0200000000000042 /* RawSensorReplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000041 /* RawSensorReplayTests.swift */; };
 		A5B1102A0200000000000040 /* OfficeStayAbsorptionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000003F /* OfficeStayAbsorptionTests.swift */; };
 		A5B1102A020000000000003E /* CarAudioTravelConfirmationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000003D /* CarAudioTravelConfirmationTests.swift */; };
+		A5B1103A020000000000003C /* NLESubActivityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1103A020000000000003B /* NLESubActivityTests.swift */; };
 		A5B1102A020000000000003C /* NLEMultiDayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000003B /* NLEMultiDayTests.swift */; };
 		A5B1102A020000000000003A /* PlaybackPathSmoothingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000039 /* PlaybackPathSmoothingTests.swift */; };
 		A5B1102A0200000000000038 /* FeatureEngineTests+Classification.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000037 /* FeatureEngineTests+Classification.swift */; };
@@ -260,6 +261,10 @@
 		A10000000000000000000061 /* RecordSummaryEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000061 /* RecordSummaryEngine.swift */; };
 		A1000000000000000000003C /* WidgetPayloadFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000003B /* WidgetPayloadFactory.swift */; };
 		A1000000000000000000003D /* WatchSyncModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000029 /* WatchSyncModels.swift */; };
+		A10000000000000000CA2004 /* SubwayAlighting.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000CA2004 /* SubwayAlighting.swift */; };
+		A10000000000000000CA2001 /* HwarangPoseAtlas.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000CA2001 /* HwarangPoseAtlas.swift */; };
+		A10000000000000000CA2002 /* HwarangPoseAtlas.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000CA2001 /* HwarangPoseAtlas.swift */; };
+		A10000000000000000CA2003 /* HwarangCoat.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000CA2003 /* HwarangCoat.swift */; };
 		A10000000000000000000040 /* CatAnimationShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000040 /* CatAnimationShared.swift */; };
 		A10000000000000000000041 /* CatAnimationShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000040 /* CatAnimationShared.swift */; };
 		A10000000000000000000044 /* ScreenTimeUsageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000041 /* ScreenTimeUsageService.swift */; };
@@ -398,6 +403,8 @@
 		A1000000000000000B1102F8 /* MapHomeBottomBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102F8 /* MapHomeBottomBar.swift */; };
 		A1000000000000000B110301 /* MapHomeHomeNames.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B110301 /* MapHomeHomeNames.swift */; };
 		A1000000000000000B110300 /* TaptionFont.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B110300 /* TaptionFont.swift */; };
+		A1000000000000000B1103F1 /* MapHomeNLESubActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1103F1 /* MapHomeNLESubActivity.swift */; };
+		A1000000000000000B1103F2 /* MapHomeNLEDetailLane.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1103F2 /* MapHomeNLEDetailLane.swift */; };
 		A1000000000000000B1102F9 /* MapHomeNLERawDetail.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102F9 /* MapHomeNLERawDetail.swift */; };
 		A1000000000000000B1102FA /* TaptionCuteIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102FA /* TaptionCuteIcon.swift */; };
 		A1000000000000000B1102E5 /* MapHomeSalarySettingsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102E5 /* MapHomeSalarySettingsSheet.swift */; };
@@ -695,6 +702,7 @@
 		F5B1102A0200000000000041 /* RawSensorReplayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RawSensorReplayTests.swift; sourceTree = "<group>"; };
 		F5B1102A020000000000003F /* OfficeStayAbsorptionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfficeStayAbsorptionTests.swift; sourceTree = "<group>"; };
 		F5B1102A020000000000003D /* CarAudioTravelConfirmationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarAudioTravelConfirmationTests.swift; sourceTree = "<group>"; };
+		F5B1103A020000000000003B /* NLESubActivityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NLESubActivityTests.swift; sourceTree = "<group>"; };
 		F5B1102A020000000000003B /* NLEMultiDayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NLEMultiDayTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000039 /* PlaybackPathSmoothingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackPathSmoothingTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000037 /* FeatureEngineTests+Classification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FeatureEngineTests+Classification.swift"; sourceTree = "<group>"; };
@@ -755,6 +763,9 @@
 		F1000000000000000000003A /* TimelineBlockStyleViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineBlockStyleViews.swift; sourceTree = "<group>"; };
 		F1000000000000000000003B /* WidgetPayloadFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetPayloadFactory.swift; sourceTree = "<group>"; };
 		F10000000000000000000061 /* RecordSummaryEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordSummaryEngine.swift; sourceTree = "<group>"; };
+		F10000000000000000CA2004 /* SubwayAlighting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubwayAlighting.swift; sourceTree = "<group>"; };
+		F10000000000000000CA2001 /* HwarangPoseAtlas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HwarangPoseAtlas.swift; sourceTree = "<group>"; };
+		F10000000000000000CA2003 /* HwarangCoat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HwarangCoat.swift; sourceTree = "<group>"; };
 		F10000000000000000000040 /* CatAnimationShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatAnimationShared.swift; sourceTree = "<group>"; };
 		F10000000000000000000041 /* ScreenTimeUsageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenTimeUsageService.swift; sourceTree = "<group>"; };
 		F10000000000000000000072 /* WatchSensorQueryPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSensorQueryPlan.swift; sourceTree = "<group>"; };
@@ -873,6 +884,8 @@
 		F1000000000000000B1102F8 /* MapHomeBottomBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeBottomBar.swift; sourceTree = "<group>"; };
 		F1000000000000000B110301 /* MapHomeHomeNames.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeHomeNames.swift; sourceTree = "<group>"; };
 		F1000000000000000B110300 /* TaptionFont.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionFont.swift; sourceTree = "<group>"; };
+		F1000000000000000B1103F1 /* MapHomeNLESubActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeNLESubActivity.swift; sourceTree = "<group>"; };
+		F1000000000000000B1103F2 /* MapHomeNLEDetailLane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeNLEDetailLane.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102F9 /* MapHomeNLERawDetail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeNLERawDetail.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102FA /* TaptionCuteIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionCuteIcon.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102E5 /* MapHomeSalarySettingsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeSalarySettingsSheet.swift; sourceTree = "<group>"; };
@@ -1100,6 +1113,7 @@
 				F5B1102A0200000000000041 /* RawSensorReplayTests.swift */,
 				F5B1102A020000000000003F /* OfficeStayAbsorptionTests.swift */,
 				F5B1102A020000000000003D /* CarAudioTravelConfirmationTests.swift */,
+				F5B1103A020000000000003B /* NLESubActivityTests.swift */,
 				F5B1102A020000000000003B /* NLEMultiDayTests.swift */,
 				F5B1102A0200000000000039 /* PlaybackPathSmoothingTests.swift */,
 				F5B1102A0200000000000037 /* FeatureEngineTests+Classification.swift */,
@@ -1193,6 +1207,7 @@
 				F10000000000000000000083 /* MapHomeTimeSidebar.swift */,
 				F1000000000000000B1101A2 /* MapHomePlaybackPerformance.swift */,
 				F1000000000000000B1101C1 /* HwarangRig.swift */,
+				F10000000000000000CA2003 /* HwarangCoat.swift */,
 				F1000000000000000B1102E1 /* FirstRunTutorialPolicy.swift */,
 				F1000000000000000B1102E2 /* FirstRunTutorialView.swift */,
 				F1000000000000000B1102E4 /* PermissionOnboardingSheet.swift */,
@@ -1203,6 +1218,8 @@
 				F1000000000000000B1102F8 /* MapHomeBottomBar.swift */,
 				F1000000000000000B110301 /* MapHomeHomeNames.swift */,
 				F1000000000000000B110300 /* TaptionFont.swift */,
+				F1000000000000000B1103F1 /* MapHomeNLESubActivity.swift */,
+				F1000000000000000B1103F2 /* MapHomeNLEDetailLane.swift */,
 				F1000000000000000B1102F9 /* MapHomeNLERawDetail.swift */,
 				F1000000000000000B1102FA /* TaptionCuteIcon.swift */,
 				F1000000000000000B1102E5 /* MapHomeSalarySettingsSheet.swift */,
@@ -1401,6 +1418,8 @@
 				F1000000000000000000001C /* SleepAnalysisEngine.swift */,
 				F1000000000000000000001D /* SensorDataServices.swift */,
 				F10000000000000000000040 /* CatAnimationShared.swift */,
+				F10000000000000000CA2001 /* HwarangPoseAtlas.swift */,
+				F10000000000000000CA2004 /* SubwayAlighting.swift */,
 				F10000000000000000000041 /* ScreenTimeUsageService.swift */,
 				F1000000000000000000001F /* WidgetShared.swift */,
 				F1000000000000000000003B /* WidgetPayloadFactory.swift */,
@@ -1918,6 +1937,8 @@
 				A1000000000000000B1102F8 /* MapHomeBottomBar.swift in Sources */,
 				A1000000000000000B110301 /* MapHomeHomeNames.swift in Sources */,
 				A1000000000000000B110300 /* TaptionFont.swift in Sources */,
+				A1000000000000000B1103F1 /* MapHomeNLESubActivity.swift in Sources */,
+				A1000000000000000B1103F2 /* MapHomeNLEDetailLane.swift in Sources */,
 				A1000000000000000B1102F9 /* MapHomeNLERawDetail.swift in Sources */,
 				A1000000000000000B1102FA /* TaptionCuteIcon.swift in Sources */,
 				A1000000000000000B1102E5 /* MapHomeSalarySettingsSheet.swift in Sources */,
@@ -2059,6 +2080,9 @@
 				A1000000000000000000001C /* SleepAnalysisEngine.swift in Sources */,
 				A1000000000000000000001D /* SensorDataServices.swift in Sources */,
 				A10000000000000000000040 /* CatAnimationShared.swift in Sources */,
+				A10000000000000000CA2001 /* HwarangPoseAtlas.swift in Sources */,
+				A10000000000000000CA2004 /* SubwayAlighting.swift in Sources */,
+				A10000000000000000CA2003 /* HwarangCoat.swift in Sources */,
 				A10000000000000000000044 /* ScreenTimeUsageService.swift in Sources */,
 				A1000000000000000000001E /* WidgetShared.swift in Sources */,
 				A10000000000000000000026 /* StoreKitSupport.swift in Sources */,
@@ -2137,6 +2161,7 @@
 				A5B1102A0200000000000042 /* RawSensorReplayTests.swift in Sources */,
 				A5B1102A0200000000000040 /* OfficeStayAbsorptionTests.swift in Sources */,
 				A5B1102A020000000000003E /* CarAudioTravelConfirmationTests.swift in Sources */,
+				A5B1103A020000000000003C /* NLESubActivityTests.swift in Sources */,
 				A5B1102A020000000000003C /* NLEMultiDayTests.swift in Sources */,
 				A5B1102A020000000000003A /* PlaybackPathSmoothingTests.swift in Sources */,
 				A5B1102A0200000000000038 /* FeatureEngineTests+Classification.swift in Sources */,
@@ -2219,6 +2244,7 @@
 				A1000000000000000000003C /* WidgetPayloadFactory.swift in Sources */,
 				A1000000000000000000003D /* WatchSyncModels.swift in Sources */,
 				A10000000000000000000041 /* CatAnimationShared.swift in Sources */,
+				A10000000000000000CA2002 /* HwarangPoseAtlas.swift in Sources */,
 				A1000000000000000000007B /* DiagnosticsLogSupport.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

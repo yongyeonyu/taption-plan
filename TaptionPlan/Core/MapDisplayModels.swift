@@ -16,6 +16,33 @@ struct MapUserActivityCategory: Identifiable, Codable, Hashable, Sendable {
     var title: String
     var systemImage: String
     var hex: String
+    /// 사용자가 고른 화랑이 동작. 옛 설정에는 없다.
+    var animation: MapUserActivityAnimation? = nil
+}
+
+/// 행동 분류에 쓰지 않는 동작 중 사용자 추가 분류에 고를 수 있는 것(CAT1103A03).
+enum MapUserActivityAnimation: String, Codable, CaseIterable, Identifiable, Hashable, Sendable {
+    case mapReading
+    case walkInPlace
+    case stretching
+    case grooming
+    case yarnPlay
+    case catWheel
+    case puzzled
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .mapReading: AppLanguagePreference.text(korean: "지도 펼쳐 보기", english: "Reading a map")
+        case .walkInPlace: AppLanguagePreference.text(korean: "제자리 걷기", english: "Walking in place")
+        case .stretching: AppLanguagePreference.text(korean: "스트레칭", english: "Stretching")
+        case .grooming: AppLanguagePreference.text(korean: "그루밍", english: "Grooming")
+        case .yarnPlay: AppLanguagePreference.text(korean: "털실 놀이", english: "Playing with yarn")
+        case .catWheel: AppLanguagePreference.text(korean: "캣휠", english: "Cat wheel")
+        case .puzzled: AppLanguagePreference.text(korean: "갸우뚱", english: "Puzzled")
+        }
+    }
 }
 
 enum MapDisplayProvider: CaseIterable, Hashable, Sendable {

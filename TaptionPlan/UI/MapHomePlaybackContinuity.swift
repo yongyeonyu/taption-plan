@@ -31,7 +31,8 @@ extension MapHomePlaybackLocation {
             frame: frame,
             normalizedReadings: normalizedReadings,
             confirmedTravel: travel,
-            expectedCoordinate: expectedCoordinate,
+            // 앞뒤 표본이 있는 시각에 예상 경로를 쓰면 출발지(집)로 튄다.
+            expectedCoordinate: sensorGapCoordinate(at: date, readings: normalizedReadings) == nil ? expectedCoordinate : nil,
             calendar: calendar
         ) {
             return resolved
@@ -57,7 +58,7 @@ extension MapHomePlaybackLocation {
             frame: frame,
             normalizedReadings: normalizedReadings,
             confirmedTravel: lookup.subwayTravel,
-            expectedCoordinate: expectedCoordinate
+            expectedCoordinate: sensorGapCoordinate(at: date, readings: normalizedReadings) == nil ? expectedCoordinate : nil
         ) {
             return resolved
         }

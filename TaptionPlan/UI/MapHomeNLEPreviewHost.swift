@@ -11,6 +11,12 @@ struct NLEClipEditorPreviewHost: View {
     /// `-nlePreviewMultiDay`: 어제를 심어 둔다. 수면이 어제 23:00에서 오늘 07:00까지
     /// 한 기록(같은 sourceID)으로 이어져, 위로 넘기면 클립 하나로 보여야 한다(NLE1029A02).
     init() {
+        let today = Calendar.autoupdatingCurrent.startOfDay(for: Date())
+        NLEDayWindow.previewDays[today] = NLEDayInput(
+            segments: Self.segments,
+            details: NLESubActivityEngine.details(Self.sampleEvidence(dayStart: today))
+        )
+        NLEDayWindow.previewSensors[today] = Self.sampleSensors
         guard ProcessInfo.processInfo.arguments.contains("-nlePreviewMultiDay") else { return }
         let calendar = Calendar.autoupdatingCurrent
         guard let yesterday = calendar.date(byAdding: .day, value: -1, to: calendar.startOfDay(for: Date()))
@@ -94,6 +100,53 @@ struct NLEClipEditorPreviewHost: View {
                 startMinute: 1_320, endMinute: 1_440, categoryID: "sleep", title: "수면",
                 sourceIDs: [sources[7]]
             ),
+        ]
+    }
+
+    /// 업무 구간의 근거 예시. 화면과 같은 계산(`NLESubActivityEngine`)을 지나 상세 층이 된다.
+    /// 07:00–08:00과 09:50–10:00처럼 근거가 없는 시간은 비어야 한다.
+    private static func sampleEvidence(dayStart: Date) -> NLESubActivityInput {
+        func date(_ minute: Int) -> Date { dayStart.addingTimeInterval(Double(minute) * 60) }
+        func record(_ title: String, _ behavior: String?, _ start: Int, _ end: Int, source: ActualSource, evidence: [String] = []) -> ActualRecord {
+            ActualRecord(
+                id: UUID(), planID: nil, routineID: nil, title: title, categoryID: "work",
+                startedAt: date(start), endedAt: date(end), source: source, confidence: .medium,
+                createdAt: date(start), behavior: behavior, evidence: evidence,
+                manuallyCorrected: source == .manual
+            )
+        }
+        func event(_ title: String, _ start: Int, _ end: Int) -> CalendarRecord {
+            CalendarRecord(
+                id: title, calendarID: "preview", title: title, span: TimeSpan(start: date(start), end: date(end)),
+                isAllDay: false, calendarTitle: "미리보기", calendarColorHex: nil, sourceTitle: nil
+            )
+        }
+        return NLESubActivityInput(
+            segments: segments,
+            actuals: [
+                record("근무", "work", 420, 720, source: .location, evidence: ["자주가는 곳: 회사"]),
+                record("휴식", "stationary", 570, 590, source: .location, evidence: ["자주가는 곳: 회사"]),
+                record("통화", "phoneCall", 660, 680, source: .call),
+                record("코드 리뷰", nil, 690, 720, source: .manual),
+            ],
+            calendarEvents: [event("주간 회의", 480, 540), event("메일 정리", 600, 650)],
+            dayStart: dayStart
+        )
+    }
+
+    /// 센서 층 예시. 대분류·상세와 달리 걷기·정지 같은 원본 근거만 적는다.
+    private static var sampleSensors: [MapHomeNLESensorSegment] {
+        func motion(_ start: Int, _ end: Int, _ title: String, _ category: String, _ kind: MotionKind) -> MapHomeNLESensorSegment {
+            MapHomeNLESensorSegment(
+                channel: .motion, startMinute: start, endMinute: end, title: title,
+                categoryID: category, behavior: kind.rawValue
+            )
+        }
+        return [
+            motion(420, 470, "정지 · iPhone", "activity", .stationary),
+            motion(470, 485, "걷기 · iPhone", "movement", .walking),
+            motion(485, 720, "정지 · iPhone", "activity", .stationary),
+            motion(960, 1_020, "차량 · GPS 속도", "movement", .automotive),
         ]
     }
 

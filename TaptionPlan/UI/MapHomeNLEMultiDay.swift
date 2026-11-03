@@ -203,6 +203,7 @@ struct NLEDayWindow: Equatable {
     #if DEBUG
     /// 미리보기(`-nlePreviewMultiDay`)가 심어 두는 지난 날. 키는 그 날의 00:00이다.
     @MainActor static var previewDays: [Date: NLEDayInput] = [:]
+    @MainActor static var previewSensors: [Date: [MapHomeNLESensorSegment]] = [:]
     #endif
 
     /// 그 날의 구간·상세활동을 기준일과 같은 방법으로 읽는다. 원본은 고치지 않는다.
@@ -214,12 +215,45 @@ struct NLEDayWindow: Equatable {
         if let preview = previewDays[dayStart] { return preview }
         #endif
         let day = await model.planDayDataSnapshot(for: date, forceReload: false)
-        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
-            ?? dayStart.addingTimeInterval(24 * 60 * 60)
+        let segments = MapHomeTimeRailSegmentEngine.segments(from: day.actuals, travel: day.travel, on: date)
         return NLEDayInput(
-            segments: MapHomeTimeRailSegmentEngine.segments(from: day.actuals, travel: day.travel, on: date),
-            details: MapHomeSectionDetailEngine.dayDetails(
-                actuals: day.actuals, travel: day.travel, dayStart: dayStart, dayEnd: dayEnd, asOf: .now
+            segments: segments,
+            details: subActivities(model: model, day: day, segments: segments, dayStart: dayStart)
+        )
+    }
+
+    /// 화면이 이미 든 구간 위에 그 날의 하위 행동을 고른다.
+    @MainActor
+    static func loadSubActivities(
+        model: AppModel,
+        date: Date,
+        segments: [MapHomeTimeRailSegment]
+    ) async -> [MapHomeSectionDetail] {
+        let dayStart = Calendar.autoupdatingCurrent.startOfDay(for: date)
+        #if DEBUG
+        if let preview = previewDays[dayStart] { return preview.details }
+        #endif
+        let day = await model.planDayDataSnapshot(for: date, forceReload: false)
+        return subActivities(model: model, day: day, segments: segments, dayStart: dayStart)
+    }
+
+    @MainActor
+    private static func subActivities(
+        model: AppModel,
+        day: PlanDayDataSnapshot,
+        segments: [MapHomeTimeRailSegment],
+        dayStart: Date
+    ) -> [MapHomeSectionDetail] {
+        NLESubActivityEngine.details(
+            NLESubActivityInput(
+                segments: segments,
+                actuals: day.actuals,
+                travel: day.travel,
+                calendarEvents: model.snapshot.calendarEvents,
+                calendarTitleDetails: model.settings.calendarTitleDetails,
+                activityCorrections: model.settings.activityCorrections,
+                readings: day.readings,
+                dayStart: dayStart
             )
         )
     }

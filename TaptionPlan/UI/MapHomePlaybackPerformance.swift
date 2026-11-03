@@ -132,6 +132,22 @@ final class MapHomeLivePointChannel {
     }
 }
 
+/// 카운터를 붙일 지도 마커 뷰. 있으면 카운터는 지도 좌표를 따로 쫓지 않고 마커의 자식으로 함께 움직인다(대표 지시, CTR1103A02).
+@MainActor
+final class MapHomeMarkerAttachment {
+    private(set) var markerView: UIView?
+    /// 채널 점에서 마커 뷰 중심까지.
+    private(set) var markerOffset = CGSize.zero
+    var onChange: (() -> Void)?
+
+    func attach(_ view: UIView?, markerOffset: CGSize = .zero) {
+        guard markerView !== view else { return }
+        markerView = view
+        self.markerOffset = markerOffset
+        onChange?()
+    }
+}
+
 /// 카운터 창이 화면에서 차지한 자리. 지도 탭 판정만 읽으므로 관찰하지 않는다.
 /// 예전에는 `@State`라 재생 중 매 프레임 기록돼 지도 화면 전체가 다시 평가됐다(PRF1101A01).
 @MainActor
@@ -162,6 +178,8 @@ final class MapHomeCounterFrameBox {
 /// 채널이 없거나 점이 없으면 `fallback`(SwiftUI가 60Hz 이하로 넘기는 점)에 둔다.
 struct MapHomeLivePointFollower<Content: View>: UIViewRepresentable {
     let channel: MapHomeLivePointChannel?
+    /// 있으면(마커가 지도에 있는 동안) 내용을 마커 기준 상대 좌표에 둔다.
+    var attachment: MapHomeMarkerAttachment? = nil
     let fallback: CGPoint
     /// 채널 점에서 내용 중심까지.
     let offset: CGSize
@@ -174,17 +192,18 @@ struct MapHomeLivePointFollower<Content: View>: UIViewRepresentable {
 
     func updateUIView(_ view: MapHomeLivePointFollowerView<Content>, context: Context) {
         view.host.rootView = content()
-        view.configure(channel: channel, fallback: fallback, offset: offset, onFrame: onFrame)
+        view.configure(channel: channel, attachment: attachment, fallback: fallback, offset: offset, onFrame: onFrame)
     }
 
     static func dismantleUIView(_ view: MapHomeLivePointFollowerView<Content>, coordinator: ()) {
-        view.configure(channel: nil, fallback: .zero, offset: .zero, onFrame: nil)
+        view.configure(channel: nil, attachment: nil, fallback: .zero, offset: .zero, onFrame: nil)
     }
 }
 
 final class MapHomeLivePointFollowerView<Content: View>: UIView {
     let host: UIHostingController<Content>
     private weak var channel: MapHomeLivePointChannel?
+    private weak var attachment: MapHomeMarkerAttachment?
     private var fallback = CGPoint.zero
     private var offset = CGSize.zero
     private var onFrame: ((CGRect) -> Void)?
@@ -205,6 +224,7 @@ final class MapHomeLivePointFollowerView<Content: View>: UIView {
 
     func configure(
         channel next: MapHomeLivePointChannel?,
+        attachment nextAttachment: MapHomeMarkerAttachment? = nil,
         fallback: CGPoint,
         offset: CGSize,
         onFrame: ((CGRect) -> Void)?
@@ -214,10 +234,22 @@ final class MapHomeLivePointFollowerView<Content: View>: UIView {
             channel = next
             next?.subscribe(self) { [weak self] point in self?.place(point) }
         }
+        if attachment !== nextAttachment {
+            attachment?.onChange = nil
+            attachment = nextAttachment
+            nextAttachment?.onChange = { [weak self] in self?.mount() }
+        }
         self.fallback = fallback
         self.offset = offset
         self.onFrame = onFrame
         resizeHost()
+        mount()
+    }
+
+    /// 마커가 있으면 그 자식으로, 없으면 이 뷰의 자식으로 둔다.
+    private func mount() {
+        let parent = attachment?.markerView ?? self
+        if host.view.superview !== parent { parent.addSubview(host.view) }
         place(channel?.point)
     }
 
@@ -234,6 +266,16 @@ final class MapHomeLivePointFollowerView<Content: View>: UIView {
     }
 
     private func place(_ point: CGPoint?) {
+        if let attachment, let marker = attachment.markerView {
+            let relative = CGPoint(
+                x: marker.bounds.midX + offset.width - attachment.markerOffset.width,
+                y: marker.bounds.midY + offset.height - attachment.markerOffset.height
+            )
+            if host.view.center != relative { host.view.center = relative }
+            // 탭 판정은 이 뷰 좌표로 본다.
+            onFrame?(host.view.convert(host.view.bounds, to: self))
+            return
+        }
         let center = point.map { CGPoint(x: $0.x + offset.width, y: $0.y + offset.height) } ?? fallback
         if host.view.center != center { host.view.center = center }
         onFrame?(host.view.frame)

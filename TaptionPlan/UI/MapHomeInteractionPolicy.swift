@@ -292,11 +292,13 @@ enum MapHomeCameraLayoutMath {
     static func cameraCenterSourcePoint(
         currentLocationPoint: CGPoint,
         targetPoint: CGPoint,
-        viewportSize: CGSize
+        viewportSize: CGSize,
+        zoomScale: CGFloat = 1
     ) -> CGPoint {
+        // zoomScale: 새 카메라에서 같은 지도 거리가 지금보다 몇 배로 보이는지(지금 거리 ÷ 새 거리).
         CGPoint(
-            x: viewportSize.width / 2 + currentLocationPoint.x - targetPoint.x,
-            y: viewportSize.height / 2 + currentLocationPoint.y - targetPoint.y
+            x: currentLocationPoint.x - (targetPoint.x - viewportSize.width / 2) / zoomScale,
+            y: currentLocationPoint.y - (targetPoint.y - viewportSize.height / 2) / zoomScale
         )
     }
 
@@ -816,6 +818,7 @@ final class MapHomeStickmanViewportProjection {
 @MainActor
 final class MapHomeAppleStickmanLivePoint {
     let channel = MapHomeLivePointChannel()
+    let markerAttachment = MapHomeMarkerAttachment()
     var point: CGPoint? {
         get { channel.point }
         set { channel.send(newValue) }

@@ -199,7 +199,12 @@ struct FrequentPlaceResolutionEngine: Sendable {
                 : nil
         }
         let places = containing.map(\.0)
-        let atHeight = containing.filter { !PlaceHeightMatch.isAtOtherHeight($0.0, among: places, readings: readings) }
+        // 높이는 같은 자리에 겹친 곳만 가른다. 한쪽이 수평으로 훨씬 가까우면 기압 오차로 빼지 않는다.
+        let closest = containing.map(\.1).min() ?? 0
+        let atHeight = containing.filter { candidate in
+            candidate.1 <= closest + 1 && containing.contains { $0.1 >= candidate.1 + Self.horizontalDecisionMeters }
+                || !PlaceHeightMatch.isAtOtherHeight(candidate.0, among: places, readings: readings)
+        }
         let accuracy = point.horizontalAccuracy >= 0 ? point.horizontalAccuracy : 0
         return (atHeight.isEmpty ? containing : atHeight)
             .max(by: {
@@ -209,6 +214,8 @@ struct FrequentPlaceResolutionEngine: Sendable {
             })?
             .0
     }
+
+    private static let horizontalDecisionMeters = 60.0
 
     /// 위치 오차를 감안해 반경 안에 있을 확률에 장소 크기 가중을 곱한다. 작은 장소가 더 구체적인 답이라
     /// 식당(30m)은 회사(100m 이상) 반경 안에서도 이기고, 크기가 비슷하면 거리와 정확도가 가른다.

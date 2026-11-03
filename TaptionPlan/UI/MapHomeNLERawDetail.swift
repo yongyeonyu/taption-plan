@@ -22,7 +22,11 @@ enum NLESensorEvidenceText {
         for segment in inside.sorted(by: { $0.channel.rawValue < $1.channel.rawValue }) where !titles.contains(segment.title) {
             titles.append(segment.title)
         }
-        let differs = inside.contains { $0.channel == .motion && $0.categoryID != categoryID && $0.categoryID != "unconfirmed" }
+        // 정지는 어느 분류와도 어긋나지 않는다. 회의·휴식은 앉아서 한다(NLE1103A02).
+        let differs = inside.contains {
+            $0.channel == .motion && $0.categoryID != categoryID && $0.categoryID != "unconfirmed"
+                && $0.behavior != MotionKind.stationary.rawValue
+        }
         return (titles.prefix(6).joined(separator: " · "), differs)
     }
 }

@@ -24,10 +24,11 @@ enum CalendarTitleClassification {
     /// 일정으로 고를 수 있는 상세활동. 이동·수면·미확인과 경로·휴식·걷기는 일정 제목으로 정하지 않는다.
     static var selectableCategories: [RecordClassificationCategory] {
         RecordClassificationCatalog.categories.compactMap { category in
-            guard !["movement", "sleep", "unconfirmed"].contains(category.id) else { return nil }
+            guard !["movement", "unconfirmed"].contains(category.id) else { return nil }
             var value = category
             value.details = category.details.filter { detail in
-                detail.automaticOnly != true && !["stationary", "walking"].contains(detail.behavior) && !detail.id.hasSuffix(".route")
+                detail.automaticOnly != true && detail.behavior != "walking" && !detail.id.hasSuffix(".route")
+                    && (detail.behavior != "stationary" || detail.id.hasSuffix(".rest"))
             }
             return value.details.isEmpty ? nil : value
         }
@@ -40,11 +41,12 @@ enum CalendarTitleClassification {
         ("health.hospital", ["병원", "진료", "치과", "검진", "한의원", "피부과", "내과"], ["hospital", "clinic", "dentist"]),
         ("health.salon", ["미용실", "헤어", "커트", "네일"], ["salon", "haircut"]),
         ("study.academy", ["학원"], ["academy"]),
-        ("study.class", ["수업", "강의", "세미나"], ["class", "lecture", "seminar"]),
+        ("study.academy", ["수업", "강의", "세미나"], ["class", "lecture", "seminar"]),
         ("eating.meal", ["점심", "저녁", "아침", "식사", "회식", "브런치"], ["lunch", "dinner", "breakfast", "brunch"]),
         ("housework.groceries", ["장보기", "마트"], ["groceries"]),
         ("housework.laundry", ["빨래"], ["laundry"]),
         ("housework.cooking", ["요리"], ["cooking"]),
+        ("housework.dishes", ["설거지"], ["dishes"]),
         ("housework.chores", ["청소", "집안일"], ["chores"]),
         ("health.meditation", ["명상"], ["meditation"]),
         ("hobby.reading", ["독서"], ["reading"]),
@@ -118,6 +120,10 @@ enum CalendarTitleClassification {
     }
 
     static func isCalendarDerived(_ actual: ActualRecord) -> Bool {
-        actual.evidence.contains { $0.hasPrefix(evidencePrefix) || $0.hasPrefix("캘린더 일정 ") }
+        actual.evidence.contains(where: isCalendarEvidence)
+    }
+
+    static func isCalendarEvidence(_ text: String) -> Bool {
+        text.hasPrefix(evidencePrefix) || text.hasPrefix("캘린더 일정 ")
     }
 }

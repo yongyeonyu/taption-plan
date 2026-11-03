@@ -3,7 +3,7 @@ import CoreGraphics
 /// 직접 고르는 일상 분류(낮잠·요리…)의 화랑이 장면(RIG1103A02). 장면마다 뚜렷한 동작 하나를 되풀이한다.
 extension HwarangScene {
     static let dailyScenes: [HwarangScene] = [
-        .nap, .cook, .groceries, .laundry, .friends, .date, .family, .phoneCall,
+        .nap, .cook, .groceries, .laundry, .dishes, .meeting, .friends, .date, .family, .phoneCall,
         .meditate, .hospital, .salon, .readBook, .game, .music, .video, .petCare
     ]
 
@@ -18,7 +18,7 @@ extension HwarangScene {
     /// 곁에 다른 고양이를 함께 그려 화랑이를 작게 비켜 앉히는 장면의 배율과 왼쪽 이동.
     var companionLayout: (scale: CGFloat, shift: CGFloat)? {
         switch self {
-        case .friends: (0.8, -24)
+        case .friends, .meeting: (0.8, -24)
         case .date: (0.8, -14)
         case .family: (0.76, -24)
         default: nil
@@ -104,8 +104,9 @@ extension HwarangPainter {
     /// 불가사리: 옆으로 벌렁 누워 네 다리를 사방으로 편다.
     private func starfish(_ p: Pose) {
         let top = 72 - p.breath, tw = sin(p.tp) * 2
-        let tail = tailBlobs([P(24, 94), P(8, 94 + tw), P(-6, 88 + tw)])
-        let legs = limb([P(30, 84), P(16, 72), P(10, 58)], radius: 5.4)
+        // 꼬리는 엉덩이에서 위로 굽어 오르고, 뒷다리는 왼쪽 바닥으로 뻗는다.
+        let tail = tailBlobs([P(24, 86), P(12, 76), P(9, 62 + tw), P(16, 50 + tw)])
+        let legs = limb([P(28, groundY - 6), P(12, groundY - 4), P(-4, groundY - 6)], radius: 5.4)
             + limb([P(54, 80), P(46, 64), P(50, 48)], radius: 5.2)
             + limb([P(70, groundY - 6), P(96, groundY - 3), P(120, groundY - 5)], radius: 5.2)
         unionBody({
@@ -114,6 +115,8 @@ extension HwarangPainter {
             cubic(84, 86, 82, groundY + 1, 72, groundY + 1); c.closePath()
         }, parts: tail.blobs + legs)
         fill(0xFFE3DC, 0.7); c.beginPath(); oval(46, top + 15, 15, 7 + p.breath * 0.4); c.fillPath()
+        jelly(at: P(-4, groundY - 6), angle: -.pi / 2)
+        jelly(at: P(50, 48), angle: 0)
         finish(p, tail: tail.points, head: P(90, groundY - 23 + p.breath * 0.3), shoulder: P(72, 88))
     }
 
@@ -179,6 +182,14 @@ extension HwarangPainter {
         catmull(points, seg: 24).map { Blob(x: $0.x, y: $0.y, r: r) }
     }
 
+    /// 발바닥 젤리. `angle`은 발끝이 향하는 쪽이다.
+    private func jelly(at q: CGPoint, angle: CGFloat) {
+        c.saveGState(); c.translateBy(x: q.x, y: q.y); c.rotate(by: angle)
+        fill(0xF7A8BC); c.beginPath(); oval(0, 1.6, 2.7, 2.1)
+        for x: CGFloat in [-2.7, 0, 2.7] { circle(x, x == 0 ? -2.9 : -1.9, 1.1) }
+        c.fillPath(); c.restoreGState()
+    }
+
     private func toes(at q: CGPoint) {
         stroke(outline, 1.2); c.setLineCap(.round); c.beginPath()
         for dx: CGFloat in [-1.8, 1.8] { c.move(to: P(q.x + dx, q.y + 1.5)); c.addLine(to: P(q.x + dx, q.y + 4.4)) }
@@ -195,7 +206,7 @@ extension HwarangPainter {
     private func foldedLeg(_ points: [CGPoint], radius r: CGFloat) {
         limpLeg(points, radius: r)
         let path = catmull(points)
-        stroke(white, r * 2 + outlineWidth * 2); c.setLineCap(.butt)
+        stroke(coat.fur, r * 2 + outlineWidth * 2); c.setLineCap(.butt)
         c.beginPath(); c.addLines(between: Array(path.prefix(max(2, path.count * 2 / 5)))); c.strokePath()
         c.setLineCap(.round)
     }
@@ -204,7 +215,7 @@ extension HwarangPainter {
     private func limpLeg(_ points: [CGPoint], radius r: CGFloat) {
         let path = catmull(points)
         c.setLineCap(.round); c.setLineJoin(.round)
-        for (color, width) in [(outline, r * 2 + outlineWidth * 2), (white, r * 2)] {
+        for (color, width) in [(outline, r * 2 + outlineWidth * 2), (coat.fur, r * 2)] {
             stroke(color, width); c.beginPath(); c.addLines(between: path); c.strokePath()
         }
     }
@@ -305,8 +316,18 @@ func dailyPose(_ scene: HwarangScene, s: CGFloat) -> Pose {
         var p = walk(s, period: 1.3, stride: 16)
         p.h.eye = wrap(s, 3) < 1 ? .happy : blink(s)
         return p
+    case .dishes:
+        var p = sit(s, HeadPose(tilt: sin(s * 2.2) * 0.06, look: 3, eye: blink(s, 3)))
+        p.fn = P(92 + sin(s * 7) * 5, 74 + cos(s * 7) * 3)
+        return p
     case .laundry:
         return sit(s, HeadPose(tilt: sin(s * 2.6) * 0.1, look: 3, eye: blink(s, 2.4)))
+    case .meeting:
+        // 회의: 앞발을 휘두르며 서로 대든다.
+        let swipe = (sin(s * 11) + 1) / 2
+        var p = sit(s, HeadPose(tilt: 0.1 + sin(s * 9) * 0.05, look: 2.6, mouthOpen: 0.5 + swipe * 0.5, eye: .half))
+        p.fn = P(lerp(88, 112, swipe), lerp(52, 40, swipe))
+        return p
     case .friends:
         let wave = sin(s * 7)
         var p = sit(s, HeadPose(tilt: 0.05, look: 2.4, mouthOpen: max(0, sin(s * 5)) * 0.7, eye: wrap(s, 4) < 1.4 ? .happy : blink(s)))
@@ -364,6 +385,7 @@ extension HwarangPainter {
             napCushion()
             sun(sec)
         case .laundry: washer(sec)
+        case .dishes: sink(sec)
         case .meditate: zafu(sec)
         case .hospital: crossSign()
         case .salon: mirror()
@@ -375,6 +397,11 @@ extension HwarangPainter {
     /// 화랑이의 뒤나 곁에 있는 다른 고양이. 화랑이 장식은 걸치지 않는다.
     mutating func dailyCompanions(_ scene: HwarangScene, sec: CGFloat) {
         switch scene {
+        case .meeting:
+            let swipe = (sin(sec * 11 + .pi) + 1) / 2
+            var p = sit(sec + 1.3, HeadPose(tilt: 0.1 - sin(sec * 9) * 0.05, look: 2.4, mouthOpen: 0.5 + swipe * 0.5, eye: .half))
+            p.fn = P(lerp(88, 112, swipe), lerp(52, 40, swipe)); p.tp = sec * 6; p.tw = 0.9
+            companion(p, x: 92, scale: 0.72, ground: groundY, bow: 0xE5484D)
         case .friends:
             var p = sit(sec + 1.3, HeadPose(tilt: -0.04, look: 2.2, mouthOpen: max(0, sin(sec * 5 + .pi)) * 0.7, eye: wrap(sec, 3.6) < 1.2 ? .happy : blink(sec, 2.7)))
             p.tp = sec * 3; p.tw = 0.5
@@ -423,6 +450,7 @@ extension HwarangPainter {
     func dailyForeground(_ scene: HwarangScene, sec: CGFloat) {
         c.setLineJoin(.round); c.setLineCap(.round)
         switch scene {
+        case .meeting: fightSparks(sec)
         case .nap:
             let z = wrap(sec * 0.4, 1)
             napLetter(102 + z * 7, 58 - z * 14, size: 6 + z * 3, alpha: 1 - z)
@@ -504,6 +532,21 @@ extension HwarangPainter {
         c.drawPath(using: .fillStroke)
     }
 
+    /// 두 고양이 사이의 불꽃과 머리 위 뿔난 표시.
+    private func fightSparks(_ sec: CGFloat) {
+        c.setLineCap(.round)
+        for i in 0..<5 {
+            let a = CGFloat(i) * tau / 5 + sec * 5, r = 8 + sin(sec * 13 + CGFloat(i)) * 4, q = P(62, 56)
+            stroke(i % 2 == 0 ? 0xF2B705 : 0xE5484D, 2.4); c.beginPath()
+            c.move(to: P(q.x + cos(a) * r, q.y + sin(a) * r)); c.addLine(to: P(q.x + cos(a) * (r + 7), q.y + sin(a) * (r + 7))); c.strokePath()
+        }
+        stroke(0xE5484D, 2); c.beginPath()
+        for x: CGFloat in [32, 92] {
+            c.move(to: P(x - 4, 22)); c.addLine(to: P(x + 4, 28)); c.move(to: P(x + 4, 22)); c.addLine(to: P(x - 4, 28))
+        }
+        c.strokePath()
+    }
+
     private func bubble(_ q: CGPoint, sec: CGFloat) {
         fill(white); stroke(outline, 1.6)
         rounded(q.x - 16, q.y - 8, 32, 16, 8, fillHex: white, line: 1.6)
@@ -555,6 +598,22 @@ extension HwarangPainter {
         fill(0xE5484D); stroke(outline, 1.6); c.beginPath(); circle(x - 6, 70, 5.4); c.drawPath(using: .fillStroke)
         fill(0xF4E3C1); stroke(outline, 2); poly([P(x - 14, 72), P(x + 14, 72), P(x + 12, 100), P(x - 12, 100)]); c.drawPath(using: .fillStroke)
         stroke(0xC9A671, 1.6); c.beginPath(); c.move(to: P(x - 8, 79)); c.addLine(to: P(x + 8, 79)); c.strokePath()
+    }
+
+    /// 싱크대와 접시, 거품. 앞발이 접시를 닦는다.
+    private func sink(_ sec: CGFloat) {
+        rounded(84, 78, 48, groundY - 77, 3, fillHex: 0xD9C3A0, line: 2.2)
+        rounded(80, 72, 56, 8, 3, fillHex: 0xC6D3DC, line: 2)
+        stroke(outline, 2.4); c.setLineCap(.round); c.beginPath(); c.move(to: P(122, 72)); c.addLine(to: P(122, 58)); quad(122, 52, 114, 54); c.strokePath()
+        for i in 0..<3 where wrap(sec * 1.4 + CGFloat(i) * 0.33, 1) < 0.8 {
+            let t = wrap(sec * 1.4 + CGFloat(i) * 0.33, 1)
+            fill(0x8CCBEF); c.beginPath(); circle(114, 56 + t * 16, 1.3); c.fillPath()
+        }
+        fill(0xFFFFFF); stroke(outline, 1.8); c.beginPath(); oval(98, 68, 11, 5); c.drawPath(using: .fillStroke)
+        for (i, q) in [P(90, 60), P(102, 58), P(108, 62), P(96, 54)].enumerated() {
+            let wobble = sin(sec * 3 + CGFloat(i)) * 1.5
+            fill(0xFFFFFF, 0.92); stroke(0x8CCBEF, 1.1); c.beginPath(); circle(q.x, q.y + wobble, 2.4 + CGFloat(i % 2)); c.drawPath(using: .fillStroke)
+        }
     }
 
     private func washer(_ sec: CGFloat) {

@@ -12,8 +12,11 @@ struct TaptionLiveActivityCat: View {
 
     var body: some View {
         let action = TaptionLiveActivityCatPolicy.action(categoryID: categoryID, title: title)
+        let shownFrame = reduceMotion || dimmed ? 0 : frame
+        let posed = TaptionHwarangPose.resolve(categoryID: categoryID, title: title)
+            .flatMap { TaptionCatAtlasBitmap.poseImage(style: style, pose: $0, frame: shownFrame) }
         Group {
-            if let bitmap = TaptionCatAtlasBitmap.image(style: style, action: action, frame: reduceMotion || dimmed ? 0 : frame) {
+            if let bitmap = posed ?? TaptionCatAtlasBitmap.image(style: style, action: action, frame: shownFrame) {
                 Image(uiImage: bitmap)
                     .renderingMode(.original)
                     .resizable()
@@ -32,6 +35,6 @@ struct TaptionLiveActivityCat: View {
                     .foregroundStyle(.white)
             }
         }
-        .accessibilityLabel("화랑이 \(title)")
+        .accessibilityLabel("\(style == "calico" ? "춘향이" : style == "mackerel" ? "윤복이" : "화랑이") \(title)")
     }
 }

@@ -73,6 +73,24 @@ final class MapHomeAppleWalkerAnnotation: NSObject, MKAnnotation {
     }
 }
 
+/// 장소 핀의 표시 정책. MapKit은 낮은 우선순위 표식이 겹치면 숨기므로, 축소하면 핀이 사라진다.
+/// 집은 어떤 축소에서도 남아야 해 `.required`다. 다른 등록 지점은 겹치면 사라져도 된다(대표 지시, HIC1103A01).
+enum MapHomePlaceDisplayPolicy {
+    static func priority(for destination: MapHomeLocationDestination) -> MKFeatureDisplayPriority {
+        destination == .home ? .required : .defaultHigh
+    }
+
+    static func zPriority(for destination: MapHomeLocationDestination) -> MKAnnotationViewZPriority {
+        destination == .home ? .defaultSelected : .defaultUnselected
+    }
+
+    /// 벡터 지도는 충돌 판정이 없어 집이 남지만, 축소하면 나중에 그린 회사·역 핀이 집을 덮는다. 집을 그 위에 둔다.
+    /// 화랑이·카운터(`MapHomeLayerPriority.stickman`)보다는 아래다.
+    static func vectorZIndex(for destination: MapHomeLocationDestination) -> Double {
+        destination == .home ? 0.5 : 0
+    }
+}
+
 struct MapHomeAppleHostedDescriptor {
     let rootView: AnyView
     let size: CGSize
@@ -280,3 +298,74 @@ actor MapHomeAppleRouteResolver {
         })
     }
 }
+/// 재생 중 카운터가 받은 점과 화랑이가 실제로 그려진 점의 차이(CTR1103A02).
+/// 화면 녹화를 분석하지 않아도 카운터 흔들림을 전후로 비교할 수 있게 한다.
+@MainActor
+enum MapHomeAppleCounterDriftProbe {
+    private static var values: [Double] = []
+
+    static func note(published: CGPoint?, actual: CGPoint?) {
+        guard MapHomePlaybackProbe.isActive, let published, let actual else { return }
+        values.append(hypot(published.x - actual.x, published.y - actual.y))
+        if values.count.isMultiple(of: 300) { record() }
+    }
+
+    private static func record() {
+        let sorted = values.sorted()
+        TaptionPlanDiagnosticsLogger.shared.record("apple_counter_drift", metrics: [
+            "frames": Double(sorted.count),
+            "mean_pt": sorted.reduce(0, +) / Double(sorted.count),
+            "p95_pt": sorted[Int(Double(sorted.count - 1) * 0.95)],
+            "max_pt": sorted[sorted.count - 1],
+            "over3_pt": Double(sorted.filter { $0 > 3 }.count),
+            "over10_pt": Double(sorted.filter { $0 > 10 }.count),
+        ])
+    }
+}
+
+#if DEBUG || BENCH
+/// 측정용: `-benchHome=위도,경도`면 집과 회사를 그 근처에 놓고, `-autoBenchHomeZoom`이면 집을 가운데 두고 단계별로 축소한다(HIC1103A01).
+@MainActor
+enum MapHomeBenchHomeZoom {
+    static let distances: [CLLocationDistance] = [2_000, 20_000, 200_000, 2_000_000, 10_000_000]
+
+    /// `-benchPlaybackWaitTicks=20`이면 재생을 그만큼(2초 단위) 재고 끊는다. 느린 기기·시뮬레이터에서도 통계가 남는다.
+    static var playbackWaitTicks: Int {
+        ProcessInfo.processInfo.arguments.first { $0.hasPrefix("-benchPlaybackWaitTicks=") }
+            .flatMap { Int($0.dropFirst("-benchPlaybackWaitTicks=".count)) } ?? 120
+    }
+
+    /// 앱 시작 때 불러온 저장값이 먼저 고른 측정 스타일을 덮어쓸 수 있어, 재기 직전에 한 번 더 고른다.
+    static func reapplyStyle(model: AppModel) {
+        guard let value = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix("-benchMapStyle=") })?
+            .dropFirst("-benchMapStyle=".count), let style = MapDisplayStyle(rawValue: String(value)) else { return }
+        model.setMapDisplayStyle(style)
+    }
+
+    static func run(model: AppModel, setCamera: (MapCamera) -> Void) async {
+        guard let home = homeCoordinate else { return }
+        let places = model.settings.frequentPlaces
+        if let id = places.first(where: { $0.kind == .home })?.id {
+            model.setFrequentPlaceLocation(id, latitude: home.latitude, longitude: home.longitude)
+        }
+        if let id = places.first(where: { $0.kind == .company })?.id {
+            model.setFrequentPlaceLocation(id, latitude: home.latitude + 0.004, longitude: home.longitude + 0.004)
+        }
+        guard ProcessInfo.processInfo.arguments.contains("-autoBenchHomeZoom") else { return }
+        try? await Task.sleep(for: .seconds(12))
+        if Task.isCancelled { return }
+        reapplyStyle(model: model)
+        try? await Task.sleep(for: .seconds(3))
+        for distance in distances {
+            setCamera(MapCamera(centerCoordinate: home, distance: distance))
+            try? await Task.sleep(for: .seconds(8))
+        }
+    }
+
+    private static var homeCoordinate: CLLocationCoordinate2D? {
+        guard let value = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix("-benchHome=") }) else { return nil }
+        let parts = value.dropFirst("-benchHome=".count).split(separator: ",").compactMap { Double($0) }
+        return parts.count == 2 ? CLLocationCoordinate2D(latitude: parts[0], longitude: parts[1]) : nil
+    }
+}
+#endif

@@ -445,3 +445,32 @@ enum MapHomeRouteTimelinePlaybackMath {
             .distance(from: CLLocation(latitude: second.latitude, longitude: second.longitude))
     }
 }
+
+/// 재생 중 줌 거리 변화를 시간 기준으로 부드럽게 한다. 틱 횟수가 아니라 경과 시간으로 따라가고,
+/// 초당 로그 변화량에 상한을 둬서 정지와 이동이 짧게 번갈아도 확대·축소가 튀지 않게 한다.
+/// 시정수 0.6/0.9초 → 0.25/0.35초, 상한 1.6/0.9 → 3.2/2.0배/초: 확대·축소가 지금보다 빨리 따라온다(대표 지시, PLY1029A01).
+final class MapHomePlaybackZoomSmoother {
+    static let timeConstant: TimeInterval = 0.8
+    static let maximumLogRate = 1.2
+    /// 속도가 줄어 다가갈 때(줌인)는 조금 천천히 따라가되, 너무 늦지 않게 짧은 시간 상수를 쓴다.
+    static let zoomInTimeConstant: TimeInterval = 1.1
+    static let zoomInMaximumLogRate = 0.9
+    static let maximumStep: TimeInterval = 0.5
+
+    private var lastUptime: TimeInterval?
+
+    func next(current: Double, target: Double, uptime: TimeInterval) -> Double {
+        defer { lastUptime = uptime }
+        guard current.isFinite, current > 0, target.isFinite, target > 0,
+              let lastUptime else { return current }
+        let dt = min(max(uptime - lastUptime, 0), Self.maximumStep)
+        guard dt > 0 else { return current }
+        let gap = log(target) - log(current)
+        let zoomingIn = gap < 0
+        let step = gap * (1 - exp(-dt / (zoomingIn ? Self.zoomInTimeConstant : Self.timeConstant)))
+        let limit = (zoomingIn ? Self.zoomInMaximumLogRate : Self.maximumLogRate) * dt
+        return exp(log(current) + min(max(step, -limit), limit))
+    }
+
+    func reset() { lastUptime = nil }
+}

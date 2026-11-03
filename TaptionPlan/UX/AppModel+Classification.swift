@@ -616,13 +616,17 @@ extension AppModel {
         }
         let railJourneys = RailJourneyRecognizer.journeys(readings: readings)
         let recognizedTravel = CarAudioTravelConfirmation.enforcingRegisteredCar(
-            RailJourneyRecognizer.applying(
-                railJourneys,
-                to: ActivityClassificationLockEngine.mergingLockedTravel(
-                    existing: snapshot.travel,
-                    fresh: generatedTravel,
-                    inside: span
+            SubwayAlighting.applying(
+                RailJourneyRecognizer.applying(
+                    railJourneys,
+                    to: ActivityClassificationLockEngine.mergingLockedTravel(
+                        existing: snapshot.travel,
+                        fresh: generatedTravel,
+                        inside: span
+                    ),
+                    corrections: snapshot.settings.movementCorrections
                 ),
+                readings: readings,
                 corrections: snapshot.settings.movementCorrections
             ),
             readings: readings,

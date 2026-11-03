@@ -136,6 +136,11 @@ struct MapHomeCalendarSheet: View {
             guard !Task.isCancelled else { return }
             visits = value
         }
+        // 달을 넘기면 계절 테마도 그 달로 바꾸고, 닫으면 고른 날짜로 돌아온다(SEA1103A01).
+        .onChange(of: displayedMonth) { _, month in
+            TaptionSeasonStore.select(calendar.date(byAdding: .day, value: 14, to: month) ?? month)
+        }
+        .onDisappear { TaptionSeasonStore.select(selectedDate) }
         .task(id: "\(displayedMonth.timeIntervalSince1970)|\(extraKindsRaw)") {
             let month = displayedMonth
             let rememberedStatuses = MapHomeCalendarMonthMemory.shared.statuses(for: month)
@@ -487,17 +492,9 @@ struct MapHomeCalendarSheet: View {
             : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
         return LazyVGrid(columns: gridColumns, spacing: 0) {
             ForEach(Array(weekdays.enumerated()), id: \.offset) { index, weekday in
-                VStack(spacing: 2) {
-                    Image(weekdayIconName(index: index))
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 18, height: 18)
-                        .accessibilityHidden(true)
-
-                    Text(weekday)
-                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold))
-                        .foregroundStyle(weekdayColor(index: index))
-                }
+                Text(weekday)
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold))
+                    .foregroundStyle(weekdayColor(index: index))
                     .frame(maxWidth: .infinity)
             }
         }
@@ -615,18 +612,6 @@ struct MapHomeCalendarSheet: View {
 
     private func weekdayColor(index: Int) -> Color {
         index == 0 ? .tpHoliday : index == 6 ? .tpSaturday : .tpSecondary
-    }
-
-    private func weekdayIconName(index: Int) -> String {
-        switch index {
-        case 0: "MapHomeCalendarSunday"
-        case 1: "MapHomeCalendarMonday"
-        case 2: "MapHomeCalendarTuesday"
-        case 3: "MapHomeCalendarWednesday"
-        case 4: "MapHomeCalendarThursday"
-        case 5: "MapHomeCalendarFriday"
-        default: "MapHomeCalendarSaturday"
-        }
     }
 
     private func dayColor(weekday: Int, holiday: String?) -> Color {

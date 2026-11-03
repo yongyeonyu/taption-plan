@@ -92,9 +92,7 @@ struct MapHomeCalendarButton: View {
 
     var body: some View {
         Button(action: action) {
-            Image("GoogleGLogo")
-                .resizable()
-                .scaledToFit()
+            MapHomeCalendarSourceLogo()
                 .shadow(color: .black.opacity(0.28), radius: 1, y: 1)
                 .padding(10)
                 .frame(width: 40, height: 40)
@@ -269,5 +267,97 @@ struct MapHomeTodayCalendarList: View {
                 return lhs.span.start < rhs.span.start
             })
         }
+    }
+}
+
+/// 일정 출처 로고. 구글 계정을 연결했으면 구글, 아니면 애플 캘린더다.
+struct MapHomeCalendarSourceLogo: View {
+    var body: some View {
+        if GoogleCalendarAccount.shared.isConnected {
+            Image("GoogleGLogo").resizable().scaledToFit()
+        } else {
+            Image(systemName: "applelogo").resizable().scaledToFit().foregroundStyle(Color.black)
+        }
+    }
+}
+
+/// 메뉴 연결의 캘린더 화면. 한 번 눌러 연결하고, 구글이 안 되면 애플 캘린더를 쓴다.
+struct MapHomeCalendarConnectSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Bindable var model: AppModel
+    let language: MapHomeLanguage
+    @State private var message: String?
+    @State private var isWorking = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text(language.text("캘린더 연결", "Connect calendar"))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(21)), weight: .bold))
+                Spacer()
+                Button(language.text("닫기", "Close")) { dismiss() }
+            }
+            Text(language.text("일정을 읽어 지도와 활동 판정에 씁니다. 일정은 기기에만 저장합니다.", "Events are read for the map and activity detection and stay on this device."))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
+                .foregroundStyle(Color.tpSecondary)
+            connectButton(
+                GoogleCalendarAccount.shared.isConnected ? language.text("구글 캘린더 연결 해제", "Disconnect Google") : language.text("구글 캘린더 바로 연결", "Connect Google Calendar"),
+                logo: AnyView(Image("GoogleGLogo").resizable().scaledToFit()), action: toggleGoogle
+            )
+            connectButton(
+                language.text("애플 캘린더 사용", "Use Apple Calendar"),
+                logo: AnyView(Image(systemName: "applelogo").resizable().scaledToFit().foregroundStyle(Color.tpInk)), action: useApple
+            )
+            if let message {
+                Text(message)
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
+                    .foregroundStyle(Color.tpAccent)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(20)
+        .background(Color.tpBackground)
+        .presentationDetents([.medium])
+    }
+
+    private func connectButton(_ title: String, logo: AnyView, action: @escaping () async -> Void) -> some View {
+        Button {
+            guard !isWorking else { return }
+            isWorking = true
+            Task { await action(); isWorking = false }
+        } label: {
+            HStack(spacing: 12) {
+                logo.frame(width: 22, height: 22)
+                Text(title).font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold)).foregroundStyle(Color.tpInk)
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .frame(height: 54)
+            .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .disabled(isWorking)
+    }
+
+    private func toggleGoogle() async {
+        if GoogleCalendarAccount.shared.isConnected {
+            await model.disconnectGoogleCalendar()
+            message = language.text("구글 연결을 해제했습니다.", "Google disconnected.")
+            return
+        }
+        do {
+            try await GoogleCalendarAccount.shared.connect()
+            message = language.text("구글 캘린더를 연결했습니다.", "Google Calendar connected.")
+        } catch GoogleCalendarError.cancelled {
+            message = nil
+        } catch {
+            message = error.localizedDescription
+        }
+    }
+
+    private func useApple() async {
+        let granted = await model.requestCalendar()
+        message = granted ? language.text("애플 캘린더를 연결했습니다.", "Apple Calendar connected.")
+            : language.text("설정 앱에서 캘린더 권한을 켜 주세요.", "Turn on calendar access in Settings.")
     }
 }

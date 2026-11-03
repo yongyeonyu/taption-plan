@@ -62,7 +62,7 @@ struct MapHomeSidebarNoteBubble: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 5) {
                     if note.source == .event {
-                        Image("GoogleGLogo").resizable().scaledToFit().frame(width: 12, height: 12)
+                        MapHomeCalendarSourceLogo().frame(width: 12, height: 12)
                     }
                     Text(note.time)
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold))

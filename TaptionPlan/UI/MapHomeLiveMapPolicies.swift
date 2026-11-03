@@ -363,35 +363,6 @@ enum MapHomeLiveFollowSpeed {
     }
 }
 
-/// 재생 중 줌 거리 변화를 시간 기준으로 부드럽게 한다. 틱 횟수가 아니라 경과 시간으로 따라가고,
-/// 초당 로그 변화량에 상한을 둬서 정지와 이동이 짧게 번갈아도 확대·축소가 튀지 않게 한다.
-/// 시정수 0.6/0.9초 → 0.25/0.35초, 상한 1.6/0.9 → 3.2/2.0배/초: 확대·축소가 지금보다 빨리 따라온다(대표 지시, PLY1029A01).
-final class MapHomePlaybackZoomSmoother {
-    static let timeConstant: TimeInterval = 0.25
-    static let maximumLogRate = 3.2
-    /// 속도가 줄어 다가갈 때(줌인)는 조금 천천히 따라가되, 너무 늦지 않게 짧은 시간 상수를 쓴다.
-    static let zoomInTimeConstant: TimeInterval = 0.35
-    static let zoomInMaximumLogRate = 2.0
-    static let maximumStep: TimeInterval = 0.5
-
-    private var lastUptime: TimeInterval?
-
-    func next(current: Double, target: Double, uptime: TimeInterval) -> Double {
-        defer { lastUptime = uptime }
-        guard current.isFinite, current > 0, target.isFinite, target > 0,
-              let lastUptime else { return current }
-        let dt = min(max(uptime - lastUptime, 0), Self.maximumStep)
-        guard dt > 0 else { return current }
-        let gap = log(target) - log(current)
-        let zoomingIn = gap < 0
-        let step = gap * (1 - exp(-dt / (zoomingIn ? Self.zoomInTimeConstant : Self.timeConstant)))
-        let limit = (zoomingIn ? Self.zoomInMaximumLogRate : Self.maximumLogRate) * dt
-        return exp(log(current) + min(max(step, -limit), limit))
-    }
-
-    func reset() { lastUptime = nil }
-}
-
 /// 재생 줌 계획(대표 지시 ZMP1020A01). 재생을 시작할 때 이동 구간을 미리 나눠 구간마다 목표 배율을 정해 둔다.
 /// - 정지 구간·걷기·달리기·등록 장소에서 출발하거나 도착하는 이동·속도를 모르는 이동은 85로 고정한다.
 /// - 그 밖의 탈것 구간만 구간 속도로 목표 배율을 정한다(느리면 최대 92, 빠르면 최소 42).
@@ -402,11 +373,13 @@ final class MapHomePlaybackZoomSmoother {
 /// 등록된 지점(집·회사 등) 반경 안은 확대 배율(85)로 고정한다.
 struct MapHomePlaybackZoomProfile: Equatable, Sendable {
     static let stepMinutes = 0.5
-    static let speedWindowSeconds: TimeInterval = 90
-    /// 이동 평균 반경(칸). 2칸이면 앞뒤 1분.
-    static let smoothingRadiusSteps = 2
-    /// 30초당 배율이 바뀔 수 있는 최댓값. 85에서 42까지 가는 데 약 3.5분 걸린다.
-    static let maximumStepChange = 6.0
+    /// 경로 전체를 먼저 훑어 줌을 정한다(PLY1104A02). 속도는 앞뒤 4분 평균으로 재고,
+    /// 역·신호의 짧은 정차는 중앙값으로 지운 뒤 앞뒤 4분을 평탄화한다.
+    static let speedWindowSeconds: TimeInterval = 240
+    static let medianRadiusSteps = 6
+    static let smoothingRadiusSteps = 8
+    /// 30초당 배율이 바뀔 수 있는 최댓값. 85에서 50까지 가는 데 약 7분 걸린다.
+    static let maximumStepChange = 2.5
     static let placeRadiusMeters = 200.0
     /// 등록 지점 반경 안으로 들어가기 전후 이 칸 수만큼도 85로 둔다(도착 직전 미리 확대).
     static let placePaddingSteps = 2
@@ -476,11 +449,15 @@ struct MapHomePlaybackZoomProfile: Equatable, Sendable {
                 }
             }
         }
-        // 이동 평균으로 조금 평탄화한다.
-        var smooth = raw
+        // 짧은 정차를 지운 뒤 이동 평균으로 평탄화한다.
+        let steady = raw.indices.map { i -> Double in
+            let window = raw[max(0, i - medianRadiusSteps)...min(count - 1, i + medianRadiusSteps)].sorted()
+            return window[window.count / 2]
+        }
+        var smooth = steady
         for i in 0..<count {
             let lo = max(0, i - smoothingRadiusSteps), hi = min(count - 1, i + smoothingRadiusSteps)
-            smooth[i] = raw[lo...hi].reduce(0, +) / Double(hi - lo + 1)
+            smooth[i] = steady[lo...hi].reduce(0, +) / Double(hi - lo + 1)
         }
         // 변화량 제한(앞→뒤, 뒤→앞)으로 갑작스러운 변화를 없앤다.
         for i in 1..<count {

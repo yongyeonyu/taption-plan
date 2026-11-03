@@ -359,3 +359,76 @@ struct MapHomePhotoAlbumSelection: Identifiable {
     let id: String
     let moments: [PhotoMoment]
 }
+
+/// 재생 중 지나간 사진과 메모를 잠깐 띄운다(PLY1104A02). 사진은 지도 아이콘의 3배로 떴다가 줄지 않고 희미해지고, 메모는 한 글자씩 찍힌다.
+struct MapHomePlaybackMomentsOverlay: View {
+    enum Moment: Equatable {
+        case photo(id: String)
+        case memo(text: String)
+    }
+
+    let minute: Double
+    let events: [(minute: Double, moment: Moment)]
+    let anchor: CGPoint
+
+    @State private var current: (moment: Moment, start: Date)?
+    @State private var lastMinute: Double?
+
+    static let photoSide: CGFloat = 138
+    static let lifetime: TimeInterval = 2.4
+
+    /// 지난 분에서 이번 분 사이에 지나간 것 중 마지막. 되감기면 아무것도 띄우지 않는다.
+    nonisolated static func passed<T>(_ events: [(minute: Double, moment: T)], from previous: Double?, to minute: Double) -> T? {
+        guard let previous, minute > previous else { return nil }
+        return events.last { $0.minute > previous && $0.minute <= minute }?.moment
+    }
+
+    nonisolated static func opacity(elapsed: TimeInterval) -> Double {
+        if elapsed < 0.2 { return max(0, elapsed / 0.2) }
+        return min(1, max(0, (lifetime - elapsed) / 1.0))
+    }
+
+    nonisolated static func typedCount(elapsed: TimeInterval, total: Int) -> Int {
+        min(total, Int(elapsed / 0.045))
+    }
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: current == nil)) { context in
+            if let current {
+                let elapsed = context.date.timeIntervalSince(current.start)
+                Group {
+                    switch current.moment {
+                    case .photo(let id):
+                        MapHomePhotoThumbnail(localIdentifier: id, side: Self.photoSide)
+                            .frame(width: Self.photoSide, height: Self.photoSide)
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.white, lineWidth: 3))
+                            .shadow(color: .black.opacity(0.3), radius: 6, y: 3)
+                    case .memo(let text):
+                        Text(String(text.prefix(Self.typedCount(elapsed: elapsed, total: text.count))))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
+                            .foregroundStyle(Color.tpInk)
+                            .padding(.horizontal, 12).padding(.vertical, 8)
+                            .frame(maxWidth: 240, alignment: .leading)
+                            .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+                }
+                .opacity(Self.opacity(elapsed: max(0, elapsed - memoHold(current.moment))))
+                .position(x: anchor.x, y: max(90, anchor.y - 130))
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+        .onChange(of: minute) { old, new in
+            if let moment = Self.passed(events, from: lastMinute ?? old, to: new) { current = (moment, .now) }
+            lastMinute = new
+            if let shown = current, Date.now.timeIntervalSince(shown.start) > Self.lifetime + memoHold(shown.moment) { current = nil }
+        }
+    }
+
+    /// 메모는 다 찍은 뒤부터 사라지기 시작한다.
+    private func memoHold(_ moment: Moment) -> TimeInterval {
+        if case .memo(let text) = moment { return Double(text.count) * 0.045 }
+        return 0
+    }
+}

@@ -77,6 +77,43 @@ enum MapHomeAppleAnnotationKind {
     case pawprint(MapHomeApplePawprint)
 }
 
+extension MapHomeAppleAnnotationKind {
+    /// 내용 비교용 해시. `String(describing:)`는 반사(reflection)라 발자국 수백 개에 쓰면 본문 평가마다 수 ms가 들었다(CTR1103A02).
+    func combineContent(into hasher: inout Hasher) {
+        switch self {
+        case .temporary(let stationName, let title):
+            hasher.combine(0); hasher.combine(stationName); hasher.combine(title)
+        case .place(let place):
+            hasher.combine(1); place.combineContent(into: &hasher)
+        case .transit(let place):
+            hasher.combine(2); hasher.combine(place.id); hasher.combine(place.name); hasher.combine(place.kind)
+        case .boarding(let candidate):
+            hasher.combine(3); hasher.combine(candidate)
+        case .sticker(let sticker):
+            hasher.combine(4); hasher.combine(sticker)
+        case .memo(let memo):
+            hasher.combine(5); hasher.combine(memo)
+        case .search(let result):
+            hasher.combine(6); hasher.combine(result.title); hasher.combine(result.subtitle)
+        case .pawprint(let paw):
+            hasher.combine(7); hasher.combine(paw.index); hasher.combine(paw.angle)
+            hasher.combine(paw.isPredicted); hasher.combine(paw.isSelectedRoute); hasher.combine(paw.speedMetersPerSecond)
+        }
+    }
+}
+
+extension MapHomePlaceAnnotation {
+    fileprivate func combineContent(into hasher: inout Hasher) {
+        hasher.combine(id); hasher.combine(name); hasher.combine(floor); hasher.combine(destination)
+        hasher.combine(growthLevel); hasher.combine(isLeapDay); hasher.combine(growthStatus)
+        hasher.combine(isGrowthQualifiedToday); hasher.combine(growthStreak); hasher.combine(pendingWeeklyRewards)
+        hasher.combine(isCatAtHome); hasher.combine(catAction); hasher.combine(equippedAccessoryID)
+        hasher.combine(weatherBadge?.symbolName); hasher.combine(weatherBadge?.temperatureText)
+        hasher.combine(weatherBadge?.condition); hasher.combine(weatherBadge?.windSpeedMetersPerSecond)
+        hasher.combine(homeSky?.selectedDay); hasher.combine(homeSky?.isPlaybackRunning)
+    }
+}
+
 /// Apple 지도에 그릴 발자국 하나. 벡터 지도의 `PawprintWaypoint`와 같은 정보를 값으로 옮긴 것이다.
 struct MapHomeApplePawprint: Equatable {
     let index: Int
@@ -127,6 +164,22 @@ enum MapHomeAppleCameraCommand {
         // 거리만 못 바꾸고 중심 이동은 그대로 하는 편이 낫다.
         if let distance, distance.isFinite, distance > 0,
            let camera = mapView.camera.copy() as? MKMapCamera {
+            // 거리와 중심을 한 번에 놓는다. 나눠 놓으면 그 사이 "거리만 바뀐" 화면이 콜백과 렌더러로 새어
+            // 화랑이 위 카운터가 표적점과 화면 중심의 차이만큼 위아래로 튀었다(CTR1103A02).
+            if camera.pitch < 1, let targetPoint, mapView.bounds.width > 0, camera.centerCoordinateDistance > 0 {
+                camera.centerCoordinate = mapView.convert(
+                    MapHomeCameraLayoutMath.cameraCenterSourcePoint(
+                        currentLocationPoint: mapView.convert(coordinate, toPointTo: mapView),
+                        targetPoint: targetPoint,
+                        viewportSize: mapView.bounds.size,
+                        zoomScale: CGFloat(camera.centerCoordinateDistance / distance)
+                    ),
+                    toCoordinateFrom: mapView
+                )
+                camera.centerCoordinateDistance = distance
+                mapView.setCamera(camera, animated: false)
+                return
+            }
             camera.centerCoordinateDistance = distance
             mapView.setCamera(camera, animated: false)
         }

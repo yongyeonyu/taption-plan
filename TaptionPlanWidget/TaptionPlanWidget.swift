@@ -968,13 +968,13 @@ private struct WidgetWalkingCat: View {
 
     private var catName: String {
         switch style {
-        case "white": "흰색"
-        case "mackerel": "고등어"
+        case "white": "화랑이"
+        case "mackerel": "윤복이"
         case "black": "검정"
         case "gray": "회색"
         case "cheese": "치즈"
         case "cow": "젖소무늬"
-        default: "삼색"
+        default: "춘향이"
         }
     }
 

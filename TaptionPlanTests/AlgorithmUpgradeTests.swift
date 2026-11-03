@@ -347,6 +347,43 @@ final class AlgorithmUpgradeTests: XCTestCase {
         )
     }
 
+    func testSubwayEndsWhenWalkingStartsAfterTheLastVehicleSample() throws {
+        let start = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        func sample(_ minute: Double, _ motion: MotionKind) -> SensorReading {
+            SensorReading(
+                timestamp: start.addingTimeInterval(minute * 60),
+                point: GeoPoint(latitude: 37.5, longitude: 126.8, altitude: 10, horizontalAccuracy: 2_000, verticalAccuracy: 5),
+                motion: motion
+            )
+        }
+        let span = TimeSpan(start: start, end: start.addingTimeInterval(44 * 60))
+        var ride = TravelSegment(mode: .subway, span: span, distanceMeters: 1_000, confidence: .high, evidence: [], isConfirmed: false)
+        let place = UUID()
+        ride.toPlaceID = place
+        // 12분에 3분 환승, 34분에 마지막 차량, 35분부터 걷기.
+        let readings = [sample(1, .automotive), sample(12, .walking), sample(15, .walking), sample(16, .automotive), sample(34, .automotive), sample(35, .walking), sample(40, .walking)]
+        let result = SubwayAlighting.applying([ride], readings: readings, corrections: [])
+        XCTAssertEqual(result.map(\.mode), [.subway, .walking])
+        XCTAssertEqual(result[0].span.end, start.addingTimeInterval(35 * 60), "걷기를 시작한 시각이 하차다")
+        XCTAssertEqual(result[1].span.end, span.end)
+        XCTAssertEqual(result[1].toPlaceID, place)
+        XCTAssertEqual(SubwayAlighting.applying(result, readings: readings, corrections: []).map(\.span), result.map(\.span), "다시 돌려도 같다")
+
+        let short = [sample(34, .automotive), sample(35, .walking), sample(37, .walking)]
+        XCTAssertEqual(SubwayAlighting.applying([ride], readings: short, corrections: []).count, 1, "3분이 안 되면 자르지 않는다")
+        ride.isConfirmed = true
+        XCTAssertEqual(SubwayAlighting.applying([ride], readings: readings, corrections: []).count, 1, "사용자가 정한 구간은 그대로다")
+    }
+
+    func testStickmanFacingIgnoresBriefHeadingNoise() {
+        var pending: (facesLeft: Bool, since: TimeInterval)?
+        XCTAssertFalse(MapHomeStickmanFacing.settle(wanted: true, current: false, pending: &pending, now: 10))
+        XCTAssertFalse(MapHomeStickmanFacing.settle(wanted: true, current: false, pending: &pending, now: 10.3))
+        XCTAssertFalse(MapHomeStickmanFacing.settle(wanted: false, current: false, pending: &pending, now: 10.4))
+        XCTAssertFalse(MapHomeStickmanFacing.settle(wanted: true, current: false, pending: &pending, now: 10.5))
+        XCTAssertTrue(MapHomeStickmanFacing.settle(wanted: true, current: false, pending: &pending, now: 11.4))
+    }
+
     func testCalendarTitleVerdictOrder() {
         let key = CalendarTitleClassification.key(" 팀 회의 ")
         XCTAssertEqual(key, "팀 회의")
@@ -368,9 +405,10 @@ final class AlgorithmUpgradeTests: XCTestCase {
         let ids = CalendarTitleClassification.selectableDetailIDs
         XCTAssertTrue(ids.contains("work.meeting"))
         XCTAssertTrue(ids.contains("health.hospital"))
-        XCTAssertFalse(ids.contains { $0.hasPrefix("movement.") || $0.hasPrefix("sleep.") || $0.hasPrefix("unconfirmed.") })
+        XCTAssertFalse(ids.contains { $0.hasPrefix("movement.") || $0.hasPrefix("unconfirmed.") || ["sleep.core", "sleep.deep", "sleep.rem"].contains($0) })
         XCTAssertFalse(ids.contains("work.route"))
-        XCTAssertFalse(ids.contains("work.rest"))
+        XCTAssertTrue(ids.contains("work.rest"), "휴식 자세도 일정에서 고를 수 있다")
+        XCTAssertTrue(ids.contains("health.recovery"))
         XCTAssertFalse(ids.contains("exercise.workout"), "운동은 건강 앱 기록으로만 정한다")
         for rule in ["팀 회의", "치과 진료", "미용실", "학원", "수업", "점심", "장보기", "빨래", "요리", "청소", "명상", "독서", "데이트", "가족", "친구", "통화"] {
             XCTAssertTrue(ids.contains(CalendarTitleClassification.ruleDetailID(for: rule) ?? ""), rule)
@@ -398,8 +436,8 @@ final class AlgorithmUpgradeTests: XCTestCase {
 
     func testUserTitleChoiceWins() {
         let title = "주간 공유"
-        let chosen = titledRecords([event(title, 1, 3)], place: .company, stored: [title: .init(detailID: "study.class")])
-        XCTAssertTrue(chosen.contains { $0.behavior == "class" && $0.categoryID == "study" })
+        let chosen = titledRecords([event(title, 1, 3)], place: .company, stored: [title: .init(detailID: "study.academy")])
+        XCTAssertTrue(chosen.contains { $0.behavior == "academy" && $0.categoryID == "study" })
         let ignored = titledRecords([event(title, 1, 3)], place: .company, stored: [title: .init(detailID: nil)])
         XCTAssertEqual(ignored.map(\.behavior), ["work"], "분류 안 함이면 회의로 보지 않는다")
     }

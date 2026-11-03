@@ -8,7 +8,7 @@ enum HwarangScene: CaseIterable, Hashable, Sendable {
     case stroll, groom, work, study, yarn, sleep, eat, wheel, stretch, confused
     case shower, robotVacuum, carFront, subway, train, bus, bicycle, airplane, boat, atlas
     case sleepBelly, sleepEyeMask, recoverySuperman, medicated, restStarfish, restCroissant, restDonut, restLoaf, restBox
-    case nap, cook, groceries, laundry, friends, date, family, phoneCall, meditate, hospital, salon, readBook, game, music, video, petCare
+    case nap, cook, groceries, laundry, dishes, meeting, friends, date, family, phoneCall, meditate, hospital, salon, readBook, game, music, video, petCare
 
     /// 장면의 동작별 길이(초)와 배경 이동 속도.
     fileprivate var beats: [(duration: CGFloat, speed: CGFloat)] {
@@ -33,7 +33,7 @@ enum HwarangScene: CaseIterable, Hashable, Sendable {
         case .airplane: [(5, 26)]
         case .boat: [(5, 22)]
         case .atlas: [(6, 0)]
-        case .sleepBelly, .sleepEyeMask, .recoverySuperman, .medicated, .restStarfish, .restCroissant, .restDonut, .restLoaf, .restBox, .nap, .cook, .groceries, .laundry, .friends, .date, .family, .phoneCall, .meditate, .hospital, .salon, .readBook, .game, .music, .video, .petCare: [(6, 0)]
+        case .sleepBelly, .sleepEyeMask, .recoverySuperman, .medicated, .restStarfish, .restCroissant, .restDonut, .restLoaf, .restBox, .nap, .cook, .groceries, .laundry, .dishes, .meeting, .friends, .date, .family, .phoneCall, .meditate, .hospital, .salon, .readBook, .game, .music, .video, .petCare: [(6, 0)]
         }
     }
 
@@ -475,7 +475,7 @@ private func pose(_ scene: HwarangScene, beat i: Int, s: CGFloat, u: CGFloat) ->
         var p = study(s, turn: sin(s * 0.7) * 0.5, flip: 0, eye: blink(s, 2.9))
         p.prop = .map
         return p
-    case .sleepBelly, .sleepEyeMask, .recoverySuperman, .medicated, .restStarfish, .restCroissant, .restDonut, .restLoaf, .restBox, .nap, .cook, .groceries, .laundry, .friends, .date, .family, .phoneCall, .meditate, .hospital, .salon, .readBook, .game, .music, .video, .petCare:
+    case .sleepBelly, .sleepEyeMask, .recoverySuperman, .medicated, .restStarfish, .restCroissant, .restDonut, .restLoaf, .restBox, .nap, .cook, .groceries, .laundry, .dishes, .meeting, .friends, .date, .family, .phoneCall, .meditate, .hospital, .salon, .readBook, .game, .music, .video, .petCare:
         return dailyPose(scene, s: s)
     }
 }
@@ -523,6 +523,8 @@ struct HwarangPainter {
     /// 스카프 끝이 따라올 지난 머리 속도(최근 것부터)와 달리는 바람, 펄럭임 위상.
     var scarfSwing: [CGVector] = []
     var scarfWind: CGFloat = 0, scarfPhase: CGFloat = 0
+    /// 잠금화면 그림을 설정한 털색으로 뽑을 때만 바꾼다. 앱 화면은 늘 흰 화랑이다.
+    var coat: HwarangCoat = .white
 
     func rgb(_ hex: UInt32, _ alpha: CGFloat = 1) -> (CGFloat, CGFloat, CGFloat, CGFloat) {
         (CGFloat(hex >> 16 & 0xFF) / 255, CGFloat(hex >> 8 & 0xFF) / 255, CGFloat(hex & 0xFF) / 255, alpha)
@@ -534,9 +536,9 @@ struct HwarangPainter {
     func quad(_ cx: CGFloat, _ cy: CGFloat, _ x: CGFloat, _ y: CGFloat) { c.addQuadCurve(to: P(x, y), control: P(cx, cy)) }
     func cubic(_ a: CGFloat, _ b: CGFloat, _ d: CGFloat, _ e: CGFloat, _ x: CGFloat, _ y: CGFloat) { c.addCurve(to: P(x, y), control1: P(a, b), control2: P(d, e)) }
     func poly(_ points: [CGPoint]) { c.beginPath(); c.addLines(between: points); c.closePath() }
-    let outline: UInt32 = 0x5A4033
+    var outline: UInt32 { coat.outline }
     let white: UInt32 = 0xFFFFFF
-    private let farLimb: UInt32 = 0xEFE9E0
+    private var farLimb: UInt32 { coat.far }
 
     var outlineWidth: CGFloat { (small ? 3.3 : 2.2) * lineScale }
 
@@ -551,6 +553,7 @@ struct HwarangPainter {
 
     private mutating func drawToes() {
         stroke(outline, 1.1); c.setLineCap(.round); c.beginPath()
+        paintSocks()
         for t in toes { for d: CGFloat in [-2.2, 1.2] { c.move(to: P(t.x + d + 1, t.y + 2)); c.addLine(to: P(t.x + d + 1, t.y - 1.4)) } }
         c.strokePath()
         toes = []
@@ -661,15 +664,15 @@ struct HwarangPainter {
         c.saveGState(); c.translateBy(x: ex, y: -10)
         c.rotate(by: lerp(side * 0.34, side < 0 ? -0.2 : 0.38, t) + (side > 0 ? twitch : 0))
         c.scaleBy(x: sx, y: 1)
-        fill(white); stroke(outline, lineWidth)
+        fill(coat.fur); stroke(outline, lineWidth)
         c.beginPath(); c.move(to: P(-6.5, 4)); quad(-4.5, -8, 0, -8.6); quad(4.5, -8, 6.5, 4); c.closePath(); c.drawPath(using: .fillStroke)
         fill(0xFFC9D4); c.beginPath(); c.move(to: P(-3.4, 2.6)); quad(-2.4, -4.8, 0, -5.2); quad(2.4, -4.8, 3.4, 2.6); c.closePath(); c.fillPath()
         c.restoreGState()
     }
 
     private func openEye(_ ex: CGFloat, _ ey: CGFloat, look: CGFloat, t: CGFloat) {
-        fill(0x2474D6); stroke(outline, 1.2); c.beginPath(); oval(ex, ey, 5.9, 6.5); c.drawPath(using: .fillStroke)
-        fill(0x74C6FF); c.beginPath(); oval(ex, ey + 3, 4.7, 3.1); c.fillPath()
+        fill(coat.iris); stroke(outline, 1.2); c.beginPath(); oval(ex, ey, 5.9, 6.5); c.drawPath(using: .fillStroke)
+        fill(coat.irisLight); c.beginPath(); oval(ex, ey + 3, 4.7, 3.1); c.fillPath()
         fill(0x10203A); c.beginPath(); oval(ex + look * 0.2 + t * 1.4, ey - 0.2, 3.7, 4.5); c.fillPath()
         fill(white); c.beginPath(); circle(ex - 1.8 + t, ey - 2.5, 2); circle(ex + 2 + t, ey + 1.8, 1); circle(ex + 1.9 + t, ey - 3, 0.6); c.fillPath()
     }
@@ -677,11 +680,13 @@ struct HwarangPainter {
     func head(_ x: CGFloat, _ y: CGFloat, _ o: HeadPose) {
         let eye: Eye = o.eye == .open && o.blink ? .closed : o.eye
         let hs: CGFloat = small ? 1.72 : 1.5, t = clamp(o.turn, 0, 1), look = o.look
-        c.saveGState(); c.translateBy(x: x, y: y); c.rotate(by: o.tilt); c.scaleBy(x: hs, y: hs)
+        c.saveGState(); c.translateBy(x: x, y: y); c.rotate(by: o.tilt + coat.headTilt); c.scaleBy(x: hs, y: hs)
         c.setLineJoin(.round); c.setLineCap(.round)
         let lineWidth = (small ? 3.3 : 2.2) / hs * lineScale
         ear(1, t, o.ear, lineWidth); ear(-1, t, o.ear, lineWidth)
-        fill(white); stroke(outline, lineWidth); headPath(); c.drawPath(using: .fillStroke)
+        fill(coat.fur); stroke(outline, lineWidth); headPath(); c.drawPath(using: .fillStroke)
+        paintPatches(coat.headPatches) { headPath() }
+        if !coat.headPatches.isEmpty { stroke(outline, lineWidth); headPath(); c.strokePath() }
         if !small {
             stroke(outline, 1, 0.28); c.beginPath()
             let fx = lerp(0, 4, t)
@@ -702,6 +707,7 @@ struct HwarangPainter {
             case .closed:
                 stroke(outline, 1.8); c.beginPath(); c.move(to: P(ex - 4.6, ey)); quad(ex, ey + 4, ex + 4.6, ey); c.strokePath()
             }
+            if coat.lashes { lashes(side: side, ex: ex, ey: ey, eye: eye) }
             c.restoreGState()
         }
         let mx = lerp(look * 0.7, 7.4, t), my: CGFloat = 6.2
@@ -737,11 +743,12 @@ struct HwarangPainter {
         }
         if o.wet {
             // 물에 젖어 이마와 볼 털이 뾰족하게 뭉친다.
-            fill(white); c.beginPath(); c.move(to: P(-10, -13)); c.addLine(to: P(-7, -19.5)); c.addLine(to: P(-3.6, -14)); c.addLine(to: P(0, -21)); c.addLine(to: P(3.6, -14)); c.addLine(to: P(7, -19.5)); c.addLine(to: P(10, -13)); c.closePath(); c.fillPath()
+            fill(coat.fur); c.beginPath(); c.move(to: P(-10, -13)); c.addLine(to: P(-7, -19.5)); c.addLine(to: P(-3.6, -14)); c.addLine(to: P(0, -21)); c.addLine(to: P(3.6, -14)); c.addLine(to: P(7, -19.5)); c.addLine(to: P(10, -13)); c.closePath(); c.fillPath()
             stroke(outline, lineWidth); c.beginPath(); c.move(to: P(-10, -14)); c.addLine(to: P(-7, -19.5)); c.addLine(to: P(-3.6, -14)); c.addLine(to: P(0, -21)); c.addLine(to: P(3.6, -14)); c.addLine(to: P(7, -19.5)); c.addLine(to: P(10, -14))
             for side: CGFloat in [-1, 1] { c.move(to: P(side * 19, 1)); c.addLine(to: P(side * 25, 5)); c.addLine(to: P(side * 19.5, 6)); c.addLine(to: P(side * 24, 11)); c.addLine(to: P(side * 17, 11)) }
             c.strokePath()
         }
+        if let bow = coat.bow { bow_(bow, lineWidth: lineWidth) }
         if let hatImage {
             // 모자를 귀 사이 머리 위에 씌운다. 머리와 함께 기울고 돈다.
             let w: CGFloat = 32, h = w * 60 / 68
@@ -759,10 +766,13 @@ struct HwarangPainter {
     func unionBody(_ body: () -> Void, parts: [Blob]) {
         let w = outlineWidth
         c.setLineJoin(.round); c.setLineCap(.round)
-        stroke(outline, w * 2); body(); c.strokePath()
+        let slim = CGAffineTransform(translationX: 0, y: groundY).scaledBy(x: 1, y: coat.bodyHeight).translatedBy(x: 0, y: -groundY)
+        func shaped() { c.concatenate(slim); body(); c.concatenate(slim.inverted()) }
+        stroke(outline, w * 2); shaped(); c.strokePath()
         fill(outline); c.beginPath(); addBlobs(parts, grow: w); c.fillPath()
-        fill(white); body(); c.fillPath()
+        fill(coat.fur); shaped(); c.fillPath()
         c.beginPath(); addBlobs(parts); c.fillPath()
+        paintPatches(coat.bodyPatches) { shaped() }
     }
 
     /// 엎드린 자세의 꼬리 끝은 캔버스 왼쪽 끝에 가까워 리본을 뿌리 쪽으로 옮겨 잘리지 않게 한다.
@@ -785,6 +795,7 @@ struct HwarangPainter {
         drawToes()
         if let ribbon { drawTailRibbon(ribbon, tail: tailPoints, radius: 6.3, sway: 0.25, phase: p.tp * 0.8, along: Self.canvasEdgeRibbonAlong) }
         let headPoint = P(p.head.x + 1, groundY - (groundY - p.head.y) * 0.86 - 7)
+        paintChest(head: headPoint, shoulder: P(54, sh.y + 4))
         if let scarf {
             // 책상 앞 화랑이는 머리가 몸 위에 얹혀 있어 어깨 대신 몸통 윗부분을 향한다.
             drawScarf(scarf, neck: HwarangNeck(head: headPoint, shoulder: P(54, sh.y + 4), tilt: p.h.tilt), swing: scarfSwing, wind: 0, phase: scarfPhase)
@@ -797,8 +808,8 @@ struct HwarangPainter {
         var foot: [Blob] = []
         let root = P(paw.x - 36, paw.y - 6)
         chain(&foot, [root, P(paw.x - 8, paw.y - 5), P(paw.x + 1, paw.y - 4.5)], [4.6, 5.2, 5.6])
-        paint(foot, fillColor: white)
-        fill(white); c.beginPath(); circle(root.x - 1, root.y, 4.6 + outlineWidth + 0.4); c.fillPath()
+        paint(foot, fillColor: coat.fur)
+        fill(coat.fur); c.beginPath(); circle(root.x - 1, root.y, 4.6 + outlineWidth + 0.4); c.fillPath()
         fill(0xFFB5C4); c.beginPath(); oval(paw.x + 2.6, paw.y - 4.4, 2.2, 2.6); c.fillPath()
     }
 
@@ -806,8 +817,8 @@ struct HwarangPainter {
     private mutating func plantedForeleg(_ paw: CGPoint, from top: CGPoint) {
         var leg: [Blob] = []
         chain(&leg, [top, P(lerp(top.x, paw.x, 0.65), lerp(top.y, paw.y - 4.5, 0.65)), P(paw.x, paw.y - 4.5)], [5, 5.2, 6])
-        paint(leg, fillColor: white)
-        fill(white); c.beginPath(); circle(top.x, top.y - 1, 5 + outlineWidth + 0.4); c.fillPath()
+        paint(leg, fillColor: coat.fur)
+        fill(coat.fur); c.beginPath(); circle(top.x, top.y - 1, 5 + outlineWidth + 0.4); c.fillPath()
         toes = [P(paw.x, paw.y)]
         drawToes()
     }
@@ -819,9 +830,9 @@ struct HwarangPainter {
         let line = catmull([P(35, 99), P(29, 106), P(40, 111), P(60 + lag * 1.5, 112), P(78 + lag * 4, 111 + sway), P(90 + sway * 9, 107 - abs(sway) * 2)])
         var parts: [Blob] = []
         for (i, q) in line.enumerated() { parts.append(Blob(x: q.x, y: q.y, r: lerp(6.4, 5, CGFloat(i) / CGFloat(line.count - 1)))) }
-        paint(parts, fillColor: white)
+        paint(parts, fillColor: coat.fur)
         // 뿌리의 윤곽을 지워 몸과 한 덩어리로 잇는다.
-        fill(white); c.beginPath(); circle(38, 96, 6.4 + outlineWidth); c.fillPath()
+        fill(coat.fur); c.beginPath(); circle(38, 96, 6.4 + outlineWidth); c.fillPath()
         return line
     }
 
@@ -866,7 +877,7 @@ struct HwarangPainter {
             near.append(Blob(x: bn.x, y: bn.y - 1, r: 7.4))
         }
         if !raw.foreOver, raw.legUp < 0.5 { fore(&near, sh, fn, raw.foreBend) }
-        paint(near, fillColor: white)
+        paint(near, fillColor: coat.fur)
         drawToes()
         if raw.legUp >= 0.5 {
             tuckedFoot(bf)
@@ -893,6 +904,7 @@ struct HwarangPainter {
             for d in [P(-3.8, -2.8), P(-0.2, -4.4), P(3.6, -2.6)] { circle(bn.x + 0.6 + d.x * sp, bn.y + d.y * sp, 1.35 + raw.spread * 0.2) }
             c.fillPath()
         }
+        paintChest(head: headPoint, shoulder: sh)
         if let scarf {
             drawScarf(scarf, neck: HwarangNeck(head: headPoint, shoulder: sh, tilt: raw.h.tilt), swing: scarfSwing, wind: scarfWind, phase: scarfPhase)
         }
@@ -906,10 +918,10 @@ struct HwarangPainter {
             var top: [Blob] = []
             toes = []
             fore(&top, sh, fn, raw.foreBend)
-            paint(top, fillColor: white)
+            paint(top, fillColor: coat.fur)
             // 몸 위에 겹친 앞다리 윤곽을 지운다.
             c.saveGState(); c.beginPath(); addBlobs(near); c.clip()
-            fill(white); c.beginPath(); addBlobs(top, grow: outlineWidth + 0.3); c.fillPath()
+            fill(coat.fur); c.beginPath(); addBlobs(top, grow: outlineWidth + 0.3); c.fillPath()
             c.restoreGState()
             drawToes()
         }
@@ -936,6 +948,7 @@ struct HwarangPainter {
         var h = p.h
         if h.tilt == 0 { h.tilt = 0.03 }
         let headPoint = P(82, 68 + br * 0.6 + p.drop)
+        paintChest(head: headPoint, shoulder: P(70, 88))
         if let scarf {
             drawScarf(scarf, neck: HwarangNeck(head: headPoint, shoulder: P(70, 88), tilt: h.tilt), swing: [], wind: 0, phase: 0)
         }
@@ -956,7 +969,7 @@ struct HwarangPainter {
                 let r = lerp(raw.rh + 5, raw.rs + 4.4, u) + sin(u * .pi) * raw.rm
                 func at(_ d: CGFloat, _ along: CGFloat) -> CGPoint { P(q.x + nx * d + (next.x - q.x) / len * along, q.y + ny * d + (next.y - q.y) / len * along) }
                 let a = at(r - 1.5, -3), tip = at(r + 5.5, -4.5), b = at(r - 1.5, 3)
-                fill(white); poly([a, tip, b]); c.fillPath()
+                fill(coat.fur); poly([a, tip, b]); c.fillPath()
                 stroke(outline, outlineWidth * 0.8); c.beginPath(); c.move(to: at(r, -3)); c.addLine(to: tip); c.addLine(to: at(r, 3)); c.strokePath()
             }
         }
@@ -1045,6 +1058,7 @@ struct HwarangPainter {
 
     /// 세계 좌표(가로 146)로 장면 하나를 그린다.
     mutating func render(_ scene: HwarangScene, sec: CGFloat, facesLeft: Bool, showsBackdrop: Bool) {
+        let sec = sec * coat.tempo + coat.phase
         var st = laggedState(scene, sec)
         c.saveGState()
         if facesLeft { c.translateBy(x: 118, y: 0); c.scaleBy(x: -1, y: 1) }
@@ -1072,7 +1086,7 @@ struct HwarangPainter {
         switch scene {
         case .carFront: carFront(st.pose.h, sec: sec, progress: st.progress)
         case .subway: railTrain(st.pose.h, sec: sec, progress: st.progress, stripe: 0x2FA84F, pantograph: false)
-        case .train: railTrain(st.pose.h, sec: sec, progress: st.progress, stripe: 0xC8473A, pantograph: true)
+        case .train: ktxTrain(st.pose.h, sec: sec, progress: st.progress)
         case .bus: cityBus(st.pose.h, sec: sec, progress: st.progress)
         case .airplane: airplane(st.pose.h, sec: sec, progress: st.progress)
         case .boat: boat(st.pose.h, sec: sec, progress: st.progress)
@@ -1121,7 +1135,7 @@ struct HwarangPainter {
             yarn(y.0, y.1, y.2)
         case .eat: bowl()
         case .sleepBelly, .sleepEyeMask: sleepLetters(sec)
-        case .nap, .cook, .groceries, .friends, .date, .meditate, .salon, .game, .music, .video, .petCare: dailyForeground(scene, sec: sec)
+        case .nap, .cook, .groceries, .meeting, .friends, .date, .meditate, .salon, .game, .music, .video, .petCare: dailyForeground(scene, sec: sec)
         case .confused: questionMark(sec)
         case .shower: waterStreams(sec, xs: [52, 64, 76, 84], alpha: 0.5)
         case .atlas:
@@ -1166,7 +1180,7 @@ struct HwarangSceneView: View {
         let hat = hatAssetName.flatMap { UIImage(named: $0) }
         let small = width < 70
         let headroom = hat == nil ? 0 : Self.hatHeadroom
-        let isWheel = scene == .wheel
+        let isWheel = scene == .wheel, coat = HwarangCoat.selected
         let scale = width / Self.worldWidth * (isWheel && keepsBodySize ? 1 / wheelScale : 1)
         let height = (Self.worldHeight + headroom) * scale
         let ground = ((isWheel ? wheelGround : groundY) + headroom - 8) * scale
@@ -1175,7 +1189,7 @@ struct HwarangSceneView: View {
                 let k = size.width / Self.worldWidth
                 cg.scaleBy(x: k, y: k)
                 cg.translateBy(x: 14, y: headroom - 8)
-                var painter = HwarangPainter(c: cg, small: small, hatImage: hat, scarf: scarf, ribbon: ribbon)
+                var painter = HwarangPainter(c: cg, small: small, hatImage: hat, scarf: scarf, ribbon: ribbon, coat: coat)
                 painter.render(scene, sec: CGFloat(sec), facesLeft: facesLeft, showsBackdrop: showsBackdrop)
             }
         }

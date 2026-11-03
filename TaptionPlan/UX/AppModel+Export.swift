@@ -53,6 +53,22 @@ extension AppModel {
         }.value
     }
 
+    #if DEBUG
+    /// 개발 기기에서 `-exportRawOnLaunch`로 켜면 원본을 앱 임시 폴더에 남긴다. USB로 꺼내 재생 판정을 재현한다.
+    func exportRawOnLaunchIfRequested() async {
+        guard ProcessInfo.processInfo.arguments.contains("-exportRawOnLaunch") else { return }
+        do {
+            let url = try await exportTodaySensorRawURL()
+            try? FileManager.default.setAttributes([.protectionKey: FileProtectionType.none], ofItemAtPath: url.path)
+            let places = url.deletingLastPathComponent().appendingPathComponent("frequent-places.json")
+            try JSONEncoder().encode(snapshot.settings.frequentPlaces).write(to: places, options: .atomic)
+            TaptionPlanDiagnosticsLogger.shared.record("raw_export_done", fields: ["file": url.lastPathComponent])
+        } catch {
+            TaptionPlanDiagnosticsLogger.shared.record("raw_export_failed", fields: ["error": String(describing: error)])
+        }
+    }
+    #endif
+
     func exportSnapshotURL() throws -> URL {
         let data = try SnapshotExporter.jsonData(snapshot)
         let directory = FileManager.default.temporaryDirectory

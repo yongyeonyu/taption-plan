@@ -116,6 +116,7 @@ struct MapHomeView: View {
     @AppStorage(MapHomeCounterKind.exercise.storageKey) private var showsExerciseCounter = true
     @AppStorage("mapHomeCounter.salary") private var showsSalaryCounter = true
     @AppStorage("mapHomeCounter.collapsed") private var isCounterCollapsed = false
+    @State private var isCalendarConnectPresented = false
     @State private var pendingMemoLocationID: UUID?
     @State private var isMapAttributionPresented = false
     @State private var isAlarmSettingsPresented = false
@@ -658,6 +659,7 @@ struct MapHomeView: View {
     /// 벡터 지도 뷰가 아니라 화면 공통 위치에서 돈다. 지도 스타일을 바꾸면 벡터 지도 뷰가 사라져 안에 둔 작업이 취소됐다(ARC1030A04).
     private func runBenchAutoPlayback() async {
         #if DEBUG || BENCH
+        await MapHomeBenchHomeZoom.run(model: model) { mapPosition = .camera($0); mapCameraRevision += 1 }
         if ProcessInfo.processInfo.arguments.contains("-debugOpenDaySummary") { try? await Task.sleep(for: .seconds(15)); isDaySummaryPresented = true }
         if ProcessInfo.processInfo.arguments.contains("-debugOpenClipEditor") { try? await Task.sleep(for: .seconds(15)); openSectionEditor(at: 600) }
         if MapHomeSheetBench.isRequested {
@@ -673,12 +675,9 @@ struct MapHomeView: View {
         // 측정용: `-autoBenchMapPan`이면 지도가 뜬 뒤 12초 동안 지도를 자동으로 좌우로 밀고(손가락 팬과 같은 경로),
         // 함수별 시간(`playback_probe`)과 프레임 간격(`interaction_stats` bench_pan)을 남긴 뒤 로그 패키지를 만든다(PRF1030A02).
         if ProcessInfo.processInfo.arguments.contains("-autoBenchMapPan") {
-            if let value = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix("-benchMapStyle=") })?
-                .dropFirst("-benchMapStyle=".count),
-               let style = MapDisplayStyle(rawValue: String(value)) {
-                model.setMapDisplayStyle(style)
-            }
+            MapHomeBenchHomeZoom.reapplyStyle(model: model)
             try? await Task.sleep(nanoseconds: 25_000_000_000)
+            if Task.isCancelled { return }; MapHomeBenchHomeZoom.reapplyStyle(model: model)
             // `-benchSelectMinute=1250`이면 사이드바에서 그 시각을 고른 상태로 민다(실사용 기록과 같은 조건).
             if let value = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix("-benchSelectMinute=") })?
                 .dropFirst("-benchSelectMinute=".count), let minute = Int(value) {
@@ -711,13 +710,16 @@ struct MapHomeView: View {
                 // 어제 데이터·경로·예상 경로를 다 읽을 때까지 기다린다(먼저 재생하면 읽기 끝에 재생이 끊긴다).
                 try? await Task.sleep(nanoseconds: 14_000_000_000)
             }
+            MapHomeBenchHomeZoom.reapplyStyle(model: model)
             try? await Task.sleep(nanoseconds: 6_000_000_000)
+            if Task.isCancelled { return }
             startDayPlayback(fromMidnight: true)
             // 재생이 끝나면 로그 패키지를 저절로 만든다(USB로 받아 본다). 어제처럼 긴 하루는 1분을 넘길 수 있어 끝까지 기다린다.
             try? await Task.sleep(nanoseconds: 3_000_000_000)
-            for _ in 0..<120 where isDayPlaybackRunning {
+            for _ in 0..<MapHomeBenchHomeZoom.playbackWaitTicks where isDayPlaybackRunning {
                 try? await Task.sleep(nanoseconds: 2_000_000_000)
             }
+            if isDayPlaybackRunning { stopDayPlayback(resetProgress: false) }
             try? await Task.sleep(nanoseconds: 1_000_000_000)
             await model.exportDiagnosticsToICloud()
         }
@@ -1237,38 +1239,22 @@ struct MapHomeView: View {
         }
         // + 버튼은 바로 메모 편집 화면을 연다. 시간·위치·스티커는 그 화면에서 고른다.
         .confirmationDialog(
-            language.text("지도에 추가", "Add to map"),
+            language.text("지도에 메모 추가", "Add map memo"),
             isPresented: $isLongPressMenuPresented,
             titleVisibility: .visible
         ) {
-            Button {
-                routeLongPress(.location)
-            } label: {
-                Label(
-                    language.text("위치 추가", "Add location"),
-                    systemImage: "mappin.and.ellipse"
-                )
-            }
-            Button {
-                routeLongPress(.memo)
-            } label: {
-                Label(
-                    language.text("위치 메모 추가", "Add location memo"),
-                    systemImage: "note.text.badge.plus"
-                )
-            }
+            Button(language.text("추가", "Add")) { routeLongPress(.memo) }
             Button(language.text("취소", "Cancel"), role: .cancel) {
                 pendingLongPressCoordinate = nil
                 selectedSearchPin = nil
             }
-        } message: {
-            Text(
-                language.text(
-                    "길게 누른 위치에 추가할 항목을 선택하세요.",
-                    "Choose what to add at the long-pressed location."
-                )
-            )
         }
+        .overlay {
+            if isDayPlaybackRunning, let cat = displayedStickmanViewportPoint, let minute = dayPlaybackCurrentMinute {
+                MapHomePlaybackMomentsOverlay(minute: minute, events: playbackMomentEvents, anchor: cat)
+            }
+        }
+        .sheet(isPresented: $isCalendarConnectPresented) { MapHomeCalendarConnectSheet(model: model, language: language) }
         .sheet(isPresented: $isDataProtectionPresented) {
             MapHomeSecuritySheet(model: model, language: language)
                 .presentationDetents([.medium, .large])
@@ -2526,14 +2512,12 @@ struct MapHomeView: View {
             longPressExclusionFrame: isMenuOpen ? .zero : mapControlsFrame,
             fogReveals: appleFogReveals,
             fogOpacity: CGFloat(fogStrength.opacity),
+            onLiveStickmanPoint: { appleStickmanLivePoint.point = $0 },
+            counterAttachment: appleStickmanLivePoint.markerAttachment,
             onCameraFrame: { frame, locationPoint, isFinal in
                 MapHomeHomeSkyHeading.current = frame.camera.heading
                 MapHomeInteractionMonitor.shared.touch("map_gesture")
                 let now = ProcessInfo.processInfo.systemUptime
-                // 화랑이 점은 지도와 같은 프레임에 옮긴다. 아래 읽기 값은 0.25초마다라 여기서 기다리면 카운터가 뒤처진다.
-                // 관찰 값(@State)으로 프레임마다 올리면 2만 줄 화면 전체가 다시 평가돼, UIKit이 같은 프레임에 옮기는
-                // 화랑이 뷰보다 카운터가 늦게 따라왔다. 상자에만 담고 카운터 창이 화면 틱마다 읽는다.
-                appleStickmanLivePoint.point = locationPoint
                 let moving = !isFinal || playbackDriver != nil
                 if isAppleCameraMoving != moving { isAppleCameraMoving = moving }
                 if let rendered = mapCameraFrameProjection.submit(
@@ -2820,6 +2804,7 @@ struct MapHomeView: View {
     }
 
     private var appleMapAnnotations: [MapHomeAppleAnnotation] {
+        let probe = MapHomePlaybackProbe.begin("apple.annotationsBuild"); defer { MapHomePlaybackProbe.end(probe) }
         var annotations = temporaryLocationAnnotations.map { location in
             MapHomeAppleAnnotation(
                 id: "temporary-\(location.id.uuidString)",
@@ -2926,7 +2911,7 @@ struct MapHomeView: View {
             )
         }
         for waypoint in playbackVisibleWaypoints(recordingShows(\.footprints) ? pawprintWaypoints : []).suffix(300) {
-            let isSelectedRoute = waypoint.isPredicted
+            let isSelectedRoute = waypoint.isPredicted && waypoint.predictedRoute != nil
                 && waypoint.predictedRoute?.id == selectedPredictedRoute?.id
             let isInteractive = waypoint.predictedRoute != nil
                 || (waypoint.timestamp != nil && !waypoint.isPredicted)
@@ -3725,6 +3710,7 @@ struct MapHomeView: View {
                             }
                         }
                     }
+                    .zIndex(MapHomePlaceDisplayPolicy.vectorZIndex(for: place.destination))
                 }
             }
 
@@ -3983,8 +3969,8 @@ struct MapHomeView: View {
             && waypoint.timestamp == highlightedPawprintTimestamp
         return Image(systemName: "pawprint.fill")
             .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
-            .foregroundStyle(waypoint.predictedRoute?.id == selectedPredictedRoute?.id && waypoint.isPredicted
-                ? Color.orange : waypoint.isPredicted ? Color.gray.opacity(0.68)
+            .foregroundStyle(waypoint.predictedRoute != nil && waypoint.predictedRoute?.id == selectedPredictedRoute?.id && waypoint.isPredicted
+                ? Color.orange : waypoint.isPredicted ? MapHomePawprintSpeedColor.unconfirmedColor(forMetersPerSecond: waypoint.speedMetersPerSecond)
                 : MapHomePawprintSpeedColor.color(forMetersPerSecond: waypoint.speedMetersPerSecond))
             .rotationEffect(.degrees(waypoint.angle))
             .padding(isSelected ? 5 : 0)
@@ -4096,16 +4082,14 @@ struct MapHomeView: View {
             let points = segment.points.map {
                 CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)
             }
+            let gapSpeed = MapHomeUnconfirmedPaws.speed(points: points, seconds: segment.route.span.duration)
             for index in MapHomePawprintInteractionPolicy.spreadIndices(
                 count: points.count, limit: inferredBudgets[confirmedSegments.count + segmentIndex]
             ) {
                 let point = points[index]
                 let previous = points[max(0, index - 1)]
                 let next = points[min(points.count - 1, index + 1)]
-                let angle = atan2(
-                    next.longitude - previous.longitude,
-                    next.latitude - previous.latitude
-                ) * 180 / .pi
+                let angle = atan2(next.longitude - previous.longitude, next.latitude - previous.latitude) * 180 / .pi
                 result.append(
                     PawprintWaypoint(
                         index: result.count,
@@ -4113,10 +4097,15 @@ struct MapHomeView: View {
                         angle: angle,
                         isPredicted: true,
                         timestamp: nil,
-                        predictedRoute: segment.route
+                        predictedRoute: segment.route,
+                        speedMetersPerSecond: gapSpeed
                     )
                 )
             }
+        }
+        let gapReadings = routeReadingsLoadState.isLoaded(for: model.selectedDate) ? historicalPlaybackReadings : []
+        for gap in MapHomeUnconfirmedPaws.subwayGapPoints(travel: currentDayDataSnapshot?.travel ?? [], readings: gapReadings, through: routeOverlayCutoff, limit: hardCap - result.count) {
+            result.append(PawprintWaypoint(index: result.count, coordinate: gap.coordinate, angle: gap.angle, isPredicted: true, timestamp: nil, speedMetersPerSecond: gap.speed))
         }
         return result
     }
@@ -5624,6 +5613,7 @@ struct MapHomeView: View {
             : nil
         return MapHomeLivePointFollower(
             channel: channel,
+            attachment: tracksAppleCamera ? appleStickmanLivePoint.markerAttachment : nil,
             fallback: CGPoint(x: anchor.x, y: anchor.y - 8 - 160),
             offset: CGSize(width: 0, height: MapHomeStickmanAnnotationLayout.centerOffset.y - 42 - 8 - 160),
             onFrame: { box.hostFrame = $0 }
@@ -6561,9 +6551,7 @@ struct MapHomeView: View {
                         Button {
                             toggleSidebarNote(.event(id: "\(event.id)", title: event.title, notes: event.notes, span: event.span, minute: minute, badgeOffset: scheduleBadgeOffset(minute: minute, isEvent: true)))
                         } label: {
-                            Image("GoogleGLogo")
-                                .resizable()
-                                .scaledToFit()
+                            MapHomeCalendarSourceLogo()
                                 .padding(3)
                                 .frame(width: 22, height: 22)
                                 .background(Color.white.opacity(0.96), in: Circle())
@@ -6752,7 +6740,7 @@ struct MapHomeView: View {
         ScrollView(showsIndicators: false) {
             MapHomeWidePanelColumns(columns: menuPanelKind.columns, spacing: 14, alignment: .leading, trailingTopInset: 0) {
             HStack(spacing: 12) {
-                MapHomeMenuHeaderCat(size: 58)
+                MapHomeMenuCatPicker(selected: model.selectedCatCoat, language: language) { model.selectCatCoat($0) }
 
                 MapHomeMenuHeaderTitle(language: language)
                 Spacer()
@@ -6790,6 +6778,8 @@ struct MapHomeView: View {
             menuGroupLabel(language.text("연결", "Connections"))
             menuGroupCard {
                 appleWatchMenuItem
+                menuGroupDivider
+                menuRowButton("calendar.badge.plus", language.text("캘린더 연결", "Calendar"), tint: .tpMenuChip("#3E8FDC")) { isCalendarConnectPresented = true }
                 menuGroupDivider
                 // 차량 오디오(블루투스·CarPlay)가 연결된 이동은 자동차로 확정한다(CAR1029A01).
                 menuRowButton("car.fill", language.text("내 차 등록", "My car"), tint: .tpMenuChip("#4F86B8")) { isCarAudioSheetPresented = true }
@@ -8282,9 +8272,16 @@ struct MapHomeView: View {
                     selectedDay: model.selectedDate, progress: playbackProgress, isPlaybackRunning: false)
             }
         )
-        .scaleEffect(0.5)
-        .frame(width: 84, height: 96)
+        // 지도 아이콘과 같은 크기. 번지는 빛은 칸 밖으로 나가도 된다.
+        .frame(width: 96, height: 112)
         .allowsHitTesting(false)
+    }
+
+    private var playbackMomentEvents: [(minute: Double, moment: MapHomePlaybackMomentsOverlay.Moment)] {
+        let start = Calendar.autoupdatingCurrent.startOfDay(for: model.selectedDate)
+        let photos = photoMoments.map { ($0.capturedAt.timeIntervalSince(start) / 60, MapHomePlaybackMomentsOverlay.Moment.photo(id: $0.id)) }
+        let memos = timedMemosForSelectedDate.map { ($0.occurredAt.timeIntervalSince(start) / 60, MapHomePlaybackMomentsOverlay.Moment.memo(text: $0.text)) }
+        return (photos + memos).sorted { $0.0 < $1.0 }.map { (minute: $0.0, moment: $0.1) }
     }
 
     private var isDisplayedCatAtHome: Bool {
@@ -9565,13 +9562,10 @@ struct MapHomeView: View {
     }
 
     private var displayedLocationCoordinate: CLLocationCoordinate2D? {
-        if selectedTimelineMinute != nil {
-            return historicalPlaybackCoordinate
-        }
-        guard Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate) else {
-            return nil
-        }
-        return liveFocusCoordinate
+        let isToday = Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate)
+        // GPS가 끊겨도 오늘은 화랑이를 마지막 위치에 둔다.
+        if selectedTimelineMinute != nil { return historicalPlaybackCoordinate ?? (isToday ? lastKnownCoordinate : nil) }
+        return isToday ? liveFocusCoordinate : nil
     }
 
     private var displayedPlaybackMinute: Double? {
@@ -9668,11 +9662,11 @@ struct MapHomeView: View {
                 }
             }
         }
+        if selectedTimelineMinute != nil, activeExpectedRoute == nil || currentDayDataSnapshot?.travel.contains(where: { $0.span.contains(displayedLocationDate) }) == true, let mode = MapHomePlaybackLocation.gapMode(at: displayedLocationDate, travel: currentDayDataSnapshot?.travel ?? [], readings: historicalPlaybackReadings) {
+            return MapHomeStickmanActionResolver.action(for: mode)
+        }
         if let activeExpectedRoute {
             return MapHomeStickmanActionResolver.action(for: activeExpectedRoute.mode)
-        }
-        if selectedTimelineMinute != nil, let mode = MapHomePlaybackLocation.gapMode(at: displayedLocationDate, travel: currentDayDataSnapshot?.travel ?? [], readings: historicalPlaybackReadings) {
-            return MapHomeStickmanActionResolver.action(for: mode)
         }
         let resolved = MapHomeStickmanActionResolver.action(
             at: displayedLocationDate,

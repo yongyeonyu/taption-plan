@@ -819,14 +819,14 @@ struct CatPickerView: View {
                         columns: [GridItem(.flexible()), GridItem(.flexible())],
                         spacing: 6
                     ) {
-                        ForEach(CatCoat.allCases) { coat in
+                        ForEach(CatCoat.characters) { coat in
                             Button {
                                 model.selectCatCoat(coat)
                             } label: {
                                 HStack(spacing: 9) {
                                     CatFaceView(coat: coat)
                                     VStack(alignment: .leading, spacing: 2) {
-                                        Text(coat.rawValue)
+                                        Text(coat.displayName)
                                             .font(.taption(size: 9.5, weight: .bold))
                                             .foregroundStyle(Color.tpInk)
                                         Text(coat.caption)

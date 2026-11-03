@@ -7,6 +7,7 @@
       "systemImage": "sparkles",
       "details": [
         { "id": "activity.rest", "title": "휴식", "behavior": "stationary", "systemImage": "pause.circle.fill" },
+        { "id": "activity.zoningOut", "title": "멍때리기", "behavior": "zoningOut", "systemImage": "shippingbox.fill" },
         { "id": "activity.shower", "title": "샤워", "behavior": "shower", "systemImage": "shower.fill" },
         { "id": "activity.friends", "title": "친구 만남", "behavior": "friends", "systemImage": "person.2.fill" },
         { "id": "activity.date", "title": "데이트", "behavior": "dating", "systemImage": "heart.fill" },
@@ -30,8 +31,6 @@
       "title": "수업",
       "systemImage": "book.fill",
       "details": [
-        { "id": "study.route", "title": "수업(집 - 학교·학원)", "behavior": "study", "systemImage": "book.fill" },
-        { "id": "study.class", "title": "수업", "behavior": "class", "systemImage": "graduationcap.fill" },
         { "id": "study.academy", "title": "학원", "behavior": "academy", "systemImage": "books.vertical.fill" },
         { "id": "study.rest", "title": "휴식", "behavior": "stationary", "systemImage": "pause.circle.fill" },
         { "id": "study.walking", "title": "걷기", "behavior": "walking", "systemImage": "figure.walk" }
@@ -44,7 +43,6 @@
       "details": [
         { "id": "hobby.route", "title": "취미(집 - 취미)", "behavior": "hobby", "systemImage": "paintpalette.fill" },
         { "id": "hobby.rest", "title": "휴식", "behavior": "stationary", "systemImage": "pause.circle.fill" },
-        { "id": "hobby.walking", "title": "걷기", "behavior": "walking", "systemImage": "figure.walk" },
         { "id": "hobby.reading", "title": "독서", "behavior": "reading", "systemImage": "book.closed.fill" },
         { "id": "hobby.game", "title": "게임", "behavior": "gaming", "systemImage": "gamecontroller.fill" },
         { "id": "hobby.music", "title": "음악", "behavior": "music", "systemImage": "music.note" },
@@ -60,7 +58,8 @@
       "details": [
         { "id": "sleep.core", "title": "코어 수면", "behavior": "core", "systemImage": "moon.zzz.fill", "automaticOnly": true },
         { "id": "sleep.deep", "title": "깊은 수면", "behavior": "deep", "systemImage": "moon.zzz.fill", "automaticOnly": true },
-        { "id": "sleep.rem", "title": "REM 수면", "behavior": "rem", "systemImage": "moon.zzz.fill", "automaticOnly": true }
+        { "id": "sleep.rem", "title": "REM 수면", "behavior": "rem", "systemImage": "moon.zzz.fill", "automaticOnly": true },
+        { "id": "sleep.nap", "title": "낮잠", "behavior": "nap", "systemImage": "zzz", "automaticOnly": false }
       ]
     },
     {
@@ -73,7 +72,6 @@
         { "id": "movement.car", "title": "자동차", "behavior": "automotive", "systemImage": "car.fill" },
         { "id": "movement.subway", "title": "지하철", "behavior": "subway", "systemImage": "tram.fill" },
         { "id": "movement.train", "title": "기차", "behavior": "train", "systemImage": "train.side.front.car" },
-        { "id": "movement.privateVehicle", "title": "자가용", "behavior": "privateVehicle", "systemImage": "car.fill" },
         { "id": "movement.bus", "title": "버스", "behavior": "bus", "systemImage": "bus.fill" },
         { "id": "movement.ship", "title": "배", "behavior": "ship", "systemImage": "ferry.fill" },
         { "id": "movement.airplane", "title": "비행기", "behavior": "airplane", "systemImage": "airplane" },
@@ -103,11 +101,8 @@
       "systemImage": "heart.text.square.fill",
       "automaticOnly": true,
       "details": [
-        { "id": "health.wellness", "title": "마음·생활 관리", "behavior": "wellness", "systemImage": "heart.circle.fill", "automaticOnly": true },
-        { "id": "health.vitals", "title": "생체 변화", "behavior": "vitals", "systemImage": "waveform.path.ecg", "automaticOnly": true },
-        { "id": "health.recovery", "title": "회복", "behavior": "recovery", "systemImage": "bed.double.fill", "automaticOnly": true },
-        { "id": "health.medication", "title": "투약", "behavior": "medication", "systemImage": "pills.fill", "automaticOnly": true },
-        { "id": "health.nap", "title": "낮잠", "behavior": "nap", "systemImage": "zzz", "automaticOnly": false },
+        { "id": "health.recovery", "title": "회복", "behavior": "recovery", "systemImage": "bed.double.fill", "automaticOnly": false },
+        { "id": "health.medication", "title": "투약", "behavior": "medication", "systemImage": "pills.fill", "automaticOnly": false },
         { "id": "health.meditation", "title": "명상", "behavior": "meditation", "systemImage": "figure.mind.and.body", "automaticOnly": false },
         { "id": "health.hospital", "title": "병원", "behavior": "hospital", "systemImage": "cross.case.fill", "automaticOnly": false },
         { "id": "health.salon", "title": "미용실", "behavior": "salon", "systemImage": "scissors", "automaticOnly": false }
@@ -121,7 +116,8 @@
         { "id": "housework.chores", "title": "집안일", "behavior": "chores", "systemImage": "house.fill" },
         { "id": "housework.laundry", "title": "빨래", "behavior": "laundry", "systemImage": "washer.fill" },
         { "id": "housework.groceries", "title": "장보기", "behavior": "groceries", "systemImage": "cart.fill" },
-        { "id": "housework.cooking", "title": "요리", "behavior": "cooking", "systemImage": "frying.pan" }
+        { "id": "housework.cooking", "title": "요리", "behavior": "cooking", "systemImage": "frying.pan" },
+        { "id": "housework.dishes", "title": "설거지", "behavior": "dishes", "systemImage": "sink.fill" }
       ]
     },
     {

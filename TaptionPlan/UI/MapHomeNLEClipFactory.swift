@@ -80,6 +80,32 @@ extension MapHomeNLEClipEditor {
         dayOffset == 0 ? "" : "d\(dayOffset)|"
     }
 
+    private static func subClipID(_ detailID: UUID, dayOffset: Int) -> String {
+        "sub|\(clipIDPrefix(dayOffset))\(detailID.uuidString)"
+    }
+
+    /// 상세 클립 ID → 출처. 클립은 분류 값만 들고 다니므로 화면 표시용으로 따로 둔다.
+    static func subProvenance(
+        details: [MapHomeSectionDetail],
+        dayOffset: Int = 0
+    ) -> [String: NLESubActivityProvenance] {
+        Dictionary(
+            details.compactMap { detail in
+                detail.provenance.map { (subClipID(detail.id, dayOffset: dayOffset), $0) }
+            },
+            uniquingKeysWith: { first, _ in first }
+        )
+    }
+
+    /// 대분류 블록에 적는 이름. 합쳐진 기록의 제목(회의·근무)이 아니라 분류 이름이다.
+    /// 하위 행동은 상세 층이 보여 준다(NLE1103A02). 사용자 분류는 분류표에 없어 제목을 쓴다.
+    static func mainTitle(_ option: ActivityCorrectionOption, language: MapHomeLanguage) -> String {
+        guard !option.isCustom else { return option.title }
+        return MapHomeSidebarMajorCategory.all
+            .first { $0.id == option.categoryID }?
+            .localizedTitle(language) ?? option.title
+    }
+
     /// 상세활동 기록을 하루 전체에 걸쳐 세운다.
     ///
     /// 각 기록의 울타리는 자기가 속한 원본 구간이다. 그래서 상세활동을 그 구간
@@ -116,7 +142,7 @@ extension MapHomeNLEClipEditor {
                 fillOption: fill
             )
             return NLEClip(
-                id: "sub|\(clipIDPrefix(dayOffset))\(detail.id.uuidString)",
+                id: subClipID(detail.id, dayOffset: dayOffset),
                 option: detailOption,
                 startMinute: detail.startMinute + shift,
                 endMinute: detail.endMinute + shift,
@@ -174,6 +200,11 @@ extension MapHomeNLEClipEditor {
 
     /// 「센서 원본」 열을 그날의 원본 표본·HealthKit 수면으로 세운다.
     func loadSensorEvidence() async -> (segments: [MapHomeNLESensorSegment], readings: [SensorReading]) {
+        #if DEBUG
+        if let preview = NLEDayWindow.previewSensors[Calendar.autoupdatingCurrent.startOfDay(for: date)] {
+            return (preview, [])
+        }
+        #endif
         let day = await model.planDayDataSnapshot(for: date, forceReload: false)
         let segments = MapHomeNLESensorEvidence.channelSegments(
             readings: day.readings, sleepSessions: model.sleepSessions,

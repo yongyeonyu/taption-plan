@@ -2,11 +2,63 @@ import CoreGraphics
 import UIKit
 
 enum HwarangDiagnostics {
+    /// 잠금화면 자세 그림 한 칸. 세계 x -14...132, y 12...112를 칸 높이에 맞춰 가운데에 담는다.
+    static func poseFrame(_ pose: TaptionHwarangPose, column: Int, style: String) -> UIImage {
+        let cell = TaptionHwarangPose.cellPixels
+        let scene = scene(for: pose)
+        let sec = Double(scene.totalDuration) * (Double(column) + 0.37) / Double(TaptionHwarangPose.frameCount)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = false
+        return UIGraphicsImageRenderer(size: CGSize(width: cell.width, height: cell.height), format: format).image { renderer in
+            let context = renderer.cgContext
+            let k = CGFloat(cell.height) / 100
+            context.scaleBy(x: k, y: k)
+            context.translateBy(x: 14 + (CGFloat(cell.width) / k - 146) / 2, y: -12)
+            var painter = HwarangPainter(c: context, small: true, hatImage: nil, coat: .named(style))
+            painter.render(scene, sec: CGFloat(sec), facesLeft: false, showsBackdrop: false)
+        }
+    }
+
+    static func scene(for pose: TaptionHwarangPose) -> HwarangScene {
+        switch pose {
+        case .deepSleep: .sleepBelly
+        case .remSleep: .sleepEyeMask
+        case .recovery: .recoverySuperman
+        case .medication: .medicated
+        case .hospital: .hospital
+        case .restStarfish: .restStarfish
+        case .restCroissant: .restCroissant
+        case .restDonut: .restDonut
+        case .restLoaf: .restLoaf
+        case .restBox: .restBox
+        case .nap: .nap
+        case .meditation: .meditate
+        case .salon: .salon
+        case .cooking: .cook
+        case .groceries: .groceries
+        case .laundry: .laundry
+        case .dishes: .dishes
+        case .housework: .robotVacuum
+        case .shower: .shower
+        case .friends: .friends
+        case .meeting: .meeting
+        case .date: .date
+        case .family: .family
+        case .phoneCall: .phoneCall
+        case .bookReading: .readBook
+        case .game: .game
+        case .music: .music
+        case .video: .video
+        case .petCare: .petCare
+        }
+    }
+
     /// 장면 한 프레임을 그림으로 낸다. 자세·장식 검토 시트를 만들 때 쓴다.
     /// `world`는 비트맵 가로에 담을 세계 폭으로, 작은 크기 그림(`small`)도 같은 틀에서 본다.
     static func frame(
         scene: HwarangScene, sec: Double, side: CGFloat = 438, small: Bool = false,
-        hat: UIImage? = nil, scarf: HwarangClothStyle? = nil, ribbon: HwarangClothStyle? = nil
+        hat: UIImage? = nil, scarf: HwarangClothStyle? = nil, ribbon: HwarangClothStyle? = nil, coat: HwarangCoat = .white
     ) -> UIImage {
         let headroom = hat == nil ? 0 : HwarangSceneView.hatHeadroom
         return UIGraphicsImageRenderer(size: CGSize(width: side, height: side)).image { renderer in
@@ -14,7 +66,7 @@ enum HwarangDiagnostics {
             let k = side / (146 + headroom)
             context.scaleBy(x: k, y: k)
             context.translateBy(x: 14 + headroom / 2, y: headroom - 8)
-            var painter = HwarangPainter(c: context, small: small, hatImage: hat, scarf: scarf, ribbon: ribbon)
+            var painter = HwarangPainter(c: context, small: small, hatImage: hat, scarf: scarf, ribbon: ribbon, coat: coat)
             painter.render(scene, sec: CGFloat(sec), facesLeft: false, showsBackdrop: false)
         }
     }

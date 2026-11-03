@@ -289,7 +289,7 @@ enum MapHomeCounterFold {
     }
 
     static let arrowHeight: CGFloat = 22
-    static let iconSize: CGFloat = 36
+    static let iconSize: CGFloat = 29
 
     static func tap(atY y: CGFloat, frame: CGRect, isCollapsed: Bool) -> Tap {
         if isCollapsed { return .expand }
@@ -300,8 +300,8 @@ enum MapHomeCounterFold {
 
 struct MapHomeCounterFoldedIcon: View {
     var body: some View {
-        Image(systemName: "chart.bar.fill")
-            .font(.system(size: 15, weight: .bold))
+        Image(systemName: "chart.xyaxis.line")
+            .font(.system(size: 16, weight: .bold))
             .foregroundStyle(Color.tpCounterIcon)
             .frame(width: MapHomeCounterFold.iconSize, height: MapHomeCounterFold.iconSize)
             .background(Color.tpSurface, in: Circle())

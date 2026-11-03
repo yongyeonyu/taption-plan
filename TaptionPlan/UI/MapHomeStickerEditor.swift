@@ -290,8 +290,15 @@ struct MapHomeStickerEditorSheet: View {
             Button {
                 toggleDictation()
             } label: {
-                Image(systemName: dictation.isListening ? "mic.fill" : "mic")
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(26)), weight: .semibold))
+                VStack(spacing: 2) {
+                    Image(systemName: dictation.isListening ? "stop.fill" : "mic")
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(22)), weight: .semibold))
+                    // 지금 어떤 언어로 받아 적는지 버튼 안에 보여 준다.
+                    Text(MapHomeDictation.languageName(forLocale: MapHomeDictation.speechLocaleIdentifier()))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
                     .foregroundStyle(dictation.isListening ? Color.tpHoliday : Color.tpAccent)
                     .frame(width: 68, height: 68)
                     .background(Color.tpAccent.opacity(0.14), in: Circle())
@@ -444,7 +451,7 @@ struct MapHomeStickerEditorSheet: View {
             dictation.onTranscribed = { text in
                 memoText = dictationBase + text
             }
-            let identifier = language == .korean ? "ko-KR" : "en-US"
+            let identifier = MapHomeDictation.speechLocaleIdentifier()
             // 녹음 파일은 이 메모의 오디오 첨부로 남긴다.
             let memoID: UUID? = {
                 switch target {

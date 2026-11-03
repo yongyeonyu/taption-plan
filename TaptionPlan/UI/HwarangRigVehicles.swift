@@ -33,36 +33,35 @@ extension HwarangPainter {
     }
 
     /// 정면에서 본 자동차. 앞유리 너머로 운전하는 화랑이 얼굴이 보인다.
+    /// 옆에서 본 은색 고급 오픈카. 실제 상표는 그리지 않는다.
     mutating func carFront(_ h: HeadPose, sec: CGFloat, progress: CGFloat) {
-        let turn = sin(sec * 0.9), bob = sin(sec * 6) * 0.7
-        fill(0x000000, 0.14); c.beginPath(); oval(58, groundY + 3, 54, 5); c.fillPath()
-        // 달리는 느낌을 주는 옆 선
-        stroke(0x8E949A, 2.2); c.beginPath()
-        for (i, x) in [CGFloat(-8), 124].enumerated() {
-            let y = 40 + wrap(progress * 0.8 + CGFloat(i) * 22, 60)
-            c.move(to: P(x, y)); c.addLine(to: P(x, y + 12))
+        let bob = sin(sec * 7) * 0.6, silver: UInt32 = 0xC8CDD3
+        fill(0x000000, 0.14); c.beginPath(); oval(58, 108, 60, 4); c.fillPath()
+        roadDashes(progress, y: 112)
+        c.saveGState(); c.translateBy(x: 0, y: bob)
+        // 접힌 지붕과 등받이
+        rounded(10, 62, 30, 11, 5, fillHex: 0x2F3136, line: 2)
+        rounded(34, 44, 13, 32, 6, fillHex: 0xC89B6B, line: 1.8)
+        face(60, 50, 0.72, h, showsScarf: true)
+        // 앞유리와 핸들
+        fill(0xCFE9F5, 0.45); stroke(outline, 2); c.setLineJoin(.round)
+        poly([P(82, 72), P(92, 46), P(96, 47), P(90, 72)]); c.drawPath(using: .fillStroke)
+        stroke(0x4A4A52, 3); c.setLineCap(.round); c.beginPath(); c.move(to: P(76, 72)); c.addLine(to: P(72, 62)); c.strokePath()
+        fill(coat.fur); stroke(outline, 2); c.beginPath(); circle(71, 63, 4.6); c.drawPath(using: .fillStroke)
+        // 차체: 트렁크, 문, 긴 보닛
+        fill(silver); stroke(outline, 2.2); c.beginPath(); c.move(to: P(0, 96))
+        cubic(-2, 84, 2, 72, 12, 71); c.addLine(to: P(90, 71)); cubic(102, 72, 118, 74, 124, 82)
+        cubic(127, 88, 126, 96, 122, 96); c.closePath(); c.drawPath(using: .fillStroke)
+        // 문선, 손잡이, 앞뒤 등과 크롬 띠
+        stroke(outline, 1.2, 0.55); c.beginPath(); c.move(to: P(40, 73)); c.addLine(to: P(40, 94)); c.move(to: P(76, 73)); c.addLine(to: P(76, 94)); c.strokePath()
+        rounded(62, 78, 9, 2.6, 1.3, fillHex: 0xF2F4F6, line: 0.9)
+        stroke(0xF2F4F6, 1.6); c.beginPath(); c.move(to: P(4, 86)); c.addLine(to: P(122, 86)); c.strokePath()
+        fill(0xFFF0B0); stroke(outline, 1.6); c.beginPath(); oval(120, 81, 4, 3); c.drawPath(using: .fillStroke)
+        fill(0xE5484D); stroke(outline, 1.6); c.beginPath(); oval(3, 79, 2.4, 3.4); c.drawPath(using: .fillStroke)
+        for x: CGFloat in [26, 98] {
+            fill(silver); stroke(outline, 2); c.beginPath(); circle(x, 96, 14); c.drawPath(using: .fillStroke)
+            wheelTire(x, 98, 10, progress * 0.12)
         }
-        c.strokePath()
-        c.saveGState(); c.translateBy(x: 58 + turn * 2.5, y: groundY); c.rotate(by: turn * 0.02); c.translateBy(x: -58, y: -groundY + bob)
-        rounded(14, 90, 18, 16, 4, fillHex: 0x3A3A40); rounded(84, 90, 18, 16, 4, fillHex: 0x3A3A40)
-        fill(0xE8675A); stroke(outline, 2.2); c.beginPath(); c.move(to: P(16, 84)); cubic(18, 40, 30, 16, 58, 16); cubic(86, 16, 98, 40, 100, 84); c.closePath(); c.drawPath(using: .fillStroke)
-        fill(0xCFE9F5); stroke(outline, 2); c.beginPath(); c.move(to: P(24, 84)); cubic(26, 48, 36, 25, 58, 25); cubic(80, 25, 90, 48, 92, 84); c.closePath(); c.drawPath(using: .fillStroke)
-        rounded(38, 34, 40, 50, 12, fillHex: 0xB7695A, line: 1.4)
-        // 앞유리 너머로 턱 밑 스카프 띠만 보인다. 끈은 핸들과 차체에 가려 그리지 않는다.
-        face(58, 57, 0.9, h, showsScarf: true)
-        // 핸들과 핸들을 쥔 앞발
-        let angle = turn * 0.35
-        stroke(outline, 5.4); c.beginPath(); oval(58, 80, 16, 7); c.strokePath()
-        stroke(0x4A4A52, 3); c.beginPath(); oval(58, 80, 16, 7); c.strokePath()
-        for side: CGFloat in [-1, 1] {
-            let px = 58 + cos(angle) * side * 15, py = 79 + sin(angle) * side * 5
-            fill(white); stroke(outline, 2); c.beginPath(); circle(px, py, 5); c.drawPath(using: .fillStroke)
-        }
-        fill(0xE8675A); stroke(outline, 2.2); c.beginPath(); c.move(to: P(6, 94)); quad(6, 84, 18, 84); c.addLine(to: P(98, 84)); quad(110, 84, 110, 94); c.addLine(to: P(110, 100)); quad(110, 104, 104, 104); c.addLine(to: P(12, 104)); quad(6, 104, 6, 100); c.closePath(); c.drawPath(using: .fillStroke)
-        for x: CGFloat in [20, 96] { fill(0xFFF0B0); stroke(outline, 1.8); c.beginPath(); circle(x, 93, 5.5); c.drawPath(using: .fillStroke) }
-        rounded(40, 88, 36, 9, 3, fillHex: 0x3F3F46, line: 1.6)
-        stroke(0x8A8A92, 1.1); c.beginPath(); for x: CGFloat in [47, 54, 61, 68] { c.move(to: P(x, 90)); c.addLine(to: P(x, 95)) }; c.strokePath()
-        rounded(48, 98.5, 20, 4.5, 1, fillHex: 0xFFFDF4, line: 1)
         c.restoreGState()
     }
 
@@ -96,6 +95,30 @@ extension HwarangPainter {
         // 창틀을 앞에 다시 그려 화랑이가 차 안에 있어 보이게 한다.
         fill(0xF3F5F7); c.fill(CGRect(x: 54, y: 83, width: 58, height: 1))
         stroke(0xFFFFFF, 2, 0.7); c.beginPath(); let shine = wrap(progress * 0.4, 60) + 58; c.move(to: P(min(shine, 104), 80)); c.addLine(to: P(min(shine + 6, 106), 54)); c.strokePath()
+        c.restoreGState()
+    }
+
+    /// KTX처럼 긴 유선형 코에 흰 차체와 파란 띠. 실제 로고는 그리지 않는다.
+    mutating func ktxTrain(_ h: HeadPose, sec: CGFloat, progress: CGFloat) {
+        stroke(outline, 2.4); c.beginPath(); c.move(to: P(-14, 106)); c.addLine(to: P(132, 106)); c.strokePath()
+        roadDashes(progress, y: 110)
+        let bob = sin(sec * 11) * 0.4, navy: UInt32 = 0x1F4E9E
+        c.saveGState(); c.translateBy(x: 0, y: bob)
+        stroke(outline, 2); c.beginPath(); c.addLines(between: [P(30, 46), P(38, 34), P(30, 28), P(48, 28)]); c.strokePath()
+        // 뒤 칸과 이어진 앞 칸. 앞이 낮게 깎여 내려간다.
+        fill(0xF6F8FA); stroke(outline, 2.2); c.beginPath(); c.move(to: P(-14, 96)); c.addLine(to: P(-14, 46))
+        c.addLine(to: P(70, 46)); cubic(96, 46, 118, 62, 131, 88); quad(133, 96, 124, 96); c.closePath(); c.drawPath(using: .fillStroke)
+        stroke(outline, 1.2, 0.5); c.beginPath(); c.move(to: P(14, 47)); c.addLine(to: P(14, 95)); c.strokePath()
+        for x: CGFloat in [-10, 1, 18, 29] { rounded(x, 54, 9, 13, 2, fillHex: 0x2C3E50, line: 1.2) }
+        // 운전석 유리와 화랑이
+        fill(0xCFE9F5); stroke(outline, 1.8); c.beginPath(); c.move(to: P(42, 52)); c.addLine(to: P(72, 52)); cubic(86, 52, 98, 60, 106, 72); c.addLine(to: P(42, 72)); c.closePath(); c.drawPath(using: .fillStroke)
+        c.saveGState(); c.clip(to: CGRect(x: 42, y: 40, width: 66, height: 32))
+        face(66, 64, 0.5, h)
+        c.restoreGState()
+        // 파란 띠와 빨간 가는 선
+        fill(navy); c.beginPath(); c.move(to: P(-13, 76)); c.addLine(to: P(112, 76)); quad(122, 80, 128, 86); c.addLine(to: P(-13, 86)); c.closePath(); c.fillPath()
+        fill(0xD9363E); c.fill(CGRect(x: -13, y: 87, width: 139, height: 2))
+        for x: CGFloat in [8, 52, 100] { wheelTire(x, 99, 5.5, progress * 0.2 + x) }
         c.restoreGState()
     }
 

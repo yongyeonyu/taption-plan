@@ -1,4 +1,5 @@
 import CoreLocation
+import MapKit
 import SwiftUI
 import XCTest
 @testable import TaptionPlan
@@ -1580,5 +1581,134 @@ extension MapHomeLiveMapTests {
         for accent in ["rpg-landuse-accent", "rpg-landcover-extra", "rpg-building-tall", "rpg-road-main", "rpg-road-highway", "rpg-rail"] {
             XCTAssertTrue(ids.contains(accent), accent)
         }
+    }
+}
+
+final class MapHomeAppleMapSmoothnessTests: XCTestCase {
+    func testHomeStaysVisibleAtAnyZoomButOtherPlacesMayHide() {
+        XCTAssertEqual(MapHomePlaceDisplayPolicy.priority(for: .home), .required)
+        for destination in MapHomeLocationDestination.allCases where destination != .home {
+            XCTAssertLessThan(
+                MapHomePlaceDisplayPolicy.priority(for: destination).rawValue,
+                MKFeatureDisplayPriority.required.rawValue
+            )
+        }
+        XCTAssertGreaterThan(
+            MapHomePlaceDisplayPolicy.zPriority(for: .home).rawValue,
+            MapHomePlaceDisplayPolicy.zPriority(for: .company).rawValue
+        )
+        XCTAssertGreaterThan(MapHomePlaceDisplayPolicy.vectorZIndex(for: .home), MapHomePlaceDisplayPolicy.vectorZIndex(for: .company))
+        XCTAssertLessThan(MapHomePlaceDisplayPolicy.vectorZIndex(for: .home), MapHomeLayerPriority.stickman)
+    }
+
+    func testVectorProjectionNeverCullsHomeMarker() {
+        var projector = MapHomeMarkerProjector()
+        let far = CLLocationCoordinate2D(latitude: 10, longitude: 10)
+        let points = projector.points(
+            markers: [
+                MapHomeVectorMarker(id: "place-home", coordinate: far),
+                MapHomeVectorMarker(id: MapHomeMarkerProjector.cullablePrefix + "1", coordinate: far),
+            ],
+            camera: .init(latitude: 37, longitude: 127, altitude: 1_000, heading: 0, pitch: 0, size: CGSize(width: 400, height: 800)),
+            visible: .init(south: 36.9, west: 126.9, north: 37.1, east: 127.1),
+            project: { _ in CGPoint(x: -999, y: -999) }
+        )
+        XCTAssertNotNil(points["place-home"])
+        XCTAssertNil(points[MapHomeMarkerProjector.cullablePrefix + "1"])
+    }
+
+    /// 카메라 거리와 중심을 한 번에 계산해도 화랑이가 표적점에 온다(CTR1103A02).
+    func testCameraCenterSourceKeepsTargetWhileZooming() {
+        let viewport = CGSize(width: 400, height: 800)
+        let target = CGPoint(x: 200, y: 500)
+        let location = CGPoint(x: 240, y: 460)
+        for zoomScale: CGFloat in [0.5, 1, 1.1, 2] {
+            let source = MapHomeCameraLayoutMath.cameraCenterSourcePoint(
+                currentLocationPoint: location,
+                targetPoint: target,
+                viewportSize: viewport,
+                zoomScale: zoomScale
+            )
+            // 새 중심(source)을 화면 가운데로 옮기고 zoomScale배 하면 location이 target에 온다.
+            XCTAssertEqual(viewport.width / 2 + (location.x - source.x) * zoomScale, target.x, accuracy: 0.001)
+            XCTAssertEqual(viewport.height / 2 + (location.y - source.y) * zoomScale, target.y, accuracy: 0.001)
+        }
+    }
+
+    /// 실제 지도에서: 재생 카메라 한 번에 좌표가 표적점으로 오고, 거리도 맞는다.
+    @MainActor
+    func testAtomicCameraCommandPutsCoordinateOnTarget() {
+        let mapView = MKMapView(frame: CGRect(x: 0, y: 0, width: 400, height: 800))
+        mapView.camera = MKMapCamera(
+            lookingAtCenter: CLLocationCoordinate2D(latitude: 37.5, longitude: 126.9), fromDistance: 4_000, pitch: 0, heading: 0
+        )
+        let target = CGPoint(x: 200, y: 520)
+        let coordinate = CLLocationCoordinate2D(latitude: 37.502, longitude: 126.903)
+        MapHomeAppleCameraCommand.center(coordinate, at: target, distance: 3_000, on: mapView)
+        let point = mapView.convert(coordinate, toPointTo: mapView)
+        XCTAssertEqual(point.x, target.x, accuracy: 3)
+        XCTAssertEqual(point.y, target.y, accuracy: 3)
+        XCTAssertEqual(mapView.camera.centerCoordinateDistance, 3_000, accuracy: 300)
+    }
+
+    /// 마커에 붙은 카운터는 마커가 어디로 가든 상대 위치가 같고, 마커가 사라지면 채널 방식으로 돌아간다.
+    @MainActor
+    func testCounterFollowsMarkerAsChildAndFallsBackWithoutIt() {
+        let root = UIView(frame: CGRect(x: 0, y: 0, width: 400, height: 800))
+        let follower = MapHomeLivePointFollowerView(rootView: Color.clear.frame(width: 240, height: 320))
+        follower.frame = root.bounds
+        root.addSubview(follower)
+        let marker = UIView(frame: CGRect(x: 0, y: 0, width: 80, height: 80))
+        root.addSubview(marker)
+        let attachment = MapHomeMarkerAttachment()
+        let channel = MapHomeLivePointChannel()
+        channel.send(CGPoint(x: 100, y: 500))
+        var reported = CGRect.zero
+        follower.configure(
+            channel: channel, attachment: attachment, fallback: .zero,
+            offset: CGSize(width: 0, height: -228), onFrame: { reported = $0 }
+        )
+        XCTAssertTrue(follower.host.view.superview === follower)
+        XCTAssertEqual(follower.host.view.center, CGPoint(x: 100, y: 272))
+
+        attachment.attach(marker, markerOffset: CGSize(width: 0, height: -18))
+        XCTAssertTrue(follower.host.view.superview === marker)
+        let relative = follower.host.view.center
+        XCTAssertEqual(relative, CGPoint(x: 40, y: 40 - 210))
+        for center in [CGPoint(x: 10, y: 20), CGPoint(x: 300, y: 700)] {
+            marker.center = center
+            XCTAssertEqual(follower.host.view.center, relative, "마커가 움직여도 상대 좌표는 그대로다")
+            channel.send(CGPoint(x: center.x, y: center.y + 18))
+            XCTAssertEqual(reported.midX, center.x, accuracy: 0.5, "탭 판정 자리는 마커를 따라간다")
+            XCTAssertEqual(reported.midY, center.y - 210, accuracy: 0.5)
+        }
+
+        attachment.attach(nil)
+        XCTAssertTrue(follower.host.view.superview === follower)
+        XCTAssertEqual(follower.host.view.center, CGPoint(x: 300, y: 718 - 228))
+    }
+
+    func testFogProjectionIsAffineAndCirclesAreCulledAndMerged() {
+        let projection = MapHomeFogProjection(
+            origin: MKMapPoint(x: 1_000, y: 2_000),
+            originPoint: CGPoint(x: 100, y: 200),
+            xAxis: CGVector(dx: 0.5, dy: 0),
+            yAxis: CGVector(dx: 0, dy: 0.5)
+        )
+        let point = projection.point(for: MKMapPoint(x: 1_100, y: 1_900))
+        XCTAssertEqual(point.x, 150, accuracy: 0.001)
+        XCTAssertEqual(point.y, 150, accuracy: 0.001)
+
+        let rect = CGRect(x: 0, y: 0, width: 400, height: 800)
+        var centers: [(point: CGPoint, radius: CGFloat)] = (0..<300).map { index in
+            (CGPoint(x: 100 + CGFloat(index % 3), y: 100), 72)
+        }
+        centers.append((CGPoint(x: 100, y: 100), 96))
+        centers.append((CGPoint(x: 5_000, y: 100), 72))
+        centers.append((CGPoint(x: 300, y: 300), 72))
+        let circles = MapHomeFogProjection.visibleCircles(centers: centers, in: rect)
+        XCTAssertEqual(circles.count, 3)
+        XCTAssertTrue(circles.contains { $0.radius == 96 })
+        XCTAssertFalse(circles.contains { $0.point.x == 5_000 })
     }
 }

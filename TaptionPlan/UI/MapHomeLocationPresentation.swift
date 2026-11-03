@@ -146,6 +146,10 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
     case eating
     case exercise
     case unconfirmed
+    case mapReading
+    case walkInPlace
+    case meeting
+    case dishes
     case walking
     case running
     case car
@@ -220,6 +224,10 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
         case .health: .stretch
         case .activity: .groom
         case .unconfirmed: .confused
+        case .mapReading: .atlas
+        case .meeting: .meeting
+        case .dishes: .dishes
+        case .walkInPlace: .walkLoop
         }
     }
 
@@ -240,7 +248,7 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
         case .computer, .company, .school, .reading, .hobby, .sleeping, .deepSleep, .remSleep, .recovery, .medication, .restStarfish, .restCroissant, .restDonut, .restLoaf, .restBox, .eating,
              .activity, .exercise, .health, .unconfirmed, .shower, .housework,
              .nap, .cooking, .groceries, .laundry, .friends, .date, .family, .phoneCall,
-             .meditation, .hospital, .salon, .bookReading, .game, .music, .video, .petCare:
+             .meditation, .hospital, .salon, .bookReading, .game, .music, .video, .petCare, .mapReading, .walkInPlace, .meeting, .dishes:
             true
         default:
             isMoving
@@ -286,6 +294,10 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
         case .restDonut: return t("수업 휴식", "Study break")
         case .restLoaf: return t("취미 휴식", "Hobby break")
         case .restBox: return t("집에서 휴식", "Rest at home")
+        case .mapReading: return t("지도 보기", "Reading a map")
+        case .meeting: return t("회의", "Meeting")
+        case .dishes: return t("설거지", "Dishes")
+        case .walkInPlace: return t("제자리 걷기", "Walking in place")
         case .remSleep: return t("REM 수면", "REM sleep")
         case .movement: return t("이동", "Movement")
         case .eating: return t("식사", "Meal")
@@ -349,7 +361,7 @@ enum MapHomeStickmanActionResolver {
         readings: [SensorReading] = [],
         sleepSessions: [SleepSession] = []
     ) -> MapHomeStickmanAction {
-        let actuals = actuals.filter { active($0, at: date) }
+        let actuals = actuals.filter { active($0, at: date) || isRecentWorkout($0, before: date) }
         let travel = travel.filter { $0.span.contains(date) }
         let places = places.filter { $0.span.contains(date) }
         let readings = readings.filter {
@@ -459,10 +471,24 @@ enum MapHomeStickmanActionResolver {
         let placeAction = activePlaces.lazy.compactMap { action(for: $0, frequentPlaces: frequentPlaces) }.first
         if let candidate = activeActuals.max(by: higherPriority) {
             // 자동 기록의 일반 활동보다 식당·회사 같은 장소가 더 구체적이다(CAT1103A01).
-            if candidate.1 == .activity || candidate.1 == .restStarfish || candidate.1 == .restBox, let placeAction { return placeAction }
+            let isGeneric = candidate.1 == .activity || candidate.1 == .restStarfish || candidate.1 == .restBox
+            if isGeneric, placeAction == nil || placeAction == .activity, recentlyExercised(before: date, actuals: actuals) { return .recovery }
+            if candidate.1 == .activity || placeAction != .activity, isGeneric, let placeAction { return placeAction }
             return candidate.1
         }
+        if placeAction == nil || placeAction == .activity, recentlyExercised(before: date, actuals: actuals) { return .recovery }
         return placeAction ?? .activity
+    }
+
+    /// 운동을 마치고 30분 안에 쉬는 동안은 회복 자세다. 10분 넘게 운동한 기록만 본다.
+    private static func recentlyExercised(before date: Date, actuals: [ActualRecord]) -> Bool {
+        actuals.contains { isRecentWorkout($0, before: date) }
+    }
+
+    private static func isRecentWorkout(_ actual: ActualRecord, before date: Date) -> Bool {
+        guard let end = actual.endedAt, end <= date, date.timeIntervalSince(end) <= 30 * 60,
+              end.timeIntervalSince(actual.startedAt) >= 10 * 60 else { return false }
+        return actual.categoryID.lowercased().split(separator: ".").first == "exercise"
     }
 
     /// 머문 기록이 생기기 전 실시간 위치의 동작. 지점이 겹치면 가장 작은 곳이다(CAT1103A01).
@@ -701,7 +727,7 @@ enum MapHomeStickmanActionResolver {
     /// 직접 고르는 상세 분류(RIG1103A02). 제목이나 behavior가 정확히 같을 때만 대분류보다 먼저 자기 장면을 쓴다.
     private static let dailyActions: [String: MapHomeStickmanAction] = [
         "깊은 수면": .deepSleep, "deep": .deepSleep, "rem 수면": .remSleep, "rem": .remSleep,
-        "회복": .recovery, "recovery": .recovery, "투약": .medication, "medication": .medication,
+        "회의": .meeting, "meeting": .meeting, "설거지": .dishes, "dishes": .dishes, "멍때리기": .restBox, "zoningout": .restBox, "회복": .recovery, "recovery": .recovery, "투약": .medication, "medication": .medication,
         "샤워": .shower, "shower": .shower, "showering": .shower,
         "집안일": .housework, "housework": .housework, "chores": .housework,
         "낮잠": .nap, "nap": .nap, "요리": .cooking, "cooking": .cooking,
@@ -718,8 +744,7 @@ enum MapHomeStickmanActionResolver {
     private static func restAction(categoryRoot: String, title: String, behavior: String?) -> MapHomeStickmanAction? {
         let name = title.trimmingCharacters(in: .whitespacesAndNewlines)
         if behavior == StationaryContextKind.homeRest.rawValue || name == "집에서 휴식" { return .restBox }
-        let isRest = behavior == "stationary" || name == "휴식"
-        guard isRest else { return nil }
+        guard behavior == "stationary" || name == "휴식" else { return nil }
         switch categoryRoot {
         case "work": return .restCroissant
         case "study": return .restDonut
@@ -729,12 +754,18 @@ enum MapHomeStickmanActionResolver {
         }
     }
 
+    static func clearActionCache() {
+        actionCacheLock.lock(); defer { actionCacheLock.unlock() }
+        actionCache.removeAll(keepingCapacity: true)
+    }
+
     private static func dailyAction(title: String, behavior: String?) -> MapHomeStickmanAction? {
         behavior.flatMap { dailyActions[$0.lowercased()] }
             ?? dailyActions[title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()]
     }
 
     private static func action(for actual: ActualRecord) -> MapHomeStickmanAction? {
+        if let custom = MapHomeCustomAnimations.action(categoryID: actual.categoryID) { return custom }
         if let daily = dailyAction(title: actual.title, behavior: actual.behavior) { return daily }
         let category = actual.categoryID.lowercased()
         let categoryRoot = category.split(separator: ".", maxSplits: 1).first.map(String.init) ?? category
@@ -893,23 +924,6 @@ enum MapHomeStickmanAnimationEngine {
 
     static func pulse(for phase: Int) -> Double {
         (oscillation(for: phase) + 1) / 2
-    }
-}
-
-/// 화면에서 화랑이가 왼쪽·오른쪽 어디로 가는지 정한다. 거의 위아래로 가면 이전 방향을 유지해 좌우로 튀지 않게 한다.
-@MainActor
-enum MapHomeStickmanFacing {
-    private static var last = false
-
-    static func facesLeft(headingDegrees: Double, cameraHeading: Double) -> Bool {
-        last = resolve(headingDegrees: headingDegrees, cameraHeading: cameraHeading, previous: last)
-        return last
-    }
-
-    nonisolated static func resolve(headingDegrees: Double, cameraHeading: Double, previous: Bool) -> Bool {
-        guard headingDegrees.isFinite, cameraHeading.isFinite else { return previous }
-        let horizontal = sin((headingDegrees - cameraHeading) * .pi / 180)
-        return abs(horizontal) < 0.26 ? previous : horizontal < 0
     }
 }
 
@@ -1155,26 +1169,6 @@ struct MapHomeMenuHeaderCat: View {
         }
         .frame(width: size, height: size)
         .accessibilityHidden(true)
-    }
-}
-
-/// 메뉴 머리글 문구. 살짝 기울이고 형광펜 밑줄을 그어 일기장에 쓴 느낌을 낸다.
-struct MapHomeMenuHeaderTitle: View {
-    let language: MapHomeLanguage
-
-    var body: some View {
-        Text(language.text("오늘 하루", "Today"))
-            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(22)), weight: .bold))
-            .foregroundStyle(Color.tpInk)
-            .background(alignment: .bottomLeading) {
-                // 형광펜으로 그은 듯한 밑줄. 글자 뒤로 깔린다.
-                Capsule()
-                    .fill(Color(hex: "#F3C766").opacity(0.55))
-                    .frame(height: 8)
-                    .offset(y: -2)
-            }
-            .rotationEffect(.degrees(-2.5), anchor: .leading)
-            .fixedSize()
     }
 }
 

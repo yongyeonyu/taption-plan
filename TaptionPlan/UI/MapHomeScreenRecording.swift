@@ -1,6 +1,7 @@
 import AVFoundation
 import Photos
 import os
+import TaptionPlanCore
 import ReplayKit
 import Speech
 import SwiftUI
@@ -134,6 +135,31 @@ final class MapHomeDictation {
     }
 
     /// 음성 인식이나 마이크 권한이 거부된 상태(설정에서만 바꿀 수 있다).
+    /// 앱에서 고른 언어로 받아 적는다. 자동이면 기기 언어를 그대로 쓴다(앱에 없는 일본어 등도 음성 인식은 된다).
+    static func speechLocaleIdentifier() -> String {
+        switch AppLanguagePreference.current {
+        case .korean: return "ko-KR"
+        case .english: return "en-US"
+        case .automatic:
+            return matchedSpeechLocale(
+                preferred: Locale.preferredLanguages.first ?? "en-US",
+                supported: SFSpeechRecognizer.supportedLocales().map(\.identifier)
+            )
+        }
+    }
+
+    nonisolated static func matchedSpeechLocale(preferred: String, supported: [String]) -> String {
+        let normalized = preferred.replacingOccurrences(of: "_", with: "-")
+        if supported.contains(normalized) { return normalized }
+        let language = Locale(identifier: normalized).language.languageCode?.identifier
+        return supported.sorted().first { Locale(identifier: $0).language.languageCode?.identifier == language } ?? "en-US"
+    }
+
+    static func languageName(forLocale identifier: String) -> String {
+        let locale = Locale(identifier: identifier)
+        return locale.language.languageCode.flatMap { locale.localizedString(forLanguageCode: $0.identifier) }?.capitalized(with: locale) ?? identifier
+    }
+
     static var isPermissionDenied: Bool {
         SFSpeechRecognizer.authorizationStatus() == .denied
             || SFSpeechRecognizer.authorizationStatus() == .restricted

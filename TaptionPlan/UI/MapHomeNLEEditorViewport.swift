@@ -75,8 +75,33 @@ extension MapHomeNLEClipEditor {
         let previousStart = track.rangeStartMinute
         track = NLEDayWindow.prepending(built.main, to: track)
         subTrack = NLEDayWindow.prepending(built.sub, to: subTrack)
+        subProvenance.merge(Self.subProvenance(details: day.details, dayOffset: dayOffset)) { _, new in new }
         undoStack = undoStack.map { rebased($0, with: built, rangeStartMinute: previousStart) }
         redoStack = redoStack.map { rebased($0, with: built, rangeStartMinute: previousStart) }
+    }
+
+    /// 기준일의 상세 층을 근거로 고른 하위 행동으로 바꾼다. 읽어 둔 지난 날은 그대로다.
+    /// 상세 층은 읽기 전용이라 되돌리기 기록도 같은 값으로 맞춘다. 저장되는 것은 없다.
+    func installSubActivities(_ details: [MapHomeSectionDetail]) {
+        guard !subTrack.clips.contains(where: \.isDirty) else { return }
+        let next = NLETrack(
+            clips: subTrack.clips.filter { $0.startMinute < 0 }
+                + Self.makeSubTrack(details: details, segments: segments).clips,
+            rangeStartMinute: subTrack.rangeStartMinute,
+            rangeEndMinute: subTrack.rangeEndMinute,
+            fillsGaps: false
+        )
+        subProvenance.merge(Self.subProvenance(details: details)) { _, new in new }
+        guard next.snapshot() != subTrack.snapshot() else { return }
+        subTrack = next
+        undoStack = undoStack.map { withSub(next, $0) }
+        redoStack = redoStack.map { withSub(next, $0) }
+    }
+
+    private func withSub(_ track: NLETrack, _ snapshot: NLEEditorSnapshot) -> NLEEditorSnapshot {
+        var value = snapshot
+        value.sub = track.snapshot()
+        return value
     }
 
     private func rebased(

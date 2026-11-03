@@ -71,7 +71,9 @@ final class RawSensorReplayTests: XCTestCase {
         let data = try Data(contentsOf: URL(fileURLWithPath: path))
         let days = try (try? JSONDecoder().decode([TodaySensorRawExport].self, from: data))
             ?? [try JSONDecoder().decode(TodaySensorRawExport.self, from: data)]
-        let day = try XCTUnwrap(days.last)
+        var day = try XCTUnwrap(days.last)
+        day = TodaySensorRawExport(day: day.day, isComplete: day.isComplete, readings: day.readings,
+            travel: SubwayAlighting.applying(day.travel, readings: day.readings, corrections: []), places: day.places, actuals: day.actuals)
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Asia/Seoul") ?? .current
         let formatter = DateFormatter()
@@ -97,8 +99,37 @@ final class RawSensorReplayTests: XCTestCase {
                 at: date, actuals: day.actuals ?? [], travel: day.travel, places: day.places ?? [],
                 frequentPlaces: [], readings: readings, sleepSessions: []
             )
+            if let home = readings.first(where: { $0.point != nil })?.point, let here = location?.coordinate {
+                let gap = MapHomePlaybackLocation.subwayCoordinate(at: date, travel: day.travel, readings: readings)
+                print("REPLAY where \(formatter.string(from: date)) fromFirst=\(Int(MapHomeVectorNavigationMath.metersForTest(home, here))) subway=\(gap.map { Int(MapHomeVectorNavigationMath.metersForTest(home, $0)) } ?? -1)")
+            }
             print("REPLAY playback \(formatter.string(from: date)) frame=\(frame.map { "\($0.activity)/\($0.mode?.rawValue ?? "-")/\($0.routePhase)/\($0.legID.prefix(12))" } ?? "nil") location=\(location != nil) fallback=\(action)")
             date = date.addingTimeInterval(30)
+        }
+    }
+
+    /// 등록 장소로 체류와 식사 후보를 다시 계산해 찍는다(PLY1103A01). `TAPTION_REPLAY_PLACES`는 등록 장소 JSON이다.
+    func testDumpStaysWithFrequentPlaces() throws {
+        let environment = ProcessInfo.processInfo.environment
+        guard let path = environment["TAPTION_RAW_REPLAY"], let placesPath = environment["TAPTION_REPLAY_PLACES"] else {
+            throw XCTSkip("TAPTION_REPLAY_PLACES 없음")
+        }
+        let days = try JSONDecoder().decode([TodaySensorRawExport].self, from: Data(contentsOf: URL(fileURLWithPath: path)))
+        let places = try JSONDecoder().decode([FrequentPlace].self, from: Data(contentsOf: URL(fileURLWithPath: placesPath)))
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MM-dd HH:mm"
+        formatter.timeZone = TimeZone(identifier: "Asia/Seoul")
+        for day in days {
+            let readings = day.readings.sorted { $0.timestamp < $1.timestamp }
+            guard let first = readings.first?.timestamp, let last = readings.last?.timestamp else { continue }
+            let detected = PlaceDetectionEngine().detectStays(readings: readings, knownNames: [:])
+            for stay in FrequentPlaceResolutionEngine().applying(places, to: detected, readings: readings) {
+                print("REPLAY stay \(formatter.string(from: stay.span.start))–\(formatter.string(from: stay.span.end)) \(stay.displayName) confirmed=\(stay.isConfirmed)")
+            }
+            let walking = readings.filter { $0.motion == .walking }.map { TimeSpan(start: $0.timestamp, end: $0.timestamp.addingTimeInterval(30)) }
+            for stay in UnobservedStayEngine.stays(readings: readings, footSpans: walking, inside: TimeSpan(start: first, end: last)) {
+                print("REPLAY silence \(formatter.string(from: stay.span.start))–\(formatter.string(from: stay.span.end)) moved=\(Int(stay.displacementMeters)) left=\(stay.leftOnFoot) back=\(stay.returnedOnFoot)")
+            }
         }
     }
 
@@ -204,5 +235,12 @@ final class RawSensorReplayTests: XCTestCase {
             let json = try JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys])
             try json.write(to: URL(fileURLWithPath: out))
         }
+    }
+}
+
+private extension MapHomeVectorNavigationMath {
+    static func metersForTest(_ a: GeoPoint, _ b: GeoPoint) -> Double {
+        let y = (a.latitude - b.latitude) * 111_320, x = (a.longitude - b.longitude) * 111_320 * cos(a.latitude * .pi / 180)
+        return (x * x + y * y).squareRoot()
     }
 }

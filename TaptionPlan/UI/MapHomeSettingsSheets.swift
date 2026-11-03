@@ -13,6 +13,7 @@ struct MapHomeCategoryAddSheet: View {
     @State private var title = ""
     @State private var systemImage = "tag.fill"
     @State private var color = Color.tpReferenceMint
+    @State private var animation: MapUserActivityAnimation?
     @FocusState private var isFocused: Bool
 
     private var iconNames: [String] {
@@ -73,6 +74,15 @@ struct MapHomeCategoryAddSheet: View {
                 .background(Color.tpSurface, in: Capsule())
             }
 
+            Picker(language.text("화랑이 동작", "Cat animation"), selection: $animation) {
+                Text(language.text("기본 동작", "Default")).tag(MapUserActivityAnimation?.none)
+                ForEach(MapUserActivityAnimation.allCases) { Text($0.title).tag(MapUserActivityAnimation?.some($0)) }
+            }
+            .pickerStyle(.menu)
+            .frame(maxWidth: .infinity)
+            .frame(height: 44)
+            .background(Color.tpSurface, in: Capsule())
+
             Button(action: save) {
                 Text(language.text("추가", "Add"))
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold))
@@ -108,7 +118,8 @@ struct MapHomeCategoryAddSheet: View {
         guard model.addMapUserActivityCategory(
             title: trimmedTitle,
             systemImage: systemImage,
-            hex: color.hexRGBString ?? "#29A383"
+            hex: color.hexRGBString ?? "#29A383",
+            animation: animation
         ) else { return }
         dismiss()
     }

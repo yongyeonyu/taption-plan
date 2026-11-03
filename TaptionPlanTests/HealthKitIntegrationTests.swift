@@ -1033,12 +1033,9 @@ final class HealthKitIntegrationTests: XCTestCase {
         XCTAssertEqual(
             Set(health?.details.map(\.id) ?? []),
             [
-                "health.wellness",
-                "health.nap",
                 "health.meditation",
                 "health.hospital",
                 "health.salon",
-                "health.vitals",
                 "health.recovery",
                 "health.medication",
             ]

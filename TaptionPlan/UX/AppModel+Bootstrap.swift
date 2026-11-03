@@ -239,6 +239,9 @@ extension AppModel {
         migrateLegacyStickersOnce()
         scheduleBootstrapPreparation()
         await waitForBootstrapPreparation()
+        #if DEBUG
+        await exportRawOnLaunchIfRequested()
+        #endif
     }
 
     /// 예전 스티커 기록을 메모 하나로 한 번만 합친다. 스티커의 종류·색·시간·위치는 그대로 옮긴다.

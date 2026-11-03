@@ -12,7 +12,9 @@ struct MapHomeGrowthSheet: View {
 
     @State private var historyCache = MapHomeGrowthHistoryCache()
     @State private var showsTestTools = true
-    @State private var showsAllAccessories = false
+    @State private var accessoryTab = MapHomeAccessoryKind.hat
+    /// 종류별 미리 보기. 시트를 닫으면 사라지고 착용 상태는 바꾸지 않는다.
+    @State private var previewAccessories: [MapHomeAccessoryKind: String] = [:]
 
     private var history: MapHomeGrowthHistory {
         historyCache.history(for: growthData) ?? .initial(for: .now)
@@ -273,71 +275,22 @@ struct MapHomeGrowthSheet: View {
         VStack(alignment: .leading, spacing: 11) {
             sectionTitle(
                 language.text(
-                    "화랑이 액세서리 \(season.accessories.count) / \(MapHomeLandmarkCatalog.candidates.count)",
-                    "Hwarang accessories \(season.accessories.count) / \(MapHomeLandmarkCatalog.candidates.count)"
+                    "\(HwarangCoat.selectedName) 액세서리 \(season.accessories.count) / \(MapHomeLandmarkCatalog.candidates.count)",
+                    "\(HwarangCoat.selectedName) accessories \(season.accessories.count) / \(MapHomeLandmarkCatalog.candidates.count)"
                 ),
-                subtitle: language.text("주간 진화 보상으로 모아 착용해요 · 현재 취득 / 전체", "Collect and equip from weekly rewards · owned / total")
+                subtitle: language.text("주간 진화 보상으로 모아 착용해요 · 눌러서 미리 보기", "Collect from weekly rewards · Tap to preview")
             )
-            Button {
-                showsAllAccessories.toggle()
-            } label: {
-                Label(
-                    language.text(showsAllAccessories ? "전체 도감 접기" : "전체 도감 보기", showsAllAccessories ? "Hide all" : "Show all"),
-                    systemImage: showsAllAccessories ? "chevron.up" : "square.grid.3x3.fill"
-                )
-                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
-                .foregroundStyle(Color.tpAccent)
+            MapHomeAccessoryFashionShow(
+                outfit: season.equippedAccessory, preview: previewAccessories.values.sorted()
+            )
+            .frame(maxWidth: .infinity)
+            .frame(height: 170)
+            .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            Picker(language.text("종류", "Kind"), selection: $accessoryTab) {
+                ForEach(MapHomeAccessoryKind.allCases, id: \.self) { Text(accessoryKindName($0)).tag($0) }
             }
-            .buttonStyle(.plain)
-            if showsAllAccessories { accessoryCollectionGrid }
-            if season.accessories.isEmpty {
-                Text(language.text("아직 모은 액세서리가 없어요.", "No accessories collected yet."))
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
-                    .foregroundStyle(Color.tpSecondary)
-            } else {
-                ForEach(season.accessories, id: \.self) { accessoryID in
-                    Button {
-                        equip(accessoryID)
-                    } label: {
-                        HStack(spacing: 10) {
-                            // 화랑이가 걸치는 장식. 옛 장식은 심볼로 보인다.
-                            Group {
-                                if let art = MapHomeGrowthAccessoryCatalog.artworkName(for: accessoryID) {
-                                    Image(art).resizable().scaledToFit().padding(3)
-                                } else {
-                                    Image(systemName: MapHomeGrowthAccessoryCatalog.symbol(for: accessoryID) ?? "sparkles")
-                                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold))
-                                        .foregroundStyle(Color(hex: "#D94772"))
-                                }
-                            }
-                                .frame(width: 36, height: 36)
-                                .background(Color.tpAccent.opacity(0.10), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(accessoryName(accessoryID))
-                                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
-                                    .foregroundStyle(Color.tpInk)
-                                if let landmark = MapHomeGrowthAccessoryCatalog.landmark(for: accessoryID) {
-                                    Text("\(accessoryKindName(landmark.accessoryKind)) · \(countryName(landmark.country)) · \(categoryName(landmark.category))")
-                                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
-                                        .foregroundStyle(Color.tpSecondary)
-                                }
-                            }
-                            Spacer()
-                            if season.isEquipped(accessoryID) {
-                                Text(language.text("착용 중", "Equipped"))
-                                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
-                                    .foregroundStyle(Color.tpAccent)
-                            }
-                            // 지도에서 쓰는 화랑이 아이콘에 이 장식을 단 모습.
-                            MapHomeStickmanMarker(action: .sleeping, equippedAccessoryID: accessoryID)
-                                .frame(width: 36, height: 36)
-                        }
-                        .padding(12)
-                        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
+            .pickerStyle(.segmented)
+            accessoryCollectionGrid
         }
     }
 
@@ -345,15 +298,16 @@ struct MapHomeGrowthSheet: View {
     private var accessoryCollectionGrid: some View {
         let owned = Set(season.accessories)
         return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 5), spacing: 8) {
-            ForEach(MapHomeLandmarkCatalog.candidates) { candidate in
+            ForEach(MapHomeLandmarkCatalog.candidates.filter { $0.accessoryKind == accessoryTab }) { candidate in
                 let isOwned = owned.contains(candidate.accessoryID)
                 Button {
+                    previewAccessories[candidate.accessoryKind] = candidate.accessoryID
                     if isOwned { equip(candidate.accessoryID) }
                 } label: {
                     VStack(spacing: 3) {
                         Group {
-                            if isOwned, let art = MapHomeGrowthAccessoryCatalog.artworkName(for: candidate.accessoryID) {
-                                Image(art).resizable().scaledToFit()
+                            if let art = MapHomeGrowthAccessoryCatalog.artworkName(for: candidate.accessoryID) {
+                                Image(art).resizable().scaledToFit().opacity(isOwned ? 1 : 0.35)
                             } else {
                                 Image(systemName: "lock.fill")
                                     .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
@@ -632,5 +586,36 @@ struct MapHomeGrowthSheet: View {
             "\(candidate.name) \(accessoryKindName(candidate.accessoryKind))",
             "\(candidate.englishName) \(accessoryKindName(candidate.accessoryKind).lowercased())"
         )
+    }
+}
+
+/// 도감 위 패션쇼: 착용한 장식을 입은 고양이가 동작을 무작위로 이어 보여 준다. 고른 장식은 미리 입어 본다.
+struct MapHomeAccessoryFashionShow: View {
+    let outfit: String?
+    let preview: [String]
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private static let scenes: [HwarangScene] = [.stroll, .groom, .stretch, .yarn, .eat] + HwarangScene.dailyScenes
+    private static let holdSeconds = 5.0
+
+    private func worn(_ kind: MapHomeAccessoryKind) -> String? {
+        preview.first { MapHomeGrowthAccessoryCatalog.kind(for: $0) == kind } ?? outfit
+    }
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 24, paused: reduceMotion)) { context in
+            let seconds = reduceMotion ? 0 : HwarangClock.seconds(at: context.date)
+            let slot = Int(seconds / Self.holdSeconds)
+            // 같은 칸에서는 같은 장면, 칸이 바뀌면 흩어진 다음 장면으로 넘어간다.
+            let scene = Self.scenes[(slot &* 2_654_435_761 >> 7) % Self.scenes.count]
+            HwarangSceneView(
+                scene: scene, sec: seconds.truncatingRemainder(dividingBy: Self.holdSeconds), width: 180, anchorHeight: 150,
+                hatAssetName: MapHomeGrowthAccessoryCatalog.hatAssetName(for: worn(.hat)),
+                scarf: MapHomeGrowthAccessoryCatalog.scarfStyle(for: worn(.scarf)),
+                ribbon: MapHomeGrowthAccessoryCatalog.ribbonStyle(for: worn(.ribbon)),
+                showsBackdrop: false
+            )
+        }
+        .accessibilityHidden(true)
     }
 }

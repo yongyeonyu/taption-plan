@@ -64,7 +64,13 @@ final class AppModel {
     /// 메모 입력은 항목을 먼저 고르지 않는다. 시간표 메모 줄에서 바로 열리며,
     /// 새 메모가 놓일 순간과 그 자리에 이미 있던 메모만 들고 있으면 된다.
     var memoEntry: MemoEntry?
-    var selectedCatCoat: CatCoat = .calico
+    var selectedCatCoat: CatCoat = .calico {
+        didSet {
+            HwarangCoat.selected = .named(selectedCatCoat.catStyle.rawValue)
+            HwarangCoat.selectedName = selectedCatCoat.displayName
+            MapHomeCustomAnimations.register(snapshot.settings.mapUserActivityCategories)
+        }
+    }
     /// 기록 탭은 시간표와 같은 배율을 쓰되, 기록 전용 년 보기는 유지한다.
     var reviewScale: TimeScale = .week
     var isPermissionOnboardingPresented = false

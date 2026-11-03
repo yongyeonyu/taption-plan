@@ -9,6 +9,8 @@ struct MapHomeSectionDetail: Identifiable, Hashable {
     let behavior: String?
     let startMinute: Int
     let endMinute: Int
+    /// 하위 행동 계산이 고른 근거. 예전 경로의 상세에는 없다(NLE1103A02).
+    var provenance: NLESubActivityProvenance?
 }
 
 /// 원본 기록을 상세활동 목록으로 바꾼다.

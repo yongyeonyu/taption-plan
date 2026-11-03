@@ -106,8 +106,49 @@ enum MapHomePresencePolicy {
 }
 
 /// 발바닥 색: 느리면 빨강, 중간 속도는 초록, 빠르면 파랑(시속 150km에서 최대)으로 같은 비율로 나눈다. 속도를 모르는 미확인은 회색.
+enum MapHomeUnconfirmedPaws {
+    /// 미확인 구간의 평균 속도. 구간 길이를 걸린 시간으로 나눈다.
+    static func speed(points: [CLLocationCoordinate2D], seconds: TimeInterval) -> Double? {
+        guard seconds > 0, points.count >= 2 else { return nil }
+        return zip(points, points.dropFirst()).reduce(0.0) { sum, pair in
+            sum + CLLocation(latitude: pair.0.latitude, longitude: pair.0.longitude)
+                .distance(from: CLLocation(latitude: pair.1.latitude, longitude: pair.1.longitude))
+        } / seconds
+    }
+}
+
+extension MapHomeUnconfirmedPaws {
+    /// 지하철에서 표본이 끊긴 구간을 노선을 따라 같은 간격으로 찍을 점. 속도는 구간 평균이다.
+    static func subwayGapPoints(
+        travel: [TravelSegment], readings: [SensorReading], through cutoff: Date, limit: Int
+    ) -> [(coordinate: CLLocationCoordinate2D, angle: Double, speed: Double?)] {
+        var result: [(coordinate: CLLocationCoordinate2D, angle: Double, speed: Double?)] = []
+        for segment in travel where segment.mode == .subway {
+            let speed = segment.span.duration > 0 ? segment.distanceMeters / segment.span.duration : nil
+            for gap in MapHomePlaybackLocation.subwayGapRoutes(segment: segment, readings: readings, through: cutoff) {
+                let samples = MapHomeGPSGapPredictionPolicy.predictedRailCoordinates(along: gap.map {
+                    CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)
+                })
+                for index in MapHomePawprintInteractionPolicy.spreadIndices(count: samples.count, limit: max(0, min(40, limit - result.count))) {
+                    let point = samples[index], next = samples[min(samples.count - 1, index + 1)]
+                    result.append((
+                        CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude),
+                        atan2(next.longitude - point.longitude, next.latitude - point.latitude) * 180 / .pi, speed
+                    ))
+                }
+            }
+        }
+        return result
+    }
+}
+
 enum MapHomePawprintSpeedColor {
     static let maximumMetersPerSecond = 150.0 / 3.6
+
+    /// 미확인 구간 발자국: 느리면 진한 회색, 빠르면 흰색(대표 지정).
+    static func unconfirmedColor(forMetersPerSecond speed: Double?) -> Color {
+        Color(white: 0.28 + 0.72 * (ratio(forMetersPerSecond: speed) ?? 0)).opacity(0.95)
+    }
 
     static func ratio(forMetersPerSecond speed: Double?) -> Double? {
         guard let speed, speed.isFinite, speed >= 0 else { return nil }
@@ -165,5 +206,69 @@ enum MapHomePawprintSpeedColor {
         let meters = CLLocation(latitude: first.latitude, longitude: first.longitude)
             .distance(from: CLLocation(latitude: second.latitude, longitude: second.longitude))
         return meters / seconds
+    }
+}
+
+/// 화면에서 화랑이가 왼쪽·오른쪽 어디로 가는지 정한다. 거의 위아래로 가면 이전 방향을 유지해 좌우로 튀지 않게 한다.
+@MainActor
+enum MapHomeStickmanFacing {
+    private static var last = false
+    private static var pending: (facesLeft: Bool, since: TimeInterval)?
+    /// GPS가 몇 표본 튀어도 뒤집지 않는다. 이 시간 동안 같은 쪽을 가리켜야 돈다.
+    nonisolated static let turnHold: TimeInterval = 0.8
+
+    static func facesLeft(headingDegrees: Double, cameraHeading: Double) -> Bool {
+        let wanted = resolve(headingDegrees: headingDegrees, cameraHeading: cameraHeading, previous: last)
+        let settled = settle(wanted: wanted, current: last, pending: &pending, now: ProcessInfo.processInfo.systemUptime)
+        last = settled
+        return settled
+    }
+
+    nonisolated static func settle(
+        wanted: Bool, current: Bool, pending: inout (facesLeft: Bool, since: TimeInterval)?, now: TimeInterval
+    ) -> Bool {
+        guard wanted != current else { pending = nil; return current }
+        guard let held = pending, held.facesLeft == wanted else { pending = (wanted, now); return current }
+        guard now - held.since >= turnHold else { return current }
+        pending = nil
+        return wanted
+    }
+
+    nonisolated static func resolve(headingDegrees: Double, cameraHeading: Double, previous: Bool) -> Bool {
+        guard headingDegrees.isFinite, cameraHeading.isFinite else { return previous }
+        let horizontal = sin((headingDegrees - cameraHeading) * .pi / 180)
+        return abs(horizontal) < 0.26 ? previous : horizontal < 0
+    }
+}
+
+/// 사용자 추가 분류에 고른 동작. 분류 id(`custom:UUID`)로 찾는다(CAT1103A03).
+enum MapHomeCustomAnimations {
+    private static let actions = OSAllocatedUnfairLock(initialState: [String: MapHomeStickmanAction]())
+
+    static func register(_ categories: [MapUserActivityCategory]) {
+        var next: [String: MapHomeStickmanAction] = [:]
+        for category in categories {
+            guard let animation = category.animation else { continue }
+            next["custom:\(category.id.uuidString)"] = switch animation {
+            case .mapReading: .mapReading
+            case .walkInPlace: .walkInPlace
+            case .stretching: .health
+            case .grooming: .activity
+            case .yarnPlay: .hobby
+            case .catWheel: .exercise
+            case .puzzled: .unconfirmed
+            }
+        }
+        let registered = next
+        let changed = actions.withLock { current in
+            defer { current = registered }
+            return current != registered
+        }
+        if changed { MapHomeStickmanActionResolver.clearActionCache() }
+    }
+
+    static func action(categoryID: String) -> MapHomeStickmanAction? {
+        guard categoryID.hasPrefix("custom:") else { return nil }
+        return actions.withLock { $0[categoryID] }
     }
 }
