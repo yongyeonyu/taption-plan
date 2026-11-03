@@ -121,8 +121,8 @@ struct MapHomeAppleMap: UIViewRepresentable {
         private var routeSignatures: [String: Int] = [:]
         private var walkerAnnotation: MapHomeAppleWalkerAnnotation?
         private var walkerView: MapHomeAppleHostedAnnotationView?
-        private var observedPanGestures: [UIPanGestureRecognizer] = []
-        private var observedCameraGestures: [UIGestureRecognizer] = []
+        private var observedPanGestures = MapHomeObservedGestures<UIPanGestureRecognizer>()
+        private var observedCameraGestures = MapHomeObservedGestures<UIGestureRecognizer>()
         private var lastGestureAttachmentScanUptime = -Double.infinity
         private var longPressGesture: UILongPressGestureRecognizer?
         fileprivate var isApplyingSwiftUIUpdate = false
@@ -185,14 +185,8 @@ struct MapHomeAppleMap: UIViewRepresentable {
             walkerTapGesture = nil
             walkerView?.removeFromSuperview()
             walkerView = nil
-            for gesture in observedPanGestures {
-                gesture.removeTarget(self, action: #selector(handlePan(_:)))
-            }
-            observedPanGestures.removeAll()
-            for gesture in observedCameraGestures {
-                gesture.removeTarget(self, action: #selector(handleCameraGesture(_:)))
-            }
-            observedCameraGestures.removeAll()
+            observedPanGestures.removeAll(target: self, action: #selector(handlePan(_:)))
+            observedCameraGestures.removeAll(target: self, action: #selector(handleCameraGesture(_:)))
             if let longPressGesture {
                 mapView.removeGestureRecognizer(longPressGesture)
             }
@@ -215,26 +209,14 @@ struct MapHomeAppleMap: UIViewRepresentable {
             attachPanGestures(in: mapView)
             attachCameraGestures(in: mapView)
             // 두 번 탭(확대)이 한 번 탭으로도 처리되지 않게 한다.
-            for tap in allSubviews(in: mapView).flatMap({ $0.gestureRecognizers ?? [] }).compactMap({ $0 as? UITapGestureRecognizer })
+            for tap in MapHomeMapGestures.all(in: mapView).compactMap({ $0 as? UITapGestureRecognizer })
             where tap !== walkerTapGesture && tap.numberOfTapsRequired > 1 { walkerTapGesture?.require(toFail: tap) }
         }
 
         func attachPanGestures(in view: UIView) {
-            let gestures = allSubviews(in: view).flatMap { $0.gestureRecognizers ?? [] }
-                .compactMap { $0 as? UIPanGestureRecognizer }
-            let currentIDs = Set(gestures.map { ObjectIdentifier($0) })
-            for gesture in observedPanGestures
-            where !currentIDs.contains(ObjectIdentifier(gesture)) {
-                gesture.removeTarget(self, action: #selector(handlePan(_:)))
-            }
-            observedPanGestures.removeAll {
-                !currentIDs.contains(ObjectIdentifier($0))
-            }
-            let observedIDs = Set(observedPanGestures.map { ObjectIdentifier($0) })
-            for gesture in gestures where !observedIDs.contains(ObjectIdentifier(gesture)) {
-                gesture.addTarget(self, action: #selector(handlePan(_:)))
-                observedPanGestures.append(gesture)
-            }
+            observedPanGestures.refresh(
+                found: MapHomeMapGestures.pans(in: view), target: self, action: #selector(handlePan(_:))
+            )
         }
 
         func applyMapStyle(to mapView: MKMapView) {
@@ -545,15 +527,9 @@ struct MapHomeAppleMap: UIViewRepresentable {
         }
 
         @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
-            guard gesture.state == .began,
-                  gesture.numberOfTouches <= 1,
-                  let mapView else { return }
-            parent.onLongPress(
-                mapView.convert(
-                    gesture.location(in: mapView),
-                    toCoordinateFrom: mapView
-                )
-            )
+            guard let mapView,
+                  let point = MapHomeMapGestures.longPressPoint(gesture, in: mapView) else { return }
+            parent.onLongPress(mapView.convert(point, toCoordinateFrom: mapView))
         }
 
         private func updateRoutes(in mapView: MKMapView) {
@@ -736,25 +712,9 @@ struct MapHomeAppleMap: UIViewRepresentable {
         }
 
         func attachCameraGestures(in view: UIView) {
-            let gestures = allSubviews(in: view).flatMap { $0.gestureRecognizers ?? [] }
-                .filter { $0 is UIPinchGestureRecognizer || $0 is UIRotationGestureRecognizer }
-            let currentIDs = Set(gestures.map { ObjectIdentifier($0) })
-            for gesture in observedCameraGestures
-            where !currentIDs.contains(ObjectIdentifier(gesture)) {
-                gesture.removeTarget(self, action: #selector(handleCameraGesture(_:)))
-            }
-            observedCameraGestures.removeAll {
-                !currentIDs.contains(ObjectIdentifier($0))
-            }
-            let observedIDs = Set(observedCameraGestures.map { ObjectIdentifier($0) })
-            for gesture in gestures where !observedIDs.contains(ObjectIdentifier(gesture)) {
-                gesture.addTarget(self, action: #selector(handleCameraGesture(_:)))
-                observedCameraGestures.append(gesture)
-            }
-        }
-
-        private func allSubviews(in view: UIView) -> [UIView] {
-            [view] + view.subviews.flatMap(allSubviews)
+            observedCameraGestures.refresh(
+                found: MapHomeMapGestures.camera(in: view), target: self, action: #selector(handleCameraGesture(_:))
+            )
         }
 
         private func configureWalker(

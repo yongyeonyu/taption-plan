@@ -341,6 +341,13 @@ private struct TaptionCatAtlasIllustration: View {
     }
 }
 
+/// 아틀라스 사본은 위젯(잠금화면·다이나믹 아일랜드가 쓴다)과 워치에만 둔다. 앱은 자기 안에 든 위젯의 것을 읽는다(OPT1102A01).
+enum TaptionCatAtlasBundle {
+    static let current: Bundle = Bundle.main.builtInPlugInsURL
+        .map { $0.appendingPathComponent("TaptionPlanWidget.appex") }
+        .flatMap(Bundle.init(url:)) ?? .main
+}
+
 /// 지도 배지에서 프레임을 직접 골라 쓰기 위해 모듈 내부로 공개한다.
 struct TaptionCatAtlasSprite: View {
     let style: String
@@ -378,7 +385,7 @@ struct TaptionCatAtlasSprite: View {
 
     var body: some View {
         let frameIndex = ((frame % 6) + 6) % 6
-        Image(assetName)
+        Image(assetName, bundle: TaptionCatAtlasBundle.current)
             .resizable()
             .interpolation(.high)
             .frame(width: 312, height: 384)
@@ -414,7 +421,7 @@ enum TaptionCatAtlasBitmap {
         let normalizedFrame = ((frame % 6) + 6) % 6
         let key = "\(sprite.assetName)-\(sprite.actionIndex)-\(normalizedFrame)" as NSString
         if let cached = cache.object(forKey: key) { return cached }
-        guard let atlas = UIImage(named: sprite.assetName)?.cgImage else { return nil }
+        guard let atlas = UIImage(named: sprite.assetName, in: TaptionCatAtlasBundle.current, with: nil)?.cgImage else { return nil }
         let width = atlas.width / 6
         let height = atlas.height / 12
         guard width > 0, height > 0,

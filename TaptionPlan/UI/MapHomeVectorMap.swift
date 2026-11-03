@@ -747,6 +747,8 @@ struct MapHomeVectorMap: UIViewRepresentable {
     let onSingleTap: (CGPoint, [String: CGPoint]) -> Void
     /// 속도 그라데이션으로 나뉜 실제 경로 구간(있으면 `activeRoute` 대신 그린다).
     var activeRouteSegments: [MapHomeVectorRoute] = []
+    /// 재생 중 코디네이터 레이어에 그릴 발자국(그리는 순서). 비어 있으면 레이어를 쓰지 않는다.
+    var layerPawprints: [MapHomeLayerPawprint] = []
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -780,6 +782,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
             mapView.contentInset = contentInsets
         }
         context.coordinator.updateContent(in: mapView)
+        context.coordinator.updateMarkerLayer(in: mapView)
         context.coordinator.applyCameraCommandIfNeeded(to: mapView)
         context.coordinator.applyHeadingIfNeeded(to: mapView)
         context.coordinator.updateFrameRate(of: mapView)
@@ -818,12 +821,33 @@ struct MapHomeVectorMap: UIViewRepresentable {
             )
             parent.onPlaybackStickmanPoint(mapView.convert(coordinate, toPointTo: mapView))
             let now = ProcessInfo.processInfo.systemUptime
-            guard now - lastPlaybackViewportUptime >= 1.0 / 60.0 else { return }
+            let publishes = now - lastPlaybackViewportUptime >= Self.playbackViewportInterval
+            // 발자국 레이어는 지도와 같은 틱(최대 120Hz)에 옮긴다. SwiftUI로 가는 뷰포트만 60Hz로 묶는다.
+            guard publishes || !markerLayer.isEmpty else { return }
+            let points = projectedMarkerPoints(in: mapView)
+            markerLayer.apply(points: points, at: parent.playbackDriver.map {
+                $0.inputs.dayStart.addingTimeInterval(frame.minute * 60)
+            } ?? .distantFuture)
+            guard publishes else { return }
             lastPlaybackViewportUptime = now
-            parent.onPlaybackViewport(currentViewport(of: mapView))
+            parent.onPlaybackViewport(currentViewport(of: mapView, markerPoints: points))
         }
 
+        /// 표시 링크 틱의 흔들림으로 한 틱씩 건너뛰지 않게 2ms 여유를 둔다. 없으면 60Hz 화면에서 평가가 40Hz로 떨어졌다.
+        private static let playbackViewportInterval: TimeInterval = 1.0 / 60.0 - 0.002
         private var lastPlaybackViewportUptime: TimeInterval = 0
+        private let markerLayer = MapHomeCoordinatorMarkerLayer()
+
+        func updateMarkerLayer(in mapView: MLNMapView) {
+            let host = markerLayer.host
+            if host.superlayer == nil, !parent.layerPawprints.isEmpty {
+                host.contentsScale = mapView.traitCollection.displayScale
+                mapView.layer.addSublayer(host)
+            }
+            if host.frame != mapView.bounds { host.frame = mapView.bounds }
+            markerLayer.update(parent.layerPawprints)
+            if markerLayer.isEmpty { host.removeFromSuperlayer() }
+        }
 
         private func projectedMarkerPoints(in mapView: MLNMapView) -> [String: CGPoint] {
             let camera = mapView.camera, bounds = mapView.visibleCoordinateBounds
@@ -836,7 +860,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
             )
         }
 
-        private func currentViewport(of mapView: MLNMapView) -> MapHomeVectorViewport {
+        private func currentViewport(of mapView: MLNMapView, markerPoints: [String: CGPoint]) -> MapHomeVectorViewport {
             let span = MLNCoordinateBoundsGetCoordinateSpan(mapView.visibleCoordinateBounds)
             let camera = mapView.camera
             return MapHomeVectorViewport(
@@ -845,7 +869,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
                 cameraDistance: max(camera.altitude, 1),
                 heading: camera.heading,
                 pitch: camera.pitch,
-                markerPoints: projectedMarkerPoints(in: mapView)
+                markerPoints: markerPoints
             )
         }
         private weak var mapView: MLNMapView?
@@ -864,8 +888,8 @@ struct MapHomeVectorMap: UIViewRepresentable {
         private var pendingViewport:
             (viewport: MapHomeVectorViewport, force: Bool, cameraRevision: Int)?
         private var isViewportDeliveryScheduled = false
-        private var observedPanGestures: [UIPanGestureRecognizer] = []
-        private var observedCameraGestures: [UIGestureRecognizer] = []
+        private var observedPanGestures = MapHomeObservedGestures<UIPanGestureRecognizer>()
+        private var observedCameraGestures = MapHomeObservedGestures<UIGestureRecognizer>()
         private var longPressGesture: UILongPressGestureRecognizer?
         private var singleTapGesture: UITapGestureRecognizer?
 
@@ -898,14 +922,8 @@ struct MapHomeVectorMap: UIViewRepresentable {
         }
 
         func detach(from mapView: MLNMapView) {
-            for gesture in observedPanGestures {
-                gesture.removeTarget(self, action: #selector(handlePan(_:)))
-            }
-            observedPanGestures.removeAll()
-            for gesture in observedCameraGestures {
-                gesture.removeTarget(self, action: #selector(handleCameraGesture(_:)))
-            }
-            observedCameraGestures.removeAll()
+            observedPanGestures.removeAll(target: self, action: #selector(handlePan(_:)))
+            observedCameraGestures.removeAll(target: self, action: #selector(handleCameraGesture(_:)))
             if let longPressGesture {
                 mapView.removeGestureRecognizer(longPressGesture)
             }
@@ -1081,8 +1099,8 @@ struct MapHomeVectorMap: UIViewRepresentable {
         /// 움직이는 동안(재생·손가락·측정 이동)만 지도를 최대 프레임률로 그린다(PRF1101A01).
         func updateFrameRate(of mapView: MLNMapView) {
             let moving = parent.playbackDriver != nil || benchPan.isRunning
-                || observedPanGestures.contains(where: MapHomeMapFrameRate.isActive)
-                || observedCameraGestures.contains(where: MapHomeMapFrameRate.isActive)
+                || observedPanGestures.gestures.contains(where: MapHomeMapFrameRate.isActive)
+                || observedCameraGestures.gestures.contains(where: MapHomeMapFrameRate.isActive)
             MapHomeMapFrameRate.apply(to: mapView, isMoving: moving)
         }
 
@@ -1143,15 +1161,9 @@ struct MapHomeVectorMap: UIViewRepresentable {
         }
 
         @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
-            guard gesture.state == .began,
-                  gesture.numberOfTouches <= 1,
-                  let mapView else { return }
-            parent.onLongPress(
-                mapView.convert(
-                    gesture.location(in: mapView),
-                    toCoordinateFrom: mapView
-                )
-            )
+            guard let mapView,
+                  let point = MapHomeMapGestures.longPressPoint(gesture, in: mapView) else { return }
+            parent.onLongPress(mapView.convert(point, toCoordinateFrom: mapView))
         }
 
         @objc private func handleSingleTap(_ gesture: UITapGestureRecognizer) {
@@ -1165,7 +1177,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
 
         private func attachTapDependencies(in view: UIView) {
             guard let singleTapGesture else { return }
-            for gesture in allSubviews(in: view).flatMap({ $0.gestureRecognizers ?? [] }) {
+            for gesture in MapHomeMapGestures.all(in: view) {
                 if let tap = gesture as? UITapGestureRecognizer,
                    tap !== singleTapGesture,
                    tap.numberOfTapsRequired > 1 || tap.numberOfTouchesRequired > 1 {
@@ -1189,43 +1201,15 @@ struct MapHomeVectorMap: UIViewRepresentable {
         }
 
         private func attachPanGestures(in view: UIView) {
-            let gestures = allSubviews(in: view).flatMap { $0.gestureRecognizers ?? [] }
-                .compactMap { $0 as? UIPanGestureRecognizer }
-            let currentIDs = Set(gestures.map { ObjectIdentifier($0) })
-            for gesture in observedPanGestures
-            where !currentIDs.contains(ObjectIdentifier(gesture)) {
-                gesture.removeTarget(self, action: #selector(handlePan(_:)))
-            }
-            observedPanGestures.removeAll {
-                !currentIDs.contains(ObjectIdentifier($0))
-            }
-            let observedIDs = Set(observedPanGestures.map { ObjectIdentifier($0) })
-            for gesture in gestures where !observedIDs.contains(ObjectIdentifier(gesture)) {
-                gesture.addTarget(self, action: #selector(handlePan(_:)))
-                observedPanGestures.append(gesture)
-            }
+            observedPanGestures.refresh(
+                found: MapHomeMapGestures.pans(in: view), target: self, action: #selector(handlePan(_:))
+            )
         }
 
         private func attachCameraGestures(in view: UIView) {
-            let gestures = allSubviews(in: view).flatMap { $0.gestureRecognizers ?? [] }
-                .filter { $0 is UIPinchGestureRecognizer || $0 is UIRotationGestureRecognizer }
-            let currentIDs = Set(gestures.map { ObjectIdentifier($0) })
-            for gesture in observedCameraGestures
-            where !currentIDs.contains(ObjectIdentifier(gesture)) {
-                gesture.removeTarget(self, action: #selector(handleCameraGesture(_:)))
-            }
-            observedCameraGestures.removeAll {
-                !currentIDs.contains(ObjectIdentifier($0))
-            }
-            let observedIDs = Set(observedCameraGestures.map { ObjectIdentifier($0) })
-            for gesture in gestures where !observedIDs.contains(ObjectIdentifier(gesture)) {
-                gesture.addTarget(self, action: #selector(handleCameraGesture(_:)))
-                observedCameraGestures.append(gesture)
-            }
-        }
-
-        private func allSubviews(in view: UIView) -> [UIView] {
-            [view] + view.subviews.flatMap(allSubviews)
+            observedCameraGestures.refresh(
+                found: MapHomeMapGestures.camera(in: view), target: self, action: #selector(handleCameraGesture(_:))
+            )
         }
 
         private func installRouteLayers(in style: MLNStyle) -> Bool {

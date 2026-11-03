@@ -335,16 +335,14 @@ struct MapHomeVectorViewportOverlay<Content: View>: View {
     let content: (MapHomeVectorViewport?, CGPoint?) -> Content
 
     var body: some View {
-        if isLive {
-            // 구동기 재생 중에는 화면 틱(최대 60Hz)마다 지도 엔진이 투영한 뷰포트로 그려, 아이콘이 지도에 붙어 움직인다.
-            TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { _ in
-                content(store.livePlaybackViewport ?? store.viewport, store.livePoint ?? store.stickmanPoint)
-                    .clipped()
-            }
-        } else {
-            content(store.viewport, store.stickmanPoint)
-                .clipped()
-        }
+        // 구동기 재생 중에는 지도 엔진이 투영한 뷰포트로 그려, 아이콘이 지도에 붙어 움직인다.
+        // 시계가 아니라 뷰포트가 실제로 바뀔 때(최대 60Hz)만 다시 평가한다. 카메라가 멈춘 구간은 평가하지 않는다(OPT1102A01).
+        let _ = store.liveFrameRevision
+        content(
+            isLive ? store.livePlaybackViewport ?? store.viewport : store.viewport,
+            isLive ? store.livePoint ?? store.stickmanPoint : store.stickmanPoint
+        )
+        .clipped()
     }
 }
 

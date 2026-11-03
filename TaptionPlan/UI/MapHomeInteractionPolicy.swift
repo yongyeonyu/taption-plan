@@ -832,7 +832,11 @@ final class MapHomeVectorViewportStore {
     @ObservationIgnored let liveChannel = MapHomeLivePointChannel()
     var livePoint: CGPoint? { liveChannel.point }
     /// 재생 중 지도 엔진이 프레임마다 투영한 뷰포트. 오버레이(발자국·장소 아이콘·화살표)가 이 값으로 지도와 함께 움직인다(ARC1030A02).
-    @ObservationIgnored var livePlaybackViewport: MapHomeVectorViewport?
+    @ObservationIgnored var livePlaybackViewport: MapHomeVectorViewport? {
+        didSet { if livePlaybackViewport != oldValue { liveFrameRevision &+= 1 } }
+    }
+    /// 재생 뷰포트가 바뀔 때만 오른다. 오버레이는 이 값만 관찰하고 뷰포트는 평가할 때 읽는다.
+    private(set) var liveFrameRevision = 0
     @ObservationIgnored private var lastObservedUptime: TimeInterval = 0
     /// 재생 중 관찰되는 값(안개·급여 위치 등)을 갱신하는 간격. 화랑이 마커는 `livePoint`로 매 프레임 움직인다.
     static let playbackObservedInterval: TimeInterval = 0.25

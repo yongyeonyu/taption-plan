@@ -73,6 +73,7 @@ struct TaptionPlanApp: App {
 
 /// 앱의 모든 설정(화면·알림·달력·보폭·연봉 등 사용자 설정 값)을 한 파일에 보관한다.
 /// 위치는 앱 Application Support 안이라 앱을 업데이트해도 지워지지 않는다. 시스템 값과 캐시는 제외한다.
+@MainActor
 enum AppSettingsFile {
     private static let excludedPrefixes = ["Apple", "NS", "AK", "com.apple", "WebKit"]
 
@@ -89,29 +90,45 @@ enum AppSettingsFile {
     }
 
     /// 파일에 있는 값을 UserDefaults에 되돌린다. 파일이 없으면 아무것도 하지 않는다.
-    static func restore() {
-        guard let data = try? Data(contentsOf: url),
+    /// 화면이 읽기 전에 끝나야 해서 동기로 읽되, 값이 같은 키는 쓰지 않는다(키마다 cfprefsd로 쓰기가 나갔다).
+    /// 옛 XML 파일도 그대로 읽힌다.
+    @discardableResult
+    static func restore(from file: URL = url, to defaults: UserDefaults = .standard) -> Int {
+        guard let data = try? Data(contentsOf: file),
               let dictionary = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any]
-        else { return }
-        for (key, value) in dictionary {
-            UserDefaults.standard.set(value, forKey: key)
+        else { return 0 }
+        lastSavedSettings = dictionary as NSDictionary
+        var written = 0
+        for (key, value) in dictionary where !isSame(defaults.object(forKey: key), value) {
+            defaults.set(value, forKey: key)
+            written += 1
         }
+        return written
     }
 
-    /// 현재 설정을 파일로 저장한다(원자적 쓰기).
-    static func save() {
-        let all = UserDefaults.standard.dictionaryRepresentation()
+    /// 현재 설정을 파일로 저장한다(원자적 쓰기). 내용이 같으면 쓰지 않는다. 비활성화할 때마다 불린다.
+    @discardableResult
+    static func save(to file: URL = url, from defaults: UserDefaults = .standard) -> Bool {
+        let all = defaults.dictionaryRepresentation()
         let settings = all.filter { key, _ in
             !excludedPrefixes.contains { key.hasPrefix($0) }
         }
-        guard let data = try? PropertyListSerialization.data(
-            fromPropertyList: settings,
-            format: .xml,
-            options: 0
-        ) else { return }
-        let directory = url.deletingLastPathComponent()
+        guard lastSavedSettings?.isEqual(to: settings) != true
+                || !FileManager.default.fileExists(atPath: file.path),
+              let data = try? PropertyListSerialization.data(fromPropertyList: settings, format: .binary, options: 0)
+        else { return false }
+        let directory = file.deletingLastPathComponent()
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        try? data.write(to: url, options: .atomic)
+        guard (try? data.write(to: file, options: .atomic)) != nil else { return false }
+        lastSavedSettings = settings as NSDictionary
+        return true
+    }
+
+    private static var lastSavedSettings: NSDictionary?
+
+    private static func isSame(_ current: Any?, _ next: Any) -> Bool {
+        guard let current = current as? NSObject, let next = next as? NSObject else { return false }
+        return current.isEqual(next)
     }
 }
 

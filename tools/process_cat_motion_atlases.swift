@@ -23,7 +23,6 @@ private let sources = [
 private let eatingPath = "\(generatedRoot)/exec-ff910fa1-0ab3-4e44-8e61-de89f50ce8ba.png"
 private let groomingPath = "\(generatedRoot)/exec-220807ff-8aaf-4f42-b9a8-ef1f057d9695.png"
 private let outputRoots = [
-    "\(projectRoot)/TaptionPlan/Assets.xcassets",
     "\(projectRoot)/TaptionPlanWidget/Assets.xcassets",
     "\(projectRoot)/TaptionPlanWatch/Assets.xcassets",
 ]
