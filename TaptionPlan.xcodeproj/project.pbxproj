@@ -469,6 +469,7 @@
 		A5200000000000000000C102 /* RuntimeEfficiencyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5200000000000000000C102 /* RuntimeEfficiencyTests.swift */; };
 		A5200000000000000000F5D1 /* MapHomeCounterDetailTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5200000000000000000F5D1 /* MapHomeCounterDetailTests.swift */; };
 		5A0000000000000000000010 /* TaptionPlanSmokeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A0000000000000000000011 /* TaptionPlanSmokeUITests.swift */; };
+		A5200000000000000000F5FA /* TaptionPlanFirstRunTutorialUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5200000000000000000F5FA /* TaptionPlanFirstRunTutorialUITests.swift */; };
 		A5200000000000000000F5F9 /* TaptionPlanAllowanceUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5200000000000000000F5F9 /* TaptionPlanAllowanceUITests.swift */; };
 		A5200000000000000000F5F8 /* TaptionPlanWideLayoutUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5200000000000000000F5F8 /* TaptionPlanWideLayoutUITests.swift */; };
 /* End PBXBuildFile section */
@@ -966,6 +967,7 @@
 		F5200000000000000000C102 /* RuntimeEfficiencyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuntimeEfficiencyTests.swift; sourceTree = "<group>"; };
 		F5200000000000000000F5D1 /* MapHomeCounterDetailTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCounterDetailTests.swift; sourceTree = "<group>"; };
 		5A0000000000000000000011 /* TaptionPlanSmokeUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanSmokeUITests.swift; sourceTree = "<group>"; };
+		F5200000000000000000F5FA /* TaptionPlanFirstRunTutorialUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanFirstRunTutorialUITests.swift; sourceTree = "<group>"; };
 		F5200000000000000000F5F9 /* TaptionPlanAllowanceUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanAllowanceUITests.swift; sourceTree = "<group>"; };
 		F5200000000000000000F5F8 /* TaptionPlanWideLayoutUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanWideLayoutUITests.swift; sourceTree = "<group>"; };
 		5A0000000000000000000012 /* TaptionPlanUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TaptionPlanUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -1535,6 +1537,7 @@
 			children = (
 				5A0000000000000000000011 /* TaptionPlanSmokeUITests.swift */,
 				F5200000000000000000F5F9 /* TaptionPlanAllowanceUITests.swift */,
+				F5200000000000000000F5FA /* TaptionPlanFirstRunTutorialUITests.swift */,
 				F5200000000000000000F5F8 /* TaptionPlanWideLayoutUITests.swift */,
 			);
 			path = TaptionPlanUITests;
@@ -2301,6 +2304,7 @@
 			files = (
 				5A0000000000000000000010 /* TaptionPlanSmokeUITests.swift in Sources */,
 				A5200000000000000000F5F9 /* TaptionPlanAllowanceUITests.swift in Sources */,
+				A5200000000000000000F5FA /* TaptionPlanFirstRunTutorialUITests.swift in Sources */,
 				A5200000000000000000F5F8 /* TaptionPlanWideLayoutUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

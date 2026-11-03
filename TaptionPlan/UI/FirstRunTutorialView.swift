@@ -43,6 +43,8 @@ struct FirstRunTutorialView: View {
         .frame(maxWidth: .infinity)
         .background(Color.tpBackground.ignoresSafeArea())
         .disabled(isFinishing)
+        // 묶지 않으면 이 이름이 안쪽 단추의 이름을 덮어쓴다.
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("firstRunTutorial")
     }
 
