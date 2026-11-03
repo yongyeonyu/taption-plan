@@ -5667,3 +5667,9 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 구조 지표 `--check` 통과(수정 전 `detached_tasks` 34→35를 없앰). `MapHomeView.swift` 줄 수 변화 없음.
 - 렌더 미완주: 단독 실행 2회 모두 첫 프레임(720개 중 1개) 뒤 진행 없음(`bench4.log` 3,000초, `bench5.log` 900초). 15초 감시 기록은 `applicationState`=1(비활성)로, 렌더러가 활성 상태를 기다리는 `waitUntilActive`에서 멈춘 것과 맞는다. 비활성이 된 이유는 확인하지 못했다(시험 앱의 권한 알림 등은 추정). 같은 조건에서 지도 로드 `mapLoadFailed`도 1회 재현(`unit4.log`).
 - 영상 파일·프레임 눈 확인·렌더 시간·메모리 수치는 여전히 없다. Debug 빌드는 디스크 여유 5.5GB로 시작하지 않았다.
+
+## PLR1104A01 · 커밋 전 검증 (2026-11-04)
+- 앱 Debug 빌드 성공(`generic/platform=iOS`, `debug-build2.log`). 설치·실행은 하지 않았다.
+- 단위(시뮬레이터 BOKKI-iPhone11): `MapHomeRangePlaybackTests` 18건·`PlaybackVideoTimelineTests` 7건, 25건 통과(`unit5.xcresult`). 렌더 측정 시험은 넣지 않았고 전체 단위 테스트는 실행하지 않았다.
+- 구조 지표 `--check` 통과.
+- 시뮬레이터 렌더 재시도는 대표 선택 B로 중단. 렌더 완주·영상 파일·프레임 눈 확인·사진 저장·실기기 수치는 없고 메인 세션 실기기 확인으로 넘긴다. 구간 선택 화면도 직접 띄워 보지 않았다.

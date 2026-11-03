@@ -178,10 +178,11 @@ final class MapHomePlaybackVideoRenderer: NSObject, @preconcurrency MLNMapViewDe
         scale: CGFloat = 3,
         pitch: CGFloat = 0,
         heading: CLLocationDirection = 0,
+        hiddenPlaces: [MapHomeRangeTripPlan.Point] = [],
         stickman: @escaping (Double) -> MapHomePlaybackVideoStickman?
     ) {
         self.style = style
-        makeFrames = { Array(timeline.frames(fps: $0)) }
+        makeFrames = { MapHomeRangeTripPlan.masked(Array(timeline.frames(fps: $0)), hiddenPlaces: hiddenPlaces) }
         overlay = nil
         self.size = size
         self.scale = scale
@@ -551,6 +552,8 @@ final class MapHomePlaybackVideoWriter {
     func append(_ buffer: CVPixelBuffer, frameIndex: Int) async throws {
         while !input.isReadyForMoreMediaData {
             try Task.checkCancellation()
+            // 쓰기가 실패하면 준비 상태가 영영 오지 않는다.
+            guard writer.status == .writing else { throw failure() }
             try await Task.sleep(nanoseconds: 2_000_000)
         }
         let time = CMTime(value: CMTimeValue(frameIndex), timescale: CMTimeScale(fps))

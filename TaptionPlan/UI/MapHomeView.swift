@@ -910,8 +910,8 @@ struct MapHomeView: View {
             .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $isPlaybackVideoPresented) {
-            MapHomePlaybackVideoSheet(model: model, language: language, makeRenderer: makePlaybackVideoRenderer)
-                .presentationDetents([.medium])
+            MapHomePlaybackVideoSheet(model: model, language: language, selectedDate: model.selectedDate, accessoryID: homeGrowthHistory.season.equippedAccessory, makeRenderer: makePlaybackVideoRenderer)
+                .presentationDetents([.height(520), .large])
                 .presentationDragIndicator(.visible)
         }
         .alert(
@@ -6094,7 +6094,7 @@ struct MapHomeView: View {
     }
 
     /// 하루 재생을 프레임마다 그려 끊김 없는 60fps 영상으로 만든다(VID1029A01). 화랑이는 정중앙 고정.
-    private func makePlaybackVideoRenderer() -> MapHomePlaybackVideoRenderer? {
+    private func makePlaybackVideoRenderer(hiddenPlaces: [MapHomeRangeTripPlan.Point]) -> MapHomePlaybackVideoRenderer? {
         guard let style = model.settings.mapDisplayStyle.runtimeStyle.mapHomeVectorStyle else { return nil }
         let ranges = dayPlaybackMovementRanges
         let end = MapHomeDayPlaybackMath.playbackEndMinute(for: model.selectedDate, now: .now)
@@ -6112,7 +6112,7 @@ struct MapHomeView: View {
         let frequentPlaces = model.settings.frequentPlaces
         let sleepSessions = model.sleepSessions
         let accessory = homeGrowthHistory.season.equippedAccessory
-        return MapHomePlaybackVideoRenderer(style: style, timeline: timeline) { minute in
+        return MapHomePlaybackVideoRenderer(style: style, timeline: timeline, hiddenPlaces: hiddenPlaces) { minute in
             MapHomePlaybackVideoStickman(
                 action: MapHomeStickmanActionResolver.action(
                     at: dayStart.addingTimeInterval(minute * 60), actuals: day?.actuals ?? [],

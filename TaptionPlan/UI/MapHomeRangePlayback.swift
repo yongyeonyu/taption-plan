@@ -515,6 +515,37 @@ struct MapHomeRangeTripPlan: Sendable {
         return frames
     }
 
+    // MARK: - 장소 가리기
+
+    /// 사는 곳을 짐작하게 하는 등록 장소(대표 선택 PLR1104A01).
+    static func hiddenPlaces(from places: [FrequentPlace]) -> [Point] {
+        places.compactMap { place in
+            guard [.home, .company, .school, .academy].contains(place.kind), let point = place.point else { return nil }
+            return Point(latitude: point.latitude, longitude: point.longitude)
+        }
+    }
+
+    /// 하루 영상용. 가린 장소 안에 있는 프레임은 카메라를 가장 가까운 바깥 위치에 묶어 둔다.
+    /// 처음부터 안에 있으면 처음 나가는 위치에서 기다리고, 끝까지 안이면 보여 줄 것이 없어 빈 배열을 돌려준다.
+    static func masked(
+        _ frames: [MapHomePlaybackTimeline.Frame],
+        hiddenPlaces: [Point]
+    ) -> [MapHomePlaybackTimeline.Frame] {
+        guard !hiddenPlaces.isEmpty else { return frames }
+        func isHidden(_ coordinate: CLLocationCoordinate2D) -> Bool {
+            let point = Point(latitude: coordinate.latitude, longitude: coordinate.longitude)
+            return hiddenPlaces.contains { meters($0, point) <= Tuning.hiddenPlaceMeters }
+        }
+        guard let firstVisible = frames.lazy.compactMap(\.coordinate).first(where: { !isHidden($0) }) else { return [] }
+        var last = firstVisible
+        return frames.map { frame in
+            guard let coordinate = frame.coordinate else { return frame }
+            if isHidden(coordinate) { return (frame.minute, last, frame.cameraDistance) }
+            last = coordinate
+            return frame
+        }
+    }
+
     // MARK: - 지리 계산
 
     private struct Bounds {

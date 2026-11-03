@@ -142,6 +142,27 @@ final class MapHomeRangePlaybackTests: XCTestCase {
         XCTAssertGreaterThan(Plan.meters(plan.overviewCenter, home), Plan.Tuning.hiddenPlaceMeters)
     }
 
+    func testDayFramesHoldOutsideHiddenPlace() throws {
+        let home = Plan.Point(latitude: 13.75, longitude: 100.50)
+        let inside = CLLocationCoordinate2D(latitude: 13.75, longitude: 100.50)
+        let outsideA = CLLocationCoordinate2D(latitude: 13.76, longitude: 100.50)
+        let outsideB = CLLocationCoordinate2D(latitude: 13.77, longitude: 100.50)
+        let frames: [MapHomePlaybackTimeline.Frame] = [inside, outsideA, inside, outsideB, inside].enumerated().map {
+            (Double($0.offset), $0.element, 1_000)
+        }
+        let latitudes = Plan.masked(frames, hiddenPlaces: [home]).map { $0.coordinate?.latitude }
+        XCTAssertEqual(latitudes, [13.76, 13.76, 13.76, 13.77, 13.77])
+        XCTAssertEqual(Plan.masked(frames, hiddenPlaces: []).first?.coordinate?.latitude, 13.75)
+    }
+
+    func testDayEntirelyInsideHiddenPlaceHasNoFrames() {
+        let home = Plan.Point(latitude: 13.75, longitude: 100.50)
+        let frames: [MapHomePlaybackTimeline.Frame] = [
+            (0, CLLocationCoordinate2D(latitude: 13.75, longitude: 100.50), 1_000),
+        ]
+        XCTAssertTrue(Plan.masked(frames, hiddenPlaces: [home]).isEmpty)
+    }
+
     func testAutomaticLength() {
         XCTAssertEqual(MapHomeRangePreset.automaticSeconds(forDays: 4), 60)
         XCTAssertEqual(MapHomeRangePreset.automaticSeconds(forDays: 31), 90)

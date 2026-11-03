@@ -1,4 +1,5 @@
 import AVFoundation
+import UIKit
 import XCTest
 @testable import TaptionPlan
 
@@ -64,7 +65,7 @@ final class MapHomeRangeRenderBenchTests: XCTestCase {
             do { try await render() } catch { failure = error }
             finished.fulfill()
         }
-        wait(for: [finished], timeout: 3_000)
+        wait(for: [finished], timeout: 900)
         if let failure { throw failure }
     }
 
@@ -85,10 +86,22 @@ final class MapHomeRangeRenderBenchTests: XCTestCase {
         let started = Date()
         let url: URL
         do {
-            var reported = false
+            var progress = 0.0, reportedStep = -1
+            let watchdog = Task { @MainActor in
+                while !Task.isCancelled {
+                    try await Task.sleep(nanoseconds: 15_000_000_000)
+                    print("PLR_BENCH watch after=\(Date().timeIntervalSince(started)) progress=\(progress) app=\(UIApplication.shared.applicationState.rawValue) timeouts=\(renderer.timeoutCount)")
+                }
+            }
+            defer { watchdog.cancel() }
             url = try await renderer.render { value in
+                progress = value
                 peak = max(peak, self.footprintMB())
-                if !reported { print("PLR_BENCH first_progress=\(value) after=\(Date().timeIntervalSince(started))"); reported = true }
+                let step = Int(value * 20)
+                if step != reportedStep {
+                    reportedStep = step
+                    print("PLR_BENCH progress=\(value) after=\(Date().timeIntervalSince(started)) timeouts=\(renderer.timeoutCount) peak_mb=\(peak)")
+                }
             }
         } catch {
             print("PLR_BENCH failed type=\(type(of: error)) after=\(Date().timeIntervalSince(started)) error=\(String(reflecting: error))")
@@ -104,5 +117,14 @@ final class MapHomeRangeRenderBenchTests: XCTestCase {
         let kept = folder.appendingPathComponent("trip.mov")
         try FileManager.default.moveItem(at: url, to: kept)
         print("PLR_BENCH movie=\(kept.path)")
+        let generator = AVAssetImageGenerator(asset: AVURLAsset(url: kept))
+        generator.requestedTimeToleranceBefore = .zero
+        generator.requestedTimeToleranceAfter = .zero
+        for ratio in [0.05, 0.3, 0.6, 0.85, 0.999] {
+            let time = CMTime(seconds: seconds * ratio, preferredTimescale: 600)
+            let image = try await generator.image(at: time).image
+            let data = try XCTUnwrap(UIImage(cgImage: image).jpegData(compressionQuality: 0.8))
+            try data.write(to: folder.appendingPathComponent("frame-\(Int(ratio * 1_000)).jpg"))
+        }
     }
 }
