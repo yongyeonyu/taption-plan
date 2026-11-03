@@ -52,9 +52,25 @@ final class MapHomeRangeRenderBenchTests: XCTestCase {
         return samples
     }
 
-    func testRenderSyntheticTrip() async throws {
+    /// 비동기 시험 함수로 돌리면 시험 도구가 주 실행 루프를 지도 엔진이 쓰는 모드로 돌리지 않아 타일이 오지 않는다.
+    /// 그래서 동기 함수에서 기대값으로 기다린다.
+    func testRenderSyntheticTrip() throws {
+        guard ProcessInfo.processInfo.environment["TAPTION_RANGE_RENDER_SECONDS"] != nil else {
+            throw XCTSkip("측정 때만 실행")
+        }
+        let finished = expectation(description: "render")
+        var failure: Error?
+        Task { @MainActor in
+            do { try await render() } catch { failure = error }
+            finished.fulfill()
+        }
+        wait(for: [finished], timeout: 3_000)
+        if let failure { throw failure }
+    }
+
+    private func render() async throws {
         let raw = ProcessInfo.processInfo.environment["TAPTION_RANGE_RENDER_SECONDS"] ?? ""
-        let seconds = try XCTUnwrap(Double(raw).map { $0 } ?? { throw XCTSkip("측정 때만 실행") }())
+        let seconds = try XCTUnwrap(Double(raw))
         let style = try XCTUnwrap(MapDisplayStyle.openFreeMapStyles.first?.runtimeStyle.mapHomeVectorStyle)
         let start = Date(timeIntervalSince1970: 1_790_000_000)
         let span = TimeSpan(start: start, end: start.addingTimeInterval(4 * 86_400))

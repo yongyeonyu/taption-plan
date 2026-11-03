@@ -5659,3 +5659,5 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 앱 Debug 빌드(generic iOS, 구간 선택 화면 제외 상태): 성공(`debug-build.log`).
 - 렌더 측정 실패: 합성 3박 4일 12초(`MapHomeRangeRenderBenchTests`, 시뮬레이터)가 16초 뒤 `mapLoadFailed`(`bench1.log`). 지도 스타일 15초 대기 초과이며 원인은 아직 모른다. 영상 파일·프레임·메모리·타일 초과 수치는 없다.
 - 미검증: 실기기 설치·렌더·사진 저장, 구간 선택 화면, 경로선·날짜·지도 출처의 실제 그림.
+- `mapLoadFailed` 조사: 비동기 시험 함수에서는 지도가 프레임 2장(`fully=false`)만 그리고 멈췄다(`bench2.log`). 동기 함수에서 기대값으로 기다리게 바꾸자 `fully=true`·`didFinishLoadingMap` 뒤 첫 프레임이 4.03초에 기록됐다(`bench3.log`). 비동기 시험 환경에서 멈추는 현상이고 앱 코드 결함은 아닌 것으로 본다(실행 루프 모드 원인은 추정). 앱에서 직접 확인한 것은 아니다.
+- 합성 렌더는 첫 프레임 뒤 디스크 부족 공지로 중단했다(프로세스 종료). 영상 파일·렌더 시간·메모리·타일 초과 수치는 없다.
