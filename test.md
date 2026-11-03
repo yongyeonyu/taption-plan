@@ -5286,3 +5286,27 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 이 커밋 시점 검증: 시뮬레이터용 `build-for-testing` 성공(`build/validation/UIK1102A01/pre-split-build.log`), 가드 확인. **이 코드 그대로의 전체 단위 테스트 결과는 아직 없다.** 직전 코드로 아이폰 11 Pro에서 돌린 실행은 최신 수정을 넣으려고 중간에 끊었고, 끊을 때까지 813건 통과·실패 0이었다(`device-unit2.log`).
 - 원본 재생(11-02 18:11 내보낸 원본, 시뮬레이터, 정차 조건을 엄격히 하기 전 코드): 17:43–18:11 마곡나루>계양>검암>검바위 인식, 아침 자동차는 유지. 엄격화 후 재생은 아직 안 했다.
 - 알려진 제한: 아이패드에 깔린 앱은 빌드 256(아이폰 호환 모드)이었다. 빌드 258 산출물은 `UIDeviceFamily` 1·2로 확인했다.
+
+## OPT1102A01 재생 마커·배터리·시작·앱 크기 최적화 (2026-11-03, 시뮬레이터만)
+브랜치 `claude/optimization-d6ea46`. 실기기 설치·측정은 하지 않았다(세션 규칙). 로그는 `build/validation/OPT1102A01/`.
+
+- 단위 테스트(시뮬레이터 iPhone 17, iOS 27.0, 병렬 끔): `RuntimeEfficiencyTests`(새 파일)·`MapHomeLiveMapTests`·`MapHomeStickmanTests`·아틀라스 비트맵 테스트 **162건 중 161 통과, 실패 0, 건너뜀 1**(`unit-final.log`). 첫 실행의 실패 1건은 새 테스트의 수정 시각 비교 정밀도 문제였고 테스트를 고쳐 통과했다. **전체 단위 테스트는 실행하지 않았다.**
+- 빌드: 시뮬레이터 Debug `build-for-testing` 성공(`build-final.log`). 가드 2개 통과(`check-app-engine-import-boundary.sh`, `architecture-metrics.py --check`).
+- 재생 비교(시뮬레이터, Debug, 합성 경로 720점, `mapLibreCasual`, 다른 세션 부하 있음): 합성 데이터는 저장소 밖이고 실제 위치가 아니다.
+
+| 코드 | 틱 | 시간(초) | 오버레이 평가 | 평가/초 | 평가/틱 | 20ms 초과 틱 | 50ms 이상 틱 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| v0 이전(`TimelineView`) | 2041 | 110.2 | 2628 | 23.8 | 1.29 | 1529 | 967 |
+| v1 현재 커밋 | 1782 | 112.5 | 1706 | 15.2 | 0.96 | 1284 | 1001 |
+| v2 현재+`MapHomeView` 패치 | 1957 | 109.8 | 1759 | 16.0 | 0.90 | 1295 | 965 |
+
+  - v1은 하루 앞 날짜의 같은 합성 경로로 잰 값이다(`simbench-v1-revision`). 같은 조건의 재측정은 잠금 대기 시간 초과로 실행되지 않았다.
+  - 시뮬레이터는 초당 약 18틱이라 프레임 개선은 판단할 수 없다. 50ms 이상 틱은 줄지 않았다. 평가 횟수만 근거로 삼는다. 평가 시간 자체와 120Hz·배터리는 재지 못했다.
+  - 코디네이터 레이어는 단위 테스트(숨김·위치·그리는 순서·그림 공유)만 통과했다. v2 재생은 끝까지 돌았지만 중간 화면에 발자국이 화면 안에 없어 레이어 그림을 눈으로 확인하지 못했다(`simbench-v2/shot-mid.png`).
+- 앱 크기(actool 컴파일 결과, iphoneos): 앱 `Assets.car` 17,577,992 → 12,072,136바이트(-5.51MB, -31%). 원본 카탈로그 12MB → 4.6MB. 지운 것: 앱 쪽 아틀라스 7장(위젯 appex에서 읽음, 시뮬레이터 앱에서 조회 테스트 통과), 코드 참조 0건을 `git grep`으로 확인한 이미지 6개(`MapHomeNotionGPS`, `MapHomeHouseMarker`, `MapHomeHomeIcon`, `MapHomeNotionMascot`, `MapHomeCompass`, `MapHomeMainMenu`). 동적 조회(`PlaceIcon_`, `Landmark_`, `Hat_`, `HomeEvolution`)는 유지. 워치 카탈로그 사본 7MB는 iPhone 배포에 안 들어가 그대로 둔다. **Release 산출물 전체 크기는 재지 못했다.**
+- MapLibre 크기: `ios-arm64` 프레임워크 8.7MB(바이너리 7,823,648바이트). MapKit은 시스템 프레임워크라 앱 크기에 더해지지 않는다. 대표 결정 사항이라 빼지 않았다.
+- AirPods: 15초 타이머 제거(연결 중 시간당 240회 → 0회, 계산값). 재생 알림으로 대체했고 `stop` 경로만 단위 테스트로 확인했다. **실제 AirPods·전력은 확인하지 못했다.**
+- 활동 갱신: 콜백을 센서 큐로 옮겼다. 전후 수치는 재지 못했다. 실기기 활동 갱신도 확인하지 못했다.
+- 설정 파일: 시작 때 바뀐 키만 쓰고, 내용이 같으면 저장을 건너뛰며, 새 파일은 이진 형식이고 옛 XML도 읽는다(단위 테스트). 시작 시간 전후는 재지 못했다.
+- 제스처: 공용 `MapHomeObservedGestures`·`MapHomeMapGestures`로 합쳐 두 지도에서 중복을 지웠다(단위 테스트, 실제 핀치·팬 조작은 미확인).
+
