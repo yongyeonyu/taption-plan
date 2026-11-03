@@ -165,6 +165,31 @@ final class AlgorithmUpgradeTests: XCTestCase {
         XCTAssertNil(PlaceHeightCapture.reference(from: here, pressures: [], altitudes: []))
     }
 
+    func testHomeChoresNeedSeveralSeparateBouts() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul") ?? .current
+        let start = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 11, day: 3, hour: 19)))
+        let stay = TimeSpan(start: start, end: start.addingTimeInterval(3600))
+        func reading(_ second: Int, _ motion: MotionKind, screen: Bool = false) -> SensorReading {
+            var value = SensorReading(timestamp: start.addingTimeInterval(Double(second)), point: nil, motion: motion)
+            value.screenIsOn = screen
+            return value
+        }
+        func bouts(_ count: Int, seconds: Int, screen: Bool = false) -> [SensorReading] {
+            (0..<count).flatMap { index -> [SensorReading] in
+                let base = index * (3400 / count)
+                return stride(from: 0, through: seconds, by: 30).map { reading(base + $0, .walking, screen: screen) }
+                    + [reading(base + seconds + 200, .stationary)]
+            }
+        }
+        XCTAssertNotNil(HomeChorePattern.assess(bouts(5, seconds: 180), in: stay, calendar: calendar), "여러 번 나눠 움직였다")
+        XCTAssertNil(HomeChorePattern.assess(bouts(1, seconds: 900), in: stay, calendar: calendar), "한 번의 긴 걷기")
+        XCTAssertNil(HomeChorePattern.assess(bouts(5, seconds: 180, screen: true), in: stay, calendar: calendar), "화면을 보며 움직였다")
+        XCTAssertNil(HomeChorePattern.assess(bouts(5, seconds: 30), in: stay, calendar: calendar), "움직인 시간이 짧다")
+        let night = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 11, day: 3, hour: 2)))
+        XCTAssertNil(HomeChorePattern.assess(bouts(5, seconds: 180), in: TimeSpan(start: night, end: night.addingTimeInterval(3600)), calendar: calendar), "심야")
+    }
+
     func testPressureReferenceOnlyCountsInsideTheVisit() {
         func company(capturedAt: Date) -> FrequentPlace {
             var place = FrequentPlace(kind: .company, name: "회사", point: geo(0), floor: 8)

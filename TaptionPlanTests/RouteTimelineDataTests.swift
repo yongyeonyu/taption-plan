@@ -202,6 +202,36 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertEqual(try XCTUnwrap(slices.first?.last).latitude, points[points.count * 3 / 4].latitude, accuracy: 0.002)
     }
 
+    func testSeasonColorsHoldTwoMonthsThenBlendInTheLastMonth() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul") ?? .current
+        func day(_ year: Int, _ month: Int, _ value: Int) throws -> Date {
+            try XCTUnwrap(calendar.date(from: DateComponents(year: year, month: month, day: value)))
+        }
+        func colors(_ date: Date) -> TaptionSeason.Colors { TaptionSeason.colors(on: date, calendar: calendar) }
+        XCTAssertEqual(colors(try day(2026, 3, 1)), TaptionSeason.spring.colors)
+        XCTAssertEqual(colors(try day(2026, 4, 30)), TaptionSeason.spring.colors)
+        XCTAssertEqual(colors(try day(2026, 5, 1)), TaptionSeason.spring.colors)
+        let may = colors(try day(2026, 5, 16))
+        XCTAssertNotEqual(may, TaptionSeason.spring.colors)
+        XCTAssertNotEqual(may, TaptionSeason.summer.colors)
+        XCTAssertEqual(colors(try day(2026, 6, 1)), TaptionSeason.summer.colors)
+        XCTAssertEqual(colors(try day(2026, 9, 1)), TaptionSeason.autumn.colors)
+        XCTAssertEqual(colors(try day(2026, 12, 1)), TaptionSeason.winter.colors)
+        XCTAssertEqual(colors(try day(2027, 1, 31)), TaptionSeason.winter.colors)
+        XCTAssertEqual(TaptionSeason.position(on: try day(2027, 2, 15), calendar: calendar).season, .winter)
+        XCTAssertEqual(colors(try day(2027, 3, 1)), TaptionSeason.spring.colors)
+    }
+
+    func testDeveloperZipIsReadable() throws {
+        let body = Data(String(repeating: "화랑이 ", count: 2_000).utf8)
+        let zip = try MapHomeZipArchive.zip(body, named: "log.json")
+        XCTAssertEqual(zip.prefix(4), Data([0x50, 0x4B, 0x03, 0x04]))
+        XCTAssertLessThan(zip.count, body.count)
+        // 표준 검사값: "123456789"의 CRC-32
+        XCTAssertEqual(MapHomeZipArchive.crc32(Data("123456789".utf8)), 0xCBF4_3926)
+    }
+
     func testRecognizedSubwayDrawsRouteWithoutUserConfirmation() throws {
         var (segment, _) = confirmedSubwayFixture()
         segment.subwayRoute = try XCTUnwrap(SubwayStationCatalog.route(for: ["가정역", "마곡나루역"]))

@@ -367,13 +367,13 @@ private enum Glyph {
 }
 
 /// 하단 메뉴 스티커 색. 어두운 테마에서 글자색(거의 흰색)을 테두리로 쓰면 하얀 선이 도드라진다.
-/// 대표 지시: 야간은 흰 선에 안쪽 어두운 선, 산책은 진한 장밋빛 선, 실외는 진한 선.
-struct TaptionBarPalette {
+/// 대표 지시: 야간은 흰 선에 안쪽 어두운 선, 계절은 그 계절의 진한 선, 실외는 진한 선.
+struct TaptionBarPalette: Sendable {
     let outline, coral, honey, brick, mint, rose, sky, cream, cocoa, weekday: Color
     /// 바깥 테두리 안쪽에 한 겹 더 넣는 어두운 선. 아이콘 크기는 그대로다.
     let innerLine: Color?
 
-    private init(_ hexes: [String], innerLine: String? = nil) {
+    init(_ hexes: [String], innerLine: String? = nil) {
         let c = hexes.map { Color(hex: $0) }
         self.innerLine = innerLine.map { Color(hex: $0) }
         (outline, coral, honey, brick, mint, rose, sky, cream, cocoa, weekday)
@@ -384,14 +384,13 @@ struct TaptionBarPalette {
         switch TaptionUITheme.current {
         case .classic: classic
         case .navy: night
-        case .purple: walk
+        case .purple: TaptionSeasonStore.current.bar
         case .brown: outdoor
         }
     }
 
     private static let classic = TaptionBarPalette(["#3E3320", "#EE8A5E", "#F3C766", "#D9694F", "#62B7A6", "#E7708F", "#9CC6E8", "#FBF6EA", "#8A5A3C", "#B9A98F"])
     private static let night = TaptionBarPalette(["#FFFFFF", "#FF9E80", "#FFD97A", "#F2836B", "#6FDCC8", "#FF8FB0", "#8CCBFF", "#F5F9FF", "#4A6FA8", "#93B6DA"], innerLine: "#0A101E")
-    private static let walk = TaptionBarPalette(["#7A3A58", "#FF9FA8", "#FFD9A0", "#E77E9C", "#A8E0D2", "#FF8FB8", "#C9B8F2", "#FFF8FA", "#A8557A", "#C48BA6"])
     private static let outdoor = TaptionBarPalette(["#0E0B07", "#FF9A5C", "#FFD35C", "#F07A4F", "#66D4B5", "#FF8FA3", "#8FC4FF", "#FFFBF4", "#A0701C", "#D8CBB4"])
 }
 

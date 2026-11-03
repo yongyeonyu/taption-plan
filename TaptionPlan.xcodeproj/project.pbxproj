@@ -402,6 +402,8 @@
 		A1000000000000000B1102D1 /* MapHomeSidebarNote.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102D1 /* MapHomeSidebarNote.swift */; };
 		A1000000000000000B1102E7 /* GPSLoggingIntervalSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102E7 /* GPSLoggingIntervalSlider.swift */; };
 		A1000000000000000B1103A1 /* MapHomeHomeSkyMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1103A1 /* MapHomeHomeSkyMath.swift */; };
+		A1000000000000000B1103E1 /* TaptionSeasonTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1103E1 /* TaptionSeasonTheme.swift */; };
+		A1000000000000000B1103E2 /* MapHomeDeveloperMail.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1103E2 /* MapHomeDeveloperMail.swift */; };
 		A1000000000000000B1103D2 /* MapHomeHomeSkyArt.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1103D2 /* MapHomeHomeSkyArt.swift */; };
 		A1000000000000000B1102F1 /* MapHomeHomeWeatherArt.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102F1 /* MapHomeHomeWeatherArt.swift */; };
 		A1000000000000000B1102F2 /* HwarangRigVehicles.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102F2 /* HwarangRigVehicles.swift */; };
@@ -872,6 +874,8 @@
 		F1000000000000000B1102D1 /* MapHomeSidebarNote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeSidebarNote.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102E7 /* GPSLoggingIntervalSlider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GPSLoggingIntervalSlider.swift; sourceTree = "<group>"; };
 		F1000000000000000B1103A1 /* MapHomeHomeSkyMath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeHomeSkyMath.swift; sourceTree = "<group>"; };
+		F1000000000000000B1103E1 /* TaptionSeasonTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionSeasonTheme.swift; sourceTree = "<group>"; };
+		F1000000000000000B1103E2 /* MapHomeDeveloperMail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeDeveloperMail.swift; sourceTree = "<group>"; };
 		F1000000000000000B1103D2 /* MapHomeHomeSkyArt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeHomeSkyArt.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102F1 /* MapHomeHomeWeatherArt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeHomeWeatherArt.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102F2 /* HwarangRigVehicles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HwarangRigVehicles.swift; sourceTree = "<group>"; };
@@ -1200,6 +1204,8 @@
 				F1000000000000000B1102D1 /* MapHomeSidebarNote.swift */,
 				F1000000000000000B1102E7 /* GPSLoggingIntervalSlider.swift */,
 				F1000000000000000B1103A1 /* MapHomeHomeSkyMath.swift */,
+				F1000000000000000B1103E1 /* TaptionSeasonTheme.swift */,
+				F1000000000000000B1103E2 /* MapHomeDeveloperMail.swift */,
 				F1000000000000000B1103D2 /* MapHomeHomeSkyArt.swift */,
 				F1000000000000000B1102F1 /* MapHomeHomeWeatherArt.swift */,
 				F1000000000000000B1102F2 /* HwarangRigVehicles.swift */,
@@ -1910,6 +1916,8 @@
 				A1000000000000000B1102D1 /* MapHomeSidebarNote.swift in Sources */,
 				A1000000000000000B1102E7 /* GPSLoggingIntervalSlider.swift in Sources */,
 				A1000000000000000B1103A1 /* MapHomeHomeSkyMath.swift in Sources */,
+				A1000000000000000B1103E1 /* TaptionSeasonTheme.swift in Sources */,
+				A1000000000000000B1103E2 /* MapHomeDeveloperMail.swift in Sources */,
 				A1000000000000000B1103D2 /* MapHomeHomeSkyArt.swift in Sources */,
 				A1000000000000000B1102F1 /* MapHomeHomeWeatherArt.swift in Sources */,
 				A1000000000000000B1102F2 /* HwarangRigVehicles.swift in Sources */,

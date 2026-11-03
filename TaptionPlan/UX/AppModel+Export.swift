@@ -67,6 +67,16 @@ extension AppModel {
         return url
     }
 
+    /// 개발자에게 보낼 진단 패키지(MAL1103A01). iCloud에 올리는 것과 같은 내용이다.
+    func diagnosticsPackageURL() async throws -> URL {
+        let watchLog = await watchConnectivityService.requestDiagnosticsLog() ?? WatchLaunchReportStore.read()?.report
+        return try TaptionPlanDiagnosticsLogPackageBuilder.applicationSupport().makePackage(
+            summary: diagnosticsSummary,
+            iphoneLog: TaptionPlanDiagnosticsLogger.shared.combinedLog(),
+            watchLog: watchLog
+        )
+    }
+
     /// 어제·오늘 센서 원본을 iCloud Drive › TaptionLogs에 바로 저장하고 결과 문구를 돌려준다(SUB1029A01).
     func exportSensorRawToICloud() async -> String {
         do {

@@ -33,7 +33,9 @@ extension MapHomeNLEClipEditor {
         loadPreviousDayIfNeeded()
     }
 
-    /// 처음 열면 기준일 24시간이 한눈에 들어오게 맞춘다. 확대는 두 손가락으로 한다.
+    static var initialVisibleMinutes: Int { 360 }
+
+    /// 처음 열면 보고 있던 시각 앞뒤로 6시간을 보여 준다. 확대는 두 손가락으로 한다.
     func fitWholeDayIfNeeded(height: CGFloat) {
         guard !didCenter, height > 1 else { return }
         didCenter = true
@@ -43,8 +45,9 @@ extension MapHomeNLEClipEditor {
             setVisibleStart(Double(focusMinute) - visible / 2)
             return
         }
-        minuteHeight = max(0.22, height / CGFloat(NLETrack.dayMinutes))
-        setVisibleStart(0)
+        // 처음에는 6시간을 보여 준다(NLE1103A02). 하루 전체는 줄여서 본다.
+        minuteHeight = max(0.22, height / CGFloat(Self.initialVisibleMinutes))
+        setVisibleStart(Double(focusMinute) - Double(Self.initialVisibleMinutes) / 2)
     }
 
     // MARK: - 지난 날 잇기

@@ -851,13 +851,15 @@ struct MapHomeView: View {
             reportInitialMapShellReadyIfNeeded(for: model.selectedDate)
         }
         .onAppear {
+            TaptionSeasonStore.select(model.selectedDate)
             refreshTimedMemoCache()
             applyPendingMapHomeRoute()
         }
         .onChange(of: model.pendingMapHomeRoute) { _, _ in
             applyPendingMapHomeRoute()
         }
-        .onChange(of: model.selectedDate) { _, _ in
+        .onChange(of: model.selectedDate) { _, date in
+            TaptionSeasonStore.select(date)
             refreshTimedMemoCache()
             // 날짜가 바뀌면 이전 날짜 일정을 즉시 내린다. 다시 불러오는 동안 옛 목록이
             // 좌측 상단·사이드바에 남아 있으면 날짜를 바꿔도 그대로인 것처럼 보인다.
@@ -5177,7 +5179,7 @@ struct MapHomeView: View {
         // 스타일 이름은 재질이 아니라 상황으로 적는다. "벡터 야간"을 고르려는 사람은 없다.
         case .mapLibreNight: language.text("야간", "Night")
         case .mapLibreContrast: language.text("실외(고대비)", "Outdoor (high contrast)")
-        case .mapLibreCasual: language.text("산책(부드럽게)", "Walk (soft)")
+        case .mapLibreCasual: language.text("계절", "Seasons")
         case .mapLibreRPG: language.text("판타지 지도", "Fantasy Map")
         }
     }
@@ -5188,7 +5190,7 @@ struct MapHomeView: View {
         case .hybrid: "globe.asia.australia.fill"
         case .mapLibreNight: "moon.stars.fill"
         case .mapLibreContrast: "circle.lefthalf.filled"
-        case .mapLibreCasual: "sparkles"
+        case .mapLibreCasual: "leaf.fill"
         case .mapLibreRPG: "map.circle.fill"
         }
     }

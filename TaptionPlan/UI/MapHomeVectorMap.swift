@@ -19,7 +19,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         switch self {
         case .night: "#05070D"
         case .contrast: "#FFFFFF"
-        case .casual: "#FFF6F9"
+        case .casual: TaptionSeasonStore.current.colors.map.background
         case .rpg: "#ECDFC0"
         }
     }
@@ -28,7 +28,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         switch self {
         case .night: "#06264D"
         case .contrast: "#0057FF"
-        case .casual: "#CFDDF5"
+        case .casual: TaptionSeasonStore.current.colors.map.water
         case .rpg: "#86C3E0"
         }
     }
@@ -37,7 +37,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         switch self {
         case .night: "#0B1424"
         case .contrast: "#CDEBC0"
-        case .casual: "#FBE3EA"
+        case .casual: TaptionSeasonStore.current.colors.map.land
         case .rpg: "#DCCB9E"
         }
     }
@@ -46,7 +46,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         switch self {
         case .night: "#13223D"
         case .contrast: "#000000"
-        case .casual: "#FFE1EA"
+        case .casual: TaptionSeasonStore.current.colors.map.building
         case .rpg: "#CBAE7C"
         }
     }
@@ -64,7 +64,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         switch self {
         case .night: "#2FD6FF"
         case .contrast: "#D9BE6A"
-        case .casual: "#F7A8C4"
+        case .casual: TaptionSeasonStore.current.colors.map.road
         case .rpg: "#9A7B4A"
         }
     }
@@ -161,7 +161,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
           "source-layer": "landcover",
           "filter": ["in", "class", "wood", "grass", "scrub"],
           "paint": {
-            "fill-color": "#F9DCE6",
+            "fill-color": "\#(TaptionSeasonStore.current.colors.map.cover)",
             "fill-opacity": 0.72
           }
         },
@@ -171,7 +171,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
           "source": "openmaptiles",
           "source-layer": "park",
           "paint": {
-            "fill-color": "#F5CBDC",
+            "fill-color": "\#(TaptionSeasonStore.current.colors.map.park)",
             "fill-opacity": 0.84
           }
         }
@@ -220,7 +220,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
           "minzoom": 13,
           "layout": { "line-cap": "round", "line-join": "round" },
           "paint": {
-            "line-color": "#F2B8CC",
+            "line-color": "\#(TaptionSeasonStore.current.colors.map.buildingOutline)",
             "line-opacity": 0.46,
             "line-width": ["interpolate", ["linear"], ["zoom"], 13, 0.35, 17, 1.2]
           }
@@ -391,7 +391,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
           "minzoom": 8,
           "layout": { "line-cap": "round", "line-join": "round" },
           "paint": {
-            "line-color": "#B9CDEE",
+            "line-color": "\#(TaptionSeasonStore.current.colors.map.waterway)",
             "line-opacity": 0.78,
             "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.6, 14, 2.8]
           }
@@ -404,9 +404,9 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
           "minzoom": 5,
           "filter": ["in", "class", "city", "town", "village"],
           "paint": {
-            "circle-color": "#F28FA9",
+            "circle-color": "\#(TaptionSeasonStore.current.colors.map.marker)",
             "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 2.4, 10, 3.8, 14, 5.5],
-            "circle-stroke-color": "#FFF6F9",
+            "circle-stroke-color": "\#(TaptionSeasonStore.current.colors.map.halo)",
             "circle-stroke-width": 1.5
           }
         },
@@ -418,10 +418,10 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
           "minzoom": 13,
           "filter": ["in", "class", "cafe", "restaurant", "bakery", "shop", "supermarket"],
           "paint": {
-            "circle-color": "#C77BB0",
+            "circle-color": "\#(TaptionSeasonStore.current.colors.map.poi)",
             "circle-opacity": 0.68,
             "circle-radius": 3.2,
-            "circle-stroke-color": "#FFF6F9",
+            "circle-stroke-color": "\#(TaptionSeasonStore.current.colors.map.halo)",
             "circle-stroke-width": 1
           }
         },
@@ -442,8 +442,8 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
             "text-ignore-placement": false
           },
           "paint": {
-            "text-color": "#7A4A60",
-            "text-halo-color": "#FFF6F9",
+            "text-color": "\#(TaptionSeasonStore.current.colors.map.label)",
+            "text-halo-color": "\#(TaptionSeasonStore.current.colors.map.halo)",
             "text-halo-width": 2.2,
             "text-halo-blur": 0.15
           }
@@ -464,8 +464,8 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
             "text-keep-upright": true
           },
           "paint": {
-            "text-color": "#8F5A72",
-            "text-halo-color": "#FFF6F9",
+            "text-color": "\#(TaptionSeasonStore.current.colors.map.roadLabel)",
+            "text-halo-color": "\#(TaptionSeasonStore.current.colors.map.halo)",
             "text-halo-width": 1.8,
             "text-halo-blur": 0.1
           }
@@ -483,8 +483,8 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
             "text-padding": 4
           },
           "paint": {
-            "text-color": "#5F7FB0",
-            "text-halo-color": "#DCE6F8",
+            "text-color": "\#(TaptionSeasonStore.current.colors.map.waterLabel)",
+            "text-halo-color": "\#(TaptionSeasonStore.current.colors.map.waterHalo)",
             "text-halo-width": 1.8
           }
         },
@@ -501,8 +501,8 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
             "text-padding": 4
           },
           "paint": {
-            "text-color": "#A8557E",
-            "text-halo-color": "#F5CBDC",
+            "text-color": "\#(TaptionSeasonStore.current.colors.map.parkLabel)",
+            "text-halo-color": "\#(TaptionSeasonStore.current.colors.map.parkHalo)",
             "text-halo-width": 1.6
           }
         }
@@ -781,6 +781,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
         if mapView.contentInset != contentInsets {
             mapView.contentInset = contentInsets
         }
+        context.coordinator.applySeasonColorsIfNeeded(to: mapView)
         context.coordinator.updateContent(in: mapView)
         context.coordinator.updateMarkerLayer(in: mapView)
         context.coordinator.applyCameraCommandIfNeeded(to: mapView)
@@ -807,6 +808,35 @@ struct MapHomeVectorMap: UIViewRepresentable {
         /// 예전에는 카메라를 1/60초 애니메이션으로 옮기면서, 화랑이 좌표는 카메라가 움직이기 **전**에 계산했다.
         /// 그래서 화랑이가 매 프레임 이동 반대쪽으로 한 걸음 밀렸다가 돌아와 좌우로 튀었다(PLY1029A06).
         /// 표시 링크가 매 프레임 새 위치를 주므로 애니메이션 없이 놓아도 부드럽다.
+        private var lastSeasonKey: String?
+
+        /// 계절 색이 바뀌면 타일을 다시 받지 않고 레이어 색만 바꾼다(SEA1103A01).
+        func applySeasonColorsIfNeeded(to mapView: MLNMapView) {
+            guard parent.style == .casual, let style = mapView.style else { return }
+            let season = TaptionSeasonStore.current
+            guard lastSeasonKey != season.key else { return }
+            lastSeasonKey = season.key
+            let map = season.colors.map
+            func color(_ hex: String) -> NSExpression { NSExpression(forConstantValue: UIColor(Color(hex: hex))) }
+            (style.layer(withIdentifier: "background") as? MLNBackgroundStyleLayer)?.backgroundColor = color(map.background)
+            for (id, hex) in [("water", map.water), ("landuse", map.land), ("building", map.building), ("casual-landcover", map.cover), ("casual-park", map.park)] {
+                (style.layer(withIdentifier: id) as? MLNFillStyleLayer)?.fillColor = color(hex)
+            }
+            for (id, hex) in [("road-casing", map.casing), ("road", map.road), ("casual-waterway", map.waterway), ("casual-building-outline", map.buildingOutline)] {
+                (style.layer(withIdentifier: id) as? MLNLineStyleLayer)?.lineColor = color(hex)
+            }
+            for (id, hex, halo) in [("casual-place-label", map.label, map.halo), ("casual-road-label", map.roadLabel, map.halo), ("casual-water-label", map.waterLabel, map.waterHalo), ("casual-park-label", map.parkLabel, map.parkHalo)] {
+                let layer = style.layer(withIdentifier: id) as? MLNSymbolStyleLayer
+                layer?.textColor = color(hex)
+                layer?.textHaloColor = color(halo)
+            }
+            for (id, hex) in [("casual-place-marker", map.marker), ("casual-poi-marker", map.poi)] {
+                let layer = style.layer(withIdentifier: id) as? MLNCircleStyleLayer
+                layer?.circleColor = color(hex)
+                layer?.circleStrokeColor = color(map.halo)
+            }
+        }
+
         func applyPlaybackFrame(_ frame: MapHomePlaybackDriverFrame) {
             guard let mapView, mapView.bounds.width > 0, let coordinate = frame.coordinate else { return }
             let camera = mapView.camera
@@ -1073,6 +1103,8 @@ struct MapHomeVectorMap: UIViewRepresentable {
 
         func mapView(_ mapView: MLNMapView, didFinishLoading style: MLNStyle) {
             lastContentSignature = nil
+            lastSeasonKey = nil
+            applySeasonColorsIfNeeded(to: mapView)
             updateContent(in: mapView)
             applyCameraCommandIfNeeded(to: mapView)
             attachPanGestures(in: mapView)

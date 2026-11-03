@@ -126,6 +126,8 @@ struct MapHomeSecuritySheet: View {
     @State private var restoreTarget: PlanBackupListingRow?
     @State private var isOffloadConfirmationPresented = false
     @State private var rawExportStatus = ""
+    @State var developerAttachment: MapHomeDeveloperAttachment?
+    @State var developerMailStatus = ""
     @FocusState private var focusedField: PINField?
 
     private enum PINField { case pin, confirmation, backup }
@@ -246,6 +248,7 @@ struct MapHomeSecuritySheet: View {
                             .foregroundStyle(Color.tpReferenceBlue)
                             .lineLimit(2)
                     }
+                    developerMailButtons
                 }
 
                 card(language.text("\(PlanPINVerifier.currentDigits)자리 비밀번호", "\(PlanPINVerifier.currentDigits)-digit password")) {
@@ -648,6 +651,61 @@ struct MapHomeSecuritySheet: View {
 
     private var latestBackupText: String? {
         security.latestSuccessfulBackupDate.map(formatted)
+    }
+}
+
+extension MapHomeSecuritySheet {
+    /// 압축해 메일 작성 화면에 첨부한다. 보내기는 사용자가 누른다(MAL1103A01).
+    @ViewBuilder
+    var developerMailButtons: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(language.text("개발자에게 보내기", "Send to developer"))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
+                .foregroundStyle(.secondary)
+            HStack(spacing: 10) {
+                developerMailButton(language.text("로그 보내기", "Logs"), subject: "BOKKI Plan 로그") {
+                    try await model.diagnosticsPackageURL()
+                }
+                developerMailButton(language.text("어제·오늘 데이터", "2 days data"), subject: "BOKKI Plan 어제·오늘 데이터") {
+                    try await model.exportTodaySensorRawURL()
+                }
+            }
+            Text(language.text(
+                "위치 기록이 포함될 수 있어요. 메일 화면에서 보내기를 눌러야 전송됩니다.",
+                "May include location history. Nothing is sent until you tap Send in Mail."
+            ))
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10.5)), weight: .medium))
+            .foregroundStyle(.secondary)
+            if !developerMailStatus.isEmpty {
+                Text(developerMailStatus)
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10.5)), weight: .medium))
+                    .foregroundStyle(Color.tpReferenceBlue)
+            }
+        }
+        .sheet(item: $developerAttachment) { MapHomeDeveloperMailSheet(attachment: $0) }
+    }
+
+    private func developerMailButton(_ title: String, subject: String, source: @escaping () async throws -> URL) -> some View {
+        Button {
+            developerMailStatus = language.text("압축 중…", "Compressing…")
+            Task {
+                do {
+                    let file = try await source()
+                    let zipped = try await Task.detached(priority: .utility) { try MapHomeZipArchive.write(file) }.value
+                    developerMailStatus = ""
+                    developerAttachment = MapHomeDeveloperAttachment(url: zipped, subject: subject)
+                } catch {
+                    developerMailStatus = language.text("실패 · \(error.localizedDescription)", "Failed · \(error.localizedDescription)")
+                }
+            }
+        } label: {
+            Label(title, systemImage: "envelope")
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
+                .lineLimit(1)
+        }
+        .fixedSize()
+        .buttonStyle(.bordered)
+        .tint(Color.tpReferenceBlue)
     }
 }
 

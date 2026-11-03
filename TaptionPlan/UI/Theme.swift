@@ -115,7 +115,7 @@ enum TaptionUITheme: String, CaseIterable, Identifiable, Sendable {
     var isDark: Bool { self == .navy || self == .brown }
     var colorScheme: ColorScheme { isDark ? .dark : .light }
 
-    /// 판타지·애플맵·위성은 기본 양피지, 야간은 남색, 산책은 파스텔 핑크, 실외(고대비)는 갈색.
+    /// 판타지·애플맵·위성은 기본 양피지, 야간은 남색, 계절은 보고 있는 날짜의 계절 색, 실외(고대비)는 갈색.
     static func forMap(_ style: MapDisplayStyle) -> TaptionUITheme {
         switch style.runtimeStyle {
         case .mapLibreNight: .navy
@@ -138,12 +138,14 @@ enum TaptionUITheme: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .classic: nil
         case .navy: Self.palette("#0A101E", "#141D33", "#2A3D63", "#2A74C6", "#A9C4E0", "#F5F9FF")
-        case .purple: Self.palette("#FFF0F5", "#FFE3EC", "#F5BCD0", "#B8487A", "#8A4A68", "#4F2238")
+        case .purple: TaptionSeasonStore.current.palette
         case .brown: Self.palette("#17130E", "#2A241C", "#54483A", "#99690F", "#D8CBB4", "#FFFBF4")
         }
     }
 
-    private static func palette(_ hexes: String...) -> Palette {
+    private static func palette(_ hexes: String...) -> Palette { palette(hexes) }
+
+    static func palette(_ hexes: [String]) -> Palette {
         Palette(
             background: Color(hex: hexes[0]), surface: Color(hex: hexes[1]), line: Color(hex: hexes[2]),
             accent: Color(hex: hexes[3]), secondary: Color(hex: hexes[4]), ink: Color(hex: hexes[5])

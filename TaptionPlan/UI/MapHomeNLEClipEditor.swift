@@ -526,11 +526,16 @@ struct MapHomeNLEClipEditor: View {
                         .foregroundStyle(.white)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
-                    if height >= 28, !evidence.text.isEmpty {
+                    if height >= 26 {
+                        Text("\(Self.minuteLabel(clip.startMinute))–\(Self.minuteLabel(clip.endMinute))")
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(8)), weight: .semibold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.92))
+                    }
+                    if height >= 38, !evidence.text.isEmpty {
                         Text(evidence.text)
                             .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(8)), weight: .medium))
                             .foregroundStyle(.white.opacity(0.92))
-                            .lineLimit(max(1, Int((height - 14) / 11)))
+                            .lineLimit(max(1, Int((height - 26) / 11)))
                     }
                     }
                     .padding(.horizontal, 4)
@@ -1210,18 +1215,8 @@ struct MapHomeNLEClipEditor: View {
         let lanes = NLELaneWidths(total: width, gutter: gutterWidth, gap: laneGap)
         let sensorX = gutterWidth + lanes.main + laneGap
         let detailX = sensorX + lanes.sensor + laneGap
-        // 상세활동 줄
+        // 상세·센서 칸은 읽기 전용이다. 끌면 화면만 움직이고, 누르면 값을 본다(NLE1103A02).
         if point.x >= detailX - laneGap {
-            if let sub = subTrack.clip(atMinute: minute) {
-                selectedSubClipID = sub.id
-                if geometry.height(minutes: Double(sub.lengthMinutes)) >= Self.trimReach * 3 {
-                    let topY = geometry.y(forMinute: Double(sub.startMinute))
-                    let bottomY = geometry.y(forMinute: Double(sub.endMinute))
-                    if abs(point.y - topY) <= Self.trimReach { return .trimStart(lane: .sub, id: sub.id) }
-                    if abs(point.y - bottomY) <= Self.trimReach { return .trimEnd(lane: .sub, id: sub.id) }
-                }
-                return .move(lane: .sub, id: sub.id, originMinute: sub.startMinute, grabMinute: minute)
-            }
             selectedSubClipID = nil
             if let clip = track.clip(atMinute: minute) { selectedClipID = clip.id }
             return .pan

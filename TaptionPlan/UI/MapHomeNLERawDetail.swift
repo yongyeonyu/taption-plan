@@ -23,7 +23,7 @@ enum NLESensorEvidenceText {
             titles.append(segment.title)
         }
         let differs = inside.contains { $0.channel == .motion && $0.categoryID != categoryID && $0.categoryID != "unconfirmed" }
-        return (titles.prefix(4).joined(separator: " · "), differs)
+        return (titles.prefix(6).joined(separator: " · "), differs)
     }
 }
 
