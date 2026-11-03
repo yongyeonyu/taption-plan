@@ -5699,3 +5699,7 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 제한: 앱이 돌지 않으면 등록된 곳만 울리고 목록이 갱신되지 않는다. 기본 아이콘을 일부러 고른 메모는 구분하지 못해 제외된다. 알림을 눌러도 그 메모로 이동하지 않고 앱만 열린다.
 - 빌드·가드: generic iOS Debug `BUILD SUCCEEDED`(서명 끔, `build-ios-debug.log`), 경계 스크립트 통과, `architecture-metrics.py --check docs/architecture-baseline.json` 통과(`guard-metrics-check.log`).
 - 로그: `build/validation/NRM1104A01/`.
+
+## STK1104A01·NRM1104A01 메인 합치기 뒤 전체 단위 시험 (2026-11-04, 시뮬레이터)
+- 2,036건 중 2,022건 통과, 실패 0, 건너뜀 14 (`build/validation/SAV1104A01/check10.xcresult`). 구조 지표·엔진 경계 통과.
+- 합치기 때 `MapHomeView` 메모 아이콘 충돌을 새 `StickerGlyph`와 입체 원 배경으로 풀었다. 이 조합을 화면으로 보지는 않았다. 근처 알림의 실제 전달은 실기기에서 아직 확인하지 않았다.
