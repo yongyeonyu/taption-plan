@@ -1,5 +1,79 @@
+@preconcurrency import CoreMotion
 import Foundation
 import TaptionPlanEngine
+
+/// 층수를 저장할 때 그 자리의 높이를 함께 재는 규칙(HGT1103A01).
+enum PlaceHeightCapture {
+    static let sampleCount = 20
+    static let maximumDuration: TimeInterval = 40
+
+    /// 최솟값과 최댓값을 하나씩 버린 평균. 표본이 3개 미만이면 믿을 수 없어 nil이다.
+    static func trimmedMean(_ values: [Double]) -> Double? {
+        let finite = values.filter(\.isFinite).sorted()
+        guard finite.count >= 3 else { return nil }
+        let kept = finite.dropFirst().dropLast()
+        return kept.reduce(0, +) / Double(kept.count)
+    }
+
+    /// 지금 지점 안에 있을 때만 그 자리의 높이다. 지도에서 멀리서 고치는 경우는 재지 않는다.
+    static func isInside(_ place: FrequentPlace, reading: SensorReading?) -> Bool {
+        guard let reading, reading.gpsAvailable, let current = reading.point, let point = place.point else { return false }
+        let y = (current.latitude - point.latitude) * 111_320
+        let x = (current.longitude - point.longitude) * 111_320 * cos(point.latitude * .pi / 180)
+        return (x * x + y * y).squareRoot() <= place.radiusMeters
+    }
+
+    /// 측정값을 넣은 기준 표본. 이 측정의 상대 고도 세션은 끝나므로 남기지 않는다.
+    static func reference(from base: SensorReading, pressures: [Double], altitudes: [Double]) -> SensorReading? {
+        let pressure = trimmedMean(pressures)
+        let altitude = trimmedMean(altitudes)
+        guard pressure != nil || altitude != nil else { return nil }
+        var value = base
+        value.pressureKilopascals = pressure
+        value.relativeAltitudeMeters = nil
+        value.altimeterSessionID = nil
+        if let altitude { value.point?.altitude = altitude } else { value.point?.verticalAccuracy = -1 }
+        return value
+    }
+}
+
+/// 기압을 `count`번 읽는다. 기압계가 없거나 시간이 다 되면 그때까지 읽은 값을 준다.
+@MainActor
+final class PlaceHeightSampler {
+    private let altimeter = CMAltimeter()
+
+    func pressures(count: Int, timeout: TimeInterval, onSample: @escaping @MainActor () -> Void) async -> [Double] {
+        guard CMAltimeter.isRelativeAltitudeAvailable() else {
+            // 기압계가 없어도 GPS 고도는 같은 시간 동안 읽는다.
+            for _ in 0..<count where !Task.isCancelled {
+                onSample()
+                try? await Task.sleep(for: .seconds(1))
+            }
+            return []
+        }
+        let altimeter = self.altimeter
+        let stream = AsyncStream<Double> { continuation in
+            altimeter.startRelativeAltitudeUpdates(to: .main) { data, _ in
+                if let pressure = data?.pressure.doubleValue { continuation.yield(pressure) }
+            }
+            let timer = Task {
+                try? await Task.sleep(for: .seconds(timeout))
+                continuation.finish()
+            }
+            continuation.onTermination = { _ in
+                timer.cancel()
+                altimeter.stopRelativeAltitudeUpdates()
+            }
+        }
+        var values: [Double] = []
+        for await pressure in stream {
+            values.append(pressure)
+            onSample()
+            if values.count >= count { break }
+        }
+        return values
+    }
+}
 
 extension FloorCalibration {
     /// 층별 기준점. 옛 형식은 기준점 하나를 층별 기준점으로 편다.

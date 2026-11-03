@@ -1149,6 +1149,8 @@ struct MapHomeTimeSidebar: View {
     /// 있으면 알약 맨 위 여백에 사이드바 접기 원형 버튼을 둔다(연필과 같은 모양).
     var onCollapse: (() -> Void)?
     var onUnconfirmedReview: ((MapHomeTimeRailSegment) -> Void)?
+    /// 미확인 구간에 앞뒤 근거로 추정한 수단 아이콘을 얹는다(PLB1103A01).
+    var unconfirmedMode: ((MapHomeTimeRailSegment) -> TravelMode?)?
     /// 묶인 미확인 아이콘을 누르면 여기 담긴 구간들을 작은 메뉴로 고른다.
     @State private var reviewChoices: [MapHomeTimeRailSegment]?
 
@@ -1214,7 +1216,8 @@ struct MapHomeTimeSidebar: View {
         onInteractionChanged: ((Bool) -> Void)? = nil,
         onSectionEdit: ((Int) -> Void)? = nil,
         onCollapse: (() -> Void)? = nil,
-        onUnconfirmedReview: ((MapHomeTimeRailSegment) -> Void)? = nil
+        onUnconfirmedReview: ((MapHomeTimeRailSegment) -> Void)? = nil,
+        unconfirmedMode: ((MapHomeTimeRailSegment) -> TravelMode?)? = nil
     ) {
         self.smoothsPlayback = smoothsPlayback
         self.date = date
@@ -1233,6 +1236,7 @@ struct MapHomeTimeSidebar: View {
         self.onSectionEdit = onSectionEdit
         self.onCollapse = onCollapse
         self.onUnconfirmedReview = onUnconfirmedReview
+        self.unconfirmedMode = unconfirmedMode
         self._railSnapshot = State(
             initialValue: MapHomeTimeSidebarRailSnapshot(segments)
         )
@@ -1257,7 +1261,7 @@ struct MapHomeTimeSidebar: View {
                         }
                     } label: {
                         ZStack(alignment: .topTrailing) {
-                            Image(systemName: "questionmark")
+                            Image(systemName: group.count == 1 ? group.first.flatMap { unconfirmedMode?($0)?.outlineSymbolName } ?? "questionmark" : "questionmark")
                                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
                                 .foregroundStyle(Color.tpInk)
                                 .frame(width: 26, height: 26)
@@ -1438,6 +1442,12 @@ struct MapHomeTimeSidebar: View {
                                 .overlay {
                                     if segment.categoryID == "unconfirmed" {
                                         MapHomeUnconfirmedChecker()
+                                        if trackHeight * MapHomeTimeSidebarMath.spanFraction(start: start, end: end, window: visibleWindow) >= 12,
+                                           let mode = unconfirmedMode?(segment) {
+                                            Image(systemName: mode.outlineSymbolName)
+                                                .font(.system(size: 9, weight: .bold))
+                                                .foregroundStyle(Color.tpInk)
+                                        }
                                     }
                                 }
                                 .frame(

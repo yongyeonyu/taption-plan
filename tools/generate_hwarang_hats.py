@@ -49,7 +49,15 @@ HATS = {
     "kr.seongsan": wide("#6DAA6B", "#5A9458", "#3F7F52", SUN + WAVE),
     "kr.haeundae": wide("#F7DD93", "#F0D07C", "#3BA6DC", WAVE),
     "kr.hahoe": S('<path d="M10 44c-2-22 10-34 22-34s24 12 22 34c-13-5-31-5-44 0z" fill="#2F4C86"/><ellipse cx="32" cy="32" rx="11" ry="10" fill="#F2DDB0"/><path d="M24 30q3-3 6 0M34 30q3-3 6 0M25 36q7 6 14 0" fill="none" stroke-width="2"/>'),
-    "kr.namsan": cap("#C8473A", "#8E2F27", '<path d="M26 34V22l12 12V22" fill="none" stroke="#FFFFFF" stroke-width="3"/>', '<path d="M32 14V3M28 7h8" fill="none" stroke-width="2.6"/>'),
+    # 모자 위에 N서울타워: 기둥, 전망대, 첨탑(HAT1103A01). 타워 자리를 위해 모자 높이를 낮췄다.
+    "kr.namsan": S('<path d="M32 9V-1" fill="none" stroke-width="2"/><path d="M32 3V-1" fill="none" stroke="#E2502F" stroke-width="2"/>'
+                   '<path d="M29.5 26L30.7 14h2.6L34.5 26z" fill="#EFEBE1" stroke-width="1.8"/>'
+                   '<ellipse cx="32" cy="14.5" rx="7" ry="2.2" fill="#F7F4EC" stroke-width="1.8"/>'
+                   '<path d="M26.5 14V10.5c2-1.2 9-1.2 11 0V14c-2 1.2-9 1.2-11 0z" fill="#7FA9C9" stroke-width="1.8"/>'
+                   '<ellipse cx="32" cy="10" rx="5.6" ry="1.8" fill="#F7F4EC" stroke-width="1.8"/>'
+                   '<path d="M12 44c0-14 9-20 20-20s20 6 20 20z" fill="#C8473A"/>'
+                   '<path d="M30 42c12-4 24-3 32 2-1 6-10 7-16 6-6-1-12-3-16-8z" fill="#8E2F27"/>'
+                   '<path d="M27 38V29l10 9V29" fill="none" stroke="#FFFFFF" stroke-width="2.6"/>'),
     "kr.hallasan": beanie("#F0992C", "#D97F17", "", None) .replace('<g stroke', '<g stroke', 1) + S('<path d="M32 12c-2-6 2-9 8-9 0 6-3 9-8 9z" fill="#5F9E4F" stroke-width="2"/>'),
     "jp.fuji": beanie("#5E78C4", "#E8EEF9", '<path d="M22 18c6-4 14-4 20 0l5 12-6-3-5 5-4-5-4 5-5-5-6 3z" fill="#FFF" stroke-width="2.5"/>'),
     "jp.himeji": helmet("#F2F0E8", '<path d="M32 16 20 2M32 16 44 2" fill="none" stroke="#D9B45F" stroke-width="5"/>', '<circle cx="32" cy="24" r="3.5" fill="#D9B45F" stroke-width="2"/>'),
@@ -109,7 +117,7 @@ HI = 'fill="none" stroke="#FFFFFF" stroke-opacity=".55" stroke-width="2.4"'
 FO = 'fill="none" stroke="#1E120A" stroke-opacity=".28" stroke-width="1.6"'
 HAT_LAYERS = {
     "kr.gyeongbokgung": f'<path d="M23 15c1-3 4-4 7-4" {HI}/><path d="M36 14v18c3 0 4-.4 5-1V15z" {SH}/><path d="M8 45c12 5 36 5 48 0" {FO}/>',
-    "kr.namsan": f'<path d="M16 34c1-8 6-14 12-16" {HI}/><path d="M44 21c5 5 7 13 7 22-2-1-4-2-7-2z" {SH}/>',
+    "kr.namsan": f'<path d="M16 37c1-5 5-8 10-10" {HI}/><path d="M44 28c5 3 7 9 7 15-2-1-4-2-7-2z" {SH}/>',
     "kr.hallasan": f'<path d="M16 34c1-8 6-14 11-16" {HI}/><path d="M44 18c6 5 9 13 9 23h-9z" {SH}/>',
     "jp.fuji": f'<path d="M15 34c1-7 5-13 10-15" {HI}/><path d="M46 20c5 5 7 12 7 20h-8z" {SH}/>',
     "jp.fushimi": f'<path d="M12 36c6-5 14-6 20-6" {HI}/>',

@@ -52,7 +52,6 @@ struct MapHomeNLEClipEditor: View {
     /// 센서 원본이나 상세활동에서 집어 든 결과. 대분류에 바로 반영할 수 있다.
     @State private var pick: NLEPick?
     /// 센서 원본 다섯 줄을 펼쳤는가. 평소에는 한 줄로 접어 클립 칸을 넓힌다.
-    @State private var isSensorExpanded = false
     /// 클립 옆 빠른 메뉴를 띄운 분. 끌기 시작하면 닫는다.
     @State private var quickMenuMinute: Int?
     @State private var sensorEvidence: [MapHomeNLESensorSegment] = []
@@ -242,7 +241,7 @@ struct MapHomeNLEClipEditor: View {
 
     /// 줄 이름표. 타임라인과 같은 너비 계산을 써서 세로줄과 딱 맞춘다.
     func laneHeader(width: CGFloat) -> some View {
-        let lanes = NLELaneWidths(total: width, gutter: gutterWidth, gap: laneGap, sensorExpanded: isSensorExpanded)
+        let lanes = NLELaneWidths(total: width, gutter: gutterWidth, gap: laneGap)
         return HStack(spacing: laneGap) {
             Color.clear.frame(width: gutterWidth, height: 1)
             laneTitle(language.text("대분류", "Main"), width: lanes.main)
@@ -256,9 +255,18 @@ struct MapHomeNLEClipEditor: View {
                             .background(Color.tpAccent.opacity(0.14), in: Capsule())
                     }
                 }
-            sensorLaneTitle(width: lanes.sensor)
-            laneTitle(language.text("상세활동", "Details"), width: lanes.detail)
+            Color.clear.frame(width: lanes.sensor, height: 1)
+            laneTitle(language.text("상세·센서", "Details · sensor"), width: lanes.detail)
         }
+    }
+
+    private func laneTitle(_ text: String, width: CGFloat) -> some View {
+        Text(text)
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .bold))
+            .foregroundStyle(Color.tpSecondary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+            .frame(width: width, alignment: .leading)
     }
 
     /// 센서 기록과 달라진 구간 수. 이름표 옆에 작게 붙는다.
@@ -270,18 +278,6 @@ struct MapHomeNLEClipEditor: View {
             return [segment.startMinute, last].contains { minute in
                 track.clip(atMinute: minute)?.option.categoryID != segment.categoryID
             }
-        }
-    }
-
-    /// 센서와 대분류가 다른 구간에 "이걸로 바꿀까요" 칩을 띄운다. 누르면 그 구간만 바로 고친다.
-    private func suggestionChips(geometry: NLETimelineGeometry, x: CGFloat, width: CGFloat) -> some View {
-        let placed = NLESuggestionLayout.placed(
-            differingSegments.map { (segment: $0, y: geometry.y(forMinute: Double($0.startMinute))) }
-        )
-        return ForEach(placed, id: \.segment.id) { item in
-            NLESuggestionChip(title: item.segment.title, language: language) { restoreSensorSegment(item.segment) }
-                .frame(maxWidth: width - 8, alignment: .leading)
-                .offset(x: x + 4, y: item.y + 2)
         }
     }
 
@@ -306,42 +302,6 @@ struct MapHomeNLEClipEditor: View {
     }
 
     /// 센서 원본 열 머리: 줄마다 아이콘으로 무슨 정보인지 알린다(움직임·헬스·화면·연결·장소).
-    private func sensorLaneTitle(width: CGFloat) -> some View {
-        Button {
-            withAnimation(.snappy(duration: 0.22)) { isSensorExpanded.toggle() }
-        } label: {
-            HStack(spacing: 0) {
-                if isSensorExpanded {
-                    ForEach(MapHomeNLESensorChannel.allCases, id: \.rawValue) { channel in
-                        TaptionCuteIcon(channel.systemImage, size: 13)
-                            .foregroundStyle(Color.tpSecondary)
-                            .frame(maxWidth: .infinity)
-                            .accessibilityLabel(channel.title(language))
-                    }
-                } else {
-                    Image(systemName: "chevron.left.chevron.right")
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold))
-                        .foregroundStyle(Color.tpAccent)
-                        .frame(maxWidth: .infinity)
-                }
-            }
-            .frame(width: width, height: 16)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(language.text("센서 원본", "Sensor"))
-    }
-
-    private func laneTitle(_ text: String, width: CGFloat) -> some View {
-        Text(text)
-            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .bold))
-            .foregroundStyle(Color.tpSecondary)
-            .lineLimit(1)
-            .minimumScaleFactor(0.7)
-            .frame(width: width, alignment: .leading)
-    }
-
     /// 하루 24시간을 세로로 세운 타임라인.
     ///
     /// 위에서 아래로 시간이 흐르고, 클립은 하루를 빈틈없이 채우며 쌓인다.
@@ -350,7 +310,7 @@ struct MapHomeNLEClipEditor: View {
         GeometryReader { proxy in
             let width = max(1, proxy.size.width)
             let height = max(120, proxy.size.height)
-            let lanes = NLELaneWidths(total: width, gutter: gutterWidth, gap: laneGap, sensorExpanded: isSensorExpanded)
+            let lanes = NLELaneWidths(total: width, gutter: gutterWidth, gap: laneGap)
             let sensorX = gutterWidth + lanes.main + laneGap
             let detailX = sensorX + lanes.sensor + laneGap
             let geometry = NLETimelineGeometry(
@@ -362,12 +322,10 @@ struct MapHomeNLEClipEditor: View {
                 Color.tpSurface
                 hourGrid(geometry: geometry, width: width)
                 laneDivider(at: sensorX - laneGap / 2, height: height)
-                laneDivider(at: detailX - laneGap / 2, height: height)
                 mainColumn(geometry: geometry, x: gutterWidth, width: lanes.main)
-                sourceColumn(geometry: geometry, x: sensorX, width: lanes.sensor)
+                sourceColumn(geometry: geometry, x: detailX, width: lanes.detail)
                 detailColumn(geometry: geometry, x: detailX, width: lanes.detail)
                 playheadLine(geometry: geometry, width: width)
-                suggestionChips(geometry: geometry, x: gutterWidth, width: lanes.main)
                 quickMenu(geometry: geometry, x: gutterWidth, width: lanes.main, height: height)
             }
             // 줄 안의 클립이 화면 밖까지 길어도 카드 밖으로 새지 않게 크기를 못 박는다.
@@ -495,21 +453,16 @@ struct MapHomeNLEClipEditor: View {
             .sorted { $0.startMinute < $1.startMinute }
     }
 
-    /// 센서 원본 열을 줄 수만큼 나눈 한 줄의 너비.
-    private func channelWidth(_ width: CGFloat) -> CGFloat {
-        width / CGFloat(MapHomeNLESensorChannel.allCases.count)
-    }
-
     private func sourceColumn(geometry: NLETimelineGeometry, x: CGFloat, width: CGFloat) -> some View {
-        // 접으면 다섯 줄을 한 줄에 겹쳐 그린다. 언제 무언가 기록됐는지만 보인다.
-        let sub = isSensorExpanded ? channelWidth(width) : width
+        // 상세활동 뒤에 흐리게 겹쳐, 상세가 없는 시간에도 언제 무언가 기록됐는지 보인다.
+        let sub = width
         return ZStack(alignment: .topLeading) {
             ForEach(sourceSegments) { segment in
                 let y = geometry.y(forMinute: Double(segment.startMinute))
                 let barHeight = max(3, geometry.height(minutes: Double(segment.endMinute - segment.startMinute)) - 2)
                 sourceBar(segment, width: sub - 1, height: barHeight)
                     .frame(width: sub - 1, height: barHeight)
-                    .offset(x: isSensorExpanded ? CGFloat(segment.channel.rawValue) * sub : 0, y: y + 1)
+                    .offset(y: y + 1)
             }
         }
         .frame(width: width, alignment: .topLeading)
@@ -566,13 +519,26 @@ struct MapHomeNLEClipEditor: View {
             }
             .overlay(alignment: .topLeading) {
                 if height >= 15, width > 28 {
+                    let evidence = NLESensorEvidenceText.summary(sourceSegments, start: clip.startMinute, end: clip.endMinute, categoryID: clip.option.categoryID)
+                    VStack(alignment: .leading, spacing: 0) {
                     Text(clip.option.title)
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .bold))
                         .foregroundStyle(.white)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
-                        .padding(.horizontal, 4)
-                        .padding(.top, 1)
+                    if height >= 28, !evidence.text.isEmpty {
+                        Text(evidence.text)
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(8)), weight: .medium))
+                            .foregroundStyle(.white.opacity(0.92))
+                            .lineLimit(max(1, Int((height - 14) / 11)))
+                    }
+                    }
+                    .padding(.horizontal, 4)
+                    .padding(.top, 1)
+                    // 센서가 다른 분류로 봤으면 왼쪽 띠로 알린다.
+                    .overlay(alignment: .leading) {
+                        if evidence.differs { Rectangle().fill(Color.tpAccent).frame(width: 2) }
+                    }
                 }
             }
     }
@@ -1129,7 +1095,7 @@ struct MapHomeNLEClipEditor: View {
                 "Pinch to zoom · grab an edge to trim"
             )
         }
-        return language.text("대분류 · 센서 원본 · 상세활동", "Main · sensor · details")
+        return language.text("대분류 · 상세·센서", "Main · details · sensor")
     }
 
     private var isFittedToWholeDay: Bool {
@@ -1241,7 +1207,7 @@ struct MapHomeNLEClipEditor: View {
            !isNearClipBoundary(at: point, geometry: geometry) {
             return .scrub
         }
-        let lanes = NLELaneWidths(total: width, gutter: gutterWidth, gap: laneGap, sensorExpanded: isSensorExpanded)
+        let lanes = NLELaneWidths(total: width, gutter: gutterWidth, gap: laneGap)
         let sensorX = gutterWidth + lanes.main + laneGap
         let detailX = sensorX + lanes.sensor + laneGap
         // 상세활동 줄
@@ -1354,22 +1320,17 @@ struct MapHomeNLEClipEditor: View {
     private func handleTap(at point: CGPoint, geometry: NLETimelineGeometry, width: CGFloat) {
         let minute = Int(geometry.minute(forY: point.y).rounded())
         defer { UISelectionFeedbackGenerator().selectionChanged() }
-        let lanes = NLELaneWidths(total: width, gutter: gutterWidth, gap: laneGap, sensorExpanded: isSensorExpanded)
+        let lanes = NLELaneWidths(total: width, gutter: gutterWidth, gap: laneGap)
         let sensorX = gutterWidth + lanes.main + laneGap
         let detailX = sensorX + lanes.sensor + laneGap
         if point.x >= detailX - laneGap {
-            pick = subTrack.clip(atMinute: minute).map { .detail($0.id) }
-            return
-        }
-        if point.x >= sensorX - laneGap {
-            guard isSensorExpanded else { return withAnimation(.snappy(duration: 0.22)) { isSensorExpanded = true } }
-            // 눌린 줄(움직임·헬스·화면·연결·장소)의 구간을 집는다. 구간이 없으면 그 분의 원본 값만 보여 준다.
-            let sub = channelWidth(lanes.sensor)
-            let index = min(max(Int((point.x - sensorX) / max(1, sub)), 0), MapHomeNLESensorChannel.allCases.count - 1)
-            let channel = MapHomeNLESensorChannel.allCases[index]
-            let segment = sourceSegments.first { $0.channel == channel && minute >= $0.startMinute && minute < $0.endMinute }
-            pick = segment.map { .sensor($0.id, minute) } ?? .sensorMinute(minute)
-            // 줄이 좁아 글자를 못 쓰므로 누르면 무슨 내용인지 바로 띄운다.
+            let segment = sourceSegments.first { minute >= $0.startMinute && minute < $0.endMinute }
+            if let clip = subTrack.clip(atMinute: minute) {
+                pick = .detail(clip.id)
+            } else {
+                pick = segment.map { .sensor($0.id, minute) } ?? .sensorMinute(minute)
+            }
+            // 상세와 센서가 한 칸이라 누르면 그 시각의 원본 값도 바로 보여 준다.
             showRawValues(atMinute: minute, segment: segment)
             return
         }

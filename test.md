@@ -5426,7 +5426,7 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 합친 브랜치: 리팩토링, 구조, 최적화, 화랑이, 집 하늘, 알고리즘, iPad와 산책 핑크. 프로젝트 파일 ID 4개가 겹쳐(`HwarangRig*`와 `MapHomeHomeSky*`) 집 하늘 쪽 ID를 바꿨다.
 - 합친 뒤 첫 빌드는 실기기에서 실행 직후 충돌했다(스택 넘침, 제네릭 타입 해석, `MapHomeView.foregroundContent`). 큰 조각을 `AnyView`로 끊어 고쳤고 새 충돌 기록 없이 지도까지 뜨는 것을 확인했다.
 - 실기기(iPhone 11 Pro) 전체 단위: 1,914건 중 통과 1,903, 실패 4, 건너뜀 7(`build/validation/MRG1103A01/full2.xcresult`). 그 사이 러너가 강제 종료돼 한 번 다시 시작됐다.
-- 실패 4건 처리: 건강 분류 기대값 수정, 화랑이 시험 2건은 `autoreleasepool` 추가(추정 원인 메모리, signal kill). 벡터 경로·캐시 속도는 코드 변경 없이 재실행 통과. 벡터 경로 실패의 원인은 미확인이고 부하가 높을 때 반복된다.
+- 실패 4건 처리: 건강 분류 기대값 수정, 화랑이 시험 2건은 signal kill. 원인은 뒤에 CPU 한도로 확인했다(PLB1103A01 절). 벡터 경로·캐시 속도는 코드 변경 없이 재실행 통과. 벡터 경로 실패의 원인은 미확인이고 부하가 높을 때 반복된다.
 - 재실행(실기기): 벡터·캐시·건강·화랑이 64건 중 스카프 시험 1건 강제 종료, 수정 뒤 `MapHomeStickmanTests` 통과 57, 건너뜀 1. 수정 뒤 전체를 다시 돌리지는 않았다.
 - 구조 기준선: 합치며 늘어난 만큼 `--write-baseline`으로 다시 썼다(`MapHomeView` 11,651줄, `AppShellView` 1,421줄, 새 거대 파일 `MapHomeLiveMapPolicies` 1,203줄).
 - 미실행: 화면 시험 전체, iPad 실기기. iPad UI 시험 실패는 `IPD1102A01` 그대로(듀오 메뉴 15pt 넘침 등). 발자국 레이어 패치는 넣지 않았다.
@@ -5444,7 +5444,14 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 ## PLB1103A01 지하철 재생 수단·표본 공백 (2026-11-03, 커밋 전)
 - 재생 덤프(시뮬레이터, 빌드 260 원본 11-03, `RawSensorReplayTests.testDumpPlaybackTimeline`, 09:20~10:00): 자동차 프레임 수정 전 09:30·09:40~09:47 → 수정 후 0건. 09:47:30~09:56은 프레임 없이 위치가 계속 나온다.
 - 화면에서 화랑이·포커스가 유지되는지는 대표 재생 확인 전이다. 사라짐의 원인은 위치 튐으로 추정한 것이다.
-- 전체 단위(실기기 iPhone 11 Pro, `build/validation/PLB1103A01/device2.xcresult`): 1,916건 중 통과 1,907, 실패 1, 건너뜀 8. 실패는 `testScarfAndRibbonStayOnTheBodyInEveryScene`의 signal kill(단독 실행은 통과, 메모리 추정). 기기에서는 3프레임으로 줄이고 시뮬레이터는 8프레임 유지. 위 수정 뒤 `MapHomeStickmanTests`만 다시 돌렸다.
+- 전체 단위(실기기 iPhone 11 Pro, `build/validation/PLB1103A01/device2.xcresult`): 1,916건 중 통과 1,907, 실패 1, 건너뜀 8. 실패는 `testScarfAndRibbonStayOnTheBodyInEveryScene`의 signal kill(단독 실행은 통과). 처음엔 메모리로 추정해 3프레임으로 줄였으나, 기기 기록으로 `cpu_resource_fatal`(CPU 48초/50초, 한도 60초 80%)로 확인했다. 아래 CPU 조치로 바꿨다.
 
 ## TFB1103A02 TestFlight 빌드 261 (2026-11-03)
 - `release.sh --yes` 종료 코드 0. 처리 `VALID`, `TP Taption Plan 내부 테스트` 그룹 연결, 테스터 1명 노출 확인. 보고서 `build/validation/TFB1103A02/testflight-report.json`. PLB1103A01 포함, 앱 재생 확인은 대표 전이다.
+- CPU 한도 후속: 스카프 시험은 쉬는 시간을 넣어 통과(135초, 8프레임)했지만 다음 무거운 시험 `testMapActionLookupCostWithHalfMillionInactiveRecords`가 같은 이유로 강제 종료됐다(`cpu_resource_fatal` 12:10). `MapHomeStickmanTests` 묶음 전체에 시험마다 쓴 시간의 절반을 쉬는 시간을 넣었다. `testImmediateSensorAnalysisKeepsEveryPendingDay`는 이번 실행에서 처음 실패했고 코드 변경은 없었다(부하 관련 추정, 재확인 필요).
+
+## 11-03 오후 묶음 검증 (PLB1103A01·A02, HGT1103A01, STN1103A01, CAT1103A01·A02, NLE1103A01, SUM1103A01, CTR1103A01, HAT1103A01, CAL1103A01)
+- 시뮬레이터(TaptionPlan-Check, 실기기 아님) 전체 단위: 1,924건 중 통과 1,914, 실패 0, 건너뜀 10 (`build/validation/PLB1103A01/simfull.xcresult`).
+- 실기기 전체 실행은 BOKKI CAM 벤치마크 요청으로 827건 통과 시점에 중지했다. 기기 CPU 한도(`cpu_resource_fatal`) 조치는 기기 전체 실행으로 끝까지 확인하지 못했다.
+- 화면 미확인(대표 확인 필요): 미확인 구간 수단·이동·방향·사이드바 아이콘, 끊긴 구간만 그리는 예상 경로, 층수 높이 측정, 역 이름, 야간 테두리, 식당 동작, 행동 분류 상세, 클립 편집 합친 칸, 요약 카드 집, 카운터 접기, 서울타워 모자, 일정 시간.
+- 조치와 제한: 층 높이는 지점 안에서만 재고, 기압은 같은 방문 안에서만 비교해 다른 날에는 GPS 고도 12m 허용 오차를 쓴다.

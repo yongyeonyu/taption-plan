@@ -272,13 +272,52 @@ final class MapHomeCounterBadgeThrottle {
 /// 재생 중이 아니면(`playbackTick == nil`) 늘 다시 그린다.
 struct MapHomeCounterContentGate<Content: View>: View, Equatable {
     let playbackTick: Int?
-    let content: () -> Content
+    var isCollapsed = false
+    @ViewBuilder let content: () -> Content
 
     nonisolated static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.playbackTick != nil && lhs.playbackTick == rhs.playbackTick
+        lhs.isCollapsed == rhs.isCollapsed && lhs.playbackTick != nil && lhs.playbackTick == rhs.playbackTick
     }
 
     var body: some View { content() }
+}
+
+/// 카운터 위젯 펼치기·줄이기(CTR1103A01). 지도가 누른 자리를 받으므로 위치로 가른다.
+enum MapHomeCounterFold {
+    enum Tap: Equatable {
+        case expand, collapse, rows(CGRect)
+    }
+
+    static let arrowHeight: CGFloat = 22
+    static let iconSize: CGFloat = 36
+
+    static func tap(atY y: CGFloat, frame: CGRect, isCollapsed: Bool) -> Tap {
+        if isCollapsed { return .expand }
+        if y >= frame.maxY - arrowHeight { return .collapse }
+        return .rows(CGRect(x: frame.minX, y: frame.minY, width: frame.width, height: max(1, frame.height - arrowHeight)))
+    }
+}
+
+struct MapHomeCounterFoldedIcon: View {
+    var body: some View {
+        Image(systemName: "chart.bar.fill")
+            .font(.system(size: 15, weight: .bold))
+            .foregroundStyle(Color.tpCounterIcon)
+            .frame(width: MapHomeCounterFold.iconSize, height: MapHomeCounterFold.iconSize)
+            .background(Color.tpSurface, in: Circle())
+            .overlay { Circle().stroke(Color.tpLine, lineWidth: 1) }
+            .shadow(color: .black.opacity(0.16), radius: 4, y: 2)
+    }
+}
+
+struct MapHomeCounterFoldArrow: View {
+    var body: some View {
+        Image(systemName: "chevron.compact.down")
+            .font(.system(size: 16, weight: .bold))
+            .foregroundStyle(Color.tpInk)
+            .frame(width: 52, height: MapHomeCounterFold.arrowHeight - 2)
+            .background(Color.tpSurface.opacity(0.94), in: Capsule())
+    }
 }
 
 /// 카운터가 하나뿐일 때의 알약. 창으로 묶기 전과 같은 모양이다.

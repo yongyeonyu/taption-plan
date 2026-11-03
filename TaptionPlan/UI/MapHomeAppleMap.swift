@@ -907,7 +907,7 @@ struct MapHomeAppleMap: UIViewRepresentable {
                 return MapHomeAppleHostedDescriptor(
                     rootView: AnyView(
                         MapHomeTransitBoardingCandidatePin(
-                            name: candidate.name,
+                            name: TransitPlaceName.display(candidate.name, kind: candidate.kind, point: candidate.point, language: .current),
                             kind: candidate.kind
                         )
                         .fixedSize()

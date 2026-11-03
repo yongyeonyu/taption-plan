@@ -361,7 +361,16 @@ enum MapHomeSubwayRouteOverlayEngine {
         let resolvedSubwaySegments = subwaySegments.compactMap {
             SubwayTravelSegmentEngine.confirmedRoute(for: $0, readingIndex: readingIndex)
         }
-        let confirmed = resolvedSubwaySegments.compactMap {
+        // 자동 판정 지하철은 GPS가 끊긴 구간에만 예상 경로를 그린다. 나머지는 실제 경로가 있다(PLB1103A01).
+        let automatic = resolvedSubwaySegments.filter { !$0.isConfirmed }.flatMap { resolved in
+            MapHomePlaybackLocation.subwayGapRoutes(segment: resolved, readings: observedReadings, through: cutoff)
+                .enumerated().compactMap { index, points -> MapHomeSubwayRouteOverlay? in
+                    var id = resolved.id.uuid
+                    id.15 = id.15 &+ UInt8(truncatingIfNeeded: index + 1)
+                    return makeOverlay(id: UUID(uuid: id), points: points, estimated: false, travelID: resolved.id)
+                }
+        }
+        let confirmed = automatic + resolvedSubwaySegments.filter(\.isConfirmed).compactMap {
             resolved -> MapHomeSubwayRouteOverlay? in
             let prefix = RouteTimelineDataEngine.confirmedSubwayCoordinates(
                 for: resolved,

@@ -257,6 +257,8 @@ struct MapHomeDaySummarySheet: View {
     @Binding var growthData: Data
     let language: MapHomeLanguage
     var growthCard: MapHomeGrowthCardInfo? = nil
+    /// 지도와 같은 집 그림(레벨·날씨·하늘)을 줄인 것(SUM1103A01).
+    var homeArtwork: AnyView? = nil
     var salary: MapHomeSalaryPolicy.Live? = nil
     var memoCounts: (total: Int, map: Int) = (0, 0)
     /// 집 범위를 이 화면에서 바꿀 수 있도록 모델과 집 장소 id를 받는다.
@@ -332,11 +334,14 @@ struct MapHomeDaySummarySheet: View {
     }
 
     private func growthCardView(_ card: MapHomeGrowthCardInfo) -> some View {
+        HStack(alignment: .center, spacing: 10) {
+        if let homeArtwork { homeArtwork }
         VStack(alignment: .leading, spacing: 8) {
+            Text(MapHomeGrowthPolicy.homeTitle(level: card.level, language: language))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold))
+                .foregroundStyle(Color.tpInk)
+                .lineLimit(2)
             HStack(spacing: 6) {
-                Image(systemName: "house.fill")
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold))
-                    .foregroundStyle(Color.tpAccent)
                 Text("Lv.\(card.level)")
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(18)), weight: .bold))
                     .monospacedDigit()
@@ -353,6 +358,7 @@ struct MapHomeDaySummarySheet: View {
             Capsule()
                 .fill(card.isQualifiedToday ? Color.tpPastelMint : Color.tpLine.opacity(0.55))
                 .frame(height: 4)
+        }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)

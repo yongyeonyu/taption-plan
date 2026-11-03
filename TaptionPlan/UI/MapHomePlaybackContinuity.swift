@@ -1,3 +1,4 @@
+import CoreLocation
 import Foundation
 
 // 재생 중 화랑이가 사라지지 않게 하는 두 가지 보정.
@@ -35,7 +36,8 @@ extension MapHomePlaybackLocation {
         ) {
             return resolved
         }
-        guard let point = gapCoordinate(at: date, travel: travel, places: places) else {
+        guard let point = sensorGapCoordinate(at: date, readings: normalizedReadings)
+                ?? gapCoordinate(at: date, travel: travel, places: places) else {
             return nil
         }
         return Self(coordinate: point)
@@ -59,7 +61,8 @@ extension MapHomePlaybackLocation {
         ) {
             return resolved
         }
-        return gapCoordinate(at: date, travel: travel, placePoints: lookup.placePoints).map { Self(coordinate: $0) }
+        return (sensorGapCoordinate(at: date, readings: normalizedReadings)
+            ?? gapCoordinate(at: date, travel: travel, placePoints: lookup.placePoints)).map { Self(coordinate: $0) }
     }
 
     /// 이동 구간의 출발·도착 장소 좌표를 시각 비율로 잇는다. 여러 구간이 겹치면 늦게 시작한 쪽을 쓴다.
@@ -129,8 +132,107 @@ extension MapHomePlaybackLocation {
     }
 }
 
-/// 표본이 빈 지하철 구간(PLB1103A01). 앞뒤 표본을 노선에 투영해 그 사이를 거리÷시간의 예상 속도로 잇는다.
+/// GPS가 끊긴 미확인 구간(PLB1103A01). 지하철은 노선 위로, 나머지는 앞뒤 표본 사이 직선을 거리÷시간의 예상 속도로 잇고
+/// 수단은 저장된 이동 구간, 없으면 앞뒤 표본으로 정한다. 비행기·지하차도에서도 화랑이가 끊기지 않는다.
 extension MapHomePlaybackLocation {
+    private static let minimumGapMoveMeters = 150.0
+    private static let minimumFlightSpeed = 55.0
+    private static let minimumFlightMeters = 100_000.0
+    /// 사람이 계속 걷거나 뛰어서 낼 수 없는 평균 속도.
+    private static let minimumPossibleVehicleSpeed = 4.0
+    private static let adjacentWindow: TimeInterval = 10 * 60
+
+    private static func sensorGap(at date: Date, readings: [SensorReading]) -> (before: SensorReading, after: SensorReading)? {
+        var lower = 0, upper = readings.count
+        while lower < upper {
+            let middle = (lower + upper) / 2
+            if readings[middle].timestamp <= date { lower = middle + 1 } else { upper = middle }
+        }
+        func trusted(_ reading: SensorReading) -> Bool {
+            reading.gpsAvailable && (reading.point?.horizontalAccuracy ?? .infinity) <= trustedAccuracyMeters
+        }
+        guard let before = readings[..<lower].last(where: trusted),
+              let after = readings[lower...].first(where: trusted) else { return nil }
+        return (before, after)
+    }
+
+    static func sensorGapCoordinate(at date: Date, readings: [SensorReading]) -> GeoPoint? {
+        guard let gap = sensorGap(at: date, readings: readings),
+              let from = gap.before.point, let to = gap.after.point else { return nil }
+        let duration = gap.after.timestamp.timeIntervalSince(gap.before.timestamp)
+        guard duration > 0 else { return from }
+        let t = min(1, max(0, date.timeIntervalSince(gap.before.timestamp) / duration))
+        return GeoPoint(
+            latitude: from.latitude + (to.latitude - from.latitude) * t,
+            longitude: from.longitude + (to.longitude - from.longitude) * t,
+            altitude: from.altitude + (to.altitude - from.altitude) * t,
+            horizontalAccuracy: max(from.horizontalAccuracy, to.horizontalAccuracy),
+            verticalAccuracy: max(from.verticalAccuracy, to.verticalAccuracy)
+        )
+    }
+
+    /// 미확인 구간의 진행 방향. 지하철은 노선을 따라, 나머지는 앞 표본에서 뒤 표본 쪽이다.
+    static func gapHeading(at date: Date, travel: [TravelSegment], readings: [SensorReading]) -> CLLocationDirection? {
+        func bearing(_ from: GeoPoint, _ to: GeoPoint) -> CLLocationDirection? {
+            guard meters(from, to) >= 1 else { return nil }
+            return MapHomeVectorNavigationMath.bearing(
+                from: CLLocationCoordinate2D(latitude: from.latitude, longitude: from.longitude),
+                to: CLLocationCoordinate2D(latitude: to.latitude, longitude: to.longitude)
+            )
+        }
+        if let here = subwayCoordinate(at: date, travel: travel, readings: readings),
+           let next = subwayCoordinate(at: date.addingTimeInterval(30), travel: travel, readings: readings),
+           let heading = bearing(here, next) { return heading }
+        guard let gap = sensorGap(at: date, readings: readings), let from = gap.before.point, let to = gap.after.point,
+              meters(from, to) >= minimumGapMoveMeters else { return nil }
+        return bearing(from, to)
+    }
+
+    /// 미확인 구간의 수단을 앞뒤 근거로 추정한다. 움직이지 않았으면 nil이라 머문 자리의 동작을 그대로 쓴다.
+    /// 순서: 저장된 이동 구간 → 비행 거리·속도 → 항구 → 역과 역 → 앞뒤 차량 연결 → 걸을 수 없는 속도 → 앞뒤 걷기.
+    static func gapMode(at date: Date, travel: [TravelSegment], readings: [SensorReading]) -> TravelMode? {
+        if let segment = travel.last(where: { $0.span.contains(date) }) { return segment.mode }
+        guard let gap = sensorGap(at: date, readings: readings),
+              let from = gap.before.point, let to = gap.after.point else { return nil }
+        let duration = gap.after.timestamp.timeIntervalSince(gap.before.timestamp)
+        let distance = meters(from, to)
+        guard duration > 0, distance >= minimumGapMoveMeters else { return nil }
+        let speed = distance / duration
+        if distance >= minimumFlightMeters, speed >= minimumFlightSpeed
+            || gap.before.nearAirport == true && gap.after.nearAirport == true { return .airplane }
+        if gap.before.nearPort == true, gap.after.nearPort == true, speed >= minimumPossibleVehicleSpeed { return .ship }
+        let hasCarAudio = gap.before.carAudioRouteName?.isEmpty == false || gap.after.carAudioRouteName?.isEmpty == false
+        if !hasCarAudio, speed >= minimumPossibleVehicleSpeed,
+           let first = SubwayStationCatalog.nearest(to: from, maximumDistanceMeters: SubwayEvidenceGate.stationRadiusMeters),
+           let last = SubwayStationCatalog.nearest(to: to, maximumDistanceMeters: SubwayEvidenceGate.stationRadiusMeters),
+           first.stationName != last.stationName { return .subway }
+        let previous = adjacentMode(before: gap.before.timestamp, travel: travel) ?? mode(for: gap.before.motion)
+        let next = adjacentMode(after: gap.after.timestamp, travel: travel) ?? mode(for: gap.after.motion)
+        for candidate in [previous, next] {
+            if let candidate, ![TravelMode.walking, .running, .cycling].contains(candidate) { return candidate }
+        }
+        if speed >= minimumPossibleVehicleSpeed { return .car }
+        return previous ?? next
+    }
+
+    private static func adjacentMode(before date: Date, travel: [TravelSegment]) -> TravelMode? {
+        travel.last { $0.span.end <= date.addingTimeInterval(60) && date.timeIntervalSince($0.span.end) <= adjacentWindow }?.mode
+    }
+
+    private static func adjacentMode(after date: Date, travel: [TravelSegment]) -> TravelMode? {
+        travel.first { $0.span.start >= date.addingTimeInterval(-60) && $0.span.start.timeIntervalSince(date) <= adjacentWindow }?.mode
+    }
+
+    private static func mode(for motion: MotionKind?) -> TravelMode? {
+        switch motion {
+        case .automotive: .car
+        case .walking: .walking
+        case .running: .running
+        case .cycling: .cycling
+        default: nil
+        }
+    }
+
     private static let trustedAccuracyMeters = 150.0
 
     /// 지하철 구간 안에서 모션이 자동차라고 해도 지하철이다. 환승 걷기는 그대로 둔다.
@@ -138,6 +240,38 @@ extension MapHomePlaybackLocation {
         guard mode != .walking, mode != .running, mode != .cycling,
               travel.contains(where: { $0.mode == .subway && $0.span.contains(date) }) else { return mode }
         return .subway
+    }
+
+    private static let minimumDrawnGap: TimeInterval = 120
+
+    /// 지하철 구간에서 표본이 끊긴 부분의 노선 조각. 표본이 이어진 곳은 실제 경로가 있어 그리지 않는다.
+    static func subwayGapRoutes(segment: TravelSegment, readings: [SensorReading], through cutoff: Date) -> [[GeoPoint]] {
+        guard let points = segment.subwayRoute?.coordinates, points.count >= 2 else { return [] }
+        let lengths = zip(points, points.dropFirst()).map { meters($0.0, $0.1) }
+        let total = lengths.reduce(0, +)
+        guard total > 0 else { return [] }
+        let end = min(cutoff, segment.span.end)
+        var anchors: [(date: Date, meters: Double)] = [(segment.span.start, 0)]
+        for reading in readings.sorted(by: { $0.timestamp < $1.timestamp })
+        where reading.gpsAvailable && reading.timestamp > segment.span.start && reading.timestamp < end
+            && (reading.point?.horizontalAccuracy ?? .infinity) <= trustedAccuracyMeters {
+            guard let point = reading.point else { continue }
+            anchors.append((reading.timestamp, max(anchors.last?.meters ?? 0, position(of: point, on: points, lengths: lengths))))
+        }
+        let duration = max(1, segment.span.duration)
+        let endMeters = cutoff >= segment.span.end ? total : max(anchors.last?.meters ?? 0, total * end.timeIntervalSince(segment.span.start) / duration)
+        anchors.append((end, endMeters))
+        return zip(anchors, anchors.dropFirst()).compactMap { from, to in
+            guard to.date.timeIntervalSince(from.date) >= minimumDrawnGap, to.meters > from.meters else { return nil }
+            var slice = [point(atMeters: from.meters, on: points, lengths: lengths)]
+            var traversed = 0.0
+            for index in lengths.indices {
+                traversed += lengths[index]
+                if traversed > from.meters, traversed < to.meters { slice.append(points[index + 1]) }
+            }
+            slice.append(point(atMeters: to.meters, on: points, lengths: lengths))
+            return slice
+        }
     }
 
     static func subwayGapCoordinate(at date: Date, segment: TravelSegment, readings: [SensorReading]) -> GeoPoint? {

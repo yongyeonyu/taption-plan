@@ -3,16 +3,27 @@ import SwiftUI
 /// 세 줄의 너비. 대분류가 가장 넓고, 센서 원본과 상세활동이 오른쪽에 나란히 선다.
 struct NLELaneWidths {
     let main: CGFloat
-    let sensor: CGFloat
+    /// 상세활동과 합쳐 따로 칸을 두지 않는다(NLE1103A01).
+    let sensor: CGFloat = 0
     let detail: CGFloat
 
-    init(total: CGFloat, gutter: CGFloat, gap: CGFloat, sensorExpanded: Bool) {
+    init(total: CGFloat, gutter: CGFloat, gap: CGFloat) {
         let usable = max(90, total - gutter - gap * 2)
-        let main = max(40, (usable * (sensorExpanded ? 0.36 : 0.56)).rounded())
-        let sensor = sensorExpanded ? max(26, (usable * 0.34).rounded()) : 26
-        self.main = main
-        self.sensor = sensor
-        self.detail = max(26, usable - main - sensor)
+        main = max(40, (usable * 0.5).rounded())
+        detail = max(26, usable - main)
+    }
+}
+
+/// 상세활동 구간에 겹친 센서 근거 한 줄(NLE1103A01).
+enum NLESensorEvidenceText {
+    static func summary(_ segments: [MapHomeNLESensorSegment], start: Int, end: Int, categoryID: String) -> (text: String, differs: Bool) {
+        let inside = segments.filter { $0.startMinute < end && $0.endMinute > start }
+        var titles: [String] = []
+        for segment in inside.sorted(by: { $0.channel.rawValue < $1.channel.rawValue }) where !titles.contains(segment.title) {
+            titles.append(segment.title)
+        }
+        let differs = inside.contains { $0.channel == .motion && $0.categoryID != categoryID && $0.categoryID != "unconfirmed" }
+        return (titles.prefix(4).joined(separator: " · "), differs)
     }
 }
 
@@ -55,49 +66,6 @@ struct NLERawDetailSheet: View {
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
         .accessibilityIdentifier("mapHomeNLERawDetailSheet")
-    }
-}
-
-/// 겹치지 않게 칩을 고른다. 표시 간격이 좁아지면 먼저 온 구간을 남긴다.
-enum NLESuggestionLayout {
-    static let chipSpacing: CGFloat = 28
-
-    static func placed(_ items: [(segment: MapHomeNLESensorSegment, y: CGFloat)]) -> [(segment: MapHomeNLESensorSegment, y: CGFloat)] {
-        var result: [(segment: MapHomeNLESensorSegment, y: CGFloat)] = []
-        for item in items.sorted(by: { $0.y < $1.y }) where item.y >= 0 {
-            if let last = result.last, item.y - last.y < chipSpacing { continue }
-            result.append(item)
-        }
-        return result
-    }
-}
-
-/// 센서 근거로 고칠 수 있는 구간 칩.
-struct NLESuggestionChip: View {
-    let title: String
-    let language: MapHomeLanguage
-    let action: () -> Void
-
-    private var shortTitle: String {
-        title.components(separatedBy: " · ").first ?? title
-    }
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 3) {
-                TaptionCuteIcon("sparkles", size: 12)
-                Text(language.text("\(shortTitle)(으)로 바꾸기", "Change to \(shortTitle)"))
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-            }
-            .foregroundStyle(Color.tpAccent)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 4)
-            .background(Color.tpSurface, in: Capsule())
-            .overlay(Capsule().stroke(Color.tpAccent.opacity(0.5), lineWidth: 0.8))
-        }
-        .buttonStyle(.plain)
     }
 }
 

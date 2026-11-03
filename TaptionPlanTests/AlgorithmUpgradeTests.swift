@@ -142,6 +142,29 @@ final class AlgorithmUpgradeTests: XCTestCase {
     }
 
     /// 다른 방문에서 잰 기압 기준은 날씨 오차가 끼어 비교하지 않는다. 기압 오차를 넣어도 장소가 뒤집히지 않는다.
+    func testFloorHeightDropsMinAndMaxBeforeAveraging() throws {
+        XCTAssertNil(PlaceHeightCapture.trimmedMean([1, 2]))
+        XCTAssertEqual(try XCTUnwrap(PlaceHeightCapture.trimmedMean([100, 1, 2, 3, -50])), 2, accuracy: 0.0001)
+        let values = (0..<18).map { _ in 100.5 } + [90, 130]
+        XCTAssertEqual(try XCTUnwrap(PlaceHeightCapture.trimmedMean(values)), 100.5, accuracy: 0.0001)
+
+        let center = GeoPoint(latitude: 37.5, longitude: 127, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: 5)
+        var place = FrequentPlace(kind: .company, name: "회사")
+        place.setMapLocation(center)
+        var here = SensorReading(timestamp: .now, point: center, motion: .stationary)
+        here.gpsAvailable = true
+        here.relativeAltitudeMeters = 5
+        XCTAssertTrue(PlaceHeightCapture.isInside(place, reading: here))
+        var far = here
+        far.point?.latitude = 37.6
+        XCTAssertFalse(PlaceHeightCapture.isInside(place, reading: far), "멀리서 고치면 그 지점의 높이가 아니다")
+        let reference = try XCTUnwrap(PlaceHeightCapture.reference(from: here, pressures: [101, 101, 101.3], altitudes: [40, 42, 60]))
+        XCTAssertEqual(try XCTUnwrap(reference.pressureKilopascals), 101, accuracy: 0.0001)
+        XCTAssertEqual(try XCTUnwrap(reference.point?.altitude), 42, accuracy: 0.0001)
+        XCTAssertNil(reference.relativeAltitudeMeters)
+        XCTAssertNil(PlaceHeightCapture.reference(from: here, pressures: [], altitudes: []))
+    }
+
     func testPressureReferenceOnlyCountsInsideTheVisit() {
         func company(capturedAt: Date) -> FrequentPlace {
             var place = FrequentPlace(kind: .company, name: "회사", point: geo(0), floor: 8)

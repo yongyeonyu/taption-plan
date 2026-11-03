@@ -115,6 +115,7 @@ struct MapHomeView: View {
     @AppStorage(MapHomeCounterKind.hobby.storageKey) private var showsHobbyCounter = true
     @AppStorage(MapHomeCounterKind.exercise.storageKey) private var showsExerciseCounter = true
     @AppStorage("mapHomeCounter.salary") private var showsSalaryCounter = true
+    @AppStorage("mapHomeCounter.collapsed") private var isCounterCollapsed = false
     @State private var pendingMemoLocationID: UUID?
     @State private var isMapAttributionPresented = false
     @State private var isAlarmSettingsPresented = false
@@ -1007,6 +1008,7 @@ struct MapHomeView: View {
                     streak: homeGrowthHistory.season.streak,
                     pendingWeeklyRewards: homeGrowthHistory.season.pendingWeeklyRewards
                 ),
+                homeArtwork: AnyView(daySummaryHomeArtwork),
                 salary: salaryLive,
                 memoCounts: dayMemoCounts,
                 model: model,
@@ -2991,7 +2993,8 @@ struct MapHomeView: View {
             cameraCoordinate = coordinate
         } else {
             heading = MapHomeApplePlaybackMath.stableHeading(
-                MapHomeApplePlaybackMath.heading(
+                MapHomePlaybackLocation.gapHeading(at: displayedLocationDate, travel: currentDayDataSnapshot?.travel ?? [], readings: historicalPlaybackReadings)
+                    ?? MapHomeApplePlaybackMath.heading(
                     at: displayedLocationDate,
                     readings: historicalPlaybackReadings
                 ) ?? model.latestSensorReading?.courseDegrees
@@ -3403,9 +3406,16 @@ struct MapHomeView: View {
     /// 누른 줄의 카운터 상세 화면을 연다. 줄은 위에서 아래로 같은 높이로 쌓여 있어 높이 비율로 고른다.
     /// 줄 목록을 아직 모르면(창이 막 생긴 때) 예전처럼 카운터 메뉴를 연다.
     private func openCounterDetail(at tapPoint: CGPoint) {
+        let rows: CGRect
+        switch MapHomeCounterFold.tap(atY: tapPoint.y, frame: counterWindowFrame.frame, isCollapsed: isCounterCollapsed) {
+        case .expand, .collapse:
+            withAnimation(.snappy(duration: 0.22)) { isCounterCollapsed.toggle() }
+            return
+        case .rows(let frame): rows = frame
+        }
         let targets = counterRowTargets
         guard let index = MapHomeCounterDetailBuilder.rowIndex(
-            tapY: tapPoint.y, frame: counterWindowFrame.frame, count: targets.count
+            tapY: tapPoint.y, frame: rows, count: targets.count
         ) else {
             openCounterMenu()
             return
@@ -3756,7 +3766,7 @@ struct MapHomeView: View {
                             selectedTransitBoardingCandidate = candidate
                         } label: {
                             MapHomeTransitBoardingCandidatePin(
-                                name: candidate.name,
+                                name: TransitPlaceName.display(candidate.name, kind: candidate.kind, point: candidate.point, language: language),
                                 kind: candidate.kind
                             )
                             .fixedSize()
@@ -5620,10 +5630,18 @@ struct MapHomeView: View {
             offset: CGSize(width: 0, height: MapHomeStickmanAnnotationLayout.centerOffset.y - 42 - 8 - 160),
             onFrame: { box.hostFrame = $0 }
         ) {
-            EquatableView(content: MapHomeCounterContentGate(playbackTick: MapHomeCounterBadgeThrottle.playbackTick(isPlaying: isDayPlaybackRunning)) {
-                MapHomeCounterClock(isLive: isCounterLive) { now in
-                    counterWindowContent(now: now)
+            EquatableView(content: MapHomeCounterContentGate(playbackTick: MapHomeCounterBadgeThrottle.playbackTick(isPlaying: isDayPlaybackRunning), isCollapsed: isCounterCollapsed) {
+                if isCounterCollapsed {
+                    MapHomeCounterFoldedIcon()
                         .onGeometryChange(for: CGSize.self, of: \.size) { box.contentSize = $0 }
+                } else {
+                    MapHomeCounterClock(isLive: isCounterLive) { now in
+                        VStack(spacing: 2) {
+                            counterWindowContent(now: now)
+                            MapHomeCounterFoldArrow()
+                        }
+                        .onGeometryChange(for: CGSize.self, of: \.size) { box.contentSize = $0 }
+                    }
                 }
             })
             .frame(width: 240, height: 320, alignment: .bottom)
@@ -6448,7 +6466,8 @@ struct MapHomeView: View {
                             guard model.isBootstrapped else { return }
                             focusedUnconfirmedReviewSegment = segment
                             isUnconfirmedReviewPresented = true
-                        }
+                        },
+                        unconfirmedMode: { MapHomePlaybackLocation.gapMode(at: timelineDate(forMinute: Double($0.startMinute + $0.endMinute) / 2), travel: currentDayDataSnapshot?.travel ?? [], readings: historicalPlaybackReadings) }
                     )
                     // 확대·축소는 시간선 아래 비워 둔 자리에 사이드바와 같은 폭·모서리의 알약으로 눕힌다.
                     timelineZoomControls
@@ -7070,6 +7089,7 @@ struct MapHomeView: View {
                                     )
                                 )
                             }
+                            MapHomeCategoryDetailRows(categoryID: category.id, language: language, accessoryID: homeGrowthHistory.season.equippedAccessory)
                             if activePaletteCategoryID == category.id {
                                 LazyVGrid(
                                     columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 6),
@@ -8251,6 +8271,22 @@ struct MapHomeView: View {
                 ) : nil
             )
         }
+    }
+
+    /// 하루 요약 카드의 집. 지도 핀을 그대로 줄인다.
+    private var daySummaryHomeArtwork: some View {
+        let point = model.settings.frequentPlaces.first { $0.kind == .home }?.point
+        return MapHomePlacePin(
+            name: language.text("집", "Home"), floor: nil, destination: .home, growthLevel: homeGrowthHistory.season.level,
+            weatherBadge: MapHomeHomeWeatherBadgePolicy.badge(from: model.snapshot.weather, now: .now),
+            homeSky: point.map {
+                MapHomeHomeSkyInput(coordinate: CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude),
+                    selectedDay: model.selectedDate, progress: playbackProgress, isPlaybackRunning: false)
+            }
+        )
+        .scaleEffect(0.5)
+        .frame(width: 84, height: 96)
+        .allowsHitTesting(false)
     }
 
     private var isDisplayedCatAtHome: Bool {
@@ -9623,10 +9659,8 @@ struct MapHomeView: View {
         if let frame = wbsPlaybackFrame {
             switch frame.activity {
             case .movement:
-                if let mode = frame.mode {
-                    return MapHomeStickmanActionResolver.action(for: mode)
-                }
-                return .movement
+                let mode = frame.mode ?? MapHomePlaybackLocation.gapMode(at: displayedLocationDate, travel: currentDayDataSnapshot?.travel ?? [], readings: historicalPlaybackReadings)
+                return mode.map(MapHomeStickmanActionResolver.action(for:)) ?? .movement
             case .stay:
                 if let categoryID = frame.categoryID {
                     return MapHomeStickmanActionResolver.action(
@@ -9639,7 +9673,10 @@ struct MapHomeView: View {
         if let activeExpectedRoute {
             return MapHomeStickmanActionResolver.action(for: activeExpectedRoute.mode)
         }
-        return MapHomeStickmanActionResolver.action(
+        if selectedTimelineMinute != nil, let mode = MapHomePlaybackLocation.gapMode(at: displayedLocationDate, travel: currentDayDataSnapshot?.travel ?? [], readings: historicalPlaybackReadings) {
+            return MapHomeStickmanActionResolver.action(for: mode)
+        }
+        let resolved = MapHomeStickmanActionResolver.action(
             at: displayedLocationDate,
             actuals: actuals,
             travel: currentDayDataSnapshot?.travel ?? [],
@@ -9650,6 +9687,8 @@ struct MapHomeView: View {
                 + (model.latestSensorReading.map { [$0] } ?? []),
             sleepSessions: sleepSessions
         )
+        guard resolved == .activity, selectedTimelineMinute == nil else { return resolved }
+        return MapHomeStickmanActionResolver.action(atCurrent: model.latestSensorReading?.point, frequentPlaces: model.settings.frequentPlaces) ?? resolved
     }
 
     private var displayedLocationAccessibilityLabel: String {

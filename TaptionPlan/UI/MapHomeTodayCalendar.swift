@@ -98,12 +98,11 @@ struct MapHomeTodayCalendarList: View {
                     .foregroundStyle(Color.tpSecondary)
             case .loaded(let events):
                 ForEach(events) { event in
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(timeText(event))
-                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
-                            .foregroundStyle(Color.tpSecondary)
-                            .frame(width: 52, alignment: .leading)
                         VStack(alignment: .leading, spacing: 1) {
+                            // 제목 위에 시간을 적어 제목이 길어도 언제인지 바로 보인다.
+                            Text(timeText(event))
+                                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
+                                .foregroundStyle(Color.tpAccent)
                             Text(event.title)
                                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
                                 .foregroundStyle(Color.tpInk)
@@ -116,7 +115,6 @@ struct MapHomeTodayCalendarList: View {
                                     .fixedSize(horizontal: false, vertical: true)
                             }
                         }
-                    }
                 }
             }
         }
@@ -144,7 +142,8 @@ struct MapHomeTodayCalendarList: View {
 
     private func timeText(_ event: CalendarRecord) -> String {
         if event.isAllDay { return language.text("종일", "All day") }
-        return event.span.start.formatted(date: .omitted, time: .shortened)
+        let start = event.span.start.formatted(date: .omitted, time: .shortened)
+        return "\(start) – \(event.span.end.formatted(date: .omitted, time: .shortened))"
     }
 
     @MainActor

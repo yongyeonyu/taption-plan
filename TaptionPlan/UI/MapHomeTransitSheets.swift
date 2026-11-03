@@ -76,7 +76,7 @@ struct MapHomeTransitBoardingCandidateSheet: View {
                         in: RoundedRectangle(cornerRadius: 11, style: .continuous)
                     )
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(candidate.name)
+                    Text(TransitPlaceName.display(candidate.name, kind: candidate.kind, point: candidate.point, language: language))
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(19)), weight: .bold))
                         .lineLimit(1)
                     Text(
@@ -719,5 +719,43 @@ struct MapHomeTransitLocationNameEditor: View {
         .padding(20)
         .background(Color.tpBackground)
         .presentationDetents([.height(270)])
+    }
+}
+
+/// 역·정류장 이름을 앱 언어로 맞춘다(STN1103A01). Apple 장소 이름은 기기 언어로 오므로 카탈로그와 섞인다.
+enum TransitPlaceName {
+    static func display(_ name: String, kind: UserTransitLocationKind, point: GeoPoint, language: MapHomeLanguage) -> String {
+        let hasHangul = name.unicodeScalars.contains { (0xAC00...0xD7A3).contains($0.value) }
+        let station = kind == .subwayStation ? SubwayStationCatalog.nearest(to: point)?.stationName : nil
+        if language == .english {
+            if !hasHangul { return name }
+            let source = name.hasSuffix("역") ? String(name.dropLast()) : name
+            return kind == .subwayStation ? romanized(source) + " Station" : romanized(source)
+        }
+        return hasHangul ? name : station ?? name
+    }
+
+    /// 국어의 로마자 표기법을 음절 단위로 적용한다. 받침과 다음 초성의 음운 변화는 연음만 반영한다.
+    static func romanized(_ text: String) -> String {
+        let initials = ["g", "kk", "n", "d", "tt", "r", "m", "b", "pp", "s", "ss", "", "j", "jj", "ch", "k", "t", "p", "h"]
+        let vowels = ["a", "ae", "ya", "yae", "eo", "e", "yeo", "ye", "o", "wa", "wae", "oe", "yo", "u", "wo", "we", "wi", "yu", "eu", "ui", "i"]
+        let finals = ["", "k", "k", "k", "n", "n", "n", "t", "l", "k", "m", "l", "l", "l", "p", "l", "m", "p", "p", "t", "t", "ng", "t", "t", "k", "t", "p", "t"]
+        let linked = ["", "g", "kk", "g", "n", "n", "n", "d", "r", "g", "m", "r", "r", "r", "p", "r", "m", "b", "b", "s", "ss", "", "j", "ch", "k", "t", "p", "h"]
+        var result = ""
+        let scalars = Array(text.unicodeScalars)
+        for (index, scalar) in scalars.enumerated() {
+            guard (0xAC00...0xD7A3).contains(scalar.value) else {
+                result.unicodeScalars.append(scalar)
+                continue
+            }
+            let code = Int(scalar.value) - 0xAC00
+            let final = code % 28
+            result += initials[code / 588] + vowels[(code % 588) / 28]
+            // 받침 뒤에 ㅇ으로 시작하는 음절이 오면 받침이 다음 음절로 넘어간다.
+            let next = index + 1 < scalars.count ? scalars[index + 1].value : 0
+            let linksNext = (0xAC00...0xD7A3).contains(next) && (Int(next) - 0xAC00) / 588 == 11
+            result += linksNext ? linked[final] : finals[final]
+        }
+        return result.prefix(1).uppercased() + result.dropFirst()
     }
 }

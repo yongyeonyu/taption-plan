@@ -432,19 +432,40 @@ enum MapHomeStickmanActionResolver {
             return action(for: nearbyMovement.motion)
         }
 
-        if let candidate = activeActuals.max(by: higherPriority) {
-            return candidate.1
-        }
-
         let activePlaces = places
             .filter { $0.span.contains(date) }
             .sorted { $0.span.start > $1.span.start }
-        for place in activePlaces {
-            if let action = action(for: place, frequentPlaces: frequentPlaces) {
-                return action
-            }
+        let placeAction = activePlaces.lazy.compactMap { action(for: $0, frequentPlaces: frequentPlaces) }.first
+        if let candidate = activeActuals.max(by: higherPriority) {
+            // 자동 기록의 일반 활동보다 식당·회사 같은 장소가 더 구체적이다(CAT1103A01).
+            if candidate.1 == .activity, let placeAction { return placeAction }
+            return candidate.1
         }
-        return .activity
+        return placeAction ?? .activity
+    }
+
+    /// 머문 기록이 생기기 전 실시간 위치의 동작. 지점이 겹치면 가장 작은 곳이다(CAT1103A01).
+    static func action(atCurrent point: GeoPoint?, frequentPlaces: [FrequentPlace]) -> MapHomeStickmanAction? {
+        guard let point else { return nil }
+        let inside = frequentPlaces.filter {
+            guard let center = $0.point else { return false }
+            let y = (point.latitude - center.latitude) * 111_320
+            let x = (point.longitude - center.longitude) * 111_320 * cos(center.latitude * .pi / 180)
+            return (x * x + y * y).squareRoot() <= $0.radiusMeters
+        }
+        return inside.min { $0.radiusMeters < $1.radiusMeters }.map { action(for: $0.kind) }
+    }
+
+    private static func action(for kind: FrequentPlaceKind) -> MapHomeStickmanAction {
+        switch kind {
+        case .company: .company
+        case .school: .school
+        case .academy: .reading
+        case .restaurant: .eating
+        case .home, .custom: .activity
+        case .hobby: .hobby
+        case .exercise: .exercise
+        }
     }
 
     static func hasAppleWatchConfirmedSleep(
@@ -711,15 +732,7 @@ enum MapHomeStickmanActionResolver {
         if let frequent = frequentPlaces.first(where: {
             $0.stablePlaceKey == place.placeKey
         }) {
-            switch frequent.kind {
-            case .company: return .company
-            case .school: return .school
-            case .academy: return .reading
-            case .restaurant: return .eating
-            case .home, .custom: return .activity
-            case .hobby: return .hobby
-            case .exercise: return .exercise
-            }
+            return action(for: frequent.kind)
         }
 
         let text = [place.displayName, place.buildingName]
@@ -988,6 +1001,40 @@ struct MapHomeStickmanMarker: View {
         .frame(width: Self.size.width, height: Self.size.height)
         .shadow(color: .black.opacity(0.14), radius: 3, y: 1)
         .accessibilityHidden(true)
+    }
+}
+
+/// 행동 분류 메뉴의 상세 항목과 그 화랑이 장면(CAT1103A02).
+struct MapHomeCategoryDetailRows: View {
+    let categoryID: String
+    let language: MapHomeLanguage
+    let accessoryID: String?
+
+    static func details(for categoryID: String) -> [RecordClassificationDetail] {
+        guard categoryID != "unconfirmed" else { return [] }
+        return RecordClassificationCatalog.categories.first { $0.id == categoryID }?.details ?? []
+    }
+
+    var body: some View {
+        LazyVStack(alignment: .leading, spacing: 2) {
+            ForEach(Self.details(for: categoryID)) { detail in
+                HStack(spacing: 8) {
+                    MapHomeStickmanGlyph(
+                        action: MapHomeStickmanActionResolver.action(for: detail.id, label: detail.title),
+                        size: 28,
+                        equippedAccessoryID: accessoryID
+                    )
+                    .frame(width: 46, height: 38)
+                    .clipped()
+                    Text(language == .english ? detail.behavior.capitalized : detail.title)
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
+                        .foregroundStyle(Color.tpInk)
+                    Spacer(minLength: 0)
+                }
+                .padding(.leading, 19)
+                .accessibilityElement(children: .combine)
+            }
+        }
     }
 }
 

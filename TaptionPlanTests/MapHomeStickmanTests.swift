@@ -9,6 +9,37 @@ import TaptionPlanCore
 
 @MainActor
 final class MapHomeStickmanTests: XCTestCase {
+    private var testStart = Date()
+
+    override func setUp() {
+        super.setUp()
+        testStart = Date()
+    }
+
+    /// 무거운 시험이 이어지면 iOS CPU 한도(60초 80%)에 걸려 앱이 죽는다. 쓴 시간의 절반을 쉬고 다음으로 간다.
+    override func tearDown() {
+        Thread.sleep(forTimeInterval: min(30, Date().timeIntervalSince(testStart) * 0.5))
+        super.tearDown()
+    }
+
+    func testCounterFoldTaps() {
+        let frame = CGRect(x: 0, y: 100, width: 200, height: 122)
+        XCTAssertEqual(MapHomeCounterFold.tap(atY: 110, frame: frame, isCollapsed: true), .expand)
+        XCTAssertEqual(MapHomeCounterFold.tap(atY: 215, frame: frame, isCollapsed: false), .collapse)
+        XCTAssertEqual(
+            MapHomeCounterFold.tap(atY: 150, frame: frame, isCollapsed: false),
+            .rows(CGRect(x: 0, y: 100, width: 200, height: 100)), "화살표 자리는 줄 높이에서 뺀다"
+        )
+    }
+
+    func testCategoryMenuShowsDailyDetailsWithOwnScenes() {
+        let health = MapHomeCategoryDetailRows.details(for: "health").map(\.title)
+        XCTAssertTrue(health.contains("낮잠"))
+        XCTAssertTrue(MapHomeCategoryDetailRows.details(for: "unconfirmed").isEmpty)
+        XCTAssertEqual(MapHomeStickmanActionResolver.action(for: "health.nap", label: "낮잠"), .nap)
+        XCTAssertEqual(MapHomeStickmanActionResolver.action(for: "eating.cooking", label: "요리"), .cooking)
+    }
+
     /// `TAPTION_RIG_SHEET=<폴더>`일 때 그루밍 장면을 시트 한 장으로 쓴다. 자세를 눈으로 보려는 도구다.
     /// 장면 22종을 각 8프레임씩 그린 검토 시트. 장식을 걸친 큰 그림·지도 마커 크기 그림·장식 도감을 쓴다(ACC1102A01).
     func testWriteGroomingSheetWhenRequested() throws {
@@ -229,22 +260,49 @@ final class MapHomeStickmanTests: XCTestCase {
     }
 
     /// 움직이는 동안 스카프와 리본이 몸에서 떨어져 나가거나 캔버스 밖에서 잘리지 않는다(ACC1102A01).
+    /// iOS는 앱이 60초 동안 CPU 80%를 넘으면 강제 종료한다(`cpu_resource_fatal`). 기기에서 시험 앱도 같아서,
+    /// 장면을 모두 그리는 시험은 계산한 시간의 절반만큼 쉬어 67%로 맞춘다.
+    private func cpuPaced<Result>(_ work: () -> Result) -> Result {
+        let start = Date()
+        let result = work()
+        Thread.sleep(forTimeInterval: Date().timeIntervalSince(start) * 0.5)
+        return result
+    }
+
+    /// 자동 기록이 일반 활동이어도 식당에 있으면 먹는 동작이다. 사용자가 고른 기록은 이긴다.
+    func testRestaurantBeatsGenericActivity() throws {
+        let start = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        let center = GeoPoint(latitude: 37.5, longitude: 127, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: 5)
+        var restaurant = FrequentPlace(kind: .restaurant, name: "식당")
+        restaurant.setMapLocation(center)
+        var company = FrequentPlace(kind: .company, name: "회사")
+        company.setMapLocation(center)
+        company.radiusMeters = max(restaurant.radiusMeters * 3, 200)
+        XCTAssertEqual(MapHomeStickmanActionResolver.action(atCurrent: center, frequentPlaces: [company, restaurant]), .eating)
+        var far = center
+        far.latitude = 37.6
+        XCTAssertNil(MapHomeStickmanActionResolver.action(atCurrent: far, frequentPlaces: [company, restaurant]))
+        let stay = PlaceStay(placeKey: restaurant.stablePlaceKey, displayName: "식당", span: TimeSpan(start: start, end: start.addingTimeInterval(3600)), confidence: .high, isConfirmed: true)
+        var generic = ActualRecord(planID: nil, title: "휴식", categoryID: "activity", startedAt: start, endedAt: start.addingTimeInterval(3600), source: .motion)
+        func action() -> MapHomeStickmanAction {
+            MapHomeStickmanActionResolver.action(at: start.addingTimeInterval(600), actuals: [generic], travel: [], places: [stay], frequentPlaces: [restaurant])
+        }
+        XCTAssertEqual(action(), .eating)
+        generic.source = .manual
+        generic.manuallyCorrected = true
+        XCTAssertEqual(action(), .activity, "사용자가 고른 활동은 그대로다")
+    }
+
     func testScarfAndRibbonStayOnTheBodyInEveryScene() throws {
         let scarf = try XCTUnwrap(HwarangClothStyle.byLandmark["fr.alps"]), ribbon = try XCTUnwrap(HwarangClothStyle.byLandmark["au.opera"])
         // 창이나 선체에 목 아래와 꼬리가 가리는 장면. 자동차는 턱 밑 띠만 앞유리 안쪽에 그린다.
         let hidden: Set<HwarangScene> = [.subway, .train, .bus, .airplane, .boat, .carFront]
-        // 전체 실행 후반의 기기에서는 프레임이 많으면 강제 종료된다. 시뮬레이터는 8프레임을 모두 본다.
-        #if targetEnvironment(simulator)
-        let frames = 8
-        #else
-        let frames = 3
-        #endif
         for small in [false, true] {
             for scene in HwarangScene.allCases {
                 var added = 0
-                for frame in 0..<frames {
-                    let sec = Double(scene.totalDuration) * (Double(frame) + 0.37) / Double(frames)
-                    let result = autoreleasepool { HwarangDiagnostics.accessoryEscape(scene: scene, sec: sec, scarf: scarf, ribbon: ribbon, margin: 6, small: small) }
+                for frame in 0..<8 {
+                    let sec = Double(scene.totalDuration) * (Double(frame) + 0.37) / 8
+                    let result = cpuPaced { HwarangDiagnostics.accessoryEscape(scene: scene, sec: sec, scarf: scarf, ribbon: ribbon, margin: 6, small: small) }
                     added = max(added, result.added)
                     // 샤워 때는 장식을 벗어 옷걸이에 걸어 몸 밖에 있는 것이 맞다.
                     if scene != .shower { XCTAssertLessThanOrEqual(result.escaped, 12, "\(scene) \(frame) small=\(small)") }
@@ -960,10 +1018,7 @@ final class MapHomeStickmanTests: XCTestCase {
             XCTAssertGreaterThan(scene.totalDuration, 0)
             var time = 0.0
             while time < Double(scene.totalDuration) + 1 {
-                // 장면이 늘어 그림을 쌓아 두면 기기에서 메모리로 강제 종료된다.
-                autoreleasepool {
-                    XCTAssertGreaterThan(HwarangDiagnostics.paintedPixels(scene: scene, sec: time), 500, "\(scene) \(time)")
-                }
+                XCTAssertGreaterThan(cpuPaced { HwarangDiagnostics.paintedPixels(scene: scene, sec: time) }, 500, "\(scene) \(time)")
                 time += 0.73
             }
         }

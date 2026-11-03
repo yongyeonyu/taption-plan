@@ -729,7 +729,7 @@ struct MapHomeLocationSheet: View {
             // 위치는 그대로 두고 층수만 저장한다. 시트 밖을 누르면 바꾼 층수는 저장되지 않는다.
             Button {
                 guard let place else { return }
-                model.setFrequentPlaceFloor(place.id, floor: floor)
+                model.saveFrequentPlaceFloorAndHeight(place.id, floor: floor)
                 onSaved()
                 dismiss()
             } label: {
@@ -741,8 +741,9 @@ struct MapHomeLocationSheet: View {
                     .background(destination.tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 13))
             }
             .buttonStyle(.plain)
-            .disabled(place?.point == nil || floor == place?.floor)
-            .opacity(place?.point == nil || floor == place?.floor ? 0.46 : 1)
+            // 같은 층이어도 그 자리에 있으면 높이를 다시 잴 수 있다.
+            .disabled(place?.point == nil || (floor == place?.floor && !(place.map { PlaceHeightCapture.isInside($0, reading: model.latestSensorReading) } ?? false)))
+            .opacity(place?.point == nil || (floor == place?.floor && !(place.map { PlaceHeightCapture.isInside($0, reading: model.latestSensorReading) } ?? false)) ? 0.46 : 1)
 
             Button {
                 guard let place else { return }

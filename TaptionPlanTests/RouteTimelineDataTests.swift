@@ -136,6 +136,72 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertEqual(MapHomePlaybackLocation.ridingMode(.car, at: start.addingTimeInterval(3600), travel: [segment]), .car)
     }
 
+    /// GPS가 끊긴 구간은 앞뒤 표본으로 수단과 위치를 잇는다: 비행기, 지하차도의 차, 제자리는 수단 없음.
+    func testSensorGapInfersModeAndKeepsMoving() throws {
+        let start = date(420)
+        func sample(_ latitude: Double, _ minutes: Double, _ motion: MotionKind) -> SensorReading {
+            var value = SensorReading(timestamp: start.addingTimeInterval(minutes * 60),
+                point: GeoPoint(latitude: latitude, longitude: 127, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: 10), motion: motion)
+            value.gpsAvailable = true
+            return value
+        }
+        func mode(_ readings: [SensorReading]) -> TravelMode? {
+            MapHomePlaybackLocation.gapMode(at: start.addingTimeInterval(30 * 60), travel: [], readings: readings)
+        }
+        let flight = [sample(37, 0, .walking), sample(33, 60, .walking)] // 약 445km, 60분
+        XCTAssertEqual(mode(flight), .airplane)
+        let underpass = [sample(37, 0, .automotive), sample(37.02, 60, .automotive)] // 2.2km, 느려도 자동차
+        XCTAssertEqual(mode(underpass), .car)
+        let fastAfterWalk = [sample(37, 0, .walking), sample(37.1, 30, .walking)] // 11km, 30분: 걸을 수 없다
+        XCTAssertEqual(MapHomePlaybackLocation.gapMode(at: start.addingTimeInterval(15 * 60), travel: [], readings: fastAfterWalk), .car)
+        var port = [sample(37, 0, .stationary), sample(37.2, 60, .stationary)]
+        port[0].nearPort = true
+        port[1].nearPort = true
+        XCTAssertEqual(mode(port), .ship)
+        let stay = [sample(37, 0, .stationary), sample(37.0001, 60, .stationary)]
+        XCTAssertNil(mode(stay))
+        let middle = try XCTUnwrap(MapHomePlaybackLocation.sensorGapCoordinate(at: start.addingTimeInterval(30 * 60), readings: flight))
+        XCTAssertEqual(middle.latitude, 35, accuracy: 0.001)
+        // 남쪽으로 날아가면 화살표도 남쪽이다.
+        let heading = try XCTUnwrap(MapHomePlaybackLocation.gapHeading(at: start.addingTimeInterval(30 * 60), travel: [], readings: flight))
+        XCTAssertEqual(heading, 180, accuracy: 1)
+        // 저장된 구간이 있으면 그 수단이 먼저다.
+        let segment = TravelSegment(mode: .subway, span: TimeSpan(start: start, end: start.addingTimeInterval(3600)),
+            distanceMeters: 0, confidence: .high, evidence: [], isConfirmed: false)
+        XCTAssertEqual(MapHomePlaybackLocation.gapMode(at: start.addingTimeInterval(30 * 60), travel: [segment], readings: flight), .subway)
+    }
+
+    func testStationNameFollowsAppLanguage() throws {
+        let point = try XCTUnwrap(SubwayStationCatalog.stations.first { $0.stationName == "가정" }?.coordinate)
+        XCTAssertEqual(TransitPlaceName.display("Gajeong Station", kind: .subwayStation, point: point, language: .korean), "가정")
+        XCTAssertEqual(TransitPlaceName.display("가정역", kind: .subwayStation, point: point, language: .english), "Gajeong Station")
+        XCTAssertEqual(TransitPlaceName.display("Gajeong Station", kind: .subwayStation, point: point, language: .english), "Gajeong Station")
+        XCTAssertEqual(TransitPlaceName.display("검암", kind: .subwayStation, point: point, language: .korean), "검암")
+        XCTAssertEqual(TransitPlaceName.romanized("검암"), "Geomam")
+        XCTAssertEqual(TransitPlaceName.romanized("마곡나루"), "Magoknaru")
+    }
+
+    /// 자동 판정 지하철의 예상 경로는 표본이 끊긴 구간에만 그린다(PLB1103A01).
+    func testAutomaticSubwayDrawsOnlyGapRoutes() throws {
+        let route = try XCTUnwrap(SubwayStationCatalog.route(for: ["가정역", "마곡나루역"]))
+        let start = date(420)
+        let segment = TravelSegment(mode: .subway, span: TimeSpan(start: start, end: start.addingTimeInterval(1800)),
+            distanceMeters: 18_000, confidence: .high, evidence: ["지하철 노선 후보 확정"], isConfirmed: false, subwayRoute: route)
+        let points = route.coordinates
+        func sample(_ index: Int, _ minutes: Double) -> SensorReading {
+            var value = SensorReading(timestamp: start.addingTimeInterval(minutes * 60), point: points[index], motion: .automotive)
+            value.gpsAvailable = true
+            return value
+        }
+        // 0~10분은 표본이 이어지고, 10~25분이 끊겼고, 25~30분은 다시 이어진다.
+        var readings = stride(from: 0.5, through: 10, by: 0.5).map { sample(min(points.count / 4, Int($0)), $0) }
+        readings += stride(from: 25.0, through: 29.5, by: 0.5).map { sample(points.count * 3 / 4, $0) }
+        let slices = MapHomePlaybackLocation.subwayGapRoutes(segment: segment, readings: readings, through: segment.span.end)
+        XCTAssertEqual(slices.count, 1)
+        XCTAssertEqual(try XCTUnwrap(slices.first?.first).latitude, points[points.count / 4].latitude, accuracy: 0.002)
+        XCTAssertEqual(try XCTUnwrap(slices.first?.last).latitude, points[points.count * 3 / 4].latitude, accuracy: 0.002)
+    }
+
     func testRecognizedSubwayDrawsRouteWithoutUserConfirmation() throws {
         var (segment, _) = confirmedSubwayFixture()
         segment.subwayRoute = try XCTUnwrap(SubwayStationCatalog.route(for: ["가정역", "마곡나루역"]))

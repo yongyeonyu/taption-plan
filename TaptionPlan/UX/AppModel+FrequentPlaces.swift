@@ -76,6 +76,29 @@ extension AppModel {
         scheduleFrequentPlaceDerivedRefresh()
     }
 
+    /// 층을 저장하고, 지금 그 지점 안이면 높이를 20번 읽어 기준으로 남긴다(HGT1103A01). 멀리서 고치면 층만 저장한다.
+    func saveFrequentPlaceFloorAndHeight(_ placeID: UUID, floor: Int) {
+        setFrequentPlaceFloor(placeID, floor: floor)
+        guard let place = snapshot.settings.frequentPlaces.first(where: { $0.id == placeID }),
+              PlaceHeightCapture.isInside(place, reading: latestSensorReading) else { return }
+        Task { @MainActor [weak self] in
+            var altitudes: [Double] = []
+            let sampler = PlaceHeightSampler()
+            let pressures = await sampler.pressures(count: PlaceHeightCapture.sampleCount, timeout: PlaceHeightCapture.maximumDuration) {
+                if let point = self?.latestSensorReading?.point, point.verticalAccuracy >= 0 { altitudes.append(point.altitude) }
+            }
+            guard let self,
+                  let current = self.snapshot.settings.frequentPlaces.first(where: { $0.id == placeID }),
+                  current.floor == floor,
+                  let base = self.latestSensorReading, PlaceHeightCapture.isInside(current, reading: base),
+                  let reference = PlaceHeightCapture.reference(from: base, pressures: pressures, altitudes: altitudes) else {
+                self?.showFloorCalibrationNotice(MapHomeLanguage.current.text("높이를 재지 못해 층만 저장했어요", "Saved the floor only; height could not be measured"))
+                return
+            }
+            self.commitFloorCalibration(placeID, floor: floor, reading: reference)
+        }
+    }
+
     func setFrequentPlaceLocation(
         _ placeID: UUID,
         latitude: Double,

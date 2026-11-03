@@ -276,6 +276,22 @@ final class NLETrackTests: XCTestCase {
     }
 
     /// 센서 결과로 되돌리면 그 구간은 다시 한 덩어리가 되고, 저장할 것도 없어진다.
+    func testDetailShowsOverlappingSensorEvidence() {
+        func segment(_ channel: MapHomeNLESensorChannel, _ start: Int, _ end: Int, _ title: String, _ category: String) -> MapHomeNLESensorSegment {
+            MapHomeNLESensorSegment(channel: channel, startMinute: start, endMinute: end, title: title, categoryID: category, behavior: nil)
+        }
+        let segments = [
+            segment(.motion, 0, 60, "자동차", "movement"),
+            segment(.screen, 30, 40, "화면 켜짐", "activity"),
+            segment(.motion, 100, 110, "걷기", "movement"),
+        ]
+        let same = NLESensorEvidenceText.summary(segments, start: 20, end: 50, categoryID: "movement")
+        XCTAssertEqual(same.text, "자동차 · 화면 켜짐")
+        XCTAssertFalse(same.differs)
+        XCTAssertTrue(NLESensorEvidenceText.summary(segments, start: 20, end: 50, categoryID: "work").differs)
+        XCTAssertEqual(NLESensorEvidenceText.summary(segments, start: 70, end: 80, categoryID: "work").text, "")
+    }
+
     func testReplaceWithTheSensorResultLeavesNothingToSave() {
         let segments = threeSegmentDay(sources: [UUID()])
         var edited = MapHomeNLEClipEditor.makeMainTrack(segments: segments)
