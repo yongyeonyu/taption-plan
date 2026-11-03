@@ -924,8 +924,7 @@ enum ReviewCoverageEngine {
             return confidence(lhs.confidence) > confidence(rhs.confidence)
         }
         if lhs.startedAt != rhs.startedAt { return lhs.startedAt < rhs.startedAt }
-        if lhs.createdAt != rhs.createdAt { return lhs.createdAt > rhs.createdAt }
-        return lhs.id.uuidString < rhs.id.uuidString
+        return lhs.createdAt != rhs.createdAt ? lhs.createdAt > rhs.createdAt : lhs.id.uuidString < rhs.id.uuidString
     }
 
     private static func precedence(_ actual: ActualRecord) -> Int {
@@ -1202,40 +1201,6 @@ enum ActivitySectionOverrideEngine {
 
     static func isEditableOverride(_ actual: ActualRecord) -> Bool {
         actual.source == .manual && actual.manuallyCorrected
-    }
-
-    private static func isSectionOverride(_ actual: ActualRecord) -> Bool {
-        isEditableOverride(actual) && actual.modelVersion == modelVersion
-    }
-
-    /// 새 조각과 구간이 똑같은 이전 구간 편집 기록을 뺀다. 같은 자리는 마지막 편집이 차지한다.
-    static func removingOverrides(
-        from actuals: [ActualRecord],
-        sameSpanAs records: [ActualRecord]
-    ) -> [ActualRecord] {
-        let spans = Set(records.map { $0.span() })
-        return actuals.filter { !(isSectionOverride($0) && spans.contains($0.span())) }
-    }
-
-    /// 구간 편집 기록을 같은 구간마다 최신 하나만 남긴다. 예전 빌드가 한 번의 적용에
-    /// 여러 벌 저장한 기록과 백업·iCloud에서 되돌아온 사본을 지운다. 여러 번 돌려도 결과가 같다.
-    static func deduplicatedOverrides(_ actuals: [ActualRecord]) -> [ActualRecord] {
-        var newest: [TimeSpan: ActualRecord] = [:]
-        for actual in actuals where isSectionOverride(actual) && actual.endedAt != nil {
-            let span = actual.span()
-            if let kept = newest[span], !isNewer(actual, than: kept) { continue }
-            newest[span] = actual
-        }
-        return actuals.filter { actual in
-            guard isSectionOverride(actual), actual.endedAt != nil else { return true }
-            return newest[actual.span()]?.id == actual.id
-        }
-    }
-
-    private static func isNewer(_ lhs: ActualRecord, than rhs: ActualRecord) -> Bool {
-        lhs.createdAt != rhs.createdAt
-            ? lhs.createdAt > rhs.createdAt
-            : lhs.id.uuidString < rhs.id.uuidString
     }
 
     static func outsidePieces(

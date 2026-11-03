@@ -44,6 +44,7 @@ final class AppModelBackupConnectionTests: XCTestCase {
     private struct Harness {
         let model: AppModel
         let store: TaptionStoreV2
+        let engine: TaptionBackupEngine
         let backupDirectory: URL
         let defaults: UserDefaults
     }
@@ -83,7 +84,7 @@ final class AppModelBackupConnectionTests: XCTestCase {
             rawDeviceDataArchive: try RawDeviceDataDayArchive(store: store),
             dayDatabase: PlanDayDatabase(store: store)
         )
-        return Harness(model: model, store: store, backupDirectory: backups, defaults: defaults)
+        return Harness(model: model, store: store, engine: engine, backupDirectory: backups, defaults: defaults)
     }
 
     private func backupFileNames(_ harness: Harness) throws -> [String] {
@@ -232,6 +233,95 @@ final class AppModelBackupConnectionTests: XCTestCase {
         ] {
             XCTAssertNotEqual(PlanBackupPresenter.skipDetail(message), PlanBackupPresenter.skipDetail("알 수 없음"), message)
         }
+    }
+
+    // MARK: - 구간 편집 사본 정리와 백업 호환 (NLE1103A04)
+
+    private func actual(
+        _ title: String,
+        start: Date,
+        createdAt: Date,
+        modelVersion: String? = ActivitySectionOverrideEngine.modelVersion,
+        source: ActualSource = .manual,
+        manual: Bool = true
+    ) -> ActualRecord {
+        ActualRecord(
+            id: UUID(), planID: nil, title: title, categoryID: "work",
+            startedAt: start, endedAt: start.addingTimeInterval(3_600),
+            source: source, confidence: .high, createdAt: createdAt,
+            modelVersion: modelVersion, manuallyCorrected: manual
+        )
+    }
+
+    private func storedActualIDs(_ harness: Harness) async throws -> Set<UUID> {
+        Set(try await TaptionStoreRepository(store: harness.store).load().actuals.map(\.id))
+    }
+
+    /// 사본이 든 옛 백업: 정리한 뒤에도 백업이 되고, 옛 파일을 복원해도 사본이 되살아나지 않으며,
+    /// 새 기기에 복원해도 최신 저장본과 자동 기록만 남는다.
+    func testOldBackupWithDuplicateOverridesRestoresCleanly() async throws {
+        let source = try makeHarness()
+        let model = source.model
+        try model.configureBackupPIN(password)
+        let start = date(2026, 7, 15)
+        let older = actual("근무", start: start, createdAt: start.addingTimeInterval(100))
+        let copy = actual("근무", start: start, createdAt: start.addingTimeInterval(101))
+        let newest = actual("업무", start: start, createdAt: start.addingTimeInterval(200))
+        let automatic = actual(
+            "자동", start: start, createdAt: start, modelVersion: "auto", source: .motion, manual: false
+        )
+        let otherManual = actual("직접", start: start, createdAt: start, modelVersion: nil)
+        // 옛 빌드가 남긴 저장소와 그때 만든 백업. 사본이 그대로 들어 있다.
+        var seeded = TaptionDataSnapshot.empty
+        seeded.actuals = [older, copy, newest, automatic, otherManual]
+        try await TaptionStoreRepository(store: source.store).save(seeded)
+        let beforeCleanup = try await storedActualIDs(source)
+        XCTAssertEqual(beforeCleanup.count, 5)
+        let month = TaptionBackupMonth(year: 2026, month: 7)
+        _ = try await source.engine.backup(month: month, password: password, now: date(2026, 10, 19))
+        let july = TaptionBackupScope.month(month)
+        let kept = Set([newest.id, automatic.id, otherManual.id])
+        let fileName = "2026-07.taptionbackup"
+        let oldBackup = try Data(contentsOf: source.backupDirectory.appendingPathComponent(fileName))
+
+        // 앱 시작과 같은 순서로 저장소를 읽는다. 읽으면 정리되고, 저장하면 저장소에서도 사라진다.
+        await model.bootstrapLocalSnapshot()
+        await model.waitForBootstrapPreparation()
+        XCTAssertTrue(model.isBootstrapped)
+        XCTAssertEqual(Set(model.snapshot.actuals.map(\.id)), kept)
+        let saved = await model.persist()
+        XCTAssertTrue(saved)
+        let afterCleanup = try await storedActualIDs(source)
+        XCTAssertEqual(afterCleanup, kept)
+
+        // 정리 뒤 백업: 기존 파일보다 행이 줄어도 검증에 막히지 않는다.
+        await model.backUpNow(password: password, now: date(2026, 10, 20))
+        XCTAssertEqual(model.lastBackupReport?.succeeded, true, model.lastBackupReport?.summary ?? "")
+
+        // 같은 기기에 옛 파일을 복원해도 사본이 돌아오지 않는다.
+        try oldBackup.write(to: source.backupDirectory.appendingPathComponent(fileName), options: .atomic)
+        await model.restoreBackup(july, password: password)
+        XCTAssertEqual(model.lastBackupReport?.succeeded, true, model.lastBackupReport?.summary ?? "")
+        XCTAssertEqual(Set(model.snapshot.actuals.map(\.id)), kept)
+        let afterSameDeviceRestore = await model.persist()
+        XCTAssertTrue(afterSameDeviceRestore)
+        let sameDevice = try await storedActualIDs(source)
+        XCTAssertEqual(sameDevice, kept)
+
+        // 빈 새 기기에 옛 파일을 복원: 복원 뒤 저장까지 하면 저장소에도 사본이 없다.
+        let target = try makeHarness()
+        await target.model.bootstrapLocalSnapshot()
+        try target.model.configureBackupPIN(password)
+        try FileManager.default.createDirectory(at: target.backupDirectory, withIntermediateDirectories: true)
+        try oldBackup.write(to: target.backupDirectory.appendingPathComponent(fileName))
+        await target.model.restoreBackup(july, password: password)
+        XCTAssertEqual(target.model.lastBackupReport?.succeeded, true, target.model.lastBackupReport?.summary ?? "")
+        XCTAssertEqual(Set(target.model.snapshot.actuals.map(\.id)), kept)
+        XCTAssertEqual(target.model.snapshot.actuals.first { $0.id == newest.id }?.title, "업무")
+        let targetSaved = await target.model.persist()
+        XCTAssertTrue(targetSaved)
+        let restored = try await storedActualIDs(target)
+        XCTAssertEqual(restored, kept)
     }
 
     func testICloudDestinationUsesTheAppUbiquityContainer() {
