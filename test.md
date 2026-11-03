@@ -5292,3 +5292,13 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 재실행(실기기): 위 3개 테스트 클래스 22건 통과, 실패 0(`device-recheck.log`). 두 간헐 실패의 원인은 확인하지 않았다. 수정 뒤 전체를 다시 돌리지는 않았다.
 - 시뮬레이터: 같은 묶음과 원본 재생 24건 통과. 재생에서 11-02 17:43–18:11 지하철(마곡나루>계양>검암>검바위), 다른 탑승 없음. 원본 재생은 실기기에서 돌리지 않았다.
 - 설치: 아이폰 11 Pro Debug 설치·실행 성공. 화면 결과는 대표 확인 대기. 저장된 기록이 실제로 지하철로 바뀌는지, 구글 메모, 사진 핀 배치, 테마 색은 기기에서 내가 보지 못했다.
+
+## ARC1103A01 전체 구조 성능 개선 (2026-11-03, worktree `claude/structure-performance-e6fb21`)
+- 안 목록과 전후 수치: `docs/STRUCTURE_PERFORMANCE.md`. 측정 시험: `StructurePerformanceProbeTests`, 계약 시험: `SnapshotObservationTests`(6건 통과).
+- 단위(시뮬레이터 iPhone 17 Pro `ARC1103A01`, 병렬 끔, Debug): `build/validation/ARC1103A01/after-1.xcresult` 전체 1,839건 중 통과 1,832 · 실패 1 · 건너뜀 6. 실패는 `SensorDayStoreTests.testThirtyDayAppColdAndWarmLoadP95StaysInteractive`(warm P95 7.76ms, 기준 5ms) 시간 판정이다.
+- 그 실패의 원인은 가르지 못했다. 단독 재실행은 시뮬레이터 잠금 대기 1시간 초과(rc 75)로 돌지 못했다. Mac 부하가 큰 때의 일시 실패인지 이번 변경 때문인지 미확인이며, 합친 뒤 다시 돌려야 한다. 이 시험이 지나는 경로에 이번 변경(`snapshot` 접근자)이 포함될 수 있어 무관하다고 단정하지 않는다.
+- 측정 환경: 시뮬레이터 Debug, 합성 자료(기기 로그의 행 수 기준). 기기 시작 수치(`repository_local_load` 등)는 지난 로그 `CRS1101A01`의 집계이고, 이번 변경으로 다시 재지 못했다.
+- 빌드: 위 단위 시험의 시뮬레이터 Debug 빌드만 했다. generic iOS 빌드·위젯·워치 제품 빌드는 안 했다. 실기기 설치·재생 벤치는 안 했다.
+- 가드: `architecture-metrics.py --check`, `check-app-engine-import-boundary.sh` 통과.
+- 저장 포맷: 바꾸지 않았다. `known`·`lastSynced`는 메모리 값이다. 시험: `testUnchangedSaveEncodesNothingAndChangedRowsStillReachDisk`, `testRevertingARowToItsEarlierValueReachesDisk`.
+- 미적용: 안 6번(`@State` 묶기), "합친 뒤" A~D안. 저장소 메모리 감소는 재지 못했다.
