@@ -5619,3 +5619,8 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - `scripts/map-pan-bench.sh`: 앱이 시작 직후에도 패키지를 만들어 측정 전 로그를 읽을 수 있어, 이번 실행의 12초 측정이 든 패키지를 기다리게 고쳤다. 실기기로 실행하지 않았고 문법 검사만 했다. 측정용 인자 `-debugMapCamera=위도,경도,줌`을 더했다.
 - `-benchMapStyle`은 저장값을 읽기 전에 적용돼 스타일이 뜻대로 안 바뀌는 경우가 있었다(판타지는 적용 안 됨). 그래서 메뉴에서 스타일을 고른 뒤 쟀다. 고치지 않았다(`MapHomeView`).
 - 재생 영상 렌더러(`MapHomePlaybackVideoRenderer`)도 같은 스타일 JSON을 써 글자가 들어가지만 영향은 재지 않았다.
+
+## BKL1104A01·MAP1104A01 메인 합치기 뒤 전체 단위 시험 (2026-11-04, 시뮬레이터)
+- `8ba6b01a`까지: 1,991건 중 1,978건 통과, 실패 0, 건너뜀 13 (`build/validation/TFB1104A01/check8.xcresult`). 그 안의 TaptionBackupV2Tests·AppModelBackupConnectionTests 포함.
+- 직전 check6의 실패 1건은 시험이 준비 단계 백업의 사본 2개까지 센 것이어서 기준값을 고쳤다(`c6703237`).
+- 실기기 기기 간 복원, NSMetadataQuery 실제 동작, 오픈맵 실기기 화면·끊김, 재생 영상 영향은 미확인이다. 세션 로그는 같은 ID 폴더로 옮겼다.
