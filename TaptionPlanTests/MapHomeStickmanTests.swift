@@ -10,19 +10,255 @@ import TaptionPlanCore
 @MainActor
 final class MapHomeStickmanTests: XCTestCase {
     /// `TAPTION_RIG_SHEET=<폴더>`일 때 그루밍 장면을 시트 한 장으로 쓴다. 자세를 눈으로 보려는 도구다.
+    /// 장면 22종을 각 8프레임씩 그린 검토 시트. 장식을 걸친 큰 그림·지도 마커 크기 그림·장식 도감을 쓴다(ACC1102A01).
     func testWriteGroomingSheetWhenRequested() throws {
         guard let folder = ProcessInfo.processInfo.environment["TAPTION_RIG_SHEET"], !folder.isEmpty else {
             throw XCTSkip("TAPTION_RIG_SHEET 없음")
         }
-        let times = stride(from: 2.0, to: 18.0, by: 2.0).map { $0 }
-        let side: CGFloat = 330
-        let sheet = UIGraphicsImageRenderer(size: CGSize(width: side * 4, height: side * 2)).image { _ in
-            for (index, sec) in times.enumerated() {
-                HwarangDiagnostics.frame(scene: .groom, sec: sec, side: side)
-                    .draw(at: CGPoint(x: CGFloat(index % 4) * side, y: CGFloat(index / 4) * side))
+        let scarves = ["jp.itsukushima", "fr.alps", "kr.hahoe", "it.amalfi"], ribbons = ["au.opera", "it.dolomites", "th.doi_inthanon", "es.teide"]
+        let hats = ["Hat_kr_namsan", "Hat_gb_bigben", "Hat_kr_gyeongbokgung", "Hat_th_grand_palace"]
+        func sheet(small: Bool, name: String) throws {
+            let side: CGFloat = 220, scenes = HwarangScene.allCases
+            let image = UIGraphicsImageRenderer(size: CGSize(width: side * 8, height: side * CGFloat(scenes.count))).image { renderer in
+                UIColor(white: 0.92, alpha: 1).setFill()
+                renderer.fill(CGRect(x: 0, y: 0, width: side * 8, height: side * CGFloat(scenes.count)))
+                for (row, scene) in scenes.enumerated() {
+                    let set = row % scarves.count
+                    for column in 0..<8 {
+                        let sec = Double(scene.totalDuration) * (Double(column) + 0.37) / 8
+                        HwarangDiagnostics.frame(
+                            scene: scene, sec: sec, side: side, small: small, hat: UIImage(named: hats[set]),
+                            scarf: HwarangClothStyle.byLandmark[scarves[set]], ribbon: HwarangClothStyle.byLandmark[ribbons[set]]
+                        ).draw(at: CGPoint(x: CGFloat(column) * side, y: CGFloat(row) * side))
+                    }
+                }
+            }
+            try XCTUnwrap(image.pngData()).write(to: URL(fileURLWithPath: folder).appendingPathComponent(name))
+        }
+        try sheet(small: false, name: "accessories-all-scenes.png")
+        try sheet(small: true, name: "accessories-small.png")
+        let cell: CGFloat = 120, candidates = MapHomeLandmarkCatalog.candidates
+        let catalog = UIGraphicsImageRenderer(size: CGSize(width: cell * 9, height: cell * 6)).image { renderer in
+            UIColor(white: 0.92, alpha: 1).setFill()
+            renderer.fill(CGRect(x: 0, y: 0, width: cell * 9, height: cell * 6))
+            for (index, candidate) in candidates.enumerated() {
+                guard let art = MapHomeGrowthAccessoryCatalog.artworkName(for: candidate.accessoryID).flatMap({ UIImage(named: $0) }) else { continue }
+                art.draw(in: CGRect(x: CGFloat(index % 9) * cell + 6, y: CGFloat(index / 9) * cell + 12, width: cell - 12, height: (cell - 12) * 60 / 68))
             }
         }
-        try XCTUnwrap(sheet.pngData()).write(to: URL(fileURLWithPath: folder).appendingPathComponent("groom.png"))
+        try XCTUnwrap(catalog.pngData()).write(to: URL(fileURLWithPath: folder).appendingPathComponent("accessories-catalog.png"))
+        // 그루밍·식사·건강 장면과 꼬리 부풀림을 촘촘히 그린 시트(RIG1103A01). 위 칸은 맨몸, 아래 칸은 장식을 걸쳤다.
+        let motionRows: [(HwarangScene, [Double])] = [
+            (.groom, [3.5, 4, 5, 6.5, 8, 9.5, 11, 12, 13.5, 15]),
+            (.eat, [0.3, 0.6, 0.8, 1, 1.2, 1.4, 1.6, 3.5, 4.5, 6.5]),
+            (.eat, [7.6, 8, 8.2, 8.4, 8.6, 9.2, 9.8, 10.3, 10.6, 11.4]),
+            (.stretch, [1, 2, 4, 5, 6.5, 7.5, 9, 10, 11, 13]),
+            (.yarn, [11.4, 11.8, 11.9, 12, 12.1, 12.2, 12.4, 12.6, 12.8, 12.9]),
+            (.wheel, [10.9, 11, 11.1, 11.2, 11.3, 11.4, 11.6, 11.8, 12, 12.2])
+        ]
+        let scarf = HwarangClothStyle.byLandmark["fr.alps"], ribbon = HwarangClothStyle.byLandmark["au.opera"], hat = UIImage(named: hats[0])
+        let side: CGFloat = 220, height = side * CGFloat(motionRows.count * 2)
+        let motions = UIGraphicsImageRenderer(size: CGSize(width: side * 10, height: height)).image { renderer in
+            UIColor(white: 0.92, alpha: 1).setFill()
+            renderer.fill(CGRect(x: 0, y: 0, width: side * 10, height: height))
+            for (row, line) in motionRows.enumerated() {
+                for (column, sec) in line.1.enumerated() {
+                    let x = CGFloat(column) * side, y = CGFloat(row * 2) * side
+                    HwarangDiagnostics.frame(scene: line.0, sec: sec, side: side).draw(at: CGPoint(x: x, y: y))
+                    HwarangDiagnostics.frame(scene: line.0, sec: sec, side: side, hat: hat, scarf: scarf, ribbon: ribbon).draw(at: CGPoint(x: x, y: y + side))
+                }
+            }
+        }
+        try XCTUnwrap(motions.pngData()).write(to: URL(fileURLWithPath: folder).appendingPathComponent("rig-motions.png"))
+        // 일상 분류 16장면(RIG1103A02). 한 장면을 4프레임씩 맨몸과 장식 차림으로 그린다.
+        let daily = HwarangScene.dailyScenes
+        let dailyImage = UIGraphicsImageRenderer(size: CGSize(width: side * 8, height: side * CGFloat(daily.count))).image { renderer in
+            UIColor(white: 0.92, alpha: 1).setFill()
+            renderer.fill(CGRect(x: 0, y: 0, width: side * 8, height: side * CGFloat(daily.count)))
+            for (row, scene) in daily.enumerated() {
+                for column in 0..<4 {
+                    let sec = Double(column) * 1.37 + 0.31, y = CGFloat(row) * side
+                    HwarangDiagnostics.frame(scene: scene, sec: sec, side: side).draw(at: CGPoint(x: CGFloat(column) * side, y: y))
+                    HwarangDiagnostics.frame(scene: scene, sec: sec, side: side, hat: hat, scarf: scarf, ribbon: ribbon).draw(at: CGPoint(x: CGFloat(column + 4) * side, y: y))
+                }
+            }
+        }
+        try XCTUnwrap(dailyImage.pngData()).write(to: URL(fileURLWithPath: folder).appendingPathComponent("daily-scenes.png"))
+    }
+
+    /// 대표 결정 16개 분류(RIG1103A02): (대분류, 제목, behavior, 행동, 장면). 요리는 이미 있던 상세 분류다.
+    private static let dailyCategories: [(String, String, String, MapHomeStickmanAction, HwarangScene)] = [
+        ("health", "낮잠", "nap", .nap, .nap), ("eating", "요리", "cooking", .cooking, .cook),
+        ("activity", "장보기", "groceries", .groceries, .groceries), ("housework", "빨래", "laundry", .laundry, .laundry),
+        ("activity", "친구 만남", "friends", .friends, .friends), ("activity", "데이트", "dating", .date, .date),
+        ("activity", "가족", "family", .family, .family), ("activity", "통화", "phoneCall", .phoneCall, .phoneCall),
+        ("health", "명상", "meditation", .meditation, .meditate), ("health", "병원", "hospital", .hospital, .hospital),
+        ("health", "미용실", "salon", .salon, .salon), ("hobby", "독서", "reading", .bookReading, .readBook),
+        ("hobby", "게임", "gaming", .game, .game), ("hobby", "음악", "music", .music, .music),
+        ("hobby", "영상 보기", "video", .video, .video), ("hobby", "반려동물 돌보기", "petCare", .petCare, .petCare)
+    ]
+
+    /// 고를 수 있는 상세 분류로 들어 있고, 장면이 서로 다르며, 자동 전용이 아니고, 아이콘이 실제 기호다.
+    func testDailyCategoriesAreManualOptionsWithTheirOwnScenes() throws {
+        for (category, title, behavior, action, scene) in Self.dailyCategories {
+            let option = try XCTUnwrap(RecordClassificationCatalog.options.first { $0.categoryID == category && $0.behavior == behavior }, title)
+            XCTAssertEqual(option.title, title)
+            XCTAssertFalse(option.isAutomatic, title)
+            XCTAssertFalse(option.isAutomaticOnly, title)
+            XCTAssertNotNil(UIImage(systemName: option.systemImage), option.systemImage)
+            XCTAssertEqual(action.hwarangScene, scene, title)
+            XCTAssertTrue(action.animatesPresentation, title)
+            XCTAssertFalse(action.isMoving, title)
+            XCTAssertEqual(MapHomeStickmanActionResolver.action(for: category, label: title), action, title)
+        }
+        let others = MapHomeStickmanAction.allCases.filter { candidate in !Self.dailyCategories.contains { $0.3 == candidate } }
+        let otherScenes = Set(others.map(\.hwarangScene))
+        XCTAssertEqual(Set(Self.dailyCategories.map(\.4)).count, 16)
+        XCTAssertTrue(otherScenes.isDisjoint(with: Self.dailyCategories.map(\.4)))
+        XCTAssertEqual(Set(HwarangScene.dailyScenes), Set(Self.dailyCategories.map(\.4)))
+    }
+
+    /// 새 분류로 저장한 기록은 왕복 뒤에도 대분류와 상세 이름을 잃지 않고 수면·이동 등으로 새지 않는다.
+    func testDailyCategoryRecordsRoundTripWithoutChangingCategory() throws {
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        for (category, title, behavior, action, _) in Self.dailyCategories {
+            for source in [ActualSource.manual, .appleWatch] {
+                var record = ActualRecord(planID: nil, title: title, categoryID: category, startedAt: start, endedAt: start.addingTimeInterval(600), source: source)
+                record.behavior = behavior
+                let decoded = try JSONDecoder().decode(ActualRecord.self, from: JSONEncoder().encode(record))
+                XCTAssertEqual(decoded, record, title)
+                // 자동 기록의 낮잠 글자는 지금처럼 수면으로 분석한다. 직접 고른 낮잠만 건강관리에 남는다.
+                if title == "낮잠", source != .manual {
+                    XCTAssertEqual(RecordAnalysisCategoryPolicy.categoryID(for: decoded), "sleep")
+                    continue
+                }
+                XCTAssertEqual(ActualRecordCategoryResolver.categoryID(for: decoded), category, title)
+                XCTAssertEqual(RecordAnalysisCategoryPolicy.categoryID(for: decoded), category, title)
+                XCTAssertEqual(RecordAnalysisCategoryNormalizer.categoryID(for: category, title: title, behavior: behavior), category, title)
+                XCTAssertEqual(RecordAnalysisCategoryPolicy.detailTitle(for: decoded), title)
+                XCTAssertEqual(MapHomeStickmanActionResolver.action(
+                    at: start.addingTimeInterval(60), actuals: [decoded], travel: [], places: [], frequentPlaces: []
+                ), action, title)
+            }
+        }
+    }
+
+    /// v3 분류표의 항목과 그 항목으로 저장된 지난 기록은 v4에서도 그대로다.
+    func testPreviousTaxonomyEntriesAndOldRecordsAreUnchanged() throws {
+        let v3: [String: [(String, String)]] = [
+            "activity": [("activity.rest", "stationary"), ("activity.housework", "housework")],
+            "work": [("work.route", "work"), ("work.rest", "stationary"), ("work.walking", "walking")],
+            "study": [("study.route", "study"), ("study.class", "class"), ("study.academy", "academy"), ("study.rest", "stationary"), ("study.walking", "walking")],
+            "hobby": [("hobby.route", "hobby"), ("hobby.rest", "stationary"), ("hobby.walking", "walking")],
+            "sleep": [("sleep.core", "core"), ("sleep.deep", "deep"), ("sleep.rem", "rem")],
+            "eating": [("eating.meal", "meal"), ("eating.cooking", "cooking")],
+            "exercise": [("exercise.workout", "exercise")],
+            "health": [("health.wellness", "wellness"), ("health.vitals", "vitals"), ("health.recovery", "recovery"), ("health.medication", "medication")],
+            "shower": [("shower.wash", "shower")],
+            "housework": [("housework.chores", "chores")],
+            "unconfirmed": [("unconfirmed.automatic", "unconfirmed")]
+        ]
+        XCTAssertEqual(RecordClassificationCatalog.categoryIDs, ["activity", "work", "study", "hobby", "sleep", "movement", "eating", "exercise", "health", "shower", "housework", "unconfirmed"])
+        for (category, details) in v3 {
+            let current = try XCTUnwrap(RecordClassificationCatalog.categories.first { $0.id == category })
+            for (id, behavior) in details {
+                XCTAssertEqual(current.details.first { $0.id == id }?.behavior, behavior, id)
+            }
+        }
+        // 전에 있던 자동 전용 표시는 그대로이고, 건강 대분류 자체를 직접 고를 수도 없다.
+        XCTAssertEqual(RecordClassificationCatalog.options.first { $0.id == "detail.health.wellness" }?.isAutomaticOnly, true)
+        XCTAssertEqual(RecordClassificationCatalog.options.first { $0.id == "phase.health" }?.isAutomaticOnly, true)
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        let old: [(String, String, String?, MapHomeStickmanAction)] = [
+            ("sleep", "수면", "core", .sleeping), ("hobby", "취미", nil, .hobby), ("health", "회복", "recovery", .health),
+            ("activity", "휴식", "stationary", .activity), ("housework", "집안일", "chores", .housework), ("eating", "식사", "meal", .eating)
+        ]
+        for (category, title, behavior, action) in old {
+            var record = ActualRecord(planID: nil, title: title, categoryID: category, startedAt: start, endedAt: start.addingTimeInterval(600), source: .manual)
+            record.behavior = behavior
+            XCTAssertEqual(RecordAnalysisCategoryPolicy.categoryID(for: record), category)
+            XCTAssertEqual(MapHomeStickmanActionResolver.action(at: start.addingTimeInterval(60), actuals: [record], travel: [], places: [], frequentPlaces: []), action, title)
+        }
+    }
+
+    /// 장식을 걸쳤을 때만 샤워 옷걸이가 나타나고 장식이 그 위에 걸린다(RIG1103A01).
+    func testShowerHangsAccessoriesOnARack() throws {
+        let scarf = try XCTUnwrap(HwarangClothStyle.byLandmark["fr.alps"]), ribbon = try XCTUnwrap(HwarangClothStyle.byLandmark["au.opera"])
+        XCTAssertFalse(HwarangDiagnostics.isPainted(scene: .shower, sec: 1, at: CGPoint(x: 3, y: 60)))
+        let result = HwarangDiagnostics.accessoryEscape(scene: .shower, sec: 1, scarf: scarf, ribbon: ribbon, margin: 2)
+        XCTAssertGreaterThan(result.added, 100)
+        XCTAssertEqual(result.clipped, 0)
+    }
+
+    /// 먹는 동안 어느 프레임에서도 얼굴과 밥그릇이 겹치지 않는다(RIG1103A01).
+    func testEatingFaceNeverTouchesTheBowl() {
+        for step in 0..<Int(HwarangScene.eat.totalDuration / 0.05) {
+            let sec = Double(step) * 0.05
+            XCTAssertEqual(HwarangDiagnostics.faceBowlOverlap(sec: sec), 0, "\(sec)초")
+        }
+    }
+
+    /// 그루밍 때 뒷발을 안테나처럼 높이 들고, 반대쪽 뒷발은 몸 앞으로 나와 보인다(RIG1103A01).
+    func testGroomingFarHindLegReachesOutsideTheBody() {
+        for sec in [6.5, 7.5, 8.5, 12.0] {
+            XCTAssertTrue(HwarangDiagnostics.isPainted(scene: .groom, sec: sec, at: CGPoint(x: 110, y: 100)), "\(sec)초")
+            // 가까운 앞다리는 얼굴 왼쪽 바깥 바닥을 짚는다.
+            XCTAssertTrue(HwarangDiagnostics.isPainted(scene: .groom, sec: sec, at: CGPoint(x: -1, y: 100)), "\(sec)초")
+            // 꼬리는 몸 앞 바닥으로 돌아온다.
+            XCTAssertTrue(HwarangDiagnostics.isPainted(scene: .groom, sec: sec, at: CGPoint(x: 60, y: 112)), "\(sec)초")
+            // 든 발은 머리보다 높다.
+            XCTAssertTrue(HwarangDiagnostics.isPainted(scene: .groom, sec: sec, at: CGPoint(x: 35, y: 24)), "\(sec)초")
+        }
+    }
+
+    /// 건강 대분류 장면은 요가 매트 위에서 한다(RIG1103A01).
+    func testHealthSceneHasYogaMat() {
+        XCTAssertEqual(MapHomeStickmanAction.health.markerScene(speedMetersPerSecond: 0, showsVehicles: true), .stretch)
+        XCTAssertTrue(HwarangDiagnostics.isPainted(scene: .stretch, sec: 1, at: CGPoint(x: -4, y: 110)))
+        XCTAssertFalse(HwarangDiagnostics.isPainted(scene: .groom, sec: 1, at: CGPoint(x: -4, y: 110)))
+    }
+
+    /// 기분 좋은 박자에 꼬리가 잠깐 부풀었다 돌아온다(RIG1103A01).
+    func testHappyTailPuffsThenSettles() {
+        for (scene, peak, settled) in [(HwarangScene.eat, 10.6, 11.7), (.yarn, 11.45, 12.5), (.wheel, 11.1, 12.2)] {
+            XCTAssertGreaterThan(
+                HwarangDiagnostics.paintedPixels(scene: scene, sec: peak),
+                HwarangDiagnostics.paintedPixels(scene: scene, sec: settled) + 60, "\(scene)"
+            )
+        }
+    }
+
+    /// 움직이는 동안 스카프와 리본이 몸에서 떨어져 나가거나 캔버스 밖에서 잘리지 않는다(ACC1102A01).
+    func testScarfAndRibbonStayOnTheBodyInEveryScene() throws {
+        let scarf = try XCTUnwrap(HwarangClothStyle.byLandmark["fr.alps"]), ribbon = try XCTUnwrap(HwarangClothStyle.byLandmark["au.opera"])
+        // 창이나 선체에 목 아래와 꼬리가 가리는 장면. 자동차는 턱 밑 띠만 앞유리 안쪽에 그린다.
+        let hidden: Set<HwarangScene> = [.subway, .train, .bus, .airplane, .boat, .carFront]
+        for small in [false, true] {
+            for scene in HwarangScene.allCases {
+                var added = 0
+                for frame in 0..<8 {
+                    let sec = Double(scene.totalDuration) * (Double(frame) + 0.37) / 8
+                    let result = HwarangDiagnostics.accessoryEscape(scene: scene, sec: sec, scarf: scarf, ribbon: ribbon, margin: 6, small: small)
+                    added = max(added, result.added)
+                    // 샤워 때는 장식을 벗어 옷걸이에 걸어 몸 밖에 있는 것이 맞다.
+                    if scene != .shower { XCTAssertLessThanOrEqual(result.escaped, 12, "\(scene) \(frame) small=\(small)") }
+                    XCTAssertEqual(result.clipped, 0, "\(scene) \(frame) small=\(small)")
+                }
+                if hidden.contains(scene) {
+                    XCTAssertEqual(added, 0, "\(scene)는 보이는 부위가 없어 윤곽을 넓히지 않는다")
+                } else {
+                    XCTAssertGreaterThan(added, 0, "\(scene) small=\(small)")
+                }
+            }
+        }
+    }
+
+    /// 자동차 앞유리 너머에는 턱 밑 스카프 띠가 보인다.
+    func testScarfIsVisibleThroughTheCarWindshield() throws {
+        let scarf = try XCTUnwrap(HwarangClothStyle.byLandmark["fr.alps"])
+        let bare = try XCTUnwrap(HwarangDiagnostics.frame(scene: .carFront, sec: 1, side: 146).pngData())
+        let worn = try XCTUnwrap(HwarangDiagnostics.frame(scene: .carFront, sec: 1, side: 146, scarf: scarf).pngData())
+        XCTAssertNotEqual(bare, worn)
     }
 
     func testMapActionLookupCostWithHalfMillionInactiveRecords() {
@@ -773,9 +1009,9 @@ final class MapHomeStickmanTests: XCTestCase {
                 "\(title) 상세가 이동 대분류를 덮었습니다."
             )
         }
-        XCTAssertEqual(MapHomeStickmanAction.allCases.count, 24)
-        XCTAssertEqual(Set(MapHomeStickmanAction.allCases).count, 24)
-        XCTAssertEqual(Set(MapHomeStickmanAction.allCases.map(\.title)).count, 24)
+        XCTAssertEqual(MapHomeStickmanAction.allCases.count, 40)
+        XCTAssertEqual(Set(MapHomeStickmanAction.allCases).count, 40)
+        XCTAssertEqual(Set(MapHomeStickmanAction.allCases.map(\.title)).count, 40)
         XCTAssertEqual(MapHomeStickmanActionResolver.action(for: TravelMode.running), .running)
         XCTAssertEqual(
             MapHomeStickmanActionResolver.action(

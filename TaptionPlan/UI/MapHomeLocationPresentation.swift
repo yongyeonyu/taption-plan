@@ -156,6 +156,8 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
     case health
     case shower
     case housework
+    case nap, cooking, groceries, laundry, friends, date, family, phoneCall
+    case meditation, hospital, salon, bookReading, game, music, video, petCare
 
     var isMoving: Bool {
         switch self {
@@ -181,6 +183,22 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
         case .airplane: .airplane
         case .shower: .shower
         case .housework: .robotVacuum
+        case .nap: .nap
+        case .cooking: .cook
+        case .groceries: .groceries
+        case .laundry: .laundry
+        case .friends: .friends
+        case .date: .date
+        case .family: .family
+        case .phoneCall: .phoneCall
+        case .meditation: .meditate
+        case .hospital: .hospital
+        case .salon: .salon
+        case .bookReading: .readBook
+        case .game: .game
+        case .music: .music
+        case .video: .video
+        case .petCare: .petCare
         case .sleeping: .sleep
         case .eating: .eat
         case .computer, .company: .work
@@ -208,7 +226,9 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
     var animatesPresentation: Bool {
         switch self {
         case .computer, .company, .school, .reading, .hobby, .sleeping, .eating,
-             .activity, .exercise, .health, .unconfirmed, .shower, .housework:
+             .activity, .exercise, .health, .unconfirmed, .shower, .housework,
+             .nap, .cooking, .groceries, .laundry, .friends, .date, .family, .phoneCall,
+             .meditation, .hospital, .salon, .bookReading, .game, .music, .video, .petCare:
             true
         default:
             isMoving
@@ -224,6 +244,22 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
         case .train: return t("기차", "Train")
         case .shower: return t("샤워", "Shower")
         case .housework: return t("집안일", "Housework")
+        case .nap: return t("낮잠", "Nap")
+        case .cooking: return t("요리", "Cooking")
+        case .groceries: return t("장보기", "Groceries")
+        case .laundry: return t("빨래", "Laundry")
+        case .friends: return t("친구 만남", "Friends")
+        case .date: return t("데이트", "Date")
+        case .family: return t("가족", "Family")
+        case .phoneCall: return t("통화", "Phone call")
+        case .meditation: return t("명상", "Meditation")
+        case .hospital: return t("병원", "Hospital")
+        case .salon: return t("미용실", "Hair salon")
+        case .bookReading: return t("독서", "Reading")
+        case .game: return t("게임", "Games")
+        case .music: return t("음악", "Music")
+        case .video: return t("영상 보기", "Watching videos")
+        case .petCare: return t("반려동물 돌보기", "Pet care")
         case .computer: return t("업무", "Work")
         case .company: return t("회사 업무", "Office work")
         case .school: return t("학교 학습", "School")
@@ -474,6 +510,7 @@ enum MapHomeStickmanActionResolver {
         let category = categoryID.lowercased()
         let categoryRoot = category.split(separator: ".", maxSplits: 1).first.map(String.init) ?? category
         let value = "\(category) \(label)".lowercased()
+        if let daily = dailyAction(title: label, behavior: nil) { return daily }
         if categoryRoot == "company" || value.contains("company") { return .company }
         if categoryRoot == "school" || value.contains("school") { return .school }
         if let action = majorCategoryAction(for: categoryRoot) {
@@ -592,7 +629,25 @@ enum MapHomeStickmanActionResolver {
             && (actual.endedAt == nil || date <= actual.endedAt!)
     }
 
+    /// 직접 고르는 상세 분류(RIG1103A02). 제목이나 behavior가 정확히 같을 때만 대분류보다 먼저 자기 장면을 쓴다.
+    private static let dailyActions: [String: MapHomeStickmanAction] = [
+        "낮잠": .nap, "nap": .nap, "요리": .cooking, "cooking": .cooking,
+        "장보기": .groceries, "groceries": .groceries, "빨래": .laundry, "laundry": .laundry,
+        "친구 만남": .friends, "friends": .friends, "데이트": .date, "dating": .date,
+        "가족": .family, "family": .family, "통화": .phoneCall, "phonecall": .phoneCall,
+        "명상": .meditation, "meditation": .meditation, "병원": .hospital, "hospital": .hospital,
+        "미용실": .salon, "salon": .salon, "독서": .bookReading, "reading": .bookReading,
+        "게임": .game, "gaming": .game, "음악": .music, "music": .music,
+        "영상 보기": .video, "video": .video, "반려동물 돌보기": .petCare, "petcare": .petCare
+    ]
+
+    private static func dailyAction(title: String, behavior: String?) -> MapHomeStickmanAction? {
+        behavior.flatMap { dailyActions[$0.lowercased()] }
+            ?? dailyActions[title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()]
+    }
+
     private static func action(for actual: ActualRecord) -> MapHomeStickmanAction? {
+        if let daily = dailyAction(title: actual.title, behavior: actual.behavior) { return daily }
         let category = actual.categoryID.lowercased()
         let categoryRoot = category.split(separator: ".", maxSplits: 1).first.map(String.init) ?? category
         if let action = majorCategoryAction(for: categoryRoot) {
@@ -882,6 +937,8 @@ struct MapHomeStickmanMarker: View {
             ? MapHomeSpeedTier.tier(forMetersPerSecond: speedMetersPerSecond)
             : .idle
         let hat = MapHomeGrowthAccessoryCatalog.hatAssetName(for: equippedAccessoryID)
+        let scarf = MapHomeGrowthAccessoryCatalog.scarfStyle(for: equippedAccessoryID)
+        let ribbon = MapHomeGrowthAccessoryCatalog.ribbonStyle(for: equippedAccessoryID)
         TimelineView(
             .animation(
                 minimumInterval: 1.0 / 30,
@@ -913,6 +970,8 @@ struct MapHomeStickmanMarker: View {
                     anchorHeight: Self.size.height,
                     facesLeft: facesLeft && action.isMoving,
                     hatAssetName: hat,
+                    scarf: scarf,
+                    ribbon: ribbon,
                     showsBackdrop: false
                 )
                 .rotationEffect(.degrees(facesLeft ? -tier.leanDegrees * 0.5 : tier.leanDegrees * 0.5))
@@ -942,6 +1001,8 @@ struct MapHomeStickmanGlyph: View {
     var body: some View {
         let isStatic = reduceMotion || isLuminanceReduced || !action.animatesPresentation
         let hat = MapHomeGrowthAccessoryCatalog.hatAssetName(for: equippedAccessoryID)
+        let scarf = MapHomeGrowthAccessoryCatalog.scarfStyle(for: equippedAccessoryID)
+        let ribbon = MapHomeGrowthAccessoryCatalog.ribbonStyle(for: equippedAccessoryID)
         // 같은 화면의 화랑이들이 동시에 같은 자세로 겹치지 않게 분류별로 시작을 어긋낸다.
         let offset = Double(MapHomeStickmanAction.allCases.firstIndex(of: action) ?? 0) * 3.7
         TimelineView(.animation(minimumInterval: 1.0 / 24, paused: isStatic)) { context in
@@ -951,6 +1012,8 @@ struct MapHomeStickmanGlyph: View {
                 width: size * 1.6,
                 anchorHeight: size,
                 hatAssetName: hat,
+                scarf: scarf,
+                ribbon: ribbon,
                 showsBackdrop: size >= 36,
                 keepsBodySize: false
             )

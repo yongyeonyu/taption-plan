@@ -1,0 +1,42 @@
+// tools/generate_hwarang_hats.py가 만든다. 직접 고치지 않는다.
+
+extension HwarangClothStyle {
+    /// 스카프와 꼬리 리본의 색과 무늬. 키는 랜드마크 id다.
+    static let byLandmark: [String: HwarangClothStyle] = [
+        "kr.hahoe": .init(base: 0x2F4C86, shade: 0x223A69, accent: 0xF2DDB0, trim: 0xC8473A, pattern: .bands),
+        "kr.seongsan": .init(base: 0x6DAA6B, shade: 0x4E8A55, accent: 0xF2B632, trim: 0x3BA6DC, pattern: .waves),
+        "jp.itsukushima": .init(base: 0xD9553A, shade: 0xB03E28, accent: 0xFFF3E0, trim: 0x2E6FB0, pattern: .scales),
+        "jp.arashiyama": .init(base: 0x7FA650, shade: 0x5F8A3A, accent: 0xD3E59B, trim: 0x3F6B2F, pattern: .stripes),
+        "us.golden_gate": .init(base: 0xD9502E, shade: 0xB23B1F, accent: 0xF6E2C8, trim: 0x7A2A14, pattern: .bands),
+        "us.yosemite": .init(base: 0x4F7F5A, shade: 0x3A6347, accent: 0xEAD9A8, trim: 0x8FC6E2, pattern: .zigzag),
+        "gb.tower_bridge": .init(base: 0x2F5FA8, shade: 0x234A86, accent: 0xF3F5F7, trim: 0xC8473A, pattern: .stripes),
+        "gb.lake_district": .init(base: 0x5B8FB0, shade: 0x44748F, accent: 0xDCEBF2, trim: 0x6B8F5A, pattern: .check),
+        "fr.louvre": .init(base: 0x7FB7DA, shade: 0x5E97BC, accent: 0xFFFFFF, trim: 0x2F5F86, pattern: .diamonds),
+        "fr.alps": .init(base: 0xC8473A, shade: 0xA23429, accent: 0xFFFFFF, trim: 0x2F4C86, pattern: .stripes),
+        "it.amalfi": .init(base: 0xF7D24A, shade: 0xDDB22C, accent: 0x3BA6DC, trim: 0xFFFFFF, pattern: .dots),
+        "cn.great_wall": .init(base: 0x6E7F90, shade: 0x55636F, accent: 0xD8DEE3, trim: 0xC8473A, pattern: .zigzag),
+        "cn.li_river": .init(base: 0x4FA3A5, shade: 0x3A8486, accent: 0xE8F5F2, trim: 0x2F4C86, pattern: .waves),
+        "es.park_guell": .init(base: 0x2BA6D9, shade: 0x1E86B3, accent: 0xF7C948, trim: 0xE8553A, pattern: .diamonds),
+        "es.camino": .init(base: 0xE7B23C, shade: 0xC79324, accent: 0x2F5FA8, trim: 0xFFF8E6, pattern: .scales),
+        "th.phiphi": .init(base: 0x2BB5B2, shade: 0x1F918E, accent: 0xFFF3B0, trim: 0xF7DD93, pattern: .waves),
+        "au.great_barrier": .init(base: 0xFF7F6B, shade: 0xDE5F4C, accent: 0xFFF1E6, trim: 0x2BB5B2, pattern: .dots),
+        "kr.bulguksa": .init(base: 0xC9A66B, shade: 0xA8864E, accent: 0x7A5A32, trim: 0xFFF8E6, pattern: .stripes),
+        "kr.haeundae": .init(base: 0x3BA6DC, shade: 0x2A86B8, accent: 0xFFFFFF, trim: 0xF7DD93, pattern: .waves),
+        "jp.himeji": .init(base: 0x8FA3B8, shade: 0x6F8398, accent: 0xFFFFFF, trim: 0x2F4C86, pattern: .scales),
+        "us.mount_rushmore": .init(base: 0x8C8F96, shade: 0x6E7178, accent: 0xEDEEF0, trim: 0xC8473A, pattern: .stripes),
+        "gb.stonehenge": .init(base: 0x7E8C7A, shade: 0x616E5E, accent: 0xDADFD5, trim: 0x4A5547, pattern: .check),
+        "fr.mont_saint_michel": .init(base: 0x4A6FA5, shade: 0x38578A, accent: 0xC9D6E8, trim: 0xF7DD93, pattern: .bands),
+        "it.pisa": .init(base: 0xD8B978, shade: 0xB89857, accent: 0xFFF8E6, trim: 0x7A5A32, pattern: .stripes),
+        "it.dolomites": .init(base: 0xD96C8B, shade: 0xB84F6E, accent: 0xFFE3EA, trim: 0x4F6B3C, pattern: .zigzag),
+        "cn.zhangjiajie": .init(base: 0x5E8F7E, shade: 0x477263, accent: 0xD6E8DF, trim: 0x2F4C40, pattern: .zigzag),
+        "cn.terracotta": .init(base: 0xB5683F, shade: 0x934F2B, accent: 0xF0D3B5, trim: 0x5A3A24, pattern: .scales),
+        "es.alhambra": .init(base: 0xB8402F, shade: 0x96301F, accent: 0xF7DD93, trim: 0x2F7F6F, pattern: .diamonds),
+        "es.teide": .init(base: 0x4B4340, shade: 0x352F2C, accent: 0xE8553A, trim: 0xC9BDB5, pattern: .dots),
+        "th.ayutthaya": .init(base: 0xE8922C, shade: 0xC67518, accent: 0xFFE9B8, trim: 0x7A3E12, pattern: .bands),
+        "th.doi_inthanon": .init(base: 0xA77BD1, shade: 0x8860B3, accent: 0xFFFFFF, trim: 0x7FB069, pattern: .dots),
+        "th.wat_arun": .init(base: 0x4FB8B0, shade: 0x3A9690, accent: 0xF7C948, trim: 0xE8553A, pattern: .diamonds),
+        "au.opera": .init(base: 0x2C6FB5, shade: 0x215790, accent: 0xFFFFFF, trim: 0xF7C948, pattern: .scales),
+        "au.twelve_apostles": .init(base: 0xE6A94D, shade: 0xC78A30, accent: 0x3BA6DC, trim: 0xFFF3D6, pattern: .waves),
+        "au.harbour_bridge": .init(base: 0x8A97A3, shade: 0x6C7884, accent: 0xFFFFFF, trim: 0x2F5FA8, pattern: .zigzag),
+    ]
+}

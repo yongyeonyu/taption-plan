@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "categories": [
     {
       "id": "activity",
@@ -7,7 +7,12 @@
       "systemImage": "sparkles",
       "details": [
         { "id": "activity.rest", "title": "휴식", "behavior": "stationary", "systemImage": "pause.circle.fill" },
-        { "id": "activity.housework", "title": "집안일", "behavior": "housework", "systemImage": "washer.fill", "automaticOnly": true }
+        { "id": "activity.housework", "title": "집안일", "behavior": "housework", "systemImage": "washer.fill", "automaticOnly": true },
+        { "id": "activity.groceries", "title": "장보기", "behavior": "groceries", "systemImage": "cart.fill" },
+        { "id": "activity.friends", "title": "친구 만남", "behavior": "friends", "systemImage": "person.2.fill" },
+        { "id": "activity.date", "title": "데이트", "behavior": "dating", "systemImage": "heart.fill" },
+        { "id": "activity.family", "title": "가족", "behavior": "family", "systemImage": "figure.2.and.child.holdinghands" },
+        { "id": "activity.phoneCall", "title": "통화", "behavior": "phoneCall", "systemImage": "phone.fill" }
       ]
     },
     {
@@ -39,7 +44,12 @@
       "details": [
         { "id": "hobby.route", "title": "취미(집 - 취미)", "behavior": "hobby", "systemImage": "paintpalette.fill" },
         { "id": "hobby.rest", "title": "휴식", "behavior": "stationary", "systemImage": "pause.circle.fill" },
-        { "id": "hobby.walking", "title": "걷기", "behavior": "walking", "systemImage": "figure.walk" }
+        { "id": "hobby.walking", "title": "걷기", "behavior": "walking", "systemImage": "figure.walk" },
+        { "id": "hobby.reading", "title": "독서", "behavior": "reading", "systemImage": "book.closed.fill" },
+        { "id": "hobby.game", "title": "게임", "behavior": "gaming", "systemImage": "gamecontroller.fill" },
+        { "id": "hobby.music", "title": "음악", "behavior": "music", "systemImage": "music.note" },
+        { "id": "hobby.video", "title": "영상 보기", "behavior": "video", "systemImage": "play.rectangle.fill" },
+        { "id": "hobby.pet", "title": "반려동물 돌보기", "behavior": "petCare", "systemImage": "pawprint.fill" }
       ]
     },
     {
@@ -97,7 +107,11 @@
         { "id": "health.wellness", "title": "마음·생활 관리", "behavior": "wellness", "systemImage": "heart.circle.fill", "automaticOnly": true },
         { "id": "health.vitals", "title": "생체 변화", "behavior": "vitals", "systemImage": "waveform.path.ecg", "automaticOnly": true },
         { "id": "health.recovery", "title": "회복", "behavior": "recovery", "systemImage": "bed.double.fill", "automaticOnly": true },
-        { "id": "health.medication", "title": "투약", "behavior": "medication", "systemImage": "pills.fill", "automaticOnly": true }
+        { "id": "health.medication", "title": "투약", "behavior": "medication", "systemImage": "pills.fill", "automaticOnly": true },
+        { "id": "health.nap", "title": "낮잠", "behavior": "nap", "systemImage": "zzz", "automaticOnly": false },
+        { "id": "health.meditation", "title": "명상", "behavior": "meditation", "systemImage": "figure.mind.and.body", "automaticOnly": false },
+        { "id": "health.hospital", "title": "병원", "behavior": "hospital", "systemImage": "cross.case.fill", "automaticOnly": false },
+        { "id": "health.salon", "title": "미용실", "behavior": "salon", "systemImage": "scissors", "automaticOnly": false }
       ]
     },
     {
@@ -113,7 +127,8 @@
       "title": "집안일",
       "systemImage": "house.fill",
       "details": [
-        { "id": "housework.chores", "title": "집안일", "behavior": "chores", "systemImage": "house.fill" }
+        { "id": "housework.chores", "title": "집안일", "behavior": "chores", "systemImage": "house.fill" },
+        { "id": "housework.laundry", "title": "빨래", "behavior": "laundry", "systemImage": "washer.fill" }
       ]
     },
     {

@@ -137,7 +137,7 @@ struct MapHomeGrowthSheet: View {
                                 Text(displayName(candidate))
                                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold))
                                     .foregroundStyle(Color.tpInk)
-                                Text("\(countryName(candidate.country)) · \(categoryName(candidate.category))")
+                                Text("\(accessoryKindName(candidate.accessoryKind)) · \(countryName(candidate.country)) · \(categoryName(candidate.category))")
                                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                                     .foregroundStyle(Color.tpSecondary)
                             }
@@ -300,10 +300,10 @@ struct MapHomeGrowthSheet: View {
                         equip(accessoryID)
                     } label: {
                         HStack(spacing: 10) {
-                            // 화랑이가 쓰는 모자. 옛 장식은 심볼로 보인다.
+                            // 화랑이가 걸치는 장식. 옛 장식은 심볼로 보인다.
                             Group {
-                                if let hat = MapHomeGrowthAccessoryCatalog.hatAssetName(for: accessoryID) {
-                                    Image(hat).resizable().scaledToFit().padding(3)
+                                if let art = MapHomeGrowthAccessoryCatalog.artworkName(for: accessoryID) {
+                                    Image(art).resizable().scaledToFit().padding(3)
                                 } else {
                                     Image(systemName: MapHomeGrowthAccessoryCatalog.symbol(for: accessoryID) ?? "sparkles")
                                         .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold))
@@ -317,13 +317,13 @@ struct MapHomeGrowthSheet: View {
                                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
                                     .foregroundStyle(Color.tpInk)
                                 if let landmark = MapHomeGrowthAccessoryCatalog.landmark(for: accessoryID) {
-                                    Text("\(countryName(landmark.country)) · \(categoryName(landmark.category))")
+                                    Text("\(accessoryKindName(landmark.accessoryKind)) · \(countryName(landmark.country)) · \(categoryName(landmark.category))")
                                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                                         .foregroundStyle(Color.tpSecondary)
                                 }
                             }
                             Spacer()
-                            if season.equippedAccessory == accessoryID {
+                            if season.isEquipped(accessoryID) {
                                 Text(language.text("착용 중", "Equipped"))
                                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
                                     .foregroundStyle(Color.tpAccent)
@@ -352,8 +352,8 @@ struct MapHomeGrowthSheet: View {
                 } label: {
                     VStack(spacing: 3) {
                         Group {
-                            if isOwned, let hat = MapHomeGrowthAccessoryCatalog.hatAssetName(for: candidate.accessoryID) {
-                                Image(hat).resizable().scaledToFit()
+                            if isOwned, let art = MapHomeGrowthAccessoryCatalog.artworkName(for: candidate.accessoryID) {
+                                Image(art).resizable().scaledToFit()
                             } else {
                                 Image(systemName: "lock.fill")
                                     .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
@@ -373,7 +373,7 @@ struct MapHomeGrowthSheet: View {
                         in: RoundedRectangle(cornerRadius: 10, style: .continuous)
                     )
                     .overlay {
-                        if season.equippedAccessory == candidate.accessoryID {
+                        if season.isEquipped(candidate.accessoryID) {
                             RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.tpAccent, lineWidth: 1.4)
                         }
                     }
@@ -586,6 +586,14 @@ struct MapHomeGrowthSheet: View {
         save(updated)
     }
 
+    private func accessoryKindName(_ kind: MapHomeAccessoryKind) -> String {
+        switch kind {
+        case .hat: language.text("모자", "Hat")
+        case .scarf: language.text("스카프", "Scarf")
+        case .ribbon: language.text("꼬리 리본", "Tail ribbon")
+        }
+    }
+
     private func equip(_ accessoryID: String) {
         var updated = history
         guard MapHomeGrowthPolicy.equipAccessory(accessoryID, in: &updated.season) else { return }
@@ -620,6 +628,9 @@ struct MapHomeGrowthSheet: View {
         guard let candidate = MapHomeLandmarkCatalog.candidates.first(where: { $0.accessoryID == accessoryID }) else {
             return language.text("화랑이 장식", "Hwarang accessory")
         }
-        return language.text("\(candidate.name) 테마 장식", "\(candidate.englishName) charm")
+        return language.text(
+            "\(candidate.name) \(accessoryKindName(candidate.accessoryKind))",
+            "\(candidate.englishName) \(accessoryKindName(candidate.accessoryKind).lowercased())"
+        )
     }
 }
