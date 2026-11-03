@@ -5436,3 +5436,7 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 실기기 단위: `RailRideLikelihoodTests`, `RouteTimelineDataTests` 포함 전체 통과.
 - 원인: 지하철 Wi-Fi·수직 이동을 전용 신호로 세지 않았고, 환승 뒤 다음 역 전에는 자동차로 표시됐으며, 자동 판정은 `isConfirmed`가 꺼져 노선을 그리지 않았다.
 - 미확인: 실기기 출근에서 탑승 도중 표시와 예상 경로 화면(대표 확인 필요). 탑승 도중 지하철로 바꾼 구간은 다음 역 전 10분까지만 유지한다.
+
+## TFB1103A01 TestFlight 빌드 260 (2026-11-03)
+- `release.sh --yes` 종료 코드 0. 처리 `VALID`, `TP Taption Plan 내부 테스트` 그룹 연결, 테스터 1명 노출을 읽어 확인했다. 보고서 `build/validation/TFB1103A01/testflight-report.json`.
+- 포함: 세션 브랜치 7개, 산책 핑크, 지하철 판정 수정(SUB1103A01). 앱에 설치해 쓰는 확인은 아직 없다.
