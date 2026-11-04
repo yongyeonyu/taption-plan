@@ -28,38 +28,53 @@ enum MapHomeLanguage: String, CaseIterable, Identifiable {
         }
     }
 
-    var locale: Locale {
-        switch self {
-        case .korean: Locale(identifier: "ko_KR")
-        case .english: Locale(identifier: "en_US")
-        }
-    }
+    var locale: Locale { resolvedLanguage.locale }
 
     var dateTitleFormat: String {
         switch self {
         case .korean: "M월 d일 EEEE"
-        case .english: "EEE, MMM d"
+        case .english: packDateFormat("EEEEMMMd") ?? "EEE, MMM d"
         }
     }
 
     var monthTitleFormat: String {
         switch self {
         case .korean: "yyyy년 M월"
-        case .english: "MMMM yyyy"
+        case .english: packDateFormat("yMMMM") ?? "MMMM yyyy"
         }
     }
 
     var datePartFormat: String {
         switch self {
         case .korean: "M월 d일"
-        case .english: "MMM d"
+        case .english: packDateFormat("MMMd") ?? "MMM d"
         }
     }
 
     var weekdayFormat: String {
         switch self {
         case .korean: "EEEE"
-        case .english: "EEE"
+        case .english: packDateFormat("EEEE") ?? "EEE"
+        }
+    }
+
+    /// 달력 머리글. 일요일부터 시작한다.
+    var weekdayHeaderSymbols: [String] {
+        switch self {
+        case .korean: return ["일", "월", "화", "수", "목", "금", "토"]
+        case .english:
+            guard UITextPack.activeLanguageCode != nil else {
+                return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+            }
+            let formatter = DateFormatter()
+            formatter.locale = locale
+            return formatter.veryShortStandaloneWeekdaySymbols
+        }
+    }
+
+    private func packDateFormat(_ template: String) -> String? {
+        UITextPack.activeLocale.flatMap {
+            DateFormatter.dateFormat(fromTemplate: template, options: 0, locale: $0)
         }
     }
 
@@ -70,6 +85,11 @@ enum MapHomeLanguage: String, CaseIterable, Identifiable {
         }
     }
 
+    func text(_ korean: UIPhrase, _ english: UIPhrase) -> String {
+        resolvedLanguage.text(korean, english)
+    }
+
+    @_disfavoredOverload
     func text(_ korean: String, _ english: String) -> String {
         resolvedLanguage.text(korean, english)
     }

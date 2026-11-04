@@ -331,18 +331,18 @@ struct MapHomeSidebarMajorCategory: Identifiable, Hashable {
     func localizedTitle(_ language: MapHomeLanguage) -> String {
         guard language == .english else { return title }
         switch id {
-        case "activity": return "Activity"
-        case "work": return "Work"
-        case "study": return "Study"
-        case "hobby": return "Hobby"
-        case "sleep": return "Sleep"
-        case "movement": return "Movement"
-        case "eating": return "Eating"
-        case "exercise": return "Exercise"
-        case "health": return "Health"
-        case "shower": return "Shower"
-        case "housework": return "Housework"
-        case "unconfirmed": return "Unconfirmed"
+        case "activity": return UITextPack.translate(english: "Activity")
+        case "work": return UITextPack.translate(english: "Work")
+        case "study": return UITextPack.translate(english: "Study")
+        case "hobby": return UITextPack.translate(english: "Hobby")
+        case "sleep": return UITextPack.translate(english: "Sleep")
+        case "movement": return UITextPack.translate(english: "Movement")
+        case "eating": return UITextPack.translate(english: "Eating")
+        case "exercise": return UITextPack.translate(english: "Exercise")
+        case "health": return UITextPack.translate(english: "Health")
+        case "shower": return UITextPack.translate(english: "Shower")
+        case "housework": return UITextPack.translate(english: "Housework")
+        case "unconfirmed": return UITextPack.translate(english: "Unconfirmed")
         default: return title
         }
     }
@@ -2422,12 +2422,10 @@ Group {
     private func duration(_ minutes: Int) -> String {
         let hours = minutes / 60
         let remainder = minutes % 60
-        if language == .english {
-            if hours == 0 { return "\(remainder)m" }
-            return remainder == 0 ? "\(hours)h" : "\(hours)h \(remainder)m"
-        }
-        if hours == 0 { return "\(remainder)분" }
-        return remainder == 0 ? "\(hours)시간" : "\(hours)시간 \(remainder)분"
+        if hours == 0 { return language.text("\(remainder)분", "\(remainder)m") }
+        return remainder == 0
+            ? language.text("\(hours)시간", "\(hours)h")
+            : language.text("\(hours)시간 \(remainder)분", "\(hours)h \(remainder)m")
     }
 }
 
@@ -2518,7 +2516,7 @@ struct MapHomeWeatherSidebar: View {
                                     !isPastSpan ? Color.white : mapHomeWeatherSymbolColor(entry.context, component: .primary),
                                     !isPastSpan ? Color.white : mapHomeWeatherSymbolColor(entry.context, component: .secondary)
                                 )
-                            Text("\(Int(entry.context.temperatureCelsius.rounded()))°")
+                            Text("\(AppRegion.current.temperature(celsius: entry.context.temperatureCelsius))°")
                                 .font(.system(
                                     size: MapHomeWeatherRailLayout.scaled(10),
                                     weight: isSelected ? .bold : .semibold,
@@ -2551,9 +2549,9 @@ struct MapHomeWeatherSidebar: View {
                         .accessibilityElement(children: .ignore)
                         .accessibilityLabel(
                             language.text(
-                                "\(entryMinute / 60)시 날씨 \(entry.context.condition), \(Int(entry.context.temperatureCelsius.rounded()))도"
+                                "\(entryMinute / 60)시 날씨 \(entry.context.condition), \(AppRegion.current.temperature(celsius: entry.context.temperatureCelsius))도"
                                     + (entry.context.airQuality.map { ", 미세먼지 \($0.overallGrade.displayName)" } ?? ""),
-                                "\(entryMinute / 60):00 weather: \(entry.context.condition), \(Int(entry.context.temperatureCelsius.rounded())) degrees Celsius"
+                                "\(entryMinute / 60):00 weather: \(entry.context.condition), \(AppRegion.current.temperature(celsius: entry.context.temperatureCelsius)) degrees"
                                     + (entry.context.airQuality.map { ", air quality \($0.overallGrade.displayName)" } ?? "")
                             )
                         )
@@ -2731,10 +2729,11 @@ enum KnownActivityTitleLocalizer {
 
     static func localized(_ title: String, language: MapHomeLanguage) -> String {
         guard language == .english else { return title }
-        if let value = english[title] { return value }
+        if let value = english[title] { return UITextPack.translate(english: value) }
         if title.hasSuffix(" 탑승") {
             let base = String(title.dropLast(3))
-            return (english[base] ?? base) + " ride"
+            let name = english[base].map { UITextPack.translate(english: $0) } ?? base
+            return language.text("\(name) 탑승", "\(name) ride")
         }
         return title
     }

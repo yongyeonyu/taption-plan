@@ -1,0 +1,378 @@
+{
+ "ui": 2117,
+ "catalog": 461,
+ "unread": [
+  {
+   "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
+   "line": 21,
+   "ko": "_ korean: UIPhrase",
+   "en": "_ english: UIPhrase"
+  },
+  {
+   "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
+   "line": 27,
+   "ko": "_ korean: String",
+   "en": "_ english: String"
+  },
+  {
+   "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
+   "line": 28,
+   "ko": "UIPhrase(runtime: korean)",
+   "en": "UIPhrase(runtime: english)"
+  },
+  {
+   "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
+   "line": 116,
+   "ko": "_ korean: UIPhrase",
+   "en": "_ english: UIPhrase"
+  },
+  {
+   "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
+   "line": 117,
+   "ko": "korean",
+   "en": "english"
+  },
+  {
+   "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
+   "line": 121,
+   "ko": "_ korean: String",
+   "en": "_ english: String"
+  },
+  {
+   "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
+   "line": 122,
+   "ko": "korean",
+   "en": "english"
+  },
+  {
+   "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
+   "line": 125,
+   "ko": "UIPhrase",
+   "en": "UIPhrase"
+  },
+  {
+   "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
+   "line": 130,
+   "ko": "korean",
+   "en": "english"
+  },
+  {
+   "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
+   "line": 134,
+   "ko": "String",
+   "en": "String"
+  },
+  {
+   "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
+   "line": 139,
+   "ko": "korean",
+   "en": "english"
+  },
+  {
+   "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
+   "line": 142,
+   "ko": "UIPhrase",
+   "en": "UIPhrase"
+  },
+  {
+   "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
+   "line": 148,
+   "ko": "korean",
+   "en": "english"
+  },
+  {
+   "file": "TaptionPlan/Core/WidgetShared.swift",
+   "line": 203,
+   "ko": "koreanTitle",
+   "en": "englishTitle"
+  },
+  {
+   "file": "TaptionPlan/Core/WidgetShared.swift",
+   "line": 518,
+   "ko": "Double",
+   "en": "Double"
+  },
+  {
+   "file": "TaptionPlan/UI/FirstRunTutorialGuides.swift",
+   "line": 21,
+   "ko": "koTitle",
+   "en": "enTitle"
+  },
+  {
+   "file": "TaptionPlan/UI/FirstRunTutorialGuides.swift",
+   "line": 21,
+   "ko": "ko",
+   "en": "en"
+  },
+  {
+   "file": "TaptionPlan/UI/FirstRunTutorialView.swift",
+   "line": 415,
+   "ko": "destination.koreanName",
+   "en": "destination.englishName"
+  },
+  {
+   "file": "TaptionPlan/UI/HwarangCoat.swift",
+   "line": 128,
+   "ko": "coat.displayName",
+   "en": "coat.englishName"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeCalendarChipValue.swift",
+   "line": 8,
+   "ko": "MapHomeCalendarTimeKind",
+   "en": "TimeInterval"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeCalendarSheet.swift",
+   "line": 240,
+   "ko": "kind",
+   "en": "chipSeconds(of: kind)"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeCalendarSheet.swift",
+   "line": 345,
+   "ko": "\"\\(calendar.component(.month, from: selected))월 \\(calendar.component(.day, from: selected)",
+   "en": "selected.formatted(.dateTime.month(.abbreviated).day())"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeCounterDetailSheet.swift",
+   "line": 123,
+   "ko": "entry.mode.summaryKoreanTitle",
+   "en": "entry.mode.summaryEnglishTitle"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeCounterDetailSheet.swift",
+   "line": 137,
+   "ko": "segment.mode.summaryKoreanTitle",
+   "en": "segment.mode.summaryEnglishTitle"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeDateStrip.swift",
+   "line": 64,
+   "ko": "\"\\(month)월\"",
+   "en": "monthAbbreviation(for: visibleDay)"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeGrowthPolicy.swift",
+   "line": 373,
+   "ko": "name.korean",
+   "en": "name.english"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeGrowthSheet.swift",
+   "line": 318,
+   "ko": "candidate.name",
+   "en": "candidate.englishName"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeGrowthSheet.swift",
+   "line": 338,
+   "ko": "candidate.name",
+   "en": "candidate.englishName"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeGrowthSheet.swift",
+   "line": 564,
+   "ko": "candidate.name",
+   "en": "candidate.englishName"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeInfoSheets.swift",
+   "line": 532,
+   "ko": "entry.mode.summaryKoreanTitle",
+   "en": "entry.mode.summaryEnglishTitle"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeLanguage.swift",
+   "line": 88,
+   "ko": "_ korean: UIPhrase",
+   "en": "_ english: UIPhrase"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeLanguage.swift",
+   "line": 89,
+   "ko": "korean",
+   "en": "english"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeLanguage.swift",
+   "line": 93,
+   "ko": "_ korean: String",
+   "en": "_ english: String"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeLanguage.swift",
+   "line": 94,
+   "ko": "korean",
+   "en": "english"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeLanguage.swift",
+   "line": 131,
+   "ko": "MovementPresentation.title(for: mode)",
+   "en": "englishTitle(for: mode)"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeLocationPresentation.swift",
+   "line": 261,
+   "ko": "_ korean: UIPhrase",
+   "en": "_ english: UIPhrase"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeLocationPresentation.swift",
+   "line": 262,
+   "ko": "korean",
+   "en": "english"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeLocationSheets.swift",
+   "line": 56,
+   "ko": "transitLocation.kind.title",
+   "en": "transitLocation.kind.englishTitle"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeLocationSheets.swift",
+   "line": 218,
+   "ko": "FloorLabel.korean(floor)",
+   "en": "FloorLabel.english(floor)"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeLocationSheets.swift",
+   "line": 238,
+   "ko": "destination.koreanName",
+   "en": "destination.englishName"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeLocationSheets.swift",
+   "line": 272,
+   "ko": "kind.title",
+   "en": "kind.englishTitle"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeMapAnnotations.swift",
+   "line": 126,
+   "ko": "FloorLabel.korean(floor ?? 1)",
+   "en": "FloorLabel.english(floor ?? 1)"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeNLEClipFactory.swift",
+   "line": 497,
+   "ko": "_ ko: UIPhrase",
+   "en": "_ en: UIPhrase"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeNLEClipFactory.swift",
+   "line": 497,
+   "ko": "ko",
+   "en": "en"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeSettingsSheets.swift",
+   "line": 802,
+   "ko": "destination.koreanName",
+   "en": "destination.englishName"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeSettingsSheets.swift",
+   "line": 810,
+   "ko": "FloorLabel.korean(place.floor ?? 1)",
+   "en": "FloorLabel.english(place.floor ?? 1)"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeSettingsSheets.swift",
+   "line": 846,
+   "ko": "FloorLabel.korean(floor)",
+   "en": "FloorLabel.english(floor)"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeStickerPicker.swift",
+   "line": 100,
+   "ko": "$0.koreanName",
+   "en": "$0.englishName"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeStickerPicker.swift",
+   "line": 219,
+   "ko": "entry.koreanName",
+   "en": "entry.englishName"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeTimeSidebar.swift",
+   "line": 2551,
+   "ko": "\"\\(entryMinute / 60)시 날씨 \\(entry.context.condition), \\(AppRegion.current.temperature(celsi",
+   "en": "\"\\(entryMinute / 60):00 weather: \\(entry.context.condition), \\(AppRegion.current.temperatu"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeTransitSheets.swift",
+   "line": 107,
+   "ko": "AppLanguagePreference.text(korean: \"\\(MovementPresentation.title(for: candidate.mode)) 탑승\"",
+   "en": "\"Board \\(MovementPresentation.englishTitle(for: candidate.mode))\""
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeTransitSheets.swift",
+   "line": 410,
+   "ko": "value.title",
+   "en": "value.englishTitle"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeTransitSheets.swift",
+   "line": 424,
+   "ko": "FloorLabel.korean(floor)",
+   "en": "FloorLabel.english(floor)"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeTransitSheets.swift",
+   "line": 510,
+   "ko": "location.kind.title",
+   "en": "location.kind.englishTitle"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeTransitSheets.swift",
+   "line": 518,
+   "ko": "FloorLabel.korean(floor)",
+   "en": "FloorLabel.english(floor)"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeTransitSheets.swift",
+   "line": 690,
+   "ko": "FloorLabel.korean(floor)",
+   "en": "FloorLabel.english(floor)"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeView.swift",
+   "line": 7402,
+   "ko": "location.kind.title",
+   "en": "location.kind.englishTitle"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeView.swift",
+   "line": 7428,
+   "ko": "destination.koreanName",
+   "en": "destination.englishName"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeView.swift",
+   "line": 7505,
+   "ko": "FloorLabel.korean(place.floor ?? 1)",
+   "en": "FloorLabel.english(place.floor ?? 1)"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeView.swift",
+   "line": 7513,
+   "ko": "destination.koreanName",
+   "en": "destination.englishName"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeView.swift",
+   "line": 7628,
+   "ko": "strength.koreanLabel",
+   "en": "strength.englishLabel"
+  },
+  {
+   "file": "TaptionPlanWidget/SensorCollectionLiveActivity.swift",
+   "line": 495,
+   "ko": "base",
+   "en": "rate"
+  }
+ ]
+}

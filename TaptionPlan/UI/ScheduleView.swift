@@ -447,9 +447,9 @@ struct ScheduleView: View {
         case .day:
             if let weather = closestWeather {
                 if let air = weather.airQuality {
-                    "\(weather.temperatureCelsius.rounded().formatted())° · 미세 \(air.overallGrade.displayName) · \(weather.freshnessLabel)"
+                    "\(AppRegion.current.temperature(celsius: weather.temperatureCelsius))° · 미세 \(air.overallGrade.displayName) · \(weather.freshnessLabel)"
                 } else {
-                    "\(weather.temperatureCelsius.rounded().formatted())° · \(weather.condition) · \(weather.freshnessLabel)"
+                    "\(AppRegion.current.temperature(celsius: weather.temperatureCelsius))° · \(weather.condition) · \(weather.freshnessLabel)"
                 }
             } else {
                 ""

@@ -329,9 +329,7 @@ private struct TaptionWatchWidgetView: View {
         guard measurement?.behavior != nil else {
             return language.text("손목 움직임을 모으는 중", "Collecting wrist motion")
         }
-        return language == .korean
-            ? "신뢰도 \(Int((confidence * 100).rounded()))%"
-            : "Confidence \(Int((confidence * 100).rounded()))%"
+        return language.text("신뢰도 \(Int((confidence * 100).rounded()))%", "Confidence \(Int((confidence * 100).rounded()))%")
     }
 
     private var freshnessText: String {
@@ -339,13 +337,9 @@ private struct TaptionWatchWidgetView: View {
         let seconds = Int(max(0, playbackDate.timeIntervalSince(measuredAt)))
         if seconds < 60 { return language.text("방금", "Just now") }
         if seconds < 3_600 {
-            return language == .korean
-                ? "\(seconds / 60)분 전"
-                : "\(seconds / 60) min ago"
+            return language.text("\(seconds / 60)분 전", "\(seconds / 60) min ago")
         }
-        return language == .korean
-            ? "\(seconds / 3_600)시간 전"
-            : "\(seconds / 3_600) hr ago"
+        return language.text("\(seconds / 3_600)시간 전", "\(seconds / 3_600) hr ago")
     }
 
     /// 곧 울릴 계획 알림. iPhone이 예약한 알림이 워치로 전달되기 전에도
@@ -412,18 +406,12 @@ private struct TaptionWatchWidgetView: View {
     }
 
     private func duration(_ minutes: Int) -> String {
-        if language == .english {
-            if minutes < 60 { return "\(minutes) min" }
-            let hours = minutes / 60
-            let remainder = minutes % 60
-            return remainder == 0
-                ? "\(hours) hr"
-                : "\(hours) hr \(remainder) min"
-        }
-        if minutes < 60 { return "\(minutes)분" }
+        if minutes < 60 { return language.text("\(minutes)분", "\(minutes) min") }
         let hours = minutes / 60
         let remainder = minutes % 60
-        return remainder == 0 ? "\(hours)시간" : "\(hours)시간 \(remainder)분"
+        return remainder == 0
+            ? language.text("\(hours)시간", "\(hours) hr")
+            : language.text("\(hours)시간 \(remainder)분", "\(hours) hr \(remainder) min")
     }
 }
 

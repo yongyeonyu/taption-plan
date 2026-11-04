@@ -19,7 +19,7 @@ struct MapHomeCounterTable: View {
 
     /// 두 줄 이상일 때 창의 폭. 값 자리수가 바뀌어도 창 폭이 흔들리지 않게 고정한다.
     static let boxWidth: CGFloat = 132
-    /// 연봉 줄이 들어가면 값이 `1,234,567원`(영어 `1,234,567 USD`)까지 길어져 132pt에 들어가지 않는다.
+    /// 연봉 줄이 들어가면 값이 `1,234,567원`(영어 `$1,234,567.00`)까지 길어져 132pt에 들어가지 않는다.
     static let boxWidthWithSalary: CGFloat = 176
 
     private var moneyRows: [MapHomeCounterSalary] { [allowance, salary].compactMap { $0 } }
@@ -406,9 +406,22 @@ extension View {
 }
 
 extension MapHomeCounterSalary {
-    /// 통화에 맞는 아이콘. 영어 설정이면 달러, 아니면 원.
+    /// 통화에 맞는 아이콘. 기호가 없는 통화는 지폐로 둔다.
     static func symbol(language: MapHomeLanguage) -> String {
-        language == .english ? "dollarsign.circle.fill" : "wonsign.circle.fill"
+        switch AppRegion.current.currencyCode {
+        case "KRW": "wonsign.circle.fill"
+        case "USD", "CAD", "AUD", "MXN", "NZD", "SGD", "HKD", "TWD": "dollarsign.circle.fill"
+        case "EUR": "eurosign.circle.fill"
+        case "GBP": "sterlingsign.circle.fill"
+        case "JPY", "CNY": "yensign.circle.fill"
+        case "INR": "indianrupeesign.circle.fill"
+        case "BRL": "brazilianrealsign.circle.fill"
+        case "THB": "bahtsign.circle.fill"
+        case "VND": "dongsign.circle.fill"
+        case "IDR": "rupiahsign.circle.fill"
+        case "CHF": "francsign.circle.fill"
+        default: "banknote.fill"
+        }
     }
 
     static let allowanceSymbol = "banknote.fill"

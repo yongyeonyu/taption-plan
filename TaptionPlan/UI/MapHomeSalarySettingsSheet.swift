@@ -32,6 +32,11 @@ struct MapHomeSalarySettingsSheet: View {
     @State private var hourlyText = ""
     @State private var accumText = ""
     @State private var allowanceText = ""
+    @State private var directKind = DirectKind.annual
+    @State private var directText = ""
+
+    /// 해외에서 직접 넣는 금액 종류.
+    private enum DirectKind: Hashable { case hourly, monthly, annual }
 
     private var settings: MapHomeSalaryPolicy.Settings {
         MapHomeSalaryPolicy.Settings(
@@ -46,8 +51,11 @@ struct MapHomeSalarySettingsSheet: View {
             hourlyTax: MapHomeSalaryPolicy.HourlyTax(rawValue: hourlyTaxRaw) ?? .threePointThree,
             includesWeeklyHoliday: weeklyHoliday,
             hourlyIsNet: hourlyIsNet
-        )
+        ).applyingRegion()
     }
+
+    private var region: AppRegion { .current }
+    private var currencyUnit: String { region.currencyUnit }
 
     /// 연봉 또는 시급 중 하나를 고른다.
     private enum InputKind: Hashable { case annual, hourly }
@@ -98,6 +106,9 @@ struct MapHomeSalarySettingsSheet: View {
                     .foregroundStyle(Color.tpSecondary)
                 }
 
+                if region.isOverseas {
+                    directPayCard
+                } else {
                 // 1. 연봉 또는 시급. 세전/세후는 표시 기준 하나로 고르고, 입력은 세전·세후 어느 쪽이든 된다.
                 card {
                     Picker("", selection: inputKind) {
@@ -113,14 +124,14 @@ struct MapHomeSalarySettingsSheet: View {
                         field(language.text("세전 시급", "Gross hourly"), text: Binding(
                             get: { hourlyIsNet ? "" : hourlyText },
                             set: { hourlyText = $0 }
-                        ), unit: language.text("원", "USD"), placeholder: String(Int(hourlyGrossNow.rounded()))) {
+                        ), unit: currencyUnit, placeholder: String(Int(hourlyGrossNow.rounded()))) {
                             hourlyIsNet = false
                             hourlyPay = number(hourlyText)
                         }
                         field(language.text("세후 시급", "Net hourly"), text: Binding(
                             get: { hourlyIsNet ? hourlyText : "" },
                             set: { hourlyText = $0 }
-                        ), unit: language.text("원", "USD"), placeholder: String(Int((hourlyGrossNow * settings.hourlyTax.keepRate).rounded()))) {
+                        ), unit: currencyUnit, placeholder: String(Int((hourlyGrossNow * settings.hourlyTax.keepRate).rounded()))) {
                             hourlyIsNet = true
                             hourlyPay = number(hourlyText)
                         }
@@ -144,7 +155,7 @@ struct MapHomeSalarySettingsSheet: View {
                         field(language.text("세전 연봉", "Gross annual"), text: Binding(
                             get: { isNetInput ? "" : annualText },
                             set: { annualText = $0 }
-                        ), unit: language.text("원", "USD"), placeholder: String(Int(grossWon.rounded()))) {
+                        ), unit: currencyUnit, placeholder: String(Int(grossWon.rounded()))) {
                             isNetInput = false
                             annualPay = number(annualText)
                             monthlyPay = 0
@@ -152,12 +163,12 @@ struct MapHomeSalarySettingsSheet: View {
                         field(language.text("세후 연봉", "Net annual"), text: Binding(
                             get: { isNetInput ? annualText : "" },
                             set: { annualText = $0 }
-                        ), unit: language.text("원", "USD"), placeholder: String(Int(netWon.rounded()))) {
+                        ), unit: currencyUnit, placeholder: String(Int(netWon.rounded()))) {
                             isNetInput = true
                             annualPay = number(annualText)
                             monthlyPay = 0
                         }
-                        field(language.text("월급", "Monthly pay"), text: $monthlyText, unit: language.text("원", "USD"),
+                        field(language.text("월급", "Monthly pay"), text: $monthlyText, unit: currencyUnit,
                               placeholder: String(Int(MapHomeSalaryPolicy.inputMonthly(settings).rounded()))) {
                             annualPay = number(monthlyText) * 12
                             monthlyPay = 0
@@ -178,11 +189,12 @@ struct MapHomeSalarySettingsSheet: View {
                     Text(language.text("연봉·시급 모두 여기서 고른 기준으로 카운터와 누적 금액을 보여 줘요.", "Counter and totals use this basis for annual and hourly pay."))
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium)).foregroundStyle(Color.tpSecondary)
                 }
+                }
 
                 if !showsOnlyPayInput {
                 allowanceCard
 
-                if !isHourly {
+                if !isHourly, !region.isOverseas {
                 // 2-1. 지난달 실제 받은 월급(수당 포함) → 수당 모델
                 card {
                     Text(language.text("받은 월급 기록(실수령 세후, 수당 포함)", "Pay received (net, incl. overtime)"))
@@ -202,7 +214,7 @@ struct MapHomeSalarySettingsSheet: View {
                             .multilineTextAlignment(.trailing)
                             .textFieldStyle(.roundedBorder)
                             .frame(width: 130)
-                            Text(language.text("원", "USD")).font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13))))
+                            Text(currencyUnit).font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13))))
                         }
                     }
                     Text(model.sampleCount == 0
@@ -222,7 +234,7 @@ struct MapHomeSalarySettingsSheet: View {
                 // 3. 이번 달 누적 금액(고칠 수 있음)
                 card {
                     let computed = MapHomeSalaryPolicy.earnings(workSeconds: monthWorkSeconds, hourlyRate: rate ?? 0)
-                    field(language.text("이번 달 누적(\(basis))", "This month (\(basis))"), text: $accumText, unit: language.text("원", "USD"),
+                    field(language.text("이번 달 누적(\(basis))", "This month (\(basis))"), text: $accumText, unit: currencyUnit,
                           placeholder: String(Int(computed.rounded()))) {
                         monthAccum = number(accumText)
                         monthAccumMonth = MapHomeSalaryPolicy.monthKey(.now)
@@ -257,7 +269,7 @@ struct MapHomeSalarySettingsSheet: View {
                     card {
                         row(language.text("\(MapHomeSalaryPolicy.intervalTitle(tickSeconds, language: language))마다", "Every \(MapHomeSalaryPolicy.intervalTitle(tickSeconds, language: language))"),
                             won(rate / 3_600 * Double(tickSeconds)), bold: true)
-                        row(language.text("초급", "Per second"), String(format: "%.1f원", rate / 3_600))
+                        row(language.text("초급", "Per second"), region.isOverseas ? won(rate / 3_600) : String(format: "%.1f원", rate / 3_600))
                         row(language.text("분급", "Per minute"), won(rate / 60))
                         row(language.text("시급", "Per hour"), won(rate))
                         row(language.text("일급(8시간)", "Per day (8 h)"), won(rate * 8))
@@ -290,7 +302,74 @@ struct MapHomeSalarySettingsSheet: View {
             hourlyText = hourlyPay > 0 ? String(Int(hourlyPay.rounded())) : ""
             accumText = settings.monthAccumOverride > 0 ? String(Int(settings.monthAccumOverride.rounded())) : ""
             allowanceText = allowanceAmount > 0 ? String(Int(allowanceAmount.rounded())) : ""
+            directKind = isHourly ? .hourly : .annual
+            directText = amountText(isHourly ? hourlyPay : annualPay)
         }
+    }
+
+    /// 해외: 시급·월급·연봉 중 하나의 금액과 세전/세후 이름표만 받는다. 세금은 계산하지 않는다.
+    private var directPayCard: some View {
+        card {
+            Picker("", selection: $directKind) {
+                Text(language.text("시급", "Hourly")).tag(DirectKind.hourly)
+                Text(language.text("월급", "Monthly")).tag(DirectKind.monthly)
+                Text(language.text("연봉", "Annual")).tag(DirectKind.annual)
+            }
+            .pickerStyle(.segmented)
+            .onChange(of: directKind) { _, kind in
+                switch kind {
+                case .hourly: directText = amountText(hourlyPay)
+                case .monthly: directText = amountText(annualPay / 12)
+                case .annual: directText = amountText(annualPay)
+                }
+                saveDirectAmount()
+            }
+            HStack {
+                Text(language.text("금액", "Amount"))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
+                Spacer()
+                TextField("0", text: $directText)
+                    .keyboardType(region.usesDecimalCurrency ? .decimalPad : .numberPad)
+                    .multilineTextAlignment(.trailing)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 130)
+                    .onChange(of: directText) { _, _ in saveDirectAmount() }
+                Text(currencyUnit).font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13))))
+            }
+            Picker("", selection: Binding(
+                get: { isHourly ? hourlyIsNet : isNetInput },
+                set: { isNet in
+                    hourlyIsNet = isNet
+                    isNetInput = isNet
+                }
+            )) {
+                Text(language.text("세전", "Gross")).tag(false)
+                Text(language.text("세후", "Net")).tag(true)
+            }
+            .pickerStyle(.segmented)
+            Text(language.text(
+                "입력한 금액을 그대로 써요. 세금은 계산하지 않아요.",
+                "The amount is used as entered. Taxes are not calculated."
+            ))
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium)).foregroundStyle(Color.tpSecondary)
+        }
+    }
+
+    private func saveDirectAmount() {
+        let amount = region.amount(from: directText)
+        isHourly = directKind == .hourly
+        monthlyPay = 0
+        switch directKind {
+        case .hourly: hourlyPay = amount
+        case .monthly: annualPay = amount * 12
+        case .annual: annualPay = amount
+        }
+    }
+
+    private func amountText(_ value: Double) -> String {
+        guard value > 0 else { return "" }
+        let isWhole = value == value.rounded()
+        return value.formatted(.number.locale(region.locale).grouping(.never).precision(.fractionLength(isWhole ? 0 : 2)))
     }
 
     /// 입력값은 적는 대로 저장되므로, 저장 버튼은 입력을 마치고 창을 닫는다.
@@ -329,7 +408,7 @@ struct MapHomeSalarySettingsSheet: View {
                 Text(language.text("하루", "Day")).tag(MapHomeAllowancePolicy.Period.day.rawValue)
             }
             .pickerStyle(.segmented)
-            field(language.text("용돈", "Allowance"), text: $allowanceText, unit: language.text("원", "USD"), placeholder: "0") {
+            field(language.text("용돈", "Allowance"), text: $allowanceText, unit: currencyUnit, placeholder: "0") {
                 allowanceAmount = number(allowanceText)
             }
             if allowance.isConfigured {
@@ -366,9 +445,9 @@ struct MapHomeSalarySettingsSheet: View {
             Spacer()
             TextField(grouped(placeholder), text: Binding(
                 get: { grouped(text.wrappedValue) },
-                set: { text.wrappedValue = $0.filter(\.isNumber) }
+                set: { text.wrappedValue = region.usesDecimalCurrency ? $0.filter { $0.isNumber || String($0) == region.locale.decimalSeparator } : $0.filter(\.isNumber) }
             ))
-                .keyboardType(.numberPad)
+                .keyboardType(region.usesDecimalCurrency ? .decimalPad : .numberPad)
                 .multilineTextAlignment(.trailing)
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 130)
@@ -377,9 +456,11 @@ struct MapHomeSalarySettingsSheet: View {
         }
     }
 
-    private func number(_ text: String) -> Double { Double(text.filter(\.isNumber)) ?? 0 }
+    private func number(_ text: String) -> Double { region.amount(from: text) }
 
-    private func grouped(_ text: String) -> String { MapHomeSalaryPolicy.grouped(text) }
+    private func grouped(_ text: String) -> String {
+        region.usesDecimalCurrency ? text : MapHomeSalaryPolicy.grouped(text)
+    }
 
     private func savePayHistory() {
         var history = settings.payHistory

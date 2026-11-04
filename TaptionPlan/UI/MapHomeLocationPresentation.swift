@@ -258,7 +258,7 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
     }
 
     var title: String {
-        func t(_ korean: String, _ english: String) -> String {
+        func t(_ korean: UIPhrase, _ english: UIPhrase) -> String {
             AppLanguagePreference.text(korean: korean, english: english)
         }
         switch self {

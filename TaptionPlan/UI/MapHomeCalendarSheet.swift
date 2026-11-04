@@ -487,9 +487,7 @@ struct MapHomeCalendarSheet: View {
     }
 
     private var weekdayHeader: some View {
-        let weekdays = language == .korean
-            ? ["일", "월", "화", "수", "목", "금", "토"]
-            : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+        let weekdays = language.weekdayHeaderSymbols
         return LazyVGrid(columns: gridColumns, spacing: 0) {
             ForEach(Array(weekdays.enumerated()), id: \.offset) { index, weekday in
                 Text(weekday)
@@ -631,9 +629,7 @@ struct MapHomeCalendarSheet: View {
     private func accessibilityLabel(
         day: Int, date: Date, holiday: String?, status: MapHomeCalendarLogStatus?
     ) -> String {
-        var title = language == .korean
-            ? "\(monthTitle) \(day)일"
-            : "\(monthTitle) \(day)"
+        var title = language.text("\(monthTitle) \(day)일", "\(monthTitle) \(day)")
         if let holiday { title += ", \(holiday)" }
         switch status {
         case .incomplete: title += language.text(", 미확인 활동 있음", ", unconfirmed activity")

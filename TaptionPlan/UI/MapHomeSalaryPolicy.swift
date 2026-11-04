@@ -82,7 +82,7 @@ enum MapHomeKoreanNetPay {
     }
 }
 
-/// 연봉 카운터: 업무 시간에 시급을 곱해 번 돈을 보여 준다(금액은 원).
+/// 연봉 카운터: 업무 시간에 시급을 곱해 번 돈을 보여 준다(통화는 `AppRegion`).
 enum MapHomeSalaryPolicy {
     static let annualKey = "mapHomeSalaryAnnual"
     static let monthlyPayKey = "mapHomeSalaryMonthlyPay"
@@ -145,8 +145,22 @@ enum MapHomeSalaryPolicy {
         /// 시급을 세후로 입력했는지(세전이면 false).
         var hourlyIsNet = false
 
+        /// 해외: 세금·주휴수당·법정 수당을 계산하지 않고 입력한 금액을 그대로 쓴다.
+        var entersAmountDirectly = false
+
         var isConfigured: Bool { isHourly ? hourly > 0 : annualPay > 0 || monthlyPay > 0 }
         var showsNetAmounts: Bool { showsNet }
+
+        /// 통화가 원이 아니면 저장값을 덮어쓰지 않고 계산만 바꾼다. 한국으로 돌아오면 이전 설정이 살아난다.
+        func applyingRegion(_ region: AppRegion = .current) -> Settings {
+            guard region.isOverseas else { return self }
+            var settings = self
+            settings.entersAmountDirectly = true
+            settings.showsNet = isHourly ? hourlyIsNet : isNetInput
+            settings.hourlyTax = .none
+            settings.includesWeeklyHoliday = false
+            return settings
+        }
     }
 
     static func monthKey(_ date: Date, calendar: Calendar = MapHomeGrowthPolicy.localCalendar) -> String {
@@ -168,7 +182,7 @@ enum MapHomeSalaryPolicy {
             hourlyTax: HourlyTax(rawValue: defaults.string(forKey: hourlyTaxKey) ?? "") ?? .threePointThree,
             includesWeeklyHoliday: defaults.bool(forKey: weeklyHolidayKey),
             hourlyIsNet: defaults.bool(forKey: hourlyIsNetKey)
-        )
+        ).applyingRegion()
     }
 
     static func decodePayHistory(_ raw: String) -> [String: Double] {
@@ -183,7 +197,7 @@ enum MapHomeSalaryPolicy {
     static func paySamples(_ settings: Settings, pastMonthWorkSeconds: [String: TimeInterval]) -> [PaySample] {
         settings.payHistory.compactMap { key, received in
             pastMonthWorkSeconds[key].map {
-                PaySample(hours: $0 / 3_600, pay: settings.isNetInput ? received : grossFromNetMonthly(received))
+                PaySample(hours: $0 / 3_600, pay: settings.isNetInput || settings.entersAmountDirectly ? received : grossFromNetMonthly(received))
             }
         }
     }
@@ -237,6 +251,7 @@ enum MapHomeSalaryPolicy {
 
     /// 입력 기준 금액을 보여 줄 기준으로 바꾼다(세전 입력 + 세후 보기면 공제).
     static func displayed(_ amount: Double, _ settings: Settings) -> Double {
+        if settings.entersAmountDirectly { return amount }
         if settings.isNetInput { return settings.showsNet ? amount : grossFromNetMonthly(amount) }
         return settings.showsNet ? MapHomeKoreanNetPay.monthly(gross: amount).net : amount
     }
@@ -254,11 +269,11 @@ enum MapHomeSalaryPolicy {
 
     /// 입력 기준과 무관하게 세전 월급·세후 월급.
     static func monthlyGross(_ settings: Settings) -> Double {
-        settings.isNetInput ? grossFromNetMonthly(inputMonthly(settings)) : inputMonthly(settings)
+        settings.isNetInput && !settings.entersAmountDirectly ? grossFromNetMonthly(inputMonthly(settings)) : inputMonthly(settings)
     }
 
     static func monthlyNet(_ settings: Settings) -> Double {
-        settings.isNetInput ? inputMonthly(settings) : MapHomeKoreanNetPay.monthly(gross: inputMonthly(settings)).net
+        settings.isNetInput || settings.entersAmountDirectly ? inputMonthly(settings) : MapHomeKoreanNetPay.monthly(gross: inputMonthly(settings)).net
     }
 
     /// 입력 기준(세전 또는 세후)의 월급.
@@ -275,7 +290,7 @@ enum MapHomeSalaryPolicy {
     /// 연봉·시급 연동용: 시급 모드여도 연봉·월급 입력의 세전 월급(시급 모드면 저장된 연봉 기준).
     static func monthlyGrossIgnoringHourly(_ settings: Settings) -> Double {
         let base = settings.monthlyPay > 0 ? settings.monthlyPay : settings.annualPay / 12
-        return settings.isNetInput ? grossFromNetMonthly(base) : base
+        return settings.isNetInput && !settings.entersAmountDirectly ? grossFromNetMonthly(base) : base
     }
 
     /// 시급을 쓰면 시급의 연봉 환산(월 209시간 × 12), 연봉을 쓰면 연봉의 세전 시급 환산(÷ 209). 한쪽만 적어도 다른 쪽이 나온다.
@@ -331,6 +346,7 @@ enum MapHomeSalaryPolicy {
     static func expectedMonthPay(_ settings: Settings, projectedMonthWorkSeconds: TimeInterval, samples: [PaySample]) -> Double? {
         let base = inputMonthly(settings)
         guard base > 0 else { return nil }
+        if settings.entersAmountDirectly { return base }
         let model = fitPayModel(baseMonthly: base, samples: samples)
         let hours = max(projectedMonthWorkSeconds, 0) / 3_600
         return displayed(expectedMonthlyPay(model, workHours: hours), settings)
@@ -497,9 +513,8 @@ enum MapHomeSalaryPolicy {
         var pastMonthWorkSeconds: [String: TimeInterval] = [:]
     }
 
-    /// 영어 설정이면 USD, 한국어 설정이면 원으로 표시한다.
+    /// 앱 언어를 따르는 통화로 표시한다. 숫자는 환산하지 않는다.
     static func wonText(_ value: Double, language: MapHomeLanguage = .current) -> String {
-        let number = Int(value.rounded()).formatted(.number.locale(Locale(identifier: "en_US")).grouping(.automatic))
-        return language == .english ? "\(number) USD" : "\(number)원"
+        AppRegion.current.moneyText(value)
     }
 }

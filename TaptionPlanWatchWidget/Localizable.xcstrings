@@ -10,7 +10,6 @@
           }
         }
       }
-
     },
     "%@ · %@" : {
       "localizations" : {
@@ -37,7 +36,6 @@
           }
         }
       }
-
     },
     "Taption 측정" : {
       "extractionState" : "stale",

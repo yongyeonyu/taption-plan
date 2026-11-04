@@ -70,7 +70,7 @@ struct MapHomeDateStrip: View {
     }
 
     private func monthAbbreviation(for date: Date) -> String {
-        date.formatted(Date.FormatStyle().month(.abbreviated).locale(Locale(identifier: "en_US")))
+        date.formatted(Date.FormatStyle().month(.abbreviated).locale(language.locale))
     }
 
     private func dayArea(width: CGFloat) -> some View {
@@ -117,7 +117,7 @@ struct MapHomeDateStrip: View {
     private func dayCell(step: Int, isCentered: Bool) -> some View {
         let day = date(forStep: step)
         let weekday = day.formatted(
-            Date.FormatStyle().weekday(.narrow).locale(Locale(identifier: language.text("ko_KR", "en_US")))
+            Date.FormatStyle().weekday(.narrow).locale(language.locale)
         )
         return Button {
             onSelect(day)

@@ -170,9 +170,7 @@ struct WatchContentView: View {
             if workout.isActive {
                 statusRow(
                     language.text("원시 표본", "Raw samples"),
-                    value: language == .korean
-                        ? "\(workout.sensorSampleCount)개"
-                        : "\(workout.sensorSampleCount)"
+                    value: language.text("\(workout.sensorSampleCount)개", "\(workout.sensorSampleCount)")
                 )
             }
             if let alert = alerts.first {
@@ -352,13 +350,9 @@ struct WatchContentView: View {
         let seconds = Int(max(0, date.timeIntervalSince(measuredAt)))
         if seconds < 60 { return language.text("방금", "Just now") }
         if seconds < 3_600 {
-            return language == .korean
-                ? "\(seconds / 60)분 전"
-                : "\(seconds / 60) min ago"
+            return language.text("\(seconds / 60)분 전", "\(seconds / 60) min ago")
         }
-        return language == .korean
-            ? "\(seconds / 3_600)시간 전"
-            : "\(seconds / 3_600) hr ago"
+        return language.text("\(seconds / 3_600)시간 전", "\(seconds / 3_600) hr ago")
     }
 
     private func statusRow(_ title: String, value: String) -> some View {
@@ -376,14 +370,9 @@ struct WatchContentView: View {
     private func durationText(_ minutes: Int) -> String {
         let hours = max(0, minutes) / 60
         let remainder = max(0, minutes) % 60
-        if language == .english {
-            if hours == 0 { return "\(remainder) min" }
-            if remainder == 0 { return "\(hours) hr" }
-            return "\(hours) hr \(remainder) min"
-        }
-        if hours == 0 { return "\(remainder)분" }
-        if remainder == 0 { return "\(hours)시간" }
-        return "\(hours)시간 \(remainder)분"
+        if hours == 0 { return language.text("\(remainder)분", "\(remainder) min") }
+        if remainder == 0 { return language.text("\(hours)시간", "\(hours) hr") }
+        return language.text("\(hours)시간 \(remainder)분", "\(hours) hr \(remainder) min")
     }
 
     private func symbol(for kind: WatchBehaviorKind) -> String {

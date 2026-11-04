@@ -20,7 +20,7 @@ struct AirQualityDetailSheet: View {
                                 weatherSymbolColor(weather, component: .secondary)
                             )
                         VStack(alignment: .leading, spacing: 3) {
-                            Text("\(weather.condition) · \(Int(weather.temperatureCelsius.rounded()))°")
+                            Text("\(weather.condition) · \(AppRegion.current.temperature(celsius: weather.temperatureCelsius))°")
                                 .font(.taption(size: 18, weight: .bold))
                             Text("통합 미세먼지 \(airQuality.overallGrade.displayName)")
                                 .font(.taption(size: 14, weight: .semibold))

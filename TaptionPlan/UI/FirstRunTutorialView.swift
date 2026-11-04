@@ -740,7 +740,7 @@ private struct FirstRunCountersPage: View {
                         .foregroundStyle(Color.tpSecondary)
                     MapHomeCounterTable(
                         salary: showsSalary && isSalaryConfigured
-                            ? MapHomeCounterSalary(text: language.text("12,340원", "12,340 USD"), isWorking: true)
+                            ? MapHomeCounterSalary(text: AppRegion.current.moneyText(12_340), isWorking: true)
                             : nil,
                         badges: sampleBadges,
                         language: language
@@ -794,7 +794,7 @@ private struct FirstRunCountersPage: View {
     private func sampleText(_ kind: MapHomeCounterKind) -> String {
         switch kind {
         case .steps: "8,432"
-        case .distance: "4.2km"
+        case .distance: AppRegion.current.distanceText(meters: 4_200, compact: true)
         case .work: language.text("3시간 12분", "3h 12m")
         case .study: language.text("42분", "42m")
         case .hobby: language.text("1시간 5분", "1h 5m")

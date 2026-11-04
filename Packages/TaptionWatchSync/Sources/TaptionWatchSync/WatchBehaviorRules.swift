@@ -65,27 +65,27 @@ public enum WatchBehaviorKind: String, Codable, CaseIterable, Sendable {
             return title
         case .english:
             return switch self {
-            case .stationary: "Resting"
-            case .standing: "Standing"
-            case .sitting: "Sitting"
-            case .lying: "Lying down"
-            case .walking: "Walking"
-            case .running: "Running"
-            case .cycling: "Cycling"
-            case .stairsUp: "Going upstairs"
-            case .stairsDown: "Going downstairs"
-            case .elevator: "Elevator"
-            case .automotive: "In a car"
-            case .publicTransit: "Public transit"
-            case .subway: "Subway"
-            case .exercise: "Exercise"
-            case .brushingTeeth: "Brushing teeth"
-            case .eating: "Eating"
-            case .typing: "Typing"
-            case .housework: "Housework"
-            case .showering: "Showering"
-            case .sleep: "Sleeping"
-            case .unknown: "Activity"
+            case .stationary: UITextPack.translate(english: "Resting")
+            case .standing: UITextPack.translate(english: "Standing")
+            case .sitting: UITextPack.translate(english: "Sitting")
+            case .lying: UITextPack.translate(english: "Lying down")
+            case .walking: UITextPack.translate(english: "Walking")
+            case .running: UITextPack.translate(english: "Running")
+            case .cycling: UITextPack.translate(english: "Cycling")
+            case .stairsUp: UITextPack.translate(english: "Going upstairs")
+            case .stairsDown: UITextPack.translate(english: "Going downstairs")
+            case .elevator: UITextPack.translate(english: "Elevator")
+            case .automotive: UITextPack.translate(english: "In a car")
+            case .publicTransit: UITextPack.translate(english: "Public transit")
+            case .subway: UITextPack.translate(english: "Subway")
+            case .exercise: UITextPack.translate(english: "Exercise")
+            case .brushingTeeth: UITextPack.translate(english: "Brushing teeth")
+            case .eating: UITextPack.translate(english: "Eating")
+            case .typing: UITextPack.translate(english: "Typing")
+            case .housework: UITextPack.translate(english: "Housework")
+            case .showering: UITextPack.translate(english: "Showering")
+            case .sleep: UITextPack.translate(english: "Sleeping")
+            case .unknown: UITextPack.translate(english: "Activity")
             }
         }
     }

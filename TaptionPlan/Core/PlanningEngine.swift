@@ -2050,7 +2050,7 @@ struct ReviewEngine: Sendable {
                     id: "weather-\($0.id.uuidString)",
                     date: $0.observedAt,
                     symbolName: $0.symbolName,
-                    text: "\($0.condition) · \(Int($0.temperatureCelsius.rounded()))°\(airQualityText)",
+                    text: "\($0.condition) · \(AppRegion.current.temperature(celsius: $0.temperatureCelsius))°\(airQualityText)",
                     linkedPlanID: nil
                 )
             }
@@ -2879,7 +2879,7 @@ enum WeatherTimelineEngine {
         Signature(
             condition: context.condition,
             symbolName: context.symbolName,
-            temperature: Int(context.temperatureCelsius.rounded()),
+            temperature: AppRegion.current.temperature(celsius: context.temperatureCelsius),
             // Merge by what the timeline shows.  Raw PM values, provider and
             // fallback state belong to the detail view and must not split a
             // visually identical weather run.
@@ -2913,7 +2913,7 @@ enum WeatherTimelineEngine {
     ) -> RawDisplaySignature {
         RawDisplaySignature(
             symbolName: context.symbolName,
-            temperature: Int(context.temperatureCelsius.rounded()),
+            temperature: AppRegion.current.temperature(celsius: context.temperatureCelsius),
             airGrade: context.airQuality?.overallGrade,
             location: context.isForecast == true && context.placeID == nil
                 ? nil

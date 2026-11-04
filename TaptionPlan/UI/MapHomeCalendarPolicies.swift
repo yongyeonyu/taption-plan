@@ -402,7 +402,7 @@ enum MapHomeCalendarTimeTotalsPolicy {
     }
 
     static func distanceText(meters: Double) -> String {
-        meters < 1_000 ? "\(Int(meters.rounded())) m" : String(format: "%.1f km", meters / 1_000)
+        AppRegion.current.distanceText(meters: meters)
     }
 
     /// 달력 칸의 짧은 표기: 1시간 이상은 `7:20`, 한 시간 미만은 `45m`. 0은 빈 문자열.

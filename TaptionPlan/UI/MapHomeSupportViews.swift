@@ -221,9 +221,7 @@ enum MapHomeDayTravelSummary {
     }
 
     static func distanceText(_ meters: Double) -> String {
-        meters < 1_000
-            ? "\(Int(meters.rounded())) m"
-            : String(format: "%.1f km", meters / 1_000)
+        AppRegion.current.distanceText(meters: meters)
     }
 }
 

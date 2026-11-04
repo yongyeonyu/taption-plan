@@ -730,7 +730,8 @@ enum TransitPlaceName {
         if language == .english {
             if !hasHangul { return name }
             let source = name.hasSuffix("역") ? String(name.dropLast()) : name
-            return kind == .subwayStation ? romanized(source) + " Station" : romanized(source)
+            let romanizedName = romanized(source)
+            return kind == .subwayStation ? language.text("\(romanizedName)역", "\(romanizedName) Station") : romanizedName
         }
         return hasHangul ? name : station ?? name
     }

@@ -88,9 +88,9 @@ public enum TaptionWatchWorkoutKind: String, Codable, CaseIterable, Sendable {
         case (.walking, .korean): "걷기"
         case (.running, .korean): "달리기"
         case (.cycling, .korean): "자전거"
-        case (.walking, .english): "Walking"
-        case (.running, .english): "Running"
-        case (.cycling, .english): "Cycling"
+        case (.walking, .english): UITextPack.translate(english: "Walking")
+        case (.running, .english): UITextPack.translate(english: "Running")
+        case (.cycling, .english): UITextPack.translate(english: "Cycling")
         }
     }
 
@@ -499,10 +499,10 @@ public enum TaptionWatchAccelerationProfile: Int, Codable, CaseIterable, Hashabl
         case (.batterySaver, .korean): "배터리 최소화"
         case (.balanced, .korean): "균형"
         case (.accuracy, .korean): "정확도 최적화"
-        case (.off, .english): "Off"
-        case (.batterySaver, .english): "Battery saver"
-        case (.balanced, .english): "Balanced"
-        case (.accuracy, .english): "Accuracy optimized"
+        case (.off, .english): UITextPack.translate(english: "Off")
+        case (.batterySaver, .english): UITextPack.translate(english: "Battery saver")
+        case (.balanced, .english): UITextPack.translate(english: "Balanced")
+        case (.accuracy, .english): UITextPack.translate(english: "Accuracy optimized")
         }
     }
 
@@ -511,7 +511,7 @@ public enum TaptionWatchAccelerationProfile: Int, Codable, CaseIterable, Hashabl
             AppLanguagePreference.current.resolvedLanguage
     ) -> String {
         guard interval > 0 else {
-            return language == .korean ? "자동 수집 안 함" : "Automatic collection off"
+            return language.text("자동 수집 안 함", "Automatic collection off")
         }
         return language == .korean
             ? "앱이 꺼져 있어도 배경에서 계속 기록"
@@ -562,10 +562,10 @@ public enum TaptionWatchDataSyncProfile: Int, Codable, CaseIterable, Hashable, S
         case (.batterySaver, .korean): "배터리 최소화"
         case (.balanced, .korean): "균형"
         case (.accuracy, .korean): "최신 데이터 우선"
-        case (.off, .english): "Off"
-        case (.batterySaver, .english): "Battery saver"
-        case (.balanced, .english): "Balanced"
-        case (.accuracy, .english): "Latest data first"
+        case (.off, .english): UITextPack.translate(english: "Off")
+        case (.batterySaver, .english): UITextPack.translate(english: "Battery saver")
+        case (.balanced, .english): UITextPack.translate(english: "Balanced")
+        case (.accuracy, .english): UITextPack.translate(english: "Latest data first")
         }
     }
 
@@ -574,7 +574,7 @@ public enum TaptionWatchDataSyncProfile: Int, Codable, CaseIterable, Hashable, S
             AppLanguagePreference.current.resolvedLanguage
     ) -> String {
         guard let intervalMinutes else {
-            return language == .korean ? "자동 가져오기 안 함" : "Automatic import off"
+            return language.text("자동 가져오기 안 함", "Automatic import off")
         }
         return language == .korean
             ? "\(intervalMinutes)분마다 건강·활동 데이터 가져오기"

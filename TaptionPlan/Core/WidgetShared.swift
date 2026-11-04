@@ -436,6 +436,8 @@ struct SensorCollectionActivityAttributes: ActivityAttributes {
         var salaryMeasuredAt: Date? = nil
         var salaryIsWorking: Bool? = nil
         var salaryTickSeconds: Int? = nil
+        /// 금액 통화(ISO). 없으면 원이다.
+        var salaryCurrencyCode: String? = nil
 
         var phase: SensorCollectionActivityPhase {
             guard let phaseRawValue,
@@ -474,7 +476,8 @@ struct SensorCollectionActivityAttributes: ActivityAttributes {
             salaryHourlyRate: Double? = nil,
             salaryMeasuredAt: Date? = nil,
             salaryIsWorking: Bool? = nil,
-            salaryTickSeconds: Int? = nil
+            salaryTickSeconds: Int? = nil,
+            salaryCurrencyCode: String? = nil
         ) {
             self.startedAt = startedAt
             self.lastSavedAt = lastSavedAt
@@ -503,6 +506,7 @@ struct SensorCollectionActivityAttributes: ActivityAttributes {
             self.salaryMeasuredAt = salaryMeasuredAt
             self.salaryIsWorking = salaryIsWorking
             self.salaryTickSeconds = salaryTickSeconds
+            self.salaryCurrencyCode = salaryCurrencyCode
         }
     }
 
@@ -517,13 +521,18 @@ enum SensorCollectionSalaryText {
         measuredAt: Date,
         isWorking: Bool,
         tickSeconds: Int,
-        now: Date
+        now: Date,
+        currencyCode: String? = nil
     ) -> String {
         let tick = Double(max(1, tickSeconds))
         let elapsed = isWorking ? max(0, now.timeIntervalSince(measuredAt)) : 0
         let seconds = ((max(0, baseSeconds) + elapsed) / tick).rounded(.down) * tick
         let won = seconds / 3_600 * hourlyRate
-        return "\(Int(won.rounded()).formatted(.number.locale(Locale(identifier: "en_US")).grouping(.automatic)))원"
+        let region = AppRegion.current
+        guard currencyCode == nil || currencyCode == region.currencyCode else {
+            return won.formatted(.currency(code: currencyCode ?? "KRW"))
+        }
+        return region.moneyText(won)
     }
 }
 

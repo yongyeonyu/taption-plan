@@ -289,7 +289,7 @@ struct MapHomeDaySummarySheet: View {
         let today = MapHomeSalaryPolicy.earnings(workSeconds: salary.todayWorkSeconds, hourlyRate: salary.hourlyRate)
         return VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Label(language.text("오늘 번 돈", "Earned today"), systemImage: "wonsign.circle.fill")
+                Label(language.text("오늘 번 돈", "Earned today"), systemImage: MapHomeCounterSalary.symbol(language: language))
                     .foregroundStyle(Color.tpSecondary)
                 Spacer()
                 Text(MapHomeSalaryPolicy.wonText(today)).font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold))
@@ -317,7 +317,9 @@ struct MapHomeDaySummarySheet: View {
                 }
             }
             .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
-            Text(salary.showsNet ? language.text("세후 추정", "After-tax estimate") : language.text("세전 추정", "Pre-tax estimate"))
+            Text(AppRegion.current.isOverseas
+                 ? (salary.showsNet ? language.text("세후", "Net") : language.text("세전", "Gross"))
+                 : (salary.showsNet ? language.text("세후 추정", "After-tax estimate") : language.text("세전 추정", "Pre-tax estimate")))
                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .medium))
                 .foregroundStyle(Color.tpSecondary)
         }
@@ -574,8 +576,8 @@ struct MapHomeDaySummarySheet: View {
     private var dateText: String {
         MapHomeDateText.string(
             from: date,
-            format: language == .english ? "EEE, MMM d" : "M월 d일 EEEE",
-            locale: Locale(identifier: language == .english ? "en_US" : "ko_KR")
+            format: language.dateTitleFormat,
+            locale: language.locale
         )
     }
 }

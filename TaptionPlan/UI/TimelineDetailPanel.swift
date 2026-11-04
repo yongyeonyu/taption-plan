@@ -1150,7 +1150,7 @@ struct TimelineDetailPanel: View {
                         )
                     VStack(alignment: .leading, spacing: 1) {
                         Text(
-                            "\(weather.condition) · \(Int(weather.temperatureCelsius.rounded()))°"
+                            "\(weather.condition) · \(AppRegion.current.temperature(celsius: weather.temperatureCelsius))°"
                         )
                         .font(.taption(size: 9, weight: .semibold))
                         Text(weather.observedAt.formatted(
@@ -2082,10 +2082,7 @@ struct TimelineDetailPanel: View {
     }
 
     private func distanceLabel(_ meters: Double) -> String {
-        if meters >= 1_000 {
-            return String(format: "%.1fkm", meters / 1_000)
-        }
-        return String(Int(meters.rounded())) + "m"
+        AppRegion.current.distanceText(meters: meters, compact: true)
     }
 
     private func actionMemoPreview(planID: UUID) -> some View {

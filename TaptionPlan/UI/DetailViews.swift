@@ -1533,10 +1533,7 @@ struct InferenceDetailView: View {
     }
 
     private func formattedDistance(_ meters: Double) -> String {
-        if meters >= 1_000 {
-            return String(format: "%.1fkm", meters / 1_000)
-        }
-        return "\(Int(meters.rounded()))m"
+        AppRegion.current.distanceText(meters: meters, compact: true)
     }
 
     private var daySpan: TimeSpan {
@@ -2596,7 +2593,7 @@ struct WidgetPreviewView: View {
     private var widgetTrailingLabel: String {
         let time = Date.now.formatted(date: .omitted, time: .shortened)
         guard let currentWeather else { return time }
-        return "\(currentWeather.temperatureCelsius.rounded().formatted())° · \(time)"
+        return "\(AppRegion.current.temperature(celsius: currentWeather.temperatureCelsius))° · \(time)"
     }
 
     private var weatherSymbol: String {

@@ -120,9 +120,8 @@ final class MapHomeRangeVideoOverlay: MapHomePlaybackVideoOverlay {
 
     func drawAboveMarker(atSecond second: Double, size: CGSize) {
         guard let position = plan.position(atSecond: min(second, plan.bodySeconds)) else { return }
-        let kilometers = Int(position.meters / 1_000)
         let title = dateText(position.time)
-        let detail = "\(kilometers.formatted()) km"
+        let detail = AppRegion.current.longDistanceText(meters: position.meters)
         let titleAttributes: [NSAttributedString.Key: Any] = [
             .font: UIFont.systemFont(ofSize: 15, weight: .bold), .foregroundColor: UIColor.white,
         ]

@@ -985,7 +985,7 @@ struct MapHomeView: View {
                     initialIndex: targets.firstIndex(of: focus) ?? 0,
                     dateText: model.selectedDate.formatted(
                         Date.FormatStyle().month(.wide).day().weekday(.wide)
-                            .locale(Locale(identifier: language.text("ko_KR", "en_US")))
+                            .locale(language.locale)
                     )
                 )
             }
@@ -3656,8 +3656,8 @@ struct MapHomeView: View {
                             .accessibilityAddTraits(.isButton)
                             .accessibilityLabel(
                                 language.text(
-                                    place.name + " 사용자 위치 메뉴",
-                                    place.name + " user location menu"
+                                    "\(place.name) 사용자 위치 메뉴",
+                                    "\(place.name) user location menu"
                                 )
                             )
                         } else {
@@ -3729,8 +3729,8 @@ struct MapHomeView: View {
                         .allowsHitTesting(false)
                         .accessibilityLabel(
                             language.text(
-                                place.name + " 사용자 위치 메뉴",
-                                place.name + " user location menu"
+                                "\(place.name) 사용자 위치 메뉴",
+                                "\(place.name) user location menu"
                             )
                         )
                     }
@@ -4568,8 +4568,8 @@ struct MapHomeView: View {
             distanceText: distance > 0 ? MapHomeDayTravelSummary.distanceText(distance) : nil,
             categories: categories,
             totalText: language.text(
-                "관측 \(MapHomeAlarmPolicy.hoursText(total))" + (isDayObservedToEnd ? "" : " · 나머지는 미확인"),
-                "Observed \(MapHomeAlarmPolicy.hoursText(total))" + (isDayObservedToEnd ? "" : " · rest unconfirmed")
+                isDayObservedToEnd ? "관측 \(MapHomeAlarmPolicy.hoursText(total))" : "관측 \(MapHomeAlarmPolicy.hoursText(total)) · 나머지는 미확인",
+                isDayObservedToEnd ? "Observed \(MapHomeAlarmPolicy.hoursText(total))" : "Observed \(MapHomeAlarmPolicy.hoursText(total)) · rest unconfirmed"
             ),
             accessoryID: homeGrowthHistory.season.equippedAccessory,
             memoText: dayMemoCounts.total > 0
@@ -4820,7 +4820,7 @@ struct MapHomeView: View {
     }
 
     private var dateBadge: some View {
-        let info = MapHomeDateBadgeInfo.resolve(date: model.selectedDate, localeIdentifier: language.text("ko_KR", "en_US"))
+        let info = MapHomeDateBadgeInfo.resolve(date: model.selectedDate, localeIdentifier: language.locale.identifier)
         let color: Color = info.isHoliday || info.weekday == 1 ? .tpSundayText : (info.weekday == 7 ? .tpSaturdayText : .tpInk)
         let face = VStack(spacing: 0) {
             Text(info.weekdayText)
@@ -6767,7 +6767,9 @@ struct MapHomeView: View {
                 menuGroupDivider
                 languageMenuItem
                 menuGroupDivider
-                TaptionFontMenuRow(language: language)
+                if TaptionFont.isUserSelectable {
+                    TaptionFontMenuRow(language: language)
+                }
             }
             menuGroupLabel(language.text("연결", "Connections"))
             menuGroupCard {
@@ -7264,8 +7266,8 @@ struct MapHomeView: View {
                             .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
                         Text(
                             language.text(
-                                "등록된 사용자 위치 " + String(userLocationCount) + "개",
-                                String(userLocationCount) + " saved user locations"
+                                "등록된 사용자 위치 \(userLocationCount)개",
+                                "\(userLocationCount) saved user locations"
                             )
                         )
                             .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10.5)), weight: .medium))

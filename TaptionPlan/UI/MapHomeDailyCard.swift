@@ -100,8 +100,8 @@ struct MapHomeDailyCardContent {
             distanceText: distance > 0 ? MapHomeDayTravelSummary.distanceText(distance) : nil,
             categories: categories,
             totalText: language.text(
-                "관측 \(MapHomeAlarmPolicy.hoursText(total))" + (isObservedToEnd ? "" : " · 나머지는 미확인"),
-                "Observed \(MapHomeAlarmPolicy.hoursText(total))" + (isObservedToEnd ? "" : " · rest unconfirmed")
+                isObservedToEnd ? "관측 \(MapHomeAlarmPolicy.hoursText(total))" : "관측 \(MapHomeAlarmPolicy.hoursText(total)) · 나머지는 미확인",
+                isObservedToEnd ? "Observed \(MapHomeAlarmPolicy.hoursText(total))" : "Observed \(MapHomeAlarmPolicy.hoursText(total)) · rest unconfirmed"
             ),
             accessoryID: accessoryID,
             memoText: dayMemos.isEmpty

@@ -216,10 +216,10 @@ struct MapHomePlaybackVideoSheet: View {
         guard let rangePlan else {
             return language.text("이 기간에는 보여 줄 위치 기록이 없습니다.", "No location records to show in this period.")
         }
-        let kilometers = Int(rangePlan.totalMeters / 1_000).formatted()
+        let distance = AppRegion.current.longDistanceText(meters: rangePlan.totalMeters)
         return language.text(
-            "\(rangePlan.dayCount)일, 이동 \(kilometers)km를 \(lengthTitle(Int(rangePlan.durationSeconds))) 영상으로 그립니다.",
-            "\(rangePlan.dayCount) days, \(kilometers) km in a \(lengthTitle(Int(rangePlan.durationSeconds))) video."
+            "\(rangePlan.dayCount)일, 이동 \(distance)를 \(lengthTitle(Int(rangePlan.durationSeconds))) 영상으로 그립니다.",
+            "\(rangePlan.dayCount) days, \(distance) in a \(lengthTitle(Int(rangePlan.durationSeconds))) video."
         )
     }
 

@@ -663,11 +663,12 @@ enum ScreenTimeUsageRecordEngine {
         }
         let minutes = Int(interval / 60)
         guard minutes > 0 else { return nil }
-        if minutes < 60 { return "\(minutes) min" }
+        let language = preference.resolvedLanguage
+        if minutes < 60 { return language.text("\(minutes)분", "\(minutes) min") }
         let remainder = minutes % 60
         return remainder == 0
-            ? "\(minutes / 60) hr"
-            : "\(minutes / 60) hr \(remainder) min"
+            ? language.text("\(minutes / 60)시간", "\(minutes / 60) hr")
+            : language.text("\(minutes / 60)시간 \(remainder)분", "\(minutes / 60) hr \(remainder) min")
     }
 
     /// 화면에 쓸 "N시간 N분" 문구. 0분이면 nil.

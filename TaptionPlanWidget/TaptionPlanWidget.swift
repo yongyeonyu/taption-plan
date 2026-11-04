@@ -566,7 +566,7 @@ private struct TaptionScheduleWidgetView: View {
         guard let temperature = payload.temperatureCelsius else {
             return time
         }
-        return "\(temperature.rounded().formatted())° · \(time)"
+        return "\(AppRegion.current.temperature(celsius: temperature))° · \(time)"
     }
 
     private func deepLinkURL(

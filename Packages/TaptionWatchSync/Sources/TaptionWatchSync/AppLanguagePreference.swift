@@ -13,13 +13,19 @@ public enum AppLanguagePreference: String, Codable, CaseIterable, Identifiable, 
         public var locale: Locale {
             switch self {
             case .korean: Locale(identifier: "ko_KR")
-            case .english: Locale(identifier: "en_US")
+            case .english: UITextPack.activeLocale ?? Locale(identifier: "en_US")
             }
         }
 
         /// 이 언어에 맞는 쪽 문구. 화면이 이미 언어를 알고 있을 때 쓴다.
+        public func text(_ korean: UIPhrase, _ english: UIPhrase) -> String {
+            self == .korean ? korean.text : UITextPack.translate(korean: korean, english: english)
+        }
+
+        /// 값으로 받은 문구. 표에 없으면 영어 쪽을 그대로 쓴다.
+        @_disfavoredOverload
         public func text(_ korean: String, _ english: String) -> String {
-            self == .korean ? korean : english
+            text(UIPhrase(runtime: korean), UIPhrase(runtime: english))
         }
     }
 
@@ -107,27 +113,39 @@ public enum AppLanguagePreference: String, Codable, CaseIterable, Identifiable, 
     }
 
     /// 지금 설정(`current`)에 맞는 쪽 문구.
+    public static func text(_ korean: UIPhrase, _ english: UIPhrase) -> String {
+        current.resolvedLanguage.text(korean, english)
+    }
+
+    @_disfavoredOverload
     public static func text(_ korean: String, _ english: String) -> String {
         current.resolvedLanguage.text(korean, english)
     }
 
     public static func text(
+        korean: UIPhrase,
+        english: UIPhrase,
+        preference: Self = .current
+    ) -> String {
+        preference.resolvedLanguage.text(korean, english)
+    }
+
+    @_disfavoredOverload
+    public static func text(
         korean: String,
         english: String,
         preference: Self = .current
     ) -> String {
-        preference.resolvedLanguage == .korean ? korean : english
+        preference.resolvedLanguage.text(korean, english)
     }
 
     public static func text(
-        korean: String,
-        english: String,
+        korean: UIPhrase,
+        english: UIPhrase,
         rawPreference: String?,
         locale: Locale = .current
     ) -> String {
-        resolve(rawValue: rawPreference, locale: locale) == .korean
-            ? korean
-            : english
+        resolve(rawValue: rawPreference, locale: locale).text(korean, english)
     }
 
     public static func localized(

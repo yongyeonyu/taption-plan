@@ -498,7 +498,8 @@ private func salaryLine(_ state: SensorCollectionActivityAttributes.ContentState
                 measuredAt: measuredAt,
                 isWorking: state.salaryIsWorking ?? false,
                 tickSeconds: tick,
-                now: timeline.date
+                now: timeline.date,
+                currencyCode: state.salaryCurrencyCode
             ))
         }
     } else {

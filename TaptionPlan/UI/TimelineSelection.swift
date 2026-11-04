@@ -27,7 +27,7 @@ func weatherTimelineTitle(_ context: WeatherContext) -> String {
     let air = context.airQuality.map {
         " · 미세 " + $0.overallGrade.displayName
     } ?? ""
-    return Int(context.temperatureCelsius.rounded()).formatted()
+    return "\(AppRegion.current.temperature(celsius: context.temperatureCelsius))"
         + "° · " + context.condition + air
 }
 

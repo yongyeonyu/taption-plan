@@ -219,7 +219,8 @@ actor SensorCollectionLiveActivityController {
             salaryHourlyRate: salary.hourlyRate,
             salaryMeasuredAt: salary.measuredAt,
             salaryIsWorking: salary.isWorking,
-            salaryTickSeconds: salary.tickSeconds
+            salaryTickSeconds: salary.tickSeconds,
+            salaryCurrencyCode: AppRegion.current.currencyCode
         )
         let staleDate = SensorCollectionActivityPolicy.expirationDate(
             startedAt: activityStartedAt

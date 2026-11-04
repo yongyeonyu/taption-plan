@@ -111,7 +111,7 @@ enum MapHomeHomeWeatherBadgePolicy {
         }
         return MapHomeHomeWeatherBadge(
             symbolName: symbolName(for: best),
-            temperatureText: "\(Int(best.temperatureCelsius.rounded()))°",
+            temperatureText: "\(AppRegion.current.temperature(celsius: best.temperatureCelsius))°",
             condition: best.condition,
             windSpeedMetersPerSecond: best.windSpeedMetersPerSecond
         )

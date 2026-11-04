@@ -12,6 +12,18 @@ enum TaptionFont: String, CaseIterable, Identifiable, Sendable {
 
     var id: String { rawValue }
 
+    /// 번역 언어의 글꼴. 넣어 둔 글꼴은 한국어·영어용이라 악센트나 해당 문자가 빠져 있다.
+    enum PackScript { case selected, latinFallback, system }
+
+    static let packScript: PackScript = {
+        guard let code = UITextPack.bundleLanguageCode else { return .selected }
+        let language = code.split(separator: "-").first.map(String.init) ?? code
+        return ["ja", "zh", "th", "hi"].contains(language) ? .system : .latinFallback
+    }()
+
+    /// 글꼴을 고를 수 있는 언어인지. 번역 언어는 위 규칙이 정한다.
+    static var isUserSelectable: Bool { packScript == .selected }
+
     /// 본문이 프레임마다 읽을 수 있어 처음 한 번만 설정을 읽는다.
     static var current: TaptionFont {
         cached.withLock { value in
@@ -66,7 +78,11 @@ enum TaptionFont: String, CaseIterable, Identifiable, Sendable {
 extension Font {
     /// `Font.system(size:)`처럼 고정 크기다. 앱의 글자 크기는 `TaptionType.scaled`가 정한다.
     static func taptionFixed(size: CGFloat, weight: Font.Weight = .regular) -> Font {
-        .custom(TaptionFont.current.name(for: weight), fixedSize: size)
+        switch TaptionFont.packScript {
+        case .selected: .custom(TaptionFont.current.name(for: weight), fixedSize: size)
+        case .latinFallback: .custom(TaptionFont.pretendard.name(for: weight), fixedSize: size)
+        case .system: .system(size: size, weight: weight)
+        }
     }
 }
 

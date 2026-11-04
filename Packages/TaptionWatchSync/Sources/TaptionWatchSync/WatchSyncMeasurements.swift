@@ -28,9 +28,9 @@ public enum TaptionWatchMeasurementSource: String, Codable, Hashable, Sendable {
         case (.workout, .korean): "운동 측정 중"
         case (.ambient, .korean): "배경 기록 중"
         case (.idle, .korean): "측정 대기"
-        case (.workout, .english): "Workout measuring"
-        case (.ambient, .english): "Background recording"
-        case (.idle, .english): "Waiting to measure"
+        case (.workout, .english): UITextPack.translate(english: "Workout measuring")
+        case (.ambient, .english): UITextPack.translate(english: "Background recording")
+        case (.idle, .english): UITextPack.translate(english: "Waiting to measure")
         }
     }
 }

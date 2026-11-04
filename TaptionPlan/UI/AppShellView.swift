@@ -204,10 +204,7 @@ struct AppShellView: View {
     }
 
     private var appLocale: Locale {
-        switch AppLanguagePreference.resolve(rawValue: languageRawValue) {
-        case .korean: Locale(identifier: "ko_KR")
-        case .english: Locale(identifier: "en_US")
-        }
+        AppLanguagePreference.resolve(rawValue: languageRawValue).locale
     }
 
     private var userFacingErrorMessage: some View {

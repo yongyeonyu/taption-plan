@@ -315,7 +315,7 @@ struct MapHomeGrowthSheet: View {
                             }
                         }
                         .frame(height: 26)
-                        Text(language == .english ? candidate.englishName : candidate.name)
+                        Text(language.text(candidate.name, candidate.englishName))
                             .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(8)), weight: .medium))
                             .foregroundStyle(isOwned ? Color.tpInk : Color.tpSecondary.opacity(0.6))
                             .lineLimit(1)
@@ -335,7 +335,7 @@ struct MapHomeGrowthSheet: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(
                     isOwned
-                        ? (language == .english ? candidate.englishName : candidate.name)
+                        ? (language.text(candidate.name, candidate.englishName))
                         : language.text("아직 모으지 못한 장식", "Not collected yet")
                 )
             }
@@ -561,21 +561,23 @@ struct MapHomeGrowthSheet: View {
     }
 
     private func displayName(_ candidate: MapHomeLandmarkCandidate) -> String {
-        language == .english ? candidate.englishName : candidate.name
+        language.text(candidate.name, candidate.englishName)
     }
 
     private func countryName(_ korean: String) -> String {
         guard language == .english else { return korean }
-        return [
+        let name = [
             "대한민국": "South Korea", "일본": "Japan", "미국": "United States",
             "영국": "United Kingdom", "프랑스": "France", "이탈리아": "Italy",
             "중국": "China", "스페인": "Spain", "태국": "Thailand", "호주": "Australia",
-        ][korean] ?? korean
+        ][korean]
+        return name.map { UITextPack.translate(english: $0) } ?? korean
     }
 
     private func categoryName(_ category: String) -> String {
         guard language == .english else { return category }
-        return ["건축": "Architecture", "자연": "Nature", "문화": "Culture"][category] ?? category
+        return ["건축": "Architecture", "자연": "Nature", "문화": "Culture"][category]
+            .map { UITextPack.translate(english: $0) } ?? category
     }
 
     private func accessoryName(_ accessoryID: String) -> String {

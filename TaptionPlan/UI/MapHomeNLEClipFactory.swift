@@ -216,14 +216,9 @@ extension MapHomeNLEClipEditor {
     static func durationLabel(_ minutes: Int, language: MapHomeLanguage) -> String {
         let hours = minutes / 60
         let remainder = minutes % 60
-        if language == .english {
-            if hours > 0, remainder > 0 { return "\(hours)h \(remainder)m" }
-            if hours > 0 { return "\(hours)h" }
-            return "\(remainder)m"
-        }
-        if hours > 0, remainder > 0 { return "\(hours)시간 \(remainder)분" }
-        if hours > 0 { return "\(hours)시간" }
-        return "\(remainder)분"
+        if hours > 0, remainder > 0 { return language.text("\(hours)시간 \(remainder)분", "\(hours)h \(remainder)m") }
+        if hours > 0 { return language.text("\(hours)시간", "\(hours)h") }
+        return language.text("\(remainder)분", "\(remainder)m")
     }
 
     static func hourLabel(_ hour: Int) -> String {
@@ -499,7 +494,7 @@ enum MapHomeNLESensorEvidence {
 
     /// 측정값 하나에 들어 있는 값을 읽기 쉬운 줄로 풀어 쓴다. 값이 없는 항목은 적지 않는다.
     static func rawLines(for reading: SensorReading, language: MapHomeLanguage) -> [String] {
-        func t(_ ko: String, _ en: String) -> String { language.text(ko, en) }
+        func t(_ ko: UIPhrase, _ en: UIPhrase) -> String { language.text(ko, en) }
         var lines: [String] = []
         lines.append(t("측정 ", "At ") + reading.timestamp.formatted(date: .omitted, time: .standard)
             + (reading.sourceDevice.map { " · " + $0.rawValue } ?? ""))
@@ -509,14 +504,15 @@ enum MapHomeNLESensorEvidence {
             lines.append(t("걷고 뛴 거리 ", "Walk/run distance ") + MapHomeDayTravelSummary.distanceText(meters))
         }
         if let pace = reading.currentPaceSecondsPerMeter, pace > 0, pace.isFinite {
-            let perKm = Int((pace * 1_000).rounded())
-            lines.append(t("현재 페이스 ", "Pace ") + "\(perKm / 60)'\(String(format: "%02d", perKm % 60))\"/km")
+            let region = AppRegion.current
+            let perUnit = Int(region.secondsPerPaceUnit(secondsPerKilometer: pace * 1_000).rounded())
+            lines.append(t("현재 페이스 ", "Pace ") + "\(perUnit / 60)'\(String(format: "%02d", perUnit % 60))\"/\(region.paceUnit)")
         }
         if let cadence = reading.currentCadenceStepsPerSecond {
             lines.append(t("걸음 속도 ", "Cadence ") + String(format: "%.1f", cadence) + t("보/초", " steps/s"))
         }
         if let speed = reading.speedMetersPerSecond, speed >= 0 {
-            var text = String(format: "%.1f km/h", speed * 3.6)
+            var text = AppRegion.current.speedText(metersPerSecond: speed)
             if let accuracy = reading.speedAccuracyMetersPerSecond, accuracy >= 0 {
                 text += String(format: " ±%.1f", accuracy * 3.6)
             }
