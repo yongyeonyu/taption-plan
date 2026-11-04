@@ -157,6 +157,8 @@ final class MapHomePlaybackVideoRenderer: NSObject, @preconcurrency MLNMapViewDe
     let scale: CGFloat
     var codec: AVVideoCodecType = .hevc
     var bitRate = 16_000_000
+    /// 배경 음악 파일. nil이면 소리 없는 영상이다(BGM1104A02).
+    var music: URL?
 
     private let style: MapHomeVectorStyle
     private let pitch: CGFloat
@@ -225,7 +227,8 @@ final class MapHomePlaybackVideoRenderer: NSObject, @preconcurrency MLNMapViewDe
             .appendingPathComponent("BOKKI-Plan-render-\(UUID().uuidString).mov")
         let writer = try MapHomePlaybackVideoWriter(
             url: url, width: pixelWidth, height: pixelHeight,
-            fps: Self.fps, codec: codec, bitRate: bitRate
+            fps: Self.fps, codec: codec, bitRate: bitRate,
+            music: music, durationSeconds: Double(frames.count) / Double(Self.fps)
         )
         var reported = -1.0
         do {
@@ -507,14 +510,20 @@ final class MapHomePlaybackVideoRenderer: NSObject, @preconcurrency MLNMapViewDe
 }
 
 /// AVAssetWriter 감싸기. 프레임 시각은 `frameIndex / fps`로 고정한다.
+/// 음악을 주면 오디오 트랙을 더한다. 음악은 전용 큐에서 들어가 프레임 경로를 막지 않는다.
 @MainActor
 final class MapHomePlaybackVideoWriter {
     private let writer: AVAssetWriter
     private let input: AVAssetWriterInput
     private let adaptor: AVAssetWriterInputPixelBufferAdaptor
     private let fps: Int
+    private var musicFeeder: MapHomePlaybackMusicFeeder?
+    private var frameCount = 0
 
-    init(url: URL, width: Int, height: Int, fps: Int, codec: AVVideoCodecType, bitRate: Int) throws {
+    init(
+        url: URL, width: Int, height: Int, fps: Int, codec: AVVideoCodecType, bitRate: Int,
+        music: URL? = nil, durationSeconds: Double = 0
+    ) throws {
         writer = try AVAssetWriter(outputURL: url, fileType: .mov)
         input = AVAssetWriterInput(mediaType: .video, outputSettings: [
             AVVideoCodecKey: codec,
@@ -537,8 +546,24 @@ final class MapHomePlaybackVideoWriter {
         self.fps = fps
         guard writer.canAdd(input) else { throw MapHomePlaybackVideoError.writerFailed("cannot add input") }
         writer.add(input)
+        if let music { try addMusic(music, durationSeconds: durationSeconds) }
         guard writer.startWriting() else { throw failure() }
         writer.startSession(atSourceTime: .zero)
+        musicFeeder?.start()
+    }
+
+    private func addMusic(_ url: URL, durationSeconds: Double) throws {
+        let stream = try MapHomePlaybackMusicStream(url: url, durationSeconds: durationSeconds)
+        let audio = AVAssetWriterInput(mediaType: .audio, outputSettings: [
+            AVFormatIDKey: kAudioFormatMPEG4AAC,
+            AVSampleRateKey: stream.format.sampleRate,
+            AVNumberOfChannelsKey: stream.format.channelCount,
+            AVEncoderBitRateKey: 192_000,
+        ])
+        audio.expectsMediaDataInRealTime = false
+        guard writer.canAdd(audio) else { throw MapHomePlaybackVideoError.writerFailed("cannot add music") }
+        writer.add(audio)
+        musicFeeder = MapHomePlaybackMusicFeeder(input: audio, stream: stream)
     }
 
     func makeBuffer() throws -> CVPixelBuffer {
@@ -558,15 +583,29 @@ final class MapHomePlaybackVideoWriter {
         }
         let time = CMTime(value: CMTimeValue(frameIndex), timescale: CMTimeScale(fps))
         guard adaptor.append(buffer, withPresentationTime: time) else { throw failure() }
+        frameCount = frameIndex + 1
     }
 
     func finish() async throws {
         input.markAsFinished()
+        try await finishMusic()
         let writer = writer
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             writer.finishWriting { continuation.resume() }
         }
         guard writer.status == .completed else { throw failure() }
+    }
+
+    /// 음악을 끝까지 넣고, AAC 묶음 단위로 남는 꼬리를 영상 길이에 맞춰 자른다.
+    private func finishMusic() async throws {
+        guard let musicFeeder else { return }
+        while musicFeeder.isRunning {
+            // 쓰기가 실패하면 음악 차례가 영영 오지 않는다.
+            guard writer.status == .writing else { throw failure() }
+            try await Task.sleep(nanoseconds: 2_000_000)
+        }
+        if let reason = musicFeeder.failure { throw MapHomePlaybackVideoError.writerFailed(reason) }
+        writer.endSession(atSourceTime: CMTime(value: CMTimeValue(frameCount), timescale: CMTimeScale(fps)))
     }
 
     func cancel() {

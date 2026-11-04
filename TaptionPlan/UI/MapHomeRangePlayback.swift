@@ -1,17 +1,26 @@
 import CoreLocation
 import Foundation
 
-/// 여러 날 영상으로 만들 구간(PLR1104A01). `day`는 지금까지의 하루 재생을 그대로 쓴다.
+/// 영상으로 만들 구간(PLR1104A02). `day`는 지금까지의 하루 재생을 그대로 쓴다.
 enum MapHomeRangePreset: String, CaseIterable, Identifiable, Sendable {
-    case day, recentSevenDays, lastMonth, custom
+    case day, week, month, year, custom
 
-    /// 1단계는 일 단위로 읽어 압축하는 한 달까지만 받는다.
-    static let maximumDays = 31
+    /// 일 단위로 읽어 압축하는 1년(윤년)까지 받는다.
+    static let maximumDays = 366
+
+    /// 저장값을 읽는다. 예전 빌드의 `recentSevenDays`·`lastMonth`도 새 값으로 옮긴다.
+    static func stored(_ raw: String) -> Self {
+        switch raw {
+        case "recentSevenDays": .week
+        case "lastMonth": .month
+        default: Self(rawValue: raw) ?? .day
+        }
+    }
 
     /// 자동 길이(대표 선택 PLR1104A01): 여행 60초, 한 달 90초, 그보다 길면 2분.
     static func automaticSeconds(forDays days: Int) -> Int {
         if days <= 14 { return 60 }
-        return days <= maximumDays ? 90 : 120
+        return days <= 31 ? 90 : 120
     }
 
     var id: String { rawValue }
@@ -27,16 +36,20 @@ enum MapHomeRangePreset: String, CaseIterable, Identifiable, Sendable {
         func day(_ value: Int, from date: Date) -> Date {
             calendar.date(byAdding: .day, value: value, to: date) ?? date
         }
+        // 오늘까지 넣어 달력으로 한 달·한 해만큼 거슬러 간다(`week`의 7일과 같은 세는 법).
+        func back(_ unit: Calendar.Component) -> Date {
+            day(1, from: calendar.date(byAdding: unit, value: -1, to: today) ?? today)
+        }
         switch self {
         case .day:
             let start = calendar.startOfDay(for: selectedDate)
             return TimeSpan(start: start, end: min(day(1, from: start), now))
-        case .recentSevenDays:
+        case .week:
             return TimeSpan(start: day(-6, from: today), end: now)
-        case .lastMonth:
-            let thisMonth = calendar.dateInterval(of: .month, for: now)?.start ?? today
-            let start = calendar.date(byAdding: .month, value: -1, to: thisMonth) ?? thisMonth
-            return TimeSpan(start: start, end: thisMonth)
+        case .month:
+            return TimeSpan(start: back(.month), end: now)
+        case .year:
+            return TimeSpan(start: back(.year), end: now)
         case .custom:
             let start = calendar.startOfDay(for: min(customStart, customEnd))
             let lastDay = calendar.startOfDay(for: max(customStart, customEnd))
@@ -107,6 +120,16 @@ struct MapHomeRangeTripPlan: Sendable {
         static let flightSpeed = 60.0
         static let flightSegments = 48
         static let maximumRoutePoints = 4_000
+        /// 하루 표본을 줄이는 기준. 움직이지 않아도 이 간격마다 남겨 머문 곳을 알아본다.
+        static let sampleMinimumMeters = 25.0
+        static let sampleMinimumSeconds: TimeInterval = 5 * 60
+        static let maximumDaySamples = 2_000
+        /// 구간 하나가 영상에서 받는 최소 시간. 넘치면 가까운 왕복부터 합친다(PLR1104A02).
+        static let minimumItemSeconds = 0.4
+        static let coarsenStartMeters = 500.0
+        static let earthSpanMeters = 40_000_000.0
+        /// 이 허용 오차부터는 비행 곡선도 줄인다.
+        static let flightSimplifyMeters = 10_000.0
         static let staySeconds = 0.45
         static let stayShareLimit = 0.25
         static let moveShareLimit = 0.3
@@ -130,6 +153,8 @@ struct MapHomeRangeTripPlan: Sendable {
     let items: [Item]
     let route: [RoutePoint]
     let totalMeters: Double
+    /// 합쳐서 빠진 왕복까지 계기판 거리에 넣는 배율. 합치지 않았으면 1이다.
+    var meterScale = 1.0
     let overviewCenter: Point
     let overviewDistance: Double
 
@@ -155,6 +180,23 @@ struct MapHomeRangeTripPlan: Sendable {
         }
     }
 
+    /// 여러 날을 메모리에 쌓기 전에 줄인다. 원본이 아니라 파생 경로만 쓰므로 원본은 그대로다(PLR1104A02).
+    static func thinned(_ samples: [Sample]) -> [Sample] {
+        guard samples.count > 2, let first = samples.first, let last = samples.last else { return samples }
+        var kept = [first]
+        for sample in samples.dropFirst().dropLast() {
+            let previous = kept[kept.count - 1]
+            if sample.time - previous.time >= Tuning.sampleMinimumSeconds
+                || meters(previous.point, sample.point) >= Tuning.sampleMinimumMeters {
+                kept.append(sample)
+            }
+        }
+        kept.append(last)
+        guard kept.count > Tuning.maximumDaySamples else { return kept }
+        let step = Double(kept.count - 1) / Double(Tuning.maximumDaySamples - 1)
+        return (0..<Tuning.maximumDaySamples).map { kept[Int((Double($0) * step).rounded())] }
+    }
+
     // MARK: - 계획 만들기
 
     static func make(
@@ -173,17 +215,23 @@ struct MapHomeRangeTripPlan: Sendable {
             let point = Point(latitude: first.latitude, longitude: first.longitude)
             legs = [Leg(kind: .stay, startTime: first.time, endTime: ordered.last?.time ?? first.time, points: [point])]
         }
-        legs = simplified(legs)
+        let limit = max(8, Int((durationSeconds - Tuning.overviewSeconds) / Tuning.minimumItemSeconds))
+        let fullMeters = legs.reduce(0) { $0 + pathMeters($1.points) }
+        let isCoarsened = legs.count > limit
+        legs = simplified(coarsened(legs, limit: limit))
         var items = legs.map(Self.item)
         allocate(&items, bodySeconds: durationSeconds - Tuning.overviewSeconds)
         let route = routePoints(items)
         let bounds = Bounds(items.flatMap(\.points))
+        let shownMeters = items.last.map { $0.startMeters + $0.meters } ?? 0
+        let meterScale = isCoarsened && shownMeters > 0 ? fullMeters / shownMeters : 1
         return Self(
             durationSeconds: durationSeconds,
             span: span,
             items: items,
             route: route,
-            totalMeters: items.last.map { $0.startMeters + $0.meters } ?? 0,
+            totalMeters: shownMeters * meterScale,
+            meterScale: meterScale,
             overviewCenter: bounds.center,
             overviewDistance: bounds.cameraDistance
         )
@@ -301,18 +349,59 @@ struct MapHomeRangeTripPlan: Sendable {
         return legs
     }
 
-    /// 전체 경로 점이 상한 안에 들 때까지 허용 오차를 늘린다.
+    /// 구간이 영상 시간에 비해 너무 많으면 가까운 곳을 오간 왕복부터 합친다.
+    /// 반경 안으로 돌아온 머문 곳과 그 사이 이동을 빼므로 멀리 간 이동만 남는다.
+    private static func coarsened(_ legs: [Leg], limit: Int) -> [Leg] {
+        var result = legs
+        var radius = Tuning.coarsenStartMeters
+        while result.count > limit, radius <= Tuning.earthSpanMeters {
+            result = merged(legs, radius: radius)
+            radius *= 2
+        }
+        return result
+    }
+
+    private static func merged(_ legs: [Leg], radius: Double) -> [Leg] {
+        var result: [Leg] = []
+        var pending: [Leg] = []
+        var anchor: Point?
+        for leg in legs {
+            guard leg.kind == .stay, let center = leg.points.first else {
+                pending.append(leg)
+                continue
+            }
+            if let anchor, meters(anchor, center) <= radius, result.last?.kind == .stay {
+                result[result.count - 1].endTime = leg.endTime
+            } else {
+                result += connected(pending, from: anchor)
+                result.append(leg)
+                anchor = center
+            }
+            pending = []
+        }
+        return result + connected(pending, from: anchor)
+    }
+
+    /// 빠진 머문 곳 뒤의 이동도 남은 머문 곳에서 시작하게 잇는다. 어긋남은 합치는 반경 안이다.
+    private static func connected(_ moves: [Leg], from anchor: Point?) -> [Leg] {
+        guard let anchor, var first = moves.first, first.points.first != anchor else { return moves }
+        first.points.insert(anchor, at: 0)
+        return [first] + moves.dropFirst()
+    }
+
+    /// 전체 경로 점이 상한 안에 들 때까지 허용 오차를 늘린다. 이동을 다 줄여도 넘치면 그대로 돌려준다.
     private static func simplified(_ legs: [Leg]) -> [Leg] {
         var tolerance = 15.0
         var result = legs
         while true {
             result = legs.map { leg in
-                guard leg.kind == .move else { return leg }
+                guard leg.kind == .move || (leg.kind == .flight && tolerance >= Tuning.flightSimplifyMeters) else { return leg }
                 var leg = leg
                 leg.points = douglasPeucker(leg.points, tolerance: tolerance)
                 return leg
             }
             if result.reduce(0, { $0 + $1.points.count }) <= Tuning.maximumRoutePoints { return result }
+            if tolerance > Tuning.earthSpanMeters { return result }
             tolerance *= 2
         }
     }
@@ -414,7 +503,7 @@ struct MapHomeRangeTripPlan: Sendable {
         return Position(
             point: Self.point(on: item, progress: progress),
             time: time,
-            meters: item.startMeters + item.meters * progress,
+            meters: (item.startMeters + item.meters * progress) * meterScale,
             kind: item.kind,
             speed: item.speed
         )
