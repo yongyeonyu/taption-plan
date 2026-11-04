@@ -5703,3 +5703,7 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 ## STK1104A01·NRM1104A01 메인 합치기 뒤 전체 단위 시험 (2026-11-04, 시뮬레이터)
 - 2,036건 중 2,022건 통과, 실패 0, 건너뜀 14 (`build/validation/SAV1104A01/check10.xcresult`). 구조 지표·엔진 경계 통과.
 - 합치기 때 `MapHomeView` 메모 아이콘 충돌을 새 `StickerGlyph`와 입체 원 배경으로 풀었다. 이 조합을 화면으로 보지는 않았다. 근처 알림의 실제 전달은 실기기에서 아직 확인하지 않았다.
+
+## TFB1104A02 TestFlight 265 (2026-11-04)
+- `release.sh --yes --request-id TFB1104A02` 완료: 처리 상태 `VALID`, `TP Taption Plan 내부 테스트` 그룹 연결, 테스터 노출 1명 확인(`build/validation/TFB1104A02/testflight-report.json`).
+- 대표 선택 C: 백업 확인 없이 올리고 아이폰 18에 설치한다. 클립 편집 정리로 지워지는 이전 편집은 백업으로 되돌릴 수 없다.
