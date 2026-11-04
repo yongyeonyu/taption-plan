@@ -164,8 +164,10 @@ struct MapHomeMenuHeaderTitle: View {
         Text("“\(quote.text)” — \(quote.author)")
             .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
             .foregroundStyle(Color.tpInk)
+            .multilineTextAlignment(.center)
             .lineLimit(3)
             .minimumScaleFactor(0.85)
             .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .center)
     }
 }

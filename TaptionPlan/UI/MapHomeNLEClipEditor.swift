@@ -58,6 +58,9 @@ struct MapHomeNLEClipEditor: View {
     @State private var quickMenuMinute: Int?
     /// 장소 줄. 머문 기록에서 파생한 읽기 전용 값이다(NLE1104A01).
     @State var placeSegments: [NLEPlaceSegment] = []
+    /// 날 오프셋별 머문 기록과 지도에서 찾은 이름. 장소 줄을 다시 세울 때 쓴다(NLE1104A02).
+    @State var placeDays: [Int: [PlaceStay]] = [:]
+    @State var nearbyPlaceNames: [String: String] = [:]
     /// 핸들을 잡을 때의 재생 헤드와 손가락 자리(분).
     @State private var scrubAnchor: (playhead: Double, touch: Double)?
     /// 전체 덮기 창. 여러 개로 나뉜 클립을 한 번에 같은 분류로 바꾼다.
@@ -140,11 +143,11 @@ struct MapHomeNLEClipEditor: View {
         .padding(.bottom, 10)
         .background(Color.tpBackground.ignoresSafeArea())
         .task(id: date) {
-            let dayStart = Calendar.autoupdatingCurrent.startOfDay(for: date)
-            let places = await NLEDayWindow.loadPlaces(model: model, date: date)
-            placeSegments = placeSegments.filter { $0.startMinute < 0 }
-                + NLEPlaceLane.segments(places: places, dayStart: dayStart)
+            placeDays[0] = await NLEDayWindow.loadPlaces(model: model, date: date)
+            rebuildPlaceSegments()
+            await resolveNearbyPlaceNames()
         }
+        .onChange(of: movementSpans) { _, _ in rebuildPlaceSegments() }
         .alert(
             language.text("합칠까요?", "Merge?"),
             isPresented: Binding(get: { mergePrompt != nil }, set: { if !$0 { mergePrompt = nil } }),

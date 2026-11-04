@@ -1157,9 +1157,9 @@ final class NLETrackTests: XCTestCase {
             ],
             dayStart: dayStart
         )
-        XCTAssertEqual(segments.map(\.title), ["집", "회사", "카페"])
-        XCTAssertEqual(segments.map(\.startMinute), [0, 300, 450])
-        XCTAssertEqual(segments.map(\.endMinute), [200, 450, 1_440])
+        XCTAssertEqual(segments.map(\.title), ["집", "집 → 회사", "회사", "카페"])
+        XCTAssertEqual(segments.map(\.startMinute), [0, 200, 300, 450])
+        XCTAssertEqual(segments.map(\.endMinute), [200, 300, 450, 1_440])
 
         let yesterday = NLEPlaceLane.segments(
             places: [stay("home", "집", 0, 60, dayStart: dayStart)],
@@ -1167,6 +1167,83 @@ final class NLETrackTests: XCTestCase {
             dayOffset: -1
         )
         XCTAssertEqual(yesterday.first?.startMinute, -1_440)
+    }
+
+    func testPlaceLaneJoinsRegisteredPlacesWithMovementClip() {
+        let dayStart = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        // 체류가 이동 클립과 겹쳐도 칸 경계는 메인 줄의 이동 클립에 맞는다.
+        let segments = NLEPlaceLane.segments(
+            places: [
+                stay("frequent-office", "회사", 540, 1_090, dayStart: dayStart),
+                stay("frequent-home", "집", 1_130, 1_440, dayStart: dayStart),
+            ],
+            movement: [1_080..<1_100, 1_103..<1_140],
+            dayStart: dayStart
+        )
+        XCTAssertEqual(segments.map(\.title), ["회사", "회사 → 집", "집"])
+        XCTAssertEqual(segments.map(\.kind), [.registered, .transit, .registered])
+        XCTAssertEqual(segments[1].startMinute, 1_080)
+        XCTAssertEqual(segments[1].endMinute, 1_140)
+        XCTAssertEqual(segments[0].endMinute, 1_080)
+        XCTAssertEqual(segments[2].startMinute, 1_140)
+    }
+
+    func testPlaceLanePrefersRegisteredRadiusAndNearbyNames() {
+        let dayStart = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        let officePoint = GeoPoint(latitude: 10, longitude: 20, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: 10)
+        let elsewhere = GeoPoint(latitude: 10.1, longitude: 20.1, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: 10)
+        let office = FrequentPlace(kind: .custom, name: "회사", point: officePoint, radiusMeters: 120)
+        var short = stay("auto-1", "확인된 위치", 100, 106, dayStart: dayStart)
+        short.point = officePoint
+        var unknown = stay("auto-2", "확인된 위치", 200, 260, dayStart: dayStart)
+        unknown.point = elsewhere
+        var blip = stay("auto-3", "확인된 위치", 300, 302, dayStart: dayStart)
+        blip.point = elsewhere
+        let places = [short, unknown, blip]
+        XCTAssertEqual(
+            NLEPlaceLane.pointsNeedingNames(places: places, frequentPlaces: [office]).map(\.latitude),
+            [10.1]
+        )
+        let segments = NLEPlaceLane.segments(
+            places: places,
+            frequentPlaces: [office],
+            nearbyNames: [NLEPlaceLane.nameKey(for: elsewhere): "한강 카페"],
+            dayStart: dayStart
+        )
+        XCTAssertEqual(segments.map(\.title), ["회사", "회사 → 한강 카페", "한강 카페"])
+        XCTAssertEqual(segments.map(\.kind), [.registered, .transit, .visited])
+    }
+
+    func testPlaceLaneKeepsLongRegisteredStopInsideMovementAndJoinsGpsGap() {
+        let dayStart = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        let stopped = NLEPlaceLane.segments(
+            places: [
+                stay("frequent-a", "회사", 0, 60, dayStart: dayStart),
+                stay("frequent-b", "마트", 80, 100, dayStart: dayStart),
+                stay("frequent-c", "집", 120, 200, dayStart: dayStart),
+            ],
+            movement: [60..<120],
+            dayStart: dayStart
+        )
+        XCTAssertEqual(stopped.map(\.title), ["회사", "회사 → 마트", "마트", "마트 → 집", "집"])
+        let joined = NLEPlaceLane.segments(
+            places: [
+                stay("frequent-a", "회사", 0, 60, dayStart: dayStart),
+                stay("frequent-a", "회사", 75, 120, dayStart: dayStart),
+            ],
+            dayStart: dayStart
+        )
+        XCTAssertEqual(joined.map(\.title), ["회사"])
+        XCTAssertEqual(joined.first?.endMinute, 120)
+        let around = NLEPlaceLane.segments(
+            places: [
+                stay("frequent-a", "집", 0, 60, dayStart: dayStart),
+                stay("frequent-a", "집", 90, 120, dayStart: dayStart),
+            ],
+            movement: [60..<90],
+            dayStart: dayStart
+        )
+        XCTAssertEqual(around.map(\.title), ["집", "집 주변 이동", "집"])
     }
 
     func testPlayheadSnapsWeaklyToSegmentBoundaries() {

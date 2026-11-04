@@ -76,10 +76,9 @@ extension MapHomeNLEClipEditor {
         track = NLEDayWindow.prepending(built.main, to: track)
         subTrack = NLEDayWindow.prepending(built.sub, to: subTrack)
         subProvenance.merge(Self.subProvenance(details: day.details, dayOffset: dayOffset)) { _, new in new }
-        let calendar = Calendar.autoupdatingCurrent
-        if let dayStart = calendar.date(byAdding: .day, value: dayOffset, to: calendar.startOfDay(for: date)) {
-            placeSegments = NLEPlaceLane.segments(places: day.places, dayStart: dayStart, dayOffset: dayOffset) + placeSegments
-        }
+        placeDays[dayOffset] = day.places
+        rebuildPlaceSegments()
+        Task { await resolveNearbyPlaceNames() }
         undoStack = undoStack.map { rebased($0, with: built, rangeStartMinute: previousStart) }
         redoStack = redoStack.map { rebased($0, with: built, rangeStartMinute: previousStart) }
     }

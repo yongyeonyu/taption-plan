@@ -6619,8 +6619,7 @@ struct MapHomeView: View {
             timelineZoomButton(systemImage: "plus", direction: 1)
             timelineZoomButton(systemImage: "minus", direction: -1)
         }
-        .background(Capsule().fill(Color.tpSurface.opacity(0.94)))
-        .overlay(Capsule().stroke(Color.tpLine.opacity(0.5), lineWidth: 0.6))
+        .taptionRaised(.capsule, fill: Color.tpSurface)
         .overlay(Rectangle().fill(Color.tpLine.opacity(0.45)).frame(width: 0.6, height: 12))
     }
 
@@ -6739,7 +6738,6 @@ struct MapHomeView: View {
                 MapHomeMenuCatPicker(selected: model.selectedCatCoat, language: language) { model.selectCatCoat($0) }
 
                 MapHomeMenuHeaderTitle(language: language)
-                Spacer()
                 Button { isMenuOpen = false } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
