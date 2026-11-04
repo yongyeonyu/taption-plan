@@ -882,6 +882,7 @@ final class AppModel {
         guard let securityService else { throw PlanSecurityError.invalidCredential }
         try securityService.setAppLockSettings(settings)
         securityStatus = securityService.status
+        scheduleNearbyMemoSync()
         if !settings.lockOnLaunch && !settings.lockOnForeground {
             setExternalPrivacyLocked(false)
         }

@@ -89,6 +89,18 @@ final class NearbyMemoNotificationTests: XCTestCase {
         XCTAssertEqual(recent.first?.latestText, "14")
     }
 
+    func testAppLockHidesMemoTextFromNotification() throws {
+        let place = NearbyMemoPlace(
+            key: UUID(),
+            coordinate: NearbyMemoCoordinate(latitude: 37.5, longitude: 127),
+            latestAt: .now,
+            latestText: "비밀 메모",
+            memoCount: 2
+        )
+        XCTAssertTrue(NearbyMemoPolicy.body(for: place, hidesText: false).contains("비밀 메모"))
+        XCTAssertFalse(NearbyMemoPolicy.body(for: place, hidesText: true).contains("비밀 메모"))
+    }
+
     func testRenotifyWaitsOneDay() {
         let place = NearbyMemoPlace(
             key: UUID(),

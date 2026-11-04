@@ -18,7 +18,8 @@ extension AppModel {
         guard let summary = await nearbyMemoScheduler.synchronize(
             memos: snapshot.memos,
             availability: state.availability,
-            coordinate: state.coordinate
+            coordinate: state.coordinate,
+            hidesText: securityStatus.settings.lockOnLaunch || securityStatus.settings.lockOnForeground
         ) else { return }
         TaptionPlanDiagnosticsLogger.shared.record(
             "nearby_memo_sync",

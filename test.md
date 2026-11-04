@@ -5707,3 +5707,6 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 ## TFB1104A02 TestFlight 265 (2026-11-04)
 - `release.sh --yes --request-id TFB1104A02` 완료: 처리 상태 `VALID`, `TP Taption Plan 내부 테스트` 그룹 연결, 테스터 노출 1명 확인(`build/validation/TFB1104A02/testflight-report.json`).
 - 대표 선택 C: 백업 확인 없이 올리고 아이폰 18에 설치한다. 클립 편집 정리로 지워지는 이전 편집은 백업으로 되돌릴 수 없다.
+
+## NRM1104A02 앱 잠금 때 근처 메모 글자 숨김 (2026-11-04, 시뮬레이터)
+- 전체 단위 시험: 2,037건 중 2,023건 통과, 실패 0, 건너뜀 14 (`build/validation/NRM1104A02/check2.xcresult`). 구조 지표·엔진 경계 통과. 실제 알림 표시는 실기기에서 아직 확인하지 않았다. 이미 등록된 요청의 교체는 본문 비교 코드로만 확인했다.

@@ -165,6 +165,13 @@ enum NearbyMemoPolicy {
         return text + AppLanguagePreference.text(korean: " 외 \(others)개", english: " +\(others) more")
     }
 
+    /// 앱 잠금을 켠 사용자에게는 잠금 화면에 메모 글자를 보이지 않는다.
+    static func body(for place: NearbyMemoPlace, hidesText: Bool) -> String {
+        hidesText
+            ? AppLanguagePreference.text(korean: "이 근처에 지난 메모가 있어요.", english: "You left a memo near here.")
+            : body(for: place)
+    }
+
     static func identifier(for key: UUID) -> String {
         "\(identifierPrefix)\(key.uuidString)"
     }
@@ -184,6 +191,7 @@ actor NearbyMemoNotificationScheduler {
         var memos: [ActionMemo]
         var availability: NearbyMemoAvailability
         var coordinate: NearbyMemoCoordinate?
+        var hidesText: Bool
         var now: Date
     }
 
@@ -199,9 +207,12 @@ actor NearbyMemoNotificationScheduler {
         memos: [ActionMemo],
         availability: NearbyMemoAvailability,
         coordinate: NearbyMemoCoordinate?,
+        hidesText: Bool,
         now: Date = .now
     ) async -> NearbyMemoSyncSummary? {
-        latest = Request(memos: memos, availability: availability, coordinate: coordinate, now: now)
+        latest = Request(
+            memos: memos, availability: availability, coordinate: coordinate, hidesText: hidesText, now: now
+        )
         guard !isRunning else { return nil }
         isRunning = true
         defer { isRunning = false }
@@ -263,12 +274,13 @@ actor NearbyMemoNotificationScheduler {
         var failed = 0
         for place in desired {
             let identifier = NearbyMemoPolicy.identifier(for: place.key)
-            if let current = existing[identifier], Self.matches(current, place: place) {
+            if let current = existing[identifier],
+               Self.matches(current, place: place, hidesText: request.hidesText) {
                 active.append(identifier)
                 continue
             }
             do {
-                try await center.add(Self.makeRequest(identifier: identifier, place: place))
+                try await center.add(Self.makeRequest(identifier: identifier, place: place, hidesText: request.hidesText))
                 active.append(identifier)
             } catch {
                 failed += 1
@@ -287,11 +299,11 @@ actor NearbyMemoNotificationScheduler {
         center.removePendingNotificationRequests(withIdentifiers: identifiers)
     }
 
-    private static func makeRequest(identifier: String, place: NearbyMemoPlace) -> UNNotificationRequest {
+    private static func makeRequest(identifier: String, place: NearbyMemoPlace, hidesText: Bool) -> UNNotificationRequest {
         let content = UNMutableNotificationContent()
         content.title = AppLanguagePreference.text(korean: "이곳에 남긴 메모", english: "A memo you left here")
         content.subtitle = place.latestAt.formatted(.dateTime.month().day())
-        content.body = NearbyMemoPolicy.body(for: place)
+        content.body = NearbyMemoPolicy.body(for: place, hidesText: hidesText)
         content.sound = .default
         let region = CLCircularRegion(
             center: CLLocationCoordinate2D(
@@ -310,7 +322,7 @@ actor NearbyMemoNotificationScheduler {
         )
     }
 
-    private static func matches(_ request: UNNotificationRequest, place: NearbyMemoPlace) -> Bool {
+    private static func matches(_ request: UNNotificationRequest, place: NearbyMemoPlace, hidesText: Bool) -> Bool {
         guard let trigger = request.trigger as? UNLocationNotificationTrigger,
               let region = trigger.region as? CLCircularRegion else { return false }
         let center = NearbyMemoCoordinate(
@@ -318,7 +330,7 @@ actor NearbyMemoNotificationScheduler {
             longitude: region.center.longitude
         )
         return center.distance(to: place.coordinate) < 1
-            && request.content.body == NearbyMemoPolicy.body(for: place)
+            && request.content.body == NearbyMemoPolicy.body(for: place, hidesText: hidesText)
     }
 
     private static func loadLastFired() -> [String: Date] {
