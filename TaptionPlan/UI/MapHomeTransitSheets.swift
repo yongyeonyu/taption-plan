@@ -64,6 +64,17 @@ struct MapHomeTransitBoardingCandidateSheet: View {
         return language.text("\(minutes)분 체류 후보", "Stayed \(minutes) minutes")
     }
 
+    private var boardTitle: String {
+        switch candidate.mode {
+        case .subway: language.text("지하철 탑승", "Board Subway")
+        case .bus: language.text("버스 탑승", "Board Bus")
+        case .train: language.text("기차 탑승", "Board Train")
+        case .ship: language.text("배 탑승", "Board Ship")
+        case .airplane: language.text("비행기 탑승", "Board Airplane")
+        default: language.text("탑승", "Board")
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 12) {
@@ -104,10 +115,7 @@ struct MapHomeTransitBoardingCandidateSheet: View {
                 }
             } label: {
                 Label(
-                    language.runtimeText(
-                        AppLanguagePreference.text(korean: "\(MovementPresentation.title(for: candidate.mode)) 탑승", english: "\(MovementPresentation.englishTitle(for: candidate.mode)) ride"),
-                        "Board \(MovementPresentation.englishTitle(for: candidate.mode))"
-                    ),
+                    boardTitle,
                     systemImage: candidate.mode == .subway
                         ? "tram.fill"
                         : candidate.mode == .bus

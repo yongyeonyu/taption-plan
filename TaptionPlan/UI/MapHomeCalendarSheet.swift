@@ -343,7 +343,7 @@ struct MapHomeCalendarSheet: View {
                         .foregroundStyle(Color.tpSecondary)
                 } else if selectedInMonth {
                     Text(language.runtimeText("\(calendar.component(.month, from: selected))월 \(calendar.component(.day, from: selected))일",
-                                       selected.formatted(.dateTime.month(.abbreviated).day())))
+                                       selected.formatted(Date.FormatStyle().month(.abbreviated).day().locale(language.locale))))
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                         .foregroundStyle(Color.tpSecondary)
                 }

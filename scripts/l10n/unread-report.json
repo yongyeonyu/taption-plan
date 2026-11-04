@@ -1,5 +1,5 @@
 {
- "ui": 2207,
+ "ui": 2213,
  "catalog": 461,
  "unread": [
   {
@@ -120,7 +120,7 @@
    "file": "TaptionPlan/UI/MapHomeCalendarSheet.swift",
    "line": 345,
    "ko": "\"\\(calendar.component(.month, from: selected))월 \\(calendar.component(.day, from: selected)",
-   "en": "selected.formatted(.dateTime.month(.abbreviated).day())"
+   "en": "selected.formatted(Date.FormatStyle().month(.abbreviated).day().locale(language.locale))"
   },
   {
    "file": "TaptionPlan/UI/MapHomeCounterDetailSheet.swift",
@@ -286,37 +286,31 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeTransitSheets.swift",
-   "line": 107,
-   "ko": "AppLanguagePreference.text(korean: \"\\(MovementPresentation.title(for: candidate.mode)) 탑승\"",
-   "en": "\"Board \\(MovementPresentation.englishTitle(for: candidate.mode))\""
-  },
-  {
-   "file": "TaptionPlan/UI/MapHomeTransitSheets.swift",
-   "line": 410,
+   "line": 418,
    "ko": "value.title",
    "en": "value.englishTitle"
   },
   {
    "file": "TaptionPlan/UI/MapHomeTransitSheets.swift",
-   "line": 424,
+   "line": 432,
    "ko": "FloorLabel.korean(floor)",
    "en": "FloorLabel.english(floor)"
   },
   {
    "file": "TaptionPlan/UI/MapHomeTransitSheets.swift",
-   "line": 510,
+   "line": 518,
    "ko": "location.kind.title",
    "en": "location.kind.englishTitle"
   },
   {
    "file": "TaptionPlan/UI/MapHomeTransitSheets.swift",
-   "line": 518,
+   "line": 526,
    "ko": "FloorLabel.korean(floor)",
    "en": "FloorLabel.english(floor)"
   },
   {
    "file": "TaptionPlan/UI/MapHomeTransitSheets.swift",
-   "line": 690,
+   "line": 698,
    "ko": "FloorLabel.korean(floor)",
    "en": "FloorLabel.english(floor)"
   },

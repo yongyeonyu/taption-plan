@@ -217,7 +217,7 @@ struct MapHomeTodayCalendarList: View {
     private var title: String {
         let calendar = Calendar.autoupdatingCurrent
         if calendar.isDateInToday(date) { return language.text("오늘 일정", "Today") }
-        let day = date.formatted(.dateTime.month().day())
+        let day = date.formatted(Date.FormatStyle().month().day().locale(language.locale))
         return language.text("\(day) 일정", "Events on \(day)")
     }
 

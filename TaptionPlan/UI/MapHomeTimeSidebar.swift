@@ -2282,7 +2282,7 @@ struct MapHomeUnconfirmedReviewSheet: View {
                                     saveFailedSegmentID = nil
                                     onDateSelect(day)
                                 } label: {
-                                    Text(day.formatted(.dateTime.month().day()))
+                                    Text(day.formatted(Date.FormatStyle().month().day().locale(language.locale)))
                                         .font(.taptionFixed(size: 12, weight: .semibold))
                                         .foregroundStyle(selected ? Color.white : Color.tpInk)
                                         .padding(.horizontal, 12)

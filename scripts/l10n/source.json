@@ -1623,7 +1623,7 @@
    "ko": "{0} 삭제",
    "en": "Delete {0}",
    "files": [
-    "MapHomeTransitSheets.swift:559"
+    "MapHomeTransitSheets.swift:567"
    ],
    "args": [
     "location.name"
@@ -1725,7 +1725,7 @@
    "ko": "{0} 이름 편집",
    "en": "Edit {0}",
    "files": [
-    "MapHomeTransitSheets.swift:546"
+    "MapHomeTransitSheets.swift:554"
    ],
    "args": [
     "location.name"
@@ -2344,7 +2344,7 @@
    "ko": "{0}역",
    "en": "{0} Station",
    "files": [
-    "MapHomeTransitSheets.swift:734"
+    "MapHomeTransitSheets.swift:742"
    ],
    "args": [
     "romanizedName"
@@ -11840,8 +11840,7 @@
    "en": "{0} ride",
    "files": [
     "MapHomeSectionDetailEngine.swift:142",
-    "MapHomeTimeSidebar.swift:863",
-    "MapHomeTransitSheets.swift:108"
+    "MapHomeTimeSidebar.swift:863"
    ],
    "args": [
     "MovementPresentation.englishTitle(for: item.mode)"
@@ -12538,7 +12537,7 @@
    "ko": "검색",
    "en": "Search",
    "files": [
-    "MapHomeTransitSheets.swift:318"
+    "MapHomeTransitSheets.swift:326"
    ],
    "args": [],
    "targets": [
@@ -13876,6 +13875,18 @@
    ]
   },
   {
+   "key": "기차 탑승|Board Train",
+   "ko": "기차 탑승",
+   "en": "Board Train",
+   "files": [
+    "MapHomeTransitSheets.swift:71"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "기차|Train",
    "ko": "기차",
    "en": "Train",
@@ -15155,7 +15166,7 @@
    "ko": "등록된 교통 위치가 없습니다.",
    "en": "No transit locations are saved.",
    "files": [
-    "MapHomeTransitSheets.swift:472"
+    "MapHomeTransitSheets.swift:480"
    ],
    "args": [],
    "targets": [
@@ -15205,7 +15216,7 @@
    "ko": "등록된 위치",
    "en": "Saved locations",
    "files": [
-    "MapHomeTransitSheets.swift:456"
+    "MapHomeTransitSheets.swift:464"
    ],
    "args": [],
    "targets": [
@@ -16310,6 +16321,18 @@
    ]
   },
   {
+   "key": "배 탑승|Board Ship",
+   "ko": "배 탑승",
+   "en": "Board Ship",
+   "files": [
+    "MapHomeTransitSheets.swift:72"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "배|Ship",
    "ko": "배",
    "en": "Ship",
@@ -16569,6 +16592,18 @@
    "en": "A backup is already in progress. Try again when it finishes.",
    "files": [
     "AppLockAndPIN.swift:163"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "버스 탑승|Board Bus",
+   "ko": "버스 탑승",
+   "en": "Board Bus",
+   "files": [
+    "MapHomeTransitSheets.swift:70"
    ],
    "args": [],
    "targets": [
@@ -17222,6 +17257,18 @@
    ]
   },
   {
+   "key": "비행기 탑승|Board Airplane",
+   "ko": "비행기 탑승",
+   "en": "Board Airplane",
+   "files": [
+    "MapHomeTransitSheets.swift:73"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "비행기|Airplane",
    "ko": "비행기",
    "en": "Airplane",
@@ -17351,7 +17398,7 @@
    "ko": "사용자 위치",
    "en": "User locations",
    "files": [
-    "MapHomeTransitSheets.swift:263"
+    "MapHomeTransitSheets.swift:271"
    ],
    "args": [],
    "targets": [
@@ -18048,8 +18095,8 @@
    "ko": "선택 위치",
    "en": "Selected location",
    "files": [
-    "MapHomeTransitSheets.swift:366",
-    "MapHomeTransitSheets.swift:400"
+    "MapHomeTransitSheets.swift:374",
+    "MapHomeTransitSheets.swift:408"
    ],
    "args": [],
    "targets": [
@@ -20383,7 +20430,7 @@
    "ko": "역·정류장·공항·항구 검색",
    "en": "Search transit location",
    "files": [
-    "MapHomeTransitSheets.swift:295"
+    "MapHomeTransitSheets.swift:303"
    ],
    "args": [],
    "targets": [
@@ -21781,7 +21828,7 @@
    "files": [
     "MapHomeLocationSheets.swift:142",
     "MapHomeLocationSheets.swift:162",
-    "MapHomeTransitSheets.swift:234"
+    "MapHomeTransitSheets.swift:242"
    ],
    "args": [],
    "targets": [
@@ -21805,7 +21852,7 @@
    "ko": "위치 이름 수정",
    "en": "Edit location name",
    "files": [
-    "MapHomeTransitSheets.swift:679"
+    "MapHomeTransitSheets.swift:687"
    ],
    "args": [],
    "targets": [
@@ -21990,7 +22037,7 @@
    "ko": "유형",
    "en": "Type",
    "files": [
-    "MapHomeTransitSheets.swift:407"
+    "MapHomeTransitSheets.swift:415"
    ],
    "args": [],
    "targets": [
@@ -22506,7 +22553,7 @@
    "en": "Delete this location?",
    "files": [
     "MapHomeLocationSheets.swift:158",
-    "MapHomeTransitSheets.swift:227"
+    "MapHomeTransitSheets.swift:235"
    ],
    "args": [],
    "targets": [
@@ -22530,7 +22577,7 @@
    "ko": "이 후보 삭제",
    "en": "Delete this candidate",
    "files": [
-    "MapHomeTransitSheets.swift:136"
+    "MapHomeTransitSheets.swift:144"
    ],
    "args": [],
    "targets": [
@@ -22740,8 +22787,8 @@
    "en": "Name",
    "files": [
     "MapHomeInfoSheets.swift:44",
-    "MapHomeTransitSheets.swift:432",
-    "MapHomeTransitSheets.swift:682"
+    "MapHomeTransitSheets.swift:440",
+    "MapHomeTransitSheets.swift:690"
    ],
    "args": [],
    "targets": [
@@ -23817,7 +23864,7 @@
    "en": "Couldn’t save. Please try again.",
    "files": [
     "MapHomeTransitSheets.swift:34",
-    "MapHomeTransitSheets.swift:145"
+    "MapHomeTransitSheets.swift:153"
    ],
    "args": [],
    "targets": [
@@ -23843,7 +23890,7 @@
    "files": [
     "MapHomeLocationSheets.swift:216",
     "MapHomeSettingsSheets.swift:844",
-    "MapHomeTransitSheets.swift:422"
+    "MapHomeTransitSheets.swift:430"
    ],
    "args": [],
    "targets": [
@@ -24839,6 +24886,18 @@
    ]
   },
   {
+   "key": "지하철 탑승|Board Subway",
+   "ko": "지하철 탑승",
+   "en": "Board Subway",
+   "files": [
+    "MapHomeTransitSheets.swift:69"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "지하철 탑승|Subway ride",
    "ko": "지하철 탑승",
    "en": "Subway ride",
@@ -24880,7 +24939,7 @@
    "ko": "지하철역·버스정류장·기차역·공항·항구를 지도에서 관리합니다.",
    "en": "Manage subway stations, bus stops, train stations, airports, and harbors on the map.",
    "files": [
-    "MapHomeTransitSheets.swift:267"
+    "MapHomeTransitSheets.swift:275"
    ],
    "args": [],
    "targets": [
@@ -25328,7 +25387,7 @@
    "files": [
     "MapHomeCalendarSheet.swift:301",
     "MapHomeSettingsSheets.swift:87",
-    "MapHomeTransitSheets.swift:436"
+    "MapHomeTransitSheets.swift:444"
    ],
    "args": [],
    "targets": [
@@ -25555,7 +25614,7 @@
    "ko": "층수",
    "en": "Floor",
    "files": [
-    "MapHomeTransitSheets.swift:688"
+    "MapHomeTransitSheets.swift:696"
    ],
    "args": [],
    "targets": [
@@ -25933,7 +25992,7 @@
    "ko": "키보드 닫기",
    "en": "Dismiss keyboard",
    "files": [
-    "MapHomeTransitSheets.swift:310"
+    "MapHomeTransitSheets.swift:318"
    ],
    "args": [],
    "targets": [
@@ -25982,6 +26041,18 @@
    "en": "Could not delete the boarding candidate. Please try again.",
    "files": [
     "AppModel+MapEditing.swift:293"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "탑승|Board",
+   "ko": "탑승",
+   "en": "Board",
+   "files": [
+    "MapHomeTransitSheets.swift:74"
    ],
    "args": [],
    "targets": [
@@ -26972,7 +27043,7 @@
    "ko": "현재 위치",
    "en": "Current location",
    "files": [
-    "MapHomeTransitSheets.swift:391",
+    "MapHomeTransitSheets.swift:399",
     "MapHomeView.swift:7505",
     "MapHomeView.swift:9701"
    ],
