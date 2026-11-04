@@ -55,6 +55,8 @@ struct TaptionPlanApp: App {
                 NLEClipEditorPreviewHost()
             } else if ProcessInfo.processInfo.arguments.contains("-pinPreview") {
                 MapHomePinPreviewHost()
+            } else if ProcessInfo.processInfo.arguments.contains("-photoStripPreview") {
+                MapHomePhotoStripPreviewHost()
             } else {
                 TaptionFontRoot { AppShellView() }
                     .refreshesSupportedOrientations()

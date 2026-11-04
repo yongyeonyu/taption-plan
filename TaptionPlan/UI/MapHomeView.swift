@@ -845,7 +845,7 @@ struct MapHomeView: View {
         }
         .task { await runBenchAutoPlayback() }
         .task(id: model.selectedDate) { await loadPhotoMoments(asksPermission: FirstRunTutorialStore().allowsUnaskedPermissionPrompts) }
-        .task(id: model.selectedDate) { await loadDayCalendarEvents() }
+        .task(id: MapHomeDayCalendarLoader.key(day: model.selectedDate)) { await loadDayCalendarEvents() }
         .task {
             // 로딩이 너무 오래 걸리면 시간 제한 후 홈을 연다(무한 로딩 방지).
             try? await Task.sleep(nanoseconds: 15_000_000_000)
@@ -1252,6 +1252,11 @@ struct MapHomeView: View {
         .overlay {
             if isDayPlaybackRunning, let cat = displayedStickmanViewportPoint, let minute = dayPlaybackCurrentMinute {
                 MapHomePlaybackMomentsOverlay(minute: minute, events: playbackMomentEvents, anchor: cat)
+            }
+        }
+        .overlay(alignment: .bottom) {
+            if isDayPlaybackRunning, let minute = dayPlaybackCurrentMinute, !playbackPhotos.isEmpty {
+                MapHomePlaybackPhotoStrip(minute: minute, photos: playbackPhotos).playbackPlacement(trailing: timeRailWidth + 12)
             }
         }
         .sheet(isPresented: $isCalendarConnectPresented) { MapHomeCalendarConnectSheet(model: model, language: language) }
@@ -8276,10 +8281,11 @@ struct MapHomeView: View {
     }
 
     private var playbackMomentEvents: [(minute: Double, moment: MapHomePlaybackMomentsOverlay.Moment)] {
-        let start = Calendar.autoupdatingCurrent.startOfDay(for: model.selectedDate)
-        let photos = photoMoments.map { ($0.capturedAt.timeIntervalSince(start) / 60, MapHomePlaybackMomentsOverlay.Moment.photo(id: $0.id)) }
-        let memos = timedMemosForSelectedDate.map { ($0.occurredAt.timeIntervalSince(start) / 60, MapHomePlaybackMomentsOverlay.Moment.memo(text: $0.text)) }
-        return (photos + memos).sorted { $0.0 < $1.0 }.map { (minute: $0.0, moment: $0.1) }
+        MapHomePlaybackMomentsOverlay.events(memos: timedMemosForSelectedDate, day: model.selectedDate)
+    }
+
+    private var playbackPhotos: [MapHomePlaybackPhotoStrip.Photo] {
+        MapHomePlaybackPhotoStrip.photos(from: photoMoments, day: model.selectedDate)
     }
 
     private var isDisplayedCatAtHome: Bool {

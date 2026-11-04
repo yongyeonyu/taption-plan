@@ -38,14 +38,16 @@ extension HwarangPainter {
         let bob = sin(sec * 7) * 0.6, silver: UInt32 = 0xC8CDD3
         fill(0x000000, 0.14); c.beginPath(); oval(58, 108, 60, 4); c.fillPath()
         roadDashes(progress, y: 112)
-        c.saveGState(); c.translateBy(x: 0, y: bob)
+        c.saveGState(); c.translateBy(x: 58, y: 110 + bob); c.scaleBy(x: 1.1, y: 1.1); c.translateBy(x: -62, y: -110)
         // 접힌 지붕과 등받이
         rounded(10, 62, 30, 11, 5, fillHex: 0x2F3136, line: 2)
         rounded(34, 44, 13, 32, 6, fillHex: 0xC89B6B, line: 1.8)
         face(60, 50, 0.72, h, showsScarf: true)
         // 앞유리와 핸들
-        fill(0xCFE9F5, 0.45); stroke(outline, 2); c.setLineJoin(.round)
-        poly([P(82, 72), P(92, 46), P(96, 47), P(90, 72)]); c.drawPath(using: .fillStroke)
+        // 앞유리는 보닛에서 운전석 쪽으로 눕고, 위에 지붕이 없다.
+        fill(0xCFE9F5, 0.5); stroke(outline, 1.8); c.setLineJoin(.round)
+        poly([P(104, 73), P(95, 73), P(82, 52), P(87, 49)]); c.drawPath(using: .fillStroke)
+        stroke(0xF2F4F6, 1.2, 0.9); c.setLineCap(.round); c.beginPath(); c.move(to: P(97, 69)); c.addLine(to: P(88, 55)); c.strokePath()
         stroke(0x4A4A52, 3); c.setLineCap(.round); c.beginPath(); c.move(to: P(76, 72)); c.addLine(to: P(72, 62)); c.strokePath()
         fill(coat.fur); stroke(outline, 2); c.beginPath(); circle(71, 63, 4.6); c.drawPath(using: .fillStroke)
         // 차체: 트렁크, 문, 긴 보닛

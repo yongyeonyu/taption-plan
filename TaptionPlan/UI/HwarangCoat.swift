@@ -132,7 +132,9 @@ struct MapHomeMenuCatPicker: View {
                 }
             }
         } label: {
+            // 그림이 칸 아래쪽에 서 있어, 명언·닫기 단추와 세로 가운데가 맞도록 올린다.
             MapHomeMenuHeaderCat(size: 58)
+                .offset(y: -11)
         }
         .accessibilityLabel(language.text("고양이 바꾸기", "Change cat"))
     }

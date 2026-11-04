@@ -360,10 +360,105 @@ struct MapHomePhotoAlbumSelection: Identifiable {
     let moments: [PhotoMoment]
 }
 
+/// 재생 중 사진 미리보기. 화랑이를 가리지 않게 하단에 7칸을 두고, 지금 사진을 가운데에 크게 보여 준다.
+struct MapHomePlaybackPhotoStrip: View {
+    struct Photo: Equatable {
+        let minute: Double
+        let id: String
+    }
+
+    let minute: Double
+    let photos: [Photo]
+
+    static let slotsPerSide = 3
+    static let centerSide: CGFloat = 84
+    static let bottomInset: CGFloat = 104
+    private static let gap: CGFloat = 5
+
+    /// 지금까지 지나간 마지막 사진. 첫 사진 전이면 nil이고, 되감으면 그 자리로 돌아간다.
+    nonisolated static func currentIndex(minute: Double, photos: [Photo]) -> Int? {
+        photos.lastIndex { $0.minute <= minute }
+    }
+
+    /// 보여 줄 사진 번호. 가운데 양옆으로 최대 3칸씩, 모두 7칸이다.
+    nonisolated static func visibleIndices(current: Int?, count: Int) -> [Int] {
+        let center = current ?? -1
+        let lower = max(0, center - slotsPerSide), upper = min(count - 1, center + slotsPerSide)
+        return lower <= upper ? Array(lower...upper) : []
+    }
+
+    static func photos(from moments: [PhotoMoment], day: Date) -> [Photo] {
+        let start = Calendar.autoupdatingCurrent.startOfDay(for: day)
+        return moments
+            .map { Photo(minute: $0.capturedAt.timeIntervalSince(start) / 60, id: $0.id) }
+            .sorted { $0.minute < $1.minute }
+    }
+
+    func playbackPlacement(trailing: CGFloat) -> some View {
+        padding(.leading, 12).padding(.trailing, trailing).padding(.bottom, Self.bottomInset)
+    }
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        let current = Self.currentIndex(minute: minute, photos: photos)
+        GeometryReader { proxy in
+            let side = min(46, max(24, (proxy.size.width - Self.centerSide - Self.gap * 6) / 6))
+            ZStack {
+                ForEach(Self.visibleIndices(current: current, count: photos.count), id: \.self) { index in
+                    slot(index: index, center: current ?? -1, side: side)
+                }
+            }
+            .frame(width: proxy.size.width, height: Self.centerSide)
+        }
+        .frame(height: Self.centerSide)
+        .animation(reduceMotion ? nil : .spring(response: 0.42, dampingFraction: 0.72), value: current)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    private func slot(index: Int, center: Int, side: CGFloat) -> some View {
+        let distance = index - center
+        let isCenter = distance == 0
+        let extra = (Self.centerSide - side) / 2
+        let x = CGFloat(distance) * (side + Self.gap) + (distance > 0 ? extra : distance < 0 ? -extra : 0)
+        return MapHomePhotoThumbnail(localIdentifier: photos[index].id, side: Self.centerSide)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color.white, lineWidth: isCenter ? 3 : 4))
+            .scaleEffect(isCenter ? 1 : side / Self.centerSide)
+            .shadow(color: .black.opacity(isCenter ? 0.3 : 0.16), radius: isCenter ? 7 : 3, y: 2)
+            .opacity(isCenter ? 1 : max(0.45, 1 - Double(abs(distance)) * 0.14))
+            .zIndex(isCenter ? 1 : 0)
+            .offset(x: x)
+            .transition(.opacity)
+    }
+}
+
+#if DEBUG
+/// 화면 확인용. `-photoStripPreview` 실행 인자로만 뜬다. 분이 지나며 가운데 사진이 넘어간다.
+struct MapHomePhotoStripPreviewHost: View {
+    @State private var minute: Double = 0
+    private let photos = (0..<10).map { MapHomePlaybackPhotoStrip.Photo(minute: Double($0) * 10, id: "preview-\($0)") }
+
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            Color.tpBackground.ignoresSafeArea()
+            MapHomePlaybackPhotoStrip(minute: minute, photos: photos)
+                .playbackPlacement(trailing: 60)
+        }
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1))
+                minute = minute >= 90 ? 0 : minute + 10
+            }
+        }
+    }
+}
+#endif
+
 /// 재생 중 지나간 사진과 메모를 잠깐 띄운다(PLY1104A02). 사진은 지도 아이콘의 3배로 떴다가 줄지 않고 희미해지고, 메모는 한 글자씩 찍힌다.
 struct MapHomePlaybackMomentsOverlay: View {
     enum Moment: Equatable {
-        case photo(id: String)
         case memo(text: String)
     }
 
@@ -374,7 +469,6 @@ struct MapHomePlaybackMomentsOverlay: View {
     @State private var current: (moment: Moment, start: Date)?
     @State private var lastMinute: Double?
 
-    static let photoSide: CGFloat = 138
     static let lifetime: TimeInterval = 2.4
 
     /// 지난 분에서 이번 분 사이에 지나간 것 중 마지막. 되감기면 아무것도 띄우지 않는다.
@@ -398,12 +492,6 @@ struct MapHomePlaybackMomentsOverlay: View {
                 let elapsed = context.date.timeIntervalSince(current.start)
                 Group {
                     switch current.moment {
-                    case .photo(let id):
-                        MapHomePhotoThumbnail(localIdentifier: id, side: Self.photoSide)
-                            .frame(width: Self.photoSide, height: Self.photoSide)
-                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.white, lineWidth: 3))
-                            .shadow(color: .black.opacity(0.3), radius: 6, y: 3)
                     case .memo(let text):
                         Text(String(text.prefix(Self.typedCount(elapsed: elapsed, total: text.count))))
                             .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
@@ -424,6 +512,13 @@ struct MapHomePlaybackMomentsOverlay: View {
             lastMinute = new
             if let shown = current, Date.now.timeIntervalSince(shown.start) > Self.lifetime + memoHold(shown.moment) { current = nil }
         }
+    }
+
+    static func events(memos: [ActionMemo], day: Date) -> [(minute: Double, moment: Moment)] {
+        let start = Calendar.autoupdatingCurrent.startOfDay(for: day)
+        return memos
+            .map { (minute: $0.occurredAt.timeIntervalSince(start) / 60, moment: Moment.memo(text: $0.text)) }
+            .sorted { $0.minute < $1.minute }
     }
 
     /// 메모는 다 찍은 뒤부터 사라지기 시작한다.

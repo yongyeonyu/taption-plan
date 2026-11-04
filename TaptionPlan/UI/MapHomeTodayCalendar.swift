@@ -8,6 +8,12 @@ enum MapHomeCalendarAccessProblem: Equatable {
 
 /// 그날 일정을 읽는다. 구글을 직접 연결했으면 구글, 아니면 기기 캘린더다.
 enum MapHomeDayCalendarLoader {
+    /// 날짜나 구글 연결 상태가 바뀌면 일정을 다시 읽는다.
+    @MainActor
+    static func key(day: Date) -> String {
+        "\(day.timeIntervalSinceReferenceDate)-\(GoogleCalendarAccount.shared.isConnected)"
+    }
+
     @MainActor
     static func events(
         on day: Date,
@@ -204,7 +210,7 @@ struct MapHomeTodayCalendarList: View {
         .padding(12)
         .frame(width: 280, alignment: .leading)
         .mapHomeGlass(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .task(id: date) { await load() }
+        .task(id: MapHomeDayCalendarLoader.key(day: date)) { await load() }
     }
 
     /// 오늘이면 "오늘 일정", 다른 날이면 그 날짜를 제목에 적어 어느 날 목록인지 바로 보이게 한다.

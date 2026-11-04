@@ -1246,6 +1246,29 @@ final class NLETrackTests: XCTestCase {
         XCTAssertEqual(around.map(\.title), ["집", "집 주변 이동", "집"])
     }
 
+    func testPlaybackPhotoStripKeepsSevenSlotsAroundCurrentPhoto() {
+        let photos = (0..<10).map { MapHomePlaybackPhotoStrip.Photo(minute: Double($0) * 10, id: "\($0)") }
+        XCTAssertNil(MapHomePlaybackPhotoStrip.currentIndex(minute: -1, photos: photos))
+        XCTAssertEqual(MapHomePlaybackPhotoStrip.currentIndex(minute: 45, photos: photos), 4)
+        XCTAssertEqual(MapHomePlaybackPhotoStrip.visibleIndices(current: 4, count: 10), [1, 2, 3, 4, 5, 6, 7])
+        XCTAssertEqual(MapHomePlaybackPhotoStrip.visibleIndices(current: nil, count: 10), [0, 1, 2])
+        XCTAssertEqual(MapHomePlaybackPhotoStrip.visibleIndices(current: 9, count: 10), [6, 7, 8, 9])
+        XCTAssertEqual(MapHomePlaybackPhotoStrip.visibleIndices(current: 0, count: 1), [0])
+    }
+
+    func testGoogleCalendarReadsVisibleCalendarsWithEncodedPaths() {
+        let entries = [
+            GoogleCalendarAccount.CalendarEntry(id: "me@gmail.com", summary: "나", selected: true, primary: true),
+            GoogleCalendarAccount.CalendarEntry(id: "work#x@group.calendar.google.com", summary: "회사", selected: true, primary: nil),
+            GoogleCalendarAccount.CalendarEntry(id: "hidden", summary: "숨김", selected: nil, primary: nil),
+        ]
+        XCTAssertEqual(GoogleCalendarAccount.visibleCalendars(entries).map(\.summary), ["나", "회사"])
+        XCTAssertEqual(
+            GoogleCalendarAccount.eventsPath(calendarID: "work#x@group.calendar.google.com"),
+            "/calendar/v3/calendars/work%23x%40group.calendar.google.com/events"
+        )
+    }
+
     func testPlayheadSnapsWeaklyToSegmentBoundaries() {
         let track = MapHomeNLEClipEditor.makeMainTrack(segments: [
             MapHomeTimeRailSegment(startMinute: 0, endMinute: 600, categoryID: "sleep", title: "수면", sourceIDs: [UUID()]),

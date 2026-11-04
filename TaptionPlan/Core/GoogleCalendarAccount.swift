@@ -40,6 +40,7 @@ final class GoogleCalendarAccount: NSObject, ASWebAuthenticationPresentationCont
     private static let keychainAccount = "refreshToken"
 
     private(set) var isConnected: Bool
+    @ObservationIgnored private var cachedCalendars: (entries: [CalendarEntry], at: Date)?
     private var accessToken: String?
     private var accessTokenExpiry = Date.distantPast
     private var isConnecting = false
@@ -88,6 +89,7 @@ final class GoogleCalendarAccount: NSObject, ASWebAuthenticationPresentationCont
     }
 
     func disconnect() {
+        cachedCalendars = nil
         if let refresh = Self.loadRefreshToken() {
             Task { await Self.revoke(refresh) }
         }
@@ -98,13 +100,51 @@ final class GoogleCalendarAccount: NSObject, ASWebAuthenticationPresentationCont
 
     // MARK: 일정
 
-    /// 그날(시작 자정 ~ 다음 날 자정) 기본 캘린더의 일정을 시작 시각순으로 돌려준다.
+    /// 그날(시작 자정 ~ 다음 날 자정) 구글에서 표시로 켠 캘린더의 일정을 시작 시각순으로 돌려준다.
     /// 화면에서 고른 날짜를 그대로 넘겨 날짜를 바꿔도 같은 경로로 다시 읽는다.
     func events(on day: Date, calendar: Calendar = .current) async throws -> [CalendarRecord] {
         let token = try await validAccessToken()
         let start = calendar.startOfDay(for: day)
         let end = calendar.date(byAdding: .day, value: 1, to: start) ?? start
-        var components = URLComponents(string: "https://www.googleapis.com/calendar/v3/calendars/primary/events")!
+        let targets = await calendarTargets(token: token)
+        let parser = Event.Parser(calendar: calendar)
+        var records: [String: CalendarRecord] = [:]
+        var failures = 0
+        var lastError: Error = GoogleCalendarError.requestFailed
+        for target in targets {
+            do {
+                let list = try await eventList(calendarID: target.id, start: start, end: end, token: token)
+                for event in list.items where event.status != "cancelled" {
+                    guard var record = event.record(parser: parser) else { continue }
+                    if let title = target.summary { record.calendarTitle = title }
+                    if records[record.id] == nil { records[record.id] = record }
+                }
+            } catch GoogleCalendarError.authExpired {
+                throw GoogleCalendarError.authExpired
+            } catch {
+                failures += 1
+                lastError = error
+            }
+        }
+        // 일부 캘린더만 실패하면 읽은 일정은 보여 주고, 전부 실패할 때만 실패로 알린다.
+        if failures == targets.count { throw lastError }
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "google_calendar_events_loaded",
+            metrics: [
+                "calendars": Double(targets.count),
+                "failed_calendars": Double(failures),
+                "events": Double(records.count)
+            ]
+        )
+        return records.values.sorted { lhs, rhs in
+            if lhs.isAllDay != rhs.isAllDay { return lhs.isAllDay }
+            return lhs.span.start < rhs.span.start
+        }
+    }
+
+    private func eventList(calendarID: String, start: Date, end: Date, token: String) async throws -> EventList {
+        var components = URLComponents(string: "https://www.googleapis.com")!
+        components.percentEncodedPath = Self.eventsPath(calendarID: calendarID)
         components.queryItems = [
             URLQueryItem(name: "timeMin", value: Self.rfc3339.string(from: start)),
             URLQueryItem(name: "timeMax", value: Self.rfc3339.string(from: end)),
@@ -112,26 +152,64 @@ final class GoogleCalendarAccount: NSObject, ASWebAuthenticationPresentationCont
             URLQueryItem(name: "orderBy", value: "startTime"),
             URLQueryItem(name: "maxResults", value: "100"),
         ]
-        var request = URLRequest(url: components.url!)
+        let data = try await authorizedGet(components.url!, token: token, label: "events")
+        guard let list = try? JSONDecoder().decode(EventList.self, from: data) else {
+            throw GoogleCalendarError.requestFailed
+        }
+        return list
+    }
+
+    /// 읽을 캘린더. 목록을 못 읽으면 기본 캘린더로 돌아간다.
+    private func calendarTargets(token: String) async -> [CalendarEntry] {
+        if let cachedCalendars, Date.now.timeIntervalSince(cachedCalendars.at) < 600 {
+            return cachedCalendars.entries
+        }
+        let primary = [CalendarEntry(id: "primary", summary: nil, selected: true, primary: true)]
+        var components = URLComponents(string: "https://www.googleapis.com/calendar/v3/users/me/calendarList")!
+        components.queryItems = [URLQueryItem(name: "minAccessRole", value: "reader")]
+        guard let data = try? await authorizedGet(components.url!, token: token, label: "calendar_list"),
+              let list = try? JSONDecoder().decode(CalendarList.self, from: data) else { return primary }
+        let entries = Self.visibleCalendars(list.items)
+        let result = entries.isEmpty ? primary : entries
+        cachedCalendars = (result, .now)
+        return result
+    }
+
+    private func authorizedGet(_ url: URL, token: String, label: String) async throws -> Data {
+        var request = URLRequest(url: url)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         let (data, response) = try await send(request)
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        if status == 200 { return data }
+        // 일정 내용 없이 상태와 구글의 거절 사유만 남긴다.
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "google_calendar_request_failed",
+            level: .error,
+            fields: [
+                "request": label,
+                "status": String(status),
+                "reason": (try? JSONDecoder().decode(ErrorResponse.self, from: data))?.error.errors?.first?.reason ?? "unknown",
+            ]
+        )
         if status == 401 {
             // 사용자가 구글에서 앱 권한을 취소했다.
             forgetConnection()
             throw GoogleCalendarError.authExpired
         }
-        guard status == 200, let list = try? JSONDecoder().decode(EventList.self, from: data) else {
-            throw GoogleCalendarError.requestFailed
-        }
-        let parser = Event.Parser(calendar: calendar)
-        return list.items
-            .filter { $0.status != "cancelled" }
-            .compactMap { $0.record(parser: parser) }
-            .sorted { lhs, rhs in
-                if lhs.isAllDay != rhs.isAllDay { return lhs.isAllDay }
-                return lhs.span.start < rhs.span.start
-            }
+        throw GoogleCalendarError.requestFailed
+    }
+
+    /// 구글 캘린더 화면에서 표시로 켠 캘린더. 기본 캘린더는 항상 읽는다.
+    nonisolated static func visibleCalendars(_ items: [CalendarEntry]) -> [CalendarEntry] {
+        items.filter { $0.primary == true || $0.selected == true }
+    }
+
+    /// 캘린더 ID에는 `@`·`#`이 들어가므로 경로에 넣기 전에 인코딩한다.
+    nonisolated static func eventsPath(calendarID: String) -> String {
+        var allowed = CharacterSet.alphanumerics
+        allowed.insert(charactersIn: "-._~")
+        let encoded = calendarID.addingPercentEncoding(withAllowedCharacters: allowed) ?? calendarID
+        return "/calendar/v3/calendars/\(encoded)/events"
     }
 
     // MARK: 토큰
@@ -159,6 +237,7 @@ final class GoogleCalendarAccount: NSObject, ASWebAuthenticationPresentationCont
 
     /// 앱이 들고 있는 연결 정보를 지운다(구글 쪽 권한 취소는 하지 않는다: 이미 거부된 상태).
     private func forgetConnection() {
+        cachedCalendars = nil
         Self.deleteRefreshToken()
         accessToken = nil
         accessTokenExpiry = .distantPast
@@ -239,6 +318,25 @@ final class GoogleCalendarAccount: NSObject, ASWebAuthenticationPresentationCont
     }
 
     // MARK: 일정 응답
+
+    struct CalendarEntry: Decodable, Equatable, Sendable {
+        var id: String
+        var summary: String?
+        var selected: Bool?
+        var primary: Bool?
+    }
+
+    fileprivate struct CalendarList: Decodable {
+        var items: [CalendarEntry]
+    }
+
+    fileprivate struct ErrorResponse: Decodable {
+        struct Body: Decodable {
+            struct Item: Decodable { var reason: String? }
+            var errors: [Item]?
+        }
+        var error: Body
+    }
 
     fileprivate struct EventList: Decodable {
         var items: [Event]

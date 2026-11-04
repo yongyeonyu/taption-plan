@@ -86,6 +86,12 @@ final class MapHomeStickmanTests: XCTestCase {
             }
         }
         try XCTUnwrap(image.pngData()).write(to: URL(fileURLWithPath: folder).appendingPathComponent("characters.png"))
+        let car = UIGraphicsImageRenderer(size: CGSize(width: side * 3, height: side)).image { _ in
+            for (column, sec) in [0.5, 1.5, 3.0].enumerated() {
+                HwarangDiagnostics.frame(scene: .carFront, sec: sec, side: side).draw(at: CGPoint(x: CGFloat(column) * side, y: 0))
+            }
+        }
+        try XCTUnwrap(car.pngData()).write(to: URL(fileURLWithPath: folder).appendingPathComponent("car.png"))
     }
 
     func testUnusedAnimationsReachCustomCategories() throws {
