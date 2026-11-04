@@ -16,6 +16,9 @@
 | 화랑이 장면·소품 | `TaptionPlan/UI/HwarangRig.swift`, `HwarangRigProps.swift`, `HwarangRigDailyScenes.swift`, `HwarangRigAccessories.swift` |
 | 지도 안개(세기 정책·벡터/Apple 지도 렌더러) | `TaptionPlan/UI/MapHomeFogLayer.swift` |
 | 지도 카운터 표·재생 끊김 보정·라이브액티비티 현재 활동 | `TaptionPlan/UI/MapHomeCounterTable.swift`, `MapHomePlaybackContinuity.swift`, `LiveActivityCurrentActivity.swift` |
+| 재생 사진 칸(호 배치·3초 확대)·재생 메모 알림·지도 사진 핀 | `TaptionPlan/UI/MapHomePhotoLayer.swift` |
+| 재생 영상 렌더·음악·기간 계획 | `TaptionPlan/UI/MapHomePlaybackVideoRenderer.swift`, `MapHomePlaybackVideoSheet.swift`, `MapHomePlaybackMusic.swift`, `MapHomeRangePlayback.swift`, 곡은 `TaptionPlan/Audio/PlaybackMusic/`(앱 target만) |
+| 구글 캘린더 직접 연결 | `TaptionPlan/Core/GoogleCalendarAccount.swift`, `TaptionPlan/UI/MapHomeTodayCalendar.swift`, `TaptionPlan/UX/AppModel+CalendarTitles.swift` |
 | 클립 만들기·표기 도우미(편집기 화면 본문과 분리) | `TaptionPlan/UI/MapHomeNLEClipFactory.swift`, `TaptionPlan/UI/MapHomeNLEClipEditor.swift` |
 | SQLite 저장소(파일 하나 `taption-store.sqlite`: readings·records·raw_events)·워치 원본·암호화 백업 | `TaptionPlan/Core/TaptionStoreV2.swift`, `TaptionStoreRawEvents.swift`, `TaptionStoreRepository.swift`, `PlanDayDatabase.swift`, `TaptionBackupEngine.swift`(월 단위 백업), 모델 의존이 없는 백업 형식·암호·목적지와 기록 행·병합 규칙·원본 이벤트·품질 원장은 `Packages/TaptionPlanStore/`(`TaptionStoreRepository.swift`가 앱·위젯에 다시 내보낸다. 저장소 actor·열 코덱은 `SensorReading`이 `FeatureModels`에 있어 아직 앱에 둔다), `PlanBackupEngineAdapter.swift`(앱이 엔진을 부르는 유일한 곳), `PlanBackupPresentation.swift`, `PlanBackupRouteFallbackEngine.swift`(백업에 원본 경로 점이 없을 때 장소·이동에서 되살리는 계산), `AppLockAndPIN.swift`·`PlanSecurityService.swift`(비밀번호·앱 잠금) |
 | 활동 기록 배열의 저장소 공유·바이트 단위 동일성 비교 | `TaptionPlan/Core/PlanActualStorage.swift` |
@@ -129,6 +132,20 @@ HealthKit 운동 경로를 보완할 때는 기존 위치와 20초 시간 중복
 - `TaptionLatestValueProjection`과 `TaptionInputFrameGate`가 공통 입력 정책입니다. 동일 상태로 갱신 예산을 소비하지 않고, 종료 이벤트는 최종값을 즉시 반영합니다. UIKit/MapKit 제스처와 표시 좌표는 앱에 남깁니다.
 - Release에서 패키지 경계를 넘는 제네릭 캐시가 특수화되도록 작은 조회 함수는 `@inlinable`입니다. Debug 측정만으로 성능 개선을 판단하지 않습니다. 공통 UUID 비교는 기존 대문자 UUID 문자열 순서와 같아 fingerprint 호환성을 유지합니다.
 
+## 판정 규칙
+
+- 등록 식당은 표본이 1시간까지 비어도 앞뒤가 반경 안이면 식사로 잇습니다(`RestaurantMealActualEngine.maximumSampleGap`). 실내에서 iOS가 위치를 멈추기 때문입니다. 관측 시간이 최소 길이보다 짧으면 신뢰도를 `.medium`으로 둡니다. 식사는 자동 업무·수업을 잘라 내고, 그보다 긴 공백은 잇지 않습니다.
+- 회의는 시간 레일에서 앞뒤 업무와 합치지 않습니다(`MapHomeTimeRailSegmentEngine.mergeKey`). 같은 대분류라고 합치면 앞 조각 제목만 남아 회의가 사라집니다.
+- 슬라이드바로 표본이 없는 시간을 고르면 `MapHomePlaybackLocation.restingLocation`이 자리를 정합니다. 수면이면 그 시간의 체류 → 집, 그날 첫 표본 전이면 첫 표본입니다.
+- 분류 선택에서 `업무(집 - 회사)`를 뺐습니다. `behavior == "work"`인 옛 기록은 그대로 읽고 "업무"로 표시합니다.
+
+## 구글 캘린더 연결
+
+- 프로젝트 `bokki-plan`, 범위 `calendar.readonly`, iOS 클라이언트 하나입니다. 일정은 기기 안에서만 쓰고, 연결 해제 때 토큰을 취소하고 구글 일정을 지웁니다.
+- 앱 게시 상태는 프로덕션이고 데이터 액세스 인증은 2026-11-04에 제출해 검토 중입니다(`temp.md` GOO1104A01). 승인 전에는 "확인되지 않은 앱" 경고와 사용자 100명 제한이 있습니다.
+- 브랜딩·범위·게시 상태를 바꾸면 다시 인증이 필요합니다. 게시 상태를 오가면 심사가 늦어질 수 있습니다. 지원 메일은 구글 그룹, 담당자 연락처는 공식 지원 메일을 쓰고 **개인 메일을 넣지 않습니다**(대표 지시).
+- 시연 영상을 새로 찍으면 메일·집 주변 지도·하루 기록을 가립니다. 일부 공개 영상은 심사가 끝날 때까지 지우거나 비공개로 바꾸지 않습니다.
+
 ## 화면 규칙
 
 - 시작 화면(`LaunchScreen.storyboard`)에는 **진행선을 두지 않습니다.** 이 화면은 첫 SwiftUI 프레임이 나오기 전까지 보이는 정지 그림이라 값이 움직일 수 없고, 빈 막대는 "0%에서 멈췄다"로 읽힙니다(대표 지적). 실제 진행선은 SwiftUI 스플래시(`AppShellView.initialLaunchOverlay`)에만 있습니다. 두 화면은 같은 배경색·같은 고양이·같은 제목을 쓰고, 첫 프레임이 준비되면 진행선·퍼센트·단계 문구가 함께 나타납니다.
@@ -136,6 +153,12 @@ HealthKit 운동 경로를 보완할 때는 기존 위치와 20초 시간 중복
 - 지도 안개는 `MapHomeFogStrength`(끄기 0.0 · 옅게 0.28 · 진하게 0.55) 세 단계만 두고 `@AppStorage(MapHomeFogStrength.storageKey)`에 저장합니다. 기본은 옅게입니다. 걷어내는 반경(`revealRadius` 72pt · `currentLocationRadius` 96pt)과 세기는 `MapHomeFogLayer.swift`의 값 하나를 벡터 지도와 Apple 지도가 함께 씁니다. 지도 스타일을 추가해도 안개 정책을 따로 만들지 않습니다.
 - 하단 1급 항목은 `메뉴 · 달력 · 현재 위치 · 집 · 재생 · 녹화 · 메모` 일곱 개이고 **맨 왼쪽이 메뉴**입니다(`bottomActionBar`). 메뉴는 2026-10-26까지 좌상단 원형 버튼이었는데, 지도와 날짜 줄을 가리고 손이 닿지 않는 구석이라 아래로 내렸습니다. 「녹화」는 재생 바로 오른쪽에 둡니다 — 재생을 마친 사람이 다음에 누르는 버튼이라 메뉴 안(메뉴 열기 → 화면 그룹)에 두면 그 자리에서 보이지 않습니다. 0f2987d에서 다섯 개로 줄이며 메뉴로 내렸다가 되돌렸습니다. 항목을 더 늘려야 하면 먼저 무엇을 내릴지 정합니다.
 - 재생 단추는 **한 자리에서** `재생`↔`멈춤`으로만 바뀝니다. 예전에는 재생 중에 「일시 정지」와 「종료」를 나란히 두어 하단 항목이 하나 늘었는데, 둘을 헷갈린다는 지적을 받아 한 칸으로 되돌렸습니다(대표 요청). 재생을 취소하는 길은 단추를 늘리지 않고 **지도를 움직이는 손짓**(끌기·확대·축소·회전)과 **「현재 위치」**입니다 — `cancelDayPlaybackIfRunning()`이 재생을 멈추고, 「현재 위치」는 `requestAndFollowUserLocation`에서 날짜와 시간선 선택을 함께 지금으로 되돌립니다(`selectedTimelineMinute = nil`, `isTimelineSelectionPinned = false`). 지도만 지금으로 옮기고 시간선을 보던 시각에 두면, 확대해 둔 사이드바가 지금과 다른 시각을 가리킵니다(대표 지적, 2026-10-27). 화면 시험은 재생 중 하단 항목 **수**가 그대로인지 셉니다(`bottomBarLabels`).
+- 재생 중에는 상단 진행 바를 두지 않습니다(대표 지시, 2026-11-04). 사진과 메모는 재생 중 지도 핀으로 그리지 않고, 재생이 아닐 때만 전부 핀으로 그립니다. 재생 메모는 위쪽 버튼 줄 아래로 내려와 3초 뒤 사라지고, 여러 개면 순서대로 덮어씁니다(`MapHomePlaybackMomentsOverlay`). 재생 사진은 아래 칸에서 새 사진만 3초 크게 보이고, 나머지는 양옆으로 아래로 휘는 호에 놓이며 많으면 겹칩니다(`MapHomePlaybackPhotoStrip.arcPlacement`, 한쪽 최대 12칸). 시간 사이드바를 숨기면 화면 가운데에 둡니다.
+- Apple 지도에서 메모·스티커·사진 핀은 `displayPriority = .required`, `collisionMode = .none`입니다(`MapHomeAppleAnnotationKind.staysVisible`). 충돌에 넣으면 지도를 움직일 때마다 나타났다 사라집니다. 지도 위 요소를 더할 때는 벡터 지도와 Apple 지도 양쪽에 넣습니다. 사진 핀이 벡터 지도에만 있어 Apple 지도에서 안 보이던 적이 있습니다.
+- 집을 뺀 장소 아이콘(회사·식당 등)을 누르면 위치 설정이 열립니다. 집은 하루 요약입니다.
+- 화랑이 옆 말풍선은 `catSpeechBubble`로 붙이고 좌우는 `MapHomeCatSpeechBubble.side`가 동작별로 정합니다. 문구를 받기 전까지 동작 이름을 씁니다. 영상 렌더에는 넣지 않습니다.
+- 언어 메뉴는 자동과 14개 언어입니다(대표 결정, LNG1104A02). 번역 언어를 고르면 문구는 바로 바뀌고, 글꼴·지도 글자·시스템 문구는 다시 실행한 뒤 바뀝니다. 한국어·영어를 고정해 두면 기기 언어를 따르지 않습니다.
+- 재생 영상은 벡터 지도로만 그립니다. Apple 지도를 쓰는 중이어도 진입 단추를 숨기지 않고 기본 벡터 지도로 만듭니다. 기간은 1일·1주일·1달·1년·특정 날짜(최대 366일)이고, 위치 기록이 없는 날은 앞뒤 지점을 직선으로 잇고 시트에 날 수를 알립니다(대표 선택). 화면 녹화에는 음악이 들어가지 않습니다.
 - 시간선이 보이는 창(`timeSidebarVisibleStartMinute`·`timeSidebarVisibleDurationMinutes`)은 **지도 홈이 하나만** 들고, 시간 레일·날씨 띠·선택 캡슐이 그 값을 함께 씁니다(`MapHomeTimeSidebar`는 `@Binding`으로 받습니다). 사이드바가 `@State`로 따로 들고 `onViewportChanged`로 알리던 때에는, 메뉴를 열어 사이드바가 사라졌다 돌아오면 레일만 하루 전체로 돌아가고 부모가 든 창은 확대 상태로 남아 캡슐·날씨 띠가 다른 창을 썼습니다. 같은 날짜에서 날짜만 바뀔 때 `weatherVisible*`만 되돌리던 줄도 함께 지웠습니다 — **한쪽만 되돌리는 코드가 곧 두 시간축이 어긋나는 자리**입니다(대표 지적, 2026-10-27).
 - 시간 사이드바 손잡이는 **선택 시각의 자리**에 둡니다(`MapHomeTimeSidebarHandleMath.y`). 창을 세로로 끄는 동안에만 트랙 가운데에 고정합니다. 확대만 했을 때까지 가운데에 붙이던 때에는, 선택 시각이 창의 가운데가 아닐 때(시간이 흘러 지금이 창 아래쪽으로 내려갔거나, 「현재 위치」로 선택이 지금으로 돌아왔거나, 자정·지금 경계에서 창이 밀린 경우) 손잡이의 시각과 그 자리의 눈금이 어긋났습니다 — 지도는 선택 시각을, 사이드바는 창의 가운데 시각을 보여 주었습니다(대표 지적, 2026-10-27). 하루 전체(창 = 하루)에서는 두 계산이 같은 자리라 예전과 같습니다. 손잡이가 자기 캡슐 밖으로 나가면 이 규칙이 깨진 것입니다.
 - 시간선 확대는 두 손가락 집기만 두지 않고 시간선 아래 `＋ / －` 단추로도 합니다(`MapHomeView.timelineZoomControls`). 단계는 `MapHomeTimeSidebarMath.zoomDurations` = 하루 → 12시간 → 6시간 → 3시간 → 1시간이고, 끝 단계에서는 단추가 흐려져 더 갈 곳이 없음을 보입니다. 두 손가락만 있으면 시뮬레이터에서 확대 단계를 확인할 수 없어 화면시험이 배선을 잠그지 못합니다(`testTimelineZoomButtonsStepThroughTheLadder`). 단추는 `zoomStepToken`을 올리기만 하고 창은 여전히 지도 홈이 정합니다 — 단추가 창을 직접 쓰면 위 항목의 두 벌 문제가 그대로 돌아옵니다. 단추는 **시간선 아래 가로 알약 하나**(`HStack`, 폭 `Layout.timeRailWidth` 44 · 높이 22 · 캡슐, ＋가 왼쪽·－가 오른쪽, 가운데 0.6×12 선)로 둡니다. 사이드바 패널도 폭 44에 R 22라 양 끝이 반원으로 같고, 알약 폭은 단추 폭을 `Layout.timeRailWidth / 2`로 잡아 사이드바와 정확히 맞춥니다. 알약이 들어갈 자리는 시간선 아래 `zoomReserve` 32pt를 비워 확보하고 레일 높이를 그만큼 줄입니다 — 레일 기준점(`timeRailTop`)과 선택 캡슐 위치에서도 같은 값을 빼야 캡슐이 아래로 밀리지 않습니다.
@@ -220,6 +243,6 @@ xcodebuild test -project TaptionPlan.xcodeproj -scheme TaptionPlan \
 
 전체 scheme을 한 번에 돌리면 화면 시험이 하나라도 실패할 때 xcodebuild가 재시도 단계로 넘어가고, 그 단계에서 `Failed to launch app with identifier: com.taption.plan`만 반복하며 **끝나지 않는다**(2026-10-28에 두 번 겪었다. 22분을 기다려도 로그가 멈춰 있었다). 그래서 `-only-testing:TaptionPlanTests`와 `-only-testing:TaptionPlanUITests`를 나눠 돌린다. 단위 시험은 5분, 화면 시험은 11분쯤 걸린다.
 
-`TaptionPlanPlaybackHUDUITests.testPlayTogglesInOneSlotAndMapMoveCancelsIt`은 하루를 24초에 재생하는 화면을 그대로 재는 시험이라 **시각에 따라 실패했다**. 2026-10-28에 이 시험 하나 때문에 두 번 실패했는데, 변경 전 커밋(`9215234`)에서도 같은 시험이 다른 줄(535행 「다시 재생되지 않는다」)에서 실패해 코드 회귀가 아님을 먼저 확인했다. 원인은 재생 구간이 `[선택 시각, 지금]`이라 오전에는 3초 남짓인데, 시험이 그 사이에 접근성 스냅숏을 여러 번 뜨는 것이다. 그래서 시험은 `-slowDayPlayback` 인자로 재생 배속만 10분의 1로 늦춘다(`MapHomeDayPlaybackTestHooks.rateScale`). 인자가 없으면 배속은 그대로이고, `TimeScaleTests`가 그 기본값(120분/초)을 잠근다. 화면 시험에 시간이 걸리는 동작(스크린샷·단추 세기)을 넣을 때는 같은 방식으로 시간을 벌어야 한다.
+`TaptionPlanPlaybackHUDUITests.testPlayTogglesInOneSlotAndMapMoveCancelsIt`(상단 진행 바는 지웠고, 재생·멈춤 단추를 잽니다)은 하루를 24초에 재생하는 화면을 그대로 재는 시험이라 **시각에 따라 실패했다**. 2026-10-28에 이 시험 하나 때문에 두 번 실패했는데, 변경 전 커밋(`9215234`)에서도 같은 시험이 다른 줄(535행 「다시 재생되지 않는다」)에서 실패해 코드 회귀가 아님을 먼저 확인했다. 원인은 재생 구간이 `[선택 시각, 지금]`이라 오전에는 3초 남짓인데, 시험이 그 사이에 접근성 스냅숏을 여러 번 뜨는 것이다. 그래서 시험은 `-slowDayPlayback` 인자로 재생 배속만 10분의 1로 늦춘다(`MapHomeDayPlaybackTestHooks.rateScale`). 인자가 없으면 배속은 그대로이고, `TimeScaleTests`가 그 기본값(120분/초)을 잠근다. 화면 시험에 시간이 걸리는 동작(스크린샷·단추 세기)을 넣을 때는 같은 방식으로 시간을 벌어야 한다.
 
 `xcodebuild test`가 `** TEST FAILED **`로 끝나는데 `Failing tests:` 목록이 비어 있으면 시험 실패가 아니다. 2026-10-28 릴리스에서 이 모양으로 두 번 막혔고, 로그 끝에 `App installation failed … No space left on device`가 있었다. 범인은 `~/Library/Developer/XCTestDevices`로, xcodebuild가 병렬 워커마다 시뮬레이터를 통째로 복제해 두고 **지우지 않는다**. 그때 97개 복제본이 134GB까지 쌓여 있었다. 그래서 `release.sh`의 시험 단계는 `-parallel-testing-enabled NO`로 복제를 1개로 묶고, 실패 로그에 `No space left on device`가 보이면 「시험 실패 아님」으로 갈라서 알린다. 디스크가 의심되면 `du -sh ~/Library/Developer/XCTestDevices`로 재고, 필요할 때만 `rm -rf ~/Library/Developer/XCTestDevices/*`로 비운다(지워도 다음 시험에서 다시 만든다).

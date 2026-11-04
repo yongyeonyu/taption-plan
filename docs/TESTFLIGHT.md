@@ -106,6 +106,10 @@ build/validation/TFB1024A04/
 └── export/TaptionPlan.ipa
 ```
 
+## 실행 주의
+
+`release.sh`에 시간 제한을 걸지 않고, 오래 걸리면 백그라운드로 돌린다. 2026-11-04에 590초 제한을 걸었다가 익스포트 단계에서 끊겨 번호만 오르고 업로드되지 않은 일이 있다(빌드 270). 결과는 종료 코드와 `testflight-report.json`을 읽은 뒤에 기록한다. 번호는 되돌리지 않으므로 끊긴 번호는 건너뛴다.
+
 ## 빌드 번호 규칙
 
 `AGENTS.md` 규칙대로 `CURRENT_PROJECT_VERSION`과 앱·위젯·Watch·Watch 위젯 `Info.plist`의 `CFBundleVersion`을 모두 같은 값으로 유지한다. `release.sh` 1/9가 소스에서, 6/9가 최종 산출물에서 각각 확인한다. 자동 증가분은 커밋해야 한다.

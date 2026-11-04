@@ -674,11 +674,10 @@ final class TaptionPlanPlaybackHUDUITests: XCTestCase {
 
         // 재생을 누르면 **같은 자리**가 「멈춤」이 된다. 「종료」는 없다.
         play.tap()
-        // HUD는 재생이 끝나면 함께 사라진다. 다른 것을 보기 전에 먼저 확인한다.
-        let hud = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "하루 24초")).firstMatch
-        XCTAssertTrue(hud.waitForExistence(timeout: 6), "재생 중인데 HUD가 없다")
+        XCTAssertTrue(app.buttons["멈춤"].firstMatch.waitForExistence(timeout: 6), "재생을 눌러도 「멈춤」으로 바뀌지 않는다")
         attach(app, name: "play-running")
-        XCTAssertTrue(app.buttons["멈춤"].firstMatch.exists, "재생을 눌러도 「멈춤」으로 바뀌지 않는다")
+        let hud = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "하루 24초")).firstMatch
+        XCTAssertFalse(hud.exists, "재생 중 상단 진행 바는 지웠다")
         XCTAssertFalse(app.buttons["재생"].exists, "재생 중인데 「재생」이 남아 있다")
         XCTAssertFalse(app.buttons["종료"].exists, "재생 중에 「종료」가 또 있다(단추를 늘리지 않기로 했다)")
         XCTAssertEqual(
@@ -687,11 +686,10 @@ final class TaptionPlanPlaybackHUDUITests: XCTestCase {
             "재생 중에 하단 항목 수가 달라졌다(단추를 늘리지 않기로 했다): \(bottomBarLabels(app))"
         )
 
-        // 같은 자리를 다시 누르면 재생이 멈추고 「재생」으로 돌아온다. HUD도 함께 사라진다.
+        // 같은 자리를 다시 누르면 재생이 멈추고 「재생」으로 돌아온다.
         app.buttons["멈춤"].firstMatch.tap()
         XCTAssertTrue(app.buttons["재생"].firstMatch.waitForExistence(timeout: 5), "멈춤을 눌러도 「재생」으로 돌아오지 않는다")
         XCTAssertFalse(app.buttons["멈춤"].exists, "멈췄는데 「멈춤」이 남아 있다")
-        XCTAssertFalse(hud.exists, "멈췄는데 HUD가 남아 있다")
         attach(app, name: "play-paused")
 
         // 재생 중에 지도를 끌면 재생이 취소된다. 취소 단추를 따로 두지 않는다.

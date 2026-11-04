@@ -5814,3 +5814,6 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 
 ## TFB1104B05 TestFlight 273 (2026-11-04)
 - `release.sh --yes --request-id TFB1104B05` 결과 `build/validation/TFB1104B05/testflight-report.json`: 빌드 273, 처리 `VALID`, 내부 그룹 연결, 테스터 노출 1명 확인. 재생 사진 반원 배치와 3초 축소, 사이드바 숨김 시 가운데 정렬 포함. 대표 기기 설치·실기기 시험 결과는 아직 없다.
+
+## DOC1104A01 개발문서 갱신 (2026-11-04)
+- `DEVELOPMENT.md`(소스 위치, 판정 규칙, 구글 연결, 화면 규칙), `docs/TESTFLIGHT.md`(시간 제한 금지), `SUPPORT.md`(캘린더 연결), `scripts/l10n/README.md`(언어 고르기)를 고쳤다. 지운 상단 진행 바를 찾던 화면 시험을 고쳤고 `build-for-testing` 결과는 `build/validation/DOC1104A01/`에 있다. 화면 시험 실행은 하지 않았다. 앱 코드는 바꾸지 않았다.
