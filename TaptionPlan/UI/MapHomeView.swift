@@ -808,23 +808,6 @@ struct MapHomeView: View {
                     .zIndex(MapHomeLayerPriority.header)
             }
 
-            // 재생 중에는 상단에 얇은 진행 바를 띄운다. 정지 화면과 구분되게 하는 표시다.
-            if isDayPlaybackRunning, !isScreenRecording {
-                MapHomeObservingView {
-                    MapHomePlaybackHUD(
-                        minute: dayPlaybackCurrentMinute ?? Double(selectedTimelineMinute ?? 0),
-                        endMinute: playbackHUDEndMinute,
-                        language: language
-                    )
-                }
-                .frame(maxWidth: MapHomeWideLayoutPolicy.topOverlayMaximumWidth(viewportWidth: mapViewportSize.width))
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .padding(.top, Layout.topRowInset + Layout.dateBadgeSize + 8)
-                .padding(.horizontal, Layout.horizontalInset)
-                .transition(.move(edge: .top).combined(with: .opacity))
-                .zIndex(MapHomeLayerPriority.header)
-            }
-
             if !isScreenRecording, !isMenuOpen || isWideLayout, layoutStyle.movesActionsToBottom {
                 VStack(spacing: 0) {
                     Spacer(minLength: 0)
@@ -1251,7 +1234,7 @@ struct MapHomeView: View {
         }
         .overlay {
             if isDayPlaybackRunning, recordingShows(\.mapMemos), let minute = dayPlaybackCurrentMinute {
-                MapHomePlaybackMomentsOverlay(minute: minute, events: playbackMomentEvents)
+                MapHomePlaybackMomentsOverlay(minute: minute, events: playbackMomentEvents, topInset: Layout.topRowInset + Layout.dateBadgeSize + 8)
             }
         }
         .overlay(alignment: .bottom) {
@@ -4726,11 +4709,6 @@ struct MapHomeView: View {
     /// 저장된 안개 세기. 알 수 없는 값이면 옅게로 돌아간다.
     private var fogStrength: MapHomeFogStrength {
         MapHomeFogStrength(rawValue: fogStrengthRaw) ?? .light
-    }
-
-    /// 재생 HUD가 쓰는 종료 분. 오늘이면 지금 시각, 지난 날이면 하루 끝(1440)이다.
-    private var playbackHUDEndMinute: Double {
-        MapHomeDayPlaybackMath.playbackEndMinute(for: model.selectedDate, now: .now)
     }
 
     private func openMenu() {

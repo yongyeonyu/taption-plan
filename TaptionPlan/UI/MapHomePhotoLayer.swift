@@ -464,6 +464,7 @@ struct MapHomePlaybackMomentsOverlay: View {
 
     let minute: Double
     let events: [(minute: Double, moment: Moment)]
+    var topInset: CGFloat = 8
 
     private struct Shown: Identifiable {
         let id = UUID()
@@ -503,7 +504,7 @@ struct MapHomePlaybackMomentsOverlay: View {
             }
             Spacer(minLength: 0)
         }
-        .padding(.top, 8)
+        .padding(.top, topInset)
         .padding(.horizontal, 16)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .animation(.spring(response: 0.38, dampingFraction: 0.82), value: shown?.id)
