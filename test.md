@@ -5715,3 +5715,6 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 전체 단위 시험: 2,040건 중 2,026건 통과, 실패 0, 건너뜀 14 (`build/validation/NLE1104A02/check1.xcresult`). 구조 지표·엔진 경계 통과. 새 시험 3건이 등록 판정·이동 클립 맞춤·지도 이름·짧은 체류 제거·GPS 공백 잇기를 본다. 첫 실행(`unit1`)에서 범위 계산 충돌을 잡아 고쳤다.
 - 화면: `-nlePreview`에서 "집 → 회사" 칸 확인(`editor.png`), 확대·축소 단추 입체 효과(메인 지도 화면), 메뉴 명언 가운데 배치(`menu-top.png`).
 - 제한: 실제 `PlaceStay` 기록으로 돌려 보지 않았다(`raw2.json`에 체류가 없다). 지도 검색 이름은 실행하지 않았고 실기기 확인이 남았다. 이동 클립 없이 빈 시간으로 추정한 이동 칸은 활동 줄을 바꾸지 않아 활동과 다를 수 있다. 찾은 이름은 메모리에만 둔다.
+
+## TFB1104A03 TestFlight 266 (2026-11-04)
+- `release.sh --yes --request-id TFB1104A03` 완료: 처리 상태 `VALID`, `TP Taption Plan 내부 테스트` 그룹 연결, 테스터 노출 1명 확인(`build/validation/TFB1104A03/testflight-report.json`). 앱 잠금 때 근처 알림 글자 숨김, 장소 줄, 확대·축소 입체 효과, 메뉴 명언 가운데 배치 포함. 아이폰 18이 연결되지 않아 설치·실기기 시험은 하지 않았다.
