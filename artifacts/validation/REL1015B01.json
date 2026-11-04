@@ -57,7 +57,7 @@
   "archiveProducts": {
     "products": [
       {
-        "bundle": "/Users/u_mo_c/Documents/taption plan/build/validation/REL1015B01/TaptionPlan177.xcarchive/Products/Applications/TaptionPlan.app",
+        "bundle": "~/Documents/taption plan/build/validation/REL1015B01/TaptionPlan177.xcarchive/Products/Applications/TaptionPlan.app",
         "id": "com.taption.plan",
         "version": "1.0",
         "build": "177",
@@ -74,11 +74,11 @@
           "betaReportsActive": null,
           "expires": "2027-09-26T05:03:59"
         },
-        "dsym": "/Users/u_mo_c/Documents/taption plan/build/validation/REL1015B01/TaptionPlan177.xcarchive/dSYMs/TaptionPlan.app.dSYM",
+        "dsym": "~/Documents/taption plan/build/validation/REL1015B01/TaptionPlan177.xcarchive/dSYMs/TaptionPlan.app.dSYM",
         "dsymUUIDsMatch": true
       },
       {
-        "bundle": "/Users/u_mo_c/Documents/taption plan/build/validation/REL1015B01/TaptionPlan177.xcarchive/Products/Applications/TaptionPlan.app/PlugIns/TaptionPlanWidget.appex",
+        "bundle": "~/Documents/taption plan/build/validation/REL1015B01/TaptionPlan177.xcarchive/Products/Applications/TaptionPlan.app/PlugIns/TaptionPlanWidget.appex",
         "id": "com.taption.plan.widget",
         "version": "1.0",
         "build": "177",
@@ -95,7 +95,7 @@
           "betaReportsActive": null,
           "expires": "2027-09-26T05:03:56"
         },
-        "dsym": "/Users/u_mo_c/Documents/taption plan/build/validation/REL1015B01/TaptionPlan177.xcarchive/dSYMs/TaptionPlanWidget.appex.dSYM",
+        "dsym": "~/Documents/taption plan/build/validation/REL1015B01/TaptionPlan177.xcarchive/dSYMs/TaptionPlanWidget.appex.dSYM",
         "dsymUUIDsMatch": true
       }
     ],
@@ -104,7 +104,7 @@
   "exportProducts": {
     "products": [
       {
-        "bundle": "/Users/u_mo_c/Documents/taption plan/build/validation/REL1015B01/export-check/Payload/TaptionPlan.app",
+        "bundle": "~/Documents/taption plan/build/validation/REL1015B01/export-check/Payload/TaptionPlan.app",
         "id": "com.taption.plan",
         "version": "1.0",
         "build": "177",
@@ -121,11 +121,11 @@
           "betaReportsActive": true,
           "expires": "2027-08-03T04:58:12"
         },
-        "dsym": "/Users/u_mo_c/Documents/taption plan/build/validation/REL1015B01/TaptionPlan177.xcarchive/dSYMs/TaptionPlan.app.dSYM",
+        "dsym": "~/Documents/taption plan/build/validation/REL1015B01/TaptionPlan177.xcarchive/dSYMs/TaptionPlan.app.dSYM",
         "dsymUUIDsMatch": true
       },
       {
-        "bundle": "/Users/u_mo_c/Documents/taption plan/build/validation/REL1015B01/export-check/Payload/TaptionPlan.app/PlugIns/TaptionPlanWidget.appex",
+        "bundle": "~/Documents/taption plan/build/validation/REL1015B01/export-check/Payload/TaptionPlan.app/PlugIns/TaptionPlanWidget.appex",
         "id": "com.taption.plan.widget",
         "version": "1.0",
         "build": "177",
@@ -142,7 +142,7 @@
           "betaReportsActive": true,
           "expires": "2027-08-03T04:58:12"
         },
-        "dsym": "/Users/u_mo_c/Documents/taption plan/build/validation/REL1015B01/TaptionPlan177.xcarchive/dSYMs/TaptionPlanWidget.appex.dSYM",
+        "dsym": "~/Documents/taption plan/build/validation/REL1015B01/TaptionPlan177.xcarchive/dSYMs/TaptionPlanWidget.appex.dSYM",
         "dsymUUIDsMatch": true
       }
     ],
@@ -276,22 +276,22 @@
         "removed": true
       },
       {
-        "path": "/Users/u_mo_c/Documents/taption plan/build/validation/REL1015B01/TaptionPlan177.xcarchive",
+        "path": "~/Documents/taption plan/build/validation/REL1015B01/TaptionPlan177.xcarchive",
         "allocatedBytesBefore": 130441216,
         "removed": true
       },
       {
-        "path": "/Users/u_mo_c/Documents/taption plan/build/validation/REL1015B01/export-177",
+        "path": "~/Documents/taption plan/build/validation/REL1015B01/export-177",
         "allocatedBytesBefore": 42946560,
         "removed": true
       },
       {
-        "path": "/Users/u_mo_c/Documents/taption plan/build/validation/REL1015B01/export-check",
+        "path": "~/Documents/taption plan/build/validation/REL1015B01/export-check",
         "allocatedBytesBefore": 108564480,
         "removed": true
       },
       {
-        "path": "/Users/u_mo_c/Documents/taption plan/build/validation/REL1015B01/__pycache__",
+        "path": "~/Documents/taption plan/build/validation/REL1015B01/__pycache__",
         "allocatedBytesBefore": 8192,
         "removed": true
       }

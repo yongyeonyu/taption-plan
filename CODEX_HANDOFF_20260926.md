@@ -5,7 +5,7 @@
 이 문서를 받은 채팅은 TaptionPlan만 담당한다. ShotGuide는 원래 채팅에서 진행하므로 ShotGuide 저장소를 수정·정리·빌드·커밋·push·배포하지 않는다.
 
 ## 작업 경계
-- 저장소 및 시작 디렉터리: `/Users/u_mo_c/Documents/taption plan`
+- 저장소 및 시작 디렉터리: `~/Documents/taption plan`
 - 원격: `https://github.com/yongyeonyu/taption-plan.git`, 브랜치 `main`.
 - 구현: `TaptionPlan/` 및 관련 패키지·Watch·Widget. 테스트: `TaptionPlanTests/` 및 관련 패키지 테스트.
 - 로컬 `AGENTS.md`, `temp.md`, `test.md`를 기준으로 요청 ID에 해당하는 구간만 확인한다.
@@ -37,7 +37,7 @@ xcodebuild build -project TaptionPlan.xcodeproj -scheme TaptionPlan -configurati
 
 ## 다른 채팅에서 시작할 프롬프트
 
-> 이 채팅은 TaptionPlan 전용입니다. `/Users/u_mo_c/Documents/taption plan/CODEX_HANDOFF_20260926.md`와 이 프로젝트 AGENTS.md를 읽고, git status 및 최근 커밋과 temp.md의 관련 요청을 대조해 이어받으세요. main c5e9dbb까지 push와 앱타깃 빌드 검증을 완료한 상태가 기준점입니다. ShotGuide는 다른 채팅 담당이므로 조작하지 마세요. 완료된 메뉴 정리와 HUD 위치 이동을 재구현하지 말고, 실기기 로그 대기·결정 대기·검증 가능한 구현을 구분해 요청 목록에 정리하세요. 다음 실행 요청은 이 채팅에서 별도로 받습니다.
+> 이 채팅은 TaptionPlan 전용입니다. `~/Documents/taption plan/CODEX_HANDOFF_20260926.md`와 이 프로젝트 AGENTS.md를 읽고, git status 및 최근 커밋과 temp.md의 관련 요청을 대조해 이어받으세요. main c5e9dbb까지 push와 앱타깃 빌드 검증을 완료한 상태가 기준점입니다. ShotGuide는 다른 채팅 담당이므로 조작하지 마세요. 완료된 메뉴 정리와 HUD 위치 이동을 재구현하지 말고, 실기기 로그 대기·결정 대기·검증 가능한 구현을 구분해 요청 목록에 정리하세요. 다음 실행 요청은 이 채팅에서 별도로 받습니다.
 
 ## 운영 규칙
 - 이 문서는 작업 인계와 범위 구분을 위한 기준이다. 현재 사용자의 지시와 해당 프로젝트 AGENTS.md를 우선한다. 오래된 인계 문서의 push 대기·빌드 불가 주장을 현재 사실로 사용하지 않는다.

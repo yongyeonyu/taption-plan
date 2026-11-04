@@ -133,7 +133,7 @@
 - 제한: 시뮬레이터 접근 권한을 받지 못해 탭·화면 이동을 하지 못했다. 수정한 8곳의 실제 화면과 터치 동작, 이웃 컨트롤과의 겹침은 눈으로 확인하지 않았다. 관련 단위 테스트가 없어 새로 만들지 않았다(뷰 수정자). 슬라이더 손잡이(22, 드래그)·`GoalsView` 범위 손잡이는 탭 대상이 아니라 바꾸지 않았다. 메모 동작 3개의 가로 터치 폭은 약 25pt로 44pt에 못 미친다(레이아웃 변경 필요).
 
 ## COM1016A01 · 대기질 중계 호스트 설정·마이그레이션 재시도 테스트 경합 수정 (2026-10-18)
-- 수정: 앱 target Debug/Release 빌드 설정에 `AIR_QUALITY_PROXY_HOST = taption-airkorea-proxy.axony99.workers.dev`를 넣었다(`project.pbxproj` 2곳). Worker 주소는 `/airkorea/stations?ping=1`에 HTTP 200으로 응답했다. 서비스 키 등록·Workers Logs 설정은 대표 작업이라 확인하지 못했고, 실제 대기질 값이 내려오는지는 확인하지 않았다.
+- 수정: 앱 target Debug/Release 빌드 설정에 `AIR_QUALITY_PROXY_HOST = <대기질 중계 주소>`를 넣었다(`project.pbxproj` 2곳). Worker 주소는 `/airkorea/stations?ping=1`에 HTTP 200으로 응답했다. 서비스 키 등록·Workers Logs 설정은 대표 작업이라 확인하지 못했고, 실제 대기질 값이 내려오는지는 확인하지 않았다.
 - 분류: `testFailedPrimaryMigrationCanRetryOnNextLoad`는 시작 커밋 2a25758 이후 `MigratingPlanRepository`·테스트 본문이 바뀌지 않았다(`git diff 2a25758 HEAD`로 확인, 바뀐 곳은 백그라운드 보호·문구 현지화뿐). 첫 저장 실패 뒤 `finishMigrationTask`가 끝나기 전에 재로드하면 `guard migrationTask == nil`에 막혀 재시도가 예약되지 않는 기존 타이밍 경합이다. 시작 커밋에서 실행해 재현하지는 않았고 코드 판독으로 분류했다. 테스트가 재시도될 때까지 `load()`를 반복하도록 고쳤다(앱 코드 변경 없음).
 - 자동 검증: 신규 전용 시뮬레이터 `TaptionPlan-COM1016A01-b`(iOS 27.0)에서 `testAirQualityProxyHostIsValidatedAndNeverContainsASecret`·`testAirQualityHasNoOverseasFallbackWithoutKey`·`testFailedPrimaryMigrationCanRetryOnNextLoad` 3개 통과, `TEST SUCCEEDED`(`aq-host-02.xcresult`, `aq-host-test2.log`). 빌드된 Debug 앱 `Info.plist`의 `AIR_QUALITY_PROXY_HOST`가 위 호스트로 치환된 것을 읽었다.
 - 제한: 기존 전용 시뮬레이터 253B15E0이 사라져 새로 만들고 `taptionplan-sim.txt`를 갱신했다(이전 값은 `previous-sim-udid.txt`). 이전 `aq-host-01`·`aq-host-build`는 시뮬레이터 없음과 락 대기열 고장으로 결과 없음. 공유 락 `xcode.queue`가 비어 있는데 다른 프로젝트 `acquire` 프로세스 여러 개가 9~10시간째 대기 중이라 제 것만 종료했다. 대기질이 실제 화면에 표시되는지, 179 빌드·배포는 하지 않았다.
@@ -142,7 +142,7 @@
 - 병합: 디자인 토큰(824490f)·영어화(7b95250)·성장 시트 캐시(f54c585)를 main에 합쳤고, 충돌 해결 때 빠진 테스트 클래스 닫는 괄호 2줄을 a418a9c로 고쳤다(첫 전체 실행이 이 컴파일 오류로 실패). SettingsView의 한국어 오류 문구 2곳도 영어화했다.
 - 전체 회귀(병합 상태, 전용 시뮬레이터, 다른 프로젝트 빌드와 동시): `merged-full-02.log` 로그 기준 고유 1,534개 통과, 실패 1(기존 StoreKit). 실행이 마무리 단계에서 멈춰 결과 번들은 없고 `SQLitePlanRepositoryTests`·`SensorDayStoreTests` 일부가 돌지 않아 `merged-rest-01`로 다시 실행: 155 통과, 실패 1(`testFailedPrimaryMigrationCanRetryOnNextLoad`). 이 테스트는 단독 재실행(`merged-two-01`)에서도 실패했다. 0.5초 안에 이관 재시도가 끝나기를 기다리는 시간 의존 테스트이나, 시작 커밋에서의 재현을 아직 확인하지 않아 이번 변경 때문이 아니라고 단정하지 않는다. 성능 테스트 `testThirtyDayApp…P95`는 부하 중 계속 실패(기존). 병합 상태 generic iOS Debug `BUILD SUCCEEDED`.
 - iPhone 18 Pro Max 설치: 병합 main(미커밋 SettingsView 영어화 포함)의 Debug 빌드를 `devicectl install app`으로 설치, outcome success, 앱 목록 readback 1.0(178). 번호는 TestFlight 178과 같지만 내용은 이후 변경을 포함한다. 기존 데이터 유지. 프록시 호스트 미설정이라 대기질은 표시되지 않는다.
-- Cloudflare: 대표 계정에 Worker `taption-airkorea-proxy`(`taption-airkorea-proxy.axony99.workers.dev`)를 만들었다. 중계 코드는 편집기 초안으로 입력해 미리보기에서 not_found/invalid_station/not_configured 응답을 확인했으나, 프로덕션 배포 클릭은 권한 판정이 막아 대표가 직접 눌러야 한다. 서비스 키·로그 끄기도 대표 작업이다.
+- Cloudflare: 대표 계정에 Worker `taption-airkorea-proxy`(`<대기질 중계 주소>`)를 만들었다. 중계 코드는 편집기 초안으로 입력해 미리보기에서 not_found/invalid_station/not_configured 응답을 확인했으나, 프로덕션 배포 클릭은 권한 판정이 막아 대표가 직접 눌러야 한다. 서비스 키·로그 끄기도 대표 작업이다.
 - 정리: 디스크가 100%에 가까워 이전 xcresult 4개(약 420MB)를 삭제했다.
 
 ## COM1016A01 · 성장 시트 캐시·날짜 포맷터·백그라운드 모델 생성 시간 진단 (2026-10-16, 178 이후)
@@ -204,7 +204,7 @@
 - 제한: (1)(2)(3)은 단위 테스트가 없다. UIApplication 백그라운드 할당과 HealthKit 실제 wake는 기기에서만 재현된다. 코드 판독과 빌드 통과만 근거이며 실기기 효과는 미확인이다. 센서 갱신 롤백(`performSensorTimelineRefresh`)은 갱신 중 사용자 편집이 메모리에서 사라지는지 재현 전이라 수정하지 않았다(`persistDeviceLocalSnapshot`은 갱신 중 저장을 이미 미룬다). 레거시 일자 DB 이관·백그라운드 깨움마다 AppModel 재생성은 미착수.
 
 ## COM1016A01 · 0단계 기준선 (2026-10-16)
-- 변경: CRS1015A01 변경을 95255af로 커밋(push 안 함). 하드코딩 경로(`/Users/u_mo_c/...`)로 파일을 쓰던 임시 고양이 시트 테스트 `testTempRenderCatContactSheet`(138줄)와 `import SwiftUI // TEMP-CAT-SHEET`를 삭제했다. `.gitignore`에서 `Package.resolved`를 빼고 Xcode workspace의 `Package.resolved`를 추적한다. `.github/workflows/ci.yml`을 추가했다(패키지 테스트·경계 검사·앱 generic iOS Debug 빌드).
+- 변경: CRS1015A01 변경을 95255af로 커밋(push 안 함). 하드코딩 경로(`~/...`)로 파일을 쓰던 임시 고양이 시트 테스트 `testTempRenderCatContactSheet`(138줄)와 `import SwiftUI // TEMP-CAT-SHEET`를 삭제했다. `.gitignore`에서 `Package.resolved`를 빼고 Xcode workspace의 `Package.resolved`를 추적한다. `.github/workflows/ci.yml`을 추가했다(패키지 테스트·경계 검사·앱 generic iOS Debug 빌드).
 - 검증: `scripts/check-app-engine-import-boundary.sh` 통과. `swift test` Core 134개·Activity 33개 0실패, Route는 swift-testing 48개 통과, Engine은 XCTest 1개 통과. 앱 테스트 타깃 `build-for-testing`(generic iOS Simulator) `TEST BUILD SUCCEEDED`(삭제한 테스트 외 컴파일 오류 없음). 로그: `build/validation/COM1016A01/`.
 - 제한: 앱 단위 테스트는 실행하지 않고 컴파일만 확인했다(삭제한 테스트 외 코드 변경 없음). CI는 GitHub 러너에서 실행해 본 적이 없다(Xcode 버전 지원 미확인). 정적 감사 항목은 코드 읽기 결과이며 실행·계측 전이다.
 
@@ -1144,7 +1144,7 @@
 
 ## CAT0926T01 · UIV0926A01 실기기 녹화 판독 (2026-09-27)
 
-- 사용자가 제공한 카메라롤 저장 원본 `/Users/u_mo_c/Downloads/ScreenRecording_09-27-2026 03-59-48_1.MP4`를 판독했다(19.606초, 1126×2436, 60fps). 판독 프레임은 `build/validation/RST0927A01/video-frames/half/`에 보관했다.
+- 사용자가 제공한 카메라롤 저장 원본 `~/Downloads/ScreenRecording_09-27-2026 03-59-48_1.MP4`를 판독했다(19.606초, 1126×2436, 60fps). 판독 프레임은 `build/validation/RST0927A01/video-frames/half/`에 보관했다.
 - 화랑이·모닥불 마커가 화면에 있는 상태에서 지도가 여러 차례 이동하고, 상세 도로 수준에서 인천·김포권까지 줌 아웃되는 화면 변화를 확인했다. 이 영상 범위에서 마커 주변 지도 팬·핀치줌 통과는 확인됐다.
 - 시간축의 00–24 시간 라벨과 활동 색상 스트립, 날씨 아이콘·기온 캡슐을 확인했다. 왼쪽 메뉴와 줌 컨트롤의 하단은 오른쪽 시간 레일 하단과 거의 같은 선에 놓였다.
 - 집 상태 콜아웃과 Lv.1 캠프파이어·화랑이 마커는 표시됐다. 화랑이 정지 탭으로 `.cat` 상세 시트가 열리는 장면, 레벨 캡슐 탭으로 하루 요약이 열리는 장면은 영상에서 확인되지 않았다. 따라서 CAT0926T01의 직접 탭과 DYS0927A01의 요약 탭은 미완료로 유지한다.
@@ -1237,7 +1237,7 @@
 - 실행 명령: `xcodebuild build -project TaptionPlan.xcodeproj -scheme TaptionPlan -configuration Debug -destination 'generic/platform=iOS' -derivedDataPath build/ArchiveDD -skipPackagePluginValidation COMPILER_INDEX_STORE_ENABLE=NO OTHER_SWIFT_FLAGS='$(inherited) -Xfrontend -disable-sandbox'`.
 - 최초 빌드는 디스크 부족으로 실패. `xcodebuild clean`도 공간 부족으로 실패하여 알려진 로컬 DerivedData의 재생성 가능한 중간파일·모듈캐시·인덱스만 정리. 소스, Logs, xcresult, SourcePackages, 배포 archive/export는 보존.
 - 런타임 `.kiro/settings/.kirocrew-cli-settings.lock`은 파일 유지 후 `.git/info/exclude`로 로컬 제외. 그 외 기존 변경 파일은 커밋 대상으로 보존.
-- 산출물: `/Users/u_mo_c/Documents/taption plan/build/validation/GIT0926P01/`; 실기기 기능 검증은 수행하지 않음.
+- 산출물: `~/Documents/taption plan/build/validation/GIT0926P01/`; 실기기 기능 검증은 수행하지 않음.
 - 최종 앱타깃 빌드: `build/validation/GIT0926P01/build-final.log`의 BUILD SUCCEEDED, 종료 0 확인. push 및 원격 HEAD/clean readback은 같은 폴더 `git-readback.txt`에 기록.
 
 ## HME0926A01 · 집 성장·HUD·시간축 부분 구현 검증 (2026-09-26)
@@ -1295,7 +1295,7 @@
 
 ## OVL0926U01 · 집 성장 콜아웃과 화랑이 마커 겹침 (2026-09-26)
 
-- 제공된 실기기 캡처(`/Users/u_mo_c/Downloads/스크린샷, 2026-09-26 오후 11.25.49.png`)에서 집 성장 카드의 오늘 상태가 화랑이 마커에 가려지는 것을 확인했다. `MapHomePlacePin`에서 카드만 위로 42pt 이동했다. 마커, 지도 제스처, 레일 프레임은 바꾸지 않았다.
+- 제공된 실기기 캡처(`~/Downloads/스크린샷, 2026-09-26 오후 11.25.49.png`)에서 집 성장 카드의 오늘 상태가 화랑이 마커에 가려지는 것을 확인했다. `MapHomePlacePin`에서 카드만 위로 42pt 이동했다. 마커, 지도 제스처, 레일 프레임은 바꾸지 않았다.
 - `git diff --check` 통과. 앱 Debug 빌드 `build/validation/OVL0926U01/app-debug.log`: `** BUILD SUCCEEDED **`.
 - 해당 빌드를 iPhone 11 Pro `00008030-001628201AD2802E`, iPhone 18 Pro Max `00008160-000E195A1140000A`, iPad Pro 12.9-inch 6세대 `00008112-000964980E45401E`에 설치했다. `devicectl device info apps`에서 세 기기 모두 `com.taption.plan` 버전 1.0 / 빌드 157을 readback했다.
 - 제공 캡처는 수정 전 화면이며, 수정 후 화랑이·상태 문구 가시성과 지도 제스처는 실제 기기 화면/저장 영상으로 재확인해야 한다. 설치 성공만으로 UI 검증을 통과 처리하지 않는다.
@@ -1303,12 +1303,12 @@
 ## MUI0926D01 · 지도 홈 좌우 메뉴·통합 집 마커 디자인 시안 (2026-09-26)
 
 - 제공된 실기기 지도 캡처를 참조해 별도 이미지 시안 5개를 생성했다. 왼쪽 독은 짧은 세로형, 하단 가로형, 2×2 압축형 등으로 나누고, 우측 시간 레일과 일체형 집·화랑이 이미지를 각 시안에 반영했다.
-- 생성 파일: `/Users/u_mo_c/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-22014dda-1366-4bd0-8e5e-4fe4b9287477.png`, `exec-4b86347d-336c-4d6c-9176-10f0295247af.png`, `exec-ddcea126-843b-45b4-b74e-f68ab709cf8b.png`, `exec-21e25b2e-34aa-480f-9398-ad7436eaa53e.png`, `exec-ff79150a-f068-4596-8ac4-82d9511cc3b3.png`.
+- 생성 파일: `~/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-22014dda-1366-4bd0-8e5e-4fe4b9287477.png`, `exec-4b86347d-336c-4d6c-9176-10f0295247af.png`, `exec-ddcea126-843b-45b4-b74e-f68ab709cf8b.png`, `exec-21e25b2e-34aa-480f-9398-ad7436eaa53e.png`, `exec-ff79150a-f068-4596-8ac4-82d9511cc3b3.png`.
 - 시안 이미지 자체는 코드 반영이나 실기기 검증이 아니다. 사용자가 선택한 조합의 구현·검증 내역은 아래 기록한다.
 
 ## MUI0926D01 · 선택 시안 구현 및 검증 (2026-09-27)
 
-- 사용자가 시안 2의 우측 레일과 시안 4의 왼쪽 메뉴·집/화랑이 구성 조합을 선택했고, 추가로 좌우 레일 높이를 맞추고 아래로 이동하도록 요청했다. 통합 검토 이미지: `/Users/u_mo_c/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-55ee3e14-ac51-47e7-8370-383ee257c2df.png`; 높이 맞춤 보정 시안: `/Users/u_mo_c/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-86bf3272-951e-41f3-a02b-3b1916f66030.png`.
+- 사용자가 시안 2의 우측 레일과 시안 4의 왼쪽 메뉴·집/화랑이 구성 조합을 선택했고, 추가로 좌우 레일 높이를 맞추고 아래로 이동하도록 요청했다. 통합 검토 이미지: `~/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-55ee3e14-ac51-47e7-8370-383ee257c2df.png`; 높이 맞춤 보정 시안: `~/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-86bf3272-951e-41f3-a02b-3b1916f66030.png`.
 - 공통 레일을 28pt 아래로 이동하되 높이는 유지했다. 우측 레일의 바깥 여백을 줄여 화면 오른쪽에 붙이고, 배경 숫자 트랙을 둥근 실루엣으로 클립했다. 선택 시간 표시는 좁은 캡슐 형태로 바꿨다.
 - 집 위치의 사용자 설정 반경 안에 표시 위치가 들어오면 집 안에 작은 흰 고양이를 합성하고, 별도 고양이 마커와 플레이어 방향 화살표를 숨긴다. 집 밖에서는 기존 성장 아트와 별도 화랑이를 유지한다. 기존 액세서리·윤달 표시는 통합 마커에서도 보존한다.
 - 신규 `MapHomePresencePolicyTests` 2개와 `MapHomeTimeRailCardTests` 4개, 기존 `MapHomeGrowthPolicyTests`를 실행해 통과했다. 로그 `build/validation/MUI0926D01/ui-tests.log`; xcresult `build/ArchiveDD/Logs/Test/Test-TaptionPlan-2026.09.27_00-17-41-+0900.xcresult`.
@@ -1328,15 +1328,15 @@
 - `MapHomeGrowthPolicyTests`, `MapHomeTimeRailCardTests`, `MapHomePresencePolicyTests` 통과(총 18개). 로그 `build/validation/MAP0927T03/ui-tests.log`; xcresult `build/ArchiveDD/Logs/Test/Test-TaptionPlan-2026.09.27_00-47-52-+0900.xcresult`.
 - 앱 Debug 빌드 통과: `build/validation/MAP0927T03/app-debug.log`. 산출물을 iPhone 11 Pro `00008030-001628201AD2802E`에 설치·실행했고 `com.taption.plan` 버전 1.0/빌드 157을 readback했다.
 - 수정 화면·팬/핀치 동작은 아직 실제 기기 카메라롤 저장 증거로 확인하지 않았다. 사이드바 시안은 선택 전이므로 코드 반영하지 않았다.
-- 사이드바 이미지 시안(최근 캡처를 참조): `/Users/u_mo_c/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-1a505b1a-8c2e-40fe-a219-26c034d99860.png`, `/Users/u_mo_c/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-7a2aaf6a-8278-44be-84e3-4d38d0cd4efb.png`, `/Users/u_mo_c/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-e67e30f5-51de-4424-992d-3942c1f73116.png`.
-- 사용자가 2안을 고르며 활동 카테고리 색상 세그먼트가 보여야 한다고 보정 요청했다. 지속 시간에 비례한 연속 색상 구간이 있는 수정 시안 `/Users/u_mo_c/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-3679919c-2b7b-42eb-bf32-114a6d2f6615.png` 생성. 최종 시안 확인 후 구현한다.
-- 후속으로 왼쪽 메뉴의 4개 조작(메뉴·검색·현재 위치·방향)과 아래 분리형 확대/축소 전체를 유지하도록 요청해 최종 검토 시안 `/Users/u_mo_c/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-70032c3e-37d8-4364-b2c9-357c4ed8822d.png`를 생성했다. 구현 전 최종 확인 대기.
-- 좌우 사이드바 하단 위치와 화면 아래 여백을 동일하게 하고 오른쪽 시간축을 아래로 연장하도록 추가 요청받아 시안 `/Users/u_mo_c/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-f6b3f2d7-b50e-4eba-9e06-6743ab3098c6.png`로 보정했다. 구현 전 최종 확인 대기.
+- 사이드바 이미지 시안(최근 캡처를 참조): `~/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-1a505b1a-8c2e-40fe-a219-26c034d99860.png`, `~/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-7a2aaf6a-8278-44be-84e3-4d38d0cd4efb.png`, `~/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-e67e30f5-51de-4424-992d-3942c1f73116.png`.
+- 사용자가 2안을 고르며 활동 카테고리 색상 세그먼트가 보여야 한다고 보정 요청했다. 지속 시간에 비례한 연속 색상 구간이 있는 수정 시안 `~/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-3679919c-2b7b-42eb-bf32-114a6d2f6615.png` 생성. 최종 시안 확인 후 구현한다.
+- 후속으로 왼쪽 메뉴의 4개 조작(메뉴·검색·현재 위치·방향)과 아래 분리형 확대/축소 전체를 유지하도록 요청해 최종 검토 시안 `~/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-70032c3e-37d8-4364-b2c9-357c4ed8822d.png`를 생성했다. 구현 전 최종 확인 대기.
+- 좌우 사이드바 하단 위치와 화면 아래 여백을 동일하게 하고 오른쪽 시간축을 아래로 연장하도록 추가 요청받아 시안 `~/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-f6b3f2d7-b50e-4eba-9e06-6743ab3098c6.png`로 보정했다. 구현 전 최종 확인 대기.
 
 ## WTH0927A05 · 시간축 왼쪽 날씨 시안 5개 (2026-09-27)
 
 - 매시간 00–24 표시, 활동 색상 세그먼트, 전체 좌측 조작 버튼, 좌우 같은 하단 여백을 유지하며 날씨 레이아웃 다섯 안을 생성했다. 최종 선택 전 코드는 변경하지 않았다.
-- 시안 순서: `/Users/u_mo_c/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-d20af15e-a2e2-469e-a231-af615941d298.png`, `/Users/u_mo_c/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-0775b59d-fca1-4b6d-ba64-c325e04bc308.png`, `/Users/u_mo_c/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-af7d62a2-06e3-4601-bb9f-eeff12be9445.png`, `/Users/u_mo_c/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-f8da4268-2ce0-4861-a18d-c26fbe66b7ed.png`, `/Users/u_mo_c/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-6b9a9ece-7d54-4956-9914-f0eecc3d844e.png`.
+- 시안 순서: `~/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-d20af15e-a2e2-469e-a231-af615941d298.png`, `~/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-0775b59d-fca1-4b6d-ba64-c325e04bc308.png`, `~/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-af7d62a2-06e3-4601-bb9f-eeff12be9445.png`, `~/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-f8da4268-2ce0-4861-a18d-c26fbe66b7ed.png`, `~/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-6b9a9ece-7d54-4956-9914-f0eecc3d844e.png`.
 - 사용자가 3안을 선택해 날씨 셀을 카드 없는 세로형 기호·기온으로 바꾸고 날씨 항목 사이 최소 간격을 확보했다. 전체 하루 보기 시간 눈금은 00–24 매시간 모두 표시한다. 활동 색상 띠, 전체 왼쪽 조작 메뉴, 좌우 레일 정렬은 유지했다.
 - 자동 테스트 22개 통과: `build/validation/WTH0927A05/tests.log`, xcresult `build/ArchiveDD/Logs/Test/Test-TaptionPlan-2026.09.27_01-39-16-+0900.xcresult`. iOS Debug 빌드 성공: `build/validation/WTH0927A05/build.log`.
 - iPhone 11 Pro `00008030-001628201AD2802E` 설치·실행 완료, `com.taption.plan` 버전 1.0/빌드 157 readback: `build/validation/WTH0927A05/install.log`. 기기 화면 캡처·카메라롤 영상은 아직 판독하지 않아 시각 기능 검증은 대기한다.
@@ -5747,3 +5747,7 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 
 ## TFB1104A04 TestFlight 267 (2026-11-04)
 - `release.sh --yes --request-id TFB1104A04` 결과는 `build/validation/TFB1104A04/testflight-report.json`에 있다. 12개 언어 팩, 구글 일정 읽기, BOKKI Plan OAuth 클라이언트, 재생 사진 7칸, 명언 세로 맞춤, 오픈카 포함. 대표 기기 설치·실기기 시험 결과는 아직 없다.
+
+## PRV1104A01 공개 저장소의 개인 정보 가리기 (2026-11-04)
+- 대기질 중계 주소를 추적되지 않는 `TaptionPlan/AppSecrets.local.xcconfig`로 옮기고 `AppSecrets.xcconfig`가 불러오게 했다. 시뮬레이터 Debug 빌드의 `Info.plist`에 값이 들어가는 것을 읽어 확인했다. 전체 단위 시험은 이 변경에서 돌리지 않았다(코드 변경 없음).
+- 추적 파일의 Mac 사용자 이름을 가렸다. 지난 커밋 이력과 이미 올린 앱 안의 주소에는 남아 있다. 새 worktree에는 local 파일이 없어 대기질이 비활성이다.

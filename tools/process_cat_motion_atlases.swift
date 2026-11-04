@@ -9,8 +9,8 @@ private struct MotionSource {
     let eatingRow: Int
 }
 
-private let generatedRoot = "/Users/u_mo_c/.codex/generated_images/019fb2fa-4245-7233-84a1-6b4ed90d808b"
-private let projectRoot = "/Users/u_mo_c/Documents/taption plan"
+private let generatedRoot = NSHomeDirectory() + "/.codex/generated_images/019fb2fa-4245-7233-84a1-6b4ed90d808b"
+private let projectRoot = NSHomeDirectory() + "/Documents/taption plan"
 private let sources = [
     MotionSource(name: "Calico", motionPath: "\(generatedRoot)/exec-af9f92a6-f605-4822-add6-67520b20186e.png", eatingRow: 0),
     MotionSource(name: "White", motionPath: "\(generatedRoot)/exec-91c4bfb5-4766-4d27-b130-952a93ad60c9.png", eatingRow: 1),

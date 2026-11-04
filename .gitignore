@@ -37,3 +37,6 @@ Secrets.xcconfig
 # Clang module cache generated inside the Xcode project
 TaptionPlan.xcodeproj/-Xcc/
 *.pcm
+
+# 공개하지 않는 빌드 값
+TaptionPlan/AppSecrets.local.xcconfig

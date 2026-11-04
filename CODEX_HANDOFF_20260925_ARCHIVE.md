@@ -2,7 +2,7 @@
 
 > 역사 기록입니다. 아래 브랜치·버전·TestFlight 상태와 push/archive/upload 명령은 2026-09-25 기준이며 만료됐습니다. 현재 작업 지시로 실행하지 마세요. 기준은 현재 사용자 요청, `AGENTS.md`, 실제 코드·Git 상태와 요청 ID별 `temp.md`·`test.md`입니다.
 
-작업 디렉터리: `/Users/u_mo_c/Documents/taption plan`
+작업 디렉터리: `~/Documents/taption plan`
 Team `4FWG8XXYM7`, bundle `com.taption.plan`, scheme `TaptionPlan`, App id `6797370230`.
 
 ## 현재 상태 (2026-09-25 12:15 KST 기준, git으로 실측 먼저)
@@ -17,7 +17,7 @@ Team `4FWG8XXYM7`, bundle `com.taption.plan`, scheme `TaptionPlan`, App id `6797
 ## 해야 할 일 — push (유일 잔여)
 
 ```
-cd "/Users/u_mo_c/Documents/taption plan"
+cd "~/Documents/taption plan"
 git log origin/main..HEAD --oneline   # 31커밋 맞는지 확인
 git push origin main
 ```

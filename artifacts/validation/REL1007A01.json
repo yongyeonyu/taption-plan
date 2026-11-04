@@ -350,35 +350,35 @@
     "request": "explicit user request",
     "paths": [
       {
-        "path": "/Users/u_mo_c/Documents/taption plan/build",
+        "path": "~/Documents/taption plan/build",
         "allocated_bytes": 3877720064
       },
       {
-        "path": "/Users/u_mo_c/Documents/taption plan/Packages/TaptionPlanCore/.build",
+        "path": "~/Documents/taption plan/Packages/TaptionPlanCore/.build",
         "allocated_bytes": 140193792
       },
       {
-        "path": "/Users/u_mo_c/Documents/taption plan/Packages/TaptionRouteEngine/.build",
+        "path": "~/Documents/taption plan/Packages/TaptionRouteEngine/.build",
         "allocated_bytes": 87449600
       },
       {
-        "path": "/Users/u_mo_c/Documents/taption plan/Packages/TaptionPlanCore/.swiftpm",
+        "path": "~/Documents/taption plan/Packages/TaptionPlanCore/.swiftpm",
         "allocated_bytes": 0
       },
       {
-        "path": "/Users/u_mo_c/Documents/taption plan/Packages/TaptionRouteEngine/.swiftpm",
+        "path": "~/Documents/taption plan/Packages/TaptionRouteEngine/.swiftpm",
         "allocated_bytes": 0
       },
       {
-        "path": "/Users/u_mo_c/Documents/taption plan/Packages/TaptionActivityEngine/.swiftpm",
+        "path": "~/Documents/taption plan/Packages/TaptionActivityEngine/.swiftpm",
         "allocated_bytes": 0
       },
       {
-        "path": "/Users/u_mo_c/Documents/taption plan/Packages/TaptionPlanEngine/.swiftpm",
+        "path": "~/Documents/taption plan/Packages/TaptionPlanEngine/.swiftpm",
         "allocated_bytes": 0
       },
       {
-        "path": "/Users/u_mo_c/Documents/taption plan/TaptionPlan.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved",
+        "path": "~/Documents/taption plan/TaptionPlan.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved",
         "allocated_bytes": 4096
       },
       {
@@ -386,7 +386,7 @@
         "allocated_bytes": 0
       },
       {
-        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_u_mo_c_Documents_taption plan_Packages_TaptionPlanCore_.build_workspace-state.json.lock",
+        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_<사용자>_Documents_taption plan_Packages_TaptionPlanCore_.build_workspace-state.json.lock",
         "allocated_bytes": 0
       },
       {
@@ -394,27 +394,27 @@
         "allocated_bytes": 225280
       },
       {
-        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_u_mo_c_Documents_taption plan_Packages_TaptionPlanCore_.build.lock",
+        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_<사용자>_Documents_taption plan_Packages_TaptionPlanCore_.build.lock",
         "allocated_bytes": 0
       },
       {
-        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_u_mo_c_Documents_taption plan_build_validation_WHK1004A01_DeviceDD_SourcePackages_artifacts_maplibre-gl-native-distribution_MapLibre.lock",
+        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_<사용자>_Documents_taption plan_build_validation_WHK1004A01_DeviceDD_SourcePackages_artifacts_maplibre-gl-native-distribution_MapLibre.lock",
         "allocated_bytes": 0
       },
       {
-        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_u_mo_c_Documents_taption plan_build_validation_DBP1006A01_core-build.lock",
+        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_<사용자>_Documents_taption plan_build_validation_DBP1006A01_core-build.lock",
         "allocated_bytes": 0
       },
       {
-        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_u_mo_c_Documents_taption plan_build_ArchiveDD_SourcePackages_workspace-state.json.lock",
+        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_<사용자>_Documents_taption plan_build_ArchiveDD_SourcePackages_workspace-state.json.lock",
         "allocated_bytes": 0
       },
       {
-        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_u_mo_c_Documents_taption plan_build_ArchiveDD_SourcePackages_artifacts_maplibre-gl-native-distribution_MapLibre.lock",
+        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_<사용자>_Documents_taption plan_build_ArchiveDD_SourcePackages_artifacts_maplibre-gl-native-distribution_MapLibre.lock",
         "allocated_bytes": 0
       },
       {
-        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_u_mo_c_Documents_taption plan_build_ArchiveDD_SourcePackages_Package.resolved.lock",
+        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_<사용자>_Documents_taption plan_build_ArchiveDD_SourcePackages_Package.resolved.lock",
         "allocated_bytes": 0
       },
       {
@@ -422,15 +422,15 @@
         "allocated_bytes": 225280
       },
       {
-        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_u_mo_c_Documents_taption plan_build_validation_WHK1004A01_DeviceDD_SourcePackages_workspace-state.json.lock",
+        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_<사용자>_Documents_taption plan_build_validation_WHK1004A01_DeviceDD_SourcePackages_workspace-state.json.lock",
         "allocated_bytes": 0
       },
       {
-        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_u_mo_c_Documents_taption plan_build_validation_WHK1004A01_DeviceDD_SourcePackages_Package.resolved.lock",
+        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_<사용자>_Documents_taption plan_build_validation_WHK1004A01_DeviceDD_SourcePackages_Package.resolved.lock",
         "allocated_bytes": 0
       },
       {
-        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_u_mo_c_Documents_taption plan_Packages_TaptionRouteEngine_.build.lock",
+        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_<사용자>_Documents_taption plan_Packages_TaptionRouteEngine_.build.lock",
         "allocated_bytes": 0
       },
       {
@@ -438,11 +438,11 @@
         "allocated_bytes": 225280
       },
       {
-        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_u_mo_c_Documents_taption plan_Packages_TaptionRouteEngine_.build_workspace-state.json.lock",
+        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_<사용자>_Documents_taption plan_Packages_TaptionRouteEngine_.build_workspace-state.json.lock",
         "allocated_bytes": 0
       },
       {
-        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_u_mo_c_Documents_taption plan_build_validation_DBP1006A01_core-build_workspace-state.json.lock",
+        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_<사용자>_Documents_taption plan_build_validation_DBP1006A01_core-build_workspace-state.json.lock",
         "allocated_bytes": 0
       },
       {
@@ -458,7 +458,7 @@
         "allocated_bytes": 225280
       },
       {
-        "path": "/Users/u_mo_c/Library/Developer/Xcode/Archives/2026-09-26/TaptionPlan-157-011446.xcarchive",
+        "path": "~/Library/Developer/Xcode/Archives/2026-09-26/TaptionPlan-157-011446.xcarchive",
         "allocated_bytes": 145760256
       },
       {
@@ -522,7 +522,7 @@
         "allocated_bytes": 4096
       },
       {
-        "path": "/Users/u_mo_c/Library/Logs/CoreSimulator/850D4C37-985B-4563-B4A6-6C2D35B706DD",
+        "path": "~/Library/Logs/CoreSimulator/850D4C37-985B-4563-B4A6-6C2D35B706DD",
         "allocated_bytes": 548864
       }
     ],

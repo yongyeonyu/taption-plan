@@ -1,6 +1,6 @@
 const fs=require('fs');
 const path=require('path');
-const sharpLocations=[process.env.TAPTION_SHARP_PATH,'sharp','/Users/u_mo_c/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/sharp'].filter(Boolean);
+const sharpLocations=[process.env.TAPTION_SHARP_PATH,'sharp',process.env.HOME + '/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/sharp'].filter(Boolean);
 let sharp;
 for(const location of sharpLocations){try{sharp=require(location);break}catch(error){if(error.code!=='MODULE_NOT_FOUND')throw error}}
 if(!sharp)throw new Error('Sharp is required; install it locally or set TAPTION_SHARP_PATH.');
