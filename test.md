@@ -2669,7 +2669,7 @@
 - 빌드 번호: 230 → 231. `CURRENT_PROJECT_VERSION` 8곳과 앱·iPhone 위젯·Watch·Watch 위젯 `Info.plist`의 `CFBundleVersion` 4곳을 모두 231로 맞췄다. App Store Connect 최신 빌드는 230(VALID)이었다.
 - TestFlight: `xcodebuild archive`(Release, generic/platform=iOS) → **ARCHIVE SUCCEEDED**(`archive.log`). 산출물 확인: 앱 `com.taption.plan` 1.0(231), 위젯 `com.taption.plan.widget` 231, **Watch 디렉터리 없음**(DEVELOPMENT.md의 iPhone 배포 조건). `-exportArchive`(ExportOptions.plist, app-store-connect/자동 서명) → **EXPORT SUCCEEDED**, `TaptionPlan.ipa` 44,605,909바이트(`export.log`).
 - 업로드: `altool --upload-app` → **UPLOAD SUCCEEDED**, Delivery UUID `3d6eddd8-9329-487a-8d1a-a9688b5b77c9`(`upload.log`). App Store Connect API에서 빌드 231이 **VALID**(처리 완료)로 확인됐다.
-- 내부 배포: `TP Taption Plan 내부 테스트`(내부 그룹, `isInternalGroup: true`)에 빌드 231을 연결했고, API readback에서 그룹 빌드 목록에 231이 있고(`buildAttached: true`, `processingState: VALID`, `expired: false`) 테스터 1명(`axony99@gmail.com`)이 그룹에 노출되는 것을 확인했다(`testflight-readback.json`).
+- 내부 배포: `TP Taption Plan 내부 테스트`(내부 그룹, `isInternalGroup: true`)에 빌드 231을 연결했고, API readback에서 그룹 빌드 목록에 231이 있고(`buildAttached: true`, `processingState: VALID`, `expired: false`) 테스터 1명(`<대표 메일>`)이 그룹에 노출되는 것을 확인했다(`testflight-readback.json`).
 - 소스: `main` `18bc943`을 push(`b760509..18bc943`). 워크트리 clean.
 - 하지 않은 것: IAP 판매·계약·심사 제출은 대표 지시대로 별도 재개 요청까지 보류한다. 실기기 화면 확인(녹화 실패 안내, 미확인 배지 터치, UI 테스트 4건)은 이번에도 하지 않았다.
 
@@ -2687,7 +2687,7 @@
 - 전체 앱 테스트: **한 번에 끝까지 돌린 회차는 없다.** 두 번 시도했고 둘 다 시뮬레이터 쪽에서 끊겼다. ①`app-tests-5`: 1,581건 중 통과 1,578·실패 1(`testOpenAlarmSettingsAndToggle`, 위 타이밍 문제)·건너뜀 2. ②`app-tests-6`: UI 8건 통과 후 단위 테스트 호스트가 "test runner hung before establishing connection"으로 붙지 못해 9건만 기록. 그래서 시뮬레이터를 재시작한 뒤 번들을 나눠 돌렸고, 그 결과가 최종 수치다: **단위 `TaptionPlanTests` 1,573건 중 통과 1,571·실패 0·건너뜀 2**(`unit-7.xcresult`, `result: Passed`) + **UI `TaptionPlanSmokeUITests` 8건 전부 통과**(`app-tests-6.xcresult`). 합계 1,579 통과·0 실패·건너뜀 2. 건너뜀 2건은 시뮬레이터에 HealthKit 권한이 없어 앵커·커서 질의가 실패하는 통합 테스트다. 실패·건너뜀을 통과로 묶지 않는다.
 - E2E 확인(시뮬레이터, BOKKI-verify2): `xcrun simctl openurl`로 링크를 쏘고 앱 진단 로그에서 확인했다. `{"event":"deep_link_routed","fields":{"host":"today","route":"today"}}`, `{"host":"sensor","route":"live_location"}` 두 건이 기록됐고, sensor 링크 직후 지도가 서울에서 부산(시뮬레이터 위치)으로 이동해 캐릭터를 중심에 두었다(스크린샷 `probe-att/…png`). 외부에서 여는 링크라 iOS가 '열기' 확인창을 띄우므로 임시 UI 테스트로 그 버튼만 눌렀고, 확인 후 그 테스트는 지웠다.
 - TestFlight: 먼저 빌드 232를 올려 **UPLOAD SUCCEEDED**(Delivery UUID `e42c3130-55ca-4195-b635-b49b359ecd5c`)·**VALID**·내부 그룹 연결까지 확인했다. 그 뒤 구조 게이트(동결 파일 `MapHomeView.swift`는 늘리면 안 됨) 때문에 라우팅 표를 `MapHomeRoute.apply`로 옮기는 **동작 동일 리팩터**를 했는데, 그러면 232 바이너리와 HEAD 소스가 달라져 같은 빌드 번호로 다른 바이너리가 생긴다. 그래서 최종 소스로 **빌드 233**을 다시 아카이브·업로드했다(아래 수치가 233 기준).
-- 빌드 233 산출물: 앱 `com.taption.plan` 1.0(233), 위젯 `com.taption.plan.widget` 233, Watch 디렉터리 없음. `xcodebuild archive` **ARCHIVE SUCCEEDED**(`archive-233.log`), `-exportArchive` **EXPORT SUCCEEDED**, `TaptionPlan.ipa` 44,627,883바이트. 업로드 **UPLOAD SUCCEEDED**, App Store Connect **VALID**, `TP Taption Plan 내부 테스트`에 연결해 readback에서 `buildAttached: true`·`processingState: VALID`·`expired: false`·테스터 `axony99@gmail.com` 노출 확인(`testflight-readback.json`).
+- 빌드 233 산출물: 앱 `com.taption.plan` 1.0(233), 위젯 `com.taption.plan.widget` 233, Watch 디렉터리 없음. `xcodebuild archive` **ARCHIVE SUCCEEDED**(`archive-233.log`), `-exportArchive` **EXPORT SUCCEEDED**, `TaptionPlan.ipa` 44,627,883바이트. 업로드 **UPLOAD SUCCEEDED**, App Store Connect **VALID**, `TP Taption Plan 내부 테스트`에 연결해 readback에서 `buildAttached: true`·`processingState: VALID`·`expired: false`·테스터 `<대표 메일>` 노출 확인(`testflight-readback.json`).
 - IAP 심사 제출: **하지 못했다.** `com.taption.plan.pro`(비소모품, 1.0(1), 가격 스케줄·ko/en 현지화·심사 스크린샷 모두 있음, `READY_TO_SUBMIT`)를 심사 제출에 넣고 `submitted`로 바꾸자 Apple이 거부했다: "App 6797370230 must have an approved appStoreVersions for at least one of platforms [IOS], or an appStoreVersions must be included in this review submission." 이 앱은 아직 승인된 버전이 없어서, IAP만 따로 심사에 올릴 수 없다. 앱 버전 1.0을 같은 제출에 넣어야 하는데 그러면 앱 전체가 App Store 심사로 간다. 게다가 버전 1.0에는 App Review 연락처(`appStoreReviewDetail`)가 아직 없다. 만든 빈 제출은 항목을 지웠고(제출 자체는 API로 삭제 불가 — 남아 있어도 다음 제출에서 재사용된다).
 - 하지 않은 것: 실기기 확인. 실기기 UI는 내가 조작할 수 없고, 대표 기기에 테스트 러너를 설치해 UI 테스트를 돌리는 것은 기기를 점유하므로 하지 않았다. TestFlight 232가 그 확인 경로다.
 
@@ -2791,7 +2791,7 @@
 
 보고서: `build/validation/TFB1024A06/testflight-report.json`. 그룹에 연결된 빌드 번호 목록에 234가 추가된 것도 함께 읽었다(…232, 233, **234**).
 
-기존 빌드 재확인 경로도 따로 확인했다: `bash scripts/testflight/verify.sh --build 233` → `VALID`·연결됨·테스터 1명(`axony99@gmail.com`)·`ok: true`.
+기존 빌드 재확인 경로도 따로 확인했다: `bash scripts/testflight/verify.sh --build 233` → `VALID`·연결됨·테스터 1명(`<대표 메일>`)·`ok: true`.
 
 ### 5. 개인키 비노출 (기준 ⑤)
 
@@ -3078,7 +3078,7 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
 | 번들 버전 | `com.taption.plan` **235** · `com.taption.plan.widget` **235** (Watch는 별도 target) |
 | 업로드 | `No errors uploading`, Delivery UUID `26cdd443-9e75-4107-b570-c956dcba9fc4`, 44,402,587바이트 / 6.34초 |
 | 처리 | `NOT_UPLOADED 21:16:55 → VALID 21:32:19` (약 15분 24초) |
-| 그룹 | `TP Taption Plan 내부 테스트`에 빌드 235 연결, 테스터 1명(`axony99@gmail.com`), `ok: true` |
+| 그룹 | `TP Taption Plan 내부 테스트`에 빌드 235 연결, 테스터 1명(`<대표 메일>`), `ok: true` |
 | 비밀 노출 | 로그 7개에서 `PRIVATE KEY` **0건** |
 
 로그: `build/validation/TFB1024A16/{preflight.json,archive.log,export.log,upload.log,processing.log,attach.log,verify.log,testflight-report.json}`
@@ -3730,7 +3730,7 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 | 6 산출물 검증 | `com.taption.plan`·`com.taption.plan.widget` 둘 다 239. Watch·WatchWidget은 이 앱에 embed되지 않는 별도 target이라 산출물에 없다(실패 아님) |
 | 7 업로드 | `UPLOAD SUCCEEDED`, Delivery UUID `4b2dc9f9-bebb-4faf-9e81-4d18514852ae`, 5.756초(7.8MB/s) |
 | 8 처리·그룹 | `NOT_UPLOADED`(13:41:46) → **VALID**(13:43:12), 내부 그룹 연결 완료 |
-| 9 검증 | `ok: true`, `buildAttached: true`, 테스터 1명(`axony99@gmail.com`) |
+| 9 검증 | `ok: true`, `buildAttached: true`, 테스터 1명(`<대표 메일>`) |
 
 ### 2. 남은 것
 - 빌드 번호 변경분(네 `Info.plist` + `project.pbxproj`)은 스크립트가 커밋하지 않는다. 이 기록과 함께 커밋한다.
@@ -3857,7 +3857,7 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 | 6/9 번들 검증 | `com.taption.plan` 240 · `com.taption.plan.widget` 240 (2/2) |
 | 7/9 업로드 | 44,827,397 bytes / **5.018초(8.9MB/s, 71.5Mbps)** · Delivery UUID `5cd46493-af6b-46af-a26d-a7fb45287cad` |
 | 8/9 처리·그룹 | `15:40:54` 업로드 → `15:43:42` **VALID**(약 2분 48초), 내부 그룹 연결 완료 |
-| 9/9 검증 | `ok: true`, `buildAttached: true`, 테스터 1명(`axony99@gmail.com`, EMAIL) |
+| 9/9 검증 | `ok: true`, `buildAttached: true`, 테스터 1명(`<대표 메일>`, EMAIL) |
 
 - 보고서: `build/validation/TFB1026A04/testflight-report.json`, 로그: `build/validation/TFB1026A04/`.
 
@@ -4082,7 +4082,7 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 | 6/9 번들 검증 | `com.taption.plan` 241 · `com.taption.plan.widget` 241 (2/2) |
 | 7/9 업로드 | 44,829,377 bytes / **7.349초(6.1MB/s, 48.8Mbps)** · Delivery UUID `a07f302b-cd89-4971-a58a-f4d95fcc13d5` |
 | 8/9 처리·그룹 | `00:13:53` 업로드 → `00:16:54` **VALID**(약 3분 1초). **그룹 연결이 404로 실패** → 재시도로 성공(아래 2절) |
-| 9/9 검증 | `ok: true`, `buildAttached: true`, `groupBuildVersions` 최대 241, 테스터 1명(`axony99@gmail.com`, EMAIL) |
+| 9/9 검증 | `ok: true`, `buildAttached: true`, `groupBuildVersions` 최대 241, 테스터 1명(`<대표 메일>`, EMAIL) |
 
 - 보고서: `build/validation/TFB1026A05/testflight-report.json`, 로그: `build/validation/TFB1026A05/`.
 
@@ -4171,7 +4171,7 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 | 6/9 번들 검증 | `com.taption.plan` 242 · `com.taption.plan.widget` 242 (2/2) |
 | 7/9 업로드 | 44,833,231 bytes / **5.641초(7.9MB/s, 63.6Mbps)** · Delivery UUID `2bde2e88-6cde-41ef-838e-cd1a7fb86720` |
 | 8/9 처리·그룹 | 업로드 → `02:00:44` **VALID**(약 13분). 그룹 연결 **한 번에 성공** |
-| 9/9 검증 | `ok: true`, `buildAttached: true`, `groupBuildVersions` 최대 242, 테스터 1명(`axony99@gmail.com`, EMAIL) |
+| 9/9 검증 | `ok: true`, `buildAttached: true`, `groupBuildVersions` 최대 242, 테스터 1명(`<대표 메일>`, EMAIL) |
 
 - 보고서: `build/validation/TFB1027A01/testflight-report.json`, 로그: `build/validation/TFB1027A01/`.
 
@@ -4281,7 +4281,7 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 | 5–6/9 익스포트·번들 | `com.taption.plan` 243 · `…widget` 243 (2/2) |
 | 7/9 업로드 | 44,827,368 bytes / **6.120초**(7.3MB/s, 58.6Mbps) · Delivery UUID `66294236-ac6d-431a-af21-30f46a6cd582` |
 | 8/9 처리·그룹 | `11:32:48` NOT_UPLOADED → `11:34:34` **VALID**(약 1분 46초). 그룹 연결 **한 번에 성공** |
-| 9/9 검증 | `ok: true`, `buildAttached: true`, `groupBuildVersions` 최대 243, 테스터 1명(`axony99@gmail.com`, EMAIL) |
+| 9/9 검증 | `ok: true`, `buildAttached: true`, `groupBuildVersions` 최대 243, 테스터 1명(`<대표 메일>`, EMAIL) |
 
 - 보고서: `build/validation/TFB1027A02/testflight-report.json`, 로그: `build/validation/TFB1027A02/`.
 
@@ -4389,7 +4389,7 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 | 5–6/9 익스포트·번들 | `com.taption.plan` 244 · `…widget` 244 |
 | 7/9 업로드 | 44,841,441 bytes / **6.804초**(6.6MB/s, 52.7Mbps) · Delivery UUID `96e1d12b-5e88-4210-90d8-ca0ad331ce3d` |
 | 8/9 처리·그룹 | `13:43:55` **VALID** · 그룹 연결 **한 번에 성공** |
-| 9/9 검증 | `ok: true`, `buildAttached: true`, `groupBuildVersions` 최대 244, 테스터 1명(`axony99@gmail.com`, EMAIL) |
+| 9/9 검증 | `ok: true`, `buildAttached: true`, `groupBuildVersions` 최대 244, 테스터 1명(`<대표 메일>`, EMAIL) |
 
 - 보고서: `build/validation/TFB1027A03/testflight-report.json`, 로그: `build/validation/TFB1027A03/`.
 
