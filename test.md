@@ -5751,3 +5751,8 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 ## PRV1104A01 공개 저장소의 개인 정보 가리기 (2026-11-04)
 - 대기질 중계 주소를 추적되지 않는 `TaptionPlan/AppSecrets.local.xcconfig`로 옮기고 `AppSecrets.xcconfig`가 불러오게 했다. 시뮬레이터 Debug 빌드의 `Info.plist`에 값이 들어가는 것을 읽어 확인했다. 전체 단위 시험은 이 변경에서 돌리지 않았다(코드 변경 없음).
 - 추적 파일의 Mac 사용자 이름을 가렸다. 지난 커밋 이력과 이미 올린 앱 안의 주소에는 남아 있다. 새 worktree에는 local 파일이 없어 대기질이 비활성이다.
+
+## PRV1104A02 일정 데이터 처리와 대기질 중계 주소 (2026-11-04, 시뮬레이터)
+- 일정 제목 근거를 iCloud 스냅샷과 연결 해제에서 지우고, 전체 삭제에서 구글 연결을 해제한다. 전체 단위 시험 결과는 `build/validation/PRV1104A02/check3.xcresult`.
+- 대기질 중계를 새 주소 `air.bokkiyaw.com`에 연결했다. 접속 응답 200만 확인했고 실제 대기질 자료는 다음 빌드에서 확인한다. 이전 주소는 267까지의 빌드가 쓰므로 켜 두었다.
+- Bokki Plan 개인정보처리방침을 실제 사이트에 올렸다(대표 승인). `/privacy/plan/` 200 확인.

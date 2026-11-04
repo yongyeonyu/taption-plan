@@ -1269,6 +1269,16 @@ final class NLETrackTests: XCTestCase {
         )
     }
 
+    func testCalendarTitleEvidenceStaysOutOfCloudSnapshot() {
+        var snapshot = TaptionDataSnapshot.empty
+        let start = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        var actual = ActualRecord(planID: nil, title: "회의", categoryID: "work", startedAt: start, endedAt: start.addingTimeInterval(60), source: .manual)
+        actual.evidence = ["일정 제목 '비밀 회의' · 단어 규칙", "동작 근거"]
+        snapshot.actuals = [actual]
+        let portable = AppModel.cloudPortableSnapshot(snapshot)
+        XCTAssertEqual(portable.actuals.first?.evidence, ["동작 근거"])
+    }
+
     func testPlayheadSnapsWeaklyToSegmentBoundaries() {
         let track = MapHomeNLEClipEditor.makeMainTrack(segments: [
             MapHomeTimeRailSegment(startMinute: 0, endMinute: 600, categoryID: "sleep", title: "수면", sourceIDs: [UUID()]),

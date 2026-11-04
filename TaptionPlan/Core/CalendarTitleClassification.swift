@@ -97,6 +97,11 @@ enum CalendarTitleClassification {
         return Resolved(detail: detail, categoryID: categoryID, evidence: "\(evidencePrefix)'\(title)' · \(origin)")
     }
 
+    /// 일정 제목이 든 근거. 일정은 기기 밖으로 내보내지 않으므로 iCloud 스냅샷과 구글 연결 해제 때 지운다.
+    static func withoutCalendarTitleEvidence(_ evidence: [String]) -> [String] {
+        evidence.filter { !$0.hasPrefix(evidencePrefix) }
+    }
+
     private static let awayFromHomeDetails: Set<String> = [
         "health.hospital", "health.salon", "study.academy", "housework.groceries", "activity.friends", "activity.date"
     ]

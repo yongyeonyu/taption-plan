@@ -226,6 +226,11 @@ extension AppModel {
             portable.attachments = []
             return portable
         }
+        value.actuals = value.actuals.map { actual in
+            var portable = actual
+            portable.evidence = CalendarTitleClassification.withoutCalendarTitleEvidence(actual.evidence)
+            return portable
+        }
         value.places = value.places.map(LocationPrivacyFilter.timelineSafe)
         value.travel = value.travel.map { segment in
             var safe = segment

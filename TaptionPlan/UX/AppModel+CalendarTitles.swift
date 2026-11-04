@@ -30,6 +30,11 @@ extension AppModel {
     func disconnectGoogleCalendar() async {
         GoogleCalendarAccount.shared.disconnect()
         snapshot.calendarEvents.removeAll(where: \.isGoogleAccountEvent)
+        snapshot.actuals = snapshot.actuals.map { actual in
+            var cleaned = actual
+            cleaned.evidence = CalendarTitleClassification.withoutCalendarTitleEvidence(actual.evidence)
+            return cleaned
+        }
         await reclassifyCalendarDay(selectedDate)
     }
 

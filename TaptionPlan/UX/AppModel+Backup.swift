@@ -328,6 +328,7 @@ extension AppModel {
         liveRouteState = .empty
         isSensorCollecting = false
         await notificationScheduler.cancelAllPlanReminders()
+        GoogleCalendarAccount.shared.disconnect()
         await nearbyMemoScheduler.cancelAll()
         var empty = TaptionDataSnapshot.empty
         empty.categories = CategoryCatalog.builtIn
