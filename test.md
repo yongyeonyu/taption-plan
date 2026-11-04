@@ -5744,3 +5744,6 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - Google Cloud에 새 프로젝트, Calendar API, 동의 화면, iOS 클라이언트, 테스트 사용자 1명을 설정했다. 정책 동의는 대표가 했다.
 - 크롬에서 새 클라이언트의 로그인 주소를 열어 "BOKKI Plan(으)로 이동" 표시를 읽었다. 로그인·앱 연결·일정 수신은 하지 않았다.
 - 전체 단위 시험: 2,042건 중 2,028건 통과, 실패 0, 건너뜀 14 (`build/validation/CAL1104A02/check1.xcresult`).
+
+## TFB1104A04 TestFlight 267 (2026-11-04)
+- `release.sh --yes --request-id TFB1104A04` 결과는 `build/validation/TFB1104A04/testflight-report.json`에 있다. 12개 언어 팩, 구글 일정 읽기, BOKKI Plan OAuth 클라이언트, 재생 사진 7칸, 명언 세로 맞춤, 오픈카 포함. 대표 기기 설치·실기기 시험 결과는 아직 없다.
