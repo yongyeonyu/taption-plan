@@ -1,6 +1,6 @@
 import CoreGraphics
 
-/// 장면 소품: 글자·책·실타래·밥그릇·매트·나무·쳇바퀴·노트북·샤워기.
+/// 장면 소품: 글자·책·실타래·밥그릇·매트·나무·쳇바퀴·노트북·모니터·샤워기.
 extension HwarangPainter {
     func letterZ(_ x: CGFloat, _ y: CGFloat, _ size: CGFloat, alpha: CGFloat) {
         stroke(0x5E78C4, max(1.4, size * 0.2), alpha); c.setLineJoin(.round); c.beginPath()
@@ -136,6 +136,39 @@ extension HwarangPainter {
             }
         }
         fill(0xB9C3CE); stroke(0x8996A5, 0.9); poly([deck(0.36, 0.06), deck(0.66, 0.06), deck(0.66, 0.33), deck(0.36, 0.33)]); c.drawPath(using: .fillStroke)
+    }
+
+    /// 업무 휴식 소품: 낮은 책상과 켜 둔 모니터. 고양이 앞발이 책상 위에 얹힌다.
+    func deskMonitor(_ sec: CGFloat) {
+        c.setLineJoin(.round); c.setLineCap(.round)
+        for x: CGFloat in [84, 122] { rounded(x, deskTop + 3, 5, groundY - deskTop - 3, 1, fillHex: 0x9A6B43) }
+        rounded(78, deskTop, 53, 6, 2, fillHex: 0xC98F58)
+        rounded(108, 72, 8, deskTop - 74, 1, fillHex: 0x8996A5)
+        rounded(100, deskTop - 4, 24, 4.5, 2, fillHex: 0xB9C3CE)
+        rounded(93, 38, 38, 36, 3, fillHex: 0x46525F)
+        fill(0x17243A); c.fill(CGRect(x: 96.5, y: 41.5, width: 31, height: 29))
+        let widths: [CGFloat] = [20, 14, 24, 10], colors: [UInt32] = [0x7CC4FF, 0xF2A7C3, 0xA6E3A1, 0xF7C948]
+        for i in 0..<4 {
+            let y = 47 + CGFloat(i) * 5.5
+            stroke(colors[i], 1.6, 0.85); c.beginPath(); c.move(to: P(100, y)); c.addLine(to: P(100 + widths[i], y)); c.strokePath()
+        }
+        if wrap(sec * 1.1, 1) < 0.55 {
+            stroke(white, 1.4); c.beginPath(); c.move(to: P(112.5, 62)); c.addLine(to: P(112.5, 66)); c.strokePath()
+        }
+    }
+
+    /// 옆구리에 낀 닫힌 노트북. 몸 쪽에서 덮개 면이 보인다. 차지한 윤곽을 돌려줘 앞다리가 그 위에 얹히게 한다.
+    func heldLaptop(center q: CGPoint) -> CGPath {
+        let box = CGRect(x: -21, y: -13, width: 42, height: 26)
+        var place = CGAffineTransform(translationX: q.x, y: q.y).rotated(by: -0.1)
+        var lower = place.translatedBy(x: 0, y: 3.2)
+        let lid = CGPath(roundedRect: box, cornerWidth: 3, cornerHeight: 3, transform: &place)
+        let base = CGPath(roundedRect: box, cornerWidth: 3, cornerHeight: 3, transform: &lower)
+        c.setLineJoin(.round)
+        fill(0x8996A5); stroke(outline, outlineWidth * 0.8); c.addPath(base); c.drawPath(using: .fillStroke)
+        fill(0xC6CFD9); stroke(outline, outlineWidth * 0.8); c.addPath(lid); c.drawPath(using: .fillStroke)
+        fill(0xF7FAFC); c.beginPath(); circle(q.x - 7, q.y + 2, 3.4); c.fillPath()
+        return CGPath(roundedRect: CGRect(x: box.minX, y: box.minY, width: box.width, height: box.height + 3.2), cornerWidth: 3, cornerHeight: 3, transform: &place)
     }
 
     func yarnPosition(_ beat: Int, _ s: CGFloat, _ u: CGFloat) -> (CGFloat, CGFloat, CGFloat) {

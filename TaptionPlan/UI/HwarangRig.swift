@@ -4,7 +4,7 @@ import UIKit
 /// 코드로 그리는 화랑이(RIG1101A01). 부품과 관절을 CoreGraphics로 그리고 장면마다 여러 동작을 이어 재생한다.
 /// 위젯·워치는 기존 그림(`TaptionCatAtlasSprite`)을 그대로 쓴다.
 enum HwarangScene: CaseIterable, Hashable, Sendable {
-    case walkLoop, runLoop
+    case walkLoop, runLoop, walkLaptop
     case stroll, groom, work, study, yarn, sleep, eat, wheel, stretch, confused
     case shower, robotVacuum, carFront, subway, train, bus, bicycle, airplane, boat, atlas
     case sleepBelly, sleepEyeMask, recoverySuperman, medicated, restStarfish, restCroissant, restDonut, restLoaf, restBox
@@ -33,7 +33,7 @@ enum HwarangScene: CaseIterable, Hashable, Sendable {
         case .airplane: [(5, 26)]
         case .boat: [(5, 22)]
         case .atlas: [(6, 0)]
-        case .sleepBelly, .sleepEyeMask, .recoverySuperman, .medicated, .restStarfish, .restCroissant, .restDonut, .restLoaf, .restBox, .nap, .cook, .groceries, .laundry, .dishes, .coffee, .meeting, .friends, .date, .family, .phoneCall, .meditate, .hospital, .salon, .readBook, .game, .music, .video, .petCare: [(6, 0)]
+        case .sleepBelly, .sleepEyeMask, .recoverySuperman, .medicated, .restStarfish, .restCroissant, .restDonut, .restLoaf, .restBox, .walkLaptop, .nap, .cook, .groceries, .laundry, .dishes, .coffee, .meeting, .friends, .date, .family, .phoneCall, .meditate, .hospital, .salon, .readBook, .game, .music, .video, .petCare: [(6, 0)]
         }
     }
 
@@ -67,6 +67,7 @@ enum PoseProp {
     case none
     case book(flip: CGFloat)
     case map
+    case laptop
 }
 
 struct Pose {
@@ -95,6 +96,8 @@ let wheelCenter = CGPoint(x: 58, y: 62)
 let wheelRadius: CGFloat = 48
 let wheelGround: CGFloat = 106
 let wheelScale: CGFloat = 0.76
+let dozeCycle: CGFloat = 6
+let deskTop: CGFloat = 86
 let bookCenter: CGFloat = 66, bookY: CGFloat = groundY + 8, bookWidth: CGFloat = 34
 
 func lerp(_ a: CGFloat, _ b: CGFloat, _ t: CGFloat) -> CGFloat { a + (b - a) * t }
@@ -225,6 +228,30 @@ private func desk(_ s: CGFloat, _ a: CGFloat, _ b: CGFloat, _ h: HeadPose) -> Po
     p.fnAbs = P(82, 97 + a * 0.9); p.ffAbs = P(96, 95 + b * 0.9)
     p.tp = s * 2
     p.h = h
+    return p
+}
+
+/// 조는 정도(0: 고개 든 상태, 1: 끝까지 떨군 상태). 천천히 떨어졌다 순식간에 들려 살짝 젖혔다 돌아온다.
+func dozeDroop(_ s: CGFloat) -> CGFloat {
+    let t = wrap(s, dozeCycle)
+    switch t {
+    case ..<0.5: return 0
+    case ..<4.7: return ease((t - 0.5) / 4.2)
+    case ..<5.1: return 1
+    case ..<5.3: return lerp(1, -0.14, ease((t - 5.1) / 0.2))
+    default: return lerp(-0.14, 0, ease((t - 5.3) / 0.7))
+    }
+}
+
+/// 책상 앞에 앉아 모니터를 보며 존다. 눈은 반쯤 감겼다 감기고, 깜짝 깰 때만 뜬다.
+private func dozing(_ s: CGFloat) -> Pose {
+    let droop = dozeDroop(s), t = wrap(s, dozeCycle)
+    let eye: Eye = t >= 5.1 ? .open : (droop < 0.55 ? .half : .closed)
+    var p = desk(s, 0, 0, HeadPose(tilt: 0.05 + droop * 0.3, ear: -droop * 0.1, mouthOpen: droop > 0.8 ? 0.12 : 0, turn: 1, eye: eye))
+    p.tp = s * 0.9
+    p.sh = P(62, 84 + droop * 3)
+    p.head = P(58 + droop * 5, 58 + droop * 15)
+    p.fnAbs = P(88, deskTop); p.ffAbs = P(100, deskTop)
     return p
 }
 
@@ -475,7 +502,9 @@ private func pose(_ scene: HwarangScene, beat i: Int, s: CGFloat, u: CGFloat) ->
         var p = study(s, turn: sin(s * 0.7) * 0.5, flip: 0, eye: blink(s, 2.9))
         p.prop = .map
         return p
-    case .sleepBelly, .sleepEyeMask, .recoverySuperman, .medicated, .restStarfish, .restCroissant, .restDonut, .restLoaf, .restBox, .nap, .cook, .groceries, .laundry, .dishes, .coffee, .meeting, .friends, .date, .family, .phoneCall, .meditate, .hospital, .salon, .readBook, .game, .music, .video, .petCare:
+    case .restCroissant:
+        return dozing(s)
+    case .sleepBelly, .sleepEyeMask, .recoverySuperman, .medicated, .restStarfish, .restDonut, .restLoaf, .restBox, .walkLaptop, .nap, .cook, .groceries, .laundry, .dishes, .coffee, .meeting, .friends, .date, .family, .phoneCall, .meditate, .hospital, .salon, .readBook, .game, .music, .video, .petCare:
         return dailyPose(scene, s: s)
     }
 }
@@ -904,27 +933,39 @@ struct HwarangPainter {
             for d in [P(-3.8, -2.8), P(-0.2, -4.4), P(3.6, -2.6)] { circle(bn.x + 0.6 + d.x * sp, bn.y + d.y * sp, 1.35 + raw.spread * 0.2) }
             c.fillPath()
         }
+        // 옆구리에 낀 노트북은 몸과 앞다리 사이에 있어 머리보다 먼저 그린다.
+        var heldLaptop: CGPath?
+        if case .laptop = raw.prop {
+            heldLaptop = self.heldLaptop(center: P(mid.x - 6, mid.y + 3))
+            overForeleg(raw, shoulder: sh, keepingLineOver: heldLaptop, body: near)
+        }
         paintChest(head: headPoint, shoulder: sh)
         if let scarf {
             drawScarf(scarf, neck: HwarangNeck(head: headPoint, shoulder: sh, tilt: raw.h.tilt), swing: scarfSwing, wind: scarfWind, phase: scarfPhase)
         }
         head(headPoint.x, headPoint.y, raw.h)
         switch raw.prop {
-        case .none: break
+        case .none, .laptop: break
         case let .book(flip): book(flip)
         case .map: foldedMap()
         }
-        if raw.foreOver {
-            var top: [Blob] = []
-            toes = []
-            fore(&top, sh, fn, raw.foreBend)
-            paint(top, fillColor: coat.fur)
-            // 몸 위에 겹친 앞다리 윤곽을 지운다.
-            c.saveGState(); c.beginPath(); addBlobs(near); c.clip()
-            fill(coat.fur); c.beginPath(); addBlobs(top, grow: outlineWidth + 0.3); c.fillPath()
-            c.restoreGState()
-            drawToes()
+        if raw.foreOver, heldLaptop == nil { overForeleg(raw, shoulder: sh, keepingLineOver: nil, body: near) }
+    }
+
+    /// 몸 위에 겹쳐 그리는 앞다리. 몸 안쪽 윤곽은 지우되 `prop`(몸에 얹은 소품) 위에서는 다리 선을 남긴다.
+    private mutating func overForeleg(_ raw: Pose, shoulder sh: CGPoint, keepingLineOver prop: CGPath?, body near: [Blob]) {
+        var top: [Blob] = []
+        toes = []
+        fore(&top, sh, mapPaw(raw.fn), raw.foreBend)
+        paint(top, fillColor: coat.fur)
+        c.saveGState()
+        if let prop {
+            c.beginPath(); c.addRect(c.boundingBoxOfClipPath); c.addPath(prop); c.clip(using: .evenOdd)
         }
+        c.beginPath(); addBlobs(near); c.clip()
+        fill(coat.fur); c.beginPath(); addBlobs(top, grow: outlineWidth + 0.3); c.fillPath()
+        c.restoreGState()
+        drawToes()
     }
 
     private mutating func loaf(_ p: Pose) {
@@ -1021,7 +1062,7 @@ struct HwarangPainter {
         }
         let speed = scene.beats[beat].speed
         scarfWind = switch scene {
-        case .walkLoop: 0.32
+        case .walkLoop, .walkLaptop: 0.32
         case .runLoop: 1.0
         case .stroll: speed / 30 * 0.7
         case .wheel: speed / 4.4 * 0.9
@@ -1135,7 +1176,7 @@ struct HwarangPainter {
             yarn(y.0, y.1, y.2)
         case .eat: bowl()
         case .sleepBelly, .sleepEyeMask: sleepLetters(sec)
-        case .nap, .cook, .groceries, .coffee, .friends, .date, .meditate, .salon, .game, .music, .video, .petCare: dailyForeground(scene, sec: sec)
+        case .restCroissant, .nap, .cook, .groceries, .coffee, .friends, .date, .meditate, .salon, .game, .music, .video, .petCare: dailyForeground(scene, sec: sec)
         case .confused: questionMark(sec)
         case .shower: waterStreams(sec, xs: [52, 64, 76, 84], alpha: 0.5)
         case .atlas:

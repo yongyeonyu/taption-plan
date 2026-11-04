@@ -148,6 +148,7 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
     case unconfirmed
     case mapReading
     case walkInPlace
+    case workWalking
     case meeting
     case dishes
     case coffee
@@ -230,6 +231,7 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
         case .dishes: .dishes
         case .coffee: .coffee
         case .walkInPlace: .walkLoop
+        case .workWalking: .walkLaptop
         }
     }
 
@@ -250,7 +252,7 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
         case .computer, .company, .school, .reading, .hobby, .sleeping, .deepSleep, .remSleep, .recovery, .medication, .restStarfish, .restCroissant, .restDonut, .restLoaf, .restBox, .eating,
              .activity, .exercise, .health, .unconfirmed, .shower, .housework,
              .nap, .cooking, .groceries, .laundry, .friends, .date, .family, .phoneCall,
-             .meditation, .hospital, .salon, .bookReading, .game, .music, .video, .petCare, .mapReading, .walkInPlace, .meeting, .dishes, .coffee:
+             .meditation, .hospital, .salon, .bookReading, .game, .music, .video, .petCare, .mapReading, .walkInPlace, .workWalking, .meeting, .dishes, .coffee:
             true
         default:
             isMoving
@@ -301,6 +303,7 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
         case .dishes: return t("설거지", "Dishes")
         case .coffee: return t("커피·티타임", "Coffee & tea")
         case .walkInPlace: return t("제자리 걷기", "Walking in place")
+        case .workWalking: return t("업무 걷기", "Walking at work")
         case .remSleep: return t("REM 수면", "REM sleep")
         case .movement: return t("이동", "Movement")
         case .eating: return t("식사", "Meal")
@@ -605,6 +608,7 @@ enum MapHomeStickmanActionResolver {
         let detailMappings: [(String, MapHomeStickmanAction)] = [
             ("activity.rest", .restStarfish),
             ("work.rest", .restCroissant),
+            ("work.walking", .workWalking),
             ("study.rest", .restDonut),
             ("hobby.rest", .restLoaf),
             ("health.recovery", .recovery),
@@ -623,6 +627,7 @@ enum MapHomeStickmanActionResolver {
             ("movement.cycling", .cycling)
         ]
         if let mapping = detailMappings.first(where: { category == $0.0 }) { return mapping.1 }
+        if let walking = workWalkingAction(categoryRoot: categoryRoot, title: label, behavior: nil) { return walking }
         if categoryRoot == "company" || value.contains("company") { return .company }
         if categoryRoot == "school" || value.contains("school") { return .school }
         if let action = majorCategoryAction(for: categoryRoot) {
@@ -757,6 +762,13 @@ enum MapHomeStickmanActionResolver {
         }
     }
 
+    /// 업무 중 걷기는 노트북을 끼고 걷는다. 실제 이동 구간은 이 판정보다 먼저 일반 걷기로 정해진다.
+    private static func workWalkingAction(categoryRoot: String, title: String, behavior: String?) -> MapHomeStickmanAction? {
+        guard categoryRoot == "work" else { return nil }
+        let isWalking = behavior?.lowercased() == "walking" || title.trimmingCharacters(in: .whitespacesAndNewlines) == "걷기"
+        return isWalking ? .workWalking : nil
+    }
+
     static func clearActionCache() {
         actionCacheLock.lock(); defer { actionCacheLock.unlock() }
         actionCache.removeAll(keepingCapacity: true)
@@ -773,6 +785,7 @@ enum MapHomeStickmanActionResolver {
         let category = actual.categoryID.lowercased()
         let categoryRoot = category.split(separator: ".", maxSplits: 1).first.map(String.init) ?? category
         if let rest = restAction(categoryRoot: categoryRoot, title: actual.title, behavior: actual.behavior) { return rest }
+        if let walking = workWalkingAction(categoryRoot: categoryRoot, title: actual.title, behavior: actual.behavior) { return walking }
         if let action = majorCategoryAction(for: categoryRoot) {
             return action
         }
