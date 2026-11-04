@@ -5760,3 +5760,9 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 ## GOO1104A01 구글 인증 준비 (2026-11-04)
 - 개인정보처리방침을 `/privacy/plan/`에 올렸다(대표 승인). `bokkiyaw.com` 도메인 소유를 Search Console에서 DNS TXT로 확인했다. 동의 화면에 홈페이지·방침 주소·승인 도메인을 넣고 `calendar.readonly` 범위를 추가했다.
 - 남음: 시연 영상, 인증 제출(대표 확인 후), 게시. 게시 상태는 테스트 중이다.
+
+## TFB1104A05 TestFlight 268 (2026-11-04)
+- `release.sh --yes`: 빌드 268 업로드, 처리 상태 VALID, 내부 그룹 연결, 테스터 노출 1명 확인 (`build/validation/TFB1104A05/testflight-report.json`).
+- 산출물에서 앱·위젯 번들 268을 읽었고 Watch는 이전처럼 포함되지 않는다. Info.plist의 대기질 중계 주소는 `air.bokkiyaw.com`이다. 일정 제목 유출 차단(PRV1104A02)도 포함한다.
+- 전체 단위 시험은 직전 설정 변경 앞에서 돈 결과(2,043건 중 2,029건 통과, 실패 0, 건너뜀 14, 시뮬레이터)이며 268에서 다시 돌리지 않았다.
+- 제한: 기기 설치와 실행은 하지 않았다. 대기질 실제 수신, 저장 틈 차단, 구글 일정 수신은 기기에서 확인하지 못했다.
