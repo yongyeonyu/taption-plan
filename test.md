@@ -5725,6 +5725,7 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 단위: 패키지 `UITextPackTests`·`AppRegionTests`·`AppLanguagePreferenceTests` 20건 통과. 앱 `TaptionPlanTests` 2,036건 중 2,022건 통과, 실패 0, 건너뜀 14(`build/validation/LNG1104A01/unit-4.xcresult`). 구조 지표·엔진 경계 통과. 화면 시험(UI 테스트 전체)은 돌리지 않았다.
 - 화면(시뮬레이터 LNG-iPhone17Pro, `build/validation/LNG1104A01/screens/`): 힌디어 새 설치에서 튜토리얼 16단계·급여 직접 입력(₹, 세전/세후)·달력·메모·메뉴까지 표시를 봤다. 일본어·독일어는 홈·달력·메모·메뉴를 코드 수정 전 빌드로 봤고, 그 사이 변수 문구 수정 전 화면에서 찾은 `0m`은 원인을 고쳤으나 고친 뒤 일본어·독일어 화면을 다시 찍지는 않았다. 나머지 9개 언어 화면은 보지 않았다. 메뉴 안쪽 화면은 언어·위치 항목까지만 돌았다.
 - 찾아 고친 것: 리터럴이 `String` 판을 골라 변수 문구가 번역되지 않던 문제, 튜토리얼 문구 추출 누락, 사이드바 한글 접근성 문구, 지도 글자 언어.
+- 빌드(서명 끔): generic iOS Debug `BUILD SUCCEEDED`(`build-final.log`, 앱·위젯 번들에 `ja.lproj` 확인), generic watchOS Debug `BUILD SUCCEEDED`(`build-watch.log`, 워치 앱·워치 위젯 번들에 `UIText.strings` 확인). 빌드 번호는 바꾸지 않았다. 설치·실행은 하지 않았다.
 - 미검증(메인 세션 실기기 필요): 네 제품 표시, 워치, 위젯·잠금 화면 언어와 통화, 스와힐리어 등 미지원 언어 → 영어, `es-419`·`zh-HK`·`pt-PT` 결과, iOS 앱별 언어 설정, 지도 드래그·시간표 스크롤 프레임, 언어별 잘림.
 - 남은 표시 차이: 메뉴 상단 명언은 원래 영어 고정이다. 스티커 1,382장 이름(VoiceOver 전용)은 영어로 읽힌다. 글귀 스티커 그림 속 글자, 판정 키워드, 레거시 화면의 고정 한글은 이번 범위 밖이다. 저장된 날씨 문구는 저장 당시 언어로 보인다. 날짜 칩(시스템 DatePicker)이 시뮬레이터에서 기기 지역 형식으로 나왔다.
 - 아직 안 한 것: 언어 메뉴 제거(대표 결정: 검증 뒤), 앱 스토어 메타데이터 13벌.
