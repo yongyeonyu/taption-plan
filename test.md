@@ -5791,5 +5791,5 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 탑승 버튼을 탈것별 문구로 바꿔 12개 언어로 번역했고(별도 AI 검수 없음, `check.py` 실패 0), 달력·일정 제목·사이드바 날짜가 고른 언어를 따르게 했다. 날짜 줄의 달 이름은 이미 고른 언어를 따라 고치지 않았다. 화면으로 보지 않았다.
 - 전체 단위 시험: 2,068건 중 2,052건 통과, 실패 1, 건너뜀 15 (`build/validation/FBK1104B01/full3.xcresult`). 실패는 `MapHomeVectorRouteRenderingTests.testRoutesRemainVisibleAcrossZoomAndOffscreenRoundTrip`(66.8초, 벡터 지도 스타일 재적재 대기). 같은 코드에서 그 시험만 다시 돌려 통과했다(1.2초, `route1.xcresult`). 디스크 부족과 영상 렌더가 겹친 때라 환경 영향으로 보이지만 원인을 확정하지 못했다. 전체 시험을 다시 돌려 통과한 기록은 없다.
 
-## TFB1104B02 TestFlight 270 (2026-11-04)
-- `release.sh --yes --request-id TFB1104B02` 결과는 `build/validation/TFB1104B02/testflight-report.json`에 있다. LNG1104A03 포함. 대표 기기 설치·실기기 시험 결과는 아직 없다.
+## TFB1104B02 TestFlight 270 중단 (2026-11-04)
+- 빌드 번호를 270으로 올리고 아카이브까지 했으나, 제가 건 시간 제한(590초)에 걸려 익스포트 단계에서 멈췄다. **270은 업로드되지 않았다.** 이 항목의 직전 커밋 메시지(`6cc012dc`)는 결과를 기록했다고 적었지만 틀렸다. 아래 다음 빌드 기록을 본다.
