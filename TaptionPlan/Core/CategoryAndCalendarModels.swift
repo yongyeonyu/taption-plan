@@ -208,3 +208,16 @@ extension CalendarRecord {
     static let googleAccountCalendarID = "google-primary"
     var isGoogleAccountEvent: Bool { calendarID == Self.googleAccountCalendarID }
 }
+
+extension CalendarRecord {
+    private static let meetingWords = ["회의", "미팅", "meeting", "스크럼", "scrum", "sync"]
+    private static let mealWords = ["아침", "점심", "저녁", "식사", "lunch", "dinner", "breakfast"]
+
+    /// 시간이 정해진 회의 일정인가. 제목이나 참석자 수로만 본다.
+    var isMeetingLike: Bool {
+        guard !isAllDay, isCancelled != true else { return false }
+        let text = title.lowercased()
+        if Self.mealWords.contains(where: text.contains) { return false }
+        return Self.meetingWords.contains(where: text.contains) || (attendeeCount ?? 0) >= 2
+    }
+}

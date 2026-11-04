@@ -27,7 +27,7 @@ struct MapHomeNLEClipEditor: View {
     /// 이번 터치가 시작될 때 골라져 있던 클립과, 탭 범위를 벗어났는지(NLE1103A03).
     @State private var selectedAtTouchStart: String?
     @State private var touchLeftTapSlop = false
-    @State private var playheadMinute: Int
+    @State var playheadMinute: Int
     @State var minuteHeight: CGFloat = 2.4
     @State var visibleStartMinute: Double = 0
     @State var containerHeight: CGFloat = 0
@@ -248,7 +248,7 @@ struct MapHomeNLEClipEditor: View {
             Color.clear.frame(width: gutterWidth, height: 1)
             laneTitle(language.text("장소", "Place"), width: lanes.place)
             laneTitle(language.text("대분류", "Main"), width: lanes.main)
-            Color.clear.frame(width: lanes.right, height: 1)
+            laneTitle(language.text("상세 활동", "Detail"), width: lanes.right - Self.railBleed * 2)
         }
     }
 
@@ -306,6 +306,7 @@ struct MapHomeNLEClipEditor: View {
                 laneDivider(at: lanes.rightX - laneGap / 2, height: height)
                 placeColumn(geometry: geometry, x: lanes.placeX, width: lanes.place)
                 mainColumn(geometry: geometry, x: lanes.mainX, width: lanes.main)
+                detailColumn(geometry: geometry, x: lanes.rightX, width: lanes.right)
                 playheadLine(geometry: geometry, width: width)
                 playheadHandle(geometry: geometry, minute: playheadMinute)
                 quickMenu(geometry: geometry, x: lanes.mainX, width: lanes.main, height: height)
@@ -477,6 +478,7 @@ struct MapHomeNLEClipEditor: View {
     var toolbar: some View {
         HStack(spacing: 6) {
             categoryMenu
+            detailMenu
             NLEToolButton(
                 systemImage: "scissors",
                 title: language.text("가르기", "Split"),
@@ -547,7 +549,15 @@ struct MapHomeNLEClipEditor: View {
                 applyCategory(category)
                 quickMenuMinute = nil
             } label: {
-                Label(category.localizedTitle(language), systemImage: category.systemImage)
+                Label {
+                    Text(category.localizedTitle(language))
+                } icon: {
+                    if let icon = categoryIcon(category.stickmanAction) {
+                        Image(uiImage: icon)
+                    } else {
+                        Image(systemName: category.systemImage)
+                    }
+                }
             }
         }
         // 고른 클립 하나가 아니라 나뉜 클립 전부를 바꾸는 문. 같은 메뉴에 두어
@@ -658,7 +668,7 @@ struct MapHomeNLEClipEditor: View {
                     }
                 }
                 if !leftSlop, dragMode != .scrub, dragMode != .none {
-                    handleTap(at: value.startLocation, geometry: geometry)
+                    handleTap(at: value.startLocation, geometry: geometry, width: width)
                 }
                 // 제자리로 돌아와 손을 떼면 되돌리기 한 칸을 남기지 않는다(BOKKI STUDIO 계약).
                 if didPushUndoForDrag, let before = undoStack.last, before.main == track.snapshot(),
@@ -980,8 +990,10 @@ struct MapHomeNLEClipEditor: View {
         case .gutter:
             let playheadY = geometry.y(forMinute: Double(playheadMinute))
             return NLEPlayheadPolicy.grabsHandle(touchY: point.y, playheadY: playheadY) ? .scrub : .pan
-        case .place, .right:
+        case .place:
             return .pan
+        case .right:
+            return subDragMode(at: point, geometry: geometry)
         case .main:
             break
         }
@@ -991,6 +1003,20 @@ struct MapHomeNLEClipEditor: View {
         let minute = geometry.minute(forY: point.y)
         guard let clip = track.clip(atMinute: Int(minute.rounded(.down))) else { return .pan }
         return .move(lane: .main, id: clip.id, originMinute: clip.startMinute, grabMinute: Int(minute.rounded()))
+    }
+
+    /// 고른 상세는 끝을 잡아 자르고, 몸통을 잡아 옮긴다. 그 밖의 곳은 화면을 민다.
+    private func subDragMode(at point: CGPoint, geometry: NLETimelineGeometry) -> NLEEditorDragMode {
+        let minute = geometry.minute(forY: point.y)
+        guard let sub = selectedSubClipID.flatMap({ subTrack.clip($0) }) else { return .pan }
+        if abs(point.y - geometry.y(forMinute: Double(sub.startMinute))) <= Self.trimReach {
+            return .trimStart(lane: .sub, id: sub.id)
+        }
+        if abs(point.y - geometry.y(forMinute: Double(sub.endMinute))) <= Self.trimReach {
+            return .trimEnd(lane: .sub, id: sub.id)
+        }
+        guard sub.contains(minute: Int(minute.rounded(.down))) else { return .pan }
+        return .move(lane: .sub, id: sub.id, originMinute: sub.startMinute, grabMinute: Int(minute.rounded(.down)))
     }
 
     /// 고른 클립의 경계를 잡았는가. 짧아 경계 두 곳이 겹치는 클립은 맞닿은 이웃의 경계로 대신 민다.
@@ -1029,7 +1055,16 @@ struct MapHomeNLEClipEditor: View {
     }
 
     /// 손가락이 거의 움직이지 않았으면 누른 것이다. 선택은 여기서만 바뀐다(NLE1104A01).
-    private func handleTap(at point: CGPoint, geometry: NLETimelineGeometry) {
+    private func handleTap(at point: CGPoint, geometry: NLETimelineGeometry, width: CGFloat) {
+        if laneWidths(width).lane(atX: point.x) == .right {
+            let minute = Int(geometry.minute(forY: point.y).rounded(.down))
+            UISelectionFeedbackGenerator().selectionChanged()
+            let tapped = subClip(atMinute: minute)
+            selectedSubClipID = tapped?.id == selectedSubClipID ? nil : tapped?.id
+            quickMenuMinute = nil
+            if tapped != nil { selectedClipID = nil }
+            return
+        }
         guard dragMode.touchesMainLane else { return }
         let minute = Int(geometry.minute(forY: point.y).rounded(.down))
         guard let clip = track.clip(atMinute: minute) else { return }
@@ -1151,13 +1186,13 @@ struct MapHomeNLEClipEditor: View {
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
     }
 
-    private func pushUndo() {
+    func pushUndo() {
         undoStack.append(currentSnapshot)
         if undoStack.count > 40 { undoStack.removeFirst() }
         redoStack.removeAll()
     }
 
-    private func pushUndoIfNeeded() {
+    func pushUndoIfNeeded() {
         guard !didPushUndoForDrag else { return }
         didPushUndoForDrag = true
         pushUndo()

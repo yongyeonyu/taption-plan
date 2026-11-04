@@ -506,15 +506,28 @@ struct MapHomeStickerEditorSheet: View {
             }
         }
         editorCard(title: language.text("시간", "Time")) {
-            if !isSticker {
-                Toggle(language.text("시간 지정", "Set a time"), isOn: $hasTime)
-            }
-            if hasTime || isSticker {
+            if isSticker {
                 DatePicker(
                     language.text("시간", "Time"),
                     selection: $occurredAt,
                     displayedComponents: [.date, .hourAndMinute]
                 )
+            } else {
+                // 한 줄에 둔다. 끄면 시간을 고를 수 없게 흐려진다.
+                HStack(spacing: 6) {
+                    DatePicker(
+                        language.text("시간", "Time"),
+                        selection: $occurredAt,
+                        displayedComponents: [.date, .hourAndMinute]
+                    )
+                    .labelsHidden()
+                    .disabled(!hasTime)
+                    .opacity(hasTime ? 1 : 0.4)
+                    Spacer(minLength: 0)
+                    Toggle(language.text("시간 지정", "Set a time"), isOn: $hasTime)
+                        .labelsHidden()
+                        .tint(Color.tpAccent)
+                }
             }
         }
         editorCard(title: language.text("위치", "Location")) {

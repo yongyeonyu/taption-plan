@@ -13,6 +13,8 @@ enum FirstRunTutorialChapter: Int, CaseIterable {
 enum FirstRunTutorialStep: String, CaseIterable, Identifiable {
     case welcome
     case permissions
+    case sensorInterval
+    case dayCardTime
     case home
     case workAndSchool
     case salary
@@ -41,7 +43,7 @@ enum FirstRunTutorialStep: String, CaseIterable, Identifiable {
     var chapter: FirstRunTutorialChapter {
         switch self {
         case .welcome: .start
-        case .permissions, .home, .workAndSchool, .salary, .cat: .setup
+        case .permissions, .sensorInterval, .dayCardTime, .home, .workAndSchool, .salary, .cat: .setup
         case .map, .playback, .sidebarCalendar, .clipEditor, .memos, .summary, .counters: .learn
         case .calendar, .password: .connect
         case .finish: .finish
@@ -51,7 +53,7 @@ enum FirstRunTutorialStep: String, CaseIterable, Identifiable {
     /// 입력이 있는 단계에만 건너뛰기를 둔다. 설명 단계는 다음이 곧 건너뛰기다.
     var hasInput: Bool {
         switch self {
-        case .permissions, .home, .workAndSchool, .salary, .cat, .counters, .calendar, .password: true
+        case .permissions, .sensorInterval, .dayCardTime, .home, .workAndSchool, .salary, .cat, .counters, .calendar, .password: true
         default: false
         }
     }
@@ -169,7 +171,6 @@ enum FirstRunTutorialPolicy {
             switch feature {
             case .location where isLocationAlways: return language.text("항상 허용", "Always")
             case .location: return language.text("앱 사용 중에만", "While using")
-            case .health: return language.text("요청함", "Requested")
             default: return language.text("허용됨", "Allowed")
             }
         }

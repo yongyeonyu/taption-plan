@@ -290,6 +290,23 @@ enum MapHomeTimeSidebarMath {
         position(minute: end, window: window) - position(minute: start, window: window)
     }
 
+    /// 상세 활동 구간 중 업무로 칠해진 부분만 남긴다. 다른 대분류 위에는 무늬를 놓지 않는다.
+    static func detailPatternSpans(
+        _ spans: [Range<Int>],
+        segments: [MapHomeTimeRailSegment],
+        window: ClosedRange<Int>
+    ) -> [Range<Int>] {
+        var result: [Range<Int>] = []
+        for segment in segments where segment.categoryID == "work" {
+            for span in spans {
+                let start = max(span.lowerBound, segment.startMinute, window.lowerBound)
+                let end = min(span.upperBound, segment.endMinute, window.upperBound)
+                if start < end { result.append(start..<end) }
+            }
+        }
+        return result
+    }
+
     static func visibleHours(window: ClosedRange<Int>) -> [Int] {
         let first = max(0, Int(ceil(Double(window.lowerBound) / 60)))
         let last = min(24, Int(floor(Double(window.upperBound) / 60)))

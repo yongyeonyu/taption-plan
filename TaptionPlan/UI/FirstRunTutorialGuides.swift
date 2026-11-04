@@ -77,7 +77,7 @@ struct FirstRunWelcomePage: View {
 
     private var chapters: [(icon: String, title: String, detail: String)] {
         [
-            ("checklist", language.text("먼저 설정", "Set up first"), language.text("권한, 집과 회사, 연봉, 고양이", "Permissions, home and work, salary, your cat")),
+            ("checklist", language.text("먼저 설정", "Set up first"), language.text("권한, 센서 주기, 하루 카드, 집과 회사, 연봉, 고양이", "Permissions, sensor interval, day card, home and work, salary, your cat")),
             ("map", language.text("화면 익히기", "Learn the screen"), language.text("지도, 재생, 사이드바, 편집, 메모, 집 성장", "Map, playback, sidebar, editing, memos, home growth")),
             ("lock.shield", language.text("연결과 보호", "Connect and protect"), language.text("캘린더, 백업 비밀번호", "Calendars, backup password")),
         ]
@@ -174,214 +174,154 @@ struct FirstRunGuidePage: View {
     let date: Date
     let language: MapHomeLanguage
 
+    @State private var activeIndex = 0
+    @State private var cycleRevision = 0
+
+    private var cues: [FirstRunGuideCue] { FirstRunGuideCue.cues(for: step) }
+
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                illustration
-                    .frame(maxWidth: .infinity)
-                    .padding(14)
-                    .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 6) {
+                if cues.indices.contains(activeIndex) {
+                    let cue = cues[activeIndex]
+                    FirstRunGuideStage(step: step, cue: cue, date: date, language: language)
+                        .frame(maxWidth: .infinity)
+                        .padding(14)
+                        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .padding(.bottom, 8)
+                        .accessibilityHidden(true)
+                }
                 ForEach(Array(FirstRunGuideCatalog.rows(for: step, language: language).enumerated()), id: \.offset) { offset, row in
-                    FirstRunRowView(badge: .number(offset + 1), title: row.title, detail: row.detail)
+                    Button {
+                        activeIndex = offset
+                        cycleRevision += 1
+                    } label: {
+                        FirstRunRowView(badge: .number(offset + 1), title: row.title, detail: row.detail)
+                            .padding(8)
+                            .background(
+                                offset == activeIndex ? Color.tpAccent.opacity(0.14) : .clear,
+                                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            )
+                            .opacity(offset == activeIndex ? 1 : 0.55)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("firstRunGuideRow.\(offset)")
+                    .accessibilityAddTraits(offset == activeIndex ? .isSelected : [])
                 }
             }
             .padding(18)
         }
+        .task(id: cycleRevision) { await runCycle() }
     }
 
-    @ViewBuilder
-    private var illustration: some View {
-        switch step {
-        case .map:
-            VStack(spacing: 12) {
-                FirstRunMapSketch(language: language, showsHomeLevel: false)
-                FirstRunBottomBarSketch(highlights: [.location], date: date, language: language)
+    /// 번호 순서대로 한 줄씩 밝히고, 끝나면 처음으로 돌아간다. 줄을 누르면 거기서 이어 간다.
+    private func runCycle() async {
+        let cues = cues
+        guard !cues.isEmpty else { return }
+        while !Task.isCancelled {
+            try? await Task.sleep(for: .seconds(cues[activeIndex].seconds))
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeInOut(duration: 0.25)) {
+                activeIndex = (activeIndex + 1) % cues.count
             }
-        case .playback:
-            FirstRunBottomBarSketch(highlights: [.play, .record], date: date, language: language)
-        case .sidebarCalendar:
-            VStack(spacing: 12) {
-                FirstRunSidebarSketch(date: date, language: language)
-                FirstRunBottomBarSketch(highlights: [.calendar], date: date, language: language)
-            }
-        case .clipEditor:
-            FirstRunClipIllustration().frame(height: 96)
-        case .memos:
-            VStack(spacing: 12) {
-                FirstRunMapSketch(language: language, showsHomeLevel: false, memoText: language.text("여기 또 오기", "Come back here"))
-                FirstRunBottomBarSketch(highlights: [.memo], date: date, language: language)
-            }
-        case .summary:
-            VStack(spacing: 12) {
-                FirstRunMapSketch(language: language, showsHomeLevel: true)
-                FirstRunBottomBarSketch(highlights: [.home], date: date, language: language)
-            }
-        default:
-            EmptyView()
         }
     }
 }
 
-/// 하단 막대 그림. 실제 단추를 그대로 써서 앱과 같은 모양을 유지한다.
-private struct FirstRunBottomBarSketch: View {
-    enum Item: CaseIterable {
-        case menu, calendar, location, home, play, record, memo
-    }
+// MARK: - 하루 카드 시각
 
-    let highlights: Set<Item>
-    let date: Date
+/// 메뉴 > 알림의 하루 카드 알림 시각과 같은 값을 고른다(FRT1105A02).
+struct FirstRunDayCardTimePage: View {
+    @Bindable var model: AppModel
     let language: MapHomeLanguage
 
+    @AppStorage(MapHomeAlarmSettings.dailyCardHourKey) private var cardHour = 8
+    @AppStorage(MapHomeAlarmSettings.dailyCardMinuteKey) private var cardMinute = 0
+
+    private var time: Binding<Date> {
+        Binding(
+            get: { Calendar.current.date(bySettingHour: cardHour, minute: cardMinute, second: 0, of: .now) ?? .now },
+            set: { date in
+                let parts = Calendar.current.dateComponents([.hour, .minute], from: date)
+                cardHour = parts.hour ?? 8
+                cardMinute = parts.minute ?? 0
+                Task { await MapHomeAlarmCenter.shared.syncDailyCardSchedule(language: language) }
+            }
+        )
+    }
+
     var body: some View {
-        HStack(spacing: 0) {
-            ForEach(Item.allCases, id: \.self) { item in
-                button(item)
-                    .background {
-                        if highlights.contains(item) {
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .fill(Color.tpAccent.opacity(0.16))
-                                .overlay {
-                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                        .stroke(Color.tpAccent, lineWidth: 2)
-                                }
-                        }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                DatePicker(language.text("하루 카드 알림 시각", "Day card time"), selection: time, displayedComponents: .hourAndMinute)
+                    .datePickerStyle(.wheel)
+                    .labelsHidden()
+                    .frame(maxWidth: .infinity)
+                    .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .accessibilityIdentifier("firstRunDayCardTime")
+                if model.permissionState(for: .notifications) == .denied {
+                    Button {
+                        if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+                    } label: {
+                        Label(language.text("알림 권한이 꺼져 있어요 · 설정 열기", "Notifications are off · Open Settings"), systemImage: "bell.slash")
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .semibold))
+                            .foregroundStyle(Color.tpHoliday)
                     }
+                    .buttonStyle(.plain)
+                }
+                FirstRunRowView(
+                    badge: .icon("slider.horizontal.3"),
+                    title: language.text("나중에 바꾸기", "Change later"),
+                    detail: language.text("메뉴 > 알림에서 바꿉니다.", "Change it in Menu > Alerts.")
+                )
             }
+            .padding(18)
         }
-        .padding(.horizontal, 4)
-        .mapHomeBottomBarPill()
-        .allowsHitTesting(false)
-    }
-
-    @ViewBuilder
-    private func button(_ item: Item) -> some View {
-        switch item {
-        case .menu: icon("line.3.horizontal", language.text("메뉴", "Menu"))
-        case .calendar:
-            MapHomeBottomBarButton(title: language.text("달력", "Calendar"), action: {}) {
-                MapHomeCalendarGlyph(date: date, language: language)
-            }
-        case .location: icon("location.fill", language.text("현재 위치", "Location"))
-        case .home: icon("house.fill", language.text("집", "Home"))
-        case .play: icon("play.fill", language.text("재생", "Play"))
-        case .record: icon("record.circle", language.text("녹화", "Record"))
-        case .memo: icon("plus", language.text("메모", "Memo"))
-        }
-    }
-
-    private func icon(_ name: String, _ title: String) -> some View {
-        MapHomeBottomBarButton(title: title, action: {}) {
-            TaptionBarIcon(systemImage: name)
-        }
-    }
-}
-
-/// 지도 그림: 길과 집과 고양이. 실제 지도 타일은 쓰지 않는다.
-private struct FirstRunMapSketch: View {
-    let language: MapHomeLanguage
-    let showsHomeLevel: Bool
-    var memoText: String?
-
-    var body: some View {
-        GeometryReader { proxy in
-            let size = proxy.size
-            let home = CGPoint(x: size.width * 0.2, y: size.height * 0.68)
-            let work = CGPoint(x: size.width * 0.82, y: size.height * 0.28)
-            let cat = CGPoint(x: size.width * 0.54, y: size.height * 0.42)
-            ZStack {
-                Color.tpBackground
-                Path { path in
-                    path.move(to: home)
-                    path.addCurve(
-                        to: work,
-                        control1: CGPoint(x: size.width * 0.42, y: size.height * 0.75),
-                        control2: CGPoint(x: size.width * 0.58, y: size.height * 0.2)
-                    )
-                }
-                .stroke(Color.tpReferenceBlue, style: StrokeStyle(lineWidth: 4, lineCap: .round, dash: [2, 8]))
-                Image(MapHomeLocationDestination.home.iconAssetName)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 42, height: 42)
-                    .position(home)
-                if showsHomeLevel {
-                    Text("Lv.1")
-                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.caption), weight: .bold))
-                        .foregroundStyle(Color.tpInk)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 2)
-                        .background(Color.tpSurface, in: Capsule())
-                        .position(x: home.x, y: home.y + 30)
-                }
-                Image(MapHomeLocationDestination.company.iconAssetName)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 36, height: 36)
-                    .position(work)
-                FirstRunMascot(scene: .walkLoop, size: 54)
-                    .position(cat)
-                if let memoText {
-                    Text(memoText)
-                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.caption), weight: .semibold))
-                        .foregroundStyle(Color.tpInk)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 5)
-                        .background(Color(hex: "#F3C766").opacity(0.85), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
-                        .rotationEffect(.degrees(-3))
-                        .position(x: size.width * 0.72, y: size.height * 0.72)
-                }
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
-        }
-        .frame(height: 132)
-    }
-}
-
-/// 오른쪽 시간 막대 그림. 번호는 아래 설명 줄과 같다.
-private struct FirstRunSidebarSketch: View {
-    let date: Date
-    let language: MapHomeLanguage
-
-    private static let segments: [(color: Color, weight: CGFloat)] = [
-        (.tpReferenceBlue, 2), (.tpReferenceMint, 3), (.tpReferenceRose, 1), (.tpReferenceBlue, 2),
-    ]
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            FirstRunMapSketch(language: language, showsHomeLevel: false)
-            VStack(spacing: 4) {
-                Text(date.formatted(.dateTime.day().locale(language.locale)))
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.bodyStrong), weight: .bold))
-                    .foregroundStyle(Color.tpInk)
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(Color.tpAccent)
-                VStack(spacing: 2) {
-                    ForEach(Self.segments.indices, id: \.self) { index in
-                        RoundedRectangle(cornerRadius: 3)
-                            .fill(Self.segments[index].color.opacity(0.75))
-                            .frame(height: 16 * Self.segments[index].weight)
-                    }
-                }
-                .frame(width: 26)
-                .overlay(alignment: .trailing) {
-                    Capsule()
-                        .fill(Color.tpInk)
-                        .frame(width: 12, height: 5)
-                        .offset(x: 9, y: -6)
-                }
-                Image(systemName: "pencil")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(Color.tpInk)
-            }
-            .frame(width: 44)
-        }
-        .frame(maxHeight: 180)
     }
 }
 
 // MARK: - 고양이
+
+/// 메뉴의 GPS 및 센서 데이터와 같은 슬라이더로 기록 간격을 고른다(FRT1105A01).
+struct FirstRunSensorIntervalPage: View {
+    @Bindable var model: AppModel
+    let language: MapHomeLanguage
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                GPSLoggingIntervalSlider(
+                    seconds: model.settings.gpsLoggingPreferences.intervalSeconds,
+                    tint: Color.tpAccent,
+                    onCommit: model.setGPSLoggingIntervalSeconds
+                ) {
+                    Image(systemName: "battery.25percent")
+                        .foregroundStyle(Color.tpAccent)
+                        .accessibilityHidden(true)
+                }
+                .padding(14)
+                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                FirstRunRowView(
+                    badge: .icon("point.topleft.down.to.point.bottomright.curvepath"),
+                    title: language.text("짧을수록", "Shorter"),
+                    detail: language.text("경로가 촘촘해지고 배터리를 더 씁니다.", "More detailed routes, more battery use.")
+                )
+                FirstRunRowView(
+                    badge: .icon("battery.100percent"),
+                    title: language.text("길수록", "Longer"),
+                    detail: language.text("배터리를 아끼고 경로는 성겨집니다.", "Saves battery, with sparser routes.")
+                )
+                FirstRunRowView(
+                    badge: .icon("slider.horizontal.3"),
+                    title: language.text("나중에 바꾸기", "Change later"),
+                    detail: language.text("메뉴 > GPS 및 센서 데이터에서 바꿉니다.", "Change it in Menu > GPS & Sensor Data.")
+                )
+            }
+            .padding(18)
+        }
+    }
+}
 
 struct FirstRunCatPage: View {
     @Bindable var model: AppModel
@@ -680,6 +620,56 @@ struct FirstRunFinishPage: View {
 }
 
 // MARK: - 다시 보기
+
+/// 메뉴 > 설정의 권한 줄. 튜토리얼과 같은 권한 목록을 시트로 연다(FRT1105A02).
+struct FirstRunPermissionSettingsRow: View {
+    @Bindable var model: AppModel
+    let language: MapHomeLanguage
+
+    @State private var isPresented = false
+
+    var body: some View {
+        Button { isPresented = true } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "checkmark.shield.fill")
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .semibold))
+                    .foregroundStyle(Color.tpAccent)
+                    .frame(width: 24)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(language.text("권한 설정", "Permission settings"))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
+                    Text(language.text("위치, 건강, 사진, 캘린더, 알림", "Location, Health, Photos, Calendar, Notifications"))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10.5)), weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold))
+                    .foregroundStyle(.secondary)
+            }
+            .foregroundStyle(Color.primary)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 8)
+            .background(Color.tpAccent.opacity(0.055), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("permissionSettingsRow")
+        .sheet(isPresented: $isPresented) {
+            VStack(alignment: .leading, spacing: 0) {
+                Text(language.text("권한 설정", "Permission settings"))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(18)), weight: .bold))
+                    .foregroundStyle(Color.tpInk)
+                    .padding(.horizontal, 18)
+                    .padding(.top, 22)
+                PermissionOnboardingSheet(model: model, isEmbedded: true)
+            }
+            .background(Color.tpBackground)
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+            .task { await model.refreshPermissions() }
+        }
+    }
+}
 
 /// 메뉴 > 설정의 줄. 튜토리얼 표시까지 여기서 맡아 지도 화면을 늘리지 않는다.
 struct FirstRunTutorialReplayRow: View {

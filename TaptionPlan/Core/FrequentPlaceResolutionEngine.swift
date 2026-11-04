@@ -232,7 +232,31 @@ enum PlaceHeightMatch {
     private static let visitMargin: TimeInterval = 30 * 60
     private static let gpsToleranceMeters = 12.0
 
-    static func isAtOtherHeight(_ place: FrequentPlace, among places: [FrequentPlace], readings: [SensorReading]) -> Bool {
+    /// 체류 표본 기준으로 겹친 다른 장소보다 수평으로 `margin`m 이상 가까운가. 그러면 높이를 볼 필요가 없다.
+    static func isClearlyClosest(
+        _ place: FrequentPlace,
+        among places: [FrequentPlace],
+        readings: [SensorReading],
+        margin: Double = 60
+    ) -> Bool {
+        func median(_ target: GeoPoint) -> Double? {
+            let values = readings.compactMap(\.point).map { PlaceZoneStayTracker.centerDistance($0, target) }.sorted()
+            return values.isEmpty ? nil : values[values.count / 2]
+        }
+        guard let center = place.point, let own = median(center) else { return false }
+        return places.allSatisfy { other in
+            guard other.id != place.id, let point = other.point, let distance = median(point) else { return true }
+            return distance >= own + margin
+        }
+    }
+
+    /// `maximumGPSVerticalError`보다 수직 오차가 큰 GPS 고도만 있으면 빼지 않는다. 층을 가를 만큼 믿을 수 없다.
+    static func isAtOtherHeight(
+        _ place: FrequentPlace,
+        among places: [FrequentPlace],
+        readings: [SensorReading],
+        maximumGPSVerticalError: Double = .infinity
+    ) -> Bool {
         guard places.count >= 2, !readings.isEmpty, let targetFloor = place.floor else { return false }
         // 층만 적은 장소는 겹친 다른 장소의 기준 고도에 층 차이를 더해 쓴다(같은 건물이라고 본다).
         let own = references(of: place)
@@ -255,7 +279,10 @@ enum PlaceHeightMatch {
         switch source {
         case .relativeAltitude: return gap > floorHeight * 0.75
         case .pressure: return gap > floorHeight * 1.5
-        case .gps: return gap > max(floorHeight * 1.5, gpsToleranceMeters)
+        case .gps:
+            let errors = readings.compactMap { $0.point?.verticalAccuracy }.filter { $0 >= 0 }.sorted()
+            guard let error = errors.isEmpty ? nil : errors[errors.count / 2], error <= maximumGPSVerticalError else { return false }
+            return gap > max(floorHeight * 1.5, gpsToleranceMeters)
         }
     }
 

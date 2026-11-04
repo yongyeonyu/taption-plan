@@ -618,6 +618,8 @@ struct MapHomeVectorMap: UIViewRepresentable {
     var activeRouteSegments: [MapHomeVectorRoute] = []
     /// 재생 중 코디네이터 레이어에 그릴 발자국(그리는 순서). 비어 있으면 레이어를 쓰지 않는다.
     var layerPawprints: [MapHomeLayerPawprint] = []
+    /// 저장된 앱 언어 값. 바뀌면 지도 글자를 그 언어로 바꾼다.
+    var languageKey = ""
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -651,6 +653,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
             mapView.contentInset = contentInsets
         }
         context.coordinator.applySeasonColorsIfNeeded(to: mapView)
+        context.coordinator.applyLabelLanguageIfNeeded(to: mapView)
         context.coordinator.updateContent(in: mapView)
         context.coordinator.updateMarkerLayer(in: mapView)
         context.coordinator.applyCameraCommandIfNeeded(to: mapView)
@@ -678,6 +681,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
         /// 그래서 화랑이가 매 프레임 이동 반대쪽으로 한 걸음 밀렸다가 돌아와 좌우로 튀었다(PLY1029A06).
         /// 표시 링크가 매 프레임 새 위치를 주므로 애니메이션 없이 놓아도 부드럽다.
         private var lastSeasonKey: String?
+        private var appliedLanguageKey: String
 
         /// 계절 색이 바뀌면 타일을 다시 받지 않고 레이어 색만 바꾼다(SEA1103A01).
         func applySeasonColorsIfNeeded(to mapView: MLNMapView) {
@@ -704,6 +708,17 @@ struct MapHomeVectorMap: UIViewRepresentable {
                 let layer = style.layer(withIdentifier: id) as? MLNCircleStyleLayer
                 layer?.circleColor = color(hex)
                 layer?.circleStrokeColor = color(map.halo)
+            }
+        }
+
+        /// 언어가 바뀌면 타일을 다시 받지 않고 글자 레이어의 식만 바꾼다(MLG1105A01).
+        func applyLabelLanguageIfNeeded(to mapView: MLNMapView) {
+            guard appliedLanguageKey != parent.languageKey, let style = mapView.style else { return }
+            appliedLanguageKey = parent.languageKey
+            for label in MapHomeVectorLabels.layers {
+                guard let layer = style.layer(withIdentifier: label.id) as? MLNSymbolStyleLayer,
+                      let field = MapHomeVectorLabels.textField(of: label) else { continue }
+                layer.text = NSExpression(mglJSONObject: field)
             }
         }
 
@@ -795,6 +810,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
 
         init(parent: MapHomeVectorMap) {
             self.parent = parent
+            appliedLanguageKey = parent.languageKey
         }
 
         func attach(to mapView: MLNMapView) {

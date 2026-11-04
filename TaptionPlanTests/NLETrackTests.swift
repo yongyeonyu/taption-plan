@@ -1169,6 +1169,15 @@ final class NLETrackTests: XCTestCase {
         XCTAssertEqual(yesterday.first?.startMinute, -1_440)
     }
 
+    func testSubClipFreeSpanStaysInOwnerAndAvoidsOthers() {
+        XCTAssertEqual(NLESubClipPolicy.freeSpan(around: 600, owner: 540..<720, occupied: []), 600..<630)
+        XCTAssertEqual(NLESubClipPolicy.freeSpan(around: 710, owner: 540..<720, occupied: []), 690..<720)
+        XCTAssertEqual(NLESubClipPolicy.freeSpan(around: 600, owner: 540..<720, occupied: [610..<650]), 580..<610)
+        XCTAssertNil(NLESubClipPolicy.freeSpan(around: 620, owner: 540..<720, occupied: [610..<650]))
+        XCTAssertNil(NLESubClipPolicy.freeSpan(around: 800, owner: 540..<720, occupied: []))
+        XCTAssertEqual(NLESubClipPolicy.freeSpan(around: 810, owner: 780..<930, occupied: [], length: 120), 810..<930)
+    }
+
     func testPlaceLaneJoinsRegisteredPlacesWithMovementClip() {
         let dayStart = Date(timeIntervalSinceReferenceDate: 800_000_000)
         // 체류가 이동 클립과 겹쳐도 칸 경계는 메인 줄의 이동 클립에 맞는다.

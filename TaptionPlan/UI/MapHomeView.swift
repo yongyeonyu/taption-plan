@@ -29,6 +29,7 @@ struct MapHomeView: View {
     @State private var isLocationMenuExpanded = false
     @State private var isUserLocationsMenuExpanded = false
     @State private var isCategoryMenuExpanded = false
+    @State private var expandedCategoryDetails: Set<String> = []
     @State private var isCategoryAddPresented = false
     @State private var isDisplayMenuExpanded = false
     @State private var isCounterMenuExpanded = false
@@ -317,6 +318,7 @@ struct MapHomeView: View {
     @State private var derivedUpdateTick = 0
     @State private var homeWeatherBadgeMemo = MapHomeMemo<MapHomeHomeWeatherKey, MapHomeHomeWeatherBadge?>()
     @State private var stickmanActionMemo = MapHomeMemo<MapHomeStickmanActionKey, MapHomeStickmanAction>()
+    @State private var meetingRailSpansMemo = MapHomeMemo<String, [Range<Int>]>()
     @State private var transitBoardingDerived = MapHomeStaleWhileRevalidate<MapHomeTransitBoardingGroup, Date, [TransitBoardingCandidate]>()
     @State private var transitBoardingReadingsMemo = MapHomeMemo<MapHomeReadingsSignature, [SensorReading]>()
     /// 벡터 지도에서는 재생을 구동기가 맡는다(PLY1029A03). Apple 지도는 아직 예전 루프.
@@ -403,6 +405,8 @@ struct MapHomeView: View {
 
     /// 왼쪽 패널이 열려 있으면 지도를 그만큼 줄여 가리지 않는다.
     private var mapLeadingInset: CGFloat {
+        // 좁은 화면은 쓰지 않는 값이다. 시트 표시 상태를 읽으면 열 때마다 지도까지 다시 계산된다.
+        guard isWideLayout else { return 0 }
         let panel: MapHomeWidePanelKind? = isCalendarPresented ? .calendar : isMenuOpen ? menuPanelKind
             : isDaySummaryPresented || isDailyCardPresented ? .standard : nil
         return MapHomeWideLayoutPolicy.mapLeadingInset(viewportWidth: mapViewportSize.width, openPanel: panel)
@@ -616,7 +620,7 @@ struct MapHomeView: View {
             selection: selection,
             language: language
         )
-        .presentationDetents([.height(300)])
+        .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
     }
 
@@ -870,6 +874,7 @@ struct MapHomeView: View {
                 ),
                 language: language,
                 onStart: startRecordingPlayback,
+                canPreviewMusic: !model.isRecordingVoiceMemo,
                 onRenderVideo: {
                     isRecordingOptionsPresented = false
                     Task { @MainActor in
@@ -891,6 +896,7 @@ struct MapHomeView: View {
             )
             .presentationDetents([.height(640), .large])
             .presentationDragIndicator(.visible)
+            .presentationBackground(Color.tpBackground)
         }
         .sheet(isPresented: $isPlaybackVideoPresented) {
             MapHomePlaybackVideoSheet(model: model, language: language, selectedDate: model.selectedDate, accessoryID: homeGrowthHistory.season.equippedAccessory, makeRenderer: makePlaybackVideoRenderer)
@@ -1234,7 +1240,7 @@ struct MapHomeView: View {
         }
         .overlay {
             if isDayPlaybackRunning, recordingShows(\.mapMemos), let minute = dayPlaybackCurrentMinute {
-                MapHomePlaybackMomentsOverlay(minute: minute, events: playbackMomentEvents, topInset: Layout.topRowInset + Layout.dateBadgeSize + 8)
+                MapHomePlaybackMomentsOverlay(minute: minute, events: playbackMomentEvents, topInset: Layout.topRowInset + Layout.dateBadgeSize + 8, trailingInset: isSidebarVisible ? timeRailWidth + 12 : 12)
             }
         }
         .overlay(alignment: .bottom) {
@@ -1350,7 +1356,6 @@ struct MapHomeView: View {
             routeActualIndex = nil
         }
         // 팝업·시트가 열리는 1.2초 동안의 화면 틱을 잰다(ARC1030A07).
-        .onChange(of: isCalendarPresented) { _, on in MapHomeInteractionMonitor.shared.begin(on ? "popup_calendar" : "popup_calendar_close", duration: 1.2) }
         .onChange(of: isDaySummaryPresented) { _, on in MapHomeInteractionMonitor.shared.begin(on ? "popup_day_summary" : "popup_day_summary_close", duration: 1.2) }
         .onChange(of: counterDetail != nil) { _, on in
             if !on { counterDetailSnapshot.clear() }
@@ -1358,7 +1363,6 @@ struct MapHomeView: View {
         }
         .onChange(of: isMenuOpen) { _, on in if on { MapHomeInteractionMonitor.shared.begin("popup_menu", duration: 1.2) } }
         .onChange(of: isDateWeekExpanded) { _, on in if on { MapHomeInteractionMonitor.shared.begin("popup_date_strip", duration: 1.2) } }
-        .onChange(of: isRecordingOptionsPresented) { _, on in MapHomeInteractionMonitor.shared.begin(on ? "popup_recording" : "popup_recording_close", duration: 1.2) }
         .onChange(of: sectionEditSelection != nil) { _, on in if on { MapHomeInteractionMonitor.shared.begin("popup_clip_editor", duration: 1.2) } }
         .onChange(of: playbackZoomModeRaw) { _, raw in
             // 재생 중에 설정을 바꿔도 곧바로 적용한다.
@@ -1801,7 +1805,8 @@ struct MapHomeView: View {
                 }
             }
             // 현재 시간 ±15분 안의 메모·일정은 목록을 펼치지 않아도 왼쪽 상단에 보인다.
-            if !nearbyPreviewRows.isEmpty {
+            // 목록을 펼쳤으면 같은 메모가 그 안에 있으므로 숨긴다.
+            if !memoStackExpanded, !nearbyPreviewRows.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
                     ForEach(nearbyPreviewRows, id: \.id) { row in
                         HStack(spacing: 6) {
@@ -1817,10 +1822,19 @@ struct MapHomeView: View {
                                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                                 .foregroundStyle(Color.tpSecondary)
                         }
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            if let id = row.memoID {
+                                selectedMapStickerEditor = .memo(id)
+                            } else {
+                                withAnimation(.snappy) { todayCalendarExpanded = true }
+                            }
+                        }
+                        .accessibilityAddTraits(.isButton)
                     }
                 }
                 .padding(10)
-                .frame(width: 240, alignment: .leading)
+                .frame(width: 280, alignment: .leading)
                 .mapHomeGlass(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
             // 먼저 연 패널이 위에 오고, 나중에 연 패널은 그 아래에 붙는다. 폭은 같다.
@@ -1872,6 +1886,8 @@ struct MapHomeView: View {
         let systemImage: String
         let title: String
         let time: String
+        /// 메모면 그 메모를 열고, 일정이면 오늘 일정 목록을 연다.
+        var memoID: UUID? = nil
     }
 
     /// 현재 시간 ±15분 안의 메모와 일정 목록(왼쪽 상단 미리보기).
@@ -1884,7 +1900,8 @@ struct MapHomeView: View {
                 id: "memo-\(memo.id.uuidString)",
                 systemImage: "note.text",
                 title: memo.text,
-                time: memo.occurredAt.formatted(date: .omitted, time: .shortened)
+                time: memo.occurredAt.formatted(date: .omitted, time: .shortened),
+                memoID: memo.id
             ))
         }
         for event in dayCalendarEventsForSelectedDate where !event.isAllDay
@@ -1945,6 +1962,13 @@ struct MapHomeView: View {
                     memoCard(memo, showsTime: memo.isTimeless != true)
                 }
             }
+            // 위 목록에 이미 있는 메모는 다시 보여 주지 않는다.
+            if let timed = nearbyTimedMemo, !queuedMemos.contains(where: { $0.id == timed.id }) {
+                memoCard(timed, showsTime: true)
+            }
+            if let legacy = nearbyScheduleMemo {
+                scheduleMemoPreview(legacy)
+            }
             if queuedMemos.count > 3 {
                 Button {
                     withAnimation(.snappy) { queueExpanded.toggle() }
@@ -1960,12 +1984,6 @@ struct MapHomeView: View {
                     .mapHomeGlass(in: Capsule())
                 }
                 .buttonStyle(.plain)
-            }
-            if let timed = nearbyTimedMemo {
-                memoCard(timed, showsTime: true)
-            }
-            if let legacy = nearbyScheduleMemo {
-                scheduleMemoPreview(legacy)
             }
         }
         .frame(width: 280, alignment: .leading)
@@ -2373,7 +2391,8 @@ struct MapHomeView: View {
             onSingleTap: { point, positions in
                 handleMapTap(atLocal: point, waypoints: waypoints, positions: positions)
             },
-            activeRouteSegments: recordingShows(\.routes) ? activeSegments : []
+            activeRouteSegments: recordingShows(\.routes) ? activeSegments : [],
+            languageKey: languageRawValue
         )
         .id(style.rawValue)
         .overlay {
@@ -4378,6 +4397,16 @@ struct MapHomeView: View {
         }
     }
 
+    /// 시간 막대에 무늬로 표시할 회의 구간. 일정이나 그날 기록이 바뀔 때만 다시 계산한다.
+    private var meetingRailSpans: [Range<Int>] {
+        let dayStart = Calendar.autoupdatingCurrent.startOfDay(for: model.selectedDate)
+        let events = model.snapshot.calendarEvents
+        let key = "\(dayStart.timeIntervalSinceReferenceDate)|\(events.count)|\(currentDayDataSnapshot?.sourceRevision ?? 0)"
+        return meetingRailSpansMemo.value(for: key) {
+            MapHomeMeetingPolicy.minuteSpans(events: events, dayStart: dayStart)
+        }
+    }
+
     private var homeGrowthHistory: MapHomeGrowthHistory {
         growthHistoryCache.history(for: homeGrowthData) ?? .initial(for: .now)
     }
@@ -4407,6 +4436,15 @@ struct MapHomeView: View {
             asOf: now,
             calendar: calendar
         )
+        MapHomeGrowthPolicy.backfillDayLevelsIfNeeded(in: &history, calendar: calendar) { day in
+            MapHomeGrowthPolicy.qualifiesDay(
+                actuals: model.snapshot.actuals,
+                travel: model.snapshot.travel,
+                on: day,
+                asOf: now,
+                calendar: calendar
+            )
+        }
         if calendar.isDate(model.selectedDate, inSameDayAs: now),
            let dayData = currentDayDataSnapshot {
             MapHomeGrowthPolicy.observeCurrentDay(
@@ -4572,7 +4610,7 @@ struct MapHomeView: View {
                 ? language.text("메모 \(dayMemoCounts.total)개 · 지도 \(dayMemoCounts.map)개", "Memos \(dayMemoCounts.total) · map \(dayMemoCounts.map)")
                 : nil,
             routePoints: daySummaryRoutePoints,
-            homeLevel: homeGrowthHistory.season.level
+            homeLevel: MapHomeGrowthPolicy.level(on: model.selectedDate, in: homeGrowthHistory, calendar: MapHomeGrowthPolicy.localCalendar)
         )
     }
 
@@ -4589,7 +4627,7 @@ struct MapHomeView: View {
             placeKinds: FrequentPlaceResolutionEngine().kindsByPlaceKey(model.snapshot.settings.frequentPlaces),
             hourlyRate: salaryLive?.hourlyRate,
             accessoryID: homeGrowthHistory.season.equippedAccessory,
-            homeLevel: homeGrowthHistory.season.level,
+            homeLevel: MapHomeGrowthPolicy.level(on: day, in: homeGrowthHistory, calendar: MapHomeGrowthPolicy.localCalendar),
             memos: model.snapshot.memos,
             language: language,
             entries: { daySummaryEntries(from: $0) }
@@ -4739,7 +4777,7 @@ struct MapHomeView: View {
             bottomBarButton("line.3.horizontal", language.text("메뉴", "Menu")) {
                 if isMenuOpen { isMenuOpen = false } else { openMenu() }
             }
-            MapHomeBottomBarButton(title: language.text("달력", "Calendar"), action: { isCalendarPresented.toggle() }) {
+            MapHomeBottomBarButton(title: language.text("달력", "Calendar"), action: { MapHomeInteractionMonitor.shared.begin("popup_calendar", duration: 1.2); isCalendarPresented.toggle() }) {
                 MapHomeCalendarGlyph(date: model.selectedDate, language: language)
             }
             bottomBarButton("location.fill", language.text("현재 위치", "Location")) {
@@ -5050,12 +5088,7 @@ struct MapHomeView: View {
             }
             .padding(.horizontal, 12)
             .frame(height: 42)
-            .background(Color.tpSurface.opacity(0.96), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Color.tpLine.opacity(0.78), lineWidth: 1)
-            }
-            .shadow(color: Color.black.opacity(0.07), radius: 9, y: 3)
+            .taptionRaised(.rounded(14), fill: Color.tpSurface)
             .onGeometryChange(
                 for: CGRect.self,
                 of: { proxy in
@@ -5821,6 +5854,8 @@ struct MapHomeView: View {
                 recordingFailureMessage = screenRecorder.lastFailureMessage ?? "화면 녹화를 시작하지 못했습니다."
                 return
             }
+            // 본문이 표시 상태를 읽지 않게 측정은 여는 자리에서 시작한다.
+            MapHomeInteractionMonitor.shared.begin("popup_recording", duration: 1.2)
             isRecordingOptionsPresented = true
         }
     }
@@ -6409,6 +6444,7 @@ struct MapHomeView: View {
                             ? currentActivity(at: minute)
                             : nil,
                         segments: timeRailSegments,
+                        detailSpans: meetingRailSpans,
                         categoryColors: model.settings.mapCategoryColors,
                         zoomResetToken: zoomResetToken,
                         zoomStepToken: zoomStepToken,
@@ -7031,6 +7067,24 @@ struct MapHomeView: View {
                                 Text(category.localizedTitle(language))
                                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                                 Spacer()
+                                if !MapHomeCategoryDetailRows.details(for: category.id).isEmpty {
+                                    Button {
+                                        if expandedCategoryDetails.insert(category.id).inserted == false {
+                                            expandedCategoryDetails.remove(category.id)
+                                        }
+                                    } label: {
+                                        Image(systemName: expandedCategoryDetails.contains(category.id) ? "chevron.up" : "chevron.down")
+                                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
+                                            .foregroundStyle(.secondary)
+                                            .frame(width: 32, height: 32)
+                                            .contentShape(Rectangle())
+                                    }
+                                    .buttonStyle(.plain)
+                                    .accessibilityLabel(language.text(
+                                        "\(category.localizedTitle(language)) 상세 분류",
+                                        "\(category.localizedTitle(language)) details"
+                                    ))
+                                }
                                 Button {
                                     if activePaletteCategoryID == category.id {
                                         activePaletteCategoryID = nil
@@ -7061,7 +7115,9 @@ struct MapHomeView: View {
                                     )
                                 )
                             }
-                            MapHomeCategoryDetailRows(categoryID: category.id, language: language, accessoryID: homeGrowthHistory.season.equippedAccessory)
+                            if expandedCategoryDetails.contains(category.id) {
+                                MapHomeCategoryDetailRows(categoryID: category.id, language: language, accessoryID: homeGrowthHistory.season.equippedAccessory)
+                            }
                             if activePaletteCategoryID == category.id {
                                 LazyVGrid(
                                     columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 6),
@@ -7346,7 +7402,7 @@ struct MapHomeView: View {
                     )
                     .frame(width: 20)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(displayedFrequentPlaceName(place))
+                    Text(place.displayName)
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12.5)), weight: .semibold))
                         .lineLimit(1)
                     Text(
@@ -7841,6 +7897,8 @@ struct MapHomeView: View {
                 .accessibilityLabel(language.text("데이터 보호 열기", "Open data protection"))
                 .padding(.leading, 12)
 
+                FirstRunPermissionSettingsRow(model: model, language: language).padding(.leading, 12)
+
                 FirstRunTutorialReplayRow(model: model, language: language).padding(.leading, 12)
 
                 Button { isSettingsResetConfirmationPresented = true } label: {
@@ -8205,7 +8263,7 @@ struct MapHomeView: View {
                   isValid(point) else { return nil }
             return MapHomePlaceAnnotation(
                 id: place.id,
-                name: displayedFrequentPlaceName(place),
+                name: place.displayName,
                 floor: place.floor,
                 destination: destination,
                 growthLevel: destination == .home
@@ -8303,16 +8361,6 @@ struct MapHomeView: View {
             && history.season.pendingDay
                 == MapHomeGrowthPolicy.dayKey(today, calendar: calendar)
             && history.season.pendingDayQualified
-    }
-
-    private func displayedFrequentPlaceName(_ place: FrequentPlace) -> String {
-        guard place.kind == .restaurant else { return place.name }
-        let name = place.name.trimmingCharacters(in: .whitespacesAndNewlines)
-        if name.isEmpty || name == "사용자 지점"
-            || name.caseInsensitiveCompare("User location") == .orderedSame {
-            return "식당"
-        }
-        return name
     }
 
     private var transitAnnotations: [MapHomeTransitAnnotation] {
@@ -9620,12 +9668,22 @@ struct MapHomeView: View {
             legCount: wbsPlaybackProjection?.legs.count ?? 0,
             expectedCount: expectedRouteOverlays.count,
             latestID: model.latestSensorReading?.id,
-            hasSelection: selectedTimelineMinute != nil
+            hasSelection: selectedTimelineMinute != nil,
+            calendarEventCount: model.snapshot.calendarEvents.count
         )
         return stickmanActionMemo.value(for: key) { computeDisplayedStickmanAction() }
     }
 
     private func computeDisplayedStickmanAction() -> MapHomeStickmanAction {
+        MapHomeMeetingPolicy.action(
+            computeRecordedStickmanAction(),
+            at: displayedLocationDate,
+            events: model.snapshot.calendarEvents,
+            travel: currentDayDataSnapshot?.travel ?? []
+        )
+    }
+
+    private func computeRecordedStickmanAction() -> MapHomeStickmanAction {
         let actuals = currentDayDataSnapshot?.actuals ?? []
         let sleepSessions = model.sleepSessions
         if MapHomeStickmanActionResolver.hasAppleWatchConfirmedSleep(

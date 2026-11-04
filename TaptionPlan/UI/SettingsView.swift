@@ -1829,21 +1829,11 @@ private struct FrequentPlaceDetailView: View {
             .font(.taption(size: 10))
             // 지도 위에 범위 원을 그려 보여 준다. 슬라이더를 움직이면 원이 함께 커지고 작아진다.
             if let point = place?.point {
-                Map(
-                    initialPosition: .region(MKCoordinateRegion(
-                        center: CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude),
-                        latitudinalMeters: max(radiusMeters * 3, 200),
-                        longitudinalMeters: max(radiusMeters * 3, 200)
-                    )),
-                    interactionModes: []
-                ) {
-                    MapCircle(
-                        center: CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude),
-                        radius: radiusMeters
-                    )
-                    .foregroundStyle(Color.tpPlaceDark.opacity(0.22))
-                    .stroke(Color.tpPlaceDark, lineWidth: 2)
-                }
+                MapHomePlaceRangeMap(
+                    center: CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude),
+                    radiusMeters: radiusMeters,
+                    tint: UIColor(Color.tpPlaceDark)
+                )
                 .frame(height: 180)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             }

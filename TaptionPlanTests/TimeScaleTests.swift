@@ -5124,6 +5124,9 @@ final class TimeScaleTests: XCTestCase {
     }
 
     func testMapHomeVectorLabelsPreferKoreanAndCoverEveryNamedLayer() throws {
+        let saved = AppLanguagePreference.current
+        defer { AppLanguagePreference.save(saved) }
+        AppLanguagePreference.save(.korean)
         let json = MapHomeVectorStyle.night.json
         XCTAssertFalse(json.contains("name:en"))
         let object = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any])
@@ -5343,6 +5346,134 @@ final class MapHomeStartupCameraTests: XCTestCase {
             headingDegrees: 0, displayedCoordinate: center, onViewportChange: onViewport,
             onSingleFingerPanBegan: {}, onSingleFingerPanEnded: {}, onUserCameraGesture: {},
             onLongPress: { _ in }, onSingleTap: { _, _ in })
+    }
+
+    func testPlaceRangeMapFitsSpanAndDrawsClosedCircle() {
+        let zoom = MapHomePlaceRangeMap.zoomLevel(latitude: 0, spanMeters: 512, points: 512)
+        XCTAssertEqual(pow(2, zoom), 40_075_016.686 / 512, accuracy: 1)
+        XCTAssertGreaterThan(
+            MapHomePlaceRangeMap.zoomLevel(latitude: 37.5, spanMeters: 200, points: 170),
+            MapHomePlaceRangeMap.zoomLevel(latitude: 37.5, spanMeters: 1_500, points: 170)
+        )
+        let circle = MapHomePlaceRangeMap.circle(center: center, radiusMeters: 100)
+        XCTAssertEqual(circle.first?.latitude ?? 0, circle.last?.latitude ?? 1, accuracy: 1e-9)
+        let origin = CLLocation(latitude: center.latitude, longitude: center.longitude)
+        for point in circle {
+            let distance = origin.distance(from: CLLocation(latitude: point.latitude, longitude: point.longitude))
+            XCTAssertEqual(distance, 100, accuracy: 2)
+        }
+    }
+
+    func testRestaurantWithDefaultNameShowsRestaurant() {
+        XCTAssertEqual(FrequentPlace(kind: .restaurant, name: "사용자 지점").displayName, "식당")
+        XCTAssertEqual(FrequentPlace(kind: .restaurant, name: "User location").displayName, "식당")
+        XCTAssertEqual(FrequentPlace(kind: .restaurant, name: "구내식당").displayName, "구내식당")
+    }
+
+    func testMeetingEventOverridesSeatedActionOnly() {
+        let start = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        func event(_ title: String, attendees: Int? = nil, allDay: Bool = false) -> CalendarRecord {
+            var record = CalendarRecord(
+                id: title, calendarID: "c", title: title,
+                span: TimeSpan(start: start, end: start.addingTimeInterval(7_200)),
+                isAllDay: allDay, calendarTitle: "c"
+            )
+            record.attendeeCount = attendees
+            return record
+        }
+        XCTAssertTrue(MapHomeMeetingPolicy.isMeeting(event("아모텍 회의")))
+        XCTAssertTrue(MapHomeMeetingPolicy.isMeeting(event("고객사", attendees: 3)))
+        XCTAssertFalse(MapHomeMeetingPolicy.isMeeting(event("치과")))
+        XCTAssertFalse(MapHomeMeetingPolicy.isMeeting(event("점심 미팅")))
+        XCTAssertFalse(MapHomeMeetingPolicy.isMeeting(event("전사 회의", allDay: true)))
+        let inside = start.addingTimeInterval(600)
+        let events = [event("아모텍 회의")]
+        XCTAssertEqual(MapHomeMeetingPolicy.action(.walking, at: inside, events: events, travel: []), .meeting)
+        XCTAssertEqual(MapHomeMeetingPolicy.action(.eating, at: inside, events: events, travel: []), .eating)
+        XCTAssertEqual(MapHomeMeetingPolicy.action(.walking, at: start.addingTimeInterval(8_000), events: events, travel: []), .walking)
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.detailPatternSpans(
+                [60..<120],
+                segments: [
+                    MapHomeTimeRailSegment(startMinute: 0, endMinute: 90, categoryID: "work", title: ""),
+                    MapHomeTimeRailSegment(startMinute: 90, endMinute: 200, categoryID: "movement", title: ""),
+                ],
+                window: 0...1_440
+            ),
+            [60..<90]
+        )
+    }
+
+    func testDailyCardLevelFollowsTheDay() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        func day(_ d: Int) -> Date { calendar.date(from: DateComponents(year: 2026, month: 11, day: d))! }
+        var season = MapHomeGrowthSeason(year: 2026)
+        season.level = 5
+        season.lastClosedDay = "2026-11-03"
+        var history = MapHomeGrowthHistory(season: season)
+        // 3일·1일만 달성: 3일 5, 2일 4, 1일 4, 10월 31일 3.
+        MapHomeGrowthPolicy.backfillDayLevelsIfNeeded(in: &history, calendar: calendar) { date in
+            [3, 1].contains(calendar.component(.day, from: date)) && calendar.component(.month, from: date) == 11
+        }
+        XCTAssertEqual(MapHomeGrowthPolicy.level(on: day(4), in: history, calendar: calendar), 5)
+        XCTAssertEqual(MapHomeGrowthPolicy.level(on: day(3), in: history, calendar: calendar), 5)
+        XCTAssertEqual(MapHomeGrowthPolicy.level(on: day(2), in: history, calendar: calendar), 4)
+        XCTAssertEqual(MapHomeGrowthPolicy.level(on: day(1), in: history, calendar: calendar), 4)
+        let old = try JSONDecoder().decode(MapHomeGrowthSeason.self, from: Data(#"{"year":2026,"level":3}"#.utf8))
+        XCTAssertNil(old.dayLevels)
+    }
+
+    func testLabelNamesFollowLanguageOrder() {
+        XCTAssertEqual(MapHomeVectorLabels.nameFields(languageCode: nil), #"["get", "name:ko"], ["get", "name"]"#)
+        XCTAssertEqual(MapHomeVectorLabels.nameFields(languageCode: "en"), #"["get", "name:en"], ["get", "name"]"#)
+        XCTAssertEqual(
+            MapHomeVectorLabels.nameFields(languageCode: "ja"),
+            #"["get", "name:ja"], ["get", "name:en"], ["get", "name"]"#
+        )
+        XCTAssertEqual(
+            MapHomeVectorLabels.nameFields(languageCode: "zh-Hant"),
+            #"["get", "name:zh-Hant"], ["get", "name:zh"], ["get", "name:en"], ["get", "name"]"#
+        )
+    }
+
+    func testEnglishMapLabelsPreferEnglishNames() throws {
+        let saved = AppLanguagePreference.current
+        defer { AppLanguagePreference.save(saved) }
+        AppLanguagePreference.save(.english)
+        let layer = try XCTUnwrap(MapHomeVectorLabels.layers.first { $0.id == "label-road-major" })
+        let field = try XCTUnwrap(MapHomeVectorLabels.textField(of: layer) as? [Any])
+        XCTAssertEqual(field[1] as? [String], ["get", "name:en"])
+        XCTAssertFalse(MapHomeVectorStyle.night.json.contains("name:ko"))
+    }
+
+    func testChangingLanguageRewritesMapLabelsWithoutNewStyle() async throws {
+        let saved = AppLanguagePreference.current
+        defer { AppLanguagePreference.save(saved) }
+        AppLanguagePreference.save(.korean)
+        var parent = map()
+        parent.languageKey = AppLanguagePreference.korean.rawValue
+        let coordinator = parent.makeCoordinator()
+        let view = MLNMapView(frame: CGRect(x: 0, y: 0, width: 390, height: 600), styleJSON: MapHomeVectorStyle.rpg.json)
+        for _ in 0..<100 where view.style?.layer(withIdentifier: "label-road-major") == nil {
+            try await Task.sleep(for: .milliseconds(50))
+        }
+        let style = try XCTUnwrap(view.style)
+        let layer = try XCTUnwrap(style.layer(withIdentifier: "label-road-major") as? MLNSymbolStyleLayer)
+        XCTAssertTrue(layer.text.description.contains("name:ko"), layer.text.description)
+
+        AppLanguagePreference.save(.japanese)
+        parent.languageKey = AppLanguagePreference.japanese.rawValue
+        coordinator.parent = parent
+        coordinator.applyLabelLanguageIfNeeded(to: view)
+
+        XCTAssertTrue(view.style === style)
+        XCTAssertTrue(layer.text.description.contains("name:ja"), layer.text.description)
+        // 줄 번호 대체(`ref`)는 언어와 무관하게 남는다.
+        XCTAssertTrue(layer.text.description.contains("ref"), layer.text.description)
+        for label in MapHomeVectorLabels.layers {
+            XCTAssertNotNil(MapHomeVectorLabels.textField(of: label), label.id)
+        }
     }
 
     func testCameraCommandWaitsForNonzeroViewport() {

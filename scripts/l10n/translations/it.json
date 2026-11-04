@@ -2681,6 +2681,25 @@
 "회사 업무|Office work": "Lavoro d'ufficio",
 "회사|Work": "Ufficio",
 "회의|Meeting": "Riunione",
-"휴식|Rest": "Riposo"
+"휴식|Rest": "Riposo",
+"{0} 상세 분류|{0} details": "Dettagli di {0}",
+"경로가 촘촘해지고 배터리를 더 씁니다.|More detailed routes, more battery use.": "Percorsi più precisi, più consumo di batteria.",
+"권한 설정|Permission settings": "Autorizzazioni",
+"권한, 센서 주기, 하루 카드, 집과 회사, 연봉, 고양이|Permissions, sensor interval, day card, home and work, salary, your cat": "Autorizzazioni, intervallo sensori, scheda del giorno, casa e lavoro, stipendio, il tuo gatto",
+"기간|Period": "Periodo",
+"기간과 음악은 영상 만들기에 들어갑니다. 화면 녹화는 하루만, 음악 없이 담습니다.|Period and music apply to Render video. Screen recording captures one day without music.": "Periodo e musica valgono per la creazione del video. La registrazione dello schermo riprende un giorno senza musica.",
+"길수록|Longer": "Più lungo",
+"메뉴 > GPS 및 센서 데이터에서 바꿉니다.|Change it in Menu > GPS & Sensor Data.": "Si cambia in Menu > GPS e dati dei sensori.",
+"메뉴 > 알림에서 바꿉니다.|Change it in Menu > Alerts.": "Si cambia in Menu > Avvisi.",
+"미리듣기 멈춤|Stop preview": "Ferma anteprima",
+"배터리를 아끼고 경로는 성겨집니다.|Saves battery, with sparser routes.": "Risparmia batteria, percorsi meno precisi.",
+"상세 활동|Detail": "Dettaglio",
+"센서 주기|Sensor interval": "Intervallo sensori",
+"어제 하루를 담은 카드를 알림으로 보낼 시각을 고릅니다.|Choose when yesterday's card arrives as a notification.": "Scegli quando ricevere la notifica con la scheda di ieri.",
+"위치, 건강, 사진, 캘린더, 알림|Location, Health, Photos, Calendar, Notifications": "Posizione, Salute, Foto, Calendario, Notifiche",
+"위치와 센서를 얼마나 자주 확인할지 고릅니다.|Choose how often location and sensors are checked.": "Scegli ogni quanto controllare posizione e sensori.",
+"짧을수록|Shorter": "Più breve",
+"키보드 숨기기|Hide keyboard": "Nascondi tastiera",
+"하루 카드 시각|Day card time": "Orario scheda del giorno"
 }
 }

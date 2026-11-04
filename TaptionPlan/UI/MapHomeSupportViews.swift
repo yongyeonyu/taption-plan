@@ -42,18 +42,32 @@ struct MapHomePlacementPin: View {
                 .frame(width: 16, height: 6)
                 .blur(radius: 1.5)
                 .offset(y: 3)
+            // 애플 지도 핀처럼 빨간 몸통에 위쪽 빛과 아래쪽 그늘을 얹어 입체로 보이게 한다.
             MapHomePinShape()
                 .fill(
                     LinearGradient(
-                        colors: [Color.tpReferenceBlue.opacity(0.95), Color(hex: "#1E7ED0")],
+                        colors: [Color(hex: "#FF6B5E"), Color(hex: "#EA3B2E"), Color(hex: "#B8241B")],
                         startPoint: .top,
                         endPoint: .bottom
                     )
                 )
-                .overlay { MapHomePinShape().stroke(Color.white, lineWidth: 2) }
+                .overlay {
+                    MapHomePinShape()
+                        .fill(
+                            RadialGradient(
+                                colors: [.white.opacity(0.45), .clear],
+                                center: UnitPoint(x: 0.34, y: 0.16),
+                                startRadius: 0,
+                                endRadius: Self.width * 0.62
+                            )
+                        )
+                }
+                .overlay { MapHomePinShape().stroke(Color.white.opacity(0.92), lineWidth: 1.5) }
                 .overlay(alignment: .top) {
                     Circle()
-                        .fill(Color.white)
+                        .fill(LinearGradient(colors: [.white, Color(hex: "#F1E6E4")], startPoint: .top, endPoint: .bottom))
+                        .overlay { Circle().stroke(Color.black.opacity(0.14), lineWidth: 0.5) }
+                        .shadow(color: .black.opacity(0.25), radius: 1, y: 1)
                         .frame(width: 12, height: 12)
                         .offset(y: Self.width * 0.5 - 6)
                 }

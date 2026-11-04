@@ -129,7 +129,10 @@ enum NLEPlaceLane {
 
     /// 등록 지점이면 그 이름. 확정 시간보다 짧게 들른 체류도 반경 안이면 등록 지점으로 본다.
     static func registeredName(for stay: PlaceStay, frequentPlaces: [FrequentPlace]) -> (key: String, name: String)? {
-        if stay.isRegisteredFrequentPlace { return (stay.placeKey, stay.displayName) }
+        if stay.isRegisteredFrequentPlace {
+            let name = frequentPlaces.first { $0.stablePlaceKey == stay.placeKey }?.displayName
+            return (stay.placeKey, name ?? stay.displayName)
+        }
         guard let point = stay.point else { return nil }
         let nearest = frequentPlaces.compactMap { place -> (FrequentPlace, Double)? in
             guard let center = place.point else { return nil }
@@ -137,7 +140,7 @@ enum NLEPlaceLane {
             return ratio <= 1 ? (place, ratio) : nil
         }
         .min { $0.1 < $1.1 }
-        return nearest.map { ($0.0.stablePlaceKey, $0.0.name) }
+        return nearest.map { ($0.0.stablePlaceKey, $0.0.displayName) }
     }
 
     private static func resolvedStays(

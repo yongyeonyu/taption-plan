@@ -39,15 +39,7 @@ struct MapHomeUserLocationActionSheet: View {
     }
 
     private var locationName: String {
-        if let frequentPlace {
-            let name = frequentPlace.name.trimmingCharacters(in: .whitespacesAndNewlines)
-            if frequentPlace.kind == .restaurant,
-               name.isEmpty || name == "사용자 지점"
-                    || name.caseInsensitiveCompare("User location") == .orderedSame {
-                return "식당"
-            }
-            return name
-        }
+        if let frequentPlace { return frequentPlace.displayName }
         return transitLocation?.name ?? ""
     }
 
@@ -81,6 +73,26 @@ struct MapHomeUserLocationActionSheet: View {
     }
 
     var body: some View {
+        ScrollView {
+            content
+        }
+        .background(Color.tpSurface)
+        .onAppear {
+            name = locationName
+        }
+        .confirmationDialog(
+            language.text("이 위치를 삭제할까요?", "Delete this location?"),
+            isPresented: $showsDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button(language.text("위치 삭제", "Delete location"), role: .destructive) {
+                deleteLocation()
+            }
+            Button(language.text("취소", "Cancel"), role: .cancel) {}
+        }
+    }
+
+    private var content: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 10) {
                 Image(systemName: locationIcon)
@@ -147,23 +159,11 @@ struct MapHomeUserLocationActionSheet: View {
                 .buttonStyle(.bordered)
             }
 
-            Spacer(minLength: 0)
+            if let frequentPlace {
+                MapHomePlaceRangeEditor(model: model, placeID: frequentPlace.id, language: language)
+            }
         }
         .padding(20)
-        .background(Color.tpSurface)
-        .onAppear {
-            name = locationName
-        }
-        .confirmationDialog(
-            language.text("이 위치를 삭제할까요?", "Delete this location?"),
-            isPresented: $showsDeleteConfirmation,
-            titleVisibility: .visible
-        ) {
-            Button(language.text("위치 삭제", "Delete location"), role: .destructive) {
-                deleteLocation()
-            }
-            Button(language.text("취소", "Cancel"), role: .cancel) {}
-        }
     }
 
     private func saveName() {

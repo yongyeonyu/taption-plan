@@ -114,7 +114,7 @@ struct FirstRunTutorialView: View {
 
     private func scene(of step: FirstRunTutorialStep) -> HwarangScene {
         switch step {
-        case .welcome, .permissions, .cat: .groom
+        case .welcome, .permissions, .sensorInterval, .dayCardTime, .cat: .groom
         case .home, .summary: .sleep
         case .workAndSchool, .calendar: .work
         case .salary, .finish: .eat
@@ -140,6 +140,8 @@ struct FirstRunTutorialView: View {
         switch step {
         case .welcome: "BOKKI Plan"
         case .permissions: language.text("권한 허용", "Permissions")
+        case .sensorInterval: language.text("센서 주기", "Sensor interval")
+        case .dayCardTime: language.text("하루 카드 시각", "Day card time")
         case .home: language.text("집 위치", "Home")
         case .workAndSchool: language.text("회사 · 학교", "Work · School")
         case .salary: language.text("연봉 설정", "Salary")
@@ -161,6 +163,8 @@ struct FirstRunTutorialView: View {
         switch step {
         case .welcome: ""
         case .permissions: language.text("하루를 자동으로 기록하는 데 씁니다. 필요한 것만 허용해도 됩니다.", "Used to record your day automatically. Allow only what you need.")
+        case .sensorInterval: language.text("위치와 센서를 얼마나 자주 확인할지 고릅니다.", "Choose how often location and sensors are checked.")
+        case .dayCardTime: language.text("어제 하루를 담은 카드를 알림으로 보낼 시각을 고릅니다.", "Choose when yesterday's card arrives as a notification.")
         case .home: language.text("집에 머문 시간을 자동으로 구분합니다.", "Time at home is recognized automatically.")
         case .workAndSchool: language.text("업무와 학습 시간을 구분하는 기준이 됩니다.", "Used to tell work and study time apart.")
         case .salary: language.text("업무 시간에만 번 돈이 쌓입니다. 금액은 이 기기에만 저장됩니다.", "Earnings grow only during work time. Stored only on this device.")
@@ -187,6 +191,10 @@ struct FirstRunTutorialView: View {
             FirstRunWelcomePage(language: language)
         case .permissions:
             PermissionOnboardingSheet(model: model, isEmbedded: true)
+        case .sensorInterval:
+            FirstRunSensorIntervalPage(model: model, language: language)
+        case .dayCardTime:
+            FirstRunDayCardTimePage(model: model, language: language)
         case .home:
             ScrollView {
                 FirstRunPlacePicker(model: model, destination: .home, language: language)
@@ -220,6 +228,7 @@ struct FirstRunTutorialView: View {
             FirstRunCatPage(model: model, language: language)
         case .map, .playback, .sidebarCalendar, .clipEditor, .memos, .summary:
             FirstRunGuidePage(step: step, date: model.selectedDate, language: language)
+                .id(step)
         case .counters:
             FirstRunCountersPage(language: language)
         case .calendar:
@@ -667,41 +676,6 @@ private struct FirstRunPasswordPage: View {
 }
 
 // MARK: - 클립 편집 그림
-
-/// 클립 경계를 끌어 자르는 모습을 되풀이한다.
-struct FirstRunClipIllustration: View {
-    private let cycle = 4.0
-
-    var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30)) { context in
-            let phase = context.date.timeIntervalSinceReferenceDate
-                .truncatingRemainder(dividingBy: cycle) / cycle
-            let swing = 0.5 - 0.5 * cos(phase * 2 * .pi)
-            GeometryReader { proxy in
-                let edge = proxy.size.width * (0.34 + 0.22 * swing)
-                let split = proxy.size.width * 0.76
-                ZStack(alignment: .leading) {
-                    clip(Color.tpReferenceBlue, x: 0, width: edge - 2)
-                    clip(Color.tpReferenceMint, x: edge + 2, width: split - edge - 4)
-                    clip(Color.tpReferenceRose, x: split + 2, width: proxy.size.width - split - 2)
-                    Capsule()
-                        .fill(Color.tpInk)
-                        .frame(width: 5, height: proxy.size.height * 0.74)
-                        .offset(x: edge - 2.5)
-                }
-                .frame(maxHeight: .infinity)
-            }
-        }
-        .accessibilityHidden(true)
-    }
-
-    private func clip(_ color: Color, x: CGFloat, width: CGFloat) -> some View {
-        RoundedRectangle(cornerRadius: 9, style: .continuous)
-            .fill(color.opacity(0.7))
-            .frame(width: max(width, 0), height: 54)
-            .offset(x: x)
-    }
-}
 
 // MARK: - 카운터
 

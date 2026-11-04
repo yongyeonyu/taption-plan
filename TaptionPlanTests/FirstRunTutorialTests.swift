@@ -20,7 +20,7 @@ final class FirstRunTutorialTests: XCTestCase {
         XCTAssertEqual(
             FirstRunTutorialStep.allCases,
             [
-                .welcome, .permissions, .home, .workAndSchool, .salary, .cat,
+                .welcome, .permissions, .sensorInterval, .dayCardTime, .home, .workAndSchool, .salary, .cat,
                 .map, .playback, .sidebarCalendar, .clipEditor, .memos, .summary, .counters,
                 .calendar, .password, .finish,
             ]
@@ -43,7 +43,7 @@ final class FirstRunTutorialTests: XCTestCase {
 
     func testOnlyInputStepsOfferStepSkip() {
         let skippable = FirstRunTutorialStep.allCases.filter(\.hasInput)
-        XCTAssertEqual(skippable, [.permissions, .home, .workAndSchool, .salary, .cat, .counters, .calendar, .password])
+        XCTAssertEqual(skippable, [.permissions, .sensorInterval, .dayCardTime, .home, .workAndSchool, .salary, .cat, .counters, .calendar, .password])
     }
 
     func testEveryGuideStepHasRowsInBothLanguages() {
@@ -57,6 +57,16 @@ final class FirstRunTutorialTests: XCTestCase {
                 XCTAssertNotEqual(ko.detail, en.detail, step.rawValue)
             }
         }
+    }
+
+    func testEveryGuideRowHasItsOwnCue() {
+        for step in FirstRunTutorialStep.allCases where FirstRunGuideCatalog.isGuide(step) {
+            let cues = FirstRunGuideCue.cues(for: step)
+            XCTAssertEqual(cues.count, FirstRunGuideCatalog.rows(for: step, language: .korean).count, step.rawValue)
+            XCTAssertEqual(Set(cues).count, cues.count, step.rawValue)
+        }
+        XCTAssertEqual(FirstRunGuideCue.cues(for: .playback), [.play, .record, .render, .save])
+        XCTAssertEqual(FirstRunGuideCue.memoAdd.barHighlights, [.memo])
     }
 
     func testLegacyNumberedStepResumesAtSameContent() {
@@ -75,8 +85,8 @@ final class FirstRunTutorialTests: XCTestCase {
         }
         XCTAssertEqual(label(.location, .authorized), "앱 사용 중에만")
         XCTAssertEqual(label(.location, .authorized, always: true), "항상 허용")
-        // iOS는 건강 읽기 허용 여부를 알려 주지 않는다.
-        XCTAssertEqual(label(.health, .authorized), "요청함")
+        // iOS는 건강 읽기 허용 여부를 알려 주지 않아 물어본 뒤면 허용됨으로 보인다(대표 결정).
+        XCTAssertEqual(label(.health, .authorized), "허용됨")
         XCTAssertEqual(label(.calendar, .authorized), "허용됨")
         XCTAssertEqual(label(.photos, .limited), "일부 허용")
         for feature in [PermissionFeature.location, .health, .calendar] {

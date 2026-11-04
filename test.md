@@ -5817,3 +5817,25 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 
 ## DOC1104A01 개발문서 갱신 (2026-11-04)
 - `DEVELOPMENT.md`(소스 위치, 판정 규칙, 구글 연결, 화면 규칙), `docs/TESTFLIGHT.md`(시간 제한 금지), `SUPPORT.md`(캘린더 연결), `scripts/l10n/README.md`(언어 고르기)를 고쳤다. 지운 상단 진행 바를 찾던 화면 시험을 고쳤고 `build-for-testing` 결과는 `build/validation/DOC1104A01/`에 있다. 화면 시험 실행은 하지 않았다. 앱 코드는 바꾸지 않았다.
+
+## TFB1104B06 빌드 273 외부 베타 심사 제출 (2026-11-04)
+- 빌드 273을 외부 그룹 `TP 지인 테스트`에 연결하고 베타 심사에 제출했다. 제출 응답은 `WAITING_FOR_REVIEW`였고, 바로 다시 읽으니 `APPROVED`, 외부 상태 `IN_BETA_TESTING`, 그룹 빌드 목록 262·273이었다(`build/validation/TFB1104B06/submit.log`, `readback.json`). 이어서 공개 링크를 켜고 제한 20명을 읽어 확인했다(`build/validation/TFB1104B06/public-link.log`, git 제외). 공개 저장소라 주소는 이 기록에 적지 않는다. 지인 실제 설치는 아직 확인 전이다.
+
+## MLG1105A01 앱 언어 변경 시 오픈맵 글자 갱신 (2026-11-05, 시뮬레이터)
+- 시뮬레이터 BOKKI-iPhone11(실기기 아님): `MapHomeStartupCameraTests` 9건 통과(새 시험 2건 포함, 실제 `MLNSymbolStyleLayer`의 글자 식이 스타일을 다시 읽지 않고 `name:ko`에서 `name:ja`로 바뀌는 것 확인), `TimeScaleTests` 178건 통과, 실패·건너뜀 0 (`build/validation/MLG1105A01/map-tests2.xcresult`, `style-tests.xcresult`). 첫 실행 `map-tests.xcresult`는 시험 코드의 접근 오류로 컴파일 실패했다.
+- 전체 단위 시험, 실기기 빌드·설치, 실제 지도 화면의 일본어 표시는 확인하지 않았다. 시뮬레이터로 돌린 이유는 대표 기기의 TestFlight 앱을 Debug 빌드로 덮어쓰지 않기 위해서다.
+- OpenFreeMap 타일 설명에서 `poi`·`place` 층에 `name:ja` 필드가 있는 것을 읽어 확인했다.
+
+## FRT1105A02·RNG1105A01·MTG1105A01·REC1105A01·GRW1105A01·CAT1105A01·NLE1105A01·MEM1105A01·MLG1105A02 튜토리얼과 대표 피드백 묶음 (2026-11-05, 시뮬레이터)
+- 시뮬레이터 BOKKI-iPhone11(실기기 아님): 앱 단위 시험 전체 2,078건 중 통과 2,063, 실패 0, 건너뜀 15 (`build/validation/FRT1105A02/unit-full.xcresult`). 언어 팩 `check.py` 실패 0. 엔진 import 경계 통과.
+- 임시 시뮬레이터(시험 뒤 삭제)에서 `testKoreanWalkthrough` 통과, 18단계 캡처 (`build/validation/FRT1105A02/walk2.xcresult`). 지도·클립 그림 캡처를 눈으로 확인했다. 먼저 돌린 `walk.xcresult`는 기존 시뮬레이터에 앱이 있어 첫 화면에서 실패했다.
+- 그 뒤 튜토리얼 클립 그림의 겹침 값만 고치고 Debug 시험 빌드를 다시 했다.
+- 확인하지 못한 것: 실기기 설치·동작 전부, 팝업 속도 개선 효과(실행 측정 없음), 실제 Apple Intelligence의 메모 다듬기 결과, 상세 활동 저장 결과, 녹화 화면·반경 지도·회의 무늬·검색창·핀의 실제 화면, 영어 UI 시험.
+- 식당 미감지(MLD1105A01): 코드 수정 없음. 받은 원본을 Python으로 재현해 11-04 점심 11:06:27–15:36:48 위치 표본 0건, 저녁은 높이 검사가 식사 기록을 지우고 자동 걷기 세션이 대분류를 이동으로 덮음을 확인했다. 앱 재생으로 확인한 것은 아니다.
+
+## MEA1105A01 등록 식당 식사 판정 (2026-11-05)
+- 시뮬레이터 재생(앱 코드, `build/validation/MEA1105A01/replay-*.xcresult`, 입력은 `build/validation/MLD1105A01/device/`): 11-04 저녁 식사 기록 17:50–18:12 생성, 시간 막대 식사 17:56–18:09. 앞뒤 8분은 이동 구간이 이겨 걷기로 남는다. 11-03 점심 식사 기록 11:53–12:45는 생기지만 시간 막대는 업무 그대로다. 원본에 같은 시간의 수동 편집 업무 기록(11:55–12:07, 12:08–12:25, 12:40–12:46)이 있어 자르지 않는다. 11-04 점심은 표본이 없어 식사 기록이 없고, 재생은 식사 후보를 다루지 않았다.
+- 실기기 아이폰 18 Pro Max: `UnobservedStayEngineTests`·`FirstRunTutorialTests`·`MemoTextPolishTests`·`MapHomeStartupCameraTests`·`NLETrackTests` 120건 통과, 실패·건너뜀 0 (`device-tests.xcresult`). Debug 빌드(273) `devicectl` 설치·실행 성공, 프로세스 유지 확인. 화면은 눈으로 보지 못했고 기존 기록이 그대로인지도 읽어 확인하지 않았다.
+- 화면 UI 시험은 기기에서 돌리지 않았다. 새 설치 상태가 필요해 기기 데이터를 지우게 되기 때문이다.
+- 높이 검사 예외를 "수직 오차 12m 이하의 GPS는 계속 믿는다"로 좁혔다. 처음 고친 판은 `PlaceZoneStayTrackerTests.testRestaurantMealsUseZoneAndKeepHeightRule`이 잡았다(식당 위층 사무실이 식사로 잡히는 회귀). 고친 뒤 시뮬레이터 전체 단위 시험(병렬 끔) 2,082건 중 통과 2,066, 실패 0, 건너뜀 16 (`build/validation/MEA1105A01/unit-full2.xcresult`). 병렬로 돌린 `unit-full.xcresult`에서는 `SensorDayStoreTests.testThirtyDayAppColdAndWarmLoadP95StaysInteractive`도 실패했으나 단독·병렬 끔 실행에서는 통과했다.
+- 위 실기기 시험·설치는 이 좁힘, 식사 제목의 표시 이름, 재생 사진 디밍 전의 코드다.

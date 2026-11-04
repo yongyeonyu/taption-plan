@@ -535,6 +535,7 @@ struct MapHomeRecordingOptionsSheet: View {
     @Binding var layers: MapHomeRecordingLayers
     let language: MapHomeLanguage
     let onStart: () -> Void
+    var canPreviewMusic = true
     /// 있으면 「끊김 없는 영상 만들기」를 보여 준다(벡터 지도에서만, VID1029A01).
     var onRenderVideo: (() -> Void)? = nil
     @Binding var adaptiveZoom: Bool
@@ -542,6 +543,7 @@ struct MapHomeRecordingOptionsSheet: View {
     let mapStyles: [MapHomeRecordingMapStyleChoice]
     /// 부모 본문이 다시 계산될 때마다 권한을 묻지 않게 마지막 값으로 시작하고, 화면에 들어온 뒤 다시 읽는다(SHT1102A01).
     @MainActor private static var lastPhotoStatus: PHAuthorizationStatus?
+    @AppStorage(MapHomePlaybackRangePicker.presetKey) private var rangePresetRaw = MapHomeRangePreset.day.rawValue
     @State private var photoStatus = Self.lastPhotoStatus ?? {
         let status = MapHomeScreenRecordingStore.photoAddStatus()
         Self.lastPhotoStatus = status
@@ -560,6 +562,15 @@ struct MapHomeRecordingOptionsSheet: View {
                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                 .foregroundStyle(Color.tpSecondary)
             permissionRow
+            MapHomePlaybackRangePicker(language: language)
+            MapHomePlaybackMusicPicker(language: language, canUseAudio: canPreviewMusic)
+            Text(language.text(
+                "기간과 음악은 영상 만들기에 들어갑니다. 화면 녹화는 하루만, 음악 없이 담습니다.",
+                "Period and music apply to Render video. Screen recording captures one day without music."
+            ))
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
             Menu {
                 ForEach(mapStyles) { choice in
                     Button(action: choice.select) { Label(choice.title, systemImage: choice.systemImage) }
@@ -589,6 +600,28 @@ struct MapHomeRecordingOptionsSheet: View {
             toggle(language.text("카운터 위젯", "Counter widget"), $layers.counterWidget)
             toggle(language.text("등록 지점 아이콘", "Saved place icons"), $layers.placeIcons)
             toggle(language.text("속도에 따라 가변", "Vary zoom with speed"), $adaptiveZoom)
+        }
+        .padding(22)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .safeAreaInset(edge: .bottom) { actionButtons }
+        .background(Color.tpBackground)
+        .task {
+            // 시트가 다 올라온 뒤에 읽는다. 권한 조회는 메인 스레드를 잠시 막는다.
+            try? await Task.sleep(for: .milliseconds(450))
+            // 화면에 들어올 때 권한이 없으면 바로 묻는다(결정 전일 때만 시스템 창이 뜬다).
+            if photoStatus == .notDetermined {
+                _ = await MapHomeScreenRecordingStore.requestPhotoAddAccess()
+            }
+            photoStatus = MapHomeScreenRecordingStore.photoAddStatus()
+            Self.lastPhotoStatus = photoStatus
+        }
+    }
+
+    /// 항목이 많아도 버튼이 늘 보이게 아래에 붙인다.
+    private var actionButtons: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if MapHomeRangePreset.stored(rangePresetRaw) == .day {
             Button(action: onStart) {
                 Label(language.text("녹화하며 재생", "Record and play"), systemImage: "record.circle")
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold))
@@ -597,6 +630,7 @@ struct MapHomeRecordingOptionsSheet: View {
                     .background(Color.tpAccent, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
             .buttonStyle(.plain)
+            }
             if let onRenderVideo {
                 Button(action: onRenderVideo) {
                     Label(language.text("끊김 없는 영상 만들기", "Render smooth video"), systemImage: "film")
@@ -614,18 +648,9 @@ struct MapHomeRecordingOptionsSheet: View {
                 .foregroundStyle(.secondary)
             }
         }
-        .padding(22)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        }
+        .padding(.horizontal, 22)
+        .padding(.vertical, 10)
         .background(Color.tpBackground)
-        .task {
-            // 화면에 들어올 때 권한이 없으면 바로 묻는다(결정 전일 때만 시스템 창이 뜬다).
-            if photoStatus == .notDetermined {
-                _ = await MapHomeScreenRecordingStore.requestPhotoAddAccess()
-            }
-            photoStatus = MapHomeScreenRecordingStore.photoAddStatus()
-            Self.lastPhotoStatus = photoStatus
-        }
     }
 
     @ViewBuilder
@@ -671,6 +696,7 @@ struct MapHomeMemoTextView: UIViewRepresentable {
         view.textContainerInset = .zero
         view.textContainer.lineFragmentPadding = 0
         view.isScrollEnabled = false
+        view.inputAccessoryView = context.coordinator.keyboardBar(for: view)
         return view
     }
 
@@ -705,11 +731,32 @@ struct MapHomeMemoTextView: UIViewRepresentable {
         var parent: MapHomeMemoTextView
         var suppresses = false
         var focusToken = 0
+        private weak var textView: UITextView?
 
         init(parent: MapHomeMemoTextView) { self.parent = parent }
 
         func textViewDidChange(_ view: UITextView) {
             parent.text = view.text
+        }
+
+        /// 키보드 위 막대의 숨기기 단추.
+        func keyboardBar(for view: UITextView) -> UIToolbar {
+            textView = view
+            let bar = UIToolbar(frame: CGRect(x: 0, y: 0, width: 320, height: 44))
+            let hide = UIBarButtonItem(
+                image: UIImage(systemName: "keyboard.chevron.compact.down"),
+                style: .plain,
+                target: self,
+                action: #selector(hideKeyboard)
+            )
+            hide.accessibilityLabel = AppLanguagePreference.text("키보드 숨기기", "Hide keyboard")
+            hide.accessibilityIdentifier = "memoHideKeyboard"
+            bar.items = [UIBarButtonItem(systemItem: .flexibleSpace), hide]
+            return bar
+        }
+
+        @objc private func hideKeyboard() {
+            textView?.resignFirstResponder()
         }
     }
 }

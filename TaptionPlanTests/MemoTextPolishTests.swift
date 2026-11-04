@@ -46,7 +46,7 @@ final class MemoTextPolishTests: XCTestCase {
     // MARK: 지시문
 
     func testInstructionsFollowMemoLanguageAndForbidInvention() {
-        XCTAssertTrue(MemoPolishFormat.instructions(for: "회의 메모").contains("없는 내용을 더하지"))
+        XCTAssertTrue(MemoPolishFormat.instructions(for: "회의 메모").contains("지어내지 않"))
         XCTAssertTrue(MemoPolishFormat.instructions(for: "meeting note").contains("do not translate"))
         XCTAssertEqual(MemoPolishFormat.prompt(for: "글"), "<memo>\n글\n</memo>")
     }
@@ -71,6 +71,11 @@ final class MemoTextPolishTests: XCTestCase {
         )
     }
 
+    func testValidatedAcceptsLongerRewrite() throws {
+        let output = "오늘은 아침부터 일정이 많아 정신없이 하루를 보냈고, 저녁이 되어서야 겨우 한숨을 돌릴 수 있었다."
+        XCTAssertEqual(try MemoPolishFormat.validated(output: output, original: "오늘 바빴다"), .polished(output))
+    }
+
     func testValidatedRejectsChangedMeaning() {
         let rejected: [(output: String, original: String)] = [
             ("", "메모"),
@@ -78,7 +83,7 @@ final class MemoTextPolishTests: XCTestCase {
             ("내일 만나요", "내일 3시에 만나요"),
             ("Let's meet tomorrow", "내일 만나요"),
             ("내일 만나요", "See you tomorrow"),
-            ("내일 만나요. 그리고 점심도 같이 먹고 영화도 보고 저녁까지 함께 있기로 했어요.", "내일 만나요"),
+            (String(repeating: "길게 늘인 문장입니다. ", count: 20), "내일 만나요"),
             ("회의", "오늘 오후에 팀 회의를 했고 다음 주 일정을 정했다"),
         ]
         for item in rejected {

@@ -23,6 +23,8 @@ struct MapHomeCalendarSheet: View {
     @AppStorage(MapHomeCalendarTimeKind.extraStorageKey) private var extraKindsRaw = ""
     @State private var selectedKind: MapHomeCalendarTimeKind?
     @State private var contentHeight: CGFloat
+    @State private var measuredHeight: CGFloat = 0
+    @State private var isSettled = false
     @State private var openedAt = ProcessInfo.processInfo.systemUptime
     /// 새 센서 기록이 들어올 때마다 바뀌는 값. 바뀌면 이번 달 지표를 바로 다시 읽는다.
     private let liveToken: Double
@@ -116,9 +118,11 @@ struct MapHomeCalendarSheet: View {
             MapHomeWidePanelColumns(columns: panelColumns) { monthSection } trailing: { summarySection }
             .padding(.bottom, 40)
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
-                guard abs(height - contentHeight) >= 0.5 else { return }
-                contentHeight = height
+                guard abs(height - measuredHeight) >= 0.5 else { return }
+                measuredHeight = height
                 MapHomeCalendarMonthMemory.shared.contentHeight = height
+                // 올라오는 도중에 높이 목록을 바꾸면 시트 레이아웃을 다시 잰다.
+                if isSettled { contentHeight = height }
             }
         }
         .frame(maxWidth: .infinity)
@@ -128,6 +132,11 @@ struct MapHomeCalendarSheet: View {
         .presentationDetents(contentHeight > 0 ? [.height(contentHeight + 16), .medium, .large] : [.medium, .large])
         .presentationDragIndicator(.visible)
         .presentationBackground(Color.tpBackground)
+        .task {
+            try? await Task.sleep(for: .milliseconds(450))
+            isSettled = true
+            if measuredHeight > 0 { contentHeight = measuredHeight }
+        }
         // 달이 바뀔 때뿐 아니라 "+"로 지표를 켜고 끌 때도 다시 읽는다(걸음·사진은 켠 때만 읽기 때문).
         .task(id: "\(selectedKind == .places)|\(selectedDate.timeIntervalSince1970)") {
             guard selectedKind == .places else { visits = []; return }

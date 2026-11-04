@@ -3,7 +3,7 @@ import XCTest
 /// 지운 시뮬레이터에서 처음 실행 튜토리얼 전 단계를 지나며 화면을 남긴다(FRT1104A01). 설치 상태에 달려 있어 앱을 지운 뒤 하나씩 실행한다.
 @MainActor
 final class TaptionPlanFirstRunTutorialUITests: XCTestCase {
-    private let stepCount = 16
+    private let stepCount = 18
     private let allowLabels = ["앱을 사용하는 동안 허용", "Allow While Using App", "전체 접근 허용", "Allow Full Access", "허용", "Allow"]
     private let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
 
@@ -108,29 +108,40 @@ final class TaptionPlanFirstRunTutorialUITests: XCTestCase {
         capture("02-permissions-after-location")
         element(app, "firstRunNext").tap()
 
-        captureAndAdvance(app, 3, "home")
-        captureAndAdvance(app, 4, "work-school")
-        captureAndAdvance(app, 5, "salary")
+        assertStep(app, 3)
+        XCTAssertTrue(app.sliders.firstMatch.waitForExistence(timeout: 5))
+        captureAndAdvance(app, 3, "sensor-interval")
 
-        assertStep(app, 6)
+        assertStep(app, 4)
+        XCTAssertTrue(element(app, "firstRunDayCardTime").waitForExistence(timeout: 5))
+        captureAndAdvance(app, 4, "day-card-time")
+
+        captureAndAdvance(app, 5, "home")
+        captureAndAdvance(app, 6, "work-school")
+        captureAndAdvance(app, 7, "salary")
+
+        assertStep(app, 8)
         let cat = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "firstRunCat.")).element(boundBy: 1)
         XCTAssertTrue(cat.waitForExistence(timeout: 5))
         cat.tap()
-        captureAndAdvance(app, 6, "cat")
+        captureAndAdvance(app, 8, "cat")
 
         for (offset, name) in ["map", "playback", "sidebar-calendar", "clip-editor", "memos", "summary", "counters"].enumerated() {
-            captureAndAdvance(app, 7 + offset, name)
+            assertStep(app, 9 + offset)
+            capture(String(format: "%02d-%@-첫줄", 9 + offset, name))
+            usleep(3_500_000)
+            captureAndAdvance(app, 9 + offset, name)
         }
 
-        assertStep(app, 14)
-        capture("14-calendar-before")
+        assertStep(app, 16)
+        capture("16-calendar-before")
         element(app, "firstRunCalendarAllow").tap()
         answerAlert(timeout: 10)
-        capture("14-calendar-after")
+        capture("16-calendar-after")
         element(app, "firstRunNext").tap()
 
-        captureAndAdvance(app, 15, "password")
-        captureAndAdvance(app, 16, "finish")
+        captureAndAdvance(app, 17, "password")
+        captureAndAdvance(app, 18, "finish")
 
         // 끝나면 지도가 나오고, 메뉴 > 설정에서 다시 볼 수 있다.
         answerAlert(timeout: 3)

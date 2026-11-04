@@ -108,6 +108,36 @@ final class RawSensorReplayTests: XCTestCase {
         }
     }
 
+    /// 등록 식당 식사와 시간 막대를 다시 계산해 찍는다(MEA1105A01). 원본 판정은 바꾸지 않는다.
+    func testDumpRestaurantMealRail() throws {
+        let environment = ProcessInfo.processInfo.environment
+        guard let path = environment["TAPTION_RAW_REPLAY"], let placesPath = environment["TAPTION_REPLAY_PLACES"] else {
+            throw XCTSkip("TAPTION_REPLAY_PLACES 없음")
+        }
+        let days = try JSONDecoder().decode([TodaySensorRawExport].self, from: Data(contentsOf: URL(fileURLWithPath: path)))
+        let places = try JSONDecoder().decode([FrequentPlace].self, from: Data(contentsOf: URL(fileURLWithPath: placesPath)))
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul") ?? .current
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MM-dd HH:mm"
+        formatter.timeZone = calendar.timeZone
+        for day in days {
+            let start = calendar.startOfDay(for: day.day)
+            let end = start.addingTimeInterval(86_400)
+            let readings = day.readings.sorted { $0.timestamp < $1.timestamp }
+            let meals = RestaurantMealActualEngine.records(
+                restaurants: places, readings: readings, inside: TimeSpan(start: start, end: end), asOf: end
+            )
+            for meal in meals {
+                print("REPLAY meal \(formatter.string(from: meal.startedAt))–\(formatter.string(from: meal.endedAt ?? end)) \(meal.title)")
+            }
+            let carved = RestaurantMealActualEngine.carvingMeals(from: (day.actuals ?? []) + meals, asOf: end)
+            for segment in MapHomeTimeRailSegmentEngine.segments(from: carved, travel: day.travel, on: start, asOf: end, calendar: calendar) {
+                print("REPLAY rail \(formatter.string(from: start)) \(segment.startMinute)–\(segment.endMinute) \(segment.categoryID) \(segment.title)")
+            }
+        }
+    }
+
     /// 등록 장소로 체류와 식사 후보를 다시 계산해 찍는다(PLY1103A01). `TAPTION_REPLAY_PLACES`는 등록 장소 JSON이다.
     func testDumpStaysWithFrequentPlaces() throws {
         let environment = ProcessInfo.processInfo.environment

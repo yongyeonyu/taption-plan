@@ -71,6 +71,51 @@ final class UnobservedStayEngineTests: XCTestCase {
         XCTAssertEqual(confirmed.filter { $0.categoryID == "work" }.count, 2)
     }
 
+    /// 회의와 겹치는 끊김은 식사 후보가 되지 않는다(MEA1105A01).
+    func testMeetingBlocksMealCandidate() {
+        let foot = [TimeSpan(start: at(11, 50), end: at(12, 0)), TimeSpan(start: at(13, 0), end: at(13, 5))]
+        let readings = [fix(at(11, 50)), fix(at(13, 5))]
+        let inside = TimeSpan(start: at(0), end: at(23))
+        XCTAssertFalse(UnobservedStayEngine.mealCandidates(readings: readings, footSpans: foot, actuals: [], inside: inside).isEmpty)
+        XCTAssertTrue(UnobservedStayEngine.mealCandidates(
+            readings: readings, footSpans: foot, actuals: [],
+            busySpans: [TimeSpan(start: at(11, 30), end: at(13, 30))], inside: inside
+        ).isEmpty)
+    }
+
+    /// 식사 시간은 자동 걷기 세션에서 잘려 이동으로 덮이지 않고, 사용자 기록은 그대로다(MEA1105A01).
+    func testMealCarvesAutomaticWalkSessionOnly() {
+        let meal = ActualRecord(
+            planID: nil, title: "식사 · 식당", categoryID: "eating", startedAt: at(17, 51), endedAt: at(18, 12),
+            source: .location, confidence: .high, behavior: "meal", modelVersion: RestaurantMealActualEngine.modelVersion
+        )
+        let walk = ActualRecord(planID: nil, title: "걷기", categoryID: "activity", startedAt: at(17, 47), endedAt: at(18, 55), source: .location, confidence: .high)
+        let carved = RestaurantMealActualEngine.carvingMeals(from: [walk, meal], asOf: at(23))
+        let pieces = carved.filter { $0.title == "걷기" }.sorted { $0.startedAt < $1.startedAt }
+        XCTAssertEqual(pieces.map(\.startedAt), [at(17, 47), at(18, 12)])
+        XCTAssertEqual(pieces.map(\.endedAt), [at(17, 51), at(18, 55)])
+        XCTAssertEqual(RestaurantMealActualEngine.carvingMeals(from: carved, asOf: at(23)), carved)
+        var manual = walk
+        manual.manuallyCorrected = true
+        XCTAssertEqual(RestaurantMealActualEngine.carvingMeals(from: [manual, meal], asOf: at(23)).filter { $0.title == "걷기" }.count, 1)
+        var watch = walk
+        watch.source = .appleWatch
+        XCTAssertEqual(RestaurantMealActualEngine.carvingMeals(from: [watch, meal], asOf: at(23)).filter { $0.title == "걷기" }.count, 1)
+    }
+
+    /// 겹친 회사보다 60m 이상 가까우면 높이로 식당을 빼지 않는다(MEA1105A01).
+    func testClearlyClosestPlaceSkipsHeightCheck() {
+        func point(_ meters: Double) -> GeoPoint {
+            GeoPoint(latitude: 37.5 + meters / 111_320, longitude: 127, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: 10)
+        }
+        let restaurant = FrequentPlace(kind: .restaurant, name: "식당", point: point(0))
+        let company = FrequentPlace(kind: .company, name: "회사", point: point(118))
+        let near = SensorReading(timestamp: at(18), point: point(8))
+        XCTAssertTrue(PlaceHeightMatch.isClearlyClosest(restaurant, among: [restaurant, company], readings: [near]))
+        let between = SensorReading(timestamp: at(18), point: point(59))
+        XCTAssertFalse(PlaceHeightMatch.isClearlyClosest(restaurant, among: [restaurant, company], readings: [between]))
+    }
+
     /// 사용자가 넣은 기록이나 이미 있는 식사와 겹치면 새로 만들지 않는다.
     func testUserRecordsAndExistingMealsBlockCandidate() {
         let foot = [TimeSpan(start: at(11, 50), end: at(12, 0)), TimeSpan(start: at(13, 0), end: at(13, 5))]

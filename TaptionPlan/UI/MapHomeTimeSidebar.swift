@@ -312,6 +312,24 @@ private struct MapHomeUnconfirmedChecker: View {
     }
 }
 
+/// 대분류 색은 그대로 두고 상세 활동을 표시하는 빗금 무늬.
+private struct MapHomeDetailStripes: View {
+    var body: some View {
+        Canvas { context, size in
+            var path = Path()
+            let spacing: CGFloat = 7
+            var offset = -size.width
+            while offset < size.height {
+                path.move(to: CGPoint(x: 0, y: offset + size.width))
+                path.addLine(to: CGPoint(x: size.width, y: offset))
+                offset += spacing
+            }
+            context.stroke(path, with: .color(.white.opacity(0.45)), lineWidth: 1.5)
+        }
+        .allowsHitTesting(false)
+    }
+}
+
 /// 오른쪽 시간 레일에서 공통으로 보이는 대분류 모형이다. 제목과 아이콘은
 /// 단일 JSON 분류표에서, 색상은 앱 공통 팔레트에서 읽는다.
 struct MapHomeSidebarMajorCategory: Identifiable, Hashable {
@@ -1143,6 +1161,8 @@ struct MapHomeTimeSidebar: View {
     @Binding var selectedMinute: Int
     let activity: MapHomeTimeSidebarActivity?
     let segments: [MapHomeTimeRailSegment]
+    /// 업무 구간 위에 무늬로 표시할 상세 활동(회의) 구간.
+    let detailSpans: [Range<Int>]
     let categoryColors: [String: String]
     let zoomResetToken: Int
     let zoomStepToken: Int
@@ -1210,6 +1230,7 @@ struct MapHomeTimeSidebar: View {
         visibleDurationMinutes: Binding<Int>,
         activity: MapHomeTimeSidebarActivity? = nil,
         segments: [MapHomeTimeRailSegment] = [],
+        detailSpans: [Range<Int>] = [],
         categoryColors: [String: String] = [:],
         zoomResetToken: Int = 0,
         zoomStepToken: Int = 0,
@@ -1229,6 +1250,7 @@ struct MapHomeTimeSidebar: View {
         self._visibleDurationMinutes = visibleDurationMinutes
         self.activity = activity
         self.segments = segments
+        self.detailSpans = detailSpans
         self.categoryColors = categoryColors
         self.zoomResetToken = zoomResetToken
         self.zoomStepToken = zoomStepToken
@@ -1457,6 +1479,19 @@ struct MapHomeTimeSidebar: View {
                                     )
                                 )
                         }
+                    }
+
+                    ForEach(MapHomeTimeSidebarMath.detailPatternSpans(detailSpans, segments: visibleSegments, window: visibleWindow), id: \.lowerBound) { span in
+                        MapHomeDetailStripes()
+                            .frame(
+                                width: activeRailWidth,
+                                height: max(1, trackHeight * MapHomeTimeSidebarMath.spanFraction(start: span.lowerBound, end: span.upperBound, window: visibleWindow))
+                            )
+                            .clipped()
+                            .position(
+                                x: activeRailWidth / 2,
+                                y: trackHeight * MapHomeTimeSidebarMath.segmentCenterPosition(start: span.lowerBound, end: span.upperBound, window: visibleWindow)
+                            )
                     }
                 }
                 .frame(width: activeRailWidth, height: trackHeight)

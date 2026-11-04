@@ -342,6 +342,12 @@ struct NLETrack: Hashable, Sendable {
         return tailID
     }
 
+    /// 상세 층에 새 클립을 넣는다. 빈 시간은 호출하는 쪽이 고른다.
+    mutating func insert(_ clip: NLEClip) {
+        clips.append(clip)
+        renormalize()
+    }
+
     /// 클립을 지운다. 그 자리는 `fallback`으로 돌아간다(대분류는 미확인, 서브클립은 상위 분류).
     @discardableResult
     mutating func delete(_ id: String, fallback: ActivityCorrectionOption? = nil) -> Bool {

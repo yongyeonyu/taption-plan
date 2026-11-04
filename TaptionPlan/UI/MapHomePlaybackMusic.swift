@@ -1,6 +1,7 @@
 import AVFoundation
 import Observation
 import os
+import SwiftUI
 
 /// 재생 영상의 배경 음악(BGM1104A02). 코드로 합성한 곡만 앱 target에 넣는다.
 enum MapHomePlaybackMusicTrack: String, CaseIterable, Identifiable, Sendable {
@@ -256,6 +257,74 @@ final class MapHomePlaybackMusicPreview: NSObject, AVAudioPlayerDelegate {
         Task { @MainActor [weak self] in
             guard let self, let current = self.player, ObjectIdentifier(current) == finished else { return }
             self.stop()
+        }
+    }
+}
+
+/// 음악 고르기와 미리듣기(BGM1104A02). 영상 화면과 녹화 화면이 같은 값을 쓴다.
+struct MapHomePlaybackMusicPicker: View {
+    let language: MapHomeLanguage
+    /// 음성 메모를 녹음하는 동안에는 오디오 세션을 건드리지 않는다.
+    let canUseAudio: Bool
+
+    @AppStorage("playbackVideoMusic") private var musicRaw = MapHomePlaybackMusicTrack.defaultID
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var preview = MapHomePlaybackMusicPreview()
+
+    private var musicTrack: MapHomePlaybackMusicTrack? { MapHomePlaybackMusicTrack.stored(musicRaw) }
+    private var canPreview: Bool { musicTrack != nil && canUseAudio }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Menu {
+                Picker(language.text("음악", "Music"), selection: $musicRaw) {
+                    Text(language.text("음악 없음", "No music")).tag(MapHomePlaybackMusicTrack.noneID)
+                    ForEach(MapHomePlaybackMusicTrack.allCases) { track in
+                        Text(track.title(language)).tag(track.rawValue)
+                    }
+                }
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "music.note")
+                    Text(musicTrack?.title(language) ?? language.text("음악 없음", "No music"))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                    Spacer(minLength: 4)
+                    Image(systemName: "chevron.up.chevron.down")
+                }
+                .padding(.horizontal, 12)
+                .frame(maxWidth: .infinity, minHeight: 40)
+                .foregroundStyle(Color.tpInk)
+                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
+            Button { togglePreview() } label: {
+                Image(systemName: preview.playing == nil ? "play.fill" : "stop.fill")
+                    .frame(width: 40, height: 40)
+                    .foregroundStyle(canPreview ? Color.tpInk : Color.tpSecondary)
+                    .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .disabled(!canPreview)
+            .accessibilityLabel(preview.playing == nil ? language.text("미리듣기", "Preview") : language.text("미리듣기 멈춤", "Stop preview"))
+        }
+        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
+        .onDisappear { preview.stop() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active { preview.stop() }
+        }
+        .onChange(of: musicRaw) { _, _ in
+            guard preview.playing != nil else { return }
+            togglePreview(restart: true)
+        }
+    }
+
+    private func togglePreview(restart: Bool = false) {
+        if preview.playing != nil, !restart {
+            preview.stop()
+        } else if let musicTrack, canPreview {
+            preview.play(musicTrack)
+        } else {
+            preview.stop()
         }
     }
 }

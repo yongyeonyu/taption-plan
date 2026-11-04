@@ -63,14 +63,19 @@ enum MapHomeVectorLabels {
         var haloWidth = 1.6
     }
 
-    /// 번역 언어는 그 언어 이름 → 영어 → 현지 이름 순서로 쓴다. 한국어·영어는 한국어 이름을 먼저 쓴다.
-    private static let nameFields: String = {
-        guard let code = UITextPack.activeLanguageCode else { return #"["get", "name:ko"], ["get", "name"]"# }
+    /// 그 언어 이름 → 영어 → 현지 이름 순서로 쓴다. 한국어는 영어를 거치지 않는다.
+    private static var nameFields: String {
+        nameFields(languageCode: UITextPack.activeLanguageCode ?? (MapHomeLanguage.current == .english ? "en" : nil))
+    }
+
+    static func nameFields(languageCode code: String?) -> String {
+        guard let code else { return #"["get", "name:ko"], ["get", "name"]"# }
         let base = code.split(separator: "-").first.map(String.init) ?? code
         let names = code == "zh-Hant" ? [code, base] : [base]
-        return (names + ["en"]).map { #"["get", "name:\#($0)"], "# }.joined() + #"["get", "name"]"#
-    }()
-    private static let name = #"["coalesce", \#(nameFields)]"#
+        return (base == "en" ? names : names + ["en"]).map { #"["get", "name:\#($0)"], "# }.joined() + #"["get", "name"]"#
+    }
+
+    private static var name: String { #"["coalesce", \#(nameFields)]"# }
     private static let regular = #"["Noto Sans Regular"]"#
     private static let bold = #"["Noto Sans Bold"]"#
 
@@ -140,7 +145,7 @@ enum MapHomeVectorLabels {
         """#
     }
 
-    static let layers: [Layer] = [
+    static var layers: [Layer] { [
         Layer(
             id: "label-housenumber", sourceLayer: "housenumber", minzoom: 17,
             layout: #"""
@@ -254,7 +259,13 @@ enum MapHomeVectorLabels {
             ),
             tone: .transit, haloWidth: 2
         ),
-    ]
+    ] }
+
+    /// 레이어의 글자 식. 언어를 바꿀 때 타일을 다시 받지 않고 이 식만 바꾼다.
+    static func textField(of layer: Layer) -> Any? {
+        let object = try? JSONSerialization.jsonObject(with: Data("{\(layer.layout)}".utf8))
+        return (object as? [String: Any])?["text-field"]
+    }
 
     static func json(palette: Palette) -> String {
         layers.map { layer in

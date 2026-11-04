@@ -57,6 +57,7 @@ enum UnobservedStayEngine {
         footSpans: [TimeSpan],
         actuals: [ActualRecord],
         activityCorrections: [UUID: ActivityCorrection] = [:],
+        busySpans: [TimeSpan] = [],
         inside: TimeSpan,
         calendar: Calendar = .autoupdatingCurrent
     ) -> [ActualRecord] {
@@ -64,6 +65,8 @@ enum UnobservedStayEngine {
         let eligible = stays(readings: readings, footSpans: footSpans, inside: inside).filter { stay in
             stay.leftOnFoot && stay.returnedOnFoot
                 && mealOverlap(stay.span, calendar: calendar) >= minimumMealOverlap
+                // 회의 중에 가만히 있던 시간을 식사로 고르지 않는다.
+                && busySpans.map { stay.span.intersection(with: $0)?.duration ?? 0 }.reduce(0, +) < stay.span.duration / 2
         }
         let longestPerMeal = Dictionary(grouping: eligible) { mealIndex($0.span, calendar: calendar) }
             .values.compactMap { $0.max { $0.span.duration < $1.span.duration } }

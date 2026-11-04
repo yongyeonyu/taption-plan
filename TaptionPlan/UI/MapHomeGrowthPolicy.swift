@@ -22,6 +22,8 @@ struct MapHomeGrowthSeason: Codable, Equatable {
     var equippedRibbon: String?
     var landPlotPlacements: [MapHomeGrowthPlotPlacement]?
     var recentCompletionRewardedDays: [String]?
+    /// 그날을 닫았을 때의 레벨(GRW1105A01). 예전 저장본에는 없어 최초 1회 거꾸로 채운다.
+    var dayLevels: [String: Int]?
 }
 
 extension MapHomeGrowthSeason {
@@ -42,6 +44,7 @@ extension MapHomeGrowthSeason {
         equippedScarf = try c.decodeIfPresent(String.self, forKey: .equippedScarf)
         equippedRibbon = try c.decodeIfPresent(String.self, forKey: .equippedRibbon)
         landPlotPlacements = try c.decodeIfPresent([MapHomeGrowthPlotPlacement].self, forKey: .landPlotPlacements)
+        dayLevels = try c.decodeIfPresent([String: Int].self, forKey: .dayLevels)
         recentCompletionRewardedDays = try c.decodeIfPresent([String].self, forKey: .recentCompletionRewardedDays)
         // 착용 칸이 하나이던 때의 값을 그 장식의 종류 칸으로 옮긴다. 새 칸이 있으면 옛 값은 보지 않는다.
         if equippedHat == nil, equippedScarf == nil, equippedRibbon == nil,
@@ -493,7 +496,40 @@ enum MapHomeGrowthPolicy {
             maximumLevel(year: season.year, timeZone: calendar.timeZone),
             season.level + 1
         )
+        season.dayLevels = (season.dayLevels ?? [:]).merging([key: season.level]) { _, new in new }
         return true
+    }
+
+    /// 그날의 집 레벨. 아직 닫지 않은 날은 지금 레벨이고, 기록이 없는 시즌은 nil이다.
+    static func level(on day: Date, in history: MapHomeGrowthHistory, calendar: Calendar) -> Int? {
+        let key = dayKey(day, calendar: calendar)
+        let year = calendar.component(.year, from: day)
+        guard let season = ([history.season] + history.archives).first(where: { $0.year == year }) else { return nil }
+        if season.lastClosedDay.map({ key > $0 }) ?? true { return season.level }
+        guard let levels = season.dayLevels, !levels.isEmpty else { return nil }
+        if let exact = levels[key] { return exact }
+        // 앱이 닫지 못한 날은 그 앞 날의 레벨을 잇고, 기록보다 앞선 날은 시즌 시작 레벨이다.
+        return levels.keys.filter { $0 < key }.max().flatMap { levels[$0] } ?? 1
+    }
+
+    /// 날짜별 기록이 없는 저장본을 지금 레벨에서 거꾸로 채운다. 달성한 날마다 1씩 올랐다고 본다.
+    static func backfillDayLevelsIfNeeded(
+        in history: inout MapHomeGrowthHistory,
+        calendar: Calendar,
+        qualifies: (Date) -> Bool
+    ) {
+        guard history.season.dayLevels == nil,
+              let last = history.season.lastClosedDay,
+              var day = date(for: last, calendar: calendar) else { return }
+        var levels: [String: Int] = [:]
+        var level = history.season.level
+        while level > 1, calendar.component(.year, from: day) == history.season.year {
+            levels[dayKey(day, calendar: calendar)] = level
+            if qualifies(day) { level -= 1 }
+            guard let previous = calendar.date(byAdding: .day, value: -1, to: day) else { break }
+            day = previous
+        }
+        history.season.dayLevels = levels
     }
 
     @discardableResult
@@ -626,6 +662,7 @@ enum MapHomeGrowthPolicy {
             history.season.streak = 0
         }
         history.season.lastClosedDay = key
+        history.season.dayLevels = (history.season.dayLevels ?? [:]).merging([key: history.season.level]) { _, new in new }
     }
 
     private static func advanceSeason(in history: inout MapHomeGrowthHistory, to year: Int) {

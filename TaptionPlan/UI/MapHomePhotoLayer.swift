@@ -459,6 +459,8 @@ struct MapHomePlaybackPhotoStrip: View {
             : min(Self.slotsPerSide, center)
         let place = Self.arcPlacement(distance: distance, countOnSide: countOnSide, side: side, width: width, isEnlarged: isEnlarged)
         return MapHomePhotoThumbnail(localIdentifier: photos[index].id, side: Self.centerSide)
+            // 지금 시각의 사진만 밝게 두고 나머지는 30% 어둡게 한다.
+            .overlay(Color.black.opacity(distance == 0 ? 0 : 0.3))
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color.white, lineWidth: isCenter ? 3 : 4))
             .scaleEffect(isCenter ? 1 : side / Self.centerSide, anchor: .bottom)
@@ -502,6 +504,8 @@ struct MapHomePlaybackMomentsOverlay: View {
     let minute: Double
     let events: [(minute: Double, moment: Moment)]
     var topInset: CGFloat = 8
+    /// 왼쪽 여백부터 시간 막대 앞까지 채운다.
+    var trailingInset: CGFloat = 16
 
     private struct Shown: Identifiable {
         let id = UUID()
@@ -533,7 +537,7 @@ struct MapHomePlaybackMomentsOverlay: View {
                     .foregroundStyle(Color.tpInk)
                     .lineLimit(3)
                     .padding(.horizontal, 14).padding(.vertical, 10)
-                    .frame(maxWidth: 320, alignment: .leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                     .shadow(color: .black.opacity(0.18), radius: 8, y: 3)
                     .id(shown.id)
@@ -542,7 +546,8 @@ struct MapHomePlaybackMomentsOverlay: View {
             Spacer(minLength: 0)
         }
         .padding(.top, topInset)
-        .padding(.horizontal, 16)
+        .padding(.leading, 12)
+        .padding(.trailing, trailingInset)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .animation(.spring(response: 0.38, dampingFraction: 0.82), value: shown?.id)
         .allowsHitTesting(false)

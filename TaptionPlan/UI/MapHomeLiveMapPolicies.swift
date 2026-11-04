@@ -1112,6 +1112,7 @@ struct MapHomeStickmanActionKey: Equatable {
     var expectedCount: Int
     var latestID: UUID?
     var hasSelection: Bool
+    var calendarEventCount = 0
 }
 
 struct MapHomeHomeWeatherKey: Equatable {

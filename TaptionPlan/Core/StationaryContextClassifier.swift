@@ -1011,7 +1011,7 @@ enum RestaurantMealActualEngine {
                             return nil
                         }
                         var evidence = [
-                            "등록 식당: \(restaurant.name)",
+                            "등록 식당: \(restaurant.displayName)",
                             "반경 내 15분 이상 연속 체류",
                         ]
                         if !stay.unobserved.isEmpty {
@@ -1025,7 +1025,7 @@ enum RestaurantMealActualEngine {
                         return ActualRecord(
                             id: stableID(restaurant: restaurant, span: span),
                             planID: nil,
-                            title: "식사 · \(restaurant.name)",
+                            title: "식사 · \(restaurant.displayName)",
                             categoryID: "eating",
                             startedAt: span.start,
                             endedAt: span.end,
@@ -1041,7 +1041,13 @@ enum RestaurantMealActualEngine {
             .sorted { $0.startedAt < $1.startedAt }
     }
 
-    /// 식사 시간을 자동 업무·수업 기록에서 잘라 낸다. 회사 반경 안 식당에 머문 시간은 업무가 아니다(대표 지시).
+    /// 앱이 자동으로 끝낸 걷기 세션. 정지 판정이 늦으면 식사 내내 이어져 이동으로 덮는다.
+    private static func isAutomaticWalkSession(_ actual: ActualRecord) -> Bool {
+        actual.title == "걷기" && actual.categoryID == "activity" && actual.source == .location
+            && actual.planID == nil && actual.modelVersion == nil
+    }
+
+    /// 식사 시간을 자동 업무·수업·걷기 세션 기록에서 잘라 낸다. 회사 반경 안 식당에 머문 시간은 업무가 아니다(대표 지시).
     /// 사용자가 직접 고치거나 넣은 기록은 건드리지 않는다.
     static func carvingMeals(
         from actuals: [ActualRecord],
@@ -1057,7 +1063,7 @@ enum RestaurantMealActualEngine {
         }.map { $0.span(asOf: asOf) }.sorted { $0.start < $1.start }
         guard !meals.isEmpty else { return actuals }
         return actuals.flatMap { actual -> [ActualRecord] in
-            guard actual.categoryID == "work" || actual.categoryID == "study",
+            guard actual.categoryID == "work" || actual.categoryID == "study" || isAutomaticWalkSession(actual),
                   !ActualRecord.userOwned(actual, activityCorrections: activityCorrections)
             else { return [actual] }
             var pieces = [actual.span(asOf: asOf)]
@@ -1131,7 +1137,8 @@ enum RestaurantMealActualEngine {
             PlaceZoneStayTracker.stays(readings: piece, center: anchor, radius: restaurant.radiusMeters)
         }.filter { stay in
             let inside = readings.filter { stay.span.contains($0.timestamp) }
-            return !PlaceHeightMatch.isAtOtherHeight(restaurant, among: overlapping, readings: inside)
+            return PlaceHeightMatch.isClearlyClosest(restaurant, among: overlapping, readings: inside)
+                || !PlaceHeightMatch.isAtOtherHeight(restaurant, among: overlapping, readings: inside, maximumGPSVerticalError: 12)
         }
     }
 

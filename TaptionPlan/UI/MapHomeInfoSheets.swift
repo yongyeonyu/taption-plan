@@ -92,18 +92,7 @@ struct MapHomePlaceRangeEditor: View {
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
                         .foregroundStyle(Color.tpSecondary)
                 }
-                Map(
-                    initialPosition: .region(MKCoordinateRegion(
-                        center: center,
-                        latitudinalMeters: max(radiusMeters * 3, 200),
-                        longitudinalMeters: max(radiusMeters * 3, 200)
-                    )),
-                    interactionModes: []
-                ) {
-                    MapCircle(center: center, radius: radiusMeters)
-                        .foregroundStyle(Color.tpAccent.opacity(0.22))
-                        .stroke(Color.tpAccent, lineWidth: 2)
-                }
+                MapHomePlaceRangeMap(center: center, radiusMeters: radiusMeters, tint: UIColor(Color.tpAccent))
                 .frame(height: 170)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 HStack {

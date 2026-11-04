@@ -25,10 +25,8 @@ struct MapHomePlaybackVideoSheet: View {
     @AppStorage("playbackVideoRangeSeconds") private var targetSeconds = 0
     @AppStorage("playbackVideoHidesPrivatePlaces") private var hidesPrivatePlaces = true
     @AppStorage("playbackVideoMusic") private var musicRaw = MapHomePlaybackMusicTrack.defaultID
-    @Environment(\.scenePhase) private var scenePhase
-    @State private var preview = MapHomePlaybackMusicPreview()
-    @State private var customStart = Calendar.autoupdatingCurrent.date(byAdding: .day, value: -3, to: .now) ?? .now
-    @State private var customEnd = Date.now
+    @AppStorage(MapHomePlaybackRangePicker.customStartKey) private var customStartRaw = 0.0
+    @AppStorage(MapHomePlaybackRangePicker.customEndKey) private var customEndRaw = 0.0
     @State private var rangePlan: MapHomeRangeTripPlan?
     @State private var isLoadingRange = false
     @State private var rangeLoadPercent = 0
@@ -43,6 +41,9 @@ struct MapHomePlaybackVideoSheet: View {
     private var preset: MapHomeRangePreset { MapHomeRangePreset.stored(presetRaw) }
 
     private var musicTrack: MapHomePlaybackMusicTrack? { MapHomePlaybackMusicTrack.stored(musicRaw) }
+
+    private var customStart: Date { MapHomePlaybackRangePicker.customStart(customStartRaw) }
+    private var customEnd: Date { MapHomePlaybackRangePicker.customEnd(customEndRaw) }
 
     private var rangeSpan: TimeSpan {
         preset.span(selectedDate: selectedDate, customStart: customStart, customEnd: customEnd, now: .now)
@@ -62,14 +63,6 @@ struct MapHomePlaybackVideoSheet: View {
         // 닫기·아래로 쓸기 모두 여기로 온다. 만드는 중이면 렌더링을 멈춘다.
         .onDisappear {
             task?.cancel()
-            preview.stop()
-        }
-        .onChange(of: scenePhase) { _, newPhase in
-            if newPhase != .active { preview.stop() }
-        }
-        .onChange(of: musicRaw) { _, _ in
-            guard preview.playing != nil else { return }
-            togglePreview(restart: true)
         }
         .task(id: rangeKey) { await loadRange() }
     }
@@ -90,7 +83,7 @@ struct MapHomePlaybackVideoSheet: View {
             }
             if phase == .idle || isFailed {
                 rangeControls
-                musicControls
+                MapHomePlaybackMusicPicker(language: language, canUseAudio: !model.isRecordingVoiceMemo)
             }
             VStack(alignment: .leading, spacing: 10) {
                 Text(message)
@@ -123,56 +116,6 @@ struct MapHomePlaybackVideoSheet: View {
             .foregroundStyle(Color.tpSecondary)
     }
 
-    /// 음악 고르기와 미리듣기(BGM1104A02).
-    private var musicControls: some View {
-        HStack(spacing: 8) {
-            Menu {
-                Picker(language.text("음악", "Music"), selection: $musicRaw) {
-                    Text(language.text("음악 없음", "No music")).tag(MapHomePlaybackMusicTrack.noneID)
-                    ForEach(MapHomePlaybackMusicTrack.allCases) { track in
-                        Text(track.title(language)).tag(track.rawValue)
-                    }
-                }
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "music.note")
-                    Text(musicTrack?.title(language) ?? language.text("음악 없음", "No music"))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                    Spacer(minLength: 4)
-                    Image(systemName: "chevron.up.chevron.down")
-                }
-                .padding(.horizontal, 12)
-                .frame(maxWidth: .infinity, minHeight: 40)
-                .foregroundStyle(Color.tpInk)
-                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-            }
-            Button { togglePreview() } label: {
-                Image(systemName: preview.playing == nil ? "play.fill" : "stop.fill")
-                    .frame(width: 40, height: 40)
-                    .foregroundStyle(canPreview ? Color.tpInk : Color.tpSecondary)
-                    .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-            }
-            .buttonStyle(.plain)
-            .disabled(!canPreview)
-            .accessibilityLabel(preview.playing == nil ? language.text("미리듣기", "Preview") : language.text("미리듣기 정지", "Stop preview"))
-        }
-        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
-    }
-
-    /// 음성 메모를 녹음하는 동안에는 오디오 세션을 건드리지 않는다.
-    private var canPreview: Bool { musicTrack != nil && !model.isRecordingVoiceMemo }
-
-    private func togglePreview(restart: Bool = false) {
-        if preview.playing != nil, !restart {
-            preview.stop()
-        } else if let musicTrack, canPreview {
-            preview.play(musicTrack)
-        } else {
-            preview.stop()
-        }
-    }
-
     private var isFailed: Bool {
         if case .failed = phase { return true }
         return false
@@ -180,11 +123,7 @@ struct MapHomePlaybackVideoSheet: View {
 
     private var rangeControls: some View {
         VStack(alignment: .leading, spacing: 10) {
-            choiceRow(MapHomeRangePreset.allCases.map { ($0.rawValue, title(for: $0)) }, selected: preset.rawValue) { presetRaw = $0 }
-            if preset == .custom {
-                DatePicker(language.text("시작", "From"), selection: $customStart, in: ...Date.now, displayedComponents: .date)
-                DatePicker(language.text("끝", "To"), selection: $customEnd, in: ...Date.now, displayedComponents: .date)
-            }
+            MapHomePlaybackRangePicker(language: language)
             if preset != .day {
                 choiceRow(Self.lengthChoices.map { (String($0), lengthTitle($0)) }, selected: String(targetSeconds)) {
                     targetSeconds = Int($0) ?? 0
@@ -209,16 +148,6 @@ struct MapHomePlaybackVideoSheet: View {
                 }
                 .buttonStyle(.plain)
             }
-        }
-    }
-
-    private func title(for preset: MapHomeRangePreset) -> String {
-        switch preset {
-        case .day: language.text("1일", "1 day")
-        case .week: language.text("1주일", "1 week")
-        case .month: language.text("1달", "1 month")
-        case .year: language.text("1년", "1 year")
-        case .custom: language.text("특정 날짜", "Custom")
         }
     }
 
@@ -379,7 +308,6 @@ struct MapHomePlaybackVideoSheet: View {
             phase = .failed(language.text("재생할 기록이 없습니다.", "Nothing to play back."))
             return
         }
-        preview.stop()
         renderer.music = musicTrack?.url
         progress = 0
         phase = .rendering
@@ -407,5 +335,87 @@ struct MapHomePlaybackVideoSheet: View {
             phase = .failed(language.text("영상을 만들지 못했습니다.", "Could not make the video."))
         }
         task = nil
+    }
+}
+
+/// 영상 기간 드롭다운과 특정 날짜. 영상 화면과 녹화 화면이 같은 값을 쓴다(REC1105A01).
+struct MapHomePlaybackRangePicker: View {
+    static let presetKey = "playbackVideoRangePreset"
+    static let customStartKey = "playbackVideoCustomStart"
+    static let customEndKey = "playbackVideoCustomEnd"
+
+    let language: MapHomeLanguage
+
+    @AppStorage(presetKey) private var presetRaw = MapHomeRangePreset.day.rawValue
+    @AppStorage(customStartKey) private var customStartRaw = 0.0
+    @AppStorage(customEndKey) private var customEndRaw = 0.0
+
+    static func customStart(_ raw: Double) -> Date {
+        raw > 0
+            ? Date(timeIntervalSinceReferenceDate: raw)
+            : Calendar.autoupdatingCurrent.date(byAdding: .day, value: -3, to: .now) ?? .now
+    }
+
+    static func customEnd(_ raw: Double) -> Date {
+        raw > 0 ? Date(timeIntervalSinceReferenceDate: raw) : .now
+    }
+
+    private var preset: MapHomeRangePreset { MapHomeRangePreset.stored(presetRaw) }
+
+    private func title(_ preset: MapHomeRangePreset) -> String {
+        switch preset {
+        case .day: language.text("1일", "1 day")
+        case .week: language.text("1주일", "1 week")
+        case .month: language.text("1달", "1 month")
+        case .year: language.text("1년", "1 year")
+        case .custom: language.text("특정 날짜", "Custom")
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Menu {
+                Picker(language.text("기간", "Period"), selection: $presetRaw) {
+                    ForEach(MapHomeRangePreset.allCases, id: \.rawValue) { preset in
+                        Text(title(preset)).tag(preset.rawValue)
+                    }
+                }
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "calendar")
+                    Text(language.text("기간", "Period"))
+                    Spacer(minLength: 4)
+                    Text(title(preset))
+                        .foregroundStyle(Color.tpSecondary)
+                    Image(systemName: "chevron.up.chevron.down")
+                }
+                .padding(.horizontal, 12)
+                .frame(maxWidth: .infinity, minHeight: 40)
+                .foregroundStyle(Color.tpInk)
+                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
+            .accessibilityIdentifier("playbackRangeMenu")
+            if preset == .custom {
+                DatePicker(
+                    language.text("시작", "From"),
+                    selection: Binding(
+                        get: { Self.customStart(customStartRaw) },
+                        set: { customStartRaw = $0.timeIntervalSinceReferenceDate }
+                    ),
+                    in: ...Date.now,
+                    displayedComponents: .date
+                )
+                DatePicker(
+                    language.text("끝", "To"),
+                    selection: Binding(
+                        get: { Self.customEnd(customEndRaw) },
+                        set: { customEndRaw = $0.timeIntervalSinceReferenceDate }
+                    ),
+                    in: ...Date.now,
+                    displayedComponents: .date
+                )
+            }
+        }
+        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
     }
 }

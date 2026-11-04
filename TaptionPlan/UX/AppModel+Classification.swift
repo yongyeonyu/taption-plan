@@ -804,8 +804,9 @@ extension AppModel {
             return actual.span(asOf: span.end).intersection(with: span) == nil
         }
         let footSpans = motionActivities.filter { $0.motion == .walking || $0.motion == .running }.map(\.span)
+        let meetings = snapshot.calendarEvents.filter(\.isMeetingLike).map(\.span)
         let fresh = UnobservedStayEngine.mealCandidates(
-            readings: readings, footSpans: footSpans, actuals: kept, activityCorrections: corrections, inside: span
+            readings: readings, footSpans: footSpans, actuals: kept, activityCorrections: corrections, busySpans: meetings, inside: span
         ).filter { !snapshot.settings.suppressedActualIDs.contains($0.id) }
         kept.append(contentsOf: fresh)
         kept.sort { $0.startedAt < $1.startedAt }

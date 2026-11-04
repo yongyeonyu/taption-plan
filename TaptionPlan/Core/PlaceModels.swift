@@ -260,6 +260,17 @@ struct TransitBoardingDecision: Identifiable, Codable, Hashable, Sendable {
 }
 
 struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
+    /// 지도에서 바로 식당으로 등록하면 이름이 기본 문구로 남을 수 있어 화면에는 식당으로 보여 준다.
+    var displayName: String {
+        guard kind == .restaurant else { return name }
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty || trimmed == "사용자 지점"
+            || trimmed.caseInsensitiveCompare("User location") == .orderedSame {
+            return "식당"
+        }
+        return trimmed
+    }
+
     var id: UUID
     var kind: FrequentPlaceKind
     var name: String
