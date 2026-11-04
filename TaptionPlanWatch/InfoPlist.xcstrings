@@ -50,6 +50,78 @@
             "state" : "translated",
             "value" : "운동 중 심박수와 거리 정보를 읽어 실시간 운동 기록을 표시합니다."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "許可したワークアウト、睡眠、アクティビティ、バイタル、栄養、服薬、診療記録をタイムラインと照らし合わせ、デバイス上で自動記録を作成するために、アクセスが必要です。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要此访问权限，以便将你允许的体能训练、睡眠、活动、生命体征、营养、用药和临床记录与你的时间线对照，并在设备上生成自动记录。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要存取權限，才能將你允許的體能訓練、睡眠、活動、生命徵象、營養、用藥和臨床記錄與你的時間軸比對，並在裝置上建立自動記錄。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Zugriff ist nötig, um die von dir freigegebenen Workouts, Schlafdaten, Aktivitäten, Vitalwerte, Ernährungsdaten, Medikamente und klinischen Einträge mit deiner Zeitleiste abzugleichen und automatische Einträge auf dem Gerät zu erstellen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L'accès est nécessaire pour comparer les entraînements, le sommeil, l'activité, les constantes vitales, la nutrition, les médicaments et les dossiers médicaux que vous autorisez avec votre chronologie et créer des enregistrements automatiques sur l'appareil."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Serve l'accesso per confrontare allenamenti, sonno, attività, parametri vitali, alimentazione, farmaci e cartelle cliniche che consenti con la tua timeline e creare registrazioni automatiche sul dispositivo."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se necesita acceso para comparar con tu línea de tiempo los entrenamientos, el sueño, la actividad, las constantes vitales, la nutrición, la medicación y los registros clínicos que permitas, y crear registros automáticos en el dispositivo."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O acesso é necessário para comparar com a sua linha do tempo os treinos, o sono, a atividade, os sinais vitais, a nutrição, os medicamentos e os registros clínicos que você permitir, e criar registros automáticos no dispositivo."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cần quyền truy cập để đối chiếu bài tập, giấc ngủ, hoạt động, chỉ số sinh tồn, dinh dưỡng, thuốc và hồ sơ lâm sàng mà bạn cho phép với dòng thời gian của bạn và tạo bản ghi tự động trên thiết bị."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akses diperlukan untuk membandingkan olahraga, tidur, aktivitas, tanda vital, nutrisi, obat, dan catatan klinis yang Anda izinkan dengan garis waktu Anda dan membuat catatan otomatis di perangkat."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ต้องเข้าถึงเพื่อเปรียบเทียบการออกกำลังกาย การนอนหลับ กิจกรรม สัญญาณชีพ โภชนาการ การใช้ยา และบันทึกทางการแพทย์ที่คุณอนุญาตกับไทม์ไลน์ของคุณ และสร้างบันทึกอัตโนมัติในเครื่อง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "आपकी अनुमति वाले वर्कआउट, नींद, गतिविधि, वाइटल्स, पोषण, दवाओं और क्लिनिकल रिकॉर्ड की आपकी टाइमलाइन से तुलना करने और डिवाइस पर स्वचालित रिकॉर्ड बनाने के लिए पहुँच ज़रूरी है।"
+          }
         }
       }
     },
@@ -66,6 +138,78 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Apple Watch에서 측정한 걷기·달리기·자전거 운동을 건강 앱에 저장합니다."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ワークアウトと睡眠の記録をタイムラインと同期するために、ヘルスケアへの書き込みアクセスが必要です。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要健康写入权限，以便将体能训练和睡眠记录与你的时间线同步。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要健康寫入權限，才能將體能訓練和睡眠記錄與你的時間軸同步。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Schreibzugriff auf Health ist nötig, um Workouts und Schlafeinträge mit deiner Zeitleiste zu synchronisieren."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L'accès en écriture à Santé est nécessaire pour synchroniser les entraînements et le sommeil avec votre chronologie."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Serve l'accesso in scrittura a Salute per sincronizzare allenamenti e sonno con la tua timeline."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se necesita acceso de escritura en Salud para sincronizar los entrenamientos y los registros de sueño con tu línea de tiempo."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O acesso de gravação ao Saúde é necessário para sincronizar treinos e registros de sono com a sua linha do tempo."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cần quyền ghi Sức khỏe để đồng bộ bản ghi bài tập và giấc ngủ với dòng thời gian của bạn."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akses tulis Kesehatan diperlukan untuk menyinkronkan catatan olahraga dan tidur dengan garis waktu Anda."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ต้องเข้าถึงการเขียนข้อมูลสุขภาพเพื่อซิงค์การออกกำลังกายและบันทึกการนอนหลับกับไทม์ไลน์ของคุณ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "वर्कआउट और नींद के रिकॉर्ड को आपकी टाइमलाइन से सिंक करने के लिए स्वास्थ्य लिखने की पहुँच ज़रूरी है।"
           }
         }
       }
@@ -84,6 +228,78 @@
             "state" : "translated",
             "value" : "걷기와 달리기 경로를 Apple 지도에 기록하려면 위치 접근이 필요합니다."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "位置情報へのアクセスは、許可の範囲内で、どこに滞在し、どれだけ移動したかを記録します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "定位权限用于在你允许的范围内，记录你停留的地点以及出行时长。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "定位服務會在你允許的權限範圍內，記錄你停留的地點以及移動了多久。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Standortzugriff zeichnet im Rahmen der von dir erlaubten Berechtigungen auf, wo du dich aufgehalten hast und wie lange du unterwegs warst."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L'accès à la localisation enregistre où vous êtes resté et la durée de vos déplacements, dans la limite des autorisations que vous accordez."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L'accesso alla posizione registra dove ti sei fermato e quanto hai viaggiato, nei limiti dei permessi che consenti."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El acceso a la ubicación registra dónde te quedaste y cuánto viajaste, dentro de los permisos que concedas."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O acesso à localização registra onde você ficou e por quanto tempo viajou, dentro das permissões que você permitir."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quyền truy cập vị trí ghi lại nơi bạn đã ở lại và thời gian di chuyển, trong phạm vi các quyền bạn cho phép."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akses lokasi merekam di mana Anda singgah dan berapa lama Anda bepergian sesuai izin yang Anda berikan."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "การเข้าถึงตำแหน่งจะบันทึกสถานที่ที่คุณอยู่และระยะเวลาการเดินทาง ภายในสิทธิ์ที่คุณอนุญาต"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "स्थान पहुँच, आपकी दी गई अनुमतियों के दायरे में यह रिकॉर्ड करती है कि आप कहाँ रुके और कितनी यात्रा की।"
+          }
         }
       }
     },
@@ -100,6 +316,78 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "운동 중 3축 가속도·회전·고도·걸음 센서를 활동 기록에 반영하고, 백그라운드에서 손목 움직임을 기록해 활동을 추정합니다."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "モーションとフィットネスへのアクセスは、センサー収集がオンのとき、歩行、ランニング、移動、歩数、階数の変化を推定します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启用传感器采集期间，“运动与健身”权限用于估算步行、跑步、出行、步数和楼层变化。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「動作與健身」存取權限會在感測器收集開啟時，估算步行、跑步、移動、步數和樓層變化。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Zugriff auf Bewegung & Fitness schätzt Gehen, Laufen, Fortbewegung, Schritte und Etagenwechsel, solange die Sensorerfassung aktiviert ist."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L'accès à Mouvement et forme estime la marche, la course, les déplacements, les pas et les changements d'étage lorsque la collecte des capteurs est activée."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L'accesso a Movimento e fitness stima camminata, corsa, spostamenti, passi e cambi di piano mentre la raccolta dei sensori è attiva."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El acceso a Movimiento y forma física estima caminar, correr, desplazamientos, pasos y cambios de planta mientras la recopilación de sensores está activada."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O acesso a Movimento e Preparo Físico estima caminhada, corrida, deslocamento, passos e mudanças de andar enquanto a coleta de sensores está ativada."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quyền Chuyển động & Thể dục dùng để ước tính đi bộ, chạy, di chuyển, số bước và thay đổi tầng khi tính năng thu thập cảm biến được bật."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akses Gerak & Kebugaran memperkirakan berjalan, berlari, perjalanan, langkah, dan perubahan lantai saat pengumpulan sensor aktif."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "การเข้าถึงการเคลื่อนไหวและสมรรถภาพจะประมาณการเดิน การวิ่ง การเดินทาง ก้าวเดิน และการเปลี่ยนชั้น ขณะเปิดการเก็บข้อมูลเซนเซอร์"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सेंसर संग्रह चालू होने पर मोशन और फ़िटनेस पहुँच चलने, दौड़ने, यात्रा, कदम और मंज़िल बदलने का अनुमान लगाती है।"
           }
         }
       }

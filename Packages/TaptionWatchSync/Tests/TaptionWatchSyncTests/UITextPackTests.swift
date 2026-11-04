@@ -54,8 +54,8 @@ final class UITextPackTests: XCTestCase {
         XCTAssertEqual(AppLanguagePreference.ResolvedLanguage.korean.text("\(count)개", "\(count) items"), "3개")
         XCTAssertEqual(AppLanguagePreference.ResolvedLanguage.english.text("\(count)개", "\(count) items"), "3 items")
         let korean = "값", english = "Value"
-        XCTAssertEqual(AppLanguagePreference.ResolvedLanguage.english.text(korean, english), "Value")
-        XCTAssertEqual(AppLanguagePreference.ResolvedLanguage.korean.text(korean, english), "값")
+        XCTAssertEqual(AppLanguagePreference.ResolvedLanguage.english.runtimeText(korean, english), "Value")
+        XCTAssertEqual(AppLanguagePreference.ResolvedLanguage.korean.runtimeText(korean, english), "값")
     }
 }
 

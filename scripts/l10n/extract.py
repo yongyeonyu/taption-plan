@@ -32,7 +32,9 @@ EN_TABLES = [
     ("TaptionPlan/Core/WidgetShared.swift", "englishTitle"),
     ("TaptionPlan/Core/FloorModels.swift", "english"),
 ]
-CALL_NAMES = {"text", "t"}
+# 표로 쓴 "한글", "English" 짝을 그대로 읽는 파일.
+PAIR_TABLE_FILES = ["TaptionPlan/UI/FirstRunTutorialGuides.swift", "TaptionPlan/UI/StickerArtBasics.swift", "TaptionPlan/Core/PlaceModels.swift"]
+CALL_NAMES = {"text", "t", "runtimeText"}
 LABEL_PAIR = re.compile(r"(?:korean\w*|ko|koreanName|koreanTitle|name|title)\s*:\s*\"")
 ENGLISH_LABEL = re.compile(r"\s*,\s*(?:english\w*|en)\s*:\s*\"")
 
@@ -139,6 +141,24 @@ def collect() -> tuple[dict, list]:
                 continue
             b = read_literal(src, n.end() - 1)
             add(f"|{b.template}", a.template, b.template, f, line_of(src, m.start()), b.expressions)
+    for f in PAIR_TABLE_FILES:
+        src = (ROOT / f).read_text(encoding="utf8")
+        previous, i = None, 0
+        while i < len(src):
+            j = skip_trivia(src, i)
+            if j != i:
+                i = j
+                continue
+            if src[i] == '"':
+                lit = read_literal(src, i)
+                if (previous and HANGUL.search(previous.template) and not HANGUL.search(lit.template)
+                        and src[previous.end:i].strip() == "," and re.search("[A-Za-z]{2}", lit.template)):
+                    add(f"{previous.template}|{lit.template}", previous.template, lit.template, f, line_of(src, i))
+                previous, i = lit, lit.end
+                continue
+            if src[i] not in ", \n\t":
+                previous = None
+            i += 1
     for f, definition in EN_TABLES:
         src = (ROOT / f).read_text(encoding="utf8")
         for text in table_literals(src, definition):

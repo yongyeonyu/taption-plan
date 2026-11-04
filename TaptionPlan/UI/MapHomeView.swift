@@ -7397,7 +7397,7 @@ struct MapHomeView: View {
                     Text(location.name)
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12.5)), weight: .semibold))
                         .lineLimit(1)
-                    Text(language.text(location.kind.title, location.kind.englishTitle))
+                    Text(language.runtimeText(location.kind.title, location.kind.englishTitle))
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(9.5)), weight: .medium))
                         .foregroundStyle(.secondary)
                 }
@@ -7423,7 +7423,7 @@ struct MapHomeView: View {
                 HStack(spacing: 10) {
                     MapHomeLocationThumbnail(destination: destination, size: 34)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(language.text(destination.koreanName, destination.englishName))
+                        Text(language.runtimeText(destination.koreanName, destination.englishName))
                             .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
                         Text(locationDestinationSubtitle(destination))
                             .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10.5)), weight: .medium))
@@ -7500,7 +7500,7 @@ struct MapHomeView: View {
             return language.text("현재 위치로 설정", "Set from current location")
         }
         if place.point != nil {
-            return language.text("설정됨", "Set") + " · " + language.text(FloorLabel.korean(place.floor ?? 1), FloorLabel.english(place.floor ?? 1))
+            return language.text("설정됨", "Set") + " · " + language.runtimeText(FloorLabel.korean(place.floor ?? 1), FloorLabel.english(place.floor ?? 1))
         }
         return language.text("현재 위치로 설정", "Set from current location")
     }
@@ -7508,7 +7508,7 @@ struct MapHomeView: View {
     private func locationDestinationAccessibilityLabel(
         _ destination: MapHomeLocationDestination
     ) -> String {
-        let name = language.text(destination.koreanName, destination.englishName)
+        let name = language.runtimeText(destination.koreanName, destination.englishName)
         if destination == .user {
             return language.text("\(name) 현재 위치 보기", "Show \(name) location")
         }
@@ -7623,7 +7623,7 @@ struct MapHomeView: View {
                         set: { fogStrengthRaw = $0.rawValue }
                     )) {
                         ForEach(MapHomeFogStrength.allCases) { strength in
-                            Text(language.text(strength.koreanLabel, strength.englishLabel)).tag(strength)
+                            Text(language.runtimeText(strength.koreanLabel, strength.englishLabel)).tag(strength)
                         }
                     }
                     .pickerStyle(.segmented)

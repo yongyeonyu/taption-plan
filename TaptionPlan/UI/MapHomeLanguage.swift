@@ -89,9 +89,9 @@ enum MapHomeLanguage: String, CaseIterable, Identifiable {
         resolvedLanguage.text(korean, english)
     }
 
-    @_disfavoredOverload
-    func text(_ korean: String, _ english: String) -> String {
-        resolvedLanguage.text(korean, english)
+    /// 리터럴이 아니라 값으로 받은 문구.
+    func runtimeText(_ korean: String, _ english: String) -> String {
+        resolvedLanguage.runtimeText(korean, english)
     }
 }
 
@@ -128,7 +128,7 @@ enum MapHomeMovementEditOption {
         for mode: TravelMode,
         language: MapHomeLanguage
     ) -> String {
-        language.text(
+        language.runtimeText(
             MovementPresentation.title(for: mode),
             englishTitle(for: mode)
         )

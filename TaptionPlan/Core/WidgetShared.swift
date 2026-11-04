@@ -200,7 +200,7 @@ enum TaptionLiveActivityStickmanAction: String, CaseIterable, Codable, Hashable,
     /// 지금 활동의 대분류 이름. 다이나믹 아일랜드·잠금화면·워치가 같은 값을 쓴다.
     /// 상태에 저장된 제목(`currentActivityTitle`)은 한국어라, 영어 설정에서는 이 이름으로 바꿔 보여 준다.
     var localizedTitle: String {
-        AppLanguagePreference.text(korean: koreanTitle, english: englishTitle)
+        AppLanguagePreference.runtimeText(koreanTitle, englishTitle)
     }
 
     var koreanTitle: String {
@@ -511,29 +511,6 @@ struct SensorCollectionActivityAttributes: ActivityAttributes {
     }
 
     var sessionID: UUID
-}
-
-/// 잠금 화면 연봉 카운터 글자. 앱이 준 기준값에서 지금 시각까지 흐른 근무 시간을 더해 간격 단위로 맞춘다.
-enum SensorCollectionSalaryText {
-    static func text(
-        baseSeconds: Double,
-        hourlyRate: Double,
-        measuredAt: Date,
-        isWorking: Bool,
-        tickSeconds: Int,
-        now: Date,
-        currencyCode: String? = nil
-    ) -> String {
-        let tick = Double(max(1, tickSeconds))
-        let elapsed = isWorking ? max(0, now.timeIntervalSince(measuredAt)) : 0
-        let seconds = ((max(0, baseSeconds) + elapsed) / tick).rounded(.down) * tick
-        let won = seconds / 3_600 * hourlyRate
-        let region = AppRegion.current
-        guard currencyCode == nil || currencyCode == region.currencyCode else {
-            return won.formatted(.currency(code: currencyCode ?? "KRW"))
-        }
-        return region.moneyText(won)
-    }
 }
 
 enum SensorCollectionActivityPolicy {

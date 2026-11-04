@@ -97,7 +97,7 @@ struct MapHomeStickerPickerSheet: View {
 
     private var tabs: [(id: String, title: String)] {
         let recent = recentStorage.isEmpty ? [] : [(id: Self.recentCategoryID, title: language.text("최근", "Recent"))]
-        return recent + StickerCatalog.categories.map { (id: $0.id, title: language.text($0.koreanName, $0.englishName)) }
+        return recent + StickerCatalog.categories.map { (id: $0.id, title: language.runtimeText($0.koreanName, $0.englishName)) }
     }
 
     private func choose(_ entry: StickerEntry) {
@@ -216,7 +216,7 @@ struct MapHomeStickerPickerSheet: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(language.text(entry.koreanName, entry.englishName))
+        .accessibilityLabel(language.runtimeText(entry.koreanName, entry.englishName))
         .accessibilityAddTraits(symbol == entry.id ? .isSelected : [])
     }
 }

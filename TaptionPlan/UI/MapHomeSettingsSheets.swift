@@ -799,7 +799,7 @@ struct MapHomeLocationSheet: View {
                 MapHomeLocationThumbnail(destination: destination)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(
-                        language.text(destination.koreanName, destination.englishName)
+                        language.runtimeText(destination.koreanName, destination.englishName)
                             + language.text(" 위치 설정", " location")
                     )
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .bold))
@@ -807,7 +807,7 @@ struct MapHomeLocationSheet: View {
                         Text(
                             language.text("현재 저장 상태", "Saved")
                                 + " · "
-                                + language.text(FloorLabel.korean(place.floor ?? 1), FloorLabel.english(place.floor ?? 1))
+                                + language.runtimeText(FloorLabel.korean(place.floor ?? 1), FloorLabel.english(place.floor ?? 1))
                         )
                             .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                             .foregroundStyle(.secondary)
@@ -843,7 +843,7 @@ struct MapHomeLocationSheet: View {
                 HStack {
                     Text(language.text("저장할 층수", "Floor to save"))
                     Spacer()
-                    Text(language.text(FloorLabel.korean(floor), FloorLabel.english(floor)))
+                    Text(language.runtimeText(FloorLabel.korean(floor), FloorLabel.english(floor)))
                         .fontWeight(.bold)
                         .foregroundStyle(destination.tint)
                 }

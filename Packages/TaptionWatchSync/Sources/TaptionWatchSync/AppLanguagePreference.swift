@@ -22,9 +22,8 @@ public enum AppLanguagePreference: String, Codable, CaseIterable, Identifiable, 
             self == .korean ? korean.text : UITextPack.translate(korean: korean, english: english)
         }
 
-        /// 값으로 받은 문구. 표에 없으면 영어 쪽을 그대로 쓴다.
-        @_disfavoredOverload
-        public func text(_ korean: String, _ english: String) -> String {
+        /// 리터럴이 아니라 값으로 받은 문구. 표에 없으면 영어 쪽을 그대로 쓴다.
+        public func runtimeText(_ korean: String, _ english: String) -> String {
             text(UIPhrase(runtime: korean), UIPhrase(runtime: english))
         }
     }
@@ -117,23 +116,13 @@ public enum AppLanguagePreference: String, Codable, CaseIterable, Identifiable, 
         current.resolvedLanguage.text(korean, english)
     }
 
-    @_disfavoredOverload
-    public static func text(_ korean: String, _ english: String) -> String {
-        current.resolvedLanguage.text(korean, english)
+    public static func runtimeText(_ korean: String, _ english: String) -> String {
+        current.resolvedLanguage.runtimeText(korean, english)
     }
 
     public static func text(
         korean: UIPhrase,
         english: UIPhrase,
-        preference: Self = .current
-    ) -> String {
-        preference.resolvedLanguage.text(korean, english)
-    }
-
-    @_disfavoredOverload
-    public static func text(
-        korean: String,
-        english: String,
         preference: Self = .current
     ) -> String {
         preference.resolvedLanguage.text(korean, english)

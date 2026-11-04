@@ -97,7 +97,8 @@ enum PlanTextSuggester {
     static var isAvailable: Bool {
         #if canImport(FoundationModels)
         if #available(iOS 26.0, *) {
-            if case .available = SystemLanguageModel.default.availability { return true }
+            let model = SystemLanguageModel.default
+            if case .available = model.availability, model.supportsLocale() { return true }
         }
         #endif
         return false

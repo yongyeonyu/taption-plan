@@ -315,7 +315,7 @@ struct MapHomeGrowthSheet: View {
                             }
                         }
                         .frame(height: 26)
-                        Text(language.text(candidate.name, candidate.englishName))
+                        Text(language.runtimeText(candidate.name, candidate.englishName))
                             .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(8)), weight: .medium))
                             .foregroundStyle(isOwned ? Color.tpInk : Color.tpSecondary.opacity(0.6))
                             .lineLimit(1)
@@ -335,7 +335,7 @@ struct MapHomeGrowthSheet: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(
                     isOwned
-                        ? (language.text(candidate.name, candidate.englishName))
+                        ? (language.runtimeText(candidate.name, candidate.englishName))
                         : language.text("아직 모으지 못한 장식", "Not collected yet")
                 )
             }
@@ -561,7 +561,7 @@ struct MapHomeGrowthSheet: View {
     }
 
     private func displayName(_ candidate: MapHomeLandmarkCandidate) -> String {
-        language.text(candidate.name, candidate.englishName)
+        language.runtimeText(candidate.name, candidate.englishName)
     }
 
     private func countryName(_ korean: String) -> String {

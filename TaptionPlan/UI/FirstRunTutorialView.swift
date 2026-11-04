@@ -412,7 +412,7 @@ private struct FirstRunPlacePicker: View {
                     .frame(width: 36, height: 36)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(language.text(destination.koreanName, destination.englishName))
+                    Text(language.runtimeText(destination.koreanName, destination.englishName))
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.bodyStrong), weight: .bold))
                         .foregroundStyle(Color.tpInk)
                     if place?.point != nil {

@@ -1,8 +1,11 @@
 import Foundation
+import os
 
 /// 언어를 따라 정해지는 통화·거리·온도 표시. 저장하지 않고, 저장값과 숫자는 바꾸지 않는다.
 public struct AppRegion: Equatable, Sendable {
     public let currencyCode: String
+    public let currencyUnit: String
+    public let usesDecimalCurrency: Bool
     public let locale: Locale
     public let usesMiles: Bool
     public let usesFahrenheit: Bool
@@ -20,13 +23,19 @@ public struct AppRegion: Equatable, Sendable {
         let system = locale.measurementSystem
         usesMiles = system == .us || system == .uk
         usesFahrenheit = system == .us
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.locale = locale
+        formatter.currencyCode = currencyCode
+        currencyUnit = currencyCode == "KRW" ? "원" : formatter.currencySymbol
+        usesDecimalCurrency = currencyCode != "KRW" && formatter.maximumFractionDigits > 0
     }
 
     /// 지금 앱 언어의 표시 지역.
     public static var current: AppRegion {
         let code = currentLanguageCode
         return cache.withLock { cached in
-            if let cached = cached[code] { return cached }
+            if let region = cached[code] { return region }
             let value = AppRegion(languageCode: code, deviceRegion: Locale.current.region?.identifier)
             cached[code] = value
             return value
@@ -36,17 +45,9 @@ public struct AppRegion: Equatable, Sendable {
     /// 통화가 원이 아니면 해외로 본다. 달러 기호로 한국 세금을 계산하는 일을 막는다.
     public var isOverseas: Bool { currencyCode != "KRW" }
 
-    public var currencyUnit: String {
-        isOverseas ? Self.moneyFormatter(for: self).currencySymbol : "원"
-    }
-
-    public var usesDecimalCurrency: Bool {
-        isOverseas && Self.moneyFormatter(for: self).maximumFractionDigits > 0
-    }
-
     public func moneyText(_ value: Double) -> String {
         if isOverseas {
-            return Self.moneyFormatter(for: self).string(from: NSNumber(value: value)) ?? "\(value)"
+            return value.formatted(.currency(code: currencyCode).locale(locale))
         }
         return "\(Self.wonGrouped(value))원"
     }
@@ -121,32 +122,5 @@ public struct AppRegion: Equatable, Sendable {
         Int(value.rounded()).formatted(.number.locale(Locale(identifier: "en_US")).grouping(.automatic))
     }
 
-    private static func moneyFormatter(for region: AppRegion) -> NumberFormatter {
-        formatters.withLock { cached in
-            if let cached = cached[region.locale.identifier] { return cached.value }
-            let formatter = NumberFormatter()
-            formatter.numberStyle = .currency
-            formatter.locale = region.locale
-            formatter.currencyCode = region.currencyCode
-            cached[region.locale.identifier] = SendableFormatter(value: formatter)
-            return formatter
-        }
-    }
-
-    private struct SendableFormatter: @unchecked Sendable { let value: NumberFormatter }
-    private static let cache = LockedBox<[String: AppRegion]>([:])
-    private static let formatters = LockedBox<[String: SendableFormatter]>([:])
-}
-
-private final class LockedBox<Value: Sendable>: @unchecked Sendable {
-    private let lock = NSLock()
-    private var value: Value
-
-    init(_ value: Value) { self.value = value }
-
-    func withLock<Result>(_ body: (inout Value) -> Result) -> Result {
-        lock.lock()
-        defer { lock.unlock() }
-        return body(&value)
-    }
+    private static let cache = OSAllocatedUnfairLock<[String: AppRegion]>(initialState: [:])
 }

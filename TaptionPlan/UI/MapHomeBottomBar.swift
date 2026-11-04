@@ -23,6 +23,8 @@ struct MapHomeBottomBarButton<Icon: View>: View {
                 Text(title)
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold))
                     .foregroundStyle(Color.tpSecondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.65)
                     .frame(height: 12)
             }
             .frame(maxWidth: .infinity, minHeight: 44)

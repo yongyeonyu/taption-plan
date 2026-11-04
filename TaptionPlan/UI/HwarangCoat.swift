@@ -125,7 +125,7 @@ struct MapHomeMenuCatPicker: View {
                 Button { onSelect(coat) } label: {
                     // 메뉴 항목에는 걸어가는 고양이를 작게 그려 넣는다.
                     Label {
-                        Text(language.text(coat.displayName, coat.englishName) + (selected == coat ? " ✓" : ""))
+                        Text(language.runtimeText(coat.displayName, coat.englishName) + (selected == coat ? " ✓" : ""))
                     } icon: {
                         Image(uiImage: HwarangDiagnostics.frame(scene: .walkLoop, sec: 0.7, side: 44, small: true, coat: .named(coat.catStyle.rawValue)))
                     }

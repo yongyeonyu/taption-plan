@@ -370,7 +370,7 @@ enum MapHomeGrowthPolicy {
 
     static func homeName(level: Int, language: MapHomeLanguage) -> String {
         let name = MapHomeHomeNames.names[min(max(level, 1), MapHomeHomeNames.names.count) - 1]
-        return language.text(name.korean, name.english)
+        return language.runtimeText(name.korean, name.english)
     }
 
     static func artworkName(level: Int) -> String {

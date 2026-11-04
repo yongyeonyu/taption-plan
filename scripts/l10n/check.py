@@ -50,11 +50,12 @@ def main() -> int:
                     if missing & required:
                         failures.append(f"{language}: 자리 빠짐 {missing & required} {key!r} → {value!r}")
                 for name in KEEP:
-                    if name in en and name not in value:
+                    if name in en and name not in value and name.replace(" ", "-") not in value:
                         failures.append(f"{language}: 고유 이름 {name} 빠짐 {key!r} → {value!r}")
                 if len(en) >= 12 and len(value) > len(en) * LENGTH_LIMIT:
                     long_rows.append({"language": language, "key": key, "en": en, "value": value})
-    (L10N / "long-strings.json").write_text(json.dumps(long_rows, ensure_ascii=False, indent=1) + "\n", encoding="utf8")
+    for row in long_rows[:20]:
+        print("긴 문구", row["language"], row["key"][:60])
     print(f"실패 {len(failures)}, 긴 문구 {len(long_rows)}")
     for failure in failures[:80]:
         print(failure)

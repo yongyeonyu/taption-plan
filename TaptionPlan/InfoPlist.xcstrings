@@ -50,6 +50,78 @@
             "state" : "translated",
             "value" : "고정된 일정을 시간표에 표시하기 위해 캘린더 접근이 필요합니다."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "固定のイベントをタイムラインに表示するには、カレンダーへのアクセスが必要です。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要日历权限，以便在你的时间线上显示固定事件。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要行事曆存取權限，才能在你的時間軸上顯示固定事件。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Kalenderzugriff ist nötig, um feste Termine in deiner Zeitleiste anzuzeigen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L'accès à Calendrier est nécessaire pour afficher les événements fixes sur votre chronologie."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Serve l'accesso al calendario per mostrare gli eventi fissi nella tua timeline."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se necesita acceso a Calendario para mostrar los eventos fijos en tu línea de tiempo."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O acesso ao Calendário é necessário para mostrar eventos fixos na sua linha do tempo."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cần quyền truy cập lịch để hiển thị các sự kiện cố định trên dòng thời gian của bạn."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akses kalender diperlukan untuk menampilkan acara tetap di garis waktu Anda."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ต้องเข้าถึงปฏิทินเพื่อแสดงกิจกรรมที่กำหนดไว้บนไทม์ไลน์ของคุณ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "अपनी टाइमलाइन पर तय इवेंट दिखाने के लिए कैलेंडर की अनुमति ज़रूरी है।"
+          }
         }
       }
     },
@@ -66,6 +138,78 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "보호된 BOKKI Plan 기록의 암호키를 열기 위해 Face ID를 사용합니다."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Face IDで、保護されたBOKKI Planの記録の暗号鍵のロックを解除します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "面容 ID 用于解锁受保护的 BOKKI Plan 记录的加密密钥。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Face ID 用來解鎖受保護的 BOKKI Plan 記錄所使用的加密金鑰。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Face ID entsperrt den Verschlüsselungsschlüssel für geschützte BOKKI-Plan-Einträge."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Face ID déverrouille la clé de chiffrement des enregistrements protégés de BOKKI Plan."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Face ID sblocca la chiave di cifratura dei dati protetti di BOKKI Plan."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Face ID desbloquea la clave de cifrado de los registros protegidos de BOKKI Plan."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Face ID desbloqueia a chave de criptografia dos registros protegidos do BOKKI Plan."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Face ID mở khóa khóa mã hóa cho các bản ghi BOKKI Plan được bảo vệ."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Face ID membuka kunci enkripsi untuk catatan BOKKI Plan yang dilindungi."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Face ID ปลดล็อคกุญแจเข้ารหัสสำหรับบันทึก BOKKI Plan ที่ได้รับการป้องกัน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Face ID सुरक्षित BOKKI Plan रिकॉर्ड की एन्क्रिप्शन कुंजी अनलॉक करता है।"
           }
         }
       }
@@ -84,6 +228,78 @@
             "state" : "translated",
             "value" : "사용자가 허용한 임상 기록의 시각과 출처를 기기 안에서 건강관리 일과와 연결하기 위해 접근이 필요합니다."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "許可した診療記録のタイミングと提供元を、デバイス上の健康管理アクティビティと結び付けるために、アクセスが必要です。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要此访问权限，以便将你允许的临床记录的时间和来源，与设备上的健康管理活动关联起来。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要存取權限，才能將你允許的臨床記錄之時間與來源，連結到裝置上的健康管理活動。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Zugriff ist nötig, um Zeitpunkt und Quelle der von dir freigegebenen klinischen Einträge mit Gesundheitsaktivitäten auf dem Gerät zu verknüpfen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L'accès est nécessaire pour relier le moment et la source des dossiers médicaux que vous autorisez aux activités de gestion de la santé sur l'appareil."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Serve l'accesso per collegare orari e fonte delle cartelle cliniche che consenti alle attività di gestione della salute sul dispositivo."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se necesita acceso para conectar el momento y el origen de los registros clínicos que permitas con las actividades de gestión de la salud en el dispositivo."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O acesso é necessário para relacionar o horário e a origem dos registros clínicos que você permitir com as atividades de gerenciamento de saúde no dispositivo."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cần quyền truy cập để kết nối thời điểm và nguồn của hồ sơ lâm sàng mà bạn cho phép với các hoạt động quản lý sức khỏe trên thiết bị."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akses diperlukan untuk menghubungkan waktu dan sumber catatan klinis yang Anda izinkan dengan aktivitas manajemen kesehatan di perangkat."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ต้องเข้าถึงเพื่อเชื่อมโยงเวลาและแหล่งที่มาของบันทึกทางการแพทย์ที่คุณอนุญาตกับกิจกรรมการจัดการสุขภาพในเครื่อง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "आपकी अनुमति वाले क्लिनिकल रिकॉर्ड के समय और स्रोत को डिवाइस पर होने वाली स्वास्थ्य-प्रबंधन गतिविधियों से जोड़ने के लिए पहुँच ज़रूरी है।"
+          }
         }
       }
     },
@@ -100,6 +316,78 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "사용자가 허용한 운동·수면·활동·생체·영양·투약·임상 기록을 기기 안에서 일과와 비교하고 자동 기록하기 위해 건강 데이터 접근이 필요합니다."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "許可したワークアウト、睡眠、アクティビティ、バイタル、栄養、服薬、診療記録をタイムラインと照らし合わせ、デバイス上で自動記録を作成するために、アクセスが必要です。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要此访问权限，以便将你允许的体能训练、睡眠、活动、生命体征、营养、用药和临床记录与你的时间线对照，并在设备上生成自动记录。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要存取權限，才能將你允許的體能訓練、睡眠、活動、生命徵象、營養、用藥和臨床記錄與你的時間軸比對，並在裝置上建立自動記錄。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Zugriff ist nötig, um die von dir freigegebenen Workouts, Schlafdaten, Aktivitäten, Vitalwerte, Ernährungsdaten, Medikamente und klinischen Einträge mit deiner Zeitleiste abzugleichen und automatische Einträge auf dem Gerät zu erstellen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L'accès est nécessaire pour comparer les entraînements, le sommeil, l'activité, les constantes vitales, la nutrition, les médicaments et les dossiers médicaux que vous autorisez avec votre chronologie et créer des enregistrements automatiques sur l'appareil."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Serve l'accesso per confrontare allenamenti, sonno, attività, parametri vitali, alimentazione, farmaci e cartelle cliniche che consenti con la tua timeline e creare registrazioni automatiche sul dispositivo."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se necesita acceso para comparar con tu línea de tiempo los entrenamientos, el sueño, la actividad, las constantes vitales, la nutrición, la medicación y los registros clínicos que permitas, y crear registros automáticos en el dispositivo."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O acesso é necessário para comparar com a sua linha do tempo os treinos, o sono, a atividade, os sinais vitais, a nutrição, os medicamentos e os registros clínicos que você permitir, e criar registros automáticos no dispositivo."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cần quyền truy cập để đối chiếu bài tập, giấc ngủ, hoạt động, chỉ số sinh tồn, dinh dưỡng, thuốc và hồ sơ lâm sàng mà bạn cho phép với dòng thời gian của bạn và tạo bản ghi tự động trên thiết bị."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akses diperlukan untuk membandingkan olahraga, tidur, aktivitas, tanda vital, nutrisi, obat, dan catatan klinis yang Anda izinkan dengan garis waktu Anda dan membuat catatan otomatis di perangkat."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ต้องเข้าถึงเพื่อเปรียบเทียบการออกกำลังกาย การนอนหลับ กิจกรรม สัญญาณชีพ โภชนาการ การใช้ยา และบันทึกทางการแพทย์ที่คุณอนุญาตกับไทม์ไลน์ของคุณ และสร้างบันทึกอัตโนมัติในเครื่อง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "आपकी अनुमति वाले वर्कआउट, नींद, गतिविधि, वाइटल्स, पोषण, दवाओं और क्लिनिकल रिकॉर्ड की आपकी टाइमलाइन से तुलना करने और डिवाइस पर स्वचालित रिकॉर्ड बनाने के लिए पहुँच ज़रूरी है।"
           }
         }
       }
@@ -118,6 +406,78 @@
             "state" : "translated",
             "value" : "운동과 수면 기록을 앱의 시간표와 동기화하기 위해 건강 데이터 저장 권한이 필요합니다."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ワークアウトと睡眠の記録をタイムラインと同期するために、ヘルスケアへの書き込みアクセスが必要です。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要健康写入权限，以便将体能训练和睡眠记录与你的时间线同步。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要健康寫入權限，才能將體能訓練和睡眠記錄與你的時間軸同步。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Schreibzugriff auf Health ist nötig, um Workouts und Schlafeinträge mit deiner Zeitleiste zu synchronisieren."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L'accès en écriture à Santé est nécessaire pour synchroniser les entraînements et le sommeil avec votre chronologie."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Serve l'accesso in scrittura a Salute per sincronizzare allenamenti e sonno con la tua timeline."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se necesita acceso de escritura en Salud para sincronizar los entrenamientos y los registros de sueño con tu línea de tiempo."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O acesso de gravação ao Saúde é necessário para sincronizar treinos e registros de sono com a sua linha do tempo."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cần quyền ghi Sức khỏe để đồng bộ bản ghi bài tập và giấc ngủ với dòng thời gian của bạn."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akses tulis Kesehatan diperlukan untuk menyinkronkan catatan olahraga dan tidur dengan garis waktu Anda."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ต้องเข้าถึงการเขียนข้อมูลสุขภาพเพื่อซิงค์การออกกำลังกายและบันทึกการนอนหลับกับไทม์ไลน์ของคุณ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "वर्कआउट और नींद के रिकॉर्ड को आपकी टाइमलाइन से सिंक करने के लिए स्वास्थ्य लिखने की पहुँच ज़रूरी है।"
+          }
         }
       }
     },
@@ -134,6 +494,78 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "이동 기록이 켜진 동안 방문 장소와 이동 구간을 백그라운드에서 기록합니다. 설정 > GPS 및 센서 데이터에서 중지할 수 있으며, 연속 기록은 배터리 사용량을 늘릴 수 있습니다."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "バックグラウンドの位置情報へのアクセスは、移動ログがオンのとき、訪れた場所と移動区間を記録します。設定 > GPSとセンサーのデータで停止できます。継続的なログ記録はバッテリーの消費を増やす場合があります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启用移动记录期间，后台定位用于记录你到访的地点和出行路段。你可以在“设置”>“GPS 与传感器数据”中停止；持续记录可能增加耗电。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開啟移動記錄後，背景定位服務會記錄你造訪的地點和移動區段。你可以在「設定 > GPS 與感測器資料」中停止；持續記錄可能增加耗電量。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Standortzugriff im Hintergrund zeichnet besuchte Orte und Reiseabschnitte auf, solange die Bewegungsaufzeichnung aktiviert ist. Du kannst sie unter Einstellungen > GPS- & Sensordaten stoppen; dauerhafte Aufzeichnung kann den Akkuverbrauch erhöhen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L'accès à la localisation en arrière-plan enregistre les lieux visités et les segments de trajet lorsque le suivi des déplacements est activé. Vous pouvez l'arrêter dans Réglages > Données GPS et capteurs ; un suivi continu peut augmenter la consommation de batterie."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L'accesso alla posizione in background registra i luoghi visitati e i tragitti mentre la registrazione degli spostamenti è attiva. Puoi interromperla in Impostazioni > Dati GPS e sensori; la registrazione continua può aumentare il consumo della batteria."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El acceso a la ubicación en segundo plano registra los lugares visitados y los tramos de viaje mientras el registro de movimiento está activado. Puedes detenerlo en Ajustes > Datos de GPS y sensores; el registro continuo puede aumentar el uso de batería."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O acesso à localização em segundo plano registra os lugares visitados e os trechos de viagem enquanto o registro de movimento está ativado. Você pode interromper em Ajustes > Dados de GPS e sensores; o registro contínuo pode aumentar o uso da bateria."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quyền vị trí nền ghi lại những nơi bạn đã ghé và các đoạn di chuyển khi tính năng ghi di chuyển được bật. Bạn có thể dừng trong Cài đặt > Dữ liệu GPS và cảm biến; ghi liên tục có thể làm tăng mức dùng pin."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akses lokasi latar belakang merekam tempat yang dikunjungi dan segmen perjalanan saat pencatatan pergerakan aktif. Anda dapat menghentikannya di Pengaturan > Data GPS & Sensor; pencatatan terus-menerus dapat meningkatkan pemakaian baterai."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "การเข้าถึงตำแหน่งเบื้องหลังจะบันทึกสถานที่ที่ไปและช่วงการเดินทางขณะเปิดการบันทึกการเคลื่อนที่ คุณหยุดได้ที่ การตั้งค่า > ข้อมูล GPS และเซนเซอร์ การบันทึกต่อเนื่องอาจใช้แบตเตอรี่มากขึ้น"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "बैकग्राउंड स्थान पहुँच, मूवमेंट लॉगिंग चालू होने पर घूमी गई जगहें और यात्रा के खंड रिकॉर्ड करती है। आप इसे सेटिंग्ज़ > GPS और सेंसर डेटा में रोक सकते हैं; लगातार लॉगिंग से बैटरी ज़्यादा खर्च हो सकती है।"
           }
         }
       }
@@ -152,6 +584,78 @@
             "state" : "translated",
             "value" : "머문 장소와 이동 시간을 사용자가 허용한 범위에서 기록하기 위해 위치 접근이 필요합니다."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "位置情報へのアクセスは、許可の範囲内で、どこに滞在し、どれだけ移動したかを記録します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "定位权限用于在你允许的范围内，记录你停留的地点以及出行时长。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "定位服務會在你允許的權限範圍內，記錄你停留的地點以及移動了多久。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Standortzugriff zeichnet im Rahmen der von dir erlaubten Berechtigungen auf, wo du dich aufgehalten hast und wie lange du unterwegs warst."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L'accès à la localisation enregistre où vous êtes resté et la durée de vos déplacements, dans la limite des autorisations que vous accordez."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L'accesso alla posizione registra dove ti sei fermato e quanto hai viaggiato, nei limiti dei permessi che consenti."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El acceso a la ubicación registra dónde te quedaste y cuánto viajaste, dentro de los permisos que concedas."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O acesso à localização registra onde você ficou e por quanto tempo viajou, dentro das permissões que você permitir."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quyền truy cập vị trí ghi lại nơi bạn đã ở lại và thời gian di chuyển, trong phạm vi các quyền bạn cho phép."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akses lokasi merekam di mana Anda singgah dan berapa lama Anda bepergian sesuai izin yang Anda berikan."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "การเข้าถึงตำแหน่งจะบันทึกสถานที่ที่คุณอยู่และระยะเวลาการเดินทาง ภายในสิทธิ์ที่คุณอนุญาต"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "स्थान पहुँच, आपकी दी गई अनुमतियों के दायरे में यह रिकॉर्ड करती है कि आप कहाँ रुके और कितनी यात्रा की।"
+          }
         }
       }
     },
@@ -168,6 +672,78 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "액션 아이템에 음성 메모를 첨부하기 위해 마이크 접근이 필요합니다."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アクション項目にボイスメモを添付するために、マイクへのアクセスが必要です。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要麦克风权限，以便为行动项附加语音备忘。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要麥克風存取權限，才能將語音備忘錄附加到行動項目。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Mikrofonzugriff ist nötig, um Sprachmemos an Aufgaben anzuhängen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L'accès au micro est nécessaire pour joindre des mémos vocaux aux actions."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Serve l'accesso al microfono per allegare memo vocali alle azioni."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se necesita acceso al micrófono para adjuntar notas de voz a las tareas."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O acesso ao microfone é necessário para anexar notas de voz aos itens de ação."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cần quyền truy cập micrô để đính kèm ghi âm vào các mục hành động."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akses mikrofon diperlukan untuk melampirkan memo suara ke item aksi."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ต้องเข้าถึงไมโครโฟนเพื่อแนบบันทึกเสียงกับรายการปฏิบัติ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "एक्शन आइटम में वॉइस मेमो जोड़ने के लिए माइक्रोफ़ोन की पहुँच ज़रूरी है।"
           }
         }
       }
@@ -186,6 +762,78 @@
             "state" : "translated",
             "value" : "센서 수집이 켜진 동안 걷기·달리기·이동 상태와 걸음 및 층수 변화를 추정하기 위해 동작 및 피트니스 접근이 필요합니다."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "モーションとフィットネスへのアクセスは、センサー収集がオンのとき、歩行、ランニング、移動、歩数、階数の変化を推定します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启用传感器采集期间，“运动与健身”权限用于估算步行、跑步、出行、步数和楼层变化。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「動作與健身」存取權限會在感測器收集開啟時，估算步行、跑步、移動、步數和樓層變化。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Zugriff auf Bewegung & Fitness schätzt Gehen, Laufen, Fortbewegung, Schritte und Etagenwechsel, solange die Sensorerfassung aktiviert ist."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L'accès à Mouvement et forme estime la marche, la course, les déplacements, les pas et les changements d'étage lorsque la collecte des capteurs est activée."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L'accesso a Movimento e fitness stima camminata, corsa, spostamenti, passi e cambi di piano mentre la raccolta dei sensori è attiva."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El acceso a Movimiento y forma física estima caminar, correr, desplazamientos, pasos y cambios de planta mientras la recopilación de sensores está activada."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O acesso a Movimento e Preparo Físico estima caminhada, corrida, deslocamento, passos e mudanças de andar enquanto a coleta de sensores está ativada."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quyền Chuyển động & Thể dục dùng để ước tính đi bộ, chạy, di chuyển, số bước và thay đổi tầng khi tính năng thu thập cảm biến được bật."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akses Gerak & Kebugaran memperkirakan berjalan, berlari, perjalanan, langkah, dan perubahan lantai saat pengumpulan sensor aktif."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "การเข้าถึงการเคลื่อนไหวและสมรรถภาพจะประมาณการเดิน การวิ่ง การเดินทาง ก้าวเดิน และการเปลี่ยนชั้น ขณะเปิดการเก็บข้อมูลเซนเซอร์"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सेंसर संग्रह चालू होने पर मोशन और फ़िटनेस पहुँच चलने, दौड़ने, यात्रा, कदम और मंज़िल बदलने का अनुमान लगाती है।"
+          }
         }
       }
     },
@@ -202,6 +850,78 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "촬영 시각에 맞춰 사진을 시간표에 표시하기 위해 사진 접근이 필요합니다."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "撮影した時刻のタイムラインに写真を表示するために、写真へのアクセスが必要です。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要照片权限，以便在时间线上按拍摄时间显示照片。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要照片存取權限，才能在時間軸上依拍攝時間顯示照片。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Fotozugriff ist nötig, um Fotos zum Aufnahmezeitpunkt in der Zeitleiste anzuzeigen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L'accès aux photos est nécessaire pour afficher les photos sur la chronologie à l'heure de leur prise."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Serve l'accesso alle foto per mostrare le foto nella timeline all'ora in cui sono state scattate."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se necesita acceso a las fotos para mostrarlas en la línea de tiempo en el momento en que se tomaron."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O acesso às fotos é necessário para mostrar fotos na linha do tempo no horário em que foram tiradas."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cần quyền truy cập Ảnh để hiển thị ảnh trên dòng thời gian tại thời điểm chúng được chụp."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akses foto diperlukan untuk menampilkan foto di garis waktu pada saat foto diambil."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ต้องเข้าถึงรูปภาพเพื่อแสดงรูปภาพบนไทม์ไลน์ตามเวลาที่ถ่าย"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "टाइमलाइन पर फ़ोटो को उनके खींचे जाने के समय पर दिखाने के लिए फ़ोटो की पहुँच ज़रूरी है।"
           }
         }
       }

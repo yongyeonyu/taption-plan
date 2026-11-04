@@ -53,7 +53,7 @@ struct MapHomeUserLocationActionSheet: View {
 
     private var locationSubtitle: String {
         if let transitLocation {
-            return language.text(
+            return language.runtimeText(
                 transitLocation.kind.title,
                 transitLocation.kind.englishTitle
             )
@@ -215,7 +215,7 @@ struct MapHomeSearchPinLocationSheet: View {
                 HStack {
                     Text(language.text("저장할 층수", "Floor to save"))
                     Spacer()
-                    Text(language.text(FloorLabel.korean(floor), FloorLabel.english(floor)))
+                    Text(language.runtimeText(FloorLabel.korean(floor), FloorLabel.english(floor)))
                         .fontWeight(.bold)
                         .foregroundStyle(Color.tpReferenceBlue)
                 }
@@ -235,7 +235,7 @@ struct MapHomeSearchPinLocationSheet: View {
                                 .resizable()
                                 .scaledToFit()
                                 .frame(width: 24, height: 24)
-                            Text(language.text(destination.koreanName, destination.englishName))
+                            Text(language.runtimeText(destination.koreanName, destination.englishName))
                                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
                             Spacer()
                         }
@@ -269,7 +269,7 @@ struct MapHomeSearchPinLocationSheet: View {
                                 .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
                                 .foregroundStyle(Color.tpReferenceBlue)
                             Text(
-                                language.text(
+                                language.runtimeText(
                                     kind.title,
                                     kind.englishTitle
                                 )

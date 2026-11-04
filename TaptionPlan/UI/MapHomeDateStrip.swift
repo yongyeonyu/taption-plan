@@ -61,7 +61,7 @@ struct MapHomeDateStrip: View {
     /// 펼친 줄의 맨 왼쪽에 보이는 가운데 날짜의 달. 어느 달인지 헷갈리지 않게 한다.
     private var monthLabel: some View {
         let month = calendar.component(.month, from: visibleDay)
-        return Text(language.text("\(month)월", monthAbbreviation(for: visibleDay)))
+        return Text(language.runtimeText("\(month)월", monthAbbreviation(for: visibleDay)))
             .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
             .foregroundStyle(Color.tpInk)
             .lineLimit(1)

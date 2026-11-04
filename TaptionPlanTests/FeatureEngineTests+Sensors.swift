@@ -695,7 +695,7 @@ extension FeatureEngineTests {
 
     func testGPSLoggingIntervalTextUsesSecondsAndMinutes() {
         let expect = { (korean: String, english: String) in
-            AppLanguagePreference.text(korean: korean, english: english)
+            AppLanguagePreference.runtimeText(korean, english)
         }
         XCTAssertEqual(GPSLoggingPreferences.intervalText(30), expect("30초", "30s"))
         XCTAssertEqual(GPSLoggingPreferences.intervalText(60), expect("1분", "1m"))

@@ -18,7 +18,7 @@ enum FirstRunGuideCatalog {
 
     static func rows(for step: FirstRunTutorialStep, language: MapHomeLanguage) -> [FirstRunGuideRow] {
         func row(_ icon: String, _ koTitle: String, _ enTitle: String, _ ko: String, _ en: String) -> FirstRunGuideRow {
-            FirstRunGuideRow(icon: icon, title: language.text(koTitle, enTitle), detail: language.text(ko, en))
+            FirstRunGuideRow(icon: icon, title: language.runtimeText(koTitle, enTitle), detail: language.runtimeText(ko, en))
         }
         switch step {
         case .map:

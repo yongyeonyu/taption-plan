@@ -63,7 +63,14 @@ enum MapHomeVectorLabels {
         var haloWidth = 1.6
     }
 
-    private static let name = #"["coalesce", ["get", "name:ko"], ["get", "name"]]"#
+    /// 번역 언어는 그 언어 이름 → 영어 → 현지 이름 순서로 쓴다. 한국어·영어는 한국어 이름을 먼저 쓴다.
+    private static let nameFields: String = {
+        guard let code = UITextPack.bundleLanguageCode else { return #"["get", "name:ko"], ["get", "name"]"# }
+        let base = code.split(separator: "-").first.map(String.init) ?? code
+        let names = code == "zh-Hant" ? [code, base] : [base]
+        return (names + ["en"]).map { #"["get", "name:\#($0)"], "# }.joined() + #"["get", "name"]"#
+    }()
+    private static let name = #"["coalesce", \#(nameFields)]"#
     private static let regular = #"["Noto Sans Regular"]"#
     private static let bold = #"["Noto Sans Bold"]"#
 
@@ -196,7 +203,7 @@ enum MapHomeVectorLabels {
             id: "label-road-major", sourceLayer: "transportation_name", minzoom: 11,
             filter: #"["match", ["get", "class"], ["motorway", "trunk", "primary", "secondary", "tertiary"], true, false]"#,
             layout: lineLayout(
-                field: #"["coalesce", ["get", "name:ko"], ["get", "name"], ["get", "ref"]]"#,
+                field: #"["coalesce", \#(nameFields), ["get", "ref"]]"#,
                 size: #"["interpolate", ["linear"], ["zoom"], 11, 9, 16, 12, 18, 14]"#
             ),
             tone: .road, haloWidth: 1.8

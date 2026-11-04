@@ -120,7 +120,7 @@ enum MapHomeCounterDetailBuilder {
         let modes = entries.enumerated().map { index, entry in
             MapHomeCounterDetailContent.Row(
                 id: index,
-                title: language.text(entry.mode.summaryKoreanTitle, entry.mode.summaryEnglishTitle),
+                title: language.runtimeText(entry.mode.summaryKoreanTitle, entry.mode.summaryEnglishTitle),
                 subtitle: nil,
                 value: MapHomeDayTravelSummary.distanceText(entry.meters),
                 share: totalMeters > 0 ? entry.meters / totalMeters : nil
@@ -134,7 +134,7 @@ enum MapHomeCounterDetailBuilder {
             MapHomeCounterDetailContent.Row(
                 id: index,
                 title: spanText(segment.span.start, segment.span.end),
-                subtitle: language.text(segment.mode.summaryKoreanTitle, segment.mode.summaryEnglishTitle),
+                subtitle: language.runtimeText(segment.mode.summaryKoreanTitle, segment.mode.summaryEnglishTitle),
                 value: MapHomeDayTravelSummary.distanceText(segment.distanceMeters),
                 share: longest > 0 ? segment.distanceMeters / longest : nil
             )

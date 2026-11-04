@@ -104,7 +104,7 @@ struct MapHomeTransitBoardingCandidateSheet: View {
                 }
             } label: {
                 Label(
-                    language.text(
+                    language.runtimeText(
                         AppLanguagePreference.text(korean: "\(MovementPresentation.title(for: candidate.mode)) 탑승", english: "\(MovementPresentation.englishTitle(for: candidate.mode)) ride"),
                         "Board \(MovementPresentation.englishTitle(for: candidate.mode))"
                     ),
@@ -407,7 +407,7 @@ struct MapHomeTransitLocationsSheet: View {
             Picker(language.text("유형", "Type"), selection: $kind) {
                 ForEach(UserTransitLocationKind.allCases, id: \.self) { value in
                     Text(
-                        language.text(
+                        language.runtimeText(
                             value.title,
                             value.englishTitle
                         )
@@ -421,7 +421,7 @@ struct MapHomeTransitLocationsSheet: View {
                 HStack {
                     Text(language.text("저장할 층수", "Floor to save"))
                     Spacer()
-                    Text(language.text(FloorLabel.korean(floor), FloorLabel.english(floor)))
+                    Text(language.runtimeText(FloorLabel.korean(floor), FloorLabel.english(floor)))
                         .fontWeight(.bold)
                         .foregroundStyle(Color.tpReferenceBlue)
                 }
@@ -507,7 +507,7 @@ struct MapHomeTransitLocationsSheet: View {
                                     .foregroundStyle(Color.tpInk)
                                     .lineLimit(1)
                                 Text(
-                                    language.text(
+                                    language.runtimeText(
                                         location.kind.title,
                                         location.kind.englishTitle
                                     )
@@ -515,7 +515,7 @@ struct MapHomeTransitLocationsSheet: View {
                                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                                 .foregroundStyle(.secondary)
                                 if let floor = location.floor {
-                                    Text(language.text(FloorLabel.korean(floor), FloorLabel.english(floor)))
+                                    Text(language.runtimeText(FloorLabel.korean(floor), FloorLabel.english(floor)))
                                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
                                         .foregroundStyle(Color.tpReferenceBlue)
                                 }
@@ -687,7 +687,7 @@ struct MapHomeTransitLocationNameEditor: View {
                 HStack {
                     Text(language.text("층수", "Floor"))
                     Spacer()
-                    Text(language.text(FloorLabel.korean(floor), FloorLabel.english(floor)))
+                    Text(language.runtimeText(FloorLabel.korean(floor), FloorLabel.english(floor)))
                         .fontWeight(.bold)
                         .foregroundStyle(Color.tpReferenceBlue)
                 }

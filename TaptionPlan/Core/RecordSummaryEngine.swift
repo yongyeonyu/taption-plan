@@ -28,19 +28,13 @@ enum DurationText {
         let totalMinutes = max(0, Int(interval / 60))
         let hours = totalMinutes / 60
         let minutes = totalMinutes % 60
-        if hours == 0 { return "\(minutes)m" }
-        if minutes == 0 { return "\(hours)h" }
-        return "\(hours)h \(minutes)m"
-    }
-
-    static func localized(_ interval: TimeInterval, english useEnglish: Bool) -> String {
-        guard useEnglish else { return korean(interval) }
-        let totalMinutes = Int(interval / 60)
-        let hours = totalMinutes / 60
-        let minutes = totalMinutes % 60
         if hours == 0 { return AppLanguagePreference.ResolvedLanguage.english.text("\(minutes)분", "\(minutes)m") }
         if minutes == 0 { return AppLanguagePreference.ResolvedLanguage.english.text("\(hours)시간", "\(hours)h") }
         return AppLanguagePreference.ResolvedLanguage.english.text("\(hours)시간 \(minutes)분", "\(hours)h \(minutes)m")
+    }
+
+    static func localized(_ interval: TimeInterval, english useEnglish: Bool) -> String {
+        useEnglish ? english(interval) : korean(interval)
     }
 }
 

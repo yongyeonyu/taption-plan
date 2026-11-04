@@ -1283,9 +1283,7 @@ struct MapHomeTimeSidebar: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(
-                        group.count == 1
-                            ? "미확인 구간 \(timeLabel(for: group[0].startMinute))–\(timeLabel(for: group[0].endMinute)) 입력"
-                            : "미확인 구간 \(group.count)개 선택"
+                        unconfirmedGroupLabel(start: timeLabel(for: group[0].startMinute), end: timeLabel(for: group[0].endMinute), count: group.count)
                     )
                     .position(x: railOriginX - 16, y: y)
                     .zIndex(4)
@@ -1669,7 +1667,7 @@ struct MapHomeTimeSidebar: View {
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("클립 편집")
+                    .accessibilityLabel(AppLanguagePreference.text("클립 편집", "Clip editor"))
                     .accessibilityIdentifier("mapHomeTimelineEditButton")
                     .position(x: railOriginX + railWidth / 2, y: railHeight - verticalInset / 2)
                     .zIndex(5)
@@ -1687,7 +1685,7 @@ struct MapHomeTimeSidebar: View {
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("사이드바 닫기")
+                    .accessibilityLabel(AppLanguagePreference.text("사이드바 닫기", "Close sidebar"))
                     .accessibilityIdentifier("mapHomeSidebarCollapseButton")
                     .position(x: railOriginX + railWidth / 2, y: verticalInset / 2)
                     .zIndex(5)
@@ -1703,7 +1701,7 @@ struct MapHomeTimeSidebar: View {
             .coordinateSpace(name: "mapHomeTimeSidebarRail")
             .contentShape(Rectangle())
             .confirmationDialog(
-                "미확인 구간 고르기",
+                AppLanguagePreference.text("미확인 구간 고르기", "Choose an unconfirmed interval"),
                 isPresented: Binding(
                     get: { reviewChoices != nil },
                     set: { if !$0 { reviewChoices = nil } }
@@ -2549,11 +2547,12 @@ struct MapHomeWeatherSidebar: View {
                         .accessibilityElement(children: .ignore)
                         .accessibilityLabel(
                             language.text(
-                                "\(entryMinute / 60)시 날씨 \(entry.context.condition), \(AppRegion.current.temperature(celsius: entry.context.temperatureCelsius))도"
-                                    + (entry.context.airQuality.map { ", 미세먼지 \($0.overallGrade.displayName)" } ?? ""),
+                                "\(entryMinute / 60)시 날씨 \(entry.context.condition), \(AppRegion.current.temperature(celsius: entry.context.temperatureCelsius))도",
                                 "\(entryMinute / 60):00 weather: \(entry.context.condition), \(AppRegion.current.temperature(celsius: entry.context.temperatureCelsius)) degrees"
-                                    + (entry.context.airQuality.map { ", air quality \($0.overallGrade.displayName)" } ?? "")
-                            )
+                            ) + (entry.context.airQuality.map {
+                                let grade = $0.overallGrade.displayName
+                                return language.text(", 미세먼지 \(grade)", ", air quality \(grade)")
+                            } ?? "")
                         )
                         .accessibilityValue(
                             isSelected
@@ -2758,4 +2757,10 @@ extension AnyTransition {
             identity: SidebarVerticalStretch(amount: 1)
         )
     }
+}
+
+private func unconfirmedGroupLabel(start: String, end: String, count: Int) -> String {
+    count == 1
+        ? AppLanguagePreference.text("미확인 구간 \(start)–\(end) 입력", "Enter unconfirmed interval \(start)–\(end)")
+        : AppLanguagePreference.text("미확인 구간 \(count)개 선택", "Choose from \(count) unconfirmed intervals")
 }

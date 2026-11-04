@@ -529,7 +529,7 @@ struct MapHomeDaySummarySheet: View {
                         .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold))
                         .foregroundStyle(Color.tpAccent)
                         .frame(width: 24)
-                    Text(language.text(entry.mode.summaryKoreanTitle, entry.mode.summaryEnglishTitle))
+                    Text(language.runtimeText(entry.mode.summaryKoreanTitle, entry.mode.summaryEnglishTitle))
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold))
                         .foregroundStyle(Color.tpInk)
                     Spacer()

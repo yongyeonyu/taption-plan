@@ -659,12 +659,10 @@ struct GPSLoggingPreferences: Codable, Hashable, Sendable {
     static func intervalText(_ seconds: Int) -> String {
         let minutes = seconds / 60
         let rest = seconds % 60
-        return AppLanguagePreference.text(
-            korean: [minutes > 0 ? "\(minutes)분" : nil, rest > 0 ? "\(rest)초" : nil]
-                .compactMap { $0 }.joined(separator: " "),
-            english: [minutes > 0 ? "\(minutes)m" : nil, rest > 0 ? "\(rest)s" : nil]
-                .compactMap { $0 }.joined(separator: " ")
-        )
+        return [
+            minutes > 0 ? AppLanguagePreference.text("\(minutes)분", "\(minutes)m") : nil,
+            rest > 0 ? AppLanguagePreference.text("\(rest)초", "\(rest)s") : nil,
+        ].compactMap { $0 }.joined(separator: " ")
     }
 
 }
