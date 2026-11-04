@@ -113,6 +113,15 @@ extension AppModel {
             onCancel: { worker.cancel() })) ?? SensorReadingsLoadResult(readings: [], isComplete: false)
     }
 
+    /// 여러 날 영상용 위치 읽기(PLR1104A02). 하루 읽기를 1년치 되풀이하므로 쓰지 않는 워치 가속도 묶음은 읽지 않는다.
+    func routeReadingsForRange(in span: TimeSpan) async -> (readings: [SensorReading], isComplete: Bool) {
+        guard let sensorService,
+              let archived = try? await sensorService.archivedRouteReadingsLoadResult(in: span) else {
+            return ([], false)
+        }
+        return (archived.readings + photoBackfillReadings(in: span, existingReadings: archived.readings), archived.isComplete)
+    }
+
     /// Loads the WBS-style day snapshot: one source snapshot plus one bounded
     /// sensor read. Every consumer receives derived arrays from that captured
     /// value, so an async load cannot mix two revisions or rewrite raw data.

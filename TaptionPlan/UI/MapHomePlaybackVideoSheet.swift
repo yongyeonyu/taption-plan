@@ -24,15 +24,25 @@ struct MapHomePlaybackVideoSheet: View {
     @AppStorage("playbackVideoRangePreset") private var presetRaw = MapHomeRangePreset.day.rawValue
     @AppStorage("playbackVideoRangeSeconds") private var targetSeconds = 0
     @AppStorage("playbackVideoHidesPrivatePlaces") private var hidesPrivatePlaces = true
+    @AppStorage("playbackVideoMusic") private var musicRaw = MapHomePlaybackMusicTrack.defaultID
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var preview = MapHomePlaybackMusicPreview()
     @State private var customStart = Calendar.autoupdatingCurrent.date(byAdding: .day, value: -3, to: .now) ?? .now
     @State private var customEnd = Date.now
     @State private var rangePlan: MapHomeRangeTripPlan?
     @State private var isLoadingRange = false
+    @State private var rangeLoadPercent = 0
+    /// 구간 안에서 위치 기록을 읽지 못한 날 수. 없는 경로를 지어내지 않고 알려 준다.
+    @State private var missingRangeDays = 0
+    /// 영상 길이·가리기만 바꿀 때 1년치를 다시 읽지 않도록 줄인 표본을 시트가 열린 동안 둔다.
+    @State private var loadedRange: (span: TimeSpan, samples: [MapHomeRangeTripPlan.Sample], missing: Int)?
 
     /// 0은 기간에 따라 자동.
     private static let lengthChoices = [0, 30, 60, 90, 180]
 
-    private var preset: MapHomeRangePreset { MapHomeRangePreset(rawValue: presetRaw) ?? .day }
+    private var preset: MapHomeRangePreset { MapHomeRangePreset.stored(presetRaw) }
+
+    private var musicTrack: MapHomePlaybackMusicTrack? { MapHomePlaybackMusicTrack.stored(musicRaw) }
 
     private var rangeSpan: TimeSpan {
         preset.span(selectedDate: selectedDate, customStart: customStart, customEnd: customEnd, now: .now)
@@ -43,6 +53,28 @@ struct MapHomePlaybackVideoSheet: View {
     }
 
     var body: some View {
+        ScrollView {
+            content
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(Color.tpBackground)
+        .presentationBackground(Color.tpBackground)
+        // 닫기·아래로 쓸기 모두 여기로 온다. 만드는 중이면 렌더링을 멈춘다.
+        .onDisappear {
+            task?.cancel()
+            preview.stop()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase != .active { preview.stop() }
+        }
+        .onChange(of: musicRaw) { _, _ in
+            guard preview.playing != nil else { return }
+            togglePreview(restart: true)
+        }
+        .task(id: rangeKey) { await loadRange() }
+    }
+
+    private var content: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .firstTextBaseline) {
                 Text(language.text("재생 영상 만들기", "Make playback video"))
@@ -58,17 +90,16 @@ struct MapHomePlaybackVideoSheet: View {
             }
             if phase == .idle || isFailed {
                 rangeControls
+                musicControls
             }
             VStack(alignment: .leading, spacing: 10) {
                 Text(message)
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
                 if phase == .rendering || phase == .saving {
-                    ProgressView(value: progress)
-                        .tint(Color.tpAccent)
-                    Text("\(Int((progress * 100).rounded(.down)))%")
-                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold).monospacedDigit())
-                        .foregroundStyle(Color.tpSecondary)
+                    progressRow(progress)
+                } else if isLoadingRange {
+                    progressRow(Double(rangeLoadPercent) / 100)
                 }
             }
             .padding(14)
@@ -81,12 +112,65 @@ struct MapHomePlaybackVideoSheet: View {
             actionButton
         }
         .padding(22)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(Color.tpBackground)
-        .presentationBackground(Color.tpBackground)
-        // 닫기·아래로 쓸기 모두 여기로 온다. 만드는 중이면 렌더링을 멈춘다.
-        .onDisappear { task?.cancel() }
-        .task(id: rangeKey) { await loadRange() }
+    }
+
+    @ViewBuilder
+    private func progressRow(_ value: Double) -> some View {
+        ProgressView(value: value)
+            .tint(Color.tpAccent)
+        Text("\(Int((value * 100).rounded(.down)))%")
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold).monospacedDigit())
+            .foregroundStyle(Color.tpSecondary)
+    }
+
+    /// 음악 고르기와 미리듣기(BGM1104A02).
+    private var musicControls: some View {
+        HStack(spacing: 8) {
+            Menu {
+                Picker(language.text("음악", "Music"), selection: $musicRaw) {
+                    Text(language.text("음악 없음", "No music")).tag(MapHomePlaybackMusicTrack.noneID)
+                    ForEach(MapHomePlaybackMusicTrack.allCases) { track in
+                        Text(track.title(language)).tag(track.rawValue)
+                    }
+                }
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "music.note")
+                    Text(musicTrack?.title(language) ?? language.text("음악 없음", "No music"))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                    Spacer(minLength: 4)
+                    Image(systemName: "chevron.up.chevron.down")
+                }
+                .padding(.horizontal, 12)
+                .frame(maxWidth: .infinity, minHeight: 40)
+                .foregroundStyle(Color.tpInk)
+                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
+            Button { togglePreview() } label: {
+                Image(systemName: preview.playing == nil ? "play.fill" : "stop.fill")
+                    .frame(width: 40, height: 40)
+                    .foregroundStyle(canPreview ? Color.tpInk : Color.tpSecondary)
+                    .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .disabled(!canPreview)
+            .accessibilityLabel(preview.playing == nil ? language.text("미리듣기", "Preview") : language.text("미리듣기 정지", "Stop preview"))
+        }
+        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
+    }
+
+    /// 음성 메모를 녹음하는 동안에는 오디오 세션을 건드리지 않는다.
+    private var canPreview: Bool { musicTrack != nil && !model.isRecordingVoiceMemo }
+
+    private func togglePreview(restart: Bool = false) {
+        if preview.playing != nil, !restart {
+            preview.stop()
+        } else if let musicTrack, canPreview {
+            preview.play(musicTrack)
+        } else {
+            preview.stop()
+        }
     }
 
     private var isFailed: Bool {
@@ -96,7 +180,7 @@ struct MapHomePlaybackVideoSheet: View {
 
     private var rangeControls: some View {
         VStack(alignment: .leading, spacing: 10) {
-            choiceRow(MapHomeRangePreset.allCases.map { ($0.rawValue, title(for: $0)) }, selected: presetRaw) { presetRaw = $0 }
+            choiceRow(MapHomeRangePreset.allCases.map { ($0.rawValue, title(for: $0)) }, selected: preset.rawValue) { presetRaw = $0 }
             if preset == .custom {
                 DatePicker(language.text("시작", "From"), selection: $customStart, in: ...Date.now, displayedComponents: .date)
                 DatePicker(language.text("끝", "To"), selection: $customEnd, in: ...Date.now, displayedComponents: .date)
@@ -130,10 +214,11 @@ struct MapHomePlaybackVideoSheet: View {
 
     private func title(for preset: MapHomeRangePreset) -> String {
         switch preset {
-        case .day: language.text("이 날", "This day")
-        case .recentSevenDays: language.text("최근 7일", "7 days")
-        case .lastMonth: language.text("지난달", "Last month")
-        case .custom: language.text("직접 지정", "Custom")
+        case .day: language.text("1일", "1 day")
+        case .week: language.text("1주일", "1 week")
+        case .month: language.text("1달", "1 month")
+        case .year: language.text("1년", "1 year")
+        case .custom: language.text("특정 날짜", "Custom")
         }
     }
 
@@ -168,29 +253,63 @@ struct MapHomePlaybackVideoSheet: View {
         MapHomeRangeTripPlan.make(samples: samples, span: span, durationSeconds: seconds, hiddenPlaces: hiddenPlaces)
     }
 
-    /// 하루씩 읽어 위치 표본만 남긴다. 여러 날의 `SensorReading`을 한꺼번에 메모리에 두지 않는다.
+    /// 주 스레드 밖에서 하루치를 표본으로 줄인다.
+    private nonisolated static func daySamples(from readings: [SensorReading]) async -> [MapHomeRangeTripPlan.Sample] {
+        MapHomeRangeTripPlan.thinned(
+            MapHomeRangeTripPlan.samples(from: readings).sorted { $0.time < $1.time }
+        )
+    }
+
+    /// 하루씩 읽어 줄인 표본만 남긴다. 여러 날의 `SensorReading`을 한꺼번에 메모리에 두지 않는다.
+    /// 판독이 없는 날은 저장된 이동·장소로 경로를 지어내지 않고 날 수만 센다.
     private func loadRange() async {
         rangePlan = nil
+        missingRangeDays = 0
         guard preset != .day else { return }
         isLoadingRange = true
+        rangeLoadPercent = 0
         defer { isLoadingRange = false }
         let span = rangeSpan
         let days = max(1, Int((span.duration / 86_400).rounded(.up)))
         let seconds = Double(targetSeconds == 0 ? MapHomeRangePreset.automaticSeconds(forDays: days) : targetSeconds)
         let hiddenPlaces = hiddenPlaces
         let calendar = Calendar.autoupdatingCurrent
+        let loaded: (span: TimeSpan, samples: [MapHomeRangeTripPlan.Sample], missing: Int)
+        if let cached = loadedRange, calendar.isDate(cached.span.start, inSameDayAs: span.start),
+           calendar.isDate(cached.span.end, inSameDayAs: span.end) {
+            loaded = cached
+        } else {
+            guard let read = await readRange(span, days: days, calendar: calendar) else { return }
+            loaded = read
+            loadedRange = read
+        }
+        let plan = await Self.makePlan(samples: loaded.samples, span: span, seconds: seconds, hiddenPlaces: hiddenPlaces)
+        guard !Task.isCancelled else { return }
+        rangePlan = plan
+        missingRangeDays = loaded.missing
+    }
+
+    /// 취소되면 nil.
+    private func readRange(
+        _ span: TimeSpan, days: Int, calendar: Calendar
+    ) async -> (span: TimeSpan, samples: [MapHomeRangeTripPlan.Sample], missing: Int)? {
         var samples: [MapHomeRangeTripPlan.Sample] = []
+        var missing = 0
+        var dayIndex = 0
         var dayStart = span.start
         while dayStart < span.end {
             let next = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: dayStart)) ?? span.end
-            let readings = await model.sensorReadingsLoadResult(in: TimeSpan(start: dayStart, end: min(next, span.end))).readings
-            samples += MapHomeRangeTripPlan.samples(from: readings)
-            if Task.isCancelled { return }
+            let loaded = await model.routeReadingsForRange(in: TimeSpan(start: dayStart, end: min(next, span.end)))
+            let daySamples = await Self.daySamples(from: loaded.readings)
+            if Task.isCancelled { return nil }
+            samples += daySamples
+            if daySamples.isEmpty { missing += 1 }
+            dayIndex += 1
+            let percent = min(100, dayIndex * 100 / days)
+            if percent != rangeLoadPercent { rangeLoadPercent = percent }
             dayStart = next
         }
-        let plan = await Self.makePlan(samples: samples, span: span, seconds: seconds, hiddenPlaces: hiddenPlaces)
-        guard !Task.isCancelled else { return }
-        rangePlan = plan
+        return (span, samples, missing)
     }
 
     private var message: String {
@@ -217,10 +336,16 @@ struct MapHomePlaybackVideoSheet: View {
             return language.text("이 기간에는 보여 줄 위치 기록이 없습니다.", "No location records to show in this period.")
         }
         let distance = AppRegion.current.longDistanceText(meters: rangePlan.totalMeters)
-        return language.text(
+        let summary = language.text(
             "\(rangePlan.dayCount)일, 이동 \(distance)를 \(lengthTitle(Int(rangePlan.durationSeconds))) 영상으로 그립니다.",
             "\(rangePlan.dayCount) days, \(distance) in a \(lengthTitle(Int(rangePlan.durationSeconds))) video."
         )
+        guard missingRangeDays > 0 else { return summary }
+        let missing = language.text(
+            "위치 기록이 없는 \(missingRangeDays)일은 경로가 없어 앞뒤 지점을 바로 잇습니다.",
+            "\(missingRangeDays) days have no location records; the points around them are joined directly."
+        )
+        return summary + "\n" + missing
     }
 
     private var canStart: Bool { preset == .day || rangePlan != nil }
@@ -254,6 +379,8 @@ struct MapHomePlaybackVideoSheet: View {
             phase = .failed(language.text("재생할 기록이 없습니다.", "Nothing to play back."))
             return
         }
+        preview.stop()
+        renderer.music = musicTrack?.url
         progress = 0
         phase = .rendering
         task = Task { await run(renderer) }

@@ -466,6 +466,18 @@
 		A100000000000000000000C2 /* MapHomePlaybackContinuity.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000C2 /* MapHomePlaybackContinuity.swift */; };
 		A1VID1029A0100000000001 /* MapHomePlaybackVideoRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1VID1029A0100000000001 /* MapHomePlaybackVideoRenderer.swift */; };
 		A1VID1029A0100000000002 /* MapHomePlaybackVideoSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1VID1029A0100000000002 /* MapHomePlaybackVideoSheet.swift */; };
+		A1BGM1104A0200000000001 /* 01-sunny-stroll.m4a in Resources */ = {isa = PBXBuildFile; fileRef = F1BGM1104A0200000000001 /* 01-sunny-stroll.m4a */; };
+		A1BGM1104A0200000000002 /* 02-tiptoe-alley.m4a in Resources */ = {isa = PBXBuildFile; fileRef = F1BGM1104A0200000000002 /* 02-tiptoe-alley.m4a */; };
+		A1BGM1104A0200000000003 /* 03-riverbank-breeze.m4a in Resources */ = {isa = PBXBuildFile; fileRef = F1BGM1104A0200000000003 /* 03-riverbank-breeze.m4a */; };
+		A1BGM1104A0200000000004 /* 05-neighborhood-loop.m4a in Resources */ = {isa = PBXBuildFile; fileRef = F1BGM1104A0200000000004 /* 05-neighborhood-loop.m4a */; };
+		A1BGM1104A0200000000005 /* 06-sunset-home.m4a in Resources */ = {isa = PBXBuildFile; fileRef = F1BGM1104A0200000000005 /* 06-sunset-home.m4a */; };
+		A1BGM1104A0200000000006 /* 07-pixel-picnic.m4a in Resources */ = {isa = PBXBuildFile; fileRef = F1BGM1104A0200000000006 /* 07-pixel-picnic.m4a */; };
+		A1BGM1104A0200000000007 /* 09-starlight-map.m4a in Resources */ = {isa = PBXBuildFile; fileRef = F1BGM1104A0200000000007 /* 09-starlight-map.m4a */; };
+		A1BGM1104A0200000000008 /* 10-cloud-bicycle.m4a in Resources */ = {isa = PBXBuildFile; fileRef = F1BGM1104A0200000000008 /* 10-cloud-bicycle.m4a */; };
+		A1BGM1104A0200000000009 /* 11-travel-bag.m4a in Resources */ = {isa = PBXBuildFile; fileRef = F1BGM1104A0200000000009 /* 11-travel-bag.m4a */; };
+		A1BGM1104A0200000000010 /* 12-cat-parade.m4a in Resources */ = {isa = PBXBuildFile; fileRef = F1BGM1104A0200000000010 /* 12-cat-parade.m4a */; };
+		A1BGM1104A0200000000020 /* MapHomePlaybackMusic.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1BGM1104A0200000000020 /* MapHomePlaybackMusic.swift */; };
+		A1BGM1104A0200000000021 /* MapHomePlaybackMusicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1BGM1104A0200000000021 /* MapHomePlaybackMusicTests.swift */; };
 		A1VID1029A0100000000003 /* PlaybackVideoTimelineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1VID1029A0100000000003 /* PlaybackVideoTimelineTests.swift */; };
 		A1PLR1104A0100000000001 /* MapHomeRangePlayback.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1PLR1104A0100000000001 /* MapHomeRangePlayback.swift */; };
 		A1PLR1104A0100000000002 /* MapHomeRangeVideoOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1PLR1104A0100000000002 /* MapHomeRangeVideoOverlay.swift */; };
@@ -978,6 +990,18 @@
 		F100000000000000000000C2 /* MapHomePlaybackContinuity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaybackContinuity.swift; sourceTree = "<group>"; };
 		F1VID1029A0100000000001 /* MapHomePlaybackVideoRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaybackVideoRenderer.swift; sourceTree = "<group>"; };
 		F1VID1029A0100000000002 /* MapHomePlaybackVideoSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaybackVideoSheet.swift; sourceTree = "<group>"; };
+		F1BGM1104A0200000000001 /* 01-sunny-stroll.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; name = 01-sunny-stroll.m4a; path = Audio/PlaybackMusic/01-sunny-stroll.m4a; sourceTree = "<group>"; };
+		F1BGM1104A0200000000002 /* 02-tiptoe-alley.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; name = 02-tiptoe-alley.m4a; path = Audio/PlaybackMusic/02-tiptoe-alley.m4a; sourceTree = "<group>"; };
+		F1BGM1104A0200000000003 /* 03-riverbank-breeze.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; name = 03-riverbank-breeze.m4a; path = Audio/PlaybackMusic/03-riverbank-breeze.m4a; sourceTree = "<group>"; };
+		F1BGM1104A0200000000004 /* 05-neighborhood-loop.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; name = 05-neighborhood-loop.m4a; path = Audio/PlaybackMusic/05-neighborhood-loop.m4a; sourceTree = "<group>"; };
+		F1BGM1104A0200000000005 /* 06-sunset-home.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; name = 06-sunset-home.m4a; path = Audio/PlaybackMusic/06-sunset-home.m4a; sourceTree = "<group>"; };
+		F1BGM1104A0200000000006 /* 07-pixel-picnic.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; name = 07-pixel-picnic.m4a; path = Audio/PlaybackMusic/07-pixel-picnic.m4a; sourceTree = "<group>"; };
+		F1BGM1104A0200000000007 /* 09-starlight-map.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; name = 09-starlight-map.m4a; path = Audio/PlaybackMusic/09-starlight-map.m4a; sourceTree = "<group>"; };
+		F1BGM1104A0200000000008 /* 10-cloud-bicycle.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; name = 10-cloud-bicycle.m4a; path = Audio/PlaybackMusic/10-cloud-bicycle.m4a; sourceTree = "<group>"; };
+		F1BGM1104A0200000000009 /* 11-travel-bag.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; name = 11-travel-bag.m4a; path = Audio/PlaybackMusic/11-travel-bag.m4a; sourceTree = "<group>"; };
+		F1BGM1104A0200000000010 /* 12-cat-parade.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; name = 12-cat-parade.m4a; path = Audio/PlaybackMusic/12-cat-parade.m4a; sourceTree = "<group>"; };
+		F1BGM1104A0200000000020 /* MapHomePlaybackMusic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaybackMusic.swift; sourceTree = "<group>"; };
+		F1BGM1104A0200000000021 /* MapHomePlaybackMusicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaybackMusicTests.swift; sourceTree = "<group>"; };
 		F1VID1029A0100000000003 /* PlaybackVideoTimelineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackVideoTimelineTests.swift; sourceTree = "<group>"; };
 		F1PLR1104A0100000000001 /* MapHomeRangePlayback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeRangePlayback.swift; sourceTree = "<group>"; };
 		F1PLR1104A0100000000002 /* MapHomeRangeVideoOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeRangeVideoOverlay.swift; sourceTree = "<group>"; };
@@ -1134,6 +1158,16 @@
 				F1000000000000000B110307 /* Jua-Regular.ttf */,
 				F1000000000000000B110308 /* Sunflower-Medium.ttf */,
 				F1000000000000000B110309 /* Sunflower-Bold.ttf */,
+				F1BGM1104A0200000000001 /* 01-sunny-stroll.m4a */,
+				F1BGM1104A0200000000002 /* 02-tiptoe-alley.m4a */,
+				F1BGM1104A0200000000003 /* 03-riverbank-breeze.m4a */,
+				F1BGM1104A0200000000004 /* 05-neighborhood-loop.m4a */,
+				F1BGM1104A0200000000005 /* 06-sunset-home.m4a */,
+				F1BGM1104A0200000000006 /* 07-pixel-picnic.m4a */,
+				F1BGM1104A0200000000007 /* 09-starlight-map.m4a */,
+				F1BGM1104A0200000000008 /* 10-cloud-bicycle.m4a */,
+				F1BGM1104A0200000000009 /* 11-travel-bag.m4a */,
+				F1BGM1104A0200000000010 /* 12-cat-parade.m4a */,
 				F1000000000000000B110302 /* SUIT-Medium.otf */,
 				F1000000000000000B110303 /* SUIT-SemiBold.otf */,
 				F1000000000000000B1102FC /* SUIT-Regular.otf */,
@@ -1209,6 +1243,7 @@
 				F1VID1029A0100000000003 /* PlaybackVideoTimelineTests.swift */,
 				F1PLR1104A0100000000003 /* MapHomeRangePlaybackTests.swift */,
 				F1PLR1104A0100000000004 /* MapHomeRangeRenderBenchTests.swift */,
+				F1BGM1104A0200000000021 /* MapHomePlaybackMusicTests.swift */,
 				F20000000000000000000004 /* SensorBackgroundCoordinatorTests.swift */,
 				F2000000000000000000000D /* LocalizationCatalogTests.swift */,
 				F2000000000000000000000E /* DiagnosticsLogSupportTests.swift */,
@@ -1341,6 +1376,7 @@
 				F100000000000000000000C2 /* MapHomePlaybackContinuity.swift */,
 				F1VID1029A0100000000001 /* MapHomePlaybackVideoRenderer.swift */,
 				F1VID1029A0100000000002 /* MapHomePlaybackVideoSheet.swift */,
+				F1BGM1104A0200000000020 /* MapHomePlaybackMusic.swift */,
 				F1PLR1104A0100000000001 /* MapHomeRangePlayback.swift */,
 				F1PLR1104A0100000000002 /* MapHomeRangeVideoOverlay.swift */,
 				F1AB1029A0200000000000D1 /* MapHomeNLEMultiDay.swift */,
@@ -1882,6 +1918,16 @@
 				A1000000000000000B110307 /* Jua-Regular.ttf in Resources */,
 				A1000000000000000B110308 /* Sunflower-Medium.ttf in Resources */,
 				A1000000000000000B110309 /* Sunflower-Bold.ttf in Resources */,
+				A1BGM1104A0200000000001 /* 01-sunny-stroll.m4a in Resources */,
+				A1BGM1104A0200000000002 /* 02-tiptoe-alley.m4a in Resources */,
+				A1BGM1104A0200000000003 /* 03-riverbank-breeze.m4a in Resources */,
+				A1BGM1104A0200000000004 /* 05-neighborhood-loop.m4a in Resources */,
+				A1BGM1104A0200000000005 /* 06-sunset-home.m4a in Resources */,
+				A1BGM1104A0200000000006 /* 07-pixel-picnic.m4a in Resources */,
+				A1BGM1104A0200000000007 /* 09-starlight-map.m4a in Resources */,
+				A1BGM1104A0200000000008 /* 10-cloud-bicycle.m4a in Resources */,
+				A1BGM1104A0200000000009 /* 11-travel-bag.m4a in Resources */,
+				A1BGM1104A0200000000010 /* 12-cat-parade.m4a in Resources */,
 				A1000000000000000B110302 /* SUIT-Medium.otf in Resources */,
 				A1000000000000000B110303 /* SUIT-SemiBold.otf in Resources */,
 				A1000000000000000B1102FC /* SUIT-Regular.otf in Resources */,
@@ -2102,6 +2148,7 @@
 				A100000000000000000000C2 /* MapHomePlaybackContinuity.swift in Sources */,
 				A1VID1029A0100000000001 /* MapHomePlaybackVideoRenderer.swift in Sources */,
 				A1VID1029A0100000000002 /* MapHomePlaybackVideoSheet.swift in Sources */,
+				A1BGM1104A0200000000020 /* MapHomePlaybackMusic.swift in Sources */,
 				A1PLR1104A0100000000001 /* MapHomeRangePlayback.swift in Sources */,
 				A1PLR1104A0100000000002 /* MapHomeRangeVideoOverlay.swift in Sources */,
 				A1AB1029A0200000000000D1 /* MapHomeNLEMultiDay.swift in Sources */,
@@ -2323,6 +2370,7 @@
 				A1VID1029A0100000000003 /* PlaybackVideoTimelineTests.swift in Sources */,
 				A1PLR1104A0100000000003 /* MapHomeRangePlaybackTests.swift in Sources */,
 				A1PLR1104A0100000000004 /* MapHomeRangeRenderBenchTests.swift in Sources */,
+				A1BGM1104A0200000000021 /* MapHomePlaybackMusicTests.swift in Sources */,
 				A20000000000000000000007 /* SensorBackgroundCoordinatorTests.swift in Sources */,
 				A20000000000000000000010 /* LocalizationCatalogTests.swift in Sources */,
 				A20000000000000000000011 /* DiagnosticsLogSupportTests.swift in Sources */,

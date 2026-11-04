@@ -81,6 +81,9 @@ final class MapHomeRangeRenderBenchTests: XCTestCase {
             frames: { plan.frames(fps: $0) },
             overlay: MapHomeRangeVideoOverlay(plan: plan, language: .korean, accessoryID: nil)
         )
+        // BGM1104A02: 값을 주면 그 곡을 넣어 렌더한다.
+        renderer.music = ProcessInfo.processInfo.environment["TAPTION_RANGE_RENDER_MUSIC"]
+            .flatMap(MapHomePlaybackMusicTrack.init(rawValue:))?.url
         var peak = footprintMB()
         let before = peak
         let started = Date()
