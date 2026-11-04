@@ -327,6 +327,82 @@ final class MapHomeStickmanTests: XCTestCase {
         XCTAssertEqual(MapHomeStickmanAction.restBox.hwarangScene, .restBox)
     }
 
+    /// 업무 걷기만 노트북을 끼고 걷는다. 실제 이동 구간과 이동 분류는 일반 걷기다(ANI1104A01).
+    func testWorkWalkingCarriesALaptop() {
+        XCTAssertEqual(MapHomeStickmanActionResolver.action(for: "work.walking", label: "걷기"), .workWalking)
+        XCTAssertEqual(MapHomeStickmanActionResolver.action(for: "work", label: "걷기"), .workWalking)
+        XCTAssertEqual(MapHomeStickmanActionResolver.action(for: "work", label: "업무"), .computer)
+        XCTAssertEqual(MapHomeStickmanActionResolver.action(for: "movement.walking", label: "걷기"), .walking)
+        XCTAssertEqual(MapHomeStickmanActionResolver.action(for: TravelMode.walking), .walking)
+        XCTAssertEqual(MapHomeStickmanAction.workWalking.hwarangScene, .walkLaptop)
+        XCTAssertEqual(MapHomeStickmanAction.workWalking.markerScene(speedMetersPerSecond: 3, showsVehicles: true), .walkLaptop)
+        XCTAssertTrue(MapHomeStickmanAction.workWalking.animatesPresentation)
+        XCTAssertFalse(MapHomeStickmanAction.workWalking.isMoving)
+
+        let start = Date(timeIntervalSinceReferenceDate: 800_200_000), at = start.addingTimeInterval(60)
+        func actual(_ source: ActualSource) -> ActualRecord {
+            ActualRecord(planID: nil, title: "걷기", categoryID: "work", startedAt: start, endedAt: start.addingTimeInterval(600), source: source, behavior: "walking")
+        }
+        let travel = TravelSegment(mode: .walking, span: TimeSpan(start: start, end: start.addingTimeInterval(600)), distanceMeters: 500, confidence: .high, evidence: [])
+        func action(_ record: ActualRecord, _ segments: [TravelSegment]) -> MapHomeStickmanAction {
+            MapHomeStickmanActionResolver.action(at: at, actuals: [record], travel: segments, places: [], frequentPlaces: [])
+        }
+        XCTAssertEqual(action(actual(.motion), []), .workWalking)
+        XCTAssertEqual(action(actual(.motion), [travel]), .walking, "자동 기록은 실제 이동 구간을 따른다")
+        XCTAssertEqual(action(actual(.manual), [travel]), .workWalking, "직접 고른 분류는 그대로 보여 준다")
+    }
+
+    /// 업무 휴식: 머리가 천천히 떨어졌다 깜짝 들리고, 앞에 모니터가 있다(ANI1104A01).
+    func testWorkBreakDozesInFrontOfAMonitor() {
+        XCTAssertEqual(dozeDroop(0), 0)
+        XCTAssertLessThan(dozeDroop(2), dozeDroop(3))
+        XCTAssertLessThan(dozeDroop(3), dozeDroop(4))
+        XCTAssertEqual(dozeDroop(4.9), 1)
+        XCTAssertLessThan(dozeDroop(5.3), 0, "0.2초 만에 들려 살짝 젖힌다")
+        XCTAssertFalse(HwarangScene.restCroissant.drawsLyingBody)
+        for sec in [0.5, 2.0, 4.9, 5.4] {
+            XCTAssertTrue(HwarangDiagnostics.isPainted(scene: .restCroissant, sec: sec, at: CGPoint(x: 125, y: 50)), "\(sec)초 화면")
+            XCTAssertTrue(HwarangDiagnostics.isPainted(scene: .restCroissant, sec: sec, at: CGPoint(x: 112, y: 89)), "\(sec)초 책상")
+        }
+        // 위젯 그림을 다시 뽑아도 칸 안에 온전히 그려진다.
+        for style in HwarangCoat.characters {
+            for column in 0..<TaptionHwarangPose.frameCount {
+                XCTAssertEqual(HwarangDiagnostics.poseFrame(.restCroissant, column: column, style: style).size.width, CGFloat(TaptionHwarangPose.cellPixels.width))
+            }
+        }
+    }
+
+    /// 업무 장면 검토 시트(ANI1104A01). 세 털색의 8프레임과 장식·작은 크기를 함께 그린다.
+    func testWriteWorkAnimationSheetWhenRequested() throws {
+        guard let folder = ProcessInfo.processInfo.environment["TAPTION_WORK_SHEET"], !folder.isEmpty else {
+            throw XCTSkip("TAPTION_WORK_SHEET 없음")
+        }
+        let scarf = HwarangClothStyle.byLandmark["fr.alps"], ribbon = HwarangClothStyle.byLandmark["au.opera"]
+        let hat = UIImage(named: "Hat_kr_gyeongbokgung")
+        let side: CGFloat = 240, frames = 8
+        let times: [HwarangScene: [Double]] = [
+            .restCroissant: [0.2, 1.5, 2.6, 3.6, 4.6, 5.0, 5.25, 5.6],
+            .walkLaptop: (0..<frames).map { Double($0) * 1.3 / Double(frames) }
+        ]
+        for (name, scene) in [("doze", HwarangScene.restCroissant), ("laptop", .walkLaptop)] {
+            let rows = HwarangCoat.characters.count + 2
+            let size = CGSize(width: side * CGFloat(frames), height: side * CGFloat(rows))
+            let image = UIGraphicsImageRenderer(size: size).image { renderer in
+                UIColor(white: 0.93, alpha: 1).setFill()
+                renderer.fill(CGRect(origin: .zero, size: size))
+                for (column, sec) in (times[scene] ?? []).enumerated() {
+                    let x = CGFloat(column) * side
+                    for (row, style) in HwarangCoat.characters.enumerated() {
+                        HwarangDiagnostics.frame(scene: scene, sec: sec, side: side, coat: .named(style)).draw(at: CGPoint(x: x, y: CGFloat(row) * side))
+                    }
+                    HwarangDiagnostics.frame(scene: scene, sec: sec, side: side, hat: hat, scarf: scarf, ribbon: ribbon, coat: .named("calico")).draw(at: CGPoint(x: x, y: 3 * side))
+                    HwarangDiagnostics.frame(scene: scene, sec: sec, side: side, small: true, scarf: scarf, ribbon: ribbon, coat: .named("mackerel")).draw(at: CGPoint(x: x, y: 4 * side))
+                }
+            }
+            try XCTUnwrap(image.pngData()).write(to: URL(fileURLWithPath: folder).appendingPathComponent("\(name).png"))
+        }
+    }
+
     func testSleepStagesPickTheirOwnScenes() {
         let start = Date(timeIntervalSinceReferenceDate: 800_000_000)
         func segment(_ stage: SleepStage, _ minute: Double) -> SleepSegment {
@@ -1274,9 +1350,9 @@ final class MapHomeStickmanTests: XCTestCase {
                 "\(title) 상세가 이동 대분류를 덮었습니다."
             )
         }
-        XCTAssertEqual(MapHomeStickmanAction.allCases.count, 54)
-        XCTAssertEqual(Set(MapHomeStickmanAction.allCases).count, 54)
-        XCTAssertEqual(Set(MapHomeStickmanAction.allCases.map(\.title)).count, 54)
+        XCTAssertEqual(MapHomeStickmanAction.allCases.count, 55)
+        XCTAssertEqual(Set(MapHomeStickmanAction.allCases).count, 55)
+        XCTAssertEqual(Set(MapHomeStickmanAction.allCases.map(\.title)).count, 55)
         XCTAssertEqual(MapHomeStickmanActionResolver.action(for: TravelMode.running), .running)
         XCTAssertEqual(
             MapHomeStickmanActionResolver.action(

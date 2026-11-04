@@ -10,7 +10,7 @@ extension HwarangScene {
     /// 관절 자세 대신 누운 몸통을 직접 그리는 장면(SLP1103A01).
     var drawsLyingBody: Bool {
         switch self {
-        case .sleepBelly, .sleepEyeMask, .recoverySuperman, .medicated, .hospital, .restStarfish, .restCroissant, .restDonut, .restLoaf, .restBox: true
+        case .sleepBelly, .sleepEyeMask, .recoverySuperman, .medicated, .hospital, .restStarfish, .restDonut, .restLoaf, .restBox: true
         default: false
         }
     }
@@ -37,7 +37,6 @@ extension HwarangPainter {
             sickLoaf(p, sec: sec)
             hospitalGear(sickHead, tilt: p.h.tilt)
         case .restStarfish: starfish(p)
-        case .restCroissant: croissant(p)
         case .restDonut: donut(p)
         case .restLoaf: restingLoaf(p)
         case .restBox: boxRest(p)
@@ -118,21 +117,6 @@ extension HwarangPainter {
         jelly(at: P(-4, groundY - 6), angle: -.pi / 2)
         jelly(at: P(50, 48), angle: 0)
         finish(p, tail: tail.points, head: P(90, groundY - 23 + p.breath * 0.3), shoulder: P(72, 88))
-    }
-
-    /// 크루아상: 등을 둥글게 말고 옆으로 눕는다.
-    private func croissant(_ p: Pose) {
-        let b = p.breath
-        let tail = tailBlobs([P(18, groundY - 8), P(26, groundY - 2), P(40, groundY - 2), P(50, groundY - 5)])
-        let back = catmull([P(24, groundY - 12), P(30, 76 - b), P(52, 66 - b), P(72, 76 - b), P(74, groundY - 14)])
-        unionBody({
-            c.beginPath(); c.move(to: P(14, groundY - 8))
-            cubic(12, 70, 34, 54 - b, 54, 54 - b); cubic(72, 54 - b, 86, 70, 84, groundY - 12)
-            cubic(70, groundY - 12, 66, 84, 50, 84); cubic(36, 84, 34, groundY - 4, 28, groundY)
-            cubic(20, groundY + 1, 15, groundY - 2, 14, groundY - 8); c.closePath()
-        }, parts: tail.blobs + back.map { Blob(x: $0.x, y: $0.y, r: 5) })
-        foldedLeg([P(66, 86), P(58, 94), P(62, groundY - 3)], radius: 5)
-        finish(p, tail: tail.points, head: P(84, groundY - 19), shoulder: P(72, 84))
     }
 
     /// 도넛: 코끝이 꼬리에 닿게 동그랗게 만다.
@@ -278,13 +262,12 @@ func dailyPose(_ scene: HwarangScene, s: CGFloat) -> Pose {
         p.breath = sin(s * tau / 3.6); p.tp = s * 0.8
         p.h = HeadPose(tilt: 0.42, ear: sin(s * 0.7) * 0.05, mouthOpen: 0.12, eye: .closed)
         return p
-    case .recoverySuperman, .restLoaf, .restStarfish, .restCroissant, .restDonut, .restBox:
+    case .recoverySuperman, .restLoaf, .restStarfish, .restDonut, .restBox:
         var p = Pose()
         p.breath = sin(s * tau / 3.8); p.tp = s * 0.7
         let tilt: CGFloat = switch scene {
         case .recoverySuperman: 0.04
         case .restStarfish: 0.55
-        case .restCroissant: 0.5
         case .restDonut: 0.46
         case .restBox: 0.03
         default: 0.05
@@ -311,6 +294,12 @@ func dailyPose(_ scene: HwarangScene, s: CGFloat) -> Pose {
         let toss = max(0, sin(s * 3.4))
         var p = stand(s, HeadPose(tilt: -0.06 - toss * 0.1, look: 3, mouthOpen: toss * 0.4, eye: .open))
         p.fn = P(90, 84 - toss * 7)
+        return p
+    case .walkLaptop:
+        // 사무실을 오가는 걸음. 앞다리와 몸 사이에 노트북을 끼워 함께 흔들린다.
+        var p = walk(s, period: 1.3, stride: 16)
+        p.prop = .laptop; p.foreOver = true
+        p.h.eye = blink(s)
         return p
     case .groceries:
         var p = walk(s, period: 1.3, stride: 16)
@@ -383,6 +372,7 @@ extension HwarangPainter {
     func dailyBackdrop(_ scene: HwarangScene, sec: CGFloat) {
         c.setLineJoin(.round); c.setLineCap(.round)
         switch scene {
+        case .restCroissant: deskMonitor(sec)
         case .nap:
             napCushion()
             sun(sec)
@@ -455,6 +445,9 @@ extension HwarangPainter {
     func dailyForeground(_ scene: HwarangScene, sec: CGFloat) {
         c.setLineJoin(.round); c.setLineCap(.round)
         switch scene {
+        case .restCroissant:
+            let z = wrap(sec * 0.4, 1)
+            letterZ(88 + z * 6, 34 - z * 14, 5 + z * 3, alpha: clamp((dozeDroop(sec) - 0.55) / 0.25, 0, 1) * (1 - z))
         case .coffee: cafeTable(sec)
         case .nap:
             let z = wrap(sec * 0.4, 1)
