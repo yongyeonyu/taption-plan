@@ -5756,3 +5756,7 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 일정 제목 근거를 iCloud 스냅샷과 연결 해제에서 지우고, 전체 삭제에서 구글 연결을 해제한다. 전체 단위 시험 결과는 `build/validation/PRV1104A02/check3.xcresult`.
 - 대기질 중계를 새 주소 `air.bokkiyaw.com`에 연결했다. 접속 응답 200만 확인했고 실제 대기질 자료는 다음 빌드에서 확인한다. 이전 주소는 267까지의 빌드가 쓰므로 켜 두었다.
 - Bokki Plan 개인정보처리방침을 실제 사이트에 올렸다(대표 승인). `/privacy/plan/` 200 확인.
+
+## GOO1104A01 구글 인증 준비 (2026-11-04)
+- 개인정보처리방침을 `/privacy/plan/`에 올렸다(대표 승인). `bokkiyaw.com` 도메인 소유를 Search Console에서 DNS TXT로 확인했다. 동의 화면에 홈페이지·방침 주소·승인 도메인을 넣고 `calendar.readonly` 범위를 추가했다.
+- 남음: 시연 영상, 인증 제출(대표 확인 후), 게시. 게시 상태는 테스트 중이다.
