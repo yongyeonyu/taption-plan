@@ -138,6 +138,7 @@ final class MapHomePlaybackMusicStream {
 final class MapHomePlaybackMusicFeeder: @unchecked Sendable {
     private enum State { case running, finished, failed(String) }
 
+    // 둘 다 전용 큐의 `feed`에서만 쓴다.
     private let input: AVAssetWriterInput
     private let stream: MapHomePlaybackMusicStream
     private let queue = DispatchQueue(label: "com.taption.plan.playback-music", qos: .utility)

@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// `text("한글", "English")`의 인자. 보간 값을 따로 받아, 번역문에 영어 쪽 값을 넣을 수 있게 한다.
 public struct UIPhrase: ExpressibleByStringInterpolation, Sendable {
@@ -66,43 +67,35 @@ public enum UITextPack {
         return preference.translatedCode ?? (preference == .automatic ? bundleLanguageCode : nil)
     }
 
-    private static let selection = Selection()
-
     /// 문구마다 저장소를 읽지 않게 메뉴에서 고른 언어 팩을 잡아 둔다.
-    private final class Selection: @unchecked Sendable {
-        private let lock = NSLock()
-        private var code: String??
-        private var bundles: [String: Bundle] = [:]
+    private static let selectedCode = OSAllocatedUnfairLock<String??>(initialState: nil)
+    private static let bundles = OSAllocatedUnfairLock<[String: Bundle]>(uncheckedState: [:])
 
-        func translatedCode() -> String? {
-            lock.lock(); defer { lock.unlock() }
+    private static var selectedTranslatedCode: String? {
+        selectedCode.withLock { code in
             if let code { return code }
             let current = AppLanguagePreference.current.translatedCode
             code = .some(current)
             return current
         }
+    }
 
-        func set(_ value: String?) {
-            lock.lock(); defer { lock.unlock() }
-            code = .some(value)
-        }
-
-        func bundle(for code: String) -> Bundle? {
-            lock.lock(); defer { lock.unlock() }
-            if let bundle = bundles[code] { return bundle }
+    private static func bundle(for code: String) -> Bundle? {
+        bundles.withLockUnchecked { cache in
+            if let bundle = cache[code] { return bundle }
             let bundle = Bundle.main.path(forResource: code, ofType: "lproj").flatMap(Bundle.init(path:))
-            bundles[code] = bundle
+            cache[code] = bundle
             return bundle
         }
     }
 
     static func selectionDidChange(_ preference: AppLanguagePreference) {
-        selection.set(preference.translatedCode)
+        selectedCode.withLock { $0 = .some(preference.translatedCode) }
     }
 
     /// 번역할 일이 없는 한국어·영어 기기에서는 틀을 만들지 않는다.
     static var tracksTemplates: Bool {
-        bundleLanguageCode != nil || selection.translatedCode() != nil
+        bundleLanguageCode != nil || selectedTranslatedCode != nil
     }
 
     /// 번역 언어의 형식 지역. 기기 지역이 같은 언어를 쓰면 기기 지역을 그대로 쓴다.
@@ -173,7 +166,7 @@ public enum UITextPack {
     private static let missing = "\u{1}"
 
     private static func bundleLookup(_ key: String) -> String? {
-        let bundle = selection.translatedCode().flatMap(selection.bundle(for:)) ?? Bundle.main
+        let bundle = selectedTranslatedCode.flatMap(bundle(for:)) ?? Bundle.main
         let value = bundle.localizedString(forKey: key, value: missing, table: tableName)
         return value == missing ? nil : value
     }

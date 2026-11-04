@@ -1,72 +1,78 @@
 {
- "ui": 2186,
+ "ui": 2207,
  "catalog": 461,
  "unread": [
   {
    "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
-   "line": 21,
+   "line": 41,
    "ko": "_ korean: UIPhrase",
    "en": "_ english: UIPhrase"
   },
   {
    "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
-   "line": 26,
+   "line": 46,
    "ko": "_ korean: String",
    "en": "_ english: String"
   },
   {
    "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
-   "line": 27,
+   "line": 47,
    "ko": "UIPhrase(runtime: korean)",
    "en": "UIPhrase(runtime: english)"
   },
   {
    "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
-   "line": 115,
+   "line": 155,
    "ko": "_ korean: UIPhrase",
    "en": "_ english: UIPhrase"
   },
   {
    "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
-   "line": 116,
+   "line": 156,
    "ko": "korean",
    "en": "english"
   },
   {
    "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
-   "line": 119,
+   "line": 159,
    "ko": "_ korean: String",
    "en": "_ english: String"
   },
   {
    "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
-   "line": 120,
+   "line": 160,
    "ko": "korean",
    "en": "english"
   },
   {
    "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
-   "line": 123,
+   "line": 163,
    "ko": "UIPhrase",
    "en": "UIPhrase"
   },
   {
    "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
-   "line": 128,
+   "line": 168,
    "ko": "korean",
    "en": "english"
   },
   {
    "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
-   "line": 131,
+   "line": 171,
    "ko": "UIPhrase",
    "en": "UIPhrase"
   },
   {
    "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
-   "line": 137,
+   "line": 177,
    "ko": "korean",
    "en": "english"
+  },
+  {
+   "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/SensorCollectionSalaryText.swift",
+   "line": 5,
+   "ko": "Double",
+   "en": "Double"
   },
   {
    "file": "TaptionPlan/Core/WidgetShared.swift",
@@ -196,13 +202,13 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeLocationPresentation.swift",
-   "line": 261,
+   "line": 263,
    "ko": "_ korean: UIPhrase",
    "en": "_ english: UIPhrase"
   },
   {
    "file": "TaptionPlan/UI/MapHomeLocationPresentation.swift",
-   "line": 262,
+   "line": 264,
    "ko": "korean",
    "en": "english"
   },
@@ -316,31 +322,31 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeView.swift",
-   "line": 7402,
+   "line": 7410,
    "ko": "location.kind.title",
    "en": "location.kind.englishTitle"
   },
   {
    "file": "TaptionPlan/UI/MapHomeView.swift",
-   "line": 7428,
+   "line": 7436,
    "ko": "destination.koreanName",
    "en": "destination.englishName"
   },
   {
    "file": "TaptionPlan/UI/MapHomeView.swift",
-   "line": 7505,
+   "line": 7513,
    "ko": "FloorLabel.korean(place.floor ?? 1)",
    "en": "FloorLabel.english(place.floor ?? 1)"
   },
   {
    "file": "TaptionPlan/UI/MapHomeView.swift",
-   "line": 7513,
+   "line": 7521,
    "ko": "destination.koreanName",
    "en": "destination.englishName"
   },
   {
    "file": "TaptionPlan/UI/MapHomeView.swift",
-   "line": 7628,
+   "line": 7630,
    "ko": "strength.koreanLabel",
    "en": "strength.englishLabel"
   },

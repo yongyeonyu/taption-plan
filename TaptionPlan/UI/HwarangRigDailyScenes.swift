@@ -755,3 +755,52 @@ extension HwarangPainter {
         fill(outline); c.beginPath(); circle(x - 5, y - 2, 1.4); circle(x + 5, y - 2, 1.4); c.fillPath()
     }
 }
+
+// MARK: - 앉아서 하는 자세
+
+/// 조는 정도(0: 고개 든 상태, 1: 끝까지 떨군 상태). 천천히 떨어졌다 순식간에 들려 살짝 젖혔다 돌아온다.
+func dozeDroop(_ s: CGFloat) -> CGFloat {
+    let t = wrap(s, dozeCycle)
+    switch t {
+    case ..<0.5: return 0
+    case ..<4.7: return ease((t - 0.5) / 4.2)
+    case ..<5.1: return 1
+    case ..<5.3: return lerp(1, -0.14, ease((t - 5.1) / 0.2))
+    default: return lerp(-0.14, 0, ease((t - 5.3) / 0.7))
+    }
+}
+
+/// 책상 앞에 앉아 모니터를 보며 존다. 눈은 반쯤 감겼다 감기고, 깜짝 깰 때만 뜬다.
+func dozing(_ s: CGFloat) -> Pose {
+    let droop = dozeDroop(s), t = wrap(s, dozeCycle)
+    let eye: Eye = t >= 5.1 ? .open : (droop < 0.55 ? .half : .closed)
+    var p = desk(s, 0, 0, HeadPose(tilt: 0.05 + droop * 0.3, ear: -droop * 0.1, mouthOpen: droop > 0.8 ? 0.12 : 0, turn: 1, eye: eye))
+    p.tp = s * 0.9
+    p.sh = P(62, 84 + droop * 3)
+    p.head = P(58 + droop * 5, 58 + droop * 15)
+    p.fnAbs = P(88, deskTop); p.ffAbs = P(100, deskTop)
+    return p
+}
+
+func eating(_ s: CGFloat, dip: CGFloat, _ h: HeadPose) -> Pose {
+    var p = Pose()
+    p.headX = 5; p.headY = 6 - dip * 5
+    p.hip = P(38, 76); p.mid = P(53, 76); p.sh = P(68, 80 + dip * 3); p.head = P(80, 62 + dip * 18)
+    p.bn = P(30, groundY); p.bf = P(44, groundY); p.fn = P(62, groundY); p.ff = P(76, groundY)
+    p.ta = -2.1; p.tc = 0.9; p.tw = 0.3; p.tp = s * 2
+    p.h = h
+    return p
+}
+
+/// 자전거 안장에 앉아 페달을 밟는다. 뒷발은 크랭크를 따라 돈다.
+func riding(_ s: CGFloat) -> Pose {
+    let a = s * 6, sway = sin(a) * 0.8
+    var p = Pose()
+    p.hip = P(38, 70 + sway * 0.4); p.mid = P(50, 67); p.sh = P(64, 70); p.rh = 10; p.rs = 9
+    p.head = P(68, 46 - sway * 0.5); p.headX = 0; p.headY = 3
+    p.bn = P(58 + cos(a) * 9, 96 + sin(a) * 9); p.bf = P(52 + cos(a + .pi) * 9, 96 + sin(a + .pi) * 9)
+    p.fn = P(100, 62); p.ff = P(96, 62)
+    p.ta = 3.0; p.tc = -0.4; p.tw = 0.3; p.tp = s * 3
+    p.h = HeadPose(tilt: sway * 0.03, look: 1.8, mouthOpen: 0.2, eye: wrap(s, 4) < 3 ? blink(s) : .happy)
+    return p
+}
