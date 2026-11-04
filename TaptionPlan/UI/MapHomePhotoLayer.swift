@@ -370,17 +370,23 @@ struct MapHomePlaybackPhotoStrip: View {
     let minute: Double
     let photos: [Photo]
 
-    static let slotsPerSide = 3
+    /// 많으면 호 위에서 겹쳐 쌓인다(대표 지시).
+    static let slotsPerSide = 12
     static let centerSide: CGFloat = 168
     static let bottomInset: CGFloat = 104
+    /// 새 사진이 크게 보이는 시간(대표 지시). 지나면 다른 칸과 같은 크기로 돌아간다.
+    static let enlargedSeconds: UInt64 = 3
     private static let gap: CGFloat = 5
+    private static let maxArcDegrees: CGFloat = 85
+    /// 호가 내려가는 깊이. 아래 단추 줄에 닿기 전까지다.
+    private static let arcDrop: CGFloat = bottomInset - 16
 
     /// 지금까지 지나간 마지막 사진. 첫 사진 전이면 nil이고, 되감으면 그 자리로 돌아간다.
     nonisolated static func currentIndex(minute: Double, photos: [Photo]) -> Int? {
         photos.lastIndex { $0.minute <= minute }
     }
 
-    /// 보여 줄 사진 번호. 가운데 양옆으로 최대 3칸씩, 모두 7칸이다.
+    /// 보여 줄 사진 번호. 가운데 양옆으로 최대 `slotsPerSide`칸씩이다.
     nonisolated static func visibleIndices(current: Int?, count: Int) -> [Int] {
         let center = current ?? -1
         let lower = max(0, center - slotsPerSide), upper = min(count - 1, center + slotsPerSide)
@@ -399,37 +405,68 @@ struct MapHomePlaybackPhotoStrip: View {
     }
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isEnlarged = false
 
     var body: some View {
         let current = Self.currentIndex(minute: minute, photos: photos)
         GeometryReader { proxy in
-            let side = min(46, max(24, (proxy.size.width - Self.centerSide - Self.gap * 6) / 6))
-            ZStack {
+            let side: CGFloat = 46
+            ZStack(alignment: .bottom) {
                 ForEach(Self.visibleIndices(current: current, count: photos.count), id: \.self) { index in
-                    slot(index: index, center: current ?? -1, side: side)
+                    slot(index: index, center: current ?? -1, side: side, width: proxy.size.width)
                 }
             }
-            .frame(width: proxy.size.width, height: Self.centerSide)
+            .frame(width: proxy.size.width, height: Self.centerSide, alignment: .bottom)
         }
         .frame(height: Self.centerSide)
         .animation(reduceMotion ? nil : .spring(response: 0.42, dampingFraction: 0.72), value: current)
+        .animation(reduceMotion ? nil : .spring(response: 0.42, dampingFraction: 0.72), value: isEnlarged)
         .allowsHitTesting(false)
         .accessibilityHidden(true)
+        .task(id: current) {
+            guard current != nil else { return isEnlarged = false }
+            isEnlarged = true
+            try? await Task.sleep(for: .seconds(Self.enlargedSeconds))
+            if !Task.isCancelled { isEnlarged = false }
+        }
     }
 
-    private func slot(index: Int, center: Int, side: CGFloat) -> some View {
+    /// 호 위의 자리. 가운데에서 멀수록 아래로 내려가는 반원이고, 칸이 호에 다 안 들어가면 간격을 줄여 겹친다.
+    nonisolated static func arcPlacement(
+        distance: Int, countOnSide: Int, side: CGFloat, width: CGFloat, isEnlarged: Bool
+    ) -> (x: CGFloat, y: CGFloat, degrees: Double) {
+        guard distance != 0 else { return (0, 0, 0) }
+        let radius = max(side, width / 2 - side / 2 - 8)
+        let clearance = (isEnlarged ? centerSide / 2 + side / 2 : side) + gap
+        let first = asin(min(1, clearance / radius))
+        let last = max(first, CGFloat.pi * maxArcDegrees / 180)
+        let natural = (side + gap) / radius
+        let spacing = countOnSide > 1 ? min(natural, (last - first) / CGFloat(countOnSide - 1)) : natural
+        let angle = first + CGFloat(abs(distance) - 1) * spacing
+        let direction: CGFloat = distance > 0 ? 1 : -1
+        return (
+            direction * radius * sin(angle),
+            arcDrop * (1 - cos(angle)),
+            Double(direction * angle) * 180 / .pi * 0.35
+        )
+    }
+
+    private func slot(index: Int, center: Int, side: CGFloat, width: CGFloat) -> some View {
         let distance = index - center
-        let isCenter = distance == 0
-        let extra = (Self.centerSide - side) / 2
-        let x = CGFloat(distance) * (side + Self.gap) + (distance > 0 ? extra : distance < 0 ? -extra : 0)
+        let isCenter = distance == 0 && isEnlarged
+        let countOnSide = distance > 0
+            ? min(Self.slotsPerSide, photos.count - 1 - center)
+            : min(Self.slotsPerSide, center)
+        let place = Self.arcPlacement(distance: distance, countOnSide: countOnSide, side: side, width: width, isEnlarged: isEnlarged)
         return MapHomePhotoThumbnail(localIdentifier: photos[index].id, side: Self.centerSide)
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color.white, lineWidth: isCenter ? 3 : 4))
-            .scaleEffect(isCenter ? 1 : side / Self.centerSide)
+            .scaleEffect(isCenter ? 1 : side / Self.centerSide, anchor: .bottom)
+            .rotationEffect(.degrees(place.degrees), anchor: .bottom)
             .shadow(color: .black.opacity(isCenter ? 0.3 : 0.16), radius: isCenter ? 7 : 3, y: 2)
-            .opacity(isCenter ? 1 : max(0.45, 1 - Double(abs(distance)) * 0.14))
-            .zIndex(isCenter ? 1 : 0)
-            .offset(x: x)
+            // 가운데에 가까운 사진이 위에 온다.
+            .zIndex(isCenter ? 100 : Double(Self.slotsPerSide - abs(distance)))
+            .offset(x: place.x, y: place.y)
             .transition(.opacity)
     }
 }
@@ -438,7 +475,7 @@ struct MapHomePlaybackPhotoStrip: View {
 /// 화면 확인용. `-photoStripPreview` 실행 인자로만 뜬다. 분이 지나며 가운데 사진이 넘어간다.
 struct MapHomePhotoStripPreviewHost: View {
     @State private var minute: Double = 0
-    private let photos = (0..<10).map { MapHomePlaybackPhotoStrip.Photo(minute: Double($0) * 10, id: "preview-\($0)") }
+    private let photos = (0..<20).map { MapHomePlaybackPhotoStrip.Photo(minute: Double($0) * 10, id: "preview-\($0)") }
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -449,7 +486,7 @@ struct MapHomePhotoStripPreviewHost: View {
         .task {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(1))
-                minute = minute >= 90 ? 0 : minute + 10
+                minute = minute >= 190 ? 0 : minute + 10
             }
         }
     }

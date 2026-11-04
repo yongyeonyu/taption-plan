@@ -1239,7 +1239,7 @@ struct MapHomeView: View {
         }
         .overlay(alignment: .bottom) {
             if isDayPlaybackRunning, recordingShows(\.photos), let minute = dayPlaybackCurrentMinute, !playbackPhotos.isEmpty {
-                MapHomePlaybackPhotoStrip(minute: minute, photos: playbackPhotos).playbackPlacement(trailing: timeRailWidth + 12)
+                MapHomePlaybackPhotoStrip(minute: minute, photos: playbackPhotos).playbackPlacement(trailing: isSidebarVisible ? timeRailWidth + 12 : 12)
             }
         }
         .sheet(isPresented: $isCalendarConnectPresented) { MapHomeCalendarConnectSheet(model: model, language: language) }

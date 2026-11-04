@@ -1250,9 +1250,19 @@ final class NLETrackTests: XCTestCase {
         let photos = (0..<10).map { MapHomePlaybackPhotoStrip.Photo(minute: Double($0) * 10, id: "\($0)") }
         XCTAssertNil(MapHomePlaybackPhotoStrip.currentIndex(minute: -1, photos: photos))
         XCTAssertEqual(MapHomePlaybackPhotoStrip.currentIndex(minute: 45, photos: photos), 4)
-        XCTAssertEqual(MapHomePlaybackPhotoStrip.visibleIndices(current: 4, count: 10), [1, 2, 3, 4, 5, 6, 7])
-        XCTAssertEqual(MapHomePlaybackPhotoStrip.visibleIndices(current: nil, count: 10), [0, 1, 2])
-        XCTAssertEqual(MapHomePlaybackPhotoStrip.visibleIndices(current: 9, count: 10), [6, 7, 8, 9])
+        XCTAssertEqual(MapHomePlaybackPhotoStrip.visibleIndices(current: 4, count: 10), Array(0...9))
+        XCTAssertEqual(MapHomePlaybackPhotoStrip.visibleIndices(current: nil, count: 10), Array(0...9))
+        XCTAssertEqual(MapHomePlaybackPhotoStrip.visibleIndices(current: 9, count: 10), Array(0...9))
+        XCTAssertEqual(MapHomePlaybackPhotoStrip.visibleIndices(current: 20, count: 40), Array(8...32))
+        // 호는 가운데서 멀수록 내려가고, 사진이 많으면 간격이 좁아져 겹치되 호 밖으로 나가지 않는다.
+        func place(_ distance: Int, _ count: Int) -> (x: CGFloat, y: CGFloat, degrees: Double) {
+            MapHomePlaybackPhotoStrip.arcPlacement(distance: distance, countOnSide: count, side: 46, width: 340, isEnlarged: false)
+        }
+        XCTAssertLessThan(place(1, 3).y, place(3, 3).y)
+        XCTAssertEqual(place(-2, 3).x, -place(2, 3).x, accuracy: 0.01)
+        XCTAssertLessThan(place(2, 12).x - place(1, 12).x, place(2, 3).x - place(1, 3).x)
+        XCTAssertLessThanOrEqual(abs(place(12, 12).x), 170)
+        XCTAssertLessThan(place(12, 12).y, MapHomePlaybackPhotoStrip.bottomInset)
         XCTAssertEqual(MapHomePlaybackPhotoStrip.visibleIndices(current: 0, count: 1), [0])
     }
 
