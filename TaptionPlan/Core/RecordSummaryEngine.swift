@@ -238,7 +238,7 @@ enum RecordAnalysisCategoryPolicy {
             return detail.title
         }
         switch category {
-        case "work": return "업무(집 - 회사)"
+        case "work": return "업무"
         case "study": return "수업(집 - 학교·학원)"
         case "hobby": return "취미(집 - 취미)"
         case "exercise": return "운동"

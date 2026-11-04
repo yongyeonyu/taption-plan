@@ -125,4 +125,45 @@ final class MapHomePlaybackContinuityTests: XCTestCase {
         )
         XCTAssertEqual(resolved?.coordinate.latitude ?? 0, 36.5, accuracy: 0.000_1)
     }
+
+    /// 슬라이드바를 수면까지 거슬러 가면 집으로 간다. 그날 다른 곳에 머문 기록이 있으면 그 자리다.
+    func testRestingLocationGoesHomeDuringSleep() throws {
+        let base = Date(timeIntervalSince1970: 1_800_000_000)
+        let home = GeoPoint(latitude: 37.5, longitude: 127, altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5)
+        let office = GeoPoint(latitude: 37.6, longitude: 127.1, altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5)
+        let reading = SensorReading(timestamp: base.addingTimeInterval(7_200), point: office, motion: .unknown)
+        let sleep = TimeSpan(start: base, end: base.addingTimeInterval(3_600))
+        let resolved = try XCTUnwrap(MapHomePlaybackLocation.restingLocation(
+            at: base.addingTimeInterval(600), normalizedReadings: [reading], places: [], sleepSpans: [sleep], home: home
+        ))
+        XCTAssertEqual(resolved.coordinate.latitude, home.latitude)
+        // 수면이 아니어도 첫 표본 전에는 첫 표본 자리에 둔다.
+        let early = try XCTUnwrap(MapHomePlaybackLocation.restingLocation(
+            at: base.addingTimeInterval(5_000), normalizedReadings: [reading], places: [], sleepSpans: [sleep], home: home
+        ))
+        XCTAssertEqual(early.coordinate.latitude, office.latitude)
+        XCTAssertNil(MapHomePlaybackLocation.restingLocation(
+            at: base.addingTimeInterval(9_000), normalizedReadings: [reading], places: [], sleepSpans: [sleep], home: home
+        ))
+    }
+
+    /// 회의가 앞뒤 업무에 합쳐져 사라지면 안 된다.
+    func testMeetingStaysSeparateFromSurroundingWork() {
+        let calendar = Calendar.autoupdatingCurrent
+        let day = calendar.startOfDay(for: Date(timeIntervalSince1970: 1_800_000_000))
+        func record(_ title: String, _ behavior: String, _ from: Int, _ to: Int) -> ActualRecord {
+            ActualRecord(planID: nil, title: title, categoryID: "work", startedAt: day.addingTimeInterval(Double(from) * 3_600), endedAt: day.addingTimeInterval(Double(to) * 3_600), source: .location, behavior: behavior)
+        }
+        let segments = MapHomeTimeRailSegmentEngine.segments(
+            from: [record("업무", "work", 9, 11), record("회의", "meeting", 11, 12), record("업무", "work", 12, 14)],
+            on: day, asOf: day.addingTimeInterval(86_400), calendar: calendar
+        )
+        XCTAssertEqual(segments.filter { $0.categoryID == "work" }.map(\.title), ["업무", "회의", "업무"])
+    }
+
+    func testMemoOverlayQueuesEveryPassedMemoInOrder() {
+        let events: [(minute: Double, moment: String)] = [(minute: 10, moment: "a"), (minute: 11, moment: "b"), (minute: 30, moment: "c")]
+        XCTAssertEqual(MapHomePlaybackMomentsOverlay.passed(events, from: 5, to: 12), ["a", "b"])
+        XCTAssertTrue(MapHomePlaybackMomentsOverlay.passed(events, from: 12, to: 5).isEmpty)
+    }
 }

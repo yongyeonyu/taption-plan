@@ -132,4 +132,13 @@ final class AppLanguagePreferenceTests: XCTestCase {
             AppLanguagePreference.text(korean: "가", english: "A")
         )
     }
+
+    func testMenuOffersEveryPackLanguageAndOldValuesStillRead() {
+        XCTAssertEqual(AppLanguagePreference.allCases.count, 15)
+        XCTAssertEqual(AppLanguagePreference(rawValue: "korean"), .korean)
+        XCTAssertEqual(AppLanguagePreference(rawValue: "automatic"), .automatic)
+        XCTAssertEqual(AppLanguagePreference.german.translatedCode, "de")
+        XCTAssertNil(AppLanguagePreference.korean.translatedCode)
+        XCTAssertEqual(AppLanguagePreference.resolve(rawValue: "ja"), .english, "번역 언어는 영어 경로에서 언어 팩을 찾는다")
+    }
 }

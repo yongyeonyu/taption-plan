@@ -275,7 +275,7 @@ final class MapHomeStickmanTests: XCTestCase {
     func testPreviousTaxonomyEntriesAndOldRecordsAreUnchanged() throws {
         let v3: [String: [(String, String)]] = [
             "activity": [("activity.rest", "stationary")],
-            "work": [("work.route", "work"), ("work.rest", "stationary"), ("work.walking", "walking")],
+            "work": [("work.rest", "stationary"), ("work.walking", "walking")],
             "study": [("study.academy", "academy"), ("study.rest", "stationary"), ("study.walking", "walking")],
             "hobby": [("hobby.route", "hobby"), ("hobby.rest", "stationary")],
             "sleep": [("sleep.core", "core"), ("sleep.deep", "deep"), ("sleep.rem", "rem")],

@@ -140,9 +140,9 @@ final class MapHomeDictation {
         switch AppLanguagePreference.current {
         case .korean: return "ko-KR"
         case .english: return "en-US"
-        case .automatic:
+        case let preference:
             return matchedSpeechLocale(
-                preferred: Locale.preferredLanguages.first ?? "en-US",
+                preferred: preference.translatedCode ?? Locale.preferredLanguages.first ?? "en-US",
                 supported: SFSpeechRecognizer.supportedLocales().map(\.identifier)
             )
         }

@@ -300,11 +300,72 @@ struct MapHomePlacePin: View {
             size: MapHomeStickmanMarker.size.width,
             equippedAccessoryID: equippedAccessoryID
         )
+        .catSpeechBubble(action: catAction)
         .offset(
             x: MapHomeCatTapRouting.catOffsetInHomeImage.x * scale,
             y: MapHomeCatTapRouting.catOffsetInHomeImage.y * scale
         )
         .allowsHitTesting(false)
+    }
+}
+
+/// 화랑이 옆 말풍선. 동작마다 좌우가 정해지고, 문구를 받기 전까지 동작 이름을 쓴다(대표 지시).
+struct MapHomeCatSpeechBubble: View {
+    enum Side { case left, right }
+
+    let text: String
+    let side: Side
+
+    /// 소품이 오른쪽에 있는 동작은 왼쪽에, 이동 중에는 가는 방향을 가리지 않게 뒤쪽에 둔다.
+    static func side(for action: MapHomeStickmanAction, facesLeft: Bool) -> Side {
+        if action.isMoving { return facesLeft ? .right : .left }
+        switch action {
+        case .computer, .company, .school, .reading, .restCroissant, .meeting, .game, .video: return .left
+        default: return .right
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: -1) {
+            if side == .right { tail(pointsLeft: true) }
+            Text(text)
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
+                .foregroundStyle(Color.tpInk)
+                .lineLimit(1)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+            if side == .left { tail(pointsLeft: false) }
+        }
+        .shadow(color: .black.opacity(0.14), radius: 3, y: 1)
+        .fixedSize()
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    private func tail(pointsLeft: Bool) -> some View {
+        Path { path in
+            path.move(to: CGPoint(x: pointsLeft ? 0 : 6, y: 4))
+            path.addLine(to: CGPoint(x: pointsLeft ? 6 : 0, y: 0))
+            path.addLine(to: CGPoint(x: pointsLeft ? 6 : 0, y: 8))
+            path.closeSubpath()
+        }
+        .fill(Color.tpSurface)
+        .frame(width: 6, height: 8)
+    }
+}
+
+extension View {
+    /// 화랑이 칸 바로 바깥에 말풍선을 붙인다. 칸 크기와 레이아웃은 그대로다.
+    func catSpeechBubble(action: MapHomeStickmanAction, facesLeft: Bool = false) -> some View {
+        let side = MapHomeCatSpeechBubble.side(for: action, facesLeft: facesLeft)
+        let gap = MapHomeStickmanMarker.size.width * 0.3
+        return overlay(alignment: side == .right ? .trailing : .leading) {
+            MapHomeCatSpeechBubble(text: action.title, side: side)
+                .alignmentGuide(side == .right ? .trailing : .leading) { size in
+                    side == .right ? -gap : size.width + gap
+                }
+        }
     }
 }
 

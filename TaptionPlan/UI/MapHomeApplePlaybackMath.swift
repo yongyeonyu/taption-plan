@@ -73,11 +73,19 @@ enum MapHomeAppleAnnotationKind {
     case boarding(TransitBoardingCandidate)
     case sticker(MapSticker)
     case memo(ActionMemo)
+    case photo(MapHomePhotoCluster, coverID: String, isHighlighted: Bool)
     case search(MapHomeSearchResult)
     case pawprint(MapHomeApplePawprint)
 }
 
 extension MapHomeAppleAnnotationKind {
+    var staysVisible: Bool {
+        switch self {
+        case .sticker, .memo, .photo: true
+        default: false
+        }
+    }
+
     /// 내용 비교용 해시. `String(describing:)`는 반사(reflection)라 발자국 수백 개에 쓰면 본문 평가마다 수 ms가 들었다(CTR1103A02).
     func combineContent(into hasher: inout Hasher) {
         switch self {
@@ -93,6 +101,8 @@ extension MapHomeAppleAnnotationKind {
             hasher.combine(4); hasher.combine(sticker)
         case .memo(let memo):
             hasher.combine(5); hasher.combine(memo)
+        case .photo(let cluster, let coverID, let isHighlighted):
+            hasher.combine(8); hasher.combine(cluster.id); hasher.combine(cluster.count); hasher.combine(coverID); hasher.combine(isHighlighted)
         case .search(let result):
             hasher.combine(6); hasher.combine(result.title); hasher.combine(result.subtitle)
         case .pawprint(let paw):

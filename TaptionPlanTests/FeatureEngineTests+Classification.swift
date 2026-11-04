@@ -204,7 +204,7 @@ extension FeatureEngineTests {
                 .map(\.title)
         )
         XCTAssertTrue(detailTitles.isSuperset(of: [
-            "휴식", "미확인", "업무(집 - 회사)",
+            "휴식", "미확인",
             "취미(집 - 취미)", "코어 수면", "깊은 수면", "REM 수면",
             "걷기", "자동차", "지하철", "버스", "배", "비행기",
             "자전거", "식사", "요리", "운동",

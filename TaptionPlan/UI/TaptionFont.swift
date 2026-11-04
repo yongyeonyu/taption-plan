@@ -16,7 +16,7 @@ enum TaptionFont: String, CaseIterable, Identifiable, Sendable {
     enum PackScript { case selected, latinFallback, system }
 
     static let packScript: PackScript = {
-        guard let code = UITextPack.bundleLanguageCode else { return .selected }
+        guard let code = UITextPack.activeLanguageCode else { return .selected }
         let language = code.split(separator: "-").first.map(String.init) ?? code
         return ["ja", "zh", "th", "hi"].contains(language) ? .system : .latinFallback
     }()

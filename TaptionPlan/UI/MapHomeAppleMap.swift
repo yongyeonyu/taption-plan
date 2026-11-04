@@ -806,6 +806,13 @@ struct MapHomeAppleMap: UIViewRepresentable {
                             cameraHeading: cameraHeading
                         )
                     )
+                    .catSpeechBubble(
+                        action: annotation.action,
+                        facesLeft: MapHomeStickmanFacing.facesLeft(
+                            headingDegrees: annotation.headingDegrees,
+                            cameraHeading: cameraHeading
+                        )
+                    )
                 ),
                 size: MapHomeStickmanMarker.size,
                 centerOffset: MapHomeStickmanAnnotationLayout.centerOffset
@@ -868,6 +875,12 @@ struct MapHomeAppleMap: UIViewRepresentable {
                 view.collisionMode = .rectangle
                 view.zPriority = MapHomePlaceDisplayPolicy.zPriority(for: place.destination)
                 view.selectedZPriority = view.zPriority
+            } else if annotation.kind.staysVisible {
+                // 메모·사진은 겹쳐도 숨기지 않는다. 충돌에 넣으면 지도를 움직일 때마다 나왔다 사라진다.
+                view.displayPriority = .required
+                view.collisionMode = .none
+                view.zPriority = .defaultUnselected
+                view.selectedZPriority = .defaultUnselected
             } else {
                 view.displayPriority = .defaultHigh
                 view.collisionMode = .rectangle
@@ -1004,6 +1017,12 @@ struct MapHomeAppleMap: UIViewRepresentable {
                     rootView: AnyView(MapHomeMapMemoMarker(memo: memo)),
                     size: CGSize(width: 150, height: 60),
                     centerOffset: CGPoint(x: 0, y: -30)
+                )
+            case .photo(let cluster, let coverID, let isHighlighted):
+                return MapHomeAppleHostedDescriptor(
+                    rootView: AnyView(MapHomePhotoPin(coverID: coverID, count: cluster.count, isHighlighted: isHighlighted)),
+                    size: CGSize(width: 56, height: 74),
+                    centerOffset: CGPoint(x: 0, y: -37)
                 )
             case .pawprint(let paw):
                 let color: Color = paw.isSelectedRoute ? .orange

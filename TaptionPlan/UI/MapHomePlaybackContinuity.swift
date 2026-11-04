@@ -44,6 +44,23 @@ extension MapHomePlaybackLocation {
         return Self(coordinate: point)
     }
 
+    /// 표본이 없는 시간의 자리. 수면이면 그 시간의 체류 → 집, 그날 첫 표본 전이면 첫 표본이다.
+    /// 이게 없으면 슬라이드바를 거슬러 가도 카메라가 멈추고 화랑이가 마지막 위치에 남는다.
+    static func restingLocation(
+        at date: Date,
+        normalizedReadings readings: [SensorReading],
+        places: [PlaceStay],
+        sleepSpans: [TimeSpan],
+        home: GeoPoint?
+    ) -> Self? {
+        if sleepSpans.contains(where: { $0.contains(date) }),
+           let point = places.first(where: { $0.span.contains(date) })?.point ?? home {
+            return Self(coordinate: point)
+        }
+        guard let first = readings.first(where: { $0.point != nil }), date < first.timestamp, let point = first.point else { return nil }
+        return Self(coordinate: point)
+    }
+
     /// 재생 프레임용: 장소 좌표 사전과 지하철 구간을 미리 만든 `lookup`을 쓴다(PRF1101A01).
     static func resolveOrGap(
         at date: Date,

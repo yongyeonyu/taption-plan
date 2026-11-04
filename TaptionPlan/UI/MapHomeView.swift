@@ -887,13 +887,13 @@ struct MapHomeView: View {
                 ),
                 language: language,
                 onStart: startRecordingPlayback,
-                onRenderVideo: rendersVectorMap ? {
+                onRenderVideo: {
                     isRecordingOptionsPresented = false
                     Task { @MainActor in
                         try? await Task.sleep(nanoseconds: 450_000_000)
                         isPlaybackVideoPresented = true
                     }
-                } : nil,
+                },
                 adaptiveZoom: Binding(
                     get: { (MapHomePlaybackZoomMode(rawValue: playbackZoomModeRaw) ?? .adaptive) == .adaptive },
                     set: { playbackZoomModeRaw = ($0 ? MapHomePlaybackZoomMode.adaptive : .fixed).rawValue }
@@ -1250,12 +1250,12 @@ struct MapHomeView: View {
             }
         }
         .overlay {
-            if isDayPlaybackRunning, let cat = displayedStickmanViewportPoint, let minute = dayPlaybackCurrentMinute {
-                MapHomePlaybackMomentsOverlay(minute: minute, events: playbackMomentEvents, anchor: cat)
+            if isDayPlaybackRunning, recordingShows(\.mapMemos), let minute = dayPlaybackCurrentMinute {
+                MapHomePlaybackMomentsOverlay(minute: minute, events: playbackMomentEvents)
             }
         }
         .overlay(alignment: .bottom) {
-            if isDayPlaybackRunning, let minute = dayPlaybackCurrentMinute, !playbackPhotos.isEmpty {
+            if isDayPlaybackRunning, recordingShows(\.photos), let minute = dayPlaybackCurrentMinute, !playbackPhotos.isEmpty {
                 MapHomePlaybackPhotoStrip(minute: minute, photos: playbackPhotos).playbackPlacement(trailing: timeRailWidth + 12)
             }
         }
@@ -1601,14 +1601,14 @@ struct MapHomeView: View {
     }
 
     private var mapMemosOnMap: [ActionMemo] {
-        guard memoDisplayMode != .hidden else { return [] }
+        // 재생 중 메모는 지도 대신 상단 알림으로 나온다.
+        guard memoDisplayMode != .hidden, !isDayPlaybackRunning else { return [] }
         return MapMemoDisplayFilterEngine.visibleMemos(
             model.snapshot.memos,
             on: model.selectedDate,
             filter: model.settings.mapMemoDisplayFilter,
             selectedPlanIDs: mapMemoRelevantPlanIDs,
-            selectedTargetIDs: [],
-            through: isDayPlaybackRunning ? routeTimelineDate : nil
+            selectedTargetIDs: []
         )
         .filter { $0.mapPoint.map(isValid) == true }
         .sorted {
@@ -2829,16 +2829,11 @@ struct MapHomeView: View {
                 id: "place-\(place.id.uuidString)",
                 coordinate: place.coordinate,
                 kind: .place(place),
-                accessibilityLabel: place.destination == .user
-                    ? language.text(
-                        "\(place.name) 사용자 위치 메뉴",
-                        "\(place.name) user location menu"
-                    )
-                    : language.text(
-                        "\(place.name), 레벨 \(place.floor ?? 1)",
-                        "\(place.name), level \(place.floor ?? 1)"
-                    ),
-                isInteractive: place.destination == .user
+                accessibilityLabel: language.text(
+                    "\(place.name) 사용자 위치 메뉴",
+                    "\(place.name) user location menu"
+                ),
+                isInteractive: place.destination != .home
             )
         }
         annotations += transitAnnotations.map { place in
@@ -2882,6 +2877,16 @@ struct MapHomeView: View {
                     "\(sticker.title) memo sticker"
                 ),
                 isInteractive: isStickerMode
+            )
+        }
+        annotations += photoClusters.compactMap { cluster in
+            guard let info = photoPinInfo(for: cluster) else { return nil }
+            return MapHomeAppleAnnotation(
+                id: "photo-\(cluster.id)",
+                coordinate: cluster.coordinate,
+                kind: .photo(cluster, coverID: info.coverID, isHighlighted: info.highlighted),
+                accessibilityLabel: language.text("사진 \(cluster.count)장", "\(cluster.count) photos"),
+                isInteractive: true
             )
         }
         annotations += mapMemosOnMap.compactMap { memo in
@@ -3020,8 +3025,9 @@ struct MapHomeView: View {
                 isDaySummaryPresented = true
                 return
             }
-            guard place.destination == .user else { return }
             selectedUserLocation = .frequentPlace(place.id)
+        case .photo(let cluster, _, _):
+            photoAlbumSelection = MapHomePhotoAlbumSelection(id: cluster.id, moments: cluster.moments)
         case .transit(let place):
             selectedUserLocation = .transit(place.id)
         case .boarding(let candidate):
@@ -3349,7 +3355,7 @@ struct MapHomeView: View {
             selectedMapStickerEditor = .memo(memo.id)
             return true
         }
-        if !isDayPlaybackRunning, !isScreenRecording,
+        if !isScreenRecording,
            let cluster = photoClusters.last(where: { cluster in
                photoPinPoint(cluster, in: viewport, places: placeAnnotations).map {
                    CGRect(x: $0.x - 28, y: $0.y - 64, width: 56, height: 74).contains(tapPoint)
@@ -3370,12 +3376,7 @@ struct MapHomeView: View {
         if let place = placeAnnotations.last(where: {
             $0.destination != .home && hit(vectorPlaceMarkerID($0.id), width: 80, height: 90)
         }) {
-            if place.destination == .user {
-                selectedUserLocation = .frequentPlace(place.id)
-            } else {
-                selectedMarkerPlaceID = place.id
-                selectedMarkerInfo = .landmark(place.destination)
-            }
+            selectedUserLocation = .frequentPlace(place.id)
             return true
         }
         return false
@@ -3876,6 +3877,13 @@ struct MapHomeView: View {
                         headingDegrees: playback.headingDegrees,
                         cameraHeading: viewport?.heading ?? 0
                     )
+                    )
+                    .catSpeechBubble(
+                        action: playback.action,
+                        facesLeft: MapHomeStickmanFacing.facesLeft(
+                            headingDegrees: playback.headingDegrees,
+                            cameraHeading: viewport?.heading ?? 0
+                        )
                     )
                 }
                     .zIndex(MapHomeLayerPriority.stickman)
@@ -5396,19 +5404,14 @@ struct MapHomeView: View {
     }
 
     private var photoClusters: [MapHomePhotoCluster] {
-        guard showsPhotosOnMap, !photoMoments.isEmpty, recordingShows(\.photos) else { return [] }
+        // 재생 중 사진은 지도 대신 아래 사진 칸에 나온다.
+        guard showsPhotosOnMap, !isDayPlaybackRunning, !photoMoments.isEmpty, recordingShows(\.photos) else { return [] }
         let radius = MapHomePhotoPolicy.clusterRadiusMeters(cameraDistance: visibleMapCamera?.distance)
         return photoClusterCache.clusters(for: photoMoments, radiusMeters: radius)
     }
 
-    /// 핀에 보일 대표 사진·개수·강조 여부. 재생 중에는 지나온 사진만 순서대로 나타난다.
+    /// 핀에 보일 대표 사진·개수·강조 여부.
     private func photoPinInfo(for cluster: MapHomePhotoCluster) -> (coverID: String, count: Int, highlighted: Bool)? {
-        if isDayPlaybackRunning {
-            let minute = dayPlaybackCurrentMinute ?? Double(effectiveTimelineMinute)
-            let visible = MapHomePhotoPolicy.playbackVisibleMoments(in: cluster, playbackMinute: minute)
-            guard let cover = visible.last else { return nil }
-            return (cover.id, visible.count, true)
-        }
         let highlighted = selectedTimelineMinute != nil
             && MapHomePhotoPolicy.isHighlighted(cluster, selectedMinute: Double(effectiveTimelineMinute))
         let cover = highlighted
@@ -6099,7 +6102,9 @@ struct MapHomeView: View {
 
     /// 하루 재생을 프레임마다 그려 끊김 없는 60fps 영상으로 만든다(VID1029A01). 화랑이는 정중앙 고정.
     private func makePlaybackVideoRenderer(hiddenPlaces: [MapHomeRangeTripPlan.Point]) -> MapHomePlaybackVideoRenderer? {
-        guard let style = model.settings.mapDisplayStyle.runtimeStyle.mapHomeVectorStyle else { return nil }
+        // 영상은 벡터 지도로만 그린다. 애플 지도를 쓰는 중이면 기본 벡터 지도로 만든다.
+        guard let style = model.settings.mapDisplayStyle.runtimeStyle.mapHomeVectorStyle
+            ?? MapDisplayStyle.mapLibreRPG.runtimeStyle.mapHomeVectorStyle else { return nil }
         let ranges = dayPlaybackMovementRanges
         let end = MapHomeDayPlaybackMath.playbackEndMinute(for: model.selectedDate, now: .now)
         var timeline = MapHomePlaybackTimeline(
@@ -7565,14 +7570,8 @@ struct MapHomeView: View {
     private func languagePreferenceTitle(
         _ preference: AppLanguagePreference
     ) -> String {
-        switch preference {
-        case .automatic:
-            language.text("자동", "Automatic")
-        case .korean:
-            language.text("한국어", "Korean")
-        case .english:
-            "English"
-        }
+        // 언어 이름은 그 언어 글자로 보여 준다. 지금 언어를 못 읽어도 찾을 수 있어야 한다.
+        preference == .automatic ? language.text("자동", "Automatic") : preference.displayName
     }
 
     private var displayMenuItem: some View {
@@ -9562,6 +9561,12 @@ struct MapHomeView: View {
             travel: currentDayDataSnapshot?.travel ?? [],
             places: currentDayDataSnapshot?.places ?? [],
             expectedCoordinate: expectedPoint
+        ) ?? MapHomePlaybackLocation.restingLocation(
+            at: displayedLocationDate,
+            normalizedReadings: historicalPlaybackReadings,
+            places: currentDayDataSnapshot?.places ?? [],
+            sleepSpans: model.sleepSessions.map(\.span) + (currentDayDataSnapshot?.actuals ?? []).filter(AutomaticRecordTimelineEngine.isSleep).map { $0.span(asOf: .now) },
+            home: model.settings.frequentPlaces.first { $0.kind == .home }?.point
         )
     }
 

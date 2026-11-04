@@ -65,7 +65,7 @@ enum MapHomeVectorLabels {
 
     /// 번역 언어는 그 언어 이름 → 영어 → 현지 이름 순서로 쓴다. 한국어·영어는 한국어 이름을 먼저 쓴다.
     private static let nameFields: String = {
-        guard let code = UITextPack.bundleLanguageCode else { return #"["get", "name:ko"], ["get", "name"]"# }
+        guard let code = UITextPack.activeLanguageCode else { return #"["get", "name:ko"], ["get", "name"]"# }
         let base = code.split(separator: "-").first.map(String.init) ?? code
         let names = code == "zh-Hant" ? [code, base] : [base]
         return (names + ["en"]).map { #"["get", "name:\#($0)"], "# }.joined() + #"["get", "name"]"#

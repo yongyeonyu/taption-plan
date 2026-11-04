@@ -125,4 +125,29 @@ final class PlaceZoneStayTrackerTests: XCTestCase {
             restaurants: [company, restaurant], readings: readings, inside: span, asOf: span.end
         ).isEmpty, "8층 사무실 높이면 1층 식당이 아니다")
     }
+
+    /// 실내에서 위치가 40분 멈춰도 앞뒤가 식당 안이면 식사다. 업무는 그만큼 잘린다.
+    func testRestaurantMealSurvivesIndoorLocationPause() {
+        var restaurant = FrequentPlace(kind: .restaurant, name: "식당", point: GeoPoint(latitude: 37.5, longitude: 127, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: -1))
+        restaurant.radiusMeters = 40
+        let readings = [sample(0, meters: 5), sample(1, meters: 5), sample(41, meters: 5), sample(42, meters: 5)]
+        let span = TimeSpan(start: start.addingTimeInterval(-3_600), end: start.addingTimeInterval(7_200))
+        let meals = RestaurantMealActualEngine.records(restaurants: [restaurant], readings: readings, inside: span, asOf: span.end)
+        XCTAssertEqual(meals.count, 1)
+        XCTAssertEqual(meals.first?.categoryID, "eating")
+        XCTAssertEqual(meals.first?.confidence, .medium, "관측이 짧으면 확정처럼 올리지 않는다")
+        let work = ActualRecord(planID: nil, title: "업무", categoryID: "work", startedAt: start.addingTimeInterval(-3_000), endedAt: start.addingTimeInterval(6_000), source: .location)
+        let carved = RestaurantMealActualEngine.carvingMeals(from: [work] + meals, asOf: span.end).filter { $0.categoryID == "work" }
+        XCTAssertEqual(carved.count, 2)
+    }
+
+    /// 한 시간을 넘게 비면 근거가 없으므로 식사로 잇지 않는다.
+    func testRestaurantMealDoesNotBridgeLongSilence() {
+        var restaurant = FrequentPlace(kind: .restaurant, name: "식당", point: GeoPoint(latitude: 37.5, longitude: 127, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: -1))
+        restaurant.radiusMeters = 40
+        let span = TimeSpan(start: start.addingTimeInterval(-3_600), end: start.addingTimeInterval(14_400))
+        XCTAssertTrue(RestaurantMealActualEngine.records(
+            restaurants: [restaurant], readings: [sample(0, meters: 5), sample(100, meters: 5)], inside: span, asOf: span.end
+        ).isEmpty)
+    }
 }

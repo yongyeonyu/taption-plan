@@ -975,7 +975,8 @@ enum StationaryContextActualEngine {
 enum RestaurantMealActualEngine {
     static let modelVersion = AutomaticModelVersion.restaurantMeal
     static let minimumDuration: TimeInterval = 15 * 60
-    static let maximumSampleGap: TimeInterval = 20 * 60
+    /// 실내에서는 iOS가 위치를 멈춰 표본이 길게 빈다. 앞뒤가 식당 안이면 이만큼까지 이어 식사로 본다.
+    static let maximumSampleGap: TimeInterval = 60 * 60
 
     static func records(
         restaurants: [FrequentPlace],
@@ -1029,7 +1030,7 @@ enum RestaurantMealActualEngine {
                             startedAt: span.start,
                             endedAt: span.end,
                             source: .location,
-                            confidence: .high,
+                            confidence: stay.observedDuration < minimumDuration ? .medium : .high,
                             createdAt: span.start,
                             behavior: "meal",
                             evidence: evidence,

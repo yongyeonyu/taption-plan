@@ -371,7 +371,7 @@ struct MapHomePlaybackPhotoStrip: View {
     let photos: [Photo]
 
     static let slotsPerSide = 3
-    static let centerSide: CGFloat = 84
+    static let centerSide: CGFloat = 168
     static let bottomInset: CGFloat = 104
     private static let gap: CGFloat = 5
 
@@ -464,53 +464,64 @@ struct MapHomePlaybackMomentsOverlay: View {
 
     let minute: Double
     let events: [(minute: Double, moment: Moment)]
-    let anchor: CGPoint
 
-    @State private var current: (moment: Moment, start: Date)?
+    private struct Shown: Identifiable {
+        let id = UUID()
+        let text: String
+    }
+
+    @State private var queue: [Moment] = []
+    @State private var shown: Shown?
     @State private var lastMinute: Double?
+    @State private var lastShownAt = Date.distantPast
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    static let lifetime: TimeInterval = 2.4
+    /// 메모 하나가 떠 있는 시간(대표 지시).
+    static let lifetime: TimeInterval = 3
+    /// 여러 개가 몰려도 읽을 수 있게 다음 메모가 덮기까지 두는 최소 간격.
+    static let minimumOverwriteGap: TimeInterval = 0.7
 
-    /// 지난 분에서 이번 분 사이에 지나간 것 중 마지막. 되감기면 아무것도 띄우지 않는다.
-    nonisolated static func passed<T>(_ events: [(minute: Double, moment: T)], from previous: Double?, to minute: Double) -> T? {
-        guard let previous, minute > previous else { return nil }
-        return events.last { $0.minute > previous && $0.minute <= minute }?.moment
-    }
-
-    nonisolated static func opacity(elapsed: TimeInterval) -> Double {
-        if elapsed < 0.2 { return max(0, elapsed / 0.2) }
-        return min(1, max(0, (lifetime - elapsed) / 1.0))
-    }
-
-    nonisolated static func typedCount(elapsed: TimeInterval, total: Int) -> Int {
-        min(total, Int(elapsed / 0.045))
+    /// 지난 분에서 이번 분 사이에 지나간 것을 순서대로. 되감기면 아무것도 띄우지 않는다.
+    nonisolated static func passed<T>(_ events: [(minute: Double, moment: T)], from previous: Double?, to minute: Double) -> [T] {
+        guard let previous, minute > previous else { return [] }
+        return events.filter { $0.minute > previous && $0.minute <= minute }.map(\.moment)
     }
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: current == nil)) { context in
-            if let current {
-                let elapsed = context.date.timeIntervalSince(current.start)
-                Group {
-                    switch current.moment {
-                    case .memo(let text):
-                        Text(String(text.prefix(Self.typedCount(elapsed: elapsed, total: text.count))))
-                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
-                            .foregroundStyle(Color.tpInk)
-                            .padding(.horizontal, 12).padding(.vertical, 8)
-                            .frame(maxWidth: 240, alignment: .leading)
-                            .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    }
-                }
-                .opacity(Self.opacity(elapsed: max(0, elapsed - memoHold(current.moment))))
-                .position(x: anchor.x, y: max(90, anchor.y - 130))
+        VStack {
+            if let shown {
+                Text(shown.text)
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold))
+                    .foregroundStyle(Color.tpInk)
+                    .lineLimit(3)
+                    .padding(.horizontal, 14).padding(.vertical, 10)
+                    .frame(maxWidth: 320, alignment: .leading)
+                    .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .shadow(color: .black.opacity(0.18), radius: 8, y: 3)
+                    .id(shown.id)
+                    .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
             }
+            Spacer(minLength: 0)
         }
+        .padding(.top, 8)
+        .padding(.horizontal, 16)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .animation(.spring(response: 0.38, dampingFraction: 0.82), value: shown?.id)
         .allowsHitTesting(false)
         .accessibilityHidden(true)
         .onChange(of: minute) { old, new in
-            if let moment = Self.passed(events, from: lastMinute ?? old, to: new) { current = (moment, .now) }
+            queue += Self.passed(events, from: lastMinute ?? old, to: new)
             lastMinute = new
-            if let shown = current, Date.now.timeIntervalSince(shown.start) > Self.lifetime + memoHold(shown.moment) { current = nil }
+            advance(now: .now)
+        }
+    }
+
+    private func advance(now: Date) {
+        if !queue.isEmpty, now.timeIntervalSince(lastShownAt) >= Self.minimumOverwriteGap {
+            if case .memo(let text) = queue.removeFirst() { shown = Shown(text: text) }
+            lastShownAt = now
+        } else if shown != nil, now.timeIntervalSince(lastShownAt) >= Self.lifetime {
+            shown = nil
         }
     }
 
@@ -519,11 +530,5 @@ struct MapHomePlaybackMomentsOverlay: View {
         return memos
             .map { (minute: $0.occurredAt.timeIntervalSince(start) / 60, moment: Moment.memo(text: $0.text)) }
             .sorted { $0.minute < $1.minute }
-    }
-
-    /// 메모는 다 찍은 뒤부터 사라지기 시작한다.
-    private func memoHold(_ moment: Moment) -> TimeInterval {
-        if case .memo(let text) = moment { return Double(text.count) * 0.045 }
-        return 0
     }
 }

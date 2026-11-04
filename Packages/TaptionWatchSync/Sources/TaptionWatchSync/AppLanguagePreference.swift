@@ -5,6 +5,26 @@ public enum AppLanguagePreference: String, Codable, CaseIterable, Identifiable, 
     case automatic
     case korean
     case english
+    case japanese = "ja"
+    case simplifiedChinese = "zh-Hans"
+    case traditionalChinese = "zh-Hant"
+    case german = "de"
+    case french = "fr"
+    case italian = "it"
+    case spanish = "es"
+    case brazilianPortuguese = "pt-BR"
+    case vietnamese = "vi"
+    case indonesian = "id"
+    case thai = "th"
+    case hindi = "hi"
+
+    /// 언어 팩으로 고른 언어의 번들 코드. 자동·한국어·영어는 nil이다.
+    public var translatedCode: String? {
+        switch self {
+        case .automatic, .korean, .english: nil
+        default: rawValue
+        }
+    }
 
     public enum ResolvedLanguage: String, Codable, CaseIterable, Sendable {
         case korean
@@ -39,6 +59,18 @@ public enum AppLanguagePreference: String, Codable, CaseIterable, Identifiable, 
         case .automatic: "자동"
         case .korean: "한국어"
         case .english: "English"
+        case .japanese: "日本語"
+        case .simplifiedChinese: "简体中文"
+        case .traditionalChinese: "繁體中文"
+        case .german: "Deutsch"
+        case .french: "Français"
+        case .italian: "Italiano"
+        case .spanish: "Español"
+        case .brazilianPortuguese: "Português (Brasil)"
+        case .vietnamese: "Tiếng Việt"
+        case .indonesian: "Bahasa Indonesia"
+        case .thai: "ไทย"
+        case .hindi: "हिन्दी"
         }
     }
 
@@ -83,6 +115,13 @@ public enum AppLanguagePreference: String, Codable, CaseIterable, Identifiable, 
         target.set(preference.rawValue, forKey: sharedDefaultsKey)
 
         if defaults == nil {
+            UITextPack.selectionDidChange(preference)
+            // 시스템이 찾는 문구(Info.plist, 표준 단추)는 다음 실행부터 고른 언어를 따른다.
+            if let code = preference.translatedCode {
+                UserDefaults.standard.set([code], forKey: "AppleLanguages")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "AppleLanguages")
+            }
             UserDefaults.standard.set(
                 preference.rawValue,
                 forKey: legacyDefaultsKey
@@ -101,7 +140,8 @@ public enum AppLanguagePreference: String, Codable, CaseIterable, Identifiable, 
         switch Self(rawValue: rawValue ?? "") ?? .automatic {
         case .korean:
             return .korean
-        case .english:
+        case .english, .japanese, .simplifiedChinese, .traditionalChinese, .german, .french,
+             .italian, .spanish, .brazilianPortuguese, .vietnamese, .indonesian, .thai, .hindi:
             return .english
         case .automatic:
             let languageCode = locale.language.languageCode?.identifier ?? ""

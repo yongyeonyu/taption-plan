@@ -20,7 +20,6 @@
       "title": "업무",
       "systemImage": "briefcase.fill",
       "details": [
-        { "id": "work.route", "title": "업무(집 - 회사)", "behavior": "work", "systemImage": "briefcase.fill" },
         { "id": "work.meeting", "title": "회의", "behavior": "meeting", "systemImage": "person.3.fill" },
         { "id": "work.rest", "title": "휴식", "behavior": "stationary", "systemImage": "pause.circle.fill" },
         { "id": "work.walking", "title": "걷기", "behavior": "walking", "systemImage": "figure.walk" }

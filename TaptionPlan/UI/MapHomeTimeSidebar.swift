@@ -911,6 +911,9 @@ enum MapHomeTimeRailSegmentEngine {
             return "movement:\(segment.behavior ?? segment.title)"
         case "activity" where segment.behavior == nil:
             return "activity:\(segment.title.lowercased())"
+        case "work" where segment.behavior == StationaryContextKind.meeting.rawValue:
+            // 회의가 앞뒤 업무에 합쳐지면 업무 제목만 남아 보이지 않는다.
+            return "work:meeting"
         default:
             return segment.categoryID
         }
