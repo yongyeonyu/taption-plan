@@ -5739,3 +5739,8 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 전체 단위 시험: 2,042건 중 2,028건 통과, 실패 0, 건너뜀 14 (`build/validation/PLY1104A03/check2.xcresult`). 구조 지표·엔진 경계 통과.
 - 화면: 사진 7칸 미리보기(`strip.png`, `-photoStripPreview`, 자리표시 그림), 메뉴 명언과 고양이 세로 맞춤(`menu-top.png`), 오픈카 시트(`sheet/car.png`). 처음 12% 확대는 차 앞이 잘려 10%로 줄였다.
 - 제한: 구글 일정 실제 수신은 확인하지 못했다. 캘린더 선택·주소 인코딩 단위 시험만 했다. 표시로 켠 공유 캘린더 일정도 활동 판정에 쓰인다. 실제 사진 재생 화면과 재생 하단 위치는 기기에서 확인이 남았다.
+
+## GOO1104A01 BOKKI Plan OAuth 클라이언트 (2026-11-04)
+- Google Cloud에 새 프로젝트, Calendar API, 동의 화면, iOS 클라이언트, 테스트 사용자 1명을 설정했다. 정책 동의는 대표가 했다.
+- 크롬에서 새 클라이언트의 로그인 주소를 열어 "BOKKI Plan(으)로 이동" 표시를 읽었다. 로그인·앱 연결·일정 수신은 하지 않았다.
+- 전체 단위 시험: 2,042건 중 2,028건 통과, 실패 0, 건너뜀 14 (`build/validation/CAL1104A02/check1.xcresult`).

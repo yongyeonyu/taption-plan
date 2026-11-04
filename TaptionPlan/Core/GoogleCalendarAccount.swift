@@ -7,8 +7,8 @@ import UIKit
 
 /// 구글 OAuth 설정. 클라이언트 ID는 공개 값이라 앱에 둔다. 리디렉트는 iOS 클라이언트 규칙(반전된 ID 스킴)을 따른다.
 enum GoogleCalendarConfig {
-    static let clientID = "12503110622-e4agan8gbaggkbopfv79jg2i96bt2p23.apps.googleusercontent.com"
-    static let redirectScheme = "com.googleusercontent.apps.12503110622-e4agan8gbaggkbopfv79jg2i96bt2p23"
+    static let clientID = "550391792619-kqj6favjige5ub747d8jcvf6kttc8p73.apps.googleusercontent.com"
+    static let redirectScheme = "com.googleusercontent.apps.550391792619-kqj6favjige5ub747d8jcvf6kttc8p73"
     static let redirectURI = redirectScheme + ":/oauth2redirect"
     static let scope = "https://www.googleapis.com/auth/calendar.readonly"
 }
