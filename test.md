@@ -5839,3 +5839,12 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 화면 UI 시험은 기기에서 돌리지 않았다. 새 설치 상태가 필요해 기기 데이터를 지우게 되기 때문이다.
 - 높이 검사 예외를 "수직 오차 12m 이하의 GPS는 계속 믿는다"로 좁혔다. 처음 고친 판은 `PlaceZoneStayTrackerTests.testRestaurantMealsUseZoneAndKeepHeightRule`이 잡았다(식당 위층 사무실이 식사로 잡히는 회귀). 고친 뒤 시뮬레이터 전체 단위 시험(병렬 끔) 2,082건 중 통과 2,066, 실패 0, 건너뜀 16 (`build/validation/MEA1105A01/unit-full2.xcresult`). 병렬로 돌린 `unit-full.xcresult`에서는 `SensorDayStoreTests.testThirtyDayAppColdAndWarmLoadP95StaysInteractive`도 실패했으나 단독·병렬 끔 실행에서는 통과했다.
 - 위 실기기 시험·설치는 이 좁힘, 식사 제목의 표시 이름, 재생 사진 디밍 전의 코드다.
+
+## TFB1105A01 TestFlight 274 (2026-11-05)
+- `release.sh --yes --request-id TFB1105A01`: 빌드 274, 처리 `VALID`, 내부 그룹 연결, 테스터 노출 1명 (`build/validation/TFB1105A01/testflight-report.json`). 외부 그룹 베타 심사에는 제출하지 않았다. 대표 기기 TestFlight 설치 결과는 아직 없다.
+
+## LAY1105A01 아이패드·듀오 화면 점검 (2026-11-05)
+- 아이패드 실기기: Debug 빌드 274 `devicectl` 설치·실행, 프로세스 유지까지 확인. 화면은 보지 못했다.
+- IPD-iPad11 시뮬레이터 `TaptionPlanWideLayoutUITests` 7건 중 통과 4, 실패 3 (`build/validation/LAY1105A01/ipad.xcresult`). 실패: 듀오 안쪽 가로 폭 고정에서 왼쪽 열 넘침(675 > 623.4, 이전 기록 638.5), split700 패널 폭 546.8 > 410(이전과 같은 값), 하루 요약의 「집 성장」 버튼을 찾지 못함. 가로 메뉴·세로 홈·클립 편집 세 줄 캡처를 눈으로 봤다.
+- BOKKI-iPhoneDuo 시뮬레이터 바깥 화면: 같은 시험 7건 중 통과 1, 건너뜀 6(넓은 화면 전용). 홈 캡처를 봤다. 시간 막대와 하단 메뉴가 오른쪽 안전 영역만큼 안쪽에 있다.
+- 듀오 안쪽은 시뮬레이터를 펼치지 못해 폭·높이를 고정한 흉내만 봤다. 실제 펼침과 전환은 확인하지 못했다.
