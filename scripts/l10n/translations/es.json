@@ -2687,7 +2687,6 @@
 "권한 설정|Permission settings": "Permisos",
 "권한, 센서 주기, 하루 카드, 집과 회사, 연봉, 고양이|Permissions, sensor interval, day card, home and work, salary, your cat": "Permisos, intervalo de sensores, tarjeta del día, casa y trabajo, salario, tu gato",
 "기간|Period": "Período",
-"기간과 음악은 영상 만들기에 들어갑니다. 화면 녹화는 하루만, 음악 없이 담습니다.|Period and music apply to Render video. Screen recording captures one day without music.": "El período y la música se aplican al crear el video. La grabación de pantalla captura un día sin música.",
 "길수록|Longer": "Más largo",
 "메뉴 > GPS 및 센서 데이터에서 바꿉니다.|Change it in Menu > GPS & Sensor Data.": "Cámbialo en Menú > GPS y datos de sensores.",
 "메뉴 > 알림에서 바꿉니다.|Change it in Menu > Alerts.": "Cámbialo en Menú > Alertas.",
@@ -2700,6 +2699,10 @@
 "위치와 센서를 얼마나 자주 확인할지 고릅니다.|Choose how often location and sensors are checked.": "Elige con qué frecuencia se revisan la ubicación y los sensores.",
 "짧을수록|Shorter": "Más corto",
 "키보드 숨기기|Hide keyboard": "Ocultar teclado",
-"하루 카드 시각|Day card time": "Hora de la tarjeta del día"
+"하루 카드 시각|Day card time": "Hora de la tarjeta del día",
+"기간은 영상 만들기에 들어갑니다. 화면 녹화는 하루만 담고, 고른 음악은 저장할 때 넣습니다.|Period applies to Render video. Screen recording captures one day, and your music is added when it saves.": "El periodo se aplica a Crear vídeo. La grabación de pantalla captura un día y tu música se añade al guardar.",
+"음악을 넣지 못해 음악 없이 저장했습니다.|Couldn't add music, so the video was saved without it.": "No se pudo añadir la música, así que el vídeo se guardó sin ella.",
+"상세|Detail": "Detalle",
+"일정에서 고르기|From calendar": "Del calendario"
 }
 }

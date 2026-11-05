@@ -1,5 +1,5 @@
 {
- "ui": 2223,
+ "ui": 2227,
  "catalog": 461,
  "unread": [
   {
@@ -79,6 +79,24 @@
    "line": 203,
    "ko": "koreanTitle",
    "en": "englishTitle"
+  },
+  {
+   "file": "TaptionPlan/UI/FirstRunGuideStage.swift",
+   "line": 363,
+   "ko": "date",
+   "en": "offset"
+  },
+  {
+   "file": "TaptionPlan/UI/FirstRunGuideStage.swift",
+   "line": 446,
+   "ko": "_ date: Date",
+   "en": "Int"
+  },
+  {
+   "file": "TaptionPlan/UI/FirstRunGuideStage.swift",
+   "line": 475,
+   "ko": "date",
+   "en": "cue == .calendar ? phase - 2 : 0"
   },
   {
    "file": "TaptionPlan/UI/FirstRunTutorialGuides.swift",
@@ -166,7 +184,7 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeInfoSheets.swift",
-   "line": 521,
+   "line": 522,
    "ko": "entry.mode.summaryKoreanTitle",
    "en": "entry.mode.summaryEnglishTitle"
   },
@@ -316,31 +334,31 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeView.swift",
-   "line": 7444,
+   "line": 7460,
    "ko": "location.kind.title",
    "en": "location.kind.englishTitle"
   },
   {
    "file": "TaptionPlan/UI/MapHomeView.swift",
-   "line": 7470,
+   "line": 7486,
    "ko": "destination.koreanName",
    "en": "destination.englishName"
   },
   {
    "file": "TaptionPlan/UI/MapHomeView.swift",
-   "line": 7547,
+   "line": 7563,
    "ko": "FloorLabel.korean(place.floor ?? 1)",
    "en": "FloorLabel.english(place.floor ?? 1)"
   },
   {
    "file": "TaptionPlan/UI/MapHomeView.swift",
-   "line": 7555,
+   "line": 7571,
    "ko": "destination.koreanName",
    "en": "destination.englishName"
   },
   {
    "file": "TaptionPlan/UI/MapHomeView.swift",
-   "line": 7664,
+   "line": 7680,
    "ko": "strength.koreanLabel",
    "en": "strength.englishLabel"
   },

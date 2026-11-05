@@ -565,8 +565,8 @@ struct MapHomeRecordingOptionsSheet: View {
             MapHomePlaybackRangePicker(language: language)
             MapHomePlaybackMusicPicker(language: language, canUseAudio: canPreviewMusic)
             Text(language.text(
-                "기간과 음악은 영상 만들기에 들어갑니다. 화면 녹화는 하루만, 음악 없이 담습니다.",
-                "Period and music apply to Render video. Screen recording captures one day without music."
+                "기간은 영상 만들기에 들어갑니다. 화면 녹화는 하루만 담고, 고른 음악은 저장할 때 넣습니다.",
+                "Period applies to Render video. Screen recording captures one day, and your music is added when it saves."
             ))
             .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
             .foregroundStyle(.secondary)

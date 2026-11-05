@@ -5887,14 +5887,30 @@ struct MapHomeView: View {
     private func finishRecordingPlayback() {
         guard isScreenRecording else { return }
         Task { @MainActor in
-            let url = await screenRecorder.stop()
+            let recorded = await screenRecorder.stop()
             isScreenRecording = false
-            guard let url else { return }
+            guard let recorded else { return }
+            let url = await recordingWithSelectedMusic(recorded)
             let saved = await MapHomeScreenRecordingStore.saveToPhotos(url)
             TaptionPlanDiagnosticsLogger.shared.record("screen_recording_saved", fields: ["saved": saved ? "true" : "false"])
             // 녹화 화면을 닫는 애니메이션이 끝난 뒤 공유 시트를 연다.
             try? await Task.sleep(for: .milliseconds(400))
             recordedVideoShare = url
+        }
+    }
+
+    /// 고른 곡을 넣은 파일을 돌려준다. 넣지 못하면 음악 없는 원본을 살리고 알린다.
+    private func recordingWithSelectedMusic(_ recorded: URL) async -> URL {
+        let raw = UserDefaults.standard.string(forKey: "playbackVideoMusic") ?? MapHomePlaybackMusicTrack.defaultID
+        guard let music = MapHomePlaybackMusicTrack.stored(raw)?.url else { return recorded }
+        do {
+            let url = try await MapHomeRecordingMusicMuxer.mux(video: recorded, music: music)
+            try? FileManager.default.removeItem(at: recorded)
+            return url
+        } catch {
+            TaptionPlanDiagnosticsLogger.shared.record("screen_recording_music_failed", level: .error, fields: ["error": String(describing: error)])
+            recordingFailureMessage = language.text("음악을 넣지 못해 음악 없이 저장했습니다.", "Couldn't add music, so the video was saved without it.")
+            return recorded
         }
     }
 

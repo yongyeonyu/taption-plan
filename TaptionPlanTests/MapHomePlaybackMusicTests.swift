@@ -69,6 +69,44 @@ final class MapHomePlaybackMusicTests: XCTestCase {
         XCTAssertTrue(audio.isEmpty)
     }
 
+    /// 녹화 파일에 곡을 넣어도 영상 표본은 그대로이고, 곡보다 길면 반복해 끝까지 채운다(REC1105A02).
+    func testMuxAddsLoopedMusicAndKeepsVideoSamples() async throws {
+        let seconds = longestTrackSeconds + 4
+        let recorded = try await writeVideo(seconds: seconds, music: nil)
+        let muxed = try await MapHomeRecordingMusicMuxer.mux(video: recorded, music: try track())
+        addTeardownBlock { try? FileManager.default.removeItem(at: muxed) }
+        try await assertAudioMatchesVideo(muxed, seconds: seconds)
+        let sourceCount = try await videoSampleCount(recorded)
+        let muxedCount = try await videoSampleCount(muxed)
+        XCTAssertEqual(muxedCount, sourceCount)
+    }
+
+    func testMuxFailureLeavesRecordingAndNoOutput() async throws {
+        let notVideo = FileManager.default.temporaryDirectory.appendingPathComponent("REC-\(UUID().uuidString).mp4")
+        try Data("not a video".utf8).write(to: notVideo)
+        addTeardownBlock { try? FileManager.default.removeItem(at: notVideo) }
+        do {
+            let url = try await MapHomeRecordingMusicMuxer.mux(video: notVideo, music: try track())
+            XCTFail("합성이 성공하면 안 된다: \(url)")
+        } catch {
+            XCTAssertTrue(FileManager.default.fileExists(atPath: notVideo.path))
+            XCTAssertFalse(FileManager.default.fileExists(atPath: notVideo.deletingPathExtension().appendingPathExtension("music.mp4").path))
+        }
+    }
+
+    private func videoSampleCount(_ url: URL) async throws -> Int {
+        let asset = AVURLAsset(url: url)
+        let tracks = try await asset.loadTracks(withMediaType: .video)
+        let video = try XCTUnwrap(tracks.first)
+        let reader = try AVAssetReader(asset: asset)
+        let output = AVAssetReaderTrackOutput(track: video, outputSettings: nil)
+        reader.add(output)
+        XCTAssertTrue(reader.startReading())
+        var count = 0
+        while let sample = output.copyNextSampleBuffer() { count += CMSampleBufferGetNumSamples(sample) }
+        return count
+    }
+
     func testCancelWithMusicDoesNotHang() throws {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("BGM-\(UUID().uuidString).mov")
         addTeardownBlock { try? FileManager.default.removeItem(at: url) }

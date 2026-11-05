@@ -142,12 +142,14 @@ final class MapHomePlaybackMusicFeeder: @unchecked Sendable {
     // 둘 다 전용 큐의 `feed`에서만 쓴다.
     private let input: AVAssetWriterInput
     private let stream: MapHomePlaybackMusicStream
+    private let startTime: CMTime
     private let queue = DispatchQueue(label: "com.taption.plan.playback-music", qos: .utility)
     private let state = OSAllocatedUnfairLock(initialState: State.running)
 
-    init(input: AVAssetWriterInput, stream: MapHomePlaybackMusicStream) {
+    init(input: AVAssetWriterInput, stream: MapHomePlaybackMusicStream, startTime: CMTime = .zero) {
         self.input = input
         self.stream = stream
+        self.startTime = startTime
     }
 
     var isRunning: Bool {
@@ -174,7 +176,7 @@ final class MapHomePlaybackMusicFeeder: @unchecked Sendable {
                     value: stream.producedFrames - AVAudioFramePosition(buffer.frameLength),
                     timescale: CMTimeScale(stream.format.sampleRate)
                 )
-                guard input.append(try Self.sampleBuffer(buffer, at: time)) else {
+                guard input.append(try Self.sampleBuffer(buffer, at: CMTimeAdd(startTime, time))) else {
                     state.withLock { $0 = .failed("music append") }
                     return
                 }
@@ -208,6 +210,114 @@ final class MapHomePlaybackMusicFeeder: @unchecked Sendable {
               ) == noErr
         else { throw MapHomePlaybackVideoError.writerFailed("music sample buffer") }
         return sample
+    }
+}
+
+/// 화면 녹화 파일에 고른 곡을 넣은 새 파일을 만든다(REC1105A02). 영상은 다시 인코딩하지 않는다.
+enum MapHomeRecordingMusicMuxer {
+    static func mux(video: URL, music: URL) async throws -> URL {
+        let asset = AVURLAsset(url: video)
+        guard let track = try await asset.loadTracks(withMediaType: .video).first else {
+            throw MapHomePlaybackVideoError.writerFailed("recording has no video")
+        }
+        let range = try await track.load(.timeRange)
+        let reader = try AVAssetReader(asset: asset)
+        let output = AVAssetReaderTrackOutput(track: track, outputSettings: nil)
+        guard reader.canAdd(output) else { throw MapHomePlaybackVideoError.writerFailed("cannot read recording") }
+        reader.add(output)
+
+        let url = video.deletingPathExtension().appendingPathExtension("music.mp4")
+        try? FileManager.default.removeItem(at: url)
+        let writer = try AVAssetWriter(outputURL: url, fileType: .mp4)
+        let videoInput = AVAssetWriterInput(
+            mediaType: .video, outputSettings: nil,
+            sourceFormatHint: try await track.load(.formatDescriptions).first
+        )
+        videoInput.transform = try await track.load(.preferredTransform)
+        videoInput.expectsMediaDataInRealTime = false
+        let stream = try MapHomePlaybackMusicStream(url: music, durationSeconds: range.duration.seconds)
+        let audioInput = AVAssetWriterInput(mediaType: .audio, outputSettings: [
+            AVFormatIDKey: kAudioFormatMPEG4AAC,
+            AVSampleRateKey: stream.format.sampleRate,
+            AVNumberOfChannelsKey: stream.format.channelCount,
+            AVEncoderBitRateKey: 192_000,
+        ])
+        audioInput.expectsMediaDataInRealTime = false
+        guard writer.canAdd(videoInput), writer.canAdd(audioInput) else {
+            throw MapHomePlaybackVideoError.writerFailed("cannot add recording tracks")
+        }
+        writer.add(videoInput)
+        writer.add(audioInput)
+        let feeder = MapHomePlaybackMusicFeeder(input: audioInput, stream: stream, startTime: range.start)
+        guard reader.startReading(), writer.startWriting() else {
+            throw MapHomePlaybackVideoError.writerFailed("cannot start muxing")
+        }
+        writer.startSession(atSourceTime: range.start)
+        feeder.start()
+        let copy = MapHomeRecordingVideoCopy(reader: reader, output: output, input: videoInput)
+        do {
+            try await copy.run()
+            while feeder.isRunning {
+                // 쓰기가 실패하면 음악 차례가 영영 오지 않는다.
+                guard writer.status == .writing else { throw MapHomePlaybackVideoError.writerFailed("mux writer stopped") }
+                try await Task.sleep(nanoseconds: 2_000_000)
+            }
+            if let reason = feeder.failure { throw MapHomePlaybackVideoError.writerFailed(reason) }
+        } catch {
+            writer.cancelWriting()
+            try? FileManager.default.removeItem(at: url)
+            throw error
+        }
+        writer.endSession(atSourceTime: range.end)
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            writer.finishWriting { continuation.resume() }
+        }
+        guard writer.status == .completed else {
+            try? FileManager.default.removeItem(at: url)
+            throw MapHomePlaybackVideoError.writerFailed("mux finish")
+        }
+        return url
+    }
+}
+
+/// 녹화 영상 표본을 전용 큐에서 그대로 옮긴다.
+private final class MapHomeRecordingVideoCopy: @unchecked Sendable {
+    // 모두 전용 큐의 콜백에서만 쓴다.
+    private let reader: AVAssetReader
+    private let output: AVAssetReaderTrackOutput
+    private let input: AVAssetWriterInput
+    private let queue = DispatchQueue(label: "com.taption.plan.recording-video-copy", qos: .utility)
+
+    init(reader: AVAssetReader, output: AVAssetReaderTrackOutput, input: AVAssetWriterInput) {
+        self.reader = reader
+        self.output = output
+        self.input = input
+    }
+
+    func run() async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            var isFinished = false
+            input.requestMediaDataWhenReady(on: queue) { [self] in
+                guard !isFinished else { return }
+                while input.isReadyForMoreMediaData {
+                    guard let sample = output.copyNextSampleBuffer() else {
+                        isFinished = true
+                        input.markAsFinished()
+                        if reader.status == .completed {
+                            continuation.resume()
+                        } else {
+                            continuation.resume(throwing: MapHomePlaybackVideoError.writerFailed("recording read"))
+                        }
+                        return
+                    }
+                    guard input.append(sample) else {
+                        isFinished = true
+                        continuation.resume(throwing: MapHomePlaybackVideoError.writerFailed("recording append"))
+                        return
+                    }
+                }
+            }
+        }
     }
 }
 
