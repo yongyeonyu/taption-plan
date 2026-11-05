@@ -5926,3 +5926,6 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 시험: 전체 단위 2,050건 실패 0, 건너뜀 17(`unit-full2.xcresult`), 구조·경계 점검 통과, 기준선 낮춤, watchOS·iOS Debug 빌드 성공, `check.py` 실패 0. 실기기 미확인.
 - 남긴 후보(동작 영향이 커 이번에 안 함): `MapHomeView` 약 1.2만 줄의 상태 분리, `TimelineBoard`·`TimelineDetailPanel` 분할, `performSensorTimelineRefresh`의 주 스레드 계산 이전(STRUCTURE_PERFORMANCE 안 A), 위젯 소스 직접 컴파일 감축(안 B), `Task.detached` 34곳 점검.
 
+## TFB1105A06 TestFlight 279 (2026-11-05)
+- 커밋 `8ab33f0b` 기준. 처리 `VALID`, `TP Taption Plan 내부 테스트` 그룹 연결, 테스터 1명 노출을 보고서에서 읽었다. 네 번들 번호 ['279', '279', '279', '279']를 아카이브에서 읽었다. 외부 심사 제출 안 함(외부 그룹 최신은 273). 실기기 확인 대기.
+
