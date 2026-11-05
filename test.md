@@ -5887,3 +5887,8 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 시뮬레이터: `-photoBrowserPreview` 예시 화면에서 밀기(6→11)·전체 화면 열기·닫기를 직접 해 봤다(자리 표시 이미지).
 - 미확인: 실제 사진과 지도 핀에서 시작하는 흐름. 전체 화면 사진 크기 수정은 시험 빌드에 들어 있으나 실제 사진으로 보지 못했다.
 
+## TFB1105A03 TestFlight 276 (2026-11-05)
+- 커밋 `80563f75` 기준. `release.sh --yes` 종료 코드 0, 처리 `VALID`, `TP Taption Plan 내부 테스트` 그룹 연결·테스터 1명 노출을 보고서에서 읽었다(`build/validation/TFB1105A03/testflight-report.json`).
+- 산출물: 앱·위젯·Watch·Watch 위젯 네 번들 276을 아카이브에서 읽었고, IPA에 Watch 앱이 들어 있다. Watch 앱이 다시 들어간 첫 TestFlight 빌드다.
+- 외부 심사는 제출하지 않았다. 설치와 Watch 동작은 대표 실기기 확인 대기다(WCH1105A01, PHO1105A01 열림).
+
