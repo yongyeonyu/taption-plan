@@ -18,6 +18,11 @@ struct MapHomePhotoCluster: Identifiable, Equatable {
 }
 
 enum MapHomePhotoPolicy {
+    /// 지금 시각에 가장 가까이 찍은 사진. 링이 여기서 시작한다.
+    static func nearest(_ photos: [PhotoMoment], toMinute minute: Double) -> PhotoMoment? {
+        photos.min { abs(minuteOfDay($0.capturedAt) - minute) < abs(minuteOfDay($1.capturedAt) - minute) }
+    }
+
     /// 사이드바 선택 시각 주변으로 보는 범위(분).
     static let highlightWindowMinutes = 30
     /// 재생 중 사진이 지도에 머무는 재생 시간(분).
@@ -372,6 +377,9 @@ struct MapHomePhotoArcBrowser: View {
     let moments: [PhotoMoment]
     let language: MapHomeLanguage
     let trailing: CGFloat
+    /// 하단 링: 지도를 가리지 않고 계속 떠 있으며, 넘길 때마다 알린다.
+    let isRing: Bool
+    let onPhotoChange: ((PhotoMoment) -> Void)?
     let onClose: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -383,7 +391,17 @@ struct MapHomePhotoArcBrowser: View {
     private static let pointsPerPhoto: CGFloat = 36
     private static let swipeDepth: CGFloat = MapHomePlaybackPhotoStrip.arcDrop + 46
 
-    init(moments: [PhotoMoment], startID: String?, language: MapHomeLanguage, trailing: CGFloat, onClose: @escaping () -> Void) {
+    init(
+        moments: [PhotoMoment],
+        startID: String?,
+        language: MapHomeLanguage,
+        trailing: CGFloat,
+        isRing: Bool = false,
+        onPhotoChange: ((PhotoMoment) -> Void)? = nil,
+        onClose: @escaping () -> Void
+    ) {
+        self.isRing = isRing
+        self.onPhotoChange = onPhotoChange
         self.moments = moments
         self.language = language
         self.trailing = trailing
@@ -400,12 +418,14 @@ struct MapHomePhotoArcBrowser: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            Color.black.opacity(0.18)
-                .ignoresSafeArea()
-                .contentShape(Rectangle())
-                .onTapGesture(perform: onClose)
-                .accessibilityLabel(language.text("닫기", "Close"))
-                .accessibilityAddTraits(.isButton)
+            if !isRing {
+                Color.black.opacity(0.18)
+                    .ignoresSafeArea()
+                    .contentShape(Rectangle())
+                    .onTapGesture(perform: onClose)
+                    .accessibilityLabel(language.text("닫기", "Close"))
+                    .accessibilityAddTraits(.isButton)
+            }
             VStack(spacing: 10) {
                 caption
                 arc
@@ -413,6 +433,10 @@ struct MapHomePhotoArcBrowser: View {
             .playbackBrowserPlacement(trailing: trailing)
         }
         .sensoryFeedback(.selection, trigger: index)
+        .onChange(of: index) { _, value in
+            guard moments.indices.contains(value) else { return }
+            onPhotoChange?(moments[value])
+        }
         .fullScreenCover(isPresented: Binding(
             get: { pagerIndex != nil },
             set: { if !$0 { pagerIndex = nil } }

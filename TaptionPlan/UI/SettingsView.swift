@@ -1075,7 +1075,7 @@ struct SettingsView: View {
                 seconds: model.settings.gpsLoggingPreferences.intervalSeconds,
                 tint: Color.tpMovementDark,
                 onCommit: model.setGPSLoggingIntervalSeconds
-            ) {
+            ) { _ in
                 Text("센싱 주기")
                     .font(.taption(size: SettingsTypography.rowTitle, weight: .bold))
                     .foregroundStyle(Color.tpInk)

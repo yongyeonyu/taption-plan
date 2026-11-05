@@ -170,15 +170,17 @@ enum MapHomeSalaryPolicy {
 
     static func loadSettings(_ defaults: UserDefaults = .standard, now: Date = .now) -> Settings {
         let override = defaults.string(forKey: monthAccumMonthKey) == monthKey(now) ? defaults.double(forKey: monthAccumKey) : 0
+        // 용돈을 고르면 급여 카운터는 쉰다. 적어 둔 금액은 지우지 않는다.
+        let isActive = !MapHomeAllowancePolicy.isSelected(defaults)
         return Settings(
-            annualPay: defaults.double(forKey: annualKey),
+            annualPay: isActive ? defaults.double(forKey: annualKey) : 0,
             isNetInput: defaults.bool(forKey: isNetInputKey),
-            monthlyPay: defaults.double(forKey: monthlyPayKey),
+            monthlyPay: isActive ? defaults.double(forKey: monthlyPayKey) : 0,
             showsNet: defaults.object(forKey: showsNetKey) as? Bool ?? true,
             monthAccumOverride: override,
             payHistory: decodePayHistory(defaults.string(forKey: payHistoryKey) ?? ""),
             isHourly: defaults.bool(forKey: isHourlyKey),
-            hourly: defaults.double(forKey: hourlyKey),
+            hourly: isActive ? defaults.double(forKey: hourlyKey) : 0,
             hourlyTax: HourlyTax(rawValue: defaults.string(forKey: hourlyTaxKey) ?? "") ?? .threePointThree,
             includesWeeklyHoliday: defaults.bool(forKey: weeklyHolidayKey),
             hourlyIsNet: defaults.bool(forKey: hourlyIsNetKey)

@@ -191,7 +191,24 @@ struct MapHomeAppleMap: UIViewRepresentable {
             let hitsWalker = walkerPoint(in: mapView).map {
                 hypot(location.x - $0.x, location.y - $0.y) <= Self.walkerHitRadius
             } ?? false
+            if !hitsWalker, let annotation = interactiveAnnotation(at: location, in: mapView) {
+                parent.onAnnotationSelected(annotation.kind)
+                return
+            }
             parent.onMapTap(location, hitsWalker)
+        }
+
+        /// 핀은 터치를 받지 않으므로 탭 위치로 맨 위의 핀을 찾는다(PNC1105A01).
+        private func interactiveAnnotation(at point: CGPoint, in mapView: MKMapView) -> MapHomeAppleMapAnnotation? {
+            var best: (annotation: MapHomeAppleMapAnnotation, priority: Float)?
+            for case let annotation as MapHomeAppleMapAnnotation in mapView.annotations where annotation.isInteractive {
+                guard let view = mapView.view(for: annotation), !view.isHidden, view.alpha > 0 else { continue }
+                let frame = view.convert(view.bounds, to: mapView).insetBy(dx: -6, dy: -6)
+                guard frame.contains(point) else { continue }
+                let priority = view.zPriority.rawValue
+                if best == nil || priority >= best!.priority { best = (annotation, priority) }
+            }
+            return best?.annotation
         }
 
         func detach(from mapView: MKMapView) {
@@ -537,6 +554,9 @@ struct MapHomeAppleMap: UIViewRepresentable {
                     return false
                 }
                 guard let view = gestureRecognizer.view else { return true }
+                if let mapView, interactiveAnnotation(at: touch.location(in: mapView), in: mapView) != nil {
+                    return false
+                }
                 return MapHomeLongPressRoutingMath.shouldPresentLocation(
                     at: touch.location(in: view),
                     excluding: parent.longPressExclusionFrame
@@ -834,6 +854,11 @@ struct MapHomeAppleMap: UIViewRepresentable {
             view.accessibilityLabel = annotation.label
         }
 
+        private func activation(for annotation: MapHomeAppleMapAnnotation) -> (() -> Void)? {
+            guard annotation.isInteractive else { return nil }
+            return { [weak self] in self?.parent.onAnnotationSelected(annotation.kind) }
+        }
+
         private func configurePawprint(
             _ view: MapHomeApplePawprintAnnotationView,
             annotation: MapHomeAppleMapAnnotation
@@ -844,8 +869,9 @@ struct MapHomeAppleMap: UIViewRepresentable {
                 : MapHomePawprintSpeedColor.color(forMetersPerSecond: paw.speedMetersPerSecond)
             view.annotation = annotation
             view.apply(paw, color: UIColor(color))
-            view.isEnabled = annotation.isInteractive
-            view.isUserInteractionEnabled = annotation.isInteractive
+            view.isEnabled = false
+            view.isUserInteractionEnabled = false
+            view.onAccessibilityActivate = activation(for: annotation)
             view.isAccessibilityElement = annotation.isInteractive
             view.accessibilityTraits = annotation.isInteractive ? .button : .image
             view.accessibilityIdentifier = "MapHome.appleAnnotation.\(annotation.identifier)"
@@ -888,8 +914,11 @@ struct MapHomeAppleMap: UIViewRepresentable {
                 view.selectedZPriority = .defaultUnselected
             }
             view.layer.zPosition = MapHomeAppleAnnotationLayerPriority.place
-            view.isEnabled = annotation.isInteractive
-            view.isUserInteractionEnabled = annotation.isInteractive
+            // 핀 위에서 시작한 핀치도 지도로 가게 터치를 받지 않는다. 탭은 위치로 판정한다.
+            let takesTouches = annotation.isInteractive && !annotation.kind.passesTouchesToMap
+            view.isEnabled = takesTouches
+            view.isUserInteractionEnabled = takesTouches
+            view.onAccessibilityActivate = activation(for: annotation)
             view.isAccessibilityElement = true
             view.accessibilityTraits = annotation.isInteractive ? .button : .image
             view.accessibilityIdentifier = "MapHome.appleAnnotation.\(annotation.identifier)"

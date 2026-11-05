@@ -5959,3 +5959,18 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 외부 그룹 `TP 지인 테스트`에 연결하고 베타 심사를 제출. 제출 응답은 `WAITING_FOR_REVIEW`였고, 바로 다시 읽은 값은 `betaReviewState: APPROVED`, `externalBuildState: IN_BETA_TESTING`, 그룹 빌드 262·273·280, 테스터 3명, 공개 링크 켜짐(`readback.json`).
 - 로그: `build/validation/TFB1105A07/`.
 - 제한: 전체 단위 시험을 280 코드에서 다시 돌리지 않았다(마지막 실행은 번역 추출기 수정 전, 2,053건 실행·실패 0·건너뜀 17). 구조 예산과 번역 점검만 커밋 전에 통과했다. 실기기 설치·실행과 외부 테스터의 실제 수신은 확인하지 않았다.
+
+## BDG1105A01·WLK1105A01·PRM1105A01·CAT1105A02·PNC1105A01·SPK1105A01·VID1105A02·VID1105A03·CAL1105A01·RNG1105A01·RST1105A01·MNU1105A02·SAL1105A01 대표 제보 묶음 (2026-11-05, 커밋 전)
+- 단위(시뮬레이터 BOKKI-iPhone11, 실기기 아님, `build/validation/PNC1105A01/unit10.log`): 새 시험과 `NLESubActivityTests`·`NLEMultiDayTests`·`RouteTimelineDataTests`·`MapHomeLiveMapTests`·`StickerCatalogTests` 합쳐 273건 실패 0. 그 뒤 사이드바 갱신 키 한 줄을 더해 앱 Debug 빌드만 다시 통과(`build3.log`). 전체 단위 시험은 돌리지 않았다.
+- 실기기 시험 시도(iPhone 11 Pro)는 20분 넘게 끝나지 않아 멈췄다. TaptionPlan-Check에서 두 번 "test runner hung"이 나 BOKKI-iPhone11로 옮겼다.
+- 걷기 원인: 대표 11-05 원본에서 `걷기` 12:30–14:55 기록 id가 자동 세션 `F5D35C9F`와 같다. 최근 업로드의 같은 모양 13건 중 판독이 있는 12건 모두 자동 세션.
+- 튄 경로: 대표 원본 14:37:13 오차 202m `approximate` 한 점. 파란색은 속도 색의 끝값(2초에 438m)이다.
+- 휴식 후보: 대표 11-05 원본 대조로 화면 켜짐 5분 이상은 12:30–12:49, 14:48–14:55. 심박은 쓰지 않았다.
+- 시뮬레이터 화면(실기기 아님): Apple 지도 메모 핀 위 좌우 핀치 정상, 달력 시트 내용 높이로 열림. 수정 전 빌드로 같은 조작을 비교하지 않아 이 수정이 대표 기기 증상의 원인인지는 재현으로 확정하지 못했다. 벡터 지도 화랑이 위 좌우 핀치는 정상.
+- 영상: Apple 스타일에서 렌더러가 nil이 되는 경로를 코드로 고쳤다. 시뮬레이터에 여러 날 기록이 없어 실제 영상 저장은 확인하지 못했다. 읽기 캐시의 체감 속도도 재지 않았다.
+- UI 시험 `testSkipStepAndBack`: 시뮬레이터가 이미 튜토리얼을 마친 상태라 시작 화면을 찾지 못해 실패(`ui1.log`). 하단 이전·오른쪽 위 건너뛰기는 빌드만 확인.
+- 확인 못 함: 사진 링(시뮬레이터에 사진 없음), 권한 모두 허용의 실제 요청 순서, 급여 세 탭 화면, 안개 드롭다운, 연필 편집, 표식 열 배치 화면, 실기기 전체.
+- 활동 칼로리·몸무게 권한(CAL1105A02): 계산 단위 시험과 `HealthReadScopeTests` 통과. 실제 건강 앱 값과 몸무게 권한 창은 실기기에서 보지 못했다.
+- 전체 단위(시뮬레이터 BOKKI-iPhone11, 실기기 아님, `unit-all.xcresult`): 2,118건 중 통과 2,100·실패 1·건너뜀 17. 실패는 달력 지표 목록을 고정한 `testCalendarTimeTextFormatsCellsAndDurations`로, 새 지표 `calories`를 기대값에 더하고 그 클래스만 다시 돌려 통과(`unit-growth.log`). 전체를 다시 돌리지는 않았다.
+- 튜토리얼 UI 시험과 아래 화면 미확인 항목은 그대로 남아 있어 이 요청들을 `temp.md`에서 지우지 않는다.
+

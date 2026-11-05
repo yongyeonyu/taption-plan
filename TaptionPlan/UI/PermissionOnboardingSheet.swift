@@ -1,3 +1,4 @@
+import ActivityKit
 import SwiftUI
 import UIKit
 
@@ -33,6 +34,7 @@ struct PermissionOnboardingSheet: View {
     @State private var isRequesting = false
     @State private var requestError: String?
     @State private var skipped: Set<String> = []
+    @State private var liveActivitiesEnabled = ActivityAuthorizationInfo().areActivitiesEnabled
     /// 처음 실행 튜토리얼 안에 들어가면 제목과 끝내기 단추는 튜토리얼이 맡는다.
     private let isEmbedded: Bool
     private let language = MapHomeLanguage.current
@@ -102,12 +104,14 @@ struct PermissionOnboardingSheet: View {
             if !isEmbedded { header }
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 9) {
+                    allowAllButton
                     ForEach(
                         Array(steps.enumerated()),
                         id: \.element.id
                     ) { offset, step in
                         stepCard(step, offset: offset)
                     }
+                    liveActivityCard
                     if isEmbedded, hasDeniedPermission {
                         Button(language.text("iOS 설정에서 바꾸기", "Change in iOS Settings")) {
                             if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
@@ -125,7 +129,9 @@ struct PermissionOnboardingSheet: View {
         .background(Color.tpBackground)
         // iOS 설정에 다녀온 뒤에도 실제 값을 보여 준다.
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active, isEmbedded { Task { await model.refreshPermissions() } }
+            guard phase == .active else { return }
+            liveActivitiesEnabled = ActivityAuthorizationInfo().areActivitiesEnabled
+            if isEmbedded { Task { await model.refreshPermissions() } }
         }
     }
 
@@ -153,11 +159,6 @@ struct PermissionOnboardingSheet: View {
                     .tint(Color.tpPrimaryFill)
                     .frame(maxWidth: .infinity)
             } else {
-                Button(language.text("모두 허용", "Allow all")) { requestRemaining() }
-                    .font(.taption(size: 10, weight: .bold))
-                    .buttonStyle(.plain)
-                    .foregroundStyle(Color.tpInk)
-                    .disabled(isRequesting || model.isRequestingPermission)
                 if !isEmbedded {
                     Button(language.text("전체 건너뛰기", "Skip all")) { finish() }
                         .font(.taption(size: 10, weight: .bold))
@@ -174,6 +175,49 @@ struct PermissionOnboardingSheet: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(Color.tpCard)
+    }
+
+    /// 실시간 현황은 요청 창이 없고 iOS 설정에서만 바꾼다. 그래서 순서 요청과 따로 둔다(PRM1105A01).
+    private var liveActivityCard: some View {
+        VStack(alignment: .leading, spacing: TaptionSpacing.regular) {
+            HStack(spacing: 9) {
+                Image(systemName: "lock.iphone")
+                    .accessibilityHidden(true)
+                    .font(.taption(size: 14))
+                    .foregroundStyle(Color.tpInk)
+                    .frame(width: 29, height: 29)
+                    .background(Color.tpBackground, in: RoundedRectangle(cornerRadius: TaptionRadius.control))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(language.text("잠금화면 · 실시간 현황", "Lock Screen · Live Activities"))
+                        .font(.taption(size: 11, weight: .bold))
+                        .foregroundStyle(Color.tpInk)
+                    Text(language.text(
+                        "지금 활동을 잠금화면과 다이나믹 아일랜드에 보여줍니다.",
+                        "Shows your current activity on the Lock Screen and Dynamic Island."
+                    ))
+                    .font(.taption(size: 8))
+                    .foregroundStyle(Color.tpSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 4)
+                Text(liveActivitiesEnabled ? language.text("켜짐", "On") : language.text("꺼짐", "Off"))
+                    .font(.taption(size: 8.5, weight: .bold))
+                    .foregroundStyle(Color.tpSecondary)
+            }
+            if !liveActivitiesEnabled {
+                Button(language.text("설정 열기", "Open Settings")) {
+                    if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+                }
+                .font(.taption(size: 10, weight: .bold))
+                .buttonStyle(.borderedProminent)
+                .tint(Color.tpPrimaryFill)
+                .padding(.leading, 38)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .draftCard()
+        .accessibilityIdentifier("permissionLiveActivities")
     }
 
     private func stepCard(
@@ -303,27 +347,47 @@ struct PermissionOnboardingSheet: View {
         }
     }
 
-    /// 남은 권한을 순서대로 한 번에 요청한다. 시스템 권한창은 한 번에 하나만
-    /// 뜨므로 순차로 진행하고, 중간에 버튼을 다시 누르지 못하게 막는다.
-    private func requestRemaining() {
+    /// 아직 답하지 않은 권한을 위에서부터 차례로 요청한다. 시스템 권한창은 한 번에 하나만 뜬다.
+    /// 거부했거나 실시간 현황이 꺼져 있으면 앱이 다시 물을 수 없어 끝에 iOS 설정을 연다.
+    private func requestAll() {
         guard !isRequesting else { return }
         isRequesting = true
         Task {
-            while progress.index < Self.features.count {
-                let didComplete = await requestPermission(
-                    for: steps[progress.index]
-                )
-                progress.completeRequest(didComplete)
-                if didComplete {
-                    requestError = nil
-                    model.clearError()
-                } else {
+            for step in steps where model.permissionState(for: step.feature) == .notDetermined {
+                guard await requestPermission(for: step) else {
                     requestError = language.text("요청을 완료하지 못했습니다. 다시 시도해 주세요.", "Couldn't finish the request. Please try again.")
-                    break
+                    isRequesting = false
+                    return
                 }
+                requestError = nil
+                model.clearError()
             }
+            await model.refreshPermissions()
+            progress = PermissionOnboardingProgress(index: Self.features.count)
+            liveActivitiesEnabled = ActivityAuthorizationInfo().areActivitiesEnabled
             isRequesting = false
+            if !isAllAllowed, let url = URL(string: UIApplication.openSettingsURLString) {
+                await UIApplication.shared.open(url)
+            }
         }
+    }
+
+    private var isAllAllowed: Bool {
+        liveActivitiesEnabled && Self.features.allSatisfy { model.permissionState(for: $0).isGranted }
+    }
+
+    private var allowAllButton: some View {
+        Button(action: requestAll) {
+            Text(isAllAllowed ? language.text("모두 허용됨", "All allowed") : language.text("모두 허용", "Allow all"))
+                .font(.taption(size: 12, weight: .bold))
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .foregroundStyle(.white)
+                .background(Color.tpPrimaryFill, in: RoundedRectangle(cornerRadius: TaptionRadius.control, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .disabled(isAllAllowed || isRequesting || model.isRequestingPermission)
+        .opacity(isAllAllowed ? 0.5 : 1)
+        .accessibilityIdentifier("permissionAllowAll")
     }
 
     private func finish() {

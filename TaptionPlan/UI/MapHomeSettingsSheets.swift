@@ -10,16 +10,31 @@ struct MapHomeCategoryAddSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable var model: AppModel
     let language: MapHomeLanguage
-    @State private var title = ""
-    @State private var systemImage = "tag.fill"
-    @State private var color = Color.tpReferenceMint
+    /// 값이 있으면 그 분류를 수정·삭제한다(CAT1105A02).
+    private let editing: MapUserActivityCategory?
+    @State private var title: String
+    @State private var systemImage: String
+    @State private var color: Color
     @State private var animation: MapUserActivityAnimation?
+    @State private var isDeleteConfirmationPresented = false
     @FocusState private var isFocused: Bool
 
+    init(model: AppModel, language: MapHomeLanguage, editing: MapUserActivityCategory? = nil) {
+        self.model = model
+        self.language = language
+        self.editing = editing
+        _title = State(initialValue: editing?.title ?? "")
+        _systemImage = State(initialValue: editing?.systemImage ?? "tag.fill")
+        _color = State(initialValue: editing.map { Color(hex: $0.hex) } ?? Color.tpReferenceMint)
+        _animation = State(initialValue: editing?.animation)
+    }
+
     private var iconNames: [String] {
-        MapUserActivityIconCatalog.available(
-            for: model.settings.mapUserActivityCategories
+        let available = MapUserActivityIconCatalog.available(
+            for: model.settings.mapUserActivityCategories.filter { $0.id != editing?.id }
         )
+        guard let current = editing?.systemImage, !available.contains(current) else { return available }
+        return [current] + available
     }
 
     private var trimmedTitle: String {
@@ -29,7 +44,9 @@ struct MapHomeCategoryAddSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack {
-                Text(language.text("행동분류 추가", "Add activity category"))
+                Text(editing == nil
+                    ? language.text("행동분류 추가", "Add activity category")
+                    : language.text("행동분류 수정", "Edit activity category"))
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(21)), weight: .bold))
                 Spacer()
                 Button(language.text("닫기", "Close")) { dismiss() }
@@ -84,13 +101,26 @@ struct MapHomeCategoryAddSheet: View {
             .background(Color.tpSurface, in: Capsule())
 
             Button(action: save) {
-                Text(language.text("추가", "Add"))
+                Text(editing == nil ? language.text("추가", "Add") : language.text("저장", "Save"))
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold))
                     .frame(maxWidth: .infinity)
                     .frame(height: 48)
             }
             .buttonStyle(.borderedProminent)
             .disabled(trimmedTitle.isEmpty || systemImage.isEmpty)
+
+            if editing != nil {
+                Button(role: .destructive) {
+                    isDeleteConfirmationPresented = true
+                } label: {
+                    Text(language.text("삭제", "Delete"))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 40)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.red)
+            }
 
             if iconNames.isEmpty {
                 Text(
@@ -109,12 +139,35 @@ struct MapHomeCategoryAddSheet: View {
             if !iconNames.contains(systemImage) {
                 systemImage = iconNames.first ?? ""
             }
-            isFocused = true
+            isFocused = editing == nil
+        }
+        .confirmationDialog(
+            language.text("행동분류를 삭제할까요?", "Delete this activity category?"),
+            isPresented: $isDeleteConfirmationPresented,
+            titleVisibility: .visible
+        ) {
+            Button(language.text("삭제", "Delete"), role: .destructive) {
+                if let editing { model.deleteMapUserActivityCategory(id: editing.id) }
+                dismiss()
+            }
+        } message: {
+            Text(language.text("이미 남긴 기록의 이름은 그대로 남습니다.", "Existing records keep this name."))
         }
     }
 
     private func save() {
         guard !trimmedTitle.isEmpty, !systemImage.isEmpty else { return }
+        if let editing {
+            guard model.updateMapUserActivityCategory(
+                id: editing.id,
+                title: trimmedTitle,
+                systemImage: systemImage,
+                hex: color.hexRGBString ?? editing.hex,
+                animation: animation
+            ) else { return }
+            dismiss()
+            return
+        }
         guard model.addMapUserActivityCategory(
             title: trimmedTitle,
             systemImage: systemImage,

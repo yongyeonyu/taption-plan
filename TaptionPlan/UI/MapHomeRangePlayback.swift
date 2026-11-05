@@ -64,7 +64,7 @@ enum MapHomeRangePreset: String, CaseIterable, Identifiable, Sendable {
 /// 머문 곳은 짧은 장면으로 줄이고 남은 시간을 이동 거리의 로그 비율로 나눈다.
 /// 그래서 기간이 길어져도 프레임 수는 영상 길이로만 정해진다.
 struct MapHomeRangeTripPlan: Sendable {
-    struct Sample: Hashable, Sendable {
+    struct Sample: Hashable, Sendable, Codable {
         var time: TimeInterval
         var latitude: Double
         var longitude: Double
@@ -769,3 +769,45 @@ struct MapHomeRangeTripPlan: Sendable {
 private extension MapHomeRangeTripPlan.Sample {
     var point: MapHomeRangeTripPlan.Point { .init(latitude: latitude, longitude: longitude) }
 }
+
+/// 여러 날 영상의 줄인 표본을 날짜별로 둔다. 원본을 다시 읽지 않아 두 번째부터 바로 열린다(VID1105A03).
+/// 원본이 아니라 다시 만들 수 있는 파생 값이라 Caches에 두고, 데이터 삭제·오프로드·복원 때 비운다.
+enum MapHomeRangeSampleCache {
+    static var defaultDirectory: URL {
+        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("PlaybackRangeSamples-v1", isDirectory: true)
+    }
+
+    /// 오늘과 어제는 아직 기록이 들어올 수 있어 두지 않는다.
+    static func isCacheable(dayStart: Date, now: Date, calendar: Calendar) -> Bool {
+        let today = calendar.startOfDay(for: now)
+        guard let yesterday = calendar.date(byAdding: .day, value: -1, to: today) else { return false }
+        return dayStart < yesterday
+    }
+
+    static func read(
+        dayStart: Date, calendar: Calendar, directory: URL = defaultDirectory
+    ) -> [MapHomeRangeTripPlan.Sample]? {
+        guard let data = try? Data(contentsOf: fileURL(dayStart, calendar: calendar, directory: directory)) else { return nil }
+        return try? JSONDecoder().decode([MapHomeRangeTripPlan.Sample].self, from: data)
+    }
+
+    /// 빈 날은 나중에 기록이 복원될 수 있어 두지 않는다.
+    static func write(
+        _ samples: [MapHomeRangeTripPlan.Sample], dayStart: Date, calendar: Calendar, directory: URL = defaultDirectory
+    ) {
+        guard !samples.isEmpty, let data = try? JSONEncoder().encode(samples) else { return }
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try? data.write(to: fileURL(dayStart, calendar: calendar, directory: directory), options: .atomic)
+    }
+
+    static func removeAll(directory: URL = defaultDirectory) {
+        try? FileManager.default.removeItem(at: directory)
+    }
+
+    private static func fileURL(_ dayStart: Date, calendar: Calendar, directory: URL) -> URL {
+        let day = calendar.dateComponents([.year, .month, .day], from: dayStart)
+        return directory.appendingPathComponent("\(day.year ?? 0)-\(day.month ?? 0)-\(day.day ?? 0).json")
+    }
+}
+

@@ -14,7 +14,8 @@ extension MapHomeView {
             if isMapGroupExpanded {
                 displayToggle(language.text("경로", "Routes"), systemImage: "point.topleft.down.to.point.bottomright.curvepath", isOn: $showsRoutesOnMap)
                 displayToggle(language.text("발자국", "Footprints"), systemImage: "pawprint.fill", isOn: $showsFootprintsOnMap)
-                displayToggle(language.text("사진", "Photos"), systemImage: "photo.fill", isOn: $showsPhotosOnMap)
+                displayToggle(language.text("사진(지도)", "Photos (map)"), systemImage: "photo.fill", isOn: $showsPhotosOnMap)
+                displayToggle(language.text("사진(하단링)", "Photos (bottom ring)"), systemImage: "photo.stack", isOn: $showsPhotoRing)
                 // 등록한 장소의 반경 원(집·회사 등)을 켜고 끈다(대표 지시, ARC1030A10). 판타지 지도에서 그려진다.
                 displayToggle(language.text("장소 반경", "Place radius"), systemImage: "circle.dashed", isOn: $showsPlaceRanges)
                 // 끄면 재생 때 탈것 없이 속도에 따라 걷거나 뛴다.
@@ -298,10 +299,8 @@ extension MapHomeView {
                     seconds: preferences.intervalSeconds,
                     tint: tint,
                     onCommit: model.setGPSLoggingIntervalSeconds
-                ) {
-                    Image(systemName: "battery.25percent")
-                        .foregroundStyle(tint)
-                        .accessibilityHidden(true)
+                ) { seconds in
+                    GPSLoggingBatteryIcon(seconds: seconds, tint: tint)
                 }
                 .padding(.horizontal, 12)
                 .padding(.bottom, 8)

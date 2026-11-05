@@ -65,6 +65,8 @@ enum NLESubActivityEngine {
     private static let minimumEventMinutes = 5
     /// 이보다 짧은 Watch 행동은 손목 흔들림으로 보고 쓰지 않는다.
     private static let minimumWatchRunMinutes = 3
+    private static let restMinimumSeconds: TimeInterval = 5 * 60
+    private static let restMaximumGapSeconds: TimeInterval = 5 * 60
     private static let minimumWatchConfidence = 0.55
     private static let phoneCallDetailID = "activity.phoneCall"
     private static let mailWords = ["mail", "메일", "outlook"]
@@ -76,6 +78,7 @@ enum NLESubActivityEngine {
             .counted(input.calendarEvents, stored: input.calendarTitleDetails)
             .filter { !$0.isAllDay && $0.isCancelled != true }
         let watchRuns = watchRuns(input.readings, dayStart: input.dayStart)
+        let restRuns = restCandidateRuns(input.readings, dayStart: input.dayStart)
         var usedKeys = Set<String>()
         return input.segments
             .filter { $0.endMinute > $0.startMinute }
@@ -84,6 +87,7 @@ enum NLESubActivityEngine {
                 let candidates = records.filter { applies($0, to: segment) }
                     + events.compactMap { eventCandidate($0, segment: segment, input: input) }
                     + watchRuns.compactMap { watchCandidate($0, segment: segment) }
+                    + restRuns.compactMap { restCandidate($0, segment: segment) }
                 return paint(candidates, in: segment, usedKeys: &usedKeys)
             }
     }
@@ -174,6 +178,7 @@ enum NLESubActivityEngine {
         if ActualRecord.userOwned(actual, activityCorrections: input.activityCorrections) {
             return make(actual.title, .manual, "사용자 기록")
         }
+        if TrackingSessionRecordPolicy.isAutomaticSessionArtifact(actual) { return nil }
         switch actual.source {
         case .call:
             return make(actual.title, .call, "CallKit 통화 기록")
@@ -248,6 +253,36 @@ enum NLESubActivityEngine {
             startMinute: run.startMinute, endMinute: run.endMinute, rank: .weakSignal,
             provenance: NLESubActivityProvenance(origin: .automatic, evidence: "Apple Watch 행동")
         )
+    }
+
+    /// 업무 중 걷지 않고 화면을 켜 둔 시간. 업무로 폰을 쓴 것과 구분되지 않아 후보로만 보여 준다(RST1105A01).
+    private static func restCandidate(_ run: Range<Int>, segment: MapHomeTimeRailSegment) -> Candidate? {
+        guard segment.categoryID == "work", run.lowerBound < segment.endMinute, run.upperBound > segment.startMinute
+        else { return nil }
+        return Candidate(
+            key: "rest|\(run.lowerBound)|\(segment.startMinute)", recordID: nil,
+            title: "휴식 후보", categoryID: segment.categoryID, behavior: nil,
+            startMinute: run.lowerBound, endMinute: run.upperBound, rank: .weakSignal,
+            provenance: NLESubActivityProvenance(origin: .automatic, evidence: "화면 켜짐 · 걷기 없음")
+        )
+    }
+
+    static func restCandidateRuns(_ readings: [SensorReading], dayStart: Date) -> [Range<Int>] {
+        let moving: Set<MotionKind> = [.walking, .running, .cycling, .automotive]
+        let ordered = readings
+            .filter { $0.screenIsOn == true && !moving.contains($0.motion) }
+            .sorted { $0.timestamp < $1.timestamp }
+        var spans: [(start: Date, end: Date)] = []
+        for reading in ordered {
+            if let last = spans.last, reading.timestamp.timeIntervalSince(last.end) <= restMaximumGapSeconds {
+                spans[spans.count - 1].end = reading.timestamp
+            } else {
+                spans.append((reading.timestamp, reading.timestamp))
+            }
+        }
+        return spans
+            .filter { $0.end.timeIntervalSince($0.start) >= restMinimumSeconds }
+            .map { minute($0.start, dayStart)..<max(minute($0.start, dayStart) + 1, minute($0.end, dayStart)) }
     }
 
     /// 대분류보다 작은 단위를 말해 주는 Watch 행동만 이어 붙인다. 걷기·앉기는 센서 층의 몫이다.

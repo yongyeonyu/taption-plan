@@ -95,6 +95,16 @@ struct MapHomeCalendarSheet: View {
             )
     }
 
+    private var caloriesNote: String {
+        let day = calendar.startOfDay(for: selectedDate)
+        return totals[day]?[MapHomeCalendarTimeKind.caloriesEstimatedKey] == 1
+            ? language.text(
+                "이 날은 건강 앱 값이 없어 걸음 수와 몸무게로 추정했어요. 몸무게가 없으면 65kg로 계산해요.",
+                "No Health data for this day, so this is estimated from steps and weight (65 kg if no weight is set)."
+            )
+            : language.text("건강 앱의 활동 에너지예요.", "Active energy from the Health app.")
+    }
+
     @ViewBuilder
     private var summarySection: some View {
         timeMenu
@@ -105,6 +115,13 @@ struct MapHomeCalendarSheet: View {
             timePanel(for: selectedKind)
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
+            if selectedKind == .calories {
+                Text(caloriesNote)
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
+                    .foregroundStyle(Color.tpSecondary)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+            }
             if selectedKind == .places {
                 placeVisitList
                     .padding(.horizontal, 16)
@@ -116,7 +133,7 @@ struct MapHomeCalendarSheet: View {
     var body: some View {
         ScrollView {
             MapHomeWidePanelColumns(columns: panelColumns) { monthSection } trailing: { summarySection }
-            .padding(.bottom, 40)
+            .padding(.bottom, 12)
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
                 guard abs(height - measuredHeight) >= 0.5 else { return }
                 measuredHeight = height
@@ -128,8 +145,8 @@ struct MapHomeCalendarSheet: View {
         .frame(maxWidth: .infinity)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Color.tpBackground)
-        // 내용에 맞춰 열고, 절반보다 길면 .medium에서 스크롤로 이어진다.
-        .presentationDetents(contentHeight > 0 ? [.height(contentHeight + 16), .medium, .large] : [.medium, .large])
+        // 추가한 지표까지 내용에 딱 맞춰 연다. 화면보다 길면 스크롤로 이어진다.
+        .presentationDetents(contentHeight > 0 ? [.height(contentHeight), .large] : [.medium, .large])
         .presentationDragIndicator(.visible)
         .presentationBackground(Color.tpBackground)
         .task {
@@ -178,8 +195,8 @@ struct MapHomeCalendarSheet: View {
             guard !Task.isCancelled, month == displayedMonth, !fast.isEmpty else { return }
             // 시간 합계·사진 수 같은 값은 30초 갱신에 맡기고, 걸음 수와 이동 거리만 덮어쓴다.
             let fastKeys: Set<String> = [
-                MapHomeCalendarTimeKind.steps, .distance, .walkDistance, .carDistance, .transitDistance, .stepDistance,
-            ].reduce(into: []) { $0.insert($1.rawValue) }
+                MapHomeCalendarTimeKind.steps, .distance, .walkDistance, .carDistance, .transitDistance, .stepDistance, .calories,
+            ].reduce(into: [MapHomeCalendarTimeKind.caloriesEstimatedKey]) { $0.insert($1.rawValue) }
             for (day, values) in fast {
                 totals[day, default: [:]].merge(values.filter { fastKeys.contains($0.key) }) { _, new in new }
             }
@@ -402,7 +419,8 @@ struct MapHomeCalendarSheet: View {
             }
             ForEach(visits) { visit in
                 HStack(alignment: .firstTextBaseline, spacing: 10) {
-                    Image(systemName: "mappin.circle.fill").foregroundStyle(Color.tpAccent)
+                    TaptionCuteIcon(visit.systemImage ?? "mappin.circle.fill", size: 20)
+                        .foregroundStyle(Color.tpAccent)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(visit.name)
                             .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))

@@ -5,6 +5,8 @@ import Foundation
 enum MapHomeAllowancePolicy {
     static let amountKey = "mapHomeAllowanceAmount"
     static let periodKey = "mapHomeAllowancePeriod"
+    /// 연봉·시급·용돈 중 용돈을 쓰는지. 값이 없으면 옛 사용자라 급여 없이 용돈만 있을 때 용돈으로 본다.
+    static let isSelectedKey = "mapHomeAllowanceIsSelected"
 
     enum Period: String, CaseIterable {
         case month, week, day
@@ -17,11 +19,37 @@ enum MapHomeAllowancePolicy {
         var isConfigured: Bool { amount > 0 }
     }
 
+    static func isSelected(_ defaults: UserDefaults = .standard) -> Bool {
+        if let selected = defaults.object(forKey: isSelectedKey) as? Bool { return selected }
+        let hasSalary = defaults.double(forKey: MapHomeSalaryPolicy.annualKey) > 0
+            || defaults.double(forKey: MapHomeSalaryPolicy.monthlyPayKey) > 0
+            || defaults.double(forKey: MapHomeSalaryPolicy.hourlyKey) > 0
+        return !hasSalary && defaults.double(forKey: amountKey) > 0
+    }
+
     static func load(_ defaults: UserDefaults = .standard) -> Settings {
         Settings(
-            amount: defaults.double(forKey: amountKey),
+            amount: isSelected(defaults) ? defaults.double(forKey: amountKey) : 0,
             period: Period(rawValue: defaults.string(forKey: periodKey) ?? "") ?? .month
         )
+    }
+
+    /// 연봉으로 환산한 금액. 연봉·시급 칸에 회색으로 보여 줄 때만 쓴다(SAL1105A01).
+    static func annualAmount(_ settings: Settings) -> Double {
+        switch settings.period {
+        case .month: settings.amount * 12
+        case .week: settings.amount * 365 / 7
+        case .day: settings.amount * 365
+        }
+    }
+
+    /// 연봉을 고른 기간의 용돈으로 환산한다.
+    static func amount(fromAnnual annual: Double, period: Period) -> Double {
+        switch period {
+        case .month: annual / 12
+        case .week: annual * 7 / 365
+        case .day: annual / 365
+        }
     }
 
     /// 환산 시급. 월 단위는 `date`가 속한 달의 실제 일수로 나눈다.

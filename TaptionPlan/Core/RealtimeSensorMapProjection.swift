@@ -86,3 +86,38 @@ struct RealtimeSensorMapProjection: Hashable, Sendable {
         )
     }
 }
+
+extension RouteTimelineDataEngine {
+    /// 앞뒤로 가까운 정밀 위치가 있으면 대략 위치는 경로에 필요 없다.
+    /// 오차가 큰 한 점이 왕복선으로 튀는 것을 막는다. 원본은 저장소에 그대로 있다(SPK1105A01).
+    static func droppingBracketedApproximates(
+        _ sorted: [SensorReading],
+        when isEnabled: Bool = true,
+        maximumGap: TimeInterval = 300
+    ) -> [SensorReading] {
+        guard isEnabled else { return sorted }
+        func isPrecise(_ reading: SensorReading) -> Bool {
+            reading.gpsAvailable && reading.locationFixQuality != .approximate
+        }
+        var nextPrecise = [Date?](repeating: nil, count: sorted.count)
+        var upcoming: Date?
+        for index in sorted.indices.reversed() {
+            nextPrecise[index] = upcoming
+            if isPrecise(sorted[index]) { upcoming = sorted[index].timestamp }
+        }
+        var result: [SensorReading] = []
+        result.reserveCapacity(sorted.count)
+        var previousPrecise: Date?
+        for (index, reading) in sorted.enumerated() {
+            if isPrecise(reading) {
+                previousPrecise = reading.timestamp
+                result.append(reading)
+                continue
+            }
+            let isBracketed = previousPrecise.map { reading.timestamp.timeIntervalSince($0) <= maximumGap } == true
+                && nextPrecise[index].map { $0.timeIntervalSince(reading.timestamp) <= maximumGap } == true
+            if !isBracketed { result.append(reading) }
+        }
+        return result
+    }
+}

@@ -34,6 +34,7 @@ struct MapHomeSalarySettingsSheet: View {
     @State private var allowanceText = ""
     @State private var directKind = DirectKind.annual
     @State private var directText = ""
+    @State private var inputTab = InputKind.annual
 
     /// 해외에서 직접 넣는 금액 종류.
     private enum DirectKind: Hashable { case hourly, monthly, annual }
@@ -57,14 +58,37 @@ struct MapHomeSalarySettingsSheet: View {
     private var region: AppRegion { .current }
     private var currencyUnit: String { region.currencyUnit }
 
-    /// 연봉 또는 시급 중 하나를 고른다.
-    private enum InputKind: Hashable { case annual, hourly }
+    /// 연봉·시급·용돈 중 하나를 고른다. 카운터 방식을 바꾸는 것은 연봉과 시급뿐이다.
+    private enum InputKind: Hashable { case annual, hourly, allowance }
 
     private var inputKind: Binding<InputKind> {
         Binding(
-            get: { isHourly ? .hourly : .annual },
-            set: { isHourly = $0 == .hourly }
+            get: { inputTab },
+            set: { tab in
+                inputTab = tab
+                UserDefaults.standard.set(tab == .allowance, forKey: MapHomeAllowancePolicy.isSelectedKey)
+                if tab != .allowance { isHourly = tab == .hourly }
+            }
         )
+    }
+
+    private var allowanceSettings: MapHomeAllowancePolicy.Settings {
+        MapHomeAllowancePolicy.Settings(
+            amount: allowanceAmount,
+            period: MapHomeAllowancePolicy.Period(rawValue: allowancePeriodRaw) ?? .month
+        )
+    }
+
+    private var hasSalaryInput: Bool { annualPay > 0 || monthlyPay > 0 || hourlyPay > 0 }
+
+    /// 연봉·시급 칸의 회색 값. 급여를 적지 않았으면 용돈을 연봉으로 환산해 보여 준다.
+    private var linkedSettings: MapHomeSalaryPolicy.Settings {
+        var value = settings
+        if !hasSalaryInput, allowanceAmount > 0 {
+            value.annualPay = MapHomeAllowancePolicy.annualAmount(allowanceSettings)
+            value.isNetInput = false
+        }
+        return value
     }
 
     /// 지난 석 달의 월 키(최근 달부터).
@@ -114,12 +138,17 @@ struct MapHomeSalarySettingsSheet: View {
                     Picker("", selection: inputKind) {
                         Text(language.text("연봉", "Annual")).tag(InputKind.annual)
                         Text(language.text("시급", "Hourly")).tag(InputKind.hourly)
+                        Text(language.text("용돈", "Allowance")).tag(InputKind.allowance)
                     }
                     .pickerStyle(.segmented)
-                    if isHourly {
+                    Text(language.text("고른 하나만 카운터에 쓰여요. 적은 금액은 나머지 칸에 환산해 보여 줘요.", "Only the selected one runs the counter. Other tabs show the converted amount."))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium)).foregroundStyle(Color.tpSecondary)
+                    if inputTab == .allowance {
+                        allowanceFields
+                    } else if inputTab == .hourly {
                         let weekly = max(projectedMonthWorkSeconds, monthWorkSeconds) / 3_600 * 7 / 30.4
                         let hourlyGrossNow = hourlyText.isEmpty && hourlyPay <= 0
-                            ? MapHomeSalaryPolicy.linkedHourlyGross(settings)
+                            ? MapHomeSalaryPolicy.linkedHourlyGross(linkedSettings)
                             : MapHomeSalaryPolicy.hourlyGross(settings, weeklyHours: weekly)
                         field(language.text("세전 시급", "Gross hourly"), text: Binding(
                             get: { hourlyIsNet ? "" : hourlyText },
@@ -150,7 +179,7 @@ struct MapHomeSalarySettingsSheet: View {
                         ))
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium)).foregroundStyle(Color.tpSecondary)
                     } else {
-                        let grossWon = MapHomeSalaryPolicy.linkedAnnualGross(settings)
+                        let grossWon = MapHomeSalaryPolicy.linkedAnnualGross(linkedSettings)
                         let netWon = MapHomeSalaryPolicy.netOfGross(grossWon)
                         field(language.text("세전 연봉", "Gross annual"), text: Binding(
                             get: { isNetInput ? "" : annualText },
@@ -169,7 +198,7 @@ struct MapHomeSalarySettingsSheet: View {
                             monthlyPay = 0
                         }
                         field(language.text("월급", "Monthly pay"), text: $monthlyText, unit: currencyUnit,
-                              placeholder: String(Int(MapHomeSalaryPolicy.inputMonthly(settings).rounded()))) {
+                              placeholder: String(Int(MapHomeSalaryPolicy.inputMonthly(linkedSettings).rounded()))) {
                             annualPay = number(monthlyText) * 12
                             monthlyPay = 0
                             annualText = String(Int(annualPay.rounded()))
@@ -192,7 +221,7 @@ struct MapHomeSalarySettingsSheet: View {
                 }
 
                 if !showsOnlyPayInput {
-                allowanceCard
+                if region.isOverseas { card { allowanceFields } }
 
                 if !isHourly, !region.isOverseas {
                 // 2-1. 지난달 실제 받은 월급(수당 포함) → 수당 모델
@@ -302,6 +331,7 @@ struct MapHomeSalarySettingsSheet: View {
             hourlyText = hourlyPay > 0 ? String(Int(hourlyPay.rounded())) : ""
             accumText = settings.monthAccumOverride > 0 ? String(Int(settings.monthAccumOverride.rounded())) : ""
             allowanceText = allowanceAmount > 0 ? String(Int(allowanceAmount.rounded())) : ""
+            inputTab = MapHomeAllowancePolicy.isSelected() ? .allowance : isHourly ? .hourly : .annual
             directKind = isHourly ? .hourly : .annual
             directText = amountText(isHourly ? hourlyPay : annualPay)
         }
@@ -395,31 +425,37 @@ struct MapHomeSalarySettingsSheet: View {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 
-    /// 용돈: 연봉과 따로 쓰며, 환산 시급만 보여 준다.
-    private var allowanceCard: some View {
-        let allowance = MapHomeAllowancePolicy.Settings(
-            amount: allowanceAmount,
-            period: MapHomeAllowancePolicy.Period(rawValue: allowancePeriodRaw) ?? .month
-        )
-        return card {
-            Picker("", selection: $allowancePeriodRaw) {
-                Text(language.text("한 달", "Month")).tag(MapHomeAllowancePolicy.Period.month.rawValue)
-                Text(language.text("한 주", "Week")).tag(MapHomeAllowancePolicy.Period.week.rawValue)
-                Text(language.text("하루", "Day")).tag(MapHomeAllowancePolicy.Period.day.rawValue)
-            }
-            .pickerStyle(.segmented)
-            field(language.text("용돈", "Allowance"), text: $allowanceText, unit: currencyUnit, placeholder: "0") {
-                allowanceAmount = number(allowanceText)
-            }
-            if allowance.isConfigured {
-                row(language.text("환산 시급", "Hourly"), won(MapHomeAllowancePolicy.hourlyRate(allowance, on: .now)), bold: true)
-            }
-            Text(language.text(
-                "근무·수면과 상관없이 24시간 내내 쌓여요. 카운터에는 그날 0시부터 번 돈이 보여요.",
-                "Grows around the clock. The counter shows what you earned since midnight."
-            ))
-            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium)).foregroundStyle(Color.tpSecondary)
+    /// 용돈은 24시간 내내 쌓이는 따로 도는 카운터다. 칸의 회색 값은 연봉을 환산해 보여 준다.
+    @ViewBuilder
+    private var allowanceFields: some View {
+        let allowance = allowanceSettings
+        Picker("", selection: $allowancePeriodRaw) {
+            Text(language.text("한 달", "Month")).tag(MapHomeAllowancePolicy.Period.month.rawValue)
+            Text(language.text("한 주", "Week")).tag(MapHomeAllowancePolicy.Period.week.rawValue)
+            Text(language.text("하루", "Day")).tag(MapHomeAllowancePolicy.Period.day.rawValue)
         }
+        .pickerStyle(.segmented)
+        field(
+            language.text("용돈", "Allowance"),
+            text: $allowanceText,
+            unit: currencyUnit,
+            placeholder: hasSalaryInput
+                ? String(Int(MapHomeAllowancePolicy.amount(
+                    fromAnnual: MapHomeSalaryPolicy.linkedAnnualGross(settings),
+                    period: allowance.period
+                ).rounded()))
+                : "0"
+        ) {
+            allowanceAmount = number(allowanceText)
+        }
+        if allowance.isConfigured {
+            row(language.text("환산 시급", "Hourly"), won(MapHomeAllowancePolicy.hourlyRate(allowance, on: .now)), bold: true)
+        }
+        Text(language.text(
+            "근무·수면과 상관없이 24시간 내내 쌓여요. 카운터에는 그날 0시부터 번 돈이 보여요.",
+            "Grows around the clock. The counter shows what you earned since midnight."
+        ))
+        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium)).foregroundStyle(Color.tpSecondary)
     }
 
     private func card<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {

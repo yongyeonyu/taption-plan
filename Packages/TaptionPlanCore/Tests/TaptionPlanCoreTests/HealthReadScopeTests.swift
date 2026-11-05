@@ -7,7 +7,8 @@ final class HealthReadScopeTests: XCTestCase {
             "HKWorkoutTypeIdentifier", "HKCategoryTypeIdentifierSleepAnalysis",
             "HKQuantityTypeIdentifierHeartRate", "HKQuantityTypeIdentifierStepCount",
             "HKQuantityTypeIdentifierDistanceWalkingRunning", "HKQuantityTypeIdentifierDistanceCycling",
-            "HKQuantityTypeIdentifierActiveEnergyBurned", "HKWorkoutRouteTypeIdentifier",
+            "HKQuantityTypeIdentifierActiveEnergyBurned", "HKWorkoutRouteTypeIdentifier", "HKQuantityTypeIdentifierBodyMass",
+            "HKQuantityTypeIdentifierBodyMass",
         ])
     }
     func testUnrelatedSensitiveRecordsAreExcluded() {

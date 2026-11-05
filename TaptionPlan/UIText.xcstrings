@@ -2927,79 +2927,79 @@
         }
       }
     },
-    "7일 연속이면 진화를 하나 고르고, 땅과 액세서리를 모읍니다.|Every 7 days in a row, choose an evolution and collect land and accessories." : {
+    "7일 연속이면 진화를 하나 고르고, 모자·목도리·리본을 모읍니다.|Every 7 days in a row, choose an evolution and collect hats, scarves, and ribbons." : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "7日連続で進化を1つ選び、土地とアクセサリーを集めます。"
+            "value" : "7日連続で進化を1つ選び、帽子・マフラー・リボンを集めます。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "连续 7 天，可选择一次进化，并收集土地和配饰。"
+            "value" : "连续7天可选择一种进化,并收集帽子、围巾和丝带。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "連續 7 天，可選擇一次進化，並收集土地和配件。"
+            "value" : "連續7天可選擇一種進化,並收集帽子、圍巾和緞帶。"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Alle 7 Tage in Folge wählst du eine Evolution und sammelst Land und Accessoires."
+            "value" : "Alle 7 Tage in Folge wählst du eine Entwicklung und sammelst Hüte, Schals und Bänder."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tous les 7 jours d’affilée, choisissez une évolution et récoltez terrain et accessoires."
+            "value" : "Tous les 7 jours consécutifs, choisissez une évolution et collectionnez chapeaux, écharpes et rubans."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ogni 7 giorni di fila scegli un’evoluzione e raccogli terreni e accessori."
+            "value" : "Ogni 7 giorni di fila, scegli un’evoluzione e colleziona cappelli, sciarpe e fiocchi."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cada 7 días seguidos, elige una evolución y consigue terrenos y accesorios."
+            "value" : "Cada 7 días seguidos, elige una evolución y colecciona sombreros, bufandas y lazos."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A cada 7 dias seguidos, escolha uma evolução e colete terrenos e acessórios."
+            "value" : "A cada 7 dias seguidos, escolha uma evolução e colecione chapéus, cachecóis e laços."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mỗi 7 ngày liên tiếp, bạn chọn một lần tiến hóa và thu thập đất cùng phụ kiện."
+            "value" : "Mỗi 7 ngày liên tiếp, chọn một tiến hóa và sưu tầm mũ, khăn và nơ."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Setiap 7 hari berturut-turut, pilih satu evolusi dan kumpulkan lahan serta aksesori."
+            "value" : "Setiap 7 hari berturut-turut, pilih evolusi dan kumpulkan topi, syal, dan pita."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ครบ 7 วันติดต่อกัน เลือกวิวัฒนาการได้หนึ่งอย่าง และเก็บที่ดินกับของตกแต่ง"
+            "value" : "ทุก 7 วันติดต่อกัน เลือกวิวัฒนาการหนึ่งอย่างและสะสมหมวก ผ้าพันคอ และริบบิ้น"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "लगातार हर 7 दिन पर एक इवोल्यूशन चुनें और ज़मीन व एक्सेसरी इकट्ठा करें।"
+            "value" : "लगातार हर 7 दिन पर एक विकास चुनें और टोपी, स्कार्फ़ और रिबन जमा करें।"
           }
         }
       }
@@ -10858,6 +10858,83 @@
         }
       }
     },
+    "{0} 수정|Edit {0}" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0}を編集"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "编辑{0}"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "編輯{0}"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} bearbeiten"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modifier {0}"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modifica {0}"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Editar {0}"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Editar {0}"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sửa {0}"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit {0}"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แก้ไข {0}"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} संपादित करें"
+          }
+        }
+      }
+    },
     "{0} 액세서리 {1} / {2}|{0} accessories {1} / {2}" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -17707,6 +17784,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "एल जेम का एम्फ़ीथिएटर"
+          }
+        }
+      }
+    },
+    "|An activity category with this name already exists." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同じ名前の行動カテゴリがあります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已存在同名活动类别。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已有同名活動類別。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine Aktivitätskategorie mit diesem Namen existiert bereits."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une catégorie d’activité porte déjà ce nom."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esiste già una categoria di attività con questo nome."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ya existe una categoría de actividad con este nombre."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Já existe uma categoria de atividade com este nome."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã có danh mục hoạt động với tên này."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kategori aktivitas dengan nama ini sudah ada."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "มีหมวดกิจกรรมชื่อนี้อยู่แล้ว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "इस नाम की गतिविधि श्रेणी पहले से मौजूद है।"
           }
         }
       }
@@ -73613,6 +73767,83 @@
         }
       }
     },
+    "같은 이름의 행동분류가 있습니다.|An activity category with this name already exists." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同じ名前の行動カテゴリがあります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已存在同名活动类别。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已有同名活動類別。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine Aktivitätskategorie mit diesem Namen existiert bereits."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une catégorie d’activité porte déjà ce nom."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esiste già una categoria di attività con questo nome."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ya existe una categoría de actividad con este nombre."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Já existe uma categoria de atividade com este nome."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã có danh mục hoạt động với tên này."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kategori aktivitas dengan nama ini sudah ada."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "มีหมวดกิจกรรมชื่อนี้อยู่แล้ว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "इस नाम की गतिविधि श्रेणी पहले से मौजूद है।"
+          }
+        }
+      }
+    },
     "같은 항목에는 연결할 수 없습니다.|An item cannot be linked to itself." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -75072,6 +75303,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Health ऐप और Watch ऐप का डेटा आयात करता है"
+          }
+        }
+      }
+    },
+    "건강 앱의 활동 에너지예요.|Active energy from the Health app." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ヘルスケアのアクティブエネルギーです。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "来自健康 App 的活动能量。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "來自健康 App 的活動能量。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktivenergie aus der Health-App."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Énergie active de l’app Santé."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Energia attiva dall’app Salute."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Energía activa de la app Salud."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Energia ativa do app Saúde."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Năng lượng hoạt động từ ứng dụng Sức khỏe."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Energi aktif dari app Kesehatan."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "พลังงานจากกิจกรรมในแอปสุขภาพ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health ऐप से सक्रिय ऊर्जा।"
           }
         }
       }
@@ -78768,6 +79076,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ऊँचाई %.1f मी तक घटती-बढ़ती रही, इसलिए कैलिब्रेशन रद्द हो गया। एक जगह रुककर फिर कोशिश करें।"
+          }
+        }
+      }
+    },
+    "고른 하나만 카운터에 쓰여요. 적은 금액은 나머지 칸에 환산해 보여 줘요.|Only the selected one runs the counter. Other tabs show the converted amount." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選んだ1つだけカウンターに使います。他のタブには換算額を表示します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只有所选项用于计数器,其他标签显示换算金额。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只有所選項用於計數器,其他分頁顯示換算金額。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur die Auswahl zählt für den Zähler. Die anderen Tabs zeigen den umgerechneten Betrag."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seul le choix sélectionné alimente le compteur. Les autres onglets affichent le montant converti."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Solo la voce scelta aziona il contatore. Le altre schede mostrano l’importo convertito."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Solo la opción elegida usa el contador. Las otras pestañas muestran el importe convertido."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Só a opção escolhida usa o contador. As outras abas mostram o valor convertido."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chỉ mục đã chọn dùng cho bộ đếm. Các tab khác hiện số tiền quy đổi."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hanya pilihan ini yang menjalankan penghitung. Tab lain menampilkan jumlah hasil konversi."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ตัวนับใช้เฉพาะรายการที่เลือก แท็บอื่นแสดงจำนวนที่แปลงแล้ว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "काउंटर में केवल चुना हुआ विकल्प चलता है। अन्य टैब बदली हुई राशि दिखाते हैं।"
           }
         }
       }
@@ -84085,79 +84470,79 @@
         }
       }
     },
-    "기록을 읽는 중입니다.|Reading your records." : {
+    "기록을 읽는 중입니다. 처음에는 기간이 길수록 오래 걸리고, 한 번 읽은 날은 다음부터 바로 열립니다.|Reading your records. The first read takes longer for long periods; days already read open instantly next time." : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "記録を読み込み中です。"
+            "value" : "記録を読み込んでいます。初回は期間が長いほど時間がかかり、一度読み込んだ日は次回からすぐ開きます。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "正在读取你的记录。"
+            "value" : "正在读取记录。首次读取时周期越长耗时越久,读取过的日子下次会立即打开。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "正在讀取你的記錄。"
+            "value" : "正在讀取記錄。首次讀取時期間越長耗時越久,讀取過的日子下次會立即開啟。"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deine Einträge werden gelesen."
+            "value" : "Einträge werden gelesen. Beim ersten Mal dauert es bei langen Zeiträumen länger; bereits gelesene Tage öffnen sich beim nächsten Mal sofort."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lecture de vos enregistrements."
+            "value" : "Lecture des enregistrements. La première lecture est plus longue pour les longues périodes ; les jours déjà lus s’ouvrent ensuite instantanément."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lettura delle tue registrazioni."
+            "value" : "Lettura dei record. La prima lettura richiede più tempo per i periodi lunghi; i giorni già letti si aprono subito la volta successiva."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Leyendo tus registros."
+            "value" : "Leyendo los registros. La primera lectura tarda más en periodos largos; los días ya leídos se abren al instante la próxima vez."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lendo seus registros."
+            "value" : "Lendo os registros. A primeira leitura demora mais em períodos longos; os dias já lidos abrem na hora da próxima vez."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Đang đọc bản ghi của bạn."
+            "value" : "Đang đọc bản ghi. Lần đầu sẽ lâu hơn với khoảng thời gian dài; những ngày đã đọc sẽ mở ngay lần sau."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Membaca catatan Anda."
+            "value" : "Membaca catatan. Pembacaan pertama lebih lama untuk periode panjang; hari yang sudah dibaca langsung terbuka berikutnya."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "กำลังอ่านบันทึกของคุณ"
+            "value" : "กำลังอ่านบันทึก ครั้งแรกจะใช้เวลานานขึ้นเมื่อช่วงเวลายาว วันที่อ่านแล้วจะเปิดได้ทันทีในครั้งถัดไป"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "आपके रिकॉर्ड पढ़े जा रहे हैं।"
+            "value" : "रिकॉर्ड पढ़े जा रहे हैं। पहली बार लंबी अवधि में अधिक समय लगता है; पढ़े जा चुके दिन अगली बार तुरंत खुलते हैं।"
           }
         }
       }
@@ -85544,6 +85929,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "जागे हुए"
+          }
+        }
+      }
+    },
+    "꺼짐|Off" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "オフ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关闭"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "關閉"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aus"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Désactivé"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Disattivo"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Desactivado"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Desligado"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tắt"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mati"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ปิด"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "बंद"
           }
         }
       }
@@ -97483,6 +97945,83 @@
         }
       }
     },
+    "모두 허용됨|All allowed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "すべて許可済み"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已全部允许"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已全部允許"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle erlaubt"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tout est autorisé"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tutto consentito"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Todo permitido"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tudo permitido"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã cho phép tất cả"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semua diizinkan"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "อนุญาตทั้งหมดแล้ว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सभी की अनुमति है"
+          }
+        }
+      }
+    },
     "모든 권한이 확인되면 GPS와 센서 기록이 5분 간격으로 자동 시작됩니다.|GPS and sensor recording starts automatically every 5 minutes after all permissions are verified." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -100409,79 +100948,79 @@
         }
       }
     },
-    "배터리를 아끼고 경로는 성겨집니다.|Saves battery, with sparser routes." : {
+    "배터리를 아끼는 대신 경로 기록이 드문드문해집니다.|Saves battery, with fewer route points." : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "バッテリーを節約でき、経路は粗くなります。"
+            "value" : "バッテリーを節約しますが、経路の記録はまばらになります。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "更省电，路线更稀疏。"
+            "value" : "节省电量,但路线记录点会变少。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "更省電，路線更稀疏。"
+            "value" : "節省電量,但路線記錄點會變少。"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Spart Akku, Routen werden gröber."
+            "value" : "Spart Akku, zeichnet aber weniger Routenpunkte auf."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Économise la batterie, trajets moins précis."
+            "value" : "Économise la batterie, avec moins de points d’itinéraire."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Risparmia batteria, percorsi meno precisi."
+            "value" : "Risparmia batteria, con meno punti del percorso."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ahorra batería, con rutas menos precisas."
+            "value" : "Ahorra batería, con menos puntos de ruta."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Economiza bateria, com rotas menos precisas."
+            "value" : "Economiza bateria, com menos pontos de rota."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tiết kiệm pin, lộ trình thưa hơn."
+            "value" : "Tiết kiệm pin, nhưng ít điểm lộ trình hơn."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hemat baterai, rute lebih renggang."
+            "value" : "Menghemat baterai, dengan lebih sedikit titik rute."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ประหยัดแบตเตอรี่ เส้นทางห่างขึ้น"
+            "value" : "ประหยัดแบตเตอรี่ แต่จุดเส้นทางจะน้อยลง"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "बैटरी बचती है, मार्ग कम सटीक होता है।"
+            "value" : "बैटरी बचती है, पर रूट के बिंदु कम होते हैं।"
           }
         }
       }
@@ -108490,6 +109029,160 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "फ़ोटो सहेजने की अनुमति चाहिए"
+          }
+        }
+      }
+    },
+    "사진(지도)|Photos (map)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "写真(地図)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "照片(地图)"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "照片(地圖)"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fotos (Karte)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photos (carte)"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Foto (mappa)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fotos (mapa)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fotos (mapa)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ảnh (bản đồ)"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Foto (peta)"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "รูปภาพ (แผนที่)"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "फ़ोटो (मैप)"
+          }
+        }
+      }
+    },
+    "사진(하단링)|Photos (bottom ring)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "写真(下部リング)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "照片(底部圆环)"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "照片(底部圓環)"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fotos (unterer Ring)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photos (anneau du bas)"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Foto (anello inferiore)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fotos (anillo inferior)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fotos (anel inferior)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ảnh (vòng dưới)"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Foto (cincin bawah)"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "รูปภาพ (วงด้านล่าง)"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "फ़ोटो (निचला रिंग)"
           }
         }
       }
@@ -120810,6 +121503,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "अभी नहीं"
+          }
+        }
+      }
+    },
+    "안개 탐험 선택|Choose fog of exploration" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "探索の霧を選択"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择探索迷雾"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選擇探索迷霧"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erkundungsnebel wählen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisir le brouillard d’exploration"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scegli la nebbia di esplorazione"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elegir niebla de exploración"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escolher névoa de exploração"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chọn sương mù khám phá"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pilih kabut eksplorasi"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เลือกหมอกสำรวจ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "अन्वेषण कोहरा चुनें"
           }
         }
       }
@@ -138062,6 +138832,83 @@
         }
       }
     },
+    "이 날은 건강 앱 값이 없어 걸음 수와 몸무게로 추정했어요. 몸무게가 없으면 65kg로 계산해요.|No Health data for this day, so this is estimated from steps and weight (65 kg if no weight is set)." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この日はヘルスケアの値がないため、歩数と体重から推定しました。体重がない場合は65kgで計算します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这一天没有健康 App 数据,因此根据步数和体重估算。没有体重时按65kg计算。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這一天沒有健康 App 資料,因此根據步數和體重估算。沒有體重時以65kg計算。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Für diesen Tag gibt es keine Health-Daten, daher aus Schritten und Gewicht geschätzt (65 kg ohne Gewichtsangabe)."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucune donnée Santé ce jour-là : estimation à partir des pas et du poids (65 kg si aucun poids n’est défini)."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nessun dato di Salute per questo giorno: stima da passi e peso (65 kg se il peso non è impostato)."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No hay datos de Salud este día, así que se estima con los pasos y el peso (65 kg si no hay peso)."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sem dados do Saúde neste dia, então a estimativa usa passos e peso (65 kg se não houver peso)."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ngày này không có dữ liệu Sức khỏe nên ước tính từ số bước và cân nặng (65 kg nếu chưa có cân nặng)."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak ada data Kesehatan hari ini, jadi diperkirakan dari langkah dan berat badan (65 kg jika berat tidak ada)."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "วันนี้ไม่มีข้อมูลจากแอปสุขภาพ จึงประมาณจากจำนวนก้าวและน้ำหนัก (ใช้ 65 กก. หากไม่มีน้ำหนัก)"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "इस दिन Health डेटा नहीं है, इसलिए कदमों और वज़न से अनुमान लगाया गया है (वज़न न होने पर 65 किग्रा)।"
+          }
+        }
+      }
+    },
     "이 날의 기록이 아직 없습니다|No records for this day yet" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -140291,6 +141138,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "नाम"
+          }
+        }
+      }
+    },
+    "이미 남긴 기록의 이름은 그대로 남습니다.|Existing records keep this name." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "既存の記録の名前はそのまま残ります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已有记录会保留此名称。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已有記錄會保留此名稱。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vorhandene Einträge behalten diesen Namen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les enregistrements existants conservent ce nom."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I record esistenti mantengono questo nome."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Los registros existentes conservan este nombre."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Os registros existentes mantêm este nome."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Các bản ghi hiện có vẫn giữ tên này."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catatan yang ada tetap memakai nama ini."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "บันทึกที่มีอยู่จะยังใช้ชื่อนี้"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "मौजूदा रिकॉर्ड में यह नाम बना रहेगा।"
           }
         }
       }
@@ -144295,6 +145219,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ऑपरेशन रद्द किया गया।"
+          }
+        }
+      }
+    },
+    "잠금화면 · 실시간 현황|Lock Screen · Live Activities" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ロック画面 · ライブアクティビティ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "锁定屏幕 · 实时活动"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "鎖定畫面 · 即時動態"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sperrbildschirm · Live-Aktivitäten"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Écran verrouillé · Activités en direct"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schermata di blocco · Attività live"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pantalla bloqueada · Actividades en vivo"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tela Bloqueada · Atividades ao Vivo"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Màn hình khóa · Hoạt động trực tiếp"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Layar Terkunci · Aktivitas Langsung"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "หน้าจอล็อก · กิจกรรมสด"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "लॉक स्क्रीन · लाइव गतिविधियां"
           }
         }
       }
@@ -150378,6 +151379,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "मौजूदा गतिविधि, आज का सारांश और अगली योजना देखें, और गतिविधियों की पुष्टि या सुधार करें। इसे वॉच फ़ेस पर भी रख सकते हैं।"
+          }
+        }
+      }
+    },
+    "지금 활동을 잠금화면과 다이나믹 아일랜드에 보여줍니다.|Shows your current activity on the Lock Screen and Dynamic Island." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "現在の活動をロック画面とDynamic Islandに表示します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在锁定屏幕和灵动岛上显示当前活动。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在鎖定畫面和動態島上顯示目前活動。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zeigt deine aktuelle Aktivität auf dem Sperrbildschirm und in der Dynamic Island."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Affiche votre activité actuelle sur l’écran verrouillé et dans la Dynamic Island."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostra l’attività corrente sulla schermata di blocco e nella Dynamic Island."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Muestra tu actividad actual en la pantalla bloqueada y la Dynamic Island."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostra sua atividade atual na Tela Bloqueada e na Dynamic Island."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hiển thị hoạt động hiện tại trên màn hình khóa và Dynamic Island."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menampilkan aktivitas saat ini di Layar Terkunci dan Dynamic Island."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แสดงกิจกรรมปัจจุบันบนหน้าจอล็อกและ Dynamic Island"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "आपकी मौजूदा गतिविधि लॉक स्क्रीन और Dynamic Island पर दिखाता है।"
           }
         }
       }
@@ -159314,6 +160392,83 @@
         }
       }
     },
+    "켜짐|On" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "オン"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开启"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開啟"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activé"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Attivo"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activado"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ligado"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bật"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktif"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เปิด"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "चालू"
+          }
+        }
+      }
+    },
     "켜짐|on" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -165705,6 +166860,83 @@
         }
       }
     },
+    "행동분류 수정|Edit activity category" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "行動カテゴリを編集"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "编辑活动类别"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "編輯活動類別"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktivitätskategorie bearbeiten"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modifier la catégorie d’activité"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modifica categoria di attività"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Editar categoría de actividad"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Editar categoria de atividade"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sửa danh mục hoạt động"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit kategori aktivitas"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แก้ไขหมวดกิจกรรม"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "गतिविधि श्रेणी संपादित करें"
+          }
+        }
+      }
+    },
     "행동분류 이름|Category name" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -165855,6 +167087,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "गतिविधि श्रेणी जोड़ें"
+          }
+        }
+      }
+    },
+    "행동분류를 삭제할까요?|Delete this activity category?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この行動カテゴリを削除しますか?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要删除此活动类别吗?"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要刪除此活動類別嗎?"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Aktivitätskategorie löschen?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supprimer cette catégorie d’activité ?"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eliminare questa categoria di attività?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Eliminar esta categoría de actividad?"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Excluir esta categoria de atividade?"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xóa danh mục hoạt động này?"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hapus kategori aktivitas ini?"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลบหมวดกิจกรรมนี้หรือไม่"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "यह गतिविधि श्रेणी हटाएं?"
           }
         }
       }
@@ -169320,6 +170629,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "{0} रिकॉर्ड"
+          }
+        }
+      }
+    },
+    "활동 칼로리|Active calories" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アクティブカロリー"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "活动卡路里"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "活動卡路里"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktivkalorien"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calories actives"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calorie attive"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calorías activas"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calorias ativas"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calo hoạt động"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kalori aktif"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แคลอรีจากกิจกรรม"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सक्रिय कैलोरी"
           }
         }
       }

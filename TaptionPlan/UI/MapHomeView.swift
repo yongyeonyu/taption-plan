@@ -48,6 +48,7 @@ struct MapHomeView: View {
     @State var expandedCategoryDetails: Set<String> = []
 
     @State var isCategoryAddPresented = false
+    @State var editingUserCategory: MapUserActivityCategory?
 
     @State var isDisplayMenuExpanded = false
 
@@ -81,6 +82,7 @@ struct MapHomeView: View {
     @State var isCarAudioSheetPresented = false
 
     @AppStorage(MapHomeSalaryPolicy.annualKey) var salaryAnnualPay = 0.0
+    @AppStorage(MapHomeAllowancePolicy.isSelectedKey) var allowanceIsSelected = false
 
     @AppStorage(MapHomeSalaryPolicy.monthlyPayKey) var salaryMonthlyPay = 0.0
 
@@ -169,6 +171,7 @@ struct MapHomeView: View {
     @State var photosNeedReadingRetry = false
 
     @AppStorage("mapHomeShowsPhotos") var showsPhotosOnMap = true
+    @AppStorage("mapHomeShowsPhotoRing") var showsPhotoRing = false
 
     /// 표시 메뉴의 경로·발자국 켜기/끄기(대표 지시, ARC1030A06). 녹화 레이어와는 별개로, 평소 화면에 적용된다.
     @AppStorage("mapHomeShowsRoutes") var showsRoutesOnMap = true

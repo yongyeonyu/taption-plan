@@ -90,6 +90,9 @@ struct MapHomePlaybackVideoSheet: View {
                 MapHomePlaybackMusicPicker(language: language, canUseAudio: !model.isRecordingVoiceMemo)
             }
             VStack(alignment: .leading, spacing: 10) {
+                Text(periodText)
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold))
+                    .foregroundStyle(Color.tpInk)
                 Text(message)
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
@@ -118,6 +121,17 @@ struct MapHomePlaybackVideoSheet: View {
         Text("\(Int((value * 100).rounded(.down)))%")
             .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold).monospacedDigit())
             .foregroundStyle(Color.tpSecondary)
+    }
+
+    /// 영상에 담기는 기간. 끝은 다음 날 0시일 수 있어 1초 빼서 보여 준다.
+    private var periodText: String {
+        let format = Date.FormatStyle().year().month().day()
+        let span = rangeSpan
+        let lastMoment = max(span.start, span.end.addingTimeInterval(-1))
+        guard !Calendar.autoupdatingCurrent.isDate(span.start, inSameDayAs: lastMoment) else {
+            return span.start.formatted(format)
+        }
+        return "\(span.start.formatted(format)) – \(lastMoment.formatted(format))"
     }
 
     private var isFailed: Bool {
@@ -168,7 +182,9 @@ struct MapHomePlaybackVideoSheet: View {
 
     /// 여러 날 구간을 영상으로 그린다.
     private func makeRangeRenderer(_ plan: MapHomeRangeTripPlan) -> MapHomePlaybackVideoRenderer? {
-        guard let style = model.settings.mapDisplayStyle.runtimeStyle.mapHomeVectorStyle else { return nil }
+        // Apple 지도는 영상으로 그릴 수 없어 하루 영상과 같은 기본 벡터 스타일을 쓴다.
+        guard let style = model.settings.mapDisplayStyle.runtimeStyle.mapHomeVectorStyle
+            ?? MapDisplayStyle.mapLibreRPG.runtimeStyle.mapHomeVectorStyle else { return nil }
         return MapHomePlaybackVideoRenderer(
             style: style,
             frames: { plan.frames(fps: $0) },
@@ -193,11 +209,23 @@ struct MapHomePlaybackVideoSheet: View {
         )
     }
 
+    private nonisolated static func cachedSamples(dayStart: Date, calendar: Calendar) async -> [MapHomeRangeTripPlan.Sample]? {
+        MapHomeRangeSampleCache.read(dayStart: dayStart, calendar: calendar)
+    }
+
+    private nonisolated static func storeSamples(
+        _ samples: [MapHomeRangeTripPlan.Sample], dayStart: Date, calendar: Calendar
+    ) async {
+        guard MapHomeRangeSampleCache.isCacheable(dayStart: dayStart, now: .now, calendar: calendar) else { return }
+        MapHomeRangeSampleCache.write(samples, dayStart: dayStart, calendar: calendar)
+    }
+
     /// 하루씩 읽어 줄인 표본만 남긴다. 여러 날의 `SensorReading`을 한꺼번에 메모리에 두지 않는다.
     /// 판독이 없는 날은 저장된 이동·장소로 경로를 지어내지 않고 날 수만 센다.
     private func loadRange() async {
         rangePlan = nil
         missingRangeDays = 0
+        if isFailed { phase = .idle }
         guard preset != .day else { return }
         isLoadingRange = true
         rangeLoadPercent = 0
@@ -232,8 +260,15 @@ struct MapHomePlaybackVideoSheet: View {
         var dayStart = span.start
         while dayStart < span.end {
             let next = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: dayStart)) ?? span.end
-            let loaded = await model.routeReadingsForRange(in: TimeSpan(start: dayStart, end: min(next, span.end)))
-            let daySamples = await Self.daySamples(from: loaded.readings)
+            let daySamples: [MapHomeRangeTripPlan.Sample]
+            if let cached = await Self.cachedSamples(dayStart: dayStart, calendar: calendar) {
+                daySamples = cached
+            } else {
+                let loaded = await model.routeReadingsForRange(in: TimeSpan(start: dayStart, end: min(next, span.end)))
+                daySamples = await Self.daySamples(from: loaded.readings)
+                if Task.isCancelled { return nil }
+                await Self.storeSamples(daySamples, dayStart: dayStart, calendar: calendar)
+            }
             if Task.isCancelled { return nil }
             samples += daySamples
             if daySamples.isEmpty { missing += 1 }
@@ -264,7 +299,12 @@ struct MapHomePlaybackVideoSheet: View {
         guard preset != .day else {
             return language.text("하루 재생을 60fps 영상으로 그립니다. 끊김 없이 저장됩니다.", "Renders the day at 60 fps with no dropped frames.")
         }
-        if isLoadingRange { return language.text("기록을 읽는 중입니다.", "Reading your records.") }
+        if isLoadingRange {
+            return language.text(
+                "기록을 읽는 중입니다. 처음에는 기간이 길수록 오래 걸리고, 한 번 읽은 날은 다음부터 바로 열립니다.",
+                "Reading your records. The first read takes longer for long periods; days already read open instantly next time."
+            )
+        }
         guard let rangePlan else {
             return language.text("이 기간에는 보여 줄 위치 기록이 없습니다.", "No location records to show in this period.")
         }

@@ -267,7 +267,7 @@ extension MapHomeView {
     /// 연봉 카운터 작업을 다시 돌릴 기준값. 식이 길어 따로 뺐다.
     var salaryTaskID: String {
         let parts: [String] = [
-            "\(salaryAnnualPay)", "\(salaryMonthlyPay)", "\(salaryIsNetInput)", "\(salaryShowsNet)",
+            "\(salaryAnnualPay)", "\(allowanceIsSelected)", "\(salaryMonthlyPay)", "\(salaryIsNetInput)", "\(salaryShowsNet)",
             "\(salaryMonthAccum)", "\(salaryPayHistoryRaw)", "\(scenePhase == .active)",
             "\(model.selectedDate.timeIntervalSince1970)", "\(model.snapshot.actuals.count)", "\(model.snapshot.places.count)",
         ]

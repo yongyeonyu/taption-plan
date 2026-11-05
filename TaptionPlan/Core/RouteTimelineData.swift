@@ -2339,14 +2339,14 @@ enum RouteTimelineDataEngine {
             if index.isMultiple(of: 256) { try cancellationCheck() }
             preferred.append(reading)
         }
-        return try RouteTimelineCancellableSort.sorted(
+        return try droppingBracketedApproximates(RouteTimelineCancellableSort.sorted(
             preferred,
             by: {
                 if $0.timestamp != $1.timestamp { return $0.timestamp < $1.timestamp }
                 return $0.id.uuidString < $1.id.uuidString
             },
             cancellationCheck: cancellationCheck
-        )
+        ), when: includesApproximateLocations)
     }
 
     static func playbackCoordinate(

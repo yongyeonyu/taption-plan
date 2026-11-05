@@ -952,23 +952,16 @@ extension AppModel {
             return
         }
         let end = max(session.startedAt, session.endedAt ?? .now)
-        let kind = session.kind == .running ? "달리기" : "걷기"
         let linkedPlan = session.linkedPlanID.flatMap { planID in
             snapshot.plans.first { $0.id == planID }
         }
-        snapshot.actuals.append(
-            ActualRecord(
-                id: session.id,
-                planID: linkedPlan?.id,
-                title: linkedPlan?.title ?? kind,
-                categoryID: linkedPlan?.categoryID ?? "activity",
-                startedAt: session.startedAt,
-                endedAt: end,
-                source: session.sourceDevice == .appleWatch
-                    ? .appleWatch
-                    : .location,
-                confidence: .high
-            )
-        )
+        guard let actual = TrackingSessionRecordPolicy.actual(
+            for: session,
+            endedAt: end,
+            planID: linkedPlan?.id,
+            planTitle: linkedPlan?.title,
+            planCategoryID: linkedPlan?.categoryID
+        ) else { return }
+        snapshot.actuals.append(actual)
     }
 }

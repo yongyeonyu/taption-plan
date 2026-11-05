@@ -35,6 +35,27 @@ extension AppModel {
         return merged
     }
 
+    private static let bodyMassAccessRequestedKey = "calendarBodyMassAccessRequested"
+
+    /// 달력 활동 칼로리. 몸무게는 칼로리를 켠 뒤 한 번만 묻는다. 이미 허용한 건강 항목은 다시 묻지 않는다.
+    func calendarDailyCalories(
+        month: Date, steps: [Date: Double], strideMeters: Double
+    ) async -> [Date: (kilocalories: Double, isEstimated: Bool)] {
+        let calendar = Calendar.autoupdatingCurrent
+        guard let first = calendar.date(from: calendar.dateComponents([.year, .month], from: month)),
+              let end = calendar.date(byAdding: .month, value: 1, to: first) else { return [:] }
+        let defaults = UserDefaults.standard
+        if !defaults.bool(forKey: Self.bodyMassAccessRequestedKey), !FirstRunTutorialStore().defersPermissionPrompts {
+            defaults.set(true, forKey: Self.bodyMassAccessRequestedKey)
+            _ = try? await healthService.requestReadAccess()
+        }
+        let health = (try? await healthService.dailyActiveEnergy(from: first, to: min(end, .now), calendar: calendar)) ?? [:]
+        let weight = await healthService.latestBodyMassKilograms()
+        return MapHomeCalendarTimeTotalsPolicy.dailyCalories(
+            health: health, steps: steps, strideMeters: strideMeters, weightKilograms: weight
+        )
+    }
+
     private nonisolated(unsafe) static let todayPedometer = CMPedometer()
 
     /// 자정부터 지금까지의 걸음 수(CMPedometer). 지원되지 않거나 실패하거나 3초 안에 응답이 없으면 nil.

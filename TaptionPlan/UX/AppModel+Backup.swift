@@ -124,6 +124,7 @@ extension AppModel {
 
     /// 백업 후 로컬 정리: 끝난 달 중 백업을 다시 읽어 검증한 달만 이 기기에서 지운다.
     func offloadLocalMonths(password: String, now: Date = .now) async {
+        MapHomeRangeSampleCache.removeAll()
         guard beginBackupOperation(.offloading) else {
             lastBackupReport = Self.backupBusyReport(.offload)
             return
@@ -162,6 +163,7 @@ extension AppModel {
     /// 백업 한 개(월 또는 설정)를 비밀번호로 복원한다. 로컬에서 정리한 달을 다시 불러오는 데도 쓴다.
     /// 복원은 기존 로컬 행보다 새 것만 가져오고, 끝나면 repository를 다시 불러온다.
     func restoreBackup(_ scope: TaptionBackupScope, password: String, now: Date = .now) async {
+        MapHomeRangeSampleCache.removeAll()
         let name = PlanBackupPresenter.name(of: scope)
         guard beginBackupOperation(.restoring(name)) else {
             lastBackupReport = Self.backupBusyReport(.restore)
@@ -238,6 +240,7 @@ extension AppModel {
     /// (되돌릴 수 없으므로 호출하는 화면이 사용자 확인을 받아야 한다).
     func deleteAllUserData(includingBackups: Bool = false) async {
         guard acceptsDataMutation() || (isStartupSnapshotPartial && allowsRepositoryLoadAttempt()) else { return }
+        MapHomeRangeSampleCache.removeAll()
         isDeletingUserData = true
         let deletionCutoff = Date.now
         dataDeletionGeneration = TaptionDataDeletionFence.advance(

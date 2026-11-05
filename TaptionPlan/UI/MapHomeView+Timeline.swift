@@ -331,6 +331,7 @@ extension MapHomeView {
                         )
                     }
 
+                    let badgeColumns = scheduleBadgeColumns(railHeight: railHeight)
                     ForEach(recordingShows(\.sidebarMemos) ? scheduleStickersForSelectedDate : []) { sticker in
                         let window = MapHomeTimeSidebarMath.visibleWindow(
                             startMinute: timeSidebarVisibleStartMinute,
@@ -349,7 +350,7 @@ extension MapHomeView {
                             )
                         Button {
                             if isStickerMode { selectedMapStickerEditor = .sticker(sticker.id); return }
-                            toggleSidebarNote(.sticker(sticker, minute: minute, badgeOffset: scheduleBadgeOffset(minute: minute, isEvent: false)))
+                            toggleSidebarNote(.sticker(sticker, minute: minute, badgeOffset: scheduleBadgeOffset(id: "sticker-\(sticker.id)", minute: minute, isEvent: false, columns: badgeColumns)))
                         } label: {
                             StickerGlyph(symbol: sticker.systemImage, colorHex: sticker.colorHex, size: 20)
                                 .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
@@ -366,7 +367,7 @@ extension MapHomeView {
                         )
                         // 날씨 칩의 왼쪽 끝에 맞춘다(캡처로 잰 값: 칩 왼쪽 끝 x 17, 스티커 반지름 11).
                         .position(
-                            x: scheduleBadgeBaseX + scheduleBadgeOffset(minute: minute, isEvent: false),
+                            x: scheduleBadgeBaseX + scheduleBadgeOffset(id: "sticker-\(sticker.id)", minute: minute, isEvent: false, columns: badgeColumns),
                             y: min(
                                 max(y, MapHomeTimeSidebarMath.verticalInset),
                                 railHeight - MapHomeTimeSidebarMath.verticalInset
@@ -387,7 +388,7 @@ extension MapHomeView {
                         let y = MapHomeTimeSidebarMath.verticalInset
                             + trackHeight * MapHomeTimeSidebarMath.position(minute: minute, window: window)
                         Button {
-                            toggleSidebarNote(.memo(memo, minute: minute, badgeOffset: scheduleBadgeOffset(minute: minute, isEvent: false)))
+                            toggleSidebarNote(.memo(memo, minute: minute, badgeOffset: scheduleBadgeOffset(id: "memo-\(memo.id)", minute: minute, isEvent: false, columns: badgeColumns)))
                         } label: {
                             StickerGlyph(symbol: memo.iconSymbol(), colorHex: memo.iconColorHex, size: 20)
                                 .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
@@ -398,7 +399,7 @@ extension MapHomeView {
                         .buttonStyle(.plain)
                         .accessibilityLabel("\(memo.text) 메모")
                         .position(
-                            x: scheduleBadgeBaseX + scheduleBadgeOffset(minute: minute, isEvent: false),
+                            x: scheduleBadgeBaseX + scheduleBadgeOffset(id: "memo-\(memo.id)", minute: minute, isEvent: false, columns: badgeColumns),
                             y: min(max(y, MapHomeTimeSidebarMath.verticalInset), railHeight - MapHomeTimeSidebarMath.verticalInset)
                         )
                     }
@@ -413,7 +414,7 @@ extension MapHomeView {
                         let y = MapHomeTimeSidebarMath.verticalInset
                             + trackHeight * MapHomeTimeSidebarMath.position(minute: minute, window: window)
                         Button {
-                            toggleSidebarNote(.event(id: "\(event.id)", title: event.title, notes: event.notes, span: event.span, minute: minute, badgeOffset: scheduleBadgeOffset(minute: minute, isEvent: true)))
+                            toggleSidebarNote(.event(id: "\(event.id)", title: event.title, notes: event.notes, span: event.span, minute: minute, badgeOffset: scheduleBadgeOffset(id: "event-\(event.id)", minute: minute, isEvent: true, columns: badgeColumns)))
                         } label: {
                             MapHomeCalendarSourceLogo()
                                 .padding(3)
@@ -423,7 +424,7 @@ extension MapHomeView {
                         .buttonStyle(.plain)
                         .accessibilityLabel("\(event.title) 일정")
                         .position(
-                            x: scheduleBadgeBaseX + scheduleBadgeOffset(minute: minute, isEvent: true),
+                            x: scheduleBadgeBaseX + scheduleBadgeOffset(id: "event-\(event.id)", minute: minute, isEvent: true, columns: badgeColumns),
                             y: min(max(y, MapHomeTimeSidebarMath.verticalInset), railHeight - MapHomeTimeSidebarMath.verticalInset)
                         )
                     }

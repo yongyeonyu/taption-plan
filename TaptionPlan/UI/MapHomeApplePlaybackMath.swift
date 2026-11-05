@@ -79,6 +79,14 @@ enum MapHomeAppleAnnotationKind {
 }
 
 extension MapHomeAppleAnnotationKind {
+    /// 스티커 모드의 스티커와 검색 핀만 터치를 직접 받는다(벡터 지도와 같다).
+    var passesTouchesToMap: Bool {
+        switch self {
+        case .sticker, .search: false
+        default: true
+        }
+    }
+
     var staysVisible: Bool {
         switch self {
         case .sticker, .memo, .photo: true

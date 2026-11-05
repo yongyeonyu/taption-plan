@@ -99,6 +99,13 @@ struct MapHomeAppleHostedDescriptor {
 
 final class MapHomeAppleHostedAnnotationView: MKAnnotationView {
     private var hostingController: UIHostingController<AnyView>?
+    var onAccessibilityActivate: (() -> Void)?
+
+    override func accessibilityActivate() -> Bool {
+        guard let onAccessibilityActivate else { return false }
+        onAccessibilityActivate()
+        return true
+    }
 
     func update(
         rootView: AnyView,
@@ -127,6 +134,14 @@ final class MapHomeAppleHostedAnnotationView: MKAnnotationView {
 
 /// 발자국 주석. SwiftUI 호스팅 뷰를 수백 개 만들면 늦게 뜨고 첫 배치 때 위치가 어긋나므로 이미지 뷰 하나만 쓴다.
 final class MapHomeApplePawprintAnnotationView: MKAnnotationView {
+    var onAccessibilityActivate: (() -> Void)?
+
+    override func accessibilityActivate() -> Bool {
+        guard let onAccessibilityActivate else { return false }
+        onAccessibilityActivate()
+        return true
+    }
+
     private static let size = CGSize(width: 28, height: 28)
     private static var imageCache: [UInt32: UIImage] = [:]
     private let imageView = UIImageView()

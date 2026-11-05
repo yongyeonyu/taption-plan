@@ -509,6 +509,43 @@ struct TrackingSession: Identifiable, Codable, Hashable, Sendable {
     }
 }
 
+/// 추적 세션을 활동 기록으로 남길지 정한다(WLK1105A01).
+enum TrackingSessionRecordPolicy {
+    static let userStartedEvidence = "사용자가 시작한 추적"
+
+    /// 자동 세션은 수집 구간일 뿐 활동이 아니다. 실제 걷기는 모션 기록이 따로 남긴다.
+    static func actual(
+        for session: TrackingSession,
+        endedAt: Date,
+        planID: UUID?,
+        planTitle: String?,
+        planCategoryID: String?
+    ) -> ActualRecord? {
+        guard !session.wasAutomaticallyDetected else { return nil }
+        return ActualRecord(
+            id: session.id,
+            planID: planID,
+            title: planTitle ?? (session.kind == .running ? "달리기" : "걷기"),
+            categoryID: planCategoryID ?? "activity",
+            startedAt: session.startedAt,
+            endedAt: endedAt,
+            source: session.sourceDevice == .appleWatch ? .appleWatch : .location,
+            confidence: .high,
+            evidence: [userStartedEvidence]
+        )
+    }
+
+    /// 예전 버전이 자동 세션으로 저장한 근거 없는 기록.
+    static func isAutomaticSessionArtifact(_ actual: ActualRecord) -> Bool {
+        actual.source == .location
+            && actual.planID == nil
+            && actual.behavior == nil
+            && actual.evidence.isEmpty
+            && actual.categoryID == "activity"
+            && ["걷기", "달리기"].contains(actual.title)
+    }
+}
+
 struct LiveRouteState: Hashable, Sendable {
     var session: TrackingSession?
     var readings: [SensorReading]

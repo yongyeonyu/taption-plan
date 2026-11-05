@@ -2773,6 +2773,27 @@
 "취미(집 - 취미)|Hobby (home to hobby)": "Hobby (von zu Hause)",
 "지하철|Subway": "U-Bahn",
 "버스|Bus": "Bus",
-"건강관리|Health care": "Gesundheit"
+"건강관리|Health care": "Gesundheit",
+"{0} 수정|Edit {0}": "{0} bearbeiten",
+"|An activity category with this name already exists.": "Eine Aktivitätskategorie mit diesem Namen existiert bereits.",
+"같은 이름의 행동분류가 있습니다.|An activity category with this name already exists.": "Eine Aktivitätskategorie mit diesem Namen existiert bereits.",
+"기록을 읽는 중입니다. 처음에는 기간이 길수록 오래 걸리고, 한 번 읽은 날은 다음부터 바로 열립니다.|Reading your records. The first read takes longer for long periods; days already read open instantly next time.": "Einträge werden gelesen. Beim ersten Mal dauert es bei langen Zeiträumen länger; bereits gelesene Tage öffnen sich beim nächsten Mal sofort.",
+"꺼짐|Off": "Aus",
+"사진(지도)|Photos (map)": "Fotos (Karte)",
+"사진(하단링)|Photos (bottom ring)": "Fotos (unterer Ring)",
+"이미 남긴 기록의 이름은 그대로 남습니다.|Existing records keep this name.": "Vorhandene Einträge behalten diesen Namen.",
+"잠금화면 · 실시간 현황|Lock Screen · Live Activities": "Sperrbildschirm · Live-Aktivitäten",
+"지금 활동을 잠금화면과 다이나믹 아일랜드에 보여줍니다.|Shows your current activity on the Lock Screen and Dynamic Island.": "Zeigt deine aktuelle Aktivität auf dem Sperrbildschirm und in der Dynamic Island.",
+"켜짐|On": "Ein",
+"행동분류 수정|Edit activity category": "Aktivitätskategorie bearbeiten",
+"행동분류를 삭제할까요?|Delete this activity category?": "Diese Aktivitätskategorie löschen?",
+"모두 허용됨|All allowed": "Alle erlaubt",
+"배터리를 아끼는 대신 경로 기록이 드문드문해집니다.|Saves battery, with fewer route points.": "Spart Akku, zeichnet aber weniger Routenpunkte auf.",
+"안개 탐험 선택|Choose fog of exploration": "Erkundungsnebel wählen",
+"7일 연속이면 진화를 하나 고르고, 모자·목도리·리본을 모읍니다.|Every 7 days in a row, choose an evolution and collect hats, scarves, and ribbons.": "Alle 7 Tage in Folge wählst du eine Entwicklung und sammelst Hüte, Schals und Bänder.",
+"고른 하나만 카운터에 쓰여요. 적은 금액은 나머지 칸에 환산해 보여 줘요.|Only the selected one runs the counter. Other tabs show the converted amount.": "Nur die Auswahl zählt für den Zähler. Die anderen Tabs zeigen den umgerechneten Betrag.",
+"활동 칼로리|Active calories": "Aktivkalorien",
+"건강 앱의 활동 에너지예요.|Active energy from the Health app.": "Aktivenergie aus der Health-App.",
+"이 날은 건강 앱 값이 없어 걸음 수와 몸무게로 추정했어요. 몸무게가 없으면 65kg로 계산해요.|No Health data for this day, so this is estimated from steps and weight (65 kg if no weight is set).": "Für diesen Tag gibt es keine Health-Daten, daher aus Schritten und Gewicht geschätzt (65 kg ohne Gewichtsangabe)."
 }
 }

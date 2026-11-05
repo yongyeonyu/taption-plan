@@ -51,7 +51,7 @@ enum MapHomeCalendarLogStatusPolicy {
 enum MapHomeCalendarTimeKind: String, CaseIterable, Identifiable {
     case sleep, movement, study, work, exercise, hobby, distance, places, trips
     // 사용자가 "+"로 골라 쓰는 추가 지표
-    case steps, photos, walkDistance, carDistance, transitDistance, awayTime, stepDistance
+    case steps, photos, walkDistance, carDistance, transitDistance, awayTime, stepDistance, calories
 
     var id: String { rawValue }
 
@@ -73,6 +73,7 @@ enum MapHomeCalendarTimeKind: String, CaseIterable, Identifiable {
         case .carDistance: language.text("운전 거리", "Driving")
         case .transitDistance: language.text("대중교통 거리", "Transit")
         case .awayTime: language.text("외출 시간", "Time away")
+        case .calories: language.text("활동 칼로리", "Active calories")
         }
     }
 
@@ -94,6 +95,7 @@ enum MapHomeCalendarTimeKind: String, CaseIterable, Identifiable {
         case .carDistance: "car.fill"
         case .transitDistance: "tram.fill"
         case .awayTime: "door.left.hand.open"
+        case .calories: "flame.fill"
         }
     }
 
@@ -103,12 +105,14 @@ enum MapHomeCalendarTimeKind: String, CaseIterable, Identifiable {
     }
 
     /// 방문 장소 수·이동 횟수·걸음 수·사진 수는 개수를 같은 딕셔너리에 담는다.
-    var isCount: Bool { self == .places || self == .trips || self == .steps || self == .photos }
+    var isCount: Bool { self == .places || self == .trips || self == .steps || self == .photos || self == .calories }
 
     /// 기본으로 늘 보이는 지표와, 사용자가 "+"로 더하는 지표.
     static let coreKinds: [MapHomeCalendarTimeKind] = [.sleep, .movement, .study, .work, .exercise, .hobby, .distance, .places, .trips]
-    static let extraKinds: [MapHomeCalendarTimeKind] = [.steps, .photos, .walkDistance, .carDistance, .transitDistance, .awayTime, .stepDistance]
+    static let extraKinds: [MapHomeCalendarTimeKind] = [.steps, .photos, .walkDistance, .carDistance, .transitDistance, .awayTime, .stepDistance, .calories]
     static let extraStorageKey = "mapHomeCalendarExtraKinds"
+    /// 그날 칼로리가 걸음 수로 추정한 값이면 1. 합계 표의 지표 칸이 아니다.
+    static let caloriesEstimatedKey = "caloriesEstimated"
 
     static func enabledExtras(from raw: String) -> [MapHomeCalendarTimeKind] {
         let enabled = Set(raw.split(separator: ",").map(String.init))
@@ -134,6 +138,8 @@ struct MapHomeCalendarPlaceVisit: Identifiable, Hashable, Sendable {
     var departure: Date
     var visitCount: Int
     var seconds: TimeInterval
+    /// 등록 지점이면 그 종류의 앱 아이콘. 아니면 nil.
+    var systemImage: String? = nil
 }
 
 enum MapHomeCalendarPlaceVisitPolicy {
@@ -143,7 +149,13 @@ enum MapHomeCalendarPlaceVisitPolicy {
     static let samePlaceMeters: Double = 30
 
     /// `day`~`dayEnd`와 겹친 머묾 중 10분 이상인 것만, 30 m 안은 한 곳으로 묶어 도착 순서로 돌려준다.
-    static func visits(stays: [PlaceStay], day: Date, dayEnd: Date) -> [MapHomeCalendarPlaceVisit] {
+    static func visits(
+        stays: [PlaceStay],
+        day: Date,
+        dayEnd: Date,
+        registeredNames: [String: String] = [:],
+        registeredSymbols: [String: String] = [:]
+    ) -> [MapHomeCalendarPlaceVisit] {
         struct Cluster {
             var anchor: GeoPoint?
             var key: String
@@ -170,7 +182,8 @@ enum MapHomeCalendarPlaceVisitPolicy {
             var cluster = index.map { clusters[$0] } ?? Cluster(
                 anchor: stay.point, key: stay.placeKey, arrival: start, departure: end
             )
-            cluster.names[stay.displayName, default: 0] += duration
+            // 등록 지점은 저장 당시 이름 대신 지금 등록한 이름을 쓴다.
+            cluster.names[registeredNames[stay.placeKey] ?? stay.displayName, default: 0] += duration
             if cluster.building == nil { cluster.building = stay.buildingName }
             cluster.arrival = min(cluster.arrival, start)
             cluster.departure = max(cluster.departure, end)
@@ -186,7 +199,8 @@ enum MapHomeCalendarPlaceVisitPolicy {
                 arrival: cluster.arrival,
                 departure: cluster.departure,
                 visitCount: cluster.count,
-                seconds: cluster.seconds
+                seconds: cluster.seconds,
+                systemImage: registeredSymbols[cluster.key]
             )
         }
         .sorted { $0.arrival < $1.arrival }
@@ -343,6 +357,27 @@ enum MapHomeCalendarTimeTotalsPolicy {
     }
 
     /// 날짜별 걸음 수 합치기: 건강 앱 값(기기 간 겹침을 HealthKit이 정리한 합계)을 우선하고, 없는 날만 센서 값.
+    /// 걷기 순에너지 근사(kcal/kg/km). 건강 앱 값이 없는 날의 추정에만 쓴다.
+    static let walkingKilocaloriesPerKilogramKilometer = 0.5
+    static let defaultWeightKilograms = 65.0
+
+    /// 날짜별 활동 칼로리. 건강 앱(Watch·iPhone 겹침 정리됨)을 우선하고, 없는 날만 걸음으로 추정한다.
+    static func dailyCalories(
+        health: [Date: Double],
+        steps: [Date: Double],
+        strideMeters: Double,
+        weightKilograms: Double?
+    ) -> [Date: (kilocalories: Double, isEstimated: Bool)] {
+        let weight = weightKilograms.flatMap { $0 > 0 ? $0 : nil } ?? defaultWeightKilograms
+        var result: [Date: (kilocalories: Double, isEstimated: Bool)] = [:]
+        for (day, stepCount) in steps where stepCount > 0 {
+            let kilometers = stepCount * strideMeters / 1_000
+            result[day] = (walkingKilocaloriesPerKilogramKilometer * weight * kilometers, true)
+        }
+        for (day, value) in health where value > 0 { result[day] = (value, false) }
+        return result
+    }
+
     static func mergedStepCounts(health: [Date: Double], sensor: [Date: Double]) -> [Date: Double] {
         ClassifierAdapter.mergedDailySteps(health: health, sensor: sensor)
     }
@@ -391,6 +426,7 @@ enum MapHomeCalendarTimeTotalsPolicy {
         switch kind {
         case .places: return language.text("\(value)곳", "\(value)")
         case .steps: return language.text("\(value)걸음", "\(value) steps")
+        case .calories: return "\(value) kcal"
         case .photos: return language.text("\(value)장", "\(value)")
         default: return language.text("\(value)회", "\(value)")
         }

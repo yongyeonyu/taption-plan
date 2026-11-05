@@ -61,7 +61,7 @@ enum FirstRunGuideCatalog {
             return [
                 row("house.fill", "하루 요약", "Day summary", "아래 막대의 집이나 지도의 집 그림을 누르면 열립니다.", "Tap Home in the bottom bar or the home on the map."),
                 row("checkmark.seal", "연속 달성", "Streak", "‘미확인’ 없이 기록을 채운 날이 달성입니다.", "A day counts when its records have no ‘unconfirmed’ time left."),
-                row("gift", "주간 보상", "Weekly reward", "7일 연속이면 진화를 하나 고르고, 땅과 액세서리를 모읍니다.", "Every 7 days in a row, choose an evolution and collect land and accessories."),
+                row("gift", "주간 보상", "Weekly reward", "7일 연속이면 진화를 하나 고르고, 모자·목도리·리본을 모읍니다.", "Every 7 days in a row, choose an evolution and collect hats, scarves, and ribbons."),
             ]
         default:
             return []
@@ -295,10 +295,8 @@ struct FirstRunSensorIntervalPage: View {
                     seconds: model.settings.gpsLoggingPreferences.intervalSeconds,
                     tint: Color.tpAccent,
                     onCommit: model.setGPSLoggingIntervalSeconds
-                ) {
-                    Image(systemName: "battery.25percent")
-                        .foregroundStyle(Color.tpAccent)
-                        .accessibilityHidden(true)
+                ) { seconds in
+                    GPSLoggingBatteryIcon(seconds: seconds, tint: Color.tpAccent)
                 }
                 .padding(14)
                 .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -310,7 +308,7 @@ struct FirstRunSensorIntervalPage: View {
                 FirstRunRowView(
                     badge: .icon("battery.100percent"),
                     title: language.text("길수록", "Longer"),
-                    detail: language.text("배터리를 아끼고 경로는 성겨집니다.", "Saves battery, with sparser routes.")
+                    detail: language.text("배터리를 아끼는 대신 경로 기록이 드문드문해집니다.", "Saves battery, with fewer route points.")
                 )
                 FirstRunRowView(
                     badge: .icon("slider.horizontal.3"),

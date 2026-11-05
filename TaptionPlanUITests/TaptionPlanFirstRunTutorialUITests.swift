@@ -17,16 +17,17 @@ final class TaptionPlanFirstRunTutorialUITests: XCTestCase {
         assertTutorialStaysClosed(app)
     }
 
-    /// 단계 건너뛰기는 다음 단계로 가고, 전체 건너뛰기는 튜토리얼을 닫는다.
-    func testSkipStepThenSkipAll() {
+    /// 건너뛰기는 다음 단계로, 이전은 앞 단계로 간다. 전체 건너뛰기는 첫 화면의 바로 시작뿐이다.
+    func testSkipStepAndBack() {
         let app = launchFresh()
         element(app, "firstRunNext").tap()
         assertStep(app, 2)
         element(app, "firstRunSkip").tap()
         assertStep(app, 3)
         capture("skip-step-3")
-        element(app, "firstRunSkipAll").tap()
-        assertTutorialStaysClosed(app)
+        XCTAssertFalse(element(app, "firstRunSkipAll").exists)
+        element(app, "firstRunBack").tap()
+        assertStep(app, 2)
     }
 
     private func launchFresh() -> XCUIApplication {
@@ -162,7 +163,7 @@ final class TaptionPlanFirstRunTutorialUITests: XCTestCase {
         replayRow.tap()
         assertStep(app, 1)
         capture("19-replay-welcome")
-        element(app, "firstRunSkipAll").tap()
+        element(app, "firstRunStartNow").tap()
         XCTAssertTrue(replayRow.waitForExistence(timeout: 10))
 
         // 다시 실행해도 튜토리얼이 또 뜨지 않는다.

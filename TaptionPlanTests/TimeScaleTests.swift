@@ -6261,7 +6261,226 @@ final class TaptionUIThemeMapTests: XCTestCase {
 }
 
 /// 사이드바 옆 일정·메모 말풍선(SBN1102A01).
+final class AllowanceConversionTests: XCTestCase {
+    func testOnlySelectedPayKindRuns() throws {
+        let name = "AllowanceSelection-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        defaults.set(30_000_000.0, forKey: MapHomeSalaryPolicy.annualKey)
+        defaults.set(500_000.0, forKey: MapHomeAllowancePolicy.amountKey)
+        // 옛 사용자: 급여가 있으면 급여를 쓴다.
+        XCTAssertFalse(MapHomeAllowancePolicy.isSelected(defaults))
+        XCTAssertFalse(MapHomeAllowancePolicy.load(defaults).isConfigured)
+        XCTAssertTrue(MapHomeSalaryPolicy.loadSettings(defaults).isConfigured)
+        defaults.set(true, forKey: MapHomeAllowancePolicy.isSelectedKey)
+        XCTAssertTrue(MapHomeAllowancePolicy.load(defaults).isConfigured)
+        XCTAssertFalse(MapHomeSalaryPolicy.loadSettings(defaults).isConfigured)
+        // 옛 사용자: 용돈만 있으면 용돈을 쓴다.
+        defaults.removeObject(forKey: MapHomeAllowancePolicy.isSelectedKey)
+        defaults.removeObject(forKey: MapHomeSalaryPolicy.annualKey)
+        XCTAssertTrue(MapHomeAllowancePolicy.isSelected(defaults))
+    }
+
+    func testConversionsRoundTripForEachPeriod() {
+        for period in MapHomeAllowancePolicy.Period.allCases {
+            let amount = MapHomeAllowancePolicy.amount(fromAnnual: 36_500_000, period: period)
+            let settings = MapHomeAllowancePolicy.Settings(amount: amount, period: period)
+            XCTAssertEqual(MapHomeAllowancePolicy.annualAmount(settings), 36_500_000, accuracy: 0.01)
+        }
+        XCTAssertEqual(MapHomeAllowancePolicy.amount(fromAnnual: 12_000_000, period: .month), 1_000_000)
+    }
+}
+
+@MainActor
+final class GPSLoggingBatteryIconTests: XCTestCase {
+    func testFillGrowsWithIntervalAndStaysInRange() {
+        let values = [30, 60, 300, 600, 900, 1_800].map(GPSLoggingBatteryIcon.fillFraction(seconds:))
+        XCTAssertEqual(values, values.sorted())
+        XCTAssertEqual(Set(values).count, values.count)
+        XCTAssertEqual(values.last, 1)
+        XCTAssertGreaterThan(values[0], 0)
+    }
+}
+
+final class MapHomeRangeSampleCacheTests: XCTestCase {
+    func testRoundTripAndEmptyDayAndCacheableDays() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { MapHomeRangeSampleCache.removeAll(directory: directory) }
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: .now)
+        let day = try XCTUnwrap(calendar.date(byAdding: .day, value: -5, to: today))
+        let samples = [MapHomeRangeTripPlan.Sample(time: 1, latitude: 37.5, longitude: 126.8)]
+        MapHomeRangeSampleCache.write(samples, dayStart: day, calendar: calendar, directory: directory)
+        XCTAssertEqual(MapHomeRangeSampleCache.read(dayStart: day, calendar: calendar, directory: directory), samples)
+        let empty = try XCTUnwrap(calendar.date(byAdding: .day, value: -6, to: today))
+        MapHomeRangeSampleCache.write([], dayStart: empty, calendar: calendar, directory: directory)
+        XCTAssertNil(MapHomeRangeSampleCache.read(dayStart: empty, calendar: calendar, directory: directory))
+        let yesterday = try XCTUnwrap(calendar.date(byAdding: .day, value: -1, to: today))
+        XCTAssertFalse(MapHomeRangeSampleCache.isCacheable(dayStart: yesterday, now: .now, calendar: calendar))
+        XCTAssertTrue(MapHomeRangeSampleCache.isCacheable(dayStart: day, now: .now, calendar: calendar))
+    }
+}
+
+final class DisplayRouteApproximateFilterTests: XCTestCase {
+    private func reading(_ seconds: TimeInterval, quality: LocationFixQuality) -> SensorReading {
+        SensorReading(
+            timestamp: Date(timeIntervalSinceReferenceDate: 815_549_000 + seconds),
+            point: GeoPoint(latitude: 37.56, longitude: 126.83, altitude: 0, horizontalAccuracy: quality == .approximate ? 202 : 8, verticalAccuracy: 8),
+            locationFixQuality: quality,
+            gpsAvailable: quality == .precise
+        )
+    }
+
+    /// 대표 원본 14:37:13: 정밀 위치 사이의 오차 202m 한 점이 왕복선을 만들었다.
+    func testBracketedApproximateIsDroppedButLoneOneStays() {
+        let bracketed = [reading(0, quality: .precise), reading(22, quality: .approximate), reading(23, quality: .precise)]
+        XCTAssertEqual(RouteTimelineDataEngine.droppingBracketedApproximates(bracketed).count, 2)
+        let lone = [reading(0, quality: .precise), reading(4_000, quality: .approximate), reading(8_000, quality: .precise)]
+        XCTAssertEqual(RouteTimelineDataEngine.droppingBracketedApproximates(lone).count, 3)
+    }
+}
+
+final class CalendarCaloriesTests: XCTestCase {
+    func testHealthValueWinsAndStepsAreEstimated() throws {
+        let watchDay = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        let phoneDay = Date(timeIntervalSinceReferenceDate: 800_086_400)
+        let result = MapHomeCalendarTimeTotalsPolicy.dailyCalories(
+            health: [watchDay: 320],
+            steps: [watchDay: 9_000, phoneDay: 10_000],
+            strideMeters: 0.75,
+            weightKilograms: 70
+        )
+        XCTAssertEqual(result[watchDay]?.kilocalories, 320)
+        XCTAssertEqual(result[watchDay]?.isEstimated, false)
+        // 10,000걸음 × 0.75m = 7.5km, 0.5 × 70kg × 7.5km = 262.5kcal
+        XCTAssertEqual(try XCTUnwrap(result[phoneDay]?.kilocalories), 262.5, accuracy: 0.001)
+        XCTAssertEqual(result[phoneDay]?.isEstimated, true)
+        let noWeight = MapHomeCalendarTimeTotalsPolicy.dailyCalories(
+            health: [:], steps: [phoneDay: 10_000], strideMeters: 0.75, weightKilograms: nil
+        )
+        XCTAssertEqual(try XCTUnwrap(noWeight[phoneDay]?.kilocalories), 243.75, accuracy: 0.001)
+    }
+}
+
+final class CalendarVisitNameTests: XCTestCase {
+    func testRegisteredNameReplacesStoredDisplayName() throws {
+        let start = Date(timeIntervalSinceReferenceDate: 815_500_000)
+        let stay = PlaceStay(
+            placeKey: "frequent-abc", displayName: "사용자 지점",
+            span: TimeSpan(start: start, end: start.addingTimeInterval(2_460)), confidence: .high
+        )
+        let visits = MapHomeCalendarPlaceVisitPolicy.visits(
+            stays: [stay], day: start.addingTimeInterval(-60), dayEnd: start.addingTimeInterval(86_000),
+            registeredNames: ["frequent-abc": "식당"],
+            registeredSymbols: ["frequent-abc": "storefront.fill"]
+        )
+        XCTAssertEqual(try XCTUnwrap(visits.first).name, "식당")
+        XCTAssertEqual(visits.first?.systemImage, "storefront.fill")
+    }
+}
+
+final class TrackingSessionRecordPolicyTests: XCTestCase {
+    private let start = Date(timeIntervalSinceReferenceDate: 815_542_200)
+
+    func testAutomaticSessionLeavesNoRecord() {
+        let session = TrackingSession(kind: .walking, startedAt: start, wasAutomaticallyDetected: true)
+        XCTAssertNil(TrackingSessionRecordPolicy.actual(
+            for: session, endedAt: start.addingTimeInterval(8_703), planID: nil, planTitle: nil, planCategoryID: nil
+        ))
+    }
+
+    func testUserStartedSessionKeepsRecordAndIsNotArtifact() throws {
+        let session = TrackingSession(kind: .running, startedAt: start)
+        let actual = try XCTUnwrap(TrackingSessionRecordPolicy.actual(
+            for: session, endedAt: start.addingTimeInterval(600), planID: nil, planTitle: nil, planCategoryID: nil
+        ))
+        XCTAssertEqual(actual.title, "달리기")
+        XCTAssertFalse(TrackingSessionRecordPolicy.isAutomaticSessionArtifact(actual))
+    }
+
+    func testRestCandidateNeedsFiveMinutesOfStillScreenOn() {
+        let dayStart = Calendar.current.startOfDay(for: start)
+        func at(_ minute: Int) -> Date { dayStart.addingTimeInterval(Double(minute) * 60) }
+        func reading(_ minute: Int, screen: Bool = true, motion: MotionKind = .stationary) -> SensorReading {
+            var value = SensorReading(timestamp: at(minute))
+            value.screenIsOn = screen
+            value.motion = motion
+            return value
+        }
+        let readings = (750...756).map { reading($0) }
+            + [reading(800), reading(802)]
+            + (850...860).map { reading($0, motion: .walking) }
+            + (900...910).map { reading($0, screen: false) }
+        XCTAssertEqual(NLESubActivityEngine.restCandidateRuns(readings, dayStart: dayStart), [750..<756])
+        let work = MapHomeTimeRailSegment(startMinute: 700, endMinute: 900, categoryID: "work", title: "업무")
+        let details = NLESubActivityEngine.details(NLESubActivityInput(segments: [work], readings: readings, dayStart: dayStart, asOf: at(1_000)))
+        XCTAssertEqual(details.map(\.title), ["휴식 후보"])
+        let home = MapHomeTimeRailSegment(startMinute: 700, endMinute: 900, categoryID: "activity", title: "일상")
+        XCTAssertTrue(NLESubActivityEngine.details(NLESubActivityInput(segments: [home], readings: readings, dayStart: dayStart, asOf: at(1_000))).isEmpty)
+    }
+
+    /// 대표 원본(11-05 12:30–14:55)과 같은 모양의 옛 기록은 상세 활동에 나오지 않는다.
+    func testStoredArtifactIsHiddenFromDetails() {
+        let dayStart = Calendar.current.startOfDay(for: start)
+        func at(_ minute: Int) -> Date { dayStart.addingTimeInterval(Double(minute) * 60) }
+        let artifact = ActualRecord(
+            id: UUID(), planID: nil, title: "걷기", categoryID: "activity",
+            startedAt: at(750), endedAt: at(895), source: .location, confidence: .high
+        )
+        XCTAssertTrue(TrackingSessionRecordPolicy.isAutomaticSessionArtifact(artifact))
+        let segment = MapHomeTimeRailSegment(startMinute: 750, endMinute: 999, categoryID: "activity", title: "일상")
+        XCTAssertTrue(NLESubActivityEngine.details(NLESubActivityInput(
+            segments: [segment], actuals: [artifact], dayStart: dayStart, asOf: at(1_000)
+        )).isEmpty)
+    }
+}
+
+@MainActor
+final class MapUserActivityCategoryEditingTests: XCTestCase {
+    func testEditRejectsDuplicateNameAndDeleteRemoves() async throws {
+        let model = AppModel(repository: InMemoryPlanRepository(snapshot: .empty), cloudSyncService: nil)
+        await model.bootstrap()
+        let icons = MapUserActivityIconCatalog.available(for: [])
+        XCTAssertTrue(model.addMapUserActivityCategory(title: "비행기", systemImage: icons[0], hex: "#29A383"))
+        XCTAssertTrue(model.addMapUserActivityCategory(title: "독서", systemImage: icons[1], hex: "#29A383"))
+        let plane = try XCTUnwrap(model.settings.mapUserActivityCategories.first { $0.title == "비행기" })
+
+        XCTAssertFalse(model.updateMapUserActivityCategory(
+            id: plane.id, title: "독서", systemImage: plane.systemImage, hex: plane.hex, animation: nil
+        ))
+        XCTAssertTrue(model.updateMapUserActivityCategory(
+            id: plane.id, title: "여행", systemImage: icons[2], hex: "#112233", animation: .stretching
+        ))
+        let edited = try XCTUnwrap(model.settings.mapUserActivityCategories.first { $0.id == plane.id })
+        XCTAssertEqual(edited.title, "여행")
+        XCTAssertEqual(edited.systemImage, icons[2])
+        XCTAssertEqual(edited.animation, .stretching)
+
+        model.deleteMapUserActivityCategory(id: plane.id)
+        XCTAssertEqual(model.settings.mapUserActivityCategories.map(\.title), ["독서"])
+    }
+}
+
 final class MapHomeSidebarNoteTests: XCTestCase {
+    func testScheduleBadgesStayLeftOfRailWithoutWeatherChips() {
+        let base = MapHomeTimeSidebarMath.scheduleBadgeBaseX(hasWeatherChips: false)
+        XCTAssertLessThanOrEqual(
+            base + MapHomeTimeSidebarMath.scheduleBadgeRadius,
+            MapHomeTimeSidebarMath.handleLaneWidth - MapHomeTimeSidebarMath.scheduleBadgeRailGap
+        )
+        XCTAssertEqual(MapHomeTimeSidebarMath.scheduleBadgeBaseX(hasWeatherChips: true), 28)
+    }
+
+    func testOverlappingBadgesSpreadLeftAroundReviewMarker() {
+        let columns = MapHomeTimeSidebarMath.scheduleBadgeColumns(
+            badges: [(id: "memo", y: 100), (id: "event", y: 105), (id: "far", y: 300)],
+            reviewMarkerYs: [110]
+        )
+        XCTAssertEqual(columns["memo"], 1)
+        XCTAssertEqual(columns["event"], 2)
+        XCTAssertEqual(columns["far"], 0)
+    }
+
     func testBubbleSitsLeftOfBadgeWithoutOverlap() {
         let badgeX: CGFloat = 300
         let center = MapHomeSidebarNoteLayout.centerX(badgeX: badgeX)

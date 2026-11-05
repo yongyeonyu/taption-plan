@@ -249,6 +249,7 @@ extension MapHomeView {
         }
         .onChange(of: model.snapshot.memos) { _, _ in refreshTimedMemoCache() }
         .onChange(of: showsPhotosOnMap) { _, _ in Task { await loadPhotoMoments(asksPermission: true) } }
+        .onChange(of: showsPhotoRing) { _, _ in Task { await loadPhotoMoments(asksPermission: true) } }
         // 하루 데이터가 늦게 들어오면 위치 없는 사진의 추정 위치도 다시 맞춘다.
         .onChange(of: isDayDataLoading) { _, loading in
             if !loading, photosNeedReadingRetry { Task { await loadPhotoMoments(asksPermission: false) } }
@@ -468,9 +469,19 @@ extension MapHomeView {
                 liveTotals: { month in await calendarTimeTotals(month: month, includePhotos: false) },
                 placeVisits: { day in
                     let stays = model.snapshot.places
+                    let names = Dictionary(
+                        model.settings.frequentPlaces.map { ($0.stablePlaceKey, $0.displayName) },
+                        uniquingKeysWith: { first, _ in first }
+                    )
+                    let symbols = Dictionary(
+                        model.settings.frequentPlaces.map { ($0.stablePlaceKey, $0.kind.systemImage) },
+                        uniquingKeysWith: { first, _ in first }
+                    )
                     guard let dayEnd = MapHomeGrowthPolicy.localCalendar.date(byAdding: .day, value: 1, to: day) else { return [] }
                     return await Task.detached(priority: .userInitiated) {
-                        MapHomeCalendarPlaceVisitPolicy.visits(stays: stays, day: day, dayEnd: dayEnd)
+                        MapHomeCalendarPlaceVisitPolicy.visits(
+                            stays: stays, day: day, dayEnd: dayEnd, registeredNames: names, registeredSymbols: symbols
+                        )
                     }.value
                 },
                 timeTint: { categoryID in
@@ -633,6 +644,11 @@ extension MapHomeView {
         .sheet(isPresented: $isCategoryAddPresented) {
             MapHomeCategoryAddSheet(model: model, language: language)
                 .presentationDetents([.height(320)])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $editingUserCategory) { category in
+            MapHomeCategoryAddSheet(model: model, language: language, editing: category)
+                .presentationDetents([.height(380)])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $proAccess.isPurchaseSheetPresented) {

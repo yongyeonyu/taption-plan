@@ -836,6 +836,16 @@ extension MapHomeView {
                                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                                 Spacer()
                                 Button {
+                                    editingUserCategory = category
+                                } label: {
+                                    Image(systemName: "pencil")
+                                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
+                                        .foregroundStyle(Color.tpSecondary)
+                                        .frame(width: 28, height: 28)
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel(language.text("\(category.title) 수정", "Edit \(category.title)"))
+                                Button {
                                     if activePaletteCategoryID == category.id.uuidString {
                                         activePaletteCategoryID = nil
                                     } else {
@@ -1047,27 +1057,20 @@ extension MapHomeView {
                 .accessibilityLabel(language.text("지도 스타일 선택", "Choose map style"))
 
                 // 안개 탐험은 지도 스타일 바로 아래에 둔다(대표 지시, ARC1030A11).
-                VStack(alignment: .leading, spacing: 6) {
-                    Label(
-                        language.text("안개 탐험", "Fog of Exploration"),
-                        systemImage: "cloud.fog.fill"
-                    )
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
-                    Picker("", selection: Binding(
-                        get: { fogStrength },
-                        set: { fogStrengthRaw = $0.rawValue }
-                    )) {
-                        ForEach(MapHomeFogStrength.allCases) { strength in
-                            Text(language.runtimeText(strength.koreanLabel, strength.englishLabel)).tag(strength)
+                Menu {
+                    ForEach(MapHomeFogStrength.allCases) { strength in
+                        Button(language.runtimeText(strength.koreanLabel, strength.englishLabel)) {
+                            fogStrengthRaw = strength.rawValue
                         }
                     }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .tint(Color.tpAccent)
+                } label: {
+                    displayDropdownRow(
+                        "cloud.fog.fill",
+                        language.text("안개 탐험", "Fog of Exploration"),
+                        language.runtimeText(fogStrength.koreanLabel, fogStrength.englishLabel)
+                    )
                 }
-                .padding(.vertical, 8)
-                .padding(.horizontal, 12)
-
+                .accessibilityLabel(language.text("안개 탐험 선택", "Choose fog of exploration"))
 
                 counterMenuItem
                 sidebarDisplayGroup

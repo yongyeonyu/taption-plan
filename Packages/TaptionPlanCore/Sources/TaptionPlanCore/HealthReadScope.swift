@@ -8,5 +8,6 @@ public enum TaptionHealthReadScope {
         "HKQuantityTypeIdentifierDistanceCycling",
         "HKQuantityTypeIdentifierActiveEnergyBurned",
         "HKWorkoutRouteTypeIdentifier",
+        "HKQuantityTypeIdentifierBodyMass",
     ]
 }

@@ -136,8 +136,41 @@ final class AppleHealthService: @unchecked Sendable {
     /// 건강 앱의 날짜별 걸음 수 합계(그 달). 읽기 권한이 없거나 기록이 없으면 빈 딕셔너리.
     /// 아이폰·애플워치가 같은 걸음을 두 번 세지 않도록 HealthKit 통계(합산·중복 제거)를 쓴다.
     func dailyStepCounts(from start: Date, to end: Date, calendar: Calendar) async throws -> [Date: Double] {
+        try await dailySums(.stepCount, unit: .count(), from: start, to: end, calendar: calendar)
+    }
+
+    /// 건강 앱의 날짜별 활동 에너지(kcal). Watch·iPhone 겹침은 HealthKit 통계가 정리한다.
+    func dailyActiveEnergy(from start: Date, to end: Date, calendar: Calendar) async throws -> [Date: Double] {
+        try await dailySums(.activeEnergyBurned, unit: .kilocalorie(), from: start, to: end, calendar: calendar)
+    }
+
+    /// 건강 앱의 가장 최근 몸무게(kg). 권한이 없거나 기록이 없으면 nil.
+    func latestBodyMassKilograms() async -> Double? {
         guard HKHealthStore.isHealthDataAvailable(),
-              let type = HKObjectType.quantityType(forIdentifier: .stepCount) else { return [:] }
+              let type = HKObjectType.quantityType(forIdentifier: .bodyMass) else { return nil }
+        return await withCheckedContinuation { continuation in
+            let query = HKSampleQuery(
+                sampleType: type,
+                predicate: nil,
+                limit: 1,
+                sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)]
+            ) { _, samples, _ in
+                let sample = samples?.first as? HKQuantitySample
+                continuation.resume(returning: sample?.quantity.doubleValue(for: .gramUnit(with: .kilo)))
+            }
+            store.execute(query)
+        }
+    }
+
+    private func dailySums(
+        _ identifier: HKQuantityTypeIdentifier,
+        unit: HKUnit,
+        from start: Date,
+        to end: Date,
+        calendar: Calendar
+    ) async throws -> [Date: Double] {
+        guard HKHealthStore.isHealthDataAvailable(),
+              let type = HKObjectType.quantityType(forIdentifier: identifier) else { return [:] }
         let anchor = calendar.startOfDay(for: start)
         let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: [])
         return try await withCheckedThrowingContinuation { continuation in
@@ -155,8 +188,8 @@ final class AppleHealthService: @unchecked Sendable {
                 }
                 var result: [Date: Double] = [:]
                 collection?.enumerateStatistics(from: start, to: end) { statistics, _ in
-                    let steps = statistics.sumQuantity()?.doubleValue(for: .count()) ?? 0
-                    if steps > 0 { result[calendar.startOfDay(for: statistics.startDate)] = steps }
+                    let value = statistics.sumQuantity()?.doubleValue(for: unit) ?? 0
+                    if value > 0 { result[calendar.startOfDay(for: statistics.startDate)] = value }
                 }
                 continuation.resume(returning: result)
             }

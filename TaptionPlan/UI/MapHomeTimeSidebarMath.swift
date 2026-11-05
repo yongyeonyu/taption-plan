@@ -84,6 +84,37 @@ enum MapHomeTimeSidebarMath {
         railOriginX + railWidth - numericColumnWidth - activeRailWidth / 2 - 1
     }
 
+    static let scheduleBadgeRadius: CGFloat = 11
+    static let scheduleBadgeRailGap: CGFloat = 4
+    static let scheduleBadgeColumnWidth: CGFloat = 26
+
+    /// 일정·메모 표식의 기준 x. 날씨 칩이 있으면 칩 왼쪽 끝에 맞추고, 없으면 사이드바 왼쪽 바깥에 띄운다.
+    static func scheduleBadgeBaseX(hasWeatherChips: Bool) -> CGFloat {
+        hasWeatherChips
+            ? handleLaneWidth - 41
+            : handleLaneWidth - scheduleBadgeRailGap - scheduleBadgeRadius
+    }
+
+    /// 날씨 칩이 없을 때 표식이 들어갈 열(0이 사이드바 쪽, 커질수록 왼쪽).
+    /// 미확인 아이콘이 0열을 먼저 차지하고, 표식은 위부터 겹치지 않는 가장 오른쪽 열에 놓는다.
+    static func scheduleBadgeColumns(
+        badges: [(id: String, y: CGFloat)],
+        reviewMarkerYs: [CGFloat],
+        minimumGap: CGFloat = 24
+    ) -> [String: Int] {
+        var occupied: [[CGFloat]] = [reviewMarkerYs]
+        var columns: [String: Int] = [:]
+        for badge in badges.sorted(by: { ($0.y, $0.id) < ($1.y, $1.id) }) {
+            let column = occupied.firstIndex { taken in
+                taken.allSatisfy { abs($0 - badge.y) >= minimumGap }
+            } ?? occupied.count
+            if column == occupied.count { occupied.append([]) }
+            occupied[column].append(badge.y)
+            columns[badge.id] = column
+        }
+        return columns
+    }
+
     static func handleCenterX(
         trackX: CGFloat,
         activeRailWidth: CGFloat

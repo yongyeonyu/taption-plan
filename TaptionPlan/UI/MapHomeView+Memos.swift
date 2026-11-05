@@ -492,12 +492,19 @@ extension MapHomeView {
         let enabled = MapHomeCalendarTimeKind.enabledExtras(
             from: UserDefaults.standard.string(forKey: MapHomeCalendarTimeKind.extraStorageKey) ?? ""
         )
-        if enabled.contains(.steps) || enabled.contains(.stepDistance) {
+        if enabled.contains(.steps) || enabled.contains(.stepDistance) || enabled.contains(.calories) {
             let stride = MapHomeStride.current
-            for (day, steps) in await model.calendarDailyStepCounts(month: month) {
+            let dailySteps = await model.calendarDailyStepCounts(month: month)
+            for (day, steps) in dailySteps {
                 if enabled.contains(.steps) { result[day, default: [:]][MapHomeCalendarTimeKind.steps.rawValue] = steps }
                 if enabled.contains(.stepDistance), steps > 0 {
                     result[day, default: [:]][MapHomeCalendarTimeKind.stepDistance.rawValue] = steps * stride
+                }
+            }
+            if enabled.contains(.calories) {
+                for (day, value) in await model.calendarDailyCalories(month: month, steps: dailySteps, strideMeters: stride) {
+                    result[day, default: [:]][MapHomeCalendarTimeKind.calories.rawValue] = value.kilocalories
+                    result[day, default: [:]][MapHomeCalendarTimeKind.caloriesEstimatedKey] = value.isEstimated ? 1 : 0
                 }
             }
         }
@@ -740,24 +747,53 @@ extension MapHomeView {
         }
     }
 
-    /// 일정·스티커 배지의 기준 x. 날씨 배지가 켜져 있으면 날씨 왼쪽(왼쪽 정렬), 꺼져 있으면 시간 레일 오른쪽(오른쪽 정렬).
-    var scheduleBadgeBaseX: CGFloat {
-        // 날씨 칩이 실제로 보일 때만 왼쪽에 붙이고, 날씨 칩이 없으면 오른쪽에 붙인다.
-        let hasWeatherChips = model.settings.weatherSidebarVisible
+    var hasScheduleWeatherChips: Bool {
+        model.settings.weatherSidebarVisible
             && recordingShows(\.weatherSidebar)
             && !displayWeatherContexts.isEmpty
-        return hasWeatherChips
-            ? MapHomeTimeSidebarMath.handleLaneWidth - 41
-            : MapHomeTimeSidebarMath.handleLaneWidth + 8
     }
 
-    /// 같은 시간(±10분)에 일정과 스티커가 함께 있으면 일정은 왼쪽, 스티커는 오른쪽으로 나눈다. 아니면 기본 위치.
-    func scheduleBadgeOffset(minute: Int, isEvent: Bool) -> CGFloat {
+    /// 일정·스티커 배지의 기준 x.
+    var scheduleBadgeBaseX: CGFloat {
+        MapHomeTimeSidebarMath.scheduleBadgeBaseX(hasWeatherChips: hasScheduleWeatherChips)
+    }
+
+    /// 표식의 x 이동량. 날씨 칩이 없으면 겹치는 만큼 왼쪽 열로 벌린다.
+    /// 날씨 칩이 있으면 같은 시간(±10분)의 일정은 왼쪽, 스티커는 오른쪽으로 나눈다.
+    func scheduleBadgeOffset(id: String, minute: Int, isEvent: Bool, columns: [String: Int]) -> CGFloat {
+        guard hasScheduleWeatherChips else {
+            return -CGFloat(columns[id] ?? 0) * MapHomeTimeSidebarMath.scheduleBadgeColumnWidth
+        }
         let timedEvents = dayCalendarEventsForSelectedDate.filter { !$0.isAllDay }.map { minuteOfDay(for: $0.span.start) }
         let timedStickers = scheduleStickersForSelectedDate.map { minuteOfDay(for: $0.occurredAt) }
             + timedMemosForSelectedDate.map { minuteOfDay(for: $0.occurredAt) }
         let others = isEvent ? timedStickers : timedEvents
         guard others.contains(where: { abs($0 - minute) <= 10 }) else { return 0 }
         return isEvent ? -14 : 14
+    }
+
+    /// 지금 보이는 시간대에서 표식과 미확인 아이콘의 y로 열을 정한다. 날씨 칩이 있으면 쓰지 않는다.
+    func scheduleBadgeColumns(railHeight: CGFloat) -> [String: Int] {
+        guard !hasScheduleWeatherChips, recordingShows(\.sidebarMemos) else { return [:] }
+        let window = MapHomeTimeSidebarMath.visibleWindow(
+            startMinute: timeSidebarVisibleStartMinute,
+            durationMinutes: timeSidebarVisibleDurationMinutes,
+            centerMinute: effectiveTimelineMinute
+        )
+        let inset = MapHomeTimeSidebarMath.verticalInset
+        let trackHeight = max(1, railHeight - inset * 2)
+        func y(_ date: Date) -> CGFloat {
+            inset + trackHeight * MapHomeTimeSidebarMath.position(minute: minuteOfDay(for: date), window: window)
+        }
+        let badges = scheduleStickersForSelectedDate.map { (id: "sticker-\($0.id)", y: y($0.occurredAt)) }
+            + timedMemosForSelectedDate.map { (id: "memo-\($0.id)", y: y($0.occurredAt)) }
+            + dayCalendarEventsForSelectedDate.filter { !$0.isAllDay }.map { (id: "event-\($0.id)", y: y($0.span.start)) }
+        let reviewSegments = MapHomeUnconfirmedReviewPolicy.visibleReviewTargets(
+            from: timeRailSegments, in: window, for: model.selectedDate
+        )
+        let centers = MapHomeTimeSidebarMath.unconfirmedReviewMarkerCenters(
+            segments: reviewSegments, window: window, trackHeight: trackHeight, verticalInset: inset
+        )
+        return MapHomeTimeSidebarMath.scheduleBadgeColumns(badges: badges, reviewMarkerYs: Array(centers.values))
     }
 }

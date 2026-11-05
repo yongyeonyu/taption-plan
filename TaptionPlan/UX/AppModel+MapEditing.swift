@@ -56,6 +56,56 @@ extension AppModel {
     }
 
     @discardableResult
+    func updateMapUserActivityCategory(
+        id: UUID,
+        title: String,
+        systemImage: String,
+        hex: String,
+        animation: MapUserActivityAnimation?
+    ) -> Bool {
+        guard acceptsDataMutation() else { return false }
+        let categories = snapshot.settings.mapUserActivityCategories
+        guard let index = categories.firstIndex(where: { $0.id == id }) else { return false }
+        let others = categories.filter { $0.id != id }
+        let cleanTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !others.contains(where: { $0.title.localizedCaseInsensitiveCompare(cleanTitle) == .orderedSame }) else {
+            userFacingError = AppLanguagePreference.text(
+                korean: "같은 이름의 행동분류가 있습니다.",
+                english: "An activity category with this name already exists."
+            )
+            return false
+        }
+        guard !others.contains(where: { $0.systemImage == systemImage }) else {
+            userFacingError = AppLanguagePreference.text(
+                korean: "이미 사용 중인 행동분류 아이콘입니다.",
+                english: "This activity category icon is already in use."
+            )
+            return false
+        }
+        var edited = categories
+        edited[index] = MapUserActivityCategory(
+            id: id, title: cleanTitle, systemImage: systemImage, hex: hex, animation: animation
+        )
+        let next = AppFeatureSettings.normalizedMapUserActivityCategories(edited)
+        guard next.count == categories.count else { return false }
+        guard next != categories else { return true }
+        snapshot.settings.mapUserActivityCategories = next
+        MapHomeCustomAnimations.register(next)
+        Task { await persist() }
+        return true
+    }
+
+    /// 분류 목록에서만 뺀다. 기록은 분류 이름을 값으로 들고 있어 그대로 남는다.
+    func deleteMapUserActivityCategory(id: UUID) {
+        guard acceptsDataMutation() else { return }
+        let next = snapshot.settings.mapUserActivityCategories.filter { $0.id != id }
+        guard next.count != snapshot.settings.mapUserActivityCategories.count else { return }
+        snapshot.settings.mapUserActivityCategories = next
+        MapHomeCustomAnimations.register(next)
+        Task { await persist() }
+    }
+
+    @discardableResult
     func addMapSticker(
         title: String,
         memo: String? = nil,

@@ -8,7 +8,7 @@ import TaptionPlanCore
 
 extension MapHomeView {
     func loadPhotoMoments(asksPermission: Bool) async {
-        guard showsPhotosOnMap, !FirstRunTutorialStore().defersPermissionPrompts else {
+        guard showsPhotosOnMap || showsPhotoRing, !FirstRunTutorialStore().defersPermissionPrompts else {
             photoMoments = []
             return
         }
@@ -85,7 +85,27 @@ extension MapHomeView {
             ) { self.photoBrowserSelection = nil }
             .id(photoBrowserSelection.startID)
             .transition(.opacity)
+        } else if showsPhotoRing, !isDayPlaybackRunning, !isScreenRecording, !browsablePhotos.isEmpty {
+            let photos = browsablePhotos
+            MapHomePhotoArcBrowser(
+                moments: photos,
+                startID: MapHomePhotoPolicy.nearest(photos, toMinute: Double(effectiveTimelineMinute))?.id,
+                language: language,
+                trailing: trailing,
+                isRing: true,
+                onPhotoChange: focusOnPhoto,
+                onClose: {}
+            )
+            .id("\(model.selectedDate.timeIntervalSinceReferenceDate)|\(photos.count)")
         }
+    }
+
+    /// 링에서 고른 사진의 찍은 시각으로 사이드바를, 찍은 곳으로 지도를 옮긴다(RNG1105A01).
+    func focusOnPhoto(_ photo: PhotoMoment) {
+        selectedPawprintTimestamp = nil
+        isTimelineSelectionPinned = true
+        selectedTimelineMinute = min(1_439, max(0, Int(MapHomePhotoPolicy.minuteOfDay(photo.capturedAt))))
+        if let location = photo.location { focusMap(on: location) }
     }
 
     /// 지도에서 넘겨 볼 그날 사진. 찍은 순서다.

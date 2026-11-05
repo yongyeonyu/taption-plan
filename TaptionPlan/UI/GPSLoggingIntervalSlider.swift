@@ -5,7 +5,8 @@ struct GPSLoggingIntervalSlider<Leading: View>: View {
     let seconds: Int
     let tint: Color
     let onCommit: (Int) -> Void
-    @ViewBuilder let leading: () -> Leading
+    /// 드래그 중인 값까지 받아 그리므로 손잡이와 함께 바뀐다.
+    @ViewBuilder let leading: (Int) -> Leading
 
     /// 드래그 중 손잡이 위치. 스냅한 값을 되돌려 주면 손가락 이동량을 잃어 끝까지 가지 못한다.
     @State private var dragPosition: Double?
@@ -22,7 +23,7 @@ struct GPSLoggingIntervalSlider<Leading: View>: View {
     var body: some View {
         VStack(spacing: 5) {
             HStack(spacing: 8) {
-                leading()
+                leading(shownSeconds)
                 Text(GPSLoggingPreferences.intervalText(shownSeconds))
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
                     .foregroundStyle(.secondary)
@@ -95,3 +96,36 @@ struct GPSLoggingIntervalSlider<Leading: View>: View {
         }
     }
 }
+
+/// 간격이 길수록 배터리를 아끼므로 칸이 찬다. 슬라이더 위치를 그대로 따라 움직일 때마다 바뀐다.
+struct GPSLoggingBatteryIcon: View {
+    let seconds: Int
+    let tint: Color
+
+    static func fillFraction(seconds: Int) -> Double {
+        let last = GPSLoggingPreferences.majorTickPositions.last ?? 1
+        guard last > 0 else { return 1 }
+        return min(1, max(0.08, GPSLoggingPreferences.sliderPosition(forSeconds: seconds) / last))
+    }
+
+    var body: some View {
+        HStack(spacing: 1.5) {
+            RoundedRectangle(cornerRadius: 3.5, style: .continuous)
+                .stroke(tint, lineWidth: 1.5)
+                .overlay(alignment: .leading) {
+                    GeometryReader { proxy in
+                        RoundedRectangle(cornerRadius: 2, style: .continuous)
+                            .fill(tint)
+                            .frame(width: proxy.size.width * Self.fillFraction(seconds: seconds))
+                    }
+                    .padding(2.5)
+                }
+                .frame(width: 26, height: 13)
+            RoundedRectangle(cornerRadius: 1)
+                .fill(tint)
+                .frame(width: 2, height: 5)
+        }
+        .accessibilityHidden(true)
+    }
+}
+

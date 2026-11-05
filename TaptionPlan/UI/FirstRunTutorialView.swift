@@ -52,20 +52,6 @@ struct FirstRunTutorialView: View {
 
     private var topBar: some View {
         HStack(spacing: 10) {
-            Button {
-                if let previous = step.previous { move(to: previous) }
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: TaptionType.scaled(TaptionType.title), weight: .semibold))
-                    .foregroundStyle(Color.tpInk)
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .opacity(step.previous == nil ? 0 : 1)
-            .disabled(step.previous == nil)
-            .accessibilityLabel(language.text("이전", "Back"))
-
             HStack(spacing: 3) {
                 ForEach(FirstRunTutorialStep.allCases) { item in
                     Capsule()
@@ -77,16 +63,15 @@ struct FirstRunTutorialView: View {
             .accessibilityLabel("\(step.number) / \(FirstRunTutorialStep.allCases.count)")
             .accessibilityIdentifier("firstRunProgress")
 
-            Button(language.text("전체 건너뛰기", "Skip all")) {
-                finish(.skipped)
-            }
-            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .semibold))
-            .foregroundStyle(Color.tpSecondary)
-            .buttonStyle(.plain)
-            .frame(minHeight: 44)
-            .opacity(step == .finish ? 0 : 1)
-            .disabled(step == .finish)
-            .accessibilityIdentifier("firstRunSkipAll")
+            // 전체 건너뛰기는 첫 화면의 「바로 시작」이 맡는다.
+            Button(language.text("건너뛰기", "Skip")) { skipStep() }
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .semibold))
+                .foregroundStyle(Color.tpSecondary)
+                .buttonStyle(.plain)
+                .frame(minHeight: 44)
+                .opacity(step.hasInput ? 1 : 0)
+                .disabled(!step.hasInput)
+                .accessibilityIdentifier("firstRunSkip")
         }
         .padding(.horizontal, 12)
     }
@@ -253,13 +238,13 @@ struct FirstRunTutorialView: View {
                     .buttonStyle(.plain)
                     .frame(minWidth: 88, minHeight: 50)
                     .accessibilityIdentifier("firstRunStartNow")
-            } else if step.hasInput {
-                Button(language.text("건너뛰기", "Skip")) { skipStep() }
+            } else if let previous = step.previous {
+                Button(language.text("이전", "Back")) { move(to: previous) }
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.bodyStrong), weight: .semibold))
-                    .foregroundStyle(Color.tpSecondary)
+                    .foregroundStyle(Color.tpInk)
                     .buttonStyle(.plain)
                     .frame(minWidth: 88, minHeight: 50)
-                    .accessibilityIdentifier("firstRunSkip")
+                    .accessibilityIdentifier("firstRunBack")
             }
             Button { confirmStep() } label: {
                 Text(primaryTitle)
