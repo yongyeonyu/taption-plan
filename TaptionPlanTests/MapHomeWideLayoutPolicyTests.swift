@@ -99,4 +99,13 @@ final class MapHomeWideLayoutPolicyTests: XCTestCase {
         XCTAssertEqual(AppOrientationPolicy.mask(screenSize: CGSize(width: duoInner.height, height: duoInner.width)), .all)
         XCTAssertEqual(AppOrientationPolicy.mask(screenSize: iPad), .all)
     }
+
+    func testOnlyLowTwoColumnMenuUsesCompactRows() {
+        let duoInner = CGSize(width: 951, height: 669)
+        let duoKind = MapHomeWideLayoutPolicy.menuPanelKind(viewportSize: duoInner, hasPermissionCard: true)
+        XCTAssertEqual(duoKind.columns, 2)
+        XCTAssertTrue(MapHomeWideLayoutPolicy.menuUsesCompactRows(viewportSize: duoInner, kind: duoKind))
+        XCTAssertFalse(MapHomeWideLayoutPolicy.menuUsesCompactRows(viewportSize: duoInner, kind: .standard))
+        XCTAssertFalse(MapHomeWideLayoutPolicy.menuUsesCompactRows(viewportSize: CGSize(width: 1210, height: 834), kind: .columns(width: 680)))
+    }
 }

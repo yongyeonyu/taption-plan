@@ -799,7 +799,7 @@ struct MapHomeView: View {
             .zIndex(MapHomeLayerPriority.search)
 
             if isMenuOpen, !isScreenRecording {
-                Group { if isWideLayout { AnyView(sidebarContent).mapHomeWidePanelFrame(viewportWidth: mapViewportSize.width, kind: menuPanelKind) } else { menu } }
+                Group { if isWideLayout { AnyView(sidebarContent).environment(\.mapHomeMenuIsCompact, MapHomeWideLayoutPolicy.menuUsesCompactRows(viewportSize: mapViewportSize, kind: menuPanelKind)).mapHomeWidePanelFrame(viewportWidth: mapViewportSize.width, kind: menuPanelKind) } else { menu } }
                     .transition(.move(edge: .leading).combined(with: .opacity))
                     .zIndex(MapHomeLayerPriority.menu)
             }
@@ -6972,7 +6972,7 @@ struct MapHomeView: View {
                     .foregroundStyle(.secondary)
             }
             .foregroundStyle(Color.tpInk)
-            .padding(.vertical, 9)
+            .modifier(MapHomeMenuRowPadding())
             .padding(.horizontal, 12)
             .contentShape(Rectangle())
         }
@@ -6983,7 +6983,7 @@ struct MapHomeView: View {
         Text(title)
             .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
             .foregroundStyle(Color.tpSecondary)
-            .padding(.top, 16)
+            .modifier(MapHomeMenuGroupLabelPadding())
             .padding(.bottom, 6)
             .padding(.horizontal, 6)
     }
@@ -7038,7 +7038,7 @@ struct MapHomeView: View {
                         .foregroundStyle(.secondary)
                 }
                 .foregroundStyle(Color.tpInk)
-                .padding(.vertical, 10)
+                .modifier(MapHomeMenuRowPadding())
                 .padding(.horizontal, 12)
                 .contentShape(Rectangle())
             }
@@ -7276,7 +7276,7 @@ struct MapHomeView: View {
                         .foregroundStyle(.secondary)
                 }
                 .foregroundStyle(Color.tpInk)
-                .padding(.vertical, 9)
+                .modifier(MapHomeMenuRowPadding())
                 .padding(.horizontal, 12)
                 .contentShape(Rectangle())
             }
@@ -7595,7 +7595,7 @@ struct MapHomeView: View {
                     .foregroundStyle(.secondary)
             }
             .foregroundStyle(Color.tpInk)
-            .padding(.vertical, 9)
+            .modifier(MapHomeMenuRowPadding())
             .padding(.horizontal, 12)
         }
         .accessibilityLabel(language.text("언어 선택", "Choose language"))
@@ -7623,7 +7623,7 @@ struct MapHomeView: View {
                         .foregroundStyle(.secondary)
                 }
                 .foregroundStyle(Color.tpInk)
-                .padding(.vertical, 9)
+                .modifier(MapHomeMenuRowPadding())
                 .padding(.horizontal, 12)
                 .contentShape(Rectangle())
             }
@@ -7861,7 +7861,7 @@ struct MapHomeView: View {
                         .foregroundStyle(.secondary)
                 }
                 .foregroundStyle(Color.tpInk)
-                .padding(.vertical, 9)
+                .modifier(MapHomeMenuRowPadding())
                 .padding(.horizontal, 12)
                 .background(Color.tpInk.opacity(0.05), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .contentShape(Rectangle())
@@ -7954,7 +7954,7 @@ struct MapHomeView: View {
                         .foregroundStyle(.secondary)
                 }
                 .foregroundStyle(Color.tpInk)
-                .padding(.vertical, 9)
+                .modifier(MapHomeMenuRowPadding())
                 .padding(.horizontal, 12)
                 .background(Color.tpInk.opacity(0.05), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .contentShape(Rectangle())

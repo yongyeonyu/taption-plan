@@ -7,7 +7,9 @@ final class TaptionPlanWideLayoutUITests: XCTestCase {
 
     private func launchHome(extraArguments: [String] = [], waitsForMap: Bool = true) -> XCUIApplication {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
-        app.launchArguments += ["-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR", "-slowDayPlayback"] + extraArguments
+        // 시뮬레이터 설정에 남은 이전 폭·높이 고정이 다음 실행을 흔들지 않게 항상 값을 준다.
+        let viewportResets = ["-debugViewportWidth", "-debugViewportHeight"].filter { !extraArguments.contains($0) }.flatMap { [$0, "0"] }
+        app.launchArguments += ["-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR", "-slowDayPlayback"] + viewportResets + extraArguments
         app.launch()
         let skip = app.buttons["전체 건너뛰기"]
         if skip.waitForExistence(timeout: 20) { skip.tap() }
@@ -220,7 +222,7 @@ final class TaptionPlanWideLayoutUITests: XCTestCase {
         XCTAssertTrue(summary.waitForExistence(timeout: 40))
         assertPanelBesideMap(app, maxWidth: 410, "하루 요약")
         capture(app, "day-summary")
-        app.buttons.matching(NSPredicate(format: "label == %@", "집 성장")).firstMatch.tap()
+        app.buttons["daySummaryGrowthCard"].firstMatch.tap()
         let growthTitle = app.staticTexts["우리 집 성장"]
         XCTAssertTrue(growthTitle.waitForExistence(timeout: 10))
         sleep(1)

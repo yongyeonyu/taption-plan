@@ -436,6 +436,7 @@ struct MapHomeDaySummarySheet: View {
                 } label: { growthCardView(growthCard) }
                 .buttonStyle(.plain)
                 .accessibilityHint(language.text("주간 보상과 집 성장 기록을 엽니다", "Opens weekly rewards and home growth"))
+                .accessibilityIdentifier("daySummaryGrowthCard")
             }
 
             if let salary {

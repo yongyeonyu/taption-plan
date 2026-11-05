@@ -133,7 +133,7 @@ struct TaptionFontMenuRow: View {
                     .foregroundStyle(.secondary)
             }
             .foregroundStyle(Color.tpInk)
-            .padding(.vertical, 9)
+            .modifier(MapHomeMenuRowPadding())
             .padding(.horizontal, 12)
         }
         .accessibilityLabel(language.text("글꼴 선택", "Choose font"))

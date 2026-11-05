@@ -30,6 +30,7 @@ enum MapHomeWideLayoutPolicy {
     /// 두 열 메뉴의 폭. 사이드바(패널 오른쪽 약 140pt)를 가리지 않는 안에서 680pt까지, 480pt보다 좁으면 한 열로 둔다.
     static let menuColumnsMaximumWidth: CGFloat = 680
     static let menuColumnsMinimumWidth: CGFloat = 480
+    static let menuCompactRowsMaximumHeight: CGFloat = 760
     static let sidebarReservedWidth: CGFloat = 140
     /// 클립 편집을 두 열로 펴는 폭과 오른쪽 열 폭. 도구 여섯 개가 아이폰과 같은 간격으로 놓인다.
     static let clipColumnsMinimumWidth: CGFloat = 760
@@ -90,6 +91,11 @@ enum MapHomeWideLayoutPolicy {
         return viewportWidth - inset >= minimumMapWidthBesidePanel ? inset : 0
     }
 
+    /// 두 열로 펴도 왼쪽 열이 높이에 모자라는 낮은 가로 화면(듀오 안쪽)은 메뉴 줄 간격을 줄인다.
+    static func menuUsesCompactRows(viewportSize: CGSize, kind: MapHomeWidePanelKind) -> Bool {
+        kind.columns > 1 && viewportSize.height < menuCompactRowsMaximumHeight
+    }
+
     /// 메인 메뉴 자리. 세로는 한 열. 가로는 한 열이 높이에 안 들어가면 옆으로 펴서 스크롤 없이 보인다.
     static func menuPanelKind(viewportSize: CGSize, hasPermissionCard: Bool) -> MapHomeWidePanelKind {
         guard isWide(viewportWidth: viewportSize.width), viewportSize.width > viewportSize.height else { return .standard }
@@ -124,6 +130,7 @@ extension EnvironmentValues {
     /// 시트가 아니라 넓은 화면의 왼쪽 패널 안에 놓였는지.
     @Entry var mapHomeIsWidePanel = false
     @Entry var mapHomeWidePanelColumns = 1
+    @Entry var mapHomeMenuIsCompact = false
 }
 
 /// 좁은 폭에서는 시트, 넓은 폭에서는 하단 메뉴 위 왼쪽 패널로 띄운다. 폭이 갈려도 열림 상태는 이어진다.
@@ -379,5 +386,22 @@ extension View {
                 scene.keyWindow?.rootViewController?.setNeedsUpdateOfSupportedInterfaceOrientations()
             }
         }
+    }
+}
+
+/// 메뉴 한 줄의 위아래 여백. 낮은 가로 화면에서도 줄 높이 44pt를 지킨다.
+struct MapHomeMenuRowPadding: ViewModifier {
+    @Environment(\.mapHomeMenuIsCompact) private var isCompact
+
+    func body(content: Content) -> some View {
+        content.padding(.vertical, isCompact ? 6 : 9)
+    }
+}
+
+struct MapHomeMenuGroupLabelPadding: ViewModifier {
+    @Environment(\.mapHomeMenuIsCompact) private var isCompact
+
+    func body(content: Content) -> some View {
+        content.padding(.top, isCompact ? 8 : 16)
     }
 }
