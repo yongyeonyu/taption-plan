@@ -386,6 +386,9 @@ struct MapHomePhotoArcBrowser: View {
     @State private var index: Int
     @State private var dragStartIndex: Int?
     @State private var pagerIndex: Int?
+    /// 하단 링: 입력이 3초 없으면 가운데 사진도 다른 칸과 같은 크기로 줄고 어두워진다(RNG1105A02).
+    @State private var isRingIdle = false
+    @State private var ringActivity = 0
 
     /// 손가락이 이만큼 움직이면 사진 한 장을 넘긴다.
     private static let pointsPerPhoto: CGFloat = 36
@@ -436,6 +439,13 @@ struct MapHomePhotoArcBrowser: View {
         .onChange(of: index) { _, value in
             guard moments.indices.contains(value) else { return }
             onPhotoChange?(moments[value])
+            wakeRing()
+        }
+        .task(id: ringActivity) {
+            guard isRing else { return }
+            try? await Task.sleep(nanoseconds: MapHomePlaybackPhotoStrip.enlargedSeconds * 1_000_000_000)
+            guard !Task.isCancelled, dragStartIndex == nil else { return }
+            isRingIdle = true
         }
         .fullScreenCover(isPresented: Binding(
             get: { pagerIndex != nil },
@@ -445,6 +455,12 @@ struct MapHomePhotoArcBrowser: View {
         }
     }
 
+    private func wakeRing() {
+        guard isRing else { return }
+        if isRingIdle { isRingIdle = false }
+        ringActivity &+= 1
+    }
+
     private var caption: some View {
         Text("\(moments[index].capturedAt.formatted(date: .omitted, time: .shortened)) · \(index + 1)/\(moments.count)")
             .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))
@@ -452,6 +468,7 @@ struct MapHomePhotoArcBrowser: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 5)
             .background(Color.tpSurface, in: Capsule())
+            .opacity(isRingIdle ? 0 : 1)
             .accessibilityHidden(true)
     }
 
@@ -467,7 +484,8 @@ struct MapHomePhotoArcBrowser: View {
                             : min(MapHomePlaybackPhotoStrip.slotsPerSide, index),
                         side: 46,
                         width: proxy.size.width,
-                        isEnlarged: true
+                        isEnlarged: !isRingIdle,
+                        dimsCenter: isRingIdle
                     )
                     .onTapGesture {
                         if photoIndex == index { pagerIndex = index } else { index = photoIndex }
@@ -483,6 +501,7 @@ struct MapHomePhotoArcBrowser: View {
         .simultaneousGesture(swipe)
         .padding(.bottom, -Self.swipeDepth)
         .animation(reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.8), value: index)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: isRingIdle)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(language.text(
             "사진 \(index + 1)/\(moments.count), \(moments[index].capturedAt.formatted(date: .omitted, time: .shortened))",
@@ -503,7 +522,10 @@ struct MapHomePhotoArcBrowser: View {
         DragGesture(minimumDistance: 8)
             .onChanged { value in
                 let start = dragStartIndex ?? index
-                if dragStartIndex == nil { dragStartIndex = start }
+                if dragStartIndex == nil {
+                    dragStartIndex = start
+                    wakeRing()
+                }
                 let next = Self.index(start: start, translation: value.translation.width, count: moments.count)
                 if next != index { index = next }
             }
@@ -512,6 +534,7 @@ struct MapHomePhotoArcBrowser: View {
                 let next = Self.index(start: dragStartIndex ?? index, translation: value.predictedEndTranslation.width, count: moments.count)
                 dragStartIndex = nil
                 if next != index { index = next }
+                wakeRing()
             }
     }
 }
@@ -530,13 +553,14 @@ struct MapHomePhotoArcSlot: View {
     let side: CGFloat
     let width: CGFloat
     let isEnlarged: Bool
+    var dimsCenter = false
 
     var body: some View {
         let isCenter = distance == 0 && isEnlarged
         let place = MapHomePlaybackPhotoStrip.arcPlacement(distance: distance, countOnSide: countOnSide, side: side, width: width, isEnlarged: isEnlarged)
         MapHomePhotoThumbnail(localIdentifier: id, side: MapHomePlaybackPhotoStrip.centerSide)
             // 지금 사진만 밝게 두고 나머지는 30% 어둡게 한다.
-            .overlay(Color.black.opacity(distance == 0 ? 0 : 0.3))
+            .overlay(Color.black.opacity(distance == 0 && !dimsCenter ? 0 : 0.3))
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color.white, lineWidth: isCenter ? 3 : 4))
             .scaleEffect(isCenter ? 1 : side / MapHomePlaybackPhotoStrip.centerSide, anchor: .bottom)

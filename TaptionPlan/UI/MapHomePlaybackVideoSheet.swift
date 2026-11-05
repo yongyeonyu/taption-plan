@@ -354,6 +354,7 @@ struct MapHomePlaybackVideoSheet: View {
         }
         renderer.music = musicTrack?.url
         renderer.fps = preset == .day ? MapHomePlaybackVideoRenderer.dayFPS : MapHomePlaybackVideoRenderer.rangeFPS
+        renderer.capturesAtPlaybackSpeed = preset != .day
         progress = 0
         phase = .rendering
         task = Task { await run(renderer) }

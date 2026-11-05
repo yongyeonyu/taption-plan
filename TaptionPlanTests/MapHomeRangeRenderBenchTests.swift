@@ -81,6 +81,8 @@ final class MapHomeRangeRenderBenchTests: XCTestCase {
             frames: { plan.frames(fps: $0) },
             overlay: MapHomeRangeVideoOverlay(plan: plan, language: .korean, accessoryID: nil)
         )
+        // 실제 여러 날 영상과 같은 프레임 수로 잰다.
+        renderer.fps = MapHomePlaybackVideoRenderer.rangeFPS
         // BGM1104A02: 값을 주면 그 곡을 넣어 렌더한다.
         renderer.music = ProcessInfo.processInfo.environment["TAPTION_RANGE_RENDER_MUSIC"]
             .flatMap(MapHomePlaybackMusicTrack.init(rawValue:))?.url
@@ -112,7 +114,7 @@ final class MapHomeRangeRenderBenchTests: XCTestCase {
         }
         let elapsed = Date().timeIntervalSince(started)
         let bytes = (try FileManager.default.attributesOfItem(atPath: url.path)[.size] as? NSNumber)?.doubleValue ?? 0
-        let frames = Int(seconds * 60)
+        let frames = Int(seconds * Double(MapHomePlaybackVideoRenderer.rangeFPS))
         print("PLR_BENCH frames=\(frames) seconds=\(elapsed) avg_ms=\(elapsed * 1_000 / Double(frames)) timeouts=\(renderer.timeoutCount) mb=\(bytes / 1_048_576) before_mb=\(before) peak_mb=\(peak) items=\(plan.items.count) route=\(plan.route.count) km=\(plan.totalMeters / 1_000)")
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("PLR1104A01", isDirectory: true)
         try? FileManager.default.removeItem(at: folder)

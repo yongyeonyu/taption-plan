@@ -1711,4 +1711,51 @@ final class MapHomeAppleMapSmoothnessTests: XCTestCase {
         XCTAssertTrue(circles.contains { $0.radius == 96 })
         XCTAssertFalse(circles.contains { $0.point.x == 5_000 })
     }
+
+    // MARK: - TRN1105A01
+
+    private func transitReading(_ offset: TimeInterval, _ motion: MotionKind, streak: Int = 0) -> SensorReading {
+        var value = SensorReading(timestamp: Date(timeIntervalSinceReferenceDate: 1_000 + offset))
+        value.motion = motion
+        value.subwayWiFiObservationStreak = streak
+        return value
+    }
+
+    private func transitSegment(_ start: TimeInterval, _ end: TimeInterval, _ mode: TravelMode, confirmed: Bool = false) -> TravelSegment {
+        TravelSegment(
+            mode: mode,
+            span: TimeSpan(start: Date(timeIntervalSinceReferenceDate: 1_000 + start), end: Date(timeIntervalSinceReferenceDate: 1_000 + end)),
+            distanceMeters: 1_000,
+            confidence: .high,
+            evidence: [],
+            isConfirmed: confirmed
+        )
+    }
+
+    func testLiveTransitKeepsSubwayAfterConfirmedSegmentEnds() {
+        let date = Date(timeIntervalSinceReferenceDate: 1_060)
+        let mode = MapHomeLiveTransitPolicy.mode(at: date, travel: [transitSegment(-600, 0, .subway)], readings: [transitReading(50, .automotive)])
+        XCTAssertEqual(mode, .subway)
+    }
+
+    func testLiveTransitStopsAfterWalkingOrLongGap() {
+        let date = Date(timeIntervalSinceReferenceDate: 1_060)
+        let subway = [transitSegment(-600, 0, .subway)]
+        XCTAssertNil(MapHomeLiveTransitPolicy.mode(at: date, travel: subway, readings: [transitReading(20, .walking), transitReading(50, .automotive)]))
+        XCTAssertNil(MapHomeLiveTransitPolicy.mode(at: date, travel: subway, readings: [transitReading(55, .walking)]))
+        XCTAssertNil(MapHomeLiveTransitPolicy.mode(at: date, travel: [transitSegment(-1_200, -700, .subway)], readings: [transitReading(50, .automotive)]))
+    }
+
+    func testLiveTransitUsesSubwayWiFiBeforeSegmentIsConfirmed() {
+        let date = Date(timeIntervalSinceReferenceDate: 1_060)
+        XCTAssertEqual(MapHomeLiveTransitPolicy.mode(at: date, travel: [], readings: [transitReading(50, .automotive, streak: 2)]), .subway)
+        XCTAssertEqual(MapHomeLiveTransitPolicy.mode(at: date, travel: [transitSegment(0, 100, .car)], readings: [transitReading(50, .automotive, streak: 2)]), .subway)
+        XCTAssertNil(MapHomeLiveTransitPolicy.mode(at: date, travel: [], readings: [transitReading(50, .automotive, streak: 1)]))
+    }
+
+    func testLiveTransitLeavesCarAlone() {
+        let date = Date(timeIntervalSinceReferenceDate: 1_060)
+        XCTAssertNil(MapHomeLiveTransitPolicy.mode(at: date, travel: [transitSegment(-600, 0, .car)], readings: [transitReading(50, .automotive)]))
+        XCTAssertNil(MapHomeLiveTransitPolicy.mode(at: date, travel: [transitSegment(0, 100, .car, confirmed: true)], readings: [transitReading(50, .automotive, streak: 5)]))
+    }
 }

@@ -149,10 +149,14 @@ final class MapHomePlaybackVideoRenderer: NSObject, @preconcurrency MLNMapViewDe
     /// 여러 날 영상은 빠르게 지나가 30fps로도 부드럽고, 만드는 시간이 절반으로 준다.
     static let rangeFPS = 30
     var fps = dayFPS
+    var capturesAtPlaybackSpeed = false
     /// 화면 절반 넘게 움직인 프레임만 새 타일을 끝까지 기다린다. 나머지는 이미 받은 타일로 그린다.
     nonisolated static let frameTimeout: TimeInterval = 2
     nonisolated static let smallMoveFrameTimeout: TimeInterval = 0.2
     nonisolated static let largeMoveRatio = 0.5
+    /// 여러 날 영상은 재생하며 녹화하듯 타일을 오래 기다리지 않는다. 덜 받은 타일은 비어 보일 수 있다(VID1105A04).
+    nonisolated static let playbackSpeedFrameTimeout: TimeInterval = 0.05
+    nonisolated static let playbackSpeedLargeMoveTimeout: TimeInterval = 0.4
     static let styleTimeout: TimeInterval = 15
     static let stickmanCacheLimit = 256
 
@@ -175,6 +179,7 @@ final class MapHomePlaybackVideoRenderer: NSObject, @preconcurrency MLNMapViewDe
     private var waiter: CheckedContinuation<Bool, Never>?
     private var waitToken = 0
     private var isStyleLoaded = false
+    private var acceptsPartialFrame = false
     private var stickmanCache: [String: UIImage] = [:]
     private var lastCamera: (coordinate: CLLocationCoordinate2D, distance: Double)?
     private(set) var timeoutCount = 0
@@ -327,7 +332,8 @@ final class MapHomePlaybackVideoRenderer: NSObject, @preconcurrency MLNMapViewDe
     private func placeCamera(_ frame: MapHomePlaybackTimeline.Frame) async {
         guard let mapView, let coordinate = frame.coordinate else { return }
         if let lastCamera, Self.isSame(lastCamera, (coordinate, frame.cameraDistance)) { return }
-        let timeout = Self.frameTimeout(from: lastCamera, to: (coordinate, frame.cameraDistance))
+        let timeout = Self.frameTimeout(from: lastCamera, to: (coordinate, frame.cameraDistance), atPlaybackSpeed: capturesAtPlaybackSpeed)
+        acceptsPartialFrame = capturesAtPlaybackSpeed && timeout == Self.playbackSpeedFrameTimeout
         lastCamera = (coordinate, frame.cameraDistance)
         mapView.setCamera(
             MLNMapCamera(lookingAtCenter: coordinate, altitude: frame.cameraDistance, pitch: pitch, heading: heading),
@@ -340,13 +346,16 @@ final class MapHomePlaybackVideoRenderer: NSObject, @preconcurrency MLNMapViewDe
     /// 첫 프레임, 크게 옮긴 프레임, 줌이 크게 바뀐 프레임만 오래 기다린다.
     nonisolated static func frameTimeout(
         from previous: (coordinate: CLLocationCoordinate2D, distance: Double)?,
-        to next: (coordinate: CLLocationCoordinate2D, distance: Double)
+        to next: (coordinate: CLLocationCoordinate2D, distance: Double),
+        atPlaybackSpeed: Bool = false
     ) -> TimeInterval {
         guard let previous, previous.distance > 0, next.distance > 0 else { return frameTimeout }
         let moved = CLLocation(latitude: previous.coordinate.latitude, longitude: previous.coordinate.longitude)
             .distance(from: CLLocation(latitude: next.coordinate.latitude, longitude: next.coordinate.longitude))
         let zoomChange = abs(log2(next.distance / previous.distance))
-        return moved / next.distance > largeMoveRatio || zoomChange > largeMoveRatio ? frameTimeout : smallMoveFrameTimeout
+        let isLargeMove = moved / next.distance > largeMoveRatio || zoomChange > largeMoveRatio
+        if atPlaybackSpeed { return isLargeMove ? playbackSpeedLargeMoveTimeout : playbackSpeedFrameTimeout }
+        return isLargeMove ? frameTimeout : smallMoveFrameTimeout
     }
 
     private static func isSame(
@@ -398,7 +407,7 @@ final class MapHomePlaybackVideoRenderer: NSObject, @preconcurrency MLNMapViewDe
     }
 
     func mapViewDidFinishRenderingFrame(_ mapView: MLNMapView, fullyRendered: Bool) {
-        guard fullyRendered, isStyleLoaded else { return }
+        guard fullyRendered || acceptsPartialFrame, isStyleLoaded else { return }
         finishWait(token: nil, rendered: true)
     }
 

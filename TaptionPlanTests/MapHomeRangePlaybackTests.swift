@@ -349,5 +349,8 @@ final class MapHomeRangePlaybackTests: XCTestCase {
         XCTAssertEqual(Renderer.frameTimeout(from: start, to: small), Renderer.smallMoveFrameTimeout)
         XCTAssertEqual(Renderer.frameTimeout(from: start, to: far), Renderer.frameTimeout)
         XCTAssertEqual(Renderer.frameTimeout(from: start, to: zoomed), Renderer.frameTimeout)
+        XCTAssertEqual(Renderer.frameTimeout(from: nil, to: start, atPlaybackSpeed: true), Renderer.frameTimeout)
+        XCTAssertEqual(Renderer.frameTimeout(from: start, to: small, atPlaybackSpeed: true), Renderer.playbackSpeedFrameTimeout)
+        XCTAssertEqual(Renderer.frameTimeout(from: start, to: far, atPlaybackSpeed: true), Renderer.playbackSpeedLargeMoveTimeout)
     }
 }

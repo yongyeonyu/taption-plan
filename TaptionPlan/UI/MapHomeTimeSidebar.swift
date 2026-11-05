@@ -1724,7 +1724,7 @@ struct MapHomeTimeSidebar: View {
             )
             .animation(smoothsPlayback ? .linear(duration: 0.26) : nil, value: minute)
             .coordinateSpace(name: "mapHomeTimeSidebarRail")
-            .contentShape(Rectangle())
+            // 바깥 틀에 contentShape를 주면 레일 왼쪽 빈 띠에 닿은 손가락이 지도 핀치에서 빠진다(PNC1105A02). 손잡이·레일이 각자 터치를 받는다.
             .confirmationDialog(
                 AppLanguagePreference.text("미확인 구간 고르기", "Choose an unconfirmed interval"),
                 isPresented: Binding(

@@ -474,3 +474,31 @@ final class MapHomePlaybackZoomSmoother {
 
     func reset() { lastUptime = nil }
 }
+
+/// 열차 안에서는 iPhone 움직임이 자동차로만 나온다. 구간 확정 전이나 확정 구간이 끝난 뒤의 새 점을
+/// 자동차로 보이지 않게 지하철 Wi-Fi·철도 일치·직전 대중교통 구간을 먼저 본다(TRN1105A01). 파생 표시이며 원본은 그대로다.
+enum MapHomeLiveTransitPolicy {
+    static let maximumReadingAge: TimeInterval = 3 * 60
+    static let continuationWindow: TimeInterval = 10 * 60
+
+    static func mode(at date: Date, travel: [TravelSegment], readings: [SensorReading]) -> TravelMode? {
+        let containing = travel.filter { $0.span.contains(date) }
+        guard !containing.contains(where: \.isConfirmed) else { return nil }
+        let earliest = date.addingTimeInterval(-maximumReadingAge)
+        let recent = readings.filter { $0.motion.isMovement && $0.timestamp >= earliest && $0.timestamp <= date }
+        guard let latest = recent.max(by: { $0.timestamp < $1.timestamp }), latest.motion == .automotive else { return nil }
+        if latest.matchesRailRoute || SubwayWiFiSSID.hasContinuousEvidence(streak: latest.subwayWiFiObservationStreak) {
+            return .subway
+        }
+        guard containing.isEmpty else { return nil }
+        let earlier = travel
+            .filter { $0.span.end <= date && date.timeIntervalSince($0.span.end) <= continuationWindow }
+            .max { $0.span.end < $1.span.end }
+        guard let earlier, [.subway, .train, .bus].contains(earlier.mode) else { return nil }
+        let leftVehicle = readings.contains {
+            $0.timestamp >= earlier.span.end && $0.timestamp <= date
+                && [.walking, .running, .cycling].contains($0.motion)
+        }
+        return leftVehicle ? nil : earlier.mode
+    }
+}

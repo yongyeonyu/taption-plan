@@ -52,6 +52,13 @@ struct FirstRunTutorialView: View {
 
     private var topBar: some View {
         HStack(spacing: 10) {
+            Button(language.text("닫기", "Close")) { finish(.skipped) }
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .semibold))
+                .foregroundStyle(Color.tpSecondary)
+                .buttonStyle(.plain)
+                .frame(minHeight: 44)
+                .accessibilityIdentifier("firstRunClose")
+
             HStack(spacing: 3) {
                 ForEach(FirstRunTutorialStep.allCases) { item in
                     Capsule()

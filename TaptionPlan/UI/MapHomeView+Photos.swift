@@ -85,7 +85,7 @@ extension MapHomeView {
             ) { self.photoBrowserSelection = nil }
             .id(photoBrowserSelection.startID)
             .transition(.opacity)
-        } else if showsPhotoRing, !isDayPlaybackRunning, !isScreenRecording, !browsablePhotos.isEmpty {
+        } else if showsPhotoRing, !isDayPlaybackRunning, !isScreenRecording, !isPhotoRingCovered, !browsablePhotos.isEmpty {
             let photos = browsablePhotos
             MapHomePhotoArcBrowser(
                 moments: photos,
@@ -98,6 +98,22 @@ extension MapHomeView {
             )
             .id("\(model.selectedDate.timeIntervalSinceReferenceDate)|\(photos.count)")
         }
+    }
+
+    /// 메뉴·달력 같은 창이 떠 있으면 하단 링을 숨긴다(RNG1105A03).
+    var isPhotoRingCovered: Bool {
+        let panels = isMenuOpen || isCalendarPresented || isDaySummaryPresented || isDailyCardPresented
+            || isSearchExpanded || todayCalendarExpanded
+        let sheets = isRecordingOptionsPresented || isPlaybackVideoPresented || isCarAudioSheetPresented
+            || isSalarySettingsPresented || isStrideCalibrationPresented || isTransitLocationsPresented
+            || isSearchPinMenuPresented || isAlarmSettingsPresented || isMapAttributionPresented
+            || isCalendarConnectPresented || isDataProtectionPresented || isCategoryAddPresented
+            || isUnconfirmedReviewPresented || proAccess.isPurchaseSheetPresented
+        let items = recordedVideoShare != nil || selectedMarkerInfo != nil || counterDetail != nil
+            || selectedLocationDestination != nil || selectedUserLocation != nil || selectedMapStickerEditor != nil
+            || selectedTransitBoardingCandidate != nil || selectedPredictedRoute != nil || pendingAlarm != nil
+            || editingUserCategory != nil || sectionEditSelection != nil
+        return panels || sheets || items
     }
 
     /// 링에서 고른 사진의 찍은 시각으로 사이드바를, 찍은 곳으로 지도를 옮긴다(RNG1105A01).

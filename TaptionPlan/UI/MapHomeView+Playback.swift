@@ -796,6 +796,15 @@ extension MapHomeView {
         ) {
             return MapHomeStickmanActionResolver.sleepStageAction(at: displayedLocationDate, actuals: actuals, sleepSessions: sleepSessions)
         }
+        let transitReadings = (currentDayDataSnapshot?.readings ?? routeReadings)
+            + model.liveRouteState.readings
+            + (model.latestSensorReading.map { [$0] } ?? [])
+        let hasManualRecord = actuals.contains {
+            ($0.manuallyCorrected || $0.source == .manual) && $0.startedAt <= displayedLocationDate && displayedLocationDate < ($0.endedAt ?? .distantFuture)
+        }
+        if !hasManualRecord, let mode = MapHomeLiveTransitPolicy.mode(at: displayedLocationDate, travel: currentDayDataSnapshot?.travel ?? [], readings: transitReadings) {
+            return MapHomeStickmanActionResolver.action(for: mode)
+        }
         // 등록 지점 안에서 걸으면 그 곳의 걷기다. 회사면 노트북을 들고 걷는다.
         let walkMinute = minuteOfDay(for: displayedLocationDate)
         if let walking = timeRailSegments.first(where: { $0.walkSpans.contains { $0.contains(walkMinute) } }) {
@@ -831,9 +840,7 @@ extension MapHomeView {
             travel: currentDayDataSnapshot?.travel ?? [],
             places: currentDayDataSnapshot?.places ?? [],
             frequentPlaces: model.settings.frequentPlaces,
-            readings: (currentDayDataSnapshot?.readings ?? routeReadings)
-                + model.liveRouteState.readings
-                + (model.latestSensorReading.map { [$0] } ?? []),
+            readings: transitReadings,
             sleepSessions: sleepSessions
         )
         guard resolved == .activity, selectedTimelineMinute == nil else { return resolved }
