@@ -3312,6 +3312,83 @@
         }
       }
     },
+    "Apple Watch 데이터|Apple Watch data" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Watchのデータ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Watch 数据"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Watch 資料"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple-Watch-Daten"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Données de l'Apple Watch"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dati di Apple Watch"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Datos de Apple Watch"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dados do Apple Watch"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dữ liệu Apple Watch"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Data Apple Watch"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ข้อมูล Apple Watch"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Watch डेटा"
+          }
+        }
+      }
+    },
     "Apple Watch 미페어링|Apple Watch not paired" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3543,6 +3620,83 @@
         }
       }
     },
+    "Apple Watch 연동|Apple Watch link" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Watch連携"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Watch 连接"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Watch 連結"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Watch verbinden"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Liaison Apple Watch"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collegamento con Apple Watch"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conexión con Apple Watch"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conexão com o Apple Watch"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Liên kết Apple Watch"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tautan Apple Watch"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "การเชื่อมต่อ Apple Watch"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Watch लिंक"
+          }
+        }
+      }
+    },
     "Apple Watch가 있나요?|Do you have an Apple Watch?" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3693,6 +3847,160 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Apple Watch को iPhone के साथ पेयर करना ज़रूरी है। अगले चरण पर जाएँ।"
+          }
+        }
+      }
+    },
+    "Apple Watch를 연결하면 {0}가지가 더해집니다. {1}|Connecting an Apple Watch adds {0} things. {1}" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Watchを接続すると{0}件が追加されます。{1}"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连接 Apple Watch 可增加{0}项功能。{1}"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "連接 Apple Watch 可增加 {0} 項功能。{1}"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit einer verbundenen Apple Watch kommen {0} Dinge dazu. {1}"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecter une Apple Watch ajoute {0} fonctions. {1}"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collegando un Apple Watch si aggiungono {0} funzioni. {1}"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al conectar un Apple Watch se añaden {0} cosas. {1}"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conectar um Apple Watch adiciona {0} itens. {1}"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kết nối Apple Watch sẽ thêm {0} tính năng. {1}"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menghubungkan Apple Watch menambah {0} hal. {1}"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "การเชื่อมต่อ Apple Watch จะเพิ่มความสามารถอีก {0} อย่าง {1}"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Watch जोड़ने से {0} चीज़ें जुड़ती हैं। {1}"
+          }
+        }
+      }
+    },
+    "Apple Watch에 설치되어 손목 센서를 함께 기록합니다|Installed on your Apple Watch and recording with wrist sensors" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Watchにインストール済みで、手首のセンサーで記録中"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已安装在你的 Apple Watch 上，并通过手腕传感器记录"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已安裝在你的 Apple Watch 上，並以手腕感測器記錄"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auf deiner Apple Watch installiert und zeichnet mit Handgelenksensoren auf"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installée sur votre Apple Watch et enregistre avec les capteurs du poignet"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installata su Apple Watch, registra con i sensori del polso"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instalada en tu Apple Watch y registra con los sensores de la muñeca"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instalado no seu Apple Watch e gravando com os sensores do pulso"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã cài trên Apple Watch và ghi bằng cảm biến ở cổ tay"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terpasang di Apple Watch dan merekam dengan sensor pergelangan tangan"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ติดตั้งบน Apple Watch และบันทึกด้วยเซนเซอร์ที่ข้อมือ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "आपकी Apple Watch पर इंस्टॉल है और कलाई के सेंसर से रिकॉर्ड कर रही है"
           }
         }
       }
@@ -6084,6 +6392,237 @@
         }
       }
     },
+    "Watch 앱 · 설치 안 됨|Watch app · not installed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watchアプリ · 未インストール"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch App · 未安装"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch App · 未安裝"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch-App · nicht installiert"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App Watch · non installée"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App Watch · non installata"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App de Watch · no instalada"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App do Watch · não instalado"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ứng dụng Watch · chưa cài"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App Watch · belum diinstal"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แอป Watch · ยังไม่ติดตั้ง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch ऐप · इंस्टॉल नहीं"
+          }
+        }
+      }
+    },
+    "Watch 앱 · 설치됨 · {0}|Watch app · installed · {0}" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watchアプリ · インストール済み · {0}"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch App · 已安装 · {0}"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch App · 已安裝 · {0}"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch-App · installiert · {0}"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App Watch · installée · {0}"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App Watch · installata · {0}"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App de Watch · instalada · {0}"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App do Watch · instalado · {0}"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ứng dụng Watch · đã cài · {0}"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App Watch · terinstal · {0}"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แอป Watch · ติดตั้งแล้ว · {0}"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch ऐप · इंस्टॉल · {0}"
+          }
+        }
+      }
+    },
+    "Watch 앱 · 설치됨 · 버전 확인 중|Watch app · installed · checking version" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watchアプリ · インストール済み · バージョン確認中"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch App · 已安装 · 正在确认版本"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch App · 已安裝 · 正在確認版本"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch-App · installiert · Version wird geprüft"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App Watch · installée · vérification de la version"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App Watch · installata · verifica versione"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App de Watch · instalada · comprobando versión"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App do Watch · instalado · verificando versão"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ứng dụng Watch · đã cài · đang kiểm tra phiên bản"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App Watch · terinstal · memeriksa versi"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แอป Watch · ติดตั้งแล้ว · กำลังตรวจสอบเวอร์ชัน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch ऐप · इंस्टॉल · संस्करण जाँच रहा है"
+          }
+        }
+      }
+    },
     "Watch 앱 다시 열기|Open Watch app again" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6157,6 +6696,237 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Watch ऐप फिर खोलें"
+          }
+        }
+      }
+    },
+    "Watch 앱 설치 필요|Install the Watch app" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watchアプリのインストールが必要"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要安装 Watch App"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要安裝 Watch App"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch-App installieren"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installez l’app Watch"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installa l’app Watch"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instala la app de Watch"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instale o app do Watch"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cần cài ứng dụng Watch"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instal app Watch"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ต้องติดตั้งแอป Watch"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch ऐप इंस्टॉल करें"
+          }
+        }
+      }
+    },
+    "Watch 앱 설치|Install Watch app" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watchアプリをインストール"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安装 Watch App"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安裝 Watch App"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch-App installieren"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installer l’app Watch"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installa l’app Watch"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instalar la app de Watch"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instalar o app do Watch"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cài ứng dụng Watch"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instal app Watch"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ติดตั้งแอป Watch"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch ऐप इंस्टॉल करें"
+          }
+        }
+      }
+    },
+    "Watch 앱 업데이트|Update Watch app" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watchアプリをアップデート"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更新 Watch App"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更新 Watch App"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch-App aktualisieren"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mettre à jour l’app Watch"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aggiorna l’app Watch"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Actualizar la app de Watch"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Atualizar o app do Watch"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cập nhật ứng dụng Watch"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perbarui app Watch"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "อัปเดตแอป Watch"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch ऐप अपडेट करें"
           }
         }
       }
@@ -8621,6 +9391,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "सिर्फ़ iPhone से भी आपका दिन रिकॉर्ड होता है। बाद में Watch मिले तो मेन्यू > Apple Watch डेटा में देखें।"
+          }
+        }
+      }
+    },
+    "iPhone의 Watch 앱 → 나의 시계 → 사용 가능한 앱 → BOKKI Plan에서 ‘설치’|In the Watch app on iPhone → My Watch → Available Apps → tap “Install” next to BOKKI Plan" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhoneのWatch App → マイウォッチ → 利用可能なApp → BOKKI Planの横の「インストール」をタップ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 iPhone 上的“Watch”App 中 → “我的手表” → “可用的 App” → 点按 BOKKI Plan 旁的“安装”"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 iPhone 的「Watch」App 中 →「我的手錶」→「可用的 App」→ 點一下 BOKKI Plan 旁的「安裝」"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In der Watch-App auf dem iPhone → Meine Watch → Verfügbare Apps → tippe bei BOKKI Plan auf „Installieren“"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dans l'app Watch de l'iPhone → Ma montre → Apps disponibles → touchez « Installer » à côté de BOKKI Plan"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nell'app Watch su iPhone → Il mio Watch → App disponibili → tocca “Installa” accanto a BOKKI Plan"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En la app Watch del iPhone → Mi Watch → Apps disponibles → toca “Instalar” junto a BOKKI Plan"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No app Watch do iPhone → Meu Watch → Apps Disponíveis → toque em “Instalar” ao lado de BOKKI Plan"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trong ứng dụng Watch trên iPhone → Apple Watch của tôi → Ứng dụng có sẵn → nhấn “Cài đặt” cạnh BOKKI Plan"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Di app Watch pada iPhone → Watch Saya → App Tersedia → ketuk “Pasang” di samping BOKKI Plan"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ในแอป Watch บน iPhone → Watch ของฉัน → แอปที่มี → แตะ “ติดตั้ง” ข้าง BOKKI Plan"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhone के Watch ऐप में → मेरी वॉच → उपलब्ध ऐप्स → BOKKI Plan के आगे “इंस्टॉल करें” दबाएँ"
           }
         }
       }
@@ -14473,6 +15320,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "63 बिल्डिंग"
+          }
+        }
+      }
+    },
+    "|A Watch app records your day with wrist sensors" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watchアプリが手首のセンサーであなたの1日を記録します"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch App 通过手腕传感器记录你的一天"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch App 以手腕感測器記錄你的一天"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine Watch-App zeichnet deinen Tag mit Handgelenksensoren auf"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une app Watch enregistre votre journée avec les capteurs du poignet"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un'app Watch registra la tua giornata con i sensori del polso"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Una app de Watch registra tu día con los sensores de la muñeca"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Um app de Watch registra seu dia com os sensores do pulso"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ứng dụng Watch ghi lại ngày của bạn bằng cảm biến ở cổ tay"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ada app Watch yang mencatat hari Anda dengan sensor pergelangan tangan"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แอป Watch บันทึกวันของคุณด้วยเซนเซอร์ที่ข้อมือ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch ऐप कलाई के सेंसर से आपका दिन रिकॉर्ड करता है"
           }
         }
       }
@@ -25796,6 +26720,83 @@
         }
       }
     },
+    "|Connecting an Apple Watch adds {0} things. {1}" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Watchを接続すると{0}件が追加されます。{1}"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连接 Apple Watch 可增加{0}项功能。{1}"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "連接 Apple Watch 可增加 {0} 項功能。{1}"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit einer verbundenen Apple Watch kommen {0} Dinge dazu. {1}"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecter une Apple Watch ajoute {0} fonctions. {1}"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collegando un Apple Watch si aggiungono {0} funzioni. {1}"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al conectar un Apple Watch se añaden {0} cosas. {1}"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conectar um Apple Watch adiciona {0} itens. {1}"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kết nối Apple Watch sẽ thêm {0} tính năng. {1}"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menghubungkan Apple Watch menambah {0} hal. {1}"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "การเชื่อมต่อ Apple Watch จะเพิ่มความสามารถอีก {0} อย่าง {1}"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Watch जोड़ने से {0} चीज़ें जुड़ती हैं। {1}"
+          }
+        }
+      }
+    },
     "|Core sleep" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -33496,6 +34497,83 @@
         }
       }
     },
+    "|Fine-grained actions told apart by wrist movement, such as stairs, elevators, brushing teeth and typing. The iPhone alone distinguishes still, walking, running, cycling and driving." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "階段、エレベーター、歯みがき、タイピングなど、手首の動きで見分ける細かなアクション。iPhoneだけでは、静止、歩行、ランニング、サイクリング、運転を判別します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通过手腕动作区分的精细动作，例如上下楼梯、乘电梯、刷牙和打字。仅凭 iPhone 只能区分静止、步行、跑步、骑行和驾车。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "依手腕動作區分的細部動作，例如爬樓梯、搭電梯、刷牙和打字。單靠 iPhone 只能區分靜止、步行、跑步、騎自行車和開車。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Feine Aktionen, die an der Handgelenksbewegung erkannt werden, etwa Treppensteigen, Aufzug, Zähneputzen und Tippen. Das iPhone allein unterscheidet Stillstehen, Gehen, Laufen, Radfahren und Autofahren."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Actions fines distinguées par le mouvement du poignet, comme les escaliers, l'ascenseur, le brossage des dents et la frappe. L'iPhone seul distingue immobile, marche, course, vélo et conduite."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Azioni specifiche riconosciute dal movimento del polso, come scale, ascensori, lavarsi i denti e digitare. Il solo iPhone distingue fermo, camminata, corsa, ciclismo e guida."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Acciones detalladas distinguidas por el movimiento de la muñeca, como escaleras, ascensor, cepillarse los dientes y escribir. El iPhone solo distingue quieto, caminar, correr, ir en bici y conducir."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ações detalhadas distinguidas pelo movimento do pulso, como escadas, elevadores, escovar os dentes e digitar. O iPhone sozinho distingue parado, caminhando, correndo, pedalando e dirigindo."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Các hành động chi tiết được phân biệt qua chuyển động cổ tay, như leo cầu thang, đi thang máy, đánh răng và gõ phím. Riêng iPhone chỉ phân biệt được đứng yên, đi bộ, chạy, đạp xe và lái xe."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aksi terperinci yang dibedakan lewat gerakan pergelangan tangan, seperti tangga, lift, sikat gigi, dan mengetik. iPhone saja membedakan diam, jalan, lari, bersepeda, dan mengemudi."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "การกระทำย่อยที่แยกได้จากการเคลื่อนไหวของข้อมือ เช่น ขึ้นลงบันได ลิฟต์ แปรงฟัน และพิมพ์ดีด ส่วน iPhone เพียงเครื่องเดียวแยกได้เพียงอยู่นิ่ง เดิน วิ่ง ปั่นจักรยาน และขับรถ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कलाई की गति से पहचानी गई बारीक गतिविधियाँ, जैसे सीढ़ियाँ, लिफ़्ट, दाँत ब्रश करना और टाइपिंग। अकेला iPhone सिर्फ़ ठहरना, चलना, दौड़ना, साइकिल और ड्राइविंग अलग पहचानता है।"
+          }
+        }
+      }
+    },
     "|Fixed calendar events cannot be moved here." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -38270,6 +39348,83 @@
         }
       }
     },
+    "|Heart rate. The Watch is the only place the app can read heart rate." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "心拍数。心拍数を読み取れるのはWatchだけです。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "心率。Watch 是 App 唯一能读取心率的地方。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "心率。App 只能從 Watch 讀取心率。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Herzfrequenz. Nur die Watch kann die Herzfrequenz für die App erfassen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fréquence cardiaque. La Watch est le seul endroit où l'app peut la lire."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Battito cardiaco. Il Watch è l'unico posto da cui l'app può leggere il battito."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Frecuencia cardiaca. El Watch es el único lugar donde la app puede leer la frecuencia cardiaca."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Frequência cardíaca. O Watch é o único lugar de onde o app consegue ler a frequência cardíaca."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nhịp tim. Watch là nơi duy nhất ứng dụng có thể đọc nhịp tim."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Detak jantung. Watch adalah satu-satunya tempat app dapat membaca detak jantung."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "อัตราการเต้นของหัวใจ Watch เป็นอุปกรณ์เดียวที่แอปอ่านอัตราการเต้นของหัวใจได้"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "हृदय गति। ऐप सिर्फ़ Watch से ही हृदय गति पढ़ सकता है।"
+          }
+        }
+      }
+    },
     "|Heydar Aliyev Center" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -39964,6 +41119,83 @@
         }
       }
     },
+    "|In the Watch app on iPhone → My Watch → Available Apps → tap “Install” next to BOKKI Plan" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhoneのWatch App → マイウォッチ → 利用可能なApp → BOKKI Planの横の「インストール」をタップ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 iPhone 上的“Watch”App 中 → “我的手表” → “可用的 App” → 点按 BOKKI Plan 旁的“安装”"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 iPhone 的「Watch」App 中 →「我的手錶」→「可用的 App」→ 點一下 BOKKI Plan 旁的「安裝」"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In der Watch-App auf dem iPhone → Meine Watch → Verfügbare Apps → tippe bei BOKKI Plan auf „Installieren“"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dans l'app Watch de l'iPhone → Ma montre → Apps disponibles → touchez « Installer » à côté de BOKKI Plan"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nell'app Watch su iPhone → Il mio Watch → App disponibili → tocca “Installa” accanto a BOKKI Plan"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En la app Watch del iPhone → Mi Watch → Apps disponibles → toca “Instalar” junto a BOKKI Plan"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No app Watch do iPhone → Meu Watch → Apps Disponíveis → toque em “Instalar” ao lado de BOKKI Plan"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trong ứng dụng Watch trên iPhone → Apple Watch của tôi → Ứng dụng có sẵn → nhấn “Cài đặt” cạnh BOKKI Plan"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Di app Watch pada iPhone → Watch Saya → App Tersedia → ketuk “Pasang” di samping BOKKI Plan"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ในแอป Watch บน iPhone → Watch ของฉัน → แอปที่มี → แตะ “ติดตั้ง” ข้าง BOKKI Plan"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhone के Watch ऐप में → मेरी वॉच → उपलब्ध ऐप्स → BOKKI Plan के आगे “इंस्टॉल करें” दबाएँ"
+          }
+        }
+      }
+    },
     "|Incheon Bridge" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -40191,6 +41423,314 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "इंडिपेंडेंस हॉल"
+          }
+        }
+      }
+    },
+    "|Info" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "案内"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "说明"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "資訊"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Info"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Infos"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Info"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Información"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aviso"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thông tin"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Info"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ข้อมูล"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "जानकारी"
+          }
+        }
+      }
+    },
+    "|Install needed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "インストールが必要"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要安装"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要安裝"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installation nötig"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installation nécessaire"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installazione necessaria"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instalación necesaria"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instalação necessária"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cần cài đặt"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perlu dipasang"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ต้องติดตั้ง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "इंस्टॉल करना ज़रूरी"
+          }
+        }
+      }
+    },
+    "|Installed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "インストール済み"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已安装"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已安裝"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installiert"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installée"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installata"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instalada"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instalado"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã cài đặt"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terpasang"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ติดตั้งแล้ว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "इंस्टॉल है"
+          }
+        }
+      }
+    },
+    "|Installed on your Apple Watch and recording with wrist sensors" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Watchにインストール済みで、手首のセンサーで記録中"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已安装在你的 Apple Watch 上，并通过手腕传感器记录"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已安裝在你的 Apple Watch 上，並以手腕感測器記錄"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auf deiner Apple Watch installiert und zeichnet mit Handgelenksensoren auf"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installée sur votre Apple Watch et enregistre avec les capteurs du poignet"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installata su Apple Watch, registra con i sensori del polso"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instalada en tu Apple Watch y registra con los sensores de la muñeca"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instalado no seu Apple Watch e gravando com os sensores do pulso"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã cài trên Apple Watch và ghi bằng cảm biến ở cổ tay"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terpasang di Apple Watch dan merekam dengan sensor pergelangan tangan"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ติดตั้งบน Apple Watch และบันทึกด้วยเซนเซอร์ที่ข้อมือ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "आपकी Apple Watch पर इंस्टॉल है और कलाई के सेंसर से रिकॉर्ड कर रही है"
           }
         }
       }
@@ -48203,6 +49743,83 @@
         }
       }
     },
+    "|Not yet installed on your connected Apple Watch" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続中のApple Watchにまだインストールされていません"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已连接的 Apple Watch 上尚未安装"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "尚未安裝在你已連接的 Apple Watch 上"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auf deiner verbundenen Apple Watch noch nicht installiert"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pas encore installée sur l'Apple Watch connectée"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Non ancora installata sull'Apple Watch connesso"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aún no instalada en tu Apple Watch conectado"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ainda não instalado no Apple Watch conectado"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chưa cài trên Apple Watch đã kết nối của bạn"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belum terpasang di Apple Watch yang terhubung"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ยังไม่ได้ติดตั้งบน Apple Watch ที่เชื่อมต่ออยู่"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "आपकी जुड़ी Apple Watch पर अभी इंस्टॉल नहीं है"
+          }
+        }
+      }
+    },
     "|Notre-Dame de Paris" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -52900,6 +54517,83 @@
         }
       }
     },
+    "|Recording started right from your wrist, and follow-up questions." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "手首からそのまま記録を開始し、続けて質問もできます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "直接在手腕上开始录音，并可继续追问。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "直接從手腕開始錄音，以及後續提問。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aufnahme direkt vom Handgelenk starten, dazu Rückfragen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistrement lancé directement depuis votre poignet, et questions de suivi."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registrazione avviata direttamente dal polso e domande di approfondimento."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grabación iniciada directamente desde la muñeca, y preguntas de seguimiento."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gravação iniciada direto do pulso, e perguntas de acompanhamento."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bắt đầu ghi ngay từ cổ tay, kèm các câu hỏi tiếp theo."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perekaman dimulai langsung dari pergelangan tangan Anda, dan pertanyaan lanjutan."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เริ่มบันทึกได้จากข้อมือทันที และถามต่อได้"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कलाई से ही शुरू हुई रिकॉर्डिंग और फ़ॉलो-अप सवाल।"
+          }
+        }
+      }
+    },
     "|Red Fort" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -56827,6 +58521,83 @@
         }
       }
     },
+    "|Shown as connected when sensor or Health data arrives within the last 15 minutes." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "過去15分以内にセンサーまたはヘルスケアのデータが届くと、接続済みと表示されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近15分钟内收到传感器或健康数据时，显示为已连接。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近 15 分鐘內收到感測器或健康資料時，會顯示為已連接。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird als verbunden angezeigt, wenn in den letzten 15 Minuten Sensor- oder Health-Daten eingetroffen sind."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Affiché comme connecté lorsque des données de capteurs ou de Santé arrivent dans les 15 dernières minutes."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appare come connesso quando i dati dei sensori o di Salute arrivano negli ultimi 15 minuti."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se muestra como conectado cuando llegan datos de sensores o de Salud en los últimos 15 minutos."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aparece como conectado quando chegam dados de sensor ou do Saúde nos últimos 15 minutos."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hiển thị là đã kết nối khi có dữ liệu cảm biến hoặc Sức khỏe trong 15 phút gần nhất."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ditampilkan sebagai terhubung bila data sensor atau Kesehatan masuk dalam 15 menit terakhir."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แสดงว่าเชื่อมต่อแล้วเมื่อมีข้อมูลเซนเซอร์หรือข้อมูลสุขภาพเข้ามาใน 15 นาทีที่ผ่านมา"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "पिछले 15 मिनट में सेंसर या स्वास्थ्य डेटा आने पर जुड़ा हुआ दिखता है।"
+          }
+        }
+      }
+    },
     "|Shwedagon Pagoda" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -58906,6 +60677,83 @@
         }
       }
     },
+    "|Steps, distance and floors, telling walking, running, cycling and driving apart, places and routes, weather, app usage time, photos, calendar, and stays such as meetings, calls and work are still recorded on the iPhone alone." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "歩数、距離、階数、歩行・ランニング・サイクリング・運転の判別、場所とルート、天気、Appの使用時間、写真、カレンダー、会議・通話・仕事などの滞在は、引き続きiPhoneだけで記録されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "步数、距离和楼层，区分步行、跑步、骑行和驾车，地点和路线，天气，App 使用时长，照片，日历，以及会议、通话和工作等停留，仍可仅靠 iPhone 记录。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "步數、距離與樓層、區分步行／跑步／騎車／開車、地點與路線、天氣、App 使用時間、照片、行事曆，以及會議、通話和工作等停留，仍可單靠 iPhone 記錄。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schritte, Strecke und Etagen, die Unterscheidung von Gehen, Laufen, Radfahren und Autofahren, Orte und Routen, Wetter, App-Nutzungszeit, Fotos, Kalender und Aufenthalte wie Meetings, Anrufe und Arbeit werden weiterhin allein auf dem iPhone erfasst."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les pas, la distance et les étages, la distinction entre marche, course, vélo et conduite, les lieux et itinéraires, la météo, le temps d'utilisation des apps, les photos, le calendrier et les séjours comme réunions, appels et travail restent enregistrés sur l'iPhone seul."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passi, distanza e piani, distinzione tra camminata, corsa, ciclismo e guida, luoghi e percorsi, meteo, tempo di utilizzo delle app, foto, calendario e soste come riunioni, chiamate e lavoro vengono comunque registrati solo dall'iPhone."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Los pasos, la distancia y las plantas, la distinción entre caminar, correr, ir en bici y conducir, los lugares y rutas, el tiempo, el tiempo de uso de apps, las fotos, el calendario y las estancias como reuniones, llamadas y trabajo se siguen registrando solo con el iPhone."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passos, distância e andares, distinção entre caminhada, corrida, ciclismo e direção, lugares e rotas, clima, tempo de uso de apps, fotos, calendário e permanências como reuniões, ligações e trabalho continuam sendo registrados só pelo iPhone."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Số bước, quãng đường và số tầng, phân biệt đi bộ, chạy, đạp xe và lái xe, địa điểm và lộ trình, thời tiết, thời gian sử dụng ứng dụng, ảnh, lịch cùng các lần ở lại như họp, cuộc gọi và làm việc vẫn được ghi riêng trên iPhone."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Langkah, jarak, dan lantai, pembedaan jalan, lari, bersepeda, dan mengemudi, tempat dan rute, cuaca, durasi penggunaan app, foto, kalender, serta persinggahan seperti rapat, panggilan, dan kerja tetap dicatat di iPhone saja."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ก้าวเดิน ระยะทาง และชั้น การแยกการเดิน วิ่ง ปั่นจักรยาน และขับรถ สถานที่และเส้นทาง สภาพอากาศ เวลาการใช้งานแอป รูปภาพ ปฏิทิน และการอยู่ในที่ต่างๆ เช่น ประชุม โทร และทำงาน ยังบันทึกได้ด้วย iPhone เพียงเครื่องเดียว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कदम, दूरी और मंज़िलें, चलना-दौड़ना-साइकिल-ड्राइविंग का फ़र्क, जगहें और रूट, मौसम, ऐप उपयोग का समय, फ़ोटो, कैलेंडर, और मीटिंग, कॉल व काम जैसे ठहराव अकेले iPhone पर भी रिकॉर्ड होते हैं।"
+          }
+        }
+      }
+    },
     "|Stonehenge" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -60677,6 +62525,83 @@
         }
       }
     },
+    "|Telling “housework” apart. Time at home cannot be split into housework and rest." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「家事」の判別。自宅で過ごす時間を、家事と休憩に分けることはできません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "区分“家务”。在家的时间无法分为家务和休息。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "區分「做家事」。在家的時間無法分成做家事和休息。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "„Hausarbeit“ unterscheiden. Zeit zu Hause lässt sich nicht in Hausarbeit und Ausruhen aufteilen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Distinction des « tâches ménagères ». Le temps à la maison ne peut pas être séparé entre tâches ménagères et repos."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Riconoscere le “faccende di casa”. Il tempo a casa non si può dividere tra faccende e riposo."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Distinguir las “tareas del hogar”. El tiempo en casa no se puede dividir entre tareas del hogar y descanso."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Distinguir “tarefas domésticas”. O tempo em casa não pode ser separado entre tarefas domésticas e descanso."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phân biệt “việc nhà”. Thời gian ở nhà không thể tách thành việc nhà và nghỉ ngơi."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Membedakan “pekerjaan rumah”. Waktu di rumah tidak dapat dibagi menjadi pekerjaan rumah dan istirahat."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "การแยก “งานบ้าน” ออก เวลาที่อยู่บ้านแยกเป็นงานบ้านกับการพักผ่อนไม่ได้"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“घर का काम” पहचानना। घर में बिताए समय को घर का काम और आराम में बाँटा नहीं जा सकता।"
+          }
+        }
+      }
+    },
     "|Temple of Artemis" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -61751,6 +63676,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "द शार्ड"
+          }
+        }
+      }
+    },
+    "|The Watch app is installed but has no recent data" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watchアプリはインストール済みですが、最近のデータがありません"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已安装 Watch App，但没有近期数据"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch App 已安裝，但沒有近期資料"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Watch-App ist installiert, hat aber keine aktuellen Daten"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L'app Watch est installée mais n'a aucune donnée récente"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L'app Watch è installata ma non ha dati recenti"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La app de Watch está instalada pero no tiene datos recientes"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O app de Watch está instalado, mas sem dados recentes"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ứng dụng Watch đã cài nhưng chưa có dữ liệu gần đây"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App Watch terpasang tetapi belum ada data terbaru"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ติดตั้งแอป Watch แล้วแต่ไม่มีข้อมูลล่าสุด"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch ऐप इंस्टॉल है, पर हाल का कोई डेटा नहीं है"
           }
         }
       }
@@ -66529,6 +68531,83 @@
         }
       }
     },
+    "|Waiting for data" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "データを待っています"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "等待数据"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "等待資料"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Warte auf Daten"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En attente de données"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In attesa dei dati"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esperando datos"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aguardando dados"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đang chờ dữ liệu"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menunggu data"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "รอข้อมูล"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "डेटा का इंतज़ार है"
+          }
+        }
+      }
+    },
     "|Waiting to measure" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -67449,6 +69528,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Watch डिवाइस जाँच"
+          }
+        }
+      }
+    },
+    "|Watch workout records that confirm the mode of transport. It is estimated from GPS, barometer and steps instead." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移動手段を確認できるWatchのワークアウト記録。代わりにGPS、気圧計、歩数から推定します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可确认交通方式的 Watch 体能训练记录。现在改用 GPS、气压计和步数来估算。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可確認交通方式的 Watch 體能訓練記錄。目前改用 GPS、氣壓計和步數估算。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch-Workout-Einträge, die das Verkehrsmittel bestätigen. Stattdessen wird es aus GPS, Barometer und Schritten geschätzt."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Séances d'entraînement de la Watch confirmant le mode de transport. Il est estimé à partir du GPS, du baromètre et des pas."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registrazioni degli allenamenti del Watch che confermano il mezzo di trasporto. Viene invece stimato da GPS, barometro e passi."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registros de entrenamiento del Watch que confirman el medio de transporte. En su lugar, se estima con GPS, barómetro y pasos."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registros de treino do Watch que confirmam o meio de transporte. Em vez disso, ele é estimado por GPS, barômetro e passos."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bản ghi bài tập trên Watch xác nhận phương tiện di chuyển. Thay vào đó, phương tiện được ước tính từ GPS, phong vũ biểu và số bước."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catatan olahraga Watch yang memastikan moda transportasi. Moda diperkirakan dari GPS, barometer, dan langkah."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "บันทึกการออกกำลังกายบน Watch ที่ยืนยันรูปแบบการเดินทาง แต่จะประมาณจาก GPS เครื่องวัดความกดอากาศ และก้าวเดินแทน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "परिवहन का तरीका पक्का करने वाले Watch वर्कआउट रिकॉर्ड। इसके बजाय GPS, बैरोमीटर और कदमों से अनुमान लगाया जाता है।"
           }
         }
       }
@@ -70764,6 +72920,83 @@
         }
       }
     },
+    "‘집안일’ 구분. 집에 머문 시간을 집안일과 휴식으로 가르지 못합니다.|Telling “housework” apart. Time at home cannot be split into housework and rest." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「家事」の判別。自宅で過ごす時間を、家事と休憩に分けることはできません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "区分“家务”。在家的时间无法分为家务和休息。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "區分「做家事」。在家的時間無法分成做家事和休息。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "„Hausarbeit“ unterscheiden. Zeit zu Hause lässt sich nicht in Hausarbeit und Ausruhen aufteilen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Distinction des « tâches ménagères ». Le temps à la maison ne peut pas être séparé entre tâches ménagères et repos."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Riconoscere le “faccende di casa”. Il tempo a casa non si può dividere tra faccende e riposo."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Distinguir las “tareas del hogar”. El tiempo en casa no se puede dividir entre tareas del hogar y descanso."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Distinguir “tarefas domésticas”. O tempo em casa não pode ser separado entre tarefas domésticas e descanso."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phân biệt “việc nhà”. Thời gian ở nhà không thể tách thành việc nhà và nghỉ ngơi."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Membedakan “pekerjaan rumah”. Waktu di rumah tidak dapat dibagi menjadi pekerjaan rumah dan istirahat."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "การแยก “งานบ้าน” ออก เวลาที่อยู่บ้านแยกเป็นงานบ้านกับการพักผ่อนไม่ได้"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“घर का काम” पहचानना। घर में बिताए समय को घर का काम और आराम में बाँटा नहीं जा सकता।"
+          }
+        }
+      }
+    },
     "가까운 정류장 |Nearest stop " : {
       "extractionState" : "manual",
       "localizations" : {
@@ -71919,6 +74152,83 @@
         }
       }
     },
+    "건강 데이터 보내기|Send health data" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ヘルスケアデータの送信"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "发送健康数据"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "傳送健康資料"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health-Daten senden"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoyer les données Santé"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invia dati Salute"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviar datos de Salud"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviar dados do Saúde"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gửi dữ liệu Sức khỏe"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kirim data Kesehatan"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ส่งข้อมูลสุขภาพ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health डेटा भेजें"
+          }
+        }
+      }
+    },
     "건강 데이터 원본|Health source data" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -72454,6 +74764,237 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "स्वास्थ्य डेटा पढ़ा नहीं जा सका। {0}"
+          }
+        }
+      }
+    },
+    "건강 앱 · {0} 가져옴|Health · fetched {0}" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ヘルスケア · {0}に取得"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "健康 · {0} 已获取"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "健康 · {0} 已取得"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health · abgerufen {0}"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Santé · récupéré {0}"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salute · recuperato {0}"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salud · obtenido {0}"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saúde · obtido {0}"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sức khỏe · đã lấy {0}"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kesehatan · diambil {0}"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "สุขภาพ · ดึงข้อมูลเมื่อ {0}"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health · {0} को लिया गया"
+          }
+        }
+      }
+    },
+    "건강 앱 · 권한 필요|Health · permission needed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ヘルスケア · 権限が必要"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "健康 · 需要权限"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "健康 · 需要權限"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health · Berechtigung nötig"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Santé · autorisation requise"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salute · autorizzazione necessaria"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salud · permiso necesario"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saúde · permissão necessária"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sức khỏe · cần quyền"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kesehatan · perlu izin"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "สุขภาพ · ต้องขออนุญาต"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health · अनुमति चाहिए"
+          }
+        }
+      }
+    },
+    "건강 앱 · 연결됨|Health · connected" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ヘルスケア · 接続済み"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "健康 · 已连接"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "健康 · 已連接"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health · verbunden"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Santé · connecté"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salute · connesso"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salud · conectado"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saúde · conectado"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sức khỏe · đã kết nối"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kesehatan · terhubung"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "สุขภาพ · เชื่อมต่อแล้ว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health · कनेक्टेड"
           }
         }
       }
@@ -73844,6 +76385,83 @@
         }
       }
     },
+    "걸음·거리·층수, 걷기·달리기·자전거·자동차 구분, 장소와 이동 경로, 날씨, 앱 사용시간, 사진, 캘린더, 회의·통화·근무 같은 머문 자리 구분은 iPhone만으로 그대로 기록됩니다.|Steps, distance and floors, telling walking, running, cycling and driving apart, places and routes, weather, app usage time, photos, calendar, and stays such as meetings, calls and work are still recorded on the iPhone alone." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "歩数、距離、階数、歩行・ランニング・サイクリング・運転の判別、場所とルート、天気、Appの使用時間、写真、カレンダー、会議・通話・仕事などの滞在は、引き続きiPhoneだけで記録されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "步数、距离和楼层，区分步行、跑步、骑行和驾车，地点和路线，天气，App 使用时长，照片，日历，以及会议、通话和工作等停留，仍可仅靠 iPhone 记录。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "步數、距離與樓層、區分步行／跑步／騎車／開車、地點與路線、天氣、App 使用時間、照片、行事曆，以及會議、通話和工作等停留，仍可單靠 iPhone 記錄。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schritte, Strecke und Etagen, die Unterscheidung von Gehen, Laufen, Radfahren und Autofahren, Orte und Routen, Wetter, App-Nutzungszeit, Fotos, Kalender und Aufenthalte wie Meetings, Anrufe und Arbeit werden weiterhin allein auf dem iPhone erfasst."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les pas, la distance et les étages, la distinction entre marche, course, vélo et conduite, les lieux et itinéraires, la météo, le temps d'utilisation des apps, les photos, le calendrier et les séjours comme réunions, appels et travail restent enregistrés sur l'iPhone seul."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passi, distanza e piani, distinzione tra camminata, corsa, ciclismo e guida, luoghi e percorsi, meteo, tempo di utilizzo delle app, foto, calendario e soste come riunioni, chiamate e lavoro vengono comunque registrati solo dall'iPhone."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Los pasos, la distancia y las plantas, la distinción entre caminar, correr, ir en bici y conducir, los lugares y rutas, el tiempo, el tiempo de uso de apps, las fotos, el calendario y las estancias como reuniones, llamadas y trabajo se siguen registrando solo con el iPhone."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passos, distância e andares, distinção entre caminhada, corrida, ciclismo e direção, lugares e rotas, clima, tempo de uso de apps, fotos, calendário e permanências como reuniões, ligações e trabalho continuam sendo registrados só pelo iPhone."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Số bước, quãng đường và số tầng, phân biệt đi bộ, chạy, đạp xe và lái xe, địa điểm và lộ trình, thời tiết, thời gian sử dụng ứng dụng, ảnh, lịch cùng các lần ở lại như họp, cuộc gọi và làm việc vẫn được ghi riêng trên iPhone."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Langkah, jarak, dan lantai, pembedaan jalan, lari, bersepeda, dan mengemudi, tempat dan rute, cuaca, durasi penggunaan app, foto, kalender, serta persinggahan seperti rapat, panggilan, dan kerja tetap dicatat di iPhone saja."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ก้าวเดิน ระยะทาง และชั้น การแยกการเดิน วิ่ง ปั่นจักรยาน และขับรถ สถานที่และเส้นทาง สภาพอากาศ เวลาการใช้งานแอป รูปภาพ ปฏิทิน และการอยู่ในที่ต่างๆ เช่น ประชุม โทร และทำงาน ยังบันทึกได้ด้วย iPhone เพียงเครื่องเดียว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कदम, दूरी और मंज़िलें, चलना-दौड़ना-साइकिल-ड्राइविंग का फ़र्क, जगहें और रूट, मौसम, ऐप उपयोग का समय, फ़ोटो, कैलेंडर, और मीटिंग, कॉल व काम जैसे ठहराव अकेले iPhone पर भी रिकॉर्ड होते हैं।"
+          }
+        }
+      }
+    },
     "걸음걸이 카운터|Step counter" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -74687,6 +77305,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "रूट सहेजा नहीं जा सका। कृपया फिर कोशिश करें।"
+          }
+        }
+      }
+    },
+    "계단·엘리베이터·양치·타이핑처럼 손목 움직임으로 나뉘는 세부 행동. iPhone만으로는 정지·걷기·달리기·자전거·자동차까지 구분합니다.|Fine-grained actions told apart by wrist movement, such as stairs, elevators, brushing teeth and typing. The iPhone alone distinguishes still, walking, running, cycling and driving." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "階段、エレベーター、歯みがき、タイピングなど、手首の動きで見分ける細かなアクション。iPhoneだけでは、静止、歩行、ランニング、サイクリング、運転を判別します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通过手腕动作区分的精细动作，例如上下楼梯、乘电梯、刷牙和打字。仅凭 iPhone 只能区分静止、步行、跑步、骑行和驾车。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "依手腕動作區分的細部動作，例如爬樓梯、搭電梯、刷牙和打字。單靠 iPhone 只能區分靜止、步行、跑步、騎自行車和開車。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Feine Aktionen, die an der Handgelenksbewegung erkannt werden, etwa Treppensteigen, Aufzug, Zähneputzen und Tippen. Das iPhone allein unterscheidet Stillstehen, Gehen, Laufen, Radfahren und Autofahren."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Actions fines distinguées par le mouvement du poignet, comme les escaliers, l'ascenseur, le brossage des dents et la frappe. L'iPhone seul distingue immobile, marche, course, vélo et conduite."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Azioni specifiche riconosciute dal movimento del polso, come scale, ascensori, lavarsi i denti e digitare. Il solo iPhone distingue fermo, camminata, corsa, ciclismo e guida."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Acciones detalladas distinguidas por el movimiento de la muñeca, como escaleras, ascensor, cepillarse los dientes y escribir. El iPhone solo distingue quieto, caminar, correr, ir en bici y conducir."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ações detalhadas distinguidas pelo movimento do pulso, como escadas, elevadores, escovar os dentes e digitar. O iPhone sozinho distingue parado, caminhando, correndo, pedalando e dirigindo."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Các hành động chi tiết được phân biệt qua chuyển động cổ tay, như leo cầu thang, đi thang máy, đánh răng và gõ phím. Riêng iPhone chỉ phân biệt được đứng yên, đi bộ, chạy, đạp xe và lái xe."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aksi terperinci yang dibedakan lewat gerakan pergelangan tangan, seperti tangga, lift, sikat gigi, dan mengetik. iPhone saja membedakan diam, jalan, lari, bersepeda, dan mengemudi."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "การกระทำย่อยที่แยกได้จากการเคลื่อนไหวของข้อมือ เช่น ขึ้นลงบันได ลิฟต์ แปรงฟัน และพิมพ์ดีด ส่วน iPhone เพียงเครื่องเดียวแยกได้เพียงอยู่นิ่ง เดิน วิ่ง ปั่นจักรยาน และขับรถ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कलाई की गति से पहचानी गई बारीक गतिविधियाँ, जैसे सीढ़ियाँ, लिफ़्ट, दाँत ब्रश करना और टाइपिंग। अकेला iPhone सिर्फ़ ठहरना, चलना, दौड़ना, साइकिल और ड्राइविंग अलग पहचानता है।"
           }
         }
       }
@@ -83157,6 +85852,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "स्मूद वीडियो रेंडर करें"
+          }
+        }
+      }
+    },
+    "끔|Off" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "オフ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "關"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aus"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Désactivé"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Off"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Desactivado"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Desligado"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tắt"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mati"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ปิด"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "बंद"
           }
         }
       }
@@ -109803,6 +112575,83 @@
         }
       }
     },
+    "설치 필요|Install needed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "インストールが必要"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要安装"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要安裝"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installation nötig"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installation nécessaire"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installazione necessaria"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instalación necesaria"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instalação necessária"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cần cài đặt"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perlu dipasang"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ต้องติดตั้ง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "इंस्टॉल करना ज़रूरी"
+          }
+        }
+      }
+    },
     "설치가 확인됐습니다|Installation confirmed" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -109876,6 +112725,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "इंस्टॉलेशन की पुष्टि हुई"
+          }
+        }
+      }
+    },
+    "설치됨|Installed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "インストール済み"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已安装"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已安裝"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installiert"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installée"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installata"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instalada"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instalado"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã cài đặt"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terpasang"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ติดตั้งแล้ว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "इंस्टॉल है"
           }
         }
       }
@@ -111497,6 +114423,160 @@
         }
       }
     },
+    "손목 센서로 하루를 함께 적는 워치 앱이 있습니다|A Watch app records your day with wrist sensors" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watchアプリが手首のセンサーであなたの1日を記録します"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch App 通过手腕传感器记录你的一天"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch App 以手腕感測器記錄你的一天"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine Watch-App zeichnet deinen Tag mit Handgelenksensoren auf"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une app Watch enregistre votre journée avec les capteurs du poignet"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un'app Watch registra la tua giornata con i sensori del polso"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Una app de Watch registra tu día con los sensores de la muñeca"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Um app de Watch registra seu dia com os sensores do pulso"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ứng dụng Watch ghi lại ngày của bạn bằng cảm biến ở cổ tay"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ada app Watch yang mencatat hari Anda dengan sensor pergelangan tangan"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แอป Watch บันทึกวันของคุณด้วยเซนเซอร์ที่ข้อมือ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch ऐप कलाई के सेंसर से आपका दिन रिकॉर्ड करता है"
+          }
+        }
+      }
+    },
+    "손목에서 바로 시작하는 기록과 되묻기.|Recording started right from your wrist, and follow-up questions." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "手首からそのまま記録を開始し、続けて質問もできます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "直接在手腕上开始录音，并可继续追问。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "直接從手腕開始錄音，以及後續提問。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aufnahme direkt vom Handgelenk starten, dazu Rückfragen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistrement lancé directement depuis votre poignet, et questions de suivi."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registrazione avviata direttamente dal polso e domande di approfondimento."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grabación iniciada directamente desde la muñeca, y preguntas de seguimiento."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gravação iniciada direto do pulso, e perguntas de acompanhamento."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bắt đầu ghi ngay từ cổ tay, kèm các câu hỏi tiếp theo."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perekaman dimulai langsung dari pergelangan tangan Anda, dan pertanyaan lanjutan."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เริ่มบันทึกได้จากข้อมือทันที และถามต่อได้"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कलाई से ही शुरू हुई रिकॉर्डिंग और फ़ॉलो-अप सवाल।"
+          }
+        }
+      }
+    },
     "손목에서 보기|On your wrist" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -112263,6 +115343,160 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "नींद का समय"
+          }
+        }
+      }
+    },
+    "수신 대기 · {0}|Waiting · last {0}" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "受信待ち · 最終 {0}"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "等待数据 · 最后 {0}"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "等待資料 · 最後 {0}"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Warten · zuletzt {0}"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En attente · dernier {0}"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In attesa · ultimo {0}"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En espera · último {0}"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aguardando · último {0}"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đang chờ · lần cuối {0}"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menunggu · terakhir {0}"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "รอข้อมูล · ล่าสุด {0}"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "प्रतीक्षा · अंतिम {0}"
+          }
+        }
+      }
+    },
+    "수신 대기|Waiting for data" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "データを待っています"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "等待数据"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "等待資料"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Warte auf Daten"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En attente de données"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In attesa dei dati"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esperando datos"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aguardando dados"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đang chờ dữ liệu"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menunggu data"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "รอข้อมูล"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "डेटा का इंतज़ार है"
           }
         }
       }
@@ -115963,6 +119197,83 @@
         }
       }
     },
+    "심박수. 앱이 심박수를 읽을 수 있는 곳은 워치뿐입니다.|Heart rate. The Watch is the only place the app can read heart rate." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "心拍数。心拍数を読み取れるのはWatchだけです。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "心率。Watch 是 App 唯一能读取心率的地方。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "心率。App 只能從 Watch 讀取心率。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Herzfrequenz. Nur die Watch kann die Herzfrequenz für die App erfassen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fréquence cardiaque. La Watch est le seul endroit où l'app peut la lire."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Battito cardiaco. Il Watch è l'unico posto da cui l'app può leggere il battito."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Frecuencia cardiaca. El Watch es el único lugar donde la app puede leer la frecuencia cardiaca."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Frequência cardíaca. O Watch é o único lugar de onde o app consegue ler a frequência cardíaca."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nhịp tim. Watch là nơi duy nhất ứng dụng có thể đọc nhịp tim."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Detak jantung. Watch adalah satu-satunya tempat app dapat membaca detak jantung."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "อัตราการเต้นของหัวใจ Watch เป็นอุปกรณ์เดียวที่แอปอ่านอัตราการเต้นของหัวใจได้"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "हृदय गति। ऐप सिर्फ़ Watch से ही हृदय गति पढ़ सकता है।"
+          }
+        }
+      }
+    },
     "아래 막대의 달력에서 지난 날을 찾아 고릅니다.|Find and pick past days with Calendar in the bottom bar." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -117345,6 +120656,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "खोज का कोहरा"
+          }
+        }
+      }
+    },
+    "안내|Info" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "案内"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "说明"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "資訊"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Info"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Infos"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Info"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Información"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aviso"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thông tin"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Info"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ข้อมูล"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "जानकारी"
           }
         }
       }
@@ -120198,6 +123586,160 @@
         }
       }
     },
+    "언어 선택|Choose language" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "言語を選択"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择语言"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選擇語言"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sprache wählen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisir la langue"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scegli la lingua"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elegir idioma"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escolher idioma"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chọn ngôn ngữ"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pilih bahasa"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เลือกภาษา"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "भाषा चुनें"
+          }
+        }
+      }
+    },
+    "언어|Language" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "言語"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "语言"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "語言"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sprache"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Langue"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lingua"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Idioma"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Idioma"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ngôn ngữ"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bahasa"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ภาษา"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "भाषा"
+          }
+        }
+      }
+    },
     "언제든 건너뛸 수 있습니다. 메뉴 > 설정에서 다시 볼 수 있습니다.|Skip anytime. Watch it again in Menu > Settings." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -122046,6 +125588,83 @@
         }
       }
     },
+    "연결된 Apple Watch에 아직 설치되지 않았습니다|Not yet installed on your connected Apple Watch" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続中のApple Watchにまだインストールされていません"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已连接的 Apple Watch 上尚未安装"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "尚未安裝在你已連接的 Apple Watch 上"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auf deiner verbundenen Apple Watch noch nicht installiert"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pas encore installée sur l'Apple Watch connectée"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Non ancora installata sull'Apple Watch connesso"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aún no instalada en tu Apple Watch conectado"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ainda não instalado no Apple Watch conectado"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chưa cài trên Apple Watch đã kết nối của bạn"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belum terpasang di Apple Watch yang terhubung"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ยังไม่ได้ติดตั้งบน Apple Watch ที่เชื่อมต่ออยู่"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "आपकी जुड़ी Apple Watch पर अभी इंस्टॉल नहीं है"
+          }
+        }
+      }
+    },
     "연결된 땅 조각|Connected plot" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -122273,6 +125892,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "कोई आउटपुट जुड़ा नहीं है"
+          }
+        }
+      }
+    },
+    "연결됨 · {0} 수신|Connected · received {0}" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続済み · {0}に受信"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已连接 · {0} 收到"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已連接 · {0} 收到"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verbunden · empfangen {0}"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecté · reçu {0}"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connesso · ricevuto {0}"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conectado · recibido {0}"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conectado · recebido {0}"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã kết nối · nhận {0}"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terhubung · diterima {0}"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เชื่อมต่อแล้ว · รับเมื่อ {0}"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कनेक्टेड · {0} को मिला"
           }
         }
       }
@@ -122889,6 +126585,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "{0} इंटीग्रेशन उपयोग में"
+          }
+        }
+      }
+    },
+    "연동 꺼짐|Link off" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "連携オフ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "联动已关闭"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "連動已關閉"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verknüpfung aus"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Liaison désactivée"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collegamento disattivato"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enlace desactivado"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vínculo desligado"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã tắt liên kết"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tautan mati"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ปิดการเชื่อมโยง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "लिंक बंद"
           }
         }
       }
@@ -127821,6 +131594,83 @@
         }
       }
     },
+    "움직임 수집|Motion collection" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "動きの収集"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "运动数据收集"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "動作資料收集"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bewegungserfassung"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collecte des mouvements"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Raccolta movimenti"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recopilación de movimiento"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coleta de movimento"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thu thập chuyển động"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pengumpulan gerakan"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เก็บข้อมูลการเคลื่อนไหว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "गति संग्रह"
+          }
+        }
+      }
+    },
     "움직임|Motion" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -128048,6 +131898,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Watch ऐप इंस्टॉल करना ज़रूरी"
+          }
+        }
+      }
+    },
+    "워치 앱은 설치됐지만 최근 데이터가 없습니다|The Watch app is installed but has no recent data" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watchアプリはインストール済みですが、最近のデータがありません"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已安装 Watch App，但没有近期数据"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch App 已安裝，但沒有近期資料"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Watch-App ist installiert, hat aber keine aktuellen Daten"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L'app Watch est installée mais n'a aucune donnée récente"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L'app Watch è installata ma non ha dati recenti"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La app de Watch está instalada pero no tiene datos recientes"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O app de Watch está instalado, mas sem dados recentes"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ứng dụng Watch đã cài nhưng chưa có dữ liệu gần đây"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App Watch terpasang tetapi belum ada data terbaru"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ติดตั้งแอป Watch แล้วแต่ไม่มีข้อมูลล่าสุด"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch ऐप इंस्टॉल है, पर हाल का कोई डेटा नहीं है"
           }
         }
       }
@@ -135752,6 +139679,83 @@
         }
       }
     },
+    "이동수단을 확정해 주는 워치 운동 기록. 대신 GPS·기압·걸음으로 추정합니다.|Watch workout records that confirm the mode of transport. It is estimated from GPS, barometer and steps instead." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移動手段を確認できるWatchのワークアウト記録。代わりにGPS、気圧計、歩数から推定します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可确认交通方式的 Watch 体能训练记录。现在改用 GPS、气压计和步数来估算。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可確認交通方式的 Watch 體能訓練記錄。目前改用 GPS、氣壓計和步數估算。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch-Workout-Einträge, die das Verkehrsmittel bestätigen. Stattdessen wird es aus GPS, Barometer und Schritten geschätzt."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Séances d'entraînement de la Watch confirmant le mode de transport. Il est estimé à partir du GPS, du baromètre et des pas."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registrazioni degli allenamenti del Watch che confermano il mezzo di trasporto. Viene invece stimato da GPS, barometro e passi."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registros de entrenamiento del Watch que confirman el medio de transporte. En su lugar, se estima con GPS, barómetro y pasos."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registros de treino do Watch que confirmam o meio de transporte. Em vez disso, ele é estimado por GPS, barômetro e passos."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bản ghi bài tập trên Watch xác nhận phương tiện di chuyển. Thay vào đó, phương tiện được ước tính từ GPS, phong vũ biểu và số bước."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catatan olahraga Watch yang memastikan moda transportasi. Moda diperkirakan dari GPS, barometer, dan langkah."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "บันทึกการออกกำลังกายบน Watch ที่ยืนยันรูปแบบการเดินทาง แต่จะประมาณจาก GPS เครื่องวัดความกดอากาศ และก้าวเดินแทน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "परिवहन का तरीका पक्का करने वाले Watch वर्कआउट रिकॉर्ड। इसके बजाय GPS, बैरोमीटर और कदमों से अनुमान लगाया जाता है।"
+          }
+        }
+      }
+    },
     "이동시간|Travel" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -139213,6 +143217,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ऑटो"
+          }
+        }
+      }
+    },
+    "자동|Automatic" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatisch"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatique"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatico"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automático"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automático"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tự động"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otomatis"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "อัตโนมัติ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "स्वचालित"
           }
         }
       }
@@ -145454,6 +149535,83 @@
         }
       }
     },
+    "지금 가져오기|Import now" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今すぐ取り込む"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "立即导入"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "立即匯入"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jetzt importieren"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importer maintenant"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importa ora"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importar ahora"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importar agora"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nhập ngay"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impor sekarang"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "นำเข้าเดี๋ยวนี้"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "अभी इंपोर्ट करें"
+          }
+        }
+      }
+    },
     "지금 고른 클립과 같은 분류인 클립만 바꿉니다.|Only clips in the same category as the selected clip change." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -147914,6 +152072,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "मैप पर देर तक दबाया गया स्थान"
+          }
+        }
+      }
+    },
+    "지도에서 저장됨|Saved from the map" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "マップから保存"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已从地图保存"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已從地圖儲存"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Über die Karte gespeichert"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistré depuis la carte"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salvato dalla mappa"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardado desde el mapa"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salvo pelo mapa"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã lưu từ bản đồ"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Disimpan dari peta"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "บันทึกจากแผนที่แล้ว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "मैप से सहेजा गया"
           }
         }
       }
@@ -150613,6 +154848,83 @@
         }
       }
     },
+    "최근 15분 내 센서·건강 데이터 수신 시 연결됨으로 표시합니다.|Shown as connected when sensor or Health data arrives within the last 15 minutes." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "過去15分以内にセンサーまたはヘルスケアのデータが届くと、接続済みと表示されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近15分钟内收到传感器或健康数据时，显示为已连接。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近 15 分鐘內收到感測器或健康資料時，會顯示為已連接。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird als verbunden angezeigt, wenn in den letzten 15 Minuten Sensor- oder Health-Daten eingetroffen sind."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Affiché comme connecté lorsque des données de capteurs ou de Santé arrivent dans les 15 dernières minutes."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appare come connesso quando i dati dei sensori o di Salute arrivano negli ultimi 15 minuti."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se muestra como conectado cuando llegan datos de sensores o de Salud en los últimos 15 minutos."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aparece como conectado quando chegam dados de sensor ou do Saúde nos últimos 15 minutos."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hiển thị là đã kết nối khi có dữ liệu cảm biến hoặc Sức khỏe trong 15 phút gần nhất."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ditampilkan sebagai terhubung bila data sensor atau Kesehatan masuk dalam 15 menit terakhir."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แสดงว่าเชื่อมต่อแล้วเมื่อมีข้อมูลเซนเซอร์หรือข้อมูลสุขภาพเข้ามาใน 15 นาทีที่ผ่านมา"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "पिछले 15 मिनट में सेंसर या स्वास्थ्य डेटा आने पर जुड़ा हुआ दिखता है।"
+          }
+        }
+      }
+    },
     "최근 {0}개 달을 뺀 지난 달 중 백업을 다시 읽어 확인된 달만 이 기기에서 지웁니다. 지운 달은 백업 목록에서 다시 불러올 수 있습니다.|Past months older than the latest {0} are removed from this device only after their backup is read back and verified. You can restore them from the backup list." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -150994,6 +155306,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "नवीनतम {0} · {1}"
+          }
+        }
+      }
+    },
+    "최신 데이터 우선|Latest data first" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最新データ優先"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最新数据优先"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最新資料優先"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neueste Daten zuerst"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Données récentes d’abord"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prima i dati recenti"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Datos recientes primero"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dados recentes primeiro"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ưu tiên dữ liệu mới"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utamakan data terbaru"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ข้อมูลล่าสุดก่อน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "नवीनतम डेटा पहले"
           }
         }
       }

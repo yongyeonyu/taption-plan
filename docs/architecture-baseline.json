@@ -1,9 +1,9 @@
 {
-  "files": 393,
-  "lines": 185753,
+  "files": 396,
+  "lines": 185997,
   "buckets": {
-    "<500": 279,
-    "500-1000": 74,
+    "<500": 281,
+    "500-1000": 75,
     "1000-2000": 27,
     "2000-5000": 12,
     "5000+": 1
@@ -17,10 +17,10 @@
     "main_queue": 7
   },
   "size": {
-    "state_properties": 671,
+    "state_properties": 672,
     "observable_types": 10,
-    "view_types": 259,
-    "funcs": 6358,
+    "view_types": 260,
+    "funcs": 6371,
     "singleton_reach": 383
   },
   "metrics": {
@@ -30,7 +30,7 @@
   "frozen_files": {
     "Packages/TaptionPlanCore/Sources/TaptionPlanCore/DayStoreV3.swift": 2408,
     "TaptionPlan/Core/HealthKitImportCoordinator.swift": 1367,
-    "TaptionPlan/Core/PlanningEngine.swift": 2967,
+    "TaptionPlan/Core/PlanningEngine.swift": 2259,
     "TaptionPlan/Core/RecordSummaryEngine.swift": 2988,
     "TaptionPlan/Core/RouteTimelineData.swift": 3408,
     "TaptionPlan/Core/TaptionActivityEngineAdapter.swift": 1871,
@@ -46,7 +46,7 @@
     "TaptionPlan/UI/MapHomeVectorMap.swift": 1347,
     "TaptionPlan/UI/MapHomeView.swift": 11653,
     "TaptionPlan/UI/ReviewView+Clock.swift": 2165,
-    "TaptionPlan/UI/SettingsView.swift": 2200,
+    "TaptionPlan/UI/SettingsView.swift": 2151,
     "TaptionPlan/UI/TimelineBoard.swift": 3316,
     "TaptionPlan/UI/TimelineDetailPanel.swift": 3404,
     "TaptionPlanWatch/WatchConnectivityController.swift": 1623,
@@ -89,13 +89,6 @@
       "types": 33
     },
     {
-      "path": "TaptionPlan/Core/PlanningEngine.swift",
-      "lines": 2967,
-      "largest_type": "struct TimelineAggregationEngine",
-      "largest_type_lines": 318,
-      "types": 45
-    },
-    {
       "path": "TaptionPlan/UI/DetailViews.swift",
       "lines": 2900,
       "largest_type": "struct LocationTimelineView",
@@ -124,11 +117,11 @@
       "types": 10
     },
     {
-      "path": "TaptionPlan/UI/SettingsView.swift",
-      "lines": 2200,
-      "largest_type": "struct SettingsView",
-      "largest_type_lines": 1457,
-      "types": 10
+      "path": "TaptionPlan/Core/PlanningEngine.swift",
+      "lines": 2259,
+      "largest_type": "struct TimelineAggregationEngine",
+      "largest_type_lines": 318,
+      "types": 34
     },
     {
       "path": "TaptionPlan/UI/ReviewView+Clock.swift",
@@ -136,6 +129,13 @@
       "largest_type": "extension ReviewView",
       "largest_type_lines": 2162,
       "types": 1
+    },
+    {
+      "path": "TaptionPlan/UI/SettingsView.swift",
+      "lines": 2151,
+      "largest_type": "struct SettingsView",
+      "largest_type_lines": 1457,
+      "types": 10
     }
   ],
   "largest_types": [

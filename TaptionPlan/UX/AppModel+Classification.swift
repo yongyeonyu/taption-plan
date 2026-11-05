@@ -516,10 +516,9 @@ extension AppModel {
         let knownNames = knownPlaces.reduce(into: [String: String]()) {
             $0[$1.placeKey] = $1.displayName
         }
-        var detectedPlaces = PlaceDetectionEngine().detectStays(
-            readings: readings,
-            knownNames: knownNames
-        )
+        // 계산은 주 스레드 밖에서 한다(RFA1105A02). 저장은 아래에서 최신 snapshot에 한 번에 한다.
+        let readingsForDetection = readings
+        var detectedPlaces = await SensorStayDerivation.detect(readings: readingsForDetection, knownNames: knownNames)
         for index in detectedPlaces.indices
             where detectedPlaces[index].displayName == "자동 감지 장소" {
             guard !Task.isCancelled, acceptsDataMutation() else { return false }
@@ -534,107 +533,69 @@ extension AppModel {
         }
         guard !Task.isCancelled, acceptsDataMutation() else { return false }
 
-        detectedPlaces = FrequentPlaceResolutionEngine().applying(
-            settings.frequentPlaces,
-            to: detectedPlaces,
-            readings: readings
-        )
-
-        let floorTimeline = FloorTimelineEngine().apply(
-            readings: readings,
-            to: detectedPlaces,
-            knownPlaces: knownPlaces
-        )
-        let basePlaces = floorTimeline.places
-        let walkingLocations = WalkingLocationEngine()
-            .build(readings: readings)
-            .filter { walkingLocation in
-                !basePlaces.contains { place in
-                    guard let placePoint = place.point,
-                          let walkingPoint = walkingLocation.point,
-                          place.span.intersection(
-                              with: walkingLocation.span
-                          ) != nil else {
-                        return false
-                    }
-                    return distanceMeters(placePoint, walkingPoint) <= 100
-                }
-            }
-        let places = basePlaces + walkingLocations
-        let floors = floorTimeline.transitions
-        let gpsSegments = MovementRouteBuilder().build(
-            stays: basePlaces,
-            readings: readings,
-            healthEvidence: healthMovementEvidence,
-            userTransitLocations: settings.userTransitLocations,
-            registeredCarAudioNames: Set(settings.registeredCarAudioNames)
-        )
         let previousSubwaySegments = snapshot.travel.filter {
             $0.mode == .subway
                 && $0.span.intersection(with: span) != nil
         }
-        let inferredTravel = AppleDeviceGroundTruthEngine.mergingTravel(
-            gpsSegments: gpsSegments,
+        let stayInput = SensorStayDerivation.Input(
+            detectedPlaces: detectedPlaces,
+            readings: readings,
+            knownPlaces: knownPlaces,
+            frequentPlaces: settings.frequentPlaces,
+            healthMovementEvidence: healthMovementEvidence,
+            userTransitLocations: settings.userTransitLocations,
+            registeredCarAudioNames: Set(settings.registeredCarAudioNames),
             motionActivities: motionActivities,
             pedometer: pedometer,
-            healthEvidence: healthMovementEvidence,
-            readings: readings,
-            preservedSubwaySegments: previousSubwaySegments,
-            userTransitLocations: settings.userTransitLocations,
-            registeredCarAudioNames: Set(settings.registeredCarAudioNames)
+            previousSubwaySegments: previousSubwaySegments
         )
+        let stayOutput = await SensorStayDerivation.runInBackground(stayInput)
+        guard !Task.isCancelled, acceptsDataMutation() else { return false }
+        let basePlaces = stayOutput.basePlaces
+        let places = stayOutput.places
+        let floors = stayOutput.floors
+        let inferredTravel = stayOutput.inferredTravel
         guard let travelTimeline = try? await ClassifierAdapter.travelTimelineInBackground(readings: readings, in: span),
               !Task.isCancelled, acceptsDataMutation() else { return false }
-        let correctedTravel = AppleDeviceGroundTruthEngine.resolvingOverlaps(
-            AppleDeviceGroundTruthEngine.enforcingMotionFamily(
-                MovementCorrectionEngine.applying(
-                    snapshot.settings.movementCorrections,
-                    to: ClassifierAdapter.resolvingTravelModes(inferredTravel, timeline: travelTimeline),
-                    places: basePlaces,
-                    readings: readings
-                ),
-                activities: motionActivities,
-                readings: readings
-            )
+        let travelInput = SensorTravelDerivation.Input(
+            inferredTravel: inferredTravel,
+            timeline: travelTimeline,
+            basePlaces: basePlaces,
+            readings: readings,
+            motionActivities: motionActivities,
+            corrections: snapshot.settings.movementCorrections,
+            boardingDecisions: snapshot.settings.transitBoardingDecisions,
+            maximumGap: max(5 * 60, snapshot.settings.gpsLoggingPreferences.interval + 60),
+            registeredCarAudioNames: Set(settings.registeredCarAudioNames)
         )
-        let generatedTravel = AppleDeviceGroundTruthEngine.coalescingTravel(
-            TransitBoardingDecisionEngine.applying(
-                snapshot.settings.transitBoardingDecisions,
-                to: correctedTravel
-            ),
-            stays: basePlaces,
-            maximumGap: max(
-                5 * 60,
-                snapshot.settings.gpsLoggingPreferences.interval + 60
-            )
-        )
+        let generated = await SensorTravelDerivation.generatedInBackground(travelInput)
+        guard !Task.isCancelled, acceptsDataMutation() else { return false }
+        let generatedTravel = generated.travel
         let recentCarAudio = CarAudioTravelConfirmation.recentNames(
             from: generatedTravel, merging: snapshot.settings.recentCarAudioNames
         )
         if recentCarAudio != snapshot.settings.recentCarAudioNames {
             snapshot.settings.recentCarAudioNames = recentCarAudio
         }
-        let railJourneys = RailJourneyRecognizer.journeys(readings: readings)
-        let recognizedTravel = CarAudioTravelConfirmation.enforcingRegisteredCar(
-            SubwayAlighting.applying(
-                RailJourneyRecognizer.applying(
-                    railJourneys,
-                    to: ActivityClassificationLockEngine.mergingLockedTravel(
-                        existing: snapshot.travel,
-                        fresh: generatedTravel,
-                        inside: span
-                    ),
-                    corrections: snapshot.settings.movementCorrections
-                ),
-                readings: readings,
-                corrections: snapshot.settings.movementCorrections
-            ),
-            readings: readings,
-            registered: Set(settings.registeredCarAudioNames),
-            corrections: snapshot.settings.movementCorrections
+        // 잠근 이동은 사용자 값이다. 계산 뒤 최신 snapshot으로 합치고, 계산 중 바뀌면 그 자리에서 다시 한다.
+        var mergedTravel = ActivityClassificationLockEngine.mergingLockedTravel(
+            existing: snapshot.travel,
+            fresh: generatedTravel,
+            inside: span
         )
-        let travel = WalkingDistanceBreakdown.make(travel: recognizedTravel, readings: readings)
-            .annotating(recognizedTravel)
+        let revisionBeforeTravel = snapshotRevision
+        var travel = await SensorTravelDerivation.finishedInBackground(travelInput, merged: mergedTravel, railJourneys: generated.railJourneys)
+        guard !Task.isCancelled, acceptsDataMutation() else { return false }
+        if snapshotRevision != revisionBeforeTravel {
+            mergedTravel = ActivityClassificationLockEngine.mergingLockedTravel(
+                existing: snapshot.travel,
+                fresh: generatedTravel,
+                inside: span
+            )
+            var freshInput = travelInput
+            freshInput.corrections = snapshot.settings.movementCorrections
+            travel = SensorTravelDerivation.finished(freshInput, merged: mergedTravel, railJourneys: generated.railJourneys)
+        }
 
         // A photo location is only a fallback anchor. It must not erase a
         // previously recorded route when the sensor archive is temporarily
@@ -669,24 +630,27 @@ extension AppModel {
             fields: travelDiagnostics
         )
 
+        // 쓰기마다 didSet이 돌지 않게 모아서 한 번에 넣는다.
+        var nextSnapshot = snapshot
         if hasPrimaryLocationEvidence {
-            snapshot.travel.removeAll {
+            nextSnapshot.travel.removeAll {
                 $0.span.intersection(with: span) != nil
             }
-            snapshot.places.removeAll {
+            nextSnapshot.places.removeAll {
                 $0.span.intersection(with: span) != nil
             }
-            snapshot.floorTransitions.removeAll {
+            nextSnapshot.floorTransitions.removeAll {
                 $0.span.intersection(with: span) != nil
             }
-            snapshot.places.append(contentsOf: places)
-            snapshot.floorTransitions.append(contentsOf: floors)
-            snapshot.travel.append(contentsOf: SleepTravelReconciliationEngine
+            nextSnapshot.places.append(contentsOf: places)
+            nextSnapshot.floorTransitions.append(contentsOf: floors)
+            nextSnapshot.travel.append(contentsOf: SleepTravelReconciliationEngine
                 .removingAutomaticTravel(travel, sessions: sleepSessions, inside: span))
         }
-        snapshot.places.sort { $0.span.start < $1.span.start }
-        snapshot.travel.sort { $0.span.start < $1.span.start }
-        snapshot.floorTransitions.sort { $0.span.start < $1.span.start }
+        nextSnapshot.places.sort { $0.span.start < $1.span.start }
+        nextSnapshot.travel.sort { $0.span.start < $1.span.start }
+        nextSnapshot.floorTransitions.sort { $0.span.start < $1.span.start }
+        snapshot = nextSnapshot
 
         // 이번 갱신에서 만든 이동과 장소를 모두 확정한 다음에 정지 구간
         // 문맥을 붙인다. 예전 이동만 보고 있으면 "대기"를 찾을 수 없었다.
@@ -702,7 +666,7 @@ extension AppModel {
         )) else { return false }
         snapshot.actuals = RailJourneyRecognizer.retitling(
             snapshot.actuals,
-            subwaySpans: railJourneys.map(\.span),
+            subwaySpans: generated.railJourneys.map(\.span),
             activityCorrections: snapshot.settings.activityCorrections,
             asOf: span.end
         )

@@ -119,3 +119,39 @@ struct GoalRepeatRule: Identifiable, Codable, Hashable, Sendable {
         self.endMinuteOfDay = endMinuteOfDay
     }
 }
+
+enum GoalRecordPolicy {
+    static let currentPrefix = "루틴:"
+    static let legacyPrefix = "목표:"
+
+    static func isGoal(_ plan: PlanRecord) -> Bool {
+        guard plan.parentID == nil else { return false }
+        let title = plan.title.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        return title.hasPrefix(currentPrefix)
+            || title.hasPrefix(legacyPrefix)
+    }
+
+    static func displayTitle(_ raw: String) -> String {
+        let title = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        if title.hasPrefix(currentPrefix) {
+            return title
+        }
+        if title.hasPrefix(legacyPrefix) {
+            return currentPrefix + title.dropFirst(legacyPrefix.count)
+        }
+        return currentPrefix + title
+    }
+
+    static func visibleGoals(in plans: [PlanRecord]) -> [PlanRecord] {
+        plans
+            .filter { isGoal($0) && $0.status != .skipped }
+            .sorted { lhs, rhs in
+                if lhs.span.start == rhs.span.start {
+                    return lhs.createdAt < rhs.createdAt
+                }
+                return lhs.span.start < rhs.span.start
+            }
+    }
+}

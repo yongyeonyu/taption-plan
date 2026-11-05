@@ -602,7 +602,7 @@ struct MapHomeView: View {
             setMapPosition(.automatic)
             focusMapIfNeeded()
         }
-        .presentationDetents([.height(510)])
+        .presentationDetents([.large])
         .presentationDragIndicator(.visible)
     }
 

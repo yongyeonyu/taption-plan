@@ -802,3 +802,63 @@ enum TrackingSessionPolicy {
             && duration >= automaticStopStationaryDuration
     }
 }
+
+/// Combines overlapping measured intervals without changing the source records.
+/// Automatic sensors can emit the same activity from more than one device.
+enum ActualIntervalMergeEngine {
+    static func union(
+        _ spans: [TimeSpan],
+        mergeGap: TimeInterval = 1
+    ) -> [TimeSpan] {
+        let ordered = spans
+            .filter { $0.duration > 0 }
+            .sorted { $0.start < $1.start }
+        guard var current = ordered.first else { return [] }
+
+        var merged: [TimeSpan] = []
+        for span in ordered.dropFirst() {
+            if span.start <= current.end.addingTimeInterval(max(0, mergeGap)) {
+                current.end = max(current.end, span.end)
+            } else {
+                merged.append(current)
+                current = span
+            }
+        }
+        merged.append(current)
+        return merged
+    }
+
+    static func duration(
+        of spans: [TimeSpan],
+        mergeGap: TimeInterval = 1
+    ) -> TimeInterval {
+        union(spans, mergeGap: mergeGap).reduce(0) {
+            $0 + $1.duration
+        }
+    }
+
+    /// `span` 에서 `covered` 가 덮은 시간을 뺀 나머지 조각. 조각은 시작 시각
+    /// 순이고 서로 겹치지 않는다. `covered` 는 정렬돼 있지 않아도 된다.
+    static func subtracting(
+        _ covered: [TimeSpan],
+        from span: TimeSpan
+    ) -> [TimeSpan] {
+        guard span.duration > 0 else { return [] }
+        var remaining: [TimeSpan] = []
+        var cursor = span.start
+        for block in union(covered, mergeGap: 0)
+        where block.end > span.start && block.start < span.end {
+            if block.start > cursor {
+                remaining.append(
+                    TimeSpan(start: cursor, end: min(block.start, span.end))
+                )
+            }
+            cursor = max(cursor, block.end)
+            if cursor >= span.end { break }
+        }
+        if cursor < span.end {
+            remaining.append(TimeSpan(start: cursor, end: span.end))
+        }
+        return remaining.filter { $0.duration > 0 }
+    }
+}

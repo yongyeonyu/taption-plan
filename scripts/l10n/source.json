@@ -254,7 +254,7 @@
    "ko": "1시간 5분",
    "en": "1h 5m",
    "files": [
-    "FirstRunTutorialView.swift:778"
+    "FirstRunTutorialView.swift:764"
    ],
    "args": [],
    "targets": [
@@ -362,7 +362,7 @@
    "ko": "25분",
    "en": "25m",
    "files": [
-    "FirstRunTutorialView.swift:779"
+    "FirstRunTutorialView.swift:765"
    ],
    "args": [],
    "targets": [
@@ -398,7 +398,7 @@
    "ko": "3시간 12분",
    "en": "3h 12m",
    "files": [
-    "FirstRunTutorialView.swift:776"
+    "FirstRunTutorialView.swift:762"
    ],
    "args": [],
    "targets": [
@@ -410,7 +410,7 @@
    "ko": "42분",
    "en": "42m",
    "files": [
-    "FirstRunTutorialView.swift:777"
+    "FirstRunTutorialView.swift:763"
    ],
    "args": [],
    "targets": [
@@ -526,6 +526,18 @@
    ]
   },
   {
+   "key": "Apple Watch 데이터|Apple Watch data",
+   "ko": "Apple Watch 데이터",
+   "en": "Apple Watch data",
+   "files": [
+    "MapHomeAppleWatchMenuItem.swift:22"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "Apple Watch 미페어링|Apple Watch not paired",
    "ko": "Apple Watch 미페어링",
    "en": "Apple Watch not paired",
@@ -563,6 +575,18 @@
    ]
   },
   {
+   "key": "Apple Watch 연동|Apple Watch link",
+   "ko": "Apple Watch 연동",
+   "en": "Apple Watch link",
+   "files": [
+    "MapHomeAppleWatchMenuItem.swift:42"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "Apple Watch가 있나요?|Do you have an Apple Watch?",
    "ko": "Apple Watch가 있나요?",
    "en": "Do you have an Apple Watch?",
@@ -582,6 +606,33 @@
    "files": [
     "FirstRunTutorialGuides.swift:353",
     "FirstRunTutorialGuides.swift:353"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "Apple Watch를 연결하면 {0}가지가 더해집니다. {1}|Connecting an Apple Watch adds {0} things. {1}",
+   "ko": "Apple Watch를 연결하면 {0}가지가 더해집니다. {1}",
+   "en": "Connecting an Apple Watch adds {0} things. {1}",
+   "files": [
+    "AppleWatchMenuPolicy.swift:203"
+   ],
+   "args": [
+    "watchlessLimitations(preference: preference).count",
+    "iPhoneOnlyCoverage(preference: preference)"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "Apple Watch에 설치되어 손목 센서를 함께 기록합니다|Installed on your Apple Watch and recording with wrist sensors",
+   "ko": "Apple Watch에 설치되어 손목 센서를 함께 기록합니다",
+   "en": "Installed on your Apple Watch and recording with wrist sensors",
+   "files": [
+    "AppleWatchMenuPolicy.swift:243"
    ],
    "args": [],
    "targets": [
@@ -1006,12 +1057,86 @@
    ]
   },
   {
+   "key": "Watch 앱 · 설치 안 됨|Watch app · not installed",
+   "ko": "Watch 앱 · 설치 안 됨",
+   "en": "Watch app · not installed",
+   "files": [
+    "MapHomeAppleWatchMenuItem.swift:86"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "Watch 앱 · 설치됨 · {0}|Watch app · installed · {0}",
+   "ko": "Watch 앱 · 설치됨 · {0}",
+   "en": "Watch app · installed · {0}",
+   "files": [
+    "MapHomeAppleWatchMenuItem.swift:91"
+   ],
+   "args": [
+    "text"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "Watch 앱 · 설치됨 · 버전 확인 중|Watch app · installed · checking version",
+   "ko": "Watch 앱 · 설치됨 · 버전 확인 중",
+   "en": "Watch app · installed · checking version",
+   "files": [
+    "MapHomeAppleWatchMenuItem.swift:92"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "Watch 앱 다시 열기|Open Watch app again",
    "ko": "Watch 앱 다시 열기",
    "en": "Open Watch app again",
    "files": [
     "FirstRunTutorialGuides.swift:438",
     "FirstRunTutorialGuides.swift:438"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "Watch 앱 설치 필요|Install the Watch app",
+   "ko": "Watch 앱 설치 필요",
+   "en": "Install the Watch app",
+   "files": [
+    "MapHomeAppleWatchMenuItem.swift:166"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "Watch 앱 설치|Install Watch app",
+   "ko": "Watch 앱 설치",
+   "en": "Install Watch app",
+   "files": [
+    "MapHomeAppleWatchMenuItem.swift:87"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "Watch 앱 업데이트|Update Watch app",
+   "ko": "Watch 앱 업데이트",
+   "en": "Update Watch app",
+   "files": [
+    "MapHomeAppleWatchMenuItem.swift:94"
    ],
    "args": [],
    "targets": [
@@ -1460,6 +1585,18 @@
    "files": [
     "FirstRunTutorialGuides.swift:352",
     "FirstRunTutorialGuides.swift:352"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "iPhone의 Watch 앱 → 나의 시계 → 사용 가능한 앱 → BOKKI Plan에서 ‘설치’|In the Watch app on iPhone → My Watch → Available Apps → tap “Install” next to BOKKI Plan",
+   "ko": "iPhone의 Watch 앱 → 나의 시계 → 사용 가능한 앱 → BOKKI Plan에서 ‘설치’",
+   "en": "In the Watch app on iPhone → My Watch → Available Apps → tap “Install” next to BOKKI Plan",
+   "files": [
+    "AppleWatchMenuPolicy.swift:175"
    ],
    "args": [],
    "targets": [
@@ -2649,6 +2786,18 @@
    "en": "63 Building",
    "files": [
     "MapHomeHomeNames.swift:0"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "|A Watch app records your day with wrist sensors",
+   "ko": "손목 센서로 하루를 함께 적는 워치 앱이 있습니다",
+   "en": "A Watch app records your day with wrist sensors",
+   "files": [
+    "AppleWatchMenuPolicy.swift:194"
    ],
    "args": [],
    "targets": [
@@ -4495,6 +4644,21 @@
    ]
   },
   {
+   "key": "|Connecting an Apple Watch adds {0} things. {1}",
+   "ko": "Apple Watch를 연결하면 {0}가지가 더해집니다. {1}",
+   "en": "Connecting an Apple Watch adds {0} things. {1}",
+   "files": [
+    "AppleWatchMenuPolicy.swift:204"
+   ],
+   "args": [
+    "watchlessLimitations(preference: preference).count",
+    "iPhoneOnlyCoverage(preference: preference)"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "|Connecting to iPhone",
    "ko": "iPhone 연결 중",
    "en": "Connecting to iPhone",
@@ -5793,6 +5957,18 @@
    ]
   },
   {
+   "key": "|Fine-grained actions told apart by wrist movement, such as stairs, elevators, brushing teeth and typing. The iPhone alone distinguishes still, walking, running, cycling and driving.",
+   "ko": "계단·엘리베이터·양치·타이핑처럼 손목 움직임으로 나뉘는 세부 행동. iPhone만으로는 정지·걷기·달리기·자전거·자동차까지 구분합니다.",
+   "en": "Fine-grained actions told apart by wrist movement, such as stairs, elevators, brushing teeth and typing. The iPhone alone distinguishes still, walking, running, cycling and driving.",
+   "files": [
+    "AppleWatchMenuPolicy.swift:128"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "|Fixed calendar events cannot be moved here.",
    "ko": "캘린더의 고정 일정은 이곳에서 옮길 수 없습니다.",
    "en": "Fixed calendar events cannot be moved here.",
@@ -6496,7 +6672,7 @@
    "ko": "건강 연결",
    "en": "Health connected",
    "files": [
-    "AppModel+WatchHealth.swift:145"
+    "AppModel+WatchHealth.swift:148"
    ],
    "args": [],
    "targets": [
@@ -6532,7 +6708,7 @@
    "ko": "앱을 열면 건강 앱을 조회하고, Watch 앱은 저전력으로 움직임을 모아 보냅니다. Watch 상태에 따라 최신 데이터가 늦게 도착할 수 있습니다.",
    "en": "Health data is fetched when you open the app, and the Watch app sends motion data in low-power mode. The latest data may arrive late depending on the Watch.",
    "files": [
-    "AppModel+WatchHealth.swift:148"
+    "AppModel+WatchHealth.swift:151"
    ],
    "args": [],
    "targets": [
@@ -6545,6 +6721,18 @@
    "en": "Health source data",
    "files": [
     "AppModel+Backup.swift:415"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "|Heart rate. The Watch is the only place the app can read heart rate.",
+   "ko": "심박수. 앱이 심박수를 읽을 수 있는 곳은 워치뿐입니다.",
+   "en": "Heart rate. The Watch is the only place the app can read heart rate.",
+   "files": [
+    "AppleWatchMenuPolicy.swift:138"
    ],
    "args": [],
    "targets": [
@@ -6780,7 +6968,7 @@
    "ko": "건강 앱과 Watch 앱의 데이터를 가져옵니다",
    "en": "Imports data from the Health app and the Watch app",
    "files": [
-    "AppModel+WatchHealth.swift:141"
+    "AppModel+WatchHealth.swift:144"
    ],
    "args": [],
    "targets": [
@@ -6828,6 +7016,18 @@
    ]
   },
   {
+   "key": "|In the Watch app on iPhone → My Watch → Available Apps → tap “Install” next to BOKKI Plan",
+   "ko": "iPhone의 Watch 앱 → 나의 시계 → 사용 가능한 앱 → BOKKI Plan에서 ‘설치’",
+   "en": "In the Watch app on iPhone → My Watch → Available Apps → tap “Install” next to BOKKI Plan",
+   "files": [
+    "AppleWatchMenuPolicy.swift:176"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "|Incheon Bridge",
    "ko": "인천대교",
    "en": "Incheon Bridge",
@@ -6857,6 +7057,54 @@
    "en": "Independence Hall",
    "files": [
     "MapHomeHomeNames.swift:0"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "|Info",
+   "ko": "안내",
+   "en": "Info",
+   "files": [
+    "AppleWatchMenuPolicy.swift:199"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "|Install needed",
+   "ko": "설치 필요",
+   "en": "Install needed",
+   "files": [
+    "AppleWatchMenuPolicy.swift:217"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "|Installed",
+   "ko": "설치됨",
+   "en": "Installed",
+   "files": [
+    "AppleWatchMenuPolicy.swift:249"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "|Installed on your Apple Watch and recording with wrist sensors",
+   "ko": "Apple Watch에 설치되어 손목 센서를 함께 기록합니다",
+   "en": "Installed on your Apple Watch and recording with wrist sensors",
+   "files": [
+    "AppleWatchMenuPolicy.swift:244"
    ],
    "args": [],
    "targets": [
@@ -8144,6 +8392,18 @@
    ]
   },
   {
+   "key": "|Not yet installed on your connected Apple Watch",
+   "ko": "연결된 Apple Watch에 아직 설치되지 않았습니다",
+   "en": "Not yet installed on your connected Apple Watch",
+   "files": [
+    "AppleWatchMenuPolicy.swift:212"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "|Notre-Dame de Paris",
    "ko": "노트르담 대성당",
    "en": "Notre-Dame de Paris",
@@ -8504,7 +8764,7 @@
    "en": "Permission needed",
    "files": [
     "ScreenTimeUsageService.swift:50",
-    "AppModel+WatchHealth.swift:146",
+    "AppModel+WatchHealth.swift:149",
     "AppModelSupportTypes.swift:262"
    ],
    "args": [],
@@ -8900,6 +9160,18 @@
    "en": "Recording could not be prepared.",
    "files": [
     "VoiceMemoServices.swift:120"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "|Recording started right from your wrist, and follow-up questions.",
+   "ko": "손목에서 바로 시작하는 기록과 되묻기.",
+   "en": "Recording started right from your wrist, and follow-up questions.",
+   "files": [
+    "AppleWatchMenuPolicy.swift:148"
    ],
    "args": [],
    "targets": [
@@ -9541,6 +9813,18 @@
    ]
   },
   {
+   "key": "|Shown as connected when sensor or Health data arrives within the last 15 minutes.",
+   "ko": "최근 15분 내 센서·건강 데이터 수신 시 연결됨으로 표시합니다.",
+   "en": "Shown as connected when sensor or Health data arrives within the last 15 minutes.",
+   "files": [
+    "AppleWatchMenuPolicy.swift:236"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "|Shows your current activity, next plan, and today's record.",
    "ko": "지금 활동과 다음 일정, 오늘 기록을 표시합니다.",
    "en": "Shows your current activity, next plan, and today's record.",
@@ -9897,6 +10181,18 @@
    ]
   },
   {
+   "key": "|Steps, distance and floors, telling walking, running, cycling and driving apart, places and routes, weather, app usage time, photos, calendar, and stays such as meetings, calls and work are still recorded on the iPhone alone.",
+   "ko": "걸음·거리·층수, 걷기·달리기·자전거·자동차 구분, 장소와 이동 경로, 날씨, 앱 사용시간, 사진, 캘린더, 회의·통화·근무 같은 머문 자리 구분은 iPhone만으로 그대로 기록됩니다.",
+   "en": "Steps, distance and floors, telling walking, running, cycling and driving apart, places and routes, weather, app usage time, photos, calendar, and stays such as meetings, calls and work are still recorded on the iPhone alone.",
+   "files": [
+    "AppleWatchMenuPolicy.swift:162"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "|Stonehenge",
    "ko": "스톤헨지",
    "en": "Stonehenge",
@@ -10195,6 +10491,18 @@
    ]
   },
   {
+   "key": "|Telling “housework” apart. Time at home cannot be split into housework and rest.",
+   "ko": "‘집안일’ 구분. 집에 머문 시간을 집안일과 휴식으로 가르지 못합니다.",
+   "en": "Telling “housework” apart. Time at home cannot be split into housework and rest.",
+   "files": [
+    "AppleWatchMenuPolicy.swift:133"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "|Temple of Artemis",
    "ko": "에페소스 아르테미스 신전",
    "en": "Temple of Artemis",
@@ -10357,6 +10665,18 @@
    "en": "The Shard",
    "files": [
     "MapHomeHomeNames.swift:0"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "|The Watch app is installed but has no recent data",
+   "ko": "워치 앱은 설치됐지만 최근 데이터가 없습니다",
+   "en": "The Watch app is installed but has no recent data",
+   "files": [
+    "AppleWatchMenuPolicy.swift:226"
    ],
    "args": [],
    "targets": [
@@ -11128,6 +11448,18 @@
    ]
   },
   {
+   "key": "|Waiting for data",
+   "ko": "수신 대기",
+   "en": "Waiting for data",
+   "files": [
+    "AppleWatchMenuPolicy.swift:231"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "|Waiting to measure",
    "ko": "",
    "en": "Waiting to measure",
@@ -11275,6 +11607,18 @@
    "en": "Watch device check",
    "files": [
     "AppModel+Backup.swift:436"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "|Watch workout records that confirm the mode of transport. It is estimated from GPS, barometer and steps instead.",
+   "ko": "이동수단을 확정해 주는 워치 운동 기록. 대신 GPS·기압·걸음으로 추정합니다.",
+   "en": "Watch workout records that confirm the mode of transport. It is estimated from GPS, barometer and steps instead.",
+   "files": [
+    "AppleWatchMenuPolicy.swift:143"
    ],
    "args": [],
    "targets": [
@@ -11829,6 +12173,18 @@
    ]
   },
   {
+   "key": "‘집안일’ 구분. 집에 머문 시간을 집안일과 휴식으로 가르지 못합니다.|Telling “housework” apart. Time at home cannot be split into housework and rest.",
+   "ko": "‘집안일’ 구분. 집에 머문 시간을 집안일과 휴식으로 가르지 못합니다.",
+   "en": "Telling “housework” apart. Time at home cannot be split into housework and rest.",
+   "files": [
+    "AppleWatchMenuPolicy.swift:132"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "♥︎ 대기|♥︎ Waiting",
    "ko": "♥︎ 대기",
    "en": "♥︎ Waiting",
@@ -12025,6 +12381,18 @@
    ]
   },
   {
+   "key": "건강 데이터 보내기|Send health data",
+   "ko": "건강 데이터 보내기",
+   "en": "Send health data",
+   "files": [
+    "MapHomeAppleWatchMenuItem.swift:121"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "건강 데이터 원본|Health source data",
    "ko": "건강 데이터 원본",
    "en": "Health source data",
@@ -12113,11 +12481,49 @@
    ]
   },
   {
+   "key": "건강 앱 · {0} 가져옴|Health · fetched {0}",
+   "ko": "건강 앱 · {0} 가져옴",
+   "en": "Health · fetched {0}",
+   "files": [
+    "MapHomeAppleWatchMenuItem.swift:182"
+   ],
+   "args": [
+    "stamp"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "건강 앱 · 권한 필요|Health · permission needed",
+   "ko": "건강 앱 · 권한 필요",
+   "en": "Health · permission needed",
+   "files": [
+    "MapHomeAppleWatchMenuItem.swift:179"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "건강 앱 · 연결됨|Health · connected",
+   "ko": "건강 앱 · 연결됨",
+   "en": "Health · connected",
+   "files": [
+    "MapHomeAppleWatchMenuItem.swift:180"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "건강 앱과 Watch 앱의 데이터를 가져옵니다|Imports data from the Health app and the Watch app",
    "ko": "건강 앱과 Watch 앱의 데이터를 가져옵니다",
    "en": "Imports data from the Health app and the Watch app",
    "files": [
-    "AppModel+WatchHealth.swift:140"
+    "AppModel+WatchHealth.swift:143"
    ],
    "args": [],
    "targets": [
@@ -12141,7 +12547,7 @@
    "ko": "건강 연결",
    "en": "Health connected",
    "files": [
-    "AppModel+WatchHealth.swift:145"
+    "AppModel+WatchHealth.swift:148"
    ],
    "args": [],
    "targets": [
@@ -12339,6 +12745,18 @@
    ]
   },
   {
+   "key": "걸음·거리·층수, 걷기·달리기·자전거·자동차 구분, 장소와 이동 경로, 날씨, 앱 사용시간, 사진, 캘린더, 회의·통화·근무 같은 머문 자리 구분은 iPhone만으로 그대로 기록됩니다.|Steps, distance and floors, telling walking, running, cycling and driving apart, places and routes, weather, app usage time, photos, calendar, and stays such as meetings, calls and work are still recorded on the iPhone alone.",
+   "ko": "걸음·거리·층수, 걷기·달리기·자전거·자동차 구분, 장소와 이동 경로, 날씨, 앱 사용시간, 사진, 캘린더, 회의·통화·근무 같은 머문 자리 구분은 iPhone만으로 그대로 기록됩니다.",
+   "en": "Steps, distance and floors, telling walking, running, cycling and driving apart, places and routes, weather, app usage time, photos, calendar, and stays such as meetings, calls and work are still recorded on the iPhone alone.",
+   "files": [
+    "AppleWatchMenuPolicy.swift:161"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "걸음걸이 카운터|Step counter",
    "ko": "걸음걸이 카운터",
    "en": "Step counter",
@@ -12467,6 +12885,18 @@
    "en": "Could not save the route. Please try again.",
    "files": [
     "AppModel+MapEditing.swift:218"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "계단·엘리베이터·양치·타이핑처럼 손목 움직임으로 나뉘는 세부 행동. iPhone만으로는 정지·걷기·달리기·자전거·자동차까지 구분합니다.|Fine-grained actions told apart by wrist movement, such as stairs, elevators, brushing teeth and typing. The iPhone alone distinguishes still, walking, running, cycling and driving.",
+   "ko": "계단·엘리베이터·양치·타이핑처럼 손목 움직임으로 나뉘는 세부 행동. iPhone만으로는 정지·걷기·달리기·자전거·자동차까지 구분합니다.",
+   "en": "Fine-grained actions told apart by wrist movement, such as stairs, elevators, brushing teeth and typing. The iPhone alone distinguishes still, walking, running, cycling and driving.",
+   "files": [
+    "AppleWatchMenuPolicy.swift:127"
    ],
    "args": [],
    "targets": [
@@ -13152,7 +13582,7 @@
    "files": [
     "ScreenTimeUsageService.swift:49",
     "MapHomeView.swift:8093",
-    "AppModel+WatchHealth.swift:146"
+    "AppModel+WatchHealth.swift:149"
    ],
    "args": [],
    "targets": [
@@ -13215,7 +13645,8 @@
    "ko": "균형",
    "en": "Balanced",
    "files": [
-    "HealthAndSensorModels.swift:489"
+    "HealthAndSensorModels.swift:489",
+    "MapHomeAppleWatchMenuItem.swift:134"
    ],
    "args": [],
    "targets": [
@@ -13888,7 +14319,7 @@
    "ko": "끄면 비밀번호는 백업에만 쓰입니다.",
    "en": "When off, the password is used only for backups.",
    "files": [
-    "FirstRunTutorialView.swift:625"
+    "FirstRunTutorialView.swift:611"
    ],
    "args": [],
    "targets": [
@@ -13901,6 +14332,18 @@
    "en": "Render smooth video",
    "files": [
     "MapHomeScreenRecording.swift:636"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "끔|Off",
+   "ko": "끔",
+   "en": "Off",
+   "files": [
+    "MapHomeAppleWatchMenuItem.swift:132"
    ],
    "args": [],
    "targets": [
@@ -15081,7 +15524,7 @@
    "ko": "등록된 비밀번호가 있습니다",
    "en": "A password is already set",
    "files": [
-    "FirstRunTutorialView.swift:588"
+    "FirstRunTutorialView.swift:574"
    ],
    "args": [],
    "targets": [
@@ -16031,7 +16474,7 @@
    "ko": "바꾸지 않으면 그대로 씁니다.",
    "en": "It stays as is unless you change it.",
    "files": [
-    "FirstRunTutorialView.swift:590"
+    "FirstRunTutorialView.swift:576"
    ],
    "args": [],
    "targets": [
@@ -16043,7 +16486,7 @@
    "ko": "바꾸지 않으면 이 번호로 시작합니다.",
    "en": "This is used unless you change it.",
    "files": [
-    "FirstRunTutorialView.swift:602"
+    "FirstRunTutorialView.swift:588"
    ],
    "args": [],
    "targets": [
@@ -16274,7 +16717,8 @@
    "ko": "배터리 최소화",
    "en": "Battery saver",
    "files": [
-    "HealthAndSensorModels.swift:487"
+    "HealthAndSensorModels.swift:487",
+    "MapHomeAppleWatchMenuItem.swift:133"
    ],
    "args": [],
    "targets": [
@@ -17089,7 +17533,7 @@
    "ko": "비밀번호 확인",
    "en": "Confirm password",
    "files": [
-    "FirstRunTutorialView.swift:610",
+    "FirstRunTutorialView.swift:596",
     "MapHomeSettingsSheets.swift:281"
    ],
    "args": [],
@@ -17176,7 +17620,7 @@
    "ko": "비밀번호를 잊으면 백업을 복구할 수 없습니다. 예전 iCloud 백업은 그때 쓴 비밀번호로 열립니다.",
    "en": "Without the password, backups can't be restored. Older iCloud backups open with the password used then.",
    "files": [
-    "FirstRunTutorialView.swift:628"
+    "FirstRunTutorialView.swift:614"
    ],
    "args": [],
    "targets": [
@@ -17261,6 +17705,7 @@
    "en": "Unavailable",
    "files": [
     "FirstRunTutorialPolicy.swift:170",
+    "MapHomeAppleWatchMenuItem.swift:164",
     "AppModelSupportTypes.swift:268"
    ],
    "args": [],
@@ -17839,7 +18284,7 @@
    "ko": "새 비밀번호(6자리)",
    "en": "New password (6 digits)",
    "files": [
-    "FirstRunTutorialView.swift:607"
+    "FirstRunTutorialView.swift:593"
    ],
    "args": [],
    "targets": [
@@ -17851,7 +18296,7 @@
    "ko": "새 비밀번호",
    "en": "New password",
    "files": [
-    "FirstRunTutorialView.swift:609"
+    "FirstRunTutorialView.swift:595"
    ],
    "args": [],
    "targets": [
@@ -18292,12 +18737,36 @@
    ]
   },
   {
+   "key": "설치 필요|Install needed",
+   "ko": "설치 필요",
+   "en": "Install needed",
+   "files": [
+    "AppleWatchMenuPolicy.swift:216"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "설치가 확인됐습니다|Installation confirmed",
    "ko": "설치가 확인됐습니다",
    "en": "Installation confirmed",
    "files": [
     "FirstRunTutorialGuides.swift:447",
     "FirstRunTutorialGuides.swift:447"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "설치됨|Installed",
+   "ko": "설치됨",
+   "en": "Installed",
+   "files": [
+    "AppleWatchMenuPolicy.swift:248"
    ],
    "args": [],
    "targets": [
@@ -18641,6 +19110,30 @@
    ]
   },
   {
+   "key": "손목 센서로 하루를 함께 적는 워치 앱이 있습니다|A Watch app records your day with wrist sensors",
+   "ko": "손목 센서로 하루를 함께 적는 워치 앱이 있습니다",
+   "en": "A Watch app records your day with wrist sensors",
+   "files": [
+    "AppleWatchMenuPolicy.swift:193"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "손목에서 바로 시작하는 기록과 되묻기.|Recording started right from your wrist, and follow-up questions.",
+   "ko": "손목에서 바로 시작하는 기록과 되묻기.",
+   "en": "Recording started right from your wrist, and follow-up questions.",
+   "files": [
+    "AppleWatchMenuPolicy.swift:147"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "손목에서 보기|On your wrist",
    "ko": "손목에서 보기",
    "en": "On your wrist",
@@ -18761,6 +19254,33 @@
    "en": "Sleep",
    "files": [
     "MapHomeCalendarPolicies.swift:60"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "수신 대기 · {0}|Waiting · last {0}",
+   "ko": "수신 대기 · {0}",
+   "en": "Waiting · last {0}",
+   "files": [
+    "MapHomeAppleWatchMenuItem.swift:170"
+   ],
+   "args": [
+    "stamp"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "수신 대기|Waiting for data",
+   "ko": "수신 대기",
+   "en": "Waiting for data",
+   "files": [
+    "AppleWatchMenuPolicy.swift:230",
+    "MapHomeAppleWatchMenuItem.swift:168"
    ],
    "args": [],
    "targets": [
@@ -19413,6 +19933,18 @@
    ]
   },
   {
+   "key": "심박수. 앱이 심박수를 읽을 수 있는 곳은 워치뿐입니다.|Heart rate. The Watch is the only place the app can read heart rate.",
+   "ko": "심박수. 앱이 심박수를 읽을 수 있는 곳은 워치뿐입니다.",
+   "en": "Heart rate. The Watch is the only place the app can read heart rate.",
+   "files": [
+    "AppleWatchMenuPolicy.swift:137"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "아래 막대의 달력에서 지난 날을 찾아 고릅니다.|Find and pick past days with Calendar in the bottom bar.",
    "ko": "아래 막대의 달력에서 지난 날을 찾아 고릅니다.",
    "en": "Find and pick past days with Calendar in the bottom bar.",
@@ -19465,7 +19997,7 @@
    "ko": "아래에 적고 다음을 누르면 저장됩니다.",
    "en": "Enter one below and tap Next to save it.",
    "files": [
-    "FirstRunTutorialView.swift:594"
+    "FirstRunTutorialView.swift:580"
    ],
    "args": [],
    "targets": [
@@ -19575,7 +20107,7 @@
    "ko": "아직 비밀번호가 없습니다",
    "en": "No password yet",
    "files": [
-    "FirstRunTutorialView.swift:592"
+    "FirstRunTutorialView.swift:578"
    ],
    "args": [],
    "targets": [
@@ -19626,6 +20158,18 @@
    "en": "Fog of Exploration",
    "files": [
     "MapHomeView.swift:7613"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "안내|Info",
+   "ko": "안내",
+   "en": "Info",
+   "files": [
+    "AppleWatchMenuPolicy.swift:198"
    ],
    "args": [],
    "targets": [
@@ -19959,7 +20503,7 @@
    "ko": "앱을 열 때마다 잠금",
    "en": "Lock whenever the app opens",
    "files": [
-    "FirstRunTutorialView.swift:620",
+    "FirstRunTutorialView.swift:606",
     "MapHomeSettingsSheets.swift:303"
    ],
    "args": [],
@@ -19972,7 +20516,7 @@
    "ko": "앱을 열면 건강 앱을 조회하고, Watch 앱은 저전력으로 움직임을 모아 보냅니다. Watch 상태에 따라 최신 데이터가 늦게 도착할 수 있습니다.",
    "en": "Health data is fetched when you open the app, and the Watch app sends motion data in low-power mode. The latest data may arrive late depending on the Watch.",
    "files": [
-    "AppModel+WatchHealth.swift:147"
+    "AppModel+WatchHealth.swift:150"
    ],
    "args": [],
    "targets": [
@@ -20110,6 +20654,30 @@
    "targets": [
     "TaptionPlan",
     "TaptionPlanWidget"
+   ]
+  },
+  {
+   "key": "언어 선택|Choose language",
+   "ko": "언어 선택",
+   "en": "Choose language",
+   "files": [
+    "MapHomeLanguageMenuItem.swift:52"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "언어|Language",
+   "ko": "언어",
+   "en": "Language",
+   "files": [
+    "MapHomeLanguageMenuItem.swift:38"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
    ]
   },
   {
@@ -20435,6 +21003,18 @@
    ]
   },
   {
+   "key": "연결된 Apple Watch에 아직 설치되지 않았습니다|Not yet installed on your connected Apple Watch",
+   "ko": "연결된 Apple Watch에 아직 설치되지 않았습니다",
+   "en": "Not yet installed on your connected Apple Watch",
+   "files": [
+    "AppleWatchMenuPolicy.swift:211"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "연결된 땅 조각|Connected plot",
    "ko": "연결된 땅 조각",
    "en": "Connected plot",
@@ -20466,6 +21046,20 @@
     "MapHomeCarAudioSheet.swift:130"
    ],
    "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "연결됨 · {0} 수신|Connected · received {0}",
+   "ko": "연결됨 · {0} 수신",
+   "en": "Connected · received {0}",
+   "files": [
+    "MapHomeAppleWatchMenuItem.swift:174"
+   ],
+   "args": [
+    "stamp"
+   ],
    "targets": [
     "TaptionPlan"
    ]
@@ -20513,7 +21107,7 @@
    "files": [
     "FirstRunTutorialGuides.swift:609",
     "FirstRunTutorialGuides.swift:744",
-    "AppModelSupportTypes.swift:266"
+    "MapHomeAppleWatchMenuItem.swift:172"
    ],
    "args": [],
    "targets": [
@@ -20579,6 +21173,18 @@
    "args": [
     "enabled"
    ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "연동 꺼짐|Link off",
+   "ko": "연동 꺼짐",
+   "en": "Link off",
+   "files": [
+    "MapHomeAppleWatchMenuItem.swift:165"
+   ],
+   "args": [],
    "targets": [
     "TaptionPlan"
    ]
@@ -20662,7 +21268,7 @@
    "ko": "연봉 카운터",
    "en": "Salary counter",
    "files": [
-    "FirstRunTutorialView.swift:734",
+    "FirstRunTutorialView.swift:720",
     "MapHomeAlarm.swift:25",
     "MapHomeSalarySettingsSheet.swift:99"
    ],
@@ -20714,7 +21320,7 @@
    "ko": "연봉을 적으면 나타납니다",
    "en": "Appears once you enter a salary",
    "files": [
-    "FirstRunTutorialView.swift:736"
+    "FirstRunTutorialView.swift:722"
    ],
    "args": [],
    "targets": [
@@ -20911,7 +21517,7 @@
    "ko": "예시",
    "en": "Example",
    "files": [
-    "FirstRunTutorialView.swift:716"
+    "FirstRunTutorialView.swift:702"
    ],
    "args": [],
    "targets": [
@@ -21434,6 +22040,18 @@
    ]
   },
   {
+   "key": "움직임 수집|Motion collection",
+   "ko": "움직임 수집",
+   "en": "Motion collection",
+   "files": [
+    "MapHomeAppleWatchMenuItem.swift:109"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "움직임|Motion",
    "ko": "움직임",
    "en": "Motion",
@@ -21463,6 +22081,18 @@
    "en": "Watch app installation needed",
    "files": [
     "WatchConnectivitySupport.swift:32"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "워치 앱은 설치됐지만 최근 데이터가 없습니다|The Watch app is installed but has no recent data",
+   "ko": "워치 앱은 설치됐지만 최근 데이터가 없습니다",
+   "en": "The Watch app is installed but has no recent data",
+   "files": [
+    "AppleWatchMenuPolicy.swift:225"
    ],
    "args": [],
    "targets": [
@@ -21960,7 +22590,7 @@
    "ko": "위치를 찾지 못했습니다. 다른 이름으로 검색해 주세요.",
    "en": "Couldn't find it. Try another name.",
    "files": [
-    "FirstRunTutorialView.swift:490"
+    "FirstRunTutorialView.swift:498"
    ],
    "args": [],
    "targets": [
@@ -21972,7 +22602,7 @@
    "ko": "위치를 허용하면 현재 위치로도 저장할 수 있습니다.",
    "en": "Allow location to use your current position.",
    "files": [
-    "FirstRunTutorialView.swift:512"
+    "FirstRunTutorialView.swift:520"
    ],
    "args": [],
    "targets": [
@@ -22730,6 +23360,18 @@
    ]
   },
   {
+   "key": "이동수단을 확정해 주는 워치 운동 기록. 대신 GPS·기압·걸음으로 추정합니다.|Watch workout records that confirm the mode of transport. It is estimated from GPS, barometer and steps instead.",
+   "ko": "이동수단을 확정해 주는 워치 운동 기록. 대신 GPS·기압·걸음으로 추정합니다.",
+   "en": "Watch workout records that confirm the mode of transport. It is estimated from GPS, barometer and steps instead.",
+   "files": [
+    "AppleWatchMenuPolicy.swift:142"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "이동시간|Travel",
    "ko": "이동시간",
    "en": "Travel",
@@ -23313,6 +23955,18 @@
    ]
   },
   {
+   "key": "자동|Automatic",
+   "ko": "자동",
+   "en": "Automatic",
+   "files": [
+    "MapHomeLanguageMenuItem.swift:59"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "자동으로 붙이기|Place automatically",
    "ko": "자동으로 붙이기",
    "en": "Place automatically",
@@ -23743,8 +24397,8 @@
    "ko": "저장된 위치 삭제",
    "en": "Delete saved location",
    "files": [
-    "MapHomeSettingsSheets.swift:898",
-    "MapHomeSettingsSheets.swift:929"
+    "MapHomeSettingsSheets.swift:911",
+    "MapHomeSettingsSheets.swift:942"
    ],
    "args": [],
    "targets": [
@@ -23756,7 +24410,7 @@
    "ko": "저장된 위치를 삭제할까요?",
    "en": "Delete the saved location?",
    "files": [
-    "MapHomeSettingsSheets.swift:921"
+    "MapHomeSettingsSheets.swift:934"
    ],
    "args": [],
    "targets": [
@@ -23834,7 +24488,7 @@
    "en": "Floor to save",
    "files": [
     "MapHomeLocationSheets.swift:216",
-    "MapHomeSettingsSheets.swift:844",
+    "MapHomeSettingsSheets.swift:857",
     "MapHomeTransitSheets.swift:430"
    ],
    "args": [],
@@ -24260,7 +24914,7 @@
    "ko": "주소나 장소 이름 검색",
    "en": "Search address or place",
    "files": [
-    "FirstRunTutorialView.swift:454"
+    "FirstRunTutorialView.swift:462"
    ],
    "args": [],
    "targets": [
@@ -24337,6 +24991,18 @@
    "args": [
     "context.middleCategoryName"
    ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "지금 가져오기|Import now",
+   "ko": "지금 가져오기",
+   "en": "Import now",
+   "files": [
+    "MapHomeAppleWatchMenuItem.swift:60"
+   ],
+   "args": [],
    "targets": [
     "TaptionPlan"
    ]
@@ -24771,6 +25437,18 @@
    ]
   },
   {
+   "key": "지도에서 저장됨|Saved from the map",
+   "ko": "지도에서 저장됨",
+   "en": "Saved from the map",
+   "files": [
+    "FirstRunTutorialView.swift:454"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "지도에서 집 근처를 최대로 확대하면 이 땅이 집 주변에 그려지고, 점선 칸을 눌러 바로 이어 붙일 수 있어요.|Zoom all the way in near your home on the map to see this land and attach plots there.",
    "ko": "지도에서 집 근처를 최대로 확대하면 이 땅이 집 주변에 그려지고, 점선 칸을 눌러 바로 이어 붙일 수 있어요.",
    "en": "Zoom all the way in near your home on the map to see this land and attach plots there.",
@@ -25176,7 +25854,7 @@
    "ko": "초기 비밀번호",
    "en": "Default password",
    "files": [
-    "FirstRunTutorialView.swift:596"
+    "FirstRunTutorialView.swift:582"
    ],
    "args": [],
    "targets": [
@@ -25208,6 +25886,18 @@
    "args": [
     "DurationText.english(totalSeconds)"
    ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "최근 15분 내 센서·건강 데이터 수신 시 연결됨으로 표시합니다.|Shown as connected when sensor or Health data arrives within the last 15 minutes.",
+   "ko": "최근 15분 내 센서·건강 데이터 수신 시 연결됨으로 표시합니다.",
+   "en": "Shown as connected when sensor or Health data arrives within the last 15 minutes.",
+   "files": [
+    "AppleWatchMenuPolicy.swift:235"
+   ],
+   "args": [],
    "targets": [
     "TaptionPlan"
    ]
@@ -25300,6 +25990,18 @@
     "fileName",
     "savedText"
    ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "최신 데이터 우선|Latest data first",
+   "ko": "최신 데이터 우선",
+   "en": "Latest data first",
+   "files": [
+    "MapHomeAppleWatchMenuItem.swift:135"
+   ],
+   "args": [],
    "targets": [
     "TaptionPlan"
    ]
@@ -25561,7 +26263,7 @@
    "ko": "층수 저장",
    "en": "Save floor",
    "files": [
-    "MapHomeSettingsSheets.swift:860"
+    "MapHomeSettingsSheets.swift:873"
    ],
    "args": [],
    "targets": [
@@ -27069,7 +27771,7 @@
    "ko": "현재 위치로 다시 저장",
    "en": "Update current location",
    "files": [
-    "MapHomeSettingsSheets.swift:881"
+    "MapHomeSettingsSheets.swift:894"
    ],
    "args": [],
    "targets": [
@@ -27094,7 +27796,7 @@
    "ko": "현재 위치로 저장",
    "en": "Save current location",
    "files": [
-    "MapHomeSettingsSheets.swift:880"
+    "MapHomeSettingsSheets.swift:893"
    ],
    "args": [],
    "targets": [
@@ -27106,7 +27808,7 @@
    "ko": "현재 위치로 저장",
    "en": "Use current location",
    "files": [
-    "FirstRunTutorialView.swift:501"
+    "FirstRunTutorialView.swift:509"
    ],
    "args": [],
    "targets": [
@@ -27118,7 +27820,7 @@
    "ko": "현재 위치로 저장됨",
    "en": "Saved from current location",
    "files": [
-    "FirstRunTutorialView.swift:498"
+    "FirstRunTutorialView.swift:506"
    ],
    "args": [],
    "targets": [
@@ -27142,7 +27844,7 @@
    "ko": "현재 위치를 받는 중입니다. 검색으로도 저장할 수 있습니다.",
    "en": "Waiting for your location. You can also search.",
    "files": [
-    "FirstRunTutorialView.swift:511"
+    "FirstRunTutorialView.swift:519"
    ],
    "args": [],
    "targets": [
@@ -27154,7 +27856,7 @@
    "ko": "현재 위치를 받는 중입니다. 위치 기록이 잡히면 저장할 수 있습니다.",
    "en": "Waiting for location. Save becomes available when a location is recorded.",
    "files": [
-    "MapHomeSettingsSheets.swift:834"
+    "MapHomeSettingsSheets.swift:847"
    ],
    "args": [],
    "targets": [
@@ -27180,7 +27882,7 @@
    "ko": "현재 위치를 이 장소의 기준 위치로 저장합니다. 좌표는 화면에 표시하지 않습니다.",
    "en": "Save the current location as this place. Coordinates are not shown.",
    "files": [
-    "MapHomeSettingsSheets.swift:830"
+    "MapHomeSettingsSheets.swift:843"
    ],
    "args": [],
    "targets": [

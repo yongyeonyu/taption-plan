@@ -65,13 +65,16 @@ extension AppModel {
                 )
             )
             guard self.isSceneActive, !self.isAppLocked else { return }
+            // 튜토리얼이 권한을 물을 차례를 정한다. 먼저 물으면 건강 시트가 튜토리얼 뒤에서 멈추고
+            // 그동안 다른 권한 단추도 듣지 않는다(TUT1105A01, 273 로그에서 3분 24초).
+            let mayAsk = FirstRunTutorialStore().allowsUnaskedPermissionPrompts
             switch action {
             case .requestAuthorization:
-                await self.requestHealth()
+                if mayAsk { await self.requestHealth() }
             case .refresh:
                 do {
                     if try await self.healthService.authorizationRequestState() == .notDetermined {
-                        await self.requestHealth()
+                        if mayAsk { await self.requestHealth() }
                         return
                     }
                 } catch {

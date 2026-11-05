@@ -1,3 +1,4 @@
+import CoreLocation
 import UIKit
 import XCTest
 @testable import TaptionPlan
@@ -107,5 +108,15 @@ final class MapHomeWideLayoutPolicyTests: XCTestCase {
         XCTAssertTrue(MapHomeWideLayoutPolicy.menuUsesCompactRows(viewportSize: duoInner, kind: duoKind))
         XCTAssertFalse(MapHomeWideLayoutPolicy.menuUsesCompactRows(viewportSize: duoInner, kind: .standard))
         XCTAssertFalse(MapHomeWideLayoutPolicy.menuUsesCompactRows(viewportSize: CGSize(width: 1210, height: 834), kind: .columns(width: 680)))
+    }
+
+    func testPlacePinPolicyClampsZoomAndIgnoresJitter() {
+        XCTAssertEqual(MapHomePlacePinPolicy.zoom(20, by: 1), 20)
+        XCTAssertEqual(MapHomePlacePinPolicy.zoom(3, by: -1), 3)
+        XCTAssertEqual(MapHomePlacePinPolicy.zoom(15, by: 1), 16)
+        let saved = GeoPoint(latitude: 37.5, longitude: 127, altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5)
+        XCTAssertFalse(MapHomePlacePinPolicy.needsSave(saved: saved, center: CLLocationCoordinate2D(latitude: 37.5, longitude: 127)))
+        XCTAssertTrue(MapHomePlacePinPolicy.needsSave(saved: saved, center: CLLocationCoordinate2D(latitude: 37.501, longitude: 127)))
+        XCTAssertTrue(MapHomePlacePinPolicy.needsSave(saved: nil, center: CLLocationCoordinate2D(latitude: 37.5, longitude: 127)))
     }
 }

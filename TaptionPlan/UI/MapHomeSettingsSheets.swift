@@ -825,6 +825,19 @@ struct MapHomeLocationSheet: View {
                 Spacer()
             }
 
+            MapHomePlacePinPicker(
+                point: place?.point,
+                fallback: model.latestSensorReading?.point,
+                tint: destination.tint,
+                language: language,
+                height: nil
+            ) { coordinate in
+                guard let place else { return }
+                model.setFrequentPlaceLocation(place.id, latitude: coordinate.latitude, longitude: coordinate.longitude, floor: floor)
+                onSaved()
+                dismiss()
+            }
+
             Text(
                 hasCurrentLocation
                     ? language.text(

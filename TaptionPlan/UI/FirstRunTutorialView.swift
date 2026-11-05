@@ -443,8 +443,16 @@ private struct FirstRunPlacePicker: View {
                 }
             }
 
-            if let point = place?.point {
-                mapPreview(point)
+            MapHomePlacePinPicker(
+                point: place?.point,
+                fallback: currentPoint,
+                tint: Color.tpAccent,
+                language: language
+            ) { coordinate in
+                guard let place else { return }
+                model.setFrequentPlaceLocation(place.id, latitude: coordinate.latitude, longitude: coordinate.longitude)
+                savedName = language.text("지도에서 저장됨", "Saved from the map")
+                clearSearch()
             }
 
             HStack(spacing: 8) {
@@ -516,28 +524,6 @@ private struct FirstRunPlacePicker: View {
         }
         .padding(14)
         .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-    }
-
-    private func mapPreview(_ point: GeoPoint) -> some View {
-        let coordinate = CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude)
-        return Map(
-            position: .constant(.region(MKCoordinateRegion(
-                center: coordinate,
-                latitudinalMeters: 600,
-                longitudinalMeters: 600
-            ))),
-            interactionModes: []
-        ) {
-            Annotation("", coordinate: coordinate) {
-                Image(destination.iconAssetName)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 34, height: 34)
-            }
-        }
-        .frame(height: 120)
-        .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
-        .accessibilityHidden(true)
     }
 
     private func select(_ completion: MKLocalSearchCompletion) {
