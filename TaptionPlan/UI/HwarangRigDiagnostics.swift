@@ -20,6 +20,22 @@ enum HwarangDiagnostics {
         }
     }
 
+    /// Watch 위젯용 투명 그림 한 장. 위젯은 장면을 그릴 수 없어 미리 뽑아 자산으로 넣는다.
+    static func watchSprite(scene: HwarangScene, sec: Double, style: String) -> UIImage {
+        let size = CGSize(width: 156, height: 96)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = false
+        return UIGraphicsImageRenderer(size: size, format: format).image { renderer in
+            let context = renderer.cgContext
+            let k = size.height / 100
+            context.scaleBy(x: k, y: k)
+            context.translateBy(x: 14 + (size.width / k - 146) / 2, y: -12)
+            var painter = HwarangPainter(c: context, small: true, hatImage: nil, coat: .named(style))
+            painter.render(scene, sec: CGFloat(sec), facesLeft: false, showsBackdrop: false)
+        }
+    }
+
     static func scene(for pose: TaptionHwarangPose) -> HwarangScene {
         switch pose {
         case .deepSleep: .sleepBelly

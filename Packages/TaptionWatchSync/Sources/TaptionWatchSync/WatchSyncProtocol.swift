@@ -714,6 +714,8 @@ public struct TaptionWatchCurrentActivity: Codable, Hashable, Sendable {
     public var englishTitle: String
     /// 이 활동이 시작된 시각. 워치가 "지금 몇 분째"를 스스로 셀 수 있게 함께 보낸다.
     public var startedAt: Date
+    /// 상세 활동에 맞는 고양이 그림 이름. 예전 iPhone 빌드가 보낸 값에는 없다.
+    public var poseName: String? = nil
 
     public func title(for language: AppLanguagePreference.ResolvedLanguage) -> String {
         language == .korean ? koreanTitle : englishTitle
@@ -723,12 +725,14 @@ public struct TaptionWatchCurrentActivity: Codable, Hashable, Sendable {
         categoryID: String,
         koreanTitle: String,
         englishTitle: String,
-        startedAt: Date
+        startedAt: Date,
+        poseName: String? = nil
     ) {
         self.categoryID = categoryID
         self.koreanTitle = koreanTitle
         self.englishTitle = englishTitle
         self.startedAt = startedAt
+        self.poseName = poseName
     }
 }
 

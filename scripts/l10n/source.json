@@ -767,7 +767,7 @@
    "ko": "BOKKI 오늘",
    "en": "BOKKI Today",
    "files": [
-    "TaptionPlanWatchWidget.swift:107"
+    "TaptionPlanWatchWidget.swift:106"
    ],
    "args": [],
    "targets": [
@@ -1753,7 +1753,7 @@
    "en": "Was this {0}?",
    "files": [
     "ContentView.swift:112",
-    "TaptionPlanWatchWidget.swift:258"
+    "TaptionPlanWatchWidget.swift:364"
    ],
    "args": [
     "subject.behavior.localizedTitle(.english)"
@@ -2358,7 +2358,7 @@
    "files": [
     "ScreenTimeUsageService.swift:671",
     "WatchTodayCards.swift:21",
-    "TaptionPlanWatchWidget.swift:334"
+    "TaptionPlanWatchWidget.swift:440"
    ],
    "args": [
     "minutes / 60",
@@ -2437,7 +2437,7 @@
    "files": [
     "ScreenTimeUsageService.swift:670",
     "WatchTodayCards.swift:20",
-    "TaptionPlanWatchWidget.swift:333"
+    "TaptionPlanWatchWidget.swift:439"
    ],
    "args": [
     "minutes / 60"
@@ -3492,7 +3492,7 @@
    "ko": "BOKKI 오늘",
    "en": "BOKKI Today",
    "files": [
-    "TaptionPlanWatchWidget.swift:108"
+    "TaptionPlanWatchWidget.swift:107"
    ],
    "args": [],
    "targets": [
@@ -8324,7 +8324,7 @@
    "ko": "신제품 기획",
    "en": "New product planning",
    "files": [
-    "TaptionPlanWatchWidget.swift:349"
+    "TaptionPlanWatchWidget.swift:455"
    ],
    "args": [],
    "targets": [
@@ -8959,7 +8959,7 @@
    "ko": "프로젝트",
    "en": "Project",
    "files": [
-    "TaptionPlanWatchWidget.swift:358"
+    "TaptionPlanWatchWidget.swift:464"
    ],
    "args": [],
    "targets": [
@@ -9829,7 +9829,7 @@
    "ko": "지금 활동과 다음 일정, 오늘 기록을 표시합니다.",
    "en": "Shows your current activity, next plan, and today's record.",
    "files": [
-    "TaptionPlanWatchWidget.swift:114"
+    "TaptionPlanWatchWidget.swift:113"
    ],
    "args": [],
    "targets": [
@@ -13279,7 +13279,7 @@
    "ko": "과거 위치 {0}",
    "en": "Past location {0}",
    "files": [
-    "MapHomeView.swift:9892"
+    "MapHomeView.swift:9896"
    ],
    "args": [
     "time"
@@ -13950,7 +13950,7 @@
    "ko": "기록 꺼짐",
    "en": "Recording off",
    "files": [
-    "TaptionPlanWatchWidget.swift:269"
+    "TaptionPlanWatchWidget.swift:375"
    ],
    "args": [],
    "targets": [
@@ -19838,7 +19838,7 @@
    "ko": "신제품 기획",
    "en": "New product planning",
    "files": [
-    "TaptionPlanWatchWidget.swift:348"
+    "TaptionPlanWatchWidget.swift:454"
    ],
    "args": [],
    "targets": [
@@ -21505,7 +21505,7 @@
    "ko": "예상 경로 위치",
    "en": "Expected route location",
    "files": [
-    "MapHomeView.swift:9879"
+    "MapHomeView.swift:9883"
    ],
    "args": [],
    "targets": [
@@ -21544,8 +21544,7 @@
    "ko": "오늘 {0}",
    "en": "Today {0}",
    "files": [
-    "TaptionPlanWatchWidget.swift:207",
-    "TaptionPlanWatchWidget.swift:292"
+    "TaptionPlanWatchWidget.swift:398"
    ],
    "args": [
     "duration(summary.recordedMinutes)"
@@ -25098,7 +25097,7 @@
    "ko": "지금 활동과 다음 일정, 오늘 기록을 표시합니다.",
    "en": "Shows your current activity, next plan, and today's record.",
    "files": [
-    "TaptionPlanWatchWidget.swift:113"
+    "TaptionPlanWatchWidget.swift:112"
    ],
    "args": [],
    "targets": [
@@ -26216,7 +26215,7 @@
    "ko": "측정 대기",
    "en": "Waiting to measure",
    "files": [
-    "TaptionPlanWatchWidget.swift:270"
+    "TaptionPlanWatchWidget.swift:376"
    ],
    "args": [],
    "targets": [
@@ -26997,7 +26996,7 @@
    "ko": "프로젝트",
    "en": "Project",
    "files": [
-    "TaptionPlanWatchWidget.swift:357"
+    "TaptionPlanWatchWidget.swift:463"
    ],
    "args": [],
    "targets": [
@@ -27734,7 +27733,7 @@
    "files": [
     "MapHomeTransitSheets.swift:399",
     "MapHomeView.swift:7562",
-    "MapHomeView.swift:9882"
+    "MapHomeView.swift:9886"
    ],
    "args": [],
    "targets": [

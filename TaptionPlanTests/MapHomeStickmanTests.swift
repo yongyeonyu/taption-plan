@@ -68,6 +68,41 @@ final class MapHomeStickmanTests: XCTestCase {
         }
     }
 
+    func testRailCategoryDecidesActionWhileStaying() {
+        let eating = MapHomeTimeRailSegment(startMinute: 1_070, endMinute: 1_092, categoryID: "eating", title: "식사")
+        XCTAssertEqual(MapHomeStickmanActionResolver.railAction(segment: eating, details: []), .eating)
+        let work = MapHomeTimeRailSegment(startMinute: 600, endMinute: 700, categoryID: "work", title: "업무")
+        let meeting = MapHomeSectionDetail(id: UUID(), title: "회의", categoryID: "work", behavior: nil, startMinute: 610, endMinute: 650, provenance: nil)
+        XCTAssertEqual(MapHomeStickmanActionResolver.railAction(segment: work, details: [meeting]), MapHomeStickmanActionResolver.action(for: "work", label: "회의"))
+        let moving = MapHomeTimeRailSegment(startMinute: 0, endMinute: 10, categoryID: "movement", title: "걷기")
+        XCTAssertNil(MapHomeStickmanActionResolver.railAction(segment: moving, details: []))
+        XCTAssertNil(MapHomeStickmanActionResolver.railAction(segment: nil, details: []))
+    }
+
+    /// Watch 위젯 그림을 만든다. `TAPTION_WATCH_CATS=<폴더>`일 때만 돈다(WCH1105A03).
+    func testWriteWatchCatSpritesWhenRequested() throws {
+        guard let root = ProcessInfo.processInfo.environment["TAPTION_WATCH_CATS"], !root.isEmpty else {
+            throw XCTSkip("TAPTION_WATCH_CATS 없음")
+        }
+        let scenes: [(String, HwarangScene, Double)] = [
+            ("Work", .work, 1.8), ("Study", .study, 1.8), ("Sleep", .sleep, 2), ("Eat", .eat, 7),
+            ("Walk", .walkLoop, 1), ("Run", .runLoop, 1), ("Hobby", .yarn, 1.2), ("Rest", .restLoaf, 1),
+            ("Check", .confused, 1), ("WorkWalk", .walkLaptop, 1),
+        ]
+        let poses = TaptionHwarangPose.allCases.map { pose -> (String, HwarangScene, Double) in
+            let scene = HwarangDiagnostics.scene(for: pose)
+            return (pose.rawValue, scene, Double(scene.totalDuration) * 0.37)
+        }
+        try FileManager.default.createDirectory(atPath: root, withIntermediateDirectories: true)
+        for style in HwarangCoat.characters {
+            for (name, scene, sec) in scenes + poses {
+                let image = HwarangDiagnostics.watchSprite(scene: scene, sec: sec, style: style)
+                let file = URL(fileURLWithPath: root).appendingPathComponent("\(style)-\(name).png")
+                try XCTUnwrap(image.pngData()).write(to: file)
+            }
+        }
+    }
+
     /// 캐릭터 검토 시트(CHR1103A01). 화랑이·춘향이·윤복이를 같은 장면으로 나란히 그린다.
     func testWriteCharacterSheetWhenRequested() throws {
         guard let folder = ProcessInfo.processInfo.environment["TAPTION_CHARACTER_SHEET"], !folder.isEmpty else {

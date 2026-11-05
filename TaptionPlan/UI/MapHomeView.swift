@@ -9838,6 +9838,13 @@ struct MapHomeView: View {
         if let walking = timeRailSegments.first(where: { $0.walkSpans.contains { $0.contains(walkMinute) } }) {
             return walking.categoryID == "work" ? .workWalking : .walking
         }
+        // 대분류 줄이 정본이다. 식사·업무처럼 머무는 대분류면 근처 걸음 표본이나 다른 기록이 동작을 바꾸지 못한다.
+        if let action = MapHomeStickmanActionResolver.railAction(
+            segment: MapHomeTimeRailSegmentEngine.segment(at: walkMinute, in: timeRailSegments),
+            details: sectionDetails(at: walkMinute)
+        ) {
+            return action
+        }
         if let frame = wbsPlaybackFrame {
             switch frame.activity {
             case .movement:
@@ -9845,10 +9852,7 @@ struct MapHomeView: View {
                 return mode.map(MapHomeStickmanActionResolver.action(for:)) ?? .movement
             case .stay:
                 if let categoryID = frame.categoryID {
-                    return MapHomeStickmanActionResolver.action(
-                        for: categoryID,
-                        label: ""
-                    )
+                    return MapHomeStickmanActionResolver.action(for: categoryID, label: "")
                 }
             }
         }

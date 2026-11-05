@@ -101,7 +101,6 @@ private struct TaptionWatchStatusWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: TaptionWatchWidgetProvider()) {
             TaptionWatchWidgetView(entry: $0)
-                .containerBackground(.clear, for: .widget)
         }
         .configurationDisplayName(
             AppLanguagePreference.text(
@@ -123,8 +122,58 @@ private struct TaptionWatchStatusWidget: Widget {
     }
 }
 
+/// 시계 페이스의 고양이와 스마트 스택 배경색. 값 계산만 해서 시험할 수 있게 둔다.
+enum TaptionWatchFaceStyle {
+    static func catAssetName(style: String, categoryID: String, poseName: String? = nil) -> String {
+        let coat = switch style {
+        case "calico": "calico"
+        case "mackerel": "mackerel"
+        default: "white"
+        }
+        return "WatchCat-\(coat)-\(poseName ?? catAction(categoryID: categoryID))"
+    }
+
+    static func catAction(categoryID: String) -> String {
+        switch categoryID.split(separator: ".").first.map(String.init) ?? categoryID {
+        case "sleep": "Sleep"
+        case "eating": "Eat"
+        case "exercise": "Run"
+        case "movement": "Walk"
+        case "hobby": "Hobby"
+        case "work": "Work"
+        case "study": "Study"
+        case "unconfirmed": "Check"
+        default: "Rest"
+        }
+    }
+
+    static func background(categoryID: String) -> Color {
+        switch categoryID.split(separator: ".").first.map(String.init) ?? categoryID {
+        case "work": Color(red: 0.11, green: 0.23, blue: 0.43)
+        case "study": Color(red: 0.25, green: 0.17, blue: 0.43)
+        case "eating": Color(red: 0.48, green: 0.24, blue: 0.07)
+        case "sleep": Color(red: 0.15, green: 0.15, blue: 0.37)
+        case "movement": Color(red: 0.48, green: 0.29, blue: 0.07)
+        case "exercise": Color(red: 0.08, green: 0.33, blue: 0.18)
+        case "rest": Color(red: 0.18, green: 0.29, blue: 0.23)
+        case "hobby": Color(red: 0.42, green: 0.15, blue: 0.27)
+        default: Color(white: 0.17)
+        }
+    }
+
+    static func color(hex: String?) -> Color? {
+        guard let hex, let value = UInt32(hex.replacingOccurrences(of: "#", with: ""), radix: 16) else { return nil }
+        return Color(
+            red: Double((value >> 16) & 0xFF) / 255,
+            green: Double((value >> 8) & 0xFF) / 255,
+            blue: Double(value & 0xFF) / 255
+        )
+    }
+}
+
 private struct TaptionWatchWidgetView: View {
     @Environment(\.widgetFamily) private var family
+    @Environment(\.widgetRenderingMode) private var renderingMode
     let entry: TaptionWatchWidgetEntry
 
     /// 저장소 읽기와 JSON 디코딩을 뷰 본문 평가마다 반복하면 컴플리케이션의
@@ -182,36 +231,91 @@ private struct TaptionWatchWidgetView: View {
         .environment(\.locale, language.locale)
     }
 
+    /// 고른 고양이가 지금 활동을 한다. 단색 페이스에서도 그림 색을 지킨다.
+    private var catImage: some View {
+        Image(TaptionWatchFaceStyle.catAssetName(
+            style: resolvedPayload?.catStyle ?? "calico",
+            categoryID: currentCategoryID,
+            poseName: resolvedPayload?.currentActivity?.poseName
+        ))
+        .resizable()
+        .widgetAccentedRenderingMode(.fullColor)
+        .scaledToFit()
+        .accessibilityHidden(true)
+    }
+
     private var rectangularView: some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Label(activityTitle, systemImage: activitySymbolName)
-                .font(.headline)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-
-            if let alert {
-                Label(alert.title, systemImage: alert.symbolName)
-                    .font(.caption2.weight(.semibold))
-                    .lineLimit(1)
-            } else if let next = nextPlan {
-                HStack(spacing: 3) {
-                    Text(next.startsAt, style: .time)
-                        .monospacedDigit()
-                    Text(next.title)
+        HStack(spacing: 5) {
+            catImage
+                .frame(width: 44)
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(alignment: .firstTextBaseline, spacing: 3) {
+                    Text(activityTitle)
+                        .font(.headline)
                         .lineLimit(1)
-                        .privacySensitive()
+                        .minimumScaleFactor(0.7)
+                    Spacer(minLength: 0)
+                    if let elapsed = elapsedText {
+                        Text(elapsed)
+                            .font(.caption2.weight(.semibold).monospacedDigit())
+                            .lineLimit(1)
+                    }
                 }
-                .font(.caption2.weight(.semibold))
+                if let alert {
+                    Text(alert.title)
+                        .font(.caption2.weight(.semibold))
+                        .lineLimit(1)
+                } else if let next = nextPlan {
+                    HStack(spacing: 3) {
+                        Text(next.startsAt, style: .time)
+                            .fontWeight(.bold)
+                            .monospacedDigit()
+                        Text(next.title)
+                            .lineLimit(1)
+                            .privacySensitive()
+                    }
+                    .font(.caption2)
+                }
+                dayRibbon
+                    .frame(height: 5)
             }
-
-            Text(language.text("오늘 \(duration(summary.recordedMinutes))", "Today \(duration(summary.recordedMinutes))"))
-                .font(.caption2)
-                .lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .widgetAccentable()
+        .containerBackground(for: .widget) {
+            TaptionWatchFaceStyle.background(categoryID: currentCategoryID)
+        }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel)
+    }
+
+    /// 하루 24시간 중 기록된 시간을 분류 색으로 쌓는다. 순서가 아니라 분류별 합이다.
+    private var dayRibbon: some View {
+        GeometryReader { proxy in
+            ZStack(alignment: .leading) {
+                Capsule().fill(.white.opacity(0.2))
+                HStack(spacing: 0) {
+                    ForEach(summary.topCategories(limit: 5), id: \.categoryID) { category in
+                        Rectangle()
+                            .fill(renderingMode == .fullColor
+                                ? (TaptionWatchFaceStyle.color(hex: category.hex) ?? .white)
+                                : .white)
+                            .frame(width: proxy.size.width * CGFloat(category.minutes) / 1_440)
+                    }
+                }
+                .clipShape(Capsule())
+            }
+        }
+    }
+
+    private var currentCategoryID: String {
+        resolvedPayload?.currentActivity?.categoryID ?? "unconfirmed"
+    }
+
+    private var elapsedText: String? {
+        resolvedPayload?.currentActivity.map {
+            duration(Int(max(0, playbackDate.timeIntervalSince($0.startedAt)) / 60))
+        }
     }
 
     /// 오늘 지나간 시간 중 기록된 비율.
@@ -226,6 +330,7 @@ private struct TaptionWatchWidgetView: View {
         .gaugeStyle(.accessoryCircularCapacity)
         .widgetAccentable()
         .accessibilityLabel(accessibilityLabel)
+        .containerBackground(.clear, for: .widget)
     }
 
     private var inlineView: some View {
@@ -235,6 +340,7 @@ private struct TaptionWatchWidgetView: View {
             Image(systemName: alert?.symbolName ?? activitySymbolName)
         }
         .accessibilityLabel(accessibilityLabel)
+        .containerBackground(.clear, for: .widget)
     }
 
     // MARK: - 값

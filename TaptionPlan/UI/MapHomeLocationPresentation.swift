@@ -613,6 +613,17 @@ enum MapHomeStickmanActionResolver {
         return title == "수면" || title == "sleep"
     }
 
+    /// 그 시각 대분류와 상세 활동으로 정한 동작. 이동·미확인은 위치·센서 판정에 맡긴다.
+    static func railAction(
+        segment: MapHomeTimeRailSegment?,
+        details: [MapHomeSectionDetail]
+    ) -> MapHomeStickmanAction? {
+        guard let segment, !["movement", "activity", "unconfirmed"].contains(segment.categoryID) else { return nil }
+        // 가장 짧은 상세가 가장 구체적이다.
+        let detail = details.min { ($0.endMinute - $0.startMinute) < ($1.endMinute - $1.startMinute) }
+        return action(for: segment.categoryID, label: detail?.title ?? "")
+    }
+
     static func action(for mode: TravelMode) -> MapHomeStickmanAction {
         switch mode {
         case .walking: .walking

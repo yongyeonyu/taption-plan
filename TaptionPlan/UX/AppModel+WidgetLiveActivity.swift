@@ -704,16 +704,33 @@ extension AppModel {
     private func watchCurrentActivity(now: Date) -> TaptionWatchCurrentActivity? {
         let projection = currentLiveActivityProjection(at: now)
         guard projection.categoryID != "unconfirmed" else { return nil }
+        // 장소 → 대분류 → 상세 순서. 등록 지점 안에서 걸으면 그 곳의 대분류다.
+        let placeCategory = watchPlaceCategoryForWalking(title: projection.title, categoryID: projection.categoryID, at: now)
+        let categoryID = placeCategory ?? projection.categoryID
         let action = TaptionLiveActivityStickmanAction.resolve(
-            categoryID: projection.categoryID,
-            title: projection.title
+            categoryID: categoryID,
+            title: placeCategory == nil ? projection.title : ""
         )
+        let poseName = placeCategory == "work"
+            ? "WorkWalk"
+            : TaptionHwarangPose.resolve(categoryID: categoryID, title: projection.title)?.rawValue
         return TaptionWatchCurrentActivity(
-            categoryID: projection.categoryID,
+            categoryID: categoryID,
             koreanTitle: action.koreanTitle,
             englishTitle: action.englishTitle,
-            startedAt: projection.startedAt
+            startedAt: projection.startedAt,
+            poseName: poseName
         )
+    }
+
+    private func watchPlaceCategoryForWalking(title: String, categoryID: String, at date: Date) -> String? {
+        let probe = MapHomeTimeRailSegment(startMinute: 0, endMinute: 1, categoryID: categoryID, title: title)
+        guard MapHomePlaceFirstPolicy.isWalking(probe) else { return nil }
+        let kinds = settings.frequentPlaces.reduce(into: [String: FrequentPlaceKind]()) { $0[$1.stablePlaceKey] = $1.kind }
+        return snapshot.places
+            .first { $0.span.start <= date && date <= $0.span.end }
+            .flatMap { kinds[$0.placeKey] }
+            .flatMap(MapHomePlaceFirstPolicy.categoryID(for:))
     }
 
     /// payload가 바뀌었을 때만 불린다. 잇따른 변경을 0.3초 묶어 모든 위젯을 한 번만 다시 읽힌다
