@@ -2617,6 +2617,32 @@ final class WatchWorkoutDataIsolationTests: XCTestCase {
 
 /// 시뮬레이터에는 페어링된 워치가 없어 `WCSession`으로는 세 상태를 만들 수
 /// 없다. 상태 판단을 값 계산으로 떼어 두었으므로 여기서 그대로 확인한다.
+final class AppleWatchMenuStatusTests: XCTestCase {
+    private let date = Date(timeIntervalSince1970: 1_000)
+
+    func testStatusSeparatesInstallWaitingAndConnected() {
+        XCTAssertEqual(AppleWatchMenuStatus.make(state: .unsupported, linkEnabled: true, lastDataAt: date), .unavailable)
+        XCTAssertEqual(AppleWatchMenuStatus.make(state: .notPaired, linkEnabled: false, lastDataAt: nil), .unavailable)
+        XCTAssertEqual(AppleWatchMenuStatus.make(state: .appNotInstalled, linkEnabled: true, lastDataAt: nil), .installNeeded)
+        XCTAssertEqual(AppleWatchMenuStatus.make(state: .noRecentData, linkEnabled: true, lastDataAt: date), .waiting(lastData: date))
+        XCTAssertEqual(AppleWatchMenuStatus.make(state: .background, linkEnabled: true, lastDataAt: date), .connected(lastData: date))
+        XCTAssertEqual(AppleWatchMenuStatus.make(state: .reachable, linkEnabled: true, lastDataAt: nil), .connected(lastData: nil))
+    }
+
+    func testLinkOffWinsOverConnection() {
+        XCTAssertEqual(AppleWatchMenuStatus.make(state: .reachable, linkEnabled: false, lastDataAt: date), .linkOff)
+    }
+
+    func testLinkDefaultsOnAndFollowsSavedValue() throws {
+        let name = "AppleWatchMenuStatusTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        XCTAssertTrue(AppleWatchLink.isEnabled(defaults: defaults))
+        defaults.set(false, forKey: AppleWatchLink.enabledKey)
+        XCTAssertFalse(AppleWatchLink.isEnabled(defaults: defaults))
+    }
+}
+
 final class AppleWatchOnboardingTests: XCTestCase {
     private func prompt(
         _ state: AppleWatchConnectionState,

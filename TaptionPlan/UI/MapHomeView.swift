@@ -122,14 +122,14 @@ struct MapHomeView: View {
     @State private var isMapAttributionPresented = false
     @State private var isAlarmSettingsPresented = false
     @State private var pendingAlarm: (kind: MapHomeAlarmKind, at: Date)?
-    @AppStorage("appleWatchLinkEnabled") private var isAppleWatchLinkEnabled = true
+    @AppStorage(AppleWatchLink.enabledKey) private var isAppleWatchLinkEnabled = true
     @State private var isDailyCardPresented = false
     /// 땅은 벡터 지도에서만 그려져서, 붙일 타일이 있고 집 근처로 확대하면 벡터 스타일로 자동 전환했다가 끝나면 되돌린다.
     @AppStorage("mapHomeAutoLandStyle") private var autoLandStyleEnabled = true
     /// "원래 스타일|자동 전환한 스타일". 비어 있으면 자동 전환 중이 아니다.
     @AppStorage("mapHomeAutoLandStyleState") private var autoLandStyleState = ""
     @State private var photoClusterCache = MapHomePhotoClusterCache()
-    @State private var photoAlbumSelection: MapHomePhotoAlbumSelection?
+    @State private var photoBrowserSelection: MapHomePhotoBrowserSelection?
     private let photoLibrary = ApplePhotoLibraryService()
     @State private var isRecordingOptionsPresented = false
     @State private var isPlaybackVideoPresented = false
@@ -861,11 +861,6 @@ struct MapHomeView: View {
         .onChange(of: isDayDataLoading) { _, loading in
             if !loading, photosNeedReadingRetry { Task { await loadPhotoMoments(asksPermission: false) } }
         }
-        .sheet(item: $photoAlbumSelection) { selection in
-            MapHomePhotoAlbumSheet(moments: selection.moments, language: language)
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
-        }
         .sheet(isPresented: $isRecordingOptionsPresented) {
             MapHomeRecordingOptionsSheet(
                 layers: Binding(
@@ -1248,6 +1243,19 @@ struct MapHomeView: View {
                 MapHomePlaybackPhotoStrip(minute: minute, photos: playbackPhotos).playbackPlacement(trailing: isSidebarVisible ? timeRailWidth + 12 : 12)
             }
         }
+        .overlay {
+            if let photoBrowserSelection, !isDayPlaybackRunning, !browsablePhotos.isEmpty {
+                MapHomePhotoArcBrowser(
+                    moments: browsablePhotos,
+                    startID: photoBrowserSelection.startID,
+                    language: language,
+                    trailing: isSidebarVisible ? timeRailWidth + 12 : 12
+                ) { self.photoBrowserSelection = nil }
+                .id(photoBrowserSelection.startID)
+                .transition(.opacity)
+            }
+        }
+        .onChange(of: model.selectedDate) { _, _ in photoBrowserSelection = nil }
         .sheet(isPresented: $isCalendarConnectPresented) { MapHomeCalendarConnectSheet(model: model, language: language) }
         .sheet(isPresented: $isDataProtectionPresented) {
             MapHomeSecuritySheet(model: model, language: language)
@@ -3029,7 +3037,7 @@ struct MapHomeView: View {
             }
             selectedUserLocation = .frequentPlace(place.id)
         case .photo(let cluster, _, _):
-            photoAlbumSelection = MapHomePhotoAlbumSelection(id: cluster.id, moments: cluster.moments)
+            photoBrowserSelection = MapHomePhotoBrowserSelection(startID: cluster.moments.first?.id)
         case .transit(let place):
             selectedUserLocation = .transit(place.id)
         case .boarding(let candidate):
@@ -3363,7 +3371,7 @@ struct MapHomeView: View {
                    CGRect(x: $0.x - 28, y: $0.y - 64, width: 56, height: 74).contains(tapPoint)
                } ?? false
            }) {
-            photoAlbumSelection = MapHomePhotoAlbumSelection(id: cluster.id, moments: cluster.moments)
+            photoBrowserSelection = MapHomePhotoBrowserSelection(startID: cluster.moments.first?.id)
             return true
         }
         if let candidate = transitBoardingCandidates.last(where: { hit(vectorBoardingCandidateMarkerID($0.id)) }) {
@@ -3800,10 +3808,7 @@ struct MapHomeView: View {
                    let point = photoPinPoint(cluster, in: viewport, places: inputs.places) {
                     MapHomeProjectedAnnotation(point: point, anchor: .bottom) {
                         Button {
-                            photoAlbumSelection = MapHomePhotoAlbumSelection(
-                                id: cluster.id,
-                                moments: cluster.moments
-                            )
+                            photoBrowserSelection = MapHomePhotoBrowserSelection(startID: cluster.moments.first?.id)
                         } label: {
                             MapHomePhotoPin(
                                 coverID: info.coverID,
@@ -7983,6 +7988,11 @@ struct MapHomeView: View {
                 }
                 .tint(Color.tpAccent)
                 .padding(.horizontal, 12)
+                .onChange(of: isAppleWatchLinkEnabled) { _, _ in model.applyAppleWatchLinkChange() }
+                Text(appleWatchHealthStatusText)
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 12)
                 Button {
                     if model.settings.healthEnabled {
                         model.requestWatchDataSync(source: "map_watch_card")
@@ -8001,21 +8011,37 @@ struct MapHomeView: View {
         }
     }
 
-    /// "사용 가능 · 10월 19일 오후 4:51 가져옴" / "사용 불가"
+    /// Watch 앱에서 받은 상태. 건강 앱 조회 시각은 `appleWatchHealthStatusText`에 따로 둔다.
     private var appleWatchDataStatusText: String {
-        let available: Bool
-        switch model.appleWatchConnectionState {
-        case .unsupported, .notPaired: available = false
-        case .appNotInstalled, .noRecentData, .background, .reachable: available = model.settings.healthEnabled
-        }
-        guard available else { return language.text("사용 불가", "Unavailable") }
-        guard let fetched = model.lastHealthRefreshAt else {
-            return language.text("사용 가능", "Available")
-        }
-        let stamp = fetched.formatted(
-            .dateTime.month().day().hour().minute().locale(language.locale)
+        let status = AppleWatchMenuStatus.make(
+            state: model.appleWatchConnectionState,
+            linkEnabled: isAppleWatchLinkEnabled,
+            lastDataAt: model.appleWatchLastDataReceivedAt
         )
-        return language.text("사용 가능 · \(stamp) 가져옴", "Available · fetched \(stamp)")
+        switch status {
+        case .unavailable: return language.text("사용 불가", "Unavailable")
+        case .linkOff: return language.text("연동 꺼짐", "Link off")
+        case .installNeeded: return language.text("Watch 앱 설치 필요", "Install the Watch app")
+        case .waiting(let lastData):
+            guard let lastData else { return language.text("수신 대기", "Waiting for data") }
+            let stamp = appleWatchStamp(lastData)
+            return language.text("수신 대기 · \(stamp)", "Waiting · last \(stamp)")
+        case .connected(let lastData):
+            guard let lastData else { return language.text("연결됨", "Connected") }
+            let stamp = appleWatchStamp(lastData)
+            return language.text("연결됨 · \(stamp) 수신", "Connected · received \(stamp)")
+        }
+    }
+
+    private var appleWatchHealthStatusText: String {
+        guard model.settings.healthEnabled else { return language.text("건강 앱 · 권한 필요", "Health · permission needed") }
+        guard let fetched = model.lastHealthRefreshAt else { return language.text("건강 앱 · 연결됨", "Health · connected") }
+        let stamp = appleWatchStamp(fetched)
+        return language.text("건강 앱 · \(stamp) 가져옴", "Health · fetched \(stamp)")
+    }
+
+    private func appleWatchStamp(_ date: Date) -> String {
+        date.formatted(.dateTime.month().day().hour().minute().locale(language.locale))
     }
 
     private var dataProtectionStatusText: String {
@@ -8333,6 +8359,11 @@ struct MapHomeView: View {
 
     private var playbackMomentEvents: [(minute: Double, moment: MapHomePlaybackMomentsOverlay.Moment)] {
         MapHomePlaybackMomentsOverlay.events(memos: timedMemosForSelectedDate, day: model.selectedDate)
+    }
+
+    /// 지도에서 넘겨 볼 그날 사진. 찍은 순서다.
+    private var browsablePhotos: [PhotoMoment] {
+        photoMoments.filter { !$0.isHiddenFromTimeline }.sorted { $0.capturedAt < $1.capturedAt }
     }
 
     private var playbackPhotos: [MapHomePlaybackPhotoStrip.Photo] {

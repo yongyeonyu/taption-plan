@@ -1,8 +1,10 @@
 import SwiftUI
+import WatchKit
 import TaptionPlanCore
 
 @main
 struct TaptionPlanWatchApp: App {
+    @WKApplicationDelegateAdaptor(WatchAppDelegate.self) private var appDelegate
     @StateObject private var connectivity: WatchConnectivityController
     @StateObject private var workout: WatchWorkoutManager
 
@@ -81,6 +83,11 @@ struct TaptionPlanWatchApp: App {
                     }
                 }
             }
+        }
+        WatchAppDelegate.onRefresh = { @MainActor [weak workout] in
+            // 수집을 끈 동안에는 백그라운드에서 아무것도 하지 않는다.
+            guard let workout, workout.accelerationSettings?.isEnabled == true else { return }
+            await workout.syncNow(requestID: "background")
         }
         connectivity.activateConnectivity()
         _connectivity = StateObject(wrappedValue: connectivity)

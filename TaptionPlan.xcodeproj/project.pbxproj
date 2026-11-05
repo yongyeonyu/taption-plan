@@ -249,6 +249,9 @@
 		A1000000000000000000002D /* WatchConnectivityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002C /* WatchConnectivityController.swift */; };
 		A1000000000000000000002E /* WatchWorkoutManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002D /* WatchWorkoutManager.swift */; };
 		A10000000000000000000070 /* WatchAmbientSensorRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000070 /* WatchAmbientSensorRecorder.swift */; };
+		A1000000000000000B1105B1 /* WatchTodayCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105B1 /* WatchTodayCards.swift */; };
+		A1000000000000000B1105B2 /* WatchStatusViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105B2 /* WatchStatusViews.swift */; };
+		A1000000000000000B1105B3 /* WatchBackgroundRefresh.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105B3 /* WatchBackgroundRefresh.swift */; };
 		A1000000000000000000002F /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002E /* ContentView.swift */; };
 		A10000000000000000000030 /* WatchSyncModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000029 /* WatchSyncModels.swift */; };
 		A10000000000000000000031 /* TaptionPlanWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = C10000000000000000000004 /* TaptionPlanWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -799,6 +802,9 @@
 		F10000000000000000000060 /* WatchLaunchDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchLaunchDiagnostics.swift; sourceTree = "<group>"; };
 		F1000000000000000000002D /* WatchWorkoutManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchWorkoutManager.swift; sourceTree = "<group>"; };
 		F10000000000000000000070 /* WatchAmbientSensorRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchAmbientSensorRecorder.swift; sourceTree = "<group>"; };
+		F1000000000000000B1105B1 /* WatchTodayCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchTodayCards.swift; sourceTree = "<group>"; };
+		F1000000000000000B1105B2 /* WatchStatusViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchStatusViews.swift; sourceTree = "<group>"; };
+		F1000000000000000B1105B3 /* WatchBackgroundRefresh.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchBackgroundRefresh.swift; sourceTree = "<group>"; };
 		F1000000000000000000002E /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		F1000000000000000000002F /* TaptionPlanWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TaptionPlanWatch.entitlements; sourceTree = "<group>"; };
 		F10000000000000000000030 /* TaptionPlanWatchDebug.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TaptionPlanWatchDebug.entitlements; sourceTree = "<group>"; };
@@ -1626,6 +1632,9 @@
 				F10000000000000000000074 /* WatchObjCExceptionCatcher.m */,
 				F10000000000000000000075 /* TaptionPlanWatch-Bridging-Header.h */,
 				F1000000000000000000002E /* ContentView.swift */,
+				F1000000000000000B1105B3 /* WatchBackgroundRefresh.swift */,
+				F1000000000000000B1105B2 /* WatchStatusViews.swift */,
+				F1000000000000000B1105B1 /* WatchTodayCards.swift */,
 				F10000000000000000000031 /* Info.plist */,
 				F90000000000000000000003 /* PrivacyInfo.xcprivacy */,
 				F1000000000000000000002F /* TaptionPlanWatch.entitlements */,
@@ -1676,11 +1685,13 @@
 				910000000000000000000001 /* Frameworks */,
 				930000000000000000000001 /* Resources */,
 				940000000000000000000001 /* Embed App Extensions */,
+				940000000000000000000002 /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				B20000000000000000000002 /* PBXTargetDependency */,
+				B20000000000000000000003 /* PBXTargetDependency */,
 			);
 			name = TaptionPlan;
 			packageProductDependencies = (
@@ -2454,6 +2465,9 @@
 				A10000000000000000000073 /* WatchSensorQueryPlan.swift in Sources */,
 				A10000000000000000000074 /* WatchObjCExceptionCatcher.m in Sources */,
 				A1000000000000000000002F /* ContentView.swift in Sources */,
+				A1000000000000000B1105B3 /* WatchBackgroundRefresh.swift in Sources */,
+				A1000000000000000B1105B2 /* WatchStatusViews.swift in Sources */,
+				A1000000000000000B1105B1 /* WatchTodayCards.swift in Sources */,
 				A10000000000000000000030 /* WatchSyncModels.swift in Sources */,
 				A10000000000000000000038 /* WatchWidgetShared.swift in Sources */,
 				A10000000000000000000093 /* WatchDayDatabase.swift in Sources */,

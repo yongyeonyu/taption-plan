@@ -105,14 +105,14 @@ private struct TaptionWatchStatusWidget: Widget {
         }
         .configurationDisplayName(
             AppLanguagePreference.text(
-                korean: "Taption 측정",
-                english: "Taption Measurement"
+                korean: "BOKKI 오늘",
+                english: "BOKKI Today"
             )
         )
         .description(
             AppLanguagePreference.text(
-                korean: "지금 감지된 활동과 오늘 활동 요약을 표시합니다.",
-                english: "Shows the detected activity and today's summary."
+                korean: "지금 활동과 다음 일정, 오늘 기록을 표시합니다.",
+                english: "Shows your current activity, next plan, and today's record."
             )
         )
         .supportedFamilies([
@@ -183,71 +183,44 @@ private struct TaptionWatchWidgetView: View {
     }
 
     private var rectangularView: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 4) {
-                Image(systemName: sourceSymbolName)
-                    .font(.system(size: 9, weight: .bold))
-                Text(sourceTitle)
-                Spacer(minLength: 2)
-                Text(freshnessText)
-                    .monospacedDigit()
-            }
-            .font(.system(size: 10))
-
-            // 행동 이름은 19개짜리 고정 목록에서 온다. 계획 제목과 달리
-            // 사용자가 쓴 글이 아니라 가려도 얻는 것이 없다.
-            Text(activityTitle)
+        VStack(alignment: .leading, spacing: 1) {
+            Label(activityTitle, systemImage: activitySymbolName)
                 .font(.headline)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
 
             if let alert {
+                Label(alert.title, systemImage: alert.symbolName)
+                    .font(.caption2.weight(.semibold))
+                    .lineLimit(1)
+            } else if let next = nextPlan {
                 HStack(spacing: 3) {
-                    Image(systemName: alert.symbolName)
-                    Text(alert.title)
-                        .lineLimit(1)
-                    Spacer(minLength: 1)
-                }
-                .font(.system(size: 10, weight: .semibold))
-            } else if let reminder = nextReminder {
-                HStack(spacing: 3) {
-                    Image(systemName: "alarm.fill")
-                    Text(reminder.startsAt, style: .time)
+                    Text(next.startsAt, style: .time)
                         .monospacedDigit()
-                    Text(reminder.title)
+                    Text(next.title)
                         .lineLimit(1)
                         .privacySensitive()
-                    Spacer(minLength: 1)
                 }
-                .font(.system(size: 10, weight: .semibold))
-            } else {
-                Text(confidenceText)
-                    .font(.system(size: 10))
-                    .lineLimit(1)
+                .font(.caption2.weight(.semibold))
             }
 
-            HStack(spacing: 5) {
-                Label(
-                    duration(summary.recordedMinutes),
-                    systemImage: "waveform"
-                )
-                Label(
-                    duration(summary.activeMinutes),
-                    systemImage: "figure.run"
-                )
-                Spacer(minLength: 1)
-            }
-            .font(.system(size: 9, weight: .semibold))
+            Text(language.text("오늘 \(duration(summary.recordedMinutes))", "Today \(duration(summary.recordedMinutes))"))
+                .font(.caption2)
+                .lineLimit(1)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .widgetAccentable()
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel)
     }
 
+    /// 오늘 지나간 시간 중 기록된 비율.
     private var circularView: some View {
-        Gauge(value: alert == nil ? confidence : 0) {
+        let fraction = summary.recordedFraction(at: playbackDate)
+        return Gauge(value: alert == nil ? fraction : 0) {
             Image(systemName: alert?.symbolName ?? activitySymbolName)
         } currentValueLabel: {
-            Text(alert == nil ? "\(Int((confidence * 100).rounded()))" : "!")
+            Text(alert == nil ? "\(Int((fraction * 100).rounded()))" : "!")
                 .font(.caption2.monospacedDigit())
         }
         .gaugeStyle(.accessoryCircularCapacity)
@@ -257,13 +230,7 @@ private struct TaptionWatchWidgetView: View {
 
     private var inlineView: some View {
         Label {
-            if let alert {
-                Text(alert.title)
-            } else if measurement?.behavior != nil {
-                Text("\(activityTitle) · \(confidenceText)")
-            } else {
-                Text(sourceTitle)
-            }
+            Text(alert?.title ?? activityTitle)
         } icon: {
             Image(systemName: alert?.symbolName ?? activitySymbolName)
         }
@@ -286,28 +253,16 @@ private struct TaptionWatchWidgetView: View {
         )
     }
 
-    private var sourceTitle: String {
-        if confirmationSuggestion != nil {
-            return language.text("확인 요청", "Confirmation requested")
-        }
-        return measurement?.source.localizedTitle(language)
-            ?? language.text("측정 대기", "Waiting to measure")
-    }
-
-    private var sourceSymbolName: String {
-        switch measurement?.source ?? .idle {
-        case .workout: "figure.run.circle.fill"
-        case .ambient: "waveform.path.ecg"
-        case .idle: "pause.circle"
-        }
-    }
-
     private var activityTitle: String {
         if let suggestion = confirmationSuggestion {
             return language.text(
                 "\(suggestion.proposedBehavior.localizedTitle(.korean)) 맞나요?",
                 "Was this \(suggestion.proposedBehavior.localizedTitle(.english))?"
             )
+        }
+        // iPhone이 정한 지금 활동이 정본이다. 없으면 Watch 측정값을 쓴다.
+        if let activity = resolvedPayload?.currentActivity {
+            return activity.title(for: language)
         }
         guard let behavior = measurement?.behavior else {
             return measurement?.isRecordingRequested == false
@@ -317,44 +272,9 @@ private struct TaptionWatchWidgetView: View {
         return behavior.localizedTitle(language)
     }
 
-    private var confidence: Double {
-        min(1, max(0, confirmationSuggestion?.confidenceScore
-            ?? measurement?.confidenceScore ?? 0))
+    private var nextPlan: TaptionWatchPlanItem? {
+        TaptionWatchLiveItemPolicy.upcoming(resolvedPayload?.items ?? [], at: playbackDate).first
     }
-
-    private var confidenceText: String {
-        if confirmationSuggestion != nil {
-            return language.text("Watch에서 확인", "Confirm on Watch")
-        }
-        guard measurement?.behavior != nil else {
-            return language.text("손목 움직임을 모으는 중", "Collecting wrist motion")
-        }
-        return language.text("신뢰도 \(Int((confidence * 100).rounded()))%", "Confidence \(Int((confidence * 100).rounded()))%")
-    }
-
-    private var freshnessText: String {
-        guard let measuredAt = measurement?.measuredAt else { return "—" }
-        let seconds = Int(max(0, playbackDate.timeIntervalSince(measuredAt)))
-        if seconds < 60 { return language.text("방금", "Just now") }
-        if seconds < 3_600 {
-            return language.text("\(seconds / 60)분 전", "\(seconds / 60) min ago")
-        }
-        return language.text("\(seconds / 3_600)시간 전", "\(seconds / 3_600) hr ago")
-    }
-
-    /// 곧 울릴 계획 알림. iPhone이 예약한 알림이 워치로 전달되기 전에도
-    /// "다음에 무엇이 시작되는지"는 여기서 볼 수 있어야 한다.
-    private var nextReminder: TaptionWatchPlanItem? {
-        TaptionWatchLiveItemPolicy
-            .upcoming(resolvedPayload?.items ?? [], at: playbackDate)
-            .first {
-                $0.startsAt.timeIntervalSince(playbackDate)
-                    <= Self.reminderHorizon
-            }
-    }
-
-    /// 이만큼 앞의 계획만 알림 줄에 올린다. 더 먼 일정은 iPhone이 보여준다.
-    private static let reminderHorizon: TimeInterval = 2 * 3_600
 
     private var summary: TaptionWatchDaySummary {
         resolvedPayload?.todaySummary
@@ -369,8 +289,8 @@ private struct TaptionWatchWidgetView: View {
 
     private var accessibilityLabel: String {
         if let alert { return "\(alert.title), \(alert.detail)" }
-        guard measurement?.behavior != nil else { return sourceTitle }
-        return "\(activityTitle), \(confidenceText), \(freshnessText)"
+        let today = language.text("오늘 \(duration(summary.recordedMinutes))", "Today \(duration(summary.recordedMinutes))")
+        return "\(activityTitle), \(today)"
     }
 
     private var confirmationSuggestion: TaptionWatchActivitySuggestion? {

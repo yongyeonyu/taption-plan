@@ -115,6 +115,7 @@ enum TaptionWatchDaySummaryFactory {
     static func make(
         plans: [PlanRecord],
         actuals: [ActualRecord],
+        categories: [CategoryDefinition] = [],
         at date: Date,
         calendar: Calendar = .autoupdatingCurrent
     ) -> TaptionWatchDaySummary {
@@ -149,8 +150,28 @@ enum TaptionWatchDaySummaryFactory {
                 $0.status == .completed
             }.count,
             recordedMinutes: minutes(in: recordedSpans),
-            activeMinutes: minutes(in: activeSpans)
+            activeMinutes: minutes(in: activeSpans),
+            categories: categoryMinutes(actuals: actuals, categories: categories, day: day, at: date)
         )
+    }
+
+    private static func categoryMinutes(
+        actuals: [ActualRecord],
+        categories: [CategoryDefinition],
+        day: TimeSpan,
+        at date: Date
+    ) -> [TaptionWatchCategoryMinutes] {
+        let definitions = Dictionary(categories.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let spansByCategory = Dictionary(grouping: actuals, by: \.categoryID).mapValues { records in
+            records.compactMap { $0.span(asOf: date).intersection(with: day) }
+        }
+        return spansByCategory.compactMap { id, spans -> TaptionWatchCategoryMinutes? in
+            guard let definition = definitions[id] else { return nil }
+            let total = minutes(in: spans)
+            guard total > 0 else { return nil }
+            return TaptionWatchCategoryMinutes(categoryID: id, title: definition.name, hex: definition.lightHex, minutes: total)
+        }
+        .sorted { ($0.minutes, $1.categoryID) > ($1.minutes, $0.categoryID) }
     }
 
     private static func minutes(in spans: [TimeSpan]) -> Int {

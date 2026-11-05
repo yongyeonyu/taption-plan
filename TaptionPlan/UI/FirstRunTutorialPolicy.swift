@@ -27,6 +27,7 @@ enum FirstRunTutorialStep: String, CaseIterable, Identifiable {
     case summary
     case counters
     case calendar
+    case appleWatch
     case password
     case finish
 
@@ -45,7 +46,7 @@ enum FirstRunTutorialStep: String, CaseIterable, Identifiable {
         case .welcome: .start
         case .permissions, .sensorInterval, .dayCardTime, .home, .workAndSchool, .salary, .cat: .setup
         case .map, .playback, .sidebarCalendar, .clipEditor, .memos, .summary, .counters: .learn
-        case .calendar, .password: .connect
+        case .calendar, .appleWatch, .password: .connect
         case .finish: .finish
         }
     }
@@ -53,7 +54,7 @@ enum FirstRunTutorialStep: String, CaseIterable, Identifiable {
     /// 입력이 있는 단계에만 건너뛰기를 둔다. 설명 단계는 다음이 곧 건너뛰기다.
     var hasInput: Bool {
         switch self {
-        case .permissions, .sensorInterval, .dayCardTime, .home, .workAndSchool, .salary, .cat, .counters, .calendar, .password: true
+        case .permissions, .sensorInterval, .dayCardTime, .home, .workAndSchool, .salary, .cat, .counters, .calendar, .appleWatch, .password: true
         default: false
         }
     }
@@ -174,5 +175,35 @@ enum FirstRunTutorialPolicy {
             default: return language.text("허용됨", "Allowed")
             }
         }
+    }
+}
+
+/// 튜토리얼 Apple Watch 단계. 설치 여부는 `WCSession`이 알려 준 값으로만 판단한다(WCH1105A01).
+enum FirstRunWatchStage: Equatable {
+    case ask
+    case skipped
+    case unavailable
+    case notPaired
+    case explain
+    case installing
+    case installed
+
+    static func make(
+        state: AppleWatchConnectionState,
+        hasWatchAnswer: Bool?,
+        wantsInstall: Bool
+    ) -> Self {
+        switch state {
+        case .noRecentData, .background, .reachable:
+            return .installed
+        case .unsupported:
+            return .unavailable
+        case .notPaired, .appNotInstalled:
+            break
+        }
+        guard let hasWatchAnswer else { return .ask }
+        guard hasWatchAnswer else { return .skipped }
+        guard state == .appNotInstalled else { return .notPaired }
+        return wantsInstall ? .installing : .explain
     }
 }

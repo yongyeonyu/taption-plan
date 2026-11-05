@@ -331,9 +331,7 @@ fi
 [[ "$MISMATCH" -eq 0 ]] || fail "산출물 번들 버전이 ${TARGET_BUILD}과 다릅니다."
 printf '  %s개 번들 모두 %s\n' "$FOUND_BUNDLES" "$TARGET_BUILD"
 
-# Watch 앱은 이 프로젝트에서 iOS 앱에 embed되지 않는 별도 target이다(Embed Watch
-# Content 단계 없음, TaptionPlanWatch.app은 project.pbxproj에 등장하지 않음).
-# 산출물에 없는 제품은 실패가 아니라 사실대로 알린다. 네 plist의 버전 일치는 1/9에서 확인한다.
+# 앱·위젯·Watch·Watch 위젯 네 제품이 모두 산출물에 있어야 한다(WCH1105A01).
 MISSING_PRODUCTS=""
 while IFS=$'\t' read -r name bundle_id; do
   [[ -z "$bundle_id" ]] && continue
@@ -347,7 +345,7 @@ for product in config["app"]["products"]:
 PY
 )
 if [[ -n "$MISSING_PRODUCTS" ]]; then
-  printf '  산출물에 없는 제품(별도 target):%s\n' "$MISSING_PRODUCTS"
+  fail "산출물에 없는 제품:${MISSING_PRODUCTS}"
 fi
 
 if [[ "$MODE" == "no-upload" ]]; then

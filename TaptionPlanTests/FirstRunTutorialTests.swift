@@ -22,7 +22,7 @@ final class FirstRunTutorialTests: XCTestCase {
             [
                 .welcome, .permissions, .sensorInterval, .dayCardTime, .home, .workAndSchool, .salary, .cat,
                 .map, .playback, .sidebarCalendar, .clipEditor, .memos, .summary, .counters,
-                .calendar, .password, .finish,
+                .calendar, .appleWatch, .password, .finish,
             ]
         )
         XCTAssertNil(FirstRunTutorialStep.welcome.previous)
@@ -43,7 +43,7 @@ final class FirstRunTutorialTests: XCTestCase {
 
     func testOnlyInputStepsOfferStepSkip() {
         let skippable = FirstRunTutorialStep.allCases.filter(\.hasInput)
-        XCTAssertEqual(skippable, [.permissions, .sensorInterval, .dayCardTime, .home, .workAndSchool, .salary, .cat, .counters, .calendar, .password])
+        XCTAssertEqual(skippable, [.permissions, .sensorInterval, .dayCardTime, .home, .workAndSchool, .salary, .cat, .counters, .calendar, .appleWatch, .password])
     }
 
     func testEveryGuideStepHasRowsInBothLanguages() {
@@ -196,4 +196,23 @@ private final class InMemoryCredentialStore: PlanCredentialStore {
     private var data: Data?
     func read() throws -> Data? { data }
     func write(_ data: Data) throws { self.data = data }
+
+    func testWatchStageFollowsAnswerAndRealInstallState() {
+        func stage(_ state: AppleWatchConnectionState, _ answer: Bool?, install: Bool = false) -> FirstRunWatchStage {
+            FirstRunWatchStage.make(state: state, hasWatchAnswer: answer, wantsInstall: install)
+        }
+        XCTAssertEqual(stage(.unsupported, nil), .unavailable)
+        XCTAssertEqual(stage(.appNotInstalled, nil), .ask)
+        XCTAssertEqual(stage(.notPaired, nil), .ask)
+        XCTAssertEqual(stage(.notPaired, false), .skipped)
+        XCTAssertEqual(stage(.notPaired, true), .notPaired)
+        XCTAssertEqual(stage(.appNotInstalled, true), .explain)
+        XCTAssertEqual(stage(.appNotInstalled, true, install: true), .installing)
+        // 사용자가 설치하겠다고 해도 실제 설치 전에는 확인으로 넘어가지 않는다.
+        XCTAssertNotEqual(stage(.appNotInstalled, true, install: true), .installed)
+        for installed in [AppleWatchConnectionState.noRecentData, .background, .reachable] {
+            XCTAssertEqual(stage(installed, nil), .installed)
+            XCTAssertEqual(stage(installed, false), .installed)
+        }
+    }
 }

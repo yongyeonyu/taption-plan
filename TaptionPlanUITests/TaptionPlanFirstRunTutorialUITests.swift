@@ -3,7 +3,7 @@ import XCTest
 /// 지운 시뮬레이터에서 처음 실행 튜토리얼 전 단계를 지나며 화면을 남긴다(FRT1104A01). 설치 상태에 달려 있어 앱을 지운 뒤 하나씩 실행한다.
 @MainActor
 final class TaptionPlanFirstRunTutorialUITests: XCTestCase {
-    private let stepCount = 18
+    private let stepCount = 19
     private let allowLabels = ["앱을 사용하는 동안 허용", "Allow While Using App", "전체 접근 허용", "Allow Full Access", "허용", "Allow"]
     private let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
 
@@ -140,8 +140,9 @@ final class TaptionPlanFirstRunTutorialUITests: XCTestCase {
         capture("16-calendar-after")
         element(app, "firstRunNext").tap()
 
-        captureAndAdvance(app, 17, "password")
-        captureAndAdvance(app, 18, "finish")
+        captureAndAdvance(app, 17, "apple-watch")
+        captureAndAdvance(app, 18, "password")
+        captureAndAdvance(app, 19, "finish")
 
         // 끝나면 지도가 나오고, 메뉴 > 설정에서 다시 볼 수 있다.
         answerAlert(timeout: 3)
@@ -157,7 +158,7 @@ final class TaptionPlanFirstRunTutorialUITests: XCTestCase {
         let replayRow = element(app, "firstRunTutorialReplay")
         tries = 0
         while !replayRow.isHittable, tries < 4 { app.swipeUp(); tries += 1 }
-        capture("18-menu-replay-\(replay)")
+        capture("19-menu-replay-\(replay)")
         replayRow.tap()
         assertStep(app, 1)
         capture("19-replay-welcome")

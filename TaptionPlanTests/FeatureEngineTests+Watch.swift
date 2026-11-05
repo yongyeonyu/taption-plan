@@ -7,6 +7,53 @@ import TaptionPlanCore
 @testable import TaptionPlan
 
 extension FeatureEngineTests {
+    func testWatchDaySummaryTopCategoriesAndOldPayloadDecode() throws {
+        let summary = TaptionWatchDaySummary(
+            date: .now, scheduledCount: 0, completedCount: 0, recordedMinutes: 100, activeMinutes: 0,
+            categories: [
+                TaptionWatchCategoryMinutes(categoryID: "a", title: "A", hex: nil, minutes: 10),
+                TaptionWatchCategoryMinutes(categoryID: "b", title: "B", hex: nil, minutes: 50),
+                TaptionWatchCategoryMinutes(categoryID: "c", title: "C", hex: nil, minutes: 30),
+                TaptionWatchCategoryMinutes(categoryID: "d", title: "D", hex: nil, minutes: 20),
+                TaptionWatchCategoryMinutes(categoryID: "e", title: "E", hex: nil, minutes: 0),
+            ]
+        )
+        XCTAssertEqual(summary.topCategories().map(\.categoryID), ["b", "c", "d"])
+        let old = #"{"date":0,"scheduledCount":1,"completedCount":0,"recordedMinutes":5,"activeMinutes":1}"#
+        let decoded = try JSONDecoder().decode(TaptionWatchDaySummary.self, from: Data(old.utf8))
+        XCTAssertNil(decoded.categories)
+        XCTAssertEqual(decoded.topCategories(), [])
+    }
+
+    func testWatchRecordedFractionComparesToElapsedDay() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "Asia/Seoul"))
+        let dayStart = calendar.startOfDay(for: Date(timeIntervalSince1970: 1_800_000_000))
+        func summary(_ minutes: Int) -> TaptionWatchDaySummary {
+            TaptionWatchDaySummary(date: dayStart, scheduledCount: 0, completedCount: 0, recordedMinutes: minutes, activeMinutes: 0)
+        }
+        let noon = dayStart.addingTimeInterval(12 * 3_600)
+        XCTAssertEqual(summary(360).recordedFraction(at: noon, calendar: calendar), 0.5, accuracy: 0.001)
+        XCTAssertEqual(summary(2_000).recordedFraction(at: noon, calendar: calendar), 1)
+        XCTAssertEqual(summary(10).recordedFraction(at: dayStart, calendar: calendar), 0)
+    }
+
+    func testWatchNextPlanSkipsGoalsPastAndFinishedItems() {
+        let now = Date(timeIntervalSince1970: 1_000)
+        func item(_ title: String, _ offset: TimeInterval, status: String = "planned", isGoal: Bool = false) -> TaptionWatchPlanItem {
+            var value = TaptionWatchPlanItem(
+                id: UUID(), title: title, categoryID: "work",
+                startsAt: now.addingTimeInterval(offset), endsAt: now.addingTimeInterval(offset + 60),
+                status: status, actualStartedAt: nil, categoryName: nil, categoryHex: nil
+            )
+            value.isGoal = isGoal
+            return value
+        }
+        let items = [item("past", -60), item("goal", 10, isGoal: true), item("done", 20, status: "completed"), item("later", 90), item("next", 30)]
+        XCTAssertEqual(items.nextPlan(after: now)?.title, "next")
+        XCTAssertNil([item("past", -60)].nextPlan(after: now))
+    }
+
     /// 워치 페이로드가 지금 대분류를 실어 나르고, 그 값이 없던 예전 페이로드도 읽힌다.
     func testWatchPayloadCarriesCurrentActivity() throws {
         let startedAt = Date(timeIntervalSince1970: 900)

@@ -281,36 +281,22 @@ struct MapHomePhotoPin: View {
     }
 }
 
-/// 격자 앨범. 사진을 누르면 전체 화면으로 넘겨 본다.
-struct MapHomePhotoAlbumSheet: View {
-    let moments: [PhotoMoment]
-    let language: MapHomeLanguage
-    @State private var pagerIndex: Int?
-
-    private let columns = [GridItem(.adaptive(minimum: 96), spacing: 3)]
+/// 전체 화면 사진. 정사각 칸에 가두지 않고 화면에 맞춘다.
+struct MapHomePhotoFullImage: View {
+    let localIdentifier: String
+    @State private var image: UIImage?
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                LazyVGrid(columns: columns, spacing: 3) {
-                    ForEach(Array(moments.enumerated()), id: \.element.id) { index, moment in
-                        Button { pagerIndex = index } label: {
-                            MapHomePhotoThumbnail(localIdentifier: moment.id, side: 120)
-                                .frame(minWidth: 0, maxWidth: .infinity)
-                                .aspectRatio(1, contentMode: .fill)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
+        Group {
+            if let image {
+                Image(uiImage: image).resizable().scaledToFit()
+            } else {
+                ProgressView().tint(.white)
             }
-            .navigationTitle(language.text("사진 \(moments.count)장", "\(moments.count) photos"))
-            .navigationBarTitleDisplayMode(.inline)
         }
-        .fullScreenCover(isPresented: Binding(
-            get: { pagerIndex != nil },
-            set: { if !$0 { pagerIndex = nil } }
-        )) {
-            MapHomePhotoPager(moments: moments, startIndex: pagerIndex ?? 0, language: language)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .task(id: localIdentifier) {
+            image = await MapHomePhotoImageLoader.shared.image(localIdentifier: localIdentifier, side: 1_000)
         }
     }
 }
@@ -333,8 +319,7 @@ struct MapHomePhotoPager: View {
             TabView(selection: $index) {
                 ForEach(Array(moments.enumerated()), id: \.element.id) { offset, moment in
                     VStack(spacing: 8) {
-                        MapHomePhotoThumbnail(localIdentifier: moment.id, side: 380, contentMode: .fit)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        MapHomePhotoFullImage(localIdentifier: moment.id)
                         Text(moment.capturedAt.formatted(date: .abbreviated, time: .shortened))
                             .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                             .foregroundStyle(.white.opacity(0.8))
@@ -355,9 +340,163 @@ struct MapHomePhotoPager: View {
 }
 
 
-struct MapHomePhotoAlbumSelection: Identifiable {
-    let id: String
+/// 지도에서 누른 사진. 그날 사진 전체를 이 사진부터 넘겨 본다.
+struct MapHomePhotoBrowserSelection: Equatable {
+    let startID: String?
+}
+
+/// 지도 사진 탐색(PHO1105A01). 재생과 같은 반달에서 좌우로 밀어 넘기고, 가운데를 누르면 크게 본다.
+struct MapHomePhotoArcBrowser: View {
     let moments: [PhotoMoment]
+    let language: MapHomeLanguage
+    let trailing: CGFloat
+    let onClose: () -> Void
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var index: Int
+    @State private var dragStartIndex: Int?
+    @State private var pagerIndex: Int?
+
+    /// 손가락이 이만큼 움직이면 사진 한 장을 넘긴다.
+    private static let pointsPerPhoto: CGFloat = 36
+
+    init(moments: [PhotoMoment], startID: String?, language: MapHomeLanguage, trailing: CGFloat, onClose: @escaping () -> Void) {
+        self.moments = moments
+        self.language = language
+        self.trailing = trailing
+        self.onClose = onClose
+        _index = State(initialValue: moments.firstIndex { $0.id == startID } ?? 0)
+    }
+
+    /// 왼쪽으로 밀면 다음 사진이다.
+    nonisolated static func index(start: Int, translation: CGFloat, count: Int) -> Int {
+        guard count > 0 else { return 0 }
+        let moved = Int((-translation / pointsPerPhoto).rounded())
+        return min(count - 1, max(0, start + moved))
+    }
+
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            Color.black.opacity(0.18)
+                .ignoresSafeArea()
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onClose)
+                .accessibilityLabel(language.text("닫기", "Close"))
+                .accessibilityAddTraits(.isButton)
+            VStack(spacing: 10) {
+                caption
+                arc
+            }
+            .playbackBrowserPlacement(trailing: trailing)
+        }
+        .sensoryFeedback(.selection, trigger: index)
+        .fullScreenCover(isPresented: Binding(
+            get: { pagerIndex != nil },
+            set: { if !$0 { pagerIndex = nil } }
+        )) {
+            MapHomePhotoPager(moments: moments, startIndex: pagerIndex ?? 0, language: language)
+        }
+    }
+
+    private var caption: some View {
+        Text("\(moments[index].capturedAt.formatted(date: .omitted, time: .shortened)) · \(index + 1)/\(moments.count)")
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))
+            .foregroundStyle(Color.tpInk)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 5)
+            .background(Color.tpSurface, in: Capsule())
+            .accessibilityHidden(true)
+    }
+
+    private var arc: some View {
+        GeometryReader { proxy in
+            ZStack(alignment: .bottom) {
+                ForEach(MapHomePlaybackPhotoStrip.visibleIndices(current: index, count: moments.count), id: \.self) { photoIndex in
+                    MapHomePhotoArcSlot(
+                        id: moments[photoIndex].id,
+                        distance: photoIndex - index,
+                        countOnSide: photoIndex > index
+                            ? min(MapHomePlaybackPhotoStrip.slotsPerSide, moments.count - 1 - index)
+                            : min(MapHomePlaybackPhotoStrip.slotsPerSide, index),
+                        side: 46,
+                        width: proxy.size.width,
+                        isEnlarged: true
+                    )
+                    .onTapGesture {
+                        if photoIndex == index { pagerIndex = index } else { index = photoIndex }
+                    }
+                }
+            }
+            .frame(width: proxy.size.width, height: MapHomePlaybackPhotoStrip.centerSide, alignment: .bottom)
+        }
+        .frame(height: MapHomePlaybackPhotoStrip.centerSide)
+        .contentShape(Rectangle())
+        .simultaneousGesture(swipe)
+        .animation(reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.8), value: index)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(language.text(
+            "사진 \(index + 1)/\(moments.count), \(moments[index].capturedAt.formatted(date: .omitted, time: .shortened))",
+            "Photo \(index + 1) of \(moments.count), \(moments[index].capturedAt.formatted(date: .omitted, time: .shortened))"
+        ))
+        .accessibilityHint(language.text("위아래로 쓸어 넘기고, 두 번 눌러 크게 봅니다", "Swipe up or down to change, double-tap to enlarge"))
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: index = min(moments.count - 1, index + 1)
+            case .decrement: index = max(0, index - 1)
+            @unknown default: break
+            }
+        }
+        .accessibilityAction { pagerIndex = index }
+    }
+
+    private var swipe: some Gesture {
+        DragGesture(minimumDistance: 8)
+            .onChanged { value in
+                let start = dragStartIndex ?? index
+                if dragStartIndex == nil { dragStartIndex = start }
+                let next = Self.index(start: start, translation: value.translation.width, count: moments.count)
+                if next != index { index = next }
+            }
+            .onEnded { value in
+                // 빠르게 튕기면 관성만큼 더 넘어간다.
+                let next = Self.index(start: dragStartIndex ?? index, translation: value.predictedEndTranslation.width, count: moments.count)
+                dragStartIndex = nil
+                if next != index { index = next }
+            }
+    }
+}
+
+private extension View {
+    func playbackBrowserPlacement(trailing: CGFloat) -> some View {
+        padding(.leading, 12).padding(.trailing, trailing).padding(.bottom, MapHomePlaybackPhotoStrip.bottomInset)
+    }
+}
+
+/// 반달 위 사진 한 칸. 재생과 지도 탐색이 같은 모양을 쓴다.
+struct MapHomePhotoArcSlot: View {
+    let id: String
+    let distance: Int
+    let countOnSide: Int
+    let side: CGFloat
+    let width: CGFloat
+    let isEnlarged: Bool
+
+    var body: some View {
+        let isCenter = distance == 0 && isEnlarged
+        let place = MapHomePlaybackPhotoStrip.arcPlacement(distance: distance, countOnSide: countOnSide, side: side, width: width, isEnlarged: isEnlarged)
+        MapHomePhotoThumbnail(localIdentifier: id, side: MapHomePlaybackPhotoStrip.centerSide)
+            // 지금 사진만 밝게 두고 나머지는 30% 어둡게 한다.
+            .overlay(Color.black.opacity(distance == 0 ? 0 : 0.3))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color.white, lineWidth: isCenter ? 3 : 4))
+            .scaleEffect(isCenter ? 1 : side / MapHomePlaybackPhotoStrip.centerSide, anchor: .bottom)
+            .rotationEffect(.degrees(place.degrees), anchor: .bottom)
+            .shadow(color: .black.opacity(isCenter ? 0.3 : 0.16), radius: isCenter ? 7 : 3, y: 2)
+            // 가운데에 가까운 사진이 위에 온다.
+            .zIndex(isCenter ? 100 : Double(MapHomePlaybackPhotoStrip.slotsPerSide - abs(distance)))
+            .offset(x: place.x, y: place.y)
+            .transition(.opacity)
+    }
 }
 
 /// 재생 중 사진 미리보기. 화랑이를 가리지 않게 하단에 7칸을 두고, 지금 사진을 가운데에 크게 보여 준다.
@@ -452,24 +591,16 @@ struct MapHomePlaybackPhotoStrip: View {
     }
 
     private func slot(index: Int, center: Int, side: CGFloat, width: CGFloat) -> some View {
-        let distance = index - center
-        let isCenter = distance == 0 && isEnlarged
-        let countOnSide = distance > 0
-            ? min(Self.slotsPerSide, photos.count - 1 - center)
-            : min(Self.slotsPerSide, center)
-        let place = Self.arcPlacement(distance: distance, countOnSide: countOnSide, side: side, width: width, isEnlarged: isEnlarged)
-        return MapHomePhotoThumbnail(localIdentifier: photos[index].id, side: Self.centerSide)
-            // 지금 시각의 사진만 밝게 두고 나머지는 30% 어둡게 한다.
-            .overlay(Color.black.opacity(distance == 0 ? 0 : 0.3))
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color.white, lineWidth: isCenter ? 3 : 4))
-            .scaleEffect(isCenter ? 1 : side / Self.centerSide, anchor: .bottom)
-            .rotationEffect(.degrees(place.degrees), anchor: .bottom)
-            .shadow(color: .black.opacity(isCenter ? 0.3 : 0.16), radius: isCenter ? 7 : 3, y: 2)
-            // 가운데에 가까운 사진이 위에 온다.
-            .zIndex(isCenter ? 100 : Double(Self.slotsPerSide - abs(distance)))
-            .offset(x: place.x, y: place.y)
-            .transition(.opacity)
+        MapHomePhotoArcSlot(
+            id: photos[index].id,
+            distance: index - center,
+            countOnSide: index > center
+                ? min(Self.slotsPerSide, photos.count - 1 - center)
+                : min(Self.slotsPerSide, center),
+            side: side,
+            width: width,
+            isEnlarged: isEnlarged
+        )
     }
 }
 
@@ -490,6 +621,20 @@ struct MapHomePhotoStripPreviewHost: View {
                 try? await Task.sleep(for: .seconds(1))
                 minute = minute >= 190 ? 0 : minute + 10
             }
+        }
+    }
+}
+
+/// 화면 확인용. `-photoBrowserPreview` 실행 인자로만 뜬다.
+struct MapHomePhotoBrowserPreviewHost: View {
+    private let moments = (0..<20).map {
+        PhotoMoment(id: "preview-\($0)", capturedAt: Date(timeIntervalSinceNow: Double($0) * 600), pixelWidth: 100, pixelHeight: 100, isFavorite: false, isHiddenFromTimeline: false, location: nil, linkedPlanID: nil)
+    }
+
+    var body: some View {
+        ZStack {
+            Color.tpBackground.ignoresSafeArea()
+            MapHomePhotoArcBrowser(moments: moments, startID: "preview-5", language: .korean, trailing: 60) {}
         }
     }
 }

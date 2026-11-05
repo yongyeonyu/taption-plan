@@ -55,9 +55,9 @@
 
 `--no-upload`는 6/9에서 끝나고, `--preflight`는 1/9에서 끝난다. `--reuse-archive <경로>`를 주면 2/9(번호 증가)와 4/9(아카이브)를 건너뛰고 기존 `.xcarchive`로 익스포트·업로드만 다시 한다(업로드 실패 재시도용).
 
-### 산출물에 Watch 앱이 없는 이유
+### 산출물의 네 번들
 
-이 프로젝트의 iOS 앱은 Watch 앱을 **embed하지 않는다**. `project.pbxproj`에 `Embed Watch Content` 단계가 없고 `TaptionPlanWatch.app` 참조도 없으며, Watch는 `TaptionPlanWatch.xcscheme`으로 따로 빌드되는 별도 target이다. 따라서 아카이브 산출물은 앱·위젯 2개 번들이고, 6/9는 이 2개가 모두 목표 번호인지 확인한 뒤 나머지 제품을 "산출물에 없는 제품(별도 target)"으로 알린다. 네 plist의 버전 일치는 1/9이 소스에서 확인한다.
+iOS 앱은 Watch 앱을 포함한다(`Embed Watch Content`, WCH1105A01). 6/9는 앱·위젯·Watch·Watch 위젯 네 번들이 모두 있고 목표 번호인지 산출물에서 확인하며, 하나라도 없으면 실패한다.
 
 ## 검증 기준
 

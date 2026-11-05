@@ -427,25 +427,64 @@ public enum TaptionWatchLiveItemPolicy {
     }
 }
 
+/// 오늘 분류별 기록 시간. Watch 오늘 카드가 쓴다.
+public struct TaptionWatchCategoryMinutes: Codable, Hashable, Sendable {
+    public var categoryID: String
+    public var title: String
+    public var hex: String?
+    public var minutes: Int
+
+    public init(categoryID: String, title: String, hex: String?, minutes: Int) {
+        self.categoryID = categoryID
+        self.title = title
+        self.hex = hex
+        self.minutes = minutes
+    }
+}
+
 public struct TaptionWatchDaySummary: Codable, Hashable, Sendable {
     public var date: Date
     public var scheduledCount: Int
     public var completedCount: Int
     public var recordedMinutes: Int
     public var activeMinutes: Int
+    /// 예전 iPhone 빌드가 보낸 값에는 없다.
+    public var categories: [TaptionWatchCategoryMinutes]? = nil
 
     public init(
         date: Date,
         scheduledCount: Int,
         completedCount: Int,
         recordedMinutes: Int,
-        activeMinutes: Int
+        activeMinutes: Int,
+        categories: [TaptionWatchCategoryMinutes]? = nil
     ) {
         self.date = date
         self.scheduledCount = scheduledCount
         self.completedCount = completedCount
         self.recordedMinutes = recordedMinutes
         self.activeMinutes = activeMinutes
+        self.categories = categories
+    }
+
+    /// 오늘 지나간 시간 중 기록된 비율(0~1). 시계 페이스 원형이 쓴다.
+    public func recordedFraction(at now: Date, calendar: Calendar = .autoupdatingCurrent) -> Double {
+        let elapsed = now.timeIntervalSince(calendar.startOfDay(for: now)) / 60
+        guard elapsed > 0 else { return 0 }
+        return min(1, max(0, Double(recordedMinutes) / elapsed))
+    }
+
+    /// 오늘 카드에 보여 줄 분류. 긴 순서로 `limit`개까지다.
+    public func topCategories(limit: Int = 3) -> [TaptionWatchCategoryMinutes] {
+        Array((categories ?? []).filter { $0.minutes > 0 }.sorted { $0.minutes > $1.minutes }.prefix(limit))
+    }
+}
+
+public extension Array where Element == TaptionWatchPlanItem {
+    /// 아직 시작하지 않은 가장 가까운 일정. 목표 묶음과 끝난 일정은 뺀다.
+    func nextPlan(after now: Date) -> TaptionWatchPlanItem? {
+        filter { !$0.isGoal && $0.startsAt > now && $0.status != "completed" && $0.status != "skipped" }
+            .min { $0.startsAt < $1.startsAt }
     }
 }
 

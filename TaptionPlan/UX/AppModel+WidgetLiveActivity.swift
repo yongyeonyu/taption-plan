@@ -606,6 +606,7 @@ extension AppModel {
                     parentID: plan.parentID
                 )
             }
+        let stopsWatchCollection = isCommerceLocked || !AppleWatchLink.isEnabled()
         let commandCapabilities = hidesSensitiveContent || isCommerceLocked
             ? []
             : TaptionWatchCommandCapabilityStore.reconcile(
@@ -627,6 +628,7 @@ extension AppModel {
                 : TaptionWatchDaySummaryFactory.make(
                     plans: snapshot.plans,
                     actuals: snapshot.actuals,
+                    categories: Array(categoriesByID.values),
                     at: now,
                     calendar: calendar
                 ),
@@ -634,14 +636,14 @@ extension AppModel {
                 ? nil
                 : watchCurrentActivity(now: now),
             accelerationSettings: TaptionWatchAccelerationSettings(
-                profile: isCommerceLocked
+                profile: stopsWatchCollection
                     ? .off
                     : snapshot.settings.watchAccelerationProfile
             ),
-            dataSyncProfile: isCommerceLocked
+            dataSyncProfile: stopsWatchCollection
                 ? .off
                 : snapshot.settings.watchDataSyncProfile,
-            locationTrackingEnabled: isCommerceLocked
+            locationTrackingEnabled: stopsWatchCollection
                 ? false
                 : snapshot.settings.locationEnabled,
             locationPermissionState:

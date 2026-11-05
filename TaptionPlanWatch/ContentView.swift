@@ -1,6 +1,6 @@
 import SwiftUI
 
-private struct WatchConfirmationSubject: Identifiable, Hashable {
+struct WatchConfirmationSubject: Identifiable, Hashable {
     var id: String
     var suggestionID: UUID
     var confirmationToken: UUID
@@ -68,53 +68,19 @@ struct WatchContentView: View {
     }
 
     private func dashboard(at date: Date) -> some View {
-        let subject = confirmationSubject
-        return VStack(alignment: .leading, spacing: 8) {
-            currentActivityCard(at: date)
-            transferCard(at: date)
-            if let subject {
+        VStack(alignment: .leading, spacing: 8) {
+            WatchNowCard(activity: connectivity.payload?.currentActivity, hasPayload: connectivity.payload != nil, date: date, language: language)
+            if let subject = confirmationSubject {
                 confirmationCard(subject)
-            } else {
-                waitingCard
             }
-        }
-    }
-
-    /// 지금 하고 있는 대분류. iPhone이 바뀐 값을 밀어 주면 몇 초 안에 여기까지 온다.
-    private func currentActivityCard(at date: Date) -> some View {
-        let activity = connectivity.payload?.currentActivity
-        return VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 4) {
-                Image(systemName: "waveform.path.ecg")
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(.green)
-                Text(language.text("지금", "Now"))
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                Spacer(minLength: 2)
-                if let activity {
-                    Text(elapsedText(since: activity.startedAt, at: date))
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundStyle(.secondary)
-                }
+            if let summary = connectivity.payload?.todaySummary {
+                WatchTodayCard(summary: summary, language: language)
             }
-            Text(activity?.title(for: language) ?? language.text("확인 중", "Checking"))
-                .font(.system(size: 17, weight: .bold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-                .foregroundStyle(.white)
+            if let next = connectivity.orderedItems.nextPlan(after: date) {
+                WatchNextCard(item: next, language: language)
+            }
+            WatchStatusLink(date: date, language: language)
         }
-        .padding(10)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            Color.green.opacity(0.14),
-            in: RoundedRectangle(cornerRadius: 13)
-        )
-        .accessibilityElement(children: .combine)
-    }
-
-    private func elapsedText(since start: Date, at date: Date) -> String {
-        durationText(max(0, Int(date.timeIntervalSince(start) / 60)))
     }
 
     private var confirmationSubject: WatchConfirmationSubject? {
@@ -138,56 +104,6 @@ struct WatchContentView: View {
         )
     }
 
-    private func transferCard(at date: Date) -> some View {
-        let measurement = workout.measurement
-        let alerts = TaptionWatchAlertPolicy.alerts(
-            for: measurement,
-            now: date,
-            language: language
-        )
-        return VStack(alignment: .leading, spacing: 7) {
-            Button { connectivity.requestSync() } label: {
-                HStack(spacing: 5) {
-                    Image(systemName: "iphone.and.arrow.forward")
-                        .foregroundStyle(.green)
-                        Text(language.text("센서 수집 · iPhone 전송", "Collect sensors · Send to iPhone"))
-                        .font(.caption.weight(.semibold))
-                    Spacer(minLength: 2)
-                    Image(systemName: "arrow.clockwise")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            statusRow(language.text("수집", "Collection"), value: collectionStatus(measurement))
-            statusRow(language.text("전송", "Transfer"), value: connectivity.statusText)
-            statusRow(language.text("최근 측정", "Last measurement"), value: freshnessText(at: date))
-            if let summary = connectivity.payload?.todaySummary {
-                statusRow(language.text("일과", "Day"), value: durationText(summary.recordedMinutes))
-                statusRow(language.text("활동", "Active"), value: durationText(summary.activeMinutes))
-            }
-            if workout.isActive {
-                statusRow(
-                    language.text("원시 표본", "Raw samples"),
-                    value: language.text("\(workout.sensorSampleCount)개", "\(workout.sensorSampleCount)")
-                )
-            }
-            if let alert = alerts.first {
-                Label(alert.detail, systemImage: alert.symbolName)
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(.orange)
-                    .lineLimit(2)
-            }
-        }
-        .padding(10)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            Color.white.opacity(0.09),
-            in: RoundedRectangle(cornerRadius: 13)
-        )
-    }
-
     private func confirmationCard(_ subject: WatchConfirmationSubject) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Label(language.text("활동 확인", "Confirm activity"), systemImage: "questionmark.bubble.fill")
@@ -197,9 +113,9 @@ struct WatchContentView: View {
                 "\(subject.behavior.localizedTitle(.korean)) 맞나요?",
                 "Was this \(subject.behavior.localizedTitle(.english))?"
             ))
-                .font(.title3.weight(.bold))
-                .lineLimit(2)
-                .minimumScaleFactor(0.75)
+                .font(.headline)
+                .lineLimit(3)
+                .minimumScaleFactor(0.8)
             Text(subject.detail)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
@@ -232,26 +148,6 @@ struct WatchContentView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             Color.orange.opacity(0.13),
-            in: RoundedRectangle(cornerRadius: 15)
-        )
-    }
-
-    private var waitingCard: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Label(language.text("확인할 활동 없음", "No activity to confirm"), systemImage: "checkmark.circle")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.green)
-            Text(language.text(
-                "특정 가능한 활동이 생기면 여기에서 확인을 요청합니다.",
-                "When an activity can be identified, we will ask you to confirm it here."
-            ))
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
-        .padding(11)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            Color.white.opacity(0.08),
             in: RoundedRectangle(cornerRadius: 15)
         )
     }
@@ -324,55 +220,6 @@ struct WatchContentView: View {
                 pattern: subject.pattern
             )
         )
-    }
-
-    private func collectionStatus(
-        _ measurement: TaptionWatchMeasurementSnapshot
-    ) -> String {
-        if workout.isActive { return language.text("고정밀 수집 중", "High-precision collection") }
-        guard let settings = workout.accelerationSettings else {
-            return language.text("iPhone 설정 대기", "Waiting for iPhone settings")
-        }
-        guard settings.isEnabled else { return language.text("꺼짐 · iPhone 설정", "Off · iPhone settings") }
-        if measurement.isMotionAccessDenied {
-            return language.text("동작 권한 없음", "Motion access unavailable")
-        }
-        guard measurement.isRecorderAvailable else {
-            return language.text("이 Watch에서 불가", "Unavailable on this Watch")
-        }
-        return settings.profile.localizedDisplayName(language)
-    }
-
-    private func freshnessText(at date: Date) -> String {
-        guard let measuredAt = workout.measurement.measuredAt else {
-            return language.text("측정 없음", "No measurement")
-        }
-        let seconds = Int(max(0, date.timeIntervalSince(measuredAt)))
-        if seconds < 60 { return language.text("방금", "Just now") }
-        if seconds < 3_600 {
-            return language.text("\(seconds / 60)분 전", "\(seconds / 60) min ago")
-        }
-        return language.text("\(seconds / 3_600)시간 전", "\(seconds / 3_600) hr ago")
-    }
-
-    private func statusRow(_ title: String, value: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 4) {
-            Text(title).foregroundStyle(.secondary)
-            Spacer(minLength: 2)
-            Text(value)
-                .multilineTextAlignment(.trailing)
-                .lineLimit(2)
-                .minimumScaleFactor(0.75)
-        }
-        .font(.system(size: 10))
-    }
-
-    private func durationText(_ minutes: Int) -> String {
-        let hours = max(0, minutes) / 60
-        let remainder = max(0, minutes) % 60
-        if hours == 0 { return language.text("\(remainder)분", "\(remainder) min") }
-        if remainder == 0 { return language.text("\(hours)시간", "\(hours) hr") }
-        return language.text("\(hours)시간 \(remainder)분", "\(hours) hr \(remainder) min")
     }
 
     private func symbol(for kind: WatchBehaviorKind) -> String {

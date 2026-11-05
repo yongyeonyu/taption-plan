@@ -398,85 +398,85 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Health write access is required to synchronize workouts and sleep records with your timeline."
+            "value" : "Workouts measured on Apple Watch are saved to the Health app."
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "운동과 수면 기록을 앱의 시간표와 동기화하기 위해 건강 데이터 저장 권한이 필요합니다."
+            "value" : "Apple Watch에서 측정한 운동을 건강 앱에 저장합니다."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ワークアウトと睡眠の記録をタイムラインと同期するために、ヘルスケアへの書き込みアクセスが必要です。"
+            "value" : "Apple Watchで測定したワークアウトをヘルスケアに保存します。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "需要健康写入权限，以便将体能训练和睡眠记录与你的时间线同步。"
+            "value" : "将 Apple Watch 测量的体能训练保存到“健康”App。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "需要健康寫入權限，才能將體能訓練和睡眠記錄與你的時間軸同步。"
+            "value" : "將 Apple Watch 測量的體能訓練儲存到「健康」App。"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Der Schreibzugriff auf Health ist nötig, um Workouts und Schlafeinträge mit deiner Zeitleiste zu synchronisieren."
+            "value" : "Auf der Apple Watch gemessene Trainings werden in der Health-App gespeichert."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "L'accès en écriture à Santé est nécessaire pour synchroniser les entraînements et le sommeil avec votre chronologie."
+            "value" : "Les entraînements mesurés sur l’Apple Watch sont enregistrés dans l’app Santé."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Serve l'accesso in scrittura a Salute per sincronizzare allenamenti e sonno con la tua timeline."
+            "value" : "Gli allenamenti misurati su Apple Watch vengono salvati nell’app Salute."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Se necesita acceso de escritura en Salud para sincronizar los entrenamientos y los registros de sueño con tu línea de tiempo."
+            "value" : "Los entrenamientos medidos en el Apple Watch se guardan en la app Salud."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O acesso de gravação ao Saúde é necessário para sincronizar treinos e registros de sono com a sua linha do tempo."
+            "value" : "Os treinos medidos no Apple Watch são salvos no app Saúde."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cần quyền ghi Sức khỏe để đồng bộ bản ghi bài tập và giấc ngủ với dòng thời gian của bạn."
+            "value" : "Các bài tập đo trên Apple Watch được lưu vào ứng dụng Sức khỏe."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Akses tulis Kesehatan diperlukan untuk menyinkronkan catatan olahraga dan tidur dengan garis waktu Anda."
+            "value" : "Olahraga yang diukur di Apple Watch disimpan ke app Kesehatan."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ต้องเข้าถึงการเขียนข้อมูลสุขภาพเพื่อซิงค์การออกกำลังกายและบันทึกการนอนหลับกับไทม์ไลน์ของคุณ"
+            "value" : "บันทึกการออกกำลังกายที่วัดจาก Apple Watch ลงในแอปสุขภาพ"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "वर्कआउट और नींद के रिकॉर्ड को आपकी टाइमलाइन से सिंक करने के लिए स्वास्थ्य लिखने की पहुँच ज़रूरी है।"
+            "value" : "Apple Watch पर मापे गए वर्कआउट Health ऐप में सहेजे जाते हैं।"
           }
         }
       }

@@ -190,6 +190,38 @@ enum AppleWatchConnectionPolicy {
     }
 }
 
+/// 메뉴 연동 토글. 끄면 Watch 수집·전송을 멈추고 건강 앱 조회만 남는다.
+enum AppleWatchLink {
+    static let enabledKey = "appleWatchLinkEnabled"
+
+    static func isEnabled(defaults: UserDefaults = .standard) -> Bool {
+        defaults.object(forKey: enabledKey) as? Bool ?? true
+    }
+}
+
+/// 메뉴에 보여 줄 Watch 앱 상태. 건강 앱 조회 시각과 섞지 않는다.
+enum AppleWatchMenuStatus: Equatable, Sendable {
+    case unavailable
+    case linkOff
+    case installNeeded
+    case waiting(lastData: Date?)
+    case connected(lastData: Date?)
+
+    static func make(
+        state: AppleWatchConnectionState,
+        linkEnabled: Bool,
+        lastDataAt: Date?
+    ) -> Self {
+        switch state {
+        case .unsupported, .notPaired: .unavailable
+        case _ where !linkEnabled: .linkOff
+        case .appNotInstalled: .installNeeded
+        case .noRecentData: .waiting(lastData: lastDataAt)
+        case .background, .reachable: .connected(lastData: lastDataAt)
+        }
+    }
+}
+
 /// 첫 실행에서 한 번만 보여 주는 Apple Watch 안내.
 enum AppleWatchOnboardingPrompt: String, Sendable, CaseIterable {
     /// 워치는 있는데 워치 앱이 없다. 설치를 권한다.
@@ -788,6 +820,7 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
     }
 
     func requestWatchDataSyncIfDue() {
+        guard AppleWatchLink.isEnabled() else { return }
         let now = ProcessInfo.processInfo.systemUptime
         lock.lock()
         let shouldRequest = AppleWatchAutomaticSyncPolicy.shouldRequest(

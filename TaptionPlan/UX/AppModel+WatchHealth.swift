@@ -30,6 +30,12 @@ extension AppModel {
 
     func requestWatchDataSync(source: String = "settings_button") {
         scheduleWatchHealthRefresh()
+        guard AppleWatchLink.isEnabled() else { return }
+        watchConnectivityService.requestWatchDataSync()
+    }
+
+    func applyAppleWatchLinkChange() {
+        publishWatchPayload()
     }
 
     func scheduleWatchHealthRefresh() {
@@ -104,22 +110,26 @@ extension AppModel {
 
     /// 지금 보여 줄 첫 실행 안내. 없으면 아무것도 띄우지 않는다.
     var appleWatchOnboardingPrompt: AppleWatchOnboardingPrompt? {
-        nil
+        AppleWatchOnboarding.prompt(
+            for: appleWatchConnectionState,
+            dismissed: dismissedAppleWatchPrompts,
+            hasSeenWatchAppInstalled: hasSeenWatchAppInstalled
+        )
     }
 
-    /// Watch 앱 설치와 무관한 HealthKit 수신 안내.
+    /// 건강 앱 조회와 Watch 앱 수집을 함께 알리는 안내.
     var appleWatchCompanionRow: AppleWatchCompanionRow {
         AppleWatchCompanionRow(
             subtitle: AppLanguagePreference.text(
-                korean: "iPhone 건강 앱에 동기화된 Watch 데이터를 가져옵니다",
-                english: "Imports Watch data synced to the iPhone Health app"
+                korean: "건강 앱과 Watch 앱의 데이터를 가져옵니다",
+                english: "Imports data from the Health app and the Watch app"
             ),
             value: settings.healthEnabled
                 ? AppLanguagePreference.text(korean: "건강 연결", english: "Health connected")
                 : AppLanguagePreference.text(korean: "권한 필요", english: "Permission needed"),
             detail: AppLanguagePreference.text(
-                korean: "별도 Watch 앱 없이 앱을 열면 조회합니다. Watch에서 iPhone으로 동기화되는 시점에 따라 최신 데이터가 늦게 도착할 수 있습니다.",
-                english: "Data is fetched when you open the app, with no separate Watch app. The latest data may arrive late depending on when the Watch syncs to the iPhone."
+                korean: "앱을 열면 건강 앱을 조회하고, Watch 앱은 저전력으로 움직임을 모아 보냅니다. Watch 상태에 따라 최신 데이터가 늦게 도착할 수 있습니다.",
+                english: "Health data is fetched when you open the app, and the Watch app sends motion data in low-power mode. The latest data may arrive late depending on the Watch."
             )
         )
     }

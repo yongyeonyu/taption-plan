@@ -1255,6 +1255,15 @@ final class NLETrackTests: XCTestCase {
         XCTAssertEqual(around.map(\.title), ["집", "집 주변 이동", "집"])
     }
 
+    func testPhotoBrowserSwipeMovesOnePhotoPerStepAndStopsAtEnds() {
+        XCTAssertEqual(MapHomePhotoArcBrowser.index(start: 5, translation: -36, count: 20), 6)
+        XCTAssertEqual(MapHomePhotoArcBrowser.index(start: 5, translation: 72, count: 20), 3)
+        XCTAssertEqual(MapHomePhotoArcBrowser.index(start: 5, translation: 5, count: 20), 5)
+        XCTAssertEqual(MapHomePhotoArcBrowser.index(start: 1, translation: 400, count: 20), 0)
+        XCTAssertEqual(MapHomePhotoArcBrowser.index(start: 18, translation: -400, count: 20), 19)
+        XCTAssertEqual(MapHomePhotoArcBrowser.index(start: 0, translation: -36, count: 0), 0)
+    }
+
     func testPlaybackPhotoStripKeepsSevenSlotsAroundCurrentPhoto() {
         let photos = (0..<10).map { MapHomePlaybackPhotoStrip.Photo(minute: Double($0) * 10, id: "\($0)") }
         XCTAssertNil(MapHomePlaybackPhotoStrip.currentIndex(minute: -1, photos: photos))

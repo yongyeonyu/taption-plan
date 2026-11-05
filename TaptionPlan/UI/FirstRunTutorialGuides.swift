@@ -323,6 +323,157 @@ struct FirstRunSensorIntervalPage: View {
     }
 }
 
+/// Watch 앱은 iPhone 앱에 함께 들어 있어, iPhone의 Watch 앱에서 설치한다. 앱이 대신 설치할 수는 없다.
+struct FirstRunAppleWatchPage: View {
+    @Bindable var model: AppModel
+    let language: MapHomeLanguage
+
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var hasWatchAnswer: Bool?
+    @State private var wantsInstall = false
+    @State private var couldNotOpenWatchApp = false
+
+    private var stage: FirstRunWatchStage {
+        FirstRunWatchStage.make(state: model.appleWatchConnectionState, hasWatchAnswer: hasWatchAnswer, wantsInstall: wantsInstall)
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                switch stage {
+                case .ask: askContent
+                case .skipped: note("applewatch.slash", language.text("Apple Watch 없이 진행합니다", "Continuing without Apple Watch"), language.text("iPhone만으로도 하루는 기록됩니다. 나중에 Watch가 생기면 메뉴 > Apple Watch 데이터에서 확인할 수 있습니다.", "Your day is still recorded with just iPhone. If you get a Watch later, check Menu > Apple Watch data."))
+                case .unavailable: note("applewatch.slash", language.text("이 기기에서는 쓸 수 없습니다", "Not available on this device"), language.text("Apple Watch는 iPhone과 페어링해야 합니다. 다음으로 넘어가세요.", "Apple Watch needs to be paired with iPhone. Continue to the next step."))
+                case .notPaired: notPairedContent
+                case .explain: explainContent
+                case .installing: installingContent
+                case .installed: installedContent
+                }
+            }
+            .padding(18)
+        }
+        .onAppear { model.refreshAppleWatchConnectionState() }
+        // Watch 앱에서 돌아오면 설치 여부를 다시 읽는다. 앞에 있는 동안의 변화는 WCSession이 알려 준다.
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { model.refreshAppleWatchConnectionState() }
+        }
+    }
+
+    private var askContent: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(language.text("Apple Watch가 있나요?", "Do you have an Apple Watch?"))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(17)), weight: .bold))
+                .foregroundStyle(Color.tpInk)
+            actionButton(language.text("있어요", "Yes"), identifier: "firstRunWatchYes") { hasWatchAnswer = true }
+            actionButton(language.text("없어요", "No"), identifier: "firstRunWatchNo", isPrimary: false) { hasWatchAnswer = false }
+        }
+    }
+
+    @ViewBuilder
+    private var dataRows: some View {
+        FirstRunRowView(
+            badge: .icon("figure.walk"),
+            title: language.text("받는 정보", "What it receives"),
+            detail: language.text("Watch의 움직임 기록을 받고, 건강 앱의 심박·걸음·운동·수면 기록을 함께 읽습니다.", "Motion from your Watch, plus heart rate, steps, workouts, and sleep from the Health app.")
+        )
+        FirstRunRowView(
+            badge: .icon("sparkles"),
+            title: language.text("하는 일", "What it does"),
+            detail: language.text("걷기·이동·운동·수면을 더 정확히 구분합니다.", "Tells walking, travel, workouts, and sleep apart more accurately.")
+        )
+        FirstRunRowView(
+            badge: .icon("applewatch"),
+            title: language.text("손목에서 보기", "On your wrist"),
+            detail: language.text("지금 활동, 오늘 요약, 다음 일정을 보고 활동을 확인·수정합니다. 시계 페이스에도 놓을 수 있습니다.", "See your current activity, today's summary, and next plan, confirm or fix activities, and add it to your watch face.")
+        )
+        FirstRunRowView(
+            badge: .icon("battery.100percent"),
+            title: language.text("배터리", "Battery"),
+            detail: language.text("평소에는 저전력으로 모으고, 운동을 측정할 때만 더 자주 확인합니다.", "Collects in low-power mode, and checks more often only while measuring a workout.")
+        )
+    }
+
+    @ViewBuilder
+    private var explainContent: some View {
+        dataRows
+        actionButton(language.text("설치하기", "Install"), identifier: "firstRunWatchInstall") {
+            wantsInstall = true
+            openWatchApp()
+        }
+        actionButton(language.text("나중에", "Later"), identifier: "firstRunWatchLater", isPrimary: false) { hasWatchAnswer = false }
+    }
+
+    @ViewBuilder
+    private var installingContent: some View {
+        HStack(spacing: 10) {
+            ProgressView()
+            Text(language.text("설치를 기다리는 중입니다", "Waiting for installation"))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
+                .foregroundStyle(Color.tpInk)
+        }
+        FirstRunRowView(
+            badge: .icon("applewatch"),
+            title: language.text("iPhone의 Watch 앱에서", "In iPhone's Watch app"),
+            detail: language.text("나의 시계 > 사용 가능한 앱에서 BOKKI Plan 옆의 설치를 누르세요. 설치되면 여기에 바로 표시됩니다.", "Go to My Watch > Available Apps and tap Install next to BOKKI Plan. It shows here as soon as it's installed.")
+        )
+        FirstRunRowView(
+            badge: .icon("airplane"),
+            title: language.text("TestFlight로 받았다면", "If you use TestFlight"),
+            detail: language.text("TestFlight 앱의 BOKKI Plan 화면에서 Apple Watch에 설치할 수 있습니다.", "You can install to Apple Watch from BOKKI Plan's page in the TestFlight app.")
+        )
+        if couldNotOpenWatchApp {
+            Text(language.text("Watch 앱을 열지 못했습니다. iPhone에서 Watch 앱을 직접 열어 주세요.", "Couldn't open the Watch app. Open it on your iPhone."))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
+                .foregroundStyle(Color.tpSecondary)
+        }
+        actionButton(language.text("Watch 앱 다시 열기", "Open Watch app again"), identifier: "firstRunWatchOpen", isPrimary: false, action: openWatchApp)
+    }
+
+    @ViewBuilder
+    private var installedContent: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(Color.tpAccent)
+                .accessibilityHidden(true)
+            Text(language.text("설치가 확인됐습니다", "Installation confirmed"))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
+                .foregroundStyle(Color.tpInk)
+        }
+        .accessibilityIdentifier("firstRunWatchInstalled")
+        dataRows
+    }
+
+    @ViewBuilder
+    private var notPairedContent: some View {
+        note("applewatch", language.text("페어링된 Watch를 찾지 못했습니다", "No paired Watch found"), language.text("iPhone의 Watch 앱에서 먼저 페어링하세요. 지금 하지 않아도 앱은 그대로 쓸 수 있습니다.", "Pair it in iPhone's Watch app first. You can keep using the app without it."))
+        actionButton(language.text("Watch 앱 열기", "Open Watch app"), identifier: "firstRunWatchOpen", action: openWatchApp)
+        actionButton(language.text("나중에", "Later"), identifier: "firstRunWatchLater", isPrimary: false) { hasWatchAnswer = false }
+    }
+
+    private func note(_ icon: String, _ title: String, _ detail: String) -> some View {
+        FirstRunRowView(badge: .icon(icon), title: title, detail: detail)
+    }
+
+    private func actionButton(_ title: String, identifier: String, isPrimary: Bool = true, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
+                .frame(maxWidth: .infinity, minHeight: 46)
+                .foregroundStyle(isPrimary ? Color.white : Color.tpInk)
+                .background(isPrimary ? Color.tpAccent : Color.tpSurface, in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(identifier)
+    }
+
+    private func openWatchApp() {
+        guard let url = URL(string: "itms-watchs://") else { return }
+        UIApplication.shared.open(url) { opened in
+            couldNotOpenWatchApp = !opened
+        }
+    }
+}
+
 struct FirstRunCatPage: View {
     @Bindable var model: AppModel
     let language: MapHomeLanguage

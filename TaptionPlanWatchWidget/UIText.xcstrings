@@ -1,156 +1,79 @@
 {
   "sourceLanguage" : "ko",
   "strings" : {
-    "Taption 측정|Taption Measurement" : {
+    "BOKKI 오늘|BOKKI Today" : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Taption測定"
+            "value" : "BOKKI 今日"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Taption 测量"
+            "value" : "BOKKI 今天"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Taption 測量"
+            "value" : "BOKKI 今天"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Taption-Messung"
+            "value" : "BOKKI Heute"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mesure Taption"
+            "value" : "BOKKI Aujourd’hui"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Misurazione Taption"
+            "value" : "BOKKI Oggi"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Medición de Taption"
+            "value" : "BOKKI Hoy"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Medição Taption"
+            "value" : "BOKKI Hoje"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Đo lường Taption"
+            "value" : "BOKKI Hôm nay"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pengukuran Taption"
+            "value" : "BOKKI Hari Ini"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "การวัดของ Taption"
+            "value" : "BOKKI วันนี้"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Taption मापन"
-          }
-        }
-      }
-    },
-    "Watch에서 확인|Confirm on Watch" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Watchで確認"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在 Watch 上确认"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在 Watch 上確認"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Auf der Watch bestätigen"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Confirmer sur la Watch"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Conferma su Watch"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Confirmar en el Watch"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Confirmar no Watch"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Xác nhận trên Watch"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Konfirmasi di Watch"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ยืนยันบน Watch"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Watch पर पुष्टि करें"
+            "value" : "BOKKI आज"
           }
         }
       }
@@ -228,83 +151,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "क्या यह {0} था?"
-          }
-        }
-      }
-    },
-    "{0}분 전|{0} min ago" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "{0}分前"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "{0}分钟前"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "{0} 分鐘前"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vor {0} Min."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "il y a {0} min"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "{0} min fa"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hace {0} min"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "{0} min atrás"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "{0} phút trước"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "{0} mnt lalu"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "{0} นาทีที่แล้ว"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "{0} मिनट पहले"
           }
         }
       }
@@ -459,83 +305,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "{0} घं {1} मि"
-          }
-        }
-      }
-    },
-    "{0}시간 전|{0} hr ago" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "{0}時間前"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "{0}小时前"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "{0} 小時前"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vor {0} Std."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "il y a {0} h"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "{0} h fa"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hace {0} h"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "{0} h atrás"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "{0} giờ trước"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "{0} jam lalu"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "{0} ชม.ที่แล้ว"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "{0} घंटे पहले"
           }
         }
       }
@@ -767,6 +536,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "गतिविधि"
+          }
+        }
+      }
+    },
+    "|BOKKI Today" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BOKKI 今日"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BOKKI 今天"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BOKKI 今天"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BOKKI Heute"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BOKKI Aujourd’hui"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BOKKI Oggi"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BOKKI Hoy"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BOKKI Hoje"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BOKKI Hôm nay"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BOKKI Hari Ini"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BOKKI วันนี้"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BOKKI आज"
           }
         }
       }
@@ -2388,79 +2234,79 @@
         }
       }
     },
-    "|Shows the detected activity and today's summary." : {
+    "|Shows your current activity, next plan, and today's record." : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "検出されたアクティビティと今日のサマリーを表示します。"
+            "value" : "現在のアクティビティ、次の予定、今日の記録を表示します。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "显示检测到的活动和今天的摘要。"
+            "value" : "显示当前活动、下一个日程和今天的记录。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "顯示偵測到的活動和今天的摘要。"
+            "value" : "顯示目前活動、下一個行程和今天的記錄。"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zeigt die erkannte Aktivität und die Zusammenfassung von heute."
+            "value" : "Zeigt deine aktuelle Aktivität, den nächsten Plan und den heutigen Eintrag."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Affiche l'activité détectée et le résumé du jour."
+            "value" : "Affiche votre activité actuelle, le prochain plan et le relevé du jour."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mostra l'attività rilevata e il riepilogo di oggi."
+            "value" : "Mostra l’attività attuale, il prossimo impegno e la registrazione di oggi."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Muestra la actividad detectada y el resumen de hoy."
+            "value" : "Muestra tu actividad actual, el próximo plan y el registro de hoy."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mostra a atividade detectada e o resumo de hoje."
+            "value" : "Mostra sua atividade atual, o próximo plano e o registro de hoje."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hiển thị hoạt động được phát hiện và tóm tắt hôm nay."
+            "value" : "Hiển thị hoạt động hiện tại, kế hoạch tiếp theo và ghi nhận hôm nay."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Menampilkan aktivitas yang terdeteksi dan ringkasan hari ini."
+            "value" : "Menampilkan aktivitas saat ini, rencana berikutnya, dan catatan hari ini."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "แสดงกิจกรรมที่ตรวจพบและสรุปของวันนี้"
+            "value" : "แสดงกิจกรรมปัจจุบัน แผนถัดไป และบันทึกของวันนี้"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "पहचानी गई गतिविधि और आज का सारांश दिखाता है।"
+            "value" : "मौजूदा गतिविधि, अगली योजना और आज का रिकॉर्ड दिखाता है।"
           }
         }
       }
@@ -2769,83 +2615,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "सबवे"
-          }
-        }
-      }
-    },
-    "|Taption Measurement" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Taption測定"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Taption 测量"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Taption 測量"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Taption-Messung"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mesure Taption"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Misurazione Taption"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Medición de Taption"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Medição Taption"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Đo lường Taption"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pengukuran Taption"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "การวัดของ Taption"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Taption मापन"
           }
         }
       }
@@ -3235,237 +3004,6 @@
         }
       }
     },
-    "방금|Just now" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "たった今"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "刚刚"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "剛剛"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gerade eben"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "À l'instant"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Adesso"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ahora mismo"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Agora há pouco"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vừa xong"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Baru saja"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "เมื่อสักครู่"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "अभी-अभी"
-          }
-        }
-      }
-    },
-    "손목 움직임을 모으는 중|Collecting wrist motion" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "手首の動きを収集中"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "正在采集手腕动作"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "正在收集手腕動作"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Handgelenkbewegung wird erfasst"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Collecte des mouvements du poignet"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Raccolta del movimento del polso"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Recopilando movimiento de la muñeca"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Coletando movimento do pulso"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Đang thu thập chuyển động cổ tay"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mengumpulkan gerakan pergelangan tangan"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "กำลังเก็บการเคลื่อนไหวของข้อมือ"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "कलाई की गति इकट्ठा हो रही है"
-          }
-        }
-      }
-    },
-    "신뢰도 {0}%|Confidence {0}%" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "信頼度 {0}%"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "置信度 {0}%"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "可信度 {0}%"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sicherheit {0} %"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Confiance {0} %"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Affidabilità {0}%"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Confianza {0} %"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Confiança {0}%"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Độ tin cậy {0}%"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Keyakinan {0}%"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ความมั่นใจ {0}%"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "भरोसा {0}%"
-          }
-        }
-      }
-    },
     "신제품 기획|New product planning" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3539,6 +3077,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "नए प्रोडक्ट की प्लानिंग"
+          }
+        }
+      }
+    },
+    "오늘 {0}|Today {0}" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今日 {0}"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天 {0}"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天 {0}"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heute {0}"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aujourd’hui {0}"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oggi {0}"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hoy {0}"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hoje {0}"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hôm nay {0}"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hari ini {0}"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "วันนี้ {0}"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "आज {0}"
           }
         }
       }
@@ -3697,79 +3312,79 @@
         }
       }
     },
-    "지금 감지된 활동과 오늘 활동 요약을 표시합니다.|Shows the detected activity and today's summary." : {
+    "지금 활동과 다음 일정, 오늘 기록을 표시합니다.|Shows your current activity, next plan, and today's record." : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "検出されたアクティビティと今日のサマリーを表示します。"
+            "value" : "現在のアクティビティ、次の予定、今日の記録を表示します。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "显示检测到的活动和今天的摘要。"
+            "value" : "显示当前活动、下一个日程和今天的记录。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "顯示偵測到的活動和今天的摘要。"
+            "value" : "顯示目前活動、下一個行程和今天的記錄。"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zeigt die erkannte Aktivität und die Zusammenfassung von heute."
+            "value" : "Zeigt deine aktuelle Aktivität, den nächsten Plan und den heutigen Eintrag."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Affiche l'activité détectée et le résumé du jour."
+            "value" : "Affiche votre activité actuelle, le prochain plan et le relevé du jour."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mostra l'attività rilevata e il riepilogo di oggi."
+            "value" : "Mostra l’attività attuale, il prossimo impegno e la registrazione di oggi."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Muestra la actividad detectada y el resumen de hoy."
+            "value" : "Muestra tu actividad actual, el próximo plan y el registro de hoy."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mostra a atividade detectada e o resumo de hoje."
+            "value" : "Mostra sua atividade atual, o próximo plano e o registro de hoje."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hiển thị hoạt động được phát hiện và tóm tắt hôm nay."
+            "value" : "Hiển thị hoạt động hiện tại, kế hoạch tiếp theo và ghi nhận hôm nay."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Menampilkan aktivitas yang terdeteksi dan ringkasan hari ini."
+            "value" : "Menampilkan aktivitas saat ini, rencana berikutnya, dan catatan hari ini."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "แสดงกิจกรรมที่ตรวจพบและสรุปของวันนี้"
+            "value" : "แสดงกิจกรรมปัจจุบัน แผนถัดไป และบันทึกของวันนี้"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "पहचानी गई गतिविधि और आज का सारांश दिखाता है।"
+            "value" : "मौजूदा गतिविधि, अगली योजना और आज का रिकॉर्ड दिखाता है।"
           }
         }
       }
@@ -3924,83 +3539,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "प्रोजेक्ट"
-          }
-        }
-      }
-    },
-    "확인 요청|Confirmation requested" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "確認をリクエストしました"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请求确认"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已要求確認"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bestätigung angefragt"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Confirmation demandée"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Conferma richiesta"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Confirmación solicitada"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Confirmação solicitada"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Đã yêu cầu xác nhận"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Konfirmasi diminta"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ขอให้ยืนยัน"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "पुष्टि माँगी गई"
           }
         }
       }
