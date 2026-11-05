@@ -5903,3 +5903,6 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 사진: 호 전체 스와이프, 전체 화면 아래로 쓸어 닫기. 음악 미리듣기는 무음 모드에서도 재생. 날씨 끄면 메모·일정이 사이드바 옆으로. 아일랜드 펼침 화면을 두 칸 6개 막대로 조정. 화면 확인은 안 함.
 - 시험: `TaptionPlanTests` 통과(`build/validation/WCH1105A02/unit-full.xcresult`), `check.py` 실패 0, iOS Debug 빌드 성공. 실기기 미확인.
 
+## TFB1105A04 TestFlight 277 (2026-11-05)
+- 커밋 `7ab14210` 기준. 처리 `VALID`, `TP Taption Plan 내부 테스트` 그룹 연결, 테스터 1명 노출을 보고서에서 읽었다. 앱·위젯·Watch·Watch 위젯 번호 ['277', '277', '277', '277']를 아카이브에서 읽었다. 외부 심사 제출 안 함. 실기기 확인 대기.
+
