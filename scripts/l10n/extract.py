@@ -40,7 +40,7 @@ ENGLISH_LABEL = re.compile(r"\s*,\s*(?:english\w*|en)\s*:\s*\"")
 
 
 def tracked_swift() -> list[str]:
-    out = subprocess.check_output(["git", "ls-files", "*.swift"], cwd=ROOT).decode().splitlines()
+    out = subprocess.check_output(["git", "ls-files", "--cached", "--others", "--exclude-standard", "*.swift"], cwd=ROOT).decode().splitlines()
     skip = ("TaptionPlanTests", "TaptionPlanUITests", "tools/", "scripts/", "server/", "design/", "artifacts/")
     return [f for f in out if "/Tests/" not in f and not f.startswith(skip)]
 
@@ -170,6 +170,13 @@ def collect() -> tuple[dict, list]:
         for m in re.finditer(r'UITextPack\.translate\(english: "', text):
             lit = read_literal(text, m.end() - 1)
             add(f"|{lit.template}", "", lit.template, rel, line_of(text, m.start()))
+    # 행동 분류는 값으로 넘어가므로 코드에서 읽히지 않는다. 분류표에서 직접 모은다.
+    taxonomy = "Packages/TaptionPlanCore/Sources/TaptionPlanCore/Resources/record-classification.json"
+    for category in json.loads((ROOT / taxonomy).read_text(encoding="utf8"))["categories"]:
+        for item in [category] + category["details"]:
+            if not item.get("englishTitle"):
+                raise SystemExit(f"englishTitle 없음: {item['id']}")
+            add(f"{item['title']}|{item['englishTitle']}", item["title"], item["englishTitle"], taxonomy, 0)
     names = (ROOT / "TaptionPlan/UI/MapHomeHomeNames.swift").read_text(encoding="utf8")
     for ko, en in re.findall(r'\("((?:[^"\\]|\\.)*)",\s*"((?:[^"\\]|\\.)*)"\)', names):
         add(f"|{en}", ko, en, "TaptionPlan/UI/MapHomeHomeNames.swift", 0)

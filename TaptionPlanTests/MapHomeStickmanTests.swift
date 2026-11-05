@@ -68,6 +68,27 @@ final class MapHomeStickmanTests: XCTestCase {
         }
     }
 
+    func testEveryClassificationHasEnglishTitleWithoutChangingStoredTitle() {
+        for category in RecordClassificationCatalog.categories {
+            XCTAssertNotNil(category.englishTitle, category.id)
+            for detail in category.details {
+                XCTAssertNotNil(detail.englishTitle, detail.id)
+                XCTAssertEqual(detail.localizedTitle(.korean), detail.title)
+            }
+        }
+        XCTAssertEqual(RecordClassificationCatalog.localizedDetailTitle("회의", language: .korean), "회의")
+        XCTAssertEqual(RecordClassificationCatalog.localizedDetailTitle("내가 만든 이름", language: .english), "내가 만든 이름")
+    }
+
+    func testWorkAndStudyUseDeskPoses() {
+        XCTAssertEqual(TaptionHwarangPose.resolve(categoryID: "work", title: "업무"), .workDesk)
+        XCTAssertEqual(TaptionHwarangPose.resolve(categoryID: "work", title: "걷기"), .laptopWalk)
+        XCTAssertEqual(TaptionHwarangPose.resolve(categoryID: "work", title: "회의"), .meeting)
+        XCTAssertEqual(TaptionHwarangPose.resolve(categoryID: "study", title: "공부"), .studyDesk)
+        XCTAssertEqual(TaptionHwarangPose.resolve(categoryID: "work", title: "휴식"), .restCroissant)
+        XCTAssertNil(TaptionHwarangPose.resolve(categoryID: "movement", title: "걷기"))
+    }
+
     func testRailCategoryDecidesActionWhileStaying() {
         let eating = MapHomeTimeRailSegment(startMinute: 1_070, endMinute: 1_092, categoryID: "eating", title: "식사")
         XCTAssertEqual(MapHomeStickmanActionResolver.railAction(segment: eating, details: []), .eating)
@@ -87,7 +108,7 @@ final class MapHomeStickmanTests: XCTestCase {
         let scenes: [(String, HwarangScene, Double)] = [
             ("Work", .work, 1.8), ("Study", .study, 1.8), ("Sleep", .sleep, 2), ("Eat", .eat, 7),
             ("Walk", .walkLoop, 1), ("Run", .runLoop, 1), ("Hobby", .yarn, 1.2), ("Rest", .restLoaf, 1),
-            ("Check", .confused, 1), ("WorkWalk", .walkLaptop, 1),
+            ("Check", .confused, 1),
         ]
         let poses = TaptionHwarangPose.allCases.map { pose -> (String, HwarangScene, Double) in
             let scene = HwarangDiagnostics.scene(for: pose)
@@ -170,7 +191,7 @@ final class MapHomeStickmanTests: XCTestCase {
         XCTAssertEqual(TaptionHwarangPose.resolve(categoryID: "rest", title: "집에서 휴식"), .restBox)
         XCTAssertEqual(TaptionHwarangPose.resolve(categoryID: "work", title: "휴식"), .restCroissant)
         XCTAssertEqual(TaptionHwarangPose.resolve(categoryID: "activity", title: "휴식"), .restStarfish)
-        XCTAssertNil(TaptionHwarangPose.resolve(categoryID: "work", title: "업무"))
+        XCTAssertEqual(TaptionHwarangPose.resolve(categoryID: "movement", title: "업무"), nil)
     }
 
     func testWriteGroomingSheetWhenRequested() throws {

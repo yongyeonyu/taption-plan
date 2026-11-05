@@ -9,6 +9,7 @@ enum TaptionHwarangPose: String, CaseIterable, Sendable {
     case restStarfish, restCroissant, restDonut, restLoaf, restBox
     case nap, meditation, salon, cooking, groceries, laundry, dishes, coffee, housework, shower
     case meeting, friends, date, family, phoneCall, bookReading, game, music, video, petCare
+    case workDesk, studyDesk, laptopWalk
 
     private static let titles: [String: TaptionHwarangPose] = [
         "깊은 수면": .deepSleep, "rem 수면": .remSleep, "회복": .recovery, "투약": .medication, "병원": .hospital,
@@ -22,8 +23,16 @@ enum TaptionHwarangPose: String, CaseIterable, Sendable {
     static func resolve(categoryID: String, title: String) -> TaptionHwarangPose? {
         let name = title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         if let pose = titles[name] { return pose }
-        guard name == "휴식" else { return nil }
-        switch categoryID.split(separator: ".").first.map(String.init) ?? categoryID {
+        let root = categoryID.split(separator: ".").first.map(String.init) ?? categoryID
+        // 업무·공부는 예전 꾹꾹이 그림이 자는 것처럼 보여 노트북·책 그림을 쓴다(WCH1105A03).
+        if name != "휴식" {
+            switch root {
+            case "work": return name == "걷기" ? .laptopWalk : .workDesk
+            case "study": return .studyDesk
+            default: return nil
+            }
+        }
+        switch root {
         case "work": return .restCroissant
         case "study": return .restDonut
         case "hobby": return .restLoaf

@@ -5936,3 +5936,17 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 위젯(RFA1105A03): 위젯 target에서 `PlanningEngine.swift`를 뺐다. 위젯이 쓰는 엔진은 `WidgetSharedEngines.swift`(앱·위젯 공용)로, 작은 정책은 쓰는 모델 파일로 옮겼다. 위젯 깨끗한 빌드 23초 → 16초(각 1회, 같은 Mac). 저장소 소스는 위젯 인텐트가 DB를 직접 쓰므로 그대로 뒀다.
 - 시험: `TaptionPlanTests` 2,051건 실패 0, 건너뜀 17(IPD-iPad11 시뮬레이터, `build/validation/RFA1105A03/full.xcresult`), iOS·watchOS Debug 빌드, 구조·경계·번역 점검 통과, 기준선 낮춤.
 
+## RFA1105A04 남은 리팩토링과 아일랜드 그림 (2026-11-05, 커밋 전)
+- 분할: 도구로 메서드·계산 속성을 기능별 extension으로 옮겼다. `MapHomeView` 11,653 → 약 660줄 + 16개 파일, `TimelineBoard` 3,316 → 약 330줄 + 4개, `TimelineDetailPanel` 3,404 → 약 230줄 + 5개. 저장 속성·init·body는 본 파일에 있다. 파일을 나누려고 이 세 타입 멤버와 파일 안 `private` 선언을 푼 곳이 많다.
+- 상태 분리는 하지 않았다: 파일만 나눴고 `MapHomeView`의 상태 수는 그대로다. 화면 재평가 범위는 바뀌지 않는다.
+- `Task.detached` 34곳 점검: 코드를 고치지 않았다. `assigned` 형은 취소 처리나 검사가 있다. `await` 직접 호출 약 14곳은 호출자 취소가 전달되지 않지만 읽기·내보내기 계산이라 끝까지 돈다(결과 사용 전 확인 여부는 곳마다 다르다). 정리 작업 등 fire-and-forget 5곳은 의도된 것으로 봤다. 간이 검색과 일부 코드 읽기로 본 결과이고 전수 정독은 아니다.
+- 아일랜드: `TaptionHwarangPose`에 `workDesk`·`studyDesk`·`laptopWalk`를 더하고 세 고양이 자세 아틀라스를 다시 만들었다. 업무·공부는 노트북·책 그림, 회사 안 걷기는 노트북 든 그림이다. 잠금화면·아일랜드와 홈 위젯의 정지 칸이 같이 바뀐다. Watch 자산도 맞췄다(126장, 자산 약 2.1MB). 그림 화면은 실기기·위젯으로 보지 못했다.
+- 번역: 위치 핀 문구 4개가 12개 언어에서 빠져 있어 채웠다(앞선 `9a39ed73`에는 빠져 있음). `check.py` 실패 0.
+- 시험: `TaptionPlanTests` 2,052건 실패 0, 건너뜀 17(`build/validation/RFA1105A04/full.xcresult`), iOS·watchOS Debug 빌드, 구조·경계 점검 통과, 기준선 낮춤. 실기기 미확인.
+
+## L10N1105A01 행동 분류 상세 번역 (2026-11-05, 커밋 전)
+- 분류표 50개 항목(대분류 11·상세 47, 키 기준 중복 제외)에 `englishTitle`을 넣고, 빠진 번역 6개를 12개 언어로 채웠다. 메뉴·달력·클립 편집 상세 줄이 번역표를 쓴다. 저장 값과 판정은 한국어 `title` 그대로다.
+- 추출 도구 결함: `git ls-files`로 파일을 모아 아직 추적되지 않은 새 파일을 읽지 못했다. 리팩토링으로 만든 파일의 문구가 빠져 작업 트리의 `UIText.xcstrings`가 2,198개에서 2,081개로 줄었고 `check.py`는 통과했다. 일본어 화면에서 발견해 고쳤다(2,208개, HEAD 대비 손실 0). 분류표도 추출 대상에 넣었다.
+- 시뮬레이터(IPD-iPad11, `-AppleLanguages (ja)`): 메뉴 문구, 대분류, 활동 대분류의 상세 7개 일본어 표시를 눈으로 확인했다. 나머지 11개 언어와 달력·클립 편집 화면은 보지 못했고, 번역은 사람 검수가 없다.
+- 시험: `TaptionPlanTests` 2,053건 실패 0(`build/validation/L10N1105A01/full.xcresult`, 추출 도구 수정 전 코드·문자열표), 추출 수정 뒤 앱 빌드 성공, `check.py` 실패 0.
+

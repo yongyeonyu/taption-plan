@@ -83,6 +83,13 @@
 - **`AppModel` 스냅샷을 필드별로 관찰**: `MapHomeView`가 거의 모든 필드를 읽어 얻는 것이 적다. 읽는 곳 500곳 이상을 바꿔야 한다.
 - **`AppModel` 분해(리팩토링 11번)**: 효과는 관찰 단위로 정해지는데 `@Observable`이 이미 속성 단위로 추적한다. 저장 프로퍼티를 옮겨도 무효화는 줄지 않는다. 성능 안이 아니라 정리 안으로 남긴다.
 
+## 2026-11-05 적용
+
+- 안 A: 센서 갱신 계산을 `SensorTimelineDerivation.swift`로 옮겨 주 스레드 밖에서 돌리고 `snapshot` 쓰기를 한 번으로 묶었다. 끊김 감소는 재지 못했다.
+- 안 B 일부: 위젯 target에서 `PlanningEngine.swift`를 뺐다. 위젯 깨끗한 빌드 23초 → 16초(각 1회). 저장소 소스는 위젯 인텐트가 써서 남겼다.
+- 파일 분할: `MapHomeView`, `TimelineBoard`, `TimelineDetailPanel`의 메서드·계산 속성을 `타입+기능.swift`로 옮겼다. 상태 분리는 아니어서 화면 재평가 범위는 그대로다. 안 6(`@State` 묶기)은 남아 있다.
+- `Task.detached` 34곳: 코드 변경 없음. `await` 직접 호출 약 14곳은 호출자 취소가 전달되지 않는다. 간이 점검이다.
+
 ## 적용 결과
 
 시뮬레이터(iPhone 17 Pro) · Debug · Mac에서 쟀다. 기기 수치는 재지 못했다. 전은 커밋 `ecf089a5`, 후는 커밋 `fb5f5acc`의 측정 시험이다.

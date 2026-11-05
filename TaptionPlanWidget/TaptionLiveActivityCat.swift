@@ -29,7 +29,7 @@ struct TaptionLiveActivityCat: View {
             }
         }
         .overlay(alignment: .bottomTrailing) {
-            if categoryID == "work" || categoryID == "study" {
+            if posed == nil, categoryID == "work" || categoryID == "study" {
                 Image(systemName: categoryID == "work" ? "desktopcomputer" : "book.closed.fill")
                     .font(.system(size: 7, weight: .bold))
                     .foregroundStyle(.white)

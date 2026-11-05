@@ -2763,6 +2763,16 @@
 "건강 데이터 보내기|Send health data": "Kirim data Kesehatan",
 "끔|Off": "Mati",
 "최신 데이터 우선|Latest data first": "Utamakan data terbaru",
-"지도에서 저장됨|Saved from the map": "Disimpan dari peta"
+"지도에서 저장됨|Saved from the map": "Disimpan dari peta",
+"이 위치로 저장|Save this location": "Simpan lokasi ini",
+"지도를 움직여 핀을 맞추세요|Move the map to place the pin": "Geser peta untuk menempatkan pin",
+"축소|Zoom out": "Perkecil",
+"확대|Zoom in": "Perbesar",
+"멍때리기|Zoning out": "Melamun",
+"학원|Academy": "Bimbel",
+"취미(집 - 취미)|Hobby (home to hobby)": "Hobi (dari rumah)",
+"지하철|Subway": "Kereta bawah tanah",
+"버스|Bus": "Bus",
+"건강관리|Health care": "Kesehatan"
 }
 }

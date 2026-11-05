@@ -3,6 +3,7 @@
 한국어·영어는 코드의 `text("한글", "English")`가 그대로 정본이고, 나머지 12개 언어(ja, zh-Hans, zh-Hant, de, fr, it, es, pt-BR, vi, id, th, hi)는 여기서 만듭니다.
 
 - `extract.py`: 코드와 기존 카탈로그에서 대상을 모아 `source.json`을 만듭니다. 읽지 못한 호출은 `unread-report.json`에 남깁니다.
+  커밋 전 새 파일도 읽습니다. 행동 분류 이름은 값으로 넘어가므로 `record-classification.json`의 `title|englishTitle`을 직접 모읍니다.
 - `translations/<언어>.json`: 번역 원본. 키는 `ko|en`(변수 자리는 `{0}`), 영어만 있는 표는 `|en`, 기존 카탈로그는 `Localizable:키`·`InfoPlist:키`입니다.
 - `generate.py`: 네 제품의 `UIText.xcstrings`와 `Localizable`·`InfoPlist`를 다시 씁니다. 카탈로그를 손으로 고치지 않습니다. 충돌을 피하려고 메인 세션만 실행합니다.
 - `check.py`: 누락·남은 한글·자리 표시자·고유 이름을 점검합니다. 실패하면 출시하지 않습니다(사람 검수가 없는 대신의 조건, 대표 결정).

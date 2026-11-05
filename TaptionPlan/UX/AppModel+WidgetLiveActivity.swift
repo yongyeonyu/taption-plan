@@ -712,7 +712,7 @@ extension AppModel {
             title: placeCategory == nil ? projection.title : ""
         )
         let poseName = placeCategory == "work"
-            ? "WorkWalk"
+            ? TaptionHwarangPose.laptopWalk.rawValue
             : TaptionHwarangPose.resolve(categoryID: categoryID, title: projection.title)?.rawValue
         return TaptionWatchCurrentActivity(
             categoryID: categoryID,

@@ -2763,6 +2763,16 @@
 "건강 데이터 보내기|Send health data": "Gửi dữ liệu Sức khỏe",
 "끔|Off": "Tắt",
 "최신 데이터 우선|Latest data first": "Ưu tiên dữ liệu mới",
-"지도에서 저장됨|Saved from the map": "Đã lưu từ bản đồ"
+"지도에서 저장됨|Saved from the map": "Đã lưu từ bản đồ",
+"이 위치로 저장|Save this location": "Lưu vị trí này",
+"지도를 움직여 핀을 맞추세요|Move the map to place the pin": "Di chuyển bản đồ để đặt ghim",
+"축소|Zoom out": "Thu nhỏ",
+"확대|Zoom in": "Phóng to",
+"멍때리기|Zoning out": "Thẫn thờ",
+"학원|Academy": "Trung tâm học thêm",
+"취미(집 - 취미)|Hobby (home to hobby)": "Sở thích (từ nhà)",
+"지하철|Subway": "Tàu điện ngầm",
+"버스|Bus": "Xe buýt",
+"건강관리|Health care": "Chăm sóc sức khỏe"
 }
 }

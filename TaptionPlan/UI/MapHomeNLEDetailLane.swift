@@ -57,7 +57,7 @@ extension MapHomeNLEClipEditor {
             .overlay(alignment: .topLeading) {
                 if height >= 15 {
                     VStack(alignment: .leading, spacing: 0) {
-                        Text(clip.option.title)
+                        Text(RecordClassificationCatalog.localizedDetailTitle(clip.option.title, language: language))
                             .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold))
                             .lineLimit(1)
                             .minimumScaleFactor(0.7)
@@ -74,7 +74,7 @@ extension MapHomeNLEClipEditor {
                 }
             }
             .accessibilityElement()
-            .accessibilityLabel(clip.option.title)
+            .accessibilityLabel(RecordClassificationCatalog.localizedDetailTitle(clip.option.title, language: language))
     }
 
     /// 상세 항목이 속한 대분류 클립. 상세를 골랐으면 그 자리, 아니면 재생 헤드 자리다.
@@ -114,7 +114,7 @@ extension MapHomeNLEClipEditor {
                 Button {
                     applyDetail(title: detailTitle(detail), behavior: detail.behavior)
                 } label: {
-                    Label(detailTitle(detail), systemImage: detail.systemImage)
+                    Label(detail.localizedTitle(language), systemImage: detail.systemImage)
                 }
             }
             if !dayEvents.isEmpty {

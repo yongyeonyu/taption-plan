@@ -149,3 +149,23 @@ enum MapHomeMovementEditOption {
         }
     }
 }
+
+extension RecordClassificationCategory {
+    func localizedTitle(_ language: MapHomeLanguage) -> String {
+        language.runtimeText(title, englishTitle ?? title)
+    }
+}
+
+extension RecordClassificationDetail {
+    func localizedTitle(_ language: MapHomeLanguage) -> String {
+        language.runtimeText(title, englishTitle ?? title)
+    }
+}
+
+extension RecordClassificationCatalog {
+    /// 저장된 한국어 상세 이름을 표시 언어로 바꾼다. 분류표에 없으면 사용자가 쓴 이름이라 그대로 둔다.
+    static func localizedDetailTitle(_ title: String, language: MapHomeLanguage) -> String {
+        categories.lazy.flatMap(\.details).first { $0.title == title }?.localizedTitle(language) ?? title
+    }
+}
+

@@ -1,12 +1,12 @@
 {
-  "files": 396,
-  "lines": 185997,
+  "files": 422,
+  "lines": 186501,
   "buckets": {
-    "<500": 281,
-    "500-1000": 75,
-    "1000-2000": 27,
-    "2000-5000": 12,
-    "5000+": 1
+    "<500": 291,
+    "500-1000": 83,
+    "1000-2000": 38,
+    "2000-5000": 10,
+    "5000+": 0
   },
   "risk": {
     "unchecked_sendable": 22,
@@ -24,8 +24,8 @@
     "singleton_reach": 383
   },
   "metrics": {
-    "largest_file_lines": 11653,
-    "largest_type_lines": 11644
+    "largest_file_lines": 3408,
+    "largest_type_lines": 2162
   },
   "frozen_files": {
     "Packages/TaptionPlanCore/Sources/TaptionPlanCore/DayStoreV3.swift": 2408,
@@ -44,42 +44,18 @@
     "TaptionPlan/UI/MapHomeNLEClipEditor.swift": 1245,
     "TaptionPlan/UI/MapHomeTimeSidebar.swift": 2791,
     "TaptionPlan/UI/MapHomeVectorMap.swift": 1347,
-    "TaptionPlan/UI/MapHomeView.swift": 11653,
     "TaptionPlan/UI/ReviewView+Clock.swift": 2165,
     "TaptionPlan/UI/SettingsView.swift": 2151,
-    "TaptionPlan/UI/TimelineBoard.swift": 3316,
-    "TaptionPlan/UI/TimelineDetailPanel.swift": 3404,
     "TaptionPlanWatch/WatchConnectivityController.swift": 1623,
     "TaptionPlanWatch/WatchWorkoutManager.swift": 2349
   },
   "largest_files": [
-    {
-      "path": "TaptionPlan/UI/MapHomeView.swift",
-      "lines": 11653,
-      "largest_type": "struct MapHomeView",
-      "largest_type_lines": 11644,
-      "types": 6
-    },
     {
       "path": "TaptionPlan/Core/RouteTimelineData.swift",
       "lines": 3408,
       "largest_type": "enum RouteTimelineDataEngine",
       "largest_type_lines": 1392,
       "types": 40
-    },
-    {
-      "path": "TaptionPlan/UI/TimelineDetailPanel.swift",
-      "lines": 3404,
-      "largest_type": "struct TimelineDetailPanel",
-      "largest_type_lines": 3192,
-      "types": 5
-    },
-    {
-      "path": "TaptionPlan/UI/TimelineBoard.swift",
-      "lines": 3316,
-      "largest_type": "struct TimelineBoard",
-      "largest_type_lines": 3312,
-      "types": 1
     },
     {
       "path": "TaptionPlan/Core/RecordSummaryEngine.swift",
@@ -136,24 +112,30 @@
       "largest_type": "struct SettingsView",
       "largest_type_lines": 1457,
       "types": 10
+    },
+    {
+      "path": "TaptionPlan/UI/AddPlanSheet.swift",
+      "lines": 2128,
+      "largest_type": "struct AddPlanSheet",
+      "largest_type_lines": 1059,
+      "types": 8
+    },
+    {
+      "path": "TaptionPlan/Core/WidgetShared.swift",
+      "lines": 1977,
+      "largest_type": "enum TaptionWidgetSharedStore",
+      "largest_type_lines": 304,
+      "types": 36
+    },
+    {
+      "path": "TaptionPlan/Core/TaptionActivityEngineAdapter.swift",
+      "lines": 1871,
+      "largest_type": "enum TaptionActivityEngineAdapter",
+      "largest_type_lines": 1424,
+      "types": 9
     }
   ],
   "largest_types": [
-    {
-      "path": "TaptionPlan/UI/MapHomeView.swift",
-      "type": "struct MapHomeView",
-      "lines": 11644
-    },
-    {
-      "path": "TaptionPlan/UI/TimelineBoard.swift",
-      "type": "struct TimelineBoard",
-      "lines": 3312
-    },
-    {
-      "path": "TaptionPlan/UI/TimelineDetailPanel.swift",
-      "type": "struct TimelineDetailPanel",
-      "lines": 3192
-    },
     {
       "path": "TaptionPlan/UI/ReviewView+Clock.swift",
       "type": "extension ReviewView",
@@ -198,6 +180,21 @@
       "path": "TaptionPlan/UI/MapHomeNLEClipEditor.swift",
       "type": "struct MapHomeNLEClipEditor",
       "lines": 1227
+    },
+    {
+      "path": "TaptionPlan/Core/HealthKitImportCoordinator.swift",
+      "type": "actor HealthKitImportCoordinator",
+      "lines": 1212
+    },
+    {
+      "path": "TaptionPlan/UI/MapHomeSectionEditSheet.swift",
+      "type": "struct MapHomeSectionEditSheet",
+      "lines": 1196
+    },
+    {
+      "path": "TaptionPlan/Core/TaptionStoreV2.swift",
+      "type": "actor TaptionStoreV2",
+      "lines": 1164
     }
   ]
 }

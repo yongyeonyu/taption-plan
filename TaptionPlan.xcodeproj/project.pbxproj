@@ -33,8 +33,18 @@
 		A1FA1100D0A3E914D10FEC81 /* ReviewSupportTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA113778B8EB03DD952E89 /* ReviewSupportTypes.swift */; };
 		A1FA11B788DDFF62F309512F /* TimelineRowModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11B51558DBA397EDEB19 /* TimelineRowModels.swift */; };
 		A1FA11356EDD0F1965709226 /* TimelineRowViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11DCE35698B9D5CBB801 /* TimelineRowViews.swift */; };
+		A1EB386C4976687FBD7C0390 /* TimelineBoard+Layout.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1EB386C4976687FBD7C0390 /* TimelineBoard+Layout.swift */; };
+		A1E6C6325EEA7A7F0B45FA50 /* TimelineBoard+Support.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E6C6325EEA7A7F0B45FA50 /* TimelineBoard+Support.swift */; };
+		A1E62D1EF9170F803D9F4E50 /* TimelineBoard+Support2.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E62D1EF9170F803D9F4E50 /* TimelineBoard+Support2.swift */; };
+		A1E124A4DAB02C59A4A75DA0 /* TimelineBoard+Rows.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E124A4DAB02C59A4A75DA0 /* TimelineBoard+Rows.swift */; };
+		A1E997DC49569A27B7BF04C0 /* TimelineBoard+Gesture.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E997DC49569A27B7BF04C0 /* TimelineBoard+Gesture.swift */; };
 		A1FA11A3B8DAE991AEA02AAF /* TimelineBoard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11A8410BD26D37F70F6C /* TimelineBoard.swift */; };
 		A1FA113C605017A9D1288BA2 /* GroupGanttView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1151C89CDAB2BD35E340 /* GroupGanttView.swift */; };
+		A1E7953FB47635FC14651740 /* TimelineDetailPanel+Support.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E7953FB47635FC14651740 /* TimelineDetailPanel+Support.swift */; };
+		A1E0F1C4432871821FA96150 /* TimelineDetailPanel+Support2.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E0F1C4432871821FA96150 /* TimelineDetailPanel+Support2.swift */; };
+		A1EE7C753AAE67DF510A1700 /* TimelineDetailPanel+Support3.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1EE7C753AAE67DF510A1700 /* TimelineDetailPanel+Support3.swift */; };
+		A1E37CAEA4CA9ED41D7FDE20 /* TimelineDetailPanel+Sections.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E37CAEA4CA9ED41D7FDE20 /* TimelineDetailPanel+Sections.swift */; };
+		A1E537D0C8837B01C02152F0 /* TimelineDetailPanel+Editing.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E537D0C8837B01C02152F0 /* TimelineDetailPanel+Editing.swift */; };
 		A1FA113C5869FE29648957F6 /* TimelineDetailPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA114C9607F825D87DDABD /* TimelineDetailPanel.swift */; };
 		A1FA11A8E4B16F54E10FE9B1 /* RouteMapViewport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA111EE25EBDA22F51D42E /* RouteMapViewport.swift */; };
 		A1FA11EB640567D972E12891 /* TimelineSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11013C73958F69782D38 /* TimelineSelection.swift */; };
@@ -359,6 +369,22 @@
 		A1000000000000000B1105C3 /* MapHomeAppleWatchMenuItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105C3 /* MapHomeAppleWatchMenuItem.swift */; };
 		A1000000000000000B1105C5 /* MapHomeLanguageMenuItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105C5 /* MapHomeLanguageMenuItem.swift */; };
 		A1000000000000000B1105C6 /* MapHomePlacePinPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105C6 /* MapHomePlacePinPicker.swift */; };
+		A1E3519F71AF5D72C5438970 /* MapHomeView+Timeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E3519F71AF5D72C5438970 /* MapHomeView+Timeline.swift */; };
+		A1EF724568A9B22CAC66C750 /* MapHomeView+Playback.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1EF724568A9B22CAC66C750 /* MapHomeView+Playback.swift */; };
+		A1EEF6FAFDD9B3AE536F4390 /* MapHomeView+Playback2.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1EEF6FAFDD9B3AE536F4390 /* MapHomeView+Playback2.swift */; };
+		A1E32009FB49172F1DBAF950 /* MapHomeView+Support.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E32009FB49172F1DBAF950 /* MapHomeView+Support.swift */; };
+		A1EF1870E9BA90AF77FBB630 /* MapHomeView+Support2.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1EF1870E9BA90AF77FBB630 /* MapHomeView+Support2.swift */; };
+		A1E4358522139E5590681710 /* MapHomeView+Support3.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E4358522139E5590681710 /* MapHomeView+Support3.swift */; };
+		A1E7006AF3F40D36507FBCF0 /* MapHomeView+Menu.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E7006AF3F40D36507FBCF0 /* MapHomeView+Menu.swift */; };
+		A1E721D1B0AAA98B8110A900 /* MapHomeView+Menu2.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E721D1B0AAA98B8110A900 /* MapHomeView+Menu2.swift */; };
+		A1EBDE9094DD4C3E21584B00 /* MapHomeView+Map.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1EBDE9094DD4C3E21584B00 /* MapHomeView+Map.swift */; };
+		A1EE6819A850BADC4B9A5FD0 /* MapHomeView+Map2.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1EE6819A850BADC4B9A5FD0 /* MapHomeView+Map2.swift */; };
+		A1E6257DBE7C5071E0418EF0 /* MapHomeView+Routes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E6257DBE7C5071E0418EF0 /* MapHomeView+Routes.swift */; };
+		A1E3BFDC700E8BFFDF523F50 /* MapHomeView+Routes2.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E3BFDC700E8BFFDF523F50 /* MapHomeView+Routes2.swift */; };
+		A1E4FD129558F5399CF05D90 /* MapHomeView+Routes3.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E4FD129558F5399CF05D90 /* MapHomeView+Routes3.swift */; };
+		A1E1AB03A03E9D29DDFF4F60 /* MapHomeView+Stickman.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E1AB03A03E9D29DDFF4F60 /* MapHomeView+Stickman.swift */; };
+		A1E97732D0E6C0A80F86DCD0 /* MapHomeView+Memos.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E97732D0E6C0A80F86DCD0 /* MapHomeView+Memos.swift */; };
+		A1E4059E918F755B11D98A00 /* MapHomeView+Photos.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E4059E918F755B11D98A00 /* MapHomeView+Photos.swift */; };
 		A1000000000000000000007D /* MapHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000007D /* MapHomeView.swift */; };
 		A100000000000000C1102A1F /* MapHomeAppleMapAnnotations.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A1F /* MapHomeAppleMapAnnotations.swift */; };
 		A100000000000000C1102A01 /* AirQualityDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A01 /* AirQualityDetailSheet.swift */; };
@@ -627,8 +653,18 @@
 		F1FA113778B8EB03DD952E89 /* ReviewSupportTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewSupportTypes.swift; sourceTree = "<group>"; };
 		F1FA11B51558DBA397EDEB19 /* TimelineRowModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineRowModels.swift; sourceTree = "<group>"; };
 		F1FA11DCE35698B9D5CBB801 /* TimelineRowViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineRowViews.swift; sourceTree = "<group>"; };
+		F1EB386C4976687FBD7C0390 /* TimelineBoard+Layout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TimelineBoard+Layout.swift"; sourceTree = "<group>"; };
+		F1E6C6325EEA7A7F0B45FA50 /* TimelineBoard+Support.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TimelineBoard+Support.swift"; sourceTree = "<group>"; };
+		F1E62D1EF9170F803D9F4E50 /* TimelineBoard+Support2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TimelineBoard+Support2.swift"; sourceTree = "<group>"; };
+		F1E124A4DAB02C59A4A75DA0 /* TimelineBoard+Rows.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TimelineBoard+Rows.swift"; sourceTree = "<group>"; };
+		F1E997DC49569A27B7BF04C0 /* TimelineBoard+Gesture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TimelineBoard+Gesture.swift"; sourceTree = "<group>"; };
 		F1FA11A8410BD26D37F70F6C /* TimelineBoard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineBoard.swift; sourceTree = "<group>"; };
 		F1FA1151C89CDAB2BD35E340 /* GroupGanttView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupGanttView.swift; sourceTree = "<group>"; };
+		F1E7953FB47635FC14651740 /* TimelineDetailPanel+Support.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TimelineDetailPanel+Support.swift"; sourceTree = "<group>"; };
+		F1E0F1C4432871821FA96150 /* TimelineDetailPanel+Support2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TimelineDetailPanel+Support2.swift"; sourceTree = "<group>"; };
+		F1EE7C753AAE67DF510A1700 /* TimelineDetailPanel+Support3.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TimelineDetailPanel+Support3.swift"; sourceTree = "<group>"; };
+		F1E37CAEA4CA9ED41D7FDE20 /* TimelineDetailPanel+Sections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TimelineDetailPanel+Sections.swift"; sourceTree = "<group>"; };
+		F1E537D0C8837B01C02152F0 /* TimelineDetailPanel+Editing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TimelineDetailPanel+Editing.swift"; sourceTree = "<group>"; };
 		F1FA114C9607F825D87DDABD /* TimelineDetailPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineDetailPanel.swift; sourceTree = "<group>"; };
 		F1FA111EE25EBDA22F51D42E /* RouteMapViewport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteMapViewport.swift; sourceTree = "<group>"; };
 		F1FA11013C73958F69782D38 /* TimelineSelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineSelection.swift; sourceTree = "<group>"; };
@@ -906,6 +942,22 @@
 		F1000000000000000B1105C3 /* MapHomeAppleWatchMenuItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeAppleWatchMenuItem.swift; sourceTree = "<group>"; };
 		F1000000000000000B1105C5 /* MapHomeLanguageMenuItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLanguageMenuItem.swift; sourceTree = "<group>"; };
 		F1000000000000000B1105C6 /* MapHomePlacePinPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlacePinPicker.swift; sourceTree = "<group>"; };
+		F1E3519F71AF5D72C5438970 /* MapHomeView+Timeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Timeline.swift"; sourceTree = "<group>"; };
+		F1EF724568A9B22CAC66C750 /* MapHomeView+Playback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Playback.swift"; sourceTree = "<group>"; };
+		F1EEF6FAFDD9B3AE536F4390 /* MapHomeView+Playback2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Playback2.swift"; sourceTree = "<group>"; };
+		F1E32009FB49172F1DBAF950 /* MapHomeView+Support.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Support.swift"; sourceTree = "<group>"; };
+		F1EF1870E9BA90AF77FBB630 /* MapHomeView+Support2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Support2.swift"; sourceTree = "<group>"; };
+		F1E4358522139E5590681710 /* MapHomeView+Support3.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Support3.swift"; sourceTree = "<group>"; };
+		F1E7006AF3F40D36507FBCF0 /* MapHomeView+Menu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Menu.swift"; sourceTree = "<group>"; };
+		F1E721D1B0AAA98B8110A900 /* MapHomeView+Menu2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Menu2.swift"; sourceTree = "<group>"; };
+		F1EBDE9094DD4C3E21584B00 /* MapHomeView+Map.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Map.swift"; sourceTree = "<group>"; };
+		F1EE6819A850BADC4B9A5FD0 /* MapHomeView+Map2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Map2.swift"; sourceTree = "<group>"; };
+		F1E6257DBE7C5071E0418EF0 /* MapHomeView+Routes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Routes.swift"; sourceTree = "<group>"; };
+		F1E3BFDC700E8BFFDF523F50 /* MapHomeView+Routes2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Routes2.swift"; sourceTree = "<group>"; };
+		F1E4FD129558F5399CF05D90 /* MapHomeView+Routes3.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Routes3.swift"; sourceTree = "<group>"; };
+		F1E1AB03A03E9D29DDFF4F60 /* MapHomeView+Stickman.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Stickman.swift"; sourceTree = "<group>"; };
+		F1E97732D0E6C0A80F86DCD0 /* MapHomeView+Memos.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Memos.swift"; sourceTree = "<group>"; };
+		F1E4059E918F755B11D98A00 /* MapHomeView+Photos.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Photos.swift"; sourceTree = "<group>"; };
 		F1000000000000000000007D /* MapHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeView.swift; sourceTree = "<group>"; };
 		F100000000000000C1102A1F /* MapHomeAppleMapAnnotations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeAppleMapAnnotations.swift; sourceTree = "<group>"; };
 		F100000000000000C1102A01 /* AirQualityDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AirQualityDetailSheet.swift; sourceTree = "<group>"; };
@@ -1292,6 +1344,22 @@
 			isa = PBXGroup;
 			children = (
 				F1000000000000000000007D /* MapHomeView.swift */,
+				F1E4059E918F755B11D98A00 /* MapHomeView+Photos.swift */,
+				F1E97732D0E6C0A80F86DCD0 /* MapHomeView+Memos.swift */,
+				F1E1AB03A03E9D29DDFF4F60 /* MapHomeView+Stickman.swift */,
+				F1E4FD129558F5399CF05D90 /* MapHomeView+Routes3.swift */,
+				F1E3BFDC700E8BFFDF523F50 /* MapHomeView+Routes2.swift */,
+				F1E6257DBE7C5071E0418EF0 /* MapHomeView+Routes.swift */,
+				F1EE6819A850BADC4B9A5FD0 /* MapHomeView+Map2.swift */,
+				F1EBDE9094DD4C3E21584B00 /* MapHomeView+Map.swift */,
+				F1E721D1B0AAA98B8110A900 /* MapHomeView+Menu2.swift */,
+				F1E7006AF3F40D36507FBCF0 /* MapHomeView+Menu.swift */,
+				F1E4358522139E5590681710 /* MapHomeView+Support3.swift */,
+				F1EF1870E9BA90AF77FBB630 /* MapHomeView+Support2.swift */,
+				F1E32009FB49172F1DBAF950 /* MapHomeView+Support.swift */,
+				F1EEF6FAFDD9B3AE536F4390 /* MapHomeView+Playback2.swift */,
+				F1EF724568A9B22CAC66C750 /* MapHomeView+Playback.swift */,
+				F1E3519F71AF5D72C5438970 /* MapHomeView+Timeline.swift */,
 				F1000000000000000B1105C6 /* MapHomePlacePinPicker.swift */,
 				F1000000000000000B1105C5 /* MapHomeLanguageMenuItem.swift */,
 				F1000000000000000B1105C3 /* MapHomeAppleWatchMenuItem.swift */,
@@ -1424,8 +1492,18 @@
 				F1FA11B51558DBA397EDEB19 /* TimelineRowModels.swift */,
 				F1FA11DCE35698B9D5CBB801 /* TimelineRowViews.swift */,
 				F1FA11A8410BD26D37F70F6C /* TimelineBoard.swift */,
+				F1E997DC49569A27B7BF04C0 /* TimelineBoard+Gesture.swift */,
+				F1E124A4DAB02C59A4A75DA0 /* TimelineBoard+Rows.swift */,
+				F1E62D1EF9170F803D9F4E50 /* TimelineBoard+Support2.swift */,
+				F1E6C6325EEA7A7F0B45FA50 /* TimelineBoard+Support.swift */,
+				F1EB386C4976687FBD7C0390 /* TimelineBoard+Layout.swift */,
 				F1FA1151C89CDAB2BD35E340 /* GroupGanttView.swift */,
 				F1FA114C9607F825D87DDABD /* TimelineDetailPanel.swift */,
+				F1E537D0C8837B01C02152F0 /* TimelineDetailPanel+Editing.swift */,
+				F1E37CAEA4CA9ED41D7FDE20 /* TimelineDetailPanel+Sections.swift */,
+				F1EE7C753AAE67DF510A1700 /* TimelineDetailPanel+Support3.swift */,
+				F1E0F1C4432871821FA96150 /* TimelineDetailPanel+Support2.swift */,
+				F1E7953FB47635FC14651740 /* TimelineDetailPanel+Support.swift */,
 				F1FA111EE25EBDA22F51D42E /* RouteMapViewport.swift */,
 				F1FA11013C73958F69782D38 /* TimelineSelection.swift */,
 				F10000000000000000000007 /* GoalsView.swift */,
@@ -2078,11 +2156,37 @@
 				A1FA11B788DDFF62F309512F /* TimelineRowModels.swift in Sources */,
 				A1FA11356EDD0F1965709226 /* TimelineRowViews.swift in Sources */,
 				A1FA11A3B8DAE991AEA02AAF /* TimelineBoard.swift in Sources */,
+				A1E997DC49569A27B7BF04C0 /* TimelineBoard+Gesture.swift in Sources */,
+				A1E124A4DAB02C59A4A75DA0 /* TimelineBoard+Rows.swift in Sources */,
+				A1E62D1EF9170F803D9F4E50 /* TimelineBoard+Support2.swift in Sources */,
+				A1E6C6325EEA7A7F0B45FA50 /* TimelineBoard+Support.swift in Sources */,
+				A1EB386C4976687FBD7C0390 /* TimelineBoard+Layout.swift in Sources */,
 				A1FA113C605017A9D1288BA2 /* GroupGanttView.swift in Sources */,
 				A1FA113C5869FE29648957F6 /* TimelineDetailPanel.swift in Sources */,
+				A1E537D0C8837B01C02152F0 /* TimelineDetailPanel+Editing.swift in Sources */,
+				A1E37CAEA4CA9ED41D7FDE20 /* TimelineDetailPanel+Sections.swift in Sources */,
+				A1EE7C753AAE67DF510A1700 /* TimelineDetailPanel+Support3.swift in Sources */,
+				A1E0F1C4432871821FA96150 /* TimelineDetailPanel+Support2.swift in Sources */,
+				A1E7953FB47635FC14651740 /* TimelineDetailPanel+Support.swift in Sources */,
 				A1FA11A8E4B16F54E10FE9B1 /* RouteMapViewport.swift in Sources */,
 				A1FA11EB640567D972E12891 /* TimelineSelection.swift in Sources */,
 				A1000000000000000000007D /* MapHomeView.swift in Sources */,
+				A1E4059E918F755B11D98A00 /* MapHomeView+Photos.swift in Sources */,
+				A1E97732D0E6C0A80F86DCD0 /* MapHomeView+Memos.swift in Sources */,
+				A1E1AB03A03E9D29DDFF4F60 /* MapHomeView+Stickman.swift in Sources */,
+				A1E4FD129558F5399CF05D90 /* MapHomeView+Routes3.swift in Sources */,
+				A1E3BFDC700E8BFFDF523F50 /* MapHomeView+Routes2.swift in Sources */,
+				A1E6257DBE7C5071E0418EF0 /* MapHomeView+Routes.swift in Sources */,
+				A1EE6819A850BADC4B9A5FD0 /* MapHomeView+Map2.swift in Sources */,
+				A1EBDE9094DD4C3E21584B00 /* MapHomeView+Map.swift in Sources */,
+				A1E721D1B0AAA98B8110A900 /* MapHomeView+Menu2.swift in Sources */,
+				A1E7006AF3F40D36507FBCF0 /* MapHomeView+Menu.swift in Sources */,
+				A1E4358522139E5590681710 /* MapHomeView+Support3.swift in Sources */,
+				A1EF1870E9BA90AF77FBB630 /* MapHomeView+Support2.swift in Sources */,
+				A1E32009FB49172F1DBAF950 /* MapHomeView+Support.swift in Sources */,
+				A1EEF6FAFDD9B3AE536F4390 /* MapHomeView+Playback2.swift in Sources */,
+				A1EF724568A9B22CAC66C750 /* MapHomeView+Playback.swift in Sources */,
+				A1E3519F71AF5D72C5438970 /* MapHomeView+Timeline.swift in Sources */,
 				A1000000000000000B1105C6 /* MapHomePlacePinPicker.swift in Sources */,
 				A1000000000000000B1105C5 /* MapHomeLanguageMenuItem.swift in Sources */,
 				A1000000000000000B1105C3 /* MapHomeAppleWatchMenuItem.swift in Sources */,

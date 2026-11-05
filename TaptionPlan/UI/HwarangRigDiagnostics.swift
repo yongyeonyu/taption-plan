@@ -38,6 +38,9 @@ enum HwarangDiagnostics {
 
     static func scene(for pose: TaptionHwarangPose) -> HwarangScene {
         switch pose {
+        case .workDesk: .work
+        case .studyDesk: .study
+        case .laptopWalk: .walkLaptop
         case .deepSleep: .sleepBelly
         case .remSleep: .sleepEyeMask
         case .recovery: .recoverySuperman

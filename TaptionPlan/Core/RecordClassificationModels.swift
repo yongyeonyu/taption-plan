@@ -102,6 +102,8 @@ struct RecordClassificationFile: Codable, Sendable {
 struct RecordClassificationCategory: Codable, Identifiable, Sendable {
     var id: String
     var title: String
+    /// 화면 표시·번역 키. 저장 값과 판정은 계속 `title`을 쓴다.
+    var englishTitle: String?
     var systemImage: String
     var automaticOnly: Bool?
     var details: [RecordClassificationDetail]
@@ -110,6 +112,7 @@ struct RecordClassificationCategory: Codable, Identifiable, Sendable {
 struct RecordClassificationDetail: Codable, Identifiable, Sendable {
     var id: String
     var title: String
+    var englishTitle: String?
     var behavior: String
     var systemImage: String
     var automaticOnly: Bool?

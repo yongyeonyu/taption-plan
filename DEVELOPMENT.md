@@ -32,13 +32,17 @@
 | 워치 공유 모델·언어 설정 | `Packages/TaptionWatchSync/`(명령 프로토콜·측정값·outbox/spool·행동 규칙·`AppLanguagePreference`, `Core/WatchSyncModels.swift`가 네 target에 다시 내보낸다), CoreML 행동 모델은 `TaptionWatchBehaviorML`(워치 앱만 링크), replay·개인화는 `TaptionPlan/Core/WatchActivityReplay.swift` |
 | 회귀 테스트 | `TaptionPlanTests/`, 각 package의 `Tests/` |
 
+위젯 target은 `PlanningEngine.swift`를 컴파일하지 않습니다. 위젯이 쓰는 엔진은 앱·위젯 공용 `Core/WidgetSharedEngines.swift`에 둡니다. 저장소 소스는 위젯 인텐트가 DB에 직접 쓰므로 위젯에도 컴파일됩니다.
+
+센서 갱신의 체류·층·이동 계산은 `UX/SensorTimelineDerivation.swift`에서 주 스레드 밖으로 돕니다. 잠근 이동 합치기와 저장은 주 스레드의 최신 `snapshot`에서 하고, 계산 중 `snapshotRevision`이 바뀌면 마지막 단계를 다시 합니다.
+
 앱 전용 프레임워크와 화면은 Swift Package로 옮기지 않습니다. package import 경계 검사는 `bash scripts/check-app-engine-import-boundary.sh`로 확인합니다.
 
-동결 예산(`docs/architecture-baseline.json`의 `frozen_files`)에 붙은 파일에는 기능을 더하지 않습니다. 계산만 하고 그 파일의 사설 상태에 닿지 않는 타입은 새 파일로 떼어 내고(예: `AppShellLaunchGate.swift`, `PlanBackupRouteFallbackEngine.swift`, `MapHomeSectionDetailEngine.swift`), 뺀 만큼 예산을 낮춰 다시 잠급니다 — 남겨 둔 여유는 다음 기능이 조용히 들어오는 자리가 됩니다. 확인은 `python3 scripts/architecture-metrics.py --check docs/architecture-baseline.json`.
+`MapHomeView`·`TimelineBoard`·`TimelineDetailPanel`은 저장 속성·init·body만 본 파일에 두고 나머지는 `타입+기능.swift` extension에 둡니다. 동결 예산(`docs/architecture-baseline.json`의 `frozen_files`)에 붙은 파일에는 기능을 더하지 않습니다. 계산만 하고 그 파일의 사설 상태에 닿지 않는 타입은 새 파일로 떼어 내고(예: `AppShellLaunchGate.swift`, `PlanBackupRouteFallbackEngine.swift`, `MapHomeSectionDetailEngine.swift`), 뺀 만큼 예산을 낮춰 다시 잠급니다 — 남겨 둔 여유는 다음 기능이 조용히 들어오는 자리가 됩니다. 확인은 `python3 scripts/architecture-metrics.py --check docs/architecture-baseline.json`.
 
 HealthKit의 앱 읽기/import 허용 목록은 `TaptionHealthReadScope`의 8개 항목(운동·수면·심박·걸음·걷기/달리기 거리·자전거 거리·활동 에너지·운동 경로)입니다. 전체 타입 카탈로그는 기존 원본 해석용이며 신규 권한/수집 범위가 아닙니다. 임상·투약·영양·시력·특성·활동 요약 신규 조회는 하지 않고 기존 저장 원본은 보존합니다.
 
-Apple Watch 데이터는 iPhone HealthKit과 Watch 앱 저전력 수집으로 받습니다. iPhone의 TaptionPlan target은 Watch 앱을 빌드·임베딩합니다(WCH1105A01). 앱 활성화 시 건강 연결이 켜져 있으면 즉시 증분 조회하고, 페어링된 Watch가 있으며 아직 건강 연결을 요청하지 않은 경우 사용자 승인을 요청합니다. Watch 앱 설치·실시간 메시지 응답은 건강 조회 조건이 아닙니다. 건강 데이터의 Watch→iPhone 동기화 시점과 읽기 허용 여부는 앱이 강제로 제어하거나 판별할 수 없습니다.
+Watch 앱은 백그라운드 수집과 시계 페이스 중심이고 상세 설정은 iPhone에서 합니다(대표 결정). 움직임 수집은 앱을 처음 확인할 때 한 번만 저전력으로 켜고(`AppleWatchCollectionDefaults`), 백그라운드 전송은 `WatchAppDelegate`가 요청합니다. 시계 페이스·Watch의 고양이 그림은 `testWriteWatchCatSpritesWhenRequested`(`TAPTION_WATCH_CATS`)로, 잠금화면 자세 아틀라스는 `testWritePoseAtlasWhenRequested`(`TAPTION_POSE_ATLAS`)로 다시 만듭니다. Apple Watch 데이터는 iPhone HealthKit과 Watch 앱 저전력 수집으로 받습니다. iPhone의 TaptionPlan target은 Watch 앱을 빌드·임베딩합니다(WCH1105A01). 앱 활성화 시 건강 연결이 켜져 있으면 즉시 증분 조회하고, 페어링된 Watch가 있으며 아직 건강 연결을 요청하지 않은 경우 사용자 승인을 요청합니다. Watch 앱 설치·실시간 메시지 응답은 건강 조회 조건이 아닙니다. 건강 데이터의 Watch→iPhone 동기화 시점과 읽기 허용 여부는 앱이 강제로 제어하거나 판별할 수 없습니다.
 
 ## 보존해야 할 데이터 계약
 
@@ -139,6 +143,10 @@ HealthKit 운동 경로를 보완할 때는 기존 위치와 20초 시간 중복
 - 슬라이드바로 표본이 없는 시간을 고르면 `MapHomePlaybackLocation.restingLocation`이 자리를 정합니다. 수면이면 그 시간의 체류 → 집, 그날 첫 표본 전이면 첫 표본입니다.
 - 분류 선택에서 `업무(집 - 회사)`를 뺐습니다. `behavior == "work"`인 옛 기록은 그대로 읽고 "업무"로 표시합니다.
 
+- 활동은 장소 → 장소에 따른 대분류 → 대분류 안의 상세 활동 순서로 보여 줍니다(대표 결정). `MapHomePlaceFirstPolicy`가 시간 막대와 클립 편집이 받는 구간을 파생합니다. 등록 지점 안의 걷기는 수동 기록이어도 그 곳의 대분류가 되고 `walkSpans`로 상세 걷기가 됩니다. 이어진 같은 대분류는 합칩니다. 차로 이동하지 않았다면 같은 등록 지점의 머문 기록 사이도 그 지점으로 봅니다. 원본 기록은 바꾸지 않습니다.
+- 재생·지도의 고양이 동작은 머무는 대분류면 `MapHomeStickmanActionResolver.railAction`이 대분류 줄과 그 시각 상세 활동으로 먼저 정합니다. 이동·활동·미확인은 위치·센서 판정에 맡기고, 회의 일정은 `MapHomeMeetingPolicy`가 덮습니다.
+- 첫 실행 튜토리얼이 끝나기 전에는 앱이 건강 권한을 먼저 묻지 않습니다(`FirstRunTutorialStore.allowsUnaskedPermissionPrompts`). 먼저 물으면 시트가 튜토리얼 뒤에서 멈추고 `isRequestingPermission` 때문에 다른 권한 단추도 듣지 않습니다.
+
 ## 구글 캘린더 연결
 
 - 프로젝트 `bokki-plan`, 범위 `calendar.readonly`, iOS 클라이언트 하나입니다. 일정은 기기 안에서만 쓰고, 연결 해제 때 토큰을 취소하고 구글 일정을 지웁니다.
@@ -182,6 +190,11 @@ HealthKit 운동 경로를 보완할 때는 기존 위치와 20초 시간 중복
 - 지도 마커와 행동 분류 글리프의 화랑이는 코드로 그립니다(`HwarangRig.swift`, 세계 좌표 가로 146). `MapHomeStickmanAction.hwarangScene`이 장면을 정하고, 행동 분류마다 장면이 달라야 합니다(`testEveryMajorCategoryHasItsOwnHwarangScene`). 장면 하나는 동작 여러 개를 이어 재생하며, 동작 사이는 0.45초 동안 자세를 섞습니다. 지도에서 움직이는 동안은 멈추지 않는 `walkLoop`·`runLoop`만 쓰고, 화면 왼쪽으로 갈 때 뒤집습니다(`MapHomeStickmanFacing`). 홈 화면 위젯은 멈춰 있는 동안 제목이 분명한 상세활동이면 자세 아틀라스(`TaptionCatPoseSprite`)를, 그 밖에는 기존 스프라이트(`TaptionCatAtlasSprite`)를 씁니다. 워치 앱과 워치 컴플리케이션은 고양이를 그리지 않습니다. 재생 영상의 화랑이는 아직 오른쪽만 봅니다.
 - 화랑이 액세서리는 랜드마크별 모자 17개·스카프 17개·꼬리 리본 18개입니다(모자는 `Assets.xcassets/Hats`, 벡터 SVG. 스카프·리본은 `HwarangRigAccessories.swift`). 그림 정의는 `tools/generate_hwarang_hats.py`에 있고, 고친 뒤 이 스크립트로 자산을 다시 만듭니다. 저장값은 기존 `cat.accessory.<랜드마크 id>`를 유지하고, 랜드마크를 못 찾는 옛 값은 심볼로 보입니다.
 - 「현재 위치」 단추는 배율 80으로 고정하며(`focusCurrentLocationAtFixedScale`) 하루요약 시트가 덮은 높이만큼 중심을 아래로 내려 화랑이가 가려지지 않은 영역의 가운데에 둡니다. 이 경로는 `liveZoomGovernor`를 20초 멈춰, 속도에 따른 자동 줌이 방금 맞춘 배율을 덮지 않게 합니다.
+
+- 등록 지점 위치는 `MapHomePlacePinPicker`로 고릅니다(오픈맵, 가운데 고정 핀, 지도 이동·확대·축소, 저장 단추). 튜토리얼·메뉴 위치 설정·설정 화면이 같이 씁니다.
+- 지도 사진은 `MapHomePhotoArcBrowser`로 넘겨 봅니다. 재생 사진과 같은 `MapHomePhotoArcSlot`을 쓰고, 두 반달 모두 하단 메뉴 아래 층입니다(`photoArcLayer`).
+- 메뉴의 Apple Watch 항목은 `MapHomeAppleWatchMenuItem`입니다. 설치 여부(`WCSession`)·Watch 앱이 알린 버전·수집 설정을 보여 줍니다. iOS는 앱이 Watch 앱을 설치·업데이트하는 API를 주지 않으므로 단추는 iPhone의 Watch 앱을 엽니다.
+- 행동 분류 이름은 분류표의 `title`(저장·판정용 한국어)과 `englishTitle`(표시·번역 키)을 씁니다. 화면에는 `localizedTitle(language)`나 `RecordClassificationCatalog.localizedDetailTitle`을 쓰고 `title`을 직접 보여 주지 않습니다.
 
 ## 검증 명령
 

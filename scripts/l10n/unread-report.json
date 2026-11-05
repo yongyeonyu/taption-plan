@@ -1,7 +1,37 @@
 {
- "ui": 2265,
+ "ui": 2275,
  "catalog": 461,
  "unread": [
+  {
+   "file": "TaptionPlan/UI/MapHomeView+Menu.swift",
+   "line": 1061,
+   "ko": "strength.koreanLabel",
+   "en": "strength.englishLabel"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeView+Stickman.swift",
+   "line": 279,
+   "ko": "location.kind.title",
+   "en": "location.kind.englishTitle"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeView+Stickman.swift",
+   "line": 305,
+   "ko": "destination.koreanName",
+   "en": "destination.englishName"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeView+Stickman.swift",
+   "line": 382,
+   "ko": "FloorLabel.korean(place.floor ?? 1)",
+   "en": "FloorLabel.english(place.floor ?? 1)"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeView+Stickman.swift",
+   "line": 390,
+   "ko": "destination.koreanName",
+   "en": "destination.englishName"
+  },
   {
    "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
    "line": 41,
@@ -219,6 +249,18 @@
    "en": "englishTitle(for: mode)"
   },
   {
+   "file": "TaptionPlan/UI/MapHomeLanguage.swift",
+   "line": 155,
+   "ko": "title",
+   "en": "englishTitle ?? title"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeLanguage.swift",
+   "line": 161,
+   "ko": "title",
+   "en": "englishTitle ?? title"
+  },
+  {
    "file": "TaptionPlan/UI/MapHomeLocationPresentation.swift",
    "line": 263,
    "ko": "_ korean: UIPhrase",
@@ -331,36 +373,6 @@
    "line": 698,
    "ko": "FloorLabel.korean(floor)",
    "en": "FloorLabel.english(floor)"
-  },
-  {
-   "file": "TaptionPlan/UI/MapHomeView.swift",
-   "line": 7447,
-   "ko": "location.kind.title",
-   "en": "location.kind.englishTitle"
-  },
-  {
-   "file": "TaptionPlan/UI/MapHomeView.swift",
-   "line": 7473,
-   "ko": "destination.koreanName",
-   "en": "destination.englishName"
-  },
-  {
-   "file": "TaptionPlan/UI/MapHomeView.swift",
-   "line": 7550,
-   "ko": "FloorLabel.korean(place.floor ?? 1)",
-   "en": "FloorLabel.english(place.floor ?? 1)"
-  },
-  {
-   "file": "TaptionPlan/UI/MapHomeView.swift",
-   "line": 7558,
-   "ko": "destination.koreanName",
-   "en": "destination.englishName"
-  },
-  {
-   "file": "TaptionPlan/UI/MapHomeView.swift",
-   "line": 7622,
-   "ko": "strength.koreanLabel",
-   "en": "strength.englishLabel"
   },
   {
    "file": "TaptionPlanWatch/WatchTodayCards.swift",

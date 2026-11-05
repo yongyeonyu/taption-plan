@@ -2763,6 +2763,16 @@
 "건강 데이터 보내기|Send health data": "Health डेटा भेजें",
 "끔|Off": "बंद",
 "최신 데이터 우선|Latest data first": "नवीनतम डेटा पहले",
-"지도에서 저장됨|Saved from the map": "मैप से सहेजा गया"
+"지도에서 저장됨|Saved from the map": "मैप से सहेजा गया",
+"이 위치로 저장|Save this location": "यह स्थान सहेजें",
+"지도를 움직여 핀을 맞추세요|Move the map to place the pin": "पिन लगाने के लिए मैप को हिलाएँ",
+"축소|Zoom out": "ज़ूम आउट",
+"확대|Zoom in": "ज़ूम इन",
+"멍때리기|Zoning out": "खाली बैठना",
+"학원|Academy": "कोचिंग",
+"취미(집 - 취미)|Hobby (home to hobby)": "शौक (घर से)",
+"지하철|Subway": "मेट्रो",
+"버스|Bus": "बस",
+"건강관리|Health care": "स्वास्थ्य देखभाल"
 }
 }

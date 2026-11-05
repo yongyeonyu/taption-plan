@@ -2763,6 +2763,16 @@
 "건강 데이터 보내기|Send health data": "Enviar datos de Salud",
 "끔|Off": "Desactivado",
 "최신 데이터 우선|Latest data first": "Datos recientes primero",
-"지도에서 저장됨|Saved from the map": "Guardado desde el mapa"
+"지도에서 저장됨|Saved from the map": "Guardado desde el mapa",
+"이 위치로 저장|Save this location": "Guardar esta ubicación",
+"지도를 움직여 핀을 맞추세요|Move the map to place the pin": "Mueve el mapa para colocar el pin",
+"축소|Zoom out": "Alejar",
+"확대|Zoom in": "Acercar",
+"멍때리기|Zoning out": "Desconectar",
+"학원|Academy": "Academia",
+"취미(집 - 취미)|Hobby (home to hobby)": "Afición (desde casa)",
+"지하철|Subway": "Metro",
+"버스|Bus": "Autobús",
+"건강관리|Health care": "Salud"
 }
 }

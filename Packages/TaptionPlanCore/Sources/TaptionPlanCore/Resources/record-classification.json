@@ -4,129 +4,433 @@
     {
       "id": "activity",
       "title": "활동",
+      "englishTitle": "Activity",
       "systemImage": "sparkles",
       "details": [
-        { "id": "activity.rest", "title": "휴식", "behavior": "stationary", "systemImage": "pause.circle.fill" },
-        { "id": "activity.zoningOut", "title": "멍때리기", "behavior": "zoningOut", "systemImage": "shippingbox.fill" },
-        { "id": "activity.shower", "title": "샤워", "behavior": "shower", "systemImage": "shower.fill" },
-        { "id": "activity.friends", "title": "친구 만남", "behavior": "friends", "systemImage": "person.2.fill" },
-        { "id": "activity.date", "title": "데이트", "behavior": "dating", "systemImage": "heart.fill" },
-        { "id": "activity.family", "title": "가족", "behavior": "family", "systemImage": "figure.2.and.child.holdinghands" },
-        { "id": "activity.phoneCall", "title": "통화", "behavior": "phoneCall", "systemImage": "phone.fill" }
+        {
+          "id": "activity.rest",
+          "title": "휴식",
+          "englishTitle": "Rest",
+          "behavior": "stationary",
+          "systemImage": "pause.circle.fill"
+        },
+        {
+          "id": "activity.zoningOut",
+          "title": "멍때리기",
+          "englishTitle": "Zoning out",
+          "behavior": "zoningOut",
+          "systemImage": "shippingbox.fill"
+        },
+        {
+          "id": "activity.shower",
+          "title": "샤워",
+          "englishTitle": "Shower",
+          "behavior": "shower",
+          "systemImage": "shower.fill"
+        },
+        {
+          "id": "activity.friends",
+          "title": "친구 만남",
+          "englishTitle": "Friends",
+          "behavior": "friends",
+          "systemImage": "person.2.fill"
+        },
+        {
+          "id": "activity.date",
+          "title": "데이트",
+          "englishTitle": "Date",
+          "behavior": "dating",
+          "systemImage": "heart.fill"
+        },
+        {
+          "id": "activity.family",
+          "title": "가족",
+          "englishTitle": "Family",
+          "behavior": "family",
+          "systemImage": "figure.2.and.child.holdinghands"
+        },
+        {
+          "id": "activity.phoneCall",
+          "title": "통화",
+          "englishTitle": "Phone call",
+          "behavior": "phoneCall",
+          "systemImage": "phone.fill"
+        }
       ]
     },
     {
       "id": "work",
       "title": "업무",
+      "englishTitle": "Work",
       "systemImage": "briefcase.fill",
       "details": [
-        { "id": "work.meeting", "title": "회의", "behavior": "meeting", "systemImage": "person.3.fill" },
-        { "id": "work.rest", "title": "휴식", "behavior": "stationary", "systemImage": "pause.circle.fill" },
-        { "id": "work.walking", "title": "걷기", "behavior": "walking", "systemImage": "figure.walk" }
+        {
+          "id": "work.meeting",
+          "title": "회의",
+          "englishTitle": "Meeting",
+          "behavior": "meeting",
+          "systemImage": "person.3.fill"
+        },
+        {
+          "id": "work.rest",
+          "title": "휴식",
+          "englishTitle": "Rest",
+          "behavior": "stationary",
+          "systemImage": "pause.circle.fill"
+        },
+        {
+          "id": "work.walking",
+          "title": "걷기",
+          "englishTitle": "Walking",
+          "behavior": "walking",
+          "systemImage": "figure.walk"
+        }
       ]
     },
     {
       "id": "study",
       "title": "수업",
+      "englishTitle": "Class",
       "systemImage": "book.fill",
       "details": [
-        { "id": "study.academy", "title": "학원", "behavior": "academy", "systemImage": "books.vertical.fill" },
-        { "id": "study.rest", "title": "휴식", "behavior": "stationary", "systemImage": "pause.circle.fill" },
-        { "id": "study.walking", "title": "걷기", "behavior": "walking", "systemImage": "figure.walk" }
+        {
+          "id": "study.academy",
+          "title": "학원",
+          "englishTitle": "Academy",
+          "behavior": "academy",
+          "systemImage": "books.vertical.fill"
+        },
+        {
+          "id": "study.rest",
+          "title": "휴식",
+          "englishTitle": "Rest",
+          "behavior": "stationary",
+          "systemImage": "pause.circle.fill"
+        },
+        {
+          "id": "study.walking",
+          "title": "걷기",
+          "englishTitle": "Walking",
+          "behavior": "walking",
+          "systemImage": "figure.walk"
+        }
       ]
     },
     {
       "id": "hobby",
       "title": "취미",
+      "englishTitle": "Hobby",
       "systemImage": "paintpalette.fill",
       "details": [
-        { "id": "hobby.route", "title": "취미(집 - 취미)", "behavior": "hobby", "systemImage": "paintpalette.fill" },
-        { "id": "hobby.rest", "title": "휴식", "behavior": "stationary", "systemImage": "pause.circle.fill" },
-        { "id": "hobby.reading", "title": "독서", "behavior": "reading", "systemImage": "book.closed.fill" },
-        { "id": "hobby.game", "title": "게임", "behavior": "gaming", "systemImage": "gamecontroller.fill" },
-        { "id": "hobby.music", "title": "음악", "behavior": "music", "systemImage": "music.note" },
-        { "id": "hobby.video", "title": "영상 보기", "behavior": "video", "systemImage": "play.rectangle.fill" },
-        { "id": "hobby.pet", "title": "반려동물 돌보기", "behavior": "petCare", "systemImage": "pawprint.fill" }
+        {
+          "id": "hobby.route",
+          "title": "취미(집 - 취미)",
+          "englishTitle": "Hobby (home to hobby)",
+          "behavior": "hobby",
+          "systemImage": "paintpalette.fill"
+        },
+        {
+          "id": "hobby.rest",
+          "title": "휴식",
+          "englishTitle": "Rest",
+          "behavior": "stationary",
+          "systemImage": "pause.circle.fill"
+        },
+        {
+          "id": "hobby.reading",
+          "title": "독서",
+          "englishTitle": "Reading",
+          "behavior": "reading",
+          "systemImage": "book.closed.fill"
+        },
+        {
+          "id": "hobby.game",
+          "title": "게임",
+          "englishTitle": "Games",
+          "behavior": "gaming",
+          "systemImage": "gamecontroller.fill"
+        },
+        {
+          "id": "hobby.music",
+          "title": "음악",
+          "englishTitle": "Music",
+          "behavior": "music",
+          "systemImage": "music.note"
+        },
+        {
+          "id": "hobby.video",
+          "title": "영상 보기",
+          "englishTitle": "Watching videos",
+          "behavior": "video",
+          "systemImage": "play.rectangle.fill"
+        },
+        {
+          "id": "hobby.pet",
+          "title": "반려동물 돌보기",
+          "englishTitle": "Pet care",
+          "behavior": "petCare",
+          "systemImage": "pawprint.fill"
+        }
       ]
     },
     {
       "id": "sleep",
       "title": "수면",
+      "englishTitle": "Sleep",
       "systemImage": "moon.zzz.fill",
       "automaticOnly": true,
       "details": [
-        { "id": "sleep.core", "title": "코어 수면", "behavior": "core", "systemImage": "moon.zzz.fill", "automaticOnly": true },
-        { "id": "sleep.deep", "title": "깊은 수면", "behavior": "deep", "systemImage": "moon.zzz.fill", "automaticOnly": true },
-        { "id": "sleep.rem", "title": "REM 수면", "behavior": "rem", "systemImage": "moon.zzz.fill", "automaticOnly": true },
-        { "id": "sleep.nap", "title": "낮잠", "behavior": "nap", "systemImage": "zzz", "automaticOnly": false }
+        {
+          "id": "sleep.core",
+          "title": "코어 수면",
+          "englishTitle": "Core sleep",
+          "behavior": "core",
+          "systemImage": "moon.zzz.fill",
+          "automaticOnly": true
+        },
+        {
+          "id": "sleep.deep",
+          "title": "깊은 수면",
+          "englishTitle": "Deep sleep",
+          "behavior": "deep",
+          "systemImage": "moon.zzz.fill",
+          "automaticOnly": true
+        },
+        {
+          "id": "sleep.rem",
+          "title": "REM 수면",
+          "englishTitle": "REM sleep",
+          "behavior": "rem",
+          "systemImage": "moon.zzz.fill",
+          "automaticOnly": true
+        },
+        {
+          "id": "sleep.nap",
+          "title": "낮잠",
+          "englishTitle": "Nap",
+          "behavior": "nap",
+          "systemImage": "zzz",
+          "automaticOnly": false
+        }
       ]
     },
     {
       "id": "movement",
       "title": "이동",
+      "englishTitle": "Movement",
       "systemImage": "figure.walk.motion",
       "details": [
-        { "id": "movement.walking", "title": "걷기", "behavior": "walking", "systemImage": "figure.walk" },
-        { "id": "movement.running", "title": "달리기", "behavior": "running", "systemImage": "figure.run" },
-        { "id": "movement.car", "title": "자동차", "behavior": "automotive", "systemImage": "car.fill" },
-        { "id": "movement.subway", "title": "지하철", "behavior": "subway", "systemImage": "tram.fill" },
-        { "id": "movement.train", "title": "기차", "behavior": "train", "systemImage": "train.side.front.car" },
-        { "id": "movement.bus", "title": "버스", "behavior": "bus", "systemImage": "bus.fill" },
-        { "id": "movement.ship", "title": "배", "behavior": "ship", "systemImage": "ferry.fill" },
-        { "id": "movement.airplane", "title": "비행기", "behavior": "airplane", "systemImage": "airplane" },
-        { "id": "movement.cycling", "title": "자전거", "behavior": "cycling", "systemImage": "bicycle" }
+        {
+          "id": "movement.walking",
+          "title": "걷기",
+          "englishTitle": "Walking",
+          "behavior": "walking",
+          "systemImage": "figure.walk"
+        },
+        {
+          "id": "movement.running",
+          "title": "달리기",
+          "englishTitle": "Running",
+          "behavior": "running",
+          "systemImage": "figure.run"
+        },
+        {
+          "id": "movement.car",
+          "title": "자동차",
+          "englishTitle": "Car",
+          "behavior": "automotive",
+          "systemImage": "car.fill"
+        },
+        {
+          "id": "movement.subway",
+          "title": "지하철",
+          "englishTitle": "Subway",
+          "behavior": "subway",
+          "systemImage": "tram.fill"
+        },
+        {
+          "id": "movement.train",
+          "title": "기차",
+          "englishTitle": "Train",
+          "behavior": "train",
+          "systemImage": "train.side.front.car"
+        },
+        {
+          "id": "movement.bus",
+          "title": "버스",
+          "englishTitle": "Bus",
+          "behavior": "bus",
+          "systemImage": "bus.fill"
+        },
+        {
+          "id": "movement.ship",
+          "title": "배",
+          "englishTitle": "Ship",
+          "behavior": "ship",
+          "systemImage": "ferry.fill"
+        },
+        {
+          "id": "movement.airplane",
+          "title": "비행기",
+          "englishTitle": "Airplane",
+          "behavior": "airplane",
+          "systemImage": "airplane"
+        },
+        {
+          "id": "movement.cycling",
+          "title": "자전거",
+          "englishTitle": "Cycling",
+          "behavior": "cycling",
+          "systemImage": "bicycle"
+        }
       ]
     },
     {
       "id": "eating",
       "title": "식사",
+      "englishTitle": "Meal",
       "systemImage": "fork.knife",
       "details": [
-        { "id": "eating.meal", "title": "식사", "behavior": "meal", "systemImage": "fork.knife" },
-        { "id": "eating.coffee", "title": "커피·티타임", "behavior": "coffee", "systemImage": "cup.and.saucer.fill" }
+        {
+          "id": "eating.meal",
+          "title": "식사",
+          "englishTitle": "Meal",
+          "behavior": "meal",
+          "systemImage": "fork.knife"
+        },
+        {
+          "id": "eating.coffee",
+          "title": "커피·티타임",
+          "englishTitle": "Coffee & tea",
+          "behavior": "coffee",
+          "systemImage": "cup.and.saucer.fill"
+        }
       ]
     },
     {
       "id": "exercise",
       "title": "운동",
+      "englishTitle": "Exercise",
       "systemImage": "figure.strengthtraining.traditional",
       "automaticOnly": true,
       "details": [
-        { "id": "exercise.workout", "title": "운동", "behavior": "exercise", "systemImage": "figure.strengthtraining.traditional", "automaticOnly": true }
+        {
+          "id": "exercise.workout",
+          "title": "운동",
+          "englishTitle": "Exercise",
+          "behavior": "exercise",
+          "systemImage": "figure.strengthtraining.traditional",
+          "automaticOnly": true
+        }
       ]
     },
     {
       "id": "health",
       "title": "건강관리",
+      "englishTitle": "Health care",
       "systemImage": "heart.text.square.fill",
       "automaticOnly": true,
       "details": [
-        { "id": "health.recovery", "title": "회복", "behavior": "recovery", "systemImage": "bed.double.fill", "automaticOnly": false },
-        { "id": "health.medication", "title": "투약", "behavior": "medication", "systemImage": "pills.fill", "automaticOnly": false },
-        { "id": "health.meditation", "title": "명상", "behavior": "meditation", "systemImage": "figure.mind.and.body", "automaticOnly": false },
-        { "id": "health.hospital", "title": "병원", "behavior": "hospital", "systemImage": "cross.case.fill", "automaticOnly": false },
-        { "id": "health.salon", "title": "미용실", "behavior": "salon", "systemImage": "scissors", "automaticOnly": false }
+        {
+          "id": "health.recovery",
+          "title": "회복",
+          "englishTitle": "Recovery",
+          "behavior": "recovery",
+          "systemImage": "bed.double.fill",
+          "automaticOnly": false
+        },
+        {
+          "id": "health.medication",
+          "title": "투약",
+          "englishTitle": "Medication",
+          "behavior": "medication",
+          "systemImage": "pills.fill",
+          "automaticOnly": false
+        },
+        {
+          "id": "health.meditation",
+          "title": "명상",
+          "englishTitle": "Meditation",
+          "behavior": "meditation",
+          "systemImage": "figure.mind.and.body",
+          "automaticOnly": false
+        },
+        {
+          "id": "health.hospital",
+          "title": "병원",
+          "englishTitle": "Hospital",
+          "behavior": "hospital",
+          "systemImage": "cross.case.fill",
+          "automaticOnly": false
+        },
+        {
+          "id": "health.salon",
+          "title": "미용실",
+          "englishTitle": "Hair salon",
+          "behavior": "salon",
+          "systemImage": "scissors",
+          "automaticOnly": false
+        }
       ]
     },
     {
       "id": "housework",
       "title": "집안일",
+      "englishTitle": "Housework",
       "systemImage": "house.fill",
       "details": [
-        { "id": "housework.chores", "title": "집안일", "behavior": "chores", "systemImage": "house.fill" },
-        { "id": "housework.laundry", "title": "빨래", "behavior": "laundry", "systemImage": "washer.fill" },
-        { "id": "housework.groceries", "title": "장보기", "behavior": "groceries", "systemImage": "cart.fill" },
-        { "id": "housework.cooking", "title": "요리", "behavior": "cooking", "systemImage": "frying.pan" },
-        { "id": "housework.dishes", "title": "설거지", "behavior": "dishes", "systemImage": "sink.fill" }
+        {
+          "id": "housework.chores",
+          "title": "집안일",
+          "englishTitle": "Chores",
+          "behavior": "chores",
+          "systemImage": "house.fill"
+        },
+        {
+          "id": "housework.laundry",
+          "title": "빨래",
+          "englishTitle": "Laundry",
+          "behavior": "laundry",
+          "systemImage": "washer.fill"
+        },
+        {
+          "id": "housework.groceries",
+          "title": "장보기",
+          "englishTitle": "Groceries",
+          "behavior": "groceries",
+          "systemImage": "cart.fill"
+        },
+        {
+          "id": "housework.cooking",
+          "title": "요리",
+          "englishTitle": "Cooking",
+          "behavior": "cooking",
+          "systemImage": "frying.pan"
+        },
+        {
+          "id": "housework.dishes",
+          "title": "설거지",
+          "englishTitle": "Dishes",
+          "behavior": "dishes",
+          "systemImage": "sink.fill"
+        }
       ]
     },
     {
       "id": "unconfirmed",
       "title": "미확인",
+      "englishTitle": "Unconfirmed",
       "systemImage": "questionmark.circle.fill",
       "automaticOnly": true,
       "details": [
-        { "id": "unconfirmed.automatic", "title": "미확인", "behavior": "unconfirmed", "systemImage": "questionmark.circle.fill", "automaticOnly": true }
+        {
+          "id": "unconfirmed.automatic",
+          "title": "미확인",
+          "englishTitle": "Unconfirmed",
+          "behavior": "unconfirmed",
+          "systemImage": "questionmark.circle.fill",
+          "automaticOnly": true
+        }
       ]
     }
   ]

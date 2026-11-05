@@ -1135,7 +1135,7 @@ struct MapHomeCategoryDetailRows: View {
                     )
                     .frame(width: 46, height: 38)
                     .clipped()
-                    Text(language == .english ? detail.behavior.capitalized : detail.title)
+                    Text(detail.localizedTitle(language))
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                         .foregroundStyle(Color.tpInk)
                     Spacer(minLength: 0)

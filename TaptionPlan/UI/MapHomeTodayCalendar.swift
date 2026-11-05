@@ -63,7 +63,7 @@ struct MapHomeCalendarTitleMenu: View {
         case .user: language.text("직접", "You")
         case .rule: language.text("자동", "Auto")
         }
-        return "\(pair.0.title) - \(pair.1.title) · \(origin)"
+        return "\(pair.0.localizedTitle(language)) - \(pair.1.localizedTitle(language)) · \(origin)"
     }
 
     var body: some View {
@@ -71,9 +71,9 @@ struct MapHomeCalendarTitleMenu: View {
             Button(language.text("자동으로 판정", "Automatic")) { onChoose(.automatic) }
             Button(language.text("분류 안 함", "Don't categorize")) { onChoose(.none) }
             ForEach(CalendarTitleClassification.selectableCategories) { category in
-                Menu(category.title) {
+                Menu(category.localizedTitle(language)) {
                     ForEach(category.details) { detail in
-                        Button(detail.title) { onChoose(.detail(detail.id)) }
+                        Button(detail.localizedTitle(language)) { onChoose(.detail(detail.id)) }
                     }
                 }
             }
