@@ -6021,3 +6021,10 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 단위(BOKKI-iPhone11 시뮬레이터): `UnobservedStayEngineTests`·`MapHomeLiveMapTests` 103건 실패 0(`build/validation/GPS1105A01/unit.log`). 앱 Debug 빌드는 이 시험 실행에 함께 포함됐다. 구조 지표 통과.
 - 시험한 것은 반경·재설정 계산뿐이다. 구역이 실제로 걸리는지, 벗어날 때 앱이 깨어나 점을 남기는지는 시뮬레이터·실기기 모두 확인하지 않았다. 배터리 영향도 재지 않았다.
 - 제한: iOS 구역 감시는 짧은 거리에서 늦거나 울리지 않을 수 있어 30m가 실제 깨어남 거리를 뜻하지 않는다. 282에는 이 수정이 없다.
+
+## TFB1106A01 TestFlight 283 내부 배포 (2026-11-06)
+
+- 커밋 `79c94876`(머문 자리 30m 감시 구역) 위에서 `release.sh --yes --request-id TFB1106A01` 실행, 종료 코드 0.
+- 처리 상태 `VALID`. `TP Taption Plan 내부 테스트` 그룹 연결·테스터 1명 노출을 읽어 확인(`testflight-report.json`). 아카이브 네 번들 번호 283(`bundles.log`).
+- 외부 그룹에는 올리지 않았다. 실기기 설치·실행과 감시 구역 동작은 확인하지 않았다. 로그: `build/validation/TFB1106A01/`.
+- 디스크 부족으로 다시 만들 수 있는 DerivedData 캐시(이번 작업 것과 지난 요청 DPL1024A01·UIK1102A01·MRG1103A01·FRT1102A01의 `dd`)를 지웠다. 검증 로그와 결과 파일은 남겼다.
