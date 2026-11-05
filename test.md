@@ -5950,3 +5950,12 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 시뮬레이터(IPD-iPad11, `-AppleLanguages (ja)`): 메뉴 문구, 대분류, 활동 대분류의 상세 7개 일본어 표시를 눈으로 확인했다. 나머지 11개 언어와 달력·클립 편집 화면은 보지 못했고, 번역은 사람 검수가 없다.
 - 시험: `TaptionPlanTests` 2,053건 실패 0(`build/validation/L10N1105A01/full.xcresult`, 추출 도구 수정 전 코드·문자열표), 추출 수정 뒤 앱 빌드 성공, `check.py` 실패 0.
 
+
+## TFB1105A07 TestFlight 280 내부·외부 베타 배포 (2026-11-05)
+
+- 커밋 `dfe431e5` 위에서 `release.sh --yes --request-id TFB1105A07` 실행, 종료 코드 0.
+- 처리 상태 `VALID`. `TP Taption Plan 내부 테스트` 그룹 연결·테스터 1명 노출을 읽어 확인(`testflight-report.json`).
+- 아카이브 네 번들(앱·Watch·위젯·Watch 위젯)의 `CFBundleVersion`을 읽어 모두 280 확인(`bundles.log`).
+- 외부 그룹 `TP 지인 테스트`에 연결하고 베타 심사를 제출. 제출 응답은 `WAITING_FOR_REVIEW`였고, 바로 다시 읽은 값은 `betaReviewState: APPROVED`, `externalBuildState: IN_BETA_TESTING`, 그룹 빌드 262·273·280, 테스터 3명, 공개 링크 켜짐(`readback.json`).
+- 로그: `build/validation/TFB1105A07/`.
+- 제한: 전체 단위 시험을 280 코드에서 다시 돌리지 않았다(마지막 실행은 번역 추출기 수정 전, 2,053건 실행·실패 0·건너뜀 17). 구조 예산과 번역 점검만 커밋 전에 통과했다. 실기기 설치·실행과 외부 테스터의 실제 수신은 확인하지 않았다.
