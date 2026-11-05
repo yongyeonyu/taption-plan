@@ -41,6 +41,8 @@ struct TaptionPlanWatchApp: App {
         }
         connectivity.onPayloadChange = { [weak workout] payload in
             Task { @MainActor in
+                // 활성화 뒤 첫 값이 오는 때다. 이때 Watch 앱 버전도 iPhone에 알린다.
+                WatchAppVersionReporter.report()
                 await workout?.applySettings(
                     acceleration: payload.accelerationSettings,
                     dataSyncProfile: payload.dataSyncProfile,

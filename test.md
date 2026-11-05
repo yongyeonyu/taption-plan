@@ -5916,3 +5916,13 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 ## TFB1105A05 TestFlight 278 (2026-11-05)
 - 커밋 `0e1e881d` 기준. 처리 `VALID`, `TP Taption Plan 내부 테스트` 그룹 연결, 테스터 1명 노출을 보고서에서 읽었다. 네 번들 번호 ['278', '278', '278', '278']를 아카이브에서 읽었다. 외부 심사 제출 안 함. 실기기 확인 대기.
 
+## PHO1105A02 사진 반달이 하단 메뉴를 가림 (2026-11-05)
+- 대표 스크린샷(278): 재생 사진 반달 끝이 메뉴·녹화·메모를 덮었다. 반달을 화면 맨 위 겹침에서 빼고 하단 메뉴 아래 층으로 옮겼다. 시험 결과는 아래 빌드 기록을 본다.
+
+## RFA1105A01 구조 예산 복구와 리팩토링 (2026-11-05)
+- 조사: `architecture-metrics.py --check`가 실패 중이었다(동결 파일 5개 증가, 새 거대 파일 1개, `@unchecked Sendable` +1). 이번 세션 기능 추가 탓이다.
+- 실행: 동작 변경 없는 이동. `MapHomePlaceFirstPolicy`, `AppleWatchMenuPolicy`, `MapHomeMeetingPolicy`, `MapHomeAppleWatchMenuItem`, `MapHomeLanguageMenuItem` 새 파일. 설치 안내를 수식어로, Watch 버전 보고를 작은 타입으로 옮김. 영상 합성의 복사 클래스를 없애 같은 흐름의 반복문으로 줄임(이 부분만 실행 코드가 바뀜, `testMuxAddsLoopedMusicAndKeepsVideoSamples` 통과). Watch 앱 주소·연동 키 상수 통일.
+- Watch 버전 보고 시점이 활성화 직후에서 첫 값 수신·앱 활성화·백그라운드 새로고침으로 바뀌었다. 활동 없이 활성화만 되면 다음 시점까지 늦어질 수 있다.
+- 시험: 전체 단위 2,050건 실패 0, 건너뜀 17(`unit-full2.xcresult`), 구조·경계 점검 통과, 기준선 낮춤, watchOS·iOS Debug 빌드 성공, `check.py` 실패 0. 실기기 미확인.
+- 남긴 후보(동작 영향이 커 이번에 안 함): `MapHomeView` 약 1.2만 줄의 상태 분리, `TimelineBoard`·`TimelineDetailPanel` 분할, `performSensorTimelineRefresh`의 주 스레드 계산 이전(STRUCTURE_PERFORMANCE 안 A), 위젯 소스 직접 컴파일 감축(안 B), `Task.detached` 34곳 점검.
+

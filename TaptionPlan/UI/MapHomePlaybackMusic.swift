@@ -254,9 +254,17 @@ enum MapHomeRecordingMusicMuxer {
         }
         writer.startSession(atSourceTime: range.start)
         feeder.start()
-        let copy = MapHomeRecordingVideoCopy(reader: reader, output: output, input: videoInput)
         do {
-            try await copy.run()
+            while let sample = output.copyNextSampleBuffer() {
+                while !videoInput.isReadyForMoreMediaData {
+                    // 쓰기가 실패하면 준비 상태가 영영 오지 않는다.
+                    guard writer.status == .writing else { throw MapHomePlaybackVideoError.writerFailed("mux writer stopped") }
+                    try await Task.sleep(nanoseconds: 2_000_000)
+                }
+                guard videoInput.append(sample) else { throw MapHomePlaybackVideoError.writerFailed("recording append") }
+            }
+            guard reader.status == .completed else { throw MapHomePlaybackVideoError.writerFailed("recording read") }
+            videoInput.markAsFinished()
             while feeder.isRunning {
                 // 쓰기가 실패하면 음악 차례가 영영 오지 않는다.
                 guard writer.status == .writing else { throw MapHomePlaybackVideoError.writerFailed("mux writer stopped") }
@@ -277,47 +285,6 @@ enum MapHomeRecordingMusicMuxer {
             throw MapHomePlaybackVideoError.writerFailed("mux finish")
         }
         return url
-    }
-}
-
-/// 녹화 영상 표본을 전용 큐에서 그대로 옮긴다.
-private final class MapHomeRecordingVideoCopy: @unchecked Sendable {
-    // 모두 전용 큐의 콜백에서만 쓴다.
-    private let reader: AVAssetReader
-    private let output: AVAssetReaderTrackOutput
-    private let input: AVAssetWriterInput
-    private let queue = DispatchQueue(label: "com.taption.plan.recording-video-copy", qos: .utility)
-
-    init(reader: AVAssetReader, output: AVAssetReaderTrackOutput, input: AVAssetWriterInput) {
-        self.reader = reader
-        self.output = output
-        self.input = input
-    }
-
-    func run() async throws {
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            var isFinished = false
-            input.requestMediaDataWhenReady(on: queue) { [self] in
-                guard !isFinished else { return }
-                while input.isReadyForMoreMediaData {
-                    guard let sample = output.copyNextSampleBuffer() else {
-                        isFinished = true
-                        input.markAsFinished()
-                        if reader.status == .completed {
-                            continuation.resume()
-                        } else {
-                            continuation.resume(throwing: MapHomePlaybackVideoError.writerFailed("recording read"))
-                        }
-                        return
-                    }
-                    guard input.append(sample) else {
-                        isFinished = true
-                        continuation.resume(throwing: MapHomePlaybackVideoError.writerFailed("recording append"))
-                        return
-                    }
-                }
-            }
-        }
     }
 }
 

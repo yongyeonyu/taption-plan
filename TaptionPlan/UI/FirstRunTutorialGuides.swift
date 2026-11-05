@@ -476,7 +476,7 @@ struct FirstRunAppleWatchPage: View {
     }
 
     private func openWatchApp() {
-        guard let url = URL(string: "itms-watchs://") else { return }
+        guard let url = AppleWatchLink.watchAppURL else { return }
         UIApplication.shared.open(url) { opened in
             couldNotOpenWatchApp = !opened
         }

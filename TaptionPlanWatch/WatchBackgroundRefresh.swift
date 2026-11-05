@@ -19,6 +19,10 @@ final class WatchAppDelegate: NSObject, WKApplicationDelegate {
         scheduleRefresh()
     }
 
+    func applicationDidBecomeActive() {
+        WatchAppVersionReporter.report()
+    }
+
     func handle(_ backgroundTasks: Set<WKRefreshBackgroundTask>) {
         for task in backgroundTasks {
             switch task {
@@ -26,6 +30,7 @@ final class WatchAppDelegate: NSObject, WKApplicationDelegate {
                 Task { @MainActor in
                     WatchLaunchDiagnostics.mark("background refresh begin")
                     await runRefresh()
+                    WatchAppVersionReporter.report()
                     WatchLaunchDiagnostics.mark("background refresh end")
                     scheduleRefresh()
                     refresh.setTaskCompletedWithSnapshot(false)
@@ -65,5 +70,18 @@ final class WatchAppDelegate: NSObject, WKApplicationDelegate {
                 WatchLaunchDiagnostics.mark("background refresh schedule failed \(error.localizedDescription)")
             }
         }
+    }
+}
+
+/// iPhone 메뉴가 설치된 버전을 보여 주도록 알린다. 값이 같으면 시스템이 다시 보내지 않는다.
+enum WatchAppVersionReporter {
+    static func report() {
+        guard WCSession.isSupported(), WCSession.default.activationState == .activated else { return }
+        let info = Bundle.main.infoDictionary
+        let version = TaptionWatchAppVersion(
+            version: info?["CFBundleShortVersionString"] as? String ?? "?",
+            build: info?["CFBundleVersion"] as? String ?? "?"
+        )
+        try? WCSession.default.updateApplicationContext(version.context)
     }
 }

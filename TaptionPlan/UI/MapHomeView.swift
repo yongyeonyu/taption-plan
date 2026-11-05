@@ -83,7 +83,6 @@ struct MapHomeView: View {
     private let isStickerMode = true
     @State private var selectedMapStickerEditor: MapHomeStickerEditorTarget?
     @State private var sidebarNote: MapHomeSidebarNote?
-    @State private var isAppleWatchMenuExpanded = false
     @State private var isSettingsMenuExpanded = false
     @State private var isGPSLoggingMenuExpanded = false
     @State private var isDataProtectionPresented = false
@@ -118,12 +117,10 @@ struct MapHomeView: View {
     @AppStorage("mapHomeCounter.salary") private var showsSalaryCounter = true
     @AppStorage("mapHomeCounter.collapsed") private var isCounterCollapsed = false
     @State private var isCalendarConnectPresented = false
-    @State private var isWatchInstallPresented = false
     @State private var pendingMemoLocationID: UUID?
     @State private var isMapAttributionPresented = false
     @State private var isAlarmSettingsPresented = false
     @State private var pendingAlarm: (kind: MapHomeAlarmKind, at: Date)?
-    @AppStorage(AppleWatchLink.enabledKey) private var isAppleWatchLinkEnabled = true
     @State private var isDailyCardPresented = false
     /// 땅은 벡터 지도에서만 그려져서, 붙일 타일이 있고 집 근처로 확대하면 벡터 스타일로 자동 전환했다가 끝나면 되돌린다.
     @AppStorage("mapHomeAutoLandStyle") private var autoLandStyleEnabled = true
@@ -383,10 +380,6 @@ struct MapHomeView: View {
         case .korean: .korean
         case .english: .english
         }
-    }
-
-    private var languagePreference: AppLanguagePreference {
-        AppLanguagePreference(rawValue: languageRawValue) ?? .automatic
     }
 
     private var userTrackingMode: MapHomeUserTrackingMode {
@@ -812,6 +805,11 @@ struct MapHomeView: View {
                     .padding(.horizontal, Layout.horizontalInset)
                     .zIndex(MapHomeLayerPriority.header)
             }
+
+            // 사진 반달은 하단 메뉴 아래에 깔린다. 메뉴를 가리면 안 된다(대표 지시).
+            photoArcLayer
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                .zIndex(MapHomeLayerPriority.header - 0.5)
 
             if !isScreenRecording, !isMenuOpen || isWideLayout, layoutStyle.movesActionsToBottom {
                 VStack(spacing: 0) {
@@ -1239,25 +1237,7 @@ struct MapHomeView: View {
                 MapHomePlaybackMomentsOverlay(minute: minute, events: playbackMomentEvents, topInset: Layout.topRowInset + Layout.dateBadgeSize + 8, trailingInset: isSidebarVisible ? timeRailWidth + 12 : 12)
             }
         }
-        .overlay(alignment: .bottom) {
-            if isDayPlaybackRunning, recordingShows(\.photos), let minute = dayPlaybackCurrentMinute, !playbackPhotos.isEmpty {
-                MapHomePlaybackPhotoStrip(minute: minute, photos: playbackPhotos).playbackPlacement(trailing: isSidebarVisible ? timeRailWidth + 12 : 12)
-            }
-        }
-        .overlay {
-            if let photoBrowserSelection, !isDayPlaybackRunning, !browsablePhotos.isEmpty {
-                MapHomePhotoArcBrowser(
-                    moments: browsablePhotos,
-                    startID: photoBrowserSelection.startID,
-                    language: language,
-                    trailing: isSidebarVisible ? timeRailWidth + 12 : 12
-                ) { self.photoBrowserSelection = nil }
-                .id(photoBrowserSelection.startID)
-                .transition(.opacity)
-            }
-        }
         .onChange(of: model.selectedDate) { _, _ in photoBrowserSelection = nil }
-        .sheet(isPresented: $isWatchInstallPresented) { AppleWatchInstallSheet(model: model, language: language) }
         .sheet(isPresented: $isCalendarConnectPresented) { MapHomeCalendarConnectSheet(model: model, language: language) }
         .sheet(isPresented: $isDataProtectionPresented) {
             MapHomeSecuritySheet(model: model, language: language)
@@ -6812,7 +6792,7 @@ struct MapHomeView: View {
             menuGroupCard {
                 displayMenuItem
                 menuGroupDivider
-                languageMenuItem
+                MapHomeLanguageMenuItem(language: language)
                 menuGroupDivider
                 if TaptionFont.isUserSelectable {
                     TaptionFontMenuRow(language: language)
@@ -6820,7 +6800,7 @@ struct MapHomeView: View {
             }
             menuGroupLabel(language.text("연결", "Connections"))
             menuGroupCard {
-                appleWatchMenuItem
+                MapHomeAppleWatchMenuItem(model: model, language: language)
                 menuGroupDivider
                 menuRowButton("calendar.badge.plus", language.text("캘린더 연결", "Calendar"), tint: .tpMenuChip("#3E8FDC")) { isCalendarConnectPresented = true }
                 menuGroupDivider
@@ -7586,51 +7566,6 @@ struct MapHomeView: View {
         return language.text("\(name) 위치 설정", "Set \(name) location")
     }
 
-    private var languageMenuItem: some View {
-        Menu {
-            ForEach(AppLanguagePreference.allCases) { option in
-                Button {
-                    guard languageRawValue != option.rawValue else { return }
-                    languageRawValue = option.rawValue
-                    AppLanguagePreference.save(option)
-                } label: {
-                    if option == languagePreference {
-                        Label(
-                            languagePreferenceTitle(option),
-                            systemImage: "checkmark"
-                        )
-                    } else {
-                        Text(languagePreferenceTitle(option))
-                    }
-                }
-            }
-        } label: {
-            HStack(spacing: 13) {
-                MapHomeMenuIconChip(systemImage: "globe", tint: .tpMenuChip("#4E9C8F"))
-                Text(language.text("언어", "Language"))
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .semibold))
-                Spacer()
-                Text(languagePreferenceTitle(languagePreference))
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
-                    .foregroundStyle(.secondary)
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold))
-                    .foregroundStyle(.secondary)
-            }
-            .foregroundStyle(Color.tpInk)
-            .modifier(MapHomeMenuRowPadding())
-            .padding(.horizontal, 12)
-        }
-        .accessibilityLabel(language.text("언어 선택", "Choose language"))
-    }
-
-    private func languagePreferenceTitle(
-        _ preference: AppLanguagePreference
-    ) -> String {
-        // 언어 이름은 그 언어 글자로 보여 준다. 지금 언어를 못 읽어도 찾을 수 있어야 한다.
-        preference == .automatic ? language.text("자동", "Automatic") : preference.displayName
-    }
-
     private var displayMenuItem: some View {
         VStack(alignment: .leading, spacing: 5) {
             Button {
@@ -7956,182 +7891,6 @@ struct MapHomeView: View {
         }
     }
 
-    private var appleWatchMenuItem: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Button {
-                model.refreshAppleWatchConnectionState()
-                isAppleWatchMenuExpanded.toggle()
-            } label: {
-                HStack(spacing: 13) {
-                    MapHomeMenuIconChip(systemImage: "applewatch", tint: .tpMenuChip("#6FA84F"))
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(language.text("Apple Watch 데이터", "Apple Watch data"))
-                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .semibold))
-                        Text(appleWatchDataStatusText)
-                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    Image(systemName: isAppleWatchMenuExpanded ? "chevron.up" : "chevron.down")
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
-                        .foregroundStyle(.secondary)
-                }
-                .foregroundStyle(Color.tpInk)
-                .modifier(MapHomeMenuRowPadding())
-                .padding(.horizontal, 12)
-                .background(Color.tpInk.opacity(0.05), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            if isAppleWatchMenuExpanded {
-                Toggle(isOn: $isAppleWatchLinkEnabled) {
-                    Text(language.text("Apple Watch 연동", "Apple Watch link"))
-                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
-                }
-                .tint(Color.tpAccent)
-                .padding(.horizontal, 12)
-                .onChange(of: isAppleWatchLinkEnabled) { _, _ in model.applyAppleWatchLinkChange() }
-                appleWatchAppSection
-                Text(appleWatchHealthStatusText)
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 12)
-                Button {
-                    if model.settings.healthEnabled {
-                        model.requestWatchDataSync(source: "map_watch_card")
-                    } else {
-                        Task { await model.requestHealth() }
-                    }
-                } label: {
-                    Text(language.text("지금 가져오기", "Import now")).frame(maxWidth: .infinity).padding(.vertical, 10)
-                        .background(Color.tpAccent.opacity(0.10), in: Capsule()).contentShape(Capsule())
-                }
-                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
-                .foregroundStyle(Color.tpAccent)
-                .lineLimit(1)
-                .padding(.horizontal, 12)
-            }
-        }
-    }
-
-    private var appleWatchAppStatus: AppleWatchAppStatus {
-        AppleWatchAppStatus.make(
-            state: model.appleWatchConnectionState,
-            version: model.appleWatchAppVersion,
-            iPhoneBuild: Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? ""
-        )
-    }
-
-    /// 설치·버전과 iPhone에서 바꾸는 Watch 설정.
-    @ViewBuilder
-    private var appleWatchAppSection: some View {
-        switch appleWatchAppStatus {
-        case .unavailable:
-            EmptyView()
-        case .notInstalled:
-            appleWatchNote(language.text("Watch 앱 · 설치 안 됨", "Watch app · not installed"))
-            appleWatchActionButton(language.text("Watch 앱 설치", "Install Watch app")) { isWatchInstallPresented = true }
-        case .installed(let version, let updateAvailable):
-            appleWatchNote(version.map { value in
-                let text = value.displayText
-                return language.text("Watch 앱 · 설치됨 · \(text)", "Watch app · installed · \(text)")
-            } ?? language.text("Watch 앱 · 설치됨 · 버전 확인 중", "Watch app · installed · checking version"))
-            if updateAvailable {
-                appleWatchActionButton(language.text("Watch 앱 업데이트", "Update Watch app")) {
-                    if let url = URL(string: "itms-watchs://") { UIApplication.shared.open(url) }
-                }
-            }
-            appleWatchSettings
-        }
-    }
-
-    private var appleWatchSettings: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // 기록기는 시스템이 계속 돌리므로 켬·끔만 고른다.
-            Toggle(isOn: Binding(
-                get: { model.settings.watchAccelerationProfile != .off },
-                set: { model.setWatchAccelerationProfile($0 ? .balanced : .off) }
-            )) {
-                Text(language.text("움직임 수집", "Motion collection"))
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
-            }
-            .tint(Color.tpAccent)
-            Picker(selection: Binding(
-                get: { model.settings.watchDataSyncProfile },
-                set: { model.setWatchDataSyncProfile($0) }
-            )) {
-                ForEach(TaptionWatchDataSyncProfile.allCases, id: \.self) { profile in
-                    Text(appleWatchSyncTitle(profile)).tag(profile)
-                }
-            } label: {
-                Text(language.text("건강 데이터 보내기", "Send health data"))
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
-            }
-            .tint(Color.tpAccent)
-        }
-        .disabled(!isAppleWatchLinkEnabled)
-        .padding(.horizontal, 12)
-    }
-
-    private func appleWatchSyncTitle(_ profile: TaptionWatchDataSyncProfile) -> String {
-        switch profile {
-        case .off: language.text("끔", "Off")
-        case .batterySaver: language.text("배터리 최소화", "Battery saver")
-        case .balanced: language.text("균형", "Balanced")
-        case .accuracy: language.text("최신 데이터 우선", "Latest data first")
-        }
-    }
-
-    private func appleWatchNote(_ text: String) -> some View {
-        Text(text)
-            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 12)
-    }
-
-    private func appleWatchActionButton(_ title: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title).frame(maxWidth: .infinity).padding(.vertical, 10)
-                .background(Color.tpAccent.opacity(0.10), in: Capsule()).contentShape(Capsule())
-        }
-        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
-        .foregroundStyle(Color.tpAccent)
-        .padding(.horizontal, 12)
-    }
-
-    /// Watch 앱에서 받은 상태. 건강 앱 조회 시각은 `appleWatchHealthStatusText`에 따로 둔다.
-    private var appleWatchDataStatusText: String {
-        let status = AppleWatchMenuStatus.make(
-            state: model.appleWatchConnectionState,
-            linkEnabled: isAppleWatchLinkEnabled,
-            lastDataAt: model.appleWatchLastDataReceivedAt
-        )
-        switch status {
-        case .unavailable: return language.text("사용 불가", "Unavailable")
-        case .linkOff: return language.text("연동 꺼짐", "Link off")
-        case .installNeeded: return language.text("Watch 앱 설치 필요", "Install the Watch app")
-        case .waiting(let lastData):
-            guard let lastData else { return language.text("수신 대기", "Waiting for data") }
-            let stamp = appleWatchStamp(lastData)
-            return language.text("수신 대기 · \(stamp)", "Waiting · last \(stamp)")
-        case .connected(let lastData):
-            guard let lastData else { return language.text("연결됨", "Connected") }
-            let stamp = appleWatchStamp(lastData)
-            return language.text("연결됨 · \(stamp) 수신", "Connected · received \(stamp)")
-        }
-    }
-
-    private var appleWatchHealthStatusText: String {
-        guard model.settings.healthEnabled else { return language.text("건강 앱 · 권한 필요", "Health · permission needed") }
-        guard let fetched = model.lastHealthRefreshAt else { return language.text("건강 앱 · 연결됨", "Health · connected") }
-        let stamp = appleWatchStamp(fetched)
-        return language.text("건강 앱 · \(stamp) 가져옴", "Health · fetched \(stamp)")
-    }
-
-    private func appleWatchStamp(_ date: Date) -> String {
-        date.formatted(.dateTime.month().day().hour().minute().locale(language.locale))
-    }
-
     private var dataProtectionStatusText: String {
         if model.securityStatus.settings.lockOnLaunch {
             return language.text("앱 열 때마다 잠금", "Locks whenever the app opens")
@@ -8447,6 +8206,23 @@ struct MapHomeView: View {
 
     private var playbackMomentEvents: [(minute: Double, moment: MapHomePlaybackMomentsOverlay.Moment)] {
         MapHomePlaybackMomentsOverlay.events(memos: timedMemosForSelectedDate, day: model.selectedDate)
+    }
+
+    @ViewBuilder
+    private var photoArcLayer: some View {
+        let trailing = isSidebarVisible ? timeRailWidth + 12 : 12
+        if isDayPlaybackRunning, recordingShows(\.photos), let minute = dayPlaybackCurrentMinute, !playbackPhotos.isEmpty {
+            MapHomePlaybackPhotoStrip(minute: minute, photos: playbackPhotos).playbackPlacement(trailing: trailing)
+        } else if let photoBrowserSelection, !isDayPlaybackRunning, !browsablePhotos.isEmpty {
+            MapHomePhotoArcBrowser(
+                moments: browsablePhotos,
+                startID: photoBrowserSelection.startID,
+                language: language,
+                trailing: trailing
+            ) { self.photoBrowserSelection = nil }
+            .id(photoBrowserSelection.startID)
+            .transition(.opacity)
+        }
     }
 
     /// 지도에서 넘겨 볼 그날 사진. 찍은 순서다.

@@ -169,7 +169,7 @@ extension AppModel {
 
     func applyWatchCommand(_ command: TaptionWatchCommand) async {
         // 애플워치 연동을 끄면 워치에서 온 명령을 받지 않는다.
-        guard UserDefaults.standard.object(forKey: "appleWatchLinkEnabled") as? Bool ?? true else { return }
+        guard AppleWatchLink.isEnabled() else { return }
         guard !TaptionExternalPrivacyStore.isLocked,
               acceptsDataMutation(capturedAt: command.requestedAt) else {
             return

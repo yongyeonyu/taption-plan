@@ -173,3 +173,23 @@ struct MapHomeMenuHeaderTitle: View {
             .frame(maxWidth: .infinity, alignment: .center)
     }
 }
+
+/// 메뉴 머리글의 화랑이: 지도를 펼쳐 든 모습과 발자국.
+struct MapHomeMenuHeaderCat: View {
+    let size: CGFloat
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 24, paused: reduceMotion)) { context in
+            HwarangSceneView(
+                scene: .atlas,
+                sec: reduceMotion ? 0 : HwarangClock.seconds(at: context.date),
+                width: size * 1.3,
+                anchorHeight: size,
+                showsBackdrop: false
+            )
+        }
+        .frame(width: size, height: size)
+        .accessibilityHidden(true)
+    }
+}

@@ -242,6 +242,7 @@
 		A1000000000000000000002A /* WatchSyncModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000029 /* WatchSyncModels.swift */; };
 		A80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift */; };
 		A80000000000000000000002 /* WatchAmbientSummaryAccumulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift */; };
+		A1000000000000000B1105C4 /* AppleWatchMenuPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105C4 /* AppleWatchMenuPolicy.swift */; };
 		A1000000000000000000002B /* WatchConnectivitySupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002A /* WatchConnectivitySupport.swift */; };
 		C0FFEE000000000000000031 /* WatchActivityReplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE000000000000000032 /* WatchActivityReplay.swift */; };
 		A10000000000000000000060 /* WatchLaunchDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000060 /* WatchLaunchDiagnostics.swift */; };
@@ -350,6 +351,10 @@
 		A4000000000000000000000C /* TaptionPlanCore in Frameworks */ = {isa = PBXBuildFile; productRef = X30000000000000000000002 /* TaptionPlanCore */; };
 		A30000000000000000000004 /* TaptionPlanCore in Frameworks */ = {isa = PBXBuildFile; productRef = X30000000000000000000002 /* TaptionPlanCore */; };
 		A30000000000000000000005 /* TaptionPlanCore in Frameworks */ = {isa = PBXBuildFile; productRef = X30000000000000000000002 /* TaptionPlanCore */; };
+		A1000000000000000B1105C1 /* MapHomePlaceFirstPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105C1 /* MapHomePlaceFirstPolicy.swift */; };
+		A1000000000000000B1105C2 /* MapHomeMeetingPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105C2 /* MapHomeMeetingPolicy.swift */; };
+		A1000000000000000B1105C3 /* MapHomeAppleWatchMenuItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105C3 /* MapHomeAppleWatchMenuItem.swift */; };
+		A1000000000000000B1105C5 /* MapHomeLanguageMenuItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105C5 /* MapHomeLanguageMenuItem.swift */; };
 		A1000000000000000000007D /* MapHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000007D /* MapHomeView.swift */; };
 		A100000000000000C1102A1F /* MapHomeAppleMapAnnotations.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A1F /* MapHomeAppleMapAnnotations.swift */; };
 		A100000000000000C1102A01 /* AirQualityDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A01 /* AirQualityDetailSheet.swift */; };
@@ -795,6 +800,7 @@
 		F10000000000000000000028 /* TaptionPlanWidgetDebug.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TaptionPlanWidgetDebug.entitlements; sourceTree = "<group>"; };
 		F10000000000000000000029 /* WatchSyncModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSyncModels.swift; sourceTree = "<group>"; };
 		F80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchAmbientSummaryAccumulator.swift; sourceTree = "<group>"; };
+		F1000000000000000B1105C4 /* AppleWatchMenuPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleWatchMenuPolicy.swift; sourceTree = "<group>"; };
 		F1000000000000000000002A /* WatchConnectivitySupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivitySupport.swift; sourceTree = "<group>"; };
 		C0FFEE000000000000000032 /* WatchActivityReplay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchActivityReplay.swift; sourceTree = "<group>"; };
 		F1000000000000000000002B /* TaptionPlanWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanWatchApp.swift; sourceTree = "<group>"; };
@@ -889,6 +895,10 @@
 		F40000000000000000000007 /* TaptionStoreQualityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionStoreQualityTests.swift; sourceTree = "<group>"; };
 		F40000000000000000000008 /* TaptionStoreColumnCodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionStoreColumnCodingTests.swift; sourceTree = "<group>"; };
 		F40000000000000000000006 /* SensorDayStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDayStoreTests.swift; sourceTree = "<group>"; };
+		F1000000000000000B1105C1 /* MapHomePlaceFirstPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaceFirstPolicy.swift; sourceTree = "<group>"; };
+		F1000000000000000B1105C2 /* MapHomeMeetingPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeMeetingPolicy.swift; sourceTree = "<group>"; };
+		F1000000000000000B1105C3 /* MapHomeAppleWatchMenuItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeAppleWatchMenuItem.swift; sourceTree = "<group>"; };
+		F1000000000000000B1105C5 /* MapHomeLanguageMenuItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLanguageMenuItem.swift; sourceTree = "<group>"; };
 		F1000000000000000000007D /* MapHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeView.swift; sourceTree = "<group>"; };
 		F100000000000000C1102A1F /* MapHomeAppleMapAnnotations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeAppleMapAnnotations.swift; sourceTree = "<group>"; };
 		F100000000000000C1102A01 /* AirQualityDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AirQualityDetailSheet.swift; sourceTree = "<group>"; };
@@ -1275,6 +1285,10 @@
 			isa = PBXGroup;
 			children = (
 				F1000000000000000000007D /* MapHomeView.swift */,
+				F1000000000000000B1105C5 /* MapHomeLanguageMenuItem.swift */,
+				F1000000000000000B1105C3 /* MapHomeAppleWatchMenuItem.swift */,
+				F1000000000000000B1105C2 /* MapHomeMeetingPolicy.swift */,
+				F1000000000000000B1105C1 /* MapHomePlaceFirstPolicy.swift */,
 				F100000000000000C1102A1F /* MapHomeAppleMapAnnotations.swift */,
 				F100000000000000C1102A01 /* AirQualityDetailSheet.swift */,
 				F100000000000000C1102A02 /* MapHomeAnnotationPolicies.swift */,
@@ -1567,6 +1581,7 @@
 				F80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift */,
 				F10000000000000000000029 /* WatchSyncModels.swift */,
 				F1000000000000000000002A /* WatchConnectivitySupport.swift */,
+				F1000000000000000B1105C4 /* AppleWatchMenuPolicy.swift */,
 				C0FFEE000000000000000032 /* WatchActivityReplay.swift */,
 				F10000000000000000000072 /* WatchSensorQueryPlan.swift */,
 				F1000000000000000000007A /* DiagnosticsLogSupport.swift */,
@@ -2056,6 +2071,10 @@
 				A1FA11A8E4B16F54E10FE9B1 /* RouteMapViewport.swift in Sources */,
 				A1FA11EB640567D972E12891 /* TimelineSelection.swift in Sources */,
 				A1000000000000000000007D /* MapHomeView.swift in Sources */,
+				A1000000000000000B1105C5 /* MapHomeLanguageMenuItem.swift in Sources */,
+				A1000000000000000B1105C3 /* MapHomeAppleWatchMenuItem.swift in Sources */,
+				A1000000000000000B1105C2 /* MapHomeMeetingPolicy.swift in Sources */,
+				A1000000000000000B1105C1 /* MapHomePlaceFirstPolicy.swift in Sources */,
 				A100000000000000C1102A1F /* MapHomeAppleMapAnnotations.swift in Sources */,
 				A100000000000000C1102A01 /* AirQualityDetailSheet.swift in Sources */,
 				A100000000000000C1102A02 /* MapHomeAnnotationPolicies.swift in Sources */,
@@ -2289,6 +2308,7 @@
 				A1000000000000000000002A /* WatchSyncModels.swift in Sources */,
 				A80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift in Sources */,
 				A1000000000000000000002B /* WatchConnectivitySupport.swift in Sources */,
+				A1000000000000000B1105C4 /* AppleWatchMenuPolicy.swift in Sources */,
 				C0FFEE000000000000000031 /* WatchActivityReplay.swift in Sources */,
 				A10000000000000000000039 /* TimelineBoardModels.swift in Sources */,
 				A1000000000000000000003A /* TimelineBlockStyleViews.swift in Sources */,
