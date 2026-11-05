@@ -38,6 +38,7 @@ struct AppShellView: View {
     @State private var isBiometricAuthenticationInFlight = false
     @State private var biometricPromptInterruptedScene = false
     @State private var isFirstRunTutorialPending = false
+    @State private var isWatchInstallPromptPresented = false
 
     /// 사슬이 길면 타입 검사가 17초 걸려(ARC1103A01) 세 덩어리로 나눈다. 수식어 순서는 그대로다.
     private var appLifecycleContent: some View {
@@ -75,6 +76,13 @@ struct AppShellView: View {
             )
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
+        }
+        // 튜토리얼을 이미 지난 사용자에게도 Watch 앱 설치를 한 번 안내한다(WCH1105A01).
+        .onChange(of: shouldOfferWatchInstall, initial: true) { _, offers in
+            if offers { isWatchInstallPromptPresented = true }
+        }
+        .sheet(isPresented: $isWatchInstallPromptPresented) {
+            AppleWatchInstallSheet(model: model, language: MapHomeLanguage.current)
         }
         .fullScreenCover(isPresented: firstRunTutorialBinding) {
             FirstRunTutorialView(model: model) { finishFirstRunTutorial() }
@@ -599,6 +607,13 @@ struct AppShellView: View {
     }
 
     /// 잠금 화면이나 상점 잠금 위로 올라오지 않는다. 잠금을 풀면 보던 단계에서 다시 뜬다.
+    private var shouldOfferWatchInstall: Bool {
+        model.appleWatchOnboardingPrompt == .installInvitation
+            && !isFirstRunTutorialPending
+            && !model.isAppLocked
+            && !isInitialLaunchOverlayVisible
+    }
+
     private var firstRunTutorialBinding: Binding<Bool> {
         Binding(
             get: { isFirstRunTutorialPending && !model.isAppLocked && proAccess.grantsAccess },

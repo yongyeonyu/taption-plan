@@ -196,15 +196,11 @@ struct MapHomeNLEClipEditor: View {
             }
             .buttonStyle(.plain)
             Spacer()
-            VStack(spacing: 1) {
-                Text(language.text("클립 편집", "Clip editor"))
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .bold))
-                Text(headerSubtitle)
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
-                    .foregroundStyle(hasChanges ? Color.tpAccent : Color.tpSecondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-            }
+            Text(visibleDateTitle)
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(17)), weight: .bold))
+                .foregroundStyle(Color.tpInk)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
             Spacer()
             Button {
                 apply()
@@ -863,30 +859,16 @@ struct MapHomeNLEClipEditor: View {
         track.clips.filter(\.isDirty).count + subTrack.clips.filter(\.isDirty).count
     }
 
-    /// 머리말 아래 한 줄. 지금 상태에서 다음에 할 일을 적는다.
-    private var headerSubtitle: String {
-        if dirtyClipCount > 0 {
-            return language.text(
-                "바뀐 클립 \(dirtyClipCount)개 · 적용하면 저장",
-                "\(dirtyClipCount) changed · Apply to save"
-            )
-        }
-        if isFittedToWholeDay {
-            // 하루 전체가 한눈에 들어오는 배율에서는 클립이 몇 pt라 경계를 잡을 수 없다.
-            // 손가락을 벌려야 편집이 된다는 사실을 이 자리에서 알려 준다.
-            return language.text(
-                "두 손가락으로 벌려 확대 · 경계를 잡아 자르기",
-                "Pinch to zoom · grab an edge to trim"
-            )
-        }
-        return language.text("장소 · 대분류", "Place · main")
-    }
-
-    private var isFittedToWholeDay: Bool {
-        NLEZoomPolicy.isFitted(
-            currentMinuteHeight: minuteHeight,
-            fitMinuteHeight: NLEZoomPolicy.fitMinuteHeight(height: containerHeight)
-        )
+    /// 화면 가운데가 속한 날. 위로 넘겨 전날을 보면 머리말도 바뀐다.
+    private var visibleDateTitle: String {
+        let visibleMinutes = minuteHeight > 0 ? Double(containerHeight / minuteHeight) : 0
+        let calendar = Calendar.autoupdatingCurrent
+        let day = calendar.date(
+            byAdding: .day,
+            value: NLEDayWindow.dayIndex(Int(visibleStartMinute + visibleMinutes / 2)),
+            to: calendar.startOfDay(for: date)
+        ) ?? date
+        return day.formatted(.dateTime.month().day().weekday(.wide).locale(language.locale))
     }
 
     /// 지우기가 향하는 클립. 상세활동을 골랐으면 상세활동이 먼저다.

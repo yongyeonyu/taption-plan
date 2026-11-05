@@ -6277,4 +6277,41 @@ final class MapHomeSidebarNoteTests: XCTestCase {
         XCTAssertNotNil(note(.memo(id)).editorTarget)
         XCTAssertNotNil(note(.sticker(id)).editorTarget)
     }
+
+    func testWalkInsideRegisteredPlaceBecomesPlaceCategoryAndJoins() {
+        let zones = MapHomePlaceFirstPolicy.zones(
+            stays: [("company", 600, 660), ("company", 900, 1_000)],
+            categoryForKey: { $0 == "company" ? "work" : nil },
+            vehicleSpans: []
+        )
+        XCTAssertEqual(zones, [MapHomePlaceFirstPolicy.Zone(startMinute: 600, endMinute: 1_000, categoryID: "work")])
+        let segments = [
+            MapHomeTimeRailSegment(startMinute: 700, endMinute: 760, categoryID: "work", title: "근무"),
+            MapHomeTimeRailSegment(startMinute: 760, endMinute: 770, categoryID: "movement", title: "걷기", behavior: "walking"),
+            MapHomeTimeRailSegment(startMinute: 770, endMinute: 830, categoryID: "work", title: "회의", behavior: "meeting"),
+        ]
+        let result = MapHomePlaceFirstPolicy.merged(segments.map { MapHomePlaceFirstPolicy.assign($0, zones: zones) })
+        XCTAssertEqual(result.count, 1)
+        XCTAssertEqual(result[0].categoryID, "work")
+        XCTAssertEqual(result[0].startMinute, 700)
+        XCTAssertEqual(result[0].endMinute, 830)
+        XCTAssertEqual(result[0].walkSpans, [760..<770])
+    }
+
+    func testWalkOutsideRegisteredPlaceStaysMovement() {
+        let zone = MapHomePlaceFirstPolicy.Zone(startMinute: 600, endMinute: 660, categoryID: "work")
+        let outside = MapHomeTimeRailSegment(startMinute: 700, endMinute: 720, categoryID: "movement", title: "걷기", behavior: "walking")
+        let car = MapHomeTimeRailSegment(startMinute: 610, endMinute: 620, categoryID: "movement", title: "자동차", behavior: "automotive")
+        XCTAssertEqual(MapHomePlaceFirstPolicy.assign(outside, zones: [zone]).categoryID, "movement")
+        XCTAssertEqual(MapHomePlaceFirstPolicy.assign(car, zones: [zone]).categoryID, "movement")
+    }
+
+    func testVehicleBetweenStaysKeepsZonesApart() {
+        let zones = MapHomePlaceFirstPolicy.zones(
+            stays: [("company", 600, 660), ("company", 900, 1_000)],
+            categoryForKey: { _ in "work" },
+            vehicleSpans: [700..<750]
+        )
+        XCTAssertEqual(zones.count, 2)
+    }
 }

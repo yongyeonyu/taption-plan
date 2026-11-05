@@ -338,4 +338,16 @@ final class MapHomeRangePlaybackTests: XCTestCase {
         let plan = try XCTUnwrap(Plan.make(samples: localTrip(), span: span, durationSeconds: 60))
         XCTAssertEqual(plan.meterScale, 1)
     }
+
+    func testVideoFrameWaitsLongOnlyForLargeCameraMoves() {
+        typealias Renderer = MapHomePlaybackVideoRenderer
+        let start = (coordinate: CLLocationCoordinate2D(latitude: 37.5, longitude: 127), distance: 2_000.0)
+        let small = (coordinate: CLLocationCoordinate2D(latitude: 37.5001, longitude: 127), distance: 2_000.0)
+        let far = (coordinate: CLLocationCoordinate2D(latitude: 37.6, longitude: 127), distance: 2_000.0)
+        let zoomed = (coordinate: start.coordinate, distance: 8_000.0)
+        XCTAssertEqual(Renderer.frameTimeout(from: nil, to: start), Renderer.frameTimeout)
+        XCTAssertEqual(Renderer.frameTimeout(from: start, to: small), Renderer.smallMoveFrameTimeout)
+        XCTAssertEqual(Renderer.frameTimeout(from: start, to: far), Renderer.frameTimeout)
+        XCTAssertEqual(Renderer.frameTimeout(from: start, to: zoomed), Renderer.frameTimeout)
+    }
 }

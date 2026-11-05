@@ -119,7 +119,7 @@ struct MapHomeRangeTripPlan: Sendable {
         static let longJumpMeters = 100_000.0
         static let flightSpeed = 60.0
         static let flightSegments = 48
-        static let maximumRoutePoints = 4_000
+        static let maximumRoutePoints = 1_200
         /// 하루 표본을 줄이는 기준. 움직이지 않아도 이 간격마다 남겨 머문 곳을 알아본다.
         static let sampleMinimumMeters = 25.0
         static let sampleMinimumSeconds: TimeInterval = 5 * 60

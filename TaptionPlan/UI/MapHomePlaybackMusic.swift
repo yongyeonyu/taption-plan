@@ -321,7 +321,7 @@ private final class MapHomeRecordingVideoCopy: @unchecked Sendable {
     }
 }
 
-/// 곡 미리듣기. 무음 스위치를 따르고 다른 앱 소리에 섞이는 `.ambient`를 쓰며, 끝나면 이전 분류로 돌려 둔다.
+/// 곡 미리듣기. 사용자가 눌러서 듣는 소리라 무음 스위치가 켜져 있어도 나오게 `.playback`을 쓰고, 끝나면 이전 분류로 돌려 둔다.
 @MainActor
 @Observable
 final class MapHomePlaybackMusicPreview: NSObject, AVAudioPlayerDelegate {
@@ -335,7 +335,7 @@ final class MapHomePlaybackMusicPreview: NSObject, AVAudioPlayerDelegate {
         let session = AVAudioSession.sharedInstance()
         let category = session.category
         do {
-            try session.setCategory(.ambient)
+            try session.setCategory(.playback, options: .mixWithOthers)
             previousCategory = category
             try session.setActive(true)
             let player = try AVAudioPlayer(contentsOf: url)

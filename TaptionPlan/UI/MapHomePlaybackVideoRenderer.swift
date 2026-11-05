@@ -145,8 +145,14 @@ enum MapHomePlaybackVideoError: Error {
 /// 기기 부하와 상관없이 프레임이 빠지지 않는다. 화랑이는 화면 정중앙에 고정하고 지도가 움직인다.
 @MainActor
 final class MapHomePlaybackVideoRenderer: NSObject, @preconcurrency MLNMapViewDelegate {
-    static let fps = 60
-    static let frameTimeout: TimeInterval = 2
+    static let dayFPS = 60
+    /// 여러 날 영상은 빠르게 지나가 30fps로도 부드럽고, 만드는 시간이 절반으로 준다.
+    static let rangeFPS = 30
+    var fps = dayFPS
+    /// 화면 절반 넘게 움직인 프레임만 새 타일을 끝까지 기다린다. 나머지는 이미 받은 타일로 그린다.
+    nonisolated static let frameTimeout: TimeInterval = 2
+    nonisolated static let smallMoveFrameTimeout: TimeInterval = 0.2
+    nonisolated static let largeMoveRatio = 0.5
     static let styleTimeout: TimeInterval = 15
     static let stickmanCacheLimit = 256
 
@@ -218,7 +224,7 @@ final class MapHomePlaybackVideoRenderer: NSObject, @preconcurrency MLNMapViewDe
 
     /// 영상을 만들어 임시 `.mov` 위치를 돌려준다. 취소하면 `CancellationError`.
     func render(progress: @escaping (Double) -> Void) async throws -> URL {
-        let frames = makeFrames(Self.fps)
+        let frames = makeFrames(fps)
         guard !frames.isEmpty else { throw MapHomePlaybackVideoError.empty }
         let started = ProcessInfo.processInfo.systemUptime
         defer { tearDownMap() }
@@ -227,8 +233,8 @@ final class MapHomePlaybackVideoRenderer: NSObject, @preconcurrency MLNMapViewDe
             .appendingPathComponent("BOKKI-Plan-render-\(UUID().uuidString).mov")
         let writer = try MapHomePlaybackVideoWriter(
             url: url, width: pixelWidth, height: pixelHeight,
-            fps: Self.fps, codec: codec, bitRate: bitRate,
-            music: music, durationSeconds: Double(frames.count) / Double(Self.fps)
+            fps: fps, codec: codec, bitRate: bitRate,
+            music: music, durationSeconds: Double(frames.count) / Double(fps)
         )
         var reported = -1.0
         do {
@@ -238,7 +244,7 @@ final class MapHomePlaybackVideoRenderer: NSObject, @preconcurrency MLNMapViewDe
                 await placeCamera(frame)
                 try Task.checkCancellation()
                 let buffer = try writer.makeBuffer()
-                draw(into: buffer, minute: frame.minute, videoSeconds: Double(index) / Double(Self.fps))
+                draw(into: buffer, minute: frame.minute, videoSeconds: Double(index) / Double(fps))
                 try await writer.append(buffer, frameIndex: index)
                 let value = Double(index + 1) / Double(frames.count)
                 if value - reported >= 0.005 || index == frames.count - 1 {
@@ -321,13 +327,26 @@ final class MapHomePlaybackVideoRenderer: NSObject, @preconcurrency MLNMapViewDe
     private func placeCamera(_ frame: MapHomePlaybackTimeline.Frame) async {
         guard let mapView, let coordinate = frame.coordinate else { return }
         if let lastCamera, Self.isSame(lastCamera, (coordinate, frame.cameraDistance)) { return }
+        let timeout = Self.frameTimeout(from: lastCamera, to: (coordinate, frame.cameraDistance))
         lastCamera = (coordinate, frame.cameraDistance)
         mapView.setCamera(
             MLNMapCamera(lookingAtCenter: coordinate, altitude: frame.cameraDistance, pitch: pitch, heading: heading),
             animated: false
         )
         mapView.triggerRepaint()
-        if !(await wait(timeout: Self.frameTimeout)) { timeoutCount += 1 }
+        if !(await wait(timeout: timeout)) { timeoutCount += 1 }
+    }
+
+    /// 첫 프레임, 크게 옮긴 프레임, 줌이 크게 바뀐 프레임만 오래 기다린다.
+    nonisolated static func frameTimeout(
+        from previous: (coordinate: CLLocationCoordinate2D, distance: Double)?,
+        to next: (coordinate: CLLocationCoordinate2D, distance: Double)
+    ) -> TimeInterval {
+        guard let previous, previous.distance > 0, next.distance > 0 else { return frameTimeout }
+        let moved = CLLocation(latitude: previous.coordinate.latitude, longitude: previous.coordinate.longitude)
+            .distance(from: CLLocation(latitude: next.coordinate.latitude, longitude: next.coordinate.longitude))
+        let zoomChange = abs(log2(next.distance / previous.distance))
+        return moved / next.distance > largeMoveRatio || zoomChange > largeMoveRatio ? frameTimeout : smallMoveFrameTimeout
     }
 
     private static func isSame(

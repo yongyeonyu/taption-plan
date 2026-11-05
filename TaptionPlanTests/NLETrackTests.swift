@@ -1255,6 +1255,14 @@ final class NLETrackTests: XCTestCase {
         XCTAssertEqual(around.map(\.title), ["집", "집 주변 이동", "집"])
     }
 
+    func testPhotoPagerClosesOnlyOnDownwardPull() {
+        XCTAssertTrue(MapHomePhotoPager.closesOnPull(translation: CGSize(width: 10, height: 130), predictedHeight: 130))
+        XCTAssertTrue(MapHomePhotoPager.closesOnPull(translation: CGSize(width: 0, height: 40), predictedHeight: 300))
+        XCTAssertFalse(MapHomePhotoPager.closesOnPull(translation: CGSize(width: 200, height: 130), predictedHeight: 130))
+        XCTAssertFalse(MapHomePhotoPager.closesOnPull(translation: CGSize(width: 0, height: -200), predictedHeight: -300))
+        XCTAssertFalse(MapHomePhotoPager.closesOnPull(translation: CGSize(width: 0, height: 40), predictedHeight: 60))
+    }
+
     func testPhotoBrowserSwipeMovesOnePhotoPerStepAndStopsAtEnds() {
         XCTAssertEqual(MapHomePhotoArcBrowser.index(start: 5, translation: -36, count: 20), 6)
         XCTAssertEqual(MapHomePhotoArcBrowser.index(start: 5, translation: 72, count: 20), 3)

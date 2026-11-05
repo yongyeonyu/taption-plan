@@ -333,6 +333,13 @@ struct FirstRunAppleWatchPage: View {
     @State private var wantsInstall = false
     @State private var couldNotOpenWatchApp = false
 
+    /// 메뉴·업데이트 안내에서 열면 이미 Watch가 있는 것이므로 묻지 않는다.
+    init(model: AppModel, language: MapHomeLanguage, startsAnswered: Bool = false) {
+        self.model = model
+        self.language = language
+        _hasWatchAnswer = State(initialValue: startsAnswered ? true : nil)
+    }
+
     private var stage: FirstRunWatchStage {
         FirstRunWatchStage.make(state: model.appleWatchConnectionState, hasWatchAnswer: hasWatchAnswer, wantsInstall: wantsInstall)
     }
@@ -353,6 +360,8 @@ struct FirstRunAppleWatchPage: View {
             .padding(18)
         }
         .onAppear { model.refreshAppleWatchConnectionState() }
+        // 한 번 안내했으면 업데이트 안내를 다시 띄우지 않는다.
+        .onDisappear { model.dismissAppleWatchPrompt(.installInvitation) }
         // Watch 앱에서 돌아오면 설치 여부를 다시 읽는다. 앞에 있는 동안의 변화는 WCSession이 알려 준다.
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { model.refreshAppleWatchConnectionState() }
@@ -470,6 +479,27 @@ struct FirstRunAppleWatchPage: View {
         guard let url = URL(string: "itms-watchs://") else { return }
         UIApplication.shared.open(url) { opened in
             couldNotOpenWatchApp = !opened
+        }
+    }
+}
+
+/// 튜토리얼을 지난 사용자에게 같은 설치 안내를 보여 준다.
+struct AppleWatchInstallSheet: View {
+    @Bindable var model: AppModel
+    let language: MapHomeLanguage
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            FirstRunAppleWatchPage(model: model, language: language, startsAnswered: true)
+                .navigationTitle("Apple Watch")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(language.text("닫기", "Close")) { dismiss() }
+                    }
+                }
+                .background(Color.tpBackground)
         }
     }
 }

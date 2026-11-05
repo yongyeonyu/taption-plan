@@ -190,6 +190,48 @@ enum AppleWatchConnectionPolicy {
     }
 }
 
+/// 메뉴에 보여 줄 Watch 앱 설치 상태. `WCSession`과 Watch 앱이 알린 값만 쓴다.
+enum AppleWatchAppStatus: Equatable, Sendable {
+    case unavailable
+    case notInstalled
+    case installed(version: TaptionWatchAppVersion?, updateAvailable: Bool)
+
+    static func make(
+        state: AppleWatchConnectionState,
+        version: TaptionWatchAppVersion?,
+        iPhoneBuild: String
+    ) -> Self {
+        switch state {
+        case .unsupported, .notPaired: .unavailable
+        case .appNotInstalled: .notInstalled
+        case .noRecentData, .background, .reachable:
+            .installed(version: version, updateAvailable: version?.isOlder(thanBuild: iPhoneBuild) ?? false)
+        }
+    }
+}
+
+/// Watch 앱을 처음 확인했을 때 저전력 수집을 켠다. 그 뒤 사용자가 끄면 다시 켜지 않는다.
+enum AppleWatchCollectionDefaults {
+    static let appliedKey = "appleWatchCollectionDefaultsApplied"
+
+    static func enabledProfiles(
+        acceleration: TaptionWatchAccelerationProfile,
+        dataSync: TaptionWatchDataSyncProfile,
+        state: AppleWatchConnectionState,
+        alreadyApplied: Bool
+    ) -> (acceleration: TaptionWatchAccelerationProfile, dataSync: TaptionWatchDataSyncProfile)? {
+        switch state {
+        case .unsupported, .notPaired, .appNotInstalled: return nil
+        case .noRecentData, .background, .reachable: break
+        }
+        guard !alreadyApplied else { return nil }
+        return (
+            acceleration == .off ? .balanced : acceleration,
+            dataSync == .off ? .batterySaver : dataSync
+        )
+    }
+}
+
 /// 메뉴 연동 토글. 끄면 Watch 수집·전송을 멈추고 건강 앱 조회만 남는다.
 enum AppleWatchLink {
     static let enabledKey = "appleWatchLinkEnabled"
@@ -489,6 +531,7 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
     private let confirmationDefaultsKey =
         "TaptionPlan.appliedWatchConfirmationIDs"
     private let lastContactDefaultsKey = "TaptionPlan.lastWatchDataAt.v2"
+    private let watchAppVersionDefaultsKey = "TaptionPlan.watchAppVersion"
     private let lock = NSLock()
     private var lastAutomaticSyncUptime: TimeInterval?
     private var latestPayloadData: Data?
@@ -816,6 +859,7 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         commandDefaults.removeObject(forKey: commandDefaultsKey)
         commandDefaults.removeObject(forKey: confirmationDefaultsKey)
         commandDefaults.removeObject(forKey: lastContactDefaultsKey)
+        commandDefaults.removeObject(forKey: watchAppVersionDefaultsKey)
         TaptionWatchCommandCapabilityStore.clear()
     }
 
@@ -877,11 +921,31 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         }
     }
 
+    var watchAppVersion: TaptionWatchAppVersion? {
+        commandDefaults.data(forKey: watchAppVersionDefaultsKey)
+            .flatMap { try? JSONDecoder().decode(TaptionWatchAppVersion.self, from: $0) }
+    }
+
+    private func storeWatchAppVersion(from context: [String: Any]) {
+        guard let version = TaptionWatchAppVersion(context: context),
+              let data = try? JSONEncoder().encode(version) else { return }
+        commandDefaults.set(data, forKey: watchAppVersionDefaultsKey)
+    }
+
+    nonisolated func session(
+        _ session: WCSession,
+        didReceiveApplicationContext applicationContext: [String: Any]
+    ) {
+        storeWatchAppVersion(from: applicationContext)
+        statusHandler?(connectionState(for: session))
+    }
+
     nonisolated func session(
         _ session: WCSession,
         activationDidCompleteWith activationState: WCSessionActivationState,
         error: (any Error)?
     ) {
+        storeWatchAppVersion(from: session.receivedApplicationContext)
         TaptionPlanDiagnosticsLogger.shared.record(
             "watch_connectivity_activation",
             fields: [

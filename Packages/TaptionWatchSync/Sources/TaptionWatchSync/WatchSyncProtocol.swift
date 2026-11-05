@@ -930,7 +930,38 @@ public struct TaptionWatchDataSyncRequestGate: Sendable {
     }
 }
 
+/// Watch 앱이 iPhone에 알리는 자기 버전. 메뉴의 설치·업데이트 표시에 쓴다.
+public struct TaptionWatchAppVersion: Codable, Hashable, Sendable {
+    public var version: String
+    public var build: String
+
+    public init(version: String, build: String) {
+        self.version = version
+        self.build = build
+    }
+
+    public var displayText: String { "\(version) (\(build))" }
+
+    /// 번호를 읽지 못하면 있다고 단정하지 않는다.
+    public func isOlder(thanBuild other: String) -> Bool {
+        guard let mine = Int(build), let theirs = Int(other) else { return false }
+        return mine < theirs
+    }
+
+    public var context: [String: Any] {
+        [TaptionWatchEnvelope.appVersionKey: version, TaptionWatchEnvelope.appBuildKey: build]
+    }
+
+    public init?(context: [String: Any]) {
+        guard let version = context[TaptionWatchEnvelope.appVersionKey] as? String,
+              let build = context[TaptionWatchEnvelope.appBuildKey] as? String else { return nil }
+        self.init(version: version, build: build)
+    }
+}
+
 public enum TaptionWatchEnvelope {
+    public static let appVersionKey = "taption.watch.app-version"
+    public static let appBuildKey = "taption.watch.app-build"
     public static let payloadKey = "taption.watch.payload"
     public static let commandKey = "taption.watch.command"
     public static let sensorSummaryKey = "taption.watch.sensor-summary"

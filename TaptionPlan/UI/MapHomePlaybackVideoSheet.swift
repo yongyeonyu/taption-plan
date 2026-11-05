@@ -24,6 +24,7 @@ struct MapHomePlaybackVideoSheet: View {
     @AppStorage("playbackVideoRangePreset") private var presetRaw = MapHomeRangePreset.day.rawValue
     @AppStorage("playbackVideoRangeSeconds") private var targetSeconds = 0
     @AppStorage("playbackVideoHidesPrivatePlaces") private var hidesPrivatePlaces = true
+    @State private var isClosing = false
     @AppStorage("playbackVideoMusic") private var musicRaw = MapHomePlaybackMusicTrack.defaultID
     @AppStorage(MapHomePlaybackRangePicker.customStartKey) private var customStartRaw = 0.0
     @AppStorage(MapHomePlaybackRangePicker.customEndKey) private var customEndRaw = 0.0
@@ -60,6 +61,8 @@ struct MapHomePlaybackVideoSheet: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color.tpBackground)
         .presentationBackground(Color.tpBackground)
+        // 만드는 중에는 쓸어 내리지 않는다. 캡처가 화면 갱신을 강제해 시트가 떨린다. 취소 단추로 닫는다.
+        .interactiveDismissDisabled(phase == .rendering)
         // 닫기·아래로 쓸기 모두 여기로 온다. 만드는 중이면 렌더링을 멈춘다.
         .onDisappear {
             task?.cancel()
@@ -75,6 +78,7 @@ struct MapHomePlaybackVideoSheet: View {
                     .foregroundStyle(Color.tpInk)
                 Spacer(minLength: 8)
                 Button(phase == .rendering ? language.text("취소", "Cancel") : language.text("닫기", "Close")) {
+                    isClosing = true
                     task?.cancel()
                     dismiss()
                 }
@@ -309,6 +313,7 @@ struct MapHomePlaybackVideoSheet: View {
             return
         }
         renderer.music = musicTrack?.url
+        renderer.fps = preset == .day ? MapHomePlaybackVideoRenderer.dayFPS : MapHomePlaybackVideoRenderer.rangeFPS
         progress = 0
         phase = .rendering
         task = Task { await run(renderer) }
@@ -328,7 +333,8 @@ struct MapHomePlaybackVideoSheet: View {
                 ? .saved
                 : .failed(language.text("사진 저장 권한이 필요합니다.", "Photo saving permission is needed."))
         } catch is CancellationError {
-            phase = .idle
+            // 닫히는 중에 화면을 되돌리면 시트 안 내용이 튄다.
+            if !isClosing { phase = .idle }
         } catch MapHomePlaybackVideoError.empty {
             phase = .failed(language.text("보여 줄 위치 기록이 없습니다.", "No location records to show."))
         } catch {

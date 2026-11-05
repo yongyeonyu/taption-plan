@@ -216,7 +216,12 @@ struct NLEDayWindow: Equatable {
         if let preview = previewDays[dayStart] { return preview }
         #endif
         let day = await model.planDayDataSnapshot(for: date, forceReload: false)
-        let segments = MapHomeTimeRailSegmentEngine.segments(from: day.actuals, travel: day.travel, on: date)
+let segments = MapHomePlaceFirstPolicy.apply(
+            to: MapHomeTimeRailSegmentEngine.segments(from: day.actuals, travel: day.travel, on: date),
+            stays: day.places,
+            frequentPlaces: model.settings.frequentPlaces,
+            on: date
+        )
         return NLEDayInput(
             segments: segments,
             details: subActivities(model: model, day: day, segments: segments, dayStart: dayStart),

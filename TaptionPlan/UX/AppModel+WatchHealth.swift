@@ -34,6 +34,20 @@ extension AppModel {
         watchConnectivityService.requestWatchDataSync()
     }
 
+    private func applyWatchCollectionDefaultsIfNeeded(_ state: AppleWatchConnectionState) {
+        guard let profiles = AppleWatchCollectionDefaults.enabledProfiles(
+            acceleration: snapshot.settings.watchAccelerationProfile,
+            dataSync: snapshot.settings.watchDataSyncProfile,
+            state: state,
+            alreadyApplied: UserDefaults.standard.bool(forKey: AppleWatchCollectionDefaults.appliedKey)
+        ) else { return }
+        UserDefaults.standard.set(true, forKey: AppleWatchCollectionDefaults.appliedKey)
+        snapshot.settings.watchAccelerationProfile = profiles.acceleration
+        snapshot.settings.watchDataSyncProfile = profiles.dataSync
+        publishWatchPayload()
+        Task { await persist() }
+    }
+
     func applyAppleWatchLinkChange() {
         publishWatchPayload()
     }
@@ -90,6 +104,9 @@ extension AppModel {
     /// 페어링 완료 이벤트에서도 HealthKit 연결을 확인한다.
     func applyAppleWatchConnectionState(_ state: AppleWatchConnectionState) {
         let changed = appleWatchConnectionState != state
+        let version = watchConnectivityService.watchAppVersion
+        if appleWatchAppVersion != version { appleWatchAppVersion = version }
+        applyWatchCollectionDefaultsIfNeeded(state)
         scheduleWatchHealthRefresh()
         if changed {
             appleWatchConnectionState = state

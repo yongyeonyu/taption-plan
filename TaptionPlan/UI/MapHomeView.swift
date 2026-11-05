@@ -118,6 +118,7 @@ struct MapHomeView: View {
     @AppStorage("mapHomeCounter.salary") private var showsSalaryCounter = true
     @AppStorage("mapHomeCounter.collapsed") private var isCounterCollapsed = false
     @State private var isCalendarConnectPresented = false
+    @State private var isWatchInstallPresented = false
     @State private var pendingMemoLocationID: UUID?
     @State private var isMapAttributionPresented = false
     @State private var isAlarmSettingsPresented = false
@@ -1256,6 +1257,7 @@ struct MapHomeView: View {
             }
         }
         .onChange(of: model.selectedDate) { _, _ in photoBrowserSelection = nil }
+        .sheet(isPresented: $isWatchInstallPresented) { AppleWatchInstallSheet(model: model, language: language) }
         .sheet(isPresented: $isCalendarConnectPresented) { MapHomeCalendarConnectSheet(model: model, language: language) }
         .sheet(isPresented: $isDataProtectionPresented) {
             MapHomeSecuritySheet(model: model, language: language)
@@ -6465,7 +6467,7 @@ struct MapHomeView: View {
                             ? currentActivity(at: minute)
                             : nil,
                         segments: timeRailSegments,
-                        detailSpans: meetingRailSpans,
+                        detailSpans: meetingRailSpans + timeRailSegments.flatMap(\.walkSpans),
                         categoryColors: model.settings.mapCategoryColors,
                         zoomResetToken: zoomResetToken,
                         zoomStepToken: zoomStepToken,
@@ -7989,6 +7991,7 @@ struct MapHomeView: View {
                 .tint(Color.tpAccent)
                 .padding(.horizontal, 12)
                 .onChange(of: isAppleWatchLinkEnabled) { _, _ in model.applyAppleWatchLinkChange() }
+                appleWatchAppSection
                 Text(appleWatchHealthStatusText)
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                     .foregroundStyle(.secondary)
@@ -8009,6 +8012,91 @@ struct MapHomeView: View {
                 .padding(.horizontal, 12)
             }
         }
+    }
+
+    private var appleWatchAppStatus: AppleWatchAppStatus {
+        AppleWatchAppStatus.make(
+            state: model.appleWatchConnectionState,
+            version: model.appleWatchAppVersion,
+            iPhoneBuild: Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? ""
+        )
+    }
+
+    /// 설치·버전과 iPhone에서 바꾸는 Watch 설정.
+    @ViewBuilder
+    private var appleWatchAppSection: some View {
+        switch appleWatchAppStatus {
+        case .unavailable:
+            EmptyView()
+        case .notInstalled:
+            appleWatchNote(language.text("Watch 앱 · 설치 안 됨", "Watch app · not installed"))
+            appleWatchActionButton(language.text("Watch 앱 설치", "Install Watch app")) { isWatchInstallPresented = true }
+        case .installed(let version, let updateAvailable):
+            appleWatchNote(version.map { value in
+                let text = value.displayText
+                return language.text("Watch 앱 · 설치됨 · \(text)", "Watch app · installed · \(text)")
+            } ?? language.text("Watch 앱 · 설치됨 · 버전 확인 중", "Watch app · installed · checking version"))
+            if updateAvailable {
+                appleWatchActionButton(language.text("Watch 앱 업데이트", "Update Watch app")) {
+                    if let url = URL(string: "itms-watchs://") { UIApplication.shared.open(url) }
+                }
+            }
+            appleWatchSettings
+        }
+    }
+
+    private var appleWatchSettings: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // 기록기는 시스템이 계속 돌리므로 켬·끔만 고른다.
+            Toggle(isOn: Binding(
+                get: { model.settings.watchAccelerationProfile != .off },
+                set: { model.setWatchAccelerationProfile($0 ? .balanced : .off) }
+            )) {
+                Text(language.text("움직임 수집", "Motion collection"))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
+            }
+            .tint(Color.tpAccent)
+            Picker(selection: Binding(
+                get: { model.settings.watchDataSyncProfile },
+                set: { model.setWatchDataSyncProfile($0) }
+            )) {
+                ForEach(TaptionWatchDataSyncProfile.allCases, id: \.self) { profile in
+                    Text(appleWatchSyncTitle(profile)).tag(profile)
+                }
+            } label: {
+                Text(language.text("건강 데이터 보내기", "Send health data"))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
+            }
+            .tint(Color.tpAccent)
+        }
+        .disabled(!isAppleWatchLinkEnabled)
+        .padding(.horizontal, 12)
+    }
+
+    private func appleWatchSyncTitle(_ profile: TaptionWatchDataSyncProfile) -> String {
+        switch profile {
+        case .off: language.text("끔", "Off")
+        case .batterySaver: language.text("배터리 최소화", "Battery saver")
+        case .balanced: language.text("균형", "Balanced")
+        case .accuracy: language.text("최신 데이터 우선", "Latest data first")
+        }
+    }
+
+    private func appleWatchNote(_ text: String) -> some View {
+        Text(text)
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 12)
+    }
+
+    private func appleWatchActionButton(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title).frame(maxWidth: .infinity).padding(.vertical, 10)
+                .background(Color.tpAccent.opacity(0.10), in: Capsule()).contentShape(Capsule())
+        }
+        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
+        .foregroundStyle(Color.tpAccent)
+        .padding(.horizontal, 12)
     }
 
     /// Watch 앱에서 받은 상태. 건강 앱 조회 시각은 `appleWatchHealthStatusText`에 따로 둔다.
@@ -8654,9 +8742,14 @@ struct MapHomeView: View {
             return
         }
         let dayData = currentDayDataSnapshot
-        let next = MapHomeTimeRailSegmentEngine.segments(
-            from: dayData?.actuals ?? [],
-            travel: dayData?.travel ?? [],
+        let next = MapHomePlaceFirstPolicy.apply(
+            to: MapHomeTimeRailSegmentEngine.segments(
+                from: dayData?.actuals ?? [],
+                travel: dayData?.travel ?? [],
+                on: model.selectedDate
+            ),
+            stays: dayData?.places ?? [],
+            frequentPlaces: model.settings.frequentPlaces,
             on: model.selectedDate
         )
         if next != timeRailSegments {
@@ -9739,6 +9832,11 @@ struct MapHomeView: View {
             sleepSessions: sleepSessions
         ) {
             return MapHomeStickmanActionResolver.sleepStageAction(at: displayedLocationDate, actuals: actuals, sleepSessions: sleepSessions)
+        }
+        // 등록 지점 안에서 걸으면 그 곳의 걷기다. 회사면 노트북을 들고 걷는다.
+        let walkMinute = minuteOfDay(for: displayedLocationDate)
+        if let walking = timeRailSegments.first(where: { $0.walkSpans.contains { $0.contains(walkMinute) } }) {
+            return walking.categoryID == "work" ? .workWalking : .walking
         }
         if let frame = wbsPlaybackFrame {
             switch frame.activity {
@@ -11003,7 +11101,8 @@ struct MapHomeView: View {
     /// 일정·스티커 배지의 기준 x. 날씨 배지가 켜져 있으면 날씨 왼쪽(왼쪽 정렬), 꺼져 있으면 시간 레일 오른쪽(오른쪽 정렬).
     private var scheduleBadgeBaseX: CGFloat {
         // 날씨 칩이 실제로 보일 때만 왼쪽에 붙이고, 날씨 칩이 없으면 오른쪽에 붙인다.
-        let hasWeatherChips = recordingShows(\.weatherSidebar)
+        let hasWeatherChips = model.settings.weatherSidebarVisible
+            && recordingShows(\.weatherSidebar)
             && !displayWeatherContexts.isEmpty
         return hasWeatherChips
             ? MapHomeTimeSidebarMath.handleLaneWidth - 41

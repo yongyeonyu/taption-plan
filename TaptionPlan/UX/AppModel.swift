@@ -215,6 +215,7 @@ final class AppModel {
     var isHealthHistorySyncRunning = false
     var appleWatchConnectionState: AppleWatchConnectionState = .unsupported
     var appleWatchLastDataReceivedAt: Date?
+    var appleWatchAppVersion: TaptionWatchAppVersion?
     var appleWatchReceivedDataKinds: Set<AppleWatchDataKind> = []
     var appleWatchDataSyncRequestedAt: Date?
     var appleWatchDataSyncRequestStatus:

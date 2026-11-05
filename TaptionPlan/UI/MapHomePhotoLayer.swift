@@ -306,6 +306,12 @@ struct MapHomePhotoPager: View {
     @State var index: Int
     let language: MapHomeLanguage
     @Environment(\.dismiss) private var dismiss
+    @State private var pullDown: CGFloat = 0
+
+    /// 이만큼 아래로 쓸면 닫는다.
+    nonisolated static func closesOnPull(translation: CGSize, predictedHeight: CGFloat) -> Bool {
+        translation.height > abs(translation.width) && max(translation.height, predictedHeight) > 120
+    }
 
     init(moments: [PhotoMoment], startIndex: Int, language: MapHomeLanguage) {
         self.moments = moments
@@ -315,7 +321,7 @@ struct MapHomePhotoPager: View {
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            Color.black.ignoresSafeArea()
+            Color.black.opacity(1 - min(0.6, pullDown / 500)).ignoresSafeArea()
             TabView(selection: $index) {
                 ForEach(Array(moments.enumerated()), id: \.element.id) { offset, moment in
                     VStack(spacing: 8) {
@@ -328,6 +334,22 @@ struct MapHomePhotoPager: View {
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .automatic))
+            .offset(y: pullDown)
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 16)
+                    .onChanged { value in
+                        // 옆으로 넘기는 동안에는 따라 내려가지 않는다.
+                        let next = value.translation.height > abs(value.translation.width) ? value.translation.height : 0
+                        if next != pullDown { pullDown = next }
+                    }
+                    .onEnded { value in
+                        if Self.closesOnPull(translation: value.translation, predictedHeight: value.predictedEndTranslation.height) {
+                            dismiss()
+                        } else {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { pullDown = 0 }
+                        }
+                    }
+            )
             Button { dismiss() } label: {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: TaptionType.scaled(TaptionType.snapped(30))))
@@ -359,6 +381,7 @@ struct MapHomePhotoArcBrowser: View {
 
     /// 손가락이 이만큼 움직이면 사진 한 장을 넘긴다.
     private static let pointsPerPhoto: CGFloat = 36
+    private static let swipeDepth: CGFloat = MapHomePlaybackPhotoStrip.arcDrop + 46
 
     init(moments: [PhotoMoment], startID: String?, language: MapHomeLanguage, trailing: CGFloat, onClose: @escaping () -> Void) {
         self.moments = moments
@@ -430,8 +453,11 @@ struct MapHomePhotoArcBrowser: View {
             .frame(width: proxy.size.width, height: MapHomePlaybackPhotoStrip.centerSide, alignment: .bottom)
         }
         .frame(height: MapHomePlaybackPhotoStrip.centerSide)
+        // 호가 아래로 내려간 끝까지 밀 수 있게 잡는 자리를 넓힌다. 놓이는 자리는 그대로다.
+        .padding(.bottom, Self.swipeDepth)
         .contentShape(Rectangle())
         .simultaneousGesture(swipe)
+        .padding(.bottom, -Self.swipeDepth)
         .animation(reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.8), value: index)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(language.text(
@@ -518,7 +544,7 @@ struct MapHomePlaybackPhotoStrip: View {
     private static let gap: CGFloat = 5
     private static let maxArcDegrees: CGFloat = 85
     /// 호가 내려가는 깊이. 아래 단추 줄에 닿기 전까지다.
-    private static let arcDrop: CGFloat = bottomInset - 16
+    static let arcDrop: CGFloat = bottomInset - 16
 
     /// 지금까지 지나간 마지막 사진. 첫 사진 전이면 nil이고, 되감으면 그 자리로 돌아간다.
     nonisolated static func currentIndex(minute: Double, photos: [Photo]) -> Int? {

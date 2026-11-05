@@ -1,5 +1,5 @@
 {
- "ui": 2239,
+ "ui": 2264,
  "catalog": 461,
  "unread": [
   {
@@ -262,13 +262,13 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeNLEClipFactory.swift",
-   "line": 497,
+   "line": 514,
    "ko": "_ ko: UIPhrase",
    "en": "_ en: UIPhrase"
   },
   {
    "file": "TaptionPlan/UI/MapHomeNLEClipFactory.swift",
-   "line": 497,
+   "line": 514,
    "ko": "ko",
    "en": "en"
   },
@@ -334,37 +334,61 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeView.swift",
-   "line": 7465,
+   "line": 7467,
    "ko": "location.kind.title",
    "en": "location.kind.englishTitle"
   },
   {
    "file": "TaptionPlan/UI/MapHomeView.swift",
-   "line": 7491,
+   "line": 7493,
    "ko": "destination.koreanName",
    "en": "destination.englishName"
   },
   {
    "file": "TaptionPlan/UI/MapHomeView.swift",
-   "line": 7568,
+   "line": 7570,
    "ko": "FloorLabel.korean(place.floor ?? 1)",
    "en": "FloorLabel.english(place.floor ?? 1)"
   },
   {
    "file": "TaptionPlan/UI/MapHomeView.swift",
-   "line": 7576,
+   "line": 7578,
    "ko": "destination.koreanName",
    "en": "destination.englishName"
   },
   {
    "file": "TaptionPlan/UI/MapHomeView.swift",
-   "line": 7685,
+   "line": 7687,
    "ko": "strength.koreanLabel",
    "en": "strength.englishLabel"
   },
   {
+   "file": "TaptionPlanWatch/WatchTodayCards.swift",
+   "line": 16,
+   "ko": "_ minutes: Int",
+   "en": "AppLanguagePreference.ResolvedLanguage"
+  },
+  {
+   "file": "TaptionPlanWatch/WatchTodayCards.swift",
+   "line": 49,
+   "ko": "Int(max(0, date.timeIntervalSince(activity.startedAt)) / 60)",
+   "en": "language"
+  },
+  {
+   "file": "TaptionPlanWatch/WatchTodayCards.swift",
+   "line": 82,
+   "ko": "summary.recordedMinutes",
+   "en": "language"
+  },
+  {
+   "file": "TaptionPlanWatch/WatchTodayCards.swift",
+   "line": 90,
+   "ko": "category.minutes",
+   "en": "language"
+  },
+  {
    "file": "TaptionPlanWidget/SensorCollectionLiveActivity.swift",
-   "line": 495,
+   "line": 523,
    "ko": "base",
    "en": "rate"
   }

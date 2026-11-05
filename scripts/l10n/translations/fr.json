@@ -2749,6 +2749,19 @@
 "|BOKKI Today": "BOKKI Aujourd’hui",
 "지금 활동과 다음 일정, 오늘 기록을 표시합니다.|Shows your current activity, next plan, and today's record.": "Affiche votre activité actuelle, le prochain plan et le relevé du jour.",
 "|Shows your current activity, next plan, and today's record.": "Affiche votre activité actuelle, le prochain plan et le relevé du jour.",
-"오늘 {0}|Today {0}": "Aujourd’hui {0}"
+"오늘 {0}|Today {0}": "Aujourd’hui {0}",
+"Watch 앱 설치|Install Watch app": "Installer l’app Watch",
+"iPhone 연결 대기|Waiting for iPhone": "En attente de l’iPhone",
+"수집 상태|Collection status": "État de la collecte",
+"오늘|Today": "Aujourd’hui",
+"지금 보내기|Send now": "Envoyer maintenant",
+"Watch 앱 · 설치 안 됨|Watch app · not installed": "App Watch · non installée",
+"Watch 앱 · 설치됨 · {0}|Watch app · installed · {0}": "App Watch · installée · {0}",
+"Watch 앱 · 설치됨 · 버전 확인 중|Watch app · installed · checking version": "App Watch · installée · vérification de la version",
+"Watch 앱 업데이트|Update Watch app": "Mettre à jour l’app Watch",
+"움직임 수집|Motion collection": "Collecte des mouvements",
+"건강 데이터 보내기|Send health data": "Envoyer les données Santé",
+"끔|Off": "Désactivé",
+"최신 데이터 우선|Latest data first": "Données récentes d’abord"
 }
 }

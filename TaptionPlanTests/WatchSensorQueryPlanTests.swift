@@ -2629,6 +2629,34 @@ final class AppleWatchMenuStatusTests: XCTestCase {
         XCTAssertEqual(AppleWatchMenuStatus.make(state: .reachable, linkEnabled: true, lastDataAt: nil), .connected(lastData: nil))
     }
 
+    func testAppStatusShowsInstallVersionAndUpdate() {
+        let old = TaptionWatchAppVersion(version: "1.0", build: "275")
+        let same = TaptionWatchAppVersion(version: "1.0", build: "276")
+        XCTAssertEqual(AppleWatchAppStatus.make(state: .notPaired, version: same, iPhoneBuild: "276"), .unavailable)
+        XCTAssertEqual(AppleWatchAppStatus.make(state: .appNotInstalled, version: same, iPhoneBuild: "276"), .notInstalled)
+        XCTAssertEqual(AppleWatchAppStatus.make(state: .noRecentData, version: nil, iPhoneBuild: "276"), .installed(version: nil, updateAvailable: false))
+        XCTAssertEqual(AppleWatchAppStatus.make(state: .reachable, version: same, iPhoneBuild: "276"), .installed(version: same, updateAvailable: false))
+        XCTAssertEqual(AppleWatchAppStatus.make(state: .background, version: old, iPhoneBuild: "276"), .installed(version: old, updateAvailable: true))
+        XCTAssertFalse(TaptionWatchAppVersion(version: "1.0", build: "?").isOlder(thanBuild: "276"))
+        XCTAssertEqual(same.displayText, "1.0 (276)")
+        XCTAssertEqual(TaptionWatchAppVersion(context: same.context), same)
+        XCTAssertNil(TaptionWatchAppVersion(context: [:]))
+    }
+
+    func testCollectionTurnsOnOnceWhenWatchAppIsFound() throws {
+        func make(_ acceleration: TaptionWatchAccelerationProfile, _ state: AppleWatchConnectionState, applied: Bool = false) -> TaptionWatchAccelerationProfile? {
+            AppleWatchCollectionDefaults.enabledProfiles(acceleration: acceleration, dataSync: .off, state: state, alreadyApplied: applied)?.acceleration
+        }
+        XCTAssertNil(make(.off, .appNotInstalled))
+        XCTAssertNil(make(.off, .notPaired))
+        XCTAssertEqual(make(.off, .noRecentData), .balanced)
+        XCTAssertEqual(make(.accuracy, .reachable), .accuracy)
+        // 켠 뒤 사용자가 끄면 다시 켜지 않는다.
+        XCTAssertNil(make(.off, .reachable, applied: true))
+        let profiles = try XCTUnwrap(AppleWatchCollectionDefaults.enabledProfiles(acceleration: .off, dataSync: .off, state: .background, alreadyApplied: false))
+        XCTAssertEqual(profiles.dataSync, .batterySaver)
+    }
+
     func testLinkOffWinsOverConnection() {
         XCTAssertEqual(AppleWatchMenuStatus.make(state: .reachable, linkEnabled: false, lastDataAt: date), .linkOff)
     }

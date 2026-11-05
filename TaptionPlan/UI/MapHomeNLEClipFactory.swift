@@ -110,6 +110,23 @@ extension MapHomeNLEClipEditor {
     ///
     /// 각 기록의 울타리는 자기가 속한 원본 구간이다. 그래서 상세활동을 그 구간
     /// 안에서 옮기거나 자를 수는 있어도, 다른 구간으로 넘어가지는 않는다.
+    /// 등록 지점 안에서 걸은 구간. 대분류 아래 상세 활동으로 보여 준다.
+    static func walkDetails(segments: [MapHomeTimeRailSegment]) -> [MapHomeSectionDetail] {
+        segments.flatMap { segment in
+            segment.walkSpans.map { span in
+                MapHomeSectionDetail(
+                    id: UUID(),
+                    title: AppLanguagePreference.text(korean: "걷기", english: "Walking"),
+                    categoryID: segment.categoryID,
+                    behavior: WatchBehaviorKind.walking.rawValue,
+                    startMinute: span.lowerBound,
+                    endMinute: span.upperBound,
+                    provenance: nil
+                )
+            }
+        }
+    }
+
     static func makeSubTrack(
         details: [MapHomeSectionDetail],
         segments: [MapHomeTimeRailSegment],
@@ -119,7 +136,7 @@ extension MapHomeNLEClipEditor {
         let ordered = segments
             .filter { $0.endMinute > $0.startMinute }
             .sorted { $0.startMinute < $1.startMinute }
-        let clips = details.compactMap { detail -> NLEClip? in
+        let clips = (details + walkDetails(segments: ordered)).compactMap { detail -> NLEClip? in
             guard detail.endMinute > detail.startMinute else { return nil }
             let owner = ordered.first {
                 detail.startMinute >= $0.startMinute && detail.endMinute <= $0.endMinute

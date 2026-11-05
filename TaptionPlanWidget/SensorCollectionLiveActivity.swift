@@ -28,22 +28,15 @@ struct SensorCollectionLiveActivity: Widget {
                         Text(liveActivityTitle(context.state))
                             .font(.headline)
                             .foregroundStyle(.white)
-                        Text(sensorCollectionKinds(context.state.collectionKinds))
-                            .font(.caption2)
-                            .foregroundStyle(.white.opacity(0.72))
-                            .lineLimit(1)
+                        SensorCollectionSavedAtLine(lastSavedAt: context.state.lastSavedAt)
                     }
                 }
                 DynamicIslandExpandedRegion(.bottom) {
+                    // 아일랜드는 높이가 좁아 여섯 줄이 잘린다. 두 칸으로 놓아 센서마다 다 보이게 한다.
                     VStack(alignment: .leading, spacing: 5) {
-                        ZStack(alignment: .trailing) {
-                            SensorCollectionWaveformView(state: context.state)
-                                .frame(maxWidth: .infinity)
-                            SensorCollectionSavedAtView(
-                                lastSavedAt: context.state.lastSavedAt
-                            )
-                        }
-                        SensorCollectionMeterRows(state: context.state)
+                        SensorCollectionWaveformView(state: context.state)
+                            .frame(maxWidth: .infinity)
+                        SensorCollectionMeterRows(state: context.state, columns: 2)
                     }
                 }
             } compactLeading: {
@@ -354,11 +347,13 @@ private struct SensorCollectionMeterView: View {
     let mask: Int?
     let level: Double
     let color: Color
+    var height: CGFloat = 2
 
-    init(mask: Int? = nil, level: Double = 0, color: Color) {
+    init(mask: Int? = nil, level: Double = 0, color: Color, height: CGFloat = 2) {
         self.mask = mask
         self.level = level
         self.color = color
+        self.height = height
     }
 
     var body: some View {
@@ -370,7 +365,7 @@ private struct SensorCollectionMeterView: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 2)
+        .frame(height: height)
         .accessibilityHidden(true)
     }
 
@@ -384,26 +379,16 @@ private struct SensorCollectionMeterView: View {
 
 private struct SensorCollectionMeterRows: View {
     let state: SensorCollectionActivityAttributes.ContentState
+    var columns = 1
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            ForEach(Array(displayKinds.enumerated()), id: \.offset) { index, kind in
-                HStack(spacing: 4) {
-                    Text(SensorCollectionMeterModel.label(for: kind))
-                        .font(.system(size: 8, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.72))
-                        .frame(width: 42, alignment: .leading)
-                    SensorCollectionMeterView(
-                        mask: state.sensorMeterMasks?[kind],
-                        level: SensorCollectionMeterModel.level(
-                            mask: state.sensorMeterMasks?[kind]
-                        ),
-                        color: sensorCollectionMeterColor(
-                            for: kind,
-                            index: index,
-                            state: state
-                        )
-                    )
+        let kinds = displayKinds
+        Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: columns > 1 ? 4 : 2) {
+            ForEach(Array(stride(from: 0, to: kinds.count, by: columns)), id: \.self) { start in
+                GridRow {
+                    ForEach(start..<min(start + columns, kinds.count), id: \.self) { index in
+                        meter(kinds[index], index: index)
+                    }
                 }
             }
         }
@@ -411,6 +396,29 @@ private struct SensorCollectionMeterRows: View {
         .accessibilityLabel(
             AppLanguagePreference.text("센서별 최근 수신량", "Recent samples by sensor")
         )
+    }
+
+    private func meter(_ kind: String, index: Int) -> some View {
+        HStack(spacing: 4) {
+            Text(SensorCollectionMeterModel.label(for: kind))
+                .font(.system(size: columns > 1 ? 11 : 8, weight: .semibold))
+                .foregroundStyle(.white.opacity(columns > 1 ? 0.9 : 0.72))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .frame(width: columns > 1 ? 32 : 42, alignment: .leading)
+            SensorCollectionMeterView(
+                mask: state.sensorMeterMasks?[kind],
+                level: SensorCollectionMeterModel.level(
+                    mask: state.sensorMeterMasks?[kind]
+                ),
+                color: sensorCollectionMeterColor(
+                    for: kind,
+                    index: index,
+                    state: state
+                ),
+                height: columns > 1 ? 5 : 2
+            )
+        }
     }
 
     private var displayKinds: [String] {
@@ -462,6 +470,26 @@ private func sensorCollectionAccessibilityLabel(
     }
     let activityTitle = liveActivityTitle(state)
     return "\(activityTitle), \(status), \(kinds)"
+}
+
+/// 아일랜드용 한 줄. 타이머 글자는 폭을 다 차지하므로 폭을 정해 왼쪽으로 쏠리지 않게 한다.
+private struct SensorCollectionSavedAtLine: View {
+    let lastSavedAt: Date?
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Text(AppLanguagePreference.text("최근 저장", "Last saved"))
+                .foregroundStyle(.white.opacity(0.72))
+            if let lastSavedAt {
+                Text(lastSavedAt, style: .timer)
+                    .monospacedDigit()
+                    .frame(width: 44, alignment: .leading)
+            } else {
+                Text(AppLanguagePreference.text("대기", "Waiting"))
+            }
+        }
+        .font(.caption2.weight(.semibold))
+    }
 }
 
 private struct SensorCollectionSavedAtView: View {

@@ -556,6 +556,15 @@ final class WatchConnectivityController: NSObject, ObservableObject {
     ) {
         let activationRawValue = session.activationState.rawValue
         let isReachable = session.isReachable
+        // iPhone 메뉴가 설치된 버전을 보여 주도록 알린다. 값이 같으면 시스템이 다시 보내지 않는다.
+        if activationState == .activated {
+            let info = Bundle.main.infoDictionary
+            let appVersion = TaptionWatchAppVersion(
+                version: info?["CFBundleShortVersionString"] as? String ?? "?",
+                build: info?["CFBundleVersion"] as? String ?? "?"
+            )
+            try? session.updateApplicationContext(appVersion.context)
+        }
         let data = session.receivedApplicationContext[
             TaptionWatchEnvelope.payloadKey
         ] as? Data
