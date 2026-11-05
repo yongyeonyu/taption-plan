@@ -69,6 +69,11 @@ extension AppleSensorCollector {
                 batch: validLocations
             )
         }
+        armStayRegionIfNeeded(manager, at: newestLocation)
+        if pendingStayRegionExitEmission {
+            pendingStayRegionExitEmission = false
+            emit(force: true)
+        }
         if isForegroundLiveLocationTrackingEnabled {
             guard ForegroundLiveLocationPolicy.isNewFix(
                 newestLocation.timestamp,

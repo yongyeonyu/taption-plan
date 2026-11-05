@@ -127,7 +127,11 @@ final class UnobservedStayEngineTests: XCTestCase {
     }
 
     func testPauseRegionRadiusFollowsAccuracy() {
-        XCTAssertEqual(LocationPauseRegionPolicy.radius(horizontalAccuracy: 10), 100)
+        XCTAssertEqual(LocationPauseRegionPolicy.radius(horizontalAccuracy: 10), 30)
+        XCTAssertEqual(LocationPauseRegionPolicy.radius(horizontalAccuracy: 25), 50)
+        XCTAssertTrue(LocationPauseRegionPolicy.needsNewRegion(distanceFromCenter: nil, radius: 0))
+        XCTAssertFalse(LocationPauseRegionPolicy.needsNewRegion(distanceFromCenter: 20, radius: 30))
+        XCTAssertTrue(LocationPauseRegionPolicy.needsNewRegion(distanceFromCenter: 40, radius: 30))
         XCTAssertEqual(LocationPauseRegionPolicy.radius(horizontalAccuracy: 100), 200)
         XCTAssertEqual(LocationPauseRegionPolicy.radius(horizontalAccuracy: 1_000), 300)
         XCTAssertEqual(LocationPauseRegionPolicy.radius(horizontalAccuracy: -1), 300)

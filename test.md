@@ -6009,3 +6009,15 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 커밋 `ebd25119` 위에서 `release.sh --yes --request-id TFB1105A11` 실행, 종료 코드 0.
 - 처리 상태 `VALID`. `TP Taption Plan 내부 테스트` 그룹 연결·테스터 1명 노출을 읽어 확인(`testflight-report.json`). 아카이브 번들 번호는 `bundles.log`.
 - 외부 그룹에는 올리지 않았다. 실기기 설치·실행은 하지 않았다. 로그: `build/validation/TFB1105A11/`.
+
+## TFB1105A12 TestFlight 282 외부 베타 제출 (2026-11-06)
+
+- 대표 선택으로 `TP 지인 테스트`에 연결하고 베타 심사 제출(`submit.log`). 제출 응답은 `WAITING_FOR_REVIEW`.
+- 바로 다시 읽은 값은 `betaReviewState: APPROVED`, `externalBuildState: IN_BETA_TESTING`, 그룹 빌드 262·273·280·281·282, 테스터 3명, 공개 링크 켜짐(`readback.json`).
+- 제한: 282는 실기기 설치·실행을 확인하지 않은 채 외부에 나갔다. 외부 테스터의 실제 수신도 확인하지 않았다. 로그: `build/validation/TFB1105A12/`.
+
+## GPS1105A01 머문 자리 30m 감시 구역 (2026-11-06, 커밋 전)
+
+- 단위(BOKKI-iPhone11 시뮬레이터): `UnobservedStayEngineTests`·`MapHomeLiveMapTests` 103건 실패 0(`build/validation/GPS1105A01/unit.log`). 앱 Debug 빌드는 이 시험 실행에 함께 포함됐다. 구조 지표 통과.
+- 시험한 것은 반경·재설정 계산뿐이다. 구역이 실제로 걸리는지, 벗어날 때 앱이 깨어나 점을 남기는지는 시뮬레이터·실기기 모두 확인하지 않았다. 배터리 영향도 재지 않았다.
+- 제한: iOS 구역 감시는 짧은 거리에서 늦거나 울리지 않을 수 있어 30m가 실제 깨어남 거리를 뜻하지 않는다. 282에는 이 수정이 없다.

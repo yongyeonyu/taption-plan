@@ -126,6 +126,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     var latestDeviceMotion: DeviceMotionSnapshot?
     var latestConnectedWiFiSSID: String?
     var subwayWiFiObservationStreak = 0
+    var pendingStayRegionExitEmission = false
     private var currentWiFiFetchInFlight = false
     private var lastWiFiFetchAt: Date?
     var deviceMotionAccumulator = DeviceMotionAccumulator()
@@ -271,6 +272,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         )
         guard isCollecting else { return }
         applyLocationPolicy(isMoving: enabled || latestMotion != .stationary)
+        if !enabled, let latestLocation { armStayRegionIfNeeded(locationManager, at: latestLocation) }
         if !enabled, !shouldKeepHardwareStreamsActive {
             stopHardwareStreams()
         }
