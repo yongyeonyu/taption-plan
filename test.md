@@ -5974,3 +5974,7 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 전체 단위(시뮬레이터 BOKKI-iPhone11, 실기기 아님, `unit-all.xcresult`): 2,118건 중 통과 2,100·실패 1·건너뜀 17. 실패는 달력 지표 목록을 고정한 `testCalendarTimeTextFormatsCellsAndDurations`로, 새 지표 `calories`를 기대값에 더하고 그 클래스만 다시 돌려 통과(`unit-growth.log`). 전체를 다시 돌리지는 않았다.
 - 튜토리얼 UI 시험과 아래 화면 미확인 항목은 그대로 남아 있어 이 요청들을 `temp.md`에서 지우지 않는다.
 
+## TFB1105A08 TestFlight 281 내부 배포 (2026-11-05)
+- 커밋 `1d1eb621` 위에서 `release.sh --yes --request-id TFB1105A08` 실행, 종료 코드 0. 처리 `VALID`, `TP Taption Plan 내부 테스트` 연결·테스터 1명 노출 읽기 확인(`testflight-report.json`). 아카이브 네 번들 281 확인(`bundles.log`).
+- 외부 심사는 내지 않았다. 설치와 기기 동작은 확인하지 않았다.
+
