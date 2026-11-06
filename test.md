@@ -6110,3 +6110,8 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 포함: DIR1106A01(이동 수단 좌우 방향).
 - 결과: `release.sh --yes --request-id TFB1106A05` 종료 0, 처리 `VALID`, `TP Taption Plan 내부 테스트` 그룹 연결, 테스터 1명 노출. 아카이브 네 번들 `CFBundleVersion` 287 확인. 보고서 `build/validation/TFB1106A05/testflight-report.json`.
 - 남음: 실기기 재생에서 좌우 전환 확인(대표).
+
+## TFB1106A06 · 빌드 288 내부 TestFlight (2026-11-06)
+- 포함: BRK1106A01(회사 근무 중 휴식 판정).
+- 결과: `release.sh --yes --request-id TFB1106A06` 종료 0, 처리 `VALID`, `TP Taption Plan 내부 테스트` 그룹 연결, 테스터 1명 노출. 아카이브 네 번들 `CFBundleVersion` 288 확인. 보고서 `build/validation/TFB1106A06/testflight-report.json`.
+- 남음: 실기기 회사 하루에서 휴식 표시 확인(대표).
