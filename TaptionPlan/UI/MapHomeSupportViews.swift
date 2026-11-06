@@ -417,5 +417,5 @@ struct MapHomePawprintLedgerKey: Equatable {
     let count: Int
     let firstID: UUID?
     let lastID: UUID?
-    let excluded: [Double]
+    let railSpans: [Double]
 }

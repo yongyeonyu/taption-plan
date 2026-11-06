@@ -535,13 +535,6 @@ final class MapHomeGrowthPolicyTests: XCTestCase {
         }
     }
 
-    func testPawprintsStayOnSubwaySegmentWithoutDrawnRoute() {
-        let span = TimeSpan(start: Date(timeIntervalSince1970: 1_000), end: Date(timeIntervalSince1970: 2_000))
-        var segment = TravelSegment(mode: .subway, span: span, distanceMeters: 1_000, confidence: .high, evidence: ["사용자 확인 기억"])
-        segment.isConfirmed = true
-        XCTAssertTrue(MapHomePawprintLedger.lineDrawnSpans(in: [segment]).isEmpty)
-    }
-
     func testNoMoreRewardsAfterAllFiftyTwoCollected() {
         var history = MapHomeGrowthHistory(season: MapHomeGrowthSeason(year: 2026))
         history.season.pendingWeeklyRewards = 60

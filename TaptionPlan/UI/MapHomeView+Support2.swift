@@ -60,49 +60,55 @@ extension MapHomeView {
             .allowsHitTesting(false)
     }
 
-    /// 하루 발자국 장부(기록이 늘 때만 다시 만든다). 확정된 지하철 구간은 선으로 그려져 발자국을 놓지 않는다.
+    /// 하루 발자국 장부(기록이 늘 때만 다시 만든다). 지하철 구간도 믿을 만한 GPS 발자국은 선 위에 남긴다(MAP1106A01).
     func pawprintLedger() -> [MapHomePawprintLedger.Entry] {
         let readings = currentDayReadings
-        let excluded = MapHomePawprintLedger.lineDrawnSpans(in: displayDayDataSnapshot?.travel ?? [])
+        let railSpans = MapHomePawprintLedger.railSpans(in: displayDayDataSnapshot?.travel ?? [])
         let key = MapHomePawprintLedgerKey(
             day: Calendar.autoupdatingCurrent.startOfDay(for: model.selectedDate),
             count: readings.count, firstID: readings.first?.id, lastID: readings.last?.id,
-            excluded: excluded.flatMap { [$0.start.timeIntervalSinceReferenceDate, $0.end.timeIntervalSinceReferenceDate] }
+            railSpans: railSpans.flatMap { [$0.start.timeIntervalSinceReferenceDate, $0.end.timeIntervalSinceReferenceDate] }
         )
         return pawprintLedgerMemo.value(for: key) {
-            MapHomePawprintLedger.entries(readings: readings, excluding: excluded)
+            MapHomePawprintLedger.entries(readings: readings, railSpans: railSpans)
         }
     }
 
     /// 한 화면에서 여러 번 읽힌다. 입력(예상·확인 경로, 장부, 컷오프)이 같으면 이전 값을 쓴다(PRF1101A01).
     var pawprintWaypoints: [PawprintWaypoint] {
         let probe = MapHomePlaybackProbe.begin("pawprintWaypoints"); defer { MapHomePlaybackProbe.end(probe) }
-        let predicted = predictedMapRoutes, confirmed = confirmedPredictedRoutes, ledger = pawprintLedger()
+        let ledger = pawprintLedger()
+        let plan = MapHomeUnconfirmedPaws.plan(
+            predicted: predictedMapRoutes, confirmed: confirmedPredictedRoutes,
+            decidedTravelIDs: Set(model.snapshot.settings.predictedRouteDecisions.compactMap(\.route.travelID)),
+            travel: currentDayDataSnapshot?.travel ?? [])
+        let gapReadings = routeReadingsLoadState.isLoaded(for: model.selectedDate) ? historicalPlaybackReadings : []
         let cutoff = routeOverlayCutoff
         let calendarForDay = Calendar.autoupdatingCurrent
         let dayEnd = calendarForDay.date(byAdding: .day, value: 1, to: calendarForDay.startOfDay(for: model.selectedDate))
             ?? .distantFuture
         let ledgerCutoff = playbackDriver != nil ? dayEnd : cutoff
         let key = MapHomePawprintWaypointsKey(
-            day: model.selectedDate, cutoff: cutoff, ledgerCutoff: ledgerCutoff, predicted: predicted, confirmed: confirmed,
-            ledgerCount: ledger.count, ledgerFirst: ledger.first?.timestamp, ledgerLast: ledger.last?.timestamp
+            day: model.selectedDate, cutoff: cutoff, ledgerCutoff: ledgerCutoff,
+            ledgerCount: ledger.count, ledgerFirst: ledger.first?.timestamp, ledgerLast: ledger.last?.timestamp,
+            plan: plan, gapReadingsCount: gapReadings.count, gapReadingsLastID: gapReadings.last?.id
         )
         return pawprintWaypointsMemo.value(for: key) {
-            makePawprintWaypoints(predicted: predicted, confirmed: confirmed, ledger: ledger,
+            makePawprintWaypoints(plan: plan, gapReadings: gapReadings, ledger: ledger,
                                   cutoff: cutoff, ledgerCutoff: ledgerCutoff)
         }
     }
 
     func makePawprintWaypoints(
-        predicted: [MapPredictedRoute], confirmed: [MapPredictedRoute], ledger: [MapHomePawprintLedger.Entry],
+        plan: MapHomeUnconfirmedPaws.Plan, gapReadings: [SensorReading], ledger: [MapHomePawprintLedger.Entry],
         cutoff routeOverlayCutoff: Date, ledgerCutoff: Date
     ) -> [PawprintWaypoint] {
         let hardCap = MapHomePawprintInteractionPolicy.markerLimit
-        let predictedSegments = predicted.map { route in
+        let predictedSegments = plan.predicted.map { route in
             (route: route, points: MapHomeGPSGapPredictionPolicy.predictedRailCoordinates(
                 along: coordinates(for: route, through: routeOverlayCutoff)))
         }
-        let confirmedSegments = confirmed.map { route in
+        let confirmedSegments = plan.confirmed.map { route in
             let samples = MapHomeGPSGapPredictionPolicy.predictedRailCoordinates(along: coordinates(for: route))
             let timestamps = samples.indices.map { index in
                 route.span.start.addingTimeInterval(route.span.duration
@@ -175,9 +181,9 @@ extension MapHomeView {
                 )
             }
         }
-        let gapReadings = routeReadingsLoadState.isLoaded(for: model.selectedDate) ? historicalPlaybackReadings : []
-        for gap in MapHomeUnconfirmedPaws.subwayGapPoints(travel: currentDayDataSnapshot?.travel ?? [], readings: gapReadings, through: routeOverlayCutoff, limit: hardCap - result.count) {
-            result.append(PawprintWaypoint(index: result.count, coordinate: gap.coordinate, angle: gap.angle, isPredicted: true, timestamp: nil, speedMetersPerSecond: gap.speed))
+        for gap in MapHomeUnconfirmedPaws.subwayGapPoints(travel: plan.gapTravel, readings: gapReadings, through: routeOverlayCutoff, limit: hardCap - result.count) {
+            result.append(PawprintWaypoint(index: result.count, coordinate: gap.coordinate, angle: gap.angle, isPredicted: true, timestamp: nil,
+                predictedRoute: plan.gapRoutes[gap.travelID], speedMetersPerSecond: gap.speed))
         }
         return result
     }

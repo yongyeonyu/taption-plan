@@ -641,6 +641,7 @@ extension MapHomeView {
     /// 지도 탭 한 경로(UIKit 탭이 부른다). 좌표는 지도 로컬 하나만 쓴다. 예전에는 SwiftUI 탭(뷰포트 좌표)과
     /// UIKit 탭(지도 로컬 좌표)이 같은 손짓을 두 번 판정했고, 카운터 창 판정에 서로 다른 좌표가 섞였다(PRF1101A01).
     func handleMapTap(atLocal local: CGPoint, waypoints: [PawprintWaypoint], positions: [String: CGPoint]?) {
+        photoRingShrinkRequest &+= 1
         defer { if isSearchDismissable { dismissMapSearchOverlay() } }
         if isCounterWindowTapped(at: local) {
             openCounterDetail(at: local)

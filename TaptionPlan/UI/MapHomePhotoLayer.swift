@@ -379,6 +379,8 @@ struct MapHomePhotoArcBrowser: View {
     let trailing: CGFloat
     /// 하단 링: 지도를 가리지 않고 계속 떠 있으며, 넘길 때마다 알린다.
     let isRing: Bool
+    /// 지도를 누를 때마다 늘어난다. 커져 있던 가운데 사진을 바로 줄인다(MAP1106A01). 지도는 그 터치를 그대로 처리한다.
+    let shrinkRequest: Int
     let onPhotoChange: ((PhotoMoment) -> Void)?
     let onClose: () -> Void
 
@@ -386,7 +388,7 @@ struct MapHomePhotoArcBrowser: View {
     @State private var index: Int
     @State private var dragStartIndex: Int?
     @State private var pagerIndex: Int?
-    /// 하단 링: 입력이 3초 없으면 가운데 사진도 다른 칸과 같은 크기로 줄고 어두워진다(RNG1105A02).
+    /// 하단 링: 입력이 2초 없으면 가운데 사진도 다른 칸과 같은 크기로 줄고 어두워진다(RNG1105A02).
     @State private var isRingIdle = false
     @State private var ringActivity = 0
 
@@ -400,10 +402,12 @@ struct MapHomePhotoArcBrowser: View {
         language: MapHomeLanguage,
         trailing: CGFloat,
         isRing: Bool = false,
+        shrinkRequest: Int = 0,
         onPhotoChange: ((PhotoMoment) -> Void)? = nil,
         onClose: @escaping () -> Void
     ) {
         self.isRing = isRing
+        self.shrinkRequest = shrinkRequest
         self.onPhotoChange = onPhotoChange
         self.moments = moments
         self.language = language
@@ -440,6 +444,9 @@ struct MapHomePhotoArcBrowser: View {
             guard moments.indices.contains(value) else { return }
             onPhotoChange?(moments[value])
             wakeRing()
+        }
+        .onChange(of: shrinkRequest) { _, _ in
+            if isRing, !isRingIdle { isRingIdle = true }
         }
         .task(id: ringActivity) {
             guard isRing else { return }
@@ -588,7 +595,7 @@ struct MapHomePlaybackPhotoStrip: View {
     static let centerSide: CGFloat = 168
     static let bottomInset: CGFloat = 104
     /// 새 사진이 크게 보이는 시간(대표 지시). 지나면 다른 칸과 같은 크기로 돌아간다.
-    static let enlargedSeconds: UInt64 = 3
+    static let enlargedSeconds: UInt64 = 2
     private static let gap: CGFloat = 5
     private static let maxArcDegrees: CGFloat = 85
     /// 호가 내려가는 깊이. 아래 단추 줄에 닿기 전까지다.

@@ -121,8 +121,8 @@ extension MapHomeUnconfirmedPaws {
     /// 지하철에서 표본이 끊긴 구간을 노선을 따라 같은 간격으로 찍을 점. 속도는 구간 평균이다.
     static func subwayGapPoints(
         travel: [TravelSegment], readings: [SensorReading], through cutoff: Date, limit: Int
-    ) -> [(coordinate: CLLocationCoordinate2D, angle: Double, speed: Double?)] {
-        var result: [(coordinate: CLLocationCoordinate2D, angle: Double, speed: Double?)] = []
+    ) -> [(coordinate: CLLocationCoordinate2D, angle: Double, speed: Double?, travelID: UUID)] {
+        var result: [(coordinate: CLLocationCoordinate2D, angle: Double, speed: Double?, travelID: UUID)] = []
         for segment in travel where segment.mode == .subway {
             let speed = segment.span.duration > 0 ? segment.distanceMeters / segment.span.duration : nil
             for gap in MapHomePlaybackLocation.subwayGapRoutes(segment: segment, readings: readings, through: cutoff) {
@@ -133,12 +133,42 @@ extension MapHomeUnconfirmedPaws {
                     let point = samples[index], next = samples[min(samples.count - 1, index + 1)]
                     result.append((
                         CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude),
-                        atan2(next.longitude - point.longitude, next.latitude - point.latitude) * 180 / .pi, speed
+                        atan2(next.longitude - point.longitude, next.latitude - point.latitude) * 180 / .pi, speed, segment.id
                     ))
                 }
             }
         }
         return result
+    }
+
+    /// 노선 좌표가 있는 지하철 구간의 `rail` 경로는 노선 전체가 아니라 GPS가 끊긴 조각에만 발자국을 찍는다.
+    /// 전체에 찍으면 역을 직선으로 이은 발자국 줄이 실제 선로 GPS 발자국 옆에 나란히 생긴다(MAP1106A01).
+    static func gapDrawnTravelIDs(_ travel: [TravelSegment]) -> Set<UUID> {
+        Set(travel.filter { $0.mode == .subway && ($0.subwayRoute?.coordinates.count ?? 0) >= 2 }.map(\.id))
+    }
+
+    struct Plan: Equatable {
+        /// 노선 전체에 발자국을 찍을 예상·확정 경로.
+        let predicted: [MapPredictedRoute]
+        let confirmed: [MapPredictedRoute]
+        /// 끊긴 조각만 회색으로 찍을 미확정 지하철. 탑승을 확정했거나 경로를 확정·삭제한 구간은 뺀다.
+        let gapTravel: [TravelSegment]
+        /// 조각 발자국을 눌렀을 때 고를 예상 경로.
+        let gapRoutes: [UUID: MapPredictedRoute]
+    }
+
+    static func plan(
+        predicted: [MapPredictedRoute], confirmed: [MapPredictedRoute], decidedTravelIDs: Set<UUID>, travel: [TravelSegment]
+    ) -> Plan {
+        let gapDrawn = gapDrawnTravelIDs(travel)
+        func isGapRail(_ route: MapPredictedRoute) -> Bool { route.source == "rail" && route.travelID.map(gapDrawn.contains) == true }
+        let rail = predicted.filter(isGapRail)
+        return Plan(
+            predicted: predicted.filter { !isGapRail($0) },
+            confirmed: confirmed.filter { !isGapRail($0) },
+            gapTravel: travel.filter { gapDrawn.contains($0.id) && !$0.isConfirmed && !decidedTravelIDs.contains($0.id) },
+            gapRoutes: Dictionary(rail.compactMap { route in route.travelID.map { ($0, route) } }, uniquingKeysWith: { first, _ in first })
+        )
     }
 }
 

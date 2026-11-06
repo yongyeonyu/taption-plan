@@ -200,6 +200,51 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertEqual(slices.count, 1)
         XCTAssertEqual(try XCTUnwrap(slices.first?.first).latitude, points[points.count / 4].latitude, accuracy: 0.002)
         XCTAssertEqual(try XCTUnwrap(slices.first?.last).latitude, points[points.count * 3 / 4].latitude, accuracy: 0.002)
+        // 노선 전체의 예상 경로 발자국은 빼고, 끊긴 조각 발자국이 그 구간을 가리킨다(MAP1106A01).
+        XCTAssertEqual(MapHomeUnconfirmedPaws.gapDrawnTravelIDs([segment]), [segment.id])
+        let paws = MapHomeUnconfirmedPaws.subwayGapPoints(travel: [segment], readings: readings, through: segment.span.end, limit: 100)
+        XCTAssertFalse(paws.isEmpty)
+        XCTAssertTrue(paws.allSatisfy { $0.travelID == segment.id })
+        let walking = TravelSegment(mode: .walking, span: segment.span, distanceMeters: 500, confidence: .high, evidence: [], isConfirmed: false)
+        XCTAssertTrue(MapHomeUnconfirmedPaws.gapDrawnTravelIDs([walking]).isEmpty)
+    }
+
+    /// 노선 전체 발자국은 지하철 rail 경로에서 빠지고, 끊긴 조각은 미확정·미결정 구간만 남는다(MAP1106A01).
+    func testSubwayPawPlanDrawsGapsOnlyForUndecidedRides() throws {
+        let route = try XCTUnwrap(SubwayStationCatalog.route(for: ["가정역", "마곡나루역"]))
+        let start = date(420), span = TimeSpan(start: start, end: start.addingTimeInterval(1800))
+        let ride = TravelSegment(mode: .subway, span: span, distanceMeters: 18_000, confidence: .high,
+            evidence: [], isConfirmed: false, subwayRoute: route)
+        var boarded = ride; boarded.id = UUID(); boarded.isConfirmed = true
+        var deleted = ride; deleted.id = UUID()
+        func rail(_ travel: TravelSegment, source: String = "rail") -> MapPredictedRoute {
+            MapPredictedRoute(source: source, travelID: travel.id, mode: .subway, span: travel.span, coordinates: route.coordinates)
+        }
+        let walk = MapPredictedRoute(source: "gps-gap", travelID: nil, mode: .walking, span: span, coordinates: Array(route.coordinates.prefix(2)))
+        let plan = MapHomeUnconfirmedPaws.plan(
+            predicted: [rail(ride), rail(boarded), walk], confirmed: [rail(deleted)],
+            decidedTravelIDs: [deleted.id], travel: [ride, boarded, deleted])
+        XCTAssertEqual(plan.predicted, [walk])
+        XCTAssertTrue(plan.confirmed.isEmpty, "확정한 지하철 경로도 역 직선 발자국을 찍지 않는다")
+        XCTAssertEqual(plan.gapTravel.map(\.id), [ride.id], "탑승 확정·경로 결정(삭제 포함) 구간은 회색 조각이 없다")
+        XCTAssertEqual(plan.gapRoutes[ride.id], rail(ride))
+    }
+
+    /// 철도 구간에서는 부정확한 위치를 발자국으로 놓지 않는다(MAP1106A01).
+    func testPawprintLedgerSkipsLooseFixesOnRail() {
+        let start = date(420)
+        func reading(_ second: Double, lat: Double, accuracy: Double, quality: LocationFixQuality = .precise) -> SensorReading {
+            var value = SensorReading(timestamp: start.addingTimeInterval(second),
+                point: GeoPoint(latitude: lat, longitude: 127, altitude: 0, horizontalAccuracy: accuracy, verticalAccuracy: 10))
+            value.locationFixQuality = quality
+            return value
+        }
+        let readings = [reading(0, lat: 37.000, accuracy: 10), reading(60, lat: 37.010, accuracy: 120),
+                        reading(120, lat: 37.020, accuracy: 20, quality: .approximate), reading(180, lat: 37.030, accuracy: 10)]
+        XCTAssertEqual(MapHomePawprintLedger.entries(readings: readings).count, 4)
+        let rail = [TimeSpan(start: start, end: start.addingTimeInterval(200))]
+        XCTAssertEqual(MapHomePawprintLedger.entries(readings: readings, railSpans: rail).map(\.timestamp),
+                       [start, start.addingTimeInterval(180)])
     }
 
     func testSeasonColorsHoldTwoMonthsThenBlendInTheLastMonth() throws {

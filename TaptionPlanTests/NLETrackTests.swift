@@ -773,16 +773,16 @@ final class NLETrackTests: XCTestCase {
         }
         // 0.001도(약 111m)씩 북쪽으로 움직이는 기록.
         let first = (0..<6).map { reading($0 * 10, lat: 37 + Double($0) * 0.001, speed: 5 + Double($0)) }
-        let before = MapHomePawprintLedger.entries(readings: first, excluding: [])
+        let before = MapHomePawprintLedger.entries(readings: first)
         XCTAssertEqual(before.count, 6)
         XCTAssertEqual(before[2].speed, 7, "기록 당시 GPS 속도를 그대로 쓴다")
 
         let more = first + (6..<10).map { reading($0 * 10, lat: 37 + Double($0) * 0.001, speed: 20) }
-        let after = MapHomePawprintLedger.entries(readings: more, excluding: [])
+        let after = MapHomePawprintLedger.entries(readings: more)
         XCTAssertEqual(Array(after.prefix(before.count)), before, "새 기록이 붙어도 앞 발자국은 그대로다")
         XCTAssertEqual(after.count, 10)
         // 같은 입력은 늘 같은 결과(순서를 섞어 넣어도 시간순으로 판단한다).
-        XCTAssertEqual(MapHomePawprintLedger.entries(readings: Array(more.reversed()), excluding: []), after)
+        XCTAssertEqual(MapHomePawprintLedger.entries(readings: Array(more.reversed())), after)
     }
 
     /// 간격 안의 기록은 발자국이 되지 않고, GPS 속도가 없으면 직전 기록에서 구한 평균 속도를 쓰며, 지하철 구간은 건너뛴다.
@@ -800,17 +800,11 @@ final class NLETrackTests: XCTestCase {
             reading(20, lat: 37.0010),   // 약 111m: 발자국, 속도는 직전 기록(0.0002도)에서 20초 → 구한 값
             reading(30, lat: 37.0020),
         ]
-        let entries = MapHomePawprintLedger.entries(readings: readings, excluding: [])
+        let entries = MapHomePawprintLedger.entries(readings: readings)
         XCTAssertEqual(entries.count, 3)
         let derived = try XCTUnwrap(entries[1].speed)
         XCTAssertEqual(derived, CLLocation(latitude: 37.0002, longitude: 127)
             .distance(from: CLLocation(latitude: 37.0010, longitude: 127)) / 10, accuracy: 0.01)
-
-        let skipped = MapHomePawprintLedger.entries(
-            readings: readings,
-            excluding: [TimeSpan(start: base.addingTimeInterval(15), end: base.addingTimeInterval(35))]
-        )
-        XCTAssertEqual(skipped.count, 1)
     }
 
     /// 이웃이 1분보다 짧아지는 자리에서는 경계가 더 밀리지 않는다.

@@ -459,10 +459,11 @@ struct MapHomePawprintWaypointsKey: Equatable {
     let day: Date
     let cutoff: Date
     let ledgerCutoff: Date
-    let predicted: [MapPredictedRoute]
-    let confirmed: [MapPredictedRoute]
     let ledgerCount: Int
     let ledgerFirst: Date?
     let ledgerLast: Date?
+    let plan: MapHomeUnconfirmedPaws.Plan
+    let gapReadingsCount: Int
+    let gapReadingsLastID: UUID?
 }
 

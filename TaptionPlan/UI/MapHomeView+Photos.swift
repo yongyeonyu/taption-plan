@@ -93,6 +93,7 @@ extension MapHomeView {
                 language: language,
                 trailing: trailing,
                 isRing: true,
+                shrinkRequest: photoRingShrinkRequest,
                 onPhotoChange: focusOnPhoto,
                 onClose: {}
             )

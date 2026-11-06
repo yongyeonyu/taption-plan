@@ -720,16 +720,14 @@ enum MapHomePawprintLedger {
     /// 이보다 부정확한 위치는 발자국으로 놓지 않는다(m).
     static let maximumAccuracyMeters = 200.0
 
-    /// 노선 선을 실제로 그리는 철도 구간만 발자국에서 뺀다. 노선 없이 지하철로 저장된 구간까지 빼면
-    /// 선도 발자국도 없어 그 시간이 비어 보인다(PAW1102A02, 10-30 출근).
-    static func lineDrawnSpans(in travel: [TravelSegment]) -> [TimeSpan] {
-        travel.filter {
-            ($0.mode == .subway || $0.mode == .train) && $0.isConfirmed
-                && $0.subwayRoute.map(SubwayStationCatalog.isValid) == true
-        }.map(\.span)
+    /// 철도 구간에서는 지하에서 잡힌 부정확한 위치를 발자국으로 놓지 않는다(MAP1106A01).
+    static let railMaximumAccuracyMeters = 50.0
+
+    static func railSpans(in travel: [TravelSegment]) -> [TimeSpan] {
+        travel.filter { $0.mode == .subway || $0.mode == .train }.map(\.span)
     }
 
-    static func entries(readings: [SensorReading], excluding excluded: [TimeSpan]) -> [Entry] {
+    static func entries(readings: [SensorReading], railSpans: [TimeSpan] = []) -> [Entry] {
         var result: [Entry] = []
         var lastPaw: (latitude: Double, longitude: Double)?
         var previous: (latitude: Double, longitude: Double, timestamp: Date)?
@@ -739,10 +737,8 @@ enum MapHomePawprintLedger {
                   abs(point.latitude) <= 90, abs(point.longitude) <= 180,
                   point.horizontalAccuracy >= 0, point.horizontalAccuracy <= maximumAccuracyMeters,
                   RouteTimelineTimestamp.isValid(reading.timestamp) else { continue }
-            if excluded.contains(where: { $0.start <= reading.timestamp && reading.timestamp <= $0.end }) {
-                previous = nil
-                continue
-            }
+            if reading.locationFixQuality == .approximate || point.horizontalAccuracy > railMaximumAccuracyMeters,
+               railSpans.contains(where: { $0.start <= reading.timestamp && reading.timestamp <= $0.end }) { continue }
             defer { previous = (point.latitude, point.longitude, reading.timestamp) }
             if let lastPaw, distance(lastPaw.latitude, lastPaw.longitude, point.latitude, point.longitude) < spacingDegrees {
                 continue

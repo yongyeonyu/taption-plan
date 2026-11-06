@@ -172,6 +172,7 @@ struct MapHomeView: View {
 
     @AppStorage("mapHomeShowsPhotos") var showsPhotosOnMap = true
     @AppStorage("mapHomeShowsPhotoRing") var showsPhotoRing = false
+    @State var photoRingShrinkRequest = 0
 
     /// 표시 메뉴의 경로·발자국 켜기/끄기(대표 지시, ARC1030A06). 녹화 레이어와는 별개로, 평소 화면에 적용된다.
     @AppStorage("mapHomeShowsRoutes") var showsRoutesOnMap = true

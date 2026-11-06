@@ -6061,3 +6061,14 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 ## TFB1106A02 TestFlight 284 (2026-11-06)
 - 커밋 `3247459f` 기준(Watch 32비트 충돌 수정, 새 설치 건강 기록 시작, 구글 일정 제목 근거 제거 포함). `release.sh --yes` 종료 코드 0, 처리 `VALID`, `TP Taption Plan 내부 테스트` 그룹 연결, 테스터 1명 노출을 보고서에서 읽었다(`build/validation/TFB1106A02/testflight-report.json`).
 - 외부 심사 제출 안 함. Watch 충돌 재발 여부·새 설치 건강 기록은 실기기 확인 대기.
+
+## MAP1106A01 · 지하철 미확인 회색 발자국 겹침 (2026-11-06)
+- 근거: 대표 화면 녹화(24초)와 iCloud 원본 `Taption-Raw-2Days-D4BAE2CA…json`·로그 `TaptionLogs-20261106-125939`(빌드 283). 11/6 09:35–10:13 지하철 1구간(인천2호선→공항철도, 미확정), GPS 신뢰 표본 344개, 2분 넘게 끊긴 곳은 09:35–09:42(가정→아시아드경기장)와 10:04–10:13(계양 이후) 두 곳뿐.
+- 원인: 미확정 지하철 전체가 `rail` 예상 경로로 들어가 역 직선 위에 회색 발자국이 찍혀, 1초 GPS 발자국 옆에 나란히 보이고 시간 비율 컷오프로 화랑이보다 앞서 나갔다. `subwayGapPoints`와 같은 구간을 두 번 그렸다.
+- 수정: 노선 좌표가 있는 지하철의 `rail` 경로 발자국을 빼고 끊긴 조각 발자국에 그 경로를 달았다(탭 확정·삭제 유지). 사용자가 확정한 경로 구간은 끊긴 조각 회색도 그리지 않는다.
+- 결과(시뮬레이터 BOKKI-iPhone11): `RouteTimelineDataTests`·`MapHomeStickmanTests` 213개 실행, 실패 0, 건너뜀 5(기존). 시험 빌드로 앱 Debug 컴파일 성공. 구조 지표 기준선 통과. 로그 `build/validation/MAP1106A01/`.
+- 남음: 실기기에서 같은 날 재생 화면 확인(대표).
+- 추가(13:31 대표 화면): 확정 지하철 구간의 GPS 발자국을 장부에서 빼던 규칙(`lineDrawnSpans`)과 그 시험을 없애고, 확정 구간의 회색 조각을 그리지 않게 했다. 사진링은 커져 있을 때 링 밖 첫 터치로 줄고, 크게 보이는 시간을 2초로 줄였다(재생 사진 줄도 같은 값).
+- 결과(시뮬레이터 BOKKI-iPhone11): `RouteTimelineDataTests`·`MapHomeStickmanTests`·`MapHomeGrowthPolicyTests`·`NLETrackTests` 305개 실행, 실패 0, 건너뜀 5(기존). 구조 지표 통과. 사진링 터치·발자국 화면은 시험으로 확인하지 않았다(실기기 확인 필요). 로그 `unit3.log`.
+- 코드 리뷰 7건 반영: 발자국 규칙 `plan`(메모 키 포함), 결정·확정 구간 회색 제외, 확정 경로 직선 발자국 제외, 철도 구간 장부 50m·approximate 거르기, 사진링 지도 탭으로 줄이기. 새 시험 2개(`testSubwayPawPlanDrawsGapsOnlyForUndecidedRides`, `testPawprintLedgerSkipsLooseFixesOnRail`).
+- 결과(시뮬레이터 BOKKI-iPhone11): 같은 4개 묶음 307개 실행, 실패 0, 건너뜀 5(기존). 구조 지표 통과. 화면 동작은 미확인. 로그 `unit4.log`.
