@@ -65,7 +65,9 @@ actor WatchAmbientSensorRecorder {
     private let armedAtKey = "TaptionPlan.watchSensorRecorderArmedAt"
     private let failureCountKey = "TaptionPlan.watchSensorRecorderDrainFailures"
     private let retryAfterKey = "TaptionPlan.watchSensorRecorderRetryAfter"
-    private let pendingSessionKey = "TaptionPlan.watchSensorRecorderPendingSession"
+    /// 묶음 번호 단위를 초로 바꾸며 새 세션으로 시작한다. 옛 세션의 큰 번호가 iPhone 처리 위치로 남아
+    /// 새 번호를 지난 것으로 보지 않게 한다(WCH1106A02).
+    private let pendingSessionKey = "TaptionPlan.watchSensorRecorderPendingSession.v2"
     private let committedSampleDatesKey =
         "TaptionPlan.watchSensorRecorderCommittedSampleDates"
     private let pendingSampleDatesKey =

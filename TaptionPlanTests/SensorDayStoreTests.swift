@@ -1804,7 +1804,7 @@ final class SensorDayStoreTests: XCTestCase {
                 anchor: sequenceAnchor
             )
         )
-        XCTAssertGreaterThan(latestSequence, 80_000_000_000)
+        XCTAssertGreaterThan(latestSequence, 80_000)
 
         let earlierStartedAt = sequenceAnchor.addingTimeInterval(60)
         let earlierSequence = try XCTUnwrap(

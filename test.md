@@ -6072,3 +6072,9 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 결과(시뮬레이터 BOKKI-iPhone11): `RouteTimelineDataTests`·`MapHomeStickmanTests`·`MapHomeGrowthPolicyTests`·`NLETrackTests` 305개 실행, 실패 0, 건너뜀 5(기존). 구조 지표 통과. 사진링 터치·발자국 화면은 시험으로 확인하지 않았다(실기기 확인 필요). 로그 `unit3.log`.
 - 코드 리뷰 7건 반영: 발자국 규칙 `plan`(메모 키 포함), 결정·확정 구간 회색 제외, 확정 경로 직선 발자국 제외, 철도 구간 장부 50m·approximate 거르기, 사진링 지도 탭으로 줄이기. 새 시험 2개(`testSubwayPawPlanDrawsGapsOnlyForUndecidedRides`, `testPawprintLedgerSkipsLooseFixesOnRail`).
 - 결과(시뮬레이터 BOKKI-iPhone11): 같은 4개 묶음 307개 실행, 실패 0, 건너뜀 5(기존). 구조 지표 통과. 화면 동작은 미확인. 로그 `unit4.log`.
+
+## WCH1106A02 · Watch 가속도 수집 36분 뒤 멈춤 (2026-11-06)
+- 수정: `ambientAccelerationSequence`를 마이크로초에서 초 단위로 바꾸고(32비트 68년), Watch 세션 키를 `.v2`로 바꿔 iPhone의 세션별 처리 위치와 섞이지 않게 했다. 새 시험 `testAmbientSequenceFitsThirtyTwoBitsLongAfterArming`, 마이크로초 값을 가정한 기존 시험 3곳을 초 단위로 고쳤다.
+- 결과(시뮬레이터 BOKKI-iPhone11): `WatchSensorQueryPlanTests`·`SensorDayStoreTests`·`FeatureEngineTests` 792개 중 실패 1(`testSceneActivationPublishesLocalSnapshotBeforeDeferredRefresh`, 단독 5회 반복은 모두 통과 → 타이밍 흔들림, 이번 변경과 무관한 경로). watchOS Debug 빌드 성공(서명 없음). 구조 지표 통과. 로그 `build/validation/WCH1106A02/`.
+- 남음: 실기기 Watch 하루 착용에서 가속도가 36분 넘어도 계속 들어오는지.
+- WCH1106A01 위젯 점검(284 아카이브, 정적): Watch 앱 `PlugIns`에 위젯 확장이 있고 번들 ID(`…watchkitapp.widget`)·extension point·앱 그룹(`group.com.taption.plan`)·arm64/arm64_32·`containerBackground`·지원 크기 3종이 모두 정상. 외부 프레임워크 링크 없음. 바이너리 minos 26.0(사용 기기 watchOS 26.6이라 문제 아님). 원인 못 찾음. Watch는 이때 devicectl에서 `unavailable`이라 기기 로그를 받지 못했다. 위젯 목록에는 위젯 이름(`BOKKI 오늘`)이 아니라 앱 이름(`BOKKI Plan`) 아래에 묶여 나온다.

@@ -138,16 +138,19 @@ public enum TaptionWatchStableID {
         ambientAccelerationSequence(capturedAt: startedAt, anchor: anchor)
     }
 
+    /// 기준 시각부터 지난 초(1부터). Apple Watch(arm64_32)는 Int가 32비트라 마이크로초로 세면
+    /// 약 36분 만에 넘쳐 묶음·요약이 멈췄다(WCH1106A02). 보관 표본은 5초, 묶음 시작은 5초 넘는 틈이나
+    /// 창 경계로 나뉘어 초 단위로도 겹치지 않고, 68년을 버틴다.
     public static func ambientAccelerationSequence(
         capturedAt: Date,
         anchor: Date
     ) -> Int? {
         let elapsed = capturedAt.timeIntervalSince(anchor)
         guard elapsed >= 0,
-              elapsed < Double(Int.max - 1) / 1_000_000 else {
+              elapsed < Double(Int32.max - 1) else {
             return nil
         }
-        return Int((elapsed * 1_000_000).rounded(.down)) + 1
+        return Int(elapsed.rounded(.down)) + 1
     }
 
     public static func ambientAccelerationSample(sessionID: UUID, sequence: Int) -> UUID {

@@ -393,7 +393,7 @@ final class WatchSensorQueryPlanTests: XCTestCase {
         let originalDates = [1.0, 6.0, 11.0].map {
             anchor.addingTimeInterval($0)
         }
-        let retryDates = [1.0, 5.5, 11.0].map {
+        let retryDates = [1.0, 4.5, 11.0].map {
             anchor.addingTimeInterval($0)
         }
         let originalSequences = originalDates.compactMap {
@@ -422,7 +422,7 @@ final class WatchSensorQueryPlanTests: XCTestCase {
                     sequence: sequence
                 ),
                 capturedAt: anchor.addingTimeInterval(
-                    Double(sequence - 1) / 1_000_000
+                    Double(sequence - 1)
                 ),
                 acceleration: .init(x: 0, y: 0, z: 0),
                 sessionID: sessionID,
@@ -538,6 +538,19 @@ final class WatchSensorQueryPlanTests: XCTestCase {
                 revision: 0
             )
         )
+    }
+
+    /// 첫 기록 시각이 한 달 전이어도 묶음 번호가 32비트 안에 있어 Watch에서 수집이 멈추지 않는다(WCH1106A02).
+    func testAmbientSequenceFitsThirtyTwoBitsLongAfterArming() throws {
+        let anchor = Date(timeIntervalSince1970: 1_000_000)
+        let monthLater = try XCTUnwrap(TaptionWatchStableID.ambientAccelerationSequence(
+            capturedAt: anchor.addingTimeInterval(30 * 24 * 60 * 60 + 0.7), anchor: anchor))
+        XCTAssertEqual(monthLater, 30 * 24 * 60 * 60 + 1)
+        XCTAssertLessThan(monthLater, Int(Int32.max))
+        let archive = (0..<3).compactMap {
+            TaptionWatchStableID.ambientAccelerationSequence(capturedAt: anchor.addingTimeInterval(40 * 60 + Double($0) * 5), anchor: anchor)
+        }
+        XCTAssertEqual(Set(archive).count, 3, "5초 간격 보관 표본은 번호가 겹치지 않는다")
     }
 
     func testAmbientChunkIDKeepsSessionPrefixAndSequenceSuffix() {
@@ -790,8 +803,8 @@ final class WatchSensorQueryPlanTests: XCTestCase {
         let second = try XCTUnwrap(summaries.last)
         XCTAssertEqual(first.sessionID, sessionID)
         XCTAssertEqual(second.sessionID, sessionID)
-        XCTAssertEqual(first.sequence, 120_000_001)
-        XCTAssertEqual(second.sequence, 130_000_001)
+        XCTAssertEqual(first.sequence, 121)
+        XCTAssertEqual(second.sequence, 131)
         XCTAssertNotEqual(first.rawEventID, second.rawEventID)
         XCTAssertEqual(first.ambientWindowStart, anchor)
         XCTAssertEqual(second.ambientWindowStart, anchor)
