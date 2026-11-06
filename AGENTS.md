@@ -45,6 +45,9 @@
 - `docs/IPAD_UI.md`: 넓은 화면 배치 구성안과 남은 결함.
 - `docs/STRUCTURE_PERFORMANCE.md`: 구조 성능 개선 안·전후 수치와 합친 뒤 할 일.
 - `docs/DATA_PIPELINE.md`: 저장소 파이프라인 측정 결과와 개선 설계(P0~P3). 측정 도구는 `scripts/pipeline-bench.py`.
+- `docs/ARCHITECTURE_ROADMAP.md`: 구조 로드맵(Phase 0~5)과 결정 기록(ADR).
+- `docs/HOME_EVOLUTION_LIST.md`: 집 성장 366일 건축물 목록(생성물).
+- `docs/CLIENT_REPORT.md`·`docs/UX_ARCHITECTURE.md`·`docs/DESIGN_SYSTEM.md`: 2026-10-24 UX 진단·설계 자료.
 - `scripts/l10n/README.md`: 12개 언어 팩의 추출·번역·점검·생성 절차.
-- `temp.md` / `test.md`: 미완료 요청 / 실제 검증 근거. 요청한 부분만 읽습니다.
-- `*_ARCHIVE.md`와 날짜가 붙은 인계문: 지난 시점의 기록으로, 현재 작업 시작 시 읽지 않습니다.
+- `temp.md` / `test.md`: 미완료 요청(맨 위 `남은 액션아이템`) / 실제 검증 근거(2026-11-01 이후와 남은 요청). 요청한 부분만 읽습니다.
+- `test_ARCHIVE.md`·`docs/HANDOFF_*.md` 같은 보관본과 날짜가 붙은 인계문: 지난 시점의 기록으로, 현재 작업 시작 시 읽지 않습니다.

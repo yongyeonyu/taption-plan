@@ -263,3 +263,19 @@ xcodebuild test -project TaptionPlan.xcodeproj -scheme TaptionPlan \
 `TaptionPlanPlaybackHUDUITests.testPlayTogglesInOneSlotAndMapMoveCancelsIt`(상단 진행 바는 지웠고, 재생·멈춤 단추를 잽니다)은 하루를 24초에 재생하는 화면을 그대로 재는 시험이라 **시각에 따라 실패했다**. 2026-10-28에 이 시험 하나 때문에 두 번 실패했는데, 변경 전 커밋(`9215234`)에서도 같은 시험이 다른 줄(535행 「다시 재생되지 않는다」)에서 실패해 코드 회귀가 아님을 먼저 확인했다. 원인은 재생 구간이 `[선택 시각, 지금]`이라 오전에는 3초 남짓인데, 시험이 그 사이에 접근성 스냅숏을 여러 번 뜨는 것이다. 그래서 시험은 `-slowDayPlayback` 인자로 재생 배속만 10분의 1로 늦춘다(`MapHomeDayPlaybackTestHooks.rateScale`). 인자가 없으면 배속은 그대로이고, `TimeScaleTests`가 그 기본값(120분/초)을 잠근다. 화면 시험에 시간이 걸리는 동작(스크린샷·단추 세기)을 넣을 때는 같은 방식으로 시간을 벌어야 한다.
 
 `xcodebuild test`가 `** TEST FAILED **`로 끝나는데 `Failing tests:` 목록이 비어 있으면 시험 실패가 아니다. 2026-10-28 릴리스에서 이 모양으로 두 번 막혔고, 로그 끝에 `App installation failed … No space left on device`가 있었다. 범인은 `~/Library/Developer/XCTestDevices`로, xcodebuild가 병렬 워커마다 시뮬레이터를 통째로 복제해 두고 **지우지 않는다**. 그때 97개 복제본이 134GB까지 쌓여 있었다. 그래서 `release.sh`의 시험 단계는 `-parallel-testing-enabled NO`로 복제를 1개로 묶고, 실패 로그에 `No space left on device`가 보이면 「시험 실패 아님」으로 갈라서 알린다. 디스크가 의심되면 `du -sh ~/Library/Developer/XCTestDevices`로 재고, 필요할 때만 `rm -rf ~/Library/Developer/XCTestDevices/*`로 비운다(지워도 다음 시험에서 다시 만든다).
+
+## 자주 걸리는 함정
+
+- 동결 파일(`docs/architecture-baseline.json`)이 커지면 CI 구조 점검이 실패합니다. 기능은 새 파일에 넣고 커밋 전에 `python3 scripts/architecture-metrics.py --check docs/architecture-baseline.json`을 돌립니다.
+- `release.sh`는 빌드 번호를 올리지만 커밋은 직접 해야 하고, 깨끗한 작업 트리를 요구합니다. 업로드 중에는 소스를 고치지 않습니다.
+- `-debugViewportWidth` 값이 시뮬레이터 설정에 남을 수 있습니다. 넓은 화면 UI 시험은 매번 값을 줍니다.
+- 튜토리얼 UI 시험은 시험마다 새 시뮬레이터가 필요합니다. 같은 시뮬레이터에서 이어 돌리면 실패합니다.
+- watchOS 시뮬레이터 런타임이 없어 Watch 화면은 빌드로만 확인됩니다.
+- `cancellationCheck`에 실제 취소 검사를 넣으면 그 경로의 `preconditionFailure` 4곳이 앱 종료가 됩니다. 그때는 `throw`로 바꿉니다(REV1026A01).
+
+## 문서
+
+- `AGENTS.md`: 작업 규칙. `README.md`: 개요. `temp.md`: 남은 요청과 액션아이템. `test.md`: 2026-11-01 이후와 남은 요청의 검증 근거, 이전 기록은 `test_ARCHIVE.md`.
+- `docs/TESTFLIGHT.md`(배포), `docs/IPAD_UI.md`(넓은 화면), `docs/STRUCTURE_PERFORMANCE.md`(구조 성능), `docs/DATA_PIPELINE.md`(저장소 파이프라인), `docs/ARCHITECTURE_ROADMAP.md`(구조 로드맵·ADR), `docs/HOME_EVOLUTION_LIST.md`(집 성장 366일 목록, 생성물).
+- 2026-10-24 진단·설계 자료: `docs/CLIENT_REPORT.md`(요약), `docs/UX_ARCHITECTURE.md`, `docs/DESIGN_SYSTEM.md`(중국어 원문). 당시 기준입니다. 위젯 딥링크(0a)는 DLK1024B12에서 코드로 고쳤고 실기기 확인이 남았습니다.
+- `scripts/l10n/README.md`: 12개 언어 팩 절차.
