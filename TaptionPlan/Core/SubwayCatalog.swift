@@ -397,6 +397,9 @@ enum SubwayStationCatalog {
     /// marked confirmed so a train that has merely arrived is not presented as
     /// a completed trip.  This is a derived evidence hook; callers still need
     /// rail or Wi-Fi corroboration before changing a travel mode.
+    /// 출발역에 들어왔다고 보는 거리. 역 출입구까지는 들어오고 역 옆 건물은 빠진다.
+    static let boardingArrivalRadiusMeters = 120.0
+
     static func stationJourney(
         from readings: [SensorReading],
         minimumStayDuration: TimeInterval = 5 * 60,
@@ -446,11 +449,17 @@ enum SubwayStationCatalog {
                 end += 1
             }
 
-            let arrival = samples[index].timestamp
             let departure = samples[end].timestamp
-            let duration = departure.timeIntervalSince(arrival)
+            let duration = departure.timeIntervalSince(samples[index].timestamp)
             if duration >= minimumStayDuration,
                let coordinate = coordinate(for: stationName) {
+                // 출발역 220m 안에 집·가게가 있으면 그 체류부터 지하철이 된다(가정역 185m 집, SUB1106A01).
+                // 체류 판정은 그대로 두고, 탑승 시작만 역 가까이 들어온 첫 표본으로 늦춘다.
+                let arrival = candidateStays.isEmpty
+                    ? samples[index...end].first {
+                        distanceMeters($0.point, coordinate) <= Self.boardingArrivalRadiusMeters
+                    }?.timestamp ?? samples[index].timestamp
+                    : samples[index].timestamp
                 let after = samples[(end + 1)...]
                 var contiguousAfter: [StationPointSample] = []
                 var previous = samples[end]

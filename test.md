@@ -6083,3 +6083,8 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 포함: MAP1106A01(지하철 발자국·사진링), WCH1106A02(Watch 가속도 번호 초 단위).
 - 결과: `release.sh --yes --request-id TFB1106A03` 종료 0, 처리 `VALID`, `TP Taption Plan 내부 테스트` 그룹 연결, 테스터 1명 노출. 아카이브에서 앱·위젯·Watch·Watch 위젯 네 번들 `CFBundleVersion` 285 확인. 보고서 `build/validation/TFB1106A03/testflight-report.json`.
 - 남음: 실기기 설치 후 지하철 화면·사진링·Watch 가속도 하루 수집 확인(대표).
+
+## SUB1106A01 · 출발역 근처 집 체류가 지하철로 잡힘 (2026-11-06)
+- 근거: iCloud 원본 `Taption-Raw-2Days-0134D2B1…`·로그 `TaptionLogs-20261106-170447`. 지하철 09:23:58–10:22:49(탑승 확정), 집 표본 37.5241,126.6725는 가정역 중심에서 약 179m, 09:29부터 걷기로 역 이동.
+- 수정: `stationJourney` 첫 역 도착 시각을 역 120m 안 첫 표본으로 늦춘다(체류 판정 220m·5분은 그대로).
+- 결과(시뮬레이터 BOKKI-iPhone11): `FeatureEngineTests`·`RouteTimelineDataTests` 820개 실패 0. 새 시험 `testStationJourneyStartsWhenReachingStationNotAtNearbyHome`. 구조 지표 통과. 이미 저장된 확정 경로(09:23:58)는 저장된 구간을 쓰므로 그대로일 수 있다(실기기 확인 필요).

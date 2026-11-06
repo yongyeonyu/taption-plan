@@ -1930,6 +1930,31 @@ extension FeatureEngineTests {
         XCTAssertTrue(segment.evidence.contains("출발역·환승역·도착역 상태 확정"))
     }
 
+    /// 집이 출발역 220m 안이면 집에 머문 시간은 지하철이 아니다. 역 120m 안에 들어온 때부터 탄다(SUB1106A01).
+    func testStationJourneyStartsWhenReachingStationNotAtNearbyHome() throws {
+        let base = makeDate(2026, 11, 6, 9, 24)
+        // 11-06 원본: 집(가정역 약 185m) 5분 → 걸어서 역 → 열차 → 마곡나루 도착·이탈.
+        let samples: [(Double, Double, Double)] = [
+            (0, 37.52413, 126.67255), (2, 37.52410, 126.67262), (4.5, 37.52408, 126.67271),
+            (5.5, 37.52398, 126.67283), (6.5, 37.52440, 126.67327), (7.5, 37.52448, 126.67394),
+            (8.5, 37.52446, 126.67432), (9.5, 37.52444, 126.67462), (10.5, 37.52448, 126.67477),
+            (11.5, 37.5500, 126.7500), (14, 37.5500, 126.7500),
+            (20, 37.5667, 126.8273), (25, 37.5667, 126.8273),
+            (26, 37.5600, 126.8273), (27, 37.5590, 126.8273),
+        ]
+        let readings = samples.map { minute, latitude, longitude in
+            SensorReading(
+                timestamp: base.addingTimeInterval(minute * 60),
+                point: GeoPoint(latitude: latitude, longitude: longitude, altitude: 20,
+                                horizontalAccuracy: 10, verticalAccuracy: 8),
+                motion: .automotive, motionConfidence: .high, matchesRailRoute: true
+            )
+        }
+        let journey = try XCTUnwrap(SubwayStationCatalog.stationJourney(from: readings))
+        XCTAssertEqual(journey.startStationName, "가정")
+        XCTAssertEqual(journey.span.start, base.addingTimeInterval(6.5 * 60), "집에 있던 09:24가 아니라 역 120m 안에 든 09:30:30")
+    }
+
     func testStationJourneyDoesNotBridgeMissingSampleGap() {
         let base = makeDate(2026, 8, 18, 7, 0)
         let samples: [(Double, Double, Double, Bool)] = [
