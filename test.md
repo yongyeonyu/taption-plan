@@ -6078,3 +6078,8 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 결과(시뮬레이터 BOKKI-iPhone11): `WatchSensorQueryPlanTests`·`SensorDayStoreTests`·`FeatureEngineTests` 792개 중 실패 1(`testSceneActivationPublishesLocalSnapshotBeforeDeferredRefresh`, 단독 5회 반복은 모두 통과 → 타이밍 흔들림, 이번 변경과 무관한 경로). watchOS Debug 빌드 성공(서명 없음). 구조 지표 통과. 로그 `build/validation/WCH1106A02/`.
 - 남음: 실기기 Watch 하루 착용에서 가속도가 36분 넘어도 계속 들어오는지.
 - WCH1106A01 위젯 점검(284 아카이브, 정적): Watch 앱 `PlugIns`에 위젯 확장이 있고 번들 ID(`…watchkitapp.widget`)·extension point·앱 그룹(`group.com.taption.plan`)·arm64/arm64_32·`containerBackground`·지원 크기 3종이 모두 정상. 외부 프레임워크 링크 없음. 바이너리 minos 26.0(사용 기기 watchOS 26.6이라 문제 아님). 원인 못 찾음. Watch는 이때 devicectl에서 `unavailable`이라 기기 로그를 받지 못했다. 위젯 목록에는 위젯 이름(`BOKKI 오늘`)이 아니라 앱 이름(`BOKKI Plan`) 아래에 묶여 나온다.
+
+## TFB1106A03 · 빌드 285 내부 TestFlight (2026-11-06)
+- 포함: MAP1106A01(지하철 발자국·사진링), WCH1106A02(Watch 가속도 번호 초 단위).
+- 결과: `release.sh --yes --request-id TFB1106A03` 종료 0, 처리 `VALID`, `TP Taption Plan 내부 테스트` 그룹 연결, 테스터 1명 노출. 아카이브에서 앱·위젯·Watch·Watch 위젯 네 번들 `CFBundleVersion` 285 확인. 보고서 `build/validation/TFB1106A03/testflight-report.json`.
+- 남음: 실기기 설치 후 지하철 화면·사진링·Watch 가속도 하루 수집 확인(대표).
