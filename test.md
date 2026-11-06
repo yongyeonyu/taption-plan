@@ -6057,3 +6057,7 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 단위 시험: `HealthRecordingStartTests` 2건. 시험 앱이 첫 실행에서 기준선을 정해 기존 과거 표본 시험 3건이 잘려 실패했고, `HealthKitIntegrationTests`가 시험 동안 기준선을 비우게 고쳐 통과했다.
 - 전체 단위 시험(BOKKI-iPhone11 시뮬레이터, 병렬 끔): 2,076건 실패 0, 건너뜀 17(`build/validation/HLT1106A01/unit-full2.xcresult`). 구조 지표 기준선 통과.
 - 실기기 미확인: 새로 설치한 기기에서 설치 전 건강 기록이 안 들어오는지, 기존 기기 기록이 그대로인지.
+
+## TFB1106A02 TestFlight 284 (2026-11-06)
+- 커밋 `3247459f` 기준(Watch 32비트 충돌 수정, 새 설치 건강 기록 시작, 구글 일정 제목 근거 제거 포함). `release.sh --yes` 종료 코드 0, 처리 `VALID`, `TP Taption Plan 내부 테스트` 그룹 연결, 테스터 1명 노출을 보고서에서 읽었다(`build/validation/TFB1106A02/testflight-report.json`).
+- 외부 심사 제출 안 함. Watch 충돌 재발 여부·새 설치 건강 기록은 실기기 확인 대기.
