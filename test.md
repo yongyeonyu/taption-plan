@@ -1691,3 +1691,4 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
 - 포함: SUB1106A02(지하철 OSM 선로·도시별 역 연결), CTR1107A01(화랑이 탭 카운터), RNG1106A01(지도 탭 사진링 접기·집 위 반달), PLY1106A01 이후 변경.
 - 결과: `release.sh --yes --request-id TFB1107A01` 종료 0, 처리 `VALID`, `TP Taption Plan 내부 테스트` 그룹 연결, 테스터 1명 노출. 아카이브 네 번들 `CFBundleVersion` 291 확인. 보고서 `build/validation/TFB1107A01/testflight-report.json`.
 - 참고: 아이폰 18의 Debug 시험 호스트(LAG1107A01)는 TestFlight 291을 설치하면 바뀐다.
+- 아이폰 11 Pro(00008030-001628201AD2802E) 설치(2026-11-07, 대표 요청): 291 Release 빌드(`-configuration Release`, generic iOS)를 `devicectl device install app`으로 설치, 종료 0, 기기 앱 `bundleVersion` 291 확인(개발 서명이라 `builtByDeveloper: true`). 앱 실행·기능 확인은 하지 않음. BOKKI Cam 세션과 기기 사용을 맞춤(아이폰 18은 미사용).
