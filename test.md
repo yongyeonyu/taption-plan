@@ -6088,3 +6088,8 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 근거: iCloud 원본 `Taption-Raw-2Days-0134D2B1…`·로그 `TaptionLogs-20261106-170447`. 지하철 09:23:58–10:22:49(탑승 확정), 집 표본 37.5241,126.6725는 가정역 중심에서 약 179m, 09:29부터 걷기로 역 이동.
 - 수정: `stationJourney` 첫 역 도착 시각을 역 120m 안 첫 표본으로 늦춘다(체류 판정 220m·5분은 그대로).
 - 결과(시뮬레이터 BOKKI-iPhone11): `FeatureEngineTests`·`RouteTimelineDataTests` 820개 실패 0. 새 시험 `testStationJourneyStartsWhenReachingStationNotAtNearbyHome`. 구조 지표 통과. 이미 저장된 확정 경로(09:23:58)는 저장된 구간을 쓰므로 그대로일 수 있다(실기기 확인 필요).
+
+## TFB1106A04 · 빌드 286 내부 TestFlight (2026-11-06)
+- 포함: SUB1106A01(출발역 근처 집 체류를 지하철에서 제외).
+- 결과: `release.sh --yes --request-id TFB1106A04` 종료 0, 처리 `VALID`, `TP Taption Plan 내부 테스트` 그룹 연결, 테스터 1명 노출. 아카이브 네 번들 `CFBundleVersion` 286 확인. 보고서 `build/validation/TFB1106A04/testflight-report.json`.
+- 남음: 실기기에서 아침 지하철 시작 시각 확인(대표).
