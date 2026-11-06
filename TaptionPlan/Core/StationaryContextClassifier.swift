@@ -634,7 +634,7 @@ enum StationaryContextActualEngine {
     ) -> [ActualRecord] {
         let classifier = StationaryContextClassifier()
         let calendarEvents = CalendarTitleClassification.counted(allCalendarEvents, stored: calendarTitleDetails)
-        return contextStays(
+        let records = contextStays(
             stays: stays,
             placeAnchors: placeAnchors,
             registeredKeys: Set(placeKinds.keys),
@@ -692,6 +692,7 @@ enum StationaryContextActualEngine {
                 modelVersion: inference.modelVersion
             )
         }
+        return WorkBreakPattern.splitting(records, readings: readings, asOf: now)
     }
 
     /// 체류를 일정 경계에서 나눠 일정 시간만 회의·상세활동으로 판정되게 한다(HWK1103A01).

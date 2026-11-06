@@ -3904,4 +3904,55 @@ extension FeatureEngineTests {
         XCTAssertEqual(candidates.filter { $0.kind == .busStop }.count, 1)
     }
 
+    // MARK: - 업무 휴식 (BRK1106A01)
+
+    private func workBreakReading(_ at: Date, screenOn: Bool? = true, gravityZ: Double? = -0.85, shake: Double? = 0.03,
+                                  motion: MotionKind = .unknown, power: DevicePowerState = .unplugged) -> SensorReading {
+        let zero = SensorVector3(x: 0, y: 0, z: 0)
+        return SensorReading(
+            timestamp: at, motion: motion,
+            deviceMotion: gravityZ.map { DeviceMotionSnapshot(gravity: SensorVector3(x: 0, y: 0, z: $0), userAcceleration: zero, rotationRate: zero, attitudeRadians: zero) },
+            deviceMotionSummary: shake.map { DeviceMotionSummary(sampleCount: 50, meanUserAccelerationG: $0, userAccelerationStandardDeviationG: $0, peakUserAccelerationG: $0, meanRotationRateRadiansPerSecond: 0, rotationRateStandardDeviationRadiansPerSecond: 0, peakRotationRateRadiansPerSecond: 0) },
+            powerState: power, screenIsOn: screenOn)
+    }
+
+    private func officeRecords(_ readings: [SensorReading], start: Date) -> [ActualRecord] {
+        StationaryContextActualEngine.records(
+            stays: [makeContextStay(start: start, end: start.addingTimeInterval(2 * hour), placeKey: "frequent-office")],
+            placeKinds: ["frequent-office": .company], readings: readings,
+            inside: TimeSpan(start: start.addingTimeInterval(-hour), end: start.addingTimeInterval(3 * hour)),
+            calendar: utcCalendar, now: start.addingTimeInterval(3 * hour))
+    }
+
+    func testWorkBreakCutsHandheldScreenUseOutOfWork() {
+        let start = makeDate(2026, 11, 6, 10, 0)
+        let plain = officeRecords([], start: start)
+        XCTAssertEqual(plain.map(\.title), ["근무"])
+        let use = stride(from: 30.0, through: 36.0, by: 1.5).map { workBreakReading(start.addingTimeInterval($0 * 60)) }
+        let records = officeRecords(use + [workBreakReading(start.addingTimeInterval(37 * 60), screenOn: false)], start: start)
+        XCTAssertEqual(records.map(\.title), ["근무", "휴식", "근무"])
+        XCTAssertEqual(records.map(\.categoryID), ["work", "work", "work"])
+        XCTAssertEqual(records[0].id, plain[0].id)
+        XCTAssertEqual(records[1].startedAt, start.addingTimeInterval(30 * 60))
+        XCTAssertEqual(records[1].endedAt, start.addingTimeInterval(36 * 60))
+        XCTAssertEqual(records[2].endedAt, plain[0].endedAt)
+        XCTAssertEqual(Set(records.map(\.id)).count, 3)
+        XCTAssertEqual(officeRecords(use, start: start).map(\.id), records.map(\.id))
+        XCTAssertTrue(records[1].evidence.contains("화면을 켠 채 폰을 손에 듦"))
+        XCTAssertEqual(TaptionHwarangPose.resolve(categoryID: records[1].categoryID, title: records[1].title), .restCroissant)
+    }
+
+    func testWorkBreakIgnoresStaleScreenDeskChargingAndWalking() {
+        let start = makeDate(2026, 11, 6, 10, 0)
+        func titles(_ make: (Date) -> SensorReading, every minutes: Double = 1.5) -> [String] {
+            officeRecords(stride(from: 30.0, through: 40.0, by: minutes).map { make(start.addingTimeInterval($0 * 60)) }, start: start).map(\.title)
+        }
+        XCTAssertEqual(titles({ self.workBreakReading($0) }, every: 4), ["근무"], "표본 간격이 3분을 넘으면 이어 보지 않는다")
+        XCTAssertEqual(titles { self.workBreakReading($0, gravityZ: -1, shake: 0.001) }, ["근무"], "책상에 평평히 둔 화면")
+        XCTAssertEqual(titles { self.workBreakReading($0, gravityZ: nil, shake: nil) }, ["근무"], "흔들림 없는 마지막 화면 상태")
+        XCTAssertEqual(titles { self.workBreakReading($0, power: .charging) }, ["근무"], "충전 거치")
+        XCTAssertEqual(titles { self.workBreakReading($0, motion: .walking) }, ["근무"], "걷기")
+        XCTAssertEqual(titles { self.workBreakReading($0, screenOn: nil) }, ["근무"], "화면 상태 모름")
+        XCTAssertEqual(titles { self.workBreakReading($0) }, ["근무", "휴식", "근무"])
+    }
 }

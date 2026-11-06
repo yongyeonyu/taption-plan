@@ -12,6 +12,7 @@
 		A1000000000000000D1104A1 /* NearbyMemoNotifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000D1104A1 /* NearbyMemoNotifications.swift */; };
 		A10000000000000000CA1003 /* AppModel+CalendarTitles.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000CA1003 /* AppModel+CalendarTitles.swift */; };
 		A10000000000000000CA1001 /* CalendarTitleClassification.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000CA1001 /* CalendarTitleClassification.swift */; };
+		A10000000000000000BB1106 /* WorkBreakPattern.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000BB1106 /* WorkBreakPattern.swift */; };
 		A10000000000000000CA1000 /* HomeChorePattern.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000CA1000 /* HomeChorePattern.swift */; };
 		5624A4986B94396ED9FEC9D5 /* MovementNameTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 769EE77192CF9EC73E324782 /* MovementNameTests.swift */; };
 		A1FA11A6B07C6C7A479E67EE /* StableRecordID.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11518EFE631FA33E137B /* StableRecordID.swift */; };
@@ -633,6 +634,7 @@
 		F1000000000000000D1104A1 /* NearbyMemoNotifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NearbyMemoNotifications.swift"; sourceTree = "<group>"; };
 		F10000000000000000CA1003 /* AppModel+CalendarTitles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+CalendarTitles.swift"; sourceTree = "<group>"; };
 		F10000000000000000CA1001 /* CalendarTitleClassification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CalendarTitleClassification.swift"; sourceTree = "<group>"; };
+		F10000000000000000BB1106 /* WorkBreakPattern.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WorkBreakPattern.swift"; sourceTree = "<group>"; };
 		F10000000000000000CA1000 /* HomeChorePattern.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HomeChorePattern.swift"; sourceTree = "<group>"; };
 		769EE77192CF9EC73E324782 /* MovementNameTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovementNameTests.swift; sourceTree = "<group>"; };
 		F1FA11518EFE631FA33E137B /* StableRecordID.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StableRecordID.swift; sourceTree = "<group>"; };
@@ -1641,6 +1643,7 @@
 				F1000000000000000000F0C1 /* GoogleCalendarAccount.swift */,
 				F10000000000000000CA1001 /* CalendarTitleClassification.swift */,
 				F10000000000000000CA1000 /* HomeChorePattern.swift */,
+				F10000000000000000BB1106 /* WorkBreakPattern.swift */,
 				F60000000000000000000001 /* HealthKitTypeCatalog.swift */,
 				F60000000000000000000002 /* HealthKitImportStore.swift */,
 				F60000000000000000000003 /* HealthKitImportCoordinator.swift */,
@@ -2401,6 +2404,7 @@
 				A10000000000000000CA1003 /* AppModel+CalendarTitles.swift in Sources */,
 				A10000000000000000CA1001 /* CalendarTitleClassification.swift in Sources */,
 				A10000000000000000CA1000 /* HomeChorePattern.swift in Sources */,
+				A10000000000000000BB1106 /* WorkBreakPattern.swift in Sources */,
 				A60000000000000000000001 /* HealthKitTypeCatalog.swift in Sources */,
 				A60000000000000000000002 /* HealthKitImportStore.swift in Sources */,
 				A60000000000000000000003 /* HealthKitImportCoordinator.swift in Sources */,
