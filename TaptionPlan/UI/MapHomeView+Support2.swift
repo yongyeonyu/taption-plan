@@ -363,24 +363,6 @@ extension MapHomeView {
         return MapHomeCounterTimelinePolicy.stepCount(readings: currentDayReadings, cutoff: nil)
     }
 
-    /// 겹치는 구간을 병합해 총 소요 시간을 반환한다(같은 초 중복 계산 방지).
-    static func unionDuration(_ spans: [TimeSpan]) -> TimeInterval {
-        let ordered = spans
-            .filter { $0.duration > 0 }
-            .sorted { $0.start < $1.start }
-        guard var current = ordered.first else { return 0 }
-        var total: TimeInterval = 0
-        for span in ordered.dropFirst() {
-            if span.start <= current.end {
-                current.end = max(current.end, span.end)
-            } else {
-                total += current.duration
-                current = span
-            }
-        }
-        return total + current.duration
-    }
-
     /// 저장된 안개 세기. 알 수 없는 값이면 옅게로 돌아간다.
     var fogStrength: MapHomeFogStrength {
         MapHomeFogStrength(rawValue: fogStrengthRaw) ?? .light

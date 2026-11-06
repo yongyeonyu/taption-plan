@@ -79,7 +79,7 @@ struct SleepAnalysisEngine: Sendable {
             return nil
         }
         let last = sessionSegments.max(by: { $0.span.end < $1.span.end }) ?? first
-        let inBedDuration = unionDuration(
+        let inBedDuration = TimeSpan.unionDuration(
             segments.filter { $0.stage == .inBed }.map(\.span)
         )
         let asleepDuration: TimeInterval
@@ -142,22 +142,6 @@ struct SleepAnalysisEngine: Sendable {
             durations[selected.stage, default: 0] += end.timeIntervalSince(start)
         }
         return durations
-    }
-
-    private func unionDuration(_ spans: [TimeSpan]) -> TimeInterval {
-        let ordered = spans.sorted { $0.start < $1.start }
-        guard var current = ordered.first else { return 0 }
-        var duration: TimeInterval = 0
-
-        for span in ordered.dropFirst() {
-            if span.start <= current.end {
-                current.end = max(current.end, span.end)
-            } else {
-                duration += current.duration
-                current = span
-            }
-        }
-        return duration + current.duration
     }
 
     private func deduplicatedSegments(
