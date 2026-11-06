@@ -486,3 +486,12 @@ final class AlgorithmUpgradeTests: XCTestCase {
         XCTAssertEqual(decoded.calendarTitleDetails, [:], "옛 설정도 읽는다")
     }
 }
+
+extension AlgorithmUpgradeTests {
+    /// GOO1106A01: 일정 제목이 든 근거는 내보내기·iCloud 동기화 전에 모두 빠진다.
+    func testCalendarTitleEvidenceIsRemovedFromEveryPrefix() {
+        let kept = ["iPhone Core Motion", "참석자 3명"]
+        let evidence = kept + ["일정 제목 '팀 회의' · 단어 규칙", "식사 일정 '점심'", "캘린더 일정 '1:1'", "일정 '주간 보고'"]
+        XCTAssertEqual(CalendarTitleClassification.withoutCalendarTitleEvidence(evidence), kept)
+    }
+}

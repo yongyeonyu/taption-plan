@@ -41,7 +41,12 @@ extension AppModel {
             let day = await planDayDataSnapshot(for: date, forceReload: true, refreshRawReadings: true)
             payload.append(TodaySensorRawExport(day: day.day, isComplete: day.isComplete,
                 readings: TodaySensorRawExport.readings(day.readings, on: date), travel: day.travel,
-                places: day.places, actuals: day.actuals))
+                places: day.places, actuals: day.actuals.map { actual in
+                    // 개발자에게 보내는 원본에는 구글·기기 일정 제목을 넣지 않는다(GOO1106A01).
+                    var safe = actual
+                    safe.evidence = CalendarTitleClassification.withoutCalendarTitleEvidence(actual.evidence)
+                    return safe
+                }))
         }
         return try await Task.detached(priority: .utility) {
             let directory = FileManager.default.temporaryDirectory

@@ -6028,3 +6028,9 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 처리 상태 `VALID`. `TP Taption Plan 내부 테스트` 그룹 연결·테스터 1명 노출을 읽어 확인(`testflight-report.json`). 아카이브 네 번들 번호 283(`bundles.log`).
 - 외부 그룹에는 올리지 않았다. 실기기 설치·실행과 감시 구역 동작은 확인하지 않았다. 로그: `build/validation/TFB1106A01/`.
 - 디스크 부족으로 다시 만들 수 있는 DerivedData 캐시(이번 작업 것과 지난 요청 DPL1024A01·UIK1102A01·MRG1103A01·FRT1102A01의 `dd`)를 지웠다. 검증 로그와 결과 파일은 남겼다.
+
+## GOO1106A01 구글 OAuth 반려 대응: 방침 보호 조치·일정 제목 근거 제거 (2026-11-06, 커밋 전)
+
+- `PRIVACY.md`에 Google 사용자 데이터 절(한국어·영어)을 넣었다. 각 문장은 코드로 대조했다: 범위 `calendar.readonly`, PKCE(`S256`), 갱신 토큰 Keychain `AfterFirstUnlockThisDeviceOnly`, 해제 때 토큰 취소·구글 일정과 제목 근거 삭제, 저장소 파일 보호(`completeUntilFirstUserAuthentication`), iCloud 동기화 스냅샷에서 일정 제외, 별도 백업에는 일정이 포함될 수 있음.
+- 대조 중 체류 판정 근거(`식사 일정 '…'`, `캘린더 일정 '…'`)와 개발자 보내기 원본에 일정 제목이 남는 것을 찾아 막았다. 단위(BOKKI-iPhone11): `AlgorithmUpgradeTests` 29건 실패 0(새 시험 포함, `build/validation/GOO1106A01/unit.log`). 앱 Debug 빌드는 시험 실행에 포함. 구조 지표 통과.
+- 공개 방침 반영(푸시), 구글 콘솔 재제출·메일 회신, 시연 영상 촬영은 하지 않았다.

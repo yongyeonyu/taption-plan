@@ -1,6 +1,6 @@
 # Taption Plan 개인정보처리방침
 
-최종 업데이트: 2026-10-16
+최종 업데이트: 2026-11-06
 
 Taption Plan은 사용자가 허용한 범위에서 하루의 일정, 위치, 이동, 활동, 수면과 메모를 기기 안에서 정리합니다. 광고, 사용자 추적, 데이터 판매를 하지 않습니다.
 
@@ -37,6 +37,46 @@ Taption Plan은 자체 광고·분석 서버를 운영하지 않으며 앱 데�
 ## 보호 조치
 
 기기 파일 보호, Keychain·Face ID 기반 키 보호, 암호화 백업, 무결성 검사와 세대 기반 복원 검증을 사용합니다. 인터넷 전송은 운영체제가 제공하는 암호화 연결을 사용합니다.
+
+## Google 사용자 데이터
+
+사용자가 앱에서 구글 계정을 직접 연결한 경우에만 Google Calendar API의 `https://www.googleapis.com/auth/calendar.readonly` 범위를 요청합니다. 쓰기·삭제 권한은 요청하지 않습니다.
+
+- **읽는 정보:** 구글 캘린더에서 표시로 켠 캘린더 목록과, 화면에서 연 날짜의 일정(제목, 시작·종료 시각, 종일 여부, 캘린더 이름).
+- **사용 목적:** 그날 일정을 지도 홈과 일정 목록에 보여 주고, 일정 시간대의 활동(업무, 수업 등)을 판정합니다. 제목 분류는 기기 안의 단어 규칙과 사용자가 고른 값으로만 처리합니다.
+- **전송과 공유:** 구글 일정은 Google 서버와 사용자 기기 사이에서만 오갑니다. 개발자 서버로 보내지 않고, 제3자에게 판매·공유하지 않으며, 광고, 신용 평가, AI·머신러닝 모델 학습에 쓰지 않습니다. 개발자를 포함한 사람이 열람하지 않습니다.
+- **저장:** 받은 일정은 기기 안 앱 데이터베이스에 저장합니다. 사용자가 iCloud 백업을 켜면 일정이 다른 앱 데이터와 함께 사용자의 비공개 iCloud 영역에 AES-GCM으로 암호화된 백업에 포함될 수 있습니다.
+- **보관과 삭제:** 연결을 해제하면 구글 쪽 토큰 권한을 취소하고, 기기에 저장한 구글 일정과 일정 제목으로 만든 판정 근거를 지웁니다. `모든 데이터 삭제`를 실행해도 지워집니다. 사용자는 구글 계정의 보안 설정에서도 언제든 권한을 취소할 수 있습니다.
+
+### 민감한 데이터 보호 조치
+
+- 로그인은 OAuth 2.0 PKCE로 처리하며 앱은 구글 비밀번호를 보거나 저장하지 않습니다.
+- 갱신 토큰은 iOS Keychain에 `이 기기에서만, 첫 잠금 해제 후`(`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`) 접근 조건으로 저장해 다른 기기나 백업으로 옮겨지지 않습니다. 접근 토큰은 메모리에만 두고 만료 전에 갱신합니다.
+- 모든 Google API 요청은 HTTPS(TLS)로만 보냅니다.
+- 앱 데이터는 iOS 데이터 보호(파일 암호화)가 적용된 앱 전용 저장소에 두며, 다른 앱은 읽을 수 없습니다. 별도 백업 파일은 AES-GCM으로 암호화하고 무결성을 검사합니다.
+- 진단 로그와 개발자에게 보내는 로그에는 일정 제목과 일정 내용을 넣지 않습니다.
+
+Taption Plan의 Google API 데이터 사용은 [Google API 서비스 사용자 데이터 정책](https://developers.google.com/terms/api-services-user-data-policy)과 그 제한된 사용(Limited Use) 요구사항을 따릅니다.
+
+### Google user data (English)
+
+Taption Plan (BOKKI Plan) requests the read-only Google Calendar scope `https://www.googleapis.com/auth/calendar.readonly` only when the user connects a Google account in the app. It never requests write or delete access.
+
+- **Data accessed:** the list of calendars the user has set as visible, and the events (title, start and end time, all-day flag, calendar name) for the day the user opens.
+- **Purpose:** show that day's schedule on the map home and schedule list, and classify the user's activity (for example work or class) during those events. Title classification runs on the device with built-in keyword rules and the user's own choices.
+- **Transfer and sharing:** calendar data moves only between Google's servers and the user's device. It is not sent to any developer server, not sold or shared with third parties, not used for advertising, credit decisions, or training AI/ML models, and not read by any person, including the developer.
+- **Storage:** events are stored in the app's on-device database. If the user turns on iCloud backup, they may be included in the user's private, AES-GCM encrypted iCloud backup together with other app data.
+- **Retention and deletion:** disconnecting revokes the Google token and deletes the stored Google events and the activity evidence derived from their titles. "Delete all data" in the app also removes them. Users can also revoke access at any time in their Google Account security settings.
+
+**Protection of sensitive data**
+
+- Sign-in uses OAuth 2.0 with PKCE; the app never sees or stores the Google password.
+- The refresh token is stored in the iOS Keychain with `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`, so it never leaves the device or moves through backups. The access token is kept in memory only and refreshed before it expires.
+- All Google API requests use HTTPS (TLS) only.
+- App data is kept in the app's sandboxed storage protected by iOS Data Protection (file encryption) and cannot be read by other apps. Separate backup files are encrypted with AES-GCM and integrity-checked.
+- Diagnostic logs and logs sent to the developer exclude event titles and event contents.
+
+Taption Plan's use of information received from Google APIs adheres to the [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy), including the Limited Use requirements.
 
 ## 아동의 개인정보
 

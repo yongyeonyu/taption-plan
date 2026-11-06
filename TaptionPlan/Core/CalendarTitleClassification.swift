@@ -99,8 +99,11 @@ enum CalendarTitleClassification {
 
     /// 일정 제목이 든 근거. 일정은 기기 밖으로 내보내지 않으므로 iCloud 스냅샷과 구글 연결 해제 때 지운다.
     static func withoutCalendarTitleEvidence(_ evidence: [String]) -> [String] {
-        evidence.filter { !$0.hasPrefix(evidencePrefix) }
+        evidence.filter { item in !titleEvidencePrefixes.contains { item.hasPrefix($0) } }
     }
+
+    /// 체류 판정이 남기는 일정 제목 근거도 같이 뺀다(GOO1106A01).
+    static let titleEvidencePrefixes = [evidencePrefix, "식사 일정 '", "캘린더 일정 '", "일정 '"]
 
     private static let awayFromHomeDetails: Set<String> = [
         "health.hospital", "health.salon", "study.academy", "housework.groceries", "activity.friends", "activity.date"
