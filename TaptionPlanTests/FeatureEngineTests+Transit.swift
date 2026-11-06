@@ -3955,4 +3955,21 @@ extension FeatureEngineTests {
         XCTAssertEqual(titles { self.workBreakReading($0, screenOn: nil) }, ["근무"], "화면 상태 모름")
         XCTAssertEqual(titles { self.workBreakReading($0) }, ["근무", "휴식", "근무"])
     }
+
+    func testWorkBreakSurvivesEarlierLockedWorkRecord() {
+        let start = makeDate(2026, 11, 6, 10, 0)
+        var stored = officeRecords([], start: start)[0]
+        stored.isClassificationLocked = true
+        let use = stride(from: 30.0, through: 36.0, by: 1.5).map { workBreakReading(start.addingTimeInterval($0 * 60)) }
+        let fresh = officeRecords(use, start: start)
+        let window = TimeSpan(start: start, end: start.addingTimeInterval(3 * hour))
+        let merged = ActivityClassificationLockEngine.mergingLockedClassifications(existing: [stored], fresh: fresh, inside: window)
+        XCTAssertEqual(merged.map(\.title), ["근무", "휴식", "근무"], "예전에 잠긴 자동 근무가 새 휴식을 덮지 않는다")
+
+        var corrected = stored
+        corrected.title = "회의"
+        corrected.manuallyCorrected = true
+        let kept = ActivityClassificationLockEngine.mergingLockedClassifications(existing: [corrected], fresh: fresh, inside: window)
+        XCTAssertEqual(kept.map(\.title), ["회의", "회의", "회의"], "사용자가 고친 기록은 그대로 이긴다")
+    }
 }

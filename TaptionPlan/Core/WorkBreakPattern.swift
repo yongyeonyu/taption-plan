@@ -9,13 +9,24 @@ enum WorkBreakPattern {
     static let minimumHandheldSamples = 2
     static let handheldAccelerationG = 0.008
     private static let minimumWorkPiece: TimeInterval = 60
+    static let evidence = "화면을 켠 채 폰을 손에 듦"
+
+    /// 자동 근무·휴식 경계는 매번 새로 판정한다. 예전 갱신에서 잠긴 `근무`가 새 휴식 조각을 덮지 않게 한다.
+    /// 사용자가 고친 기록은 그대로 이긴다.
+    static func freshWins(previous: ActualRecord, candidate: ActualRecord) -> Bool {
+        previous.source == .location && candidate.source == .location
+            && !previous.manuallyCorrected && !ActualRecord.userOwned(previous)
+            && (isBreak(previous) || isBreak(candidate))
+    }
+
+    static func isBreak(_ actual: ActualRecord) -> Bool { actual.evidence.contains(evidence) }
 
     private enum Sample { case handheld, screenOn, breaks }
 
     private static func sample(_ reading: SensorReading) -> Sample {
         guard reading.screenIsOn == true,
               reading.powerState?.isCharging != true,
-              ![.walking, .running, .cycling, .automotive].contains(reading.motion) else { return .breaks }
+              !reading.motion.isMovement else { return .breaks }
         let shake = reading.deviceMotionSummary?.userAccelerationStandardDeviationG
         if let z = reading.deviceMotion?.gravity.z, abs(z) >= 0.94, (shake ?? 0) < 0.005 { return .breaks }
         if let shake, shake >= handheldAccelerationG { return .handheld }
@@ -56,18 +67,12 @@ enum WorkBreakPattern {
             let span = record.span(asOf: now)
             let breaks = spans(in: readings, inside: span)
             guard !breaks.isEmpty else { return [record] }
-            var pieces: [(TimeSpan, Bool)] = []
-            var cursor = span.start
-            for rest in breaks {
-                pieces.append((TimeSpan(start: cursor, end: rest.start), false))
-                pieces.append((rest, true))
-                cursor = rest.end
-            }
-            pieces.append((TimeSpan(start: cursor, end: span.end), false))
-            return pieces.filter { $0.1 || $0.0.duration >= minimumWorkPiece }.enumerated().map { index, piece in
+            let work = ActualIntervalMergeEngine.subtracting(breaks, from: span).filter { $0.duration >= minimumWorkPiece }
+            let pieces = (work.map { ($0, false) } + breaks.map { ($0, true) }).sorted { $0.0.start < $1.0.start }
+            return pieces.enumerated().map { index, piece in
                 var value = record
                 if index > 0 {
-                    value.id = stableUUID("work-break|\(record.id.uuidString)|\(Int(piece.0.start.timeIntervalSinceReferenceDate))")
+                    value.id = StableRecordID.indexMixedFNV("work-break|\(record.id.uuidString)|\(Int(piece.0.start.timeIntervalSinceReferenceDate))")
                 }
                 value.startedAt = piece.0.start
                 value.endedAt = piece.0.end
@@ -75,24 +80,10 @@ enum WorkBreakPattern {
                 if piece.1 {
                     value.title = "휴식"
                     value.confidence = .medium
-                    value.evidence = record.evidence.filter { $0.hasPrefix("자주가는 곳") } + ["화면을 켠 채 폰을 손에 듦"]
+                    value.evidence = record.evidence.filter { $0.hasPrefix("자주가는 곳") } + [evidence]
                 }
                 return value
             }
         }
-    }
-
-    private static func stableUUID(_ key: String) -> UUID {
-        var hash: UInt64 = 14_695_981_039_346_656_037
-        var bytes = [UInt8](repeating: 0, count: 16)
-        for byte in key.utf8 { hash = (hash ^ UInt64(byte)) &* 1_099_511_628_211 }
-        for index in bytes.indices {
-            hash = (hash ^ UInt64(index + 1)) &* 1_099_511_628_211
-            bytes[index] = UInt8(truncatingIfNeeded: hash >> ((index % 8) * 8))
-        }
-        bytes[6] = (bytes[6] & 0x0F) | 0x50
-        bytes[8] = (bytes[8] & 0x3F) | 0x80
-        return UUID(uuid: (bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
-                           bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]))
     }
 }

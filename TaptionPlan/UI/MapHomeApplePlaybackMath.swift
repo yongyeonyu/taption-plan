@@ -330,9 +330,12 @@ enum MapHomeApplePlaybackMath {
             if points[middle].0 <= date { low = middle + 1 } else { high = middle }
         }
         let window = headingWindow
-        let before = points[..<low].filter { date.timeIntervalSince($0.0) <= window }
-        let after = points[low...].filter { $0.0.timeIntervalSince(date) <= window }
-        guard let from = before.first ?? after.first, let to = after.last ?? before.last,
+        // 매 프레임 불리므로 창 밖까지 훑지 않는다.
+        var first = low
+        while first > 0, date.timeIntervalSince(points[first - 1].0) <= window { first -= 1 }
+        var last = low
+        while last < points.count, points[last].0.timeIntervalSince(date) <= window { last += 1 }
+        guard last - first >= 2, let from = points[first..<last].first, let to = points[first..<last].last,
               distanceMeters(from.1, to.1) >= minimumHeadingMeters else { return nil }
         return stableHeading(bearing(from: from.1, to: to.1))
     }
