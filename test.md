@@ -1686,3 +1686,8 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
 - 근거: 00:58 업로드 로그(`build/validation/LAG1107A01/`). 세션 894C0AB9는 시험 호스트(`repository: injected` 18번, 2초에 초기화 20번), 세션 E1254ADD가 그 직후 대표 실행. `devicectl device info apps`: `builtByDeveloper: true`, 290 — TestFlight가 아닌 Debug 시험 호스트가 깔려 있었다.
 - 조치: 시험 뒤 Release 빌드를 같은 기기에 설치(데이터 유지). 결과는 아래 줄에 적는다.
 - Release 재설치: 빌드 컴파일 중 BOKKI Cam 세션의 기기 사용 요청(아이폰 18·11 모두 사용 중)으로 중단, 설치하지 않음. 아이폰 18에는 아직 Debug 시험 호스트가 깔려 있다. 기기가 비면 Release 설치 또는 TestFlight 290 재설치.
+
+## TFB1107A01 · 빌드 291 내부 TestFlight (2026-11-07)
+- 포함: SUB1106A02(지하철 OSM 선로·도시별 역 연결), CTR1107A01(화랑이 탭 카운터), RNG1106A01(지도 탭 사진링 접기·집 위 반달), PLY1106A01 이후 변경.
+- 결과: `release.sh --yes --request-id TFB1107A01` 종료 0, 처리 `VALID`, `TP Taption Plan 내부 테스트` 그룹 연결, 테스터 1명 노출. 아카이브 네 번들 `CFBundleVersion` 291 확인. 보고서 `build/validation/TFB1107A01/testflight-report.json`.
+- 참고: 아이폰 18의 Debug 시험 호스트(LAG1107A01)는 TestFlight 291을 설치하면 바뀐다.
