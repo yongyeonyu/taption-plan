@@ -1654,3 +1654,7 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
 - 수정: ①분류 잠금 병합이 예전에 잠긴 자동 `근무`(겹침 비율 1.0)로 새 `휴식` 조각 제목을 덮어 실제 앱에서 휴식이 안 보였다 → 자동 휴식 경계는 새 판정이 이기고 사용자 수정 기록은 유지(`WorkBreakPattern.freshWins`, 시험 `testWorkBreakSurvivesEarlierLockedWorkRecord`). ②재생 방향 계산이 앞뒤 창 밖 판독까지 훑던 것을 창 안만 보게.
 - 확인만 함(수정 없음): Watch 초 단위 순번 충돌 없음, 출발역 도착 시각은 체류 안 표본에서만 고름, 좌우 상태 공유는 기존 동작.
 - 전체 단위 시험(iPhone 18): 2,083건 중 실패 1·건너뜀 15(`unit-all.xcresult`, 로그 `build/validation/REV1106A01-unit-all.log`). 실패 `testSensorAnalysisDefersBackgroundReadingsAndCoalescesOnForeground`(2≠1, 시간 의존)는 `FeatureEngineTests` 재실행 689건 통과에서 통과(`REV1106A01/feature-rerun.xcresult`, `unionDuration` 정리 뒤 코드). 구조 검사 통과.
+
+## TFB1106A07 · 빌드 289 내부 TestFlight (2026-11-06)
+- 포함: RFT1106A01(중복 정리), REV1106A01(잠긴 근무가 휴식을 덮던 문제, 재생 방향 창), DOC1106A01(문서 정리).
+- 결과: `release.sh --yes --request-id TFB1106A07` 종료 0, 처리 `VALID`, `TP Taption Plan 내부 테스트` 그룹 연결, 테스터 1명 노출. 아카이브 네 번들 `CFBundleVersion` 289 확인. 보고서 `build/validation/TFB1106A07/testflight-report.json`.
