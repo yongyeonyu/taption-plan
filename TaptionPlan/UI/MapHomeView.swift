@@ -172,7 +172,6 @@ struct MapHomeView: View {
 
     @AppStorage("mapHomeShowsPhotos") var showsPhotosOnMap = true
     @AppStorage("mapHomeShowsPhotoRing") var showsPhotoRing = false
-    @State var photoRingShrinkRequest = 0
     /// 하단 사진링을 아래로 끌어 반달로 접었다(RNG1106A01). 사이드바와 무관하게 유지한다.
     @State var isPhotoRingFolded = false
 

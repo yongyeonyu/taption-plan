@@ -446,7 +446,8 @@ enum MapHomeSubwayRouteOverlayEngine {
         estimated: Bool,
         travelID: UUID
     ) -> MapHomeSubwayRouteOverlay? {
-        let coordinates = points.compactMap { point -> CLLocationCoordinate2D? in
+        // 역과 역 사이는 실제 선로 모양을 따른다(SUB1106A02).
+        let coordinates = SubwayTrackCatalog.following(points).compactMap { point -> CLLocationCoordinate2D? in
             guard isValid(point) else { return nil }
             return CLLocationCoordinate2D(
                 latitude: point.latitude,

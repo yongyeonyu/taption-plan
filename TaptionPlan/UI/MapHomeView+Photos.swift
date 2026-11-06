@@ -86,7 +86,7 @@ extension MapHomeView {
             .id(photoBrowserSelection.startID)
             .transition(.opacity)
         } else if showsPhotoRing, !isDayPlaybackRunning, !isScreenRecording, !isPhotoRingCovered, !browsablePhotos.isEmpty, isPhotoRingFolded {
-            MapHomePhotoRingTab(language: language, trailing: trailing) { withAnimation(.easeInOut(duration: 0.25)) { isPhotoRingFolded = false } }
+            MapHomePhotoRingTab(language: language) { withAnimation(.easeInOut(duration: 0.25)) { isPhotoRingFolded = false } }
                 .transition(.move(edge: .bottom).combined(with: .opacity))
         } else if showsPhotoRing, !isDayPlaybackRunning, !isScreenRecording, !isPhotoRingCovered, !browsablePhotos.isEmpty {
             let photos = browsablePhotos
@@ -96,13 +96,18 @@ extension MapHomeView {
                 language: language,
                 trailing: trailing,
                 isRing: true,
-                shrinkRequest: photoRingShrinkRequest,
                 onPhotoChange: focusOnPhoto,
                 onFold: { withAnimation(.easeInOut(duration: 0.25)) { isPhotoRingFolded = true } },
                 onClose: {}
             )
             .id("\(model.selectedDate.timeIntervalSinceReferenceDate)|\(photos.count)")
         }
+    }
+
+    /// 링 밖 지도를 누르면 링을 `집` 단추 위 반달로 접는다(RNG1106A01, 대표 지시). 링 위 터치는 지도에 오지 않는다.
+    func foldPhotoRingOnMapTap() {
+        guard showsPhotoRing, !isPhotoRingFolded, !isDayPlaybackRunning, !browsablePhotos.isEmpty else { return }
+        withAnimation(.easeInOut(duration: 0.25)) { isPhotoRingFolded = true }
     }
 
     /// 메뉴·달력 같은 창이 떠 있으면 하단 링을 숨긴다(RNG1105A03).

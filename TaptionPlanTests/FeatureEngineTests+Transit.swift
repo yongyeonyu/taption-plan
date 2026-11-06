@@ -3972,4 +3972,39 @@ extension FeatureEngineTests {
         let kept = ActivityClassificationLockEngine.mergingLockedClassifications(existing: [corrected], fresh: fresh, inside: window)
         XCTAssertEqual(kept.map(\.title), ["회의", "회의", "회의"], "사용자가 고친 기록은 그대로 이긴다")
     }
+
+    // MARK: - 지하철 선로 모양 (SUB1106A02)
+
+    func testSubwayTrackPolylineDecodesGoogleSample() {
+        let points = SubwayTrackCatalog.polyline("_p~iF~ps|U_ulLnnqC_mqNvxq`@"[...])
+        XCTAssertEqual(points.count, 3)
+        XCTAssertEqual(points[0].latitude, 38.5, accuracy: 1e-9)
+        XCTAssertEqual(points[2].longitude, -126.453, accuracy: 1e-9)
+    }
+
+    func testSubwayRouteFollowsTrackBetweenNeighborStations() {
+        // 서울 2호선만 본다. 같은 이름의 부산·대구 2호선은 도시별 무리로 갈린다.
+        let indices = SubwayStationCatalog.stations.indices.filter { SubwayStationCatalog.stations[$0].lineName == "2호선" }
+        let seoul = SubwayStationCatalog.cityGroups(indices).max { $0.count < $1.count } ?? []
+        let line = seoul.map { SubwayStationCatalog.stations[$0] }.filter { $0.coordinate != nil }.sorted { $0.order < $1.order }
+        let pairs = zip(line, line.dropFirst()).compactMap { a, b -> (GeoPoint, GeoPoint)? in
+            guard let from = a.coordinate, let to = b.coordinate else { return nil }
+            return (from, to)
+        }
+        let followed = pairs.map { SubwayTrackCatalog.following([$0.0, $0.1]) }
+        XCTAssertGreaterThan(followed.filter { $0.count > 2 }.count, pairs.count / 2, "서울 2호선 대부분은 선로 모양이 있다")
+        XCTAssertTrue(seoul.allSatisfy { SubwayStationCatalog.stations[$0].coordinate.map { $0.latitude > 37 } ?? true }, "서울 무리에 다른 도시 역이 섞이지 않는다")
+        for (pair, points) in zip(pairs, followed) {
+            XCTAssertEqual(points.first, pair.0)
+            XCTAssertEqual(points.last, pair.1)
+        }
+        // 거꾸로 가도 같은 선로를 뒤집어 쓴다.
+        if let index = followed.firstIndex(where: { $0.count > 2 }) {
+            let reversed = SubwayTrackCatalog.following([pairs[index].1, pairs[index].0])
+            XCTAssertEqual(reversed.count, followed[index].count)
+            XCTAssertEqual(reversed.first, pairs[index].1)
+        }
+        let loose = GeoPoint(latitude: 37.1, longitude: 127.1, altitude: 0, horizontalAccuracy: -1, verticalAccuracy: -1)
+        XCTAssertEqual(SubwayTrackCatalog.following([loose, pairs[0].0]).count, 2, "역이 아닌 점은 직선 그대로")
+    }
 }

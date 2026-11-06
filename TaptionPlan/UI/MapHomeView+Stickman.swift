@@ -247,8 +247,8 @@ extension MapHomeView {
                 .allowsHitTesting(false)
                 .accessibilityElement()
                 .accessibilityAddTraits(.isButton)
-                .accessibilityLabel(language.text("화랑이 하루 요약", "Today summary"))
-                .accessibilityAction { presentDaySummary(fromCat: true) }
+                .accessibilityLabel(language.text("화랑이 카운터 보이기·숨기기", "Show or hide counters"))
+                .accessibilityAction { toggleCounterFromCat() }
         }
     }
 

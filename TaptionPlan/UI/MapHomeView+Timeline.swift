@@ -119,6 +119,11 @@ extension MapHomeView {
         .accessibilityIdentifier("mapHomeSidebarExpandButton")
     }
 
+    /// 화랑이를 누르면 카운터 창을 보이거나 숨긴다(CTR1107A01, 대표 지시). 하루 요약은 집 아이콘에서 연다.
+    func toggleCounterFromCat() {
+        withAnimation(.snappy(duration: 0.22)) { isCounterCollapsed.toggle() }
+    }
+
     /// 하루 요약을 연다. 화랑이에서 열면 시트가 올라올 때 집이 아니라 화랑이를 화면에 남긴다.
     func presentDaySummary(fromCat: Bool) {
         daySummaryFocusesCat = fromCat

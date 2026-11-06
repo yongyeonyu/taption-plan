@@ -1282,19 +1282,6 @@ final class NLETrackTests: XCTestCase {
         XCTAssertEqual(MapHomePhotoArcBrowser.index(start: 0, translation: -36, count: 0), 0)
     }
 
-    /// 가운데 사진을 아래로 끌어야 접힌다. 옆으로 넘기거나 가장자리 사진을 끄는 것은 접지 않는다(RNG1106A01).
-    func testPhotoRingFoldsOnlyOnDownwardDragFromCenter() {
-        func fold(_ x: CGFloat, _ dx: CGFloat, _ dy: CGFloat) -> Bool {
-            MapHomePhotoArcBrowser.isFoldDrag(startX: x, width: 400, translation: CGSize(width: dx, height: dy))
-        }
-        XCTAssertTrue(fold(200, 0, 80))
-        XCTAssertTrue(fold(260, 20, 70))
-        XCTAssertFalse(fold(200, 0, 40), "덜 내렸다")
-        XCTAssertFalse(fold(200, 80, 70), "옆으로 넘기는 중")
-        XCTAssertFalse(fold(200, 0, -90), "위로 끌었다")
-        XCTAssertFalse(fold(20, 0, 90), "가장자리 사진")
-    }
-
     func testPlaybackPhotoStripKeepsSevenSlotsAroundCurrentPhoto() {
         let photos = (0..<10).map { MapHomePlaybackPhotoStrip.Photo(minute: Double($0) * 10, id: "\($0)") }
         XCTAssertNil(MapHomePlaybackPhotoStrip.currentIndex(minute: -1, photos: photos))

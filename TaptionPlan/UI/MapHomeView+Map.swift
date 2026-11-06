@@ -348,7 +348,11 @@ extension MapHomeView {
             onLongPress: presentMapLongPressMenu,
             onAnnotationSelected: handleAppleMapAnnotation,
             onMapTap: { local, hitsWalker in
-                if hitsWalker { presentDaySummary(fromCat: true) }
+                if hitsWalker {
+                    foldPhotoRingOnMapTap()
+                    toggleCounterFromCat()
+                    return
+                }
                 handleMapTap(atLocal: local, waypoints: pawprintWaypoints, positions: nil)
             }
         )
@@ -637,18 +641,18 @@ extension MapHomeView {
         return markers
     }
 
-    /// 화랑이를 누르면 하루 요약 카드를 연다. 발자국·집 아이콘보다 먼저 판정한다(대표 지시, ARC1030A07).
+    /// 화랑이를 누르면 카운터 창을 보이거나 숨긴다(CTR1107A01). 발자국·집 아이콘보다 먼저 판정한다.
     /// 지도 탭 한 경로(UIKit 탭이 부른다). 좌표는 지도 로컬 하나만 쓴다. 예전에는 SwiftUI 탭(뷰포트 좌표)과
     /// UIKit 탭(지도 로컬 좌표)이 같은 손짓을 두 번 판정했고, 카운터 창 판정에 서로 다른 좌표가 섞였다(PRF1101A01).
     func handleMapTap(atLocal local: CGPoint, waypoints: [PawprintWaypoint], positions: [String: CGPoint]?) {
-        photoRingShrinkRequest &+= 1
+        foldPhotoRingOnMapTap()
         defer { if isSearchDismissable { dismissMapSearchOverlay() } }
         if isCounterWindowTapped(at: local) {
             openCounterDetail(at: local)
             return
         }
         if isStickmanTapped(at: local) {
-            presentDaySummary(fromCat: true)
+            toggleCounterFromCat()
             return
         }
         if handleMapMarkerTap(at: local) { return }

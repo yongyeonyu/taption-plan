@@ -114,6 +114,10 @@ struct MapHomeAttributionSheet: View {
                 language.text("지도 데이터", "Map data"),
                 "© OpenStreetMap contributors (ODbL)"
             )
+            attributionRow(
+                language.text("지하철 선로 모양", "Subway track shapes"),
+                "© OpenStreetMap contributors (ODbL)"
+            )
             attributionRow(language.text("지도 표시", "Map rendering"), "MapLibre Native")
             Link(destination: URL(string: "https://www.openstreetmap.org/copyright")!) {
                 Label(language.text("OpenStreetMap 저작권 보기", "OpenStreetMap copyright"), systemImage: "arrow.up.right.square")

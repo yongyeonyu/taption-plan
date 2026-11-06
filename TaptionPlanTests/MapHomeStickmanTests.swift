@@ -22,16 +22,6 @@ final class MapHomeStickmanTests: XCTestCase {
         super.tearDown()
     }
 
-    func testCounterFoldTaps() {
-        let frame = CGRect(x: 0, y: 100, width: 200, height: 122)
-        XCTAssertEqual(MapHomeCounterFold.tap(atY: 110, frame: frame, isCollapsed: true), .expand)
-        XCTAssertEqual(MapHomeCounterFold.tap(atY: 215, frame: frame, isCollapsed: false), .collapse)
-        XCTAssertEqual(
-            MapHomeCounterFold.tap(atY: 150, frame: frame, isCollapsed: false),
-            .rows(CGRect(x: 0, y: 100, width: 200, height: 100)), "화살표 자리는 줄 높이에서 뺀다"
-        )
-    }
-
     func testCategoryMenuShowsDailyDetailsWithOwnScenes() {
         XCTAssertTrue(MapHomeCategoryDetailRows.details(for: "sleep").map(\.title).contains("낮잠"))
         XCTAssertTrue(MapHomeCategoryDetailRows.details(for: "unconfirmed").isEmpty)

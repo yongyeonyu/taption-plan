@@ -1672,3 +1672,17 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
 - 변경: 링 가운데 사진 폭 안에서 시작해 아래로 60pt 넘게(세로가 가로의 1.5배 넘게) 끌면 접는다. 세로로 끄는 동안은 사진을 넘기지 않는다. 접힌 동안 같은 배치(사이드바 켜면 사이드바 왼쪽)에 `chevron.up` 반달 단추만 두고 누르면 펼친다. 접힘 상태는 `MapHomeView`에 두어 사이드바 켜고 끄기·날짜와 무관. 보이스오버 "사진 접기" 동작.
 - 시험(실기기 iPhone 18 Pro Max, with-device-lock, 병렬 끔): `NLETrackTests`·`MapHomeLiveMapTests` 157건 통과(새 `testPhotoRingFoldsOnlyOnDownwardDragFromCenter`, `build/validation/RNG1106A01-unit.xcresult`). 앱 빌드 포함. 구조 검사 통과.
 - 남은 것: 실기기에서 접기·펼치기 손맛과 반달 위치(사이드바 켜짐·꺼짐) 확인(대표).
+
+## SUB1106A02·CTR1107A01·RNG1106A01(수정) · 지하철 선로 모양, 화랑이 탭 카운터, 사진링 지도 탭 접기 (2026-11-07)
+- 지하철 선로: `scripts/subway-tracks/build.py`가 OSM Overpass 철도 선로(원본 `build/validation/SUB1106A02/osm/`, ODbL)로 같은 노선·같은 도시 이웃 역 710쌍 중 696쌍의 선로를 찾아 `SubwayTrackData.swift`(45KB)를 만든다. 길이/직선 중간값 1.016, p90 1.163, 1.5배 초과 6쌍. 오버레이·예상 경로가 `SubwayTrackCatalog.following`으로 끼운다. 지도 출처에 "지하철 선로 모양 © OpenStreetMap contributors (ODbL)" 추가.
+- 발견·수정: 역 목록의 1~4호선 등은 서울·부산·대구가 같은 노선 이름과 순서 번호를 써서, 이웃 역이 다른 도시 역으로 이어졌다(서울 2호선 이웃 쌍 대부분이 무효). 앱 `SubwayStationCatalog.adjacency`와 생성 스크립트 모두 노선을 20km 무리(도시)로 나눈 뒤 잇는다(`cityGroups`, 좌표 없는 역은 순서 ±1이 많은 무리).
+- 카운터: 화랑이 탭(벡터·애플 지도·보이스오버)이 카운터 창 보이기·숨기기. 숨김 중엔 아이콘·누를 자리 없음. 접기 화살표·`MapHomeCounterFold` 삭제. 하루 요약은 집 아이콘·하단 `집`.
+- 사진링: 아래로 끌어 접기 제거, 지도 탭으로 접기, 반달은 하단 `집` 단추 위. 쓰지 않게 된 `shrinkRequest` 제거.
+- 번역: 새 문구 4개 × 12개 언어, `extract.py`가 생성 자료 파일을 건너뛰게 함, `check.py` 실패 0.
+- 시험(실기기 iPhone 18 Pro Max, with-device-lock, 병렬 끔): 1차 서울 2호선 시험이 도시 섞임으로 실패 → 위 수정. 최종 `FeatureEngineTests`·`NLETrackTests`·`MapHomeLiveMapTests`·`RouteTimelineDataTests`·`RailRideLikelihoodTests`·`RawSensorReplayTests`·`MapHomeStickmanTests` 1,076건 통과·건너뜀 10·실패 0(`build/validation/SUB1106A02/unit6.xcresult`). 구조 검사 통과.
+- 남은 것: 실기기 지하철 재생 선로 모양, 화랑이 탭 카운터, 지도 탭 링 접기·반달 위치 확인(대표).
+
+## LAG1107A01 · 실행·이동 중 렉 원인 (2026-11-07)
+- 근거: 00:58 업로드 로그(`build/validation/LAG1107A01/`). 세션 894C0AB9는 시험 호스트(`repository: injected` 18번, 2초에 초기화 20번), 세션 E1254ADD가 그 직후 대표 실행. `devicectl device info apps`: `builtByDeveloper: true`, 290 — TestFlight가 아닌 Debug 시험 호스트가 깔려 있었다.
+- 조치: 시험 뒤 Release 빌드를 같은 기기에 설치(데이터 유지). 결과는 아래 줄에 적는다.
+- Release 재설치: 빌드 컴파일 중 BOKKI Cam 세션의 기기 사용 요청(아이폰 18·11 모두 사용 중)으로 중단, 설치하지 않음. 아이폰 18에는 아직 Debug 시험 호스트가 깔려 있다. 기기가 비면 Release 설치 또는 TestFlight 290 재설치.

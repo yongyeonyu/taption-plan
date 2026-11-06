@@ -34,13 +34,7 @@ extension MapHomeView {
     /// 누른 줄의 카운터 상세 화면을 연다. 줄은 위에서 아래로 같은 높이로 쌓여 있어 높이 비율로 고른다.
     /// 줄 목록을 아직 모르면(창이 막 생긴 때) 예전처럼 카운터 메뉴를 연다.
     func openCounterDetail(at tapPoint: CGPoint) {
-        let rows: CGRect
-        switch MapHomeCounterFold.tap(atY: tapPoint.y, frame: counterWindowFrame.frame, isCollapsed: isCounterCollapsed) {
-        case .expand, .collapse:
-            withAnimation(.snappy(duration: 0.22)) { isCounterCollapsed.toggle() }
-            return
-        case .rows(let frame): rows = frame
-        }
+        let rows = counterWindowFrame.frame
         let targets = counterRowTargets
         guard let index = MapHomeCounterDetailBuilder.rowIndex(
             tapY: tapPoint.y, frame: rows, count: targets.count
@@ -228,16 +222,13 @@ extension MapHomeView {
             onFrame: { box.hostFrame = $0 }
         ) {
             EquatableView(content: MapHomeCounterContentGate(playbackTick: MapHomeCounterBadgeThrottle.playbackTick(isPlaying: isDayPlaybackRunning), isCollapsed: isCounterCollapsed) {
+                // 숨긴 동안은 아무것도 그리지 않고 누를 자리도 없다. 화랑이를 다시 누르면 나온다(CTR1107A01).
                 if isCounterCollapsed {
-                    MapHomeCounterFoldedIcon()
-                        .onGeometryChange(for: CGSize.self, of: \.size) { box.contentSize = $0 }
+                    Color.clear.frame(width: 0, height: 0).onAppear { box.contentSize = .zero }
                 } else {
                     MapHomeCounterClock(isLive: isCounterLive) { now in
-                        VStack(spacing: 2) {
-                            counterWindowContent(now: now)
-                            MapHomeCounterFoldArrow()
-                        }
-                        .onGeometryChange(for: CGSize.self, of: \.size) { box.contentSize = $0 }
+                        counterWindowContent(now: now)
+                            .onGeometryChange(for: CGSize.self, of: \.size) { box.contentSize = $0 }
                     }
                 }
             })

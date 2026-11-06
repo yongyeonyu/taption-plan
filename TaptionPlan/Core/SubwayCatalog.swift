@@ -151,18 +151,53 @@ enum SubwayStationCatalog {
         }
     }()
 
+    /// 한 노선의 역을 20km 안으로 이어진 무리로 나눈다. 좌표가 없는 역은 순서 번호가 가장 가까운 무리에 붙인다.
+    static func cityGroups(_ indices: [Int], linkMeters: Double = 20_000) -> [[Int]] {
+        let located = indices.filter { stations[$0].coordinate != nil }
+        var parent = Dictionary(uniqueKeysWithValues: located.map { ($0, $0) })
+        func root(_ value: Int) -> Int {
+            var value = value
+            while let next = parent[value], next != value { value = next }
+            return value
+        }
+        for (offset, first) in located.enumerated() {
+            guard let a = stations[first].coordinate else { continue }
+            for second in located.dropFirst(offset + 1) {
+                guard let b = stations[second].coordinate, distanceMeters(a, b) <= linkMeters else { continue }
+                parent[root(first)] = root(second)
+            }
+        }
+        var groups: [Int: [Int]] = [:]
+        for index in located { groups[root(index), default: []].append(index) }
+        var result = Array(groups.values)
+        guard !result.isEmpty else { return [indices] }
+        // 좌표 없는 역은 앞뒤 순서 번호(±1)를 가장 많이 가진 무리, 그다음 번호가 가까운 무리에 붙인다.
+        for index in indices where stations[index].coordinate == nil {
+            let order = stations[index].order
+            func score(_ group: [Int]) -> (Int, Int) {
+                let gaps = group.map { abs(stations[$0].order - order) }
+                return (-gaps.filter { $0 == 1 }.count, gaps.min() ?? .max)
+            }
+            let best = result.indices.min { score(result[$0]) < score(result[$1]) } ?? 0
+            result[best].append(index)
+        }
+        return result
+    }
+
     private static let adjacency: [[Int]] = {
         var edges = Array(repeating: Set<Int>(), count: stations.count)
         let byLine = Dictionary(grouping: stations.indices) {
             stations[$0].lineName
         }
+        // 1·2·3·4호선은 서울·부산·대구 등이 같은 이름과 순서 번호를 쓴다. 도시별로 나눠 이웃을 잇는다.
+        // 예전에는 한데 정렬해 서울 역 다음이 부산 역이 됐다(SUB1106A02).
         for indices in byLine.values {
-            let ordered = indices.sorted {
-                stations[$0].order < stations[$1].order
-            }
-            for pair in zip(ordered, ordered.dropFirst()) {
-                edges[pair.0].insert(pair.1)
-                edges[pair.1].insert(pair.0)
+            for city in cityGroups(indices) {
+                let ordered = city.sorted { stations[$0].order < stations[$1].order }
+                for pair in zip(ordered, ordered.dropFirst()) {
+                    edges[pair.0].insert(pair.1)
+                    edges[pair.1].insert(pair.0)
+                }
             }
         }
 

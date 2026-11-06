@@ -538,7 +538,7 @@ extension MapHomeView {
 
     func predictedRoute(for overlay: MapHomeSubwayRouteOverlay) -> MapPredictedRoute? {
         guard let travel = currentDayDataSnapshot?.travel.first(where: { $0.id == (overlay.travelID ?? overlay.id) }) else { return nil }
-        let points = travel.subwayRoute?.coordinates.map {
+        let points = travel.subwayRoute.map { SubwayTrackCatalog.following($0.coordinates) }?.map {
             CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)
         } ?? overlay.coordinates
         return predictedRoute(source: "rail", travelID: travel.id, mode: travel.mode,

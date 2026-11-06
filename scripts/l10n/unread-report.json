@@ -1,5 +1,5 @@
 {
- "ui": 2292,
+ "ui": 2295,
  "catalog": 461,
  "unread": [
   {
@@ -346,13 +346,13 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeView+Menu.swift",
-   "line": 1062,
+   "line": 1053,
    "ko": "strength.koreanLabel",
    "en": "strength.englishLabel"
   },
   {
    "file": "TaptionPlan/UI/MapHomeView+Menu.swift",
-   "line": 1070,
+   "line": 1061,
    "ko": "fogStrength.koreanLabel",
    "en": "fogStrength.englishLabel"
   },
