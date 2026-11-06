@@ -85,6 +85,9 @@ extension MapHomeView {
             ) { self.photoBrowserSelection = nil }
             .id(photoBrowserSelection.startID)
             .transition(.opacity)
+        } else if showsPhotoRing, !isDayPlaybackRunning, !isScreenRecording, !isPhotoRingCovered, !browsablePhotos.isEmpty, isPhotoRingFolded {
+            MapHomePhotoRingTab(language: language, trailing: trailing) { withAnimation(.easeInOut(duration: 0.25)) { isPhotoRingFolded = false } }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
         } else if showsPhotoRing, !isDayPlaybackRunning, !isScreenRecording, !isPhotoRingCovered, !browsablePhotos.isEmpty {
             let photos = browsablePhotos
             MapHomePhotoArcBrowser(
@@ -95,6 +98,7 @@ extension MapHomeView {
                 isRing: true,
                 shrinkRequest: photoRingShrinkRequest,
                 onPhotoChange: focusOnPhoto,
+                onFold: { withAnimation(.easeInOut(duration: 0.25)) { isPhotoRingFolded = true } },
                 onClose: {}
             )
             .id("\(model.selectedDate.timeIntervalSinceReferenceDate)|\(photos.count)")

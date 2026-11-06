@@ -173,6 +173,8 @@ struct MapHomeView: View {
     @AppStorage("mapHomeShowsPhotos") var showsPhotosOnMap = true
     @AppStorage("mapHomeShowsPhotoRing") var showsPhotoRing = false
     @State var photoRingShrinkRequest = 0
+    /// 하단 사진링을 아래로 끌어 반달로 접었다(RNG1106A01). 사이드바와 무관하게 유지한다.
+    @State var isPhotoRingFolded = false
 
     /// 표시 메뉴의 경로·발자국 켜기/끄기(대표 지시, ARC1030A06). 녹화 레이어와는 별개로, 평소 화면에 적용된다.
     @AppStorage("mapHomeShowsRoutes") var showsRoutesOnMap = true

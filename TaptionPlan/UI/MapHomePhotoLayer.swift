@@ -382,10 +382,13 @@ struct MapHomePhotoArcBrowser: View {
     /// 지도를 누를 때마다 늘어난다. 커져 있던 가운데 사진을 바로 줄인다(MAP1106A01). 지도는 그 터치를 그대로 처리한다.
     let shrinkRequest: Int
     let onPhotoChange: ((PhotoMoment) -> Void)?
+    /// 하단 링: 가운데 사진을 아래로 끌면 반달로 접는다(RNG1106A01).
+    let onFold: (() -> Void)?
     let onClose: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var index: Int
+    @State private var arcWidth: CGFloat = 0
     @State private var dragStartIndex: Int?
     @State private var pagerIndex: Int?
     /// 하단 링: 입력이 2초 없으면 가운데 사진도 다른 칸과 같은 크기로 줄고 어두워진다(RNG1105A02).
@@ -404,8 +407,10 @@ struct MapHomePhotoArcBrowser: View {
         isRing: Bool = false,
         shrinkRequest: Int = 0,
         onPhotoChange: ((PhotoMoment) -> Void)? = nil,
+        onFold: (() -> Void)? = nil,
         onClose: @escaping () -> Void
     ) {
+        self.onFold = onFold
         self.isRing = isRing
         self.shrinkRequest = shrinkRequest
         self.onPhotoChange = onPhotoChange
@@ -414,6 +419,16 @@ struct MapHomePhotoArcBrowser: View {
         self.trailing = trailing
         self.onClose = onClose
         _index = State(initialValue: moments.firstIndex { $0.id == startID } ?? 0)
+    }
+
+    /// 접는 끌기: 가운데 사진 폭 안에서 시작해 아래로 충분히, 옆보다 세로로 더 움직였다.
+    nonisolated static let foldDistance: CGFloat = 60
+
+    nonisolated static func isFoldDrag(startX: CGFloat, width: CGFloat, translation: CGSize) -> Bool {
+        let center = width / 2
+        return abs(startX - center) <= MapHomePlaybackPhotoStrip.centerSide / 2
+            && translation.height >= foldDistance
+            && translation.height > abs(translation.width) * 1.5
     }
 
     /// 왼쪽으로 밀면 다음 사진이다.
@@ -500,6 +515,8 @@ struct MapHomePhotoArcBrowser: View {
                 }
             }
             .frame(width: proxy.size.width, height: MapHomePlaybackPhotoStrip.centerSide, alignment: .bottom)
+            .onAppear { arcWidth = proxy.size.width }
+            .onChange(of: proxy.size.width) { _, width in arcWidth = width }
         }
         .frame(height: MapHomePlaybackPhotoStrip.centerSide)
         // 호가 아래로 내려간 끝까지 밀 수 있게 잡는 자리를 넓힌다. 놓이는 자리는 그대로다.
@@ -523,6 +540,7 @@ struct MapHomePhotoArcBrowser: View {
             }
         }
         .accessibilityAction { pagerIndex = index }
+        .accessibilityAction(named: language.text("사진 접기", "Hide photos")) { onFold?() }
     }
 
     private var swipe: some Gesture {
@@ -533,16 +551,49 @@ struct MapHomePhotoArcBrowser: View {
                     dragStartIndex = start
                     wakeRing()
                 }
+                // 세로로 끄는 동안은 사진을 넘기지 않는다.
+                if onFold != nil, value.translation.height > abs(value.translation.width) { return }
                 let next = Self.index(start: start, translation: value.translation.width, count: moments.count)
                 if next != index { index = next }
             }
             .onEnded { value in
+                if let onFold, Self.isFoldDrag(startX: value.startLocation.x, width: arcWidth, translation: value.translation) {
+                    dragStartIndex = nil
+                    onFold()
+                    return
+                }
                 // 빠르게 튕기면 관성만큼 더 넘어간다.
                 let next = Self.index(start: dragStartIndex ?? index, translation: value.predictedEndTranslation.width, count: moments.count)
                 dragStartIndex = nil
                 if next != index { index = next }
                 wakeRing()
             }
+    }
+}
+
+/// 접힌 하단 사진링(RNG1106A01). 위 화살표가 든 반달이고, 누르면 링을 다시 펼친다.
+struct MapHomePhotoRingTab: View {
+    let language: MapHomeLanguage
+    let trailing: CGFloat
+    let onOpen: () -> Void
+
+    var body: some View {
+        Button(action: onOpen) {
+            Image(systemName: "chevron.up")
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(17)), weight: .bold))
+                .foregroundStyle(Color.tpInk)
+                .frame(width: 72, height: 36)
+                .padding(.top, 2)
+                .background(Color.tpSurface, in: UnevenRoundedRectangle(topLeadingRadius: 36, topTrailingRadius: 36))
+                .shadow(color: .black.opacity(0.14), radius: 6, y: -1)
+                .contentShape(UnevenRoundedRectangle(topLeadingRadius: 36, topTrailingRadius: 36))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(language.text("사진 펼치기", "Show photos"))
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+        .padding(.leading, 12)
+        .padding(.trailing, trailing)
+        .padding(.bottom, MapHomePlaybackPhotoStrip.bottomInset - MapHomePlaybackPhotoStrip.arcDrop)
     }
 }
 

@@ -1667,3 +1667,8 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
 ## TFB1106A08 · 빌드 290 내부 TestFlight (2026-11-06)
 - 포함: PLY1106A01(회사 재생 동작·장소 말풍선, 상세 묶기, 사용자 분류 메뉴·고양이 그림).
 - 결과: `release.sh --yes --request-id TFB1106A08` 종료 0, 처리 `VALID`, `TP Taption Plan 내부 테스트` 그룹 연결, 테스터 1명 노출. 아카이브 네 번들 `CFBundleVersion` 290 확인. 보고서 `build/validation/TFB1106A08/testflight-report.json`.
+
+## RNG1106A01 · 하단 사진링을 아래로 끌어 반달로 접기 (2026-11-06)
+- 변경: 링 가운데 사진 폭 안에서 시작해 아래로 60pt 넘게(세로가 가로의 1.5배 넘게) 끌면 접는다. 세로로 끄는 동안은 사진을 넘기지 않는다. 접힌 동안 같은 배치(사이드바 켜면 사이드바 왼쪽)에 `chevron.up` 반달 단추만 두고 누르면 펼친다. 접힘 상태는 `MapHomeView`에 두어 사이드바 켜고 끄기·날짜와 무관. 보이스오버 "사진 접기" 동작.
+- 시험(실기기 iPhone 18 Pro Max, with-device-lock, 병렬 끔): `NLETrackTests`·`MapHomeLiveMapTests` 157건 통과(새 `testPhotoRingFoldsOnlyOnDownwardDragFromCenter`, `build/validation/RNG1106A01-unit.xcresult`). 앱 빌드 포함. 구조 검사 통과.
+- 남은 것: 실기기에서 접기·펼치기 손맛과 반달 위치(사이드바 켜짐·꺼짐) 확인(대표).
