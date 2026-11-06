@@ -930,14 +930,16 @@ extension MapHomeView {
                     equippedAccessoryID: homeGrowthHistory.season.equippedAccessory,
                     facesLeft: MapHomeStickmanFacing.facesLeft(
                         headingDegrees: playback.headingDegrees,
-                        cameraHeading: viewport?.heading ?? 0
+                        cameraHeading: viewport?.heading ?? 0,
+                        action: playback.action
                     )
                     )
                     .catSpeechBubble(
                         action: playback.action,
                         facesLeft: MapHomeStickmanFacing.facesLeft(
                             headingDegrees: playback.headingDegrees,
-                            cameraHeading: viewport?.heading ?? 0
+                            cameraHeading: viewport?.heading ?? 0,
+                            action: playback.action
                         )
                     )
                 }

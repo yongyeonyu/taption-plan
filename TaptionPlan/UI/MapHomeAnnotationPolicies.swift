@@ -240,26 +240,37 @@ enum MapHomePawprintSpeedColor {
 }
 
 /// 화면에서 화랑이가 왼쪽·오른쪽 어디로 가는지 정한다. 거의 위아래로 가면 이전 방향을 유지해 좌우로 튀지 않게 한다.
+/// 방향은 움직이는 동안만 바꾼다. 머무를 때의 방향 값(나침반·끝 표본)이 다음 출발 방향을 흔들지 않게 한다(DIR1106A01).
 @MainActor
 enum MapHomeStickmanFacing {
     private static var last = false
     private static var pending: (facesLeft: Bool, since: TimeInterval)?
-    /// GPS가 몇 표본 튀어도 뒤집지 않는다. 이 시간 동안 같은 쪽을 가리켜야 돈다.
-    nonisolated static let turnHold: TimeInterval = 0.8
+    /// GPS 방향이 잠깐 튀어도 뒤집지 않는다. 이 시간 동안 같은 쪽을 가리켜야 돈다.
+    /// 방향은 30초 창의 이동으로 구해 잡음이 작으므로 짧게 둔다.
+    nonisolated static let turnHold: TimeInterval = 0.3
 
-    static func facesLeft(headingDegrees: Double, cameraHeading: Double) -> Bool {
+    static func facesLeft(headingDegrees: Double, cameraHeading: Double, action: MapHomeStickmanAction) -> Bool {
+        guard action.isMoving else { pending = nil; return last }
         let wanted = resolve(headingDegrees: headingDegrees, cameraHeading: cameraHeading, previous: last)
-        let settled = settle(wanted: wanted, current: last, pending: &pending, now: ProcessInfo.processInfo.systemUptime)
+        let settled = settle(wanted: wanted, current: last, pending: &pending,
+                             now: ProcessInfo.processInfo.systemUptime, hold: turnHold(for: action))
         last = settled
         return settled
     }
 
+    /// 지하철·기차는 노선을 따라 방향을 구해 튀지 않으므로 바로 돈다(대표 지시).
+    nonisolated static func turnHold(for action: MapHomeStickmanAction) -> TimeInterval {
+        action == .subway || action == .train ? 0 : turnHold
+    }
+
     nonisolated static func settle(
-        wanted: Bool, current: Bool, pending: inout (facesLeft: Bool, since: TimeInterval)?, now: TimeInterval
+        wanted: Bool, current: Bool, pending: inout (facesLeft: Bool, since: TimeInterval)?, now: TimeInterval,
+        hold: TimeInterval = turnHold
     ) -> Bool {
         guard wanted != current else { pending = nil; return current }
+        guard hold > 0 else { pending = nil; return wanted }
         guard let held = pending, held.facesLeft == wanted else { pending = (wanted, now); return current }
-        guard now - held.since >= turnHold else { return current }
+        guard now - held.since >= hold else { return current }
         pending = nil
         return wanted
     }

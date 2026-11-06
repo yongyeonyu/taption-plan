@@ -6093,3 +6093,7 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 포함: SUB1106A01(출발역 근처 집 체류를 지하철에서 제외).
 - 결과: `release.sh --yes --request-id TFB1106A04` 종료 0, 처리 `VALID`, `TP Taption Plan 내부 테스트` 그룹 연결, 테스터 1명 노출. 아카이브 네 번들 `CFBundleVersion` 286 확인. 보고서 `build/validation/TFB1106A04/testflight-report.json`.
 - 남음: 실기기에서 아침 지하철 시작 시각 확인(대표).
+
+## DIR1106A01 · 이동 수단 좌우 방향 (2026-11-06)
+- 수정: `MapHomeApplePlaybackMath.heading(at:readings:)`를 앞뒤 15초 창·12m 이동·정확도 100m 이내 표본으로 바꾸고 하루 끝 두 표본 대체를 없앴다. `MapHomeStickmanFacing`은 움직이는 동작일 때만 좌우를 바꾸고, 지하철·기차는 즉시, 나머지는 0.3초(이전 0.8초) 유지 뒤 돈다.
+- 결과(시뮬레이터 BOKKI-iPhone11): `AlgorithmUpgradeTests`·`MapHomeStickmanTests`·`MapHomeLiveMapTests` 205개 실패 0·건너뜀 5(기존). 새 시험 `testReadingHeadingUsesWindowAndIgnoresJitter` 통과. 앱 Debug 컴파일 성공, 구조 지표 통과. 화면 재생은 미확인.

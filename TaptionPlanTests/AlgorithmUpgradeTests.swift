@@ -378,10 +378,34 @@ final class AlgorithmUpgradeTests: XCTestCase {
     func testStickmanFacingIgnoresBriefHeadingNoise() {
         var pending: (facesLeft: Bool, since: TimeInterval)?
         XCTAssertFalse(MapHomeStickmanFacing.settle(wanted: true, current: false, pending: &pending, now: 10))
+        XCTAssertFalse(MapHomeStickmanFacing.settle(wanted: true, current: false, pending: &pending, now: 10.2))
+        XCTAssertFalse(MapHomeStickmanFacing.settle(wanted: false, current: false, pending: &pending, now: 10.25))
         XCTAssertFalse(MapHomeStickmanFacing.settle(wanted: true, current: false, pending: &pending, now: 10.3))
-        XCTAssertFalse(MapHomeStickmanFacing.settle(wanted: false, current: false, pending: &pending, now: 10.4))
-        XCTAssertFalse(MapHomeStickmanFacing.settle(wanted: true, current: false, pending: &pending, now: 10.5))
-        XCTAssertTrue(MapHomeStickmanFacing.settle(wanted: true, current: false, pending: &pending, now: 11.4))
+        XCTAssertTrue(MapHomeStickmanFacing.settle(wanted: true, current: false, pending: &pending, now: 10.65))
+        // 지하철·기차는 기다리지 않고 바로 돈다(DIR1106A01).
+        var railPending: (facesLeft: Bool, since: TimeInterval)?
+        XCTAssertTrue(MapHomeStickmanFacing.settle(wanted: true, current: false, pending: &railPending, now: 10,
+                                                   hold: MapHomeStickmanFacing.turnHold(for: .subway)))
+        XCTAssertEqual(MapHomeStickmanFacing.turnHold(for: .train), 0)
+        XCTAssertGreaterThan(MapHomeStickmanFacing.turnHold(for: .car), 0)
+    }
+
+    /// GPS 방향은 붙은 두 표본이 아니라 앞뒤 15초 창의 이동으로 구한다. 멈춰 있으면 nil(하루 끝 방향을 쓰지 않는다).
+    func testReadingHeadingUsesWindowAndIgnoresJitter() {
+        let base = Date(timeIntervalSince1970: 1_800_000_000)
+        func reading(_ second: Double, east meters: Double, north jitter: Double = 0) -> SensorReading {
+            SensorReading(timestamp: base.addingTimeInterval(second), point: GeoPoint(
+                latitude: 37.5 + jitter / 111_000, longitude: 127 + meters / 88_200,
+                altitude: 0, horizontalAccuracy: 10, verticalAccuracy: 10))
+        }
+        // 동쪽으로 1.5m/s, 표본마다 위아래 4m 잡음, 중간에 뒤로 3m 튐.
+        var moving = (0..<20).map { reading(Double($0), east: Double($0) * 1.5, north: $0 % 2 == 0 ? 4 : -4) }
+        moving[10] = reading(10, east: 12)
+        XCTAssertEqual(MapHomeApplePlaybackMath.heading(at: base.addingTimeInterval(10), readings: moving), 90)
+        // 제자리 잡음만 있으면 방향이 없다. 하루 마지막 두 표본(서쪽 이동)의 방향을 빌려 쓰지 않는다.
+        let still = (0..<20).map { reading(Double($0), east: $0 % 2 == 0 ? 1 : -1) }
+            + [reading(600, east: 0), reading(610, east: -200)]
+        XCTAssertNil(MapHomeApplePlaybackMath.heading(at: base.addingTimeInterval(10), readings: still))
     }
 
     func testCalendarTitleVerdictOrder() {

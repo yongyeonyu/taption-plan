@@ -823,14 +823,16 @@ struct MapHomeAppleMap: UIViewRepresentable {
                         equippedAccessoryID: annotation.equippedAccessoryID,
                         facesLeft: MapHomeStickmanFacing.facesLeft(
                             headingDegrees: annotation.headingDegrees,
-                            cameraHeading: cameraHeading
+                            cameraHeading: cameraHeading,
+                            action: annotation.action
                         )
                     )
                     .catSpeechBubble(
                         action: annotation.action,
                         facesLeft: MapHomeStickmanFacing.facesLeft(
                             headingDegrees: annotation.headingDegrees,
-                            cameraHeading: cameraHeading
+                            cameraHeading: cameraHeading,
+                            action: annotation.action
                         )
                     )
                 ),

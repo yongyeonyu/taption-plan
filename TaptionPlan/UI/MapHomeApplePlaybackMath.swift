@@ -310,6 +310,7 @@ enum MapHomeApplePlaybackMath {
                       point.latitude.isFinite,
                       point.longitude.isFinite,
                       (-90...90).contains(point.latitude),
+                      point.horizontalAccuracy <= 100,
                       (-180...180).contains(point.longitude) else { return nil }
                 return (
                     reading.timestamp,
@@ -321,20 +322,28 @@ enum MapHomeApplePlaybackMath {
             }
             .sorted { $0.0 < $1.0 }
         guard points.count >= 2 else { return nil }
-        if let before = points.last(where: { $0.0 <= date }),
-           let after = points.first(where: { $0.0 >= date }),
-           before.1.latitude != after.1.latitude
-                || before.1.longitude != after.1.longitude {
-            return stableHeading(
-                bearing(from: before.1, to: after.1)
-            )
+        // 붙은 두 표본은 몇 m 잡음에도 방향이 뒤집힌다. 앞뒤 창 안에서 충분히 움직인 두 점을 쓰고,
+        // 움직임이 없으면 nil이다. 예전에는 이때 하루 마지막 두 표본의 방향을 썼다(DIR1106A01).
+        var low = 0, high = points.count
+        while low < high {
+            let middle = (low + high) / 2
+            if points[middle].0 <= date { low = middle + 1 } else { high = middle }
         }
-        return stableHeading(
-            bearing(
-                from: points[points.count - 2].1,
-                to: points[points.count - 1].1
-            )
-        )
+        let window = headingWindow
+        let before = points[..<low].filter { date.timeIntervalSince($0.0) <= window }
+        let after = points[low...].filter { $0.0.timeIntervalSince(date) <= window }
+        guard let from = before.first ?? after.first, let to = after.last ?? before.last,
+              distanceMeters(from.1, to.1) >= minimumHeadingMeters else { return nil }
+        return stableHeading(bearing(from: from.1, to: to.1))
+    }
+
+    /// 방향을 구할 앞뒤 시간 창과 그 안에서 움직였다고 볼 거리.
+    static let headingWindow: TimeInterval = 15
+    static let minimumHeadingMeters = 12.0
+
+    private static func distanceMeters(_ lhs: CLLocationCoordinate2D, _ rhs: CLLocationCoordinate2D) -> Double {
+        CLLocation(latitude: lhs.latitude, longitude: lhs.longitude)
+            .distance(from: CLLocation(latitude: rhs.latitude, longitude: rhs.longitude))
     }
 
     private static func sameLocation(
