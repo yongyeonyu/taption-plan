@@ -172,7 +172,9 @@ final class AppleHealthService: @unchecked Sendable {
         guard HKHealthStore.isHealthDataAvailable(),
               let type = HKObjectType.quantityType(forIdentifier: identifier) else { return [:] }
         let anchor = calendar.startOfDay(for: start)
-        let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: [])
+        let recordingStart = HealthRecordingStart.clamp(start)
+        guard recordingStart < end else { return [:] }
+        let predicate = HKQuery.predicateForSamples(withStart: recordingStart, end: end, options: [])
         return try await withCheckedThrowingContinuation { continuation in
             let query = HKStatisticsCollectionQuery(
                 quantityType: type,
@@ -765,6 +767,7 @@ final class AppleHealthService: @unchecked Sendable {
         type: HKSampleType,
         span: TimeSpan
     ) async throws -> [HKSample] {
+        guard let span = HealthRecordingStart.clamp(span) else { return [] }
         let predicate = HKQuery.predicateForSamples(
             withStart: span.start,
             end: span.end,
@@ -997,5 +1000,40 @@ private extension HKWorkoutActivityType {
         case .cycling: .cycling
         default: nil
         }
+    }
+}
+
+/// 건강 앱·Watch 기록을 받기 시작하는 시각(대표 결정, 2026-11-06).
+/// 새로 설치한 기기는 첫 실행 시각부터만 받고, 이미 기록이 있던 기기는 제한하지 않는다.
+enum HealthRecordingStart {
+    static let defaultsKey = "healthRecordingStartAt.v1"
+
+    /// 저장된 시작 시각. 아직 정하지 않았거나 제한이 없으면 nil.
+    static func date(defaults: UserDefaults = .standard) -> Date? {
+        guard let seconds = defaults.object(forKey: defaultsKey) as? Double, seconds > 0 else { return nil }
+        return Date(timeIntervalSince1970: seconds)
+    }
+
+    /// 처음 한 번만 정한다. 기록이 이미 있으면 0(제한 없음)을 남겨 다시 묻지 않는다.
+    static func establishIfNeeded(hasExistingRecords: Bool, now: Date = .now, defaults: UserDefaults = .standard) {
+        guard defaults.object(forKey: defaultsKey) == nil else { return }
+        defaults.set(hasExistingRecords ? 0 : now.timeIntervalSince1970, forKey: defaultsKey)
+    }
+
+    /// 앵커 없는 첫 증분 조회는 건강 앱 전체 과거를 돌려주므로 시작 시각 이후로 좁힌다.
+    static func samplePredicate(defaults: UserDefaults = .standard) -> NSPredicate? {
+        date(defaults: defaults).map { HKQuery.predicateForSamples(withStart: $0, end: nil, options: []) }
+    }
+
+    static func clamp(_ start: Date, defaults: UserDefaults = .standard) -> Date {
+        guard let limit = date(defaults: defaults) else { return start }
+        return max(start, limit)
+    }
+
+    /// 시작 시각 이전 부분을 잘라 낸 구간. 모두 이전이면 nil.
+    static func clamp(_ span: TimeSpan, defaults: UserDefaults = .standard) -> TimeSpan? {
+        let start = clamp(span.start, defaults: defaults)
+        guard start < span.end else { return nil }
+        return TimeSpan(start: start, end: span.end)
     }
 }

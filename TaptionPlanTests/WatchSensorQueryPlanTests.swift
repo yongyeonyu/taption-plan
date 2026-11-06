@@ -540,6 +540,32 @@ final class WatchSensorQueryPlanTests: XCTestCase {
         )
     }
 
+    func testAmbientChunkIDKeepsSessionPrefixAndSequenceSuffix() {
+        let sessionID = UUID(uuidString: "00112233-4455-6677-8899-AABBCCDDEEFF")!
+        XCTAssertEqual(
+            TaptionWatchStableID.ambientAccelerationChunkID(sessionID: sessionID, sequence: 0x0102_0304, revision: 0),
+            UUID(uuidString: "00112233-4455-6677-8899-AABB01020304")
+        )
+    }
+
+    /// Apple Watch(arm64_32)는 Int가 32비트다. 64비트 시험에서는 드러나지 않으므로
+    /// Watch가 컴파일하는 소스에 32비트 Int를 넘는 상수 변환이 없는지 직접 본다.
+    func testWatchSourcesAvoidIntConversionsThatOverflowOn32Bit() throws {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+        let folders = ["Packages/TaptionWatchSync/Sources", "TaptionPlanWatch", "TaptionPlanWatchWidget"]
+        let pattern = try NSRegularExpression(pattern: #"\bInt\((U?Int64|UInt32|UInt)\.max\)"#)
+        var hits: [String] = []
+        for folder in folders {
+            let enumerator = FileManager.default.enumerator(at: root.appendingPathComponent(folder), includingPropertiesForKeys: nil)
+            while let url = enumerator?.nextObject() as? URL {
+                guard url.pathExtension == "swift", let text = try? String(contentsOf: url, encoding: .utf8) else { continue }
+                let range = NSRange(text.startIndex..., in: text)
+                if pattern.firstMatch(in: text, range: range) != nil { hits.append(url.lastPathComponent) }
+            }
+        }
+        XCTAssertEqual(hits, [])
+    }
+
     func testLegacyAmbientSummaryOverlapOnlySuppressesExactCrossSessionDuplicate() throws {
         let anchor = Date(timeIntervalSince1970: 1_000_000)
         let oldSessionID = UUID()

@@ -195,9 +195,9 @@ public enum TaptionWatchStableID {
         sequence: Int,
         revision: Int
     ) -> UUID {
-        if revision == 0, sequence >= 0, sequence <= Int(UInt32.max) {
+        // Apple Watch(arm64_32)는 Int가 32비트라 UInt32 최댓값을 Int로 바꾸면 멈춘다.
+        if revision == 0, let value = UInt32(exactly: sequence) {
             var bytes = withUnsafeBytes(of: sessionID) { Array($0) }
-            let value = UInt32(truncatingIfNeeded: sequence)
             bytes[12] = UInt8((value >> 24) & 0xff)
             bytes[13] = UInt8((value >> 16) & 0xff)
             bytes[14] = UInt8((value >> 8) & 0xff)

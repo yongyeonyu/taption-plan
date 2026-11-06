@@ -115,6 +115,20 @@ final class HealthKitIntegrationTests: XCTestCase {
         case failed
     }
 
+    private var savedRecordingStart: Any?
+
+    /// 시험 앱이 첫 실행에서 정한 기록 시작 시각이 과거 표본 시험을 자르지 않게 잠시 비운다.
+    override func setUp() {
+        super.setUp()
+        savedRecordingStart = UserDefaults.standard.object(forKey: HealthRecordingStart.defaultsKey)
+        UserDefaults.standard.removeObject(forKey: HealthRecordingStart.defaultsKey)
+    }
+
+    override func tearDown() {
+        UserDefaults.standard.set(savedRecordingStart, forKey: HealthRecordingStart.defaultsKey)
+        super.tearDown()
+    }
+
     func testObservedHealthChangeQueueRequeuesFailedScopeWithoutDroppingNewEvents() {
         var queue = HealthKitObservedChangeQueue()
         queue.mark("HKQuantityTypeIdentifierStepCount")
@@ -1410,5 +1424,40 @@ final class HealthKitIntegrationTests: XCTestCase {
         throw XCTSkip(
             "HealthKit 권한이 없는 환경이라 동기화 상태 전이를 확인할 수 없다: \(lastError)"
         )
+    }
+}
+
+final class HealthRecordingStartTests: XCTestCase {
+    private func freshDefaults() -> UserDefaults {
+        let name = "HealthRecordingStartTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: name)!
+        defaults.removePersistentDomain(forName: name)
+        return defaults
+    }
+
+    func testNewInstallStartsAtFirstLaunchAndClampsEarlierQueries() {
+        let defaults = freshDefaults()
+        let installedAt = Date(timeIntervalSince1970: 1_800_000_000)
+        HealthRecordingStart.establishIfNeeded(hasExistingRecords: false, now: installedAt, defaults: defaults)
+        HealthRecordingStart.establishIfNeeded(hasExistingRecords: false, now: installedAt.addingTimeInterval(3_600), defaults: defaults)
+
+        XCTAssertEqual(HealthRecordingStart.date(defaults: defaults), installedAt)
+        XCTAssertEqual(HealthRecordingStart.clamp(installedAt.addingTimeInterval(-86_400), defaults: defaults), installedAt)
+        XCTAssertNil(HealthRecordingStart.clamp(
+            TimeSpan(start: installedAt.addingTimeInterval(-7_200), end: installedAt), defaults: defaults))
+        XCTAssertEqual(
+            HealthRecordingStart.clamp(
+                TimeSpan(start: installedAt.addingTimeInterval(-7_200), end: installedAt.addingTimeInterval(600)), defaults: defaults)?.start,
+            installedAt)
+    }
+
+    func testDeviceWithExistingRecordsKeepsFullHistory() {
+        let defaults = freshDefaults()
+        let old = Date(timeIntervalSince1970: 1_600_000_000)
+        HealthRecordingStart.establishIfNeeded(hasExistingRecords: true, defaults: defaults)
+        HealthRecordingStart.establishIfNeeded(hasExistingRecords: false, defaults: defaults)
+
+        XCTAssertNil(HealthRecordingStart.date(defaults: defaults))
+        XCTAssertEqual(HealthRecordingStart.clamp(old, defaults: defaults), old)
     }
 }

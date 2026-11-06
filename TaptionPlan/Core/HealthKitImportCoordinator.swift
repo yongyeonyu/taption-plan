@@ -616,7 +616,7 @@ actor HealthKitImportCoordinator {
     }
 
     private func earliestPermittedSampleDate() -> Date {
-        earliestPermittedDateLoader?() ?? healthStore.earliestPermittedSampleDate()
+        HealthRecordingStart.clamp(earliestPermittedDateLoader?() ?? healthStore.earliestPermittedSampleDate())
     }
 
     private func samples(
@@ -640,7 +640,7 @@ actor HealthKitImportCoordinator {
         anchor: HKQueryAnchor?
     ) async throws -> AnchoredPage {
         let result = try await HKAnchoredObjectQueryDescriptor(
-            predicates: [.sample(type: type)],
+            predicates: [.sample(type: type, predicate: HealthRecordingStart.samplePredicate())],
             anchor: anchor,
             limit: 500
         ).result(for: healthStore)
@@ -1109,7 +1109,7 @@ actor HealthKitImportCoordinator {
         through end: Date
     ) async throws {
         guard let importStore else { return }
-        let summaries = try await activitySummaries(from: start, through: end)
+        let summaries = try await activitySummaries(from: HealthRecordingStart.clamp(start), through: end)
         try Task.checkCancellation()
         let records = summaries.compactMap { summary -> HealthKitSampleRecord? in
             let components = summary.dateComponents(for: calendar)

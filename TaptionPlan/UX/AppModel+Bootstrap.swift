@@ -344,6 +344,10 @@ extension AppModel {
                 // Publish local data before normalization, sensors or cloud work.
                 isStartupSnapshotPartial = false
                 snapshot = source
+                // 건강 앱 동기화가 시작되기 전에 정한다. 읽기에 실패한 경우는 새 설치로 보지 않는다.
+                HealthRecordingStart.establishIfNeeded(
+                    hasExistingRecords: !source.actuals.isEmpty || !source.plans.isEmpty || !source.memos.isEmpty
+                )
                 selectedScale = TimeScale(
                     timelineLevel: source.settings.startScale
                 ).scheduleEquivalent

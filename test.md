@@ -6034,3 +6034,26 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - `PRIVACY.md`에 Google 사용자 데이터 절(한국어·영어)을 넣었다. 각 문장은 코드로 대조했다: 범위 `calendar.readonly`, PKCE(`S256`), 갱신 토큰 Keychain `AfterFirstUnlockThisDeviceOnly`, 해제 때 토큰 취소·구글 일정과 제목 근거 삭제, 저장소 파일 보호(`completeUntilFirstUserAuthentication`), iCloud 동기화 스냅샷에서 일정 제외, 별도 백업에는 일정이 포함될 수 있음.
 - 대조 중 체류 판정 근거(`식사 일정 '…'`, `캘린더 일정 '…'`)와 개발자 보내기 원본에 일정 제목이 남는 것을 찾아 막았다. 단위(BOKKI-iPhone11): `AlgorithmUpgradeTests` 29건 실패 0(새 시험 포함, `build/validation/GOO1106A01/unit.log`). 앱 Debug 빌드는 시험 실행에 포함. 구조 지표 통과.
 - 공개 방침 반영(푸시), 구글 콘솔 재제출·메일 회신, 시연 영상 촬영은 하지 않았다.
+
+## GOO1106A02 구글 OAuth 시연 영상 (2026-11-06)
+- 대표가 아이폰 화면 녹화로 촬영해 YouTube 일부 공개로 올렸다(`aedgk_iv-II`). 로그인 없이 oEmbed로 제목 "BOKKI Plan – Google Calendar (calendar.readonly) OAuth demo"가 읽히고 시청 주소가 HTTP 200을 돌려준다.
+- 영상 내용(동의 화면 범위·일정 표시·판정·해제 장면)은 내려받지 않아 확인하지 않았다.
+- 시뮬레이터 준비(최신 Debug 빌드 설치, 영어 전환)는 했으나 촬영에는 쓰지 않았다. 빌드 로그 `build/validation/GOO1106A02/build.log`.
+- 콘솔 재제출과 메일 회신은 대표가 한다.
+- 콘솔(bokki-plan) 인증 센터: 홈페이지·브랜드·최소 범위는 통과, 방침·앱 기능 두 항목이 반려 상태였다. 데이터 액세스의 데모 YouTube 링크를 `watch?v=aedgk_iv-II`로 바꿔 저장했다("데이터 액세스 변경사항이 저장되었습니다").
+- 콘솔에 등록된 방침 주소는 GitHub가 아니라 `bokkiyaw.com/privacy/plan/`이었다. 사이트 저장소에 "How Google data is protected" 절과 시행일 11월 6일을 넣어 커밋(`c023664`)하고 대표 승인으로 실제 사이트에 배포했다. 공개 페이지에서 두 문구를 읽어 확인했다.
+- 구글 반려 메일 스레드에 회신을 보냈다(받는 주소: Google OAuth 검증 회신 주소, 10:02). 보낸편지함 검색에서 방침 주소가 든 회신을 확인했다. 구글 재검토 결과는 아직 없다.
+
+## WCH1106A01 Watch 앱 반복 충돌 (2026-11-06)
+- 대표가 보낸 충돌 기록 두 개(빌드 278 `…141701`, 280 `…175535`, watchOS 26.6, Watch6,11, 백그라운드 `wcd` 깨움)를 각 아카이브 dSYM으로 기호화했다. 둘 다 `TaptionWatchStableID.ambientAccelerationChunkID` `WatchSyncProtocol.swift:198`(`applyAmbientDrain` ← `refreshAmbientRecording`)의 Swift 넘침 정지였다. arm64_32에서 Int는 32비트라 UInt32 최댓값을 Int로 바꾸는 순간 멈춘다.
+- 수정: `UInt32(exactly:)`로 비교. 64비트 iPhone에서 같은 입력의 ID는 같다(`testAmbientChunkIDKeepsSessionPrefixAndSequenceSuffix`). Watch가 컴파일하는 소스에 같은 변환이 다시 들어오면 실패하는 시험을 넣었다(첫 실행에서 내 주석 문구를 잡아 고쳤다).
+- 시험: `WatchSensorQueryPlanTests` 통과, watchOS Debug 빌드 성공(서명 끔, `watch-build.log`), 전체 단위 시험은 아래 HLT1106A01 실행에 포함.
+- 함께 발견: Watch에서 `ambientAccelerationSequence`는 마이크로초 순번이라 기준 시각 뒤 약 35분이 넘으면 nil을 돌려 가속도 보관 표본이 더 쌓이지 않는다(멈추지는 않음). 고치지 않았다.
+- 시계 페이스에 위젯이 안 나오는 원인은 여전히 모른다. 283 산출물의 위젯 번들 ID·확장 지점·앱 그룹·프로비저닝·지원 크기는 정상이고 위젯 충돌 기록은 없다(대표 확인).
+- 실기기 미확인: 다음 빌드에서 Watch 충돌 기록이 더 생기지 않는지.
+
+## HLT1106A01 새 설치는 설치 시각부터 건강 기록 (2026-11-06)
+- `HealthRecordingStart`: 첫 실행에서 저장소를 읽은 직후 한 번 정한다(기록 없음→그 시각, 기록 있음→제한 없음). 과거 가져오기 시작, 앵커 증분 조회 조건, 활동 요약 시작, 직접 조회(운동·수면·걸음·칼로리 합계)를 그 시각 이후로 좁혔다.
+- 단위 시험: `HealthRecordingStartTests` 2건. 시험 앱이 첫 실행에서 기준선을 정해 기존 과거 표본 시험 3건이 잘려 실패했고, `HealthKitIntegrationTests`가 시험 동안 기준선을 비우게 고쳐 통과했다.
+- 전체 단위 시험(BOKKI-iPhone11 시뮬레이터, 병렬 끔): 2,076건 실패 0, 건너뜀 17(`build/validation/HLT1106A01/unit-full2.xcresult`). 구조 지표 기준선 통과.
+- 실기기 미확인: 새로 설치한 기기에서 설치 전 건강 기록이 안 들어오는지, 기존 기기 기록이 그대로인지.
