@@ -59,29 +59,10 @@ enum ConfirmedSleepSpanEditor {
         adding: [TimeSpan] = []
     ) -> [TimeSpan] {
         let cuts = normalized(removing)
-        let remaining = normalized(existing).flatMap { span in
-            cuts.reduce(into: [span]) { pieces, cut in
-                pieces = pieces.flatMap { subtracting($0, by: cut) }
-            }
+        let remaining = normalized(existing).flatMap {
+            ActualIntervalMergeEngine.subtracting(cuts, from: $0)
         }
         return normalized(remaining + adding)
-    }
-
-    private static func subtracting(
-        _ span: TimeSpan,
-        by cut: TimeSpan
-    ) -> [TimeSpan] {
-        guard let overlap = span.intersection(with: cut) else {
-            return [span]
-        }
-        var result: [TimeSpan] = []
-        if span.start < overlap.start {
-            result.append(TimeSpan(start: span.start, end: overlap.start))
-        }
-        if overlap.end < span.end {
-            result.append(TimeSpan(start: overlap.end, end: span.end))
-        }
-        return result
     }
 
     private static func normalized(_ spans: [TimeSpan]) -> [TimeSpan] {

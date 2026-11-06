@@ -221,7 +221,7 @@ struct FloorEstimator: Sendable {
     private static let levelTolerance = 0.5
 
     private static func hasFootEvidence(from: SensorReading, to: SensorReading) -> Bool {
-        if to.motion == .walking || to.motion == .running || from.motion == .walking || from.motion == .running { return true }
+        if to.motion.isOnFoot || from.motion.isOnFoot { return true }
         if let start = from.stepCount, let end = to.stepCount, end != start { return true }
         return (from.floorsAscended ?? 0) != (to.floorsAscended ?? 0)
             || (from.floorsDescended ?? 0) != (to.floorsDescended ?? 0)

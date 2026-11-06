@@ -454,6 +454,9 @@ enum MotionKind: String, Codable, CaseIterable, Sendable {
             false
         }
     }
+
+    /// 걷기·달리기. 걸음·층 이동 근거로 쓴다.
+    var isOnFoot: Bool { self == .walking || self == .running }
 }
 
 enum TrackingKind: String, Codable, CaseIterable, Hashable, Sendable {

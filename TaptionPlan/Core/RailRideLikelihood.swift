@@ -120,7 +120,7 @@ enum RailRideLikelihood {
                 close(at: last.reading.timestamp)
             }
             previous = item
-            if item.reading.motion == .walking || item.reading.motion == .running {
+            if item.reading.motion.isOnFoot {
                 close(at: time)
                 continue
             }
@@ -225,7 +225,7 @@ enum RailRideLikelihood {
 
     /// 지하철은 걸어서 타고 내린다. 끊김 없이 차량 속도로 닿았으면 도로 쪽 근거다.
     private static func access(_ readings: [SensorReading]) -> Access {
-        if readings.contains(where: { $0.motion == .walking || $0.motion == .running }) { return .onFoot }
+        if readings.contains(where: { $0.motion.isOnFoot }) { return .onFoot }
         let fixes = readings.filter(hasFix)
         guard fixes.count >= 2, fixes.count == readings.count else { return .unknown }
         let fast = fixes.compactMap(\.speedMetersPerSecond).filter { $0 >= passingSpeed }.count
@@ -234,7 +234,7 @@ enum RailRideLikelihood {
 
     /// 차 안의 기압은 환기·터널로 흔들리므로 걷는 동안의 수직 이동만 센다. 같은 기압계 세션 안에서만 비교한다.
     private static func hasVerticalAccess(_ readings: [SensorReading]) -> Bool {
-        let foot = readings.filter { ($0.motion == .walking || $0.motion == .running) && $0.pressureKilopascals != nil }
+        let foot = readings.filter { $0.motion.isOnFoot && $0.pressureKilopascals != nil }
         let sessions = Dictionary(grouping: foot, by: { $0.altimeterSessionID?.uuidString ?? "" })
         return sessions.values.contains { group in
             let values = group.compactMap(\.pressureKilopascals)

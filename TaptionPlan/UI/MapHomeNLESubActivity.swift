@@ -268,9 +268,8 @@ enum NLESubActivityEngine {
     }
 
     static func restCandidateRuns(_ readings: [SensorReading], dayStart: Date) -> [Range<Int>] {
-        let moving: Set<MotionKind> = [.walking, .running, .cycling, .automotive]
         let ordered = readings
-            .filter { $0.screenIsOn == true && !moving.contains($0.motion) }
+            .filter { $0.screenIsOn == true && !$0.motion.isMovement }
             .sorted { $0.timestamp < $1.timestamp }
         var spans: [(start: Date, end: Date)] = []
         for reading in ordered {

@@ -757,7 +757,7 @@ enum StationaryContextActualEngine {
             stationarySpans.compactMap { $0.intersection(with: inside) },
             mergeGap: 60
         )
-        .flatMap { subtracting(covered, from: $0) }
+        .flatMap { ActualIntervalMergeEngine.subtracting(covered, from: $0) }
         .filter { $0.duration >= minimumDuration }
         .map {
             PlaceStay(
@@ -897,29 +897,6 @@ enum StationaryContextActualEngine {
             > max(anchor.radiusMeters, indoorDriftRadiusMeters)
     }
 
-    /// `covered` 는 시작 시각 순으로 정렬되고 서로 겹치지 않는다.
-    private static func subtracting(
-        _ covered: [TimeSpan],
-        from span: TimeSpan
-    ) -> [TimeSpan] {
-        var remaining: [TimeSpan] = []
-        var cursor = span.start
-        for block in covered where block.end > span.start
-            && block.start < span.end {
-            if block.start > cursor {
-                remaining.append(
-                    TimeSpan(start: cursor, end: min(block.start, span.end))
-                )
-            }
-            cursor = max(cursor, block.end)
-            if cursor >= span.end { break }
-        }
-        if cursor < span.end {
-            remaining.append(TimeSpan(start: cursor, end: span.end))
-        }
-        return remaining.filter { $0.duration > 0 }
-    }
-
     /// 문맥 기록이 덮은 구간의 옛 "정지·휴식" 기록을 같은 갱신에서 걷어낸다.
     static func suppressingStationaryMotion(
         _ actuals: [ActualRecord],
@@ -948,25 +925,7 @@ enum StationaryContextActualEngine {
             String(Int(span.start.timeIntervalSinceReferenceDate.rounded())),
             String(Int(span.end.timeIntervalSinceReferenceDate.rounded())),
         ].joined(separator: "|")
-        var hash: UInt64 = 14_695_981_039_346_656_037
-        var bytes = [UInt8](repeating: 0, count: 16)
-        for byte in key.utf8 {
-            hash ^= UInt64(byte)
-            hash = hash &* 1_099_511_628_211
-        }
-        for index in bytes.indices {
-            hash ^= UInt64(index + 1) * 0x9E37_79B9
-            hash = hash &* 1_099_511_628_211
-            bytes[index] = UInt8(truncatingIfNeeded: hash >> ((index % 8) * 8))
-        }
-        bytes[6] = (bytes[6] & 0x0F) | 0x50
-        bytes[8] = (bytes[8] & 0x3F) | 0x80
-        return UUID(uuid: (
-            bytes[0], bytes[1], bytes[2], bytes[3],
-            bytes[4], bytes[5], bytes[6], bytes[7],
-            bytes[8], bytes[9], bytes[10], bytes[11],
-            bytes[12], bytes[13], bytes[14], bytes[15]
-        ))
+        return StableRecordID.goldenMixedFNV(key)
     }
 }
 
@@ -1155,22 +1114,6 @@ enum RestaurantMealActualEngine {
     }
 
     private static func stableUUID(_ key: String) -> UUID {
-        var hash: UInt64 = 14_695_981_039_346_656_037
-        var bytes = [UInt8](repeating: 0, count: 16)
-        for byte in key.utf8 {
-            hash = (hash ^ UInt64(byte)) &* 1_099_511_628_211
-        }
-        for index in bytes.indices {
-            hash = (hash ^ UInt64(index + 1)) &* 1_099_511_628_211
-            bytes[index] = UInt8(truncatingIfNeeded: hash >> ((index % 8) * 8))
-        }
-        bytes[6] = (bytes[6] & 0x0F) | 0x50
-        bytes[8] = (bytes[8] & 0x3F) | 0x80
-        return UUID(uuid: (
-            bytes[0], bytes[1], bytes[2], bytes[3],
-            bytes[4], bytes[5], bytes[6], bytes[7],
-            bytes[8], bytes[9], bytes[10], bytes[11],
-            bytes[12], bytes[13], bytes[14], bytes[15]
-        ))
+        StableRecordID.indexMixedFNV(key)
     }
 }

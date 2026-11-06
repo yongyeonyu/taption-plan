@@ -789,7 +789,7 @@ enum TrackingSessionPolicy {
         confidence: ConfidenceLevel,
         sustainedFor duration: TimeInterval
     ) -> Bool {
-        (motion == .walking || motion == .running)
+        motion.isOnFoot
             && confidence != .low
             && duration >= automaticStartDuration
     }
