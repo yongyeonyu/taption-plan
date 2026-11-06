@@ -1658,3 +1658,8 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
 ## TFB1106A07 · 빌드 289 내부 TestFlight (2026-11-06)
 - 포함: RFT1106A01(중복 정리), REV1106A01(잠긴 근무가 휴식을 덮던 문제, 재생 방향 창), DOC1106A01(문서 정리).
 - 결과: `release.sh --yes --request-id TFB1106A07` 종료 0, 처리 `VALID`, `TP Taption Plan 내부 테스트` 그룹 연결, 테스터 1명 노출. 아카이브 네 번들 `CFBundleVersion` 289 확인. 보고서 `build/validation/TFB1106A07/testflight-report.json`.
+
+## PLY1106A01 · 회사 재생 동작·말풍선, 상세 묶기, 사용자 분류 메뉴·아이콘 (2026-11-06)
+- 변경: `railAction`이 재생 시각에 걸친 상세만 본다. 대분류 줄의 상세 이름 '휴식'도 휴식 자세(업무→회사에서 휴식). 말풍선 문구: 회사에서 업무/걷기/휴식, 학교에서 학습/휴식. 클립 편집 상세 줄은 1분 이내로 맞닿은 같은 상세(제목·행동 같음, 같은 대분류 구간)를 한 클립으로 묶고 원본 ID를 모두 지닌다. 분류 메뉴는 사용자 분류를 "내가 만든 분류" 절로 나눈다. 분류 추가 화면은 메뉴와 같은 고양이 그림(`NLECategoryIcon`)으로 동작을 고르고 기호는 자동, 메뉴도 고른 동작(`MapHomeCustomAnimations`)을 쓴다. 번역 7개 × 12개 언어 추가(`check.py` 실패 0, `generate.py`).
+- 시험(실기기 iPhone 18 Pro Max, with-device-lock, 병렬 끔): 1차 `testRailActionUsesOnlyDetailAtPlaybackMinute` 실패(휴식이 업무 자세) → 상세 이름 휴식 처리 추가. 2차 `MapHomeStickmanTests`·`NLETrackTests`·`NLESubActivityTests`·`TimeScaleTests`·`MapHomeLiveMapTests`·`FeatureEngineTests` 1,119건 통과·건너뜀 5·실패 0(`build/validation/PLY1106A01/unit2.xcresult`). 구조 검사 통과.
+- 남은 것: 실기기 11-06 재생(회사 시간 업무·휴식·걷기 전환, 말풍선), 클립 편집 걷기 묶음, 분류 메뉴·추가 화면 확인(대표).

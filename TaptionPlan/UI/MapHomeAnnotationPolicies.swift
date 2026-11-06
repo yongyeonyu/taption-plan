@@ -290,15 +290,7 @@ enum MapHomeCustomAnimations {
         var next: [String: MapHomeStickmanAction] = [:]
         for category in categories {
             guard let animation = category.animation else { continue }
-            next["custom:\(category.id.uuidString)"] = switch animation {
-            case .mapReading: .mapReading
-            case .walkInPlace: .walkInPlace
-            case .stretching: .health
-            case .grooming: .activity
-            case .yarnPlay: .hobby
-            case .catWheel: .exercise
-            case .puzzled: .unconfirmed
-            }
+            next["custom:\(category.id.uuidString)"] = action(for: animation)
         }
         let registered = next
         let changed = actions.withLock { current in
@@ -306,6 +298,23 @@ enum MapHomeCustomAnimations {
             return current != registered
         }
         if changed { MapHomeStickmanActionResolver.clearActionCache() }
+    }
+
+    static func action(for animation: MapUserActivityAnimation) -> MapHomeStickmanAction {
+        switch animation {
+        case .mapReading: .mapReading
+        case .walkInPlace: .walkInPlace
+        case .stretching: .health
+        case .grooming: .activity
+        case .yarnPlay: .hobby
+        case .catWheel: .exercise
+        case .puzzled: .unconfirmed
+        }
+    }
+
+    /// 분류 메뉴에 나올 고양이. 동작을 고르지 않았으면 이름으로 고른다.
+    static func action(title: String, animation: MapUserActivityAnimation?) -> MapHomeStickmanAction {
+        animation.map(action(for:)) ?? MapHomeStickmanActionResolver.action(for: "custom:", label: title)
     }
 
     static func action(categoryID: String) -> MapHomeStickmanAction? {

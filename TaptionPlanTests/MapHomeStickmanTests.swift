@@ -100,6 +100,32 @@ final class MapHomeStickmanTests: XCTestCase {
         XCTAssertNil(MapHomeStickmanActionResolver.railAction(segment: nil, details: []))
     }
 
+    /// 근무 구간의 1분짜리 걷기가 근무 내내 화랑이를 걷게 하지 않는다. 그 시각의 상세만 본다(PLY1106A01).
+    func testRailActionUsesOnlyDetailAtPlaybackMinute() {
+        let work = MapHomeTimeRailSegment(startMinute: 600, endMinute: 1_000, categoryID: "work", title: "업무")
+        let walk = MapHomeSectionDetail(id: UUID(), title: "걷기", categoryID: "work", behavior: "walking", startMinute: 610, endMinute: 611, provenance: nil)
+        let rest = MapHomeSectionDetail(id: UUID(), title: "휴식", categoryID: "work", behavior: "work", startMinute: 775, endMinute: 784, provenance: nil)
+        func action(_ minute: Int) -> MapHomeStickmanAction? {
+            MapHomeStickmanActionResolver.railAction(segment: work, details: [walk, rest], minute: minute)
+        }
+        XCTAssertEqual(action(610), .workWalking)
+        XCTAssertEqual(action(780), .restCroissant)
+        XCTAssertEqual(action(700), MapHomeStickmanActionResolver.action(for: "work", label: ""))
+        XCTAssertNotEqual(action(700), .workWalking)
+        XCTAssertEqual(MapHomeStickmanAction.workWalking.title, "회사에서 걷기")
+        XCTAssertEqual(MapHomeStickmanAction.restCroissant.title, "회사에서 휴식")
+    }
+
+    /// 사용자 분류에 고른 화랑이 동작이 분류 메뉴 그림에도 나온다.
+    func testCustomCategoryMenuUsesChosenAnimation() {
+        let category = MapUserActivityCategory(id: UUID(), title: "비행기", systemImage: "tag.fill", hex: "#29A383", animation: .yarnPlay)
+        MapHomeCustomAnimations.register([category])
+        defer { MapHomeCustomAnimations.register([]) }
+        XCTAssertEqual(MapHomeSidebarMajorCategory.custom(category).stickmanAction, .hobby)
+        XCTAssertEqual(MapHomeCustomAnimations.action(title: "비행기", animation: .yarnPlay), .hobby)
+        XCTAssertEqual(MapHomeCustomAnimations.action(title: "비행기", animation: nil), MapHomeStickmanActionResolver.action(for: "custom:", label: "비행기"))
+    }
+
     /// Watch 위젯 그림을 만든다. `TAPTION_WATCH_CATS=<폴더>`일 때만 돈다(WCH1105A03).
     func testWriteWatchCatSpritesWhenRequested() throws {
         guard let root = ProcessInfo.processInfo.environment["TAPTION_WATCH_CATS"], !root.isEmpty else {

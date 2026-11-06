@@ -196,10 +196,52 @@ extension MapHomeNLEClipEditor {
         selectedSubClipID = id
     }
 
+    /// 기본 대분류 뒤에 사용자가 만든 분류를 따로 묶는다. 메뉴가 위로 열려 맨 위에 와도 기본 분류와 섞여 보이지 않는다.
+    @ViewBuilder
+    func categoryButtons(
+        _ categories: [MapHomeSidebarMajorCategory],
+        apply: @escaping (MapHomeSidebarMajorCategory) -> Void
+    ) -> some View {
+        let custom = categories.filter { $0.id.hasPrefix("custom:") }
+        ForEach(categories.filter { !$0.id.hasPrefix("custom:") }) { categoryButton($0, apply: apply) }
+        if !custom.isEmpty {
+            Section(language.text("내가 만든 분류", "My categories")) {
+                ForEach(custom) { categoryButton($0, apply: apply) }
+            }
+        }
+    }
+
+    private func categoryButton(
+        _ category: MapHomeSidebarMajorCategory,
+        apply: @escaping (MapHomeSidebarMajorCategory) -> Void
+    ) -> some View {
+        Button { apply(category) } label: {
+            Label {
+                Text(category.localizedTitle(language))
+            } icon: {
+                if let icon = categoryIcon(category.stickmanAction) {
+                    Image(uiImage: icon)
+                } else {
+                    Image(systemName: category.systemImage)
+                }
+            }
+        }
+    }
+
     /// 메뉴에 넣을 고양이 그림. 메뉴는 움직이는 뷰를 그리지 못해 한 장으로 구워 둔다.
     func categoryIcon(_ action: MapHomeStickmanAction) -> UIImage? {
-        let key = "\(action.rawValue)|\(model.selectedCatCoat)"
-        if let cached = Self.categoryIconCache[key] { return cached }
+        NLECategoryIcon.image(action, coat: model.selectedCatCoat)
+    }
+}
+
+/// 분류 메뉴와 분류 추가 화면이 같은 고양이 그림을 쓰게 한 곳에서 굽는다.
+@MainActor
+enum NLECategoryIcon {
+    private static var cache: [String: UIImage] = [:]
+
+    static func image(_ action: MapHomeStickmanAction, coat: CatCoat) -> UIImage? {
+        let key = "\(action.rawValue)|\(coat)"
+        if let cached = cache[key] { return cached }
         let renderer = ImageRenderer(content:
             HwarangSceneView(
                 scene: action.hwarangScene,
@@ -213,17 +255,7 @@ extension MapHomeNLEClipEditor {
         )
         renderer.scale = 3
         let image = renderer.uiImage?.withRenderingMode(.alwaysOriginal)
-        Self.categoryIconCache[key] = image
+        cache[key] = image
         return image
     }
-
-    private static var categoryIconCache: [String: UIImage] {
-        get { NLECategoryIconCache.values }
-        set { NLECategoryIconCache.values = newValue }
-    }
-}
-
-@MainActor
-private enum NLECategoryIconCache {
-    static var values: [String: UIImage] = [:]
 }

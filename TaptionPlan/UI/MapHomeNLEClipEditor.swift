@@ -540,21 +540,9 @@ struct MapHomeNLEClipEditor: View {
 
     @ViewBuilder
     private var categoryMenuItems: some View {
-        ForEach(categoryOptions) { category in
-            Button {
-                applyCategory(category)
-                quickMenuMinute = nil
-            } label: {
-                Label {
-                    Text(category.localizedTitle(language))
-                } icon: {
-                    if let icon = categoryIcon(category.stickmanAction) {
-                        Image(uiImage: icon)
-                    } else {
-                        Image(systemName: category.systemImage)
-                    }
-                }
-            }
+        categoryButtons(categoryOptions) { category in
+            applyCategory(category)
+            quickMenuMinute = nil
         }
         // 고른 클립 하나가 아니라 나뉜 클립 전부를 바꾸는 문. 같은 메뉴에 두어
         // '하나 고치기'와 '전체 덮기'를 같은 자리에서 고르게 한다.

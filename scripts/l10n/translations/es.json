@@ -2794,6 +2794,13 @@
 "고른 하나만 카운터에 쓰여요. 적은 금액은 나머지 칸에 환산해 보여 줘요.|Only the selected one runs the counter. Other tabs show the converted amount.": "Solo la opción elegida usa el contador. Las otras pestañas muestran el importe convertido.",
 "활동 칼로리|Active calories": "Calorías activas",
 "건강 앱의 활동 에너지예요.|Active energy from the Health app.": "Energía activa de la app Salud.",
-"이 날은 건강 앱 값이 없어 걸음 수와 몸무게로 추정했어요. 몸무게가 없으면 65kg로 계산해요.|No Health data for this day, so this is estimated from steps and weight (65 kg if no weight is set).": "No hay datos de Salud este día, así que se estima con los pasos y el peso (65 kg si no hay peso)."
+"이 날은 건강 앱 값이 없어 걸음 수와 몸무게로 추정했어요. 몸무게가 없으면 65kg로 계산해요.|No Health data for this day, so this is estimated from steps and weight (65 kg if no weight is set).": "No hay datos de Salud este día, así que se estima con los pasos y el peso (65 kg si no hay peso).",
+"내가 만든 분류|My categories": "Mis categorías",
+"이름에 맞는 동작|Match the name": "Según el nombre",
+"학교에서 학습|Studying at school": "Estudiando en la escuela",
+"학교에서 휴식|Break at school": "Descanso en la escuela",
+"회사에서 걷기|Walking at the office": "Caminando en la oficina",
+"회사에서 업무|Working at the office": "Trabajando en la oficina",
+"회사에서 휴식|Break at the office": "Descanso en la oficina"
 }
 }

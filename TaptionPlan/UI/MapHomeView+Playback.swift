@@ -813,7 +813,8 @@ extension MapHomeView {
         // 대분류 줄이 정본이다. 식사·업무처럼 머무는 대분류면 근처 걸음 표본이나 다른 기록이 동작을 바꾸지 못한다.
         if let action = MapHomeStickmanActionResolver.railAction(
             segment: MapHomeTimeRailSegmentEngine.segment(at: walkMinute, in: timeRailSegments),
-            details: sectionDetails(at: walkMinute)
+            details: sectionDetails(at: walkMinute),
+            minute: walkMinute
         ) {
             return action
         }

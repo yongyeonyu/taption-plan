@@ -172,11 +172,47 @@ extension MapHomeNLEClipEditor {
             )
         }
         return NLETrack(
-            clips: clips,
+            clips: mergingTouching(clips),
             rangeStartMinute: shift,
             rangeEndMinute: shift + NLETrack.dayMinutes,
             fillsGaps: false
         )
+    }
+
+    /// 같은 상세가 맞닿거나 겹치면 한 클립으로 묶는다. 움직임 센서가 1~2분마다 끊어 저장한 걷기와
+    /// 그 틈을 메운 기록, 등록 지점 안 걷기가 따로 그려지면 너무 잘게 나뉜다(PLY1106A01).
+    /// 묶은 클립은 원본 기록 ID를 모두 들고 있어 고치면 함께 바뀐다.
+    static func mergingTouching(_ clips: [NLEClip], tolerance: Int = 1) -> [NLEClip] {
+        var result: [NLEClip] = []
+        for clip in clips.sorted(by: { ($0.startMinute, $0.endMinute) < ($1.startMinute, $1.endMinute) }) {
+            guard let last = result.last,
+                  last.option.title == clip.option.title,
+                  last.option.behavior == clip.option.behavior,
+                  last.parent.startMinute == clip.parent.startMinute,
+                  last.parent.endMinute == clip.parent.endMinute,
+                  clip.startMinute <= last.endMinute + tolerance else {
+                result.append(clip)
+                continue
+            }
+            let end = max(last.endMinute, clip.endMinute)
+            var seen = Set<UUID>()
+            let parent = NLEClipParent(
+                startMinute: last.parent.startMinute,
+                endMinute: last.parent.endMinute,
+                sourceIDs: (last.parent.sourceIDs + clip.parent.sourceIDs).filter { seen.insert($0).inserted },
+                option: last.parent.option,
+                fillOption: last.parent.fillOption
+            )
+            result[result.count - 1] = NLEClip(
+                id: last.id,
+                option: last.option,
+                startMinute: last.startMinute,
+                endMinute: end,
+                parent: parent,
+                origin: NLEClipOrigin(startMinute: last.startMinute, endMinute: end, option: last.option)
+            )
+        }
+        return result
     }
 
     static func option(

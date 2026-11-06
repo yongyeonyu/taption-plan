@@ -285,8 +285,8 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
         case .video: return t("영상 보기", "Watching videos")
         case .petCare: return t("반려동물 돌보기", "Pet care")
         case .computer: return t("업무", "Work")
-        case .company: return t("회사 업무", "Office work")
-        case .school: return t("학교 학습", "School")
+        case .company: return t("회사에서 업무", "Working at the office")
+        case .school: return t("학교에서 학습", "Studying at school")
         case .reading: return t("수업", "Class")
         case .hobby: return t("취미", "Hobby")
         case .sleeping: return t("수면", "Sleep")
@@ -294,8 +294,8 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
         case .recovery: return t("회복", "Recovery")
         case .medication: return t("투약", "Medication")
         case .restStarfish: return t("휴식", "Rest")
-        case .restCroissant: return t("업무 휴식", "Work break")
-        case .restDonut: return t("수업 휴식", "Study break")
+        case .restCroissant: return t("회사에서 휴식", "Break at the office")
+        case .restDonut: return t("학교에서 휴식", "Break at school")
         case .restLoaf: return t("취미 휴식", "Hobby break")
         case .restBox: return t("집에서 휴식", "Rest at home")
         case .mapReading: return t("지도 보기", "Reading a map")
@@ -303,7 +303,7 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
         case .dishes: return t("설거지", "Dishes")
         case .coffee: return t("커피·티타임", "Coffee & tea")
         case .walkInPlace: return t("제자리 걷기", "Walking in place")
-        case .workWalking: return t("업무 걷기", "Walking at work")
+        case .workWalking: return t("회사에서 걷기", "Walking at the office")
         case .remSleep: return t("REM 수면", "REM sleep")
         case .movement: return t("이동", "Movement")
         case .eating: return t("식사", "Meal")
@@ -586,11 +586,14 @@ enum MapHomeStickmanActionResolver {
     /// 그 시각 대분류와 상세 활동으로 정한 동작. 이동·미확인은 위치·센서 판정에 맡긴다.
     static func railAction(
         segment: MapHomeTimeRailSegment?,
-        details: [MapHomeSectionDetail]
+        details: [MapHomeSectionDetail],
+        minute: Int? = nil
     ) -> MapHomeStickmanAction? {
         guard let segment, !["movement", "activity", "unconfirmed"].contains(segment.categoryID) else { return nil }
+        // 그 시각에 걸친 상세만 본다. 구간 전체에서 고르면 1분짜리 걷기가 근무 내내 이겼다(PLY1106A01).
+        let current = minute.map { minute in details.filter { $0.startMinute <= minute && minute < $0.endMinute } } ?? details
         // 가장 짧은 상세가 가장 구체적이다.
-        let detail = details.min { ($0.endMinute - $0.startMinute) < ($1.endMinute - $1.startMinute) }
+        let detail = current.min { ($0.endMinute - $0.startMinute) < ($1.endMinute - $1.startMinute) }
         return action(for: segment.categoryID, label: detail?.title ?? "")
     }
 
@@ -612,6 +615,8 @@ enum MapHomeStickmanActionResolver {
         for categoryID: String,
         label: String
     ) -> MapHomeStickmanAction {
+        // 사용자 분류에 고른 화랑이 동작이 있으면 메뉴·재생 모두 그 동작이다.
+        if let custom = MapHomeCustomAnimations.action(categoryID: categoryID) { return custom }
         let category = categoryID.lowercased()
         let categoryRoot = category.split(separator: ".", maxSplits: 1).first.map(String.init) ?? category
         let value = "\(category) \(label)".lowercased()
@@ -638,6 +643,8 @@ enum MapHomeStickmanActionResolver {
             ("movement.cycling", .cycling)
         ]
         if let mapping = detailMappings.first(where: { category == $0.0 }) { return mapping.1 }
+        // 대분류 줄의 상세 이름 '휴식'도 기록과 같은 휴식 자세다(PLY1106A01).
+        if let rest = restAction(categoryRoot: categoryRoot, title: label, behavior: nil) { return rest }
         if let walking = workWalkingAction(categoryRoot: categoryRoot, title: label, behavior: nil) { return walking }
         if categoryRoot == "company" || value.contains("company") { return .company }
         if categoryRoot == "school" || value.contains("school") { return .school }

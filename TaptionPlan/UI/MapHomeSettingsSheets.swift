@@ -68,17 +68,21 @@ struct MapHomeCategoryAddSheet: View {
                     .stroke(Color.tpLine.opacity(0.7), lineWidth: 1)
             }
 
+            // 분류 메뉴에 나올 고양이 그림을 그대로 보여 주고 고른다. 기호 아이콘은 겹치지 않게 알아서 붙인다.
             HStack(spacing: 12) {
-                Picker(language.text("아이콘", "Icon"), selection: $systemImage) {
-                    ForEach(iconNames, id: \.self) { name in
-                        Image(systemName: name).tag(name)
+                Menu {
+                    catChoice(nil)
+                    ForEach(MapUserActivityAnimation.allCases) { catChoice($0) }
+                } label: {
+                    HStack(spacing: 8) {
+                        catImage(animation)
+                        Text(catTitle(animation)).lineLimit(1).minimumScaleFactor(0.75)
                     }
+                    .foregroundStyle(Color.tpInk)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .background(Color.tpSurface, in: Capsule())
                 }
-                .pickerStyle(.menu)
-                .disabled(iconNames.isEmpty)
-                .frame(maxWidth: .infinity)
-                .frame(height: 44)
-                .background(Color.tpSurface, in: Capsule())
 
                 ColorPicker(
                     language.text("색상", "Color"),
@@ -90,15 +94,6 @@ struct MapHomeCategoryAddSheet: View {
                 .frame(height: 44)
                 .background(Color.tpSurface, in: Capsule())
             }
-
-            Picker(language.text("화랑이 동작", "Cat animation"), selection: $animation) {
-                Text(language.text("기본 동작", "Default")).tag(MapUserActivityAnimation?.none)
-                ForEach(MapUserActivityAnimation.allCases) { Text($0.title).tag(MapUserActivityAnimation?.some($0)) }
-            }
-            .pickerStyle(.menu)
-            .frame(maxWidth: .infinity)
-            .frame(height: 44)
-            .background(Color.tpSurface, in: Capsule())
 
             Button(action: save) {
                 Text(editing == nil ? language.text("추가", "Add") : language.text("저장", "Save"))
@@ -152,6 +147,24 @@ struct MapHomeCategoryAddSheet: View {
             }
         } message: {
             Text(language.text("이미 남긴 기록의 이름은 그대로 남습니다.", "Existing records keep this name."))
+        }
+    }
+
+    private func catTitle(_ value: MapUserActivityAnimation?) -> String {
+        value?.title ?? language.text("이름에 맞는 동작", "Match the name")
+    }
+
+    @ViewBuilder
+    private func catImage(_ value: MapUserActivityAnimation?) -> some View {
+        let action = MapHomeCustomAnimations.action(title: trimmedTitle, animation: value)
+        if let image = NLECategoryIcon.image(action, coat: model.selectedCatCoat) {
+            Image(uiImage: image)
+        }
+    }
+
+    private func catChoice(_ value: MapUserActivityAnimation?) -> some View {
+        Button { animation = value } label: {
+            Label { Text(catTitle(value)) } icon: { catImage(value) }
         }
     }
 

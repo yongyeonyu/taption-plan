@@ -227,6 +227,22 @@ final class NLETrackTests: XCTestCase {
     }
 
     /// 상세활동 줄은 하루 전체를 담고, 각 기록은 자기 원본 구간을 울타리로 삼는다.
+    /// 맞닿은 같은 상세는 한 클립으로 묶고 원본 ID를 모두 지닌다. 사이가 벌어지거나 다른 상세는 묶지 않는다(PLY1106A01).
+    func testSubTrackMergesTouchingSameDetails() {
+        let segments = [MapHomeTimeRailSegment(startMinute: 600, endMinute: 900, categoryID: "work", title: "업무")]
+        func walk(_ start: Int, _ end: Int) -> MapHomeSectionDetail {
+            MapHomeSectionDetail(id: UUID(), title: "걷기", categoryID: "movement", behavior: "walking", startMinute: start, endMinute: end)
+        }
+        let pieces = [walk(787, 788), walk(788, 789), walk(789, 791), walk(791, 797), walk(797, 799), walk(830, 832)]
+        let rest = MapHomeSectionDetail(id: UUID(), title: "휴식", categoryID: "work", behavior: "work", startMinute: 799, endMinute: 805)
+        let clips = MapHomeNLEClipEditor.makeSubTrack(details: pieces + [rest], segments: segments).clips
+        let walks = clips.filter { $0.option.behavior == "walking" }
+        XCTAssertEqual(walks.map(\.startMinute), [787, 830])
+        XCTAssertEqual(walks.map(\.endMinute), [799, 832])
+        XCTAssertEqual(Set(walks[0].parent.sourceIDs), Set(pieces.prefix(5).map(\.id)))
+        XCTAssertEqual(clips.filter { $0.option.behavior != "walking" }.count, 1)
+    }
+
     func testDetailTrackSpansTheDayAndClampsToItsOriginalSegment() {
         let segments = [
             segment(540, 660, "hobby", sources: [UUID()]),
