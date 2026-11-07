@@ -122,6 +122,7 @@
 		A5B1102A0200000000000021 /* AppModel+ExternalData.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000020 /* AppModel+ExternalData.swift */; };
 		A5B1102A020000000000001F /* AppModel+FrequentPlaces.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000001E /* AppModel+FrequentPlaces.swift */; };
 		A5B1102A020000000000001D /* AppModel+Lifecycle.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000001C /* AppModel+Lifecycle.swift */; };
+		A10000000000000003C90003 /* AppModel+ClassificationBackfill.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000003C90003 /* AppModel+ClassificationBackfill.swift */; };
 		A5B1102A020000000000001B /* AppModel+LocationCollection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000001A /* AppModel+LocationCollection.swift */; };
 		A5B1102A0200000000000019 /* AppModel+MapEditing.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000018 /* AppModel+MapEditing.swift */; };
 		A5B1102A0200000000000017 /* AppModel+Memos.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000016 /* AppModel+Memos.swift */; };
@@ -355,8 +356,12 @@
 		A40000000000000000000002 /* TaptionRouteEngine in Frameworks */ = {isa = PBXBuildFile; productRef = X40000000000000000000004 /* TaptionRouteEngine */; };
 		A40000000000000000000003 /* TaptionActivityEngineAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F40000000000000000000001 /* TaptionActivityEngineAdapter.swift */; };
 		AC1A55000000000000000001 /* ClassifierAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC1A55000000000000000001 /* ClassifierAdapter.swift */; };
+		A10000000000000003C90002 /* ClassificationBackfill.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000003C90002 /* ClassificationBackfill.swift */; };
+		A10000000000000003C90001 /* AppleWatchNapPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000003C90001 /* AppleWatchNapPolicy.swift */; };
 		A40000000000000000000004 /* TaptionRouteEngineAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F40000000000000000000002 /* TaptionRouteEngineAdapter.swift */; };
 		A40000000000000000000005 /* TaptionActivityEngineAdapterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F40000000000000000000003 /* TaptionActivityEngineAdapterTests.swift */; };
+		A10000000000000003C90005 /* ClassificationBackfillTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000003C90005 /* ClassificationBackfillTests.swift */; };
+		A10000000000000003C90004 /* AppleWatchNapPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000003C90004 /* AppleWatchNapPolicyTests.swift */; };
 		A40000000000000000000006 /* TaptionRouteEngineAdapterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F40000000000000000000004 /* TaptionRouteEngineAdapterTests.swift */; };
 		A40000000000000000000007 /* SQLitePlanRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F40000000000000000000005 /* SQLitePlanRepositoryTests.swift */; };
 		A4000000000000000000000D /* TaptionStoreQualityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F40000000000000000000007 /* TaptionStoreQualityTests.swift */; };
@@ -735,6 +740,7 @@
 		F5B1102A0200000000000020 /* AppModel+ExternalData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+ExternalData.swift"; sourceTree = "<group>"; };
 		F5B1102A020000000000001E /* AppModel+FrequentPlaces.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+FrequentPlaces.swift"; sourceTree = "<group>"; };
 		F5B1102A020000000000001C /* AppModel+Lifecycle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Lifecycle.swift"; sourceTree = "<group>"; };
+		F10000000000000003C90003 /* AppModel+ClassificationBackfill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+ClassificationBackfill.swift"; sourceTree = "<group>"; };
 		F5B1102A020000000000001A /* AppModel+LocationCollection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+LocationCollection.swift"; sourceTree = "<group>"; };
 		F5B1102A0200000000000018 /* AppModel+MapEditing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+MapEditing.swift"; sourceTree = "<group>"; };
 		F5B1102A0200000000000016 /* AppModel+Memos.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Memos.swift"; sourceTree = "<group>"; };
@@ -940,8 +946,12 @@
 		F2000000000000000000000E /* DiagnosticsLogSupportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsLogSupportTests.swift; sourceTree = "<group>"; };
 		F40000000000000000000001 /* TaptionActivityEngineAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionActivityEngineAdapter.swift; sourceTree = "<group>"; };
 		FC1A55000000000000000001 /* ClassifierAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassifierAdapter.swift; sourceTree = "<group>"; };
+		F10000000000000003C90002 /* ClassificationBackfill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassificationBackfill.swift; sourceTree = "<group>"; };
+		F10000000000000003C90001 /* AppleWatchNapPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleWatchNapPolicy.swift; sourceTree = "<group>"; };
 		F40000000000000000000002 /* TaptionRouteEngineAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionRouteEngineAdapter.swift; sourceTree = "<group>"; };
 		F40000000000000000000003 /* TaptionActivityEngineAdapterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionActivityEngineAdapterTests.swift; sourceTree = "<group>"; };
+		F10000000000000003C90005 /* ClassificationBackfillTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassificationBackfillTests.swift; sourceTree = "<group>"; };
+		F10000000000000003C90004 /* AppleWatchNapPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleWatchNapPolicyTests.swift; sourceTree = "<group>"; };
 		F40000000000000000000004 /* TaptionRouteEngineAdapterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionRouteEngineAdapterTests.swift; sourceTree = "<group>"; };
 		F40000000000000000000005 /* SQLitePlanRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLitePlanRepositoryTests.swift; sourceTree = "<group>"; };
 		F40000000000000000000007 /* TaptionStoreQualityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionStoreQualityTests.swift; sourceTree = "<group>"; };
@@ -1339,6 +1349,8 @@
 				F2000000000000000000000D /* LocalizationCatalogTests.swift */,
 				F2000000000000000000000E /* DiagnosticsLogSupportTests.swift */,
 				F40000000000000000000003 /* TaptionActivityEngineAdapterTests.swift */,
+				F10000000000000003C90005 /* ClassificationBackfillTests.swift */,
+				F10000000000000003C90004 /* AppleWatchNapPolicyTests.swift */,
 				F40000000000000000000004 /* TaptionRouteEngineAdapterTests.swift */,
 				F40000000000000000000005 /* SQLitePlanRepositoryTests.swift */,
 				F40000000000000000000007 /* TaptionStoreQualityTests.swift */,
@@ -1562,6 +1574,7 @@
 				F5B1102A0200000000000020 /* AppModel+ExternalData.swift */,
 				F5B1102A020000000000001E /* AppModel+FrequentPlaces.swift */,
 				F5B1102A020000000000001C /* AppModel+Lifecycle.swift */,
+				F10000000000000003C90003 /* AppModel+ClassificationBackfill.swift */,
 				F5B1102A020000000000001A /* AppModel+LocationCollection.swift */,
 				F5B1102A0200000000000018 /* AppModel+MapEditing.swift */,
 				F1000000000000000D1104A2 /* AppModel+NearbyMemos.swift */,
@@ -1715,6 +1728,8 @@
 				F20000000000000000000002 /* SensorBackgroundCoordinator.swift */,
 				F40000000000000000000001 /* TaptionActivityEngineAdapter.swift */,
 				FC1A55000000000000000001 /* ClassifierAdapter.swift */,
+				F10000000000000003C90002 /* ClassificationBackfill.swift */,
+				F10000000000000003C90001 /* AppleWatchNapPolicy.swift */,
 				F40000000000000000000002 /* TaptionRouteEngineAdapter.swift */,
 			);
 			path = Core;
@@ -2153,6 +2168,7 @@
 				A5B1102A0200000000000021 /* AppModel+ExternalData.swift in Sources */,
 				A5B1102A020000000000001F /* AppModel+FrequentPlaces.swift in Sources */,
 				A5B1102A020000000000001D /* AppModel+Lifecycle.swift in Sources */,
+				A10000000000000003C90003 /* AppModel+ClassificationBackfill.swift in Sources */,
 				A5B1102A020000000000001B /* AppModel+LocationCollection.swift in Sources */,
 				A5B1102A0200000000000019 /* AppModel+MapEditing.swift in Sources */,
 				A1000000000000000D1104A2 /* AppModel+NearbyMemos.swift in Sources */,
@@ -2482,6 +2498,8 @@
 				A20000000000000000000005 /* SensorBackgroundCoordinator.swift in Sources */,
 				A40000000000000000000003 /* TaptionActivityEngineAdapter.swift in Sources */,
 				AC1A55000000000000000001 /* ClassifierAdapter.swift in Sources */,
+				A10000000000000003C90002 /* ClassificationBackfill.swift in Sources */,
+				A10000000000000003C90001 /* AppleWatchNapPolicy.swift in Sources */,
 				A40000000000000000000004 /* TaptionRouteEngineAdapter.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -2554,6 +2572,8 @@
 				A20000000000000000000010 /* LocalizationCatalogTests.swift in Sources */,
 				A20000000000000000000011 /* DiagnosticsLogSupportTests.swift in Sources */,
 				A40000000000000000000005 /* TaptionActivityEngineAdapterTests.swift in Sources */,
+				A10000000000000003C90005 /* ClassificationBackfillTests.swift in Sources */,
+				A10000000000000003C90004 /* AppleWatchNapPolicyTests.swift in Sources */,
 				A40000000000000000000006 /* TaptionRouteEngineAdapterTests.swift in Sources */,
 				A40000000000000000000007 /* SQLitePlanRepositoryTests.swift in Sources */,
 				A4000000000000000000000D /* TaptionStoreQualityTests.swift in Sources */,

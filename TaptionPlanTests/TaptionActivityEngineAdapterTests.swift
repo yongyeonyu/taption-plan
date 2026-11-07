@@ -978,7 +978,7 @@ final class ClassifierMigrationTests: XCTestCase {
         )
         XCTAssertEqual(first.map { $0.outcome }, [.recomputed, .failed, .skippedNoRaw], "최신 날부터")
         XCTAssertEqual(markers.keys.count, 2)
-        XCTAssertTrue(markers.keys.allSatisfy { $0.hasPrefix("classifier-v1:") })
+        XCTAssertTrue(markers.keys.allSatisfy { $0.hasPrefix(ClassificationRules.version + ":") })
         recomputed = []
         let second = await coordinator.run(days: days, calendar: calendar, rawSampleCount: { _ in 500 }, recompute: { day in
             recomputed.append(day)
@@ -991,7 +991,7 @@ final class ClassifierMigrationTests: XCTestCase {
     func testMarkerKeyIsDateScoped() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
-        XCTAssertEqual(ClassificationRecomputeCoordinator.markerKey(for: start, calendar: calendar), "classifier-v1:2026-09-21")
+        XCTAssertEqual(ClassificationRecomputeCoordinator.markerKey(for: start, calendar: calendar), "classifier-v1r2:2026-09-21")
     }
 
     func testKeywordResolverNoLongerTurnsDeliveryOrBadmintonIntoMovement() {
