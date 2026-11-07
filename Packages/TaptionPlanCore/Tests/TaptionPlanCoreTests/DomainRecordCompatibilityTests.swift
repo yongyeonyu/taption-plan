@@ -49,4 +49,20 @@ struct DomainRecordCompatibilityTests {
         #expect(span.end == span.start)
         #expect(span.duration == 0)
     }
+
+    @Test func activityCorrectionStoredBytesAreUnchanged() throws {
+        try Self.roundTrip(
+            ActivityCorrection.self,
+            stored: #"{"behavior":"brushing","categoryID":"activity","endedAt":1762560120,"startedAt":1762560000,"title":"양치"}"#,
+            expected: ActivityCorrection(
+                title: "양치", behavior: "brushing", categoryID: "activity",
+                startedAt: Self.start, endedAt: Self.start.addingTimeInterval(120)
+            )
+        )
+        try Self.roundTrip(
+            ActivityCorrection.self,
+            stored: #"{"categoryID":"activity","title":"독서"}"#,
+            expected: ActivityCorrection(title: "독서")
+        )
+    }
 }
