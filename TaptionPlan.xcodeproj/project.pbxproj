@@ -241,6 +241,7 @@
 		A1000000000000000000001C /* SleepAnalysisEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001C /* SleepAnalysisEngine.swift */; };
 		A1000000000000000000001D /* SensorDataServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001D /* SensorDataServices.swift */; };
 		A1000000000000000000001E /* WidgetShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001F /* WidgetShared.swift */; };
+		A10000000000000001A70002 /* WidgetAppOnly.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000001A70002 /* WidgetAppOnly.swift */; };
 		A1000000000000000000001F /* TaptionPlanWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000020 /* TaptionPlanWidget.swift */; };
 		C0FFEE000000000000000041 /* SensorCollectionLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE000000000000000042 /* SensorCollectionLiveActivity.swift */; };
 		C0FFEE000000000000000043 /* TaptionPlanLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE000000000000000044 /* TaptionPlanLiveActivity.swift */; };
@@ -838,6 +839,7 @@
 		F1000000000000000000001D /* SensorDataServices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDataServices.swift; sourceTree = "<group>"; };
 		F1000000000000000000001E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F1000000000000000000001F /* WidgetShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetShared.swift; sourceTree = "<group>"; };
+		F10000000000000001A70002 /* WidgetAppOnly.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetAppOnly.swift; sourceTree = "<group>"; };
 		F10000000000000000000020 /* TaptionPlanWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanWidget.swift; sourceTree = "<group>"; };
 		C0FFEE000000000000000042 /* SensorCollectionLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorCollectionLiveActivity.swift; sourceTree = "<group>"; };
 		C0FFEE000000000000000044 /* TaptionPlanLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanLiveActivity.swift; sourceTree = "<group>"; };
@@ -1681,6 +1683,7 @@
 				F10000000000000000CA2004 /* SubwayAlighting.swift */,
 				F10000000000000000000041 /* ScreenTimeUsageService.swift */,
 				F1000000000000000000001F /* WidgetShared.swift */,
+				F10000000000000001A70002 /* WidgetAppOnly.swift */,
 				F1000000000000000000003B /* WidgetPayloadFactory.swift */,
 				F10000000000000000000061 /* RecordSummaryEngine.swift */,
 				F10000000000000000000023 /* StoreKitSupport.swift */,
@@ -2444,6 +2447,7 @@
 				A10000000000000000CA2003 /* HwarangCoat.swift in Sources */,
 				A10000000000000000000044 /* ScreenTimeUsageService.swift in Sources */,
 				A1000000000000000000001E /* WidgetShared.swift in Sources */,
+				A10000000000000001A70002 /* WidgetAppOnly.swift in Sources */,
 				A10000000000000000000026 /* StoreKitSupport.swift in Sources */,
 				A10000000000000000000027 /* CategoryManagerView.swift in Sources */,
 				A10000000000000000000028 /* PlanEditorSheet.swift in Sources */,
