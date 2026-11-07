@@ -67,7 +67,7 @@ public actor TaptionStoreV2 {
     }
 
     private var connection: TaptionSQLiteConnection?
-    public let calendar: Calendar
+    public nonisolated let calendar: Calendar
     /// 저장소 파일 위치. 같은 폴더에 쓰기 잠금 파일을 둘 때 쓴다.
     public nonisolated let url: URL
 
