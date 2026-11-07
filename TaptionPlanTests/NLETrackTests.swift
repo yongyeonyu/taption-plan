@@ -1034,12 +1034,11 @@ final class NLETrackTests: XCTestCase {
         XCTAssertEqual(request.sourceIDs, walk.parent.sourceIDs, "파생 상세의 ID만 들고 가므로 다른 저장 기록을 지우지 않는다")
 
         let records = ActivitySectionOverrideEngine.records(for: request).sorted { $0.startedAt < $1.startedAt }
-        let minutes = records.map {
-            (Int($0.startedAt.timeIntervalSince(dayStart()) / 60), Int($0.endedAt.timeIntervalSince(dayStart()) / 60), $0.title)
-        }
-        XCTAssertEqual(minutes.map(\.0), [600, 700, 730])
-        XCTAssertEqual(minutes.map(\.1), [700, 730, 900])
-        XCTAssertEqual(minutes.map(\.2), ["업무", "회의", "업무"])
+        let starts = records.map { Int($0.span().start.timeIntervalSince(dayStart()) / 60) }
+        let ends = records.map { Int($0.span().end.timeIntervalSince(dayStart()) / 60) }
+        XCTAssertEqual(starts, [600, 700, 730])
+        XCTAssertEqual(ends, [700, 730, 900])
+        XCTAssertEqual(records.map(\.title), ["업무", "회의", "업무"])
 
         // 지우면 그 자리는 대분류로 돌아가 구간 전체가 업무 하나로 저장된다.
         var deleted = base
@@ -1049,7 +1048,7 @@ final class NLETrackTests: XCTestCase {
         let clearedRecords = ActivitySectionOverrideEngine.records(for: cleared)
         XCTAssertFalse(clearedRecords.isEmpty)
         XCTAssertTrue(clearedRecords.allSatisfy { $0.categoryID == "work" && $0.title == "업무" })
-        XCTAssertEqual(clearedRecords.map { $0.endedAt.timeIntervalSince($0.startedAt) }.reduce(0, +), 300 * 60)
+        XCTAssertEqual(clearedRecords.map { $0.span().duration }.reduce(0, +), 300 * 60)
     }
 
     // MARK: - 수동 기록 중복 (NLE1103A04)
