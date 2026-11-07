@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A10000000000000006FC0001 /* StayRegionArmingPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000006FC0001 /* StayRegionArmingPolicy.swift */; };
+		A10000000000000006FC0002 /* BackgroundRefreshErrorPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000006FC0002 /* BackgroundRefreshErrorPolicy.swift */; };
+		A10000000000000006FC0003 /* MapHomeAlarmDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000006FC0003 /* MapHomeAlarmDiagnostics.swift */; };
+		A10000000000000006FC0004 /* BackgroundSignalPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000006FC0004 /* BackgroundSignalPolicyTests.swift */; };
 		A1000000000000000D1104A3 /* NearbyMemoNotificationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000D1104A3 /* NearbyMemoNotificationTests.swift */; };
 		A1000000000000000D1104A2 /* AppModel+NearbyMemos.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000D1104A2 /* AppModel+NearbyMemos.swift */; };
 		A1000000000000000D1104A1 /* NearbyMemoNotifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000D1104A1 /* NearbyMemoNotifications.swift */; };
@@ -633,6 +637,10 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		F10000000000000006FC0001 /* StayRegionArmingPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StayRegionArmingPolicy.swift; sourceTree = "<group>"; };
+		F10000000000000006FC0002 /* BackgroundRefreshErrorPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundRefreshErrorPolicy.swift; sourceTree = "<group>"; };
+		F10000000000000006FC0003 /* MapHomeAlarmDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeAlarmDiagnostics.swift; sourceTree = "<group>"; };
+		F10000000000000006FC0004 /* BackgroundSignalPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundSignalPolicyTests.swift; sourceTree = "<group>"; };
 		F1000000000000000B1104A3 /* AppSecrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = AppSecrets.xcconfig; sourceTree = "<group>"; };
 		F1000000000000000D1104A3 /* NearbyMemoNotificationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NearbyMemoNotificationTests.swift"; sourceTree = "<group>"; };
 		F1000000000000000D1104A2 /* AppModel+NearbyMemos.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+NearbyMemos.swift"; sourceTree = "<group>"; };
@@ -1296,6 +1304,7 @@
 				F5B1102A0200000000000049 /* NLETrackTests.swift */,
 				A1102A0100000000000000F2 /* RailRideLikelihoodTests.swift */,
 				A1102A0100000000000000F3 /* RawSensorReplayVerdictTests.swift */,
+				F10000000000000006FC0004 /* BackgroundSignalPolicyTests.swift */,
 				A1102A0100000000000000F6 /* UnobservedStayEngineTests.swift */,
 				A1102A0100000000000000F8 /* AlgorithmUpgradeTests.swift */,
 				A1102A0100000000000000FA /* PlaceZoneStayTrackerTests.swift */,
@@ -1427,6 +1436,7 @@
 				F50000000000000000000002 /* MapHomeVectorLabels.swift */,
 				F1000000000000000000007F /* MapHomeCalendarSheet.swift */,
 				F1FA115C43BF0F705C0CC3E6 /* MapHomeDailyCard.swift */,
+				F10000000000000006FC0003 /* MapHomeAlarmDiagnostics.swift */,
 				F1FA11050C8C616822F8DF6B /* MapHomeAlarm.swift */,
 				F1FA11B9733FBC139C6D2716 /* MapHomeSalaryPolicy.swift */,
 				F1FA11501F768BFA9562791B /* MapHomeStride.swift */,
@@ -1561,6 +1571,7 @@
 				F5B1102A0200000000000022 /* AppModel+Export.swift */,
 				F5B1102A0200000000000020 /* AppModel+ExternalData.swift */,
 				F5B1102A020000000000001E /* AppModel+FrequentPlaces.swift */,
+				F10000000000000006FC0002 /* BackgroundRefreshErrorPolicy.swift */,
 				F5B1102A020000000000001C /* AppModel+Lifecycle.swift */,
 				F5B1102A020000000000001A /* AppModel+LocationCollection.swift */,
 				F5B1102A0200000000000018 /* AppModel+MapEditing.swift */,
@@ -1667,6 +1678,7 @@
 				224225E0023E3C60D75BF00C /* SubwayEvidenceGate.swift */,
 				A1102A0100000000000000F1 /* RailRideLikelihood.swift */,
 				A1102A0100000000000000F4 /* UnobservedStayEngine.swift */,
+				F10000000000000006FC0001 /* StayRegionArmingPolicy.swift */,
 				A1102A0100000000000000F5 /* AppleSensorCollector+LocationPause.swift */,
 				A1102A0100000000000000F7 /* WalkingDistanceBreakdown.swift */,
 				A1102A0100000000000000F9 /* PlaceZoneStayTracker.swift */,
@@ -2137,6 +2149,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A10000000000000006FC0001 /* StayRegionArmingPolicy.swift in Sources */,
+				A10000000000000006FC0002 /* BackgroundRefreshErrorPolicy.swift in Sources */,
+				A10000000000000006FC0003 /* MapHomeAlarmDiagnostics.swift in Sources */,
 				A1000000000000000B1105C8 /* WidgetSharedEngines.swift in Sources */,
 				A10000000000000000000001 /* TaptionPlanApp.swift in Sources */,
 				A10000000000000000000002 /* AppModel.swift in Sources */,
@@ -2490,6 +2505,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A10000000000000006FC0004 /* BackgroundSignalPolicyTests.swift in Sources */,
 				A1000000000000000000000C /* TimeScaleTests.swift in Sources */,
 				A10000000000000000000016 /* FeatureEngineTests.swift in Sources */,
 				A1FA113776B4F655CB131CBA /* StableRecordIDTests.swift in Sources */,

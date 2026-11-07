@@ -335,6 +335,9 @@ final class TaptionPlanAppDelegate:
     func applicationProtectedDataDidBecomeAvailable(
         _ application: UIApplication
     ) {
+        if let model = AppModel.applicationInstance {
+            Task { @MainActor in await model.retryDeferredHealthRefreshIfNeeded() }
+        }
         guard application.applicationState == .active else { return }
         PhoneScreenActivityStore.update(
             brightness: Double(UIScreen.main.brightness),
@@ -346,7 +349,10 @@ final class TaptionPlanAppDelegate:
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
-        [.banner, .sound]
+        MapHomeAlarmDiagnostics.log(MapHomeAlarmDiagnostics.presented(
+            kind: notification.request.content.userInfo[MapHomeAlarmCenter.userInfoKind] as? String
+        ))
+        return [.banner, .sound]
     }
 
     func userNotificationCenter(
@@ -354,6 +360,12 @@ final class TaptionPlanAppDelegate:
         didReceive response: UNNotificationResponse
     ) async {
         if let kind = response.notification.request.content.userInfo[MapHomeAlarmCenter.userInfoKind] as? String {
+            MapHomeAlarmDiagnostics.log(MapHomeAlarmDiagnostics.tapped(
+                kind: kind,
+                actionIdentifier: response.actionIdentifier,
+                deliveredAt: response.notification.date,
+                now: .now
+            ))
             let at = response.notification.request.content.userInfo[MapHomeAlarmCenter.userInfoAt] as? Double ?? Date.now.timeIntervalSince1970
             NotificationCenter.default.post(
                 name: .taptionPlanAlarmTapped,

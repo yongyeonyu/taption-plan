@@ -127,6 +127,9 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     var latestConnectedWiFiSSID: String?
     var subwayWiFiObservationStreak = 0
     var pendingStayRegionExitEmission = false
+    /// iOS가 `pausesLocationUpdatesAutomatically`로 위치 수집을 멈춘 상태인지. 다시 켤 때만 참이다.
+    var locationUpdatesPausedBySystem = false
+    var stayRegionArming = StayRegionArmingPolicy()
     private var currentWiFiFetchInFlight = false
     private var lastWiFiFetchAt: Date?
     var deviceMotionAccumulator = DeviceMotionAccumulator()
@@ -614,6 +617,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         )
         if permissionState() == .authorized {
             locationManager.startUpdatingLocation()
+            locationUpdatesPausedBySystem = false
         }
 
         if CMMotionActivityManager.isActivityAvailable() {
@@ -786,6 +790,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
             || !isCollecting
             || !isForegroundLiveLocationTrackingEnabled {
             locationManager.stopUpdatingLocation()
+            locationUpdatesPausedBySystem = false
             locationManager.allowsBackgroundLocationUpdates = false
             locationManager.showsBackgroundLocationIndicator = false
         }

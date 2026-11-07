@@ -456,6 +456,8 @@ final class AppModel {
     @ObservationIgnored var isSceneInBackground = false
     @ObservationIgnored var isCommerceLocked = false
     @ObservationIgnored var isHealthRefreshRunning = false
+    /// 잠긴 기기에서 건강 갱신을 미뤘는지. 보호된 자료가 다시 열리면 한 번 읽는다(BGR1028A01).
+    @ObservationIgnored var isHealthRefreshDeferredUntilUnlock = false
     @ObservationIgnored var isSensorTimelineRefreshing = false
     /// A user edit saved while a sensor refresh was running. Rolling the whole
     /// snapshot back to the pre-refresh copy would silently delete that edit.
