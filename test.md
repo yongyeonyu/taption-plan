@@ -1720,3 +1720,7 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
 - 화면: 재생 `.stay` 프레임도 그 시각 상세 장면을 씀(RIG1103A02). 듀오 메뉴 넘침은 한 열 메뉴로 바뀌어 재확인 필요. 구글 아이콘 말풍선(SBN1102A01)·애플 지도 카운터 흔들림(CTR1103A02)은 코드만으로 원인을 못 찾아 실기기 재현이 필요.
 - 하지 않음: UI 시험 고정 sleep 18곳(REV1026A01), 지도 가림 시 GPS 끄기(PRF1101A01), 발자국 레이어 패치(OPT1102A01).
 - 시험(시뮬레이터 BOKKI-iPhone11, with-device-lock, 병렬 끔): `swift test` TaptionRouteEngine 51건 통과. 앱 6개 클래스 906건 중 1건 실패(알림 시험이 10분 칸 경계를 골랐음) → 시각 조정 후 알림·검색 시험 5건 통과(`build/validation/SRC1107A01/unit2.xcresult`). 구조 검사 통과.
+
+## TFB1107A04 · 빌드 294 내부 TestFlight (2026-11-07)
+- 포함: SRC1107A01(지도 검색 목록·앱 안 장소·역 찾기·실패 안내, 시작 재계산 묶기, 성장 시험 도구 Debug 전용, 알림 판정 시험, 재생 머무름 상세 장면).
+- 결과: `release.sh --yes --request-id TFB1107A04` 종료 0, 처리 `VALID`, `TP Taption Plan 내부 테스트` 그룹 연결, 테스터 1명 노출. 아카이브 네 번들 `CFBundleVersion` 294 확인. 보고서 `build/validation/TFB1107A04/testflight-report.json`.
