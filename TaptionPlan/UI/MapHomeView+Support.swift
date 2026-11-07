@@ -186,7 +186,7 @@ extension MapHomeView {
             .zIndex(MapHomeLayerPriority.search)
 
             if isMenuOpen, !isScreenRecording {
-                Group { if isWideLayout { AnyView(sidebarContent).environment(\.mapHomeMenuIsCompact, MapHomeWideLayoutPolicy.menuUsesCompactRows(viewportSize: mapViewportSize, kind: menuPanelKind)).mapHomeWidePanelFrame(viewportWidth: mapViewportSize.width, kind: menuPanelKind) } else { menu } }
+                Group { if isWideLayout { AnyView(sidebarContent).environment(\.mapHomeMenuIsCompact, MapHomeWideLayoutPolicy.menuUsesCompactRows(viewportSize: mapViewportSize, hasPermissionCard: !sensorCollectionPermissionGate.sensorCollectionReady)).mapHomeWidePanelFrame(viewportWidth: mapViewportSize.width, kind: menuPanelKind) } else { menu } }
                     .transition(.move(edge: .leading).combined(with: .opacity))
                     .zIndex(MapHomeLayerPriority.menu)
             }

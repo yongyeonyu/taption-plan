@@ -1701,3 +1701,10 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
 ## TFB1107A02 · 빌드 292 내부 TestFlight (2026-11-07)
 - 포함: REV1107A01(다방면 리뷰 10건 수정).
 - 결과: `release.sh --yes --request-id TFB1107A02` 종료 0, 처리 `VALID`, `TP Taption Plan 내부 테스트` 그룹 연결, 테스터 1명 노출. 아카이브 네 번들 `CFBundleVersion` 292 확인. 보고서 `build/validation/TFB1107A02/testflight-report.json`.
+
+## REV1107A02 · 리뷰 퇴행 수정, 넓은 화면 메뉴 한 열, 아이패드 달력 한 열 (2026-11-07)
+- 지하철: 생성 스크립트가 OSM 역 노드(`railway=station|halt`) 이름으로 좌표 없는 역 264개 중 169개를 채워 `SubwayTrackData.stationFill`에 넣고(같은 노선·같은 도시 무리, ±1 이웃 6km 안, 한 무리에서만), 앱이 역 목록을 읽을 때 보탠다. 역 쌍 872, 선로 858. 좌표 있는 역이 없는 노선은 다시 한 사슬(대경선). 사슬에서 빠지는 역 80 → 17(1,103개 중). 선로 노선 토큰은 별칭표('철도'·'라인'·'중앙' 제외).
+- 메뉴: 넓은 화면에서 두 열(`.columns`)을 쓰지 않고 늘 한 열 스크롤, 한 열이 높이에 모자라면 촘촘한 줄. 쓰지 않게 된 상수 3개 삭제.
+- 달력: 넓은 패널(680pt, 화면 1050pt 이상)에서도 한 열, 지표 단추 6개씩.
+- 시험(시뮬레이터 BOKKI-iPhone11 — 실기기는 BOKKI Cam 사용 중): `FeatureEngineTests`·`MapHomeWideLayoutPolicyTests`·`RouteTimelineDataTests`·`RailRideLikelihoodTests`·`RawSensorReplayTests`·`MapHomeLiveMapTests`·`NLETrackTests` 1,008건 통과·건너뜀 5(`build/validation/REV1107A02/unit.xcresult`). 새 시험 `testEveryLineKeepsItsStationChain`·`testMenuStaysOneColumnOnEveryWideScreen`·`testWideMenuUsesCompactRowsOnlyWhenOneColumnDoesNotFit`. 구조 검사 통과.
+- 화면: 아이패드 11 시뮬레이터 세로에서 달력 한 열·지표 3개씩 확인. 가로(넓은 패널)는 시뮬레이터 창이 약 670pt로만 그려져 확인하지 못함. 듀오 화면 미확인.

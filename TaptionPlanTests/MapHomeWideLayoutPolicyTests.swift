@@ -32,18 +32,13 @@ final class MapHomeWideLayoutPolicyTests: XCTestCase {
         }
     }
 
-    func testMenuUnfoldsSidewaysOnlyWhenOneColumnDoesNotFit() {
-        // 세로는 높이와 권한 카드에 상관없이 한 열이다.
-        XCTAssertEqual(MapHomeWideLayoutPolicy.menuPanelKind(viewportSize: iPad, hasPermissionCard: true), .standard)
-        XCTAssertEqual(MapHomeWideLayoutPolicy.menuPanelKind(viewportSize: duoInner, hasPermissionCard: true), .standard)
-        // 가로로 돌리면 높이가 모자라 두 열로 편다.
+    /// 메뉴는 화면 모양과 상관없이 두 열로 펴지 않고 한 열로 스크롤한다(REV1107A02).
+    func testMenuStaysOneColumnOnEveryWideScreen() {
         let landscape = CGSize(width: iPad.height, height: iPad.width)
-        XCTAssertEqual(MapHomeWideLayoutPolicy.menuPanelKind(viewportSize: landscape, hasPermissionCard: false), .columns(width: 680))
-        // 듀오 안쪽 가로도 사이드바를 가리지 않는 폭으로 편다.
         let duoLandscape = CGSize(width: duoInner.height, height: duoInner.width)
-        XCTAssertEqual(MapHomeWideLayoutPolicy.menuPanelKind(viewportSize: duoLandscape, hasPermissionCard: false), .columns(width: 680))
-        // 좁은 분할 화면은 옆으로 펼 자리가 없어 한 열로 두고 스크롤한다.
-        XCTAssertEqual(MapHomeWideLayoutPolicy.menuPanelKind(viewportSize: CGSize(width: 600, height: 834), hasPermissionCard: false), .standard)
+        for size in [iPad, duoInner, landscape, duoLandscape, CGSize(width: 600, height: 834)] {
+            XCTAssertEqual(MapHomeWideLayoutPolicy.menuPanelKind(viewportSize: size, hasPermissionCard: false), .standard, "\(size)")
+        }
     }
 
     func testPanelMatchesTheActionBarAndCalendarUnfoldsOnlyWhenTheMapStillFits() {
@@ -101,13 +96,12 @@ final class MapHomeWideLayoutPolicyTests: XCTestCase {
         XCTAssertEqual(AppOrientationPolicy.mask(screenSize: iPad), .all)
     }
 
-    func testOnlyLowTwoColumnMenuUsesCompactRows() {
+    /// 넓은 화면은 한 열이 높이에 모자랄 때만 줄 간격을 줄인다(REV1107A02).
+    func testWideMenuUsesCompactRowsOnlyWhenOneColumnDoesNotFit() {
         let duoInner = CGSize(width: 951, height: 669)
-        let duoKind = MapHomeWideLayoutPolicy.menuPanelKind(viewportSize: duoInner, hasPermissionCard: true)
-        XCTAssertEqual(duoKind.columns, 2)
-        XCTAssertTrue(MapHomeWideLayoutPolicy.menuUsesCompactRows(viewportSize: duoInner, kind: duoKind))
-        XCTAssertFalse(MapHomeWideLayoutPolicy.menuUsesCompactRows(viewportSize: duoInner, kind: .standard))
-        XCTAssertFalse(MapHomeWideLayoutPolicy.menuUsesCompactRows(viewportSize: CGSize(width: 1210, height: 834), kind: .columns(width: 680)))
+        XCTAssertTrue(MapHomeWideLayoutPolicy.menuUsesCompactRows(viewportSize: duoInner, hasPermissionCard: true))
+        XCTAssertFalse(MapHomeWideLayoutPolicy.menuUsesCompactRows(viewportSize: CGSize(width: 1032, height: 1376), hasPermissionCard: false))
+        XCTAssertFalse(MapHomeWideLayoutPolicy.menuUsesCompactRows(viewportSize: CGSize(width: 402, height: 500), hasPermissionCard: true), "좁은 화면은 시트")
     }
 
     func testPlacePinPolicyClampsZoomAndIgnoresJitter() {

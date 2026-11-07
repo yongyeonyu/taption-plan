@@ -132,7 +132,8 @@ struct MapHomeCalendarSheet: View {
 
     var body: some View {
         ScrollView {
-            MapHomeWidePanelColumns(columns: panelColumns) { monthSection } trailing: { summarySection }
+            // 넓은 패널도 두 열로 나누지 않는다. 달력을 폭 가득, 아래 지표 단추를 한 줄에 더 놓는다(대표 지시, REV1107A02).
+            MapHomeWidePanelColumns(columns: 1) { monthSection } trailing: { summarySection }
             .padding(.bottom, 12)
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
                 guard abs(height - measuredHeight) >= 0.5 else { return }
@@ -248,7 +249,7 @@ struct MapHomeCalendarSheet: View {
     }
 
     private var timeMenu: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: panelColumns > 1 ? 6 : 3), spacing: 8) {
             ForEach(MapHomeCalendarTimeKind.coreKinds + MapHomeCalendarTimeKind.enabledExtras(from: extraKindsRaw)) { kind in
                 let isOn = selectedKind == kind
                 let tint = kind.usesAccentTint ? Color.tpAccent : timeTint(kind.rawValue)

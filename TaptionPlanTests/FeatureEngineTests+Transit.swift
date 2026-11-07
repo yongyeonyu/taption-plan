@@ -4018,4 +4018,17 @@ extension FeatureEngineTests {
         XCTAssertFalse(seoul.isEmpty)
         XCTAssertFalse(seoul.contains { stations[$0].stationName.hasPrefix("하단") || stations[$0].stationName.hasPrefix("동대구") })
     }
+
+    /// 모든 노선은 역 사슬을 가진다. 좌표 없는 역은 OSM 역 이름으로 채워 대부분 사슬에 남는다(REV1107A02).
+    func testEveryLineKeepsItsStationChain() {
+        let stations = SubwayStationCatalog.stations
+        let byLine = Dictionary(grouping: stations.indices) { stations[$0].lineName }
+        var kept = 0
+        for (line, indices) in byLine {
+            let groups = SubwayStationCatalog.cityGroups(indices)
+            XCTAssertFalse(groups.isEmpty, line)
+            kept += Set(groups.joined()).count
+        }
+        XCTAssertGreaterThanOrEqual(Double(kept), Double(stations.count) * 0.97, "사슬에서 빠진 역이 3% 이하")
+    }
 }

@@ -27,10 +27,6 @@ enum MapHomeWideLayoutPolicy {
     /// 메뉴를 다 펼치지 않은 한 열의 높이(권한 카드 제외)와 권한 카드 높이. `testMenuFits…`가 실제 화면으로 잠근다.
     static let menuSingleColumnHeight: CGFloat = 900
     static let menuPermissionCardHeight: CGFloat = 200
-    /// 두 열 메뉴의 폭. 사이드바(패널 오른쪽 약 140pt)를 가리지 않는 안에서 680pt까지, 480pt보다 좁으면 한 열로 둔다.
-    static let menuColumnsMaximumWidth: CGFloat = 680
-    static let menuColumnsMinimumWidth: CGFloat = 480
-    static let menuCompactRowsMaximumHeight: CGFloat = 760
     static let sidebarReservedWidth: CGFloat = 140
     /// 클립 편집을 두 열로 펴는 폭과 오른쪽 열 폭. 도구 여섯 개가 아이폰과 같은 간격으로 놓인다.
     static let clipColumnsMinimumWidth: CGFloat = 760
@@ -91,19 +87,16 @@ enum MapHomeWideLayoutPolicy {
         return viewportWidth - inset >= minimumMapWidthBesidePanel ? inset : 0
     }
 
-    /// 두 열로 펴도 왼쪽 열이 높이에 모자라는 낮은 가로 화면(듀오 안쪽)은 메뉴 줄 간격을 줄인다.
-    static func menuUsesCompactRows(viewportSize: CGSize, kind: MapHomeWidePanelKind) -> Bool {
-        kind.columns > 1 && viewportSize.height < menuCompactRowsMaximumHeight
+    /// 넓은 화면에서 한 열 메뉴가 패널 높이에 다 안 들어가면 줄 간격을 줄여 한 화면에 최대한 담는다. 나머지는 스크롤.
+    static func menuUsesCompactRows(viewportSize: CGSize, hasPermissionCard: Bool) -> Bool {
+        guard isWide(viewportWidth: viewportSize.width) else { return false }
+        let available = viewportSize.height - panelTopInset - MapHomeBottomBarMetrics.reservedHeight - 8
+        return available < menuSingleColumnHeight + (hasPermissionCard ? menuPermissionCardHeight : 0)
     }
 
-    /// 메인 메뉴 자리. 세로는 한 열. 가로는 한 열이 높이에 안 들어가면 옆으로 펴서 스크롤 없이 보인다.
+    /// 메인 메뉴 자리. 두 열로 펴지 않고 늘 한 열로 스크롤한다(대표 지시, REV1107A02).
     static func menuPanelKind(viewportSize: CGSize, hasPermissionCard: Bool) -> MapHomeWidePanelKind {
-        guard isWide(viewportWidth: viewportSize.width), viewportSize.width > viewportSize.height else { return .standard }
-        let available = viewportSize.height - panelTopInset - MapHomeBottomBarMetrics.reservedHeight - 8
-        let needed = menuSingleColumnHeight + (hasPermissionCard ? menuPermissionCardHeight : 0)
-        guard available < needed else { return .standard }
-        let width = min(menuColumnsMaximumWidth, viewportSize.width - MapHomeBottomBarMetrics.edgeMargin - sidebarReservedWidth)
-        return width >= menuColumnsMinimumWidth ? .columns(width: width) : .standard
+        .standard
     }
 
     /// 시간 레일 폭. 넓은 화면은 눈금과 잡는 자리를 조금 넓혀 큰 화면 비율에 맞춘다.

@@ -172,7 +172,8 @@ enum SubwayStationCatalog {
         var groups: [Int: [Int]] = [:]
         for index in located { groups[root(index), default: []].append(index) }
         var result = groups.values.map { $0.sorted() }.sorted { $0[0] < $1[0] }
-        guard !result.isEmpty else { return [] }
+        // 좌표 있는 역이 하나도 없는 노선은 도시를 가를 수 없으니 예전처럼 한 사슬로 둔다(REV1107A02).
+        guard !result.isEmpty else { return [indices] }
         for index in indices where stations[index].coordinate == nil {
             if let place = sameNameCoordinate(of: index),
                let group = result.indices.first(where: { result[$0].contains { stations[$0].coordinate.map { distanceMeters($0, place) <= linkMeters } ?? false } }) {
@@ -1126,21 +1127,33 @@ enum SubwayStationCatalog {
         return result
     }
 
+    /// 역 목록에 좌표가 없는 역의 좌표. OSM 역 노드 이름으로 채웠다(`SubwayTrackData.stationFill`, REV1107A02).
+    private static let filledCoordinates: [String: (Double, Double)] = {
+        var result: [String: (Double, Double)] = [:]
+        for line in SubwayTrackData.stationFill.split(separator: "\n") {
+            let f = line.split(separator: "\t", omittingEmptySubsequences: false)
+            guard f.count == 5, let lat = Double(f[3]), let lon = Double(f[4]) else { continue }
+            result["\(f[0])|\(f[1])|\(f[2])"] = (lat, lon)
+        }
+        return result
+    }()
+
     private static func decodeStations() -> [Station] {
         guard let data = Data(base64Encoded: packedRoutes),
               let text = String(data: data, encoding: .utf8) else {
             return []
         }
-        return text.split(separator: "\n").compactMap { line in
+        return text.split(separator: "\n").compactMap { line -> Station? in
             let fields = line.split(separator: "\t", omittingEmptySubsequences: false)
             guard fields.count == 5,
                   let order = Int(fields[1]) else { return nil }
+            let filled = filledCoordinates["\(fields[0])|\(fields[1])|\(fields[2])"]
             return Station(
                 lineName: String(fields[0]),
                 order: order,
                 stationName: String(fields[2]),
-                latitude: Double(fields[3]),
-                longitude: Double(fields[4])
+                latitude: Double(fields[3]) ?? filled?.0,
+                longitude: Double(fields[4]) ?? filled?.1
             )
         }
     }

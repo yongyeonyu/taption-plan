@@ -54,6 +54,56 @@ def stations():
     return result
 
 
+def all_stations():
+    """좌표가 없는 역까지 (노선, 순서, 이름, 위도|None, 경도|None)."""
+    text = open(CATALOG, encoding="utf-8").read()
+    packed = re.search(r'packedRoutes[^"]*"""?\s*([A-Za-z0-9+/=\s]+?)\s*"""?', text) or re.search(r'packedRoutes[^"]*"([A-Za-z0-9+/=]+)"', text)
+    result = []
+    for row in base64.b64decode(re.sub(r"\s", "", packed.group(1))).decode("utf-8").split("\n"):
+        f = row.split("\t")
+        if len(f) == 5:
+            result.append((f[0], int(f[1]), f[2], float(f[3]) if f[3] else None, float(f[4]) if f[4] else None))
+    return result
+
+
+def station_key(name):
+    """'하단(부산본병원)'·'동대구역' → '하단'·'동대구'. OSM 역 이름과 맞춰 보는 열쇠."""
+    base = re.sub(r"\(.*?\)", "", name).replace(" ", "")
+    return base[:-1] if base.endswith("역") and len(base) > 2 else base
+
+
+def fill_coordinates(rows, nodes):
+    """좌표 없는 역을 같은 노선·같은 도시 무리 근처 OSM 역 노드 이름으로 채운다.
+    무리 하나에서만, 그리고 앞뒤 순서(±1) 역이 6km 안에 있을 때만 쓴다(REV1107A02)."""
+    by_name = {}
+    for node in nodes:
+        tags = node.get("tags", {})
+        for key in {station_key(tags.get("name", "")), station_key(tags.get("name:ko", ""))} - {""}:
+            by_name.setdefault(key, []).append((node["lat"], node["lon"]))
+    filled = []
+    by_line = {}
+    for row in rows:
+        by_line.setdefault(row[0], []).append(row)
+    for line, line_rows in sorted(by_line.items()):
+        located = [r for r in line_rows if r[3] is not None]
+        groups = cities(located) if located else []
+        for row in line_rows:
+            if row[3] is not None:
+                continue
+            choices = []
+            for group in groups:
+                neighbors = [(g[3], g[4]) for g in group if abs(g[1] - row[1]) == 1]
+                points = [p for p in by_name.get(station_key(row[2]), [])
+                          if any(meters(p, n) <= 6_000 for n in neighbors)]
+                if points and all(meters(p, points[0]) <= 1_500 for p in points):
+                    lat = sum(p[0] for p in points) / len(points)
+                    lon = sum(p[1] for p in points) / len(points)
+                    choices.append((lat, lon))
+            if len(choices) == 1:
+                filled.append((line, row[1], row[2], round(choices[0][0], 6), round(choices[0][1], 6)))
+    return filled
+
+
 def pairs(rows):
     by_line = {}
     for row in rows:
@@ -102,15 +152,19 @@ def cells(pair_list, size=0.1):
     return sorted((i * size, j * size, (i + 1) * size, (j + 1) * size) for i, j in touched)
 
 
-def fetch(boxes, cache):
+RAIL_SELECTOR = 'way["railway"~"^(subway|light_rail|rail|monorail|narrow_gauge)$"]'
+STATION_SELECTOR = 'node["railway"~"^(station|halt)$"]'
+
+
+def fetch(boxes, cache, selector=RAIL_SELECTOR, tail="out body;>;out skel qt;"):
     os.makedirs(cache, exist_ok=True)
     elements = []
     for start in range(0, len(boxes), 25):
         parts = "".join(
-            f'way["railway"~"^(subway|light_rail|rail|monorail|narrow_gauge)$"]({s:.3f},{w:.3f},{n:.3f},{e:.3f});'
+            f'{selector}({s:.3f},{w:.3f},{n:.3f},{e:.3f});'
             for s, w, n, e in boxes[start:start + 25]
         )
-        query = f"[out:json][timeout:180];({parts});out body;>;out skel qt;"
+        query = f"[out:json][timeout:180];({parts});{tail}"
         # 같은 요청이면 받은 원본을 다시 쓴다. 상자가 바뀌면 새로 받는다.
         path = os.path.join(cache, f"rail-{hashlib.sha256(query.encode()).hexdigest()[:16]}.json")
         if not os.path.exists(path):
@@ -163,12 +217,16 @@ def near(point, nodes, grid, limit=60):
     return sorted(found)[:limit]
 
 
+# 선로 이름에서 찾을 노선 표시. '철도'·'라인'·'중앙'처럼 흔한 말은 넣지 않는다(REV1107A02).
+LINE_ALIASES = {
+    "수인분당": {"수인", "분당"}, "경의중앙": {"경의"}, "공항철도": {"공항"}, "에버라인": {"에버", "용인경전철"},
+    "김포골드라인": {"김포골드", "김포도시철도"}, "우이신설": {"우이"}, "부산김해경전철": {"김해"},
+    "GTX-A": {"GTX"}, "자기부상": {"자기부상"}, "신분당": {"신분당"}, "의정부": {"의정부경전철"},
+}
+
+
 def tokens(line):
-    """선로 이름에서 찾을 노선 표시. '수인분당'·'경의중앙'처럼 붙은 이름은 반씩도 본다."""
-    found = {line, line.replace("선", "")}
-    if len(line) == 4 and "호선" not in line:
-        found |= {line[:2], line[2:]}
-    return {t for t in found if t}
+    return {line} | LINE_ALIASES.get(line, set())
 
 
 OTHER_LINE_PENALTY = 1.5
@@ -259,7 +317,12 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--cache", required=True)
     args = parser.parse_args()
-    rows = stations()
+    every = all_stations()
+    located = [r for r in every if r[3] is not None]
+    station_boxes = cells([((r[3], r[4]), (r[3], r[4])) for r in located], size=0.2)
+    station_nodes = [e for e in fetch(station_boxes, args.cache, STATION_SELECTOR, "out body;") if e["type"] == "node"]
+    filled = fill_coordinates(every, station_nodes)
+    rows = located + [f for f in filled]
     pair_list = pairs(rows)
     nodes, edges, grid = graph(fetch(cells(pair_list), args.cache))
     lines, missing = [], 0
@@ -276,9 +339,13 @@ def main():
         "// 지하철 선로 모양 © OpenStreetMap contributors, ODbL 1.0 (https://www.openstreetmap.org/copyright).\n"
         "// 한 줄은 '앞 역 위도,경도,뒤 역 위도,경도(1e-5 정수)<TAB>Google polyline(1e-5)'이다.\n"
     )
-    swift = header + "enum SubwayTrackData {\n    static let packed = #\"\"\"\n" + body + "\n\"\"\"#\n}\n"
+    fill_body = "\n".join(f"{l}\t{o}\t{n}\t{la}\t{lo}" for l, o, n, la, lo in filled)
+    swift = (header + "enum SubwayTrackData {\n    static let packed = #\"\"\"\n" + body + "\n\"\"\"#\n\n"
+             + "    /// 역 목록에 좌표가 없는 역을 OSM 역 노드 이름으로 채운 것. '노선<TAB>순서<TAB>이름<TAB>위도<TAB>경도'.\n"
+             + "    static let stationFill = #\"\"\"\n" + fill_body + "\n\"\"\"#\n}\n")
     open(OUTPUT, "w", encoding="utf-8").write(swift)
-    print(f"역 쌍 {len(pair_list)}, 선로 {len(lines)}, 못 찾음 {missing}, 크기 {len(swift.encode()) // 1024}KB", file=sys.stderr)
+    missing_coords = sum(1 for r in every if r[3] is None) - len(filled)
+    print(f"좌표 채움 {len(filled)}, 남은 좌표 없는 역 {missing_coords}, 역 쌍 {len(pair_list)}, 선로 {len(lines)}, 못 찾음 {missing}, 크기 {len(swift.encode()) // 1024}KB", file=sys.stderr)
 
 
 if __name__ == "__main__":
