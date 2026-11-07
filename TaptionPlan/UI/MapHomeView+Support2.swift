@@ -46,13 +46,10 @@ extension MapHomeView {
 
     func pawprintImage(_ waypoint: PawprintWaypoint) -> some View {
         // 선택한 발자국은 흰색 배경(100%)과 강조 테두리로 표시한다.
-        let isSelected = !waypoint.isPredicted && waypoint.timestamp != nil
-            && waypoint.timestamp == highlightedPawprintTimestamp
+        let isSelected = MapHomePawprintStyle.isSelected(waypoint, highlightedTimestamp: highlightedPawprintTimestamp)
         return Image(systemName: "pawprint.fill")
             .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
-            .foregroundStyle(waypoint.predictedRoute != nil && waypoint.predictedRoute?.id == selectedPredictedRoute?.id && waypoint.isPredicted
-                ? Color.orange : waypoint.isPredicted ? MapHomePawprintSpeedColor.unconfirmedColor(forMetersPerSecond: waypoint.speedMetersPerSecond)
-                : MapHomePawprintSpeedColor.color(forMetersPerSecond: waypoint.speedMetersPerSecond))
+            .foregroundStyle(MapHomePawprintStyle.color(waypoint, selectedPredictedRouteID: selectedPredictedRoute?.id))
             .rotationEffect(.degrees(waypoint.angle))
             .padding(isSelected ? 5 : 0)
             .background(Circle().fill(isSelected ? Color.white : Color.clear))
