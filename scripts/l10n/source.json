@@ -767,7 +767,7 @@
    "ko": "BOKKI 오늘",
    "en": "BOKKI Today",
    "files": [
-    "TaptionPlanWatchWidget.swift:106"
+    "TaptionPlanWatchWidget.swift:109"
    ],
    "args": [],
    "targets": [
@@ -851,7 +851,7 @@
    "ko": "GPS 트래킹 권한 안내 열기",
    "en": "Open GPS tracking permission guidance",
    "files": [
-    "TaptionPlanWidget.swift:414"
+    "TaptionPlanWidget.swift:417"
    ],
    "args": [],
    "targets": [
@@ -911,7 +911,7 @@
    "ko": "Live Activity를 시작하지 못했습니다. {0}",
    "en": "Could not start the Live Activity. {0}",
    "files": [
-    "AppModel+WidgetLiveActivity.swift:300"
+    "AppModel+WidgetLiveActivity.swift:296"
    ],
    "args": [
     "error.localizedDescription"
@@ -1485,18 +1485,6 @@
    ]
   },
   {
-   "key": "iOS가 허용하는 다음 실행에서 센서 기록을 이어갑니다.|Sensor recording resumes at the next opportunity allowed by iOS.",
-   "ko": "iOS가 허용하는 다음 실행에서 센서 기록을 이어갑니다.",
-   "en": "Sensor recording resumes at the next opportunity allowed by iOS.",
-   "files": [
-    "TaptionPlanApp.swift:216"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "iPhone 건강 앱과 승인된 건강 앱의 걸음·운동·수면을 읽습니다. Apple Watch 기록도 함께 반영합니다.|Reads steps, workouts, and sleep from Health and approved apps, including Apple Watch.",
    "ko": "iPhone 건강 앱과 승인된 건강 앱의 걸음·운동·수면을 읽습니다. Apple Watch 기록도 함께 반영합니다.",
    "en": "Reads steps, workouts, and sleep from Health and approved apps, including Apple Watch.",
@@ -1537,7 +1525,7 @@
    "ko": "iPhone 실시간 연결",
    "en": "iPhone connected",
    "files": [
-    "WatchConnectivityController.swift:1279"
+    "WatchConnectivityController.swift:1286"
    ],
    "args": [],
    "targets": [
@@ -1562,7 +1550,7 @@
    "en": "Connecting to iPhone",
    "files": [
     "WatchConnectivityController.swift:23",
-    "WatchConnectivityController.swift:1274"
+    "WatchConnectivityController.swift:1281"
    ],
    "args": [],
    "targets": [
@@ -1756,7 +1744,7 @@
    "en": "Was this {0}?",
    "files": [
     "ContentView.swift:112",
-    "TaptionPlanWatchWidget.swift:364"
+    "TaptionPlanWatchWidget.swift:367"
    ],
    "args": [
     "subject.behavior.localizedTitle(.english)"
@@ -1858,7 +1846,7 @@
    "ko": "{0} 상세 분류",
    "en": "{0} details",
    "files": [
-    "MapHomeView+Menu.swift:706"
+    "MapHomeView+Menu.swift:708"
    ],
    "args": [
     "category.localizedTitle(language)"
@@ -1872,8 +1860,8 @@
    "ko": "{0} 색상 팔레트",
    "en": "{0} color palette",
    "files": [
-    "MapHomeView+Menu.swift:735",
-    "MapHomeView+Menu.swift:853"
+    "MapHomeView+Menu.swift:737",
+    "MapHomeView+Menu.swift:855"
    ],
    "args": [
     "category.localizedTitle(language)"
@@ -1887,7 +1875,7 @@
    "ko": "{0} 수정",
    "en": "Edit {0}",
    "files": [
-    "MapHomeView+Menu.swift:838"
+    "MapHomeView+Menu.swift:840"
    ],
    "args": [
     "category.title"
@@ -2375,7 +2363,7 @@
    "files": [
     "ScreenTimeUsageService.swift:671",
     "WatchTodayCards.swift:21",
-    "TaptionPlanWatchWidget.swift:440"
+    "TaptionPlanWatchWidget.swift:443"
    ],
    "args": [
     "minutes / 60",
@@ -2454,7 +2442,7 @@
    "files": [
     "ScreenTimeUsageService.swift:670",
     "WatchTodayCards.swift:20",
-    "TaptionPlanWatchWidget.swift:439"
+    "TaptionPlanWatchWidget.swift:442"
    ],
    "args": [
     "minutes / 60"
@@ -3001,8 +2989,8 @@
    "en": "Activity",
    "files": [
     "WidgetShared.swift:774",
-    "AppModel+WidgetLiveActivity.swift:148",
-    "AppModel+WidgetLiveActivity.swift:150"
+    "AppModel+WidgetLiveActivity.swift:144",
+    "AppModel+WidgetLiveActivity.swift:146"
    ],
    "args": [],
    "targets": [
@@ -3521,7 +3509,7 @@
    "ko": "BOKKI 오늘",
    "en": "BOKKI Today",
    "files": [
-    "TaptionPlanWatchWidget.swift:107"
+    "TaptionPlanWatchWidget.swift:110"
    ],
    "args": [],
    "targets": [
@@ -4370,7 +4358,7 @@
    "ko": "확인 중",
    "en": "Checking",
    "files": [
-    "AppModel+WidgetLiveActivity.swift:193",
+    "AppModel+WidgetLiveActivity.swift:189",
     "WidgetShared.swift:0"
    ],
    "args": [],
@@ -4757,7 +4745,7 @@
    "ko": "위젯 요청을 반영하지 못했습니다. {0}",
    "en": "Could not apply the widget request. {0}",
    "files": [
-    "AppModel+WidgetLiveActivity.swift:424"
+    "AppModel+WidgetLiveActivity.swift:420"
    ],
    "args": [
     "error.localizedDescription"
@@ -4913,9 +4901,9 @@
    "ko": "선택한 계획을 찾지 못했습니다.",
    "en": "Could not find the selected plan.",
    "files": [
-    "AppModel+WidgetLiveActivity.swift:223",
-    "AppModel+WidgetLiveActivity.swift:273",
-    "AppModel+WidgetLiveActivity.swift:311"
+    "AppModel+WidgetLiveActivity.swift:219",
+    "AppModel+WidgetLiveActivity.swift:269",
+    "AppModel+WidgetLiveActivity.swift:307"
    ],
    "args": [],
    "targets": [
@@ -4991,7 +4979,7 @@
    "ko": "계획을 처리하지 못했습니다. {0}",
    "en": "Could not process the plan. {0}",
    "files": [
-    "AppModel+WidgetLiveActivity.swift:264"
+    "AppModel+WidgetLiveActivity.swift:260"
    ],
    "args": [
     "error.localizedDescription"
@@ -5107,7 +5095,7 @@
    "ko": "Live Activity를 시작하지 못했습니다. {0}",
    "en": "Could not start the Live Activity. {0}",
    "files": [
-    "AppModel+WidgetLiveActivity.swift:301"
+    "AppModel+WidgetLiveActivity.swift:297"
    ],
    "args": [
     "error.localizedDescription"
@@ -5189,7 +5177,7 @@
    "ko": "위젯 데이터를 갱신하지 못했습니다. {0}",
    "en": "Could not update widget data. {0}",
    "files": [
-    "AppModel+WidgetLiveActivity.swift:526"
+    "AppModel+WidgetLiveActivity.swift:522"
    ],
    "args": [
     "error.localizedDescription"
@@ -5605,7 +5593,7 @@
    "ko": "식사",
    "en": "Eating",
    "files": [
-    "AppModel+WidgetLiveActivity.swift:156",
+    "AppModel+WidgetLiveActivity.swift:152",
     "MapHomeTimeSidebar.swift:0",
     "WatchBehaviorRules.swift:83"
    ],
@@ -5861,7 +5849,7 @@
    "ko": "운동",
    "en": "Exercise",
    "files": [
-    "AppModel+WidgetLiveActivity.swift:157",
+    "AppModel+WidgetLiveActivity.swift:153",
     "MapHomeTimeSidebar.swift:0",
     "MapHomeLocationPresentation.swift:0"
    ],
@@ -6810,7 +6798,7 @@
    "ko": "취미",
    "en": "Hobby",
    "files": [
-    "AppModel+WidgetLiveActivity.swift:153",
+    "AppModel+WidgetLiveActivity.swift:149",
     "MapHomeTimeSidebar.swift:0",
     "MapHomeLocationPresentation.swift:0"
    ],
@@ -8182,7 +8170,7 @@
    "en": "Movement",
    "files": [
     "WidgetShared.swift:770",
-    "AppModel+WidgetLiveActivity.swift:155",
+    "AppModel+WidgetLiveActivity.swift:151",
     "MapHomeTimeSidebar.swift:0"
    ],
    "args": [],
@@ -8353,7 +8341,7 @@
    "ko": "신제품 기획",
    "en": "New product planning",
    "files": [
-    "TaptionPlanWatchWidget.swift:455"
+    "TaptionPlanWatchWidget.swift:458"
    ],
    "args": [],
    "targets": [
@@ -8988,7 +8976,7 @@
    "ko": "프로젝트",
    "en": "Project",
    "files": [
-    "TaptionPlanWatchWidget.swift:464"
+    "TaptionPlanWatchWidget.swift:467"
    ],
    "args": [],
    "targets": [
@@ -9656,30 +9644,6 @@
    ]
   },
   {
-   "key": "|Sensor recording check",
-   "ko": "센서 기록 확인",
-   "en": "Sensor recording check",
-   "files": [
-    "TaptionPlanApp.swift:213"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "|Sensor recording resumes at the next opportunity allowed by iOS.",
-   "ko": "iOS가 허용하는 다음 실행에서 센서 기록을 이어갑니다.",
-   "en": "Sensor recording resumes at the next opportunity allowed by iOS.",
-   "files": [
-    "TaptionPlanApp.swift:217"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "|Seokguram",
    "ko": "석굴암",
    "en": "Seokguram",
@@ -9858,7 +9822,7 @@
    "ko": "지금 활동과 다음 일정, 오늘 기록을 표시합니다.",
    "en": "Shows your current activity, next plan, and today's record.",
    "files": [
-    "TaptionPlanWatchWidget.swift:113"
+    "TaptionPlanWatchWidget.swift:116"
    ],
    "args": [],
    "targets": [
@@ -9960,7 +9924,7 @@
    "files": [
     "HealthAndSensorModels.swift:35",
     "WidgetShared.swift:772",
-    "AppModel+WidgetLiveActivity.swift:154"
+    "AppModel+WidgetLiveActivity.swift:150"
    ],
    "args": [],
    "targets": [
@@ -10264,7 +10228,7 @@
    "ko": "수업",
    "en": "Study",
    "files": [
-    "AppModel+WidgetLiveActivity.swift:152",
+    "AppModel+WidgetLiveActivity.swift:148",
     "MapHomeTimeSidebar.swift:0",
     "WidgetShared.swift:0"
    ],
@@ -11261,7 +11225,7 @@
    "ko": "미확인",
    "en": "Unconfirmed",
    "files": [
-    "AppModel+WidgetLiveActivity.swift:158",
+    "AppModel+WidgetLiveActivity.swift:154",
     "MapHomeTimeSidebar.swift:0"
    ],
    "args": [],
@@ -11780,7 +11744,7 @@
    "ko": "업무",
    "en": "Work",
    "files": [
-    "AppModel+WidgetLiveActivity.swift:151",
+    "AppModel+WidgetLiveActivity.swift:147",
     "WatchTodayCards.swift:139",
     "MapHomeTimeSidebar.swift:0"
    ],
@@ -13174,7 +13138,7 @@
    "ko": "계획을 처리하지 못했습니다. {0}",
    "en": "Could not process the plan. {0}",
    "files": [
-    "AppModel+WidgetLiveActivity.swift:263"
+    "AppModel+WidgetLiveActivity.swift:259"
    ],
    "args": [
     "error.localizedDescription"
@@ -14067,7 +14031,7 @@
    "ko": "기록 꺼짐",
    "en": "Recording off",
    "files": [
-    "TaptionPlanWatchWidget.swift:375"
+    "TaptionPlanWatchWidget.swift:378"
    ],
    "args": [],
    "targets": [
@@ -14104,7 +14068,7 @@
    "ko": "기록 중",
    "en": "Recording",
    "files": [
-    "TaptionPlanWidget.swift:543"
+    "TaptionPlanWidget.swift:546"
    ],
    "args": [],
    "targets": [
@@ -14628,7 +14592,7 @@
    "ko": "날씨",
    "en": "Weather",
    "files": [
-    "MapHomeView+Menu.swift:514",
+    "MapHomeView+Menu.swift:516",
     "StickerArtBasics.swift:7"
    ],
    "args": [],
@@ -14719,7 +14683,7 @@
    "ko": "내 차 등록",
    "en": "My car",
    "files": [
-    "MapHomeView+Menu.swift:444"
+    "MapHomeView+Menu.swift:446"
    ],
    "args": [],
    "targets": [
@@ -15700,7 +15664,7 @@
    "ko": "등록된 사용자 위치 {0}개",
    "en": "{0} saved user locations",
    "files": [
-    "MapHomeView+Menu.swift:945"
+    "MapHomeView+Menu.swift:947"
    ],
    "args": [
     "userLocationCount"
@@ -15714,7 +15678,7 @@
    "ko": "등록된 사용자 위치가 없습니다.",
    "en": "No saved user locations.",
    "files": [
-    "MapHomeView+Menu.swift:975"
+    "MapHomeView+Menu.swift:977"
    ],
    "args": [],
    "targets": [
@@ -16366,7 +16330,7 @@
    "ko": "메모 표시",
    "en": "Show memos",
    "files": [
-    "MapHomeView+Menu.swift:522"
+    "MapHomeView+Menu.swift:524"
    ],
    "args": [],
    "targets": [
@@ -16673,7 +16637,7 @@
    "files": [
     "MapHomeLocationPresentation.swift:311",
     "MapHomeNLEClipEditor.swift:450",
-    "AppModel+WidgetLiveActivity.swift:158"
+    "AppModel+WidgetLiveActivity.swift:154"
    ],
    "args": [],
    "targets": [
@@ -16979,7 +16943,7 @@
    "ko": "백그라운드 동기화",
    "en": "Background sync",
    "files": [
-    "WatchConnectivityController.swift:1280"
+    "WatchConnectivityController.swift:1287"
    ],
    "args": [],
    "targets": [
@@ -17967,7 +17931,7 @@
    "ko": "사용자 위치 관리",
    "en": "Manage user locations",
    "files": [
-    "MapHomeView+Menu.swift:994"
+    "MapHomeView+Menu.swift:996"
    ],
    "args": [],
    "targets": [
@@ -17979,7 +17943,7 @@
    "ko": "사용자 위치 목록",
    "en": "User location list",
    "files": [
-    "MapHomeView+Menu.swift:969"
+    "MapHomeView+Menu.swift:971"
    ],
    "args": [],
    "targets": [
@@ -18029,7 +17993,7 @@
    "ko": "사용자 지정 색상",
    "en": "Custom category color",
    "files": [
-    "MapHomeView+Menu.swift:784"
+    "MapHomeView+Menu.swift:786"
    ],
    "args": [],
    "targets": [
@@ -18041,8 +18005,8 @@
    "ko": "사용자 지정",
    "en": "Custom",
    "files": [
-    "MapHomeView+Menu.swift:767",
-    "MapHomeView+Menu.swift:866"
+    "MapHomeView+Menu.swift:769",
+    "MapHomeView+Menu.swift:868"
    ],
    "args": [],
    "targets": [
@@ -18054,7 +18018,7 @@
    "ko": "사용자 추가",
    "en": "Add custom",
    "files": [
-    "MapHomeView+Menu.swift:807"
+    "MapHomeView+Menu.swift:809"
    ],
    "args": [],
    "targets": [
@@ -18066,7 +18030,7 @@
    "ko": "사용자",
    "en": "User",
    "files": [
-    "MapHomeView+Menu.swift:942"
+    "MapHomeView+Menu.swift:944"
    ],
    "args": [],
    "targets": [
@@ -18126,7 +18090,7 @@
    "ko": "사이드바",
    "en": "Sidebar",
    "files": [
-    "MapHomeView+Menu.swift:511"
+    "MapHomeView+Menu.swift:513"
    ],
    "args": [],
    "targets": [
@@ -18630,7 +18594,7 @@
    "ko": "색상 선택",
    "en": "Choose color",
    "files": [
-    "MapHomeView+Menu.swift:763"
+    "MapHomeView+Menu.swift:765"
    ],
    "args": [],
    "targets": [
@@ -18654,7 +18618,7 @@
    "ko": "색상을 선택하면 즉시 저장됩니다.",
    "en": "Colors save immediately.",
    "files": [
-    "MapHomeView+Menu.swift:889"
+    "MapHomeView+Menu.swift:891"
    ],
    "args": [],
    "targets": [
@@ -18804,9 +18768,9 @@
    "ko": "선택한 계획을 찾지 못했습니다.",
    "en": "Could not find the selected plan.",
    "files": [
-    "AppModel+WidgetLiveActivity.swift:222",
-    "AppModel+WidgetLiveActivity.swift:272",
-    "AppModel+WidgetLiveActivity.swift:310"
+    "AppModel+WidgetLiveActivity.swift:218",
+    "AppModel+WidgetLiveActivity.swift:268",
+    "AppModel+WidgetLiveActivity.swift:306"
    ],
    "args": [],
    "targets": [
@@ -19257,18 +19221,6 @@
    ]
   },
   {
-   "key": "센서 기록 확인|Sensor recording check",
-   "ko": "센서 기록 확인",
-   "en": "Sensor recording check",
-   "files": [
-    "TaptionPlanApp.swift:212"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "센서 기록을 저장하지 못했습니다.|Could not save sensor records.",
    "ko": "센서 기록을 저장하지 못했습니다.",
    "en": "Could not save sensor records.",
@@ -19603,7 +19555,7 @@
    "ko": "수업",
    "en": "Study",
    "files": [
-    "AppModel+WidgetLiveActivity.swift:152"
+    "AppModel+WidgetLiveActivity.swift:148"
    ],
    "args": [],
    "targets": [
@@ -19787,7 +19739,7 @@
    "ko": "시간 간격",
    "en": "Time interval",
    "files": [
-    "MapHomeView+Menu.swift:552"
+    "MapHomeView+Menu.swift:554"
    ],
    "args": [],
    "targets": [
@@ -19835,7 +19787,7 @@
    "ko": "시간 표시",
    "en": "Time format",
    "files": [
-    "MapHomeView+Menu.swift:538"
+    "MapHomeView+Menu.swift:540"
    ],
    "args": [],
    "targets": [
@@ -20099,7 +20051,7 @@
    "ko": "식사",
    "en": "Eating",
    "files": [
-    "AppModel+WidgetLiveActivity.swift:156"
+    "AppModel+WidgetLiveActivity.swift:152"
    ],
    "args": [],
    "targets": [
@@ -20128,7 +20080,7 @@
    "ko": "신제품 기획",
    "en": "New product planning",
    "files": [
-    "TaptionPlanWatchWidget.swift:454"
+    "TaptionPlanWatchWidget.swift:457"
    ],
    "args": [],
    "targets": [
@@ -20435,7 +20387,7 @@
    "ko": "안개 탐험 선택",
    "en": "Choose fog of exploration",
    "files": [
-    "MapHomeView+Menu.swift:1064"
+    "MapHomeView+Menu.swift:1066"
    ],
    "args": [],
    "targets": [
@@ -20447,7 +20399,7 @@
    "ko": "안개 탐험",
    "en": "Fog of Exploration",
    "files": [
-    "MapHomeView+Menu.swift:1060"
+    "MapHomeView+Menu.swift:1062"
    ],
    "args": [],
    "targets": [
@@ -20510,7 +20462,7 @@
    "en": "Alerts",
    "files": [
     "MapHomeAlarm.swift:479",
-    "MapHomeView+Menu.swift:452"
+    "MapHomeView+Menu.swift:454"
    ],
    "args": [],
    "targets": [
@@ -20781,7 +20733,7 @@
    "ko": "앱",
    "en": "App",
    "files": [
-    "MapHomeView+Menu.swift:448"
+    "MapHomeView+Menu.swift:450"
    ],
    "args": [],
    "targets": [
@@ -20818,7 +20770,7 @@
    "ko": "앱을 열어 오늘 기록을 동기화하세요",
    "en": "Open the app to sync today's records",
    "files": [
-    "TaptionPlanWidget.swift:350"
+    "TaptionPlanWidget.swift:353"
    ],
    "args": [],
    "targets": [
@@ -20830,7 +20782,7 @@
    "ko": "앱을 열어 잠금을 해제하세요",
    "en": "Open the app to unlock",
    "files": [
-    "TaptionPlanWidget.swift:333"
+    "TaptionPlanWidget.swift:336"
    ],
    "args": [],
    "targets": [
@@ -20951,7 +20903,7 @@
    "ko": "언어 선택",
    "en": "Choose language",
    "files": [
-    "MapHomeLanguageMenuItem.swift:52"
+    "MapHomeLanguageMenuItem.swift:54"
    ],
    "args": [],
    "targets": [
@@ -20963,7 +20915,7 @@
    "ko": "언어",
    "en": "Language",
    "files": [
-    "MapHomeLanguageMenuItem.swift:38"
+    "MapHomeLanguageMenuItem.swift:40"
    ],
    "args": [],
    "targets": [
@@ -21211,7 +21163,7 @@
    "ko": "연결 대기",
    "en": "Waiting for connection",
    "files": [
-    "WatchConnectivityController.swift:1276"
+    "WatchConnectivityController.swift:1283"
    ],
    "args": [],
    "targets": [
@@ -21223,7 +21175,7 @@
    "ko": "연결 상태 확인 중",
    "en": "Checking connection",
    "files": [
-    "WatchConnectivityController.swift:1282"
+    "WatchConnectivityController.swift:1289"
    ],
    "args": [],
    "targets": [
@@ -21250,7 +21202,7 @@
    "en": "Connections",
    "files": [
     "MapHomeNLEClipFactory.swift:307",
-    "MapHomeView+Menu.swift:437"
+    "MapHomeView+Menu.swift:439"
    ],
    "args": [],
    "targets": [
@@ -21817,7 +21769,7 @@
    "ko": "오늘 {0}",
    "en": "Today {0}",
    "files": [
-    "TaptionPlanWatchWidget.swift:398"
+    "TaptionPlanWatchWidget.swift:401"
    ],
    "args": [
     "duration(summary.recordedMinutes)"
@@ -22249,7 +22201,7 @@
    "files": [
     "MapHomeInteractionPolicy.swift:416",
     "MapHomeLocationPresentation.swift:310",
-    "AppModel+WidgetLiveActivity.swift:157"
+    "AppModel+WidgetLiveActivity.swift:153"
    ],
    "args": [],
    "targets": [
@@ -22495,7 +22447,7 @@
    "ko": "위젯 데이터를 갱신하지 못했습니다. {0}",
    "en": "Could not update widget data. {0}",
    "files": [
-    "AppModel+WidgetLiveActivity.swift:525"
+    "AppModel+WidgetLiveActivity.swift:521"
    ],
    "args": [
     "error.localizedDescription"
@@ -22509,7 +22461,7 @@
    "ko": "위젯 요청을 반영하지 못했습니다. {0}",
    "en": "Could not apply the widget request. {0}",
    "files": [
-    "AppModel+WidgetLiveActivity.swift:423"
+    "AppModel+WidgetLiveActivity.swift:419"
    ],
    "args": [
     "error.localizedDescription"
@@ -22572,7 +22524,7 @@
    "ko": "위치 기록을 기다리는 중",
    "en": "Waiting for location",
    "files": [
-    "MapHomeView+Menu.swift:480"
+    "MapHomeView+Menu.swift:482"
    ],
    "args": [],
    "targets": [
@@ -22646,7 +22598,7 @@
    "ko": "위치 목록",
    "en": "Location list",
    "files": [
-    "MapHomeView+Menu.swift:917"
+    "MapHomeView+Menu.swift:919"
    ],
    "args": [],
    "targets": [
@@ -22845,7 +22797,7 @@
    "files": [
     "WidgetShared.swift:768",
     "MapHomeStickerEditor.swift:533",
-    "MapHomeView+Menu.swift:904"
+    "MapHomeView+Menu.swift:906"
    ],
    "args": [],
    "targets": [
@@ -23623,7 +23575,7 @@
    "files": [
     "WidgetShared.swift:770",
     "MapHomeLocationPresentation.swift:308",
-    "AppModel+WidgetLiveActivity.swift:155"
+    "AppModel+WidgetLiveActivity.swift:151"
    ],
    "args": [],
    "targets": [
@@ -24002,7 +23954,7 @@
    "ko": "일정 · 위치 · 이동 · 활동이 여기에 표시됩니다",
    "en": "Plans, places, trips and activity appear here",
    "files": [
-    "TaptionPlanWidget.swift:354"
+    "TaptionPlanWidget.swift:357"
    ],
    "args": [],
    "targets": [
@@ -24294,7 +24246,7 @@
    "ko": "자동",
    "en": "Automatic",
    "files": [
-    "MapHomeLanguageMenuItem.swift:59"
+    "MapHomeLanguageMenuItem.swift:61"
    ],
    "args": [],
    "targets": [
@@ -25455,7 +25407,7 @@
    "ko": "지금 활동과 다음 일정, 오늘 기록을 표시합니다.",
    "en": "Shows your current activity, next plan, and today's record.",
    "files": [
-    "TaptionPlanWatchWidget.swift:112"
+    "TaptionPlanWatchWidget.swift:115"
    ],
    "args": [],
    "targets": [
@@ -25563,7 +25515,7 @@
    "ko": "지도 스타일 선택",
    "en": "Choose map style",
    "files": [
-    "MapHomeView+Menu.swift:1048"
+    "MapHomeView+Menu.swift:1050"
    ],
    "args": [],
    "targets": [
@@ -25575,7 +25527,7 @@
    "ko": "지도 스타일",
    "en": "Map style",
    "files": [
-    "MapHomeView+Menu.swift:1044"
+    "MapHomeView+Menu.swift:1046"
    ],
    "args": [],
    "targets": [
@@ -25650,7 +25602,7 @@
    "en": "Map attribution",
    "files": [
     "MapHomeSupportViews.swift:109",
-    "MapHomeView+Menu.swift:456"
+    "MapHomeView+Menu.swift:458"
    ],
    "args": [],
    "targets": [
@@ -26200,7 +26152,7 @@
    "ko": "집중 중",
    "en": "Focusing",
    "files": [
-    "TaptionPlanWidget.swift:539"
+    "TaptionPlanWidget.swift:542"
    ],
    "args": [],
    "targets": [
@@ -26623,7 +26575,7 @@
    "files": [
     "MapHomeInteractionPolicy.swift:415",
     "MapHomeLocationPresentation.swift:291",
-    "AppModel+WidgetLiveActivity.swift:153"
+    "AppModel+WidgetLiveActivity.swift:149"
    ],
    "args": [],
    "targets": [
@@ -26688,7 +26640,7 @@
    "ko": "측정 대기",
    "en": "Waiting to measure",
    "files": [
-    "TaptionPlanWatchWidget.swift:376"
+    "TaptionPlanWatchWidget.swift:379"
    ],
    "args": [],
    "targets": [
@@ -26878,7 +26830,7 @@
    "ko": "캘린더 연결",
    "en": "Calendar",
    "files": [
-    "MapHomeView+Menu.swift:441"
+    "MapHomeView+Menu.swift:443"
    ],
    "args": [],
    "targets": [
@@ -27476,7 +27428,7 @@
    "ko": "표시",
    "en": "Display",
    "files": [
-    "MapHomeView+Menu.swift:1016"
+    "MapHomeView+Menu.swift:1018"
    ],
    "args": [],
    "targets": [
@@ -27500,7 +27452,7 @@
    "ko": "프로젝트",
    "en": "Project",
    "files": [
-    "TaptionPlanWatchWidget.swift:463"
+    "TaptionPlanWatchWidget.swift:466"
    ],
    "args": [],
    "targets": [
@@ -27708,7 +27660,7 @@
    "en": "Day card",
    "files": [
     "MapHomeDailyCard.swift:354",
-    "MapHomeView+Menu.swift:454",
+    "MapHomeView+Menu.swift:456",
     "MapHomeView+Support.swift:579"
    ],
    "args": [],
@@ -28086,7 +28038,7 @@
    "ko": "행동 분류 목록",
    "en": "Activity category list",
    "files": [
-    "MapHomeView+Menu.swift:669"
+    "MapHomeView+Menu.swift:671"
    ],
    "args": [],
    "targets": [
@@ -28098,7 +28050,7 @@
    "ko": "행동 분류",
    "en": "Activity categories",
    "files": [
-    "MapHomeView+Menu.swift:656"
+    "MapHomeView+Menu.swift:658"
    ],
    "args": [],
    "targets": [
@@ -28274,7 +28226,7 @@
    "ko": "현재 위치 기록 중",
    "en": "Recording current location",
    "files": [
-    "MapHomeView+Menu.swift:481"
+    "MapHomeView+Menu.swift:483"
    ],
    "args": [],
    "targets": [
@@ -28635,7 +28587,7 @@
    "ko": "확인 중",
    "en": "Checking",
    "files": [
-    "AppModel+WidgetLiveActivity.swift:193",
+    "AppModel+WidgetLiveActivity.swift:189",
     "WatchTodayCards.swift:66",
     "SensorCollectionLiveActivity.swift:112"
    ],
@@ -28778,7 +28730,7 @@
    "files": [
     "WidgetShared.swift:774",
     "MapHomeLocationPresentation.swift:267",
-    "AppModel+WidgetLiveActivity.swift:148"
+    "AppModel+WidgetLiveActivity.swift:144"
    ],
    "args": [],
    "targets": [

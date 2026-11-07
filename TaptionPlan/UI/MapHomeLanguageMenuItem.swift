@@ -4,6 +4,7 @@ import TaptionPlanCore
 /// 메뉴의 언어 고르기.
 struct MapHomeLanguageMenuItem: View {
     let language: MapHomeLanguage
+    let onChange: () -> Void
 
     @AppStorage(
         AppLanguagePreference.sharedDefaultsKey,
@@ -21,6 +22,7 @@ struct MapHomeLanguageMenuItem: View {
                     guard languageRawValue != option.rawValue else { return }
                     languageRawValue = option.rawValue
                     AppLanguagePreference.save(option)
+                    onChange()
                 } label: {
                     if option == languagePreference {
                         Label(

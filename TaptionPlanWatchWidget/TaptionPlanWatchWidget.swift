@@ -43,6 +43,7 @@ private struct TaptionWatchWidgetProvider: TimelineProvider {
         in context: Context,
         completion: @escaping (TaptionWatchWidgetEntry) -> Void
     ) {
+        UITextPack.reloadSelection()
         completion(
             TaptionWatchWidgetEntry(
                 date: .now,
@@ -60,6 +61,8 @@ private struct TaptionWatchWidgetProvider: TimelineProvider {
         in context: Context,
         completion: @escaping (Timeline<TaptionWatchWidgetEntry>) -> Void
     ) {
+        // 워치 앱이 iPhone 선택을 앱 그룹에 남긴다. 위젯 프로세스가 오래 살아 있어도 그 값을 다시 읽는다.
+        UITextPack.reloadSelection()
         let now = Date.now
         let end = now.addingTimeInterval(Self.horizon)
         let payload = TaptionWatchWidgetStore.read()

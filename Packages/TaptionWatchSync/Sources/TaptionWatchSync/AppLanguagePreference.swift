@@ -82,6 +82,26 @@ public enum AppLanguagePreference: String, Codable, CaseIterable, Identifiable, 
         self == .automatic ? nil : rawValue
     }
 
+    /// 워치가 받은 iPhone 선택. 값이 없거나 모르는 값이면 자동(워치 기기 언어)이다.
+    public static func fromWatchPayload(_ value: String?) -> Self {
+        value.flatMap(Self.init(rawValue:)) ?? .automatic
+    }
+
+    /// 워치 앱이 iPhone 선택을 워치 앱 그룹에 남긴다. 워치 위젯과 번역 표가 같은 언어를 읽는다.
+    /// 값이 바뀐 때만 쓰고, 바뀌었으면 true다.
+    @discardableResult
+    public static func adoptPhoneSelection(
+        _ payloadValue: String?,
+        defaults: UserDefaults? = nil
+    ) -> Bool {
+        let preference = fromWatchPayload(payloadValue)
+        guard storedPreference(in: defaults ?? sharedDefaults, key: sharedDefaultsKey) != preference else {
+            return false
+        }
+        save(preference, to: defaults)
+        return true
+    }
+
     public static var current: Self {
         if let groupDefaults = UserDefaults(suiteName: appGroupIdentifier),
            let rawValue = groupDefaults.string(forKey: sharedDefaultsKey) {
