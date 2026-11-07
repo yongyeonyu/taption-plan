@@ -2,6 +2,12 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## PRF1101A01 · 영상 렌더러 조회 자료 공유 (2026-11-07)
+
+- 변경: `MapHomePlaybackTimeline`이 만들 때 `MapHomePlaybackLookup`을 한 번 만들고, 프레임마다 좌표(`resolveOrGap(lookup:)`)와 속도(`lookup.speed`)에 쓴다. 예전에는 프레임마다 장소 사전을 다시 만들고 속도 때문에 하루 측정값을 전부 훑었다. 실시간 구동기와 같은 경로다.
+- 시뮬레이터(BOKKI-iPhone11): `PlaybackVideoTimelineTests`(좌표 = `resolveOrGap` 일치 포함)·`MapHomePerformanceHelperTests` 15건 통과, 구조 검사 통과. 로그 `build/validation/PRF1101A01b/test.log`.
+- 남은 것: 실기기 영상 렌더 시간 비교는 하지 않았다.
+
 ## NTF1107A01 · 센서 수신 알림 없애기 (2026-11-07)
 
 - 원인: 백그라운드 새로고침·전환마다 "센서 기록 확인" 로컬 알림을 다시 예약해 앱 밖에서 주기적으로 떴다.

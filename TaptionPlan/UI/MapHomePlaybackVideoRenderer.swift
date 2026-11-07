@@ -18,6 +18,8 @@ struct MapHomePlaybackTimeline {
 
     let inputs: MapHomePlaybackDriver.Inputs
     var projection: MapHomeWBSPlaybackProjection?
+    /// 구동기처럼 하루 조회 자료를 한 번 만들어 프레임마다 쓴다(PRF1101A01).
+    private let lookup: MapHomePlaybackLookup
     var preferredForecastLegIDs: Set<String> = []
     var expectedCoordinate: (Date) -> GeoPoint? = { _ in nil }
     var isAdaptiveZoom = true
@@ -25,6 +27,12 @@ struct MapHomePlaybackTimeline {
     var initialCameraDistance: Double = MapHomeStartupCameraPolicy.distance
     /// 실시간 재생과 같은 경로 다듬기(PLY1029A07). 원본 좌표를 그대로 보려면 끈다.
     var smoothsPath = true
+
+    init(inputs: MapHomePlaybackDriver.Inputs, projection: MapHomeWBSPlaybackProjection?) {
+        self.inputs = inputs
+        self.projection = projection
+        lookup = MapHomePlaybackLookup(readings: inputs.readings, travel: inputs.travel, places: inputs.places)
+    }
 
     var endMinute: Double { min(inputs.endMinute, 1_440) }
 
@@ -58,7 +66,7 @@ struct MapHomePlaybackTimeline {
             frame: frame,
             normalizedReadings: inputs.readings,
             travel: inputs.travel,
-            places: inputs.places,
+            lookup: lookup,
             expectedCoordinate: frame == nil ? expectedCoordinate(date) : nil
         )
         guard let point = location?.cameraCoordinate else { return nil }
@@ -69,7 +77,7 @@ struct MapHomePlaybackTimeline {
     /// 이 분의 목표 카메라 거리(스무딩 전).
     func targetDistance(atMinute minute: Double) -> Double {
         let date = inputs.dayStart.addingTimeInterval(minute * 60)
-        let speed = MapHomePlaybackSpeed.speed(at: date, travel: inputs.travel, readings: inputs.readings)
+        let speed = lookup.speed(at: date, travel: inputs.travel)
         return inputs.zoomPlan.targetDistance(atMinute: minute, speedMetersPerSecond: speed)
     }
 
