@@ -612,26 +612,27 @@ extension MapHomeView {
         style: MapHomeVectorStyle,
         viewport: MapHomeVectorViewport?,
         stickmanPoint: CGPoint?,
-        waypoints allWaypoints: [PawprintWaypoint],
+        statics: MapHomePlaybackStaticLayers,
         inputs: MapHomeOverlayInputs,
         playback: MapHomeApplePlayback?,
         displayedSpeed: Double?
     ) -> some View {
         _ = MapHomePlaybackFrameStats.noteOverlayEvaluation()
-        // 구동기 재생 중에는 화랑이가 지나간 시각까지의 발자국만 화면 틱마다 보여, 발자국이 화랑이 발밑에 바로 찍힌다(ARC1030A02).
-        let waypoints = playbackVisibleWaypoints(allWaypoints)
         let places = inputs.places
         return ZStack {
             if fogStrength != .off {
+                // 구동기 재생 중에는 화랑이가 지나간 시각까지의 발자국만 걷어 낸다(ARC1030A02).
                 MapHomeFogLayer(
                     opacity: fogStrength.opacity,
-                    reveals: fogReveals(viewport: viewport, waypoints: waypoints, places: places, stickmanPoint: stickmanPoint)
+                    reveals: fogReveals(viewport: viewport, waypoints: playbackFogWaypoints(statics),
+                                        places: places, stickmanPoint: stickmanPoint)
                 )
             }
-            homeLandOverlay(viewport: viewport)
-            placeZoneOverlay(viewport: viewport)
-            // `waypoints`는 이미 그리는 순서로 정렬돼 있다(`vectorMap(style:)`).
-            ForEach(recordingShows(\.footprints) && !Self.benchHidden("paws") ? waypoints : []) { waypoint in
+            homeLandOverlay(viewport: viewport, content: statics.land)
+            placeZoneOverlay(viewport: viewport, zones: statics.zones)
+            // 그리는 순서로 정렬돼 있다. 구동기 재생 중에는 지도 코디네이터 레이어가 그린다(OPT1102A01).
+            ForEach(recordingShows(\.footprints) && !Self.benchHidden("paws") && playbackDriver == nil
+                    ? statics.pawprints.drawOrder : []) { waypoint in
                 if let point = vectorPoint(
                     in: viewport,
                     for: vectorPawprintMarkerID(waypoint.index)
@@ -695,83 +696,13 @@ extension MapHomeView {
                     in: viewport,
                     for: vectorPlaceMarkerID(place.id)
                 ) {
+                    // 핀 내용은 비교되고, 지도만 움직인 프레임에는 위치만 바뀐다(OPT1102A01).
                     MapHomeProjectedAnnotation(
                         point: point,
                         anchor: MapHomePlaceAnnotationLayout.vectorAnchor
                     ) {
-                        if place.destination == .user {
-                            MapHomePlacePin(
-                                name: place.name,
-                                floor: place.floor,
-                                destination: place.destination,
-                                growthLevel: place.growthLevel,
-                                isLeapDay: place.isLeapDay,
-                                growthStatus: place.growthStatus,
-                                isGrowthQualifiedToday: place.isGrowthQualifiedToday,
-                                growthStreak: place.growthStreak,
-                                pendingWeeklyRewards: place.pendingWeeklyRewards,
-                                showsCatAtHome: place.isCatAtHome,
-                                catAction: place.catAction,
-                                equippedAccessoryID: place.equippedAccessoryID
-                            )
-                            .fixedSize()
-                            // 탭은 지도 탭에서 위치로 판정한다(두 손가락 핀치가 핀에 막히지 않게).
-                            .allowsHitTesting(false)
-                            .accessibilityAddTraits(.isButton)
-                            .accessibilityLabel(
-                                language.text(
-                                    "\(place.name) 사용자 위치 메뉴",
-                                    "\(place.name) user location menu"
-                                )
-                            )
-                        } else {
-                            if place.destination == .home {
-                                MapHomePlacePin(
-                                    name: place.name,
-                                    floor: place.floor,
-                                    destination: place.destination,
-                                    growthLevel: place.growthLevel,
-                                    isLeapDay: place.isLeapDay,
-                                    growthStatus: place.growthStatus,
-                                    isGrowthQualifiedToday: place.isGrowthQualifiedToday,
-                                    growthStreak: place.growthStreak,
-                                    pendingWeeklyRewards: place.pendingWeeklyRewards,
-                                    showsCatAtHome: place.isCatAtHome,
-                                    catAction: place.catAction,
-                                    equippedAccessoryID: place.equippedAccessoryID,
-                                    weatherBadge: place.weatherBadge,
-                                    homeSky: place.homeSky,
-                                    onOpenDaySummary: { isDaySummaryPresented = true }
-                                )
-                                .fixedSize()
-                                .allowsHitTesting(false)
-                                .accessibilityAddTraits(.isButton)
-                            } else {
-                                MapHomePlacePin(
-                                    name: place.name,
-                                    floor: place.floor,
-                                    destination: place.destination,
-                                    growthLevel: place.growthLevel,
-                                    isLeapDay: place.isLeapDay,
-                                    growthStatus: place.growthStatus,
-                                    isGrowthQualifiedToday: place.isGrowthQualifiedToday,
-                                    growthStreak: place.growthStreak,
-                                    pendingWeeklyRewards: place.pendingWeeklyRewards,
-                                    showsCatAtHome: place.isCatAtHome,
-                                    catAction: place.catAction,
-                                    equippedAccessoryID: place.equippedAccessoryID
-                                )
-                                .fixedSize()
-                                .allowsHitTesting(false)
-                                .accessibilityAddTraits(.isButton)
-                                .accessibilityLabel(
-                                    language.text(
-                                        "\(place.name), 레벨 \(place.floor ?? 1)",
-                                        "\(place.name), level \(place.floor ?? 1)"
-                                    )
-                                )
-                            }
-                        }
+                        MapHomePlacePinItem(place: place, language: language) { isDaySummaryPresented = true }
+                            .equatable()
                     }
                     .zIndex(MapHomePlaceDisplayPolicy.vectorZIndex(for: place.destination))
                 }
@@ -992,30 +923,18 @@ extension MapHomeView {
 
     /// 등록지점 범위: 빨간 원은 반경, 주황 두 원은 ±15% 히스테리시스 구간.
     @ViewBuilder
-    func placeZoneOverlay(viewport: MapHomeVectorViewport?) -> some View {
-        if showsPlaceRanges, let viewport, viewport.pitch < 5, mapViewportSize.height > 0 {
+    func placeZoneOverlay(viewport: MapHomeVectorViewport?, zones: [MapHomePlaceZoneItem]) -> some View {
+        if !zones.isEmpty, let viewport, viewport.pitch < 5, mapViewportSize.height > 0 {
             let metersPerPoint = viewport.span.latitudeDelta * 111_320 / Double(mapViewportSize.height)
             if metersPerPoint.isFinite, metersPerPoint > 0 {
-                ForEach(model.settings.frequentPlaces.filter { $0.point != nil }) { place in
-                    if let pin = vectorPoint(in: viewport, for: vectorPlaceMarkerID(place.id)) {
-                        let radius = CGFloat(place.radiusMeters / metersPerPoint)
-                        let outer = CGFloat(place.radiusMeters * (1 + MapHomePlaceZone.band) / metersPerPoint)
-                        let inner = CGFloat(place.radiusMeters * (1 - MapHomePlaceZone.band) / metersPerPoint)
-                        ZStack {
-                            Circle()
-                                .stroke(Color.orange.opacity(0.85), lineWidth: 1.5)
-                                .frame(width: outer * 2, height: outer * 2)
-                            Circle()
-                                .stroke(Color.orange.opacity(0.85), lineWidth: 1.5)
-                                .frame(width: inner * 2, height: inner * 2)
-                            Circle()
-                                .stroke(Color.red, lineWidth: 2)
-                                .frame(width: radius * 2, height: radius * 2)
-                        }
-                        .frame(width: 0, height: 0)
-                        .opacity(0.5)
-                        .position(pin)
-                        .allowsHitTesting(false)
+                ForEach(zones) { zone in
+                    if let pin = vectorPoint(in: viewport, for: vectorPlaceMarkerID(zone.id)) {
+                        MapHomePlaceZoneRings(radiusMeters: zone.radiusMeters, metersPerPoint: metersPerPoint)
+                            .equatable()
+                            .frame(width: 0, height: 0)
+                            .opacity(0.5)
+                            .position(pin)
+                            .allowsHitTesting(false)
                     }
                 }
             }

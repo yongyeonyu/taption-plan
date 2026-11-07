@@ -86,44 +86,16 @@ extension MapHomeView {
     /// 집 주변에 이어 붙인 땅을 지도 위에 그린다(최대 확대에 가까울수록 크게). 붙일 땅이 남아 있으면
     /// 이을 수 있는 빈 칸이 점선 "+"로 나오고, 눌러서 이어 붙인다. 벡터 지도 스타일에서만 그린다.
     @ViewBuilder
-    func homeLandOverlay(viewport: MapHomeVectorViewport?) -> some View {
-        if let layout = homeLandLayout(viewport: viewport) {
-            let season = homeGrowthHistory.season
-            let placements = season.landPlotPlacements ?? []
-            let nextPlot = season.landPlots.first { id in !placements.contains { $0.plotID == id } }
-            let candidates = nextPlot == nil ? [] : MapHomeGrowthPolicy.placementCandidates(in: season)
-            ZStack {
-                ForEach(placements) { placement in
-                    RoundedRectangle(cornerRadius: layout.cell * 0.14, style: .continuous)
-                        .fill(Color.tpPastelMint.opacity(0.55))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: layout.cell * 0.14, style: .continuous)
-                                .stroke(Color.tpReferenceMint.opacity(0.7), lineWidth: 1)
-                        }
-                        .frame(width: layout.cell - 2, height: layout.cell - 2)
-                        .offset(x: CGFloat(placement.x) * layout.cell, y: CGFloat(placement.y) * layout.cell)
-                        .allowsHitTesting(false)
-                }
-                ForEach(Array(candidates.enumerated()), id: \.offset) { _, cell in
-                    Button {
-                        placeLandFromMap(x: cell.x, y: cell.y)
-                    } label: {
-                        RoundedRectangle(cornerRadius: layout.cell * 0.14, style: .continuous)
-                            .strokeBorder(Color.tpAccent.opacity(0.8), style: StrokeStyle(lineWidth: 1.4, dash: [5, 4]))
-                            .background(Color.tpAccent.opacity(0.06), in: RoundedRectangle(cornerRadius: layout.cell * 0.14, style: .continuous))
-                            .overlay {
-                                Image(systemName: "plus")
-                                    .font(.system(size: min(20, layout.cell * 0.32), weight: .bold))
-                                    .foregroundStyle(Color.tpAccent)
-                            }
-                            .frame(width: layout.cell - 2, height: layout.cell - 2)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .offset(x: CGFloat(cell.x) * layout.cell, y: CGFloat(cell.y) * layout.cell)
-                    .accessibilityLabel(language.text("여기에 땅 이어 붙이기", "Attach land here"))
-                }
-            }
+    func homeLandOverlay(viewport: MapHomeVectorViewport?, content: MapHomeHomeLandContent?) -> some View {
+        if let content, let layout = homeLandLayout(viewport: viewport) {
+            // 칸 내용은 부모 평가에서 만들고, 프레임마다 위치·방위만 옮긴다(OPT1102A01).
+            MapHomeHomeLandGrid(
+                content: content,
+                cell: layout.cell,
+                attachLabel: language.text("여기에 땅 이어 붙이기", "Attach land here"),
+                onPlace: { x, y in placeLandFromMap(x: x, y: y) }
+            )
+            .equatable()
             .frame(width: 0, height: 0)
             .rotationEffect(.degrees(-layout.heading))
             .position(layout.center)

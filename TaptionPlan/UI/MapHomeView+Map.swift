@@ -170,10 +170,8 @@ extension MapHomeView {
     func vectorMap(style: MapHomeVectorStyle) -> some View {
         let cameraRevision = mapCameraRevision
         let waypoints = pawprintWaypoints
-        // 오버레이는 이 순서(예상 경로 먼저, 그다음 번호순)로 그린다. 프레임마다 정렬하지 않게 한 번만 정렬한다.
-        let drawOrderWaypoints = waypoints.sorted {
-            $0.isPredicted != $1.isPredicted ? $0.isPredicted : $0.index < $1.index
-        }
+        // 재생 분과 무관한 고정 레이어. 내용이 같으면 정렬·색 계산을 다시 하지 않는다(OPT1102A01).
+        let statics = playbackStaticLayers(waypoints: waypoints)
         let inputs = mapOverlayInputs()
         let places = inputs.places
         let playback = appleMapPlayback
@@ -213,6 +211,7 @@ extension MapHomeView {
                 handleMapTap(atLocal: point, waypoints: waypoints, positions: positions)
             },
             activeRouteSegments: recordingShows(\.routes) ? activeSegments : [],
+            layerPawprints: playbackLayerPawprints(statics),
             languageKey: languageRawValue
         )
         .id(style.rawValue)
@@ -224,7 +223,7 @@ extension MapHomeView {
                     style: style,
                     viewport: viewport,
                     stickmanPoint: stickmanPoint,
-                    waypoints: drawOrderWaypoints,
+                    statics: statics,
                     inputs: inputs,
                     playback: playback,
                     displayedSpeed: displayedSpeed
@@ -719,7 +718,7 @@ extension MapHomeView {
     }
 
     func vectorPawprintMarkerID(_ index: Int) -> String {
-        "pawprint-\(index)"
+        Self.pawprintMarkerID(index)
     }
 
     func placeLandFromMap(x: Int, y: Int) {

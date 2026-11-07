@@ -830,6 +830,8 @@ final class MapHomeVectorViewportStore {
     /// 재생 중 화랑이 점. 관찰하지 않는다: 매 프레임 바뀌어도 오버레이 전체를 다시 그리지 않는다(PLY1029A05).
     @ObservationIgnored let liveChannel = MapHomeLivePointChannel()
     var livePoint: CGPoint? { liveChannel.point }
+    /// 재생 분과 무관한 고정 레이어 캐시(OPT1102A01). 관찰하지 않는다.
+    @ObservationIgnored let staticLayers = MapHomePlaybackStaticLayerCache()
     /// 재생 중 지도 엔진이 프레임마다 투영한 뷰포트. 오버레이(발자국·장소 아이콘·화살표)가 이 값으로 지도와 함께 움직인다(ARC1030A02).
     @ObservationIgnored var livePlaybackViewport: MapHomeVectorViewport? {
         didSet { if livePlaybackViewport != oldValue { liveFrameRevision &+= 1 } }

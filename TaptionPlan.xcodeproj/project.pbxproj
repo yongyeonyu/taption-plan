@@ -468,6 +468,7 @@
 		A1000000000000000000F0A2 /* MapHomePhotoLayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000F0A2 /* MapHomePhotoLayer.swift */; };
 		A10000000000000000000083 /* MapHomeTimeSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000083 /* MapHomeTimeSidebar.swift */; };
 		A1000000000000000B1101A2 /* MapHomePlaybackPerformance.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1101A2 /* MapHomePlaybackPerformance.swift */; };
+		A1000000000000000CC30001 /* MapHomePlaybackStaticLayers.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000CC30001 /* MapHomePlaybackStaticLayers.swift */; };
 		A1000000000000000B1101C1 /* HwarangRig.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1101C1 /* HwarangRig.swift */; };
 		A1000000000000000B1102E1 /* FirstRunTutorialPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102E1 /* FirstRunTutorialPolicy.swift */; };
 		A1000000000000000B1102E2 /* FirstRunTutorialView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102E2 /* FirstRunTutorialView.swift */; };
@@ -558,6 +559,7 @@
 		A52000000000000000000001 /* MapHomeLiveMapPolicies.swift in Sources */ = {isa = PBXBuildFile; fileRef = F52000000000000000000001 /* MapHomeLiveMapPolicies.swift */; };
 		A1000000000000000B1102E3 /* FirstRunTutorialTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102E3 /* FirstRunTutorialTests.swift */; };
 		A52000000000000000000002 /* MapHomeLiveMapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F52000000000000000000002 /* MapHomeLiveMapTests.swift */; };
+		A1000000000000000CC30002 /* MapHomePlaybackStaticLayersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000CC30002 /* MapHomePlaybackStaticLayersTests.swift */; };
 		A5200000000000000000F5D2 /* MapHomeAllowanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5200000000000000000F5D2 /* MapHomeAllowanceTests.swift */; };
 		A5200000000000000000F5F7 /* MapHomeWideLayoutPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5200000000000000000F5F7 /* MapHomeWideLayoutPolicyTests.swift */; };
 		A5200000000000000000C102 /* RuntimeEfficiencyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5200000000000000000C102 /* RuntimeEfficiencyTests.swift */; };
@@ -1050,6 +1052,7 @@
 		F1000000000000000000F0A2 /* MapHomePhotoLayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePhotoLayer.swift; sourceTree = "<group>"; };
 		F10000000000000000000083 /* MapHomeTimeSidebar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeTimeSidebar.swift; sourceTree = "<group>"; };
 		F1000000000000000B1101A2 /* MapHomePlaybackPerformance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaybackPerformance.swift; sourceTree = "<group>"; };
+		F1000000000000000CC30001 /* MapHomePlaybackStaticLayers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaybackStaticLayers.swift; sourceTree = "<group>"; };
 		F1000000000000000B1101C1 /* HwarangRig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HwarangRig.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102E1 /* FirstRunTutorialPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstRunTutorialPolicy.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102E2 /* FirstRunTutorialView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstRunTutorialView.swift; sourceTree = "<group>"; };
@@ -1152,6 +1155,7 @@
 		F52000000000000000000001 /* MapHomeLiveMapPolicies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLiveMapPolicies.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102E3 /* FirstRunTutorialTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstRunTutorialTests.swift; sourceTree = "<group>"; };
 		F52000000000000000000002 /* MapHomeLiveMapTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLiveMapTests.swift; sourceTree = "<group>"; };
+		F1000000000000000CC30002 /* MapHomePlaybackStaticLayersTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaybackStaticLayersTests.swift; sourceTree = "<group>"; };
 		F5200000000000000000F5D2 /* MapHomeAllowanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeAllowanceTests.swift; sourceTree = "<group>"; };
 		F5200000000000000000F5F7 /* MapHomeWideLayoutPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeWideLayoutPolicyTests.swift; sourceTree = "<group>"; };
 		F5200000000000000000C102 /* RuntimeEfficiencyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuntimeEfficiencyTests.swift; sourceTree = "<group>"; };
@@ -1353,6 +1357,7 @@
 				F10000000000000000000076 /* WatchSensorQueryPlanTests.swift */,
 				F1000000000000000B1102E3 /* FirstRunTutorialTests.swift */,
 				F52000000000000000000002 /* MapHomeLiveMapTests.swift */,
+				F1000000000000000CC30002 /* MapHomePlaybackStaticLayersTests.swift */,
 				F5200000000000000000F5D2 /* MapHomeAllowanceTests.swift */,
 				F5200000000000000000F5F7 /* MapHomeWideLayoutPolicyTests.swift */,
 				F5200000000000000000C102 /* RuntimeEfficiencyTests.swift */,
@@ -1467,6 +1472,7 @@
 				F1000000000000000000F0A2 /* MapHomePhotoLayer.swift */,
 				F10000000000000000000083 /* MapHomeTimeSidebar.swift */,
 				F1000000000000000B1101A2 /* MapHomePlaybackPerformance.swift */,
+				F1000000000000000CC30001 /* MapHomePlaybackStaticLayers.swift */,
 				F1000000000000000B1101C1 /* HwarangRig.swift */,
 				F10000000000000000CA2003 /* HwarangCoat.swift */,
 				F1000000000000000B1102E1 /* FirstRunTutorialPolicy.swift */,
@@ -2310,6 +2316,7 @@
 				A1000000000000000000F0A2 /* MapHomePhotoLayer.swift in Sources */,
 				A10000000000000000000083 /* MapHomeTimeSidebar.swift in Sources */,
 				A1000000000000000B1101A2 /* MapHomePlaybackPerformance.swift in Sources */,
+				A1000000000000000CC30001 /* MapHomePlaybackStaticLayers.swift in Sources */,
 				A1000000000000000B1101C1 /* HwarangRig.swift in Sources */,
 				A1000000000000000B1102E1 /* FirstRunTutorialPolicy.swift in Sources */,
 				A1000000000000000B1102E2 /* FirstRunTutorialView.swift in Sources */,
@@ -2588,6 +2595,7 @@
 				A10000000000000000000075 /* WatchSensorQueryPlanTests.swift in Sources */,
 				A1000000000000000B1102E3 /* FirstRunTutorialTests.swift in Sources */,
 				A52000000000000000000002 /* MapHomeLiveMapTests.swift in Sources */,
+				A1000000000000000CC30002 /* MapHomePlaybackStaticLayersTests.swift in Sources */,
 				A5200000000000000000F5D2 /* MapHomeAllowanceTests.swift in Sources */,
 				A5200000000000000000F5F7 /* MapHomeWideLayoutPolicyTests.swift in Sources */,
 				A5200000000000000000C102 /* RuntimeEfficiencyTests.swift in Sources */,
