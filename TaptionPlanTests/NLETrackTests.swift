@@ -1010,6 +1010,48 @@ final class NLETrackTests: XCTestCase {
         XCTAssertTrue(result.track.editRequests(dayStart: dayStart()).isEmpty)
     }
 
+    // MARK: - 파생 걷기 상세 저장 (NLE1105A01)
+
+    /// 등록 지점 안 파생 걷기(저장 기록 없이 `walkSpans`로 만든 상세)를 고쳐도 그 구간 요청 하나만 나가고,
+    /// 저장 기록은 구간 전체를 빈틈·겹침 없이 덮으며 고친 자리 밖은 대분류로 남는다.
+    func testEditingDerivedWalkingDetailSavesOneCoverOverItsSegment() throws {
+        var segment = MapHomeTimeRailSegment(startMinute: 600, endMinute: 900, categoryID: "work", title: "업무")
+        segment.walkSpans = [700..<720]
+        let fill = MapHomeNLEClipEditor.option(forCategoryID: "work", title: "업무", behavior: nil)
+        let meeting = MapHomeNLEClipEditor.option(forCategoryID: "work", title: "회의", behavior: "meeting")
+        let base = MapHomeNLEClipEditor.makeSubTrack(details: [], segments: [segment])
+        let walk = try XCTUnwrap(base.clip(atMinute: 710))
+        XCTAssertEqual(walk.option.behavior, WatchBehaviorKind.walking.rawValue)
+        XCTAssertTrue(base.editRequests(dayStart: dayStart(), calendar: calendar).isEmpty, "고치기 전에는 저장할 것이 없다")
+
+        var edited = base
+        XCTAssertTrue(edited.setOption(walk.id, to: meeting))
+        XCTAssertTrue(edited.trim(walk.id, edge: .end, toMinute: 730))
+        edited.setFillOption(fill, forClipID: walk.id)
+        let requests = edited.editRequests(dayStart: dayStart(), calendar: calendar)
+        let request = try XCTUnwrap(requests.first)
+        XCTAssertEqual(requests.count, 1)
+        XCTAssertEqual(request.sourceIDs, walk.parent.sourceIDs, "파생 상세의 ID만 들고 가므로 다른 저장 기록을 지우지 않는다")
+
+        let records = ActivitySectionOverrideEngine.records(for: request).sorted { $0.startedAt < $1.startedAt }
+        let minutes = records.map {
+            (Int($0.startedAt.timeIntervalSince(dayStart()) / 60), Int($0.endedAt.timeIntervalSince(dayStart()) / 60), $0.title)
+        }
+        XCTAssertEqual(minutes.map(\.0), [600, 700, 730])
+        XCTAssertEqual(minutes.map(\.1), [700, 730, 900])
+        XCTAssertEqual(minutes.map(\.2), ["업무", "회의", "업무"])
+
+        // 지우면 그 자리는 대분류로 돌아가 구간 전체가 업무 하나로 저장된다.
+        var deleted = base
+        XCTAssertTrue(deleted.delete(walk.id, fallback: walk.parent.fillOption))
+        deleted.setFillOption(fill, forClipID: walk.id)
+        let cleared = try XCTUnwrap(deleted.editRequests(dayStart: dayStart(), calendar: calendar).first)
+        let clearedRecords = ActivitySectionOverrideEngine.records(for: cleared)
+        XCTAssertFalse(clearedRecords.isEmpty)
+        XCTAssertTrue(clearedRecords.allSatisfy { $0.categoryID == "work" && $0.title == "업무" })
+        XCTAssertEqual(clearedRecords.map { $0.endedAt.timeIntervalSince($0.startedAt) }.reduce(0, +), 300 * 60)
+    }
+
     // MARK: - 수동 기록 중복 (NLE1103A04)
 
     /// 한 대분류 구간의 상세 5개 중 하나만 고쳐도 요청은 하나이고, 저장 기록의 구간이 겹치지 않는다.
