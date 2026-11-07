@@ -137,4 +137,43 @@ struct DomainRecordCompatibilityTests {
             expected: GeoPoint(latitude: 37.5, longitude: 127.25, altitude: 12.5, horizontalAccuracy: 5, verticalAccuracy: -1)
         )
     }
+
+    @Test func travelSegmentStoredBytesAreUnchanged() throws {
+        let route = SubwayRoutePath(
+            stops: [
+                SubwayRouteStop(lineName: "2호선", order: 1, stationName: "강남", latitude: 37.5, longitude: 127.0),
+                SubwayRouteStop(lineName: "2호선", order: 2, stationName: "역삼", latitude: nil, longitude: nil),
+            ],
+            lineNames: ["2호선"], transferStationNames: []
+        )
+        let subway = TravelSegment(
+            id: Self.id(1), fromPlaceID: Self.id(2), toPlaceID: Self.id(3), mode: .subway,
+            span: TimeSpan(start: Self.start, end: Self.start.addingTimeInterval(600)),
+            distanceMeters: 1_234.5, confidence: .high, evidence: ["wifi"], isConfirmed: true,
+            subwayRoute: route, isClassificationLocked: true
+        )
+        try Self.roundTrip(
+            TravelSegment.self,
+            stored: #"{"confidence":"high","distanceMeters":1234.5,"evidence":["wifi"],"fromPlaceID":"00000000-0000-0000-0000-000000000002","id":"00000000-0000-0000-0000-000000000001","isClassificationLocked":true,"isConfirmed":true,"mode":"subway","span":{"end":1762560600,"start":1762560000},"subwayRoute":{"lineNames":["2호선"],"stops":[{"latitude":37.5,"lineName":"2호선","longitude":127,"order":1,"stationName":"강남"},{"lineName":"2호선","order":2,"stationName":"역삼"}],"transferStationNames":[]},"toPlaceID":"00000000-0000-0000-0000-000000000003"}"#,
+            expected: subway
+        )
+        // 음수 거리는 0으로 접는다.
+        let walk = TravelSegment(
+            id: Self.id(4), mode: .walking, span: TimeSpan(start: Self.start, end: Self.start),
+            distanceMeters: -3, confidence: .low, evidence: []
+        )
+        try Self.roundTrip(
+            TravelSegment.self,
+            stored: #"{"confidence":"low","distanceMeters":0,"evidence":[],"id":"00000000-0000-0000-0000-000000000004","isClassificationLocked":false,"isConfirmed":false,"mode":"walking","span":{"end":1762560000,"start":1762560000}}"#,
+            expected: walk
+        )
+    }
+
+    /// 예전 이동 기록(거리·근거·확인·잠금 키 없음)은 잠긴 자동 분류로 읽힌다.
+    @Test func legacyTravelSegmentDecodesLocked() throws {
+        let legacy = #"{"confidence":"medium","id":"00000000-0000-0000-0000-000000000009","mode":"bus","span":{"end":1762560600,"start":1762560000}}"#
+        let decoded = try Self.storeDecoder.decode(TravelSegment.self, from: Data(legacy.utf8))
+        let encoded = String(decoding: try Self.storeEncoder.encode(decoded), as: UTF8.self)
+        #expect(encoded == #"{"confidence":"medium","distanceMeters":0,"evidence":[],"id":"00000000-0000-0000-0000-000000000009","isClassificationLocked":true,"isConfirmed":false,"mode":"bus","span":{"end":1762560600,"start":1762560000}}"#)
+    }
 }

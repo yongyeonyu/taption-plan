@@ -1,18 +1,8 @@
 import Foundation
 import TaptionPlanCore
 
-enum TravelMode: String, Codable, CaseIterable, Sendable {
-    case walking
-    case running
-    case cycling
-    case bus
-    case subway
-    case taxi
-    case car
-    case train
-    case airplane
-    case ship
-}
+// `TravelMode`·`TravelSegment`·`SubwayRouteStop`·`SubwayRoutePath`는
+// `TaptionPlanCore/Domain/TravelSegment.swift`에 있다.
 
 /// A single presentation source for movement results.  Automatic movement
 /// records can arrive with a generic title (for example "차량 탑승") while
@@ -169,91 +159,6 @@ enum MovementPresentation {
     }
 }
 
-struct TravelSegment: Identifiable, Codable, Hashable, Sendable {
-    var id: UUID
-    var fromPlaceID: UUID?
-    var toPlaceID: UUID?
-    var mode: TravelMode
-    var span: TimeSpan
-    var distanceMeters: Double
-    var confidence: ConfidenceLevel
-    var evidence: [String]
-    var isConfirmed: Bool
-    var subwayRoute: SubwayRoutePath?
-    /// Persisted automatic mode classification. User confirmation is still
-    /// represented by `isConfirmed`; this flag protects inferred modes from
-    /// changing during a later archive refresh.
-    var isClassificationLocked: Bool
-
-    private enum CodingKeys: String, CodingKey {
-        case id, fromPlaceID, toPlaceID, mode, span, distanceMeters,
-             confidence, evidence, isConfirmed, subwayRoute,
-             isClassificationLocked
-    }
-
-    init(
-        id: UUID = UUID(),
-        fromPlaceID: UUID? = nil,
-        toPlaceID: UUID? = nil,
-        mode: TravelMode,
-        span: TimeSpan,
-        distanceMeters: Double,
-        confidence: ConfidenceLevel,
-        evidence: [String],
-        isConfirmed: Bool = false,
-        subwayRoute: SubwayRoutePath? = nil,
-        isClassificationLocked: Bool = false
-    ) {
-        self.id = id
-        self.fromPlaceID = fromPlaceID
-        self.toPlaceID = toPlaceID
-        self.mode = mode
-        self.span = span
-        self.distanceMeters = max(0, distanceMeters)
-        self.confidence = confidence
-        self.evidence = evidence
-        self.isConfirmed = isConfirmed
-        self.subwayRoute = subwayRoute
-        self.isClassificationLocked = isClassificationLocked
-    }
-
-    init(from decoder: Decoder) throws {
-        let values = try decoder.container(keyedBy: CodingKeys.self)
-        id = try values.decode(UUID.self, forKey: .id)
-        fromPlaceID = try values.decodeIfPresent(UUID.self, forKey: .fromPlaceID)
-        toPlaceID = try values.decodeIfPresent(UUID.self, forKey: .toPlaceID)
-        mode = try values.decode(TravelMode.self, forKey: .mode)
-        span = try values.decode(TimeSpan.self, forKey: .span)
-        distanceMeters = max(
-            0,
-            try values.decodeIfPresent(Double.self, forKey: .distanceMeters) ?? 0
-        )
-        confidence = try values.decode(ConfidenceLevel.self, forKey: .confidence)
-        evidence = try values.decodeIfPresent([String].self, forKey: .evidence) ?? []
-        isConfirmed = try values.decodeIfPresent(Bool.self, forKey: .isConfirmed) ?? false
-        subwayRoute = try values.decodeIfPresent(SubwayRoutePath.self, forKey: .subwayRoute)
-        isClassificationLocked = try values.decodeIfPresent(
-            Bool.self,
-            forKey: .isClassificationLocked
-        ) ?? true
-    }
-
-    func encode(to encoder: Encoder) throws {
-        var values = encoder.container(keyedBy: CodingKeys.self)
-        try values.encode(id, forKey: .id)
-        try values.encodeIfPresent(fromPlaceID, forKey: .fromPlaceID)
-        try values.encodeIfPresent(toPlaceID, forKey: .toPlaceID)
-        try values.encode(mode, forKey: .mode)
-        try values.encode(span, forKey: .span)
-        try values.encode(distanceMeters, forKey: .distanceMeters)
-        try values.encode(confidence, forKey: .confidence)
-        try values.encode(evidence, forKey: .evidence)
-        try values.encode(isConfirmed, forKey: .isConfirmed)
-        try values.encodeIfPresent(subwayRoute, forKey: .subwayRoute)
-        try values.encode(isClassificationLocked, forKey: .isClassificationLocked)
-    }
-}
-
 struct MapPredictedRoute: Identifiable, Codable, Hashable, Sendable {
     let source: String
     let travelID: UUID?
@@ -301,35 +206,6 @@ struct MapPredictedRouteDecision: Identifiable, Codable, Hashable, Sendable {
             return hypot(lhs.latitude - rhs.latitude, dx) * 111_320 <= 50
         }
         return close(first, candidateFirst) && close(last, candidateLast)
-    }
-}
-
-struct SubwayRouteStop: Codable, Hashable, Sendable {
-    var lineName: String
-    var order: Int
-    var stationName: String
-    var latitude: Double?
-    var longitude: Double?
-
-    var coordinate: GeoPoint? {
-        guard let latitude, let longitude else { return nil }
-        return GeoPoint(
-            latitude: latitude,
-            longitude: longitude,
-            altitude: 0,
-            horizontalAccuracy: -1,
-            verticalAccuracy: -1
-        )
-    }
-}
-
-struct SubwayRoutePath: Codable, Hashable, Sendable {
-    var stops: [SubwayRouteStop]
-    var lineNames: [String]
-    var transferStationNames: [String]
-
-    var coordinates: [GeoPoint] {
-        stops.compactMap(\.coordinate)
     }
 }
 
