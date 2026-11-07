@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// 같은 노선 이웃 역 사이의 실제 선로 모양(SUB1106A02). 자료는 `SubwayTrackData`(OSM, ODbL)이고
 /// `scripts/subway-tracks/build.py`가 만든다. 선로가 없는 역 쌍은 예전처럼 직선이다.
@@ -12,9 +13,23 @@ enum SubwayTrackCatalog {
 
     private static let tracks: [Key: [GeoPoint]] = decode(SubwayTrackData.packed)
 
+    /// 재생 중 경로 계산이 같은 노선을 거듭 묻으므로 결과를 담아 둔다(REV1107A01). 하루 노선 수만큼이면 충분하다.
+    private static let cache = OSAllocatedUnfairLock(initialState: [[GeoPoint]: [GeoPoint]]())
+    private static let cacheLimit = 64
+
     /// 역 좌표를 이은 점들 사이에 선로 모양을 끼운다. 역이 아닌 점은 그대로 둔다.
     static func following(_ points: [GeoPoint]) -> [GeoPoint] {
         guard points.count >= 2 else { return points }
+        if let cached = cache.withLock({ $0[points] }) { return cached }
+        let result = expanded(points)
+        cache.withLock { values in
+            if values.count >= cacheLimit { values.removeAll(keepingCapacity: true) }
+            values[points] = result
+        }
+        return result
+    }
+
+    private static func expanded(_ points: [GeoPoint]) -> [GeoPoint] {
         var result = [points[0]]
         for (from, to) in zip(points, points.dropFirst()) {
             if let track = track(from: from, to: to), track.count > 2 {

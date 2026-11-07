@@ -349,6 +349,8 @@ extension MapHomeView {
             onAnnotationSelected: handleAppleMapAnnotation,
             onMapTap: { local, hitsWalker in
                 if hitsWalker {
+                    // 벡터 지도 탭 경로(handleMapTap)와 같이 검색 결과도 닫는다(REV1107A01).
+                    if isSearchDismissable { dismissMapSearchOverlay() }
                     foldPhotoRingOnMapTap()
                     toggleCounterFromCat()
                     return

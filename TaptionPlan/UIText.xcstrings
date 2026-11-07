@@ -91323,6 +91323,83 @@
         }
       }
     },
+    "더 추가할 수 없습니다. 쓰지 않는 행동분류를 지운 뒤 추가하세요.|No more categories can be added. Delete one you don't use first." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "これ以上追加できません。使わない分類を削除してから追加してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法再添加。请先删除不用的分类。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法再新增。請先刪除不用的分類。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Es können keine weiteren Kategorien hinzugefügt werden. Lösche zuerst eine, die du nicht nutzt."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible d’ajouter d’autres catégories. Supprimez d’abord celle que vous n’utilisez pas."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Non è possibile aggiungere altre categorie. Elimina prima quella che non usi."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pueden añadir más categorías. Elimina primero una que no uses."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não é possível adicionar mais categorias. Exclua primeiro uma que você não usa."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không thể thêm danh mục nữa. Hãy xóa danh mục không dùng trước."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak dapat menambah kategori lagi. Hapus dulu kategori yang tidak dipakai."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เพิ่มหมวดหมู่ไม่ได้อีก ลบหมวดหมู่ที่ไม่ใช้ก่อน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "और श्रेणियाँ नहीं जोड़ी जा सकतीं। पहले कोई अनुपयोगी श्रेणी हटाएँ।"
+          }
+        }
+      }
+    },
     "더 확대|Zoom+" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -107720,83 +107797,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "आपकी दी गई अनुमति का पूरा इतिहास · इसी डिवाइस पर स्थानीय रूप से सहेजा गया"
-          }
-        }
-      }
-    },
-    "사용할 수 있는 새 아이콘이 없습니다.|No unused icons are available." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未使用のアイコンはありません。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "没有可用的未使用图标。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "沒有可用的未使用圖像。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Keine ungenutzten Symbole verfügbar."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aucune icône inutilisée disponible."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Non ci sono icone inutilizzate disponibili."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No hay iconos sin usar disponibles."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nenhum ícone não utilizado disponível."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Không còn biểu tượng chưa dùng nào."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tidak ada ikon yang belum terpakai."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ไม่มีไอคอนที่ยังไม่ได้ใช้"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "कोई अनुपयोगी आइकन उपलब्ध नहीं है।"
           }
         }
       }

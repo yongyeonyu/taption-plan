@@ -322,3 +322,16 @@ enum MapHomeCustomAnimations {
         return actions.withLock { $0[categoryID] }
     }
 }
+
+extension MapHomeStickmanActionResolver {
+    /// 등록한 회사·학교 안에서의 일반 업무·수업은 장소가 붙은 장면이다(말풍선 "회사에서 업무"·"학교에서 학습", REV1107A01).
+    static func placed(_ action: MapHomeStickmanAction, at coordinate: CLLocationCoordinate2D?, frequentPlaces: [FrequentPlace]) -> MapHomeStickmanAction {
+        guard action == .computer || action == .reading, let coordinate else { return action }
+        let point = GeoPoint(latitude: coordinate.latitude, longitude: coordinate.longitude, altitude: 0, horizontalAccuracy: -1, verticalAccuracy: -1)
+        switch (action, Self.action(atCurrent: point, frequentPlaces: frequentPlaces)) {
+        case (.computer, .company?): return .company
+        case (.reading, .school?): return .school
+        default: return action
+        }
+    }
+}

@@ -151,7 +151,9 @@ enum SubwayStationCatalog {
         }
     }()
 
-    /// 한 노선의 역을 20km 안으로 이어진 무리로 나눈다. 좌표가 없는 역은 순서 번호가 가장 가까운 무리에 붙인다.
+    /// 한 노선의 역을 20km 안으로 이어진 무리(도시)로 나눈다. 결과 순서는 첫 역 번호로 고정한다.
+    /// 좌표 없는 역은 같은 이름의 다른 노선 역 좌표로 도시를 정하고, 없으면 앞뒤 순서 번호(±1)가 한 무리에만 있을 때만 붙인다.
+    /// 어느 도시인지 모르면 사슬에서 빼고 환승 간선만 남긴다. 잘못 붙으면 다른 도시 이웃 사이를 끊는다(REV1107A01).
     static func cityGroups(_ indices: [Int], linkMeters: Double = 20_000) -> [[Int]] {
         let located = indices.filter { stations[$0].coordinate != nil }
         var parent = Dictionary(uniqueKeysWithValues: located.map { ($0, $0) })
@@ -169,19 +171,26 @@ enum SubwayStationCatalog {
         }
         var groups: [Int: [Int]] = [:]
         for index in located { groups[root(index), default: []].append(index) }
-        var result = Array(groups.values)
-        guard !result.isEmpty else { return [indices] }
-        // 좌표 없는 역은 앞뒤 순서 번호(±1)를 가장 많이 가진 무리, 그다음 번호가 가까운 무리에 붙인다.
+        var result = groups.values.map { $0.sorted() }.sorted { $0[0] < $1[0] }
+        guard !result.isEmpty else { return [] }
         for index in indices where stations[index].coordinate == nil {
-            let order = stations[index].order
-            func score(_ group: [Int]) -> (Int, Int) {
-                let gaps = group.map { abs(stations[$0].order - order) }
-                return (-gaps.filter { $0 == 1 }.count, gaps.min() ?? .max)
+            if let place = sameNameCoordinate(of: index),
+               let group = result.indices.first(where: { result[$0].contains { stations[$0].coordinate.map { distanceMeters($0, place) <= linkMeters } ?? false } }) {
+                result[group].append(index)
+                continue
             }
-            let best = result.indices.min { score(result[$0]) < score(result[$1]) } ?? 0
-            result[best].append(index)
+            let order = stations[index].order
+            let neighbors = result.indices.filter { result[$0].contains { abs(stations[$0].order - order) == 1 } }
+            if neighbors.count == 1 { result[neighbors[0]].append(index) }
         }
         return result
+    }
+
+    /// 다른 노선의 같은 이름 역 좌표(환승역). 이름이 같은 역이 여러 도시에 있으면 쓰지 않는다.
+    private static func sameNameCoordinate(of index: Int) -> GeoPoint? {
+        let points = (stationIndices[normalized(stations[index].stationName)] ?? []).compactMap { stations[$0].coordinate }
+        guard let first = points.first, points.allSatisfy({ distanceMeters($0, first) <= 2_000 }) else { return nil }
+        return first
     }
 
     private static let adjacency: [[Int]] = {

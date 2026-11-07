@@ -4007,4 +4007,15 @@ extension FeatureEngineTests {
         let loose = GeoPoint(latitude: 37.1, longitude: 127.1, altitude: 0, horizontalAccuracy: -1, verticalAccuracy: -1)
         XCTAssertEqual(SubwayTrackCatalog.following([loose, pairs[0].0]).count, 2, "역이 아닌 점은 직선 그대로")
     }
+
+    /// 도시 무리는 실행마다 같고, 어느 도시인지 모르는 좌표 없는 역은 다른 도시 사슬에 끼지 않는다(REV1107A01).
+    func testSubwayCityGroupsAreStableAndKeepBusanOutOfSeoul() {
+        let stations = SubwayStationCatalog.stations
+        let line = stations.indices.filter { stations[$0].lineName == "1호선" }
+        let groups = SubwayStationCatalog.cityGroups(line)
+        XCTAssertEqual(groups, SubwayStationCatalog.cityGroups(line))
+        let seoul = groups.first { $0.contains { stations[$0].coordinate.map { $0.latitude > 37.4 } ?? false } } ?? []
+        XCTAssertFalse(seoul.isEmpty)
+        XCTAssertFalse(seoul.contains { stations[$0].stationName.hasPrefix("하단") || stations[$0].stationName.hasPrefix("동대구") })
+    }
 }

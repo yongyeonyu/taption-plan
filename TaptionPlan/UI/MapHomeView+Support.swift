@@ -213,7 +213,7 @@ extension MapHomeView {
                 .zIndex(MapHomeLayerPriority.header)
             }
 
-            // 화랑이 탭은 모든 층보다 위에서 먼저 받는다(대표 지시). 여기서 하루 요약을 연다.
+            // 화랑이 자리 보이스오버 단추(카운터 보이기·숨기기). 화면 탭 판정은 지도 탭(`handleMapTap`)이 한다(CTR1107A01).
             if !isScreenRecording, !isMenuOpen || isWideLayout {
                 MapHomeObservingView { stickmanTapTarget }
                     .zIndex(MapHomeLayerPriority.header + 1)

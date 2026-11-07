@@ -816,7 +816,7 @@ extension MapHomeView {
             details: sectionDetails(at: walkMinute),
             minute: walkMinute
         ) {
-            return action
+            return MapHomeStickmanActionResolver.placed(action, at: displayedLocationCoordinate, frequentPlaces: model.settings.frequentPlaces)
         }
         if let frame = wbsPlaybackFrame {
             switch frame.activity {

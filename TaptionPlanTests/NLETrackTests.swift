@@ -243,6 +243,21 @@ final class NLETrackTests: XCTestCase {
         XCTAssertEqual(clips.filter { $0.option.behavior != "walking" }.count, 1)
     }
 
+    /// 대분류가 다르거나 1분이라도 떨어진 상세는 묶지 않고, 등록 지점 걷기 클립 ID는 다시 만들어도 같다(REV1107A01).
+    func testSubTrackKeepsDifferentCategoriesAndGapsApart() {
+        let segments = [MapHomeTimeRailSegment(startMinute: 600, endMinute: 900, categoryID: "work", title: "업무")]
+        let a = MapHomeSectionDetail(id: UUID(), title: "걷기", categoryID: "movement", behavior: "walking", startMinute: 700, endMinute: 705)
+        let gap = MapHomeSectionDetail(id: UUID(), title: "걷기", categoryID: "movement", behavior: "walking", startMinute: 706, endMinute: 710)
+        let clips = MapHomeNLEClipEditor.makeSubTrack(details: [a, gap], segments: segments).clips
+        XCTAssertEqual(clips.count, 2)
+        var walking = segments
+        walking[0].walkSpans = [650..<660]
+        let first = MapHomeNLEClipEditor.makeSubTrack(details: [], segments: walking).clips.map(\.id)
+        let second = MapHomeNLEClipEditor.makeSubTrack(details: [], segments: walking).clips.map(\.id)
+        XCTAssertEqual(first, second)
+        XCTAssertEqual(first.count, 1)
+    }
+
     func testDetailTrackSpansTheDayAndClampsToItsOriginalSegment() {
         let segments = [
             segment(540, 660, "hobby", sources: [UUID()]),

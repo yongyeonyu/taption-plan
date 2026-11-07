@@ -58,16 +58,16 @@ def pairs(rows):
     by_line = {}
     for row in rows:
         by_line.setdefault(row[0], []).append(row)
-    result = set()
-    for line_rows in by_line.values():
+    result = {}
+    for line_name, line_rows in sorted(by_line.items()):
         # '1호선'·'2호선'처럼 여러 도시가 같은 노선 이름과 순서 번호를 쓴다. 도시별로 먼저 나눈다.
         for city in cities(line_rows):
             city.sort(key=lambda r: r[1])
             for a, b in zip(city, city[1:]):
                 pa, pb = (a[3], a[4]), (b[3], b[4])
                 if 0 < meters(pa, pb) <= MAX_PAIR_METERS:
-                    result.add((pa, pb) if pa <= pb else (pb, pa))
-    return sorted(result)
+                    result.setdefault((pa, pb) if pa <= pb else (pb, pa), line_name)
+    return dict(sorted(result.items()))
 
 
 def cities(rows, link_meters=20_000):
@@ -136,12 +136,14 @@ def graph(elements):
     nodes = {e["id"]: (e["lat"], e["lon"]) for e in elements if e["type"] == "node"}
     edges = {}
     for way in (e for e in elements if e["type"] == "way"):
-        penalty = PENALTY.get(way.get("tags", {}).get("service"), 1.0)
+        tags = way.get("tags", {})
+        penalty = PENALTY.get(tags.get("service"), 1.0)
+        label = " ".join(tags.get(k, "") for k in ("name", "name:ko", "ref", "line"))
         ids = [n for n in way["nodes"] if n in nodes]
         for u, v in zip(ids, ids[1:]):
             cost = meters(nodes[u], nodes[v]) * penalty
-            edges.setdefault(u, []).append((v, cost))
-            edges.setdefault(v, []).append((u, cost))
+            edges.setdefault(u, []).append((v, cost, label))
+            edges.setdefault(v, []).append((u, cost, label))
     grid = {}
     for node in edges:
         lat, lon = nodes[node]
@@ -161,7 +163,20 @@ def near(point, nodes, grid, limit=60):
     return sorted(found)[:limit]
 
 
-def shortest(a, b, nodes, edges, grid):
+def tokens(line):
+    """선로 이름에서 찾을 노선 표시. '수인분당'·'경의중앙'처럼 붙은 이름은 반씩도 본다."""
+    found = {line, line.replace("선", "")}
+    if len(line) == 4 and "호선" not in line:
+        found |= {line[:2], line[2:]}
+    return {t for t in found if t}
+
+
+OTHER_LINE_PENALTY = 1.5
+
+
+def shortest(a, b, nodes, edges, grid, line=""):
+    """같은 노선 이름이 붙은 선로를 우선한다. 나란히 달리는 다른 노선(공항철도 옆 9호선 등)으로 새지 않게 한다."""
+    wanted = tokens(line)
     starts, ends = near(a, nodes, grid), dict((n, d) for d, n in near(b, nodes, grid))
     if not starts or not ends:
         return None
@@ -178,7 +193,8 @@ def shortest(a, b, nodes, edges, grid):
             continue
         if node in ends and cost + ends[node] < goal_cost:
             goal, goal_cost = node, cost + ends[node]
-        for nxt, step in edges.get(node, []):
+        for nxt, base, label in edges.get(node, []):
+            step = base if not wanted or any(t in label for t in wanted) else base * OTHER_LINE_PENALTY
             value = cost + step
             if value < best.get(nxt, math.inf):
                 best[nxt] = value
@@ -247,8 +263,8 @@ def main():
     pair_list = pairs(rows)
     nodes, edges, grid = graph(fetch(cells(pair_list), args.cache))
     lines, missing = [], 0
-    for a, b in pair_list:
-        path = shortest(a, b, nodes, edges, grid)
+    for (a, b), line in pair_list.items():
+        path = shortest(a, b, nodes, edges, grid, line)
         if path is None:
             missing += 1
             continue

@@ -115,7 +115,8 @@ extension MapHomeNLEClipEditor {
         segments.flatMap { segment in
             segment.walkSpans.map { span in
                 MapHomeSectionDetail(
-                    id: UUID(),
+                    // 다시 만들어도 같은 클립으로 남게 구간으로 정한 ID를 쓴다(REV1107A01).
+                    id: StableRecordID.indexMixedFNV("walk-detail|\(segment.categoryID)|\(span.lowerBound)|\(span.upperBound)"),
                     title: AppLanguagePreference.text(korean: "걷기", english: "Walking"),
                     categoryID: segment.categoryID,
                     behavior: WatchBehaviorKind.walking.rawValue,
@@ -179,15 +180,16 @@ extension MapHomeNLEClipEditor {
         )
     }
 
-    /// 같은 상세가 맞닿거나 겹치면 한 클립으로 묶는다. 움직임 센서가 1~2분마다 끊어 저장한 걷기와
+    /// 같은 대분류의 같은 상세가 맞닿거나 겹치면 한 클립으로 묶는다(틈은 메우지 않는다). 움직임 센서가 1~2분마다 끊어 저장한 걷기와
     /// 그 틈을 메운 기록, 등록 지점 안 걷기가 따로 그려지면 너무 잘게 나뉜다(PLY1106A01).
     /// 묶은 클립은 원본 기록 ID를 모두 들고 있어 고치면 함께 바뀐다.
-    static func mergingTouching(_ clips: [NLEClip], tolerance: Int = 1) -> [NLEClip] {
+    static func mergingTouching(_ clips: [NLEClip], tolerance: Int = 0) -> [NLEClip] {
         var result: [NLEClip] = []
         for clip in clips.sorted(by: { ($0.startMinute, $0.endMinute) < ($1.startMinute, $1.endMinute) }) {
             guard let last = result.last,
                   last.option.title == clip.option.title,
                   last.option.behavior == clip.option.behavior,
+                  last.option.categoryID == clip.option.categoryID,
                   last.parent.startMinute == clip.parent.startMinute,
                   last.parent.endMinute == clip.parent.endMinute,
                   clip.startMinute <= last.endMinute + tolerance else {

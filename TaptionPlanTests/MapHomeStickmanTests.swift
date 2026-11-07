@@ -106,6 +106,17 @@ final class MapHomeStickmanTests: XCTestCase {
         XCTAssertEqual(MapHomeStickmanAction.restCroissant.title, "회사에서 휴식")
     }
 
+    /// 등록한 회사 안의 일반 업무는 "회사에서 업무" 장면이다(REV1107A01).
+    func testWorkInsideRegisteredCompanyIsPlaced() {
+        let office = FrequentPlace(kind: .company, name: "회사", point: GeoPoint(latitude: 37.5, longitude: 127.0, altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5), radiusMeters: 100)
+        let inside = CLLocationCoordinate2D(latitude: 37.5003, longitude: 127.0)
+        let outside = CLLocationCoordinate2D(latitude: 37.51, longitude: 127.0)
+        XCTAssertEqual(MapHomeStickmanActionResolver.placed(.computer, at: inside, frequentPlaces: [office]), .company)
+        XCTAssertEqual(MapHomeStickmanAction.company.title, "회사에서 업무")
+        XCTAssertEqual(MapHomeStickmanActionResolver.placed(.computer, at: outside, frequentPlaces: [office]), .computer)
+        XCTAssertEqual(MapHomeStickmanActionResolver.placed(.restCroissant, at: inside, frequentPlaces: [office]), .restCroissant)
+    }
+
     /// 사용자 분류에 고른 화랑이 동작이 분류 메뉴 그림에도 나온다.
     func testCustomCategoryMenuUsesChosenAnimation() {
         let category = MapUserActivityCategory(id: UUID(), title: "비행기", systemImage: "tag.fill", hex: "#29A383", animation: .yarnPlay)

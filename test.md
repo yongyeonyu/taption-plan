@@ -1692,3 +1692,8 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
 - 결과: `release.sh --yes --request-id TFB1107A01` 종료 0, 처리 `VALID`, `TP Taption Plan 내부 테스트` 그룹 연결, 테스터 1명 노출. 아카이브 네 번들 `CFBundleVersion` 291 확인. 보고서 `build/validation/TFB1107A01/testflight-report.json`.
 - 참고: 아이폰 18의 Debug 시험 호스트(LAG1107A01)는 TestFlight 291을 설치하면 바뀐다.
 - 아이폰 11 Pro(00008030-001628201AD2802E) 설치(2026-11-07, 대표 요청): 291 Release 빌드(`-configuration Release`, generic iOS)를 `devicectl device install app`으로 설치, 종료 0, 기기 앱 `bundleVersion` 291 확인(개발 서명이라 `builtByDeveloper: true`). 앱 실행·기능 확인은 하지 않음. BOKKI Cam 세션과 기기 사용을 맞춤(아이폰 18은 미사용).
+
+## REV1107A01 · 11-06 이후 변경 다방면 리뷰 10건 수정 (2026-11-07)
+- 수정: ①②지하철 도시 무리 순서를 첫 역 번호로 고정, 좌표 없는 역은 같은 이름 환승역 좌표로 도시를 정하고 없으면 ±1 이웃이 한 무리에만 있을 때만 붙이며 아니면 사슬에서 뺀다(1호선 24개 역이 실행마다 다른 도시에 붙던 문제). ③등록 회사·학교 안 일반 업무·수업은 `.company`("회사에서 업무")·`.school`("학교에서 학습"). ④애플 지도 화랑이 탭도 검색 결과를 닫는다. ⑤⑥상세 묶기는 같은 대분류·맞닿음(틈 0분)만, 등록 지점 걷기 상세 ID를 구간으로 고정. ⑦선로 생성이 노선 이름이 붙은 선로를 우선(다른 노선 ×1.5) — 696개 중 61개 모양 변경. ⑧선로 끼우기 결과를 64개까지 담아 둠. ⑨분류 추가 한도 안내 문구(12개 언어). ⑩화랑이 탭 주석 갱신.
+- 시험(시뮬레이터 BOKKI-iPhone11 — 아이폰 18·11은 BOKKI Cam 세션이 사용 중, with-device-lock, 병렬 끔): 관련 9개 클래스 1,270건 통과·건너뜀 10·실패 0(`build/validation/REV1107A01/unit.xcresult`). 새 시험 3건 통과. 구조 검사 통과. 실기기 미확인.
+- 구조 검사 1차 실패(`MapHomeLocationPresentation.swift` 1,206줄 > 1,200) → `placed`를 `MapHomeAnnotationPolicies.swift` 확장으로 옮김(1,194줄), 검사 통과. 옮긴 뒤 `MapHomeStickmanTests`·`MapHomeLiveMapTests` 177건 통과·건너뜀 5(`unit2.xcresult`, 시뮬레이터).

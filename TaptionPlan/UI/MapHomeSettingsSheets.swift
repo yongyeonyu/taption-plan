@@ -120,8 +120,8 @@ struct MapHomeCategoryAddSheet: View {
             if iconNames.isEmpty {
                 Text(
                     language.text(
-                        "사용할 수 있는 새 아이콘이 없습니다.",
-                        "No unused icons are available."
+                        "더 추가할 수 없습니다. 쓰지 않는 행동분류를 지운 뒤 추가하세요.",
+                        "No more categories can be added. Delete one you don't use first."
                     )
                 )
                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))

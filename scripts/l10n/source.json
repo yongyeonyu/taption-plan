@@ -839,7 +839,7 @@
    "ko": "GPS 속도 ",
    "en": "GPS speed ",
    "files": [
-    "MapHomeNLEClipFactory.swift:572"
+    "MapHomeNLEClipFactory.swift:574"
    ],
    "args": [],
    "targets": [
@@ -1010,7 +1010,7 @@
    "en": "REM sleep",
    "files": [
     "HealthAndSensorModels.swift:33",
-    "MapHomeLocationPresentation.swift:307",
+    "MapHomeLocationPresentation.swift:308",
     "record-classification.json:0"
    ],
    "args": [],
@@ -1652,7 +1652,7 @@
    "ko": "{0} {1} 탑승 확인",
    "en": "Confirm boarding at {0} {1}",
    "files": [
-    "MapHomeView+Map.swift:446",
+    "MapHomeView+Map.swift:448",
     "MapHomeView+Routes.swift:822"
    ],
    "args": [
@@ -1771,7 +1771,7 @@
    "ko": "{0} 메모 스티커",
    "en": "{0} memo sticker",
    "files": [
-    "MapHomeView+Map.swift:462",
+    "MapHomeView+Map.swift:464",
     "MapHomeView+Routes.swift:845"
    ],
    "args": [
@@ -1828,8 +1828,8 @@
    "ko": "{0} 사용자 위치 메뉴",
    "en": "{0} user location menu",
    "files": [
-    "MapHomeView+Map.swift:419",
-    "MapHomeView+Map.swift:431",
+    "MapHomeView+Map.swift:421",
+    "MapHomeView+Map.swift:433",
     "MapHomeView+Routes.swift:722"
    ],
    "args": [
@@ -1945,7 +1945,7 @@
    "ko": "{0} 위치 추가",
    "en": "Add {0} location",
    "files": [
-    "MapHomeView+Map.swift:501",
+    "MapHomeView+Map.swift:503",
     "MapHomeView+Routes.swift:982"
    ],
    "args": [
@@ -2030,7 +2030,7 @@
    "ko": "{0} 지도 메모, {1}",
    "en": "{0} map memo, {1}",
    "files": [
-    "MapHomeView+Map.swift:488",
+    "MapHomeView+Map.swift:490",
     "MapHomeView+Routes.swift:889"
    ],
    "args": [
@@ -2046,7 +2046,7 @@
    "ko": "{0} 지하철 임시 위치",
    "en": "{0} temporary subway location",
    "files": [
-    "MapHomeView+Map.swift:407",
+    "MapHomeView+Map.swift:409",
     "MapHomeView+Routes.swift:683"
    ],
    "args": [
@@ -2394,7 +2394,7 @@
    "files": [
     "RecordSummaryEngine.swift:33",
     "MapHomeCalendarSheet.swift:456",
-    "MapHomeNLEClipFactory.swift:272"
+    "MapHomeNLEClipFactory.swift:274"
    ],
    "args": [
     "hours",
@@ -2472,7 +2472,7 @@
    "files": [
     "RecordSummaryEngine.swift:32",
     "MapHomeCalendarSheet.swift:456",
-    "MapHomeNLEClipFactory.swift:273"
+    "MapHomeNLEClipFactory.swift:275"
    ],
    "args": [
     "hours"
@@ -11533,7 +11533,7 @@
    "ko": "걷기",
    "en": "Walking",
    "files": [
-    "MapHomeNLEClipFactory.swift:119",
+    "MapHomeNLEClipFactory.swift:120",
     "MapHomeSupportViews.swift:0",
     "MapHomeLanguage.swift:0"
    ],
@@ -12231,7 +12231,7 @@
    "ko": "가까운 정류장 ",
    "en": "Nearest stop ",
    "files": [
-    "MapHomeNLEClipFactory.swift:604"
+    "MapHomeNLEClipFactory.swift:606"
    ],
    "args": [],
    "targets": [
@@ -12257,7 +12257,7 @@
    "ko": "가족",
    "en": "Family",
    "files": [
-    "MapHomeLocationPresentation.swift:277",
+    "MapHomeLocationPresentation.swift:278",
     "record-classification.json:0"
    ],
    "args": [],
@@ -12631,7 +12631,7 @@
    "ko": "건강",
    "en": "Health",
    "files": [
-    "MapHomeLocationPresentation.swift:321",
+    "MapHomeLocationPresentation.swift:322",
     "SensorCollectionLiveActivity.swift:546"
    ],
    "args": [],
@@ -12673,7 +12673,7 @@
    "ko": "건물 층 ",
    "en": "Building floor ",
    "files": [
-    "MapHomeNLEClipFactory.swift:591"
+    "MapHomeNLEClipFactory.swift:593"
    ],
    "args": [],
    "targets": [
@@ -12685,7 +12685,7 @@
    "ko": "걷고 뛴 거리 ",
    "en": "Walk/run distance ",
    "files": [
-    "MapHomeNLEClipFactory.swift:557"
+    "MapHomeNLEClipFactory.swift:559"
    ],
    "args": [],
    "targets": [
@@ -12709,8 +12709,8 @@
    "ko": "걷기",
    "en": "Walking",
    "files": [
-    "MapHomeLocationPresentation.swift:312",
-    "MapHomeNLEClipFactory.swift:119",
+    "MapHomeLocationPresentation.swift:313",
+    "MapHomeNLEClipFactory.swift:120",
     "record-classification.json:0"
    ],
    "args": [],
@@ -12751,7 +12751,7 @@
    "ko": "걸음 ",
    "en": "Steps ",
    "files": [
-    "MapHomeNLEClipFactory.swift:555"
+    "MapHomeNLEClipFactory.swift:557"
    ],
    "args": [],
    "targets": [
@@ -12763,7 +12763,7 @@
    "ko": "걸음 속도 ",
    "en": "Cadence ",
    "files": [
-    "MapHomeNLEClipFactory.swift:565"
+    "MapHomeNLEClipFactory.swift:567"
    ],
    "args": [],
    "targets": [
@@ -12864,7 +12864,7 @@
    "ko": "검색 지우기",
    "en": "Clear search",
    "files": [
-    "MapHomeView+Map.swift:823"
+    "MapHomeView+Map.swift:825"
    ],
    "args": [],
    "targets": [
@@ -12888,7 +12888,7 @@
    "ko": "게임",
    "en": "Games",
    "files": [
-    "MapHomeLocationPresentation.swift:283",
+    "MapHomeLocationPresentation.swift:284",
     "record-classification.json:0"
    ],
    "args": [],
@@ -13013,7 +13013,7 @@
    "ko": "계절",
    "en": "Seasons",
    "files": [
-    "MapHomeView+Map.swift:897"
+    "MapHomeView+Map.swift:899"
    ],
    "args": [],
    "targets": [
@@ -13358,7 +13358,7 @@
    "ko": "공항",
    "en": "airport",
    "files": [
-    "MapHomeNLEClipFactory.swift:613",
+    "MapHomeNLEClipFactory.swift:615",
     "PlaceModels.swift:93"
    ],
    "args": [],
@@ -13965,7 +13965,7 @@
    "ko": "기기 모션 ",
    "en": "Device motion ",
    "files": [
-    "MapHomeNLEClipFactory.swift:630"
+    "MapHomeNLEClipFactory.swift:632"
    ],
    "args": [],
    "targets": [
@@ -14055,7 +14055,7 @@
    "ko": "기록 발자국 ",
    "en": "Recorded paw ",
    "files": [
-    "MapHomeView+Map.swift:526",
+    "MapHomeView+Map.swift:528",
     "MapHomeView+Routes.swift:643"
    ],
    "args": [],
@@ -14200,7 +14200,7 @@
    "ko": "기압 ",
    "en": "Pressure ",
    "files": [
-    "MapHomeNLEClipFactory.swift:586"
+    "MapHomeNLEClipFactory.swift:588"
    ],
    "args": [],
    "targets": [
@@ -14287,7 +14287,7 @@
    "ko": "기차",
    "en": "Train",
    "files": [
-    "MapHomeLocationPresentation.swift:268",
+    "MapHomeLocationPresentation.swift:269",
     "record-classification.json:0"
    ],
    "args": [],
@@ -14330,7 +14330,7 @@
    "en": "Deep sleep",
    "files": [
     "HealthAndSensorModels.swift:31",
-    "MapHomeLocationPresentation.swift:293",
+    "MapHomeLocationPresentation.swift:294",
     "record-classification.json:0"
    ],
    "args": [],
@@ -14383,7 +14383,7 @@
    "ko": "꺼짐",
    "en": "off",
    "files": [
-    "MapHomeNLEClipFactory.swift:593"
+    "MapHomeNLEClipFactory.swift:595"
    ],
    "args": [],
    "targets": [
@@ -14679,7 +14679,7 @@
    "ko": "낮잠",
    "en": "Nap",
    "files": [
-    "MapHomeLocationPresentation.swift:271",
+    "MapHomeLocationPresentation.swift:272",
     "record-classification.json:0"
    ],
    "args": [],
@@ -15082,7 +15082,7 @@
    "ko": "달리기",
    "en": "Running",
    "files": [
-    "MapHomeLocationPresentation.swift:313",
+    "MapHomeLocationPresentation.swift:314",
     "record-classification.json:0"
    ],
    "args": [],
@@ -15268,7 +15268,7 @@
    "ko": "대중교통 노선",
    "en": "transit route",
    "files": [
-    "MapHomeNLEClipFactory.swift:610"
+    "MapHomeNLEClipFactory.swift:612"
    ],
    "args": [],
    "targets": [
@@ -15281,6 +15281,18 @@
    "en": "Transit location",
    "files": [
     "MapHomeLocationSheets.swift:255"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "더 추가할 수 없습니다. 쓰지 않는 행동분류를 지운 뒤 추가하세요.|No more categories can be added. Delete one you don't use first.",
+   "ko": "더 추가할 수 없습니다. 쓰지 않는 행동분류를 지운 뒤 추가하세요.",
+   "en": "No more categories can be added. Delete one you don't use first.",
+   "files": [
+    "MapHomeSettingsSheets.swift:122"
    ],
    "args": [],
    "targets": [
@@ -15413,7 +15425,7 @@
    "ko": "데이트",
    "en": "Date",
    "files": [
-    "MapHomeLocationPresentation.swift:276",
+    "MapHomeLocationPresentation.swift:277",
     "record-classification.json:0"
    ],
    "args": [],
@@ -15429,7 +15441,7 @@
    "ko": "독서",
    "en": "Reading",
    "files": [
-    "MapHomeLocationPresentation.swift:282",
+    "MapHomeLocationPresentation.swift:283",
     "record-classification.json:0"
    ],
    "args": [],
@@ -16382,7 +16394,7 @@
    "ko": "명상",
    "en": "Meditation",
    "files": [
-    "MapHomeLocationPresentation.swift:279",
+    "MapHomeLocationPresentation.swift:280",
     "record-classification.json:0"
    ],
    "args": [],
@@ -16434,7 +16446,7 @@
    "ko": "모션 ",
    "en": "Motion ",
    "files": [
-    "MapHomeNLEClipFactory.swift:554"
+    "MapHomeNLEClipFactory.swift:556"
    ],
    "args": [],
    "targets": [
@@ -16494,7 +16506,7 @@
    "ko": "물 위",
    "en": "on water",
    "files": [
-    "MapHomeNLEClipFactory.swift:615"
+    "MapHomeNLEClipFactory.swift:617"
    ],
    "args": [],
    "targets": [
@@ -16542,7 +16554,7 @@
    "ko": "미용실",
    "en": "Hair salon",
    "files": [
-    "MapHomeLocationPresentation.swift:281",
+    "MapHomeLocationPresentation.swift:282",
     "record-classification.json:0"
    ],
    "args": [],
@@ -16623,7 +16635,7 @@
    "ko": "미확인",
    "en": "Unconfirmed",
    "files": [
-    "MapHomeLocationPresentation.swift:311",
+    "MapHomeLocationPresentation.swift:312",
     "MapHomeNLEClipEditor.swift:450",
     "AppModel+WidgetLiveActivity.swift:158"
    ],
@@ -16700,7 +16712,7 @@
    "ko": "반려동물 돌보기",
    "en": "Pet care",
    "files": [
-    "MapHomeLocationPresentation.swift:286",
+    "MapHomeLocationPresentation.swift:287",
     "record-classification.json:0"
    ],
    "args": [],
@@ -16875,7 +16887,7 @@
    "ko": "배",
    "en": "Ship",
    "files": [
-    "MapHomeLocationPresentation.swift:318",
+    "MapHomeLocationPresentation.swift:319",
     "record-classification.json:0"
    ],
    "args": [],
@@ -17184,7 +17196,7 @@
    "ko": "버스 탑승",
    "en": "Bus ride",
    "files": [
-    "MapHomeLocationPresentation.swift:317"
+    "MapHomeLocationPresentation.swift:318"
    ],
    "args": [],
    "targets": [
@@ -17324,7 +17336,7 @@
    "ko": "병원",
    "en": "Hospital",
    "files": [
-    "MapHomeLocationPresentation.swift:280",
+    "MapHomeLocationPresentation.swift:281",
     "record-classification.json:0"
    ],
    "args": [],
@@ -17340,7 +17352,7 @@
    "ko": "보/초",
    "en": " steps/s",
    "files": [
-    "MapHomeNLEClipFactory.swift:565"
+    "MapHomeNLEClipFactory.swift:567"
    ],
    "args": [],
    "targets": [
@@ -17849,7 +17861,7 @@
    "ko": "비행기",
    "en": "Airplane",
    "files": [
-    "MapHomeLocationPresentation.swift:319",
+    "MapHomeLocationPresentation.swift:320",
     "record-classification.json:0"
    ],
    "args": [],
@@ -17877,7 +17889,7 @@
    "ko": "빨래",
    "en": "Laundry",
    "files": [
-    "MapHomeLocationPresentation.swift:274",
+    "MapHomeLocationPresentation.swift:275",
     "record-classification.json:0"
    ],
    "args": [],
@@ -17893,7 +17905,7 @@
    "ko": "사용 가능",
    "en": "available",
    "files": [
-    "MapHomeNLEClipFactory.swift:581"
+    "MapHomeNLEClipFactory.swift:583"
    ],
    "args": [],
    "targets": [
@@ -18038,18 +18050,6 @@
    ]
   },
   {
-   "key": "사용할 수 있는 새 아이콘이 없습니다.|No unused icons are available.",
-   "ko": "사용할 수 있는 새 아이콘이 없습니다.",
-   "en": "No unused icons are available.",
-   "files": [
-    "MapHomeSettingsSheets.swift:122"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "사이드바 닫기|Close sidebar",
    "ko": "사이드바 닫기",
    "en": "Close sidebar",
@@ -18126,7 +18126,7 @@
    "ko": "사진 {0}/{1}, {2}",
    "en": "Photo {0} of {1}, {2}",
    "files": [
-    "MapHomePhotoLayer.swift:530"
+    "MapHomePhotoLayer.swift:510"
    ],
    "args": [
     "index + 1",
@@ -18142,7 +18142,7 @@
    "ko": "사진 {0}장",
    "en": "{0} photos",
    "files": [
-    "MapHomeView+Map.swift:475"
+    "MapHomeView+Map.swift:477"
    ],
    "args": [
     "cluster.count"
@@ -18252,7 +18252,7 @@
    "ko": "사진 접기",
    "en": "Hide photos",
    "files": [
-    "MapHomePhotoLayer.swift:543"
+    "MapHomePhotoLayer.swift:523"
    ],
    "args": [],
    "targets": [
@@ -18264,7 +18264,7 @@
    "ko": "사진 펼치기",
    "en": "Show photos",
    "files": [
-    "MapHomePhotoLayer.swift:592"
+    "MapHomePhotoLayer.swift:564"
    ],
    "args": [],
    "targets": [
@@ -18399,7 +18399,7 @@
    "ko": "상대 고도 ",
    "en": "Relative altitude ",
    "files": [
-    "MapHomeNLEClipFactory.swift:583"
+    "MapHomeNLEClipFactory.swift:585"
    ],
    "args": [],
    "targets": [
@@ -18702,7 +18702,7 @@
    "ko": "샤워",
    "en": "Shower",
    "files": [
-    "MapHomeLocationPresentation.swift:269",
+    "MapHomeLocationPresentation.swift:270",
     "record-classification.json:0"
    ],
    "args": [],
@@ -18806,7 +18806,7 @@
    "ko": "설거지",
    "en": "Dishes",
    "files": [
-    "MapHomeLocationPresentation.swift:303",
+    "MapHomeLocationPresentation.swift:304",
     "record-classification.json:0"
    ],
    "args": [],
@@ -19552,7 +19552,7 @@
    "files": [
     "MapHomeAlarm.swift:671",
     "MapHomeAlarm.swift:672",
-    "MapHomeLocationPresentation.swift:290"
+    "MapHomeLocationPresentation.swift:291"
    ],
    "args": [],
    "targets": [
@@ -20075,7 +20075,7 @@
    "ko": "식사",
    "en": "Meal",
    "files": [
-    "MapHomeLocationPresentation.swift:309",
+    "MapHomeLocationPresentation.swift:310",
     "record-classification.json:0",
     "record-classification.json:0"
    ],
@@ -20128,7 +20128,7 @@
    "ko": "실외(고대비)",
    "en": "Outdoor (high contrast)",
    "files": [
-    "MapHomeView+Map.swift:896"
+    "MapHomeView+Map.swift:898"
    ],
    "args": [],
    "targets": [
@@ -20573,7 +20573,7 @@
    "ko": "애플맵",
    "en": "Apple Maps",
    "files": [
-    "MapHomeView+Map.swift:892"
+    "MapHomeView+Map.swift:894"
    ],
    "args": [],
    "targets": [
@@ -20830,7 +20830,7 @@
    "ko": "야간",
    "en": "Night",
    "files": [
-    "MapHomeView+Map.swift:895"
+    "MapHomeView+Map.swift:897"
    ],
    "args": [],
    "targets": [
@@ -21042,7 +21042,7 @@
    "ko": "없음",
    "en": "unavailable",
    "files": [
-    "MapHomeNLEClipFactory.swift:581"
+    "MapHomeNLEClipFactory.swift:583"
    ],
    "args": [],
    "targets": [
@@ -21151,7 +21151,7 @@
    "ko": "역 근처",
    "en": "Near a station",
    "files": [
-    "MapHomeNLEClipFactory.swift:606"
+    "MapHomeNLEClipFactory.swift:608"
    ],
    "args": [],
    "targets": [
@@ -21213,7 +21213,7 @@
    "ko": "연결",
    "en": "Connections",
    "files": [
-    "MapHomeNLEClipFactory.swift:305",
+    "MapHomeNLEClipFactory.swift:307",
     "MapHomeView+Menu.swift:437"
    ],
    "args": [],
@@ -21677,7 +21677,7 @@
    "ko": "영상 보기",
    "en": "Watching videos",
    "files": [
-    "MapHomeLocationPresentation.swift:285",
+    "MapHomeLocationPresentation.swift:286",
     "record-classification.json:0"
    ],
    "args": [],
@@ -21729,7 +21729,7 @@
    "ko": "예상 경로 선택",
    "en": "Select predicted route",
    "files": [
-    "MapHomeView+Map.swift:524",
+    "MapHomeView+Map.swift:526",
     "MapHomeView+Routes.swift:650"
    ],
    "args": [],
@@ -22142,7 +22142,7 @@
    "ko": "요리",
    "en": "Cooking",
    "files": [
-    "MapHomeLocationPresentation.swift:272",
+    "MapHomeLocationPresentation.swift:273",
     "record-classification.json:0"
    ],
    "args": [],
@@ -22212,7 +22212,7 @@
    "en": "Exercise",
    "files": [
     "MapHomeInteractionPolicy.swift:416",
-    "MapHomeLocationPresentation.swift:310",
+    "MapHomeLocationPresentation.swift:311",
     "AppModel+WidgetLiveActivity.swift:157"
    ],
    "args": [],
@@ -22300,7 +22300,7 @@
    "ko": "움직임",
    "en": "Motion",
    "files": [
-    "MapHomeNLEClipFactory.swift:302"
+    "MapHomeNLEClipFactory.swift:304"
    ],
    "args": [],
    "targets": [
@@ -22312,7 +22312,7 @@
    "ko": "워치 가속도 변동 ",
    "en": "Watch accel. spread ",
    "files": [
-    "MapHomeNLEClipFactory.swift:627"
+    "MapHomeNLEClipFactory.swift:629"
    ],
    "args": [],
    "targets": [
@@ -22348,7 +22348,7 @@
    "ko": "워치 운동 ",
    "en": "Watch workout ",
    "files": [
-    "MapHomeNLEClipFactory.swift:617"
+    "MapHomeNLEClipFactory.swift:619"
    ],
    "args": [],
    "targets": [
@@ -22360,7 +22360,7 @@
    "ko": "워치 행동 ",
    "en": "Watch behavior ",
    "files": [
-    "MapHomeNLEClipFactory.swift:621"
+    "MapHomeNLEClipFactory.swift:623"
    ],
    "args": [],
    "targets": [
@@ -22423,7 +22423,7 @@
    "ko": "위성",
    "en": "Satellite",
    "files": [
-    "MapHomeView+Map.swift:893"
+    "MapHomeView+Map.swift:895"
    ],
    "args": [],
    "targets": [
@@ -22435,7 +22435,7 @@
    "ko": "위아래로 쓸어 넘기고, 두 번 눌러 크게 봅니다",
    "en": "Swipe up or down to change, double-tap to enlarge",
    "files": [
-    "MapHomePhotoLayer.swift:534"
+    "MapHomePhotoLayer.swift:514"
    ],
    "args": [],
    "targets": [
@@ -22598,7 +22598,7 @@
    "ko": "위치 단서 ",
    "en": "Place hints ",
    "files": [
-    "MapHomeNLEClipFactory.swift:616"
+    "MapHomeNLEClipFactory.swift:618"
    ],
    "args": [],
    "targets": [
@@ -22696,7 +22696,7 @@
    "ko": "위치 정확도 ",
    "en": "Location accuracy ",
    "files": [
-    "MapHomeNLEClipFactory.swift:578"
+    "MapHomeNLEClipFactory.swift:580"
    ],
    "args": [],
    "targets": [
@@ -22996,7 +22996,7 @@
    "ko": "음악",
    "en": "Music",
    "files": [
-    "MapHomeLocationPresentation.swift:284",
+    "MapHomeLocationPresentation.swift:285",
     "MapHomePlaybackMusic.swift:357",
     "record-classification.json:0"
    ],
@@ -23586,7 +23586,7 @@
    "en": "Movement",
    "files": [
     "WidgetShared.swift:770",
-    "MapHomeLocationPresentation.swift:308",
+    "MapHomeLocationPresentation.swift:309",
     "AppModel+WidgetLiveActivity.swift:155"
    ],
    "args": [],
@@ -24079,7 +24079,7 @@
    "ko": "임시 위치",
    "en": "Temporary",
    "files": [
-    "MapHomeView+Map.swift:405",
+    "MapHomeView+Map.swift:407",
     "MapHomeView+Routes.swift:669"
    ],
    "args": [],
@@ -24142,7 +24142,7 @@
    "ko": "자가용",
    "en": "Private car",
    "files": [
-    "MapHomeLocationPresentation.swift:316"
+    "MapHomeLocationPresentation.swift:317"
    ],
    "args": [],
    "targets": [
@@ -24294,7 +24294,7 @@
    "ko": "자동차",
    "en": "Car",
    "files": [
-    "MapHomeLocationPresentation.swift:314",
+    "MapHomeLocationPresentation.swift:315",
     "record-classification.json:0"
    ],
    "args": [],
@@ -24334,7 +24334,7 @@
    "ko": "자전거",
    "en": "Cycling",
    "files": [
-    "MapHomeLocationPresentation.swift:320",
+    "MapHomeLocationPresentation.swift:321",
     "record-classification.json:0"
    ],
    "args": [],
@@ -24411,7 +24411,7 @@
    "ko": "장보기",
    "en": "Groceries",
    "files": [
-    "MapHomeLocationPresentation.swift:273",
+    "MapHomeLocationPresentation.swift:274",
     "record-classification.json:0"
    ],
    "args": [],
@@ -24451,7 +24451,7 @@
    "ko": "장소 단서",
    "en": "Place hints",
    "files": [
-    "MapHomeNLEClipFactory.swift:306"
+    "MapHomeNLEClipFactory.swift:308"
    ],
    "args": [],
    "targets": [
@@ -24535,7 +24535,7 @@
    "ko": "장소·주소 검색",
    "en": "Search places or addresses",
    "files": [
-    "MapHomeView+Map.swift:784"
+    "MapHomeView+Map.swift:786"
    ],
    "args": [],
    "targets": [
@@ -24571,7 +24571,7 @@
    "ko": "잦은 정차",
    "en": "frequent stops",
    "files": [
-    "MapHomeNLEClipFactory.swift:611"
+    "MapHomeNLEClipFactory.swift:613"
    ],
    "args": [],
    "targets": [
@@ -24896,7 +24896,7 @@
    "ko": "전원 ",
    "en": "Power ",
    "files": [
-    "MapHomeNLEClipFactory.swift:597"
+    "MapHomeNLEClipFactory.swift:599"
    ],
    "args": [],
    "targets": [
@@ -25075,7 +25075,7 @@
    "en": "Walking in place",
    "files": [
     "MapDisplayModels.swift:38",
-    "MapHomeLocationPresentation.swift:305"
+    "MapHomeLocationPresentation.swift:306"
    ],
    "args": [],
    "targets": [
@@ -25503,7 +25503,7 @@
    "ko": "지도 보기",
    "en": "Reading a map",
    "files": [
-    "MapHomeLocationPresentation.swift:301"
+    "MapHomeLocationPresentation.swift:302"
    ],
    "args": [],
    "targets": [
@@ -25601,7 +25601,7 @@
    "ko": "지도 축소",
    "en": "Zoom map out",
    "files": [
-    "MapHomeView+Map.swift:1062"
+    "MapHomeView+Map.swift:1064"
    ],
    "args": [],
    "targets": [
@@ -25663,7 +25663,7 @@
    "ko": "지도 확대",
    "en": "Zoom map in",
    "files": [
-    "MapHomeView+Map.swift:1061"
+    "MapHomeView+Map.swift:1063"
    ],
    "args": [],
    "targets": [
@@ -25860,7 +25860,7 @@
    "ko": "지하철 Wi-Fi 연속 ",
    "en": "Subway Wi-Fi streak ",
    "files": [
-    "MapHomeNLEClipFactory.swift:600"
+    "MapHomeNLEClipFactory.swift:602"
    ],
    "args": [],
    "targets": [
@@ -25896,7 +25896,7 @@
    "ko": "지하철 탑승",
    "en": "Subway ride",
    "files": [
-    "MapHomeLocationPresentation.swift:315"
+    "MapHomeLocationPresentation.swift:316"
    ],
    "args": [],
    "targets": [
@@ -25996,7 +25996,7 @@
    "ko": "진행 방향 ",
    "en": "Course ",
    "files": [
-    "MapHomeNLEClipFactory.swift:575"
+    "MapHomeNLEClipFactory.swift:577"
    ],
    "args": [],
    "targets": [
@@ -26086,7 +26086,7 @@
    "ko": "집안일",
    "en": "Housework",
    "files": [
-    "MapHomeLocationPresentation.swift:270",
+    "MapHomeLocationPresentation.swift:271",
     "record-classification.json:0"
    ],
    "args": [],
@@ -26126,7 +26126,7 @@
    "ko": "집에서 휴식",
    "en": "Rest at home",
    "files": [
-    "MapHomeLocationPresentation.swift:300"
+    "MapHomeLocationPresentation.swift:301"
    ],
    "args": [],
    "targets": [
@@ -26187,7 +26187,7 @@
    "ko": "차량 오디오 ",
    "en": "Car audio ",
    "files": [
-    "MapHomeNLEClipFactory.swift:602"
+    "MapHomeNLEClipFactory.swift:604"
    ],
    "args": [],
    "targets": [
@@ -26199,7 +26199,7 @@
    "ko": "철도 노선",
    "en": "rail route",
    "files": [
-    "MapHomeNLEClipFactory.swift:609"
+    "MapHomeNLEClipFactory.swift:611"
    ],
    "args": [],
    "targets": [
@@ -26532,7 +26532,7 @@
    "ko": "취미 휴식",
    "en": "Hobby break",
    "files": [
-    "MapHomeLocationPresentation.swift:299"
+    "MapHomeLocationPresentation.swift:300"
    ],
    "args": [],
    "targets": [
@@ -26572,7 +26572,7 @@
    "en": "Hobby",
    "files": [
     "MapHomeInteractionPolicy.swift:415",
-    "MapHomeLocationPresentation.swift:291",
+    "MapHomeLocationPresentation.swift:292",
     "AppModel+WidgetLiveActivity.swift:153"
    ],
    "args": [],
@@ -26626,7 +26626,7 @@
    "ko": "측정 ",
    "en": "At ",
    "files": [
-    "MapHomeNLEClipFactory.swift:552"
+    "MapHomeNLEClipFactory.swift:554"
    ],
    "args": [],
    "targets": [
@@ -26662,7 +26662,7 @@
    "ko": "층 오름/내림 ",
    "en": "Floors up/down ",
    "files": [
-    "MapHomeNLEClipFactory.swift:589"
+    "MapHomeNLEClipFactory.swift:591"
    ],
    "args": [],
    "targets": [
@@ -26713,7 +26713,7 @@
    "ko": "친구 만남",
    "en": "Friends",
    "files": [
-    "MapHomeLocationPresentation.swift:275",
+    "MapHomeLocationPresentation.swift:276",
     "record-classification.json:0"
    ],
    "args": [],
@@ -26978,7 +26978,7 @@
    "ko": "커피·티타임",
    "en": "Coffee & tea",
    "files": [
-    "MapHomeLocationPresentation.swift:304",
+    "MapHomeLocationPresentation.swift:305",
     "record-classification.json:0"
    ],
    "args": [],
@@ -27006,7 +27006,7 @@
    "ko": "켜짐",
    "en": "on",
    "files": [
-    "MapHomeNLEClipFactory.swift:593"
+    "MapHomeNLEClipFactory.swift:595"
    ],
    "args": [],
    "targets": [
@@ -27196,7 +27196,7 @@
    "ko": "통화",
    "en": "Phone call",
    "files": [
-    "MapHomeLocationPresentation.swift:278",
+    "MapHomeLocationPresentation.swift:279",
     "record-classification.json:0"
    ],
    "args": [],
@@ -27236,7 +27236,7 @@
    "ko": "투약",
    "en": "Medication",
    "files": [
-    "MapHomeLocationPresentation.swift:295",
+    "MapHomeLocationPresentation.swift:296",
     "record-classification.json:0"
    ],
    "args": [],
@@ -27277,7 +27277,7 @@
    "ko": "판타지 지도",
    "en": "Fantasy Map",
    "files": [
-    "MapHomeView+Map.swift:898"
+    "MapHomeView+Map.swift:900"
    ],
    "args": [],
    "targets": [
@@ -27364,7 +27364,7 @@
    "ko": "표본",
    "en": " samples",
    "files": [
-    "MapHomeNLEClipFactory.swift:631"
+    "MapHomeNLEClipFactory.swift:633"
    ],
    "args": [],
    "targets": [
@@ -27757,7 +27757,7 @@
    "ko": "학교에서 학습",
    "en": "Studying at school",
    "files": [
-    "MapHomeLocationPresentation.swift:289"
+    "MapHomeLocationPresentation.swift:290"
    ],
    "args": [],
    "targets": [
@@ -27769,7 +27769,7 @@
    "ko": "학교에서 휴식",
    "en": "Break at school",
    "files": [
-    "MapHomeLocationPresentation.swift:298"
+    "MapHomeLocationPresentation.swift:299"
    ],
    "args": [],
    "targets": [
@@ -27964,7 +27964,7 @@
    "ko": "항만",
    "en": "port",
    "files": [
-    "MapHomeNLEClipFactory.swift:614"
+    "MapHomeNLEClipFactory.swift:616"
    ],
    "args": [],
    "targets": [
@@ -28024,7 +28024,7 @@
    "ko": "행동 근거 ",
    "en": "Evidence ",
    "files": [
-    "MapHomeNLEClipFactory.swift:623"
+    "MapHomeNLEClipFactory.swift:625"
    ],
    "args": [],
    "targets": [
@@ -28159,7 +28159,7 @@
    "ko": "헬스·워치",
    "en": "Health·Watch",
    "files": [
-    "MapHomeNLEClipFactory.swift:303"
+    "MapHomeNLEClipFactory.swift:305"
    ],
    "args": [],
    "targets": [
@@ -28399,7 +28399,7 @@
    "ko": "현재 페이스 ",
    "en": "Pace ",
    "files": [
-    "MapHomeNLEClipFactory.swift:562"
+    "MapHomeNLEClipFactory.swift:564"
    ],
    "args": [],
    "targets": [
@@ -28411,7 +28411,7 @@
    "ko": "호출 택시 단서",
    "en": "ride-hail hint",
    "files": [
-    "MapHomeNLEClipFactory.swift:612"
+    "MapHomeNLEClipFactory.swift:614"
    ],
    "args": [],
    "targets": [
@@ -28486,7 +28486,7 @@
    "ko": "화면 ",
    "en": "Screen ",
    "files": [
-    "MapHomeNLEClipFactory.swift:595"
+    "MapHomeNLEClipFactory.swift:597"
    ],
    "args": [],
    "targets": [
@@ -28548,7 +28548,7 @@
    "ko": "화면·전원",
    "en": "Screen·Power",
    "files": [
-    "MapHomeNLEClipFactory.swift:304"
+    "MapHomeNLEClipFactory.swift:306"
    ],
    "args": [],
    "targets": [
@@ -28727,7 +28727,7 @@
    "en": "Activity",
    "files": [
     "WidgetShared.swift:774",
-    "MapHomeLocationPresentation.swift:267",
+    "MapHomeLocationPresentation.swift:268",
     "AppModel+WidgetLiveActivity.swift:148"
    ],
    "args": [],
@@ -28767,7 +28767,7 @@
    "ko": "회복",
    "en": "Recovery",
    "files": [
-    "MapHomeLocationPresentation.swift:294",
+    "MapHomeLocationPresentation.swift:295",
     "record-classification.json:0"
    ],
    "args": [],
@@ -28808,7 +28808,7 @@
    "ko": "회사에서 걷기",
    "en": "Walking at the office",
    "files": [
-    "MapHomeLocationPresentation.swift:306"
+    "MapHomeLocationPresentation.swift:307"
    ],
    "args": [],
    "targets": [
@@ -28820,7 +28820,7 @@
    "ko": "회사에서 업무",
    "en": "Working at the office",
    "files": [
-    "MapHomeLocationPresentation.swift:288"
+    "MapHomeLocationPresentation.swift:289"
    ],
    "args": [],
    "targets": [
@@ -28832,7 +28832,7 @@
    "ko": "회사에서 휴식",
    "en": "Break at the office",
    "files": [
-    "MapHomeLocationPresentation.swift:297"
+    "MapHomeLocationPresentation.swift:298"
    ],
    "args": [],
    "targets": [
@@ -28844,7 +28844,7 @@
    "ko": "회의",
    "en": "Meeting",
    "files": [
-    "MapHomeLocationPresentation.swift:302",
+    "MapHomeLocationPresentation.swift:303",
     "record-classification.json:0"
    ],
    "args": [],
@@ -28860,7 +28860,7 @@
    "ko": "휴식",
    "en": "Rest",
    "files": [
-    "MapHomeLocationPresentation.swift:296",
+    "MapHomeLocationPresentation.swift:297",
     "record-classification.json:0",
     "record-classification.json:0"
    ],

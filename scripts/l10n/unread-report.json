@@ -232,13 +232,13 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeLocationPresentation.swift",
-   "line": 263,
+   "line": 264,
    "ko": "_ korean: UIPhrase",
    "en": "_ english: UIPhrase"
   },
   {
    "file": "TaptionPlan/UI/MapHomeLocationPresentation.swift",
-   "line": 264,
+   "line": 265,
    "ko": "korean",
    "en": "english"
   },
@@ -274,13 +274,13 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeNLEClipFactory.swift",
-   "line": 550,
+   "line": 552,
    "ko": "_ ko: UIPhrase",
    "en": "_ en: UIPhrase"
   },
   {
    "file": "TaptionPlan/UI/MapHomeNLEClipFactory.swift",
-   "line": 550,
+   "line": 552,
    "ko": "ko",
    "en": "en"
   },
