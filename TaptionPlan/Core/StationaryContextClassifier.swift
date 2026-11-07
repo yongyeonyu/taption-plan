@@ -1001,6 +1001,18 @@ enum RestaurantMealActualEngine {
             .sorted { $0.startedAt < $1.startedAt }
     }
 
+    /// 등록 식당의 체류 판정은 매번 새로 따른다(MEAL1103A1). 회사로 묶였던 때 잠긴 `근무`가
+    /// 식당을 등록한 뒤에도 제목·분류를 지켜 식당 근거를 단 근무로 남던 것을 막는다. 사용자 기록은 그대로 이긴다.
+    static func freshWins(previous: ActualRecord, candidate: ActualRecord) -> Bool {
+        previous.source == .location && candidate.source == .location
+            && !previous.manuallyCorrected && !ActualRecord.userOwned(previous)
+            && (isRegisteredRestaurantStay(previous) || isRegisteredRestaurantStay(candidate))
+    }
+
+    static func isRegisteredRestaurantStay(_ actual: ActualRecord) -> Bool {
+        actual.evidence.contains("자주가는 곳: 식당")
+    }
+
     /// 앱이 자동으로 끝낸 걷기 세션. 정지 판정이 늦으면 식사 내내 이어져 이동으로 덮는다.
     private static func isAutomaticWalkSession(_ actual: ActualRecord) -> Bool {
         actual.title == "걷기" && actual.categoryID == "activity" && actual.source == .location
