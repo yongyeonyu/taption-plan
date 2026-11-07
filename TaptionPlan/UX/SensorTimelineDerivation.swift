@@ -24,8 +24,30 @@ enum SensorStayDerivation {
     }
 
     // `nonisolated async`라 주 스레드 밖에서 돈다(`ClassifierAdapter.travelTimelineInBackground`와 같은 방식).
-    nonisolated static func detect(readings: [SensorReading], knownNames: [String: String]) async -> [PlaceStay] {
-        PlaceDetectionEngine().detectStays(readings: readings, knownNames: knownNames)
+    nonisolated static func detect(readings: [SensorReading], knownPlaces: [PlaceStay]) async -> [PlaceStay] {
+        PlaceDetectionEngine().detectStays(readings: readings, knownNames: knownNames(knownPlaces))
+    }
+
+    /// 같은 장소 키가 여럿이면 뒤의 이름이 남는다(기존 `reduce`와 같다).
+    static func knownNames(_ places: [PlaceStay]) -> [String: String] {
+        places.reduce(into: [String: String]()) { $0[$1.placeKey] = $1.displayName }
+    }
+
+    /// 경로 판정에 쓰는 측정값: 시각이 맞는 것만 시간순으로 모아 움직임 기록을 입힌다(ARC1103A01 A안).
+    nonisolated static func routeReadingsInBackground(
+        _ readings: [SensorReading],
+        activities: [MotionActivityRecord]
+    ) async -> [SensorReading] {
+        routeReadings(readings, activities: activities)
+    }
+
+    static func routeReadings(_ readings: [SensorReading], activities: [MotionActivityRecord]) -> [SensorReading] {
+        AppleDeviceGroundTruthEngine.applyingMotionHistory(
+            to: readings
+                .filter { RouteTimelineTimestamp.isValid($0.timestamp) }
+                .sorted { $0.timestamp < $1.timestamp },
+            activities: activities
+        )
     }
 
     nonisolated static func runInBackground(_ input: Input) async -> Output {

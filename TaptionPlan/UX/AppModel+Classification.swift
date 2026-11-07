@@ -415,13 +415,16 @@ extension AppModel {
             Self.integrationLogger.notice(
                 "Motion history refresh: activities=\(motionActivities.count, privacy: .public), generated=\(generatedMotionActuals.count, privacy: .public), spanStart=\(span.start.timeIntervalSince1970, privacy: .public), observationEnd=\(min(span.end, Date.now).timeIntervalSince1970, privacy: .public)"
             )
-            snapshot.actuals.removeAll {
+            // 쓰기마다 didSet이 돌지 않게 모아서 한 번에 넣는다(ARC1103A01 A안).
+            var actuals = snapshot.actuals
+            actuals.removeAll {
                 $0.source == .motion
                     && !AutomaticModelVersion.matches($0.modelVersion, AutomaticModelVersion.phoneSleep)
                     && $0.span(asOf: span.end).intersection(with: span) != nil
             }
-            snapshot.actuals.append(contentsOf: mergedMotionActuals)
-            snapshot.actuals.sort { $0.startedAt < $1.startedAt }
+            actuals.append(contentsOf: mergedMotionActuals)
+            actuals.sort { $0.startedAt < $1.startedAt }
+            snapshot.actuals = actuals
         }
         if let capturedAt = motionActivities.map(\.span.end).max() {
             await archiveRawDeviceData(
@@ -497,28 +500,19 @@ extension AppModel {
             return true
         }
 
-        var readings = AppleDeviceGroundTruthEngine
-            .applyingMotionHistory(
-                to: (
-                    filteredArchivedReadings
-                        + photoLocationReadings
-                        + filteredHealthRouteReadings
-                ).filter { RouteTimelineTimestamp.isValid($0.timestamp) }
-                    .sorted { $0.timestamp < $1.timestamp },
-                activities: motionActivities
-            )
+        var readings = await SensorStayDerivation.routeReadingsInBackground(
+            filteredArchivedReadings + photoLocationReadings + filteredHealthRouteReadings,
+            activities: motionActivities
+        )
         readings = await transportContextService.enriching(
             readings,
             userTransitLocations: settings.userTransitLocations
         )
         guard !Task.isCancelled, acceptsDataMutation() else { return false }
         let knownPlaces = snapshot.places
-        let knownNames = knownPlaces.reduce(into: [String: String]()) {
-            $0[$1.placeKey] = $1.displayName
-        }
         // 계산은 주 스레드 밖에서 한다(RFA1105A02). 저장은 아래에서 최신 snapshot에 한 번에 한다.
         let readingsForDetection = readings
-        var detectedPlaces = await SensorStayDerivation.detect(readings: readingsForDetection, knownNames: knownNames)
+        var detectedPlaces = await SensorStayDerivation.detect(readings: readingsForDetection, knownPlaces: knownPlaces)
         for index in detectedPlaces.indices
             where detectedPlaces[index].displayName == "자동 감지 장소" {
             guard !Task.isCancelled, acceptsDataMutation() else { return false }
