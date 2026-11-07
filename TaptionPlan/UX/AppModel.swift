@@ -424,6 +424,7 @@ final class AppModel {
     @ObservationIgnored var sealedDaysLoadedAt: Date?
     @ObservationIgnored var isSealingSettledDays = false
     @ObservationIgnored var daySealingTask: Task<Void, Never>?
+    @ObservationIgnored var classificationBackfillTask: Task<Void, Never>?
     @ObservationIgnored var bootstrapTask: Task<Void, Never>?
     @ObservationIgnored var startupSettingsTask: Task<Void, Never>?
     @ObservationIgnored var bootstrapPreparationTask: Task<Void, Never>?

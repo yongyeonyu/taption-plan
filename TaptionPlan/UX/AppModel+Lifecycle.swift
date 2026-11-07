@@ -48,6 +48,7 @@ extension AppModel {
         // 확정은 하루치 원본을 읽으므로, 앱을 여는 일과 겹치지 않게 잠시 뒤에 한다.
         await reloadSealedDaysIfNeeded()
         scheduleDaySealing()
+        scheduleClassificationBackfill()
     }
 
     /// 앱이 안정된 뒤에 지나간 날을 확정한다(시작 화면·지도 적재와 겹치지 않게).

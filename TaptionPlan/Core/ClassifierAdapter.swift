@@ -122,7 +122,7 @@ struct ClassificationRecomputeCoordinator: Sendable {
 
     static func markerKey(for day: Date, calendar: Calendar = .autoupdatingCurrent) -> String {
         let parts = calendar.dateComponents([.year, .month, .day], from: day)
-        return String(format: "%@:%04d-%02d-%02d", ClassifierPipeline.version, parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
+        return String(format: "%@:%04d-%02d-%02d", ClassificationRules.version, parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
     }
 
     func needsRecompute(_ day: Date, calendar: Calendar = .autoupdatingCurrent) async -> Bool {
