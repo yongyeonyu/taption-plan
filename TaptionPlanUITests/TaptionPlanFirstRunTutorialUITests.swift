@@ -30,6 +30,40 @@ final class TaptionPlanFirstRunTutorialUITests: XCTestCase {
         assertStep(app, 2)
     }
 
+    /// 왼쪽 위 「닫기」는 처음 실행 중간 단계에서도, 메뉴 > 설정 > 다시 보기에서도 튜토리얼을 닫는다(TUT1105A02).
+    func testCloseButtonClosesFirstRunAndReplay() {
+        let app = launchFresh()
+        element(app, "firstRunNext").tap()
+        assertStep(app, 2)
+        capture("close-first-run-before")
+        element(app, "firstRunClose").tap()
+        assertTutorialStaysClosed(app)
+
+        let replayRow = openReplayRow(app)
+        replayRow.tap()
+        assertStep(app, 1)
+        element(app, "firstRunNext").tap()
+        assertStep(app, 2)
+        capture("close-replay-before")
+        element(app, "firstRunClose").tap()
+        XCTAssertTrue(UITestWait.until(10) { !self.element(app, "firstRunTutorial").exists }, "다시 보기 닫기가 튜토리얼을 닫지 않았다")
+        XCTAssertTrue(replayRow.waitForExistence(timeout: 10))
+        capture("close-replay-after")
+    }
+
+    /// 메뉴 > 설정 목록을 열어 다시 보기 줄을 보이게 한다.
+    private func openReplayRow(_ app: XCUIApplication) -> XCUIElement {
+        app.buttons.matching(NSPredicate(format: "label == %@", "메뉴")).firstMatch.tap()
+        let settingsRow = app.buttons["설정 목록"]
+        var tries = 0
+        while !settingsRow.isHittable, tries < 6 { app.swipeUp(); tries += 1 }
+        settingsRow.tap()
+        let replayRow = element(app, "firstRunTutorialReplay")
+        tries = 0
+        while !replayRow.isHittable, tries < 4 { app.swipeUp(); tries += 1 }
+        return replayRow
+    }
+
     private func launchFresh() -> XCUIApplication {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
         app.launchArguments += ["-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR"]
