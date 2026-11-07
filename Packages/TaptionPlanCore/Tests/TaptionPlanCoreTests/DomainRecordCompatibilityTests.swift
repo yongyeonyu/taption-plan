@@ -129,4 +129,12 @@ struct DomainRecordCompatibilityTests {
             expected: plain
         )
     }
+
+    @Test func geoPointStoredBytesAreUnchanged() throws {
+        try Self.roundTrip(
+            GeoPoint.self,
+            stored: #"{"altitude":12.5,"horizontalAccuracy":5,"latitude":37.5,"longitude":127.25,"verticalAccuracy":-1}"#,
+            expected: GeoPoint(latitude: 37.5, longitude: 127.25, altitude: 12.5, horizontalAccuracy: 5, verticalAccuracy: -1)
+        )
+    }
 }

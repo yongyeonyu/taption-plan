@@ -14,13 +14,7 @@ struct HealthActual: Identifiable, Codable, Hashable, Sendable {
     var linkedCategoryID: String? = nil
 }
 
-struct GeoPoint: Codable, Hashable, Sendable {
-    var latitude: Double
-    var longitude: Double
-    var altitude: Double
-    var horizontalAccuracy: Double
-    var verticalAccuracy: Double
-}
+// `GeoPoint`는 `TaptionPlanCore/Domain/GeoPoint.swift`에 있다.
 
 enum DevicePowerState: String, Codable, Hashable, Sendable {
     case unknown
