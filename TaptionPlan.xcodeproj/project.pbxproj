@@ -95,6 +95,7 @@
 		A1FA11E346325DE9124646F2 /* SensorEvidenceTimeIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1114DFD1B4E129D9D260 /* SensorEvidenceTimeIndex.swift */; };
 		A1FA11E73D8EF4A0D46BA75B /* TransitBoardingEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1191E387639DDBE62829 /* TransitBoardingEngines.swift */; };
 		A1FA11E539E87EF9BECCEED3 /* PlaceDetectionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11F6DF3994BF0EFB09B0 /* PlaceDetectionEngine.swift */; };
+		A10000000000000004DA0002 /* PlaceStayMergeEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000004DA0002 /* PlaceStayMergeEngine.swift */; };
 		A1FA116E94306EBCD83FA237 /* UnregisteredPlaceSuggestionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA112726691A677BFF352A /* UnregisteredPlaceSuggestionEngine.swift */; };
 		A1FA11F2247EED1E851FD89B /* FrequentPlaceResolutionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11317768AD20F051874E /* FrequentPlaceResolutionEngine.swift */; };
 		A1FA110A399BEE8BE6C8AE89 /* FloorTimelineEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA118E292B101C6B3AA5B8 /* FloorTimelineEngine.swift */; };
@@ -128,6 +129,7 @@
 		A5B1102A0200000000000015 /* AppModel+Navigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000014 /* AppModel+Navigation.swift */; };
 		A5B1102A0200000000000013 /* AppModel+Permissions.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000012 /* AppModel+Permissions.swift */; };
 		A5B1102A0200000000000011 /* AppModel+Persistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000010 /* AppModel+Persistence.swift */; };
+		A10000000000000004DA0001 /* AppModel+EditRollback.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000004DA0001 /* AppModel+EditRollback.swift */; };
 		A5B1102A020000000000000F /* AppModel+Plans.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000000E /* AppModel+Plans.swift */; };
 		A5B1102A020000000000000D /* AppModel+Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000000C /* AppModel+Settings.swift */; };
 		A5B1102A020000000000000B /* AppModel+Steps.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000000A /* AppModel+Steps.swift */; };
@@ -211,6 +213,8 @@
 		A1102A0100000000000000B3 /* UnobservedStayEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1102A0100000000000000F6 /* UnobservedStayEngineTests.swift */; };
 		A1102A0100000000000000B4 /* AlgorithmUpgradeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1102A0100000000000000F8 /* AlgorithmUpgradeTests.swift */; };
 		A1102A0100000000000000B5 /* PlaceZoneStayTrackerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1102A0100000000000000FA /* PlaceZoneStayTrackerTests.swift */; };
+		A10000000000000004DA0005 /* PlaceStayMergeEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000004DA0005 /* PlaceStayMergeEngineTests.swift */; };
+		A10000000000000004DA0004 /* UserEditRollbackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000004DA0004 /* UserEditRollbackTests.swift */; };
 		A5B1102A0200000000000048 /* MapHomeCounterTimelinePolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000047 /* MapHomeCounterTimelinePolicyTests.swift */; };
 		A5B1102A0200000000000046 /* MapHomePlaybackContinuityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000045 /* MapHomePlaybackContinuityTests.swift */; };
 		A5B1102A0200000000000044 /* MapHomeDateStripTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000043 /* MapHomeDateStripTests.swift */; };
@@ -502,6 +506,7 @@
 		A100000000000000000000E8 /* MapHomeFogLayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000E8 /* MapHomeFogLayer.swift */; };
 		A100000000000000000000EB /* MapHomeCalendarChipValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000EB /* MapHomeCalendarChipValue.swift */; };
 		A100000000000000000000EC /* MapHomeNLEToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000EC /* MapHomeNLEToolbar.swift */; };
+		A10000000000000004DA0003 /* MapHomeNLESaveGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000004DA0003 /* MapHomeNLESaveGate.swift */; };
 		A100000000000000000000ED /* MapHomeNLEOverwriteSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000ED /* MapHomeNLEOverwriteSheet.swift */; };
 		A100000000000000000000EE /* MapHomeNLEPreviewHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000EE /* MapHomeNLEPreviewHost.swift */; };
 		A100000000000000000000EF /* MapHomeDateStrip.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000EF /* MapHomeDateStrip.swift */; };
@@ -705,6 +710,7 @@
 		F1FA1114DFD1B4E129D9D260 /* SensorEvidenceTimeIndex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorEvidenceTimeIndex.swift; sourceTree = "<group>"; };
 		F1FA1191E387639DDBE62829 /* TransitBoardingEngines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransitBoardingEngines.swift; sourceTree = "<group>"; };
 		F1FA11F6DF3994BF0EFB09B0 /* PlaceDetectionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceDetectionEngine.swift; sourceTree = "<group>"; };
+		F10000000000000004DA0002 /* PlaceStayMergeEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceStayMergeEngine.swift; sourceTree = "<group>"; };
 		F1FA112726691A677BFF352A /* UnregisteredPlaceSuggestionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnregisteredPlaceSuggestionEngine.swift; sourceTree = "<group>"; };
 		F1FA11317768AD20F051874E /* FrequentPlaceResolutionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrequentPlaceResolutionEngine.swift; sourceTree = "<group>"; };
 		F1FA118E292B101C6B3AA5B8 /* FloorTimelineEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloorTimelineEngine.swift; sourceTree = "<group>"; };
@@ -741,6 +747,7 @@
 		F5B1102A0200000000000014 /* AppModel+Navigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Navigation.swift"; sourceTree = "<group>"; };
 		F5B1102A0200000000000012 /* AppModel+Permissions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Permissions.swift"; sourceTree = "<group>"; };
 		F5B1102A0200000000000010 /* AppModel+Persistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Persistence.swift"; sourceTree = "<group>"; };
+		F10000000000000004DA0001 /* AppModel+EditRollback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+EditRollback.swift"; sourceTree = "<group>"; };
 		F5B1102A020000000000000E /* AppModel+Plans.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Plans.swift"; sourceTree = "<group>"; };
 		F5B1102A020000000000000C /* AppModel+Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Settings.swift"; sourceTree = "<group>"; };
 		F5B1102A020000000000000A /* AppModel+Steps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Steps.swift"; sourceTree = "<group>"; };
@@ -805,6 +812,8 @@
 		A1102A0100000000000000F6 /* UnobservedStayEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnobservedStayEngineTests.swift; sourceTree = "<group>"; };
 		A1102A0100000000000000F8 /* AlgorithmUpgradeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlgorithmUpgradeTests.swift; sourceTree = "<group>"; };
 		A1102A0100000000000000FA /* PlaceZoneStayTrackerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceZoneStayTrackerTests.swift; sourceTree = "<group>"; };
+		F10000000000000004DA0005 /* PlaceStayMergeEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceStayMergeEngineTests.swift; sourceTree = "<group>"; };
+		F10000000000000004DA0004 /* UserEditRollbackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserEditRollbackTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000047 /* MapHomeCounterTimelinePolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCounterTimelinePolicyTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000045 /* MapHomePlaybackContinuityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaybackContinuityTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000043 /* MapHomeDateStripTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeDateStripTests.swift; sourceTree = "<group>"; };
@@ -1071,6 +1080,7 @@
 		F100000000000000000000E8 /* MapHomeFogLayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeFogLayer.swift; sourceTree = "<group>"; };
 		F100000000000000000000EB /* MapHomeCalendarChipValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCalendarChipValue.swift; sourceTree = "<group>"; };
 		F100000000000000000000EC /* MapHomeNLEToolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeNLEToolbar.swift; sourceTree = "<group>"; };
+		F10000000000000004DA0003 /* MapHomeNLESaveGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeNLESaveGate.swift; sourceTree = "<group>"; };
 		F100000000000000000000ED /* MapHomeNLEOverwriteSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeNLEOverwriteSheet.swift; sourceTree = "<group>"; };
 		F100000000000000000000EE /* MapHomeNLEPreviewHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeNLEPreviewHost.swift; sourceTree = "<group>"; };
 		F100000000000000000000EF /* MapHomeDateStrip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeDateStrip.swift; sourceTree = "<group>"; };
@@ -1299,6 +1309,8 @@
 				A1102A0100000000000000F6 /* UnobservedStayEngineTests.swift */,
 				A1102A0100000000000000F8 /* AlgorithmUpgradeTests.swift */,
 				A1102A0100000000000000FA /* PlaceZoneStayTrackerTests.swift */,
+				F10000000000000004DA0005 /* PlaceStayMergeEngineTests.swift */,
+				F10000000000000004DA0004 /* UserEditRollbackTests.swift */,
 				F5B1102A0200000000000047 /* MapHomeCounterTimelinePolicyTests.swift */,
 				F5B1102A0200000000000045 /* MapHomePlaybackContinuityTests.swift */,
 				F5B1102A0200000000000043 /* MapHomeDateStripTests.swift */,
@@ -1482,6 +1494,7 @@
 				F100000000000000000000E8 /* MapHomeFogLayer.swift */,
 				F100000000000000000000EB /* MapHomeCalendarChipValue.swift */,
 				F100000000000000000000EC /* MapHomeNLEToolbar.swift */,
+				F10000000000000004DA0003 /* MapHomeNLESaveGate.swift */,
 				F100000000000000000000ED /* MapHomeNLEOverwriteSheet.swift */,
 				F100000000000000000000EE /* MapHomeNLEPreviewHost.swift */,
 				F100000000000000000000EF /* MapHomeDateStrip.swift */,
@@ -1569,6 +1582,7 @@
 				F5B1102A0200000000000014 /* AppModel+Navigation.swift */,
 				F5B1102A0200000000000012 /* AppModel+Permissions.swift */,
 				F5B1102A0200000000000010 /* AppModel+Persistence.swift */,
+				F10000000000000004DA0001 /* AppModel+EditRollback.swift */,
 				F5B1102A020000000000000E /* AppModel+Plans.swift */,
 				F5B1102A020000000000000C /* AppModel+Settings.swift */,
 				F5B1102A020000000000000A /* AppModel+Steps.swift */,
@@ -1624,6 +1638,7 @@
 				F1FA1114DFD1B4E129D9D260 /* SensorEvidenceTimeIndex.swift */,
 				F1FA1191E387639DDBE62829 /* TransitBoardingEngines.swift */,
 				F1FA11F6DF3994BF0EFB09B0 /* PlaceDetectionEngine.swift */,
+				F10000000000000004DA0002 /* PlaceStayMergeEngine.swift */,
 				F1FA112726691A677BFF352A /* UnregisteredPlaceSuggestionEngine.swift */,
 				F1FA11317768AD20F051874E /* FrequentPlaceResolutionEngine.swift */,
 				F1FA118E292B101C6B3AA5B8 /* FloorTimelineEngine.swift */,
@@ -2160,6 +2175,7 @@
 				A5B1102A0200000000000015 /* AppModel+Navigation.swift in Sources */,
 				A5B1102A0200000000000013 /* AppModel+Permissions.swift in Sources */,
 				A5B1102A0200000000000011 /* AppModel+Persistence.swift in Sources */,
+				A10000000000000004DA0001 /* AppModel+EditRollback.swift in Sources */,
 				A5B1102A020000000000000F /* AppModel+Plans.swift in Sources */,
 				A5B1102A020000000000000D /* AppModel+Settings.swift in Sources */,
 				A5B1102A020000000000000B /* AppModel+Steps.swift in Sources */,
@@ -2313,6 +2329,7 @@
 				A100000000000000000000E8 /* MapHomeFogLayer.swift in Sources */,
 				A100000000000000000000EB /* MapHomeCalendarChipValue.swift in Sources */,
 				A100000000000000000000EC /* MapHomeNLEToolbar.swift in Sources */,
+				A10000000000000004DA0003 /* MapHomeNLESaveGate.swift in Sources */,
 				A100000000000000000000ED /* MapHomeNLEOverwriteSheet.swift in Sources */,
 				A100000000000000000000EE /* MapHomeNLEPreviewHost.swift in Sources */,
 				A100000000000000000000EF /* MapHomeDateStrip.swift in Sources */,
@@ -2389,6 +2406,7 @@
 				A1FA11E346325DE9124646F2 /* SensorEvidenceTimeIndex.swift in Sources */,
 				A1FA11E73D8EF4A0D46BA75B /* TransitBoardingEngines.swift in Sources */,
 				A1FA11E539E87EF9BECCEED3 /* PlaceDetectionEngine.swift in Sources */,
+				A10000000000000004DA0002 /* PlaceStayMergeEngine.swift in Sources */,
 				A1FA116E94306EBCD83FA237 /* UnregisteredPlaceSuggestionEngine.swift in Sources */,
 				A1FA11F2247EED1E851FD89B /* FrequentPlaceResolutionEngine.swift in Sources */,
 				A1FA110A399BEE8BE6C8AE89 /* FloorTimelineEngine.swift in Sources */,
@@ -2514,6 +2532,8 @@
 				A1102A0100000000000000B3 /* UnobservedStayEngineTests.swift in Sources */,
 				A1102A0100000000000000B4 /* AlgorithmUpgradeTests.swift in Sources */,
 				A1102A0100000000000000B5 /* PlaceZoneStayTrackerTests.swift in Sources */,
+				A10000000000000004DA0005 /* PlaceStayMergeEngineTests.swift in Sources */,
+				A10000000000000004DA0004 /* UserEditRollbackTests.swift in Sources */,
 				A5B1102A0200000000000048 /* MapHomeCounterTimelinePolicyTests.swift in Sources */,
 				A5B1102A0200000000000046 /* MapHomePlaybackContinuityTests.swift in Sources */,
 				A5B1102A0200000000000044 /* MapHomeDateStripTests.swift in Sources */,

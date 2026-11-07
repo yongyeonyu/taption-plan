@@ -42,8 +42,7 @@ extension AppModel {
             replaceConfirmedSleepSpans(adding: [previousSpan])
         }
         snapshot.actuals.sort { $0.startedAt < $1.startedAt }
-        recordUserEdit(from: previous)
-        await persist()
+        await saveUserEdit(from: previous)
         TaptionPlanDiagnosticsLogger.shared.record(
             "activity_correction_applied",
             fields: [
@@ -92,8 +91,7 @@ extension AppModel {
             )
         }
         snapshot.actuals.sort { $0.startedAt < $1.startedAt }
-        recordUserEdit(from: previous)
-        await persist()
+        await saveUserEdit(from: previous)
         TaptionPlanDiagnosticsLogger.shared.record(
             "activity_span_correction_applied",
             fields: [
@@ -191,8 +189,7 @@ extension AppModel {
             storeConfirmedSleepSpan(TimeSpan(start: startAt, end: endAt))
         }
         snapshot.actuals.sort { $0.startedAt < $1.startedAt }
-        recordUserEdit(from: previous)
-        await persist()
+        await saveUserEdit(from: previous)
         TaptionPlanDiagnosticsLogger.shared.record(
             "activity_correction_applied",
             fields: [
@@ -258,8 +255,7 @@ extension AppModel {
         if option.categoryID == "sleep" {
             storeConfirmedSleepSpan(span)
         }
-        recordUserEdit(from: previous)
-        await persist()
+        await saveUserEdit(from: previous)
     }
 
     func saveActivitySectionEdit(
@@ -315,9 +311,9 @@ extension AppModel {
             replaceConfirmedSleepSpans(removing: [editedSpan])
         }
 
-        let editRevision = snapshotRevision
+        let rollback = userEditRollback(from: previous)
         guard await persist() else {
-            if snapshotRevision == editRevision { snapshot = previous }
+            rollBackUnsavedEdit(rollback)
             TaptionPlanDiagnosticsLogger.shared.record(
                 "section_edit_save_failed",
                 level: .error,
@@ -388,6 +384,13 @@ extension AppModel {
         _ requests: [ActivitySectionEditRequest]
     ) async -> Bool {
         guard !requests.isEmpty else { return true }
+        guard hasLoadedFullSnapshot else {
+            userFacingError = AppLanguagePreference.text(
+                korean: "기록을 모두 불러온 뒤에 저장할 수 있습니다.",
+                english: "You can save after all records finish loading."
+            )
+            return false
+        }
         guard acceptsDataMutation() else { return false }
         var applied = 0
         for request in requests {
@@ -494,6 +497,7 @@ extension AppModel {
         }
 
         clearUserEditRedoHistory()
+        let previous = snapshot
         invalidateReviewArchives(spans: [actual.span()])
         snapshot.settings.suppressedActualIDs.insert(actualID)
         snapshot.actuals.removeAll { $0.id == actualID }
@@ -520,6 +524,6 @@ extension AppModel {
             )
         }
 
-        await persist()
+        await persistOrRollBack(userEditRollback(from: previous))
     }
 }

@@ -39,6 +39,8 @@ struct MapHomeNLEClipEditor: View {
     @State private var dragMode: NLEEditorDragMode = .none
     @State private var didPushUndoForDrag = false
     @State private var isSaving = false
+    /// 그날 기록을 다 읽기 전에는 저장하지 않는다(NLE1103A04).
+    @State private var isDayLoaded = false
     @State var didCenter = false
     /// 위로 넘겨 전날을 읽는 중인 작업. 하나씩만 읽는다(NLE1029A02).
     @State var previousDayLoad: Task<Void, Never>?
@@ -144,6 +146,7 @@ struct MapHomeNLEClipEditor: View {
         .background(Color.tpBackground.ignoresSafeArea())
         .task(id: date) {
             placeDays[0] = await NLEDayWindow.loadPlaces(model: model, date: date)
+            isDayLoaded = true
             rebuildPlaceSegments()
             await resolveNearbyPlaceNames()
         }
@@ -206,7 +209,7 @@ struct MapHomeNLEClipEditor: View {
                 apply()
             } label: {
                 Group {
-                    if isSaving {
+                    if isSaving || !saveGate.isLoaded {
                         ProgressView().tint(.white)
                     } else {
                         Text(language.text("적용", "Apply"))
@@ -219,8 +222,8 @@ struct MapHomeNLEClipEditor: View {
                 .background(Color.tpReferenceBlue, in: Capsule())
             }
             .buttonStyle(.plain)
-            .disabled(isSaving || !hasChanges)
-            .opacity(isSaving || !hasChanges ? 0.45 : 1)
+            .disabled(!saveGate.canApply)
+            .opacity(saveGate.canApply ? 1 : 0.45)
         }
         .frame(minHeight: 44)
     }
@@ -1196,7 +1199,12 @@ struct MapHomeNLEClipEditor: View {
         selectedSubClipID = snapshot.selectedSubClipID
     }
 
+    private var saveGate: NLEClipSaveGate {
+        NLEClipSaveGate(hasChanges: hasChanges, isSaving: isSaving, isDayLoaded: isDayLoaded, recordsLoaded: model.hasLoadedFullSnapshot)
+    }
+
     private func apply() {
+        guard saveGate.canApply else { return }
         let dayStart = Calendar.autoupdatingCurrent.startOfDay(for: date)
         // 대분류를 먼저, 상세활동을 나중에 저장한다. 상세활동이 위에 남아야 한다.
         // 상세활동이 비운 자리는 그 시각의 대분류가 이어받는다.

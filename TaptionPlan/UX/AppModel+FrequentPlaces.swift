@@ -8,6 +8,7 @@ extension AppModel {
         }) else {
             return
         }
+        let previous = snapshot
         let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         if !cleanName.isEmpty {
             snapshot.places[index].displayName = cleanName
@@ -15,7 +16,8 @@ extension AppModel {
         snapshot.places[index].floor = floor
         snapshot.places[index].confidence = .high
         snapshot.places[index].isConfirmed = true
-        Task { await persist() }
+        let rollback = userEditRollback(from: previous)
+        Task { await persistOrRollBack(rollback) }
     }
 
     /// 층수를 전달하지 않은 기존 호출은 기존 기준을 유지하고, 지도 저장 UI는
@@ -474,6 +476,7 @@ extension AppModel {
         }) else {
             return
         }
+        let previous = snapshot
         let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         if !cleanName.isEmpty {
             snapshot.settings.frequentPlaces[index].name = cleanName

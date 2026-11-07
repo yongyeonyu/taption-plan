@@ -96,7 +96,8 @@ extension AppModel {
         expectedRevision: UInt64? = nil,
         requiresCurrentRevision: Bool = true,
         actualEdit: PlanActualEdit? = nil,
-        allowingDeletion: Bool = false
+        allowingDeletion: Bool = false,
+        supersedable: Bool = false
     ) async throws -> Bool {
         guard hasCurrentDataGeneration else {
             throw RepositoryError.staleGeneration
@@ -115,12 +116,17 @@ extension AppModel {
         let generation = dataDeletionGeneration
         repositoryWriteSequence &+= 1
         let sequence = repositoryWriteSequence
+        if supersedable { snapshotWriteLedger.begin(sequence) }
         // A caller disappearing must not discard an accepted local write.
         let task = Task { @MainActor [self] in
             _ = await previous?.result
             guard generation == dataDeletionGeneration,
                   hasCurrentDataGeneration else {
                 throw RepositoryError.staleGeneration
+            }
+            // 뒤에 줄 선 전체 저장이 이 값을 포함하므로 오래된 값은 쓰지 않는다(RVW1030A01).
+            if supersedable, snapshotWriteLedger.isSuperseded(sequence) {
+                throw SnapshotWriteSuperseded()
             }
             if requiresCurrentRevision,
                let expectedRevision, expectedRevision != snapshotRevision {
@@ -131,10 +137,11 @@ extension AppModel {
                 || expectedRevision == snapshotRevision
         }
         repositoryWriteTask = task
+        if supersedable { snapshotWriteLedger.latestTask = task }
         defer {
             if repositoryWriteSequence == sequence { repositoryWriteTask = nil }
         }
-        return try await task.value
+        return try await snapshotWriteLedger.result(of: task)
     }
 
     @discardableResult
@@ -142,6 +149,7 @@ extension AppModel {
         guard hasCurrentDataGeneration,
               allowingDeletion || !isDeletingUserData else { return false }
         if isSensorTimelineRefreshing { userEditedDuringSensorRefresh = true }
+        lastPersistWasCancelled = false
         activeDataMutationCount += 1
         defer { activeDataMutationCount -= 1 }
         guard !repositoryLoadFailed else {
@@ -162,7 +170,8 @@ extension AppModel {
                 expectedRevision: sourceRevision,
                 requiresCurrentRevision: false,
                 actualEdit: actualEdit,
-                allowingDeletion: allowingDeletion
+                allowingDeletion: allowingDeletion,
+                supersedable: true
             ) else { return false }
             if snapshotRevision == sourceRevision {
                 assignTimestampOnlySnapshot(visibleValue)
@@ -185,6 +194,7 @@ extension AppModel {
             }
             return true
         } catch is CancellationError {
+            lastPersistWasCancelled = true
             return false
         } catch {
             userFacingError = AppLanguagePreference.text(
@@ -565,7 +575,8 @@ extension AppModel {
             guard try await saveToRepository(
                 value,
                 expectedRevision: sourceRevision,
-                requiresCurrentRevision: false
+                requiresCurrentRevision: false,
+                supersedable: true
             ) else { return false }
             if snapshotRevision == sourceRevision {
                 assignTimestampOnlySnapshot(visibleValue)

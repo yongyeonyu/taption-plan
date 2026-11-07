@@ -337,7 +337,7 @@ extension AppModel {
         synchronizeUserEditHistoryAvailability()
     }
 
-    private func synchronizeUserEditHistoryAvailability() {
+    func synchronizeUserEditHistoryAvailability() {
         canUndo = !userEditUndoHistory.isEmpty
         canRedo = !userEditRedoHistory.isEmpty
     }

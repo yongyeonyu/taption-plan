@@ -465,6 +465,8 @@ final class AppModel {
         TaptionDataDeletionFence.currentGeneration()
     @ObservationIgnored var repositoryWriteTask: Task<Bool, Error>?
     @ObservationIgnored var repositoryWriteSequence: UInt64 = 0
+    @ObservationIgnored var snapshotWriteLedger = SnapshotWriteLedger()
+    @ObservationIgnored var lastPersistWasCancelled = false
     @ObservationIgnored var sensorTimelineTask: Task<Bool, Never>?
     @ObservationIgnored var sensorTimelineRequestID: UUID?
     @ObservationIgnored var sensorTimelineRequestKey: String?
