@@ -1712,3 +1712,11 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
 ## TFB1107A03 · 빌드 293 내부 TestFlight (2026-11-07)
 - 포함: REV1107A02(좌표 없는 역 OSM 채움·대경선 연결, 넓은 화면 메뉴 한 열, 아이패드 달력 한 열).
 - 결과: `release.sh --yes --request-id TFB1107A03` 종료 0, 처리 `VALID`, `TP Taption Plan 내부 테스트` 그룹 연결, 테스터 1명 노출. 아카이브 네 번들 `CFBundleVersion` 293 확인. 보고서 `build/validation/TFB1107A03/testflight-report.json`.
+
+## SRC1107A01 · 남은 항목 묶음: 지도 검색, 시작 재계산, 작은 정리, 화면 결함 (2026-11-07)
+- 지도 검색: 검색 단추는 결과 목록(최대 8, 하나면 바로 이동)을 보여 고르게 함. 범위는 보고 있는 지도 가운데·최소 0.25°(지도 위치를 모르면 현재 위치). 결과 없음(`MKError.placemarkNotFound`)·실패를 목록 자리에 알림. 입력 중 등록 장소·지하철역 이름 일치를 Apple 추천 위에 보여 줌(`MapHomeSearchPolicy`, 새 파일). 번역 4문구 × 12개 언어.
+- 시작 재계산(LAG1107A01 부수): 예상 경로 갱신 묶음 대기 0.1초 → 0.3초.
+- 정리: `SubwayRoutePrecedence`(RouteEngine)와 시험 줄 삭제(CLN1101A01). 집 성장 시험 도구가 정식 빌드에서 기본으로 보였다 → Debug 빌드에서만, 기본 닫힘(GRW1021C01). 알림 판정 단위 시험 3건(ALM1021A01). 복원 카드 비밀번호 칸은 이미 있음(REV1102A01).
+- 화면: 재생 `.stay` 프레임도 그 시각 상세 장면을 씀(RIG1103A02). 듀오 메뉴 넘침은 한 열 메뉴로 바뀌어 재확인 필요. 구글 아이콘 말풍선(SBN1102A01)·애플 지도 카운터 흔들림(CTR1103A02)은 코드만으로 원인을 못 찾아 실기기 재현이 필요.
+- 하지 않음: UI 시험 고정 sleep 18곳(REV1026A01), 지도 가림 시 GPS 끄기(PRF1101A01), 발자국 레이어 패치(OPT1102A01).
+- 시험(시뮬레이터 BOKKI-iPhone11, with-device-lock, 병렬 끔): `swift test` TaptionRouteEngine 51건 통과. 앱 6개 클래스 906건 중 1건 실패(알림 시험이 10분 칸 경계를 골랐음) → 시각 조정 후 알림·검색 시험 5건 통과(`build/validation/SRC1107A01/unit2.xcresult`). 구조 검사 통과.

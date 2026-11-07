@@ -381,6 +381,7 @@
 		A1E7006AF3F40D36507FBCF0 /* MapHomeView+Menu.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E7006AF3F40D36507FBCF0 /* MapHomeView+Menu.swift */; };
 		A1E721D1B0AAA98B8110A900 /* MapHomeView+Menu2.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E721D1B0AAA98B8110A900 /* MapHomeView+Menu2.swift */; };
 		A1EBDE9094DD4C3E21584B00 /* MapHomeView+Map.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1EBDE9094DD4C3E21584B00 /* MapHomeView+Map.swift */; };
+		A10000000000000000BB1109 /* MapHomeSearchPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000BB1109 /* MapHomeSearchPolicy.swift */; };
 		A1EE6819A850BADC4B9A5FD0 /* MapHomeView+Map2.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1EE6819A850BADC4B9A5FD0 /* MapHomeView+Map2.swift */; };
 		A1E6257DBE7C5071E0418EF0 /* MapHomeView+Routes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E6257DBE7C5071E0418EF0 /* MapHomeView+Routes.swift */; };
 		A1E3BFDC700E8BFFDF523F50 /* MapHomeView+Routes2.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E3BFDC700E8BFFDF523F50 /* MapHomeView+Routes2.swift */; };
@@ -957,6 +958,7 @@
 		F1E7006AF3F40D36507FBCF0 /* MapHomeView+Menu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Menu.swift"; sourceTree = "<group>"; };
 		F1E721D1B0AAA98B8110A900 /* MapHomeView+Menu2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Menu2.swift"; sourceTree = "<group>"; };
 		F1EBDE9094DD4C3E21584B00 /* MapHomeView+Map.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Map.swift"; sourceTree = "<group>"; };
+		F10000000000000000BB1109 /* MapHomeSearchPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeSearchPolicy.swift"; sourceTree = "<group>"; };
 		F1EE6819A850BADC4B9A5FD0 /* MapHomeView+Map2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Map2.swift"; sourceTree = "<group>"; };
 		F1E6257DBE7C5071E0418EF0 /* MapHomeView+Routes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Routes.swift"; sourceTree = "<group>"; };
 		F1E3BFDC700E8BFFDF523F50 /* MapHomeView+Routes2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Routes2.swift"; sourceTree = "<group>"; };
@@ -1358,6 +1360,7 @@
 				F1E6257DBE7C5071E0418EF0 /* MapHomeView+Routes.swift */,
 				F1EE6819A850BADC4B9A5FD0 /* MapHomeView+Map2.swift */,
 				F1EBDE9094DD4C3E21584B00 /* MapHomeView+Map.swift */,
+				F10000000000000000BB1109 /* MapHomeSearchPolicy.swift */,
 				F1E721D1B0AAA98B8110A900 /* MapHomeView+Menu2.swift */,
 				F1E7006AF3F40D36507FBCF0 /* MapHomeView+Menu.swift */,
 				F1E4358522139E5590681710 /* MapHomeView+Support3.swift */,
@@ -2188,6 +2191,7 @@
 				A1E6257DBE7C5071E0418EF0 /* MapHomeView+Routes.swift in Sources */,
 				A1EE6819A850BADC4B9A5FD0 /* MapHomeView+Map2.swift in Sources */,
 				A1EBDE9094DD4C3E21584B00 /* MapHomeView+Map.swift in Sources */,
+				A10000000000000000BB1109 /* MapHomeSearchPolicy.swift in Sources */,
 				A1E721D1B0AAA98B8110A900 /* MapHomeView+Menu2.swift in Sources */,
 				A1E7006AF3F40D36507FBCF0 /* MapHomeView+Menu.swift in Sources */,
 				A1E4358522139E5590681710 /* MapHomeView+Support3.swift in Sources */,

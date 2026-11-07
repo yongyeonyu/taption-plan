@@ -11,7 +11,15 @@ struct MapHomeGrowthSheet: View {
     let language: MapHomeLanguage
 
     @State private var historyCache = MapHomeGrowthHistoryCache()
-    @State private var showsTestTools = true
+    /// 레벨·보상·저장 형식을 바꾸는 시험 도구. 실제 저장 데이터를 바꾸므로 Debug 빌드에서만 연다(GRW1021C01).
+    @State private var showsTestTools = false
+    private static let allowsTestTools: Bool = {
+        #if DEBUG
+        true
+        #else
+        false
+        #endif
+    }()
     @State private var accessoryTab = MapHomeAccessoryKind.hat
     /// 종류별 미리 보기. 시트를 닫으면 사라지고 착용 상태는 바꾸지 않는다.
     @State private var previewAccessories: [MapHomeAccessoryKind: String] = [:]
@@ -38,7 +46,7 @@ struct MapHomeGrowthSheet: View {
                     if MapHomeLandFeature.isVisible { landSection }
                     accessorySection
                     archiveSection
-                    if showsTestTools { testToolsSection }
+                    if Self.allowsTestTools, showsTestTools { testToolsSection }
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 18)
@@ -62,7 +70,7 @@ struct MapHomeGrowthSheet: View {
             }
             .contentShape(Rectangle())
             // 제목을 1.5초 길게 누르면 시험 도구가 열린다.
-            .onLongPressGesture(minimumDuration: 1.5) { showsTestTools.toggle() }
+            .onLongPressGesture(minimumDuration: 1.5) { if Self.allowsTestTools { showsTestTools.toggle() } }
             Spacer()
             if season.pendingWeeklyRewards > 0 {
                 Text(language.text("보상 \(season.pendingWeeklyRewards)", "Rewards \(season.pendingWeeklyRewards)"))

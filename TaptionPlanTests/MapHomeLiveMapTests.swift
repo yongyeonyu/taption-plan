@@ -1759,3 +1759,68 @@ final class MapHomeAppleMapSmoothnessTests: XCTestCase {
         XCTAssertNil(MapHomeLiveTransitPolicy.mode(at: date, travel: [transitSegment(0, 100, .car, confirmed: true)], readings: [transitReading(50, .automotive, streak: 5)]))
     }
 }
+
+/// 지도 검색 범위와 앱 안 자료 찾기(SRC1107A01).
+final class MapHomeSearchPolicyTests: XCTestCase {
+    func testSearchUsesVisibleMapWithMinimumSpan() {
+        let visible = CLLocationCoordinate2D(latitude: 35.1, longitude: 129.0)
+        let region = MapHomeSearchPolicy.region(visibleCenter: visible, visibleSpan: MKCoordinateSpan(latitudeDelta: 0.002, longitudeDelta: 0.002), current: CLLocationCoordinate2D(latitude: 37.5, longitude: 127))
+        XCTAssertEqual(region.center.latitude, 35.1, accuracy: 1e-9)
+        XCTAssertEqual(region.span.latitudeDelta, MapHomeSearchPolicy.minimumSpanDegrees)
+        let unknown = MapHomeSearchPolicy.region(visibleCenter: CLLocationCoordinate2D(latitude: 0, longitude: 0), visibleSpan: MKCoordinateSpan(latitudeDelta: 1, longitudeDelta: 1), current: CLLocationCoordinate2D(latitude: 37.5, longitude: 127))
+        XCTAssertEqual(unknown.center.latitude, 37.5, accuracy: 1e-9)
+        XCTAssertEqual(unknown.span.latitudeDelta, 1)
+    }
+
+    func testLocalMatchesFindSavedPlacesBeforeStations() {
+        let office = FrequentPlace(kind: .company, name: "가정동 사무실", point: GeoPoint(latitude: 37.52, longitude: 126.67, altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5))
+        let matches = MapHomeSearchPolicy.localMatches("가정", places: [office], language: .korean)
+        XCTAssertEqual(matches.first?.title, "가정동 사무실")
+        XCTAssertTrue(matches.dropFirst().contains { $0.title.hasPrefix("가정") }, "가정역도 찾는다")
+        XCTAssertLessThanOrEqual(matches.count, MapHomeSearchPolicy.localLimit)
+        XCTAssertTrue(MapHomeSearchPolicy.localMatches("", places: [office], language: .korean).isEmpty)
+    }
+}
+
+/// 장소 도착·출발·기상 알림 판정. 같은 일은 같은 열쇠로 한 번만 알린다(ALM1021A01).
+final class MapHomeAlarmPolicyTests: XCTestCase {
+    private let now = Date(timeIntervalSince1970: 1_800_000_000)
+    private func stay(_ startMinutesAgo: Double, _ endMinutesAgo: Double, key: String = "office") -> PlaceStay {
+        PlaceStay(placeKey: key, displayName: "회사", span: TimeSpan(start: now - startMinutesAgo * 60, end: now - endMinutesAgo * 60), confidence: .medium)
+    }
+
+    func testArrivalIsRecentOnlyAndKeyStableAcrossRecompute() {
+        let kinds = ["office": FrequentPlaceKind.company]
+        let fresh = MapHomeAlarmPolicy.placeEvents(stays: [stay(23, 0)], placeKinds: kinds, now: now, language: .korean)
+        XCTAssertEqual(fresh.map(\.kind), [.arriveCompany])
+        let recomputed = MapHomeAlarmPolicy.placeEvents(stays: [stay(23.2, 0)], placeKinds: kinds, now: now, language: .korean)
+        XCTAssertEqual(recomputed.first?.key, fresh.first?.key, "다시 계산돼 몇 초 달라져도 같은 10분 칸이면 같은 일")
+        XCTAssertTrue(MapHomeAlarmPolicy.placeEvents(stays: [stay(90, 0)], placeKinds: kinds, now: now, language: .korean).isEmpty, "45분 넘은 도착은 알리지 않는다")
+        XCTAssertTrue(MapHomeAlarmPolicy.placeEvents(stays: [stay(20, 0)], placeKinds: [:], now: now, language: .korean).isEmpty, "등록하지 않은 곳")
+    }
+
+    func testDepartureWaitsAndIgnoresQuickReturn() {
+        let kinds = ["office": FrequentPlaceKind.company]
+        func leaves(_ stays: [PlaceStay]) -> [MapHomeAlarmKind] {
+            MapHomeAlarmPolicy.placeEvents(stays: stays, placeKinds: kinds, now: now, language: .korean).map(\.kind).filter { $0 == .leaveCompany }
+        }
+        XCTAssertEqual(leaves([stay(300, 20)]), [.leaveCompany])
+        XCTAssertTrue(leaves([stay(300, 5)]).isEmpty, "떠난 지 10분이 안 됐다")
+        XCTAssertTrue(leaves([stay(300, 30), stay(25, 0)]).isEmpty, "10분 안에 다시 왔다")
+    }
+
+    func testWakeIsOncePerDayAndNeedsSettledEnd() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        func phases(_ endMinutesAgo: Double) -> [DayPhaseSpan] {
+            [DayPhaseSpan(phase: .sleep, span: TimeSpan(start: now - 8 * 3_600, end: now - endMinutesAgo * 60))]
+        }
+        let first = MapHomeAlarmPolicy.wakeEvent(phases: phases(10), now: now, calendar: calendar, language: .korean)
+        let again = MapHomeAlarmPolicy.wakeEvent(phases: phases(12), now: now, calendar: calendar, language: .korean)
+        XCTAssertEqual(first?.kind, .wakeUp)
+        XCTAssertEqual(first?.key, again?.key, "하루 한 번")
+        XCTAssertNil(MapHomeAlarmPolicy.wakeEvent(phases: phases(1), now: now, calendar: calendar, language: .korean), "막 깬 2분 안")
+        XCTAssertNil(MapHomeAlarmPolicy.wakeEvent(phases: phases(60), now: now, calendar: calendar, language: .korean), "45분 넘게 지난 기상")
+    }
+}
+

@@ -2806,6 +2806,10 @@
 "사진 펼치기|Show photos": "Mostra foto",
 "지하철 선로 모양|Subway track shapes": "Tracciato dei binari della metro",
 "화랑이 카운터 보이기·숨기기|Show or hide counters": "Mostra o nascondi i contatori",
-"더 추가할 수 없습니다. 쓰지 않는 행동분류를 지운 뒤 추가하세요.|No more categories can be added. Delete one you don't use first.": "Non è possibile aggiungere altre categorie. Elimina prima quella che non usi."
+"더 추가할 수 없습니다. 쓰지 않는 행동분류를 지운 뒤 추가하세요.|No more categories can be added. Delete one you don't use first.": "Non è possibile aggiungere altre categorie. Elimina prima quella che non usi.",
+"검색 결과가 없습니다.|No results.": "Nessun risultato.",
+"검색하지 못했습니다. 연결을 확인해 주세요.|Search failed. Check your connection.": "Ricerca non riuscita. Controlla la connessione.",
+"등록한 장소|Saved place": "Luogo salvato",
+"지하철역 · {0}|Subway station · {0}": "Stazione della metro · {0}"
 }
 }

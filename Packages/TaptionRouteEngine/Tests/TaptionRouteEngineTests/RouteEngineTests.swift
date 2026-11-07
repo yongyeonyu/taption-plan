@@ -555,10 +555,9 @@ struct RouteEngineTests {
         #expect(checks == 36)
     }
 
-    @Test func subwayEvidenceWinsAndFalseZeroDistanceIsRejected() {
+    @Test func subwayEvidenceAllowsDottedRouteAndFalseZeroDistanceIsRejected() {
         let subway = SubwayRouteEvidence(lineName: "9호선", stationNames: ["가정", "검암", "마곡나루"], coordinates: [.init(latitude: 37, longitude: 126), .init(latitude: 37.5, longitude: 126.5)])
         #expect(RouteEvidenceGate.allowsDottedRoute(.init(subway: subway)))
-        #expect(SubwayRoutePrecedence.resolve(gps: [sample(0, 37)], evidence: subway).count == 2)
         #expect(!RouteEvidenceGate.allowsDottedRoute(.init(motionDetected: true, cellularContinuity: true, observedDistanceMeters: 0)))
     }
 

@@ -825,7 +825,11 @@ extension MapHomeView {
                 return mode.map(MapHomeStickmanActionResolver.action(for:)) ?? .movement
             case .stay:
                 if let categoryID = frame.categoryID {
-                    return MapHomeStickmanActionResolver.action(for: categoryID, label: "")
+                    // 머무는 동안도 그 시각의 상세 활동 장면을 쓴다(RIG1103A02).
+                    let detail = sectionDetails(at: walkMinute)
+                        .filter { $0.startMinute <= walkMinute && walkMinute < $0.endMinute }
+                        .min { ($0.endMinute - $0.startMinute) < ($1.endMinute - $1.startMinute) }
+                    return MapHomeStickmanActionResolver.action(for: categoryID, label: detail?.title ?? "")
                 }
             }
         }

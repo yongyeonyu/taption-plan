@@ -32,21 +32,6 @@ public enum RouteEvidenceGate {
     }
 }
 
-public enum SubwayRoutePrecedence {
-    public static func resolve(
-        gps: [RouteSample],
-        evidence: SubwayRouteEvidence?
-    ) -> [RouteCoordinate] {
-        guard let evidence,
-              evidence.stationNames.count >= 2,
-              evidence.coordinates.count >= 2,
-              evidence.confidence >= 0.5 else {
-            return gps.map(\.coordinate)
-        }
-        return evidence.coordinates
-    }
-}
-
 public enum RoutePlaybackPolicy {
     public static func rate(currentSpeedMetersPerSecond: Double, movementDetected: Bool) -> Double {
         let speed = max(0, currentSpeedMetersPerSecond)

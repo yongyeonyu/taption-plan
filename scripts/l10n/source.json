@@ -17,7 +17,7 @@
    "ko": " · {0}번",
    "en": " · {0}x",
    "files": [
-    "MapHomeCalendarSheet.swift:434"
+    "MapHomeCalendarSheet.swift:435"
    ],
    "args": [
     "visit.visitCount"
@@ -57,7 +57,7 @@
    "ko": ", 기록 완료",
    "en": ", fully logged",
    "files": [
-    "MapHomeCalendarSheet.swift:663"
+    "MapHomeCalendarSheet.swift:664"
    ],
    "args": [],
    "targets": [
@@ -83,7 +83,7 @@
    "ko": ", 미확인 활동 있음",
    "en": ", unconfirmed activity",
    "files": [
-    "MapHomeCalendarSheet.swift:662"
+    "MapHomeCalendarSheet.swift:663"
    ],
    "args": [],
    "targets": [
@@ -314,7 +314,7 @@
    "ko": "2026은 365일이라 최대 365입니다. 366은 그림 미리보기용이고, 다음 기록 때 365로 돌아갑니다.",
    "en": "2026 has 365 days, so the cap is 365. Lv.366 is an artwork preview and returns to the cap on the next record.",
    "files": [
-    "MapHomeGrowthSheet.swift:442"
+    "MapHomeGrowthSheet.swift:450"
    ],
    "args": [],
    "targets": [
@@ -458,7 +458,7 @@
    "ko": "7일 연속 달성 보상 · 하나를 골라요",
    "en": "7-day streak reward · choose one",
    "files": [
-    "MapHomeGrowthSheet.swift:112"
+    "MapHomeGrowthSheet.swift:120"
    ],
    "args": [],
    "targets": [
@@ -668,7 +668,7 @@
    "ko": "Apple 지도",
    "en": "Apple map",
    "files": [
-    "MapHomeView+Map.swift:307"
+    "MapHomeView+Map.swift:313"
    ],
    "args": [],
    "targets": [
@@ -1010,7 +1010,7 @@
    "en": "REM sleep",
    "files": [
     "HealthAndSensorModels.swift:33",
-    "MapHomeLocationPresentation.swift:308",
+    "MapHomeLocationPresentation.swift:307",
     "record-classification.json:0"
    ],
    "args": [],
@@ -1652,7 +1652,7 @@
    "ko": "{0} {1} 탑승 확인",
    "en": "Confirm boarding at {0} {1}",
    "files": [
-    "MapHomeView+Map.swift:448",
+    "MapHomeView+Map.swift:454",
     "MapHomeView+Routes.swift:822"
    ],
    "args": [
@@ -1668,7 +1668,7 @@
    "ko": "{0} {1}일",
    "en": "{0} {1}",
    "files": [
-    "MapHomeCalendarSheet.swift:659"
+    "MapHomeCalendarSheet.swift:660"
    ],
    "args": [
     "monthTitle",
@@ -1771,7 +1771,7 @@
    "ko": "{0} 메모 스티커",
    "en": "{0} memo sticker",
    "files": [
-    "MapHomeView+Map.swift:464",
+    "MapHomeView+Map.swift:470",
     "MapHomeView+Routes.swift:845"
    ],
    "args": [
@@ -1828,8 +1828,8 @@
    "ko": "{0} 사용자 위치 메뉴",
    "en": "{0} user location menu",
    "files": [
-    "MapHomeView+Map.swift:421",
-    "MapHomeView+Map.swift:433",
+    "MapHomeView+Map.swift:427",
+    "MapHomeView+Map.swift:439",
     "MapHomeView+Routes.swift:722"
    ],
    "args": [
@@ -1901,7 +1901,7 @@
    "ko": "{0} 액세서리 {1} / {2}",
    "en": "{0} accessories {1} / {2}",
    "files": [
-    "MapHomeGrowthSheet.swift:277"
+    "MapHomeGrowthSheet.swift:285"
    ],
    "args": [
     "HwarangCoat.selectedName",
@@ -1945,7 +1945,7 @@
    "ko": "{0} 위치 추가",
    "en": "Add {0} location",
    "files": [
-    "MapHomeView+Map.swift:503",
+    "MapHomeView+Map.swift:509",
     "MapHomeView+Routes.swift:982"
    ],
    "args": [
@@ -2030,7 +2030,7 @@
    "ko": "{0} 지도 메모, {1}",
    "en": "{0} map memo, {1}",
    "files": [
-    "MapHomeView+Map.swift:490",
+    "MapHomeView+Map.swift:496",
     "MapHomeView+Routes.swift:889"
    ],
    "args": [
@@ -2046,7 +2046,7 @@
    "ko": "{0} 지하철 임시 위치",
    "en": "{0} temporary subway location",
    "files": [
-    "MapHomeView+Map.swift:409",
+    "MapHomeView+Map.swift:415",
     "MapHomeView+Routes.swift:683"
    ],
    "args": [
@@ -2327,7 +2327,7 @@
    "files": [
     "HealthAndSensorModels.swift:663",
     "RecordSummaryEngine.swift:31",
-    "MapHomeCalendarSheet.swift:458"
+    "MapHomeCalendarSheet.swift:459"
    ],
    "args": [
     "minutes"
@@ -2393,7 +2393,7 @@
    "en": "{0}h {1}m",
    "files": [
     "RecordSummaryEngine.swift:33",
-    "MapHomeCalendarSheet.swift:456",
+    "MapHomeCalendarSheet.swift:457",
     "MapHomeNLEClipFactory.swift:274"
    ],
    "args": [
@@ -2471,7 +2471,7 @@
    "en": "{0}h",
    "files": [
     "RecordSummaryEngine.swift:32",
-    "MapHomeCalendarSheet.swift:456",
+    "MapHomeCalendarSheet.swift:457",
     "MapHomeNLEClipFactory.swift:275"
    ],
    "args": [
@@ -2560,7 +2560,7 @@
    "ko": "{0}월 하루 평균",
    "en": "Monthly daily average",
    "files": [
-    "MapHomeCalendarSheet.swift:367"
+    "MapHomeCalendarSheet.swift:368"
    ],
    "args": [],
    "targets": [
@@ -2631,7 +2631,7 @@
    "ko": "{0}일",
    "en": "{0} days",
    "files": [
-    "MapHomeGrowthSheet.swift:414"
+    "MapHomeGrowthSheet.swift:422"
    ],
    "args": [
     "season.streak"
@@ -12257,7 +12257,7 @@
    "ko": "가족",
    "en": "Family",
    "files": [
-    "MapHomeLocationPresentation.swift:278",
+    "MapHomeLocationPresentation.swift:277",
     "record-classification.json:0"
    ],
    "args": [],
@@ -12631,7 +12631,7 @@
    "ko": "건강",
    "en": "Health",
    "files": [
-    "MapHomeLocationPresentation.swift:322",
+    "MapHomeLocationPresentation.swift:321",
     "SensorCollectionLiveActivity.swift:546"
    ],
    "args": [],
@@ -12709,7 +12709,7 @@
    "ko": "걷기",
    "en": "Walking",
    "files": [
-    "MapHomeLocationPresentation.swift:313",
+    "MapHomeLocationPresentation.swift:312",
     "MapHomeNLEClipFactory.swift:120",
     "record-classification.json:0"
    ],
@@ -12860,11 +12860,23 @@
    ]
   },
   {
+   "key": "검색 결과가 없습니다.|No results.",
+   "ko": "검색 결과가 없습니다.",
+   "en": "No results.",
+   "files": [
+    "MapHomeView+Map.swift:1040"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "검색 지우기|Clear search",
    "ko": "검색 지우기",
    "en": "Clear search",
    "files": [
-    "MapHomeView+Map.swift:825"
+    "MapHomeView+Map.swift:832"
    ],
    "args": [],
    "targets": [
@@ -12884,11 +12896,23 @@
    ]
   },
   {
+   "key": "검색하지 못했습니다. 연결을 확인해 주세요.|Search failed. Check your connection.",
+   "ko": "검색하지 못했습니다. 연결을 확인해 주세요.",
+   "en": "Search failed. Check your connection.",
+   "files": [
+    "MapHomeView+Map.swift:1039"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "게임|Games",
    "ko": "게임",
    "en": "Games",
    "files": [
-    "MapHomeLocationPresentation.swift:284",
+    "MapHomeLocationPresentation.swift:283",
     "record-classification.json:0"
    ],
    "args": [],
@@ -13013,7 +13037,7 @@
    "ko": "계절",
    "en": "Seasons",
    "files": [
-    "MapHomeView+Map.swift:899"
+    "MapHomeView+Map.swift:917"
    ],
    "args": [],
    "targets": [
@@ -13372,7 +13396,7 @@
    "ko": "과거 위치 {0}",
    "en": "Past location {0}",
    "files": [
-    "MapHomeView+Playback.swift:857"
+    "MapHomeView+Playback.swift:861"
    ],
    "args": [
     "time"
@@ -14055,7 +14079,7 @@
    "ko": "기록 발자국 ",
    "en": "Recorded paw ",
    "files": [
-    "MapHomeView+Map.swift:528",
+    "MapHomeView+Map.swift:534",
     "MapHomeView+Routes.swift:643"
    ],
    "args": [],
@@ -14287,7 +14311,7 @@
    "ko": "기차",
    "en": "Train",
    "files": [
-    "MapHomeLocationPresentation.swift:269",
+    "MapHomeLocationPresentation.swift:268",
     "record-classification.json:0"
    ],
    "args": [],
@@ -14330,7 +14354,7 @@
    "en": "Deep sleep",
    "files": [
     "HealthAndSensorModels.swift:31",
-    "MapHomeLocationPresentation.swift:294",
+    "MapHomeLocationPresentation.swift:293",
     "record-classification.json:0"
    ],
    "args": [],
@@ -14395,7 +14419,7 @@
    "ko": "꼬리 리본",
    "en": "Tail ribbon",
    "files": [
-    "MapHomeGrowthSheet.swift:547"
+    "MapHomeGrowthSheet.swift:555"
    ],
    "args": [],
    "targets": [
@@ -14679,7 +14703,7 @@
    "ko": "낮잠",
    "en": "Nap",
    "files": [
-    "MapHomeLocationPresentation.swift:272",
+    "MapHomeLocationPresentation.swift:271",
     "record-classification.json:0"
    ],
    "args": [],
@@ -14830,7 +14854,7 @@
    "ko": "누르면 오늘 날짜로 이동합니다",
    "en": "Jumps to today",
    "files": [
-    "MapHomeCalendarSheet.swift:499"
+    "MapHomeCalendarSheet.swift:500"
    ],
    "args": [],
    "targets": [
@@ -14978,7 +15002,7 @@
    "ko": "다음 달",
    "en": "Next month",
    "files": [
-    "MapHomeCalendarSheet.swift:512"
+    "MapHomeCalendarSheet.swift:513"
    ],
    "args": [],
    "targets": [
@@ -14990,7 +15014,7 @@
    "ko": "다음 보상까지 연속 {0}일 남았어요.",
    "en": "{0} consecutive days until your next reward.",
    "files": [
-    "MapHomeGrowthSheet.swift:158"
+    "MapHomeGrowthSheet.swift:166"
    ],
    "args": [
     "remaining"
@@ -15082,7 +15106,7 @@
    "ko": "달리기",
    "en": "Running",
    "files": [
-    "MapHomeLocationPresentation.swift:314",
+    "MapHomeLocationPresentation.swift:313",
     "record-classification.json:0"
    ],
    "args": [],
@@ -15425,7 +15449,7 @@
    "ko": "데이트",
    "en": "Date",
    "files": [
-    "MapHomeLocationPresentation.swift:277",
+    "MapHomeLocationPresentation.swift:276",
     "record-classification.json:0"
    ],
    "args": [],
@@ -15441,7 +15465,7 @@
    "ko": "독서",
    "en": "Reading",
    "files": [
-    "MapHomeLocationPresentation.swift:283",
+    "MapHomeLocationPresentation.swift:282",
     "record-classification.json:0"
    ],
    "args": [],
@@ -15603,7 +15627,7 @@
    "ko": "뒤로",
    "en": "Back",
    "files": [
-    "MapHomeWideLayoutPolicy.swift:246"
+    "MapHomeWideLayoutPolicy.swift:239"
    ],
    "args": [],
    "targets": [
@@ -15747,6 +15771,18 @@
    ]
   },
   {
+   "key": "등록한 장소|Saved place",
+   "ko": "등록한 장소",
+   "en": "Saved place",
+   "files": [
+    "MapHomeSearchPolicy.swift:32"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "등록한 장소에 머물기 시작하면 알려요.|When a stay at the registered place begins.",
    "ko": "등록한 장소에 머물기 시작하면 알려요.",
    "en": "When a stay at the registered place begins.",
@@ -15763,7 +15799,7 @@
    "ko": "땅",
    "en": "plots",
    "files": [
-    "MapHomeGrowthSheet.swift:372"
+    "MapHomeGrowthSheet.swift:380"
    ],
    "args": [],
    "targets": [
@@ -15789,7 +15825,7 @@
    "ko": "레벨 바로 가기",
    "en": "Level presets",
    "files": [
-    "MapHomeGrowthSheet.swift:423"
+    "MapHomeGrowthSheet.swift:431"
    ],
    "args": [],
    "targets": [
@@ -15801,7 +15837,7 @@
    "ko": "레벨·보상·저장 형식을 임의로 바꿔 기능을 시험해요",
    "en": "Change level, rewards, and storage shape to test",
    "files": [
-    "MapHomeGrowthSheet.swift:398"
+    "MapHomeGrowthSheet.swift:406"
    ],
    "args": [],
    "targets": [
@@ -16000,7 +16036,7 @@
    "ko": "매년 새 모닥불에서 시작하고 이전 집은 보관해요",
    "en": "Each year starts at the campfire; past homes stay saved",
    "files": [
-    "MapHomeGrowthSheet.swift:350"
+    "MapHomeGrowthSheet.swift:358"
    ],
    "args": [],
    "targets": [
@@ -16394,7 +16430,7 @@
    "ko": "명상",
    "en": "Meditation",
    "files": [
-    "MapHomeLocationPresentation.swift:280",
+    "MapHomeLocationPresentation.swift:279",
     "record-classification.json:0"
    ],
    "args": [],
@@ -16470,7 +16506,7 @@
    "ko": "모자",
    "en": "Hat",
    "files": [
-    "MapHomeGrowthSheet.swift:545"
+    "MapHomeGrowthSheet.swift:553"
    ],
    "args": [],
    "targets": [
@@ -16554,7 +16590,7 @@
    "ko": "미용실",
    "en": "Hair salon",
    "files": [
-    "MapHomeLocationPresentation.swift:282",
+    "MapHomeLocationPresentation.swift:281",
     "record-classification.json:0"
    ],
    "args": [],
@@ -16635,7 +16671,7 @@
    "ko": "미확인",
    "en": "Unconfirmed",
    "files": [
-    "MapHomeLocationPresentation.swift:312",
+    "MapHomeLocationPresentation.swift:311",
     "MapHomeNLEClipEditor.swift:450",
     "AppModel+WidgetLiveActivity.swift:158"
    ],
@@ -16712,7 +16748,7 @@
    "ko": "반려동물 돌보기",
    "en": "Pet care",
    "files": [
-    "MapHomeLocationPresentation.swift:287",
+    "MapHomeLocationPresentation.swift:286",
     "record-classification.json:0"
    ],
    "args": [],
@@ -16851,7 +16887,7 @@
    "ko": "방문한 곳 (10분 이상 · 30m 이내는 한 곳)",
    "en": "Visited (10+ min, within 30 m merged)",
    "files": [
-    "MapHomeCalendarSheet.swift:410"
+    "MapHomeCalendarSheet.swift:411"
    ],
    "args": [],
    "targets": [
@@ -16887,7 +16923,7 @@
    "ko": "배",
    "en": "Ship",
    "files": [
-    "MapHomeLocationPresentation.swift:319",
+    "MapHomeLocationPresentation.swift:318",
     "record-classification.json:0"
    ],
    "args": [],
@@ -17196,7 +17232,7 @@
    "ko": "버스 탑승",
    "en": "Bus ride",
    "files": [
-    "MapHomeLocationPresentation.swift:318"
+    "MapHomeLocationPresentation.swift:317"
    ],
    "args": [],
    "targets": [
@@ -17336,7 +17372,7 @@
    "ko": "병원",
    "en": "Hospital",
    "files": [
-    "MapHomeLocationPresentation.swift:281",
+    "MapHomeLocationPresentation.swift:280",
     "record-classification.json:0"
    ],
    "args": [],
@@ -17364,7 +17400,7 @@
    "ko": "보상 +1",
    "en": "Reward +1",
    "files": [
-    "MapHomeGrowthSheet.swift:435"
+    "MapHomeGrowthSheet.swift:443"
    ],
    "args": [],
    "targets": [
@@ -17376,7 +17412,7 @@
    "ko": "보상 {0}",
    "en": "Rewards {0}",
    "files": [
-    "MapHomeGrowthSheet.swift:68",
+    "MapHomeGrowthSheet.swift:76",
     "MapHomeInfoSheets.swift:342"
    ],
    "args": [
@@ -17391,7 +17427,7 @@
    "ko": "보상·연속",
    "en": "Rewards and streak",
    "files": [
-    "MapHomeGrowthSheet.swift:431"
+    "MapHomeGrowthSheet.swift:439"
    ],
    "args": [],
    "targets": [
@@ -17403,7 +17439,7 @@
    "ko": "보상을 받아 집 주변에 한 칸씩 이어 붙여요",
    "en": "Place each earned plot beside your home or another plot",
    "files": [
-    "MapHomeGrowthSheet.swift:172"
+    "MapHomeGrowthSheet.swift:180"
    ],
    "args": [],
    "targets": [
@@ -17672,7 +17708,7 @@
    "ko": "붙이지 않은 땅 {0}개 · 점선 칸을 눌러 이어 붙여요.",
    "en": "{0} plots left · tap a dashed cell to attach.",
    "files": [
-    "MapHomeGrowthSheet.swift:187"
+    "MapHomeGrowthSheet.swift:195"
    ],
    "args": [
     "unplacedPlots.count"
@@ -17861,7 +17897,7 @@
    "ko": "비행기",
    "en": "Airplane",
    "files": [
-    "MapHomeLocationPresentation.swift:320",
+    "MapHomeLocationPresentation.swift:319",
     "record-classification.json:0"
    ],
    "args": [],
@@ -17889,7 +17925,7 @@
    "ko": "빨래",
    "en": "Laundry",
    "files": [
-    "MapHomeLocationPresentation.swift:275",
+    "MapHomeLocationPresentation.swift:274",
     "record-classification.json:0"
    ],
    "args": [],
@@ -18142,7 +18178,7 @@
    "ko": "사진 {0}장",
    "en": "{0} photos",
    "files": [
-    "MapHomeView+Map.swift:477"
+    "MapHomeView+Map.swift:483"
    ],
    "args": [
     "cluster.count"
@@ -18702,7 +18738,7 @@
    "ko": "샤워",
    "en": "Shower",
    "files": [
-    "MapHomeLocationPresentation.swift:270",
+    "MapHomeLocationPresentation.swift:269",
     "record-classification.json:0"
    ],
    "args": [],
@@ -18806,7 +18842,7 @@
    "ko": "설거지",
    "en": "Dishes",
    "files": [
-    "MapHomeLocationPresentation.swift:304",
+    "MapHomeLocationPresentation.swift:303",
     "record-classification.json:0"
    ],
    "args": [],
@@ -19552,7 +19588,7 @@
    "files": [
     "MapHomeAlarm.swift:671",
     "MapHomeAlarm.swift:672",
-    "MapHomeLocationPresentation.swift:291"
+    "MapHomeLocationPresentation.swift:290"
    ],
    "args": [],
    "targets": [
@@ -19664,7 +19700,7 @@
    "ko": "스카프",
    "en": "Scarf",
    "files": [
-    "MapHomeGrowthSheet.swift:546"
+    "MapHomeGrowthSheet.swift:554"
    ],
    "args": [],
    "targets": [
@@ -20039,7 +20075,7 @@
    "ko": "시험 도구",
    "en": "Test tools",
    "files": [
-    "MapHomeGrowthSheet.swift:397"
+    "MapHomeGrowthSheet.swift:405"
    ],
    "args": [],
    "targets": [
@@ -20075,7 +20111,7 @@
    "ko": "식사",
    "en": "Meal",
    "files": [
-    "MapHomeLocationPresentation.swift:310",
+    "MapHomeLocationPresentation.swift:309",
     "record-classification.json:0",
     "record-classification.json:0"
    ],
@@ -20128,7 +20164,7 @@
    "ko": "실외(고대비)",
    "en": "Outdoor (high contrast)",
    "files": [
-    "MapHomeView+Map.swift:898"
+    "MapHomeView+Map.swift:916"
    ],
    "args": [],
    "targets": [
@@ -20325,7 +20361,7 @@
    "ko": "아직 모으지 못한 장식",
    "en": "Not collected yet",
    "files": [
-    "MapHomeGrowthSheet.swift:339"
+    "MapHomeGrowthSheet.swift:347"
    ],
    "args": [],
    "targets": [
@@ -20337,7 +20373,7 @@
    "ko": "아직 보관된 집이 없어요.",
    "en": "No archived homes yet.",
    "files": [
-    "MapHomeGrowthSheet.swift:353"
+    "MapHomeGrowthSheet.swift:361"
    ],
    "args": [],
    "targets": [
@@ -20573,7 +20609,7 @@
    "ko": "애플맵",
    "en": "Apple Maps",
    "files": [
-    "MapHomeView+Map.swift:894"
+    "MapHomeView+Map.swift:912"
    ],
    "args": [],
    "targets": [
@@ -20598,7 +20634,7 @@
    "ko": "액세서리 52개를 모두 모았어요.",
    "en": "You collected all 52 accessories.",
    "files": [
-    "MapHomeGrowthSheet.swift:115"
+    "MapHomeGrowthSheet.swift:123"
    ],
    "args": [],
    "targets": [
@@ -20830,7 +20866,7 @@
    "ko": "야간",
    "en": "Night",
    "files": [
-    "MapHomeView+Map.swift:897"
+    "MapHomeView+Map.swift:915"
    ],
    "args": [],
    "targets": [
@@ -21079,7 +21115,7 @@
    "ko": "여기에 땅 붙이기",
    "en": "Attach land here",
    "files": [
-    "MapHomeGrowthSheet.swift:256"
+    "MapHomeGrowthSheet.swift:264"
    ],
    "args": [],
    "targets": [
@@ -21252,7 +21288,7 @@
    "ko": "연결된 땅 조각",
    "en": "Connected plot",
    "files": [
-    "MapHomeGrowthSheet.swift:241"
+    "MapHomeGrowthSheet.swift:249"
    ],
    "args": [],
    "targets": [
@@ -21264,7 +21300,7 @@
    "ko": "연결된 땅",
    "en": "Connected land",
    "files": [
-    "MapHomeGrowthSheet.swift:171"
+    "MapHomeGrowthSheet.swift:179"
    ],
    "args": [],
    "targets": [
@@ -21577,7 +21613,7 @@
    "ko": "연속 +7일(보상 +1)",
    "en": "Streak +7 (reward +1)",
    "files": [
-    "MapHomeGrowthSheet.swift:436"
+    "MapHomeGrowthSheet.swift:444"
    ],
    "args": [],
    "targets": [
@@ -21603,7 +21639,7 @@
    "ko": "연속 달성 {0}일",
    "en": "{0}-day streak",
    "files": [
-    "MapHomeGrowthSheet.swift:98"
+    "MapHomeGrowthSheet.swift:106"
    ],
    "args": [
     "season.streak"
@@ -21629,7 +21665,7 @@
    "ko": "연속 달성일",
    "en": "Streak days",
    "files": [
-    "MapHomeGrowthSheet.swift:410"
+    "MapHomeGrowthSheet.swift:418"
    ],
    "args": [],
    "targets": [
@@ -21641,7 +21677,7 @@
    "ko": "연속 일수가 7의 배수를 넘으면 주간 보상이 하나씩 생겨요.",
    "en": "Each multiple of 7 streak days adds a weekly reward.",
    "files": [
-    "MapHomeGrowthSheet.swift:420"
+    "MapHomeGrowthSheet.swift:428"
    ],
    "args": [],
    "targets": [
@@ -21677,7 +21713,7 @@
    "ko": "영상 보기",
    "en": "Watching videos",
    "files": [
-    "MapHomeLocationPresentation.swift:286",
+    "MapHomeLocationPresentation.swift:285",
     "record-classification.json:0"
    ],
    "args": [],
@@ -21729,7 +21765,7 @@
    "ko": "예상 경로 선택",
    "en": "Select predicted route",
    "files": [
-    "MapHomeView+Map.swift:526",
+    "MapHomeView+Map.swift:532",
     "MapHomeView+Routes.swift:650"
    ],
    "args": [],
@@ -22142,7 +22178,7 @@
    "ko": "요리",
    "en": "Cooking",
    "files": [
-    "MapHomeLocationPresentation.swift:273",
+    "MapHomeLocationPresentation.swift:272",
     "record-classification.json:0"
    ],
    "args": [],
@@ -22185,7 +22221,7 @@
    "ko": "우리 집 성장",
    "en": "Home growth",
    "files": [
-    "MapHomeGrowthSheet.swift:56"
+    "MapHomeGrowthSheet.swift:64"
    ],
    "args": [],
    "targets": [
@@ -22212,7 +22248,7 @@
    "en": "Exercise",
    "files": [
     "MapHomeInteractionPolicy.swift:416",
-    "MapHomeLocationPresentation.swift:311",
+    "MapHomeLocationPresentation.swift:310",
     "AppModel+WidgetLiveActivity.swift:157"
    ],
    "args": [],
@@ -22423,7 +22459,7 @@
    "ko": "위성",
    "en": "Satellite",
    "files": [
-    "MapHomeView+Map.swift:895"
+    "MapHomeView+Map.swift:913"
    ],
    "args": [],
    "targets": [
@@ -22996,7 +23032,7 @@
    "ko": "음악",
    "en": "Music",
    "files": [
-    "MapHomeLocationPresentation.swift:285",
+    "MapHomeLocationPresentation.swift:284",
     "MapHomePlaybackMusic.swift:357",
     "record-classification.json:0"
    ],
@@ -23586,7 +23622,7 @@
    "en": "Movement",
    "files": [
     "WidgetShared.swift:770",
-    "MapHomeLocationPresentation.swift:309",
+    "MapHomeLocationPresentation.swift:308",
     "AppModel+WidgetLiveActivity.swift:155"
    ],
    "args": [],
@@ -23806,7 +23842,7 @@
    "ko": "이번 달 합계",
    "en": "Month total",
    "files": [
-    "MapHomeCalendarSheet.swift:396"
+    "MapHomeCalendarSheet.swift:397"
    ],
    "args": [],
    "targets": [
@@ -23830,7 +23866,7 @@
    "ko": "이전 달",
    "en": "Previous month",
    "files": [
-    "MapHomeCalendarSheet.swift:483"
+    "MapHomeCalendarSheet.swift:484"
    ],
    "args": [],
    "targets": [
@@ -23856,7 +23892,7 @@
    "ko": "이전 형식으로 저장 후 다시 읽기",
    "en": "Save in the old shape and reload",
    "files": [
-    "MapHomeGrowthSheet.swift:441"
+    "MapHomeGrowthSheet.swift:449"
    ],
    "args": [],
    "targets": [
@@ -24079,7 +24115,7 @@
    "ko": "임시 위치",
    "en": "Temporary",
    "files": [
-    "MapHomeView+Map.swift:407",
+    "MapHomeView+Map.swift:413",
     "MapHomeView+Routes.swift:669"
    ],
    "args": [],
@@ -24142,7 +24178,7 @@
    "ko": "자가용",
    "en": "Private car",
    "files": [
-    "MapHomeLocationPresentation.swift:317"
+    "MapHomeLocationPresentation.swift:316"
    ],
    "args": [],
    "targets": [
@@ -24270,7 +24306,7 @@
    "ko": "자동으로 붙이기",
    "en": "Place automatically",
    "files": [
-    "MapHomeGrowthSheet.swift:196"
+    "MapHomeGrowthSheet.swift:204"
    ],
    "args": [],
    "targets": [
@@ -24294,7 +24330,7 @@
    "ko": "자동차",
    "en": "Car",
    "files": [
-    "MapHomeLocationPresentation.swift:315",
+    "MapHomeLocationPresentation.swift:314",
     "record-classification.json:0"
    ],
    "args": [],
@@ -24334,7 +24370,7 @@
    "ko": "자전거",
    "en": "Cycling",
    "files": [
-    "MapHomeLocationPresentation.swift:321",
+    "MapHomeLocationPresentation.swift:320",
     "record-classification.json:0"
    ],
    "args": [],
@@ -24411,7 +24447,7 @@
    "ko": "장보기",
    "en": "Groceries",
    "files": [
-    "MapHomeLocationPresentation.swift:274",
+    "MapHomeLocationPresentation.swift:273",
     "record-classification.json:0"
    ],
    "args": [],
@@ -24427,7 +24463,7 @@
    "ko": "장소 검색",
    "en": "Search places",
    "files": [
-    "MapHomeView+Map.swift:151"
+    "MapHomeView+Map.swift:157"
    ],
    "args": [],
    "targets": [
@@ -24535,7 +24571,7 @@
    "ko": "장소·주소 검색",
    "en": "Search places or addresses",
    "files": [
-    "MapHomeView+Map.swift:786"
+    "MapHomeView+Map.swift:792"
    ],
    "args": [],
    "targets": [
@@ -24682,7 +24718,7 @@
    "ko": "저장 형식",
    "en": "Storage shape",
    "files": [
-    "MapHomeGrowthSheet.swift:438"
+    "MapHomeGrowthSheet.swift:446"
    ],
    "args": [],
    "targets": [
@@ -25075,7 +25111,7 @@
    "en": "Walking in place",
    "files": [
     "MapDisplayModels.swift:38",
-    "MapHomeLocationPresentation.swift:306"
+    "MapHomeLocationPresentation.swift:305"
    ],
    "args": [],
    "targets": [
@@ -25088,7 +25124,7 @@
    "ko": "조건에 맞는 방문 장소가 없어요",
    "en": "No places match",
    "files": [
-    "MapHomeCalendarSheet.swift:415"
+    "MapHomeCalendarSheet.swift:416"
    ],
    "args": [],
    "targets": [
@@ -25152,7 +25188,7 @@
    "ko": "종류",
    "en": "Kind",
    "files": [
-    "MapHomeGrowthSheet.swift:289"
+    "MapHomeGrowthSheet.swift:297"
    ],
    "args": [],
    "targets": [
@@ -25200,7 +25236,7 @@
    "ko": "주간 진화 보상으로 모아 착용해요 · 눌러서 미리 보기",
    "en": "Collect from weekly rewards · Tap to preview",
    "files": [
-    "MapHomeGrowthSheet.swift:281"
+    "MapHomeGrowthSheet.swift:289"
    ],
    "args": [],
    "targets": [
@@ -25212,7 +25248,7 @@
    "ko": "주간 진화 선택",
    "en": "Weekly evolution",
    "files": [
-    "MapHomeGrowthSheet.swift:111"
+    "MapHomeGrowthSheet.swift:119"
    ],
    "args": [],
    "targets": [
@@ -25455,7 +25491,7 @@
    "ko": "지난해의 집",
    "en": "Past homes",
    "files": [
-    "MapHomeGrowthSheet.swift:349"
+    "MapHomeGrowthSheet.swift:357"
    ],
    "args": [],
    "targets": [
@@ -25503,7 +25539,7 @@
    "ko": "지도 보기",
    "en": "Reading a map",
    "files": [
-    "MapHomeLocationPresentation.swift:302"
+    "MapHomeLocationPresentation.swift:301"
    ],
    "args": [],
    "targets": [
@@ -25601,7 +25637,7 @@
    "ko": "지도 축소",
    "en": "Zoom map out",
    "files": [
-    "MapHomeView+Map.swift:1064"
+    "MapHomeView+Map.swift:1093"
    ],
    "args": [],
    "targets": [
@@ -25663,7 +25699,7 @@
    "ko": "지도 확대",
    "en": "Zoom map in",
    "files": [
-    "MapHomeView+Map.swift:1063"
+    "MapHomeView+Map.swift:1092"
    ],
    "args": [],
    "targets": [
@@ -25799,7 +25835,7 @@
    "ko": "지도에서 집 근처를 최대로 확대하면 이 땅이 집 주변에 그려지고, 점선 칸을 눌러 바로 이어 붙일 수 있어요.",
    "en": "Zoom all the way in near your home on the map to see this land and attach plots there.",
    "files": [
-    "MapHomeGrowthSheet.swift:180"
+    "MapHomeGrowthSheet.swift:188"
    ],
    "args": [],
    "targets": [
@@ -25848,7 +25884,7 @@
    "ko": "지표 추가",
    "en": "Add metric",
    "files": [
-    "MapHomeCalendarSheet.swift:337"
+    "MapHomeCalendarSheet.swift:338"
    ],
    "args": [],
    "targets": [
@@ -25896,7 +25932,7 @@
    "ko": "지하철 탑승",
    "en": "Subway ride",
    "files": [
-    "MapHomeLocationPresentation.swift:316"
+    "MapHomeLocationPresentation.swift:315"
    ],
    "args": [],
    "targets": [
@@ -25926,6 +25962,20 @@
     "AppShellView.swift:1171"
    ],
    "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "지하철역 · {0}|Subway station · {0}",
+   "ko": "지하철역 · {0}",
+   "en": "Subway station · {0}",
+   "files": [
+    "MapHomeSearchPolicy.swift:42"
+   ],
+   "args": [
+    "station.lineName"
+   ],
    "targets": [
     "TaptionPlan"
    ]
@@ -26008,7 +26058,7 @@
    "ko": "진화",
    "en": "evolutions",
    "files": [
-    "MapHomeGrowthSheet.swift:367"
+    "MapHomeGrowthSheet.swift:375"
    ],
    "args": [],
    "targets": [
@@ -26020,7 +26070,7 @@
    "ko": "집 레벨",
    "en": "Home level",
    "files": [
-    "MapHomeGrowthSheet.swift:400"
+    "MapHomeGrowthSheet.swift:408"
    ],
    "args": [],
    "targets": [
@@ -26086,7 +26136,7 @@
    "ko": "집안일",
    "en": "Housework",
    "files": [
-    "MapHomeLocationPresentation.swift:271",
+    "MapHomeLocationPresentation.swift:270",
     "record-classification.json:0"
    ],
    "args": [],
@@ -26126,7 +26176,7 @@
    "ko": "집에서 휴식",
    "en": "Rest at home",
    "files": [
-    "MapHomeLocationPresentation.swift:301"
+    "MapHomeLocationPresentation.swift:300"
    ],
    "args": [],
    "targets": [
@@ -26211,7 +26261,7 @@
    "ko": "첫 주간 보상을 받으면 땅 조각이 생겨요.",
    "en": "Your first weekly reward will add a land plot.",
    "files": [
-    "MapHomeGrowthSheet.swift:175"
+    "MapHomeGrowthSheet.swift:183"
    ],
    "args": [],
    "targets": [
@@ -26428,7 +26478,7 @@
    "ko": "추가",
    "en": "Add",
    "files": [
-    "MapHomeCalendarSheet.swift:327",
+    "MapHomeCalendarSheet.swift:328",
     "MapHomeSettingsSheets.swift:99",
     "MapHomeTransitSheets.swift:444"
    ],
@@ -26532,7 +26582,7 @@
    "ko": "취미 휴식",
    "en": "Hobby break",
    "files": [
-    "MapHomeLocationPresentation.swift:300"
+    "MapHomeLocationPresentation.swift:299"
    ],
    "args": [],
    "targets": [
@@ -26572,7 +26622,7 @@
    "en": "Hobby",
    "files": [
     "MapHomeInteractionPolicy.swift:415",
-    "MapHomeLocationPresentation.swift:292",
+    "MapHomeLocationPresentation.swift:291",
     "AppModel+WidgetLiveActivity.swift:153"
    ],
    "args": [],
@@ -26713,7 +26763,7 @@
    "ko": "친구 만남",
    "en": "Friends",
    "files": [
-    "MapHomeLocationPresentation.swift:276",
+    "MapHomeLocationPresentation.swift:275",
     "record-classification.json:0"
    ],
    "args": [],
@@ -26978,7 +27028,7 @@
    "ko": "커피·티타임",
    "en": "Coffee & tea",
    "files": [
-    "MapHomeLocationPresentation.swift:305",
+    "MapHomeLocationPresentation.swift:304",
     "record-classification.json:0"
    ],
    "args": [],
@@ -27196,7 +27246,7 @@
    "ko": "통화",
    "en": "Phone call",
    "files": [
-    "MapHomeLocationPresentation.swift:279",
+    "MapHomeLocationPresentation.swift:278",
     "record-classification.json:0"
    ],
    "args": [],
@@ -27236,7 +27286,7 @@
    "ko": "투약",
    "en": "Medication",
    "files": [
-    "MapHomeLocationPresentation.swift:296",
+    "MapHomeLocationPresentation.swift:295",
     "record-classification.json:0"
    ],
    "args": [],
@@ -27277,7 +27327,7 @@
    "ko": "판타지 지도",
    "en": "Fantasy Map",
    "files": [
-    "MapHomeView+Map.swift:900"
+    "MapHomeView+Map.swift:918"
    ],
    "args": [],
    "targets": [
@@ -27289,7 +27339,7 @@
    "ko": "패널 닫기",
    "en": "Close panel",
    "files": [
-    "MapHomeWideLayoutPolicy.swift:198"
+    "MapHomeWideLayoutPolicy.swift:191"
    ],
    "args": [],
    "targets": [
@@ -27671,7 +27721,7 @@
    "ko": "하루 평균",
    "en": "Daily average",
    "files": [
-    "MapHomeCalendarSheet.swift:398"
+    "MapHomeCalendarSheet.swift:399"
    ],
    "args": [],
    "targets": [
@@ -27757,7 +27807,7 @@
    "ko": "학교에서 학습",
    "en": "Studying at school",
    "files": [
-    "MapHomeLocationPresentation.swift:290"
+    "MapHomeLocationPresentation.swift:289"
    ],
    "args": [],
    "targets": [
@@ -27769,7 +27819,7 @@
    "ko": "학교에서 휴식",
    "en": "Break at school",
    "files": [
-    "MapHomeLocationPresentation.swift:299"
+    "MapHomeLocationPresentation.swift:298"
    ],
    "args": [],
    "targets": [
@@ -27904,7 +27954,7 @@
    "ko": "한달 평균 보기",
    "en": "Show month average",
    "files": [
-    "MapHomeCalendarSheet.swift:308"
+    "MapHomeCalendarSheet.swift:309"
    ],
    "args": [],
    "targets": [
@@ -27916,7 +27966,7 @@
    "ko": "한달 평균",
    "en": "Month avg",
    "files": [
-    "MapHomeCalendarSheet.swift:294"
+    "MapHomeCalendarSheet.swift:295"
    ],
    "args": [],
    "targets": [
@@ -28449,7 +28499,7 @@
    "ko": "화랑이 장식",
    "en": "Hwarang accessory",
    "files": [
-    "MapHomeGrowthSheet.swift:585"
+    "MapHomeGrowthSheet.swift:593"
    ],
    "args": [],
    "targets": [
@@ -28727,7 +28777,7 @@
    "en": "Activity",
    "files": [
     "WidgetShared.swift:774",
-    "MapHomeLocationPresentation.swift:268",
+    "MapHomeLocationPresentation.swift:267",
     "AppModel+WidgetLiveActivity.swift:148"
    ],
    "args": [],
@@ -28767,7 +28817,7 @@
    "ko": "회복",
    "en": "Recovery",
    "files": [
-    "MapHomeLocationPresentation.swift:295",
+    "MapHomeLocationPresentation.swift:294",
     "record-classification.json:0"
    ],
    "args": [],
@@ -28808,7 +28858,7 @@
    "ko": "회사에서 걷기",
    "en": "Walking at the office",
    "files": [
-    "MapHomeLocationPresentation.swift:307"
+    "MapHomeLocationPresentation.swift:306"
    ],
    "args": [],
    "targets": [
@@ -28820,7 +28870,7 @@
    "ko": "회사에서 업무",
    "en": "Working at the office",
    "files": [
-    "MapHomeLocationPresentation.swift:289"
+    "MapHomeLocationPresentation.swift:288"
    ],
    "args": [],
    "targets": [
@@ -28832,7 +28882,7 @@
    "ko": "회사에서 휴식",
    "en": "Break at the office",
    "files": [
-    "MapHomeLocationPresentation.swift:298"
+    "MapHomeLocationPresentation.swift:297"
    ],
    "args": [],
    "targets": [
@@ -28844,7 +28894,7 @@
    "ko": "회의",
    "en": "Meeting",
    "files": [
-    "MapHomeLocationPresentation.swift:303",
+    "MapHomeLocationPresentation.swift:302",
     "record-classification.json:0"
    ],
    "args": [],
@@ -28860,7 +28910,7 @@
    "ko": "휴식",
    "en": "Rest",
    "files": [
-    "MapHomeLocationPresentation.swift:297",
+    "MapHomeLocationPresentation.swift:296",
     "record-classification.json:0",
     "record-classification.json:0"
    ],

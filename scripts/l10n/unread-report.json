@@ -1,5 +1,5 @@
 {
- "ui": 2295,
+ "ui": 2299,
  "catalog": 461,
  "unread": [
   {
@@ -130,13 +130,13 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeCalendarSheet.swift",
-   "line": 266,
+   "line": 267,
    "ko": "kind",
    "en": "chipSeconds(of: kind)"
   },
   {
    "file": "TaptionPlan/UI/MapHomeCalendarSheet.swift",
-   "line": 371,
+   "line": 372,
    "ko": "\"\\(calendar.component(.month, from: selected))월 \\(calendar.component(.day, from: selected)",
    "en": "selected.formatted(Date.FormatStyle().month(.abbreviated).day().locale(language.locale))"
   },
@@ -166,19 +166,19 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeGrowthSheet.swift",
-   "line": 318,
+   "line": 326,
    "ko": "candidate.name",
    "en": "candidate.englishName"
   },
   {
    "file": "TaptionPlan/UI/MapHomeGrowthSheet.swift",
-   "line": 338,
+   "line": 346,
    "ko": "candidate.name",
    "en": "candidate.englishName"
   },
   {
    "file": "TaptionPlan/UI/MapHomeGrowthSheet.swift",
-   "line": 564,
+   "line": 572,
    "ko": "candidate.name",
    "en": "candidate.englishName"
   },
@@ -232,13 +232,13 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeLocationPresentation.swift",
-   "line": 264,
+   "line": 263,
    "ko": "_ korean: UIPhrase",
    "en": "_ english: UIPhrase"
   },
   {
    "file": "TaptionPlan/UI/MapHomeLocationPresentation.swift",
-   "line": 265,
+   "line": 264,
    "ko": "korean",
    "en": "english"
   },

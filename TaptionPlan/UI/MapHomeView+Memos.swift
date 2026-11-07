@@ -563,7 +563,8 @@ extension MapHomeView {
         }
         expectedRouteRefreshTask = Task { @MainActor in
             do {
-                try await Task.sleep(nanoseconds: 100_000_000)
+                // 실행 직후 위치·하루 자료가 0.3초 간격으로 들어와 같은 입력으로 6번 다시 만들었다. 묶어서 한 번만 만든다(LAG1107A01).
+                try await Task.sleep(nanoseconds: 300_000_000)
             } catch {
                 return
             }

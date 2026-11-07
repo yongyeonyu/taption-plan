@@ -2806,6 +2806,10 @@
 "사진 펼치기|Show photos": "展开照片",
 "지하철 선로 모양|Subway track shapes": "地铁线路形状",
 "화랑이 카운터 보이기·숨기기|Show or hide counters": "显示或隐藏计数器",
-"더 추가할 수 없습니다. 쓰지 않는 행동분류를 지운 뒤 추가하세요.|No more categories can be added. Delete one you don't use first.": "无法再添加。请先删除不用的分类。"
+"더 추가할 수 없습니다. 쓰지 않는 행동분류를 지운 뒤 추가하세요.|No more categories can be added. Delete one you don't use first.": "无法再添加。请先删除不用的分类。",
+"검색 결과가 없습니다.|No results.": "没有搜索结果。",
+"검색하지 못했습니다. 연결을 확인해 주세요.|Search failed. Check your connection.": "搜索失败。请检查网络连接。",
+"등록한 장소|Saved place": "已保存的地点",
+"지하철역 · {0}|Subway station · {0}": "地铁站 · {0}"
 }
 }

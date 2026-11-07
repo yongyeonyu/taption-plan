@@ -292,6 +292,8 @@ struct MapHomeView: View {
     @State var mapSearchText = ""
 
     @State var mapSearchResults: [MapHomeSearchResult] = []
+    /// 검색 결과가 없거나 실패했을 때 목록 자리에 보일 한 줄(SRC1107A01).
+    @State var mapSearchNotice: String?
 
     @State var selectedSearchPin: MapHomeSearchResult?
 

@@ -39,13 +39,19 @@ extension MapHomeView {
     }
 
     var hasMapSearchResults: Bool {
-        !mapSearchResults.isEmpty || !mapSearchCompleter.results.isEmpty
+        !mapSearchResults.isEmpty || !mapSearchCompleter.results.isEmpty || mapSearchNotice != nil || !localSearchMatches.isEmpty
     }
 
     var mapSearchResultCount: Int {
         mapSearchResults.isEmpty
-            ? mapSearchCompleter.results.count
+            ? mapSearchCompleter.results.count + localSearchMatches.count + (mapSearchNotice == nil ? 0 : 1)
             : mapSearchResults.count
+    }
+
+    /// 입력하는 동안 Apple 추천 위에 보일 등록 장소·지하철역.
+    var localSearchMatches: [MapHomeSearchResult] {
+        guard isMapSearchFocused, mapSearchResults.isEmpty else { return [] }
+        return MapHomeSearchPolicy.localMatches(mapSearchText, places: model.settings.frequentPlaces, language: language)
     }
 
     var mapSearchSurfaceHeight: CGFloat {
@@ -794,6 +800,7 @@ extension MapHomeView {
                 .onChange(of: mapSearchText) { _, value in
                     guard isMapSearchFocused else { return }
                     mapSearchResults = []
+                    mapSearchNotice = nil
                     mapSearchCompleter.update(
                         query: value,
                         region: mapSearchRegion
@@ -843,6 +850,17 @@ extension MapHomeView {
                 ScrollView(showsIndicators: false) {
                     LazyVStack(alignment: .leading, spacing: 0) {
                         if mapSearchResults.isEmpty {
+                            if let mapSearchNotice {
+                                Text(mapSearchNotice)
+                                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
+                                    .foregroundStyle(.secondary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 10)
+                            }
+                            ForEach(localSearchMatches) { result in
+                                mapSearchRow(title: result.title, subtitle: result.subtitle) { selectSearchResult(result) }
+                            }
                             ForEach(
                                 Array(mapSearchCompleter.results.enumerated()),
                                 id: \.offset
@@ -944,11 +962,7 @@ extension MapHomeView {
     }
 
     var mapSearchRegion: MKCoordinateRegion {
-        let center = currentCoordinate ?? visibleMapCenter
-        let span = visibleMapSpan.latitudeDelta > 0 && visibleMapSpan.longitudeDelta > 0
-            ? visibleMapSpan
-            : MKCoordinateSpan(latitudeDelta: 0.25, longitudeDelta: 0.25)
-        return MKCoordinateRegion(center: center, span: span)
+        MapHomeSearchPolicy.region(visibleCenter: visibleMapCenter, visibleSpan: visibleMapSpan, current: currentCoordinate)
     }
 
     func clearMapSearch() {
@@ -958,6 +972,7 @@ extension MapHomeView {
         mapSearchCompleter.clear()
         mapSearchText = ""
         mapSearchResults = []
+        mapSearchNotice = nil
         selectedSearchPin = nil
         isSearchPinMenuPresented = false
         isMapSearchFocused = false
@@ -979,7 +994,7 @@ extension MapHomeView {
         let request = MKLocalSearch.Request()
         request.naturalLanguageQuery = query
         request.region = mapSearchRegion
-        runMapSearch(request, fallbackTitle: query)
+        runMapSearch(request, fallbackTitle: query, showsList: true)
     }
 
     func searchMap(completion: MKLocalSearchCompletion) {
@@ -988,30 +1003,43 @@ extension MapHomeView {
         runMapSearch(request, fallbackTitle: completion.title)
     }
 
+    /// 검색 단추로 찾으면 결과 목록을 보여 고르게 하고(하나면 바로 간다), 추천을 눌렀으면 그 곳으로 간다.
+    /// 결과가 없거나 실패하면 목록 자리에 알린다. 예전에는 첫 결과로 곧장 옮기고 실패는 조용히 지웠다(SRC1107A01).
     func runMapSearch(
         _ request: MKLocalSearch.Request,
-        fallbackTitle: String
+        fallbackTitle: String,
+        showsList: Bool = false
     ) {
         mapSearchTask?.cancel()
         let requestID = UUID()
         mapSearchRequestID = requestID
+        let local = showsList ? MapHomeSearchPolicy.localMatches(fallbackTitle, places: model.settings.frequentPlaces, language: language) : []
         mapSearchTask = Task { @MainActor in
-            guard let response = try? await MKLocalSearch(request: request).start(),
-                  !Task.isCancelled,
-                  requestID == mapSearchRequestID
-            else { return }
-            let results = response.mapItems.prefix(8).map { item in
+            var response: MKLocalSearch.Response?
+            var failed = false
+            do { response = try await MKLocalSearch(request: request).start() } catch {
+                // 결과가 없으면 Apple 검색은 placemarkNotFound 오류를 낸다. 그때는 실패가 아니다.
+                failed = (error as? MKError)?.code != .placemarkNotFound
+            }
+            guard !Task.isCancelled, requestID == mapSearchRequestID else { return }
+            let found = (response?.mapItems ?? []).prefix(8).map { item in
                 MapHomeSearchResult(
                     title: item.name ?? fallbackTitle,
                     subtitle: item.placemark.title ?? "",
                     coordinate: item.placemark.coordinate
                 )
             }
+            let results = Array((local + found).prefix(8))
             mapSearchCompleter.clear()
-            if let first = results.first {
-                selectSearchResult(first)
-            } else {
+            if results.count == 1 || (!showsList && !results.isEmpty) {
+                selectSearchResult(results[0])
+            } else if results.isEmpty {
                 mapSearchResults = []
+                mapSearchNotice = failed
+                    ? language.text("검색하지 못했습니다. 연결을 확인해 주세요.", "Search failed. Check your connection.")
+                    : language.text("검색 결과가 없습니다.", "No results.")
+            } else {
+                mapSearchResults = results
             }
         }
     }
@@ -1028,6 +1056,7 @@ extension MapHomeView {
         )
         selectedSearchPin = result
         mapSearchResults = []
+        mapSearchNotice = nil
         mapSearchCompleter.clear()
         isMapSearchFocused = false
         isSearchExpanded = false
