@@ -1,4 +1,5 @@
 import Foundation
+import TaptionPlanCore
 
 /// `SensorReading` ↔ 열 사이를 **JSON을 거치지 않고** 잇는다.
 ///
@@ -600,12 +601,12 @@ extension TaptionReadingRowCodec {
     )
 
     /// 열 하나의 경로 조각. `columns`에 없는 열(테스트가 직접 만든 열)은 그때 쪼갠다.
-    static func parts(of column: Column) -> [String] {
+    public static func parts(of column: Column) -> [String] {
         columnPartsByName[column.name] ?? column.path.split(separator: ".").map(String.init)
     }
 
     /// `SensorReading` → 저장할 행. JSON을 거치지 않고 같은 모양의 사전을 만든 뒤 열로 펼친다.
-    static func row(for reading: SensorReading, calendar: Calendar) throws -> Row {
+    public static func row(for reading: SensorReading, calendar: Calendar) throws -> Row {
         var object = try TaptionColumnObjectCoder.object(from: reading)
         guard let id = object["id"] as? String, uuidData(id) != nil,
               let timestamp = TaptionObjectPrimitive.double(object["timestamp"]) else {
@@ -633,7 +634,7 @@ extension TaptionReadingRowCodec {
     }
 
     /// 저장된 행 → `SensorReading`. 사전을 만들지 않고 행의 열 값에서 바로 모델을 채운다.
-    static func reading(from row: Row) throws -> SensorReading {
+    public static func reading(from row: Row) throws -> SensorReading {
         var extra: [String: Any] = [:]
         if let text = row.extra {
             guard let parsed = try JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any] else {
@@ -931,7 +932,7 @@ extension TaptionReadingRowCodec {
     /// 같은 텍스트를 `Double(_:)`로 읽으면 정확히 복원되므로 손실은 파서 한 곳에서만 생겼다.
     /// 지금은 그 단계가 없어 값이 정확하다.
     /// 그래서 실수는 상대오차 `storedRealTolerance`까지 같은 값으로 본다. 그보다 크면 예전처럼 충돌이다.
-    static func sameStoredContent(_ lhs: SensorReading, _ rhs: SensorReading) -> Bool {
+    public static func sameStoredContent(_ lhs: SensorReading, _ rhs: SensorReading) -> Bool {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
         guard let left = try? row(for: lhs, calendar: calendar),
@@ -951,7 +952,7 @@ extension TaptionReadingRowCodec {
         return true
     }
 
-    static func sameReal(_ lhs: Double, _ rhs: Double) -> Bool {
+    public static func sameReal(_ lhs: Double, _ rhs: Double) -> Bool {
         if lhs == rhs { return true }
         guard lhs.isFinite, rhs.isFinite else { return false }
         return abs(lhs - rhs) <= max(abs(lhs), abs(rhs)) * storedRealTolerance

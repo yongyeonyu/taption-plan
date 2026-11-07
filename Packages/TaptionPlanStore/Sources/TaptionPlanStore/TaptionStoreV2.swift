@@ -4,19 +4,25 @@ import SQLite3
 import TaptionPlanCore
 
 /// `SensorReading`을 열이 나뉜 행으로 바꾸고 되돌린다. 합성 Codable의 JSON 키(=필드 이름)를 이용한다.
-enum TaptionReadingRowCodec {
-    enum Kind: Sendable {
+public enum TaptionReadingRowCodec {
+    public enum Kind: Sendable {
         case text, real, int, bool
     }
 
-    struct Column: Sendable {
-        let name: String
+    public struct Column: Sendable {
+        public let name: String
         /// JSON 경로. `point.latitude`처럼 한 단계 안쪽 키를 쓸 수 있다.
-        let path: String
-        let kind: Kind
+        public let path: String
+        public let kind: Kind
+
+        public init(name: String, path: String, kind: Kind) {
+            self.name = name
+            self.path = path
+            self.kind = kind
+        }
     }
 
-    static let columns: [Column] = [
+    public static let columns: [Column] = [
         Column(name: "lat", path: "point.latitude", kind: .real),
         Column(name: "lon", path: "point.longitude", kind: .real),
         Column(name: "alt", path: "point.altitude", kind: .real),
@@ -76,7 +82,7 @@ enum TaptionReadingRowCodec {
         Column(name: "watch_jerk", path: "watchAccelerationMeanJerkGPerSecond", kind: .real),
     ]
 
-    enum Value: Equatable, Sendable {
+    public enum Value: Equatable, Sendable {
         case null
         case int(Int64)
         case real(Double)
@@ -84,27 +90,35 @@ enum TaptionReadingRowCodec {
         case blob(Data)
     }
 
-    struct Row: Equatable, Sendable {
-        var id: String
-        var timestamp: Double
-        var day: Int
-        var values: [Value]
-        var extra: String?
+    public struct Row: Equatable, Sendable {
+        public var id: String
+        public var timestamp: Double
+        public var day: Int
+        public var values: [Value]
+        public var extra: String?
+
+        public init(id: String, timestamp: Double, day: Int, values: [Value], extra: String?) {
+            self.id = id
+            self.timestamp = timestamp
+            self.day = day
+            self.values = values
+            self.extra = extra
+        }
     }
 
     /// UUID 문자열을 16바이트로. 문자열(36자)보다 행마다 20바이트가 줄고 색인도 작아진다.
-    static func uuidData(_ string: String) -> Data? {
+    public static func uuidData(_ string: String) -> Data? {
         guard let uuid = UUID(uuidString: string) else { return nil }
         return withUnsafeBytes(of: uuid.uuid) { Data($0) }
     }
 
-    static func uuidString(from data: Data) -> String? {
+    public static func uuidString(from data: Data) -> String? {
         guard data.count == 16 else { return nil }
         let uuid = data.withUnsafeBytes { $0.loadUnaligned(as: uuid_t.self) }
         return UUID(uuid: uuid).uuidString
     }
 
-    static func dayNumber(for date: Date, calendar: Calendar) -> Int {
+    public static func dayNumber(for date: Date, calendar: Calendar) -> Int {
         let parts = calendar.dateComponents([.year, .month, .day], from: date)
         return (parts.year ?? 0) * 10_000 + (parts.month ?? 0) * 100 + (parts.day ?? 0)
     }
@@ -127,15 +141,15 @@ private final class TaptionSQLiteConnection: @unchecked Sendable {
     }
 }
 
-actor TaptionStoreV2 {
+public actor TaptionStoreV2 {
     /// 2: 확정한 하루 요약(`sealed_days`) 표가 늘었다. 1인 파일은 표만 덧붙이고 그대로 쓴다.
-    static let schemaVersion = 2
-    static let fileName = "taption-store.sqlite"
+    public static let schemaVersion = 2
+    public static let fileName = "taption-store.sqlite"
     /// 메모는 따로 보관한다. 파일만 다르고 표·보호 등급·삭제 방식은 같다.
-    static let memoFileName = "taption-memos.sqlite"
+    public static let memoFileName = "taption-memos.sqlite"
 
     /// 사용자의 달력 설정(불교력·연호력 등)과 무관하게 그레고리력 현지 날짜로 `day`를 계산한다.
-    static func localGregorianCalendar() -> Calendar {
+    public static func localGregorianCalendar() -> Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = .autoupdatingCurrent
         return calendar
@@ -145,13 +159,13 @@ actor TaptionStoreV2 {
     private static let sharedLock = NSLock()
 
     /// 앱이 쓰는 저장소 하나. 센서·계획·기록이 같은 파일과 같은 연결을 쓴다.
-    static func applicationSupport(fileManager: FileManager = .default) throws -> TaptionStoreV2 {
+    public static func applicationSupport(fileManager: FileManager = .default) throws -> TaptionStoreV2 {
         try shared(at: try applicationSupportURL(fileName: fileName, fileManager: fileManager))
     }
 
     /// 메모 전용 저장소. 앱 그룹 컨테이너의 같은 폴더에 `taption-memos.sqlite`로 둔다.
     /// 파일이 달라도 여는 방식·표 구조·파일 보호 등급·`secure_delete`가 본 저장소와 같다.
-    static func applicationSupportMemos(fileManager: FileManager = .default) throws -> TaptionStoreV2 {
+    public static func applicationSupportMemos(fileManager: FileManager = .default) throws -> TaptionStoreV2 {
         try shared(at: try applicationSupportURL(fileName: memoFileName, fileManager: fileManager))
     }
 
@@ -168,7 +182,7 @@ actor TaptionStoreV2 {
         return storeRoot.appendingPathComponent(fileName, isDirectory: false)
     }
 
-    static func shared(at url: URL) throws -> TaptionStoreV2 {
+    public static func shared(at url: URL) throws -> TaptionStoreV2 {
         sharedLock.lock()
         defer { sharedLock.unlock() }
         if let existing = sharedStores[url.path] { return existing }
@@ -178,12 +192,12 @@ actor TaptionStoreV2 {
     }
 
     private var connection: TaptionSQLiteConnection?
-    let calendar: Calendar
+    public let calendar: Calendar
     /// 저장소 파일 위치. 같은 폴더에 쓰기 잠금 파일을 둘 때 쓴다.
-    nonisolated let url: URL
+    public nonisolated let url: URL
 
     /// `url`에 새 저장소를 만들거나 연다. `calendar`는 `day` 열(현지 날짜)을 정하는 데 쓴다.
-    init(url: URL, calendar: Calendar = TaptionStoreV2.localGregorianCalendar()) throws {
+    public init(url: URL, calendar: Calendar = TaptionStoreV2.localGregorianCalendar()) throws {
         self.calendar = calendar
         self.url = url
         try FileManager.default.createDirectory(
@@ -213,7 +227,7 @@ actor TaptionStoreV2 {
     }
 
     /// 연결을 닫는다. 이후 호출은 실패한다.
-    func close() {
+    public func close() {
         connection = nil
     }
 
@@ -221,7 +235,7 @@ actor TaptionStoreV2 {
 
     /// 같은 `id`가 이미 있으면 덮어쓴다.
     @discardableResult
-    func upsertReadings(_ readings: [SensorReading]) throws -> Int {
+    public func upsertReadings(_ readings: [SensorReading]) throws -> Int {
         let db = try handle()
         try exec(db, "BEGIN IMMEDIATE")
         do {
@@ -245,7 +259,7 @@ actor TaptionStoreV2 {
         return readings.count
     }
 
-    func readings(from start: Date, to end: Date) throws -> [SensorReading] {
+    public func readings(from start: Date, to end: Date) throws -> [SensorReading] {
         let result = try loadReadings(
             where: "ts >= ? AND ts < ?",
             bindings: [.real(start.timeIntervalSince1970), .real(end.timeIntervalSince1970)]
@@ -255,7 +269,7 @@ actor TaptionStoreV2 {
     }
 
     /// 끝을 포함하는 범위 조회. 해석할 수 없는 행은 건너뛰고 `isComplete`를 false로 돌려준다.
-    func readingsLoadResult(
+    public func readingsLoadResult(
         from start: Date,
         through end: Date
     ) throws -> (readings: [SensorReading], isComplete: Bool) {
@@ -266,12 +280,12 @@ actor TaptionStoreV2 {
         return (result.readings, result.failures.isEmpty)
     }
 
-    func allReadingsLoadResult() throws -> (readings: [SensorReading], isComplete: Bool) {
+    public func allReadingsLoadResult() throws -> (readings: [SensorReading], isComplete: Bool) {
         let result = try loadReadings(where: "1 = 1", bindings: [])
         return (result.readings, result.failures.isEmpty)
     }
 
-    func readings(ids: [String]) throws -> [SensorReading] {
+    public func readings(ids: [String]) throws -> [SensorReading] {
         var found: [SensorReading] = []
         for chunk in stride(from: 0, to: ids.count, by: 400).map({ Array(ids[$0..<min($0 + 400, ids.count)]) }) {
             let blobs = chunk.compactMap(TaptionReadingRowCodec.uuidData)
@@ -285,13 +299,13 @@ actor TaptionStoreV2 {
     }
 
     /// 센서 원본은 바꾸지 않는다. 새 `id`는 넣고, 같은 내용은 그대로 두며, 내용이 다르면 전체를 되돌리고 거부한다.
-    func appendImmutableReadings(_ readings: [SensorReading]) throws {
+    public func appendImmutableReadings(_ readings: [SensorReading]) throws {
         _ = try appendReadings(readings, rejectingConflicts: true)
     }
 
     /// 백업 합치기용. `appendImmutableReadings`와 같지만 같은 `id`의 내용이 다르면 거부하지 않고 로컬 행을 지키며,
     /// 그런 `id`의 개수를 돌려준다(한 행 때문에 달 전체 백업이 영원히 멈추지 않게 한다).
-    func mergeReadingsKeepingLocal(_ readings: [SensorReading]) throws -> Int {
+    public func mergeReadingsKeepingLocal(_ readings: [SensorReading]) throws -> Int {
         try appendReadings(readings, rejectingConflicts: false)
     }
 
@@ -340,7 +354,7 @@ actor TaptionStoreV2 {
 
     /// 기록이 있는 현지 날짜마다 첫·마지막 시각 범위.
     /// 저장된 `day`가 지금 달력과 어긋나면(시간대 이동) 조용히 넘기지 않고 센다. 정확한 행 수는 `dayDrift()`가 센다.
-    func dayRanges() throws -> [ClosedRange<Date>] {
+    public func dayRanges() throws -> [ClosedRange<Date>] {
         let db = try handle()
         let statement = try prepare(db, "SELECT day, MIN(ts), MAX(ts) FROM readings GROUP BY day ORDER BY day")
         defer { sqlite3_finalize(statement) }
@@ -422,7 +436,7 @@ actor TaptionStoreV2 {
     /// 센서 원본에는 삭제 표시(톰스톤)가 없다. 이미 월 백업 파일에 담긴 행을 이 함수로 지우면 다음 백업이 파일에서
     /// 합집합으로 되살린다. 사용자가 원본을 지우는 경로는 전체 삭제(`deleteAllReadings`/`deleteAll`)뿐이고,
     /// 그쪽은 백업 무효화 표시를 남긴다.
-    func deleteReadings(ids: [String]) throws {
+    public func deleteReadings(ids: [String]) throws {
         guard !ids.isEmpty else { return }
         let db = try handle()
         try exec(db, "BEGIN IMMEDIATE")
@@ -442,13 +456,13 @@ actor TaptionStoreV2 {
         }
     }
 
-    func readingCount() throws -> Int {
+    public func readingCount() throws -> Int {
         try scalarInt("SELECT COUNT(*) FROM readings")
     }
 
     // MARK: 기록(계획·메모·장소·이동 등)
 
-    func upsertRecords(_ records: [TaptionStoreRecord]) throws {
+    public func upsertRecords(_ records: [TaptionStoreRecord]) throws {
         let db = try handle()
         try exec(db, "BEGIN IMMEDIATE")
         do {
@@ -493,7 +507,7 @@ actor TaptionStoreV2 {
     }
 
     /// 삭제 표시된 행은 제외한다. `start`/`end`를 주면 시작 시각이 그 범위에 있는 행만 돌려준다.
-    func records(kind: String, from start: Date? = nil, to end: Date? = nil) throws -> [TaptionStoreRecord] {
+    public func records(kind: String, from start: Date? = nil, to end: Date? = nil) throws -> [TaptionStoreRecord] {
         let db = try handle()
         var sql = """
             SELECT id, kind, start_ts, end_ts, updated_ts, origin, deleted, body
@@ -535,7 +549,7 @@ actor TaptionStoreV2 {
     }
 
     /// 지워지지 않은 모든 기록 행(종류, id, 순서, 본문). 불러오기와 변경 비교의 기준으로 쓴다.
-    func allRecordRows() throws -> [(kind: String, id: String, ord: Int, body: String)] {
+    public func allRecordRows() throws -> [(kind: String, id: String, ord: Int, body: String)] {
         try allRecordRows(kinds: nil)
     }
 
@@ -544,7 +558,7 @@ actor TaptionStoreV2 {
     /// 시작 적재는 스냅샷에 담기는 종류만 필요하다. HealthKit 원본 표본은
     /// `HealthKitImportStore`가 따로 쓰고 읽으므로 시작 경로에서 읽을 이유가 없다 —
     /// 실기기 로그에서 1,284,890행 중 1,258,394행이 그 표본이었고, 읽기에만 13.8초를 썼다.
-    func allRecordRows(kinds: [String]?) throws -> [(kind: String, id: String, ord: Int, body: String)] {
+    public func allRecordRows(kinds: [String]?) throws -> [(kind: String, id: String, ord: Int, body: String)] {
         let db = try handle()
         let filter: String
         if let kinds, !kinds.isEmpty {
@@ -584,7 +598,7 @@ actor TaptionStoreV2 {
     /// 한 트랜잭션으로 바뀐 행은 쓰고, 사라진 행은 삭제 표시(톰스톤)로 바꾼다. 도중에 실패하면 둘 다 되돌린다.
     /// 삭제 표시는 본문을 비우고 `deleted=1`, 수정 시각을 `deletedAt`(이전 수정 시각보다 항상 뒤)으로 둔다.
     /// 월 백업이 "이 id가 지워졌다"를 담고 복원 때 오래된 로컬 행에 적용할 수 있게 하기 위해서다.
-    func applyRecordChanges(
+    public func applyRecordChanges(
         upserts: [TaptionStoreRecord], deletes: [(kind: String, id: String)], deletedAt: Date = Date()
     ) throws {
         guard !upserts.isEmpty || !deletes.isEmpty else { return }
@@ -618,7 +632,7 @@ actor TaptionStoreV2 {
     /// 모든 기록 행을 하드 삭제한다(전체 삭제 경로). 월 백업과 어긋나지 않게 같은 트랜잭션에서
     /// 백업 무효화 표시(`backup.wipe.token`)를 남긴다. 호출자는 사용자 확인 뒤 `TaptionBackupEngine.deleteAllBackups()`도 불러야
     /// 한다. 표시가 있는 동안 엔진은 이 삭제 이전에 만든 백업 파일을 합치거나 덮어쓰지 않고(되살림 방지) 알린다.
-    func deleteAllRecords() throws {
+    public func deleteAllRecords() throws {
         let db = try handle()
         try exec(db, "BEGIN IMMEDIATE")
         do {
@@ -631,7 +645,7 @@ actor TaptionStoreV2 {
         }
     }
 
-    static let backupWipeTokenKey = "backup.wipe.token"
+    public static let backupWipeTokenKey = "backup.wipe.token"
 
     /// 데이터가 통째로 지워졌음을 새 무작위 값으로 남긴다. 엔진은 파일을 쓸 때 이 값을 달/설정 범위별로 기록하고,
     /// 값이 다른 파일을 "삭제 이전의 오래된 백업"으로 본다. 시계에 의존하지 않는다.
@@ -645,7 +659,7 @@ actor TaptionStoreV2 {
 
     /// 삭제 표시된 행까지 포함한 한 종류의 모든 행. 저장소 이동(메모 분리)에서 삭제 표시도 함께 옮길 때 쓴다.
     /// 삭제 표시를 두고 오면 백업을 합칠 때 오래된 메모가 되살아난다.
-    func recordsIncludingDeleted(kind: String) throws -> [TaptionStoreRecord] {
+    public func recordsIncludingDeleted(kind: String) throws -> [TaptionStoreRecord] {
         let db = try handle()
         let statement = try prepare(db, """
             SELECT id, kind, start_ts, end_ts, updated_ts, origin, deleted, ord, body
@@ -683,7 +697,7 @@ actor TaptionStoreV2 {
 
     /// 한 종류의 기록 행을 하드 삭제한다(삭제 표시를 남기지 않는다).    /// 사용자 삭제가 아니라 저장소 이동에만 쓴다: 메모를 별도 파일로 옮길 때 옛 파일에 남은 행을 지운다.
     /// 삭제 표시를 남기면 백업의 "삭제가 이긴다" 규칙이 옮긴 메모를 다시 지워 버린다.
-    func deleteRecords(kind: String) throws {
+    public func deleteRecords(kind: String) throws {
         let db = try handle()
         let statement = try prepare(db, "DELETE FROM records WHERE kind = ?")
         defer { sqlite3_finalize(statement) }
@@ -693,7 +707,7 @@ actor TaptionStoreV2 {
 
     /// `[from, to)`에 시작하는 기록 행을 하드 삭제한다. 백업 파일에 담아 검증한 뒤 로컬에서 지울 때
     /// 메모 파일처럼 본 저장소 밖에 있는 행에 쓴다(본 저장소는 `deleteRange`가 지문까지 확인하고 지운다).
-    func deleteRecordRange(from: Double, to: Double) throws -> Int {
+    public func deleteRecordRange(from: Double, to: Double) throws -> Int {
         let db = try handle()
         try exec(db, "BEGIN IMMEDIATE")
         do {
@@ -715,7 +729,7 @@ actor TaptionStoreV2 {
         }
     }
 
-    func recordCount(kind: String? = nil) throws -> Int {        if let kind {
+    public func recordCount(kind: String? = nil) throws -> Int {        if let kind {
             let db = try handle()
             let statement = try prepare(db, "SELECT COUNT(*) FROM records WHERE kind = ?")
             defer { sqlite3_finalize(statement) }
@@ -728,7 +742,7 @@ actor TaptionStoreV2 {
     // MARK: 월 백업 보조
 
     /// 시각 범위 `[from, to)` 안의 행 수와 시각 범위. 기록은 시작 시각이 있는 행만 센다.
-    func rangeStats(from: Double, to: Double) throws -> (readings: Int, records: Int, first: Double?, last: Double?) {
+    public func rangeStats(from: Double, to: Double) throws -> (readings: Int, records: Int, first: Double?, last: Double?) {
         let db = try handle()
         let statement = try prepare(db, """
             SELECT
@@ -751,16 +765,16 @@ actor TaptionStoreV2 {
     }
 
     /// 백업용 기록 행. 삭제 표시 행과 순서(`ord`)까지 포함하고 결정적 순서(종류, id)로 돌려준다.
-    func recordsForBackup(from: Double, to: Double) throws -> [TaptionStoreRecord] {
+    public func recordsForBackup(from: Double, to: Double) throws -> [TaptionStoreRecord] {
         try loadBackupRecords(where: "start_ts >= ? AND start_ts < ?", bindings: [.real(from), .real(to)])
     }
 
     /// 시작 시각이 없는 기록(설정 헤더·분류 등). 달에 속하지 않아 설정 백업 파일에 담는다.
-    func undatedRecordsForBackup() throws -> [TaptionStoreRecord] {
+    public func undatedRecordsForBackup() throws -> [TaptionStoreRecord] {
         try loadBackupRecords(where: "start_ts IS NULL", bindings: [])
     }
 
-    func undatedRecordCount() throws -> Int {
+    public func undatedRecordCount() throws -> Int {
         try scalarInt("SELECT COUNT(*) FROM records WHERE start_ts IS NULL")
     }
 
@@ -806,7 +820,7 @@ actor TaptionStoreV2 {
     /// 그래도 같으면 본문 해시가 큰 쪽)로 이기는 쪽만 남긴다. 같은 입력이면 어느 기기에서 합쳐도 같은 결과다.
     /// 새로 넣었거나 덮어쓴 행 수를 돌려준다.
     @discardableResult
-    func upsertRecordsKeepingNewer(_ records: [TaptionStoreRecord]) throws -> Int {
+    public func upsertRecordsKeepingNewer(_ records: [TaptionStoreRecord]) throws -> Int {
         let db = try handle()
         try exec(db, "BEGIN IMMEDIATE")
         var changed = 0
@@ -840,14 +854,14 @@ actor TaptionStoreV2 {
     /// 범위 `[from, to)`의 상태 지문. 오프로드가 "검증한 그 상태 그대로인지"를 가리는 데 쓴다.
     /// 센서 원본은 수정이 `INSERT OR REPLACE`라 다시 쓰면 rowid가 새로 커지므로 개수와 가장 큰 rowid로 편집을 잡고,
     /// 기록은 행 개수와 (종류, id, 수정 시각, 삭제 여부, 본문) 해시로 같은 수정 시각의 편집까지 잡는다.
-    struct RangeFingerprint: Equatable, Sendable {
-        var readings = 0
+    public struct RangeFingerprint: Equatable, Sendable {
+        public var readings = 0
         var maxReadingRowID: Int64 = 0
-        var records = 0
+        public var records = 0
         var recordDigest = ""
     }
 
-    func rangeFingerprint(from: Double, to: Double) throws -> RangeFingerprint {
+    public func rangeFingerprint(from: Double, to: Double) throws -> RangeFingerprint {
         let db = try handle()
         return try fingerprint(db, from: from, to: to)
     }
@@ -879,7 +893,7 @@ actor TaptionStoreV2 {
     /// 아니라 편집·삭제 표시도 놓치지 않는다). 봉인 표시(`sealedMeta`)는 같은 트랜잭션에 기록해 크래시로
     /// "지웠는데 봉인 표시가 없는" 상태가 생기지 않게 한다.
     /// 끝(`end_ts`)이 `to` 뒤인 기록(달이 끝나도 진행 중인 긴 기록)은 지우지 않고 남긴다. 지운 행 수를 돌려준다.
-    func deleteRange(
+    public func deleteRange(
         from: Double, to: Double, expected: RangeFingerprint, sealedMeta: (key: String, value: String)? = nil
     ) throws -> (readings: Int, records: Int)? {
         let db = try handle()
@@ -919,7 +933,7 @@ actor TaptionStoreV2 {
 
     /// 데이터(센서 원본·시작 시각이 있는 기록)가 있는 UTC 날짜 번호(1970-01-01부터). 월 순회가 비정상으로 먼
     /// 시각(예: `distantPast`) 하나 때문에 수만 달을 도는 것을 막고, 실제 데이터가 있는 달만 고르는 데 쓴다.
-    func dataUTCDays() throws -> [Int] {
+    public func dataUTCDays() throws -> [Int] {
         let db = try handle()
         let statement = try prepare(db, """
             SELECT DISTINCT CAST(v / 86400.0 AS INTEGER) AS d FROM (
@@ -935,7 +949,7 @@ actor TaptionStoreV2 {
     // MARK: 확정한 하루 요약
 
     /// 확정한 하루를 저장한다. 같은 날짜가 있으면 덮어쓴다(다시 확정한 경우).
-    func upsertSealedDays(_ days: [TaptionSealedDay]) throws {
+    public func upsertSealedDays(_ days: [TaptionSealedDay]) throws {
         guard !days.isEmpty else { return }
         let db = try handle()
         try exec(db, "BEGIN IMMEDIATE")
@@ -965,7 +979,7 @@ actor TaptionStoreV2 {
     }
 
     /// `[from, through]`(둘 다 `yyyymmdd`) 범위의 확정 요약. 해석할 수 없는 행은 건너뛴다.
-    func sealedDays(from: Int? = nil, through: Int? = nil) throws -> [TaptionSealedDay] {
+    public func sealedDays(from: Int? = nil, through: Int? = nil) throws -> [TaptionSealedDay] {
         let db = try handle()
         var sql = "SELECT payload FROM sealed_days"
         if from != nil || through != nil { sql += " WHERE 1 = 1" }
@@ -990,7 +1004,7 @@ actor TaptionStoreV2 {
         return result
     }
 
-    func sealedDay(for day: Date) throws -> TaptionSealedDay? {
+    public func sealedDay(for day: Date) throws -> TaptionSealedDay? {
         let db = try handle()
         let statement = try prepare(db, "SELECT payload FROM sealed_days WHERE day = ?")
         defer { sqlite3_finalize(statement) }
@@ -999,11 +1013,11 @@ actor TaptionStoreV2 {
         return Self.decodeSealedDay(blob)
     }
 
-    func sealedDayCount() throws -> Int {
+    public func sealedDayCount() throws -> Int {
         try scalarInt("SELECT COUNT(*) FROM sealed_days")
     }
 
-    func deleteSealedDays(numbers: [Int]) throws {
+    public func deleteSealedDays(numbers: [Int]) throws {
         guard !numbers.isEmpty else { return }
         let db = try handle()
         try exec(db, "BEGIN IMMEDIATE")
@@ -1047,7 +1061,7 @@ actor TaptionStoreV2 {
 
     // MARK: 메타·삭제
 
-    func meta(_ key: String) throws -> String? {
+    public func meta(_ key: String) throws -> String? {
         let db = try handle()
         let statement = try prepare(db, "SELECT value FROM meta WHERE key = ?")
         defer { sqlite3_finalize(statement) }
@@ -1056,7 +1070,7 @@ actor TaptionStoreV2 {
         return String(cString: sqlite3_column_text(statement, 0))
     }
 
-    func setMeta(_ key: String, _ value: String) throws {
+    public func setMeta(_ key: String, _ value: String) throws {
         let db = try handle()
         let statement = try prepare(db, "INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)")
         defer { sqlite3_finalize(statement) }
@@ -1066,7 +1080,7 @@ actor TaptionStoreV2 {
     }
 
     /// 삭제로 생긴 빈 공간을 파일에서 실제로 돌려준다(오프로드 뒤에 부른다).
-    func reclaimSpace() throws {
+    public func reclaimSpace() throws {
         let db = try handle()
         try exec(db, "PRAGMA wal_checkpoint(TRUNCATE)")
         // 한 번에 다 돌려주면 오래 막히므로 나눠서 돌려준다.
@@ -1094,7 +1108,7 @@ actor TaptionStoreV2 {
     }
 
     /// 전체 삭제 경로(원본·기록·원본 이벤트·메타). 백업 무효화 표시는 `deleteAllRecords` 설명과 같다.
-    func deleteAll() throws {
+    public func deleteAll() throws {
         let db = try handle()
         try exec(db, "BEGIN IMMEDIATE")
         do {

@@ -1,4 +1,5 @@
 import Foundation
+import TaptionPlanCore
 import SQLite3
 
 extension TaptionStoreV2 {
@@ -29,7 +30,7 @@ extension TaptionStoreV2 {
     /// 새 `id`는 넣고, 같은 내용이 이미 있으면 그대로 두며, 내용이 다르면 전체를 되돌리고 거부한다.
     /// 새로 들어간 `id`를 돌려준다.
     @discardableResult
-    func appendRawEvents(_ events: [TaptionRawEvent]) throws -> [String] {
+    public func appendRawEvents(_ events: [TaptionRawEvent]) throws -> [String] {
         guard !events.isEmpty else { return [] }
         let db = try handle()
         try exec(db, "BEGIN IMMEDIATE")
@@ -67,7 +68,7 @@ extension TaptionStoreV2 {
     }
 
     /// 쓰지 않고, 같은 `id`에 다른 내용이 이미 있는지만 확인한다.
-    func validateRawEvents(_ events: [TaptionRawEvent]) throws {
+    public func validateRawEvents(_ events: [TaptionRawEvent]) throws {
         let db = try handle()
         for event in events {
             if let stored = try rawEvent(db, kind: event.kind, id: event.id), !stored.storedFormEquals(event) {
@@ -77,7 +78,7 @@ extension TaptionStoreV2 {
     }
 
     /// 시각이 `start...end`(양끝 포함)인 이벤트를 시각·순서·id 순으로. 범위를 주지 않으면 모두.
-    func rawEvents(
+    public func rawEvents(
         kind: String, from start: Date? = nil, through end: Date? = nil, idPrefix: String? = nil, limit: Int? = nil,
         newestFirst: Bool = false
     ) throws -> [TaptionRawEvent] {
@@ -105,7 +106,7 @@ extension TaptionStoreV2 {
         return result
     }
 
-    func rawEventCount(kind: String) throws -> Int {
+    public func rawEventCount(kind: String) throws -> Int {
         let db = try handle()
         let statement = try prepare(db, "SELECT COUNT(*) FROM raw_events WHERE kind = ?")
         defer { sqlite3_finalize(statement) }
@@ -114,7 +115,7 @@ extension TaptionStoreV2 {
     }
 
     /// 이벤트가 있는 현지 날짜마다 첫·마지막 시각 범위. `kind`를 주지 않으면 모든 종류.
-    func rawEventDayRanges(kind: String? = nil) throws -> [ClosedRange<Date>] {
+    public func rawEventDayRanges(kind: String? = nil) throws -> [ClosedRange<Date>] {
         let db = try handle()
         let statement = try prepare(
             db,
@@ -131,7 +132,7 @@ extension TaptionStoreV2 {
         return ranges
     }
 
-    func deleteRawEvents(kind: String, ids: [String]) throws {
+    public func deleteRawEvents(kind: String, ids: [String]) throws {
         guard !ids.isEmpty else { return }
         let db = try handle()
         try exec(db, "BEGIN IMMEDIATE")
@@ -152,7 +153,7 @@ extension TaptionStoreV2 {
         }
     }
 
-    func deleteRawEvents(kind: String) throws {
+    public func deleteRawEvents(kind: String) throws {
         let db = try handle()
         let statement = try prepare(db, "DELETE FROM raw_events WHERE kind = ?")
         defer { sqlite3_finalize(statement) }
@@ -164,7 +165,7 @@ extension TaptionStoreV2 {
     /// 하드 삭제하면 월 백업 파일에 남은 같은 행이 다음 백업의 합집합에서 되살아나기 때문이다. 본문은 `{}`로 비우고
     /// 수정 시각은 이전보다 항상 뒤로 둬서(`applyRecordChanges`와 같은 규칙) 오래된 백업 행을 이긴다.
     /// 읽기 API(`records(kind:)` 등)는 삭제 표시를 숨긴다. 전체 삭제(`deleteAllRecords`)와 달리 백업 무효화 표시는 남기지 않는다.
-    func deleteRecords(kinds: [String], deletedAt: Date = Date()) throws {
+    public func deleteRecords(kinds: [String], deletedAt: Date = Date()) throws {
         guard !kinds.isEmpty else { return }
         let db = try handle()
         try exec(db, "BEGIN IMMEDIATE")
@@ -190,11 +191,11 @@ extension TaptionStoreV2 {
     }
 
     /// 쓰기 로그(WAL)를 본 파일에 합친다. 앱이 백그라운드로 가기 전에 부른다.
-    func checkpoint() throws {
+    public func checkpoint() throws {
         try exec(try handle(), "PRAGMA wal_checkpoint(PASSIVE)")
     }
 
-    func deleteMeta(_ key: String) throws {
+    public func deleteMeta(_ key: String) throws {
         let db = try handle()
         let statement = try prepare(db, "DELETE FROM meta WHERE key = ?")
         defer { sqlite3_finalize(statement) }
@@ -203,7 +204,7 @@ extension TaptionStoreV2 {
     }
 
     /// 종류가 같은 `records` 행의 `id`가 있는 것만 골라 돌려준다.
-    func existingRecordIDs(kind: String, ids: [String]) throws -> Set<String> {
+    public func existingRecordIDs(kind: String, ids: [String]) throws -> Set<String> {
         let db = try handle()
         let statement = try prepare(db, "SELECT 1 FROM records WHERE kind = ? AND id = ? AND deleted = 0")
         defer { sqlite3_finalize(statement) }
