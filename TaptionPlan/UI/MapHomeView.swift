@@ -272,14 +272,8 @@ struct MapHomeView: View {
     @SceneStorage("MapHome.userTrackingMode")
     var userTrackingModeRawValue = MapHomeUserTrackingMode.idle.rawValue
 
-    @State var currentLocationRequestTask: Task<Void, Never>?
-
-    @State var initialLocationRequestTask: Task<Void, Never>?
-
-    @State var routeReadingsPreparationTask: Task<Void, Never>?
-
-    @State var routeReadingsPreparationGeneration =
-        MapHomeRouteReadingsPreparationGeneration()
+    /// 본문이 읽지 않는 작업 핸들·세대 번호·시각(ARC1103A01 안 6). 바뀌어도 화면을 무효화하지 않는다.
+    @State var work = MapHomeViewWork()
 
     @State var hasAppliedInitialLocation = false
 
@@ -335,23 +329,13 @@ struct MapHomeView: View {
 
     @State var pendingUserLocationSelection: MapHomeUserLocationSelection?
 
-    @State var mapSearchTask: Task<Void, Never>?
-
-    @State var transitPOIRefreshTask: Task<Void, Never>?
-
-    @State var transitPOIRefreshGeneration: UInt64 = 0
-
     @State var nearbyTransitPlaces: [TransitBoardingPlace] = []
 
     @State var transitBoardingReadingsRevision: UInt64 = 0
 
-    @State var lastTransitBoardingLiveRefreshAt: Date?
-
     @State var nearbyTransitPlacesRevision: UInt64 = 0
 
     @State var mapSearchCompleter = MapHomeSearchCompleter()
-
-    @State var mapSearchRequestID = UUID()
 
     @FocusState var isMapSearchFocused: Bool
 
@@ -366,22 +350,10 @@ struct MapHomeView: View {
     /// 마지막 경로 계산의 입력 요약. 같으면 다시 계산하지 않는다.
     @State var routeProjectionInputKey: RouteProjectionInputKey?
 
-    @State var routeProjectionTask: Task<Void, Never>?
-
-    @State var routeProjectionRunID = 0
-
     /// 발자국 장부 캐시. 기록이 늘 때만 새로 만든다(ARC1030A07).
     @State var pawprintLedgerMemo = MapHomeMemo<MapHomePawprintLedgerKey, [MapHomePawprintLedger.Entry]>()
 
     @State var pawprintWaypointsMemo = MapHomeMemo<MapHomePawprintWaypointsKey, [PawprintWaypoint]>()
-
-    @State var routeProjectionApplied = 0
-
-    @State var routeProjectionSkips = [0, 0, 0]
-
-    @State var routeProjectionLastMS = 0.0
-
-    @State var lastPlaybackTraceUptime: TimeInterval = 0
 
     @State var routeProjectionInFlight = false
 
@@ -425,15 +397,9 @@ struct MapHomeView: View {
 
     @State var expectedRouteCache: [ExpectedRouteRequest: [CLLocationCoordinate2D]] = [:]
 
-    @State var expectedRouteRefreshTask: Task<Void, Never>?
-
-    @State var expectedRouteRefreshGeneration: UInt64 = 0
-
     @State var wbsExpectedRouteRequests: [ExpectedRouteRequest] = []
 
     @State var wbsExpectedRouteRequestsInputKey: MapHomeExpectedRouteInputKey?
-
-    @State var liveRouteProjectionRefreshTask: Task<Void, Never>?
 
     @State var visibleMapSpan = MKCoordinateSpan(
         latitudeDelta: 0.025,
@@ -503,21 +469,7 @@ struct MapHomeView: View {
 
     @State var routeDocumentProjectionGate = MapHomeRouteDocumentProjectionGate()
 
-    @State var lastPlaybackRouteProjectionUptime: TimeInterval = 0
-
-    @State var lastPlaybackMapFocusUptime: TimeInterval = 0
-
     @State var isPlaybackIntroActive = false
-
-    @State var playbackIntroTask: Task<Void, Never>?
-
-    @State var lastPlaybackFocusLogUptime: TimeInterval = 0
-
-    @State var lastPlaybackMarkerUptime: TimeInterval = 0
-
-    @State var lastTimelineMapFocusUptime: TimeInterval = 0
-
-    @State var dayPlaybackTask: Task<Void, Never>?
 
     @State var playbackClock = MapHomePlaybackClock()
 
