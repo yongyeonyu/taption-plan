@@ -1,5 +1,6 @@
 import Foundation
-import TaptionPlanCore
+/// 도메인 모델(`TimeSpan` 등)이 `TaptionPlanCore`에 있어 앱·위젯 파일 전체가 보게 한다.
+@_exported import TaptionPlanCore
 
 /// The first product surface is an automatic life log. Manual planning data
 /// remains in storage for compatibility, but is intentionally kept out of the
@@ -12,54 +13,7 @@ enum TaptionProductScope {
 
 // MARK: - Plan and actual records
 
-struct TimeSpan: Codable, Hashable, Sendable {
-    var start: Date
-    var end: Date
-
-    init(start: Date, end: Date) {
-        self.start = start
-        self.end = max(start, end)
-    }
-
-    var duration: TimeInterval {
-        max(0, end.timeIntervalSince(start))
-    }
-
-    /// 겹치는 구간을 병합한 총 시간(같은 초를 두 번 세지 않는다).
-    static func unionDuration(_ spans: [TimeSpan]) -> TimeInterval {
-        let ordered = spans
-            .filter { $0.duration > 0 }
-            .sorted { $0.start < $1.start }
-        guard var current = ordered.first else { return 0 }
-        var total: TimeInterval = 0
-        for span in ordered.dropFirst() {
-            if span.start <= current.end {
-                current.end = max(current.end, span.end)
-            } else {
-                total += current.duration
-                current = span
-            }
-        }
-        return total + current.duration
-    }
-
-    func intersection(with other: TimeSpan) -> TimeSpan? {
-        let lower = max(start, other.start)
-        let upper = min(end, other.end)
-        guard lower < upper else { return nil }
-        return TimeSpan(start: lower, end: upper)
-    }
-
-    /// NaN 시각이나 NaN 경계는 어떤 구간에도 속하지 않는다. Date 비교의 NaN 결과는 기기 런타임마다 다르다.
-    func contains(_ date: Date) -> Bool {
-        guard !date.timeIntervalSinceReferenceDate.isNaN, !isNaNBounded else { return false }
-        return start <= date && date <= end
-    }
-
-    var isNaNBounded: Bool {
-        start.timeIntervalSinceReferenceDate.isNaN || end.timeIntervalSinceReferenceDate.isNaN
-    }
-}
+// `TimeSpan`은 `TaptionPlanCore/Domain/TimeSpan.swift`에 있다.
 
 // MARK: - Categories and templates
 

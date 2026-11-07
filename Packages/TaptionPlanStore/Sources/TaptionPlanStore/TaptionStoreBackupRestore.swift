@@ -4,10 +4,10 @@ import SQLite3
 /// 백업 복원·합치기의 마지막 단계. 엔진이 백업 파일을 준비 저장소(같은 표 구조의 다른 SQLite 파일)에 끝까지 풀고
 /// 검증한 뒤, 이 함수가 준비 파일의 행을 한 트랜잭션으로 이 저장소에 합친다.
 extension TaptionStoreV2 {
-    struct RestoreStagingResult: Equatable, Sendable {
-        var newReadings = 0
-        var readingConflicts = 0
-        var changedRecords = 0
+    public struct RestoreStagingResult: Equatable, Sendable {
+        public var newReadings = 0
+        public var readingConflicts = 0
+        public var changedRecords = 0
     }
 
     enum RestoreRecordFilter: Sendable {
@@ -186,22 +186,22 @@ extension TaptionStoreV2 {
 
 /// 복원 준비 파일의 자리·커밋·정리. `TaptionBackupEngine`이 직렬화된 작업 안에서만 부른다.
 /// 준비 파일은 본 저장소 옆 숨은 폴더(`.taption-restore-staging/<uuid>/staging.sqlite`)에 둬 같은 보호 등급을 받는다.
-enum TaptionRestoreStaging {
-    static let pendingMemoKey = "backup.restore.pendingMemos"
+public enum TaptionRestoreStaging {
+    public static let pendingMemoKey = "backup.restore.pendingMemos"
     static let memoKind = "memo"
     private static let fileName = "staging.sqlite"
 
-    struct Staging {
-        var directory: URL
-        var store: TaptionStoreV2
-        var file: URL { store.url }
+    public struct Staging {
+        public var directory: URL
+        public var store: TaptionStoreV2
+        public var file: URL { store.url }
     }
 
-    static func root(of store: TaptionStoreV2) -> URL {
+    public static func root(of store: TaptionStoreV2) -> URL {
         store.url.deletingLastPathComponent().appendingPathComponent(".taption-restore-staging", isDirectory: true)
     }
 
-    static func make(for store: TaptionStoreV2) throws -> Staging {
+    public static func make(for store: TaptionStoreV2) throws -> Staging {
         let directory = root(of: store).appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         do {
@@ -218,7 +218,7 @@ enum TaptionRestoreStaging {
     /// 커밋 지점은 본 저장소의 한 트랜잭션이다. 메모 저장소가 있으면 "메모 남음" 표시를 그 트랜잭션에 함께 남기고,
     /// 커밋 뒤 메모를 합친 다음 표시를 지운다. 커밋 전에 실패하면 준비 파일을 지우고, 메모 단계에서 실패하면
     /// 표시와 준비 파일이 남아 `recover`가 마저 한다.
-    static func commit(
+    public static func commit(
         _ staging: Staging, into store: TaptionStoreV2, memoStore: TaptionStoreV2?, rejectConflicts: Bool,
         meta: [String: String]
     ) async throws -> TaptionStoreV2.RestoreStagingResult {
@@ -244,7 +244,7 @@ enum TaptionRestoreStaging {
 
     /// 커밋 뒤 끝내지 못한 메모 합치기를 마저 하고(멱등), 그 밖의 남은 준비 파일을 지운다.
     /// 실패하면 표시와 그 준비 파일을 남겨 다음 작업이 다시 한다.
-    static func recover(store: TaptionStoreV2, memoStore: TaptionStoreV2?) async {
+    public static func recover(store: TaptionStoreV2, memoStore: TaptionStoreV2?) async {
         let root = root(of: store)
         var keep: String?
         if let pending = try? await store.meta(pendingMemoKey), !pending.isEmpty {

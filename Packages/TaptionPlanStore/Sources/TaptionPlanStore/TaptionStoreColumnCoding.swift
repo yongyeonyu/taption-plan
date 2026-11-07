@@ -1,4 +1,129 @@
 import Foundation
+import TaptionPlanCore
+
+/// `SensorReading`을 열이 나뉜 행으로 바꾸고 되돌린다. 합성 Codable의 JSON 키(=필드 이름)를 이용한다.
+public enum TaptionReadingRowCodec {
+    public enum Kind: Sendable {
+        case text, real, int, bool
+    }
+
+    public struct Column: Sendable {
+        public let name: String
+        /// JSON 경로. `point.latitude`처럼 한 단계 안쪽 키를 쓸 수 있다.
+        public let path: String
+        public let kind: Kind
+
+        public init(name: String, path: String, kind: Kind) {
+            self.name = name
+            self.path = path
+            self.kind = kind
+        }
+    }
+
+    public static let columns: [Column] = [
+        Column(name: "lat", path: "point.latitude", kind: .real),
+        Column(name: "lon", path: "point.longitude", kind: .real),
+        Column(name: "alt", path: "point.altitude", kind: .real),
+        Column(name: "h_acc", path: "point.horizontalAccuracy", kind: .real),
+        Column(name: "v_acc", path: "point.verticalAccuracy", kind: .real),
+        Column(name: "fix_quality", path: "locationFixQuality", kind: .text),
+        Column(name: "speed_mps", path: "speedMetersPerSecond", kind: .real),
+        Column(name: "speed_acc_mps", path: "speedAccuracyMetersPerSecond", kind: .real),
+        Column(name: "course_deg", path: "courseDegrees", kind: .real),
+        Column(name: "course_acc_deg", path: "courseAccuracyDegrees", kind: .real),
+        Column(name: "motion", path: "motion", kind: .text),
+        Column(name: "motion_conf", path: "motionConfidence", kind: .text),
+        Column(name: "gps_available", path: "gpsAvailable", kind: .bool),
+        Column(name: "source_device", path: "sourceDevice", kind: .text),
+        Column(name: "tracking_session_id", path: "trackingSessionID", kind: .text),
+        Column(name: "tracking_kind", path: "trackingKind", kind: .text),
+        Column(name: "tracking_auto", path: "trackingWasAutomaticallyDetected", kind: .bool),
+        Column(name: "session_ended", path: "trackingSessionEnded", kind: .bool),
+        Column(name: "seq", path: "sequence", kind: .int),
+        Column(name: "nearby_station", path: "nearbyStation", kind: .bool),
+        Column(name: "station_name", path: "nearbyStationName", kind: .text),
+        Column(name: "matches_rail", path: "matchesRailRoute", kind: .bool),
+        Column(name: "power_state", path: "powerState", kind: .text),
+        Column(name: "screen_on", path: "screenIsOn", kind: .bool),
+        Column(name: "behavior", path: "behavior", kind: .text),
+        Column(name: "step_count", path: "stepCount", kind: .int),
+        Column(name: "rel_alt_m", path: "relativeAltitudeMeters", kind: .real),
+        Column(name: "pressure_kpa", path: "pressureKilopascals", kind: .real),
+        Column(name: "dm_n", path: "deviceMotionSummary.sampleCount", kind: .int),
+        Column(name: "dm_acc_mean_g", path: "deviceMotionSummary.meanUserAccelerationG", kind: .real),
+        Column(name: "dm_acc_std_g", path: "deviceMotionSummary.userAccelerationStandardDeviationG", kind: .real),
+        Column(name: "dm_acc_peak_g", path: "deviceMotionSummary.peakUserAccelerationG", kind: .real),
+        Column(name: "dm_rot_mean", path: "deviceMotionSummary.meanRotationRateRadiansPerSecond", kind: .real),
+        Column(name: "dm_rot_std", path: "deviceMotionSummary.rotationRateStandardDeviationRadiansPerSecond", kind: .real),
+        Column(name: "dm_rot_peak", path: "deviceMotionSummary.peakRotationRateRadiansPerSecond", kind: .real),
+        // 항상 들어 있는 불리언은 열로 두면 값 없이 헤더 1바이트만 쓴다(JSON이면 행마다 20바이트 남짓).
+        Column(name: "matches_transit", path: "matchesPublicTransitRoute", kind: .bool),
+        Column(name: "frequent_stops", path: "frequentStops", kind: .bool),
+        Column(name: "ride_hailing", path: "rideHailingHint", kind: .bool),
+        Column(name: "near_airport", path: "nearAirport", kind: .bool),
+        Column(name: "near_port", path: "nearPort", kind: .bool),
+        Column(name: "on_water", path: "onWater", kind: .bool),
+        Column(name: "floors_up", path: "floorsAscended", kind: .int),
+        Column(name: "floors_down", path: "floorsDescended", kind: .int),
+        Column(name: "walk_dist_m", path: "walkingRunningDistanceMeters", kind: .real),
+        Column(name: "pace_s_per_m", path: "currentPaceSecondsPerMeter", kind: .real),
+        Column(name: "cadence_hz", path: "currentCadenceStepsPerSecond", kind: .real),
+        Column(name: "system_floor", path: "systemFloor", kind: .int),
+        Column(name: "screen_brightness", path: "screenBrightness", kind: .real),
+        Column(name: "wifi_ssid", path: "connectedWiFiSSID", kind: .text),
+        Column(name: "behavior_conf", path: "behaviorConfidenceScore", kind: .real),
+        Column(name: "watch_workout", path: "watchWorkoutKind", kind: .text),
+        Column(name: "watch_acc_x", path: "watchAccelerationAverageG.x", kind: .real),
+        Column(name: "watch_acc_y", path: "watchAccelerationAverageG.y", kind: .real),
+        Column(name: "watch_acc_z", path: "watchAccelerationAverageG.z", kind: .real),
+        Column(name: "watch_acc_std", path: "watchAccelerationStandardDeviationG", kind: .real),
+        Column(name: "watch_jerk", path: "watchAccelerationMeanJerkGPerSecond", kind: .real),
+    ]
+
+    public enum Value: Equatable, Sendable {
+        case null
+        case int(Int64)
+        case real(Double)
+        case text(String)
+        case blob(Data)
+    }
+
+    public struct Row: Equatable, Sendable {
+        public var id: String
+        public var timestamp: Double
+        public var day: Int
+        public var values: [Value]
+        public var extra: String?
+
+        public init(id: String, timestamp: Double, day: Int, values: [Value], extra: String?) {
+            self.id = id
+            self.timestamp = timestamp
+            self.day = day
+            self.values = values
+            self.extra = extra
+        }
+    }
+
+    /// UUID 문자열을 16바이트로. 문자열(36자)보다 행마다 20바이트가 줄고 색인도 작아진다.
+    public static func uuidData(_ string: String) -> Data? {
+        guard let uuid = UUID(uuidString: string) else { return nil }
+        return withUnsafeBytes(of: uuid.uuid) { Data($0) }
+    }
+
+    public static func uuidString(from data: Data) -> String? {
+        guard data.count == 16 else { return nil }
+        let uuid = data.withUnsafeBytes { $0.loadUnaligned(as: uuid_t.self) }
+        return UUID(uuid: uuid).uuidString
+    }
+
+    public static func dayNumber(for date: Date, calendar: Calendar) -> Int {
+        let parts = calendar.dateComponents([.year, .month, .day], from: date)
+        return (parts.year ?? 0) * 10_000 + (parts.month ?? 0) * 100 + (parts.day ?? 0)
+    }
+
+    // 행 ↔ 모델 변환(`row(for:)`·`reading(from:)`)과 내용 비교(`sameStoredContent`)는 아래에 있다.
+    // 열 ↔ 값 변환(`take`·`convert`)은 `TaptionStoreQuality.swift`에 있다. 열 강등을 거기서 센다. 읽기는 사전을 거치지 않는다.
+}
 
 /// `SensorReading` ↔ 열 사이를 **JSON을 거치지 않고** 잇는다.
 ///
@@ -600,12 +725,12 @@ extension TaptionReadingRowCodec {
     )
 
     /// 열 하나의 경로 조각. `columns`에 없는 열(테스트가 직접 만든 열)은 그때 쪼갠다.
-    static func parts(of column: Column) -> [String] {
+    public static func parts(of column: Column) -> [String] {
         columnPartsByName[column.name] ?? column.path.split(separator: ".").map(String.init)
     }
 
     /// `SensorReading` → 저장할 행. JSON을 거치지 않고 같은 모양의 사전을 만든 뒤 열로 펼친다.
-    static func row(for reading: SensorReading, calendar: Calendar) throws -> Row {
+    public static func row(for reading: SensorReading, calendar: Calendar) throws -> Row {
         var object = try TaptionColumnObjectCoder.object(from: reading)
         guard let id = object["id"] as? String, uuidData(id) != nil,
               let timestamp = TaptionObjectPrimitive.double(object["timestamp"]) else {
@@ -633,7 +758,7 @@ extension TaptionReadingRowCodec {
     }
 
     /// 저장된 행 → `SensorReading`. 사전을 만들지 않고 행의 열 값에서 바로 모델을 채운다.
-    static func reading(from row: Row) throws -> SensorReading {
+    public static func reading(from row: Row) throws -> SensorReading {
         var extra: [String: Any] = [:]
         if let text = row.extra {
             guard let parsed = try JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any] else {
@@ -931,7 +1056,7 @@ extension TaptionReadingRowCodec {
     /// 같은 텍스트를 `Double(_:)`로 읽으면 정확히 복원되므로 손실은 파서 한 곳에서만 생겼다.
     /// 지금은 그 단계가 없어 값이 정확하다.
     /// 그래서 실수는 상대오차 `storedRealTolerance`까지 같은 값으로 본다. 그보다 크면 예전처럼 충돌이다.
-    static func sameStoredContent(_ lhs: SensorReading, _ rhs: SensorReading) -> Bool {
+    public static func sameStoredContent(_ lhs: SensorReading, _ rhs: SensorReading) -> Bool {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
         guard let left = try? row(for: lhs, calendar: calendar),
@@ -951,7 +1076,7 @@ extension TaptionReadingRowCodec {
         return true
     }
 
-    static func sameReal(_ lhs: Double, _ rhs: Double) -> Bool {
+    public static func sameReal(_ lhs: Double, _ rhs: Double) -> Bool {
         if lhs == rhs { return true }
         guard lhs.isFinite, rhs.isFinite else { return false }
         return abs(lhs - rhs) <= max(abs(lhs), abs(rhs)) * storedRealTolerance

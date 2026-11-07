@@ -1,6 +1,6 @@
 import Foundation
 import SQLite3
-import TaptionPlanStore
+import TaptionPlanCore
 
 // MARK: - 열 매핑 (동결 파일에서 옮겨 왔다)
 
@@ -8,12 +8,12 @@ import TaptionPlanStore
 extension TaptionReadingRowCodec {
     /// 값의 형태가 열과 맞을 때만 열로 옮기고, 맞지 않으면 `extra`에 그대로 둔다.
     /// 키가 아예 없으면 정상적인 빈 값이므로 세지 않는다. 키는 있는데 형태가 다르면 G1로 센다.
-    static func take(_ column: Column, from object: inout [String: Any]) -> Value {
+    public static func take(_ column: Column, from object: inout [String: Any]) -> Value {
         take(column, parts: parts(of: column), from: &object)
     }
 
     /// 경로를 이미 쪼갠 상태로 부르는 형태. 경로 문자열은 고정이므로 행마다 `split`하지 않는다.
-    static func take(_ column: Column, parts: [String], from object: inout [String: Any]) -> Value {
+    public static func take(_ column: Column, parts: [String], from object: inout [String: Any]) -> Value {
         if parts.count == 2 {
             guard var inner = object[parts[0]] as? [String: Any], let raw = inner[parts[1]] else { return .null }
             guard let value = convert(raw, kind: column.kind) else {
@@ -33,7 +33,7 @@ extension TaptionReadingRowCodec {
         return value
     }
 
-    static func convert(_ raw: Any, kind: Kind) -> Value? {
+    public static func convert(_ raw: Any, kind: Kind) -> Value? {
         switch kind {
         case .text:
             guard let text = raw as? String else { return nil }
@@ -54,11 +54,11 @@ extension TaptionReadingRowCodec {
 // MARK: - day 불일치 점검
 
 extension TaptionStoreV2 {
-    struct DayDrift: Equatable, Sendable {
-        var days = 0
-        var rows = 0
+    public struct DayDrift: Equatable, Sendable {
+        public var days = 0
+        public var rows = 0
 
-        var isClean: Bool { days == 0 }
+        public var isClean: Bool { days == 0 }
     }
 
     /// 저장된 `day`가 지금 달력 기준 날짜와 다른 날을 센다.
@@ -68,7 +68,7 @@ extension TaptionStoreV2 {
     /// `day`로 묶는 쪽(백업 날짜 범위)은 어긋난다.
     ///
     /// 하루에 한 행만 읽으므로 비용은 날짜 수에 비례한다. 호출은 사용자가 진단을 요청할 때만 한다.
-    func dayDrift() throws -> DayDrift {
+    public func dayDrift() throws -> DayDrift {
         let db = try handle()
         let statement = try prepare(db, "SELECT day, COUNT(*), MIN(ts), MAX(ts) FROM readings GROUP BY day")
         defer { sqlite3_finalize(statement) }

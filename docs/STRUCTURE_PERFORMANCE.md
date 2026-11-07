@@ -77,6 +77,16 @@
 - 문제: 800바이트 값이라 배열 필터·정렬에서 큰 복사가 일어난다.
 - 변경: 안쪽 저장을 참조 박스로 옮기는 COW로 바꾼다. 필드 이름·`TSR1` 순서·Codable 키는 그대로 둔다.
 - 효과: 「적용 결과」의 `sort.readings` 수치를 보고 판단한다. 읽기마다 간접 참조가 늘어 오히려 느려질 수 있어 측정 없이 넣지 않는다.
+- 측정(2026-11-08, RFA1102A01): `SensorReading`이 `TaptionPlanCore`로 옮겨진 뒤 그 선언을 그대로 컴파일해 macOS(Apple M5, `-O -wmo`, 부하 load 80~110)에서 쟀다. 각 200회 중 최솟값. 「박스」는 값 전체를 `final class` 하나에 담은 비교용 형태다.
+
+  | 행 수 | 정렬(값) | 정렬(박스) | 필터(값) | 필터(박스) | 필드 합산(값) | 필드 합산(박스) |
+  | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+  | 1,440 | 7.08ms | 0.21ms | 0.075ms | 0.008ms | 0.001ms | 0.002ms |
+  | 30,000 | 152.7ms | 10.2ms | 2.41ms | 0.26ms | 0.036ms | 0.068ms |
+
+  `MemoryLayout<SensorReading>.size`는 800바이트다. 정렬·필터는 박스가 10~33배 빠르고, 필드를 하나씩 읽는 순회는 박스가 약 2배 느리다. 자료·측정 코드: `build/validation/RFA1102A01/phase2/sensor-reading-bench/`.
+- 아직 넣지 않은 이유: (1) 지금 저장 속성 60개를 그대로 둔 내부 값(`Fields`)과 `final class` 저장소를 두고, 접근자 60개를 손으로 써야 한다. (2) 쓰기 전 유일 참조 확인(`isKnownUniquelyReferenced`)을 하려면 `@unchecked Sendable`이 하나 늘어 구조 게이트(`unchecked_sendable`)가 실패한다. 불변 저장소로 하면 필드를 쓸 때마다 할당이 생긴다. (3) 필드 읽기가 많은 분류 경로(`TravelModeClassifier` 등)가 느려지는지 앱 수준에서 재야 한다. 위 수치는 그 판단의 근거일 뿐 앱 전체 효과가 아니다.
+- 넣을 때의 설계: `Codable`은 `Fields`의 합성 구현에 그대로 맡겨 JSON 키·열 코덱·백업 바이트가 바뀌지 않게 한다(`DomainRecordCompatibilityTests.sensorReadingStoredBytesAreUnchanged`가 JSON 두 건·TSR2 두 건을 고정한다). `==`·`hash(into:)`는 `Fields` 값으로 한다.
 
 ## 안 하기로 한 것
 

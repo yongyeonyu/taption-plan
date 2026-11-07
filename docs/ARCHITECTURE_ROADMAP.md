@@ -16,7 +16,7 @@
 | 가장 큰 파일 | 21,998줄 | 2,988줄 (`RecordSummaryEngine.swift`) | ≤ 1,200줄 | 파일 하나를 열면 컨텍스트를 다 잃는다 |
 | 가장 큰 타입 | 13,535줄 | 2,162줄 (`extension ReviewView`) | ≤ 1,500줄 | 타입 하나가 8개 도메인의 상태를 들고 있다 |
 | UI/UX → 엔진 직접 의존 | 0곳 (1 → 0) | 0곳 | 0곳 | **달성** — 뷰는 이제 엔진을 모른다. 경계 스크립트가 지킨다 |
-| 도메인 모델 위치 | 앱 타깃 (`internal`) | 앱 타깃 | `TaptionPlanCore` (`public`) | 지금은 패키지가 도메인을 못 봐서 어댑터가 번역만 한다 |
+| 도메인 모델 위치 | 앱 타깃 (`internal`) | 6개 중 5개 `TaptionPlanCore` (`TaptionDataSnapshot` 남음) | `TaptionPlanCore` (`public`) | 지금은 패키지가 도메인을 못 봐서 어댑터가 번역만 한다 |
 | 어댑터 줄 수 | 2,385줄 | 2,391줄 | ≤ 600줄 | 위 항목의 직접 비용 |
 | Swift 6 탈출구 | 70곳 | 76곳 (22 · 11 · 34 · 2 · 7) | 0곳 | `@unchecked Sendable` 25 · `nonisolated(unsafe)` 10 · `Task.detached` 29 · `fatalError` 1 · `DispatchQueue.main` 5 |
 | 테스트 파일 최대 | 29,456줄 (756개) | 6,536줄 (`TimeScaleTests.swift`) | ≤ 3,000줄 | 실패 하나가 어느 경계의 문제인지 안 보인다 |
@@ -287,7 +287,7 @@ return await Task.detached(priority: .userInitiated) {
 
 ### ADR-001: 도메인 모델을 `TaptionPlanCore`로 올린다
 
-**상태** 제안
+**상태** 채택 · 진행 중 (2026-11-08, `TaptionDataSnapshot` 남음 — Phase 2 절 참고)
 
 **맥락**
 F1. 공용어(`PlanRecord`, `ActualRecord`, `TimeSpan`, `ActivityCorrection`,
@@ -440,7 +440,7 @@ V2의 쓰기 API에 `@available(*, deprecated)`를 붙이고, 새 호출이 생�
 |---|---|---|
 | 1 | Phase 0 (완료) + Phase 1 (이음새 자르기) | 동작 불변. UX 작업의 안전망을 먼저 깐다 |
 | 2 | UX 마이그레이션 0a → 0b → 1 → 2 → 3 | `docs/UX_ARCHITECTURE.md` §6 |
-| 3 | **Phase 2 (도메인 승격)** | UX가 `Day` 기준으로 호출부를 정리한 **뒤에** 한다. 그때는 49개 파일이 이미 줄어 있다 |
+| 3 | **Phase 2 (도메인 승격)** | UX가 `Day` 기준으로 호출부를 정리한 **뒤에** 한다. 그때는 49개 파일이 이미 줄어 있다. **2026-11-08 대표 결정으로 앞당겨 시작했다(Phase 2 절의 상태 참고)** |
 | 4 | Phase 3 → 4 → 5 | Phase 2의 결과에 의존 |
 
 **Phase 1은 지금 해도 된다.** 파일 이동만 하므로 UX 작업과 충돌하지 않고, 오히려
@@ -494,11 +494,33 @@ V2의 쓰기 API에 `@available(*, deprecated)`를 붙이고, 새 호출이 생�
 같은 파일 안에서만 쓰인다는 뜻이므로, 옮길 때 `internal`로 넓히거나 그대로 둘 곳을 정해야 한다.
 **이 판단이 이 단계의 유일한 설계 결정이다.**
 
-### Phase 2 — 도메인 모델 승격 (ADR-001) — **보류, UX 마이그레이션 뒤로**
+### Phase 2 — 도메인 모델 승격 (ADR-001) — **진행 중 (2026-11-08 대표 결정으로 시작)**
 
-> **상태: 시작하지 않는다.** 위 "실행 순서 정정"을 참고. UX 마이그레이션이 `Day` 기준으로
-> 호출부를 정리하기 전에 이 단계를 시작하면, 같은 파일을 두 작업이 동시에 다시 쓰게 된다.
-> 이 절은 **무엇을 할지의 명세**로만 유지하고, **언제**는 UX 쪽이 정한다.
+> **상태 (2026-11-08, RFA1102A01).** 대표가 UX 마이그레이션을 기다리지 않고 시작하기로 정했다.
+> 6개 중 5개를 옮겼고 `TaptionDataSnapshot`만 남았다. 타입마다 커밋 하나, 커밋마다 옮기기 전
+> 선언으로 만든 JSON(저장소 설정 `secondsSince1970`·`sortedKeys`)을 그대로 읽고 다시 쓰는 시험을
+> `Packages/TaptionPlanCore/Tests/TaptionPlanCoreTests/DomainRecordCompatibilityTests.swift`에 붙였다.
+> 옮긴 타입은 `Packages/TaptionPlanCore/Sources/TaptionPlanCore/Domain/`에 있고, 앱은
+> `FeatureModels.swift`의 `@_exported import TaptionPlanCore` 한 줄로 그대로 본다.
+>
+> | 커밋 순서 | 옮긴 타입 | 함께 옮긴 값 타입 |
+> |---|---|---|
+> | 1 | `TimeSpan` | — |
+> | 2 | `ActivityCorrection` | — |
+> | 3 | `ActualRecord` | `ActualSource` · `ConfidenceLevel` · `ActualLockReason` |
+> | 4 | `PlanRecord` | `PlanStatus` · `PlanOrigin` · `GoalRepeatRule` |
+> | 5 | `GeoPoint` (선행) | — |
+> | 6 | `TravelSegment` | `TravelMode` · `SubwayRouteStop` · `SubwayRoutePath` |
+> | 7 | `SensorReading` (저장소 이동의 선행) | `MotionKind` · `TrackingKind` · `TrackingDevice` · `DevicePowerState` · `LocationFixQuality` · `SensorVector3` · `DeviceMotionSnapshot` · `DeviceMotionSummary`, TSR2 이진 형식 |
+>
+> **남은 것: `TaptionDataSnapshot`.** 저장 속성이 가리키는 타입을 따라가면 52개 타입·약 2,400줄
+> (`AppFeatureSettings` 523줄, `FrequentPlace` 413줄, 장소·메모·날씨·층·리뷰 보관본 등)이 함께
+> 와야 한다. 표시·현지화 코드가 섞인 타입이 많아 한 커밋으로 옮길 수 없고, 묶음별로 나눠야 한다.
+> `PlanDataRepository`(RFA1102A01 6번의 나머지)가 이 타입에 묶여 있어 같이 남았다.
+>
+> 지킨 규칙: 직접 쓴 `init(from:)`·`encode(to:)`는 한 글자도 바꾸지 않았다. 합성 memberwise
+> init을 쓰던 타입에는 같은 인자 순서·기본값의 `public init`을 두었다. 표시용 확장(아이콘·제목·
+> 타임라인 의미)은 앱에 남겼다.
 
 **범위** `FeatureModels.swift`(4,661줄)에서 가장 많이 쓰이는 6개 타입
 (`TimeSpan`, `PlanRecord`, `ActualRecord`, `TravelSegment`, `ActivityCorrection`,
