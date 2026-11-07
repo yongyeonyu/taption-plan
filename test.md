@@ -1754,3 +1754,7 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
 ## TFB1107A05 · 빌드 295 내부 TestFlight (2026-11-07)
 - 포함: NTF1107A01(센서 수신 때 뜨던 "센서 기록 확인" 알림 없애기).
 - 결과: `release.sh --yes --request-id TFB1107A05` 종료 0, 처리 `VALID`, `TP Taption Plan 내부 테스트` 그룹 연결, 테스터 1명 노출. 아카이브 네 번들 `CFBundleVersion` 295 확인. 보고서 `build/validation/TFB1107A05/testflight-report.json`.
+
+## TFB1107A06 · 빌드 296 내부 TestFlight (2026-11-07)
+- 포함: PRF1101A01(영상 렌더러 조회 자료 공유), RFT1107A01(거리 계산 사본 정리·재생 투영 파일 분리·낡은 지하철 시험 기대값).
+- 결과: `release.sh --yes --request-id TFB1107A06` 종료 0, 처리 `VALID`, `TP Taption Plan 내부 테스트` 그룹 연결, 테스터 1명 노출. 아카이브 네 번들 `CFBundleVersion` 296 확인. 보고서 `build/validation/TFB1107A06/testflight-report.json`.
