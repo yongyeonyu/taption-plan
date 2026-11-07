@@ -203,35 +203,15 @@ enum TaptionPlanBackgroundRefresh {
     }
 }
 
+/// 예전 빌드가 예약한 "센서 기록 확인" 알림을 지운다. 센서 수신은 알리지 않는다(NTF1107A01).
 enum SensorBackgroundWakeNotification {
     private static let identifier =
         "com.taption.plan.sensor-background-wake"
 
-    static func schedule(after delay: TimeInterval) async {
-        let content = UNMutableNotificationContent()
-        content.title = AppLanguagePreference.text(
-            korean: "센서 기록 확인",
-            english: "Sensor recording check"
-        )
-        content.body = AppLanguagePreference.text(
-            korean: "iOS가 허용하는 다음 실행에서 센서 기록을 이어갑니다.",
-            english: "Sensor recording resumes at the next opportunity allowed by iOS."
-        )
-        let request = UNNotificationRequest(
-            identifier: identifier,
-            content: content,
-            trigger: UNTimeIntervalNotificationTrigger(
-                timeInterval: max(60, delay),
-                repeats: false
-            )
-        )
-        try? await UNUserNotificationCenter.current().add(request)
-    }
-
     static func cancel() {
-        UNUserNotificationCenter.current().removePendingNotificationRequests(
-            withIdentifiers: [identifier]
-        )
+        let center = UNUserNotificationCenter.current()
+        center.removePendingNotificationRequests(withIdentifiers: [identifier])
+        center.removeDeliveredNotifications(withIdentifiers: [identifier])
     }
 }
 

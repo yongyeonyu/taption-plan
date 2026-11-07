@@ -182,7 +182,6 @@ extension AppModel {
             applyAirPodsActivity(observation)
         }
         await resumeSensorCollectionAndRestoreTrackingIfNeeded()
-        await scheduleSensorWakeNotificationIfNeeded()
         foregroundRefreshTask?.cancel()
         foregroundRefreshTask = nil
         deferredVisibleRefreshTask?.cancel()
@@ -444,7 +443,6 @@ extension AppModel {
         )
         await persist()
         await reconcileSensorCollectionLiveActivity(isForeground: false)
-        await scheduleSensorWakeNotificationIfNeeded()
         // 새 오류가 서지 않았으면 성공이다. 앞서 남은 배너는 이번 작업의 실패가 아니다.
         succeeded = userFacingError == errorAtStart || userFacingError == nil
         Self.integrationLogger.notice(

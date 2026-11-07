@@ -2,6 +2,13 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## NTF1107A01 · 센서 수신 알림 없애기 (2026-11-07)
+
+- 원인: 백그라운드 새로고침·전환마다 "센서 기록 확인" 로컬 알림을 다시 예약해 앱 밖에서 주기적으로 떴다.
+- 수정: 예약 경로(`scheduleSensorWakeNotificationIfNeeded`, `SensorBackgroundWakeNotification.schedule`)를 지우고, 남은 예약·도착 알림은 앱이 앞으로 올 때 지운다.
+- 시뮬레이터(BOKKI-iPhone11) Debug 빌드 + `SensorBackgroundCoordinatorTests` 8개 통과. 로그 `build/validation/NTF1107A01/test.log`.
+- 남은 것: 실기기 백그라운드 이동 중 알림 없음은 아직 확인하지 않았다(대표 확인).
+
 ## BRK1106A01 · 회사 근무 중 휴식 판정 (2026-11-06)
 - 변경: `WorkBreakPattern`(새 파일)이 자동 `근무` 기록 안에서 화면 켜짐+손 떨림(가속 표준편차 ≥0.008g) 표본이 3분 이내 간격으로 5분 넘게, 손에 든 표본 2개 이상 이어지면 `휴식`(work)으로 잘라 낸다. 화면 꺼짐·모름, 걷기 등 이동, 충전, 책상에 평평히 둔 정지 표본은 구간을 끊는다. 첫 조각은 원래 id, 나머지는 안정 id. `StationaryContextActualEngine.records` 끝에서 적용.
 - 원본 재현(대표 iCloud 원본 11-05·11-06, 같은 규칙의 Python 재현, `replay-1106.txt`): 11-06 근무 10:22–17:04에 휴식 1건 12:55–13:04(9분). 11-05 근무 12:30–17:53에 3건(12:30–12:44, 16:40–16:55, 16:58–17:05). 앱 안 재계산 결과는 아직 보지 않았다.

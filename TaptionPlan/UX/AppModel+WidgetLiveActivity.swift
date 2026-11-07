@@ -114,18 +114,6 @@ extension AppModel {
         return kinds
     }
 
-    func scheduleSensorWakeNotificationIfNeeded() async {
-        guard settings.notificationsEnabled,
-              permissionState(for: .notifications).isGranted,
-              sensorCollectionSessionState == .collecting else {
-            SensorBackgroundWakeNotification.cancel()
-            return
-        }
-        await SensorBackgroundWakeNotification.schedule(
-            after: SensorBackgroundRefreshPolicy.savedDelay()
-        )
-    }
-
     func setWidgetPhotosVisible(_ visible: Bool) {
         snapshot.settings.showsPhotosInWidgets =
             visible && permissionState(for: .photos).isGranted
