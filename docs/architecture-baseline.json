@@ -34,7 +34,6 @@
     "TaptionPlan/Core/RecordSummaryEngine.swift": 2988,
     "TaptionPlan/Core/RouteTimelineData.swift": 2753,
     "TaptionPlan/Core/TaptionActivityEngineAdapter.swift": 1871,
-    "TaptionPlan/Core/TaptionStoreV2.swift": 1293,
     "TaptionPlan/Core/TravelModeClassifier.swift": 1367,
     "TaptionPlan/Core/WidgetShared.swift": 1977,
     "TaptionPlan/UI/AddPlanSheet.swift": 2128,
@@ -192,7 +191,7 @@
       "lines": 1196
     },
     {
-      "path": "TaptionPlan/Core/TaptionStoreV2.swift",
+      "path": "Packages/TaptionPlanStore/Sources/TaptionPlanStore/TaptionStoreV2.swift",
       "type": "actor TaptionStoreV2",
       "lines": 1164
     }
