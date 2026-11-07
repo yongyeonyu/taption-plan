@@ -31,31 +31,35 @@ enum LocationPauseRegionPolicy {
 
 extension AppleSensorCollector {
     func locationManagerDidPauseLocationUpdates(_ manager: CLLocationManager) {
+        locationUpdatesPausedBySystem = true
         guard isCollecting, manager.authorizationStatus == .authorizedAlways,
               CLLocationManager.isMonitoringAvailable(for: CLCircularRegion.self),
               let location = latestLocation else {
             TaptionPlanDiagnosticsLogger.shared.record("sensor_location_paused", fields: ["region": "false"])
             return
         }
-        startPauseRegion(manager, at: location)
+        startPauseRegion(manager, at: location, trigger: "pause")
         TaptionPlanDiagnosticsLogger.shared.record("sensor_location_paused", fields: ["region": "true"])
     }
 
-    /// 머문 자리에 영역을 미리 건다. 포그라운드 실시간 추적 중에는 위치가 계속 오므로 걸지 않는다.
+    /// 실제로 머문 뒤에만 그 자리에 영역을 미리 건다(`StayRegionArmingPolicy`).
+    /// 포그라운드 실시간 추적 중에는 위치가 계속 오므로 걸지 않는다.
     func armStayRegionIfNeeded(_ manager: CLLocationManager, at location: CLLocation) {
         guard isCollecting, !isForegroundLiveLocationTrackingEnabled,
               manager.authorizationStatus == .authorizedAlways,
-              CLLocationManager.isMonitoringAvailable(for: CLCircularRegion.self) else { return }
+              CLLocationManager.isMonitoringAvailable(for: CLCircularRegion.self),
+              let center = stayRegionArming.observe(location, motionIsStationary: latestMotion == .stationary)
+        else { return }
         let existing = manager.monitoredRegions
             .first { $0.identifier == LocationPauseRegionPolicy.identifier } as? CLCircularRegion
         let distance = existing.map {
-            location.distance(from: CLLocation(latitude: $0.center.latitude, longitude: $0.center.longitude))
+            center.distance(from: CLLocation(latitude: $0.center.latitude, longitude: $0.center.longitude))
         }
         guard LocationPauseRegionPolicy.needsNewRegion(distanceFromCenter: distance, radius: existing?.radius ?? 0) else { return }
-        startPauseRegion(manager, at: location)
+        startPauseRegion(manager, at: center, trigger: "stay")
     }
 
-    private func startPauseRegion(_ manager: CLLocationManager, at location: CLLocation) {
+    private func startPauseRegion(_ manager: CLLocationManager, at location: CLLocation, trigger: String) {
         let radius = min(
             manager.maximumRegionMonitoringDistance,
             LocationPauseRegionPolicy.radius(horizontalAccuracy: location.horizontalAccuracy)
@@ -64,10 +68,13 @@ extension AppleSensorCollector {
         region.notifyOnEntry = false
         region.notifyOnExit = true
         manager.startMonitoring(for: region)
-        TaptionPlanDiagnosticsLogger.shared.record("sensor_stay_region_armed", metrics: ["radius": radius])
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "sensor_stay_region_armed", fields: ["trigger": trigger], metrics: ["radius": radius]
+        )
     }
 
     func locationManagerDidResumeLocationUpdates(_ manager: CLLocationManager) {
+        locationUpdatesPausedBySystem = false
         stopLocationPauseRegion(manager)
         TaptionPlanDiagnosticsLogger.shared.record("sensor_location_resumed", fields: ["trigger": "system"])
     }
@@ -77,7 +84,7 @@ extension AppleSensorCollector {
         // 거리 필터 안쪽이어도 이번 위치는 남기도록 다시 시작한다.
         pendingStayRegionExitEmission = true
         manager.stopUpdatingLocation()
-        resumeLocationUpdates(manager, trigger: "region")
+        resumeLocationUpdates(manager, trigger: .region)
     }
 
     func locationManager(_ manager: CLLocationManager, monitoringDidFailFor region: CLRegion?, withError error: Error) {
@@ -86,20 +93,27 @@ extension AppleSensorCollector {
         TaptionPlanDiagnosticsLogger.shared.record("sensor_location_pause_region_failed", fields: [:])
     }
 
-    /// 큰 위치 변화·방문으로 깨어났을 때 멈춘 자리를 벗어났으면 영역 이벤트를 기다리지 않고 켠다.
+    /// 위치·방문으로 깨어났을 때 멈춘 자리를 벗어났으면 영역을 거두고, iOS가 멈춘 수집이면 다시 켠다.
     func resumeLocationUpdatesIfLeftPauseRegion(_ manager: CLLocationManager, location: CLLocation) {
         guard let region = manager.monitoredRegions
             .first(where: { $0.identifier == LocationPauseRegionPolicy.identifier }) as? CLCircularRegion else { return }
         let center = CLLocation(latitude: region.center.latitude, longitude: region.center.longitude)
         guard LocationPauseRegionPolicy.hasLeft(distanceMeters: location.distance(from: center), radius: region.radius) else { return }
-        resumeLocationUpdates(manager, trigger: "wake")
+        resumeLocationUpdates(manager, trigger: .wake)
     }
 
-    private func resumeLocationUpdates(_ manager: CLLocationManager, trigger: String) {
+    private func resumeLocationUpdates(_ manager: CLLocationManager, trigger: LocationPauseRegionPolicy.ResumeTrigger) {
         stopLocationPauseRegion(manager)
         guard isCollecting else { return }
+        guard LocationPauseRegionPolicy.restartsUpdates(
+            trigger: trigger, updatesPausedBySystem: locationUpdatesPausedBySystem
+        ) else {
+            TaptionPlanDiagnosticsLogger.shared.record("sensor_stay_region_left", fields: ["trigger": trigger.rawValue])
+            return
+        }
         manager.startUpdatingLocation()
-        TaptionPlanDiagnosticsLogger.shared.record("sensor_location_resumed", fields: ["trigger": trigger])
+        locationUpdatesPausedBySystem = false
+        TaptionPlanDiagnosticsLogger.shared.record("sensor_location_resumed", fields: ["trigger": trigger.rawValue])
     }
 
     private func stopLocationPauseRegion(_ manager: CLLocationManager) {

@@ -1,5 +1,6 @@
 import Foundation
 import TaptionPlanCore
+import UIKit
 
 extension AppModel {
     func refreshEnabledData(
@@ -431,6 +432,11 @@ extension AppModel {
         forceRawSync: Bool = false
     ) async {
         guard acceptsDataMutation(), !isHealthRefreshRunning else { return }
+        // 잠긴 기기에서는 HealthKit이 읽기를 거절한다. 실패를 만들지 않고 잠금이 풀린 뒤 다시 읽는다.
+        guard UIApplication.shared.isProtectedDataAvailable else {
+            deferHealthRefreshUntilUnlock(fields: ["stage": "before_read"])
+            return
+        }
         isHealthRefreshRunning = true
         defer { isHealthRefreshRunning = false }
         let span = requestedSpan ?? recentHealthSpan
@@ -590,10 +596,17 @@ extension AppModel {
                 ]) { _, new in new }
             )
         } catch {
+            if HealthRefreshErrorPolicy.isProtectedDataUnavailable(error) {
+                deferHealthRefreshUntilUnlock(
+                    fields: healthFields.merging(["stage": "read"]) { _, new in new }
+                        .merging(TaptionDiagnosticError.compactFields(for: error)) { _, new in new }
+                )
+                return
+            }
             Self.integrationLogger.error(
                 "HealthKit refresh failed: \(error.localizedDescription, privacy: .public)"
             )
-            if showErrors {
+            if HealthRefreshErrorPolicy.showsBanner(for: error, showErrors: showErrors) {
                 userFacingError = AppLanguagePreference.text(
                     korean: "건강 데이터를 읽지 못했습니다. \(error.localizedDescription)",
                     english: "Could not read Health data. \(error.localizedDescription)"
@@ -607,6 +620,28 @@ extension AppModel {
                 ) { _, new in new }
             )
         }
+    }
+
+    private func deferHealthRefreshUntilUnlock(fields: [String: String]) {
+        isHealthRefreshDeferredUntilUnlock = true
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "health_refresh_deferred",
+            level: .notice,
+            fields: fields.merging(["reason": "protected_data_unavailable"]) { _, new in new }
+        )
+    }
+
+    /// 잠금이 풀려 보호된 자료를 다시 읽을 수 있게 되면, 잠긴 동안 미룬 건강 갱신을 한 번 한다.
+    func retryDeferredHealthRefreshIfNeeded() async {
+        guard isHealthRefreshDeferredUntilUnlock, acceptsDataMutation(),
+              settings.healthEnabled else { return }
+        isHealthRefreshDeferredUntilUnlock = false
+        activeDataMutationCount += 1
+        defer { activeDataMutationCount -= 1 }
+        TaptionPlanDiagnosticsLogger.shared.record("health_refresh_retry_after_unlock")
+        await refreshHealthData(in: periodicHealthSpan, showErrors: false)
+        logAutomaticRecordSummary()
+        await persistDeviceLocalSnapshot()
     }
 
     func refreshAppUsageData(

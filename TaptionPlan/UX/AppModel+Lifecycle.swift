@@ -382,8 +382,8 @@ extension AppModel {
             logger.finishOperation(
                 operation,
                 outcome: Task.isCancelled ? "cancelled" : (succeeded ? "success" : "failure"),
-                fields: ["wake_reason": wakeReason.rawValue, "sensor_collecting": String(isSensorCollecting),
-                         "user_error": userFacingError.map { String($0.prefix(80)) } ?? "none"]
+                fields: ["wake_reason": wakeReason.rawValue, "sensor_collecting": String(isSensorCollecting)]
+                    .merging(BackgroundRefreshUserErrorDiagnostics.fields(atStart: errorAtStart, atEnd: userFacingError)) { _, new in new }
             )
         }
         Self.integrationLogger.notice("Background model refresh started")
