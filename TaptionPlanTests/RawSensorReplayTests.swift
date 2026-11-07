@@ -138,6 +138,49 @@ final class RawSensorReplayTests: XCTestCase {
         }
     }
 
+    /// 등록 장소로 식사를 다시 만들고 장소 우선 대분류 막대를 찍는다(MEAL1103A1·CLP1105A01).
+    /// 저장 기록만 쓴 막대와 식사를 넣은 막대를 함께 찍고, 사용자 기록은 그대로인지 확인한다.
+    func testDumpPlaceFirstRailWithRestaurantMeals() throws {
+        let environment = ProcessInfo.processInfo.environment
+        guard let path = environment["TAPTION_RAW_REPLAY"], let placesPath = environment["TAPTION_REPLAY_PLACES"] else {
+            throw XCTSkip("TAPTION_REPLAY_PLACES 없음")
+        }
+        let days = try JSONDecoder().decode([TodaySensorRawExport].self, from: Data(contentsOf: URL(fileURLWithPath: path)))
+        let places = try JSONDecoder().decode([FrequentPlace].self, from: Data(contentsOf: URL(fileURLWithPath: placesPath)))
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul") ?? .current
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MM-dd HH:mm"
+        formatter.timeZone = calendar.timeZone
+        func clock(_ minute: Int) -> String { String(format: "%02d:%02d", minute / 60, minute % 60) }
+        for day in days {
+            let start = calendar.startOfDay(for: day.day)
+            let end = start.addingTimeInterval(86_400)
+            let readings = day.readings.sorted { $0.timestamp < $1.timestamp }
+            let actuals = day.actuals ?? []
+            for stale in actuals where stale.source == .location && stale.categoryID != "eating"
+                && stale.evidence.contains(where: { $0.hasPrefix("자주가는 곳: 식당") }) {
+                print("REPLAY stale-restaurant \(formatter.string(from: stale.startedAt))–\(formatter.string(from: stale.endedAt ?? end)) \(stale.categoryID) \(stale.title) locked=\(stale.isClassificationLocked)")
+            }
+            let meals = RestaurantMealActualEngine.records(restaurants: places, readings: readings, inside: TimeSpan(start: start, end: end), asOf: end)
+            for meal in meals {
+                print("REPLAY meal \(formatter.string(from: meal.startedAt))–\(formatter.string(from: meal.endedAt ?? end)) conf=\(meal.confidence.rawValue)")
+            }
+            let carved = RestaurantMealActualEngine.carvingMeals(from: actuals + meals, asOf: end)
+            XCTAssertEqual(actuals.filter { ActualRecord.userOwned($0) }, carved.filter { ActualRecord.userOwned($0) }, "사용자 기록이 바뀌었다")
+            for (label, records) in [("stored", actuals), ("meals", carved)] {
+                let rail = MapHomePlaceFirstPolicy.apply(
+                    to: MapHomeTimeRailSegmentEngine.segments(from: records, travel: day.travel, on: start, asOf: end, calendar: calendar),
+                    stays: day.places ?? [], frequentPlaces: places, on: start, calendar: calendar
+                )
+                for segment in rail {
+                    print("REPLAY rail-\(label) \(formatter.string(from: start).prefix(5)) \(clock(segment.startMinute))–\(clock(segment.endMinute)) "
+                        + "\(segment.categoryID) \(segment.title) walk=\(segment.walkSpans.map { "\(clock($0.lowerBound))-\(clock($0.upperBound))" }.joined(separator: ","))")
+                }
+            }
+        }
+    }
+
     /// 등록 장소로 체류와 식사 후보를 다시 계산해 찍는다(PLY1103A01). `TAPTION_REPLAY_PLACES`는 등록 장소 JSON이다.
     func testDumpStaysWithFrequentPlaces() throws {
         let environment = ProcessInfo.processInfo.environment
