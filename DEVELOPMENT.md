@@ -11,11 +11,14 @@
 | 공통 캐시·입력 예산·UUID 순서 | `Packages/TaptionPlanCore/Sources/TaptionPlanCore/RuntimeEfficiency.swift` |
 | 지도 카메라·터치 정책 | `TaptionPlan/UI/MapHomeInteractionPolicy.swift` |
 | 지도·시간축·시간표 UI | `TaptionPlan/UI/MapHomeView.swift`, `MapHomeTimeSidebar.swift`, `MapHomeTimeSidebarHandleMath.swift`(손잡이 세로 위치), `MapHomeSectionDetailEngine.swift`(상세활동 목록), `ScheduleView.swift` |
-| 넓은 화면(폭 600pt 이상) 왼쪽 패널·두 열 배치 | `TaptionPlan/UI/MapHomeWideLayoutPolicy.swift`, 구성안은 `docs/IPAD_UI.md` |
+| 넓은 화면(폭 600pt 이상) 왼쪽 패널(메뉴·달력은 한 열 스크롤) | `TaptionPlan/UI/MapHomeWideLayoutPolicy.swift`, 구성안은 `docs/IPAD_UI.md` |
 | 집 아이콘의 위치 기준 하늘(해·달·노을) | `TaptionPlan/UI/MapHomeHomeSkyMath.swift`, `MapHomeHomeSkyArt.swift` |
 | 화랑이 장면·소품 | `TaptionPlan/UI/HwarangRig.swift`, `HwarangRigProps.swift`, `HwarangRigDailyScenes.swift`, `HwarangRigAccessories.swift` |
 | 지도 안개(세기 정책·벡터/Apple 지도 렌더러) | `TaptionPlan/UI/MapHomeFogLayer.swift` |
 | 지도 카운터 표·재생 끊김 보정·라이브액티비티 현재 활동 | `TaptionPlan/UI/MapHomeCounterTable.swift`, `MapHomePlaybackContinuity.swift`, `LiveActivityCurrentActivity.swift` |
+| 지하철 실제 선로 모양(OSM, ODbL) | `TaptionPlan/Core/SubwayTrackCatalog.swift`, `SubwayTrackData.swift`(생성물, 손으로 고치지 않음), 생성 `scripts/subway-tracks/build.py`, 출처 표기 `MapHomeSupportViews` |
+| 지도 검색(범위·등록 장소·역 찾기) | `TaptionPlan/UI/MapHomeSearchPolicy.swift`, `MapHomeView+Map.swift`의 `runMapSearch` |
+| 거리 계산 | `TaptionPlan/Core/FeatureModels.swift`의 `distanceMeters`(대원 거리)·`PlanarDistance`(수 km 판정용 평면 근사). 새 사본을 만들지 않습니다 |
 | 재생 사진 칸(호 배치·3초 확대)·재생 메모 알림·지도 사진 핀 | `TaptionPlan/UI/MapHomePhotoLayer.swift` |
 | 재생 영상 렌더·음악·기간 계획 | `TaptionPlan/UI/MapHomePlaybackVideoRenderer.swift`, `MapHomePlaybackVideoSheet.swift`, `MapHomePlaybackMusic.swift`, `MapHomeRangePlayback.swift`, 곡은 `TaptionPlan/Audio/PlaybackMusic/`(앱 target만) |
 | 구글 캘린더 직접 연결 | `TaptionPlan/Core/GoogleCalendarAccount.swift`, `TaptionPlan/UI/MapHomeTodayCalendar.swift`, `TaptionPlan/UX/AppModel+CalendarTitles.swift` |
@@ -25,7 +28,7 @@
 | 센서 레코드 직접 바이너리 저장·복원 | `TaptionPlan/Core/SensorReadingStorage.swift`, `Packages/TaptionPlanCore/Sources/TaptionPlanCore/CanonicalStorage.swift` |
 | 센서·HealthKit·Apple 연동 | `TaptionPlan/Core/SensorDataServices.swift`, `HealthKitImportCoordinator.swift`, `HealthKitImportStore.swift`, `AppleIntegrations.swift` |
 | 지하철 하루 판정 | `TaptionPlan/Core/RailJourneyRecognizer.swift`(역 → 역 사슬, 환승 뒤 구간), `RailRideLikelihood.swift`, `SubwayEvidenceGate.swift` |
-| 앱과 엔진 연결 | `TaptionPlan/Core/RouteTimelineData.swift`, `TaptionRouteEngineAdapter.swift`, `TaptionActivityEngineAdapter.swift` |
+| 앱과 엔진 연결 | `TaptionPlan/Core/RouteTimelineData.swift`, `MapHomeWBSPlayback.swift`(하루 재생 투영), `TaptionRouteEngineAdapter.swift`, `TaptionActivityEngineAdapter.swift` |
 | 공유 엔진 | `Packages/TaptionPlanCore/`, `Packages/TaptionActivityEngine/`, `Packages/TaptionRouteEngine/`, `Packages/TaptionClassifierEngine/`, `Packages/TaptionPlanEngine/`, `Packages/TaptionPlanStore/`, `Packages/TaptionWatchSync/` |
 | 분류 알고리즘(분류표 v4·키워드·창 특징·수단 점수·HMM·구간·장소·맥락·수면·파생 지표) | `Packages/TaptionClassifierEngine/`, 앱 쪽 어댑터는 `TaptionActivityEngineAdapter.swift`의 `ClassifierAdapter`·`ClassificationRecomputeCoordinator` |
 | Watch·위젯 | `TaptionPlanWatch/`, `TaptionPlanWidget/`(일정 위젯·`SensorCollectionLiveActivity`·`TaptionPlanLiveActivity`·고양이는 앱 아틀라스), `TaptionPlanWatchWidget/` |
@@ -103,7 +106,7 @@ GPS 경로는 낮은 정확도의 경계 표본도 시간·거리 검사를 거�
 
 지하철 발자국 규칙은 `MapHomeUnconfirmedPaws.plan`이 한곳에서 정합니다(MAP1106A01). 노선 좌표가 있는 지하철의 `rail` 예상·확정 경로는 역을 직선으로 이은 좌표라 노선 전체에 발자국을 찍지 않습니다. 회색은 GPS가 2분 넘게 끊긴 조각(`subwayGapPoints`)에만 찍고, 그 발자국에 예상 경로를 달아 변경·삭제 메뉴를 유지합니다. 탑승을 확정했거나 경로를 변경·삭제한 구간에는 회색을 그리지 않습니다. 실제 GPS 발자국 장부는 확정 여부와 관계없이 지하철 구간에도 남기되, 철도 구간에서는 오차 50m 이하이고 approximate가 아닌 위치만 받습니다. 이 규칙의 입력(계획·끊긴 조각 표본)은 발자국 메모 키에 들어갑니다.
 
-지도 하단 사진링은 가운데 사진을 2초(`MapHomePlaybackPhotoStrip.enlargedSeconds`, 재생 사진 줄과 같은 값) 크게 보여 줍니다. 지도를 탭하면(`handleMapTap`) 바로 줄고 지도는 그 탭을 그대로 처리합니다. 화면을 덮는 터치 층은 지도·단추 입력을 삼키므로 쓰지 않습니다.
+지도 하단 사진링은 가운데 사진을 2초(`MapHomePlaybackPhotoStrip.enlargedSeconds`, 재생 사진 줄과 같은 값) 크게 보여 줍니다. 지도를 탭하면(`handleMapTap`) 바로 줄고 지도는 그 탭을 그대로 처리합니다. 사진링 밖을 탭하면 접혀 집 아이콘 위 반달(`MapHomePhotoRingTab`, 위 화살표)이 되고, 반달을 누르면 다시 펼쳐집니다(`isPhotoRingFolded`, 사이드바 표시와 무관). 쓸어내려 접기는 없습니다. 화면을 덮는 터치 층은 지도·단추 입력을 삼키므로 쓰지 않습니다.
 
 발자국 표시 상한은 전체 220개입니다. 거리 간격 후보를 경로 끝까지 만든 뒤 전체 구간에 고르게 나누고, 경로별 표시 수를 순환 배정하여 앞선 긴 경로가 이후 경로를 지우지 않게 합니다. 한 개만 배정되면 마지막 좌표를 사용하고 경로 수가 상한을 넘으면 최근 시각의 경로부터 남깁니다. 예상·사용자 확정 추정 경로에는 먼저 최대 96개를 예약하고, 관측 경로의 남는 표시 수를 재사용합니다. 화면 발자국·지도 좌표 변환 마커·탭 판정은 같은 샘플 목록을 사용합니다. 지도 배율에 따른 한도 변경이나 원본 기록 삭제는 하지 않습니다.
 
@@ -131,6 +134,7 @@ HealthKit 운동 경로를 보완할 때는 기존 위치와 20초 시간 중복
 - 재생·시간축 선택의 마커와 카메라는 `MapHomePlaybackLocation`에서 같은 시각으로 조회합니다. 현재 frame(수면 포함)·지하철 노선·표시 중 예상 경로를 반영하고 나머지는 준비된 일자 GPS를 이진 탐색합니다. 시각 없는 위치 캐시·그리기용 경로 cutoff로 돌아가지 않으며 미래 첫 표본이나 다른 날짜 표본을 현재 선택 시각의 GPS로 사용하지 않습니다. 위치 조회마다 전체 센서 정렬·수면 anchor 계산을 반복하지 않습니다. 네 갈래가 모두 비어 화랑이가 사라지는 구간은 이동 구간의 출발·도착 장소 좌표를 시각 비율로 보간합니다(`resolveOrGap`, `MapHomePlaybackContinuity.swift`). 장소 좌표가 없으면 좌표를 지어내지 않고 표시하지 않습니다. **지하철은 확정 여부와 상관없이 노선 위에 올립니다**(`subwayCoordinate`) — `isConfirmed`는 "사용자가 모드를 직접 고쳤다"는 뜻이라 자동 분류 구간은 늘 false이고, 지하에는 GPS도 재생 프레임도 없어 확정 구간만 보면 화랑이가 그 구간에서 통째로 사라졌습니다.
 - 재생 배속은 이동 수단이 아니라 **대분류**로 정합니다(`MapHomePlaybackCategoryRanges`). 대분류 '이동'은 이동 배속(걷기는 3배), 수면·업무·식사·취미·운동·활동은 정지 배속입니다. 확정 여부와 센서 유무는 배속을 바꾸지 않으며, 미확인 이동도 이동 구간으로 재생합니다.
 - 지도 카운터는 재생 중에는 재생 시각까지로 잘라 세어(`MapHomeCounterTimelinePolicy`) 시간을 따라 올라갑니다. 하루 전체 합계는 1분 버킷으로 캐시(`MapHomeCounterValueCache`)해 30Hz 재생 틱마다 하루 phase를 다시 계산하지 않습니다. 표시 형태는 `MapHomeCounterTable`이 정합니다(1줄=알약, 2줄 이상=한 상자에 줄을 붙여 세로로 길어짐). 연봉도 **같은 상자의 마지막 줄**(머리에 가장 가까운 줄)로 넣습니다. 알약을 따로 띄우고 그 위에 표를 쌓으면 두 덩어리로 보이므로, 창은 하나만 세웁니다. 연봉이 들어가면 값이 `1,234,567원`까지 길어져 창 폭을 132→176pt로 넓힙니다.
+- 화랑이를 누르면 카운터 창이 보이고, 한 번 더 누르면 숨습니다(`toggleCounterFromCat`). 숨긴 자리에 화살표·접힌 아이콘을 두지 않습니다(CTR1107A01).
 - 카운터 창은 **스스로 박자**를 가집니다(`MapHomeCounterClock`). 오늘을 보고 있거나 재생 중이면 10초마다(`refreshSeconds`) 다시 그려, 진행 중인 업무·학습처럼 아직 끝나지 않은 기록이 분 단위로 올라갑니다. 예전에는 연봉 줄이 켜져 있을 때만 시계가 돌아, 연봉 카운터를 끄면 나머지 숫자가 멈춰 있었습니다(대표 지적). 값은 그릴 때마다 `asOf: now`로 세되 캐시가 1분 버킷으로 막고, 기록이 바뀌면(`dayProjectionRevision`) 버킷이 같아도 다시 셉니다. 지난 날은 값이 변하지 않으므로 시계를 돌리지 않습니다.
 - 잠금화면·다이나믹 아일랜드의 현재 활동 이름·아이콘은 앱 화면과 같은 시간 레일 엔진(`MapHomeTimeRailSegmentEngine`)에서 읽습니다. 잠금 상태이거나 그 시각에 미확인뿐이면 기존 '확인 중' 표시로 물러섭니다.
 - 클립 편집기(`MapHomeNLEClipEditor`)는 경계를 고르지 않은 클립에서도 다듬기로 받습니다. 대분류 경계는 `NLETrack.roll`로 **양쪽 끝을 함께** 밉니다(롤 편집). 한쪽이 늘어난 만큼 맞닿은 이웃이 줄고 빈 시간은 생기지 않으며, 클립은 자기 원본 구간을 넘어설 수 있습니다. 넘어선 시간은 `editRequests`가 그 시간을 소유한 이웃 구간의 `cover` 조각으로 실어 보내므로 원본 기록의 출처는 그대로 남습니다. 서브클립 줄은 자기 구간 안에서만 다듬습니다. 손잡이를 그릴 높이가 안 되는 짧은 클립(하루 전체 보기에서 1시간 남짓)은 자기 경계 대신 `shortClipBoundary`로 맞닿은 이웃의 경계를 넘겨받습니다 — 같은 경계라 어느 쪽에서 잡아도 결과가 같고, 이웃도 짧으면 집어 들기로 넘깁니다. 몸통은 0.4초를 누르고 있어야 집어 들고(`NLEReorderHoldPolicy`), 그 전에 18pt 넘게 움직이면 클립을 딸고 가지 않고 화면이 흐릅니다. 집어 든 클립은 그림자로 표시하고, 제자리에서 손을 떼면 되돌리기 흔적을 남기지 않습니다. 가장자리 자동 스크롤은 손가락이 닿은 깊이와 무관하게 60Hz 타이머로 360pt/s를 유지합니다. 같은 원본 구간 안에서 맞닿은 미확인 조각은 `NLETrack.normalized`가 하나로 합칩니다. 대분류 합치기는 `NLETrack.squeezedMergePair`가 정합니다. 이번 손짓으로 줄어든 쪽(이웃이든 잡은 클립이든)이 「현재 배율의 화면 18pt」와 「처음 길이의 4분의 1」 중 작은 기준 이하로 눌리면 다른 쪽에 붙일지 묻습니다. 끌고 있는 도중 기준에 닿으면 손을 떼지 않아도 묻고, 그 동안은 더 끌지 않습니다. 처음부터 1분인 클립은 줄어들 수 없으므로 손가락이 그 클립을 지나쳐 밀었을 때만 묻습니다(`fingerMinute`). 기록 없는 미확인 자리는 합치지 않습니다. 같은 분류·이름이라도 두 덩어리로 나뉘어 있으면 묻습니다(예전의 「같은 클립이면 묻지 않음」 규칙은 없습니다). 합치면 `mergeIntoDragged`가 남는 클립을 이웃 자리까지 늘리고 이웃을 지웁니다. 지운 이웃의 원본 구간은 `mergedAwayParents`로 저장 요청에 남아 기록이 빠지지 않습니다. 판정은 DEBUG 빌드의 `[NLEMerge]` 로그(기기에서는 `devicectl device process launch --console`)로 확인합니다.
@@ -142,6 +146,7 @@ HealthKit 운동 경로를 보완할 때는 기존 위치와 20초 시간 중복
 
 ## 판정 규칙
 
+- 센서 수신·백그라운드 깨어남은 알림을 보내지 않습니다(대표 지시, NTF1107A01). 예전 빌드가 예약한 「센서 기록 확인」 알림은 앱이 앞으로 올 때 `SensorBackgroundWakeNotification.cancel()`이 지웁니다. 일정·하루 카드 같은 다른 알림은 그대로입니다.
 - 등록 식당은 표본이 1시간까지 비어도 앞뒤가 반경 안이면 식사로 잇습니다(`RestaurantMealActualEngine.maximumSampleGap`). 실내에서 iOS가 위치를 멈추기 때문입니다. 관측 시간이 최소 길이보다 짧으면 신뢰도를 `.medium`으로 둡니다. 식사는 자동 업무·수업을 잘라 내고, 그보다 긴 공백은 잇지 않습니다.
 - 회의는 시간 레일에서 앞뒤 업무와 합치지 않습니다(`MapHomeTimeRailSegmentEngine.mergeKey`). 같은 대분류라고 합치면 앞 조각 제목만 남아 회의가 사라집니다.
 - 슬라이드바로 표본이 없는 시간을 고르면 `MapHomePlaybackLocation.restingLocation`이 자리를 정합니다. 수면이면 그 시간의 체류 → 집, 그날 첫 표본 전이면 첫 표본입니다.
@@ -154,9 +159,9 @@ HealthKit 운동 경로를 보완할 때는 기존 위치와 20초 시간 중복
 ## 구글 캘린더 연결
 
 - 프로젝트 `bokki-plan`, 범위 `calendar.readonly`, iOS 클라이언트 하나입니다. 일정은 기기 안에서만 쓰고, 연결 해제 때 토큰을 취소하고 구글 일정을 지웁니다.
-- 앱 게시 상태는 프로덕션이고 데이터 액세스 인증은 2026-11-04에 제출해 검토 중입니다(`temp.md` GOO1104A01). 승인 전에는 "확인되지 않은 앱" 경고와 사용자 100명 제한이 있습니다.
+- 앱 게시 상태는 프로덕션이고, 데이터 액세스 인증(`calendar.readonly`)은 2026-11-08에 승인됐습니다(GOO1104A01). 이제 "확인되지 않은 앱" 경고와 사용자 100명 제한이 없어야 하며, 실기기 확인이 남았습니다. 범위를 더하면 새로 인증해야 합니다.
 - 브랜딩·범위·게시 상태를 바꾸면 다시 인증이 필요합니다. 게시 상태를 오가면 심사가 늦어질 수 있습니다. 지원 메일은 구글 그룹, 담당자 연락처는 공식 지원 메일을 쓰고 **개인 메일을 넣지 않습니다**(대표 지시).
-- 시연 영상을 새로 찍으면 메일·집 주변 지도·하루 기록을 가립니다. 일부 공개 영상은 심사가 끝날 때까지 지우거나 비공개로 바꾸지 않습니다.
+- 시연 영상을 새로 찍으면 메일·집 주변 지도·하루 기록을 가립니다. 심사에 낸 일부 공개 영상은 다음 심사(범위·브랜딩 변경) 때 다시 쓸 수 있으니 지우기 전에 대표에게 묻습니다.
 
 ## 화면 규칙
 
@@ -271,6 +276,7 @@ xcodebuild test -project TaptionPlan.xcodeproj -scheme TaptionPlan \
 - `-debugViewportWidth` 값이 시뮬레이터 설정에 남을 수 있습니다. 넓은 화면 UI 시험은 매번 값을 줍니다.
 - 튜토리얼 UI 시험은 시험마다 새 시뮬레이터가 필요합니다. 같은 시뮬레이터에서 이어 돌리면 실패합니다.
 - watchOS 시뮬레이터 런타임이 없어 Watch 화면은 빌드로만 확인됩니다.
+- 지도의 지하철 선은 `SubwayTrackCatalog.following`으로 역 사이를 선로 모양으로 잇습니다. 시험 기대값을 역 좌표 수로 두면 틀립니다.
 - `cancellationCheck`에 실제 취소 검사를 넣으면 그 경로의 `preconditionFailure` 4곳이 앱 종료가 됩니다. 그때는 `throw`로 바꿉니다(REV1026A01).
 
 ## 문서
