@@ -102,4 +102,31 @@ struct DomainRecordCompatibilityTests {
         let encoded = String(decoding: try Self.storeEncoder.encode(decoded), as: UTF8.self)
         #expect(encoded == #"{"categoryID":"location","confidence":"high","createdAt":1762560000,"evidence":[],"id":"00000000-0000-0000-0000-000000000009","isClassificationLocked":true,"manuallyCorrected":false,"source":"location","startedAt":1762560000,"title":"집"}"#)
     }
+
+    @Test func planRecordStoredBytesAreUnchanged() throws {
+        let rule = GoalRepeatRule(id: Self.id(4), name: "아침", weekdays: [2], startMinuteOfDay: 420, endMinuteOfDay: 480)
+        let full = PlanRecord(
+            id: Self.id(1), title: "루틴:운동",
+            span: TimeSpan(start: Self.start, end: Self.start.addingTimeInterval(3_600)),
+            categoryID: "activity", middleCategoryName: "운동", subCategoryName: "달리기",
+            repeatRules: [rule], parentID: Self.id(2), status: .completed, origin: .repeatRule,
+            isFixed: true, isImportant: true, externalCalendarID: "cal", externalEventID: "evt",
+            createdAt: Self.start, updatedAt: Self.start.addingTimeInterval(60)
+        )
+        try Self.roundTrip(
+            PlanRecord.self,
+            stored: #"{"categoryID":"activity","createdAt":1762560000,"externalCalendarID":"cal","externalEventID":"evt","id":"00000000-0000-0000-0000-000000000001","isFixed":true,"isImportant":true,"middleCategoryName":"운동","origin":"repeatRule","parentID":"00000000-0000-0000-0000-000000000002","repeatRules":[{"endMinuteOfDay":480,"id":"00000000-0000-0000-0000-000000000004","name":"아침","startMinuteOfDay":420,"weekdays":[2]}],"span":{"end":1762563600,"start":1762560000},"status":"completed","subCategoryName":"달리기","title":"루틴:운동","updatedAt":1762560060}"#,
+            expected: full
+        )
+        // 빈 반복 규칙은 저장하지 않는다(nil로 접는다).
+        let plain = PlanRecord(
+            id: Self.id(3), title: "회의", span: TimeSpan(start: Self.start, end: Self.start),
+            categoryID: "work", repeatRules: [], createdAt: Self.start, updatedAt: Self.start
+        )
+        try Self.roundTrip(
+            PlanRecord.self,
+            stored: #"{"categoryID":"work","createdAt":1762560000,"id":"00000000-0000-0000-0000-000000000003","isFixed":false,"isImportant":false,"origin":"user","span":{"end":1762560000,"start":1762560000},"status":"planned","title":"회의","updatedAt":1762560000}"#,
+            expected: plain
+        )
+    }
 }
