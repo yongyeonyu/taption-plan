@@ -250,6 +250,7 @@
 		A1000000000000000000001C /* SleepAnalysisEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001C /* SleepAnalysisEngine.swift */; };
 		A1000000000000000000001D /* SensorDataServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001D /* SensorDataServices.swift */; };
 		A1000000000000000000001E /* WidgetShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001F /* WidgetShared.swift */; };
+		A10000000000000001A70002 /* WidgetAppOnly.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000001A70002 /* WidgetAppOnly.swift */; };
 		A1000000000000000000001F /* TaptionPlanWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000020 /* TaptionPlanWidget.swift */; };
 		C0FFEE000000000000000041 /* SensorCollectionLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE000000000000000042 /* SensorCollectionLiveActivity.swift */; };
 		C0FFEE000000000000000043 /* TaptionPlanLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE000000000000000044 /* TaptionPlanLiveActivity.swift */; };
@@ -385,6 +386,7 @@
 		A1E3519F71AF5D72C5438970 /* MapHomeView+Timeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E3519F71AF5D72C5438970 /* MapHomeView+Timeline.swift */; };
 		A1EF724568A9B22CAC66C750 /* MapHomeView+Playback.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1EF724568A9B22CAC66C750 /* MapHomeView+Playback.swift */; };
 		A1EEF6FAFDD9B3AE536F4390 /* MapHomeView+Playback2.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1EEF6FAFDD9B3AE536F4390 /* MapHomeView+Playback2.swift */; };
+		A10000000000000001A70001 /* MapHomeView+Work.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000001A70001 /* MapHomeView+Work.swift */; };
 		A1E32009FB49172F1DBAF950 /* MapHomeView+Support.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E32009FB49172F1DBAF950 /* MapHomeView+Support.swift */; };
 		A1EF1870E9BA90AF77FBB630 /* MapHomeView+Support2.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1EF1870E9BA90AF77FBB630 /* MapHomeView+Support2.swift */; };
 		A1E4358522139E5590681710 /* MapHomeView+Support3.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E4358522139E5590681710 /* MapHomeView+Support3.swift */; };
@@ -856,6 +858,7 @@
 		F1000000000000000000001D /* SensorDataServices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDataServices.swift; sourceTree = "<group>"; };
 		F1000000000000000000001E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F1000000000000000000001F /* WidgetShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetShared.swift; sourceTree = "<group>"; };
+		F10000000000000001A70002 /* WidgetAppOnly.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetAppOnly.swift; sourceTree = "<group>"; };
 		F10000000000000000000020 /* TaptionPlanWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanWidget.swift; sourceTree = "<group>"; };
 		C0FFEE000000000000000042 /* SensorCollectionLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorCollectionLiveActivity.swift; sourceTree = "<group>"; };
 		C0FFEE000000000000000044 /* TaptionPlanLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanLiveActivity.swift; sourceTree = "<group>"; };
@@ -974,6 +977,7 @@
 		F1E3519F71AF5D72C5438970 /* MapHomeView+Timeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Timeline.swift"; sourceTree = "<group>"; };
 		F1EF724568A9B22CAC66C750 /* MapHomeView+Playback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Playback.swift"; sourceTree = "<group>"; };
 		F1EEF6FAFDD9B3AE536F4390 /* MapHomeView+Playback2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Playback2.swift"; sourceTree = "<group>"; };
+		F10000000000000001A70001 /* MapHomeView+Work.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Work.swift"; sourceTree = "<group>"; };
 		F1E32009FB49172F1DBAF950 /* MapHomeView+Support.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Support.swift"; sourceTree = "<group>"; };
 		F1EF1870E9BA90AF77FBB630 /* MapHomeView+Support2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Support2.swift"; sourceTree = "<group>"; };
 		F1E4358522139E5590681710 /* MapHomeView+Support3.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Support3.swift"; sourceTree = "<group>"; };
@@ -1395,6 +1399,7 @@
 				F1EF1870E9BA90AF77FBB630 /* MapHomeView+Support2.swift */,
 				F1E32009FB49172F1DBAF950 /* MapHomeView+Support.swift */,
 				F1EEF6FAFDD9B3AE536F4390 /* MapHomeView+Playback2.swift */,
+				F10000000000000001A70001 /* MapHomeView+Work.swift */,
 				F1EF724568A9B22CAC66C750 /* MapHomeView+Playback.swift */,
 				F1E3519F71AF5D72C5438970 /* MapHomeView+Timeline.swift */,
 				F1000000000000000B1105C6 /* MapHomePlacePinPicker.swift */,
@@ -1708,6 +1713,7 @@
 				F10000000000000000CA2004 /* SubwayAlighting.swift */,
 				F10000000000000000000041 /* ScreenTimeUsageService.swift */,
 				F1000000000000000000001F /* WidgetShared.swift */,
+				F10000000000000001A70002 /* WidgetAppOnly.swift */,
 				F1000000000000000000003B /* WidgetPayloadFactory.swift */,
 				F10000000000000000000061 /* RecordSummaryEngine.swift */,
 				F10000000000000000000023 /* StoreKitSupport.swift */,
@@ -2238,6 +2244,7 @@
 				A1EF1870E9BA90AF77FBB630 /* MapHomeView+Support2.swift in Sources */,
 				A1E32009FB49172F1DBAF950 /* MapHomeView+Support.swift in Sources */,
 				A1EEF6FAFDD9B3AE536F4390 /* MapHomeView+Playback2.swift in Sources */,
+				A10000000000000001A70001 /* MapHomeView+Work.swift in Sources */,
 				A1EF724568A9B22CAC66C750 /* MapHomeView+Playback.swift in Sources */,
 				A1E3519F71AF5D72C5438970 /* MapHomeView+Timeline.swift in Sources */,
 				A1000000000000000B1105C6 /* MapHomePlacePinPicker.swift in Sources */,
@@ -2476,6 +2483,7 @@
 				A10000000000000000CA2003 /* HwarangCoat.swift in Sources */,
 				A10000000000000000000044 /* ScreenTimeUsageService.swift in Sources */,
 				A1000000000000000000001E /* WidgetShared.swift in Sources */,
+				A10000000000000001A70002 /* WidgetAppOnly.swift in Sources */,
 				A10000000000000000000026 /* StoreKitSupport.swift in Sources */,
 				A10000000000000000000027 /* CategoryManagerView.swift in Sources */,
 				A10000000000000000000028 /* PlanEditorSheet.swift in Sources */,

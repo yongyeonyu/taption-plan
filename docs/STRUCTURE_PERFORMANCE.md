@@ -52,7 +52,7 @@
 
 아래는 지금 구현하지 않는다. 해당 세션이 합쳐진 뒤 그대로 적용할 수 있게 변경 내용을 적어 둔다.
 
-### A. 하루치 파생 계산을 main 밖으로 (`algorithm-upgrade`, `AppModel+Classification.swift`)
+### A. 하루치 파생 계산을 main 밖으로 (`algorithm-upgrade`, `AppModel+Classification.swift`) — 적용(11-05·11-08)
 
 - 문제: `performSensorTimelineRefresh`(`:171`)가 `@MainActor`에서 `PlaceDetectionEngine.detectStays`(`:518`), `FrequentPlaceResolutionEngine.applying`, `FloorTimelineEngine.apply`(`:564` 근처), `WalkingLocationEngine.build`, `MovementRouteBuilder.build`(`:573`), `AppleDeviceGroundTruthEngine.mergingTravel`을 차례로 돌린다. `knownPlaces`가 2만 8천 건이다.
 - 변경: 입력(읽은 측정값, `settings`, `snapshot.places`, `snapshot.travel`)을 `Sendable` 값으로 묶고 위 계산을 `nonisolated static`으로 옮겨 `Task.detached(priority: .utility)`에서 돈다. 장소 이름 조회(`placeNameResolver`)는 지금처럼 `await`로 둔다. 돌아온 뒤 `acceptsDataMutation()`과 `snapshotRevision`을 다시 확인하고, 어긋나면 지금의 취소 경로를 탄다.
@@ -60,7 +60,7 @@
 - 효과: 「적용 결과」의 `derive.*` 수치만큼 main이 빈다.
 - 위험: revision fence를 놓치면 사용자 편집을 덮어쓴다. `userEditedDuringSensorRefresh` 경로 시험을 그대로 통과해야 한다.
 
-### B. 위젯 소스 직접 컴파일 줄이기 (`refactor-mechanical`, `WidgetShared.swift`)
+### B. 위젯 소스 직접 컴파일 줄이기 (`refactor-mechanical`, `WidgetShared.swift`) — 일부 적용(11-05·11-08), 패키지 이동은 남음
 
 - 문제: 위젯 target이 소스 21개를 직접 컴파일한다. `WidgetShared.swift`는 3,005행이고 앱·위젯에서 따로 컴파일한다.
 - 변경: RFA1102A01의 1,014행 삭제가 합쳐진 뒤 남은 공유 타입을 `TaptionPlanCore` 또는 새 패키지로 옮긴다. 패키지 2차(`SensorReading` 이동)와 묶는다.
@@ -90,6 +90,12 @@
 - 파일 분할: `MapHomeView`, `TimelineBoard`, `TimelineDetailPanel`의 메서드·계산 속성을 `타입+기능.swift`로 옮겼다. 상태 분리는 아니어서 화면 재평가 범위는 그대로다. 안 6(`@State` 묶기)은 남아 있다.
 - `Task.detached` 34곳: 코드 변경 없음. `await` 직접 호출 약 14곳은 호출자 취소가 전달되지 않는다. 간이 점검이다.
 
+## 2026-11-08 적용
+
+- 안 6: 본문이 읽지 않는 작업 핸들 10개·세대 번호 5개·재생 시각 7개·경로 계산 통계 3개를 관찰하지 않는 `MapHomeViewWork` 하나로 옮겼다(`MapHomeView+Work.swift`). 예전 이름은 전달 속성으로 남겨 호출하는 곳은 바꾸지 않았다. 읽는 곳이 모두 작업·콜백·로그 함수임을 확인했다(`currentExpectedRouteInputKey()`·`makeWBSPlaybackProjection`도 본문이 아니라 갱신 함수에서만 부른다). 화면에 그리는 값은 옮기지 않았다.
+- 안 A 나머지: 경로 측정값 모으기(시각 거르기·정렬·움직임 기록 입히기)와 장소 이름표(장소 2만 8천 건 `reduce`)를 `SensorStayDerivation`의 `nonisolated async` 함수로 옮겼다. 움직임 활동의 `removeAll`·`append`·`sort` 세 번 쓰기를 한 번 대입으로 묶었다. 결과가 이전 내용과 같으면 이제 개정 번호가 오르지 않는다(지도 하루 자료를 다시 읽지 않는다). 취소·`snapshotRevision` 확인과 되돌림 경로는 그대로다. 장소 정렬(최신 snapshot 위에서 해야 한다)은 주 스레드에 남겼다.
+- 안 B 일부: 위젯이 쓰지 않는 `TaptionLiveActivityStickmanAnimation`·`TaptionWidgetCatPreviewEngine`·`TaptionWidgetSyncStatus`를 앱 전용 `WidgetAppOnly.swift`로 옮겼다. `WidgetShared.swift` 1,977행 → 1,850행(동결 예산도 낮췄다). 남은 공유 타입의 패키지 이동은 저장소·`SensorReading` 패키지 이동과 묶여 다른 세션이 맡는다.
+
 ## 적용 결과
 
 시뮬레이터(iPhone 17 Pro) · Debug · Mac에서 쟀다. 기기 수치는 재지 못했다. 전은 커밋 `ecf089a5`, 후는 커밋 `fb5f5acc`의 측정 시험이다.
@@ -103,7 +109,16 @@
 | 3 | 내용 그대로인 저장 | 62.3ms | 1.26ms(약 49배) | `e89b499e` |
 | 4 | 내용 그대로인 저장의 위젯 계산 | 저장마다 11.9ms(main) | 입력이 같으면 건너뜀(같은 분 안). 계산 자체는 12.8ms로 그대로 | `6f83eab2` |
 | 5 | 저장소가 상주시키던 장소 본문 | 8.18MB | 지문만 보관(해당 본문 분량만큼 감소 예상). **실제 메모리 사용량은 재지 못했다** | `e89b499e` |
-| 6 | `@State` 묶기 | — | **적용 안 함**(세션 마감). `MapHomeView` 값 크기는 9,280바이트 | — |
+| 6 | `@State` 묶기 | `@State` 25개(전체 `@State` 680개). `MapHomeView` 값 크기는 재지 못함(계산상 약 6,830바이트) | 묶음 1개(657개). 값 크기 6,424바이트. 지도 홈 본문 평가 횟수는 그대로(아래 「2026-11-08 검증」) | 2026-11-08 |
+
+### 2026-11-08 검증
+
+시뮬레이터(`BOKKI-iPhone11`, iOS) · Debug · 병렬 끔. 로그: `build/validation/ARC1103A01/unit-after-1108.*`.
+
+- 단위 시험: `FeatureEngineTests`·`MapHomeStickmanTests`·`SnapshotObservationTests`·`StructurePerformanceProbeTests` 791건 실행, 실패 0 · 건너뜀 5.
+- 빌드: 앱 Debug(generic iOS), iPhone 위젯 target, Watch 위젯 target 모두 성공. 실기기 설치·재생 측정은 하지 않았다.
+- 측정 시험(후만): `stride.MapHomeView` 6,424바이트. 지도 홈 본문 평가(쓰기 10회): 시각만·같은 값·저장 토큰·심박 0회, 현재 위치·실시간 경로·다른 날 설정 10회(전과 같은 모양). 전 값은 시뮬레이터 잠금 대기로 다시 재지 못했다. 옮긴 `@State` 25개의 저장 크기 합(약 424바이트)에서 묶음 하나(16바이트)를 뺀 값으로 추정했다.
+- 구조 지표: `@State` 680 → 657, `WidgetShared.swift` 1,977 → 1,850행, `Task.detached` 34 그대로.
 
 변하지 않은 값(회귀 없음 확인용): 저장소 읽기 490.9ms → 491.2ms, GPS 새 값 본문 12.4ms → 11.5ms.
 
