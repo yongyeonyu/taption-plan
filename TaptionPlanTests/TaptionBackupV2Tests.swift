@@ -1672,6 +1672,261 @@ final class TaptionBackupV2Tests: XCTestCase {
         XCTAssertEqual(try fileBytes(url), before)
     }
 
+    // MARK: 복원 원자성(RVW1030A01)
+
+    private struct StoreSnapshot: Equatable {
+        var readings: [SensorReading]
+        var records: [TaptionStoreRecord]
+        var raw: [TaptionRawEvent]
+        var meta: [String?]
+    }
+
+    private static let snapshotMetaKeys = [
+        "backup.sealed.2026-10", "backup.epoch.2026-10", TaptionRestoreStaging.pendingMemoKey,
+    ]
+
+    private func snapshot(_ store: TaptionStoreV2) async throws -> StoreSnapshot {
+        var raw: [TaptionRawEvent] = []
+        for kind in [TaptionRawEvent.Kind.deviceEnvelope, TaptionRawEvent.Kind.watchSummary, TaptionRawEvent.Kind.watchAcceleration] {
+            raw += try await store.rawEvents(kind: kind)
+        }
+        var meta: [String?] = []
+        for key in Self.snapshotMetaKeys { meta.append(try await store.meta(key)) }
+        let dated = try await store.recordsForBackup(from: -.greatestFiniteMagnitude, to: .greatestFiniteMagnitude)
+        let undated = try await store.undatedRecordsForBackup()
+        return StoreSnapshot(
+            readings: try await allReadings(store).sorted { $0.id.uuidString < $1.id.uuidString },
+            records: (dated + undated).sorted { ($0.kind, $0.id) < ($1.kind, $1.id) },
+            raw: raw, meta: meta
+        )
+    }
+
+    private func stagingLeftovers(_ store: TaptionStoreV2) -> [String] {
+        (try? FileManager.default.contentsOfDirectory(atPath: TaptionRestoreStaging.root(of: store).path)) ?? []
+    }
+
+    /// 백업할 달: 센서 원본 2,500개(배치 2,000개를 넘는다)·기록·원본 이벤트.
+    private func populatedSource() async throws -> (Harness, [SensorReading]) {
+        let source = try makeHarness()
+        let sample = readings(day: date(2026, 10, 3), count: 2_500)
+        try await source.store.upsertReadings(sample)
+        try await source.store.upsertRecords([
+            record("m1", start: date(2026, 10, 4, 9), ord: 0),
+            record("p1", kind: "plan", start: date(2026, 10, 5, 9), ord: 1, updated: Date(timeIntervalSince1970: 1_800_000_000)),
+        ])
+        _ = try await source.store.appendRawEvents([
+            TaptionRawEvent(
+                kind: TaptionRawEvent.Kind.watchSummary, id: "w-oct", timestamp: date(2026, 10, 4, 8), sequence: 3,
+                origin: .auto, provenance: ["watch"], payload: "{\"steps\":12}"
+            ),
+        ])
+        _ = try await engine(source, chunkBytes: 65_536).backup(
+            month: TaptionBackupMonth(year: 2026, month: 10), password: password, now: date(2026, 10, 10)
+        )
+        return (source, sample)
+    }
+
+    func testRestoreThatFailsOnALateConflictLeavesTheStoreExactlyAsBefore() async throws {
+        let (source, sample) = try await populatedSource()
+        let month = TaptionBackupMonth(year: 2026, month: 10)
+        let target = try makeHarness()
+        // 파일의 마지막 센서 원본(첫 배치 2,000개 뒤)과 같은 id, 다른 내용. 이전 구현은 앞 배치를 이미 커밋했다.
+        var changed = sample[sample.count - 1]
+        changed.stepCount = 99_999
+        try await target.store.upsertReadings([changed])
+        try await target.store.upsertRecords([
+            record("p1", kind: "plan", start: date(2026, 10, 5, 9), ord: 1, updated: Date(timeIntervalSince1970: 1_700_000_000), body: "{\"old\":1}"),
+        ])
+        try await target.store.setMeta("backup.sealed.2026-10", "sealed-before")
+        let before = try await snapshot(target.store)
+
+        let restorer = TaptionBackupEngine(store: target.store, destination: source.destination, calendar: calendar, configuration: fastConfiguration)
+        do {
+            _ = try await restorer.restore(month: month, password: password)
+            XCTFail("같은 id 다른 내용은 거부해야 한다")
+        } catch {
+            XCTAssertEqual(error as? TaptionStoreV2Error, .readingConflict(changed.id.uuidString))
+        }
+        let after = try await snapshot(target.store)
+        XCTAssertEqual(after, before, "센서 원본·기록·원본 이벤트·봉인/세대 표시가 하나도 바뀌지 않는다")
+        XCTAssertEqual(stagingLeftovers(target.store), [], "준비 파일을 지운다")
+
+        // 센서 원본 2,500개를 트랜잭션 안에서 넣은 뒤 원본 이벤트 충돌로 실패해도 되돌린다.
+        let second = try makeHarness()
+        _ = try await second.store.appendRawEvents([
+            TaptionRawEvent(
+                kind: TaptionRawEvent.Kind.watchSummary, id: "w-oct", timestamp: date(2026, 10, 4, 8), sequence: 3,
+                origin: .auto, provenance: ["watch"], payload: "{\"steps\":13}"
+            ),
+        ])
+        let secondBefore = try await snapshot(second.store)
+        let secondRestorer = TaptionBackupEngine(store: second.store, destination: source.destination, calendar: calendar, configuration: fastConfiguration)
+        do {
+            _ = try await secondRestorer.restore(month: month, password: password)
+            XCTFail("같은 원본 이벤트 id 다른 내용은 거부해야 한다")
+        } catch {
+            XCTAssertEqual(error as? TaptionStoreV2Error, .rawEventConflict(kind: TaptionRawEvent.Kind.watchSummary, id: "w-oct"))
+        }
+        let secondAfter = try await snapshot(second.store)
+        XCTAssertEqual(secondAfter, secondBefore, "이미 넣은 센서 원본까지 되돌린다")
+        XCTAssertEqual(secondAfter.readings.count, 0)
+    }
+
+    func testRestoreFailingBeforeCommitForAnyReasonChangesNothingAndCleansStaging() async throws {
+        let (source, sample) = try await populatedSource()
+        let month = TaptionBackupMonth(year: 2026, month: 10)
+        let target = try makeHarness()
+        try await target.store.upsertReadings(readings(day: date(2026, 10, 20), count: 3, startIndex: 9_000))
+        let before = try await snapshot(target.store)
+        let failures: [any Error & Sendable] = [CancellationError(), TaptionStoreV2Error.sqlFailed("disk I/O error")]
+        for failure in failures {
+            var configuration = fastConfiguration
+            let seen = RestoreStagingProbe()
+            configuration.beforeRestoreCommit = { url in
+                seen.record(url)
+                throw failure
+            }
+            let restorer = TaptionBackupEngine(store: target.store, destination: source.destination, calendar: calendar, configuration: configuration)
+            do {
+                _ = try await restorer.restore(month: month, password: password)
+                XCTFail("\(failure): 실패해야 한다")
+            } catch {
+                XCTAssertEqual("\(error)", "\(failure)")
+            }
+            let staged = try XCTUnwrap(seen.url)
+            XCTAssertTrue(staged.path.hasPrefix(TaptionRestoreStaging.root(of: target.store).path), "준비 파일은 저장소 옆 숨은 폴더에 있다")
+            XCTAssertFalse(FileManager.default.fileExists(atPath: staged.path))
+            let after = try await snapshot(target.store)
+            XCTAssertEqual(after, before, "\(failure)")
+            XCTAssertEqual(stagingLeftovers(target.store), [])
+        }
+        // 이후 정상 복원은 그대로 된다.
+        let restorer = TaptionBackupEngine(store: target.store, destination: source.destination, calendar: calendar, configuration: fastConfiguration)
+        let summary = try await restorer.restore(month: month, password: password)
+        XCTAssertEqual(summary.newReadings, sample.count)
+        let sealed = try await target.store.meta("backup.sealed.2026-10")
+        XCTAssertEqual(sealed, "")
+    }
+
+    func testTruncatedFileFailsAfterStagingAndChangesNothing() async throws {
+        let (source, _) = try await populatedSource()
+        let month = TaptionBackupMonth(year: 2026, month: 10)
+        let url = source.backupDirectory.appendingPathComponent(month.fileName)
+        try dropLastFrame(at: url)
+        let target = try makeHarness()
+        let before = try await snapshot(target.store)
+        let restorer = TaptionBackupEngine(store: target.store, destination: source.destination, calendar: calendar, configuration: fastConfiguration)
+        do {
+            _ = try await restorer.restore(month: month, password: password)
+            XCTFail()
+        } catch {
+            XCTAssertEqual(error as? TaptionBackupError, .authenticationFailed)
+        }
+        let after = try await snapshot(target.store)
+        XCTAssertEqual(after, before)
+        XCTAssertEqual(stagingLeftovers(target.store), [])
+    }
+
+    func testMemoPartLeftAfterTheCommitIsFinishedOnTheNextOperationAndStaleStagingIsRemoved() async throws {
+        let target = try makeHarness()
+        let memoStore = try TaptionStoreV2(url: target.storeURL.deletingLastPathComponent().appendingPathComponent("memos.sqlite"), calendar: calendar)
+        // 본 트랜잭션은 커밋됐고 메모 단계 전에 앱이 멈춘 상태를 만든다.
+        let staging = try TaptionRestoreStaging.make(for: target.store)
+        let memo = record("m-left", start: date(2026, 10, 4, 9), ord: 0)
+        try await staging.store.upsertRecords([memo, record("p-main", kind: "plan", start: date(2026, 10, 4, 9), ord: 1)])
+        await staging.store.close()
+        try await target.store.setMeta(TaptionRestoreStaging.pendingMemoKey, staging.directory.lastPathComponent)
+        let stale = TaptionRestoreStaging.root(of: target.store).appendingPathComponent("stale-run", isDirectory: true)
+        try FileManager.default.createDirectory(at: stale, withIntermediateDirectories: true)
+        try Data("x".utf8).write(to: stale.appendingPathComponent("staging.sqlite"))
+
+        var configuration = fastConfiguration
+        configuration.temporaryDirectory = target.temporaryDirectory
+        let next = TaptionBackupEngine(
+            store: target.store, memoStore: memoStore, destination: target.destination, calendar: calendar, configuration: configuration
+        )
+        _ = try await next.backupSettings(password: password)
+        let memos = try await memoStore.recordsForBackup(from: 0, to: .greatestFiniteMagnitude)
+        XCTAssertEqual(memos, [memo], "메모 저장소에는 메모만 마저 합친다")
+        let pending = try await target.store.meta(TaptionRestoreStaging.pendingMemoKey)
+        XCTAssertEqual(pending, "")
+        XCTAssertEqual(stagingLeftovers(target.store), [], "끝낸 준비 파일과 남은 준비 파일을 모두 지운다")
+    }
+
+    func testRestoreWithAMemoStoreSplitsMemosAndClearsThePendingMark() async throws {
+        let (source, sample) = try await populatedSource()
+        let target = try makeHarness()
+        let memoStore = try TaptionStoreV2(url: target.storeURL.deletingLastPathComponent().appendingPathComponent("memos.sqlite"), calendar: calendar)
+        let restorer = TaptionBackupEngine(
+            store: target.store, memoStore: memoStore, destination: source.destination, calendar: calendar, configuration: fastConfiguration
+        )
+        let summary = try await restorer.restore(month: TaptionBackupMonth(year: 2026, month: 10), password: password)
+        XCTAssertEqual(summary.newReadings, sample.count)
+        XCTAssertEqual(summary.changedRecords, 2)
+        let memos = try await memoStore.recordsForBackup(from: 0, to: .greatestFiniteMagnitude)
+        let main = try await target.store.recordsForBackup(from: 0, to: .greatestFiniteMagnitude)
+        XCTAssertEqual(memos.map(\.id), ["m1"])
+        XCTAssertEqual(main.map(\.id), ["p1"])
+        let pending = try await target.store.meta(TaptionRestoreStaging.pendingMemoKey)
+        XCTAssertEqual(pending, "")
+        XCTAssertEqual(stagingLeftovers(target.store), [])
+    }
+
+    // MARK: 형식 버전 2 읽기 호환(RVW1030A01)
+
+    func testVersion2BackupStillRestoresIdenticallyAndTheNextChangedBackupIsWrittenAsVersion3() async throws {
+        let source = try makeHarness()
+        var sample: [SensorReading] = []
+        for day in 1...3 { sample += readings(day: date(2026, 10, day), count: 30, startIndex: day * 100) }
+        sample.append(reading(date(2026, 10, 2, 15), 999, ssid: "카페 \"WiFi\"\n2층"))
+        try await source.store.upsertReadings(sample)
+        try await source.store.upsertRecords([
+            record("r1", start: date(2026, 10, 1, 9), ord: 0),
+            record("r2", kind: "plan", start: date(2026, 10, 9, 9), ord: 1, deleted: true),
+        ])
+        _ = try await source.store.appendRawEvents([
+            TaptionRawEvent(
+                kind: TaptionRawEvent.Kind.deviceEnvelope, id: "d1", timestamp: date(2026, 10, 2, 8), sequence: 1,
+                origin: .auto, provenance: ["phone"], payload: "{}"
+            ),
+        ])
+        let month = TaptionBackupMonth(year: 2026, month: 10)
+        var restored: [Int: StoreSnapshot] = [:]
+        for version in [2, 3] {
+            let destination = TaptionLocalFolderBackupDestination(
+                directory: source.backupDirectory.appendingPathComponent("v\(version)", isDirectory: true)
+            )
+            var configuration = fastConfiguration
+            configuration.formatVersion = version
+            configuration.chunkBytes = 2_048
+            configuration.temporaryDirectory = source.temporaryDirectory
+            let writer = TaptionBackupEngine(store: source.store, destination: destination, calendar: calendar, configuration: configuration)
+            let written = try await writer.backup(month: month, password: password, now: date(2026, 10, 10))
+            XCTAssertEqual(written.header?.version, version)
+            let file = destination.directory.appendingPathComponent(month.fileName)
+            XCTAssertEqual(try fileBytes(file).prefix(8), Data("TAPTBK0\(version)".utf8))
+
+            let target = try makeHarness()
+            let reader = TaptionBackupEngine(store: target.store, destination: destination, calendar: calendar, configuration: fastConfiguration)
+            let summary = try await reader.restore(month: month, password: password)
+            XCTAssertEqual(summary.newReadings, sample.count, "버전 \(version)")
+            var state = try await snapshot(target.store)
+            state.meta = []
+            restored[version] = state
+        }
+        XCTAssertEqual(restored[2], restored[3], "버전 2와 3이 같은 저장소 상태로 복원된다")
+        XCTAssertEqual(Set(try XCTUnwrap(restored[2]).readings), Set(sample))
+
+        // 버전 2 파일이 있는 달에 새 데이터가 생기면 합친 뒤 버전 3으로 다시 쓴다.
+        let v2Destination = TaptionLocalFolderBackupDestination(directory: source.backupDirectory.appendingPathComponent("v2", isDirectory: true))
+        try await source.store.upsertReadings(readings(day: date(2026, 10, 20), count: 4, startIndex: 5_000))
+        let upgraded = try await engine(source, destination: v2Destination).backup(month: month, password: password, now: date(2026, 10, 21))
+        XCTAssertEqual(upgraded.outcome, .written)
+        XCTAssertEqual(upgraded.header?.version, 3)
+        XCTAssertEqual(upgraded.header?.readingCount, sample.count + 4)
+        XCTAssertEqual(try fileBytes(v2Destination.directory.appendingPathComponent(month.fileName)).prefix(8), Data("TAPTBK03".utf8))
+    }
+
     // MARK: 변조 도우미
 
     /// 헤더 블록을 열어 고친 뒤 같은 키로 다시 봉인한다(체크섬까지 고쳐 놓은 공격을 흉내 낸다).
@@ -1692,11 +1947,15 @@ final class TaptionBackupV2Tests: XCTestCase {
 
     private func frameRanges(of data: Data) -> [Range<Int>] {
         var ranges: [Range<Int>] = []
+        // 버전 3은 봉인 길이 u32 + 봉인, 버전 2는 코덱 u8 + 크기 u32 + 봉인 길이 u32 + 봉인.
+        let legacy = TaptionBackupLayout.version(forMagic: data) == 2
+        let lengthOffset = legacy ? 5 : 0
+        let prefix = legacy ? 9 : 4
         var offset = Int(TaptionBackupLayout.bodyOffset)
         while offset < data.count {
-            let sealed = Int(TaptionBackupCrypto.readUInt32(data, at: offset + 5))
-            ranges.append(offset..<(offset + 9 + sealed))
-            offset += 9 + sealed
+            let sealed = Int(TaptionBackupCrypto.readUInt32(data, at: offset + lengthOffset))
+            ranges.append(offset..<(offset + prefix + sealed))
+            offset += prefix + sealed
         }
         return ranges
     }
@@ -1743,4 +2002,12 @@ private struct SeededGenerator: RandomNumberGenerator {
         value = (value ^ (value >> 27)) &* 0x94D0_49BB_1331_11EB
         return value ^ (value >> 31)
     }
+}
+
+/// 준비 파일 경로를 테스트 밖에서 받아 둔다.
+private final class RestoreStagingProbe: @unchecked Sendable {
+    private let lock = NSLock()
+    private var stored: URL?
+    var url: URL? { lock.withLock { stored } }
+    func record(_ url: URL) { lock.withLock { stored = url } }
 }

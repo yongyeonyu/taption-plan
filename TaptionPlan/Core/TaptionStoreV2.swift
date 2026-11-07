@@ -462,7 +462,7 @@ actor TaptionStoreV2 {
 
     /// 이미 시작한 트랜잭션 안에서 행을 쓴다. 같은 행의 수정 시각(`updated_ts`)은 줄어들지 않는다(단조 증가):
     /// 백업의 "최신 수정이 이긴다" 규칙과 상위 집합 판정이 수정 시각의 후퇴에 속지 않게 한다.
-    private func upsertRecordRows(_ db: OpaquePointer, _ records: [TaptionStoreRecord]) throws {
+    func upsertRecordRows(_ db: OpaquePointer, _ records: [TaptionStoreRecord]) throws {
         let statement = try prepare(db, """
             INSERT INTO records
             (id, kind, day, start_ts, end_ts, updated_ts, origin, deleted, ord, body)
