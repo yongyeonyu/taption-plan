@@ -554,6 +554,7 @@
 		A5200000000000000000F5FA /* TaptionPlanFirstRunTutorialUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5200000000000000000F5FA /* TaptionPlanFirstRunTutorialUITests.swift */; };
 		A5200000000000000000F5F9 /* TaptionPlanAllowanceUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5200000000000000000F5F9 /* TaptionPlanAllowanceUITests.swift */; };
 		A5200000000000000000F5F8 /* TaptionPlanWideLayoutUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5200000000000000000F5F8 /* TaptionPlanWideLayoutUITests.swift */; };
+		A10000000000000000BB1110 /* UITestWaiting.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000BB1110 /* UITestWaiting.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -1134,6 +1135,7 @@
 		F5200000000000000000F5FA /* TaptionPlanFirstRunTutorialUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanFirstRunTutorialUITests.swift; sourceTree = "<group>"; };
 		F5200000000000000000F5F9 /* TaptionPlanAllowanceUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanAllowanceUITests.swift; sourceTree = "<group>"; };
 		F5200000000000000000F5F8 /* TaptionPlanWideLayoutUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanWideLayoutUITests.swift; sourceTree = "<group>"; };
+		F10000000000000000BB1110 /* UITestWaiting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UITestWaiting.swift"; sourceTree = "<group>"; };
 		5A0000000000000000000012 /* TaptionPlanUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TaptionPlanUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -1785,6 +1787,7 @@
 				F5200000000000000000F5FA /* TaptionPlanFirstRunTutorialUITests.swift */,
 				F5200000000000000C1104B1 /* TaptionPlanLanguagePackUITests.swift */,
 				F5200000000000000000F5F8 /* TaptionPlanWideLayoutUITests.swift */,
+				F10000000000000000BB1110 /* UITestWaiting.swift */,
 			);
 			path = TaptionPlanUITests;
 			sourceTree = "<group>";
@@ -2647,6 +2650,7 @@
 				A5200000000000000000F5FA /* TaptionPlanFirstRunTutorialUITests.swift in Sources */,
 				A5200000000000000C1104B1 /* TaptionPlanLanguagePackUITests.swift in Sources */,
 				A5200000000000000000F5F8 /* TaptionPlanWideLayoutUITests.swift in Sources */,
+				A10000000000000000BB1110 /* UITestWaiting.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

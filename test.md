@@ -1724,3 +1724,8 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
 ## TFB1107A04 · 빌드 294 내부 TestFlight (2026-11-07)
 - 포함: SRC1107A01(지도 검색 목록·앱 안 장소·역 찾기·실패 안내, 시작 재계산 묶기, 성장 시험 도구 Debug 전용, 알림 판정 시험, 재생 머무름 상세 장면).
 - 결과: `release.sh --yes --request-id TFB1107A04` 종료 0, 처리 `VALID`, `TP Taption Plan 내부 테스트` 그룹 연결, 테스터 1명 노출. 아카이브 네 번들 `CFBundleVersion` 294 확인. 보고서 `build/validation/TFB1107A04/testflight-report.json`.
+
+## REV1026A01 · UI 시험 고정 대기 교체 (2026-11-07)
+- 변경: `TaptionPlanUITests/UITestWaiting.swift`(새 파일, UI 시험 대상)의 `UITestWait.until`·`settled`(요소 수·버튼 자리가 두 번 같으면 멈춤)로 언어 팩·넓은 화면 UI 시험의 `sleep`·`Thread.sleep` 25곳을 바꿨다. 넓은 화면 메뉴 시험은 한 열 메뉴(REV1107A02)에 맞게 `testMenuStaysBelowTopRowInOneScrollingColumn`으로 바꿨다(패널 폭 ≤410, 첫 묶음 보임).
+- 확인: 시뮬레이터 build-for-testing 성공(`build/validation/REV1026A01/build-for-testing.log`). 아이패드 11 시뮬레이터에서 메뉴 시험 실행은 실패 — `launchHome`이 새로 깐 앱에서 40초 안에 메뉴 단추를 찾지 못함(바꾼 대기 부분 이전 단계, `ui-menu.xcresult`). 실제 통과는 미확인.
+- 발자국 레이어 패치(OPT1102A01)는 더 이상 적용되지 않아 보류, 지도 가림 시 GPS 끄기(PRF1101A01)는 대표 결정 대기.

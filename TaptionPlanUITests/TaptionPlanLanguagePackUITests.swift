@@ -16,19 +16,22 @@ final class TaptionPlanLanguagePackUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments += ["-AppleLanguages", "(\(language))"]
         app.launch()
-        sleep(14)
+        // 지도 홈 메뉴나 첫 실행 튜토리얼이 뜰 때까지 기다린다.
+        let firstScreen = app.buttons.matching(NSPredicate(format: "label == %@ OR identifier == %@", "메뉴", "firstRunNext")).firstMatch
+        UITestWait.until(60) { firstScreen.exists && firstScreen.isHittable }
+        UITestWait.settled(app)
         walkTutorial(app)
         capture(app, "home")
 
         let bar = app.windows.firstMatch
         func tapBottom(_ slot: Int) {
             bar.coordinate(withNormalizedOffset: CGVector(dx: (Double(slot) + 0.5) / 7.0 * 0.92 + 0.04, dy: 0.963)).tap()
-            sleep(3)
+            UITestWait.settled(app)
         }
         func dismiss() {
             bar.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3))
                 .press(forDuration: 0.05, thenDragTo: bar.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.98)))
-            sleep(2)
+            UITestWait.settled(app)
         }
 
         for (slot, name) in [(1, "calendar"), (6, "memo")] {
@@ -45,7 +48,7 @@ final class TaptionPlanLanguagePackUITests: XCTestCase {
                 labels.append(label)
             }
             bar.swipeUp()
-            sleep(1)
+            UITestWait.settled(app)
         }
         dismiss()
         for (position, label) in labels.prefix(40).enumerated() {
@@ -54,7 +57,7 @@ final class TaptionPlanLanguagePackUITests: XCTestCase {
             var swipes = 0
             while !(button.exists && button.isHittable), swipes < 4 {
                 bar.swipeUp()
-                sleep(1)
+                UITestWait.settled(app)
                 button = app.buttons[label].firstMatch
                 swipes += 1
             }
@@ -63,10 +66,10 @@ final class TaptionPlanLanguagePackUITests: XCTestCase {
                 continue
             }
             button.tap()
-            sleep(3)
+            UITestWait.settled(app)
             capture(app, "menu-\(position)")
             app.swipeUp()
-            sleep(1)
+            UITestWait.settled(app)
             capture(app, "menu-\(position)-down")
             dismiss()
             dismiss()
@@ -80,7 +83,7 @@ final class TaptionPlanLanguagePackUITests: XCTestCase {
         while next.exists, next.isHittable, step < 16 {
             capture(app, "tutorial-\(step)")
             next.tap()
-            sleep(2)
+            UITestWait.settled(app)
             step += 1
         }
     }

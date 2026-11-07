@@ -28,7 +28,7 @@ final class TaptionPlanWideLayoutUITests: XCTestCase {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
             if condition() { return true }
-            Thread.sleep(forTimeInterval: 0.5)
+            RunLoop.current.run(until: Date().addingTimeInterval(0.5))
         }
         return condition()
     }
@@ -41,7 +41,7 @@ final class TaptionPlanWideLayoutUITests: XCTestCase {
             guard orientation.isLandscape == (window.width > window.height) else { return false }
             return badge.exists && badge.frame.minX > window.width * 0.6
         }
-        Thread.sleep(forTimeInterval: 1)
+        UITestWait.settled(app)
     }
 
     private func menuButton(_ app: XCUIApplication) -> XCUIElement {
@@ -99,7 +99,7 @@ final class TaptionPlanWideLayoutUITests: XCTestCase {
 
     private func closePanel(_ app: XCUIApplication) {
         app.buttons.matching(NSPredicate(format: "label == %@", "패널 닫기")).firstMatch.tap()
-        sleep(1)
+        UITestWait.settled(app)
     }
 
     private func exerciseScreens(_ app: XCUIApplication, _ tag: String) {
@@ -109,7 +109,7 @@ final class TaptionPlanWideLayoutUITests: XCTestCase {
 
         let menu = menuButton(app)
         menu.tap()
-        sleep(1)
+        UITestWait.settled(app)
         capture(app, "\(tag)-menu")
         if isWide {
             // 가로는 메뉴를 두 열로 펴서 스크롤 없이 보인다.
@@ -119,7 +119,7 @@ final class TaptionPlanWideLayoutUITests: XCTestCase {
         } else {
             app.windows.firstMatch.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
         }
-        sleep(1)
+        UITestWait.settled(app)
 
         let badge = app.descendants(matching: .any)["mapHomeDateBadge"]
         badge.tap()
@@ -137,7 +137,7 @@ final class TaptionPlanWideLayoutUITests: XCTestCase {
         let calendar = app.buttons.matching(NSPredicate(format: "label == %@", "달력")).firstMatch
         if calendar.waitForExistence(timeout: 5) {
             calendar.tap()
-            sleep(2)
+            UITestWait.settled(app)
             capture(app, "\(tag)-calendar")
             if isWide {
                 let expected: CGFloat = app.windows.firstMatch.frame.width >= 1050 ? 690 : 410
@@ -145,7 +145,7 @@ final class TaptionPlanWideLayoutUITests: XCTestCase {
                 closePanel(app)
             } else {
                 app.windows.firstMatch.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.03)).tap()
-                sleep(1)
+                UITestWait.settled(app)
             }
         }
     }
@@ -158,14 +158,14 @@ final class TaptionPlanWideLayoutUITests: XCTestCase {
             let tag = "split\(width)"
             let menu = menuButton(app)
             menu.tap()
-            sleep(1)
+            UITestWait.settled(app)
             let panelFrame = panel(app).frame
             XCTAssertLessThanOrEqual(panelFrame.width, 410, tag)
             XCTAssertLessThan(panelFrame.maxX, CGFloat(Int(width)!) - 100, "\(tag) 패널이 사이드바를 가린다")
             capture(app, "\(tag)-menu")
             let calendar = app.buttons.matching(NSPredicate(format: "label == %@", "달력")).firstMatch
             calendar.tap()
-            sleep(2)
+            UITestWait.settled(app)
             capture(app, "\(tag)-calendar")
             XCTAssertLessThanOrEqual(panel(app).frame.width, 410, tag)
             app.terminate()
@@ -174,7 +174,7 @@ final class TaptionPlanWideLayoutUITests: XCTestCase {
 
     /// 가로에서는 메인 메뉴가 스크롤 없이 마지막 줄까지 보인다. 패널은 상단 버튼 줄 아래에 서고, 세로도 같은 자리다.
     /// 듀오 안쪽은 실제 펼침을 띄울 수 없어 폭·높이를 고정해 본다.
-    func testMenuStaysBelowTopRowAndLandscapeFitsWithoutScrolling() throws {
+    func testMenuStaysBelowTopRowInOneScrollingColumn() throws {
         try XCTSkipIf(min(UIScreen.main.bounds.width, UIScreen.main.bounds.height) < wideWidth, "넓은 화면 전용")
         for (tag, orientation, arguments) in [
             ("ipad-portrait", UIDeviceOrientation.portrait, [String]()),
@@ -183,31 +183,27 @@ final class TaptionPlanWideLayoutUITests: XCTestCase {
             ("duo-landscape", .landscapeLeft, ["-debugViewportWidth", "951", "-debugViewportHeight", "669"]),
         ] {
             XCUIDevice.shared.orientation = orientation
-            sleep(2)
             let app = launchHome(extraArguments: arguments)
-            sleep(2)
+            UITestWait.settled(app)
             menuButton(app).tap()
-            sleep(2)
+            UITestWait.settled(app)
             capture(app, "menu-\(tag)")
             let panelFrame = panel(app).frame
             let footer = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "빌드")).firstMatch
             print("MENU-FIT \(tag) panel=\(panelFrame) footer=\(footer.frame)")
             XCTAssertGreaterThan(panelFrame.minY, 60, "\(tag) 메뉴가 상단 버튼 줄을 덮었다")
             XCTAssertTrue(topLeftGoogleButton(app).isHittable, tag)
-            if orientation.isLandscape {
-                // 듀오 가로에 권한 카드까지 있으면 맨 아래 상태·버전 줄만 넘칠 수 있어 메뉴 항목으로 잰다(시뮬레이터는 권한이 없어 카드가 뜬다).
-                let lastRow = tag == "ipad-landscape" ? footer : app.buttons.matching(NSPredicate(format: "label == %@", "지도 출처")).firstMatch
-                XCTAssertLessThanOrEqual(lastRow.frame.maxY, panelFrame.maxY, "\(tag) 스크롤해야 보인다")
-                let firstColumnLast = app.staticTexts["내 차 등록"].firstMatch
-                XCTAssertLessThanOrEqual(firstColumnLast.frame.maxY, panelFrame.maxY, "\(tag) 왼쪽 열이 잘린다")
-            }
+            // 두 열로 펴지 않는다(REV1107A02). 패널은 하단 메뉴 폭 그대로이고, 넘치는 항목은 스크롤로 본다.
+            XCTAssertLessThanOrEqual(panelFrame.width, 410, "\(tag) 메뉴가 두 열로 펴졌다")
+            let record = app.staticTexts["기록"].firstMatch
+            XCTAssertTrue(record.exists && record.frame.minY >= panelFrame.minY, "\(tag) 첫 묶음이 보이지 않는다")
             app.buttons.matching(NSPredicate(format: "label == %@", "메뉴 닫기")).firstMatch.tap()
-            sleep(1)
+            UITestWait.settled(app)
             // 날짜 줄을 펼쳐도 왼쪽 위 버튼을 덮지 않으니 그대로 둔다.
             let badge = app.descendants(matching: .any)["mapHomeDateBadge"]
             badge.tap()
             XCTAssertTrue(app.descendants(matching: .any)["mapHomeDateWeekStrip"].waitForExistence(timeout: 5), tag)
-            sleep(1)
+            UITestWait.settled(app)
             capture(app, "date-strip-\(tag)")
             XCTAssertTrue(topLeftGoogleButton(app).isHittable, "\(tag) 날짜 줄을 펴자 왼쪽 위 버튼이 숨었다")
             app.terminate()
@@ -225,7 +221,7 @@ final class TaptionPlanWideLayoutUITests: XCTestCase {
         app.buttons["daySummaryGrowthCard"].firstMatch.tap()
         let growthTitle = app.staticTexts["우리 집 성장"]
         XCTAssertTrue(growthTitle.waitForExistence(timeout: 10))
-        sleep(1)
+        UITestWait.settled(app)
         capture(app, "growth-page")
         // 집 성장은 패널 안에서 넘어가고 잘리지 않는다.
         XCTAssertGreaterThan(growthTitle.frame.minX, panel(app).frame.minX)
@@ -238,11 +234,11 @@ final class TaptionPlanWideLayoutUITests: XCTestCase {
         try XCTSkipIf(min(UIScreen.main.bounds.width, UIScreen.main.bounds.height) < wideWidth, "넓은 화면 전용")
         let app = launchHome()
         XCUIDevice.shared.orientation = .portrait
-        sleep(2)
+        UITestWait.settled(app)
         menuButton(app).tap()
-        sleep(1)
+        UITestWait.settled(app)
         app.buttons.matching(NSPredicate(format: "label == %@", "하루 카드")).firstMatch.tap()
-        sleep(4)
+        UITestWait.settled(app)
         assertPanelBesideMap(app, maxWidth: 410, "하루 카드")
         XCTAssertFalse(app.buttons.matching(NSPredicate(format: "label == %@", "메뉴 닫기")).firstMatch.exists, "메뉴가 함께 열려 있다")
         capture(app, "daily-card")
@@ -254,12 +250,12 @@ final class TaptionPlanWideLayoutUITests: XCTestCase {
         let app = launchHome(extraArguments: ["-debugOpenClipEditor"], waitsForMap: false)
         let apply = app.buttons["적용"]
         XCTAssertTrue(apply.waitForExistence(timeout: 60))
-        sleep(2)
+        UITestWait.settled(app)
         capture(app, "clip-editor-portrait")
         // 오른쪽 열에 도구가 모인다.
         XCTAssertGreaterThan(apply.frame.minX, app.windows.firstMatch.frame.width - 402)
         XCUIDevice.shared.orientation = .landscapeLeft
-        sleep(4)
+        UITestWait.settled(app)
         capture(app, "clip-editor-landscape")
         XCTAssertGreaterThan(apply.frame.minX, app.windows.firstMatch.frame.width - 402)
         XCUIDevice.shared.orientation = .portrait
@@ -271,7 +267,7 @@ final class TaptionPlanWideLayoutUITests: XCTestCase {
         let app = launchHome()
         let device = XCUIDevice.shared
         device.orientation = .portrait
-        sleep(2)
+        UITestWait.settled(app)
 
         let badge = app.descendants(matching: .any)["mapHomeDateBadge"]
         let originalDate = badge.label
@@ -279,7 +275,7 @@ final class TaptionPlanWideLayoutUITests: XCTestCase {
         let strip = app.descendants(matching: .any)["mapHomeDateWeekStrip"]
         XCTAssertTrue(strip.waitForExistence(timeout: 15))
         strip.swipeRight()
-        sleep(1)
+        UITestWait.settled(app)
         let movedDate = badge.label
         XCTAssertNotEqual(movedDate, originalDate, "날짜 줄을 밀어도 날짜가 그대로다")
 
@@ -291,7 +287,7 @@ final class TaptionPlanWideLayoutUITests: XCTestCase {
         let weekday = app.descendants(matching: .any).matching(NSPredicate(format: "label MATCHES %@", "20[0-9]{2}년 [0-9]+월")).firstMatch
         XCTAssertTrue(weekday.waitForExistence(timeout: 8), "달력 시트가 열리지 않았다")
         XCUIDevice.shared.orientation = .portrait
-        sleep(4)
+        UITestWait.settled(app)
         XCTAssertTrue(weekday.exists, "돌렸더니 달력 시트가 닫혔다")
         capture(app, "rotated-keeps-calendar")
         closePanel(app)
@@ -302,7 +298,7 @@ final class TaptionPlanWideLayoutUITests: XCTestCase {
         let pause = app.buttons.matching(NSPredicate(format: "label == %@", "멈춤")).firstMatch
         XCTAssertTrue(pause.waitForExistence(timeout: 5), "재생이 시작되지 않았다")
         device.orientation = .landscapeLeft
-        sleep(1)
+        UITestWait.settled(app)
         XCTAssertTrue(pause.exists, "돌렸더니 재생이 멈췄다")
         capture(app, "rotated-keeps-playback")
         device.orientation = .portrait
@@ -312,7 +308,7 @@ final class TaptionPlanWideLayoutUITests: XCTestCase {
         let app = launchHome()
         let device = XCUIDevice.shared
         device.orientation = .portrait
-        sleep(2)
+        UITestWait.settled(app)
         let portrait = app.windows.firstMatch.frame.size
         let screenShortSide = min(portrait.width, portrait.height)
         exerciseScreens(app, "portrait")
@@ -327,6 +323,6 @@ final class TaptionPlanWideLayoutUITests: XCTestCase {
             capture(app, "landscape-request-stays-portrait")
         }
         device.orientation = .portrait
-        sleep(2)
+        UITestWait.settled(app)
     }
 }
