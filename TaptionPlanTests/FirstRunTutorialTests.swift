@@ -1,3 +1,4 @@
+import CoreLocation
 import XCTest
 @testable import TaptionPlan
 
@@ -132,6 +133,35 @@ final class FirstRunTutorialTests: XCTestCase {
         defaults.removePersistentDomain(forName: suite)
         defaults.set(true, forKey: AppModel.permissionOnboardingKey)
         XCTAssertFalse(store.defersPermissionPrompts)
+    }
+
+    /// REV1102A01: '사용 중' 팝업이 12초를 넘겨 승격을 못 물었으면 튜토리얼 뒤 한 번 더 묻는다.
+    func testAlwaysUpgradeIsAllowedOnceAfterTutorialWhenPromptTimedOut() {
+        typealias Policy = LocationAlwaysUpgradePolicy
+        XCTAssertFalse(Policy.wasRequested(in: defaults), "팝업이 늦게 닫혀 승격을 못 보냈으면 기록이 없다")
+        XCTAssertTrue(Policy.shouldRequestAtLaunch(
+            status: .authorizedWhenInUse, allowsUnaskedPrompts: false, tutorialFinished: true,
+            alreadyRequested: Policy.wasRequested(in: defaults)
+        ))
+        Policy.markRequested(in: defaults)
+        XCTAssertFalse(Policy.shouldRequestAtLaunch(
+            status: .authorizedWhenInUse, allowsUnaskedPrompts: false, tutorialFinished: true,
+            alreadyRequested: Policy.wasRequested(in: defaults)
+        ), "한 번 보낸 뒤에는 다시 묻지 않는다")
+        XCTAssertFalse(Policy.shouldRequestAtLaunch(
+            status: .authorizedWhenInUse, allowsUnaskedPrompts: false, tutorialFinished: false, alreadyRequested: false
+        ), "튜토리얼 중에는 앱이 먼저 묻지 않는다")
+        XCTAssertFalse(Policy.shouldRequestAtLaunch(
+            status: .notDetermined, allowsUnaskedPrompts: false, tutorialFinished: true, alreadyRequested: false
+        ), "튜토리얼에서 건너뛴 첫 권한은 다시 먼저 묻지 않는다")
+        XCTAssertTrue(Policy.shouldRequestAtLaunch(
+            status: .notDetermined, allowsUnaskedPrompts: true, tutorialFinished: false, alreadyRequested: true
+        ))
+        for status in [CLAuthorizationStatus.authorizedAlways, .denied, .restricted] {
+            XCTAssertFalse(Policy.shouldRequestAtLaunch(
+                status: status, allowsUnaskedPrompts: true, tutorialFinished: true, alreadyRequested: false
+            ))
+        }
     }
 
     func testSkippedPermissionsAreNotAskedAgainUnlessExistingUser() {

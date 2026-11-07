@@ -47,6 +47,11 @@ final class ApplePhotoLibraryService: @unchecked Sendable {
         }
     }
 
+    /// 기간 안 사진 수. 격리되지 않은 async라 메인 스레드 밖에서 읽는다(하루 카드 고르기 값).
+    func momentCount(in span: TimeSpan) async -> Int {
+        moments(in: span).count
+    }
+
     func moments(in span: TimeSpan) -> [PhotoMoment] {
         // 권한이 정해지기 전의 조회는 시스템 팝업을 띄운다.
         guard permissionState().isGranted else { return [] }

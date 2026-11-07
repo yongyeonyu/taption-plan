@@ -40,6 +40,7 @@ extension AppModel {
         }
         if always, status == .authorizedWhenInUse {
             sensorService.requestLocationPermission(always: true)
+            LocationAlwaysUpgradePolicy.markRequested()
             for _ in 0..<120 where status == .authorizedWhenInUse {
                 guard !Task.isCancelled else { return false }
                 try? await Task.sleep(for: .milliseconds(100))

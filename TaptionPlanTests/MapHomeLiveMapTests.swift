@@ -546,6 +546,33 @@ final class MapHomeLiveMapTests: XCTestCase {
         XCTAssertFalse(MapHomeDailyCardDayPolicy.canMoveForward(from: today, now: now, calendar: calendar))
     }
 
+    /// CARD1022N01: 고르기 목록에 사진 수·메모 수가 있고, 그날 값이 채워진다.
+    @MainActor
+    func testDailyCardPickerOffersPhotoAndMemoCounts() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(secondsFromGMT: 9 * 3_600))
+        let day = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 11, day: 2, hour: 15)))
+        let start = calendar.startOfDay(for: day)
+        let memos = [
+            ActionMemo(occurredAt: start.addingTimeInterval(3_600), kind: .idea, text: "그날"),
+            ActionMemo(occurredAt: start.addingTimeInterval(-3_600), isTimeless: true, kind: .idea, text: "시각 없음", createdAt: start.addingTimeInterval(7_200)),
+            ActionMemo(occurredAt: start.addingTimeInterval(-60), kind: .idea, text: "전날")
+        ]
+        let ids = MapHomeCardMetricOption.all.map(\.id)
+        XCTAssertTrue(ids.contains(MapHomeCalendarTimeKind.photos.rawValue))
+        XCTAssertTrue(ids.contains(MapHomeCardMetricOption.memosID))
+        XCTAssertEqual(Set(ids).count, ids.count)
+
+        let content = MapHomeDailyCardContent(data: .placeholder, values: [:])
+            .addingCounts(day: day, memos: memos, photoCount: 5, calendar: calendar)
+        XCTAssertEqual(content.values[MapHomeCardMetricOption.memosID], 2)
+        XCTAssertEqual(content.values[MapHomeCalendarTimeKind.photos.rawValue], 5)
+        let memoOption = try XCTUnwrap(MapHomeCardMetricOption(id: MapHomeCardMetricOption.memosID))
+        XCTAssertEqual(memoOption.valueText(2), "2")
+        XCTAssertEqual(memoOption.title(.english), "Memos")
+        XCTAssertNil(MapHomeCardMetricOption(id: "unknown"))
+    }
+
     func testPlaybackZoomModeRoundTripsAndDefaultsToAdaptive() {
         XCTAssertEqual(MapHomePlaybackZoomMode(rawValue: "fixed"), .fixed)
         XCTAssertNil(MapHomePlaybackZoomMode(rawValue: "unknown"))

@@ -338,7 +338,17 @@ extension MapHomeView {
     }
 
     /// 하루 카드 한 장. 지도가 보는 날은 읽어 둔 값을, 다른 날은 그날 기록을 따로 읽어 만든다(지도 날짜는 그대로 둔다).
+    /// 고르기 목록의 메모 수·사진 수도 그날 값으로 채운다(CARD1022N01).
     func dailyCardContent(for day: Date) async -> MapHomeDailyCardContent {
+        let content = await dailyCardBaseContent(for: day)
+        let calendar = Calendar.autoupdatingCurrent
+        let start = calendar.startOfDay(for: day)
+        let span = TimeSpan(start: start, end: calendar.date(byAdding: .day, value: 1, to: start) ?? start.addingTimeInterval(24 * 60 * 60))
+        let photoCount = await photoLibrary.momentCount(in: span)
+        return content.addingCounts(day: day, memos: model.snapshot.memos, photoCount: photoCount)
+    }
+
+    private func dailyCardBaseContent(for day: Date) async -> MapHomeDailyCardContent {
         if Calendar.autoupdatingCurrent.isDate(day, inSameDayAs: model.selectedDate) {
             return MapHomeDailyCardContent(data: dailyCardData, values: dailyMetricValues)
         }
