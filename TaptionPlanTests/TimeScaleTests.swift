@@ -5447,6 +5447,24 @@ final class MapHomeStartupCameraTests: XCTestCase {
         XCTAssertFalse(MapHomeVectorStyle.night.json.contains("name:ko"))
     }
 
+    /// MLG1105A02: 영어 사용자에게 실제 스타일 JSON의 모든 이름 칸이 `name:en`을 먼저 읽는다.
+    func testEnglishStyleJSONReadsEnglishNameFirstInEveryLabelLayer() throws {
+        let saved = AppLanguagePreference.current
+        defer { AppLanguagePreference.save(saved) }
+        AppLanguagePreference.save(.english)
+        for style in MapHomeVectorStyle.allCases {
+            let object = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(style.json.utf8)) as? [String: Any])
+            let layers = try XCTUnwrap(object["layers"] as? [[String: Any]])
+            let named = layers.filter { $0["type"] as? String == "symbol" && $0["source-layer"] as? String != "housenumber" }
+            XCTAssertFalse(named.isEmpty, style.rawValue)
+            for layer in named {
+                let id = "\(style.rawValue)/\(layer["id"] ?? "")"
+                let field = try XCTUnwrap((layer["layout"] as? [String: Any])?["text-field"] as? [Any], id)
+                XCTAssertEqual(field[1] as? [String], ["get", "name:en"], id)
+            }
+        }
+    }
+
     func testChangingLanguageRewritesMapLabelsWithoutNewStyle() async throws {
         let saved = AppLanguagePreference.current
         defer { AppLanguagePreference.save(saved) }

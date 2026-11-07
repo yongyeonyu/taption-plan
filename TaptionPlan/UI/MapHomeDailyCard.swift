@@ -337,12 +337,12 @@ struct MapHomeDailyCardSheet: View {
     private var data: MapHomeDailyCardData {
         var copy = baseData ?? .placeholder
         copy.metrics = selectedIDs.compactMap { id in
-            guard let kind = MapHomeCalendarTimeKind(rawValue: id) else { return nil }
+            guard let option = MapHomeCardMetricOption(id: id) else { return nil }
             return MapHomeCardMetric(
                 id: id,
-                title: kind.title(language),
-                systemImage: kind.systemImage,
-                value: MapHomeCardMetricSelection.value(for: kind, number: dayValues[id] ?? 0)
+                title: option.title(language),
+                systemImage: option.systemImage,
+                value: option.valueText(dayValues[id] ?? 0)
             )
         }
         return copy
@@ -431,15 +431,15 @@ struct MapHomeDailyCardSheet: View {
     }
 
     private func slot(_ index: Int) -> some View {
-        let filled = index < selectedIDs.count ? MapHomeCalendarTimeKind(rawValue: selectedIDs[index]) : nil
+        let filled = index < selectedIDs.count ? MapHomeCardMetricOption(id: selectedIDs[index]) : nil
         return Button {
-            if let filled { toggle(filled.rawValue) } else { isPickerPresented = true }
+            if let filled { toggle(filled.id) } else { isPickerPresented = true }
         } label: {
             VStack(spacing: 4) {
                 if let filled {
                     TaptionCuteIcon(filled.systemImage).foregroundStyle(Color.tpAccent)
                     Text(filled.title(language)).font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold)).lineLimit(1).minimumScaleFactor(0.6)
-                    Text(MapHomeCardMetricSelection.value(for: filled, number: dayValues[filled.rawValue] ?? 0))
+                    Text(filled.valueText(dayValues[filled.id] ?? 0))
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold)).lineLimit(1).minimumScaleFactor(0.6)
                 } else {
                     Image(systemName: "plus").font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold)).foregroundStyle(Color.tpSecondary)
@@ -460,17 +460,17 @@ struct MapHomeDailyCardSheet: View {
     private var metricPicker: some View {
         NavigationStack {
             List {
-                ForEach(MapHomeCalendarTimeKind.allCases) { kind in
-                    let chosen = selectedIDs.contains(kind.rawValue)
+                ForEach(MapHomeCardMetricOption.all) { option in
+                    let chosen = selectedIDs.contains(option.id)
                     let full = !chosen && selectedIDs.count >= MapHomeCardMetricSelection.maximum
                     Button {
-                        toggle(kind.rawValue)
+                        toggle(option.id)
                     } label: {
                         HStack {
-                            TaptionCuteIcon(kind.systemImage).foregroundStyle(Color.tpAccent).frame(width: 24)
-                            Text(kind.title(language))
+                            TaptionCuteIcon(option.systemImage).foregroundStyle(Color.tpAccent).frame(width: 24)
+                            Text(option.title(language))
                             Spacer()
-                            Text(MapHomeCardMetricSelection.value(for: kind, number: dayValues[kind.rawValue] ?? 0))
+                            Text(option.valueText(dayValues[option.id] ?? 0))
                                 .foregroundStyle(Color.tpSecondary)
                             Image(systemName: chosen ? "checkmark.circle.fill" : "circle")
                                 .foregroundStyle(chosen ? Color.tpAccent : Color.tpLine)

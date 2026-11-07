@@ -252,20 +252,16 @@ extension AppModel {
     }
 
     /// 안내 시트가 없을 때 위치 권한이 비어 있으면 시작하자마자 시스템 팝업으로 묻는다.
-    /// '항상' 승격 팝업은 iOS가 한 번만 보여 주므로 설치당 한 번만 요청한다.
+    /// '항상' 승격 팝업은 iOS가 한 번만 보여 주므로 실제로 보낸 뒤에만 기록한다(`LocationAlwaysUpgradePolicy`).
     func requestMissingLocationPermissionAtLaunch() async {
-        guard !isPermissionOnboardingPresented, FirstRunTutorialStore().allowsUnaskedPermissionPrompts,
-              let sensorService else { return }
-        let upgradeKey = "taption.locationAlwaysUpgradeRequested"
-        switch sensorService.locationAuthorizationStatus() {
-        case .notDetermined:
-            break
-        case .authorizedWhenInUse:
-            guard !UserDefaults.standard.bool(forKey: upgradeKey) else { return }
-        default:
-            return
-        }
-        UserDefaults.standard.set(true, forKey: upgradeKey)
+        guard !isPermissionOnboardingPresented, let sensorService else { return }
+        let tutorial = FirstRunTutorialStore()
+        guard LocationAlwaysUpgradePolicy.shouldRequestAtLaunch(
+            status: sensorService.locationAuthorizationStatus(),
+            allowsUnaskedPrompts: tutorial.allowsUnaskedPermissionPrompts,
+            tutorialFinished: tutorial.outcome == .completed || tutorial.outcome == .skipped,
+            alreadyRequested: LocationAlwaysUpgradePolicy.wasRequested()
+        ) else { return }
         await enableLocationCollection(always: true)
     }
 

@@ -26,6 +26,7 @@
 		A1FA113776B4F655CB131CBA /* StableRecordIDTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11C58FA9883A9A7F8673 /* StableRecordIDTests.swift */; };
 		A1FA11D356722EEA8B293A50 /* OneShotReply.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11F96060E8351D906AA8 /* OneShotReply.swift */; };
 		A1FA111D146A9C217935CC51 /* MapHomeDailyCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA115C43BF0F705C0CC3E6 /* MapHomeDailyCard.swift */; };
+		A1000000000000000AA1C001 /* MapHomeCardMetricOption.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000AA1C001 /* MapHomeCardMetricOption.swift */; };
 		A1FA1128A1FC3A9AF08DED56 /* MapHomeAlarm.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11050C8C616822F8DF6B /* MapHomeAlarm.swift */; };
 		A1FA11D67A6BAA407D371199 /* MapHomeSalaryPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11B9733FBC139C6D2716 /* MapHomeSalaryPolicy.swift */; };
 		A1FA119C943D414BBBC9CDA9 /* MapHomeStride.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11501F768BFA9562791B /* MapHomeStride.swift */; };
@@ -132,6 +133,7 @@
 		A5B1102A0200000000000017 /* AppModel+Memos.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000016 /* AppModel+Memos.swift */; };
 		A5B1102A0200000000000015 /* AppModel+Navigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000014 /* AppModel+Navigation.swift */; };
 		A5B1102A0200000000000013 /* AppModel+Permissions.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000012 /* AppModel+Permissions.swift */; };
+		A1000000000000000AA1C002 /* LocationAlwaysUpgradePolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000AA1C002 /* LocationAlwaysUpgradePolicy.swift */; };
 		A5B1102A0200000000000011 /* AppModel+Persistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000010 /* AppModel+Persistence.swift */; };
 		A10000000000000004DA0001 /* AppModel+EditRollback.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000004DA0001 /* AppModel+EditRollback.swift */; };
 		A5B1102A020000000000000F /* AppModel+Plans.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000000E /* AppModel+Plans.swift */; };
@@ -666,6 +668,7 @@
 		F1FA11C58FA9883A9A7F8673 /* StableRecordIDTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StableRecordIDTests.swift; sourceTree = "<group>"; };
 		F1FA11F96060E8351D906AA8 /* OneShotReply.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OneShotReply.swift; sourceTree = "<group>"; };
 		F1FA115C43BF0F705C0CC3E6 /* MapHomeDailyCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeDailyCard.swift; sourceTree = "<group>"; };
+		F1000000000000000AA1C001 /* MapHomeCardMetricOption.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCardMetricOption.swift; sourceTree = "<group>"; };
 		F1FA11050C8C616822F8DF6B /* MapHomeAlarm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeAlarm.swift; sourceTree = "<group>"; };
 		F1FA11B9733FBC139C6D2716 /* MapHomeSalaryPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeSalaryPolicy.swift; sourceTree = "<group>"; };
 		F1FA11501F768BFA9562791B /* MapHomeStride.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeStride.swift; sourceTree = "<group>"; };
@@ -759,6 +762,7 @@
 		F5B1102A0200000000000016 /* AppModel+Memos.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Memos.swift"; sourceTree = "<group>"; };
 		F5B1102A0200000000000014 /* AppModel+Navigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Navigation.swift"; sourceTree = "<group>"; };
 		F5B1102A0200000000000012 /* AppModel+Permissions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Permissions.swift"; sourceTree = "<group>"; };
+		F1000000000000000AA1C002 /* LocationAlwaysUpgradePolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationAlwaysUpgradePolicy.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000010 /* AppModel+Persistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Persistence.swift"; sourceTree = "<group>"; };
 		F10000000000000004DA0001 /* AppModel+EditRollback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+EditRollback.swift"; sourceTree = "<group>"; };
 		F5B1102A020000000000000E /* AppModel+Plans.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Plans.swift"; sourceTree = "<group>"; };
@@ -1462,6 +1466,7 @@
 				F1000000000000000000007F /* MapHomeCalendarSheet.swift */,
 				F1FA115C43BF0F705C0CC3E6 /* MapHomeDailyCard.swift */,
 				F10000000000000006FC0003 /* MapHomeAlarmDiagnostics.swift */,
+				F1000000000000000AA1C001 /* MapHomeCardMetricOption.swift */,
 				F1FA11050C8C616822F8DF6B /* MapHomeAlarm.swift */,
 				F1FA11B9733FBC139C6D2716 /* MapHomeSalaryPolicy.swift */,
 				F1FA11501F768BFA9562791B /* MapHomeStride.swift */,
@@ -1606,6 +1611,7 @@
 				F5B1102A0200000000000016 /* AppModel+Memos.swift */,
 				F5B1102A0200000000000014 /* AppModel+Navigation.swift */,
 				F5B1102A0200000000000012 /* AppModel+Permissions.swift */,
+				F1000000000000000AA1C002 /* LocationAlwaysUpgradePolicy.swift */,
 				F5B1102A0200000000000010 /* AppModel+Persistence.swift */,
 				F10000000000000004DA0001 /* AppModel+EditRollback.swift */,
 				F5B1102A020000000000000E /* AppModel+Plans.swift */,
@@ -2204,6 +2210,7 @@
 				A5B1102A0200000000000017 /* AppModel+Memos.swift in Sources */,
 				A5B1102A0200000000000015 /* AppModel+Navigation.swift in Sources */,
 				A5B1102A0200000000000013 /* AppModel+Permissions.swift in Sources */,
+				A1000000000000000AA1C002 /* LocationAlwaysUpgradePolicy.swift in Sources */,
 				A5B1102A0200000000000011 /* AppModel+Persistence.swift in Sources */,
 				A10000000000000004DA0001 /* AppModel+EditRollback.swift in Sources */,
 				A5B1102A020000000000000F /* AppModel+Plans.swift in Sources */,
@@ -2307,6 +2314,7 @@
 				A5000000000000000000A002 /* MapHomeVectorLabels.swift in Sources */,
 				A1000000000000000000007F /* MapHomeCalendarSheet.swift in Sources */,
 				A1FA111D146A9C217935CC51 /* MapHomeDailyCard.swift in Sources */,
+				A1000000000000000AA1C001 /* MapHomeCardMetricOption.swift in Sources */,
 				A1FA1128A1FC3A9AF08DED56 /* MapHomeAlarm.swift in Sources */,
 				A1FA11D67A6BAA407D371199 /* MapHomeSalaryPolicy.swift in Sources */,
 				A1FA119C943D414BBBC9CDA9 /* MapHomeStride.swift in Sources */,
