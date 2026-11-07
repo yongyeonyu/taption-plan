@@ -142,13 +142,32 @@ final class MapHomePlaybackMusicTests: XCTestCase {
         XCTAssertEqual(MapHomePlaybackMusicStream.fadeGain(frame: 999, total: 1_000, fadeFrames: 100), 0)
     }
 
+    /// 끝의 무음 꼬리를 잘라 반복하므로, 모든 곡의 반복 길이가 파일보다 짧고 마지막 표본이 들린다.
+    func testLoopLengthDropsTrailingSilence() throws {
+        for track in MapHomePlaybackMusicTrack.allCases {
+            let url = try XCTUnwrap(track.url)
+            let file = try AVAudioFile(forReading: url, commonFormat: .pcmFormatFloat32, interleaved: true)
+            let loop = try MapHomePlaybackMusicStream.audibleLength(of: file)
+            let tail = Double(file.length - loop) / file.processingFormat.sampleRate
+            XCTAssertLessThan(loop, file.length, track.rawValue)
+            XCTAssertLessThan(tail, 2.5, "\(track.rawValue) 꼬리가 너무 길게 잘림")
+            let channels = Int(file.processingFormat.channelCount)
+            let buffer = try XCTUnwrap(AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: 64))
+            file.framePosition = loop - 1
+            try file.read(into: buffer, frameCount: 1)
+            let last = try XCTUnwrap(buffer.audioBufferList.pointee.mBuffers.mData).assumingMemoryBound(to: Float.self)
+            let peak = (0..<channels).map { abs(last[$0]) }.max() ?? 0
+            XCTAssertGreaterThan(peak, MapHomePlaybackMusicStream.silenceThreshold, track.rawValue)
+        }
+    }
+
     /// 이음새 근처의 표본 간 변화가 곡 안에서 나오는 변화보다 커지지 않는다.
     func testLoopSeamsDoNotClick() throws {
         for track in MapHomePlaybackMusicTrack.allCases {
             let url = try XCTUnwrap(track.url)
             let file = try AVAudioFile(forReading: url)
-            let length = file.length
-            let stream = try MapHomePlaybackMusicStream(url: url, durationSeconds: Double(length) / file.processingFormat.sampleRate * 2.2)
+            let stream = try MapHomePlaybackMusicStream(url: url, durationSeconds: Double(file.length) / file.processingFormat.sampleRate * 2.2)
+            let length = stream.loopFrames
             let channels = Int(stream.format.channelCount)
             var previous = [Float](repeating: 0, count: channels)
             var frame: AVAudioFramePosition = 0

@@ -50,10 +50,14 @@ final class MapHomePlaybackMusicStream {
     static let fadeSeconds = 1.5
     /// 이음새에서 곡 끝과 곡 처음을 겹치는 길이(약 46ms).
     static let seamFrames: AVAudioFramePosition = 2_048
+    /// 곡 끝에서 이 크기(약 -46dB)보다 작은 꼬리는 무음으로 보고 반복 때 잘라낸다.
+    static let silenceThreshold: Float = 0.005
     private static let chunkFrames: AVAudioFramePosition = 4_096
 
     let format: AVAudioFormat
     let totalFrames: AVAudioFramePosition
+    /// 반복에 쓰는 곡 길이. 끝의 무음 꼬리를 뺀 값.
+    let loopFrames: AVAudioFramePosition
     private(set) var producedFrames: AVAudioFramePosition = 0
 
     private let file: AVAudioFile
@@ -67,7 +71,8 @@ final class MapHomePlaybackMusicStream {
         format = file.processingFormat
         channels = Int(format.channelCount)
         guard file.length > 0 else { throw MapHomePlaybackVideoError.writerFailed("empty music") }
-        seam = min(Self.seamFrames, file.length / 4)
+        loopFrames = try Self.audibleLength(of: file)
+        seam = min(Self.seamFrames, loopFrames / 4)
         totalFrames = AVAudioFramePosition((durationSeconds * format.sampleRate).rounded())
         // 영상이 아주 짧으면 절반까지만 페이드아웃한다.
         fadeFrames = min(AVAudioFramePosition(Self.fadeSeconds * format.sampleRate), totalFrames / 2)
@@ -83,12 +88,36 @@ final class MapHomePlaybackMusicStream {
         return ratio * ratio
     }
 
+    /// 끝에서부터 거꾸로 읽어 마지막으로 들리는 표본까지의 길이. 전부 무음이면 파일 길이를 그대로 쓴다.
+    static func audibleLength(of file: AVAudioFile, threshold: Float = silenceThreshold) throws -> AVAudioFramePosition {
+        let channels = Int(file.processingFormat.channelCount)
+        let step = AVAudioFramePosition(file.processingFormat.sampleRate)
+        var end = file.length
+        defer { file.framePosition = 0 }
+        while end > 0 {
+            let start = max(0, end - step)
+            file.framePosition = start
+            guard let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: AVAudioFrameCount(end - start)) else { break }
+            try file.read(into: buffer, frameCount: AVAudioFrameCount(end - start))
+            let samples = pointer(buffer)
+            var frame = Int(buffer.frameLength) - 1
+            while frame >= 0 {
+                for channel in 0..<channels where abs(samples[frame * channels + channel]) > threshold {
+                    return start + AVAudioFramePosition(frame) + 1
+                }
+                frame -= 1
+            }
+            end = start
+        }
+        return file.length
+    }
+
     /// 다음 묶음. 영상 길이를 다 채웠으면 nil.
     func nextBuffer() throws -> AVAudioPCMBuffer? {
         guard producedFrames < totalFrames else { return nil }
-        if file.framePosition >= file.length { file.framePosition = seam }
-        let seamStart = file.length - seam
-        let boundary = file.framePosition < seamStart ? seamStart : file.length
+        if file.framePosition >= loopFrames { file.framePosition = seam }
+        let seamStart = loopFrames - seam
+        let boundary = file.framePosition < seamStart ? seamStart : loopFrames
         let wanted = min(Self.chunkFrames, boundary - file.framePosition, totalFrames - producedFrames)
         let position = file.framePosition
         guard let buffer = try read(frames: wanted), buffer.frameLength > 0 else {
