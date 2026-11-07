@@ -38,7 +38,7 @@ enum UnobservedStayEngine {
             guard let from = before.point, let to = after.point else { return nil }
             let silence = TimeSpan(start: before.timestamp, end: after.timestamp)
             guard silence.duration >= minimumDuration else { return nil }
-            let displacement = meters(from, to)
+            let displacement = PlanarDistance.meters(from, to)
             guard displacement <= maximumDisplacementMeters else { return nil }
             guard let still = longestPiece(of: silence, removing: footSpans), still.duration >= minimumDuration else { return nil }
             let window = footEvidenceWindow
@@ -131,11 +131,6 @@ enum UnobservedStayEngine {
         return pieces.max { $0.duration < $1.duration }
     }
 
-    private static func meters(_ a: GeoPoint, _ b: GeoPoint) -> Double {
-        let x = (a.longitude - b.longitude) * 111_320 * cos(a.latitude * .pi / 180)
-        let y = (a.latitude - b.latitude) * 111_320
-        return (x * x + y * y).squareRoot()
-    }
 
     private static func stableUUID(_ key: String) -> UUID {
         StableRecordID.indexMixedFNV(key)

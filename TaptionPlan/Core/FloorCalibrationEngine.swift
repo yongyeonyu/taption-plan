@@ -18,9 +18,7 @@ enum PlaceHeightCapture {
     /// 지금 지점 안에 있을 때만 그 자리의 높이다. 지도에서 멀리서 고치는 경우는 재지 않는다.
     static func isInside(_ place: FrequentPlace, reading: SensorReading?) -> Bool {
         guard let reading, reading.gpsAvailable, let current = reading.point, let point = place.point else { return false }
-        let y = (current.latitude - point.latitude) * 111_320
-        let x = (current.longitude - point.longitude) * 111_320 * cos(point.latitude * .pi / 180)
-        return (x * x + y * y).squareRoot() <= place.radiusMeters
+        return PlanarDistance.meters(point, current) <= place.radiusMeters
     }
 
     /// 측정값을 넣은 기준 표본. 이 측정의 상대 고도 세션은 끝나므로 남기지 않는다.

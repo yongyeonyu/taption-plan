@@ -32,7 +32,7 @@
     "TaptionPlan/Core/HealthKitImportCoordinator.swift": 1367,
     "TaptionPlan/Core/PlanningEngine.swift": 2259,
     "TaptionPlan/Core/RecordSummaryEngine.swift": 2988,
-    "TaptionPlan/Core/RouteTimelineData.swift": 3408,
+    "TaptionPlan/Core/RouteTimelineData.swift": 2753,
     "TaptionPlan/Core/TaptionActivityEngineAdapter.swift": 1871,
     "TaptionPlan/Core/TaptionStoreV2.swift": 1293,
     "TaptionPlan/Core/TravelModeClassifier.swift": 1367,

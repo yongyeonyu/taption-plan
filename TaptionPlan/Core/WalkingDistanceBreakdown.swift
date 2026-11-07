@@ -56,9 +56,7 @@ struct WalkingDistanceBreakdown: Equatable, Sendable {
         var meters = 0.0
         for (a, b) in zip(fixes, fixes.dropFirst()) {
             guard let from = a.point, let to = b.point else { continue }
-            let x = (from.longitude - to.longitude) * 111_320 * cos(from.latitude * .pi / 180)
-            let y = (from.latitude - to.latitude) * 111_320
-            meters += (x * x + y * y).squareRoot()
+            meters += PlanarDistance.meters(from, to)
         }
         let accuracy = fixes.isEmpty ? -1 : fixes.compactMap { $0.point?.horizontalAccuracy }.reduce(0, +) / Double(fixes.count)
         return WalkingBout(

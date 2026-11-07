@@ -2,6 +2,14 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## RFT1107A01 · 리팩토링 상위 3개 (2026-11-07)
+
+- 1) 평면 거리 사본 9곳(지하철 판정 2·머무름 2·층 보정·걷기 거리·재생 연속성·지하철 근거·선분 거리 2) → `PlanarDistance.meters`·`segmentMeters`(`FeatureModels.swift`). 식과 곱셈 순서를 그대로 두어 결과가 같다.
+- 2) 대원 거리 사본 `MapHomeWBSPlaybackProjection.distanceMeters` → 전역 `distanceMeters`로 위임. 전역 함수는 경도를 짧은 쪽으로 재게 했다(±180° 안에서는 결과 같음, 날짜변경선 넘는 두 점은 이제 가깝게 나온다).
+- 3) 가장 큰 파일 `RouteTimelineData.swift` 3,408→2,753줄: 재생 투영 타입(활동·방향·구간·프레임·`MapHomePlaybackLocation`·`MapHomeWBSPlaybackProjection`)을 새 `MapHomeWBSPlayback.swift`(647줄)로 옮기고 동결 예산을 2,753으로 낮췄다.
+- 시뮬레이터(BOKKI-iPhone11, 병렬 끔) 앱 단위 시험 2,096건: 1건 실패·17건 건너뜀(`build/validation/RFT1107A01/unit.xcresult`). 실패한 `TransitBoardingPersistenceTests.testConfirmationPersistsGeometryAndReloadsWithoutSensorReadings`는 리팩토링 전 코드에서도 같은 값(47≠9)으로 실패(`before-transit.log`) — 지도 선이 실제 선로를 따르게 된 SUB1106A02 뒤 고치지 않은 시험이라, 기대값을 `SubwayTrackCatalog.following` 점 수로 바꿨다. 그 뒤 해당 클래스 12건 통과(`transit.log`). 전체를 다시 돌리지는 않았다.
+- 구조 검사 통과, `plutil -lint` 통과. 실기기 확인 없음(동작 변경 없음).
+
 ## PRF1101A01 · 영상 렌더러 조회 자료 공유 (2026-11-07)
 
 - 변경: `MapHomePlaybackTimeline`이 만들 때 `MapHomePlaybackLookup`을 한 번 만들고, 프레임마다 좌표(`resolveOrGap(lookup:)`)와 속도(`lookup.speed`)에 쓴다. 예전에는 프레임마다 장소 사전을 다시 만들고 속도 때문에 하루 측정값을 전부 훑었다. 실시간 구동기와 같은 경로다.

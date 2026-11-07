@@ -181,8 +181,8 @@ enum RailRideLikelihood {
     private static func emission(point: GeoPoint, speed: Double?, state: Int, stations: [GeoPoint]) -> Double {
         let isStation = state % 2 == 0
         let distance = isStation
-            ? meters(point, stations[state / 2])
-            : segmentMeters(point, stations[state / 2], stations[state / 2 + 1])
+            ? PlanarDistance.meters(point, stations[state / 2])
+            : PlanarDistance.segmentMeters(point, stations[state / 2], stations[state / 2 + 1])
         // 역 사이는 직선으로 근사하므로 폭을 넓게 둔다.
         let sigma = isStation ? 120.0 : 300.0
         var value = max(-12, -0.5 * pow(distance / sigma, 2)) - log(sigma / 120)
@@ -199,7 +199,7 @@ enum RailRideLikelihood {
             guard !stoppedAt.contains(station) else { return false }
             let near = alignment.filter {
                 guard let point = $0.reading.point else { return false }
-                return meters(point, stations[station]) <= passingRadiusMeters
+                return PlanarDistance.meters(point, stations[station]) <= passingRadiusMeters
             }
             let speeds = near.compactMap(\.reading.speedMetersPerSecond).filter { $0 >= 0 }
             return !speeds.isEmpty && speeds.allSatisfy { $0 >= passingSpeed }
@@ -248,20 +248,5 @@ enum RailRideLikelihood {
         return (0...maximumAccuracyMeters).contains(point.horizontalAccuracy)
     }
 
-    private static func segmentMeters(_ point: GeoPoint, _ start: GeoPoint, _ end: GeoPoint) -> Double {
-        let scale = cos(point.latitude * .pi / 180)
-        let ax = (start.longitude - point.longitude) * 111_320 * scale, ay = (start.latitude - point.latitude) * 111_320
-        let bx = (end.longitude - point.longitude) * 111_320 * scale, by = (end.latitude - point.latitude) * 111_320
-        let dx = bx - ax, dy = by - ay
-        let length = dx * dx + dy * dy
-        let t = length > 0 ? min(1, max(0, -(ax * dx + ay * dy) / length)) : 0
-        let x = ax + dx * t, y = ay + dy * t
-        return (x * x + y * y).squareRoot()
-    }
 
-    private static func meters(_ a: GeoPoint, _ b: GeoPoint) -> Double {
-        let x = (a.longitude - b.longitude) * 111_320 * cos(a.latitude * .pi / 180)
-        let y = (a.latitude - b.latitude) * 111_320
-        return (x * x + y * y).squareRoot()
-    }
 }

@@ -51,7 +51,7 @@ enum PlaceZoneStayTracker {
             .compactMap { reading -> (time: Date, distance: Double, accuracy: Double)? in
                 guard RouteTimelineTimestamp.isValid(reading.timestamp), reading.gpsAvailable, let point = reading.point,
                       (0...maximumAccuracyMeters).contains(point.horizontalAccuracy) else { return nil }
-                return (reading.timestamp, meters(point, center), point.horizontalAccuracy)
+                return (reading.timestamp, PlanarDistance.meters(point, center), point.horizontalAccuracy)
             }
             .sorted { $0.time < $1.time }
 
@@ -149,11 +149,6 @@ enum PlaceZoneStayTracker {
         return result
     }
 
-    static func centerDistance(_ a: GeoPoint, _ b: GeoPoint) -> Double { meters(a, b) }
+    static func centerDistance(_ a: GeoPoint, _ b: GeoPoint) -> Double { PlanarDistance.meters(a, b) }
 
-    private static func meters(_ a: GeoPoint, _ b: GeoPoint) -> Double {
-        let x = (a.longitude - b.longitude) * 111_320 * cos(a.latitude * .pi / 180)
-        let y = (a.latitude - b.latitude) * 111_320
-        return (x * x + y * y).squareRoot()
-    }
 }

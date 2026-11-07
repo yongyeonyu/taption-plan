@@ -192,7 +192,7 @@ extension MapHomePlaybackLocation {
     /// 미확인 구간의 진행 방향. 지하철은 노선을 따라, 나머지는 앞 표본에서 뒤 표본 쪽이다.
     static func gapHeading(at date: Date, travel: [TravelSegment], readings: [SensorReading]) -> CLLocationDirection? {
         func bearing(_ from: GeoPoint, _ to: GeoPoint) -> CLLocationDirection? {
-            guard meters(from, to) >= 1 else { return nil }
+            guard PlanarDistance.meters(from, to) >= 1 else { return nil }
             return MapHomeVectorNavigationMath.bearing(
                 from: CLLocationCoordinate2D(latitude: from.latitude, longitude: from.longitude),
                 to: CLLocationCoordinate2D(latitude: to.latitude, longitude: to.longitude)
@@ -202,7 +202,7 @@ extension MapHomePlaybackLocation {
            let next = subwayCoordinate(at: date.addingTimeInterval(30), travel: travel, readings: readings),
            let heading = bearing(here, next) { return heading }
         guard let gap = sensorGap(at: date, readings: readings), let from = gap.before.point, let to = gap.after.point,
-              meters(from, to) >= minimumGapMoveMeters else { return nil }
+              PlanarDistance.meters(from, to) >= minimumGapMoveMeters else { return nil }
         return bearing(from, to)
     }
 
@@ -213,7 +213,7 @@ extension MapHomePlaybackLocation {
         guard let gap = sensorGap(at: date, readings: readings),
               let from = gap.before.point, let to = gap.after.point else { return nil }
         let duration = gap.after.timestamp.timeIntervalSince(gap.before.timestamp)
-        let distance = meters(from, to)
+        let distance = PlanarDistance.meters(from, to)
         guard duration > 0, distance >= minimumGapMoveMeters else { return nil }
         let speed = distance / duration
         if distance >= minimumFlightMeters, speed >= minimumFlightSpeed
@@ -265,7 +265,7 @@ extension MapHomePlaybackLocation {
     /// 지하철 구간에서 표본이 끊긴 부분의 노선 조각. 표본이 이어진 곳은 실제 경로가 있어 그리지 않는다.
     static func subwayGapRoutes(segment: TravelSegment, readings: [SensorReading], through cutoff: Date) -> [[GeoPoint]] {
         guard let points = segment.subwayRoute?.coordinates, points.count >= 2 else { return [] }
-        let lengths = zip(points, points.dropFirst()).map { meters($0.0, $0.1) }
+        let lengths = zip(points, points.dropFirst()).map { PlanarDistance.meters($0.0, $0.1) }
         let total = lengths.reduce(0, +)
         guard total > 0 else { return [] }
         let end = min(cutoff, segment.span.end)
@@ -307,7 +307,7 @@ extension MapHomePlaybackLocation {
         }
         before = readings[..<lower].last(where: trusted)
         after = readings[lower...].first(where: trusted)
-        let lengths = zip(points, points.dropFirst()).map { meters($0.0, $0.1) }
+        let lengths = zip(points, points.dropFirst()).map { PlanarDistance.meters($0.0, $0.1) }
         let total = lengths.reduce(0, +)
         guard total > 0 else { return nil }
         let startMeters = before?.point.map { position(of: $0, on: points, lengths: lengths) } ?? 0
@@ -356,11 +356,6 @@ extension MapHomePlaybackLocation {
         return points[points.count - 1]
     }
 
-    private static func meters(_ a: GeoPoint, _ b: GeoPoint) -> Double {
-        let y = (a.latitude - b.latitude) * 111_320
-        let x = (a.longitude - b.longitude) * 111_320 * cos(a.latitude * .pi / 180)
-        return (x * x + y * y).squareRoot()
-    }
 }
 
 extension RouteConfirmedSubwayIntervalIndex {

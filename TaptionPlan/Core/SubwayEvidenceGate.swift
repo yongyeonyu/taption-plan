@@ -45,7 +45,7 @@ enum SubwayEvidenceGate {
         }
         for reading in readings.sorted(by: { $0.timestamp < $1.timestamp }) {
             if let lastInRun, reading.timestamp.timeIntervalSince(lastInRun) > maximumDwellGap { closeRun() }
-            let distance = reading.gpsAvailable ? reading.point.map { meters($0, station) } : nil
+            let distance = reading.gpsAvailable ? reading.point.map { PlanarDistance.meters($0, station) } : nil
             if distance != nil { hasAnyPosition = true }
             if let distance, distance > stationRadiusMeters {
                 closeRun()
@@ -59,11 +59,6 @@ enum SubwayEvidenceGate {
         return hasAnyPosition ? longest : nil
     }
 
-    private static func meters(_ a: GeoPoint, _ b: GeoPoint) -> Double {
-        let latitude = (a.latitude - b.latitude) * 111_320
-        let longitude = (a.longitude - b.longitude) * 111_320 * cos(a.latitude * .pi / 180)
-        return (latitude * latitude + longitude * longitude).squareRoot()
-    }
 
     static func missingConditions(_ input: Input) -> [String] {
         var missing: [String] = []

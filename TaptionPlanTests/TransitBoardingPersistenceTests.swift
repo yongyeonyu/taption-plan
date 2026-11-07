@@ -172,7 +172,9 @@ final class TransitBoardingPersistenceTests: XCTestCase {
                 end: segment.span.end.addingTimeInterval(3600)), through: segment.span.end)
         XCTAssertEqual(overlays.count, 1)
         XCTAssertFalse(try XCTUnwrap(overlays.first).estimated)
-        XCTAssertEqual(overlays.first?.coordinates.count, segment.subwayRoute?.coordinates.count)
+        // 지도는 역 사이를 실제 선로 모양으로 잇는다(SUB1106A02).
+        XCTAssertEqual(overlays.first?.coordinates.count,
+            segment.subwayRoute.map { SubwayTrackCatalog.following($0.coordinates).count })
         var regenerated = source.travel[0]
         regenerated.id = UUID()
         let replayed = TransitBoardingDecisionEngine.applying(

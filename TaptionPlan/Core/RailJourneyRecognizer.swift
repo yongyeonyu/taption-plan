@@ -92,7 +92,7 @@ enum RailJourneyRecognizer {
         var value = previous
         value.span = TimeSpan(start: boarded, end: now)
         value.stationNames = []
-        value.measuredMeters = zip(points, points.dropFirst()).reduce(0) { $0 + meters($1.0, $1.1) }
+        value.measuredMeters = zip(points, points.dropFirst()).reduce(0) { $0 + PlanarDistance.meters($1.0, $1.1) }
         return value
     }
 
@@ -322,28 +322,13 @@ enum RailJourneyRecognizer {
 
     private static func routeMeters(_ route: SubwayRoutePath) -> Double {
         let points = route.coordinates
-        return zip(points, points.dropFirst()).reduce(0) { $0 + meters($1.0, $1.1) }
+        return zip(points, points.dropFirst()).reduce(0) { $0 + PlanarDistance.meters($1.0, $1.1) }
     }
 
     private static func offRouteMeters(_ point: GeoPoint, route: SubwayRoutePath) -> Double {
         let points = route.coordinates
-        return zip(points, points.dropFirst()).map { segmentMeters(point, $0.0, $0.1) }.min() ?? .infinity
+        return zip(points, points.dropFirst()).map { PlanarDistance.segmentMeters(point, $0.0, $0.1) }.min() ?? .infinity
     }
 
-    private static func segmentMeters(_ point: GeoPoint, _ start: GeoPoint, _ end: GeoPoint) -> Double {
-        let scale = cos(point.latitude * .pi / 180)
-        let ax = (start.longitude - point.longitude) * 111_320 * scale, ay = (start.latitude - point.latitude) * 111_320
-        let bx = (end.longitude - point.longitude) * 111_320 * scale, by = (end.latitude - point.latitude) * 111_320
-        let dx = bx - ax, dy = by - ay
-        let length = dx * dx + dy * dy
-        let t = length > 0 ? min(1, max(0, -(ax * dx + ay * dy) / length)) : 0
-        let x = ax + dx * t, y = ay + dy * t
-        return (x * x + y * y).squareRoot()
-    }
 
-    private static func meters(_ a: GeoPoint, _ b: GeoPoint) -> Double {
-        let x = (a.longitude - b.longitude) * 111_320 * cos(a.latitude * .pi / 180)
-        let y = (a.latitude - b.latitude) * 111_320
-        return (x * x + y * y).squareRoot()
-    }
 }
