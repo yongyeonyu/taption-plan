@@ -74,8 +74,7 @@ extension AppModel {
             )
         }
         snapshot.plans.sort { $0.span.start < $1.span.start }
-        recordUserEdit(from: previous)
-        Task { await persist() }
+        scheduleUserEditSave(from: previous)
         return plan.id
     }
 
@@ -172,8 +171,7 @@ extension AppModel {
             snapshot.plans = candidate.sorted {
                 $0.span.start < $1.span.start
             }
-            recordUserEdit(from: previous)
-            Task { await persist() }
+            scheduleUserEditSave(from: previous)
         } catch PlanningError.parentCycle {
             userFacingError = AppLanguagePreference.text(
                 korean: "계획을 자기 하위 루틴 안으로 옮길 수 없습니다.",
@@ -636,6 +634,7 @@ extension AppModel {
             return
         }
         clearUserEditRedoHistory()
+        let previous = snapshot
         let descendants = (try? PlanHierarchy.descendants(
             of: planID,
             in: snapshot.plans
@@ -698,7 +697,7 @@ extension AppModel {
             majorCategoryTitle: majorCategory.title,
             majorCategorySystemImage: majorCategory.systemImage
         )
-        await persist()
+        await persistOrRollBack(userEditRollback(from: previous))
     }
 
     private func recordNodePlanID(_ nodeID: String) -> UUID? {
@@ -802,11 +801,10 @@ extension AppModel {
                 )
             }
             snapshot.plans.sort { $0.span.start < $1.span.start }
-            recordUserEdit(
+            scheduleUserEditSave(
                 from: previous,
                 coalescingKey: "plan:\(planID.uuidString)"
             )
-            Task { await persist() }
         } catch PlanningError.fixedPlan {
             userFacingError = AppLanguagePreference.text(
                 korean: "캘린더의 고정 일정은 이곳에서 옮길 수 없습니다.",
@@ -863,11 +861,10 @@ extension AppModel {
             }
             let previous = snapshot
             snapshot.plans[index] = resized
-            recordUserEdit(
+            scheduleUserEditSave(
                 from: previous,
                 coalescingKey: "plan:\(planID.uuidString)"
             )
-            Task { await persist() }
         } catch PlanningError.childOutsideParent {
             userFacingError = AppLanguagePreference.text(
                 korean: "상위·하위 계획의 기간을 벗어나지 않도록 길이를 조절해 주세요.",

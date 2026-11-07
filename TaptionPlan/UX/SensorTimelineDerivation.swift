@@ -43,7 +43,7 @@ enum SensorStayDerivation {
             to: resolved,
             knownPlaces: input.knownPlaces
         )
-        let basePlaces = floorTimeline.places
+        let basePlaces = PlaceStayMergeEngine.merging(floorTimeline.places)
         let walkingLocations = WalkingLocationEngine()
             .build(readings: input.readings)
             .filter { walkingLocation in
