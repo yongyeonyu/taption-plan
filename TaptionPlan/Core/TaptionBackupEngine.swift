@@ -18,6 +18,11 @@ import TaptionPlanCore
 /// - 달력은 그레고리력 + 고정 시간대다. 시간대는 첫 사용 때 meta(`backup.timezone`)에 저장하고 이후에는 저장된 값을 쓴다.
 ///   파일 헤더의 시간대와 달라도 저장된 값을 쓴다(헤더 값은 참고용).
 /// - 헤더의 행 수·시각·해시 같은 메타데이터는 암호화돼 있다. 비밀번호 없이는 월 이름과 파일 크기만 보인다.
+/// - 복원·합치기는 전부 아니면 전무다. 파일을 준비 저장소(`<저장소 폴더>/.taption-restore-staging/<uuid>/`)에 끝까지 풀어
+///   트레일러 행 수·내용 SHA-256까지 검증한 뒤 본 저장소에 한 트랜잭션으로 합친다. 그 전에 실패(통신·복호화·디스크·취소)하면
+///   본 저장소는 그대로이고 준비 파일은 지운다. 메모 저장소는 다른 파일이라 본 트랜잭션에 "메모 남음" 표시를 함께 남기고
+///   커밋 뒤에 메모를 합친다. 그 사이에 멈추면 다음 작업 시작 때 같은 준비 파일로 메모를 마저 합친다(멱등). 남은 준비 파일은
+///   다음 작업 시작 때 지운다.
 /// 비밀번호 문자열은 쓰기·읽기에만 쓰고 저장하지 않는다. 유도한 키는 작업 하나가 끝나면 버린다.
 actor TaptionBackupEngine {
     struct Configuration: Sendable {
@@ -31,6 +36,10 @@ actor TaptionBackupEngine {
         var beforeVerify: (@Sendable (URL) throws -> Void)?
         /// 직렬화된 작업의 시작(`true`)·끝(`false`)에 부른다(테스트에서 겹침이 없는지 본다).
         var operationHook: (@Sendable (String, Bool) -> Void)?
+        /// 새로 쓰는 파일의 형식 버전. 테스트만 2로 낮춰 옛 형식 읽기 호환을 본다.
+        var formatVersion = TaptionBackupHeader.currentVersion
+        /// 준비 파일을 다 채운 뒤 저장소에 합치기 직전에 부른다(테스트에서 복원 도중 실패를 흉내 낸다).
+        var beforeRestoreCommit: (@Sendable (URL) throws -> Void)?
     }
 
     enum KeepReason: Equatable, Sendable {
@@ -148,7 +157,6 @@ actor TaptionBackupEngine {
     private let store: TaptionStoreV2
     /// 메모 전용 저장소. 백업 파일에는 본 저장소 행과 함께 담고, 복원할 때는 종류에 따라 되돌려 쓴다.
     private let memoStore: TaptionStoreV2?
-    private static let memoKind = "memo"
     private let destination: any TaptionBackupDestination
     private let configuration: Configuration
     private var calendar: Calendar
@@ -208,6 +216,8 @@ actor TaptionBackupEngine {
             await destination.cleanupStaleUploads()
             didCleanUploads = true
         }
+        // 이전 실행이 남긴 복원 준비 파일: 커밋 뒤 못 끝낸 메모는 마저 합치고 나머지는 지운다.
+        await TaptionRestoreStaging.recover(store: store, memoStore: memoStore)
     }
 
     // MARK: 목록
@@ -355,9 +365,12 @@ actor TaptionBackupEngine {
                     return result(scope, .unchanged, "\(name)은 바뀐 데이터가 없어 그대로 둔다.", header: old)
                 }
                 // 파일의 모든 행을 로컬에 합친다(없는 id는 넣고, 기록은 최신 수정이 이긴다).
-                index = try await apply(fileAt: fetched, header: old, key: key, scope: scope, rejectConflicts: false).index
-                // 파일의 행이 로컬에 돌아왔으므로 "로컬에서 오프로드됨" 표시는 더는 맞지 않는다.
-                if case .month(let month) = scope { try await store.setMeta(Self.sealedPrefix + month.key, "") }
+                // 파일의 행이 로컬에 돌아오므로 "로컬에서 오프로드됨" 표시는 같은 트랜잭션에서 푼다.
+                var meta: [String: String] = [:]
+                if case .month(let month) = scope { meta[Self.sealedPrefix + month.key] = "" }
+                index = try await apply(
+                    fileAt: fetched, header: old, key: key, scope: scope, rejectConflicts: false, meta: meta
+                ).index
                 current = try await export(scope, emit: { _ in })
             } catch let error as TaptionBackupError where Self.isCorruption(error) {
                 corrupted = true
@@ -489,15 +502,15 @@ actor TaptionBackupEngine {
         do {
             let (header, key) = try openHeader(at: url, scope: scope, password: password)
             try TaptionBackupFileReader.verifyBodyChecksum(at: url, header: header)
-            applied = try await apply(fileAt: url, header: header, key: key, scope: scope, rejectConflicts: true)
+            // 봉인 해제와, 사용자가 직접 복원한 파일은 전체 삭제 이후에도 받아들인다는 표시를 행과 같은 트랜잭션에 쓴다.
+            var meta = [Self.epochPrefix + scope.key: try await wipeToken()]
+            if case .month(let month) = scope { meta[Self.sealedPrefix + month.key] = "" }
+            applied = try await apply(fileAt: url, header: header, key: key, scope: scope, rejectConflicts: true, meta: meta)
         } catch {
             await destination.release(fetched: url)
             throw error
         }
         await destination.release(fetched: url)
-        if case .month(let month) = scope { try await store.setMeta(Self.sealedPrefix + month.key, "") }
-        // 사용자가 직접 복원한 파일은 전체 삭제 이후에도 받아들인 것으로 본다.
-        try await store.setMeta(Self.epochPrefix + scope.key, try await wipeToken())
         return applied.summary
     }
 
@@ -506,43 +519,56 @@ actor TaptionBackupEngine {
         var index: FileIndex
     }
 
-    /// 파일을 먼저 끝까지 검증한 뒤 로컬 저장소에 합친다.
+    /// 파일을 준비 저장소에 끝까지 풀어 검증한 뒤(트레일러·내용 해시가 틀리면 여기서 던진다) 본 저장소에 한 트랜잭션으로 합친다.
+    /// 커밋 전에 실패하면 본 저장소·메모 저장소는 그대로다. `meta`는 같은 트랜잭션에 쓴다.
     private func apply(
-        fileAt url: URL, header: TaptionBackupHeader, key: SymmetricKey, scope: TaptionBackupScope, rejectConflicts: Bool
+        fileAt url: URL, header: TaptionBackupHeader, key: SymmetricKey, scope: TaptionBackupScope,
+        rejectConflicts: Bool, meta: [String: String]
     ) async throws -> Applied {
-        try await TaptionBackupFileReader.decode(at: url, header: header, key: key) { _ in }
-        let before = try await store.readingCount()
+        let staging = try TaptionRestoreStaging.make(for: store)
         var buffer = RestoreBuffer(rejectConflicts: rejectConflicts)
         var index = FileIndex()
-        let calendar = self.calendar
-        try await TaptionBackupFileReader.decode(at: url, header: header, key: key) { line in
-            let fields = try TaptionBackupJSONLine.parse(line)
-            switch fields.first?.string {
-            case "#readings":
-                buffer.columns = try Self.mapColumns(fields)
-            case "r":
-                let reading = try Self.reading(from: fields, columns: buffer.columns, calendar: calendar)
-                index.readings.insert(reading.id.uuidString)
-                buffer.readings.append(reading)
-                if buffer.readings.count >= Self.restoreBatch { try await self.flush(&buffer) }
-            case "c":
-                let record = try Self.record(from: fields)
-                index.records["\(record.kind)\u{0}\(record.id)"] = record.updatedAt.timeIntervalSince1970
-                buffer.records.append(record)
-                if buffer.records.count >= Self.restoreBatch { try await self.flush(&buffer) }
-            case "w":
-                buffer.rawEvents.append(try Self.rawEvent(from: fields))
-                if buffer.rawEvents.count >= Self.restoreBatch { try await self.flush(&buffer) }
-            default:
-                break
+        do {
+            let calendar = self.calendar
+            let target = staging.store
+            try await TaptionBackupFileReader.decode(at: url, header: header, key: key) { line in
+                let fields = try TaptionBackupJSONLine.parse(line)
+                switch fields.first?.string {
+                case "#readings":
+                    buffer.columns = try Self.mapColumns(fields)
+                case "r":
+                    let reading = try Self.reading(from: fields, columns: buffer.columns, calendar: calendar)
+                    index.readings.insert(reading.id.uuidString)
+                    buffer.readings.append(reading)
+                    if buffer.readings.count >= Self.restoreBatch { try await Self.flush(&buffer, into: target) }
+                case "c":
+                    let record = try Self.record(from: fields)
+                    index.records["\(record.kind)\u{0}\(record.id)"] = record.updatedAt.timeIntervalSince1970
+                    buffer.records.append(record)
+                    if buffer.records.count >= Self.restoreBatch { try await Self.flush(&buffer, into: target) }
+                case "w":
+                    buffer.rawEvents.append(try Self.rawEvent(from: fields))
+                    if buffer.rawEvents.count >= Self.restoreBatch { try await Self.flush(&buffer, into: target) }
+                default:
+                    break
+                }
             }
+            try await Self.flush(&buffer, into: target)
+            await target.close()
+            try configuration.beforeRestoreCommit?(staging.file)
+            try Task.checkCancellation()
+        } catch {
+            await staging.store.close()
+            try? FileManager.default.removeItem(at: staging.directory)
+            throw error
         }
-        try await flush(&buffer)
-        let after = try await store.readingCount()
+        let merged = try await TaptionRestoreStaging.commit(
+            staging, into: store, memoStore: memoStore, rejectConflicts: rejectConflicts, meta: meta
+        )
         let summary = RestoreSummary(
-            scope: scope, fileReadings: header.readingCount, newReadings: after - before,
-            fileRecords: header.recordCount, changedRecords: buffer.changedRecords,
-            readingConflicts: buffer.readingConflicts
+            scope: scope, fileReadings: header.readingCount, newReadings: merged.newReadings,
+            fileRecords: header.recordCount, changedRecords: merged.changedRecords,
+            readingConflicts: buffer.readingConflicts + merged.readingConflicts
         )
         return Applied(summary: summary, index: index)
     }
@@ -553,40 +579,30 @@ actor TaptionBackupEngine {
         var readings: [SensorReading] = []
         var records: [TaptionStoreRecord] = []
         var rawEvents: [TaptionRawEvent] = []
-        var changedRecords = 0
+        /// 파일 안에서 같은 id가 다른 내용으로 두 번 나온 수(합치기에서만 센다).
         var readingConflicts = 0
     }
 
-    private func flush(_ buffer: inout RestoreBuffer) async throws {
+    /// 준비 저장소에만 쓴다. 파일 안의 중복은 본 저장소와 같은 규칙(센서 원본은 먼저 온 것, 기록은 최신 수정)으로 정리된다.
+    private static func flush(_ buffer: inout RestoreBuffer, into staging: TaptionStoreV2) async throws {
         if !buffer.readings.isEmpty {
             let batch = buffer.readings
             buffer.readings = []
             if buffer.rejectConflicts {
-                try await store.appendImmutableReadings(batch)
+                try await staging.appendImmutableReadings(batch)
             } else {
-                buffer.readingConflicts += try await store.mergeReadingsKeepingLocal(batch)
+                buffer.readingConflicts += try await staging.mergeReadingsKeepingLocal(batch)
             }
         }
         if !buffer.rawEvents.isEmpty {
             let batch = buffer.rawEvents
             buffer.rawEvents = []
-            _ = try await store.appendRawEvents(batch)
+            _ = try await staging.appendRawEvents(batch)
         }
         if !buffer.records.isEmpty {
             let batch = buffer.records
             buffer.records = []
-            // 메모는 별도 파일에 쓰므로 종류로 나눠 되돌린다.
-            var main: [TaptionStoreRecord] = []
-            var memos: [TaptionStoreRecord] = []
-            for record in batch {
-                if record.kind == Self.memoKind, memoStore != nil { memos.append(record) } else { main.append(record) }
-            }
-            if !main.isEmpty {
-                buffer.changedRecords += try await store.upsertRecordsKeepingNewer(main)
-            }
-            if !memos.isEmpty, let memoStore {
-                buffer.changedRecords += try await memoStore.upsertRecordsKeepingNewer(memos)
-            }
+            try await staging.upsertRecordsKeepingNewer(batch)
         }
     }
 
@@ -702,11 +718,12 @@ actor TaptionBackupEngine {
         )
         let writer = try TaptionBackupFileWriter(
             url: url, month: scope.key, key: key, salt: salt,
-            codec: configuration.codec, chunkBytes: configuration.chunkBytes
+            codec: configuration.codec, chunkBytes: configuration.chunkBytes, version: configuration.formatVersion
         )
         do {
             let summary = try await export(scope, emit: { try writer.append($0) })
             let template = TaptionBackupHeader(
+                version: configuration.formatVersion,
                 month: scope.key,
                 timeZone: calendar.timeZone.identifier,
                 createdAt: now.timeIntervalSince1970,

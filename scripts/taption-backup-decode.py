@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Taption Plan 월 백업(yyyy-MM.taptionbackup, 형식 버전 1)을 비밀번호만으로 풀어 JSON Lines로 낸다.
+"""Taption Plan 월 백업(yyyy-MM.taptionbackup, 형식 버전 3과 이전 버전 2)을 비밀번호만으로 풀어 JSON Lines로 낸다.
 
 사용:
   python3 scripts/taption-backup-decode.py <백업 파일> --header            # 비밀번호 없이 평문 헤더만(비밀번호를 주면 암호화된 헤더도)
@@ -11,6 +11,8 @@
 월 파일은 시작 시각이 그 달인 행을, taption-settings.taptionbackup은 시작 시각이 없는 기록을 담는다. 기록 행의 deleted=1은 삭제 표시다.
 헤더 영역의 평문에는 형식·버전·KDF(솔트·반복 횟수)와 봉인된 헤더 블록만 있고, 행 수·시각·해시 등은 같은 키로 AES-GCM 봉인돼 있다.
 월은 파일 이름에서 얻는다(AAD에 묶임).
+버전 3(매직 TAPTBK03) 프레임 = 봉인 길이 u32 + 봉인. 봉인 평문 = 코덱 u8 + 압축 전 크기 u32 + 본문 길이 u32 + 본문 + 0 채움
+(길이는 Padmé). 버전 2(매직 TAPTBK02) 프레임 = 코덱 u8 + 압축 전 크기 u32 + 봉인 길이 u32 + 봉인(코덱·크기가 평문).
 키 = PBKDF2-HMAC-SHA256(비밀번호, 헤더의 솔트, 헤더의 반복 횟수 100000~5000000, 32바이트).
 전체 검증(모든 프레임의 AES-GCM 태그, 프레임 크기 상한, 본문 SHA-256, 트레일러의 행 수·시각·내용 해시)이 끝난 뒤에만
 출력한다. 하나라도 틀리면 아무것도 내지 않고 종료 코드 1로 끝난다.
@@ -33,9 +35,10 @@ import tempfile
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-MAGIC = b"TAPTBK02"
+MAGICS = {b"TAPTBK02": 2, b"TAPTBK03": 3}
 HEADER_REGION = 2048
-BODY_OFFSET = len(MAGIC) + 4 + HEADER_REGION
+BODY_OFFSET = 8 + 4 + HEADER_REGION
+SEALED_FRAME_HEADER = 9
 COMPRESSION_ALGORITHMS = {1: 0x801, 2: 0x205}  # 1=LZFSE, 2=zlib. 0=압축 안 함
 MIN_ITERATIONS = 100_000
 MAX_ITERATIONS = 5_000_000
@@ -52,6 +55,15 @@ def fail(message: str) -> None:
 
 def max_plain_frame(chunk_bytes: int) -> int:
     return min(MAX_FRAME_BYTES, max(chunk_bytes * 4, 64 << 10))
+
+
+def padme(length: int) -> int:
+    """앱의 TaptionBackupLayout.paddedFrameLength와 같다."""
+    if length <= 2:
+        return max(length, 0)
+    exponent = length.bit_length() - 1
+    mask = (1 << (exponent - exponent.bit_length())) - 1
+    return (length + mask) & ~mask
 
 
 def decompress(codec: int, data: bytes, size: int) -> bytes:
@@ -87,7 +99,7 @@ def scope_key(path: str) -> str:
 
 
 def read_public_header(data: bytes) -> dict:
-    if len(data) < len(MAGIC) + 4 or data[:8] != MAGIC:
+    if len(data) < 12 or data[:8] not in MAGICS:
         fail("Taption 월 백업 파일이 아닙니다")
     (length,) = struct.unpack(">I", data[8:12])
     if length != HEADER_REGION:
@@ -98,8 +110,10 @@ def read_public_header(data: bytes) -> dict:
         header = json.loads(data[12:12 + length])
     except ValueError:
         fail("헤더 영역을 읽을 수 없습니다")
-    if not isinstance(header, dict) or header.get("format") != "taption-backup" or header.get("version") != 1:
+    if not isinstance(header, dict) or header.get("format") != "taption-backup":
         fail(f"지원하지 않는 형식입니다: {header.get('format') if isinstance(header, dict) else None}")
+    if header.get("version") != MAGICS[data[:8]]:
+        fail(f"지원하지 않는 버전이거나 매직과 맞지 않습니다: {header.get('version')}")
     kdf = header.get("kdf")
     if not isinstance(kdf, dict) or not isinstance(header.get("sealed"), str):
         fail("헤더에 kdf 또는 봉인된 헤더 블록이 없습니다")
@@ -145,37 +159,69 @@ def open_header(password: str, public: dict, month: str):
     return header, key
 
 
+def open_sealed_frame(body, offset, index, final, key, salt, month, max_plain):
+    """버전 3: 봉인 길이만 평문이다. 코덱·크기는 봉인 안에 있고 채움 길이·0 채움까지 확인한다."""
+    if offset + 4 > len(body):
+        fail(f"프레임 {index}의 머리가 잘렸습니다")
+    (sealed_size,) = struct.unpack(">I", body[offset:offset + 4])
+    max_inner = padme(SEALED_FRAME_HEADER + max_plain)
+    if not AEAD_OVERHEAD + SEALED_FRAME_HEADER <= sealed_size <= max_inner + AEAD_OVERHEAD:
+        fail(f"프레임 {index}의 크기가 허용 범위를 벗어납니다")
+    sealed = body[offset + 4:offset + 4 + sealed_size]
+    if len(sealed) != sealed_size:
+        fail(f"프레임 {index}가 잘렸습니다")
+    aad = b"TAPTBK03|" + salt + f"|{month}|".encode() + struct.pack(">I", index) + bytes([1 if final else 0])
+    try:
+        inner = AESGCM(key).decrypt(sealed[:12], sealed[12:], aad)
+    except InvalidTag:
+        fail(f"프레임 {index}의 인증 태그가 맞지 않습니다(변조 또는 손상)")
+    codec = inner[0]
+    plain_size, payload_size = struct.unpack(">II", inner[1:9])
+    used = SEALED_FRAME_HEADER + payload_size
+    if plain_size > max_plain or used > len(inner) or len(inner) != padme(used) or any(inner[used:]):
+        fail(f"프레임 {index}의 크기 또는 채움이 맞지 않습니다")
+    return codec, plain_size, inner[SEALED_FRAME_HEADER:used], offset + 4 + sealed_size
+
+
+def open_legacy_frame(body, offset, index, final, key, salt, month, max_plain):
+    """버전 2: 코덱 + 압축 전 크기 + 봉인 길이가 평문이고 AAD가 그 값을 묶는다."""
+    if offset + 9 > len(body):
+        fail(f"프레임 {index}의 머리가 잘렸습니다")
+    codec = body[offset]
+    plain_size, sealed_size = struct.unpack(">II", body[offset + 1:offset + 9])
+    if plain_size > max_plain or not AEAD_OVERHEAD <= sealed_size <= max_plain + AEAD_OVERHEAD:
+        fail(f"프레임 {index}의 크기가 허용 범위를 벗어납니다")
+    sealed = body[offset + 9:offset + 9 + sealed_size]
+    if len(sealed) != sealed_size:
+        fail(f"프레임 {index}가 잘렸습니다")
+    aad = b"TAPTBK02|" + salt + f"|{month}|".encode() + struct.pack(">I", index) \
+        + bytes([1 if final else 0, codec]) + struct.pack(">I", plain_size)
+    try:
+        compressed = AESGCM(key).decrypt(sealed[:12], sealed[12:], aad)
+    except InvalidTag:
+        fail(f"프레임 {index}의 인증 태그가 맞지 않습니다(변조 또는 손상)")
+    return codec, plain_size, compressed, offset + 9 + sealed_size
+
+
 def verify_and_collect(data: bytes, header: dict, key: bytes, sink):
     """모든 검증을 하면서 복호화한 줄(개행 포함)을 `sink`에 쓴다. 틀리면 종료한다."""
     body = data[BODY_OFFSET:]
     if len(body) != header["bodyBytes"] or hashlib.sha256(body).hexdigest() != header["bodySHA256"]:
         fail("본문 바이트 수 또는 SHA-256이 헤더와 다릅니다(파일이 깨졌습니다)")
     chunk_bytes, chunk_count = header["chunkBytes"], header["chunkCount"]
-    if not 1 <= chunk_bytes <= MAX_CHUNK_BYTES or chunk_count < 0 or chunk_count > len(body) // (9 + AEAD_OVERHEAD):
+    version = header["version"]
+    min_frame = 4 + SEALED_FRAME_HEADER + AEAD_OVERHEAD if version >= 3 else 9 + AEAD_OVERHEAD
+    if not 1 <= chunk_bytes <= MAX_CHUNK_BYTES or chunk_count < 0 or chunk_count > len(body) // min_frame:
         fail("헤더의 청크 크기 또는 개수가 허용 범위를 벗어납니다")
     max_plain = max_plain_frame(chunk_bytes)
     salt = base64.b64decode(header["kdf"]["salt"])
     offset, plain_total, digest, trailer = 0, 0, hashlib.sha256(), None
     counts = collections.Counter()
     for index in range(chunk_count):
-        if offset + 9 > len(body):
-            fail(f"프레임 {index}의 머리가 잘렸습니다")
-        codec = body[offset]
-        plain_size, sealed_size = struct.unpack(">II", body[offset + 1:offset + 9])
-        if plain_size > max_plain or not AEAD_OVERHEAD <= sealed_size <= max_plain + AEAD_OVERHEAD:
-            fail(f"프레임 {index}의 크기가 허용 범위를 벗어납니다")
-        sealed = body[offset + 9:offset + 9 + sealed_size]
-        if len(sealed) != sealed_size:
-            fail(f"프레임 {index}가 잘렸습니다")
-        offset += 9 + sealed_size
-        plain_total += plain_size
         final = index == chunk_count - 1
-        aad = b"TAPTBK02|" + salt + f"|{header['month']}|".encode() + struct.pack(">I", index) \
-            + bytes([1 if final else 0, codec]) + struct.pack(">I", plain_size)
-        try:
-            compressed = AESGCM(key).decrypt(sealed[:12], sealed[12:], aad)
-        except InvalidTag:
-            fail(f"프레임 {index}의 인증 태그가 맞지 않습니다(변조 또는 손상)")
+        opener = open_sealed_frame if version >= 3 else open_legacy_frame
+        codec, plain_size, compressed, offset = opener(body, offset, index, final, key, salt, header["month"], max_plain)
+        plain_total += plain_size
         for line in decompress(codec, compressed, plain_size).split(b"\n"):
             if not line:
                 continue
@@ -188,7 +234,7 @@ def verify_and_collect(data: bytes, header: dict, key: bytes, sink):
                     fail("트레일러를 읽을 수 없습니다")
                 continue
             digest.update(line + b"\n")
-            kind = "schema" if line.startswith(b'["#') else {b"r": "readings", b"c": "records"}.get(line[2:3])
+            kind = "schema" if line.startswith(b'["#') else {b"r": "readings", b"c": "records", b"w": "rawEvents"}.get(line[2:3])
             if kind is None:
                 fail("알 수 없는 줄 종류가 있습니다")
             counts[kind] += 1

@@ -313,6 +313,7 @@
 		A1000000000000000000007A /* DiagnosticsLogSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000007A /* DiagnosticsLogSupport.swift */; };
 		5A00000000000000000000A2 /* TaptionStoreV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A00000000000000000000F2 /* TaptionStoreV2.swift */; };
 		5B00000000000000000000A3 /* TaptionBackupEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B00000000000000000000F3 /* TaptionBackupEngine.swift */; };
+		A10000000000000005EB0001 /* TaptionStoreBackupRestore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000005EB0001 /* TaptionStoreBackupRestore.swift */; };
 		5B0000000000000000000B4A /* PlanBackupEngineAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0000000000000000000B4F /* PlanBackupEngineAdapter.swift */; };
 		5B0000000000000000000B3A /* PlanBackupPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0000000000000000000B3F /* PlanBackupPresentation.swift */; };
 		A100000000000000000000F1 /* PlanBackupRouteFallbackEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000F1 /* PlanBackupRouteFallbackEngine.swift */; };
@@ -914,6 +915,7 @@
 		F1000000000000000000007A /* DiagnosticsLogSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsLogSupport.swift; sourceTree = "<group>"; };
 		5A00000000000000000000F2 /* TaptionStoreV2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionStoreV2.swift; sourceTree = "<group>"; };
 		5B00000000000000000000F3 /* TaptionBackupEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionBackupEngine.swift; sourceTree = "<group>"; };
+		F10000000000000005EB0001 /* TaptionStoreBackupRestore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionStoreBackupRestore.swift; sourceTree = "<group>"; };
 		5B0000000000000000000B4F /* PlanBackupEngineAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanBackupEngineAdapter.swift; sourceTree = "<group>"; };
 		5B0000000000000000000B3F /* PlanBackupPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanBackupPresentation.swift; sourceTree = "<group>"; };
 		F100000000000000000000F1 /* PlanBackupRouteFallbackEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanBackupRouteFallbackEngine.swift; sourceTree = "<group>"; };
@@ -1740,6 +1742,7 @@
 				5A00000000000000000000F2 /* TaptionStoreV2.swift */,
 				5A00000000000000000000F3 /* TaptionStoreRepository.swift */,
 				5B00000000000000000000F3 /* TaptionBackupEngine.swift */,
+				F10000000000000005EB0001 /* TaptionStoreBackupRestore.swift */,
 				5B0000000000000000000B4F /* PlanBackupEngineAdapter.swift */,
 				5B0000000000000000000B3F /* PlanBackupPresentation.swift */,
 				F100000000000000000000F1 /* PlanBackupRouteFallbackEngine.swift */,
@@ -2517,6 +2520,7 @@
 				5A00000000000000000000A2 /* TaptionStoreV2.swift in Sources */,
 				5A00000000000000000000A3 /* TaptionStoreRepository.swift in Sources */,
 				5B00000000000000000000A3 /* TaptionBackupEngine.swift in Sources */,
+				A10000000000000005EB0001 /* TaptionStoreBackupRestore.swift in Sources */,
 				5B0000000000000000000B4A /* PlanBackupEngineAdapter.swift in Sources */,
 				5B0000000000000000000B3A /* PlanBackupPresentation.swift in Sources */,
 				A100000000000000000000F1 /* PlanBackupRouteFallbackEngine.swift in Sources */,

@@ -3,13 +3,20 @@ import Compression
 import CryptoKit
 import Foundation
 
-// 월 단위 백업 파일 형식(버전 1). 이전 백업 엔진과 호환하지 않는다.
+// 월 단위 백업 파일 형식. 새 파일은 버전 3(매직 "TAPTBK03")으로 쓰고, 버전 2(매직 "TAPTBK02")도 계속 읽는다
+// (대표 승인 예외, 2026-11-08). 버전 1·이전 백업 엔진과는 호환하지 않는다.
 //
-// 파일 = 매직 "TAPTBK02"(8) + 헤더 영역 길이 u32 BE + 헤더 영역(평문 JSON, 공백으로 채움, 고정 2048바이트) + 프레임들
+// 파일 = 매직(8) + 헤더 영역 길이 u32 BE + 헤더 영역(평문 JSON, 공백으로 채움, 고정 2048바이트) + 프레임들
 // 헤더 영역의 평문에는 형식 이름·버전·KDF(알고리즘·솔트·반복 횟수)와 봉인된 헤더 블록(`sealed`, base64)만 있다. 월은 파일 이름이다.
 //   행 수·시각 범위·생성 시각·시간대·내용/본문 해시 같은 나머지 메타데이터는 같은 키로 AES-GCM 봉인한 헤더 블록 안에 있다
 //   (AAD = 솔트·월·버전을 묶음). 평문 키 확인값은 없다: 헤더 블록의 GCM 태그가 맞아야 비밀번호가 맞다.
-// 프레임 = 코덱 u8 + 압축 전 크기 u32 BE + 봉인 길이 u32 BE + 봉인(AES-GCM: nonce 12 + 암호문 + 태그 16)
+//   버전 3은 봉인 전 헤더 JSON을 공백으로 1024바이트 배수까지 채워 봉인 길이로 시간대 이름·숫자 자릿수가 드러나지 않게 한다.
+// 프레임(버전 3) = 봉인 길이 u32 BE + 봉인(AES-GCM: nonce 12 + 암호문 + 태그 16)
+//   봉인 평문 = 코덱 u8 + 압축 전 크기 u32 BE + 본문 길이 u32 BE + 본문(압축된 줄) + 0으로 채움.
+//   봉인 평문 길이는 Padmé(9 + 본문 길이)다(`TaptionBackupLayout.paddedFrameLength`). 코덱·압축 전 크기는 암호문 안에만 있고,
+//   봉인 길이는 압축 크기를 거칠게만 보인다(최대 11.7%, MB 단위 프레임은 3% 이하 부풀림, O(log log n) 비트만 샌다).
+//   AAD = "TAPTBK03|" + 솔트 + "|월|" + 프레임 번호 u32 BE + 마지막 여부 u8: 순서 바꿈·잘림·다른 파일로 옮김을 잡는다.
+// 프레임(버전 2, 읽기만) = 코덱 u8 + 압축 전 크기 u32 BE + 봉인 길이 u32 BE + 봉인. 코덱·크기가 평문이고 AAD가 그것을 묶는다.
 // 프레임 평문 = JSON Lines(한 줄에 배열 하나). 표마다 스키마 줄(`["#readings",열...]`) 뒤에 행 줄이 온다.
 //   센서 원본 행  ["r", id, ts, 열값..., extra]   기록 행  ["c", id, kind, start, end, updated, origin, deleted, ord, body]
 //   마지막 줄(트레일러) ["#end", 센서 수, 기록 수, 첫 시각, 마지막 시각, 내용 SHA-256, 기록 최신 수정 시각]
@@ -17,7 +24,6 @@ import Foundation
 //   기록 행의 deleted=1은 삭제 표시(톰스톤)다. 센서 원본에는 삭제 표시가 없다.
 //   월 파일은 시작 시각이 그 달인 행을, 설정 파일(taption-settings.taptionbackup)은 시작 시각이 없는 기록을 담는다.
 // 키 = PBKDF2-HMAC-SHA256(비밀번호, 헤더의 솔트, 헤더의 반복 횟수, 32바이트). 압축한 뒤 암호화한다.
-// 각 프레임의 AAD가 솔트·월·프레임 번호·마지막 여부·코덱·크기를 묶어, 순서 바꿈·잘림·헤더 변조를 복호화 단계에서 잡는다.
 
 public enum TaptionBackupError: Error, Equatable {
     case emptyPassword
@@ -166,7 +172,10 @@ public struct TaptionBackupHeader: Codable, Equatable, Sendable {
 
     public static let formatName = "taption-backup"
     /// 2: 워치·기기 원본 이벤트(`#raw` 구간)를 담는다. 버전 1 백업은 읽지 않는다(출시 전 기존 백업 삭제에 합의).
-    public static let currentVersion = 2
+    /// 3: 프레임의 코덱·압축 전 크기를 봉인 안으로 옮기고 프레임·헤더 블록을 채운다. 새 파일은 3으로 쓴다.
+    public static let currentVersion = 3
+    /// 읽을 수 있는 버전. 2는 대표 승인으로 계속 읽는다(2026-11-08).
+    public static let readableVersions: Set<Int> = [2, 3]
 
     public var format = Self.formatName
     public var version = Self.currentVersion
@@ -352,6 +361,7 @@ public enum TaptionBackupCrypto {
         digest.map { String(format: "%02x", $0) }.joined()
     }
 
+    /// 버전 2 프레임의 AAD(코덱·크기가 평문이라 함께 묶는다). 읽기에만 쓴다.
     public static func frameAAD(
         salt: Data, month: String, index: Int, isFinal: Bool, codec: TaptionBackupCodec, plainSize: Int
     ) -> Data {
@@ -365,6 +375,16 @@ public enum TaptionBackupCrypto {
         return aad
     }
 
+    /// 버전 3 프레임의 AAD. 코덱·크기는 봉인 평문 안에 있어 GCM 태그가 직접 인증한다.
+    public static func sealedFrameAAD(salt: Data, month: String, index: Int, isFinal: Bool) -> Data {
+        var aad = Data("TAPTBK03|".utf8)
+        aad.append(salt)
+        aad.append(Data("|\(month)|".utf8))
+        aad.append(bigEndian(UInt32(index)))
+        aad.append(isFinal ? 1 : 0)
+        return aad
+    }
+
     public static func bigEndian(_ value: UInt32) -> Data {
         withUnsafeBytes(of: value.bigEndian) { Data($0) }
     }
@@ -375,9 +395,47 @@ public enum TaptionBackupCrypto {
 }
 
 public enum TaptionBackupLayout {
-    public static let magic = Data("TAPTBK02".utf8)
+    /// 새로 쓰는 파일의 매직(버전 3).
+    public static let magic = Data("TAPTBK03".utf8)
+    /// 버전 2 파일의 매직(읽기만).
+    public static let legacyMagic = Data("TAPTBK02".utf8)
     public static let headerRegionBytes = 2048
     public static let bodyOffset = UInt64(magic.count + 4 + headerRegionBytes)
+    /// 버전 3 봉인 평문의 머리(코덱 u8 + 압축 전 크기 u32 + 본문 길이 u32).
+    public static let sealedFrameHeaderBytes = 9
+    /// 버전 3은 봉인 전 헤더 JSON을 이 배수까지 공백으로 채운다.
+    public static let sealedHeaderBlockBytes = 1024
+
+    public static func magic(forVersion version: Int) -> Data? {
+        switch version {
+        case 2: legacyMagic
+        case 3: magic
+        default: nil
+        }
+    }
+
+    public static func version(forMagic prefix: Data) -> Int? {
+        switch Data(prefix.prefix(magic.count)) {
+        case legacyMagic: 2
+        case magic: 3
+        default: nil
+        }
+    }
+
+    /// Padmé(Nikitin 외, PURBs, PETS 2019): 길이 L을 지수 비트 수만큼만 남기고 올린다. 부풀림은 최대 11.7%(MB 단위면 3% 이하)이고
+    /// 봉인 길이로 새는 정보는 O(log log L) 비트다. 고정 크기 채움은 압축이 잘 되는 위치 기록에서 파일을 몇 배로 키워 쓰지 않는다.
+    public static func paddedFrameLength(_ length: Int) -> Int {
+        guard length > 2 else { return max(length, 0) }
+        let exponent = Int.bitWidth - 1 - length.leadingZeroBitCount
+        let exponentBits = Int.bitWidth - exponent.leadingZeroBitCount
+        let mask = (1 << (exponent - exponentBits)) - 1
+        return (length + mask) & ~mask
+    }
+
+    /// 프레임 하나의 최소 바이트 수(헤더의 프레임 수가 본문 크기와 맞는지 볼 때 쓴다).
+    public static func minimumFrameBytes(version: Int) -> Int {
+        version >= 3 ? 4 + sealedFrameHeaderBytes + aeadOverhead : 9 + aeadOverhead
+    }
     /// 한 프레임 크기의 절대 상한(깨진 길이로 큰 메모리를 잡지 않게).
     public static let maxFrameBytes = 256 << 20
     public static let maxChunkBytes = 64 << 20
@@ -391,8 +449,10 @@ public enum TaptionBackupLayout {
 }
 
 /// 임시 파일에 프레임을 차례로 쓰는 작성기. 줄을 모아 `chunkBytes`마다 압축·봉인한다.
+/// `version`은 기본이 현재 버전(3)이다. 2는 옛 형식 읽기 호환을 시험할 때만 쓴다.
 public final class TaptionBackupFileWriter {
     private let handle: FileHandle
+    private let version: Int
     private let month: String
     private let key: SymmetricKey
     private let salt: Data
@@ -404,17 +464,24 @@ public final class TaptionBackupFileWriter {
     public private(set) var bodyBytes = 0
     public private(set) var plaintextBytes = 0
 
-    public init(url: URL, month: String, key: SymmetricKey, salt: Data, codec: TaptionBackupCodec, chunkBytes: Int) throws {
+    public init(
+        url: URL, month: String, key: SymmetricKey, salt: Data, codec: TaptionBackupCodec, chunkBytes: Int,
+        version: Int = TaptionBackupHeader.currentVersion
+    ) throws {
+        guard let magic = TaptionBackupLayout.magic(forVersion: version) else {
+            throw TaptionBackupError.unsupportedVersion(version)
+        }
         guard FileManager.default.createFile(atPath: url.path, contents: nil) else {
             throw TaptionBackupError.destinationUnavailable("cannot create \(url.lastPathComponent)")
         }
         handle = try FileHandle(forWritingTo: url)
+        self.version = version
         self.month = month
         self.key = key
         self.salt = salt
         self.codec = codec
         self.chunkBytes = min(max(1, chunkBytes), TaptionBackupLayout.maxChunkBytes)
-        try handle.write(contentsOf: TaptionBackupLayout.magic)
+        try handle.write(contentsOf: magic)
         try handle.write(contentsOf: TaptionBackupCrypto.bigEndian(UInt32(TaptionBackupLayout.headerRegionBytes)))
         try handle.write(contentsOf: Data(repeating: 0x20, count: TaptionBackupLayout.headerRegionBytes))
     }
@@ -433,6 +500,7 @@ public final class TaptionBackupFileWriter {
     public func finish(header template: TaptionBackupHeader) throws -> TaptionBackupHeader {
         try flush(isFinal: true)
         var header = template
+        header.version = version
         header.chunkCount = frameIndex
         header.plaintextBytes = plaintextBytes
         header.bodyBytes = bodyBytes
@@ -456,20 +524,48 @@ public final class TaptionBackupFileWriter {
             throw TaptionBackupError.malformed("frame too large")
         }
         let compressed = codec.compress(plain)
-        let aad = TaptionBackupCrypto.frameAAD(
-            salt: salt, month: month, index: frameIndex, isFinal: isFinal,
-            codec: compressed.codec, plainSize: plain.count
-        )
-        let sealed = try AES.GCM.seal(compressed.data, using: key, authenticating: aad)
-        guard let combined = sealed.combined else { throw TaptionBackupError.malformed("seal") }
-        var frame = Data([compressed.codec.rawValue])
-        frame.append(TaptionBackupCrypto.bigEndian(UInt32(plain.count)))
-        frame.append(TaptionBackupCrypto.bigEndian(UInt32(combined.count)))
-        frame.append(combined)
+        let frame = version >= 3
+            ? try sealedFrame(compressed, plainSize: plain.count, isFinal: isFinal)
+            : try legacyFrame(compressed, plainSize: plain.count, isFinal: isFinal)
         try handle.write(contentsOf: frame)
         bodyHasher.update(data: frame)
         bodyBytes += frame.count
         frameIndex += 1
+    }
+
+    /// 버전 3: 봉인 길이 + 봉인(코덱·압축 전 크기·본문 길이·본문·0 채움).
+    private func sealedFrame(
+        _ compressed: (codec: TaptionBackupCodec, data: Data), plainSize: Int, isFinal: Bool
+    ) throws -> Data {
+        var inner = Data([compressed.codec.rawValue])
+        inner.append(TaptionBackupCrypto.bigEndian(UInt32(plainSize)))
+        inner.append(TaptionBackupCrypto.bigEndian(UInt32(compressed.data.count)))
+        inner.append(compressed.data)
+        inner.append(Data(count: TaptionBackupLayout.paddedFrameLength(inner.count) - inner.count))
+        let aad = TaptionBackupCrypto.sealedFrameAAD(salt: salt, month: month, index: frameIndex, isFinal: isFinal)
+        guard let combined = try AES.GCM.seal(inner, using: key, authenticating: aad).combined else {
+            throw TaptionBackupError.malformed("seal")
+        }
+        var frame = TaptionBackupCrypto.bigEndian(UInt32(combined.count))
+        frame.append(combined)
+        return frame
+    }
+
+    /// 버전 2: 코덱 + 압축 전 크기 + 봉인 길이(모두 평문) + 봉인.
+    private func legacyFrame(
+        _ compressed: (codec: TaptionBackupCodec, data: Data), plainSize: Int, isFinal: Bool
+    ) throws -> Data {
+        let aad = TaptionBackupCrypto.frameAAD(
+            salt: salt, month: month, index: frameIndex, isFinal: isFinal, codec: compressed.codec, plainSize: plainSize
+        )
+        guard let combined = try AES.GCM.seal(compressed.data, using: key, authenticating: aad).combined else {
+            throw TaptionBackupError.malformed("seal")
+        }
+        var frame = Data([compressed.codec.rawValue])
+        frame.append(TaptionBackupCrypto.bigEndian(UInt32(plainSize)))
+        frame.append(TaptionBackupCrypto.bigEndian(UInt32(combined.count)))
+        frame.append(combined)
+        return frame
     }
 }
 
@@ -479,7 +575,12 @@ public enum TaptionBackupHeaderCoding {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         let aad = TaptionBackupCrypto.headerAAD(salt: salt, month: header.month, version: header.version)
-        let box = try AES.GCM.seal(try encoder.encode(header), using: key, authenticating: aad)
+        var block = try encoder.encode(header)
+        if header.version >= 3 {
+            let unit = TaptionBackupLayout.sealedHeaderBlockBytes
+            block.append(Data(repeating: 0x20, count: (unit - block.count % unit) % unit))
+        }
+        let box = try AES.GCM.seal(block, using: key, authenticating: aad)
         guard let combined = box.combined else { throw TaptionBackupError.malformed("seal header") }
         let publicHeader = TaptionBackupPublicHeader(
             format: header.format, version: header.version, kdf: header.kdf, sealed: combined.base64EncodedString()
@@ -505,8 +606,7 @@ public enum TaptionBackupFileReader {
     /// 파일 앞 `headerPrefixBytes`바이트(매직 + 길이 + 헤더 영역)에서 평문 헤더를 읽는다.
     public static func parsePublicHeader(_ prefix: Data) throws -> TaptionBackupPublicHeader {
         let lengthEnd = TaptionBackupLayout.magic.count + 4
-        guard prefix.count >= lengthEnd,
-              prefix.prefix(TaptionBackupLayout.magic.count) == TaptionBackupLayout.magic else {
+        guard prefix.count >= lengthEnd, let magicVersion = TaptionBackupLayout.version(forMagic: prefix) else {
             throw TaptionBackupError.notABackup
         }
         let length = Int(TaptionBackupCrypto.readUInt32(prefix, at: TaptionBackupLayout.magic.count))
@@ -515,7 +615,7 @@ public enum TaptionBackupFileReader {
         let region = prefix.dropFirst(lengthEnd).prefix(length)
         guard let header = try? JSONDecoder().decode(TaptionBackupPublicHeader.self, from: Data(region)),
               header.format == TaptionBackupHeader.formatName else { throw TaptionBackupError.notABackup }
-        guard header.version == TaptionBackupHeader.currentVersion else {
+        guard TaptionBackupHeader.readableVersions.contains(header.version), header.version == magicVersion else {
             throw TaptionBackupError.unsupportedVersion(header.version)
         }
         return header
@@ -594,8 +694,11 @@ public enum TaptionBackupFileReader {
         isolation: isolated (any Actor)? = #isolation, handler: (Data) async throws -> Void
     ) async throws -> Counts {
         guard let salt = Data(base64Encoded: header.kdf.salt) else { throw TaptionBackupError.malformed("salt") }
+        guard TaptionBackupHeader.readableVersions.contains(header.version) else {
+            throw TaptionBackupError.unsupportedVersion(header.version)
+        }
         guard (1...TaptionBackupLayout.maxChunkBytes).contains(header.chunkBytes), header.chunkCount >= 0,
-              header.chunkCount <= header.bodyBytes / (9 + TaptionBackupLayout.aeadOverhead) else {
+              header.chunkCount <= header.bodyBytes / TaptionBackupLayout.minimumFrameBytes(version: header.version) else {
             throw TaptionBackupError.malformed("header sizes")
         }
         let maxPlain = TaptionBackupLayout.maxPlainFrameBytes(chunkBytes: header.chunkBytes)
@@ -608,30 +711,14 @@ public enum TaptionBackupFileReader {
         var trailer: [TaptionBackupJSONLine.Field]?
         var consumed = 0
         for index in 0..<header.chunkCount {
-            let prefix = try handle.read(upToCount: 9) ?? Data()
-            guard prefix.count == 9, let codec = TaptionBackupCodec(rawValue: prefix[prefix.startIndex]) else {
-                throw TaptionBackupError.malformed("frame header")
-            }
-            let plainSize = Int(TaptionBackupCrypto.readUInt32(prefix, at: 1))
-            let sealedSize = Int(TaptionBackupCrypto.readUInt32(prefix, at: 5))
-            guard sealedSize >= TaptionBackupLayout.aeadOverhead,
-                  sealedSize <= maxPlain + TaptionBackupLayout.aeadOverhead,
-                  plainSize <= maxPlain else { throw TaptionBackupError.malformed("frame size") }
-            plainTotal += plainSize
-            let sealed = try handle.read(upToCount: sealedSize) ?? Data()
-            guard sealed.count == sealedSize else { throw TaptionBackupError.malformed("frame truncated") }
-            consumed += 9 + sealedSize
-            let aad = TaptionBackupCrypto.frameAAD(
-                salt: salt, month: header.month, index: index, isFinal: index == header.chunkCount - 1,
-                codec: codec, plainSize: plainSize
+            let frame = FrameContext(
+                handle: handle, key: key, salt: salt, month: header.month, index: index,
+                isFinal: index == header.chunkCount - 1, maxPlain: maxPlain
             )
-            let compressed: Data
-            do {
-                compressed = try AES.GCM.open(AES.GCM.SealedBox(combined: sealed), using: key, authenticating: aad)
-            } catch {
-                throw TaptionBackupError.authenticationFailed
-            }
-            let plain = try codec.decompress(compressed, expectedSize: plainSize)
+            let opened = header.version >= 3 ? try readSealedFrame(frame) : try readLegacyFrame(frame)
+            plainTotal += opened.plainSize
+            consumed += opened.frameBytes
+            let plain = try opened.codec.decompress(opened.payload, expectedSize: opened.plainSize)
             for line in plain.split(separator: 0x0A, omittingEmptySubsequences: true) {
                 guard trailer == nil else { throw TaptionBackupError.malformed("data after trailer") }
                 if line.starts(with: Data("[\"#end\"".utf8)) {
@@ -664,6 +751,75 @@ public enum TaptionBackupFileReader {
             throw TaptionBackupError.verificationFailed("trailer does not match header or content")
         }
         return counts
+    }
+
+    private struct FrameContext {
+        var handle: FileHandle
+        var key: SymmetricKey
+        var salt: Data
+        var month: String
+        var index: Int
+        var isFinal: Bool
+        var maxPlain: Int
+    }
+
+    private struct OpenedFrame {
+        var codec: TaptionBackupCodec
+        var plainSize: Int
+        var payload: Data
+        var frameBytes: Int
+    }
+
+    private static func open(sealed: Data, frame: FrameContext, aad: Data) throws -> Data {
+        do {
+            return try AES.GCM.open(AES.GCM.SealedBox(combined: sealed), using: frame.key, authenticating: aad)
+        } catch {
+            throw TaptionBackupError.authenticationFailed
+        }
+    }
+
+    /// 버전 3: 봉인 길이만 평문이다. 코덱·크기는 봉인을 연 뒤에 읽고, 채움 길이와 0 채움까지 확인한다.
+    private static func readSealedFrame(_ frame: FrameContext) throws -> OpenedFrame {
+        let prefix = try frame.handle.read(upToCount: 4) ?? Data()
+        guard prefix.count == 4 else { throw TaptionBackupError.malformed("frame header") }
+        let sealedSize = Int(TaptionBackupCrypto.readUInt32(prefix, at: 0))
+        let maxInner = TaptionBackupLayout.paddedFrameLength(TaptionBackupLayout.sealedFrameHeaderBytes + frame.maxPlain)
+        guard sealedSize >= TaptionBackupLayout.aeadOverhead + TaptionBackupLayout.sealedFrameHeaderBytes,
+              sealedSize <= maxInner + TaptionBackupLayout.aeadOverhead else { throw TaptionBackupError.malformed("frame size") }
+        let sealed = try frame.handle.read(upToCount: sealedSize) ?? Data()
+        guard sealed.count == sealedSize else { throw TaptionBackupError.malformed("frame truncated") }
+        let aad = TaptionBackupCrypto.sealedFrameAAD(salt: frame.salt, month: frame.month, index: frame.index, isFinal: frame.isFinal)
+        let inner = try open(sealed: sealed, frame: frame, aad: aad)
+        let start = inner.startIndex
+        guard let codec = TaptionBackupCodec(rawValue: inner[start]) else { throw TaptionBackupError.malformed("frame codec") }
+        let plainSize = Int(TaptionBackupCrypto.readUInt32(inner, at: 1))
+        let payloadSize = Int(TaptionBackupCrypto.readUInt32(inner, at: 5))
+        let used = TaptionBackupLayout.sealedFrameHeaderBytes + payloadSize
+        guard plainSize <= frame.maxPlain, used <= inner.count,
+              inner.count == TaptionBackupLayout.paddedFrameLength(used),
+              inner[(start + used)...].allSatisfy({ $0 == 0 }) else { throw TaptionBackupError.malformed("frame size") }
+        let payload = inner[(start + TaptionBackupLayout.sealedFrameHeaderBytes)..<(start + used)]
+        return OpenedFrame(codec: codec, plainSize: plainSize, payload: Data(payload), frameBytes: 4 + sealedSize)
+    }
+
+    /// 버전 2(읽기만): 코덱 + 압축 전 크기 + 봉인 길이가 평문이고 AAD가 그 값을 묶는다.
+    private static func readLegacyFrame(_ frame: FrameContext) throws -> OpenedFrame {
+        let prefix = try frame.handle.read(upToCount: 9) ?? Data()
+        guard prefix.count == 9, let codec = TaptionBackupCodec(rawValue: prefix[prefix.startIndex]) else {
+            throw TaptionBackupError.malformed("frame header")
+        }
+        let plainSize = Int(TaptionBackupCrypto.readUInt32(prefix, at: 1))
+        let sealedSize = Int(TaptionBackupCrypto.readUInt32(prefix, at: 5))
+        guard sealedSize >= TaptionBackupLayout.aeadOverhead,
+              sealedSize <= frame.maxPlain + TaptionBackupLayout.aeadOverhead,
+              plainSize <= frame.maxPlain else { throw TaptionBackupError.malformed("frame size") }
+        let sealed = try frame.handle.read(upToCount: sealedSize) ?? Data()
+        guard sealed.count == sealedSize else { throw TaptionBackupError.malformed("frame truncated") }
+        let aad = TaptionBackupCrypto.frameAAD(
+            salt: frame.salt, month: frame.month, index: frame.index, isFinal: frame.isFinal, codec: codec, plainSize: plainSize
+        )
+        let payload = try open(sealed: sealed, frame: frame, aad: aad)
+        return OpenedFrame(codec: codec, plainSize: plainSize, payload: payload, frameBytes: 9 + sealedSize)
     }
 }
 
