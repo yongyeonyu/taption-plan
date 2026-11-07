@@ -93,6 +93,11 @@ public enum UITextPack {
         selectedCode.withLock { $0 = .some(preference.translatedCode) }
     }
 
+    /// 다른 프로세스(앱·워치 앱)가 바꾼 선택을 위젯이 타임라인을 만들 때 다시 읽는다.
+    public static func reloadSelection() {
+        selectionDidChange(AppLanguagePreference.current)
+    }
+
     /// 번역할 일이 없는 한국어·영어 기기에서는 틀을 만들지 않는다.
     static var tracksTemplates: Bool {
         bundleLanguageCode != nil || selectedTranslatedCode != nil

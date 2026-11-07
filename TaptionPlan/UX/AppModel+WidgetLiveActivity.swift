@@ -124,6 +124,14 @@ extension AppModel {
         publishWidgetPayload()
     }
 
+    /// 언어를 바꾸면 위젯 내용을 다시 만들어 워치에 바로 보낸다. 위젯 화면 문구는 위젯이 그릴 때
+    /// 정하므로 내용이 같아도 타임라인을 다시 읽힌다.
+    func languagePreferenceDidChange() {
+        lastWidgetPayloadInput = nil
+        publishWidgetPayload()
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
     func currentMajorCategory(for plan: PlanRecord) -> (
         id: String,
         title: String,

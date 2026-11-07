@@ -428,7 +428,9 @@ extension MapHomeView {
             menuGroupCard {
                 displayMenuItem
                 menuGroupDivider
-                MapHomeLanguageMenuItem(language: language)
+                MapHomeLanguageMenuItem(language: language) {
+                    model.languagePreferenceDidChange()
+                }
                 menuGroupDivider
                 if TaptionFont.isUserSelectable {
                     TaptionFontMenuRow(language: language)

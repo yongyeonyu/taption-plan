@@ -96,6 +96,36 @@ final class AppLanguagePreferenceTests: XCTestCase {
         )
     }
 
+    func testWatchPayloadValueRoundTripsEveryChoice() {
+        for preference in AppLanguagePreference.allCases {
+            XCTAssertEqual(
+                AppLanguagePreference.fromWatchPayload(preference.watchPayloadValue),
+                preference
+            )
+        }
+        XCTAssertEqual(AppLanguagePreference.fromWatchPayload("unknown"), .automatic)
+    }
+
+    func testWatchAdoptsPhoneSelectionOnlyWhenChanged() {
+        let suite = "AppLanguagePreferenceTests.adopt"
+        let defaults = UserDefaults(suiteName: suite)!
+        defaults.removePersistentDomain(forName: suite)
+
+        XCTAssertTrue(AppLanguagePreference.adoptPhoneSelection("ja", defaults: defaults))
+        XCTAssertEqual(AppLanguagePreference.load(from: defaults), .japanese)
+        XCTAssertFalse(AppLanguagePreference.adoptPhoneSelection("ja", defaults: defaults))
+
+        // 옛 iPhone이나 자동 선택은 값을 보내지 않는다. 워치 기기 언어로 돌아간다.
+        XCTAssertTrue(AppLanguagePreference.adoptPhoneSelection(nil, defaults: defaults))
+        XCTAssertEqual(
+            defaults.string(forKey: AppLanguagePreference.sharedDefaultsKey),
+            AppLanguagePreference.automatic.rawValue
+        )
+        XCTAssertFalse(AppLanguagePreference.adoptPhoneSelection(nil, defaults: defaults))
+        XCTAssertTrue(AppLanguagePreference.adoptPhoneSelection("english", defaults: defaults))
+        XCTAssertEqual(AppLanguagePreference.load(from: defaults), .english)
+    }
+
     func testOlderWatchPayloadWithoutLanguageDecodes() throws {
         let now = Date(timeIntervalSince1970: 1_800_000_000)
         let payload = TaptionWatchPayload(

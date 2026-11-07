@@ -41,6 +41,7 @@ struct TaptionScheduleProvider: TimelineProvider {
         in context: Context,
         completion: @escaping (TaptionScheduleEntry) -> Void
     ) {
+        UITextPack.reloadSelection()
         completion(
             TaptionScheduleEntry(
                 date: .now,
@@ -55,6 +56,8 @@ struct TaptionScheduleProvider: TimelineProvider {
         in context: Context,
         completion: @escaping (Timeline<TaptionScheduleEntry>) -> Void
     ) {
+        // 앱에서 바꾼 언어를 위젯 프로세스가 오래 살아 있어도 다시 읽는다.
+        UITextPack.reloadSelection()
         let now = Date.now
         let payload = groundTruthPayload(at: now)
         let horizon = now.addingTimeInterval(15 * 60)

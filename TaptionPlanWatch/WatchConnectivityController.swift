@@ -72,9 +72,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
     private var legacyAmbientAdoptionID: UUID?
     private var legacyAmbientAdoptionTask: Task<Void, Never>?
 
-    private var language: AppLanguagePreference.ResolvedLanguage {
-        AppLanguagePreference.resolve(rawValue: payload?.languagePreference)
-    }
+    private var language: AppLanguagePreference.ResolvedLanguage { AppLanguagePreference.resolve(rawValue: payload?.languagePreference) }
 
     override init() {
         dayDatabase = WatchDayDatabase()
@@ -1218,6 +1216,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
               ) else {
             return
         }
+        AppLanguagePreference.adoptPhoneSelection(value.languagePreference) // 워치 위젯도 iPhone 언어를 따른다.
         payload = value
         updateStatus(
             activationRawValue: WCSession.default.activationState.rawValue,
@@ -1241,6 +1240,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
               ) else {
             return
         }
+        AppLanguagePreference.adoptPhoneSelection(value.languagePreference) // 워치 위젯도 iPhone 언어를 따른다.
         payload = value
         updateStatus(
             activationRawValue: WCSession.default.activationState.rawValue,
