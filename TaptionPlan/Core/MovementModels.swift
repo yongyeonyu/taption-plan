@@ -303,56 +303,7 @@ struct TravelModeCorrection: Identifiable, Codable, Hashable, Sendable {
     }
 }
 
-enum MotionKind: String, Codable, CaseIterable, Sendable {
-    case stationary
-    case walking
-    case running
-    case cycling
-    case automotive
-    case unknown
-
-    var activityTitle: String? {
-        switch self {
-        case .stationary: "정지·휴식"
-        case .walking: "걷기"
-        case .running: "달리기"
-        case .cycling: "자전거"
-        case .automotive: "자동차"
-        case .unknown: nil
-        }
-    }
-
-    var isMovement: Bool {
-        switch self {
-        case .walking, .running, .cycling, .automotive:
-            true
-        case .stationary, .unknown:
-            false
-        }
-    }
-
-    /// 걷기·달리기. 걸음·층 이동 근거로 쓴다.
-    var isOnFoot: Bool { self == .walking || self == .running }
-}
-
-enum TrackingKind: String, Codable, CaseIterable, Hashable, Sendable {
-    case automatic
-    case walking
-    case running
-
-    var displayName: String {
-        switch self {
-        case .automatic: "자동 감지"
-        case .walking: "걷기"
-        case .running: "달리기"
-        }
-    }
-}
-
-enum TrackingDevice: String, Codable, Hashable, Sendable {
-    case iPhone
-    case appleWatch
-}
+// `MotionKind`·`TrackingKind`·`TrackingDevice`는 `TaptionPlanCore/Domain/SensorReading.swift`에 있다.
 
 struct TrackingSession: Identifiable, Codable, Hashable, Sendable {
     var id: UUID

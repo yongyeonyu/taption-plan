@@ -104,9 +104,7 @@
 		A1FA112678FE13ABA3A562E7 /* TravelModeClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11CF2BF9E0148DBF14F0 /* TravelModeClassifier.swift */; };
 		A1FA1117E59F5515E80AEB17 /* RealtimeSensorMapProjection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11F59DB022FC67C16D22 /* RealtimeSensorMapProjection.swift */; };
 		ABD100600000000000000001 /* PlanActualStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBD100600000000000000001 /* PlanActualStorage.swift */; };
-		ABD100700000000000000001 /* SensorReadingStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBD100700000000000000001 /* SensorReadingStorage.swift */; };
 		ABD100600000000000000002 /* PlanActualStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBD100600000000000000001 /* PlanActualStorage.swift */; };
-		ABD100700000000000000002 /* SensorReadingStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBD100700000000000000001 /* SensorReadingStorage.swift */; };
 		A10000000000000000000001 /* TaptionPlanApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000001 /* TaptionPlanApp.swift */; };
 		A10000000000000000000002 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000002 /* AppModel.swift */; };
 		A5B1102A0200000000000033 /* AppModelPolicies.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000032 /* AppModelPolicies.swift */; };
@@ -714,7 +712,6 @@
 		F1FA11CF2BF9E0148DBF14F0 /* TravelModeClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelModeClassifier.swift; sourceTree = "<group>"; };
 		F1FA11F59DB022FC67C16D22 /* RealtimeSensorMapProjection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeSensorMapProjection.swift; sourceTree = "<group>"; };
 		FBD100600000000000000001 /* PlanActualStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanActualStorage.swift; sourceTree = "<group>"; };
-		FBD100700000000000000001 /* SensorReadingStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorReadingStorage.swift; sourceTree = "<group>"; };
 		C10000000000000000000001 /* TaptionPlan.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TaptionPlan.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C10000000000000000000002 /* TaptionPlanTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TaptionPlanTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C10000000000000000000003 /* TaptionPlanWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TaptionPlanWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -1607,7 +1604,6 @@
 				F1FA1138653005BEA1D8CBB0 /* TimelineModels.swift */,
 				F10000000000000000000010 /* PlanRepository.swift */,
 				FBD100600000000000000001 /* PlanActualStorage.swift */,
-				FBD100700000000000000001 /* SensorReadingStorage.swift */,
 				F10000000000000000000011 /* PlanningEngine.swift */,
 				F1000000000000000B1105C8 /* WidgetSharedEngines.swift */,
 				F1FA11518EFE631FA33E137B /* StableRecordID.swift */,
@@ -2373,7 +2369,6 @@
 				A1FA11D738A8A0AC7B013DD9 /* TimelineModels.swift in Sources */,
 				A10000000000000000000010 /* PlanRepository.swift in Sources */,
 				ABD100600000000000000001 /* PlanActualStorage.swift in Sources */,
-				ABD100700000000000000001 /* SensorReadingStorage.swift in Sources */,
 				A10000000000000000000011 /* PlanningEngine.swift in Sources */,
 				A1FA1169BA887967E6373290 /* StableRecordID.swift in Sources */,
 				A10000000000000000000012 /* TemplatesAndSettings.swift in Sources */,
@@ -2597,7 +2592,6 @@
 				A1FA11A6B07C6C7A479E67EE /* StableRecordID.swift in Sources */,
 				A10000000000000000000025 /* PlanRepository.swift in Sources */,
 				ABD100600000000000000002 /* PlanActualStorage.swift in Sources */,
-				ABD100700000000000000002 /* SensorReadingStorage.swift in Sources */,
 				A51002000000000000000005 /* PlanDaySeal.swift in Sources */,
 				5A00000000000000000000A4 /* TaptionStoreV2.swift in Sources */,
 				5A00000000000000000000A7 /* TaptionStoreRawEvents.swift in Sources */,

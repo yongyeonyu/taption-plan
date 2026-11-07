@@ -1,5 +1,4 @@
 import Foundation
-import TaptionPlanCore
 
 // TSR2 is an explicit field-order contract. Change its version when changing the layout.
 // TSR1 (before carAudioRouteName, CAR1029A01) is rejected: no production store ever wrote it
@@ -8,14 +7,14 @@ import TaptionPlanCore
 extension SensorReading: TaptionPlanBinaryRecord {
     private static let currentMagic: UInt32 = 0x32525354 // "TSR2"
 
-    func storageBytes() throws -> Data {
+    public func storageBytes() throws -> Data {
         var writer = SensorRecordWriter()
         try writer.write(Self.currentMagic)
         try writeRecord(to: &writer)
         return writer.data
     }
 
-    static func fromStorageBytes(_ data: Data) throws -> Self {
+    public static func fromStorageBytes(_ data: Data) throws -> Self {
         try data.withUnsafeBytes { bytes in
             var reader = SensorRecordReader(bytes: bytes)
             guard try reader.read() as UInt32 == currentMagic else {

@@ -319,34 +319,7 @@ struct SleepReconciliation: Identifiable, Codable, Hashable, Sendable {
 
 // MARK: - Motion and pedometer
 
-struct SensorVector3: Codable, Hashable, Sendable {
-    var x: Double
-    var y: Double
-    var z: Double
-}
-
-struct DeviceMotionSnapshot: Codable, Hashable, Sendable {
-    var gravity: SensorVector3
-    var userAcceleration: SensorVector3
-    var rotationRate: SensorVector3
-    var attitudeRadians: SensorVector3
-    var magneticFieldMicroteslas: SensorVector3? = nil
-    var magneticFieldAccuracy: Int? = nil
-    var headingDegrees: Double? = nil
-}
-
-/// A compact statistical window of the high-frequency motion stream.
-/// The raw stream is too large to place on the timeline, so every persisted
-/// sensor reading carries the features needed for movement classification.
-struct DeviceMotionSummary: Codable, Hashable, Sendable {
-    var sampleCount: Int
-    var meanUserAccelerationG: Double
-    var userAccelerationStandardDeviationG: Double
-    var peakUserAccelerationG: Double
-    var meanRotationRateRadiansPerSecond: Double
-    var rotationRateStandardDeviationRadiansPerSecond: Double
-    var peakRotationRateRadiansPerSecond: Double
-}
+// `SensorVector3`·`DeviceMotionSnapshot`·`DeviceMotionSummary`는 `TaptionPlanCore/Domain/SensorReading.swift`에 있다.
 
 struct MotionActivityRecord: Identifiable, Codable, Hashable, Sendable {
     var id: UUID
