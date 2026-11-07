@@ -11,15 +11,13 @@ final class TaptionPlanWideLayoutUITests: XCTestCase {
         let viewportResets = ["-debugViewportWidth", "-debugViewportHeight"].filter { !extraArguments.contains($0) }.flatMap { [$0, "0"] }
         app.launchArguments += ["-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR", "-slowDayPlayback"] + viewportResets + extraArguments
         app.launch()
-        let skip = app.buttons["전체 건너뛰기"]
-        if skip.waitForExistence(timeout: 20) { skip.tap() }
-        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
-        let decline = springboard.buttons["허용 안 함"]
-        if decline.waitForExistence(timeout: 3) { decline.tap() }
-        guard waitsForMap else { return app }
-        XCTAssertTrue(menuButton(app).waitForExistence(timeout: 40))
-        // 런치 오버레이가 걷힌 뒤에야 탭이 닿는다.
-        XCTAssertTrue(waitUntil(60) { self.menuButton(app).isHittable }, "지도 홈이 눌리지 않음")
+        guard waitsForMap else {
+            // 시험용 화면이 15초 뒤 열리기 전에 튜토리얼만 걷어 둔다. 그 화면이 메뉴를 덮어도 기다림은 짧게 끝난다.
+            UITestWait.reachMapHome(app, menu: menuButton(app), timeout: 12)
+            return app
+        }
+        // 새 기기는 첫 실행 튜토리얼이 지도를 덮는다. 런치 오버레이가 걷힌 뒤에야 탭이 닿는다.
+        XCTAssertTrue(UITestWait.reachMapHome(app, menu: menuButton(app)), "지도 홈이 눌리지 않음")
         return app
     }
 
