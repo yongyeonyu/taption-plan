@@ -774,12 +774,8 @@ extension MapHomeView {
     }
 
     var historicalPlaybackCoordinate: CLLocationCoordinate2D? {
-        guard let point = displayedPlaybackLocation?.coordinate,
-              isValid(point) else { return nil }
-        return CLLocationCoordinate2D(
-            latitude: point.latitude,
-            longitude: point.longitude
-        )
+        // 재생 좌표는 선로·예상 경로처럼 계산한 자리(정확도 -1)가 많아 정확도로 거르지 않는다(PLY1108A01).
+        displayedPlaybackLocation.flatMap { MapHomePlaybackLocation.drawableCoordinate($0.coordinate) }
     }
 
     var expectedRoutePlaybackCoordinate: CLLocationCoordinate2D? {

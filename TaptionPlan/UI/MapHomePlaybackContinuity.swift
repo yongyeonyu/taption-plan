@@ -135,9 +135,63 @@ extension MapHomePlaybackLocation {
         // 선로 모양을 따라 간다. 탑승 안에서는 GPS 직선 프레임보다 먼저 쓴다(SUB1108A01).
         let active = travel.filter { SubwayRideTrack.isRide($0) && $0.span.contains(date) }
         guard let segment = active.max(by: { $0.span.start < $1.span.start }) else {
-            return nil
+            // 환승 걷기도 내린 자리에서 이어 간다. 탑승 앞뒤 GPS를 이은 직선은 뒤로 튄다(PLY1108A01).
+            return subwayTransferCoordinate(at: date, travel: travel, readings: readings)
         }
         return subwayGapCoordinate(at: date, segment: segment, readings: readings)
+    }
+
+    /// 화랑이를 그릴 좌표. 위경도만 본다(PLY1108A01).
+    /// 선로·역·예상 경로 좌표는 정확도가 -1(측정이 아니라 계산한 자리)이다. 화면이 정확도 0 이상만 받아
+    /// SUB1108A01 뒤로 탑승 내내 화랑이가 사라지고 구동기가 그리는 화살표만 남았다.
+    static func drawableCoordinate(_ point: GeoPoint) -> CLLocationCoordinate2D? {
+        guard point.latitude.isFinite, point.longitude.isFinite else { return nil }
+        let coordinate = CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude)
+        return CLLocationCoordinate2DIsValid(coordinate) ? coordinate : nil
+    }
+
+    /// 이어진 두 탑승 사이(환승 걷기)의 자리. 앞 탑승이 내린 선로 위치 → 그 사이 믿을 만한 GPS → 다음 탑승이 타는
+    /// 선로 위치를 시간 비율로 잇는다(PLY1108A01). 예전에는 탑승 전 GPS와 환승 뒤 GPS를 이은 직선을 따라가, 내린 자리에서
+    /// 노선 뒤쪽으로 수백 m 튀었다가 다시 걸어왔다(11-05 원본 22:32:51에 865m). `readings`는 시각순이어야 한다.
+    static func subwayTransferCoordinate(at date: Date, travel: [TravelSegment], readings: [SensorReading]) -> GeoPoint? {
+        let rides = travel.filter(SubwayRideTrack.isRide)
+        guard let previous = rides.filter({ $0.span.end <= date }).max(by: { $0.span.end < $1.span.end }),
+              let next = rides.filter({ $0.span.start > date }).min(by: { $0.span.start < $1.span.start }),
+              next.span.start.timeIntervalSince(previous.span.end) <= SubwayRideTrack.maximumJourneyGap,
+              let exit = rideEndpoint(previous, readings: readings, atEnd: true),
+              let entry = rideEndpoint(next, readings: readings, atEnd: false) else { return nil }
+        var anchors: [(date: Date, point: GeoPoint)] = [(previous.span.end, exit)]
+        var lower = 0, upper = readings.count
+        while lower < upper {
+            let middle = (lower + upper) / 2
+            if readings[middle].timestamp <= previous.span.end { lower = middle + 1 } else { upper = middle }
+        }
+        for reading in readings[lower...] {
+            guard reading.timestamp < next.span.start else { break }
+            if reading.gpsAvailable, let point = reading.point,
+               point.horizontalAccuracy <= SubwayRideTrack.trustedAccuracyMeters { anchors.append((reading.timestamp, point)) }
+        }
+        anchors.append((next.span.start, entry))
+        guard let index = anchors.firstIndex(where: { $0.date >= date }) else { return entry }
+        guard index > 0 else { return anchors[0].point }
+        let a = anchors[index - 1], b = anchors[index]
+        let duration = b.date.timeIntervalSince(a.date)
+        let t = duration > 0 ? min(1, max(0, date.timeIntervalSince(a.date) / duration)) : 1
+        return GeoPoint(
+            latitude: a.point.latitude + (b.point.latitude - a.point.latitude) * t,
+            longitude: a.point.longitude + (b.point.longitude - a.point.longitude) * t,
+            altitude: a.point.altitude + (b.point.altitude - a.point.altitude) * t,
+            horizontalAccuracy: max(a.point.horizontalAccuracy, b.point.horizontalAccuracy),
+            verticalAccuracy: max(a.point.verticalAccuracy, b.point.verticalAccuracy)
+        )
+    }
+
+    /// 탑승의 처음(타는 자리)·끝(내리는 자리) 선로 위치. 재생 위치와 같은 기준점을 쓴다.
+    private static func rideEndpoint(_ segment: TravelSegment, readings: [SensorReading], atEnd: Bool) -> GeoPoint? {
+        guard let line = SubwayTrackLine(route: segment.subwayRoute) else { return nil }
+        let anchors = line.anchors(segment: segment, readings: readings)
+        guard let meters = atEnd ? anchors.last?.meters : anchors.first?.meters else { return nil }
+        return line.point(atMeters: meters)
     }
 }
 

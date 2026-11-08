@@ -224,6 +224,7 @@
 		A1000000000000000B1104C2 /* TaptionRaisedFaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1104C2 /* TaptionRaisedFaceTests.swift */; };
 		A5B1102A0200000000000042 /* RawSensorReplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000041 /* RawSensorReplayTests.swift */; };
 		B10805000000000000000002 /* SubwayRideTrackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10805000000000000000001 /* SubwayRideTrackTests.swift */; };
+		B10813000000000000000002 /* PlaybackRideVisibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10813000000000000000001 /* PlaybackRideVisibilityTests.swift */; };
 		A5B1102A0200000000000040 /* OfficeStayAbsorptionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000003F /* OfficeStayAbsorptionTests.swift */; };
 		A5B1102A020000000000003E /* CarAudioTravelConfirmationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000003D /* CarAudioTravelConfirmationTests.swift */; };
 		A5B1103A020000000000003C /* NLESubActivityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1103A020000000000003B /* NLESubActivityTests.swift */; };
@@ -868,6 +869,7 @@
 		F1000000000000000B1104C2 /* TaptionRaisedFaceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionRaisedFaceTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000041 /* RawSensorReplayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RawSensorReplayTests.swift; sourceTree = "<group>"; };
 		B10805000000000000000001 /* SubwayRideTrackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubwayRideTrackTests.swift; sourceTree = "<group>"; };
+		B10813000000000000000001 /* PlaybackRideVisibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackRideVisibilityTests.swift; sourceTree = "<group>"; };
 		F5B1102A020000000000003F /* OfficeStayAbsorptionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfficeStayAbsorptionTests.swift; sourceTree = "<group>"; };
 		F5B1102A020000000000003D /* CarAudioTravelConfirmationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarAudioTravelConfirmationTests.swift; sourceTree = "<group>"; };
 		F5B1103A020000000000003B /* NLESubActivityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NLESubActivityTests.swift; sourceTree = "<group>"; };
@@ -1406,6 +1408,7 @@
 				F1000000000000000B1104C2 /* TaptionRaisedFaceTests.swift */,
 				F5B1102A0200000000000041 /* RawSensorReplayTests.swift */,
 				B10805000000000000000001 /* SubwayRideTrackTests.swift */,
+				B10813000000000000000001 /* PlaybackRideVisibilityTests.swift */,
 				F5B1102A020000000000003F /* OfficeStayAbsorptionTests.swift */,
 				F5B1102A020000000000003D /* CarAudioTravelConfirmationTests.swift */,
 				F5B1103A020000000000003B /* NLESubActivityTests.swift */,
@@ -2713,6 +2716,7 @@
 				A1000000000000000B1104C2 /* TaptionRaisedFaceTests.swift in Sources */,
 				A5B1102A0200000000000042 /* RawSensorReplayTests.swift in Sources */,
 				B10805000000000000000002 /* SubwayRideTrackTests.swift in Sources */,
+				B10813000000000000000002 /* PlaybackRideVisibilityTests.swift in Sources */,
 				A5B1102A0200000000000040 /* OfficeStayAbsorptionTests.swift in Sources */,
 				A5B1102A020000000000003E /* CarAudioTravelConfirmationTests.swift in Sources */,
 				A5B1103A020000000000003C /* NLESubActivityTests.swift in Sources */,
