@@ -484,6 +484,9 @@ struct MapHomeView: View {
     @State var derivedUpdateTick = 0
 
     @State var homeWeatherBadgeMemo = MapHomeMemo<MapHomeHomeWeatherKey, MapHomeHomeWeatherBadge?>()
+    /// 수묵 테마 핀 도장: 보고 있는 날 머문 등록 장소 키(INK1108A01).
+    @State var placeStampMemo = MapHomeMemo<MapHomePlaceStampKey, Set<String>>()
+    @State var isPlaceBookPresented = false
 
     @State var stickmanActionMemo = MapHomeMemo<MapHomeStickmanActionKey, MapHomeStickmanAction>()
 

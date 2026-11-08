@@ -611,6 +611,15 @@ extension MapHomeView {
                 )
             }
         }
+        .sheet(isPresented: $isPlaceBookPresented) {
+            MapHomePlaceBookSheet(
+                frequentPlaces: model.settings.frequentPlaces,
+                stays: model.snapshot.places,
+                language: language
+            )
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
         .sheet(isPresented: $isMapAttributionPresented) {
             MapHomeAttributionSheet(language: language)
                 .presentationDetents([.height(360), .large])

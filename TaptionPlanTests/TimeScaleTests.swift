@@ -4220,6 +4220,7 @@ final class TimeScaleTests: XCTestCase {
                 .mapLibreContrast,
                 .mapLibreCasual,
                 .mapLibreRPG,
+                .mapLibreInk,
             ]
         )
         // 없앤 밝게·파스텔로 저장된 값은 산책 지도로 읽는다(UIX1101A03).
@@ -4949,7 +4950,7 @@ final class TimeScaleTests: XCTestCase {
     func testMapHomeVectorStylesKeepOnlyStyledRoadMapLayers() throws {
         XCTAssertEqual(
             MapHomeVectorStyle.allCases,
-            [.night, .contrast, .casual, .rpg]
+            [.night, .contrast, .casual, .rpg, .ink]
         )
 
         let baseLayerIDs = [
@@ -5009,6 +5010,19 @@ final class TimeScaleTests: XCTestCase {
                     "rpg-waterway",
                     "rpg-place-marker",
                     "rpg-poi-marker",
+                ] + labelIDs
+            case .ink:
+                expectedLayerIDs = [
+                    "background",
+                    "water",
+                    "landuse",
+                    "ink-landcover",
+                    "ink-coastline",
+                    "building",
+                    "road-casing",
+                    "road",
+                    "ink-road-major",
+                    "ink-waterway",
                 ] + labelIDs
             default:
                 expectedLayerIDs = baseLayerIDs + labelIDs
@@ -5084,6 +5098,7 @@ final class TimeScaleTests: XCTestCase {
             .casual
         )
         XCTAssertEqual(MapDisplayStyle.mapLibreRPG.mapHomeVectorStyle, .rpg)
+        XCTAssertEqual(MapDisplayStyle.mapLibreInk.mapHomeVectorStyle, .ink)
 
         for style in [
             MapDisplayStyle.standard,
@@ -5105,6 +5120,7 @@ final class TimeScaleTests: XCTestCase {
                 .mapLibreCasual,
                 .mapLibreNight,
                 .mapLibreContrast,
+                .mapLibreInk,
             ]
         )
         XCTAssertEqual(MapDisplayStyle.standard.provider, .apple)
@@ -6240,6 +6256,7 @@ final class TaptionUIThemeMapTests: XCTestCase {
         XCTAssertEqual(TaptionUITheme.forMap(.mapLibreNight), .navy)
         XCTAssertEqual(TaptionUITheme.forMap(.mapLibreCasual), .purple)
         XCTAssertEqual(TaptionUITheme.forMap(.mapLibreContrast), .brown)
+        XCTAssertEqual(TaptionUITheme.forMap(.mapLibreInk), .ink)
         XCTAssertEqual(TaptionUITheme.forMap(.standard), .classic)
         XCTAssertEqual(TaptionUITheme.forMap(.hybrid), .classic)
     }

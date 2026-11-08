@@ -122,7 +122,7 @@ extension MapHomeView {
             || isSearchExpanded || todayCalendarExpanded
         let sheets = isRecordingOptionsPresented || isPlaybackVideoPresented || isCarAudioSheetPresented
             || isSalarySettingsPresented || isStrideCalibrationPresented || isTransitLocationsPresented
-            || isSearchPinMenuPresented || isAlarmSettingsPresented || isMapAttributionPresented
+            || isSearchPinMenuPresented || isAlarmSettingsPresented || isMapAttributionPresented || isPlaceBookPresented
             || isCalendarConnectPresented || isDataProtectionPresented || isCategoryAddPresented
             || isUnconfirmedReviewPresented || proAccess.isPurchaseSheetPresented
         let items = recordedVideoShare != nil || selectedMarkerInfo != nil || counterDetail != nil

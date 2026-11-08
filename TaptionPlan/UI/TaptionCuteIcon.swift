@@ -386,11 +386,14 @@ struct TaptionBarPalette: Sendable {
         case .navy: night
         case .purple: TaptionSeasonStore.current.bar
         case .brown: outdoor
+        case .ink: inkWash
         }
     }
 
     private static let classic = TaptionBarPalette(["#3E3320", "#EE8A5E", "#F3C766", "#D9694F", "#62B7A6", "#E7708F", "#9CC6E8", "#FBF6EA", "#8A5A3C", "#B9A98F"])
     private static let night = TaptionBarPalette(["#FFFFFF", "#FF9E80", "#FFD97A", "#F2836B", "#6FDCC8", "#FF8FB0", "#8CCBFF", "#F5F9FF", "#4A6FA8", "#93B6DA"], innerLine: "#0A101E")
+    /// 수묵: 먹 테두리에 옅은 먹빛 면, 인주 빨강은 한 칸만.
+    private static let inkWash = TaptionBarPalette(MapHomeInkWash.barHexes)
     private static let outdoor = TaptionBarPalette(["#0E0B07", "#FF9A5C", "#FFD35C", "#F07A4F", "#66D4B5", "#FF8FA3", "#8FC4FF", "#FFFBF4", "#A0701C", "#D8CBB4"])
 }
 

@@ -267,8 +267,10 @@ enum MapHomeVectorLabels {
         return (object as? [String: Any])?["text-field"]
     }
 
-    static func json(palette: Palette) -> String {
-        layers.map { layer in
+    /// `iconOpacity`: 수묵 지도는 색 있는 시설 아이콘을 옅게 눌러 먹빛 화면을 지킨다.
+    static func json(palette: Palette, iconOpacity: Double = 1) -> String {
+        let iconPaint = iconOpacity < 1 ? #", "icon-opacity": \#(iconOpacity)"# : ""
+        return layers.map { layer in
             let filter = layer.filter.map { "\"filter\": \($0)," } ?? ""
             return #"""
             {
@@ -282,7 +284,7 @@ enum MapHomeVectorLabels {
               "paint": {
                 "text-color": "\#(palette.text(layer.tone))",
                 "text-halo-color": "\#(palette.halo(layer.tone))",
-                "text-halo-width": \#(layer.haloWidth)
+                "text-halo-width": \#(layer.haloWidth)\#(iconPaint)
               }
             }
             """#

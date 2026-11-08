@@ -61,6 +61,7 @@ extension MapHomeView {
         )) {
             MapHomeHomeWeatherBadgePolicy.badge(from: model.snapshot.weather, now: .now)
         }
+        let stampedKeys = placeStampedKeys
         return model.settings.frequentPlaces.compactMap { place in
             guard let destination = MapHomeLocationDestination(placeKind: place.kind),
                   let point = place.point,
@@ -98,7 +99,8 @@ extension MapHomeView {
                     selectedDay: model.selectedDate,
                     progress: playbackProgress,
                     isPlaybackRunning: isDayPlaybackRunning
-                ) : nil
+                ) : nil,
+                stamp: stampedKeys.map { MapHomePlaceStampPolicy.mark(for: place, stampedKeys: $0) }
             )
         }
     }

@@ -75,6 +75,8 @@ struct MapHomePlaceAnnotation: Identifiable {
     var weatherBadge: MapHomeHomeWeatherBadge? = nil
     /// 집 하늘의 위치와 시각 출처(집에만).
     var homeSky: MapHomeHomeSkyInput? = nil
+    /// 수묵 테마의 도장(INK1108A01). 다른 테마에서는 nil이라 핀이 그대로다.
+    var stamp: MapHomePlaceStampMark? = nil
 }
 
 struct MapHomeTransitAnnotation: Identifiable {
@@ -99,6 +101,7 @@ struct MapHomePlacePin: View {
     var equippedAccessoryID: String? = nil
     var weatherBadge: MapHomeHomeWeatherBadge? = nil
     var homeSky: MapHomeHomeSkyInput? = nil
+    var stamp: MapHomePlaceStampMark? = nil
     var onOpenDaySummary: (() -> Void)? = nil
 
     var body: some View {
@@ -123,6 +126,7 @@ struct MapHomePlacePin: View {
                             .stroke(Color.tpLine.opacity(0.95), lineWidth: 1)
                     }
                     .shadow(color: Color.tpInk.opacity(0.2), radius: 4, y: 2)
+                    .overlay(alignment: .topTrailing) { stampSeal }
                 Text(AppLanguagePreference.runtimeText(FloorLabel.korean(floor ?? 1), FloorLabel.english(floor ?? 1)))
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
                     .foregroundStyle(Color.tpInk)
@@ -144,7 +148,17 @@ struct MapHomePlacePin: View {
             homeAvatar(level: level)
             homeLevelLabel(level: level)
         }
+        .overlay(alignment: .topTrailing) { stampSeal }
         .offset(y: MapHomePlacePinLayout.avatarCenterCompensation)
+    }
+
+    @ViewBuilder
+    private var stampSeal: some View {
+        if let stamp {
+            MapHomePlaceSeal(mark: stamp, size: 22)
+                .offset(x: 9, y: -9)
+                .allowsHitTesting(false)
+        }
     }
 
     /// 원형 아바타. 뒤로 부드러운 발광이 번지고, 안쪽에 레벨 아트를 넣는다. 화랑이는 그 위에 얹는다.

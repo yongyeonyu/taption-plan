@@ -79,6 +79,8 @@ enum TaptionUITheme: String, CaseIterable, Identifiable, Sendable {
     case navy
     case purple
     case brown
+    /// 수묵(INK1108A01): 한지 바탕·먹 글자·붉은 인주 강조 하나.
+    case ink
 
     struct Palette: Sendable {
         let background: Color
@@ -115,12 +117,13 @@ enum TaptionUITheme: String, CaseIterable, Identifiable, Sendable {
     var isDark: Bool { self == .navy || self == .brown }
     var colorScheme: ColorScheme { isDark ? .dark : .light }
 
-    /// 판타지·애플맵·위성은 기본 양피지, 야간은 남색, 계절은 보고 있는 날짜의 계절 색, 실외(고대비)는 갈색.
+    /// 판타지·애플맵·위성은 기본 양피지, 야간은 남색, 계절은 보고 있는 날짜의 계절 색, 실외(고대비)는 갈색, 수묵은 한지.
     static func forMap(_ style: MapDisplayStyle) -> TaptionUITheme {
         switch style.runtimeStyle {
         case .mapLibreNight: .navy
         case .mapLibreCasual: .purple
         case .mapLibreContrast: .brown
+        case .mapLibreInk: .ink
         case .mapLibreRPG, .standard, .hybrid: .classic
         }
     }
@@ -140,6 +143,7 @@ enum TaptionUITheme: String, CaseIterable, Identifiable, Sendable {
         case .navy: Self.palette("#0A101E", "#141D33", "#2A3D63", "#2A74C6", "#A9C4E0", "#F5F9FF")
         case .purple: TaptionSeasonStore.current.palette
         case .brown: Self.palette("#17130E", "#2A241C", "#54483A", "#99690F", "#D8CBB4", "#FFFBF4")
+        case .ink: Self.palette(MapHomeInkWash.uiHexes)
         }
     }
 
