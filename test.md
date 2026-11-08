@@ -2,6 +2,12 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## TFB1108A04 · TestFlight 300 + 외부 베타 (2026-11-08)
+
+- push 후 `release.sh --yes --request-id TFB1108A04`: 빌드 300, VALID, 내부 그룹 연결·노출 확인(`build/validation/TFB1108A04/testflight-report.json`). 아카이브 네 번들 모두 300.
+- 외부 그룹 `TP 지인 테스트` 연결·베타 심사 제출: 제출 응답 `WAITING_FOR_REVIEW`, 다시 읽으니 외부 상태 `IN_BETA_TESTING`, 그룹 빌드 262·273·280·281·282·299·300(`external-submit.log`).
+- 299 대비: PLY1108A01·ALG1102A01·MAP1108A03·SRC1108A02·PLB1108A01·RUL1108A01. 실기기 확인은 대표.
+
 ## PLY1108A01 · 지하철 재생에서 화랑이 사라짐·환승 때 뒤로 튐 (2026-11-08)
 
 - 원인 1(사라짐): 선로·역 좌표와 예상 경로 좌표는 계산한 자리라 정확도 `-1`인데, 화랑이를 그리는 경로(`historicalPlaybackCoordinate` → `MapHomeView.isValid`)는 정확도 0 이상만 받아 nil이 됐다. 구동기는 위경도만 봐서 카메라·파란 화살표는 그려졌다. SUB1108A01 전에는 탑승 중에도 GPS 프레임이 먼저라 대부분 가려졌고, 선로가 먼저가 되며 탑승 전체가 숨었다. 11-05 재생: 22:30:32–22:32:51·22:36:20–22:53:05 동안 1,145초 숨음.
