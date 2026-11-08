@@ -2867,6 +2867,15 @@
 "이동 수단|Transport": "Transportasi",
 "자료|Source": "Sumber",
 "직접 고치기|Edit as manual trip": "Edit manual",
-"직접 입력|Enter manually": "Masukkan manual"
+"직접 입력|Enter manually": "Masukkan manual",
+"{0}, 도장 찍음|{0}, stamped": "{0}, sudah dicap",
+"{0}, 아직 가 보지 않음|{0}, not visited yet": "{0}, belum dikunjungi",
+"도장 찍음|Stamped": "Sudah dicap",
+"등록한 곳|My places": "Tempat saya",
+"랜드마크|Landmarks": "Landmark",
+"수묵|Ink Wash": "Tinta",
+"아직 도장 없음|Not stamped yet": "Belum ada cap",
+"장소 도감|Place book": "Buku tempat",
+"찍은 도장 {0} · 남은 곳 {1}|Stamps {0} · To go {1}": "Cap {0} · Sisa {1}"
 }
 }

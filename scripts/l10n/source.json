@@ -1858,7 +1858,7 @@
    "ko": "{0} 상세 분류",
    "en": "{0} details",
    "files": [
-    "MapHomeView+Menu.swift:708"
+    "MapHomeView+Menu.swift:711"
    ],
    "args": [
     "category.localizedTitle(language)"
@@ -1872,8 +1872,8 @@
    "ko": "{0} 색상 팔레트",
    "en": "{0} color palette",
    "files": [
-    "MapHomeView+Menu.swift:737",
-    "MapHomeView+Menu.swift:855"
+    "MapHomeView+Menu.swift:740",
+    "MapHomeView+Menu.swift:858"
    ],
    "args": [
     "category.localizedTitle(language)"
@@ -1887,7 +1887,7 @@
    "ko": "{0} 수정",
    "en": "Edit {0}",
    "files": [
-    "MapHomeView+Menu.swift:840"
+    "MapHomeView+Menu.swift:843"
    ],
    "args": [
     "category.title"
@@ -2101,6 +2101,20 @@
    ]
   },
   {
+   "key": "{0}, 도장 찍음|{0}, stamped",
+   "ko": "{0}, 도장 찍음",
+   "en": "{0}, stamped",
+   "files": [
+    "MapHomePlaceBook.swift:227"
+   ],
+   "args": [
+    "entry.title"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "{0}, 레벨 {1}|{0}, level {1}",
    "ko": "{0}, 레벨 {1}",
    "en": "{0}, level {1}",
@@ -2110,6 +2124,20 @@
    "args": [
     "place.name",
     "place.floor ?? 1"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "{0}, 아직 가 보지 않음|{0}, not visited yet",
+   "ko": "{0}, 아직 가 보지 않음",
+   "en": "{0}, not visited yet",
+   "files": [
+    "MapHomePlaceBook.swift:228"
+   ],
+   "args": [
+    "entry.title"
    ],
    "targets": [
     "TaptionPlan"
@@ -2603,7 +2631,7 @@
    "ko": "{0}일 달력",
    "en": "Calendar, day {0}",
    "files": [
-    "MapHomeMapAnnotations.swift:905"
+    "MapHomeMapAnnotations.swift:919"
    ],
    "args": [
     "day"
@@ -5339,7 +5367,7 @@
    "ko": "현재 날씨 {0}, {1}",
    "en": "Current weather {0}, {1}",
    "files": [
-    "MapHomeMapAnnotations.swift:252"
+    "MapHomeMapAnnotations.swift:266"
    ],
    "args": [
     "badge.condition",
@@ -12968,7 +12996,7 @@
    "ko": "검색 결과가 없습니다.",
    "en": "No results.",
    "files": [
-    "MapHomeView+Map.swift:1046",
+    "MapHomeView+Map.swift:1048",
     "TravelMapTripEditorSheet.swift:151"
    ],
    "args": [],
@@ -13005,7 +13033,7 @@
    "ko": "검색하지 못했습니다. 연결을 확인해 주세요.",
    "en": "Search failed. Check your connection.",
    "files": [
-    "MapHomeView+Map.swift:1045",
+    "MapHomeView+Map.swift:1047",
     "TravelMapTripEditorSheet.swift:150"
    ],
    "args": [],
@@ -13268,7 +13296,7 @@
    "ko": "계획과 기록은 삭제되지 않습니다.",
    "en": "Your plans and records will not be deleted.",
    "files": [
-    "MapHomeView+Support.swift:709"
+    "MapHomeView+Support.swift:718"
    ],
    "args": [],
    "targets": [
@@ -14805,7 +14833,7 @@
    "ko": "날씨",
    "en": "Weather",
    "files": [
-    "MapHomeView+Menu.swift:516",
+    "MapHomeView+Menu.swift:519",
     "StickerArtBasics.swift:7"
    ],
    "args": [],
@@ -14908,7 +14936,7 @@
    "ko": "내 차 등록",
    "en": "My car",
    "files": [
-    "MapHomeView+Menu.swift:446"
+    "MapHomeView+Menu.swift:449"
    ],
    "args": [],
    "targets": [
@@ -15801,6 +15829,18 @@
    ]
   },
   {
+   "key": "도장 찍음|Stamped",
+   "ko": "도장 찍음",
+   "en": "Stamped",
+   "files": [
+    "MapHomePlaceStamps.swift:87"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "독서|Reading",
    "ko": "독서",
    "en": "Reading",
@@ -16040,7 +16080,7 @@
    "ko": "등록된 사용자 위치 {0}개",
    "en": "{0} saved user locations",
    "files": [
-    "MapHomeView+Menu.swift:947"
+    "MapHomeView+Menu.swift:950"
    ],
    "args": [
     "userLocationCount"
@@ -16054,7 +16094,7 @@
    "ko": "등록된 사용자 위치가 없습니다.",
    "en": "No saved user locations.",
    "files": [
-    "MapHomeView+Menu.swift:977"
+    "MapHomeView+Menu.swift:980"
    ],
    "args": [],
    "targets": [
@@ -16080,6 +16120,18 @@
    "files": [
     "FirstRunTutorialGuides.swift:750",
     "FirstRunTutorialGuides.swift:750"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "등록한 곳|My places",
+   "ko": "등록한 곳",
+   "en": "My places",
+   "files": [
+    "MapHomePlaceBook.swift:149"
    ],
    "args": [],
    "targets": [
@@ -16156,6 +16208,18 @@
    "args": [
     "d.englishName"
    ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "랜드마크|Landmarks",
+   "ko": "랜드마크",
+   "en": "Landmarks",
+   "files": [
+    "MapHomePlaceBook.swift:151"
+   ],
+   "args": [],
    "targets": [
     "TaptionPlan"
    ]
@@ -16718,7 +16782,7 @@
    "ko": "메모 표시",
    "en": "Show memos",
    "files": [
-    "MapHomeView+Menu.swift:524"
+    "MapHomeView+Menu.swift:527"
    ],
    "args": [],
    "targets": [
@@ -18402,7 +18466,7 @@
    "ko": "사용자 위치 관리",
    "en": "Manage user locations",
    "files": [
-    "MapHomeView+Menu.swift:996"
+    "MapHomeView+Menu.swift:999"
    ],
    "args": [],
    "targets": [
@@ -18414,7 +18478,7 @@
    "ko": "사용자 위치 목록",
    "en": "User location list",
    "files": [
-    "MapHomeView+Menu.swift:971"
+    "MapHomeView+Menu.swift:974"
    ],
    "args": [],
    "targets": [
@@ -18464,7 +18528,7 @@
    "ko": "사용자 지정 색상",
    "en": "Custom category color",
    "files": [
-    "MapHomeView+Menu.swift:786"
+    "MapHomeView+Menu.swift:789"
    ],
    "args": [],
    "targets": [
@@ -18476,8 +18540,8 @@
    "ko": "사용자 지정",
    "en": "Custom",
    "files": [
-    "MapHomeView+Menu.swift:769",
-    "MapHomeView+Menu.swift:868"
+    "MapHomeView+Menu.swift:772",
+    "MapHomeView+Menu.swift:871"
    ],
    "args": [],
    "targets": [
@@ -18489,7 +18553,7 @@
    "ko": "사용자 추가",
    "en": "Add custom",
    "files": [
-    "MapHomeView+Menu.swift:809"
+    "MapHomeView+Menu.swift:812"
    ],
    "args": [],
    "targets": [
@@ -18501,7 +18565,7 @@
    "ko": "사용자",
    "en": "User",
    "files": [
-    "MapHomeView+Menu.swift:944"
+    "MapHomeView+Menu.swift:947"
    ],
    "args": [],
    "targets": [
@@ -18561,7 +18625,7 @@
    "ko": "사이드바",
    "en": "Sidebar",
    "files": [
-    "MapHomeView+Menu.swift:513"
+    "MapHomeView+Menu.swift:516"
    ],
    "args": [],
    "targets": [
@@ -19068,7 +19132,7 @@
    "ko": "색상 선택",
    "en": "Choose color",
    "files": [
-    "MapHomeView+Menu.swift:765"
+    "MapHomeView+Menu.swift:768"
    ],
    "args": [],
    "targets": [
@@ -19092,7 +19156,7 @@
    "ko": "색상을 선택하면 즉시 저장됩니다.",
    "en": "Colors save immediately.",
    "files": [
-    "MapHomeView+Menu.swift:891"
+    "MapHomeView+Menu.swift:894"
    ],
    "args": [],
    "targets": [
@@ -19385,7 +19449,7 @@
    "files": [
     "MapHomeView+Menu2.swift:208",
     "MapHomeView+Menu2.swift:225",
-    "MapHomeView+Support.swift:703"
+    "MapHomeView+Support.swift:712"
    ],
    "args": [],
    "targets": [
@@ -19447,7 +19511,7 @@
    "ko": "설정을 기본값으로 초기화할까요?",
    "en": "Reset settings to defaults?",
    "files": [
-    "MapHomeView+Support.swift:699"
+    "MapHomeView+Support.swift:708"
    ],
    "args": [],
    "targets": [
@@ -19995,6 +20059,18 @@
    ]
   },
   {
+   "key": "수묵|Ink Wash",
+   "ko": "수묵",
+   "en": "Ink Wash",
+   "files": [
+    "MapHomeView+Map.swift:918"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "수신 대기 · {0}|Waiting · last {0}",
    "ko": "수신 대기 · {0}",
    "en": "Waiting · last {0}",
@@ -20229,7 +20305,7 @@
    "ko": "시간 간격",
    "en": "Time interval",
    "files": [
-    "MapHomeView+Menu.swift:554"
+    "MapHomeView+Menu.swift:557"
    ],
    "args": [],
    "targets": [
@@ -20277,7 +20353,7 @@
    "ko": "시간 표시",
    "en": "Time format",
    "files": [
-    "MapHomeView+Menu.swift:540"
+    "MapHomeView+Menu.swift:543"
    ],
    "args": [],
    "targets": [
@@ -20789,6 +20865,18 @@
    ]
   },
   {
+   "key": "아직 도장 없음|Not stamped yet",
+   "ko": "아직 도장 없음",
+   "en": "Not stamped yet",
+   "files": [
+    "MapHomePlaceStamps.swift:88"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "아직 등록한 기기가 없습니다|No device registered yet",
    "ko": "아직 등록한 기기가 없습니다",
    "en": "No device registered yet",
@@ -20879,7 +20967,7 @@
    "ko": "안개 탐험 선택",
    "en": "Choose fog of exploration",
    "files": [
-    "MapHomeView+Menu.swift:1066"
+    "MapHomeView+Menu.swift:1069"
    ],
    "args": [],
    "targets": [
@@ -20891,7 +20979,7 @@
    "ko": "안개 탐험",
    "en": "Fog of Exploration",
    "files": [
-    "MapHomeView+Menu.swift:1062"
+    "MapHomeView+Menu.swift:1065"
    ],
    "args": [],
    "targets": [
@@ -20954,7 +21042,7 @@
    "en": "Alerts",
    "files": [
     "MapHomeAlarm.swift:479",
-    "MapHomeView+Menu.swift:454"
+    "MapHomeView+Menu.swift:457"
    ],
    "args": [],
    "targets": [
@@ -21239,7 +21327,7 @@
    "ko": "앱",
    "en": "App",
    "files": [
-    "MapHomeView+Menu.swift:450"
+    "MapHomeView+Menu.swift:453"
    ],
    "args": [],
    "targets": [
@@ -21722,7 +21810,7 @@
    "en": "Connections",
    "files": [
     "MapHomeNLEClipFactory.swift:307",
-    "MapHomeView+Menu.swift:439"
+    "MapHomeView+Menu.swift:442"
    ],
    "args": [],
    "targets": [
@@ -23088,7 +23176,7 @@
    "ko": "위치 기록을 기다리는 중",
    "en": "Waiting for location",
    "files": [
-    "MapHomeView+Menu.swift:482"
+    "MapHomeView+Menu.swift:485"
    ],
    "args": [],
    "targets": [
@@ -23162,7 +23250,7 @@
    "ko": "위치 목록",
    "en": "Location list",
    "files": [
-    "MapHomeView+Menu.swift:919"
+    "MapHomeView+Menu.swift:922"
    ],
    "args": [],
    "targets": [
@@ -23361,7 +23449,7 @@
    "files": [
     "WidgetShared.swift:737",
     "MapHomeStickerEditor.swift:533",
-    "MapHomeView+Menu.swift:906"
+    "MapHomeView+Menu.swift:909"
    ],
    "args": [],
    "targets": [
@@ -25060,6 +25148,19 @@
    ]
   },
   {
+   "key": "장소 도감|Place book",
+   "ko": "장소 도감",
+   "en": "Place book",
+   "files": [
+    "MapHomePlaceBook.swift:167",
+    "MapHomeView+Menu.swift:428"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "장소 반경|Place radius",
    "ko": "장소 반경",
    "en": "Place radius",
@@ -26183,7 +26284,7 @@
    "ko": "지도 스타일 선택",
    "en": "Choose map style",
    "files": [
-    "MapHomeView+Menu.swift:1050"
+    "MapHomeView+Menu.swift:1053"
    ],
    "args": [],
    "targets": [
@@ -26195,7 +26296,7 @@
    "ko": "지도 스타일",
    "en": "Map style",
    "files": [
-    "MapHomeView+Menu.swift:1046"
+    "MapHomeView+Menu.swift:1049"
    ],
    "args": [],
    "targets": [
@@ -26257,7 +26358,7 @@
    "ko": "지도 축소",
    "en": "Zoom map out",
    "files": [
-    "MapHomeView+Map.swift:1099"
+    "MapHomeView+Map.swift:1101"
    ],
    "args": [],
    "targets": [
@@ -26270,7 +26371,7 @@
    "en": "Map attribution",
    "files": [
     "MapHomeSupportViews.swift:109",
-    "MapHomeView+Menu.swift:458"
+    "MapHomeView+Menu.swift:461"
    ],
    "args": [],
    "targets": [
@@ -26321,7 +26422,7 @@
    "ko": "지도 확대",
    "en": "Zoom map in",
    "files": [
-    "MapHomeView+Map.swift:1098"
+    "MapHomeView+Map.swift:1100"
    ],
    "args": [],
    "targets": [
@@ -26408,7 +26509,7 @@
    "ko": "지도에 메모 추가",
    "en": "Add map memo",
    "files": [
-    "MapHomeView+Support.swift:621"
+    "MapHomeView+Support.swift:630"
    ],
    "args": [],
    "targets": [
@@ -26905,6 +27006,21 @@
     "FirstRunTutorialGuides.swift:305"
    ],
    "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "찍은 도장 {0} · 남은 곳 {1}|Stamps {0} · To go {1}",
+   "ko": "찍은 도장 {0} · 남은 곳 {1}",
+   "en": "Stamps {0} · To go {1}",
+   "files": [
+    "MapHomePlaceBook.swift:171"
+   ],
+   "args": [
+    "state.stampedCount",
+    "state.remainingCount"
+   ],
    "targets": [
     "TaptionPlan"
    ]
@@ -27623,7 +27739,7 @@
    "ko": "캘린더 연결",
    "en": "Calendar",
    "files": [
-    "MapHomeView+Menu.swift:443"
+    "MapHomeView+Menu.swift:446"
    ],
    "args": [],
    "targets": [
@@ -28225,7 +28341,7 @@
    "ko": "표시",
    "en": "Display",
    "files": [
-    "MapHomeView+Menu.swift:1018"
+    "MapHomeView+Menu.swift:1021"
    ],
    "args": [],
    "targets": [
@@ -28457,7 +28573,7 @@
    "en": "Day card",
    "files": [
     "MapHomeDailyCard.swift:354",
-    "MapHomeView+Menu.swift:456",
+    "MapHomeView+Menu.swift:459",
     "MapHomeView+Support.swift:578"
    ],
    "args": [],
@@ -28859,7 +28975,7 @@
    "ko": "행동 분류 목록",
    "en": "Activity category list",
    "files": [
-    "MapHomeView+Menu.swift:671"
+    "MapHomeView+Menu.swift:674"
    ],
    "args": [],
    "targets": [
@@ -28871,7 +28987,7 @@
    "ko": "행동 분류",
    "en": "Activity categories",
    "files": [
-    "MapHomeView+Menu.swift:658"
+    "MapHomeView+Menu.swift:661"
    ],
    "args": [],
    "targets": [
@@ -28994,7 +29110,7 @@
    "ko": "현재 날씨 {0}, {1}",
    "en": "Current weather {0}, {1}",
    "files": [
-    "MapHomeMapAnnotations.swift:251"
+    "MapHomeMapAnnotations.swift:265"
    ],
    "args": [
     "badge.condition",
@@ -29047,7 +29163,7 @@
    "ko": "현재 위치 기록 중",
    "en": "Recording current location",
    "files": [
-    "MapHomeView+Menu.swift:483"
+    "MapHomeView+Menu.swift:486"
    ],
    "args": [],
    "targets": [
@@ -29347,7 +29463,7 @@
    "ko": "화면",
    "en": "View",
    "files": [
-    "MapHomeView+Menu.swift:427"
+    "MapHomeView+Menu.swift:430"
    ],
    "args": [],
    "targets": [

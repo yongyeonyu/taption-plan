@@ -2,6 +2,15 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## INK1108A01 · 수묵 테마·도장·장소 도감 (2026-11-08)
+
+- 대표 결정: 테마+도장+장소 도감 모두, 다크 모드에서도 한지 그대로, 핀 도장은 수묵 테마에서만, 랜드마크 반경은 종류별 기본값.
+- 테마: 지도 스타일 「수묵」(`MapDisplayStyle.mapLibreInk`)을 고르면 `TaptionUITheme.ink`. 한지 #EFE6D2·면 #F8F2E4·선 #BFB39C·먹 #2B2925·보조 #5E574C·붉은 강조 #B8322A(흰 글자 대비 5.9:1, 보조 5.7:1 시험 고정). 지도는 한지 땅·옅은 회청 물·큰길만 가는 먹선·아이콘 투명도 0.32. OpenFreeMap 글꼴이 Noto Sans뿐이라 명조 느낌은 없음. 동결 파일을 늘리지 않으려 스타일 정의를 `MapHomeVectorStyle.swift`로 옮겨 `MapHomeVectorMap.swift` 1,347 → 880줄.
+- 도장: 그날 `PlaceStay.placeKey == FrequentPlace.stablePlaceKey`인 머묾이 있으면 도장(머무는 중·자정 넘김 포함). 家·社·學·食, 그 밖은 이름 첫 글자(없으면 印). 찍힌 곳 붉은 도장 −8°, 아직은 점선. 머문 기록에서 매번 구하는 표시 값이라 SQLite·설정·백업 형식 그대로(새 저장값은 스타일 문자열 `mapLibreInk`뿐, 옛 빌드는 모르는 값을 애플맵으로 읽음 — 시험).
+- 장소 도감: 메뉴 > 기록 > 「장소 도감」. 위치 정한 등록 장소 + 랜드마크 52곳 카드, 가 본 곳 색·도장, 아직 흑백·점선, 「찍은 도장 N · 남은 곳 M」. 랜드마크 반경은 건물 500m(25곳)·동네·해변 2km(12곳)·넓은 자연 5km(15곳).
+- 시험(시뮬레이터): 에이전트 131건(InkWashThemeTests 12 포함) 통과, 합친 뒤 전체 단위 시험 XCTest 2,243건 실패 0·건너뜀 19, Swift Testing 51 통과(`build/validation/INK1108A01/unit-full-1.log`). 반경 변경 뒤 `InkWashThemeTests` 12건 통과(`landmark-radius-1.log`). 새 문구 9개 12개 언어. 화면 `build/validation/INK1108A01/ink1108-*.png`(도감은 견본 데이터).
+- 미확인(실기기): 실제 도착 시 도장, 날 바뀌면 점선, 기록 많을 때 도감 여는 속도, 수묵 지도 가독성, 다크 모드 한지 유지.
+
 ## TFB1108A01 · TestFlight 297 (2026-11-08)
 
 - `release.sh --yes --request-id TFB1108A01`: 빌드 297, 처리 상태 VALID, 내부 그룹 「TP Taption Plan 내부 테스트」 연결·테스터 노출 확인(`build/validation/TFB1108A01/testflight-report.json`).

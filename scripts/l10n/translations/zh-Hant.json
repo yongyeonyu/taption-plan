@@ -2867,6 +2867,15 @@
 "이동 수단|Transport": "交通方式",
 "자료|Source": "資料",
 "직접 고치기|Edit as manual trip": "改為手動編輯",
-"직접 입력|Enter manually": "手動輸入"
+"직접 입력|Enter manually": "手動輸入",
+"{0}, 도장 찍음|{0}, stamped": "{0}，已蓋章",
+"{0}, 아직 가 보지 않음|{0}, not visited yet": "{0}，尚未到訪",
+"도장 찍음|Stamped": "已蓋章",
+"등록한 곳|My places": "我的地點",
+"랜드마크|Landmarks": "地標",
+"수묵|Ink Wash": "水墨",
+"아직 도장 없음|Not stamped yet": "尚未蓋章",
+"장소 도감|Place book": "地點圖鑑",
+"찍은 도장 {0} · 남은 곳 {1}|Stamps {0} · To go {1}": "印章 {0} · 剩餘 {1}"
 }
 }

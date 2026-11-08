@@ -2867,6 +2867,15 @@
 "이동 수단|Transport": "Phương tiện",
 "자료|Source": "Nguồn",
 "직접 고치기|Edit as manual trip": "Sửa thủ công",
-"직접 입력|Enter manually": "Tự nhập"
+"직접 입력|Enter manually": "Tự nhập",
+"{0}, 도장 찍음|{0}, stamped": "{0}, đã đóng dấu",
+"{0}, 아직 가 보지 않음|{0}, not visited yet": "{0}, chưa ghé",
+"도장 찍음|Stamped": "Đã đóng dấu",
+"등록한 곳|My places": "Địa điểm của tôi",
+"랜드마크|Landmarks": "Địa danh",
+"수묵|Ink Wash": "Thủy mặc",
+"아직 도장 없음|Not stamped yet": "Chưa có dấu",
+"장소 도감|Place book": "Sổ địa điểm",
+"찍은 도장 {0} · 남은 곳 {1}|Stamps {0} · To go {1}": "Dấu {0} · Còn {1}"
 }
 }

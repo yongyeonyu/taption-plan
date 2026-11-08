@@ -97,7 +97,7 @@ final class InkWashThemeTests: XCTestCase {
             XCTAssertNotNil(UIImage(named: candidate.artworkName), candidate.artworkName)
             if let site {
                 XCTAssertTrue((-90...90).contains(site.latitude) && (-180...180).contains(site.longitude), candidate.id)
-                XCTAssertTrue((300...30_000).contains(site.radiusMeters), candidate.id)
+                XCTAssertTrue([500, 2_000, 5_000].contains(site.radiusMeters), candidate.id)
             }
         }
         XCTAssertEqual(MapHomeLandmarkSites.table.count, MapHomeLandmarkCatalog.candidates.count)

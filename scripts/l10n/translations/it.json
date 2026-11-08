@@ -2867,6 +2867,15 @@
 "이동 수단|Transport": "Mezzo",
 "자료|Source": "Fonte",
 "직접 고치기|Edit as manual trip": "Modifica a mano",
-"직접 입력|Enter manually": "Inserisci a mano"
+"직접 입력|Enter manually": "Inserisci a mano",
+"{0}, 도장 찍음|{0}, stamped": "{0}, timbrato",
+"{0}, 아직 가 보지 않음|{0}, not visited yet": "{0}, non ancora visitato",
+"도장 찍음|Stamped": "Timbrato",
+"등록한 곳|My places": "I miei luoghi",
+"랜드마크|Landmarks": "Monumenti",
+"수묵|Ink Wash": "Inchiostro",
+"아직 도장 없음|Not stamped yet": "Nessun timbro",
+"장소 도감|Place book": "Album dei luoghi",
+"찍은 도장 {0} · 남은 곳 {1}|Stamps {0} · To go {1}": "Timbri {0} · Mancano {1}"
 }
 }

@@ -66,7 +66,7 @@ struct MapHomePlaceBookState: Equatable {
     }
 }
 
-/// 랜드마크 중심 좌표와 반경. 넓은 자연 지형은 반경을 크게 잡았다(공개 지도의 대략 좌표).
+/// 랜드마크 중심 좌표와 반경(공개 지도의 대략 좌표, 반경은 종류별 기본값).
 struct MapHomeLandmarkSite: Equatable, Sendable {
     let latitude: Double
     let longitude: Double
@@ -91,43 +91,82 @@ struct MapHomeLandmarkSite: Equatable, Sendable {
 }
 
 enum MapHomeLandmarkSites {
-    static func site(for id: String) -> MapHomeLandmarkSite? {
-        table[id].map { MapHomeLandmarkSite(latitude: $0.0, longitude: $0.1, radiusMeters: $0.2) }
+    /// 가 본 곳으로 치는 반경. 종류별 기본값(대표 결정 2026-11-08).
+    enum Kind: Sendable {
+        /// 건물·궁궐·다리·탑
+        case building
+        /// 동네·해변·마을·섬 한 곳
+        case area
+        /// 산·국립공원·해안처럼 넓은 자연
+        case nature
+
+        var radiusMeters: Double {
+            switch self {
+            case .building: 500
+            case .area: 2_000
+            case .nature: 5_000
+            }
+        }
     }
 
-    /// 랜드마크 id → (위도, 경도, 반경 m).
-    static let table: [String: (Double, Double, Double)] = [
-        "kr.gyeongbokgung": (37.5796, 126.9770, 600), "kr.bulguksa": (35.7900, 129.3320, 600),
-        "kr.seongsan": (33.4580, 126.9425, 1_200), "kr.haeundae": (35.1587, 129.1604, 1_200),
-        "kr.hahoe": (36.5390, 128.5180, 900), "kr.namsan": (37.5512, 126.9882, 700),
-        "kr.hallasan": (33.3617, 126.5292, 6_000),
-        "jp.fuji": (35.3606, 138.7274, 8_000), "jp.himeji": (34.8394, 134.6939, 600),
-        "jp.fushimi": (34.9671, 135.7727, 800), "jp.itsukushima": (34.2959, 132.3198, 800),
-        "jp.arashiyama": (35.0094, 135.6668, 1_500),
-        "us.liberty": (40.6892, -74.0445, 500), "us.grandcanyon": (36.1069, -112.1129, 25_000),
-        "us.golden_gate": (37.8199, -122.4783, 1_500), "us.yosemite": (37.8651, -119.5383, 20_000),
-        "us.mount_rushmore": (43.8791, -103.4591, 1_500),
-        "gb.bigben": (51.5007, -0.1246, 500), "gb.stonehenge": (51.1789, -1.8262, 800),
-        "gb.edinburgh": (55.9486, -3.1999, 600), "gb.lake_district": (54.4609, -3.0886, 25_000),
-        "gb.tower_bridge": (51.5055, -0.0754, 500),
-        "fr.eiffel": (48.8584, 2.2945, 600), "fr.mont_saint_michel": (48.6361, -1.5115, 1_500),
-        "fr.louvre": (48.8606, 2.3376, 500), "fr.versailles": (48.8049, 2.1204, 1_200),
-        "fr.alps": (45.8326, 6.8652, 30_000),
-        "it.colosseum": (41.8902, 12.4922, 500), "it.venice": (45.4408, 12.3155, 3_000),
-        "it.pisa": (43.7230, 10.3966, 500), "it.dolomites": (46.4102, 11.8440, 30_000),
-        "it.amalfi": (40.6340, 14.6027, 10_000),
-        "cn.great_wall": (40.4319, 116.5704, 3_000), "cn.forbidden_city": (39.9163, 116.3972, 800),
-        "cn.zhangjiajie": (29.3150, 110.4343, 15_000), "cn.terracotta": (34.3841, 109.2785, 800),
-        "cn.li_river": (24.7780, 110.4960, 25_000),
-        "es.sagrada": (41.4036, 2.1744, 500), "es.alhambra": (37.1761, -3.5881, 700),
-        "es.park_guell": (41.4145, 2.1527, 500), "es.camino": (42.8806, -8.5446, 2_000),
-        "es.teide": (28.2724, -16.6425, 10_000),
-        "th.grand_palace": (13.7500, 100.4913, 600), "th.phiphi": (7.7407, 98.7784, 6_000),
-        "th.ayutthaya": (14.3532, 100.5689, 4_000), "th.doi_inthanon": (18.5883, 98.4861, 10_000),
-        "th.wat_arun": (13.7437, 100.4888, 400),
-        "au.opera": (-33.8568, 151.2153, 500), "au.great_barrier": (-16.5000, 146.2000, 30_000),
-        "au.uluru": (-25.3444, 131.0369, 5_000), "au.twelve_apostles": (-38.6662, 143.1051, 2_000),
-        "au.harbour_bridge": (-33.8523, 151.2108, 500),
+    static func site(for id: String) -> MapHomeLandmarkSite? {
+        table[id].map { MapHomeLandmarkSite(latitude: $0.0, longitude: $0.1, radiusMeters: $0.2.radiusMeters) }
+    }
+
+    /// 랜드마크 id → (위도, 경도, 종류).
+    static let table: [String: (Double, Double, Kind)] = [
+        "kr.gyeongbokgung": (37.5796, 126.9770, .building),
+        "kr.bulguksa": (35.7900, 129.3320, .building),
+        "kr.seongsan": (33.4580, 126.9425, .area),
+        "kr.haeundae": (35.1587, 129.1604, .area),
+        "kr.hahoe": (36.5390, 128.5180, .area),
+        "kr.namsan": (37.5512, 126.9882, .building),
+        "kr.hallasan": (33.3617, 126.5292, .nature),
+        "jp.fuji": (35.3606, 138.7274, .nature),
+        "jp.himeji": (34.8394, 134.6939, .building),
+        "jp.fushimi": (34.9671, 135.7727, .building),
+        "jp.itsukushima": (34.2959, 132.3198, .building),
+        "jp.arashiyama": (35.0094, 135.6668, .area),
+        "us.liberty": (40.6892, -74.0445, .building),
+        "us.grandcanyon": (36.1069, -112.1129, .nature),
+        "us.golden_gate": (37.8199, -122.4783, .area),
+        "us.yosemite": (37.8651, -119.5383, .nature),
+        "us.mount_rushmore": (43.8791, -103.4591, .area),
+        "gb.bigben": (51.5007, -0.1246, .building),
+        "gb.stonehenge": (51.1789, -1.8262, .building),
+        "gb.edinburgh": (55.9486, -3.1999, .building),
+        "gb.lake_district": (54.4609, -3.0886, .nature),
+        "gb.tower_bridge": (51.5055, -0.0754, .building),
+        "fr.eiffel": (48.8584, 2.2945, .building),
+        "fr.mont_saint_michel": (48.6361, -1.5115, .area),
+        "fr.louvre": (48.8606, 2.3376, .building),
+        "fr.versailles": (48.8049, 2.1204, .building),
+        "fr.alps": (45.8326, 6.8652, .nature),
+        "it.colosseum": (41.8902, 12.4922, .building),
+        "it.venice": (45.4408, 12.3155, .area),
+        "it.pisa": (43.7230, 10.3966, .building),
+        "it.dolomites": (46.4102, 11.8440, .nature),
+        "it.amalfi": (40.6340, 14.6027, .nature),
+        "cn.great_wall": (40.4319, 116.5704, .area),
+        "cn.forbidden_city": (39.9163, 116.3972, .building),
+        "cn.zhangjiajie": (29.3150, 110.4343, .nature),
+        "cn.terracotta": (34.3841, 109.2785, .building),
+        "cn.li_river": (24.7780, 110.4960, .nature),
+        "es.sagrada": (41.4036, 2.1744, .building),
+        "es.alhambra": (37.1761, -3.5881, .building),
+        "es.park_guell": (41.4145, 2.1527, .building),
+        "es.camino": (42.8806, -8.5446, .area),
+        "es.teide": (28.2724, -16.6425, .nature),
+        "th.grand_palace": (13.7500, 100.4913, .building),
+        "th.phiphi": (7.7407, 98.7784, .nature),
+        "th.ayutthaya": (14.3532, 100.5689, .area),
+        "th.doi_inthanon": (18.5883, 98.4861, .nature),
+        "th.wat_arun": (13.7437, 100.4888, .building),
+        "au.opera": (-33.8568, 151.2153, .building),
+        "au.great_barrier": (-16.5000, 146.2000, .nature),
+        "au.uluru": (-25.3444, 131.0369, .nature),
+        "au.twelve_apostles": (-38.6662, 143.1051, .area),
+        "au.harbour_bridge": (-33.8523, 151.2108, .building),
     ]
 }
 

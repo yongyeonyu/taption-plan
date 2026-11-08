@@ -2867,6 +2867,15 @@
 "이동 수단|Transport": "移動手段",
 "자료|Source": "データ",
 "직접 고치기|Edit as manual trip": "手入力として編集",
-"직접 입력|Enter manually": "手入力"
+"직접 입력|Enter manually": "手入力",
+"{0}, 도장 찍음|{0}, stamped": "{0}、スタンプ済み",
+"{0}, 아직 가 보지 않음|{0}, not visited yet": "{0}、まだ訪れていません",
+"도장 찍음|Stamped": "スタンプ済み",
+"등록한 곳|My places": "登録した場所",
+"랜드마크|Landmarks": "ランドマーク",
+"수묵|Ink Wash": "水墨",
+"아직 도장 없음|Not stamped yet": "まだスタンプなし",
+"장소 도감|Place book": "場所図鑑",
+"찍은 도장 {0} · 남은 곳 {1}|Stamps {0} · To go {1}": "スタンプ {0} · 残り {1}"
 }
 }
