@@ -87,19 +87,28 @@ final class MapHomeSearchCompleter: NSObject, @preconcurrency MKLocalSearchCompl
         completer.resultTypes = [.address, .pointOfInterest, .query]
     }
 
-    /// 현재 위치 둘레만 먼저 찾고, 그 안에 하나도 없을 때만 넓혀 찾는다(SRC1108A01). 일본에 가면 일본이 먼저다.
+    /// 늘 지역을 묶어 찾는다(`.required`). 현재 위치 둘레(약 55km)에 없으면 반경을 6배씩 두 번까지만 넓힌다.
+    /// 전 세계로 넘기면 한글 조합 중 잠깐 빈 결과에도 미국·홍콩 결과가 떴다(SRC1108A02). 일본에 가면 일본 둘레에서 찾는다.
+    private var baseRegion = MKCoordinateRegion()
+    private var widenStep = 0
+    static let widenFactor = 6.0
+    static let maxWidenSteps = 2
+
     func update(query: String, region: MKCoordinateRegion) {
-        completer.region = region
+        baseRegion = region
         let value = query.trimmingCharacters(in: .whitespacesAndNewlines)
         if value.isEmpty {
             clear()
         } else if completer.queryFragment != value {
+            widenStep = 0
             completer.regionPriority = .required
+            completer.region = region
             completer.queryFragment = value
         }
     }
 
     func clear() {
+        widenStep = 0
         if !completer.queryFragment.isEmpty {
             completer.queryFragment = ""
         }
@@ -109,10 +118,11 @@ final class MapHomeSearchCompleter: NSObject, @preconcurrency MKLocalSearchCompl
     }
 
     func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
-        if completer.results.isEmpty, completer.regionPriority == .required, !completer.queryFragment.isEmpty {
-            completer.regionPriority = .default
+        let fragment = completer.queryFragment
+        if completer.results.isEmpty, !fragment.isEmpty, widenStep < Self.maxWidenSteps {
+            widenStep += 1
+            completer.region = Self.widened(baseRegion, step: widenStep)
             completer.cancel()
-            let fragment = completer.queryFragment
             completer.queryFragment = ""
             completer.queryFragment = fragment
             return
@@ -122,6 +132,17 @@ final class MapHomeSearchCompleter: NSObject, @preconcurrency MKLocalSearchCompl
                 || results.map(\.subtitle) != next.map(\.subtitle)
         else { return }
         results = next
+    }
+
+    static func widened(_ region: MKCoordinateRegion, step: Int) -> MKCoordinateRegion {
+        let factor = pow(widenFactor, Double(step))
+        return MKCoordinateRegion(
+            center: region.center,
+            span: MKCoordinateSpan(
+                latitudeDelta: min(region.span.latitudeDelta * factor, 60),
+                longitudeDelta: min(region.span.longitudeDelta * factor, 60)
+            )
+        )
     }
 
     func completer(

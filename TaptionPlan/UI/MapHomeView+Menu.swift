@@ -545,20 +545,6 @@ extension MapHomeView {
                     )
                 }
                 .padding(.vertical, 3)
-                Menu {
-                    Picker("", selection: $sidebarRulerIntervalRaw) {
-                        ForEach(MapHomeSidebarRulerInterval.allCases) { interval in
-                            Text(interval.title(language)).tag(interval.rawValue)
-                        }
-                    }
-                } label: {
-                    displayDropdownRow(
-                        "ruler",
-                        language.text("시간 간격", "Time interval"),
-                        (MapHomeSidebarRulerInterval(rawValue: sidebarRulerIntervalRaw) ?? .automatic).title(language)
-                    )
-                }
-                .padding(.vertical, 3)
             }
         }
     }

@@ -182,7 +182,6 @@ struct MapHomeView: View {
 
     @AppStorage(MapHomeSidebarTimeFormat.storageKey) var sidebarTimeFormatRaw = MapHomeSidebarTimeFormat.twentyFourHour.rawValue
 
-    @AppStorage(MapHomeSidebarRulerInterval.storageKey) var sidebarRulerIntervalRaw = MapHomeSidebarRulerInterval.automatic.rawValue
 
     @AppStorage("mapHomeMemoDisplay") var memoDisplayRaw = MapHomeMemoDisplayMode.all.rawValue
 

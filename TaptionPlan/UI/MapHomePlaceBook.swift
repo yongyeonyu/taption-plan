@@ -49,7 +49,7 @@ struct MapHomePlaceBookState: Equatable {
                 firstVisit: firstArrivals[place.stablePlaceKey]
             )
         }
-        let landmarks = MapHomeLandmarkCatalog.candidates.map { candidate in
+        let landmarks = bookCandidates.map { candidate in
             let title = language.runtimeText(candidate.name, candidate.englishName)
             return MapHomePlaceBookEntry(
                 id: candidate.id,
@@ -63,6 +63,13 @@ struct MapHomePlaceBookState: Equatable {
             )
         }
         return Self(registered: registered, landmarks: landmarks)
+    }
+
+    /// 지금은 한국 도감만 보여 준다(대표 결정 2026-11-08). 나라별 도감은 나중에 이 나라 코드로 나눈다.
+    static let bookCountryPrefix = "kr."
+
+    static var bookCandidates: [MapHomeLandmarkCandidate] {
+        MapHomeLandmarkCatalog.candidates.filter { $0.id.hasPrefix(bookCountryPrefix) }
     }
 }
 

@@ -1181,7 +1181,6 @@ struct MapHomeTimeSidebar: View {
     @State private var pendingRailSegments: [MapHomeTimeRailSegment]?
     @State private var pinchStepOffset = 0
     @AppStorage(MapHomeSidebarTimeFormat.storageKey) private var timeFormatRaw = MapHomeSidebarTimeFormat.twentyFourHour.rawValue
-    @AppStorage(MapHomeSidebarRulerInterval.storageKey) private var rulerIntervalRaw = MapHomeSidebarRulerInterval.automatic.rawValue
     @State private var pinchGate = TimelineTrailingInputGate<Int>()
 
     private let railWidth: CGFloat
@@ -1508,8 +1507,7 @@ struct MapHomeTimeSidebar: View {
                     let rulerRows = MapHomeTimeSidebarMath.visibleRulerRows(
                         window: visibleWindow,
                         durationMinutes: visibleDurationMinutes,
-                        trackHeight: trackHeight,
-                        minimumStep: rulerIntervalRaw
+                        trackHeight: trackHeight
                     )
                     let rulerFontSize = MapHomeTimeSidebarMath.rulerFontSize(
                         durationMinutes: visibleDurationMinutes
@@ -2719,27 +2717,6 @@ enum MapHomeSidebarTimeFormat: String, CaseIterable, Identifiable {
 }
 
 /// 사이드바 눈금에 시각 글자를 적는 최소 간격(표시 > 사이드바). 자동이면 화면 높이에 맞춘다.
-enum MapHomeSidebarRulerInterval: Int, CaseIterable, Identifiable {
-    case automatic = 0
-    case five = 5
-    case ten = 10
-    case fifteen = 15
-    case thirty = 30
-    case hour = 60
-
-    static let storageKey = "mapHomeSidebarRulerInterval"
-
-    var id: Int { rawValue }
-
-    func title(_ language: MapHomeLanguage) -> String {
-        switch self {
-        case .automatic: language.text("자동", "Auto")
-        case .hour: language.text("1시간", "1 hour")
-        default: language.text("\(rawValue)분", "\(rawValue) min")
-        }
-    }
-}
-
 /// 저장된 한국어 활동 이름(정지·휴식, 걷기, 지하철 탑승 …)을 영어 설정에서 영어로 보여 준다.
 /// 저장된 기록 글자는 그대로 두고 화면에 그릴 때만 바꾼다. 모르는 이름은 그대로 돌려준다.
 enum KnownActivityTitleLocalizer {

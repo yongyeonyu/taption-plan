@@ -1038,6 +1038,8 @@ extension MapHomeView {
                 )
             }, from: origin)
             let results = Array((local + found).prefix(8))
+            // Apple 전체 검색은 「사이언스」처럼 이름 일부로는 비어 오는데, 추천 목록에는 근처 결과가 있다. 그때는 추천 목록을 그대로 둔다.
+            if results.isEmpty, !failed, !mapSearchCompleter.results.isEmpty { return }
             mapSearchCompleter.clear()
             if results.count == 1 || (!showsList && !results.isEmpty) {
                 selectSearchResult(results[0])

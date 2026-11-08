@@ -2,6 +2,23 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## SRC1108A02·PLB1108A01·RUL1108A01 · 검색 범위·도감 한국만·「시간 간격」 삭제 (2026-11-08)
+
+- SRC1108A02: 299에서도 「사이언스」에 해외 결과. 맥에서 Apple 검색을 같은 조건으로 재 보니 주변 묶음(`.required`, 0.5°)으로 「사이언스」 → 서울·부천 사이언스밸리·사이언스월드 등, 「사이언스파크」 → LG사이언스파크 안 시설, 「LG사이언스파크」 → 본관·각 동이 나온다. `MKLocalSearch`(전체 검색)는 네 질의 모두 빈 결과. 원인은 추천이 비면 곧바로 `.default`(전 세계)로 넘기던 것 — 한글 조합 중 빈 순간에도 해외로 넘어갔다. 같은 중심으로 6배씩 두 번(최대 18°)만 넓히고 전 세계로는 넘기지 않음, 검색 단추로 찾을 때 전체 검색이 비면 추천 목록을 그대로 둠. 이름 가운데 글자(「사이언스」로 「LG사이언스파크」)는 Apple이 찾지 않는다.
+- PLB1108A01: 장소 도감 랜드마크를 한국(`kr.`)만. 나라별 도감은 나중에 나라 코드로 나눈다.
+- RUL1108A01: 메뉴 「시간 간격」 삭제, 시간 레일 눈금은 늘 자동(설정 값·열거형 삭제, 옛 저장 값 무시). `MapHomeTimeSidebar.swift` 2,791 → 2,768줄, 예산 낮춤.
+- 시험(시뮬레이터): `TimeScaleTests` 178·`MapHomeSearchPolicyTests` 4(새 범위 넓히기 시험 포함)·`InkWashThemeTests` 12·`AppleWatchNapPolicyTests` 등 205건 실패 0(`build/validation/RUL1108A01/unit-1.log`), 앞서 `MapHomeLiveMapTests` 포함 111건(`build/validation/SRC1108A02/unit-1.log`). 구조 검사·번역 점검 통과. 실기기에서 「사이언스」 확인 필요.
+
+## ALG1102A01 · SleepFusion 일원화 (2026-11-08)
+
+- 따로 놀던 경로: 패키지 `SleepFusion.sessions`(앱에서 안 돎), 앱 `PhoneSleepFusion`(감지기 셋 최소 길이 5분·30분·1시간, 낮 제한 없음 — 낮에 폰이 가만히 있으면 수면, 5분 조각이 밤 전체 후보를 막음), `AppleWatchNapPolicy`(낮 창 따로), HealthKit 갱신 `SleepActualReconciliationEngine`(워치 수면이 들어와도 겹치는 휴대폰 수면을 안 지움).
+- 단일 기준: 패키지 `SleepFusion`에 낮 창 9~21시·낮잠 4시간·휴대폰 수면 최소 30분, `isDaytime`·`isNap`·`acceptsPhoneOnly`·`phoneOnly`. `PhoneSleepFusion`·`AppleWatchNapPolicy`·HealthKit 갱신(`PhoneSleepFusion.droppingCovered`)·패키지 경로가 모두 이것을 거친다.
+- 동작 변경: 휴대폰만으로 9~21시 안에서 시작·끝나는 수면은 버림, 30분 미만 휴대폰 후보는 중재 전에 버림, 건강 갱신에서도 워치·HealthKit과 겹치는 자동 휴대폰 수면을 바로 뺌(사용자 기록 유지). 낮잠 판정·원본·provenance·저장 형식 그대로. 제한: 20시에 누운 진행 중 휴대폰 수면은 21시 뒤에 보인다.
+- 규칙 버전 `classifier-v1r2` → `classifier-v1r3`(지난 낮 오탐을 지우려 전체 기록 재계산 한 번).
+- 원본 재생(대표 원본 21개·42밤): 휴대폰 수면 밤 38 → 38, 합계 7,396 → 7,311분, 낮 창 안 85 → 0분. 바뀐 밤은 AE321FD9 10-28 18:44–20:09(오탐) 하나, 같은 밤 23:05–01:25는 남음.
+- 시험(시뮬레이터): 수면·분류·재생 8개 클래스 829건 실패 0·건너뜀 5(`build/validation/ALG1102A01/alg1102-after2.log`). 중간 실행 1건 실패는 UTC 자정을 밤으로 쓴 시험 날짜라 지역 자정으로 고침. 패키지 `swift test`의 `testTaxonomyV3HasHealthRunningAndSplitStudy` 2건 실패는 분류표 버전(5)과 기대값(3)이 어긋난 기존 실패로 보임(이번 변경 전 상태로 확인은 안 함). 구조 검사·import 경계 통과.
+- 대표 판단 필요: 11-02 18:55–22:37 충전 정지 수면(21시를 넘겨 남음)이 오탐인지.
+
 ## TFB1108A03 · TestFlight 299 + 외부 베타 (2026-11-08)
 
 - `release.sh --yes --request-id TFB1108A03`: 빌드 299, VALID, 내부 그룹 연결·노출 확인(`build/validation/TFB1108A03/testflight-report.json`). 아카이브 네 번들 모두 299.

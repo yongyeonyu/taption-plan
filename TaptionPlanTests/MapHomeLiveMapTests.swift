@@ -1802,6 +1802,16 @@ final class MapHomeSearchPolicyTests: XCTestCase {
         XCTAssertEqual(unknown.span.latitudeDelta, 1)
     }
 
+    @MainActor
+    func testSearchWidensAroundSameCenterButNeverWorldwide() {
+        // SRC1108A02: 근처에 없으면 같은 중심으로 6배씩 두 번까지만 넓힌다. 전 세계로 넘기면 해외 결과가 먼저 떴다.
+        let base = MapHomeSearchPolicy.region(visibleCenter: CLLocationCoordinate2D(latitude: 0, longitude: 0), visibleSpan: MKCoordinateSpan(latitudeDelta: 0, longitudeDelta: 0), current: CLLocationCoordinate2D(latitude: 37.53, longitude: 126.83))
+        let widest = MapHomeSearchCompleter.widened(base, step: MapHomeSearchCompleter.maxWidenSteps)
+        XCTAssertEqual(widest.center.latitude, 37.53, accuracy: 1e-9)
+        XCTAssertEqual(widest.span.latitudeDelta, 18, accuracy: 1e-9, "0.5° × 6 × 6 = 18°: 한반도와 주변까지만")
+        XCTAssertLessThanOrEqual(MapHomeSearchCompleter.widened(base, step: 5).span.latitudeDelta, 60)
+    }
+
     func testLocalMatchesFindMiddleOfNameInVisitedPlacesNearestFirst() {
         func point(_ lat: Double, _ lon: Double) -> GeoPoint {
             GeoPoint(latitude: lat, longitude: lon, altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5)

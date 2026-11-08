@@ -80,9 +80,10 @@ final class InkWashThemeTests: XCTestCase {
         ]
         let state = MapHomePlaceBookState.make(frequentPlaces: [home, school, unset], stays: stays, language: .korean)
         XCTAssertEqual(state.registered.map(\.id), [home.stablePlaceKey, school.stablePlaceKey])
-        XCTAssertEqual(state.landmarks.count, MapHomeLandmarkCatalog.candidates.count)
+        XCTAssertEqual(state.landmarks.count, MapHomePlaceBookState.bookCandidates.count)
+        XCTAssertTrue(state.landmarks.allSatisfy { $0.id.hasPrefix("kr.") }, "지금은 한국 도감만")
         XCTAssertEqual(state.stampedCount, 2)
-        XCTAssertEqual(state.remainingCount, 1 + MapHomeLandmarkCatalog.candidates.count - 1)
+        XCTAssertEqual(state.remainingCount, 1 + MapHomePlaceBookState.bookCandidates.count - 1)
         XCTAssertTrue(state.registered[0].isVisited)
         XCTAssertFalse(state.registered[1].isVisited)
         XCTAssertEqual(state.registered[0].stamp.glyph, "家")

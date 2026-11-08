@@ -84,15 +84,19 @@ private extension GeoPoint {
     var coordinate: CLLocationCoordinate2D { CLLocationCoordinate2D(latitude: latitude, longitude: longitude) }
 }
 
-/// 현재 위치 둘레에서 먼저 찾고, 없으면 넓혀 한 번 더 찾는다(SRC1108A01).
+/// 현재 위치 둘레에서 먼저 찾고, 없으면 같은 중심으로 넓혀 두 번까지 더 찾는다. 전 세계로는 넘기지 않는다(SRC1108A02).
 @MainActor
 enum MapHomeSearchRunner {
     static func items(for request: MKLocalSearch.Request) async -> (items: [MKMapItem], failed: Bool) {
+        let base = request.region
         request.regionPriority = .required
-        let near = await run(request)
-        guard near.items.isEmpty, !Task.isCancelled else { return near }
-        request.regionPriority = .default
-        return await run(request)
+        var last: (items: [MKMapItem], failed: Bool) = ([], false)
+        for step in 0...MapHomeSearchCompleter.maxWidenSteps {
+            request.region = MapHomeSearchCompleter.widened(base, step: step)
+            last = await run(request)
+            if !last.items.isEmpty || last.failed || Task.isCancelled { return last }
+        }
+        return last
     }
 
     private static func run(_ request: MKLocalSearch.Request) async -> (items: [MKMapItem], failed: Bool) {
