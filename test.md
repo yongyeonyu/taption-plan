@@ -2,6 +2,14 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## PLB1108A02·ALG1108A01 · 나라별 장소 도감, 저녁 휴대폰 수면 오탐 (2026-11-08)
+
+- PLB1108A02: 도감 상단에서 10개 나라를 고른다(처음 한국). 나라 이름은 iOS 지역 이름을 앱 언어로 쓴다(새 번역 문구 없음). 등록한 곳은 나라와 무관하고, 도장·남은 곳 수는 등록한 곳 + 고른 나라 랜드마크다.
+- ALG1108A01: 대표 확인으로 11-02 18:55–22:37은 오탐. 휴대폰만으로 잡힌 후보가 9~21시에 시작해 그날 자정 전에 끝나면 버린다. 규칙 버전 `classifier-v1r4`(지난 기록 재계산 한 번).
+- 원본 재생(대표 원본 21개·42밤, r3 `ALG1102A01/alg1102-after2.log`와 비교): 바뀐 후보는 11-02 18:55–22:37(원본 6개에 중복 포함)뿐이고 같은 밤 00:00–01:50은 유지. 휴대폰 수면 합계 7,311 → 5,980분, 낮 창 안 0분. 자정을 넘긴 11-04 20:45~ 후보는 유지.
+- 시험(시뮬레이터 BOKKI-iPhone11, 실기기가 `available`이 아니라 대체): `InkWashThemeTests`·`AppleWatchNapPolicyTests`·`FeatureEngineTests`·`TaptionActivityEngineAdapterTests`·`RawSensorReplayVerdictTests` 717건 실패 0·건너뜀 2(`build/validation/ALG1108A01/unit-1.log`). 패키지 `testPhoneOnlyRejectsDaytimeAndFragmentsBeforeArbitration` 통과. 시험 빌드 성공, 구조 검사·번역 점검 통과.
+- 제한: 전체 시험은 돌리지 않았다. 도감 화면은 시뮬레이터·실기기 모두 눈으로 보지 않았고, 저장된 기록의 r4 재계산도 실기기에서 확인하지 않았다.
+
 ## TFB1108A05 · 301 배포 전 전체 시험 (2026-11-08)
 
 - 전체 단위 시험(BOKKI-iPhone11): XCTest 2,270건 중 실패 1·건너뜀 21, Swift Testing 51 통과(`build/validation/TFB1108A05/unit-full-1.log`). 실패는 시간 측정 시험 `CategoryCacheBenchmarkTests.testStickmanActionCacheSpeedup`(속도 향상 ×1.59, 기준 ×2)로, 맥 부하 평균 약 69인 상태였다. 같은 빌드로 단독 3회 재실행 모두 통과(`bench-rerun-1~3.log`). 부하 민감 시험으로 보고 진행(앱 코드 무관 여부를 코드로 입증하지는 않음).

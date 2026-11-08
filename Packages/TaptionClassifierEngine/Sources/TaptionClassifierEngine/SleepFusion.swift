@@ -67,10 +67,19 @@ public enum SleepFusion {
         watchMeasured && !isMainSleep && interval.duration <= maximumNap && isDaytime(interval, calendar: calendar)
     }
 
-    /// 휴대폰만으로 잡힌 수면을 받을지. 휴대폰 정지는 낮잠이 되지 않으므로(대표 결정) 낮 창 안에
-    /// 다 들어가는 후보는 버리고, 30분보다 짧은 조각도 버린다.
+    /// 낮 창에 시작해 그날 자정 전에 끝나는가. 저녁 책상 위 충전은 21시를 넘겨도 밤잠이 아니다(ALG1108A01).
+    static func endsSameDayAfterDaytimeStart(_ interval: ClassifierInterval, calendar: Calendar) -> Bool {
+        let day = calendar.startOfDay(for: interval.start)
+        guard let start = calendar.date(byAdding: .hour, value: daytimeStartHour, to: day),
+              let end = calendar.date(byAdding: .hour, value: daytimeEndHour, to: day),
+              let midnight = calendar.date(byAdding: .day, value: 1, to: day) else { return false }
+        return interval.start >= start && interval.start < end && interval.end <= midnight
+    }
+
+    /// 휴대폰만으로 잡힌 수면을 받을지. 휴대폰 정지는 낮잠이 되지 않으므로(대표 결정) 낮 창에 시작해
+    /// 그날 안에 끝나는 후보는 버리고, 30분보다 짧은 조각도 버린다.
     public static func acceptsPhoneOnly(_ interval: ClassifierInterval, calendar: Calendar = .autoupdatingCurrent) -> Bool {
-        interval.duration >= minimumPhoneOnlySleep && !isDaytime(interval, calendar: calendar)
+        interval.duration >= minimumPhoneOnlySleep && !endsSameDayAfterDaytimeStart(interval, calendar: calendar)
     }
 
     /// 휴대폰 수면 후보를 고르는 단일 입구: 받을 수 없는 후보를 먼저 빼고 `arbitrate`한다.

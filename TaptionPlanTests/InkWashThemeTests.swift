@@ -80,10 +80,23 @@ final class InkWashThemeTests: XCTestCase {
         ]
         let state = MapHomePlaceBookState.make(frequentPlaces: [home, school, unset], stays: stays, language: .korean)
         XCTAssertEqual(state.registered.map(\.id), [home.stablePlaceKey, school.stablePlaceKey])
-        XCTAssertEqual(state.landmarks.count, MapHomePlaceBookState.bookCandidates.count)
-        XCTAssertTrue(state.landmarks.allSatisfy { $0.id.hasPrefix("kr.") }, "지금은 한국 도감만")
+        let korea = MapHomePlaceBookState.candidates(in: "kr")
+        XCTAssertEqual(state.landmarks.count, korea.count)
+        XCTAssertTrue(state.landmarks.allSatisfy { $0.id.hasPrefix("kr.") }, "처음은 한국 도감")
         XCTAssertEqual(state.stampedCount, 2)
-        XCTAssertEqual(state.remainingCount, 1 + MapHomePlaceBookState.bookCandidates.count - 1)
+        XCTAssertEqual(state.remainingCount, 1 + korea.count - 1)
+        XCTAssertEqual(MapHomePlaceBookState.countries.first, "kr")
+        XCTAssertEqual(MapHomePlaceBookState.countries.count, 10)
+        XCTAssertEqual(
+            MapHomePlaceBookState.countries.flatMap(MapHomePlaceBookState.candidates(in:)).count,
+            MapHomeLandmarkCatalog.candidates.count,
+            "모든 랜드마크가 어느 한 나라에 든다"
+        )
+        let japan = MapHomePlaceBookState.make(frequentPlaces: [home, school, unset], stays: stays, language: .korean, country: "jp")
+        XCTAssertTrue(japan.landmarks.allSatisfy { $0.id.hasPrefix("jp.") })
+        XCTAssertEqual(japan.landmarks.count, 5)
+        XCTAssertEqual(japan.registered.map(\.id), state.registered.map(\.id), "등록한 곳은 나라와 무관하다")
+        XCTAssertEqual(japan.stampedCount, 1, "한국 랜드마크 도장은 일본 수에 넣지 않는다")
         XCTAssertTrue(state.registered[0].isVisited)
         XCTAssertFalse(state.registered[1].isVisited)
         XCTAssertEqual(state.registered[0].stamp.glyph, "家")

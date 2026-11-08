@@ -7,7 +7,7 @@ import TaptionPlanEngine
 enum ClassificationRules {
     /// r2: 이동 수단 혼합 판정(HMM1101A01)·Apple Watch 낮잠(RIG1103A02).
     /// r3: 휴대폰 수면을 `SleepFusion.phoneOnly` 한 규칙으로(낮 창 안·30분 미만 후보 버림, ALG1102A01).
-    static let version = ClassifierPipeline.version + "r3"
+    static let version = ClassifierPipeline.version + "r4"
 }
 
 /// 규칙 버전이 바뀐 뒤 지난 날짜 전체의 자동 기록을 한 번 다시 만든다(HMM1101A01).

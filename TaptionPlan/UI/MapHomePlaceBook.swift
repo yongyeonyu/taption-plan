@@ -31,7 +31,8 @@ struct MapHomePlaceBookState: Equatable {
     static func make(
         frequentPlaces: [FrequentPlace],
         stays: [PlaceStay],
-        language: MapHomeLanguage
+        language: MapHomeLanguage,
+        country: String = defaultCountry
     ) -> Self {
         let placed = frequentPlaces.filter { $0.point != nil }
         let firstArrivals = MapHomePlaceStampPolicy.firstArrivals(
@@ -49,13 +50,13 @@ struct MapHomePlaceBookState: Equatable {
                 firstVisit: firstArrivals[place.stablePlaceKey]
             )
         }
-        let landmarks = bookCandidates.map { candidate in
+        let landmarks = candidates(in: country).map { candidate in
             let title = language.runtimeText(candidate.name, candidate.englishName)
             return MapHomePlaceBookEntry(
                 id: candidate.id,
                 kind: .landmark,
                 title: title,
-                subtitle: language.runtimeText(candidate.country, "Landmark"),
+                subtitle: countryName(country, language: language),
                 // "N서울타워"처럼 로마자로 시작하면 첫 한글을 쓴다.
                 glyph: (candidate.name.first { !$0.isASCII } ?? candidate.name.first).map(String.init) ?? "印",
                 artworkName: candidate.artworkName,
@@ -65,11 +66,28 @@ struct MapHomePlaceBookState: Equatable {
         return Self(registered: registered, landmarks: landmarks)
     }
 
-    /// 지금은 한국 도감만 보여 준다(대표 결정 2026-11-08). 나라별 도감은 나중에 이 나라 코드로 나눈다.
-    static let bookCountryPrefix = "kr."
+    /// 처음 여는 나라(PLB1108A02). 나라는 랜드마크 id 앞의 소문자 지역 코드다.
+    static let defaultCountry = "kr"
 
-    static var bookCandidates: [MapHomeLandmarkCandidate] {
-        MapHomeLandmarkCatalog.candidates.filter { $0.id.hasPrefix(bookCountryPrefix) }
+    /// 카탈로그 순서대로 겹치지 않는 나라 코드.
+    static let countries: [String] = {
+        var seen = Set<String>()
+        return MapHomeLandmarkCatalog.candidates.compactMap { candidate in
+            let code = countryCode(of: candidate)
+            return seen.insert(code).inserted ? code : nil
+        }
+    }()
+
+    static func candidates(in country: String) -> [MapHomeLandmarkCandidate] {
+        MapHomeLandmarkCatalog.candidates.filter { countryCode(of: $0) == country }
+    }
+
+    static func countryName(_ country: String, language: MapHomeLanguage) -> String {
+        language.locale.localizedString(forRegionCode: country.uppercased()) ?? country.uppercased()
+    }
+
+    private static func countryCode(of candidate: MapHomeLandmarkCandidate) -> String {
+        String(candidate.id.prefix { $0 != "." })
     }
 }
 
@@ -184,12 +202,14 @@ struct MapHomePlaceBookSheet: View {
     let language: MapHomeLanguage
 
     @State private var state: MapHomePlaceBookState?
+    @State private var country = MapHomePlaceBookState.defaultCountry
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 3)
 
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 18) {
                 header
+                countryPicker
                 if let state {
                     if !state.registered.isEmpty {
                         section(language.text("등록한 곳", "My places"), entries: state.registered)
@@ -204,7 +224,36 @@ struct MapHomePlaceBookSheet: View {
         .background(Color.tpBackground)
         .onAppear {
             guard state == nil else { return }
-            state = MapHomePlaceBookState.make(frequentPlaces: frequentPlaces, stays: stays, language: language)
+            reload()
+        }
+        .onChange(of: country) { reload() }
+    }
+
+    private func reload() {
+        state = MapHomePlaceBookState.make(
+            frequentPlaces: frequentPlaces, stays: stays, language: language, country: country
+        )
+    }
+
+    private var countryPicker: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(MapHomePlaceBookState.countries, id: \.self) { code in
+                    let isSelected = code == country
+                    Button {
+                        country = code
+                    } label: {
+                        Text(MapHomePlaceBookState.countryName(code, language: language))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .semibold))
+                            .foregroundStyle(isSelected ? Color.tpBackground : Color.tpInk)
+                            .padding(.horizontal, 12)
+                            .frame(minHeight: 44)
+                            .background(isSelected ? Color.tpInk : Color.tpCard, in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(isSelected ? .isSelected : [])
+                }
+            }
         }
     }
 
