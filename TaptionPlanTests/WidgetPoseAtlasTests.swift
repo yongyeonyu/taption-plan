@@ -8,6 +8,11 @@ import XCTest
 final class WidgetPoseAtlasTests: XCTestCase {
     private let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
 
+    /// 저장소의 그림 파일을 직접 읽는 시험이라 맥(시뮬레이터)에서만 돈다. 실기기에는 소스 폴더가 없다.
+    override func setUpWithError() throws {
+        try XCTSkipUnless(FileManager.default.fileExists(atPath: root.path), "소스 폴더가 없는 실기기에서는 건너뛴다")
+    }
+
     func testWidgetPoseAtlasHasRowForEveryPose() throws {
         let cell = TaptionHwarangPose.cellPixels
         for style in HwarangCoat.characters {

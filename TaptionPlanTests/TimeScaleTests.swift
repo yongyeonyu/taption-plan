@@ -1297,11 +1297,12 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertTrue(mapView.subviews.last === newTopSubview)
         XCTAssertEqual(walker.layer.zPosition, MapHomeAppleAnnotationLayerPriority.stickman)
         let projected = mapView.convert(coordinate, toPointTo: mapView)
-        XCTAssertEqual(walker.center.x, projected.x, accuracy: 0.001)
+        // 흔들림을 막으려 원점을 기기 픽셀에 맞춘다(CTR1103A02). 창 밖 시험 뷰는 배율 1이라 반 픽셀은 0.5pt다.
+        XCTAssertEqual(walker.center.x, projected.x, accuracy: 0.5)
         XCTAssertEqual(
             walker.frame.maxY,
             projected.y,
-            accuracy: 0.001
+            accuracy: 0.5
         )
     }
 

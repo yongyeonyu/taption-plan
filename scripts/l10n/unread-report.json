@@ -1,5 +1,5 @@
 {
- "ui": 2340,
+ "ui": 2339,
  "catalog": 461,
  "unread": [
   {
@@ -364,13 +364,13 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeView+Menu.swift",
-   "line": 1044,
+   "line": 1045,
    "ko": "strength.koreanLabel",
    "en": "strength.englishLabel"
   },
   {
    "file": "TaptionPlan/UI/MapHomeView+Menu.swift",
-   "line": 1052,
+   "line": 1053,
    "ko": "fogStrength.koreanLabel",
    "en": "fogStrength.englishLabel"
   },
@@ -424,7 +424,7 @@
   },
   {
    "file": "TaptionPlanWidget/SensorCollectionLiveActivity.swift",
-   "line": 523,
+   "line": 261,
    "ko": "base",
    "en": "rate"
   }

@@ -2,6 +2,37 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## DYN1108A01 · 다이나믹 아일랜드 펼침 화면을 오늘 요약으로 (2026-11-08)
+
+- 대표 결정: 센서 칸 완전히 뺌, 분류별 시간 + 걸음·거리.
+- 펼침 화면에서 파형·센서 막대·「최근 저장」 삭제. 화랑이·지금 활동 아래 대분류 상위 4개 2×2(색 점·이름·시간)와 걸음·이동 거리. 계산은 `TaptionSealedDayBuilder.categoryDurations`·`MapHomeCounterTimelinePolicy`·`MapHomeSidebarMajorCategory.presentation`·`DurationText` 재사용. `ContentState.daySummary` 선택 필드(옛 payload 읽힘). 재계산은 같은 날·같은 언어에서 1분에 한 번, 값이 같으면 보내지 않음(15초마다 보내던 동작 제거), 외부 화면 잠금 중 nil. 잠금 화면(`SensorCollectionLockScreenView`)은 별도 뷰라 그대로. 쓰지 않게 된 센서 표시 코드 제거, `WidgetShared.swift` 1,850 → 1,716줄(예산 낮춤). 수집은 그대로.
+- 시험(시뮬레이터): `LiveActivityDaySummaryTests` 등 28건, `TaptionPlanWidget` 빌드(`build/validation/DYN1108A01/`). 합친 뒤 전체 단위 시험 XCTest 2,268건 중 실패 2건(`unit-full-1.log`): `testWalkerViewportUpdatesDoNotRestackMapSubviews`가 CTR1103A02의 픽셀 맞춤 전 기대값(오차 0.001)이라 반 픽셀(0.5pt)로 고침, `TimeScaleTests` 178건 재실행 통과(`timescale-rerun.log`). 전체 시험을 고친 뒤 다시 돌리지는 않았다. Swift Testing 51 통과.
+- 실기기: 펼침 높이 안에 2×2·걸음 줄이 잘리지 않는지(12개 언어), 백그라운드 갱신, 외부 화면 잠금 시 숨김, 업데이트 직후 떠 있던 Live Activity.
+- 대표 결정 대기: 상위 4개 범위(수면·이동 포함 / 생활 분류만), AGENTS.md 「외부 수신 센서 빨간 심박 표시」 규칙.
+
+## SBN1102A01 · 구글 일정 아이콘 말풍선 (2026-11-08, 재현 안 됨)
+
+- 코드 비교: 메모·일정 아이콘은 같은 `toggleSidebarNote` → `MapHomeSidebarNoteBubble` 경로, 빠진 분기·터치 영역·z 순서 문제 없음. 일정 메모는 `notes` → `detail`로 최대 6줄 이미 표시.
+- 시뮬레이터 재현(임시로 `google-` 일정 2건 주입, 커밋 안 함): 15:00 아이콘은 0.15초·0초 탭 모두, 09:00 아이콘은 0.15초 탭으로 말풍선·제목·시간·메모 표시. 실행 직후 09:00 첫 0초 탭만 화면에 안 보였는데 캡처가 일렀는지 실패인지 구분 못 함. 화면 `build/validation/SBN1102A01/repro-*.png`.
+- 앱 코드 수정 없음. 말풍선 내용 시험 `testGoogleEventNoteCarriesTitleTimeAndNotes` 추가, `MapHomeSidebarNoteTests` 8건 통과.
+- 한계: 구글 미연결(로고 애플)·날씨 칩 있는 배치 미시험. 참고: `isStickerMode`가 true 고정이라 스티커 아이콘은 말풍선 대신 편집 창을 연다. 날씨 칩 없는 배치에서 메모 말풍선이 6초 동안 왼쪽 열 일정 아이콘을 덮을 수 있다(코드 계산).
+- 대표 확인 필요: 구글 연결 기기에서 일정 아이콘을 눌러 뜨면 닫고, 안 뜨면 시간대·주변 아이콘·화면 녹화.
+
+## CTR1103A02 · Apple 지도 재생 중 카운터 흔들림 (2026-11-08)
+
+- 확인된 주원인: `.monospacedDigit()`이 기본 글꼴 주아에서 효과 없음(11pt에서 `1` 4.52pt·`4` 6.91pt, 고정폭 기능 없음). 값이 0.25초마다 바뀔 때 글자가 좌우로 움직였다(`1,111`·`4,444` 폭 5pt 넘게 차이). 벡터 지도도 같은 뷰.
+- 코드로 확인·기여도 미측정: 연봉 알약 `.animation`이 박자마다 재시작, 고정 크기 카운터의 `sizeThatFits` 재측정, 화랑이 `center` 소수점. 뒷받침 안 된 가설: `MKMapView.convert` 오차(240프레임 최대 0.00004pt, 실제 렌더 없는 측정).
+- 수정: 고정폭 기능 없는 글꼴만 숫자 뒤 자간으로 가장 넓은 숫자 폭에 맞춤(`MapHomeCounterDigits`), 재생 중 연봉 알약 애니메이션 끔, 화랑이 원점 픽셀 맞춤·재생 중 표적 6pt 안이면 고정(`MapHomeAppleMarkerPlacement`), `knownContentSize`로 재측정 생략.
+- 시험(시뮬레이터): 새 `MapHomeAppleCounterStabilityTests` 8 + `MapHomeLiveMapTests` 95 실패 0(`build/validation/CTR1103A02/unit1.log`, 뒤에 주석 한 곳만 고침). 구조 검사 통과.
+- 실기기: ProMotion Apple 지도 재생에서 글자 흔들림(영상)·프레임, 주아 `1` 뒤 여백이 어색하지 않은지. 끊김은 따로 측정 못 함.
+
+## DEV1108A01 · 아이폰 11 Pro 실기기 시험 (2026-11-08, 빌드 300 코드)
+
+- 실기기 iPhone 11 Pro(devicectl `physical`), 기기 잠금, 병렬 끔, Debug 시험 호스트. 시뮬레이터 결과와 별개.
+- 16개 클래스 178건 실행(`build/validation/DEV1108A01/iphone11-unit-2.log`·`.xcresult`). 15개 클래스 통과: SubwayRideTrack, PlaybackRideVisibility, OfflineVectorTile, InkWashTheme, AppleWatchNapPolicy, ClassificationBackfill, MapHomeSearchPolicy, TravelMap, TravelMapVideoRender(짧은 9:16 MP4 렌더 0.51초), NLEOverwriteBatch, PlaceWalkRadiusSplit, ReviewClockGeometry, UserEditRollback, TaptionBackupV2, DiagnosticsLogSupport. 건너뜀 2.
+- 실패 1개 클래스: `WidgetPoseAtlasTests` 2건(단언 100개). 맥의 소스 폴더 그림 파일을 읽는 시험이라 기기에 경로가 없어서다(앱 결함 아님). 소스 폴더가 없으면 건너뛰도록 고쳐 기기 재실행: 2건 건너뜀, 실패 0(`iphone11-unit-3.log`). 즉 이 클래스의 내용은 실기기에서 검증되지 않았고 시뮬레이터 결과뿐이다.
+- 설치·실행: 시험 호스트(번들 300)가 설치돼 있고 `devicectl`로 실행, 프로세스 확인. 화면·체감은 이 환경에서 볼 수 없어 미확인. iCloud 원본·백업을 기기에 넣어 재생하는 검증은 하지 않았다.
+
 ## TFB1108A04 · TestFlight 300 + 외부 베타 (2026-11-08)
 
 - push 후 `release.sh --yes --request-id TFB1108A04`: 빌드 300, VALID, 내부 그룹 연결·노출 확인(`build/validation/TFB1108A04/testflight-report.json`). 아카이브 네 번들 모두 300.
