@@ -956,6 +956,7 @@ struct MapHomeAppleMap: UIViewRepresentable {
             MapHomeAppleWalkerOverlayLayout.update(
                 walkerView,
                 coordinate: walkerAnnotation.coordinate,
+                lockTarget: parent.playbackDriver != nil && hasRunPlayback ? parent.playbackTargetPoint : nil,
                 on: mapView
             )
         }

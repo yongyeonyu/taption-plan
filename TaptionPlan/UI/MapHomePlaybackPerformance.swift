@@ -183,6 +183,8 @@ struct MapHomeLivePointFollower<Content: View>: UIViewRepresentable {
     let fallback: CGPoint
     /// 채널 점에서 내용 중심까지.
     let offset: CGSize
+    /// 크기가 고정된 내용은 갱신 때마다 SwiftUI 배치를 강제로 다시 재지 않는다(CTR1103A02).
+    var knownContentSize: CGSize? = nil
     var onFrame: ((CGRect) -> Void)?
     @ViewBuilder let content: () -> Content
 
@@ -192,6 +194,7 @@ struct MapHomeLivePointFollower<Content: View>: UIViewRepresentable {
 
     func updateUIView(_ view: MapHomeLivePointFollowerView<Content>, context: Context) {
         view.host.rootView = content()
+        view.knownContentSize = knownContentSize
         view.configure(channel: channel, attachment: attachment, fallback: fallback, offset: offset, onFrame: onFrame)
     }
 
@@ -207,6 +210,7 @@ final class MapHomeLivePointFollowerView<Content: View>: UIView {
     private var fallback = CGPoint.zero
     private var offset = CGSize.zero
     private var onFrame: ((CGRect) -> Void)?
+    var knownContentSize: CGSize?
 
     init(rootView: Content) {
         host = UIHostingController(rootView: rootView)
@@ -260,7 +264,8 @@ final class MapHomeLivePointFollowerView<Content: View>: UIView {
     }
 
     private func resizeHost() {
-        let size = host.sizeThatFits(in: CGSize(width: CGFloat.greatestFiniteMagnitude, height: .greatestFiniteMagnitude))
+        let size = knownContentSize
+            ?? host.sizeThatFits(in: CGSize(width: CGFloat.greatestFiniteMagnitude, height: .greatestFiniteMagnitude))
         guard size.width.isFinite, size.height.isFinite, host.view.bounds.size != size else { return }
         host.view.bounds.size = size
     }

@@ -219,6 +219,7 @@
 		A10000000000000004DA0005 /* PlaceStayMergeEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000004DA0005 /* PlaceStayMergeEngineTests.swift */; };
 		A10000000000000004DA0004 /* UserEditRollbackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000004DA0004 /* UserEditRollbackTests.swift */; };
 		A5B1102A0200000000000048 /* MapHomeCounterTimelinePolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000047 /* MapHomeCounterTimelinePolicyTests.swift */; };
+		B10815000000000000000C03 /* MapHomeAppleCounterStabilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10815000000000000000C04 /* MapHomeAppleCounterStabilityTests.swift */; };
 		A5B1102A0200000000000046 /* MapHomePlaybackContinuityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000045 /* MapHomePlaybackContinuityTests.swift */; };
 		A5B1102A0200000000000044 /* MapHomeDateStripTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000043 /* MapHomeDateStripTests.swift */; };
 		A1000000000000000B1104C2 /* TaptionRaisedFaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1104C2 /* TaptionRaisedFaceTests.swift */; };
@@ -398,6 +399,7 @@
 		A1E721D1B0AAA98B8110A900 /* MapHomeView+Menu2.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E721D1B0AAA98B8110A900 /* MapHomeView+Menu2.swift */; };
 		A1EBDE9094DD4C3E21584B00 /* MapHomeView+Map.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1EBDE9094DD4C3E21584B00 /* MapHomeView+Map.swift */; };
 		A10000000000000000BB1109 /* MapHomeSearchPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000BB1109 /* MapHomeSearchPolicy.swift */; };
+		B10815000000000000000C01 /* MapHomeAppleCounterStability.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10815000000000000000C02 /* MapHomeAppleCounterStability.swift */; };
 		A1EE6819A850BADC4B9A5FD0 /* MapHomeView+Map2.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1EE6819A850BADC4B9A5FD0 /* MapHomeView+Map2.swift */; };
 		A1E6257DBE7C5071E0418EF0 /* MapHomeView+Routes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E6257DBE7C5071E0418EF0 /* MapHomeView+Routes.swift */; };
 		A1E3BFDC700E8BFFDF523F50 /* MapHomeView+Routes2.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E3BFDC700E8BFFDF523F50 /* MapHomeView+Routes2.swift */; };
@@ -864,6 +866,7 @@
 		F10000000000000004DA0005 /* PlaceStayMergeEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceStayMergeEngineTests.swift; sourceTree = "<group>"; };
 		F10000000000000004DA0004 /* UserEditRollbackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserEditRollbackTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000047 /* MapHomeCounterTimelinePolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCounterTimelinePolicyTests.swift; sourceTree = "<group>"; };
+		B10815000000000000000C04 /* MapHomeAppleCounterStabilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeAppleCounterStabilityTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000045 /* MapHomePlaybackContinuityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaybackContinuityTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000043 /* MapHomeDateStripTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeDateStripTests.swift; sourceTree = "<group>"; };
 		F1000000000000000B1104C2 /* TaptionRaisedFaceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionRaisedFaceTests.swift; sourceTree = "<group>"; };
@@ -1033,6 +1036,7 @@
 		F1E721D1B0AAA98B8110A900 /* MapHomeView+Menu2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Menu2.swift"; sourceTree = "<group>"; };
 		F1EBDE9094DD4C3E21584B00 /* MapHomeView+Map.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Map.swift"; sourceTree = "<group>"; };
 		F10000000000000000BB1109 /* MapHomeSearchPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeSearchPolicy.swift"; sourceTree = "<group>"; };
+		B10815000000000000000C02 /* MapHomeAppleCounterStability.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeAppleCounterStability.swift"; sourceTree = "<group>"; };
 		F1EE6819A850BADC4B9A5FD0 /* MapHomeView+Map2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Map2.swift"; sourceTree = "<group>"; };
 		F1E6257DBE7C5071E0418EF0 /* MapHomeView+Routes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Routes.swift"; sourceTree = "<group>"; };
 		F1E3BFDC700E8BFFDF523F50 /* MapHomeView+Routes2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Routes2.swift"; sourceTree = "<group>"; };
@@ -1403,6 +1407,7 @@
 				F10000000000000004DA0005 /* PlaceStayMergeEngineTests.swift */,
 				F10000000000000004DA0004 /* UserEditRollbackTests.swift */,
 				F5B1102A0200000000000047 /* MapHomeCounterTimelinePolicyTests.swift */,
+				B10815000000000000000C04 /* MapHomeAppleCounterStabilityTests.swift */,
 				F5B1102A0200000000000045 /* MapHomePlaybackContinuityTests.swift */,
 				F5B1102A0200000000000043 /* MapHomeDateStripTests.swift */,
 				F1000000000000000B1104C2 /* TaptionRaisedFaceTests.swift */,
@@ -1475,6 +1480,7 @@
 				F1EE6819A850BADC4B9A5FD0 /* MapHomeView+Map2.swift */,
 				F1EBDE9094DD4C3E21584B00 /* MapHomeView+Map.swift */,
 				F10000000000000000BB1109 /* MapHomeSearchPolicy.swift */,
+				B10815000000000000000C02 /* MapHomeAppleCounterStability.swift */,
 				F1E721D1B0AAA98B8110A900 /* MapHomeView+Menu2.swift */,
 				F1E7006AF3F40D36507FBCF0 /* MapHomeView+Menu.swift */,
 				F1E4358522139E5590681710 /* MapHomeView+Support3.swift */,
@@ -2355,6 +2361,7 @@
 				A1EE6819A850BADC4B9A5FD0 /* MapHomeView+Map2.swift in Sources */,
 				A1EBDE9094DD4C3E21584B00 /* MapHomeView+Map.swift in Sources */,
 				A10000000000000000BB1109 /* MapHomeSearchPolicy.swift in Sources */,
+				B10815000000000000000C01 /* MapHomeAppleCounterStability.swift in Sources */,
 				A1E721D1B0AAA98B8110A900 /* MapHomeView+Menu2.swift in Sources */,
 				A1E7006AF3F40D36507FBCF0 /* MapHomeView+Menu.swift in Sources */,
 				A1E4358522139E5590681710 /* MapHomeView+Support3.swift in Sources */,
@@ -2711,6 +2718,7 @@
 				A10000000000000004DA0005 /* PlaceStayMergeEngineTests.swift in Sources */,
 				A10000000000000004DA0004 /* UserEditRollbackTests.swift in Sources */,
 				A5B1102A0200000000000048 /* MapHomeCounterTimelinePolicyTests.swift in Sources */,
+				B10815000000000000000C03 /* MapHomeAppleCounterStabilityTests.swift in Sources */,
 				A5B1102A0200000000000046 /* MapHomePlaybackContinuityTests.swift in Sources */,
 				A5B1102A0200000000000044 /* MapHomeDateStripTests.swift in Sources */,
 				A1000000000000000B1104C2 /* TaptionRaisedFaceTests.swift in Sources */,

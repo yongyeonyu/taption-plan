@@ -16,6 +16,8 @@ struct MapHomeCounterTable: View {
     var allowance: MapHomeCounterSalary? = nil
     let badges: [MapHomeCounterBadge]
     let language: MapHomeLanguage
+    /// 재생 중에는 값이 0.25초마다 바뀌어 애니메이션이 끝나지 못하고 흔들린다.
+    var isPlaying = false
 
     /// 두 줄 이상일 때 창의 폭. 값 자리수가 바뀌어도 창 폭이 흔들리지 않게 고정한다.
     static let boxWidth: CGFloat = 132
@@ -27,7 +29,7 @@ struct MapHomeCounterTable: View {
 
     var body: some View {
         if rowCount == 1, let money = moneyRows.first {
-            MapHomeCounterSalaryPill(salary: money, language: language)
+            MapHomeCounterSalaryPill(salary: money, language: language, isPlaying: isPlaying)
         } else if rowCount == 1, let badge = badges.first {
             MapHomeCounterPill(kind: badge.kind, text: badge.text, language: language)
         } else if rowCount > 1 {
@@ -116,7 +118,7 @@ private struct MapHomeCounterRow: View {
                 .foregroundStyle(Color.tpSecondary)
                 .lineLimit(1)
             Spacer(minLength: 6)
-            Text(text)
+            Text(MapHomeCounterDigits.attributed(text, size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
                 .monospacedDigit()
                 .foregroundStyle(Color.tpInk)
@@ -293,7 +295,7 @@ private struct MapHomeCounterPill: View {
         HStack(spacing: 4) {
             TaptionCuteIcon(kind.systemImage, size: 14)
                 .foregroundStyle(Color.tpCounterIcon)
-            Text(text)
+            Text(MapHomeCounterDigits.attributed(text, size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
                 .monospacedDigit()
                 .foregroundStyle(Color.tpInk)
@@ -323,7 +325,7 @@ private struct MapHomeCounterSalaryRow: View {
                 .foregroundStyle(Color.tpSecondary)
                 .lineLimit(1)
             Spacer(minLength: 6)
-            Text(salary.text)
+            Text(MapHomeCounterDigits.attributed(salary.text, size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
                 .monospacedDigit()
                 .foregroundStyle(Color.tpInk)
@@ -341,12 +343,13 @@ private struct MapHomeCounterSalaryRow: View {
 private struct MapHomeCounterSalaryPill: View {
     let salary: MapHomeCounterSalary
     let language: MapHomeLanguage
+    let isPlaying: Bool
 
     var body: some View {
         HStack(spacing: 4) {
             Image(systemName: salary.symbol(language: language))
                 .foregroundStyle(salary.isWorking ? Color.tpReferenceMint : Color.tpSecondary)
-            Text(salary.text)
+            Text(MapHomeCounterDigits.attributed(salary.text, size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))
                 .monospacedDigit()
                 .contentTransition(.numericText())
         }
@@ -355,7 +358,7 @@ private struct MapHomeCounterSalaryPill: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
         .mapHomeCounterPlate(in: Capsule())
-        .animation(.snappy, value: salary.text)
+        .animation(isPlaying ? nil : .snappy, value: salary.text)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(salary.title(language: language)) \(salary.text)")
     }

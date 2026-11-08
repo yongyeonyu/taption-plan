@@ -260,7 +260,7 @@ enum MapHomeAppleAnnotationLayerPriority {
 
 enum MapHomeAppleWalkerOverlayLayout {
     @MainActor
-    static func update(_ view: UIView, coordinate: CLLocationCoordinate2D, on mapView: MKMapView) {
+    static func update(_ view: UIView, coordinate: CLLocationCoordinate2D, lockTarget: CGPoint? = nil, on mapView: MKMapView) {
         guard mapView.bounds.width > 0, mapView.bounds.height > 0 else { return }
         if view.superview !== mapView {
             mapView.addSubview(view)
@@ -268,10 +268,15 @@ enum MapHomeAppleWalkerOverlayLayout {
             mapView.bringSubviewToFront(view)
         }
         let point = mapView.convert(coordinate, toPointTo: mapView)
-        let offset = MapHomeStickmanAnnotationLayout.centerOffset
-        UIView.performWithoutAnimation {
-            view.center = CGPoint(x: point.x + offset.x, y: point.y + offset.y)
-        }
+        let center = MapHomeAppleMarkerPlacement.center(
+            actual: point,
+            lockTarget: lockTarget,
+            offset: MapHomeStickmanAnnotationLayout.centerOffset,
+            size: view.bounds.size,
+            scale: mapView.traitCollection.displayScale
+        )
+        guard view.center != center else { return }
+        UIView.performWithoutAnimation { view.center = center }
     }
 }
 

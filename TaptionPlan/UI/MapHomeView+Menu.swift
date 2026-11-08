@@ -219,6 +219,7 @@ extension MapHomeView {
             attachment: tracksAppleCamera ? appleStickmanLivePoint.markerAttachment : nil,
             fallback: CGPoint(x: anchor.x, y: anchor.y - 8 - 160),
             offset: CGSize(width: 0, height: MapHomeStickmanAnnotationLayout.centerOffset.y - 42 - 8 - 160),
+            knownContentSize: CGSize(width: 240, height: 320),
             onFrame: { box.hostFrame = $0 }
         ) {
             EquatableView(content: MapHomeCounterContentGate(playbackTick: MapHomeCounterBadgeThrottle.playbackTick(isPlaying: isDayPlaybackRunning), isCollapsed: isCounterCollapsed) {
@@ -287,7 +288,7 @@ extension MapHomeView {
         )
         let badges = mapCounterBadges(asOf: now)
         let targets = badges.map { MapHomeCounterDetailTarget.kind($0.kind) } + (allowance == nil ? [] : [.allowance]) + (salary == nil ? [] : [.salary])
-        return MapHomeCounterTable(salary: salary, allowance: allowance, badges: badges, language: language)
+        return MapHomeCounterTable(salary: salary, allowance: allowance, badges: badges, language: language, isPlaying: isDayPlaybackRunning)
             .onChange(of: targets, initial: true) { _, next in
                 if counterRowTargets != next { counterRowTargets = next }
             }
