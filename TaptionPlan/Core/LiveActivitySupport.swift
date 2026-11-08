@@ -64,7 +64,6 @@ actor SensorCollectionLiveActivityController {
     static let shared = SensorCollectionLiveActivityController()
 
     private var activity: Activity<SensorCollectionActivityAttributes>?
-    private var lastPublishedAt: Date?
 
     @discardableResult
     func reconcile(
@@ -76,7 +75,6 @@ actor SensorCollectionLiveActivityController {
         isForeground: Bool,
         intervalSeconds: Int,
         saveToken: Int? = nil,
-        validSampleKinds: [String] = [],
         isExternalSample: Bool = false,
         latestHeartRate: Double? = nil,
         heartRateUpdatedAt: Date? = nil,
@@ -84,6 +82,7 @@ actor SensorCollectionLiveActivityController {
         currentActivityCategoryID: String? = nil,
         currentActivitySystemImage: String? = nil,
         currentActivityCatStyle: String? = nil,
+        daySummary: SensorCollectionDaySummary? = nil,
         now: Date = .now
     ) async throws -> String? {
         await recoverAndRemoveDuplicates(
@@ -153,26 +152,6 @@ actor SensorCollectionLiveActivityController {
         } else {
             phaseUntil = nil
         }
-        let sensorMeterMasks = SensorCollectionActivityPolicy
-            .updatedSensorMeterMasks(
-                previous: previousState?.sensorMeterMasks,
-                collectionKinds: collectionKinds,
-                validSampleKinds: validSampleKinds,
-                hasNewSample: hasNewSample
-            )
-        let sensorStatusRawValues = SensorCollectionActivityPolicy
-            .updatedSensorStatuses(
-                previous: previousState?.sensorStatusRawValues,
-                collectionKinds: collectionKinds,
-                validSampleKinds: validSampleKinds,
-                hasNewSample: hasNewSample,
-                now: now,
-                lastSavedAt: lastSavedAt,
-                intervalSeconds: intervalSeconds
-            )
-        let waveformScanStartedAt = hasNewSample
-            ? now
-            : (previousState?.waveformScanStartedAt ?? now)
         let sensorHUDUntil: Date?
         if hasNewSample {
             sensorHUDUntil = SensorCollectionActivityPolicy.sensorHUDUntil(
@@ -202,9 +181,6 @@ actor SensorCollectionLiveActivityController {
             saveToken: effectiveSaveToken,
             phaseRawValue: phase.rawValue,
             phaseUntil: phaseUntil,
-            sensorMeterMasks: sensorMeterMasks,
-            sensorStatusRawValues: sensorStatusRawValues,
-            waveformScanStartedAt: waveformScanStartedAt,
             isExternalSample: isExternalSample,
             latestHeartRate: latestHeartRate,
             heartRateUpdatedAt: heartRateUpdatedAt,
@@ -220,24 +196,22 @@ actor SensorCollectionLiveActivityController {
             salaryMeasuredAt: salary.measuredAt,
             salaryIsWorking: salary.isWorking,
             salaryTickSeconds: salary.tickSeconds,
-            salaryCurrencyCode: AppRegion.current.currencyCode
+            salaryCurrencyCode: AppRegion.current.currencyCode,
+            daySummary: daySummary
         )
         let staleDate = SensorCollectionActivityPolicy.expirationDate(
             startedAt: activityStartedAt
         )
 
         if let activity {
-            let shouldPublish = hasNewSample
-                || state != activity.content.state
-                || SensorCollectionActivityPolicy.shouldPublish(
-                    lastPublishedAt: lastPublishedAt,
-                    now: now
-                )
-            guard shouldPublish else { return activity.id }
+            // 표시 값이 그대로면 보내지 않는다. 새 샘플은 saveToken이 바뀌어 여기서 걸러지지 않는다.
+            guard SensorCollectionActivityPolicy.shouldPublishUpdate(
+                previous: activity.content.state,
+                next: state
+            ) else { return activity.id }
             await activity.update(
                 ActivityContent(state: state, staleDate: staleDate)
             )
-            lastPublishedAt = now
             return activity.id
         }
 
@@ -256,7 +230,6 @@ actor SensorCollectionLiveActivityController {
             pushType: nil
         )
         activity = newActivity
-        lastPublishedAt = now
         return newActivity.id
     }
 
@@ -279,16 +252,14 @@ actor SensorCollectionLiveActivityController {
             saveToken: saveToken ?? activity.content.state.saveToken,
             phaseRawValue: SensorCollectionActivityPhase.flatline.rawValue,
             phaseUntil: flatlineUntil,
-            sensorMeterMasks: activity.content.state.sensorMeterMasks,
-            sensorStatusRawValues: activity.content.state.sensorStatusRawValues,
-            waveformScanStartedAt: activity.content.state.waveformScanStartedAt,
             isExternalSample: false,
             latestHeartRate: activity.content.state.latestHeartRate,
             heartRateUpdatedAt: activity.content.state.heartRateUpdatedAt,
             sensorHUDUntil: activity.content.state.sensorHUDUntil,
             currentActivityTitle: activity.content.state.currentActivityTitle,
             currentActivityCategoryID: activity.content.state.currentActivityCategoryID,
-            currentActivitySystemImage: activity.content.state.currentActivitySystemImage
+            currentActivitySystemImage: activity.content.state.currentActivitySystemImage,
+            daySummary: activity.content.state.daySummary
         )
         await activity.end(
             ActivityContent(state: finalState, staleDate: flatlineUntil),
@@ -296,7 +267,6 @@ actor SensorCollectionLiveActivityController {
         )
         if self.activity?.id == activity.id {
             self.activity = nil
-            lastPublishedAt = nil
         }
     }
 
@@ -309,7 +279,6 @@ actor SensorCollectionLiveActivityController {
               ) else { return }
         await activity.end(nil, dismissalPolicy: .immediate)
         self.activity = nil
-        lastPublishedAt = nil
     }
 
     func activeID() -> String? {
@@ -322,7 +291,6 @@ actor SensorCollectionLiveActivityController {
     ) async {
         if let current = activity, !isLive(current) {
             activity = nil
-            lastPublishedAt = nil
         }
         if let current = activity {
             let isExpired = SensorCollectionActivityPolicy.isExpired(
@@ -335,7 +303,6 @@ actor SensorCollectionLiveActivityController {
             if isExpired || isWrongSession {
                 await current.end(nil, dismissalPolicy: .immediate)
                 activity = nil
-                lastPublishedAt = nil
             }
         }
         var selected = activity

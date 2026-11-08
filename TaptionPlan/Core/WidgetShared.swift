@@ -362,13 +362,6 @@ enum SensorCollectionWaveformMath {
 }
 
 struct SensorCollectionActivityAttributes: ActivityAttributes {
-    enum SensorStatus: String, Codable, Hashable {
-        case waiting
-        case receiving
-        case delayed
-        case unavailable
-    }
-
     struct ContentState: Codable, Hashable {
         var startedAt: Date
         var lastSavedAt: Date?
@@ -379,12 +372,6 @@ struct SensorCollectionActivityAttributes: ActivityAttributes {
         var saveToken: Int?
         var phaseRawValue: String?
         var phaseUntil: Date?
-        /// Each value is a ten-sample rolling bit mask. Bit zero is the most
-        /// recent sample and bit nine is the oldest retained sample.
-        var sensorMeterMasks: [String: Int]?
-        var sensorStatusRawValues: [String: String]?
-        /// The one-second scan cycle origin used by the widget renderer.
-        var waveformScanStartedAt: Date?
         /// True when the most recent saved sample came from a supported
         /// external device such as Apple Watch. A different app's sensor use
         /// is never inferred.
@@ -407,6 +394,8 @@ struct SensorCollectionActivityAttributes: ActivityAttributes {
         var salaryTickSeconds: Int? = nil
         /// 금액 통화(ISO). 없으면 원이다.
         var salaryCurrencyCode: String? = nil
+        /// 다이나믹 아일랜드 펼침 화면의 오늘 요약. 옛 payload에는 없어 nil이다.
+        var daySummary: SensorCollectionDaySummary? = nil
 
         var phase: SensorCollectionActivityPhase {
             guard let phaseRawValue,
@@ -428,9 +417,6 @@ struct SensorCollectionActivityAttributes: ActivityAttributes {
             saveToken: Int? = nil,
             phaseRawValue: String? = nil,
             phaseUntil: Date? = nil,
-            sensorMeterMasks: [String: Int]? = nil,
-            sensorStatusRawValues: [String: String]? = nil,
-            waveformScanStartedAt: Date? = nil,
             isExternalSample: Bool? = nil,
             latestHeartRate: Double? = nil,
             heartRateUpdatedAt: Date? = nil,
@@ -446,7 +432,8 @@ struct SensorCollectionActivityAttributes: ActivityAttributes {
             salaryMeasuredAt: Date? = nil,
             salaryIsWorking: Bool? = nil,
             salaryTickSeconds: Int? = nil,
-            salaryCurrencyCode: String? = nil
+            salaryCurrencyCode: String? = nil,
+            daySummary: SensorCollectionDaySummary? = nil
         ) {
             self.startedAt = startedAt
             self.lastSavedAt = lastSavedAt
@@ -457,9 +444,6 @@ struct SensorCollectionActivityAttributes: ActivityAttributes {
             self.saveToken = saveToken
             self.phaseRawValue = phaseRawValue
             self.phaseUntil = phaseUntil
-            self.sensorMeterMasks = sensorMeterMasks
-            self.sensorStatusRawValues = sensorStatusRawValues
-            self.waveformScanStartedAt = waveformScanStartedAt
             self.isExternalSample = isExternalSample
             self.latestHeartRate = latestHeartRate
             self.heartRateUpdatedAt = heartRateUpdatedAt
@@ -476,6 +460,7 @@ struct SensorCollectionActivityAttributes: ActivityAttributes {
             self.salaryIsWorking = salaryIsWorking
             self.salaryTickSeconds = salaryTickSeconds
             self.salaryCurrencyCode = salaryCurrencyCode
+            self.daySummary = daySummary
         }
     }
 
@@ -484,82 +469,13 @@ struct SensorCollectionActivityAttributes: ActivityAttributes {
 
 enum SensorCollectionActivityPolicy {
     static let maximumDuration: TimeInterval = 8 * 3_600
-    static let minimumUpdateInterval: TimeInterval = 15
     static let pulseDuration: TimeInterval = 1
     static let completionFlatlineDuration: TimeInterval = 1
-    static let sensorMeterWidth = 10
-    static let sensorMeterMask = (1 << sensorMeterWidth) - 1
     static let waveformScanDuration: TimeInterval = 1
     static let sensorHUDDuration: TimeInterval = 10
 
     static func sensorHUDUntil(startedAt: Date) -> Date {
         startedAt.addingTimeInterval(sensorHUDDuration)
-    }
-
-    static func uniqueSensorKinds(_ kinds: [String]) -> [String] {
-        var seen = Set<String>()
-        return kinds.filter { seen.insert($0).inserted }
-    }
-
-    static func updatedSensorMeterMasks(
-        previous: [String: Int]?,
-        collectionKinds: [String],
-        validSampleKinds: [String],
-        hasNewSample: Bool
-    ) -> [String: Int] {
-        let validKinds = Set(validSampleKinds)
-        return Dictionary(uniqueKeysWithValues: uniqueSensorKinds(
-            collectionKinds
-        ).map { kind in
-            let oldMask = min(
-                max(previous?[kind] ?? 0, 0),
-                sensorMeterMask
-            )
-            let shifted = hasNewSample
-                ? (oldMask << 1) & sensorMeterMask
-                : oldMask
-            let mask = hasNewSample && validKinds.contains(kind)
-                ? shifted | 1
-                : shifted
-            return (kind, mask)
-        })
-    }
-
-    static func updatedSensorStatuses(
-        previous: [String: String]?,
-        collectionKinds: [String],
-        validSampleKinds: [String],
-        hasNewSample: Bool,
-        now: Date,
-        lastSavedAt: Date?,
-        intervalSeconds: Int
-    ) -> [String: String] {
-        let validKinds = Set(validSampleKinds)
-        let staleAfter = max(TimeInterval(intervalSeconds) * 2, 30)
-        let isStale = lastSavedAt.map {
-            now.timeIntervalSince($0) >= staleAfter
-        } ?? false
-        return Dictionary(uniqueKeysWithValues: uniqueSensorKinds(
-            collectionKinds
-        ).map { kind in
-            let status: SensorCollectionActivityAttributes.SensorStatus
-            if hasNewSample && validKinds.contains(kind) {
-                status = .receiving
-            } else if hasNewSample {
-                status = .waiting
-            } else if isStale {
-                status = .delayed
-            } else if let raw = previous?[kind],
-                      let previousStatus =
-                        SensorCollectionActivityAttributes.SensorStatus(
-                            rawValue: raw
-                        ) {
-                status = previousStatus
-            } else {
-                status = .waiting
-            }
-            return (kind, status.rawValue)
-        })
     }
 
     static func canStart(
@@ -580,11 +496,6 @@ enum SensorCollectionActivityPolicy {
 
     static func isExpired(startedAt: Date, now: Date) -> Bool {
         now >= expirationDate(startedAt: startedAt)
-    }
-
-    static func shouldPublish(lastPublishedAt: Date?, now: Date) -> Bool {
-        guard let lastPublishedAt else { return true }
-        return now.timeIntervalSince(lastPublishedAt) >= minimumUpdateInterval
     }
 
     static func pulseUntil(
@@ -625,51 +536,6 @@ enum SensorCollectionActivityPolicy {
     ) -> Bool {
         guard phase == .pulse, let until else { return false }
         return now >= until
-    }
-}
-
-enum SensorCollectionMeterModel {
-    static let orderedKinds = [
-        "location",
-        "motion",
-        "altitude",
-        "steps",
-        "health",
-        "wifi",
-    ]
-
-    static func level(mask: Int?) -> Double {
-        let value = min(
-            max(mask ?? 0, 0),
-            SensorCollectionActivityPolicy.sensorMeterMask
-        )
-        return Double(value.nonzeroBitCount)
-            / Double(SensorCollectionActivityPolicy.sensorMeterWidth)
-    }
-
-    static func label(for kind: String) -> String {
-        switch kind {
-        case "location": return "GPS"
-        case "motion": return "모션"
-        case "altitude": return "기압"
-        case "steps": return "걸음"
-        case "health": return "건강"
-        case "wifi": return "Wi-Fi"
-        default: return kind
-        }
-    }
-
-    static func status(
-        for kind: String,
-        state: SensorCollectionActivityAttributes.ContentState
-    ) -> SensorCollectionActivityAttributes.SensorStatus {
-        guard let rawValue = state.sensorStatusRawValues?[kind],
-              let status = SensorCollectionActivityAttributes.SensorStatus(
-                  rawValue: rawValue
-              ) else {
-            return state.isCollecting ? .waiting : .unavailable
-        }
-        return status
     }
 }
 
