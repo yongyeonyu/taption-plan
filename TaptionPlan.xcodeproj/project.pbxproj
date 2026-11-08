@@ -53,6 +53,8 @@
 		A1FA11EB640567D972E12891 /* TimelineSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11013C73958F69782D38 /* TimelineSelection.swift */; };
 		A1FA11CAD2B1A327A31670AB /* AppFeatureSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11B07DD51FA2F1E98EE8 /* AppFeatureSettings.swift */; };
 		A1FA11A945DE6CB52FDFD7AF /* AppFeatureSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11B07DD51FA2F1E98EE8 /* AppFeatureSettings.swift */; };
+		B10802000000000000000012 /* OfflineVectorMapDownloader.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10802000000000000000002 /* OfflineVectorMapDownloader.swift */; };
+		B10802000000000000000011 /* OfflineVectorTiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10802000000000000000001 /* OfflineVectorTiles.swift */; };
 		A1FA1149ABD1E6845D6CAAC0 /* MapDisplayModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11FA168BA095E34D6938 /* MapDisplayModels.swift */; };
 		A1FA11E5401FED61219701DE /* MapDisplayModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11FA168BA095E34D6938 /* MapDisplayModels.swift */; };
 		A1FA11A34B1439834812A887 /* ReviewModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11910B5837616D11C071 /* ReviewModels.swift */; };
@@ -203,6 +205,7 @@
 		A5B1102A0200000000000054 /* MapHomeWeatherRailLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000053 /* MapHomeWeatherRailLayoutTests.swift */; };
 		A5B1102A0200000000000052 /* MapHomePresencePolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000051 /* MapHomePresencePolicyTests.swift */; };
 		A5B1102A0200000000000050 /* MapHomeGrowthPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000004F /* MapHomeGrowthPolicyTests.swift */; };
+		B10802000000000000000014 /* OfflineVectorTileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10802000000000000000004 /* OfflineVectorTileTests.swift */; };
 		A5B1102A020000000000004E /* TransitBoardingPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000004D /* TransitBoardingPersistenceTests.swift */; };
 		A5B1102A020000000000004C /* PredictedRoutePersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000004B /* PredictedRoutePersistenceTests.swift */; };
 		A5B1102A020000000000004A /* NLETrackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000049 /* NLETrackTests.swift */; };
@@ -372,6 +375,7 @@
 		A1000000000000000B1105C2 /* MapHomeMeetingPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105C2 /* MapHomeMeetingPolicy.swift */; };
 		A1000000000000000B1105C3 /* MapHomeAppleWatchMenuItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105C3 /* MapHomeAppleWatchMenuItem.swift */; };
 		A1000000000000000B1105C5 /* MapHomeLanguageMenuItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105C5 /* MapHomeLanguageMenuItem.swift */; };
+		B10802000000000000000013 /* MapHomeOfflineMapSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10802000000000000000003 /* MapHomeOfflineMapSheet.swift */; };
 		A1000000000000000B1105C6 /* MapHomePlacePinPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105C6 /* MapHomePlacePinPicker.swift */; };
 		A1E3519F71AF5D72C5438970 /* MapHomeView+Timeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E3519F71AF5D72C5438970 /* MapHomeView+Timeline.swift */; };
 		A1EF724568A9B22CAC66C750 /* MapHomeView+Playback.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1EF724568A9B22CAC66C750 /* MapHomeView+Playback.swift */; };
@@ -678,6 +682,8 @@
 		F1FA111EE25EBDA22F51D42E /* RouteMapViewport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteMapViewport.swift; sourceTree = "<group>"; };
 		F1FA11013C73958F69782D38 /* TimelineSelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineSelection.swift; sourceTree = "<group>"; };
 		F1FA11B07DD51FA2F1E98EE8 /* AppFeatureSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFeatureSettings.swift; sourceTree = "<group>"; };
+		B10802000000000000000002 /* OfflineVectorMapDownloader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineVectorMapDownloader.swift; sourceTree = "<group>"; };
+		B10802000000000000000001 /* OfflineVectorTiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineVectorTiles.swift; sourceTree = "<group>"; };
 		F1FA11FA168BA095E34D6938 /* MapDisplayModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapDisplayModels.swift; sourceTree = "<group>"; };
 		F1FA11910B5837616D11C071 /* ReviewModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewModels.swift; sourceTree = "<group>"; };
 		F1FA11E186E821582D4654B6 /* SensorReadingModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorReadingModels.swift; sourceTree = "<group>"; };
@@ -797,6 +803,7 @@
 		F5B1102A0200000000000053 /* MapHomeWeatherRailLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeWeatherRailLayoutTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000051 /* MapHomePresencePolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePresencePolicyTests.swift; sourceTree = "<group>"; };
 		F5B1102A020000000000004F /* MapHomeGrowthPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeGrowthPolicyTests.swift; sourceTree = "<group>"; };
+		B10802000000000000000004 /* OfflineVectorTileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineVectorTileTests.swift; sourceTree = "<group>"; };
 		F5B1102A020000000000004D /* TransitBoardingPersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransitBoardingPersistenceTests.swift; sourceTree = "<group>"; };
 		F5B1102A020000000000004B /* PredictedRoutePersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PredictedRoutePersistenceTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000049 /* NLETrackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NLETrackTests.swift; sourceTree = "<group>"; };
@@ -951,6 +958,7 @@
 		F1000000000000000B1105C2 /* MapHomeMeetingPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeMeetingPolicy.swift; sourceTree = "<group>"; };
 		F1000000000000000B1105C3 /* MapHomeAppleWatchMenuItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeAppleWatchMenuItem.swift; sourceTree = "<group>"; };
 		F1000000000000000B1105C5 /* MapHomeLanguageMenuItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLanguageMenuItem.swift; sourceTree = "<group>"; };
+		B10802000000000000000003 /* MapHomeOfflineMapSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeOfflineMapSheet.swift; sourceTree = "<group>"; };
 		F1000000000000000B1105C6 /* MapHomePlacePinPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlacePinPicker.swift; sourceTree = "<group>"; };
 		F1E3519F71AF5D72C5438970 /* MapHomeView+Timeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Timeline.swift"; sourceTree = "<group>"; };
 		F1EF724568A9B22CAC66C750 /* MapHomeView+Playback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Playback.swift"; sourceTree = "<group>"; };
@@ -1291,6 +1299,7 @@
 				F5B1102A0200000000000053 /* MapHomeWeatherRailLayoutTests.swift */,
 				F5B1102A0200000000000051 /* MapHomePresencePolicyTests.swift */,
 				F5B1102A020000000000004F /* MapHomeGrowthPolicyTests.swift */,
+				B10802000000000000000004 /* OfflineVectorTileTests.swift */,
 				F5B1102A020000000000004D /* TransitBoardingPersistenceTests.swift */,
 				F5B1102A020000000000004B /* PredictedRoutePersistenceTests.swift */,
 				F5B1102A0200000000000049 /* NLETrackTests.swift */,
@@ -1375,6 +1384,7 @@
 				F1E3519F71AF5D72C5438970 /* MapHomeView+Timeline.swift */,
 				F1000000000000000B1105C6 /* MapHomePlacePinPicker.swift */,
 				F1000000000000000B1105C5 /* MapHomeLanguageMenuItem.swift */,
+				B10802000000000000000003 /* MapHomeOfflineMapSheet.swift */,
 				F1000000000000000B1105C3 /* MapHomeAppleWatchMenuItem.swift */,
 				F1000000000000000B1105C2 /* MapHomeMeetingPolicy.swift */,
 				F1000000000000000B1105C1 /* MapHomePlaceFirstPolicy.swift */,
@@ -1590,6 +1600,8 @@
 				F10000000000000000000003 /* PlanItem.swift */,
 				F1000000000000000000000F /* FeatureModels.swift */,
 				F1FA11B07DD51FA2F1E98EE8 /* AppFeatureSettings.swift */,
+				B10802000000000000000002 /* OfflineVectorMapDownloader.swift */,
+				B10802000000000000000001 /* OfflineVectorTiles.swift */,
 				F1FA11FA168BA095E34D6938 /* MapDisplayModels.swift */,
 				F1FA11910B5837616D11C071 /* ReviewModels.swift */,
 				F1FA11E186E821582D4654B6 /* SensorReadingModels.swift */,
@@ -2208,6 +2220,7 @@
 				A1E3519F71AF5D72C5438970 /* MapHomeView+Timeline.swift in Sources */,
 				A1000000000000000B1105C6 /* MapHomePlacePinPicker.swift in Sources */,
 				A1000000000000000B1105C5 /* MapHomeLanguageMenuItem.swift in Sources */,
+				B10802000000000000000013 /* MapHomeOfflineMapSheet.swift in Sources */,
 				A1000000000000000B1105C3 /* MapHomeAppleWatchMenuItem.swift in Sources */,
 				A1000000000000000B1105C2 /* MapHomeMeetingPolicy.swift in Sources */,
 				A1000000000000000B1105C1 /* MapHomePlaceFirstPolicy.swift in Sources */,
@@ -2356,6 +2369,8 @@
 				A1000000000000000000000E /* DetailViews.swift in Sources */,
 				A1000000000000000000000F /* FeatureModels.swift in Sources */,
 				A1FA11A945DE6CB52FDFD7AF /* AppFeatureSettings.swift in Sources */,
+				B10802000000000000000012 /* OfflineVectorMapDownloader.swift in Sources */,
+				B10802000000000000000011 /* OfflineVectorTiles.swift in Sources */,
 				A1FA11E5401FED61219701DE /* MapDisplayModels.swift in Sources */,
 				A1FA11D1FC078F2BA7021A4D /* ReviewModels.swift in Sources */,
 				A1FA11AD460494BD2B675105 /* SensorReadingModels.swift in Sources */,
@@ -2506,6 +2521,7 @@
 				A5B1102A0200000000000054 /* MapHomeWeatherRailLayoutTests.swift in Sources */,
 				A5B1102A0200000000000052 /* MapHomePresencePolicyTests.swift in Sources */,
 				A5B1102A0200000000000050 /* MapHomeGrowthPolicyTests.swift in Sources */,
+				B10802000000000000000014 /* OfflineVectorTileTests.swift in Sources */,
 				A5B1102A020000000000004E /* TransitBoardingPersistenceTests.swift in Sources */,
 				A5B1102A020000000000004C /* PredictedRoutePersistenceTests.swift in Sources */,
 				A5B1102A020000000000004A /* NLETrackTests.swift in Sources */,

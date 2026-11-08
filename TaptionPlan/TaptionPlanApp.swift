@@ -43,6 +43,8 @@ struct TaptionPlanApp: App {
                 identifier: TaptionPlanSharedContainer.defaultAppGroupIdentifier
             )
         )
+        // 벡터 지도 오프라인 저장본을 MapLibre 요청보다 먼저 읽게 한다(MAP1108A02).
+        OfflineVectorMap.install()
         #if DEBUG || BENCH
         BenchSeed.runIfRequested()
         #endif
