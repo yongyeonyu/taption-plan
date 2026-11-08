@@ -31,7 +31,6 @@
     "Packages/TaptionPlanCore/Sources/TaptionPlanCore/DayStoreV3.swift": 2408,
     "TaptionPlan/Core/HealthKitImportCoordinator.swift": 1367,
     "TaptionPlan/Core/PlanningEngine.swift": 2259,
-    "TaptionPlan/Core/RecordSummaryEngine.swift": 2988,
     "TaptionPlan/Core/RouteTimelineData.swift": 2753,
     "TaptionPlan/Core/TaptionActivityEngineAdapter.swift": 1871,
     "TaptionPlan/Core/TravelModeClassifier.swift": 1367,
