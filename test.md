@@ -2,6 +2,11 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## TFB1108A07 · TestFlight 303 내부 그룹 (2026-11-08)
+
+- `release.sh --yes --request-id TFB1108A07`: 빌드 303, 처리 VALID, `TP Taption Plan 내부 테스트` 그룹 연결·테스터 1명 노출 확인(`build/validation/TFB1108A07/testflight-report.json`). 외부 그룹은 제출하지 않음(외부 최신 301).
+- 302 대비: PLB1108A02·ALG1108A01(규칙 `classifier-v1r4`). 실기기 화면·재계산 확인은 대표.
+
 ## PLB1108A02·ALG1108A01 · 나라별 장소 도감, 저녁 휴대폰 수면 오탐 (2026-11-08)
 
 - PLB1108A02: 도감 상단에서 10개 나라를 고른다(처음 한국). 나라 이름은 iOS 지역 이름을 앱 언어로 쓴다(새 번역 문구 없음). 등록한 곳은 나라와 무관하고, 도장·남은 곳 수는 등록한 곳 + 고른 나라 랜드마크다.
