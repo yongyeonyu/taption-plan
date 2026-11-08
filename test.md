@@ -2,6 +2,13 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## TFB1108A01 · TestFlight 297 (2026-11-08)
+
+- `release.sh --yes --request-id TFB1108A01`: 빌드 297, 처리 상태 VALID, 내부 그룹 「TP Taption Plan 내부 테스트」 연결·테스터 노출 확인(`build/validation/TFB1108A01/testflight-report.json`).
+- 아카이브 네 제품 번들 CFBundleVersion 모두 297(앱·위젯·Watch·Watch 위젯), `CURRENT_PROJECT_VERSION = 297`.
+- 포함: ALL1108A01·ALL1108B01·RFT1108A01과 하단 반달·입체 메뉴·현재 위치 검색 등(커밋 `cf6f0898`까지). 수묵 테마(INK1108A01)는 미포함.
+- 실기기 설치·기능 확인은 대표(`temp.md` 「대표 실기기 확인」).
+
 ## RFT1108A01 · 코드 리팩토링 상위 3개 (2026-11-08)
 
 - 대상: 구조 지표의 가장 큰 파일 중 작업 중인 지도 홈·검색·튜토리얼과 겹치지 않는 셋. 동작·화면 문구 그대로, 코드는 옮기기 위주.
