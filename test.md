@@ -2,6 +2,12 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## TFB1108A03 · TestFlight 299 + 외부 베타 (2026-11-08)
+
+- `release.sh --yes --request-id TFB1108A03`: 빌드 299, VALID, 내부 그룹 연결·노출 확인(`build/validation/TFB1108A03/testflight-report.json`). 아카이브 네 번들 모두 299.
+- 외부 그룹 `TP 지인 테스트`에 연결하고 베타 심사 제출: 제출 응답 `WAITING_FOR_REVIEW`, 바로 다시 읽으니 외부 상태 `IN_BETA_TESTING`, 그룹 빌드 262·273·280·281·282·299(`external-submit.log`). 공개 링크 주소는 적지 않는다.
+- 포함: 298 + ANI1104A01 지킴 시험. SRC1108A02(검색 전 세계 넘김 막기)·PLB1108A01(도감 한국만)은 아카이브(18:42:29) 뒤 수정이라 미포함.
+
 ## ANI1104A01 · 위젯·잠금 화면 아틀라스 새 자세 (2026-11-08)
 
 - 결과: 이미 반영됨. `TaptionHwarangPose` 33개 자세(`restCroissant`·`laptopWalk` 포함)가 위젯 아틀라스 세 털색(416×2112px, 64×33줄)과 Watch 자산 모두에 있다. 아틀라스는 dfe431e5(11-05)에서 다시 뽑혔고 그 뒤 고양이 그림 코드 변경 없음. 지금 코드로 다시 뽑은 세 장의 SHA-256이 저장본과 같다(`build/validation/ANI1104A01/ani1104-atlas-sha256.txt`). PNG·연결 변경 없음, 크기 영향 없음.
