@@ -28,6 +28,8 @@ enum MapHomePlaceFirstPolicy {
         to segments: [MapHomeTimeRailSegment],
         stays: [PlaceStay],
         frequentPlaces: [FrequentPlace],
+        readings: [SensorReading] = [],
+        userOwnedIDs: Set<UUID> = [],
         on date: Date,
         calendar: Calendar = .autoupdatingCurrent
     ) -> [MapHomeTimeRailSegment] {
@@ -46,7 +48,22 @@ enum MapHomePlaceFirstPolicy {
             categoryForKey: { kinds[$0].flatMap(categoryID(for:)) },
             vehicleSpans: segments.filter(isVehicle).map { $0.startMinute..<$0.endMinute }
         )
-        return merged(segments.map { assign($0, zones: zones) })
+        // 사용자가 만든·고친 걷기는 위치로 가르지 않는다. 반경으로 가를 근거가 없으면 머문 시간 겹침으로 본다.
+        let places = radiusPlaces(frequentPlaces: frequentPlaces, stays: registered)
+        let located = places.isEmpty ? [] : locatedReadings(readings)
+        return merged(segments.flatMap { segment -> [MapHomeTimeRailSegment] in
+            if userOwnedIDs.isDisjoint(with: segment.sourceIDs),
+               let split = splitByRadius(segment, places: places, located: located, dayStart: dayStart) {
+                return split
+            }
+            return [assign(segment, zones: zones)]
+        })
+    }
+
+    /// 대분류 이름. 시간표 줄 이름에 없는 업무·식사 같은 대분류는 분류표에서 읽는다.
+    static func categoryTitle(_ id: String) -> String? {
+        TimelineRowKind.title(forCategoryID: id)
+            ?? RecordClassificationCatalog.categories.first { $0.id == id }?.title
     }
 
     /// 같은 곳의 머문 기록은 그 사이에 차로 이동하지 않았다면 이어서 본다. 건물 안에서는 위치가 끊기기도 한다.
@@ -89,7 +106,7 @@ enum MapHomePlaceFirstPolicy {
             startMinute: segment.startMinute,
             endMinute: segment.endMinute,
             categoryID: zone.categoryID,
-            title: TimelineRowKind.title(forCategoryID: zone.categoryID) ?? segment.title,
+            title: categoryTitle(zone.categoryID) ?? segment.title,
             sourceIDs: segment.sourceIDs
         )
         result.walkSpans = [segment.startMinute..<segment.endMinute]
@@ -108,7 +125,7 @@ enum MapHomePlaceFirstPolicy {
                 startMinute: last.startMinute,
                 endMinute: segment.endMinute,
                 categoryID: last.categoryID,
-                title: TimelineRowKind.title(forCategoryID: last.categoryID) ?? last.title,
+                title: categoryTitle(last.categoryID) ?? last.title,
                 behavior: last.behavior == segment.behavior ? last.behavior : nil,
                 sourceIDs: last.sourceIDs + segment.sourceIDs
             )

@@ -213,6 +213,7 @@
 		A5B1102A020000000000004E /* TransitBoardingPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000004D /* TransitBoardingPersistenceTests.swift */; };
 		A5B1102A020000000000004C /* PredictedRoutePersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000004B /* PredictedRoutePersistenceTests.swift */; };
 		A5B1102A020000000000004A /* NLETrackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000049 /* NLETrackTests.swift */; };
+		B10801000C1505A100000004 /* PlaceWalkRadiusSplitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10801000C1505A100000003 /* PlaceWalkRadiusSplitTests.swift */; };
 		A1102A0100000000000000B1 /* RailRideLikelihoodTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1102A0100000000000000F2 /* RailRideLikelihoodTests.swift */; };
 		A1102A0100000000000000B2 /* RawSensorReplayVerdictTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1102A0100000000000000F3 /* RawSensorReplayVerdictTests.swift */; };
 		A10000000000000002B80001 /* RawReplayRegressionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000002B80001 /* RawReplayRegressionTests.swift */; };
@@ -376,6 +377,7 @@
 		A30000000000000000000004 /* TaptionPlanCore in Frameworks */ = {isa = PBXBuildFile; productRef = X30000000000000000000002 /* TaptionPlanCore */; };
 		A30000000000000000000005 /* TaptionPlanCore in Frameworks */ = {isa = PBXBuildFile; productRef = X30000000000000000000002 /* TaptionPlanCore */; };
 		A1000000000000000B1105C1 /* MapHomePlaceFirstPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105C1 /* MapHomePlaceFirstPolicy.swift */; };
+		B10801000C1505A100000002 /* MapHomePlaceWalkRadiusSplit.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10801000C1505A100000001 /* MapHomePlaceWalkRadiusSplit.swift */; };
 		A1000000000000000B1105C2 /* MapHomeMeetingPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105C2 /* MapHomeMeetingPolicy.swift */; };
 		A1000000000000000B1105C3 /* MapHomeAppleWatchMenuItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105C3 /* MapHomeAppleWatchMenuItem.swift */; };
 		A1000000000000000B1105C5 /* MapHomeLanguageMenuItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105C5 /* MapHomeLanguageMenuItem.swift */; };
@@ -819,6 +821,7 @@
 		F5B1102A020000000000004D /* TransitBoardingPersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransitBoardingPersistenceTests.swift; sourceTree = "<group>"; };
 		F5B1102A020000000000004B /* PredictedRoutePersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PredictedRoutePersistenceTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000049 /* NLETrackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NLETrackTests.swift; sourceTree = "<group>"; };
+		B10801000C1505A100000003 /* PlaceWalkRadiusSplitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceWalkRadiusSplitTests.swift; sourceTree = "<group>"; };
 		A1102A0100000000000000F2 /* RailRideLikelihoodTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RailRideLikelihoodTests.swift; sourceTree = "<group>"; };
 		A1102A0100000000000000F3 /* RawSensorReplayVerdictTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RawSensorReplayVerdictTests.swift; sourceTree = "<group>"; };
 		F10000000000000002B80001 /* RawReplayRegressionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RawReplayRegressionTests.swift; sourceTree = "<group>"; };
@@ -971,6 +974,7 @@
 		F40000000000000000000008 /* TaptionStoreColumnCodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionStoreColumnCodingTests.swift; sourceTree = "<group>"; };
 		F40000000000000000000006 /* SensorDayStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDayStoreTests.swift; sourceTree = "<group>"; };
 		F1000000000000000B1105C1 /* MapHomePlaceFirstPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaceFirstPolicy.swift; sourceTree = "<group>"; };
+		B10801000C1505A100000001 /* MapHomePlaceWalkRadiusSplit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaceWalkRadiusSplit.swift; sourceTree = "<group>"; };
 		F1000000000000000B1105C2 /* MapHomeMeetingPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeMeetingPolicy.swift; sourceTree = "<group>"; };
 		F1000000000000000B1105C3 /* MapHomeAppleWatchMenuItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeAppleWatchMenuItem.swift; sourceTree = "<group>"; };
 		F1000000000000000B1105C5 /* MapHomeLanguageMenuItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLanguageMenuItem.swift; sourceTree = "<group>"; };
@@ -1321,6 +1325,7 @@
 				F5B1102A020000000000004D /* TransitBoardingPersistenceTests.swift */,
 				F5B1102A020000000000004B /* PredictedRoutePersistenceTests.swift */,
 				F5B1102A0200000000000049 /* NLETrackTests.swift */,
+				B10801000C1505A100000003 /* PlaceWalkRadiusSplitTests.swift */,
 				A1102A0100000000000000F2 /* RailRideLikelihoodTests.swift */,
 				A1102A0100000000000000F3 /* RawSensorReplayVerdictTests.swift */,
 				F10000000000000006FC0004 /* BackgroundSignalPolicyTests.swift */,
@@ -1413,6 +1418,7 @@
 				F1000000000000000B1105C3 /* MapHomeAppleWatchMenuItem.swift */,
 				F1000000000000000B1105C2 /* MapHomeMeetingPolicy.swift */,
 				F1000000000000000B1105C1 /* MapHomePlaceFirstPolicy.swift */,
+				B10801000C1505A100000001 /* MapHomePlaceWalkRadiusSplit.swift */,
 				F100000000000000C1102A1F /* MapHomeAppleMapAnnotations.swift */,
 				F100000000000000C1102A01 /* AirQualityDetailSheet.swift */,
 				F100000000000000C1102A02 /* MapHomeAnnotationPolicies.swift */,
@@ -2261,6 +2267,7 @@
 				A1000000000000000B1105C3 /* MapHomeAppleWatchMenuItem.swift in Sources */,
 				A1000000000000000B1105C2 /* MapHomeMeetingPolicy.swift in Sources */,
 				A1000000000000000B1105C1 /* MapHomePlaceFirstPolicy.swift in Sources */,
+				B10801000C1505A100000002 /* MapHomePlaceWalkRadiusSplit.swift in Sources */,
 				A100000000000000C1102A1F /* MapHomeAppleMapAnnotations.swift in Sources */,
 				A100000000000000C1102A01 /* AirQualityDetailSheet.swift in Sources */,
 				A100000000000000C1102A02 /* MapHomeAnnotationPolicies.swift in Sources */,
@@ -2562,6 +2569,7 @@
 				A5B1102A020000000000004E /* TransitBoardingPersistenceTests.swift in Sources */,
 				A5B1102A020000000000004C /* PredictedRoutePersistenceTests.swift in Sources */,
 				A5B1102A020000000000004A /* NLETrackTests.swift in Sources */,
+				B10801000C1505A100000004 /* PlaceWalkRadiusSplitTests.swift in Sources */,
 				A1102A0100000000000000B1 /* RailRideLikelihoodTests.swift in Sources */,
 				A1102A0100000000000000B2 /* RawSensorReplayVerdictTests.swift in Sources */,
 				A10000000000000002B80001 /* RawReplayRegressionTests.swift in Sources */,
