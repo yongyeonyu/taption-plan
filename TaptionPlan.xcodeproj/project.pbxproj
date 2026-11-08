@@ -198,6 +198,7 @@
 		A1000000000000000B1103D3 /* MapHomeHomeSkyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1103D3 /* MapHomeHomeSkyTests.swift */; };
 		A1000000000000000B1104B1 /* StickerCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1104B1 /* StickerCatalogTests.swift */; };
 		A5B1102A020000000000005A /* MapHomeStickmanTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000059 /* MapHomeStickmanTests.swift */; };
+		B10810000000000000A11041 /* WidgetPoseAtlasTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10810000000000000A11040 /* WidgetPoseAtlasTests.swift */; };
 		A1A11102A0100000000000A2 /* MemoTextPolishTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A11102A0100000000000F2 /* MemoTextPolishTests.swift */; };
 		A5B1102A0200000000000058 /* CategoryCacheBenchmarkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000057 /* CategoryCacheBenchmarkTests.swift */; };
 		A5B1102A0200000000000056 /* MapHomeTimeRailCardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000055 /* MapHomeTimeRailCardTests.swift */; };
@@ -842,6 +843,7 @@
 		F1000000000000000B1103D3 /* MapHomeHomeSkyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeHomeSkyTests.swift; sourceTree = "<group>"; };
 		F1000000000000000B1104B1 /* StickerCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickerCatalogTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000059 /* MapHomeStickmanTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeStickmanTests.swift; sourceTree = "<group>"; };
+		B10810000000000000A11040 /* WidgetPoseAtlasTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetPoseAtlasTests.swift; sourceTree = "<group>"; };
 		F1A11102A0100000000000F2 /* MemoTextPolishTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoTextPolishTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000057 /* CategoryCacheBenchmarkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryCacheBenchmarkTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000055 /* MapHomeTimeRailCardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeTimeRailCardTests.swift; sourceTree = "<group>"; };
@@ -1378,6 +1380,7 @@
 				F1000000000000000D1104A3 /* NearbyMemoNotificationTests.swift */,
 				F1000000000000000B1104B1 /* StickerCatalogTests.swift */,
 				F5B1102A0200000000000059 /* MapHomeStickmanTests.swift */,
+				B10810000000000000A11040 /* WidgetPoseAtlasTests.swift */,
 				F1A11102A0100000000000F2 /* MemoTextPolishTests.swift */,
 				F5B1102A0200000000000057 /* CategoryCacheBenchmarkTests.swift */,
 				F5B1102A0200000000000055 /* MapHomeTimeRailCardTests.swift */,
@@ -2687,6 +2690,7 @@
 				A1000000000000000D1104A3 /* NearbyMemoNotificationTests.swift in Sources */,
 				A1000000000000000B1104B1 /* StickerCatalogTests.swift in Sources */,
 				A5B1102A020000000000005A /* MapHomeStickmanTests.swift in Sources */,
+				B10810000000000000A11041 /* WidgetPoseAtlasTests.swift in Sources */,
 				A1A11102A0100000000000A2 /* MemoTextPolishTests.swift in Sources */,
 				A5B1102A0200000000000058 /* CategoryCacheBenchmarkTests.swift in Sources */,
 				A5B1102A0200000000000056 /* MapHomeTimeRailCardTests.swift in Sources */,
