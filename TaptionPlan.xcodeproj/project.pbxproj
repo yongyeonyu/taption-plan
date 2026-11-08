@@ -14,6 +14,7 @@
 		A10000000000000000CA1001 /* CalendarTitleClassification.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000CA1001 /* CalendarTitleClassification.swift */; };
 		A10000000000000000BB1106 /* WorkBreakPattern.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000BB1106 /* WorkBreakPattern.swift */; };
 		A10000000000000000BB1107 /* SubwayTrackCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000BB1107 /* SubwayTrackCatalog.swift */; };
+		B10805000000000000000004 /* SubwayRideTrack.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10805000000000000000003 /* SubwayRideTrack.swift */; };
 		A10000000000000000BB1108 /* SubwayTrackData.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000BB1108 /* SubwayTrackData.swift */; };
 		A10000000000000000CA1000 /* HomeChorePattern.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000CA1000 /* HomeChorePattern.swift */; };
 		5624A4986B94396ED9FEC9D5 /* MovementNameTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 769EE77192CF9EC73E324782 /* MovementNameTests.swift */; };
@@ -216,6 +217,7 @@
 		A5B1102A0200000000000044 /* MapHomeDateStripTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000043 /* MapHomeDateStripTests.swift */; };
 		A1000000000000000B1104C2 /* TaptionRaisedFaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1104C2 /* TaptionRaisedFaceTests.swift */; };
 		A5B1102A0200000000000042 /* RawSensorReplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000041 /* RawSensorReplayTests.swift */; };
+		B10805000000000000000002 /* SubwayRideTrackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10805000000000000000001 /* SubwayRideTrackTests.swift */; };
 		A5B1102A0200000000000040 /* OfficeStayAbsorptionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000003F /* OfficeStayAbsorptionTests.swift */; };
 		A5B1102A020000000000003E /* CarAudioTravelConfirmationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000003D /* CarAudioTravelConfirmationTests.swift */; };
 		A5B1103A020000000000003C /* NLESubActivityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1103A020000000000003B /* NLESubActivityTests.swift */; };
@@ -641,6 +643,7 @@
 		F10000000000000000CA1001 /* CalendarTitleClassification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CalendarTitleClassification.swift"; sourceTree = "<group>"; };
 		F10000000000000000BB1106 /* WorkBreakPattern.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WorkBreakPattern.swift"; sourceTree = "<group>"; };
 		F10000000000000000BB1107 /* SubwayTrackCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SubwayTrackCatalog.swift"; sourceTree = "<group>"; };
+		B10805000000000000000003 /* SubwayRideTrack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubwayRideTrack.swift; sourceTree = "<group>"; };
 		F10000000000000000BB1108 /* SubwayTrackData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SubwayTrackData.swift"; sourceTree = "<group>"; };
 		F10000000000000000CA1000 /* HomeChorePattern.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HomeChorePattern.swift"; sourceTree = "<group>"; };
 		769EE77192CF9EC73E324782 /* MovementNameTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovementNameTests.swift; sourceTree = "<group>"; };
@@ -810,6 +813,7 @@
 		F5B1102A0200000000000043 /* MapHomeDateStripTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeDateStripTests.swift; sourceTree = "<group>"; };
 		F1000000000000000B1104C2 /* TaptionRaisedFaceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionRaisedFaceTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000041 /* RawSensorReplayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RawSensorReplayTests.swift; sourceTree = "<group>"; };
+		B10805000000000000000001 /* SubwayRideTrackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubwayRideTrackTests.swift; sourceTree = "<group>"; };
 		F5B1102A020000000000003F /* OfficeStayAbsorptionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfficeStayAbsorptionTests.swift; sourceTree = "<group>"; };
 		F5B1102A020000000000003D /* CarAudioTravelConfirmationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarAudioTravelConfirmationTests.swift; sourceTree = "<group>"; };
 		F5B1103A020000000000003B /* NLESubActivityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NLESubActivityTests.swift; sourceTree = "<group>"; };
@@ -1304,6 +1308,7 @@
 				F5B1102A0200000000000043 /* MapHomeDateStripTests.swift */,
 				F1000000000000000B1104C2 /* TaptionRaisedFaceTests.swift */,
 				F5B1102A0200000000000041 /* RawSensorReplayTests.swift */,
+				B10805000000000000000001 /* SubwayRideTrackTests.swift */,
 				F5B1102A020000000000003F /* OfficeStayAbsorptionTests.swift */,
 				F5B1102A020000000000003D /* CarAudioTravelConfirmationTests.swift */,
 				F5B1103A020000000000003B /* NLESubActivityTests.swift */,
@@ -1656,6 +1661,7 @@
 				F10000000000000000CA1000 /* HomeChorePattern.swift */,
 				F10000000000000000BB1108 /* SubwayTrackData.swift */,
 				F10000000000000000BB1107 /* SubwayTrackCatalog.swift */,
+				B10805000000000000000003 /* SubwayRideTrack.swift */,
 				F10000000000000000BB1106 /* WorkBreakPattern.swift */,
 				F60000000000000000000001 /* HealthKitTypeCatalog.swift */,
 				F60000000000000000000002 /* HealthKitImportStore.swift */,
@@ -2422,6 +2428,7 @@
 				A10000000000000000CA1000 /* HomeChorePattern.swift in Sources */,
 				A10000000000000000BB1108 /* SubwayTrackData.swift in Sources */,
 				A10000000000000000BB1107 /* SubwayTrackCatalog.swift in Sources */,
+				B10805000000000000000004 /* SubwayRideTrack.swift in Sources */,
 				A10000000000000000BB1106 /* WorkBreakPattern.swift in Sources */,
 				A60000000000000000000001 /* HealthKitTypeCatalog.swift in Sources */,
 				A60000000000000000000002 /* HealthKitImportStore.swift in Sources */,
@@ -2519,6 +2526,7 @@
 				A5B1102A0200000000000044 /* MapHomeDateStripTests.swift in Sources */,
 				A1000000000000000B1104C2 /* TaptionRaisedFaceTests.swift in Sources */,
 				A5B1102A0200000000000042 /* RawSensorReplayTests.swift in Sources */,
+				B10805000000000000000002 /* SubwayRideTrackTests.swift in Sources */,
 				A5B1102A0200000000000040 /* OfficeStayAbsorptionTests.swift in Sources */,
 				A5B1102A020000000000003E /* CarAudioTravelConfirmationTests.swift in Sources */,
 				A5B1103A020000000000003C /* NLESubActivityTests.swift in Sources */,

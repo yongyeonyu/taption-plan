@@ -220,7 +220,9 @@ final class RouteTimelineDataTests: XCTestCase {
         func rail(_ travel: TravelSegment, source: String = "rail") -> MapPredictedRoute {
             MapPredictedRoute(source: source, travelID: travel.id, mode: .subway, span: travel.span, coordinates: route.coordinates)
         }
-        let walk = MapPredictedRoute(source: "gps-gap", travelID: nil, mode: .walking, span: span, coordinates: Array(route.coordinates.prefix(2)))
+        // 탑승 밖의 GPS 공백만 남는다. 탑승 안의 공백 직선은 SUB1108A01에서 뺀다.
+        let walk = MapPredictedRoute(source: "gps-gap", travelID: nil, mode: .walking,
+            span: TimeSpan(start: span.end.addingTimeInterval(60), end: span.end.addingTimeInterval(240)), coordinates: Array(route.coordinates.prefix(2)))
         let plan = MapHomeUnconfirmedPaws.plan(
             predicted: [rail(ride), rail(boarded), walk], confirmed: [rail(deleted)],
             decidedTravelIDs: [deleted.id], travel: [ride, boarded, deleted])

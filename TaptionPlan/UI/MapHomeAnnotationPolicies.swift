@@ -162,9 +162,13 @@ extension MapHomeUnconfirmedPaws {
     ) -> Plan {
         let gapDrawn = gapDrawnTravelIDs(travel)
         func isGapRail(_ route: MapPredictedRoute) -> Bool { route.source == "rail" && route.travelID.map(gapDrawn.contains) == true }
+        // 탑승 안의 GPS 공백 직선은 지하철 선과 겹치는 미확인 경로라 찍지 않는다(SUB1108A01).
+        func isInsideRide(_ route: MapPredictedRoute) -> Bool {
+            route.source == "gps-gap" && SubwayRideTrack.covers(route.span, in: travel)
+        }
         let rail = predicted.filter(isGapRail)
         return Plan(
-            predicted: predicted.filter { !isGapRail($0) },
+            predicted: predicted.filter { !isGapRail($0) && !isInsideRide($0) },
             confirmed: confirmed.filter { !isGapRail($0) },
             gapTravel: travel.filter { gapDrawn.contains($0.id) && !$0.isConfirmed && !decidedTravelIDs.contains($0.id) },
             gapRoutes: Dictionary(rail.compactMap { route in route.travelID.map { ($0, route) } }, uniquingKeysWith: { first, _ in first })

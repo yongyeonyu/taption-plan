@@ -169,7 +169,7 @@ enum MapHomeCounterTimelinePolicy {
     static func travelMeters(segments: [TravelSegment], cutoff: Date?, day: TimeSpan? = nil) -> Double {
         let visible = visibleSegments(segments, cutoff: cutoff, day: day)
         guard cutoff != nil else {
-            return MapHomeDayTravelSummary.entries(from: visible).reduce(0) { $0 + $1.meters }
+            return MapHomeDayTravelSummary.summed(visible).reduce(0) { $0 + $1.meters }
         }
         return visible.reduce(0) { $0 + $1.distanceMeters }
     }
@@ -177,7 +177,8 @@ enum MapHomeCounterTimelinePolicy {
     /// 보이는 시간만큼 거리를 나눈 구간들. 자정을 넘긴 구간은 이 날 몫만, 먼저 센 구간과 겹친 시간은 빼고 센다.
     static func visibleSegments(_ segments: [TravelSegment], cutoff: Date?, day: TimeSpan? = nil) -> [TravelSegment] {
         var countedUntil = Date.distantPast
-        return segments.sorted { $0.span.start < $1.span.start }.compactMap { segment in
+        // 탑승 거리는 잘라 내기 전에 선로 길이로 바꾼다(SUB1108A01).
+        return SubwayRideTrack.applyingTrackDistance(segments).sorted { $0.span.start < $1.span.start }.compactMap { segment in
             guard segment.distanceMeters.isFinite, segment.distanceMeters > 0 else { return nil }
             let start = max(segment.span.start, day?.start ?? .distantPast, countedUntil)
             let end = min(segment.span.end, day?.end ?? .distantFuture, cutoff ?? .distantFuture)

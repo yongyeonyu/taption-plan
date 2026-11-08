@@ -2484,7 +2484,7 @@ enum RouteTimelineDataEngine {
         through cutoff: Date
     ) -> [GeoPoint] {
         guard RouteConfirmedSubwayIntervalIndex.isConfirmedSubway(segment),
-              let coordinates = segment.subwayRoute?.coordinates,
+              let coordinates = segment.subwayRoute.map(SubwayRideTrack.coordinates(of:)),
               let first = coordinates.first,
               cutoff >= segment.span.start else { return [] }
         guard cutoff < segment.span.end, segment.span.duration > 0 else {
