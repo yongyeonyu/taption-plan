@@ -8,7 +8,7 @@ import TaptionPlanCore
 
 extension MapHomeView {
     func loadPhotoMoments(asksPermission: Bool) async {
-        guard showsPhotosOnMap || showsPhotoRing, !FirstRunTutorialStore().defersPermissionPrompts else {
+        guard !FirstRunTutorialStore().defersPermissionPrompts else {
             photoMoments = []
             return
         }
@@ -85,10 +85,10 @@ extension MapHomeView {
             ) { self.photoBrowserSelection = nil }
             .id(photoBrowserSelection.startID)
             .transition(.opacity)
-        } else if showsPhotoRing, !isDayPlaybackRunning, !isScreenRecording, !isPhotoRingCovered, !browsablePhotos.isEmpty, isPhotoRingFolded {
-            MapHomePhotoRingTab(language: language) { withAnimation(.easeInOut(duration: 0.25)) { isPhotoRingFolded = false } }
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-        } else if showsPhotoRing, !isDayPlaybackRunning, !isScreenRecording, !isPhotoRingCovered, !browsablePhotos.isEmpty {
+        } else if showsPhotoRingTab {
+            // 접히면 하단 메뉴 위 반달만 남는다(`bottomBar`가 그린다).
+            EmptyView()
+        } else if !isDayPlaybackRunning, !isScreenRecording, !isPhotoRingCovered, !browsablePhotos.isEmpty {
             let photos = browsablePhotos
             MapHomePhotoArcBrowser(
                 moments: photos,
@@ -104,9 +104,15 @@ extension MapHomeView {
         }
     }
 
+    /// 사진링이 접혀 하단 메뉴 위에 반달이 붙어 있는지(BAR1108A01).
+    var showsPhotoRingTab: Bool {
+        photoBrowserSelection == nil && !isDayPlaybackRunning && !isScreenRecording && !isPhotoRingCovered
+            && !browsablePhotos.isEmpty && isPhotoRingFolded
+    }
+
     /// 링 밖 지도를 누르면 링을 `집` 단추 위 반달로 접는다(RNG1106A01, 대표 지시). 링 위 터치는 지도에 오지 않는다.
     func foldPhotoRingOnMapTap() {
-        guard showsPhotoRing, !isPhotoRingFolded, !isDayPlaybackRunning, !browsablePhotos.isEmpty else { return }
+        guard !isPhotoRingFolded, !isDayPlaybackRunning, !browsablePhotos.isEmpty else { return }
         withAnimation(.easeInOut(duration: 0.25)) { isPhotoRingFolded = true }
     }
 

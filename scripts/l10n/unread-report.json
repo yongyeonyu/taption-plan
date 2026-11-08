@@ -1,5 +1,5 @@
 {
- "ui": 2295,
+ "ui": 2351,
  "catalog": 461,
  "unread": [
   {
@@ -112,7 +112,7 @@
   },
   {
    "file": "TaptionPlan/UI/FirstRunTutorialView.swift",
-   "line": 420,
+   "line": 433,
    "ko": "destination.koreanName",
    "en": "destination.englishName"
   },
@@ -358,25 +358,25 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeView+Stickman.swift",
-   "line": 279,
+   "line": 251,
    "ko": "location.kind.title",
    "en": "location.kind.englishTitle"
   },
   {
    "file": "TaptionPlan/UI/MapHomeView+Stickman.swift",
-   "line": 305,
+   "line": 277,
    "ko": "destination.koreanName",
    "en": "destination.englishName"
   },
   {
    "file": "TaptionPlan/UI/MapHomeView+Stickman.swift",
-   "line": 382,
+   "line": 354,
    "ko": "FloorLabel.korean(place.floor ?? 1)",
    "en": "FloorLabel.english(place.floor ?? 1)"
   },
   {
    "file": "TaptionPlan/UI/MapHomeView+Stickman.swift",
-   "line": 390,
+   "line": 362,
    "ko": "destination.koreanName",
    "en": "destination.englishName"
   },

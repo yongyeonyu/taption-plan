@@ -1789,14 +1789,31 @@ final class MapHomeAppleMapSmoothnessTests: XCTestCase {
 
 /// 지도 검색 범위와 앱 안 자료 찾기(SRC1107A01).
 final class MapHomeSearchPolicyTests: XCTestCase {
-    func testSearchUsesVisibleMapWithMinimumSpan() {
+    func testSearchCentersOnCurrentLocation() {
+        // 대표 지시(SRC1108A01): 보고 있는 지도와 상관없이 현재 위치 둘레를 먼저 찾는다.
         let visible = CLLocationCoordinate2D(latitude: 35.1, longitude: 129.0)
-        let region = MapHomeSearchPolicy.region(visibleCenter: visible, visibleSpan: MKCoordinateSpan(latitudeDelta: 0.002, longitudeDelta: 0.002), current: CLLocationCoordinate2D(latitude: 37.5, longitude: 127))
-        XCTAssertEqual(region.center.latitude, 35.1, accuracy: 1e-9)
+        let tokyo = CLLocationCoordinate2D(latitude: 35.68, longitude: 139.76)
+        let region = MapHomeSearchPolicy.region(visibleCenter: visible, visibleSpan: MKCoordinateSpan(latitudeDelta: 3, longitudeDelta: 3), current: tokyo)
+        XCTAssertEqual(region.center.latitude, 35.68, accuracy: 1e-9)
+        XCTAssertEqual(region.center.longitude, 139.76, accuracy: 1e-9)
         XCTAssertEqual(region.span.latitudeDelta, MapHomeSearchPolicy.minimumSpanDegrees)
-        let unknown = MapHomeSearchPolicy.region(visibleCenter: CLLocationCoordinate2D(latitude: 0, longitude: 0), visibleSpan: MKCoordinateSpan(latitudeDelta: 1, longitudeDelta: 1), current: CLLocationCoordinate2D(latitude: 37.5, longitude: 127))
-        XCTAssertEqual(unknown.center.latitude, 37.5, accuracy: 1e-9)
+        let unknown = MapHomeSearchPolicy.region(visibleCenter: visible, visibleSpan: MKCoordinateSpan(latitudeDelta: 1, longitudeDelta: 1), current: nil)
+        XCTAssertEqual(unknown.center.latitude, 35.1, accuracy: 1e-9, "위치를 모르면 보고 있는 지도")
         XCTAssertEqual(unknown.span.latitudeDelta, 1)
+    }
+
+    func testLocalMatchesFindMiddleOfNameInVisitedPlacesNearestFirst() {
+        func point(_ lat: Double, _ lon: Double) -> GeoPoint {
+            GeoPoint(latitude: lat, longitude: lon, altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5)
+        }
+        let span = TimeSpan(start: Date(timeIntervalSince1970: 0), end: Date(timeIntervalSince1970: 600))
+        let park = PlaceStay(placeKey: "a", displayName: "회사", buildingName: "LG사이언스파크", span: span, confidence: .medium, point: point(37.56, 126.83))
+        let far = PlaceStay(placeKey: "b", displayName: "부산 사이언스홀", span: span, confidence: .medium, point: point(35.1, 129.0))
+        let again = PlaceStay(placeKey: "c", displayName: "회사", buildingName: "LG사이언스파크", span: span, confidence: .medium, point: point(37.56, 126.83))
+        let here = CLLocationCoordinate2D(latitude: 37.53, longitude: 126.66)
+        let matches = MapHomeSearchPolicy.localMatches("사이언스", places: [], visited: [far, park, again], origin: here, language: .korean)
+        XCTAssertEqual(matches.map(\.title), ["LG사이언스파크", "부산 사이언스홀"], "중간 글자로 찾고, 가까운 곳이 먼저, 같은 이름은 한 번")
+        XCTAssertEqual(MapHomeSearchPolicy.localMatches("lg사이", places: [], visited: [park], language: .korean).first?.title, "LG사이언스파크", "대소문자 무시")
     }
 
     func testLocalMatchesFindSavedPlacesBeforeStations() {

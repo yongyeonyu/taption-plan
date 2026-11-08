@@ -2,6 +2,213 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## RFT1108A01 · 코드 리팩토링 상위 3개 (2026-11-08)
+
+- 대상: 구조 지표의 가장 큰 파일 중 작업 중인 지도 홈·검색·튜토리얼과 겹치지 않는 셋. 동작·화면 문구 그대로, 코드는 옮기기 위주.
+- `RecordSummaryEngine.swift` 2,988줄 → 10개 파일(최대 674줄: 분류 정책·기록 묶기·리포트 보관·하루 덮기·구간 교정·기간 칸·차트·메모 표식·일과·시계). 중복 4곳 모음(분석 범위 분기 6곳 → `RecordAnalysisScope.categoryID(for:)`·`phase(_:)`, 분류 사전 2곳, 밀리초 ID, ISO8601 칸 ID). 원본과 줄 단위 비교에서 빠진 것은 MARK·import뿐. 관련 9개 클래스 1,188건 통과.
+- `DetailViews.swift` 2,900줄 → 9개 파일(최대 757줄: 빠른 동작·메모 상세·고양이 고르기·추정 상세·위치 타임라인·위젯 미리보기·분류 설정·앱 이름표·공용). "구간과 겹치는 항목 골라 시작순" 7곳 → `Array.overlapping(_:by:)`, 구간 비율 2곳 → `TimeSpan.clampedFraction(of:)`, `TravelMode.systemImage` 별칭 제거. 문자열 리터럴 전후 차이 0건. 앱 Debug 빌드, `MovementNameTests` 통과.
+- `ReviewView+Clock.swift` 2,165줄(앱 최대 타입) → 6개 파일(최대 522줄) + 순수 계산 `ReviewClockGeometry`·`ReviewClockOpacity`(새 `ReviewClockGeometryTests` 7건). 문자열·함수 목록 전후 같음. `TimeScaleTests` 포함 185건 통과. 최대 타입 지표 2,162 → 2,127.
+- 동결 목록에서 1,200줄 아래가 된 두 파일 항목 삭제, 구조 검사 통과.
+- 합친 뒤 전체 단위 시험(BOKKI-iPhone11): 처음 세 번은 시험 러너가 연결 전에 멈추거나 앱 실행 실패(`unit-full-1~3.log`), 앱을 직접 띄우면 정상. 15:53 실행 중 MapLibre 내부 스레드 SIGSEGV 기록 1건(`~/Library/Logs/DiagnosticReports/TaptionPlan-2026-11-08-155327.ips`). 시뮬레이터를 지운 뒤 XCTest 2,231건 실패 0·건너뜀 19, Swift Testing 51건 통과(`build/validation/RFT1108A01/unit-full-4.log`). MapLibre 종료는 이번 실행에서 다시 나오지 않았다.
+- 미확인: 화면이 예전과 똑같이 보이는지(눈금판·직선 시간표·상세 화면) 실기기·화면 확인.
+
+## ALL1108B01 · 남은 작업 이어 진행 — 합친 뒤 검증 (2026-11-08)
+
+- 합친 묶음: CLP1105A01(걷기 반경), LCH1108A01(시작 지연 측정), MAP1108A02(오프라인 벡터 지도), RFA1102A01 Phase 2, OVW1108A01(덮기), SUB1108A01(지하철 선로), TRV1108A01(도시 여행 지도 영상). 메인 작업 공간 변경: RIG1103A02 기준 9~21시·4시간, RNG1108A01·BAR1108A01·INF1108A01(하단 반달·입체 메뉴·(i)), SRC1108A01(현재 위치 검색). 각 근거는 요청 ID별 절.
+- 합치며 고친 것: Phase 2와 오프라인 지도의 pbxproj 충돌(옮긴 파일 항목만 뺌), 덮기 브랜치에 빠진 「전체 기록 불러온 뒤에만 저장」(NLE1103A04) 다시 넣음, 옛 저장 함수를 부르던 `UserEditRollbackTests`를 새 한 번에 저장으로, 클립 편집기 동결 예산 초과(1,221줄)를 `NLEMergePrompt` 옮겨 1,211줄·예산 낮춤, 번역 추출 스크립트의 옮긴 모델 파일 경로.
+- 전체 단위 시험(BOKKI-iPhone11, 기기 잠금, 병렬 끔): 마지막 XCTest 2,224건 실패 0·건너뜀 19, Swift Testing 51건 통과(`build/validation/ALL1108B01/unit-full-4.log`). 지하철 합친 직후 실행(`unit-full-3`)에서 `MapHomeVectorRouteRenderingTests` 1건이 부하 중 66초 걸리며 실패했고, 단독 재실행에서 1.8초로 통과(`vector-route-rerun-3.log`, 중간 두 번은 시험 러너 연결 실패) — 부하에 민감한 시험으로 기록.
+- Watch Debug 빌드 성공(`watch-debug-build.log`), 앱 Debug 빌드 성공, 구조 검사 통과, 번역 `check.py` 실패 0.
+- 실기기·TestFlight·push는 하지 않았다.
+
+## TRV1108A01 · 도시 요약 여행 지도 영상 (2026-11-08)
+
+- 1 스타일: 재생 영상 시트에서 「경로 재생 / 도시 여행 지도」. 기록에 시·군 이름이 없어 위치 표본·체류를 앱에 넣은 Natural Earth 도시 목록(7,342곳)의 가까운 도시(35km, 큰 도시 가중)로 묶고, 45분 넘게 머문 곳만 들른 도시. 구간 수단은 도시 사이 이동 기록의 거리 최대 수단(없으면 멀고 빠르면 비행기, 나머지 자동차). 카메라 고정, 구간을 좌우로 번갈아 휘는 곡선으로 하나씩 그림(비행기 점선), 수단 아이콘·현재 도시 고리·이름표 겹침 피함, 맨 위 「서울 → … · 도시 수 · 기간 · 총 거리」. 길이 1초 + 구간마다 2.3초 + 2.5초, 60초 상한.
+- 2 바탕: Natural Earth(공개 도메인, 저장소 태그 v5.1.2 GeoJSON) 세계 1:110m + 동아시아 1:10m(Douglas–Peucker 0.003°), 화면이 동아시아 안일 때만 1:10m. 색은 팔레트·다크 여부에서 중간 톤(L* 25~85 시험). 「Natural Earth」 표기. 번들 +460,173B(`ne-basemap.bin` 117,991B, `ne-cities.tsv` 342,182B). 생성 `python3 -I scripts/natural-earth/build.py --cache <폴더>`(두 번 같은 바이트).
+- 3 직접 입력: 「내 기록 / 직접 입력」, 「경로 편집」 목록 편집기(도시 추가·삭제·순서·수단·날짜), 도시 검색은 앱 안 목록 → `MKLocalSearch`(현재 위치 둘레). 새 도시 기본값은 다음 날·거리로 수단(350km 이상 비행기, 80km 이상 기차, 그 밖 자동차 — 부산→제주는 기차로 잡혀 고쳐야 함). 「직접 고치기」로 기록 여행을 초안으로 복사. 초안은 `UserDefaults` JSON만.
+- 4 세로 MP4: 기존 저장은 1080×1920 HEVC였지만 그릇이 MOV였다. `MapHomePlaybackVideoWriter` 기본을 `.mp4`로 바꿔 기존 하루·여러 날 영상도 MP4. 새 스타일도 1080×1920·30fps·HEVC MP4, 사진 저장은 기존 경로.
+- 시험(시뮬레이터): `TravelMapTests`·`TravelMapVideoRenderTests`·`MapHomeRangePlaybackTests` 47건, `MapHomePlaybackMusicTests` 11건 통과(실제 파일의 `ftyp`·9:16·코덱 확인 포함). 구조 검사 통과. 새 문구 20개 12개 언어. 렌더 프레임 `build/validation/TRV1108A01/snapshots/travel-map-3.png`(0~2는 이름표 고치기 전). 로그 `build/validation/TRV1108A01/`.
+- MOV·MP4 속도 비교(대표 질문, Mac에서 1080×1920 HEVC 370프레임 3회): MOV 1.46~1.48초, MP4 1.45~1.46초로 같다(압축이 시간을 쓰고 그릇은 차이 없음). 공유 호환이 넓은 MP4 유지.
+- 미확인: 실기기 렌더 시간(4구간 약 12초·370프레임), 사진 앱 저장·재생, 기존 영상 MP4 전환 뒤 저장, 실제 기록 기간의 도시 뽑기, 시트·편집기 화면. 날짜변경선을 넘는 여행은 다루지 않음.
+
+## SUB1108A01 · 지하철 탄 구간은 선로로만 그리고 재생·거리도 선로 (2026-11-08)
+
+- 원인: 공백을 따로 그린 게 아니라 지하철 노선 모양이 두 가지였다. 파란 선만 `SubwayTrackCatalog.following`(실제 선로)이고, GPS 끊긴 조각·회색(미확인) 발자국(`subwayGapRoutes`·`subwayGapPoints`)·확정 노선·재생 위치(`subwayGapCoordinate`)는 역과 역을 직선으로 이은 좌표를 썼다. 그래서 회색 발자국이 선로 옆 직선으로 찍혔다. 재생은 탑승 중 5분 이하로 떨어진 GPS 두 점의 직선 프레임을 먼저 따라갔고, 거리는 역 직선 길이의 시간 몫이었다. 11-05는 환승으로 두 조각(22:30–22:32, 22:36–22:53)인데 같은 6개 역 노선이라 첫 조각(2분)이 노선 전체 14.2km를 그렸다.
+- 수정(`SubwayRideTrack.swift`): 지하철·기차 탑승의 선로 좌표·길이·겹침 판정, 선로 위 투영·조각 자르기(양 끝은 탑승 직전·직후 5분 안 선로 300m 안 GPS, 없으면 노선 처음·끝). 선 조각·회색 발자국·확정 노선·재생 위치 모두 선로 좌표. 탑승 중 재생은 직선 프레임보다 선로 우선(기차 포함). 오늘 화면의 `gps-gap` 예상 경로는 탑승과 겹치면 안 그림. 거리는 선로 길이 × 같은 탑승(같은 노선·20분 안 조각) 안 시간 몫, 분류 끝 단계와 하루 요약·카운터에서 같은 계산. 저장 구간·원본은 그대로.
+- 판단(대표 확인): 회색 발자국을 지우지 않고 선로 위로 옮겼다(MAP1106A01의 경로 변경·삭제 메뉴 유지). 탑승 구간 회색 발자국 자체를 없애려면 `MapHomeUnconfirmedPaws.plan`의 `gapTravel`에서 탑승을 빼면 되고, 그 메뉴는 사라진다.
+- 11-05 원본 재생 전후: 회색 발자국 선로 이탈 최대 882m/964m → 0m, 재생 이탈 평균·최대 139/855m·152/973m → 0/0m, 그린 선 조각 14,169m+6,981m → 2,075m+5,574m(탄 몫만), 지하철 거리 11,378m → 14,154m(선로 14,169m), 하루 이동 거리 37,973m → 40,749m.
+- 시험(시뮬레이터): 새 `SubwayRideTrackTests` 6, `RouteTimelineDataTests` 134, 관련 9개 클래스 1,121건 통과(건너뜀 5). 앱 Debug 빌드(시험에 포함). 구조 검사 통과. 로그 `build/validation/SUB1108A01/`(`replay-before.log`·`tests-after-2.log`·`tests-related-2.log`). 실기기 미확인.
+
+## OVW1108A01 · 전체 덮기 대표 결정 6건 (2026-11-08, OVW1026A01 이어받음)
+
+- 1 상세활동: 덮기 창에 「상세활동도 지움」(기본 꺼짐). 켜면 실제로 바뀌는 대분류 클립 안 상세를 지우고(경계는 갈라 안쪽만) 지울 수를 미리 보인다.
+- 2 직접 입력: `ActualRecord.userOwned`(수동·`manuallyCorrected`·`lockReason == .user`·교정표, 예전 클립 덮개 포함)가 범위에 있으면 「함께 덮기 / 직접 입력 N개 건너뛰기 / 취소」. 건너뛴 원본 구간은 덮지도 합치지도 저장 요청도 없음, 편집기 위 4초 알림.
+- 3 수면: 사라지거나 생기는 수면 분을 소수 첫째 자리 시간으로 「수면 N시간이 바뀝니다」, 변화 없으면 숨김.
+- 4 한 번에 저장: `saveClipEditBatch(main:detail:)`가 요청을 값에 차례로 반영(`ActivitySectionEditStaging`)한 뒤 `persist()` 1회. 실패·되읽기 실패면 메모리(그 사이 다른 변경이 있으면 이번 편집의 역만)·저장소를 편집 전으로, 편집기는 열린 채 알림. 메인에 합칠 때 브랜치 기반이 옛 코드라 빠져 있던 「전체 기록을 불러온 뒤에만 저장」 막기(NLE1103A04)를 다시 넣었다. 요청마다 저장하던 `applyClipEditRequests`는 지움.
+- 5 합치기: 같은 원본 구간끼리만(동작 그대로) + 창 안내와 회귀 시험.
+- 6 되돌리기: 저장 성공 시 `userEditUndoHistory` 한 칸(자동 기록 표시 사본·지운 상세·확정 수면 포함), 되돌리면 전부 복원(시험).
+- 함께 고침: 대분류 요청의 확정 수면을 가장 긴 조각 하나로 판단하던 것을 조각마다로(클립 편집 모든 대분류 저장에 적용). 상세 요청은 예전대로.
+- 시험(시뮬레이터): 새 `NLEOverwriteBatchTests` 8 + `NLETrackTests` 63 통과, `FeatureEngineTests` 693 통과, 구조 검사 통과(편집기 동결 예산 1245 → 1213). 새 문구 11개 12개 언어. 로그 `build/validation/OVW1108A01/`. 화면 시험·실기기 미실행.
+- 위험: 되돌리기 칸이 자동 기록까지 담아 저장마다 전체 기록 비교 1회(실기기 약 2만 8천 행). 예전 클립 덮개도 직접 입력으로 세어 확인 창이 자주 뜰 수 있음. 건너뛰기를 고르면 창에 보인 수면 시간이 실제보다 클 수 있음.
+
+## RFA1102A01 · Phase 2 마무리 — 스냅샷·저장소 경계를 패키지로 (2026-11-08, ALL1108B01)
+
+- `TaptionDataSnapshot`·`PlanDataRepository`와 스냅샷이 담는 모델 16개 파일(약 4,800줄: AppFeatureSettings·MapDisplay·Review·Place·Floor·Weather·CategoryAndCalendar·Permission·Movement·Memo·ActualRecord·ActivityCorrection·RecordClassification·Timeline·HealthAndSensor·PlanActualStorage)을 `Packages/TaptionPlanStore/Sources/TaptionPlanStore/Snapshot/`으로. 범위는 따로 빌드해 보며 정했다. Core가 아니라 Store인 이유: `AppFeatureSettings`가 WatchSync 프로필을 담아 Core에 두면 순환 의존(Store → WatchSync 의존 추가).
+- 최상위 선언·멤버 `public`, 손으로 쓴 Codable·저장 속성은 글자 그대로, 구조체 27개에 같은 인자 순서의 `public init`. `distanceMeters`·`PlanarDistance`는 Core `Domain/GeoPoint.swift`로 `@inlinable`. 분류 엔진의 같은 이름 `SleepSession` 때문에 앱에 `typealias SleepSession = TaptionPlanStore.SleepSession`. 앱에 남김: CloudKit 동기화·복구 병합·내보내기, `PlanRecordModels`·`SensorReadingModels`·`StableRecordID`, 로거를 부르는 `SleepTravelReconciliationEngine.reconciled`.
+- 형식 그대로의 근거: 새 `TaptionDataSnapshotCompatibilityTests` — 옮기기 전 선언으로 모든 배열을 채워 인코딩한 JSON(`build/validation/RFA1102A01/phase2-snapshot/pre-move-snapshot.json`)과 새 코드 출력이 바이트 단위로 같고, 왕복·빈 값도 같다. 백업 TAPTBK03 쓰기·02 읽기와 저장소 시험 통과.
+- 결과: Store `swift test` 16+7, Core 86+10 통과. 앱·iPhone 위젯·Watch·Watch 위젯 빌드 성공. 전체 단위 시험 2,163건 실패 0·건너뜀 18(`snapshot-unit-tests-1.log`). 구조 검사·엔진 import 경계 통과. 메인에 합칠 때 pbxproj 충돌(오프라인 지도 항목과 옮긴 파일 항목)을 옮긴 파일 항목만 빼고 해결.
+- 미확인: 모듈 밖 호출로 인라인이 줄어 생길 수 있는 실기기 성능.
+
+## MAP1108A02 · 벡터 지도 오프라인 내려받기 (2026-11-08, CTR1103A02 이어받음)
+
+- 대표 결정: Apple 지도 타일은 계속 저장하지 않고 앱의 벡터(OSM) 지도만 오프라인 저장.
+- 제공처: OpenFreeMap(`tiles.openfreemap.org/planet`). 약관(openfreemap.org/tos·FAQ)은 한 번에 3,000 타일 또는 50MB 이하·병렬 4 이하·앱을 밝히는 User-Agent 조건으로 오프라인 영역 저장을 허용하고, 그 밖의 대량 수집은 금지.
+- 구현: 보이는 벡터 지도 영역의 z(기본 8~14, 최대 14) 타일을 받아 `Application Support/OfflineVectorMap`(iCloud 백업 제외)에 파일로. 한 번 3,000개·추정/실측 50MB 상한, 전체 300MB·1만 파일 LRU, 메모리 경고 시 색인만 비움. 병렬 2·요청 간 0.1초, User-Agent `BOKKIPlan-OfflineMap/<버전> (iOS)`. `OfflineVectorTileURLProtocol`을 MapLibre 세션에 끼워 저장본이 있는 타일은 먼저 쓰고, TileJSON·글꼴·아이콘은 오프라인일 때만. 취소·이어 받기·전체 삭제. 메뉴 > 화면 > 표시에 「오프라인 지도」. SQLite·MapKit 무관.
+- 시험(시뮬레이터): `OfflineVectorTileTests` 16건 통과(가짜 fetcher, 실제 네트워크 없음). 앱 Debug 빌드, 구조 검사 통과. 새 문구 18개 12개 언어 추가(`check.py` 실패 0). 로그 `build/validation/MAP1108A02/test-OfflineVectorTileTests-2.log`.
+- 미검증: 실기기 내려받기, 비행기 모드에서 저장 타일 표시, MapLibre가 URLProtocol을 실제로 거치는지(세션 설정 시점), MapLibre 자체 캐시와의 관계, 시트 화면. 넣지 않은 것: 등록 장소+반경 영역 선택, 영역별 목록, 저장 타일 만료.
+
+## LCH1108A01 · 시작 지연(빌드 251~254 이후 약 2초) 원인 (2026-11-08, ALL1108B01)
+
+- 결론: 코드 회귀가 아니라 비교 조건이 섞였다. 로그 환경 헤더로 기기가 둘(A: 대표 일상 폰, B: 다른 기기·10-30~11-01만)이고, 252–256 느린 시작 99건 중 97건이 B(행 수 비슷한데 해독 500–1,500ms로 A의 약 5배). 기준 381ms는 249·250의 몇 분 간격 따뜻한 재시작 값이었다.
+- A 기기 공백 뒤 첫 시작만 비교: 244–246 0.55–0.7초(26–28k행) → 256–285 0.95–1.9초(34–38k행). 늘어난 몫은 `repository_local_load` read_ms. 같은 `records` 표의 HealthKit 원본 약 126만 행을 차가운 캐시로 흩어 읽는 비용으로 추정(미검증). 250~255 사이 저장소 코드 변경 없음, 시작 중 메인 스레드 지연 5–30ms.
+- 수정(동작 변경 없음): `initial_launch_started`에 `device_model`·`idle_s`(직전 세션 뒤 쉰 초)·`prewarmed`, 진단 환경 헤더에 `device_model`. 건강 비공개 처리에서 지워지지 않는 시험 포함.
+- 로그 질문: LCH1027A08 `timeline_window` 1,142건 있음. LCH1028A01 10–31초 시작은 245 이후 사라짐(양보 있음 중앙값 3.13초·없음 1.59초). RBK1028A01 저장 뒤 다시 읽기 245 27/27 → 255 이후 0(클립 편집 경로는 로그 없음). BGR1028A01 `user_error` 0건, 실패 30건 모두 240–244, 17건이 잠금 중 HealthKit 거부(`refreshHealthData` showErrors 경로 추정). ARC1030A03 `daily_card_schedule` 143건 모두 권한·예약·08:00 정상 — 전달 안 된 원인은 로그로 안 보임. GPS1105A01 빌드 266에서 정지 뒤 깨우는 이벤트 없음·폰 움직임 없음, 머무름 구역은 283부터.
+- 시험(시뮬레이터): `DiagnosticsLogSupportTests` 18건 통과, 앱 Debug 빌드, 구조 검사 통과. 로그·분석 `build/validation/LCH1108A01/`. 실기기에서 새 필드 기록 확인 필요. 제안(미구현): HealthKit 원본을 다른 표로 분리해 차가운 read 줄이기 — 스키마 변경이라 별도 요청.
+
+## SRC1108A01·INF1108A01·BAR1108A01 · 현재 위치 기준 검색·(i) 내리기·하단 메뉴 입체 바탕 (2026-11-08)
+
+- SRC1108A01 원인: 검색 범위 중심이 보고 있는 지도이고 Apple 검색의 범위는 '우선'일 뿐이라 미국·홍콩 결과가 섞였다. Apple 검색은 이름 앞부분으로 찾아 「사이언스」로 「LG사이언스파크」가 안 걸렸고, 앱 안 자료는 등록 장소·지하철역만 찾았다.
+- SRC1108A01 수정: 중심을 현재 위치(최소 0.5°, 약 55km)로, 추천·검색 모두 `regionPriority = .required`로 먼저 찾고 없을 때만 `.default`로 다시(`MapHomeSearchRunner`, `MapHomeSearchCompleter`). Apple 결과는 현재 위치에서 가까운 순. 다녀온 곳(`snapshot.places`의 건물·장소 이름)을 중간 글자로 찾아 등록 장소 다음·지하철역 앞에, 무리마다 가까운 순. 튜토리얼 장소 고르기(다녀온 곳 결과도 바로 저장)·대중교통 지점 검색에도 같은 방식. 새 문구 「다녀온 곳|Visited place」 12개 언어.
+- INF1108A01: 출처 (i) 여백을 없어진 왼쪽 아래 원형 단추 기준(메뉴+62pt)에서 `메뉴 높이 + 8 − 안전 영역`으로. `updateUIView`에서 안전 영역이 정해진 뒤 맞춘다(동결 파일 줄 수 그대로).
+- BAR1108A01: `MapHomeBottomBarShape`(알약 ∪ 위 가운데 반달, `Path.union`)·`MapHomeBottomBarBackground`(단추 팔레트 그라데이션·위쪽 반사·안쪽 선·바깥 선·그림자 두 겹). 반달 단추를 사진 층에서 하단 메뉴의 `safeAreaInset`으로 옮겨 넓은 화면에서도 메뉴 가운데에 붙는다(겹침 overlay로 두었을 때는 누름이 지도로 갔다).
+- 시험(시뮬레이터 BOKKI-iPhone11): `MapHomeSearchPolicyTests`(현재 위치 중심·중간 글자·가까운 순 새로) + `MapHomeLiveMapTests` + `NLETrackTests` 162건 실패 0, 앱 Debug 빌드 성공, 번역 `check.py` 실패 0, 구조 검사 통과. 로그 `build/validation/SRC1108A01/unit-2.log`, `build/validation/BAR1108A01/unit-1.log`.
+- 화면(시뮬레이터): iPhone에서 반달 묶음 테두리·(i) 위치, iPad에서 반달이 메뉴 가운데·누르면 링이 펼쳐지고 메뉴만 테두리(`build/validation/BAR1108A01/*.png`). 첫 누름이 한 번 안 먹은 적이 있어 실기기 확인 필요. 시뮬레이터는 한글 입력이 안 돼 실제 Apple 검색 결과는 미확인.
+
+## CLP1105A01 · 등록 지점 걷기 반경 절반 규칙·흡수 줄 이름 (2026-11-08, ALL1108B01)
+
+- 대표 결정: 등록 장소 반경 안 걷기는 그 곳 대분류에 흡수, 반경 밖으로 나가면 반경 절반 지점을 지난 때부터 걷기.
+- 원인: 흡수는 엔진이 아니라 화면 파생(`MapHomePlaceFirstPolicy`)에서 머문 시간과 70% 겹침만 보고 했고 위치 반경은 보지 않았다. 흡수한 줄 이름은 `TimelineRowKind.title(forCategoryID:)`가 업무·식사에 nil이라 "걷기"로 남았다.
+- 수정(`MapHomePlaceWalkRadiusSplit.swift`): 중심·반경 있는 등록 지점에 닿은 걷기를 앞뒤 2분 포함 GPS(정확도 100m 이하)로 본다. 정확한 표본이 반경 밖에 있었을 때만 "나갔다"로 보고, 절반을 넘은 때(직선 보간·분 반올림)부터 다시 절반 안으로 들어온 때까지만 걷기, 앞뒤는 대분류+상세 걷기. 절반~반경 사이 왕복은 안. 사용자 기록·표본 없음·중심 없음은 예전 규칙. 줄 이름은 `RecordClassificationCatalog` 대분류 이름으로. 원본·provenance 그대로(화면 파생만). Watch·위젯의 걷기 장소 판정은 그대로.
+- 시험(시뮬레이터 BOKKI-iPhone11): 새 `PlaceWalkRadiusSplitTests` 9 + `MapHomeSidebarNoteTests`·`NLETrackTests` 79건 실패 0, 관련 분류·재생 클래스 733건 실패 0(원본 재생 7건은 자료 없어 건너뜀). 구조 검사 통과. 로그 `build/validation/CLP1105A01/clp-walksplit-1.log`·`clp-related-3.log`. 실기기·실제 원본 재생 미확인.
+
+## RNG1108A01 · 하단 반달 손잡이 붙이기·메뉴 「사진(하단링)」 삭제 (2026-11-08)
+
+- 원인: 반달(72×36pt)이 하단 메뉴 위 2pt(`reservedHeight + 2`)에 떠 있고 아래로 퍼지는 그림자 때문에 틈이 보였다. 링은 메뉴 「사진(하단링)」(`mapHomeShowsPhotoRing`, 기본 꺼짐)을 켜야만 나왔다.
+- 수정(`MapHomePhotoRingTab`): 56×22pt, 하단 메뉴에 1pt 겹쳐 붙이고 그림자는 위로만, 누르는 자리는 위로 14pt 넓힘. 메뉴 토글·저장 키 삭제, 오늘 사진이 있으면 늘 반달로 접힌 채 시작하고 누르면 펼친다. 앱 시작 때 사진 권한 요청은 「사진(지도)」가 켜졌을 때만(링 때문에 권한 창이 새로 뜨지 않음 — 권한이 없으면 반달도 안 보임).
+- 시험(시뮬레이터 BOKKI-iPhone11): `MapHomeLiveMapTests`·`NLETrackTests` 159건 실패 0, 앱 Debug 빌드 성공, 번역 `check.py` 실패 0(문구 1개 빠짐), 구조 검사 통과. 오늘 날짜·위치 EXIF 사진을 넣어 반달이 메뉴에 붙어 보이고 누르면 링이 펼쳐지는 화면 확인(`build/validation/RNG1108A01/folded-tab.png`·`opened-ring.png`). 실기기 미확인.
+
+## ALL1108A01 · 기기 없이 할 수 있는 일 일괄 진행 — 합친 뒤 검증 (2026-11-08)
+
+- 합친 묶음: BGM1104A02, LOGFIX1108A01, LNG1104A01, RPY1108A01, RVW1030A01·NLE1103A04(되돌리기·장소 합치기·저장 막기), ARC1103A01, OPT1102A01, SML1108A01, RVW1030A01(TAPTBK03·복원 준비 저장소), RFA1102A01 Phase 2, RIG1103A02·HMM1101A01, REV1026A01·IPD1102A01·TUT1105A02. 각 근거는 아래 요청 ID별 절.
+- Phase 2와 복원이 함께 들어가면서 `TaptionStoreBackupRestore.swift`가 패키지로 옮겨진 저장소 actor 내부를 써서, 파일을 `Packages/TaptionPlanStore`로 옮기고 필요한 API를 public으로 열었다.
+- 번역: 새 문구 7개 × 12개 언어를 채워 `check.py` 실패 0·긴 문구 0, `generate.py`로 xcstrings 7개 갱신.
+- 빌드(시뮬레이터): 앱 Debug(BOKKI-iPhone11) 성공, Watch Debug(generic watchOS Simulator) 성공. 로그 `build/validation/ALL1108A01/app-debug-build.log`·`watch-debug-build.log`.
+- 전체 단위 시험(BOKKI-iPhone11, 기기 잠금, 병렬 끔, `-only-testing:TaptionPlanTests`): XCTest 2,163건 실패 0·건너뜀 18, Swift Testing 51건 통과. SML1108A01 묶음(디스크 부족으로 못 돌린 것)도 여기서 통과. 로그·결과 `build/validation/ALL1108A01/unit-full-1.log`·`.xcresult`.
+- `swift test` TaptionPlanStore 16건+Swift Testing 4건 통과(`store-package-test.log`). 구조 검사 통과.
+- 실기기·TestFlight·push는 하지 않았다. 기기에서 볼 것은 `temp.md` 「대표 실기기 확인」.
+
+## REV1026A01·IPD1102A01·TUT1105A02 · UI 시험 실제 통과 (2026-11-08, ALL1108A01)
+
+- REV1026A01 원인: 지운 시뮬레이터에서는 첫 실행 튜토리얼이 지도 위를 덮는다(UI 시험 프로세스에는 XCTestCase가 없어 건너뛰지 않음). `launchHome`은 없어진 옛 권한 시트의 「전체 건너뛰기」만 기다려 메뉴 버튼을 끝내 못 찾았다. 앱 문제가 아니라 시험이 낡았다. `UITestWait.reachMapHome`이 「바로 시작」·닫기로 튜토리얼을 닫고 시스템 권한 창을 거절한 뒤 메뉴 버튼을 기다린다.
+- 언어 팩 시험: 홈을 `mapHomeDateBadge`로 찾고, 튜토리얼 19단계까지 넘기고, 넓은 화면 하단 바 위치를 실제 배치로 계산하고, 메뉴·패널을 ×로 닫는다(아래로 끌기로는 닫히지 않아 예전 iPhone 실행은 메뉴 0장으로 "통과"였다). 설정 앱으로 넘어가는 줄은 건너뛴다.
+- IPD1102A01: 앱 수정 없음. 700pt 실패(546.8 > 410)와 듀오 메뉴 15pt 넘침은 REV1107A02의 한 열 메뉴로 사라졌다(600·700pt 패널 402.8pt). 듀오 안쪽 크기 669×951·951×669를 아이패드에서 `-debugViewportWidth/Height`로 확인해 넘침 없음. 실제 BOKKI-iPhoneDuo 시뮬레이터는 바깥 466pt 화면만 보여 넓은 화면 시험은 의도대로 건너뜀.
+- TUT1105A02: 새 시험 `testCloseButtonClosesFirstRunAndReplay` — 첫 실행 2단계에서 닫기 → 지도, 다시 켜도 닫힘 유지. 다시 보기(메뉴 > 설정 > 다시 보기) 2단계에서 닫기 → 덮개 닫힘.
+- 결과(각 클래스 전 시뮬레이터 지움, 병렬 끔): `TaptionPlanWideLayoutUITests` IPD-iPad11 7/7, BOKKI-iPhone11·Duo 1 통과·6 건너뜀(넓은 화면 전용). `TaptionPlanLanguagePackUITests`(ko) iPad·iPhone11 1/1(iPhone 47장). 튜토리얼 닫기 iPad·iPhone11 1/1. iPad 1회차에서 시험 시작 전 러너 abrt 1회, 같은 바이너리 2회차 통과. 로그 `build/validation/REV1026A01/agent-r1`~`agent-r4`.
+- 남은 것: 언어 팩 시험은 ko만. 실제 듀오 펼침·분할 화면은 시뮬레이터로 못 본다(대표 실기기 확인).
+
+## RIG1103A02·HMM1101A01 · 워치 낮잠 판정·지난 날짜 전체 재계산 (2026-11-08, ALL1108A01)
+
+- RIG1103A02(대표 결정: 애플워치로 잰 낮 수면만): `AppleWatchNapPolicy` — 잠든 표본이 Apple Watch 등급이고 직접 입력이 아니며, 지역 10~20시 안에서 시작·끝, 3시간 이하, 그 밤(전날 18시~그날 12시)의 가장 긴 세션이 아니면 낮잠. 자동 건강·워치 수면 기록만 제목 `낮잠`·behavior `nap`으로 바꾸고 근거를 더하며 원 근거·`modelVersion`은 둔다. 규칙에서 벗어나면 수면으로 되돌린다. 사용자 기록·폰 정지 수면은 건드리지 않는다. 적용은 `SleepActualReconciliationEngine.applying` 한 곳(건강 갱신·워치 스냅숏 둘 다 지남).
+- HMM1101A01(대표 결정: 전체 기간): `ClassificationRules.version = classifier-v1r2`로 날짜별 재계산 표식 버전을 올림(기록 `modelVersion`은 그대로). `ClassificationBackfill`이 오늘을 뺀 지난 날을 최신부터 하루씩, 진행을 `meta` 표식으로 남겨 이어 하고, 끝까지 돌면 `classification-backfill:<버전>`을 남긴다. 앱이 앞으로 오면 30초 뒤 utility로 시작, 날 사이 2초, 하루 갱신 중엔 기다리고 뒤로 가면 멈춘다. 하루마다 `refreshSensorTimeline(containing:)` → (건강 앱이 켜져 있으면) 그날 수면 다시 읽어 낮잠 붙이기 → `persist()`. 사용자 기록 보존은 기존 `prepare`·`mergingLockedClassifications`.
+- 시험(시뮬레이터 BOKKI-iPhone11): 새 `AppleWatchNapPolicyTests` 9·`ClassificationBackfillTests` 7 + `ClassifierMigrationTests` 22 = 38건 실패 0. 관련 `FeatureEngineTests`·`TaptionActivityEngineAdapterTests`·`MapHomeStickmanTests` 776건(건너뜀 5) 실패 0. 구조 검사 통과. 로그 `build/validation/HMM1101A01/backfill-nap-*`.
+- 기준 변경(대표 결정 2026-11-08): 9~21시·4시간 이하로 바꿈. `AppleWatchNapPolicyTests` 9·`ClassificationBackfillTests` 7 = 16건 실패 0(`build/validation/RIG1103A02/nap-9-21-1.log`).
+- 위험·남은 것: 업데이트 뒤 첫 실행에 데이터 있는 모든 날을 다시 계산한다(1,000일이면 앱을 앞에 둔 시간으로 30분 이상). 실기기 발열·전력, 실제 워치 낮잠 원본 확인이 남았다. 마지막까지 돌면 실패한 날이 있어도 완료로 두고, 그날은 열 때 다시 계산된다.
+
+## RVW1030A01 · 복원 원자성·백업 조각 크기 암호화(TAPTBK03) (2026-11-08, ALL1108A01)
+
+- 새 형식 TAPTBK03: 헤더 평문은 형식·버전·KDF(알고리즘·솔트·반복)·봉인뿐(키 집합 시험으로 고정). 봉인 헤더는 1024바이트 배수로 채워 행 수·시간대 길이가 새지 않는다. 프레임은 `봉인 길이 u32` + 봉인이고, 코덱·압축 전 크기·본문 길이는 봉인 안. 봉인 평문 길이를 Padmé로 맞춰(부풀림 최대 11.7%, MB 프레임 3% 이하) 길이로 새는 정보를 O(log log L) 비트로 줄였다. 아직 보이는 것은 프레임 수와 총 크기. 6자리 비밀번호·KDF는 그대로.
+- 옛 TAPTBK02는 계속 읽는다(대표 결정, AGENTS.md에 예외로 적음). 새 백업은 3으로, 내용이 같아 다시 쓰지 않는 2 파일은 2로 남는다. `scripts/taption-backup-decode.py`가 2·3을 읽는다(그동안 `version != 1`만 받고 원본 이벤트 줄에서 멈추던 결함도 고침).
+- 복원 원자성: 백업을 `.taption-restore-staging/<uuid>/staging.sqlite`에 끝까지 풀어 트레일러 행 수·SHA-256을 확인한 뒤 ATTACH + `BEGIN IMMEDIATE` 한 트랜잭션으로 합친다(`TaptionStoreBackupRestore.swift`). 커밋 전 실패(통신·복호화·잘림·충돌·디스크·취소)면 저장소 그대로, 준비 파일 삭제. 메모 저장소는 다른 파일이라 표시를 남기고 커밋 뒤 합치며, 끊기면 다음 엔진 작업에서 마저 합친다.
+- 시험: `swift test` TaptionPlanStore 16건(새 8건: 2 고정 파일·3 왕복·Padmé·변조·틀린 비밀번호·헤더 필드), 앱 `TaptionBackupV2Tests`·`AppModelBackupConnectionTests` 53건(새 6건) 실패 0, 구조 검사 통과. 로그 `build/validation/RVW1030A01/rvw1108-*`.
+- 제한: 메모 쪽은 커밋 뒤 단계라 즉시 원자적이지 않다. 복원 중 준비 파일만큼 디스크가 더 든다. 실기기·실제 iCloud 파일 미확인.
+
+## SML1108A01 · 작은 코드 항목(GRW1021E01·CARD1022N01·NLE1105A01·REV1102A01·MLG1105A02·ANI1104A01·STK1104A01) (2026-11-08, ALL1108A01)
+
+- GRW1021E01: 생성 스크립트가 없어 같은 96×96 SVG 틀로 `Landmark_kr_namsan`(언덕 위 탑)·`Landmark_kr_hallasan`(눈 덮인 화산·화구호) 추가. 앱 안 모습은 미확인.
+- CARD1022N01: 고르기 목록의 「사진」이 값이 안 채워져 늘 0이었다 → 하루 사진 수(이미 허용된 경우만, 권한 창 없음)와 「메모 수」를 채운다(`MapHomeCardMetricOption`, `ApplePhotoLibraryService.momentCount`).
+- NLE1105A01: 파생 걷기 상세를 고쳤을 때 저장 요청 하나·구간 600–700 업무/700–730 회의/730–900 업무, 지우면 업무로 되돌아오는 시험 추가.
+- REV1102A01 원인·수정: 위치 '사용 중' 창이 12초 넘게 열려 있으면 '항상' 요청을 보내지 않고도 보낸 것으로 기록해 영영 막혔다. 실제로 보낼 때만 기록하고, 튜토리얼 뒤 한 번 허용(`LocationAlwaysUpgradePolicy`).
+- MLG1105A02: 모든 벡터 스타일의 모든 글자 레이어(번지 제외)가 영어일 때 `name:en`을 먼저 읽는지 실제 스타일 JSON으로 잠그는 시험 추가.
+- ANI1104A01: 업무 휴식(`restCroissant`)·업무 걷기(`laptopWalk`) 자세는 이미 아틀라스 행에 있다. 위젯 아틀라스 PNG가 11-05에 갱신돼 있어 새 자세가 들어 있을 가능성이 크다. 다시 뽑기는 시험이 돌지 못해 못 했다.
+- STK1104A01(측정, Release generic iOS 서명 없음, 3b19339d): `.app` 167,756KB(얇게 하기 전), 본 실행 파일 88,058,624B, `Assets.car` 12,541,752B(7.3%). 스티커는 코드로 그려 `Assets.car` 몫 0%, 스티커 소스는 컴파일 산출물의 약 2.0%. `build/validation/STK1104A01/summary.txt`.
+- 시험: 디스크가 가득 차(ENOSPC) 이 묶음의 단위 시험은 끝까지 돌지 못했다. 합친 뒤 전체 단위 시험에서 확인한다.
+
+## OPT1102A01 · 재생 프레임에서 고정 레이어 떼어 내기 (2026-11-08, ALL1108A01)
+
+- 원인: 재생 중 60Hz 오버레이 평가마다 발자국 ForEach(수백 개)·장소 핀 본문(집 핀 클로저로 비교 실패)·집 땅 칸 계산·구역 필터·발자국 시각 필터가 다시 돌았다. 코디네이터 CALayer는 있었지만 값을 넘기는 곳이 없었다.
+- 수정(`MapHomePlaybackStaticLayers.swift`): 발자국 묶음은 generation 불변 값(열쇠에 재생 분 없음)으로 캐시하고 재생 중에는 코디네이터 레이어(`layerPawprints`)가 그린다. 안개는 시각 정렬 색인으로 같은 집합을 고른다. 장소 핀·구역 고리·집 땅은 `.equatable()`로 위치만 바뀌면 본문을 다시 평가하지 않는다.
+- 보이는 차이: 재생 중 발자국 레이어가 SwiftUI 오버레이 아래라 집 땅 칸·구역 고리가 발자국 위에 그려진다(재생이 아닐 때는 같음). 재생 중 발자국 접근성 동작 없음.
+- 시뮬레이터 새 시험 7건 + 기존 109건 통과, 구조 검사 통과, 동결 파일 무변경. 로그 `build/validation/OPT1102A01/static-layers-*`.
+- 남은 것(실기기): 아이폰 18 프레임 측정(`scripts/playback-bench.sh`), 겹침 순서 눈 확인, Release 크기, AirPods 재생 알림.
+
+## ARC1103A01 · 안 6·A안 나머지·B안 일부 (2026-11-08, ALL1108A01)
+
+- 안 6: 지도 홈 본문이 읽지 않는 `@State` 25개(작업 핸들·세대 번호·재생 시각·경로 통계)를 관찰하지 않는 `MapHomeViewWork`(`MapHomeView+Work.swift`)로 옮기고 예전 이름의 전달 속성을 둠. `@State` 680→657, `stride.MapHomeView` 6,424바이트.
+- A안: 대부분 11-05에 이미 `SensorTimelineDerivation`으로 들어가 있었고, 남은 경로 측정값 모으기·장소 이름표를 백그라운드로(`Task.detached` 수 변화 없음). 활동 배열이 같으면 `snapshotRevision`을 올리지 않는다.
+- B안: 앱·시험 전용 타입 3개를 `WidgetAppOnly.swift`로 옮겨 `WidgetShared.swift` 1,977→1,850행(예산 낮춤). 나머지 공유 타입 패키지 이동은 Phase 2와 묶임.
+- 시뮬레이터 791건 실패 0·건너뜀 5, 앱·iPhone 위젯·Watch 위젯 빌드 성공, 구조 검사 통과. 로그 `build/validation/ARC1103A01/*-1108*`. 실기기 시작·저장 수치는 미측정.
+
+## RVW1030A01·NLE1103A04 · 저장 실패 되돌리기·같은 장소 합치기·불러오기 전 저장 막기 (2026-11-08, ALL1108A01)
+
+- 되돌리기(`AppModel+EditRollback.swift`): 활동·시간 교정, 조각 교정, 미확인 분류, 기록 삭제, 클립 적용, 계획 추가·수정·이동·길이·삭제, 장소 확정이 저장에 실패하면 편집 전으로 되돌리고(그 사이 다른 변경이 있으면 이 편집 차이만 거꾸로) 실행취소 항목을 지운 뒤 알린다. 취소로 끝난 저장은 조용히 되돌린다. 전체 스냅샷 저장은 순번(`SnapshotWriteLedger`)으로 뒤에 더 새 저장이 줄 서 있으면 옛 값을 쓰지 않는다.
+- 같은 장소 합치기(`PlaceStayMergeEngine`, 층 판정 뒤): 중심 50m 이하·틈 10분 이하면 하나로. 남는 쪽은 등록 지점 > 이름 있는 곳 > 이름 없는 곳, 같으면 긴 쪽. 사용자 확정·걷기·이름이 다른 두 곳·다른 등록 지점·층이 다른 곳은 합치지 않는다.
+- 클립 편집 「적용」은 그날과 전체 기록을 다 읽기 전에는 꺼지고(`NLEClipSaveGate`), 모델도 그 전에는 바꾸지 않는다.
+- 시뮬레이터 새 시험 13건 + 관련 기존 774건(2 건너뜀) 실패 0, 구조 검사 통과. 로그 `build/validation/RVW1030A01/w1108/`.
+- 제한: 장소 이름 수정은 동시 변경이 있으면 되돌리지 못하고 알림만 뜬다. 끌기로 이어 붙인 계획 이동은 실행취소 항목을 남긴다. 장소 합치기는 재계산된 날의 `places`에 반영된다(실기기 미확인).
+
+## RPY1108A01 · 원본 재생 회귀(HMM1101A01·ALG1102A01·MEAL1103A1·CLP1105A01·RFA1105A02) (2026-11-08, ALL1108A01)
+
+- 원본: 지정 폴더에는 없어 대표 iCloud `Taption-Raw-2Days-*.json` 21개를 저장소 밖에서 썼다. 등록 장소는 체류 근거로 되살렸다(식당 반경 40m는 가정).
+- HMM1101A01: 21개 중 버스 이동이 없어 버스 판정은 미검증(버스 원본 필요). 사용자 편집 날 3개는 재계산 전후 사용자 기록 동일, 혼합 판정 차이는 11-04 09:25–09:26 1분(걷기→자동차) 하나. 172681F1에 같은 수동 기록이 id만 다르게 최대 5벌(NLE1103A04 중복과 같은 모양, 뒤 파일에는 없음).
+- ALG1102A01: 남은 5개 재생에서 사용자 기록·원본 해시 보존. 임시 경로 요청 0건이라 도로 매칭은 실제 자료에서 돈 적이 없다. AE321FD9 10-28 18:44–20:09 폰만으로 잡힌 수면은 오탐으로 보이나 라벨 없음. SleepFusion 일원화는 하지 않음.
+- MEAL1103A1 원인·수정: 회사로 묶였을 때 잠긴 자동 `근무`가 등록 식당 근거의 새 식사 판정을 덮었다. `RestaurantMealActualEngine.freshWins` 추가(사용자 기록이 아니고 식당 근거가 있으면 새 판정). 편집 전 원본은 11:53–12:39 식사로 나온다. 편집 후 원본은 10:06–19:34 전체가 수동 업무라 식사가 나오지 않는다(사용자 우선 — 클립 편집이 그때 화면의 잠긴 근무를 수동으로 굳힌 것으로 추정).
+- CLP1105A01: 11-04 재생 기대대로(회사 안 걷기 = 업무+상세 걷기, 식당 = 식사). 걷기를 흡수한 대분류 블록 제목이 "걷기"로 남는 문제(`TimelineRowKind.title(forCategoryID:)`가 work·eating에 nil) 발견, 미수정.
+- RFA1105A02: 11-01 저장 비교값과 4일 모두 같음(일치율·저장 구간·혼합·사용자 기록).
+- 새 시험 4건(`RawReplayRegressionTests`, 익명화 조각) 포함 관련 10개 클래스 855건 중 842 통과·13 건너뜀(환경변수 재생)·실패 0. 로그 `build/validation/<ID>/rpy1108-*`.
+
+## LNG1104A01 · 워치 언어 전달·12개 언어 AI 검수 (2026-11-08, ALL1108A01)
+
+- 원인: iPhone은 payload `languagePreference`로 고른 언어를 보내고 있었지만 워치 번역 표가 워치 앱 그룹 값만 읽어 워치 기기 언어로 보였다. 위젯은 처음 읽은 선택을 붙잡고 있었고, 언어를 바꿔도 위젯·워치가 바로 갱신되지 않았다.
+- 수정: 워치가 payload를 적용·복원할 때 `AppLanguagePreference.adoptPhoneSelection`(바뀐 때만 저장, nil·모르는 값은 자동). 위젯 둘은 `UITextPack.reloadSelection()`. iPhone 언어 메뉴에서 고르면 위젯 payload 재생성·워치 전송·타임라인 재로드. payload 형식 무변경.
+- 시험: `swift test` TaptionWatchSync 23건 통과(새 2건), 앱 `FirstRunTutorialTests`+워치 payload 3건 20건 통과, 워치 스킴 빌드 성공. 로그 `build/validation/LNG1104A01/watchlang-*`.
+- 번역 AI 검수(사람 검수 대신): 12개 언어 2,756항목 전부 읽고 649건 수정(ja 56·zh-Hans 41·zh-Hant 59·de 55·fr 30·it 71·es 24·pt-BR 21·vi 28·id 51·th 113·hi 100). 용어 통일(대분류·상세 활동·Live Activity), 오역(it 시급→'Orario', fr rest→'le reste', th '그날'→'오늘' 등), hi에 남은 영어 18건. `check.py` 실패 0. 기록 `build/validation/LNG1104A01/review-2026-11-08.md`.
+- 남은 것: Apple 공식 용어 일부(수면 단계·'My Watch')와 버튼 잘림은 화면 확인 필요.
+
+## LOGFIX1108A01 · 로그 분석으로 찾은 세 가지 수정 (2026-11-08, ALL1108A01)
+
+- BGR1028A01: 잠금 중 HealthKit "보호 데이터 접근 불가"(HKError 6)는 배너를 띄우지 않고(`HealthRefreshErrorPolicy`), 보호 데이터가 없으면 읽지 않고 미뤘다가 잠금이 풀릴 때 한 번 다시 읽는다(`health_refresh_deferred`·`health_refresh_retry_after_unlock`). 배경 갱신 종료 기록에 `user_error`(120자)·`user_error_state`·`user_error_category`.
+- GPS1105A01: 머무름 구역은 0.5m/s 미만으로 2분 머물렀거나 동작 센서가 멈춤일 때만 건다(`StayRegionArmingPolicy`). 위치·방문으로 깨어나 구역을 벗어났을 때 `startUpdatingLocation`은 iOS가 멈춘 경우에만 부른다(`LocationPauseRegionPolicy`). 구역 이탈 이벤트는 예전처럼 다시 켠다. `sensor_stay_region_armed`에 `trigger`.
+- ARC1030A03: 하루 카드 알림을 누르면 `daily_card_tapped`(전달→탭 초), 앱이 앞일 때 받으면 `daily_card_presented`.
+- 시뮬레이터 97건 통과(새 3개 클래스 15건 + 센서·머무름·저장소 기존), 구조 검사 통과. 로그 `build/validation/LOGFIX1108A01/`.
+- 남은 것(실기기): 이동 중 구역 걸기 횟수가 줄었는지, 잠금 중 배경 갱신에 배너가 없는지, 멈춰 있는 동안 위치가 거의 오지 않아 2분 조건이 늦게 차는지.
+
+## BGM1104A02 · 곡 끝 무음·곡 유사성 (2026-11-08, ALL1108A01)
+
+- 측정(ffmpeg): 앞 무음은 10곡 모두 약 0초. 끝은 디지털 0이 아니라 잔향 꼬리로, 진폭 0.01 아래가 0.81~1.62초.
+- 수정: 파일은 그대로 두고 `MapHomePlaybackMusicStream.audibleLength`가 끝에서 거꾸로 훑어 진폭 0.005(약 −46dB)를 넘는 마지막 표본까지만 반복 길이로 쓴다. 기존 2,048프레임 이음 크로스페이드가 그 자리에서 돈다. 잘린 꼬리 0.64~1.61초. 반복 주기가 그만큼 짧아진다.
+- 시뮬레이터 `MapHomePlaybackMusicTests` 12건 통과(새 `testLoopLengthDropsTrailingSilence` 포함), 구조 검사 통과. 로그 `build/validation/BGM1104A02/`.
+- 곡 유사성(오프라인): 리듬(스펙트럼 플럭스 자기상관) 곡끼리 최대 0.23으로 서로 다름. 음높이 분포는 모두 장조라 0.96 수준으로 구별력이 없다. 상용곡 대조(Shazam)는 여기서 할 수 없어 남는다.
+- 남은 것: 실기기에서 반복 이음 청취, 음악 든 긴 영상 렌더.
+
+## LOGAN1108A01 · 기기 로그 분석 (2026-11-08, ALL1108A01)
+
+- 자료: 대표 iCloud 로그 113개(2026-10-22~11-06, 빌드 226–290, 이벤트 118,803개). 분석 스크립트·사본 `build/validation/LOGAN1108A01/`. 코드 변경 없음.
+- LCH1027A08 해결: `timeline_window` 1,142건(빌드 245~290), recenter 전후 1:1, 창 크기 90%가 하루 전체. 손잡이 비율과 화면 위치 일치는 화면 비교가 필요.
+- LCH1028A01 일부 해결: 10–31초 시작은 245 이후 사라짐. 다만 백그라운드 양보가 있던 시작은 중앙값 3.13초(없으면 1.59초), 빌드 251 무렵부터 보통 시작이 0.85→약 2초로 늘었다(`bootstrapped` 381ms→1.6–2.2초) — 따로 원인 조사 필요.
+- RBK1028A01 해결: 저장 뒤 `repository_local_load`가 245에서는 27/27, 255 이후 0. 클립 편집 재작성(NLE1104A01) 뒤 저장 경로는 로그에 없어 미검증.
+- BGR1028A01: 실패 30건은 모두 빌드 240–244. 17건이 같은 때 `health_refresh_failed`("Protected health data is inaccessible", 잠금 중 HealthKit) — 배너는 `refreshHealthData`의 `showErrors` 기본값으로 추정. 13건은 원인 미상. 수정은 LOGFIX1108A01.
+- ARC1030A03: `daily_card_schedule` 143건 모두 권한·알림 켜짐, 예약 있음, 다음 시각 08:00 KST. 앱 예약 문제 아님 — 집중 모드 등 iOS 쪽 가능성. 누른 기록이 없어 `daily_card_tapped` 로그 추가(LOGFIX1108A01).
+- GPS1105A01: 11-04 02:06–06:36Z 공백은 빌드 266에서 앱이 정지된 뒤 깨우는 이벤트가 하나도 없었고(머무름 구역은 283에서 들어옴) 폰도 움직이지 않음. 283에서 머무름 구역 걸기·재개가 40분에 109번 반복(움직이는 동안 매 위치마다 다시 검) — 수정은 LOGFIX1108A01. 구역 이탈로 깨어난 기록은 아직 0건.
+
 ## RFT1107A01 · 리팩토링 상위 3개 (2026-11-07)
 
 - 1) 평면 거리 사본 9곳(지하철 판정 2·머무름 2·층 보정·걷기 거리·재생 연속성·지하철 근거·선분 거리 2) → `PlanarDistance.meters`·`segmentMeters`(`FeatureModels.swift`). 식과 곱셈 순서를 그대로 두어 결과가 같다.

@@ -36,14 +36,54 @@ struct MapHomeBottomBarButton<Icon: View>: View {
 }
 
 extension View {
-    /// 하단 메뉴 알약. 지도가 비치지 않게 불투명하게 칠한다(대표 요청).
-    func mapHomeBottomBarPill() -> some View {
+    /// 하단 메뉴 알약. 위쪽 둥근 단추(`TaptionStickerDisc`)와 같은 입체 바탕이다(BAR1108A01).
+    /// 사진링이 접혀 있으면 가운데 위에 반달이 붙고, 테두리는 반달까지 한 덩어리로 두른다.
+    func mapHomeBottomBarPill(showsTab: Bool = false) -> some View {
         frame(height: MapHomeBottomBarMetrics.pillHeight)
-            .background {
-                Capsule()
-                    .fill(Color.tpSurface)
-                    .overlay(Capsule().stroke(Color.tpLine.opacity(0.8), lineWidth: 0.6))
-                    .shadow(color: .black.opacity(0.14), radius: 12, y: 4)
+            .background { MapHomeBottomBarBackground(showsTab: showsTab) }
+    }
+}
+
+/// 알약과(있으면) 위쪽 가운데 반달을 합친 모양. 반달은 알약 위 끝에서 위로 솟는다.
+struct MapHomeBottomBarShape: Shape {
+    var showsTab: Bool
+
+    func path(in rect: CGRect) -> Path {
+        let pill = Path(roundedRect: rect, cornerRadius: rect.height / 2, style: .continuous)
+        guard showsTab else { return pill }
+        let w = MapHomePhotoRingTab.width, h = MapHomePhotoRingTab.height
+        // 알약 위 끝과 조금 겹쳐야 합친 모양에 틈이 생기지 않는다.
+        let tab = Path(roundedRect: CGRect(x: rect.midX - w / 2, y: rect.minY - h, width: w, height: h + 2),
+                       cornerRadii: RectangleCornerRadii(topLeading: h, topTrailing: h))
+        return pill.union(tab)
+    }
+}
+
+struct MapHomeBottomBarBackground: View {
+    var showsTab: Bool
+
+    var body: some View {
+        let palette = TaptionBarPalette.current
+        let shape = MapHomeBottomBarShape(showsTab: showsTab)
+        ZStack {
+            shape.fill(LinearGradient(
+                colors: [palette.cream, palette.cream.mix(with: .black, by: 0.08)],
+                startPoint: .top, endPoint: .bottom
+            ))
+            // 위쪽 빛 반사. 단추의 흰 타원과 같은 역할을 넓은 알약에 맞게 띠로 둔다.
+            shape.fill(LinearGradient(
+                stops: [.init(color: .white.opacity(0.55), location: 0), .init(color: .white.opacity(0), location: 0.45)],
+                startPoint: .top, endPoint: .bottom
+            ))
+            .padding(3)
+            if let inner = palette.innerLine {
+                shape.stroke(inner, lineWidth: 2.4).padding(1.2)
             }
+            shape.stroke(palette.outline, lineWidth: 1.6)
+        }
+        .compositingGroup()
+        .shadow(color: .black.opacity(0.22), radius: 2.5, y: 2)
+        .shadow(color: .black.opacity(0.12), radius: 10, y: 4)
+        .accessibilityHidden(true)
     }
 }

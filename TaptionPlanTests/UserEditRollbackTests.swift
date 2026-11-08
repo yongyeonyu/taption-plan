@@ -181,7 +181,7 @@ final class UserEditRollbackTests: XCTestCase {
             sourceIDs: [actual.id], originalSpan: span, originalOption: option,
             mode: .replace(editedSpan: span, option: option)
         )
-        let saved = await model.applyClipEditRequests([request])
+        let saved = await model.saveClipEditBatch(main: [request], detail: [])
         XCTAssertFalse(saved)
         XCTAssertNotNil(model.userFacingError)
         let saves = await repository.saves

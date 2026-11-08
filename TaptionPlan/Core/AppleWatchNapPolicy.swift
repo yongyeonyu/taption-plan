@@ -10,10 +10,10 @@ enum AppleWatchNapPolicy {
     static let title = "낮잠"
     static let behavior = "nap"
     static let evidence = "Apple Watch 낮잠 수면 기록"
-    /// 이 지역 시각 안에서 시작하고 끝나야 낮잠이다.
-    static let daytimeStartHour = 10
-    static let daytimeEndHour = 20
-    static let maximumDuration: TimeInterval = 3 * 3_600
+    /// 이 지역 시각 안에서 시작하고 끝나야 낮잠이다(대표 결정 2026-11-08: 9~21시·4시간 이하).
+    static let daytimeStartHour = 9
+    static let daytimeEndHour = 21
+    static let maximumDuration: TimeInterval = 4 * 3_600
 
     static func isNap(
         _ session: SleepSession,

@@ -544,27 +544,28 @@ struct MapHomePhotoArcBrowser: View {
     }
 }
 
-/// 접힌 하단 사진링(RNG1106A01). 하단 메뉴 `집` 단추 바로 위의 위 화살표 반달이고, 누르면 링을 다시 펼친다.
+/// 접힌 하단 사진링(RNG1106A01). 하단 메뉴 가운데 위로 솟은 반달이고, 누르면 링을 다시 펼친다.
+/// 반달 바탕·테두리는 하단 메뉴 바탕(`MapHomeBottomBarShape`)이 함께 그린다(BAR1108A01). 여기는 화살표와 누르는 자리만.
 struct MapHomePhotoRingTab: View {
+    static let width: CGFloat = 56
+    static let height: CGFloat = 22
+    /// 보이는 반달은 낮게, 누르는 자리는 위로 이만큼 넓힌다.
+    static let touchExtra: CGFloat = 14
+
     let language: MapHomeLanguage
     let onOpen: () -> Void
 
     var body: some View {
         Button(action: onOpen) {
             Image(systemName: "chevron.up")
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(17)), weight: .bold))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))
                 .foregroundStyle(Color.tpInk)
-                .frame(width: 72, height: 36)
-                .padding(.top, 2)
-                .background(Color.tpSurface, in: UnevenRoundedRectangle(topLeadingRadius: 36, topTrailingRadius: 36))
-                .shadow(color: .black.opacity(0.14), radius: 6, y: -1)
-                .contentShape(UnevenRoundedRectangle(topLeadingRadius: 36, topTrailingRadius: 36))
+                .frame(width: Self.width, height: Self.height)
+                .padding(.top, Self.touchExtra)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(language.text("사진 펼치기", "Show photos"))
-        // 하단 메뉴는 화면 가운데에 놓이고 `집`이 가운데 칸이다. 사이드바와 무관하게 그 위에 둔다.
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-        .padding(.bottom, MapHomeBottomBarMetrics.reservedHeight + 2)
     }
 }
 

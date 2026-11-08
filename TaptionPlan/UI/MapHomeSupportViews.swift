@@ -178,9 +178,11 @@ enum MapHomeLayoutStyle: String, CaseIterable, Sendable {
 
     var movesActionsToBottom: Bool { self != .classic }
 
-    /// 지도 출처 (i) 버튼이 왼쪽 하단 원형 버튼(높이 44) 바로 위에 오도록 지도 아래에서 띄우는 거리.
-    /// 하단 메뉴 높이 + 기준 여백 10 + 버튼 44 + 간격 8.
-    static var attributionBottomMargin: CGFloat { MapHomeLayoutStyle.tabBar.bottomReservedHeight + 10 + 44 + 8 }
+    /// 지도 출처 (i) 버튼을 하단 메뉴 바로 위(간격 8)에 둔다(INF1108A01, 대표 지시로 내림).
+    /// MapLibre 여백은 안전 영역 기준이고 하단 메뉴 높이는 화면 끝 기준이라 안전 영역만큼 뺀다.
+    static func attributionMargins(safeAreaBottom: CGFloat) -> CGPoint {
+        CGPoint(x: 18, y: max(8, MapHomeLayoutStyle.tabBar.bottomReservedHeight + 8 - safeAreaBottom))
+    }
 
     /// 하단 막대가 차지하는 높이. 레일과 왼쪽 버튼을 이만큼 위로 올린다.
     var bottomReservedHeight: CGFloat {

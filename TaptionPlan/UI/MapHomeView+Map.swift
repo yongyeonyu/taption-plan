@@ -51,7 +51,7 @@ extension MapHomeView {
     /// 입력하는 동안 Apple 추천 위에 보일 등록 장소·지하철역.
     var localSearchMatches: [MapHomeSearchResult] {
         guard isMapSearchFocused, mapSearchResults.isEmpty else { return [] }
-        return MapHomeSearchPolicy.localMatches(mapSearchText, places: model.settings.frequentPlaces, language: language)
+        return mapLocalMatches(mapSearchText)
     }
 
     var mapSearchSurfaceHeight: CGFloat {
@@ -960,6 +960,17 @@ extension MapHomeView {
         .buttonStyle(.plain)
     }
 
+    /// 등록 장소·다녀온 곳·지하철역에서 이름 중간 글자로도 찾는다(SRC1108A01).
+    func mapLocalMatches(_ query: String) -> [MapHomeSearchResult] {
+        MapHomeSearchPolicy.localMatches(
+            query,
+            places: model.settings.frequentPlaces,
+            visited: model.snapshot.places,
+            origin: currentCoordinate,
+            language: language
+        )
+    }
+
     var mapSearchRegion: MKCoordinateRegion {
         MapHomeSearchPolicy.region(visibleCenter: visibleMapCenter, visibleSpan: visibleMapSpan, current: currentCoordinate)
     }
@@ -1012,22 +1023,18 @@ extension MapHomeView {
         mapSearchTask?.cancel()
         let requestID = UUID()
         mapSearchRequestID = requestID
-        let local = showsList ? MapHomeSearchPolicy.localMatches(fallbackTitle, places: model.settings.frequentPlaces, language: language) : []
+        let local = showsList ? mapLocalMatches(fallbackTitle) : []
+        let origin = currentCoordinate
         mapSearchTask = Task { @MainActor in
-            var response: MKLocalSearch.Response?
-            var failed = false
-            do { response = try await MKLocalSearch(request: request).start() } catch {
-                // 결과가 없으면 Apple 검색은 placemarkNotFound 오류를 낸다. 그때는 실패가 아니다.
-                failed = (error as? MKError)?.code != .placemarkNotFound
-            }
+            let (items, failed) = await MapHomeSearchRunner.items(for: request)
             guard !Task.isCancelled, requestID == mapSearchRequestID else { return }
-            let found = (response?.mapItems ?? []).prefix(8).map { item in
+            let found = MapHomeSearchPolicy.sortedByDistance(items.prefix(8).map { item in
                 MapHomeSearchResult(
                     title: item.name ?? fallbackTitle,
                     subtitle: item.placemark.title ?? "",
                     coordinate: item.placemark.coordinate
                 )
-            }
+            }, from: origin)
             let results = Array((local + found).prefix(8))
             mapSearchCompleter.clear()
             if results.count == 1 || (!showsList && !results.isEmpty) {

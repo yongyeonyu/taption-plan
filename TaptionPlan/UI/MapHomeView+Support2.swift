@@ -424,7 +424,13 @@ extension MapHomeView {
             }
         }
         .padding(.horizontal, 8)
-        .mapHomeBottomBarPill()
+        .mapHomeBottomBarPill(showsTab: showsPhotoRingTab)
+        // 반달 단추는 알약 위 같은 레이아웃 안에 둬야 눌린다(겹침으로 밖에 두면 지도가 터치를 가져간다).
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if showsPhotoRingTab {
+                MapHomePhotoRingTab(language: language) { withAnimation(.easeInOut(duration: 0.25)) { isPhotoRingFolded = false } }
+            }
+        }
     }
 
     func bottomBarButton(

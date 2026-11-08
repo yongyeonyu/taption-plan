@@ -95,10 +95,10 @@ final class AppleWatchNapPolicyTests: XCTestCase {
         entered.isUserEntered = true
         let manual = sessions([watch(0, 7), entered])
         XCTAssertFalse(AppleWatchNapPolicy.isNap(manual[1], among: manual, calendar: calendar))
-        let long = sessions([watch(0, 7), watch(12, 16)])
-        XCTAssertFalse(AppleWatchNapPolicy.isNap(long[1], among: long, calendar: calendar), "3시간보다 길면 낮잠이 아니다")
-        let evening = sessions([watch(0, 7), watch(19.5, 21)])
-        XCTAssertFalse(AppleWatchNapPolicy.isNap(evening[1], among: evening, calendar: calendar), "20시를 넘기면 낮잠이 아니다")
+        let long = sessions([watch(0, 7), watch(12, 16.5)])
+        XCTAssertFalse(AppleWatchNapPolicy.isNap(long[1], among: long, calendar: calendar), "4시간보다 길면 낮잠이 아니다")
+        let evening = sessions([watch(0, 7), watch(20.5, 22)])
+        XCTAssertFalse(AppleWatchNapPolicy.isNap(evening[1], among: evening, calendar: calendar), "21시를 넘기면 낮잠이 아니다")
     }
 
     func testLateMorningSleepWithoutNightSessionIsMainSleep() {

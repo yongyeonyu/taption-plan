@@ -223,7 +223,7 @@ extension MapHomeView {
             if !isRunning { finishRecordingPlayback() }
         }
         .task { await runBenchAutoPlayback() }
-        .task(id: model.selectedDate) { await loadPhotoMoments(asksPermission: FirstRunTutorialStore().allowsUnaskedPermissionPrompts) }
+        .task(id: model.selectedDate) { await loadPhotoMoments(asksPermission: showsPhotosOnMap && FirstRunTutorialStore().allowsUnaskedPermissionPrompts) }
         .task(id: MapHomeDayCalendarLoader.key(day: model.selectedDate)) { await loadDayCalendarEvents() }
         .task {
             // 로딩이 너무 오래 걸리면 시간 제한 후 홈을 연다(무한 로딩 방지).
@@ -249,7 +249,6 @@ extension MapHomeView {
         }
         .onChange(of: model.snapshot.memos) { _, _ in refreshTimedMemoCache() }
         .onChange(of: showsPhotosOnMap) { _, _ in Task { await loadPhotoMoments(asksPermission: true) } }
-        .onChange(of: showsPhotoRing) { _, _ in Task { await loadPhotoMoments(asksPermission: true) } }
         // 하루 데이터가 늦게 들어오면 위치 없는 사진의 추정 위치도 다시 맞춘다.
         .onChange(of: isDayDataLoading) { _, loading in
             if !loading, photosNeedReadingRetry { Task { await loadPhotoMoments(asksPermission: false) } }

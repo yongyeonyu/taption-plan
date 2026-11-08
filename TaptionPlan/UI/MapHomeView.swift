@@ -171,9 +171,9 @@ struct MapHomeView: View {
     @State var photosNeedReadingRetry = false
 
     @AppStorage("mapHomeShowsPhotos") var showsPhotosOnMap = true
-    @AppStorage("mapHomeShowsPhotoRing") var showsPhotoRing = false
     /// 하단 사진링을 아래로 끌어 반달로 접었다(RNG1106A01). 사이드바와 무관하게 유지한다.
-    @State var isPhotoRingFolded = false
+    /// 하단 사진링은 늘 쓰며 처음엔 `집` 위 반달로 접혀 있다(RNG1108A01, 대표 지시: 메뉴 켜기 대신 반달).
+    @State var isPhotoRingFolded = true
 
     /// 표시 메뉴의 경로·발자국 켜기/끄기(대표 지시, ARC1030A06). 녹화 레이어와는 별개로, 평소 화면에 적용된다.
     @AppStorage("mapHomeShowsRoutes") var showsRoutesOnMap = true

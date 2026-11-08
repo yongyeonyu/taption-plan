@@ -1209,13 +1209,3 @@ struct MapHomeNLEClipEditor: View {
         }
     }
 }
-
-
-/// 경계 손잡이를 이웃의 먼 쪽 끝까지 가져갔을 때 묻는 합치기 확인.
-struct NLEMergePrompt: Equatable {
-    let clipID: String
-    let neighborID: String
-    let clipTitle: String
-    let neighborTitle: String
-}
-

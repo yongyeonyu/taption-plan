@@ -1166,7 +1166,7 @@
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nota %@"
+            "value" : "Memo %@"
           }
         },
         "es" : {
@@ -1196,7 +1196,7 @@
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "บันทึก %@"
+            "value" : "โน้ต %@"
           }
         },
         "hi" : {
@@ -1248,7 +1248,7 @@
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apri la nota %@"
+            "value" : "Apri il memo %@"
           }
         },
         "es" : {
@@ -1278,7 +1278,7 @@
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "เปิดบันทึก %@"
+            "value" : "เปิดโน้ต %@"
           }
         },
         "hi" : {
@@ -3175,7 +3175,7 @@
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld piani · %2$lld attività di dettaglio"
+            "value" : "%1$lld piani · %2$lld attività dettagliate"
           }
         },
         "es" : {
@@ -3205,13 +3205,13 @@
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld แผน · %2$lld กิจกรรมแบบละเอียด"
+            "value" : "%1$lld แผน · %2$lld กิจกรรมโดยละเอียด"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld प्लान · %2$lld बारीक गतिविधियाँ"
+            "value" : "%1$lld प्लान · %2$lld उप-गतिविधियाँ"
           }
         }
       }
@@ -5191,7 +5191,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apple Maps"
+            "value" : "Apple Karten"
           }
         },
         "fr" : {
@@ -5203,7 +5203,7 @@
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apple Maps"
+            "value" : "Mappe di Apple"
           }
         },
         "es" : {
@@ -5233,7 +5233,7 @@
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apple Maps"
+            "value" : "แผนที่ Apple"
           }
         },
         "hi" : {
@@ -5273,7 +5273,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apple-Maps-Route"
+            "value" : "Apple-Karten-Route"
           }
         },
         "fr" : {
@@ -5285,7 +5285,7 @@
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Percorso di Apple Maps"
+            "value" : "Percorso in Mappe di Apple"
           }
         },
         "es" : {
@@ -5315,7 +5315,7 @@
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "เส้นทาง Apple Maps"
+            "value" : "เส้นทางแผนที่ Apple"
           }
         },
         "hi" : {
@@ -5355,7 +5355,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apple-Maps-Standort"
+            "value" : "Apple-Karten-Standort"
           }
         },
         "fr" : {
@@ -5367,7 +5367,7 @@
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Posizione di Apple Maps"
+            "value" : "Posizione in Mappe di Apple"
           }
         },
         "es" : {
@@ -5397,7 +5397,7 @@
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ตำแหน่ง Apple Maps"
+            "value" : "ตำแหน่งแผนที่ Apple"
           }
         },
         "hi" : {
@@ -7191,7 +7191,7 @@
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ลากส่วนตัวของแผนภูมิแกนต์เพื่อย้าย และถ่างสองนิ้วเพื่อซูมได้ละเอียดถึงหนึ่งนาที"
+            "value" : "ลากตัวแผนภูมิแกนต์เพื่อย้าย และถ่างสองนิ้วเพื่อซูมได้ละเอียดถึงหนึ่งนาที"
           }
         },
         "hi" : {
@@ -8084,19 +8084,19 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pläne, tatsächliche Einträge, Notizen und automatische Reiseeinträge werden gelöscht. Kaufverlauf und Testnutzung bleiben erhalten. Das kann nicht rückgängig gemacht werden."
+            "value" : "Pläne, tatsächliche Einträge, Memos und automatische Reiseeinträge werden gelöscht. Kaufverlauf und Testnutzung bleiben erhalten. Das kann nicht rückgängig gemacht werden."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Les plans, enregistrements réels, notes et trajets automatiques seront supprimés. L'historique d'achat et l'utilisation de l'essai seront conservés. Cette action est irréversible."
+            "value" : "Les plans, enregistrements réels, mémos et trajets automatiques seront supprimés. L'historique d'achat et l'utilisation de l'essai seront conservés. Cette action est irréversible."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Piani, registrazioni effettive, note e registrazioni automatiche dei tragitti verranno eliminati. Cronologia degli acquisti e uso della prova verranno mantenuti. L'operazione non si può annullare."
+            "value" : "Piani, registrazioni effettive, memo e registrazioni automatiche dei tragitti verranno eliminati. Cronologia degli acquisti e uso della prova verranno mantenuti. L'operazione non si può annullare."
           }
         },
         "es" : {
@@ -8132,7 +8132,7 @@
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "प्लान, असली रिकॉर्ड, नोट और स्वचालित यात्रा रिकॉर्ड हटा दिए जाएँगे। खरीदारी का इतिहास और ट्रायल उपयोग बना रहेगा। इसे पूर्ववत नहीं किया जा सकता।"
+            "value" : "प्लान, असली रिकॉर्ड, मेमो और स्वचालित यात्रा रिकॉर्ड हटा दिए जाएँगे। खरीदारी का इतिहास और ट्रायल उपयोग बना रहेगा। इसे पूर्ववत नहीं किया जा सकता।"
           }
         }
       }
@@ -8165,7 +8165,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "计划名称会作为细类添加，输入的内容会关联到行动备忘。"
+            "value" : "计划名称会作为中类添加，输入的内容会关联到行动备忘。"
           }
         },
         "zh-Hant" : {
@@ -8177,19 +8177,19 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Der Planname wird als Unterkategorie hinzugefügt und der eingegebene Inhalt mit der Aufgabennotiz verknüpft."
+            "value" : "Der Planname wird als Unterkategorie hinzugefügt und der eingegebene Inhalt mit dem Aufgaben-Memo verknüpft."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Le nom du plan est ajouté comme sous-catégorie et le contenu saisi est lié à la note d'action."
+            "value" : "Le nom du plan est ajouté comme sous-catégorie et le contenu saisi est lié au mémo de l'action."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Il nome del piano viene aggiunto come sottocategoria e il contenuto inserito viene collegato alla nota dell'azione."
+            "value" : "Il nome del piano viene aggiunto come sottocategoria e il contenuto inserito viene collegato al memo dell'azione."
           }
         },
         "es" : {
@@ -8225,7 +8225,7 @@
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "प्लान का नाम उप-श्रेणी के रूप में जुड़ता है और दर्ज सामग्री एक्शन नोट से लिंक हो जाती है।"
+            "value" : "प्लान का नाम उप-श्रेणी के रूप में जुड़ता है और दर्ज सामग्री एक्शन मेमो से लिंक हो जाती है।"
           }
         }
       }
@@ -10456,19 +10456,19 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "マイタイムテーブル"
+            "value" : "マイタイムライン"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "我的时间表"
+            "value" : "我的时间线"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "我的時間表"
+            "value" : "我的時間軸"
           }
         },
         "de" : {
@@ -10480,7 +10480,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mon planning"
+            "value" : "Ma chronologie"
           }
         },
         "it" : {
@@ -13671,13 +13671,13 @@
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "บันทึกที่ติดขัด"
+            "value" : "โน้ตอุปสรรค"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "रुका हुआ नोट"
+            "value" : "रुकावट मेमो"
           }
         }
       }
@@ -13917,7 +13917,7 @@
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "บันทึก"
+            "value" : "โน้ต"
           }
         },
         "hi" : {
@@ -13999,13 +13999,13 @@
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "บันทึก %lld รายการ"
+            "value" : "โน้ต %lld รายการ"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld नोट"
+            "value" : "%lld मेमो"
           }
         }
       }
@@ -14051,7 +14051,7 @@
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Modifica nota…"
+            "value" : "Modifica memo…"
           }
         },
         "es" : {
@@ -14081,13 +14081,13 @@
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "แก้ไขบันทึก…"
+            "value" : "แก้ไขโน้ต…"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "नोट संपादित करें…"
+            "value" : "मेमो संपादित करें…"
           }
         }
       }
@@ -14133,7 +14133,7 @@
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Menu delle note"
+            "value" : "Menu dei memo"
           }
         },
         "es" : {
@@ -14163,13 +14163,13 @@
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "เมนูบันทึก"
+            "value" : "เมนูโน้ต"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "नोट मेन्यू"
+            "value" : "मेमो मेन्यू"
           }
         }
       }
@@ -14215,7 +14215,7 @@
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Elenco delle note"
+            "value" : "Elenco dei memo"
           }
         },
         "es" : {
@@ -14245,13 +14245,13 @@
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "รายการบันทึก"
+            "value" : "รายการโน้ต"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "नोट सूची"
+            "value" : "मेमो सूची"
           }
         }
       }
@@ -14297,7 +14297,7 @@
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ora della nota"
+            "value" : "Ora del memo"
           }
         },
         "es" : {
@@ -14327,13 +14327,13 @@
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "เวลาบันทึก"
+            "value" : "เวลาโน้ต"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "नोट का समय"
+            "value" : "मेमो का समय"
           }
         }
       }
@@ -14379,7 +14379,7 @@
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aggiungi nota"
+            "value" : "Aggiungi memo"
           }
         },
         "es" : {
@@ -14409,13 +14409,13 @@
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "เพิ่มบันทึก"
+            "value" : "เพิ่มโน้ต"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "नोट जोड़ें"
+            "value" : "मेमो जोड़ें"
           }
         }
       }
@@ -14461,7 +14461,7 @@
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Scrivi una nota…"
+            "value" : "Scrivi un memo…"
           }
         },
         "es" : {
@@ -14491,13 +14491,13 @@
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ป้อนบันทึก…"
+            "value" : "ป้อนโน้ต…"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "नोट लिखें…"
+            "value" : "मेमो लिखें…"
           }
         }
       }
@@ -15193,7 +15193,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Fines %@"
+            "value" : "Particules fines %@"
           }
         },
         "it" : {
@@ -16947,13 +16947,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "细项 %lld"
+            "value" : "细分 %lld"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "詳細 %lld"
+            "value" : "詳細活動 %lld"
           }
         },
         "de" : {
@@ -17007,7 +17007,7 @@
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "विवरण %lld"
+            "value" : "उप-गतिविधि %lld"
           }
         }
       }
@@ -17029,19 +17029,19 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "细分行动"
+            "value" : "细分动作"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "詳細動作"
+            "value" : "詳細活動"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Detailaktion"
+            "value" : "Detailaktivität"
           }
         },
         "fr" : {
@@ -17053,7 +17053,7 @@
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Azione dettagliata"
+            "value" : "Attività dettagliata"
           }
         },
         "es" : {
@@ -17089,7 +17089,7 @@
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "बारीक एक्शन"
+            "value" : "उप-गतिविधि"
           }
         }
       }
@@ -17253,7 +17253,7 @@
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "बारीक गतिविधि"
+            "value" : "उप-गतिविधि"
           }
         }
       }
@@ -17879,7 +17879,7 @@
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "El aspecto seleccionado se aplica al widget de la pantalla de inicio · pantalla de bloqueo · app"
+            "value" : "El aspecto seleccionado se aplica al widget de la pantalla de inicio · pantalla bloqueada · app"
           }
         },
         "pt-BR" : {
@@ -19620,7 +19620,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "時間プレイヘッド"
+            "value" : "時間の再生ヘッド"
           }
         },
         "zh-Hans" : {
@@ -19984,7 +19984,7 @@
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Configuración inicial"
+            "value" : "Iniciar configuración"
           }
         },
         "pt-BR" : {
@@ -21394,7 +21394,7 @@
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ancora nessuna nota. Allega a questa azione decisioni, idee, ostacoli e prossimi passi."
+            "value" : "Ancora nessun memo. Allega a questa azione decisioni, idee, ostacoli e prossimi passi."
           }
         },
         "es" : {
@@ -21424,13 +21424,13 @@
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ยังไม่มีบันทึก แนบการตัดสินใจ ไอเดีย อุปสรรค และขั้นตอนถัดไปกับการปฏิบัตินี้ได้โดยตรง"
+            "value" : "ยังไม่มีโน้ต แนบการตัดสินใจ ไอเดีย อุปสรรค และขั้นตอนถัดไปกับการปฏิบัตินี้ได้โดยตรง"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "अभी कोई नोट नहीं। फ़ैसले, विचार, रुकावटें और अगले कदम सीधे इस एक्शन से जोड़ें।"
+            "value" : "अभी कोई मेमो नहीं। फ़ैसले, विचार, रुकावटें और अगले कदम सीधे इस एक्शन से जोड़ें।"
           }
         }
       }
@@ -24038,7 +24038,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "今日歩いたルート"
+            "value" : "今日移動したルート"
           }
         },
         "zh-Hans" : {
@@ -25447,7 +25447,7 @@
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nessuna nota scritta in questo periodo."
+            "value" : "Nessun memo scritto in questo periodo."
           }
         },
         "es" : {
@@ -25477,13 +25477,13 @@
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ไม่มีการเขียนบันทึกในช่วงเวลานี้"
+            "value" : "ไม่มีการเขียนโน้ตในช่วงเวลานี้"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "इस अवधि में कोई नोट नहीं लिखा गया।"
+            "value" : "इस अवधि में कोई मेमो नहीं लिखा गया।"
           }
         }
       }
@@ -25939,7 +25939,7 @@
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lascia una breve nota a quest'ora…"
+            "value" : "Lascia un breve memo a quest'ora…"
           }
         },
         "es" : {
@@ -25969,13 +25969,13 @@
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ทิ้งบันทึกสั้นๆ ไว้ตอนนี้…"
+            "value" : "ทิ้งโน้ตสั้นๆ ไว้ตอนนี้…"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "इस समय पर एक छोटा नोट छोड़ें…"
+            "value" : "इस समय पर एक छोटा मेमो छोड़ें…"
           }
         }
       }
@@ -26021,7 +26021,7 @@
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ancora nessuna nota a quest'ora"
+            "value" : "Ancora nessun memo a quest'ora"
           }
         },
         "es" : {
@@ -26051,13 +26051,13 @@
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ยังไม่มีบันทึกในเวลานี้"
+            "value" : "ยังไม่มีโน้ตในเวลานี้"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "इस समय पर अभी कोई नोट नहीं"
+            "value" : "इस समय पर अभी कोई मेमो नहीं"
           }
         }
       }
@@ -27954,7 +27954,7 @@
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "दो पंक्तियाँ: प्लान और बारीक गतिविधियाँ"
+            "value" : "दो पंक्तियाँ: प्लान और उप-गतिविधियाँ"
           }
         }
       }
@@ -29211,7 +29211,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ロック画面 · Live Activity"
+            "value" : "ロック画面 · ライブアクティビティ"
           }
         },
         "zh-Hans" : {
@@ -29223,61 +29223,61 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "鎖定畫面 · Live Activity"
+            "value" : "鎖定畫面 · 即時動態"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sperrbildschirm · Live Activity"
+            "value" : "Sperrbildschirm · Live-Aktivität"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Écran verrouillé · Live Activity"
+            "value" : "Écran verrouillé · Activité en direct"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Schermata di blocco · Live Activity"
+            "value" : "Schermata di blocco · Attività live"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pantalla de bloqueo · Live Activity"
+            "value" : "Pantalla bloqueada · Actividad en vivo"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tela Bloqueada · Live Activity"
+            "value" : "Tela Bloqueada · Atividade ao Vivo"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Màn hình khóa · Live Activity"
+            "value" : "Màn hình khóa · Hoạt động trực tiếp"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Layar Terkunci · Live Activity"
+            "value" : "Layar Terkunci · Aktivitas Langsung"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "หน้าจอล็อค · Live Activity"
+            "value" : "หน้าจอล็อค · กิจกรรมสด"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "लॉक स्क्रीन · Live Activity"
+            "value" : "लॉक स्क्रीन · लाइव ऐक्टिविटी"
           }
         }
       }
@@ -31672,7 +31672,7 @@
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "सबवे लाइन"
+            "value" : "मेट्रो लाइन"
           }
         }
       }
@@ -31952,7 +31952,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zuhause, Schule, Akademie, Arbeit oder ein Restaurant auf deinen aktuellen Standort setzen"
+            "value" : "Zuhause, Schule, Nachhilfe, Arbeit oder ein Restaurant auf deinen aktuellen Standort setzen"
           }
         },
         "fr" : {
@@ -32139,7 +32139,7 @@
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Serve un primo piano"
+            "value" : "Serve almeno un piano"
           }
         },
         "es" : {
@@ -33170,7 +33170,7 @@
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "बारीक गतिविधि · समय संपादित करने के लिए दबाएँ"
+            "value" : "उप-गतिविधि · समय संपादित करने के लिए दबाएँ"
           }
         }
       }
@@ -34071,7 +34071,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Putar catatan hari ini"
+            "value" : "Putar catatan hari"
           }
         },
         "th" : {

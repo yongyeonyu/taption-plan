@@ -646,9 +646,9 @@ struct MapHomeTransitLocationsSheet: View {
                     span: MKCoordinateSpan(latitudeDelta: 0.5, longitudeDelta: 0.5)
                 )
             }
-            guard let response = try? await MKLocalSearch(request: request).start(),
-                  !Task.isCancelled else { return }
-            searchResults = response.mapItems.prefix(8).map { item in
+            let found = await MapHomeSearchRunner.items(for: request).items
+            guard !Task.isCancelled else { return }
+            searchResults = found.prefix(8).map { item in
                 MapHomeSearchResult(
                     title: item.name ?? query,
                     subtitle: item.placemark.title ?? "",

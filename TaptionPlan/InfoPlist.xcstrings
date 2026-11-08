@@ -428,7 +428,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Auf der Apple Watch gemessene Trainings werden in der Health-App gespeichert."
+            "value" : "Auf der Apple Watch gemessene Workouts werden in der Health-App gespeichert."
           }
         },
         "fr" : {
@@ -476,7 +476,7 @@
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apple Watch पर मापे गए वर्कआउट Health ऐप में सहेजे जाते हैं।"
+            "value" : "Apple Watch पर मापे गए वर्कआउट स्वास्थ्य ऐप में सहेजे जाते हैं।"
           }
         }
       }
@@ -790,7 +790,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "L'accès à Mouvement et forme estime la marche, la course, les déplacements, les pas et les changements d'étage lorsque la collecte des capteurs est activée."
+            "value" : "L'accès à Mouvements et forme estime la marche, la course, les déplacements, les pas et les changements d'étage lorsque la collecte des capteurs est activée."
           }
         },
         "it" : {

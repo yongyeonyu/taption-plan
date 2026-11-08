@@ -87,12 +87,14 @@ final class MapHomeSearchCompleter: NSObject, @preconcurrency MKLocalSearchCompl
         completer.resultTypes = [.address, .pointOfInterest, .query]
     }
 
+    /// 현재 위치 둘레만 먼저 찾고, 그 안에 하나도 없을 때만 넓혀 찾는다(SRC1108A01). 일본에 가면 일본이 먼저다.
     func update(query: String, region: MKCoordinateRegion) {
         completer.region = region
         let value = query.trimmingCharacters(in: .whitespacesAndNewlines)
         if value.isEmpty {
             clear()
         } else if completer.queryFragment != value {
+            completer.regionPriority = .required
             completer.queryFragment = value
         }
     }
@@ -107,6 +109,14 @@ final class MapHomeSearchCompleter: NSObject, @preconcurrency MKLocalSearchCompl
     }
 
     func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
+        if completer.results.isEmpty, completer.regionPriority == .required, !completer.queryFragment.isEmpty {
+            completer.regionPriority = .default
+            completer.cancel()
+            let fragment = completer.queryFragment
+            completer.queryFragment = ""
+            completer.queryFragment = fragment
+            return
+        }
         let next = Array(completer.results.prefix(8))
         guard results.map(\.title) != next.map(\.title)
                 || results.map(\.subtitle) != next.map(\.subtitle)

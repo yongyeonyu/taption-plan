@@ -400,11 +400,24 @@ private struct FirstRunPlacePicker: View {
 
     private var currentPoint: GeoPoint? { model.latestSensorReading?.point }
 
+    /// 지도 검색과 같이 현재 위치 둘레를 먼저 찾는다(SRC1108A01).
     private var searchRegion: MKCoordinateRegion {
         guard let currentPoint else { return MKCoordinateRegion(.world) }
-        return MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: currentPoint.latitude, longitude: currentPoint.longitude),
-            span: MKCoordinateSpan(latitudeDelta: 1, longitudeDelta: 1)
+        return MapHomeSearchPolicy.region(
+            visibleCenter: CLLocationCoordinate2D(latitude: 0, longitude: 0),
+            visibleSpan: MKCoordinateSpan(latitudeDelta: 0, longitudeDelta: 0),
+            current: CLLocationCoordinate2D(latitude: currentPoint.latitude, longitude: currentPoint.longitude)
+        )
+    }
+
+    /// 다녀온 곳·지하철역은 이름 중간 글자로도 찾는다. 이 장소 자신은 뺀다.
+    private var localMatches: [MapHomeSearchResult] {
+        MapHomeSearchPolicy.localMatches(
+            query,
+            places: model.settings.frequentPlaces.filter { $0.id != place?.id },
+            visited: model.snapshot.places,
+            origin: currentPoint.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) },
+            language: language
         )
     }
 
@@ -467,6 +480,21 @@ private struct FirstRunPlacePicker: View {
             }
 
             if isSearchFocused || !query.isEmpty {
+                ForEach(localMatches) { result in
+                    Button { select(result) } label: {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(result.title)
+                                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.body), weight: .semibold))
+                                .foregroundStyle(Color.tpInk)
+                            Text(result.subtitle)
+                                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .medium))
+                                .foregroundStyle(Color.tpSecondary)
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 40, alignment: .leading)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
                 ForEach(completer.results, id: \.self) { result in
                     Button { select(result) } label: {
                         VStack(alignment: .leading, spacing: 2) {
@@ -535,6 +563,13 @@ private struct FirstRunPlacePicker: View {
             savedName = item.name ?? completion.title
             clearSearch()
         }
+    }
+
+    private func select(_ result: MapHomeSearchResult) {
+        guard let place else { return }
+        model.setFrequentPlaceLocation(place.id, latitude: result.coordinate.latitude, longitude: result.coordinate.longitude)
+        savedName = result.title
+        clearSearch()
     }
 
     private func clearSearch() {

@@ -27,13 +27,13 @@ EN_TABLES = [
     ("TaptionPlan/UI/MapHomeSupportViews.swift", "summaryEnglishTitle"),
     ("TaptionPlan/UI/MapHomeLocationPresentation.swift", "englishName"),
     ("TaptionPlan/UI/MapHomeLanguage.swift", "englishTitle"),
-    ("TaptionPlan/Core/MovementModels.swift", "englishTitle"),
-    ("TaptionPlan/Core/PlaceModels.swift", "englishTitle"),
+    ("Packages/TaptionPlanStore/Sources/TaptionPlanStore/Snapshot/MovementModels.swift", "englishTitle"),
+    ("Packages/TaptionPlanStore/Sources/TaptionPlanStore/Snapshot/PlaceModels.swift", "englishTitle"),
     ("TaptionPlan/Core/WidgetShared.swift", "englishTitle"),
-    ("TaptionPlan/Core/FloorModels.swift", "english"),
+    ("Packages/TaptionPlanStore/Sources/TaptionPlanStore/Snapshot/FloorModels.swift", "english"),
 ]
 # 표로 쓴 "한글", "English" 짝을 그대로 읽는 파일.
-PAIR_TABLE_FILES = ["TaptionPlan/UI/FirstRunTutorialGuides.swift", "TaptionPlan/UI/StickerArtBasics.swift", "TaptionPlan/Core/PlaceModels.swift"]
+PAIR_TABLE_FILES = ["TaptionPlan/UI/FirstRunTutorialGuides.swift", "TaptionPlan/UI/StickerArtBasics.swift", "Packages/TaptionPlanStore/Sources/TaptionPlanStore/Snapshot/PlaceModels.swift"]
 CALL_NAMES = {"text", "t", "runtimeText"}
 LABEL_PAIR = re.compile(r"(?:korean\w*|ko|koreanName|koreanTitle|name|title)\s*:\s*\"")
 ENGLISH_LABEL = re.compile(r"\s*,\s*(?:english\w*|en)\s*:\s*\"")
