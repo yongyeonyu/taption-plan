@@ -6,6 +6,11 @@
 
 - 전체 단위 시험(BOKKI-iPhone11): XCTest 2,270건 중 실패 1·건너뜀 21, Swift Testing 51 통과(`build/validation/TFB1108A05/unit-full-1.log`). 실패는 시간 측정 시험 `CategoryCacheBenchmarkTests.testStickmanActionCacheSpeedup`(속도 향상 ×1.59, 기준 ×2)로, 맥 부하 평균 약 69인 상태였다. 같은 빌드로 단독 3회 재실행 모두 통과(`bench-rerun-1~3.log`). 부하 민감 시험으로 보고 진행(앱 코드 무관 여부를 코드로 입증하지는 않음).
 
+## TFB1108A05 · TestFlight 301 + 외부 베타 결과 (2026-11-08)
+
+- 빌드 301, VALID, 내부 그룹 연결·노출 확인(`build/validation/TFB1108A05/testflight-report.json`). 아카이브 네 번들 모두 301. 외부 그룹 `TP 지인 테스트` 연결·베타 심사 제출: 응답 `WAITING_FOR_REVIEW`, 다시 읽으니 외부 `IN_BETA_TESTING`, 그룹 빌드에 301(`external-submit.log`).
+- 300 대비: CTR1103A02·DYN1108A01·DYN1108A02·지킴 시험. 실기기 화면 확인은 대표.
+
 ## DYN1108A01 · 다이나믹 아일랜드 펼침 화면을 오늘 요약으로 (2026-11-08)
 
 - 대표 결정: 센서 칸 완전히 뺌, 분류별 시간 + 걸음·거리.
