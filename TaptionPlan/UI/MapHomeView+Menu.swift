@@ -1053,7 +1053,6 @@ extension MapHomeView {
                     )
                 }
                 .accessibilityLabel(language.text("안개 탐험 선택", "Choose fog of exploration"))
-                MapHomeOfflineMapMenuRow(language: language) { vectorMapViewportStore.viewport?.region }
 
                 counterMenuItem
                 sidebarDisplayGroup
