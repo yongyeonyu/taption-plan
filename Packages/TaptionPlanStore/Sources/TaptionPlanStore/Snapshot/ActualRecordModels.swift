@@ -5,11 +5,11 @@ import TaptionPlanCore
 // `TaptionPlanCore/Domain/ActualRecord.swift`에 있다.
 
 extension ActualRecord {
-    var semanticLevel: TimelineSemanticLevel {
+    public var semanticLevel: TimelineSemanticLevel {
         .activity
     }
 
-    var sourceKind: TimelineSourceKind {
+    public var sourceKind: TimelineSourceKind {
         switch source {
         case .manual, .timer:
             .action
@@ -23,13 +23,13 @@ extension ActualRecord {
 /// use the stable prefixes emitted by `RecordRelationshipEngine`, allowing
 /// calendar/place/travel records to be linked without changing their source
 /// models.
-struct RecordLink: Identifiable, Codable, Hashable, Sendable {
-    var id: UUID
-    var fromNodeID: String
-    var toNodeID: String
-    var createdAt: Date
+public struct RecordLink: Identifiable, Codable, Hashable, Sendable {
+    public var id: UUID
+    public var fromNodeID: String
+    public var toNodeID: String
+    public var createdAt: Date
 
-    init(
+    public init(
         id: UUID = UUID(),
         fromNodeID: String,
         toNodeID: String,

@@ -3,17 +3,17 @@ import TaptionPlanCore
 
 // `ActivityCorrection`은 `TaptionPlanCore/Domain/ActivityCorrection.swift`에 있다.
 
-struct ActivityCorrectionOption: Identifiable, Hashable, Sendable {
-    var id: String
-    var title: String
-    var behavior: String?
-    var categoryID: String
-    var systemImage: String
-    var isAutomatic: Bool
-    var isCustom: Bool
-    var isAutomaticOnly: Bool
+public struct ActivityCorrectionOption: Identifiable, Hashable, Sendable {
+    public var id: String
+    public var title: String
+    public var behavior: String?
+    public var categoryID: String
+    public var systemImage: String
+    public var isAutomatic: Bool
+    public var isCustom: Bool
+    public var isAutomaticOnly: Bool
 
-    init(
+    public init(
         id: String,
         title: String,
         behavior: String?,
@@ -33,7 +33,7 @@ struct ActivityCorrectionOption: Identifiable, Hashable, Sendable {
         self.isAutomaticOnly = isAutomaticOnly
     }
 
-    var correction: ActivityCorrection {
+    public var correction: ActivityCorrection {
         ActivityCorrection(
             title: title,
             behavior: behavior,
@@ -41,7 +41,7 @@ struct ActivityCorrectionOption: Identifiable, Hashable, Sendable {
         )
     }
 
-    static func custom(_ title: String) -> ActivityCorrectionOption {
+    public static func custom(_ title: String) -> ActivityCorrectionOption {
         let normalized = title
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
@@ -62,8 +62,8 @@ struct ActivityCorrectionOption: Identifiable, Hashable, Sendable {
     }
 }
 
-enum ActivityCorrectionEngine {
-    static func replacingActivity(
+public enum ActivityCorrectionEngine {
+    public static func replacingActivity(
         in existing: ActivityCorrection?,
         with option: ActivityCorrectionOption
     ) -> ActivityCorrection {
@@ -73,7 +73,7 @@ enum ActivityCorrectionEngine {
         return correction
     }
 
-    static func applying(
+    public static func applying(
         _ corrections: [UUID: ActivityCorrection],
         to actuals: [ActualRecord]
     ) -> [ActualRecord] {

@@ -1,7 +1,8 @@
 import Foundation
+import TaptionWatchSync
 import TaptionPlanCore
 
-enum CatStyle: String, Codable, CaseIterable, Sendable {
+public enum CatStyle: String, Codable, CaseIterable, Sendable {
     case white
     case calico
     case mackerel
@@ -11,17 +12,31 @@ enum CatStyle: String, Codable, CaseIterable, Sendable {
     case cow
 }
 
-struct MapUserActivityCategory: Identifiable, Codable, Hashable, Sendable {
-    var id: UUID
-    var title: String
-    var systemImage: String
-    var hex: String
+public struct MapUserActivityCategory: Identifiable, Codable, Hashable, Sendable {
+    public var id: UUID
+    public var title: String
+    public var systemImage: String
+    public var hex: String
     /// 사용자가 고른 화랑이 동작. 옛 설정에는 없다.
-    var animation: MapUserActivityAnimation? = nil
+    public var animation: MapUserActivityAnimation? = nil
+
+    public init(
+        id: UUID,
+        title: String,
+        systemImage: String,
+        hex: String,
+        animation: MapUserActivityAnimation? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.systemImage = systemImage
+        self.hex = hex
+        self.animation = animation
+    }
 }
 
 /// 행동 분류에 쓰지 않는 동작 중 사용자 추가 분류에 고를 수 있는 것(CAT1103A03).
-enum MapUserActivityAnimation: String, Codable, CaseIterable, Identifiable, Hashable, Sendable {
+public enum MapUserActivityAnimation: String, Codable, CaseIterable, Identifiable, Hashable, Sendable {
     case mapReading
     case walkInPlace
     case stretching
@@ -30,9 +45,9 @@ enum MapUserActivityAnimation: String, Codable, CaseIterable, Identifiable, Hash
     case catWheel
     case puzzled
 
-    var id: Self { self }
+    public var id: Self { self }
 
-    var title: String {
+    public var title: String {
         switch self {
         case .mapReading: AppLanguagePreference.text(korean: "지도 펼쳐 보기", english: "Reading a map")
         case .walkInPlace: AppLanguagePreference.text(korean: "제자리 걷기", english: "Walking in place")
@@ -45,12 +60,12 @@ enum MapUserActivityAnimation: String, Codable, CaseIterable, Identifiable, Hash
     }
 }
 
-enum MapDisplayProvider: CaseIterable, Hashable, Sendable {
+public enum MapDisplayProvider: CaseIterable, Hashable, Sendable {
     case apple
     case openFreeMap
 }
 
-enum MapDisplayStyle: String, Codable, CaseIterable, Sendable {
+public enum MapDisplayStyle: String, Codable, CaseIterable, Sendable {
     case standard
     /// 화면 이름은 "위성"(항공 사진 + 도로·지명). 저장값 호환을 위해 hybrid를 유지한다.
     case hybrid
@@ -60,9 +75,9 @@ enum MapDisplayStyle: String, Codable, CaseIterable, Sendable {
     case mapLibreRPG
 
     /// 없앤 스타일(밝게·파스텔, UIX1101A03)로 저장된 값은 가장 비슷한 산책 지도로 읽는다.
-    static let retiredRawValues: Set<String> = ["mapLibreLight", "mapLibrePastel"]
+    public static let retiredRawValues: Set<String> = ["mapLibreLight", "mapLibrePastel"]
 
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let value = try decoder.singleValueContainer().decode(String.self)
         if Self.retiredRawValues.contains(value) {
             self = .mapLibreCasual
@@ -72,30 +87,30 @@ enum MapDisplayStyle: String, Codable, CaseIterable, Sendable {
     }
 }
 
-enum MapMemoDisplayFilter: String, Codable, CaseIterable, Hashable, Sendable {
+public enum MapMemoDisplayFilter: String, Codable, CaseIterable, Hashable, Sendable {
     case all
     case relevant
 }
 
-enum MapStickerPlacement: String, Codable, CaseIterable, Hashable, Sendable {
+public enum MapStickerPlacement: String, Codable, CaseIterable, Hashable, Sendable {
     case map
     case schedule
 }
 
-struct MapSticker: Identifiable, Codable, Hashable, Sendable {
-    var id: UUID
-    var title: String
-    var memo: String?
-    var systemImage: String
-    var colorHex: String
-    var placement: MapStickerPlacement
-    var point: GeoPoint?
-    var planID: UUID?
-    var occurredAt: Date
-    var createdAt: Date
-    var updatedAt: Date
+public struct MapSticker: Identifiable, Codable, Hashable, Sendable {
+    public var id: UUID
+    public var title: String
+    public var memo: String?
+    public var systemImage: String
+    public var colorHex: String
+    public var placement: MapStickerPlacement
+    public var point: GeoPoint?
+    public var planID: UUID?
+    public var occurredAt: Date
+    public var createdAt: Date
+    public var updatedAt: Date
 
-    init(
+    public init(
         id: UUID = UUID(),
         title: String,
         memo: String? = nil,
@@ -123,19 +138,19 @@ struct MapSticker: Identifiable, Codable, Hashable, Sendable {
 }
 
 extension MapDisplayStyle {
-    static let appleStyles: [Self] = [
+    public static let appleStyles: [Self] = [
         .standard,
         .hybrid,
     ]
 
-    static let openFreeMapStyles: [Self] = [
+    public static let openFreeMapStyles: [Self] = [
         .mapLibreRPG,
         .mapLibreCasual,
         .mapLibreNight,
         .mapLibreContrast,
     ]
 
-    var provider: MapDisplayProvider {
+    public var provider: MapDisplayProvider {
         switch self {
         case .standard, .hybrid:
             .apple
@@ -147,18 +162,18 @@ extension MapDisplayStyle {
         }
     }
 
-    static func defaultStyle(for provider: MapDisplayProvider) -> Self {
+    public static func defaultStyle(for provider: MapDisplayProvider) -> Self {
         switch provider {
         case .apple: .standard
         case .openFreeMap: .mapLibreRPG
         }
     }
 
-    var runtimeStyle: Self { self }
+    public var runtimeStyle: Self { self }
 }
 
-enum MapUserActivityIconCatalog {
-    static let candidates = [
+public enum MapUserActivityIconCatalog {
+    public static let candidates = [
         "tag.fill", "star.fill", "heart.fill", "bolt.fill",
         "flag.fill", "bookmark.fill", "pin.fill", "bell.fill",
         "gift.fill", "trophy.fill", "medal.fill", "crown.fill",
@@ -175,7 +190,7 @@ enum MapUserActivityIconCatalog {
         "printer.fill", "shippingbox.fill", "archivebox.fill",
     ]
 
-    static func available(
+    public static func available(
         for customCategories: [MapUserActivityCategory]
     ) -> [String] {
         let used = Set(

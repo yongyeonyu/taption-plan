@@ -1,7 +1,7 @@
 import Foundation
 import TaptionPlanCore
 
-enum PermissionFeature: String, Codable, CaseIterable, Sendable {
+public enum PermissionFeature: String, Codable, CaseIterable, Sendable {
     case photos
     case calendar
     case health
@@ -14,7 +14,7 @@ enum PermissionFeature: String, Codable, CaseIterable, Sendable {
     case appUsage
 }
 
-enum PermissionState: String, Codable, CaseIterable, Sendable {
+public enum PermissionState: String, Codable, CaseIterable, Sendable {
     case notDetermined
     case denied
     case limited
@@ -22,7 +22,7 @@ enum PermissionState: String, Codable, CaseIterable, Sendable {
     case unavailable
 }
 
-enum RequiredPermission: String, CaseIterable, Equatable, Sendable {
+public enum RequiredPermission: String, CaseIterable, Equatable, Sendable {
     case locationAlways
     case locationPrecise
     case motion
@@ -32,14 +32,14 @@ enum RequiredPermission: String, CaseIterable, Equatable, Sendable {
     case liveActivities
 }
 
-struct RequiredPermissionSnapshot: Equatable, Sendable {
-    var permissions: [PermissionFeature: PermissionState]
-    var locationAlwaysAuthorized: Bool
-    var locationPrecise: Bool
-    var healthKitRequestCompleted: Bool
-    var liveActivitiesEnabled: Bool
+public struct RequiredPermissionSnapshot: Equatable, Sendable {
+    public var permissions: [PermissionFeature: PermissionState]
+    public var locationAlwaysAuthorized: Bool
+    public var locationPrecise: Bool
+    public var healthKitRequestCompleted: Bool
+    public var liveActivitiesEnabled: Bool
 
-    init(
+    public init(
         permissions: [PermissionFeature: PermissionState] = [:],
         locationAlwaysAuthorized: Bool = false,
         locationPrecise: Bool = false,
@@ -54,32 +54,32 @@ struct RequiredPermissionSnapshot: Equatable, Sendable {
     }
 }
 
-struct RequiredPermissionGate: Equatable, Sendable {
-    static let sensorCollectionRequirements: [RequiredPermission] = [
+public struct RequiredPermissionGate: Equatable, Sendable {
+    public static let sensorCollectionRequirements: [RequiredPermission] = [
         .locationAlways,
         .locationPrecise,
         .motion,
     ]
 
-    let missing: [RequiredPermission]
+    public let missing: [RequiredPermission]
 
-    var allSatisfied: Bool { missing.isEmpty }
+    public var allSatisfied: Bool { missing.isEmpty }
 
-    var sensorCollectionMissing: [RequiredPermission] {
+    public var sensorCollectionMissing: [RequiredPermission] {
         missing.filter(Self.sensorCollectionRequirements.contains)
     }
 
-    var sensorCollectionReady: Bool {
+    public var sensorCollectionReady: Bool {
         sensorCollectionMissing.isEmpty
     }
 
-    init(snapshot: RequiredPermissionSnapshot) {
+    public init(snapshot: RequiredPermissionSnapshot) {
         missing = RequiredPermission.allCases.filter {
             !Self.isSatisfied($0, in: snapshot)
         }
     }
 
-    static func evaluate(
+    public static func evaluate(
         _ snapshot: RequiredPermissionSnapshot
     ) -> RequiredPermissionGate {
         RequiredPermissionGate(snapshot: snapshot)

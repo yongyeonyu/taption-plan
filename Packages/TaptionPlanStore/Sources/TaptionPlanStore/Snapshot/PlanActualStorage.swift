@@ -1,12 +1,12 @@
 import Foundation
 import TaptionPlanCore
 
-struct PlanActualEdit: Sendable {
-    let baseline: [ActualRecord]
-    let result: [ActualRecord]
-    let index: Int
+public struct PlanActualEdit: Sendable {
+    public let baseline: [ActualRecord]
+    public let result: [ActualRecord]
+    public let index: Int
 
-    init?(replacing record: ActualRecord, at index: Int, in baseline: [ActualRecord]) {
+    public init?(replacing record: ActualRecord, at index: Int, in baseline: [ActualRecord]) {
         guard baseline.indices.contains(index), baseline[index].id == record.id else { return nil }
         self.baseline = baseline
         self.index = index
@@ -17,8 +17,8 @@ struct PlanActualEdit: Sendable {
 }
 
 /// 계획 기록 배열의 저장소 공유·바이트 단위 동일성 비교 보조 함수.
-enum PlanActualStorage {
-    static func reusingUnchangedStorage(_ records: [ActualRecord], previous: [ActualRecord],
+public enum PlanActualStorage {
+    public static func reusingUnchangedStorage(_ records: [ActualRecord], previous: [ActualRecord],
                                         cancellationCheck: () throws -> Void) rethrows -> [ActualRecord] {
         guard !sharesStorage(records, previous) else { return previous }
         guard records.count == previous.count else { return records }
@@ -30,12 +30,12 @@ enum PlanActualStorage {
         return previous
     }
 
-    static func sharesStorage(_ lhs: [ActualRecord], _ rhs: [ActualRecord]) -> Bool {
+    public static func sharesStorage(_ lhs: [ActualRecord], _ rhs: [ActualRecord]) -> Bool {
         guard lhs.count == rhs.count else { return false }
         return lhs.withUnsafeBufferPointer { a in rhs.withUnsafeBufferPointer { b in a.baseAddress == b.baseAddress } }
     }
 
-    static func exactlyEqual(_ lhs: ArraySlice<ActualRecord>, _ rhs: ArraySlice<ActualRecord>) -> Bool {
+    public static func exactlyEqual(_ lhs: ArraySlice<ActualRecord>, _ rhs: ArraySlice<ActualRecord>) -> Bool {
         guard lhs.count == rhs.count else { return false }
         return zip(lhs, rhs).allSatisfy { exactlyEqual($0, $1) }
     }

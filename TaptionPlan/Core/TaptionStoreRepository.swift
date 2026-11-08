@@ -1,7 +1,6 @@
 import Foundation
 import TaptionPlanCore
-// 저장소 패키지를 앱·위젯 전체에 다시 내보낸다. 저장소 actor·열 코덱이 `FeatureModels`와 함께
-// 패키지로 옮겨 가기 전(ALL1101A01 2차)까지, 다른 파일이 import 한 줄씩 늘리지 않게 한다.
+// 저장소 패키지(저장소 actor·열 코덱·`TaptionDataSnapshot`과 저장 모델)를 앱·위젯 전체에 다시 내보낸다.
 @_exported import TaptionPlanStore
 
 /// 계획·기록 저장소. `TaptionStoreV2`의 `records` 표에 스냅샷의 모든 항목을 행 하나씩 저장한다.

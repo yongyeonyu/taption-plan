@@ -1,7 +1,7 @@
 import Foundation
 import TaptionPlanCore
 
-enum TimelineLevel: String, Codable, CaseIterable, Sendable {
+public enum TimelineLevel: String, Codable, CaseIterable, Sendable {
     case day
     case week
     case month
@@ -10,12 +10,12 @@ enum TimelineLevel: String, Codable, CaseIterable, Sendable {
 
 /// The semantic hierarchy shown by the timetable.  Record origin is kept
 /// separate in `TimelineSourceKind`; it is a badge, not another parent row.
-enum TimelineSemanticLevel: String, Codable, CaseIterable, Sendable {
+public enum TimelineSemanticLevel: String, Codable, CaseIterable, Sendable {
     case dayPhase = "일과"
     case activity = "활동"
 }
 
-enum TimelineSourceKind: String, Codable, CaseIterable, Sendable {
+public enum TimelineSourceKind: String, Codable, CaseIterable, Sendable {
     case automatic = "자동"
     case routine = "루틴"
     case action = "액션"
@@ -25,7 +25,7 @@ enum TimelineSourceKind: String, Codable, CaseIterable, Sendable {
 /// together here so every scale, every detail card and every widget reads the
 /// same vocabulary. Duplicating the label tables per surface is what produced
 /// English identifiers leaking into the week timetable.
-enum TimelineRowKind: String, CaseIterable, Sendable {
+public enum TimelineRowKind: String, CaseIterable, Sendable {
     case calendar
     case location
     case movement
@@ -37,7 +37,7 @@ enum TimelineRowKind: String, CaseIterable, Sendable {
     case photo
     case memo
 
-    var title: String {
+    public var title: String {
         switch self {
         case .calendar: "일정"
         case .location: "위치"
@@ -52,7 +52,7 @@ enum TimelineRowKind: String, CaseIterable, Sendable {
         }
     }
 
-    var systemImage: String {
+    public var systemImage: String {
         switch self {
         case .calendar: "calendar"
         case .location: "mappin.and.ellipse"
@@ -69,7 +69,7 @@ enum TimelineRowKind: String, CaseIterable, Sendable {
 
     /// Records carry a category identifier, which is the row identifier for
     /// every automatic lane except the calendar lane.
-    init?(categoryID: String) {
+    public init?(categoryID: String) {
         switch categoryID {
         case "schedule": self = .calendar
         default:
@@ -80,7 +80,7 @@ enum TimelineRowKind: String, CaseIterable, Sendable {
         }
     }
 
-    static func title(forCategoryID id: String) -> String? {
+    public static func title(forCategoryID id: String) -> String? {
         TimelineRowKind(categoryID: id)?.title
     }
 }
@@ -88,8 +88,8 @@ enum TimelineRowKind: String, CaseIterable, Sendable {
 /// Stable identifiers shared by the timeline row labels and detail cards.
 /// Keeping this order in the model lets the UI persist one ordering for both
 /// surfaces without coupling storage to SwiftUI view types.
-enum TimelineRowOrder {
-    static let defaults = [
+public enum TimelineRowOrder {
+    public static let defaults = [
         TimelineRowKind.calendar.rawValue,
         TimelineRowKind.location.rawValue,
         TimelineRowKind.movement.rawValue,
@@ -101,7 +101,7 @@ enum TimelineRowOrder {
         TimelineRowKind.memo.rawValue,
     ]
 
-    static func ordered<T>(
+    public static func ordered<T>(
         _ values: [T],
         id: (T) -> String,
         savedIDs: [String]
@@ -116,7 +116,7 @@ enum TimelineRowOrder {
         }.map(\.element)
     }
 
-    static func moved(
+    public static func moved(
         _ values: [String],
         sourceID: String,
         targetID: String,
@@ -138,14 +138,14 @@ enum TimelineRowOrder {
     }
 }
 
-struct TimelineViewport: Codable, Hashable, Sendable {
-    var dayStart: Date
-    var visibleSpan: TimeInterval
-    var horizontalOffset: TimeInterval
-    var currentTime: Date
-    var followsCurrentTime: Bool
+public struct TimelineViewport: Codable, Hashable, Sendable {
+    public var dayStart: Date
+    public var visibleSpan: TimeInterval
+    public var horizontalOffset: TimeInterval
+    public var currentTime: Date
+    public var followsCurrentTime: Bool
 
-    init(
+    public init(
         dayStart: Date,
         visibleSpan: TimeInterval = 15 * 3_600,
         horizontalOffset: TimeInterval = 6 * 3_600,
