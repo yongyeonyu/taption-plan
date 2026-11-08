@@ -69,6 +69,33 @@ final class DiagnosticsLogSupportTests: XCTestCase {
         XCTAssertEqual(summary["previous_session_last_phase_at"], "1000.0")
     }
 
+    func testLaunchContextReportsIdleSecondsDeviceAndPrewarm() throws {
+        let suite = "TaptionPlanDiagnosticsSessionTests.\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let first = TaptionPlanDiagnosticsSession.launchContextFields(
+            defaults: defaults, environment: [:], deviceModel: "iPhone12,3"
+        )
+        XCTAssertNil(first["idle_s"])
+        XCTAssertEqual(first["device_model"], "iPhone12,3")
+        XCTAssertEqual(first["prewarmed"], "false")
+
+        _ = TaptionPlanDiagnosticsSession.begin(defaults: defaults)
+        TaptionPlanDiagnosticsSession.recordPhase(.background, at: Date(timeIntervalSince1970: 1_000), defaults: defaults)
+        _ = TaptionPlanDiagnosticsSession.begin(defaults: defaults)
+        let next = TaptionPlanDiagnosticsSession.launchContextFields(
+            now: Date(timeIntervalSince1970: 1_090), defaults: defaults,
+            environment: ["ActivePrewarm": "1"], deviceModel: "iPhone12,3"
+        )
+        XCTAssertEqual(next["idle_s"], "90")
+        XCTAssertEqual(next["prewarmed"], "true")
+        // 진단 내보내기에서 건강 관련 필드로 지워지지 않아야 비교에 쓸 수 있다.
+        let line = #"{"event":"initial_launch_started","fields":{"device_model":"iPhone12,3","idle_s":"90","prewarmed":"true"}}"#
+        let redacted = TaptionPlanDiagnosticsLogPolicy.redactingPersonalHealthFields(in: line)
+        XCTAssertTrue(redacted.contains("idle_s") && redacted.contains("device_model") && redacted.contains("prewarmed"))
+        XCTAssertFalse(TaptionPlanDeviceModel.identifier.isEmpty)
+    }
+
     func testSystemTerminationFieldsExcludeFreeformExceptionAndPersonalData() {
         let fields = TaptionTerminationDiagnosticFields.make(
             reason: "Namespace FRONTBOARD, Code 0x8badf00d; private-location private-secret",
