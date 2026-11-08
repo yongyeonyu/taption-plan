@@ -546,7 +546,7 @@ struct AppShellView: View {
 
     private func performInitialLaunchPreparation() async {
         initialLaunchStartedAt = ProcessInfo.processInfo.systemUptime
-        TaptionPlanDiagnosticsLogger.shared.record("initial_launch_started")
+        TaptionPlanDiagnosticsLogger.shared.record("initial_launch_started", fields: TaptionPlanDiagnosticsSession.launchContextFields())
         recordLaunchGate("launch_task_started")
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: 15_000_000_000)

@@ -199,6 +199,7 @@ extension AppModel {
                 forInfoDictionaryKey: "CFBundleVersion"
             ) as? String ?? "unknown",
             "os": ProcessInfo.processInfo.operatingSystemVersionString,
+            "device_model": TaptionPlanDeviceModel.identifier,
             "plans": String(snapshot.plans.count),
             "actuals": String(snapshot.actuals.count),
             "travel": String(snapshot.travel.count),

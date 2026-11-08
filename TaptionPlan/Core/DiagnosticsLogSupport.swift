@@ -226,6 +226,39 @@ struct TaptionPlanDiagnosticsSession: Sendable {
         }
         return values
     }
+
+    /// 시작 시간 비교용 맥락. 기기 모델, 직전 세션의 마지막 상태 뒤 쉰 초, iOS 사전 실행 여부를 남긴다.
+    /// 다른 기기 로그나 연달아 다시 연 시작(파일 캐시가 따뜻함)이 섞이면 `bootstrapped` 시간을
+    /// 빌드 회귀로 잘못 읽는다(LCH1108A01). `begin` 뒤에 불러야 직전 세션 값이 읽힌다.
+    static func launchContextFields(
+        now: Date = .now,
+        defaults: UserDefaults = .standard,
+        environment: [String: String] = ProcessInfo.processInfo.environment,
+        deviceModel: String = TaptionPlanDeviceModel.identifier
+    ) -> [String: String] {
+        var fields = [
+            "device_model": deviceModel,
+            "prewarmed": String(environment["ActivePrewarm"] == "1"),
+        ]
+        if let lastPhaseAt = defaults.object(forKey: lastPhaseAtKey) as? Date {
+            fields["idle_s"] = String(max(0, Int(now.timeIntervalSince(lastPhaseAt))))
+        }
+        return fields
+    }
+}
+
+/// 하드웨어 모델 식별자(예: iPhone12,3). 개인 정보가 아니며 기기별 성능 비교에만 쓴다.
+enum TaptionPlanDeviceModel {
+    static let identifier: String = {
+        if let simulated = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"] {
+            return "sim-\(simulated)"
+        }
+        var system = utsname()
+        uname(&system)
+        return withUnsafeBytes(of: &system.machine) { bytes in
+            String(decoding: bytes.prefix { $0 != 0 }, as: UTF8.self)
+        }
+    }()
 }
 
 /// Safe, compact movement metadata for support packages. Coordinates and raw
