@@ -487,14 +487,17 @@ struct NLETrack: Hashable, Sendable {
     ///
     /// 원본 기록이 없는 빈 시간(`parent.sourceIDs`가 빈 날 구멍)은 건드리지 않는다.
     /// 센서에 없는 시간을 지어내지 않는다는 이 트랙의 규칙과 같은 이유다.
+    /// `skippingParents`의 원본 구간은 그대로 둔다(직접 입력 건너뛰기, OVW1108A01).
     @discardableResult
     mutating func overwrite(
         with option: ActivityCorrectionOption,
-        matchingCategoryID: String? = nil
+        matchingCategoryID: String? = nil,
+        skippingParents: Set<NLEClipParent> = []
     ) -> Int {
         var changed = 0
         for index in clips.indices {
             guard !clips[index].parent.sourceIDs.isEmpty,
+                  !skippingParents.contains(clips[index].parent),
                   clips[index].option != option,
                   matchingCategoryID == nil
                     || clips[index].option.categoryID == matchingCategoryID else { continue }
@@ -510,8 +513,9 @@ struct NLETrack: Hashable, Sendable {
     ///
     /// 손으로 가른 클립을 되돌리는 일이다(자막 합치기와 같다). 덮기와 함께 쓰면
     /// 같은 분류가 된 이웃이 하나로 붙어, 하루가 원본 구간 수만큼의 띠로 정리된다.
+    /// 원본 구간이 다르면 같은 분류여도 합치지 않는다(`merged`가 `parent`를 비교한다).
     @discardableResult
-    mutating func mergeAdjacent() -> Int {
+    mutating func mergeAdjacent(skippingParents: Set<NLEClipParent> = []) -> Int {
         var merged = 0
         var result: [NLEClip] = []
         for clip in clips.sorted(by: { lhs, rhs in
@@ -519,7 +523,8 @@ struct NLETrack: Hashable, Sendable {
                 ? lhs.id < rhs.id
                 : lhs.startMinute < rhs.startMinute
         }) {
-            if let last = result.last, let union = Self.merged(last, clip) {
+            if let last = result.last, !skippingParents.contains(clip.parent),
+               let union = Self.merged(last, clip) {
                 result[result.count - 1] = union
                 merged += 1
                 continue

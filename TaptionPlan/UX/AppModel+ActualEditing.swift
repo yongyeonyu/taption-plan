@@ -275,41 +275,13 @@ extension AppModel {
         )
 
         let previous = snapshot
-        let sourceIDs = Set(request.sourceIDs)
-        let preservedPieces = snapshot.actuals
-            .filter {
-                sourceIDs.contains($0.id)
-                    && ActivitySectionOverrideEngine.isEditableOverride($0)
-            }
-            .flatMap {
-                ActivitySectionOverrideEngine.outsidePieces(
-                    of: $0,
-                    replacing: request.originalSpan
-                )
-            }
-        snapshot.actuals.removeAll { actual in
-            sourceIDs.contains(actual.id)
-                && ActivitySectionOverrideEngine.isEditableOverride(actual)
-        }
-        snapshot.actuals = ActivitySectionOverrideEngine.removingOverrides(
-            from: snapshot.actuals,
-            sameSpanAs: records
-        )
-        snapshot.actuals.append(contentsOf: preservedPieces)
-        snapshot.actuals.append(contentsOf: records)
-        snapshot.actuals.sort { $0.startedAt < $1.startedAt }
-        for option in editedOptions(in: request.mode) where option.isCustom {
-            snapshot.settings.customActivityLabels =
-                AppFeatureSettings.normalizedActivityLabels(
-                    snapshot.settings.customActivityLabels + [option.title]
-                )
-        }
-        let editedSpan = primarySpan(for: request)
-        if editedOptions(in: request.mode).contains(where: { $0.categoryID == "sleep" }) {
-            replaceConfirmedSleepSpans(adding: [editedSpan])
-        } else {
-            replaceConfirmedSleepSpans(removing: [editedSpan])
-        }
+        var staged = snapshot
+        guard let stage = ActivitySectionEditStaging.stage(
+            request, into: &staged, sleepRule: .primarySpan
+        ) else { return nil }
+        snapshot = staged
+        let preservedPieces = stage.preservedPieces
+        let editedSpan = stage.editedSpan
 
         let rollback = userEditRollback(from: previous)
         guard await persist() else {
@@ -374,71 +346,6 @@ extension AppModel {
             recordIDs: records.map(\.id),
             selectedSpan: selectedSpan
         )
-    }
-
-    /// NLE 클립 편집을 순서대로 적용한다.
-    ///
-    /// 대분류 요청을 먼저, 서브클립 요청을 나중에 넣는다. 서브클립 구간은
-    /// 대분류 구간 안에 있으므로, 나중에 덮어야 서브클립이 살아남는다.
-    func applyClipEditRequests(
-        _ requests: [ActivitySectionEditRequest]
-    ) async -> Bool {
-        guard !requests.isEmpty else { return true }
-        guard hasLoadedFullSnapshot else {
-            userFacingError = AppLanguagePreference.text(
-                korean: "기록을 모두 불러온 뒤에 저장할 수 있습니다.",
-                english: "You can save after all records finish loading."
-            )
-            return false
-        }
-        guard acceptsDataMutation() else { return false }
-        var applied = 0
-        for request in requests {
-            if await saveActivitySectionEdit(request) != nil {
-                applied += 1
-            }
-        }
-        TaptionPlanDiagnosticsLogger.shared.record(
-            "nle_clip_edit_applied",
-            fields: [
-                "request_count": String(requests.count),
-                "applied_count": String(applied),
-            ]
-        )
-        return applied == requests.count
-    }
-
-    private func editedOptions(
-        in mode: ActivitySectionEditMode
-    ) -> [ActivityCorrectionOption] {
-        switch mode {
-        case let .replace(_, option), let .cutLowerUnconfirmed(_, option),
-             let .insertDetail(_, option):
-            return [option]
-        case let .cover(pieces, _):
-            return pieces.map(\.option)
-        }
-    }
-
-    private func primarySpan(
-        for request: ActivitySectionEditRequest
-    ) -> TimeSpan {
-        switch request.mode {
-        case let .replace(editedSpan, _):
-            return editedSpan.intersection(with: request.originalSpan)
-                ?? request.originalSpan
-        case let .cutLowerUnconfirmed(cutAt, _):
-            return TimeSpan(start: request.originalSpan.start, end: cutAt)
-        case let .insertDetail(detailSpan, _):
-            return detailSpan.intersection(with: request.originalSpan)
-                ?? request.originalSpan
-        case let .cover(pieces, _):
-            // 가장 긴 조각을 대표 구간으로 삼는다(선택 표시용).
-            return pieces
-                .map(\.span)
-                .max { $0.duration < $1.duration }
-                ?? request.originalSpan
-        }
     }
 
     func applyStoredActivityCorrections() {

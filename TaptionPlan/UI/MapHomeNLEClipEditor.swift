@@ -20,7 +20,7 @@ struct MapHomeNLEClipEditor: View {
 
     @State var track: NLETrack
     @State var subTrack: NLETrack
-    @State private var selectedClipID: String?
+    @State var selectedClipID: String?
     @State var selectedSubClipID: String?
     /// 상세 층 클립의 자동·수동 근거(NLE1103A02).
     @State var subProvenance: [String: NLESubActivityProvenance] = [:]
@@ -65,8 +65,10 @@ struct MapHomeNLEClipEditor: View {
     @State var nearbyPlaceNames: [String: String] = [:]
     /// 핸들을 잡을 때의 재생 헤드와 손가락 자리(분).
     @State private var scrubAnchor: (playhead: Double, touch: Double)?
-    /// 전체 덮기 창. 여러 개로 나뉜 클립을 한 번에 같은 분류로 바꾼다.
-    @State private var isOverwritePresented = false
+    /// 전체 덮기 창과 그 창이 묻는 직접 입력 기록, 편집기 위 짧은 알림(OVW1108A01).
+    @State var isOverwritePresented = false
+    @State var overwriteUserOwnedIDs: Set<UUID> = []
+    @State var editorNotice: String?
     /// 경계 손잡이를 이웃의 먼 쪽 끝까지 가져갔을 때 묻는 합치기 확인.
     @State private var mergePrompt: NLEMergePrompt?
     /// 이번 손잡이 끌기를 시작할 때 맞닿은 이웃의 길이(분). 이미 최소 길이였던 이웃은 "끝까지 갔다"고 보지 않는다.
@@ -164,14 +166,8 @@ struct MapHomeNLEClipEditor: View {
                 "Merge ‘\(prompt.neighborTitle)’ into ‘\(prompt.clipTitle)’. Sensor data is kept."
             ))
         }
-        .sheet(isPresented: $isOverwritePresented) {
-            MapHomeNLEOverwriteSheet(
-                language: language,
-                track: track,
-                selectedCategoryID: selectedClip?.option.categoryID,
-                categories: categoryOptions
-            ) { applyOverwrite($0) }
-        }
+        .sheet(isPresented: $isOverwritePresented) { overwriteSheet }
+        .overlay(alignment: .top) { editorNoticeBanner }
     }
 
     /// 클립 줄이 화면 양옆으로 삐져나오는 폭.
@@ -551,7 +547,7 @@ struct MapHomeNLEClipEditor: View {
         // '하나 고치기'와 '전체 덮기'를 같은 자리에서 고르게 한다.
         Divider()
         Button {
-            isOverwritePresented = true
+            presentOverwrite()
         } label: {
             Label(language.text("전체 덮기", "Overwrite all"), systemImage: "rectangle.on.rectangle")
         }
@@ -811,7 +807,7 @@ struct MapHomeNLEClipEditor: View {
         }
     }
 
-    private var selectedClip: NLEClip? {
+    var selectedClip: NLEClip? {
         selectedClipID.flatMap { track.clip($0) }
     }
 
@@ -868,7 +864,7 @@ struct MapHomeNLEClipEditor: View {
         return selectedClip.map { !$0.isGap } ?? false
     }
 
-    private var categoryOptions: [MapHomeSidebarMajorCategory] {
+    var categoryOptions: [MapHomeSidebarMajorCategory] {
         MapHomeSidebarMajorCategory.all(categoryColors: model.settings.mapCategoryColors)
             + model.settings.mapUserActivityCategories.map(MapHomeSidebarMajorCategory.custom)
     }
@@ -1142,23 +1138,6 @@ struct MapHomeNLEClipEditor: View {
         }
     }
 
-    /// 전체 덮기·합치기를 적용한다. 실제로 바뀐 것이 없으면 되돌리기를 쌓지 않는다.
-    private func applyOverwrite(_ request: NLEOverwriteRequest) {
-        let result = NLEOverwritePolicy.apply(
-            track,
-            option: request.category.map { Self.option(for: $0, language: language) },
-            scope: request.scope,
-            selectedCategoryID: selectedClip?.option.categoryID,
-            mergesAfter: request.mergesAfter
-        )
-        guard result.changed + result.merged > 0 else { return }
-        pushUndo()
-        track = result.track
-        // 합쳐져 사라진 클립을 가리키지 않게 재생 헤드 자리의 클립으로 옮긴다.
-        selectedClipID = track.clip(atMinute: playheadMinute)?.id
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-    }
-
     func pushUndo() {
         undoStack.append(currentSnapshot)
         if undoStack.count > 40 { undoStack.removeFirst() }
@@ -1213,17 +1192,18 @@ struct MapHomeNLEClipEditor: View {
             guard let main = track.clip(atMinute: clip.startMinute) else { continue }
             detailTrack.setFillOption(main.option, forClipID: clip.id)
         }
-        let requests = track.editRequests(dayStart: dayStart)
-            + detailTrack.editRequests(dayStart: dayStart)
-        guard !requests.isEmpty else {
+        let main = track.editRequests(dayStart: dayStart)
+        let detail = detailTrack.editRequests(dayStart: dayStart)
+        guard !main.isEmpty || !detail.isEmpty else {
             dismiss()
             return
         }
         isSaving = true
         Task { @MainActor in
-            let saved = await model.applyClipEditRequests(requests)
+            // 한 번에 저장하고, 실패하면 아무것도 바뀌지 않은 채 편집기에 남는다(OVW1108A01).
+            let saved = await model.saveClipEditBatch(main: main, detail: detail)
             isSaving = false
-            guard saved else { return }
+            guard saved else { return showSaveFailedNotice() }
             onSaved()
             dismiss()
         }

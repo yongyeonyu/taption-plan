@@ -1,0 +1,105 @@
+import SwiftUI
+
+/// 전체 덮기 창을 열고 결과를 편집기 트랙에 반영한다(OVW1108A01).
+///
+/// 편집기 본문은 줄 예산이 묶여 있어 덮기 흐름은 여기 둔다. 저장은 하지 않는다 —
+/// 「적용」을 눌러야 `AppModel.saveClipEditBatch`가 한 번에 저장한다.
+extension MapHomeNLEClipEditor {
+    /// 창을 열 때 한 번만 직접 입력 기록을 찾는다. 창이 떠 있는 동안 다시 세지 않는다.
+    func presentOverwrite() {
+        overwriteUserOwnedIDs = Self.userOwnedSourceIDs(
+            in: track,
+            actuals: model.snapshot.actuals,
+            corrections: model.snapshot.settings.activityCorrections
+        )
+        isOverwritePresented = true
+    }
+
+    /// 트랙 클립이 딛고 선 기록 중 사용자가 직접 만들거나 고친 것.
+    static func userOwnedSourceIDs(
+        in track: NLETrack,
+        actuals: [ActualRecord],
+        corrections: [UUID: ActivityCorrection]
+    ) -> Set<UUID> {
+        let sourceIDs = Set(track.clips.flatMap(\.parent.sourceIDs))
+        guard !sourceIDs.isEmpty else { return [] }
+        return Set(actuals.lazy
+            .filter { sourceIDs.contains($0.id) && ActualRecord.userOwned($0, activityCorrections: corrections) }
+            .map(\.id))
+    }
+
+    var overwriteSheet: some View {
+        MapHomeNLEOverwriteSheet(
+            language: language,
+            track: track,
+            subTrack: subTrack,
+            userOwnedSourceIDs: overwriteUserOwnedIDs,
+            selectedCategoryID: selectedClip?.option.categoryID,
+            categories: categoryOptions
+        ) { applyOverwrite($0) }
+    }
+
+    /// 전체 덮기·합치기를 적용한다. 실제로 바뀐 것이 없으면 되돌리기를 쌓지 않는다.
+    /// 대분류·상세활동을 한 칸에 담으므로 편집기 되돌리기 한 번에 함께 돌아온다.
+    func applyOverwrite(_ request: NLEOverwriteRequest) {
+        let result = NLEOverwritePolicy.apply(
+            track,
+            subTrack: subTrack,
+            option: request.category.map { Self.option(for: $0, language: language) },
+            scope: request.scope,
+            selectedCategoryID: selectedClip?.option.categoryID,
+            mergesAfter: request.mergesAfter,
+            userOwnedSourceIDs: overwriteUserOwnedIDs,
+            includesUserOwned: request.includesUserOwned,
+            clearsDetails: request.clearsDetails
+        )
+        if result.skipped > 0 {
+            showEditorNotice(language.text(
+                "직접 입력한 클립 \(result.skipped)개는 그대로 두었습니다",
+                "Left \(result.skipped) clip(s) you entered unchanged"
+            ))
+        }
+        guard result.changed + result.merged + result.removedDetails > 0 else { return }
+        pushUndo()
+        track = result.track
+        if let detail = result.subTrack { subTrack = detail }
+        // 합쳐져 사라진 클립을 가리키지 않게 재생 헤드 자리의 클립으로 옮긴다.
+        selectedClipID = track.clip(atMinute: playheadMinute)?.id
+        selectedSubClipID = nil
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+    }
+
+    func showSaveFailedNotice() {
+        showEditorNotice(language.text(
+            "저장하지 못했습니다. 기록은 하나도 바뀌지 않았습니다. 다시 적용해 보세요.",
+            "Couldn't save. No records changed. Try applying again."
+        ))
+    }
+
+    func showEditorNotice(_ text: String) {
+        editorNotice = text
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(4))
+            if editorNotice == text { editorNotice = nil }
+        }
+    }
+
+    @ViewBuilder
+    var editorNoticeBanner: some View {
+        if let editorNotice {
+            Text(editorNotice)
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
+                .foregroundStyle(Color.tpInk)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(Color.tpSurface, in: Capsule())
+                .overlay { Capsule().stroke(Color.tpLine, lineWidth: 1) }
+                .padding(.top, 8)
+                .padding(.horizontal, 16)
+                .onTapGesture { self.editorNotice = nil }
+                .transition(.opacity)
+                .accessibilityIdentifier("nleEditorNotice")
+        }
+    }
+}
