@@ -2,6 +2,12 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## ANI1104A01 · 위젯·잠금 화면 아틀라스 새 자세 (2026-11-08)
+
+- 결과: 이미 반영됨. `TaptionHwarangPose` 33개 자세(`restCroissant`·`laptopWalk` 포함)가 위젯 아틀라스 세 털색(416×2112px, 64×33줄)과 Watch 자산 모두에 있다. 아틀라스는 dfe431e5(11-05)에서 다시 뽑혔고 그 뒤 고양이 그림 코드 변경 없음. 지금 코드로 다시 뽑은 세 장의 SHA-256이 저장본과 같다(`build/validation/ANI1104A01/ani1104-atlas-sha256.txt`). PNG·연결 변경 없음, 크기 영향 없음.
+- 새 시험 `WidgetPoseAtlasTests`: 아틀라스 크기·칸마다 그림·지금 코드 그림과 알파 차이 2% 미만, Watch 털색×자세 그림 존재. 시뮬레이터 3건 통과, `TaptionPlanWidget` 빌드 성공(`ani1104-guard-test.log`·`ani1104-widget-build.log`).
+- 실기기: 업무 휴식(크루아상)·업무 걷기 그림이 홈 위젯·잠금 화면·다이나믹 아일랜드·Watch에서 보이는지.
+
 ## TFB1108A02 · TestFlight 298 (2026-11-08)
 
 - `release.sh --yes --request-id TFB1108A02`: 빌드 298, VALID, 내부 그룹 연결·테스터 노출 확인(`build/validation/TFB1108A02/testflight-report.json`). 아카이브 네 제품 번들 모두 298.
