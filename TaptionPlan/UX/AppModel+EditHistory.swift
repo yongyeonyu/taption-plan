@@ -25,14 +25,19 @@ struct AppModelHistoryEntry {
             && addedSuppressedIDs.isEmpty && removedSuppressedIDs.isEmpty
     }
 
+    /// `includesAutomaticActuals`를 켜면 자동 기록의 바뀐 표시 사본(확정 수면이 자른 조각 등)도 담는다.
+    /// 여러 구간을 한 번에 고친 편집을 되돌리기 한 번에 통째로 돌려놓을 때 쓴다(OVW1108A01).
     static func difference(
         from before: TaptionDataSnapshot,
-        to after: TaptionDataSnapshot
+        to after: TaptionDataSnapshot,
+        includesAutomaticActuals: Bool = false
     ) -> Self {
         let planOrigins: (PlanRecord) -> Bool = {
             $0.origin == .user || $0.origin == .repeatRule
         }
-        let manualRecords: (ActualRecord) -> Bool = { $0.source == .manual }
+        let manualRecords: (ActualRecord) -> Bool = {
+            includesAutomaticActuals || $0.source == .manual
+        }
         let oldLabels = Set(before.settings.customActivityLabels)
         let newLabels = Set(after.settings.customActivityLabels)
         let oldSleepSpans = Set(before.settings.confirmedSleepSpans)
@@ -292,9 +297,14 @@ extension AppModel {
 
     func recordUserEdit(
         from before: TaptionDataSnapshot,
-        coalescingKey: String? = nil
+        coalescingKey: String? = nil,
+        includesAutomaticActuals: Bool = false
     ) {
-        let entry = AppModelHistoryEntry.difference(from: before, to: snapshot)
+        let entry = AppModelHistoryEntry.difference(
+            from: before,
+            to: snapshot,
+            includesAutomaticActuals: includesAutomaticActuals
+        )
         guard !entry.isEmpty else { return }
         let now = Date.now
         if let coalescingKey,

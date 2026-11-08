@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B1080600000000000000000A /* NLEOverwriteBatchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10806000000000000000009 /* NLEOverwriteBatchTests.swift */; };
+		B10806000000000000000008 /* AppModel+ClipEditBatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10806000000000000000007 /* AppModel+ClipEditBatch.swift */; };
+		B10806000000000000000006 /* ActivitySectionEditStaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10806000000000000000005 /* ActivitySectionEditStaging.swift */; };
+		B10806000000000000000004 /* MapHomeNLEClipEditor+Overwrite.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10806000000000000000003 /* MapHomeNLEClipEditor+Overwrite.swift */; };
+		B10806000000000000000002 /* MapHomeNLEOverwritePolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10806000000000000000001 /* MapHomeNLEOverwritePolicy.swift */; };
 		A1000000000000000D1104A3 /* NearbyMemoNotificationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000D1104A3 /* NearbyMemoNotificationTests.swift */; };
 		A1000000000000000D1104A2 /* AppModel+NearbyMemos.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000D1104A2 /* AppModel+NearbyMemos.swift */; };
 		A1000000000000000D1104A1 /* NearbyMemoNotifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000D1104A1 /* NearbyMemoNotifications.swift */; };
@@ -633,6 +638,11 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		B10806000000000000000009 /* NLEOverwriteBatchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NLEOverwriteBatchTests.swift; sourceTree = "<group>"; };
+		B10806000000000000000007 /* AppModel+ClipEditBatch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+ClipEditBatch.swift"; sourceTree = "<group>"; };
+		B10806000000000000000005 /* ActivitySectionEditStaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitySectionEditStaging.swift; sourceTree = "<group>"; };
+		B10806000000000000000003 /* MapHomeNLEClipEditor+Overwrite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeNLEClipEditor+Overwrite.swift"; sourceTree = "<group>"; };
+		B10806000000000000000001 /* MapHomeNLEOverwritePolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeNLEOverwritePolicy.swift; sourceTree = "<group>"; };
 		F1000000000000000B1104A3 /* AppSecrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = AppSecrets.xcconfig; sourceTree = "<group>"; };
 		F1000000000000000D1104A3 /* NearbyMemoNotificationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NearbyMemoNotificationTests.swift"; sourceTree = "<group>"; };
 		F1000000000000000D1104A2 /* AppModel+NearbyMemos.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+NearbyMemos.swift"; sourceTree = "<group>"; };
@@ -1294,6 +1304,7 @@
 				F5B1102A020000000000004D /* TransitBoardingPersistenceTests.swift */,
 				F5B1102A020000000000004B /* PredictedRoutePersistenceTests.swift */,
 				F5B1102A0200000000000049 /* NLETrackTests.swift */,
+				B10806000000000000000009 /* NLEOverwriteBatchTests.swift */,
 				A1102A0100000000000000F2 /* RailRideLikelihoodTests.swift */,
 				A1102A0100000000000000F3 /* RawSensorReplayVerdictTests.swift */,
 				A1102A0100000000000000F6 /* UnobservedStayEngineTests.swift */,
@@ -1483,6 +1494,8 @@
 				F100000000000000000000EB /* MapHomeCalendarChipValue.swift */,
 				F100000000000000000000EC /* MapHomeNLEToolbar.swift */,
 				F100000000000000000000ED /* MapHomeNLEOverwriteSheet.swift */,
+				B10806000000000000000003 /* MapHomeNLEClipEditor+Overwrite.swift */,
+				B10806000000000000000001 /* MapHomeNLEOverwritePolicy.swift */,
 				F100000000000000000000EE /* MapHomeNLEPreviewHost.swift */,
 				F100000000000000000000EF /* MapHomeDateStrip.swift */,
 				F1000000000000000000F5D1 /* MapHomeCounterDetailSheet.swift */,
@@ -1551,6 +1564,8 @@
 				F5B1102A0200000000000032 /* AppModelPolicies.swift */,
 				F5B1102A0200000000000030 /* AppModelSupportTypes.swift */,
 				F5B1102A020000000000002E /* AppModel+ActualEditing.swift */,
+				B10806000000000000000007 /* AppModel+ClipEditBatch.swift */,
+				B10806000000000000000005 /* ActivitySectionEditStaging.swift */,
 				F5B1102A020000000000002C /* AppModel+Backup.swift */,
 				F5B1102A020000000000002A /* AppModel+Bootstrap.swift */,
 				F5B1102A0200000000000028 /* AppModel+Classification.swift */,
@@ -2143,6 +2158,8 @@
 				A5B1102A0200000000000033 /* AppModelPolicies.swift in Sources */,
 				A5B1102A0200000000000031 /* AppModelSupportTypes.swift in Sources */,
 				A5B1102A020000000000002F /* AppModel+ActualEditing.swift in Sources */,
+				B10806000000000000000008 /* AppModel+ClipEditBatch.swift in Sources */,
+				B10806000000000000000006 /* ActivitySectionEditStaging.swift in Sources */,
 				A5B1102A020000000000002D /* AppModel+Backup.swift in Sources */,
 				A5B1102A020000000000002B /* AppModel+Bootstrap.swift in Sources */,
 				A5B1102A0200000000000029 /* AppModel+Classification.swift in Sources */,
@@ -2314,6 +2331,8 @@
 				A100000000000000000000EB /* MapHomeCalendarChipValue.swift in Sources */,
 				A100000000000000000000EC /* MapHomeNLEToolbar.swift in Sources */,
 				A100000000000000000000ED /* MapHomeNLEOverwriteSheet.swift in Sources */,
+				B10806000000000000000004 /* MapHomeNLEClipEditor+Overwrite.swift in Sources */,
+				B10806000000000000000002 /* MapHomeNLEOverwritePolicy.swift in Sources */,
 				A100000000000000000000EE /* MapHomeNLEPreviewHost.swift in Sources */,
 				A100000000000000000000EF /* MapHomeDateStrip.swift in Sources */,
 				A1000000000000000000F5D1 /* MapHomeCounterDetailSheet.swift in Sources */,
@@ -2509,6 +2528,7 @@
 				A5B1102A020000000000004E /* TransitBoardingPersistenceTests.swift in Sources */,
 				A5B1102A020000000000004C /* PredictedRoutePersistenceTests.swift in Sources */,
 				A5B1102A020000000000004A /* NLETrackTests.swift in Sources */,
+				B1080600000000000000000A /* NLEOverwriteBatchTests.swift in Sources */,
 				A1102A0100000000000000B1 /* RailRideLikelihoodTests.swift in Sources */,
 				A1102A0100000000000000B2 /* RawSensorReplayVerdictTests.swift in Sources */,
 				A1102A0100000000000000B3 /* UnobservedStayEngineTests.swift in Sources */,
