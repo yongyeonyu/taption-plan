@@ -6522,6 +6522,21 @@ final class MapHomeSidebarNoteTests: XCTestCase {
         XCTAssertLessThanOrEqual(center + MapHomeSidebarNoteLayout.width / 2, badgeX - MapHomeSidebarNoteLayout.badgeRadius)
     }
 
+    // 구글 일정 말풍선에 제목·시간·일정 메모가 그대로 실리는지 고정한다(SBN1102A01).
+    func testGoogleEventNoteCarriesTitleTimeAndNotes() {
+        let start = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        let span = TimeSpan(start: start, end: start.addingTimeInterval(3_600))
+        let note = MapHomeSidebarNote.event(id: "google-abc", title: "회의", notes: "3층 회의실", span: span, minute: 540, badgeOffset: -26)
+        XCTAssertEqual(note.id, "event-google-abc")
+        XCTAssertEqual(note.source, .event)
+        XCTAssertEqual(note.title, "회의")
+        XCTAssertEqual(note.detail, "3층 회의실")
+        XCTAssertTrue(note.time.contains("–"))
+        XCTAssertEqual(note.minute, 540)
+        XCTAssertEqual(note.badgeOffset, -26)
+        XCTAssertNil(note.editorTarget)
+    }
+
     func testEventHasNoEditorButMemoAndStickerDo() {
         let id = UUID()
         func note(_ source: MapHomeSidebarNote.Source) -> MapHomeSidebarNote {
