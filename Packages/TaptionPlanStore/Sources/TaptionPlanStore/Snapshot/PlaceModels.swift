@@ -1,7 +1,7 @@
 import Foundation
 import TaptionPlanCore
 
-enum FrequentPlaceKind: String, Codable, CaseIterable, Sendable {
+public enum FrequentPlaceKind: String, Codable, CaseIterable, Sendable {
     case home
     case school
     case academy
@@ -11,7 +11,7 @@ enum FrequentPlaceKind: String, Codable, CaseIterable, Sendable {
     case restaurant
     case custom
 
-    var defaultName: String {
+    public var defaultName: String {
         switch self {
         case .home: "집"
         case .school: "학교"
@@ -24,7 +24,7 @@ enum FrequentPlaceKind: String, Codable, CaseIterable, Sendable {
         }
     }
 
-    var systemImage: String {
+    public var systemImage: String {
         switch self {
         case .home: "house.fill"
         case .school: "graduationcap.fill"
@@ -38,14 +38,14 @@ enum FrequentPlaceKind: String, Codable, CaseIterable, Sendable {
     }
 }
 
-enum UserTransitLocationKind: String, Codable, CaseIterable, Hashable, Sendable {
+public enum UserTransitLocationKind: String, Codable, CaseIterable, Hashable, Sendable {
     case subwayStation
     case busStop
     case trainStation
     case airport
     case harbor
 
-    var title: String {
+    public var title: String {
         switch self {
         case .subwayStation: "지하철역"
         case .busStop: "버스정류장"
@@ -55,7 +55,7 @@ enum UserTransitLocationKind: String, Codable, CaseIterable, Hashable, Sendable 
         }
     }
 
-    var englishTitle: String {
+    public var englishTitle: String {
         switch self {
         case .subwayStation: "Subway station"
         case .busStop: "Bus stop"
@@ -65,7 +65,7 @@ enum UserTransitLocationKind: String, Codable, CaseIterable, Hashable, Sendable 
         }
     }
 
-    var systemImage: String {
+    public var systemImage: String {
         switch self {
         case .subwayStation: "tram.fill"
         case .busStop: "bus.fill"
@@ -75,7 +75,7 @@ enum UserTransitLocationKind: String, Codable, CaseIterable, Hashable, Sendable 
         }
     }
 
-    var boardingMode: TravelMode {
+    public var boardingMode: TravelMode {
         switch self {
         case .subwayStation: .subway
         case .busStop: .bus
@@ -85,7 +85,7 @@ enum UserTransitLocationKind: String, Codable, CaseIterable, Hashable, Sendable 
         }
     }
 
-    var mapKitQueries: [String] {
+    public var mapKitQueries: [String] {
         switch self {
         case .subwayStation: ["지하철역", "subway station"]
         case .busStop: ["버스정류장", "bus stop"]
@@ -95,7 +95,7 @@ enum UserTransitLocationKind: String, Codable, CaseIterable, Hashable, Sendable 
         }
     }
 
-    var mapKitSearchRadiusMeters: Double {
+    public var mapKitSearchRadiusMeters: Double {
         switch self {
         case .subwayStation: 450
         case .busStop: 140
@@ -106,16 +106,16 @@ enum UserTransitLocationKind: String, Codable, CaseIterable, Hashable, Sendable 
     }
 }
 
-struct UserTransitLocation: Identifiable, Codable, Hashable, Sendable {
-    var id: UUID
-    var name: String
-    var kind: UserTransitLocationKind
-    var point: GeoPoint
-    var floor: Int?
-    var radiusMeters: Double
-    var createdAt: Date
+public struct UserTransitLocation: Identifiable, Codable, Hashable, Sendable {
+    public var id: UUID
+    public var name: String
+    public var kind: UserTransitLocationKind
+    public var point: GeoPoint
+    public var floor: Int?
+    public var radiusMeters: Double
+    public var createdAt: Date
 
-    init(
+    public init(
         id: UUID = UUID(),
         name: String,
         kind: UserTransitLocationKind,
@@ -134,22 +134,22 @@ struct UserTransitLocation: Identifiable, Codable, Hashable, Sendable {
     }
 }
 
-enum TransitBoardingPlaceSource: String, Codable, Hashable, Sendable {
+public enum TransitBoardingPlaceSource: String, Codable, Hashable, Sendable {
     case registered
     case catalog
     case mapKit
 }
 
-struct TransitBoardingPlace: Hashable, Sendable {
-    let id: String
-    let name: String
-    let kind: UserTransitLocationKind
-    let point: GeoPoint
-    let radiusMeters: Double
-    let source: TransitBoardingPlaceSource
-    let userLocationID: UUID?
+public struct TransitBoardingPlace: Hashable, Sendable {
+    public let id: String
+    public let name: String
+    public let kind: UserTransitLocationKind
+    public let point: GeoPoint
+    public let radiusMeters: Double
+    public let source: TransitBoardingPlaceSource
+    public let userLocationID: UUID?
 
-    init(registered location: UserTransitLocation) {
+    public init(registered location: UserTransitLocation) {
         id = "registered-\(location.id.uuidString)"
         name = location.name
         kind = location.kind
@@ -159,7 +159,7 @@ struct TransitBoardingPlace: Hashable, Sendable {
         userLocationID = location.id
     }
 
-    init(
+    public init(
         mapKitIdentifier: String? = nil,
         mapKitName name: String,
         kind: UserTransitLocationKind,
@@ -184,7 +184,7 @@ struct TransitBoardingPlace: Hashable, Sendable {
         userLocationID = nil
     }
 
-    init(catalogSubwayName name: String, point: GeoPoint) {
+    public init(catalogSubwayName name: String, point: GeoPoint) {
         let latitudeKey = Int((point.latitude * 10_000).rounded())
         let longitudeKey = Int((point.longitude * 10_000).rounded())
         id = "catalog-subway-\(latitudeKey):\(longitudeKey)"
@@ -197,46 +197,82 @@ struct TransitBoardingPlace: Hashable, Sendable {
     }
 }
 
-struct TransitBoardingCandidate: Identifiable, Hashable, Sendable {
-    let id: String
-    let placeID: String
-    let locationID: UUID?
-    let name: String
-    let kind: UserTransitLocationKind
-    let point: GeoPoint
-    let span: TimeSpan
-    let dwellDuration: TimeInterval
-    let source: TransitBoardingPlaceSource
-    let travelSegmentIDs: [UUID]
-    var subwayRoutes: [TransitBoardingSubwayRoute] = []
+public struct TransitBoardingCandidate: Identifiable, Hashable, Sendable {
+    public let id: String
+    public let placeID: String
+    public let locationID: UUID?
+    public let name: String
+    public let kind: UserTransitLocationKind
+    public let point: GeoPoint
+    public let span: TimeSpan
+    public let dwellDuration: TimeInterval
+    public let source: TransitBoardingPlaceSource
+    public let travelSegmentIDs: [UUID]
+    public var subwayRoutes: [TransitBoardingSubwayRoute] = []
 
-    var mode: TravelMode {
+    public var mode: TravelMode {
         kind.boardingMode
+    }
+
+    public init(
+        id: String,
+        placeID: String,
+        locationID: UUID? = nil,
+        name: String,
+        kind: UserTransitLocationKind,
+        point: GeoPoint,
+        span: TimeSpan,
+        dwellDuration: TimeInterval,
+        source: TransitBoardingPlaceSource,
+        travelSegmentIDs: [UUID],
+        subwayRoutes: [TransitBoardingSubwayRoute] = []
+    ) {
+        self.id = id
+        self.placeID = placeID
+        self.locationID = locationID
+        self.name = name
+        self.kind = kind
+        self.point = point
+        self.span = span
+        self.dwellDuration = dwellDuration
+        self.source = source
+        self.travelSegmentIDs = travelSegmentIDs
+        self.subwayRoutes = subwayRoutes
     }
 }
 
-struct TransitBoardingSubwayRoute: Codable, Hashable, Sendable {
-    var travelSegmentID: UUID
-    var span: TimeSpan
-    var route: SubwayRoutePath
+public struct TransitBoardingSubwayRoute: Codable, Hashable, Sendable {
+    public var travelSegmentID: UUID
+    public var span: TimeSpan
+    public var route: SubwayRoutePath
+
+    public init(
+        travelSegmentID: UUID,
+        span: TimeSpan,
+        route: SubwayRoutePath
+    ) {
+        self.travelSegmentID = travelSegmentID
+        self.span = span
+        self.route = route
+    }
 }
 
-struct TransitBoardingDecision: Identifiable, Codable, Hashable, Sendable {
-    var candidateKey: String
+public struct TransitBoardingDecision: Identifiable, Codable, Hashable, Sendable {
+    public var candidateKey: String
     /// Stable enough to match the same registered or nearby logical place
     /// after MapKit changes its display name or coordinate slightly.
-    var placeID: String?
-    var kind: UserTransitLocationKind?
-    var point: GeoPoint?
-    var span: TimeSpan
-    var mode: TravelMode?
-    var travelSegmentIDs: [UUID]
-    var subwayRoutes: [TransitBoardingSubwayRoute]?
-    var updatedAt: Date
+    public var placeID: String?
+    public var kind: UserTransitLocationKind?
+    public var point: GeoPoint?
+    public var span: TimeSpan
+    public var mode: TravelMode?
+    public var travelSegmentIDs: [UUID]
+    public var subwayRoutes: [TransitBoardingSubwayRoute]?
+    public var updatedAt: Date
 
-    var id: String { candidateKey }
+    public var id: String { candidateKey }
 
-    init(
+    public init(
         candidateKey: String,
         placeID: String? = nil,
         kind: UserTransitLocationKind? = nil,
@@ -259,9 +295,9 @@ struct TransitBoardingDecision: Identifiable, Codable, Hashable, Sendable {
     }
 }
 
-struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
+public struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
     /// 지도에서 바로 식당으로 등록하면 이름이 기본 문구로 남을 수 있어 화면에는 식당으로 보여 준다.
-    var displayName: String {
+    public var displayName: String {
         guard kind == .restaurant else { return name }
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty || trimmed == "사용자 지점"
@@ -271,27 +307,27 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
         return trimmed
     }
 
-    var id: UUID
-    var kind: FrequentPlaceKind
-    var name: String
-    var point: GeoPoint?
-    var floor: Int?
-    var referenceRelativeAltitudeMeters: Double?
-    var referencePressureKilopascals: Double?
-    var referenceAltimeterSessionID: UUID?
-    var floorCapturedAt: Date?
-    var floorReferencePoints: [FloorCalibrationPoint]
-    var radiusMeters: Double
+    public var id: UUID
+    public var kind: FrequentPlaceKind
+    public var name: String
+    public var point: GeoPoint?
+    public var floor: Int?
+    public var referenceRelativeAltitudeMeters: Double?
+    public var referencePressureKilopascals: Double?
+    public var referenceAltimeterSessionID: UUID?
+    public var floorCapturedAt: Date?
+    public var floorReferencePoints: [FloorCalibrationPoint]
+    public var radiusMeters: Double
     /// 건물마다 다른 층 높이를 고도 보정에 사용합니다. 기본값은 3m입니다.
-    var floorHeightMeters: Double
+    public var floorHeightMeters: Double
     /// 장소로 확정하기 위해 머물러야 하는 최소 시간입니다.
-    var minimumDwellMinutes: Int
+    public var minimumDwellMinutes: Int
     /// 끄면 이 장소는 자동 위치 분석에서 제외하고 수동 기록만 사용합니다.
-    var isAutomaticRecordingEnabled: Bool
-    var createdAt: Date
-    var updatedAt: Date
+    public var isAutomaticRecordingEnabled: Bool
+    public var createdAt: Date
+    public var updatedAt: Date
 
-    init(
+    public init(
         id: UUID = UUID(),
         kind: FrequentPlaceKind,
         name: String? = nil,
@@ -352,7 +388,7 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
     }
 
     /// 새 필드가 추가된 이전 저장 파일도 읽을 수 있도록 기본값을 적용합니다.
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         let decodedKind = try values.decodeIfPresent(
             FrequentPlaceKind.self,
@@ -420,7 +456,7 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
             ?? createdAt
     }
 
-    func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var values = encoder.container(keyedBy: CodingKeys.self)
         try values.encode(id, forKey: .id)
         try values.encode(kind, forKey: .kind)
@@ -452,7 +488,7 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
         try values.encode(updatedAt, forKey: .updatedAt)
     }
 
-    static let defaults: [FrequentPlace] = [
+    public static let defaults: [FrequentPlace] = [
         FrequentPlace(kind: .home),
         FrequentPlace(kind: .school),
         FrequentPlace(kind: .academy),
@@ -461,11 +497,11 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
         FrequentPlace(kind: .exercise),
     ]
 
-    var stablePlaceKey: String {
+    public var stablePlaceKey: String {
         "frequent-\(id.uuidString.lowercased())"
     }
 
-    var floorCalibration: FloorCalibration? {
+    public var floorCalibration: FloorCalibration? {
         guard let point, let floor else { return nil }
         return FloorCalibration(
             placeName: name,
@@ -482,7 +518,7 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
         )
     }
 
-    mutating func setLocation(
+    public mutating func setLocation(
         from reading: SensorReading,
         floor: Int,
         isManual: Bool = false
@@ -514,7 +550,7 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
         updatedAt = .now
     }
 
-    mutating func setMapLocation(_ newPoint: GeoPoint) {
+    public mutating func setMapLocation(_ newPoint: GeoPoint) {
         let previousPoint = point
         let keepsFloorCalibration = previousPoint.map {
             distanceMeters($0, newPoint) <= Self.sameBuildingRadiusMeters
@@ -544,16 +580,16 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
         updatedAt = .now
     }
 
-    static let sameBuildingRadiusMeters = 120.0
-    static let defaultFloorHeightMeters = 3.0
+    public static let sameBuildingRadiusMeters = 120.0
+    public static let defaultFloorHeightMeters = 3.0
 
     /// 서로 다른 층이라면 최소 층 높이(2.2m)만큼은 떨어져 있어야 한다. 그
     /// 절반보다 가까운 두 기준점은 같은 높이를 가리키므로 둘 다 참일 수 없다.
     /// 가만히 선 기기의 기압계 잡음(수십 cm)보다는 넉넉하다.
-    static let conflictingAltitudeToleranceMeters = 1.0
+    public static let conflictingAltitudeToleranceMeters = 1.0
 
     @discardableResult
-    mutating func addFloorCalibration(
+    public mutating func addFloorCalibration(
         from reading: SensorReading,
         floor: Int,
         isManual: Bool = false
@@ -612,7 +648,7 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
     /// 않고, 서로 다른 층 기준이 둘 이상 모이면 그 사이의 고도 차이로 앱이
     /// 다시 구한다. 위치나 기준 층이 아직 없으면 이번 기준으로 자리를 잡고,
     /// 있으면 자리는 두고 이 층만 더한다.
-    mutating func calibrateCurrentFloor(
+    public mutating func calibrateCurrentFloor(
         to floor: Int,
         from reading: SensorReading
     ) {
@@ -636,7 +672,7 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
     /// 잘못 들어간 기준점 하나만 지운다. 나머지 기준과 이 장소의 위치는
     /// 그대로 둔다.
     @discardableResult
-    mutating func removeFloorReference(floor target: Int) -> Bool {
+    public mutating func removeFloorReference(floor target: Int) -> Bool {
         let kept = floorReferencePoints.filter { $0.floor != target }
         guard kept.count != floorReferencePoints.count else { return false }
         floorReferencePoints = kept
@@ -662,7 +698,7 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
         ) ?? Self.defaultFloorHeightMeters
     }
 
-    mutating func clearLocation() {
+    public mutating func clearLocation() {
         point = nil
         floor = nil
         referenceRelativeAltitudeMeters = nil
@@ -677,33 +713,33 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
 /// 사용자가 "등록하지 않겠다"고 답한 자리. 같은 커피숍을 매주 다시 묻는 것이
 /// 한 번도 묻지 않는 것보다 나쁘므로 만료 없이 남긴다. 자주가는 곳에서 지운
 /// 자리도 같은 목록에 들어간다.
-struct DismissedPlaceSuggestion: Identifiable, Codable, Hashable, Sendable {
-    var id: UUID
-    var point: GeoPoint
-    var dismissedAt: Date
+public struct DismissedPlaceSuggestion: Identifiable, Codable, Hashable, Sendable {
+    public var id: UUID
+    public var point: GeoPoint
+    public var dismissedAt: Date
 
-    init(id: UUID = UUID(), point: GeoPoint, dismissedAt: Date = .now) {
+    public init(id: UUID = UUID(), point: GeoPoint, dismissedAt: Date = .now) {
         self.id = id
         self.point = point
         self.dismissedAt = dismissedAt
     }
 }
 
-struct PlaceStay: Identifiable, Codable, Hashable, Sendable {
-    var id: UUID
-    var placeKey: String
-    var displayName: String
-    var buildingName: String?
-    var floor: Int?
-    var span: TimeSpan
-    var confidence: ConfidenceLevel
-    var point: GeoPoint?
-    var isConfirmed: Bool
+public struct PlaceStay: Identifiable, Codable, Hashable, Sendable {
+    public var id: UUID
+    public var placeKey: String
+    public var displayName: String
+    public var buildingName: String?
+    public var floor: Int?
+    public var span: TimeSpan
+    public var confidence: ConfidenceLevel
+    public var point: GeoPoint?
+    public var isConfirmed: Bool
     /// `floor` 를 만든 관측. 예전 빌드가 쓴 기록에는 없으므로 Optional 이다.
     /// 없으면 그 기록은 다시 매기지 않고 있던 층수를 그대로 둔다.
-    var floorEvidence: FloorEvidence?
+    public var floorEvidence: FloorEvidence?
 
-    init(
+    public init(
         id: UUID = UUID(),
         placeKey: String,
         displayName: String,

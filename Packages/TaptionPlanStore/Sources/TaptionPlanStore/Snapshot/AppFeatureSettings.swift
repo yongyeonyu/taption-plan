@@ -1,65 +1,66 @@
 import Foundation
+import TaptionWatchSync
 import TaptionPlanCore
 
-struct AppFeatureSettings: Codable, Hashable, Sendable {
-    var startScale: TimelineLevel
-    var rememberLastScale: Bool
-    var catStyle: CatStyle
-    var reduceMotion: Bool
-    var showsPhotos: Bool
-    var showsPhotosInWidgets: Bool
-    var selectedCalendarIDs: [String]
-    var healthEnabled: Bool
-    var locationEnabled: Bool
-    var backgroundPreciseLocationEnabled: Bool
-    var sensorCollectionProfile: SensorCollectionProfile
-    var gpsLoggingPreferences: GPSLoggingPreferences
+public struct AppFeatureSettings: Codable, Hashable, Sendable {
+    public var startScale: TimelineLevel
+    public var rememberLastScale: Bool
+    public var catStyle: CatStyle
+    public var reduceMotion: Bool
+    public var showsPhotos: Bool
+    public var showsPhotosInWidgets: Bool
+    public var selectedCalendarIDs: [String]
+    public var healthEnabled: Bool
+    public var locationEnabled: Bool
+    public var backgroundPreciseLocationEnabled: Bool
+    public var sensorCollectionProfile: SensorCollectionProfile
+    public var gpsLoggingPreferences: GPSLoggingPreferences
     /// Optional user-selected overrides for the automatic major
     /// categories. Missing values intentionally keep the shared defaults.
-    var mapCategoryColors: [String: String]
-    var mapUserActivityCategories: [MapUserActivityCategory]
+    public var mapCategoryColors: [String: String]
+    public var mapUserActivityCategories: [MapUserActivityCategory]
     // RPG 판타지 지도(무료 OpenFreeMap 벡터)를 기본으로 쓴다. 예전에는 벡터
     // 재생 경로가 준비되지 않아 항상 .standard(Apple)로 되돌렸으나, 이제
     // 벡터 스타일 선택을 허용한다. 알 수 없는 값만 안전값으로 보정.
-    var mapDisplayStyle: MapDisplayStyle
-    var mapMemoDisplayFilter: MapMemoDisplayFilter
-    var watchAccelerationProfile: TaptionWatchAccelerationProfile
-    var watchDataSyncProfile: TaptionWatchDataSyncProfile
-    var floorCalibration: FloorCalibration?
-    var floorCalibrationHistory: [FloorCalibrationEvent]
-    var frequentPlaces: [FrequentPlace]
-    var userTransitLocations: [UserTransitLocation]
+    public var mapDisplayStyle: MapDisplayStyle
+    public var mapMemoDisplayFilter: MapMemoDisplayFilter
+    public var watchAccelerationProfile: TaptionWatchAccelerationProfile
+    public var watchDataSyncProfile: TaptionWatchDataSyncProfile
+    public var floorCalibration: FloorCalibration?
+    public var floorCalibrationHistory: [FloorCalibrationEvent]
+    public var frequentPlaces: [FrequentPlace]
+    public var userTransitLocations: [UserTransitLocation]
     /// 지도상의 3분 이상 교통 장소 후보에 대한 사용자 확인·삭제 기록.
     /// 원본 센서와 지도 POI는 저장하지 않고 이 결정만 기기에 남긴다.
-    var transitBoardingDecisions: [TransitBoardingDecision]
-    var predictedRouteDecisions: [MapPredictedRouteDecision]
+    public var transitBoardingDecisions: [TransitBoardingDecision]
+    public var predictedRouteDecisions: [MapPredictedRouteDecision]
     /// 기기 위치 기록에서만 나오는 값이라 iCloud로 내보내지 않는다.
-    var dismissedPlaceSuggestions: [DismissedPlaceSuggestion]
-    var movementCorrections: [TravelModeCorrection]
-    var suppressedActualIDs: Set<UUID>
+    public var dismissedPlaceSuggestions: [DismissedPlaceSuggestion]
+    public var movementCorrections: [TravelModeCorrection]
+    public var suppressedActualIDs: Set<UUID>
     /// 일정 제목(정규화)별 상세활동. 사용자가 고른 값이다. 기기에만 둔다(CAL1103A01).
-    var calendarTitleDetails: [String: CalendarTitleDetail]
+    public var calendarTitleDetails: [String: CalendarTitleDetail]
     /// Prevents a deliberate deletion from being mistaken for local data loss
     /// when an older CloudKit snapshot is used as a recovery source.
-    var cloudDeletedRecordKeys: Set<String>
+    public var cloudDeletedRecordKeys: Set<String>
     /// A full reset invalidates every cloud record written before this time.
-    var cloudResetAt: Date?
-    var weatherEnabled: Bool
-    var weatherSidebarVisible: Bool
-    var notificationsEnabled: Bool
-    var permissions: [PermissionFeature: PermissionState]
-    var timelineRowOrder: [String]
+    public var cloudResetAt: Date?
+    public var weatherEnabled: Bool
+    public var weatherSidebarVisible: Bool
+    public var notificationsEnabled: Bool
+    public var permissions: [PermissionFeature: PermissionState]
+    public var timelineRowOrder: [String]
     /// 사용자 교정은 원본 센서와 분리한 표시용 파생값이다.
-    var activityCorrections: [UUID: ActivityCorrection]
-    var customActivityLabels: [String]
+    public var activityCorrections: [UUID: ActivityCorrection]
+    public var customActivityLabels: [String]
     /// UUID가 바뀌는 자동 재분류 뒤에도 유지되는 사용자 확인 수면 구간.
-    var confirmedSleepSpans: [TimeSpan]
+    public var confirmedSleepSpans: [TimeSpan]
     /// 내 차로 등록한 차량 오디오 기기 이름. 연결된 이동은 자동차로 확정한다(CAR1029A01).
-    var registeredCarAudioNames: [String]
+    public var registeredCarAudioNames: [String]
     /// 연결·해제가 이동과 맞아떨어진 미등록 기기, 최근 순 최대 10개.
-    var recentCarAudioNames: [String]
+    public var recentCarAudioNames: [String]
 
-    static let defaults = AppFeatureSettings(
+    public static let defaults = AppFeatureSettings(
         startScale: .day,
         rememberLastScale: false,
         catStyle: .calico,
@@ -103,7 +104,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         recentCarAudioNames: []
     )
 
-    init(
+    public init(
         startScale: TimelineLevel,
         rememberLastScale: Bool,
         catStyle: CatStyle,
@@ -240,7 +241,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         case recentCarAudioNames
     }
 
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         let defaults = Self.defaults
         startScale = try values.decodeIfPresent(
@@ -420,7 +421,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         }
     }
 
-    static func mergedFrequentPlaces(
+    public static func mergedFrequentPlaces(
         _ places: [FrequentPlace]
     ) -> [FrequentPlace] {
         var result = places
@@ -432,7 +433,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         return result
     }
 
-    static func normalizedTimelineRowOrder(_ ids: [String]) -> [String] {
+    public static func normalizedTimelineRowOrder(_ ids: [String]) -> [String] {
         var result: [String] = []
         for id in ids + TimelineRowOrder.defaults
         where !id.isEmpty && !result.contains(id) {
@@ -441,7 +442,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         return result
     }
 
-    static func normalizedActivityLabels(_ labels: [String]) -> [String] {
+    public static func normalizedActivityLabels(_ labels: [String]) -> [String] {
         var result: [String] = []
         for label in labels {
             let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -455,7 +456,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
     }
 
     /// 기기 이름은 iOS가 보고한 그대로 두고 공백·중복만 거른다.
-    static func normalizedCarAudioNames(_ names: [String]) -> [String] {
+    public static func normalizedCarAudioNames(_ names: [String]) -> [String] {
         var result: [String] = []
         for name in names {
             let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -465,7 +466,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         return result
     }
 
-    static func normalizedConfirmedSleepSpans(
+    public static func normalizedConfirmedSleepSpans(
         _ spans: [TimeSpan]
     ) -> [TimeSpan] {
         let ordered = spans
@@ -486,7 +487,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         return result
     }
 
-    static func normalizedMapUserActivityCategories(
+    public static func normalizedMapUserActivityCategories(
         _ categories: [MapUserActivityCategory]
     ) -> [MapUserActivityCategory] {
         var result: [MapUserActivityCategory] = []
@@ -509,7 +510,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         return result
     }
 
-    static func normalizedMapCategoryColors(
+    public static func normalizedMapCategoryColors(
         _ values: [String: String]
     ) -> [String: String] {
         let allowed = Set(RecordClassificationCatalog.categories.map(\.id))
@@ -527,6 +528,12 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
 }
 
 /// 일정 제목에 붙인 상세활동. `detailID`가 nil이면 "분류 안 함"이다.
-struct CalendarTitleDetail: Codable, Hashable, Sendable {
-    var detailID: String?
+public struct CalendarTitleDetail: Codable, Hashable, Sendable {
+    public var detailID: String?
+
+    public init(
+        detailID: String? = nil
+    ) {
+        self.detailID = detailID
+    }
 }

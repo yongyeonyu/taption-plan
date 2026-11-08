@@ -1,7 +1,7 @@
 import Foundation
 import TaptionPlanCore
 
-enum CategoryIcon: String, Codable, CaseIterable, Sendable {
+public enum CategoryIcon: String, Codable, CaseIterable, Sendable {
     case briefcase
     case building
     case book
@@ -43,18 +43,18 @@ enum CategoryIcon: String, Codable, CaseIterable, Sendable {
     case food
 }
 
-struct CategoryDefinition: Identifiable, Codable, Hashable, Sendable {
-    var id: String
-    var name: String
-    var icon: CategoryIcon
-    var lightHex: String
-    var darkHex: String
-    var actualHex: String
-    var sortOrder: Int
-    var isHidden: Bool
-    var isBuiltIn: Bool
+public struct CategoryDefinition: Identifiable, Codable, Hashable, Sendable {
+    public var id: String
+    public var name: String
+    public var icon: CategoryIcon
+    public var lightHex: String
+    public var darkHex: String
+    public var actualHex: String
+    public var sortOrder: Int
+    public var isHidden: Bool
+    public var isBuiltIn: Bool
 
-    init(
+    public init(
         id: String,
         name: String,
         icon: CategoryIcon,
@@ -77,41 +77,41 @@ struct CategoryDefinition: Identifiable, Codable, Hashable, Sendable {
     }
 }
 
-struct CalendarRecord: Identifiable, Codable, Hashable, Sendable {
-    var id: String
-    var calendarID: String
-    var title: String
-    var span: TimeSpan
-    var isAllDay: Bool
-    var calendarTitle: String
-    var calendarColorHex: String?
-    var sourceTitle: String?
-    var sourceIdentifier: String? = nil
+public struct CalendarRecord: Identifiable, Codable, Hashable, Sendable {
+    public var id: String
+    public var calendarID: String
+    public var title: String
+    public var span: TimeSpan
+    public var isAllDay: Bool
+    public var calendarTitle: String
+    public var calendarColorHex: String?
+    public var sourceTitle: String?
+    public var sourceIdentifier: String? = nil
     /// EventKit keeps the event's wall-clock zone and floating-time state
     /// separately from its absolute Date values. Keep both so a day reload or
     /// device-zone change does not move an all-day/floating event to another
     /// day.
-    var timeZoneIdentifier: String? = nil
-    var isFloatingTime: Bool? = nil
-    var originalStartDateComponents: DateComponents? = nil
-    var originalEndDateComponents: DateComponents? = nil
-    var externalIdentifier: String? = nil
-    var recurrenceIdentifier: String? = nil
+    public var timeZoneIdentifier: String? = nil
+    public var isFloatingTime: Bool? = nil
+    public var originalStartDateComponents: DateComponents? = nil
+    public var originalEndDateComponents: DateComponents? = nil
+    public var externalIdentifier: String? = nil
+    public var recurrenceIdentifier: String? = nil
     /// 반복 일정의 원래 발생 시각. 특정 발생분이 다른 날로 이동해도
     /// 이전 기록과 같은 occurrence로 교체할 수 있게 보존한다.
-    var occurrenceDate: Date? = nil
+    public var occurrenceDate: Date? = nil
     /// 일정 메모. 구글은 HTML로 줄 수 있어 `CalendarNotesText.plain`으로 푼 글자를 담는다.
-    var notes: String? = nil
+    public var notes: String? = nil
     /// 정지 구간 문맥 추론에서 쓰는 EventKit 부가 정보. 이전 보관본은 값이
     /// 없으므로 옵셔널로 둔다.
-    var attendeeCount: Int? = nil
-    var isCancelled: Bool? = nil
+    public var attendeeCount: Int? = nil
+    public var isCancelled: Bool? = nil
 
     /// The timeline uses the device calendar for day buckets and labels. A
     /// floating or all-day event is date-based, so rebuild its span from the
     /// original wall-clock components instead of interpreting EventKit's Date
     /// as an instant in the current zone.
-    func normalizedForDisplay(
+    public func normalizedForDisplay(
         in calendar: Calendar = .autoupdatingCurrent
     ) -> CalendarRecord {
         guard (isAllDay || isFloatingTime == true),
@@ -150,24 +150,66 @@ struct CalendarRecord: Identifiable, Codable, Hashable, Sendable {
         }
         return calendar.date(from: value)
     }
+
+    public init(
+        id: String,
+        calendarID: String,
+        title: String,
+        span: TimeSpan,
+        isAllDay: Bool,
+        calendarTitle: String,
+        calendarColorHex: String? = nil,
+        sourceTitle: String? = nil,
+        sourceIdentifier: String? = nil,
+        timeZoneIdentifier: String? = nil,
+        isFloatingTime: Bool? = nil,
+        originalStartDateComponents: DateComponents? = nil,
+        originalEndDateComponents: DateComponents? = nil,
+        externalIdentifier: String? = nil,
+        recurrenceIdentifier: String? = nil,
+        occurrenceDate: Date? = nil,
+        notes: String? = nil,
+        attendeeCount: Int? = nil,
+        isCancelled: Bool? = nil
+    ) {
+        self.id = id
+        self.calendarID = calendarID
+        self.title = title
+        self.span = span
+        self.isAllDay = isAllDay
+        self.calendarTitle = calendarTitle
+        self.calendarColorHex = calendarColorHex
+        self.sourceTitle = sourceTitle
+        self.sourceIdentifier = sourceIdentifier
+        self.timeZoneIdentifier = timeZoneIdentifier
+        self.isFloatingTime = isFloatingTime
+        self.originalStartDateComponents = originalStartDateComponents
+        self.originalEndDateComponents = originalEndDateComponents
+        self.externalIdentifier = externalIdentifier
+        self.recurrenceIdentifier = recurrenceIdentifier
+        self.occurrenceDate = occurrenceDate
+        self.notes = notes
+        self.attendeeCount = attendeeCount
+        self.isCancelled = isCancelled
+    }
 }
 
-struct PhotoMoment: Identifiable, Codable, Hashable, Sendable {
-    var id: String
-    var capturedAt: Date
-    var pixelWidth: Int
-    var pixelHeight: Int
-    var isFavorite: Bool
-    var isHiddenFromTimeline: Bool
-    var location: GeoPoint?
-    var linkedPlanID: UUID?
-    var linkedPlaceID: UUID?
+public struct PhotoMoment: Identifiable, Codable, Hashable, Sendable {
+    public var id: String
+    public var capturedAt: Date
+    public var pixelWidth: Int
+    public var pixelHeight: Int
+    public var isFavorite: Bool
+    public var isHiddenFromTimeline: Bool
+    public var location: GeoPoint?
+    public var linkedPlanID: UUID?
+    public var linkedPlaceID: UUID?
     /// 스크린샷 여부. 예전 기록에는 없으므로 Optional.
-    var isScreenshot: Bool?
+    public var isScreenshot: Bool?
     /// 사진에 위치가 없어 같은 시각의 내 이동 기록에서 추정한 위치인지.
-    var isLocationEstimated: Bool?
+    public var isLocationEstimated: Bool?
 
-    init(
+    public init(
         id: String,
         capturedAt: Date,
         pixelWidth: Int,
@@ -194,19 +236,29 @@ struct PhotoMoment: Identifiable, Codable, Hashable, Sendable {
     }
 }
 
-struct PhotoCluster: Identifiable, Codable, Hashable, Sendable {
-    var id: String
-    var representative: PhotoMoment
-    var photos: [PhotoMoment]
+public struct PhotoCluster: Identifiable, Codable, Hashable, Sendable {
+    public var id: String
+    public var representative: PhotoMoment
+    public var photos: [PhotoMoment]
 
-    var capturedAt: Date { representative.capturedAt }
-    var additionalCount: Int { max(0, photos.count - 1) }
+    public var capturedAt: Date { representative.capturedAt }
+    public var additionalCount: Int { max(0, photos.count - 1) }
+
+    public init(
+        id: String,
+        representative: PhotoMoment,
+        photos: [PhotoMoment]
+    ) {
+        self.id = id
+        self.representative = representative
+        self.photos = photos
+    }
 }
 
 extension CalendarRecord {
     /// 구글 로그인으로 직접 읽은 일정. 기기 캘린더 권한과 따로 관리한다.
-    static let googleAccountCalendarID = "google-primary"
-    var isGoogleAccountEvent: Bool { calendarID == Self.googleAccountCalendarID }
+    public static let googleAccountCalendarID = "google-primary"
+    public var isGoogleAccountEvent: Bool { calendarID == Self.googleAccountCalendarID }
 }
 
 extension CalendarRecord {
@@ -214,7 +266,7 @@ extension CalendarRecord {
     private static let mealWords = ["아침", "점심", "저녁", "식사", "lunch", "dinner", "breakfast"]
 
     /// 시간이 정해진 회의 일정인가. 제목이나 참석자 수로만 본다.
-    var isMeetingLike: Bool {
+    public var isMeetingLike: Bool {
         guard !isAllDay, isCancelled != true else { return false }
         let text = title.lowercased()
         if Self.mealWords.contains(where: text.contains) { return false }

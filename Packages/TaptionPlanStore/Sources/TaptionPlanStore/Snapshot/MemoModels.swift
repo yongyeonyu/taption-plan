@@ -1,25 +1,25 @@
 import Foundation
 import TaptionPlanCore
 
-enum MemoKind: String, Codable, CaseIterable, Sendable {
+public enum MemoKind: String, Codable, CaseIterable, Sendable {
     case decision
     case idea
     case blocker
     case nextAction
 }
 
-enum AttachmentKind: String, Codable, CaseIterable, Sendable {
+public enum AttachmentKind: String, Codable, CaseIterable, Sendable {
     case photo
     case audio
 }
 
-struct MemoAttachment: Identifiable, Codable, Hashable, Sendable {
-    var id: UUID
-    var kind: AttachmentKind
-    var localIdentifier: String
-    var createdAt: Date
+public struct MemoAttachment: Identifiable, Codable, Hashable, Sendable {
+    public var id: UUID
+    public var kind: AttachmentKind
+    public var localIdentifier: String
+    public var createdAt: Date
 
-    init(
+    public init(
         id: UUID = UUID(),
         kind: AttachmentKind,
         localIdentifier: String,
@@ -35,36 +35,36 @@ struct MemoAttachment: Identifiable, Codable, Hashable, Sendable {
 /// A memo stands on its own. It may point at a plan or at an automatic
 /// record, but it never requires one: a note left on a category row keeps that
 /// category and the instant it belongs to, so no placeholder plan is needed.
-struct ActionMemo: Identifiable, Codable, Hashable, Sendable {
-    var id: UUID
+public struct ActionMemo: Identifiable, Codable, Hashable, Sendable {
+    public var id: UUID
     /// Optional link to a user plan. `nil` for standalone memos.
-    var planID: UUID?
+    public var planID: UUID?
     /// Stable timeline item key. Plan-backed memos keep using `planID`, while
     /// automatic records (location, travel, health, weather, photos, etc.)
     /// use this key so two records in the same category never share notes.
-    var targetID: String?
+    public var targetID: String?
     /// Category the memo belongs to. Always set for standalone memos.
-    var categoryID: String?
+    public var categoryID: String?
     /// Instant on the timeline the memo belongs to, which is not necessarily
     /// when it was typed: a note added to yesterday stays on yesterday.
-    var occurredAt: Date
+    public var occurredAt: Date
     /// Optional map position. Existing timeline-only memos keep this nil.
-    var mapPoint: GeoPoint?
+    public var mapPoint: GeoPoint?
     /// 시간을 지정하지 않은 메모. nil·false는 시간이 있는 메모(예전 기록 포함).
-    var isTimeless: Bool?
+    public var isTimeless: Bool?
     /// 스티커 정보. nil이면 일반 메모다. 메모 하나가 스티커 정보를 함께 가진다(예전 기록은 nil).
-    var stickerSymbol: String? = nil
-    var stickerColorHex: String? = nil
-    var kind: MemoKind
-    var text: String
-    var attachments: [MemoAttachment]
-    var isHighlightedInReview: Bool
-    var createdAt: Date
-    var updatedAt: Date
+    public var stickerSymbol: String? = nil
+    public var stickerColorHex: String? = nil
+    public var kind: MemoKind
+    public var text: String
+    public var attachments: [MemoAttachment]
+    public var isHighlightedInReview: Bool
+    public var createdAt: Date
+    public var updatedAt: Date
 
-    var isSticker: Bool { stickerSymbol != nil }
+    public var isSticker: Bool { stickerSymbol != nil }
 
-    init(
+    public init(
         id: UUID = UUID(),
         planID: UUID? = nil,
         targetID: String? = nil,
@@ -102,7 +102,7 @@ struct ActionMemo: Identifiable, Codable, Hashable, Sendable {
 
     /// `categoryID` and `occurredAt` arrived after the first archive format,
     /// so records saved by older builds decode with their plan-derived values.
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         id = try values.decode(UUID.self, forKey: .id)
         stickerSymbol = try values.decodeIfPresent(String.self, forKey: .stickerSymbol)

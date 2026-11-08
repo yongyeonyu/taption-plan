@@ -815,3 +815,22 @@ extension AppModel {
         )
     }
 }
+
+/// 진단 기록기는 앱에 있어, 지운 수를 남기는 갱신 경로만 앱에 둔다(판정은 TaptionPlanStore).
+extension SleepTravelReconciliationEngine {
+    /// HealthKit 갱신 경로용. 지운 수를 진단에 남긴다.
+    static func reconciled(
+        _ travel: [TravelSegment],
+        sessions: [SleepSession],
+        inside span: TimeSpan
+    ) -> [TravelSegment] {
+        let kept = removingAutomaticTravel(travel, sessions: sessions, inside: span, asOf: min(span.end, .now))
+        if kept.count != travel.count {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "sleep_travel_removed",
+                fields: ["removed": String(travel.count - kept.count)]
+            )
+        }
+        return kept
+    }
+}

@@ -1,15 +1,15 @@
 import Foundation
 import TaptionPlanCore
 
-enum AirQualityGrade: Int, Codable, CaseIterable, Comparable, Hashable, Sendable {
+public enum AirQualityGrade: Int, Codable, CaseIterable, Comparable, Hashable, Sendable {
     case good = 0
     case moderate
     case bad
     case veryBad
 
-    static func < (lhs: Self, rhs: Self) -> Bool { lhs.rawValue < rhs.rawValue }
+    public static func < (lhs: Self, rhs: Self) -> Bool { lhs.rawValue < rhs.rawValue }
 
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .good: "좋음"
         case .moderate: "보통"
@@ -18,7 +18,7 @@ enum AirQualityGrade: Int, Codable, CaseIterable, Comparable, Hashable, Sendable
         }
     }
 
-    static func pm10(_ value: Double) -> Self {
+    public static func pm10(_ value: Double) -> Self {
         switch value {
         case ...30: .good
         case ...80: .moderate
@@ -27,7 +27,7 @@ enum AirQualityGrade: Int, Codable, CaseIterable, Comparable, Hashable, Sendable
         }
     }
 
-    static func pm25(_ value: Double) -> Self {
+    public static func pm25(_ value: Double) -> Self {
         switch value {
         case ...15: .good
         case ...35: .moderate
@@ -37,18 +37,18 @@ enum AirQualityGrade: Int, Codable, CaseIterable, Comparable, Hashable, Sendable
     }
 }
 
-struct AirQualityContext: Codable, Hashable, Sendable {
-    var pm10MicrogramsPerCubicMeter: Double
-    var pm25MicrogramsPerCubicMeter: Double
-    var pm10Grade: AirQualityGrade
-    var pm25Grade: AirQualityGrade
-    var overallGrade: AirQualityGrade
-    var observedAt: Date
-    var stationName: String?
-    var providerName: String
-    var isFallback: Bool
+public struct AirQualityContext: Codable, Hashable, Sendable {
+    public var pm10MicrogramsPerCubicMeter: Double
+    public var pm25MicrogramsPerCubicMeter: Double
+    public var pm10Grade: AirQualityGrade
+    public var pm25Grade: AirQualityGrade
+    public var overallGrade: AirQualityGrade
+    public var observedAt: Date
+    public var stationName: String?
+    public var providerName: String
+    public var isFallback: Bool
 
-    init(
+    public init(
         pm10MicrogramsPerCubicMeter: Double,
         pm25MicrogramsPerCubicMeter: Double,
         observedAt: Date,
@@ -68,29 +68,29 @@ struct AirQualityContext: Codable, Hashable, Sendable {
     }
 }
 
-struct WeatherSymbolRGB: Equatable, Sendable {
-    let red: Double
-    let green: Double
-    let blue: Double
+public struct WeatherSymbolRGB: Equatable, Sendable {
+    public let red: Double
+    public let green: Double
+    public let blue: Double
 
-    init(red: Double, green: Double, blue: Double) {
+    public init(red: Double, green: Double, blue: Double) {
         self.red = red
         self.green = green
         self.blue = blue
     }
 }
 
-enum WeatherSymbolPaletteComponent: Equatable, Sendable {
+public enum WeatherSymbolPaletteComponent: Equatable, Sendable {
     case primary
     case secondary
 }
 
-struct WeatherSymbolPalette: Equatable, Sendable {
-    let primary: WeatherSymbolRGB
-    let secondary: WeatherSymbolRGB
+public struct WeatherSymbolPalette: Equatable, Sendable {
+    public let primary: WeatherSymbolRGB
+    public let secondary: WeatherSymbolRGB
 }
 
-enum WeatherSymbolKind: String, CaseIterable, Equatable, Sendable {
+public enum WeatherSymbolKind: String, CaseIterable, Equatable, Sendable {
     case sun
     case moon
     case cloud
@@ -99,7 +99,7 @@ enum WeatherSymbolKind: String, CaseIterable, Equatable, Sendable {
     case lightning
     case fallback
 
-    init(symbolName: String) {
+    public init(symbolName: String) {
         let symbol = symbolName.lowercased()
         if symbol.contains("bolt") || symbol.contains("thunder") {
             self = .lightning
@@ -118,7 +118,7 @@ enum WeatherSymbolKind: String, CaseIterable, Equatable, Sendable {
         }
     }
 
-    var palette: WeatherSymbolPalette {
+    public var palette: WeatherSymbolPalette {
         switch self {
         case .sun:
             return WeatherSymbolPalette(
@@ -162,46 +162,46 @@ enum WeatherSymbolKind: String, CaseIterable, Equatable, Sendable {
 private let retiredWeatherProviderPrefix = "Open-Meteo"
 
 extension WeatherContext {
-    var isFromRetiredProvider: Bool {
+    public var isFromRetiredProvider: Bool {
         providerName?.hasPrefix(retiredWeatherProviderPrefix) == true
     }
 }
 
 extension AirQualityContext {
-    var isFromRetiredProvider: Bool {
+    public var isFromRetiredProvider: Bool {
         providerName.hasPrefix(retiredWeatherProviderPrefix)
     }
 }
 
-struct WeatherContext: Identifiable, Codable, Hashable, Sendable {
-    var id: UUID
-    var observedAt: Date
+public struct WeatherContext: Identifiable, Codable, Hashable, Sendable {
+    public var id: UUID
+    public var observedAt: Date
     /// End of the displayed weather run. Raw samples remain in the device
     /// archive while equal consecutive values share one timeline segment.
-    var validUntil: Date?
+    public var validUntil: Date?
     /// Time at which the provider actually supplied this observation.
-    var fetchedAt: Date?
+    public var fetchedAt: Date?
     /// True when this is the last known value after a failed refresh.
-    var isStale: Bool?
+    public var isStale: Bool?
     /// True when the provider supplied a forecast rather than an observed
     /// current value. Legacy snapshots omit this field and remain readable.
-    var isForecast: Bool?
+    public var isForecast: Bool?
     /// Provider provenance for raw weather replay. Legacy snapshots omit this
     /// field and remain readable.
-    var providerName: String?
-    var condition: String
-    var symbolName: String
-    var temperatureCelsius: Double
-    var precipitationChance: Double?
-    var placeID: UUID?
-    var placeName: String?
-    var point: GeoPoint?
-    var isContextOnly: Bool
-    var airQuality: AirQualityContext?
+    public var providerName: String?
+    public var condition: String
+    public var symbolName: String
+    public var temperatureCelsius: Double
+    public var precipitationChance: Double?
+    public var placeID: UUID?
+    public var placeName: String?
+    public var point: GeoPoint?
+    public var isContextOnly: Bool
+    public var airQuality: AirQualityContext?
     /// 옛 기록에는 없다.
-    var windSpeedMetersPerSecond: Double?
+    public var windSpeedMetersPerSecond: Double?
 
-    init(
+    public init(
         id: UUID = UUID(),
         observedAt: Date,
         validUntil: Date? = nil,
@@ -239,7 +239,7 @@ struct WeatherContext: Identifiable, Codable, Hashable, Sendable {
         self.airQuality = airQuality
     }
 
-    var freshnessLabel: String {
+    public var freshnessLabel: String {
         guard let fetchedAt else {
             return isStale == true ? "이전" : "확인됨"
         }

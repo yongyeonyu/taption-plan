@@ -494,7 +494,7 @@ V2의 쓰기 API에 `@available(*, deprecated)`를 붙이고, 새 호출이 생�
 같은 파일 안에서만 쓰인다는 뜻이므로, 옮길 때 `internal`로 넓히거나 그대로 둘 곳을 정해야 한다.
 **이 판단이 이 단계의 유일한 설계 결정이다.**
 
-### Phase 2 — 도메인 모델 승격 (ADR-001) — **진행 중 (2026-11-08 대표 결정으로 시작)**
+### Phase 2 — 도메인 모델 승격 (ADR-001) — **완료 (2026-11-08, RFA1102A01)**
 
 > **상태 (2026-11-08, RFA1102A01).** 대표가 UX 마이그레이션을 기다리지 않고 시작하기로 정했다.
 > 6개 중 5개를 옮겼고 `TaptionDataSnapshot`만 남았다. 타입마다 커밋 하나, 커밋마다 옮기기 전
@@ -513,10 +513,16 @@ V2의 쓰기 API에 `@available(*, deprecated)`를 붙이고, 새 호출이 생�
 > | 6 | `TravelSegment` | `TravelMode` · `SubwayRouteStop` · `SubwayRoutePath` |
 > | 7 | `SensorReading` (저장소 이동의 선행) | `MotionKind` · `TrackingKind` · `TrackingDevice` · `DevicePowerState` · `LocationFixQuality` · `SensorVector3` · `DeviceMotionSnapshot` · `DeviceMotionSummary`, TSR2 이진 형식 |
 >
-> **남은 것: `TaptionDataSnapshot`.** 저장 속성이 가리키는 타입을 따라가면 52개 타입·약 2,400줄
-> (`AppFeatureSettings` 523줄, `FrequentPlace` 413줄, 장소·메모·날씨·층·리뷰 보관본 등)이 함께
-> 와야 한다. 표시·현지화 코드가 섞인 타입이 많아 한 커밋으로 옮길 수 없고, 묶음별로 나눠야 한다.
-> `PlanDataRepository`(RFA1102A01 6번의 나머지)가 이 타입에 묶여 있어 같이 남았다.
+> **마지막: `TaptionDataSnapshot`·`PlanDataRepository` → `TaptionPlanStore`.** 저장 속성이 가리키는
+> 타입을 따라가 보니 파일 단위 닫힘이 앱 `Core/`의 모델 파일 16개(약 4,800줄)였다. 이 파일들은 Foundation·
+> `TaptionPlanCore`·`TaptionWatchSync`만 쓰고 UI·MapKit·ActivityKit·HealthKit 연결 코드가 없어(진단 기록
+> 호출 한 곳만 앱에 남김) 통째로 `Packages/TaptionPlanStore/Sources/TaptionPlanStore/Snapshot/`으로 옮겼다.
+> Core가 아닌 Store인 이유: `AppFeatureSettings`가 `TaptionWatchSync`의 Watch 프로필과 `AppLanguagePreference`를
+> 담는데, `TaptionWatchSync`가 이미 Core에 의존하므로 Core에 두면 순환이 된다. 저장소 경계(`PlanDataRepository`)도
+> 같은 package에 두었다. 거리 계산(`distanceMeters`·`PlanarDistance`)은 `GeoPoint` 옆(Core)으로 옮겼다.
+> 바이트 계약: 옮기기 전 앱 선언으로 인코딩한 JSON(`build/validation/RFA1102A01/phase2-snapshot/`)을
+> `TaptionDataSnapshotCompatibilityTests`가 그대로 다시 쓰는지 본다. 앱의 백업·저장소 시험(TAPTBK03 쓰기·
+> TAPTBK02 읽기 포함)도 그대로 통과한다. 합성 memberwise init을 쓰던 타입에는 같은 인자·기본값의 `public init`을 두었다.
 >
 > 지킨 규칙: 직접 쓴 `init(from:)`·`encode(to:)`는 한 글자도 바꾸지 않았다. 합성 memberwise
 > init을 쓰던 타입에는 같은 인자 순서·기본값의 `public init`을 두었다. 표시용 확장(아이콘·제목·

@@ -1,8 +1,10 @@
 import Foundation
+import TaptionWatchSync
+import TaptionPlanCore
 
 // MARK: - Sleep
 
-enum SleepStage: String, Codable, CaseIterable, Hashable, Sendable {
+public enum SleepStage: String, Codable, CaseIterable, Hashable, Sendable {
     case inBed
     case awake
     case core
@@ -10,7 +12,7 @@ enum SleepStage: String, Codable, CaseIterable, Hashable, Sendable {
     case rem
     case asleepUnspecified
 
-    var isAsleep: Bool {
+    public var isAsleep: Bool {
         switch self {
         case .core, .deep, .rem, .asleepUnspecified:
             true
@@ -19,7 +21,7 @@ enum SleepStage: String, Codable, CaseIterable, Hashable, Sendable {
         }
     }
 
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .inBed:
             AppLanguagePreference.text(korean: "침대에 있음", english: "In bed")
@@ -39,7 +41,7 @@ enum SleepStage: String, Codable, CaseIterable, Hashable, Sendable {
     /// HealthKit은 같은 시각에 여러 단계를 겹쳐 보낸다(침대에 있음이 밤 전체를
     /// 덮고 그 위에 코어·깊은 수면이 얹힌다). 겹친 구간을 한 단계로 정할 때
     /// 쓰는 우선순위로, 구체적인 관측이 포괄적인 관측을 이긴다.
-    var overlapPriority: Int {
+    public var overlapPriority: Int {
         switch self {
         case .awake: 60
         case .deep: 50
@@ -51,17 +53,17 @@ enum SleepStage: String, Codable, CaseIterable, Hashable, Sendable {
     }
 }
 
-struct SleepSegment: Identifiable, Codable, Hashable, Sendable {
-    var id: UUID
-    var stage: SleepStage
-    var span: TimeSpan
-    var sourceName: String
-    var sourceBundleIdentifier: String
-    var deviceName: String?
-    var timeZoneIdentifier: String?
-    var isUserEntered: Bool
+public struct SleepSegment: Identifiable, Codable, Hashable, Sendable {
+    public var id: UUID
+    public var stage: SleepStage
+    public var span: TimeSpan
+    public var sourceName: String
+    public var sourceBundleIdentifier: String
+    public var deviceName: String?
+    public var timeZoneIdentifier: String?
+    public var isUserEntered: Bool
 
-    init(
+    public init(
         id: UUID = UUID(),
         stage: SleepStage,
         span: TimeSpan,
@@ -82,29 +84,49 @@ struct SleepSegment: Identifiable, Codable, Hashable, Sendable {
     }
 }
 
-struct SleepSession: Identifiable, Codable, Hashable, Sendable {
-    var id: UUID
-    var span: TimeSpan
-    var asleepDuration: TimeInterval
-    var awakeDuration: TimeInterval
-    var inBedDuration: TimeInterval
-    var stageDurations: [SleepStage: TimeInterval]
-    var sourceNames: [String]
-    var segments: [SleepSegment]
+public struct SleepSession: Identifiable, Codable, Hashable, Sendable {
+    public var id: UUID
+    public var span: TimeSpan
+    public var asleepDuration: TimeInterval
+    public var awakeDuration: TimeInterval
+    public var inBedDuration: TimeInterval
+    public var stageDurations: [SleepStage: TimeInterval]
+    public var sourceNames: [String]
+    public var segments: [SleepSegment]
 
-    var sleepEfficiency: Double? {
+    public var sleepEfficiency: Double? {
         let denominator = inBedDuration > 0
             ? inBedDuration
             : asleepDuration + awakeDuration
         guard denominator > 0 else { return nil }
         return min(1, max(0, asleepDuration / denominator))
     }
+
+    public init(
+        id: UUID,
+        span: TimeSpan,
+        asleepDuration: TimeInterval,
+        awakeDuration: TimeInterval,
+        inBedDuration: TimeInterval,
+        stageDurations: [SleepStage: TimeInterval],
+        sourceNames: [String],
+        segments: [SleepSegment]
+    ) {
+        self.id = id
+        self.span = span
+        self.asleepDuration = asleepDuration
+        self.awakeDuration = awakeDuration
+        self.inBedDuration = inBedDuration
+        self.stageDurations = stageDurations
+        self.sourceNames = sourceNames
+        self.segments = segments
+    }
 }
 
 extension SleepSession {
     /// Apple Watch sleep is a derived provenance check. The HealthKit sample
     /// and its source metadata remain untouched.
-    var isAppleWatchConfirmed: Bool {
+    public var isAppleWatchConfirmed: Bool {
         guard asleepDuration > 0 else { return false }
         let provenance = sourceNames + segments.flatMap {
             [$0.sourceName, $0.sourceBundleIdentifier, $0.deviceName ?? ""]
@@ -120,11 +142,11 @@ extension SleepSession {
 /// 자는 동안 실내 GPS가 끊기거나 튀면 지하철·이동 구간이 만들어진다. 그 시간의
 /// 대분류는 수면이므로, 수면에 대부분 덮인 **자동** 이동 구간은 지운다. 사용자가
 /// 확인·교정한 이동은 남기고, GPS 원본은 이 구간과 따로 보관되어 그대로 남는다.
-enum SleepTravelReconciliationEngine {
+public enum SleepTravelReconciliationEngine {
     /// 구간 길이 중 이 비율 이상이 수면에 덮이면 자동 이동을 지운다.
-    static let coveredFraction = 0.5
+    public static let coveredFraction = 0.5
 
-    static func removingAutomaticTravel(
+    public static func removingAutomaticTravel(
         _ travel: [TravelSegment],
         sessions: [SleepSession],
         inside span: TimeSpan,
@@ -147,23 +169,7 @@ enum SleepTravelReconciliationEngine {
         }
     }
 
-    /// HealthKit 갱신 경로용. 지운 수를 진단에 남긴다.
-    static func reconciled(
-        _ travel: [TravelSegment],
-        sessions: [SleepSession],
-        inside span: TimeSpan
-    ) -> [TravelSegment] {
-        let kept = removingAutomaticTravel(travel, sessions: sessions, inside: span, asOf: min(span.end, .now))
-        if kept.count != travel.count {
-            TaptionPlanDiagnosticsLogger.shared.record(
-                "sleep_travel_removed",
-                fields: ["removed": String(travel.count - kept.count)]
-            )
-        }
-        return kept
-    }
-
-    static func isUserConfirmed(_ segment: TravelSegment) -> Bool {
+    public static func isUserConfirmed(_ segment: TravelSegment) -> Bool {
         segment.isConfirmed || segment.evidence.contains {
             $0.hasPrefix("사용자 확인") || $0 == "사용자 교정"
         }
@@ -179,13 +185,13 @@ enum SleepTravelReconciliationEngine {
 /// 만들고(`isProvisional`), 워치 기록이 도착하면 그 밤의 수면·기상 주장을
 /// 워치 것으로 갈아 끼운다. `inBed`는 수면 주장이 아니라 "침대에 있었다"는
 /// 별개 사실이고 수면 효율의 분모라서 등급과 무관하게 합친다.
-enum SleepSourceTier: String, Codable, CaseIterable, Hashable, Sendable {
+public enum SleepSourceTier: String, Codable, CaseIterable, Hashable, Sendable {
     case unknown
     case iPhone
     case thirdParty
     case appleWatch
 
-    var priority: Int {
+    public var priority: Int {
         switch self {
         case .unknown: 0
         case .iPhone: 10
@@ -195,11 +201,11 @@ enum SleepSourceTier: String, Codable, CaseIterable, Hashable, Sendable {
     }
 
     /// 이 등급으로 만든 결과를 더 높은 등급이 나중에 보정할 수 있는지.
-    var needsConfirmation: Bool {
+    public var needsConfirmation: Bool {
         self != .appleWatch
     }
 
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .unknown:
             AppLanguagePreference.text(korean: "출처 미상", english: "Unknown source")
@@ -215,7 +221,7 @@ enum SleepSourceTier: String, Codable, CaseIterable, Hashable, Sendable {
 
 extension SleepSegment {
     /// 이 표본을 만든 기기의 등급. HealthKit이 주는 출처 메타데이터만 본다.
-    var sourceTier: SleepSourceTier {
+    public var sourceTier: SleepSourceTier {
         Self.sourceTier(
             sourceName: sourceName,
             sourceBundleIdentifier: sourceBundleIdentifier,
@@ -223,7 +229,7 @@ extension SleepSegment {
         )
     }
 
-    static func sourceTier(
+    public static func sourceTier(
         sourceName: String,
         sourceBundleIdentifier: String,
         deviceName: String?
@@ -256,7 +262,7 @@ extension SleepSegment {
 extension SleepSession {
     /// 이 세션을 이끈 가장 높은 등급. 구간에서 파생하므로 저장하지 않는다.
     /// 구간이 비어 있는 세션(테스트·복원 경로)은 출처 이름으로 대신 판정한다.
-    var sourceTier: SleepSourceTier {
+    public var sourceTier: SleepSourceTier {
         if let fromSegments = segments
             .map(\.sourceTier)
             .max(by: { $0.priority < $1.priority }),
@@ -275,45 +281,69 @@ extension SleepSession {
     }
 
     /// 워치 기록 없이 만든 잠정 결과인지. 워치 데이터가 오면 보정 대상이다.
-    var isProvisional: Bool {
+    public var isProvisional: Bool {
         sourceTier.needsConfirmation
     }
 
     /// 워치가 이 밤의 수면 시간을 확정했는지.
-    var isWatchAuthoritative: Bool {
+    public var isWatchAuthoritative: Bool {
         sourceTier == .appleWatch && asleepDuration > 0
     }
 }
 
 /// 워치 기록이 늦게 도착해 아이폰 추정 결과를 갈아 끼웠을 때 남기는 기록.
 /// 값 자체를 되돌릴 수는 없으므로, 무엇이 얼마나 달라졌는지만 보관한다.
-struct SleepReconciliation: Identifiable, Codable, Hashable, Sendable {
-    enum Reason: String, Codable, Hashable, Sendable {
+public struct SleepReconciliation: Identifiable, Codable, Hashable, Sendable {
+    public enum Reason: String, Codable, Hashable, Sendable {
         /// 잠정(아이폰) 추정을 워치가 확정으로 대체했다.
         case watchReplacedEstimate
         /// 워치 기록만 있던 밤에 잠정 추정이 없었다가 워치가 채웠다.
         case watchFilledGap
     }
 
-    var id: UUID
+    public var id: UUID
     /// 그 밤을 가리키는 날짜(기상일 기준 자정).
-    var overnightDate: Date
-    var estimatedTier: SleepSourceTier
-    var estimatedSpan: TimeSpan?
-    var estimatedAsleepDuration: TimeInterval
-    var authoritativeTier: SleepSourceTier
-    var authoritativeSpan: TimeSpan
-    var authoritativeAsleepDuration: TimeInterval
-    var reason: Reason
-    var reconciledAt: Date
+    public var overnightDate: Date
+    public var estimatedTier: SleepSourceTier
+    public var estimatedSpan: TimeSpan?
+    public var estimatedAsleepDuration: TimeInterval
+    public var authoritativeTier: SleepSourceTier
+    public var authoritativeSpan: TimeSpan
+    public var authoritativeAsleepDuration: TimeInterval
+    public var reason: Reason
+    public var reconciledAt: Date
 
-    var asleepDurationDelta: TimeInterval {
+    public var asleepDurationDelta: TimeInterval {
         authoritativeAsleepDuration - estimatedAsleepDuration
     }
 
-    var spanStartDelta: TimeInterval {
+    public var spanStartDelta: TimeInterval {
         guard let estimatedSpan else { return 0 }
         return authoritativeSpan.start.timeIntervalSince(estimatedSpan.start)
+    }
+
+    public init(
+        id: UUID,
+        overnightDate: Date,
+        estimatedTier: SleepSourceTier,
+        estimatedSpan: TimeSpan? = nil,
+        estimatedAsleepDuration: TimeInterval,
+        authoritativeTier: SleepSourceTier,
+        authoritativeSpan: TimeSpan,
+        authoritativeAsleepDuration: TimeInterval,
+        reason: Reason,
+        reconciledAt: Date
+    ) {
+        self.id = id
+        self.overnightDate = overnightDate
+        self.estimatedTier = estimatedTier
+        self.estimatedSpan = estimatedSpan
+        self.estimatedAsleepDuration = estimatedAsleepDuration
+        self.authoritativeTier = authoritativeTier
+        self.authoritativeSpan = authoritativeSpan
+        self.authoritativeAsleepDuration = authoritativeAsleepDuration
+        self.reason = reason
+        self.reconciledAt = reconciledAt
     }
 }
 
@@ -321,13 +351,13 @@ struct SleepReconciliation: Identifiable, Codable, Hashable, Sendable {
 
 // `SensorVector3`·`DeviceMotionSnapshot`·`DeviceMotionSummary`는 `TaptionPlanCore/Domain/SensorReading.swift`에 있다.
 
-struct MotionActivityRecord: Identifiable, Codable, Hashable, Sendable {
-    var id: UUID
-    var span: TimeSpan
-    var motion: MotionKind
-    var confidence: ConfidenceLevel
+public struct MotionActivityRecord: Identifiable, Codable, Hashable, Sendable {
+    public var id: UUID
+    public var span: TimeSpan
+    public var motion: MotionKind
+    public var confidence: ConfidenceLevel
 
-    init(
+    public init(
         id: UUID = UUID(),
         span: TimeSpan,
         motion: MotionKind,
@@ -340,8 +370,8 @@ struct MotionActivityRecord: Identifiable, Codable, Hashable, Sendable {
     }
 }
 
-enum MotionKindResolver {
-    static func resolve(
+public enum MotionKindResolver {
+    public static func resolve(
         stationary: Bool,
         walking: Bool,
         running: Bool,
@@ -359,38 +389,54 @@ enum MotionKindResolver {
     }
 }
 
-struct PedometerSummary: Codable, Hashable, Sendable {
-    var span: TimeSpan
-    var stepCount: Int
-    var distanceMeters: Double?
-    var floorsAscended: Int?
-    var floorsDescended: Int?
-    var averageActivePaceSecondsPerMeter: Double?
+public struct PedometerSummary: Codable, Hashable, Sendable {
+    public var span: TimeSpan
+    public var stepCount: Int
+    public var distanceMeters: Double?
+    public var floorsAscended: Int?
+    public var floorsDescended: Int?
+    public var averageActivePaceSecondsPerMeter: Double?
+
+    public init(
+        span: TimeSpan,
+        stepCount: Int,
+        distanceMeters: Double? = nil,
+        floorsAscended: Int? = nil,
+        floorsDescended: Int? = nil,
+        averageActivePaceSecondsPerMeter: Double? = nil
+    ) {
+        self.span = span
+        self.stepCount = stepCount
+        self.distanceMeters = distanceMeters
+        self.floorsAscended = floorsAscended
+        self.floorsDescended = floorsDescended
+        self.averageActivePaceSecondsPerMeter = averageActivePaceSecondsPerMeter
+    }
 }
 
-enum AppleMovementEvidenceSource: String, Codable, Hashable, Sendable {
+public enum AppleMovementEvidenceSource: String, Codable, Hashable, Sendable {
     case iPhone
     case appleWatch
     case other
 }
 
-enum AppleMovementEvidenceKind: String, Codable, Hashable, Sendable {
+public enum AppleMovementEvidenceKind: String, Codable, Hashable, Sendable {
     case workout
     case steps
 }
 
-struct AppleMovementEvidence: Identifiable, Codable, Hashable, Sendable {
-    var id: UUID
-    var span: TimeSpan
-    var source: AppleMovementEvidenceSource
-    var kind: AppleMovementEvidenceKind
-    var workoutMode: TravelMode?
-    var stepCount: Int?
-    var distanceMeters: Double?
-    var sourceName: String
-    var deviceName: String?
+public struct AppleMovementEvidence: Identifiable, Codable, Hashable, Sendable {
+    public var id: UUID
+    public var span: TimeSpan
+    public var source: AppleMovementEvidenceSource
+    public var kind: AppleMovementEvidenceKind
+    public var workoutMode: TravelMode?
+    public var stepCount: Int?
+    public var distanceMeters: Double?
+    public var sourceName: String
+    public var deviceName: String?
 
-    init(
+    public init(
         id: UUID = UUID(),
         span: TimeSpan,
         source: AppleMovementEvidenceSource,
@@ -413,25 +459,49 @@ struct AppleMovementEvidence: Identifiable, Codable, Hashable, Sendable {
     }
 }
 
-struct SensorHardwareAvailability: Codable, Hashable, Sendable {
-    var location: Bool
-    var motionActivity: Bool
-    var deviceMotion: Bool
-    var magnetometer: Bool
-    var relativeAltitude: Bool
-    var stepCounting: Bool
-    var distance: Bool
-    var floorCounting: Bool
-    var pace: Bool
-    var cadence: Bool
+public struct SensorHardwareAvailability: Codable, Hashable, Sendable {
+    public var location: Bool
+    public var motionActivity: Bool
+    public var deviceMotion: Bool
+    public var magnetometer: Bool
+    public var relativeAltitude: Bool
+    public var stepCounting: Bool
+    public var distance: Bool
+    public var floorCounting: Bool
+    public var pace: Bool
+    public var cadence: Bool
+
+    public init(
+        location: Bool,
+        motionActivity: Bool,
+        deviceMotion: Bool,
+        magnetometer: Bool,
+        relativeAltitude: Bool,
+        stepCounting: Bool,
+        distance: Bool,
+        floorCounting: Bool,
+        pace: Bool,
+        cadence: Bool
+    ) {
+        self.location = location
+        self.motionActivity = motionActivity
+        self.deviceMotion = deviceMotion
+        self.magnetometer = magnetometer
+        self.relativeAltitude = relativeAltitude
+        self.stepCounting = stepCounting
+        self.distance = distance
+        self.floorCounting = floorCounting
+        self.pace = pace
+        self.cadence = cadence
+    }
 }
 
-enum SensorCollectionProfile: Int, Codable, CaseIterable, Hashable, Sendable {
+public enum SensorCollectionProfile: Int, Codable, CaseIterable, Hashable, Sendable {
     case batterySaver = 0
     case balanced = 1
     case accuracy = 2
 
-    var interval: TimeInterval {
+    public var interval: TimeInterval {
         switch self {
         case .batterySaver: 15 * 60
         case .balanced: 5 * 60
@@ -439,14 +509,14 @@ enum SensorCollectionProfile: Int, Codable, CaseIterable, Hashable, Sendable {
         }
     }
 
-    var intervalMinutes: Int {
+    public var intervalMinutes: Int {
         Int(interval / 60)
     }
 
     /// Hardware is awake only for this short sampling window. The interval
     /// remains the time between sample starts; tracking sessions are the only
     /// mode that intentionally keeps the streams alive.
-    var samplingWindowDuration: TimeInterval {
+    public var samplingWindowDuration: TimeInterval {
         switch self {
         case .batterySaver: 8
         case .balanced: 10
@@ -454,7 +524,7 @@ enum SensorCollectionProfile: Int, Codable, CaseIterable, Hashable, Sendable {
         }
     }
 
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .batterySaver:
             AppLanguagePreference.text(korean: "배터리 최소화", english: "Battery saver")
@@ -466,14 +536,14 @@ enum SensorCollectionProfile: Int, Codable, CaseIterable, Hashable, Sendable {
     }
 }
 
-struct SensorCollectionConfiguration: Codable, Hashable, Sendable {
-    var profile: SensorCollectionProfile
-    var highAccuracyDuringMovement: Bool
-    var collectsDeviceMotion: Bool
-    var allowsBackgroundLocation: Bool
-    var minimumEmissionInterval: TimeInterval
+public struct SensorCollectionConfiguration: Codable, Hashable, Sendable {
+    public var profile: SensorCollectionProfile
+    public var highAccuracyDuringMovement: Bool
+    public var collectsDeviceMotion: Bool
+    public var allowsBackgroundLocation: Bool
+    public var minimumEmissionInterval: TimeInterval
 
-    static let standard = SensorCollectionConfiguration(
+    public static let standard = SensorCollectionConfiguration(
         profile: .balanced,
         highAccuracyDuringMovement: true,
         collectsDeviceMotion: true,
@@ -481,7 +551,7 @@ struct SensorCollectionConfiguration: Codable, Hashable, Sendable {
         minimumEmissionInterval: SensorCollectionProfile.balanced.interval
     )
 
-    static func configured(
+    public static func configured(
         for profile: SensorCollectionProfile,
         allowsBackgroundLocation: Bool
     ) -> SensorCollectionConfiguration {
@@ -494,7 +564,7 @@ struct SensorCollectionConfiguration: Codable, Hashable, Sendable {
         )
     }
 
-    var normalized: SensorCollectionConfiguration {
+    public var normalized: SensorCollectionConfiguration {
         var copy = self
         copy.minimumEmissionInterval = TimeInterval(
             GPSLoggingPreferences.restoredSeconds(
@@ -505,48 +575,48 @@ struct SensorCollectionConfiguration: Codable, Hashable, Sendable {
     }
 }
 
-struct GPSLoggingPreferences: Codable, Hashable, Sendable {
+public struct GPSLoggingPreferences: Codable, Hashable, Sendable {
     /// User-facing cadence presets shared by Settings and the hamburger menu.
-    enum Preset: Int, CaseIterable, Hashable, Sendable {
+    public enum Preset: Int, CaseIterable, Hashable, Sendable {
         case batterySaver = 900
         case balanced = 300
         case realtime = 60
 
-        var intervalSeconds: Int { rawValue }
+        public var intervalSeconds: Int { rawValue }
     }
 
     /// 30초 단위로 30초~30분.
-    static let intervalStepSeconds = 30
-    static let supportedIntervalSeconds = Array(
+    public static let intervalStepSeconds = 30
+    public static let supportedIntervalSeconds = Array(
         stride(from: intervalStepSeconds, through: 1_800, by: intervalStepSeconds)
     )
     /// 슬라이더 큰 눈금과 그 위치. 30초·1분이 겹치지 않게 시간에 비례시키지 않는다.
-    static let majorTickSeconds = [30, 60, 300, 600, 900, 1_800]
-    static let majorTickPositions: [Double] = [0, 1, 2, 3, 4, 6]
-    static let batteryMinimalIntervalSeconds = 900
+    public static let majorTickSeconds = [30, 60, 300, 600, 900, 1_800]
+    public static let majorTickPositions: [Double] = [0, 1, 2, 3, 4, 6]
+    public static let batteryMinimalIntervalSeconds = 900
 
-    var intervalSeconds: Int
+    public var intervalSeconds: Int
 
-    static let standard = GPSLoggingPreferences(intervalSeconds: 300)
+    public static let standard = GPSLoggingPreferences(intervalSeconds: 300)
 
-    init(intervalSeconds: Int = 300) {
+    public init(intervalSeconds: Int = 300) {
         self.intervalSeconds = Self.clampedSeconds(intervalSeconds)
     }
 
     /// 15분 이상이면 저전력 수집(낮은 정확도 표본도 저장)을 쓴다.
-    var isBatteryMinimal: Bool {
+    public var isBatteryMinimal: Bool {
         intervalSeconds >= Self.batteryMinimalIntervalSeconds
     }
 
-    var interval: TimeInterval {
+    public var interval: TimeInterval {
         TimeInterval(effectiveIntervalSeconds)
     }
 
-    var effectiveIntervalSeconds: Int {
+    public var effectiveIntervalSeconds: Int {
         intervalSeconds
     }
 
-    var preset: Preset {
+    public var preset: Preset {
         get {
             Preset(rawValue: effectiveIntervalSeconds)
                 ?? (effectiveIntervalSeconds > Preset.balanced.rawValue
@@ -558,7 +628,7 @@ struct GPSLoggingPreferences: Codable, Hashable, Sendable {
     }
 
     @available(*, deprecated, message: "Use intervalSeconds")
-    var intervalMinutes: Int {
+    public var intervalMinutes: Int {
         max(1, Int(ceil(Double(intervalSeconds) / 60)))
     }
 
@@ -568,7 +638,7 @@ struct GPSLoggingPreferences: Codable, Hashable, Sendable {
         case intervalMinutes
     }
 
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         let isBatteryMinimal = try values.decodeIfPresent(
             Bool.self,
@@ -588,26 +658,26 @@ struct GPSLoggingPreferences: Codable, Hashable, Sendable {
         )
     }
 
-    func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var values = encoder.container(keyedBy: CodingKeys.self)
         try values.encode(isBatteryMinimal, forKey: .isBatteryMinimal)
         try values.encode(intervalSeconds, forKey: .intervalSeconds)
     }
 
-    static func clampedSeconds(_ value: Int) -> Int {
+    public static func clampedSeconds(_ value: Int) -> Int {
         let step = intervalStepSeconds
         let snapped = (value + step / 2) / step * step
         return min(max(snapped, step), supportedIntervalSeconds.last ?? snapped)
     }
 
     /// 예전 연속 수집 값(30초 미만)은 이전 빌드처럼 1분으로 읽는다.
-    static func restoredSeconds(_ value: Int) -> Int {
+    public static func restoredSeconds(_ value: Int) -> Int {
         value < intervalStepSeconds
             ? Preset.realtime.intervalSeconds
             : clampedSeconds(value)
     }
 
-    static func sliderPosition(forSeconds seconds: Int) -> Double {
+    public static func sliderPosition(forSeconds seconds: Int) -> Double {
         let clamped = clampedSeconds(seconds)
         let upper = majorTickSeconds.firstIndex { $0 >= clamped } ?? 0
         guard upper > 0 else { return majorTickPositions[0] }
@@ -617,7 +687,7 @@ struct GPSLoggingPreferences: Codable, Hashable, Sendable {
             + progress * (majorTickPositions[upper] - majorTickPositions[upper - 1])
     }
 
-    static func seconds(forSliderPosition position: Double) -> Int {
+    public static func seconds(forSliderPosition position: Double) -> Int {
         let upper = majorTickPositions.firstIndex { $0 >= position }
             ?? majorTickPositions.count - 1
         guard upper > 0 else { return majorTickSeconds[0] }
@@ -629,7 +699,7 @@ struct GPSLoggingPreferences: Codable, Hashable, Sendable {
     }
 
     /// 30초, 1분, 2분 30초처럼 짧게 적는다.
-    static func intervalText(_ seconds: Int) -> String {
+    public static func intervalText(_ seconds: Int) -> String {
         let minutes = seconds / 60
         let rest = seconds % 60
         return [
@@ -644,8 +714,8 @@ struct GPSLoggingPreferences: Codable, Hashable, Sendable {
 /// exact allow-list: generic/legacy names such as `ollehWiFi` are not
 /// evidence of a subway ride.  Matching is deliberately independent from
 /// the UI and movement classifier so archived readings can be re-analysed.
-enum SubwayWiFiSSID {
-    static let minimumContinuousObservations = 2
+public enum SubwayWiFiSSID {
+    public static let minimumContinuousObservations = 2
     private static let allowed: Set<String> = [
         "t wifi",
         "t wifi secure",
@@ -661,7 +731,7 @@ enum SubwayWiFiSSID {
         "t wifi zone",
     ]
 
-    static func normalized(_ ssid: String) -> String {
+    public static func normalized(_ ssid: String) -> String {
         ssid
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .replacingOccurrences(of: "_", with: " ")
@@ -673,7 +743,7 @@ enum SubwayWiFiSSID {
             .lowercased()
     }
 
-    static func isAllowed(_ ssid: String?) -> Bool {
+    public static func isAllowed(_ ssid: String?) -> Bool {
         guard let ssid else { return false }
         return allowed.contains(normalized(ssid))
     }
@@ -681,7 +751,7 @@ enum SubwayWiFiSSID {
     /// A run of accepted, connected SSIDs is a stronger signal than a single
     /// scan.  Secure/open variants may alternate while the device remains in
     /// the train, so the name itself need not remain identical.
-    static func hasContinuousEvidence(
+    public static func hasContinuousEvidence(
         _ ssids: [String?],
         minimumObservations: Int = minimumContinuousObservations
     ) -> Bool {
@@ -698,26 +768,26 @@ enum SubwayWiFiSSID {
         return false
     }
 
-    static func hasContinuousEvidence(streak: Int?) -> Bool {
+    public static func hasContinuousEvidence(streak: Int?) -> Bool {
         (streak ?? 0) >= minimumContinuousObservations
     }
 }
 
-enum TrackingSessionPolicy {
-    static let automaticStartDuration: TimeInterval = 10
-    static let automaticStopStationaryDuration: TimeInterval = 2 * 60
-    static let activeHorizontalAccuracyLimit: Double = 50
-    static let activeDistanceFilterMeters: Double = 5
-    static let automaticEmissionThrottleInterval: TimeInterval = 1
+public enum TrackingSessionPolicy {
+    public static let automaticStartDuration: TimeInterval = 10
+    public static let automaticStopStationaryDuration: TimeInterval = 2 * 60
+    public static let activeHorizontalAccuracyLimit: Double = 50
+    public static let activeDistanceFilterMeters: Double = 5
+    public static let automaticEmissionThrottleInterval: TimeInterval = 1
 
-    static func allowsAutomaticTracking(
+    public static func allowsAutomaticTracking(
         interval: TimeInterval
     ) -> Bool {
         interval >= TimeInterval(GPSLoggingPreferences.intervalStepSeconds)
             && interval <= TimeInterval(GPSLoggingPreferences.Preset.balanced.intervalSeconds)
     }
 
-    static func allowsPersistingLocation(
+    public static func allowsPersistingLocation(
         horizontalAccuracy: Double,
         batteryMinimal: Bool
     ) -> Bool {
@@ -728,7 +798,7 @@ enum TrackingSessionPolicy {
             )
     }
 
-    static func isPreciseRouteReading(_ reading: SensorReading) -> Bool {
+    public static func isPreciseRouteReading(_ reading: SensorReading) -> Bool {
         guard reading.gpsAvailable,
               reading.locationFixQuality != .approximate,
               let point = reading.point else { return false }
@@ -741,7 +811,7 @@ enum TrackingSessionPolicy {
                 .contains(point.horizontalAccuracy)
     }
 
-    static func shouldPromoteBackgroundMovement(
+    public static func shouldPromoteBackgroundMovement(
         speedMetersPerSecond: Double,
         displacementMeters: Double,
         elapsed: TimeInterval,
@@ -757,7 +827,7 @@ enum TrackingSessionPolicy {
                 && displacementMeters >= 80
     }
 
-    static func shouldAutomaticallyStart(
+    public static func shouldAutomaticallyStart(
         motion: MotionKind,
         confidence: ConfidenceLevel,
         sustainedFor duration: TimeInterval
@@ -767,7 +837,7 @@ enum TrackingSessionPolicy {
             && duration >= automaticStartDuration
     }
 
-    static func shouldAutomaticallyStop(
+    public static func shouldAutomaticallyStop(
         motion: MotionKind,
         stationaryFor duration: TimeInterval
     ) -> Bool {
@@ -778,8 +848,8 @@ enum TrackingSessionPolicy {
 
 /// Combines overlapping measured intervals without changing the source records.
 /// Automatic sensors can emit the same activity from more than one device.
-enum ActualIntervalMergeEngine {
-    static func union(
+public enum ActualIntervalMergeEngine {
+    public static func union(
         _ spans: [TimeSpan],
         mergeGap: TimeInterval = 1
     ) -> [TimeSpan] {
@@ -801,7 +871,7 @@ enum ActualIntervalMergeEngine {
         return merged
     }
 
-    static func duration(
+    public static func duration(
         of spans: [TimeSpan],
         mergeGap: TimeInterval = 1
     ) -> TimeInterval {
@@ -812,7 +882,7 @@ enum ActualIntervalMergeEngine {
 
     /// `span` 에서 `covered` 가 덮은 시간을 뺀 나머지 조각. 조각은 시작 시각
     /// 순이고 서로 겹치지 않는다. `covered` 는 정렬돼 있지 않아도 된다.
-    static func subtracting(
+    public static func subtracting(
         _ covered: [TimeSpan],
         from span: TimeSpan
     ) -> [TimeSpan] {
