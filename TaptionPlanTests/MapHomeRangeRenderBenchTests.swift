@@ -119,7 +119,7 @@ final class MapHomeRangeRenderBenchTests: XCTestCase {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("PLR1104A01", isDirectory: true)
         try? FileManager.default.removeItem(at: folder)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        let kept = folder.appendingPathComponent("trip.mov")
+        let kept = folder.appendingPathComponent("trip.mp4")
         try FileManager.default.moveItem(at: url, to: kept)
         print("PLR_BENCH movie=\(kept.path)")
         let generator = AVAssetImageGenerator(asset: AVURLAsset(url: kept))

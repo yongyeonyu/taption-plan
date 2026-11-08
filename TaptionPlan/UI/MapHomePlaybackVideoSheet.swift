@@ -35,6 +35,11 @@ struct MapHomePlaybackVideoSheet: View {
     @State private var missingRangeDays = 0
     /// 영상 길이·가리기만 바꿀 때 1년치를 다시 읽지 않도록 줄인 표본을 시트가 열린 동안 둔다.
     @State private var loadedRange: (span: TimeSpan, samples: [MapHomeRangeTripPlan.Sample], missing: Int)?
+    /// 경로 재생(`route`) 또는 도시 여행 지도(`cities`, TRV1108A01).
+    @AppStorage("playbackVideoStyle") private var styleRaw = "route"
+    @State private var isTravelMapBusy = false
+
+    private var isTravelMapStyle: Bool { styleRaw == "cities" }
 
     /// 0은 기간에 따라 자동.
     private static let lengthChoices = [0, 30, 60, 90, 180]
@@ -51,7 +56,7 @@ struct MapHomePlaybackVideoSheet: View {
     }
 
     private var rangeKey: String {
-        "\(presetRaw)|\(targetSeconds)|\(hidesPrivatePlaces)|\(Int(customStart.timeIntervalSinceReferenceDate / 86_400))|\(Int(customEnd.timeIntervalSinceReferenceDate / 86_400))"
+        "\(styleRaw)|\(presetRaw)|\(targetSeconds)|\(hidesPrivatePlaces)|\(Int(customStart.timeIntervalSinceReferenceDate / 86_400))|\(Int(customEnd.timeIntervalSinceReferenceDate / 86_400))"
     }
 
     var body: some View {
@@ -62,7 +67,7 @@ struct MapHomePlaybackVideoSheet: View {
         .background(Color.tpBackground)
         .presentationBackground(Color.tpBackground)
         // 만드는 중에는 쓸어 내리지 않는다. 캡처가 화면 갱신을 강제해 시트가 떨린다. 취소 단추로 닫는다.
-        .interactiveDismissDisabled(phase == .rendering)
+        .interactiveDismissDisabled(phase == .rendering || isTravelMapBusy)
         // 닫기·아래로 쓸기 모두 여기로 온다. 만드는 중이면 렌더링을 멈춘다.
         .onDisappear {
             task?.cancel()
@@ -77,7 +82,7 @@ struct MapHomePlaybackVideoSheet: View {
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .bold))
                     .foregroundStyle(Color.tpInk)
                 Spacer(minLength: 8)
-                Button(phase == .rendering ? language.text("취소", "Cancel") : language.text("닫기", "Close")) {
+                Button(phase == .rendering || isTravelMapBusy ? language.text("취소", "Cancel") : language.text("닫기", "Close")) {
                     isClosing = true
                     task?.cancel()
                     dismiss()
@@ -85,10 +90,29 @@ struct MapHomePlaybackVideoSheet: View {
                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold))
                 .foregroundStyle(Color.tpAccent)
             }
-            if phase == .idle || isFailed {
-                rangeControls
+            if (phase == .idle || isFailed) && !isTravelMapBusy {
+                choiceRow(
+                    [("route", language.text("경로 재생", "Route playback")), ("cities", language.text("도시 여행 지도", "City travel map"))],
+                    selected: isTravelMapStyle ? "cities" : "route"
+                ) { styleRaw = $0 }
+                if isTravelMapStyle {
+                    MapHomePlaybackRangePicker(language: language)
+                } else {
+                    rangeControls
+                }
                 MapHomePlaybackMusicPicker(language: language, canUseAudio: !model.isRecordingVoiceMemo)
             }
+            if isTravelMapStyle {
+                TravelMapVideoSection(model: model, language: language, span: rangeSpan, isBusy: $isTravelMapBusy)
+            } else {
+                routeStatus
+            }
+        }
+        .padding(22)
+    }
+
+    private var routeStatus: some View {
+        VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 10) {
                 Text(periodText)
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold))
@@ -111,7 +135,6 @@ struct MapHomePlaybackVideoSheet: View {
             }
             actionButton
         }
-        .padding(22)
     }
 
     @ViewBuilder
@@ -202,31 +225,12 @@ struct MapHomePlaybackVideoSheet: View {
         MapHomeRangeTripPlan.make(samples: samples, span: span, durationSeconds: seconds, hiddenPlaces: hiddenPlaces)
     }
 
-    /// 주 스레드 밖에서 하루치를 표본으로 줄인다.
-    private nonisolated static func daySamples(from readings: [SensorReading]) async -> [MapHomeRangeTripPlan.Sample] {
-        MapHomeRangeTripPlan.thinned(
-            MapHomeRangeTripPlan.samples(from: readings).sorted { $0.time < $1.time }
-        )
-    }
-
-    private nonisolated static func cachedSamples(dayStart: Date, calendar: Calendar) async -> [MapHomeRangeTripPlan.Sample]? {
-        MapHomeRangeSampleCache.read(dayStart: dayStart, calendar: calendar)
-    }
-
-    private nonisolated static func storeSamples(
-        _ samples: [MapHomeRangeTripPlan.Sample], dayStart: Date, calendar: Calendar
-    ) async {
-        guard MapHomeRangeSampleCache.isCacheable(dayStart: dayStart, now: .now, calendar: calendar) else { return }
-        MapHomeRangeSampleCache.write(samples, dayStart: dayStart, calendar: calendar)
-    }
-
-    /// 하루씩 읽어 줄인 표본만 남긴다. 여러 날의 `SensorReading`을 한꺼번에 메모리에 두지 않는다.
-    /// 판독이 없는 날은 저장된 이동·장소로 경로를 지어내지 않고 날 수만 센다.
+    /// 읽기는 `MapHomeRangeSampleLoader`가 맡는다. 같은 날짜 구간이면 시트가 열린 동안 다시 읽지 않는다.
     private func loadRange() async {
         rangePlan = nil
         missingRangeDays = 0
         if isFailed { phase = .idle }
-        guard preset != .day else { return }
+        guard preset != .day, !isTravelMapStyle else { return }
         isLoadingRange = true
         rangeLoadPercent = 0
         defer { isLoadingRange = false }
@@ -240,44 +244,16 @@ struct MapHomePlaybackVideoSheet: View {
            calendar.isDate(cached.span.end, inSameDayAs: span.end) {
             loaded = cached
         } else {
-            guard let read = await readRange(span, days: days, calendar: calendar) else { return }
-            loaded = read
-            loadedRange = read
+            guard let read = await MapHomeRangeSampleLoader.read(model: model, span: span, calendar: calendar, progress: {
+                rangeLoadPercent = $0
+            }) else { return }
+            loaded = (read.span, read.samples, read.missing)
+            loadedRange = loaded
         }
         let plan = await Self.makePlan(samples: loaded.samples, span: span, seconds: seconds, hiddenPlaces: hiddenPlaces)
         guard !Task.isCancelled else { return }
         rangePlan = plan
         missingRangeDays = loaded.missing
-    }
-
-    /// 취소되면 nil.
-    private func readRange(
-        _ span: TimeSpan, days: Int, calendar: Calendar
-    ) async -> (span: TimeSpan, samples: [MapHomeRangeTripPlan.Sample], missing: Int)? {
-        var samples: [MapHomeRangeTripPlan.Sample] = []
-        var missing = 0
-        var dayIndex = 0
-        var dayStart = span.start
-        while dayStart < span.end {
-            let next = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: dayStart)) ?? span.end
-            let daySamples: [MapHomeRangeTripPlan.Sample]
-            if let cached = await Self.cachedSamples(dayStart: dayStart, calendar: calendar) {
-                daySamples = cached
-            } else {
-                let loaded = await model.routeReadingsForRange(in: TimeSpan(start: dayStart, end: min(next, span.end)))
-                daySamples = await Self.daySamples(from: loaded.readings)
-                if Task.isCancelled { return nil }
-                await Self.storeSamples(daySamples, dayStart: dayStart, calendar: calendar)
-            }
-            if Task.isCancelled { return nil }
-            samples += daySamples
-            if daySamples.isEmpty { missing += 1 }
-            dayIndex += 1
-            let percent = min(100, dayIndex * 100 / days)
-            if percent != rangeLoadPercent { rangeLoadPercent = percent }
-            dayStart = next
-        }
-        return (span, samples, missing)
     }
 
     private var message: String {

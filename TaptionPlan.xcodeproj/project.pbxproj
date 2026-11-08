@@ -526,6 +526,18 @@
 		A1VID1029A0100000000003 /* PlaybackVideoTimelineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1VID1029A0100000000003 /* PlaybackVideoTimelineTests.swift */; };
 		A1PLR1104A0100000000001 /* MapHomeRangePlayback.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1PLR1104A0100000000001 /* MapHomeRangePlayback.swift */; };
 		A1PLR1104A0100000000002 /* MapHomeRangeVideoOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1PLR1104A0100000000002 /* MapHomeRangeVideoOverlay.swift */; };
+		B10807000000000000000101 /* TravelMapBaseMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10807000000000000000001 /* TravelMapBaseMap.swift */; };
+		B10807000000000000000102 /* TravelMapCityCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10807000000000000000002 /* TravelMapCityCatalog.swift */; };
+		B10807000000000000000103 /* TravelMapTrip.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10807000000000000000003 /* TravelMapTrip.swift */; };
+		B10807000000000000000104 /* TravelMapVideoPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10807000000000000000004 /* TravelMapVideoPlan.swift */; };
+		B10807000000000000000105 /* TravelMapVideoRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10807000000000000000005 /* TravelMapVideoRenderer.swift */; };
+		B10807000000000000000106 /* TravelMapVideoSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10807000000000000000006 /* TravelMapVideoSection.swift */; };
+		B10807000000000000000107 /* TravelMapTripEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10807000000000000000007 /* TravelMapTripEditorSheet.swift */; };
+		B10807000000000000000108 /* MapHomeRangeSampleLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10807000000000000000008 /* MapHomeRangeSampleLoader.swift */; };
+		B10807000000000000000109 /* ne-basemap.bin in Resources */ = {isa = PBXBuildFile; fileRef = B10807000000000000000009 /* ne-basemap.bin */; };
+		B1080700000000000000010A /* ne-cities.tsv in Resources */ = {isa = PBXBuildFile; fileRef = B1080700000000000000000A /* ne-cities.tsv */; };
+		B1080700000000000000010B /* TravelMapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080700000000000000000B /* TravelMapTests.swift */; };
+		B1080700000000000000010C /* TravelMapVideoRenderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080700000000000000000C /* TravelMapVideoRenderTests.swift */; };
 		A1PLR1104A0100000000003 /* MapHomeRangePlaybackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1PLR1104A0100000000003 /* MapHomeRangePlaybackTests.swift */; };
 		A1PLR1104A0100000000004 /* MapHomeRangeRenderBenchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1PLR1104A0100000000004 /* MapHomeRangeRenderBenchTests.swift */; };
 		A1AB1029A0200000000000D1 /* MapHomeNLEMultiDay.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1AB1029A0200000000000D1 /* MapHomeNLEMultiDay.swift */; };
@@ -1095,6 +1107,18 @@
 		F1VID1029A0100000000003 /* PlaybackVideoTimelineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackVideoTimelineTests.swift; sourceTree = "<group>"; };
 		F1PLR1104A0100000000001 /* MapHomeRangePlayback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeRangePlayback.swift; sourceTree = "<group>"; };
 		F1PLR1104A0100000000002 /* MapHomeRangeVideoOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeRangeVideoOverlay.swift; sourceTree = "<group>"; };
+		B10807000000000000000001 /* TravelMapBaseMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelMapBaseMap.swift; sourceTree = "<group>"; };
+		B10807000000000000000002 /* TravelMapCityCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelMapCityCatalog.swift; sourceTree = "<group>"; };
+		B10807000000000000000003 /* TravelMapTrip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelMapTrip.swift; sourceTree = "<group>"; };
+		B10807000000000000000004 /* TravelMapVideoPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelMapVideoPlan.swift; sourceTree = "<group>"; };
+		B10807000000000000000005 /* TravelMapVideoRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelMapVideoRenderer.swift; sourceTree = "<group>"; };
+		B10807000000000000000006 /* TravelMapVideoSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelMapVideoSection.swift; sourceTree = "<group>"; };
+		B10807000000000000000007 /* TravelMapTripEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelMapTripEditorSheet.swift; sourceTree = "<group>"; };
+		B10807000000000000000008 /* MapHomeRangeSampleLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeRangeSampleLoader.swift; sourceTree = "<group>"; };
+		B10807000000000000000009 /* ne-basemap.bin */ = {isa = PBXFileReference; lastKnownFileType = file; name = ne-basemap.bin; path = MapData/ne-basemap.bin; sourceTree = "<group>"; };
+		B1080700000000000000000A /* ne-cities.tsv */ = {isa = PBXFileReference; lastKnownFileType = text; name = ne-cities.tsv; path = MapData/ne-cities.tsv; sourceTree = "<group>"; };
+		B1080700000000000000000B /* TravelMapTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelMapTests.swift; sourceTree = "<group>"; };
+		B1080700000000000000000C /* TravelMapVideoRenderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelMapVideoRenderTests.swift; sourceTree = "<group>"; };
 		F1PLR1104A0100000000003 /* MapHomeRangePlaybackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeRangePlaybackTests.swift; sourceTree = "<group>"; };
 		F1PLR1104A0100000000004 /* MapHomeRangeRenderBenchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeRangeRenderBenchTests.swift; sourceTree = "<group>"; };
 		F1AB1029A0200000000000D1 /* MapHomeNLEMultiDay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeNLEMultiDay.swift; sourceTree = "<group>"; };
@@ -1259,6 +1283,8 @@
 				F1BGM1104A0200000000008 /* 10-cloud-bicycle.m4a */,
 				F1BGM1104A0200000000009 /* 11-travel-bag.m4a */,
 				F1BGM1104A0200000000010 /* 12-cat-parade.m4a */,
+				B10807000000000000000009 /* ne-basemap.bin */,
+				B1080700000000000000000A /* ne-cities.tsv */,
 				F1000000000000000B110302 /* SUIT-Medium.otf */,
 				F1000000000000000B110303 /* SUIT-SemiBold.otf */,
 				F1000000000000000B1102FC /* SUIT-Regular.otf */,
@@ -1335,6 +1361,8 @@
 				F1PLR1104A0100000000003 /* MapHomeRangePlaybackTests.swift */,
 				F1PLR1104A0100000000004 /* MapHomeRangeRenderBenchTests.swift */,
 				F1BGM1104A0200000000021 /* MapHomePlaybackMusicTests.swift */,
+				B1080700000000000000000B /* TravelMapTests.swift */,
+				B1080700000000000000000C /* TravelMapVideoRenderTests.swift */,
 				F20000000000000000000004 /* SensorBackgroundCoordinatorTests.swift */,
 				F2000000000000000000000D /* LocalizationCatalogTests.swift */,
 				F2000000000000000000000E /* DiagnosticsLogSupportTests.swift */,
@@ -1494,6 +1522,14 @@
 				F1BGM1104A0200000000020 /* MapHomePlaybackMusic.swift */,
 				F1PLR1104A0100000000001 /* MapHomeRangePlayback.swift */,
 				F1PLR1104A0100000000002 /* MapHomeRangeVideoOverlay.swift */,
+				B10807000000000000000001 /* TravelMapBaseMap.swift */,
+				B10807000000000000000002 /* TravelMapCityCatalog.swift */,
+				B10807000000000000000003 /* TravelMapTrip.swift */,
+				B10807000000000000000004 /* TravelMapVideoPlan.swift */,
+				B10807000000000000000005 /* TravelMapVideoRenderer.swift */,
+				B10807000000000000000006 /* TravelMapVideoSection.swift */,
+				B10807000000000000000007 /* TravelMapTripEditorSheet.swift */,
+				B10807000000000000000008 /* MapHomeRangeSampleLoader.swift */,
 				F1AB1029A0200000000000D1 /* MapHomeNLEMultiDay.swift */,
 				F1AB1029A0200000000000D2 /* MapHomeNLEEditorViewport.swift */,
 				F1PLY1029A0300000000001 /* MapHomePlaybackDriver.swift */,
@@ -2066,6 +2102,8 @@
 				A1BGM1104A0200000000008 /* 10-cloud-bicycle.m4a in Resources */,
 				A1BGM1104A0200000000009 /* 11-travel-bag.m4a in Resources */,
 				A1BGM1104A0200000000010 /* 12-cat-parade.m4a in Resources */,
+				B10807000000000000000109 /* ne-basemap.bin in Resources */,
+				B1080700000000000000010A /* ne-cities.tsv in Resources */,
 				A1000000000000000B110302 /* SUIT-Medium.otf in Resources */,
 				A1000000000000000B110303 /* SUIT-SemiBold.otf in Resources */,
 				A1000000000000000B1102FC /* SUIT-Regular.otf in Resources */,
@@ -2325,6 +2363,14 @@
 				A1BGM1104A0200000000020 /* MapHomePlaybackMusic.swift in Sources */,
 				A1PLR1104A0100000000001 /* MapHomeRangePlayback.swift in Sources */,
 				A1PLR1104A0100000000002 /* MapHomeRangeVideoOverlay.swift in Sources */,
+				B10807000000000000000101 /* TravelMapBaseMap.swift in Sources */,
+				B10807000000000000000102 /* TravelMapCityCatalog.swift in Sources */,
+				B10807000000000000000103 /* TravelMapTrip.swift in Sources */,
+				B10807000000000000000104 /* TravelMapVideoPlan.swift in Sources */,
+				B10807000000000000000105 /* TravelMapVideoRenderer.swift in Sources */,
+				B10807000000000000000106 /* TravelMapVideoSection.swift in Sources */,
+				B10807000000000000000107 /* TravelMapTripEditorSheet.swift in Sources */,
+				B10807000000000000000108 /* MapHomeRangeSampleLoader.swift in Sources */,
 				A1AB1029A0200000000000D1 /* MapHomeNLEMultiDay.swift in Sources */,
 				A1AB1029A0200000000000D2 /* MapHomeNLEEditorViewport.swift in Sources */,
 				A1PLY1029A0300000000001 /* MapHomePlaybackDriver.swift in Sources */,
@@ -2550,6 +2596,8 @@
 				A1PLR1104A0100000000003 /* MapHomeRangePlaybackTests.swift in Sources */,
 				A1PLR1104A0100000000004 /* MapHomeRangeRenderBenchTests.swift in Sources */,
 				A1BGM1104A0200000000021 /* MapHomePlaybackMusicTests.swift in Sources */,
+				B1080700000000000000010B /* TravelMapTests.swift in Sources */,
+				B1080700000000000000010C /* TravelMapVideoRenderTests.swift in Sources */,
 				A20000000000000000000007 /* SensorBackgroundCoordinatorTests.swift in Sources */,
 				A20000000000000000000010 /* LocalizationCatalogTests.swift in Sources */,
 				A20000000000000000000011 /* DiagnosticsLogSupportTests.swift in Sources */,

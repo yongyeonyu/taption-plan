@@ -13,7 +13,7 @@ final class MapHomePlaybackMusicTests: XCTestCase {
     }
 
     private func writeVideo(seconds: Double, music: URL?) async throws -> URL {
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("BGM-\(UUID().uuidString).mov")
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("BGM-\(UUID().uuidString).mp4")
         addTeardownBlock { try? FileManager.default.removeItem(at: url) }
         let writer = try MapHomePlaybackVideoWriter(
             url: url, width: 64, height: 64, fps: fps, codec: .h264, bitRate: 200_000,
@@ -108,7 +108,7 @@ final class MapHomePlaybackMusicTests: XCTestCase {
     }
 
     func testCancelWithMusicDoesNotHang() throws {
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("BGM-\(UUID().uuidString).mov")
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("BGM-\(UUID().uuidString).mp4")
         addTeardownBlock { try? FileManager.default.removeItem(at: url) }
         let writer = try MapHomePlaybackVideoWriter(
             url: url, width: 64, height: 64, fps: fps, codec: .h264, bitRate: 200_000,
