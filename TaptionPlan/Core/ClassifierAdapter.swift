@@ -444,8 +444,9 @@ enum AutomaticModelVersion {
 }
 
 /// 휴대폰 수면 하나. 감지기(엄격 규칙·화면 꺼짐·충전 정지)는 후보만 내고, 어느 것을 쓸지는
-/// `SleepFusion.arbitrate`가 정한다: 엄격 규칙 후보가 있으면 그것만, 없으면 화면 후보에
-/// 겹치지 않는 충전 후보를 더한다. 워치·HealthKit 수면과 겹치는 후보는 버린다.
+/// `SleepFusion.phoneOnly`가 정한다: 30분 미만·낮 창(9~21시) 안 후보를 먼저 버리고(ALG1102A01),
+/// 엄격 규칙 후보가 있으면 그것만, 없으면 화면 후보에 겹치지 않는 충전 후보를 더한다.
+/// 워치·HealthKit 수면과 겹치는 후보는 버린다.
 enum PhoneSleepFusion {
     /// 배경 수집 간격이 길어도 밤 한 번은 이어서 본다.
     static let maximumBackgroundSampleGap: TimeInterval = 4 * 60 * 60
@@ -473,12 +474,30 @@ enum PhoneSleepFusion {
             ChargingInactivitySleepEngine.records(readings: iPhoneReadings, actuals: actuals, inside: span,
                                                   watchAvailable: false, maximumSampleGap: maximumSampleGap, asOf: asOf),
         ]
-        let picks = SleepFusion.arbitrate(
+        let picks = SleepFusion.phoneOnly(
             wearable: wearable.map(ClassifierAdapter.interval),
             tiers: detectors.map { $0.map { ClassifierAdapter.interval($0.span(asOf: asOf)) } }
         )
         return picks.map { detectors[$0.tier][$0.index] }.sorted {
             $0.startedAt != $1.startedAt ? $0.startedAt < $1.startedAt : $0.id.uuidString < $1.id.uuidString
+        }
+    }
+
+    /// 휴대폰만으로 만든 자동 수면인가(엄격 규칙 포함).
+    static func isPhoneSleep(_ actual: ActualRecord) -> Bool {
+        AutomaticModelVersion.matches(actual.modelVersion, AutomaticModelVersion.phoneSleep)
+            || AutomaticModelVersion.matches(actual.modelVersion, AutomaticModelVersion.strictSleep)
+    }
+
+    /// 워치·HealthKit 수면이 들어오면 그 시간과 겹치는 휴대폰 수면을 바로 뺀다. 하루 갱신의
+    /// `records`와 같은 웨어러블 우선 규칙을 건강 갱신 경로에서도 지킨다. 사용자 기록은 그대로 둔다.
+    static func droppingCovered(_ actuals: [ActualRecord], by sessions: [SleepSession], inside span: TimeSpan, asOf date: Date) -> [ActualRecord] {
+        let wearable = sessions.compactMap { $0.span.intersection(with: span) }
+        guard !wearable.isEmpty else { return actuals }
+        return actuals.filter { actual in
+            guard isPhoneSleep(actual), !ActualRecord.userOwned(actual) else { return true }
+            let span = actual.span(asOf: date)
+            return !wearable.contains { ($0.intersection(with: span)?.duration ?? 0) > 0 }
         }
     }
 }

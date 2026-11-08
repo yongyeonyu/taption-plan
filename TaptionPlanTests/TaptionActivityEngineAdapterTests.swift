@@ -991,7 +991,7 @@ final class ClassifierMigrationTests: XCTestCase {
     func testMarkerKeyIsDateScoped() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
-        XCTAssertEqual(ClassificationRecomputeCoordinator.markerKey(for: start, calendar: calendar), "classifier-v1r2:2026-09-21")
+        XCTAssertEqual(ClassificationRecomputeCoordinator.markerKey(for: start, calendar: calendar), "classifier-v1r3:2026-09-21")
     }
 
     func testKeywordResolverNoLongerTurnsDeliveryOrBadmintonIntoMovement() {

@@ -1,5 +1,5 @@
 import Foundation
-import TaptionPlanCore
+import TaptionPlanEngine
 
 /// 낮잠은 Apple Watch가 잰 낮 수면만이다(대표 결정, RIG1103A02).
 ///
@@ -10,21 +10,18 @@ enum AppleWatchNapPolicy {
     static let title = "낮잠"
     static let behavior = "nap"
     static let evidence = "Apple Watch 낮잠 수면 기록"
-    /// 이 지역 시각 안에서 시작하고 끝나야 낮잠이다(대표 결정 2026-11-08: 9~21시·4시간 이하).
-    static let daytimeStartHour = 9
-    static let daytimeEndHour = 21
-    static let maximumDuration: TimeInterval = 4 * 3_600
-
+    /// 낮 창·최대 길이는 `SleepFusion`(휴대폰 수면과 같은 규칙)에 있다(대표 결정 2026-11-08: 9~21시·4시간 이하).
     static func isNap(
         _ session: SleepSession,
         among sessions: [SleepSession],
         calendar: Calendar = .autoupdatingCurrent
     ) -> Bool {
-        guard session.asleepDuration > 0,
-              session.span.duration <= maximumDuration,
-              isWatchMeasured(session),
-              isDaytime(session.span, calendar: calendar) else { return false }
-        return mainNightSession(around: session.span.start, among: sessions, calendar: calendar)?.id != session.id
+        guard session.asleepDuration > 0 else { return false }
+        let isMain = mainNightSession(around: session.span.start, among: sessions, calendar: calendar)?.id == session.id
+        return SleepFusion.isNap(
+            ClassifierAdapter.interval(session.span), watchMeasured: isWatchMeasured(session),
+            isMainSleep: isMain, calendar: calendar
+        )
     }
 
     /// 잠든 구간을 Apple Watch가 직접 잰 세션. 직접 입력한 표본은 빼고 본다.
@@ -67,13 +64,6 @@ enum AppleWatchNapPolicy {
 
     static func isNap(_ actual: ActualRecord) -> Bool {
         actual.evidence.contains(evidence)
-    }
-
-    private static func isDaytime(_ span: TimeSpan, calendar: Calendar) -> Bool {
-        let day = calendar.startOfDay(for: span.start)
-        guard let start = calendar.date(byAdding: .hour, value: daytimeStartHour, to: day),
-              let end = calendar.date(byAdding: .hour, value: daytimeEndHour, to: day) else { return false }
-        return span.start >= start && span.end <= end
     }
 
     private static func matchingSession(_ actual: ActualRecord, sessions: [SleepSession], asOf date: Date) -> SleepSession? {

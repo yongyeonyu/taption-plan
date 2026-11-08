@@ -242,6 +242,26 @@ final class ClassifierSleepAndMetricTests: XCTestCase {
         XCTAssertTrue(SleepFusion.arbitrate(wearable: [span(0, 8)], tiers: [strict, screen]).isEmpty, "워치·HealthKit 수면이 있으면 휴대폰 추정은 버린다")
     }
 
+    /// 낮 창(9~21시) 안 휴대폰 후보·30분 미만 조각은 버리고, 버린 조각이 아래 층을 막지 않는다(ALG1102A01).
+    func testPhoneOnlyRejectsDaytimeAndFragmentsBeforeArbitration() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        let day = calendar.startOfDay(for: Synthetic.start)
+        let at = { (h: Double, m: Double) in ClassifierInterval(start: day.addingTimeInterval(h * 3_600), end: day.addingTimeInterval(m * 3_600)) }
+        let evening = at(18 + 44.0 / 60, 20 + 9.0 / 60)
+        let night = at(23, 31)
+        let fragment = at(22, 22.1)
+        XCTAssertFalse(SleepFusion.acceptsPhoneOnly(evening, calendar: calendar), "낮 창 안 휴대폰 정지는 수면이 아니다")
+        XCTAssertTrue(SleepFusion.acceptsPhoneOnly(at(20, 23), calendar: calendar), "21시를 넘기면 밤 수면 후보다")
+        XCTAssertFalse(SleepFusion.acceptsPhoneOnly(fragment, calendar: calendar))
+        let picks = SleepFusion.phoneOnly(wearable: [], tiers: [[fragment], [evening, night]], calendar: calendar)
+        XCTAssertEqual(picks.map { "\($0.tier):\($0.index)" }, ["1:1"])
+        XCTAssertTrue(SleepFusion.isNap(at(13, 14), watchMeasured: true, isMainSleep: false, calendar: calendar))
+        XCTAssertFalse(SleepFusion.isNap(at(13, 14), watchMeasured: false, isMainSleep: false, calendar: calendar))
+        XCTAssertFalse(SleepFusion.isNap(at(13, 14), watchMeasured: true, isMainSleep: true, calendar: calendar))
+        XCTAssertFalse(SleepFusion.isNap(at(10, 15), watchMeasured: true, isMainSleep: false, calendar: calendar), "4시간 초과")
+    }
+
     func testScreenOnBreaksPhoneSleep() {
         var samples = phoneNight(brightness: 0, charging: true)
         samples[samples.count / 2].screenIsOn = true
