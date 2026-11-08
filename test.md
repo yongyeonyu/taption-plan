@@ -2,6 +2,11 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## TFB1108A02 · TestFlight 298 (2026-11-08)
+
+- `release.sh --yes --request-id TFB1108A02`: 빌드 298, VALID, 내부 그룹 연결·테스터 노출 확인(`build/validation/TFB1108A02/testflight-report.json`). 아카이브 네 제품 번들 모두 298.
+- 297 대비 추가: 수묵 테마·도장·장소 도감(INK1108A01, 랜드마크 반경 종류별). 실기기 확인은 대표.
+
 ## INK1108A01 · 수묵 테마·도장·장소 도감 (2026-11-08)
 
 - 대표 결정: 테마+도장+장소 도감 모두, 다크 모드에서도 한지 그대로, 핀 도장은 수묵 테마에서만, 랜드마크 반경은 종류별 기본값.
