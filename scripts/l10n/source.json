@@ -418,18 +418,6 @@
    ]
   },
   {
-   "key": "50MB에 닿아 멈췄습니다.|Stopped at 50MB.",
-   "ko": "50MB에 닿아 멈췄습니다.",
-   "en": "Stopped at 50MB.",
-   "files": [
-    "MapHomeOfflineMapSheet.swift:163"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "6자리 숫자 비밀번호를 다시 확인해 주세요.|Check your 6-digit PIN and try again.",
    "ko": "6자리 숫자 비밀번호를 다시 확인해 주세요.",
    "en": "Check your 6-digit PIN and try again.",
@@ -15205,42 +15193,6 @@
    ]
   },
   {
-   "key": "다운로드 완료|Download complete",
-   "ko": "다운로드 완료",
-   "en": "Download complete",
-   "files": [
-    "MapHomeOfflineMapSheet.swift:167"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "다운로드|Download",
-   "ko": "다운로드",
-   "en": "Download",
-   "files": [
-    "MapHomeOfflineMapSheet.swift:133"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "다운로드하지 못했습니다.|Download failed.",
-   "ko": "다운로드하지 못했습니다.",
-   "en": "Download failed.",
-   "files": [
-    "MapHomeOfflineMapSheet.swift:171"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "다음 날짜|Next date",
    "ko": "다음 날짜",
    "en": "Next date",
@@ -17214,21 +17166,6 @@
    ]
   },
   {
-   "key": "받는 중 {0}/{1}|Downloading {0}/{1}",
-   "ko": "받는 중 {0}/{1}",
-   "en": "Downloading {0}/{1}",
-   "files": [
-    "MapHomeOfflineMapSheet.swift:126"
-   ],
-   "args": [
-    "done",
-    "total"
-   ],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "받은 금액|Received",
    "ko": "받은 금액",
    "en": "Received",
@@ -17749,18 +17686,6 @@
    "en": "Range",
    "files": [
     "MapHomeInfoSheets.swift:85"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "벡터 지도를 연 뒤 다시 열어 주세요.|Open a vector map style first.",
-   "ko": "벡터 지도를 연 뒤 다시 열어 주세요.",
-   "en": "Open a vector map style first.",
-   "files": [
-    "MapHomeOfflineMapSheet.swift:142"
    ],
    "args": [],
    "targets": [
@@ -18863,9 +18788,9 @@
    "ko": "삭제",
    "en": "Delete",
    "files": [
-    "MapHomeOfflineMapSheet.swift:113",
     "MapHomeSettingsSheets.swift:111",
-    "MapHomeSettingsSheets.swift:144"
+    "MapHomeSettingsSheets.swift:144",
+    "MapHomeStickerEditor.swift:187"
    ],
    "args": [],
    "targets": [
@@ -22300,21 +22225,6 @@
    ]
   },
   {
-   "key": "예상 {0} · 타일 {1}개|About {0} · {1} tiles",
-   "ko": "예상 {0} · 타일 {1}개",
-   "en": "About {0} · {1} tiles",
-   "files": [
-    "MapHomeOfflineMapSheet.swift:146"
-   ],
-   "args": [
-    "size",
-    "count"
-   ],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "예상 경로 선택|Select predicted route",
    "ko": "예상 경로 선택",
    "en": "Select predicted route",
@@ -22608,31 +22518,6 @@
    "files": [
     "MapHomeTimeSidebar.swift:2213",
     "MapHomeTimeSidebar.swift:2698"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "오프라인 지도 삭제|Delete offline map",
-   "ko": "오프라인 지도 삭제",
-   "en": "Delete offline map",
-   "files": [
-    "MapHomeOfflineMapSheet.swift:88"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "오프라인 지도|Offline map",
-   "ko": "오프라인 지도",
-   "en": "Offline map",
-   "files": [
-    "MapHomeOfflineMapSheet.swift:22",
-    "MapHomeOfflineMapSheet.swift:101"
    ],
    "args": [],
    "targets": [
@@ -24590,18 +24475,6 @@
    ]
   },
   {
-   "key": "일부를 받지 못했습니다. 다시 누르면 이어 받습니다.|Some tiles failed. Tap again to resume.",
-   "ko": "일부를 받지 못했습니다. 다시 누르면 이어 받습니다.",
-   "en": "Some tiles failed. Tap again to resume.",
-   "files": [
-    "MapHomeOfflineMapSheet.swift:165"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "일어났어요|Woke up",
    "ko": "일어났어요",
    "en": "Woke up",
@@ -25418,21 +25291,6 @@
    ]
   },
   {
-   "key": "저장됨 {0} · 타일 {1}개|Saved {0} · {1} tiles",
-   "ko": "저장됨 {0} · 타일 {1}개",
-   "en": "Saved {0} · {1} tiles",
-   "files": [
-    "MapHomeOfflineMapSheet.swift:157"
-   ],
-   "args": [
-    "size",
-    "count"
-   ],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "저장됨 · {0}|Saved · {0}",
    "ko": "저장됨 · {0}",
    "en": "Saved · {0}",
@@ -25503,18 +25361,6 @@
    "en": "Could not save.",
    "files": [
     "MapHomeDailyCard.swift:603"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "저장한 오프라인 지도를 모두 지울까요?|Delete all saved offline maps?",
-   "ko": "저장한 오프라인 지도를 모두 지울까요?",
-   "en": "Delete all saved offline maps?",
-   "files": [
-    "MapHomeOfflineMapSheet.swift:109"
    ],
    "args": [],
    "targets": [
@@ -26083,18 +25929,6 @@
    "args": [],
    "targets": [
     "TaptionPlanWatch"
-   ]
-  },
-  {
-   "key": "지금 보이는 지도 영역|Visible map area",
-   "ko": "지금 보이는 지도 영역",
-   "en": "Visible map area",
-   "files": [
-    "MapHomeOfflineMapSheet.swift:74"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
    ]
   },
   {
@@ -27191,46 +27025,6 @@
    ]
   },
   {
-   "key": "최대 300MB. 넘으면 오래 안 쓴 타일부터 지웁니다. 벡터 지도 전용이며 애플 지도는 저장하지 않습니다.|Up to 300MB; least-used tiles go first. Vector maps only; Apple Maps is never stored.",
-   "ko": "최대 300MB. 넘으면 오래 안 쓴 타일부터 지웁니다. 벡터 지도 전용이며 애플 지도는 저장하지 않습니다.",
-   "en": "Up to 300MB; least-used tiles go first. Vector maps only; Apple Maps is never stored.",
-   "files": [
-    "MapHomeOfflineMapSheet.swift:93"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "최대 확대 {0}|Max zoom {0}",
-   "ko": "최대 확대 {0}",
-   "en": "Max zoom {0}",
-   "files": [
-    "MapHomeOfflineMapSheet.swift:71"
-   ],
-   "args": [
-    "maxZoom"
-   ],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "최소 확대 {0}|Min zoom {0}",
-   "ko": "최소 확대 {0}",
-   "en": "Min zoom {0}",
-   "files": [
-    "MapHomeOfflineMapSheet.swift:68"
-   ],
-   "args": [
-    "minZoom"
-   ],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "최신 {0} · {1}|Latest {0} · {1}",
    "ko": "최신 {0} · {1}",
    "en": "Latest {0} · {1}",
@@ -27487,18 +27281,6 @@
     "MapHomeAlarm.swift:649",
     "MapHomeLocationSheets.swift:91",
     "MapHomeLocationSheets.swift:125"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "취소했습니다. 다시 누르면 이어 받습니다.|Cancelled. Tap again to resume.",
-   "ko": "취소했습니다. 다시 누르면 이어 받습니다.",
-   "en": "Cancelled. Tap again to resume.",
-   "files": [
-    "MapHomeOfflineMapSheet.swift:169"
    ],
    "args": [],
    "targets": [
@@ -28759,18 +28541,6 @@
    "en": "Tap to show the date strip",
    "files": [
     "MapHomeView+Support2.swift:472"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "한 번에 3,000개·50MB까지입니다. 지도를 확대하거나 최대 확대를 낮춰 주세요.|Limit is 3,000 tiles or 50MB. Zoom in or lower max zoom.",
-   "ko": "한 번에 3,000개·50MB까지입니다. 지도를 확대하거나 최대 확대를 낮춰 주세요.",
-   "en": "Limit is 3,000 tiles or 50MB. Zoom in or lower max zoom.",
-   "files": [
-    "MapHomeOfflineMapSheet.swift:148"
    ],
    "args": [],
    "targets": [
