@@ -877,7 +877,8 @@ extension FeatureEngineTests {
     }
 
     func testPhoneSleepFallbackBridgesSparseChargingNight() {
-        let start = makeDate(2026, 8, 24, 0, 0)
+        // 지역 시각 자정부터 본다. UTC 자정은 한국 시각 9~16시라 낮 창 규칙에 걸린다(ALG1102A01).
+        let start = Calendar.autoupdatingCurrent.startOfDay(for: makeDate(2026, 8, 24, 12, 0))
         let readings = [0.0, 2, 4, 7].map { hourOffset in
             SensorReading(
                 timestamp: start.addingTimeInterval(hourOffset * hour),

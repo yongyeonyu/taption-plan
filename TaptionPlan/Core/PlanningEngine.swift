@@ -488,7 +488,7 @@ enum SleepActualReconciliationEngine {
                 )
             )
         }
-        return AppleWatchNapPolicy.labeling(result.sorted { $0.startedAt < $1.startedAt }, sessions: sessions, inside: span)
+        return AppleWatchNapPolicy.labeling(PhoneSleepFusion.droppingCovered(result, by: sessions, inside: span, asOf: date).sorted { $0.startedAt < $1.startedAt }, sessions: sessions, inside: span)
     }
 
     private static func sleepSpans(

@@ -143,4 +143,43 @@ final class AppleWatchNapPolicyTests: XCTestCase {
         XCTAssertEqual(result.map(\.title), ["수면", "낮잠"])
         XCTAssertEqual(result.map(\.behavior), ["sleep", "nap"])
     }
+
+    /// 휴대폰 수면은 낮잠과 같은 낮 창 규칙을 따른다: 저녁 18:44–20:09 정지는 버리고 밤 수면은 남긴다(ALG1102A01, AE321FD9 모양).
+    func testPhoneOnlySleepInsideDaytimeWindowIsRejected() {
+        let eveningStart = day.addingTimeInterval(18 * hour + 39 * 60)
+        func darkRun(from start: Date, minutes: Int) -> [SensorReading] {
+            stride(from: 0, through: minutes, by: 5).map { minute in
+                SensorReading(timestamp: start.addingTimeInterval(Double(minute) * 60), motion: .stationary, motionConfidence: .high,
+                              stepCount: 0, powerState: .unplugged, screenBrightness: 0.1, screenIsOn: false)
+            }
+        }
+        let wake = (0...5).map { index in
+            SensorReading(timestamp: eveningStart.addingTimeInterval(Double(110 + index * 5) * 60), motion: .walking, motionConfidence: .high,
+                          stepCount: 40 * (index + 1), screenBrightness: 0.8, screenIsOn: true)
+        }
+        let nightStart = day.addingTimeInterval(23 * hour)
+        let readings = darkRun(from: eveningStart, minutes: 90) + wake + darkRun(from: nightStart, minutes: 180)
+        let span = TimeSpan(start: day.addingTimeInterval(18 * hour), end: day.addingTimeInterval(36 * hour))
+        let records = PhoneSleepFusion.records(readings: readings, actuals: [], inside: span, nominalMaximumSampleGap: 20 * 60, asOf: span.end)
+        XCTAssertFalse(records.isEmpty)
+        XCTAssertTrue(records.allSatisfy { $0.startedAt >= nightStart }, "낮 창 안 휴대폰 정지는 수면이 아니다")
+        XCTAssertFalse(PhoneSleepWakeEngine.records(readings: readings, actuals: [], inside: span, watchAvailable: false,
+                                                    maximumSampleGap: 20 * 60, asOf: span.end)
+            .allSatisfy { $0.startedAt >= nightStart }, "감지기 자체는 후보를 낸다(거르기는 SleepFusion 한 곳)")
+    }
+
+    /// 건강 갱신으로 워치 수면이 들어오면 겹치는 휴대폰 수면은 빠지고 사용자 기록은 남는다.
+    func testSleepReconciliationDropsOverlappingPhoneSleepButKeepsUserRecords() {
+        let all = sessions([watch(0, 7)])
+        let phone = ActualRecord(planID: nil, title: "수면", categoryID: "sleep", startedAt: day.addingTimeInterval(-hour),
+                                 endedAt: day.addingTimeInterval(2 * hour), source: .motion, behavior: "iphone-sleep",
+                                 modelVersion: AutomaticModelVersion.phoneSleep)
+        var edited = phone
+        edited.id = UUID()
+        edited.manuallyCorrected = true
+        let result = SleepActualReconciliationEngine.applying([phone, edited], sessions: all, inside: daySpan, asOf: daySpan.end)
+        XCTAssertFalse(result.contains { $0.id == phone.id })
+        XCTAssertTrue(result.contains { $0.id == edited.id })
+        XCTAssertTrue(result.contains { $0.source == .appleWatch && $0.categoryID == "sleep" })
+    }
 }

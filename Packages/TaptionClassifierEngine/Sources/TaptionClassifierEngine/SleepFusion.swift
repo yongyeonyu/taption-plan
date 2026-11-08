@@ -19,16 +19,27 @@ public struct SleepSession: Codable, Hashable, Sendable {
     public var evidence: [String]
 }
 
-/// 수면 판정 하나. 워치·HealthKit이 있으면 그것을 쓰고, 없을 때만 휴대폰의
+/// 수면 규칙 하나(ALG1102A01). 워치·HealthKit이 있으면 그것을 쓰고, 없을 때만 휴대폰의
 /// 화면 꺼짐·정지 최장 구간을 충전·어둠으로 가중한다. 밝기 값이 없으면 어둠으로
-/// 치지 않는다.
+/// 치지 않는다. 앱의 휴대폰 수면(`PhoneSleepFusion`)과 낮잠(`AppleWatchNapPolicy`)도
+/// 아래 `phoneOnly`·`acceptsPhoneOnly`·`isNap`으로 같은 낮 창·길이 기준을 쓴다.
 public enum SleepFusion {
     public static let minimumPhoneSleep: TimeInterval = 3 * 3_600
     public static let maximumSampleGap: TimeInterval = 75 * 60
     public static let mergeGap: TimeInterval = 30 * 60
     public static let darkBrightness = 0.1
+    /// 낮 창: 이 지역 시각 안에서 시작하고 끝나야 낮 수면이다(대표 결정 2026-11-08: 9~21시).
+    public static let daytimeStartHour = 9
+    public static let daytimeEndHour = 21
+    /// 낮잠은 4시간 이하다(대표 결정 2026-11-08).
+    public static let maximumNap: TimeInterval = 4 * 3_600
+    /// 휴대폰만으로 잡힌 수면의 최소 길이. 감지기 확정 시간 중 가장 짧은 값(충전 중 30분)이다.
+    public static let minimumPhoneOnlySleep: TimeInterval = 30 * 60
 
-    public static func sessions(health: [SleepSource], phone: [ClassifierSample], night: ClassifierInterval) -> [SleepSession] {
+    public static func sessions(
+        health: [SleepSource], phone: [ClassifierSample], night: ClassifierInterval,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> [SleepSession] {
         let wearable = health.filter { $0.interval.overlap(with: night) > 0 }
         if !wearable.isEmpty {
             let origin: SleepSession.Origin = wearable.contains { $0.kind == .appleWatch } ? .appleWatch : .healthKit
@@ -36,7 +47,42 @@ public enum SleepFusion {
                 SleepSession(interval: $0, origin: origin, score: 0.95, evidence: [origin == .appleWatch ? "Apple Watch 수면" : "HealthKit 수면"])
             }
         }
-        return phoneSession(phone.filter { $0.timestamp >= night.start && $0.timestamp <= night.end }).map { [$0] } ?? []
+        return phoneSession(phone.filter { $0.timestamp >= night.start && $0.timestamp <= night.end })
+            .flatMap { acceptsPhoneOnly($0.interval, calendar: calendar) ? [$0] : nil } ?? []
+    }
+
+    /// 낮 창(9~21시) 안에서 시작하고 끝나는가.
+    public static func isDaytime(_ interval: ClassifierInterval, calendar: Calendar = .autoupdatingCurrent) -> Bool {
+        let day = calendar.startOfDay(for: interval.start)
+        guard let start = calendar.date(byAdding: .hour, value: daytimeStartHour, to: day),
+              let end = calendar.date(byAdding: .hour, value: daytimeEndHour, to: day) else { return false }
+        return interval.start >= start && interval.end <= end
+    }
+
+    /// 낮잠: 워치가 직접 잰 수면이 낮 창 안에서 4시간 이하이고 그 밤의 주 수면이 아니다.
+    public static func isNap(
+        _ interval: ClassifierInterval, watchMeasured: Bool, isMainSleep: Bool,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> Bool {
+        watchMeasured && !isMainSleep && interval.duration <= maximumNap && isDaytime(interval, calendar: calendar)
+    }
+
+    /// 휴대폰만으로 잡힌 수면을 받을지. 휴대폰 정지는 낮잠이 되지 않으므로(대표 결정) 낮 창 안에
+    /// 다 들어가는 후보는 버리고, 30분보다 짧은 조각도 버린다.
+    public static func acceptsPhoneOnly(_ interval: ClassifierInterval, calendar: Calendar = .autoupdatingCurrent) -> Bool {
+        interval.duration >= minimumPhoneOnlySleep && !isDaytime(interval, calendar: calendar)
+    }
+
+    /// 휴대폰 수면 후보를 고르는 단일 입구: 받을 수 없는 후보를 먼저 빼고 `arbitrate`한다.
+    /// 버린 조각이 아래 층의 밤 전체 후보를 막지 않게 하려고 거르기를 먼저 한다. 결과 순번은 원래 층 안 순번이다.
+    public static func phoneOnly(
+        wearable: [ClassifierInterval],
+        tiers: [[ClassifierInterval]],
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> [(tier: Int, index: Int)] {
+        let kept = tiers.map { candidates in candidates.indices.filter { acceptsPhoneOnly(candidates[$0], calendar: calendar) } }
+        let filtered = kept.enumerated().map { tier, indices in indices.map { tiers[tier][$0] } }
+        return arbitrate(wearable: wearable, tiers: filtered).map { ($0.tier, kept[$0.tier][$0.index]) }
     }
 
     /// 여러 휴대폰 수면 감지기의 후보를 한 번에 고른다. `tiers`는 우선순위 순서다.

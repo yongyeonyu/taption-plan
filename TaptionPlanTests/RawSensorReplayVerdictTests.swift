@@ -210,4 +210,63 @@ final class RawSensorReplayVerdictTests: XCTestCase {
                 + "storedWalkM=\(Int(stored2)) gpsM=\(Int(gps)) stepEstM=\(Int(estimated)) stride=\(String(format: "%.2f", breakdown.stride)) calibrated=\(breakdown.isStrideCalibrated)")
         }
     }
+
+    /// 휴대폰 수면 판정을 하루 갱신과 같은 순서(엄격 규칙 → `PhoneSleepFusion`)로 원본에서 다시 낸다(ALG1102A01 SleepFusion 일원화 전후 비교).
+    /// `TEST_RUNNER_TAPTION_RAW_REPLAY_DIR`(원본 json 폴더)이 있을 때만 돈다. 시각과 길이만 찍고 좌표는 찍지 않는다.
+    func testReplayPhoneSleepDecision() throws {
+        guard let folder = ProcessInfo.processInfo.environment["TAPTION_RAW_REPLAY_DIR"], !folder.isEmpty else {
+            throw XCTSkip("원본 폴더 없음")
+        }
+        let files = try FileManager.default.contentsOfDirectory(atPath: folder).filter { $0.hasSuffix(".json") }.sorted()
+        var nights = 0, phoneNights = 0, phoneMinutes = 0.0, daytimeMinutes = 0.0
+        for file in files {
+            let data = try Data(contentsOf: URL(fileURLWithPath: folder).appendingPathComponent(file))
+            let days = try (try? JSONDecoder().decode([TodaySensorRawExport].self, from: data))
+                ?? [JSONDecoder().decode(TodaySensorRawExport.self, from: data)]
+            let readings = days.flatMap(\.readings).sorted { $0.timestamp < $1.timestamp }
+            var seen = Set<UUID>()
+            let actuals = days.flatMap { $0.actuals ?? [] }.filter { seen.insert($0.id).inserted }
+            let derived = actuals.filter {
+                AutomaticModelVersion.matches($0.modelVersion, AutomaticModelVersion.phoneSleep)
+                    || AutomaticModelVersion.matches($0.modelVersion, AutomaticModelVersion.strictSleep)
+            }
+            let kept = actuals.filter { !derived.contains($0) }
+            for day in days {
+                let span = SleepAnalysisEngine.overnightSpan(containing: Calendar.autoupdatingCurrent.startOfDay(for: day.day))
+                let inside = readings.filter { span.contains($0.timestamp) }
+                guard let last = inside.last?.timestamp else { continue }
+                let wearable = kept.compactMap { actual -> TimeSpan? in
+                    guard actual.source == .healthKit || actual.source == .appleWatch,
+                          AutomaticRecordTimelineEngine.isSleep(actual) else { return nil }
+                    return actual.span(asOf: last).intersection(with: span)
+                }
+                let strict = TaptionActivityEngineAdapter.strictSleepActuals(
+                    readings: inside, actuals: kept, inside: span, homePoint: nil, maximumSampleGap: 20 * 60,
+                    authoritativeSleepSpans: wearable, asOf: last
+                )
+                let records = PhoneSleepFusion.records(
+                    readings: inside, actuals: kept, inside: span, nominalMaximumSampleGap: 20 * 60,
+                    authoritativeSleepSpans: wearable, strict: strict, asOf: last
+                )
+                let describe: ([ActualRecord]) -> String = { values in
+                    values.map { "\(self.formatter.string(from: $0.startedAt))–\(self.formatter.string(from: $0.endedAt ?? last))(\($0.behavior ?? "-"))" }
+                        .joined(separator: ",")
+                }
+                let minutes = records.map { $0.span(asOf: last).duration / 60 }.reduce(0, +)
+                let daytime = records.filter {
+                    let hour = Calendar.autoupdatingCurrent.component(.hour, from: $0.startedAt)
+                    let endHour = Calendar.autoupdatingCurrent.component(.hour, from: $0.endedAt ?? last)
+                    return hour >= 9 && endHour < 21 && Calendar.autoupdatingCurrent.isDate($0.startedAt, inSameDayAs: $0.endedAt ?? last)
+                }.map { $0.span(asOf: last).duration / 60 }.reduce(0, +)
+                nights += 1
+                phoneNights += records.isEmpty ? 0 : 1
+                phoneMinutes += minutes
+                daytimeMinutes += daytime
+                print("SLEEPFUSION \(file.dropFirst(18).prefix(8)) night=\(formatter.string(from: span.end).prefix(5)) wearable=\(wearable.count) "
+                    + "strict=\(strict.count) phone=\(records.count) minutes=\(Int(minutes)) daytimeMinutes=\(Int(daytime)) "
+                    + "fresh=[\(describe(records))] stored=[\(describe(derived.filter { $0.span(asOf: last).intersection(with: span) != nil }))]")
+            }
+        }
+        print("SLEEPFUSION total nights=\(nights) phoneNights=\(phoneNights) phoneMinutes=\(Int(phoneMinutes)) daytimeMinutes=\(Int(daytimeMinutes))")
+    }
 }
