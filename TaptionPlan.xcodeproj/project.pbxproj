@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B10816000000000000000007 /* LiveActivityDaySummaryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10816000000000000000006 /* LiveActivityDaySummaryTests.swift */; };
+		B10816000000000000000005 /* LiveActivityDaySummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10816000000000000000004 /* LiveActivityDaySummary.swift */; };
+		B10816000000000000000003 /* LiveActivityDaySummaryState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10816000000000000000001 /* LiveActivityDaySummaryState.swift */; };
+		B10816000000000000000002 /* LiveActivityDaySummaryState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10816000000000000000001 /* LiveActivityDaySummaryState.swift */; };
 		A10000000000000006FC0001 /* StayRegionArmingPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000006FC0001 /* StayRegionArmingPolicy.swift */; };
 		A10000000000000006FC0002 /* BackgroundRefreshErrorPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000006FC0002 /* BackgroundRefreshErrorPolicy.swift */; };
 		A10000000000000006FC0003 /* MapHomeAlarmDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000006FC0003 /* MapHomeAlarmDiagnostics.swift */; };
@@ -668,6 +672,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		B10816000000000000000006 /* LiveActivityDaySummaryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityDaySummaryTests.swift; sourceTree = "<group>"; };
+		B10816000000000000000004 /* LiveActivityDaySummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityDaySummary.swift; sourceTree = "<group>"; };
+		B10816000000000000000001 /* LiveActivityDaySummaryState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityDaySummaryState.swift; sourceTree = "<group>"; };
 		F10000000000000006FC0001 /* StayRegionArmingPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StayRegionArmingPolicy.swift; sourceTree = "<group>"; };
 		F10000000000000006FC0002 /* BackgroundRefreshErrorPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundRefreshErrorPolicy.swift; sourceTree = "<group>"; };
 		F10000000000000006FC0003 /* MapHomeAlarmDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeAlarmDiagnostics.swift; sourceTree = "<group>"; };
@@ -1427,6 +1434,7 @@
 				F5B1102A0200000000000023 /* FeatureEngineTests+Watch.swift */,
 				F5B1102A0200000000000021 /* FeatureEngineTests+Weather.swift */,
 				F5B1102A020000000000001F /* FeatureEngineTests+Widget.swift */,
+				B10816000000000000000006 /* LiveActivityDaySummaryTests.swift */,
 				F10000000000000000000076 /* WatchSensorQueryPlanTests.swift */,
 				F1000000000000000B1102E3 /* FirstRunTutorialTests.swift */,
 				F52000000000000000000002 /* MapHomeLiveMapTests.swift */,
@@ -1611,6 +1619,7 @@
 				F1000000000000000000F5D1 /* MapHomeCounterDetailSheet.swift */,
 				F100000000000000000000F0 /* AppShellLaunchGate.swift */,
 				F100000000000000000000C3 /* LiveActivityCurrentActivity.swift */,
+				B10816000000000000000004 /* LiveActivityDaySummary.swift */,
 				F100000000000000000000C2 /* MapHomePlaybackContinuity.swift */,
 				F1VID1029A0100000000001 /* MapHomePlaybackVideoRenderer.swift */,
 				F1VID1029A0100000000002 /* MapHomePlaybackVideoSheet.swift */,
@@ -1817,6 +1826,7 @@
 				F10000000000000000CA2004 /* SubwayAlighting.swift */,
 				F10000000000000000000041 /* ScreenTimeUsageService.swift */,
 				F1000000000000000000001F /* WidgetShared.swift */,
+				B10816000000000000000001 /* LiveActivityDaySummaryState.swift */,
 				F10000000000000001A70002 /* WidgetAppOnly.swift */,
 				F1000000000000000000003B /* WidgetPayloadFactory.swift */,
 				F10000000000000000000061 /* RecordSummaryEngine.swift */,
@@ -2488,6 +2498,7 @@
 				A1000000000000000000F5D1 /* MapHomeCounterDetailSheet.swift in Sources */,
 				A100000000000000000000F0 /* AppShellLaunchGate.swift in Sources */,
 				A100000000000000000000C3 /* LiveActivityCurrentActivity.swift in Sources */,
+				B10816000000000000000005 /* LiveActivityDaySummary.swift in Sources */,
 				A100000000000000000000C2 /* MapHomePlaybackContinuity.swift in Sources */,
 				A1VID1029A0100000000001 /* MapHomePlaybackVideoRenderer.swift in Sources */,
 				A1VID1029A0100000000002 /* MapHomePlaybackVideoSheet.swift in Sources */,
@@ -2618,6 +2629,7 @@
 				A10000000000000000CA2003 /* HwarangCoat.swift in Sources */,
 				A10000000000000000000044 /* ScreenTimeUsageService.swift in Sources */,
 				A1000000000000000000001E /* WidgetShared.swift in Sources */,
+				B10816000000000000000002 /* LiveActivityDaySummaryState.swift in Sources */,
 				A10000000000000001A70002 /* WidgetAppOnly.swift in Sources */,
 				A10000000000000000000026 /* StoreKitSupport.swift in Sources */,
 				A10000000000000000000027 /* CategoryManagerView.swift in Sources */,
@@ -2735,6 +2747,7 @@
 				A5B1102A0200000000000024 /* FeatureEngineTests+Watch.swift in Sources */,
 				A5B1102A0200000000000022 /* FeatureEngineTests+Weather.swift in Sources */,
 				A5B1102A0200000000000020 /* FeatureEngineTests+Widget.swift in Sources */,
+				B10816000000000000000007 /* LiveActivityDaySummaryTests.swift in Sources */,
 				A10000000000000000000075 /* WatchSensorQueryPlanTests.swift in Sources */,
 				A1000000000000000B1102E3 /* FirstRunTutorialTests.swift in Sources */,
 				A52000000000000000000002 /* MapHomeLiveMapTests.swift in Sources */,
@@ -2779,6 +2792,7 @@
 				C0FFEE000000000000000043 /* TaptionPlanLiveActivity.swift in Sources */,
 				C0FFEE000000000000000045 /* TaptionLiveActivityCat.swift in Sources */,
 				A10000000000000000000020 /* WidgetShared.swift in Sources */,
+				B10816000000000000000003 /* LiveActivityDaySummaryState.swift in Sources */,
 				A10000000000000000000022 /* FeatureModels.swift in Sources */,
 				A1FA115BFD9ADB6D5F57D8C1 /* SensorReadingModels.swift in Sources */,
 				A1FA119B398AC34A1F78055C /* PlanRecordModels.swift in Sources */,

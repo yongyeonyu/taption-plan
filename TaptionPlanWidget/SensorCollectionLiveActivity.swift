@@ -24,19 +24,15 @@ struct SensorCollectionLiveActivity: Widget {
                         .frame(width: 31, height: 31)
                 }
                 DynamicIslandExpandedRegion(.center) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(liveActivityTitle(context.state))
-                            .font(.headline)
-                            .foregroundStyle(.white)
-                        SensorCollectionSavedAtLine(lastSavedAt: context.state.lastSavedAt)
-                    }
+                    Text(liveActivityTitle(context.state))
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    // 아일랜드는 높이가 좁아 여섯 줄이 잘린다. 두 칸으로 놓아 센서마다 다 보이게 한다.
-                    VStack(alignment: .leading, spacing: 5) {
-                        SensorCollectionWaveformView(state: context.state)
-                            .frame(maxWidth: .infinity)
-                        SensorCollectionMeterRows(state: context.state, columns: 2)
+                    if let summary = context.state.daySummary {
+                        SensorCollectionDaySummaryView(summary: summary)
                     }
                 }
             } compactLeading: {
@@ -57,6 +53,64 @@ struct SensorCollectionLiveActivity: Widget {
                     .frame(width: 29, height: 29)
             }
             .keylineTint(Color(red: 0.18, green: 0.72, blue: 0.59))
+        }
+    }
+}
+
+/// 다이나믹 아일랜드 펼침 화면의 오늘 요약. 위에 대분류 네 칸, 아래에 걸음·이동 거리.
+private struct SensorCollectionDaySummaryView: View {
+    let summary: SensorCollectionDaySummary
+
+    private let columns = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            LazyVGrid(columns: columns, alignment: .leading, spacing: 3) {
+                ForEach(summary.categories, id: \.id) { category in
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(Color(widgetHex: category.hex))
+                            .frame(width: 7, height: 7)
+                            .accessibilityHidden(true)
+                        Text(category.title)
+                            .foregroundStyle(.white.opacity(0.75))
+                        Spacer(minLength: 2)
+                        Text(category.durationText)
+                            .monospacedDigit()
+                    }
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                }
+            }
+            HStack(spacing: 12) {
+                metric(
+                    "figure.walk",
+                    summary.steps.formatted(),
+                    label: AppLanguagePreference.text("걸음", "Steps")
+                )
+                metric(
+                    "point.topleft.down.to.point.bottomright.curvepath.fill",
+                    summary.distanceText,
+                    label: nil
+                )
+                Spacer(minLength: 0)
+            }
+        }
+        .font(.caption2.weight(.semibold))
+        .foregroundStyle(.white)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func metric(_ systemImage: String, _ value: String, label: String?) -> some View {
+        HStack(spacing: 3) {
+            Image(systemName: systemImage)
+                .foregroundStyle(.white.opacity(0.75))
+                .accessibilityLabel(label ?? "")
+                .accessibilityHidden(label == nil)
+            Text(value)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
         }
     }
 }
@@ -157,302 +211,6 @@ private struct TaptionPlanAppIcon: View {
     }
 }
 
-private struct SensorCollectionWaveformView: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    let state: SensorCollectionActivityAttributes.ContentState
-    let positionOffset: Double
-    let positionScale: Double
-    let scanOffset: Double
-    let scanScale: Double
-    let showsIndicator: Bool
-
-    init(
-        state: SensorCollectionActivityAttributes.ContentState,
-        positionOffset: Double = 0,
-        positionScale: Double = 1,
-        scanOffset: Double = 0,
-        scanScale: Double = 1,
-        showsIndicator: Bool = true
-    ) {
-        self.state = state
-        self.positionOffset = positionOffset
-        self.positionScale = positionScale
-        self.scanOffset = scanOffset
-        self.scanScale = scanScale
-        self.showsIndicator = showsIndicator
-    }
-
-    var body: some View {
-        TimelineView(
-            .animation(
-                minimumInterval: 1.0 / 30.0,
-                paused: reduceMotion || !state.isCollecting
-            )
-        ) { timeline in
-            waveform(at: timeline.date)
-                .overlay {
-                    scanline(at: timeline.date)
-                }
-        }
-        .frame(minWidth: 24, maxWidth: .infinity)
-        .frame(height: 14)
-        .overlay(alignment: .topTrailing) {
-            if state.isCollecting && showsIndicator {
-                TimelineView(
-                    .animation(minimumInterval: 1, paused: false)
-                ) { timeline in
-                    Circle()
-                        .fill(.red)
-                        .frame(width: 2, height: 2)
-                        .opacity(
-                            Int(timeline.date.timeIntervalSinceReferenceDate.rounded(.down)) % 2 == 0
-                                ? 1
-                                : 0
-                        )
-                }
-                .frame(width: 2, height: 2)
-                .accessibilityHidden(true)
-            }
-        }
-        .accessibilityHidden(true)
-    }
-
-    @ViewBuilder
-    private func waveform(at date: Date) -> some View {
-        if state.phase == .hidden {
-            Color.clear
-        } else {
-            ZStack {
-                SensorCollectionFlatlineShape()
-                    .stroke(
-                        Color(red: 0.18, green: 0.72, blue: 0.59).opacity(0.38),
-                        style: StrokeStyle(lineWidth: 1, lineCap: .round)
-                    )
-                if let progress = pulseProgress(at: date) {
-                    SensorCollectionSamplePulseShape(
-                        progress: reduceMotion ? 0.5 : progress,
-                        positionOffset: positionOffset,
-                        positionScale: positionScale
-                    )
-                    .stroke(
-                        state.isExternalSample == true
-                            ? .red
-                            : Color(red: 0.18, green: 0.72, blue: 0.59),
-                        style: StrokeStyle(lineWidth: 1.2, lineCap: .round, lineJoin: .round)
-                    )
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func scanline(at date: Date) -> some View {
-        if let progress = scanProgress(at: date) {
-            GeometryReader { proxy in
-                Rectangle()
-                    .fill(.black)
-                    .frame(width: 7, height: 2)
-                    .position(
-                        x: CGFloat(
-                            SensorCollectionWaveformMath.leftToRightEndpoint(
-                                progress: progress,
-                                width: Double(proxy.size.width)
-                            )
-                        ),
-                        y: proxy.size.height / 2
-                    )
-                    .accessibilityHidden(true)
-            }
-        }
-    }
-
-    private func pulseProgress(at date: Date) -> Double? {
-        guard state.isCollecting,
-              state.phase == .pulse,
-              state.phaseUntil.map({ date < $0 }) ?? true else {
-            return nil
-        }
-        let halfWindow = SensorCollectionProgressPolicy
-            .halfWindowDuration(intervalSeconds: state.intervalSeconds)
-            ?? 0.5
-        let origin = state.lastSavedAt ?? state.startedAt
-        return SensorCollectionWaveformMath.cycleProgress(
-            at: date,
-            origin: origin,
-            duration: halfWindow
-        )
-    }
-
-    private func scanProgress(at date: Date) -> Double? {
-        guard state.isCollecting else { return nil }
-        let globalProgress = reduceMotion
-            ? 0.5
-            : SensorCollectionWaveformMath.cycleProgress(
-                at: date,
-                origin: state.waveformScanStartedAt ?? state.startedAt,
-                duration: SensorCollectionActivityPolicy.waveformScanDuration
-            )
-        let scale = max(scanScale, 0.000_001)
-        let localProgress = (globalProgress - scanOffset) / scale
-        guard localProgress >= 0, localProgress <= 1 else { return nil }
-        return localProgress
-    }
-}
-
-private struct SensorCollectionFlatlineShape: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.move(to: CGPoint(x: rect.minX, y: rect.midY))
-        path.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
-        return path
-    }
-}
-
-private struct SensorCollectionSamplePulseShape: Shape {
-    var progress: Double
-    var positionOffset: Double = 0
-    var positionScale: Double = 1
-
-    func path(in rect: CGRect) -> Path {
-        guard rect.width > 0, rect.height > 0 else { return Path() }
-        let localProgress = (progress - positionOffset) / max(positionScale, 0.000_001)
-        guard localProgress >= 0, localProgress <= 1 else { return Path() }
-        let sampleCount = max(24, Int((rect.width * 2).rounded(.up)))
-        let baseline = rect.midY
-        let verticalScale = rect.height * 0.42
-        let pulseWidth = 0.34
-        var path = Path()
-
-        for index in 0...sampleCount {
-            let position = Double(index) / Double(sampleCount)
-            let x = rect.minX + rect.width * CGFloat(position)
-            let pulsePhase = (position - localProgress) / pulseWidth + 0.5
-            let signal = pulsePhase >= 0 && pulsePhase <= 1
-                ? SensorCollectionWaveformMath.heartbeat(at: pulsePhase)
-                : 0
-            let y = baseline - CGFloat(signal) * verticalScale
-            let point = CGPoint(x: x, y: y)
-            if index == 0 {
-                path.move(to: point)
-            } else {
-                path.addLine(to: point)
-            }
-        }
-        return path
-    }
-}
-
-private struct SensorCollectionMeterView: View {
-    let mask: Int?
-    let level: Double
-    let color: Color
-    var height: CGFloat = 2
-
-    init(mask: Int? = nil, level: Double = 0, color: Color, height: CGFloat = 2) {
-        self.mask = mask
-        self.level = level
-        self.color = color
-        self.height = height
-    }
-
-    var body: some View {
-        HStack(spacing: 1) {
-            ForEach(0..<10, id: \.self) { index in
-                Capsule(style: .continuous)
-                    .fill(isFilled(at: index) ? color : .white.opacity(0.22))
-                    .frame(maxWidth: .infinity)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: height)
-        .accessibilityHidden(true)
-    }
-
-    private func isFilled(at index: Int) -> Bool {
-        if let mask {
-            return mask & (1 << index) != 0
-        }
-        return Double(index) < level * 10
-    }
-}
-
-private struct SensorCollectionMeterRows: View {
-    let state: SensorCollectionActivityAttributes.ContentState
-    var columns = 1
-
-    var body: some View {
-        let kinds = displayKinds
-        Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: columns > 1 ? 4 : 2) {
-            ForEach(Array(stride(from: 0, to: kinds.count, by: columns)), id: \.self) { start in
-                GridRow {
-                    ForEach(start..<min(start + columns, kinds.count), id: \.self) { index in
-                        meter(kinds[index], index: index)
-                    }
-                }
-            }
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(
-            AppLanguagePreference.text("센서별 최근 수신량", "Recent samples by sensor")
-        )
-    }
-
-    private func meter(_ kind: String, index: Int) -> some View {
-        HStack(spacing: 4) {
-            Text(SensorCollectionMeterModel.label(for: kind))
-                .font(.system(size: columns > 1 ? 11 : 8, weight: .semibold))
-                .foregroundStyle(.white.opacity(columns > 1 ? 0.9 : 0.72))
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                .frame(width: columns > 1 ? 32 : 42, alignment: .leading)
-            SensorCollectionMeterView(
-                mask: state.sensorMeterMasks?[kind],
-                level: SensorCollectionMeterModel.level(
-                    mask: state.sensorMeterMasks?[kind]
-                ),
-                color: sensorCollectionMeterColor(
-                    for: kind,
-                    index: index,
-                    state: state
-                ),
-                height: columns > 1 ? 5 : 2
-            )
-        }
-    }
-
-    private var displayKinds: [String] {
-        let kinds = state.collectionKinds.filter { !$0.isEmpty }
-        return kinds.isEmpty
-            ? Array(SensorCollectionMeterModel.orderedKinds.prefix(6))
-            : Array(kinds.prefix(6))
-    }
-}
-
-private func sensorCollectionMeterColor(
-    for kind: String,
-    index: Int,
-    state: SensorCollectionActivityAttributes.ContentState
-) -> Color {
-    switch SensorCollectionMeterModel.status(for: kind, state: state) {
-    case .delayed: return .orange
-    case .unavailable: return .red
-    case .waiting: return .white.opacity(0.40)
-    case .receiving:
-        break
-    }
-    switch kind {
-    case "location": return Color(red: 0.26, green: 0.61, blue: 1)
-    case "motion", "steps": return Color(red: 0.22, green: 0.78, blue: 0.54)
-    case "altitude": return Color(red: 0.62, green: 0.47, blue: 0.95)
-    case "health": return .red
-    case "wifi": return Color(red: 0.22, green: 0.72, blue: 0.86)
-    default:
-        let colors: [Color] = [.teal, .blue, .purple, .orange, .pink]
-        return colors[index % colors.count]
-    }
-}
-
 private func sensorCollectionAccessibilityLabel(
     for state: SensorCollectionActivityAttributes.ContentState
 ) -> String {
@@ -470,26 +228,6 @@ private func sensorCollectionAccessibilityLabel(
     }
     let activityTitle = liveActivityTitle(state)
     return "\(activityTitle), \(status), \(kinds)"
-}
-
-/// 아일랜드용 한 줄. 타이머 글자는 폭을 다 차지하므로 폭을 정해 왼쪽으로 쏠리지 않게 한다.
-private struct SensorCollectionSavedAtLine: View {
-    let lastSavedAt: Date?
-
-    var body: some View {
-        HStack(spacing: 4) {
-            Text(AppLanguagePreference.text("최근 저장", "Last saved"))
-                .foregroundStyle(.white.opacity(0.72))
-            if let lastSavedAt {
-                Text(lastSavedAt, style: .timer)
-                    .monospacedDigit()
-                    .frame(width: 44, alignment: .leading)
-            } else {
-                Text(AppLanguagePreference.text("대기", "Waiting"))
-            }
-        }
-        .font(.caption2.weight(.semibold))
-    }
 }
 
 private struct SensorCollectionSavedAtView: View {
