@@ -68,7 +68,7 @@
 		A1FA113C5869FE29648957F6 /* TimelineDetailPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA114C9607F825D87DDABD /* TimelineDetailPanel.swift */; };
 		A1FA11A8E4B16F54E10FE9B1 /* RouteMapViewport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA111EE25EBDA22F51D42E /* RouteMapViewport.swift */; };
 		A1FA11EB640567D972E12891 /* TimelineSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11013C73958F69782D38 /* TimelineSelection.swift */; };
-		B10802000000000000000012 /* OfflineVectorMapDownloader.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10802000000000000000002 /* OfflineVectorMapDownloader.swift */; };
+		B10802000000000000000012 /* OfflineVectorTileCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10802000000000000000002 /* OfflineVectorTileCache.swift */; };
 		B10802000000000000000011 /* OfflineVectorTiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10802000000000000000001 /* OfflineVectorTiles.swift */; };
 		A1FA115BFD9ADB6D5F57D8C1 /* SensorReadingModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11E186E821582D4654B6 /* SensorReadingModels.swift */; };
 		A1FA11AD460494BD2B675105 /* SensorReadingModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11E186E821582D4654B6 /* SensorReadingModels.swift */; };
@@ -385,7 +385,6 @@
 		A1000000000000000B1105C2 /* MapHomeMeetingPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105C2 /* MapHomeMeetingPolicy.swift */; };
 		A1000000000000000B1105C3 /* MapHomeAppleWatchMenuItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105C3 /* MapHomeAppleWatchMenuItem.swift */; };
 		A1000000000000000B1105C5 /* MapHomeLanguageMenuItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105C5 /* MapHomeLanguageMenuItem.swift */; };
-		B10802000000000000000013 /* MapHomeOfflineMapSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10802000000000000000003 /* MapHomeOfflineMapSheet.swift */; };
 		A1000000000000000B1105C6 /* MapHomePlacePinPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105C6 /* MapHomePlacePinPicker.swift */; };
 		A1E3519F71AF5D72C5438970 /* MapHomeView+Timeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E3519F71AF5D72C5438970 /* MapHomeView+Timeline.swift */; };
 		A1EF724568A9B22CAC66C750 /* MapHomeView+Playback.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1EF724568A9B22CAC66C750 /* MapHomeView+Playback.swift */; };
@@ -729,7 +728,7 @@
 		F1FA114C9607F825D87DDABD /* TimelineDetailPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineDetailPanel.swift; sourceTree = "<group>"; };
 		F1FA111EE25EBDA22F51D42E /* RouteMapViewport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteMapViewport.swift; sourceTree = "<group>"; };
 		F1FA11013C73958F69782D38 /* TimelineSelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineSelection.swift; sourceTree = "<group>"; };
-		B10802000000000000000002 /* OfflineVectorMapDownloader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineVectorMapDownloader.swift; sourceTree = "<group>"; };
+		B10802000000000000000002 /* OfflineVectorTileCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineVectorTileCache.swift; sourceTree = "<group>"; };
 		B10802000000000000000001 /* OfflineVectorTiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineVectorTiles.swift; sourceTree = "<group>"; };
 		F1FA11E186E821582D4654B6 /* SensorReadingModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorReadingModels.swift; sourceTree = "<group>"; };
 		F1FA1157352882250214647A /* PlanRecordModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanRecordModels.swift; sourceTree = "<group>"; };
@@ -1020,7 +1019,6 @@
 		F1000000000000000B1105C2 /* MapHomeMeetingPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeMeetingPolicy.swift; sourceTree = "<group>"; };
 		F1000000000000000B1105C3 /* MapHomeAppleWatchMenuItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeAppleWatchMenuItem.swift; sourceTree = "<group>"; };
 		F1000000000000000B1105C5 /* MapHomeLanguageMenuItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLanguageMenuItem.swift; sourceTree = "<group>"; };
-		B10802000000000000000003 /* MapHomeOfflineMapSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeOfflineMapSheet.swift; sourceTree = "<group>"; };
 		F1000000000000000B1105C6 /* MapHomePlacePinPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlacePinPicker.swift; sourceTree = "<group>"; };
 		F1E3519F71AF5D72C5438970 /* MapHomeView+Timeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Timeline.swift"; sourceTree = "<group>"; };
 		F1EF724568A9B22CAC66C750 /* MapHomeView+Playback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Playback.swift"; sourceTree = "<group>"; };
@@ -1485,7 +1483,6 @@
 				F1E3519F71AF5D72C5438970 /* MapHomeView+Timeline.swift */,
 				F1000000000000000B1105C6 /* MapHomePlacePinPicker.swift */,
 				F1000000000000000B1105C5 /* MapHomeLanguageMenuItem.swift */,
-				B10802000000000000000003 /* MapHomeOfflineMapSheet.swift */,
 				F1000000000000000B1105C3 /* MapHomeAppleWatchMenuItem.swift */,
 				F1000000000000000B1105C2 /* MapHomeMeetingPolicy.swift */,
 				F1000000000000000B1105C1 /* MapHomePlaceFirstPolicy.swift */,
@@ -1740,7 +1737,7 @@
 			children = (
 				F10000000000000000000003 /* PlanItem.swift */,
 				F1000000000000000000000F /* FeatureModels.swift */,
-				B10802000000000000000002 /* OfflineVectorMapDownloader.swift */,
+				B10802000000000000000002 /* OfflineVectorTileCache.swift */,
 				B10802000000000000000001 /* OfflineVectorTiles.swift */,
 				F1FA11E186E821582D4654B6 /* SensorReadingModels.swift */,
 				F1FA1157352882250214647A /* PlanRecordModels.swift */,
@@ -2366,7 +2363,6 @@
 				A1E3519F71AF5D72C5438970 /* MapHomeView+Timeline.swift in Sources */,
 				A1000000000000000B1105C6 /* MapHomePlacePinPicker.swift in Sources */,
 				A1000000000000000B1105C5 /* MapHomeLanguageMenuItem.swift in Sources */,
-				B10802000000000000000013 /* MapHomeOfflineMapSheet.swift in Sources */,
 				A1000000000000000B1105C3 /* MapHomeAppleWatchMenuItem.swift in Sources */,
 				A1000000000000000B1105C2 /* MapHomeMeetingPolicy.swift in Sources */,
 				A1000000000000000B1105C1 /* MapHomePlaceFirstPolicy.swift in Sources */,
@@ -2547,7 +2543,7 @@
 				B10808020000000000000B07 /* CategorySetupView.swift in Sources */,
 				B10808020000000000000B08 /* AppUsageNameLabel.swift in Sources */,
 				A1000000000000000000000F /* FeatureModels.swift in Sources */,
-				B10802000000000000000012 /* OfflineVectorMapDownloader.swift in Sources */,
+				B10802000000000000000012 /* OfflineVectorTileCache.swift in Sources */,
 				B10802000000000000000011 /* OfflineVectorTiles.swift in Sources */,
 				A1FA11AD460494BD2B675105 /* SensorReadingModels.swift in Sources */,
 				A1FA11EE9F352FA3C4B9FA2A /* PlanRecordModels.swift in Sources */,
