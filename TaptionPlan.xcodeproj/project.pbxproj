@@ -159,6 +159,14 @@
 		B10808030000000000000107 /* ReviewClockGeometryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10808030000000000000007 /* ReviewClockGeometryTests.swift */; };
 		A1000000000000000000000D /* DraftComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000D /* DraftComponents.swift */; };
 		A1000000000000000000000E /* DetailViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000E /* DetailViews.swift */; };
+		B10808020000000000000B01 /* QuickActionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10808020000000000000A01 /* QuickActionSheet.swift */; };
+		B10808020000000000000B02 /* MemoDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10808020000000000000A02 /* MemoDetailView.swift */; };
+		B10808020000000000000B03 /* CatPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10808020000000000000A03 /* CatPickerView.swift */; };
+		B10808020000000000000B04 /* InferenceDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10808020000000000000A04 /* InferenceDetailView.swift */; };
+		B10808020000000000000B05 /* LocationTimelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10808020000000000000A05 /* LocationTimelineView.swift */; };
+		B10808020000000000000B06 /* WidgetPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10808020000000000000A06 /* WidgetPreviewView.swift */; };
+		B10808020000000000000B07 /* CategorySetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10808020000000000000A07 /* CategorySetupView.swift */; };
+		B10808020000000000000B08 /* AppUsageNameLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10808020000000000000A08 /* AppUsageNameLabel.swift */; };
 		A1000000000000000000000F /* FeatureModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000F /* FeatureModels.swift */; };
 		A10000000000000000000010 /* PlanRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000010 /* PlanRepository.swift */; };
 		A1000000000000000B1105C8 /* WidgetSharedEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105C8 /* WidgetSharedEngines.swift */; };
@@ -790,6 +798,14 @@
 		B10808030000000000000007 /* ReviewClockGeometryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewClockGeometryTests.swift; sourceTree = "<group>"; };
 		F1000000000000000000000D /* DraftComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftComponents.swift; sourceTree = "<group>"; };
 		F1000000000000000000000E /* DetailViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailViews.swift; sourceTree = "<group>"; };
+		B10808020000000000000A01 /* QuickActionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickActionSheet.swift; sourceTree = "<group>"; };
+		B10808020000000000000A02 /* MemoDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoDetailView.swift; sourceTree = "<group>"; };
+		B10808020000000000000A03 /* CatPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatPickerView.swift; sourceTree = "<group>"; };
+		B10808020000000000000A04 /* InferenceDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InferenceDetailView.swift; sourceTree = "<group>"; };
+		B10808020000000000000A05 /* LocationTimelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationTimelineView.swift; sourceTree = "<group>"; };
+		B10808020000000000000A06 /* WidgetPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetPreviewView.swift; sourceTree = "<group>"; };
+		B10808020000000000000A07 /* CategorySetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategorySetupView.swift; sourceTree = "<group>"; };
+		B10808020000000000000A08 /* AppUsageNameLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUsageNameLabel.swift; sourceTree = "<group>"; };
 		F1000000000000000000000F /* FeatureModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureModels.swift; sourceTree = "<group>"; };
 		F10000000000000000000010 /* PlanRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanRepository.swift; sourceTree = "<group>"; };
 		F1000000000000000B1105C8 /* WidgetSharedEngines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSharedEngines.swift; sourceTree = "<group>"; };
@@ -1635,6 +1651,14 @@
 				F1A11102A0100000000000F1 /* MemoTextPolish.swift */,
 				F1000000000000000000000D /* DraftComponents.swift */,
 				F1000000000000000000000E /* DetailViews.swift */,
+				B10808020000000000000A01 /* QuickActionSheet.swift */,
+				B10808020000000000000A02 /* MemoDetailView.swift */,
+				B10808020000000000000A03 /* CatPickerView.swift */,
+				B10808020000000000000A04 /* InferenceDetailView.swift */,
+				B10808020000000000000A05 /* LocationTimelineView.swift */,
+				B10808020000000000000A06 /* WidgetPreviewView.swift */,
+				B10808020000000000000A07 /* CategorySetupView.swift */,
+				B10808020000000000000A08 /* AppUsageNameLabel.swift */,
 				F10000000000000000000004 /* Theme.swift */,
 				F10000000000000000000024 /* CategoryManagerView.swift */,
 				F10000000000000000000025 /* PlanEditorSheet.swift */,
@@ -2488,6 +2512,14 @@
 				A1A11102A0100000000000A1 /* MemoTextPolish.swift in Sources */,
 				A1000000000000000000000D /* DraftComponents.swift in Sources */,
 				A1000000000000000000000E /* DetailViews.swift in Sources */,
+				B10808020000000000000B01 /* QuickActionSheet.swift in Sources */,
+				B10808020000000000000B02 /* MemoDetailView.swift in Sources */,
+				B10808020000000000000B03 /* CatPickerView.swift in Sources */,
+				B10808020000000000000B04 /* InferenceDetailView.swift in Sources */,
+				B10808020000000000000B05 /* LocationTimelineView.swift in Sources */,
+				B10808020000000000000B06 /* WidgetPreviewView.swift in Sources */,
+				B10808020000000000000B07 /* CategorySetupView.swift in Sources */,
+				B10808020000000000000B08 /* AppUsageNameLabel.swift in Sources */,
 				A1000000000000000000000F /* FeatureModels.swift in Sources */,
 				B10802000000000000000012 /* OfflineVectorMapDownloader.swift in Sources */,
 				B10802000000000000000011 /* OfflineVectorTiles.swift in Sources */,
