@@ -182,6 +182,16 @@ private struct SensorCollectionLockScreenView: View {
 
             Spacer(minLength: 8)
 
+            if let heart = SensorExternalHeartPolicy.text(
+                isExternalSample: context.state.isExternalSample,
+                heartRate: context.state.latestHeartRate
+            ) {
+                Text(heart)
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(.red)
+            }
+
             SensorCollectionSavedAtView(
                 lastSavedAt: context.state.lastSavedAt
             )

@@ -127,4 +127,16 @@ final class LiveActivityDaySummaryTests: XCTestCase {
         XCTAssertNil(cache.reusable(day: day, language: .english, now: now))
         XCTAssertNil(cache.reusable(day: day.addingTimeInterval(86_400), language: .korean, now: now))
     }
+
+    func testSummaryShowsLifeCategoriesOnly() {
+        let value = summary(["sleep": 28_800, "movement": 7_200, "activity": 9_000, "work": 3_600, "eating": 1_800])
+        XCTAssertEqual(value.categories.map(\.id), ["work", "eating"])
+    }
+
+    func testExternalHeartOnlyForExternalSensor() {
+        XCTAssertNil(SensorExternalHeartPolicy.text(isExternalSample: false, heartRate: 70))
+        XCTAssertNil(SensorExternalHeartPolicy.text(isExternalSample: nil, heartRate: 70))
+        XCTAssertEqual(SensorExternalHeartPolicy.text(isExternalSample: true, heartRate: 70.4), "♥︎ 70")
+        XCTAssertEqual(SensorExternalHeartPolicy.text(isExternalSample: true, heartRate: nil), "♥︎")
+    }
 }

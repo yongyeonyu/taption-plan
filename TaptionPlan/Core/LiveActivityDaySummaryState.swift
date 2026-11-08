@@ -26,3 +26,12 @@ extension SensorCollectionActivityPolicy {
         previous != next
     }
 }
+
+/// 잠금 화면의 빨간 심박 표시(대표 결정 2026-11-08). 외부 수신 센서(Apple Watch)일 때만 보인다.
+enum SensorExternalHeartPolicy {
+    static func text(isExternalSample: Bool?, heartRate: Double?) -> String? {
+        guard isExternalSample == true else { return nil }
+        guard let heartRate, heartRate.isFinite, heartRate > 0, heartRate < 1000 else { return "♥︎" }
+        return "♥︎ \(Int(heartRate.rounded()))"
+    }
+}

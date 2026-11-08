@@ -3,6 +3,8 @@ import TaptionPlanCore
 
 /// 오늘 요약 값을 ActivityKit용 값으로 바꾼다. 계산 자체는 지도 카운터와 같은 정책을 쓴다.
 enum LiveActivityDaySummaryBuilder {
+    /// 요약은 생활 분류만 보여 준다(대표 결정 2026-11-08). 수면·이동·일반 활동이 자리를 차지하지 않게 한다.
+    static let excludedCategoryIDs: Set<String> = ["unconfirmed", "sleep", "movement", "activity"]
     static let categoryLimit = 4
     /// 값이 분 단위라 1분에 한 번만 다시 센다. 센서 저장마다 하루 전체를 다시 세지 않는다.
     static let refreshSeconds: TimeInterval = 60
@@ -17,7 +19,7 @@ enum LiveActivityDaySummaryBuilder {
     ) -> SensorCollectionDaySummary {
         let safeMeters = meters.isFinite ? max(0, meters) : 0
         let categories = categorySeconds
-            .filter { $0.key != "unconfirmed" && $0.value >= 60 }
+            .filter { !excludedCategoryIDs.contains($0.key) && $0.value >= 60 }
             .sorted { ($1.value, $0.key) < ($0.value, $1.key) }
             .prefix(categoryLimit)
             .map { id, seconds in

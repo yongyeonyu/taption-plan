@@ -2,13 +2,18 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## TFB1108A05 · 301 배포 전 전체 시험 (2026-11-08)
+
+- 전체 단위 시험(BOKKI-iPhone11): XCTest 2,270건 중 실패 1·건너뜀 21, Swift Testing 51 통과(`build/validation/TFB1108A05/unit-full-1.log`). 실패는 시간 측정 시험 `CategoryCacheBenchmarkTests.testStickmanActionCacheSpeedup`(속도 향상 ×1.59, 기준 ×2)로, 맥 부하 평균 약 69인 상태였다. 같은 빌드로 단독 3회 재실행 모두 통과(`bench-rerun-1~3.log`). 부하 민감 시험으로 보고 진행(앱 코드 무관 여부를 코드로 입증하지는 않음).
+
 ## DYN1108A01 · 다이나믹 아일랜드 펼침 화면을 오늘 요약으로 (2026-11-08)
 
 - 대표 결정: 센서 칸 완전히 뺌, 분류별 시간 + 걸음·거리.
 - 펼침 화면에서 파형·센서 막대·「최근 저장」 삭제. 화랑이·지금 활동 아래 대분류 상위 4개 2×2(색 점·이름·시간)와 걸음·이동 거리. 계산은 `TaptionSealedDayBuilder.categoryDurations`·`MapHomeCounterTimelinePolicy`·`MapHomeSidebarMajorCategory.presentation`·`DurationText` 재사용. `ContentState.daySummary` 선택 필드(옛 payload 읽힘). 재계산은 같은 날·같은 언어에서 1분에 한 번, 값이 같으면 보내지 않음(15초마다 보내던 동작 제거), 외부 화면 잠금 중 nil. 잠금 화면(`SensorCollectionLockScreenView`)은 별도 뷰라 그대로. 쓰지 않게 된 센서 표시 코드 제거, `WidgetShared.swift` 1,850 → 1,716줄(예산 낮춤). 수집은 그대로.
 - 시험(시뮬레이터): `LiveActivityDaySummaryTests` 등 28건, `TaptionPlanWidget` 빌드(`build/validation/DYN1108A01/`). 합친 뒤 전체 단위 시험 XCTest 2,268건 중 실패 2건(`unit-full-1.log`): `testWalkerViewportUpdatesDoNotRestackMapSubviews`가 CTR1103A02의 픽셀 맞춤 전 기대값(오차 0.001)이라 반 픽셀(0.5pt)로 고침, `TimeScaleTests` 178건 재실행 통과(`timescale-rerun.log`). 전체 시험을 고친 뒤 다시 돌리지는 않았다. Swift Testing 51 통과.
 - 실기기: 펼침 높이 안에 2×2·걸음 줄이 잘리지 않는지(12개 언어), 백그라운드 갱신, 외부 화면 잠금 시 숨김, 업데이트 직후 떠 있던 Live Activity.
-- 대표 결정 대기: 상위 4개 범위(수면·이동 포함 / 생활 분류만), AGENTS.md 「외부 수신 센서 빨간 심박 표시」 규칙.
+- DYN1108A02(대표 결정): 상위 4개는 생활 분류만(미확인·수면·이동·일반 활동 제외). 외부 수신 센서 표시는 잠금 화면에 빨간 심박(`SensorExternalHeartPolicy`, Apple Watch 수신일 때만, 심박 없으면 ♥︎만).
+- SBN1102A01: 대표 확인(구글 연결 기기에서 말풍선 뜸)으로 닫음.
 
 ## SBN1102A01 · 구글 일정 아이콘 말풍선 (2026-11-08, 재현 안 됨)
 
