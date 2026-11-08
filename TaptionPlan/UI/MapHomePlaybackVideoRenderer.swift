@@ -235,7 +235,7 @@ final class MapHomePlaybackVideoRenderer: NSObject, @preconcurrency MLNMapViewDe
 
     // MARK: - 렌더
 
-    /// 영상을 만들어 임시 `.mov` 위치를 돌려준다. 취소하면 `CancellationError`.
+    /// 영상을 만들어 임시 `.mp4` 위치를 돌려준다. 취소하면 `CancellationError`.
     func render(progress: @escaping (Double) -> Void) async throws -> URL {
         let frames = makeFrames(fps)
         guard !frames.isEmpty else { throw MapHomePlaybackVideoError.empty }
@@ -243,7 +243,7 @@ final class MapHomePlaybackVideoRenderer: NSObject, @preconcurrency MLNMapViewDe
         defer { tearDownMap() }
         try await prepareMap()
         let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("BOKKI-Plan-render-\(UUID().uuidString).mov")
+            .appendingPathComponent("BOKKI-Plan-render-\(UUID().uuidString).mp4")
         let writer = try MapHomePlaybackVideoWriter(
             url: url, width: pixelWidth, height: pixelHeight,
             fps: fps, codec: codec, bitRate: bitRate,
@@ -547,6 +547,7 @@ final class MapHomePlaybackVideoRenderer: NSObject, @preconcurrency MLNMapViewDe
 
 /// AVAssetWriter 감싸기. 프레임 시각은 `frameIndex / fps`로 고정한다.
 /// 음악을 주면 오디오 트랙을 더한다. 음악은 전용 큐에서 들어가 프레임 경로를 막지 않는다.
+/// 기본 그릇은 MP4다. 세로 영상을 그대로 올리는 곳들이 MP4를 받는다(TRV1108A01, 예전에는 MOV).
 @MainActor
 final class MapHomePlaybackVideoWriter {
     private let writer: AVAssetWriter
@@ -558,9 +559,9 @@ final class MapHomePlaybackVideoWriter {
 
     init(
         url: URL, width: Int, height: Int, fps: Int, codec: AVVideoCodecType, bitRate: Int,
-        music: URL? = nil, durationSeconds: Double = 0
+        music: URL? = nil, durationSeconds: Double = 0, fileType: AVFileType = .mp4
     ) throws {
-        writer = try AVAssetWriter(outputURL: url, fileType: .mov)
+        writer = try AVAssetWriter(outputURL: url, fileType: fileType)
         input = AVAssetWriterInput(mediaType: .video, outputSettings: [
             AVVideoCodecKey: codec,
             AVVideoWidthKey: width,
