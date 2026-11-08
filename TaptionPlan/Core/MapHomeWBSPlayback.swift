@@ -120,12 +120,13 @@ struct MapHomePlaybackLocation: Equatable {
         expectedCoordinate: GeoPoint? = nil,
         calendar: Calendar = .autoupdatingCurrent
     ) -> Self? {
-        if let frame, frame.date == date {
-            return Self(coordinate: frame.coordinate, cameraCoordinate: frame.cameraCoordinate)
-        }
         // 지하철은 확정 여부와 상관없이 노선 위에 올린다. 자동 분류 구간은 `isConfirmed`가
         // 늘 false라, 예전에는 노선이 그려져 있어도 화랑이가 그 구간에서 사라졌다.
+        // 탑승 중에는 GPS 두 점을 직선으로 이은 프레임보다 선로가 먼저다(SUB1108A01).
         let subwayPoint = Self.subwayCoordinate(at: date, travel: confirmedTravel, readings: normalizedReadings)
+        if subwayPoint == nil, let frame, frame.date == date {
+            return Self(coordinate: frame.coordinate, cameraCoordinate: frame.cameraCoordinate)
+        }
         if let point = subwayPoint ?? expectedCoordinate {
             return Self(coordinate: point)
         }

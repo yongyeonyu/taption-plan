@@ -227,7 +227,13 @@ struct MapHomeDayTravelDistanceEntry: Identifiable, Equatable {
 enum MapHomeDayTravelSummary {
     static let minimumMeters = 10.0
 
+    /// 지하철·기차 탑승은 선로 길이로 센다(SUB1108A01). 옛 저장 구간의 역 직선·GPS 직선 거리를 그대로 쓰지 않는다.
     static func entries(from segments: [TravelSegment]) -> [MapHomeDayTravelDistanceEntry] {
+        summed(SubwayRideTrack.applyingTrackDistance(segments))
+    }
+
+    /// 이미 탑승 거리를 고친 구간(`MapHomeCounterTimelinePolicy.visibleSegments`)을 더한다.
+    static func summed(_ segments: [TravelSegment]) -> [MapHomeDayTravelDistanceEntry] {
         var totals: [TravelMode: Double] = [:]
         for segment in segments where segment.distanceMeters.isFinite && segment.distanceMeters > 0 {
             totals[segment.mode, default: 0] += segment.distanceMeters

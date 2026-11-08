@@ -132,21 +132,12 @@ extension MapHomePlaybackLocation {
         travel: [TravelSegment],
         readings: [SensorReading] = []
     ) -> GeoPoint? {
-        let active = travel.filter { segment in
-            segment.mode == .subway
-                && segment.span.contains(date)
-                && segment.subwayRoute.map(SubwayStationCatalog.isValid) == true
-        }
-        guard var segment = active.max(by: { $0.span.start < $1.span.start }) else {
+        // 선로 모양을 따라 간다. 탑승 안에서는 GPS 직선 프레임보다 먼저 쓴다(SUB1108A01).
+        let active = travel.filter { SubwayRideTrack.isRide($0) && $0.span.contains(date) }
+        guard let segment = active.max(by: { $0.span.start < $1.span.start }) else {
             return nil
         }
-        if let point = subwayGapCoordinate(at: date, segment: segment, readings: readings) { return point }
-        // 확정 구간과 **같은 계산**을 쓰려고 확정 표시만 세운다. 좌표 계산에는 쓰이지 않는다.
-        segment.isConfirmed = true
-        return RouteTimelineDataEngine.confirmedSubwayCoordinates(
-            for: segment,
-            through: date
-        ).last
+        return subwayGapCoordinate(at: date, segment: segment, readings: readings)
     }
 }
 
@@ -262,98 +253,24 @@ extension MapHomePlaybackLocation {
 
     private static let minimumDrawnGap: TimeInterval = 120
 
-    /// 지하철 구간에서 표본이 끊긴 부분의 노선 조각. 표본이 이어진 곳은 실제 경로가 있어 그리지 않는다.
+    /// 지하철 구간에서 표본이 끊긴 부분의 선로 조각. 표본이 이어진 곳은 실제 경로가 있어 그리지 않는다.
+    /// 역 직선이 아니라 선로 모양을 따른다. 직선이면 선로 옆에 나란한 미확인 발자국이 생겼다(SUB1108A01).
     static func subwayGapRoutes(segment: TravelSegment, readings: [SensorReading], through cutoff: Date) -> [[GeoPoint]] {
-        guard let points = segment.subwayRoute?.coordinates, points.count >= 2 else { return [] }
-        let lengths = zip(points, points.dropFirst()).map { PlanarDistance.meters($0.0, $0.1) }
-        let total = lengths.reduce(0, +)
-        guard total > 0 else { return [] }
-        let end = min(cutoff, segment.span.end)
-        var anchors: [(date: Date, meters: Double)] = [(segment.span.start, 0)]
-        for reading in readings.sorted(by: { $0.timestamp < $1.timestamp })
-        where reading.gpsAvailable && reading.timestamp > segment.span.start && reading.timestamp < end
-            && (reading.point?.horizontalAccuracy ?? .infinity) <= trustedAccuracyMeters {
-            guard let point = reading.point else { continue }
-            anchors.append((reading.timestamp, max(anchors.last?.meters ?? 0, position(of: point, on: points, lengths: lengths))))
-        }
-        let duration = max(1, segment.span.duration)
-        let endMeters = cutoff >= segment.span.end ? total : max(anchors.last?.meters ?? 0, total * end.timeIntervalSince(segment.span.start) / duration)
-        anchors.append((end, endMeters))
+        guard let line = SubwayTrackLine(route: segment.subwayRoute) else { return [] }
+        let anchors = line.anchors(segment: segment, readings: readings.sorted { $0.timestamp < $1.timestamp },
+                                   through: min(cutoff, segment.span.end))
         return zip(anchors, anchors.dropFirst()).compactMap { from, to in
             guard to.date.timeIntervalSince(from.date) >= minimumDrawnGap, to.meters > from.meters else { return nil }
-            var slice = [point(atMeters: from.meters, on: points, lengths: lengths)]
-            var traversed = 0.0
-            for index in lengths.indices {
-                traversed += lengths[index]
-                if traversed > from.meters, traversed < to.meters { slice.append(points[index + 1]) }
-            }
-            slice.append(point(atMeters: to.meters, on: points, lengths: lengths))
-            return slice
+            return line.slice(from: from.meters, to: to.meters)
         }
     }
 
+    /// 지하철 구간의 재생 위치. 믿을 만한 표본 사이를 선로를 따라 시간 비율로 잇는다(`readings`는 시각순).
     static func subwayGapCoordinate(at date: Date, segment: TravelSegment, readings: [SensorReading]) -> GeoPoint? {
-        guard let points = segment.subwayRoute?.coordinates, points.count >= 2 else { return nil }
-        var before: SensorReading?
-        var after: SensorReading?
-        var lower = 0, upper = readings.count
-        while lower < upper {
-            let middle = (lower + upper) / 2
-            if readings[middle].timestamp <= date { lower = middle + 1 } else { upper = middle }
-        }
-        func trusted(_ reading: SensorReading) -> Bool {
-            reading.gpsAvailable && segment.span.contains(reading.timestamp)
-                && (reading.point?.horizontalAccuracy ?? .infinity) <= trustedAccuracyMeters
-        }
-        before = readings[..<lower].last(where: trusted)
-        after = readings[lower...].first(where: trusted)
-        let lengths = zip(points, points.dropFirst()).map { PlanarDistance.meters($0.0, $0.1) }
-        let total = lengths.reduce(0, +)
-        guard total > 0 else { return nil }
-        let startMeters = before?.point.map { position(of: $0, on: points, lengths: lengths) } ?? 0
-        let endMeters = after?.point.map { position(of: $0, on: points, lengths: lengths) } ?? total
-        let startDate = before?.timestamp ?? segment.span.start
-        let endDate = after?.timestamp ?? segment.span.end
-        let duration = endDate.timeIntervalSince(startDate)
-        guard duration > 0 else { return point(atMeters: startMeters, on: points, lengths: lengths) }
-        let progress = min(1, max(0, date.timeIntervalSince(startDate) / duration))
-        // 투영이 잠깐 뒤로 잡혀도 열차는 뒤로 가지 않는다.
-        let target = startMeters + max(0, endMeters - startMeters) * progress
-        return point(atMeters: target, on: points, lengths: lengths)
-    }
-
-    private static func position(of point: GeoPoint, on points: [GeoPoint], lengths: [Double]) -> Double {
-        var best = (distance: Double.infinity, meters: 0.0)
-        var traversed = 0.0
-        let scale = cos(point.latitude * .pi / 180) * 111_320
-        for index in lengths.indices {
-            let ax = (points[index].longitude - point.longitude) * scale, ay = (points[index].latitude - point.latitude) * 111_320
-            let bx = (points[index + 1].longitude - point.longitude) * scale, by = (points[index + 1].latitude - point.latitude) * 111_320
-            let dx = bx - ax, dy = by - ay, square = dx * dx + dy * dy
-            let t = square > 0 ? min(1, max(0, -(ax * dx + ay * dy) / square)) : 0
-            let x = ax + dx * t, y = ay + dy * t, distance = x * x + y * y
-            if distance < best.distance { best = (distance, traversed + lengths[index] * t) }
-            traversed += lengths[index]
-        }
-        return best.meters
-    }
-
-    private static func point(atMeters target: Double, on points: [GeoPoint], lengths: [Double]) -> GeoPoint {
-        var traversed = 0.0
-        for index in lengths.indices {
-            let next = traversed + lengths[index]
-            if target <= next, lengths[index] > 0 {
-                let t = (target - traversed) / lengths[index]
-                let a = points[index], b = points[index + 1]
-                return GeoPoint(
-                    latitude: a.latitude + (b.latitude - a.latitude) * t,
-                    longitude: a.longitude + (b.longitude - a.longitude) * t,
-                    altitude: a.altitude, horizontalAccuracy: a.horizontalAccuracy, verticalAccuracy: a.verticalAccuracy
-                )
-            }
-            traversed = next
-        }
-        return points[points.count - 1]
+        guard let line = SubwayTrackLine(route: segment.subwayRoute),
+              let meters = SubwayTrackLine.meters(at: date, anchors: line.anchors(segment: segment, readings: readings))
+        else { return nil }
+        return line.point(atMeters: meters)
     }
 
 }

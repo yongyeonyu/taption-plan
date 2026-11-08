@@ -157,7 +157,8 @@ enum SensorTravelDerivation {
     }
 
     static func finished(_ input: Input, merged: [TravelSegment], railJourneys: [RailJourneyRecognizer.Journey]) -> [TravelSegment] {
-        let recognizedTravel = CarAudioTravelConfirmation.enforcingRegisteredCar(
+        // 지하철·기차 탑승 거리는 선로 길이로 정한다(SUB1108A01).
+        let recognizedTravel = SubwayRideTrack.applyingTrackDistance(CarAudioTravelConfirmation.enforcingRegisteredCar(
             SubwayAlighting.applying(
                 RailJourneyRecognizer.applying(
                     railJourneys,
@@ -170,7 +171,7 @@ enum SensorTravelDerivation {
             readings: input.readings,
             registered: input.registeredCarAudioNames,
             corrections: input.corrections
-        )
+        ))
         return WalkingDistanceBreakdown.make(travel: recognizedTravel, readings: input.readings)
             .annotating(recognizedTravel)
     }

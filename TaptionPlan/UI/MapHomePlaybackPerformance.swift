@@ -73,7 +73,7 @@ struct MapHomePlaybackLookup {
     init(readings: [SensorReading], travel: [TravelSegment], places: [PlaceStay]) {
         placePoints = Self.placePoints(places)
         subwayTravel = travel.filter { segment in
-            segment.mode == .subway && segment.subwayRoute.map(SubwayStationCatalog.isValid) == true
+            SubwayRideTrack.isRide(segment)
         }
         let samples = readings.enumerated()
             .compactMap { index, reading in reading.point.map { (index, reading.timestamp, $0, reading.speedMetersPerSecond) } }
