@@ -156,6 +156,7 @@
 		A90000000000000000000004 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = F90000000000000000000004 /* PrivacyInfo.xcprivacy */; };
 		A90000000000000000000005 /* Products.storekit in Resources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000091 /* Products.storekit */; };
 		A1000000000000000000000C /* TimeScaleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000C /* TimeScaleTests.swift */; };
+		B10809000000000000000A11 /* InkWashThemeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10809000000000000000F11 /* InkWashThemeTests.swift */; };
 		B10808030000000000000107 /* ReviewClockGeometryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10808030000000000000007 /* ReviewClockGeometryTests.swift */; };
 		A1000000000000000000000D /* DraftComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000D /* DraftComponents.swift */; };
 		A1000000000000000000000E /* DetailViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000E /* DetailViews.swift */; };
@@ -449,6 +450,11 @@
 		A100000000000000C1102A1E /* TwoFingerGestureAttachments.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A1E /* TwoFingerGestureAttachments.swift */; };
 		A50000000000000000000001 /* MapHomeVectorMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = F50000000000000000000001 /* MapHomeVectorMap.swift */; };
 		A5000000000000000000A002 /* MapHomeVectorLabels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F50000000000000000000002 /* MapHomeVectorLabels.swift */; };
+		B10809000000000000000A01 /* MapHomeVectorStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10809000000000000000F01 /* MapHomeVectorStyle.swift */; };
+		B10809000000000000000A02 /* MapHomeInkWash.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10809000000000000000F02 /* MapHomeInkWash.swift */; };
+		B10809000000000000000A03 /* MapHomePlaceStamps.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10809000000000000000F03 /* MapHomePlaceStamps.swift */; };
+		B10809000000000000000A04 /* MapHomePlaceBook.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10809000000000000000F04 /* MapHomePlaceBook.swift */; };
+		B10809000000000000000A05 /* MapHomeInkPreviewHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10809000000000000000F05 /* MapHomeInkPreviewHost.swift */; };
 		A50000000000000000000002 /* MapLibre in Frameworks */ = {isa = PBXBuildFile; productRef = X50000000000000000000002 /* MapLibre */; };
 		A60000000000000000000001 /* HealthKitTypeCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F60000000000000000000001 /* HealthKitTypeCatalog.swift */; };
 		A60000000000000000000002 /* HealthKitImportStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F60000000000000000000002 /* HealthKitImportStore.swift */; };
@@ -795,6 +801,7 @@
 		F1A11102A0100000000000F1 /* MemoTextPolish.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoTextPolish.swift; sourceTree = "<group>"; };
 		F1000000000000000000000B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F1000000000000000000000C /* TimeScaleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeScaleTests.swift; sourceTree = "<group>"; };
+		B10809000000000000000F11 /* InkWashThemeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InkWashThemeTests.swift; sourceTree = "<group>"; };
 		B10808030000000000000007 /* ReviewClockGeometryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewClockGeometryTests.swift; sourceTree = "<group>"; };
 		F1000000000000000000000D /* DraftComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftComponents.swift; sourceTree = "<group>"; };
 		F1000000000000000000000E /* DetailViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailViews.swift; sourceTree = "<group>"; };
@@ -1077,6 +1084,11 @@
 		F100000000000000C1102A1E /* TwoFingerGestureAttachments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TwoFingerGestureAttachments.swift; sourceTree = "<group>"; };
 		F50000000000000000000001 /* MapHomeVectorMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeVectorMap.swift; sourceTree = "<group>"; };
 		F50000000000000000000002 /* MapHomeVectorLabels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeVectorLabels.swift; sourceTree = "<group>"; };
+		B10809000000000000000F01 /* MapHomeVectorStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeVectorStyle.swift; sourceTree = "<group>"; };
+		B10809000000000000000F02 /* MapHomeInkWash.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeInkWash.swift; sourceTree = "<group>"; };
+		B10809000000000000000F03 /* MapHomePlaceStamps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaceStamps.swift; sourceTree = "<group>"; };
+		B10809000000000000000F04 /* MapHomePlaceBook.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaceBook.swift; sourceTree = "<group>"; };
+		B10809000000000000000F05 /* MapHomeInkPreviewHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeInkPreviewHost.swift; sourceTree = "<group>"; };
 		F60000000000000000000001 /* HealthKitTypeCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitTypeCatalog.swift; sourceTree = "<group>"; };
 		F60000000000000000000002 /* HealthKitImportStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitImportStore.swift; sourceTree = "<group>"; };
 		F60000000000000000000003 /* HealthKitImportCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitImportCoordinator.swift; sourceTree = "<group>"; };
@@ -1355,6 +1367,7 @@
 			isa = PBXGroup;
 			children = (
 				F1000000000000000000000C /* TimeScaleTests.swift */,
+				B10809000000000000000F11 /* InkWashThemeTests.swift */,
 				B10808030000000000000007 /* ReviewClockGeometryTests.swift */,
 				F10000000000000000000016 /* FeatureEngineTests.swift */,
 				F1FA11C58FA9883A9A7F8673 /* StableRecordIDTests.swift */,
@@ -1521,6 +1534,11 @@
 				F52000000000000000000001 /* MapHomeLiveMapPolicies.swift */,
 				F50000000000000000000001 /* MapHomeVectorMap.swift */,
 				F50000000000000000000002 /* MapHomeVectorLabels.swift */,
+				B10809000000000000000F01 /* MapHomeVectorStyle.swift */,
+				B10809000000000000000F02 /* MapHomeInkWash.swift */,
+				B10809000000000000000F03 /* MapHomePlaceStamps.swift */,
+				B10809000000000000000F04 /* MapHomePlaceBook.swift */,
+				B10809000000000000000F05 /* MapHomeInkPreviewHost.swift */,
 				F1000000000000000000007F /* MapHomeCalendarSheet.swift */,
 				F1FA115C43BF0F705C0CC3E6 /* MapHomeDailyCard.swift */,
 				F10000000000000006FC0003 /* MapHomeAlarmDiagnostics.swift */,
@@ -2397,6 +2415,11 @@
 				A52000000000000000000001 /* MapHomeLiveMapPolicies.swift in Sources */,
 				A50000000000000000000001 /* MapHomeVectorMap.swift in Sources */,
 				A5000000000000000000A002 /* MapHomeVectorLabels.swift in Sources */,
+				B10809000000000000000A01 /* MapHomeVectorStyle.swift in Sources */,
+				B10809000000000000000A02 /* MapHomeInkWash.swift in Sources */,
+				B10809000000000000000A03 /* MapHomePlaceStamps.swift in Sources */,
+				B10809000000000000000A04 /* MapHomePlaceBook.swift in Sources */,
+				B10809000000000000000A05 /* MapHomeInkPreviewHost.swift in Sources */,
 				A1000000000000000000007F /* MapHomeCalendarSheet.swift in Sources */,
 				A1FA111D146A9C217935CC51 /* MapHomeDailyCard.swift in Sources */,
 				A1000000000000000AA1C001 /* MapHomeCardMetricOption.swift in Sources */,
@@ -2653,6 +2676,7 @@
 			files = (
 				A10000000000000006FC0004 /* BackgroundSignalPolicyTests.swift in Sources */,
 				A1000000000000000000000C /* TimeScaleTests.swift in Sources */,
+				B10809000000000000000A11 /* InkWashThemeTests.swift in Sources */,
 				B10808030000000000000107 /* ReviewClockGeometryTests.swift in Sources */,
 				A10000000000000000000016 /* FeatureEngineTests.swift in Sources */,
 				A1FA113776B4F655CB131CBA /* StableRecordIDTests.swift in Sources */,

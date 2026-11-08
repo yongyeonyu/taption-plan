@@ -423,6 +423,9 @@ extension MapHomeView {
                 locationMenuItem
                 menuGroupDivider
                 categoryMenuItem
+                menuGroupDivider
+                // 등록 장소·랜드마크 도장을 모은 장소 도감(INK1108A01).
+                menuRowButton("seal.fill", language.text("장소 도감", "Place book"), tint: .tpMenuChip(MapHomeInkWash.sealHex)) { isPlaceBookPresented = true }
             }
             menuGroupLabel(language.text("화면", "View"))
             menuGroupCard {

@@ -221,6 +221,7 @@ struct MapHomePlacePinItem: View, Equatable {
             equippedAccessoryID: place.equippedAccessoryID,
             weatherBadge: weather ? place.weatherBadge : nil,
             homeSky: weather ? place.homeSky : nil,
+            stamp: place.stamp,
             onOpenDaySummary: weather ? onOpenDaySummary : nil
         )
         .fixedSize()
@@ -236,7 +237,7 @@ extension MapHomePlaceAnnotation {
             && isGrowthQualifiedToday == other.isGrowthQualifiedToday && growthStreak == other.growthStreak
             && pendingWeeklyRewards == other.pendingWeeklyRewards && isCatAtHome == other.isCatAtHome
             && catAction == other.catAction && equippedAccessoryID == other.equippedAccessoryID
-            && weatherBadge == other.weatherBadge && Self.sameSky(homeSky, other.homeSky)
+            && weatherBadge == other.weatherBadge && Self.sameSky(homeSky, other.homeSky) && stamp == other.stamp
     }
 
     private static func sameSky(_ lhs: MapHomeHomeSkyInput?, _ rhs: MapHomeHomeSkyInput?) -> Bool {
