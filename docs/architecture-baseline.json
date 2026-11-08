@@ -25,7 +25,7 @@
   },
   "metrics": {
     "largest_file_lines": 3408,
-    "largest_type_lines": 2162
+    "largest_type_lines": 2127
   },
   "frozen_files": {
     "Packages/TaptionPlanCore/Sources/TaptionPlanCore/DayStoreV3.swift": 2408,
@@ -44,7 +44,6 @@
     "TaptionPlan/UI/MapHomeNLEClipEditor.swift": 1245,
     "TaptionPlan/UI/MapHomeTimeSidebar.swift": 2791,
     "TaptionPlan/UI/MapHomeVectorMap.swift": 1347,
-    "TaptionPlan/UI/ReviewView+Clock.swift": 2165,
     "TaptionPlan/UI/SettingsView.swift": 2151,
     "TaptionPlanWatch/WatchConnectivityController.swift": 1623,
     "TaptionPlanWatch/WatchWorkoutManager.swift": 2349
@@ -100,13 +99,6 @@
       "types": 34
     },
     {
-      "path": "TaptionPlan/UI/ReviewView+Clock.swift",
-      "lines": 2165,
-      "largest_type": "extension ReviewView",
-      "largest_type_lines": 2162,
-      "types": 1
-    },
-    {
       "path": "TaptionPlan/UI/SettingsView.swift",
       "lines": 2151,
       "largest_type": "struct SettingsView",
@@ -136,11 +128,6 @@
     }
   ],
   "largest_types": [
-    {
-      "path": "TaptionPlan/UI/ReviewView+Clock.swift",
-      "type": "extension ReviewView",
-      "lines": 2162
-    },
     {
       "path": "Packages/TaptionPlanCore/Sources/TaptionPlanCore/DayStoreV3.swift",
       "type": "actor TaptionPlanV3Store",
