@@ -220,6 +220,10 @@ let segments = MapHomePlaceFirstPolicy.apply(
             to: MapHomeTimeRailSegmentEngine.segments(from: day.actuals, travel: day.travel, on: date),
             stays: day.places,
             frequentPlaces: model.settings.frequentPlaces,
+            readings: day.readings,
+            userOwnedIDs: MapHomePlaceFirstPolicy.userOwnedIDs(
+                day.actuals, activityCorrections: model.settings.activityCorrections
+            ),
             on: date
         )
         return NLEDayInput(

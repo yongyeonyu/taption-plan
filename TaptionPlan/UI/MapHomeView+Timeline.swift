@@ -525,6 +525,10 @@ extension MapHomeView {
             ),
             stays: dayData?.places ?? [],
             frequentPlaces: model.settings.frequentPlaces,
+            readings: dayData?.readings ?? [],
+            userOwnedIDs: MapHomePlaceFirstPolicy.userOwnedIDs(
+                dayData?.actuals ?? [], activityCorrections: model.settings.activityCorrections
+            ),
             on: model.selectedDate
         )
         if next != timeRailSegments {
