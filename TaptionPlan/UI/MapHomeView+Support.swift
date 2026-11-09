@@ -616,7 +616,8 @@ extension MapHomeView {
                 frequentPlaces: model.settings.frequentPlaces,
                 stays: model.snapshot.places,
                 language: language,
-                onSelect: showPlaceBookEntryOnMap
+                onSelect: showPlaceBookEntryOnMap,
+                loadDrivePasses: { await model.placeBookDrivePasses() }
             )
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)

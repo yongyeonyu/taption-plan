@@ -254,7 +254,7 @@
    "ko": "1시간 5분",
    "en": "1h 5m",
    "files": [
-    "FirstRunTutorialView.swift:791"
+    "FirstRunTutorialView.swift:787"
    ],
    "args": [],
    "targets": [
@@ -350,7 +350,7 @@
    "ko": "25분",
    "en": "25m",
    "files": [
-    "FirstRunTutorialView.swift:792"
+    "FirstRunTutorialView.swift:788"
    ],
    "args": [],
    "targets": [
@@ -386,7 +386,7 @@
    "ko": "3시간 12분",
    "en": "3h 12m",
    "files": [
-    "FirstRunTutorialView.swift:789"
+    "FirstRunTutorialView.swift:785"
    ],
    "args": [],
    "targets": [
@@ -398,7 +398,7 @@
    "ko": "42분",
    "en": "42m",
    "files": [
-    "FirstRunTutorialView.swift:790"
+    "FirstRunTutorialView.swift:786"
    ],
    "args": [],
    "targets": [
@@ -434,7 +434,7 @@
    "ko": "6자리 숫자를 두 칸에 모두 입력해 주세요.",
    "en": "Enter 6 digits in both fields.",
    "files": [
-    "FirstRunTutorialView.swift:324"
+    "FirstRunTutorialView.swift:320"
    ],
    "args": [],
    "targets": [
@@ -554,8 +554,8 @@
    "ko": "Apple Watch 없이 진행합니다",
    "en": "Continuing without Apple Watch",
    "files": [
-    "FirstRunTutorialGuides.swift:350",
-    "FirstRunTutorialGuides.swift:350"
+    "FirstRunTutorialGuides.swift:312",
+    "FirstRunTutorialGuides.swift:312"
    ],
    "args": [],
    "targets": [
@@ -579,8 +579,8 @@
    "ko": "Apple Watch가 있나요?",
    "en": "Do you have an Apple Watch?",
    "files": [
-    "FirstRunTutorialGuides.swift:371",
-    "FirstRunTutorialGuides.swift:371"
+    "FirstRunTutorialGuides.swift:333",
+    "FirstRunTutorialGuides.swift:333"
    ],
    "args": [],
    "targets": [
@@ -592,8 +592,8 @@
    "ko": "Apple Watch는 iPhone과 페어링해야 합니다. 다음으로 넘어가세요.",
    "en": "Apple Watch needs to be paired with iPhone. Continue to the next step.",
    "files": [
-    "FirstRunTutorialGuides.swift:351",
-    "FirstRunTutorialGuides.swift:351"
+    "FirstRunTutorialGuides.swift:313",
+    "FirstRunTutorialGuides.swift:313"
    ],
    "args": [],
    "targets": [
@@ -695,7 +695,7 @@
    "ko": "BOKKI Plan 앱 아이콘",
    "en": "BOKKI Plan app icon",
    "files": [
-    "SensorCollectionLiveActivity.swift:209"
+    "SensorCollectionLiveActivity.swift:219"
    ],
    "args": [],
    "targets": [
@@ -799,23 +799,11 @@
    ]
   },
   {
-   "key": "GPS 및 센서 데이터 설정|GPS and sensor settings",
-   "ko": "GPS 및 센서 데이터 설정",
-   "en": "GPS and sensor settings",
-   "files": [
-    "MapHomeView+Menu2.swift:287"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "GPS 및 센서 데이터|GPS & Sensor Data",
    "ko": "GPS 및 센서 데이터",
    "en": "GPS & Sensor Data",
    "files": [
-    "MapHomeView+Menu2.swift:261"
+    "MapHomeView+Menu2.swift:257"
    ],
    "args": [],
    "targets": [
@@ -1014,8 +1002,8 @@
    "ko": "TestFlight 앱의 BOKKI Plan 화면에서 Apple Watch에 설치할 수 있습니다.",
    "en": "You can install to Apple Watch from BOKKI Plan's page in the TestFlight app.",
    "files": [
-    "FirstRunTutorialGuides.swift:429",
-    "FirstRunTutorialGuides.swift:429"
+    "FirstRunTutorialGuides.swift:391",
+    "FirstRunTutorialGuides.swift:391"
    ],
    "args": [],
    "targets": [
@@ -1027,8 +1015,8 @@
    "ko": "TestFlight로 받았다면",
    "en": "If you use TestFlight",
    "files": [
-    "FirstRunTutorialGuides.swift:428",
-    "FirstRunTutorialGuides.swift:428"
+    "FirstRunTutorialGuides.swift:390",
+    "FirstRunTutorialGuides.swift:390"
    ],
    "args": [],
    "targets": [
@@ -1090,8 +1078,8 @@
    "ko": "Watch 앱 다시 열기",
    "en": "Open Watch app again",
    "files": [
-    "FirstRunTutorialGuides.swift:436",
-    "FirstRunTutorialGuides.swift:436"
+    "FirstRunTutorialGuides.swift:398",
+    "FirstRunTutorialGuides.swift:398"
    ],
    "args": [],
    "targets": [
@@ -1139,8 +1127,8 @@
    "ko": "Watch 앱 열기",
    "en": "Open Watch app",
    "files": [
-    "FirstRunTutorialGuides.swift:456",
-    "FirstRunTutorialGuides.swift:456"
+    "FirstRunTutorialGuides.swift:418",
+    "FirstRunTutorialGuides.swift:418"
    ],
    "args": [],
    "targets": [
@@ -1152,8 +1140,8 @@
    "ko": "Watch 앱을 열지 못했습니다. iPhone에서 Watch 앱을 직접 열어 주세요.",
    "en": "Couldn't open the Watch app. Open it on your iPhone.",
    "files": [
-    "FirstRunTutorialGuides.swift:432",
-    "FirstRunTutorialGuides.swift:432"
+    "FirstRunTutorialGuides.swift:394",
+    "FirstRunTutorialGuides.swift:394"
    ],
    "args": [],
    "targets": [
@@ -1165,8 +1153,8 @@
    "ko": "Watch의 움직임 기록을 받고, 건강 앱의 심박·걸음·운동·수면 기록을 함께 읽습니다.",
    "en": "Motion from your Watch, plus heart rate, steps, workouts, and sleep from the Health app.",
    "files": [
-    "FirstRunTutorialGuides.swift:384",
-    "FirstRunTutorialGuides.swift:384"
+    "FirstRunTutorialGuides.swift:346",
+    "FirstRunTutorialGuides.swift:346"
    ],
    "args": [],
    "targets": [
@@ -1315,7 +1303,7 @@
    "ko": "iCloud 백업까지 모두 삭제",
    "en": "Delete iCloud backups too",
    "files": [
-    "SettingsView.swift:449"
+    "SettingsView.swift:448"
    ],
    "args": [],
    "targets": [
@@ -1327,7 +1315,7 @@
    "ko": "iCloud 백업도 영구 삭제할까요?",
    "en": "Permanently delete the iCloud backups too?",
    "files": [
-    "SettingsView.swift:466"
+    "SettingsView.swift:465"
    ],
    "args": [],
    "targets": [
@@ -1450,8 +1438,8 @@
    "ko": "iOS 설정 > BOKKI Plan",
    "en": "iOS Settings > BOKKI Plan",
    "files": [
-    "FirstRunTutorialGuides.swift:730",
-    "FirstRunTutorialGuides.swift:730"
+    "FirstRunTutorialGuides.swift:692",
+    "FirstRunTutorialGuides.swift:692"
    ],
    "args": [],
    "targets": [
@@ -1463,9 +1451,9 @@
    "ko": "iOS 설정에서 바꾸기",
    "en": "Change in iOS Settings",
    "files": [
-    "FirstRunTutorialGuides.swift:597",
+    "FirstRunTutorialGuides.swift:559",
     "PermissionOnboardingSheet.swift:116",
-    "FirstRunTutorialGuides.swift:597"
+    "FirstRunTutorialGuides.swift:559"
    ],
    "args": [],
    "targets": [
@@ -1562,8 +1550,8 @@
    "ko": "iPhone만으로도 하루는 기록됩니다. 나중에 Watch가 생기면 메뉴 > Apple Watch 데이터에서 확인할 수 있습니다.",
    "en": "Your day is still recorded with just iPhone. If you get a Watch later, check Menu > Apple Watch data.",
    "files": [
-    "FirstRunTutorialGuides.swift:350",
-    "FirstRunTutorialGuides.swift:350"
+    "FirstRunTutorialGuides.swift:312",
+    "FirstRunTutorialGuides.swift:312"
    ],
    "args": [],
    "targets": [
@@ -1587,8 +1575,8 @@
    "ko": "iPhone의 Watch 앱에서 먼저 페어링하세요. 지금 하지 않아도 앱은 그대로 쓸 수 있습니다.",
    "en": "Pair it in iPhone's Watch app first. You can keep using the app without it.",
    "files": [
-    "FirstRunTutorialGuides.swift:455",
-    "FirstRunTutorialGuides.swift:455"
+    "FirstRunTutorialGuides.swift:417",
+    "FirstRunTutorialGuides.swift:417"
    ],
    "args": [],
    "targets": [
@@ -1600,8 +1588,8 @@
    "ko": "iPhone의 Watch 앱에서",
    "en": "In iPhone's Watch app",
    "files": [
-    "FirstRunTutorialGuides.swift:423",
-    "FirstRunTutorialGuides.swift:423"
+    "FirstRunTutorialGuides.swift:385",
+    "FirstRunTutorialGuides.swift:385"
    ],
    "args": [],
    "targets": [
@@ -1618,6 +1606,21 @@
    "args": [
     "match.name",
     "FloorLabel.english(estimate.floor)"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "{0} {1} 공항|{0} {1} Airport",
+   "ko": "{0} {1} 공항",
+   "en": "{0} {1} Airport",
+   "files": [
+    "MapHomePlaceBook.swift:256"
+   ],
+   "args": [
+    "title",
+    "airportName"
    ],
    "targets": [
     "TaptionPlan"
@@ -1692,6 +1695,20 @@
    ],
    "args": [
     "size"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "{0} 공항|{0} Airport",
+   "ko": "{0} 공항",
+   "en": "{0} Airport",
+   "files": [
+    "MapHomePlaceBook.swift:255"
+   ],
+   "args": [
+    "title"
    ],
    "targets": [
     "TaptionPlan"
@@ -1834,7 +1851,7 @@
    "ko": "{0} 상세 분류",
    "en": "{0} details",
    "files": [
-    "MapHomeView+Menu.swift:698"
+    "MapHomeView+Menu.swift:697"
    ],
    "args": [
     "category.localizedTitle(language)"
@@ -1848,8 +1865,8 @@
    "ko": "{0} 색상 팔레트",
    "en": "{0} color palette",
    "files": [
-    "MapHomeView+Menu.swift:727",
-    "MapHomeView+Menu.swift:845"
+    "MapHomeView+Menu.swift:726",
+    "MapHomeView+Menu.swift:844"
    ],
    "args": [
     "category.localizedTitle(language)"
@@ -1863,7 +1880,7 @@
    "ko": "{0} 수정",
    "en": "Edit {0}",
    "files": [
-    "MapHomeView+Menu.swift:830"
+    "MapHomeView+Menu.swift:829"
    ],
    "args": [
     "category.title"
@@ -2081,7 +2098,7 @@
    "ko": "{0}, 도장 찍음",
    "en": "{0}, stamped",
    "files": [
-    "MapHomePlaceBook.swift:273"
+    "MapHomePlaceBook.swift:541"
    ],
    "args": [
     "entry.title"
@@ -2110,7 +2127,7 @@
    "ko": "{0}, 아직 가 보지 않음",
    "en": "{0}, not visited yet",
    "files": [
-    "MapHomePlaceBook.swift:274"
+    "MapHomePlaceBook.swift:542"
    ],
    "args": [
     "entry.title"
@@ -2230,20 +2247,6 @@
    ],
    "args": [
     "displayPrice"
-   ],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "{0}마다 위치 확인|Checks location every {0}",
-   "ko": "{0}마다 위치 확인",
-   "en": "Checks location every {0}",
-   "files": [
-    "MapHomeView+Menu2.swift:312"
-   ],
-   "args": [
-    "interval"
    ],
    "targets": [
     "TaptionPlan"
@@ -3141,7 +3144,7 @@
    "ko": "이 기기의 모든 기록과 iCloud Drive의 BOKKI Plan 백업 파일이 모두 삭제됩니다. 백업을 지우면 복원할 방법이 없으며, 이 작업은 되돌릴 수 없습니다.",
    "en": "All records on this device and every BOKKI Plan backup file in iCloud Drive will be deleted. Once the backups are gone they cannot be restored, and this cannot be undone.",
    "files": [
-    "SettingsView.swift:485"
+    "SettingsView.swift:484"
    ],
    "args": [],
    "targets": [
@@ -4032,6 +4035,30 @@
    ]
   },
   {
+   "key": "|By region",
+   "ko": "지역별",
+   "en": "By region",
+   "files": [
+    "MapHomePlaceBook.swift:128"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "|By type",
+   "ko": "종류별",
+   "en": "By type",
+   "files": [
+    "MapHomePlaceBook.swift:129"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "|Byodo-in",
    "ko": "보도인 봉황당",
    "en": "Byodo-in",
@@ -4111,7 +4138,7 @@
    "ko": "취소",
    "en": "Cancel",
    "files": [
-    "SettingsView.swift:482"
+    "SettingsView.swift:481"
    ],
    "args": [],
    "targets": [
@@ -5245,7 +5272,7 @@
    "ko": "데이터 파일을 만들지 못했습니다.",
    "en": "Couldn't create the data file.",
    "files": [
-    "SettingsView.swift:331"
+    "SettingsView.swift:330"
    ],
    "args": [],
    "targets": [
@@ -5257,7 +5284,7 @@
    "ko": "오늘 원본 파일을 만들지 못했습니다.",
    "en": "Couldn't create today's raw data file.",
    "files": [
-    "SettingsView.swift:347"
+    "SettingsView.swift:346"
    ],
    "args": [],
    "targets": [
@@ -5462,7 +5489,7 @@
    "ko": "iCloud 백업까지 모두 삭제",
    "en": "Delete iCloud backups too",
    "files": [
-    "SettingsView.swift:450"
+    "SettingsView.swift:449"
    ],
    "args": [],
    "targets": [
@@ -7493,6 +7520,18 @@
    ]
   },
   {
+   "key": "|Korea",
+   "ko": "한국",
+   "en": "Korea",
+   "files": [
+    "MapHomePlaceBook.swift:124"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "|Koutoubia",
    "ko": "쿠투비아 모스크",
    "en": "Koutoubia",
@@ -7770,18 +7809,6 @@
    "en": "Location & movement",
    "files": [
     "AppModel.swift:356"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "|Location check interval",
-   "ko": "위치 확인 간격",
-   "en": "Location check interval",
-   "files": [
-    "GPSLoggingIntervalSlider.swift:42"
    ],
    "args": [],
    "targets": [
@@ -8808,7 +8835,7 @@
    "ko": "기기 데이터와 iCloud 백업 영구 삭제",
    "en": "Permanently delete device data and backups",
    "files": [
-    "SettingsView.swift:475"
+    "SettingsView.swift:474"
    ],
    "args": [],
    "targets": [
@@ -8820,7 +8847,7 @@
    "ko": "iCloud 백업도 영구 삭제할까요?",
    "en": "Permanently delete the iCloud backups too?",
    "files": [
-    "SettingsView.swift:467"
+    "SettingsView.swift:466"
    ],
    "args": [],
    "targets": [
@@ -12728,7 +12755,7 @@
    "en": "Health",
    "files": [
     "MapHomeLocationPresentation.swift:321",
-    "SensorCollectionLiveActivity.swift:284"
+    "SensorCollectionLiveActivity.swift:294"
    ],
    "args": [],
    "targets": [
@@ -12846,8 +12873,8 @@
    "ko": "걷기·이동·운동·수면을 더 정확히 구분합니다.",
    "en": "Tells walking, travel, workouts, and sleep apart more accurately.",
    "files": [
-    "FirstRunTutorialGuides.swift:389",
-    "FirstRunTutorialGuides.swift:389"
+    "FirstRunTutorialGuides.swift:351",
+    "FirstRunTutorialGuides.swift:351"
    ],
    "args": [],
    "targets": [
@@ -12922,7 +12949,7 @@
    "files": [
     "MapHomeInteractionPolicy.swift:416",
     "SensorCollectionLiveActivity.swift:89",
-    "SensorCollectionLiveActivity.swift:283"
+    "SensorCollectionLiveActivity.swift:293"
    ],
    "args": [],
    "targets": [
@@ -13107,19 +13134,6 @@
    ]
   },
   {
-   "key": "경로가 촘촘해지고 배터리를 더 씁니다.|More detailed routes, more battery use.",
-   "ko": "경로가 촘촘해지고 배터리를 더 씁니다.",
-   "en": "More detailed routes, more battery use.",
-   "files": [
-    "FirstRunTutorialGuides.swift:306",
-    "FirstRunTutorialGuides.swift:306"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "경로를 저장하지 못했습니다. 다시 시도해 주세요.|Could not save the route. Please try again.",
    "ko": "경로를 저장하지 못했습니다. 다시 시도해 주세요.",
    "en": "Could not save the route. Please try again.",
@@ -13273,7 +13287,7 @@
    "ko": "계획과 기록은 삭제되지 않습니다.",
    "en": "Your plans and records will not be deleted.",
    "files": [
-    "MapHomeView+Support.swift:718"
+    "MapHomeView+Support.swift:720"
    ],
    "args": [],
    "targets": [
@@ -13349,7 +13363,7 @@
    "ko": "고도",
    "en": "Altitude",
    "files": [
-    "SensorCollectionLiveActivity.swift:282"
+    "SensorCollectionLiveActivity.swift:292"
    ],
    "args": [],
    "targets": [
@@ -13385,7 +13399,7 @@
    "ko": "고양이 고르기",
    "en": "Pick your cat",
    "files": [
-    "FirstRunTutorialView.swift:140"
+    "FirstRunTutorialView.swift:139"
    ],
    "args": [],
    "targets": [
@@ -13601,8 +13615,8 @@
    "ko": "구글 계정 직접 연결",
    "en": "Connect Google directly",
    "files": [
-    "FirstRunTutorialGuides.swift:605",
-    "FirstRunTutorialGuides.swift:605"
+    "FirstRunTutorialGuides.swift:567",
+    "FirstRunTutorialGuides.swift:567"
    ],
    "args": [],
    "targets": [
@@ -13614,8 +13628,8 @@
    "ko": "구글 로그인으로 Google Calendar를 바로 읽습니다. 캘린더 앱에 넣지 않아도 됩니다.",
    "en": "Sign in to read Google Calendar directly, without adding it to the Calendar app.",
    "files": [
-    "FirstRunTutorialGuides.swift:606",
-    "FirstRunTutorialGuides.swift:606"
+    "FirstRunTutorialGuides.swift:568",
+    "FirstRunTutorialGuides.swift:568"
    ],
    "args": [],
    "targets": [
@@ -13627,8 +13641,8 @@
    "ko": "구글 연결",
    "en": "Connect Google",
    "files": [
-    "FirstRunTutorialGuides.swift:610",
-    "FirstRunTutorialGuides.swift:610"
+    "FirstRunTutorialGuides.swift:572",
+    "FirstRunTutorialGuides.swift:572"
    ],
    "args": [],
    "targets": [
@@ -13808,9 +13822,9 @@
    "ko": "권한 설정",
    "en": "Permission settings",
    "files": [
-    "FirstRunTutorialGuides.swift:818",
-    "FirstRunTutorialGuides.swift:838",
-    "FirstRunTutorialGuides.swift:818"
+    "FirstRunTutorialGuides.swift:780",
+    "FirstRunTutorialGuides.swift:800",
+    "FirstRunTutorialGuides.swift:780"
    ],
    "args": [],
    "targets": [
@@ -13860,8 +13874,8 @@
    "ko": "권한, 설정, 화면 사용법",
    "en": "Permissions, setup, how to use the screen",
    "files": [
-    "FirstRunTutorialGuides.swift:870",
-    "FirstRunTutorialGuides.swift:870"
+    "FirstRunTutorialGuides.swift:832",
+    "FirstRunTutorialGuides.swift:832"
    ],
    "args": [],
    "targets": [
@@ -14118,7 +14132,7 @@
    "ko": "기기 데이터와 iCloud 백업 영구 삭제",
    "en": "Permanently delete device data and backups",
    "files": [
-    "SettingsView.swift:474"
+    "SettingsView.swift:473"
    ],
    "args": [],
    "targets": [
@@ -14257,7 +14271,7 @@
    "ko": "기록",
    "en": "Record",
    "files": [
-    "MapHomeView+Menu.swift:422"
+    "MapHomeView+Menu.swift:421"
    ],
    "args": [],
    "targets": [
@@ -14293,7 +14307,7 @@
    "ko": "기록을 마친 날이 쌓이면 집이 자랍니다.",
    "en": "Your home grows as you complete days.",
    "files": [
-    "FirstRunTutorialView.swift:170"
+    "FirstRunTutorialView.swift:168"
    ],
    "args": [],
    "targets": [
@@ -14504,19 +14518,6 @@
    ]
   },
   {
-   "key": "길수록|Longer",
-   "ko": "길수록",
-   "en": "Longer",
-   "files": [
-    "FirstRunTutorialGuides.swift:310",
-    "FirstRunTutorialGuides.swift:310"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "깊은 수면|Deep sleep",
    "ko": "깊은 수면",
    "en": "Deep sleep",
@@ -14613,7 +14614,7 @@
    "ko": "끄면 비밀번호는 백업에만 쓰입니다.",
    "en": "When off, the password is used only for backups.",
    "files": [
-    "FirstRunTutorialView.swift:638"
+    "FirstRunTutorialView.swift:634"
    ],
    "args": [],
    "targets": [
@@ -14721,8 +14722,8 @@
    "ko": "나의 시계 > 사용 가능한 앱에서 BOKKI Plan 옆의 설치를 누르세요. 설치되면 여기에 바로 표시됩니다.",
    "en": "Go to My Watch > Available Apps and tap Install next to BOKKI Plan. It shows here as soon as it's installed.",
    "files": [
-    "FirstRunTutorialGuides.swift:424",
-    "FirstRunTutorialGuides.swift:424"
+    "FirstRunTutorialGuides.swift:386",
+    "FirstRunTutorialGuides.swift:386"
    ],
    "args": [],
    "targets": [
@@ -14735,8 +14736,8 @@
    "en": "Change later",
    "files": [
     "FirstRunTutorialGuides.swift:275",
-    "FirstRunTutorialGuides.swift:315",
-    "FirstRunTutorialGuides.swift:554"
+    "FirstRunTutorialGuides.swift:516",
+    "FirstRunTutorialGuides.swift:275"
    ],
    "args": [],
    "targets": [
@@ -14748,8 +14749,8 @@
    "ko": "나중에",
    "en": "Later",
    "files": [
-    "FirstRunTutorialGuides.swift:410",
-    "FirstRunTutorialGuides.swift:457",
+    "FirstRunTutorialGuides.swift:372",
+    "FirstRunTutorialGuides.swift:419",
     "PermissionOnboardingSheet.swift:300"
    ],
    "args": [],
@@ -14810,7 +14811,7 @@
    "ko": "날씨",
    "en": "Weather",
    "files": [
-    "MapHomeView+Menu.swift:520",
+    "MapHomeView+Menu.swift:519",
     "StickerArtBasics.swift:7"
    ],
    "args": [],
@@ -14913,7 +14914,7 @@
    "ko": "내 차 등록",
    "en": "My car",
    "files": [
-    "MapHomeView+Menu.swift:450"
+    "MapHomeView+Menu.swift:449"
    ],
    "args": [],
    "targets": [
@@ -15173,8 +15174,8 @@
    "ko": "다시 보기",
    "en": "Watch again",
    "files": [
-    "FirstRunTutorialGuides.swift:792",
-    "FirstRunTutorialGuides.swift:792"
+    "FirstRunTutorialGuides.swift:754",
+    "FirstRunTutorialGuides.swift:754"
    ],
    "args": [],
    "targets": [
@@ -15236,7 +15237,7 @@
    "ko": "다음 센서 정보 대기중",
    "en": "Waiting for the next sample",
    "files": [
-    "SensorCollectionLiveActivity.swift:225"
+    "SensorCollectionLiveActivity.swift:235"
    ],
    "args": [],
    "targets": [
@@ -15248,7 +15249,7 @@
    "ko": "다음",
    "en": "Next",
    "files": [
-    "FirstRunTutorialView.swift:274",
+    "FirstRunTutorialView.swift:270",
     "WatchTodayCards.swift:120"
    ],
    "args": [],
@@ -15275,7 +15276,7 @@
    "en": "Close",
    "files": [
     "AppShellView.swift:1131",
-    "FirstRunTutorialGuides.swift:497",
+    "FirstRunTutorialGuides.swift:459",
     "FirstRunTutorialView.swift:55"
    ],
    "args": [],
@@ -15343,7 +15344,7 @@
    "en": "Waiting",
    "files": [
     "MapHomeView+Support2.swift:900",
-    "SensorCollectionLiveActivity.swift:246",
+    "SensorCollectionLiveActivity.swift:256",
     "TaptionPlanWidget.swift:545"
    ],
    "args": [],
@@ -15659,7 +15660,7 @@
    "ko": "데이터 파일을 만들지 못했습니다.",
    "en": "Couldn't create the data file.",
    "files": [
-    "SettingsView.swift:330"
+    "SettingsView.swift:329"
    ],
    "args": [],
    "targets": [
@@ -15738,6 +15739,7 @@
    "ko": "도시",
    "en": "Cities",
    "files": [
+    "MapHomePlaceBook.swift:403",
     "TravelMapTripEditorSheet.swift:30"
    ],
    "args": [],
@@ -15923,7 +15925,7 @@
    "ko": "동작",
    "en": "Motion",
    "files": [
-    "SensorCollectionLiveActivity.swift:281"
+    "SensorCollectionLiveActivity.swift:291"
    ],
    "args": [],
    "targets": [
@@ -15948,6 +15950,7 @@
    "ko": "뒤로",
    "en": "Back",
    "files": [
+    "MapHomePlaceBook.swift:450",
     "MapHomeWideLayoutPolicy.swift:239"
    ],
    "args": [],
@@ -16009,7 +16012,7 @@
    "ko": "등록된 비밀번호가 있습니다",
    "en": "A password is already set",
    "files": [
-    "FirstRunTutorialView.swift:601"
+    "FirstRunTutorialView.swift:597"
    ],
    "args": [],
    "targets": [
@@ -16021,7 +16024,7 @@
    "ko": "등록된 사용자 위치 {0}개",
    "en": "{0} saved user locations",
    "files": [
-    "MapHomeView+Menu.swift:937"
+    "MapHomeView+Menu.swift:936"
    ],
    "args": [
     "userLocationCount"
@@ -16035,7 +16038,7 @@
    "ko": "등록된 사용자 위치가 없습니다.",
    "en": "No saved user locations.",
    "files": [
-    "MapHomeView+Menu.swift:967"
+    "MapHomeView+Menu.swift:966"
    ],
    "args": [],
    "targets": [
@@ -16059,8 +16062,8 @@
    "ko": "등록됨",
    "en": "Set",
    "files": [
-    "FirstRunTutorialGuides.swift:750",
-    "FirstRunTutorialGuides.swift:750"
+    "FirstRunTutorialGuides.swift:712",
+    "FirstRunTutorialGuides.swift:712"
    ],
    "args": [],
    "targets": [
@@ -16072,7 +16075,7 @@
    "ko": "등록한 곳",
    "en": "My places",
    "files": [
-    "MapHomePlaceBook.swift:195"
+    "MapHomePlaceBook.swift:401"
    ],
    "args": [],
    "targets": [
@@ -16158,7 +16161,7 @@
    "ko": "랜드마크",
    "en": "Landmarks",
    "files": [
-    "MapHomePlaceBook.swift:197"
+    "MapHomePlaceBook.swift:403"
    ],
    "args": [],
    "targets": [
@@ -16465,25 +16468,12 @@
    ]
   },
   {
-   "key": "메뉴 > GPS 및 센서 데이터에서 바꿉니다.|Change it in Menu > GPS & Sensor Data.",
-   "ko": "메뉴 > GPS 및 센서 데이터에서 바꿉니다.",
-   "en": "Change it in Menu > GPS & Sensor Data.",
-   "files": [
-    "FirstRunTutorialGuides.swift:316",
-    "FirstRunTutorialGuides.swift:316"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "메뉴 > 설정 > 데이터 보호|Menu > Settings > Data Protection",
    "ko": "메뉴 > 설정 > 데이터 보호",
    "en": "Menu > Settings > Data Protection",
    "files": [
-    "FirstRunTutorialGuides.swift:752",
-    "FirstRunTutorialGuides.swift:752"
+    "FirstRunTutorialGuides.swift:714",
+    "FirstRunTutorialGuides.swift:714"
    ],
    "args": [],
    "targets": [
@@ -16495,8 +16485,8 @@
    "ko": "메뉴 > 설정 > 튜토리얼 다시 보기",
    "en": "Menu > Settings > Replay tutorial",
    "files": [
-    "FirstRunTutorialGuides.swift:793",
-    "FirstRunTutorialGuides.swift:793"
+    "FirstRunTutorialGuides.swift:755",
+    "FirstRunTutorialGuides.swift:755"
    ],
    "args": [],
    "targets": [
@@ -16521,8 +16511,8 @@
    "ko": "메뉴 > 위치",
    "en": "Menu > Location",
    "files": [
-    "FirstRunTutorialGuides.swift:710",
-    "FirstRunTutorialGuides.swift:710"
+    "FirstRunTutorialGuides.swift:672",
+    "FirstRunTutorialGuides.swift:672"
    ],
    "args": [],
    "targets": [
@@ -16546,8 +16536,8 @@
    "ko": "메뉴 > 카운터",
    "en": "Menu > Counters",
    "files": [
-    "FirstRunTutorialGuides.swift:738",
-    "FirstRunTutorialGuides.swift:738"
+    "FirstRunTutorialGuides.swift:700",
+    "FirstRunTutorialGuides.swift:700"
    ],
    "args": [],
    "targets": [
@@ -16571,7 +16561,7 @@
    "ko": "메뉴 닫기",
    "en": "Close menu",
    "files": [
-    "MapHomeView+Menu.swift:413"
+    "MapHomeView+Menu.swift:412"
    ],
    "args": [],
    "targets": [
@@ -16596,8 +16586,8 @@
    "ko": "메뉴를 열고 ‘오늘 하루’ 옆 고양이를 누릅니다.",
    "en": "Open Menu and tap the cat next to ‘Today’.",
    "files": [
-    "FirstRunTutorialGuides.swift:555",
-    "FirstRunTutorialGuides.swift:555"
+    "FirstRunTutorialGuides.swift:517",
+    "FirstRunTutorialGuides.swift:517"
    ],
    "args": [],
    "targets": [
@@ -16639,7 +16629,7 @@
    "ko": "메모 · 지도 메모",
    "en": "Memos · Map memos",
    "files": [
-    "FirstRunTutorialView.swift:145"
+    "FirstRunTutorialView.swift:144"
    ],
    "args": [],
    "targets": [
@@ -16723,7 +16713,7 @@
    "ko": "메모 표시",
    "en": "Show memos",
    "files": [
-    "MapHomeView+Menu.swift:528"
+    "MapHomeView+Menu.swift:527"
    ],
    "args": [],
    "targets": [
@@ -17045,7 +17035,7 @@
    "ko": "바꾸지 않으면 그대로 씁니다.",
    "en": "It stays as is unless you change it.",
    "files": [
-    "FirstRunTutorialView.swift:603"
+    "FirstRunTutorialView.swift:599"
    ],
    "args": [],
    "targets": [
@@ -17057,7 +17047,7 @@
    "ko": "바꾸지 않으면 이 번호로 시작합니다.",
    "en": "This is used unless you change it.",
    "files": [
-    "FirstRunTutorialView.swift:615"
+    "FirstRunTutorialView.swift:611"
    ],
    "args": [],
    "targets": [
@@ -17081,7 +17071,7 @@
    "ko": "바로 시작",
    "en": "Start now",
    "files": [
-    "FirstRunTutorialView.swift:242"
+    "FirstRunTutorialView.swift:238"
    ],
    "args": [],
    "targets": [
@@ -17158,8 +17148,8 @@
    "ko": "받는 정보",
    "en": "What it receives",
    "files": [
-    "FirstRunTutorialGuides.swift:383",
-    "FirstRunTutorialGuides.swift:383"
+    "FirstRunTutorialGuides.swift:345",
+    "FirstRunTutorialGuides.swift:345"
    ],
    "args": [],
    "targets": [
@@ -17313,21 +17303,8 @@
    "ko": "배터리",
    "en": "Battery",
    "files": [
-    "FirstRunTutorialGuides.swift:398",
-    "FirstRunTutorialGuides.swift:398"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "배터리를 아끼는 대신 경로 기록이 드문드문해집니다.|Saves battery, with fewer route points.",
-   "ko": "배터리를 아끼는 대신 경로 기록이 드문드문해집니다.",
-   "en": "Saves battery, with fewer route points.",
-   "files": [
-    "FirstRunTutorialGuides.swift:311",
-    "FirstRunTutorialGuides.swift:311"
+    "FirstRunTutorialGuides.swift:360",
+    "FirstRunTutorialGuides.swift:360"
    ],
    "args": [],
    "targets": [
@@ -17389,8 +17366,8 @@
    "ko": "백업 비밀번호",
    "en": "Backup password",
    "files": [
-    "FirstRunTutorialGuides.swift:747",
-    "FirstRunTutorialView.swift:150",
+    "FirstRunTutorialGuides.swift:709",
+    "FirstRunTutorialView.swift:149",
     "MapHomeSettingsSheets.swift:550"
    ],
    "args": [],
@@ -18175,7 +18152,7 @@
    "ko": "비밀번호 확인",
    "en": "Confirm password",
    "files": [
-    "FirstRunTutorialView.swift:623",
+    "FirstRunTutorialView.swift:619",
     "MapHomeSettingsSheets.swift:347"
    ],
    "args": [],
@@ -18188,7 +18165,7 @@
    "ko": "비밀번호 확인이 일치하지 않습니다.",
    "en": "Passwords do not match.",
    "files": [
-    "FirstRunTutorialView.swift:327",
+    "FirstRunTutorialView.swift:323",
     "MapHomeSettingsSheets.swift:682"
    ],
    "args": [],
@@ -18262,7 +18239,7 @@
    "ko": "비밀번호를 잊으면 백업을 복구할 수 없습니다. 예전 iCloud 백업은 그때 쓴 비밀번호로 열립니다.",
    "en": "Without the password, backups can't be restored. Older iCloud backups open with the password used then.",
    "files": [
-    "FirstRunTutorialView.swift:641"
+    "FirstRunTutorialView.swift:637"
    ],
    "args": [],
    "targets": [
@@ -18366,7 +18343,7 @@
    "ko": "사용 불가",
    "en": "Unavailable",
    "files": [
-    "FirstRunTutorialPolicy.swift:170",
+    "FirstRunTutorialPolicy.swift:171",
     "MapHomeAppleWatchMenuItem.swift:164",
     "AppModelSupportTypes.swift:268"
    ],
@@ -18380,7 +18357,7 @@
    "ko": "사용자 위치 관리",
    "en": "Manage user locations",
    "files": [
-    "MapHomeView+Menu.swift:986"
+    "MapHomeView+Menu.swift:985"
    ],
    "args": [],
    "targets": [
@@ -18392,7 +18369,7 @@
    "ko": "사용자 위치 목록",
    "en": "User location list",
    "files": [
-    "MapHomeView+Menu.swift:961"
+    "MapHomeView+Menu.swift:960"
    ],
    "args": [],
    "targets": [
@@ -18442,7 +18419,7 @@
    "ko": "사용자 지정 색상",
    "en": "Custom category color",
    "files": [
-    "MapHomeView+Menu.swift:776"
+    "MapHomeView+Menu.swift:775"
    ],
    "args": [],
    "targets": [
@@ -18454,8 +18431,8 @@
    "ko": "사용자 지정",
    "en": "Custom",
    "files": [
-    "MapHomeView+Menu.swift:759",
-    "MapHomeView+Menu.swift:858"
+    "MapHomeView+Menu.swift:758",
+    "MapHomeView+Menu.swift:857"
    ],
    "args": [],
    "targets": [
@@ -18467,7 +18444,7 @@
    "ko": "사용자 추가",
    "en": "Add custom",
    "files": [
-    "MapHomeView+Menu.swift:799"
+    "MapHomeView+Menu.swift:798"
    ],
    "args": [],
    "targets": [
@@ -18479,7 +18456,7 @@
    "ko": "사용자",
    "en": "User",
    "files": [
-    "MapHomeView+Menu.swift:934"
+    "MapHomeView+Menu.swift:933"
    ],
    "args": [],
    "targets": [
@@ -18539,7 +18516,7 @@
    "ko": "사이드바",
    "en": "Sidebar",
    "files": [
-    "MapHomeView+Menu.swift:517"
+    "MapHomeView+Menu.swift:516"
    ],
    "args": [],
    "targets": [
@@ -18551,7 +18528,7 @@
    "ko": "사이드바와 달력",
    "en": "Sidebar and calendar",
    "files": [
-    "FirstRunTutorialView.swift:143"
+    "FirstRunTutorialView.swift:142"
    ],
    "args": [],
    "targets": [
@@ -18984,7 +18961,7 @@
    "ko": "새 비밀번호(6자리)",
    "en": "New password (6 digits)",
    "files": [
-    "FirstRunTutorialView.swift:620"
+    "FirstRunTutorialView.swift:616"
    ],
    "args": [],
    "targets": [
@@ -18996,7 +18973,7 @@
    "ko": "새 비밀번호",
    "en": "New password",
    "files": [
-    "FirstRunTutorialView.swift:622"
+    "FirstRunTutorialView.swift:618"
    ],
    "args": [],
    "targets": [
@@ -19046,7 +19023,7 @@
    "ko": "색상 선택",
    "en": "Choose color",
    "files": [
-    "MapHomeView+Menu.swift:755"
+    "MapHomeView+Menu.swift:754"
    ],
    "args": [],
    "targets": [
@@ -19070,7 +19047,7 @@
    "ko": "색상을 선택하면 즉시 저장됩니다.",
    "en": "Colors save immediately.",
    "files": [
-    "MapHomeView+Menu.swift:881"
+    "MapHomeView+Menu.swift:880"
    ],
    "args": [],
    "targets": [
@@ -19094,7 +19071,7 @@
    "ko": "생각과 장소를 그 시각에 남깁니다.",
    "en": "Keep thoughts and places at the moment they happen.",
    "files": [
-    "FirstRunTutorialView.swift:169"
+    "FirstRunTutorialView.swift:167"
    ],
    "args": [],
    "targets": [
@@ -19363,7 +19340,7 @@
    "files": [
     "MapHomeView+Menu2.swift:208",
     "MapHomeView+Menu2.swift:225",
-    "MapHomeView+Support.swift:712"
+    "MapHomeView+Support.swift:714"
    ],
    "args": [],
    "targets": [
@@ -19425,7 +19402,7 @@
    "ko": "설정을 기본값으로 초기화할까요?",
    "en": "Reset settings to defaults?",
    "files": [
-    "MapHomeView+Support.swift:708"
+    "MapHomeView+Support.swift:710"
    ],
    "args": [],
    "targets": [
@@ -19461,8 +19438,8 @@
    "ko": "설치가 확인됐습니다",
    "en": "Installation confirmed",
    "files": [
-    "FirstRunTutorialGuides.swift:445",
-    "FirstRunTutorialGuides.swift:445"
+    "FirstRunTutorialGuides.swift:407",
+    "FirstRunTutorialGuides.swift:407"
    ],
    "args": [],
    "targets": [
@@ -19486,8 +19463,8 @@
    "ko": "설치를 기다리는 중입니다",
    "en": "Waiting for installation",
    "files": [
-    "FirstRunTutorialGuides.swift:417",
-    "FirstRunTutorialGuides.swift:417"
+    "FirstRunTutorialGuides.swift:379",
+    "FirstRunTutorialGuides.swift:379"
    ],
    "args": [],
    "targets": [
@@ -19499,8 +19476,8 @@
    "ko": "설치하기",
    "en": "Install",
    "files": [
-    "FirstRunTutorialGuides.swift:406",
-    "FirstRunTutorialGuides.swift:406"
+    "FirstRunTutorialGuides.swift:368",
+    "FirstRunTutorialGuides.swift:368"
    ],
    "args": [],
    "targets": [
@@ -19689,7 +19666,7 @@
    "ko": "센서 수집 종료",
    "en": "Sensor collection ended",
    "files": [
-    "SensorCollectionLiveActivity.swift:227"
+    "SensorCollectionLiveActivity.swift:237"
    ],
    "args": [],
    "targets": [
@@ -19737,7 +19714,7 @@
    "ko": "센서 정보 대기중",
    "en": "Waiting for sensor data",
    "files": [
-    "SensorCollectionLiveActivity.swift:221"
+    "SensorCollectionLiveActivity.swift:231"
    ],
    "args": [],
    "targets": [
@@ -19749,7 +19726,7 @@
    "ko": "센서 정보 저장중",
    "en": "Saving sensor data",
    "files": [
-    "SensorCollectionLiveActivity.swift:223"
+    "SensorCollectionLiveActivity.swift:233"
    ],
    "args": [],
    "targets": [
@@ -19757,23 +19734,11 @@
    ]
   },
   {
-   "key": "센서 주기|Sensor interval",
-   "ko": "센서 주기",
-   "en": "Sensor interval",
-   "files": [
-    "FirstRunTutorialView.swift:135"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "센서|Sensors",
    "ko": "센서",
    "en": "Sensors",
    "files": [
-    "SensorCollectionLiveActivity.swift:290"
+    "SensorCollectionLiveActivity.swift:300"
    ],
    "args": [],
    "targets": [
@@ -19822,8 +19787,8 @@
    "ko": "손목에서 보기",
    "en": "On your wrist",
    "files": [
-    "FirstRunTutorialGuides.swift:393",
-    "FirstRunTutorialGuides.swift:393"
+    "FirstRunTutorialGuides.swift:355",
+    "FirstRunTutorialGuides.swift:355"
    ],
    "args": [],
    "targets": [
@@ -19835,7 +19800,7 @@
    "ko": "손목의 움직임까지 더해 하루를 기록합니다.",
    "en": "Adds movement from your wrist to your day.",
    "files": [
-    "FirstRunTutorialView.swift:173"
+    "FirstRunTutorialView.swift:171"
    ],
    "args": [],
    "targets": [
@@ -20093,8 +20058,8 @@
    "ko": "수컷 · 흰 털 · 파란 눈",
    "en": "Male · white · blue eyes",
    "files": [
-    "FirstRunTutorialGuides.swift:511",
-    "FirstRunTutorialGuides.swift:511"
+    "FirstRunTutorialGuides.swift:473",
+    "FirstRunTutorialGuides.swift:473"
    ],
    "args": [],
    "targets": [
@@ -20243,7 +20208,7 @@
    "ko": "시간 표시",
    "en": "Time format",
    "files": [
-    "MapHomeView+Menu.swift:544"
+    "MapHomeView+Menu.swift:543"
    ],
    "args": [],
    "targets": [
@@ -20470,7 +20435,7 @@
    "ko": "시작하기",
    "en": "Get started",
    "files": [
-    "FirstRunTutorialView.swift:273",
+    "FirstRunTutorialView.swift:269",
     "PermissionOnboardingSheet.swift:156"
    ],
    "args": [],
@@ -20695,7 +20660,7 @@
    "ko": "아래에 적고 다음을 누르면 저장됩니다.",
    "en": "Enter one below and tap Next to save it.",
    "files": [
-    "FirstRunTutorialView.swift:607"
+    "FirstRunTutorialView.swift:603"
    ],
    "args": [],
    "targets": [
@@ -20731,8 +20696,8 @@
    "ko": "아이폰 캘린더",
    "en": "iPhone Calendar",
    "files": [
-    "FirstRunTutorialGuides.swift:581",
-    "FirstRunTutorialGuides.swift:581"
+    "FirstRunTutorialGuides.swift:543",
+    "FirstRunTutorialGuides.swift:543"
    ],
    "args": [],
    "targets": [
@@ -20807,7 +20772,7 @@
    "ko": "아직 비밀번호가 없습니다",
    "en": "No password yet",
    "files": [
-    "FirstRunTutorialView.swift:605"
+    "FirstRunTutorialView.swift:601"
    ],
    "args": [],
    "targets": [
@@ -20819,7 +20784,7 @@
    "ko": "아직 안 물음",
    "en": "Not asked",
    "files": [
-    "FirstRunTutorialPolicy.swift:164"
+    "FirstRunTutorialPolicy.swift:165"
    ],
    "args": [],
    "targets": [
@@ -20843,9 +20808,9 @@
    "ko": "아직 없음",
    "en": "Not yet",
    "files": [
-    "FirstRunTutorialGuides.swift:708",
-    "FirstRunTutorialGuides.swift:736",
-    "FirstRunTutorialGuides.swift:750"
+    "FirstRunTutorialGuides.swift:670",
+    "FirstRunTutorialGuides.swift:698",
+    "FirstRunTutorialGuides.swift:712"
    ],
    "args": [],
    "targets": [
@@ -20857,7 +20822,7 @@
    "ko": "안개 탐험 선택",
    "en": "Choose fog of exploration",
    "files": [
-    "MapHomeView+Menu.swift:1056"
+    "MapHomeView+Menu.swift:1055"
    ],
    "args": [],
    "targets": [
@@ -20869,7 +20834,7 @@
    "ko": "안개 탐험",
    "en": "Fog of Exploration",
    "files": [
-    "MapHomeView+Menu.swift:1052"
+    "MapHomeView+Menu.swift:1051"
    ],
    "args": [],
    "targets": [
@@ -20932,7 +20897,7 @@
    "en": "Alerts",
    "files": [
     "MapHomeAlarm.swift:479",
-    "MapHomeView+Menu.swift:458"
+    "MapHomeView+Menu.swift:457"
    ],
    "args": [],
    "targets": [
@@ -20957,8 +20922,8 @@
    "ko": "암컷 · 삼색 털 · 호박색 눈",
    "en": "Female · calico · amber eyes",
    "files": [
-    "FirstRunTutorialGuides.swift:512",
-    "FirstRunTutorialGuides.swift:512"
+    "FirstRunTutorialGuides.swift:474",
+    "FirstRunTutorialGuides.swift:474"
    ],
    "args": [],
    "targets": [
@@ -20970,8 +20935,8 @@
    "ko": "암컷 · 줄무늬 · 흰 가슴과 양말",
    "en": "Female · tabby · white chest and socks",
    "files": [
-    "FirstRunTutorialGuides.swift:513",
-    "FirstRunTutorialGuides.swift:513"
+    "FirstRunTutorialGuides.swift:475",
+    "FirstRunTutorialGuides.swift:475"
    ],
    "args": [],
    "targets": [
@@ -21119,7 +21084,7 @@
    "ko": "앱 사용 중에만",
    "en": "While using",
    "files": [
-    "FirstRunTutorialPolicy.swift:174"
+    "FirstRunTutorialPolicy.swift:175"
    ],
    "args": [],
    "targets": [
@@ -21205,7 +21170,7 @@
    "ko": "앱 잠금과 iCloud 백업에 같은 비밀번호를 씁니다.",
    "en": "App lock and iCloud backup share this password.",
    "files": [
-    "FirstRunTutorialView.swift:174"
+    "FirstRunTutorialView.swift:172"
    ],
    "args": [],
    "targets": [
@@ -21217,7 +21182,7 @@
    "ko": "앱",
    "en": "App",
    "files": [
-    "MapHomeView+Menu.swift:454"
+    "MapHomeView+Menu.swift:453"
    ],
    "args": [],
    "targets": [
@@ -21229,7 +21194,7 @@
    "ko": "앱을 열 때마다 잠금",
    "en": "Lock whenever the app opens",
    "files": [
-    "FirstRunTutorialView.swift:633",
+    "FirstRunTutorialView.swift:629",
     "MapHomeSettingsSheets.swift:369"
    ],
    "args": [],
@@ -21278,7 +21243,7 @@
    "ko": "앱의 첫 화면입니다. 하루가 지도 위에 그려집니다.",
    "en": "This is the main screen. Your day is drawn on the map.",
    "files": [
-    "FirstRunTutorialView.swift:165"
+    "FirstRunTutorialView.swift:163"
    ],
    "args": [],
    "targets": [
@@ -21338,7 +21303,7 @@
    "ko": "어제 하루를 담은 카드를 알림으로 보낼 시각을 고릅니다.",
    "en": "Choose when yesterday's card arrives as a notification.",
    "files": [
-    "FirstRunTutorialView.swift:160"
+    "FirstRunTutorialView.swift:158"
    ],
    "args": [],
    "targets": [
@@ -21436,7 +21401,7 @@
    "ko": "업무 시간에만 번 돈이 쌓입니다. 금액은 이 기기에만 저장됩니다.",
    "en": "Earnings grow only during work time. Stored only on this device.",
    "files": [
-    "FirstRunTutorialView.swift:163"
+    "FirstRunTutorialView.swift:161"
    ],
    "args": [],
    "targets": [
@@ -21489,7 +21454,7 @@
    "ko": "업무와 학습 시간을 구분하는 기준이 됩니다.",
    "en": "Used to tell work and study time apart.",
    "files": [
-    "FirstRunTutorialView.swift:162"
+    "FirstRunTutorialView.swift:160"
    ],
    "args": [],
    "targets": [
@@ -21501,8 +21466,8 @@
    "ko": "없어요",
    "en": "No",
    "files": [
-    "FirstRunTutorialGuides.swift:375",
-    "FirstRunTutorialGuides.swift:375"
+    "FirstRunTutorialGuides.swift:337",
+    "FirstRunTutorialGuides.swift:337"
    ],
    "args": [],
    "targets": [
@@ -21685,9 +21650,9 @@
    "ko": "연결 안 함",
    "en": "Not connected",
    "files": [
-    "FirstRunTutorialGuides.swift:607",
-    "FirstRunTutorialGuides.swift:742",
-    "FirstRunTutorialGuides.swift:607"
+    "FirstRunTutorialGuides.swift:569",
+    "FirstRunTutorialGuides.swift:704",
+    "FirstRunTutorialGuides.swift:569"
    ],
    "args": [],
    "targets": [
@@ -21700,7 +21665,7 @@
    "en": "Connections",
    "files": [
     "MapHomeNLEClipFactory.swift:307",
-    "MapHomeView+Menu.swift:443"
+    "MapHomeView+Menu.swift:442"
    ],
    "args": [],
    "targets": [
@@ -21824,8 +21789,8 @@
    "ko": "연결됨",
    "en": "Connected",
    "files": [
-    "FirstRunTutorialGuides.swift:607",
-    "FirstRunTutorialGuides.swift:742",
+    "FirstRunTutorialGuides.swift:569",
+    "FirstRunTutorialGuides.swift:704",
     "MapHomeAppleWatchMenuItem.swift:172"
    ],
    "args": [],
@@ -21925,7 +21890,7 @@
    "ko": "연봉 설정",
    "en": "Salary",
    "files": [
-    "FirstRunTutorialView.swift:139"
+    "FirstRunTutorialView.swift:138"
    ],
    "args": [],
    "targets": [
@@ -21937,7 +21902,7 @@
    "ko": "연봉 카운터 {0}",
    "en": "Salary {0}",
    "files": [
-    "SensorCollectionLiveActivity.swift:272"
+    "SensorCollectionLiveActivity.swift:282"
    ],
    "args": [
     "$0"
@@ -21951,7 +21916,7 @@
    "ko": "연봉 카운터 ",
    "en": "Salary ",
    "files": [
-    "SensorCollectionLiveActivity.swift:261"
+    "SensorCollectionLiveActivity.swift:271"
    ],
    "args": [],
    "targets": [
@@ -21987,7 +21952,7 @@
    "ko": "연봉 카운터",
    "en": "Salary counter",
    "files": [
-    "FirstRunTutorialView.swift:747",
+    "FirstRunTutorialView.swift:743",
     "MapHomeAlarm.swift:25",
     "MapHomeSalarySettingsSheet.swift:123"
    ],
@@ -22014,8 +21979,8 @@
    "ko": "연봉",
    "en": "Salary",
    "files": [
-    "FirstRunTutorialGuides.swift:735",
-    "FirstRunTutorialGuides.swift:735"
+    "FirstRunTutorialGuides.swift:697",
+    "FirstRunTutorialGuides.swift:697"
    ],
    "args": [],
    "targets": [
@@ -22039,7 +22004,7 @@
    "ko": "연봉을 적으면 나타납니다",
    "en": "Appears once you enter a salary",
    "files": [
-    "FirstRunTutorialView.swift:749"
+    "FirstRunTutorialView.swift:745"
    ],
    "args": [],
    "targets": [
@@ -22231,7 +22196,7 @@
    "ko": "예상 경로 위치",
    "en": "Expected route location",
    "files": [
-    "MapHomeView+Menu2.swift:498"
+    "MapHomeView+Menu2.swift:456"
    ],
    "args": [],
    "targets": [
@@ -22243,7 +22208,7 @@
    "ko": "예시",
    "en": "Example",
    "files": [
-    "FirstRunTutorialView.swift:729"
+    "FirstRunTutorialView.swift:725"
    ],
    "args": [],
    "targets": [
@@ -22344,7 +22309,7 @@
    "ko": "오늘 원본 파일을 만들지 못했습니다.",
    "en": "Couldn't create today's raw data file.",
    "files": [
-    "SettingsView.swift:346"
+    "SettingsView.swift:345"
    ],
    "args": [],
    "targets": [
@@ -22392,8 +22357,8 @@
    "ko": "오늘 할 일은 없습니다",
    "en": "Nothing else to do today",
    "files": [
-    "FirstRunTutorialGuides.swift:787",
-    "FirstRunTutorialGuides.swift:787"
+    "FirstRunTutorialGuides.swift:749",
+    "FirstRunTutorialGuides.swift:749"
    ],
    "args": [],
    "targets": [
@@ -22445,7 +22410,7 @@
    "ko": "오른쪽 시간 막대로 하루를, 달력으로 지난 날을 봅니다.",
    "en": "See the day on the right time bar and past days in the calendar.",
    "files": [
-    "FirstRunTutorialView.swift:167"
+    "FirstRunTutorialView.swift:165"
    ],
    "args": [],
    "targets": [
@@ -22989,8 +22954,8 @@
    "ko": "위치 권한",
    "en": "Location access",
    "files": [
-    "FirstRunTutorialGuides.swift:722",
-    "FirstRunTutorialGuides.swift:722"
+    "FirstRunTutorialGuides.swift:684",
+    "FirstRunTutorialGuides.swift:684"
    ],
    "args": [],
    "targets": [
@@ -23026,7 +22991,7 @@
    "ko": "위치 기록을 기다리는 중",
    "en": "Waiting for location",
    "files": [
-    "MapHomeView+Menu.swift:486"
+    "MapHomeView+Menu.swift:485"
    ],
    "args": [],
    "targets": [
@@ -23100,7 +23065,7 @@
    "ko": "위치 목록",
    "en": "Location list",
    "files": [
-    "MapHomeView+Menu.swift:909"
+    "MapHomeView+Menu.swift:908"
    ],
    "args": [],
    "targets": [
@@ -23256,18 +23221,6 @@
    ]
   },
   {
-   "key": "위치 확인 간격|Location check interval",
-   "ko": "위치 확인 간격",
-   "en": "Location check interval",
-   "files": [
-    "GPSLoggingIntervalSlider.swift:42"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "위치 확인 중|Locating",
    "ko": "위치 확인 중",
    "en": "Locating",
@@ -23284,8 +23237,8 @@
    "ko": "위치, 건강, 사진, 캘린더, 알림",
    "en": "Location, Health, Photos, Calendar, Notifications",
    "files": [
-    "FirstRunTutorialGuides.swift:820",
-    "FirstRunTutorialGuides.swift:820"
+    "FirstRunTutorialGuides.swift:782",
+    "FirstRunTutorialGuides.swift:782"
    ],
    "args": [],
    "targets": [
@@ -23299,7 +23252,7 @@
    "files": [
     "WidgetShared.swift:603",
     "MapHomeStickerEditor.swift:533",
-    "MapHomeView+Menu.swift:896"
+    "MapHomeView+Menu.swift:895"
    ],
    "args": [],
    "targets": [
@@ -23324,7 +23277,7 @@
    "ko": "위치를 찾지 못했습니다. 다른 이름으로 검색해 주세요.",
    "en": "Couldn't find it. Try another name.",
    "files": [
-    "FirstRunTutorialView.swift:518"
+    "FirstRunTutorialView.swift:514"
    ],
    "args": [],
    "targets": [
@@ -23336,19 +23289,7 @@
    "ko": "위치를 허용하면 현재 위치로도 저장할 수 있습니다.",
    "en": "Allow location to use your current position.",
    "files": [
-    "FirstRunTutorialView.swift:540"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "위치와 센서를 얼마나 자주 확인할지 고릅니다.|Choose how often location and sensors are checked.",
-   "ko": "위치와 센서를 얼마나 자주 확인할지 고릅니다.",
-   "en": "Choose how often location and sensors are checked.",
-   "files": [
-    "FirstRunTutorialView.swift:159"
+    "FirstRunTutorialView.swift:536"
    ],
    "args": [],
    "targets": [
@@ -23372,8 +23313,8 @@
    "ko": "윤복이",
    "en": "Yunbok",
    "files": [
-    "FirstRunTutorialGuides.swift:513",
-    "FirstRunTutorialGuides.swift:513"
+    "FirstRunTutorialGuides.swift:475",
+    "FirstRunTutorialGuides.swift:475"
    ],
    "args": [],
    "targets": [
@@ -23661,8 +23602,8 @@
    "ko": "이 기기에서는 쓸 수 없습니다",
    "en": "Not available on this device",
    "files": [
-    "FirstRunTutorialGuides.swift:351",
-    "FirstRunTutorialGuides.swift:351"
+    "FirstRunTutorialGuides.swift:313",
+    "FirstRunTutorialGuides.swift:313"
    ],
    "args": [],
    "targets": [
@@ -23734,7 +23675,7 @@
    "ko": "이 기기의 모든 기록과 iCloud Drive의 BOKKI Plan 백업 파일이 모두 삭제됩니다. 백업을 지우면 복원할 방법이 없으며, 이 작업은 되돌릴 수 없습니다.",
    "en": "All records on this device and every BOKKI Plan backup file in iCloud Drive will be deleted. Once the backups are gone they cannot be restored, and this cannot be undone.",
    "files": [
-    "SettingsView.swift:484"
+    "SettingsView.swift:483"
    ],
    "args": [],
    "targets": [
@@ -24382,7 +24323,7 @@
    "ko": "이전",
    "en": "Back",
    "files": [
-    "FirstRunTutorialView.swift:249"
+    "FirstRunTutorialView.swift:245"
    ],
    "args": [],
    "targets": [
@@ -24456,7 +24397,7 @@
    "ko": "일부 허용",
    "en": "Partly allowed",
    "files": [
-    "FirstRunTutorialPolicy.swift:168"
+    "FirstRunTutorialPolicy.swift:169"
    ],
    "args": [],
    "targets": [
@@ -24506,8 +24447,8 @@
    "ko": "일정 보는 곳",
    "en": "Where to see events",
    "files": [
-    "FirstRunTutorialGuides.swift:625",
-    "FirstRunTutorialGuides.swift:625"
+    "FirstRunTutorialGuides.swift:587",
+    "FirstRunTutorialGuides.swift:587"
    ],
    "args": [],
    "targets": [
@@ -24581,7 +24522,7 @@
    "ko": "일정을 하루 기록과 함께 봅니다. 읽기만 합니다.",
    "en": "See events with your day. Read only.",
    "files": [
-    "FirstRunTutorialView.swift:172"
+    "FirstRunTutorialView.swift:170"
    ],
    "args": [],
    "targets": [
@@ -24630,8 +24571,8 @@
    "ko": "입력함",
    "en": "Entered",
    "files": [
-    "FirstRunTutorialGuides.swift:736",
-    "FirstRunTutorialGuides.swift:736"
+    "FirstRunTutorialGuides.swift:698",
+    "FirstRunTutorialGuides.swift:698"
    ],
    "args": [],
    "targets": [
@@ -24643,8 +24584,8 @@
    "ko": "있어요",
    "en": "Yes",
    "files": [
-    "FirstRunTutorialGuides.swift:374",
-    "FirstRunTutorialGuides.swift:374"
+    "FirstRunTutorialGuides.swift:336",
+    "FirstRunTutorialGuides.swift:336"
    ],
    "args": [],
    "targets": [
@@ -24727,11 +24668,23 @@
    ]
   },
   {
+   "key": "자동 기록을 위해 저전력으로 위치 변화를 지켜보는 동안 상단에 위치 표시가 보일 수 있습니다.|The location icon may stay visible while the app watches for movement at low power to keep automatic records.",
+   "ko": "자동 기록을 위해 저전력으로 위치 변화를 지켜보는 동안 상단에 위치 표시가 보일 수 있습니다.",
+   "en": "The location icon may stay visible while the app watches for movement at low power to keep automatic records.",
+   "files": [
+    "MapHomeView+Menu2.swift:262"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "자동 기록이 틀렸으면 영상 편집처럼 고칩니다.|Fix automatic records the way you edit a video.",
    "ko": "자동 기록이 틀렸으면 영상 편집처럼 고칩니다.",
    "en": "Fix automatic records the way you edit a video.",
    "files": [
-    "FirstRunTutorialView.swift:168"
+    "FirstRunTutorialView.swift:166"
    ],
    "args": [],
    "targets": [
@@ -24989,8 +24942,8 @@
    "ko": "장소 도감",
    "en": "Place book",
    "files": [
-    "MapHomePlaceBook.swift:213",
-    "MapHomeView+Menu.swift:429"
+    "MapHomePlaceBook.swift:475",
+    "MapHomeView+Menu.swift:428"
    ],
    "args": [],
    "targets": [
@@ -25185,7 +25138,7 @@
    "ko": "재생과 녹화",
    "en": "Play and record",
    "files": [
-    "FirstRunTutorialView.swift:142"
+    "FirstRunTutorialView.swift:141"
    ],
    "args": [],
    "targets": [
@@ -25298,9 +25251,9 @@
    "ko": "저장됨",
    "en": "Saved",
    "files": [
-    "FirstRunTutorialGuides.swift:708",
-    "FirstRunTutorialView.swift:437",
-    "FirstRunTutorialView.swift:447"
+    "FirstRunTutorialGuides.swift:670",
+    "FirstRunTutorialView.swift:433",
+    "FirstRunTutorialView.swift:443"
    ],
    "args": [],
    "targets": [
@@ -25791,7 +25744,7 @@
    "ko": "주소나 장소 이름 검색",
    "en": "Search address or place",
    "files": [
-    "FirstRunTutorialView.swift:467"
+    "FirstRunTutorialView.swift:463"
    ],
    "args": [],
    "targets": [
@@ -25839,7 +25792,7 @@
    "ko": "준비됐습니다",
    "en": "You're ready",
    "files": [
-    "FirstRunTutorialView.swift:151"
+    "FirstRunTutorialView.swift:150"
    ],
    "args": [],
    "targets": [
@@ -25852,6 +25805,18 @@
    "en": "Ready",
    "files": [
     "AppModel+Export.swift:27"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "중국|China",
+   "ko": "중국",
+   "en": "China",
+   "files": [
+    "MapHomePlaceBook.swift:117"
    ],
    "args": [],
    "targets": [
@@ -25925,7 +25890,7 @@
    "ko": "지금 상태입니다. 비어 있는 것은 나중에 해도 됩니다.",
    "en": "Here's where things stand. Anything open can wait.",
    "files": [
-    "FirstRunTutorialView.swift:175"
+    "FirstRunTutorialView.swift:173"
    ],
    "args": [],
    "targets": [
@@ -25961,8 +25926,8 @@
    "ko": "지금 활동, 오늘 요약, 다음 일정을 보고 활동을 확인·수정합니다. 시계 페이스에도 놓을 수 있습니다.",
    "en": "See your current activity, today's summary, and next plan, confirm or fix activities, and add it to your watch face.",
    "files": [
-    "FirstRunTutorialGuides.swift:394",
-    "FirstRunTutorialGuides.swift:394"
+    "FirstRunTutorialGuides.swift:356",
+    "FirstRunTutorialGuides.swift:356"
    ],
    "args": [],
    "targets": [
@@ -26070,7 +26035,7 @@
    "ko": "지도 보는 법",
    "en": "Reading the map",
    "files": [
-    "FirstRunTutorialView.swift:141"
+    "FirstRunTutorialView.swift:140"
    ],
    "args": [],
    "targets": [
@@ -26082,7 +26047,7 @@
    "ko": "지도 스타일 선택",
    "en": "Choose map style",
    "files": [
-    "MapHomeView+Menu.swift:1040"
+    "MapHomeView+Menu.swift:1039"
    ],
    "args": [],
    "targets": [
@@ -26094,7 +26059,7 @@
    "ko": "지도 스타일",
    "en": "Map style",
    "files": [
-    "MapHomeView+Menu.swift:1036"
+    "MapHomeView+Menu.swift:1035"
    ],
    "args": [],
    "targets": [
@@ -26118,8 +26083,8 @@
    "ko": "지도 왼쪽 위 구글 단추",
    "en": "Google button, top left of the map",
    "files": [
-    "FirstRunTutorialGuides.swift:744",
-    "FirstRunTutorialGuides.swift:744"
+    "FirstRunTutorialGuides.swift:706",
+    "FirstRunTutorialGuides.swift:706"
    ],
    "args": [],
    "targets": [
@@ -26131,8 +26096,8 @@
    "ko": "지도 왼쪽 위 구글 단추와 시간 막대에 나타납니다.",
    "en": "Events appear under the Google button at the top left and on the time bar.",
    "files": [
-    "FirstRunTutorialGuides.swift:626",
-    "FirstRunTutorialGuides.swift:626"
+    "FirstRunTutorialGuides.swift:588",
+    "FirstRunTutorialGuides.swift:588"
    ],
    "args": [],
    "targets": [
@@ -26144,7 +26109,7 @@
    "ko": "지도 위 고양이 곁에 보여 줄 것을 고릅니다.",
    "en": "Choose what appears next to the cat on the map.",
    "files": [
-    "FirstRunTutorialView.swift:171"
+    "FirstRunTutorialView.swift:169"
    ],
    "args": [],
    "targets": [
@@ -26156,7 +26121,7 @@
    "ko": "지도 축소",
    "en": "Zoom map out",
    "files": [
-    "MapHomeView+Map.swift:1103"
+    "MapHomeView+Map.swift:1118"
    ],
    "args": [],
    "targets": [
@@ -26169,7 +26134,7 @@
    "en": "Map attribution",
    "files": [
     "MapHomeSupportViews.swift:109",
-    "MapHomeView+Menu.swift:462"
+    "MapHomeView+Menu.swift:461"
    ],
    "args": [],
    "targets": [
@@ -26220,7 +26185,7 @@
    "ko": "지도 확대",
    "en": "Zoom map in",
    "files": [
-    "MapHomeView+Map.swift:1102"
+    "MapHomeView+Map.swift:1117"
    ],
    "args": [],
    "targets": [
@@ -26307,7 +26272,7 @@
    "ko": "지도에 메모 추가",
    "en": "Add map memo",
    "files": [
-    "MapHomeView+Support.swift:630"
+    "MapHomeView+Support.swift:632"
    ],
    "args": [],
    "targets": [
@@ -26344,7 +26309,7 @@
    "ko": "지도에서 저장됨",
    "en": "Saved from the map",
    "files": [
-    "FirstRunTutorialView.swift:459"
+    "FirstRunTutorialView.swift:455"
    ],
    "args": [],
    "targets": [
@@ -26368,7 +26333,7 @@
    "ko": "지도에서 하루를 함께 걸을 고양이입니다.",
    "en": "This cat walks through your day on the map.",
    "files": [
-    "FirstRunTutorialView.swift:164"
+    "FirstRunTutorialView.swift:162"
    ],
    "args": [],
    "targets": [
@@ -26670,7 +26635,7 @@
    "ko": "집 위치",
    "en": "Home",
    "files": [
-    "FirstRunTutorialView.swift:137"
+    "FirstRunTutorialView.swift:136"
    ],
    "args": [],
    "targets": [
@@ -26683,7 +26648,7 @@
    "en": "Home",
    "files": [
     "FirstRunGuideStage.swift:647",
-    "FirstRunTutorialGuides.swift:732",
+    "FirstRunTutorialGuides.swift:694",
     "MapHomeView+Stickman.swift:377"
    ],
    "args": [],
@@ -26740,7 +26705,7 @@
    "ko": "집에 머문 시간을 자동으로 구분합니다.",
    "en": "Time at home is recognized automatically.",
    "files": [
-    "FirstRunTutorialView.swift:161"
+    "FirstRunTutorialView.swift:159"
    ],
    "args": [],
    "targets": [
@@ -26796,24 +26761,11 @@
    ]
   },
   {
-   "key": "짧을수록|Shorter",
-   "ko": "짧을수록",
-   "en": "Shorter",
-   "files": [
-    "FirstRunTutorialGuides.swift:305",
-    "FirstRunTutorialGuides.swift:305"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "찍은 도장 {0} · 남은 곳 {1}|Stamps {0} · To go {1}",
    "ko": "찍은 도장 {0} · 남은 곳 {1}",
    "en": "Stamps {0} · To go {1}",
    "files": [
-    "MapHomePlaceBook.swift:217"
+    "MapHomePlaceBook.swift:479"
    ],
    "args": [
     "state.stampedCount",
@@ -26828,7 +26780,7 @@
    "ko": "차근차근 따라 하기",
    "en": "Walk me through",
    "files": [
-    "FirstRunTutorialView.swift:272"
+    "FirstRunTutorialView.swift:268"
    ],
    "args": [],
    "targets": [
@@ -26888,7 +26840,7 @@
    "ko": "초기 비밀번호",
    "en": "Default password",
    "files": [
-    "FirstRunTutorialView.swift:609"
+    "FirstRunTutorialView.swift:605"
    ],
    "args": [],
    "targets": [
@@ -26900,8 +26852,8 @@
    "ko": "초기값 {0}",
    "en": "Default {0}",
    "files": [
-    "FirstRunTutorialGuides.swift:749",
-    "FirstRunTutorialGuides.swift:749"
+    "FirstRunTutorialGuides.swift:711",
+    "FirstRunTutorialGuides.swift:711"
    ],
    "args": [
     "FirstRunTutorialPolicy.defaultPIN"
@@ -26967,7 +26919,7 @@
    "ko": "최근 저장",
    "en": "Last saved",
    "files": [
-    "SensorCollectionLiveActivity.swift:238"
+    "SensorCollectionLiveActivity.swift:248"
    ],
    "args": [],
    "targets": [
@@ -27132,8 +27084,8 @@
    "ko": "춘향이",
    "en": "Chunhyang",
    "files": [
-    "FirstRunTutorialGuides.swift:512",
-    "FirstRunTutorialGuides.swift:512"
+    "FirstRunTutorialGuides.swift:474",
+    "FirstRunTutorialGuides.swift:474"
    ],
    "args": [],
    "targets": [
@@ -27422,7 +27374,7 @@
    "ko": "카운터",
    "en": "Counters",
    "files": [
-    "FirstRunTutorialView.swift:147",
+    "FirstRunTutorialView.swift:146",
     "MapHomeView+Menu2.swift:49"
    ],
    "args": [],
@@ -27471,8 +27423,8 @@
    "ko": "캘린더 앱에 추가한 Apple·Google·Naver 일정을 봅니다.",
    "en": "See Apple, Google, and Naver events added to the Calendar app.",
    "files": [
-    "FirstRunTutorialGuides.swift:582",
-    "FirstRunTutorialGuides.swift:582"
+    "FirstRunTutorialGuides.swift:544",
+    "FirstRunTutorialGuides.swift:544"
    ],
    "args": [],
    "targets": [
@@ -27484,7 +27436,7 @@
    "ko": "캘린더 연결",
    "en": "Calendar",
    "files": [
-    "MapHomeView+Menu.swift:447"
+    "MapHomeView+Menu.swift:446"
    ],
    "args": [],
    "targets": [
@@ -27508,7 +27460,7 @@
    "ko": "캘린더 연결",
    "en": "Connect calendars",
    "files": [
-    "FirstRunTutorialView.swift:148"
+    "FirstRunTutorialView.swift:147"
    ],
    "args": [],
    "targets": [
@@ -27569,7 +27521,7 @@
    "ko": "캘린더",
    "en": "Calendar",
    "files": [
-    "FirstRunTutorialGuides.swift:741",
+    "FirstRunTutorialGuides.swift:703",
     "PermissionOnboardingSheet.swift:74",
     "AppModel.swift:367"
    ],
@@ -27707,7 +27659,7 @@
    "ko": "클립 편집",
    "en": "Clip editor",
    "files": [
-    "FirstRunTutorialView.swift:144",
+    "FirstRunTutorialView.swift:143",
     "MapHomeSectionEditSheet.swift:369",
     "MapHomeSectionEditSheet.swift:396"
    ],
@@ -27912,8 +27864,8 @@
    "ko": "튜토리얼 다시 보기",
    "en": "Replay tutorial",
    "files": [
-    "FirstRunTutorialGuides.swift:868",
-    "FirstRunTutorialGuides.swift:868"
+    "FirstRunTutorialGuides.swift:830",
+    "FirstRunTutorialGuides.swift:830"
    ],
    "args": [],
    "targets": [
@@ -27961,8 +27913,8 @@
    "ko": "페어링된 Watch를 찾지 못했습니다",
    "en": "No paired Watch found",
    "files": [
-    "FirstRunTutorialGuides.swift:455",
-    "FirstRunTutorialGuides.swift:455"
+    "FirstRunTutorialGuides.swift:417",
+    "FirstRunTutorialGuides.swift:417"
    ],
    "args": [],
    "targets": [
@@ -27998,8 +27950,8 @@
    "ko": "평소에는 저전력으로 모으고, 운동을 측정할 때만 더 자주 확인합니다.",
    "en": "Collects in low-power mode, and checks more often only while measuring a workout.",
    "files": [
-    "FirstRunTutorialGuides.swift:399",
-    "FirstRunTutorialGuides.swift:399"
+    "FirstRunTutorialGuides.swift:361",
+    "FirstRunTutorialGuides.swift:361"
    ],
    "args": [],
    "targets": [
@@ -28011,8 +27963,8 @@
    "ko": "평소처럼 지내면 하루가 쌓입니다. 저녁에 지도를 열고 재생해 보세요.",
    "en": "Go about your day and it builds up. Open the map tonight and tap Play.",
    "files": [
-    "FirstRunTutorialGuides.swift:788",
-    "FirstRunTutorialGuides.swift:788"
+    "FirstRunTutorialGuides.swift:750",
+    "FirstRunTutorialGuides.swift:750"
    ],
    "args": [],
    "targets": [
@@ -28086,7 +28038,7 @@
    "ko": "표시",
    "en": "Display",
    "files": [
-    "MapHomeView+Menu.swift:1008"
+    "MapHomeView+Menu.swift:1007"
    ],
    "args": [],
    "targets": [
@@ -28170,8 +28122,8 @@
    "ko": "하는 일",
    "en": "What it does",
    "files": [
-    "FirstRunTutorialGuides.swift:388",
-    "FirstRunTutorialGuides.swift:388"
+    "FirstRunTutorialGuides.swift:350",
+    "FirstRunTutorialGuides.swift:350"
    ],
    "args": [],
    "targets": [
@@ -28231,7 +28183,7 @@
    "ko": "하루 요약과 집 성장",
    "en": "Day summary and home growth",
    "files": [
-    "FirstRunTutorialView.swift:146"
+    "FirstRunTutorialView.swift:145"
    ],
    "args": [],
    "targets": [
@@ -28291,7 +28243,7 @@
    "ko": "하루 카드 시각",
    "en": "Day card time",
    "files": [
-    "FirstRunTutorialView.swift:136"
+    "FirstRunTutorialView.swift:135"
    ],
    "args": [],
    "targets": [
@@ -28318,7 +28270,7 @@
    "en": "Day card",
    "files": [
     "MapHomeDailyCard.swift:354",
-    "MapHomeView+Menu.swift:460",
+    "MapHomeView+Menu.swift:459",
     "MapHomeView+Support.swift:578"
    ],
    "args": [],
@@ -28381,7 +28333,7 @@
    "ko": "하루를 다시 보고 영상으로 남깁니다.",
    "en": "Replay your day and keep it as a video.",
    "files": [
-    "FirstRunTutorialView.swift:166"
+    "FirstRunTutorialView.swift:164"
    ],
    "args": [],
    "targets": [
@@ -28389,11 +28341,11 @@
    ]
   },
   {
-   "key": "하루를 자동으로 기록하는 데 씁니다. 필요한 것만 허용해도 됩니다.|Used to record your day automatically. Allow only what you need.",
-   "ko": "하루를 자동으로 기록하는 데 씁니다. 필요한 것만 허용해도 됩니다.",
-   "en": "Used to record your day automatically. Allow only what you need.",
+   "key": "하루를 자동으로 기록하는 데 씁니다. 필요한 것만 허용해도 됩니다. 자동 기록 중에는 상단에 위치 표시가 보일 수 있습니다.|Used to record your day automatically. Allow only what you need. The location icon may stay visible during automatic recording.",
+   "ko": "하루를 자동으로 기록하는 데 씁니다. 필요한 것만 허용해도 됩니다. 자동 기록 중에는 상단에 위치 표시가 보일 수 있습니다.",
+   "en": "Used to record your day automatically. Allow only what you need. The location icon may stay visible during automatic recording.",
    "files": [
-    "FirstRunTutorialView.swift:158"
+    "FirstRunTutorialView.swift:157"
    ],
    "args": [],
    "targets": [
@@ -28660,7 +28612,7 @@
    "ko": "항상 허용",
    "en": "Always",
    "files": [
-    "FirstRunTutorialPolicy.swift:173"
+    "FirstRunTutorialPolicy.swift:174"
    ],
    "args": [],
    "targets": [
@@ -28708,7 +28660,7 @@
    "ko": "행동 분류 목록",
    "en": "Activity category list",
    "files": [
-    "MapHomeView+Menu.swift:661"
+    "MapHomeView+Menu.swift:660"
    ],
    "args": [],
    "targets": [
@@ -28720,7 +28672,7 @@
    "ko": "행동 분류",
    "en": "Activity categories",
    "files": [
-    "MapHomeView+Menu.swift:648"
+    "MapHomeView+Menu.swift:647"
    ],
    "args": [],
    "targets": [
@@ -28780,7 +28732,7 @@
    "ko": "허용 안 함",
    "en": "Not allowed",
    "files": [
-    "FirstRunTutorialPolicy.swift:166"
+    "FirstRunTutorialPolicy.swift:167"
    ],
    "args": [],
    "targets": [
@@ -28793,7 +28745,7 @@
    "en": "Allowed",
    "files": [
     "AppShellView.swift:1024",
-    "FirstRunTutorialPolicy.swift:175"
+    "FirstRunTutorialPolicy.swift:176"
    ],
    "args": [],
    "targets": [
@@ -28818,7 +28770,7 @@
    "en": "Allow",
    "files": [
     "AppShellView.swift:1072",
-    "FirstRunTutorialGuides.swift:586",
+    "FirstRunTutorialGuides.swift:548",
     "MapHomeView+Support2.swift:890"
    ],
    "args": [],
@@ -28896,7 +28848,7 @@
    "ko": "현재 위치 기록 중",
    "en": "Recording current location",
    "files": [
-    "MapHomeView+Menu.swift:487"
+    "MapHomeView+Menu.swift:486"
    ],
    "args": [],
    "targets": [
@@ -28909,7 +28861,7 @@
    "en": "Current location",
    "files": [
     "MapHomeTransitSheets.swift:399",
-    "MapHomeView+Menu2.swift:501",
+    "MapHomeView+Menu2.swift:459",
     "MapHomeView+Stickman.swift:346"
    ],
    "args": [],
@@ -28973,7 +28925,7 @@
    "ko": "현재 위치로 저장",
    "en": "Use current location",
    "files": [
-    "FirstRunTutorialView.swift:529"
+    "FirstRunTutorialView.swift:525"
    ],
    "args": [],
    "targets": [
@@ -28985,7 +28937,7 @@
    "ko": "현재 위치로 저장됨",
    "en": "Saved from current location",
    "files": [
-    "FirstRunTutorialView.swift:526"
+    "FirstRunTutorialView.swift:522"
    ],
    "args": [],
    "targets": [
@@ -29009,7 +28961,7 @@
    "ko": "현재 위치를 받는 중입니다. 검색으로도 저장할 수 있습니다.",
    "en": "Waiting for your location. You can also search.",
    "files": [
-    "FirstRunTutorialView.swift:539"
+    "FirstRunTutorialView.swift:535"
    ],
    "args": [],
    "targets": [
@@ -29145,8 +29097,8 @@
    "ko": "화랑이",
    "en": "Hwarang",
    "files": [
-    "FirstRunTutorialGuides.swift:511",
-    "FirstRunTutorialGuides.swift:511"
+    "FirstRunTutorialGuides.swift:473",
+    "FirstRunTutorialGuides.swift:473"
    ],
    "args": [],
    "targets": [
@@ -29196,7 +29148,7 @@
    "ko": "화면",
    "en": "View",
    "files": [
-    "MapHomeView+Menu.swift:431"
+    "MapHomeView+Menu.swift:430"
    ],
    "args": [],
    "targets": [
@@ -29455,7 +29407,7 @@
    "ko": "회사 · 학교",
    "en": "Work · School",
    "files": [
-    "FirstRunTutorialView.swift:138"
+    "FirstRunTutorialView.swift:137"
    ],
    "args": [],
    "targets": [
@@ -29467,8 +29419,8 @@
    "ko": "회사",
    "en": "Work",
    "files": [
-    "FirstRunTutorialGuides.swift:733",
-    "FirstRunTutorialGuides.swift:733"
+    "FirstRunTutorialGuides.swift:695",
+    "FirstRunTutorialGuides.swift:695"
    ],
    "args": [],
    "targets": [

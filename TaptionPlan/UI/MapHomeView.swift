@@ -144,7 +144,6 @@ struct MapHomeView: View {
 
     @State var isSettingsMenuExpanded = false
 
-    @State var isGPSLoggingMenuExpanded = false
 
     @State var isDataProtectionPresented = false
 

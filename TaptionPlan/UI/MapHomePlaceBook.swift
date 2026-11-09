@@ -34,7 +34,8 @@ struct MapHomePlaceBookState: Equatable {
         frequentPlaces: [FrequentPlace],
         stays: [PlaceStay],
         language: MapHomeLanguage,
-        region: String = defaultRegion
+        region: String = defaultRegion,
+        drivePasses: [String: Date] = [:]
     ) -> Self {
         let placed = frequentPlaces.filter { $0.point != nil }
         let firstArrivals = MapHomePlaceStampPolicy.firstArrivals(
@@ -63,7 +64,7 @@ struct MapHomePlaceBookState: Equatable {
                 // "N서울타워"·"5·18기념공원"처럼 한글로 시작하지 않으면 첫 한글을 쓴다.
                 glyph: (place.name.first { $0.isLetter && !$0.isASCII } ?? place.name.first).map(String.init) ?? "印",
                 artworkName: place.artworkName,
-                firstVisit: place.firstVisit(in: stays),
+                firstVisit: [place.firstVisit(in: stays), drivePasses[place.id]].compactMap { $0 }.min(),
                 pins: place.pins(language: language)
             )
         }
@@ -164,6 +165,39 @@ struct MapHomeKoreaRegion: Identifiable, Equatable, Sendable {
     let id: String
     let name: String
     let englishName: String
+}
+
+/// 드라이브길은 머물지 않아도 지나가면 도장을 찍는다(대표 결정 2026-11-09).
+enum MapHomePlaceBookDrivePass {
+    static let places = MapHomeKoreaPlaceBookData.places.filter { $0.theme == "drive" }
+    static let maximumAccuracyMeters = 100.0
+
+    /// 경로 표본이 반경 안에 든 첫 시각. 이미 찾은 곳은 다시 보지 않는다.
+    static func merge(readings: [SensorReading], into passes: inout [String: Date]) {
+        let remaining = places.filter { passes[$0.id] == nil }.map { ($0.id, $0.site) }
+        guard !remaining.isEmpty else { return }
+        for reading in readings.sorted(by: { $0.timestamp < $1.timestamp }) {
+            guard let point = reading.point, point.horizontalAccuracy >= 0, point.horizontalAccuracy <= maximumAccuracyMeters else { continue }
+            for (id, site) in remaining where passes[id] == nil && site.contains(point) {
+                passes[id] = reading.timestamp
+            }
+        }
+    }
+}
+
+extension AppModel {
+    /// 차·버스 등 이동 구간의 GPS만 읽어 드라이브길 통과를 찾는다. 지하철과 걷기는 도로를 달린 것이 아니다.
+    func placeBookDrivePasses() async -> [String: Date] {
+        var passes: [String: Date] = [:]
+        let spans = snapshot.travel.filter { $0.mode != .walking && $0.mode != .subway }.map(\.span)
+        for span in spans {
+            guard !Task.isCancelled, passes.count < MapHomePlaceBookDrivePass.places.count else { break }
+            let readings = await sensorReadings(in: span)
+            MapHomePlaceBookDrivePass.merge(readings: readings, into: &passes)
+            await Task.yield()
+        }
+        return passes
+    }
 }
 
 struct MapHomeAirport: Equatable, Sendable {
@@ -349,10 +383,12 @@ struct MapHomePlaceBookSheet: View {
     let language: MapHomeLanguage
     /// 카드를 누르면 지도에 표시한다(대표 지시).
     var onSelect: (MapHomePlaceBookPin) -> Void = { _ in }
+    var loadDrivePasses: () async -> [String: Date] = { [:] }
 
     @State private var state: MapHomePlaceBookState?
     @State private var menu = MapHomePlaceBookMenu()
     @State private var airportChoice: MapHomePlaceBookEntry?
+    @State private var drivePasses: [String: Date] = [:]
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 3)
 
     var body: some View {
@@ -377,6 +413,12 @@ struct MapHomePlaceBookSheet: View {
             reload()
         }
         .onChange(of: menu.selected) { reload() }
+        .task {
+            let passes = await loadDrivePasses()
+            guard passes != drivePasses else { return }
+            drivePasses = passes
+            reload()
+        }
         .confirmationDialog(
             airportChoice?.title ?? "",
             isPresented: Binding(get: { airportChoice != nil }, set: { if !$0 { airportChoice = nil } }),
@@ -390,7 +432,7 @@ struct MapHomePlaceBookSheet: View {
 
     private func reload() {
         state = MapHomePlaceBookState.make(
-            frequentPlaces: frequentPlaces, stays: stays, language: language, region: menu.selected
+            frequentPlaces: frequentPlaces, stays: stays, language: language, region: menu.selected, drivePasses: drivePasses
         )
     }
 

@@ -4852,83 +4852,6 @@
         }
       }
     },
-    "GPS 및 센서 데이터 설정|GPS and sensor settings" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "GPSとセンサーの設定"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "GPS 与传感器设置"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "GPS 與感測器設定"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "GPS- und Sensoreinstellungen"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Réglages GPS et capteurs"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Impostazioni GPS e sensori"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ajustes de GPS y sensores"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ajustes de GPS e sensores"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cài đặt GPS và cảm biến"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pengaturan GPS dan sensor"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "การตั้งค่า GPS และเซนเซอร์"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "GPS और सेंसर सेटिंग्ज़"
-          }
-        }
-      }
-    },
     "GPS 및 센서 데이터|GPS & Sensor Data" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -9549,6 +9472,83 @@
         }
       }
     },
+    "{0} {1} 공항|{0} {1} Airport" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} {1}空港"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0}{1}机场"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0}{1}機場"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flughafen {0} {1}"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aéroport {0} {1}"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aeroporto {0} {1}"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aeropuerto {0} {1}"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aeroporto {0} {1}"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sân bay {0} {1}"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bandara {0} {1}"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "สนามบิน{1} {0}"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} {1} हवाई अड्डा"
+          }
+        }
+      }
+    },
     "{0} {1} 탑승 확인|Confirm boarding at {0} {1}" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -9930,6 +9930,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "{0} · पढ़ा नहीं जा सकता (क्षतिग्रस्त या परस्पर विरोधी संस्करण)"
+          }
+        }
+      }
+    },
+    "{0} 공항|{0} Airport" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0}空港"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0}机场"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0}機場"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flughafen {0}"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aéroport de {0}"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aeroporto di {0}"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aeropuerto de {0}"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aeroporto de {0}"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sân bay {0}"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bandara {0}"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "สนามบิน{0}"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} हवाई अड्डा"
           }
         }
       }
@@ -12548,83 +12625,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "{0} में Pro हमेशा के लिए खरीदें"
-          }
-        }
-      }
-    },
-    "{0}마다 위치 확인|Checks location every {0}" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "{0}ごとに位置情報を確認します"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "每{0}检查一次位置"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "每 {0} 檢查一次位置"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Prüft den Standort alle {0}"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vérifie la position toutes les {0}"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Controlla la posizione ogni {0}"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Comprueba la ubicación cada {0}"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Verifica a localização a cada {0}"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kiểm tra vị trí mỗi {0}"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Memeriksa lokasi setiap {0}"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ตรวจสอบตำแหน่งทุก {0}"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "हर {0} पर स्थान जाँचता है"
           }
         }
       }
@@ -22712,6 +22712,160 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "बुसोक्सा"
+          }
+        }
+      }
+    },
+    "|By region" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "地域別"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按地区"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "依地區"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nach Region"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Par région"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Per regione"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Por región"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Por região"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Theo khu vực"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menurut wilayah"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ตามพื้นที่"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "क्षेत्र के अनुसार"
+          }
+        }
+      }
+    },
+    "|By type" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "種類別"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按类型"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "依類型"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nach Art"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Par type"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Per tipo"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Por tipo"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Por tipo"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Theo loại"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menurut jenis"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ตามประเภท"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "प्रकार के अनुसार"
           }
         }
       }
@@ -43891,6 +44045,83 @@
         }
       }
     },
+    "|Korea" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "韓国"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "韩国"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "韓國"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Korea"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Corée"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Corea"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Corea"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coreia"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hàn Quốc"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Korea"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เกาหลี"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कोरिया"
+          }
+        }
+      }
+    },
     "|Koutoubia" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -45658,83 +45889,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "स्थान और गति"
-          }
-        }
-      }
-    },
-    "|Location check interval" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "位置情報の確認間隔"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "位置检查间隔"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "位置檢查間隔"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Intervall der Standortprüfung"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Intervalle de vérification de la position"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Intervallo di controllo della posizione"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Intervalo de comprobación de ubicación"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Intervalo de verificação da localização"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Khoảng thời gian kiểm tra vị trí"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Interval pemeriksaan lokasi"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ช่วงเวลาตรวจสอบตำแหน่ง"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "स्थान जाँच अंतराल"
           }
         }
       }
@@ -78079,83 +78233,6 @@
         }
       }
     },
-    "경로가 촘촘해지고 배터리를 더 씁니다.|More detailed routes, more battery use." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "経路が細かくなり、バッテリーを多く使います。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "路线更精细，耗电更多。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "路線更精細，耗電更多。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Genauere Routen, mehr Akkuverbrauch."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Trajets plus précis, plus de batterie utilisée."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Percorsi più precisi, più consumo di batteria."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Rutas más precisas, más uso de batería."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Rotas mais precisas, mais uso de bateria."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lộ trình chi tiết hơn, tốn pin hơn."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Rute lebih rinci, baterai lebih boros."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "เส้นทางละเอียดขึ้น ใช้แบตเตอรี่มากขึ้น"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "रूट ज़्यादा सटीक, बैटरी की खपत ज़्यादा।"
-          }
-        }
-      }
-    },
     "경로를 저장하지 못했습니다. 다시 시도해 주세요.|Could not save the route. Please try again." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -86314,83 +86391,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "रेलवे स्टेशन"
-          }
-        }
-      }
-    },
-    "길수록|Longer" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "長いほど"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "越长"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "越長"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Länger"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Plus long"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Più lungo"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Más largo"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mais longo"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dài hơn"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lebih lama"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ยาวขึ้น"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "लंबा"
           }
         }
       }
@@ -97868,83 +97868,6 @@
         }
       }
     },
-    "메뉴 > GPS 및 센서 데이터에서 바꿉니다.|Change it in Menu > GPS & Sensor Data." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "メニュー > GPSとセンサーのデータで変更します。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在“菜单”>“GPS 与传感器数据”中更改。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在選單 > GPS 與感測器資料中更改。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Änderbar unter Menü > GPS & Sensordaten."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "À modifier dans Menu > GPS et données des capteurs."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Si cambia in Menu > GPS e dati dei sensori."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cámbialo en Menú > GPS y datos de sensores."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Altere em Menu > GPS e dados dos sensores."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Đổi trong Menu > GPS và dữ liệu cảm biến."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ubah di Menu > Data GPS & Sensor."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "เปลี่ยนได้ที่ เมนู > ข้อมูล GPS และเซนเซอร์"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "मेन्यू > GPS और सेंसर डेटा में बदलें।"
-          }
-        }
-      }
-    },
     "메뉴 > 설정 > 데이터 보호|Menu > Settings > Data Protection" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -102946,83 +102869,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "बैटरी"
-          }
-        }
-      }
-    },
-    "배터리를 아끼는 대신 경로 기록이 드문드문해집니다.|Saves battery, with fewer route points." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "バッテリーを節約しますが、経路の記録はまばらになります。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "节省电量，但路线记录点会变少。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "節省電量，但路線記錄點會變少。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Spart Akku, zeichnet aber weniger Routenpunkte auf."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Économise la batterie, avec moins de points d’itinéraire."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Risparmia batteria, con meno punti del percorso."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ahorra batería, con menos puntos de ruta."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Economiza bateria, com menos pontos de rota."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tiết kiệm pin, nhưng ít điểm lộ trình hơn."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Menghemat baterai, dengan lebih sedikit titik rute."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ประหยัดแบตเตอรี่ แต่จุดเส้นทางจะน้อยลง"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "बैटरी बचती है, पर रूट के बिंदु कम होते हैं।"
           }
         }
       }
@@ -117499,83 +117345,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "सेंसर आर्काइव नहीं खुल सका।"
-          }
-        }
-      }
-    },
-    "센서 주기|Sensor interval" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "センサー間隔"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "传感器间隔"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "感測器間隔"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sensorintervall"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Intervalle des capteurs"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Intervallo sensori"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Intervalo de sensores"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Intervalo dos sensores"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chu kỳ cảm biến"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Interval sensor"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ช่วงเวลาเซนเซอร์"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "सेंसर अंतराल"
           }
         }
       }
@@ -137831,83 +137600,6 @@
         }
       }
     },
-    "위치 확인 간격|Location check interval" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "位置情報の確認間隔"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "位置检查间隔"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "位置檢查間隔"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Intervall der Standortprüfung"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Intervalle de vérification de la position"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Intervallo di controllo della posizione"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Intervalo de comprobación de ubicación"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Intervalo de verificação da localização"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Khoảng thời gian kiểm tra vị trí"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Interval pemeriksaan lokasi"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ช่วงเวลาตรวจสอบตำแหน่ง"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "स्थान जाँच अंतराल"
-          }
-        }
-      }
-    },
     "위치 확인 중|Locating" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -138366,83 +138058,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "अपनी मौजूदा स्थिति इस्तेमाल करने के लिए स्थान की अनुमति दें।"
-          }
-        }
-      }
-    },
-    "위치와 센서를 얼마나 자주 확인할지 고릅니다.|Choose how often location and sensors are checked." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "位置情報とセンサーを確認する頻度を選びます。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "选择检查位置和传感器的频率。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "選擇檢查位置和感測器的頻率。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wähle, wie oft Standort und Sensoren geprüft werden."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choisissez la fréquence de vérification de la position et des capteurs."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Scegli ogni quanto controllare posizione e sensori."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Elige con qué frecuencia se revisan la ubicación y los sensores."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Escolha com que frequência a localização e os sensores são verificados."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chọn tần suất kiểm tra vị trí và cảm biến."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pilih seberapa sering lokasi dan sensor diperiksa."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "เลือกความถี่ในการตรวจตำแหน่งและเซนเซอร์"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "चुनें कि स्थान और सेंसर कितनी बार जाँचे जाएँ।"
           }
         }
       }
@@ -146763,6 +146378,83 @@
         }
       }
     },
+    "자동 기록을 위해 저전력으로 위치 변화를 지켜보는 동안 상단에 위치 표시가 보일 수 있습니다.|The location icon may stay visible while the app watches for movement at low power to keep automatic records." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動記録のために低電力で移動を見守っている間、上部に位置情報アイコンが表示されることがあります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "为保持自动记录，应用以低功耗监测移动时，顶部可能持续显示定位图标。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "為維持自動記錄，App 以低耗電監測移動時，頂部可能持續顯示定位圖示。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das Standortsymbol kann sichtbar bleiben, während die App für automatische Aufzeichnungen Bewegungen stromsparend überwacht."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’icône de localisation peut rester visible pendant que l’app surveille les déplacements à faible consommation pour l’enregistrement automatique."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’icona della posizione può restare visibile mentre l’app monitora gli spostamenti a basso consumo per la registrazione automatica."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El icono de ubicación puede seguir visible mientras la app vigila los desplazamientos con bajo consumo para el registro automático."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O ícone de localização pode continuar visível enquanto o app monitora deslocamentos com baixo consumo para o registro automático."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biểu tượng vị trí có thể vẫn hiển thị khi ứng dụng theo dõi di chuyển ở mức tiết kiệm pin để tự động ghi lại."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ikon lokasi dapat tetap terlihat saat aplikasi memantau pergerakan dengan daya rendah untuk pencatatan otomatis."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ไอคอนตำแหน่งอาจแสดงค้างไว้ขณะที่แอปเฝ้าดูการเคลื่อนที่แบบประหยัดพลังงานเพื่อบันทึกอัตโนมัติ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "स्वचालित रिकॉर्ड के लिए ऐप कम बैटरी में गतिविधि पर नज़र रखते समय लोकेशन आइकन दिखता रह सकता है।"
+          }
+        }
+      }
+    },
     "자동 기록이 틀렸으면 영상 편집처럼 고칩니다.|Fix automatic records the way you edit a video." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -153539,6 +153231,83 @@
         }
       }
     },
+    "중국|China" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "中国"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "中国"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "中國"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "China"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chine"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cina"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "China"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "China"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trung Quốc"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tiongkok"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "จีน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "चीन"
+          }
+        }
+      }
+    },
     "중분류: {0}|Subcategory: {0}" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -159002,83 +158771,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "अभी कोई घर की जगह नहीं"
-          }
-        }
-      }
-    },
-    "짧을수록|Shorter" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "短いほど"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "越短"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "越短"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kürzer"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Plus court"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Più breve"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Más corto"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mais curto"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ngắn hơn"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lebih singkat"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "สั้นลง"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "छोटा"
           }
         }
       }
@@ -168246,79 +167938,79 @@
         }
       }
     },
-    "하루를 자동으로 기록하는 데 씁니다. 필요한 것만 허용해도 됩니다.|Used to record your day automatically. Allow only what you need." : {
+    "하루를 자동으로 기록하는 데 씁니다. 필요한 것만 허용해도 됩니다. 자동 기록 중에는 상단에 위치 표시가 보일 수 있습니다.|Used to record your day automatically. Allow only what you need. The location icon may stay visible during automatic recording." : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1日を自動で記録するために使います。必要なものだけを許可してください。"
+            "value" : "1日を自動で記録するために使います。必要なものだけ許可できます。自動記録中は上部に位置情報アイコンが表示されることがあります。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "用于自动记录你的一天。只允许你需要的权限。"
+            "value" : "用于自动记录您的一天。可以只允许需要的权限。自动记录期间，顶部可能显示定位图标。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "用於自動記錄你的一天。請只允許你需要的項目。"
+            "value" : "用於自動記錄您的一天。可以只允許需要的權限。自動記錄期間，頂部可能顯示定位圖示。"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dient dazu, deinen Tag automatisch aufzuzeichnen. Erlaube nur, was du brauchst."
+            "value" : "Wird zur automatischen Aufzeichnung deines Tages verwendet. Erlaube nur, was du brauchst. Während der automatischen Aufzeichnung kann das Standortsymbol sichtbar bleiben."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sert à enregistrer votre journée automatiquement. N'autorisez que le nécessaire."
+            "value" : "Sert à enregistrer votre journée automatiquement. N’autorisez que ce dont vous avez besoin. L’icône de localisation peut rester visible pendant l’enregistrement automatique."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Serve a registrare automaticamente la tua giornata. Consenti solo ciò che ti serve."
+            "value" : "Serve a registrare automaticamente la tua giornata. Consenti solo ciò che ti serve. Durante la registrazione automatica l’icona della posizione può restare visibile."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Se usa para registrar tu día automáticamente. Permite solo lo que necesites."
+            "value" : "Se usa para registrar tu día automáticamente. Permite solo lo que necesites. Durante el registro automático, el icono de ubicación puede seguir visible."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Usado para registrar seu dia automaticamente. Permita só o que precisar."
+            "value" : "Usado para registrar seu dia automaticamente. Permita apenas o que precisar. Durante o registro automático, o ícone de localização pode continuar visível."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dùng để tự động ghi lại ngày của bạn. Chỉ cho phép những gì bạn cần."
+            "value" : "Dùng để tự động ghi lại một ngày của bạn. Chỉ cần cho phép những gì bạn muốn. Trong khi tự động ghi lại, biểu tượng vị trí có thể vẫn hiển thị."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dipakai untuk merekam hari Anda secara otomatis. Izinkan hanya yang Anda perlukan."
+            "value" : "Digunakan untuk mencatat hari Anda secara otomatis. Izinkan hanya yang Anda perlukan. Selama pencatatan otomatis, ikon lokasi dapat tetap terlihat."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ใช้บันทึกวันของคุณอัตโนมัติ อนุญาตเฉพาะที่จำเป็น"
+            "value" : "ใช้บันทึกวันของคุณโดยอัตโนมัติ อนุญาตเฉพาะที่ต้องการได้ ระหว่างบันทึกอัตโนมัติ ไอคอนตำแหน่งอาจแสดงอยู่ด้านบน"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "आपका दिन अपने-आप दर्ज करने के लिए इस्तेमाल होता है। सिर्फ़ ज़रूरी अनुमतियाँ दें।"
+            "value" : "आपके दिन को स्वचालित रूप से रिकॉर्ड करने के लिए। केवल ज़रूरी अनुमति दें। स्वचालित रिकॉर्डिंग के दौरान लोकेशन आइकन दिख सकता है।"
           }
         }
       }

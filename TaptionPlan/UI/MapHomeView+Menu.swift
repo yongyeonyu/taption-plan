@@ -174,7 +174,6 @@ extension MapHomeView {
         isSidebarGroupExpanded = false
         isMapGroupExpanded = false
         isSettingsMenuExpanded = false
-        isGPSLoggingMenuExpanded = false
         withAnimation(.easeInOut(duration: 0.22)) { isMenuOpen = true }
     }
 

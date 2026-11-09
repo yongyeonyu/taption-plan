@@ -130,6 +130,8 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     /// iOS가 `pausesLocationUpdatesAutomatically`로 위치 수집을 멈춘 상태인지. 다시 켤 때만 참이다.
     var locationUpdatesPausedBySystem = false
     var stayRegionArming = StayRegionArmingPolicy()
+    /// 머문 자리라 이번 측정 구간에 GPS를 켜지 않았다. 움직임이 보이면 바로 켠다.
+    var locationHeldForStay = false
     private var currentWiFiFetchInFlight = false
     private var lastWiFiFetchAt: Date?
     var deviceMotionAccumulator = DeviceMotionAccumulator()
@@ -615,9 +617,20 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
             isMoving: activeTrackingSession != nil
                 || configuration.minimumEmissionInterval <= 1
         )
+        locationHeldForStay = false
         if permissionState() == .authorized {
-            locationManager.startUpdatingLocation()
-            locationUpdatesPausedBySystem = false
+            if StationaryGPSPolicy.requestsFix(
+                stayRegionArmed: locationManager.monitoredRegions.contains { $0.identifier == LocationPauseRegionPolicy.identifier },
+                keepsStreamsActive: activeTrackingSession != nil || shouldKeepHardwareStreamsActive,
+                lastFixAt: lastAcceptedLocationAt,
+                now: .now
+            ) {
+                locationManager.startUpdatingLocation()
+                locationUpdatesPausedBySystem = false
+            } else {
+                locationHeldForStay = true
+                TaptionPlanDiagnosticsLogger.shared.record("sensor_gps_held_for_stay", fields: [:])
+            }
         }
 
         if CMMotionActivityManager.isActivityAvailable() {
@@ -636,6 +649,11 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                     }
                     self.latestMotion = motion
                     self.latestMotionConfidence = confidence
+                    if self.locationHeldForStay, StationaryGPSPolicy.wakesGPS(for: motion) {
+                        self.locationHeldForStay = false
+                        self.locationManager.startUpdatingLocation()
+                        self.locationUpdatesPausedBySystem = false
+                    }
                     self.updateAutomaticTracking(for: self.latestMotion)
                     if self.configuration.highAccuracyDuringMovement
                         || self.isForegroundLiveLocationTrackingEnabled {

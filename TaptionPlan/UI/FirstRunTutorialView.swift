@@ -106,7 +106,7 @@ struct FirstRunTutorialView: View {
 
     private func scene(of step: FirstRunTutorialStep) -> HwarangScene {
         switch step {
-        case .welcome, .permissions, .sensorInterval, .dayCardTime, .cat: .groom
+        case .welcome, .permissions, .dayCardTime, .cat: .groom
         case .home, .summary: .sleep
         case .workAndSchool, .calendar, .appleWatch: .work
         case .salary, .finish: .eat
@@ -132,7 +132,6 @@ struct FirstRunTutorialView: View {
         switch step {
         case .welcome: "BOKKI Plan"
         case .permissions: language.text("권한 허용", "Permissions")
-        case .sensorInterval: language.text("센서 주기", "Sensor interval")
         case .dayCardTime: language.text("하루 카드 시각", "Day card time")
         case .home: language.text("집 위치", "Home")
         case .workAndSchool: language.text("회사 · 학교", "Work · School")
@@ -155,8 +154,7 @@ struct FirstRunTutorialView: View {
     private func detail(of step: FirstRunTutorialStep) -> String {
         switch step {
         case .welcome: ""
-        case .permissions: language.text("하루를 자동으로 기록하는 데 씁니다. 필요한 것만 허용해도 됩니다.", "Used to record your day automatically. Allow only what you need.")
-        case .sensorInterval: language.text("위치와 센서를 얼마나 자주 확인할지 고릅니다.", "Choose how often location and sensors are checked.")
+        case .permissions: language.text("하루를 자동으로 기록하는 데 씁니다. 필요한 것만 허용해도 됩니다. 자동 기록 중에는 상단에 위치 표시가 보일 수 있습니다.", "Used to record your day automatically. Allow only what you need. The location icon may stay visible during automatic recording.")
         case .dayCardTime: language.text("어제 하루를 담은 카드를 알림으로 보낼 시각을 고릅니다.", "Choose when yesterday's card arrives as a notification.")
         case .home: language.text("집에 머문 시간을 자동으로 구분합니다.", "Time at home is recognized automatically.")
         case .workAndSchool: language.text("업무와 학습 시간을 구분하는 기준이 됩니다.", "Used to tell work and study time apart.")
@@ -185,8 +183,6 @@ struct FirstRunTutorialView: View {
             FirstRunWelcomePage(language: language)
         case .permissions:
             PermissionOnboardingSheet(model: model, isEmbedded: true)
-        case .sensorInterval:
-            FirstRunSensorIntervalPage(model: model, language: language)
         case .dayCardTime:
             FirstRunDayCardTimePage(model: model, language: language)
         case .home:

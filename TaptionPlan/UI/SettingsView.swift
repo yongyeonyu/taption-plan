@@ -246,7 +246,6 @@ struct SettingsView: View {
                         ) {
                             model.presentPermissionOnboarding(for: .location)
                         }
-                        sensorCollectionProfileRow
                         settingsToggleRow(
                             icon: "cloud.sun",
                             iconBackground: .tpWeather,
@@ -1034,60 +1033,6 @@ struct SettingsView: View {
         guard place.point != nil else { return "미지정" }
         let floor = place.floor.map { " · \($0)층" } ?? ""
         return "지정됨\(floor) · 반경 \(Int(place.radiusMeters))m"
-    }
-
-    private var sensorCollectionProfileRow: some View {
-        VStack(spacing: TaptionSpacing.cozy) {
-            HStack(spacing: TaptionMenuMetrics.sectionSpacing) {
-                Image(systemName: "slider.horizontal.3")
-                    .accessibilityHidden(true)
-                    .font(.taption(size: 13))
-                    .foregroundStyle(Color.tpMovementDark)
-                    .frame(width: 24, height: 24)
-                    .background(
-                        Color.tpMovement,
-                        in: RoundedRectangle(cornerRadius: TaptionRadius.tight)
-                    )
-
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("GPS · 센서 기록 간격")
-                        .font(
-                            .taption(
-                                size: SettingsTypography.rowTitle,
-                                weight: .bold
-                            )
-                        )
-                        .foregroundStyle(Color.tpInk)
-                    Text(
-                        "\(GPSLoggingPreferences.intervalText(model.settings.gpsLoggingPreferences.intervalSeconds))마다 "
-                            + "\(Int(model.settings.sensorCollectionProfile.samplingWindowDuration))초만 수집 · 사이에는 센서 종료"
-                    )
-                        .font(
-                            .taption(size: SettingsTypography.rowSubtitle)
-                        )
-                        .foregroundStyle(Color.tpSecondary)
-                }
-
-                Spacer(minLength: 4)
-            }
-
-            GPSLoggingIntervalSlider(
-                seconds: model.settings.gpsLoggingPreferences.intervalSeconds,
-                tint: Color.tpMovementDark,
-                onCommit: model.setGPSLoggingIntervalSeconds
-            ) { _ in
-                Text("센싱 주기")
-                    .font(.taption(size: SettingsTypography.rowTitle, weight: .bold))
-                    .foregroundStyle(Color.tpInk)
-            }
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .overlay(alignment: .top) {
-            Rectangle()
-                .fill(Color.tpControlFill)
-                .frame(height: 0.5)
-        }
     }
 
     private var watchAccelerationCollectionRow: some View {

@@ -1,5 +1,5 @@
 {
- "ui": 2339,
+ "ui": 2335,
  "catalog": 461,
  "unread": [
   {
@@ -75,6 +75,12 @@
    "en": "Double"
   },
   {
+   "file": "TaptionPlan/Core/LiveActivityDaySummaryState.swift",
+   "line": 32,
+   "ko": "Bool?",
+   "en": "Double?"
+  },
+  {
    "file": "TaptionPlan/Core/WidgetShared.swift",
    "line": 203,
    "ko": "koreanTitle",
@@ -112,7 +118,7 @@
   },
   {
    "file": "TaptionPlan/UI/FirstRunTutorialView.swift",
-   "line": 433,
+   "line": 429,
    "ko": "destination.koreanName",
    "en": "destination.englishName"
   },
@@ -286,21 +292,39 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomePlaceBook.swift",
-   "line": 46,
+   "line": 50,
    "ko": "destination.koreanName",
    "en": "destination.englishName"
   },
   {
    "file": "TaptionPlan/UI/MapHomePlaceBook.swift",
-   "line": 53,
-   "ko": "candidate.name",
-   "en": "candidate.englishName"
+   "line": 57,
+   "ko": "$0.name",
+   "en": "$0.englishName"
   },
   {
    "file": "TaptionPlan/UI/MapHomePlaceBook.swift",
-   "line": 58,
-   "ko": "candidate.country",
-   "en": "\"Landmark\""
+   "line": 62,
+   "ko": "place.name",
+   "en": "place.englishName"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomePlaceBook.swift",
+   "line": 101,
+   "ko": "name",
+   "en": "englishName"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomePlaceBook.swift",
+   "line": 247,
+   "ko": "name",
+   "en": "englishName"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomePlaceBook.swift",
+   "line": 252,
+   "ko": "airport.name",
+   "en": "airport.englishName"
   },
   {
    "file": "TaptionPlan/UI/MapHomeSettingsSheets.swift",
@@ -364,13 +388,13 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeView+Menu.swift",
-   "line": 1045,
+   "line": 1044,
    "ko": "strength.koreanLabel",
    "en": "strength.englishLabel"
   },
   {
    "file": "TaptionPlan/UI/MapHomeView+Menu.swift",
-   "line": 1053,
+   "line": 1052,
    "ko": "fogStrength.koreanLabel",
    "en": "fogStrength.englishLabel"
   },
@@ -424,7 +448,13 @@
   },
   {
    "file": "TaptionPlanWidget/SensorCollectionLiveActivity.swift",
-   "line": 261,
+   "line": 185,
+   "ko": "context.state.isExternalSample",
+   "en": "context.state.latestHeartRate"
+  },
+  {
+   "file": "TaptionPlanWidget/SensorCollectionLiveActivity.swift",
+   "line": 271,
    "ko": "base",
    "en": "rate"
   }

@@ -284,14 +284,9 @@ public struct AppFeatureSettings: Codable, Hashable, Sendable {
             Bool.self,
             forKey: .backgroundPreciseLocationEnabled
         ) ?? defaults.backgroundPreciseLocationEnabled
-        sensorCollectionProfile = try values.decodeIfPresent(
-            SensorCollectionProfile.self,
-            forKey: .sensorCollectionProfile
-        ) ?? defaults.sensorCollectionProfile
-        gpsLoggingPreferences = try values.decodeIfPresent(
-            GPSLoggingPreferences.self,
-            forKey: .gpsLoggingPreferences
-        ) ?? defaults.gpsLoggingPreferences
+        // 기록 간격 메뉴를 없애고 값을 고정했다(대표 결정 2026-11-09). 옛 저장 값과 백업의 값은 읽지 않는다.
+        sensorCollectionProfile = defaults.sensorCollectionProfile
+        gpsLoggingPreferences = defaults.gpsLoggingPreferences
         mapCategoryColors = Self.normalizedMapCategoryColors(
             try values.decodeIfPresent(
                 [String: String].self,

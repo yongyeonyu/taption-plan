@@ -6327,17 +6327,6 @@ final class AllowanceConversionTests: XCTestCase {
     }
 }
 
-@MainActor
-final class GPSLoggingBatteryIconTests: XCTestCase {
-    func testFillGrowsWithIntervalAndStaysInRange() {
-        let values = [30, 60, 300, 600, 900, 1_800].map(GPSLoggingBatteryIcon.fillFraction(seconds:))
-        XCTAssertEqual(values, values.sorted())
-        XCTAssertEqual(Set(values).count, values.count)
-        XCTAssertEqual(values.last, 1)
-        XCTAssertGreaterThan(values[0], 0)
-    }
-}
-
 final class MapHomeRangeSampleCacheTests: XCTestCase {
     func testRoundTripAndEmptyDayAndCacheableDays() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)

@@ -211,6 +211,58 @@ final class RawSensorReplayVerdictTests: XCTestCase {
         }
     }
 
+    /// 머문 자리의 GPS를 30분에 한 번만 남겼을 때 체류·수면이 달라지는지 원본으로 비교한다(VER1109A01).
+    func testReplayStationaryGPSThinning() throws {
+        guard let folder = ProcessInfo.processInfo.environment["TAPTION_RAW_REPLAY_DIR"], !folder.isEmpty else {
+            throw XCTSkip("원본 폴더 없음")
+        }
+        func thin(_ readings: [SensorReading], every interval: TimeInterval) -> [SensorReading] {
+            var anchor: GeoPoint?, arrived = Date.distantPast, lastKept = Date.distantPast
+            return readings.map { reading in
+                guard let point = reading.point else { return reading }
+                let moved = anchor.map {
+                    MapHomeLandmarkSite.distance($0.latitude, $0.longitude, point.latitude, point.longitude)
+                        > LocationPauseRegionPolicy.radius(horizontalAccuracy: $0.horizontalAccuracy)
+                } ?? true
+                if moved { anchor = point; arrived = reading.timestamp }
+                let keep = moved || reading.timestamp.timeIntervalSince(arrived) < 120
+                    || reading.timestamp.timeIntervalSince(lastKept) >= interval
+                guard keep else { var copy = reading; copy.point = nil; return copy }
+                lastKept = reading.timestamp
+                return reading
+            }
+        }
+        func minutes(_ stays: [PlaceStay]) -> Int { Int(stays.map(\.span.duration).reduce(0, +) / 60) }
+        let files = try FileManager.default.contentsOfDirectory(atPath: folder).filter { $0.hasSuffix(".json") }.sorted()
+        let exports = try files.map { file -> [TodaySensorRawExport] in
+            let data = try Data(contentsOf: URL(fileURLWithPath: folder).appendingPathComponent(file))
+            return try (try? JSONDecoder().decode([TodaySensorRawExport].self, from: data))
+                ?? [JSONDecoder().decode(TodaySensorRawExport.self, from: data)]
+        }
+        for fixMinutes in [5.0, 10, 15, 30] {
+            var points = 0, keptPoints = 0, stays = 0, thinStays = 0, stayMin = 0, thinMin = 0, sleep = 0, thinSleep = 0
+            for days in exports {
+                let readings = days.flatMap(\.readings).sorted { $0.timestamp < $1.timestamp }
+                let thinned = thin(readings, every: fixMinutes * 60)
+                points += readings.filter { $0.point != nil }.count
+                keptPoints += thinned.filter { $0.point != nil }.count
+                let a = PlaceDetectionEngine().detectStays(readings: readings)
+                let b = PlaceDetectionEngine().detectStays(readings: thinned)
+                stays += a.count; thinStays += b.count; stayMin += minutes(a); thinMin += minutes(b)
+                for day in days {
+                    let span = SleepAnalysisEngine.overnightSpan(containing: Calendar.autoupdatingCurrent.startOfDay(for: day.day))
+                    func records(_ list: [SensorReading]) -> Int {
+                        let inside = list.filter { span.contains($0.timestamp) }
+                        guard let last = inside.last?.timestamp else { return 0 }
+                        return PhoneSleepWakeEngine.records(readings: inside, actuals: [], inside: span, watchAvailable: false, maximumSampleGap: 75 * 60, asOf: last).count
+                    }
+                    sleep += records(readings); thinSleep += records(thinned)
+                }
+            }
+            print("GPSTHIN every=\(Int(fixMinutes))m points=\(points)->\(keptPoints) stays=\(stays)->\(thinStays) stayMinutes=\(stayMin)->\(thinMin) sleepRecords=\(sleep)->\(thinSleep)")
+        }
+    }
+
     /// 휴대폰 수면 판정을 하루 갱신과 같은 순서(엄격 규칙 → `PhoneSleepFusion`)로 원본에서 다시 낸다(ALG1102A01 SleepFusion 일원화 전후 비교).
     /// `TEST_RUNNER_TAPTION_RAW_REPLAY_DIR`(원본 json 폴더)이 있을 때만 돈다. 시각과 길이만 찍고 좌표는 찍지 않는다.
     func testReplayPhoneSleepDecision() throws {

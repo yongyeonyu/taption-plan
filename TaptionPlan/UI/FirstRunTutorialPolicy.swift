@@ -13,7 +13,6 @@ enum FirstRunTutorialChapter: Int, CaseIterable {
 enum FirstRunTutorialStep: String, CaseIterable, Identifiable {
     case welcome
     case permissions
-    case sensorInterval
     case dayCardTime
     case home
     case workAndSchool
@@ -44,7 +43,7 @@ enum FirstRunTutorialStep: String, CaseIterable, Identifiable {
     var chapter: FirstRunTutorialChapter {
         switch self {
         case .welcome: .start
-        case .permissions, .sensorInterval, .dayCardTime, .home, .workAndSchool, .salary, .cat: .setup
+        case .permissions, .dayCardTime, .home, .workAndSchool, .salary, .cat: .setup
         case .map, .playback, .sidebarCalendar, .clipEditor, .memos, .summary, .counters: .learn
         case .calendar, .appleWatch, .password: .connect
         case .finish: .finish
@@ -54,7 +53,7 @@ enum FirstRunTutorialStep: String, CaseIterable, Identifiable {
     /// 입력이 있는 단계에만 건너뛰기를 둔다. 설명 단계는 다음이 곧 건너뛰기다.
     var hasInput: Bool {
         switch self {
-        case .permissions, .sensorInterval, .dayCardTime, .home, .workAndSchool, .salary, .cat, .counters, .calendar, .appleWatch, .password: true
+        case .permissions, .dayCardTime, .home, .workAndSchool, .salary, .cat, .counters, .calendar, .appleWatch, .password: true
         default: false
         }
     }
@@ -96,6 +95,8 @@ struct FirstRunTutorialStore {
 
     var savedStep: FirstRunTutorialStep? {
         guard let raw = defaults.string(forKey: Self.stepKey) else { return nil }
+        // 없앤 센서 주기 단계를 보던 사람은 다음 단계부터 잇는다(VER1109A01).
+        if raw == "sensorInterval" { return .dayCardTime }
         if let step = FirstRunTutorialStep(rawValue: raw) { return step }
         let legacy = FirstRunTutorialStep.legacyOrder
         return Int(raw).flatMap { legacy.indices.contains($0) ? legacy[$0] : nil }

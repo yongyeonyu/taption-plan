@@ -283,44 +283,6 @@ struct FirstRunDayCardTimePage: View {
 
 // MARK: - 고양이
 
-/// 메뉴의 GPS 및 센서 데이터와 같은 슬라이더로 기록 간격을 고른다(FRT1105A01).
-struct FirstRunSensorIntervalPage: View {
-    @Bindable var model: AppModel
-    let language: MapHomeLanguage
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                GPSLoggingIntervalSlider(
-                    seconds: model.settings.gpsLoggingPreferences.intervalSeconds,
-                    tint: Color.tpAccent,
-                    onCommit: model.setGPSLoggingIntervalSeconds
-                ) { seconds in
-                    GPSLoggingBatteryIcon(seconds: seconds, tint: Color.tpAccent)
-                }
-                .padding(14)
-                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                FirstRunRowView(
-                    badge: .icon("point.topleft.down.to.point.bottomright.curvepath"),
-                    title: language.text("짧을수록", "Shorter"),
-                    detail: language.text("경로가 촘촘해지고 배터리를 더 씁니다.", "More detailed routes, more battery use.")
-                )
-                FirstRunRowView(
-                    badge: .icon("battery.100percent"),
-                    title: language.text("길수록", "Longer"),
-                    detail: language.text("배터리를 아끼는 대신 경로 기록이 드문드문해집니다.", "Saves battery, with fewer route points.")
-                )
-                FirstRunRowView(
-                    badge: .icon("slider.horizontal.3"),
-                    title: language.text("나중에 바꾸기", "Change later"),
-                    detail: language.text("메뉴 > GPS 및 센서 데이터에서 바꿉니다.", "Change it in Menu > GPS & Sensor Data.")
-                )
-            }
-            .padding(18)
-        }
-    }
-}
-
 /// Watch 앱은 iPhone 앱에 함께 들어 있어, iPhone의 Watch 앱에서 설치한다. 앱이 대신 설치할 수는 없다.
 struct FirstRunAppleWatchPage: View {
     @Bindable var model: AppModel

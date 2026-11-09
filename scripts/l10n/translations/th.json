@@ -2876,6 +2876,14 @@
 "수묵|Ink Wash": "หมึกจีน",
 "아직 도장 없음|Not stamped yet": "ยังไม่มีตรา",
 "장소 도감|Place book": "สมุดสถานที่",
-"찍은 도장 {0} · 남은 곳 {1}|Stamps {0} · To go {1}": "ตรา {0} · เหลือ {1}"
+"찍은 도장 {0} · 남은 곳 {1}|Stamps {0} · To go {1}": "ตรา {0} · เหลือ {1}",
+"{0} {1} 공항|{0} {1} Airport": "สนามบิน{1} {0}",
+"{0} 공항|{0} Airport": "สนามบิน{0}",
+"|By region": "ตามพื้นที่",
+"|By type": "ตามประเภท",
+"|Korea": "เกาหลี",
+"자동 기록을 위해 저전력으로 위치 변화를 지켜보는 동안 상단에 위치 표시가 보일 수 있습니다.|The location icon may stay visible while the app watches for movement at low power to keep automatic records.": "ไอคอนตำแหน่งอาจแสดงค้างไว้ขณะที่แอปเฝ้าดูการเคลื่อนที่แบบประหยัดพลังงานเพื่อบันทึกอัตโนมัติ",
+"중국|China": "จีน",
+"하루를 자동으로 기록하는 데 씁니다. 필요한 것만 허용해도 됩니다. 자동 기록 중에는 상단에 위치 표시가 보일 수 있습니다.|Used to record your day automatically. Allow only what you need. The location icon may stay visible during automatic recording.": "ใช้บันทึกวันของคุณโดยอัตโนมัติ อนุญาตเฉพาะที่ต้องการได้ ระหว่างบันทึกอัตโนมัติ ไอคอนตำแหน่งอาจแสดงอยู่ด้านบน"
 }
 }

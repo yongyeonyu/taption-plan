@@ -78,7 +78,7 @@ daegu	kr.palgongsan	팔공산	Palgongsan	nature	36.0150	128.6950
 daegu	kr.donghwasa	동화사	Donghwasa	building	35.9950	128.7000
 daegu	kr.suseongmot	수성못	Suseong Lake	building	35.8280	128.6180
 daegu	kr.e_world	이월드	E-World	building	35.8540	128.5650
-daegu	kr.kim_gwangseok	김광석다시그리기길	Kim Kwang-seok Street	building	35.8600	128.6070	김광석길,김광석 거리
+daegu	kr.kim_gwangseok	김광석다시그리기길	Kim Kwang-seok Street	building	35.8600	128.6070	방천시장,김광석 다시그리기길
 incheon	kr.incheon_chinatown	인천 차이나타운	Incheon Chinatown	building	37.4750	126.6190
 incheon	kr.wolmido	월미도	Wolmido	area	37.4750	126.5970
 incheon	kr.songdo_central	송도 센트럴파크	Songdo Central Park	building	37.3930	126.6390
@@ -209,7 +209,7 @@ seoul	kr.seoul_city_hall	서울특별시청	Seoul City Hall	building	37.5663	126
 seoul	kr.myeongdong	명동	Myeongdong	building	37.5636	126.9826
 seoul	kr.namsangol	남산골한옥마을	Namsangol Hanok Village	building	37.5592	126.9943
 seoul	kr.national_theater	국립극장	National Theater of Korea	building	37.5525	127.0003
-seoul	kr.seoullo	서울로7017	Seoullo 7017	building	37.5570	126.9700
+seoul	kr.seoullo	서울로7017	Seoullo 7017	building	37.5570	126.9700	서울로,Seoullo 7017
 seoul	kr.sewoon	세운상가	Sewoon Plaza	building	37.5680	126.9960
 seoul	kr.jogyesa	조계사	Jogyesa	building	37.5740	126.9820
 seoul	kr.gilsangsa	길상사	Gilsangsa	building	37.5990	126.9940
@@ -231,7 +231,7 @@ seoul	kr.gocheok	고척스카이돔	Gocheok Sky Dome	building	37.4982	126.8671
 seoul	kr.botanic	서울식물원	Seoul Botanic Park	building	37.5690	126.8350
 seoul	kr.yangcheon_hyanggyo	양천향교	Yangcheon Hyanggyo	building	37.5720	126.8410
 seoul	kr.mullae	문래창작촌	Mullae Art Village	building	37.5150	126.8950
-seoul	kr.hangdong	항동철길	Hangdong Railway	building	37.4910	126.8210
+seoul	kr.hangdong	항동철길	Hangdong Railway	building	37.4910	126.8210	항동 철길,푸른수목원
 seoul	kr.taereung	태릉	Taereung	building	37.6350	127.0950
 seoul	kr.uireung	의릉	Uireung	building	37.6010	127.0590
 seoul	kr.jeongneung	정릉	Jeongneung	building	37.6030	127.0060
@@ -268,12 +268,12 @@ daegu	kr.lions_park	대구삼성라이온즈파크	Daegu Samsung Lions Park	buil
 daegu	kr.biseulsan	비슬산	Biseulsan	nature	35.6950	128.5240
 daegu	kr.dodong_seowon	도동서원	Dodong Seowon	building	35.7280	128.3720
 daegu	kr.gatbawi	갓바위	Gatbawi	building	35.9820	128.8000
-incheon	kr.gaehang	개항장	Incheon Open Port	building	37.4740	126.6200	인천 개항장 거리
+incheon	kr.gaehang	개항장	Incheon Open Port	building	37.4740	126.6200	인천개항박물관,인천 개항장
 incheon	kr.jayu_park	자유공원	Jayu Park	building	37.4760	126.6200
 incheon	kr.sinpo	신포국제시장	Sinpo Market	building	37.4720	126.6250
 incheon	kr.baedari	배다리	Baedari	building	37.4730	126.6370	배다리 헌책방골목
 incheon	kr.soraepogu	소래포구	Soraepogu	area	37.4000	126.7380
-incheon	kr.songdo_tribowl	트라이보울	Tri-Bowl	building	37.3910	126.6400
+incheon	kr.songdo_tribowl	트라이보울	Tri-Bowl	building	37.3910	126.6400	인천 트라이보울,Tri-Bowl
 incheon	kr.airport	인천국제공항	Incheon International Airport	area	37.4602	126.4407
 incheon	kr.ganghwa_sanseong	강화산성	Ganghwa Sanseong	area	37.7480	126.4800
 incheon	kr.baengnyeongdo	백령도	Baengnyeongdo	nature	37.9590	124.6700
@@ -291,7 +291,7 @@ daejeon	kr.science_museum	국립중앙과학관	National Science Museum	building
 daejeon	kr.hanwha_park	대전한화생명볼파크	Daejeon Baseball Park	building	36.3170	127.4290	한화생명 이글스파크
 daejeon	kr.oworld	오월드	O-World	area	36.2880	127.3980
 daejeon	kr.sikjangsan	식장산	Sikjangsan	nature	36.3050	127.4950
-daejeon	kr.jangtaesan	장태산	Jangtaesan	nature	36.2190	127.3400
+daejeon	kr.jangtaesan	장태산	Jangtaesan	nature	36.2190	127.3400	장태산자연휴양림,장태산 휴양림
 daejeon	kr.daejeon_station	대전역	Daejeon Station	building	36.3320	127.4340
 daejeon	kr.euneungjeongi	으능정이거리	Eunhaeng-dong Street	building	36.3280	127.4270
 ulsan	kr.ulsan_tower	울산대교	Ulsan Bridge	building	35.5040	129.3820
@@ -318,7 +318,7 @@ gyeonggi	kr.seolleung_paju	파주출판도시	Paju Book City	area	37.7110	126.68
 gyeonggi	kr.odusan	오두산통일전망대	Odusan Unification Observatory	building	37.7730	126.6770
 gyeonggi	kr.ansan_daebudo	대부도	Daebudo	nature	37.2440	126.5760
 gyeonggi	kr.jebudo	제부도	Jebudo	area	37.1670	126.6200
-gyeonggi	kr.icheon_cerapia	이천 도자예술마을	Icheon Ceramic Village	area	37.2930	127.4400	이천 예스파크
+gyeonggi	kr.icheon_cerapia	이천 도자예술마을	Icheon Ceramic Village	area	37.2930	127.4400	이천세라피아,예스파크
 gyeonggi	kr.gapyeong_jaraseom	자라섬	Jaraseom	area	37.8210	127.5230
 gyeonggi	kr.morning_calm	아침고요수목원	Garden of Morning Calm	building	37.7440	127.3530
 gyeonggi	kr.petite_france	쁘띠프랑스	Petite France	building	37.7050	127.5140
@@ -332,12 +332,12 @@ gangwon	kr.sokcho_jungang	속초관광수산시장	Sokcho Tourist Market	buildin
 gangwon	kr.abai	아바이마을	Abai Village	building	38.2020	128.5950
 gangwon	kr.yeongnangho	영랑호	Yeongnangho	area	38.2150	128.5790
 gangwon	kr.samcheok_cave	환선굴	Hwanseongul	building	37.3290	129.0170
-gangwon	kr.samcheok_rail	삼척해양레일바이크	Samcheok Ocean Rail Bike	building	37.3420	129.3050
+gangwon	kr.samcheok_rail	삼척해양레일바이크	Samcheok Ocean Rail Bike	building	37.3420	129.3050	궁촌역,용화역
 gangwon	kr.taebaeksan	태백산	Taebaeksan	nature	37.0950	128.9170
-gangwon	kr.jeongseon	정선5일장	Jeongseon Market	building	37.3800	128.6600	정선아리랑시장
+gangwon	kr.jeongseon	정선5일장	Jeongseon Market	building	37.3800	128.6600	정선시장,정선아리랑시장
 gangwon	kr.hwajinpo	화진포	Hwajinpo	area	38.4750	128.4430
 gangwon	kr.yanggu_punch	해안분지	Haean Basin	nature	38.2800	128.1300	펀치볼
-chungbuk	kr.danyang_mancheonha	만천하스카이워크	Mancheonha Skywalk	building	36.9880	128.3460
+chungbuk	kr.danyang_mancheonha	만천하스카이워크	Mancheonha Skywalk	building	36.9880	128.3460	만학천봉,만천하 스카이워크
 chungbuk	kr.guinsa	구인사	Guinsa	building	37.0280	128.4890
 chungbuk	kr.sobaeksan	소백산	Sobaeksan	nature	36.9570	128.4850
 chungbuk	kr.chungjuho	충주호	Chungju Lake	nature	36.9500	128.1000
@@ -402,14 +402,14 @@ gyeongnam	kr.daraengi	다랭이마을	Daraengi Village	area	34.7270	127.8930	남
 gyeongnam	kr.changwon_lake	주남저수지	Junam Reservoir	area	35.3120	128.6780
 gyeongnam	kr.masan_gagopa	돝섬	Dotseom	area	35.1800	128.5850
 gyeongnam	kr.gimhae_tomb	수로왕릉	Tomb of King Suro	building	35.2330	128.8750
-gyeongnam	kr.sancheong	남명조식유적지	Sancheong Namsa Village	area	35.3100	127.9500	산청 남사예담촌,남사예담촌
+gyeongnam	kr.sancheong	남명조식유적지	Sancheong Namsa Village	area	35.3100	127.9500	남사마을,남사예담촌
 gyeongnam	kr.hwagaejangteo	화개장터	Hwagae Market	building	35.1870	127.6240
 gyeongnam	kr.ssanggyesa	쌍계사	Ssanggyesa	building	35.2380	127.6410
 gyeongnam	kr.choe_chamnan	최참판댁	Choi Champan House	building	35.1540	127.6340	하동 최참판댁
 gyeongnam	kr.hwangmaesan	황매산	Hwangmaesan	nature	35.4920	127.9700
 jeju	kr.hamdeok	함덕해수욕장	Hamdeok Beach	area	33.5430	126.6690
-jeju	kr.woljeongri	월정리해변	Woljeong-ri Beach	area	33.5560	126.7960
-jeju	kr.aewol	애월 한담해변	Aewol Handam Beach	area	33.4620	126.3100	한담해변
+jeju	kr.woljeongri	월정리해변	Woljeong-ri Beach	area	33.5560	126.7960	월정리해수욕장,월정리
+jeju	kr.aewol	애월 한담해변	Aewol Handam Beach	area	33.4620	126.3100	한담공원,곽지해수욕장,애월읍
 jeju	kr.oedolgae	외돌개	Oedolgae	building	33.2400	126.5450
 jeju	kr.jusangjeolli	대포주상절리	Daepo Jusangjeolli	building	33.2380	126.4250	중문대포해안주상절리대
 jeju	kr.sanbangsan	산방산	Sanbangsan	nature	33.2410	126.3120
@@ -423,7 +423,7 @@ jeju	kr.saebyeol	새별오름	Saebyeol Oreum	area	33.3660	126.3580
 jeju	kr.yongmeori	용머리해안	Yongmeori Coast	area	33.2320	126.3150
 gangwon	kr.bangyeri_ginkgo	반계리 은행나무	Bangye-ri Ginkgo Tree	building	37.3670	127.8090	원주 반계리 은행나무,원주 반계리의 은행나무
 gangwon	kr.hongcheon_ginkgo	홍천 은행나무숲	Hongcheon Ginkgo Forest	building	37.8730	128.3650
-gangwon	kr.inje_birch	원대리 자작나무숲	Wondae-ri Birch Forest	area	38.0350	128.2300	인제 자작나무숲
+gangwon	kr.inje_birch	원대리 자작나무숲	Wondae-ri Birch Forest	area	38.0350	128.2300	속삭이는 자작나무숲,원대리
 gangwon	kr.daegwallyeong_sheep	대관령양떼목장	Daegwallyeong Sheep Ranch	area	37.6880	128.7510
 gangwon	kr.hanbando	한반도지형	Korean Peninsula-shaped Terrain	area	37.2240	128.3410	영월 한반도 지형
 gangwon	kr.cheongnyeongpo	청령포	Cheongnyeongpo	area	37.1760	128.4460
@@ -439,13 +439,13 @@ jeonnam	kr.gwanbangjerim	관방제림	Gwanbangjerim	building	35.3300	126.9870	�
 jeonnam	kr.soswaewon	소쇄원	Soswaewon	building	35.1830	127.0130	담양 소쇄원
 jeonnam	kr.sansuyu	구례 산수유마을	Gurye Sansuyu Village	area	35.2650	127.4720	구례 산동면 산수유마을
 jeonnam	kr.gwangyang_maehwa	광양 매화마을	Gwangyang Maehwa Village	area	35.0710	127.7480
-jeonnam	kr.seryangji	세량지	Seryangji	building	34.9990	127.0200	화순 세량지
+jeonnam	kr.seryangji	세량지	Seryangji	building	34.9990	127.0200	세량제,세량저수지
 gyeongbuk	kr.jusanji	주산지	Jusanji	building	36.3370	129.0090	청송 주산지
 gyeongbuk	kr.yonggye_ginkgo	용계리 은행나무	Yonggye-ri Ginkgo Tree	building	36.6000	128.9500	안동 용계리 은행나무
 gyeongbuk	kr.ungok_ginkgo	운곡서원 은행나무	Ungok Seowon Ginkgo Tree	building	35.9320	129.2980	경주 운곡서원
-gyeongbuk	kr.geumgang_pine	금강소나무숲길	Geumgang Pine Forest Trail	area	36.8900	129.1700	울진 금강소나무숲길,울진 소광리 금강소나무숲
+gyeongbuk	kr.geumgang_pine	금강소나무숲길	Geumgang Pine Forest Trail	area	36.8900	129.1700	소광리,울진 소광리
 daegu	kr.dodong_cypress	도동 측백나무숲	Dodong Oriental Arborvitae Forest	building	35.8970	128.6430	대구 도동 측백나무 숲
-gyeongnam	kr.hadong_cherry	십리벚꽃길	Simni Cherry Blossom Road	area	35.2150	127.6330	하동 십리벚꽃길
+gyeongnam	kr.hadong_cherry	십리벚꽃길	Simni Cherry Blossom Road	area	35.2150	127.6330	화개장터,쌍계사
 incheon	kr.chamseongdan	참성단	Chamseongdan	building	37.6130	126.4240	강화 참성단
 seoul	kr.sinlim_oak	신림동 굴참나무	Sillim-dong Oriental Cork Oak	building	37.4760	126.9310	서울 신림동 굴참나무
 jeju	kr.jeju_camellia	카멜리아힐	Camellia Hill	building	33.2900	126.3700
@@ -665,7 +665,7 @@ gyeongnam	kr.yokjido	욕지도	Yokjido	nature	34.6300	128.2600
 gyeongnam	kr.bijindo	비진도	Bijindo	area	34.7300	128.4600
 gyeongnam	kr.maemuldo	매물도	Maemuldo	area	34.6400	128.5700
 gyeongnam	kr.saryangdo	사량도	Saryangdo	nature	34.8300	128.2100
-seoul	kr.deoksugung_wall	덕수궁 돌담길	Deoksugung Stone Wall Road	building	37.5655	126.9745	덕수궁 돌담
+seoul	kr.deoksugung_wall	덕수궁 돌담길	Deoksugung Stone Wall Road	building	37.5655	126.9745	정동길,덕수궁
 gangwon	kr.misiryeong	미시령옛길	Misiryeong Old Road	nature	38.2190	128.4700	미시령
 gangwon	kr.hangyeryeong	한계령	Hangyeryeong	nature	38.1060	128.3360
 gangwon	kr.daegwallyeong	대관령옛길	Daegwallyeong Old Road	nature	37.6880	128.7560	대관령
@@ -676,22 +676,22 @@ gangwon	kr.haesanryeong	해산령	Haesanryeong	nature	38.1200	127.8000	해산터
 jeonbuk	kr.jeongnyeongchi	정령치	Jeongnyeongchi	nature	35.3590	127.5320
 gyeongnam	kr.jianjae	지안재	Jianjae	nature	35.4080	127.6800	오도재
 jeonbuk	kr.okjeongho	옥정호 순환도로	Okjeongho Circular Road	nature	35.6090	127.1400	옥정호
-jeonnam	kr.baeksu	백수해안도로	Baeksu Coastal Road	nature	35.2810	126.3700	영광 백수해안도로
+jeonnam	kr.baeksu	백수해안도로	Baeksu Coastal Road	nature	35.2810	126.3700	백수읍,영광 노을전시관
 gyeongnam	kr.mulmi	물미해안도로	Mulmi Coastal Road	nature	34.8200	128.0300	물건리
 gyeongnam	kr.changseon_bridge	창선·삼천포대교	Changseon-Samcheonpo Bridge	nature	34.9240	128.0500	창선삼천포대교,삼천포대교
 gyeongnam	kr.sanyang	산양일주도로	Sanyang Circular Road	nature	34.8000	128.4000	달아공원,미륵도
 gyeongnam	kr.haegeumgang	해금강 해안도로	Haegeumgang Coastal Road	nature	34.7500	128.6800	해금강
 busan	kr.dalmaji	달맞이길	Dalmaji-gil	nature	35.1590	129.1760	달맞이고개
-gyeongnam	kr.seomjin	섬진강변도로	Seomjin River Road	nature	35.1900	127.6100	섬진강
+gyeongnam	kr.seomjin	섬진강변도로	Seomjin River Road	nature	35.1900	127.6250	화개장터,하동 악양
 jeonnam	kr.yisunsin_bridge	이순신대교	Yi Sun-sin Bridge	nature	34.9080	127.7060
 gyeongnam	kr.geoga	거가대교	Geoga Bridge	nature	35.0140	128.8170
 gyeongnam	kr.jeodo	저도연륙교	Jeodo Bridge	nature	35.0860	128.5840	콰이강의 다리
 chungbuk	kr.cheongpung	청풍호반도로	Cheongpung Lake Road	nature	37.0000	128.1700	청풍호
-chungbuk	kr.malti	말티재	Malti Pass	nature	36.5310	127.8260
+chungbuk	kr.malti	말티재	Malti Pass	nature	36.5290	127.8110	말티고개,보은 말티재
 gyeonggi	kr.cheongpyeong	청평호반도로	Cheongpyeong Lake Road	nature	37.7300	127.4300	청평호
 jeju	kr.bijarim_road	비자림로	Bijarim-ro	nature	33.4500	126.7100
 jeju	kr.noksan	녹산로	Noksan-ro	nature	33.3900	126.7300	가시리
-jeju	kr.road1100	1100도로	1100 Road	nature	33.3580	126.4630	1100고지
+jeju	kr.road1100	1100도로	1100 Road	nature	33.3580	126.4630	1100고지휴게소,1100고지
 gyeongbuk	kr.ulleung_road	울릉순환로	Ulleung Circular Road	nature	37.5000	130.8500	울릉도 해안도로
 jeonnam	kr.geogeum_bridge	거금대교	Geogeum Bridge	nature	34.4900	127.2200
 abroad	intl.cn.ningbo	닝보	Ningbo	city	29.8683	121.5440
@@ -704,9 +704,9 @@ jeonnam	kr.r100_nogodan	노고단도로	Nogodan Road	nature	35.2950	127.5300	성
 gyeongbuk	kr.r100_mungyeong_road	문경새재 과거길	Mungyeong Saejae Road	nature	36.7600	128.0810	문경새재
 jeonnam	kr.r100_jindo_bridge	진도대교	Jindo Bridge	nature	34.5660	126.3070
 daegu	kr.r100_dongdaegu	동대구로	Dongdaegu-ro	nature	35.8590	128.6260
-jeonnam	kr.r100_seomjin_azalea	섬진강 철쭉꽃 도로	Seomjin Azalea Road	nature	35.2600	127.3300	곡성 섬진강,곡성 기차마을
+jeonnam	kr.r100_seomjin_azalea	섬진강 철쭉꽃 도로	Seomjin Azalea Road	nature	35.2600	127.3300	곡성역,곡성섬진강기차마을
 busan	kr.r100_forty_steps	40계단 특화거리	40 Steps Street	building	35.1030	129.0350	40계단,40계단문화관
-chungbuk	kr.r100_cheongju_street	청주 가로수길	Cheongju Tree-lined Road	nature	36.6370	127.4050	청주 가로수길
+chungbuk	kr.r100_cheongju_street	청주 가로수길	Cheongju Tree-lined Road	nature	36.6370	127.4050	청주 강서동,플라타너스 가로수길
 chungbuk	kr.r100_nongdari	농다리	Nongdari	building	36.8030	127.4900	진천 농다리
 chungbuk	kr.r100_geumgang_expressway	금강휴게소	Geumgang Section Expressway	nature	36.2730	127.6620	금강휴게소
 seoul	kr.r100_hangang_road	한강시민공원길	Hangang Park Road	nature	37.5284	126.9326	여의도한강공원
@@ -740,10 +740,10 @@ gyeongbuk	kr.r100_jungnyeong	죽령옛길	Jungnyeong Old Road	nature	36.8900	128
 seoul	kr.r100_yangjaecheon	양재천	Yangjaecheon	nature	37.4870	127.0500
 gangwon	kr.r100_hoengseong_bridge	횡성대교	Hoengseong Bridge	nature	37.4800	128.0200	횡성호
 gyeongnam	kr.r100_namhae_bridge	남해대교	Namhae Bridge	nature	34.9300	127.8700
-chungnam	kr.r100_seokmun	석문방조제	Seokmun Seawall	nature	36.9900	126.5500
+chungnam	kr.r100_seokmun	석문방조제	Seokmun Seawall	nature	36.9900	126.5500	석문호,당진 석문면
 chungbuk	kr.r100_cheongnam_road	청남대 진입로	Cheongnamdae Road	nature	36.4610	127.4900	청남대
 jeonnam	kr.r100_boseong_daewon	보성 대원사	Boseong Daewonsa Road	building	34.8800	127.0900
-jeonbuk	kr.r100_najetongmun	나제통문	Najetongmun	building	35.9710	127.7750
+jeonbuk	kr.r100_najetongmun	나제통문	Najetongmun	building	35.9710	127.7750	무주 설천면,무주구천동
 jeju	kr.r100_sagye	사계해안도로	Sagye Coastal Road	nature	33.2200	126.3100	사계해안,사계해변
 jeonnam	kr.r100_ttangkkeut_road	땅끝 가는 길	Road to Ttangkkeut	nature	34.2970	126.5300	땅끝마을
 gyeongbuk	kr.r100_yeongdeok	영덕대게로	Yeongdeok Daege-ro	nature	36.4200	129.3900	강구항
@@ -766,7 +766,7 @@ gyeonggi	kr.r100_yongdam	양평대교	Yangpyeong Bridge Road	nature	37.4900	127.
 gyeonggi	kr.r100_seohae_bridge	서해대교	Seohae Bridge	nature	36.9620	126.8420
 incheon	kr.r100_yeongjong_bridge	영종대교	Yeongjong Bridge	nature	37.5450	126.5850
 chungnam	kr.r100_taean_road	태안 해안도로	Taean Coastal Road	nature	36.7470	126.3000	태안
-jeonnam	kr.r100_yeongam_cherry	영암 벚꽃길	Yeongam Cherry Road	nature	34.7700	126.7000	왕인박사유적지
+jeonnam	kr.r100_yeongam_cherry	영암 벚꽃길	Yeongam Cherry Road	nature	34.7700	126.7000	영암읍,왕인박사유적지
 seoul	kr.r100_banghwa_bridge	방화대교	Banghwa Bridge	building	37.5820	126.8170
 chungbuk	kr.r100_janghoe	장회나루	Janghoe Section	nature	36.9500	128.3000
 jeonbuk	kr.r100_saemgol	정읍 샘골	Saemgol Bridge	nature	35.5700	126.8560	정읍천

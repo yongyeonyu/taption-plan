@@ -49,3 +49,19 @@ extension LocationPauseRegionPolicy {
         trigger == .region || updatesPausedBySystem
     }
 }
+
+/// 머문 자리에서는 측정 구간마다 GPS를 켜지 않는다(VER1109A01, 대표 결정 2026-11-09).
+/// 위치를 지어내지 않고 10분마다 실제로 잰다(원본 21개 비교로 정함: 머문 시간 손실 약 2.5%). 머묾 판정이 점 간격 90분까지 잇고
+/// (`PlaceDetectionEngine.maximumSampleGap`) 벗어나면 감시 구역·움직임으로 바로 켜지므로 체류가 끊기지 않는다.
+enum StationaryGPSPolicy {
+    static let fixInterval: TimeInterval = 10 * 60
+
+    static func requestsFix(stayRegionArmed: Bool, keepsStreamsActive: Bool, lastFixAt: Date?, now: Date) -> Bool {
+        guard stayRegionArmed, !keepsStreamsActive, let lastFixAt else { return true }
+        return now.timeIntervalSince(lastFixAt) >= fixInterval
+    }
+
+    static func wakesGPS(for motion: MotionKind) -> Bool {
+        motion != .stationary && motion != .unknown
+    }
+}

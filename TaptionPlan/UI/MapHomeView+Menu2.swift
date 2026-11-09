@@ -244,75 +244,33 @@ extension MapHomeView {
         }
     }
 
+    /// 기록 간격은 앱이 정한 값으로 고정했다(VER1109A01). 여기는 수집 상태만 보여 준다.
     var gpsLoggingMenuItem: some View {
         let isLogging = model.sensorCollectionSessionState == .collecting
         let tint = Color.tpReferenceRose
-        let preferences = model.settings.gpsLoggingPreferences
-        return VStack(spacing: 8) {
-            Button {
-                isGPSLoggingMenuExpanded.toggle()
-            } label: {
-                HStack(spacing: 13) {
-                    Image(systemName: isLogging ? "location.fill" : "location.viewfinder")
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .semibold))
-                        .foregroundStyle(tint)
-                        .frame(width: 24)
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(language.text("GPS 및 센서 데이터", "GPS & Sensor Data"))
-                                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .semibold))
-                        Text(sensorCollectionStatusText)
-                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
-                        .foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    Image(
-                        systemName: isGPSLoggingMenuExpanded
-                            ? "chevron.up"
-                            : "chevron.down"
-                    )
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
+        return HStack(spacing: 13) {
+            Image(systemName: isLogging ? "location.fill" : "location.viewfinder")
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(width: 24)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(language.text("GPS 및 센서 데이터", "GPS & Sensor Data"))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .semibold))
+                Text(sensorCollectionStatusText)
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                     .foregroundStyle(.secondary)
-                }
-                .foregroundStyle(Color.primary)
-                .padding(.vertical, 12)
-                .padding(.horizontal, 12)
-                .background(
-                    tint.opacity(0.08),
-                    in: RoundedRectangle(cornerRadius: 12)
-                )
-                .contentShape(Rectangle())
+                Text(language.text("자동 기록을 위해 저전력으로 위치 변화를 지켜보는 동안 상단에 위치 표시가 보일 수 있습니다.", "The location icon may stay visible while the app watches for movement at low power to keep automatic records."))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .regular))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(
-                language.text(
-                    "GPS 및 센서 데이터 설정",
-                    "GPS and sensor settings"
-                )
-            )
-            .accessibilityValue(
-                gpsLoggingIntervalText(preferences.effectiveIntervalSeconds)
-            )
-
-            if isGPSLoggingMenuExpanded {
-                GPSLoggingIntervalSlider(
-                    seconds: preferences.intervalSeconds,
-                    tint: tint,
-                    onCommit: model.setGPSLoggingIntervalSeconds
-                ) { seconds in
-                    GPSLoggingBatteryIcon(seconds: seconds, tint: tint)
-                }
-                .padding(.horizontal, 12)
-                .padding(.bottom, 8)
-            }
+            Spacer()
         }
-    }
-
-    func gpsLoggingIntervalText(_ seconds: Int) -> String {
-        let interval = GPSLoggingPreferences.intervalText(seconds)
-        return language.text(
-            "\(interval)마다 위치 확인",
-            "Checks location every \(interval)"
-        )
+        .foregroundStyle(Color.primary)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 12)
+        .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+        .accessibilityElement(children: .combine)
     }
 
     @ViewBuilder

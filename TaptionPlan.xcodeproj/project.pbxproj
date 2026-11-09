@@ -509,7 +509,6 @@
 		A1000000000000000B1102E5 /* MapHomeSalarySettingsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102E5 /* MapHomeSalarySettingsSheet.swift */; };
 		A1000000000000000B1102A9 /* MapHomeInteractionMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102A9 /* MapHomeInteractionMonitor.swift */; };
 		A1000000000000000B1102D1 /* MapHomeSidebarNote.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102D1 /* MapHomeSidebarNote.swift */; };
-		A1000000000000000B1102E7 /* GPSLoggingIntervalSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102E7 /* GPSLoggingIntervalSlider.swift */; };
 		A1000000000000000B1103A1 /* MapHomeHomeSkyMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1103A1 /* MapHomeHomeSkyMath.swift */; };
 		A1000000000000000B1103E1 /* TaptionSeasonTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1103E1 /* TaptionSeasonTheme.swift */; };
 		A1000000000000000B1103E2 /* MapHomeDeveloperMail.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1103E2 /* MapHomeDeveloperMail.swift */; };
@@ -1141,7 +1140,6 @@
 		F1000000000000000B1102E5 /* MapHomeSalarySettingsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeSalarySettingsSheet.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102A9 /* MapHomeInteractionMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeInteractionMonitor.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102D1 /* MapHomeSidebarNote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeSidebarNote.swift; sourceTree = "<group>"; };
-		F1000000000000000B1102E7 /* GPSLoggingIntervalSlider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GPSLoggingIntervalSlider.swift; sourceTree = "<group>"; };
 		F1000000000000000B1103A1 /* MapHomeHomeSkyMath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeHomeSkyMath.swift; sourceTree = "<group>"; };
 		F1000000000000000B1103E1 /* TaptionSeasonTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionSeasonTheme.swift; sourceTree = "<group>"; };
 		F1000000000000000B1103E2 /* MapHomeDeveloperMail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeDeveloperMail.swift; sourceTree = "<group>"; };
@@ -1599,7 +1597,6 @@
 				F1000000000000000B1102E5 /* MapHomeSalarySettingsSheet.swift */,
 				F1000000000000000B1102A9 /* MapHomeInteractionMonitor.swift */,
 				F1000000000000000B1102D1 /* MapHomeSidebarNote.swift */,
-				F1000000000000000B1102E7 /* GPSLoggingIntervalSlider.swift */,
 				F1000000000000000B1103A1 /* MapHomeHomeSkyMath.swift */,
 				F1000000000000000B1103E1 /* TaptionSeasonTheme.swift */,
 				F1000000000000000B1103E2 /* MapHomeDeveloperMail.swift */,
@@ -2480,7 +2477,6 @@
 				A1000000000000000B1102E5 /* MapHomeSalarySettingsSheet.swift in Sources */,
 				A1000000000000000B1102A9 /* MapHomeInteractionMonitor.swift in Sources */,
 				A1000000000000000B1102D1 /* MapHomeSidebarNote.swift in Sources */,
-				A1000000000000000B1102E7 /* GPSLoggingIntervalSlider.swift in Sources */,
 				A1000000000000000B1103A1 /* MapHomeHomeSkyMath.swift in Sources */,
 				A1000000000000000B1103E1 /* TaptionSeasonTheme.swift in Sources */,
 				A1000000000000000B1103E2 /* MapHomeDeveloperMail.swift in Sources */,
