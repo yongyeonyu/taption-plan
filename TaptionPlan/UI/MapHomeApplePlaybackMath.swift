@@ -76,6 +76,7 @@ enum MapHomeAppleAnnotationKind {
     case photo(MapHomePhotoCluster, coverID: String, isHighlighted: Bool)
     case search(MapHomeSearchResult)
     case pawprint(MapHomeApplePawprint)
+    case travelStop(number: Int)
 }
 
 extension MapHomeAppleAnnotationKind {
@@ -113,6 +114,8 @@ extension MapHomeAppleAnnotationKind {
             hasher.combine(8); hasher.combine(cluster.id); hasher.combine(cluster.count); hasher.combine(coverID); hasher.combine(isHighlighted)
         case .search(let result):
             hasher.combine(6); hasher.combine(result.title); hasher.combine(result.subtitle)
+        case .travelStop(let number):
+            hasher.combine(9); hasher.combine(number)
         case .pawprint(let paw):
             hasher.combine(7); hasher.combine(paw.index); hasher.combine(paw.angle)
             hasher.combine(paw.isPredicted); hasher.combine(paw.isSelectedRoute); hasher.combine(paw.speedMetersPerSecond)

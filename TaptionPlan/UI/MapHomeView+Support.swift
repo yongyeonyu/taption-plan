@@ -611,16 +611,15 @@ extension MapHomeView {
                 )
             }
         }
-        .sheet(isPresented: $isPlaceBookPresented) {
+        .fullScreenCover(isPresented: $isPlaceBookPresented) {
             MapHomePlaceBookSheet(
-                frequentPlaces: model.settings.frequentPlaces,
                 stays: model.snapshot.places,
                 language: language,
+                model: model,
+                currentCoordinate: currentCoordinate,
                 onSelect: showPlaceBookEntryOnMap,
                 loadDrivePasses: { await model.placeBookDrivePasses() }
             )
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $isMapAttributionPresented) {
             MapHomeAttributionSheet(language: language)

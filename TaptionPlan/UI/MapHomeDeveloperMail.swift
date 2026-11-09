@@ -63,6 +63,7 @@ struct MapHomeDeveloperAttachment: Identifiable {
     let id = UUID()
     let url: URL
     let subject: String
+    var mimeType = "application/zip"
 }
 
 struct MapHomeDeveloperMailSheet: UIViewControllerRepresentable {
@@ -80,7 +81,7 @@ struct MapHomeDeveloperMailSheet: UIViewControllerRepresentable {
         mail.mailComposeDelegate = context.coordinator
         mail.setToRecipients([MapHomeDeveloperMail.recipient])
         mail.setSubject(attachment.subject)
-        mail.addAttachmentData(data, mimeType: "application/zip", fileName: attachment.url.lastPathComponent)
+        mail.addAttachmentData(data, mimeType: attachment.mimeType, fileName: attachment.url.lastPathComponent)
         return mail
     }
 

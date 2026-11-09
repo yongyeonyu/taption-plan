@@ -2884,6 +2884,16 @@
 "|Korea": "Hàn Quốc",
 "자동 기록을 위해 저전력으로 위치 변화를 지켜보는 동안 상단에 위치 표시가 보일 수 있습니다.|The location icon may stay visible while the app watches for movement at low power to keep automatic records.": "Biểu tượng vị trí có thể vẫn hiển thị khi ứng dụng theo dõi di chuyển ở mức tiết kiệm pin để tự động ghi lại.",
 "중국|China": "Trung Quốc",
-"하루를 자동으로 기록하는 데 씁니다. 필요한 것만 허용해도 됩니다. 자동 기록 중에는 상단에 위치 표시가 보일 수 있습니다.|Used to record your day automatically. Allow only what you need. The location icon may stay visible during automatic recording.": "Dùng để tự động ghi lại một ngày của bạn. Chỉ cần cho phép những gì bạn muốn. Trong khi tự động ghi lại, biểu tượng vị trí có thể vẫn hiển thị."
+"하루를 자동으로 기록하는 데 씁니다. 필요한 것만 허용해도 됩니다. 자동 기록 중에는 상단에 위치 표시가 보일 수 있습니다.|Used to record your day automatically. Allow only what you need. The location icon may stay visible during automatic recording.": "Dùng để tự động ghi lại một ngày của bạn. Chỉ cần cho phép những gì bạn muốn. Trong khi tự động ghi lại, biểu tượng vị trí có thể vẫn hiển thị.",
+"큰 지도에서 보기|Open in full map": "Mở trên bản đồ lớn",
+"가상 방문 찍기·지우기|Toggle test visit": "Bật/tắt lượt thăm thử",
+"메일 보내기|Send email": "Gửi email",
+"설명|Description": "Mô tả",
+"아직 담은 곳이 없습니다.|No stops yet.": "Chưa có điểm dừng nào.",
+"여행 계획|Trip plan": "Kế hoạch du lịch",
+"여행에 추가|Add to trip": "Thêm vào chuyến đi",
+"장소 등록 요청|Request a place": "Yêu cầu thêm địa điểm",
+"지도를 움직여 핀을 맞춰 주세요.|Move the map to place the pin.": "Di chuyển bản đồ để đặt ghim.",
+"테스트 모드 · 기록에 저장되지 않음|Test mode · not saved": "Chế độ thử · không lưu"
 }
 }

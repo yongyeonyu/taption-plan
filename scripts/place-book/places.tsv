@@ -274,7 +274,7 @@ incheon	kr.sinpo	신포국제시장	Sinpo Market	building	37.4720	126.6250
 incheon	kr.baedari	배다리	Baedari	building	37.4730	126.6370	배다리 헌책방골목
 incheon	kr.soraepogu	소래포구	Soraepogu	area	37.4000	126.7380
 incheon	kr.songdo_tribowl	트라이보울	Tri-Bowl	building	37.39425	126.63483	Tribowl Songdo
-incheon	kr.airport	인천국제공항	Incheon International Airport	area	37.4602	126.4407
+incheon	kr.airport	인천국제공항	Incheon International Airport	airport	37.4602	126.4407
 incheon	kr.ganghwa_sanseong	강화산성	Ganghwa Sanseong	area	37.7480	126.4800
 incheon	kr.baengnyeongdo	백령도	Baengnyeongdo	nature	37.9590	124.6700
 incheon	kr.muuido	무의도	Muuido	nature	37.3890	126.4150
@@ -770,3 +770,8 @@ jeonnam	kr.r100_yeongam_cherry	영암 벚꽃길	Yeongam Cherry Road	nature	34.77
 seoul	kr.r100_banghwa_bridge	방화대교	Banghwa Bridge	building	37.5820	126.8170
 chungbuk	kr.r100_janghoe	장회나루	Janghoe Section	nature	36.9500	128.3000
 jeonbuk	kr.r100_saemgol	정읍 샘골	Saemgol Bridge	nature	35.5700	126.8560	정읍천
+seoul	kr.airport_gmp	김포국제공항	Gimpo International Airport	airport	37.5583	126.7906
+busan	kr.airport_pus	김해국제공항	Gimhae International Airport	airport	35.1795	128.9382
+jeju	kr.airport_cju	제주국제공항	Jeju International Airport	airport	33.5113	126.4930
+daegu	kr.airport_tae	대구국제공항	Daegu International Airport	airport	35.8941	128.6589
+chungbuk	kr.airport_cjj	청주국제공항	Cheongju International Airport	airport	36.7166	127.4991

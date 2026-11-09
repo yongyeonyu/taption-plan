@@ -30,6 +30,7 @@ enum MapHomeKoreaPlaceBookData {
         .init(id: "sea", name: "바다", englishName: "Sea"),
         .init(id: "tree", name: "나무·숲", englishName: "Trees & forests"),
         .init(id: "drive", name: "드라이브", englishName: "Scenic drives"),
+        .init(id: "airport", name: "공항", englishName: "Airports"),
     ]
 
     static let places: [MapHomeKoreaPlace] = [
@@ -309,7 +310,7 @@ enum MapHomeKoreaPlaceBookData {
         .init(id: "kr.baedari", region: "incheon", name: "배다리", englishName: "Baedari", theme: "landmark", kind: .building, latitude: 37.47279, longitude: 126.63609),
         .init(id: "kr.soraepogu", region: "incheon", name: "소래포구", englishName: "Soraepogu", theme: "sea", kind: .area, latitude: 37.40097, longitude: 126.73354),
         .init(id: "kr.songdo_tribowl", region: "incheon", name: "트라이보울", englishName: "Tri-Bowl", theme: "landmark", kind: .building, latitude: 37.39425, longitude: 126.63483),
-        .init(id: "kr.airport", region: "incheon", name: "인천국제공항", englishName: "Incheon International Airport", theme: "landmark", kind: .area, latitude: 37.46250, longitude: 126.43917),
+        .init(id: "kr.airport", region: "incheon", name: "인천국제공항", englishName: "Incheon International Airport", theme: "airport", kind: .airport, latitude: 37.46250, longitude: 126.43917),
         .init(id: "kr.ganghwa_sanseong", region: "incheon", name: "강화산성", englishName: "Ganghwa Sanseong", theme: "landmark", kind: .area, latitude: 37.75556, longitude: 126.47694),
         .init(id: "kr.baengnyeongdo", region: "incheon", name: "백령도", englishName: "Baengnyeongdo", theme: "island", kind: .nature, latitude: 37.96667, longitude: 124.65000),
         .init(id: "kr.muuido", region: "incheon", name: "무의도", englishName: "Muuido", theme: "island", kind: .nature, latitude: 37.39194, longitude: 126.41556),
@@ -805,5 +806,10 @@ enum MapHomeKoreaPlaceBookData {
         .init(id: "kr.r100_banghwa_bridge", region: "seoul", name: "방화대교", englishName: "Banghwa Bridge", theme: "drive", kind: .building, latitude: 37.58806, longitude: 126.82639),
         .init(id: "kr.r100_janghoe", region: "chungbuk", name: "장회나루", englishName: "Janghoe Section", theme: "drive", kind: .nature, latitude: 36.92979, longitude: 128.25277),
         .init(id: "kr.r100_saemgol", region: "jeonbuk", name: "정읍 샘골", englishName: "Saemgol Bridge", theme: "drive", kind: .nature, latitude: 35.56076, longitude: 126.85557),
+        .init(id: "kr.airport_gmp", region: "seoul", name: "김포국제공항", englishName: "Gimpo International Airport", theme: "airport", kind: .airport, latitude: 37.55694, longitude: 126.79750),
+        .init(id: "kr.airport_pus", region: "busan", name: "김해국제공항", englishName: "Gimhae International Airport", theme: "airport", kind: .airport, latitude: 35.18056, longitude: 128.93806),
+        .init(id: "kr.airport_cju", region: "jeju", name: "제주국제공항", englishName: "Jeju International Airport", theme: "airport", kind: .airport, latitude: 33.51222, longitude: 126.49278),
+        .init(id: "kr.airport_tae", region: "daegu", name: "대구국제공항", englishName: "Daegu International Airport", theme: "airport", kind: .airport, latitude: 35.89417, longitude: 128.65889),
+        .init(id: "kr.airport_cjj", region: "chungbuk", name: "청주국제공항", englishName: "Cheongju International Airport", theme: "airport", kind: .airport, latitude: 36.71639, longitude: 127.49917),
     ]
 }

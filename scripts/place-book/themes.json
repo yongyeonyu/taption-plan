@@ -212,5 +212,13 @@
   "kr.r100_banghwa_bridge",
   "kr.r100_janghoe",
   "kr.r100_saemgol"
+ ],
+ "airport": [
+  "kr.airport",
+  "kr.airport_gmp",
+  "kr.airport_pus",
+  "kr.airport_cju",
+  "kr.airport_tae",
+  "kr.airport_cjj"
  ]
 }

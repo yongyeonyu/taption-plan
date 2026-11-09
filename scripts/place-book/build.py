@@ -22,7 +22,7 @@ CACHE = HERE / "wikidata-cache.json"
 ICONS = HERE.parents[1] / "TaptionPlan/Assets.xcassets/PlaceBook"
 API = "https://www.wikidata.org/w/api.php"
 OSM = "https://nominatim.openstreetmap.org/search"
-MAX_DISTANCE_M = {"building": 1_500, "area": 3_000, "nature": 12_000, "city": 40_000, "largeIsland": 20_000}
+MAX_DISTANCE_M = {"building": 1_500, "area": 3_000, "nature": 12_000, "city": 40_000, "largeIsland": 20_000, "airport": 4_000}
 REGIONS = [
     ("seoul", "서울", "Seoul"), ("busan", "부산", "Busan"), ("daegu", "대구", "Daegu"),
     ("incheon", "인천", "Incheon"), ("gwangju", "광주", "Gwangju"), ("daejeon", "대전", "Daejeon"),
@@ -34,7 +34,7 @@ REGIONS = [
 THEMES = [
     ("landmark", "명소", "Landmarks"), ("mountain", "산", "Mountains"), ("temple", "사찰", "Temples"),
     ("island", "섬", "Islands"), ("sea", "바다", "Sea"), ("tree", "나무·숲", "Trees & forests"),
-    ("drive", "드라이브", "Scenic drives"),
+    ("drive", "드라이브", "Scenic drives"), ("airport", "공항", "Airports"),
 ]
 
 

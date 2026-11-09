@@ -1,12 +1,10 @@
+import MapKit
 import SwiftUI
 import TaptionPlanCore
 
 /// 장소 도감 한 칸(INK1108A01). 가 본 곳은 색 있는 그림과 도장, 아직이면 먹빛 그림과 점선 도장.
 struct MapHomePlaceBookEntry: Identifiable, Equatable {
-    enum Kind: Equatable { case registered, landmark }
-
     let id: String
-    let kind: Kind
     let title: String
     let subtitle: String
     let glyph: String
@@ -14,6 +12,9 @@ struct MapHomePlaceBookEntry: Identifiable, Equatable {
     let firstVisit: Date?
     /// 지도에 표시할 자리. 해외 도시는 직항 공항마다 하나씩이다.
     var pins: [MapHomePlaceBookPin] = []
+    /// 공항·해외 도시는 여권 입국 도장을 찍는다.
+    var usesPassportStamp = false
+    var stampCountry = "kr"
 
     var isVisited: Bool { firstVisit != nil }
     var stamp: MapHomePlaceStampMark { MapHomePlaceStampMark(glyph: glyph, isStamped: isVisited) }
@@ -21,55 +22,35 @@ struct MapHomePlaceBookEntry: Identifiable, Equatable {
 
 /// 도감 상태. 원본 머묾에서 매번 다시 구하고 저장하지 않는다.
 struct MapHomePlaceBookState: Equatable {
-    var registered: [MapHomePlaceBookEntry]
     var landmarks: [MapHomePlaceBookEntry]
 
-    var entries: [MapHomePlaceBookEntry] { registered + landmarks }
+    var entries: [MapHomePlaceBookEntry] { landmarks }
     var stampedCount: Int { entries.filter(\.isVisited).count }
     var remainingCount: Int { entries.count - stampedCount }
 
-    /// 등록 장소는 그 장소 키로 머문 기록이 한 번이라도 있으면, 랜드마크는 머문 자리가 반경 안이면 가 본 곳이다.
-    /// 위치를 정하지 않은 기본 장소는 도감에 넣지 않는다.
+    /// 머문 자리가 반경 안이거나(드라이브길은 지나가면) 가 본 곳이다. 등록 장소는 도감에 넣지 않는다(대표 지시).
     static func make(
-        frequentPlaces: [FrequentPlace],
         stays: [PlaceStay],
         language: MapHomeLanguage,
         region: String = defaultRegion,
         drivePasses: [String: Date] = [:]
     ) -> Self {
-        let placed = frequentPlaces.filter { $0.point != nil }
-        let firstArrivals = MapHomePlaceStampPolicy.firstArrivals(
-            stays: stays, keys: Set(placed.map(\.stablePlaceKey))
-        )
-        let registered = placed.map { place in
-            let destination = MapHomeLocationDestination(placeKind: place.kind) ?? .user
-            return MapHomePlaceBookEntry(
-                id: place.stablePlaceKey,
-                kind: .registered,
-                title: place.displayName,
-                subtitle: language.runtimeText(destination.koreanName, destination.englishName),
-                glyph: MapHomePlaceStampPolicy.glyph(kind: place.kind, name: place.displayName),
-                artworkName: destination.iconAssetName,
-                firstVisit: firstArrivals[place.stablePlaceKey],
-                pins: place.point.map { [MapHomePlaceBookPin(title: place.displayName, subtitle: "", latitude: $0.latitude, longitude: $0.longitude)] } ?? []
-            )
-        }
         let regionNames = Dictionary(uniqueKeysWithValues: regions.map { ($0.id, language.runtimeText($0.name, $0.englishName)) })
         let landmarks = places(in: region).map { place in
             MapHomePlaceBookEntry(
                 id: place.id,
-                kind: .landmark,
                 title: language.runtimeText(place.name, place.englishName),
                 subtitle: place.countryCode.map { MapHomePlaceBookMenu.countryName($0, language: language) } ?? regionNames[place.region] ?? "",
                 // "N서울타워"·"5·18기념공원"처럼 한글로 시작하지 않으면 첫 한글을 쓴다.
                 glyph: (place.name.first { $0.isLetter && !$0.isASCII } ?? place.name.first).map(String.init) ?? "印",
                 artworkName: place.artworkName,
                 firstVisit: [place.firstVisit(in: stays), drivePasses[place.id]].compactMap { $0 }.min(),
-                pins: place.pins(language: language)
+                pins: place.pins(language: language),
+                usesPassportStamp: place.usesPassportStamp,
+                stampCountry: place.countryCode ?? "kr"
             )
         }
-        // 다른 나라는 그 나라의 직항 도시만 보여 준다(대표 지시).
-        return Self(registered: MapHomePlaceBookMenu.isCountry(region) ? [] : registered, landmarks: landmarks)
+        return Self(landmarks: landmarks)
     }
 
     /// 처음 여는 시·도(PLB1109A01).
@@ -84,26 +65,38 @@ struct MapHomePlaceBookState: Equatable {
     }
 }
 
-/// 도감의 한 줄 메뉴(PLB1109A01). 1차 나라 → 2차 한국의 지역별·종류별 → 3차 시·도·종류.
+/// 도감의 세 줄 메뉴(PLB1109A01). 1줄 나라, 2줄 지역별·종류별, 3줄 시·도 또는 종류.
 struct MapHomePlaceBookMenu: Equatable {
-    enum Level: Equatable { case root, korea, region, theme }
+    enum Browse: Equatable { case region, theme }
 
     struct Item: Identifiable, Equatable {
         let id: String
         let name: String
         let englishName: String
-        var opens: Level?
 
         func title(_ language: MapHomeLanguage) -> String {
-            if opens == nil, MapHomePlaceBookMenu.isCountry(id) {
-                return MapHomePlaceBookMenu.countryName(id, language: language)
-            }
-            return language.runtimeText(name, englishName)
+            MapHomePlaceBookMenu.isCountry(id)
+                ? MapHomePlaceBookMenu.countryName(id, language: language)
+                : language.runtimeText(name, englishName)
         }
     }
 
-    var level = Level.region
-    var selected = MapHomePlaceBookState.defaultRegion
+    static let korea = "kr"
+    static let byRegion = "by-region"
+    static let byTheme = "by-theme"
+
+    var country = korea
+    var browse = Browse.region
+    var region = MapHomePlaceBookState.defaultRegion
+    var theme = MapHomeKoreaPlaceBookData.themes.first?.id ?? ""
+
+    /// 카드로 보여 줄 목록.
+    var selected: String {
+        guard showsKoreaRows else { return country }
+        return browse == .region ? region : theme
+    }
+
+    var showsKoreaRows: Bool { country == Self.korea }
 
     static let countries: [String] = {
         var seen = Set<String>()
@@ -118,46 +111,30 @@ struct MapHomePlaceBookMenu: Equatable {
         return language.locale.localizedString(forRegionCode: code.uppercased()) ?? code.uppercased()
     }
 
-    var items: [Item] {
-        switch level {
-        case .root:
-            [Item(id: "kr", name: "한국", englishName: "Korea", opens: .korea)]
-                + Self.countries.map { Item(id: $0, name: $0, englishName: $0) }
-        case .korea:
-            [
-                Item(id: "by-region", name: "지역별", englishName: "By region", opens: .region),
-                Item(id: "by-theme", name: "종류별", englishName: "By type", opens: .theme),
-            ]
-        case .region:
-            MapHomeKoreaPlaceBookData.regions.map { Item(id: $0.id, name: $0.name, englishName: $0.englishName) }
-        case .theme:
-            MapHomeKoreaPlaceBookData.themes.map { Item(id: $0.id, name: $0.name, englishName: $0.englishName) }
-        }
+    var countryItems: [Item] {
+        [Item(id: Self.korea, name: "한국", englishName: "Korea")]
+            + Self.countries.map { Item(id: $0, name: $0, englishName: $0) }
     }
 
-    var canGoUp: Bool { level != .root }
-
-    /// 지금 고른 목록으로 가는 길의 메뉴를 칠한다.
-    func isHighlighted(_ item: Item) -> Bool {
-        let isTheme = MapHomeKoreaPlaceBookData.themes.contains { $0.id == selected }
-        switch item.id {
-        case "kr": return !Self.isCountry(selected)
-        case "by-region": return !isTheme && !Self.isCountry(selected)
-        case "by-theme": return isTheme
-        default: return item.id == selected
-        }
+    var browseItems: [Item] {
+        [
+            Item(id: Self.byRegion, name: "지역별", englishName: "By region"),
+            Item(id: Self.byTheme, name: "종류별", englishName: "By type"),
+        ]
     }
 
-    mutating func tap(_ item: Item) {
-        if let opens = item.opens { level = opens } else { selected = item.id }
+    var listItems: [Item] {
+        (browse == .region ? MapHomeKoreaPlaceBookData.regions : MapHomeKoreaPlaceBookData.themes)
+            .map { Item(id: $0.id, name: $0.name, englishName: $0.englishName) }
     }
 
-    mutating func goUp() {
-        switch level {
-        case .root: break
-        case .korea: level = .root
-        case .region, .theme: level = .korea
-        }
+    var selectedBrowseID: String { browse == .region ? Self.byRegion : Self.byTheme }
+    var selectedListID: String { browse == .region ? region : theme }
+
+    mutating func selectBrowse(_ id: String) { browse = id == Self.byTheme ? .theme : .region }
+
+    mutating func selectList(_ id: String) {
+        if browse == .region { region = id } else { theme = id }
     }
 }
 
@@ -259,6 +236,8 @@ struct MapHomeKoreaPlace: Identifiable, Equatable, Sendable {
         }
     }
 
+    var usesPassportStamp: Bool { countryCode != nil || kind == .airport }
+
     var artworkName: String { "PlaceBook_" + id.replacingOccurrences(of: ".", with: "_") }
 
     var site: MapHomeLandmarkSite {
@@ -303,6 +282,8 @@ enum MapHomeLandmarkSites {
         case city
         /// 거제도처럼 넓은 섬 하나
         case largeIsland
+        /// 국내 공항
+        case airport
 
         var radiusMeters: Double {
             switch self {
@@ -311,6 +292,7 @@ enum MapHomeLandmarkSites {
             case .nature: 5_000
             case .city: 30_000
             case .largeIsland: 15_000
+            case .airport: 3_000
             }
         }
     }
@@ -378,46 +360,86 @@ enum MapHomeLandmarkSites {
 
 /// 장소 도감 시트. 메뉴 > 기록 > 장소 도감에서 연다.
 struct MapHomePlaceBookSheet: View {
-    let frequentPlaces: [FrequentPlace]
     let stays: [PlaceStay]
     let language: MapHomeLanguage
-    /// 카드를 누르면 지도에 표시한다(대표 지시).
+    /// 여행 계획을 담을 때 쓴다. 미리보기에는 없다.
+    var model: AppModel?
+    var currentCoordinate: CLLocationCoordinate2D?
+    /// 펼친 지도의 「큰 지도에서 보기」.
     var onSelect: (MapHomePlaceBookPin) -> Void = { _ in }
     var loadDrivePasses: () async -> [String: Date] = { [:] }
 
     @State private var state: MapHomePlaceBookState?
     @State private var menu = MapHomePlaceBookMenu()
     @State private var airportChoice: MapHomePlaceBookEntry?
+    /// 카드 줄 사이에 지도를 펼친 명소.
+    @State private var expandedID: String?
+    @Environment(\.dismiss) private var dismiss
+    @State private var isTestMode = MapHomePlaceBookTestMode.isEnabled
+    @State private var isRequestPresented = false
+    @State private var isTripPresented = false
+    @State private var tripEntry: MapHomePlaceBookEntry?
+    @State private var tripDay = Calendar.autoupdatingCurrent.startOfDay(for: .now)
     @State private var drivePasses: [String: Date] = [:]
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 3)
+    private static let columnCount = 3
 
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 18) {
-                header
-                menuRow
-                if let state {
-                    if !state.registered.isEmpty {
-                        section(language.text("등록한 곳", "My places"), entries: state.registered)
+        ScrollViewReader { proxy in
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 18) {
+                    header
+                    menuRows
+                    if let state {
+                        section(
+                            MapHomePlaceBookMenu.isCountry(menu.selected) ? language.runtimeText("도시", "Cities") : language.text("랜드마크", "Landmarks"),
+                            entries: state.landmarks,
+                            proxy: proxy
+                        )
+                    } else {
+                        ProgressView().frame(maxWidth: .infinity)
                     }
-                    section(MapHomePlaceBookMenu.isCountry(menu.selected) ? language.runtimeText("도시", "Cities") : language.text("랜드마크", "Landmarks"), entries: state.landmarks)
-                } else {
-                    ProgressView().frame(maxWidth: .infinity)
                 }
+                .padding(20)
             }
-            .padding(20)
         }
         .background(Color.tpBackground)
         .onAppear {
             guard state == nil else { return }
             reload()
         }
-        .onChange(of: menu.selected) { reload() }
+        .onChange(of: menu.selected) {
+            expandedID = nil
+            reload()
+        }
         .task {
             let passes = await loadDrivePasses()
             guard passes != drivePasses else { return }
             drivePasses = passes
             reload()
+        }
+        .sheet(isPresented: $isRequestPresented) {
+            MapHomePlaceRequestSheet(language: language, currentCoordinate: currentCoordinate)
+                .presentationDetents([.large])
+        }
+        .sheet(isPresented: $isTripPresented) {
+            if let model {
+                MapHomeTripPlanSheet(model: model, language: language, onSelect: onSelect)
+                    .presentationDetents([.large])
+            }
+        }
+        .sheet(item: $tripEntry) { entry in
+            VStack(spacing: 14) {
+                Text(entry.title).font(.taptionFixed(size: TaptionType.scaled(TaptionType.bodyStrong), weight: .bold))
+                DatePicker(language.text("날짜", "Date"), selection: $tripDay, displayedComponents: .date)
+                toolButton(language.text("여행에 추가", "Add to trip")) {
+                    if let pin = entry.pins.first {
+                        model?.addTravelStop(title: entry.title, latitude: pin.latitude, longitude: pin.longitude, day: tripDay)
+                    }
+                    tripEntry = nil
+                }
+            }
+            .padding(20)
+            .presentationDetents([.height(240)])
         }
         .confirmationDialog(
             airportChoice?.title ?? "",
@@ -432,49 +454,76 @@ struct MapHomePlaceBookSheet: View {
 
     private func reload() {
         state = MapHomePlaceBookState.make(
-            frequentPlaces: frequentPlaces, stays: stays, language: language, region: menu.selected, drivePasses: drivePasses
+            stays: stays, language: language, region: menu.selected,
+            drivePasses: drivePasses.merging(MapHomePlaceBookTestMode.visits) { _, test in test }
         )
     }
 
-    private var menuRow: some View {
-        HStack(spacing: 8) {
-            if menu.canGoUp {
-                Button { menu.goUp() } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .bold))
-                        .foregroundStyle(Color.tpInk)
-                        .frame(width: 44, height: 44)
-                        .background(Color.tpCard, in: Circle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(language.text("뒤로", "Back"))
+    /// 다른 나라를 골라도 2·3줄 자리는 비워 둬 카드 시작 위치가 오르내리지 않는다(대표 지시).
+    private var menuRows: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            chipRow(menu.countryItems, selectedID: menu.showsKoreaRows ? MapHomePlaceBookMenu.korea : menu.country) { menu.country = $0 }
+            Group {
+                chipRow(menu.browseItems, selectedID: menu.selectedBrowseID) { menu.selectBrowse($0) }
+                chipRow(menu.listItems, selectedID: menu.selectedListID) { menu.selectList($0) }
+                    .id(menu.browse)
             }
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(menu.items) { item in
-                        let isSelected = menu.isHighlighted(item)
-                        Button { menu.tap(item) } label: {
-                            Text(item.title(language))
-                                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .semibold))
-                                .foregroundStyle(isSelected ? Color.tpBackground : Color.tpInk)
-                                .padding(.horizontal, 14)
-                                .frame(minHeight: 44)
-                                .background(isSelected ? Color.tpInk : Color.tpCard, in: Capsule())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityAddTraits(isSelected ? .isSelected : [])
+            .opacity(menu.showsKoreaRows ? 1 : 0)
+            .allowsHitTesting(menu.showsKoreaRows)
+            .accessibilityHidden(!menu.showsKoreaRows)
+        }
+    }
+
+    private func chipRow(
+        _ items: [MapHomePlaceBookMenu.Item],
+        selectedID: String,
+        action: @escaping (String) -> Void
+    ) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(items) { item in
+                    let isSelected = item.id == selectedID
+                    Button { action(item.id) } label: {
+                        Text(item.title(language))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .semibold))
+                            .foregroundStyle(isSelected ? Color.tpBackground : Color.tpInk)
+                            .padding(.horizontal, 14)
+                            .frame(minHeight: 44)
+                            .background(isSelected ? Color.tpInk : Color.tpCard, in: Capsule())
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(isSelected ? .isSelected : [])
                 }
             }
-            .id(menu.level)
         }
     }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(language.text("장소 도감", "Place book"))
-                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.headline), weight: .bold))
-                .foregroundStyle(Color.tpInk)
+            HStack {
+                Text(language.text("장소 도감", "Place book"))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.headline), weight: .bold))
+                    .foregroundStyle(Color.tpInk)
+                    .onTapGesture(count: 5) {
+                        MapHomePlaceBookTestMode.isEnabled.toggle()
+                        isTestMode = MapHomePlaceBookTestMode.isEnabled
+                    }
+                Spacer()
+                if model != nil {
+                    Button { isTripPresented = true } label: { Image(systemName: "airplane.departure").frame(width: 44, height: 44) }
+                        .accessibilityLabel(language.text("여행 계획", "Trip plan"))
+                }
+                Button { isRequestPresented = true } label: { Image(systemName: "mappin.and.ellipse").frame(width: 44, height: 44) }
+                    .accessibilityLabel(language.text("장소 등록 요청", "Request a place"))
+                Button { dismiss() } label: { Image(systemName: "xmark").frame(width: 44, height: 44) }
+                    .accessibilityLabel(language.text("닫기", "Close"))
+            }
+            .foregroundStyle(Color.tpInk)
+            if isTestMode {
+                Text(language.runtimeText("테스트 모드 · 기록에 저장되지 않음", "Test mode · not saved"))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.caption), weight: .bold))
+                    .foregroundStyle(Color(hex: MapHomeInkWash.sealHex))
+            }
             if let state {
                 Text(language.text(
                     "찍은 도장 \(state.stampedCount) · 남은 곳 \(state.remainingCount)",
@@ -484,24 +533,100 @@ struct MapHomePlaceBookSheet: View {
                 .foregroundStyle(Color.tpSecondary)
             }
         }
-        .accessibilityElement(children: .combine)
     }
 
-    private func section(_ title: String, entries: [MapHomePlaceBookEntry]) -> some View {
+    private func section(_ title: String, entries: [MapHomePlaceBookEntry], proxy: ScrollViewProxy) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.bodyStrong), weight: .bold))
                 .foregroundStyle(Color.tpInk)
-            LazyVGrid(columns: columns, spacing: 10) {
-                ForEach(entries) { entry in
-                    Button {
-                        if entry.pins.count > 1 { airportChoice = entry } else if let pin = entry.pins.first { onSelect(pin) }
-                    } label: { card(entry) }
-                        .buttonStyle(.plain)
-                        .disabled(entry.pins.isEmpty)
+            LazyVStack(spacing: 10) {
+                ForEach(Array(stride(from: 0, to: entries.count, by: Self.columnCount)), id: \.self) { start in
+                    let row = Array(entries[start..<min(start + Self.columnCount, entries.count)])
+                    HStack(alignment: .top, spacing: 10) {
+                        ForEach(row) { entry in
+                            Button { toggle(entry, proxy: proxy) } label: { card(entry) }
+                                .buttonStyle(.plain)
+                                .disabled(entry.pins.isEmpty)
+                        }
+                        ForEach(row.count..<Self.columnCount, id: \.self) { _ in
+                            Color.clear.frame(maxWidth: .infinity, maxHeight: 1)
+                        }
+                    }
+                    if let expanded = row.first(where: { $0.id == expandedID }) {
+                        inlineMap(expanded)
+                            .id(Self.mapAnchor)
+                            .transition(.opacity)
+                    }
                 }
             }
         }
+    }
+
+    private static let mapAnchor = "place-book-inline-map"
+
+    /// 카드를 누르면 그 줄 아래가 벌어지며 지도가 뜨고, 다시 누르면 닫힌다(대표 지시).
+    private func toggle(_ entry: MapHomePlaceBookEntry, proxy: ScrollViewProxy) {
+        let opens = expandedID != entry.id
+        withAnimation(.easeInOut(duration: 0.25)) { expandedID = opens ? entry.id : nil }
+        guard opens else { return }
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(280))
+            withAnimation(.easeInOut(duration: 0.25)) { proxy.scrollTo(Self.mapAnchor, anchor: .center) }
+        }
+    }
+
+    private func inlineMap(_ entry: MapHomePlaceBookEntry) -> some View {
+        VStack(spacing: 8) {
+            Map(initialPosition: mapPosition(entry)) {
+                ForEach(entry.pins, id: \.self) { pin in
+                    Marker(pin.title, coordinate: CLLocationCoordinate2D(latitude: pin.latitude, longitude: pin.longitude))
+                        .tint(Color(hex: MapHomeInkWash.sealHex))
+                }
+            }
+            .frame(height: 260)
+            .clipShape(RoundedRectangle(cornerRadius: TaptionRadius.card, style: .continuous))
+            .id(entry.id)
+            Button {
+                if entry.pins.count > 1 { airportChoice = entry } else if let pin = entry.pins.first { onSelect(pin) }
+            } label: {
+                Text(language.text("큰 지도에서 보기", "Open in full map"))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .semibold))
+                    .foregroundStyle(Color.tpInk)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionRadius.card, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            if entry.id.hasPrefix("intl."), model != nil {
+                toolButton(language.text("여행에 추가", "Add to trip")) { tripEntry = entry }
+            }
+            if isTestMode {
+                toolButton(language.runtimeText("가상 방문 찍기·지우기", "Toggle test visit")) {
+                    MapHomePlaceBookTestMode.toggleVisit(entry.id)
+                    reload()
+                }
+            }
+        }
+    }
+
+    private func toolButton(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .semibold))
+                .foregroundStyle(Color.tpInk)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionRadius.card, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func mapPosition(_ entry: MapHomePlaceBookEntry) -> MapCameraPosition {
+        guard entry.pins.count == 1, let pin = entry.pins.first else { return .automatic }
+        return .region(MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: pin.latitude, longitude: pin.longitude),
+            latitudinalMeters: 2_500,
+            longitudinalMeters: 2_500
+        ))
     }
 
     private func card(_ entry: MapHomePlaceBookEntry) -> some View {
@@ -514,7 +639,11 @@ struct MapHomePlaceBookSheet: View {
                 .frame(height: 54)
                 .frame(maxWidth: .infinity)
                 .overlay(alignment: .topTrailing) {
-                    MapHomePlaceSeal(mark: entry.stamp, size: 24).offset(x: 4, y: -4)
+                    if entry.usesPassportStamp {
+                        MapHomePassportStamp(visitDate: entry.firstVisit, countryCode: entry.stampCountry, size: entry.isVisited ? 46 : 26).offset(x: 6, y: -6)
+                    } else {
+                        MapHomePlaceSeal(mark: entry.stamp, size: 24).offset(x: 4, y: -4)
+                    }
                 }
             Text(entry.title)
                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .semibold))
@@ -532,8 +661,10 @@ struct MapHomePlaceBookSheet: View {
         .overlay {
             RoundedRectangle(cornerRadius: TaptionRadius.card, style: .continuous)
                 .stroke(
-                    entry.isVisited ? Color(hex: MapHomeInkWash.sealHex).opacity(0.5) : Color.tpLine,
-                    style: StrokeStyle(lineWidth: 1, dash: entry.isVisited ? [] : [4, 3])
+                    entry.id == expandedID
+                        ? Color(hex: MapHomeInkWash.sealHex)
+                        : entry.isVisited ? Color(hex: MapHomeInkWash.sealHex).opacity(0.5) : Color.tpLine,
+                    style: StrokeStyle(lineWidth: entry.id == expandedID ? 2 : 1, dash: entry.isVisited || entry.id == expandedID ? [] : [4, 3])
                 )
         }
         .accessibilityElement(children: .ignore)

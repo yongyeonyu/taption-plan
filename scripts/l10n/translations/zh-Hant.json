@@ -2884,6 +2884,16 @@
 "|Korea": "韓國",
 "자동 기록을 위해 저전력으로 위치 변화를 지켜보는 동안 상단에 위치 표시가 보일 수 있습니다.|The location icon may stay visible while the app watches for movement at low power to keep automatic records.": "為維持自動記錄，App 以低耗電監測移動時，頂部可能持續顯示定位圖示。",
 "중국|China": "中國",
-"하루를 자동으로 기록하는 데 씁니다. 필요한 것만 허용해도 됩니다. 자동 기록 중에는 상단에 위치 표시가 보일 수 있습니다.|Used to record your day automatically. Allow only what you need. The location icon may stay visible during automatic recording.": "用於自動記錄您的一天。可以只允許需要的權限。自動記錄期間，頂部可能顯示定位圖示。"
+"하루를 자동으로 기록하는 데 씁니다. 필요한 것만 허용해도 됩니다. 자동 기록 중에는 상단에 위치 표시가 보일 수 있습니다.|Used to record your day automatically. Allow only what you need. The location icon may stay visible during automatic recording.": "用於自動記錄您的一天。可以只允許需要的權限。自動記錄期間，頂部可能顯示定位圖示。",
+"큰 지도에서 보기|Open in full map": "在大地圖中查看",
+"가상 방문 찍기·지우기|Toggle test visit": "切換測試到訪",
+"메일 보내기|Send email": "傳送電子郵件",
+"설명|Description": "說明",
+"아직 담은 곳이 없습니다.|No stops yet.": "尚未加入地點。",
+"여행 계획|Trip plan": "旅行計畫",
+"여행에 추가|Add to trip": "加入旅行",
+"장소 등록 요청|Request a place": "申請新增地點",
+"지도를 움직여 핀을 맞춰 주세요.|Move the map to place the pin.": "移動地圖以對準圖釘。",
+"테스트 모드 · 기록에 저장되지 않음|Test mode · not saved": "測試模式 · 不會儲存到記錄"
 }
 }

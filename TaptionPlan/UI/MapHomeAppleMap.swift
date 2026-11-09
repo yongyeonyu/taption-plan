@@ -1071,6 +1071,12 @@ struct MapHomeAppleMap: UIViewRepresentable {
                     size: CGSize(width: 24, height: 24),
                     centerOffset: .zero
                 )
+            case .travelStop(let number):
+                return MapHomeAppleHostedDescriptor(
+                    rootView: AnyView(MapHomeTravelStopPin(number: number)),
+                    size: CGSize(width: 34, height: 34),
+                    centerOffset: .zero
+                )
             case .search:
                 return MapHomeAppleHostedDescriptor(
                     rootView: AnyView(

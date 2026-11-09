@@ -183,7 +183,7 @@ extension MapHomeView {
             cameraRevision: mapCameraRevision,
             historicalRoutes: recordingShows(\.routes) ? vectorHistoricalRoutes : [],
             activeRoute: recordingShows(\.routes) && activeSegments.isEmpty ? vectorActiveRoute : nil,
-            expectedRoutes: recordingShows(\.routes) ? vectorExpectedRoutes : [],
+            expectedRoutes: recordingShows(\.routes) ? vectorExpectedRoutes + vectorTravelRoutes : [],
             subwayRoutes: recordingShows(\.routes) ? vectorSubwayRoutes + vectorUserSelectedRoutes : [],
             markers: vectorMapMarkers(waypoints: waypoints, inputs: inputs),
             contentInsets: vectorMapContentInsets,
@@ -313,7 +313,7 @@ extension MapHomeView {
             cameraPosition: mapPosition,
             cameraRevision: mapCameraRevision,
             viewportCommand: appleViewportCommand,
-            routes: recordingShows(\.routes) ? appleMapRoutes : [],
+            routes: recordingShows(\.routes) ? appleMapRoutes + appleTravelRoutes : [],
             annotations: appleMapAnnotations,
             playback: appleMapPlayback,
             centersPlayback: selectedTimelineMinute != nil
@@ -499,6 +499,17 @@ extension MapHomeView {
                 isInteractive: true
             )
         }
+        for (index, stop) in travelStopsOnSelectedDay.enumerated() {
+            annotations.append(
+                MapHomeAppleAnnotation(
+                    id: travelStopMarkerID(stop),
+                    coordinate: stop.coordinate,
+                    kind: .travelStop(number: index + 1),
+                    accessibilityLabel: stop.title,
+                    isInteractive: false
+                )
+            )
+        }
         if let selectedSearchPin {
             annotations.append(
                 MapHomeAppleAnnotation(
@@ -562,6 +573,8 @@ extension MapHomeView {
             selectedMapStickerEditor = .memo(memo.id)
         case .search:
             isSearchPinMenuPresented = true
+        case .travelStop:
+            break
         case .pawprint(let paw):
             if let waypoint = pawprintWaypoints.first(where: { $0.index == paw.index }) {
                 selectPawprint(waypoint)
@@ -628,6 +641,9 @@ extension MapHomeView {
                     coordinate: displayedLocationCoordinate
                 )
             )
+        }
+        for stop in travelStopsOnSelectedDay {
+            markers.append(MapHomeVectorMarker(id: travelStopMarkerID(stop), coordinate: stop.coordinate))
         }
         if let selectedSearchPin {
             markers.append(

@@ -2884,6 +2884,16 @@
 "|Korea": "Korea",
 "자동 기록을 위해 저전력으로 위치 변화를 지켜보는 동안 상단에 위치 표시가 보일 수 있습니다.|The location icon may stay visible while the app watches for movement at low power to keep automatic records.": "Ikon lokasi dapat tetap terlihat saat aplikasi memantau pergerakan dengan daya rendah untuk pencatatan otomatis.",
 "중국|China": "Tiongkok",
-"하루를 자동으로 기록하는 데 씁니다. 필요한 것만 허용해도 됩니다. 자동 기록 중에는 상단에 위치 표시가 보일 수 있습니다.|Used to record your day automatically. Allow only what you need. The location icon may stay visible during automatic recording.": "Digunakan untuk mencatat hari Anda secara otomatis. Izinkan hanya yang Anda perlukan. Selama pencatatan otomatis, ikon lokasi dapat tetap terlihat."
+"하루를 자동으로 기록하는 데 씁니다. 필요한 것만 허용해도 됩니다. 자동 기록 중에는 상단에 위치 표시가 보일 수 있습니다.|Used to record your day automatically. Allow only what you need. The location icon may stay visible during automatic recording.": "Digunakan untuk mencatat hari Anda secara otomatis. Izinkan hanya yang Anda perlukan. Selama pencatatan otomatis, ikon lokasi dapat tetap terlihat.",
+"큰 지도에서 보기|Open in full map": "Buka di peta besar",
+"가상 방문 찍기·지우기|Toggle test visit": "Alihkan kunjungan uji",
+"메일 보내기|Send email": "Kirim email",
+"설명|Description": "Deskripsi",
+"아직 담은 곳이 없습니다.|No stops yet.": "Belum ada perhentian.",
+"여행 계획|Trip plan": "Rencana perjalanan",
+"여행에 추가|Add to trip": "Tambahkan ke perjalanan",
+"장소 등록 요청|Request a place": "Minta tempat baru",
+"지도를 움직여 핀을 맞춰 주세요.|Move the map to place the pin.": "Geser peta untuk menempatkan pin.",
+"테스트 모드 · 기록에 저장되지 않음|Test mode · not saved": "Mode uji · tidak disimpan"
 }
 }

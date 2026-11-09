@@ -15,6 +15,8 @@ public struct AppFeatureSettings: Codable, Hashable, Sendable {
     public var backgroundPreciseLocationEnabled: Bool
     public var sensorCollectionProfile: SensorCollectionProfile
     public var gpsLoggingPreferences: GPSLoggingPreferences
+    /// 장소 도감의 여행 일정(PLB1109A03). 옛 저장본에는 없다.
+    public var travelPlanStops: [TravelPlanStop]
     /// Optional user-selected overrides for the automatic major
     /// categories. Missing values intentionally keep the shared defaults.
     public var mapCategoryColors: [String: String]
@@ -117,6 +119,7 @@ public struct AppFeatureSettings: Codable, Hashable, Sendable {
         backgroundPreciseLocationEnabled: Bool,
         sensorCollectionProfile: SensorCollectionProfile,
         gpsLoggingPreferences: GPSLoggingPreferences = .standard,
+        travelPlanStops: [TravelPlanStop] = [],
         mapCategoryColors: [String: String] = [:],
         mapUserActivityCategories: [MapUserActivityCategory] = [],
         mapDisplayStyle: MapDisplayStyle = .standard,
@@ -158,6 +161,7 @@ public struct AppFeatureSettings: Codable, Hashable, Sendable {
         self.backgroundPreciseLocationEnabled = backgroundPreciseLocationEnabled
         self.sensorCollectionProfile = sensorCollectionProfile
         self.gpsLoggingPreferences = gpsLoggingPreferences
+        self.travelPlanStops = travelPlanStops
         self.mapCategoryColors = Self.normalizedMapCategoryColors(
             mapCategoryColors
         )
@@ -211,6 +215,7 @@ public struct AppFeatureSettings: Codable, Hashable, Sendable {
         case backgroundPreciseLocationEnabled
         case sensorCollectionProfile
         case gpsLoggingPreferences
+        case travelPlanStops
         case mapCategoryColors
         case mapUserActivityCategories
         case mapDisplayStyle
@@ -287,6 +292,7 @@ public struct AppFeatureSettings: Codable, Hashable, Sendable {
         // 기록 간격 메뉴를 없애고 값을 고정했다(대표 결정 2026-11-09). 옛 저장 값과 백업의 값은 읽지 않는다.
         sensorCollectionProfile = defaults.sensorCollectionProfile
         gpsLoggingPreferences = defaults.gpsLoggingPreferences
+        travelPlanStops = try values.decodeIfPresent([TravelPlanStop].self, forKey: .travelPlanStops) ?? []
         mapCategoryColors = Self.normalizedMapCategoryColors(
             try values.decodeIfPresent(
                 [String: String].self,
@@ -530,5 +536,26 @@ public struct CalendarTitleDetail: Codable, Hashable, Sendable {
         detailID: String? = nil
     ) {
         self.detailID = detailID
+    }
+}
+
+/// 여행 일정 한 곳. 하루 안에서 `order` 순서로 잇는다.
+public struct TravelPlanStop: Codable, Hashable, Sendable, Identifiable {
+    public var id: UUID
+    public var title: String
+    public var latitude: Double
+    public var longitude: Double
+    public var day: Date
+    public var order: Int
+    public var planID: UUID?
+
+    public init(id: UUID, title: String, latitude: Double, longitude: Double, day: Date, order: Int, planID: UUID?) {
+        self.id = id
+        self.title = title
+        self.latitude = latitude
+        self.longitude = longitude
+        self.day = day
+        self.order = order
+        self.planID = planID
     }
 }

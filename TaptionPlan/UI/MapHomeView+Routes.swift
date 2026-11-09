@@ -895,6 +895,15 @@ extension MapHomeView {
                 counterWindow(at: anchor, tracksPlaybackPoint: playback != nil)
             }
 
+            ForEach(Array(travelStopsOnSelectedDay.enumerated()), id: \.element.id) { index, stop in
+                if let point = vectorPoint(in: viewport, for: travelStopMarkerID(stop)) {
+                    MapHomeProjectedAnnotation(point: point, anchor: .center) {
+                        MapHomeTravelStopPin(number: index + 1)
+                            .accessibilityLabel(stop.title)
+                    }
+                }
+            }
+
             if let selectedSearchPin,
                let point = vectorPoint(in: viewport, for: vectorSearchMarkerID) {
                 MapHomeProjectedAnnotation(point: point, anchor: .bottom) {

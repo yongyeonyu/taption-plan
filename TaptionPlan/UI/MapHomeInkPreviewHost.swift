@@ -53,7 +53,7 @@ struct MapHomeInkPreviewHost: View {
             .padding(.vertical, 14)
             .frame(maxWidth: .infinity)
             .background(Color(hex: MapHomeInkWash.Map.paper))
-            MapHomePlaceBookSheet(frequentPlaces: places, stays: stays, language: .korean)
+            MapHomePlaceBookSheet(stays: stays, language: .korean)
         }
         .preferredColorScheme(.light)
     }

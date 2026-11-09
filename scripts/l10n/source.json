@@ -1616,7 +1616,7 @@
    "ko": "{0} {1} 공항",
    "en": "{0} {1} Airport",
    "files": [
-    "MapHomePlaceBook.swift:256"
+    "MapHomePlaceBook.swift:231"
    ],
    "args": [
     "title",
@@ -1705,7 +1705,7 @@
    "ko": "{0} 공항",
    "en": "{0} Airport",
    "files": [
-    "MapHomePlaceBook.swift:255"
+    "MapHomePlaceBook.swift:230"
    ],
    "args": [
     "title"
@@ -2098,7 +2098,7 @@
    "ko": "{0}, 도장 찍음",
    "en": "{0}, stamped",
    "files": [
-    "MapHomePlaceBook.swift:541"
+    "MapHomePlaceBook.swift:670"
    ],
    "args": [
     "entry.title"
@@ -2127,7 +2127,7 @@
    "ko": "{0}, 아직 가 보지 않음",
    "en": "{0}, not visited yet",
    "files": [
-    "MapHomePlaceBook.swift:542"
+    "MapHomePlaceBook.swift:671"
    ],
    "args": [
     "entry.title"
@@ -4039,7 +4039,7 @@
    "ko": "지역별",
    "en": "By region",
    "files": [
-    "MapHomePlaceBook.swift:128"
+    "MapHomePlaceBook.swift:119"
    ],
    "args": [],
    "targets": [
@@ -4051,7 +4051,7 @@
    "ko": "종류별",
    "en": "By type",
    "files": [
-    "MapHomePlaceBook.swift:129"
+    "MapHomePlaceBook.swift:120"
    ],
    "args": [],
    "targets": [
@@ -7524,7 +7524,7 @@
    "ko": "한국",
    "en": "Korea",
    "files": [
-    "MapHomePlaceBook.swift:124"
+    "MapHomePlaceBook.swift:113"
    ],
    "args": [],
    "targets": [
@@ -12362,6 +12362,18 @@
    ]
   },
   {
+   "key": "가상 방문 찍기·지우기|Toggle test visit",
+   "ko": "가상 방문 찍기·지우기",
+   "en": "Toggle test visit",
+   "files": [
+    "MapHomePlaceBook.swift:602"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "가족|Family",
    "ko": "가족",
    "en": "Family",
@@ -13287,7 +13299,7 @@
    "ko": "계획과 기록은 삭제되지 않습니다.",
    "en": "Your plans and records will not be deleted.",
    "files": [
-    "MapHomeView+Support.swift:720"
+    "MapHomeView+Support.swift:719"
    ],
    "args": [],
    "targets": [
@@ -14850,7 +14862,9 @@
    "ko": "날짜",
    "en": "Date",
    "files": [
-    "MapHomeDailyCard.swift:361"
+    "MapHomePlaceBookTools.swift:238",
+    "MapHomeDailyCard.swift:361",
+    "MapHomePlaceBook.swift:431"
    ],
    "args": [],
    "targets": [
@@ -15739,7 +15753,7 @@
    "ko": "도시",
    "en": "Cities",
    "files": [
-    "MapHomePlaceBook.swift:403",
+    "MapHomePlaceBook.swift:392",
     "TravelMapTripEditorSheet.swift:30"
    ],
    "args": [],
@@ -15950,7 +15964,6 @@
    "ko": "뒤로",
    "en": "Back",
    "files": [
-    "MapHomePlaceBook.swift:450",
     "MapHomeWideLayoutPolicy.swift:239"
    ],
    "args": [],
@@ -16071,18 +16084,6 @@
    ]
   },
   {
-   "key": "등록한 곳|My places",
-   "ko": "등록한 곳",
-   "en": "My places",
-   "files": [
-    "MapHomePlaceBook.swift:401"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "등록한 기기|Registered devices",
    "ko": "등록한 기기",
    "en": "Registered devices",
@@ -16161,7 +16162,7 @@
    "ko": "랜드마크",
    "en": "Landmarks",
    "files": [
-    "MapHomePlaceBook.swift:403"
+    "MapHomePlaceBook.swift:392"
    ],
    "args": [],
    "targets": [
@@ -16766,6 +16767,18 @@
    "en": "Turn back into a memo",
    "files": [
     "MapHomeStickerEditor.swift:567"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "메일 보내기|Send email",
+   "ko": "메일 보내기",
+   "en": "Send email",
+   "files": [
+    "MapHomePlaceBookTools.swift:119"
    ],
    "args": [],
    "targets": [
@@ -18766,9 +18779,9 @@
    "ko": "삭제",
    "en": "Delete",
    "files": [
+    "MapHomePlaceBookTools.swift:292",
     "MapHomeSettingsSheets.swift:111",
-    "MapHomeSettingsSheets.swift:144",
-    "MapHomeStickerEditor.swift:187"
+    "MapHomeSettingsSheets.swift:144"
    ],
    "args": [],
    "targets": [
@@ -19259,6 +19272,18 @@
    ]
   },
   {
+   "key": "설명|Description",
+   "ko": "설명",
+   "en": "Description",
+   "files": [
+    "MapHomePlaceBookTools.swift:89"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "설정 > 스크린 타임 > 앱 및 웹사이트 활동에서 BOKKI Plan을 허용해 주세요.|In Settings > Screen Time > App & Website Activity, allow BOKKI Plan.",
    "ko": "설정 > 스크린 타임 > 앱 및 웹사이트 활동에서 BOKKI Plan을 허용해 주세요.",
    "en": "In Settings > Screen Time > App & Website Activity, allow BOKKI Plan.",
@@ -19340,7 +19365,7 @@
    "files": [
     "MapHomeView+Menu2.swift:208",
     "MapHomeView+Menu2.swift:225",
-    "MapHomeView+Support.swift:714"
+    "MapHomeView+Support.swift:713"
    ],
    "args": [],
    "targets": [
@@ -19402,7 +19427,7 @@
    "ko": "설정을 기본값으로 초기화할까요?",
    "en": "Reset settings to defaults?",
    "files": [
-    "MapHomeView+Support.swift:710"
+    "MapHomeView+Support.swift:709"
    ],
    "args": [],
    "targets": [
@@ -20720,6 +20745,18 @@
    ]
   },
   {
+   "key": "아직 담은 곳이 없습니다.|No stops yet.",
+   "ko": "아직 담은 곳이 없습니다.",
+   "en": "No stops yet.",
+   "files": [
+    "MapHomePlaceBookTools.swift:244"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "아직 도장 없음|Not stamped yet",
    "ko": "아직 도장 없음",
    "en": "Not stamped yet",
@@ -21586,11 +21623,37 @@
    ]
   },
   {
+   "key": "여행 계획|Trip plan",
+   "ko": "여행 계획",
+   "en": "Trip plan",
+   "files": [
+    "MapHomePlaceBookTools.swift:236",
+    "MapHomePlaceBook.swift:512"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "여행·교통|Travel",
    "ko": "여행·교통",
    "en": "Travel",
    "files": [
     "StickerArtBasics.swift:14"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "여행에 추가|Add to trip",
+   "ko": "여행에 추가",
+   "en": "Add to trip",
+   "files": [
+    "MapHomePlaceBook.swift:432",
+    "MapHomePlaceBook.swift:599"
    ],
    "args": [],
    "targets": [
@@ -24906,6 +24969,8 @@
    "ko": "장소 검색",
    "en": "Search places",
    "files": [
+    "MapHomePlaceBookTools.swift:93",
+    "MapHomePlaceBookTools.swift:239",
     "MapHomeView+Map.swift:157"
    ],
    "args": [],
@@ -24942,8 +25007,21 @@
    "ko": "장소 도감",
    "en": "Place book",
    "files": [
-    "MapHomePlaceBook.swift:475",
+    "MapHomePlaceBook.swift:502",
     "MapHomeView+Menu.swift:428"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "장소 등록 요청|Request a place",
+   "ko": "장소 등록 요청",
+   "en": "Request a place",
+   "files": [
+    "MapHomePlaceBookTools.swift:85",
+    "MapHomePlaceBook.swift:515"
    ],
    "args": [],
    "targets": [
@@ -24967,6 +25045,7 @@
    "ko": "장소 이름",
    "en": "Place name",
    "files": [
+    "MapHomePlaceBookTools.swift:87",
     "MapHomeInfoSheets.swift:46"
    ],
    "args": [],
@@ -25816,7 +25895,7 @@
    "ko": "중국",
    "en": "China",
    "files": [
-    "MapHomePlaceBook.swift:117"
+    "MapHomePlaceBook.swift:108"
    ],
    "args": [],
    "targets": [
@@ -26268,11 +26347,23 @@
    ]
   },
   {
+   "key": "지도를 움직여 핀을 맞춰 주세요.|Move the map to place the pin.",
+   "ko": "지도를 움직여 핀을 맞춰 주세요.",
+   "en": "Move the map to place the pin.",
+   "files": [
+    "MapHomePlaceBookTools.swift:115"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "지도에 메모 추가|Add map memo",
    "ko": "지도에 메모 추가",
    "en": "Add map memo",
    "files": [
-    "MapHomeView+Support.swift:632"
+    "MapHomeView+Support.swift:631"
    ],
    "args": [],
    "targets": [
@@ -26765,7 +26856,7 @@
    "ko": "찍은 도장 {0} · 남은 곳 {1}",
    "en": "Stamps {0} · To go {1}",
    "files": [
-    "MapHomePlaceBook.swift:479"
+    "MapHomePlaceBook.swift:526"
    ],
    "args": [
     "state.stampedCount",
@@ -27640,6 +27731,18 @@
    ]
   },
   {
+   "key": "큰 지도에서 보기|Open in full map",
+   "ko": "큰 지도에서 보기",
+   "en": "Open in full map",
+   "files": [
+    "MapHomePlaceBook.swift:591"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "클립 {0}개를 '{1}' 분류로 덮습니다|Overwrites {0} clip(s) with {1}",
    "ko": "클립 {0}개를 '{1}' 분류로 덮습니다",
    "en": "Overwrites {0} clip(s) with {1}",
@@ -27801,6 +27904,18 @@
     "TaptionPlanWidget",
     "TaptionPlanWatch",
     "TaptionPlanWatchWidget"
+   ]
+  },
+  {
+   "key": "테스트 모드 · 기록에 저장되지 않음|Test mode · not saved",
+   "ko": "테스트 모드 · 기록에 저장되지 않음",
+   "en": "Test mode · not saved",
+   "files": [
+    "MapHomePlaceBook.swift:521"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
    ]
   },
   {
@@ -28860,9 +28975,9 @@
    "ko": "현재 위치",
    "en": "Current location",
    "files": [
+    "MapHomePlaceBookTools.swift:101",
     "MapHomeTransitSheets.swift:399",
-    "MapHomeView+Menu2.swift:459",
-    "MapHomeView+Stickman.swift:346"
+    "MapHomeView+Menu2.swift:459"
    ],
    "args": [],
    "targets": [

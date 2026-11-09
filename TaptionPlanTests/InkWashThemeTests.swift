@@ -139,7 +139,7 @@ final class InkWashThemeTests: XCTestCase {
 
     private func isStamped(_ id: String, in selection: String, readings: [SensorReading]) throws -> Bool {
         let stays = PlaceDetectionEngine().detectStays(readings: readings)
-        let state = MapHomePlaceBookState.make(frequentPlaces: [], stays: stays, language: .korean, region: selection)
+        let state = MapHomePlaceBookState.make(stays: stays, language: .korean, region: selection)
         return try XCTUnwrap(state.landmarks.first { $0.id == id }, id).isVisited
     }
 
@@ -186,7 +186,7 @@ final class InkWashThemeTests: XCTestCase {
         MapHomePlaceBookDrivePass.merge(readings: readings, into: &passes)
         XCTAssertNotNil(passes[road.id])
         XCTAssertNil(passes["kr.gyeongbokgung"], "드라이브길이 아니면 통과로 찍지 않는다")
-        let state = MapHomePlaceBookState.make(frequentPlaces: [], stays: [], language: .korean, region: "drive", drivePasses: passes)
+        let state = MapHomePlaceBookState.make(stays: [], language: .korean, region: "drive", drivePasses: passes)
         XCTAssertEqual(state.landmarks.first { $0.id == road.id }?.isVisited, true)
 
         let cellular = readings.map { reading -> SensorReading in
@@ -209,57 +209,108 @@ final class InkWashThemeTests: XCTestCase {
         XCTAssertTrue(stay.contains(GeoPoint(latitude: narita.latitude + 0.005, longitude: narita.longitude, altitude: 0, horizontalAccuracy: -1, verticalAccuracy: -1)))
     }
 
+    func testPassportStampDateIsEnglishDayMonthYearAndCountryStyled() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        let date = calendar.date(from: DateComponents(year: 2026, month: 11, day: 9, hour: 12))!
+        XCTAssertEqual(MapHomePassportStampStyle.dateText(date, calendar: calendar), "09 NOV 2026")
+        XCTAssertEqual(MapHomePassportStampStyle.style(forCountry: "CN").shape, .oval)
+        XCTAssertEqual(MapHomePassportStampStyle.style(forCountry: "fr").shape, .roundedRectangle)
+        XCTAssertEqual(MapHomePassportStampStyle.style(forCountry: "kr").shape, .circle)
+        XCTAssertEqual(MapHomePassportStampStyle.style(forCountry: "th").colorHex, "#B8404A")
+        XCTAssertEqual(MapHomePassportStampStyle.style(forCountry: "zz"), .standard)
+    }
+
+    func testPassportStampsCoverAirportsAndOverseasCitiesOnly() throws {
+        XCTAssertTrue(try bookPlace("kr.airport_gmp").usesPassportStamp)
+        XCTAssertTrue(try bookPlace("kr.airport").usesPassportStamp)
+        XCTAssertTrue(try bookPlace("intl.jp.tokyo").usesPassportStamp)
+        XCTAssertFalse(try bookPlace("kr.gyeongbokgung").usesPassportStamp)
+        XCTAssertEqual(MapHomeKoreaPlaceBookData.places.filter { $0.theme == "airport" }.count, 6)
+    }
+
+    @MainActor
+    func testPlaceBookTestVisitIsReversibleAndSeparateFromRecords() {
+        MapHomePlaceBookTestMode.visits = [:]
+        MapHomePlaceBookTestMode.toggleVisit("kr.namsan", now: day)
+        let state = MapHomePlaceBookState.make(stays: [], language: .korean, drivePasses: MapHomePlaceBookTestMode.visits)
+        XCTAssertEqual(state.landmarks.first { $0.id == "kr.namsan" }?.firstVisit, day)
+        MapHomePlaceBookTestMode.toggleVisit("kr.namsan", now: day)
+        XCTAssertTrue(MapHomePlaceBookTestMode.visits.isEmpty)
+    }
+
+    func testPlaceRequestWritesRequestedJSON() throws {
+        let request = MapHomePlaceRequest(name: "새 명소", memo: "설명", latitude: 37.5, longitude: 127, requestedAt: day, appBuild: "305")
+        let url = try request.writeJSON()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
+        XCTAssertEqual(object["name"] as? String, "새 명소")
+        XCTAssertEqual(object["memo"] as? String, "설명")
+        XCTAssertEqual(object["latitude"] as? Double, 37.5)
+    }
+
+    func testTravelPlanOrdersAndMovesStopsWithinADay() throws {
+        let a = TravelPlanStop(id: UUID(), title: "A", latitude: 1, longitude: 1, day: day, order: 0, planID: nil)
+        let b = TravelPlanStop(id: UUID(), title: "B", latitude: 2, longitude: 2, day: day, order: 1, planID: nil)
+        let moved = TravelPlanSchedule.moved([a, b], id: b.id, by: -1)
+        XCTAssertEqual(TravelPlanSchedule.stops(on: day, in: moved).map(\.title), ["B", "A"])
+        XCTAssertEqual(TravelPlanSchedule.moved([a, b], id: a.id, by: -1), [a, b], "맨 앞에서 위로는 그대로")
+        XCTAssertEqual(TravelPlanSchedule.renumbered([b]).first?.order, 0)
+    }
+
+    /// 옛 저장본에는 여행 일정이 없어도 읽히고, 저장한 일정은 그대로 돌아온다.
+    func testTravelPlanStopsRoundTripAndOldSettingsDecode() throws {
+        var settings = AppFeatureSettings.defaults
+        let stop = TravelPlanStop(id: UUID(), title: "도쿄", latitude: 35, longitude: 139, day: day, order: 0, planID: nil)
+        settings.travelPlanStops = [stop]
+        let data = try JSONEncoder().encode(settings)
+        XCTAssertEqual(try JSONDecoder().decode(AppFeatureSettings.self, from: data).travelPlanStops, [stop])
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        object["travelPlanStops"] = nil
+        let old = try JSONSerialization.data(withJSONObject: object)
+        XCTAssertEqual(try JSONDecoder().decode(AppFeatureSettings.self, from: old).travelPlanStops, [])
+    }
+
     func testPlaceBookMenuHierarchy() {
         var menu = MapHomePlaceBookMenu()
-        XCTAssertEqual(menu.level, .region)
         XCTAssertEqual(menu.selected, "seoul")
-        menu.goUp()
-        XCTAssertEqual(menu.items.map(\.id), ["by-region", "by-theme"])
-        XCTAssertEqual(menu.selected, "seoul", "위로 가도 보던 목록은 그대로다")
-        menu.tap(menu.items[1])
-        XCTAssertEqual(menu.level, .theme)
-        menu.tap(try! XCTUnwrap(menu.items.first { $0.id == "temple" }))
+        XCTAssertTrue(menu.showsKoreaRows)
+        XCTAssertEqual(menu.browseItems.map(\.id), ["by-region", "by-theme"])
+        XCTAssertEqual(menu.listItems.count, 17)
+        menu.selectBrowse("by-theme")
+        XCTAssertEqual(menu.selected, "landmark")
+        menu.selectList("temple")
         XCTAssertEqual(menu.selected, "temple")
         XCTAssertTrue(MapHomePlaceBookState.places(in: "temple").contains { $0.id == "kr.bulguksa" })
-        menu.goUp(); menu.goUp()
-        XCTAssertEqual(menu.level, .root)
-        XCTAssertFalse(menu.canGoUp)
-        XCTAssertEqual(menu.items.first?.id, "kr")
-        XCTAssertTrue(menu.items.contains { $0.id == "jp" })
-        menu.tap(try! XCTUnwrap(menu.items.first { $0.id == "jp" }))
-        XCTAssertEqual(menu.level, .root, "나라는 바로 도시 목록을 연다")
+        menu.country = "jp"
+        XCTAssertEqual(menu.selected, "jp", "다른 나라는 그 나라 직항 도시만")
+        XCTAssertFalse(menu.showsKoreaRows)
         XCTAssertTrue(MapHomePlaceBookState.places(in: "jp").allSatisfy { $0.id.hasPrefix("intl.jp.") })
+        menu.country = "kr"
+        XCTAssertEqual(menu.selected, "temple", "한국으로 돌아오면 고르던 곳 그대로")
+        menu.selectBrowse("by-region")
+        XCTAssertEqual(menu.selected, "seoul")
+        XCTAssertEqual(menu.countryItems.first?.id, "kr")
     }
 
     func testPlaceBookCountsVisitedAndRemaining() throws {
-        let home = FrequentPlace(kind: .home, point: point(37.5, 127.0))
-        let school = FrequentPlace(kind: .school, point: point(37.52, 127.02))
-        let unset = FrequentPlace(kind: .academy) // 위치 없는 기본 장소는 도감에 넣지 않는다.
         let tower = try XCTUnwrap(MapHomeLandmarkSites.site(for: "kr.namsan"))
         let stays = [
-            stay(home.stablePlaceKey, start: 0),
             // 남산 서울타워 반경 안의 일반 머묾.
             stay("place-namsan", start: 4 * 3_600, at: point(tower.latitude + 0.001, tower.longitude)),
             // 경복궁에서 5 km 떨어진 곳은 세지 않는다.
             stay("place-far", start: 6 * 3_600, at: point(37.6250, 126.9770)),
         ]
-        let state = MapHomePlaceBookState.make(frequentPlaces: [home, school, unset], stays: stays, language: .korean)
-        XCTAssertEqual(state.registered.map(\.id), [home.stablePlaceKey, school.stablePlaceKey])
+        let state = MapHomePlaceBookState.make(stays: stays, language: .korean)
         let seoul = MapHomePlaceBookState.places(in: "seoul")
-        XCTAssertEqual(state.landmarks.map(\.id), seoul.map(\.id), "처음은 서울")
-        XCTAssertEqual(state.registered.filter(\.isVisited).count, 1)
+        XCTAssertEqual(state.landmarks.map(\.id), seoul.map(\.id), "처음은 서울, 등록한 곳은 없다")
         XCTAssertEqual(state.stampedCount + state.remainingCount, state.entries.count)
         XCTAssertGreaterThanOrEqual(seoul.count, 40)
-        let jeju = MapHomePlaceBookState.make(frequentPlaces: [home, school, unset], stays: stays, language: .korean, region: "jeju")
+        let jeju = MapHomePlaceBookState.make(stays: stays, language: .korean, region: "jeju")
         XCTAssertTrue(jeju.landmarks.contains { $0.id == "kr.hallasan" })
-        XCTAssertEqual(jeju.registered.map(\.id), state.registered.map(\.id), "등록한 곳은 시·도와 무관하다")
-        XCTAssertEqual(jeju.stampedCount, 1, "서울 명소 도장은 제주 수에 넣지 않는다")
-        let japan = MapHomePlaceBookState.make(frequentPlaces: [home, school, unset], stays: stays, language: .korean, region: "jp")
-        XCTAssertTrue(japan.registered.isEmpty, "다른 나라는 도시만")
+        XCTAssertEqual(jeju.stampedCount, 0, "서울 명소 도장은 제주 수에 넣지 않는다")
+        let japan = MapHomePlaceBookState.make(stays: stays, language: .korean, region: "jp")
         XCTAssertTrue(japan.landmarks.allSatisfy { $0.id.hasPrefix("intl.jp.") })
-        XCTAssertTrue(state.registered[0].isVisited)
-        XCTAssertFalse(state.registered[1].isVisited)
-        XCTAssertEqual(state.registered[0].stamp.glyph, "家")
         XCTAssertTrue(try XCTUnwrap(state.landmarks.first { $0.id == "kr.namsan" }).isVisited)
         XCTAssertFalse(try XCTUnwrap(state.landmarks.first { $0.id == "kr.gyeongbokgung" }).isVisited)
     }
