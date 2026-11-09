@@ -78,7 +78,7 @@ daegu	kr.palgongsan	팔공산	Palgongsan	nature	36.0150	128.6950
 daegu	kr.donghwasa	동화사	Donghwasa	building	35.9950	128.7000
 daegu	kr.suseongmot	수성못	Suseong Lake	building	35.8280	128.6180
 daegu	kr.e_world	이월드	E-World	building	35.8540	128.5650
-daegu	kr.kim_gwangseok	김광석다시그리기길	Kim Kwang-seok Street	building	35.8600	128.6070	방천시장,김광석 다시그리기길
+daegu	kr.kim_gwangseok	김광석다시그리기길	Kim Kwang-seok Street	building	35.86117	128.60738	달구벌대로450길
 incheon	kr.incheon_chinatown	인천 차이나타운	Incheon Chinatown	building	37.4750	126.6190
 incheon	kr.wolmido	월미도	Wolmido	area	37.4750	126.5970
 incheon	kr.songdo_central	송도 센트럴파크	Songdo Central Park	building	37.3930	126.6390
@@ -268,12 +268,12 @@ daegu	kr.lions_park	대구삼성라이온즈파크	Daegu Samsung Lions Park	buil
 daegu	kr.biseulsan	비슬산	Biseulsan	nature	35.6950	128.5240
 daegu	kr.dodong_seowon	도동서원	Dodong Seowon	building	35.7280	128.3720
 daegu	kr.gatbawi	갓바위	Gatbawi	building	35.9820	128.8000
-incheon	kr.gaehang	개항장	Incheon Open Port	building	37.4740	126.6200	인천개항박물관,인천 개항장
+incheon	kr.gaehang	개항장	Incheon Open Port	building	37.47297	126.62115	인천개항장근대건축전시관
 incheon	kr.jayu_park	자유공원	Jayu Park	building	37.4760	126.6200
 incheon	kr.sinpo	신포국제시장	Sinpo Market	building	37.4720	126.6250
 incheon	kr.baedari	배다리	Baedari	building	37.4730	126.6370	배다리 헌책방골목
 incheon	kr.soraepogu	소래포구	Soraepogu	area	37.4000	126.7380
-incheon	kr.songdo_tribowl	트라이보울	Tri-Bowl	building	37.3910	126.6400	인천 트라이보울,Tri-Bowl
+incheon	kr.songdo_tribowl	트라이보울	Tri-Bowl	building	37.39425	126.63483	Tribowl Songdo
 incheon	kr.airport	인천국제공항	Incheon International Airport	area	37.4602	126.4407
 incheon	kr.ganghwa_sanseong	강화산성	Ganghwa Sanseong	area	37.7480	126.4800
 incheon	kr.baengnyeongdo	백령도	Baengnyeongdo	nature	37.9590	124.6700
@@ -318,7 +318,7 @@ gyeonggi	kr.seolleung_paju	파주출판도시	Paju Book City	area	37.7110	126.68
 gyeonggi	kr.odusan	오두산통일전망대	Odusan Unification Observatory	building	37.7730	126.6770
 gyeonggi	kr.ansan_daebudo	대부도	Daebudo	nature	37.2440	126.5760
 gyeonggi	kr.jebudo	제부도	Jebudo	area	37.1670	126.6200
-gyeonggi	kr.icheon_cerapia	이천 도자예술마을	Icheon Ceramic Village	area	37.2930	127.4400	이천세라피아,예스파크
+gyeonggi	kr.icheon_cerapia	이천 도자예술마을	Icheon Ceramic Village	area	37.28768	127.38034	신둔면 고척리
 gyeonggi	kr.gapyeong_jaraseom	자라섬	Jaraseom	area	37.8210	127.5230
 gyeonggi	kr.morning_calm	아침고요수목원	Garden of Morning Calm	building	37.7440	127.3530
 gyeonggi	kr.petite_france	쁘띠프랑스	Petite France	building	37.7050	127.5140
@@ -334,7 +334,7 @@ gangwon	kr.yeongnangho	영랑호	Yeongnangho	area	38.2150	128.5790
 gangwon	kr.samcheok_cave	환선굴	Hwanseongul	building	37.3290	129.0170
 gangwon	kr.samcheok_rail	삼척해양레일바이크	Samcheok Ocean Rail Bike	building	37.3420	129.3050	궁촌역,용화역
 gangwon	kr.taebaeksan	태백산	Taebaeksan	nature	37.0950	128.9170
-gangwon	kr.jeongseon	정선5일장	Jeongseon Market	building	37.3800	128.6600	정선시장,정선아리랑시장
+gangwon	kr.jeongseon	정선5일장	Jeongseon Market	building	37.38034	128.66469	Jeongseon Arirang Market
 gangwon	kr.hwajinpo	화진포	Hwajinpo	area	38.4750	128.4430
 gangwon	kr.yanggu_punch	해안분지	Haean Basin	nature	38.2800	128.1300	펀치볼
 chungbuk	kr.danyang_mancheonha	만천하스카이워크	Mancheonha Skywalk	building	36.9880	128.3460	만학천봉,만천하 스카이워크
@@ -402,7 +402,7 @@ gyeongnam	kr.daraengi	다랭이마을	Daraengi Village	area	34.7270	127.8930	남
 gyeongnam	kr.changwon_lake	주남저수지	Junam Reservoir	area	35.3120	128.6780
 gyeongnam	kr.masan_gagopa	돝섬	Dotseom	area	35.1800	128.5850
 gyeongnam	kr.gimhae_tomb	수로왕릉	Tomb of King Suro	building	35.2330	128.8750
-gyeongnam	kr.sancheong	남명조식유적지	Sancheong Namsa Village	area	35.3100	127.9500	남사마을,남사예담촌
+gyeongnam	kr.sancheong	남사예담촌	Namsa Yedam Village	area	35.26680	127.94150	산청 단성면 남사리
 gyeongnam	kr.hwagaejangteo	화개장터	Hwagae Market	building	35.1870	127.6240
 gyeongnam	kr.ssanggyesa	쌍계사	Ssanggyesa	building	35.2380	127.6410
 gyeongnam	kr.choe_chamnan	최참판댁	Choi Champan House	building	35.1540	127.6340	하동 최참판댁
