@@ -1,0 +1,15 @@
+{
+  "images": [
+    {
+      "filename": "PlaceBook_kr_gimhae_tomb.svg",
+      "idiom": "universal"
+    }
+  ],
+  "info": {
+    "author": "xcode",
+    "version": 1
+  },
+  "properties": {
+    "preserves-vector-representation": true
+  }
+}

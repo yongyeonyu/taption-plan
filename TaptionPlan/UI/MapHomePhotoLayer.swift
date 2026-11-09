@@ -549,8 +549,8 @@ struct MapHomePhotoArcBrowser: View {
 struct MapHomePhotoRingTab: View {
     static let width: CGFloat = 56
     static let height: CGFloat = 22
-    /// 보이는 반달은 낮게, 누르는 자리는 위로 이만큼 넓힌다.
-    static let touchExtra: CGFloat = 14
+    /// 보이는 반달은 낮게, 누르는 자리는 위로 이만큼 넓힌다(RNG1109A01: 전체 36 → 54pt).
+    static let touchExtra: CGFloat = 32
 
     let language: MapHomeLanguage
     let onOpen: () -> Void

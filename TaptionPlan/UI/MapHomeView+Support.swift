@@ -615,7 +615,8 @@ extension MapHomeView {
             MapHomePlaceBookSheet(
                 frequentPlaces: model.settings.frequentPlaces,
                 stays: model.snapshot.places,
-                language: language
+                language: language,
+                onSelect: showPlaceBookEntryOnMap
             )
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)

@@ -461,6 +461,7 @@
 		B10809000000000000000A02 /* MapHomeInkWash.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10809000000000000000F02 /* MapHomeInkWash.swift */; };
 		B10809000000000000000A03 /* MapHomePlaceStamps.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10809000000000000000F03 /* MapHomePlaceStamps.swift */; };
 		B10809000000000000000A04 /* MapHomePlaceBook.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10809000000000000000F04 /* MapHomePlaceBook.swift */; };
+		B10809000000000000000A99 /* MapHomeKoreaPlaceBookData.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10809000000000000000F99 /* MapHomeKoreaPlaceBookData.swift */; };
 		B10809000000000000000A05 /* MapHomeInkPreviewHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10809000000000000000F05 /* MapHomeInkPreviewHost.swift */; };
 		A50000000000000000000002 /* MapLibre in Frameworks */ = {isa = PBXBuildFile; productRef = X50000000000000000000002 /* MapLibre */; };
 		A60000000000000000000001 /* HealthKitTypeCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F60000000000000000000001 /* HealthKitTypeCatalog.swift */; };
@@ -1101,6 +1102,7 @@
 		B10809000000000000000F02 /* MapHomeInkWash.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeInkWash.swift; sourceTree = "<group>"; };
 		B10809000000000000000F03 /* MapHomePlaceStamps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaceStamps.swift; sourceTree = "<group>"; };
 		B10809000000000000000F04 /* MapHomePlaceBook.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaceBook.swift; sourceTree = "<group>"; };
+		B10809000000000000000F99 /* MapHomeKoreaPlaceBookData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeKoreaPlaceBookData.swift; sourceTree = "<group>"; };
 		B10809000000000000000F05 /* MapHomeInkPreviewHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeInkPreviewHost.swift; sourceTree = "<group>"; };
 		F60000000000000000000001 /* HealthKitTypeCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitTypeCatalog.swift; sourceTree = "<group>"; };
 		F60000000000000000000002 /* HealthKitImportStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitImportStore.swift; sourceTree = "<group>"; };
@@ -1555,6 +1557,7 @@
 				B10809000000000000000F02 /* MapHomeInkWash.swift */,
 				B10809000000000000000F03 /* MapHomePlaceStamps.swift */,
 				B10809000000000000000F04 /* MapHomePlaceBook.swift */,
+				B10809000000000000000F99 /* MapHomeKoreaPlaceBookData.swift */,
 				B10809000000000000000F05 /* MapHomeInkPreviewHost.swift */,
 				F1000000000000000000007F /* MapHomeCalendarSheet.swift */,
 				F1FA115C43BF0F705C0CC3E6 /* MapHomeDailyCard.swift */,
@@ -2438,6 +2441,7 @@
 				B10809000000000000000A02 /* MapHomeInkWash.swift in Sources */,
 				B10809000000000000000A03 /* MapHomePlaceStamps.swift in Sources */,
 				B10809000000000000000A04 /* MapHomePlaceBook.swift in Sources */,
+				B10809000000000000000A99 /* MapHomeKoreaPlaceBookData.swift in Sources */,
 				B10809000000000000000A05 /* MapHomeInkPreviewHost.swift in Sources */,
 				A1000000000000000000007F /* MapHomeCalendarSheet.swift in Sources */,
 				A1FA111D146A9C217935CC51 /* MapHomeDailyCard.swift in Sources */,

@@ -12,6 +12,8 @@ struct MapHomePlaceBookEntry: Identifiable, Equatable {
     let glyph: String
     let artworkName: String
     let firstVisit: Date?
+    /// 지도에 표시할 자리. 해외 도시는 직항 공항마다 하나씩이다.
+    var pins: [MapHomePlaceBookPin] = []
 
     var isVisited: Bool { firstVisit != nil }
     var stamp: MapHomePlaceStampMark { MapHomePlaceStampMark(glyph: glyph, isStamped: isVisited) }
@@ -32,7 +34,7 @@ struct MapHomePlaceBookState: Equatable {
         frequentPlaces: [FrequentPlace],
         stays: [PlaceStay],
         language: MapHomeLanguage,
-        country: String = defaultCountry
+        region: String = defaultRegion
     ) -> Self {
         let placed = frequentPlaces.filter { $0.point != nil }
         let firstArrivals = MapHomePlaceStampPolicy.firstArrivals(
@@ -47,47 +49,186 @@ struct MapHomePlaceBookState: Equatable {
                 subtitle: language.runtimeText(destination.koreanName, destination.englishName),
                 glyph: MapHomePlaceStampPolicy.glyph(kind: place.kind, name: place.displayName),
                 artworkName: destination.iconAssetName,
-                firstVisit: firstArrivals[place.stablePlaceKey]
+                firstVisit: firstArrivals[place.stablePlaceKey],
+                pins: place.point.map { [MapHomePlaceBookPin(title: place.displayName, subtitle: "", latitude: $0.latitude, longitude: $0.longitude)] } ?? []
             )
         }
-        let landmarks = candidates(in: country).map { candidate in
-            let title = language.runtimeText(candidate.name, candidate.englishName)
-            return MapHomePlaceBookEntry(
-                id: candidate.id,
+        let regionNames = Dictionary(uniqueKeysWithValues: regions.map { ($0.id, language.runtimeText($0.name, $0.englishName)) })
+        let landmarks = places(in: region).map { place in
+            MapHomePlaceBookEntry(
+                id: place.id,
                 kind: .landmark,
-                title: title,
-                subtitle: countryName(country, language: language),
-                // "N서울타워"처럼 로마자로 시작하면 첫 한글을 쓴다.
-                glyph: (candidate.name.first { !$0.isASCII } ?? candidate.name.first).map(String.init) ?? "印",
-                artworkName: candidate.artworkName,
-                firstVisit: MapHomeLandmarkSites.site(for: candidate.id).flatMap { $0.firstVisit(in: stays) }
+                title: language.runtimeText(place.name, place.englishName),
+                subtitle: place.countryCode.map { MapHomePlaceBookMenu.countryName($0, language: language) } ?? regionNames[place.region] ?? "",
+                // "N서울타워"·"5·18기념공원"처럼 한글로 시작하지 않으면 첫 한글을 쓴다.
+                glyph: (place.name.first { $0.isLetter && !$0.isASCII } ?? place.name.first).map(String.init) ?? "印",
+                artworkName: place.artworkName,
+                firstVisit: place.firstVisit(in: stays),
+                pins: place.pins(language: language)
             )
         }
-        return Self(registered: registered, landmarks: landmarks)
+        // 다른 나라는 그 나라의 직항 도시만 보여 준다(대표 지시).
+        return Self(registered: MapHomePlaceBookMenu.isCountry(region) ? [] : registered, landmarks: landmarks)
     }
 
-    /// 처음 여는 나라(PLB1108A02). 나라는 랜드마크 id 앞의 소문자 지역 코드다.
-    static let defaultCountry = "kr"
+    /// 처음 여는 시·도(PLB1109A01).
+    static let defaultRegion = "seoul"
+    static var regions: [MapHomeKoreaRegion] { MapHomeKoreaPlaceBookData.regions }
 
-    /// 카탈로그 순서대로 겹치지 않는 나라 코드.
+    /// 시·도 id, 종류 id, 또는 소문자 나라 코드로 고른다.
+    static func places(in selection: String) -> [MapHomeKoreaPlace] {
+        MapHomeKoreaPlaceBookData.places.filter {
+            $0.region == selection || $0.theme == selection || $0.countryCode?.lowercased() == selection
+        }
+    }
+}
+
+/// 도감의 한 줄 메뉴(PLB1109A01). 1차 나라 → 2차 한국의 지역별·종류별 → 3차 시·도·종류.
+struct MapHomePlaceBookMenu: Equatable {
+    enum Level: Equatable { case root, korea, region, theme }
+
+    struct Item: Identifiable, Equatable {
+        let id: String
+        let name: String
+        let englishName: String
+        var opens: Level?
+
+        func title(_ language: MapHomeLanguage) -> String {
+            if opens == nil, MapHomePlaceBookMenu.isCountry(id) {
+                return MapHomePlaceBookMenu.countryName(id, language: language)
+            }
+            return language.runtimeText(name, englishName)
+        }
+    }
+
+    var level = Level.region
+    var selected = MapHomePlaceBookState.defaultRegion
+
     static let countries: [String] = {
         var seen = Set<String>()
-        return MapHomeLandmarkCatalog.candidates.compactMap { candidate in
-            let code = countryCode(of: candidate)
-            return seen.insert(code).inserted ? code : nil
-        }
+        return MapHomeKoreaPlaceBookData.places.compactMap { $0.countryCode?.lowercased() }.filter { seen.insert($0).inserted }
     }()
 
-    static func candidates(in country: String) -> [MapHomeLandmarkCandidate] {
-        MapHomeLandmarkCatalog.candidates.filter { countryCode(of: $0) == country }
+    static func isCountry(_ id: String) -> Bool { countries.contains(id) }
+
+    /// iOS가 홍콩·마카오와 나란히 둘 때 "중국 본토"로 부르는 지역 이름을 "중국"으로 쓴다.
+    static func countryName(_ code: String, language: MapHomeLanguage) -> String {
+        if code.lowercased() == "cn" { return language.runtimeText("중국", "China") }
+        return language.locale.localizedString(forRegionCode: code.uppercased()) ?? code.uppercased()
     }
 
-    static func countryName(_ country: String, language: MapHomeLanguage) -> String {
-        language.locale.localizedString(forRegionCode: country.uppercased()) ?? country.uppercased()
+    var items: [Item] {
+        switch level {
+        case .root:
+            [Item(id: "kr", name: "한국", englishName: "Korea", opens: .korea)]
+                + Self.countries.map { Item(id: $0, name: $0, englishName: $0) }
+        case .korea:
+            [
+                Item(id: "by-region", name: "지역별", englishName: "By region", opens: .region),
+                Item(id: "by-theme", name: "종류별", englishName: "By type", opens: .theme),
+            ]
+        case .region:
+            MapHomeKoreaPlaceBookData.regions.map { Item(id: $0.id, name: $0.name, englishName: $0.englishName) }
+        case .theme:
+            MapHomeKoreaPlaceBookData.themes.map { Item(id: $0.id, name: $0.name, englishName: $0.englishName) }
+        }
     }
 
-    private static func countryCode(of candidate: MapHomeLandmarkCandidate) -> String {
-        String(candidate.id.prefix { $0 != "." })
+    var canGoUp: Bool { level != .root }
+
+    /// 지금 고른 목록으로 가는 길의 메뉴를 칠한다.
+    func isHighlighted(_ item: Item) -> Bool {
+        let isTheme = MapHomeKoreaPlaceBookData.themes.contains { $0.id == selected }
+        switch item.id {
+        case "kr": return !Self.isCountry(selected)
+        case "by-region": return !isTheme && !Self.isCountry(selected)
+        case "by-theme": return isTheme
+        default: return item.id == selected
+        }
+    }
+
+    mutating func tap(_ item: Item) {
+        if let opens = item.opens { level = opens } else { selected = item.id }
+    }
+
+    mutating func goUp() {
+        switch level {
+        case .root: break
+        case .korea: level = .root
+        case .region, .theme: level = .korea
+        }
+    }
+}
+
+struct MapHomeKoreaRegion: Identifiable, Equatable, Sendable {
+    let id: String
+    let name: String
+    let englishName: String
+}
+
+struct MapHomeAirport: Equatable, Sendable {
+    let name: String
+    let englishName: String
+    let latitude: Double
+    let longitude: Double
+
+    /// 공항 터미널·활주로를 덮는 반경.
+    var site: MapHomeLandmarkSite { MapHomeLandmarkSite(latitude: latitude, longitude: longitude, radiusMeters: 3_000) }
+}
+
+/// 도감에서 지도로 넘기는 한 자리.
+struct MapHomePlaceBookPin: Equatable, Hashable {
+    let title: String
+    let subtitle: String
+    let latitude: Double
+    let longitude: Double
+}
+
+/// 국내 도감 명소 한 곳. 자료는 `scripts/place-book/build.py`가 만든다.
+struct MapHomeKoreaPlace: Identifiable, Equatable, Sendable {
+    let id: String
+    let region: String
+    let name: String
+    let englishName: String
+    /// 시·도 탭과 함께 보일 묶음 탭(산·절·섬·드라이브길).
+    let theme: String?
+    let kind: MapHomeLandmarkSites.Kind
+    let latitude: Double
+    let longitude: Double
+    /// 해외 도시의 직항 공항. 두 곳 이상이면 모두 든다.
+    var airports: [MapHomeAirport] = []
+
+    /// 해외 도시 id(`intl.jp.tokyo`)의 지역 코드.
+    var countryCode: String? {
+        let parts = id.split(separator: ".")
+        return parts.first == "intl" && parts.count == 3 ? parts[1].uppercased() : nil
+    }
+
+    /// 도시 반경 또는 어느 직항 공항에든 머물면 가 본 곳이다.
+    func firstVisit(in stays: [PlaceStay]) -> Date? {
+        ([site] + airports.map(\.site)).compactMap { $0.firstVisit(in: stays) }.min()
+    }
+
+    func pins(language: MapHomeLanguage) -> [MapHomePlaceBookPin] {
+        let title = language.runtimeText(name, englishName)
+        guard !airports.isEmpty else {
+            return [MapHomePlaceBookPin(title: title, subtitle: "", latitude: latitude, longitude: longitude)]
+        }
+        return airports.map { airport in
+            let airportName = language.runtimeText(airport.name, airport.englishName)
+            return MapHomePlaceBookPin(
+                title: airportName.isEmpty
+                    ? language.runtimeText("\(title) 공항", "\(title) Airport")
+                    : language.runtimeText("\(title) \(airportName) 공항", "\(title) \(airportName) Airport"),
+                subtitle: "", latitude: airport.latitude, longitude: airport.longitude
+            )
+        }
+    }
+
+    var artworkName: String { "PlaceBook_" + id.replacingOccurrences(of: ".", with: "_") }
+
+    var site: MapHomeLandmarkSite {
+        MapHomeLandmarkSite(latitude: latitude, longitude: longitude, radiusMeters: kind.radiusMeters)
     }
 }
 
@@ -124,12 +265,18 @@ enum MapHomeLandmarkSites {
         case area
         /// 산·국립공원·해안처럼 넓은 자연
         case nature
+        /// 해외는 한국 직항 도시 단위로만 찍는다(대표 결정 2026-11-09).
+        case city
+        /// 거제도처럼 넓은 섬 하나
+        case largeIsland
 
         var radiusMeters: Double {
             switch self {
             case .building: 500
             case .area: 2_000
             case .nature: 5_000
+            case .city: 30_000
+            case .largeIsland: 15_000
             }
         }
     }
@@ -200,21 +347,24 @@ struct MapHomePlaceBookSheet: View {
     let frequentPlaces: [FrequentPlace]
     let stays: [PlaceStay]
     let language: MapHomeLanguage
+    /// 카드를 누르면 지도에 표시한다(대표 지시).
+    var onSelect: (MapHomePlaceBookPin) -> Void = { _ in }
 
     @State private var state: MapHomePlaceBookState?
-    @State private var country = MapHomePlaceBookState.defaultCountry
+    @State private var menu = MapHomePlaceBookMenu()
+    @State private var airportChoice: MapHomePlaceBookEntry?
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 3)
 
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 18) {
                 header
-                countryPicker
+                menuRow
                 if let state {
                     if !state.registered.isEmpty {
                         section(language.text("등록한 곳", "My places"), entries: state.registered)
                     }
-                    section(language.text("랜드마크", "Landmarks"), entries: state.landmarks)
+                    section(MapHomePlaceBookMenu.isCountry(menu.selected) ? language.runtimeText("도시", "Cities") : language.text("랜드마크", "Landmarks"), entries: state.landmarks)
                 } else {
                     ProgressView().frame(maxWidth: .infinity)
                 }
@@ -226,34 +376,55 @@ struct MapHomePlaceBookSheet: View {
             guard state == nil else { return }
             reload()
         }
-        .onChange(of: country) { reload() }
+        .onChange(of: menu.selected) { reload() }
+        .confirmationDialog(
+            airportChoice?.title ?? "",
+            isPresented: Binding(get: { airportChoice != nil }, set: { if !$0 { airportChoice = nil } }),
+            titleVisibility: .visible
+        ) {
+            ForEach(airportChoice?.pins ?? [], id: \.self) { pin in
+                Button(pin.title) { onSelect(pin) }
+            }
+        }
     }
 
     private func reload() {
         state = MapHomePlaceBookState.make(
-            frequentPlaces: frequentPlaces, stays: stays, language: language, country: country
+            frequentPlaces: frequentPlaces, stays: stays, language: language, region: menu.selected
         )
     }
 
-    private var countryPicker: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(MapHomePlaceBookState.countries, id: \.self) { code in
-                    let isSelected = code == country
-                    Button {
-                        country = code
-                    } label: {
-                        Text(MapHomePlaceBookState.countryName(code, language: language))
-                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .semibold))
-                            .foregroundStyle(isSelected ? Color.tpBackground : Color.tpInk)
-                            .padding(.horizontal, 12)
-                            .frame(minHeight: 44)
-                            .background(isSelected ? Color.tpInk : Color.tpCard, in: Capsule())
+    private var menuRow: some View {
+        HStack(spacing: 8) {
+            if menu.canGoUp {
+                Button { menu.goUp() } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .bold))
+                        .foregroundStyle(Color.tpInk)
+                        .frame(width: 44, height: 44)
+                        .background(Color.tpCard, in: Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(language.text("뒤로", "Back"))
+            }
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(menu.items) { item in
+                        let isSelected = menu.isHighlighted(item)
+                        Button { menu.tap(item) } label: {
+                            Text(item.title(language))
+                                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .semibold))
+                                .foregroundStyle(isSelected ? Color.tpBackground : Color.tpInk)
+                                .padding(.horizontal, 14)
+                                .frame(minHeight: 44)
+                                .background(isSelected ? Color.tpInk : Color.tpCard, in: Capsule())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(isSelected ? .isSelected : [])
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityAddTraits(isSelected ? .isSelected : [])
                 }
             }
+            .id(menu.level)
         }
     }
 
@@ -280,7 +451,13 @@ struct MapHomePlaceBookSheet: View {
                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.bodyStrong), weight: .bold))
                 .foregroundStyle(Color.tpInk)
             LazyVGrid(columns: columns, spacing: 10) {
-                ForEach(entries) { card($0) }
+                ForEach(entries) { entry in
+                    Button {
+                        if entry.pins.count > 1 { airportChoice = entry } else if let pin = entry.pins.first { onSelect(pin) }
+                    } label: { card(entry) }
+                        .buttonStyle(.plain)
+                        .disabled(entry.pins.isEmpty)
+                }
             }
         }
     }

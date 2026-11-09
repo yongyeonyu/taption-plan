@@ -1,0 +1,15 @@
+{
+  "images": [
+    {
+      "filename": "PlaceBook_kr_changseon_bridge.svg",
+      "idiom": "universal"
+    }
+  ],
+  "info": {
+    "author": "xcode",
+    "version": 1
+  },
+  "properties": {
+    "preserves-vector-representation": true
+  }
+}

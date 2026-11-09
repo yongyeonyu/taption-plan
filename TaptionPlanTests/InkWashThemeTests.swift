@@ -66,6 +66,64 @@ final class InkWashThemeTests: XCTestCase {
 
     // MARK: - 장소 도감
 
+    /// 국내 도감 자료: 17개 시·도와 해외 직항 도시, id 중복 없음, 국내 좌표 범위, 기존 7곳 id 유지(PLB1109A01).
+    func testKoreaPlaceBookData() {
+        let places = MapHomeKoreaPlaceBookData.places
+        let regions = Set(MapHomeKoreaPlaceBookData.regions.map(\.id))
+        XCTAssertEqual(regions.count, 17)
+        XCTAssertEqual(Set(places.map(\.id)).count, places.count)
+        XCTAssertEqual(Set(places.compactMap { $0.countryCode == nil ? $0.region : nil }), regions, "모든 시·도에 명소가 있다")
+        XCTAssertEqual(Set(places.compactMap(\.theme)), Set(MapHomeKoreaPlaceBookData.themes.map(\.id)), "모든 종류에 명소가 있다")
+        for place in places {
+            XCTAssertNotNil(UIImage(named: place.artworkName), "그림 없음: \(place.id)")
+            if place.region == "abroad" {
+                XCTAssertNotNil(place.countryCode, place.id)
+                XCTAssertEqual(place.kind, .city, place.id)
+                XCTAssertFalse(place.airports.isEmpty, "공항 좌표 없음: \(place.id)")
+            } else {
+                XCTAssertTrue(place.id.hasPrefix("kr."), place.id)
+                XCTAssertTrue((33...39).contains(place.latitude) && (124...132).contains(place.longitude), place.id)
+            }
+        }
+        let ids = Set(places.map(\.id))
+        for kept in MapHomeLandmarkCatalog.candidates.map(\.id) where kept.hasPrefix("kr.") {
+            XCTAssertTrue(ids.contains(kept), "도장이 이어지게 기존 id를 유지한다: \(kept)")
+        }
+    }
+
+    /// 한 줄 메뉴: 1차 나라, 2차 지역별·종류별, 3차 목록과 위로가기(PLB1109A01).
+    /// 직항 공항이 둘 이상인 도시는 모두 담고, 어느 공항에 머물러도 도장이 찍힌다(PLB1109A01).
+    func testPlaceBookCityIncludesEveryDirectAirport() throws {
+        let tokyo = try XCTUnwrap(MapHomeKoreaPlaceBookData.places.first { $0.id == "intl.jp.tokyo" })
+        XCTAssertEqual(tokyo.airports.count, 2)
+        XCTAssertEqual(tokyo.pins(language: .korean).count, 2)
+        let narita = try XCTUnwrap(tokyo.airports.first)
+        let stay = MapHomeLandmarkSite(latitude: narita.latitude, longitude: narita.longitude, radiusMeters: 3_000)
+        XCTAssertTrue(stay.contains(GeoPoint(latitude: narita.latitude + 0.005, longitude: narita.longitude, altitude: 0, horizontalAccuracy: -1, verticalAccuracy: -1)))
+    }
+
+    func testPlaceBookMenuHierarchy() {
+        var menu = MapHomePlaceBookMenu()
+        XCTAssertEqual(menu.level, .region)
+        XCTAssertEqual(menu.selected, "seoul")
+        menu.goUp()
+        XCTAssertEqual(menu.items.map(\.id), ["by-region", "by-theme"])
+        XCTAssertEqual(menu.selected, "seoul", "위로 가도 보던 목록은 그대로다")
+        menu.tap(menu.items[1])
+        XCTAssertEqual(menu.level, .theme)
+        menu.tap(try! XCTUnwrap(menu.items.first { $0.id == "temple" }))
+        XCTAssertEqual(menu.selected, "temple")
+        XCTAssertTrue(MapHomePlaceBookState.places(in: "temple").contains { $0.id == "kr.bulguksa" })
+        menu.goUp(); menu.goUp()
+        XCTAssertEqual(menu.level, .root)
+        XCTAssertFalse(menu.canGoUp)
+        XCTAssertEqual(menu.items.first?.id, "kr")
+        XCTAssertTrue(menu.items.contains { $0.id == "jp" })
+        menu.tap(try! XCTUnwrap(menu.items.first { $0.id == "jp" }))
+        XCTAssertEqual(menu.level, .root, "나라는 바로 도시 목록을 연다")
+        XCTAssertTrue(MapHomePlaceBookState.places(in: "jp").allSatisfy { $0.id.hasPrefix("intl.jp.") })
+    }
+
     func testPlaceBookCountsVisitedAndRemaining() throws {
         let home = FrequentPlace(kind: .home, point: point(37.5, 127.0))
         let school = FrequentPlace(kind: .school, point: point(37.52, 127.02))
@@ -80,23 +138,18 @@ final class InkWashThemeTests: XCTestCase {
         ]
         let state = MapHomePlaceBookState.make(frequentPlaces: [home, school, unset], stays: stays, language: .korean)
         XCTAssertEqual(state.registered.map(\.id), [home.stablePlaceKey, school.stablePlaceKey])
-        let korea = MapHomePlaceBookState.candidates(in: "kr")
-        XCTAssertEqual(state.landmarks.count, korea.count)
-        XCTAssertTrue(state.landmarks.allSatisfy { $0.id.hasPrefix("kr.") }, "처음은 한국 도감")
-        XCTAssertEqual(state.stampedCount, 2)
-        XCTAssertEqual(state.remainingCount, 1 + korea.count - 1)
-        XCTAssertEqual(MapHomePlaceBookState.countries.first, "kr")
-        XCTAssertEqual(MapHomePlaceBookState.countries.count, 10)
-        XCTAssertEqual(
-            MapHomePlaceBookState.countries.flatMap(MapHomePlaceBookState.candidates(in:)).count,
-            MapHomeLandmarkCatalog.candidates.count,
-            "모든 랜드마크가 어느 한 나라에 든다"
-        )
-        let japan = MapHomePlaceBookState.make(frequentPlaces: [home, school, unset], stays: stays, language: .korean, country: "jp")
-        XCTAssertTrue(japan.landmarks.allSatisfy { $0.id.hasPrefix("jp.") })
-        XCTAssertEqual(japan.landmarks.count, 5)
-        XCTAssertEqual(japan.registered.map(\.id), state.registered.map(\.id), "등록한 곳은 나라와 무관하다")
-        XCTAssertEqual(japan.stampedCount, 1, "한국 랜드마크 도장은 일본 수에 넣지 않는다")
+        let seoul = MapHomePlaceBookState.places(in: "seoul")
+        XCTAssertEqual(state.landmarks.map(\.id), seoul.map(\.id), "처음은 서울")
+        XCTAssertEqual(state.registered.filter(\.isVisited).count, 1)
+        XCTAssertEqual(state.stampedCount + state.remainingCount, state.entries.count)
+        XCTAssertGreaterThanOrEqual(seoul.count, 40)
+        let jeju = MapHomePlaceBookState.make(frequentPlaces: [home, school, unset], stays: stays, language: .korean, region: "jeju")
+        XCTAssertTrue(jeju.landmarks.contains { $0.id == "kr.hallasan" })
+        XCTAssertEqual(jeju.registered.map(\.id), state.registered.map(\.id), "등록한 곳은 시·도와 무관하다")
+        XCTAssertEqual(jeju.stampedCount, 1, "서울 명소 도장은 제주 수에 넣지 않는다")
+        let japan = MapHomePlaceBookState.make(frequentPlaces: [home, school, unset], stays: stays, language: .korean, region: "jp")
+        XCTAssertTrue(japan.registered.isEmpty, "다른 나라는 도시만")
+        XCTAssertTrue(japan.landmarks.allSatisfy { $0.id.hasPrefix("intl.jp.") })
         XCTAssertTrue(state.registered[0].isVisited)
         XCTAssertFalse(state.registered[1].isVisited)
         XCTAssertEqual(state.registered[0].stamp.glyph, "家")

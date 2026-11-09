@@ -1054,6 +1054,21 @@ extension MapHomeView {
         }
     }
 
+    /// 장소 도감 카드를 지도에 표시한다. 해외 도시는 고른 직항 공항 자리다(PLB1109A01).
+    func showPlaceBookEntryOnMap(_ pin: MapHomePlaceBookPin) {
+        isPlaceBookPresented = false
+        isMenuOpen = false
+        // 시트와 메뉴가 다 닫힌 뒤 지도를 옮긴다. 닫히는 동안 옮기면 카메라 이동이 적용되지 않는다.
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(450))
+            selectSearchResult(MapHomeSearchResult(
+                title: pin.title,
+                subtitle: pin.subtitle,
+                coordinate: CLLocationCoordinate2D(latitude: pin.latitude, longitude: pin.longitude)
+            ))
+        }
+    }
+
     func selectSearchResult(_ result: MapHomeSearchResult) {
         focusMap(
             on: GeoPoint(
