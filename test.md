@@ -2,6 +2,10 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## TFB1109A01 · TestFlight 304 내부 그룹 (2026-11-09)
+
+- `release.sh --yes --request-id TFB1109A01`: 빌드 304, 처리 VALID, `TP Taption Plan 내부 테스트` 그룹 연결·테스터 1명 노출 확인(`build/validation/TFB1109A01/testflight-report.json`). 아카이브 네 번들 모두 304. 외부 그룹 제출 없음(외부 최신 303). 실기기 동작 확인은 대표.
+
 ## VER1109A01 · 장소 도감 미검증 항목, 기록 간격 메뉴 삭제, 멈춤 중 GPS (2026-11-09)
 
 - 전체 단위 시험(시뮬레이터 BOKKI-iPhone11): 2,280건 실패 0·건너뜀 22(`build/validation/VER1109A01/unit-full.log`). 구조 검사·번역 점검 통과. 실기기가 `available`이 아니어 시뮬레이터로 대체, 실기기 미확인.
