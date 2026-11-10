@@ -2,6 +2,14 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## EXE1110A01 · 남은 항목 전부 진행 — 0단계 서버 배포·새 빌드 (2026-11-10)
+
+- 원인(아이폰 18 「PIN 만들기」 실패): 실서버가 1단계라 `/pin`이 404 `not_found`(배포 전 `curl` 확인). 앱은 이를 「잠시 뒤 다시」로 안내했다.
+- 앱: 404 `not_found`를 `AssistantServerRefusal.serverOutdated`(「앱이나 서버 업데이트가 필요해요」)로 구분. 시뮬레이터 `AssistantPhase3Tests` 25개 통과(`build/validation/EXE1110A01/pin404-sim.xcresult`). l10n `check.py` 실패 0.
+- 서버: `npm test` 75개 통과, dry-run 뒤 3단계 배포(`relay-deploy.log`). 비밀값 `PIN_PEPPER`는 대표가 넣음. `KAKAO_REST_API_KEY`는 입력 대기 중이라 카카오 검색은 503 `unavailable`.
+- 실서버 왕복(버리는 주인 키, `relay-roundtrip-2.log`): 등록 201, `GET /pin` 없음→있음, `POST /pin` 200, 틀린 PIN 403 `remaining:4`, 연결 키 201·목록, `/activity` 올리기 `written:1`→같은 내용 `written:0`, AI 읽기 200, AI 명령 201·`bad_id` 422, 앱 큐 읽기·결과 201·AI 결과 읽기, `/pin/reset` `revokedKeys:1` 뒤 AI 키 401, 시험 자료 지움(204). 첫 시도(`relay-roundtrip-1.log`)는 시험 스크립트의 명령 형식이 틀려 422였다(서버 문제 아님).
+- TestFlight 306(`TFB1110A02`): 첫 실행은 작업 트리가 깨끗하지 않아 멈춤(`release-306.log`). 다시 실행해 네 번들 306·업로드까지 됐고, 처리 대기·그룹 연결은 네트워크 시간 초과로 실패 → `asc.py wait`·`attach` 재시도로 VALID·내부 그룹 연결, `verify` ok(`testflight-report.json`).
+
 ## LCH1110A01 · 아이폰 11 Pro 시작 화면 멈춤 신고 (2026-11-10)
 
 - 신고: 아이폰 11 Pro에서 앱이 시작 화면(로딩)에서 멈춤.
