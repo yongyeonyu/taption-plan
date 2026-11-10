@@ -306,6 +306,8 @@ extension AppModel {
         }
         let motionActivities =
             (try? await sensorService.motionActivities(in: span)) ?? []
+        let sleepMotionActivities =
+            (try? await sensorService.motionActivities(in: sleepSpan)) ?? []
         guard !Task.isCancelled, acceptsDataMutation() else { return false }
         TaptionPlanDiagnosticsLogger.shared.record(
             "sensor_timeline_evidence_loaded",
@@ -373,7 +375,8 @@ extension AppModel {
                 archivedReadings: archivedReadings, watchSummaries: watchSummaries,
                 watchAccelerationSamples: watchAccelerationSamples,
                 sleepReadings: sleepReadings, sleepSpan: sleepSpan,
-                classifiedReadings: sensorQuality.routeReadings, gapReadings: sensorQuality.readings
+                classifiedReadings: sensorQuality.routeReadings, gapReadings: sensorQuality.readings,
+                sleepMotionActivities: sleepMotionActivities
             )) else { return false }
             await classificationRecompute?.complete(recomputeOutcome, day: span.start)
             guard (settings.locationEnabled || settings.weatherEnabled),
@@ -656,7 +659,8 @@ extension AppModel {
             archivedReadings: archivedReadings, watchSummaries: watchSummaries,
             watchAccelerationSamples: watchAccelerationSamples,
             sleepReadings: sleepReadings, sleepSpan: sleepSpan,
-            classifiedReadings: readings, gapReadings: sensorQuality.readings
+            classifiedReadings: readings, gapReadings: sensorQuality.readings,
+            sleepMotionActivities: sleepMotionActivities
         )) else { return false }
         snapshot.actuals = RailJourneyRecognizer.retitling(
             snapshot.actuals,
@@ -724,7 +728,7 @@ extension AppModel {
         applyPlaceActivityRecords(stays: input.contextStays, inside: span)
         // Sleep inference depends on the current observation cutoff and also
         // consumes motion-only samples without a GPS point.
-        applyChargingInactivitySleepRecords(readings: input.sleepReadings, inside: input.sleepSpan)
+        applyChargingInactivitySleepRecords(readings: input.sleepReadings, motionActivities: input.sleepMotionActivities, inside: input.sleepSpan)
         snapshot.settings.confirmedSleepSpans =
             TaptionActivityEngineAdapter.migratedConfirmedSleepSpans(
                 existing: snapshot.settings.confirmedSleepSpans,
@@ -927,8 +931,10 @@ extension AppModel {
 
     private func applyChargingInactivitySleepRecords(
         readings: [SensorReading],
+        motionActivities: [MotionActivityRecord] = [],
         inside span: TimeSpan
     ) {
+        defer { applyPhoneSleepScoreRecords(readings: readings, motionActivities: motionActivities, night: span) }
         let maximumSampleGap = max(
             20 * 60,
             settings.gpsLoggingPreferences.interval * 1.6 + 60
@@ -1031,6 +1037,40 @@ extension AppModel {
                 && actual.span(asOf: span.end)
                     .intersection(with: evidenceSpan) != nil
         }
+        snapshot.actuals.append(contentsOf: records)
+        snapshot.actuals.sort { $0.startedAt < $1.startedAt }
+    }
+
+    /// 다른 수면 판정이 없는 밤만 점수로 판정한다. 위치를 꺼 표본이 없어도 동작 기록으로 판정한다(SLP1110A01).
+    private func applyPhoneSleepScoreRecords(
+        readings: [SensorReading],
+        motionActivities: [MotionActivityRecord],
+        night: TimeSpan
+    ) {
+        snapshot.actuals.removeAll { actual in
+            AutomaticModelVersion.matches(actual.modelVersion, PhoneSleepScoreAdapter.modelVersion)
+                && actual.span(asOf: night.end).intersection(with: night) != nil
+        }
+        let home = settings.frequentPlaces.first { $0.kind == .home && $0.isAutomaticRecordingEnabled }
+        let records = PhoneSleepScoreAdapter.records(
+            night: night,
+            readings: readings,
+            motionActivities: motionActivities,
+            actuals: snapshot.actuals,
+            homePoint: home?.point,
+            homeRadiusMeters: home?.radiusMeters ?? 100,
+            wearableSleepSpans: sleepSessions.map(\.span)
+        ).filter { !snapshot.settings.suppressedActualIDs.contains($0.id) }
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "sleep_score_completed",
+            fields: [
+                "readings": String(readings.count),
+                "motion_activities": String(motionActivities.count),
+                "records": String(records.count),
+                "evidence": records.first?.evidence.joined(separator: ";") ?? "none",
+            ]
+        )
+        guard !records.isEmpty else { return }
         snapshot.actuals.append(contentsOf: records)
         snapshot.actuals.sort { $0.startedAt < $1.startedAt }
     }

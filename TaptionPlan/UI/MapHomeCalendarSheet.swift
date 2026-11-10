@@ -36,8 +36,14 @@ struct MapHomeCalendarSheet: View {
     @Environment(\.mapHomeWidePanelColumns) private var panelColumns
 
     @MainActor
+    let starredDays: Set<Date>
+    /// 여행 모드에서 고를 수 있는 첫 날.
+    let minimumDay: Date?
+
     init(
         selectedDate: Binding<Date>,
+        starredDays: Set<Date> = [],
+        minimumDay: Date? = nil,
         holidayName: @escaping (Date) -> String?,
         logStatuses: @escaping (Date) async -> [Date: MapHomeCalendarLogStatus] = { _ in [:] },
         timeTotals: @escaping (Date) async -> [Date: [String: TimeInterval]] = { _ in [:] },
@@ -49,6 +55,8 @@ struct MapHomeCalendarSheet: View {
     ) {
         self.liveToken = liveToken
         self._selectedDate = selectedDate
+        self.starredDays = starredDays
+        self.minimumDay = minimumDay
         self.holidayName = holidayName
         self.logStatuses = logStatuses
         self.timeTotals = timeTotals
@@ -556,6 +564,7 @@ struct MapHomeCalendarSheet: View {
         let isSelected = date == selectedDay
         let isToday = date == today
         let status = statuses[date]
+        let isBlocked = minimumDay.map { date < $0 } ?? false
 
         return Button {
             selectedDate = date
@@ -570,6 +579,14 @@ struct MapHomeCalendarSheet: View {
                             Circle().fill(Color.tpAccent)
                         } else if isToday {
                             Circle().stroke(Color.tpAccent.opacity(0.65), lineWidth: 1.5)
+                        }
+                    }
+                    .overlay(alignment: .topTrailing) {
+                        if starredDays.contains(date) {
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 9))
+                                .foregroundStyle(Color(hex: "#E8B23A"))
+                                .offset(x: 3, y: -2)
                         }
                     }
 
@@ -590,6 +607,8 @@ struct MapHomeCalendarSheet: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .disabled(isBlocked)
+        .opacity(isBlocked ? 0.3 : 1)
         .accessibilityLabel(accessibilityLabel(day: day, date: date, holiday: holiday, status: status))
     }
 

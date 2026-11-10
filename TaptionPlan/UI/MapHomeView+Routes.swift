@@ -1004,6 +1004,7 @@ extension MapHomeView {
         guard isMapSearchFocused
                 || !mapSearchResults.isEmpty
                 || !mapSearchCompleter.results.isEmpty
+                || !mapSearchCompleter.kakaoResults.isEmpty
         else { return }
         isMapSearchFocused = false
         isSearchExpanded = false

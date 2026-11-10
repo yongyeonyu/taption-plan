@@ -1,5 +1,6 @@
 import CoreLocation
 import Photos
+import AVKit
 import SwiftUI
 import UIKit
 
@@ -162,6 +163,24 @@ final class MapHomePhotoImageLoader {
     static let shared = MapHomePhotoImageLoader()
     private let cache = NSCache<NSString, UIImage>()
 
+    func playerItem(localIdentifier: String) async -> AVPlayerItem? {
+        guard let asset = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil).firstObject else { return nil }
+        let options = PHVideoRequestOptions()
+        options.isNetworkAccessAllowed = true
+        return await withCheckedContinuation { continuation in
+            PHImageManager.default().requestPlayerItem(forVideo: asset, options: options) { item, _ in
+                continuation.resume(returning: item)
+            }
+        }
+    }
+
+    /// 영상이면 길이(초), 사진이면 nil. 저장 형식을 늘리지 않고 사진 앱 항목에서 바로 읽는다.
+    func videoDuration(localIdentifier: String) -> TimeInterval? {
+        guard let asset = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil).firstObject,
+              asset.mediaType == .video else { return nil }
+        return asset.duration
+    }
+
     func image(localIdentifier: String, side: CGFloat) async -> UIImage? {
         let key = "\(localIdentifier)|\(Int(side))" as NSString
         if let cached = cache.object(forKey: key) { return cached }
@@ -203,6 +222,7 @@ struct MapHomePhotoThumbnail: View {
     let side: CGFloat
     var contentMode: ContentMode = .fill
     @State private var image: UIImage?
+    @State private var videoDuration: TimeInterval?
 
     var body: some View {
         ZStack {
@@ -215,11 +235,14 @@ struct MapHomePhotoThumbnail: View {
                 Image(systemName: "photo")
                     .foregroundStyle(Color.tpSecondary)
             }
+            if videoDuration != nil { MapHomeVideoBadge(side: side * 0.34) }
         }
         .frame(width: side, height: side)
         .clipped()
         .task(id: localIdentifier) {
             if image != nil { image = nil }
+            let duration = MapHomePhotoImageLoader.shared.videoDuration(localIdentifier: localIdentifier)
+            if duration != videoDuration { videoDuration = duration }
             image = await MapHomePhotoImageLoader.shared.image(localIdentifier: localIdentifier, side: side)
         }
     }
@@ -286,22 +309,139 @@ struct MapHomePhotoPin: View {
     }
 }
 
-/// 전체 화면 사진. 정사각 칸에 가두지 않고 화면에 맞춘다.
+/// 영상 칸 가운데의 재생 표시.
+struct MapHomeVideoBadge: View {
+    let side: CGFloat
+
+    var body: some View {
+        Image(systemName: "play.fill")
+            .font(.system(size: side * 0.46, weight: .bold))
+            .foregroundStyle(.white)
+            .frame(width: side, height: side)
+            .background(.black.opacity(0.5), in: Circle())
+            .overlay(Circle().stroke(.white.opacity(0.85), lineWidth: max(1, side * 0.05)))
+    }
+}
+
+/// 전체 화면 사진·영상. 정사각 칸에 가두지 않고 화면에 맞춘다. 영상은 누를 때만 재생한다.
 struct MapHomePhotoFullImage: View {
     let localIdentifier: String
     @State private var image: UIImage?
+    @State private var isVideo = false
+    @State private var player: AVPlayer?
+    @State private var isLoadingVideo = false
 
     var body: some View {
-        Group {
-            if let image {
+        ZStack {
+            if let player {
+                VideoPlayer(player: player)
+            } else if let image {
                 Image(uiImage: image).resizable().scaledToFit()
+                if isVideo { videoButton }
             } else {
                 ProgressView().tint(.white)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .task(id: localIdentifier) {
+            isVideo = MapHomePhotoImageLoader.shared.videoDuration(localIdentifier: localIdentifier) != nil
             image = await MapHomePhotoImageLoader.shared.image(localIdentifier: localIdentifier, side: 1_000)
+        }
+        // 옆으로 넘기면 소리가 남지 않게 멈춘다.
+        .onDisappear {
+            player?.pause()
+            player = nil
+        }
+    }
+
+    private var videoButton: some View {
+        Button(action: playVideo) {
+            if isLoadingVideo {
+                ProgressView().tint(.white).frame(width: 76, height: 76)
+            } else {
+                MapHomeVideoBadge(side: 76)
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(isLoadingVideo)
+        .accessibilityLabel(MapHomeLanguage.current.text("영상 재생", "Play video"))
+    }
+
+    private func playVideo() {
+        isLoadingVideo = true
+        Task {
+            let item = await MapHomePhotoImageLoader.shared.playerItem(localIdentifier: localIdentifier)
+            isLoadingVideo = false
+            guard let item else { return }
+            let newPlayer = AVPlayer(playerItem: item)
+            player = newPlayer
+            newPlayer.play()
+        }
+    }
+}
+
+private final class MapHomeVideoLayerView: UIView {
+    override class var layerClass: AnyClass { AVPlayerLayer.self }
+    var playerLayer: AVPlayerLayer { layer as! AVPlayerLayer }
+}
+
+private struct MapHomeVideoLayer: UIViewRepresentable {
+    let player: AVPlayer
+
+    func makeUIView(context: Context) -> MapHomeVideoLayerView {
+        let view = MapHomeVideoLayerView()
+        view.playerLayer.videoGravity = .resizeAspectFill
+        view.isUserInteractionEnabled = false
+        return view
+    }
+
+    func updateUIView(_ view: MapHomeVideoLayerView, context: Context) {
+        view.playerLayer.player = player
+    }
+}
+
+/// 링 가운데에 온 영상을 소리 없이 반복 재생한다. 사진이면 아무것도 그리지 않는다.
+/// 일반 모드 링(`seamless`)은 다른 입력이 없는 동안 끊김 없이 반복한다(대표 지시). 재생 모드 줄은 예전 방식 그대로다.
+struct MapHomeRingVideo: View {
+    let localIdentifier: String
+    var seamless = false
+    @State private var player: AVPlayer?
+    @State private var looper: AVPlayerLooper?
+
+    var body: some View {
+        Group {
+            if let player { MapHomeVideoLayer(player: player) } else { Color.clear }
+        }
+        .allowsHitTesting(false)
+        .task(id: localIdentifier) {
+            guard MapHomePhotoImageLoader.shared.videoDuration(localIdentifier: localIdentifier) != nil,
+                  let item = await MapHomePhotoImageLoader.shared.playerItem(localIdentifier: localIdentifier),
+                  !Task.isCancelled else { return }
+            if seamless {
+                // 같은 영상을 대기열에 이어 붙여 끝과 처음 사이에 멈칫하지 않는다.
+                let queue = AVQueuePlayer()
+                queue.isMuted = true
+                looper = AVPlayerLooper(player: queue, templateItem: item)
+                player = queue
+                queue.play()
+                return
+            }
+            let newPlayer = AVPlayer(playerItem: item)
+            newPlayer.isMuted = true
+            newPlayer.actionAtItemEnd = .none
+            player = newPlayer
+            newPlayer.play()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .AVPlayerItemDidPlayToEndTime)) { note in
+            guard !seamless, let player, (note.object as? AVPlayerItem) === player.currentItem else { return }
+            player.seek(to: .zero)
+            player.play()
+        }
+        .onDisappear {
+            player?.pause()
+            looper?.disableLooping()
+            looper = nil
+            player = nil
         }
     }
 }
@@ -489,7 +629,8 @@ struct MapHomePhotoArcBrowser: View {
                         side: 46,
                         width: proxy.size.width,
                         isEnlarged: !isRingIdle,
-                        dimsCenter: isRingIdle
+                        dimsCenter: isRingIdle,
+                        seamlessVideo: true
                     )
                     .onTapGesture {
                         if photoIndex == index { pagerIndex = index } else { index = photoIndex }
@@ -584,11 +725,14 @@ struct MapHomePhotoArcSlot: View {
     let width: CGFloat
     let isEnlarged: Bool
     var dimsCenter = false
+    /// 일반 모드 링: 가운데 영상을 끊김 없이 반복한다.
+    var seamlessVideo = false
 
     var body: some View {
         let isCenter = distance == 0 && isEnlarged
         let place = MapHomePlaybackPhotoStrip.arcPlacement(distance: distance, countOnSide: countOnSide, side: side, width: width, isEnlarged: isEnlarged)
         MapHomePhotoThumbnail(localIdentifier: id, side: MapHomePlaybackPhotoStrip.centerSide)
+            .overlay { if distance == 0 { MapHomeRingVideo(localIdentifier: id, seamless: seamlessVideo) } }
             // 지금 사진만 밝게 두고 나머지는 30% 어둡게 한다.
             .overlay(Color.black.opacity(distance == 0 && !dimsCenter ? 0 : 0.3))
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))

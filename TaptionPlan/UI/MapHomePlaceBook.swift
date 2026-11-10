@@ -9,14 +9,33 @@ struct MapHomePlaceBookEntry: Identifiable, Equatable {
     let subtitle: String
     let glyph: String
     let artworkName: String
-    let firstVisit: Date?
+    private let storedFirstVisit: Date?
+    /// 방문한 날들(오래된 순). 여러 번 가면 도장이 쌓인다.
+    var visitDates: [Date] = []
+
+    var firstVisit: Date? { visitDates.first ?? storedFirstVisit }
     /// 지도에 표시할 자리. 해외 도시는 직항 공항마다 하나씩이다.
     var pins: [MapHomePlaceBookPin] = []
     /// 공항·해외 도시는 여권 입국 도장을 찍는다.
     var usesPassportStamp = false
     var stampCountry = "kr"
+    var stampPlace = ""
 
     var isVisited: Bool { firstVisit != nil }
+
+    init(id: String, title: String, subtitle: String, glyph: String, artworkName: String, firstVisit: Date?, visitDates: [Date] = [], pins: [MapHomePlaceBookPin] = [], usesPassportStamp: Bool = false, stampCountry: String = "kr", stampPlace: String = "") {
+        self.id = id
+        self.title = title
+        self.subtitle = subtitle
+        self.glyph = glyph
+        self.artworkName = artworkName
+        self.storedFirstVisit = firstVisit
+        self.visitDates = visitDates
+        self.pins = pins
+        self.usesPassportStamp = usesPassportStamp
+        self.stampCountry = stampCountry
+        self.stampPlace = stampPlace
+    }
     var stamp: MapHomePlaceStampMark { MapHomePlaceStampMark(glyph: glyph, isStamped: isVisited) }
 }
 
@@ -33,21 +52,38 @@ struct MapHomePlaceBookState: Equatable {
         stays: [PlaceStay],
         language: MapHomeLanguage,
         region: String = defaultRegion,
-        drivePasses: [String: Date] = [:]
+        drivePasses: [String: Date] = [:],
+        testVisits: [String: [Date]] = [:],
+        travel: [TravelSegment] = []
+    ) -> Self {
+        make(
+            visits: MapHomeVisitLedger.merged(MapHomeVisitLedger.build(stays: stays, travel: travel), extra: drivePasses.mapValues { [$0] }),
+            language: language, region: region, testVisits: testVisits
+        )
+    }
+
+    /// 방문 장부로 한 지역 카드를 만든다. 메뉴를 바꿀 때마다 불리므로 원본을 다시 훑지 않는다.
+    static func make(
+        visits: [String: [Date]],
+        language: MapHomeLanguage,
+        region: String = defaultRegion,
+        testVisits: [String: [Date]] = [:]
     ) -> Self {
         let regionNames = Dictionary(uniqueKeysWithValues: regions.map { ($0.id, language.runtimeText($0.name, $0.englishName)) })
+        let allVisits = MapHomeVisitLedger.merged(visits, extra: testVisits)
         let landmarks = places(in: region).map { place in
             MapHomePlaceBookEntry(
                 id: place.id,
                 title: language.runtimeText(place.name, place.englishName),
                 subtitle: place.countryCode.map { MapHomePlaceBookMenu.countryName($0, language: language) } ?? regionNames[place.region] ?? "",
-                // "N서울타워"·"5·18기념공원"처럼 한글로 시작하지 않으면 첫 한글을 쓴다.
-                glyph: (place.name.first { $0.isLetter && !$0.isASCII } ?? place.name.first).map(String.init) ?? "印",
+                glyph: place.stampGlyph,
                 artworkName: place.artworkName,
-                firstVisit: [place.firstVisit(in: stays), drivePasses[place.id]].compactMap { $0 }.min(),
+                firstVisit: nil,
+                visitDates: allVisits[place.id] ?? [],
                 pins: place.pins(language: language),
                 usesPassportStamp: place.usesPassportStamp,
-                stampCountry: place.countryCode ?? "kr"
+                stampCountry: place.countryCode ?? "kr",
+                stampPlace: place.stampPlaceName
             )
         }
         return Self(landmarks: landmarks)
@@ -162,21 +198,6 @@ enum MapHomePlaceBookDrivePass {
     }
 }
 
-extension AppModel {
-    /// 차·버스 등 이동 구간의 GPS만 읽어 드라이브길 통과를 찾는다. 지하철과 걷기는 도로를 달린 것이 아니다.
-    func placeBookDrivePasses() async -> [String: Date] {
-        var passes: [String: Date] = [:]
-        let spans = snapshot.travel.filter { $0.mode != .walking && $0.mode != .subway }.map(\.span)
-        for span in spans {
-            guard !Task.isCancelled, passes.count < MapHomePlaceBookDrivePass.places.count else { break }
-            let readings = await sensorReadings(in: span)
-            MapHomePlaceBookDrivePass.merge(readings: readings, into: &passes)
-            await Task.yield()
-        }
-        return passes
-    }
-}
-
 struct MapHomeAirport: Equatable, Sendable {
     let name: String
     let englishName: String
@@ -184,7 +205,15 @@ struct MapHomeAirport: Equatable, Sendable {
     let longitude: Double
 
     /// 공항 터미널·활주로를 덮는 반경.
-    var site: MapHomeLandmarkSite { MapHomeLandmarkSite(latitude: latitude, longitude: longitude, radiusMeters: 3_000) }
+    var site: MapHomeLandmarkSite { MapHomeLandmarkSite(latitude: latitude, longitude: longitude, radiusMeters: MapHomeLandmarkSites.Kind.airport.radiusMeters) }
+}
+
+/// 지하철·기차로 지나가거나 갈아탄 자리는 방문이 아니다(대표 지시).
+enum MapHomePlaceBookVisitPolicy {
+    static func actualVisits(_ stays: [PlaceStay], travel: [TravelSegment]) -> [PlaceStay] {
+        let rails = MapHomeRailIndex(travel: travel)
+        return stays.filter { !rails.isPassThrough($0.span) }
+    }
 }
 
 /// 도감에서 지도로 넘기는 한 자리.
@@ -220,6 +249,23 @@ struct MapHomeKoreaPlace: Identifiable, Equatable, Sendable {
         ([site] + airports.map(\.site)).compactMap { $0.firstVisit(in: stays) }.min()
     }
 
+    /// "N서울타워"·"5·18기념공원"처럼 한글로 시작하지 않으면 첫 한글을 쓴다.
+    var stampGlyph: String { (name.first { $0.isLetter && !$0.isASCII } ?? name.first).map(String.init) ?? "印" }
+    var stampPlaceName: String { englishName.replacingOccurrences(of: " International Airport", with: "") }
+
+    /// 공항·해외 도시는 잠깐 머문 것으로는 다녀온 곳이 아니다.
+    var minimumVisitSeconds: TimeInterval { usesPassportStamp ? 20 * 60 : 0 }
+
+    /// 방문한 날짜들. 하루에 여러 번 머물러도 한 번으로 친다.
+    func visitDays(in stays: [PlaceStay], extra: [Date] = [], calendar: Calendar = .autoupdatingCurrent) -> [Date] {
+        let sites = [site] + airports.map(\.site)
+        let stayDays = stays.filter { stay in
+            stay.span.end.timeIntervalSince(stay.span.start) >= minimumVisitSeconds
+                && stay.point.map { point in sites.contains { $0.contains(point) } } == true
+        }.map(\.span.start)
+        return Set((stayDays + extra).map { calendar.startOfDay(for: $0) }).sorted()
+    }
+
     func pins(language: MapHomeLanguage) -> [MapHomePlaceBookPin] {
         let title = language.runtimeText(name, englishName)
         guard !airports.isEmpty else {
@@ -241,7 +287,7 @@ struct MapHomeKoreaPlace: Identifiable, Equatable, Sendable {
     var artworkName: String { "PlaceBook_" + id.replacingOccurrences(of: ".", with: "_") }
 
     var site: MapHomeLandmarkSite {
-        MapHomeLandmarkSite(latitude: latitude, longitude: longitude, radiusMeters: kind.radiusMeters)
+        MapHomeLandmarkSite(latitude: latitude, longitude: longitude, radiusMeters: kind.radiusMeters, outline: MapHomeIslandOutlines.rings[id])
     }
 }
 
@@ -250,11 +296,30 @@ struct MapHomeLandmarkSite: Equatable, Sendable {
     let latitude: Double
     let longitude: Double
     let radiusMeters: Double
+    /// 섬 윤곽(위도, 경도를 번갈아). 있으면 반경 원 대신 윤곽 안인지 본다.
+    var outline: [Double]? = nil
 
     func contains(_ point: GeoPoint) -> Bool {
         // 위도 차로 먼저 거른다. 1도 ≈ 111 km.
         guard abs(point.latitude - latitude) * 111_000 <= radiusMeters else { return false }
-        return Self.distance(point.latitude, point.longitude, latitude, longitude) <= radiusMeters
+        guard Self.distance(point.latitude, point.longitude, latitude, longitude) <= radiusMeters else { return false }
+        return outline.map { Self.isInside(point.latitude, point.longitude, ring: $0) } ?? true
+    }
+
+    /// 짝수-홀수 규칙. 섬 크기에서는 위경도를 평면으로 봐도 충분하다.
+    static func isInside(_ latitude: Double, _ longitude: Double, ring: [Double]) -> Bool {
+        let count = ring.count / 2
+        var inside = false
+        var previous = count - 1
+        for index in 0..<count {
+            let (y1, x1) = (ring[previous * 2], ring[previous * 2 + 1])
+            let (y2, x2) = (ring[index * 2], ring[index * 2 + 1])
+            if (y1 > latitude) != (y2 > latitude), longitude < (x2 - x1) * (latitude - y1) / (y2 - y1) + x1 {
+                inside.toggle()
+            }
+            previous = index
+        }
+        return inside
     }
 
     func firstVisit(in stays: [PlaceStay]) -> Date? {
@@ -292,7 +357,8 @@ enum MapHomeLandmarkSites {
             case .nature: 5_000
             case .city: 30_000
             case .largeIsland: 15_000
-            case .airport: 3_000
+            // 터미널을 다 덮되 공항 옆 회사·마곡까지는 닿지 않게 한다(VIS1110A02: 3km는 2.8km 떨어진 회사를 덮었다).
+            case .airport: 2_000
             }
         }
     }
@@ -360,14 +426,11 @@ enum MapHomeLandmarkSites {
 
 /// 장소 도감 시트. 메뉴 > 기록 > 장소 도감에서 연다.
 struct MapHomePlaceBookSheet: View {
-    let stays: [PlaceStay]
+    let source: MapHomeVisitSource
     let language: MapHomeLanguage
-    /// 여행 계획을 담을 때 쓴다. 미리보기에는 없다.
-    var model: AppModel?
     var currentCoordinate: CLLocationCoordinate2D?
     /// 펼친 지도의 「큰 지도에서 보기」.
     var onSelect: (MapHomePlaceBookPin) -> Void = { _ in }
-    var loadDrivePasses: () async -> [String: Date] = { [:] }
 
     @State private var state: MapHomePlaceBookState?
     @State private var menu = MapHomePlaceBookMenu()
@@ -377,10 +440,7 @@ struct MapHomePlaceBookSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var isTestMode = MapHomePlaceBookTestMode.isEnabled
     @State private var isRequestPresented = false
-    @State private var isTripPresented = false
-    @State private var tripEntry: MapHomePlaceBookEntry?
-    @State private var tripDay = Calendar.autoupdatingCurrent.startOfDay(for: .now)
-    @State private var drivePasses: [String: Date] = [:]
+    @State private var visits: [String: [Date]] = [:]
     private static let columnCount = 3
 
     var body: some View {
@@ -403,43 +463,21 @@ struct MapHomePlaceBookSheet: View {
             }
         }
         .background(Color.tpBackground)
-        .onAppear {
-            guard state == nil else { return }
-            reload()
-        }
         .onChange(of: menu.selected) {
             expandedID = nil
             reload()
         }
         .task {
-            let passes = await loadDrivePasses()
-            guard passes != drivePasses else { return }
-            drivePasses = passes
+            visits = await source.cached()
+            reload()
+            let fresh = await source.refreshed()
+            guard fresh != visits else { return }
+            visits = fresh
             reload()
         }
         .sheet(isPresented: $isRequestPresented) {
             MapHomePlaceRequestSheet(language: language, currentCoordinate: currentCoordinate)
                 .presentationDetents([.large])
-        }
-        .sheet(isPresented: $isTripPresented) {
-            if let model {
-                MapHomeTripPlanSheet(model: model, language: language, onSelect: onSelect)
-                    .presentationDetents([.large])
-            }
-        }
-        .sheet(item: $tripEntry) { entry in
-            VStack(spacing: 14) {
-                Text(entry.title).font(.taptionFixed(size: TaptionType.scaled(TaptionType.bodyStrong), weight: .bold))
-                DatePicker(language.text("날짜", "Date"), selection: $tripDay, displayedComponents: .date)
-                toolButton(language.text("여행에 추가", "Add to trip")) {
-                    if let pin = entry.pins.first {
-                        model?.addTravelStop(title: entry.title, latitude: pin.latitude, longitude: pin.longitude, day: tripDay)
-                    }
-                    tripEntry = nil
-                }
-            }
-            .padding(20)
-            .presentationDetents([.height(240)])
         }
         .confirmationDialog(
             airportChoice?.title ?? "",
@@ -453,10 +491,7 @@ struct MapHomePlaceBookSheet: View {
     }
 
     private func reload() {
-        state = MapHomePlaceBookState.make(
-            stays: stays, language: language, region: menu.selected,
-            drivePasses: drivePasses.merging(MapHomePlaceBookTestMode.visits) { _, test in test }
-        )
+        state = MapHomePlaceBookState.make(visits: visits, language: language, region: menu.selected, testVisits: MapHomePlaceBookTestMode.visits)
     }
 
     /// 다른 나라를 골라도 2·3줄 자리는 비워 둬 카드 시작 위치가 오르내리지 않는다(대표 지시).
@@ -509,10 +544,6 @@ struct MapHomePlaceBookSheet: View {
                         isTestMode = MapHomePlaceBookTestMode.isEnabled
                     }
                 Spacer()
-                if model != nil {
-                    Button { isTripPresented = true } label: { Image(systemName: "airplane.departure").frame(width: 44, height: 44) }
-                        .accessibilityLabel(language.text("여행 계획", "Trip plan"))
-                }
                 Button { isRequestPresented = true } label: { Image(systemName: "mappin.and.ellipse").frame(width: 44, height: 44) }
                     .accessibilityLabel(language.text("장소 등록 요청", "Request a place"))
                 Button { dismiss() } label: { Image(systemName: "xmark").frame(width: 44, height: 44) }
@@ -555,7 +586,7 @@ struct MapHomePlaceBookSheet: View {
                     }
                     if let expanded = row.first(where: { $0.id == expandedID }) {
                         inlineMap(expanded)
-                            .id(Self.mapAnchor)
+                            .id(Self.mapAnchor(expanded.id))
                             .transition(.opacity)
                     }
                 }
@@ -563,7 +594,8 @@ struct MapHomePlaceBookSheet: View {
         }
     }
 
-    private static let mapAnchor = "place-book-inline-map"
+    /// 줄을 옮겨 다시 펼쳐도 이전 지도가 남지 않게 명소마다 식별값을 따로 쓴다.
+    private static func mapAnchor(_ id: String) -> String { "place-book-inline-map-\(id)" }
 
     /// 카드를 누르면 그 줄 아래가 벌어지며 지도가 뜨고, 다시 누르면 닫힌다(대표 지시).
     private func toggle(_ entry: MapHomePlaceBookEntry, proxy: ScrollViewProxy) {
@@ -572,7 +604,7 @@ struct MapHomePlaceBookSheet: View {
         guard opens else { return }
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(280))
-            withAnimation(.easeInOut(duration: 0.25)) { proxy.scrollTo(Self.mapAnchor, anchor: .center) }
+            withAnimation(.easeInOut(duration: 0.25)) { proxy.scrollTo(Self.mapAnchor(entry.id), anchor: .center) }
         }
     }
 
@@ -586,7 +618,6 @@ struct MapHomePlaceBookSheet: View {
             }
             .frame(height: 260)
             .clipShape(RoundedRectangle(cornerRadius: TaptionRadius.card, style: .continuous))
-            .id(entry.id)
             Button {
                 if entry.pins.count > 1 { airportChoice = entry } else if let pin = entry.pins.first { onSelect(pin) }
             } label: {
@@ -597,12 +628,13 @@ struct MapHomePlaceBookSheet: View {
                     .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionRadius.card, style: .continuous))
             }
             .buttonStyle(.plain)
-            if entry.id.hasPrefix("intl."), model != nil {
-                toolButton(language.text("여행에 추가", "Add to trip")) { tripEntry = entry }
-            }
             if isTestMode {
-                toolButton(language.runtimeText("가상 방문 찍기·지우기", "Toggle test visit")) {
-                    MapHomePlaceBookTestMode.toggleVisit(entry.id)
+                toolButton(language.runtimeText("가상 방문 찍기", "Add test visit")) {
+                    MapHomePlaceBookTestMode.addVisit(entry.id)
+                    reload()
+                }
+                toolButton(language.runtimeText("가상 방문 지우기", "Clear test visits")) {
+                    MapHomePlaceBookTestMode.visits[entry.id] = nil
                     reload()
                 }
             }
@@ -629,6 +661,27 @@ struct MapHomePlaceBookSheet: View {
         ))
     }
 
+    /// 도장은 한 개만 찍고, 방문 횟수는 알림처럼 오른쪽 위 빨간 원에 적는다(대표 지시).
+    private func stampStack(_ entry: MapHomePlaceBookEntry) -> some View {
+        ZStack(alignment: .topTrailing) {
+            if entry.usesPassportStamp {
+                MapHomePassportStamp(visitDate: entry.visitDates.last, countryCode: entry.stampCountry, place: entry.stampPlace, size: entry.isVisited ? 46 : 26)
+            } else {
+                MapHomePlaceSeal(mark: entry.stamp, size: 24)
+            }
+            if !entry.visitDates.isEmpty {
+                Text(verbatim: "\(entry.visitDates.count)")
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.caption), weight: .heavy))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 4)
+                    .frame(minWidth: 18, minHeight: 18)
+                    .background(Color.red, in: Capsule())
+                    .offset(x: 8, y: -8)
+            }
+        }
+        .offset(x: 5, y: -5)
+    }
+
     private func card(_ entry: MapHomePlaceBookEntry) -> some View {
         VStack(spacing: 6) {
             Image(entry.artworkName)
@@ -639,11 +692,7 @@ struct MapHomePlaceBookSheet: View {
                 .frame(height: 54)
                 .frame(maxWidth: .infinity)
                 .overlay(alignment: .topTrailing) {
-                    if entry.usesPassportStamp {
-                        MapHomePassportStamp(visitDate: entry.firstVisit, countryCode: entry.stampCountry, size: entry.isVisited ? 46 : 26).offset(x: 6, y: -6)
-                    } else {
-                        MapHomePlaceSeal(mark: entry.stamp, size: 24).offset(x: 4, y: -4)
-                    }
+                    stampStack(entry)
                 }
             Text(entry.title)
                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .semibold))

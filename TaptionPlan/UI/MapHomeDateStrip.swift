@@ -9,6 +9,9 @@ struct MapHomeDateStrip: View {
     let selectedDate: Date
     /// 데이터가 있는 날(하루의 시작 시각). 칸 아래에 점으로 표시한다.
     let markedDays: Set<Date>
+    var starredDays: Set<Date> = []
+    /// 여행 모드에서 고를 수 있는 첫 날.
+    var minimumDay: Date?
     /// 날짜가 정해졌을 때. 부모가 선택일을 바꾸고 그날 데이터를 불러온다.
     let onSelect: (Date) -> Void
 
@@ -141,6 +144,14 @@ struct MapHomeDateStrip: View {
                     )
                 }
             }
+            .overlay(alignment: .topTrailing) {
+                if starredDays.contains(day) {
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 9))
+                        .foregroundStyle(Color(hex: "#E8B23A"))
+                        .offset(x: 1, y: 1)
+                }
+            }
             .overlay(alignment: .bottom) {
                 if markedDays.contains(day) {
                     Circle()
@@ -151,6 +162,8 @@ struct MapHomeDateStrip: View {
             }
         }
         .buttonStyle(.plain)
+        .disabled(minimumDay.map { day < $0 } ?? false)
+        .opacity(minimumDay.map { day < $0 } ?? false ? 0.3 : 1)
     }
 }
 

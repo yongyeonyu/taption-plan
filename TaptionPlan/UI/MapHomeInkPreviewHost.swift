@@ -53,9 +53,32 @@ struct MapHomeInkPreviewHost: View {
             .padding(.vertical, 14)
             .frame(maxWidth: .infinity)
             .background(Color(hex: MapHomeInkWash.Map.paper))
-            MapHomePlaceBookSheet(stays: stays, language: .korean)
+            MapHomePlaceBookSheet(source: .fixed(stays: stays), language: .korean)
         }
         .preferredColorScheme(.light)
+    }
+}
+/// `-stampPreview`로 여는 나라별 입국 도장 견본(Debug 전용).
+struct MapHomeStampPreviewHost: View {
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 6), count: 4)
+
+    var body: some View {
+        ScrollView {
+            LazyVGrid(columns: columns, spacing: 14) {
+                ForEach([MapHomePlaceBookMenu.korea] + MapHomePlaceBookMenu.countries, id: \.self) { code in
+                    MapHomePassportStamp(
+                        visitDate: .now, countryCode: code,
+                        place: MapHomePlaceBookState.places(in: code).first?.englishName
+                            ?? MapHomeKoreaPlaceBookData.places.first { $0.id == "kr.airport" }?.englishName.replacingOccurrences(of: " International Airport", with: "")
+                            ?? "",
+                        size: 62
+                    )
+                        .frame(height: 76)
+                }
+            }
+            .padding(12)
+        }
+        .background(Color.tpBackground)
     }
 }
 #endif

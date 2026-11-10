@@ -517,4 +517,6 @@ struct ClassifierRefreshInput {
     var sleepSpan: TimeSpan
     var classifiedReadings: [SensorReading]
     var gapReadings: [SensorReading]
+    /// 밤 구간(전날 18시~당일 12시)의 iOS 동작 기록. 위치를 끈 밤의 점수형 수면에 쓴다(SLP1110A01).
+    var sleepMotionActivities: [MotionActivityRecord] = []
 }

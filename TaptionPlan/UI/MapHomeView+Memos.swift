@@ -515,7 +515,7 @@ extension MapHomeView {
         if includePhotos, enabled.contains(.photos) {
             let library = photoLibrary
             let counts = await Task.detached(priority: .utility) {
-                MapHomeCalendarTimeTotalsPolicy.photoCounts(in: month, moments: library.moments(in:), calendar: MapHomeGrowthPolicy.localCalendar)
+                MapHomeCalendarTimeTotalsPolicy.photoCounts(in: month, moments: { library.moments(in: $0) }, calendar: MapHomeGrowthPolicy.localCalendar)
             }.value
             for (day, count) in counts {
                 result[day, default: [:]][MapHomeCalendarTimeKind.photos.rawValue] = count

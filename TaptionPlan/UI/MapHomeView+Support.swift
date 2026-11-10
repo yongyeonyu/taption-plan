@@ -223,6 +223,16 @@ extension MapHomeView {
             if !isRunning { finishRecordingPlayback() }
         }
         .task { await runBenchAutoPlayback() }
+        .task { await model.runPlaceBookAuditIfRequested() }
+        .task { PlanTextSuggester.removeLegacyExaoneKey() }
+        .task { await checkLocationAlways() }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            refreshTripClipboardOffer()
+            Task { await checkTripRelay() }
+        }
+        .task { await checkTripRelay() }
+        .overlay(alignment: .top) { tripClipboardBanner }
         .task(id: model.selectedDate) { await loadPhotoMoments(asksPermission: showsPhotosOnMap && FirstRunTutorialStore().allowsUnaskedPermissionPrompts) }
         .task(id: MapHomeDayCalendarLoader.key(day: model.selectedDate)) { await loadDayCalendarEvents() }
         .task {
@@ -447,6 +457,8 @@ extension MapHomeView {
         .mapHomeWidePanel(isPresented: $isCalendarPresented, kind: .calendar, title: language.text("달력", "Calendar"), viewportWidth: mapViewportSize.width, language: language) {
             MapHomeCalendarSheet(
                 selectedDate: $model.selectedDate,
+                starredDays: travelPlanDays,
+                minimumDay: travelModeMinimumDay,
                 holidayName: { date in
                     TimelineAxisGrid.koreanHolidayName(on: date)
                 },
@@ -611,14 +623,34 @@ extension MapHomeView {
                 )
             }
         }
+        .onChange(of: model.selectedDate) { keepSelectedDateInFuture() }
+        .sheet(isPresented: $isTravelPlanPresented) {
+            MapHomeTripPlanSheet(model: model, language: language, initialDay: model.selectedDate) { pin in
+                isTravelPlanPresented = false
+                showPlaceBookEntryOnMap(pin)
+            }
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        }
         .fullScreenCover(isPresented: $isPlaceBookPresented) {
             MapHomePlaceBookSheet(
-                stays: model.snapshot.places,
+                source: model.placeBookVisitSource,
                 language: language,
-                model: model,
                 currentCoordinate: currentCoordinate,
-                onSelect: showPlaceBookEntryOnMap,
-                loadDrivePasses: { await model.placeBookDrivePasses() }
+                onSelect: showPlaceBookEntryOnMap
+            )
+        }
+        .fullScreenCover(isPresented: $isPassportPresented) {
+            MapHomePassportSheet(
+                source: model.placeBookVisitSource,
+                language: language,
+                initialPage: passportStartPage,
+                onSelectDay: { day, page in
+                    isPassportPresented = false
+                    isMenuOpen = false
+                    passportReturnPage = page
+                    model.selectedDate = day
+                }
             )
         }
         .sheet(isPresented: $isMapAttributionPresented) {
@@ -644,6 +676,21 @@ extension MapHomeView {
             }
         }
         .onChange(of: model.selectedDate) { _, _ in photoBrowserSelection = nil }
+        .alert(language.text("위치를 '항상 허용'으로 바꿔 주세요", "Set location to Always"), isPresented: $isLocationAlwaysPromptPresented) {
+            Button(language.text("설정 열기", "Open Settings")) { LocationAlwaysPrompt.settingsURL.map { UIApplication.shared.open($0) } }
+            Button(language.text("나중에", "Later"), role: .cancel) {}
+        } message: {
+            Text(LocationAlwaysPrompt.message(language))
+        }
+        .confirmationDialog(language.text("여행 계획 추가", "Add to trip"), isPresented: $isTravelAddChoicePresented, titleVisibility: .visible) {
+            Button(language.text("직접 입력", "Enter manually")) { isTravelPlanPresented = true }
+            Button(language.text("AI로 만들기", "Plan with AI")) { isTripImportPresented = true }
+        }
+        .sheet(isPresented: $isTripImportPresented) {
+            MapHomeTripImportSheet(model: model, language: language, initialText: pastedTripText) { day in model.selectedDate = day }
+                .onDisappear { pastedTripText = nil }
+                .presentationDetents([.large])
+        }
         .sheet(isPresented: $isCalendarConnectPresented) { MapHomeCalendarConnectSheet(model: model, language: language) }
         .sheet(isPresented: $isDataProtectionPresented) {
             MapHomeSecuritySheet(model: model, language: language)
@@ -861,7 +908,9 @@ extension MapHomeView {
             // 날짜 줄이 이 자리를 덮을 때만(아이폰 폭) 숨긴다.
             if !isDateWeekExpanded || !MapHomeWideLayoutPolicy.dateStripOverlapsTopLeftControls(viewportWidth: mapViewportSize.width) {
                 HStack(spacing: 8) {
+                    if passportReturnPage != nil { passportBackButton }
                     searchCircleButton
+                    travelModeButton
                     if recordingShows(\.sidebarMemos), memoDisplayMode == .all {
                         memoCircleButton
                     }

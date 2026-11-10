@@ -246,9 +246,28 @@ struct PermissionOnboardingSheet: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer(minLength: 4)
-                Text(stateText(step))
-                    .font(.taption(size: 8.5, weight: .bold))
-                    .foregroundStyle(Color.tpSecondary)
+                if needsAlwaysLocation(step) {
+                    // 「항상 허용」이 아니면 눌러서 iOS 설정으로 간다(대표 지시).
+                    Button { LocationAlwaysPrompt.settingsURL.map { UIApplication.shared.open($0) } } label: {
+                        Text(language.text("설정에서 '항상'으로", "Set to Always"))
+                            .font(.taption(size: 8.5, weight: .bold))
+                            .foregroundStyle(.red)
+                            .multilineTextAlignment(.trailing)
+                            .frame(minHeight: 44)
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    Text(stateText(step))
+                        .font(.taption(size: 8.5, weight: .bold))
+                        .foregroundStyle(Color.tpSecondary)
+                }
+            }
+            if needsAlwaysLocation(step) {
+                Text(LocationAlwaysPrompt.message(language))
+                    .font(.taption(size: 8, weight: .semibold))
+                    .foregroundStyle(.red)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.leading, 38)
             }
             if isCurrent {
                 HStack(spacing: 10) {
@@ -291,6 +310,12 @@ struct PermissionOnboardingSheet: View {
     }
 
     private var isFinished: Bool { progress.index >= Self.features.count }
+
+    /// 위치를 이미 물었는데 「항상」이 아니다.
+    private func needsAlwaysLocation(_ step: PermissionOnboardingStep) -> Bool {
+        step.feature == .location && model.permissionState(for: .location) != .notDetermined
+            && model.sensorService?.hasAlwaysLocationAuthorization() != true
+    }
 
     private var hasDeniedPermission: Bool {
         Self.features.contains { model.permissionState(for: $0) == .denied }

@@ -1,7 +1,13 @@
 {
- "ui": 2344,
+ "ui": 3181,
  "catalog": 461,
  "unread": [
+  {
+   "file": "TaptionPlan/UI/TripImportPrompt.swift",
+   "line": 6,
+   "ko": "String",
+   "en": "Date = .now"
+  },
   {
    "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
    "line": 41,
@@ -136,13 +142,13 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeCalendarSheet.swift",
-   "line": 267,
+   "line": 275,
    "ko": "kind",
    "en": "chipSeconds(of: kind)"
   },
   {
    "file": "TaptionPlan/UI/MapHomeCalendarSheet.swift",
-   "line": 372,
+   "line": 380,
    "ko": "\"\\(calendar.component(.month, from: selected))월 \\(calendar.component(.day, from: selected)",
    "en": "selected.formatted(Date.FormatStyle().month(.abbreviated).day().locale(language.locale))"
   },
@@ -160,7 +166,7 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeDateStrip.swift",
-   "line": 64,
+   "line": 67,
    "ko": "\"\\(month)월\"",
    "en": "monthAbbreviation(for: visibleDay)"
   },
@@ -256,19 +262,19 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeLocationSheets.swift",
-   "line": 218,
+   "line": 247,
    "ko": "FloorLabel.korean(floor)",
    "en": "FloorLabel.english(floor)"
   },
   {
    "file": "TaptionPlan/UI/MapHomeLocationSheets.swift",
-   "line": 238,
+   "line": 273,
    "ko": "destination.koreanName",
    "en": "destination.englishName"
   },
   {
    "file": "TaptionPlan/UI/MapHomeLocationSheets.swift",
-   "line": 272,
+   "line": 307,
    "ko": "kind.title",
    "en": "kind.englishTitle"
   },
@@ -292,31 +298,31 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomePlaceBook.swift",
-   "line": 37,
+   "line": 72,
    "ko": "$0.name",
    "en": "$0.englishName"
   },
   {
    "file": "TaptionPlan/UI/MapHomePlaceBook.swift",
-   "line": 41,
+   "line": 77,
    "ko": "place.name",
    "en": "place.englishName"
   },
   {
    "file": "TaptionPlan/UI/MapHomePlaceBook.swift",
-   "line": 78,
+   "line": 116,
    "ko": "name",
    "en": "englishName"
   },
   {
    "file": "TaptionPlan/UI/MapHomePlaceBook.swift",
-   "line": 222,
+   "line": 270,
    "ko": "name",
    "en": "englishName"
   },
   {
    "file": "TaptionPlan/UI/MapHomePlaceBook.swift",
-   "line": 227,
+   "line": 275,
    "ko": "airport.name",
    "en": "airport.englishName"
   },
@@ -382,13 +388,13 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeView+Menu.swift",
-   "line": 1044,
+   "line": 1051,
    "ko": "strength.koreanLabel",
    "en": "strength.englishLabel"
   },
   {
    "file": "TaptionPlan/UI/MapHomeView+Menu.swift",
-   "line": 1052,
+   "line": 1059,
    "ko": "fogStrength.koreanLabel",
    "en": "fogStrength.englishLabel"
   },

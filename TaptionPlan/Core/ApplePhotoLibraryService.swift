@@ -52,19 +52,22 @@ final class ApplePhotoLibraryService: @unchecked Sendable {
         moments(in: span).count
     }
 
-    func moments(in span: TimeSpan) -> [PhotoMoment] {
+    /// `includingVideos`는 지도·하단 링처럼 영상도 함께 보여 주는 화면만 켠다(사진 수 집계는 그대로).
+    func moments(in span: TimeSpan, includingVideos: Bool = false) -> [PhotoMoment] {
         // 권한이 정해지기 전의 조회는 시스템 팝업을 띄운다.
         guard permissionState().isGranted else { return [] }
         let options = PHFetchOptions()
         options.predicate = NSPredicate(
-            format: "creationDate >= %@ AND creationDate <= %@",
+            format: "creationDate >= %@ AND creationDate <= %@ AND (mediaType == %d OR mediaType == %d)",
             span.start as NSDate,
-            span.end as NSDate
+            span.end as NSDate,
+            PHAssetMediaType.image.rawValue,
+            (includingVideos ? PHAssetMediaType.video : .image).rawValue
         )
         options.sortDescriptors = [
             NSSortDescriptor(key: "creationDate", ascending: true)
         ]
-        let result = PHAsset.fetchAssets(with: .image, options: options)
+        let result = PHAsset.fetchAssets(with: options)
         var moments: [PhotoMoment] = []
         result.enumerateObjects { asset, _, _ in
             guard let date = asset.creationDate else { return }

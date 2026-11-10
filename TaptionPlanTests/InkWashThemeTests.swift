@@ -139,7 +139,11 @@ final class InkWashThemeTests: XCTestCase {
 
     private func isStamped(_ id: String, in selection: String, readings: [SensorReading]) throws -> Bool {
         let stays = PlaceDetectionEngine().detectStays(readings: readings)
-        let state = MapHomePlaceBookState.make(stays: stays, language: .korean, region: selection)
+        // 도착하며 걸은 기록. 공항·해외 도시는 걷기가 있어야 방문이다(VIS1110A03).
+        let walk = readings.first.map {
+            TravelSegment(mode: .walking, span: TimeSpan(start: $0.timestamp.addingTimeInterval(-300), end: $0.timestamp), distanceMeters: 300, confidence: .high, evidence: [], isConfirmed: true)
+        }
+        let state = MapHomePlaceBookState.make(stays: stays, language: .korean, region: selection, travel: walk.map { [$0] } ?? [])
         return try XCTUnwrap(state.landmarks.first { $0.id == id }, id).isVisited
     }
 
@@ -215,10 +219,28 @@ final class InkWashThemeTests: XCTestCase {
         let date = calendar.date(from: DateComponents(year: 2026, month: 11, day: 9, hour: 12))!
         XCTAssertEqual(MapHomePassportStampStyle.dateText(date, calendar: calendar), "09 NOV 2026")
         XCTAssertEqual(MapHomePassportStampStyle.style(forCountry: "CN").shape, .oval)
-        XCTAssertEqual(MapHomePassportStampStyle.style(forCountry: "fr").shape, .roundedRectangle)
+        XCTAssertEqual(MapHomePassportStampStyle.style(forCountry: "fr").entryCode, "F")
+        let number = MapHomePassportStampStyle.stampNumber(country: "fr", date: date, digits: 3, calendar: calendar)
+        XCTAssertEqual(number.count, 3)
+        XCTAssertEqual(number, MapHomePassportStampStyle.stampNumber(country: "fr", date: date, digits: 3, calendar: calendar), "같은 날 같은 나라는 같은 번호")
+        XCTAssertEqual(MapHomePassportStampStyle.numberDigits(country: "gb"), 4)
+        let unique = (["kr"] + MapHomePlaceBookMenu.countries).filter { !["gu", "mp"].contains($0) }
+        let styles = unique.map(MapHomePassportStampStyle.style(forCountry:))
+        for (index, style) in styles.enumerated() {
+            XCTAssertNotEqual(style, .standard, "도안 없음: \(unique[index])")
+            XCTAssertFalse(styles[..<index].contains(style), "디자인 중복: \(unique[index])")
+        }
+        XCTAssertEqual(MapHomePassportStampStyle.style(forCountry: "gu"), MapHomePassportStampStyle.style(forCountry: "us"), "같은 나라만 같은 도안")
         XCTAssertEqual(MapHomePassportStampStyle.style(forCountry: "kr").shape, .circle)
         XCTAssertEqual(MapHomePassportStampStyle.style(forCountry: "th").colorHex, "#B8404A")
         XCTAssertEqual(MapHomePassportStampStyle.style(forCountry: "zz"), .standard)
+        XCTAssertEqual(MapHomePassportStampStyle.style(forCountry: "id").shape, .triangle)
+        XCTAssertEqual(MapHomePassportStampStyle.countryLabel("kr"), "KOREA")
+        XCTAssertEqual(MapHomePassportStampStyle.countryLabel("jp"), "JAPAN")
+        XCTAssertEqual(MapHomePassportStampStyle.countryLabel("cn"), "CHINA")
+        XCTAssertNotNil(MapHomePassportStampStyle.style(forCountry: "jp").paperHex, "일본은 입국 스티커")
+        XCTAssertNil(MapHomePassportStampStyle.style(forCountry: "th").paperHex)
+        XCTAssertNotNil(MapHomePassportHomepageQR.image, "스티커의 홈페이지 QR이 만들어진다")
     }
 
     func testPassportStampsCoverAirportsAndOverseasCitiesOnly() throws {
@@ -230,13 +252,23 @@ final class InkWashThemeTests: XCTestCase {
     }
 
     @MainActor
-    func testPlaceBookTestVisitIsReversibleAndSeparateFromRecords() {
+    func testPlaceBookTestVisitsStackAndStaySeparateFromRecords() {
         MapHomePlaceBookTestMode.visits = [:]
-        MapHomePlaceBookTestMode.toggleVisit("kr.namsan", now: day)
-        let state = MapHomePlaceBookState.make(stays: [], language: .korean, drivePasses: MapHomePlaceBookTestMode.visits)
-        XCTAssertEqual(state.landmarks.first { $0.id == "kr.namsan" }?.firstVisit, day)
-        MapHomePlaceBookTestMode.toggleVisit("kr.namsan", now: day)
-        XCTAssertTrue(MapHomePlaceBookTestMode.visits.isEmpty)
+        MapHomePlaceBookTestMode.addVisit("kr.namsan", now: day)
+        MapHomePlaceBookTestMode.addVisit("kr.namsan", now: day)
+        let state = MapHomePlaceBookState.make(stays: [], language: .korean, testVisits: MapHomePlaceBookTestMode.visits)
+        XCTAssertEqual(state.landmarks.first { $0.id == "kr.namsan" }?.visitDates.count, 2)
+        MapHomePlaceBookTestMode.visits = [:]
+    }
+
+    /// 다른 날 또 가면 도장이 쌓이고, 같은 날 여러 번은 한 번이다.
+    func testVisitDatesStackAcrossDaysOnly() throws {
+        let tower = try bookPlace("kr.namsan")
+        let here = point(tower.latitude, tower.longitude)
+        let stays = [stay("a", start: 0, at: here), stay("b", start: 3_600, at: here), stay("c", start: 86_400 * 3, at: here)]
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        XCTAssertEqual(tower.visitDays(in: stays, calendar: calendar).count, 2)
     }
 
     func testPlaceRequestWritesRequestedJSON() throws {
@@ -394,5 +426,313 @@ final class InkWashThemeTests: XCTestCase {
     private static func contrast(_ a: String, _ b: String) -> Double {
         let (la, lb) = (luminance(a), luminance(b))
         return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
+    }
+
+    func testPassportPlacementIsStableAndStaysInsideItsCell() {
+        for page in 0..<4 {
+            let spots = (0..<MapHomePassportLayout.stampsPerPage).map {
+                MapHomePassportLayout.placement(visaID: "visa-\(page)-\($0)", order: $0, page: page)
+            }
+            XCTAssertEqual(spots, (0..<MapHomePassportLayout.stampsPerPage).map {
+                MapHomePassportLayout.placement(visaID: "visa-\(page)-\($0)", order: $0, page: page)
+            })
+            let cells = Set(spots.map { "\(Int($0.x * 2))-\(Int($0.y * 3))" })
+            XCTAssertEqual(cells.count, MapHomePassportLayout.stampsPerPage)
+        }
+    }
+
+    func testPassportPagesKeepOrderAndLeaveBlankPages() {
+        let pages = MapHomePassportLayout.pages(Array(0..<13))
+        XCTAssertEqual(pages.flatMap { $0 }, Array(0..<13))
+        XCTAssertEqual(pages[0].count, MapHomePassportLayout.stampsPerPage)
+        XCTAssertGreaterThanOrEqual(pages.count, MapHomePassportLayout.minimumPages)
+        XCTAssertEqual(pages.last, [])
+    }
+
+    func testEveryLanguageHasItsOwnPassportText() {
+        let designs = MapHomePassportDesign.languageCodes.map(MapHomePassportDesign.design(languageCode:))
+        XCTAssertEqual(Set(designs.map { $0.top + $0.bottom }).count, designs.count)
+        XCTAssertEqual(MapHomePassportDesign.design(languageCode: "pt-BR").bottom, ["PASSAPORTE"])
+    }
+
+    func testPlaybackEndKeepsLastRecordedCoordinate() {
+        let base = Date(timeIntervalSince1970: 1_780_000_000)
+        func point(_ latitude: Double) -> GeoPoint {
+            GeoPoint(latitude: latitude, longitude: 127, altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5)
+        }
+        let readings = [
+            SensorReading(timestamp: base, point: point(37.1)),
+            SensorReading(timestamp: base.addingTimeInterval(60), point: point(37.2)),
+            SensorReading(timestamp: base.addingTimeInterval(120)),
+        ]
+        XCTAssertEqual(MapHomePlaybackLocation.lastRecordedCoordinate(in: readings)?.latitude, 37.2)
+        XCTAssertNil(MapHomePlaybackLocation.lastRecordedCoordinate(in: [SensorReading(timestamp: base)]))
+    }
+
+    func testKakaoSearchDecodesLiveOnlyResultsAndKeepsAppleOutsideKorea() {
+        let json = #"{"documents":[{"place_name":"경복궁","road_address_name":"서울 종로구 사직로 161","address_name":"서울 종로구 세종로 1-91","x":"126.977","y":"37.579"},{"place_name":"깨진값","x":"x","y":"37"}]}"#
+        let results = MapHomeKakaoSearch.decode(Data(json.utf8))
+        XCTAssertEqual(results.map(\.title), ["경복궁"])
+        XCTAssertEqual(results[0].subtitle, "서울 종로구 사직로 161")
+        XCTAssertEqual(results[0].coordinate.latitude, 37.579)
+        XCTAssertTrue(results[0].isLiveOnly)
+        XCTAssertTrue(MapHomeKakaoSearch.decode(Data("oops".utf8)).isEmpty)
+        XCTAssertTrue(MapHomeKakaoSearch.isInKorea(.init(latitude: 37.5, longitude: 127)))
+        XCTAssertFalse(MapHomeKakaoSearch.isInKorea(.init(latitude: 35.6, longitude: 139.7)))
+    }
+
+    func testSearchMergeKeepsFirstGroupAndLimit() {
+        func item(_ title: String) -> MapHomeSearchResult {
+            MapHomeSearchResult(title: title, subtitle: "", coordinate: .init(latitude: 37, longitude: 127))
+        }
+        let merged = MapHomeSearchPolicy.merged([[item("가 나")], [item("가나"), item("다")], (0..<9).map { item("곳\($0)") }])
+        XCTAssertEqual(merged.count, 8)
+        XCTAssertEqual(Array(merged.map(\.title).prefix(2)), ["가 나", "다"])
+    }
+
+    func testSubwayPassThroughIsNotAPlaceBookVisit() {
+        let base = Date(timeIntervalSince1970: 1_780_000_000)
+        func at(_ minute: Double) -> Date { base.addingTimeInterval(minute * 60) }
+        func stay(_ start: Double, _ end: Double) -> PlaceStay {
+            PlaceStay(placeKey: "gimpo", displayName: "김포공항", span: TimeSpan(start: at(start), end: at(end)), confidence: .high)
+        }
+        func subway(_ start: Double, _ end: Double, mode: TravelMode = .subway) -> TravelSegment {
+            TravelSegment(mode: mode, span: TimeSpan(start: at(start), end: at(end)), distanceMeters: 1_000, confidence: .high, evidence: [], isConfirmed: false)
+        }
+        let travel = [subway(0, 30), subway(38, 60), subway(100, 130), subway(400, 420), subway(600, 650, mode: .bus)]
+        let transfer = stay(30, 38), onboard = stay(105, 125), shortAfterRide = stay(420, 426), realVisit = stay(200, 300), afterBus = stay(650, 655)
+        let visits = MapHomePlaceBookVisitPolicy.actualVisits([transfer, onboard, shortAfterRide, realVisit, afterBus], travel: travel)
+        XCTAssertEqual(visits.map(\.id), [realVisit.id, afterBus.id])
+    }
+
+    func testVisitLedgerMatchesFullScanAndIsFast() {
+        let calendar = Calendar(identifier: .gregorian)
+        let places = MapHomeKoreaPlaceBookData.places
+        let base = Date(timeIntervalSince1970: 1_780_000_000)
+        var generator = SystemRandomNumberGenerator()
+        let stays: [PlaceStay] = (0..<20_000).map { index in
+            let anchor = places[index % places.count]
+            let jitter = Double.random(in: -0.04...0.04, using: &generator)
+            let start = base.addingTimeInterval(Double(index) * 3_600)
+            return PlaceStay(
+                placeKey: "s\(index)", displayName: "s",
+                span: TimeSpan(start: start, end: start.addingTimeInterval(Double(index % 90 + 1) * 60)),
+                confidence: .high,
+                point: GeoPoint(latitude: anchor.latitude + jitter, longitude: anchor.longitude + jitter, altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5)
+            )
+        }
+        let travel: [TravelSegment] = (0..<5_000).map { index in
+            let start = base.addingTimeInterval(Double(index) * 14_400 + 1_800)
+            return TravelSegment(mode: .subway, span: TimeSpan(start: start, end: start.addingTimeInterval(1_200)), distanceMeters: 1_000, confidence: .high, evidence: [], isConfirmed: true)
+        }
+        let clock = ContinuousClock()
+        var ledger: [String: [Date]] = [:]
+        let new = clock.measure { ledger = MapHomeVisitLedger.build(stays: stays, travel: travel, calendar: calendar) }
+        var kept: [PlaceStay] = []
+        let filter = clock.measure { kept = MapHomePlaceBookVisitPolicy.actualVisits(stays, travel: travel) }
+        var full: [String: [Date]] = [:]
+        let old = clock.measure {
+            for place in places {
+                let days = place.visitDays(in: kept, calendar: calendar)
+                if !days.isEmpty { full[place.id] = days }
+            }
+        }
+        print("LDGBENCH ledger=\(new) railFilter=\(filter) oldFullScan=\(old) stays=\(stays.count) rails=\(travel.count)")
+        // 공항·해외 도시는 걷기 조건이 더해져 전수 비교와 다르다. 나머지는 같아야 한다.
+        let passport = Set(places.filter(\.usesPassportStamp).map(\.id))
+        XCTAssertEqual(ledger.filter { !passport.contains($0.key) }, full.filter { !passport.contains($0.key) })
+    }
+
+    func testIslandUsesOutlineAndAirportStaysNearTerminals() throws {
+        func point(_ latitude: Double, _ longitude: Double) -> GeoPoint {
+            GeoPoint(latitude: latitude, longitude: longitude, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: 10)
+        }
+        func ids(_ latitude: Double, _ longitude: Double) -> Set<String> {
+            Set(MapHomePlaceSiteIndex.shared.places(containing: point(latitude, longitude)).map(\.id))
+        }
+        XCTAssertTrue(ids(37.4900, 126.5300).contains("kr.yeongjongdo"), "영종도 안")
+        XCTAssertFalse(ids(37.3920, 126.6450).contains("kr.yeongjongdo"), "송도는 반경 안이지만 섬 밖")
+        XCTAssertFalse(ids(37.5350, 126.6600).contains("kr.yeongjongdo"), "청라는 섬 밖")
+        XCTAssertTrue(ids(37.5587, 126.8027).contains("kr.airport_gmp"), "김포 국내선")
+        XCTAssertTrue(ids(37.4491, 126.4510).contains("kr.airport"), "인천 1터미널")
+        XCTAssertFalse(ids(37.5670, 126.8270).contains("kr.airport_gmp"), "마곡은 공항이 아니다")
+    }
+
+    func testAirportVisitNeedsLongStayAndWalking() {
+        let base = Date(timeIntervalSince1970: 1_780_000_000)
+        func at(_ minute: Double) -> Date { base.addingTimeInterval(minute * 60) }
+        let terminal = GeoPoint(latitude: 37.5587, longitude: 126.8027, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: 10)
+        func stay(_ start: Double, _ end: Double) -> PlaceStay {
+            PlaceStay(placeKey: "gmp", displayName: "김포", span: TimeSpan(start: at(start), end: at(end)), confidence: .high, point: terminal)
+        }
+        func segment(_ mode: TravelMode, _ start: Double, _ end: Double, _ meters: Double) -> TravelSegment {
+            TravelSegment(mode: mode, span: TimeSpan(start: at(start), end: at(end)), distanceMeters: meters, confidence: .high, evidence: [], isConfirmed: true)
+        }
+        let travel = [segment(.walking, 100, 108, 400), segment(.car, 290, 300, 9_000), segment(.walking, 500, 503, 20)]
+        let ledger = MapHomeVisitLedger.build(stays: [stay(110, 160), stay(300, 360), stay(505, 560), stay(700, 710)], travel: travel)
+        XCTAssertEqual(ledger["kr.airport_gmp"]?.count, 1, "걷고 50분 머문 것만 방문")
+    }
+
+    func testTripImportReadsAIJSONWithFencesAndOffsets() throws {
+        let text = """
+        좋아요, 최종 계획입니다.
+        ```json
+        {"format":"bokki-trip","version":1,"tripId":"trip-20261201-bkk","title":"방콕 3박 4일",
+         "items":[
+          {"id":"i1","type":"flight","title":"TG659 인천→방콕","start":"2026-12-01T09:05+09:00","end":"2026-12-01T13:05+07:00",
+           "place":{"name":"수완나품 공항","lat":13.69,"lng":100.75,"mapsUrl":"https://maps.google.com/?q=BKK"}},
+          {"id":"i2","type":"meal","title":"쩟페어 야시장","start":"2026-12-01T19:00+07:00",
+           "place":{"name":"Jodd Fairs","lat":null,"lng":null},"travelFromPrevious":{"mode":"taxi","minutes":40}}
+         ]}
+        ```
+        """
+        let plan = try TripImportParser.parse(text).get()
+        XCTAssertEqual(plan.tripID, "trip-20261201-bkk")
+        XCTAssertEqual(plan.items.map(\.kind), [.flight, .meal])
+        XCTAssertEqual(plan.items[0].end.timeIntervalSince(plan.items[0].start), 6 * 3_600, "시차를 붙인 현지 시각")
+        XCTAssertNil(plan.items[1].coordinate, "AI가 비운 좌표는 앱이 찾는다")
+        XCTAssertEqual(plan.items[1].end.timeIntervalSince(plan.items[1].start), TripImportItem.defaultDuration)
+        XCTAssertEqual(plan.items[1].travelMinutes, 40)
+        XCTAssertEqual(plan.items[1].timeZone.secondsFromGMT(), 7 * 3_600, "방콕 현지 시간대")
+        var seoul = Calendar(identifier: .gregorian)
+        seoul.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        XCTAssertEqual(seoul.component(.day, from: plan.items[1].localDay(calendar: seoul)), 1, "방콕 12월 1일 밤은 기기 시간대와 상관없이 1일")
+        XCTAssertEqual(TripImportParser.parse("안녕하세요"), .failure(.noJSON))
+        XCTAssertEqual(TripImportParser.parse(#"{"format":"bokki-trip","version":2,"tripId":"x","title":"t","items":[]}"#), .failure(.unsupportedVersion(2)))
+    }
+
+    func testTravelStopDecodesRecordsWithoutTripNumbers() throws {
+        let old = #"{"id":"6E3B1A52-0C33-4C1D-9F11-2B0E7A9D4A10","title":"경복궁","latitude":37.5796,"longitude":126.977,"day":0,"order":0}"#
+        let stop = try JSONDecoder().decode(TravelPlanStop.self, from: Data(old.utf8))
+        XCTAssertNil(stop.tripID)
+        XCTAssertNil(stop.itemID)
+        XCTAssertNil(stop.planID)
+    }
+
+    func testTripImportPromptFillsLanguageAndAppsOpen() {
+        let prompt = TripImportPrompt.text(languageCode: "ko", today: Date(timeIntervalSince1970: 1_796_000_000))
+        XCTAssertTrue(prompt.contains("Talk to me in Korean"))
+        XCTAssertFalse(prompt.contains("{TODAY}"))
+        XCTAssertNotNil(TripImportAIApp.chatGPT.url(prompt: prompt))
+        XCTAssertTrue(TripImportAIApp.allCases.allSatisfy { $0.url(prompt: prompt) != nil })
+    }
+
+    func testTravelRailUsesLocalWallClockFromArrival() throws {
+        let plan = try TripImportParser.parse(#"""
+        {"format":"bokki-trip","version":1,"tripId":"t","title":"t","items":[
+         {"id":"f","type":"flight","title":"TG659","start":"2026-12-01T09:05+09:00","end":"2026-12-01T13:05+07:00"},
+         {"id":"s","type":"sleep","title":"잠","start":"2026-12-01T23:00+07:00","end":"2026-12-02T07:00+07:00"}]}
+        """#).get()
+        let items = plan.items.map {
+            TravelTripItem(tripID: "t", itemID: $0.id, kind: $0.kind.rawValue, title: $0.title, start: $0.start, end: $0.end,
+                           startOffsetSeconds: $0.timeZone.secondsFromGMT(), endOffsetSeconds: $0.endTimeZone.secondsFromGMT(), planID: nil)
+        }
+        var seoul = Calendar(identifier: .gregorian)
+        seoul.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        let day1 = seoul.date(from: DateComponents(year: 2026, month: 12, day: 1))!
+        let day2 = seoul.date(from: DateComponents(year: 2026, month: 12, day: 2))!
+        let first = TravelTripRail.segments(items, day: day1, calendar: seoul)
+        XCTAssertEqual(first.map(\.startMinute), [9 * 60 + 5, 23 * 60])
+        XCTAssertEqual(first.map(\.endMinute), [13 * 60 + 5, 1_440], "도착 13:05는 방콕 시각, 잠은 자정까지")
+        XCTAssertEqual(first.map(\.categoryID), ["movement", "sleep"])
+        let second = TravelTripRail.segments(items, day: day2, calendar: seoul)
+        XCTAssertEqual(second.map(\.startMinute), [0])
+        XCTAssertEqual(second.map(\.endMinute), [7 * 60], "다음 날 아침 7시 현지 기상")
+    }
+
+    func testSettingsDecodeWithoutTripItems() throws {
+        let data = try JSONEncoder().encode(AppFeatureSettings.defaults)
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        object.removeValue(forKey: "travelTripItems")
+        let decoded = try JSONDecoder().decode(AppFeatureSettings.self, from: JSONSerialization.data(withJSONObject: object))
+        XCTAssertNil(decoded.travelTripItems)
+        XCTAssertFalse(String(decoding: data, as: UTF8.self).contains("travelTripItems"), "비어 있으면 저장하지 않는다")
+        XCTAssertFalse(String(decoding: data, as: UTF8.self).contains("travelPlanStops"), "빈 여행 장소도 저장하지 않는다")
+        var withStops = AppFeatureSettings.defaults
+        withStops.travelPlanStops = [TravelPlanStop(id: UUID(), title: "왓 아룬", latitude: 13.74, longitude: 100.49, day: Date(timeIntervalSince1970: 0), order: 0, planID: nil, tripID: "t", itemID: "i4")]
+        let roundTrip = try JSONDecoder().decode(AppFeatureSettings.self, from: JSONEncoder().encode(withStops))
+        XCTAssertEqual(roundTrip.travelPlanStops, withStops.travelPlanStops)
+    }
+
+    func testLocationAlwaysPromptOnlyWhenNotAlwaysAndOncePerDay() throws {
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: "LocationAlwaysPromptTests"))
+        defaults.removePersistentDomain(forName: "LocationAlwaysPromptTests")
+        let now = Calendar.current.date(from: DateComponents(year: 2026, month: 11, day: 10, hour: 9))!
+        XCTAssertFalse(LocationAlwaysPrompt.shouldPrompt(state: .notDetermined, isAlways: false, now: now, defaults: defaults), "아직 안 물었으면 묻지 않는다")
+        XCTAssertFalse(LocationAlwaysPrompt.shouldPrompt(state: .authorized, isAlways: true, now: now, defaults: defaults))
+        XCTAssertTrue(LocationAlwaysPrompt.shouldPrompt(state: .authorized, isAlways: false, now: now, defaults: defaults), "앱 사용 중에만")
+        XCTAssertTrue(LocationAlwaysPrompt.shouldPrompt(state: .denied, isAlways: false, now: now, defaults: defaults))
+        LocationAlwaysPrompt.markShown(now: now, defaults: defaults)
+        XCTAssertFalse(LocationAlwaysPrompt.shouldPrompt(state: .denied, isAlways: false, now: now.addingTimeInterval(3_600), defaults: defaults), "하루 한 번")
+        XCTAssertTrue(LocationAlwaysPrompt.shouldPrompt(state: .denied, isAlways: false, now: now.addingTimeInterval(86_400 * 2), defaults: defaults))
+    }
+
+    /// 베타 기록 재생(SLP1110A01). 개인 기록이라 저장소에 두지 않고 `TEST_RUNNER_TAPTION_SLEEP_SCORE_REPLAY=<json>`일 때만 돈다.
+    /// json: {"timeZone", "motion": [[시작, 끝, "stationary"...]], "nights": [{"night": [시작, 끝], "expect": [시작, 끝]}]}(2001 기준 초).
+    func testScoredSleepReplay() throws {
+        guard let path = ProcessInfo.processInfo.environment["TAPTION_SLEEP_SCORE_REPLAY"], !path.isEmpty else {
+            throw XCTSkip("TAPTION_SLEEP_SCORE_REPLAY 없음")
+        }
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: path))) as? [String: Any])
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: object["timeZone"] as? String ?? "Asia/Seoul") ?? .current
+        let motion = try XCTUnwrap(object["motion"] as? [[Any]]).compactMap { row -> MotionActivityRecord? in
+            guard let start = row[0] as? Double, let end = row[1] as? Double, let kind = (row[2] as? String).flatMap(MotionKind.init(rawValue:)) else { return nil }
+            return MotionActivityRecord(span: TimeSpan(start: Date(timeIntervalSinceReferenceDate: start), end: Date(timeIntervalSinceReferenceDate: end)), motion: kind, confidence: .high)
+        }
+        for night in try XCTUnwrap(object["nights"] as? [[String: [Double]]]) {
+            let span = try XCTUnwrap(night["night"]), expect = try XCTUnwrap(night["expect"])
+            let records = PhoneSleepScoreAdapter.records(
+                night: TimeSpan(start: Date(timeIntervalSinceReferenceDate: span[0]), end: Date(timeIntervalSinceReferenceDate: span[1])),
+                readings: [], motionActivities: motion, actuals: [], homePoint: nil, homeRadiusMeters: 100,
+                wearableSleepSpans: [], asOf: .distantFuture, calendar: calendar
+            )
+            let sleep = try XCTUnwrap(records.first, "수면 없음 \(span)")
+            print("SLEEPSCORE", sleep.startedAt, sleep.endedAt ?? sleep.startedAt, sleep.evidence.joined(separator: " | "))
+            XCTAssertEqual(sleep.startedAt.timeIntervalSinceReferenceDate, expect[0], accuracy: 600)
+            XCTAssertEqual(try XCTUnwrap(sleep.endedAt).timeIntervalSinceReferenceDate, expect[1], accuracy: 600)
+        }
+    }
+
+    func testScoredSleepSkipsNightsWithWatchSleep() {
+        var seoul = Calendar(identifier: .gregorian)
+        seoul.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        func at(_ day: Int, _ hour: Int) -> Date { seoul.date(from: DateComponents(year: 2026, month: 11, day: day, hour: hour))! }
+        let motion = [MotionActivityRecord(span: TimeSpan(start: at(9, 1), end: at(9, 8)), motion: .stationary, confidence: .high)]
+        func run(_ wearable: [TimeSpan]) -> [ActualRecord] {
+            PhoneSleepScoreAdapter.records(
+                night: TimeSpan(start: at(8, 18), end: at(9, 12)), readings: [], motionActivities: motion + [
+                    MotionActivityRecord(span: TimeSpan(start: at(8, 18), end: at(8, 23)), motion: .walking, confidence: .high),
+                    MotionActivityRecord(span: TimeSpan(start: at(9, 8), end: at(9, 12)), motion: .walking, confidence: .high),
+                ], actuals: [], homePoint: nil, homeRadiusMeters: 100, wearableSleepSpans: wearable, asOf: at(10, 0), calendar: seoul
+            )
+        }
+        XCTAssertEqual(run([]).count, 1, "워치 없이 자면 휴대폰 점수로 수면")
+        XCTAssertTrue(run([TimeSpan(start: at(9, 1), end: at(9, 7))]).isEmpty, "워치 수면이 있는 밤은 쓰지 않는다")
+    }
+
+    func testTripClipboardOfferOnlyAfterPromptAndChangedClipboard() throws {
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: "TripClipboardWatchTests"))
+        defaults.removePersistentDomain(forName: "TripClipboardWatchTests")
+        let now = Date(timeIntervalSinceReferenceDate: 815_900_000)
+        XCTAssertFalse(TripClipboardWatch.shouldOffer(currentChangeCount: 9, hasStrings: true, now: now, defaults: defaults), "프롬프트를 안 썼으면 묻지 않는다")
+        defaults.set(7, forKey: "tripImportPromptChangeCount")
+        defaults.set(now.timeIntervalSinceReferenceDate, forKey: "tripImportPromptStartedAt")
+        XCTAssertFalse(TripClipboardWatch.shouldOffer(currentChangeCount: 7, hasStrings: true, now: now, defaults: defaults), "프롬프트 그대로")
+        XCTAssertTrue(TripClipboardWatch.shouldOffer(currentChangeCount: 8, hasStrings: true, now: now.addingTimeInterval(600), defaults: defaults))
+        XCTAssertFalse(TripClipboardWatch.shouldOffer(currentChangeCount: 8, hasStrings: true, now: now.addingTimeInterval(7 * 3_600), defaults: defaults), "6시간 지나면 묻지 않는다")
+        TripClipboardWatch.clear(defaults: defaults)
+        XCTAssertFalse(TripClipboardWatch.shouldOffer(currentChangeCount: 8, hasStrings: true, now: now, defaults: defaults))
+    }
+
+    func testTripRelayKeyFormatAndDeliveryInstruction() throws {
+        let key = TripRelay.base64URL(Data(repeating: 0xFB, count: 32))
+        XCTAssertEqual(key.count, 43)
+        XCTAssertTrue(TripRelay.isValidKey(key), key)
+        XCTAssertFalse(key.contains("+") || key.contains("/") || key.contains("="))
+        XCTAssertFalse(TripRelay.isValidKey("short"))
+        let text = TripRelay.deliveryInstruction(endpoint: try XCTUnwrap(URL(string: "https://relay.example.com/plan")), key: key)
+        XCTAssertTrue(text.contains("POST https://relay.example.com/plan"))
+        XCTAssertTrue(text.contains("Bearer \(key)"))
     }
 }

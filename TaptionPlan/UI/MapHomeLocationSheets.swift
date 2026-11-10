@@ -196,8 +196,31 @@ struct MapHomeSearchPinLocationSheet: View {
     let language: MapHomeLanguage
     let onSaved: (MapHomeUserLocationSelection?) -> Void
     @State private var floor = 1
+    @State private var appleCoordinate: CLLocationCoordinate2D?
+    @State private var isResolving = false
+
+    /// 카카오 좌표는 저장하지 않는다. 같은 장소의 Apple 좌표로 바꿔 저장한다.
+    private var saveCoordinate: CLLocationCoordinate2D { appleCoordinate ?? result.coordinate }
+    private var canSave: Bool { !result.isLiveOnly || appleCoordinate != nil }
+
+    /// 내용 높이에 맞춘 팝업 높이. 대중교통 줄이 붙으면서 고정 540pt를 넘어 제목이 잘렸다.
+    @State private var contentHeight: CGFloat = 540
 
     var body: some View {
+        ScrollView {
+            content
+                .onGeometryChange(for: CGFloat.self, of: { $0.size.height }) { height in
+                    let rounded = height.rounded(.up)
+                    if rounded != contentHeight { contentHeight = rounded }
+                }
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        .background(Color.tpSurface)
+        .presentationDetents([.height(contentHeight + 12)])
+        .presentationBackgroundInteraction(.enabled(upThrough: .height(contentHeight + 12)))
+    }
+
+    private var content: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text(language.text("위치 추가", "Add location"))
                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .bold))
@@ -211,6 +234,12 @@ struct MapHomeSearchPinLocationSheet: View {
                 }
             }
 
+            if result.isLiveOnly, !isResolving, appleCoordinate == nil {
+                Text(language.text("이 장소는 바로 저장할 수 없어요. 지도를 길게 눌러 직접 추가해 주세요.", "This place can't be saved directly. Long-press the map to add it."))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
+
             Stepper(value: $floor, in: FloorCalibrationPrompt.range) {
                 HStack {
                     Text(language.text("저장할 층수", "Floor to save"))
@@ -221,6 +250,12 @@ struct MapHomeSearchPinLocationSheet: View {
                 }
             }
             .tint(Color.tpReferenceBlue)
+            .task {
+                guard result.isLiveOnly else { return }
+                isResolving = true
+                appleCoordinate = await MapHomeSearchRunner.appleCoordinate(for: result)
+                isResolving = false
+            }
 
             LazyVGrid(
                 columns: [GridItem(.flexible()), GridItem(.flexible())],
@@ -287,15 +322,15 @@ struct MapHomeSearchPinLocationSheet: View {
                     .buttonStyle(.plain)
                 }
             }
-            Spacer()
         }
         .padding(20)
-        .background(Color.tpSurface)
+        .padding(.top, 8)
     }
 
     private func save(_ destination: MapHomeLocationDestination) {
-        let latitude = result.coordinate.latitude
-        let longitude = result.coordinate.longitude
+        guard canSave else { return }
+        let latitude = saveCoordinate.latitude
+        let longitude = saveCoordinate.longitude
         if destination == .restaurant {
             let restaurantName = resolvedRestaurantName
             model.addRestaurant(name: restaurantName)
@@ -355,12 +390,13 @@ struct MapHomeSearchPinLocationSheet: View {
     }
 
     private func saveTransit(_ kind: UserTransitLocationKind) {
+        guard canSave else { return }
         let cleanName = result.title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let createdID = model.addUserTransitLocation(
             name: cleanName.isEmpty ? kind.title : cleanName,
             kind: kind,
-            latitude: result.coordinate.latitude,
-            longitude: result.coordinate.longitude,
+            latitude: saveCoordinate.latitude,
+            longitude: saveCoordinate.longitude,
             floor: floor
         ) else { return }
         onSaved(.transit(createdID))

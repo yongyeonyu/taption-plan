@@ -25,7 +25,7 @@ extension MapHomeView {
         let readings = currentDayReadings
         let moments = await Task.detached(priority: .utility) {
             MapHomePhotoPolicy.placingUnlocated(
-                library.moments(in: TimeSpan(start: dayStart, end: dayEnd)),
+                library.moments(in: TimeSpan(start: dayStart, end: dayEnd), includingVideos: true),
                 readings: readings
             )
         }.value

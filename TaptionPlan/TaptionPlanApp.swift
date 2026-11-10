@@ -61,6 +61,14 @@ struct TaptionPlanApp: App {
                 MapHomePhotoBrowserPreviewHost()
             } else if ProcessInfo.processInfo.arguments.contains("-photoStripPreview") {
                 MapHomePhotoStripPreviewHost()
+            } else if ProcessInfo.processInfo.arguments.contains("-passportPreview") {
+                if ProcessInfo.processInfo.arguments.contains("-passportBook") {
+                    MapHomePassportTapPreviewHost()
+                } else {
+                    MapHomePassportPreviewHost()
+                }
+            } else if ProcessInfo.processInfo.arguments.contains("-stampPreview") {
+                MapHomeStampPreviewHost()
             } else if ProcessInfo.processInfo.arguments.contains("-inkPreview") {
                 MapHomeInkPreviewHost()
             } else {

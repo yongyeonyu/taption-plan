@@ -81,6 +81,7 @@
 		A1FA11802C58F99DE64AB619 /* LocationPrivacyAndTravelDistance.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA111188F70B2A1E222FD0 /* LocationPrivacyAndTravelDistance.swift */; };
 		A1FA116E96B03A38CF1271CF /* MotionActivityActualEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA114B38DDE757537287B5 /* MotionActivityActualEngine.swift */; };
 		A1FA11E1742C84FD2F207091 /* InferredSleepEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11666D556A4283945D7E /* InferredSleepEngines.swift */; };
+		B1080900000000000000A0AA /* PhoneSleepScoreAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000F0AA /* PhoneSleepScoreAdapter.swift */; };
 		A1FA11A00497E7D3361DB92E /* AppleWatchSensorActivityEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1151247FC986DC41E95E /* AppleWatchSensorActivityEngine.swift */; };
 		A1FA111C1F655A1871DB4D34 /* AppleDeviceGroundTruthEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11708F96142164B021A5 /* AppleDeviceGroundTruthEngine.swift */; };
 		A1FA1193B2C4F0AD672B142C /* MovementCorrectionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA119DA32DBD6AB39B3BE3 /* MovementCorrectionEngine.swift */; };
@@ -463,6 +464,16 @@
 		B10809000000000000000A04 /* MapHomePlaceBook.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10809000000000000000F04 /* MapHomePlaceBook.swift */; };
 		B10809000000000000000A99 /* MapHomeKoreaPlaceBookData.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10809000000000000000F99 /* MapHomeKoreaPlaceBookData.swift */; };
 		B10809000000000000000A98 /* MapHomePlaceBookTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10809000000000000000F98 /* MapHomePlaceBookTools.swift */; };
+		B1080900000000000000A0A0 /* MapHomePassportBook.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000A0F0 /* MapHomePassportBook.swift */; };
+		B1080900000000000000A0A1 /* MapHomeKakaoSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000A0F1 /* MapHomeKakaoSearch.swift */; };
+		B1080900000000000000A0A2 /* MapHomeVisitLedger.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000A0F2 /* MapHomeVisitLedger.swift */; };
+		B1080900000000000000A0A6 /* TripImportModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000F0A6 /* TripImportModel.swift */; };
+		B1080900000000000000A0A7 /* TripImportPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000F0A7 /* TripImportPrompt.swift */; };
+		B1080900000000000000A0A8 /* TripImportSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000F0A8 /* TripImportSheet.swift */; };
+		B1080900000000000000A0AC /* TripRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000F0AC /* TripRelay.swift */; };
+		B1080900000000000000A0AB /* TripClipboardBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000F0AB /* TripClipboardBanner.swift */; };
+		B1080900000000000000A0A9 /* LocationAlwaysPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000F0A9 /* LocationAlwaysPrompt.swift */; };
+		B1080900000000000000A0A3 /* MapHomeIslandOutlines.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000A0F3 /* MapHomeIslandOutlines.swift */; };
 		B10809000000000000000A05 /* MapHomeInkPreviewHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10809000000000000000F05 /* MapHomeInkPreviewHost.swift */; };
 		A50000000000000000000002 /* MapLibre in Frameworks */ = {isa = PBXBuildFile; productRef = X50000000000000000000002 /* MapLibre */; };
 		A60000000000000000000001 /* HealthKitTypeCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F60000000000000000000001 /* HealthKitTypeCatalog.swift */; };
@@ -746,6 +757,7 @@
 		F1FA111188F70B2A1E222FD0 /* LocationPrivacyAndTravelDistance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationPrivacyAndTravelDistance.swift; sourceTree = "<group>"; };
 		F1FA114B38DDE757537287B5 /* MotionActivityActualEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionActivityActualEngine.swift; sourceTree = "<group>"; };
 		F1FA11666D556A4283945D7E /* InferredSleepEngines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InferredSleepEngines.swift; sourceTree = "<group>"; };
+		B1080900000000000000F0AA /* PhoneSleepScoreAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneSleepScoreAdapter.swift; sourceTree = "<group>"; };
 		F1FA1151247FC986DC41E95E /* AppleWatchSensorActivityEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleWatchSensorActivityEngine.swift; sourceTree = "<group>"; };
 		F1FA11708F96142164B021A5 /* AppleDeviceGroundTruthEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleDeviceGroundTruthEngine.swift; sourceTree = "<group>"; };
 		F1FA119DA32DBD6AB39B3BE3 /* MovementCorrectionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovementCorrectionEngine.swift; sourceTree = "<group>"; };
@@ -1104,6 +1116,16 @@
 		B10809000000000000000F04 /* MapHomePlaceBook.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaceBook.swift; sourceTree = "<group>"; };
 		B10809000000000000000F99 /* MapHomeKoreaPlaceBookData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeKoreaPlaceBookData.swift; sourceTree = "<group>"; };
 		B10809000000000000000F98 /* MapHomePlaceBookTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaceBookTools.swift; sourceTree = "<group>"; };
+		B1080900000000000000A0F0 /* MapHomePassportBook.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePassportBook.swift; sourceTree = "<group>"; };
+		B1080900000000000000A0F1 /* MapHomeKakaoSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeKakaoSearch.swift; sourceTree = "<group>"; };
+		B1080900000000000000A0F2 /* MapHomeVisitLedger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeVisitLedger.swift; sourceTree = "<group>"; };
+		B1080900000000000000F0A6 /* TripImportModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripImportModel.swift; sourceTree = "<group>"; };
+		B1080900000000000000F0A7 /* TripImportPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripImportPrompt.swift; sourceTree = "<group>"; };
+		B1080900000000000000F0A8 /* TripImportSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripImportSheet.swift; sourceTree = "<group>"; };
+		B1080900000000000000F0AC /* TripRelay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripRelay.swift; sourceTree = "<group>"; };
+		B1080900000000000000F0AB /* TripClipboardBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripClipboardBanner.swift; sourceTree = "<group>"; };
+		B1080900000000000000F0A9 /* LocationAlwaysPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationAlwaysPrompt.swift; sourceTree = "<group>"; };
+		B1080900000000000000A0F3 /* MapHomeIslandOutlines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeIslandOutlines.swift; sourceTree = "<group>"; };
 		B10809000000000000000F05 /* MapHomeInkPreviewHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeInkPreviewHost.swift; sourceTree = "<group>"; };
 		F60000000000000000000001 /* HealthKitTypeCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitTypeCatalog.swift; sourceTree = "<group>"; };
 		F60000000000000000000002 /* HealthKitImportStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitImportStore.swift; sourceTree = "<group>"; };
@@ -1559,6 +1581,16 @@
 				B10809000000000000000F04 /* MapHomePlaceBook.swift */,
 				B10809000000000000000F99 /* MapHomeKoreaPlaceBookData.swift */,
 				B10809000000000000000F98 /* MapHomePlaceBookTools.swift */,
+				B1080900000000000000A0F0 /* MapHomePassportBook.swift */,
+				B1080900000000000000A0F1 /* MapHomeKakaoSearch.swift */,
+				B1080900000000000000A0F2 /* MapHomeVisitLedger.swift */,
+				B1080900000000000000F0A6 /* TripImportModel.swift */,
+				B1080900000000000000F0A7 /* TripImportPrompt.swift */,
+				B1080900000000000000F0A8 /* TripImportSheet.swift */,
+				B1080900000000000000F0AC /* TripRelay.swift */,
+				B1080900000000000000F0AB /* TripClipboardBanner.swift */,
+				B1080900000000000000F0A9 /* LocationAlwaysPrompt.swift */,
+				B1080900000000000000A0F3 /* MapHomeIslandOutlines.swift */,
 				B10809000000000000000F05 /* MapHomeInkPreviewHost.swift */,
 				F1000000000000000000007F /* MapHomeCalendarSheet.swift */,
 				F1FA115C43BF0F705C0CC3E6 /* MapHomeDailyCard.swift */,
@@ -1770,6 +1802,7 @@
 				F1FA111188F70B2A1E222FD0 /* LocationPrivacyAndTravelDistance.swift */,
 				F1FA114B38DDE757537287B5 /* MotionActivityActualEngine.swift */,
 				F1FA11666D556A4283945D7E /* InferredSleepEngines.swift */,
+				B1080900000000000000F0AA /* PhoneSleepScoreAdapter.swift */,
 				F1FA1151247FC986DC41E95E /* AppleWatchSensorActivityEngine.swift */,
 				F1FA11708F96142164B021A5 /* AppleDeviceGroundTruthEngine.swift */,
 				F1FA119DA32DBD6AB39B3BE3 /* MovementCorrectionEngine.swift */,
@@ -2443,6 +2476,16 @@
 				B10809000000000000000A04 /* MapHomePlaceBook.swift in Sources */,
 				B10809000000000000000A99 /* MapHomeKoreaPlaceBookData.swift in Sources */,
 				B10809000000000000000A98 /* MapHomePlaceBookTools.swift in Sources */,
+				B1080900000000000000A0A0 /* MapHomePassportBook.swift in Sources */,
+				B1080900000000000000A0A1 /* MapHomeKakaoSearch.swift in Sources */,
+				B1080900000000000000A0A2 /* MapHomeVisitLedger.swift in Sources */,
+				B1080900000000000000A0A6 /* TripImportModel.swift in Sources */,
+				B1080900000000000000A0A7 /* TripImportPrompt.swift in Sources */,
+				B1080900000000000000A0A8 /* TripImportSheet.swift in Sources */,
+				B1080900000000000000A0AC /* TripRelay.swift in Sources */,
+				B1080900000000000000A0AB /* TripClipboardBanner.swift in Sources */,
+				B1080900000000000000A0A9 /* LocationAlwaysPrompt.swift in Sources */,
+				B1080900000000000000A0A3 /* MapHomeIslandOutlines.swift in Sources */,
 				B10809000000000000000A05 /* MapHomeInkPreviewHost.swift in Sources */,
 				A1000000000000000000007F /* MapHomeCalendarSheet.swift in Sources */,
 				A1FA111D146A9C217935CC51 /* MapHomeDailyCard.swift in Sources */,
@@ -2579,6 +2622,7 @@
 				A1FA11802C58F99DE64AB619 /* LocationPrivacyAndTravelDistance.swift in Sources */,
 				A1FA116E96B03A38CF1271CF /* MotionActivityActualEngine.swift in Sources */,
 				A1FA11E1742C84FD2F207091 /* InferredSleepEngines.swift in Sources */,
+				B1080900000000000000A0AA /* PhoneSleepScoreAdapter.swift in Sources */,
 				A1FA11A00497E7D3361DB92E /* AppleWatchSensorActivityEngine.swift in Sources */,
 				A1FA111C1F655A1871DB4D34 /* AppleDeviceGroundTruthEngine.swift in Sources */,
 				A1FA1193B2C4F0AD672B142C /* MovementCorrectionEngine.swift in Sources */,

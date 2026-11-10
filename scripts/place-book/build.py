@@ -167,6 +167,7 @@ def main():
     OUTPUT.write_text("\n".join(lines), encoding="utf-8")
     print("wrote", OUTPUT.name)
     write_icons([item[1] for item in kept])
+    (HERE / "qids.json").write_text(json.dumps({item[1]: item[7] for item in kept}, ensure_ascii=False, indent=0), encoding="utf-8")
 
 
 def airport_position(iata, city, cache):

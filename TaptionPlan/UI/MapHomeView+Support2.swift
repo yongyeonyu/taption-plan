@@ -381,6 +381,7 @@ extension MapHomeView {
     /// 손이 닿지 않는 구석이라 아래로 내렸다(대표 요청). 항목은 늘리지 않았다.
     var bottomActionBar: some View {
         HStack(spacing: 0) {
+            if isTravelMode { travelBottomBarItems } else {
             bottomBarButton("line.3.horizontal", language.text("메뉴", "Menu")) {
                 if isMenuOpen { isMenuOpen = false } else { openMenu() }
             }
@@ -421,6 +422,7 @@ extension MapHomeView {
             }
             bottomBarButton("plus", language.text("메모", "Memo")) {
                 addMemo()
+            }
             }
         }
         .padding(.horizontal, 8)
@@ -490,7 +492,9 @@ extension MapHomeView {
                 MapHomeDateStrip(
                     language: language,
                     selectedDate: model.selectedDate,
-                    markedDays: dataDayStarts
+                    markedDays: dataDayStarts,
+                    starredDays: travelPlanDays,
+                    minimumDay: travelModeMinimumDay
                 ) { day in
                     shouldFitRoutesAfterDateChange = true
                     model.selectedDate = day

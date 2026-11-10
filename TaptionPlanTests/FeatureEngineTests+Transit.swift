@@ -2959,10 +2959,16 @@ extension FeatureEngineTests {
         )
         XCTAssertEqual(motionActuals.map(\.title), ["정지·휴식"])
 
+        // 위치 기록이 있는 정지 구간만 머무름이 된다. 위치를 끈 시간은 미확인으로 남는다(SLP1110A01).
+        let point = GeoPoint(latitude: 37.5, longitude: 127, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: 10)
+        XCTAssertTrue(StationaryContextActualEngine.records(
+            stays: [], placeKinds: [:], stationarySpans: [restSpan], inside: day, calendar: utcCalendar, now: day.end
+        ).isEmpty, "위치 기록이 없으면 머무름을 지어내지 않는다")
         let contextRecords = StationaryContextActualEngine.records(
             stays: [],
             placeKinds: [:],
             stationarySpans: [restSpan],
+            readings: [SensorReading(timestamp: restStart.addingTimeInterval(hour), point: point)],
             inside: day,
             calendar: utcCalendar,
             now: day.end
@@ -3003,6 +3009,12 @@ extension FeatureEngineTests {
                     end: officeStart.addingTimeInterval(3 * hour)
                 )
             ],
+            readings: [-0.5, 2.5].map {
+                SensorReading(
+                    timestamp: officeStart.addingTimeInterval($0 * hour),
+                    point: GeoPoint(latitude: 37.5, longitude: 127, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: 10)
+                )
+            },
             inside: day,
             calendar: utcCalendar,
             now: day.end

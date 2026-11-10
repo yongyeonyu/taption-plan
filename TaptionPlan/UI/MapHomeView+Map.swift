@@ -39,12 +39,13 @@ extension MapHomeView {
     }
 
     var hasMapSearchResults: Bool {
-        !mapSearchResults.isEmpty || !mapSearchCompleter.results.isEmpty || mapSearchNotice != nil || !localSearchMatches.isEmpty
+        !mapSearchResults.isEmpty || !mapSearchCompleter.results.isEmpty || !mapSearchCompleter.kakaoResults.isEmpty
+            || mapSearchNotice != nil || !localSearchMatches.isEmpty
     }
 
     var mapSearchResultCount: Int {
         mapSearchResults.isEmpty
-            ? mapSearchCompleter.results.count + localSearchMatches.count + (mapSearchNotice == nil ? 0 : 1)
+            ? mapSearchCompleter.results.count + mapSearchCompleter.kakaoResults.count + localSearchMatches.count + (mapSearchNotice == nil ? 0 : 1)
             : mapSearchResults.count
     }
 
@@ -74,11 +75,7 @@ extension MapHomeView {
                     self.selectedSearchPin = nil
                 }
             )
-            .presentationDetents([.height(540)])
             .presentationDragIndicator(.visible)
-            .presentationBackgroundInteraction(
-                .enabled(upThrough: .height(540))
-            )
         }
     }
 
@@ -876,6 +873,9 @@ extension MapHomeView {
                             ForEach(localSearchMatches) { result in
                                 mapSearchRow(title: result.title, subtitle: result.subtitle) { selectSearchResult(result) }
                             }
+                            ForEach(mapSearchCompleter.kakaoResults) { result in
+                                mapSearchRow(title: result.title, subtitle: result.subtitle) { selectSearchResult(result) }
+                            }
                             ForEach(
                                 Array(mapSearchCompleter.results.enumerated()),
                                 id: \.offset
@@ -1043,8 +1043,11 @@ extension MapHomeView {
         mapSearchRequestID = requestID
         let local = showsList ? mapLocalMatches(fallbackTitle) : []
         let origin = currentCoordinate
+        let center = mapSearchRegion.center
         mapSearchTask = Task { @MainActor in
-            let (items, failed) = await MapHomeSearchRunner.items(for: request)
+            // 국내는 카카오만 쓰고, 카카오가 비었을 때만 Apple로 넘어간다(대표 지시).
+            let kakao = showsList ? await MapHomeKakaoSearch.search(query: fallbackTitle, center: center) : []
+            let (items, failed) = kakao.isEmpty ? await MapHomeSearchRunner.items(for: request) : ([], false)
             guard !Task.isCancelled, requestID == mapSearchRequestID else { return }
             let found = MapHomeSearchPolicy.sortedByDistance(items.prefix(8).map { item in
                 MapHomeSearchResult(
@@ -1053,9 +1056,9 @@ extension MapHomeView {
                     coordinate: item.placemark.coordinate
                 )
             }, from: origin)
-            let results = Array((local + found).prefix(8))
+            let results = MapHomeSearchPolicy.merged([local, kakao, found])
             // Apple 전체 검색은 「사이언스」처럼 이름 일부로는 비어 오는데, 추천 목록에는 근처 결과가 있다. 그때는 추천 목록을 그대로 둔다.
-            if results.isEmpty, !failed, !mapSearchCompleter.results.isEmpty { return }
+            if results.isEmpty, !failed, !mapSearchCompleter.results.isEmpty || !mapSearchCompleter.kakaoResults.isEmpty { return }
             mapSearchCompleter.clear()
             if results.count == 1 || (!showsList && !results.isEmpty) {
                 selectSearchResult(results[0])

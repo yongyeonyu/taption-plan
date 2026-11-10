@@ -43,7 +43,7 @@ def tracked_swift() -> list[str]:
     out = subprocess.check_output(["git", "ls-files", "--cached", "--others", "--exclude-standard", "*.swift"], cwd=ROOT).decode().splitlines()
     skip = ("TaptionPlanTests", "TaptionPlanUITests", "tools/", "scripts/", "server/", "design/", "artifacts/")
     # 생성 자료 파일(지하철 선로 polyline)은 화면 문구가 없고 raw 문자열이라 읽지 않는다.
-    generated = ("TaptionPlan/Core/SubwayTrackData.swift", "TaptionPlan/UI/MapHomeKoreaPlaceBookData.swift")
+    generated = ("TaptionPlan/Core/SubwayTrackData.swift",)
     return [f for f in out if "/Tests/" not in f and not f.startswith(skip) and f not in generated]
 
 

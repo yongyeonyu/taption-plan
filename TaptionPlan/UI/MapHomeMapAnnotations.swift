@@ -925,4 +925,6 @@ struct MapHomeSearchResult: Identifiable {
     let title: String
     let subtitle: String
     let coordinate: CLLocationCoordinate2D
+    /// 카카오 결과. 좌표를 저장하지 않고 실시간 표시에만 쓴다.
+    var isLiveOnly = false
 }

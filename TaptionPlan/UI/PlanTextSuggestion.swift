@@ -1,4 +1,5 @@
 import Foundation
+import Security
 #if canImport(FoundationModels)
 import FoundationModels
 #endif
@@ -94,6 +95,16 @@ enum PlanTextSuggestionFormat {
 
 /// 지원 기기에서만 Apple 온디바이스 모델을 쓴다. 미지원이면 nil을 돌려 화면은 공란으로 둔다.
 enum PlanTextSuggester {
+    /// EXAONE은 약관상 영리 목적 사용이 안 돼 뺐다(AIE1110A02). 그때 저장한 키가 기기에 남지 않게 지운다.
+    static func removeLegacyExaoneKey() {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: "com.taption.plan.exaone",
+        ]
+        SecItemDelete(query as CFDictionary)
+        UserDefaults.standard.removeObject(forKey: "planTextAIEngine")
+    }
+
     static var isAvailable: Bool {
         #if canImport(FoundationModels)
         if #available(iOS 26.0, *) {

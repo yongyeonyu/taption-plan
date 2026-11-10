@@ -291,7 +291,7 @@ extension MapHomeView {
                         activity: model.isBootstrapped
                             ? currentActivity(at: minute)
                             : nil,
-                        segments: timeRailSegments,
+                        segments: travelSidebarSegments ?? timeRailSegments,
                         detailSpans: meetingRailSpans + timeRailSegments.flatMap(\.walkSpans),
                         categoryColors: model.settings.mapCategoryColors,
                         zoomResetToken: zoomResetToken,

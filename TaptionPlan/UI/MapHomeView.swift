@@ -485,6 +485,18 @@ struct MapHomeView: View {
     /// 수묵 테마 핀 도장: 보고 있는 날 머문 등록 장소 키(INK1108A01).
     @State var placeStampMemo = MapHomeMemo<MapHomePlaceStampKey, Set<String>>()
     @State var isPlaceBookPresented = false
+    @State var isPassportPresented = false
+    @State var isTravelAddChoicePresented = false
+    @State var isTripImportPresented = false
+    @State var isLocationAlwaysPromptPresented = false
+    @State var isTripClipboardOfferVisible = false
+    @State var pastedTripText: String?
+    /// 여권 도장을 눌러 나온 쪽. 있으면 왼쪽 위에 돌아가기 단추가 뜬다.
+    @State var passportReturnPage: Int?
+    @State var passportStartPage = 0
+    /// 여행 계획 모드. 미래 날짜만 고른다.
+    @State var isTravelMode = false
+    @State var isTravelPlanPresented = false
 
     @State var stickmanActionMemo = MapHomeMemo<MapHomeStickmanActionKey, MapHomeStickmanAction>()
 

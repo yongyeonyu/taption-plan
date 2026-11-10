@@ -80,6 +80,10 @@ final class MapHomeHeadingMonitor: NSObject, @preconcurrency CLLocationManagerDe
 final class MapHomeSearchCompleter: NSObject, @preconcurrency MKLocalSearchCompleterDelegate {
     private let completer = MKLocalSearchCompleter()
     private(set) var results: [MKLocalSearchCompletion] = []
+    /// 국내 입력 중 추천은 카카오다(대표 지시). 이때 Apple 추천은 부르지 않는다.
+    private(set) var kakaoResults: [MapHomeSearchResult] = []
+    private var kakaoTask: Task<Void, Never>?
+    private static let kakaoDelay: Duration = .milliseconds(250)
 
     override init() {
         super.init()
@@ -99,16 +103,36 @@ final class MapHomeSearchCompleter: NSObject, @preconcurrency MKLocalSearchCompl
         let value = query.trimmingCharacters(in: .whitespacesAndNewlines)
         if value.isEmpty {
             clear()
-        } else if completer.queryFragment != value {
-            widenStep = 0
-            completer.regionPriority = .required
-            completer.region = region
-            completer.queryFragment = value
+        } else if MapHomeKakaoSearch.isAvailable(at: region.center) {
+            if !results.isEmpty { results = [] }
+            kakaoTask?.cancel()
+            kakaoTask = Task { @MainActor [weak self] in
+                // 글자를 칠 때마다 부르지 않고 잠깐 멈췄을 때 한 번 부른다.
+                try? await Task.sleep(for: Self.kakaoDelay)
+                guard !Task.isCancelled else { return }
+                let found = await MapHomeKakaoSearch.suggestions(query: value, center: region.center)
+                guard !Task.isCancelled, let self else { return }
+                kakaoResults = found
+                // 카카오는 해외 장소를 거의 찾지 못한다. 비면 Apple 추천으로 넘긴다.
+                if found.isEmpty { startApple(value, region: region) }
+            }
+        } else {
+            startApple(value, region: region)
         }
+    }
+
+    private func startApple(_ value: String, region: MKCoordinateRegion) {
+        guard completer.queryFragment != value else { return }
+        widenStep = 0
+        completer.regionPriority = .required
+        completer.region = region
+        completer.queryFragment = value
     }
 
     func clear() {
         widenStep = 0
+        kakaoTask?.cancel()
+        if !kakaoResults.isEmpty { kakaoResults = [] }
         if !completer.queryFragment.isEmpty {
             completer.queryFragment = ""
         }

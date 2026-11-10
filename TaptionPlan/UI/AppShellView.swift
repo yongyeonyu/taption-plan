@@ -201,7 +201,7 @@ struct AppShellView: View {
             .easeInOut(duration: 0.25),
             value: model.floorCalibrationNotice
         )
-        .environment(\.locale, appLocale)
+        .id(languageRawValue).environment(\.locale, appLocale) // 언어를 바꾸면 화면을 새로 만들어 바로 반영한다.
     }
 
     private var appLocale: Locale {

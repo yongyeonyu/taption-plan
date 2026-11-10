@@ -186,10 +186,7 @@ struct AddPlanSheet: View {
                                 .background(Color.tpFieldFill, in: Capsule())
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel(AppLanguagePreference.text(
-                            korean: "추천 입력 \(candidate)",
-                            english: "Use suggestion \(candidate)"
-                        ))
+                        .accessibilityLabel(AppLanguagePreference.text(korean: "추천 입력 \(candidate)", english: "Use suggestion \(candidate)"))
                     }
                 }
             }

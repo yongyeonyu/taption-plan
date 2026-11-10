@@ -485,6 +485,13 @@ struct TaptionBarIcon: View {
         case "play.fill":
             shape(poly([(6.2, 3.4), (20.8, 12), (6.2, 20.6)], round: 3.6), palette.mint)
             gloss((8.6, 8), (8.6, 11))
+        case "airplane":
+            // 위를 향한 비행기를 오른쪽 위로 45도 돌린다.
+            let plane = poly([
+                (12, 1.8), (13.7, 4.2), (14, 9), (22, 14.4), (22, 17), (14, 14.6), (13.6, 19), (16, 21), (16, 22.6),
+                (12, 21.6), (8, 22.6), (8, 21), (10.4, 19), (10, 14.6), (2, 17), (2, 14.4), (10, 9), (10.3, 4.2),
+            ], round: 0.9)
+            shape(plane.applying(CGAffineTransform(translationX: 12, y: 12).rotated(by: .pi / 4).translatedBy(x: -12, y: -12)), palette.sky)
         case "pause.fill":
             shape(Path(roundedRect: CGRect(x: 5, y: 4, width: 5.4, height: 16), cornerRadius: 2.7), palette.mint)
             shape(Path(roundedRect: CGRect(x: 13.6, y: 4, width: 5.4, height: 16), cornerRadius: 2.7), palette.mint)

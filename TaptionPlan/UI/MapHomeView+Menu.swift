@@ -166,6 +166,7 @@ extension MapHomeView {
     }
 
     func openMenu() {
+        model.prewarmPlaceBookVisits()
         isLocationMenuExpanded = false
         isUserLocationsMenuExpanded = false
         isCategoryMenuExpanded = false
@@ -426,6 +427,12 @@ extension MapHomeView {
                 menuGroupDivider
                 // 등록 장소·랜드마크 도장을 모은 장소 도감(INK1108A01).
                 menuRowButton("seal.fill", language.text("장소 도감", "Place book"), tint: .tpMenuChip(MapHomeInkWash.sealHex)) { isPlaceBookPresented = true }
+                menuGroupDivider
+                menuRowButton("book.closed.fill", language.text("여권", "Passport"), tint: .tpMenuChip(MapHomeInkWash.sealHex)) {
+                    passportStartPage = 0
+                    passportReturnPage = nil
+                    isPassportPresented = true
+                }
             }
             menuGroupLabel(language.text("화면", "View"))
             menuGroupCard {

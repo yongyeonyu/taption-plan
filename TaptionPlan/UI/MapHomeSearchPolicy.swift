@@ -75,6 +75,12 @@ enum MapHomeSearchPolicy {
         }.map(\.element)
     }
 
+    /// 앞 무리를 우선해 이름이 같은 결과를 하나로 합친다.
+    static func merged(_ groups: [[MapHomeSearchResult]], limit: Int = 8) -> [MapHomeSearchResult] {
+        var seen = Set<String>()
+        return Array(groups.joined().filter { seen.insert(normalized($0.title)).inserted }.prefix(limit))
+    }
+
     private static func normalized(_ text: String) -> String {
         text.lowercased().replacingOccurrences(of: " ", with: "")
     }
@@ -96,7 +102,10 @@ enum MapHomeSearchRunner {
             last = await run(request)
             if !last.items.isEmpty || last.failed || Task.isCancelled { return last }
         }
-        return last
+        // 넓혀도 없으면(국내에서 「도쿄 타워」를 찾을 때) 지역 제한 없이 한 번 더 찾는다. 검색 단추로만 온다.
+        request.region = base
+        request.regionPriority = .default
+        return await run(request)
     }
 
     private static func run(_ request: MKLocalSearch.Request) async -> (items: [MKMapItem], failed: Bool) {
