@@ -115,22 +115,53 @@ struct AssistantBubbleText: Equatable, Sendable {
     }
 }
 
-/// 말풍선 하나. 그날 그 시각 사이에만 활동 이름 대신 보인다.
+/// 말풍선 하나. 그날 그 시각 사이에 활동 이름 대신 보인다.
+/// BUB1110A02: routine은 기록으로 남아 재생·사이드바 핸들로 그 시각을 보면 다시 보인다.
+/// event는 그날 하루 맨 앞에 보이고, 날이 지나면 기기에서 지운다.
 struct AssistantBubble: Codable, Equatable, Identifiable, Sendable {
+    enum Kind: String, Codable, Sendable {
+        case routine
+        case event
+    }
+
     var id = UUID()
     var start: Date
     var end: Date
     var text: String
     var hidden = false
+    var kind: Kind = .routine
+    var createdAt: Date?
 
     var parsed: AssistantBubbleText? { AssistantBubbleText(text) }
+
+    init(id: UUID = UUID(), start: Date, end: Date, text: String, hidden: Bool = false, kind: Kind = .routine, createdAt: Date? = .now) {
+        self.id = id
+        self.start = start
+        self.end = end
+        self.text = text
+        self.hidden = hidden
+        self.kind = kind
+        self.createdAt = createdAt
+    }
+
+    /// 예전 파일(kind·createdAt 없음)도 읽는다.
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(UUID.self, forKey: .id)
+        start = try values.decode(Date.self, forKey: .start)
+        end = try values.decode(Date.self, forKey: .end)
+        text = try values.decode(String.self, forKey: .text)
+        hidden = try values.decodeIfPresent(Bool.self, forKey: .hidden) ?? false
+        kind = (try? values.decodeIfPresent(Kind.self, forKey: .kind)) ?? .routine
+        createdAt = try values.decodeIfPresent(Date.self, forKey: .createdAt)
+    }
 }
 
-/// 최근 7일·하루 48개까지 기기 파일에 둔다. 기록은 바꾸지 않는다.
+/// 하루 48개까지 기기 파일에 두고, 같은 내용을 앱 DB(`assistant-bubble` 기록, 월별 백업에 들어감)에도 남긴다(BUB1110A02).
+/// routine은 지우지 않고, event는 그날이 지나면 지운다. 기록(활동·메모)은 바꾸지 않는다.
 @MainActor
 enum AssistantBubbleStore {
     static let dayLimit = 48
-    static let keepDays: TimeInterval = 7 * 86_400
 
     static var url: URL { AssistantActionLog.url.deletingLastPathComponent().appendingPathComponent("assistant-bubbles.json") }
 
@@ -139,15 +170,29 @@ enum AssistantBubbleStore {
     }
 
     static func save(_ bubbles: [AssistantBubble], to file: URL = url) {
+        if file == url { AssistantBubbleArchive.mirror(from: load(from: file), to: bubbles) }
         guard let data = try? JSONEncoder().encode(bubbles) else { return }
         try? FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
         try? data.write(to: file, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
         AssistantBubbleBoard.current.replace(bubbles, file: file)
     }
 
-    /// 하루 48개를 넘으면 nil.
+    /// 날이 지난 event. 그날 끝(다음 날 0시)이 지나면 지운다.
+    static func isExpired(_ bubble: AssistantBubble, now: Date = .now, calendar: Calendar = .autoupdatingCurrent) -> Bool {
+        guard bubble.kind == .event else { return false }
+        return bubble.end <= calendar.startOfDay(for: now) || !calendar.isDate(bubble.start, inSameDayAs: now) && bubble.start < calendar.startOfDay(for: now)
+    }
+
+    /// 앱을 켤 때·날이 바뀔 때 부른다. 지울 것이 없으면 쓰지 않는다.
+    static func cleanExpired(now: Date = .now, calendar: Calendar = .autoupdatingCurrent, file: URL = url) {
+        let bubbles = load(from: file)
+        let kept = bubbles.filter { !isExpired($0, now: now, calendar: calendar) }
+        if kept.count != bubbles.count { save(kept, to: file) }
+    }
+
+    /// 하루 48개를 넘으면 nil. 날이 지난 event는 함께 지운다.
     static func add(_ bubble: AssistantBubble, now: Date = .now, calendar: Calendar = .autoupdatingCurrent, file: URL = url) -> AssistantBubble? {
-        var bubbles = load(from: file).filter { $0.end > now.addingTimeInterval(-keepDays) }
+        var bubbles = load(from: file).filter { !isExpired($0, now: now, calendar: calendar) }
         guard bubbles.filter({ calendar.isDate($0.start, inSameDayAs: bubble.start) }).count < dayLimit else { return nil }
         bubbles.append(bubble)
         save(bubbles, to: file)
@@ -160,9 +205,12 @@ enum AssistantBubbleStore {
         save(load(from: file).map { var copy = $0; if copy.id == id { copy.hidden = true }; return copy }, to: file)
     }
 
-    /// 지금 보일 말풍선. 겹치면 늦게 시작한 것.
+    /// 그 시각에 보일 말풍선(BUB1110A02). 1순위 그날의 event(시간대가 있으면 그 안), 2순위 그 시각의 routine.
+    /// 겹치면 늦게 시작한 것. 3순위(대분류 기본 문구)는 `MapHomeDefaultBubblePool`이 맡는다.
     static func active(at now: Date, in bubbles: [AssistantBubble]) -> AssistantBubble? {
-        bubbles.filter { !$0.hidden && $0.start <= now && now < $0.end && $0.parsed != nil }.max { $0.start < $1.start }
+        let shown = bubbles.filter { !$0.hidden && $0.start <= now && now < $0.end && $0.parsed != nil }
+        return shown.filter { $0.kind == .event }.max { $0.start < $1.start }
+            ?? shown.filter { $0.kind == .routine }.max { $0.start < $1.start }
     }
 }
 
@@ -177,12 +225,31 @@ final class AssistantBubbleBoard {
     @ObservationIgnored private var bubbles: [AssistantBubble]?
 
     var text: AssistantBubbleText? { active?.parsed }
+    /// 재생·사이드바 핸들이 보여 주는 시각(BUB1110A02). nil이면 지금.
+    @ObservationIgnored private(set) var viewedTime: Date?
+    @ObservationIgnored private var triedArchive = false
 
     func refresh(now: Date = .now) {
         let list = bubbles ?? AssistantBubbleStore.load(from: file)
         bubbles = list
-        let next = AssistantBubbleStore.active(at: now, in: list)
+        let next = AssistantBubbleStore.active(at: viewedTime ?? now, in: list)
         if next != active { active = next }
+        // 새 기기·백업 복원처럼 파일이 비었으면 앱 DB에서 한 번 되살린다.
+        if list.isEmpty, !triedArchive, file == AssistantBubbleStore.url {
+            triedArchive = true
+            Task { @MainActor in
+                let stored = await AssistantBubbleArchive.all()
+                if !stored.isEmpty, (self.bubbles ?? []).isEmpty { AssistantBubbleStore.save(stored, to: AssistantBubbleStore.url) }
+            }
+        }
+    }
+
+    /// 지도 화랑이가 보여 주는 시각을 바꾼다. 같은 분이면 아무것도 하지 않는다.
+    func show(at time: Date?) {
+        let minute = time.map { floor($0.timeIntervalSinceReferenceDate / 60) }
+        guard minute != viewedTime.map({ floor($0.timeIntervalSinceReferenceDate / 60) }) else { return }
+        viewedTime = time
+        refresh()
     }
 
     /// 저장한 목록을 받아 다시 고른다. 다른 파일(시험)의 저장은 무시한다.
@@ -273,5 +340,45 @@ struct AssistantBubbleLinkBar: View {
         } message: {
             Text(pending?.url.host() ?? "")
         }
+    }
+}
+
+/// 말풍선을 앱 DB에도 남긴다(BUB1110A02). 건강 기록 가져오기처럼 같은 SQLite에 자기 종류로 두어
+/// 월별 백업에 함께 들어간다. 파일이 지워져도(새 기기·복원) 여기서 되살린다.
+enum AssistantBubbleArchive {
+    static let kind = "assistant-bubble"
+
+    @MainActor
+    static func mirror(from old: [AssistantBubble], to new: [AssistantBubble]) {
+        let before = Dictionary(old.map { ($0.id, $0) }, uniquingKeysWith: { $1 })
+        let changed = new.filter { before[$0.id] != $0 }
+        let kept = Set(new.map(\.id))
+        let removed = old.filter { !kept.contains($0.id) }
+        guard !changed.isEmpty || !removed.isEmpty else { return }
+        Task(priority: .utility) { await write(changed, removing: removed) }
+    }
+
+    /// 지운 것은 지움 표시로 남겨 백업·다른 달 복원에서도 되살아나지 않게 한다.
+    static func write(_ bubbles: [AssistantBubble], removing removed: [AssistantBubble]) async {
+        guard let store = try? TaptionStoreV2.applicationSupport() else { return }
+        let encoder = JSONEncoder()
+        func row(_ bubble: AssistantBubble, deleted: Bool) -> TaptionStoreRecord? {
+            guard let body = try? encoder.encode(bubble), let text = String(data: body, encoding: .utf8) else { return nil }
+            var record = TaptionStoreRecord(
+                id: bubble.id.uuidString, kind: kind, start: bubble.start, end: bubble.end,
+                updatedAt: .now, origin: .imported, body: text
+            )
+            record.isDeleted = deleted
+            return record
+        }
+        let rows = bubbles.compactMap { row($0, deleted: false) } + removed.compactMap { row($0, deleted: true) }
+        if !rows.isEmpty { try? await store.upsertRecords(rows) }
+    }
+
+    static func all() async -> [AssistantBubble] {
+        guard let store = try? TaptionStoreV2.applicationSupport(),
+              let rows = try? await store.records(kind: kind) else { return [] }
+        let decoder = JSONDecoder()
+        return rows.compactMap { try? decoder.decode(AssistantBubble.self, from: Data($0.body.utf8)) }.sorted { $0.start < $1.start }
     }
 }

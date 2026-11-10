@@ -158,7 +158,14 @@ private struct AssistantActivityObserver: View {
             }
             .task {
                 // 말풍선 파일은 한 번만 읽고, 시간 창은 30초마다 메모리에서만 본다. 바뀔 때만 다시 그려진다(BUB1110A01).
+                // 앱을 켤 때와 날이 바뀔 때 지난 날의 event 말풍선을 지운다(BUB1110A02).
+                var cleanedDay: Date?
                 while !Task.isCancelled {
+                    let today = Calendar.autoupdatingCurrent.startOfDay(for: .now)
+                    if cleanedDay != today {
+                        AssistantBubbleStore.cleanExpired()
+                        cleanedDay = today
+                    }
                     AssistantBubbleBoard.current.refresh()
                     try? await Task.sleep(for: .seconds(30))
                 }

@@ -142,9 +142,23 @@ extension MapHomeView {
             hasUserAdjustedMap: hasUserAdjustedMap
         ) else { return }
         guard let region = mapRouteFitRegion else {
-            setMapPosition(.automatic)
+            // 그날 GPS 기록이 없으면 서울시청(기본값) 대신 등록한 집을 가운데 둔다(MAP1110A01).
+            if let home = homeCoordinate {
+                setMapPosition(.camera(MapCamera(centerCoordinate: home, distance: MapHomeStartupCameraPolicy.distance)))
+            } else {
+                setMapPosition(.automatic)
+            }
             return
         }
         setMapPosition(.region(region))
+    }
+}
+
+extension MapHomeView {
+    /// 등록한 집 좌표. 기록이 없는 날의 지도 가운데로 쓴다(MAP1110A01).
+    var homeCoordinate: CLLocationCoordinate2D? {
+        model.settings.frequentPlaces.first { $0.kind == .home }?.point.map {
+            CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)
+        }
     }
 }

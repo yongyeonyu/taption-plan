@@ -32,7 +32,7 @@ struct AssistantCommand: Identifiable, Equatable, Sendable {
         case setMapStyle(MapDisplayStyle)
         case setDisplayOption(AssistantDisplayOption, enabled: Bool)
         /// 그날 그 시각 사이 화랑이 말풍선 글(BUB1110A01). 기록은 바꾸지 않는다.
-        case setBubble(start: Date, end: Date, text: String)
+        case setBubble(start: Date, end: Date, text: String, kind: AssistantBubble.Kind = .routine)
     }
 
     let id: String
@@ -79,6 +79,8 @@ enum AssistantCommandParser {
         let goalId: String?, stopId: String?, tripId: String?, itemId: String?, status: String?, order: Int?
         let latitude: Double?, longitude: Double?, lat: Double?, lng: Double?
         let language: String?, mapStyle: String?, theme: String?, option: String?, enabled: Bool?
+        // BUB1110A02: setBubble의 routine|event.
+        let kind: String?
     }
 
     /// `{"commands":[...]}`를 읽는다. 서버와 같은 규칙으로 다시 본다.

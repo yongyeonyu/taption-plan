@@ -329,6 +329,8 @@ struct MapHomeCatSpeechBubble: View {
 
     let text: String
     let side: Side
+    /// 3순위 기본 문구를 고르는 대분류(BUB1110A02). 없으면 동작 이름.
+    var action: MapHomeStickmanAction?
 
     /// 소품이 오른쪽에 있는 동작은 왼쪽에, 이동 중에는 가는 방향을 가리지 않게 뒤쪽에 둔다.
     static func side(for action: MapHomeStickmanAction, facesLeft: Bool) -> Side {
@@ -341,7 +343,9 @@ struct MapHomeCatSpeechBubble: View {
 
     var body: some View {
         // AI 말풍선이 있으면 그 시간 동안 활동 이름 대신 보인다(BUB1110A01). 창 폭의 40%에서 접어 아래로 다섯 줄까지(넘치면 60%까지 넓힘).
-        let ai = AssistantBubbleBoard.current.text?.display
+        let board = AssistantBubbleBoard.current
+        let ai = board.text?.display
+            ?? action.flatMap { MapHomeDefaultBubblePool.phrase(for: $0, at: board.viewedTime ?? .now, language: .current) }
         HStack(spacing: -1) {
             if side == .right { tail(pointsLeft: true) }
             Text(ai ?? text)
@@ -383,7 +387,7 @@ extension View {
         let side = MapHomeCatSpeechBubble.side(for: action, facesLeft: facesLeft)
         let gap = MapHomeStickmanMarker.size.width * 0.3
         return overlay(alignment: side == .right ? .trailing : .leading) {
-            MapHomeCatSpeechBubble(text: action.title, side: side)
+            MapHomeCatSpeechBubble(text: action.title, side: side, action: action)
                 .alignmentGuide(side == .right ? .trailing : .leading) { size in
                     side == .right ? -gap : size.width + gap
                 }

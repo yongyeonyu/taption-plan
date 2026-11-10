@@ -17,6 +17,8 @@ extension MapHomeView {
         nonmutating set {
             playbackProgress.rawSelectedMinute = newValue
             playbackProgress.selectedMinute = newValue
+            // 핸들·재생이 보여 주는 시각의 AI 말풍선을 고른다(BUB1110A02). 같은 분이면 아무것도 안 한다.
+            AssistantBubbleBoard.current.show(at: displayedPlaybackDate)
         }
     }
 

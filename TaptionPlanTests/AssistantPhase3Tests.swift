@@ -120,7 +120,16 @@ final class AssistantPhase3Tests: XCTestCase {
         XCTAssertEqual(wrong?.kind, .wrongPIN)
         XCTAssertEqual(wrong?.remaining, 2)
         XCTAssertEqual(AssistantServerRefusal.parse(status: 429, data: Data(#"{"error":"pin_locked"}"#.utf8), retryAfterHeader: "120")?.retryAfterSeconds, 120)
-        XCTAssertNil(AssistantServerRefusal.parse(status: 422, data: Data(#"{"error":"invalid"}"#.utf8)))
+        XCTAssertEqual(AssistantServerRefusal.parse(status: 422, data: Data(#"{"error":"invalid"}"#.utf8))?.kind, .invalid)
+        // CUE1110A01: 연결 키 만들기의 다른 거절도 이유별 문구로 보인다.
+        XCTAssertEqual(AssistantServerRefusal.parse(status: 401, data: Data(#"{"error":"unauthorized"}"#.utf8))?.kind, .unauthorized)
+        XCTAssertEqual(AssistantServerRefusal.parse(status: 422, data: Data(#"{"error":"too_many_keys"}"#.utf8))?.kind, .tooManyKeys)
+        XCTAssertEqual(AssistantServerRefusal.parse(status: 409, data: Data(#"{"error":"key_conflict"}"#.utf8))?.kind, .conflict)
+        XCTAssertEqual(AssistantServerRefusal.parse(status: 409, data: Data(#"{"error":"pin_not_set"}"#.utf8))?.kind, .pinNotSet)
+        let busy = AssistantServerRefusal.parse(status: 429, data: Data(#"{"error":"rate_limited","retryAfter":30}"#.utf8))
+        XCTAssertEqual(busy?.kind, .rateLimited)
+        XCTAssertEqual(busy?.text(.korean), "요청이 많아요. 30초 뒤 다시 해 주세요.")
+        XCTAssertEqual(AssistantServerRefusal.parse(status: 423, data: Data(#"{"error":"pin_locked","retryAfter":600}"#.utf8))?.kind, .locked)
     }
 
     // MARK: - 등록·바꾸기
@@ -558,6 +567,58 @@ final class AssistantPhase3Tests: XCTestCase {
         XCTAssertNotNil(AssistantBubbleStore.add(AssistantBubble(start: at(9, day: 11), end: at(10, day: 11), text: "다음 날"), now: at(8), calendar: calendar, file: file))
     }
 
+    /// BUB1110A02: event는 그날 하루 맨 앞, routine은 그 시간대. 지난 event만 지우고 routine은 남긴다.
+    func testBubbleKindsPriorityAndExpiry() throws {
+        let parsed = try batch([
+            command("e1", "setBubble", ["date": "2026-11-10", "kind": "event", "text": "여권 챙기세요"]),
+            command("r1", "setBubble", ["date": "2026-11-10", "start": "09:00", "end": "10:00", "text": "출근길 조심"]),
+            command("x1", "setBubble", ["date": "2026-11-10", "kind": "nightly", "start": "09:00", "end": "10:00", "text": "?"]),
+            command("r2", "setBubble", ["date": "2026-11-10", "text": "시간대 없음"]),
+        ])
+        XCTAssertEqual(parsed.commands.map(\.action), [
+            .setBubble(start: at(0), end: at(0, day: 11), text: "여권 챙기세요", kind: .event),
+            .setBubble(start: at(9), end: at(10), text: "출근길 조심"),
+        ])
+        XCTAssertEqual(parsed.invalidIDs, ["x1", "r2"])
+
+        let event = AssistantBubble(start: at(0), end: at(0, day: 11), text: "여권 챙기세요", kind: .event)
+        let routine = AssistantBubble(start: at(9), end: at(10), text: "출근길 조심")
+        XCTAssertEqual(AssistantBubbleStore.active(at: at(9, 30), in: [routine, event])?.id, event.id, "the day's event comes first")
+        XCTAssertNil(AssistantBubbleStore.active(at: at(9, 30), in: [AssistantBubble(start: at(0), end: at(0, day: 11), text: "x", hidden: true, kind: .event)]))
+        XCTAssertEqual(AssistantBubbleStore.active(at: at(9, 30), in: [routine])?.id, routine.id)
+
+        XCTAssertFalse(AssistantBubbleStore.isExpired(event, now: at(23, 59), calendar: calendar))
+        XCTAssertTrue(AssistantBubbleStore.isExpired(event, now: at(0, 1, day: 11), calendar: calendar), "gone after its day")
+        XCTAssertFalse(AssistantBubbleStore.isExpired(routine, now: at(9, day: 30), calendar: calendar), "routine bubbles are kept")
+
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("bubbles-\(UUID().uuidString).json")
+        addTeardownBlock { try? FileManager.default.removeItem(at: file) }
+        AssistantBubbleStore.save([event, routine], to: file)
+        AssistantBubbleStore.cleanExpired(now: at(8, day: 12), calendar: calendar, file: file)
+        XCTAssertEqual(AssistantBubbleStore.load(from: file).map(\.id), [routine.id])
+    }
+
+    func testOldBubbleFilesStillDecodeAsRoutine() throws {
+        let old = #"[{"id":"7E2C3F0A-7E1D-4F2A-9C77-1B9F0F0E0A11","start":0,"end":3600,"text":"예전","hidden":false}]"#
+        let bubbles = try JSONDecoder().decode([AssistantBubble].self, from: Data(old.utf8))
+        XCTAssertEqual(bubbles.first?.kind, .routine)
+        XCTAssertNil(bubbles.first?.createdAt)
+    }
+
+    func testDefaultBubblePoolIsStablePerHalfHour() {
+        let time = at(10, 5)
+        let first = MapHomeDefaultBubblePool.phrase(for: .computer, at: time, language: .korean)
+        XCTAssertNotNil(first)
+        XCTAssertEqual(MapHomeDefaultBubblePool.phrase(for: .computer, at: at(10, 20), language: .korean), first, "same half hour, same words")
+        XCTAssertTrue(MapHomeDefaultBubblePool.phrases(.work, language: .korean).contains(first ?? ""))
+        XCTAssertEqual(MapHomeDefaultBubblePool.group(for: .car), .movement)
+        XCTAssertEqual(MapHomeDefaultBubblePool.group(for: .eating), .eating)
+        XCTAssertEqual(MapHomeDefaultBubblePool.group(for: .deepSleep), .sleep)
+        XCTAssertNil(MapHomeDefaultBubblePool.phrase(for: .unconfirmed, at: time, language: .korean), "unknown activity keeps its own name")
+        let day = (0..<48).compactMap { MapHomeDefaultBubblePool.phrase(for: .restDonut, at: at(0).addingTimeInterval(Double($0) * 1_800), language: .korean) }
+        XCTAssertEqual(Set(day).count, MapHomeDefaultBubblePool.phrases(.rest, language: .korean).count, "every phrase comes up during a day")
+    }
+
     func testBubbleCommandIsUndoableTogglableAndTouchesNoRecords() async throws {
         let store = defaults()
         let file = AssistantPreferenceStore.test(store).bubbleFile
@@ -630,6 +691,58 @@ final class AssistantPhase3Tests: XCTestCase {
         Phase3RelayStub.body = #"{"url":"https://evil.example/s/ABCDEFGHJK"}"#
         let refused = await TripRelay.setupLinkText(for: "x", env: env)
         XCTAssertNil(refused)
+    }
+
+    /// Cue 연결(CUE1110A01): 새 32바이트 키를 43자로, 고른 권한·기간으로 `POST /keys`에 올리고 주 키는 몸통에 넣지 않는다.
+    func testCueKeyIsANewScopedKeyAndNeverTheMaster() async throws {
+        var seen = Set<String>()
+        for _ in 0..<50 {
+            let token = try XCTUnwrap(TripRelay.randomToken())
+            XCTAssertEqual(token.count, 43)
+            XCTAssertNil(token.rangeOfCharacter(from: CharacterSet(charactersIn: "+/=")), "base64url without padding")
+            XCTAssertTrue(TripRelay.isValidKey(token))
+            seen.insert(token)
+        }
+        XCTAssertEqual(seen.count, 50, "keys don't repeat")
+
+        let store = defaults()
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let env = environment(AssistantMemorySecrets([.master: oldMaster]), store)
+        let made = await TripRelay.registerScopedKey(label: "Cue", scope: .read, period: .month, pin: "135790", provider: .cue, now: now, env: env)
+        guard case let .created(key, token) = made else { return XCTFail("\(made)") }
+        XCTAssertNotEqual(token, oldMaster)
+        XCTAssertEqual(key.scope, .read)
+        XCTAssertEqual(key.expiresAt, now.addingTimeInterval(30 * 86_400))
+        XCTAssertEqual(AssistantKeyProviders.provider(key.id, defaults: store), .cue)
+        let sent = try XCTUnwrap(Phase3RelayStub.requests.last)
+        XCTAssertEqual(sent.summary, "POST /keys")
+        XCTAssertEqual(sent.token, oldMaster, "the master key only goes in the app's own Authorization header")
+        let body = try XCTUnwrap(JSONSerialization.jsonObject(with: sent.body) as? [String: Any])
+        let keys = try XCTUnwrap(body["keys"] as? [[String: Any]])
+        XCTAssertEqual(keys.count, 1)
+        XCTAssertEqual(keys[0]["token"] as? String, token)
+        XCTAssertEqual(keys[0]["scope"] as? String, "read")
+        XCTAssertEqual(keys[0]["expiresAt"] as? String, TripRelay.isoText(now.addingTimeInterval(30 * 86_400)))
+        XCTAssertEqual(body["pin"] as? String, "135790")
+        XCTAssertFalse(String(decoding: sent.body, as: UTF8.self).contains(oldMaster), "the master key is never in the body")
+
+        // 거절은 이유별 문구로, 응답이 없으면 실패로 돌려준다.
+        let locked = environment(AssistantMemorySecrets([.master: oldMaster]), store) { _ in 423 }
+        Phase3RelayStub.body = #"{"error":"pin_locked","retryAfter":900}"#
+        guard case let .refused(refusal) = await TripRelay.registerScopedKey(label: "Cue", scope: .write, period: .never, pin: "135790", provider: .cue, env: locked)
+        else { return XCTFail("expected a refusal") }
+        XCTAssertEqual(refusal.kind, .locked)
+    }
+
+    func testCueScreenTextAndDisconnectWarning() {
+        XCTAssertEqual(AssistantAIProvider.cue.title(.korean), "Cue")
+        XCTAssertNil(AssistantAIProvider.cue.appStoreURL, "no unverified App Store id or deep link")
+        XCTAssertNil(AssistantAIProvider.cue.appURL)
+        XCTAssertFalse(AssistantAIProvider.cue.usesOAuth)
+        XCTAssertEqual(TripRelay.mcpURL(host: "trip.bokkiyaw.com"), "https://trip.bokkiyaw.com/mcp")
+        let token = String(repeating: "a", count: 39) + "WXYZ"
+        XCTAssertEqual(AssistantCueText.masked(token), "aaaa…WXYZ", "only the ends are shown")
+        XCTAssertTrue(AssistantKeyText.revokeWarning("Cue", language: .korean).contains("아직 앱에 반영되지 않은 명령도 함께 지워져요"))
     }
 
     func testAIEditMarkShowsOnlyWhileTheTextIsTheAIText() {

@@ -694,6 +694,83 @@
         }
       }
     },
+    "1. 위에서 권한·기간을 고르고 「Cue 연결 키 만들기」를 눌러요.\n2. Cue에서 MCP 서버(커넥터)를 추가하는 화면을 열어요.\n3. 서버 주소에 MCP 주소를 붙여 넣어요.\n4. 인증 칸(요청 헤더)에 Authorization: Bearer 뒤에 연결 키를 붙여 넣어요. 칸 이름은 Cue 화면을 따라 주세요.\n5. 저장한 뒤 Cue에서 「오늘 기록 읽어 줘」처럼 물어 확인해요.|1. Pick access and period above, then tap Make a Cue key.\n2. In Cue, open the screen for adding an MCP server (connector).\n3. Paste the MCP URL as the server address.\n4. In the auth field (request header), enter Authorization: Bearer followed by the connection key. Field names follow Cue's screen.\n5. Save, then ask Cue something like \"read today's records\" to check." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. 上で権限と期間を選び「Cue接続キーを作成」をタップします。\n2. CueでMCPサーバー(コネクタ)を追加する画面を開きます。\n3. サーバーアドレスにMCPアドレスを貼り付けます。\n4. 認証欄(リクエストヘッダー)に Authorization: Bearer に続けて接続キーを貼り付けます。欄の名前はCueの画面に従ってください。\n5. 保存したら、Cueに「今日の記録を読んで」などと聞いて確認します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. 在上方选择权限和期限，然后轻点“生成 Cue 连接密钥”。\n2. 在 Cue 中打开添加 MCP 服务器(连接器)的界面。\n3. 将 MCP 地址粘贴为服务器地址。\n4. 在认证栏(请求头)输入 Authorization: Bearer，后接连接密钥。栏位名称以 Cue 界面为准。\n5. 保存后，向 Cue 说“读一下今天的记录”来确认。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. 在上方選擇權限和期限，然後點一下「產生 Cue 連線金鑰」。\n2. 在 Cue 中開啟新增 MCP 伺服器(連接器)的畫面。\n3. 將 MCP 網址貼上為伺服器網址。\n4. 在認證欄(請求標頭)輸入 Authorization: Bearer，後接連線金鑰。欄位名稱以 Cue 畫面為準。\n5. 儲存後，向 Cue 說「讀一下今天的紀錄」來確認。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. Wähle oben Zugriff und Zeitraum und tippe auf „Cue-Schlüssel erstellen“.\n2. Öffne in Cue den Bildschirm zum Hinzufügen eines MCP-Servers (Connectors).\n3. Füge die MCP-URL als Serveradresse ein.\n4. Gib im Authentifizierungsfeld (Request-Header) Authorization: Bearer gefolgt vom Verbindungsschlüssel ein. Die Feldnamen richten sich nach Cue.\n5. Speichere und frage Cue z. B. „Lies meine heutigen Einträge“, um es zu prüfen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. Choisissez l’accès et la durée ci-dessus, puis touchez « Créer une clé Cue ».\n2. Dans Cue, ouvrez l’écran d’ajout d’un serveur MCP (connecteur).\n3. Collez l’URL MCP comme adresse du serveur.\n4. Dans le champ d’authentification (en-tête), saisissez Authorization: Bearer suivi de la clé de connexion. Les noms des champs suivent l’écran de Cue.\n5. Enregistrez, puis demandez à Cue par exemple « lis mes données d’aujourd’hui » pour vérifier."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. Scegli accesso e durata qui sopra, poi tocca «Crea chiave Cue».\n2. In Cue apri la schermata per aggiungere un server MCP (connettore).\n3. Incolla l’URL MCP come indirizzo del server.\n4. Nel campo di autenticazione (intestazione) inserisci Authorization: Bearer seguito dalla chiave di connessione. I nomi dei campi seguono la schermata di Cue.\n5. Salva, poi chiedi a Cue ad esempio «leggi i dati di oggi» per verificare."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. Elige acceso y duración arriba y toca «Crear clave de Cue».\n2. En Cue, abre la pantalla para añadir un servidor MCP (conector).\n3. Pega la URL MCP como dirección del servidor.\n4. En el campo de autenticación (encabezado), escribe Authorization: Bearer seguido de la clave de conexión. Los nombres de los campos siguen la pantalla de Cue.\n5. Guarda y pregunta a Cue algo como «lee mis registros de hoy» para comprobarlo."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. Escolha acesso e prazo acima e toque em “Criar chave do Cue”.\n2. No Cue, abra a tela para adicionar um servidor MCP (conector).\n3. Cole a URL MCP como endereço do servidor.\n4. No campo de autenticação (cabeçalho), digite Authorization: Bearer seguido da chave de conexão. Os nomes dos campos seguem a tela do Cue.\n5. Salve e pergunte ao Cue algo como “leia meus registros de hoje” para conferir."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. Chọn quyền và thời hạn ở trên, rồi chạm “Tạo khóa Cue”.\n2. Trong Cue, mở màn hình thêm máy chủ MCP (trình kết nối).\n3. Dán URL MCP làm địa chỉ máy chủ.\n4. Ở ô xác thực (tiêu đề yêu cầu), nhập Authorization: Bearer rồi đến khóa kết nối. Tên ô theo màn hình của Cue.\n5. Lưu, rồi hỏi Cue chẳng hạn “đọc ghi chép hôm nay” để kiểm tra."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. Pilih akses dan masa berlaku di atas, lalu ketuk “Buat kunci Cue”.\n2. Di Cue, buka layar untuk menambah server MCP (konektor).\n3. Tempel URL MCP sebagai alamat server.\n4. Di kolom autentikasi (header), masukkan Authorization: Bearer diikuti kunci koneksi. Nama kolom mengikuti layar Cue.\n5. Simpan, lalu tanya Cue misalnya “baca catatan hari ini” untuk memeriksa."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. เลือกสิทธิ์และระยะเวลาด้านบน แล้วแตะ “สร้างคีย์ Cue”\n2. ใน Cue เปิดหน้าจอเพิ่มเซิร์ฟเวอร์ MCP (ตัวเชื่อมต่อ)\n3. วาง URL MCP เป็นที่อยู่เซิร์ฟเวอร์\n4. ในช่องยืนยันตัวตน (ส่วนหัวคำขอ) ใส่ Authorization: Bearer ตามด้วยคีย์เชื่อมต่อ ชื่อช่องเป็นไปตามหน้าจอของ Cue\n5. บันทึก แล้วถาม Cue เช่น “อ่านบันทึกวันนี้” เพื่อตรวจสอบ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. ऊपर अनुमति और अवधि चुनें, फिर “Cue कुंजी बनाएँ” दबाएँ।\n2. Cue में MCP सर्वर (कनेक्टर) जोड़ने वाली स्क्रीन खोलें।\n3. सर्वर पते में MCP URL पेस्ट करें।\n4. प्रमाणीकरण फ़ील्ड (रिक्वेस्ट हेडर) में Authorization: Bearer के बाद कनेक्शन कुंजी डालें। फ़ील्ड के नाम Cue की स्क्रीन के अनुसार होंगे।\n5. सहेजें, फिर जाँचने के लिए Cue से पूछें “आज के रिकॉर्ड पढ़ो”।"
+          }
+        }
+      }
+    },
     "1080×1080 · 인스타그램 피드 크기|1080×1080 · Instagram feed size" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3847,6 +3924,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "AI को सीधे ऐप में भेजने दें"
+          }
+        }
+      }
+    },
+    "AI 서버에 연결하지 못했어요. 인터넷 연결을 확인하고 다시 해 주세요.|Couldn't reach the AI server. Check your connection and try again." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AIサーバーに接続できませんでした。インターネット接続を確認してもう一度お試しください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法连接 AI 服务器。请检查网络后重试。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法連線到 AI 伺服器。請檢查網路後再試一次。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der KI-Server ist nicht erreichbar. Prüfe deine Verbindung und versuche es erneut."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de joindre le serveur IA. Vérifiez votre connexion et réessayez."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossibile raggiungere il server IA. Controlla la connessione e riprova."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudo conectar con el servidor de IA. Revisa la conexión y vuelve a intentarlo."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível conectar ao servidor de IA. Verifique a conexão e tente de novo."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không kết nối được máy chủ AI. Hãy kiểm tra mạng và thử lại."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak dapat terhubung ke server AI. Periksa koneksi lalu coba lagi."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เชื่อมต่อเซิร์ฟเวอร์ AI ไม่ได้ ตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI सर्वर से कनेक्ट नहीं हो सका। कनेक्शन जाँचें और फिर कोशिश करें।"
           }
         }
       }
@@ -7008,6 +7162,314 @@
         }
       }
     },
+    "Cue 연결 키 만들기|Make a Cue key" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cue接続キーを作成"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "生成 Cue 连接密钥"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "產生 Cue 連線金鑰"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cue-Schlüssel erstellen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Créer une clé Cue"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Crea chiave Cue"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Crear clave de Cue"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Criar chave do Cue"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tạo khóa Cue"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buat kunci Cue"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "สร้างคีย์ Cue"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cue कुंजी बनाएँ"
+          }
+        }
+      }
+    },
+    "Cue가 기록을 읽고 메모·일정·기록 수정을 보낼 수 있어요. 보낸 것은 앱에서 되돌릴 수 있어요.|Cue can read records and send memo, schedule and record edits. You can undo them in the app." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cueは記録を読み、メモ・予定・記録の修正を送れます。送られた内容はアプリで元に戻せます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cue 可以读取记录并发送备忘、日程和记录修改。发送的内容可在 App 中撤销。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cue 可以讀取紀錄並傳送備忘、行程和紀錄修改。傳送的內容可在 App 中復原。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cue kann Einträge lesen und Notiz-, Termin- und Eintragsänderungen senden. Du kannst sie in der App rückgängig machen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cue peut lire les données et envoyer des modifications de notes, d’agenda et de données. Vous pouvez les annuler dans l’app."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cue può leggere i dati e inviare modifiche a note, impegni e dati. Puoi annullarle nell’app."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cue puede leer registros y enviar cambios de notas, agenda y registros. Puedes deshacerlos en la app."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Cue pode ler registros e enviar alterações de notas, agenda e registros. Você pode desfazê-las no app."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cue có thể đọc ghi chép và gửi sửa ghi nhớ, lịch và ghi chép. Bạn có thể hoàn tác trong ứng dụng."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cue bisa membaca catatan dan mengirim perubahan memo, jadwal, dan catatan. Anda bisa membatalkannya di aplikasi."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cue อ่านบันทึกและส่งการแก้ไขโน้ต นัดหมาย และบันทึกได้ ย้อนกลับได้ในแอป"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cue रिकॉर्ड पढ़ सकता है और मेमो, शेड्यूल व रिकॉर्ड में बदलाव भेज सकता है। आप उन्हें ऐप में पलट सकते हैं।"
+          }
+        }
+      }
+    },
+    "Cue는 기록을 읽기만 해요.|Cue can only read records." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cueは記録を読むだけです。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cue 只能读取记录。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cue 只能讀取紀錄。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cue kann Einträge nur lesen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cue peut seulement lire les données."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cue può solo leggere i dati."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cue solo puede leer registros."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Cue só pode ler registros."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cue chỉ đọc ghi chép."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cue hanya bisa membaca catatan."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cue อ่านบันทึกได้อย่างเดียว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cue सिर्फ़ रिकॉर्ड पढ़ सकता है।"
+          }
+        }
+      }
+    },
+    "Cue에서 직접 등록|Register in Cue" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cueで直接登録"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 Cue 中手动注册"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 Cue 中手動註冊"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In Cue registrieren"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistrer dans Cue"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registra in Cue"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registrar en Cue"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registrar no Cue"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đăng ký trong Cue"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Daftarkan di Cue"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลงทะเบียนใน Cue"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cue में दर्ज करें"
+          }
+        }
+      }
+    },
     "Face ID / Touch ID 사용|Use Face ID / Touch ID" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -8005,6 +8467,237 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "लाइव ऐक्टिविटी शुरू नहीं हो सकी। {0}"
+          }
+        }
+      }
+    },
+    "MCP 주소 복사|Copy MCP URL" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MCPアドレスをコピー"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "复制 MCP 地址"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拷貝 MCP 網址"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MCP-URL kopieren"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copier l’URL MCP"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copia URL MCP"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copiar URL MCP"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copiar URL MCP"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sao chép URL MCP"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salin URL MCP"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คัดลอก URL MCP"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MCP URL कॉपी करें"
+          }
+        }
+      }
+    },
+    "MCP 주소|MCP URL" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MCPアドレス"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MCP 地址"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MCP 網址"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MCP-URL"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "URL MCP"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "URL MCP"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "URL MCP"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "URL MCP"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "URL MCP"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "URL MCP"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "URL MCP"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MCP URL"
+          }
+        }
+      }
+    },
+    "MCP 주소를 복사했어요.|MCP URL copied." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MCPアドレスをコピーしました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已复制 MCP 地址。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已拷貝 MCP 網址。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MCP-URL kopiert."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "URL MCP copiée."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "URL MCP copiato."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "URL MCP copiada."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "URL MCP copiada."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã sao chép URL MCP."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "URL MCP disalin."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คัดลอก URL MCP แล้ว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MCP URL कॉपी हो गया।"
           }
         }
       }
@@ -138678,6 +139371,83 @@
         }
       }
     },
+    "「{0}」 연결을 끊으면 그 AI가 더는 기록을 읽거나 보낼 수 없어요. 그 AI가 보내 두고 아직 앱에 반영되지 않은 명령도 함께 지워져요. 다시 쓰려면 새로 연결해야 해요.|Disconnecting \"{0}\" stops that AI from reading or sending anything. Commands it sent that the app hasn't applied yet are deleted too. To use it again, connect anew." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「{0}」の接続を切ると、そのAIは記録を読んだり送ったりできなくなります。そのAIが送ってまだアプリに反映されていない命令も一緒に削除されます。再び使うには新しく接続してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "断开“{0}”后，该 AI 将无法再读取或发送任何内容。它已发送但 App 尚未处理的命令也会一并删除。要再次使用，请重新连接。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "中斷「{0}」後，該 AI 將無法再讀取或傳送任何內容。它已傳送但 App 尚未處理的指令也會一併刪除。要再次使用，請重新連線。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn du „{0}“ trennst, kann diese KI nichts mehr lesen oder senden. Befehle, die sie gesendet hat und die die App noch nicht angewendet hat, werden ebenfalls gelöscht. Um sie wieder zu nutzen, verbinde neu."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si vous déconnectez « {0} », cette IA ne pourra plus rien lire ni envoyer. Les commandes qu’elle a envoyées et que l’app n’a pas encore appliquées sont aussi supprimées. Pour la réutiliser, reconnectez-la."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se scolleghi «{0}», quell’IA non potrà più leggere né inviare nulla. Anche i comandi che ha inviato e che l’app non ha ancora applicato vengono eliminati. Per riusarla, collegala di nuovo."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si desconectas «{0}», esa IA ya no podrá leer ni enviar nada. También se borran los comandos que envió y que la app aún no aplicó. Para volver a usarla, conéctala de nuevo."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ao desconectar “{0}”, essa IA não poderá mais ler nem enviar nada. Os comandos que ela enviou e que o app ainda não aplicou também são apagados. Para usar de novo, conecte outra vez."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ngắt “{0}” thì AI đó không thể đọc hay gửi gì nữa. Các lệnh nó đã gửi mà ứng dụng chưa áp dụng cũng bị xóa. Muốn dùng lại hãy kết nối mới."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jika “{0}” diputus, AI itu tidak bisa membaca atau mengirim apa pun lagi. Perintah yang dikirimnya dan belum diterapkan aplikasi juga dihapus. Untuk memakainya lagi, hubungkan ulang."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เมื่อตัดการเชื่อมต่อ “{0}” AI นั้นจะอ่านหรือส่งอะไรไม่ได้อีก คำสั่งที่ส่งมาแต่แอปยังไม่นำไปใช้จะถูกลบด้วย หากต้องการใช้อีกให้เชื่อมต่อใหม่"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“{0}” का कनेक्शन काटने पर वह AI न कुछ पढ़ पाएगा न भेज पाएगा। उसके भेजे जो आदेश ऐप ने अभी लागू नहीं किए, वे भी मिट जाएँगे। फिर से इस्तेमाल के लिए नया कनेक्शन बनाएँ।"
+          }
+        }
+      }
+    },
     "가까운 정류장 |Nearest stop " : {
       "extractionState" : "manual",
       "localizations" : {
@@ -138982,6 +139752,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "छिपा हुआ"
+          }
+        }
+      }
+    },
+    "가벼운 발걸음으로 👟|Light steps 👟" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "軽い足取りで 👟"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "脚步轻快 👟"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "腳步輕快 👟"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leichten Schrittes 👟"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "D’un pas léger 👟"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Con passo leggero 👟"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Con paso ligero 👟"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Com passos leves 👟"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bước chân nhẹ nhàng 👟"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Langkah ringan 👟"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ก้าวเบา ๆ 👟"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "हल्के कदमों से 👟"
           }
         }
       }
@@ -148688,6 +149535,83 @@
         }
       }
     },
+    "권한과 기간|Access and period" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "権限と期間"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "权限和期限"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "權限和期限"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zugriff und Zeitraum"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accès et durée"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accesso e durata"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Acceso y duración"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Acesso e prazo"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quyền và thời hạn"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akses dan masa berlaku"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "สิทธิ์และระยะเวลา"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "अनुमति और अवधि"
+          }
+        }
+      }
+    },
     "권한은 승인됐지만 앱 사용 데이터 접근이 없습니다. 설정 > 스크린 타임에서 앱 및 웹사이트 활동과 앱 사용 데이터 공유를 켜 주세요. 지역·Apple 계정에 따라 이 데이터 접근이 제공되지 않을 수도 있습니다.|Permission was granted, but app usage data access is missing. In Settings > Screen Time, turn on App & Website Activity and sharing of app usage data. This data access may not be available depending on your region or Apple Account." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -152380,6 +153304,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "बेसिक"
+          }
+        }
+      }
+    },
+    "기분 좋은 템포로!|Nice and steady!" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "気持ちのいいテンポで!"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保持好节奏!"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保持好節奏!"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schön gleichmäßig!"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tranquillement mais sûrement !"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Con calma e costanza!"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¡A buen ritmo!"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No ritmo certo!"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Giữ nhịp thật vui!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pelan tapi pasti!"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "จังหวะกำลังดี!"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "अच्छी रफ़्तार से!"
           }
         }
       }
@@ -162163,6 +163164,83 @@
         }
       }
     },
+    "든든하게 챙겨드세요 🍱|Eat well 🍱" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "しっかり食べてね 🍱"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "吃饱吃好 🍱"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "吃飽吃好 🍱"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Iss dich satt 🍱"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mangez bien 🍱"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mangia bene 🍱"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Come bien 🍱"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coma bem 🍱"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ăn no nhé 🍱"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Makan yang kenyang 🍱"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "กินให้อิ่มนะ 🍱"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "भरपेट खाइए 🍱"
+          }
+        }
+      }
+    },
     "등교했어요|Arrived at school" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -165085,6 +166163,160 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "वाक्य"
+          }
+        }
+      }
+    },
+    "맛있게 냠냠 🍽️|Enjoy your meal 🍽️" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "おいしくいただきます 🍽️"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "好好享用 🍽️"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "好好享用 🍽️"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guten Appetit 🍽️"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bon appétit 🍽️"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buon appetito 🍽️"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¡Buen provecho! 🍽️"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bom apetite 🍽️"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chúc ngon miệng 🍽️"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selamat makan 🍽️"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ทานให้อร่อย 🍽️"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "मज़े से खाइए 🍽️"
+          }
+        }
+      }
+    },
+    "맛있는 식사 시간!|Mealtime!" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "おいしい食事の時間!"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "美味用餐时间!"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "美味用餐時間!"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Essenszeit!"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "C’est l’heure du repas !"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "È ora di mangiare!"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¡Hora de comer!"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hora da refeição!"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Giờ ăn rồi!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waktunya makan!"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ได้เวลากินแล้ว!"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "खाने का समय!"
           }
         }
       }
@@ -171938,6 +173170,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "पंजों के निशान"
+          }
+        }
+      }
+    },
+    "밥이 보약이에요!|Good food, good mood!" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ごはんは元気のもと!"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "吃饭最要紧!"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "吃飯最要緊!"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gutes Essen, gute Laune!"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bien manger, bonne humeur !"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buon cibo, buon umore!"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¡Buena comida, buen humor!"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Comida boa, humor bom!"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ăn ngon, vui vẻ!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Makan enak, hati senang!"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "กินดีอารมณ์ดี!"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "अच्छा खाना, अच्छा मूड!"
           }
         }
       }
@@ -183565,6 +184874,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "नया मैप मेमो"
+          }
+        }
+      }
+    },
+    "새 키로 다시 만들기|Make a new key" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しいキーで作り直す"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新生成新密钥"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新產生新金鑰"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neuen Schlüssel erstellen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Créer une nouvelle clé"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Crea una nuova chiave"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Crear una clave nueva"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Criar uma chave nova"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tạo khóa mới"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buat kunci baru"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "สร้างคีย์ใหม่"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "नई कुंजी बनाएँ"
           }
         }
       }
@@ -195812,6 +197198,83 @@
         }
       }
     },
+    "안전 운전 필수!|Drive safe!" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安全運転で!"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安全驾驶!"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安全駕駛!"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fahr vorsichtig!"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prudence au volant !"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guida con prudenza!"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¡Conduce con cuidado!"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dirija com cuidado!"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lái xe an toàn nhé!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hati-hati menyetir!"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ขับรถปลอดภัยนะ!"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ध्यान से गाड़ी चलाएँ!"
+          }
+        }
+      }
+    },
     "안전을 위해 지우지 않았습니다.|Not removed, to be safe." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -198738,6 +200201,83 @@
         }
       }
     },
+    "앱이 Cue에 자동으로 연결해 주지는 않아요. 연결 키는 이 연결에만 쓰는 키이고, 앱의 주 키는 보내지 않아요. 아래 「연결 키 관리」에서 언제든 끊을 수 있어요.|The app doesn't connect to Cue for you. The key is only for this connection; the app's own key is never sent. You can cut it anytime under connection keys." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリがCueに自動で接続することはありません。接続キーはこの接続専用で、アプリのメインキーは送りません。下の「接続キー管理」でいつでも切断できます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App 不会自动连接 Cue。连接密钥只用于此连接，App 的主密钥不会发送。可随时在下方“连接密钥管理”中断开。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App 不會自動連線 Cue。連線金鑰只用於此連線，App 的主金鑰不會傳送。可隨時在下方「連線金鑰管理」中斷開。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die App verbindet sich nicht selbst mit Cue. Der Schlüssel gilt nur für diese Verbindung; der Hauptschlüssel der App wird nie gesendet. Unter Verbindungsschlüssel kannst du jederzeit trennen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’app ne se connecte pas à Cue toute seule. La clé ne sert qu’à cette connexion ; la clé principale de l’app n’est jamais envoyée. Vous pouvez la couper à tout moment dans les clés de connexion."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’app non si collega a Cue da sola. La chiave vale solo per questa connessione; la chiave principale dell’app non viene mai inviata. Puoi interromperla quando vuoi nelle chiavi di connessione."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La app no se conecta a Cue por sí sola. La clave solo sirve para esta conexión; la clave principal de la app nunca se envía. Puedes cortarla cuando quieras en las claves de conexión."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O app não se conecta ao Cue sozinho. A chave serve só para esta conexão; a chave principal do app nunca é enviada. Você pode cortar quando quiser nas chaves de conexão."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ứng dụng không tự kết nối với Cue. Khóa chỉ dùng cho kết nối này; khóa chính của ứng dụng không bao giờ được gửi. Bạn có thể ngắt bất cứ lúc nào trong mục khóa kết nối."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aplikasi tidak terhubung ke Cue secara otomatis. Kunci hanya untuk koneksi ini; kunci utama aplikasi tidak pernah dikirim. Anda bisa memutusnya kapan saja di kunci koneksi."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แอปไม่เชื่อมต่อกับ Cue ให้อัตโนมัติ คีย์นี้ใช้กับการเชื่อมต่อนี้เท่านั้น และไม่ส่งคีย์หลักของแอป ตัดการเชื่อมต่อได้ทุกเมื่อในคีย์เชื่อมต่อ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ऐप Cue से अपने आप नहीं जुड़ता। यह कुंजी सिर्फ़ इसी कनेक्शन के लिए है; ऐप की मुख्य कुंजी कभी नहीं भेजी जाती। कनेक्शन कुंजियों में कभी भी काट सकते हैं।"
+          }
+        }
+      }
+    },
     "앱이 기록을 갱신할 때(켜져 있을 때·iOS가 허용한 백그라운드 새로 고침) 찾은 일을 알려요. 위치 '항상 허용'이 있어야 앱이 꺼져 있어도 받을 수 있어요.|Sent when the app refreshes its records (foreground or iOS-allowed background refresh). 'Always' location access lets alerts arrive while closed." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -198888,6 +200428,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "रात"
+          }
+        }
+      }
+    },
+    "어디로 향하는 길일까요? 🚗|Where are we headed? 🚗" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "どこへ向かうのかな? 🚗"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要去哪里呢? 🚗"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要去哪裡呢? 🚗"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wohin geht es? 🚗"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On va où ? 🚗"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dove andiamo? 🚗"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Adónde vamos? 🚗"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Para onde vamos? 🚗"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mình đi đâu thế? 🚗"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mau ke mana nih? 🚗"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "จะไปไหนกันนะ? 🚗"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कहाँ जा रहे हैं? 🚗"
           }
         }
       }
@@ -201895,6 +203512,83 @@
         }
       }
     },
+    "연결 끊기|Disconnect" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続を切る"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "断开连接"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "中斷連線"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trennen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Déconnecter"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scollega"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Desconectar"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Desconectar"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ngắt kết nối"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Putuskan"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ตัดการเชื่อมต่อ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कनेक्शन काटें"
+          }
+        }
+      }
+    },
     "연결 목록을 읽지 못했어요.|Couldn't load the connections." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -202892,6 +204586,314 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "कनेक्शन कुंजियाँ"
+          }
+        }
+      }
+    },
+    "연결 키 복사|Copy connection key" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続キーをコピー"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "复制连接密钥"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拷貝連線金鑰"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verbindungsschlüssel kopieren"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copier la clé de connexion"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copia chiave di connessione"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copiar clave de conexión"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copiar chave de conexão"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sao chép khóa kết nối"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salin kunci koneksi"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คัดลอกคีย์เชื่อมต่อ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कनेक्शन कुंजी कॉपी करें"
+          }
+        }
+      }
+    },
+    "연결 키|Connection key" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続キー"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连接密钥"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "連線金鑰"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verbindungsschlüssel"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clé de connexion"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chiave di connessione"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clave de conexión"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chave de conexão"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Khóa kết nối"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kunci koneksi"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คีย์เชื่อมต่อ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कनेक्शन कुंजी"
+          }
+        }
+      }
+    },
+    "연결 키를 만들었어요. 아래에서 MCP 주소와 연결 키를 복사해 Cue에 넣어 주세요.|Key made. Copy the MCP URL and the key below into Cue." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続キーを作成しました。下でMCPアドレスと接続キーをコピーしてCueに入力してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已生成连接密钥。请在下方复制 MCP 地址和连接密钥填入 Cue。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已產生連線金鑰。請在下方拷貝 MCP 網址和連線金鑰填入 Cue。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schlüssel erstellt. Kopiere unten MCP-URL und Schlüssel in Cue."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clé créée. Copiez l’URL MCP et la clé ci-dessous dans Cue."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chiave creata. Copia qui sotto URL MCP e chiave in Cue."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clave creada. Copia abajo la URL MCP y la clave en Cue."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chave criada. Copie abaixo a URL MCP e a chave para o Cue."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã tạo khóa. Sao chép URL MCP và khóa bên dưới vào Cue."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kunci dibuat. Salin URL MCP dan kunci di bawah ke Cue."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "สร้างคีย์แล้ว คัดลอก URL MCP และคีย์ด้านล่างไปใส่ใน Cue"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कुंजी बन गई। नीचे से MCP URL और कुंजी कॉपी करके Cue में डालें।"
+          }
+        }
+      }
+    },
+    "연결 키를 복사했어요. 10분 뒤 클립보드에서 지워져요.|Key copied. It is cleared from the clipboard in 10 minutes." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続キーをコピーしました。10分後にクリップボードから消去されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已复制连接密钥。剪贴板将在 10 分钟后清除。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已拷貝連線金鑰。剪貼簿將在 10 分鐘後清除。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schlüssel kopiert. Die Zwischenablage wird nach 10 Minuten geleert."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clé copiée. Le presse-papiers est vidé après 10 minutes."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chiave copiata. Gli appunti vengono svuotati dopo 10 minuti."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clave copiada. El portapapeles se borra en 10 minutos."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chave copiada. A área de transferência é limpa em 10 minutos."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã sao chép khóa. Bộ nhớ tạm sẽ bị xóa sau 10 phút."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kunci disalin. Papan klip dihapus setelah 10 menit."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คัดลอกคีย์แล้ว คลิปบอร์ดจะถูกล้างใน 10 นาที"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कुंजी कॉपी हो गई। क्लिपबोर्ड 10 मिनट में साफ़ हो जाएगा।"
           }
         }
       }
@@ -204047,6 +206049,160 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "जुड़ा है"
+          }
+        }
+      }
+    },
+    "연결은 20개까지예요. 안 쓰는 연결을 끊고 다시 해 주세요.|Up to 20 connections. Cut one you don't use and try again." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続は20件までです。使っていない接続を切ってからもう一度お試しください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最多 20 个连接。请断开不用的连接后重试。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最多 20 個連線。請中斷不用的連線後再試一次。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Höchstens 20 Verbindungen. Trenne eine ungenutzte und versuche es erneut."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "20 connexions maximum. Coupez-en une inutilisée et réessayez."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Massimo 20 connessioni. Scollegane una inutilizzata e riprova."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Máximo 20 conexiones. Corta una que no uses y vuelve a intentarlo."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Até 20 conexões. Corte uma que não usa e tente de novo."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tối đa 20 kết nối. Hãy ngắt một kết nối không dùng rồi thử lại."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maksimal 20 koneksi. Putuskan satu yang tidak dipakai lalu coba lagi."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เชื่อมต่อได้สูงสุด 20 รายการ ตัดรายการที่ไม่ใช้แล้วลองอีกครั้ง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "अधिकतम 20 कनेक्शन। कोई अनुपयोगी कनेक्शन काटकर फिर कोशिश करें।"
+          }
+        }
+      }
+    },
+    "연결을 끊지 못했어요. 인터넷 연결을 확인하고 다시 해 주세요.|Couldn't disconnect. Check your connection and try again." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続を切れませんでした。インターネット接続を確認してもう一度お試しください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法断开。请检查网络后重试。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法中斷連線。請檢查網路後再試一次。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trennen fehlgeschlagen. Prüfe deine Verbindung und versuche es erneut."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Déconnexion impossible. Vérifiez votre connexion et réessayez."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossibile scollegare. Controlla la connessione e riprova."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudo desconectar. Revisa la conexión y vuelve a intentarlo."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível desconectar. Verifique a conexão e tente de novo."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không ngắt được. Hãy kiểm tra mạng và thử lại."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak dapat memutus. Periksa koneksi lalu coba lagi."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ตัดการเชื่อมต่อไม่ได้ ตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कनेक्शन नहीं कटा। कनेक्शन जाँचें और फिर कोशिश करें।"
           }
         }
       }
@@ -206438,6 +208594,83 @@
         }
       }
     },
+    "열일 모드 가동 중 💻|Deep work mode 💻" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "集中モード中 💻"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "专注工作中 💻"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "專注工作中 💻"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fokusmodus 💻"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mode concentration 💻"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modalità concentrazione 💻"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modo concentración 💻"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modo foco 💻"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đang tập trung làm việc 💻"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mode fokus kerja 💻"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "โหมดตั้งใจทำงาน 💻"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "काम में ध्यान लगा है 💻"
+          }
+        }
+      }
+    },
     "영상 만들기|Make video" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -208440,6 +210673,160 @@
         }
       }
     },
+    "오늘 하루도 고생 많으셨어요|You did great today" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今日もおつかれさまでした"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天辛苦啦"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天辛苦了"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du hast heute toll gemacht"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belle journée de travail"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oggi sei stato bravissimo"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hoy lo hiciste genial"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Você mandou bem hoje"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hôm nay bạn vất vả rồi"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamu hebat hari ini"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "วันนี้เหนื่อยมามากแล้ว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "आज आपने बहुत मेहनत की"
+          }
+        }
+      }
+    },
+    "오늘 할 일 부수러 갑시다!|Let's crush today's list!" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今日のタスクを片づけよう!"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "把今天的事搞定!"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "把今天的事搞定!"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lass uns die Liste abhaken!"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On attaque la liste !"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Facciamo fuori la lista!"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¡A acabar con la lista de hoy!"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bora acabar com a lista!"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xử lý hết việc hôm nay nào!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ayo tuntaskan tugas hari ini!"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ไปเคลียร์งานวันนี้กัน!"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "चलो आज का काम निपटाएँ!"
+          }
+        }
+      }
+    },
     "오늘 할 일은 없습니다|Nothing else to do today" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -208590,6 +210977,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "आज के लिए Hwarang का अभियान लॉग।\n\n🐾 दूरी: {0}\n🚩 जगहें: {1}\n🎖️ गतिविधियाँ: {2}\n\nअपना लॉग बढ़ाने के लिए और दूर तक घूमें और नई जगहें देखें।"
+          }
+        }
+      }
+    },
+    "오늘도 부지런히 움직이시네요 🏃|Busy as ever today 🏃" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今日もよく動いてますね 🏃"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天也很勤快呢 🏃"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天也很勤快呢 🏃"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heute wieder fleißig unterwegs 🏃"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toujours aussi actif aujourd’hui 🏃"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sempre attivo anche oggi 🏃"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hoy también muy activo 🏃"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ativo como sempre hoje 🏃"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hôm nay vẫn chăm chỉ ghê 🏃"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hari ini rajin bergerak 🏃"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "วันนี้ก็ขยันเหมือนเดิม 🏃"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "आज भी खूब सक्रिय 🏃"
           }
         }
       }
@@ -210057,6 +212521,83 @@
         }
       }
     },
+    "요청 형식이 맞지 않아요. 앱을 업데이트해 주세요.|The request wasn't accepted. Please update the app." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リクエストの形式が合いません。アプリをアップデートしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请求格式不正确。请更新 App。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請求格式不正確。請更新 App。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Anfrage wurde nicht angenommen. Bitte aktualisiere die App."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La requête n’a pas été acceptée. Mettez l’app à jour."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La richiesta non è stata accettata. Aggiorna l’app."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se aceptó la solicitud. Actualiza la app."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A solicitação não foi aceita. Atualize o app."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yêu cầu không được chấp nhận. Hãy cập nhật ứng dụng."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permintaan tidak diterima. Perbarui aplikasi."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คำขอไม่ได้รับการยอมรับ โปรดอัปเดตแอป"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "अनुरोध स्वीकार नहीं हुआ। कृपया ऐप अपडेट करें।"
+          }
+        }
+      }
+    },
     "요청을 완료하지 못했습니다. 다시 시도해 주세요.|Couldn't finish the request. Please try again." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -210130,6 +212671,160 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "अनुरोध पूरा नहीं हो सका। कृपया फिर कोशिश करें।"
+          }
+        }
+      }
+    },
+    "요청이 많아요. {0}초 뒤 다시 해 주세요.|Too many requests. Try again in {0} s." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リクエストが多すぎます。{0}秒後にもう一度お試しください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请求过多。请 {0} 秒后重试。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請求過多。請 {0} 秒後再試一次。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zu viele Anfragen. Versuche es in {0} s erneut."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trop de requêtes. Réessayez dans {0} s."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Troppe richieste. Riprova tra {0} s."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Demasiadas solicitudes. Vuelve a intentarlo en {0} s."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Muitas solicitações. Tente de novo em {0} s."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quá nhiều yêu cầu. Thử lại sau {0} giây."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terlalu banyak permintaan. Coba lagi dalam {0} detik."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คำขอมากเกินไป ลองอีกครั้งใน {0} วินาที"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "बहुत ज़्यादा अनुरोध। {0} सेकंड बाद फिर कोशिश करें।"
+          }
+        }
+      }
+    },
+    "요청이 많아요. 잠시 뒤 다시 해 주세요.|Too many requests. Try again in a moment." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リクエストが多すぎます。しばらくしてからもう一度お試しください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请求过多。请稍后重试。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請求過多。請稍後再試一次。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zu viele Anfragen. Versuche es gleich noch einmal."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trop de requêtes. Réessayez dans un instant."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Troppe richieste. Riprova tra poco."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Demasiadas solicitudes. Vuelve a intentarlo en un momento."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Muitas solicitações. Tente de novo em instantes."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quá nhiều yêu cầu. Thử lại sau giây lát."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terlalu banyak permintaan. Coba lagi sebentar lagi."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คำขอมากเกินไป ลองอีกครั้งในอีกสักครู่"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "बहुत ज़्यादा अनुरोध। थोड़ी देर बाद फिर कोशिश करें।"
           }
         }
       }
@@ -216987,6 +219682,83 @@
         }
       }
     },
+    "이 기기의 AI 연결 준비가 풀렸어요. 「AI 연결」을 닫았다가 다시 열어 주세요.|This device's AI link needs to be set up again. Close and reopen AI connections." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このデバイスのAI接続の準備が解除されました。「AI接続」を閉じてもう一度開いてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此设备的 AI 连接准备已失效。请关闭后重新打开“AI 连接”。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此裝置的 AI 連線準備已失效。請關閉後重新開啟「AI 連線」。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die KI-Verbindung dieses Geräts muss neu eingerichtet werden. Schließe KI-Verbindungen und öffne sie erneut."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La liaison IA de cet appareil doit être reconfigurée. Fermez puis rouvrez Connexions IA."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il collegamento IA di questo dispositivo va configurato di nuovo. Chiudi e riapri Connessioni IA."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hay que volver a preparar la conexión de IA de este dispositivo. Cierra y abre de nuevo Conexiones de IA."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A ligação de IA deste dispositivo precisa ser refeita. Feche e abra de novo Conexões de IA."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cần thiết lập lại kết nối AI của thiết bị này. Đóng rồi mở lại Kết nối AI."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Koneksi AI di perangkat ini perlu disiapkan ulang. Tutup lalu buka lagi Koneksi AI."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ต้องตั้งค่าการเชื่อมต่อ AI ของอุปกรณ์นี้ใหม่ ปิดแล้วเปิดการเชื่อมต่อ AI อีกครั้ง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "इस डिवाइस का AI कनेक्शन फिर से सेट करना होगा। AI कनेक्शन बंद करके फिर खोलें।"
+          }
+        }
+      }
+    },
     "이 기기의 마지막 기록 시각이 기존 백업보다 앞서 기존 백업을 지켰습니다.|The last record on this device is older than the backup's, so the backup was kept." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -218296,6 +221068,83 @@
         }
       }
     },
+    "이 연결을 끊을까요?|Disconnect this AI?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この接続を切りますか?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要断开此连接吗?"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要中斷此連線嗎?"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese KI trennen?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Déconnecter cette IA ?"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scollegare questa IA?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Desconectar esta IA?"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Desconectar esta IA?"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ngắt kết nối AI này?"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Putuskan AI ini?"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ตัดการเชื่อมต่อ AI นี้?"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "यह AI कनेक्शन काटें?"
+          }
+        }
+      }
+    },
     "이 위치로 저장|Save this location" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -218677,6 +221526,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "यह पता खोलें?"
+          }
+        }
+      }
+    },
+    "이 키는 쓸 수 없어요. 다시 만들어 주세요.|This key can't be used. Make a new one." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このキーは使えません。作り直してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此密钥无法使用。请重新生成。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此金鑰無法使用。請重新產生。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieser Schlüssel ist nicht nutzbar. Erstelle einen neuen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cette clé est inutilisable. Créez-en une nouvelle."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questa chiave non è utilizzabile. Creane una nuova."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta clave no se puede usar. Crea una nueva."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta chave não pode ser usada. Crie uma nova."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không dùng được khóa này. Hãy tạo khóa mới."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kunci ini tidak bisa dipakai. Buat yang baru."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ใช้คีย์นี้ไม่ได้ สร้างคีย์ใหม่"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "यह कुंजी इस्तेमाल नहीं हो सकती। नई बनाएँ।"
           }
         }
       }
@@ -230077,6 +233003,83 @@
         }
       }
     },
+    "조심히 이동하세요!|Travel safe!" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "気をつけて移動してね!"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "路上小心!"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "路上小心!"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Komm gut an!"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bonne route !"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buon viaggio!"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¡Buen viaje!"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Boa viagem!"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đi đường cẩn thận!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hati-hati di jalan!"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เดินทางปลอดภัยนะ!"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सफ़र सुरक्षित हो!"
+          }
+        }
+      }
+    },
     "종료|Stop" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -230458,6 +233461,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "पूरे दिन"
+          }
+        }
+      }
+    },
+    "좋은 꿈 꾸세요 💤|Sweet dreams 💤" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "いい夢を 💤"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "做个好梦 💤"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "做個好夢 💤"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Süße Träume 💤"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fais de beaux rêves 💤"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sogni d’oro 💤"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dulces sueños 💤"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bons sonhos 💤"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ngủ ngon nhé 💤"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mimpi indah 💤"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ฝันดีนะ 💤"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "मीठे सपने 💤"
           }
         }
       }
@@ -231536,6 +234616,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "तैयार"
+          }
+        }
+      }
+    },
+    "중간에 스트레칭도 잊지 마세요 ☕|Don't forget to stretch ☕" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ときどきストレッチも ☕"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "别忘了中途伸展 ☕"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "別忘了中途伸展 ☕"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Denk ans Dehnen ☕"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pensez à vous étirer ☕"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ricordati di fare stretching ☕"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No olvides estirarte ☕"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não esqueça de alongar ☕"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nhớ vươn vai giữa giờ ☕"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jangan lupa peregangan ☕"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "อย่าลืมยืดเส้นยืดสาย ☕"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "बीच में स्ट्रेच करना न भूलें ☕"
           }
         }
       }
@@ -237931,6 +241088,83 @@
         }
       }
     },
+    "집이 제일 편해 🛋️|Nothing beats home 🛋️" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "やっぱり家がいちばん 🛋️"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "还是家里最舒服 🛋️"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "還是家裡最舒服 🛋️"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zuhause ist es am schönsten 🛋️"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rien ne vaut la maison 🛋️"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Casa dolce casa 🛋️"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Como en casa, en ningún sitio 🛋️"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lar, doce lar 🛋️"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ở nhà là thích nhất 🛋️"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rumah paling nyaman 🛋️"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "บ้านสบายที่สุด 🛋️"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "घर जैसा कुछ नहीं 🛋️"
+          }
+        }
+      }
+    },
     "찍은 도장 {0} · 남은 곳 {1}|Stamps {0} · To go {1}" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -238081,6 +241315,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "मुझे समझाएँ"
+          }
+        }
+      }
+    },
+    "차근차근 집중해 봐요!|One step at a time!" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一歩ずつ集中しよう!"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一步步专注!"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一步步專注!"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schritt für Schritt!"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pas à pas !"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un passo alla volta!"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¡Paso a paso!"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Um passo de cada vez!"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Từng bước tập trung nhé!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pelan-pelan fokus!"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ค่อย ๆ ตั้งใจไปทีละขั้น!"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "एक-एक कदम ध्यान से!"
           }
         }
       }
@@ -243321,6 +246632,83 @@
         }
       }
     },
+    "쿨쿨... 꿈나라 여행 중 🌙|Zzz… off to dreamland 🌙" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "すやすや… 夢の国へ 🌙"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "呼呼… 梦乡旅行中 🌙"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "呼呼… 夢鄉旅行中 🌙"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zzz… ab ins Traumland 🌙"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zzz… au pays des rêves 🌙"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zzz… nel mondo dei sogni 🌙"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zzz… rumbo al país de los sueños 🌙"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zzz… rumo ao mundo dos sonhos 🌙"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Khò khò… đang mơ đẹp 🌙"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zzz… menuju alam mimpi 🌙"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คร่อก… ไปเที่ยวแดนฝัน 🌙"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ख़र्राटे… सपनों की सैर 🌙"
+          }
+        }
+      }
+    },
     "큰 지도에서 보기|Open in full map" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -243783,6 +247171,83 @@
         }
       }
     },
+    "키가 새면 직접 끊어야 해요.|If the key leaks, you have to cut it yourself." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キーが漏れたら自分で切断する必要があります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果密钥泄露，需要自己断开。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果金鑰外洩，需要自己中斷。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn der Schlüssel öffentlich wird, musst du ihn selbst trennen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si la clé fuite, vous devez la couper vous-même."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se la chiave trapela, devi interromperla tu."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si la clave se filtra, tendrás que cortarla tú."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se a chave vazar, você precisa cortá-la."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nếu khóa bị lộ, bạn phải tự ngắt."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jika kunci bocor, Anda harus memutusnya sendiri."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "หากคีย์รั่วไหล คุณต้องตัดการเชื่อมต่อเอง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "अगर कुंजी लीक हो जाए तो आपको खुद काटनी होगी।"
+          }
+        }
+      }
+    },
     "키가 새면 직접 폐기해야 해요.|If the key leaks, you have to revoke it yourself." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -243856,83 +247321,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "कुंजी लीक हो जाए तो आपको उसे ख़ुद रद्द करना होगा।"
-          }
-        }
-      }
-    },
-    "키를 폐기하지 못했어요.|Couldn't revoke the key." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "キーを無効にできませんでした。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法吊销密钥。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "無法撤銷金鑰。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Der Schlüssel konnte nicht widerrufen werden."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Impossible de révoquer la clé."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Impossibile revocare la chiave."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No se pudo revocar la clave."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Não foi possível revogar a chave."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Không thể thu hồi khóa."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tidak dapat mencabut kunci."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "เพิกถอนคีย์ไม่ได้"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "कुंजी रद्द नहीं हो सकी।"
           }
         }
       }
@@ -245785,79 +249173,79 @@
         }
       }
     },
-    "폐기|Revoke" : {
+    "포근하게 충전하는 시간 💤|Cozy recharge time 💤" : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "無効にする"
+            "value" : "ぬくぬく充電タイム 💤"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "吊销"
+            "value" : "暖暖充电时间 💤"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "撤銷"
+            "value" : "暖暖充電時間 💤"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Widerrufen"
+            "value" : "Gemütliche Ladezeit 💤"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Révoquer"
+            "value" : "Recharge tout en douceur 💤"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Revoca"
+            "value" : "Ricarica coccolosa 💤"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Revocar"
+            "value" : "Tiempo de recargar 💤"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Revogar"
+            "value" : "Hora de recarregar 💤"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Thu hồi"
+            "value" : "Giờ nạp năng lượng 💤"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cabut"
+            "value" : "Waktu isi ulang 💤"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "เพิกถอน"
+            "value" : "เวลาชาร์จพลังอุ่น ๆ 💤"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "रद्द करें"
+            "value" : "आराम से चार्ज होने का समय 💤"
           }
         }
       }
@@ -246320,6 +249708,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "डिस्प्ले"
+          }
+        }
+      }
+    },
+    "푹 쉬는 것도 일이에요|Resting is work too" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "しっかり休むのも仕事です"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "好好休息也是正事"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "好好休息也是正事"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ausruhen ist auch Arbeit"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se reposer, c’est aussi du travail"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anche riposare è lavoro"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Descansar también es trabajo"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Descansar também é trabalho"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nghỉ ngơi cũng là việc"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Istirahat juga pekerjaan"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "พักผ่อนก็เป็นงานนะ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "आराम करना भी काम है"
           }
         }
       }
@@ -254944,6 +258409,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "प्रति घंटा"
+          }
+        }
+      }
+    },
+    "활기차게 움직이는 중!|On the move and lively!" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "元気に動いてます!"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "活力满满动起来!"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "活力滿滿動起來!"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Munter in Bewegung!"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En mouvement et plein d’entrain !"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In movimento e pieno di energia!"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¡En marcha y con energía!"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Em movimento e animado!"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đang vận động hăng say!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bergerak penuh semangat!"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "กำลังขยับอย่างกระฉับกระเฉง!"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "जोश से चल रहे हैं!"
           }
         }
       }

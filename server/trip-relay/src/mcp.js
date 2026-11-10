@@ -87,7 +87,9 @@ const TOOLS = [
     + "as a bare URL followed by a space or [label](https://...) with a label of up to 20 characters that is not itself an address; 300 characters "
     + "in total. Link hosts must be plain ASCII domains (no IP, punycode, user@ or parentheses; percent-encode other characters). No backslash, "
     + "no [ ] < > outside a link, and no other scheme such as http:, tel: or mailto:. At most 48 bubbles per 24 hours, separate from the 30-edit limit.",
-    { date: DATE, start: HHMM("Start"), end: HHMM("End, after start on the same day"), text: str("Bubble text") }, ["date", "start", "end", "text"]),
+    { date: DATE, start: HHMM("Start (optional for kind event)"), end: HHMM("End, after start on the same day (optional for kind event)"), text: str("Bubble text"),
+      kind: enumOf("routine (default): shown from start to end. event: a reminder for that whole day, shown before routine bubbles and deleted by the app after the day", ["routine", "event"]) },
+    ["date", "text"]),
   commandTool("set_language", "setLanguage", "Set app language", "Change the app language.", { language: enumOf("App language", LANGUAGES) }, ["language"]),
   commandTool("set_theme", "setTheme", "Set theme", "Change the app color theme.", { theme: enumOf("Theme", THEMES) }, ["theme"]),
   commandTool("set_map_style", "setMapStyle", "Set map style", "Change the map style.", { mapStyle: enumOf("Map style", MAP_STYLES) }, ["mapStyle"]),

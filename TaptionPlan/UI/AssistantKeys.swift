@@ -232,6 +232,7 @@ extension TripRelay {
         guard let reply, (200..<300).contains(reply.status) else { return false }
         AssistantKeyStore.remove(id)
         AssistantKeyLabels.remove(id)
+        AssistantKeyProviders.remove(id)
         return true
     }
 

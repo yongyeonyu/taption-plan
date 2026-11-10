@@ -173,7 +173,7 @@ export const COMMAND_FIELDS = {
   deleteTripStop: ["stopId"],
   setTripItemStatus: ["tripId", "itemId", "status"],
   updateSleep: ["recordId", "start", "end"],
-  setBubble: ["date", "start", "end", "text"],
+  setBubble: ["date", "start", "end", "text", "kind"],
   setLanguage: ["language"],
   setTheme: ["theme"],
   setMapStyle: ["mapStyle"],
@@ -255,8 +255,15 @@ export function isCommand(value) {
       return targetID(v.recordId) && optional(v.start, isClock) && optional(v.end, isClock) && (given(v.start) || given(v.end))
         && !(given(v.start) && v.start === v.end) && !(isInstant(v.start) && isInstant(v.end) && Date.parse(v.end) <= Date.parse(v.start));
     // 같은 날 start < end(HH:mm).
-    case "setBubble":
-      return isDate(v.date) && isTime(v.start) && isTime(v.end) && v.end > v.start && !!bubbleText(v.text).text;
+    case "setBubble": {
+      // BUB1110A02: kind "routine"(기본, 시간대 필수) | "event"(그날 하루 내내 맨 앞, 날이 지나면 앱이 지움, 시간대는 없어도 됨).
+      const kind = v.kind ?? "routine";
+      if (kind !== "routine" && kind !== "event") return false;
+      const window = given(v.start) || given(v.end)
+        ? isTime(v.start) && isTime(v.end) && v.end > v.start
+        : kind === "event";
+      return isDate(v.date) && window && !!bubbleText(v.text).text;
+    }
     case "setLanguage":
       return oneOf(LANGUAGES)(v.language);
     case "setTheme":

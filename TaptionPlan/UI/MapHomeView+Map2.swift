@@ -375,7 +375,7 @@ extension MapHomeView {
         let camera = MapHomeStartupCameraPolicy.camera(
             restoring: visibleMapCamera,
             fallbackCenter: displayedLocationCoordinate ?? currentCoordinate
-                ?? MapHomeStartupCameraPolicy.fallbackCenter
+                ?? homeCoordinate ?? MapHomeStartupCameraPolicy.fallbackCenter
         )
         mapCameraFrameProjection.reset()
         if visibleMapCamera != camera { visibleMapCamera = camera }

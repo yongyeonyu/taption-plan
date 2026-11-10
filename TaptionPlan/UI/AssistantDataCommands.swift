@@ -70,10 +70,16 @@ extension AssistantCommandParser {
             guard start != nil || end != nil, start.map({ $0 != nil }) ?? true, end.map({ $0 != nil }) ?? true else { return nil }
             return .updateSleep(recordID: recordID, start: start ?? nil, end: end ?? nil)
         case "setBubble":
-            guard let day, let start = raw.start.flatMap({ clock($0, on: day, calendar: calendar) }),
-                  let end = raw.end.flatMap({ clock($0, on: day, calendar: calendar) }), end > start,
+            // BUB1110A02: routine(기본)은 시간대가 있어야 하고, event는 시간대가 없으면 그날 하루 전체다.
+            guard let day, let kind = AssistantBubble.Kind(rawValue: raw.kind ?? AssistantBubble.Kind.routine.rawValue),
                   let text = raw.text.flatMap(AssistantBubbleText.cleaned), AssistantBubbleText(text) != nil else { return nil }
-            return .setBubble(start: start, end: end, text: text)
+            if raw.start == nil, raw.end == nil, kind == .event,
+               let next = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: day)) {
+                return .setBubble(start: calendar.startOfDay(for: day), end: next, text: text, kind: kind)
+            }
+            guard let start = raw.start.flatMap({ clock($0, on: day, calendar: calendar) }),
+                  let end = raw.end.flatMap({ clock($0, on: day, calendar: calendar) }), end > start else { return nil }
+            return .setBubble(start: start, end: end, text: text, kind: kind)
         default:
             return settingAction(raw)
         }

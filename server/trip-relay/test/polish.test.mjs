@@ -100,3 +100,24 @@ test("setup link: master creates, anyone with the code reads up to 3 times, then
   assert.equal((await send(env, "/setup", "POST", { text }, ai)).status, 403, "only the app makes setup links");
   assert.equal((await send(env, "/setup", "POST", { text: "" }, master)).status, 422);
 });
+
+// BUB1110A02: 말풍선 kind. routine은 시간대가 있어야 하고, event는 하루짜리라 시간대가 없어도 된다.
+test("setBubble kind: routine needs a window, event may omit it, other kinds are refused", async () => {
+  const { env, ai } = await setup();
+  const bubble = (id, extra) => ({ format: "bokki-command", version: 1, id, action: "setBubble", date: "2026-11-11", text: "여권 챙기세요", ...extra });
+  const post = (value) => send(env, "/command", "POST", value, ai);
+  // 읽기 키로는 못 보낸다.
+  assert.equal((await post(bubble("r0", { start: "08:00", end: "09:00" }))).status, 403);
+  const { env: env2, master } = await setup();
+  const writer = randomKey();
+  assert.equal((await send(env2, "/keys", "POST", { keys: [{ token: writer, scope: "write", expiresAt: null }], pin: PIN }, master)).status, 201);
+  const write = (value) => send(env2, "/command", "POST", value, writer);
+  assert.equal((await write(bubble("r1", { start: "08:00", end: "09:00" }))).status, 201, "routine with a window");
+  assert.equal((await write(bubble("r2", {}))).status, 422, "routine without a window");
+  assert.equal((await write(bubble("e1", { kind: "event" }))).status, 201, "event for the whole day");
+  assert.equal((await write(bubble("e2", { kind: "event", start: "07:00", end: "08:00" }))).status, 201);
+  assert.equal((await write(bubble("e3", { kind: "event", start: "07:00" }))).status, 422, "a half window is refused");
+  assert.equal((await write(bubble("x1", { kind: "nightly", start: "07:00", end: "08:00" }))).status, 422);
+  const queued = (await (await send(env2, "/command", "GET", undefined, master)).json()).commands;
+  assert.deepEqual(queued.map((c) => [c.id, c.kind ?? null]), [["r1", null], ["e1", "event"], ["e2", "event"]]);
+});

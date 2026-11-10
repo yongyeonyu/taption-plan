@@ -16,6 +16,7 @@ extension MapHomeView {
         nonmutating set {
             playbackProgress.rawCurrentMinute = newValue
             playbackProgress.currentMinute = newValue
+            AssistantBubbleBoard.current.show(at: displayedPlaybackDate)
         }
     }
 

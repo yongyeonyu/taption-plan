@@ -20,7 +20,7 @@ enum AssistantClipboard {
 
 /// 「AI 연결」에 보이는 AI(AIR1110A03). 연결 방식·앱 스킴·App Store 번호·요금제 표시를 한곳에 둔다.
 enum AssistantAIProvider: String, CaseIterable, Identifiable, Codable, Sendable {
-    case pickle, chatGPT, claude, gemini, other
+    case pickle, chatGPT, claude, gemini, cue, other
 
     var id: String { rawValue }
 
@@ -33,6 +33,7 @@ enum AssistantAIProvider: String, CaseIterable, Identifiable, Codable, Sendable 
         case .chatGPT: "ChatGPT"
         case .claude: "Claude"
         case .gemini: "Gemini"
+        case .cue: "Cue"
         case .other: language.text("기타", "Other")
         }
     }
@@ -44,7 +45,8 @@ enum AssistantAIProvider: String, CaseIterable, Identifiable, Codable, Sendable 
         case .chatGPT: "6448311069"
         case .claude: "6473753684"
         case .gemini: "6477489729"
-        case .other: nil
+        // Cue는 App Store 번호·앱 스킴을 확인하지 않아 넣지 않는다(CUE1110A01).
+        case .cue, .other: nil
         }
     }
 
@@ -58,7 +60,7 @@ enum AssistantAIProvider: String, CaseIterable, Identifiable, Codable, Sendable 
         case .chatGPT: "chatgpt"
         case .claude: "claude"
         case .gemini: "googlegemini"
-        case .other: nil
+        case .cue, .other: nil
         }
     }
 
@@ -80,7 +82,7 @@ enum AssistantAIProvider: String, CaseIterable, Identifiable, Codable, Sendable 
         case .claude: language.text("무료 가능 · 무료는 커넥터 1개", "Free OK · 1 connector on Free")
         case .chatGPT: language.text("유료 (Plus 이상)", "Paid (Plus or higher)")
         case .gemini: language.text("유료 · API 키 필요", "Paid · API key needed")
-        case .other: nil
+        case .cue, .other: nil
         }
     }
 
@@ -98,6 +100,7 @@ enum AssistantAIProvider: String, CaseIterable, Identifiable, Codable, Sendable 
         case .claude: return lower.contains("claude") || lower.contains("anthropic")
         case .gemini: return lower.contains("gemini")
         case .pickle: return lower.contains("pickle")
+        case .cue: return lower == "cue" || lower.hasPrefix("cue ")
         case .other: return false
         }
     }

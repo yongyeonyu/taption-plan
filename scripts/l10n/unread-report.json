@@ -1,13 +1,7 @@
 {
- "ui": 3393,
+ "ui": 3439,
  "catalog": 461,
  "unread": [
-  {
-   "file": "TaptionPlan/UI/MemoAIEdits.swift",
-   "line": 47,
-   "ko": "_ mark: Mark",
-   "en": "MapHomeLanguage"
-  },
   {
    "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
    "line": 41,
@@ -427,6 +421,12 @@
    "line": 362,
    "ko": "destination.koreanName",
    "en": "destination.englishName"
+  },
+  {
+   "file": "TaptionPlan/UI/MemoAIEdits.swift",
+   "line": 47,
+   "ko": "_ mark: Mark",
+   "en": "MapHomeLanguage"
   },
   {
    "file": "TaptionPlan/UI/TripImportPrompt.swift",

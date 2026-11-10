@@ -97,8 +97,8 @@ extension AppModel {
                 before: AssistantDataText.display(option, isOn: change.before != "false", language),
                 after: AssistantDataText.display(option, isOn: enabled, language), preferences: change.before == change.after ? [] : [change]
             )
-        case let .setBubble(start, end, text):
-            guard let added = AssistantBubbleStore.add(AssistantBubble(start: start, end: end, text: text), file: preferences.bubbleFile)
+        case let .setBubble(start, end, text, kind):
+            guard let added = AssistantBubbleStore.add(AssistantBubble(start: start, end: end, text: text, kind: kind), file: preferences.bubbleFile)
             else { return .rejected("bubble_limit") }
             var result = AssistantEditResult(after: "\(AssistantEditText.clock(start))–\(AssistantEditText.clock(end)) \(added.parsed?.display ?? text)")
             result.bubbleID = added.id

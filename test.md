@@ -2,6 +2,20 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## BUB1110A02 · MAP1110A01 · 1단계 아이폰 18 단위 시험 (2026-11-11)
+
+- 실기기 iPhone 18 Pro Max 단위 시험 전체(오늘 23시 코드): 2,508개, 통과 2,481, 건너뜀 24, 실패 3(`build/validation/EXE1110A01/unit-iphone18.xcresult`). 실패: `MapHomeStickmanTests.testEveryHwarangSceneDrawsThroughItsWholeLoop`·`testScarfAndRibbonStayOnTheBodyInEveryScene`(실행기 「unexpected exit, crash, or test timeout」 뒤 다시 시작), `SensorDayStoreTests.testForegroundLiveLocationEmitsNewFixesInsideNormalSamplingInterval`(좌표 1개만 옴). 셋만 따로 다시 돌리니 모두 통과(`unit-iphone18-rerun3.xcresult`, 목도리 시험 혼자 123초) → 전체 실행 중 시간 초과·부하로 판단, 코드 결함은 확인되지 않음. 시험 뒤 Release 306 다시 설치(기기 앱 목록 확인).
+- 말풍선(BUB1110A02): 시뮬레이터 `AssistantPhase3Tests` 34·`AssistantReviewFixTests` 29·`AssistantCommandEditTests` 14 실패 0(새 시험: kind 읽기·event 우선·지난 event 지우기·routine 남기기·예전 파일 읽기·기본 문구 30분 고정·대분류 매핑), `MapHomeStickmanTests` 52·`SensorDayStoreTests` 83 실패 0(`build/validation/BUB1110A02/sim.xcresult`). 서버 `npm test` 81개(kind 시험 포함) 통과, 배포(`relay-deploy.log`), 실서버 event 201·routine 201·반쪽 시간대 422(`relay-bubble-roundtrip.log`).
+- 확인 못 함: 기기에서 재생·사이드바 핸들로 지난 말풍선 보이기, 앱 DB(`assistant-bubble`)에서 되살리기(새 기기·복원), 지도 기록 없는 날 집 가운데(MAP1110A01) 화면. 기본 문구는 기계 번역.
+- l10n `check.py` 실패 0, 구조 지표 통과.
+
+## CUE1110A01 · 「AI 연결」에 Cue 더하기 (2026-11-10)
+
+- 시뮬레이터(BOKKI-Preview): `AssistantPhase3Tests`(31)·`AssistantReviewFixTests`(29)·`AssistantCommandEditTests`(14)·`AssistantRelayTests`(12) 86개 실패 0(`build/validation/CUE1110A01/assistant-sim.xcresult`). 새 시험: 토큰 50개가 모두 43자 base64url·서로 다름, Cue 키를 읽기·30일로 `POST /keys`에 올리고 몸통 `keys[0]`의 token·scope·expiresAt·pin 확인, 주 키는 Authorization에만 있고 몸통에 없음, 423 잠금 거절, 거절 이유 401·409·422·423·429 문구, 화면 키 가리기, 끊기 경고 문구. 만료 계산은 기존 `AssistantCommandEditTests`가 덮는다.
+- 로그 확인: AI 연결 코드의 진단 기록은 상태 코드·개수만 남기고 토큰·PIN은 넣지 않는다(grep).
+- l10n `check.py` 실패 0, 구조 지표 통과. 아이폰 18 Release 설치는 아래 기록(`release-device18-build.log`).
+- 확인 못 함: Cue 앱에서 실제 등록(인증 칸 이름·헤더 지원 여부), 기기 화면.
+
 ## EXE1110A01 · 대표 피드백 묶음: PIN 통일·이동 판정·메모 다듬기·Claude 주소·1회용 연결 코드 (2026-11-10 밤)
 
 - 실기기 iPhone 11 Pro 단위 시험 전체(오늘 22시 코드, 공유 잠금 사용): 2,447개, 건너뜀 24, 실패 1(`CategoryCacheBenchmarkTests.testStickmanActionCacheSpeedup` ×1.95, 기준 ×2.0, 알려진 부하 민감 시험). `build/validation/EXE1110A01/unit-iphone11.xcresult`.

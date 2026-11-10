@@ -134,7 +134,7 @@
 | `deleteTripStop` | `stopId` | 여행 일정을 뺀다(되돌릴 수 있음) |
 | `setTripItemStatus` | `tripId`, `itemId`, `status` | 시간 일정의 예약·계획·미정을 바꾼다 |
 | `updateSleep` | `recordId`(하루의 `sleep[].recordId`), `start`·`end`(ISO 오프셋 포함 또는 `HH:mm`) 중 하나 이상, 둘 다 ISO면 끝이 뒤 | 수면 기록의 시작·끝을 사용자 교정으로 고친다 |
-| `setBubble` (BUB1110A01) | `date`(`YYYY-MM-DD`), `start`·`end`(`HH:mm`, 같은 날 `end` > `start`), `text` | **보이기만 한다**: 그 시각의 시간 막대에 화랑이 말풍선을 띄운다. 기록·계획·메모를 만들거나 바꾸거나 지우지 않는다. 글 규칙은 아래 |
+| `setBubble` (BUB1110A01·A02) | `date`(`YYYY-MM-DD`), `kind`(`routine` 기본·`event`), `start`·`end`(`HH:mm`, 같은 날 `end` > `start`; `event`는 둘 다 없으면 그날 하루), `text` | **보이기만 한다**: 그 시각에 화랑이 말풍선을 띄운다. 기록·계획·메모를 만들거나 바꾸거나 지우지 않는다. 앱은 받은 말풍선을 기기와 앱 DB(`assistant-bubble`, 월별 백업 포함)에 남기고, 재생·사이드바 핸들로 그 시각을 보면 다시 보인다. 보이는 순서는 그날의 `event` → 그 시각의 `routine` → 앱 내장 기본 문구(대분류별). `event`는 그날이 지나면 앱이 지운다. 글 규칙은 아래. AI 쪽 사용법은 `docs/AI_ASSISTANT_GUIDE.md` |
 | `setLanguage` | `language`: `automatic`·`korean`·`english`·`ja`·`zh-Hans`·`zh-Hant`·`de`·`fr`·`it`·`es`·`pt-BR`·`vi`·`id`·`th`·`hi` | 앱 언어 |
 | `setTheme` | `theme`: `classic`·`navy`·`purple`·`brown`·`ink` | 화면 테마 |
 | `setMapStyle` | `mapStyle`: `standard`·`hybrid`·`mapLibreNight`·`mapLibreContrast`·`mapLibreCasual`·`mapLibreRPG`·`mapLibreInk` | 지도 모양 |
@@ -304,6 +304,7 @@ curl -s "https://trip.bokkiyaw.com/activity/summary?range=week" -H "Authorizatio
 
 Claude에 연결하기:
 
+- **Cue — MCP 주소 + 연결 키(CUE1110A01)**: 앱의 「AI 연결 → Cue」에서 읽기/쓰기와 사용 기간을 고르고 앱 비밀번호로 연결 키를 만든다(`POST /keys`). Cue의 MCP 서버 추가 화면에 `https://trip.bokkiyaw.com/mcp`를 넣고 인증(요청 헤더)에 `Authorization: Bearer <연결 키>`를 넣는다. 앱이 Cue에 자동으로 잇지 않는다. Cue가 헤더 인증을 받지 않으면 Claude와 같은 `/mcp/<연결 키>` 주소도 쓸 수 있다.
 - **claude.ai(웹·앱) 사용자 지정 커넥터 — 주소 하나(추천, CLD1110A01)**: 앱의 「AI 연결 → Claude → 연결 주소 만들기」가 앱 비밀번호를 받아 연결 키를 만들고 `https://trip.bokkiyaw.com/mcp/<연결 키>`를 복사한다. 설정 → 커넥터 → 「사용자 지정 커넥터 추가」에 붙여 넣고 인증은 「로그인 없음」. 서버는 이 주소의 키를 `Authorization: Bearer`와 같게 보되 AI 연결 키만 받고 주 키는 `403`이며, 이 주소에는 OAuth 안내(`WWW-Authenticate`)를 보내지 않는다. 주소가 곧 키이므로 앱의 연결 키 관리에서 끊으면 바로 막힌다.
 - **claude.ai(웹·앱) 사용자 지정 커넥터 — OAuth**: 설정 → 커넥터 → 「사용자 지정 커넥터 추가」, 주소 `https://trip.bokkiyaw.com/mcp`. Claude가 동적 등록 → 승인 화면을 연다. 앱의 「AI 연결 → Claude」에서 받은 8자 연결 코드와 PIN을 넣고 승인한다(14장). 고정 키는 넣지 않는다.
 - **Claude Code**: OAuth로 `claude mcp add --transport http taption https://trip.bokkiyaw.com/mcp` 뒤 `/mcp`에서 인증(돌아오는 주소는 `http://localhost:<포트>/…`라 등록할 수 있다). 또는 연결 키를 헤더로: `claude mcp add --transport http taption https://trip.bokkiyaw.com/mcp --header "Authorization: Bearer <키 43자>"`.

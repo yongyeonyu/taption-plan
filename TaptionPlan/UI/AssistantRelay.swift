@@ -172,11 +172,12 @@ extension TripRelay {
           \(command)"deleteTripStop","stopId":"<trips[].items[].stopId>"}
           \(command)"setTripItemStatus","tripId":"<trips[].tripId>","itemId":"<items[].itemId>","status":"booked|planned|tentative"}
           \(command)"updateSleep","recordId":"<sleep[].recordId>","start":"YYYY-MM-DDTHH:MM\(offset)","end":"YYYY-MM-DDTHH:MM\(offset)"} (or "HH:mm"; start, end or both)
-          \(command)"setBubble","date":"YYYY-MM-DD","start":"HH:mm","end":"HH:mm","text":"Rain at 3. [Forecast](https://example.com)"} (shows a speech bubble next to my cat for that window and changes no records; up to \(AssistantBubbleText.limit) visible characters and \(AssistantBubbleText.linkLimit) links, https only, as a bare URL or [label](https://...))
+          \(command)"setBubble","date":"YYYY-MM-DD","start":"HH:mm","end":"HH:mm","text":"Rain at 3. [Forecast](https://example.com)"} (shows a speech bubble next to my cat for that window and changes no records; up to \(AssistantBubbleText.limit) visible characters and \(AssistantBubbleText.linkLimit) links, https only, as a bare URL or [label](https://...)). Add "kind":"event" for a reminder about that day (a trip, a booking): it shows before other bubbles, start and end may be left out for the whole day, and the app deletes it after the day.
           \(command)"setLanguage","language":"\(choices(AppLanguagePreference.allCases.map(\.rawValue)))"}
           \(command)"setTheme","theme":"\(choices(AssistantCommandParser.themes.map(\.name)))"}
           \(command)"setMapStyle","mapStyle":"\(choices(MapDisplayStyle.allCases.map(\.rawValue)))"}
           \(command)"setDisplayOption","option":"\(choices(AssistantDisplayOption.allCases.map(\.rawValue)))","enabled":true}
+          Nightly bubbles: if you can run on a schedule, each night between 23:00 and 00:00 read tomorrow's plans (and the weather if you can) and send 2 to 4 setBubble commands for tomorrow's time windows (morning commute, lunch, the way home), plus a kind "event" bubble on days with a trip or booking. If you can't run on a schedule, do this when I talk to you in the evening. Keep each bubble short and kind; never invent plans I don't have.
           Deleting all data, backups, keys, the PIN, permissions, sharing and purchases are app-only.
           Sending the same id again replaces a waiting command. If one batch would change more than 20 existing items, I am asked first.
         - Tell me each result: 201 delivered, 401 wrong or expired key, 422 wrong format, 429 too many requests (try later).

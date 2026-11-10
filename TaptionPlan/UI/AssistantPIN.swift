@@ -59,6 +59,16 @@ struct AssistantServerRefusal: Equatable, Sendable {
         case currentPINRequired
         /// 404 `not_found`: 서버가 이 주소를 모른다(앱보다 옛 서버).
         case serverOutdated
+        /// 401: 이 기기의 주 키가 서버에 없다(CUE1110A01).
+        case unauthorized
+        /// 422 `too_many_keys`: 연결이 20개다.
+        case tooManyKeys
+        /// 409 `key_conflict`·`revoked_key`: 쓸 수 없는 키다.
+        case conflict
+        /// 그 밖의 422: 형식이 맞지 않는다.
+        case invalid
+        /// PIN이 아닌 429: 요청이 많다.
+        case rateLimited
     }
 
     var kind: Kind
@@ -87,6 +97,11 @@ struct AssistantServerRefusal: Equatable, Sendable {
         if error.contains("pin") || status == 403 {
             return Self(kind: .wrongPIN, message: message, remaining: remaining)
         }
+        if status == 401 { return Self(kind: .unauthorized, message: nil) }
+        if error == "too_many_keys" { return Self(kind: .tooManyKeys, message: nil) }
+        if status == 409 { return Self(kind: .conflict, message: nil) }
+        if status == 422 { return Self(kind: .invalid, message: nil) }
+        if status == 429 { return Self(kind: .rateLimited, message: nil, retryAfterSeconds: retry) }
         return nil
     }
 
@@ -109,6 +124,18 @@ struct AssistantServerRefusal: Equatable, Sendable {
             return language.text("지금 PIN을 함께 넣어 주세요.", "Enter your current PIN too.")
         case .unavailable:
             return language.text("잠시 뒤 다시 해 주세요.", "Please try again in a moment.")
+        case .unauthorized:
+            return language.text("이 기기의 AI 연결 준비가 풀렸어요. 「AI 연결」을 닫았다가 다시 열어 주세요.", "This device's AI link needs to be set up again. Close and reopen AI connections.")
+        case .tooManyKeys:
+            return language.text("연결은 20개까지예요. 안 쓰는 연결을 끊고 다시 해 주세요.", "Up to 20 connections. Cut one you don't use and try again.")
+        case .conflict:
+            return language.text("이 키는 쓸 수 없어요. 다시 만들어 주세요.", "This key can't be used. Make a new one.")
+        case .invalid:
+            return language.text("요청 형식이 맞지 않아요. 앱을 업데이트해 주세요.", "The request wasn't accepted. Please update the app.")
+        case .rateLimited:
+            let seconds = retryAfterSeconds.map { max(1, $0) }
+            return seconds.map { language.text("요청이 많아요. \($0)초 뒤 다시 해 주세요.", "Too many requests. Try again in \($0) s.") }
+                ?? language.text("요청이 많아요. 잠시 뒤 다시 해 주세요.", "Too many requests. Try again in a moment.")
         case .serverOutdated:
             return language.text("서버가 아직 이 기능을 모르고 있어요. 앱이나 서버 업데이트가 필요해요.", "The server doesn't support this yet. The app or server needs an update.")
         }

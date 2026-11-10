@@ -13,6 +13,14 @@ enum AssistantKeyText {
     static func date(_ date: Date) -> String {
         date.formatted(date: .abbreviated, time: .omitted)
     }
+
+    /// 끊기 확인 문구(CUE1110A01). 서버는 끊은 키가 보내 둔 대기 명령을 함께 지운다.
+    static func revokeWarning(_ name: String, language: MapHomeLanguage) -> String {
+        language.text(
+            "「\(name)」 연결을 끊으면 그 AI가 더는 기록을 읽거나 보낼 수 없어요. 그 AI가 보내 두고 아직 앱에 반영되지 않은 명령도 함께 지워져요. 다시 쓰려면 새로 연결해야 해요.",
+            "Disconnecting \"\(name)\" stops that AI from reading or sending anything. Commands it sent that the app hasn't applied yet are deleted too. To use it again, connect anew."
+        )
+    }
 }
 
 /// AI 연결마다 키 하나(SEC1110A01·AIR1110A02). 추가·목록·폐기·연장·권한 바꾸기·연결 안내 복사.
@@ -48,6 +56,8 @@ struct AssistantConnectionsSection: View {
     @State private var queuedTask: PINTask?
     /// 키체인에 글자가 남아 있는 연결. 목록을 읽을 때만 키체인을 본다.
     @State private var copyableIDs: Set<String> = []
+    /// 끊기 전 확인(CUE1110A01). 끊으면 그 AI가 보내 두고 아직 반영되지 않은 명령도 서버에서 지워진다.
+    @State private var pendingRevoke: AssistantScopedKey?
 
     var body: some View {
         Section {
@@ -81,6 +91,14 @@ struct AssistantConnectionsSection: View {
         }
         .sheet(item: $pinTask) { task in
             AssistantPINSheet.gate(language: language) { pin in await run(task, pin: pin) }
+        }
+        .confirmationDialog(
+            language.text("이 연결을 끊을까요?", "Disconnect this AI?"), isPresented: revokeDialog, titleVisibility: .visible, presenting: pendingRevoke
+        ) { key in
+            Button(language.text("연결 끊기", "Disconnect"), role: .destructive) { revoke(key.id) }
+            Button(language.text("취소", "Cancel"), role: .cancel) {}
+        } message: { key in
+            Text(AssistantKeyText.revokeWarning(label(key), language: language))
         }
     }
 
@@ -122,7 +140,7 @@ struct AssistantConnectionsSection: View {
                     Button(language.text("연장", "Extend")) { ask(key, scope: key.scope) }
                 }
                 Spacer()
-                Button(language.text("폐기", "Revoke"), role: .destructive) { revoke(key.id) }
+                Button(language.text("연결 끊기", "Disconnect"), role: .destructive) { pendingRevoke = key }
             }
             .buttonStyle(.borderless)
         }
@@ -182,9 +200,18 @@ struct AssistantConnectionsSection: View {
 
     private func copy(token: String, key: AssistantScopedKey) async {
         // 이 기기에만 10분 동안 둔다(SEC1110A02). 키 대신 1회용 주소를 먼저 쓴다(SET1110A01).
-        let full = TripRelay.assistantSetupText(host: host, key: token, scope: key.scope, expiresAt: key.expiresAt)
-        AssistantClipboard.copy(await TripRelay.setupLinkText(for: full) ?? full)
+        // Cue는 MCP 주소와 키를 따로 넣으므로 키만 복사한다(CUE1110A01).
+        if AssistantKeyProviders.provider(key.id) == .cue {
+            AssistantClipboard.copy(token)
+        } else {
+            let full = TripRelay.assistantSetupText(host: host, key: token, scope: key.scope, expiresAt: key.expiresAt)
+            AssistantClipboard.copy(await TripRelay.setupLinkText(for: full) ?? full)
+        }
         copiedID = key.id
+    }
+
+    private var revokeDialog: Binding<Bool> {
+        Binding(get: { pendingRevoke != nil }, set: { if !$0 { pendingRevoke = nil } })
     }
 
     private func revoke(_ id: String) {
@@ -194,7 +221,7 @@ struct AssistantConnectionsSection: View {
             if await TripRelay.revokeScopedKey(id) {
                 await reload()
             } else {
-                message = language.text("키를 폐기하지 못했어요.", "Couldn't revoke the key.")
+                message = language.text("연결을 끊지 못했어요. 인터넷 연결을 확인하고 다시 해 주세요.", "Couldn't disconnect. Check your connection and try again.")
             }
         }
     }
