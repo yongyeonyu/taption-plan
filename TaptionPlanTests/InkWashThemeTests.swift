@@ -601,6 +601,17 @@ final class InkWashThemeTests: XCTestCase {
         XCTAssertEqual(TripImportParser.parse(#"{"format":"bokki-trip","version":2,"tripId":"x","title":"t","items":[]}"#), .failure(.unsupportedVersion(2)))
     }
 
+    /// 외부 AI 비서 연동 문서의 샘플을 앱이 그대로 읽는지(TRP1110A05).
+    func testTripRelayDocSampleParses() throws {
+        let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("docs/trip-relay-sample.json")
+        let plan = try TripImportParser.parse(String(contentsOf: url, encoding: .utf8)).get()
+        XCTAssertEqual(plan.tripID, "trip-20261201-bkk")
+        XCTAssertEqual(plan.items.map(\.kind), [.flight, .lodging, .activity, .meal, .sleep, .sight])
+        XCTAssertNil(plan.items[3].coordinate)
+        XCTAssertEqual(plan.items[0].endTimeZone.secondsFromGMT(), 7 * 3_600, "항공편 도착은 도착지 시차")
+    }
+
     func testTravelStopDecodesRecordsWithoutTripNumbers() throws {
         let old = #"{"id":"6E3B1A52-0C33-4C1D-9F11-2B0E7A9D4A10","title":"경복궁","latitude":37.5796,"longitude":126.977,"day":0,"order":0}"#
         let stop = try JSONDecoder().decode(TravelPlanStop.self, from: Data(old.utf8))

@@ -2,6 +2,13 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## TRP1110A05 · 외부 AI 비서(피클) 연동 규격 문서·샘플 (2026-11-10)
+
+- 문서 `docs/TRIP_RELAY_API.md`, 샘플 `docs/trip-relay-sample.json`(2,263바이트). 실제 호스트는 계정 이름이 들어 있어 `<RELAY_HOST>`로만 적음.
+- 서버 검사: `isTripPlan(샘플)` = true(node). 배포본 키 없이 GET → 401(실제 서버 응답).
+- 앱 읽기: `testTripRelayDocSampleParses`·`testTripImportReadsAIJSONWithFencesAndOffsets` 2건 통과(시뮬레이터 BOKKI-iPhone11, `build/validation/TRP1110A05/test.log`).
+- 확인 못 함: 외부 비서가 실제로 POST해 앱 미리보기까지 가는 전 과정, 실기기.
+
 ## PLB1109A02·PLB1109A03 · 도감 전체화면·세 줄 메뉴·카드 사이 지도·입국 도장·시험 모드·장소 요청·여행 계획 (2026-11-09)
 
 - 전체 단위 시험(시뮬레이터 BOKKI-iPhone11): 2,285건 실패 0·건너뜀 22(`build/validation/PLB1109A02/unit-full.log`), 구조 검사·번역 점검 통과.

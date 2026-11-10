@@ -1,0 +1,64 @@
+{
+  "format": "bokki-trip",
+  "version": 1,
+  "tripId": "trip-20261201-bkk",
+  "title": "방콕 3박 4일",
+  "startDate": "2026-12-01",
+  "endDate": "2026-12-04",
+  "returnsToOrigin": true,
+  "items": [
+    {
+      "id": "f1",
+      "type": "flight",
+      "title": "TG659 인천→방콕",
+      "start": "2026-12-01T09:05+09:00",
+      "end": "2026-12-01T13:05+07:00",
+      "place": { "name": "수완나품 국제공항", "lat": 13.69, "lng": 100.7501, "mapsUrl": "https://maps.google.com/?q=Suvarnabhumi+Airport" },
+      "flight": { "number": "TG659", "fromAirport": "ICN", "toAirport": "BKK" }
+    },
+    {
+      "id": "h1",
+      "type": "lodging",
+      "title": "호텔 체크인",
+      "start": "2026-12-01T15:00+07:00",
+      "end": "2026-12-01T15:30+07:00",
+      "place": { "name": "Siam Kempinski Hotel Bangkok", "address": "991/9 Rama I Rd, Bangkok", "lat": 13.7489, "lng": 100.5341, "mapsUrl": "https://maps.google.com/?q=Siam+Kempinski+Hotel+Bangkok" },
+      "travelFromPrevious": { "mode": "taxi", "minutes": 45 }
+    },
+    {
+      "id": "a1",
+      "type": "activity",
+      "title": "호텔 수영장",
+      "start": "2026-12-01T16:00+07:00",
+      "end": "2026-12-01T17:30+07:00",
+      "place": { "name": "Siam Kempinski Hotel Bangkok", "lat": 13.7489, "lng": 100.5341 }
+    },
+    {
+      "id": "m1",
+      "type": "meal",
+      "title": "쩟페어 야시장",
+      "start": "2026-12-01T19:00+07:00",
+      "end": "2026-12-01T21:00+07:00",
+      "place": { "name": "Jodd Fairs", "lat": null, "lng": null },
+      "travelFromPrevious": { "mode": "transit", "minutes": 25 }
+    },
+    {
+      "id": "s1",
+      "type": "sleep",
+      "title": "취침",
+      "start": "2026-12-01T23:00+07:00",
+      "end": "2026-12-02T07:30+07:00",
+      "place": { "name": "Siam Kempinski Hotel Bangkok", "lat": 13.7489, "lng": 100.5341 }
+    },
+    {
+      "id": "t1",
+      "type": "sight",
+      "title": "왓 아룬",
+      "start": "2026-12-02T09:00+07:00",
+      "end": "2026-12-02T11:00+07:00",
+      "place": { "name": "Wat Arun", "lat": 13.7437, "lng": 100.4888, "mapsUrl": "https://maps.google.com/?q=Wat+Arun" },
+      "travelFromPrevious": { "mode": "taxi", "minutes": 30 },
+      "note": "새벽 사원, 오전이 덜 붐빔"
+    }
+  ]
+}

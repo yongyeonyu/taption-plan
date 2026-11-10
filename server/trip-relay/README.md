@@ -32,3 +32,5 @@ AI 비서(도구 호출이 되는 비서, ChatGPT 맞춤 GPT Actions, 단축어 
 ```sh
 npm test
 ```
+
+연동 규격(주소·인증·JSON 스키마·샘플)은 [docs/TRIP_RELAY_API.md](../../docs/TRIP_RELAY_API.md)를 보세요.
