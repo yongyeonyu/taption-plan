@@ -134,6 +134,13 @@ struct MapHomeStickerEditorSheet: View {
     @State private var isDictationStarting = false
     @State private var memoFocusToken = 0
     @State private var polish = MemoPolishController()
+    /// 저장할 때 연결된 AI에게 다듬기를 맡긴다(MEM1110A02).
+    @State private var wantsAIPolish = false
+    /// Apple Intelligence가 만든 글. 저장할 때 글이 그대로면 「AI가 수정함」을 붙인다.
+    @State private var applePolished: String?
+    /// 열 때 읽은 「AI가 수정함」 표시.
+    @State private var aiMark: MemoAIEditMarks.Mark?
+    @State private var isQueuedForAIPolish = false
     @State private var isStickerPickerPresented = false
 
     private var isSticker: Bool {
@@ -228,6 +235,10 @@ struct MapHomeStickerEditorSheet: View {
             .onAppear {
                 load()
                 polish.refreshAvailability()
+                if let memoID {
+                    aiMark = MemoAIEditMarks.all()[memoID.uuidString]
+                    isQueuedForAIPolish = MemoPolishQueue.contains(memoID)
+                }
             }
             // 설정에서 Apple Intelligence를 켜고 돌아오면 바로 반영한다.
             .onChange(of: scenePhase) { _, phase in
@@ -299,10 +310,20 @@ struct MapHomeStickerEditorSheet: View {
         isDictationStarting || dictation.isListening || dictation.isTranscribing
     }
 
-    /// 다듬기 줄. 미지원 기기·OS에서는 아무것도 보이지 않는다.
+    private var memoID: UUID? {
+        switch target {
+        case .memo(let id), .newMemo(let id): id
+        case .sticker: nil
+        }
+    }
+
+    /// 연결된 AI에게 맡길 수 있다: 메모이고 AI 연결이 있다.
+    private var canAskConnectedAI: Bool { memoID != nil && MemoPolishQueue.hasConnection() }
+
+    /// 다듬기 줄. Apple Intelligence도 AI 연결도 없으면 아무것도 보이지 않는다.
     @ViewBuilder
     private var memoPolishRow: some View {
-        if polish.availability.showsButton || polish.history.canSwap {
+        if polish.availability.showsButton || polish.history.canSwap || canAskConnectedAI || aiMark != nil {
             VStack(alignment: .trailing, spacing: 6) {
                 HStack(spacing: 12) {
                     if polish.history.canSwap {
@@ -315,11 +336,26 @@ struct MapHomeStickerEditorSheet: View {
                         .accessibilityIdentifier("memo-polish-undo")
                     }
                     Spacer(minLength: 0)
-                    if polish.availability.showsButton {
+                    if polish.availability.showsButton || canAskConnectedAI {
                         memoPolishButton
                     }
                 }
                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))
+                if let aiMark, aiMark.text == memoText, !wantsAIPolish {
+                    Label(MemoAIEditMarks.text(aiMark, language: language), systemImage: "sparkles")
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
+                        .foregroundStyle(Color.tpAccent)
+                        .accessibilityIdentifier("memo-ai-edited")
+                }
+                if wantsAIPolish || isQueuedForAIPolish {
+                    Text(wantsAIPolish
+                        ? language.text("저장하면 연결된 AI에게 맡겨요. 다음에 AI와 대화할 때 다듬어 보내 줘요.", "Saving hands it to your connected AI. It polishes it the next time you chat.")
+                        : language.text("연결된 AI에게 맡겼어요. 다듬은 글이 오면 바뀌어요.", "Handed to your connected AI. It changes when the polished text arrives."))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
+                        .foregroundStyle(Color.tpSecondary)
+                        .multilineTextAlignment(.trailing)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 if let message = memoPolishMessage {
                     Text(message.text)
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
@@ -332,9 +368,56 @@ struct MapHomeStickerEditorSheet: View {
         }
     }
 
+    private func polishWithApple() {
+        wantsAIPolish = false
+        polish.polish(currentText: { memoText }, apply: {
+            memoText = $0
+            applePolished = $0
+        })
+    }
+
+    /// Apple Intelligence와 연결된 AI가 둘 다 있으면 고르게 한다.
+    @ViewBuilder
     private var memoPolishButton: some View {
+        let apple = polish.availability == .available
+        if apple && canAskConnectedAI {
+            Menu {
+                Button { polishWithApple() } label: { Label(language.text("Apple Intelligence로 다듬기", "Polish with Apple Intelligence"), systemImage: "apple.intelligence") }
+                Button { wantsAIPolish = true } label: { Label(language.text("연결된 AI에게 맡기기", "Ask my connected AI"), systemImage: "bubble.left.and.text.bubble.right") }
+            } label: { memoPolishLabel }
+                .disabled(!polish.canPolish(memoText) || isDictationBusy)
+                .foregroundStyle(polish.canPolish(memoText) && !isDictationBusy ? Color.tpAccent : Color.tpSecondary)
+                .accessibilityIdentifier("memo-polish-button")
+        } else if !apple && canAskConnectedAI {
+            Button { wantsAIPolish.toggle() } label: {
+                HStack(spacing: 5) {
+                    Image(systemName: "sparkles")
+                    Text(wantsAIPolish ? language.text("맡기지 않기", "Don't ask") : language.text("연결된 AI에게 맡기기", "Ask my connected AI"))
+                }
+                .frame(minHeight: TaptionMenuMetrics.minimumHitSize)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Color.tpAccent)
+            .disabled(memoText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isDictationBusy)
+            .accessibilityIdentifier("memo-polish-button")
+        } else {
+            appleOnlyPolishButton
+        }
+    }
+
+    private var memoPolishLabel: some View {
+        HStack(spacing: 5) {
+            if polish.isPolishing { ProgressView().controlSize(.small) } else { Image(systemName: "sparkles") }
+            Text(polish.isPolishing ? language.text("다듬는 중…", "Polishing…") : language.text("AI 다듬기", "AI polish"))
+        }
+        .frame(minHeight: TaptionMenuMetrics.minimumHitSize)
+        .contentShape(Rectangle())
+    }
+
+    private var appleOnlyPolishButton: some View {
         Button {
-            polish.polish(currentText: { memoText }, apply: { memoText = $0 })
+            polishWithApple()
         } label: {
             HStack(spacing: 5) {
                 if polish.isPolishing {
@@ -707,9 +790,23 @@ struct MapHomeStickerEditorSheet: View {
                 isTimeless: !hasTime
             ) else { return }
             model.setMemoSticker(id, symbol: chosenMemoSymbol, colorHex: colorHex)
+            noteMemoAIEdits(id)
             didSave = true
         }
         dismiss()
+    }
+
+    /// Apple Intelligence가 고친 글이면 표시를 붙이고, 사용자가 그 뒤 글을 바꿨으면 지운다.
+    /// 연결된 AI에게 맡겼거나 맡긴 메모의 글이 바뀌었으면 목록을 새로 올린다(MEM1110A02).
+    private func noteMemoAIEdits(_ id: UUID) {
+        if let applePolished, applePolished == memoText {
+            MemoAIEditMarks.set(id, by: MemoAIEditMarks.appleName, text: memoText)
+        } else if let aiMark, aiMark.text != memoText {
+            MemoAIEditMarks.clear(id)
+        }
+        if wantsAIPolish || isQueuedForAIPolish {
+            MemoPolishQueue.enqueue(id, text: memoText, day: hasTime ? occurredAt : nil)
+        }
     }
 
     private func cancel() {
@@ -727,7 +824,10 @@ struct MapHomeStickerEditorSheet: View {
         didSave = true
         switch target {
         case .sticker(let id): model.deleteMapSticker(id)
-        case .memo(let id): model.deleteMemo(id)
+        case .memo(let id):
+            model.deleteMemo(id)
+            MemoPolishQueue.resolve(id)
+            MemoAIEditMarks.clear(id)
         case .newMemo(let id): model.discardMapMemoDraft(id)
         }
         dismiss()

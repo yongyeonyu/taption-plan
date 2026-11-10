@@ -35,6 +35,16 @@ enum AssistantPINStore {
         env.defaults.set(true, forKey: setKey)
         return .saved
     }
+
+    /// 앱 비밀번호를 바꾸면 서버 PIN도 새 값으로 바꾼다(PIN1110A01). 서버에 PIN이 없으면 할 일이 없다.
+    /// 실패하면 다음 승인 때 「예전 PIN」으로 옮기거나 초기화한다.
+    @discardableResult
+    static func follow(appPassword: String, previous: String, env: AssistantRegistration.Environment = .live) async -> Change? {
+        guard isSet(env.defaults),
+              let next = AssistantPINDerivation.pin(appPassword: appPassword),
+              let old = AssistantPINDerivation.pin(appPassword: previous), next != old else { return nil }
+        return await set(pin: next, current: old, env: env)
+    }
 }
 
 /// `POST /keys`·OAuth 승인 거절(SEC1110A02). 잠금 문구는 서버가 준 것을 먼저 보인다.

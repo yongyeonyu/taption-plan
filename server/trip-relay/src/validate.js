@@ -34,6 +34,16 @@ export function isTripPlan(value) {
 export const ACTIVITY_EXTRAS = ["goals", "trips", "placeBook"];
 const extraOK = (name, value) => value === null || (name === "placeBook" ? typeof value === "object" : Array.isArray(value) && value.length <= 500);
 
+// 다듬어 줄 메모(MEM1110A02). 앱이 통째로 올리고, AI는 읽어 다듬은 글을 updateMemo로 보낸다.
+export const POLISH_LIMIT = 20;
+export function isPolishList(value) {
+  return value?.format === "bokki-polish" && value?.version === 1 && Array.isArray(value?.memos)
+    && value.memos.length >= 1 && value.memos.length <= POLISH_LIMIT
+    && new Set(value.memos.map((m) => m?.id)).size === value.memos.length
+    && value.memos.every((m) => m && targetID(m.id) && typeof m.text === "string"
+      && codePoints(m.text.trim()) >= 1 && codePoints(m.text) <= 1000 && (m.date === undefined || isDate(m.date)));
+}
+
 export function isActivityUpload(value) {
   return value?.format === "bokki-activity" && value?.version === 1 && RETENTION_DAYS.has(value?.retentionDays)
     && Array.isArray(value?.days) && value.days.length >= 1 && value.days.length <= 7

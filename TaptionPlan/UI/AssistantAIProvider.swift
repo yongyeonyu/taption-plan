@@ -157,6 +157,26 @@ struct AssistantOAuthCode: Equatable, Sendable {
 
 extension TripRelay {
     static func mcpURL(host: String) -> String { "https://\(host)/mcp" }
+    /// Claude 「로그인 없음」 커넥터 주소. 연결 키가 주소에 들어간다(CLD1110A01). 주 키는 넣지 않는다(서버도 거절).
+    static func mcpKeyURL(host: String, key: String) -> String { "https://\(host)/mcp/\(key)" }
+
+    /// 연결 안내를 서버에 맡기고 1회용 주소가 든 짧은 글을 돌려준다(SET1110A01). 클립보드·대화에는 키가 남지 않는다.
+    /// 서버에 닿지 못하면 nil이고, 부르는 쪽은 전체 안내를 복사한다.
+    @MainActor
+    static func setupLinkText(for text: String, env: AssistantRegistration.Environment = .live) async -> String? {
+        guard let master = env.secrets.read(.master),
+              let body = try? JSONSerialization.data(withJSONObject: ["text": text]),
+              let reply = await send(relayRequest("/setup", method: "POST", body: body, token: master, host: env.host), session: env.session),
+              reply.status == 201,
+              let object = (try? JSONSerialization.jsonObject(with: reply.data)) as? [String: Any],
+              let url = object["url"] as? String, let host = env.host, url.hasPrefix("https://\(host)/s/") else { return nil }
+        return setupLinkMessage(url)
+    }
+
+    static func setupLinkMessage(_ url: String) -> String {
+        "Connect to my BOKKI Plan app: open \(url) and follow the instructions there. "
+            + "The link works for 10 minutes and only a few reads, so read it now and keep what it says (it includes the key you will use)."
+    }
 
     enum OAuthCodeReply: Equatable, Sendable {
         case code(AssistantOAuthCode)

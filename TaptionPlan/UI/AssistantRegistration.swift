@@ -99,9 +99,13 @@ enum AssistantRegistration {
             && env.defaults.string(forKey: registeredKey) == AssistantKeyStore.keyID(master)
     }
 
+    static let isTestHost = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+
     /// 앱을 열 때 부른다. 여러 곳에서 불러도 한 번만 돈다.
     @discardableResult
     static func ensureReady() async -> Bool {
+        // 단위 시험의 호스트 앱이 실서버에 등록·바꾸기를 하면 시험의 바꾸기 표시와 겹친다(EXE1110A01).
+        guard !isTestHost else { return false }
         if isReady() { return true }
         if let preparing { return await preparing.value }
         let task = Task { @MainActor in await prepare(.live) }

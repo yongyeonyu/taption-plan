@@ -340,14 +340,14 @@ struct MapHomeCatSpeechBubble: View {
     }
 
     var body: some View {
-        // AI 말풍선이 있으면 그 시간 동안 활동 이름 대신 보인다(BUB1110A01). 화면 폭의 60%, 세 줄까지.
+        // AI 말풍선이 있으면 그 시간 동안 활동 이름 대신 보인다(BUB1110A01). 창 폭의 40%에서 접어 아래로 다섯 줄까지(넘치면 60%까지 넓힘).
         let ai = AssistantBubbleBoard.current.text?.display
         HStack(spacing: -1) {
             if side == .right { tail(pointsLeft: true) }
             Text(ai ?? text)
                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
                 .foregroundStyle(Color.tpInk)
-                .lineLimit(ai == nil ? 1 : 3)
+                .lineLimit(ai == nil ? 1 : AssistantBubbleLayout.maxLines)
                 .frame(width: ai.map(Self.width))
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 8)

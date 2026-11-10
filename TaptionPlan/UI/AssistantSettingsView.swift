@@ -1,7 +1,7 @@
 import SwiftUI
 import UIKit
 
-/// 메인 메뉴 → 연결 → 「AI 연결」(AIR1110A03, 예전 「AI 비서」). AI별 연결, PIN, 연결 키 관리,
+/// 메인 메뉴 → 연결 → 「AI 연결」(AIR1110A03, 예전 「AI 비서」). AI별 연결, 연결 키 관리(승인 PIN은 앱 비밀번호, PIN1110A01),
 /// 할 수 있는 일·한 일, 기록 공유 수준과 보관 기간, 주 키 바꾸기를 둔다. 위험한 설정은 여기서만 바꾼다.
 struct AssistantSettingsView: View {
     @Bindable var model: AppModel
@@ -13,11 +13,7 @@ struct AssistantSettingsView: View {
     @State private var keyMessage: String?
     @State private var store = AssistantConnectionStore()
     @State private var selected: AssistantAIProvider?
-    @State private var pinMode: AssistantPINSheet.Mode?
-    @State private var hasPIN = AssistantPINStore.isSet()
-    @State private var isAskingPINReset = false
     @State private var isConfirmingRotation = false
-    @State private var pinMessage: String?
     @AppStorage(AssistantShareLevel.defaultsKey) private var levelRaw = AssistantShareLevel.summary.rawValue
     @AppStorage(AssistantRetention.defaultsKey) private var retentionDays = AssistantRetention.week.rawValue
     @AppStorage(AssistantRegistration.reconnectKey) private var needsReconnect = false
@@ -27,7 +23,6 @@ struct AssistantSettingsView: View {
             Form {
                 if needsReconnect { reconnectSection }
                 AssistantProviderListSection(language: language, store: store) { selected = $0 }
-                pinSection
                 if let relayKey, let host = TripRelay.host {
                     AssistantConnectionsSection(language: language, host: host, masterKey: relayKey, store: store)
                 }
@@ -62,10 +57,6 @@ struct AssistantSettingsView: View {
                 await AssistantRegistration.ensureReady()
                 relayKey = TripRelay.key
                 await store.reload()
-                await refreshPIN()
-            }
-            .sheet(item: $pinMode, onDismiss: { Task { await refreshPIN() } }) { mode in
-                AssistantPINSheet(language: language, mode: mode) { _ in nil }
             }
             .onChange(of: levelRaw) { old, new in
                 // 덜 보내는 쪽으로 바꾸면 서버에 남은 더 자세한 날(장소 이름 등)을 모두 지운다(REV1110A06).
@@ -87,34 +78,6 @@ struct AssistantSettingsView: View {
                 "A security update disconnected your previous AI connections. Reconnect the AIs you use below."
             )).font(.footnote)
             Button(language.text("알겠어요", "Got it")) { needsReconnect = false }
-        }
-    }
-
-    private var pinSection: some View {
-        Section {
-            Label(hasPIN ? language.text("PIN이 있어요", "PIN is set") : language.text("PIN이 없어요", "No PIN"),
-                  systemImage: hasPIN ? "lock.fill" : "lock.open")
-            Button(hasPIN ? language.text("PIN 바꾸기", "Change PIN") : language.text("PIN 만들기", "Create PIN")) {
-                pinMode = hasPIN ? .change : .create
-            }
-            if hasPIN {
-                Button(language.text("PIN을 잊었어요", "I forgot my PIN"), role: .destructive) { isAskingPINReset = true }
-                .assistantPINReset(isPresented: $isAskingPINReset, language: language) { erased in
-                    pinMessage = erased ? AssistantPINText.resetDone(language) : AssistantPINText.resetFailed(language)
-                    guard erased else { return }
-                    hasPIN = false
-                    pinMode = .create
-                    Task { await store.reload() }
-                }
-            }
-            if let pinMessage { Text(pinMessage).font(.footnote).foregroundStyle(.secondary) }
-        } header: {
-            Text(language.text("연결 승인 PIN", "Connection PIN"))
-        } footer: {
-            Text(language.text(
-                "AI를 처음 연결하기 전에 6자리 PIN을 정해요. 5번 틀리면 15분 동안 잠겨요.",
-                "Set a 6-digit PIN before your first connection. Five wrong tries lock it for 15 minutes."
-            ))
         }
     }
 
@@ -146,12 +109,6 @@ struct AssistantSettingsView: View {
         }
     }
 
-    /// 서버가 아는 PIN 상태로 화면을 맞춘다. 닿지 못하면 기기 표시를 쓴다.
-    private func refreshPIN() async {
-        let next = await AssistantPINStore.status()?.isSet ?? AssistantPINStore.isSet()
-        if next != hasPIN { hasPIN = next }
-    }
-
     /// 새 주 키를 등록하고 예전 키로 서버의 AI용 키·기록·명령·계획을 지운 뒤 바꾼다(SEC1110A02).
     private func replaceKey() {
         guard !isRotating else { return }
@@ -164,7 +121,6 @@ struct AssistantSettingsView: View {
             }
             relayKey = key
             keyMessage = nil
-            hasPIN = AssistantPINStore.isSet()
             await store.reload()
             resync(clearing: false)
         }
@@ -177,10 +133,6 @@ struct AssistantSettingsView: View {
         if clearing { AssistantActivitySync.requestClear() }
         Task { @MainActor in await AssistantActivitySync.run(model: model) }
     }
-}
-
-extension AssistantPINSheet.Mode: Identifiable {
-    var id: Int { hashValue }
 }
 
 /// 앱 상태를 지켜보고 하루 기록을 올린다. 지도 화면 본문이 저장마다 다시 그려지지 않게 따로 둔다.

@@ -5,7 +5,7 @@
 import { nameKey, openJson, sealJson, tagOf } from "./crypto.js";
 import { json, stored, tooMany } from "./http.js";
 import { chargeWrites } from "./state.js";
-import { ACTIVITY_EXTRAS, QUEUE_LIMIT, cleanCommand, commandReason, isActivityUpload, isCommand, isCommandResults, isDate, isTripPlan } from "./validate.js";
+import { ACTIVITY_EXTRAS, QUEUE_LIMIT, cleanCommand, commandReason, isActivityUpload, isCommand, isCommandResults, isDate, isPolishList, isTripPlan } from "./validate.js";
 
 const DAY = 24 * 60 * 60;
 const DAY_MS = DAY * 1000;
@@ -21,6 +21,8 @@ const dayPrefix = (ctx) => `act:${ctx.master}:`;
 const legacyQueueName = (ctx) => "cmd:" + ctx.master;
 const resultName = (ctx) => "cmdres:" + ctx.master;
 const extrasName = (ctx) => "ext:" + ctx.master;
+const polishName = (ctx) => "polish:" + ctx.master;
+export const POLISH_TTL_SECONDS = 7 * DAY;
 const iso = (ms) => new Date(ms).toISOString();
 
 function parse(text, fallback) {
@@ -65,6 +67,28 @@ export async function readPlan(ctx) {
 // 없으면 지우지 않는다(KV 지우기 한도를 아낀다).
 export async function deletePlan(ctx) {
   if ((await ctx.kv.get(planName(ctx))) != null) await ctx.kv.delete(planName(ctx));
+  return json(null, 204);
+}
+
+// MARK: 다듬어 줄 메모 (MEM1110A02)
+
+// 앱이 목록 전체를 바꿔 쓴다. AI는 읽기만 하고, 다듬은 글은 updateMemo 명령으로 보낸다.
+export async function savePolish(ctx, value) {
+  if (!isPolishList(value)) return json({ error: "not_polish_list" }, 422);
+  const charge = await chargeWrites(ctx.env, ctx.state, 1, ctx.now);
+  if (!charge.ok) return overBudget(charge);
+  const memos = value.memos.map(({ id, text, date }) => (date ? { id, text, date } : { id, text }));
+  await ctx.store.put(polishName(ctx), JSON.stringify({ format: "bokki-polish", version: 1, memos }), { expirationTtl: POLISH_TTL_SECONDS });
+  return json({ ok: true, count: memos.length, expiresInSeconds: POLISH_TTL_SECONDS }, 201);
+}
+
+export async function readPolish(ctx) {
+  const text = await ctx.store.get(polishName(ctx));
+  return text ? stored(text) : json(null, 204);
+}
+
+export async function deletePolish(ctx) {
+  if ((await ctx.kv.get(polishName(ctx))) != null) await ctx.kv.delete(polishName(ctx));
   return json(null, 204);
 }
 

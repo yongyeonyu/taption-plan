@@ -105,11 +105,18 @@ struct AssistantProviderView: View {
     @Environment(\.openURL) private var openURL
     @State private var isAskingPIN = false
     @State private var code: AssistantOAuthCode?
+    /// 승인 화면에 넣을 PIN(앱 비밀번호에서 만든 값). 코드와 함께만 보인다.
+    @State private var approvalPIN: String?
     @State private var message: String?
     @State private var isWorking = false
     @State private var installed = false
     /// 다시 복사할 수 있는 연결 키. 키체인은 나타날 때와 만든 뒤에만 읽는다.
     @State private var existing: (key: AssistantScopedKey, token: String)?
+    /// 복사한 뒤 「붙여 넣어 주세요」 창. PIN 시트가 닫힌 뒤에 띄운다.
+    @State private var pendingPasteGuide = false
+    /// Claude를 OAuth 대신 「주소 하나(연결 키 포함)」로 잇는다(CLD1110A01).
+    @State private var makesKeyURL = false
+    @State private var isShowingPasteGuide = false
 
     private var host: String { TripRelay.host ?? "" }
 
@@ -138,13 +145,27 @@ struct AssistantProviderView: View {
             if store.keys == nil { await store.reload() }
             existing = store.token(for: provider)
         }
-        .sheet(isPresented: $isAskingPIN) {
-            if provider.usesOAuth {
+        .sheet(isPresented: $isAskingPIN, onDismiss: showPendingPasteGuide) {
+            if provider.usesOAuth && !makesKeyURL {
                 // 연결 코드는 PIN이 있어야 나온다. 없을 때만 여기서 만든다.
-                AssistantPINSheet(language: language, mode: .create, purpose: pinPurpose, isGate: true) { _ in await fetchCode() }
+                AssistantPINSheet(language: language, purpose: pinPurpose) { pin in
+                    approvalPIN = pin
+                    return await fetchCode()
+                }
             } else {
                 AssistantPINSheet.gate(language: language, purpose: pinPurpose) { pin in await afterPIN(pin) }
             }
+        }
+        .alert(AssistantPasteGuide.title(language), isPresented: $isShowingPasteGuide) {
+            if provider == .claude, let web = URL(string: "https://claude.ai") {
+                Button(language.text("claude.ai 열기", "Open claude.ai")) { openURL(web) }
+            }
+            if provider.appStoreURL != nil, provider != .gemini {
+                Button(language.text("\(name) 열기", "Open \(name)")) { openApp() }
+            }
+            Button(language.text("확인", "OK"), role: .cancel) {}
+        } message: {
+            Text(AssistantPasteGuide.message(provider, language))
         }
     }
 
@@ -152,7 +173,7 @@ struct AssistantProviderView: View {
 
     private var pinPurpose: String {
         provider.usesOAuth
-            ? language.text("연결 코드를 받기 전에 PIN을 정해요. 승인 화면에서 같은 PIN을 넣어요.", "Set your PIN before getting a code. Enter the same PIN on the approval page.")
+            ? language.text("앱 비밀번호를 넣으면 연결 코드와 승인 화면에 넣을 PIN이 나와요.", "Enter your app password to get a code and the PIN for the approval page.")
             : language.text("\(name) 연결 키를 만들어요.", "Creates a connection key for \(name).")
     }
 
@@ -163,7 +184,12 @@ struct AssistantProviderView: View {
             Text(keySteps).font(.footnote)
             Button(language.text("연결하기", "Connect")) { isAskingPIN = true }
             if let existing {
-                Button(language.text("연결 안내 다시 복사", "Copy setup again")) { copySetup(existing.token, key: existing.key) }
+                Button(language.text("연결 안내 다시 복사", "Copy setup again")) {
+                Task {
+                    await copySetup(existing.token, key: existing.key)
+                    isShowingPasteGuide = true
+                }
+            }
             }
         } footer: {
             if provider == .gemini {
@@ -193,6 +219,7 @@ struct AssistantProviderView: View {
 
     @ViewBuilder
     private var oauthSections: some View {
+        if provider == .claude { keyURLSection }
         Section {
             Text(oauthSteps).font(.footnote)
             LabeledContent(language.text("서버 주소", "Server URL"), value: TripRelay.mcpURL(host: host)).font(.footnote)
@@ -223,6 +250,35 @@ struct AssistantProviderView: View {
         }
     }
 
+    /// 모바일에서 가장 쉬운 길: 연결 키가 든 주소 하나를 붙여 넣고 「로그인 없음」을 고른다(CLD1110A01).
+    private var keyURLSection: some View {
+        Section {
+            Text(language.text(
+                "연결 주소를 만들면 복사돼요. Claude → 설정 → 커넥터 → 맞춤 커넥터 추가에 주소를 붙여 넣고, 인증은 「로그인 없음」을 고르면 끝나요.",
+                "Make a link and it's copied. In Claude, open Settings → Connectors → Add custom connector, paste the link and choose No sign-in."
+            )).font(.footnote)
+            Button(language.text("연결 주소 만들기", "Make a connection link")) {
+                makesKeyURL = true
+                isAskingPIN = true
+            }
+            if let existing {
+                Button(language.text("연결 주소 다시 복사", "Copy the link again")) {
+                    Task {
+                        await copySetup(existing.token, key: existing.key)
+                        isShowingPasteGuide = true
+                    }
+                }
+            }
+        } header: {
+            Text(language.text("주소 하나로 연결 (추천)", "Connect with one link (recommended)"))
+        } footer: {
+            Text(language.text(
+                "주소에 연결 키가 들어 있어요. 다른 사람에게 보이지 마세요. 아래 「연결 키 관리」에서 언제든 끊을 수 있어요.",
+                "The link contains a connection key. Don't share it. You can cut it anytime under connection keys."
+            ))
+        }
+    }
+
     private var oauthSteps: String {
         provider == .claude
             ? language.text(
@@ -240,6 +296,11 @@ struct AssistantProviderView: View {
             let left = Int(code.remaining(now: context.date))
             VStack(alignment: .leading, spacing: 4) {
                 Text(code.code).font(.title2.monospaced().weight(.bold)).textSelection(.enabled)
+                if let approvalPIN, left > 0 {
+                    LabeledContent(language.text("승인 화면 PIN", "Approval page PIN")) {
+                        Text(approvalPIN).font(.body.monospaced().weight(.semibold)).textSelection(.enabled)
+                    }
+                }
                 Text(left > 0
                      ? language.text("\(left / 60)분 \(left % 60)초 남음 · 한 번만 쓸 수 있어요", "\(left / 60)m \(left % 60)s left · single use")
                      : language.text("코드가 끝났어요. 새로 받아 주세요.", "The code expired. Get a new one."))
@@ -251,13 +312,11 @@ struct AssistantProviderView: View {
 
     // MARK: 동작
 
-    /// PIN이 이미 있으면 묻지 않고 코드를 받는다. 서버가 PIN이 없다고 하면 만들기 화면을 띄운다(REV1110A06).
+    /// 앱 비밀번호를 받아 서버 PIN을 맞춘 뒤 코드를 받는다(PIN1110A01). 승인 화면 PIN을 함께 보여야 해서 매번 묻는다.
     private func requestCode() {
-        isWorking = true
-        Task { @MainActor in
-            defer { isWorking = false }
-            message = await fetchCode()
-        }
+        code = nil
+        approvalPIN = nil
+        isAskingPIN = true
     }
 
     /// 실패하면 보여 줄 문구.
@@ -282,21 +341,33 @@ struct AssistantProviderView: View {
         case let .failure(text): return text
         case let .key(key, token):
             existing = (key, token)
-            copySetup(token, key: key)
+            await copySetup(token, key: key)
         }
-        if provider == .pickle { openApp() }
+        // 시트가 닫히면 「붙여 넣어 주세요」 창을 띄우고, 거기서 피클을 연다.
+        pendingPasteGuide = true
         return nil
     }
 
-    private func copySetup(_ token: String, key: AssistantScopedKey) {
-        let text = provider == .gemini
-            ? TripRelay.geminiSettings(host: host, key: token)
-            : TripRelay.assistantSetupText(host: host, key: token, scope: key.scope, expiresAt: key.expiresAt)
-        copy(text)
+    /// 웹 요청을 하는 AI에는 키 대신 1회용 주소만 복사한다(SET1110A01). 서버에 닿지 못하면 전체 안내를 복사한다.
+    private func copySetup(_ token: String, key: AssistantScopedKey) async {
+        switch provider {
+        case .gemini: copy(TripRelay.geminiSettings(host: host, key: token))
+        case .claude: copy(TripRelay.mcpKeyURL(host: host, key: token))
+        default:
+            let full = TripRelay.assistantSetupText(host: host, key: token, scope: key.scope, expiresAt: key.expiresAt)
+            copy(await TripRelay.setupLinkText(for: full) ?? full)
+        }
         message = language.text("연결 안내를 복사했어요. 10분 뒤 클립보드에서 지워져요.", "Setup copied. It is cleared from the clipboard in 10 minutes.")
     }
 
     private func copy(_ text: String) { AssistantClipboard.copy(text) }
+
+    private func showPendingPasteGuide() {
+        makesKeyURL = false
+        guard pendingPasteGuide else { return }
+        pendingPasteGuide = false
+        isShowingPasteGuide = true
+    }
 
     private func openApp() {
         installed = provider.isInstalled
@@ -321,5 +392,31 @@ struct AssistantProviderListSection: View {
         } footer: {
             Text(AssistantAIProvider.planFootnote(language))
         }
+    }
+}
+
+/// 연결 안내를 복사한 뒤 어디에 붙여 넣는지 알리는 창의 문구.
+enum AssistantPasteGuide {
+    static func title(_ language: MapHomeLanguage) -> String {
+        language.text("연결 안내를 복사했어요", "Setup copied")
+    }
+
+    static func message(_ provider: AssistantAIProvider, _ language: MapHomeLanguage) -> String {
+        let name = provider.title(language)
+        let place: String
+        switch provider {
+        case .gemini:
+            place = language.text("~/.gemini/settings.json에 붙여 넣고 gemini를 다시 시작해 주세요.", "Paste it into ~/.gemini/settings.json and restart gemini.")
+        case .claude:
+            return language.text(
+                "Claude → 설정 → 커넥터 → 맞춤 커넥터 추가에 주소를 붙여 넣고 인증은 「로그인 없음」을 고르세요. 클립보드는 10분 뒤 지워져요.",
+                "In Claude, open Settings → Connectors → Add custom connector, paste the link and choose No sign-in. The clipboard is cleared in 10 minutes."
+            )
+        case .other:
+            place = language.text("웹 요청을 할 수 있는 AI의 채팅창에 붙여 넣고 보내 주세요.", "Paste it into the chat of an AI that can make web requests, then send.")
+        default:
+            place = language.text("\(name) 채팅창에 붙여 넣고 보내 주세요.", "Paste it into the \(name) chat and send.")
+        }
+        return place + " " + language.text("클립보드는 10분 뒤 지워져요.", "The clipboard is cleared in 10 minutes.")
     }
 }

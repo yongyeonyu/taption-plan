@@ -115,7 +115,7 @@ struct AssistantConnectionsSection: View {
             HStack {
                 if copyableIDs.contains(key.id), !expired {
                     Button(copiedID == key.id ? language.text("복사했어요", "Copied") : language.text("연결 안내 복사", "Copy setup")) {
-                        if let token = AssistantKeyStore.token(for: key.id) { copy(token: token, key: key) }
+                        if let token = AssistantKeyStore.token(for: key.id) { Task { await copy(token: token, key: key) } }
                     }
                 }
                 if key.expiresSoon(), key.source != "oauth" {
@@ -172,7 +172,7 @@ struct AssistantConnectionsSection: View {
     /// 만든 뒤 할 일과 보여 줄 문구. 새 키로 갈았으면 예전 키를 기다리지 않고 폐기한다.
     private func finish(_ key: AssistantScopedKey, token: String, replacing old: AssistantScopedKey?, updated: Bool) async -> String {
         if updated { return language.text("연결을 바꿨어요. AI에 다시 붙여 넣지 않아도 돼요.", "Connection updated. No need to paste it again.") }
-        copy(token: token, key: key)
+        await copy(token: token, key: key)
         if let old, await !TripRelay.revokeScopedKey(old.id) {
             return language.text("새 연결 안내를 복사했어요. 예전 키는 폐기하지 못했으니 목록에서 폐기해 주세요.",
                                  "New setup copied. The old key couldn't be revoked; revoke it in the list.")
@@ -180,9 +180,10 @@ struct AssistantConnectionsSection: View {
         return language.text("연결 안내를 복사했어요. AI에 붙여 넣어 주세요.", "Setup copied. Paste it into the AI.")
     }
 
-    private func copy(token: String, key: AssistantScopedKey) {
-        // 이 기기에만 10분 동안 둔다(SEC1110A02).
-        AssistantClipboard.copy(TripRelay.assistantSetupText(host: host, key: token, scope: key.scope, expiresAt: key.expiresAt))
+    private func copy(token: String, key: AssistantScopedKey) async {
+        // 이 기기에만 10분 동안 둔다(SEC1110A02). 키 대신 1회용 주소를 먼저 쓴다(SET1110A01).
+        let full = TripRelay.assistantSetupText(host: host, key: token, scope: key.scope, expiresAt: key.expiresAt)
+        AssistantClipboard.copy(await TripRelay.setupLinkText(for: full) ?? full)
         copiedID = key.id
     }
 

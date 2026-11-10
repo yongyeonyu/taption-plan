@@ -385,6 +385,10 @@ extension AppModel {
             if let entry {
                 outcome.count(kind)
                 outcome.entries.append(entry)
+                // AI가 고친 메모는 「AI가 수정함」을 붙이고, 맡긴 다듬기 목록에서 뺀다(MEM1110A02).
+                if case let .updateMemo(memoID, _) = command.action, let memo = assistantMemo(memoID) {
+                    noteAssistantMemoEdit(memo.id, by: entry.connection)
+                }
             }
             journal?.finish(item, entry: entry)
         }
@@ -409,6 +413,8 @@ extension MapHomeView {
     /// 여행 계획 확인과 같은 때(앱을 열 때) 명령을 받아 반영하고 알림을 띄운다.
     /// 한 번에 기존 항목 20개를 넘게 바꾸면 반영하지 않고 확인 시트를 띄운다(AIR1110A02).
     func checkAssistantCommands() async {
+        // 올리지 못한 다듬기 목록을 먼저 다시 올린다(MEM1110A02).
+        await MemoPolishQueue.upload()
         switch await AssistantCommandRunner.run(model: model) {
         case let .applied(outcome): AssistantInbox.current.show(outcome.notice(language))
         case let .needsConfirmation(batch): AssistantInbox.current.pending = batch

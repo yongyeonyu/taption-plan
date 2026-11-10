@@ -20,6 +20,8 @@ async function hkdfKey(token, info) {
 }
 
 export const storageCryptoKey = (token) => hkdfKey(token, "storage");
+// 1회용 연결 코드(SET1110A01). 코드 자체에서 키를 만들어 코드를 아는 사람만 연다.
+export const setupCryptoKey = (code) => hkdfKey(code, "setup");
 export const wrapCryptoKey = (token) => hkdfKey(token, "wrap");
 export const importDek = (raw) => crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["encrypt", "decrypt"]);
 // 사용자 DEK. 주인 키에서 HKDF(info "dek")로 한 번 정해지는 32바이트라 서버에 따로 두지 않고,

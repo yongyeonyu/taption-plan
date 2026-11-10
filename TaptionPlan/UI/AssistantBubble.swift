@@ -213,10 +213,19 @@ enum AssistantBubbleLayout {
         return scene?.keyWindow?.bounds.width ?? scene?.coordinateSpace.bounds.width ?? 320
     }
 
-    /// 글 폭(창 폭의 60%까지). `padding`은 말풍선 좌우 여백 합.
+    /// 아래로 늘어나는 최대 줄 수(대표 결정 2026-11-10).
+    static let maxLines = 5
+
+    /// 글 폭. 옆으로 길게 지도를 가리지 않게 창 폭의 40%에서 접어 아래로 늘리고, 다섯 줄에 안 들어갈 때만 60%까지 넓힌다.
+    /// `padding`은 말풍선 좌우 여백 합.
     static func width(_ text: String, size: CGFloat, padding: CGFloat = 16, container: CGFloat? = nil) -> CGFloat {
         let measured = ceil((text as NSString).size(withAttributes: [.font: font(size: size)]).width) + 2
-        return max(1, min((container ?? windowWidth) * 0.6 - padding, measured))
+        let window = container ?? windowWidth
+        let narrow = window * 0.4 - padding, wide = window * 0.6 - padding
+        guard measured > narrow else { return max(1, measured) }
+        // 줄이 단어 사이에서 끊겨 남는 자리를 글자 두 개만큼 둔다.
+        let fiveLines = ceil(measured / CGFloat(maxLines)) + size * 2
+        return max(1, min(wide, max(narrow, fiveLines)))
     }
 }
 

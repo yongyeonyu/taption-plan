@@ -774,11 +774,13 @@ extension AppModel {
                   !ActualRecord.userOwned(actual, activityCorrections: corrections) else { return true }
             return actual.span(asOf: span.end).intersection(with: span) == nil
         }
+        // 앱이 꺼져 있던 시간(표본이 전혀 없음)은 식사 후보로도 채우지 않는다(MOV1110A01).
+        let unobserved = UnobservedAppSpans.spans(readings: readings, travel: snapshot.travel, inside: span)
         let footSpans = motionActivities.filter { $0.motion.isOnFoot }.map(\.span)
         let meetings = snapshot.calendarEvents.filter(\.isMeetingLike).map(\.span)
         let fresh = UnobservedStayEngine.mealCandidates(
             readings: readings, footSpans: footSpans, actuals: kept, activityCorrections: corrections, busySpans: meetings, inside: span
-        ).filter { !snapshot.settings.suppressedActualIDs.contains($0.id) }
+        ).filter { !snapshot.settings.suppressedActualIDs.contains($0.id) && !UnobservedAppSpans.covers(unobserved, $0.span(asOf: span.end)) }
         kept.append(contentsOf: fresh)
         kept.sort { $0.startedAt < $1.startedAt }
         if kept != snapshot.actuals { snapshot.actuals = kept }
@@ -806,12 +808,20 @@ extension AppModel {
             AutomaticModelVersion.matches($0.modelVersion, TaptionActivityEngineAdapter.inferredGapModelVersion)
                 && $0.span(asOf: span.end).intersection(with: span) != nil
         }
+        // 앱이 꺼져 표본이 하나도 없던 긴 시간은 추정으로 채우지 않고 미확인으로 둔다(MOV1110A01).
+        let unobserved = UnobservedAppSpans.spans(readings: readings, travel: travel, inside: span)
         let fresh = TaptionActivityEngineAdapter.inferredGapActuals(
             readings: readings,
             travel: travel,
             actuals: snapshot.actuals,
             inside: span
-        ).filter { !snapshot.settings.suppressedActualIDs.contains($0.id) }
+        ).filter { !snapshot.settings.suppressedActualIDs.contains($0.id) && !UnobservedAppSpans.covers(unobserved, $0.span(asOf: span.end)) }
+        let stale = snapshot.actuals.filter {
+            AutomaticModelVersion.matches($0.modelVersion, TaptionActivityEngineAdapter.inferredGapModelVersion)
+                && !ActualRecord.userOwned($0, activityCorrections: snapshot.settings.activityCorrections)
+                && UnobservedAppSpans.covers(unobserved, $0.span(asOf: span.end))
+        }.map(\.id)
+        if !stale.isEmpty { snapshot.actuals.removeAll { stale.contains($0.id) } }
         // Sparse refreshes are not evidence that an earlier inference vanished.
         guard !fresh.isEmpty else { return }
         let merged = ActivityClassificationLockEngine

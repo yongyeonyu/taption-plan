@@ -10,7 +10,8 @@ struct MovementRouteBuilder: Sendable {
         healthEvidence: [AppleMovementEvidence] = [],
         correctedModes: [String: TravelMode] = [:],
         userTransitLocations: [UserTransitLocation] = [],
-        registeredCarAudioNames: Set<String> = []
+        registeredCarAudioNames: Set<String> = [],
+        motionActivities: [MotionActivityRecord] = []
     ) -> [TravelSegment] {
         var inspectionCount: Int? = nil
         return build(
@@ -20,6 +21,7 @@ struct MovementRouteBuilder: Sendable {
             correctedModes: correctedModes,
             userTransitLocations: userTransitLocations,
             registeredCarAudioNames: registeredCarAudioNames,
+            motionActivities: motionActivities,
             inspectionCount: &inspectionCount
         )
     }
@@ -31,6 +33,7 @@ struct MovementRouteBuilder: Sendable {
         correctedModes: [String: TravelMode] = [:],
         userTransitLocations: [UserTransitLocation] = [],
         registeredCarAudioNames: Set<String> = [],
+        motionActivities: [MotionActivityRecord] = [],
         candidateInspectionCount: inout Int
     ) -> [TravelSegment] {
         var inspectionCount: Int? = candidateInspectionCount
@@ -41,6 +44,7 @@ struct MovementRouteBuilder: Sendable {
             correctedModes: correctedModes,
             userTransitLocations: userTransitLocations,
             registeredCarAudioNames: registeredCarAudioNames,
+            motionActivities: motionActivities,
             inspectionCount: &inspectionCount
         )
         candidateInspectionCount = inspectionCount
@@ -55,6 +59,7 @@ struct MovementRouteBuilder: Sendable {
         correctedModes: [String: TravelMode],
         userTransitLocations: [UserTransitLocation],
         registeredCarAudioNames: Set<String>,
+        motionActivities: [MotionActivityRecord],
         inspectionCount: inout Int?
     ) -> [TravelSegment] {
         let orderedStays = stays.sorted { $0.span.start < $1.span.start }
@@ -72,7 +77,11 @@ struct MovementRouteBuilder: Sendable {
                 in: gap,
                 inspectionCount: &inspectionCount
             )
-            let span = Self.departureSpan(gap, readings: gapReadings, origin: from.point)
+            let span = Self.trimmingUnobservedLead(
+                Self.departureSpan(gap, readings: gapReadings, origin: from.point),
+                readings: gapReadings,
+                motion: motionActivities
+            )
             let segmentReadings = gapReadings.filter { $0.timestamp >= span.start }
             let originReadings = evidenceIndex.readings(
                 in: from.span,
@@ -174,6 +183,44 @@ struct MovementRouteBuilder: Sendable {
         return TimeSpan(start: lastStill.timestamp, end: gap.end)
     }
 
+    /// 앞 머무름 끝과 첫 표본 사이가 이만큼 넘게 비면 앱이 꺼져 있던 것으로 본다.
+    static let maximumUnobservedLead: TimeInterval = 30 * 60
+    /// 이어진 움직임으로 볼 Core Motion 기록 사이 틈.
+    static let motionChainGap: TimeInterval = 2 * 60
+
+    /// 앱이 꺼져 표본이 하나도 없던 긴 시간은 이동에 넣지 않는다(MOV1110A01).
+    ///
+    /// 회사에서 일하는 동안 앱이 3시간 반 꺼져 있다가 CarPlay로 깨어나자, 이동이 마지막 회사 표본부터
+    /// 시작해 근무 시간 전체가 자동차가 됐다. iOS가 그동안 남긴 Core Motion 기록에서 첫 표본으로 이어지는
+    /// 움직임(걷기·달리기·자전거·차)의 시작을 출발로 본다. 그 시간 Core Motion 기록이 없으면 언제 떠났는지
+    /// 알 수 없으니 그대로 둔다. 뗀 앞부분은 이동도 체류도 아닌 「미확인」으로 남는다.
+    static func trimmingUnobservedLead(
+        _ span: TimeSpan,
+        readings: [SensorReading],
+        motion: [MotionActivityRecord]
+    ) -> TimeSpan {
+        guard let first = readings.lazy.map(\.timestamp).filter({ $0 >= span.start }).min(),
+              first.timeIntervalSince(span.start) > maximumUnobservedLead else { return span }
+        let recorded = motion
+            .filter { $0.span.end > span.start && $0.span.start < first }
+            .sorted { $0.span.start < $1.span.start }
+        guard !recorded.isEmpty else { return span }
+        var start = first
+        for activity in recorded.reversed() {
+            guard Self.isMoving(activity.motion),
+                  start.timeIntervalSince(activity.span.end) <= motionChainGap else { break }
+            start = min(start, activity.span.start)
+        }
+        return TimeSpan(start: max(span.start, start), end: span.end)
+    }
+
+    private static func isMoving(_ motion: MotionKind) -> Bool {
+        switch motion {
+        case .walking, .running, .cycling, .automotive: true
+        case .stationary, .unknown: false
+        }
+    }
+
 }
 
 /// 비행 중 GPS가 비어도 두 체류 사이 점프로 항공 구간을 만든다. 끝점 이름(공항·항구)만으로는
@@ -195,5 +242,30 @@ enum WBSMovementTransportPolicy {
             originNearAirport: originReadings.contains(where: \.nearAirport),
             destinationNearAirport: destinationReadings.contains(where: \.nearAirport)
         ) ? .airplane : nil
+    }
+}
+
+/// 앱이 꺼져 어떤 표본(위치·움직임·화면)도 없던 긴 시간(MOV1110A01). 이 시간은 이동·식사 후보·공백 추정으로
+/// 채우지 않고 미확인으로 둔다. iOS가 따로 남긴 Core Motion 기록은 원본이라 그대로 둔다.
+enum UnobservedAppSpans {
+    static let minimum = MovementRouteBuilder.maximumUnobservedLead
+
+    /// 다시 켜진 때가 이동 안(또는 이동 시작 5분 안)일 때만 센다. 집에서 자는 동안 꺼져 있던 밤처럼
+    /// 같은 자리로 돌아온 공백은 예전처럼 둔다.
+    static func spans(readings: [SensorReading], travel: [TravelSegment], inside: TimeSpan) -> [TimeSpan] {
+        let times = readings.lazy.map(\.timestamp).filter { inside.contains($0) }.sorted()
+        return zip(times, times.dropFirst()).compactMap { before, after in
+            guard after.timeIntervalSince(before) > minimum,
+                  travel.contains(where: { $0.span.contains(after) || abs($0.span.start.timeIntervalSince(after)) <= 5 * 60 })
+            else { return nil }
+            return TimeSpan(start: before, end: after)
+        }
+    }
+
+    /// 기록의 절반 넘게 그런 시간 안에 있다.
+    static func covers(_ spans: [TimeSpan], _ span: TimeSpan) -> Bool {
+        guard span.duration > 0 else { return false }
+        let inside = spans.reduce(0) { $0 + ($1.intersection(with: span)?.duration ?? 0) }
+        return inside > span.duration / 2
     }
 }

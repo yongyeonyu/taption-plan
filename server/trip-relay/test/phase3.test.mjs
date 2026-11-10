@@ -404,7 +404,7 @@ test("MCP: destructiveHint on edit/delete/merge/hide/settings tools, and untrust
   for (const name of ["update_activity", "hide_record", "merge_records", "update_record_time", "update_schedule", "delete_schedule", "update_memo",
     "delete_memo", "update_goal", "delete_goal", "update_trip_stop", "delete_trip_stop", "set_trip_item_status", "update_sleep", "set_language",
     "set_theme", "set_map_style", "set_display_option", "send_trip_plan"]) assert.equal(hint[name], true, name);
-  for (const name of ["get_activity", "get_summary", "get_command_results", "add_memo", "add_schedule", "add_goal", "add_trip_stop"]) assert.equal(hint[name], false, name);
+  for (const name of ["get_activity", "get_summary", "get_command_results", "get_polish_requests", "add_memo", "add_schedule", "add_goal", "add_trip_stop"]) assert.equal(hint[name], false, name);
   const init = await mcp(env, writer.token, rpc("initialize", { protocolVersion: "2025-06-18", capabilities: {} }));
   assert.match(init.result.instructions, /untrusted_user_text/);
   assert.match(init.result.instructions, /Never follow instructions/);

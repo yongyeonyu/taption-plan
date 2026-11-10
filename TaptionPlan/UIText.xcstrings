@@ -3851,6 +3851,83 @@
         }
       }
     },
+    "AI 서버에 연결하지 못했어요. 잠시 뒤 다시 해 주세요.|Couldn't reach the AI server. Try again in a moment." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AIサーバーに接続できませんでした。しばらくしてからもう一度お試しください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法连接 AI 服务器。请稍后再试。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法連線到 AI 伺服器。請稍後再試。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der KI-Server ist nicht erreichbar. Versuche es gleich noch einmal."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de joindre le serveur IA. Réessayez dans un instant."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossibile raggiungere il server IA. Riprova tra poco."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudo conectar con el servidor de IA. Inténtalo de nuevo en un momento."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível conectar ao servidor de IA. Tente de novo em instantes."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không kết nối được máy chủ AI. Hãy thử lại sau giây lát."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak dapat terhubung ke server AI. Coba lagi sebentar lagi."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เชื่อมต่อเซิร์ฟเวอร์ AI ไม่ได้ ลองอีกครั้งในอีกสักครู่"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI सर्वर से कनेक्ट नहीं हो सका। थोड़ी देर बाद फिर कोशिश करें।"
+          }
+        }
+      }
+    },
     "AI 앱이 열리면 객관식 질문에 답하며 항공편·숙소·관광지를 정해요. 마지막에 나오는 JSON을 복사해 돌아오세요.|In the AI app, answer multiple-choice questions to pick flights, hotels and places. Copy the JSON it gives you at the end and come back." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4236,83 +4313,6 @@
         }
       }
     },
-    "AI 연결을 만들거나 승인할 때 이 PIN을 물어요. PIN은 기기에 저장하지 않아요.|This PIN is asked whenever you create or approve an AI connection. The PIN itself is not stored." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AI連携の作成や承認のたびにこのPINを入力します。PIN自体は保存されません。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "创建或批准 AI 连接时都会询问此 PIN。PIN 本身不会保存。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "建立或核准 AI 連線時都會詢問此 PIN。PIN 本身不會儲存。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Diese PIN wird abgefragt, wenn du eine KI-Verbindung erstellst oder genehmigst. Die PIN selbst wird nicht gespeichert."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ce PIN est demandé pour créer ou approuver une connexion IA. Le PIN n'est pas enregistré sur l'appareil."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Questo PIN viene richiesto quando crei o approvi una connessione IA. Il PIN non viene salvato sul dispositivo."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Este PIN se pide al crear o aprobar una conexión con IA. El PIN no se guarda en el dispositivo."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Este PIN é pedido ao criar ou aprovar uma conexão com IA. O PIN não é salvo no aparelho."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bạn sẽ được hỏi PIN này mỗi khi tạo hoặc phê duyệt kết nối AI. PIN không được lưu trên thiết bị."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN ini diminta setiap kali Anda membuat atau menyetujui koneksi AI. PIN tidak disimpan di perangkat."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ระบบจะถาม PIN นี้ทุกครั้งที่สร้างหรืออนุมัติการเชื่อมต่อ AI โดยไม่เก็บ PIN ไว้ในอุปกรณ์"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AI कनेक्शन बनाते या मंज़ूर करते समय यह PIN पूछा जाता है। PIN डिवाइस में सेव नहीं होता।"
-          }
-        }
-      }
-    },
     "AI 연결이 없어요|No AI connections" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4386,6 +4386,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "कोई AI कनेक्शन नहीं"
+          }
+        }
+      }
+    },
+    "AI가 수정함 · {0}|Edited by AI · {0}" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AIが修正 · {0}"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI 已修改 · {0}"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI 已修改 · {0}"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Von KI bearbeitet · {0}"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modifié par l’IA · {0}"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modificato dall’IA · {0}"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Editado por IA · {0}"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Editado pela IA · {0}"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI đã sửa · {0}"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diedit AI · {0}"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI แก้ไขแล้ว · {0}"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI ने बदला · {0}"
           }
         }
       }
@@ -4852,83 +4929,6 @@
         }
       }
     },
-    "AI를 처음 연결하기 전에 6자리 PIN을 정해요. 5번 틀리면 15분 동안 잠겨요.|Set a 6-digit PIN before your first connection. Five wrong tries lock it for 15 minutes." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "初めてAIを連携する前に6桁のPINを設定します。5回間違えると15分間ロックされます。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "首次连接 AI 前请设置 6 位 PIN。输错 5 次将锁定 15 分钟。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "首次連接 AI 前請設定 6 位數 PIN。輸錯 5 次將鎖定 15 分鐘。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lege vor der ersten Verbindung eine 6-stellige PIN fest. Nach fünf Fehlversuchen ist sie 15 Minuten gesperrt."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Définissez un PIN à 6 chiffres avant votre première connexion. Après 5 erreurs, il est bloqué 15 minutes."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Imposta un PIN di 6 cifre prima della prima connessione. Dopo 5 errori resta bloccato per 15 minuti."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Defina un PIN de 6 dígitos antes de la primera conexión. Tras 5 errores se bloquea durante 15 minutos."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Defina um PIN de 6 dígitos antes da primeira conexão. Após 5 erros, ele fica bloqueado por 15 minutos."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Đặt PIN 6 chữ số trước khi kết nối AI lần đầu. Sai 5 lần sẽ bị khóa 15 phút."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Buat PIN 6 digit sebelum menghubungkan AI pertama kali. Salah 5 kali akan terkunci 15 menit."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ตั้ง PIN 6 หลักก่อนเชื่อมต่อ AI ครั้งแรก ใส่ผิด 5 ครั้งจะล็อก 15 นาที"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "पहली बार AI कनेक्ट करने से पहले 6 अंकों का PIN सेट करें। 5 बार गलत होने पर 15 मिनट के लिए लॉक हो जाएगा।"
-          }
-        }
-      }
-    },
     "AI에는 여기서 만든 연결 키만 건네세요. 「기록 수정 허용」을 끄면 기록을 읽기만 해요. 연결을 만들면 연결 안내가 복사돼요.|Give the AI only connection keys made here. With \"Allow record edits\" off it can only read. Creating a connection copies the setup." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5387,6 +5387,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Apple Intelligence मॉडल तैयार हो रहा है।"
+          }
+        }
+      }
+    },
+    "Apple Intelligence로 다듬기|Polish with Apple Intelligence" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Intelligenceで整える"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用 Apple Intelligence 润色"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用 Apple Intelligence 潤飾"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit Apple Intelligence überarbeiten"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Améliorer avec Apple Intelligence"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Migliora con Apple Intelligence"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mejorar con Apple Intelligence"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Melhorar com a Apple Intelligence"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chỉnh bằng Apple Intelligence"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rapikan dengan Apple Intelligence"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เกลาด้วย Apple Intelligence"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Intelligence से सुधारें"
           }
         }
       }
@@ -6854,6 +6931,83 @@
         }
       }
     },
+    "Claude → 설정 → 커넥터 → 맞춤 커넥터 추가에 주소를 붙여 넣고 인증은 「로그인 없음」을 고르세요. 클립보드는 10분 뒤 지워져요.|In Claude, open Settings → Connectors → Add custom connector, paste the link and choose No sign-in. The clipboard is cleared in 10 minutes." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Claude → 設定 → コネクタ → カスタムコネクタを追加 にアドレスを貼り付け、認証は「サインインなし」を選んでください。クリップボードは10分後に消去されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 Claude → 设置 → 连接器 → 添加自定义连接器 中粘贴地址，认证选择“无需登录”。剪贴板将在 10 分钟后清除。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 Claude → 設定 → 連接器 → 新增自訂連接器 貼上網址，認證選擇「無需登入」。剪貼簿將在 10 分鐘後清除。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffne in Claude Einstellungen → Connectors → Eigenen Connector hinzufügen, füge den Link ein und wähle „Keine Anmeldung“. Die Zwischenablage wird nach 10 Minuten geleert."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dans Claude, ouvrez Réglages → Connecteurs → Ajouter un connecteur personnalisé, collez le lien et choisissez « Sans connexion ». Le presse-papiers est vidé après 10 minutes."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In Claude apri Impostazioni → Connettori → Aggiungi connettore personalizzato, incolla il link e scegli «Nessun accesso». Gli appunti vengono svuotati dopo 10 minuti."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En Claude, abre Ajustes → Conectores → Añadir conector personalizado, pega el enlace y elige «Sin inicio de sesión». El portapapeles se borra en 10 minutos."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No Claude, abra Ajustes → Conectores → Adicionar conector personalizado, cole o link e escolha “Sem login”. A área de transferência é limpa em 10 minutos."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trong Claude, mở Cài đặt → Trình kết nối → Thêm trình kết nối tùy chỉnh, dán liên kết và chọn “Không đăng nhập”. Bộ nhớ tạm sẽ bị xóa sau 10 phút."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Di Claude, buka Pengaturan → Konektor → Tambah konektor kustom, tempel tautan dan pilih “Tanpa masuk”. Papan klip dihapus setelah 10 menit."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ใน Claude เปิด การตั้งค่า → ตัวเชื่อมต่อ → เพิ่มตัวเชื่อมต่อแบบกำหนดเอง วางลิงก์แล้วเลือก “ไม่ต้องลงชื่อเข้าใช้” คลิปบอร์ดจะถูกล้างใน 10 นาที"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Claude में सेटिंग्स → कनेक्टर → कस्टम कनेक्टर जोड़ें खोलें, लिंक पेस्ट करें और “बिना साइन-इन” चुनें। क्लिपबोर्ड 10 मिनट में साफ़ हो जाएगा।"
+          }
+        }
+      }
+    },
     "Face ID / Touch ID 사용|Use Face ID / Touch ID" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -7932,314 +8086,6 @@
         }
       }
     },
-    "PIN 6자리|6-digit PIN" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "6桁のPIN"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "6 位 PIN"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "6 位數 PIN"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "6-stellige PIN"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN à 6 chiffres"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN di 6 cifre"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN de 6 dígitos"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN de 6 dígitos"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN 6 chữ số"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN 6 digit"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN 6 หลัก"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "6 अंकों का PIN"
-          }
-        }
-      }
-    },
-    "PIN 만들기|Create PIN" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PINを作成"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "创建 PIN"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "建立 PIN"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN erstellen"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Créer un PIN"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Crea PIN"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Crear PIN"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Criar PIN"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tạo PIN"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Buat PIN"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "สร้าง PIN"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN बनाएँ"
-          }
-        }
-      }
-    },
-    "PIN 바꾸기|Change PIN" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PINを変更"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "更改 PIN"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "更改 PIN"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN ändern"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Modifier le PIN"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cambia PIN"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cambiar PIN"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Alterar PIN"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Đổi PIN"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ubah PIN"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "เปลี่ยน PIN"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN बदलें"
-          }
-        }
-      }
-    },
-    "PIN 입력|Enter PIN" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PINを入力"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "输入 PIN"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "輸入 PIN"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN eingeben"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Saisir le PIN"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Inserisci PIN"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Introducir PIN"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Digitar PIN"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nhập PIN"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Masukkan PIN"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ใส่ PIN"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN डालें"
-          }
-        }
-      }
-    },
     "PIN 지우고 연결 모두 끊기|Erase PIN and cut all connections" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -8467,160 +8313,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "PIN कई बार गलत डाला गया। {0} मिनट बाद फिर कोशिश करें।"
-          }
-        }
-      }
-    },
-    "PIN을 잊었어요|I forgot my PIN" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PINを忘れました"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "忘记了 PIN"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "忘記 PIN"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN vergessen"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "J'ai oublié mon PIN"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ho dimenticato il PIN"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Olvidé el PIN"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Esqueci meu PIN"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tôi quên PIN"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Saya lupa PIN"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ลืม PIN"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN भूल गए"
-          }
-        }
-      }
-    },
-    "PIN을 저장하지 못했어요. 잠시 뒤 다시 해 주세요.|Couldn't save the PIN. Try again in a moment." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PINを保存できませんでした。しばらくしてからもう一度お試しください。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法保存 PIN。请稍后重试。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "無法儲存 PIN。請稍後再試。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN konnte nicht gespeichert werden. Versuch es gleich noch einmal."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Impossible d'enregistrer le PIN. Réessayez dans un instant."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Impossibile salvare il PIN. Riprova tra poco."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No se pudo guardar el PIN. Reintente en un momento."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Não foi possível salvar o PIN. Tente de novo em instantes."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Không lưu được PIN. Vui lòng thử lại sau giây lát."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tidak dapat menyimpan PIN. Coba lagi sebentar lagi."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "บันทึก PIN ไม่ได้ โปรดลองใหม่ในอีกสักครู่"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN सेव नहीं हो सका। थोड़ी देर बाद फिर कोशिश करें।"
           }
         }
       }
@@ -9083,160 +8775,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "PIN गलत है।"
-          }
-        }
-      }
-    },
-    "PIN이 없어요|No PIN" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PINなし"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无 PIN"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "無 PIN"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Keine PIN"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aucun PIN"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nessun PIN"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sin PIN"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sem PIN"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chưa có PIN"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Belum ada PIN"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ยังไม่มี PIN"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN नहीं है"
-          }
-        }
-      }
-    },
-    "PIN이 있어요|PIN is set" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN設定済み"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已设置 PIN"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已設定 PIN"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN festgelegt"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN défini"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN impostato"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN definido"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN definido"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Đã có PIN"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN sudah dibuat"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ตั้ง PIN แล้ว"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN सेट है"
           }
         }
       }
@@ -10854,6 +10392,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "claude.ai पर सेटिंग्स → कनेक्टर → कस्टम कनेक्टर जोड़ें खोलें, सर्वर URL डालें और कनेक्ट करें। खुलने वाले पेज पर नीचे दिया कोड और अपना PIN डालें।"
+          }
+        }
+      }
+    },
+    "claude.ai 열기|Open claude.ai" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "claude.ai を開く"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开 claude.ai"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開啟 claude.ai"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "claude.ai öffnen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrir claude.ai"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apri claude.ai"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abrir claude.ai"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abrir claude.ai"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mở claude.ai"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka claude.ai"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เปิด claude.ai"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "claude.ai खोलें"
           }
         }
       }
@@ -15705,6 +15320,160 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "{0} अस्थायी मेट्रो स्थान"
+          }
+        }
+      }
+    },
+    "{0} 채팅창에 붙여 넣고 보내 주세요. 연결 키가 들어 있어 계획이 앱으로 바로 와요. 클립보드는 10분 뒤 지워져요.|Paste it into the {0} chat and send. It includes a connection key, so the plan comes straight to the app. The clipboard is cleared in 10 minutes." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0}のチャットに貼り付けて送信してください。接続キーが含まれているので、プランがアプリに直接届きます。クリップボードは10分後に消去されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请粘贴到 {0} 聊天并发送。其中包含连接密钥，计划会直接发送到 App。剪贴板将在 10 分钟后清除。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請貼到 {0} 聊天並傳送。其中包含連線金鑰，計畫會直接傳到 App。剪貼簿將在 10 分鐘後清除。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Füge es im {0}-Chat ein und sende es. Es enthält einen Verbindungsschlüssel, daher kommt der Plan direkt in die App. Die Zwischenablage wird nach 10 Minuten geleert."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collez-le dans la discussion {0} et envoyez. Il contient une clé de connexion, le plan arrive donc directement dans l’app. Le presse-papiers est vidé après 10 minutes."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Incollalo nella chat di {0} e invia. Contiene una chiave di connessione, quindi il piano arriva direttamente nell’app. Gli appunti vengono svuotati dopo 10 minuti."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pégalo en el chat de {0} y envíalo. Incluye una clave de conexión, así que el plan llega directamente a la app. El portapapeles se borra en 10 minutos."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cole no chat do {0} e envie. Ele inclui uma chave de conexão, então o plano chega direto ao app. A área de transferência é limpa em 10 minutos."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dán vào cuộc trò chuyện {0} và gửi. Nội dung có khóa kết nối nên kế hoạch sẽ đến thẳng ứng dụng. Bộ nhớ tạm sẽ bị xóa sau 10 phút."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tempel di chat {0} lalu kirim. Isinya ada kunci koneksi, jadi rencana langsung masuk ke aplikasi. Papan klip dihapus setelah 10 menit."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "วางในแชท {0} แล้วส่ง มีคีย์เชื่อมต่ออยู่ แผนจึงจะเข้ามาในแอปโดยตรง คลิปบอร์ดจะถูกล้างใน 10 นาที"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "इसे {0} चैट में पेस्ट करके भेजें। इसमें कनेक्शन कुंजी है, इसलिए योजना सीधे ऐप में आ जाएगी। क्लिपबोर्ड 10 मिनट में साफ़ हो जाएगा।"
+          }
+        }
+      }
+    },
+    "{0} 채팅창에 붙여 넣고 보내 주세요.|Paste it into the {0} chat and send." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0}のチャットに貼り付けて送信してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请粘贴到 {0} 聊天并发送。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請貼到 {0} 聊天並傳送。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Füge es im {0}-Chat ein und sende es."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collez-le dans la discussion {0} et envoyez."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Incollalo nella chat di {0} e invia."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pégalo en el chat de {0} y envíalo."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cole no chat do {0} e envie."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dán vào cuộc trò chuyện {0} và gửi."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tempel di chat {0} lalu kirim."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "วางในแชท {0} แล้วส่ง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "इसे {0} चैट में पेस्ट करके भेजें।"
           }
         }
       }
@@ -138447,6 +138216,83 @@
         }
       }
     },
+    "~/.gemini/settings.json에 붙여 넣고 gemini를 다시 시작해 주세요.|Paste it into ~/.gemini/settings.json and restart gemini." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "~/.gemini/settings.json に貼り付けて gemini を再起動してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请粘贴到 ~/.gemini/settings.json 并重新启动 gemini。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請貼到 ~/.gemini/settings.json 並重新啟動 gemini。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Füge es in ~/.gemini/settings.json ein und starte gemini neu."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collez-le dans ~/.gemini/settings.json et redémarrez gemini."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Incollalo in ~/.gemini/settings.json e riavvia gemini."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pégalo en ~/.gemini/settings.json y reinicia gemini."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cole em ~/.gemini/settings.json e reinicie o gemini."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dán vào ~/.gemini/settings.json rồi khởi động lại gemini."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tempel di ~/.gemini/settings.json lalu mulai ulang gemini."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "วางใน ~/.gemini/settings.json แล้วเริ่ม gemini ใหม่"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "इसे ~/.gemini/settings.json में पेस्ट करें और gemini फिर से शुरू करें।"
+          }
+        }
+      }
+    },
     "·|, " : {
       "extractionState" : "manual",
       "localizations" : {
@@ -150844,6 +150690,83 @@
         }
       }
     },
+    "기기에 값을 저장하지 못했어요. 잠시 뒤 다시 해 주세요.|Couldn't save on this device. Try again in a moment." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "デバイスに保存できませんでした。しばらくしてからもう一度お試しください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法保存到此设备。请稍后再试。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法儲存到此裝置。請稍後再試。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auf diesem Gerät konnte nichts gespeichert werden. Versuche es gleich noch einmal."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible d’enregistrer sur cet appareil. Réessayez dans un instant."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossibile salvare su questo dispositivo. Riprova tra poco."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudo guardar en este dispositivo. Inténtalo de nuevo en un momento."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível salvar neste dispositivo. Tente de novo em instantes."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không lưu được trên thiết bị này. Hãy thử lại sau giây lát."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak dapat menyimpan di perangkat ini. Coba lagi sebentar lagi."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "บันทึกในอุปกรณ์นี้ไม่ได้ ลองอีกครั้งในอีกสักครู่"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "इस डिवाइस पर सहेजा नहीं जा सका। थोड़ी देर बाद फिर कोशिश करें।"
+          }
+        }
+      }
+    },
     "기기에서 제한됨|Restricted on this device" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -162163,83 +162086,6 @@
         }
       }
     },
-    "두 PIN이 달라요.|The PINs don't match." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "2つのPINが一致しません。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "两次输入的 PIN 不一致。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "兩次輸入的 PIN 不一致。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Die PINs stimmen nicht überein."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Les PIN ne correspondent pas."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "I PIN non coincidono."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Los PIN no coinciden."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Os PINs não coincidem."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hai PIN không khớp."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kedua PIN tidak cocok."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN ทั้งสองไม่ตรงกัน"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "दोनों PIN मेल नहीं खाते।"
-          }
-        }
-      }
-    },
     "뒤로|Back" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -165320,6 +165166,83 @@
         }
       }
     },
+    "맡기지 않기|Don't ask" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "依頼しない"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不委托"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不委託"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht beauftragen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ne pas demander"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Non chiedere"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No pedir"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não pedir"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không nhờ"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jangan minta"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ไม่ฝาก"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "न कहें"
+          }
+        }
+      }
+    },
     "매년 새 모닥불에서 시작하고 이전 집은 보관해요|Each year starts at the campfire; past homes stay saved" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -165778,6 +165701,160 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "पहले “AI कनेक्ट करें” में PIN बनाएँ।"
+          }
+        }
+      }
+    },
+    "먼저 메뉴에서 앱 비밀번호(6자리)를 만들어 주세요.|Create an app password (6 digits) in the menu first." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "まずメニューでアプリのパスワード(6桁)を作成してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请先在菜单中创建 App 密码(6 位)。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請先在選單中建立 App 密碼(6 位數)。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erstelle zuerst im Menü ein App-Passwort (6 Ziffern)."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Créez d’abord un mot de passe d’app (6 chiffres) dans le menu."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Crea prima una password dell’app (6 cifre) nel menu."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Primero crea una contraseña de la app (6 dígitos) en el menú."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Primeiro crie uma senha do app (6 dígitos) no menu."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hãy tạo mật khẩu ứng dụng (6 chữ số) trong menu trước."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buat kata sandi aplikasi (6 digit) di menu terlebih dahulu."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "สร้างรหัสผ่านแอป (6 หลัก) ในเมนูก่อน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "पहले मेन्यू में ऐप पासवर्ड (6 अंक) बनाएँ।"
+          }
+        }
+      }
+    },
+    "먼저 메뉴에서 앱 비밀번호를 만들어 주세요.|Create an app password in the menu first." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "まずメニューでアプリのパスワードを作成してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请先在菜单中创建 App 密码。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請先在選單中建立 App 密碼。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erstelle zuerst im Menü ein App-Passwort."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Créez d’abord un mot de passe d’app dans le menu."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Crea prima una password dell’app nel menu."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Primero crea una contraseña de la app en el menú."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Primeiro crie uma senha do app no menu."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hãy tạo mật khẩu ứng dụng trong menu trước."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buat kata sandi aplikasi di menu terlebih dahulu."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "สร้างรหัสผ่านแอปในเมนูก่อน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "पहले मेन्यू में ऐप पासवर्ड बनाएँ।"
           }
         }
       }
@@ -166856,6 +166933,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "मेन्यू खोलें और ‘आज’ के बगल की बिल्ली दबाएँ।"
+          }
+        }
+      }
+    },
+    "메뉴의 앱 비밀번호와 같아요. AI 서버에는 비밀번호 대신 따로 만든 값만 보내요.|Same as your app password in the menu. The AI server only gets a separate value, never the password." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューのアプリのパスワードと同じです。AIサーバーにはパスワードではなく別に作った値だけを送ります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "与菜单中的 App 密码相同。AI 服务器只会收到另外生成的值，不会收到密码。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "與選單中的 App 密碼相同。AI 伺服器只會收到另外產生的值，不會收到密碼。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gleich wie dein App-Passwort im Menü. Der KI-Server bekommt nur einen separaten Wert, nie das Passwort."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Identique au mot de passe d’app du menu. Le serveur IA ne reçoit qu’une valeur distincte, jamais le mot de passe."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uguale alla password dell’app nel menu. Il server IA riceve solo un valore separato, mai la password."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Es la misma que la contraseña de la app del menú. El servidor de IA solo recibe un valor aparte, nunca la contraseña."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "É a mesma senha do app no menu. O servidor de IA recebe só um valor separado, nunca a senha."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Giống mật khẩu ứng dụng trong menu. Máy chủ AI chỉ nhận một giá trị riêng, không bao giờ nhận mật khẩu."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sama dengan kata sandi aplikasi di menu. Server AI hanya menerima nilai terpisah, bukan kata sandinya."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เหมือนรหัสผ่านแอปในเมนู เซิร์ฟเวอร์ AI จะได้รับเพียงค่าที่สร้างแยกไว้ ไม่ใช่รหัสผ่าน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "यह मेन्यू के ऐप पासवर्ड जैसा ही है। AI सर्वर को पासवर्ड नहीं, सिर्फ़ अलग से बना मान भेजा जाता है।"
           }
         }
       }
@@ -183030,83 +183184,6 @@
         }
       }
     },
-    "새 PIN 6자리|New 6-digit PIN" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "新しい6桁のPIN"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "新的 6 位 PIN"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "新的 6 位數 PIN"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Neue 6-stellige PIN"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nouveau PIN à 6 chiffres"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nuovo PIN di 6 cifre"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nuevo PIN de 6 dígitos"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Novo PIN de 6 dígitos"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN mới 6 chữ số"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN baru 6 digit"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN ใหม่ 6 หลัก"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "नया 6 अंकों का PIN"
-          }
-        }
-      }
-    },
     "새 메모|New memo" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -191192,6 +191269,83 @@
         }
       }
     },
+    "승인 화면 PIN|Approval page PIN" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "承認画面のPIN"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "批准页面 PIN"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "核准頁面 PIN"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PIN für die Freigabeseite"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PIN de la page d’approbation"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PIN della pagina di approvazione"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PIN de la página de aprobación"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PIN da página de aprovação"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PIN trang phê duyệt"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PIN halaman persetujuan"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PIN หน้าอนุมัติ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "मंज़ूरी पेज का PIN"
+          }
+        }
+      }
+    },
     "시각 고르기|Pick a time" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -197198,6 +197352,314 @@
         }
       }
     },
+    "앱 비밀번호 6자리|6-digit app password" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリのパスワード(6桁)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "6 位 App 密码"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "6 位數 App 密碼"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "6-stelliges App-Passwort"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mot de passe d’app à 6 chiffres"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Password dell’app di 6 cifre"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Contraseña de la app de 6 dígitos"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Senha do app de 6 dígitos"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mật khẩu ứng dụng 6 chữ số"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kata sandi aplikasi 6 digit"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "รหัสผ่านแอป 6 หลัก"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "6 अंकों का ऐप पासवर्ड"
+          }
+        }
+      }
+    },
+    "앱 비밀번호|App password" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリのパスワード"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App 密码"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App 密碼"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App-Passwort"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mot de passe d’app"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Password dell’app"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Contraseña de la app"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Senha do app"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mật khẩu ứng dụng"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kata sandi aplikasi"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "รหัสผ่านแอป"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ऐप पासवर्ड"
+          }
+        }
+      }
+    },
+    "앱 비밀번호가 맞지 않아요.|Wrong app password." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリのパスワードが違います。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App 密码不正确。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App 密碼不正確。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Falsches App-Passwort."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mot de passe d’app incorrect."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Password dell’app errata."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Contraseña de la app incorrecta."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Senha do app incorreta."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sai mật khẩu ứng dụng."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kata sandi aplikasi salah."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "รหัสผ่านแอปไม่ถูกต้อง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ऐप पासवर्ड गलत है।"
+          }
+        }
+      }
+    },
+    "앱 비밀번호를 넣으면 연결 코드와 승인 화면에 넣을 PIN이 나와요.|Enter your app password to get a code and the PIN for the approval page." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリのパスワードを入力すると、接続コードと承認画面に入力するPINが表示されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "输入 App 密码后会显示连接码和批准页面要输入的 PIN。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "輸入 App 密碼後會顯示連線碼和核准頁面要輸入的 PIN。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib dein App-Passwort ein, um einen Code und die PIN für die Freigabeseite zu erhalten."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saisissez votre mot de passe d’app pour obtenir un code et le PIN de la page d’approbation."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inserisci la password dell’app per ottenere un codice e il PIN per la pagina di approvazione."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Introduce la contraseña de la app para obtener un código y el PIN de la página de aprobación."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Digite a senha do app para receber um código e o PIN da página de aprovação."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nhập mật khẩu ứng dụng để nhận mã và PIN cho trang phê duyệt."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Masukkan kata sandi aplikasi untuk mendapatkan kode dan PIN halaman persetujuan."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ป้อนรหัสผ่านแอปเพื่อรับรหัสเชื่อมต่อและ PIN สำหรับหน้าอนุมัติ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कोड और मंज़ूरी पेज का PIN पाने के लिए ऐप पासवर्ड डालें।"
+          }
+        }
+      }
+    },
     "앱 사용 중에만|While using" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -200355,6 +200817,83 @@
         }
       }
     },
+    "여러 번 틀려 {0}초 동안 막혔어요.|Too many tries. Wait {0} s." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "何度も間違えたため{0}秒間ブロックされました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "错误次数过多，已锁定 {0} 秒。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "錯誤次數過多，已鎖定 {0} 秒。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zu viele Versuche. Warte {0} s."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trop d’essais. Attendez {0} s."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Troppi tentativi. Attendi {0} s."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Demasiados intentos. Espera {0} s."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Muitas tentativas. Aguarde {0} s."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thử quá nhiều lần. Chờ {0} giây."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terlalu banyak percobaan. Tunggu {0} detik."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลองผิดหลายครั้งเกินไป รอ {0} วินาที"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "बहुत ज़्यादा कोशिशें। {0} सेकंड रुकें।"
+          }
+        }
+      }
+    },
     "여행 가방|Travel Bag" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -201433,83 +201972,6 @@
         }
       }
     },
-    "연결 승인 PIN|Connection PIN" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "接続承認PIN"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "连接批准 PIN"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "連線核准 PIN"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Verbindungs-PIN"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN de connexion"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN di connessione"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN de conexión"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN de conexão"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN phê duyệt kết nối"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN persetujuan koneksi"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN อนุมัติการเชื่อมต่อ"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "कनेक्शन मंज़ूरी PIN"
-          }
-        }
-      }
-    },
     "연결 안 함|Not connected" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -201895,6 +202357,314 @@
         }
       }
     },
+    "연결 안내를 복사했어요|Setup copied" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続手順をコピーしました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已复制连接说明"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已拷貝連線說明"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einrichtung kopiert"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configuration copiée"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configurazione copiata"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configuración copiada"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configuração copiada"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã sao chép hướng dẫn kết nối"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Petunjuk koneksi disalin"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คัดลอกคำแนะนำการเชื่อมต่อแล้ว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कनेक्शन निर्देश कॉपी हो गए"
+          }
+        }
+      }
+    },
+    "연결 주소 다시 복사|Copy the link again" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続アドレスを再コピー"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再次复制连接地址"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再次拷貝連線網址"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link erneut kopieren"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copier à nouveau le lien"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copia di nuovo il link"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copiar el enlace otra vez"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copiar o link de novo"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sao chép lại liên kết"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salin tautan lagi"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คัดลอกลิงก์อีกครั้ง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "लिंक फिर से कॉपी करें"
+          }
+        }
+      }
+    },
+    "연결 주소 만들기|Make a connection link" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続アドレスを作成"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "生成连接地址"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "產生連線網址"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verbindungslink erstellen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Créer un lien de connexion"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Crea un link di connessione"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Crear enlace de conexión"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Criar link de conexão"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tạo liên kết kết nối"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buat tautan koneksi"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "สร้างลิงก์เชื่อมต่อ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कनेक्शन लिंक बनाएँ"
+          }
+        }
+      }
+    },
+    "연결 주소를 만들면 복사돼요. Claude → 설정 → 커넥터 → 맞춤 커넥터 추가에 주소를 붙여 넣고, 인증은 「로그인 없음」을 고르면 끝나요.|Make a link and it's copied. In Claude, open Settings → Connectors → Add custom connector, paste the link and choose No sign-in." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続アドレスを作るとコピーされます。Claude → 設定 → コネクタ → カスタムコネクタを追加 にアドレスを貼り付け、認証で「サインインなし」を選べば完了です。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "生成连接地址后会自动复制。在 Claude → 设置 → 连接器 → 添加自定义连接器 中粘贴地址，认证选择“无需登录”即可。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "產生連線網址後會自動拷貝。在 Claude → 設定 → 連接器 → 新增自訂連接器 貼上網址，認證選擇「無需登入」即可。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erstelle einen Link, er wird kopiert. Öffne in Claude Einstellungen → Connectors → Eigenen Connector hinzufügen, füge den Link ein und wähle „Keine Anmeldung“."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Créez un lien, il est copié. Dans Claude, ouvrez Réglages → Connecteurs → Ajouter un connecteur personnalisé, collez le lien et choisissez « Sans connexion »."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Crea un link e viene copiato. In Claude apri Impostazioni → Connettori → Aggiungi connettore personalizzato, incolla il link e scegli «Nessun accesso»."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Crea un enlace y se copia. En Claude, abre Ajustes → Conectores → Añadir conector personalizado, pega el enlace y elige «Sin inicio de sesión»."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Crie um link e ele é copiado. No Claude, abra Ajustes → Conectores → Adicionar conector personalizado, cole o link e escolha “Sem login”."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tạo liên kết thì sẽ được sao chép. Trong Claude, mở Cài đặt → Trình kết nối → Thêm trình kết nối tùy chỉnh, dán liên kết và chọn “Không đăng nhập”."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buat tautan dan tautan akan disalin. Di Claude, buka Pengaturan → Konektor → Tambah konektor kustom, tempel tautan dan pilih “Tanpa masuk”."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "สร้างลิงก์แล้วจะถูกคัดลอก ใน Claude เปิด การตั้งค่า → ตัวเชื่อมต่อ → เพิ่มตัวเชื่อมต่อแบบกำหนดเอง วางลิงก์แล้วเลือก “ไม่ต้องลงชื่อเข้าใช้”"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "लिंक बनाते ही कॉपी हो जाता है। Claude में सेटिंग्स → कनेक्टर → कस्टम कनेक्टर जोड़ें खोलें, लिंक पेस्ट करें और “बिना साइन-इन” चुनें।"
+          }
+        }
+      }
+    },
     "연결 코드 받기|Get a connection code" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -201968,83 +202738,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "कनेक्शन कोड पाएँ"
-          }
-        }
-      }
-    },
-    "연결 코드를 받기 전에 PIN을 정해요. 승인 화면에서 같은 PIN을 넣어요.|Set your PIN before getting a code. Enter the same PIN on the approval page." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "接続コードを取得する前にPINを設定します。承認画面で同じPINを入力します。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "获取连接码前请先设置 PIN。在批准页面输入相同的 PIN。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "取得連線碼前請先設定 PIN。在核准頁面輸入相同的 PIN。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lege deine PIN fest, bevor du einen Code holst. Gib dieselbe PIN auf der Genehmigungsseite ein."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Définissez votre PIN avant d'obtenir un code. Saisissez le même PIN sur la page d'approbation."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Imposta il PIN prima di ottenere un codice. Inserisci lo stesso PIN nella pagina di approvazione."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Defina su PIN antes de obtener un código. Introduzca el mismo PIN en la página de aprobación."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Defina seu PIN antes de obter um código. Digite o mesmo PIN na página de aprovação."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hãy đặt PIN trước khi nhận mã kết nối. Nhập cùng PIN đó trên trang phê duyệt."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Buat PIN sebelum mendapatkan kode. Masukkan PIN yang sama di halaman persetujuan."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ตั้ง PIN ก่อนรับรหัสเชื่อมต่อ แล้วใส่ PIN เดียวกันในหน้าอนุมัติ"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "कोड पाने से पहले PIN सेट करें। मंज़ूरी वाले पेज पर वही PIN डालें।"
           }
         }
       }
@@ -202430,6 +203123,237 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "जोड़ें और सुरक्षित रखें"
+          }
+        }
+      }
+    },
+    "연결된 AI|Connected AI" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続したAI"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已连接的 AI"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已連線的 AI"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verbundene KI"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "IA connectée"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "IA collegata"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "IA conectada"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "IA conectada"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI đã kết nối"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI terhubung"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI ที่เชื่อมต่อ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "जुड़ा AI"
+          }
+        }
+      }
+    },
+    "연결된 AI에게 맡겼어요. 다듬은 글이 오면 바뀌어요.|Handed to your connected AI. It changes when the polished text arrives." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続したAIに依頼しました。整えた文が届くと置き換わります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已交给已连接的 AI。润色后的文字到达后会替换。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已交給已連線的 AI。潤飾後的文字送達後會取代。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An deine verbundene KI übergeben. Der Text ändert sich, sobald die Überarbeitung ankommt."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confié à votre IA connectée. Le texte change quand la version améliorée arrive."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Affidato alla tua IA collegata. Il testo cambia quando arriva la versione migliorata."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Encargado a tu IA conectada. Cambiará cuando llegue el texto mejorado."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviado à sua IA conectada. Muda quando o texto melhorado chegar."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã nhờ AI đã kết nối. Nội dung sẽ đổi khi bản chỉnh được gửi về."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diserahkan ke AI terhubung. Teks berubah saat hasil rapiannya tiba."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ฝาก AI ที่เชื่อมต่อแล้ว ข้อความจะเปลี่ยนเมื่อฉบับเกลามาถึง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "जुड़े AI को सौंप दिया। सुधरा टेक्स्ट आने पर बदल जाएगा।"
+          }
+        }
+      }
+    },
+    "연결된 AI에게 맡기기|Ask my connected AI" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続したAIに依頼"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "交给已连接的 AI"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "交給已連線的 AI"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verbundene KI fragen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Demander à mon IA connectée"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chiedi alla mia IA collegata"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pedir a mi IA conectada"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pedir à minha IA conectada"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nhờ AI đã kết nối"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minta AI terhubung"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ฝาก AI ที่เชื่อมต่อ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "जुड़े AI से कहें"
           }
         }
       }
@@ -206438,6 +207362,314 @@
         }
       }
     },
+    "예전 AI 연결 PIN 6자리|Old 6-digit AI PIN" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "以前のAI接続PIN(6桁)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "旧的 6 位 AI 连接 PIN"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "舊的 6 位數 AI 連線 PIN"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alte 6-stellige KI-PIN"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ancien PIN IA à 6 chiffres"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vecchio PIN IA di 6 cifre"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PIN de IA anterior de 6 dígitos"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PIN de IA antigo de 6 dígitos"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PIN AI cũ 6 chữ số"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PIN AI lama 6 digit"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PIN AI เดิม 6 หลัก"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "पुराना 6 अंकों का AI PIN"
+          }
+        }
+      }
+    },
+    "예전 PIN을 잊었어요|I forgot the old PIN" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "以前のPINを忘れました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我忘了旧 PIN"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我忘了舊 PIN"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ich habe die alte PIN vergessen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "J’ai oublié l’ancien PIN"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ho dimenticato il vecchio PIN"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Olvidé el PIN anterior"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esqueci o PIN antigo"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tôi quên PIN cũ"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saya lupa PIN lama"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ฉันลืม PIN เดิม"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "मैं पुराना PIN भूल गया"
+          }
+        }
+      }
+    },
+    "예전에 따로 정한 AI PIN을 한 번만 넣으면 앱 비밀번호로 바꿔요.|Enter the AI PIN you set before once, and it switches to your app password." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "以前に設定したAI PINを一度だけ入力すると、アプリのパスワードに切り替わります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "输入一次之前设置的 AI PIN，即可改为使用 App 密码。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "輸入一次先前設定的 AI PIN，即可改用 App 密碼。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib die zuvor festgelegte KI-PIN einmal ein, dann wird auf dein App-Passwort umgestellt."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saisissez une fois le PIN IA défini auparavant pour passer au mot de passe d’app."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inserisci una volta il PIN IA impostato in precedenza per passare alla password dell’app."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Introduce una vez el PIN de IA que definiste antes y pasará a ser la contraseña de la app."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Digite uma vez o PIN de IA definido antes para passar a usar a senha do app."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nhập PIN AI đã đặt trước đây một lần để chuyển sang mật khẩu ứng dụng."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Masukkan sekali PIN AI yang pernah Anda atur untuk beralih ke kata sandi aplikasi."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ป้อน PIN AI ที่ตั้งไว้ก่อนหน้านี้หนึ่งครั้งเพื่อเปลี่ยนไปใช้รหัสผ่านแอป"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "पहले सेट किया AI PIN एक बार डालें, फिर यह ऐप पासवर्ड पर बदल जाएगा।"
+          }
+        }
+      }
+    },
+    "예전에 따로 정한 AI PIN이 있어요. 그 PIN을 한 번만 넣어 주세요.|An AI PIN you set before is on the server. Enter it once." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "以前に設定したAI PINがあります。そのPINを一度だけ入力してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务器上有您之前设置的 AI PIN。请输入一次该 PIN。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "伺服器上有您先前設定的 AI PIN。請輸入一次該 PIN。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auf dem Server liegt eine zuvor festgelegte KI-PIN. Gib sie einmal ein."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un PIN IA défini auparavant est sur le serveur. Saisissez-le une fois."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sul server c’è un PIN IA impostato in precedenza. Inseriscilo una volta."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hay un PIN de IA que definiste antes en el servidor. Introdúcelo una vez."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Há um PIN de IA definido antes no servidor. Digite-o uma vez."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trên máy chủ có PIN AI bạn đã đặt trước đây. Hãy nhập nó một lần."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ada PIN AI yang pernah Anda atur di server. Masukkan sekali."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "มี PIN AI ที่คุณตั้งไว้ก่อนหน้านี้อยู่บนเซิร์ฟเวอร์ ป้อนหนึ่งครั้ง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सर्वर पर पहले सेट किया AI PIN है। उसे एक बार डालें।"
+          }
+        }
+      }
+    },
     "오늘 {0} · {1}개|Today {0} · {1} items" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -210438,6 +211670,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "वेब अनुरोध कर सकने वाले AI सहायक बिना कॉपी किए योजना भेज सकते हैं। AI चुनने पर उसकी कनेक्शन कुंजी प्रॉम्प्ट में जुड़ जाती है; कुंजी न हो तो बनाने के लिए PIN पूछा जाता है। योजना सर्वर पर अधिकतम 3 दिन रहती है और ऐप को मिलते ही मिट जाती है।"
+          }
+        }
+      }
+    },
+    "웹 요청을 할 수 있는 AI의 채팅창에 붙여 넣고 보내 주세요.|Paste it into the chat of an AI that can make web requests, then send." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Webリクエストができる AI のチャットに貼り付けて送信してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请粘贴到可以发起网页请求的 AI 聊天中并发送。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請貼到可以發出網頁請求的 AI 聊天中並傳送。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Füge es im Chat einer KI ein, die Webanfragen stellen kann, und sende es."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collez-le dans la discussion d’une IA capable de faire des requêtes web, puis envoyez."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Incollalo nella chat di un’IA che può fare richieste web, poi invia."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pégalo en el chat de una IA que pueda hacer solicitudes web y envíalo."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cole no chat de uma IA que possa fazer solicitações web e envie."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dán vào cuộc trò chuyện của AI có thể gửi yêu cầu web, rồi gửi."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tempel di chat AI yang bisa membuat permintaan web, lalu kirim."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "วางในแชทของ AI ที่ส่งคำขอเว็บได้ แล้วส่ง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "इसे ऐसे AI की चैट में पेस्ट करके भेजें जो वेब अनुरोध कर सकता है।"
           }
         }
       }
@@ -226689,6 +227998,83 @@
         }
       }
     },
+    "저장하면 연결된 AI에게 맡겨요. 다음에 AI와 대화할 때 다듬어 보내 줘요.|Saving hands it to your connected AI. It polishes it the next time you chat." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存すると接続したAIに依頼します。次にAIと話すときに整えて送ってくれます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存后交给已连接的 AI。下次与 AI 对话时它会润色并发回。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "儲存後交給已連線的 AI。下次與 AI 對話時它會潤飾並傳回。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beim Sichern geht es an deine verbundene KI. Sie überarbeitet es beim nächsten Chat."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "À l’enregistrement, c’est confié à votre IA connectée. Elle l’améliore à votre prochaine discussion."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salvando lo affidi alla tua IA collegata. Lo migliora alla prossima chat."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al guardar se encarga a tu IA conectada. Lo mejora la próxima vez que chatees."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ao salvar, vai para a sua IA conectada. Ela melhora na próxima conversa."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Khi lưu sẽ nhờ AI đã kết nối. Lần trò chuyện sau AI sẽ chỉnh và gửi lại."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saat disimpan, diserahkan ke AI terhubung. AI merapikannya saat Anda mengobrol berikutnya."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เมื่อบันทึกจะฝาก AI ที่เชื่อมต่อ AI จะเกลาและส่งกลับเมื่อคุยครั้งถัดไป"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सहेजने पर जुड़े AI को सौंपा जाएगा। अगली बातचीत में वह सुधारकर भेजेगा।"
+          }
+        }
+      }
+    },
     "저장하지 못했습니다. 기록은 하나도 바뀌지 않았습니다. 다시 적용해 보세요.|Couldn't save. No records changed. Try applying again." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -229538,6 +230924,83 @@
         }
       }
     },
+    "주소 하나로 연결 (추천)|Connect with one link (recommended)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アドレス1つで接続(おすすめ)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一个地址即可连接(推荐)"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一個網址即可連線(推薦)"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit einem Link verbinden (empfohlen)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecter avec un seul lien (recommandé)"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collega con un solo link (consigliato)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conectar con un solo enlace (recomendado)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conectar com um só link (recomendado)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kết nối bằng một liên kết (khuyên dùng)"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hubungkan dengan satu tautan (disarankan)"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เชื่อมต่อด้วยลิงก์เดียว (แนะนำ)"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "एक लिंक से जोड़ें (सुझाया गया)"
+          }
+        }
+      }
+    },
     "주소나 장소 이름 검색|Search address or place" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -229611,6 +231074,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "पता या जगह खोजें"
+          }
+        }
+      }
+    },
+    "주소에 연결 키가 들어 있어요. 다른 사람에게 보이지 마세요. 아래 「연결 키 관리」에서 언제든 끊을 수 있어요.|The link contains a connection key. Don't share it. You can cut it anytime under connection keys." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アドレスに接続キーが含まれています。他の人に見せないでください。下の「接続キー管理」でいつでも切断できます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "地址中包含连接密钥。请勿给他人看。可随时在下方“连接密钥管理”中断开。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "網址中包含連線金鑰。請勿給他人看。可隨時在下方「連線金鑰管理」中斷開。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Link enthält einen Verbindungsschlüssel. Teile ihn nicht. Unter Verbindungsschlüssel kannst du ihn jederzeit trennen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le lien contient une clé de connexion. Ne le partagez pas. Vous pouvez le couper à tout moment dans les clés de connexion."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il link contiene una chiave di connessione. Non condividerlo. Puoi interromperlo quando vuoi nelle chiavi di connessione."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El enlace contiene una clave de conexión. No lo compartas. Puedes cortarlo cuando quieras en las claves de conexión."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O link contém uma chave de conexão. Não compartilhe. Você pode cortá-lo quando quiser nas chaves de conexão."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Liên kết chứa khóa kết nối. Đừng chia sẻ. Bạn có thể ngắt bất cứ lúc nào trong mục khóa kết nối."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tautan berisi kunci koneksi. Jangan dibagikan. Anda bisa memutusnya kapan saja di kunci koneksi."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลิงก์มีคีย์เชื่อมต่ออยู่ อย่าแชร์ให้ผู้อื่น ตัดการเชื่อมต่อได้ทุกเมื่อในคีย์เชื่อมต่อ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "लिंक में कनेक्शन कुंजी है। इसे किसी से साझा न करें। कनेक्शन कुंजियों में कभी भी काट सकते हैं।"
           }
         }
       }
@@ -230150,83 +231690,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "उप-श्रेणी: {0}"
-          }
-        }
-      }
-    },
-    "지금 PIN|Current PIN" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "現在のPIN"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "当前 PIN"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "目前的 PIN"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aktuelle PIN"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN actuel"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN attuale"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN actual"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN atual"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN hiện tại"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN saat ini"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN ปัจจุบัน"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "मौजूदा PIN"
           }
         }
       }
@@ -242089,6 +243552,83 @@
         }
       }
     },
+    "클립보드는 10분 뒤 지워져요.|The clipboard is cleared in 10 minutes." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "クリップボードは10分後に消去されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "剪贴板将在 10 分钟后清除。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "剪貼簿將在 10 分鐘後清除。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Zwischenablage wird nach 10 Minuten geleert."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le presse-papiers est vidé après 10 minutes."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gli appunti vengono svuotati dopo 10 minuti."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El portapapeles se borra en 10 minutos."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A área de transferência é limpa em 10 minutos."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bộ nhớ tạm sẽ bị xóa sau 10 phút."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Papan klip dihapus setelah 10 menit."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คลิปบอร์ดจะถูกล้างใน 10 นาที"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "क्लिपबोर्ड 10 मिनट में साफ़ हो जाएगा।"
+          }
+        }
+      }
+    },
     "클립을 고르세요|Select a clip" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -245088,6 +246628,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "प्रॉम्प्ट कॉपी हो गया।"
+          }
+        }
+      }
+    },
+    "프롬프트를 복사했어요|Prompt copied" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プロンプトをコピーしました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已复制提示词"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已拷貝提示詞"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prompt kopiert"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prompt copié"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prompt copiato"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prompt copiado"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prompt copiado"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã sao chép lời nhắc"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prompt disalin"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คัดลอกพรอมต์แล้ว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "प्रॉम्प्ट कॉपी हो गया"
           }
         }
       }
@@ -248168,83 +249785,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "तारीख़ पट्टी दिखाने के लिए दबाएँ"
-          }
-        }
-      }
-    },
-    "한 번 더|Once more" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "もう一度"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "再来一次"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "再一次"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Noch einmal"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Encore une fois"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ancora una volta"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Una vez más"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mais uma vez"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Thêm lần nữa"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sekali lagi"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "อีกครั้ง"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "एक बार और"
           }
         }
       }

@@ -5,6 +5,7 @@
 // AIR1110A02/SEC1110A01 add scoped AI keys, per-user DEK encryption (v2), summaries, a remote MCP endpoint and OpenAPI.
 // SEC1110A02 requires registration (/register), adds a PIN, a per-master Durable Object (keys, queue, budgets, PIN tries),
 // per-route limits and encrypted metadata. AIR1110A03 adds OAuth 2.1 for MCP connectors and more AI actions.
+import { createSetup, readSetup } from "./setup.js";
 import { open, seal, sha256Hex, storageCryptoKey, vault } from "./crypto.js";
 import { bearer, json, limited, readBody, tooMany, writeAllowed } from "./http.js";
 import { allows, buryLegacyWrap, importLegacyKeys, keyring, keysRoute, pinResetRoute, pinRoute, registerRoute, resealLegacyWrap, resolveKey, sealInfo } from "./keys.js";
@@ -85,6 +86,11 @@ const ROUTES = {
     GET: ["master", (request, ctx) => store.readCommands(ctx)],
     DELETE: ["master", (request, ctx) => store.deleteCommands(ctx, query(request, "ids"))],
   },
+  "/polish": {
+    GET: ["read", (request, ctx) => store.readPolish(ctx)],
+    POST: ["master", withBody(store.savePolish)],
+    DELETE: ["master", (request, ctx) => store.deletePolish(ctx)],
+  },
   "/command/result": {
     POST: ["master", withBody(store.saveResults)],
     GET: ["read", (request, ctx) => store.readResults(ctx)],
@@ -97,6 +103,9 @@ const ROUTES = {
   "/pin": {
     POST: ["master", pinRoute],
     GET: ["master", pinRoute],
+  },
+  "/setup": {
+    POST: ["master", createSetup],
   },
   "/pin/reset": {
     POST: ["master", pinResetRoute],
@@ -140,11 +149,13 @@ async function adoptInfo(auth) {
   return { keyId: auth.keyId, info: await sealInfo(ring, auth.master, auth.hash, { scope: auth.scope, expiresAt: auth.expiresAt, source: "rest" }) };
 }
 
-async function authorized(request, env, url, route) {
-  const token = bearer(request);
+async function authorized(request, env, url, route, pathKey = null) {
+  const token = pathKey ?? bearer(request);
   const now = env.NOW?.() ?? Date.now(); // 시험에서 시계를 바꿀 수 있게 한다.
   const auth = token ? await resolveKey(env.PLANS, token, now) : null;
-  if (!auth) return unauthorized(url, "unauthorized", !!request.headers.get("authorization"));
+  if (!auth) return unauthorized(url, "unauthorized", !!request.headers.get("authorization") || !!pathKey);
+  // 주소에 넣는 키는 AI 연결 키만 된다. 주 키(앱·검색)는 주소에 두지 않는다(CLD1110A01).
+  if (pathKey && auth.kind !== "key") return json({ error: "forbidden" }, 403);
   const entry = route[request.method];
   if (!entry) return json({ error: "method_not_allowed" }, 405);
   const [need, run, part] = entry;
@@ -174,6 +185,9 @@ export async function handle(request, env) {
   return cors ? withCors(response) : response;
 }
 
+const MCP_KEY_PATH = /^\/mcp\/([A-Za-z0-9_-]{43})$/;
+const SETUP_PATH = /^\/s\/([A-Za-z0-9]{1,20})$/;
+
 async function route(request, env, url) {
   const now = env.NOW?.() ?? Date.now();
   const publicRoute = PUBLIC[url.pathname];
@@ -187,6 +201,11 @@ async function route(request, env, url) {
     case "/oauth/authorize": return authorizeRoute(request, env, now);
     case "/oauth/token": return tokenRoute(request, env, now);
     default: {
+      // Claude 맞춤 커넥터 「로그인 없음」용: `/mcp/<연결 키>`(CLD1110A01). 모바일에서 주소 하나만 붙여 넣는다.
+      const setup = SETUP_PATH.exec(url.pathname);
+      if (setup) return request.method === "GET" ? readSetup(env, setup[1], now) : json({ error: "method_not_allowed" }, 405);
+      const keyed = MCP_KEY_PATH.exec(url.pathname);
+      if (keyed) return authorized(request, env, url, ROUTES["/mcp"], keyed[1]);
       const entry = ROUTES[url.pathname];
       return entry ? authorized(request, env, url, entry) : json({ error: "not_found" }, 404);
     }

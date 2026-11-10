@@ -1,7 +1,13 @@
 {
- "ui": 3373,
+ "ui": 3393,
  "catalog": 461,
  "unread": [
+  {
+   "file": "TaptionPlan/UI/MemoAIEdits.swift",
+   "line": 47,
+   "ko": "_ mark: Mark",
+   "en": "MapHomeLanguage"
+  },
   {
    "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
    "line": 41,
@@ -337,6 +343,12 @@
    "line": 928,
    "ko": "FloorLabel.korean(floor)",
    "en": "FloorLabel.english(floor)"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeStickerEditor.swift",
+   "line": 345,
+   "ko": "aiMark",
+   "en": "language"
   },
   {
    "file": "TaptionPlan/UI/MapHomeStickerPicker.swift",

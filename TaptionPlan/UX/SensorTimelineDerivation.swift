@@ -85,7 +85,8 @@ enum SensorStayDerivation {
             readings: input.readings,
             healthEvidence: input.healthMovementEvidence,
             userTransitLocations: input.userTransitLocations,
-            registeredCarAudioNames: input.registeredCarAudioNames
+            registeredCarAudioNames: input.registeredCarAudioNames,
+            motionActivities: input.motionActivities
         )
         let inferredTravel = AppleDeviceGroundTruthEngine.mergingTravel(
             gpsSegments: gpsSegments,

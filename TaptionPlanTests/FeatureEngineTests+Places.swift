@@ -661,6 +661,61 @@ extension FeatureEngineTests {
         XCTAssertNotEqual(result.first?.mode, .subway, "\(result.first?.evidence ?? [])")
     }
 
+    /// 앱이 꺼져 3시간 반 표본이 없다가 CarPlay로 깨어난 퇴근(MOV1110A01, 2026-11-10 실기기).
+    /// 이동은 Core Motion에서 첫 표본으로 이어진 걷기·차의 시작부터이고, 그 앞은 이동이 아니다.
+    func testUnobservedGapBeforeACarTripIsNotTravel() {
+        let day = makeDate(2026, 8, 1, 0, 0)
+        func at(_ minute: Int) -> Date { day.addingTimeInterval(Double(minute) * 60) }
+        func geo(_ latitude: Double) -> GeoPoint {
+            GeoPoint(latitude: latitude, longitude: 129.8, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: 10)
+        }
+        let stays = [
+            PlaceStay(placeKey: "office", displayName: "회사", span: TimeSpan(start: at(600), end: at(1004)),
+                      confidence: .high, point: geo(37.50)),
+            PlaceStay(placeKey: "home", displayName: "집", span: TimeSpan(start: at(1245), end: at(1300)),
+                      confidence: .high, point: geo(37.60)),
+        ]
+        // 16:44~20:13에는 표본이 없다(앱이 꺼짐). 20:13 CarPlay와 함께 표본이 다시 온다.
+        let drive = stride(from: 1213, through: 1243, by: 2).map {
+            SensorReading(timestamp: at($0), point: geo(37.50 + Double($0 - 1200) / 500), speedMetersPerSecond: 15,
+                          motion: .automotive, motionConfidence: .high, carAudioRouteName: "CarPlay")
+        }
+        let motion = [
+            MotionActivityRecord(span: TimeSpan(start: at(1011), end: at(1016)), motion: .walking, confidence: .high),
+            MotionActivityRecord(span: TimeSpan(start: at(1132), end: at(1197)), motion: .stationary, confidence: .high),
+            MotionActivityRecord(span: TimeSpan(start: at(1197), end: at(1203)), motion: .walking, confidence: .high),
+            MotionActivityRecord(span: TimeSpan(start: at(1204), end: at(1250)), motion: .automotive, confidence: .high),
+        ]
+
+        let trimmed = MovementRouteBuilder().build(
+            stays: stays, readings: drive, registeredCarAudioNames: ["CarPlay"], motionActivities: motion
+        )
+        XCTAssertEqual(trimmed.count, 1)
+        XCTAssertEqual(trimmed.first?.span.start, at(1197), "starts at the walk to the car, not at the last office fix")
+        XCTAssertEqual(trimmed.first?.span.end, at(1245))
+        XCTAssertEqual(trimmed.first?.mode, .car)
+
+        // Core Motion도 그 시간을 남기지 않았으면 언제 떠났는지 모르니 예전처럼 둔다.
+        let unknown = MovementRouteBuilder().build(stays: stays, readings: drive, registeredCarAudioNames: ["CarPlay"])
+        XCTAssertEqual(unknown.first?.span.start, at(1004))
+    }
+
+    /// 꺼져 있다가 출발할 때 깨어난 공백만 미확인으로 둔다. 같은 자리로 돌아온 밤 공백은 그대로다(MOV1110A01).
+    func testUnobservedAppSpansOnlyBeforeATrip() {
+        let day = makeDate(2026, 8, 1, 0, 0)
+        func at(_ minute: Int) -> Date { day.addingTimeInterval(Double(minute) * 60) }
+        let readings = [at(600), at(1004), at(1213), at(1220)].map {
+            SensorReading(timestamp: $0, motion: .stationary, motionConfidence: .high, gpsAvailable: false)
+        }
+        let trip = TravelSegment(mode: .car, span: TimeSpan(start: at(1197), end: at(1245)), distanceMeters: 19_000, confidence: .high, evidence: [])
+        let whole = TimeSpan(start: at(0), end: at(1440))
+        XCTAssertEqual(UnobservedAppSpans.spans(readings: readings, travel: [trip], inside: whole), [TimeSpan(start: at(1004), end: at(1213))])
+        XCTAssertEqual(UnobservedAppSpans.spans(readings: readings, travel: [], inside: whole), [], "a quiet stretch with no trip after it is left alone")
+        let spans = [TimeSpan(start: at(1004), end: at(1213))]
+        XCTAssertTrue(UnobservedAppSpans.covers(spans, TimeSpan(start: at(1132), end: at(1197))), "a meal candidate inside the app-off time is dropped")
+        XCTAssertFalse(UnobservedAppSpans.covers(spans, TimeSpan(start: at(1200), end: at(1260))))
+    }
+
     func testShortSlowSegmentStaysWalking() {
         let base = makeDate(2026, 8, 4, 9, 24)
         let span = TimeSpan(start: base, end: base.addingTimeInterval(10 * 60))

@@ -339,6 +339,7 @@
 		A100000000000000000000F1 /* PlanBackupRouteFallbackEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000F1 /* PlanBackupRouteFallbackEngine.swift */; };
 		5B0000000000000000000B2A /* PlanSecurityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0000000000000000000B2F /* PlanSecurityService.swift */; };
 		B1A1110A0200000000000001 /* BackupPasswordVault.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1B1110A0200000000000001 /* BackupPasswordVault.swift */; };
+		B1A1110A0300000000000001 /* AssistantPINDerivation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1B1110A0300000000000001 /* AssistantPINDerivation.swift */; };
 		5B0000000000000000000B1A /* AppLockAndPIN.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0000000000000000000B1F /* AppLockAndPIN.swift */; };
 		5B00000000000000000000A4 /* TaptionBackupV2Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B00000000000000000000F4 /* TaptionBackupV2Tests.swift */; };
 		A1E0110A0400000000000002 /* StorageReviewFixTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E0110A0400000000000002 /* StorageReviewFixTests.swift */; };
@@ -505,6 +506,7 @@
 		A1A1110A0300000000000005 /* AssistantDataActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000005 /* AssistantDataActions.swift */; };
 		A1A1110A0300000000000006 /* AssistantActivityExtras.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000006 /* AssistantActivityExtras.swift */; };
 		A1A1110A0300000000000007 /* AssistantPINSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000007 /* AssistantPINSheet.swift */; };
+		A1M1110A0200000000000001 /* MemoAIEdits.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1M1110A0200000000000001 /* MemoAIEdits.swift */; };
 		A1A1110A0300000000000008 /* AssistantConnectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000008 /* AssistantConnectView.swift */; };
 		A1A1110A0300000000000009 /* FirstRunAIConnectPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000009 /* FirstRunAIConnectPage.swift */; };
 		A1A1110A0200000000000005 /* AssistantSafetyViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0200000000000005 /* AssistantSafetyViews.swift */; };
@@ -1029,6 +1031,7 @@
 		F100000000000000000000F1 /* PlanBackupRouteFallbackEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanBackupRouteFallbackEngine.swift; sourceTree = "<group>"; };
 		5B0000000000000000000B2F /* PlanSecurityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanSecurityService.swift; sourceTree = "<group>"; };
 		F1B1110A0200000000000001 /* BackupPasswordVault.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupPasswordVault.swift; sourceTree = "<group>"; };
+		F1B1110A0300000000000001 /* AssistantPINDerivation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantPINDerivation.swift; sourceTree = "<group>"; };
 		5B0000000000000000000B1F /* AppLockAndPIN.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLockAndPIN.swift; sourceTree = "<group>"; };
 		5B00000000000000000000F4 /* TaptionBackupV2Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionBackupV2Tests.swift; sourceTree = "<group>"; };
 		F1E0110A0400000000000002 /* StorageReviewFixTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageReviewFixTests.swift; sourceTree = "<group>"; };
@@ -1193,6 +1196,7 @@
 		F1A1110A0300000000000005 /* AssistantDataActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantDataActions.swift; sourceTree = "<group>"; };
 		F1A1110A0300000000000006 /* AssistantActivityExtras.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantActivityExtras.swift; sourceTree = "<group>"; };
 		F1A1110A0300000000000007 /* AssistantPINSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantPINSheet.swift; sourceTree = "<group>"; };
+		F1M1110A0200000000000001 /* MemoAIEdits.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoAIEdits.swift; sourceTree = "<group>"; };
 		F1A1110A0300000000000008 /* AssistantConnectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantConnectView.swift; sourceTree = "<group>"; };
 		F1A1110A0300000000000009 /* FirstRunAIConnectPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstRunAIConnectPage.swift; sourceTree = "<group>"; };
 		F1A1110A0200000000000005 /* AssistantSafetyViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantSafetyViews.swift; sourceTree = "<group>"; };
@@ -1689,6 +1693,7 @@
 				F1A1110A0300000000000005 /* AssistantDataActions.swift */,
 				F1A1110A0300000000000006 /* AssistantActivityExtras.swift */,
 				F1A1110A0300000000000007 /* AssistantPINSheet.swift */,
+				F1M1110A0200000000000001 /* MemoAIEdits.swift */,
 				F1A1110A0300000000000008 /* AssistantConnectView.swift */,
 				F1A1110A0300000000000009 /* FirstRunAIConnectPage.swift */,
 				F1A1110A0200000000000005 /* AssistantSafetyViews.swift */,
@@ -2004,6 +2009,7 @@
 				F100000000000000000000F1 /* PlanBackupRouteFallbackEngine.swift */,
 				5B0000000000000000000B2F /* PlanSecurityService.swift */,
 				F1B1110A0200000000000001 /* BackupPasswordVault.swift */,
+				F1B1110A0300000000000001 /* AssistantPINDerivation.swift */,
 				5B0000000000000000000B1F /* AppLockAndPIN.swift */,
 				F10150000000000000000001 /* SystemDiagnostics.swift */,
 				F1000000000000000000007C /* SubwayCatalog.swift */,
@@ -2613,6 +2619,7 @@
 				A1A1110A0300000000000005 /* AssistantDataActions.swift in Sources */,
 				A1A1110A0300000000000006 /* AssistantActivityExtras.swift in Sources */,
 				A1A1110A0300000000000007 /* AssistantPINSheet.swift in Sources */,
+				A1M1110A0200000000000001 /* MemoAIEdits.swift in Sources */,
 				A1A1110A0300000000000008 /* AssistantConnectView.swift in Sources */,
 				A1A1110A0300000000000009 /* FirstRunAIConnectPage.swift in Sources */,
 				A1A1110A0200000000000005 /* AssistantSafetyViews.swift in Sources */,
@@ -2852,6 +2859,7 @@
 				A100000000000000000000F1 /* PlanBackupRouteFallbackEngine.swift in Sources */,
 				5B0000000000000000000B2A /* PlanSecurityService.swift in Sources */,
 				B1A1110A0200000000000001 /* BackupPasswordVault.swift in Sources */,
+				B1A1110A0300000000000001 /* AssistantPINDerivation.swift in Sources */,
 				5B0000000000000000000B1A /* AppLockAndPIN.swift in Sources */,
 				A10150000000000000000001 /* SystemDiagnostics.swift in Sources */,
 				A1000000000000000000007C /* SubwayCatalog.swift in Sources */,

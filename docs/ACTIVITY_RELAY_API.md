@@ -8,7 +8,7 @@
 |---|---|
 | 주소 | `https://trip.bokkiyaw.com` |
 | 인증 | 모든 요청에 `Authorization: Bearer <키>`, 본문이 있으면 `Content-Type: application/json`. 키는 앱만 가진 주인 키(master, 43자, `POST /register`로 등록해야 받는다), AI에 주는 읽기·쓰기 연결 키(43자), OAuth 토큰(64자, 14장), 지도 검색 전용 설치 키(43자)가 있다(7·12장). 등록되지 않은 키는 모든 경로에서 `401 {"error":"unregistered"}` |
-| 연결 | 앱 메인 메뉴 → 연결 → 「AI 연결」(피클·ChatGPT·Claude·Gemini·기타). 연결 키 만들기와 OAuth 연결 코드는 6자리 PIN을 먼저 만들어야 한다(13장) |
+| 연결 | 앱 메인 메뉴 → 연결 → 「AI 연결」(피클·ChatGPT·Claude·Gemini·기타). 연결 키 만들기와 OAuth 연결 코드는 앱 비밀번호로 승인한다(13장, 서버에는 앱 비밀번호에서 만든 다른 6자리가 간다) |
 | 기록 공유 | 「보내지 않음」·「하루 요약」(기본)·「머문 곳 이름과 시각」. 기기에만 저장. 끄면 앱이 `DELETE /activity`를 한 번 부른다 |
 | 서버 보관 기간 | 1일·7일(기본)·30일. 마지막으로 올린 때부터 센다. 줄이면 앱이 `DELETE /activity` 뒤 새 기간으로 다시 올린다 |
 
@@ -30,6 +30,11 @@
 | `DELETE /command?ids=a,b` | 앱 | `ids`가 없으면 전부 | `204` |
 | `POST /command/result` | 앱 | `{"results":[{"id","status":"applied"\|"rejected","reason"?}]}` | `201` |
 | `GET /command/result` | AI·읽기 | 없음 | `200` `{"results":[{"id","status","reason"?,"at"}]}`, `204` 없음 |
+| `POST /polish` | 앱 | `{"format":"bokki-polish","version":1,"memos":[{"id","text","date"?}]}` 1~20개, 글 1~1,000자, id 겹침 없음. 목록 전체를 바꿔 쓴다(MEM1110A02) | `201` `{"ok":true,"count":n,"expiresInSeconds":604800}`, `422` `not_polish_list` |
+| `GET /polish` | AI·읽기 | 없음 | `200` 위 목록(모르는 칸은 버림), `204` 없음. AI는 다듬은 글을 `updateMemo`로 보낸다. MCP `get_polish_requests` |
+| `DELETE /polish` | 앱 | 없음 | `204`. 앱은 목록이 비면 지운다 |
+| `POST /setup` | 앱 | `{"text":"<연결 안내, 8,000자까지>"}` (SET1110A01) | `201` `{"ok":true,"code":"<10자>","url":"https://…/s/<코드>","expiresInSeconds":600}`, `422` `not_setup`, `429` `daily_setup_limit`(하루 30개) |
+| `GET /s/<코드>` | 누구나(코드를 아는 쪽) | 없음 | `200` 안내 글(`text/plain`, `no-store`), `404` 없음·끝남. 코드에서 HKDF로 만든 키로 잠그고 이름은 코드의 해시라 서버에 코드·키가 그대로 남지 않는다. 10분 또는 3번 읽으면 사라진다(링크 미리보기가 먼저 열어도 AI가 읽게) |
 | `GET /plan` · `POST /plan` | AI·읽기 · AI·쓰기 | 여행 JSON(`docs/TRIP_RELAY_API.md`) | 그대로. `DELETE /plan`은 앱만 |
 | `POST /register` | 새 키 자신(Authorization) | `{}` · `{"purpose":"search"}` (`pinVerifier`는 무시) | 12장 |
 | `POST /keys` · `GET /keys` · `DELETE /keys[?id=]` | 앱 | 7장(만들 때 `"pin"` 필요) | 7장 |
@@ -299,6 +304,7 @@ curl -s "https://trip.bokkiyaw.com/activity/summary?range=week" -H "Authorizatio
 
 Claude에 연결하기:
 
+- **claude.ai(웹·앱) 사용자 지정 커넥터 — 주소 하나(추천, CLD1110A01)**: 앱의 「AI 연결 → Claude → 연결 주소 만들기」가 앱 비밀번호를 받아 연결 키를 만들고 `https://trip.bokkiyaw.com/mcp/<연결 키>`를 복사한다. 설정 → 커넥터 → 「사용자 지정 커넥터 추가」에 붙여 넣고 인증은 「로그인 없음」. 서버는 이 주소의 키를 `Authorization: Bearer`와 같게 보되 AI 연결 키만 받고 주 키는 `403`이며, 이 주소에는 OAuth 안내(`WWW-Authenticate`)를 보내지 않는다. 주소가 곧 키이므로 앱의 연결 키 관리에서 끊으면 바로 막힌다.
 - **claude.ai(웹·앱) 사용자 지정 커넥터 — OAuth**: 설정 → 커넥터 → 「사용자 지정 커넥터 추가」, 주소 `https://trip.bokkiyaw.com/mcp`. Claude가 동적 등록 → 승인 화면을 연다. 앱의 「AI 연결 → Claude」에서 받은 8자 연결 코드와 PIN을 넣고 승인한다(14장). 고정 키는 넣지 않는다.
 - **Claude Code**: OAuth로 `claude mcp add --transport http taption https://trip.bokkiyaw.com/mcp` 뒤 `/mcp`에서 인증(돌아오는 주소는 `http://localhost:<포트>/…`라 등록할 수 있다). 또는 연결 키를 헤더로: `claude mcp add --transport http taption https://trip.bokkiyaw.com/mcp --header "Authorization: Bearer <키 43자>"`.
 - **Claude API**(Messages API MCP 커넥터): `mcp_servers: [{"type":"url","url":"https://trip.bokkiyaw.com/mcp","name":"taption","authorization_token":"<연결 키 43자>"}]`.
@@ -324,6 +330,7 @@ Claude에 연결하기:
 
 ## 13. PIN (SEC1110A02·SEC1110A03)
 
+- 사용자가 따로 PIN을 정하지 않는다(PIN1110A01, 대표 결정 2026-11-10). 앱은 앱 비밀번호 6자리(= 백업 비밀번호)를 기기에서 먼저 확인하고, `HMAC-SHA256(key = iCloud 키체인으로 동기화되는 32바이트 무작위 값, msg = "bokki-ai-pin-v1" 0x00 앱 비밀번호)`의 앞 4바이트를 10⁶으로 나눈 나머지 6자리를 PIN으로 보낸다. 서버 저장소·pepper가 새도 이 무작위 값 없이는 앱 비밀번호를 되찾을 수 없다. 앱 비밀번호를 바꾸면 앱이 `currentPin`으로 서버 PIN을 따라 바꾼다. OAuth 승인 화면에는 앱이 연결 코드 옆에 보여 주는 「승인 화면 PIN」을 넣는다. 예전에 따로 정한 PIN이 서버에 있으면 앱이 한 번만 그 PIN을 받아 바꾼다.
 - 앱은 6자리 PIN을 TLS로 서버에 보낸다. 서버는 PIN을 저장하지 않고 검증값만 둔다: 서버가 만든 무작위 salt 16바이트와 `HMAC-SHA256(key = Worker 비밀 PIN_PEPPER, msg = salt || PIN UTF-8)`. 이것을 사용자 DEK로 잠가 Durable Object에 둔다. 비교는 상수 시간. 응답에는 PIN을 넣지 않는다. (서버 PBKDF2는 Workers 운영 환경의 반복 수 상한과 무료 CPU 10ms 때문에 쓰지 않는다. 대표 결정.)
 - `POST /pin` (주인): 처음 정하기 `{"pin":"123456"}`. 이미 있으면 바꾸기 `{"pin":"<새 PIN>","currentPin":"<지금 PIN>"}`. `currentPin`도 같은 방법으로 확인하고 틀리면 잠금 수에 센다. 응답: `200 {"ok":true}`; PIN 형식 틀림 `422 pin_required`; 바꾸는데 `currentPin` 없음 `422 current_pin_required`; 지금 PIN 틀림 `403 wrong_pin`; 잠김 `423 pin_locked`.
 - `GET /pin` (주인) → `200 {"set":true|false,"locked":true|false,"retryAfter"?:초,"lockedUntil":ISO|null}`. `retryAfter`는 잠겼을 때만 있다. 앱은 이것으로 PIN이 있는지 확인한다(기기의 표시만 믿지 않는다).

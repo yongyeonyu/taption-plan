@@ -176,6 +176,9 @@ struct MapHomeTripImportSheet: View {
     @State private var copiedFor: TripImportAIApp?
     /// 피클을 누른 뒤 안내. 중계 구역에서 눌렀으면 그 아래에 보인다(TRP1110A08).
     @State private var pickleNote: (text: String, inRelay: Bool)?
+    /// 복사한 뒤 AI를 열기 전에 「붙여 넣어 주세요」를 보이는 창. PIN 시트가 떠 있으면 닫힌 뒤에 띄운다.
+    @State private var pasteGuide: TripPasteGuide?
+    @State private var pendingPasteGuide: TripPasteGuide?
     @State private var isResolving = false
     @State private var isApplying = false
     @State private var applyMessage: String?
@@ -211,7 +214,22 @@ struct MapHomeTripImportSheet: View {
             guard plan == nil, let initialText else { return }
             read(initialText)
         }
+        .alert(language.text("프롬프트를 복사했어요", "Prompt copied"), isPresented: Binding(
+            get: { pasteGuide != nil }, set: { if !$0 { pasteGuide = nil } }
+        ), presenting: pasteGuide) { guide in
+            Button(language.text("\(guide.name) 열기", "Open \(guide.name)")) { openURL(guide.url) }
+            Button(language.text("취소", "Cancel"), role: .cancel) {}
+        } message: { guide in
+            Text(guide.hasKey
+                 ? language.text("\(guide.name) 채팅창에 붙여 넣고 보내 주세요. 연결 키가 들어 있어 계획이 앱으로 바로 와요. 클립보드는 10분 뒤 지워져요.",
+                                 "Paste it into the \(guide.name) chat and send. It includes a connection key, so the plan comes straight to the app. The clipboard is cleared in 10 minutes.")
+                 : language.text("\(guide.name) 채팅창에 붙여 넣고 보내 주세요.", "Paste it into the \(guide.name) chat and send."))
+        }
         .sheet(item: $pinApp, onDismiss: {
+            if let pendingPasteGuide {
+                pasteGuide = pendingPasteGuide
+                self.pendingPasteGuide = nil
+            }
             // PIN을 넣지 않고 닫으면 키 없이 복사하고 연다.
             if let pending = pendingApp { finishOpen(pending.app, key: nil, inRelay: pending.inRelay) }
         }) { app in
@@ -402,7 +420,9 @@ struct MapHomeTripImportSheet: View {
         copiedFor = app
         guard app == .pickle else {
             let prefills = app.prefillsPrompt && key == nil
-            if let url = app.url(prompt: prefills ? text : nil) { openURL(url) }
+            guard let url = app.url(prompt: prefills ? text : nil) else { return }
+            // 프롬프트가 채워져 열리면 붙여 넣을 일이 없다.
+            if prefills { openURL(url) } else { showPasteGuide(TripPasteGuide(name: app.title(language), url: url, hasKey: key != nil)) }
             return
         }
         // 피클은 앱이 없으면 App Store를 연다(TRP1110A08).
@@ -413,7 +433,13 @@ struct MapHomeTripImportSheet: View {
                 ? language.text("프롬프트와 피클 연결 키를 복사했어요. 피클 채팅창에 붙여 넣으면 계획이 앱으로 바로 와요.", "The prompt and Pickle's connection key are copied. Paste them into the Pickle chat and the plan comes straight to the app.")
                 : language.text("프롬프트를 복사했어요. 피클에 붙여 넣고 보내 주세요.", "The prompt is copied. Paste it into Pickle and send.")
         pickleNote = (note, inRelay)
-        if let url = AssistantAIProvider.pickle.destination(installed: installed) { openURL(url) }
+        guard let url = AssistantAIProvider.pickle.destination(installed: installed) else { return }
+        // 피클이 없으면 붙여 넣을 곳이 없으니 App Store를 바로 연다.
+        if installed { showPasteGuide(TripPasteGuide(name: AssistantAIProvider.pickle.title(language), url: url, hasKey: key != nil)) } else { openURL(url) }
+    }
+
+    private func showPasteGuide(_ guide: TripPasteGuide) {
+        if pinApp != nil { pendingPasteGuide = guide } else { pasteGuide = guide }
     }
 
     /// 반영하지 않고 닫았던 계획도 서버에 남아 있으면(최대 3일) 다시 불러온다.
@@ -498,4 +524,11 @@ struct MapHomeTripImportSheet: View {
         }
         .buttonStyle(.plain)
     }
+}
+
+/// 여행 프롬프트를 복사한 뒤 열 AI.
+struct TripPasteGuide: Equatable {
+    var name: String
+    var url: URL
+    var hasKey: Bool
 }

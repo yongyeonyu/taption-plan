@@ -2,6 +2,16 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## EXE1110A01 · 대표 피드백 묶음: PIN 통일·이동 판정·메모 다듬기·Claude 주소·1회용 연결 코드 (2026-11-10 밤)
+
+- 실기기 iPhone 11 Pro 단위 시험 전체(오늘 22시 코드, 공유 잠금 사용): 2,447개, 건너뜀 24, 실패 1(`CategoryCacheBenchmarkTests.testStickmanActionCacheSpeedup` ×1.95, 기준 ×2.0, 알려진 부하 민감 시험). `build/validation/EXE1110A01/unit-iphone11.xcresult`.
+- 시뮬레이터(BOKKI-Preview): Assistant·FeatureEngine·CarAudio·BackupPasswordVault·UnobservedStay 시험 777개 실패 0(`fixes-sim-4`), 1회용 주소 뒤 Assistant 58개 실패 0(`fixes-sim-6`). 중간에 Assistant 시험 29개가 실패한 원인은 시험 호스트 앱이 실서버(배포 뒤 응답함)에 주 키 등록·바꾸기를 해 전역 「바꾸는 중」 표시를 잡은 것 → 시험 호스트에서는 실서버 등록을 하지 않게 고침(`AssistantRegistration.isTestHost`).
+- 서버: `npm test` 80개 통과(새 `test/polish.test.mjs`: 다듬기 목록, `/mcp/<키>`, 1회용 주소). `index.test.mjs`의 암호화 시험은 무작위 암호문에 「m1」이 우연히 들어가면 실패하는 기존 불안정 시험(4번 다시 돌려 모두 통과, 바꾸기 전 코드도 같음). 실서버 배포 2회(`relay-deploy-2.log`·`-3.log`).
+- 실서버 왕복: 다듬기 목록 올리기 201·AI 읽기 200·지우기 204, `/mcp/<연결 키>` 도구 목록·`get_polish_requests` 200, 주 키를 주소에 넣으면 403, PIN 초기화 뒤 그 주소 401(`relay-roundtrip-3.log`). 1회용 주소 읽기 200·200·200·404(`relay-setup-roundtrip.log`). 카카오: 대표가 키를 다시 넣은 뒤 「서울역」 200·결과 2건(`relay-kakao-2.log`), 처음 넣은 값은 빈 값이었다.
+- 이동 판정(MOV1110A01): 아이폰 18 원본 재생(`build/validation/MOV1110A01/replay-after-fix.log`)은 저장된 이동 구간을 다시 분류할 뿐 구간을 새로 만들지 않고, 원본 내보내기에 Core Motion 기록이 없어 고친 구간 시작(19:57)은 재생으로 확인하지 못했다. 단위 시험(`testUnobservedGapBeforeACarTripIsNotTravel`, `testUnobservedAppSpansOnlyBeforeATrip`)으로만 확인. 실기기에서 다시 계산된 뒤 16:43~19:57이 미확인인지 대표 확인 필요.
+- 설치: 아이폰 18 Pro Max에 Release 1.0 (306) 다시 설치(`release306-device18-build-2.log`), Watch Debug 빌드 성공. 기능은 기기에서 확인하지 않았다(Face ID·앱 비밀번호 창, 피클·Claude 실제 연결, 메모 다듬기 왕복).
+- l10n `check.py` 실패 0(긴 문구 3), 새 문구는 기계 번역. 구조 지표 통과.
+
 ## EXE1110A01 · 남은 항목 전부 진행 — 0단계 서버 배포·새 빌드 (2026-11-10)
 
 - 원인(아이폰 18 「PIN 만들기」 실패): 실서버가 1단계라 `/pin`이 404 `not_found`(배포 전 `curl` 확인). 앱은 이를 「잠시 뒤 다시」로 안내했다.

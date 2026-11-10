@@ -1,58 +1,54 @@
 import SwiftUI
 
-/// AI 연결 승인 PIN 입력·만들기·바꾸기(SEC1110A02). PIN 글자는 이 화면 상태에만 있고 닫으면 지운다.
-/// 열 때 서버에 PIN이 있는지 물어 화면을 맞추고, 잊었으면 여기서 지우고 새로 정한다(REV1110A06).
+/// AI 연결 승인(SEC1110A02). PIN은 앱 비밀번호 6자리로 묻는다(대표 결정 2026-11-10, PIN1110A01).
+/// 기기에서 앱 비밀번호를 먼저 확인하고, 서버에는 `AssistantPINDerivation`이 만든 다른 6자리만 보낸다.
+/// 예전에 따로 정한 AI PIN이 서버에 있으면 한 번만 그 PIN을 받아 옮긴다. 글자는 이 화면 상태에만 있고 닫으면 지운다.
 struct AssistantPINSheet: View {
-    enum Mode { case enter, create, change }
+    enum Mode { case enter, migrate }
 
     let language: MapHomeLanguage
     /// 무엇을 승인하는지 한 줄.
     var purpose: String?
-    /// 승인용으로 띄웠으면 PIN이 이미 있을 때 「바꾸기」가 아니라 「입력」으로 맞춘다.
-    var isGate = false
-    /// PIN을 받아 할 일. 실패 문구를 돌려주면 시트에 남고, nil이면 닫는다.
+    /// 서버에 맞춘 PIN(앱 비밀번호에서 만든 값)을 받아 할 일. 실패 문구를 돌려주면 시트에 남고, nil이면 닫는다.
     let onSubmit: @MainActor (String) async -> String?
 
     @Environment(\.dismiss) private var dismiss
-    @State private var mode: Mode
-    @State private var current = ""
-    @State private var pin = ""
-    @State private var confirmation = ""
+    @State private var mode: Mode = .enter
+    @State private var password = ""
+    @State private var oldPIN = ""
     @State private var message: String?
     @State private var isWorking = false
     @State private var isAskingReset = false
     @State private var work: Task<Void, Never>?
 
-    init(language: MapHomeLanguage, mode: Mode, purpose: String? = nil, isGate: Bool = false, onSubmit: @escaping @MainActor (String) async -> String?) {
+    init(language: MapHomeLanguage, purpose: String? = nil, onSubmit: @escaping @MainActor (String) async -> String?) {
         self.language = language
         self.purpose = purpose
-        self.isGate = isGate
         self.onSubmit = onSubmit
-        _mode = State(initialValue: mode)
     }
 
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    if mode == .change { field(language.text("지금 PIN", "Current PIN"), $current) }
-                    field(mode == .enter ? language.text("PIN 6자리", "6-digit PIN") : language.text("새 PIN 6자리", "New 6-digit PIN"), $pin)
-                    if mode != .enter { field(language.text("한 번 더", "Once more"), $confirmation) }
+                    if AssistantAppPassword.isSet() {
+                        field(language.text("앱 비밀번호 6자리", "6-digit app password"), $password)
+                        if mode == .migrate { field(language.text("예전 AI 연결 PIN 6자리", "Old 6-digit AI PIN"), $oldPIN) }
+                    } else {
+                        Text(language.text("먼저 메뉴에서 앱 비밀번호(6자리)를 만들어 주세요.", "Create an app password (6 digits) in the menu first."))
+                    }
                     if let message { Text(message).font(.footnote).foregroundStyle(.red) }
                 } footer: {
-                    Text(purpose ?? language.text(
-                        "AI 연결을 만들거나 승인할 때 이 PIN을 물어요. PIN은 기기에 저장하지 않아요.",
-                        "This PIN is asked whenever you create or approve an AI connection. The PIN itself is not stored."
-                    ))
+                    Text([purpose, footnote].compactMap { $0 }.joined(separator: "\n"))
                 }
-                if mode != .create {
+                if mode == .migrate {
                     Section {
-                        Button(language.text("PIN을 잊었어요", "I forgot my PIN"), role: .destructive) { isAskingReset = true }
+                        Button(language.text("예전 PIN을 잊었어요", "I forgot the old PIN"), role: .destructive) { isAskingReset = true }
                     }
                 }
             }
             .disabled(isWorking)
-            .navigationTitle(title)
+            .navigationTitle(language.text("앱 비밀번호", "App password"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button(language.text("취소", "Cancel")) { close() } }
@@ -62,9 +58,8 @@ struct AssistantPINSheet: View {
             }
         }
         .presentationDetents([.medium])
-        .task { await syncMode() }
         .assistantPINReset(isPresented: $isAskingReset, language: language) { erased in
-            if erased { show(.create) }
+            if erased { show(.enter) }
             message = erased ? AssistantPINText.resetDone(language) : AssistantPINText.resetFailed(language)
         }
         .onDisappear {
@@ -73,16 +68,14 @@ struct AssistantPINSheet: View {
         }
     }
 
-    private var title: String {
-        switch mode {
-        case .enter: language.text("PIN 입력", "Enter PIN")
-        case .create: language.text("PIN 만들기", "Create PIN")
-        case .change: language.text("PIN 바꾸기", "Change PIN")
-        }
+    private var footnote: String {
+        mode == .migrate
+            ? language.text("예전에 따로 정한 AI PIN을 한 번만 넣으면 앱 비밀번호로 바꿔요.", "Enter the AI PIN you set before once, and it switches to your app password.")
+            : language.text("메뉴의 앱 비밀번호와 같아요. AI 서버에는 비밀번호 대신 따로 만든 값만 보내요.", "Same as your app password in the menu. The AI server only gets a separate value, never the password.")
     }
 
     private var isComplete: Bool {
-        AssistantPIN.isValid(pin) && (mode == .enter || AssistantPIN.isValid(confirmation)) && (mode != .change || AssistantPIN.isValid(current))
+        PlanPINVerifier.isValid(password) && (mode == .enter || AssistantPIN.isValid(oldPIN))
     }
 
     private func field(_ title: String, _ text: Binding<String>) -> some View {
@@ -95,54 +88,74 @@ struct AssistantPINSheet: View {
             }
     }
 
-    /// 서버에 PIN이 없는데 입력을 묻거나, 있는데 만들기를 보이는 막다른 길을 없앤다.
-    private func syncMode() async {
-        guard let status = await AssistantPINStore.status() else { return }
-        show(Self.mode(mode, isGate: isGate, serverHasPIN: status.isSet))
-        if status.isLocked { message = AssistantServerRefusal(kind: .locked, retryAfterSeconds: status.retryAfterSeconds).text(language) }
-    }
-
-    static func mode(_ mode: Mode, isGate: Bool, serverHasPIN: Bool) -> Mode {
-        guard serverHasPIN else { return .create }
-        return mode == .create ? (isGate ? .enter : .change) : mode
-    }
-
     private func show(_ next: Mode) {
         guard next != mode else { return }
         mode = next
-        clear()
+        oldPIN = ""
     }
 
     private func submit() {
-        guard mode == .enter || pin == confirmation else {
-            message = language.text("두 PIN이 달라요.", "The PINs don't match.")
+        switch AssistantAppPassword.verify(password) {
+        case .matched: break
+        case .wrong:
+            password = ""
+            message = language.text("앱 비밀번호가 맞지 않아요.", "Wrong app password.")
+            return
+        case let .blocked(retryAfter):
+            message = language.text("여러 번 틀려 \(max(1, Int(retryAfter.rounded(.up))))초 동안 막혔어요.", "Too many tries. Wait \(max(1, Int(retryAfter.rounded(.up)))) s.")
+            return
+        case .notSet:
+            message = language.text("먼저 메뉴에서 앱 비밀번호를 만들어 주세요.", "Create an app password in the menu first.")
+            return
+        }
+        guard let derived = AssistantPINDerivation.pin(appPassword: password) else {
+            message = language.text("기기에 값을 저장하지 못했어요. 잠시 뒤 다시 해 주세요.", "Couldn't save on this device. Try again in a moment.")
             return
         }
         isWorking = true
-        let entered = pin, old = current, submitted = mode
+        let old = mode == .migrate ? oldPIN : nil
         work = Task { @MainActor in
             defer { isWorking = false }
-            if submitted != .enter {
-                switch await AssistantPINStore.set(pin: entered, current: submitted == .change ? old : nil) {
-                case .saved: break
-                case let .refused(refusal):
-                    // 서버에 이미 PIN이 있으면 지금 PIN을 넣는 칸을 보인다.
-                    if refusal.kind == .currentPINRequired { show(isGate ? .enter : .change) }
-                    message = refusal.text(language)
-                    return
-                case .invalid, .failed:
-                    message = language.text("PIN을 저장하지 못했어요. 잠시 뒤 다시 해 주세요.", "Couldn't save the PIN. Try again in a moment.")
-                    return
-                }
+            if let failure = await Self.align(derived, old: old, language: language) {
+                if case .needsOldPIN = failure { show(.migrate) }
+                message = failure.text(language)
+                return
             }
             guard !Task.isCancelled else { return }
-            if let failure = await onSubmit(entered) {
-                pin = ""
-                await syncMode()
+            if let failure = await onSubmit(derived) {
                 message = failure
                 return
             }
             close()
+        }
+    }
+
+    enum AlignFailure: Equatable {
+        case needsOldPIN
+        case refused(AssistantServerRefusal)
+        case failed
+
+        func text(_ language: MapHomeLanguage) -> String {
+            switch self {
+            case .needsOldPIN:
+                language.text("예전에 따로 정한 AI PIN이 있어요. 그 PIN을 한 번만 넣어 주세요.", "An AI PIN you set before is on the server. Enter it once.")
+            case let .refused(refusal): refusal.text(language)
+            case .failed: language.text("AI 서버에 연결하지 못했어요. 잠시 뒤 다시 해 주세요.", "Couldn't reach the AI server. Try again in a moment.")
+            }
+        }
+    }
+
+    /// 서버 PIN을 앱 비밀번호에서 만든 값으로 맞춘다. 없으면 만들고, 있으면 같은 값을 다시 넣어 맞는지 본다.
+    /// 다르면(예전에 따로 정한 PIN) 예전 PIN을 받아 바꾼다.
+    static func align(_ derived: String, old: String?, language: MapHomeLanguage, env: AssistantRegistration.Environment = .live) async -> AlignFailure? {
+        guard await AssistantRegistration.prepare(env), let status = await AssistantPINStore.status(env: env) else { return .failed }
+        let current: String? = status.isSet ? (old ?? derived) : nil
+        switch await AssistantPINStore.set(pin: derived, current: current, env: env) {
+        case .saved: return nil
+        case let .refused(refusal):
+            if refusal.kind == .wrongPIN, old == nil { return .needsOldPIN }
+            return .refused(refusal)
+        case .invalid, .failed: return .failed
         }
     }
 
@@ -153,16 +166,14 @@ struct AssistantPINSheet: View {
     }
 
     private func clear() {
-        current = ""
-        pin = ""
-        confirmation = ""
+        password = ""
+        oldPIN = ""
     }
 }
 
-/// PIN이 없으면 만들기, 있으면 입력으로 띄운다.
 extension AssistantPINSheet {
     @MainActor
     static func gate(language: MapHomeLanguage, purpose: String? = nil, onSubmit: @escaping @MainActor (String) async -> String?) -> Self {
-        Self(language: language, mode: AssistantPINStore.isSet() ? .enter : .create, purpose: purpose, isGate: true, onSubmit: onSubmit)
+        Self(language: language, purpose: purpose, onSubmit: onSubmit)
     }
 }

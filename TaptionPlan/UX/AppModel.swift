@@ -881,8 +881,28 @@ final class AppModel {
 
     func configureBackupPIN(_ pin: String) throws {
         guard let securityService else { throw PlanSecurityError.invalidCredential }
+        let previous = securityService.rememberedPassword
         try securityService.setPIN(pin)
         securityStatus = securityService.status
+        // AI 연결 승인 PIN은 앱 비밀번호에서 만든다(PIN1110A01). 서버 PIN도 새 값으로 바꾼다.
+        if let previous, previous != pin { Task { await AssistantPINStore.follow(appPassword: pin, previous: previous) } }
+    }
+
+    /// AI 화면이 앱 비밀번호를 확인할 수 있게 한다. 틀린 횟수·잠시 막기는 앱 비밀번호와 같이 센다.
+    func connectAssistantAppPassword() {
+        AssistantAppPassword.isSet = { [weak self] in self?.securityService?.hasPIN ?? false }
+        AssistantAppPassword.verify = { [weak self] password in
+            guard let self, let securityService = self.securityService, securityService.hasPIN else { return .notSet }
+            defer { self.securityStatus = securityService.status }
+            do {
+                try securityService.verifyPIN(password, unlocking: false)
+                return .matched
+            } catch let PlanSecurityError.tooManyAttempts(retryAfter) {
+                return .blocked(retryAfter: retryAfter)
+            } catch {
+                return .wrong
+            }
+        }
     }
 
     func configureAppLock(_ settings: PlanAppLockSettings) throws {

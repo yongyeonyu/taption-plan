@@ -279,7 +279,7 @@ extension AppModel {
         )
     }
 
-    private func assistantMemo(_ memoID: String) -> ActionMemo? {
+    func assistantMemo(_ memoID: String) -> ActionMemo? {
         guard let id = UUID(uuidString: memoID), !isMemoDraft(id) else { return nil }
         return snapshot.memos.first { $0.id == id }
     }

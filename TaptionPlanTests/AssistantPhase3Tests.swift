@@ -588,6 +588,70 @@ final class AssistantPhase3Tests: XCTestCase {
         XCTAssertTrue(AssistantBubbleStore.load(from: file).isEmpty)
     }
 
+    /// 연결된 AI에게 맡긴 메모는 목록으로 올리고, AI가 고쳐 보내면 빠진다(MEM1110A02).
+    func testPolishQueueUploadsTheListAndEmptiesIt() async throws {
+        let store = defaults()
+        store.set(["k1": "피클"], forKey: AssistantKeyLabels.labelsKey)
+        XCTAssertTrue(MemoPolishQueue.hasConnection(store))
+        let id = UUID()
+        XCTAssertFalse(MemoPolishQueue.enqueue(id, text: "  ", day: nil, defaults: store), "empty text is not queued")
+        XCTAssertTrue(MemoPolishQueue.enqueue(id, text: "회의 잘끝남", day: nil, defaults: store))
+        XCTAssertTrue(MemoPolishQueue.enqueue(id, text: "회의 잘 끝남", day: nil, defaults: store))
+        XCTAssertEqual(MemoPolishQueue.items(store).map(\.text), ["회의 잘 끝남"], "the same memo is replaced, not duplicated")
+
+        let env = environment(AssistantMemorySecrets([.master: oldMaster]), store)
+        await MemoPolishQueue.upload(env: env)
+        let sent = try XCTUnwrap(Phase3RelayStub.requests.last)
+        XCTAssertEqual(sent.summary, "POST /polish")
+        let body = try XCTUnwrap(JSONSerialization.jsonObject(with: sent.body) as? [String: Any])
+        XCTAssertEqual(body["format"] as? String, "bokki-polish")
+        XCTAssertEqual((body["memos"] as? [[String: String]])?.first?["id"], id.uuidString)
+        XCTAssertFalse(store.bool(forKey: MemoPolishQueue.needsUploadKey))
+
+        MemoPolishQueue.resolve(id, defaults: store)
+        await MemoPolishQueue.upload(env: env)
+        XCTAssertEqual(Phase3RelayStub.requests.last?.summary, "DELETE /polish", "an empty list deletes the server copy")
+    }
+
+    /// 웹 요청 AI에는 키가 든 안내 대신 1회용 주소만 복사한다(SET1110A01).
+    func testSetupLinkReplacesTheKeyInTheClipboardText() async throws {
+        let store = defaults()
+        let env = environment(AssistantMemorySecrets([.master: oldMaster]), store)
+        Phase3RelayStub.body = #"{"ok":true,"code":"ABCDEFGHJK","url":"https://\#(host)/s/ABCDEFGHJK","expiresInSeconds":600}"#
+        let made = await TripRelay.setupLinkText(for: "secret setup with key", env: env)
+        let text = try XCTUnwrap(made)
+        XCTAssertTrue(text.contains("https://\(host)/s/ABCDEFGHJK"))
+        XCTAssertFalse(text.contains("secret"), "the key-bearing text is not in the clipboard text")
+        let sent = try XCTUnwrap(Phase3RelayStub.requests.last)
+        XCTAssertEqual(sent.summary, "POST /setup")
+        XCTAssertEqual(sent.token, oldMaster)
+
+        // 다른 곳을 가리키는 주소는 믿지 않고 전체 안내로 돌아간다.
+        Phase3RelayStub.body = #"{"url":"https://evil.example/s/ABCDEFGHJK"}"#
+        let refused = await TripRelay.setupLinkText(for: "x", env: env)
+        XCTAssertNil(refused)
+    }
+
+    func testAIEditMarkShowsOnlyWhileTheTextIsTheAIText() {
+        let store = defaults()
+        let id = UUID()
+        MemoAIEditMarks.set(id, by: "피클", text: "다듬은 글", defaults: store)
+        XCTAssertEqual(MemoAIEditMarks.mark(for: id, text: "다듬은 글", defaults: store)?.by, "피클")
+        XCTAssertNil(MemoAIEditMarks.mark(for: id, text: "내가 또 고침", defaults: store), "a later edit by the user hides the mark")
+        XCTAssertEqual(MemoAIEditMarks.text(.init(by: "피클", at: .now, text: ""), language: .korean), "AI가 수정함 · 피클")
+        MemoAIEditMarks.clear(id, defaults: store)
+        XCTAssertNil(MemoAIEditMarks.all(store)[id.uuidString])
+    }
+
+    func testPasteGuideNamesWhereToPaste() {
+        let korean = MapHomeLanguage.korean
+        XCTAssertTrue(AssistantPasteGuide.message(.pickle, korean).contains("피클 채팅창에 붙여 넣고"))
+        XCTAssertTrue(AssistantPasteGuide.message(.gemini, korean).contains("settings.json"))
+        XCTAssertTrue(AssistantPasteGuide.message(.other, korean).contains("웹 요청"))
+        XCTAssertTrue(AssistantPasteGuide.message(.claude, korean).contains("로그인 없음"), "Claude gets the one-link connector steps")
+        XCTAssertEqual(TripRelay.mcpKeyURL(host: "relay.example.com", key: "K"), "https://relay.example.com/mcp/K")
+    }
+
     func testCurrentPINRequiredIsNotPINNotSet() {
         let refusal = AssistantServerRefusal.parse(status: 422, data: Data(#"{"error":"current_pin_required"}"#.utf8))
         XCTAssertEqual(refusal?.kind, .currentPINRequired)

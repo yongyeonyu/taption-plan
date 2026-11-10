@@ -365,10 +365,32 @@ final class AssistantReviewFixTests: XCTestCase {
         XCTAssertTrue(AssistantPINStore.isSet(store), "the local flag follows the server")
         XCTAssertEqual(Phase3RelayStub.requests.map(\.summary), ["GET /pin"])
 
-        XCTAssertEqual(AssistantPINSheet.mode(.create, isGate: true, serverHasPIN: true), .enter)
-        XCTAssertEqual(AssistantPINSheet.mode(.create, isGate: false, serverHasPIN: true), .change)
-        XCTAssertEqual(AssistantPINSheet.mode(.enter, isGate: true, serverHasPIN: false), .create)
-        XCTAssertEqual(AssistantPINSheet.mode(.change, isGate: false, serverHasPIN: true), .change)
+    }
+
+    /// 승인 PIN은 앱 비밀번호에서 만들고, 서버에는 그 비밀번호가 아닌 값이 간다(PIN1110A01).
+    func testApprovalPINIsDerivedFromTheAppPassword() {
+        let salt = Data(repeating: 7, count: 32), other = Data(repeating: 8, count: 32)
+        let pin = AssistantPINDerivation.pin(appPassword: "135790", salt: salt)
+        XCTAssertTrue(AssistantPIN.isValid(pin), "six digits, so the server contract is unchanged")
+        XCTAssertEqual(pin, AssistantPINDerivation.pin(appPassword: "135790", salt: salt), "same password and salt give the same PIN")
+        XCTAssertNotEqual(pin, "135790", "the app password itself is never the server PIN")
+        XCTAssertNotEqual(AssistantPINDerivation.pin(appPassword: "135791", salt: salt), pin)
+        XCTAssertNotEqual(AssistantPINDerivation.pin(appPassword: "135790", salt: other), pin, "without the synced salt the PIN can't be matched to the password")
+    }
+
+    @MainActor
+    func testApprovalPINSaltIsMadeOnceAndKept() {
+        final class MemoryStore: BackupPasswordStore {
+            var value: String?
+            func read() throws -> String? { value }
+            func write(_ password: String) throws { value = password }
+            func delete() throws { value = nil }
+        }
+        let store = MemoryStore()
+        let first = AssistantPINDerivation.salt(store: store)
+        XCTAssertEqual(first?.count, 32)
+        XCTAssertEqual(AssistantPINDerivation.salt(store: store), first, "the stored salt is reused")
+        XCTAssertEqual(AssistantPINDerivation.pin(appPassword: "246801", store: store), first.map { AssistantPINDerivation.pin(appPassword: "246801", salt: $0) })
     }
 
     func testForgottenPINResetCutsConnectionsOnlyAfterOwnerAuthentication() async throws {
@@ -521,9 +543,13 @@ final class AssistantReviewFixTests: XCTestCase {
     }
 
     func testBubbleWidthUsesTheWindowNotTheScreen() {
-        let narrow = AssistantBubbleLayout.width(String(repeating: "가", count: 80), size: 11, container: 300)
-        XCTAssertEqual(narrow, 300 * 0.6 - 16, "capped at 60% of the given window width")
+        let long = AssistantBubbleLayout.width(String(repeating: "가", count: 80), size: 11, container: 300)
+        XCTAssertEqual(long, 300 * 0.6 - 16, "80 chars don't fit five lines at 40%, so it widens up to 60% of the window")
         XCTAssertLessThan(AssistantBubbleLayout.width("가", size: 11, container: 300), 40)
+        // 한 줄에 다 들어가지 않는 중간 길이 글은 40%에서 접혀 아래로 늘어난다.
+        let mid = AssistantBubbleLayout.width("대표님, 비야 연결 성공했어요! 오늘도 고생 많으셨습니다.", size: 11, container: 430)
+        XCTAssertEqual(mid, 430 * 0.4 - 16, "wraps at 40% instead of stretching sideways")
+        XCTAssertEqual(AssistantBubbleLayout.maxLines, 5)
     }
 
     // MARK: - 주소 거르기 (16)
