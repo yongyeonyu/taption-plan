@@ -15170,6 +15170,83 @@
         }
       }
     },
+    "{0} {1}을 가계부에 넣었어요.|Added {0} {1} to the ledger." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} {1}を家計簿に追加しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已将 {0} {1} 记入记账本。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已將 {0} {1} 記入記帳本。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} {1} zum Haushaltsbuch hinzugefügt."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} {1} ajouté au budget."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} {1} aggiunto alle spese."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} {1} añadido a los gastos."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} {1} adicionado às finanças."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã thêm {0} {1} vào sổ chi tiêu."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} {1} ditambahkan ke catatan keuangan."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เพิ่ม {0} {1} ลงบัญชีแล้ว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} {1} खर्च खाते में जोड़ा गया।"
+          }
+        }
+      }
+    },
     "{0} {1}일|{0} {1}" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -146220,6 +146297,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "भुगतान संदेश"
+          }
+        }
+      }
+    },
+    "결제 문자를 읽지 못했어요. 가계부에서 직접 넣어 주세요.|Couldn't read the payment text. Add it in the ledger yourself." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "決済メッセージを読み取れませんでした。家計簿で直接入力してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法识别支付短信。请在记账本中手动添加。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法辨識付款簡訊。請在記帳本中手動新增。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Zahlungs-SMS konnte nicht gelesen werden. Trage sie im Haushaltsbuch selbst ein."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de lire le SMS de paiement. Ajoutez-le vous-même dans le budget."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossibile leggere l’SMS di pagamento. Aggiungilo tu nelle spese."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudo leer el SMS de pago. Añádelo tú en los gastos."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível ler o SMS de pagamento. Adicione você mesmo nas finanças."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không đọc được tin nhắn thanh toán. Hãy tự thêm trong sổ chi tiêu."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SMS pembayaran tidak terbaca. Tambahkan sendiri di catatan keuangan."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "อ่านข้อความชำระเงินไม่ได้ เพิ่มเองในบัญชีรายรับรายจ่าย"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "भुगतान संदेश पढ़ा नहीं जा सका। खर्च खाते में खुद जोड़ें।"
           }
         }
       }

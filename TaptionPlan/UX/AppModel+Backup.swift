@@ -377,6 +377,9 @@ extension AppModel {
         UserDefaults.standard.removeObject(
             forKey: Self.calendarAutomaticRefreshKey
         )
+        // 가계부는 같은 SQLite에 있다. 메모리 장부를 비워야 옛 기록이 다시 쓰이지 않는다(리뷰 지적).
+        LedgerBook.shared.reset()
+        UserDefaults.standard.removeObject(forKey: LedgerBook.manualRatesKey)
         liveMergeCacheKey = nil
         liveMergeCacheValue = []
         sensorRefreshFingerprints.removeAll()

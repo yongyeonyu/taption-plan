@@ -90,6 +90,44 @@ final class LedgerTests: XCTestCase {
         XCTAssertEqual(outcome?.ledger, 1)
         XCTAssertNotNil(outcome?.entries.first?.delta.ledgerEntryID)
         XCTAssertEqual(outcome?.notice(.korean)?.contains("가계부 1개"), true)
+
+        // 되돌리기: 같은 장부에서 더하고 되돌리면 지워지고, 사용자가 고친 뒤면 되돌리지 않는다.
+        var preferences = AssistantPreferenceStore.test(defaults)
+        let book = LedgerBook(store: { nil })
+        preferences.ledger = book
+        func log(_ result: AssistantEditResult) -> AssistantLogEntry {
+            var delta = AssistantEditDelta.difference(from: model.snapshot, to: model.snapshot, actualIDs: [])
+            delta.ledgerEntryID = result.ledgerEntryID
+            delta.ledgerEntry = result.ledgerEntry
+            return AssistantLogEntry(commandID: "u", kind: .addExpense, appliedAt: .now, before: "", after: result.after, delta: delta)
+        }
+        let plain = await model.applyAssistantAction(.addExpense(LedgerEntry(occurredAt: at(9), amount: 4_500, title: "커피")), preferences: preferences)
+        XCTAssertEqual(book.entries.count, 1)
+        let undone = await model.undoAssistantEntry(log(plain), preferences: preferences)
+        XCTAssertTrue(undone)
+        XCTAssertTrue(book.entries.isEmpty, "undo removes the AI entry")
+
+        let edited = await model.applyAssistantAction(.addExpense(LedgerEntry(occurredAt: at(10), amount: 9_000, title: "점심")), preferences: preferences)
+        var changed = try XCTUnwrap(book.entries.first)
+        changed.amount = 9_500
+        await book.save(changed)
+        let refused = await model.undoAssistantEntry(log(edited), preferences: preferences)
+        XCTAssertFalse(refused, "an entry the user edited afterwards is not deleted")
+        XCTAssertEqual(book.entries.first?.amount, 9_500)
+    }
+
+    func testPromoLinesLocalePrefillAndResetDuringLoad() async {
+        let now = at(20)
+        let promo = LedgerMessageParser.parse("현대카드 승인 홍*동 15,000원 일시불 11/10 13:00 김밥천국 누적300,000원 청구할인 혜택 이벤트", now: now, calendar: calendar)
+        XCTAssertEqual(promo?.amount, 15_000, "a payment with a trailing promo line is still a payment")
+        XCTAssertNil(LedgerMessageParser.parse("[광고] 신한카드 승인 이벤트 10,000원", now: now, calendar: calendar))
+        let german = Locale(identifier: "de_DE")
+        XCTAssertEqual(LedgerNumber.parse(LedgerEntryForm.plain(12.5, locale: german), locale: german), 12.5, "the prefilled amount reads back the same")
+        XCTAssertEqual(LedgerNumber.parse(LedgerEntryForm.plain(12_000, locale: german), locale: german), 12_000)
+        let book = LedgerBook(store: { nil })
+        await book.save(LedgerEntry(occurredAt: at(9), amount: 1, title: "old"))
+        book.reset()
+        XCTAssertTrue(book.entries.isEmpty)
     }
 
     func testCardMessagesParse() throws {

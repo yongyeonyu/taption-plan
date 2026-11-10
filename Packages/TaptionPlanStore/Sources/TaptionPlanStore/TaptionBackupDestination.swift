@@ -508,8 +508,11 @@ public struct TaptionICloudDriveBackupDestination: TaptionBackupDestination {
         }
         // 다른 기기가 올리고 이 기기에 아직 내려오지 않은 파일은 iCloud 목록에만 있다. 그 주소로 지운다(BKS1111A03:
         // 전에는 아무것도 지우지 않고 성공으로 끝났다).
-        guard !removed, let item = await discoveredItems().first(where: { $0.url.lastPathComponent == name }) else { return }
-        try fileSystem.coordinatedRemove(item.url)
+        guard !removed else { return }
+        let cache = TaptionDiscoveryCache.shared
+        if await cache.isStale() { await cache.store(await discoveredItems()) }
+        guard let url = await cache.take(name) else { return }
+        try fileSystem.coordinatedRemove(url)
     }
 
     public func cleanupStaleUploads() async {
@@ -528,4 +531,20 @@ public struct TaptionICloudDriveBackupDestination: TaptionBackupDestination {
         let names = (try? FileManager.default.contentsOfDirectory(atPath: legacy.path)) ?? []
         return names.filter { $0.hasSuffix("." + TaptionBackupMonth.fileExtension) || Self.realName(fromPlaceholder: $0) != nil }.count
     }
+}
+
+/// 여러 파일을 잇달아 지울 때 iCloud 메타데이터 수집(최대 5초)을 한 번만 하려고 잠깐(10초) 기억한다.
+actor TaptionDiscoveryCache {
+    static let shared = TaptionDiscoveryCache()
+    private var urls: [String: URL] = [:]
+    private var gatheredAt = Date.distantPast
+
+    func isStale(now: Date = .now) -> Bool { now.timeIntervalSince(gatheredAt) > 10 }
+
+    func store(_ items: [TaptionUbiquityItem], now: Date = .now) {
+        urls = Dictionary(items.map { ($0.url.lastPathComponent, $0.url) }, uniquingKeysWith: { first, _ in first })
+        gatheredAt = now
+    }
+
+    func take(_ name: String) -> URL? { urls.removeValue(forKey: name) }
 }

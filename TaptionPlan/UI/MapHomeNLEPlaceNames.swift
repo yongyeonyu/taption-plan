@@ -33,8 +33,6 @@ enum NLENearbyPlaceNames {
     private static func nearestName(to point: GeoPoint) async -> String? {
         let center = CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude)
         let location = CLLocation(latitude: point.latitude, longitude: point.longitude)
-        // 국내는 카카오 식당·카페가 Apple 지도보다 촘촘하다(TAU1110A01). 이름은 화면에만 쓰고 기록에는 쓰지 않는다.
-        if let name = await MapHomeKakaoSearch.nearestStayName(at: center) { return name }
         let request = MKLocalPointsOfInterestRequest(center: center, radius: searchRadiusMeters)
         if let response = try? await MKLocalSearch(request: request).start() {
             let nearest = response.mapItems
@@ -45,6 +43,9 @@ enum NLENearbyPlaceNames {
                 }
             if let name = nearest?.name { return name }
         }
+        // Apple 지도에 가까운 장소가 없을 때만 국내 카카오 식당·카페를 본다(TAU1110A01). 먼저 보면 1층 카페가
+        // 사무실·병원 이름을 덮는다(리뷰 지적). 이름은 화면에만 쓰고 기록에는 쓰지 않는다.
+        if let name = await MapHomeKakaoSearch.nearestStayName(at: center) { return name }
         let placemark = try? await CLGeocoder().reverseGeocodeLocation(location).first
         return placemark?.name ?? placemark?.subLocality ?? placemark?.locality
     }

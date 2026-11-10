@@ -1,5 +1,5 @@
 {
- "ui": 3541,
+ "ui": 3543,
  "catalog": 461,
  "unread": [
   {
@@ -76,13 +76,13 @@
   },
   {
    "file": "TaptionPlan/Core/LedgerCore.swift",
-   "line": 314,
+   "line": 337,
    "ko": "_ amount: Double",
    "en": "String = \"KRW\""
   },
   {
    "file": "TaptionPlan/Core/LedgerIntents.swift",
-   "line": 21,
+   "line": 24,
    "ko": "saved.amount",
    "en": "saved.currency"
   },
@@ -196,13 +196,13 @@
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 373,
+   "line": 379,
    "ko": "transfer.amountKRW",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 377,
+   "line": 383,
    "ko": "LedgerBook.total(entries, .expense)",
    "en": "language"
   },

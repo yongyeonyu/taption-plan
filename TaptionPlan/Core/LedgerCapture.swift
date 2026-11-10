@@ -16,13 +16,19 @@ enum LedgerMessageParser {
     static let cards = ["KB국민", "국민", "신한", "삼성", "현대", "롯데", "우리", "하나", "BC", "비씨", "NH농협", "농협", "씨티", "카카오뱅크", "카카오페이", "토스", "IBK", "기업"]
     private static let noise = ["누적", "잔액", "일시불", "할부", "Web발신", "web발신", "승인", "결제", "사용", "카드", "체크", "님", "*"]
     /// 결제가 아닌 카드사 안내(청구 예정·한도·쿠폰·광고). 이런 글은 기록 후보로 보지 않는다.
-    static let notPayments = ["예정", "한도", "청구", "이용대금", "결제일", "쿠폰", "광고", "(광고)", "혜택", "이벤트"]
+    static let notPayments = ["예정", "한도", "청구", "이용대금", "결제일", "쿠폰"]
+
+    /// 광고 문자는 늘 빼고, 안내 낱말은 「승인」이 없을 때만 뺀다(승인 문자 끝의 혜택·청구할인 홍보 줄은 결제다).
+    static func isNotice(_ text: String) -> Bool {
+        if text.contains("(광고)") || text.contains("[광고]") { return true }
+        return !text.contains("승인") && notPayments.contains(where: text.contains)
+    }
     private static let currencies = ["USD", "JPY", "EUR", "CNY", "TWD", "HKD", "THB", "VND", "SGD", "PHP", "IDR", "GBP", "AUD", "CAD"]
 
     static func parse(_ text: String, now: Date = .now, calendar: Calendar = .autoupdatingCurrent) -> Draft? {
         let flat = text.replacingOccurrences(of: "\r", with: "\n")
         guard flat.count <= 1_000, ["승인", "결제", "사용", "approved", "Approved"].contains(where: flat.contains),
-              !notPayments.contains(where: flat.contains) else { return nil }
+              !isNotice(flat) else { return nil }
         guard let money = amount(flat) else { return nil }
         let time = when(flat, now: now, calendar: calendar)
         return Draft(

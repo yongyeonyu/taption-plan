@@ -180,6 +180,10 @@ final class LedgerBook {
     private(set) var isLoaded = false
     @ObservationIgnored private let storeFactory: () -> TaptionStoreV2?
     @ObservationIgnored private var loading: Task<Void, Never>?
+    /// `reset()`마다 늘린다. 그 전에 시작한 읽기는 결과를 버린다.
+    @ObservationIgnored private var generation = 0
+    /// 환율을 마지막으로 받으려 한 때. 실패해도 10분 안에는 다시 기다리지 않는다.
+    @ObservationIgnored private var lastRateAttempt = Date.distantPast
 
     init(store: @escaping () -> TaptionStoreV2? = { try? TaptionStoreV2.applicationSupport() }) {
         storeFactory = store
@@ -189,17 +193,21 @@ final class LedgerBook {
     func load() async {
         guard !isLoaded else { return }
         if let loading { return await loading.value }
-        let task = Task { await read() }
+        let started = generation
+        let task = Task { await read(generation: started) }
         loading = task
         await task.value
-        loading = nil
+        if generation == started { loading = nil }
+        // 읽는 사이 reset됐으면 새로 읽는다.
+        if !isLoaded, generation != started { await load() }
     }
 
-    private func read() async {
+    private func read(generation started: Int) async {
         guard !isLoaded, let store = storeFactory() else { return }
         let decoder = JSONDecoder()
         let rows = (try? await store.records(kind: Self.entryKind)) ?? []
         let budgetRows = (try? await store.records(kind: Self.budgetKind)) ?? []
+        guard generation == started else { return }
         let saved = entries
         entries = rows.compactMap { try? decoder.decode(LedgerEntry.self, from: Data($0.body.utf8)) }.sorted { $0.occurredAt > $1.occurredAt }
         budgets = budgetRows.compactMap { try? decoder.decode(LedgerBudget.self, from: Data($0.body.utf8)) }
@@ -211,12 +219,15 @@ final class LedgerBook {
 
     /// 복원·전체 삭제 뒤 저장소에서 다시 읽게 한다.
     func reset() {
+        generation += 1
+        loading = nil
         entries = []
         budgets = []
         isLoaded = false
     }
 
-    func refreshRates() async {
+    func refreshRates(now: Date = .now) async {
+        lastRateAttempt = now
         if let table = await LedgerFX.fetch() { fx = table }
     }
 
@@ -235,7 +246,8 @@ final class LedgerBook {
         await load()
         var value = entry
         // 단축어·AI처럼 가계부를 열기 전에 들어온 외화도 원화로 채운다. 환율을 못 받으면 비워 두고 다음에 채운다.
-        if value.amountKRW == nil, value.currency != "KRW", fx == nil, manualRates[value.currency] == nil { await refreshRates() }
+        if value.amountKRW == nil, value.currency != "KRW", fx == nil, manualRates[value.currency] == nil,
+           Date.now.timeIntervalSince(lastRateAttempt) > 600 { await refreshRates() }
         if value.amountKRW == nil { value.amountKRW = krw(value.amount, currency: value.currency) }
         if let index = entries.firstIndex(where: { $0.id == value.id }) { entries[index] = value } else { entries.append(value) }
         entries.sort { $0.occurredAt > $1.occurredAt }
@@ -310,11 +322,20 @@ final class LedgerBook {
     }
 }
 
+@MainActor
 enum LedgerMoney {
-    static func text(_ amount: Double, currency: String = "KRW", language: MapHomeLanguage) -> String {
+    private static let whole = formatter(digits: 0)
+    private static let cents = formatter(digits: 2)
+
+    private static func formatter(digits: Int) -> NumberFormatter {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
-        formatter.maximumFractionDigits = currency == "KRW" || currency == "JPY" ? 0 : 2
+        formatter.maximumFractionDigits = digits
+        return formatter
+    }
+
+    static func text(_ amount: Double, currency: String = "KRW", language: MapHomeLanguage) -> String {
+        let formatter = currency == "KRW" || currency == "JPY" ? whole : cents
         let number = formatter.string(from: NSNumber(value: amount)) ?? "\(amount)"
         return currency == "KRW" ? language.text("\(number)원", "₩\(number)") : "\(currency) \(number)"
     }

@@ -309,8 +309,14 @@ struct LedgerEntryForm: View {
         }
     }
 
-    static func plain(_ value: Double) -> String {
-        value.rounded() == value ? String(Int(value)) : String(value)
+    /// 입력 칸에 넣을 글. 저장 때 읽는 방식과 같은 지역 소수점을 쓴다(독일어 12,5).
+    static func plain(_ value: Double, locale: Locale = .current) -> String {
+        let formatter = NumberFormatter()
+        formatter.locale = locale
+        formatter.numberStyle = .decimal
+        formatter.usesGroupingSeparator = false
+        formatter.maximumFractionDigits = 2
+        return formatter.string(from: NSNumber(value: value)) ?? String(value)
     }
 }
 

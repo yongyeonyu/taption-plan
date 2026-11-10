@@ -1883,7 +1883,7 @@
    "ko": "Watch 본체 확인",
    "en": "Watch device check",
    "files": [
-    "AppModel+Backup.swift:452"
+    "AppModel+Backup.swift:455"
    ],
    "args": [],
    "targets": [
@@ -2108,8 +2108,8 @@
    "ko": "iCloud 동기화 기록",
    "en": "iCloud sync records",
    "files": [
-    "AppModel+Backup.swift:399",
-    "AppModel+Backup.swift:404"
+    "AppModel+Backup.swift:402",
+    "AppModel+Backup.swift:407"
    ],
    "args": [],
    "targets": [
@@ -2158,7 +2158,7 @@
    "ko": "iCloud 백업",
    "en": "iCloud backup",
    "files": [
-    "AppModel+Backup.swift:484"
+    "AppModel+Backup.swift:487"
    ],
    "args": [],
    "targets": [
@@ -2206,7 +2206,7 @@
    "ko": "iCloud 진단 로그",
    "en": "iCloud diagnostics log",
    "files": [
-    "AppModel+Backup.swift:517"
+    "AppModel+Backup.swift:520"
    ],
    "args": [],
    "targets": [
@@ -2368,7 +2368,7 @@
    "ko": "iPhone 센서 원본",
    "en": "iPhone sensor source data",
    "files": [
-    "AppModel+Backup.swift:421"
+    "AppModel+Backup.swift:424"
    ],
    "args": [],
    "targets": [
@@ -2531,6 +2531,21 @@
    "args": [
     "candidate.name",
     "candidate.kind.englishTitle"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "{0} {1}을 가계부에 넣었어요.|Added {0} {1} to the ledger.",
+   "ko": "{0} {1}을 가계부에 넣었어요.",
+   "en": "Added {0} {1} to the ledger.",
+   "files": [
+    "LedgerIntents.swift:25"
+   ],
+   "args": [
+    "saved.title",
+    "money"
    ],
    "targets": [
     "TaptionPlan"
@@ -3595,7 +3610,7 @@
    "ko": "{0}원",
    "en": "₩{0}",
    "files": [
-    "LedgerCore.swift:319"
+    "LedgerCore.swift:340"
    ],
    "args": [
     "number"
@@ -4496,7 +4511,7 @@
    "ko": "앱 기록",
    "en": "App records",
    "files": [
-    "AppModel+Backup.swift:411"
+    "AppModel+Backup.swift:414"
    ],
    "args": [],
    "targets": [
@@ -8478,7 +8493,7 @@
    "ko": "기기 원본",
    "en": "Device source data",
    "files": [
-    "AppModel+Backup.swift:443"
+    "AppModel+Backup.swift:446"
    ],
    "args": [],
    "targets": [
@@ -8502,7 +8517,7 @@
    "ko": "진단 로그",
    "en": "Diagnostics log",
    "files": [
-    "AppModel+Backup.swift:510"
+    "AppModel+Backup.swift:513"
    ],
    "args": [],
    "targets": [
@@ -9058,7 +9073,7 @@
    "ko": "빈 저장본",
    "en": "Empty snapshot",
    "files": [
-    "AppModel+Backup.swift:555"
+    "AppModel+Backup.swift:558"
    ],
    "args": [],
    "targets": [
@@ -11498,7 +11513,7 @@
    "ko": "건강 데이터 원본",
    "en": "Health source data",
    "files": [
-    "AppModel+Backup.swift:431"
+    "AppModel+Backup.swift:434"
    ],
    "args": [],
    "targets": [
@@ -16494,7 +16509,7 @@
    "ko": "날짜별 원본",
    "en": "Per-day source data",
    "files": [
-    "AppModel+Backup.swift:462"
+    "AppModel+Backup.swift:465"
    ],
    "args": [],
    "targets": [
@@ -16848,7 +16863,7 @@
    "ko": "보호된 스냅샷",
    "en": "Protected snapshot",
    "files": [
-    "AppModel+Backup.swift:471"
+    "AppModel+Backup.swift:474"
    ],
    "args": [],
    "targets": [
@@ -19003,7 +19018,7 @@
    "ko": "일부 데이터를 삭제하지 못했습니다: ",
    "en": "Some data could not be deleted: ",
    "files": [
-    "AppModel+Backup.swift:561"
+    "AppModel+Backup.swift:564"
    ],
    "args": [],
    "targets": [
@@ -21575,7 +21590,7 @@
    "ko": "Watch 본체 확인",
    "en": "Watch device check",
    "files": [
-    "AppModel+Backup.swift:452"
+    "AppModel+Backup.swift:455"
    ],
    "args": [],
    "targets": [
@@ -21683,7 +21698,7 @@
    "ko": "위젯 공유 기록",
    "en": "Widget shared records",
    "files": [
-    "AppModel+Backup.swift:502"
+    "AppModel+Backup.swift:505"
    ],
    "args": [],
    "targets": [
@@ -22640,7 +22655,7 @@
    "ko": "iCloud 백업",
    "en": "iCloud backup",
    "files": [
-    "AppModel+Backup.swift:484"
+    "AppModel+Backup.swift:487"
    ],
    "args": [],
    "targets": [
@@ -22652,7 +22667,7 @@
    "ko": "iCloud 진단 로그",
    "en": "iCloud diagnostics log",
    "files": [
-    "AppModel+Backup.swift:517"
+    "AppModel+Backup.swift:520"
    ],
    "args": [],
    "targets": [
@@ -22677,8 +22692,8 @@
    "ko": "iCloud 동기화 기록",
    "en": "iCloud sync records",
    "files": [
-    "AppModel+Backup.swift:399",
-    "AppModel+Backup.swift:404"
+    "AppModel+Backup.swift:402",
+    "AppModel+Backup.swift:407"
    ],
    "args": [],
    "targets": [
@@ -22705,7 +22720,7 @@
    "ko": "iPhone 센서 원본",
    "en": "iPhone sensor source data",
    "files": [
-    "AppModel+Backup.swift:421"
+    "AppModel+Backup.swift:424"
    ],
    "args": [],
    "targets": [
@@ -23298,7 +23313,7 @@
    "ko": "건강 데이터 원본",
    "en": "Health source data",
    "files": [
-    "AppModel+Backup.swift:431"
+    "AppModel+Backup.swift:434"
    ],
    "args": [],
    "targets": [
@@ -23811,6 +23826,18 @@
    "en": "Payment text",
    "files": [
     "LedgerSheet.swift:207"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "결제 문자를 읽지 못했어요. 가계부에서 직접 넣어 주세요.|Couldn't read the payment text. Add it in the ledger yourself.",
+   "ko": "결제 문자를 읽지 못했어요. 가계부에서 직접 넣어 주세요.",
+   "en": "Couldn't read the payment text. Add it in the ledger yourself.",
+   "files": [
+    "LedgerIntents.swift:19"
    ],
    "args": [],
    "targets": [
@@ -25035,7 +25062,7 @@
    "ko": "기기 원본",
    "en": "Device source data",
    "files": [
-    "AppModel+Backup.swift:443"
+    "AppModel+Backup.swift:446"
    ],
    "args": [],
    "targets": [
@@ -25753,7 +25780,7 @@
    "ko": "나",
    "en": "Me",
    "files": [
-    "LedgerSheet.swift:365"
+    "LedgerSheet.swift:371"
    ],
    "args": [],
    "targets": [
@@ -25789,7 +25816,7 @@
    "ko": "나도 포함해 똑같이 나눠요. 기록의 「낸 사람」이 비었으면 내가 낸 것이에요.",
    "en": "Split equally including you. A blank payer means you paid.",
    "files": [
-    "LedgerSheet.swift:363"
+    "LedgerSheet.swift:369"
    ],
    "args": [],
    "targets": [
@@ -25954,7 +25981,7 @@
    "ko": "날짜별 원본",
    "en": "Per-day source data",
    "files": [
-    "AppModel+Backup.swift:462"
+    "AppModel+Backup.swift:465"
    ],
    "args": [],
    "targets": [
@@ -29498,7 +29525,7 @@
    "ko": "보낼 돈",
    "en": "Transfers",
    "files": [
-    "LedgerSheet.swift:368"
+    "LedgerSheet.swift:374"
    ],
    "args": [],
    "targets": [
@@ -29708,7 +29735,7 @@
    "ko": "보호된 스냅샷",
    "en": "Protected snapshot",
    "files": [
-    "AppModel+Backup.swift:471"
+    "AppModel+Backup.swift:474"
    ],
    "args": [],
    "targets": [
@@ -30096,7 +30123,7 @@
    "ko": "빈 저장본",
    "en": "Empty snapshot",
    "files": [
-    "AppModel+Backup.swift:554"
+    "AppModel+Backup.swift:557"
    ],
    "args": [],
    "targets": [
@@ -33348,7 +33375,7 @@
    "ko": "앱 기록",
    "en": "App records",
    "files": [
-    "AppModel+Backup.swift:411"
+    "AppModel+Backup.swift:414"
    ],
    "args": [],
    "targets": [
@@ -35339,7 +35366,7 @@
    "ko": "예산",
    "en": "Budget",
    "files": [
-    "LedgerSheet.swift:329"
+    "LedgerSheet.swift:335"
    ],
    "args": [],
    "targets": [
@@ -35825,7 +35852,7 @@
    "files": [
     "AssistantSettingsView.swift:58",
     "FirstRunAIConnectPage.swift:37",
-    "LedgerSheet.swift:382"
+    "LedgerSheet.swift:388"
    ],
    "args": [],
    "targets": [
@@ -36319,7 +36346,7 @@
    "ko": "위젯 공유 기록",
    "en": "Widget shared records",
    "files": [
-    "AppModel+Backup.swift:502"
+    "AppModel+Backup.swift:505"
    ],
    "args": [],
    "targets": [
@@ -37320,7 +37347,7 @@
    "ko": "이 달 지출 예산(원)",
    "en": "Spending budget this month (KRW)",
    "files": [
-    "LedgerSheet.swift:327"
+    "LedgerSheet.swift:333"
    ],
    "args": [],
    "targets": [
@@ -37852,7 +37879,7 @@
    "ko": "이름을 넣으면 계산해요.",
    "en": "Enter names to calculate.",
    "files": [
-    "LedgerSheet.swift:370"
+    "LedgerSheet.swift:376"
    ],
    "args": [],
    "targets": [
@@ -38107,7 +38134,7 @@
    "ko": "일부 데이터를 삭제하지 못했습니다: ",
    "en": "Some data could not be deleted: ",
    "files": [
-    "AppModel+Backup.swift:560"
+    "AppModel+Backup.swift:563"
    ],
    "args": [],
    "targets": [
@@ -39036,7 +39063,7 @@
    "en": "Save",
    "files": [
     "LedgerSheet.swift:282",
-    "LedgerSheet.swift:335",
+    "LedgerSheet.swift:341",
     "MapHomeLocationSheets.swift:131"
    ],
    "args": [],
@@ -39374,7 +39401,7 @@
    "en": "Settle up",
    "files": [
     "LedgerSheet.swift:47",
-    "LedgerSheet.swift:380"
+    "LedgerSheet.swift:386"
    ],
    "args": [],
    "targets": [
@@ -40728,7 +40755,7 @@
    "ko": "진단 로그",
    "en": "Diagnostics log",
    "files": [
-    "AppModel+Backup.swift:510"
+    "AppModel+Backup.swift:513"
    ],
    "args": [],
    "targets": [
@@ -43110,7 +43137,7 @@
    "ko": "함께 쓴 돈",
    "en": "Total spent",
    "files": [
-    "LedgerSheet.swift:377"
+    "LedgerSheet.swift:383"
    ],
    "args": [],
    "targets": [
@@ -43122,7 +43149,7 @@
    "ko": "함께한 사람 (쉼표로, 예: 민수, 지영)",
    "en": "People (comma separated)",
    "files": [
-    "LedgerSheet.swift:361"
+    "LedgerSheet.swift:367"
    ],
    "args": [],
    "targets": [
