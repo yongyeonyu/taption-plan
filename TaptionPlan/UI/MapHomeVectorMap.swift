@@ -133,6 +133,8 @@ struct MapHomeVectorMap: UIViewRepresentable {
     let followsHeading: Bool
     let headingDegrees: CLLocationDirection
     let displayedCoordinate: CLLocationCoordinate2D?
+    /// 자동 위치에서 경로도 화랑이도 없을 때 서울시청보다 먼저 쓰는 집(MAP1110A01).
+    var homeCoordinate: CLLocationCoordinate2D? = nil
     /// 재생 중이면 카메라를 바로 놓지 않고 한 프레임 길이로 이어 움직인다(PLY1029A02).
     var easesCamera: Bool = false
     /// 재생 구동기. 있으면 코디네이터가 프레임을 직접 받아 카메라·화랑이를 움직인다(PLY1029A03).
@@ -481,7 +483,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
                 mapView.setCamera(
                     MLNMapCamera(
                         lookingAtCenter: parent.displayedCoordinate
-                            ?? firstRouteCoordinate ?? MapHomeStartupCameraPolicy.fallbackCenter,
+                            ?? firstRouteCoordinate ?? parent.homeCoordinate ?? MapHomeStartupCameraPolicy.fallbackCenter,
                         altitude: MapHomeStartupCameraPolicy.distance,
                         pitch: 0,
                         heading: 0

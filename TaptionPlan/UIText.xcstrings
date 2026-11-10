@@ -617,6 +617,160 @@
         }
       }
     },
+    "1. 「Claude에서 바로 추가」를 누르고 앱 비밀번호를 넣어요.\n2. 연결 코드가 복사되고 승인 PIN이 보여요.\n3. Claude가 열리면 「Add」를 누르고, 승인 화면에 코드를 붙여 넣고 PIN을 넣어요.|1. Tap Add in Claude now and enter your app password.\n2. A connection code is copied and the approval PIN is shown.\n3. In Claude tap Add, then paste the code and enter the PIN on the approval page." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1.「Claudeですぐに追加」をタップしてアプリのパスワードを入力します。\n2. 接続コードがコピーされ、承認PINが表示されます。\n3. Claudeが開いたら「Add」をタップし、承認画面でコードを貼り付けてPINを入力します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. 轻点“在 Claude 中直接添加”并输入 App 密码。\n2. 连接码会被复制，并显示批准 PIN。\n3. Claude 打开后轻点“Add”，在批准页面粘贴连接码并输入 PIN。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. 點一下「在 Claude 中直接新增」並輸入 App 密碼。\n2. 連線碼會被拷貝，並顯示核准 PIN。\n3. Claude 開啟後點一下「Add」，在核准頁面貼上連線碼並輸入 PIN。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. Tippe auf „Jetzt in Claude hinzufügen“ und gib dein App-Passwort ein.\n2. Ein Verbindungscode wird kopiert und die Freigabe-PIN angezeigt.\n3. Tippe in Claude auf „Add“, füge auf der Freigabeseite den Code ein und gib die PIN ein."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. Touchez « Ajouter dans Claude maintenant » et saisissez le mot de passe de l’app.\n2. Un code de connexion est copié et le PIN d’approbation s’affiche.\n3. Dans Claude, touchez « Add », puis collez le code et saisissez le PIN sur la page d’approbation."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. Tocca «Aggiungi subito in Claude» e inserisci la password dell’app.\n2. Viene copiato un codice di connessione e mostrato il PIN di approvazione.\n3. In Claude tocca «Add», poi incolla il codice e inserisci il PIN nella pagina di approvazione."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. Toca «Añadir en Claude ahora» e introduce la contraseña de la app.\n2. Se copia un código de conexión y se muestra el PIN de aprobación.\n3. En Claude toca «Add», pega el código e introduce el PIN en la página de aprobación."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. Toque em “Adicionar no Claude agora” e digite a senha do app.\n2. Um código de conexão é copiado e o PIN de aprovação aparece.\n3. No Claude toque em “Add”, cole o código e digite o PIN na página de aprovação."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. Chạm “Thêm ngay trong Claude” và nhập mật khẩu ứng dụng.\n2. Mã kết nối được sao chép và PIN phê duyệt hiện ra.\n3. Trong Claude chạm “Add”, rồi dán mã và nhập PIN ở trang phê duyệt."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. Ketuk “Tambahkan di Claude sekarang” dan masukkan kata sandi aplikasi.\n2. Kode koneksi disalin dan PIN persetujuan ditampilkan.\n3. Di Claude ketuk “Add”, lalu tempel kode dan masukkan PIN di halaman persetujuan."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. แตะ “เพิ่มใน Claude ทันที” แล้วใส่รหัสผ่านแอป\n2. รหัสเชื่อมต่อจะถูกคัดลอกและแสดง PIN อนุมัติ\n3. ใน Claude แตะ “Add” แล้ววางรหัสและใส่ PIN ในหน้าอนุมัติ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. “अभी Claude में जोड़ें” दबाएँ और ऐप पासवर्ड डालें।\n2. कनेक्शन कोड कॉपी हो जाता है और मंज़ूरी PIN दिखता है।\n3. Claude खुलने पर “Add” दबाएँ, फिर मंज़ूरी पेज पर कोड पेस्ट करें और PIN डालें।"
+          }
+        }
+      }
+    },
+    "1. 「연결 키 만들기」를 눌러 앱 비밀번호를 넣어요.\n2. ChatGPT → GPT 만들기 → 구성 → 작업(Actions) → 새 작업 만들기 → 가져오기(URL)에 스키마 주소를 붙여 넣어요.\n3. 인증 → API 키 → 인증 유형 Bearer를 고르고 연결 키를 붙여 넣어요.\n4. 미리보기에서 「오늘 기록 읽어 줘」로 확인한 뒤 저장해요.|1. Tap Make a key and enter your app password.\n2. In ChatGPT, open Create a GPT → Configure → Actions → Create new action → Import from URL and paste the schema URL.\n3. Under Authentication choose API key, auth type Bearer, and paste the key.\n4. Check in the preview with \"read today's records\", then save." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1.「接続キーを作成」をタップしてアプリのパスワードを入力します。\n2. ChatGPT → GPTを作成 → 構成 → アクション → 新しいアクションを作成 → URLからインポートにスキーマアドレスを貼り付けます。\n3. 認証 → APIキー → 認証タイプ Bearer を選び、接続キーを貼り付けます。\n4. プレビューで「今日の記録を読んで」と確認してから保存します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. 轻点“生成连接密钥”并输入 App 密码。\n2. 在 ChatGPT 中依次打开 创建 GPT → 配置 → 操作 → 创建新操作 → 从 URL 导入，粘贴架构地址。\n3. 在认证中选择 API 密钥、认证类型 Bearer，并粘贴连接密钥。\n4. 在预览中用“读一下今天的记录”确认后保存。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. 點一下「產生連線金鑰」並輸入 App 密碼。\n2. 在 ChatGPT 中依序開啟 建立 GPT → 設定 → 動作 → 建立新動作 → 從 URL 匯入，貼上結構描述網址。\n3. 在驗證中選擇 API 金鑰、驗證類型 Bearer，並貼上連線金鑰。\n4. 在預覽中用「讀一下今天的紀錄」確認後儲存。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. Tippe auf „Schlüssel erstellen“ und gib dein App-Passwort ein.\n2. Öffne in ChatGPT GPT erstellen → Konfigurieren → Aktionen → Neue Aktion → Von URL importieren und füge die Schema-URL ein.\n3. Wähle unter Authentifizierung API-Schlüssel, Typ Bearer, und füge den Schlüssel ein.\n4. Prüfe in der Vorschau mit „Lies meine heutigen Einträge“ und speichere."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. Touchez « Créer une clé » et saisissez le mot de passe de l’app.\n2. Dans ChatGPT, ouvrez Créer un GPT → Configurer → Actions → Créer une action → Importer depuis une URL et collez l’URL du schéma.\n3. Sous Authentification, choisissez Clé API, type Bearer, et collez la clé.\n4. Vérifiez dans l’aperçu avec « lis mes données d’aujourd’hui », puis enregistrez."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. Tocca «Crea chiave» e inserisci la password dell’app.\n2. In ChatGPT apri Crea un GPT → Configura → Azioni → Crea nuova azione → Importa da URL e incolla l’URL dello schema.\n3. In Autenticazione scegli Chiave API, tipo Bearer, e incolla la chiave.\n4. Verifica nell’anteprima con «leggi i dati di oggi», poi salva."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. Toca «Crear clave» e introduce la contraseña de la app.\n2. En ChatGPT, abre Crear un GPT → Configurar → Acciones → Crear nueva acción → Importar desde URL y pega la URL del esquema.\n3. En Autenticación elige Clave de API, tipo Bearer, y pega la clave.\n4. Comprueba en la vista previa con «lee mis registros de hoy» y guarda."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. Toque em “Criar chave” e digite a senha do app.\n2. No ChatGPT, abra Criar um GPT → Configurar → Ações → Criar nova ação → Importar de URL e cole a URL do esquema.\n3. Em Autenticação escolha Chave de API, tipo Bearer, e cole a chave.\n4. Confira na prévia com “leia meus registros de hoje” e salve."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. Chạm “Tạo khóa” và nhập mật khẩu ứng dụng.\n2. Trong ChatGPT, mở Tạo GPT → Cấu hình → Hành động → Tạo hành động mới → Nhập từ URL và dán URL lược đồ.\n3. Ở Xác thực chọn Khóa API, kiểu Bearer, rồi dán khóa.\n4. Kiểm tra ở bản xem trước bằng “đọc ghi chép hôm nay” rồi lưu."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. Ketuk “Buat kunci” dan masukkan kata sandi aplikasi.\n2. Di ChatGPT, buka Buat GPT → Konfigurasi → Tindakan → Buat tindakan baru → Impor dari URL dan tempel URL skema.\n3. Di Autentikasi pilih Kunci API, jenis Bearer, lalu tempel kunci.\n4. Periksa di pratinjau dengan “baca catatan hari ini”, lalu simpan."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. แตะ “สร้างคีย์” แล้วใส่รหัสผ่านแอป\n2. ใน ChatGPT เปิด สร้าง GPT → กำหนดค่า → การดำเนินการ → สร้างการดำเนินการใหม่ → นำเข้าจาก URL แล้ววาง URL สคีมา\n3. ในการยืนยันตัวตน เลือกคีย์ API ประเภท Bearer แล้ววางคีย์\n4. ตรวจสอบในตัวอย่างด้วย “อ่านบันทึกวันนี้” แล้วบันทึก"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. “कुंजी बनाएँ” दबाएँ और ऐप पासवर्ड डालें।\n2. ChatGPT में GPT बनाएँ → कॉन्फ़िगर → ऐक्शन → नया ऐक्शन → URL से इंपोर्ट खोलें और स्कीमा URL पेस्ट करें।\n3. प्रमाणीकरण में API कुंजी, प्रकार Bearer चुनें और कुंजी पेस्ट करें।\n4. प्रीव्यू में “आज के रिकॉर्ड पढ़ो” से जाँचकर सहेजें।"
+          }
+        }
+      }
+    },
     "1. 시작을 누르고 정한 거리를 걸은 뒤 종료를 누르세요.|1. Tap Start, walk a known distance, then tap Stop." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -7162,6 +7316,237 @@
         }
       }
     },
+    "Claude 열기|Open Claude" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Claudeを開く"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开 Claude"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開啟 Claude"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Claude öffnen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrir Claude"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apri Claude"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abrir Claude"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abrir Claude"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mở Claude"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka Claude"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เปิด Claude"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Claude खोलें"
+          }
+        }
+      }
+    },
+    "Claude에서 「Add」를 누르면 승인 화면이 열려요. 코드를 붙여 넣고 PIN {0}을 넣어 주세요. 코드는 10분 안에 한 번만 쓸 수 있어요.|Tap Add in Claude to open the approval page. Paste the code and enter PIN {0}. The code works once within 10 minutes." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Claudeで「Add」をタップすると承認画面が開きます。コードを貼り付けてPIN {0} を入力してください。コードは10分以内に1回だけ使えます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 Claude 中轻点“Add”会打开批准页面。请粘贴连接码并输入 PIN {0}。连接码 10 分钟内只能用一次。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 Claude 中點一下「Add」會開啟核准頁面。請貼上連線碼並輸入 PIN {0}。連線碼 10 分鐘內只能用一次。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tippe in Claude auf „Add“, um die Freigabeseite zu öffnen. Füge den Code ein und gib die PIN {0} ein. Der Code gilt einmal innerhalb von 10 Minuten."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touchez « Add » dans Claude pour ouvrir la page d’approbation. Collez le code et saisissez le PIN {0}. Le code ne sert qu’une fois en 10 minutes."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tocca «Add» in Claude per aprire la pagina di approvazione. Incolla il codice e inserisci il PIN {0}. Il codice vale una sola volta entro 10 minuti."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toca «Add» en Claude para abrir la página de aprobación. Pega el código e introduce el PIN {0}. El código sirve una vez en 10 minutos."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toque em “Add” no Claude para abrir a página de aprovação. Cole o código e digite o PIN {0}. O código vale uma vez em 10 minutos."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chạm “Add” trong Claude để mở trang phê duyệt. Dán mã và nhập PIN {0}. Mã chỉ dùng một lần trong 10 phút."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ketuk “Add” di Claude untuk membuka halaman persetujuan. Tempel kode dan masukkan PIN {0}. Kode hanya bisa dipakai sekali dalam 10 menit."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แตะ “Add” ใน Claude เพื่อเปิดหน้าอนุมัติ วางรหัสแล้วใส่ PIN {0} รหัสใช้ได้ครั้งเดียวภายใน 10 นาที"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Claude में “Add” दबाने पर मंज़ूरी पेज खुलेगा। कोड पेस्ट करें और PIN {0} डालें। कोड 10 मिनट में एक बार ही चलता है।"
+          }
+        }
+      }
+    },
+    "Claude에서 바로 추가 (추천)|Add in Claude now (recommended)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Claudeですぐに追加(おすすめ)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 Claude 中直接添加(推荐)"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 Claude 中直接新增(推薦)"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jetzt in Claude hinzufügen (empfohlen)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter dans Claude maintenant (recommandé)"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aggiungi subito in Claude (consigliato)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Añadir en Claude ahora (recomendado)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adicionar no Claude agora (recomendado)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thêm ngay trong Claude (khuyên dùng)"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tambahkan di Claude sekarang (disarankan)"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เพิ่มใน Claude ทันที (แนะนำ)"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "अभी Claude में जोड़ें (सुझाया गया)"
+          }
+        }
+      }
+    },
     "Cue 연결 키 만들기|Make a Cue key" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -7235,6 +7620,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Cue कुंजी बनाएँ"
+          }
+        }
+      }
+    },
+    "Cue 채팅창에 붙여 넣고 보내 주세요. Cue가 주소를 열어 MCP 주소와 키를 받아 가요. 안 되면 아래에서 MCP 주소와 키를 따로 넣어 주세요.|Paste it into the Cue chat and send. Cue opens the link to get the MCP URL and key. If that fails, enter them separately below." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cueのチャットに貼り付けて送信してください。Cueがリンクを開いてMCPアドレスとキーを受け取ります。うまくいかない場合は下でMCPアドレスとキーを別々に入力してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请粘贴到 Cue 聊天并发送。Cue 会打开链接获取 MCP 地址和密钥。若不行，请在下方分别填写 MCP 地址和密钥。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請貼到 Cue 聊天並傳送。Cue 會開啟連結取得 MCP 網址和金鑰。若不行，請在下方分別填寫 MCP 網址和金鑰。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Füge es im Cue-Chat ein und sende es. Cue öffnet den Link und holt sich MCP-URL und Schlüssel. Falls das nicht klappt, trage sie unten einzeln ein."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collez-le dans la discussion Cue et envoyez. Cue ouvre le lien pour récupérer l’URL MCP et la clé. Sinon, saisissez-les séparément ci-dessous."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Incollalo nella chat di Cue e invia. Cue apre il link per ottenere URL MCP e chiave. Se non funziona, inseriscili separatamente qui sotto."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pégalo en el chat de Cue y envíalo. Cue abre el enlace para obtener la URL MCP y la clave. Si no funciona, introdúcelas por separado abajo."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cole no chat do Cue e envie. O Cue abre o link para pegar a URL MCP e a chave. Se não der certo, digite-as separadamente abaixo."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dán vào cuộc trò chuyện Cue và gửi. Cue sẽ mở liên kết để lấy URL MCP và khóa. Nếu không được, hãy nhập riêng bên dưới."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tempel di chat Cue lalu kirim. Cue membuka tautan untuk mengambil URL MCP dan kunci. Jika gagal, masukkan terpisah di bawah."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "วางในแชท Cue แล้วส่ง Cue จะเปิดลิงก์เพื่อรับ URL MCP และคีย์ ถ้าไม่ได้ ให้ใส่แยกด้านล่าง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "इसे Cue चैट में पेस्ट करके भेजें। Cue लिंक खोलकर MCP URL और कुंजी ले लेगा। न हो तो नीचे अलग-अलग डालें।"
           }
         }
       }
@@ -165397,6 +165859,83 @@
         }
       }
     },
+    "링크와 Claude 설정에는 서버 주소만 남고, 승인은 8시간마다 바뀌는 토큰으로 이어져요.|Only the server URL is in the link and in Claude; access runs on a token that rotates every 8 hours." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リンクとClaudeの設定にはサーバーアドレスだけが残り、承認は8時間ごとに変わるトークンで続きます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "链接和 Claude 设置中只留下服务器地址，授权通过每 8 小时更换的令牌维持。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "連結和 Claude 設定中只留下伺服器網址，授權透過每 8 小時更換的權杖維持。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Im Link und in Claude steht nur die Serveradresse; der Zugriff läuft über ein Token, das alle 8 Stunden wechselt."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seule l’adresse du serveur figure dans le lien et dans Claude ; l’accès passe par un jeton renouvelé toutes les 8 heures."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nel link e in Claude resta solo l’indirizzo del server; l’accesso usa un token che cambia ogni 8 ore."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En el enlace y en Claude solo queda la dirección del servidor; el acceso usa un token que cambia cada 8 horas."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No link e no Claude fica só o endereço do servidor; o acesso usa um token que muda a cada 8 horas."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Liên kết và cài đặt Claude chỉ giữ địa chỉ máy chủ; quyền truy cập dùng mã thông báo đổi mỗi 8 giờ."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Di tautan dan Claude hanya ada alamat server; akses memakai token yang berganti tiap 8 jam."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ในลิงก์และการตั้งค่า Claude มีเพียงที่อยู่เซิร์ฟเวอร์ การเข้าถึงใช้โทเค็นที่เปลี่ยนทุก 8 ชั่วโมง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "लिंक और Claude सेटिंग में सिर्फ़ सर्वर पता रहता है; पहुँच हर 8 घंटे बदलने वाले टोकन से चलती है।"
+          }
+        }
+      }
+    },
     "마무리|Done" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -166321,79 +166860,156 @@
         }
       }
     },
-    "맞춤 GPT는 Actions에 https://{0}/openapi.json을 넣고 인증에 「기타」 연결 키를 Bearer로 넣어요.|For a custom GPT, add https://{0}/openapi.json under Actions and use an Other connection key as the Bearer token." : {
+    "맞춤 GPT는 그 GPT 안에서만 BOKKI를 읽고 보내요. 키는 이 연결에만 쓰고, 「연결 키 관리」에서 언제든 끊을 수 있어요.|The custom GPT reads and sends only inside that GPT. The key is only for this connection; cut it anytime under connection keys." : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "カスタムGPTでは、Actionsにhttps://{0}/openapi.jsonを追加し、認証に「その他」の接続キーをBearerとして設定します。"
+            "value" : "カスタムGPTはそのGPTの中だけでBOKKIを読み書きします。キーはこの接続専用で、「接続キー管理」でいつでも切断できます。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "自定义 GPT 请在 Actions 中添加 https://{0}/openapi.json，并在认证中将“其他”连接密钥设为 Bearer。"
+            "value" : "自定义 GPT 只在该 GPT 内读取和发送 BOKKI 数据。密钥只用于此连接，可随时在“连接密钥管理”中断开。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "自訂 GPT 請在 Actions 中加入 https://{0}/openapi.json，並在認證中將「其他」連線金鑰設為 Bearer。"
+            "value" : "自訂 GPT 只在該 GPT 內讀取和傳送 BOKKI 資料。金鑰只用於此連線，可隨時在「連線金鑰管理」中斷開。"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Für ein eigenes GPT: https://{0}/openapi.json unter Actions hinzufügen und einen Verbindungsschlüssel „Andere“ als Bearer-Token nutzen."
+            "value" : "Das eigene GPT liest und sendet nur innerhalb dieses GPT. Der Schlüssel gilt nur für diese Verbindung; trenne ihn jederzeit unter Verbindungsschlüssel."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pour un GPT personnalisé, ajoutez https://{0}/openapi.json dans Actions et utilisez une clé de connexion « Autre » comme jeton Bearer."
+            "value" : "Le GPT personnalisé ne lit et n’envoie que dans ce GPT. La clé ne sert qu’à cette connexion ; coupez-la à tout moment dans les clés de connexion."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Per un GPT personalizzato, aggiungi https://{0}/openapi.json in Actions e usa una chiave di connessione «Altra» come token Bearer."
+            "value" : "Il GPT personalizzato legge e invia solo all’interno di quel GPT. La chiave vale solo per questa connessione; interrompila quando vuoi nelle chiavi di connessione."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Para un GPT personalizado, añada https://{0}/openapi.json en Actions y use una clave de conexión «Otra» como token Bearer."
+            "value" : "El GPT personalizado solo lee y envía dentro de ese GPT. La clave solo sirve para esta conexión; córtala cuando quieras en las claves de conexión."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Para um GPT personalizado, adicione https://{0}/openapi.json em Actions e use uma chave de conexão “Outra” como token Bearer."
+            "value" : "O GPT personalizado só lê e envia dentro desse GPT. A chave serve só para esta conexão; corte quando quiser nas chaves de conexão."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Với GPT tùy chỉnh, thêm https://{0}/openapi.json vào Actions và dùng khóa kết nối “Khác” làm Bearer token."
+            "value" : "GPT tùy chỉnh chỉ đọc và gửi trong GPT đó. Khóa chỉ dùng cho kết nối này; có thể ngắt bất cứ lúc nào trong khóa kết nối."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Untuk GPT kustom, tambahkan https://{0}/openapi.json di Actions dan gunakan kunci koneksi “Lainnya” sebagai token Bearer."
+            "value" : "GPT kustom hanya membaca dan mengirim di dalam GPT itu. Kunci hanya untuk koneksi ini; putuskan kapan saja di kunci koneksi."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "สำหรับ GPT แบบกำหนดเอง ให้ใส่ https://{0}/openapi.json ใน Actions และใช้คีย์เชื่อมต่อ “อื่น ๆ” เป็นโทเค็น Bearer"
+            "value" : "GPT ที่กำหนดเองอ่านและส่งข้อมูลเฉพาะใน GPT นั้น คีย์ใช้กับการเชื่อมต่อนี้เท่านั้น ตัดได้ทุกเมื่อในคีย์เชื่อมต่อ"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "कस्टम GPT के लिए Actions में https://{0}/openapi.json जोड़ें और “अन्य” कनेक्शन कुंजी को Bearer टोकन के रूप में डालें।"
+            "value" : "कस्टम GPT सिर्फ़ उसी GPT में BOKKI पढ़ता और भेजता है। कुंजी सिर्फ़ इस कनेक्शन के लिए है; कनेक्शन कुंजियों में कभी भी काट सकते हैं।"
+          }
+        }
+      }
+    },
+    "맞춤 GPT로 연결 (Plus 이상, 추천)|Custom GPT (Plus or higher, recommended)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カスタムGPTで接続(Plus以上・おすすめ)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用自定义 GPT 连接(Plus 及以上，推荐)"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用自訂 GPT 連線(Plus 以上，推薦)"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eigenes GPT (ab Plus, empfohlen)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GPT personnalisé (Plus ou plus, recommandé)"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GPT personalizzato (da Plus, consigliato)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GPT personalizado (Plus o superior, recomendado)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GPT personalizado (Plus ou superior, recomendado)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GPT tùy chỉnh (Plus trở lên, khuyên dùng)"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GPT kustom (Plus ke atas, disarankan)"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เชื่อมต่อด้วย GPT ที่กำหนดเอง (Plus ขึ้นไป แนะนำ)"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कस्टम GPT से जोड़ें (Plus या ऊपर, सुझाया गया)"
           }
         }
       }
@@ -172092,6 +172708,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "अभी शुरू करें"
+          }
+        }
+      }
+    },
+    "바로 추가 (키가 남지 않음)|Quick add (no key left anywhere)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "すぐに追加(キーが残りません)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "直接添加(不留密钥)"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "直接新增(不留金鑰)"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schnell hinzufügen (kein Schlüssel bleibt zurück)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajout rapide (aucune clé ne reste)"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aggiunta rapida (nessuna chiave rimane)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Añadir rápido (no queda ninguna clave)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adicionar rápido (nenhuma chave fica)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thêm nhanh (không để lại khóa)"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tambah cepat (tanpa kunci tertinggal)"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เพิ่มด่วน (ไม่ทิ้งคีย์ไว้)"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "झटपट जोड़ें (कोई कुंजी नहीं बचती)"
           }
         }
       }
@@ -192424,6 +193117,237 @@
         }
       }
     },
+    "스키마 주소 복사|Copy schema URL" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スキーマアドレスをコピー"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "复制架构地址"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拷貝結構描述網址"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schema-URL kopieren"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copier l’URL du schéma"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copia URL dello schema"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copiar URL del esquema"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copiar URL do esquema"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sao chép URL lược đồ"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salin URL skema"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คัดลอก URL สคีมา"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "स्कीमा URL कॉपी करें"
+          }
+        }
+      }
+    },
+    "스키마 주소|Schema URL" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スキーマアドレス"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "架构地址"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "結構描述網址"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schema-URL"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "URL du schéma"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "URL dello schema"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "URL del esquema"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "URL do esquema"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "URL lược đồ"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "URL skema"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "URL สคีมา"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "स्कीमा URL"
+          }
+        }
+      }
+    },
+    "스키마 주소를 복사했어요.|Schema URL copied." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スキーマアドレスをコピーしました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已复制架构地址。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已拷貝結構描述網址。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schema-URL kopiert."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "URL du schéma copiée."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "URL dello schema copiato."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "URL del esquema copiada."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "URL do esquema copiada."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã sao chép URL lược đồ."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "URL skema disalin."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คัดลอก URL สคีมาแล้ว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "स्कीमा URL कॉपी हो गया।"
+          }
+        }
+      }
+    },
     "스트레칭|Stretching" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -203897,6 +204821,83 @@
         }
       }
     },
+    "연결 안내 한 번에 복사 (추천)|Copy everything at once (recommended)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続案内をまとめてコピー(おすすめ)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一次复制全部连接说明(推荐)"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一次拷貝全部連線說明(推薦)"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alles auf einmal kopieren (empfohlen)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tout copier d’un coup (recommandé)"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copia tutto in una volta (consigliato)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copiar todo de una vez (recomendado)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copiar tudo de uma vez (recomendado)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sao chép tất cả một lần (khuyên dùng)"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salin semuanya sekaligus (disarankan)"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คัดลอกทั้งหมดในครั้งเดียว (แนะนำ)"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सब कुछ एक साथ कॉपी करें (सुझाया गया)"
+          }
+        }
+      }
+    },
     "연결 안내를 복사했어요. 10분 뒤 클립보드에서 지워져요.|Setup copied. It is cleared from the clipboard in 10 minutes." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -204047,6 +205048,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "कनेक्शन गाइड कॉपी हो गई। इसे AI में पेस्ट करें।"
+          }
+        }
+      }
+    },
+    "연결 안내를 복사했어요. Cue 채팅창에 붙여 넣어 주세요. MCP 주소와 키를 따로 넣어도 돼요.|Setup copied. Paste it into the Cue chat, or enter the MCP URL and key separately." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続案内をコピーしました。Cueのチャットに貼り付けてください。MCPアドレスとキーを別々に入力してもかまいません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已复制连接说明。请粘贴到 Cue 聊天中，也可以分别填写 MCP 地址和密钥。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已拷貝連線說明。請貼到 Cue 聊天中，也可以分別填寫 MCP 網址和金鑰。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einrichtung kopiert. Füge sie im Cue-Chat ein oder trage MCP-URL und Schlüssel einzeln ein."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configuration copiée. Collez-la dans la discussion Cue, ou saisissez l’URL MCP et la clé séparément."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configurazione copiata. Incollala nella chat di Cue o inserisci URL MCP e chiave separatamente."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configuración copiada. Pégala en el chat de Cue o introduce la URL MCP y la clave por separado."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configuração copiada. Cole no chat do Cue ou digite a URL MCP e a chave separadamente."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã sao chép hướng dẫn. Dán vào cuộc trò chuyện Cue, hoặc nhập riêng URL MCP và khóa."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Petunjuk disalin. Tempel di chat Cue, atau masukkan URL MCP dan kunci secara terpisah."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คัดลอกคำแนะนำแล้ว วางในแชท Cue หรือใส่ URL MCP และคีย์แยกกันก็ได้"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "निर्देश कॉपी हो गए। Cue चैट में पेस्ट करें, या MCP URL और कुंजी अलग-अलग डालें।"
           }
         }
       }
@@ -204513,6 +205591,83 @@
         }
       }
     },
+    "연결 코드를 복사했어요|Code copied" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続コードをコピーしました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已复制连接码"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已拷貝連線碼"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Code kopiert"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Code copié"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Codice copiato"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Código copiado"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Código copiado"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã sao chép mã"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kode disalin"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คัดลอกรหัสแล้ว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कोड कॉपी हो गया"
+          }
+        }
+      }
+    },
     "연결 키 관리|Connection keys" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -204586,6 +205741,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "कनेक्शन कुंजियाँ"
+          }
+        }
+      }
+    },
+    "연결 키 만들기|Make a key" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続キーを作成"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "生成连接密钥"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "產生連線金鑰"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schlüssel erstellen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Créer une clé"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Crea chiave"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Crear clave"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Criar chave"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tạo khóa"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buat kunci"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "สร้างคีย์"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कुंजी बनाएँ"
           }
         }
       }
@@ -204744,83 +205976,6 @@
         }
       }
     },
-    "연결 키를 만들었어요. 아래에서 MCP 주소와 연결 키를 복사해 Cue에 넣어 주세요.|Key made. Copy the MCP URL and the key below into Cue." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "接続キーを作成しました。下でMCPアドレスと接続キーをコピーしてCueに入力してください。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已生成连接密钥。请在下方复制 MCP 地址和连接密钥填入 Cue。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已產生連線金鑰。請在下方拷貝 MCP 網址和連線金鑰填入 Cue。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Schlüssel erstellt. Kopiere unten MCP-URL und Schlüssel in Cue."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Clé créée. Copiez l’URL MCP et la clé ci-dessous dans Cue."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chiave creata. Copia qui sotto URL MCP e chiave in Cue."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Clave creada. Copia abajo la URL MCP y la clave en Cue."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chave criada. Copie abaixo a URL MCP e a chave para o Cue."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Đã tạo khóa. Sao chép URL MCP và khóa bên dưới vào Cue."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kunci dibuat. Salin URL MCP dan kunci di bawah ke Cue."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "สร้างคีย์แล้ว คัดลอก URL MCP และคีย์ด้านล่างไปใส่ใน Cue"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "कुंजी बन गई। नीचे से MCP URL और कुंजी कॉपी करके Cue में डालें।"
-          }
-        }
-      }
-    },
     "연결 키를 복사했어요. 10분 뒤 클립보드에서 지워져요.|Key copied. It is cleared from the clipboard in 10 minutes." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -204894,6 +206049,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "कुंजी कॉपी हो गई। क्लिपबोर्ड 10 मिनट में साफ़ हो जाएगा।"
+          }
+        }
+      }
+    },
+    "연결 키를 복사했어요. GPT 구성 → 작업 → 인증에서 API 키·Bearer를 고르고 붙여 넣어 주세요. 스키마 주소는 이 화면에서 따로 복사해요. 클립보드는 10분 뒤 지워져요.|Key copied. In the GPT's Configure → Actions → Authentication, choose API key and Bearer, then paste it. Copy the schema URL from this screen. The clipboard is cleared in 10 minutes." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続キーをコピーしました。GPTの構成 → アクション → 認証でAPIキー・Bearerを選んで貼り付けてください。スキーマアドレスはこの画面で別にコピーします。クリップボードは10分後に消去されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已复制连接密钥。请在 GPT 的 配置 → 操作 → 认证 中选择 API 密钥和 Bearer 后粘贴。架构地址请在此页面另行复制。剪贴板将在 10 分钟后清除。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已拷貝連線金鑰。請在 GPT 的 設定 → 動作 → 驗證 中選擇 API 金鑰和 Bearer 後貼上。結構描述網址請在此畫面另行拷貝。剪貼簿將在 10 分鐘後清除。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schlüssel kopiert. Wähle im GPT unter Konfigurieren → Aktionen → Authentifizierung API-Schlüssel und Bearer und füge ihn ein. Die Schema-URL kopierst du auf diesem Bildschirm. Die Zwischenablage wird nach 10 Minuten geleert."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clé copiée. Dans Configurer → Actions → Authentification du GPT, choisissez Clé API et Bearer, puis collez-la. Copiez l’URL du schéma depuis cet écran. Le presse-papiers est vidé après 10 minutes."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chiave copiata. In Configura → Azioni → Autenticazione del GPT scegli Chiave API e Bearer e incollala. Copia l’URL dello schema da questa schermata. Gli appunti vengono svuotati dopo 10 minuti."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clave copiada. En Configurar → Acciones → Autenticación del GPT, elige Clave de API y Bearer y pégala. Copia la URL del esquema desde esta pantalla. El portapapeles se borra en 10 minutos."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chave copiada. Em Configurar → Ações → Autenticação do GPT, escolha Chave de API e Bearer e cole. Copie a URL do esquema nesta tela. A área de transferência é limpa em 10 minutos."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã sao chép khóa. Trong Cấu hình → Hành động → Xác thực của GPT, chọn Khóa API và Bearer rồi dán. Sao chép URL lược đồ trên màn hình này. Bộ nhớ tạm sẽ bị xóa sau 10 phút."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kunci disalin. Di Konfigurasi → Tindakan → Autentikasi GPT, pilih Kunci API dan Bearer lalu tempel. Salin URL skema dari layar ini. Papan klip dihapus setelah 10 menit."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คัดลอกคีย์แล้ว ใน กำหนดค่า → การดำเนินการ → การยืนยันตัวตน ของ GPT เลือกคีย์ API และ Bearer แล้ววาง คัดลอก URL สคีมาจากหน้าจอนี้ คลิปบอร์ดจะถูกล้างใน 10 นาที"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कुंजी कॉपी हो गई। GPT के कॉन्फ़िगर → ऐक्शन → प्रमाणीकरण में API कुंजी और Bearer चुनकर पेस्ट करें। स्कीमा URL इसी स्क्रीन से कॉपी करें। क्लिपबोर्ड 10 मिनट में साफ़ हो जाएगा।"
           }
         }
       }
@@ -217295,83 +218527,6 @@
         }
       }
     },
-    "유료 (Plus 이상)|Paid (Plus or higher)" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "有料(Plus以上)"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "付费（Plus 及以上）"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "付費（Plus 以上）"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kostenpflichtig (Plus oder höher)"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Payant (Plus ou supérieur)"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A pagamento (Plus o superiore)"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "De pago (Plus o superior)"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pago (Plus ou superior)"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Trả phí (Plus trở lên)"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Berbayar (Plus atau lebih tinggi)"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "เสียเงิน (Plus ขึ้นไป)"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "सशुल्क (Plus या उससे ऊपर)"
-          }
-        }
-      }
-    },
     "유료 · API 키 필요|Paid · API key needed" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -217445,6 +218600,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "सशुल्क · API कुंजी ज़रूरी"
+          }
+        }
+      }
+    },
+    "유료 · 맞춤 GPT는 Plus 이상|Paid · Custom GPT on Plus+" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "有料・カスタムGPTはPlus以上"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "付费 · 自定义 GPT 需 Plus 及以上"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "付費・自訂 GPT 需 Plus 以上"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kostenpflichtig · eigenes GPT ab Plus"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Payant · GPT personnalisé avec Plus ou plus"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A pagamento · GPT personalizzato da Plus"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De pago · GPT personalizado con Plus o superior"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pago · GPT personalizado no Plus ou superior"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trả phí · GPT tùy chỉnh từ Plus"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berbayar · GPT kustom mulai Plus"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "มีค่าใช้จ่าย · GPT ที่กำหนดเองต้อง Plus ขึ้นไป"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सशुल्क · कस्टम GPT Plus या ऊपर"
           }
         }
       }
@@ -246012,6 +247244,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "कैट व्हील"
+          }
+        }
+      }
+    },
+    "커넥터로 연결 (Business·Enterprise·Edu, Pro는 읽기만)|Connector (Business, Enterprise, Edu; Pro read-only)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "コネクタで接続(Business・Enterprise・Edu、Proは読み取りのみ)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用连接器连接(Business、Enterprise、Edu；Pro 仅读取)"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用連接器連線(Business、Enterprise、Edu；Pro 僅讀取)"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connector (Business, Enterprise, Edu; Pro nur lesen)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecteur (Business, Enterprise, Edu ; Pro en lecture seule)"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connettore (Business, Enterprise, Edu; Pro solo lettura)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conector (Business, Enterprise, Edu; Pro solo lectura)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conector (Business, Enterprise, Edu; Pro só leitura)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trình kết nối (Business, Enterprise, Edu; Pro chỉ đọc)"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Konektor (Business, Enterprise, Edu; Pro hanya baca)"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ตัวเชื่อมต่อ (Business, Enterprise, Edu; Pro อ่านอย่างเดียว)"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कनेक्टर (Business, Enterprise, Edu; Pro सिर्फ़ पढ़ना)"
           }
         }
       }

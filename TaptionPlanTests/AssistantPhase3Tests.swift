@@ -736,8 +736,11 @@ final class AssistantPhase3Tests: XCTestCase {
 
     func testCueScreenTextAndDisconnectWarning() {
         XCTAssertEqual(AssistantAIProvider.cue.title(.korean), "Cue")
-        XCTAssertNil(AssistantAIProvider.cue.appStoreURL, "no unverified App Store id or deep link")
-        XCTAssertNil(AssistantAIProvider.cue.appURL)
+        XCTAssertEqual(AssistantAIProvider.cue.appStoreURL?.absoluteString, "https://apps.apple.com/app/id6808613358", "Cue by Manus")
+        XCTAssertNil(AssistantAIProvider.cue.appURL, "no unverified deep link")
+        let setup = TripRelay.cueSetupText(host: "trip.bokkiyaw.com", key: "K", scope: .read, expiresAt: nil)
+        XCTAssertTrue(setup.contains("https://trip.bokkiyaw.com/mcp and the request header Authorization: Bearer K"))
+        XCTAssertTrue(setup.contains("https://trip.bokkiyaw.com/mcp/K"))
         XCTAssertFalse(AssistantAIProvider.cue.usesOAuth)
         XCTAssertEqual(TripRelay.mcpURL(host: "trip.bokkiyaw.com"), "https://trip.bokkiyaw.com/mcp")
         let token = String(repeating: "a", count: 39) + "WXYZ"
@@ -762,7 +765,15 @@ final class AssistantPhase3Tests: XCTestCase {
         XCTAssertTrue(AssistantPasteGuide.message(.gemini, korean).contains("settings.json"))
         XCTAssertTrue(AssistantPasteGuide.message(.other, korean).contains("웹 요청"))
         XCTAssertTrue(AssistantPasteGuide.message(.claude, korean).contains("로그인 없음"), "Claude gets the one-link connector steps")
+        XCTAssertTrue(AssistantPasteGuide.message(.chatGPT, korean).contains("Bearer"), "ChatGPT gets the custom GPT key steps")
+        XCTAssertEqual(TripRelay.openAPIURL(host: "trip.bokkiyaw.com"), "https://trip.bokkiyaw.com/openapi.json")
+        XCTAssertEqual(AssistantAIProvider.chatGPT.planBadge(korean), "유료 · 맞춤 GPT는 Plus 이상")
         XCTAssertEqual(TripRelay.mcpKeyURL(host: "relay.example.com", key: "K"), "https://relay.example.com/mcp/K")
+        let add = try? XCTUnwrap(TripRelay.claudeAddConnectorURL(host: "trip.bokkiyaw.com"))
+        XCTAssertEqual(add?.host(), "claude.ai")
+        let items = URLComponents(url: add!, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        XCTAssertEqual(items.first { $0.name == "modal" }?.value, "add-custom-connector")
+        XCTAssertEqual(items.first { $0.name == "connectorUrl" }?.value, "https://trip.bokkiyaw.com/mcp", "no key in the link; approval runs on OAuth")
     }
 
     func testCurrentPINRequiredIsNotPINNotSet() {

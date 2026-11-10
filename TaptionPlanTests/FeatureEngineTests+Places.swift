@@ -695,6 +695,13 @@ extension FeatureEngineTests {
         XCTAssertEqual(trimmed.first?.span.end, at(1245))
         XCTAssertEqual(trimmed.first?.mode, .car)
 
+        // 실기기처럼 회사 체류의 마지막 GPS가 구간 시작 그 시각에 하나 있어도 같다.
+        let lastFix = SensorReading(timestamp: at(1004), point: geo(37.50), motion: .unknown, motionConfidence: .low)
+        let withLastFix = MovementRouteBuilder().build(
+            stays: stays, readings: [lastFix] + drive, registeredCarAudioNames: ["CarPlay"], motionActivities: motion
+        )
+        XCTAssertEqual(withLastFix.first?.span.start, at(1197), "the stay's last fix at the gap start doesn't hide the silence")
+
         // Core Motion도 그 시간을 남기지 않았으면 언제 떠났는지 모르니 예전처럼 둔다.
         let unknown = MovementRouteBuilder().build(stays: stays, readings: drive, registeredCarAudioNames: ["CarPlay"])
         XCTAssertEqual(unknown.first?.span.start, at(1004))

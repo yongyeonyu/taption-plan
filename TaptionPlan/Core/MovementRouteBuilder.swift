@@ -185,6 +185,8 @@ struct MovementRouteBuilder: Sendable {
 
     /// 앞 머무름 끝과 첫 표본 사이가 이만큼 넘게 비면 앱이 꺼져 있던 것으로 본다.
     static let maximumUnobservedLead: TimeInterval = 30 * 60
+    /// 구간 시작 뒤 이 안의 표본은 앞 체류의 끝으로 본다.
+    static let originTail: TimeInterval = 2 * 60
     /// 이어진 움직임으로 볼 Core Motion 기록 사이 틈.
     static let motionChainGap: TimeInterval = 2 * 60
 
@@ -199,10 +201,13 @@ struct MovementRouteBuilder: Sendable {
         readings: [SensorReading],
         motion: [MotionActivityRecord]
     ) -> TimeSpan {
-        guard let first = readings.lazy.map(\.timestamp).filter({ $0 >= span.start }).min(),
-              first.timeIntervalSince(span.start) > maximumUnobservedLead else { return span }
+        // 구간 시작 2분 안의 표본은 앞 체류의 마지막 점이다. 그 뒤부터 빈 시간을 잰다(실기기 16:43:53 마지막 GPS).
+        let times = readings.lazy.map(\.timestamp).filter { $0 >= span.start }
+        let lastAtOrigin = times.filter { $0 <= span.start.addingTimeInterval(originTail) }.max() ?? span.start
+        guard let first = times.filter({ $0 > lastAtOrigin }).min(),
+              first.timeIntervalSince(lastAtOrigin) > maximumUnobservedLead else { return span }
         let recorded = motion
-            .filter { $0.span.end > span.start && $0.span.start < first }
+            .filter { $0.span.end > lastAtOrigin && $0.span.start < first }
             .sorted { $0.span.start < $1.span.start }
         guard !recorded.isEmpty else { return span }
         var start = first
@@ -260,6 +265,12 @@ enum UnobservedAppSpans {
             else { return nil }
             return TimeSpan(start: before, end: after)
         }
+    }
+
+    /// 새 판정과 겹치는 예전 잠긴 자동 구간은 새 구간이 대신한다. 탑승 확인으로 고른 구간만 남긴다.
+    /// 공백까지 덮던 4시간 자동차 구간이 새 19:57 구간과 짧게 겹쳐 남았다.
+    static func isSuperseded(_ previous: TravelSegment, by fresh: [TravelSegment]) -> Bool {
+        !previous.evidence.contains { $0.hasPrefix("사용자 확인 ·") } && fresh.contains { $0.span.intersection(with: previous.span) != nil }
     }
 
     /// 기록의 절반 넘게 그런 시간 안에 있다.

@@ -45,8 +45,9 @@ enum AssistantAIProvider: String, CaseIterable, Identifiable, Codable, Sendable 
         case .chatGPT: "6448311069"
         case .claude: "6473753684"
         case .gemini: "6477489729"
-        // Cue는 App Store 번호·앱 스킴을 확인하지 않아 넣지 않는다(CUE1110A01).
-        case .cue, .other: nil
+        // Cue by Manus(대표 확인 2026-11-11, iTunes 조회 ai.manus.agents). 앱 스킴은 확인하지 못해 없다.
+        case .cue: "6808613358"
+        case .other: nil
         }
     }
 
@@ -80,7 +81,8 @@ enum AssistantAIProvider: String, CaseIterable, Identifiable, Codable, Sendable 
         switch self {
         case .pickle: language.text("무료", "Free")
         case .claude: language.text("무료 가능 · 무료는 커넥터 1개", "Free OK · 1 connector on Free")
-        case .chatGPT: language.text("유료 (Plus 이상)", "Paid (Plus or higher)")
+        // GPT1111A01: 맞춤 GPT(Actions)는 Plus 이상, MCP 커넥터는 Business·Enterprise·Edu(OpenAI 도움말 2026-11-11).
+        case .chatGPT: language.text("유료 · 맞춤 GPT는 Plus 이상", "Paid · Custom GPT on Plus+")
         case .gemini: language.text("유료 · API 키 필요", "Paid · API key needed")
         case .cue, .other: nil
         }
@@ -160,6 +162,19 @@ struct AssistantOAuthCode: Equatable, Sendable {
 
 extension TripRelay {
     static func mcpURL(host: String) -> String { "https://\(host)/mcp" }
+    static func openAPIURL(host: String) -> String { "https://\(host)/openapi.json" }
+
+    /// claude.ai 「맞춤 커넥터 추가」 창을 이름·주소를 채워 연다(CLD1111A01, Claude 앱이 알려 준 형식, 확인 못 함).
+    /// 주소에는 키를 넣지 않는다(대표 결정): Add 뒤 승인 화면에서 연결 코드와 PIN으로 OAuth 승인한다.
+    static func claudeAddConnectorURL(host: String) -> URL? {
+        var components = URLComponents(string: "https://claude.ai/customize/connectors")
+        components?.queryItems = [
+            URLQueryItem(name: "modal", value: "add-custom-connector"),
+            URLQueryItem(name: "connectorName", value: "BOKKI Plan"),
+            URLQueryItem(name: "connectorUrl", value: mcpURL(host: host)),
+        ]
+        return components?.url
+    }
     /// Claude 「로그인 없음」 커넥터 주소. 연결 키가 주소에 들어간다(CLD1110A01). 주 키는 넣지 않는다(서버도 거절).
     static func mcpKeyURL(host: String, key: String) -> String { "https://\(host)/mcp/\(key)" }
 
@@ -174,6 +189,16 @@ extension TripRelay {
               let object = (try? JSONSerialization.jsonObject(with: reply.data)) as? [String: Any],
               let url = object["url"] as? String, let host = env.host, url.hasPrefix("https://\(host)/s/") else { return nil }
         return setupLinkMessage(url)
+    }
+
+    /// Cue용 안내: MCP 연결 방법을 먼저 적고, MCP를 쓸 수 없으면 REST로 쓰는 법을 이어 붙인다(CUE1110A01).
+    static func cueSetupText(host: String, key: String, scope: AssistantKeyScope, expiresAt: Date?) -> String {
+        """
+        BOKKI Plan connection for Cue.
+        Preferred: add a remote MCP server (connector) with URL \(mcpURL(host: host)) and the request header Authorization: Bearer \(key). If your connector only takes a URL, use \(mcpKeyURL(host: host, key: key)) with no sign-in.
+        If you can't add MCP servers, use the web API below with the same key.
+
+        """ + assistantSetupText(host: host, key: key, scope: scope, expiresAt: expiresAt)
     }
 
     static func setupLinkMessage(_ url: String) -> String {

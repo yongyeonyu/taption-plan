@@ -121,8 +121,11 @@ extension MapHomeView {
             + displayedExpectedRouteOverlays.flatMap(\.coordinates)
             + displayedWBSGeneratedRouteOverlays.flatMap(\.coordinates)
             + subwayRouteOverlays.flatMap(\.coordinates)
-        if coordinates.isEmpty, let currentCoordinate {
-            coordinates = [currentCoordinate]
+        // 기록이 없는 날: 오늘은 지금 위치, 다른 날은 등록한 집(MAP1110A01).
+        if coordinates.isEmpty,
+           let fallback = Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate)
+               ? currentCoordinate ?? homeCoordinate : homeCoordinate ?? currentCoordinate {
+            coordinates = [fallback]
         }
         return MapHomeRouteFitMath.region(for: coordinates)
     }

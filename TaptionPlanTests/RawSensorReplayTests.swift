@@ -61,6 +61,40 @@ final class RawSensorReplayTests: XCTestCase {
         }
     }
 
+    /// 저장된 체류·표본으로 이동 구간을 새로 만들고 잠긴 예전 구간과 합친 결과를 찍는다(MOV1110A01).
+    /// 원본에는 Core Motion 기록이 따로 없어, Core Motion에서 온 자동 기록(걷기·정지·자동차)으로 대신한다.
+    func testReplayRebuildsTravelFromStays() throws {
+        guard let path = ProcessInfo.processInfo.environment["TAPTION_RAW_REPLAY"], !path.isEmpty else {
+            throw XCTSkip("TAPTION_RAW_REPLAY 없음")
+        }
+        let data = try Data(contentsOf: URL(fileURLWithPath: path))
+        let days: [TodaySensorRawExport]
+        if let pair = try? JSONDecoder().decode([TodaySensorRawExport].self, from: data) {
+            days = pair
+        } else {
+            days = [try JSONDecoder().decode(TodaySensorRawExport.self, from: data)]
+        }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MM-dd HH:mm"
+        formatter.timeZone = TimeZone(identifier: "Asia/Seoul")
+        for day in days {
+            let readings = day.readings.sorted { $0.timestamp < $1.timestamp }
+            let actuals: [ActualRecord] = day.actuals ?? []
+            let motion = actuals.compactMap { actual -> MotionActivityRecord? in
+                guard actual.source == .motion, let end = actual.endedAt,
+                      let behavior = actual.behavior, let kind = MotionKind(rawValue: behavior) else { return nil }
+                return MotionActivityRecord(span: TimeSpan(start: actual.startedAt, end: end), motion: kind, confidence: actual.confidence)
+            }
+            let stays = (day.places ?? []).sorted { $0.span.start < $1.span.start }
+            let built = MovementRouteBuilder().build(stays: stays, readings: readings, registeredCarAudioNames: ["CarPlay"], motionActivities: motion)
+            let span = TimeSpan(start: day.day, end: day.day.addingTimeInterval(86_400))
+            let merged = ActivityClassificationLockEngine.mergingLockedTravel(existing: day.travel, fresh: built, inside: span)
+            print("REPLAY-BUILD day \(formatter.string(from: day.day)) motion=\(motion.count) stays=\(stays.count) built=\(built.count) merged=\(merged.count)")
+            for segment in built { print("REPLAY-BUILD built \(formatter.string(from: segment.span.start))–\(formatter.string(from: segment.span.end)) \(segment.mode.rawValue)") }
+            for segment in merged { print("REPLAY-BUILD merged \(formatter.string(from: segment.span.start))–\(formatter.string(from: segment.span.end)) \(segment.mode.rawValue) locked=\(segment.isClassificationLocked)") }
+        }
+    }
+
     /// 재생할 때 시각마다 화랑이 위치·동작이 어떻게 정해지는지 찍는다(PLB1103A01). `TAPTION_REPLAY_WINDOW`는 "HH:mm-HH:mm".
     func testDumpPlaybackTimeline() throws {
         let environment = ProcessInfo.processInfo.environment

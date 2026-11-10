@@ -122,6 +122,9 @@ struct AssistantProviderView: View {
     @State private var pendingPasteGuide = false
     /// Claude를 OAuth 대신 「주소 하나(연결 키 포함)」로 잇는다(CLD1110A01).
     @State private var makesKeyURL = false
+    /// Claude 바로 추가: 코드를 받은 뒤 코드·PIN을 보이고 키 없는 추가 창을 연다(CLD1111A01).
+    @State private var opensClaudeAdd = false
+    @State private var isShowingClaudeAdd = false
     @State private var isShowingPasteGuide = false
 
     private var host: String { TripRelay.host ?? "" }
@@ -156,11 +159,24 @@ struct AssistantProviderView: View {
                 // 연결 코드는 PIN이 있어야 나온다. 없을 때만 여기서 만든다.
                 AssistantPINSheet(language: language, purpose: pinPurpose) { pin in
                     approvalPIN = pin
-                    return await fetchCode()
+                    let failure = await fetchCode()
+                    if failure == nil, opensClaudeAdd, let code { copy(code.code) }
+                    return failure
                 }
             } else {
                 AssistantPINSheet.gate(language: language, purpose: pinPurpose) { pin in await afterPIN(pin) }
             }
+        }
+        .alert(language.text("연결 코드를 복사했어요", "Code copied"), isPresented: $isShowingClaudeAdd) {
+            if let add = TripRelay.claudeAddConnectorURL(host: host) {
+                Button(language.text("Claude 열기", "Open Claude")) { openURL(add) }
+            }
+            Button(language.text("취소", "Cancel"), role: .cancel) {}
+        } message: {
+            Text(language.text(
+                "Claude에서 「Add」를 누르면 승인 화면이 열려요. 코드를 붙여 넣고 PIN \(approvalPIN ?? "")을 넣어 주세요. 코드는 10분 안에 한 번만 쓸 수 있어요.",
+                "Tap Add in Claude to open the approval page. Paste the code and enter PIN \(approvalPIN ?? ""). The code works once within 10 minutes."
+            ))
         }
         .alert(AssistantPasteGuide.title(language), isPresented: $isShowingPasteGuide) {
             if provider == .claude, let web = URL(string: "https://claude.ai") {
@@ -213,6 +229,14 @@ struct AssistantProviderView: View {
                 message = language.text("MCP 주소를 복사했어요.", "MCP URL copied.")
             }
             if let existing {
+                // 주소·MCP·키를 한 번에: 1회용 주소 한 줄만 복사하고, Cue가 열면 안내 전체가 나온다(SET1110A01).
+                Button(language.text("연결 안내 한 번에 복사 (추천)", "Copy everything at once (recommended)")) {
+                    Task {
+                        let full = TripRelay.cueSetupText(host: host, key: existing.token, scope: existing.key.scope, expiresAt: existing.key.expiresAt)
+                        copy(await TripRelay.setupLinkText(for: full) ?? full)
+                        isShowingPasteGuide = true
+                    }
+                }
                 LabeledContent(language.text("연결 키", "Connection key"), value: AssistantCueText.masked(existing.token)).font(.footnote.monospaced())
                 Button(language.text("연결 키 복사", "Copy connection key")) {
                     copy(existing.token)
@@ -278,7 +302,9 @@ struct AssistantProviderView: View {
 
     @ViewBuilder
     private var oauthSections: some View {
+        if provider == .claude { claudeAddSection }
         if provider == .claude { keyURLSection }
+        if provider == .chatGPT { gptActionsSection }
         Section {
             Text(oauthSteps).font(.footnote)
             LabeledContent(language.text("서버 주소", "Server URL"), value: TripRelay.mcpURL(host: host)).font(.footnote)
@@ -286,7 +312,9 @@ struct AssistantProviderView: View {
             Button(language.text("연결 코드 받기", "Get a connection code")) { requestCode() }
             if let code { codeView(code) }
         } header: {
-            Text(language.text("커넥터로 연결", "Connect as a connector"))
+            Text(provider == .chatGPT
+                 ? language.text("커넥터로 연결 (Business·Enterprise·Edu, Pro는 읽기만)", "Connector (Business, Enterprise, Edu; Pro read-only)")
+                 : language.text("커넥터로 연결", "Connect as a connector"))
         }
         if provider == .claude {
             Section {
@@ -299,13 +327,57 @@ struct AssistantProviderView: View {
                                    "Paste it in a terminal, authenticate bokki in /mcp, then enter the code and PIN on the page that opens."))
             }
         }
-        if provider == .chatGPT {
-            Section {
-                Text(language.text(
-                    "맞춤 GPT는 Actions에 https://\(host)/openapi.json을 넣고 인증에 「기타」 연결 키를 Bearer로 넣어요.",
-                    "For a custom GPT, add https://\(host)/openapi.json under Actions and use an Other connection key as the Bearer token."
-                )).font(.footnote)
+    }
+
+    /// ChatGPT Plus에서 되는 길: 맞춤 GPT의 Actions에 스키마 주소와 연결 키(Bearer)를 넣는다(GPT1111A01).
+    /// MCP 커넥터는 OpenAI 도움말 기준 Business·Enterprise·Edu가 대상이고 Pro는 읽기만 된다.
+    private var gptActionsSection: some View {
+        Section {
+            Text(language.text(
+                "1. 「연결 키 만들기」를 눌러 앱 비밀번호를 넣어요.\n2. ChatGPT → GPT 만들기 → 구성 → 작업(Actions) → 새 작업 만들기 → 가져오기(URL)에 스키마 주소를 붙여 넣어요.\n3. 인증 → API 키 → 인증 유형 Bearer를 고르고 연결 키를 붙여 넣어요.\n4. 미리보기에서 「오늘 기록 읽어 줘」로 확인한 뒤 저장해요.",
+                "1. Tap Make a key and enter your app password.\n2. In ChatGPT, open Create a GPT → Configure → Actions → Create new action → Import from URL and paste the schema URL.\n3. Under Authentication choose API key, auth type Bearer, and paste the key.\n4. Check in the preview with \"read today's records\", then save."
+            )).font(.footnote)
+            LabeledContent(language.text("스키마 주소", "Schema URL"), value: TripRelay.openAPIURL(host: host)).font(.footnote)
+            Button(language.text("스키마 주소 복사", "Copy schema URL")) {
+                copy(TripRelay.openAPIURL(host: host))
+                message = language.text("스키마 주소를 복사했어요.", "Schema URL copied.")
             }
+            Button(existing == nil ? language.text("연결 키 만들기", "Make a key") : language.text("새 키로 다시 만들기", "Make a new key")) {
+                makesKeyURL = true
+                isAskingPIN = true
+            }
+            if let existing {
+                LabeledContent(language.text("연결 키", "Connection key"), value: AssistantCueText.masked(existing.token)).font(.footnote.monospaced())
+                Button(language.text("연결 키 복사", "Copy connection key")) {
+                    copy(existing.token)
+                    message = language.text("연결 키를 복사했어요. 10분 뒤 클립보드에서 지워져요.", "Key copied. It is cleared from the clipboard in 10 minutes.")
+                }
+            }
+        } header: {
+            Text(language.text("맞춤 GPT로 연결 (Plus 이상, 추천)", "Custom GPT (Plus or higher, recommended)"))
+        } footer: {
+            Text(language.text(
+                "맞춤 GPT는 그 GPT 안에서만 BOKKI를 읽고 보내요. 키는 이 연결에만 쓰고, 「연결 키 관리」에서 언제든 끊을 수 있어요.",
+                "The custom GPT reads and sends only inside that GPT. The key is only for this connection; cut it anytime under connection keys."
+            ))
+        }
+    }
+
+    /// 키 없는 추가 창 + 승인(CLD1111A01, 대표 결정). 앱 비밀번호 → 연결 코드·PIN → 코드 복사 → Claude 추가 창.
+    private var claudeAddSection: some View {
+        Section {
+            Text(language.text(
+                "1. 「Claude에서 바로 추가」를 누르고 앱 비밀번호를 넣어요.\n2. 연결 코드가 복사되고 승인 PIN이 보여요.\n3. Claude가 열리면 「Add」를 누르고, 승인 화면에 코드를 붙여 넣고 PIN을 넣어요.",
+                "1. Tap Add in Claude now and enter your app password.\n2. A connection code is copied and the approval PIN is shown.\n3. In Claude tap Add, then paste the code and enter the PIN on the approval page."
+            )).font(.footnote)
+            Button(language.text("Claude에서 바로 추가 (추천)", "Add in Claude now (recommended)")) {
+                opensClaudeAdd = true
+                requestCode()
+            }
+        } header: {
+            Text(language.text("바로 추가 (키가 남지 않음)", "Quick add (no key left anywhere)"))
+        } footer: {
+            Text(language.text("링크와 Claude 설정에는 서버 주소만 남고, 승인은 8시간마다 바뀌는 토큰으로 이어져요.", "Only the server URL is in the link and in Claude; access runs on a token that rotates every 8 hours."))
         }
     }
 
@@ -408,7 +480,10 @@ struct AssistantProviderView: View {
                 // 새 키를 만들었으면 예전 Cue 키는 끊는다. 주소와 키는 화면에서 따로 복사한다.
                 if let old, old.id != key.id { _ = await TripRelay.revokeScopedKey(old.id) }
                 await store.reload()
-                message = language.text("연결 키를 만들었어요. 아래에서 MCP 주소와 연결 키를 복사해 Cue에 넣어 주세요.", "Key made. Copy the MCP URL and the key below into Cue.")
+                let full = TripRelay.cueSetupText(host: host, key: token, scope: key.scope, expiresAt: key.expiresAt)
+                copy(await TripRelay.setupLinkText(for: full) ?? full)
+                message = language.text("연결 안내를 복사했어요. Cue 채팅창에 붙여 넣어 주세요. MCP 주소와 키를 따로 넣어도 돼요.", "Setup copied. Paste it into the Cue chat, or enter the MCP URL and key separately.")
+                pendingPasteGuide = true
                 return nil
             }
             await copySetup(token, key: key)
@@ -423,6 +498,7 @@ struct AssistantProviderView: View {
         switch provider {
         case .gemini: copy(TripRelay.geminiSettings(host: host, key: token))
         case .claude: copy(TripRelay.mcpKeyURL(host: host, key: token))
+        case .chatGPT: copy(token)
         default:
             let full = TripRelay.assistantSetupText(host: host, key: token, scope: key.scope, expiresAt: key.expiresAt)
             copy(await TripRelay.setupLinkText(for: full) ?? full)
@@ -434,6 +510,11 @@ struct AssistantProviderView: View {
 
     private func showPendingPasteGuide() {
         makesKeyURL = false
+        if opensClaudeAdd {
+            opensClaudeAdd = false
+            if code != nil { isShowingClaudeAdd = true }
+            return
+        }
         guard pendingPasteGuide else { return }
         pendingPasteGuide = false
         isShowingPasteGuide = true
@@ -456,7 +537,7 @@ struct AssistantProviderListSection: View {
             ForEach(AssistantAIProvider.featured) { provider in
                 AssistantProviderRow(provider: provider, language: language, isConnected: store.isConnected(provider)) { onConnect(provider) }
             }
-            Button("Cue") { onConnect(.cue) }
+            AssistantProviderRow(provider: .cue, language: language, isConnected: store.isConnected(.cue)) { onConnect(.cue) }
             Button(language.text("기타 AI (웹 요청)", "Other AI (web requests)")) { onConnect(.other) }
         } header: {
             Text(language.text("AI 고르기", "Choose an AI"))
@@ -485,6 +566,13 @@ enum AssistantPasteGuide {
             )
         case .other:
             place = language.text("웹 요청을 할 수 있는 AI의 채팅창에 붙여 넣고 보내 주세요.", "Paste it into the chat of an AI that can make web requests, then send.")
+        case .chatGPT:
+            return language.text(
+                "연결 키를 복사했어요. GPT 구성 → 작업 → 인증에서 API 키·Bearer를 고르고 붙여 넣어 주세요. 스키마 주소는 이 화면에서 따로 복사해요. 클립보드는 10분 뒤 지워져요.",
+                "Key copied. In the GPT's Configure → Actions → Authentication, choose API key and Bearer, then paste it. Copy the schema URL from this screen. The clipboard is cleared in 10 minutes."
+            )
+        case .cue:
+            place = language.text("Cue 채팅창에 붙여 넣고 보내 주세요. Cue가 주소를 열어 MCP 주소와 키를 받아 가요. 안 되면 아래에서 MCP 주소와 키를 따로 넣어 주세요.", "Paste it into the Cue chat and send. Cue opens the link to get the MCP URL and key. If that fails, enter them separately below.")
         default:
             place = language.text("\(name) 채팅창에 붙여 넣고 보내 주세요.", "Paste it into the \(name) chat and send.")
         }

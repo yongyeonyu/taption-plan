@@ -2,6 +2,15 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## MOV1110A01 · MAP1110A01 · GPT1111A01 · 대표 기기 확인 뒤 다시 고침 (2026-11-11)
+
+- 대표 확인(아이폰 18): 재생·핸들로 지난 말풍선 다시 보임 OK. 기록 없는 날 집 가운데 NG(서울시청). 오늘 16:43~19:57 미확인으로 안 바뀜.
+- 집 가운데 원인: 날을 바꾸면 `setMapPosition(.automatic)`이 먼저 불리고, 벡터 지도는 자동 위치에서 경로·화랑이가 없으면 서울시청(기본값)으로 간다. 앞서 고친 `focusMapOnAllRoutes`는 경로가 없는 날 `mapRouteFitRegion`이 지금 위치로 채워져 집 쪽으로 가지 않았다. 고침: 날 바꿀 때 집 카메라, 벡터 지도 기본값 앞에 집, 다른 날 빈 경로 맞춤은 집 먼저.
+- 이동 원인(00:51 아이폰 18 원본 `build/validation/MOV1110A01/device3`, 재생 `testReplayRebuildsTravelFromStays`): 새로 만든 구간부터 16:43~20:44였다. 공백 앞 16:43:53(회사 체류의 마지막 GPS)에 표본이 하나 있어 「시작 뒤 첫 표본까지 30분」이 0초로 계산됐다. 고침: 시작 2분 안 표본은 앞 체류의 끝으로 보고 그 뒤부터 잰다. 재생 결과: 자동차 19:57~20:44, 16:43~19:57 이동 없음(`replay-build-2.log`). 공백 추정 기록(16:43~16:51 이동, 18:52~19:57 식사 후보)은 이미 사라져 있었다. 잠긴 예전 구간이 새 구간과 짧게 겹쳐 남는 경우도 막음(`UnobservedAppSpans.isSuperseded`).
+- 시험(시뮬레이터): FeatureEngine 695개 실패 0(새 시험: 마지막 GPS가 있는 공백, 잠긴 예전 구간 대체).
+- ChatGPT(GPT1111A01): OpenAI 도움말 기준 MCP 커넥터는 Business·Enterprise·Edu, Pro는 읽기만 → 화면 맨 위를 맞춤 GPT(Actions: `https://trip.bokkiyaw.com/openapi.json` + Bearer 연결 키)로, 배지 「유료 · 맞춤 GPT는 Plus 이상」. 실서버 `openapi.json` 200·OpenAPI 3.1·bearer·동작 7개 확인.
+- Cue: App Store 6808613358(Cue by Manus, 대표 선택), 목록에 받기·연결·상태, 키를 만들면 1회용 주소로 안내 한 번에 복사.
+
 ## BUB1110A02 · MAP1110A01 · 1단계 아이폰 18 단위 시험 (2026-11-11)
 
 - 실기기 iPhone 18 Pro Max 단위 시험 전체(오늘 23시 코드): 2,508개, 통과 2,481, 건너뜀 24, 실패 3(`build/validation/EXE1110A01/unit-iphone18.xcresult`). 실패: `MapHomeStickmanTests.testEveryHwarangSceneDrawsThroughItsWholeLoop`·`testScarfAndRibbonStayOnTheBodyInEveryScene`(실행기 「unexpected exit, crash, or test timeout」 뒤 다시 시작), `SensorDayStoreTests.testForegroundLiveLocationEmitsNewFixesInsideNormalSamplingInterval`(좌표 1개만 옴). 셋만 따로 다시 돌리니 모두 통과(`unit-iphone18-rerun3.xcresult`, 목도리 시험 혼자 123초) → 전체 실행 중 시간 초과·부하로 판단, 코드 결함은 확인되지 않음. 시험 뒤 Release 306 다시 설치(기기 앱 목록 확인).

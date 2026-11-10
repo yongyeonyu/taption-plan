@@ -1232,6 +1232,39 @@ extension FeatureEngineTests {
         XCTAssertLessThan(candidateInspectionCount, count * count / 20)
     }
 
+    /// MOV1110A01: 앱이 꺼진 공백까지 덮던 예전 잠긴 자동차 구간은, 겹치는 새 짧은 구간이 오면 남지 않는다.
+    /// 사용자가 탑승 확인으로 고른 구간은 남는다.
+    func testStaleLockedTravelOverlappingAFreshSegmentIsReplaced() {
+        let base = makeDate(2026, 11, 10, 0)
+        func at(_ hour: Double) -> Date { base.addingTimeInterval(hour * 3_600) }
+        let old = TravelSegment(
+            mode: .car, span: TimeSpan(start: at(16.73), end: at(20.74)), distanceMeters: 19_403, confidence: .high,
+            evidence: ["사용자 확인 차량 블루투스 · CarPlay"], isConfirmed: true, isClassificationLocked: true
+        )
+        let fresh = TravelSegment(
+            mode: .car, span: TimeSpan(start: at(19.96), end: at(20.74)), distanceMeters: 19_403, confidence: .high,
+            evidence: ["사용자 확인 차량 블루투스 · CarPlay"], isConfirmed: true
+        )
+        let whole = TimeSpan(start: base, end: at(24))
+        let result = ActivityClassificationLockEngine.mergingLockedTravel(existing: [old], fresh: [fresh], inside: whole)
+        XCTAssertEqual(result.map(\.span.start), [at(19.96)], "only the fresh trip; 16:44–19:57 is no longer travel")
+
+        var picked = old
+        picked.evidence = ["사용자 확인 · 자동차"]
+        // 겹침이 짧은 쪽의 20% 안 되는 예전 구간(새 판정과 짝이 안 지어짐)도 남지 않는다.
+        let farOld = TravelSegment(
+            mode: .car, span: TimeSpan(start: at(12), end: at(20.0)), distanceMeters: 19_403, confidence: .high,
+            evidence: ["차량 오디오"], isConfirmed: true, isClassificationLocked: true
+        )
+        let shortFresh = TravelSegment(mode: .car, span: TimeSpan(start: at(19.9), end: at(20.74)), distanceMeters: 19_403, confidence: .high, evidence: [])
+        XCTAssertEqual(ActivityClassificationLockEngine.mergingLockedTravel(existing: [farOld], fresh: [shortFresh], inside: whole).map(\.span.start), [at(19.9)])
+        var pickedFar = farOld
+        pickedFar.evidence = ["사용자 확인 · 자동차"]
+        XCTAssertEqual(ActivityClassificationLockEngine.mergingLockedTravel(existing: [pickedFar], fresh: [shortFresh], inside: whole).count, 2,
+                       "a span the user confirmed on a boarding card stays")
+        _ = picked
+    }
+
     func testMotionActivityActualsExposeEveryPassiveBehaviorWithoutDuplicates() {
         let base = makeDate(2026, 8, 1, 8)
         let span = TimeSpan(

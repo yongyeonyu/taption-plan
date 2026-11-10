@@ -47,7 +47,13 @@ extension MapHomeView {
             let shouldFitRoutes = shouldFitRoutesAfterDateChange
             shouldFitRoutesAfterDateChange = false
             if shouldFitRoutes || dayChanged {
-                setMapPosition(.automatic)
+                // 날을 바꾸면 경로를 불러오기 전에 집을 가운데 둔다. 경로가 오면 경로 전체 보기로 다시 맞춘다.
+                // 자동 위치는 벡터 지도에서 서울시청(기본값)이 됐다(MAP1110A01).
+                if let home = homeCoordinate {
+                    setMapPosition(.camera(MapCamera(centerCoordinate: home, distance: MapHomeStartupCameraPolicy.distance)))
+                } else {
+                    setMapPosition(.automatic)
+                }
                 focusMapIfNeeded()
             } else if calendar.isDateInToday(newDate),
                       currentCoordinate != nil {

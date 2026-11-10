@@ -1790,7 +1790,7 @@ enum ActivityClassificationLockEngine {
                 || previous.isConfirmed
                 || previous.subwayRoute.map(SubwayStationCatalog.isValid) == true
             return validatedSubway && !isRememberedOnlySubway(previous)
-                && !matchedLockedIndices.contains(inputOrder)
+                && !matchedLockedIndices.contains(inputOrder) && !UnobservedAppSpans.isSuperseded(previous, by: fresh)
                 ? previous
                 : nil
         }

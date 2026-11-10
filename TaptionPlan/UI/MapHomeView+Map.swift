@@ -188,6 +188,7 @@ extension MapHomeView {
             followsHeading: isHeadingMode && userTrackingMode.keepsCameraLocked,
             headingDegrees: -compassRotationDegrees,
             displayedCoordinate: displayedLocationCoordinate,
+            homeCoordinate: homeCoordinate,
             easesCamera: isDayPlaybackRunning,
             playbackDriver: playbackDriver,
             onPlaybackStickmanPoint: { point in
