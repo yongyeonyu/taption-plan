@@ -518,6 +518,7 @@
 		A1L1110A0100000000000003 /* MapHomeView+Ledger.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1110A0100000000000003 /* MapHomeView+Ledger.swift */; };
 		A1L1111A0300000000000001 /* LedgerMemoChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111A0300000000000001 /* LedgerMemoChip.swift */; };
 		A1L1111A0300000000000003 /* LedgerMemoPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111A0300000000000003 /* LedgerMemoPanel.swift */; };
+		A1U1111A0100000000000001 /* MapHomeUnconfirmedBatchSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1U1111A0100000000000001 /* MapHomeUnconfirmedBatchSheet.swift */; };
 		A1M1110A0300000000000001 /* MapHomeDefaultBubblePool.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1M1110A0300000000000001 /* MapHomeDefaultBubblePool.swift */; };
 		A1A1110A0300000000000008 /* AssistantConnectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000008 /* AssistantConnectView.swift */; };
 		A1A1110A0300000000000009 /* FirstRunAIConnectPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000009 /* FirstRunAIConnectPage.swift */; };
@@ -1220,6 +1221,7 @@
 		F1L1110A0100000000000003 /* MapHomeView+Ledger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Ledger.swift"; sourceTree = "<group>"; };
 		F1L1111A0300000000000001 /* LedgerMemoChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerMemoChip.swift; sourceTree = "<group>"; };
 		F1L1111A0300000000000003 /* LedgerMemoPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerMemoPanel.swift; sourceTree = "<group>"; };
+		F1U1111A0100000000000001 /* MapHomeUnconfirmedBatchSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeUnconfirmedBatchSheet.swift; sourceTree = "<group>"; };
 		F1M1110A0300000000000001 /* MapHomeDefaultBubblePool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeDefaultBubblePool.swift; sourceTree = "<group>"; };
 		F1A1110A0300000000000008 /* AssistantConnectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantConnectView.swift; sourceTree = "<group>"; };
 		F1A1110A0300000000000009 /* FirstRunAIConnectPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstRunAIConnectPage.swift; sourceTree = "<group>"; };
@@ -1724,6 +1726,7 @@
 				F1L1110A0100000000000003 /* MapHomeView+Ledger.swift */,
 				F1L1111A0300000000000001 /* LedgerMemoChip.swift */,
 				F1L1111A0300000000000003 /* LedgerMemoPanel.swift */,
+				F1U1111A0100000000000001 /* MapHomeUnconfirmedBatchSheet.swift */,
 				F1M1110A0300000000000001 /* MapHomeDefaultBubblePool.swift */,
 				F1A1110A0300000000000008 /* AssistantConnectView.swift */,
 				F1A1110A0300000000000009 /* FirstRunAIConnectPage.swift */,
@@ -2661,6 +2664,7 @@
 				A1L1110A0100000000000003 /* MapHomeView+Ledger.swift in Sources */,
 				A1L1111A0300000000000001 /* LedgerMemoChip.swift in Sources */,
 				A1L1111A0300000000000003 /* LedgerMemoPanel.swift in Sources */,
+				A1U1111A0100000000000001 /* MapHomeUnconfirmedBatchSheet.swift in Sources */,
 				A1M1110A0300000000000001 /* MapHomeDefaultBubblePool.swift in Sources */,
 				A1A1110A0300000000000008 /* AssistantConnectView.swift in Sources */,
 				A1A1110A0300000000000009 /* FirstRunAIConnectPage.swift in Sources */,

@@ -136,6 +136,21 @@ final class NLEOverwriteBatchTests: XCTestCase {
         XCTAssertEqual(NLEOverwritePolicy.affectedCount(track, scope: .picked, selectedCategoryID: nil, pickedClipIDs: picked), 2)
     }
 
+    /// UNC1111A01: 사이드바에서 고른 미확인 구간 여러 개가 한 번의 일괄 저장 요청으로 바뀐다. 미확인이 아닌 구간은 빠진다.
+    func testUnconfirmedBatchBuildsOneRequestPerPickedSpan() throws {
+        let category = try XCTUnwrap(MapHomeSidebarMajorCategory.all.first { $0.id == "work" })
+        let spans = [
+            MapHomeTimeRailSegment(startMinute: 1_011, endMinute: 1_020, categoryID: "unconfirmed", title: "미확인", sourceIDs: []),
+            MapHomeTimeRailSegment(startMinute: 1_022, endMinute: 1_045, categoryID: "unconfirmed", title: "미확인", sourceIDs: []),
+            MapHomeTimeRailSegment(startMinute: 1_050, endMinute: 1_060, categoryID: "eating", title: "eating", sourceIDs: []),
+        ]
+        let requests = spans.compactMap { MapHomeUnconfirmedBatch.request(for: $0, category: category, day: dayStart, calendar: calendar) }
+        XCTAssertEqual(requests.count, 2)
+        XCTAssertEqual(requests.map(\.originalSpan.start), [at(1_011), at(1_022)])
+        let pieces = requests.flatMap { ActivitySectionOverrideEngine.pieces(for: $0) }
+        XCTAssertEqual(Set(pieces.map(\.option.categoryID)), ["work"])
+    }
+
     func testUserOwnedClipsAreSkippedWhenAskedAndCounted() {
         let automatic = UUID(), entered = UUID()
         let track = MapHomeNLEClipEditor.makeMainTrack(segments: [

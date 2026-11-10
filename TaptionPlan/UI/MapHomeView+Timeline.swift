@@ -328,6 +328,7 @@ extension MapHomeView {
                             focusedUnconfirmedReviewSegment = segment
                             isUnconfirmedReviewPresented = true
                         },
+                        onUnconfirmedBatch: { await quickConfirmUnconfirmed($0, as: $1) },
                         unconfirmedMode: { MapHomePlaybackLocation.gapMode(at: timelineDate(forMinute: Double($0.startMinute + $0.endMinute) / 2), travel: currentDayDataSnapshot?.travel ?? [], readings: historicalPlaybackReadings) }
                     )
                     // 확대·축소는 시간선 아래 비워 둔 자리에 사이드바와 같은 폭·모서리의 알약으로 눕힌다.

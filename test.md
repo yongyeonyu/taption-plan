@@ -2,6 +2,11 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## UNC1111A01 · 미확인 구간 여러 개 한 번에 정하기 (2026-11-11)
+
+- 아이폰 11 실기기: `NLEOverwriteBatchTests` 10(새: 고른 미확인 구간마다 요청 하나, 미확인이 아닌 구간은 빠짐, 조각 분류가 고른 분류)·`NLETrackTests` 64 실패 0(`build/validation/UNC1111A01/iphone11.xcresult`). 언어 팩 7개 문구 `check.py` 실패 0, 구조 지표 통과(사이드바 파일은 줄을 늘리지 않음). 창 화면은 기기에서 보지 않았다.
+- 같은 실행 로그에서 단축어 실마리: Debug 빌드는 `AppShortcutsProvider` 형식이 `TaptionPlan.debug.dylib`에 있어 `updateAppShortcutParameters`가 「No app shortcuts provider mangled type name」(9004)로 실패한다(Debug 전용). 307 Release 실행 파일에는 `BokkiShortcuts`·`AddPaymentMessageIntent`가 들어 있다. 대표 기기에서 안 보인 원인은 아직 확인 못 함 — 다음 빌드에서 앱을 한 번 연 뒤 단축어 앱 확인이 필요.
+
 ## NLE1111A01 · 클립 편집 미확인 덮어쓰기, 여러 클립 한 번에 (2026-11-11)
 
 - 원인: 덮기가 원본 기록이 없는 클립을 모두 건너뛰어, 시간 띠의 미확인 구간(원본 없음)이 덮이지 않았다. 고침: 원본이 있거나 미확인인 클립을 덮는다(원본 없이 채운 수면·활동 같은 분류는 예전대로 둠). 분류 메뉴에 「여러 개 골라 덮기」: 고르는 동안 클립을 누르면 넣고 빼며, 분류를 고르면 고른 클립 모두 한 번에 바뀐다(되돌리기 한 칸). 덮기 창에도 「고른 클립만」 범위.

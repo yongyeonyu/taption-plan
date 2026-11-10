@@ -1161,6 +1161,7 @@ struct MapHomeTimeSidebar: View {
     /// 있으면 알약 맨 위 여백에 사이드바 접기 원형 버튼을 둔다(연필과 같은 모양).
     var onCollapse: (() -> Void)?
     var onUnconfirmedReview: ((MapHomeTimeRailSegment) -> Void)?
+    var onUnconfirmedBatch: (([MapHomeTimeRailSegment], MapHomeSidebarMajorCategory) async -> Bool)?
     /// 미확인 구간에 앞뒤 근거로 추정한 수단 아이콘을 얹는다(PLB1103A01).
     var unconfirmedMode: ((MapHomeTimeRailSegment) -> TravelMode?)?
     /// 묶인 미확인 아이콘을 누르면 여기 담긴 구간들을 작은 메뉴로 고른다.
@@ -1229,6 +1230,7 @@ struct MapHomeTimeSidebar: View {
         onSectionEdit: ((Int) -> Void)? = nil,
         onCollapse: (() -> Void)? = nil,
         onUnconfirmedReview: ((MapHomeTimeRailSegment) -> Void)? = nil,
+        onUnconfirmedBatch: (([MapHomeTimeRailSegment], MapHomeSidebarMajorCategory) async -> Bool)? = nil,
         unconfirmedMode: ((MapHomeTimeRailSegment) -> TravelMode?)? = nil
     ) {
         self.smoothsPlayback = smoothsPlayback
@@ -1249,6 +1251,7 @@ struct MapHomeTimeSidebar: View {
         self.onSectionEdit = onSectionEdit
         self.onCollapse = onCollapse
         self.onUnconfirmedReview = onUnconfirmedReview
+        self.onUnconfirmedBatch = onUnconfirmedBatch
         self.unconfirmedMode = unconfirmedMode
         self._railSnapshot = State(
             initialValue: MapHomeTimeSidebarRailSnapshot(segments)
@@ -1718,20 +1721,12 @@ struct MapHomeTimeSidebar: View {
             .animation(smoothsPlayback ? .linear(duration: 0.26) : nil, value: minute)
             .coordinateSpace(name: "mapHomeTimeSidebarRail")
             // 바깥 틀에 contentShape를 주면 레일 왼쪽 빈 띠에 닿은 손가락이 지도 핀치에서 빠진다(PNC1105A02). 손잡이·레일이 각자 터치를 받는다.
-            .confirmationDialog(
-                AppLanguagePreference.text("미확인 구간 고르기", "Choose an unconfirmed interval"),
-                isPresented: Binding(
-                    get: { reviewChoices != nil },
-                    set: { if !$0 { reviewChoices = nil } }
-                ),
-                titleVisibility: .visible
-            ) {
-                ForEach(reviewChoices ?? [], id: \.id) { segment in
-                    Button("\(timeLabel(for: segment.startMinute))–\(timeLabel(for: segment.endMinute))") {
-                        onUnconfirmedReview?(segment)
-                    }
-                }
-                Button("취소", role: .cancel) {}
+            // 여러 구간을 골라 한 번에 정한다(UNC1111A01).
+            .sheet(isPresented: Binding(get: { reviewChoices != nil }, set: { if !$0 { reviewChoices = nil } })) {
+                MapHomeUnconfirmedBatchSheet(
+                    segments: reviewChoices ?? [], timeLabel: { timeLabel(for: $0) },
+                    onOpenOne: { onUnconfirmedReview?($0) }, onConfirm: { await onUnconfirmedBatch?($0, $1) ?? false }
+                )
             }
             .accessibilityElement(children: .contain)
             .accessibilityLabel("시간 선택")
