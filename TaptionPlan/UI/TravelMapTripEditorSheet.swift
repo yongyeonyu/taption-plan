@@ -45,14 +45,14 @@ struct TravelMapTripEditorSheet: View {
                                 Text(candidate.title).foregroundStyle(Color.tpInk)
                                 if !candidate.subtitle.isEmpty {
                                     Text(candidate.subtitle)
-                                        .font(.caption)
+                                        .font(.taptionStyle(.caption))
                                         .foregroundStyle(Color.tpSecondary)
                                 }
                             }
                         }
                     }
                     if let notice {
-                        Text(notice).font(.caption).foregroundStyle(Color.tpSecondary)
+                        Text(notice).font(.taptionStyle(.caption)).foregroundStyle(Color.tpSecondary)
                     }
                 }
             }
@@ -88,7 +88,7 @@ struct TravelMapTripEditorSheet: View {
                     .accessibilityLabel(stop.wrappedValue.arrivalMode.title(language))
                 }
                 Text(stop.wrappedValue.name)
-                    .font(.headline)
+                    .font(.taptionStyle(.headline))
                     .foregroundStyle(Color.tpInk)
                 Spacer(minLength: 4)
                 DatePicker("", selection: stop.date, displayedComponents: .date)

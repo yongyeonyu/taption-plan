@@ -2,6 +2,11 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## FNT1111A01 · 시스템 글자 모양을 앱 글꼴로 (2026-11-11)
+
+- 8개 파일 44곳 `.font(.caption/.footnote/.headline/...)` → `.font(.taptionStyle(...))`. 남긴 것: 연결 키·코드의 `.monospaced()` 6곳.
+- 아이폰 11 실기기 Debug 빌드 성공, `LedgerTests`·`AssistantRelayTests` 25건 실패 0(`build/validation/FNT1111A01/iphone11.xcresult`). 구조 지표 통과. 글꼴을 바꾼 뒤 화면이 바뀌는지는 기기 화면에서 보지 않았다(내비게이션 제목·목록 머리글은 시스템이 그리는 글자라 이번에 바꾸지 않음).
+
 ## UNC1111A01 · 미확인 구간 여러 개 한 번에 정하기 (2026-11-11)
 
 - 아이폰 11 실기기: `NLEOverwriteBatchTests` 10(새: 고른 미확인 구간마다 요청 하나, 미확인이 아닌 구간은 빠짐, 조각 분류가 고른 분류)·`NLETrackTests` 64 실패 0(`build/validation/UNC1111A01/iphone11.xcresult`). 언어 팩 7개 문구 `check.py` 실패 0, 구조 지표 통과(사이드바 파일은 줄을 늘리지 않음). 창 화면은 기기에서 보지 않았다.

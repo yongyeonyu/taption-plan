@@ -70,7 +70,7 @@ struct AssistantConnectionsSection: View {
                 ProgressView()
             }
             Button(language.text("AI 연결 추가", "Add AI connection")) { isAdding = true }.disabled(isWorking)
-            if let message { Text(message).font(.footnote).foregroundStyle(.secondary) }
+            if let message { Text(message).font(.taptionStyle(.footnote)).foregroundStyle(.secondary) }
         } header: {
             Text(language.text("연결 키 관리", "Connection keys"))
         } footer: {
@@ -119,10 +119,10 @@ struct AssistantConnectionsSection: View {
             HStack {
                 Label(label(key), systemImage: key.scope == .write ? "pencil.circle" : "eye")
                 Spacer()
-                Text(key.scope.title(language)).font(.footnote).foregroundStyle(.secondary)
+                Text(key.scope.title(language)).font(.taptionStyle(.footnote)).foregroundStyle(.secondary)
             }
             if let host = key.host, !host.isEmpty { Text(host).font(.footnote.monospaced()).foregroundStyle(.secondary) }
-            Text(expiryText(key)).font(.footnote).foregroundStyle(expired || key.expiresSoon() ? .red : .secondary)
+            Text(expiryText(key)).font(.taptionStyle(.footnote)).foregroundStyle(expired || key.expiresSoon() ? .red : .secondary)
             // OAuth 연결의 권한은 승인 화면에서 정해져 여기서 바꾸지 않는다.
             if key.source != "oauth" {
                 Toggle(language.text("기록 수정 허용", "Allow record edits"), isOn: Binding(
@@ -244,7 +244,7 @@ struct AssistantConnectionForm: View {
                     TextField(language.text("이름 (예: 피클, ChatGPT)", "Name (e.g. Pickle, ChatGPT)"), text: $name)
                     if name.count > AssistantKeyLabels.maxLength {
                         Text(language.text("이름은 20자까지예요.", "Names can be up to 20 characters."))
-                            .font(.footnote).foregroundStyle(.red)
+                            .font(.taptionStyle(.footnote)).foregroundStyle(.red)
                     }
                     Toggle(language.text("기록 수정 허용", "Allow record edits"), isOn: $allowsEdits)
                     Picker(language.text("사용 기간", "Valid for"), selection: $period) {
@@ -252,7 +252,7 @@ struct AssistantConnectionForm: View {
                     }
                     if period == .never {
                         Text(language.text("키가 새면 직접 폐기해야 해요.", "If the key leaks, you have to revoke it yourself."))
-                            .font(.footnote).foregroundStyle(.orange)
+                            .font(.taptionStyle(.footnote)).foregroundStyle(.orange)
                     }
                 } footer: {
                     Text(language.text("이름은 이 기기에만 저장돼요.", "The name is stored only on this device."))
@@ -326,17 +326,17 @@ struct AssistantActionLogView: View {
     private func row(_ entry: AssistantLogEntry) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text(entry.kind.title(language)).font(.subheadline.weight(.semibold))
+                Text(entry.kind.title(language)).font(.taptionStyle(.subheadline, weight: .semibold))
                 Spacer()
-                Text(entry.appliedAt.formatted(date: .abbreviated, time: .shortened)).font(.caption).foregroundStyle(.secondary)
+                Text(entry.appliedAt.formatted(date: .abbreviated, time: .shortened)).font(.taptionStyle(.caption)).foregroundStyle(.secondary)
             }
             Text("\(entry.before.isEmpty ? language.text("새로", "New") : entry.before) → \(entry.after)")
-                .font(.footnote)
+                .font(.taptionStyle(.footnote))
             if let connection = entry.connection {
-                Text(language.text("보낸 연결: \(connection)", "From: \(connection)")).font(.caption).foregroundStyle(.secondary)
+                Text(language.text("보낸 연결: \(connection)", "From: \(connection)")).font(.taptionStyle(.caption)).foregroundStyle(.secondary)
             }
             if entry.undoneAt != nil {
-                Text(language.text("되돌렸어요", "Undone")).font(.caption).foregroundStyle(.secondary)
+                Text(language.text("되돌렸어요", "Undone")).font(.taptionStyle(.caption)).foregroundStyle(.secondary)
             } else {
                 Button(language.text("되돌리기", "Undo")) { undo(entry) }
                     .buttonStyle(.borderless)
@@ -344,7 +344,7 @@ struct AssistantActionLogView: View {
             }
             if failedID == entry.id {
                 Text(language.text("그 뒤에 바뀐 내용이 있어 되돌리지 못했어요.", "It changed afterwards, so it couldn't be undone."))
-                    .font(.caption).foregroundStyle(.red)
+                    .font(.taptionStyle(.caption)).foregroundStyle(.red)
             }
         }
     }

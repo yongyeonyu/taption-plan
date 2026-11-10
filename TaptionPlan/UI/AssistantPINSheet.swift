@@ -37,7 +37,7 @@ struct AssistantPINSheet: View {
                     } else {
                         Text(language.text("먼저 메뉴에서 앱 비밀번호(6자리)를 만들어 주세요.", "Create an app password (6 digits) in the menu first."))
                     }
-                    if let message { Text(message).font(.footnote).foregroundStyle(.red) }
+                    if let message { Text(message).font(.taptionStyle(.footnote)).foregroundStyle(.red) }
                 } footer: {
                     Text([purpose, footnote].compactMap { $0 }.joined(separator: "\n"))
                 }

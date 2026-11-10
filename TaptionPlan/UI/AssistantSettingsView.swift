@@ -81,7 +81,7 @@ struct AssistantSettingsView: View {
             Text(language.text(
                 "보안 업데이트로 예전 AI 연결을 모두 끊었어요. 쓰던 AI를 아래에서 다시 연결해 주세요.",
                 "A security update disconnected your previous AI connections. Reconnect the AIs you use below."
-            )).font(.footnote)
+            )).font(.taptionStyle(.footnote))
             Button(language.text("알겠어요", "Got it")) { needsReconnect = false }
         }
     }
@@ -105,7 +105,7 @@ struct AssistantSettingsView: View {
                         "The records on the server, every AI connection and the PIN are deleted. You'll need to reconnect the AIs you use."
                     ))
                 }
-            if let keyMessage { Text(keyMessage).font(.footnote).foregroundStyle(.secondary) }
+            if let keyMessage { Text(keyMessage).font(.taptionStyle(.footnote)).foregroundStyle(.secondary) }
         } footer: {
             Text(language.text(
                 "연동 키는 이 기기에만 있고 AI에게 주지 않아요. 키를 바꾸면 서버의 기록과 AI 연결을 모두 지워요.",

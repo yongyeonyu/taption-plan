@@ -68,10 +68,10 @@ struct AssistantProviderRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
-                Text(provider.title(language)).font(.body.weight(.semibold))
+                Text(provider.title(language)).font(.taptionStyle(.body, weight: .semibold))
                 if let badge = provider.planBadge(language) {
                     Text(badge)
-                        .font(.caption2.weight(.bold))
+                        .font(.taptionStyle(.caption2, weight: .bold))
                         .foregroundStyle(provider.isFreePlan ? Color.green : Color.orange)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
@@ -79,7 +79,7 @@ struct AssistantProviderRow: View {
                 }
                 Spacer(minLength: 0)
                 Text(isConnected ? language.text("연결됨", "Connected") : language.text("안 됨", "Not connected"))
-                    .font(.caption).foregroundStyle(isConnected ? Color.green : Color.secondary)
+                    .font(.taptionStyle(.caption)).foregroundStyle(isConnected ? Color.green : Color.secondary)
             }
             HStack {
                 if provider.appStoreURL != nil {
@@ -134,7 +134,7 @@ struct AssistantProviderView: View {
             Section {
                 LabeledContent(language.text("상태", "Status"), value: store.isConnected(provider) ? language.text("연결됨", "Connected") : language.text("안 됨", "Not connected"))
                 if let badge = provider.planBadge(language) { LabeledContent(language.text("요금제", "Plan"), value: badge) }
-                if let message { Text(message).font(.footnote).foregroundStyle(.secondary) }
+                if let message { Text(message).font(.taptionStyle(.footnote)).foregroundStyle(.secondary) }
             } footer: {
                 if provider.planBadge(language) != nil { Text(AssistantAIProvider.planFootnote(language)) }
             }
@@ -227,7 +227,7 @@ struct AssistantProviderView: View {
                 ForEach(AssistantKeyPeriod.allCases) { Text($0.title(language)).tag($0) }
             }
             if cuePeriod == .never {
-                Text(language.text("키가 새면 직접 끊어야 해요.", "If the key leaks, you have to cut it yourself.")).font(.footnote).foregroundStyle(.orange)
+                Text(language.text("키가 새면 직접 끊어야 해요.", "If the key leaks, you have to cut it yourself.")).font(.taptionStyle(.footnote)).foregroundStyle(.orange)
             }
             Button(existing == nil ? language.text("Cue 연결 키 만들기", "Make a Cue key") : language.text("새 키로 다시 만들기", "Make a new key")) { isAskingPIN = true }
         } header: {
@@ -238,8 +238,8 @@ struct AssistantProviderView: View {
                  : language.text("Cue는 기록을 읽기만 해요.", "Cue can only read records."))
         }
         Section {
-            Text(cueSteps).font(.footnote)
-            LabeledContent(language.text("MCP 주소", "MCP URL"), value: TripRelay.mcpURL(host: host)).font(.footnote)
+            Text(cueSteps).font(.taptionStyle(.footnote))
+            LabeledContent(language.text("MCP 주소", "MCP URL"), value: TripRelay.mcpURL(host: host)).font(.taptionStyle(.footnote))
             Button(language.text("MCP 주소 복사", "Copy MCP URL")) {
                 copy(TripRelay.mcpURL(host: host))
                 message = language.text("MCP 주소를 복사했어요.", "MCP URL copied.")
@@ -280,7 +280,7 @@ struct AssistantProviderView: View {
 
     private var keySection: some View {
         Section {
-            Text(keySteps).font(.footnote)
+            Text(keySteps).font(.taptionStyle(.footnote))
             Button(language.text("연결하기", "Connect")) { isAskingPIN = true }
             if let existing {
                 Button(language.text("연결 안내 다시 복사", "Copy setup again")) {
@@ -322,8 +322,8 @@ struct AssistantProviderView: View {
         if provider == .claude { keyURLSection }
         if provider == .chatGPT { gptActionsSection }
         Section {
-            Text(oauthSteps).font(.footnote)
-            LabeledContent(language.text("서버 주소", "Server URL"), value: TripRelay.mcpURL(host: host)).font(.footnote)
+            Text(oauthSteps).font(.taptionStyle(.footnote))
+            LabeledContent(language.text("서버 주소", "Server URL"), value: TripRelay.mcpURL(host: host)).font(.taptionStyle(.footnote))
             Button(language.text("서버 주소 복사", "Copy server URL")) { copy(TripRelay.mcpURL(host: host)) }
             Button(language.text("연결 코드 받기", "Get a connection code")) { requestCode() }
             if let code { codeView(code) }
@@ -352,8 +352,8 @@ struct AssistantProviderView: View {
             Text(language.text(
                 "1. 「연결 키 만들기」를 눌러 앱 비밀번호를 넣어요.\n2. ChatGPT → GPT 만들기 → 구성 → 작업(Actions) → 새 작업 만들기 → 가져오기(URL)에 스키마 주소를 붙여 넣어요.\n3. 인증 → API 키 → 인증 유형 Bearer를 고르고 연결 키를 붙여 넣어요.\n4. 미리보기에서 「오늘 기록 읽어 줘」로 확인한 뒤 저장해요.",
                 "1. Tap Make a key and enter your app password.\n2. In ChatGPT, open Create a GPT → Configure → Actions → Create new action → Import from URL and paste the schema URL.\n3. Under Authentication choose API key, auth type Bearer, and paste the key.\n4. Check in the preview with \"read today's records\", then save."
-            )).font(.footnote)
-            LabeledContent(language.text("스키마 주소", "Schema URL"), value: TripRelay.openAPIURL(host: host)).font(.footnote)
+            )).font(.taptionStyle(.footnote))
+            LabeledContent(language.text("스키마 주소", "Schema URL"), value: TripRelay.openAPIURL(host: host)).font(.taptionStyle(.footnote))
             Button(language.text("스키마 주소 복사", "Copy schema URL")) {
                 copy(TripRelay.openAPIURL(host: host))
                 message = language.text("스키마 주소를 복사했어요.", "Schema URL copied.")
@@ -385,7 +385,7 @@ struct AssistantProviderView: View {
             Text(language.text(
                 "1. 「Claude에서 바로 추가」를 누르고 앱 비밀번호를 넣어요.\n2. 연결 코드가 복사되고 승인 PIN이 보여요.\n3. Claude가 열리면 「Add」를 누르고, 승인 화면에 코드를 붙여 넣고 PIN을 넣어요.",
                 "1. Tap Add in Claude now and enter your app password.\n2. A connection code is copied and the approval PIN is shown.\n3. In Claude tap Add, then paste the code and enter the PIN on the approval page."
-            )).font(.footnote)
+            )).font(.taptionStyle(.footnote))
             Button(language.text("Claude에서 바로 추가 (추천)", "Add in Claude now (recommended)")) {
                 opensClaudeAdd = true
                 requestCode()
@@ -403,7 +403,7 @@ struct AssistantProviderView: View {
             Text(language.text(
                 "연결 주소를 만들면 복사돼요. Claude → 설정 → 커넥터 → 맞춤 커넥터 추가에 주소를 붙여 넣고, 인증은 「로그인 없음」을 고르면 끝나요.",
                 "Make a link and it's copied. In Claude, open Settings → Connectors → Add custom connector, paste the link and choose No sign-in."
-            )).font(.footnote)
+            )).font(.taptionStyle(.footnote))
             Button(language.text("연결 주소 만들기", "Make a connection link")) {
                 makesKeyURL = true
                 isAskingPIN = true
@@ -444,13 +444,13 @@ struct AssistantProviderView: View {
             // 코드와 PIN을 각자 줄에 둔다. 길게 눌러 고르면 두 줄이 함께 잡혀 복사 버튼만 쓴다(CLD1111A01).
             VStack(alignment: .leading, spacing: 8) {
                 HStack(alignment: .firstTextBaseline) {
-                    Text(language.text("연결 코드", "Connection code")).font(.footnote).foregroundStyle(.secondary)
+                    Text(language.text("연결 코드", "Connection code")).font(.taptionStyle(.footnote)).foregroundStyle(.secondary)
                     Spacer()
                     Text(code.code).font(.title2.monospaced().weight(.bold))
                 }
                 if let approvalPIN, left > 0 {
                     HStack(alignment: .firstTextBaseline) {
-                        Text(language.text("승인 화면 PIN", "Approval page PIN")).font(.footnote).foregroundStyle(.secondary)
+                        Text(language.text("승인 화면 PIN", "Approval page PIN")).font(.taptionStyle(.footnote)).foregroundStyle(.secondary)
                         Spacer()
                         Text(approvalPIN).font(.title2.monospaced().weight(.bold))
                     }
@@ -458,7 +458,7 @@ struct AssistantProviderView: View {
                 Text(left > 0
                      ? language.text("\(left / 60)분 \(left % 60)초 남음 · 한 번만 쓸 수 있어요", "\(left / 60)m \(left % 60)s left · single use")
                      : language.text("코드가 끝났어요. 새로 받아 주세요.", "The code expired. Get a new one."))
-                    .font(.caption).foregroundStyle(left > 0 ? Color.secondary : Color.red)
+                    .font(.taptionStyle(.caption)).foregroundStyle(left > 0 ? Color.secondary : Color.red)
                 if left > 0 { Button(language.text("코드 복사", "Copy code")) { copy(code.code) }.buttonStyle(.borderless) }
             }
         }

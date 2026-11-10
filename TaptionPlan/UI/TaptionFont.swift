@@ -86,6 +86,24 @@ extension Font {
     }
 }
 
+extension Font {
+    /// 시스템 글자 모양(`.caption`·`.footnote`·`.headline` 등)을 앱 글꼴로(FNT1111A01). 시스템 모양을 직접 쓰면
+    /// 메뉴에서 글꼴을 바꿔도 그 글자만 시스템 글꼴로 남는다.
+    static func taptionStyle(_ style: Font.TextStyle, weight: Font.Weight? = nil) -> Font {
+        let size: CGFloat = switch style {
+        case .caption2: 11
+        case .caption: 12
+        case .footnote: 13
+        case .subheadline: 14
+        case .headline: 17
+        case .title3: 20
+        case .title2: 22
+        default: 15
+        }
+        return .taptionFixed(size: TaptionType.scaled(TaptionType.snapped(size)), weight: weight ?? (style == .headline ? .semibold : .regular))
+    }
+}
+
 /// 글꼴을 고르면 화면을 다시 만들어 모든 글자에 바로 적용한다.
 struct TaptionFontRoot<Content: View>: View {
     @AppStorage(TaptionFont.storageKey) private var selection = TaptionFont.jua.rawValue

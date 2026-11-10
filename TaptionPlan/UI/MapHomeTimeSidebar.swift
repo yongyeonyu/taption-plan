@@ -2343,7 +2343,7 @@ Group {
                                             .foregroundStyle(Color.tpSecondary)
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text("\(time(segment.startMinute))–\(time(segment.endMinute))")
-                                                .font(.headline.monospacedDigit())
+                                                .font(.taptionStyle(.headline).monospacedDigit())
                                                 .foregroundStyle(Color.tpInk)
                                             Text(language.text(
                                                 "\(duration(segment.endMinute - segment.startMinute)) 미확인",
@@ -2354,7 +2354,7 @@ Group {
                                         }
                                         Spacer()
                                         Image(systemName: "chevron.right")
-                                            .font(.caption.weight(.semibold))
+                                            .font(.taptionStyle(.caption, weight: .semibold))
                                             .foregroundStyle(Color.tpSecondary.opacity(0.7))
                                     }
                                 }

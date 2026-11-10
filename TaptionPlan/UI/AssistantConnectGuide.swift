@@ -152,9 +152,9 @@ struct AssistantGuideSection: View {
             if let step = steps.indices.contains(index) ? steps[index] : nil {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(language.text("\(index + 1) / \(steps.count) 단계", "Step \(index + 1) of \(steps.count)"))
-                        .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                    Text(step.title).font(.headline)
-                    Text(step.detail).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                        .font(.taptionStyle(.caption, weight: .semibold)).foregroundStyle(.secondary)
+                    Text(step.title).font(.taptionStyle(.headline))
+                    Text(step.detail).font(.taptionStyle(.footnote)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     if step.action == .check, isConnected {
                         Label(language.text("연결됨", "Connected"), systemImage: "checkmark.circle.fill").foregroundStyle(.green)
                     }
@@ -167,7 +167,7 @@ struct AssistantGuideSection: View {
                 .disabled(step.action == nil)
                 .accessibilityIdentifier("assistantGuide.\(step.id)")
                 if step.action == nil {
-                    Text(language.text("앞 단계를 먼저 해 주세요.", "Do the previous step first.")).font(.caption).foregroundStyle(.orange)
+                    Text(language.text("앞 단계를 먼저 해 주세요.", "Do the previous step first.")).font(.taptionStyle(.caption)).foregroundStyle(.orange)
                 }
                 HStack {
                     Button(language.text("이전", "Back")) { memory.go(to: index - 1) }.disabled(index == 0)

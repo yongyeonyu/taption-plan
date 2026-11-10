@@ -140,7 +140,7 @@ struct LedgerSheet: View {
             HStack {
                 Button { shiftMonth(-1) } label: { Image(systemName: "chevron.left") }
                 Spacer()
-                Text(monthTitle).font(.headline)
+                Text(monthTitle).font(.taptionStyle(.headline))
                 Spacer()
                 Button { shiftMonth(1) } label: { Image(systemName: "chevron.right") }
             }
@@ -186,14 +186,14 @@ struct LedgerRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(entry.title).lineLimit(1)
                 Text([entry.category.title(language), entry.payer, sourceText].compactMap { $0 }.joined(separator: " · "))
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.taptionStyle(.caption)).foregroundStyle(.secondary)
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
                 Text((entry.kind == .expense ? "−" : "+") + LedgerMoney.text(entry.amount, currency: entry.currency, language: language))
                     .foregroundStyle(entry.kind == .expense ? Color.primary : Color.green)
                 if entry.currency != "KRW", let krw = entry.amountKRW {
-                    Text(LedgerMoney.text(krw, language: language)).font(.caption).foregroundStyle(.secondary)
+                    Text(LedgerMoney.text(krw, language: language)).font(.taptionStyle(.caption)).foregroundStyle(.secondary)
                 }
             }
         }
@@ -251,7 +251,7 @@ struct LedgerEntryForm: View {
                         let rate = LedgerFX.krwPerUnit(entry.currency, table: book.fx, manual: book.manualRates)
                         Text(rate.map { language.text("1 \(entry.currency) ≈ \(Int($0.rounded()))원", "1 \(entry.currency) ≈ ₩\(Int($0.rounded()))") }
                              ?? language.text("환율을 몰라요. 아래에 직접 넣어 주세요.", "Rate unknown. Enter it below."))
-                            .font(.caption).foregroundStyle(.secondary)
+                            .font(.taptionStyle(.caption)).foregroundStyle(.secondary)
                         TextField(language.text("직접 넣는 환율 (1단위 = 원)", "Manual rate (1 unit = KRW)"), text: $manualRateText).keyboardType(.decimalPad)
                     }
                     Picker(language.text("분류", "Category"), selection: $entry.category) {
