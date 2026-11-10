@@ -191,6 +191,10 @@ public struct RouteLoggerRouteFilter: Sendable {
                 || isContradictedGapJump(sample, after: previous, next: next) {
                 decisions.append(.init(id: sample.id, timestamp: sample.timestamp, reason: .impossibleSpeed))
                 needsNewSegment = true
+                // 거부 묶음 안의 튄 점 하나가 재기준을 막지 않게, 끝에서 서로 맞는 부분만 남긴다 (REV1110A04).
+                if let last = rejectedRun.last, !isGroundPlausible(sample, after: last) {
+                    rejectedRun.removeAll()
+                }
                 rejectedRun.append(sample)
                 if isSelfConsistentRun(rejectedRun) {
                     // The anchor, not the run, was the outlier: a stale first fix
@@ -450,10 +454,12 @@ public struct RouteLoggerRouteFilter: Sendable {
         try cancellationCheck()
         guard !segments.isEmpty else {
             guard let first = boundaries.first, let last = boundaries.last else { return [] }
+            let mode = boundaries.first(where: { $0.mode != .unknown })?.mode ?? .unknown
             return [RouteSegment(
+                id: RouteSegmentID.make(samples: boundaries, mode: mode),
                 start: first.timestamp,
                 end: last.timestamp,
-                mode: boundaries.first(where: { $0.mode != .unknown })?.mode ?? .unknown,
+                mode: mode,
                 samples: boundaries,
                 pathSamples: [],
                 boundarySamples: boundaries,
@@ -502,6 +508,7 @@ public struct RouteLoggerRouteFilter: Sendable {
             )
             try cancellationCheck()
             result.append(RouteSegment(
+                id: RouteSegmentID.make(samples: sources, mode: sources.first(where: { $0.mode != .unknown })?.mode ?? .unknown),
                 start: sources.first?.timestamp ?? segment.path[0].timestamp,
                 end: sources.last?.timestamp ?? segment.path[segment.path.count - 1].timestamp,
                 mode: sources.first(where: { $0.mode != .unknown })?.mode ?? .unknown,

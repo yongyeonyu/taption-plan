@@ -6,3 +6,21 @@ compatibility_date = "2026-10-01"
 [[kv_namespaces]]
 binding = "PLANS"
 id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+# IP당 1분에 POST 5번까지(REV1110A02). 무료 KV 쓰기 한도를 한 사람이 다 쓰지 못하게 한다.
+[[ratelimits]]
+name = "POST_LIMIT"
+namespace_id = "1001"
+
+  [ratelimits.simple]
+  limit = 5
+  period = 60
+
+# 카카오 검색 중계: IP당 1분에 60번(REV1110A03). 키는 `npx wrangler secret put KAKAO_REST_API_KEY`로만 둔다.
+[[ratelimits]]
+name = "KAKAO_LIMIT"
+namespace_id = "1002"
+
+  [ratelimits.simple]
+  limit = 60
+  period = 60

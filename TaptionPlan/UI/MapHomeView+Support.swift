@@ -649,6 +649,8 @@ extension MapHomeView {
                     isPassportPresented = false
                     isMenuOpen = false
                     passportReturnPage = page
+                    // 여권은 다녀온 기록이라 여행 모드(미래만 고름)를 끄고 그날로 간다.
+                    if isTravelMode { isTravelMode = false }
                     model.selectedDate = day
                 }
             )

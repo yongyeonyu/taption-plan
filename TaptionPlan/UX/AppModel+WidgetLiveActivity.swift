@@ -350,7 +350,8 @@ extension AppModel {
     func applyPendingWidgetCommands(
         repositoryAlreadyLoaded: Bool
     ) async {
-        guard let commands = try? TaptionWidgetSharedStore.takeCommands(),
+        guard let taken = try? TaptionWidgetSharedStore.takeCommands(),
+              case let commands = TaptionWidgetCommandReceipts.unapplied(taken),
               !commands.isEmpty else {
             return
         }
@@ -377,6 +378,17 @@ extension AppModel {
                 )
             }
         }
+        // 종료·완료 명령이 반영되면 그 계획의 Live Activity도 끝낸다(REV1110A04).
+        for command in commands where command.kind == .complete || command.kind == .stopCurrentActivity {
+            await liveActivityController.end(planID: command.planID)
+        }
+    }
+
+    /// 데이터 삭제 때 두 Live Activity를 끝내고 오늘 요약 캐시를 비운다(REV1110A04).
+    func endLiveActivitiesForPurge() async {
+        await liveActivityController.concealAll()
+        await SensorCollectionLiveActivityController.shared.endAll()
+        LiveActivityDaySummaryCache.shared.clear()
     }
 
     private func normalizedWidgetPayload(
@@ -392,12 +404,8 @@ extension AppModel {
         // movement end times, while the comparison below canonicalizes an
         // open movement edge to distantPast.
         normalized.sourceFingerprint = nil
-        if let center = payload.displayCenterDate {
-            let minute = floor(center.timeIntervalSinceReferenceDate / 60)
-            normalized.displayCenterDate = Date(
-                timeIntervalSinceReferenceDate: minute * 60
-            )
-        }
+        // 위젯은 중심 시각을 읽지 않으므로 비교에서 빼 매분 다시 그리지 않는다(REV1110A04).
+        normalized.displayCenterDate = nil
         // Open-ended automatic records use "now" as their presentation end.
         // Ignore that moving edge while comparing payload content.
         normalized.items = payload.items.map { item in

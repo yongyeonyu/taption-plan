@@ -105,6 +105,8 @@ final class MapHomeSearchCompleter: NSObject, @preconcurrency MKLocalSearchCompl
             clear()
         } else if MapHomeKakaoSearch.isAvailable(at: region.center) {
             if !results.isEmpty { results = [] }
+            // 앞서 해외에서 부른 Apple 추천이 늦게 와서 섞이지 않게 멈춘다.
+            if !completer.queryFragment.isEmpty { completer.queryFragment = "" }
             kakaoTask?.cancel()
             kakaoTask = Task { @MainActor [weak self] in
                 // 글자를 칠 때마다 부르지 않고 잠깐 멈췄을 때 한 번 부른다.
@@ -117,6 +119,9 @@ final class MapHomeSearchCompleter: NSObject, @preconcurrency MKLocalSearchCompl
                 if found.isEmpty { startApple(value, region: region) }
             }
         } else {
+            // 해외로 옮기면 받던 카카오 추천을 버린다.
+            kakaoTask?.cancel()
+            if !kakaoResults.isEmpty { kakaoResults = [] }
             startApple(value, region: region)
         }
     }

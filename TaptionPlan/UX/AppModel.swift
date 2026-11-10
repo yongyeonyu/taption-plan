@@ -112,6 +112,7 @@ final class AppModel {
             return
         }
         withMutation(keyPath: \.snapshot) { snapshotStorage = newValue }
+        noteSnapshotMutationForSensorRefresh()
         snapshotRevision &+= 1
         snapshotContentRevision &+= 1
         activityClassificationRevisionFence.advance(to: snapshotRevision)

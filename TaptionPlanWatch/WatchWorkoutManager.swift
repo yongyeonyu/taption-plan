@@ -220,12 +220,8 @@ private actor WatchAccelerationArchive {
             filesNeedLineSeparator.remove(month)
             return TaptionWatchAccelerationArchiveAppendIndex()
         }
-        let data = try Data(contentsOf: url, options: .mappedIfSafe)
-        if !data.isEmpty, data.last != 0x0A {
-            filesNeedLineSeparator.insert(month)
-        } else {
-            filesNeedLineSeparator.remove(month)
-        }
+        let (data, endsWithNewline) = try WatchFileTail.read(url) // 끝부분만 읽는다(WCH1110A01)
+        if endsWithNewline { filesNeedLineSeparator.remove(month) } else { filesNeedLineSeparator.insert(month) }
         var index = TaptionWatchAccelerationArchiveAppendIndex()
         index.trackAmbientSessions(trackingAmbientSessions)
         for line in data.split(separator: 0x0A) {
@@ -319,17 +315,17 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     private var workoutStartGate = TaptionWatchWorkoutStartGate()
     private let workoutLifecycleBarrier = TaptionWatchWorkoutLifecycleBarrier()
     private var pendingWorkoutFailureMessage: String?
-    private var workoutAwaitingPurgeDeletion: HKWorkout?
-    private var workoutAwaitingPurgeDeletionID: UUID?
-    private var workoutPurgeIdentifier: UUID?
-    private var workoutFinishState: TaptionWatchWorkoutFinishState = .idle
+    var workoutAwaitingPurgeDeletion: HKWorkout?
+    var workoutAwaitingPurgeDeletionID: UUID?
+    var workoutPurgeIdentifier: UUID?
+    var workoutFinishState: TaptionWatchWorkoutFinishState = .idle
     private var purgeWorkoutDeletionTask: Task<Void, Error>?
     // iPhone의 AppleSensorCollector와 동일하게 CoreMotion 콜백을 메인 큐로
     // 받는다. 백그라운드 큐로 받으면 @MainActor 클래스 안에서 선언된 핸들러가
     // 액터 격리 검사에 걸려 프로세스가 즉시 종료된다. 핸들러 본문은 값 하나를
     // 만들어 넘기는 수준이라 메인 큐 부담이 없다.
     private var session: HKWorkoutSession?
-    private var builder: HKLiveWorkoutBuilder?
+    var builder: HKLiveWorkoutBuilder?
     private(set) var linkedPlan: TaptionWatchPlanItem?
     private(set) var workoutKind: TaptionWatchWorkoutKind?
     var onSensorSummary: ((TaptionWatchSensorSummary) -> Void)?
@@ -364,7 +360,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     private var latestFloorsDescended: Int?
     private var averageHeartRate: Double?
     private var maximumHeartRate: Double?
-    private var pendingRoutePoints: [TaptionWatchLocationPoint] = []
+    private var pendingRoutePoints: [TaptionWatchLocationPoint] = [] { didSet { if pendingRoutePoints.isEmpty { pendingRoutePointTimes.removeAll(keepingCapacity: true) } } }
+    private var pendingRoutePointTimes = Set<Date>() // 같은 시각 점을 거른다(WCH1110A01)
     private var motionSamples: [WatchMotionSample] = []
     private var nextBehaviorWindowEnd: Date?
     private var lastWindowStepCount = 0
@@ -674,7 +671,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 )
             }
             await reset(
-                with: "운동을 시작하지 못했습니다. \(error.localizedDescription)"
+                with: AppLanguagePreference.text("운동을 시작하지 못했습니다. \(error.localizedDescription)", "Couldn't start the workout. \(error.localizedDescription)")
             )
             return false
         }
@@ -791,6 +788,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                         workoutPurgeIdentifier
                     )
                 }
+            } else {
+                builder.discardWorkout() // 수집을 끝내지 못했으면 폐기한다(WCH1110A01)
             }
             guard workoutStartGate.accepts(resetToken) else {
                 discardPendingWorkout(session, builder: builder)
@@ -799,7 +798,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             }
             WatchLaunchDiagnostics.mark("workout stop failed")
             let didReset = await reset(
-                with: "운동 저장을 완료하지 못했습니다. \(error.localizedDescription)",
+                with: AppLanguagePreference.text("운동 저장을 완료하지 못했습니다. \(error.localizedDescription)", "Couldn't finish saving the workout. \(error.localizedDescription)"),
                 using: resetToken
             )
             return didReset ? linkedPlan : nil
@@ -943,7 +942,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 WatchLaunchDiagnostics.mark(
                     "ambient drain summaries=\(result.summaries.count) samples=\(result.archiveSamples.count)"
                 )
-                await self.applyAmbientDrain(result)
+                // 남은 창은 화면이 켜져 있을 때만 이어서 비운다(백그라운드는 다음 실행에).
+                if await self.applyAmbientDrain(result), result.hasMoreWindows, self.isSceneReadyForCapture, !Task.isCancelled { self.ambientDrainTask = nil; self.refreshAmbientRecording(); return }
             } else {
                 self.recorderStatus = await recorder.status()
                 WatchLaunchDiagnostics.mark("ambient recording disabled")
@@ -953,8 +953,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         }
     }
 
-    private func applyAmbientDrain(_ result: WatchAmbientDrainResult) async {
-        guard !isCommerceLocked, !Task.isCancelled else { return }
+    private func applyAmbientDrain(_ result: WatchAmbientDrainResult) async -> Bool { // 처리 위치를 커밋했으면 true
+        guard !isCommerceLocked, !Task.isCancelled else { return false }
         var canCommitWatermark = onAmbientDrain != nil
         if !result.archiveSamples.isEmpty {
             let archive = accelerationArchive
@@ -1058,6 +1058,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             )
         }
         publishMeasurement()
+        return canCommitWatermark
     }
 
     private func restartHealthSync() {
@@ -2257,9 +2258,7 @@ extension WatchWorkoutManager: CLLocationManagerDelegate {
                   let workoutStartedAt = self.startedAt else { return }
             for point in points where point.belongs(
                 toWorkoutStartingAt: workoutStartedAt
-            ) && !self.pendingRoutePoints.contains(
-                where: { $0.capturedAt == point.capturedAt }
-            ) {
+            ) && self.pendingRoutePointTimes.insert(point.capturedAt).inserted {
                 self.pendingRoutePoints.append(point)
             }
         }
@@ -2297,8 +2296,9 @@ extension WatchWorkoutManager: HKWorkoutSessionDelegate {
                 workoutSession.delegate = nil
                 return
             }
+            await self.salvageWorkoutAfterFailure() // 그때까지 잰 운동을 저장하거나 폐기한다(WCH1110A01)
             await self.reset(
-                with: "운동 측정이 중단됐습니다. \(error.localizedDescription)"
+                with: AppLanguagePreference.text("운동 측정이 중단됐습니다. \(error.localizedDescription)", "Workout tracking stopped. \(error.localizedDescription)")
             )
         }
     }

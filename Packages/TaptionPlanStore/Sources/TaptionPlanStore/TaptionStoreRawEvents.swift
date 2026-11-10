@@ -114,6 +114,22 @@ extension TaptionStoreV2 {
         return sqlite3_step(statement) == SQLITE_ROW ? Int(sqlite3_column_int64(statement, 0)) : 0
     }
 
+    /// `[from, to)`에 든 `kinds` 이벤트 수. 원본 이벤트만 있는 달도 백업 대상으로 센다(REV1110A04).
+    public func rawEventCount(kinds: [String], from: Double, to: Double) throws -> Int {
+        guard !kinds.isEmpty else { return 0 }
+        let db = try handle()
+        let marks = Array(repeating: "?", count: kinds.count).joined(separator: ", ")
+        let statement = try prepare(
+            db, "SELECT COUNT(*) FROM raw_events WHERE kind IN (\(marks)) AND ts >= ? AND ts < ?"
+        )
+        defer { sqlite3_finalize(statement) }
+        var index: Int32 = 1
+        for kind in kinds { bind(statement, index, .text(kind)); index += 1 }
+        bind(statement, index, .real(from))
+        bind(statement, index + 1, .real(to))
+        return sqlite3_step(statement) == SQLITE_ROW ? Int(sqlite3_column_int64(statement, 0)) : 0
+    }
+
     /// 이벤트가 있는 현지 날짜마다 첫·마지막 시각 범위. `kind`를 주지 않으면 모든 종류.
     public func rawEventDayRanges(kind: String? = nil) throws -> [ClosedRange<Date>] {
         let db = try handle()

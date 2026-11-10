@@ -137,8 +137,8 @@ public enum PhoneSleepScore {
     static func nightOverlap(_ candidate: ClassifierInterval, window: UsualWindow, calendar: Calendar) -> Double {
         let day = calendar.startOfDay(for: candidate.start)
         var total: TimeInterval = 0
-        // 후보가 자정을 넘길 수 있으니 전날·당일 밤 창을 모두 본다.
-        for offset in [-1, 0] {
+        // 후보가 자정을 넘길 수 있다. 평소 취침이 자정 뒤면 당일 저녁 시작 후보는 다음 날 창과 겹치니 앞뒤 하루를 모두 본다.
+        for offset in [-1, 0, 1] {
             guard let base = calendar.date(byAdding: .day, value: offset, to: day),
                   let bed = calendar.date(byAdding: .minute, value: window.bedMinute - windowSlack, to: base) else { continue }
             let wakeDayOffset = window.wakeMinute <= window.bedMinute ? 1 : 0

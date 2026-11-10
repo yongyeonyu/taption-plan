@@ -335,6 +335,14 @@ actor TaptionBackupEngine {
             guard localRows > 0 else {
                 return result(scope, .skippedNoData, "\(scope.key)은 로컬에 데이터가 없어 쓰지 않았다.")
             }
+            // 봉인한 달의 전체 행은 그 파일에만 있다. 목록에서 못 찾았다고 남은 몇 행으로 새로 쓰면
+            // 전체 백업이 몇 행짜리로 바뀐다. 파일이 다시 보일 때까지 쓰지 않는다(REV1110A04).
+            if case .month(let month) = scope, try await isSealed(month) {
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "backup_sealed_month_file_missing", level: .error, fields: ["month": month.key]
+                )
+                return result(scope, .skippedSealed, "\(month.key)은 봉인된 달인데 기존 백업을 찾지 못해 새로 쓰지 않았다.")
+            }
             return try await write(scope: scope, password: password, now: now, token: token, old: nil, oldIndex: nil)
         }
 
@@ -636,6 +644,8 @@ actor TaptionBackupEngine {
         let to = range.end.timeIntervalSince1970
         // 검증을 시작할 때의 지문. 삭제 트랜잭션이 같은 값을 다시 확인한다.
         let fingerprint = try await store.rangeFingerprint(from: from, to: to)
+        // 메모 파일도 검증 전에 지문을 잰다. 검증 뒤 고친 메모는 지우지 않는다(REV1110A04).
+        let memoFingerprint = try await memoStore?.rangeFingerprint(from: from, to: to)
         guard fingerprint.readings + fingerprint.records > 0 else { return nil }
 
         let scope = TaptionBackupScope.month(month)
@@ -659,7 +669,8 @@ actor TaptionBackupEngine {
         let url = try await destination.fetch(name: name)
         do {
             let outcome = try await verifyAndDelete(
-                month: month, scope: scope, url: url, header: header, key: key, from: from, to: to, fingerprint: fingerprint
+                month: month, scope: scope, url: url, header: header, key: key, from: from, to: to,
+                fingerprint: fingerprint, memoFingerprint: memoFingerprint
             )
             await destination.release(fetched: url)
             return outcome
@@ -674,7 +685,8 @@ actor TaptionBackupEngine {
 
     private func verifyAndDelete(
         month: TaptionBackupMonth, scope: TaptionBackupScope, url: URL, header: TaptionBackupHeader,
-        key: SymmetricKey, from: Double, to: Double, fingerprint: TaptionStoreV2.RangeFingerprint
+        key: SymmetricKey, from: Double, to: Double, fingerprint: TaptionStoreV2.RangeFingerprint,
+        memoFingerprint: TaptionStoreV2.RangeFingerprint?
     ) async throws -> OffloadResult.Outcome {
         let name = month.fileName
         try TaptionBackupFileReader.verifyBodyChecksum(at: url, header: header)
@@ -701,8 +713,18 @@ actor TaptionBackupEngine {
         ) else {
             return .skipped("\(name) 검증 뒤 로컬이 바뀌어(새 행·편집·삭제 표시) 지우지 않았다.")
         }
-        // 메모는 다른 파일이라 한 트랜잭션으로 묶을 수 없다. 이미 검증한 백업 파일에 들어 있으므로 지운다.
-        let memoRemoved = try await memoStore?.deleteRecordRange(from: from, to: to) ?? 0
+        // 메모는 다른 파일이라 한 트랜잭션으로 묶을 수 없다. 검증 전 지문과 같을 때만 지운다.
+        // 그 사이 고친 메모는 로컬에 남고, 다음 백업이 파일과 합쳐 다시 올린다(REV1110A04).
+        var memoRemoved = 0
+        if let memoStore, let memoFingerprint {
+            if let memo = try await memoStore.deleteRange(from: from, to: to, expected: memoFingerprint) {
+                memoRemoved = memo.records
+            } else {
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "offload_memo_changed_after_verify", fields: ["month": month.key]
+                )
+            }
+        }
         return .sealed(readings: removed.readings, records: removed.records + memoRemoved)
     }
 
@@ -856,24 +878,38 @@ actor TaptionBackupEngine {
         schema.string("#raw")
         for name in Self.rawColumns { schema.string(name) }
         try put(schema.finish())
-        for kind in [
-            TaptionRawEvent.Kind.deviceEnvelope, TaptionRawEvent.Kind.watchSummary, TaptionRawEvent.Kind.watchAcceleration,
-        ] {
-            for event in try await store.rawEvents(kind: kind, from: range.start, through: range.end)
-                where event.timestamp < range.end {
-                var row = TaptionBackupJSONLine.Builder()
-                row.string("w")
-                row.string(event.kind)
-                row.string(event.id)
-                try row.double(event.timestamp.timeIntervalSince1970)
-                row.int(event.sequence)
-                row.string(event.origin.rawValue)
-                row.string(try Self.provenanceText(event.provenance))
-                row.string(event.payload)
-                try put(row.finish())
+        // 시계 가속도까지 한 달을 한 번에 읽으면 메모리가 치솟는다. 하루씩 읽되 종류→시각 순서는 그대로라
+        // 내용 해시가 바뀌지 않는다(REV1110A04).
+        for kind in Self.rawKinds {
+            var cursor = range.start
+            while cursor < range.end {
+                let next = min(calendar.date(byAdding: .day, value: 1, to: cursor) ?? range.end, range.end)
+                try await exportRawEvents(kind: kind, from: cursor, to: next, put: put)
+                cursor = next
             }
         }
     }
+
+    private func exportRawEvents(
+        kind: String, from start: Date, to end: Date, put: (Data) throws -> Void
+    ) async throws {
+        for event in try await store.rawEvents(kind: kind, from: start, through: end) where event.timestamp < end {
+            var row = TaptionBackupJSONLine.Builder()
+            row.string("w")
+            row.string(event.kind)
+            row.string(event.id)
+            try row.double(event.timestamp.timeIntervalSince1970)
+            row.int(event.sequence)
+            row.string(event.origin.rawValue)
+            row.string(try Self.provenanceText(event.provenance))
+            row.string(event.payload)
+            try put(row.finish())
+        }
+    }
+
+    private static let rawKinds = [
+        TaptionRawEvent.Kind.deviceEnvelope, TaptionRawEvent.Kind.watchSummary, TaptionRawEvent.Kind.watchAcceleration,
+    ]
 
     private static let rawColumns = ["#raw", "kind", "id", "ts", "seq", "origin", "provenance", "payload"]
 
@@ -1063,10 +1099,17 @@ actor TaptionBackupEngine {
     /// 실제 데이터가 있는 달(오름차순). 데이터가 있는 UTC 날짜의 양끝이 속한 달만 후보로 삼고 로컬 행이 있는 것만 남긴다.
     private func monthsWithData() async throws -> [TaptionBackupMonth] {
         var candidates = Set<TaptionBackupMonth>()
-        for day in try await store.dataUTCDays() where Self.validDays.contains(day) {
+        // 메모 파일과 원본 이벤트에만 있는 달도 후보에 넣는다(REV1110A04).
+        let days = try await store.dataUTCDays() + (try await memoStore?.dataUTCDays() ?? [])
+        for day in days where Self.validDays.contains(day) {
             let start = Double(day) * 86_400
             for instant in [start, start + 86_399.999] {
                 candidates.insert(TaptionBackupMonth(date: Date(timeIntervalSince1970: instant), calendar: calendar))
+            }
+        }
+        for range in try await store.rawEventDayRanges() {
+            for instant in [range.lowerBound, range.upperBound] {
+                candidates.insert(TaptionBackupMonth(date: instant, calendar: calendar))
             }
         }
         var months: [TaptionBackupMonth] = []
@@ -1101,7 +1144,11 @@ actor TaptionBackupEngine {
             let memos = (try await memoStore?.rangeStats(
                 from: range.start.timeIntervalSince1970, to: range.end.timeIntervalSince1970
             ))?.records ?? 0
-            return stats.readings + stats.records + memos
+            // 원본 이벤트는 오프로드가 지우지 않으므로 봉인한 달에서는 세지 않는다(세면 백업마다 봉인이 풀린다)(REV1110A04).
+            let raw = try await isSealed(month) ? 0 : try await store.rawEventCount(
+                kinds: Self.rawKinds, from: range.start.timeIntervalSince1970, to: range.end.timeIntervalSince1970
+            )
+            return stats.readings + stats.records + memos + raw
         case .settings:
             return try await store.undatedRecordCount()
                 + (try await memoStore?.undatedRecordCount() ?? 0)

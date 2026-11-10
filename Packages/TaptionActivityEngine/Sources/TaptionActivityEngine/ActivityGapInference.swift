@@ -302,13 +302,37 @@ private enum InferenceState: CaseIterable {
         return score
     }
 
+    /// 힌트를 낱말 단위로 맞춘다. 부분 문자열로 맞추면 "petCare"가 car, "restaurant"가 rest로 잡힌다 (REV1110A04).
     func matchesHint(_ sample: ActivitySensorEvidence) -> Bool {
-        let text = [sample.categoryHint, sample.detailHint, sample.behaviorHint]
-            .compactMap { $0?.lowercased() }
-            .joined(separator: " ")
-        return text.contains(behavior)
-            || (self == .automotive && text.contains("car"))
-            || (self == .rest && text.contains("rest"))
+        let tokens = Set([sample.categoryHint, sample.detailHint, sample.behaviorHint]
+            .compactMap { $0 }
+            .flatMap(Self.hintTokens))
+        return tokens.contains(behavior)
+            || (self == .automotive && tokens.contains("car"))
+            || (self == .rest && tokens.contains("rest"))
+    }
+
+    /// 글자가 아닌 문자와 camelCase 경계에서 나눈 소문자 낱말들.
+    static func hintTokens(_ text: String) -> [String] {
+        var tokens: [String] = []
+        var current = ""
+        var previousWasLower = false
+        for character in text {
+            guard character.isLetter else {
+                if !current.isEmpty { tokens.append(current) }
+                current = ""
+                previousWasLower = false
+                continue
+            }
+            if character.isUppercase, previousWasLower, !current.isEmpty {
+                tokens.append(current)
+                current = ""
+            }
+            current += character.lowercased()
+            previousWasLower = character.isLowercase
+        }
+        if !current.isEmpty { tokens.append(current) }
+        return tokens
     }
 
     func matchesSensor(_ sample: ActivitySensorEvidence) -> Bool {

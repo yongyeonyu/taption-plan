@@ -2,7 +2,7 @@
 """큰 섬 윤곽(VIS1110A02)을 Swift로 만든다.
 
 islands.json은 OpenStreetMap(ODbL) 섬 관계를 Nominatim으로 받아 약 130m 오차로 줄인 것이다.
-남해도는 섬 관계가 없어 남해군 경계를 쓴다. 사용: python3 scripts/place-book/islands.py
+남해도는 섬 관계가 없어 OSM 해안선(natural=coastline)을 이어 붙여 같은 오차로 줄였다(REV1110A04). 사용: python3 scripts/place-book/islands.py
 """
 import json
 from pathlib import Path

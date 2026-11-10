@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 enum RouteTimestamp {
@@ -122,6 +123,13 @@ public struct RouteSegment: Codable, Hashable, Sendable, Identifiable {
     public let isNewSegment: Bool
     public let isLowConfidence: Bool
     public let subwayEvidence: SubwayRouteEvidence?
+    /// 단순화한 표시 좌표. 접근할 때마다 Douglas-Peucker를 다시 돌지 않게 만들 때 한 번 계산한다 (REV1110A04).
+    public let coordinates: [RouteCoordinate]
+
+    private enum CodingKeys: String, CodingKey {
+        case id, start, end, mode, samples, pathSamples, boundarySamples
+        case isNewSegment, isLowConfidence, subwayEvidence
+    }
 
     public init(
         id: UUID = UUID(),
@@ -145,13 +153,44 @@ public struct RouteSegment: Codable, Hashable, Sendable, Identifiable {
         self.isNewSegment = isNewSegment
         self.isLowConfidence = isLowConfidence
         self.subwayEvidence = subwayEvidence
+        // 믿을 만한 지하철 근거만 GPS 경로를 대신한다 (REV1110A04).
+        if let subwayEvidence, RouteEvidenceGate.isTrusted(subwayEvidence) {
+            coordinates = RoutePathSimplifier.simplify(subwayEvidence.coordinates)
+        } else {
+            coordinates = RoutePathSimplifier.simplify(pathSamples.map(\.coordinate))
+        }
     }
 
-    public var coordinates: [RouteCoordinate] {
-        if let subwayEvidence, subwayEvidence.coordinates.count >= 2 {
-            return RoutePathSimplifier.simplify(subwayEvidence.coordinates)
-        }
-        return RoutePathSimplifier.simplify(pathSamples.map(\.coordinate))
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            id: try values.decode(UUID.self, forKey: .id),
+            start: try values.decode(Date.self, forKey: .start),
+            end: try values.decode(Date.self, forKey: .end),
+            mode: try values.decode(RouteTravelMode.self, forKey: .mode),
+            samples: try values.decode([RouteSample].self, forKey: .samples),
+            pathSamples: try values.decode([RouteSample].self, forKey: .pathSamples),
+            boundarySamples: try values.decode([RouteSample].self, forKey: .boundarySamples),
+            isNewSegment: try values.decode(Bool.self, forKey: .isNewSegment),
+            isLowConfidence: try values.decode(Bool.self, forKey: .isLowConfidence),
+            subwayEvidence: try values.decodeIfPresent(SubwayRouteEvidence.self, forKey: .subwayEvidence)
+        )
+    }
+}
+
+/// 같은 표본에서 나온 구간이 필터를 다시 돌려도 같은 id를 갖게 한다 (REV1110A04).
+enum RouteSegmentID {
+    static func make(samples: [RouteSample], mode: RouteTravelMode) -> UUID {
+        guard let first = samples.first, let last = samples.last else { return UUID() }
+        let seed = "route-segment-v1|\(first.id.uuidString)|\(first.timestamp.timeIntervalSince1970.bitPattern)"
+            + "|\(last.id.uuidString)|\(last.timestamp.timeIntervalSince1970.bitPattern)|\(mode.rawValue)"
+        var bytes = Array(SHA256.hash(data: Data(seed.utf8)).prefix(16))
+        bytes[6] = (bytes[6] & 0x0f) | 0x50
+        bytes[8] = (bytes[8] & 0x3f) | 0x80
+        return UUID(uuid: (
+            bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
+            bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]
+        ))
     }
 }
 

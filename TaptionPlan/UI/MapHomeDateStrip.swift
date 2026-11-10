@@ -100,8 +100,10 @@ struct MapHomeDateStrip: View {
 
     /// 스크롤이 멈추면 가운데 날짜를 고른다. 끝에 가까우면 기준을 옮겨 계속 밀 수 있게 한다.
     private func settle() {
-        let day = visibleDay
-        if abs(centeredStep ?? 0) > Self.scrollRadius - 30 { recenter(on: day) }
+        // 고를 수 없는 날(여행 모드의 지난날)까지 밀었으면 첫날로 되돌린다. 예전에는 그날을 골랐다가
+        // 화면 쪽에서 오늘로 되돌려 깜빡이고 하루치 계산을 헛되이 했다(REV1110A03).
+        let day = minimumDay.map { max(visibleDay, calendar.startOfDay(for: $0)) } ?? visibleDay
+        if day != visibleDay || abs(centeredStep ?? 0) > Self.scrollRadius - 30 { recenter(on: day) }
         if day != calendar.startOfDay(for: selectedDate) { onSelect(day) }
     }
 

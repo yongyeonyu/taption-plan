@@ -243,16 +243,20 @@ public struct ActivityClassificationEngine: Sendable {
         while index < ordered.count {
             try checkpoints.step(.deduplication)
             let timestamp = ordered[index].timestamp
-            var end = index + 1
-            var selected = ordered[index]
+            var end = index
+            // 같은 시각이라도 출처·종류가 다르면(예: 수면 힌트와 위치 표본) 따로 남긴다 (REV1110A04).
+            var selected: [DuplicateKey: ActivitySensorEvidence] = [:]
             while end < ordered.count && ordered[end].timestamp == timestamp {
                 try checkpoints.step(.deduplication)
-                if betterDuplicate(ordered[end], selected) {
-                    selected = ordered[end]
+                let key = DuplicateKey(ordered[end])
+                if let current = selected[key], !betterDuplicate(ordered[end], current) {
+                    end += 1
+                    continue
                 }
+                selected[key] = ordered[end]
                 end += 1
             }
-            result.append(selected)
+            result.append(contentsOf: selected.sorted { $0.key < $1.key }.map(\.value))
             index = end
         }
         try checkpoints.check(.deduplication)
@@ -343,12 +347,16 @@ public struct ActivityClassificationEngine: Sendable {
                 for: sample,
                 override: activeOverrideHeap.first.map { overrides[$0] }
             )
+            // 표본마다 다른 신뢰도·근거로 구간이 1초 조각으로 갈라지지 않게 정체성만 비교한다 (REV1110A04).
             let canJoin = current.map {
-                $0.classification == classification
+                $0.classification.sameIdentity(as: classification)
                     && sample.timestamp.timeIntervalSince($0.span.end) <= configuration.maximumGap
             } ?? false
             if canJoin {
-                current?.append(sample, endingAt: sampleEnd)
+                current?.append(sample, endingAt: sampleEnd, classification: classification)
+            } else if next?.timestamp == sample.timestamp {
+                // 같은 시각의 다른 출처 표본은 길이가 0이라 새 구간을 만들지 않는다. 원본은 evidence에 남는다 (REV1110A04).
+                continue
             } else {
                 if let current { raw.append(current) }
                 current = RawSegment(sample: sample, endingAt: sampleEnd, classification: classification)
@@ -389,7 +397,8 @@ public struct ActivityClassificationEngine: Sendable {
                         ? (override.isSleep ? "사용자 확인 수면" : "사용자 확인")
                         : "자동 분류 잠금"
                 ],
-                confirmed: override.isUserConfirmed
+                confirmed: override.isUserConfirmed,
+                locked: !override.isUserConfirmed
             )
         }
 
@@ -539,7 +548,7 @@ public struct ActivityClassificationEngine: Sendable {
     }
 
     private func automatic(major: String, detail: String, behavior: String, sample: ActivitySensorEvidence, evidence: String) -> Classification {
-        Classification(majorID: major, detailID: detail, title: taxonomy.detail(for: detail)?.title ?? taxonomy.major(for: major)?.title ?? "활동", behavior: behavior, confidence: sample.confidence ?? (sample.isPreciseLocation ? 0.8 : 0.55), evidence: [evidence] + sample.evidence, confirmed: false)
+        Classification(majorID: major, detailID: detail, title: taxonomy.detail(for: detail)?.title ?? taxonomy.major(for: major)?.title ?? "활동", behavior: behavior, confidence: sample.confidence ?? (sample.isPreciseLocation ? 0.8 : 0.55), evidence: [evidence] + sample.evidence, confirmed: false, locked: false)
     }
 
     private func applyOverrides(
@@ -659,7 +668,7 @@ public struct ActivityClassificationEngine: Sendable {
                 status: classification.confirmed
                     ? .userCorrected
                     : ActivityAutomaticConfirmation.status(for: classification.confidence),
-                source: classification.confirmed ? "user-correction" : "classification-lock",
+                source: classification.provenanceSource,
                 evidence: classification.evidence,
                 confidence: classification.confidence,
                 span: span
@@ -702,6 +711,8 @@ public struct ActivityClassificationEngine: Sendable {
                   last.majorCategoryID == segment.majorCategoryID,
                   last.detailID == segment.detailID,
                   last.isUserConfirmed == segment.isUserConfirmed,
+                  // 잠금 구간이 자동 구간에 합쳐져 출처를 잃지 않게 한다 (REV1110A04).
+                  last.provenance.source == segment.provenance.source,
                   last.span.end == segment.span.start else { result.append(segment); continue }
             result[result.count - 1] = ActivitySegment(id: last.id, span: ActivityTimeSpan(start: last.span.start, end: segment.span.end), majorCategoryID: last.majorCategoryID, detailID: last.detailID, title: last.title, behavior: last.behavior, confidence: min(last.confidence, segment.confidence), evidence: unique(last.evidence + segment.evidence), sampleCount: last.sampleCount + segment.sampleCount, isUserConfirmed: last.isUserConfirmed, provenance: .init(tier: last.provenance.tier, status: last.provenance.status, source: last.provenance.source, evidence: unique(last.provenance.evidence + segment.provenance.evidence), confidence: min(last.confidence, segment.confidence), span: ActivityTimeSpan(start: last.span.start, end: segment.span.end)))
         }
@@ -709,7 +720,7 @@ public struct ActivityClassificationEngine: Sendable {
     }
 
     private func makeSegment(_ raw: RawSegment) -> ActivitySegment {
-        ActivitySegment(id: ActivityStableID.uuid(seed: raw.firstID.uuidString), span: raw.span, majorCategoryID: raw.classification.majorID, detailID: raw.classification.detailID, title: raw.classification.title, behavior: raw.classification.behavior, confidence: raw.confidence, evidence: raw.evidence, sampleCount: raw.sampleCount, isUserConfirmed: raw.classification.confirmed, provenance: .init(tier: raw.classification.confirmed ? .groundTruth : .expected, status: raw.classification.confirmed ? .userCorrected : ActivityAutomaticConfirmation.status(for: raw.confidence), source: raw.classification.confirmed ? "user-correction" : "activity-classifier-v1", evidence: raw.evidence, confidence: raw.confidence, span: raw.span))
+        ActivitySegment(id: ActivityStableID.uuid(seed: raw.firstID.uuidString), span: raw.span, majorCategoryID: raw.classification.majorID, detailID: raw.classification.detailID, title: raw.classification.title, behavior: raw.classification.behavior, confidence: raw.confidence, evidence: raw.evidence, sampleCount: raw.sampleCount, isUserConfirmed: raw.classification.confirmed, provenance: .init(tier: raw.classification.confirmed ? .groundTruth : .expected, status: raw.classification.confirmed ? .userCorrected : ActivityAutomaticConfirmation.status(for: raw.confidence), source: raw.classification.provenanceSource, evidence: raw.evidence, confidence: raw.confidence, span: raw.span))
     }
 
     private func normalizedOverrides(
@@ -754,6 +765,9 @@ public struct ActivityClassificationEngine: Sendable {
         lhs.majorCategoryID == rhs.majorCategoryID
             && lhs.detailID == rhs.detailID
             && lhs.isUserConfirmed == rhs.isUserConfirmed
+            && lhs.title == rhs.title
+            && lhs.behavior == rhs.behavior
+            && lhs.provenance.source == rhs.provenance.source
     }
 
     private var engineIdentity: ActivityClassificationEngineIdentity {
@@ -799,6 +813,33 @@ private struct Classification: Hashable, Sendable {
     let confidence: Double
     let evidence: [String]
     let confirmed: Bool
+    let locked: Bool
+
+    func sameIdentity(as other: Classification) -> Bool {
+        majorID == other.majorID && detailID == other.detailID && title == other.title
+            && behavior == other.behavior && confirmed == other.confirmed && locked == other.locked
+    }
+
+    /// 사용자 확인·잠금·자동 분류의 출처 이름. 두 경로가 같은 이름을 쓰게 한 곳에 둔다 (REV1110A04).
+    var provenanceSource: String {
+        confirmed ? "user-correction" : (locked ? "classification-lock" : "activity-classifier-v1")
+    }
+}
+
+/// 같은 시각 표본을 하나로 줄일 때의 묶음 기준: 출처와 종류(힌트 또는 센서) (REV1110A04).
+private struct DuplicateKey: Hashable, Comparable {
+    let source: String
+    let isHint: Bool
+
+    init(_ sample: ActivitySensorEvidence) {
+        source = sample.source.rawValue
+        isHint = sample.categoryHint != nil || sample.detailHint != nil || sample.behaviorHint != nil
+    }
+
+    // 센서 표본을 앞에, 힌트를 뒤에 두어 같은 시각에서는 힌트가 구간을 정한다.
+    static func < (lhs: Self, rhs: Self) -> Bool {
+        lhs.isHint != rhs.isHint ? !lhs.isHint : lhs.source < rhs.source
+    }
 }
 
 private struct RawSegment: Sendable {
@@ -818,10 +859,10 @@ private struct RawSegment: Sendable {
         self.evidence = classification.evidence
     }
 
-    mutating func append(_ sample: ActivitySensorEvidence, endingAt end: Date) {
-        span = ActivityTimeSpan(start: span.start, end: end)
+    mutating func append(_ sample: ActivitySensorEvidence, endingAt end: Date, classification next: Classification) {
+        span = ActivityTimeSpan(start: span.start, end: max(span.end, end))
         sampleCount += 1
-        confidence = min(confidence, classification.confidence)
-        for item in classification.evidence where !evidence.contains(item) { evidence.append(item) }
+        confidence = min(confidence, next.confidence)
+        for item in next.evidence where !evidence.contains(item) { evidence.append(item) }
     }
 }

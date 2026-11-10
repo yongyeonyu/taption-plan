@@ -418,6 +418,19 @@
    ]
   },
   {
+   "key": "6시간|6h",
+   "ko": "6시간",
+   "en": "6h",
+   "files": [
+    "WidgetShared.swift:682"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan",
+    "TaptionPlanWidget"
+   ]
+  },
+  {
    "key": "6자리 숫자 비밀번호를 다시 확인해 주세요.|Check your 6-digit PIN and try again.",
    "ko": "6자리 숫자 비밀번호를 다시 확인해 주세요.",
    "en": "Check your 6-digit PIN and try again.",
@@ -482,7 +495,7 @@
    "ko": "AI 비서가 앱으로 바로 보내기",
    "en": "Let the AI send it to the app",
    "files": [
-    "TripImportSheet.swift:234"
+    "TripImportSheet.swift:235"
    ],
    "args": [],
    "targets": [
@@ -494,7 +507,7 @@
    "ko": "AI 앱이 열리면 객관식 질문에 답하며 항공편·숙소·관광지를 정해요. 마지막에 나오는 JSON을 복사해 돌아오세요.",
    "en": "In the AI app, answer multiple-choice questions to pick flights, hotels and places. Copy the JSON it gives you at the end and come back.",
    "files": [
-    "TripImportSheet.swift:213"
+    "TripImportSheet.swift:214"
    ],
    "args": [],
    "targets": [
@@ -506,7 +519,7 @@
    "ko": "AI로 만들기",
    "en": "Plan with AI",
    "files": [
-    "MapHomeView+Support.swift:687"
+    "MapHomeView+Support.swift:689"
    ],
    "args": [],
    "targets": [
@@ -530,7 +543,7 @@
    "ko": "AI로 여행 계획 만들기",
    "en": "Plan a trip with AI",
    "files": [
-    "TripImportSheet.swift:186"
+    "TripImportSheet.swift:187"
    ],
    "args": [],
    "targets": [
@@ -554,7 +567,7 @@
    "ko": "AI와 대화하기",
    "en": "Talk with an AI",
    "files": [
-    "TripImportSheet.swift:212"
+    "TripImportSheet.swift:213"
    ],
    "args": [],
    "targets": [
@@ -767,7 +780,7 @@
    "ko": "BOKKI Plan 앱 아이콘",
    "en": "BOKKI Plan app icon",
    "files": [
-    "SensorCollectionLiveActivity.swift:219"
+    "SensorCollectionLiveActivity.swift:228"
    ],
    "args": [],
    "targets": [
@@ -899,7 +912,7 @@
    "ko": "GPS 트래킹 권한 안내 열기",
    "en": "Open GPS tracking permission guidance",
    "files": [
-    "TaptionPlanWidget.swift:417"
+    "TaptionPlanWidget.swift:393"
    ],
    "args": [],
    "targets": [
@@ -959,7 +972,7 @@
    "ko": "JSON 일부가 잘렸거나 형식이 달라요. AI에게 JSON을 다시 출력해 달라고 해 주세요.",
    "en": "Part of the JSON is cut off or malformed. Ask the AI to output the JSON again.",
    "files": [
-    "TripImportSheet.swift:373"
+    "TripImportSheet.swift:397"
    ],
    "args": [],
    "targets": [
@@ -1112,7 +1125,7 @@
    "ko": "Watch 본체 확인",
    "en": "Watch device check",
    "files": [
-    "AppModel+Backup.swift:439"
+    "AppModel+Backup.swift:441"
    ],
    "args": [],
    "targets": [
@@ -1313,8 +1326,8 @@
    "ko": "iCloud 동기화 기록",
    "en": "iCloud sync records",
    "files": [
-    "AppModel+Backup.swift:386",
-    "AppModel+Backup.swift:391"
+    "AppModel+Backup.swift:388",
+    "AppModel+Backup.swift:393"
    ],
    "args": [],
    "targets": [
@@ -1363,7 +1376,7 @@
    "ko": "iCloud 백업",
    "en": "iCloud backup",
    "files": [
-    "AppModel+Backup.swift:471"
+    "AppModel+Backup.swift:473"
    ],
    "args": [],
    "targets": [
@@ -1411,7 +1424,7 @@
    "ko": "iCloud 진단 로그",
    "en": "iCloud diagnostics log",
    "files": [
-    "AppModel+Backup.swift:504"
+    "AppModel+Backup.swift:506"
    ],
    "args": [],
    "targets": [
@@ -1573,7 +1586,7 @@
    "ko": "iPhone 센서 원본",
    "en": "iPhone sensor source data",
    "files": [
-    "AppModel+Backup.swift:408"
+    "AppModel+Backup.swift:410"
    ],
    "args": [],
    "targets": [
@@ -1585,7 +1598,7 @@
    "ko": "iPhone 실시간 연결",
    "en": "iPhone connected",
    "files": [
-    "WatchConnectivityController.swift:1279"
+    "WatchConnectivityController.swift:1286"
    ],
    "args": [],
    "targets": [
@@ -1610,7 +1623,7 @@
    "en": "Connecting to iPhone",
    "files": [
     "WatchConnectivityController.swift:23",
-    "WatchConnectivityController.swift:1274"
+    "WatchConnectivityController.swift:1281"
    ],
    "args": [],
    "targets": [
@@ -1877,7 +1890,7 @@
    "ko": "{0} 복원 완료",
    "en": "Restored {0}",
    "files": [
-    "AppModel+Backup.swift:185"
+    "AppModel+Backup.swift:186"
    ],
    "args": [
     "name"
@@ -2154,7 +2167,7 @@
    "ko": "{0} 항목의 시각을 읽지 못했어요.",
    "en": "Couldn't read the time of item {0}.",
    "files": [
-    "TripImportSheet.swift:379"
+    "TripImportSheet.swift:403"
    ],
    "args": [
     "itemID"
@@ -2196,7 +2209,7 @@
    "ko": "{0}, 도장 찍음",
    "en": "{0}, stamped",
    "files": [
-    "MapHomePlaceBook.swift:721"
+    "MapHomePlaceBook.swift:731"
    ],
    "args": [
     "entry.title"
@@ -2225,7 +2238,7 @@
    "ko": "{0}, 아직 가 보지 않음",
    "en": "{0}, not visited yet",
    "files": [
-    "MapHomePlaceBook.swift:722"
+    "MapHomePlaceBook.swift:732"
    ],
    "args": [
     "entry.title"
@@ -2585,7 +2598,8 @@
     "hours"
    ],
    "targets": [
-    "TaptionPlan"
+    "TaptionPlan",
+    "TaptionPlanWidget"
    ]
   },
   {
@@ -2653,7 +2667,7 @@
    "ko": "{0}에서 계획 세우기",
    "en": "Plan in {0}",
    "files": [
-    "TripImportSheet.swift:218"
+    "TripImportSheet.swift:219"
    ],
    "args": [
     "app.title"
@@ -3010,7 +3024,7 @@
    "ko": "같은 이름의 대분류가 이미 있습니다.",
    "en": "A major category with the same name already exists.",
    "files": [
-    "AppModel+Plans.swift:929"
+    "AppModel+Plans.swift:933"
    ],
    "args": [],
    "targets": [
@@ -3058,7 +3072,7 @@
    "ko": "하위 계획은 상위 루틴 기간 안에서만 옮길 수 있습니다.",
    "en": "A sub-plan can only be moved within its parent routine's period.",
    "files": [
-    "AppModel+Plans.swift:815"
+    "AppModel+Plans.swift:819"
    ],
    "args": [],
    "targets": [
@@ -3155,7 +3169,7 @@
    "ko": "",
    "en": "Accuracy optimized",
    "files": [
-    "WatchSyncProtocol.swift:547"
+    "WatchSyncProtocol.swift:552"
    ],
    "args": [],
    "targets": [
@@ -3195,9 +3209,9 @@
    "ko": "활동",
    "en": "Activity",
    "files": [
-    "WidgetShared.swift:609",
-    "AppModel+WidgetLiveActivity.swift:99",
-    "AppModel+WidgetLiveActivity.swift:101"
+    "LiveActivitySupport.swift:426",
+    "LiveActivitySupport.swift:470",
+    "LiveActivitySupport.swift:502"
    ],
    "args": [],
    "targets": [
@@ -3224,7 +3238,7 @@
    "ko": "상위·하위 계획의 기간을 벗어나지 않도록 길이를 조절해 주세요.",
    "en": "Adjust the length so it stays within the period of the parent and child plans.",
    "files": [
-    "AppModel+Plans.swift:870"
+    "AppModel+Plans.swift:874"
    ],
    "args": [],
    "targets": [
@@ -3568,7 +3582,7 @@
    "ko": "앱 기록",
    "en": "App records",
    "files": [
-    "AppModel+Backup.swift:398"
+    "AppModel+Backup.swift:400"
    ],
    "args": [],
    "targets": [
@@ -4091,8 +4105,8 @@
    "en": "Balanced",
    "files": [
     "HealthAndSensorModels.swift:532",
-    "WatchSyncProtocol.swift:546",
-    "WatchSyncProtocol.swift:609"
+    "WatchSyncProtocol.swift:551",
+    "WatchSyncProtocol.swift:614"
    ],
    "args": [],
    "targets": [
@@ -4264,8 +4278,8 @@
    "en": "Battery saver",
    "files": [
     "HealthAndSensorModels.swift:530",
-    "WatchSyncProtocol.swift:545",
-    "WatchSyncProtocol.swift:608"
+    "WatchSyncProtocol.swift:550",
+    "WatchSyncProtocol.swift:613"
    ],
    "args": [],
    "targets": [
@@ -5092,7 +5106,7 @@
    "ko": "캘린더",
    "en": "Calendar",
    "files": [
-    "AppModel.swift:368"
+    "AppModel.swift:369"
    ],
    "args": [],
    "targets": [
@@ -6317,7 +6331,7 @@
    "ko": "대분류를 추가하지 못했습니다. {0}",
    "en": "Could not add the major category. {0}",
    "files": [
-    "AppModel+Plans.swift:901"
+    "AppModel+Plans.swift:905"
    ],
    "args": [
     "error.localizedDescription"
@@ -6331,7 +6345,7 @@
    "ko": "계획을 캘린더에 추가하지 못했습니다. {0}",
    "en": "Could not add the plan to Calendar. {0}",
    "files": [
-    "AppModel+Plans.swift:757"
+    "AppModel+Plans.swift:761"
    ],
    "args": [
     "error.localizedDescription"
@@ -6345,7 +6359,7 @@
    "ko": "계획 길이를 조절하지 못했습니다.",
    "en": "Could not adjust the plan length.",
    "files": [
-    "AppModel+Plans.swift:875"
+    "AppModel+Plans.swift:879"
    ],
    "args": [],
    "targets": [
@@ -6357,7 +6371,7 @@
    "ko": "위젯 요청을 반영하지 못했습니다. {0}",
    "en": "Could not apply the widget request. {0}",
    "files": [
-    "AppModel+WidgetLiveActivity.swift:375"
+    "AppModel+WidgetLiveActivity.swift:376"
    ],
    "args": [
     "error.localizedDescription"
@@ -6412,7 +6426,7 @@
    "ko": "대분류를 삭제하지 못했습니다. {0}",
    "en": "Could not delete the major category. {0}",
    "files": [
-    "AppModel+Plans.swift:1016"
+    "AppModel+Plans.swift:1020"
    ],
    "args": [
     "error.localizedDescription"
@@ -6426,7 +6440,7 @@
    "ko": "대분류를 수정하지 못했습니다. {0}",
    "en": "Could not edit the major category. {0}",
    "files": [
-    "AppModel+Plans.swift:945"
+    "AppModel+Plans.swift:949"
    ],
    "args": [
     "error.localizedDescription"
@@ -6476,7 +6490,7 @@
    "ko": "캘린더로 보낼 계획을 찾지 못했습니다.",
    "en": "Could not find the plan to send to Calendar.",
    "files": [
-    "AppModel+Plans.swift:726"
+    "AppModel+Plans.swift:730"
    ],
    "args": [],
    "targets": [
@@ -6553,7 +6567,7 @@
    "ko": "계획을 옮기지 못했습니다.",
    "en": "Could not move the plan.",
    "files": [
-    "AppModel+Plans.swift:820"
+    "AppModel+Plans.swift:824"
    ],
    "args": [],
    "targets": [
@@ -6801,7 +6815,7 @@
    "ko": "위젯 데이터를 갱신하지 못했습니다. {0}",
    "en": "Could not update widget data. {0}",
    "files": [
-    "AppModel+WidgetLiveActivity.swift:477"
+    "AppModel+WidgetLiveActivity.swift:485"
    ],
    "args": [
     "error.localizedDescription"
@@ -7365,7 +7379,7 @@
    "ko": "데이터 삭제가 취소되었습니다. 다시 시도해 주세요.",
    "en": "Data deletion was cancelled. Please try again.",
    "files": [
-    "AppModel+Backup.swift:317"
+    "AppModel+Backup.swift:319"
    ],
    "args": [],
    "targets": [
@@ -7550,7 +7564,7 @@
    "ko": "기기 원본",
    "en": "Device source data",
    "files": [
-    "AppModel+Backup.swift:430"
+    "AppModel+Backup.swift:432"
    ],
    "args": [],
    "targets": [
@@ -7574,7 +7588,7 @@
    "ko": "진단 로그",
    "en": "Diagnostics log",
    "files": [
-    "AppModel+Backup.swift:497"
+    "AppModel+Backup.swift:499"
    ],
    "args": [],
    "targets": [
@@ -8130,7 +8144,7 @@
    "ko": "빈 저장본",
    "en": "Empty snapshot",
    "files": [
-    "AppModel+Backup.swift:542"
+    "AppModel+Backup.swift:544"
    ],
    "args": [],
    "targets": [
@@ -8446,7 +8460,7 @@
    "ko": "캘린더의 고정 일정은 이곳에서 옮길 수 없습니다.",
    "en": "Fixed calendar events cannot be moved here.",
    "files": [
-    "AppModel+Plans.swift:810"
+    "AppModel+Plans.swift:814"
    ],
    "args": [],
    "targets": [
@@ -10546,7 +10560,7 @@
    "ko": "건강 데이터",
    "en": "Health data",
    "files": [
-    "AppModel.swift:362"
+    "AppModel.swift:363"
    ],
    "args": [],
    "targets": [
@@ -10570,7 +10584,7 @@
    "ko": "건강 데이터 원본",
    "en": "Health source data",
    "files": [
-    "AppModel+Backup.swift:418"
+    "AppModel+Backup.swift:420"
    ],
    "args": [],
    "targets": [
@@ -12942,7 +12956,7 @@
    "ko": "",
    "en": "Latest data first",
    "files": [
-    "WatchSyncProtocol.swift:610"
+    "WatchSyncProtocol.swift:615"
    ],
    "args": [],
    "targets": [
@@ -12957,7 +12971,7 @@
    "ko": "최신 {0} · {1}",
    "en": "Latest {0} · {1}",
    "files": [
-    "AppModel.swift:300"
+    "AppModel.swift:301"
    ],
    "args": [
     "fileName",
@@ -13166,7 +13180,7 @@
    "ko": "위치·이동",
    "en": "Location & movement",
    "files": [
-    "AppModel.swift:356"
+    "AppModel.swift:357"
    ],
    "args": [],
    "targets": [
@@ -14824,7 +14838,7 @@
    "ko": "최신 로그 없음",
    "en": "No recent log",
    "files": [
-    "AppModel.swift:294"
+    "AppModel.swift:295"
    ],
    "args": [],
    "targets": [
@@ -14836,7 +14850,7 @@
    "ko": "오늘 기록 없음",
    "en": "No records today",
    "files": [
-    "AppModel.swift:318"
+    "AppModel.swift:319"
    ],
    "args": [],
    "targets": [
@@ -15077,8 +15091,8 @@
    "en": "Off",
    "files": [
     "MapHomeFogLayer.swift:0",
-    "WatchSyncProtocol.swift:544",
-    "WatchSyncProtocol.swift:607"
+    "WatchSyncProtocol.swift:549",
+    "WatchSyncProtocol.swift:612"
    ],
    "args": [],
    "targets": [
@@ -15553,7 +15567,7 @@
    "ko": "날짜별 원본",
    "en": "Per-day source data",
    "files": [
-    "AppModel+Backup.swift:449"
+    "AppModel+Backup.swift:451"
    ],
    "args": [],
    "targets": [
@@ -15775,7 +15789,7 @@
    "ko": "캘린더 권한을 허용해 주세요.",
    "en": "Please allow Calendar access.",
    "files": [
-    "AppModel+Plans.swift:739"
+    "AppModel+Plans.swift:743"
    ],
    "args": [],
    "targets": [
@@ -15907,7 +15921,7 @@
    "ko": "보호된 스냅샷",
    "en": "Protected snapshot",
    "files": [
-    "AppModel+Backup.swift:458"
+    "AppModel+Backup.swift:460"
    ],
    "args": [],
    "targets": [
@@ -16321,7 +16335,7 @@
    "ko": "복원 실패: ",
    "en": "Restore failed: ",
    "files": [
-    "AppModel+Backup.swift:191"
+    "AppModel+Backup.swift:192"
    ],
    "args": [],
    "targets": [
@@ -16333,7 +16347,7 @@
    "ko": "{0} 복원 완료",
    "en": "Restored {0}",
    "files": [
-    "AppModel+Backup.swift:185"
+    "AppModel+Backup.swift:186"
    ],
    "args": [
     "name"
@@ -18050,7 +18064,7 @@
    "ko": "일부 데이터를 삭제하지 못했습니다: ",
    "en": "Some data could not be deleted: ",
    "files": [
-    "AppModel+Backup.swift:548"
+    "AppModel+Backup.swift:550"
    ],
    "args": [],
    "targets": [
@@ -18777,7 +18791,7 @@
    "ko": "동기화 중",
    "en": "Syncing",
    "files": [
-    "AppModel.swift:330"
+    "AppModel.swift:331"
    ],
    "args": [],
    "targets": [
@@ -19447,7 +19461,7 @@
    "ko": "오늘 {0} · {1}개",
    "en": "Today {0} · {1} items",
    "files": [
-    "AppModel.swift:323"
+    "AppModel.swift:324"
    ],
    "args": [
     "total",
@@ -20433,7 +20447,7 @@
    "ko": "동기화 대기",
    "en": "Waiting to sync",
    "files": [
-    "AppModel.swift:311"
+    "AppModel.swift:312"
    ],
    "args": [],
    "targets": [
@@ -20622,7 +20636,7 @@
    "ko": "Watch 본체 확인",
    "en": "Watch device check",
    "files": [
-    "AppModel+Backup.swift:439"
+    "AppModel+Backup.swift:441"
    ],
    "args": [],
    "targets": [
@@ -20730,7 +20744,7 @@
    "ko": "위젯 공유 기록",
    "en": "Widget shared records",
    "files": [
-    "AppModel+Backup.swift:489"
+    "AppModel+Backup.swift:491"
    ],
    "args": [],
    "targets": [
@@ -21687,7 +21701,7 @@
    "ko": "iCloud 백업",
    "en": "iCloud backup",
    "files": [
-    "AppModel+Backup.swift:471"
+    "AppModel+Backup.swift:473"
    ],
    "args": [],
    "targets": [
@@ -21699,7 +21713,7 @@
    "ko": "iCloud 진단 로그",
    "en": "iCloud diagnostics log",
    "files": [
-    "AppModel+Backup.swift:504"
+    "AppModel+Backup.swift:506"
    ],
    "args": [],
    "targets": [
@@ -21724,8 +21738,8 @@
    "ko": "iCloud 동기화 기록",
    "en": "iCloud sync records",
    "files": [
-    "AppModel+Backup.swift:386",
-    "AppModel+Backup.swift:391"
+    "AppModel+Backup.swift:388",
+    "AppModel+Backup.swift:393"
    ],
    "args": [],
    "targets": [
@@ -21752,7 +21766,7 @@
    "ko": "iPhone 센서 원본",
    "en": "iPhone sensor source data",
    "files": [
-    "AppModel+Backup.swift:408"
+    "AppModel+Backup.swift:410"
    ],
    "args": [],
    "targets": [
@@ -21803,7 +21817,7 @@
    "ko": "센서 {0}행 추가, 기록 {1}개 반영",
    "en": "{0} sensor rows added, {1} records applied",
    "files": [
-    "AppModel+Backup.swift:179"
+    "AppModel+Backup.swift:180"
    ],
    "args": [
     "summary.newReadings",
@@ -21954,7 +21968,7 @@
    "ko": "♥︎ 대기",
    "en": "♥︎ Waiting",
    "files": [
-    "SensorCollectionLiveActivity.swift:150"
+    "SensorCollectionLiveActivity.swift:155"
    ],
    "args": [],
    "targets": [
@@ -21992,7 +22006,7 @@
    "ko": "가상 방문 지우기",
    "en": "Clear test visits",
    "files": [
-    "MapHomePlaceBook.swift:636"
+    "MapHomePlaceBook.swift:646"
    ],
    "args": [],
    "targets": [
@@ -22004,7 +22018,7 @@
    "ko": "가상 방문 찍기",
    "en": "Add test visit",
    "files": [
-    "MapHomePlaceBook.swift:632"
+    "MapHomePlaceBook.swift:642"
    ],
    "args": [],
    "targets": [
@@ -22068,7 +22082,7 @@
    "ko": "같은 여행이 있어 바꿉니다 · 추가 {0} · 변경 {1} · 삭제 {2}",
    "en": "Replaces the same trip · added {0} · changed {1} · removed {2}",
    "files": [
-    "TripImportSheet.swift:272"
+    "TripImportSheet.swift:277"
    ],
    "args": [
     "diff.added",
@@ -22096,7 +22110,7 @@
    "ko": "같은 이름의 대분류가 이미 있습니다.",
    "en": "A major category with the same name already exists.",
    "files": [
-    "AppModel+Plans.swift:928"
+    "AppModel+Plans.swift:932"
    ],
    "args": [],
    "targets": [
@@ -22232,7 +22246,7 @@
    "ko": "건강 데이터 원본",
    "en": "Health source data",
    "files": [
-    "AppModel+Backup.swift:418"
+    "AppModel+Backup.swift:420"
    ],
    "args": [],
    "targets": [
@@ -22280,7 +22294,7 @@
    "ko": "건강 데이터",
    "en": "Health data",
    "files": [
-    "AppModel.swift:361"
+    "AppModel.swift:362"
    ],
    "args": [],
    "targets": [
@@ -22421,7 +22435,7 @@
    "en": "Health",
    "files": [
     "MapHomeLocationPresentation.swift:321",
-    "SensorCollectionLiveActivity.swift:294"
+    "SensorCollectionLiveActivity.swift:303"
    ],
    "args": [],
    "targets": [
@@ -22615,7 +22629,7 @@
    "files": [
     "MapHomeInteractionPolicy.swift:416",
     "SensorCollectionLiveActivity.swift:89",
-    "SensorCollectionLiveActivity.swift:293"
+    "SensorCollectionLiveActivity.swift:302"
    ],
    "args": [],
    "targets": [
@@ -22889,7 +22903,7 @@
    "ko": "계획 길이를 조절하지 못했습니다.",
    "en": "Could not adjust the plan length.",
    "files": [
-    "AppModel+Plans.swift:874"
+    "AppModel+Plans.swift:878"
    ],
    "args": [],
    "targets": [
@@ -22953,7 +22967,7 @@
    "ko": "계획과 기록은 삭제되지 않습니다.",
    "en": "Your plans and records will not be deleted.",
    "files": [
-    "MapHomeView+Support.swift:766"
+    "MapHomeView+Support.swift:768"
    ],
    "args": [],
    "targets": [
@@ -22965,7 +22979,7 @@
    "ko": "계획을 옮기지 못했습니다.",
    "en": "Could not move the plan.",
    "files": [
-    "AppModel+Plans.swift:819"
+    "AppModel+Plans.swift:823"
    ],
    "args": [],
    "targets": [
@@ -23003,7 +23017,7 @@
    "ko": "계획을 캘린더에 추가하지 못했습니다. {0}",
    "en": "Could not add the plan to Calendar. {0}",
    "files": [
-    "AppModel+Plans.swift:756"
+    "AppModel+Plans.swift:760"
    ],
    "args": [
     "error.localizedDescription"
@@ -23029,7 +23043,7 @@
    "ko": "고도",
    "en": "Altitude",
    "files": [
-    "SensorCollectionLiveActivity.swift:292"
+    "SensorCollectionLiveActivity.swift:301"
    ],
    "args": [],
    "targets": [
@@ -23344,7 +23358,7 @@
    "ko": "구글 지도에서 보기",
    "en": "Open in Google Maps",
    "files": [
-    "TripImportSheet.swift:314"
+    "TripImportSheet.swift:322"
    ],
    "args": [],
    "targets": [
@@ -23858,7 +23872,7 @@
    "ko": "기기 원본",
    "en": "Device source data",
    "files": [
-    "AppModel+Backup.swift:430"
+    "AppModel+Backup.swift:432"
    ],
    "args": [],
    "targets": [
@@ -23949,7 +23963,7 @@
    "ko": "기록 중",
    "en": "Recording",
    "files": [
-    "TaptionPlanWidget.swift:546"
+    "TaptionPlanWidget.swift:522"
    ],
    "args": [],
    "targets": [
@@ -24453,7 +24467,7 @@
    "files": [
     "FirstRunTutorialGuides.swift:372",
     "FirstRunTutorialGuides.swift:419",
-    "MapHomeView+Support.swift:681"
+    "MapHomeView+Support.swift:683"
    ],
    "args": [],
    "targets": [
@@ -24553,7 +24567,7 @@
    "en": "Date",
    "files": [
     "MapHomeDailyCard.swift:361",
-    "MapHomePlaceBookTools.swift:739"
+    "MapHomePlaceBookTools.swift:780"
    ],
    "args": [],
    "targets": [
@@ -24577,7 +24591,7 @@
    "ko": "날짜별 원본",
    "en": "Per-day source data",
    "files": [
-    "AppModel+Backup.swift:449"
+    "AppModel+Backup.swift:451"
    ],
    "args": [],
    "targets": [
@@ -24940,7 +24954,7 @@
    "ko": "다음 센서 정보 대기중",
    "en": "Waiting for the next sample",
    "files": [
-    "SensorCollectionLiveActivity.swift:235"
+    "SensorCollectionLiveActivity.swift:244"
    ],
    "args": [],
    "targets": [
@@ -24978,9 +24992,9 @@
    "ko": "닫기",
    "en": "Close",
    "files": [
-    "MapHomePassportBook.swift:570",
-    "TripClipboardBanner.swift:55",
-    "AppShellView.swift:1131"
+    "AppShellView.swift:1131",
+    "FirstRunTutorialGuides.swift:459",
+    "FirstRunTutorialView.swift:55"
    ],
    "args": [],
    "targets": [
@@ -25047,8 +25061,8 @@
    "en": "Waiting",
    "files": [
     "MapHomeView+Support2.swift:904",
-    "SensorCollectionLiveActivity.swift:256",
-    "TaptionPlanWidget.swift:545"
+    "SensorCollectionLiveActivity.swift:265",
+    "TaptionPlanWidget.swift:521"
    ],
    "args": [],
    "targets": [
@@ -25138,7 +25152,7 @@
    "ko": "대분류를 삭제하지 못했습니다. {0}",
    "en": "Could not delete the major category. {0}",
    "files": [
-    "AppModel+Plans.swift:1015"
+    "AppModel+Plans.swift:1019"
    ],
    "args": [
     "error.localizedDescription"
@@ -25152,7 +25166,7 @@
    "ko": "대분류를 수정하지 못했습니다. {0}",
    "en": "Could not edit the major category. {0}",
    "files": [
-    "AppModel+Plans.swift:944"
+    "AppModel+Plans.swift:948"
    ],
    "args": [
     "error.localizedDescription"
@@ -25166,7 +25180,7 @@
    "ko": "대분류를 추가하지 못했습니다. {0}",
    "en": "Could not add the major category. {0}",
    "files": [
-    "AppModel+Plans.swift:900"
+    "AppModel+Plans.swift:904"
    ],
    "args": [
     "error.localizedDescription"
@@ -25216,7 +25230,7 @@
    "ko": "대중교통 위치",
    "en": "Transit location",
    "files": [
-    "MapHomeLocationSheets.swift:290"
+    "MapHomeLocationSheets.swift:296"
    ],
    "args": [],
    "targets": [
@@ -25339,7 +25353,7 @@
    "ko": "데이터 삭제가 취소되었습니다. 다시 시도해 주세요.",
    "en": "Data deletion was cancelled. Please try again.",
    "files": [
-    "AppModel+Backup.swift:316"
+    "AppModel+Backup.swift:318"
    ],
    "args": [],
    "targets": [
@@ -25442,7 +25456,7 @@
    "ko": "도시",
    "en": "Cities",
    "files": [
-    "MapHomePlaceBook.swift:454",
+    "MapHomePlaceBook.swift:464",
     "TravelMapTripEditorSheet.swift:30"
    ],
    "args": [],
@@ -25479,7 +25493,7 @@
    "ko": "도장 {0}개",
    "en": "{0} stamps",
    "files": [
-    "MapHomePassportBook.swift:400"
+    "MapHomePassportBook.swift:401"
    ],
    "args": [
     "visas.count"
@@ -25494,6 +25508,30 @@
    "en": "Stamped",
    "files": [
     "MapHomePlaceStamps.swift:87"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "도착한 계획 불러오기|Load the delivered plan",
+   "ko": "도착한 계획 불러오기",
+   "en": "Load the delivered plan",
+   "files": [
+    "TripImportSheet.swift:246"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "도착한 계획이 없어요.|No plan has arrived.",
+   "ko": "도착한 계획이 없어요.",
+   "en": "No plan has arrived.",
+   "files": [
+    "TripImportSheet.swift:357"
    ],
    "args": [],
    "targets": [
@@ -25533,7 +25571,7 @@
    "ko": "동기화 대기",
    "en": "Waiting to sync",
    "files": [
-    "AppModel.swift:310"
+    "AppModel.swift:311"
    ],
    "args": [],
    "targets": [
@@ -25545,7 +25583,7 @@
    "ko": "동기화 중",
    "en": "Syncing",
    "files": [
-    "AppModel.swift:330"
+    "AppModel.swift:331"
    ],
    "args": [],
    "targets": [
@@ -25642,7 +25680,7 @@
    "ko": "동작",
    "en": "Motion",
    "files": [
-    "SensorCollectionLiveActivity.swift:291"
+    "SensorCollectionLiveActivity.swift:300"
    ],
    "args": [],
    "targets": [
@@ -25865,7 +25903,7 @@
    "ko": "랜드마크",
    "en": "Landmarks",
    "files": [
-    "MapHomePlaceBook.swift:454"
+    "MapHomePlaceBook.swift:464"
    ],
    "args": [],
    "targets": [
@@ -26481,7 +26519,7 @@
    "ko": "메일 보내기",
    "en": "Send email",
    "files": [
-    "MapHomePlaceBookTools.swift:619"
+    "MapHomePlaceBookTools.swift:629"
    ],
    "args": [],
    "targets": [
@@ -26877,7 +26915,7 @@
    "ko": "받은 JSON 붙여 넣기",
    "en": "Paste the JSON",
    "files": [
-    "TripImportSheet.swift:250"
+    "TripImportSheet.swift:255"
    ],
    "args": [],
    "targets": [
@@ -27044,7 +27082,7 @@
    "ko": "백그라운드 동기화",
    "en": "Background sync",
    "files": [
-    "WatchConnectivityController.swift:1280"
+    "WatchConnectivityController.swift:1287"
    ],
    "args": [],
    "targets": [
@@ -27692,7 +27730,7 @@
    "ko": "보호된 스냅샷",
    "en": "Protected snapshot",
    "files": [
-    "AppModel+Backup.swift:458"
+    "AppModel+Backup.swift:460"
    ],
    "args": [],
    "targets": [
@@ -27704,7 +27742,7 @@
    "ko": "복원 실패: ",
    "en": "Restore failed: ",
    "files": [
-    "AppModel+Backup.swift:191"
+    "AppModel+Backup.swift:192"
    ],
    "args": [],
    "targets": [
@@ -28031,7 +28069,7 @@
    "ko": "빈 저장본",
    "en": "Empty snapshot",
    "files": [
-    "AppModel+Backup.swift:541"
+    "AppModel+Backup.swift:543"
    ],
    "args": [],
    "targets": [
@@ -28280,7 +28318,7 @@
    "ko": "사진 {0}/{1}, {2}",
    "en": "Photo {0} of {1}, {2}",
    "files": [
-    "MapHomePhotoLayer.swift:636"
+    "MapHomePhotoLayer.swift:663"
    ],
    "args": [
     "index + 1",
@@ -28420,7 +28458,7 @@
    "ko": "사진 접기",
    "en": "Hide photos",
    "files": [
-    "MapHomePhotoLayer.swift:649"
+    "MapHomePhotoLayer.swift:676"
    ],
    "args": [],
    "targets": [
@@ -28432,7 +28470,7 @@
    "ko": "사진 펼치기",
    "en": "Show photos",
    "files": [
-    "MapHomePhotoLayer.swift:694"
+    "MapHomePhotoLayer.swift:721"
    ],
    "args": [],
    "targets": [
@@ -28506,7 +28544,7 @@
    "ko": "삭제",
    "en": "Delete",
    "files": [
-    "MapHomePlaceBookTools.swift:800",
+    "MapHomePlaceBookTools.swift:841",
     "MapHomeSettingsSheets.swift:111",
     "MapHomeSettingsSheets.swift:144"
    ],
@@ -28676,7 +28714,7 @@
    "ko": "상위·하위 계획의 기간을 벗어나지 않도록 길이를 조절해 주세요.",
    "en": "Adjust the length so it stays within the period of the parent and child plans.",
    "files": [
-    "AppModel+Plans.swift:869"
+    "AppModel+Plans.swift:873"
    ],
    "args": [],
    "targets": [
@@ -28737,7 +28775,7 @@
    "ko": "새 키로 바꾸기",
    "en": "Replace with a new key",
    "files": [
-    "TripImportSheet.swift:243"
+    "TripImportSheet.swift:248"
    ],
    "args": [],
    "targets": [
@@ -29015,7 +29053,7 @@
    "ko": "설명",
    "en": "Description",
    "files": [
-    "MapHomePlaceBookTools.swift:589"
+    "MapHomePlaceBookTools.swift:593"
    ],
    "args": [],
    "targets": [
@@ -29104,7 +29142,7 @@
    "files": [
     "MapHomeView+Menu2.swift:208",
     "MapHomeView+Menu2.swift:225",
-    "MapHomeView+Support.swift:760"
+    "MapHomeView+Support.swift:762"
    ],
    "args": [],
    "targets": [
@@ -29178,7 +29216,7 @@
    "ko": "설정을 기본값으로 초기화할까요?",
    "en": "Reset settings to defaults?",
    "files": [
-    "MapHomeView+Support.swift:756"
+    "MapHomeView+Support.swift:758"
    ],
    "args": [],
    "targets": [
@@ -29415,7 +29453,7 @@
    "ko": "센서 {0}행 추가, 기록 {1}개 반영",
    "en": "{0} sensor rows added, {1} records applied",
    "files": [
-    "AppModel+Backup.swift:178"
+    "AppModel+Backup.swift:179"
    ],
    "args": [
     "summary.newReadings",
@@ -29442,7 +29480,7 @@
    "ko": "센서 수집 종료",
    "en": "Sensor collection ended",
    "files": [
-    "SensorCollectionLiveActivity.swift:237"
+    "SensorCollectionLiveActivity.swift:246"
    ],
    "args": [],
    "targets": [
@@ -29490,7 +29528,7 @@
    "ko": "센서 정보 대기중",
    "en": "Waiting for sensor data",
    "files": [
-    "SensorCollectionLiveActivity.swift:231"
+    "SensorCollectionLiveActivity.swift:240"
    ],
    "args": [],
    "targets": [
@@ -29502,7 +29540,7 @@
    "ko": "센서 정보 저장중",
    "en": "Saving sensor data",
    "files": [
-    "SensorCollectionLiveActivity.swift:233"
+    "SensorCollectionLiveActivity.swift:242"
    ],
    "args": [],
    "targets": [
@@ -29514,7 +29552,7 @@
    "ko": "센서",
    "en": "Sensors",
    "files": [
-    "SensorCollectionLiveActivity.swift:300"
+    "SensorCollectionLiveActivity.swift:309"
    ],
    "args": [],
    "targets": [
@@ -29676,9 +29714,9 @@
    "ko": "수면",
    "en": "Sleep",
    "files": [
-    "TripImportSheet.swift:120",
     "HealthAndSensorModels.swift:37",
-    "WidgetShared.swift:607"
+    "WidgetShared.swift:607",
+    "MapHomeAlarm.swift:673"
    ],
    "args": [],
    "targets": [
@@ -30284,8 +30322,8 @@
    "ko": "식사",
    "en": "Meal",
    "files": [
-    "TripImportSheet.swift:115",
     "MapHomeLocationPresentation.swift:309",
+    "TripImportSheet.swift:115",
     "record-classification.json:0"
    ],
    "args": [],
@@ -30524,7 +30562,7 @@
    "ko": "아직 담은 곳이 없습니다.",
    "en": "No stops yet.",
    "files": [
-    "MapHomePlaceBookTools.swift:745"
+    "MapHomePlaceBookTools.swift:786"
    ],
    "args": [],
    "targets": [
@@ -30784,7 +30822,7 @@
    "ko": "앞에서 이동 {0}분",
    "en": "{0} min from previous",
    "files": [
-    "TripImportSheet.swift:306"
+    "TripImportSheet.swift:314"
    ],
    "args": [
     "Int(minutes)"
@@ -30898,7 +30936,7 @@
    "ko": "앱 기록",
    "en": "App records",
    "files": [
-    "AppModel+Backup.swift:398"
+    "AppModel+Backup.swift:400"
    ],
    "args": [],
    "targets": [
@@ -31020,7 +31058,7 @@
    "ko": "앱보다 새 형식이에요. 앱을 업데이트해 주세요.",
    "en": "This format is newer than the app. Please update the app.",
    "files": [
-    "TripImportSheet.swift:375"
+    "TripImportSheet.swift:399"
    ],
    "args": [],
    "targets": [
@@ -31057,7 +31095,7 @@
    "ko": "앱을 열어 오늘 기록을 동기화하세요",
    "en": "Open the app to sync today's records",
    "files": [
-    "TaptionPlanWidget.swift:353"
+    "TaptionPlanWidget.swift:329"
    ],
    "args": [],
    "targets": [
@@ -31069,7 +31107,7 @@
    "ko": "앱을 열어 잠금을 해제하세요",
    "en": "Open the app to unlock",
    "files": [
-    "TaptionPlanWidget.swift:336"
+    "TaptionPlanWidget.swift:312"
    ],
    "args": [],
    "targets": [
@@ -31356,7 +31394,7 @@
    "ko": "여권으로 돌아가기",
    "en": "Back to passport",
    "files": [
-    "MapHomePlaceBookTools.swift:892"
+    "MapHomePlaceBookTools.swift:933"
    ],
    "args": [],
    "targets": [
@@ -31452,7 +31490,7 @@
    "ko": "여행 계획 JSON이 아니에요. AI가 마지막에 준 JSON 전체를 복사해 주세요.",
    "en": "This isn't trip JSON. Copy the whole JSON the AI gave at the end.",
    "files": [
-    "TripImportSheet.swift:371"
+    "TripImportSheet.swift:395"
    ],
    "args": [],
    "targets": [
@@ -31464,7 +31502,7 @@
    "ko": "여행 계획 추가",
    "en": "Add to trip",
    "files": [
-    "MapHomeView+Support.swift:685"
+    "MapHomeView+Support.swift:687"
    ],
    "args": [],
    "targets": [
@@ -31476,8 +31514,8 @@
    "ko": "여행 계획",
    "en": "Trip plan",
    "files": [
-    "MapHomePlaceBookTools.swift:737",
-    "MapHomePlaceBookTools.swift:920"
+    "MapHomePlaceBookTools.swift:778",
+    "MapHomePlaceBookTools.swift:961"
    ],
    "args": [],
    "targets": [
@@ -31489,7 +31527,7 @@
    "ko": "여행 계획에 반영",
    "en": "Add to trip plan",
    "files": [
-    "TripImportSheet.swift:285"
+    "TripImportSheet.swift:290"
    ],
    "args": [],
    "targets": [
@@ -31537,7 +31575,7 @@
    "ko": "연결 대기",
    "en": "Waiting for connection",
    "files": [
-    "WatchConnectivityController.swift:1276"
+    "WatchConnectivityController.swift:1283"
    ],
    "args": [],
    "targets": [
@@ -31549,7 +31587,7 @@
    "ko": "연결 상태 확인 중",
    "en": "Checking connection",
    "files": [
-    "WatchConnectivityController.swift:1282"
+    "WatchConnectivityController.swift:1289"
    ],
    "args": [],
    "targets": [
@@ -31714,7 +31752,7 @@
    "ko": "연결을 지원하지 않음",
    "en": "Connectivity unavailable",
    "files": [
-    "WatchConnectivityController.swift:175"
+    "WatchConnectivityController.swift:177"
    ],
    "args": [],
    "targets": [
@@ -31789,7 +31827,7 @@
    "ko": "연동 키 만들기",
    "en": "Create a link key",
    "files": [
-    "TripImportSheet.swift:240"
+    "TripImportSheet.swift:243"
    ],
    "args": [],
    "targets": [
@@ -31801,7 +31839,7 @@
    "ko": "연동 키가 있어요. 프롬프트를 복사하면 함께 들어가요.",
    "en": "A link key is set. It is included when you copy the prompt.",
    "files": [
-    "TripImportSheet.swift:242"
+    "TripImportSheet.swift:245"
    ],
    "args": [],
    "targets": [
@@ -31837,7 +31875,7 @@
    "ko": "연봉 카운터 {0}",
    "en": "Salary {0}",
    "files": [
-    "SensorCollectionLiveActivity.swift:282"
+    "SensorCollectionLiveActivity.swift:291"
    ],
    "args": [
     "$0"
@@ -31851,7 +31889,7 @@
    "ko": "연봉 카운터 ",
    "en": "Salary ",
    "files": [
-    "SensorCollectionLiveActivity.swift:271"
+    "SensorCollectionLiveActivity.swift:280"
    ],
    "args": [],
    "targets": [
@@ -32080,7 +32118,7 @@
    "ko": "영상 재생",
    "en": "Play video",
    "files": [
-    "MapHomePhotoLayer.swift:367"
+    "MapHomePhotoLayer.swift:374"
    ],
    "args": [],
    "targets": [
@@ -32130,7 +32168,7 @@
    "ko": "옆으로 넘겨 보세요",
    "en": "Swipe to turn the page",
    "files": [
-    "MapHomePassportBook.swift:597"
+    "MapHomePassportBook.swift:607"
    ],
    "args": [],
    "targets": [
@@ -32155,7 +32193,7 @@
    "ko": "예상 경로 위치",
    "en": "Expected route location",
    "files": [
-    "MapHomeView+Menu2.swift:459"
+    "MapHomeView+Menu2.swift:462"
    ],
    "args": [],
    "targets": [
@@ -32179,7 +32217,7 @@
    "ko": "오늘 {0} · {1}개",
    "en": "Today {0} · {1} items",
    "files": [
-    "AppModel.swift:322"
+    "AppModel.swift:323"
    ],
    "args": [
     "total",
@@ -32208,7 +32246,7 @@
    "ko": "오늘 기록 없음",
    "en": "No records today",
    "files": [
-    "AppModel.swift:317"
+    "AppModel.swift:318"
    ],
    "args": [],
    "targets": [
@@ -32621,6 +32659,34 @@
    ]
   },
   {
+   "key": "운동 저장을 완료하지 못했습니다. {0}|Couldn't finish saving the workout. {0}",
+   "ko": "운동 저장을 완료하지 못했습니다. {0}",
+   "en": "Couldn't finish saving the workout. {0}",
+   "files": [
+    "WatchWorkoutManager.swift:801"
+   ],
+   "args": [
+    "error.localizedDescription"
+   ],
+   "targets": [
+    "TaptionPlanWatch"
+   ]
+  },
+  {
+   "key": "운동 측정이 중단됐습니다. {0}|Workout tracking stopped. {0}",
+   "ko": "운동 측정이 중단됐습니다. {0}",
+   "en": "Workout tracking stopped. {0}",
+   "files": [
+    "WatchWorkoutManager.swift:2301"
+   ],
+   "args": [
+    "error.localizedDescription"
+   ],
+   "targets": [
+    "TaptionPlanWatch"
+   ]
+  },
+  {
    "key": "운동|Exercise",
    "ko": "운동",
    "en": "Exercise",
@@ -32671,6 +32737,20 @@
    "args": [],
    "targets": [
     "TaptionPlan"
+   ]
+  },
+  {
+   "key": "운동을 시작하지 못했습니다. {0}|Couldn't start the workout. {0}",
+   "ko": "운동을 시작하지 못했습니다. {0}",
+   "en": "Couldn't start the workout. {0}",
+   "files": [
+    "WatchWorkoutManager.swift:674"
+   ],
+   "args": [
+    "error.localizedDescription"
+   ],
+   "targets": [
+    "TaptionPlanWatch"
    ]
   },
   {
@@ -32837,7 +32917,7 @@
    "ko": "웹 요청을 할 수 있는 AI 비서(도구 연결 비서, 맞춤 GPT, 단축어)는 복사하지 않아도 계획을 보낼 수 있어요. 키를 만들면 프롬프트에 함께 들어가요. 계획은 서버에 최대 3일 머물고 앱이 받으면 바로 지워져요.",
    "en": "AI assistants that can make web requests (tool-enabled assistants, custom GPTs, Shortcuts) can send the plan without copying. Create a key and it goes into the prompt. Plans stay on the server for up to 3 days and are deleted as soon as the app receives them.",
    "files": [
-    "TripImportSheet.swift:235"
+    "TripImportSheet.swift:238"
    ],
    "args": [],
    "targets": [
@@ -32861,7 +32941,7 @@
    "ko": "위아래로 쓸어 넘기고, 두 번 눌러 크게 봅니다",
    "en": "Swipe up or down to change, double-tap to enlarge",
    "files": [
-    "MapHomePhotoLayer.swift:640"
+    "MapHomePhotoLayer.swift:667"
    ],
    "args": [],
    "targets": [
@@ -32873,7 +32953,7 @@
    "ko": "위젯 공유 기록",
    "en": "Widget shared records",
    "files": [
-    "AppModel+Backup.swift:489"
+    "AppModel+Backup.swift:491"
    ],
    "args": [],
    "targets": [
@@ -32885,7 +32965,7 @@
    "ko": "위젯 데이터를 갱신하지 못했습니다. {0}",
    "en": "Could not update widget data. {0}",
    "files": [
-    "AppModel+WidgetLiveActivity.swift:476"
+    "AppModel+WidgetLiveActivity.swift:484"
    ],
    "args": [
     "error.localizedDescription"
@@ -32899,7 +32979,7 @@
    "ko": "위젯 요청을 반영하지 못했습니다. {0}",
    "en": "Could not apply the widget request. {0}",
    "files": [
-    "AppModel+WidgetLiveActivity.swift:374"
+    "AppModel+WidgetLiveActivity.swift:375"
    ],
    "args": [
     "error.localizedDescription"
@@ -33236,7 +33316,7 @@
    "ko": "위치·이동",
    "en": "Location & movement",
    "files": [
-    "AppModel.swift:355"
+    "AppModel.swift:356"
    ],
    "args": [],
    "targets": [
@@ -33260,7 +33340,7 @@
    "ko": "위치를 '항상 허용'으로 바꿔 주세요",
    "en": "Set location to Always",
    "files": [
-    "MapHomeView+Support.swift:679"
+    "MapHomeView+Support.swift:681"
    ],
    "args": [],
    "targets": [
@@ -33272,7 +33352,7 @@
    "ko": "위치를 찾지 못해 지도에는 표시되지 않아요",
    "en": "Location not found; not shown on the map",
    "files": [
-    "TripImportSheet.swift:309"
+    "TripImportSheet.swift:317"
    ],
    "args": [],
    "targets": [
@@ -33901,7 +33981,7 @@
    "ko": "이 장소는 바로 저장할 수 없어요. 지도를 길게 눌러 직접 추가해 주세요.",
    "en": "This place can't be saved directly. Long-press the map to add it.",
    "files": [
-    "MapHomeLocationSheets.swift:238"
+    "MapHomeLocationSheets.swift:242"
    ],
    "args": [],
    "targets": [
@@ -34404,7 +34484,7 @@
    "ko": "일부 데이터를 삭제하지 못했습니다: ",
    "en": "Some data could not be deleted: ",
    "files": [
-    "AppModel+Backup.swift:547"
+    "AppModel+Backup.swift:549"
    ],
    "args": [],
    "targets": [
@@ -34452,7 +34532,7 @@
    "ko": "일정 · 위치 · 이동 · 활동이 여기에 표시됩니다",
    "en": "Plans, places, trips and activity appear here",
    "files": [
-    "TaptionPlanWidget.swift:357"
+    "TaptionPlanWidget.swift:333"
    ],
    "args": [],
    "targets": [
@@ -34565,7 +34645,7 @@
    "ko": "일정이 비어 있어요.",
    "en": "The trip has no items.",
    "files": [
-    "TripImportSheet.swift:377"
+    "TripImportSheet.swift:401"
    ],
    "args": [],
    "targets": [
@@ -34664,7 +34744,7 @@
    "ko": "자동 가져오기 안 함",
    "en": "Automatic import off",
    "files": [
-    "WatchSyncProtocol.swift:619"
+    "WatchSyncProtocol.swift:624"
    ],
    "args": [],
    "targets": [
@@ -34739,7 +34819,7 @@
    "ko": "자동 수집 안 함",
    "en": "Automatic collection off",
    "files": [
-    "WatchSyncProtocol.swift:556"
+    "WatchSyncProtocol.swift:561"
    ],
    "args": [],
    "targets": [
@@ -34949,8 +35029,8 @@
    "ko": "장소 검색",
    "en": "Search places",
    "files": [
-    "MapHomePlaceBookTools.swift:593",
-    "MapHomePlaceBookTools.swift:740",
+    "MapHomePlaceBookTools.swift:597",
+    "MapHomePlaceBookTools.swift:781",
     "MapHomeView+Map.swift:154"
    ],
    "args": [],
@@ -34987,7 +35067,7 @@
    "ko": "장소 도감",
    "en": "Place book",
    "files": [
-    "MapHomePlaceBook.swift:539",
+    "MapHomePlaceBook.swift:549",
     "MapHomeView+Menu.swift:429"
    ],
    "args": [],
@@ -35000,8 +35080,8 @@
    "ko": "장소 등록 요청",
    "en": "Request a place",
    "files": [
-    "MapHomePlaceBook.swift:548",
-    "MapHomePlaceBookTools.swift:585"
+    "MapHomePlaceBook.swift:558",
+    "MapHomePlaceBookTools.swift:589"
    ],
    "args": [],
    "targets": [
@@ -35026,7 +35106,7 @@
    "en": "Place name",
    "files": [
     "MapHomeInfoSheets.swift:46",
-    "MapHomePlaceBookTools.swift:587"
+    "MapHomePlaceBookTools.swift:591"
    ],
    "args": [],
    "targets": [
@@ -35373,7 +35453,7 @@
    "ko": "저장할 층수",
    "en": "Floor to save",
    "files": [
-    "MapHomeLocationSheets.swift:245",
+    "MapHomeLocationSheets.swift:249",
     "MapHomeSettingsSheets.swift:923",
     "MapHomeTransitSheets.swift:430"
    ],
@@ -35667,7 +35747,7 @@
    "ko": "종료",
    "en": "End",
    "files": [
-    "TaptionPlanLiveActivity.swift:143"
+    "TaptionPlanLiveActivity.swift:150"
    ],
    "args": [],
    "targets": [
@@ -36331,7 +36411,19 @@
    "ko": "지도를 움직여 핀을 맞춰 주세요.",
    "en": "Move the map to place the pin.",
    "files": [
-    "MapHomePlaceBookTools.swift:615"
+    "MapHomePlaceBookTools.swift:624"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "지도를 움직이거나 검색해 핀을 맞춰 주세요. 지금 위치를 보내려면 위치 단추를 누르세요.|Move the map or search to place the pin. To send where you are, tap the location button.",
+   "ko": "지도를 움직이거나 검색해 핀을 맞춰 주세요. 지금 위치를 보내려면 위치 단추를 누르세요.",
+   "en": "Move the map or search to place the pin. To send where you are, tap the location button.",
+   "files": [
+    "MapHomePlaceBookTools.swift:625"
    ],
    "args": [],
    "targets": [
@@ -36343,7 +36435,7 @@
    "ko": "지도에 메모 추가",
    "en": "Add map memo",
    "files": [
-    "MapHomeView+Support.swift:663"
+    "MapHomeView+Support.swift:665"
    ],
    "args": [],
    "targets": [
@@ -36596,7 +36688,7 @@
    "ko": "직접 입력",
    "en": "Enter manually",
    "files": [
-    "MapHomeView+Support.swift:686",
+    "MapHomeView+Support.swift:688",
     "TravelMapVideoSection.swift:38"
    ],
    "args": [],
@@ -36659,7 +36751,7 @@
    "ko": "진단 로그",
    "en": "Diagnostics log",
    "files": [
-    "AppModel+Backup.swift:497"
+    "AppModel+Backup.swift:499"
    ],
    "args": [],
    "targets": [
@@ -36825,7 +36917,7 @@
    "ko": "집중 중",
    "en": "Focusing",
    "files": [
-    "TaptionPlanWidget.swift:542"
+    "TaptionPlanWidget.swift:518"
    ],
    "args": [],
    "targets": [
@@ -36837,7 +36929,7 @@
    "ko": "찍은 도장 {0} · 남은 곳 {1}",
    "en": "Stamps {0} · To go {1}",
    "files": [
-    "MapHomePlaceBook.swift:559"
+    "MapHomePlaceBook.swift:569"
    ],
    "args": [
     "state.stampedCount",
@@ -36991,7 +37083,7 @@
    "ko": "최근 저장",
    "en": "Last saved",
    "files": [
-    "SensorCollectionLiveActivity.swift:248"
+    "SensorCollectionLiveActivity.swift:257"
    ],
    "args": [],
    "targets": [
@@ -37041,7 +37133,7 @@
    "ko": "최신 {0} · {1}",
    "en": "Latest {0} · {1}",
    "files": [
-    "AppModel.swift:299"
+    "AppModel.swift:300"
    ],
    "args": [
     "fileName",
@@ -37068,7 +37160,7 @@
    "ko": "최신 로그 없음",
    "en": "No recent log",
    "files": [
-    "AppModel.swift:293"
+    "AppModel.swift:294"
    ],
    "args": [],
    "targets": [
@@ -37105,7 +37197,7 @@
    "en": "Add",
    "files": [
     "MapHomeCalendarSheet.swift:336",
-    "MapHomePlaceBookTools.swift:898",
+    "MapHomePlaceBookTools.swift:939",
     "MapHomeSettingsSheets.swift:99"
    ],
    "args": [],
@@ -37495,7 +37587,7 @@
    "ko": "캘린더 권한을 허용해 주세요.",
    "en": "Please allow Calendar access.",
    "files": [
-    "AppModel+Plans.swift:738"
+    "AppModel+Plans.swift:742"
    ],
    "args": [],
    "targets": [
@@ -37607,7 +37699,7 @@
    "files": [
     "FirstRunTutorialGuides.swift:703",
     "PermissionOnboardingSheet.swift:74",
-    "AppModel.swift:367"
+    "AppModel.swift:368"
    ],
    "args": [],
    "targets": [
@@ -37619,7 +37711,7 @@
    "ko": "캘린더로 보낼 계획을 찾지 못했습니다.",
    "en": "Could not find the plan to send to Calendar.",
    "files": [
-    "AppModel+Plans.swift:725"
+    "AppModel+Plans.swift:729"
    ],
    "args": [],
    "targets": [
@@ -37645,7 +37737,7 @@
    "ko": "캘린더의 고정 일정은 이곳에서 옮길 수 없습니다.",
    "en": "Fixed calendar events cannot be moved here.",
    "files": [
-    "AppModel+Plans.swift:809"
+    "AppModel+Plans.swift:813"
    ],
    "args": [],
    "targets": [
@@ -37728,7 +37820,7 @@
    "ko": "큰 지도에서 보기",
    "en": "Open in full map",
    "files": [
-    "MapHomePlaceBook.swift:624"
+    "MapHomePlaceBook.swift:634"
    ],
    "args": [],
    "targets": [
@@ -37904,7 +37996,7 @@
    "ko": "테스트 모드 · 기록에 저장되지 않음",
    "en": "Test mode · not saved",
    "files": [
-    "MapHomePlaceBook.swift:554"
+    "MapHomePlaceBook.swift:564"
    ],
    "args": [],
    "targets": [
@@ -38182,7 +38274,7 @@
    "ko": "프롬프트를 복사했어요. {0}에 붙여 넣고 보내 주세요.",
    "en": "The prompt is copied. Paste it into {0} and send.",
    "files": [
-    "TripImportSheet.swift:221"
+    "TripImportSheet.swift:222"
    ],
    "args": [
     "copiedFor.title"
@@ -38196,7 +38288,7 @@
    "ko": "프롬프트를 복사했어요.",
    "en": "Prompt copied.",
    "files": [
-    "TripImportSheet.swift:226"
+    "TripImportSheet.swift:227"
    ],
    "args": [],
    "targets": [
@@ -38208,7 +38300,7 @@
    "ko": "프롬프트만 복사",
    "en": "Copy prompt only",
    "files": [
-    "TripImportSheet.swift:223"
+    "TripImportSheet.swift:224"
    ],
    "args": [],
    "targets": [
@@ -38503,7 +38595,7 @@
    "ko": "하위 계획은 상위 루틴 기간 안에서만 옮길 수 있습니다.",
    "en": "A sub-plan can only be moved within its parent routine's period.",
    "files": [
-    "AppModel+Plans.swift:814"
+    "AppModel+Plans.swift:818"
    ],
    "args": [],
    "targets": [
@@ -38953,7 +39045,7 @@
    "ko": "현실 모드로 돌아가기",
    "en": "Back to everyday mode",
    "files": [
-    "MapHomePlaceBookTools.swift:919"
+    "MapHomePlaceBookTools.swift:960"
    ],
    "args": [],
    "targets": [
@@ -39030,9 +39122,9 @@
    "ko": "현재 위치",
    "en": "Current location",
    "files": [
-    "MapHomePlaceBookTools.swift:601",
+    "MapHomePlaceBookTools.swift:605",
     "MapHomeTransitSheets.swift:399",
-    "MapHomeView+Menu2.swift:462"
+    "MapHomeView+Menu2.swift:465"
    ],
    "args": [],
    "targets": [
@@ -39381,7 +39473,7 @@
    "files": [
     "AppModel+WidgetLiveActivity.swift:144",
     "WatchTodayCards.swift:66",
-    "SensorCollectionLiveActivity.swift:166"
+    "SensorCollectionLiveActivity.swift:171"
    ],
    "args": [],
    "targets": [
@@ -39395,7 +39487,7 @@
    "ko": "확인",
    "en": "Check",
    "files": [
-    "TripImportSheet.swift:261"
+    "TripImportSheet.swift:266"
    ],
    "args": [],
    "targets": [
@@ -39434,7 +39526,7 @@
    "ko": "확인하고 반영하기",
    "en": "Review and add",
    "files": [
-    "TripImportSheet.swift:269"
+    "TripImportSheet.swift:274"
    ],
    "args": [],
    "targets": [
@@ -39544,9 +39636,9 @@
    "ko": "활동",
    "en": "Activity",
    "files": [
-    "TripImportSheet.swift:118",
-    "WidgetShared.swift:609",
-    "MapHomeLocationPresentation.swift:267"
+    "LiveActivitySupport.swift:426",
+    "LiveActivitySupport.swift:470",
+    "LiveActivitySupport.swift:502"
    ],
    "args": [],
    "targets": [
@@ -39678,8 +39770,8 @@
    "ko": "휴식",
    "en": "Rest",
    "files": [
-    "TripImportSheet.swift:119",
     "MapHomeLocationPresentation.swift:296",
+    "TripImportSheet.swift:119",
     "record-classification.json:0"
    ],
    "args": [],

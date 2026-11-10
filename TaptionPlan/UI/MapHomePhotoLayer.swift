@@ -330,6 +330,7 @@ struct MapHomePhotoFullImage: View {
     @State private var isVideo = false
     @State private var player: AVPlayer?
     @State private var isLoadingVideo = false
+    @State private var videoTask: Task<Void, Never>?
 
     var body: some View {
         ZStack {
@@ -344,14 +345,20 @@ struct MapHomePhotoFullImage: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .task(id: localIdentifier) {
+            stopVideo()
             isVideo = MapHomePhotoImageLoader.shared.videoDuration(localIdentifier: localIdentifier) != nil
             image = await MapHomePhotoImageLoader.shared.image(localIdentifier: localIdentifier, side: 1_000)
         }
-        // 옆으로 넘기면 소리가 남지 않게 멈춘다.
-        .onDisappear {
-            player?.pause()
-            player = nil
-        }
+        // 옆으로 넘기면 소리가 남지 않게 멈춘다. 받는 중이던 영상도 재생하지 않는다.
+        .onDisappear { stopVideo() }
+    }
+
+    private func stopVideo() {
+        videoTask?.cancel()
+        videoTask = nil
+        isLoadingVideo = false
+        player?.pause()
+        player = nil
     }
 
     private var videoButton: some View {
@@ -369,8 +376,9 @@ struct MapHomePhotoFullImage: View {
 
     private func playVideo() {
         isLoadingVideo = true
-        Task {
+        videoTask = Task { @MainActor in
             let item = await MapHomePhotoImageLoader.shared.playerItem(localIdentifier: localIdentifier)
+            guard !Task.isCancelled else { return }
             isLoadingVideo = false
             guard let item else { return }
             let newPlayer = AVPlayer(playerItem: item)
@@ -414,6 +422,8 @@ struct MapHomeRingVideo: View {
         }
         .allowsHitTesting(false)
         .task(id: localIdentifier) {
+            // 가운데 항목이 바뀌면 이전 영상부터 멈춘다. 사진이면 아무것도 남기지 않는다.
+            stop()
             guard MapHomePhotoImageLoader.shared.videoDuration(localIdentifier: localIdentifier) != nil,
                   let item = await MapHomePhotoImageLoader.shared.playerItem(localIdentifier: localIdentifier),
                   !Task.isCancelled else { return }
@@ -437,12 +447,14 @@ struct MapHomeRingVideo: View {
             player.seek(to: .zero)
             player.play()
         }
-        .onDisappear {
-            player?.pause()
-            looper?.disableLooping()
-            looper = nil
-            player = nil
-        }
+        .onDisappear { stop() }
+    }
+
+    private func stop() {
+        player?.pause()
+        looper?.disableLooping()
+        looper = nil
+        player = nil
     }
 }
 

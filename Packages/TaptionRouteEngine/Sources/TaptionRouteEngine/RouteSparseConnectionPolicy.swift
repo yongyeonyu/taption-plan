@@ -13,6 +13,10 @@ public enum RouteSparseConnectionPolicy {
         distanceMeters: Double?
     ) -> Bool {
         guard let distanceMeters else { return false }
+        // 시각이 같거나 거꾸로인데 1km 넘게 떨어졌으면 속도를 잴 수 없어도 순간이동이라 끊는다 (REV1110A04).
+        if gapDuration <= 0 {
+            return distanceMeters > maximumSparseDistanceMeters
+        }
         // 기존 규칙: 5분 초과 gap + 1km 초과 거리면 끊는다.
         if gapDuration > minimumSparseGapDuration
             && distanceMeters > maximumSparseDistanceMeters {

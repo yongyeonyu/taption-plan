@@ -88,7 +88,8 @@ enum MapHomePassportLayout {
     }
 }
 
-/// 앱 언어별 대표 나라 여권. 글자는 그 나라 여권에 적힌 대로 두어 번역하지 않는다.
+/// 앱 언어별 여권 색과 글자. 색은 그 나라 여권을 따르되, 나라 이름·정부 문구는 쓰지 않고 앱 이름과
+/// 「여행 여권」만 적는다. 공문서를 흉내 낸 것으로 보이지 않게 한다(REV1110A03).
 struct MapHomePassportDesign: Equatable {
     let coverHex: String
     let top: [String]
@@ -109,20 +110,20 @@ struct MapHomePassportDesign: Equatable {
 
     private static let navy = "#1B2A57", burgundy = "#6A1B2C", green = "#1E4A3C"
     private static let table: [String: Self] = [
-        "ko": .init(coverHex: "#1A2B5E", top: [], bottom: ["대한민국 여권", "REPUBLIC OF KOREA", "PASSPORT"], pageHex: "#F2F1E6", patternHex: "#6FA8A0", visaTitle: "사증 VISAS"),
-        "en": .init(coverHex: navy, top: ["PASSPORT"], bottom: ["United States", "of America"], pageHex: "#F3F0E4", patternHex: "#7E93B8", visaTitle: "VISAS"),
-        "ja": .init(coverHex: burgundy, top: ["日本国", "JAPAN"], bottom: ["旅券", "PASSPORT"], pageHex: "#F5EEE6", patternHex: "#C79AA6", visaTitle: "査証 VISAS"),
-        "zh-Hans": .init(coverHex: "#7A1C26", top: ["中华人民共和国", "PEOPLE'S REPUBLIC OF CHINA"], bottom: ["护照", "PASSPORT"], pageHex: "#F6EFE3", patternHex: "#CF9B8E", visaTitle: "签证 VISAS"),
-        "zh-Hant": .init(coverHex: green, top: ["中華民國", "REPUBLIC OF CHINA", "TAIWAN"], bottom: ["護照", "PASSPORT"], pageHex: "#EEF1E4", patternHex: "#8DB39B", visaTitle: "簽證 VISAS"),
-        "es": .init(coverHex: burgundy, top: ["UNIÓN EUROPEA", "ESPAÑA"], bottom: ["PASAPORTE"], pageHex: "#F4EDE4", patternHex: "#C9A08C", visaTitle: "VISADOS"),
-        "fr": .init(coverHex: burgundy, top: ["UNION EUROPÉENNE", "RÉPUBLIQUE FRANÇAISE"], bottom: ["PASSEPORT"], pageHex: "#F1EEE9", patternHex: "#9AA6C7", visaTitle: "VISAS"),
-        "de": .init(coverHex: burgundy, top: ["EUROPÄISCHE UNION", "BUNDESREPUBLIK DEUTSCHLAND"], bottom: ["REISEPASS"], pageHex: "#F3EEE2", patternHex: "#BBA57E", visaTitle: "VISA"),
-        "it": .init(coverHex: burgundy, top: ["UNIONE EUROPEA", "REPUBBLICA ITALIANA"], bottom: ["PASSAPORTO"], pageHex: "#F0F0E4", patternHex: "#9FB893", visaTitle: "VISTI"),
-        "pt": .init(coverHex: "#12305A", top: ["MERCOSUL", "REPÚBLICA FEDERATIVA", "DO BRASIL"], bottom: ["PASSAPORTE"], pageHex: "#EFF1E3", patternHex: "#8FB58A", visaTitle: "VISTOS"),
-        "hi": .init(coverHex: navy, top: ["भारत गणराज्य", "REPUBLIC OF INDIA"], bottom: ["पासपोर्ट", "PASSPORT"], pageHex: "#F4EFE2", patternHex: "#C9A673", visaTitle: "वीज़ा VISAS"),
-        "th": .init(coverHex: "#5E1A2B", top: ["หนังสือเดินทาง", "PASSPORT"], bottom: ["ประเทศไทย", "THAILAND"], pageHex: "#F3EFE6", patternHex: "#A99BC7", visaTitle: "วีซ่า VISAS"),
-        "vi": .init(coverHex: "#1E2C52", top: ["CỘNG HÒA XÃ HỘI CHỦ NGHĨA", "VIỆT NAM"], bottom: ["HỘ CHIẾU", "PASSPORT"], pageHex: "#F4EEE1", patternHex: "#CDA184", visaTitle: "THỊ THỰC VISAS"),
-        "id": .init(coverHex: "#1C5044", top: ["REPUBLIK INDONESIA"], bottom: ["PASPOR", "PASSPORT"], pageHex: "#EFF1E6", patternHex: "#8FB6A6", visaTitle: "VISA"),
+        "ko": .init(coverHex: "#1A2B5E", top: [], bottom: ["보키 여행 여권", "BOKKI PLAN", "TRAVEL PASSPORT"], pageHex: "#F2F1E6", patternHex: "#6FA8A0", visaTitle: "사증 VISAS"),
+        "en": .init(coverHex: navy, top: ["TRAVEL PASSPORT"], bottom: ["BOKKI PLAN"], pageHex: "#F3F0E4", patternHex: "#7E93B8", visaTitle: "VISAS"),
+        "ja": .init(coverHex: burgundy, top: ["BOKKI PLAN"], bottom: ["旅のパスポート", "TRAVEL PASSPORT"], pageHex: "#F5EEE6", patternHex: "#C79AA6", visaTitle: "査証 VISAS"),
+        "zh-Hans": .init(coverHex: "#7A1C26", top: ["BOKKI PLAN"], bottom: ["旅行护照", "TRAVEL PASSPORT"], pageHex: "#F6EFE3", patternHex: "#CF9B8E", visaTitle: "签证 VISAS"),
+        "zh-Hant": .init(coverHex: green, top: ["BOKKI PLAN"], bottom: ["旅行護照", "TRAVEL PASSPORT"], pageHex: "#EEF1E4", patternHex: "#8DB39B", visaTitle: "簽證 VISAS"),
+        "es": .init(coverHex: burgundy, top: ["BOKKI PLAN"], bottom: ["PASAPORTE DE VIAJE"], pageHex: "#F4EDE4", patternHex: "#C9A08C", visaTitle: "VISADOS"),
+        "fr": .init(coverHex: burgundy, top: ["BOKKI PLAN"], bottom: ["PASSEPORT DE VOYAGE"], pageHex: "#F1EEE9", patternHex: "#9AA6C7", visaTitle: "VISAS"),
+        "de": .init(coverHex: burgundy, top: ["BOKKI PLAN"], bottom: ["REISEPASS"], pageHex: "#F3EEE2", patternHex: "#BBA57E", visaTitle: "VISA"),
+        "it": .init(coverHex: burgundy, top: ["BOKKI PLAN"], bottom: ["PASSAPORTO DI VIAGGIO"], pageHex: "#F0F0E4", patternHex: "#9FB893", visaTitle: "VISTI"),
+        "pt": .init(coverHex: "#12305A", top: ["BOKKI PLAN"], bottom: ["PASSAPORTE DE VIAGEM"], pageHex: "#EFF1E3", patternHex: "#8FB58A", visaTitle: "VISTOS"),
+        "hi": .init(coverHex: navy, top: ["BOKKI PLAN"], bottom: ["यात्रा पासपोर्ट", "TRAVEL PASSPORT"], pageHex: "#F4EFE2", patternHex: "#C9A673", visaTitle: "वीज़ा VISAS"),
+        "th": .init(coverHex: "#5E1A2B", top: ["BOKKI PLAN"], bottom: ["หนังสือเดินทางท่องเที่ยว", "TRAVEL PASSPORT"], pageHex: "#F3EFE6", patternHex: "#A99BC7", visaTitle: "วีซ่า VISAS"),
+        "vi": .init(coverHex: "#1E2C52", top: ["BOKKI PLAN"], bottom: ["HỘ CHIẾU DU LỊCH", "TRAVEL PASSPORT"], pageHex: "#F4EEE1", patternHex: "#CDA184", visaTitle: "THỊ THỰC VISAS"),
+        "id": .init(coverHex: "#1C5044", top: ["BOKKI PLAN"], bottom: ["PASPOR PERJALANAN", "TRAVEL PASSPORT"], pageHex: "#EFF1E6", patternHex: "#8FB6A6", visaTitle: "VISA"),
     ]
 }
 
@@ -495,10 +496,13 @@ private struct MapHomePassportPageCurl: UIViewControllerRepresentable {
         weak var controller: UIPageViewController?
         private var drawnRevision: Int
         private var isTurning = false
+        /// 처음 열 때 아직 쪽이 모자라 가지 못한 쪽. 장부가 와서 쪽이 늘면 그리로 간다(REV1110A02).
+        private var pendingPage: Int?
 
         init(parent: MapHomePassportPageCurl) {
             self.parent = parent
             drawnRevision = parent.revision
+            pendingPage = parent.initialPage >= parent.pageCount ? parent.initialPage : nil
         }
 
         /// 넘기는 도중에 바꾸면 UIKit 상태가 어긋나므로 끝난 뒤에 한다.
@@ -506,12 +510,18 @@ private struct MapHomePassportPageCurl: UIViewControllerRepresentable {
             guard !isTurning, drawnRevision != parent.revision, let controller,
                   let current = controller.viewControllers?.first else { return }
             drawnRevision = parent.revision
-            let index = min(current.view.tag, parent.pageCount - 1)
+            var index = min(current.view.tag, parent.pageCount - 1)
+            if let pendingPage, pendingPage < parent.pageCount {
+                index = pendingPage
+                self.pendingPage = nil
+            }
             controller.setViewControllers([self.controller(at: index)], direction: .forward, animated: false)
         }
 
         func pageViewController(_ pageViewController: UIPageViewController, willTransitionTo pendingViewControllers: [UIViewController]) {
             isTurning = true
+            // 사용자가 직접 넘기기 시작하면 예약한 쪽으로 끌고 가지 않는다.
+            pendingPage = nil
         }
 
         func pageViewController(_ pageViewController: UIPageViewController, didFinishAnimating finished: Bool, previousViewControllers: [UIViewController], transitionCompleted completed: Bool) {

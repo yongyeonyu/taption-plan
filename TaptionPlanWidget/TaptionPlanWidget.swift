@@ -102,9 +102,8 @@ struct TaptionScheduleProvider: TimelineProvider {
     private func groundTruthPayload(
         at date: Date = .now
     ) -> TaptionWidgetPayload {
-        let payload = TaptionWidgetSharedStore.readGroundTruthPayload(
-            now: date
-        )
+        // 앱이 쓴 새 payload를 먼저 읽는다(REV1110A04).
+        let payload = TaptionWidgetSharedStore.readWidgetPayload(now: date)
         let locationCount = payload.items.filter {
             $0.resolvedLane == .location
         }.count
@@ -243,25 +242,8 @@ private struct TaptionScheduleWidgetMetrics {
 private struct TaptionScheduleWidgetView: View {
     @Environment(\.widgetFamily) private var family
 
+    // 공급자가 읽은 payload를 그대로 쓴다. 항목마다 공유 파일을 다시 읽지 않는다(REV1110A04).
     let entry: TaptionScheduleEntry
-    @State private var renderPayload: TaptionWidgetPayload
-
-    init(entry: TaptionScheduleEntry) {
-        self.entry = entry
-
-        // Decode the app-group snapshot once when the widget view is created.
-        // Doing this on every animation tick blocks the main actor and makes
-        // the cat appear frozen when sensor data is large.
-        let groundTruth = TaptionWidgetSharedStore.readGroundTruthPayload(
-            now: .now
-        )
-        _renderPayload = State(
-            initialValue: TaptionWidgetPayloadSyncPolicy.freshest(
-                groundTruth: groundTruth,
-                cached: entry.payload
-            )
-        )
-    }
 
     var body: some View {
         // Use a periodic schedule in addition to the explicit provider frames.
@@ -274,7 +256,7 @@ private struct TaptionScheduleWidgetView: View {
                 by: playbackInterval
             )
         ) { context in
-            let payload = renderPayload
+            let payload = entry.payload
             let playbackDate = max(entry.date, context.date)
             let metrics = TaptionScheduleWidgetMetrics(family: family)
             let trackDate = timelineCenterDate(playbackDate: playbackDate)
@@ -319,13 +301,7 @@ private struct TaptionScheduleWidgetView: View {
         }
         .padding(.horizontal, TaptionScheduleWidgetMetrics(family: family).horizontalPadding)
         .padding(.vertical, TaptionScheduleWidgetMetrics(family: family).verticalPadding)
-        .onChange(of: entry.payload) { _, newPayload in
-            renderPayload = TaptionWidgetPayloadSyncPolicy.freshest(
-                groundTruth: newPayload,
-                cached: renderPayload
-            )
-        }
-        .widgetURL(deepLinkURL(payload: renderPayload, at: .now))
+        .widgetURL(deepLinkURL(payload: entry.payload, at: .now))
     }
 
     private var lockedWidgetState: some View {
@@ -811,8 +787,8 @@ private struct PrototypeWidgetTrack: View {
             return resolutionLabel
         }
         let hours = Int(windowDuration / 3_600)
-        guard hours < 24 else { return "24시간" }
-        return "\(max(1, hours))시간"
+        let shown = min(24, max(1, hours))
+        return AppLanguagePreference.text("\(shown)시간", "\(shown)h")
     }
 
     private func laneBackground(
@@ -1085,6 +1061,15 @@ struct TaptionWidgetActionIntent: AppIntent {
             try? TaptionWidgetSharedStore.writePayload(refreshedPayload)
         }
         try TaptionWidgetSharedStore.appendCommand(command)
+        // 종료·완료는 시스템이 허락하면 여기서 바로 Live Activity를 끝내고, 앱도 명령을 받을 때 다시 끝낸다(REV1110A04).
+        if action == .complete || action == .stopCurrentActivity {
+            for activity in Activity<TaptionActivityAttributes>.activities where activity.attributes.planID == id {
+                var state = activity.content.state
+                state.isRunning = false
+                state.endsAt = max(state.startedAt, min(.now, state.endsAt))
+                await activity.end(ActivityContent(state: state, staleDate: nil), dismissalPolicy: .default)
+            }
+        }
         WidgetCenter.shared.reloadTimelines(ofKind: TaptionWidgetKind.schedule)
         WidgetCenter.shared.reloadAllTimelines()
         return .result()

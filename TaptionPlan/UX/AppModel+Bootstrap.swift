@@ -469,8 +469,18 @@ extension AppModel {
     }
 
     func reloadSnapshotAfterStoreChange() async throws {
-        let loaded = try await repository.load()
-        let prepared = try await Self.preparedLoadedSnapshotInBackground(loaded)
+        // 읽는 사이 편집이 들어오면 메모리를 덮지 않고, 그 편집이 저장된 뒤 다시 읽는다(REV1110A04).
+        var prepared = TaptionDataSnapshot.empty
+        for attempt in 1...3 {
+            _ = await repositoryWriteTask?.result
+            let revision = snapshotRevision
+            let loaded = try await repository.load()
+            prepared = try await Self.preparedLoadedSnapshotInBackground(loaded)
+            if revision == snapshotRevision { break }
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "store_reload_raced_edit", fields: ["attempt": String(attempt)]
+            )
+        }
         snapshot = prepared
         selectedScale = TimeScale(timelineLevel: prepared.settings.startScale).scheduleEquivalent
         selectedCatCoat = CatCoat(catStyle: prepared.settings.catStyle)

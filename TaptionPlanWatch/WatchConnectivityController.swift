@@ -51,6 +51,8 @@ final class WatchConnectivityController: NSObject, ObservableObject {
     private var activePurge:
         (id: UUID, generation: UInt64, task: Task<Bool, Never>)?
     private var sensorWriteTasks: [UUID: Task<Void, Never>] = [:]
+    private var isFlushingSensorSummaries = false // 연결·버튼이 겹쳐도 두 번 보내지 않는다(WCH1110A01)
+    private var isFlushingAccelerationChunks = false
     private var isPurgingData = false
     private let dayDatabase: WatchDayDatabase?
     var onWorkoutRequest: ((TaptionWatchWorkoutRequest) -> Void)?
@@ -1216,6 +1218,11 @@ final class WatchConnectivityController: NSObject, ObservableObject {
               ) else {
             return
         }
+        // 늦게 온 예전 값은 버리고, 같은 값이면 화면·캐시·위젯은 두고 설정만 다시 본다(WCH1110A01).
+        if let current = payload, value.generatedAt < current.generatedAt || value == current {
+            if value == current { onPayloadChange?(value) }
+            return
+        }
         AppLanguagePreference.adoptPhoneSelection(value.languagePreference) // 워치 위젯도 iPhone 언어를 따른다.
         payload = value
         updateStatus(
@@ -1337,12 +1344,13 @@ final class WatchConnectivityController: NSObject, ObservableObject {
             }
         }
         let pending = pendingSensorSummaries.filter { $0.isAmbient != true }
-        guard !pending.isEmpty else { return }
+        guard !pending.isEmpty, !isFlushingSensorSummaries else { return }
         if let dayDatabase {
             let taskID = UUID()
+            isFlushingSensorSummaries = true
             let task = Task { @MainActor [weak self, dayDatabase, pending] in
                 guard let self else { return }
-                defer { self.sensorWriteTasks[taskID] = nil }
+                defer { self.sensorWriteTasks[taskID] = nil; self.isFlushingSensorSummaries = false }
                 do {
                     try await dayDatabase.appendBatch(pending)
                 } catch {
@@ -1396,12 +1404,13 @@ final class WatchConnectivityController: NSObject, ObservableObject {
             }
         }
         let pending = pendingAccelerationChunks.filter { !$0.isAmbient }
-        guard !pending.isEmpty else { return }
+        guard !pending.isEmpty, !isFlushingAccelerationChunks else { return }
         if let dayDatabase {
             let taskID = UUID()
+            isFlushingAccelerationChunks = true
             let task = Task { @MainActor [weak self, dayDatabase, pending] in
                 guard let self else { return }
-                defer { self.sensorWriteTasks[taskID] = nil }
+                defer { self.sensorWriteTasks[taskID] = nil; self.isFlushingAccelerationChunks = false }
                 for chunk in pending {
                     do {
                         try await dayDatabase.append(chunk)
@@ -1535,10 +1544,9 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         )
     }
 
+    private let pendingAccelerationChunksFile = "pending-acceleration-chunks.json" // 묶음이 커서 파일에 둔다(WCH1110A01)
     private func restorePendingAccelerationChunks() {
-        let data = TaptionWatchDeviceLocalDefaults.data(
-            forKey: pendingAccelerationChunksKey
-        )
+        let data = WatchPendingFile.read(pendingAccelerationChunksFile, legacyKey: pendingAccelerationChunksKey)
         guard let values = TaptionWatchDurableSpoolCodec.decode(
             [TaptionWatchAccelerationChunk].self,
             from: data
@@ -1550,21 +1558,11 @@ final class WatchConnectivityController: NSObject, ObservableObject {
     }
 
     private func persistPendingAccelerationChunks() {
-        if pendingAccelerationChunks.isEmpty {
-            TaptionWatchDeviceLocalDefaults.removeObject(
-                forKey: pendingAccelerationChunksKey
-            )
-            return
+        guard !pendingAccelerationChunks.isEmpty else {
+            return WatchPendingFile.remove(pendingAccelerationChunksFile, legacyKey: pendingAccelerationChunksKey)
         }
-        guard let data = TaptionWatchDurableSpoolCodec.encode(
-            pendingAccelerationChunks
-        ) else {
-            return
-        }
-        TaptionWatchDeviceLocalDefaults.set(
-            data,
-            forKey: pendingAccelerationChunksKey
-        )
+        guard let data = TaptionWatchDurableSpoolCodec.encode(pendingAccelerationChunks) else { return }
+        WatchPendingFile.write(data, to: pendingAccelerationChunksFile)
     }
 
     private func persistPendingHealthSnapshots() {

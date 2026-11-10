@@ -53,9 +53,7 @@ public enum SleepFusion {
 
     /// 낮 창(9~21시) 안에서 시작하고 끝나는가.
     public static func isDaytime(_ interval: ClassifierInterval, calendar: Calendar = .autoupdatingCurrent) -> Bool {
-        let day = calendar.startOfDay(for: interval.start)
-        guard let start = calendar.date(byAdding: .hour, value: daytimeStartHour, to: day),
-              let end = calendar.date(byAdding: .hour, value: daytimeEndHour, to: day) else { return false }
+        guard let (start, end) = daytimeWindow(on: interval.start, calendar: calendar) else { return false }
         return interval.start >= start && interval.end <= end
     }
 
@@ -70,10 +68,16 @@ public enum SleepFusion {
     /// 낮 창에 시작해 그날 자정 전에 끝나는가. 저녁 책상 위 충전은 21시를 넘겨도 밤잠이 아니다(ALG1108A01).
     static func endsSameDayAfterDaytimeStart(_ interval: ClassifierInterval, calendar: Calendar) -> Bool {
         let day = calendar.startOfDay(for: interval.start)
-        guard let start = calendar.date(byAdding: .hour, value: daytimeStartHour, to: day),
-              let end = calendar.date(byAdding: .hour, value: daytimeEndHour, to: day),
+        guard let (start, end) = daytimeWindow(on: interval.start, calendar: calendar),
               let midnight = calendar.date(byAdding: .day, value: 1, to: day) else { return false }
         return interval.start >= start && interval.start < end && interval.end <= midnight
+    }
+
+    /// 그날 벽시계 9시·21시. 자정+시간으로 더하면 서머타임 바뀌는 날 한 시간 밀린다 (REV1110A04).
+    static func daytimeWindow(on date: Date, calendar: Calendar) -> (Date, Date)? {
+        guard let start = calendar.date(bySettingHour: daytimeStartHour, minute: 0, second: 0, of: date),
+              let end = calendar.date(bySettingHour: daytimeEndHour, minute: 0, second: 0, of: date) else { return nil }
+        return (start, end)
     }
 
     /// 휴대폰만으로 잡힌 수면을 받을지. 휴대폰 정지는 낮잠이 되지 않으므로(대표 결정) 낮 창에 시작해

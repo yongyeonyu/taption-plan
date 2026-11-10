@@ -105,7 +105,7 @@ struct MapHomePlaceSiteIndex: Sendable {
         var cells: [Int: [Entry]] = [:]
         for place in places {
             for site in [place.site] + place.airports.map(\.site) {
-                let latitudeReach = site.radiusMeters / 111_000
+                let latitudeReach = site.reachMeters / 111_000
                 let longitudeReach = latitudeReach / max(0.05, cos(site.latitude * .pi / 180))
                 for row in Self.cellRange(site.latitude, reach: latitudeReach) {
                     for column in Self.cellRange(site.longitude, reach: longitudeReach) {
@@ -212,6 +212,13 @@ actor MapHomeVisitLedgerStore {
         MapHomePlaceBookDrivePass.merge(readings: readings, into: &state.passes)
         state.processedThrough = max(state.processedThrough, end)
         drive = state
+    }
+
+    /// 기록을 모두 지우거나 백업을 복원하면 부른다. 지운 기록에서 나온 도장과 처리 시각을 남기지 않는다(REV1110A02).
+    func reset() {
+        cached = nil
+        drive = DriveState()
+        try? FileManager.default.removeItem(at: driveFile)
     }
 
     func saveDrive() {

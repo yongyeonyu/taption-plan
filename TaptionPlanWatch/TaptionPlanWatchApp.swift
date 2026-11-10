@@ -86,9 +86,22 @@ struct TaptionPlanWatchApp: App {
                 }
             }
         }
-        WatchAppDelegate.onRefresh = { @MainActor [weak workout] in
+        WatchAppDelegate.onRefresh = { @MainActor [weak connectivity, weak workout] in
+            guard let workout else { return }
+            // 화면 없이 백그라운드로만 켜지면 첫 화면의 .task가 돌지 않아 설정·대기열이 비어 있다.
+            // 여기서 복원하고 설정을 바로 적용한다(WCH1110A01).
+            if let connectivity {
+                connectivity.prepare()
+                if workout.accelerationSettings == nil, let payload = connectivity.payload {
+                    await workout.applySettings(
+                        acceleration: payload.accelerationSettings,
+                        dataSyncProfile: payload.dataSyncProfile,
+                        commerceLocked: payload.commerceLocked == true
+                    )
+                }
+            }
             // 수집을 끈 동안에는 백그라운드에서 아무것도 하지 않는다.
-            guard let workout, workout.accelerationSettings?.isEnabled == true else { return }
+            guard workout.accelerationSettings?.isEnabled == true else { return }
             await workout.syncNow(requestID: "background")
         }
         connectivity.activateConnectivity()

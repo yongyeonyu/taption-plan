@@ -1055,6 +1055,8 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         return latestPayloadData
     }
 
+    static let maximumCommandDelay = TaptionWatchCommandCapabilityStore.expiredGrace
+
     @discardableResult
     private func receiveCommand(
         from envelope: [String: Any],
@@ -1068,9 +1070,12 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
                 from: data
               ),
               let command = command.retainingData(receivedAt: receivedAt),
+              // 워치가 연결 없이 누른 명령은 늦게 도착한다. 누른 시각에 권한이 살아 있었으면 받는다.
+              // 너무 오래된 것(7일)은 받지 않는다(WCH1110A01).
+              receivedAt.timeIntervalSince(command.requestedAt) <= Self.maximumCommandDelay,
               TaptionWatchCommandCapabilityStore.consume(
                   command,
-                  at: receivedAt
+                  at: min(command.requestedAt, receivedAt)
               ) else {
             return false
         }

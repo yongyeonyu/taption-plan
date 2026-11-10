@@ -82,4 +82,11 @@ final class PhoneSleepScoreTests: XCTestCase {
         XCTAssertEqual(verdict.interval, ClassifierInterval(start: at(9, 1, 54), end: at(9, 7, 38)), "\(verdict.factors)")
         XCTAssertTrue(verdict.isSleep)
     }
+
+    /// REV1110A01: 평소 취침이 자정 뒤여도 그 전 저녁에 잠든 밤을 밤 시간대로 센다.
+    func testUsualWindowAfterMidnightCoversEveningStart() {
+        let window = PhoneSleepScore.UsualWindow(bedMinute: 30, wakeMinute: 450, isLearned: true)
+        let overlap = PhoneSleepScore.nightOverlap(ClassifierInterval(start: at(8, 23, 45), end: at(9, 7)), window: window, calendar: calendar)
+        XCTAssertEqual(overlap, 1, accuracy: 0.01)
+    }
 }

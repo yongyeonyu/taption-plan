@@ -8,6 +8,8 @@ enum PhoneSleepScoreAdapter {
     static let modelVersion = ClassifierPipeline.modelVersion("sleep-score")
     /// 개인 수면 시간대를 배우는 기간.
     static let learningDays = 30
+    /// 정지 기록 사이가 이만큼 안이면 이어진 것으로 본다.
+    static let stillJoinGap: TimeInterval = 60
 
     static func records(
         night: TimeSpan,
@@ -47,7 +49,8 @@ enum PhoneSleepScoreAdapter {
         guard let verdict = PhoneSleepScore.evaluate(signals, calendar: calendar), verdict.isSleep,
               SleepFusion.acceptsPhoneOnly(verdict.interval, calendar: calendar) else { return [] }
         return [ActualRecord(
-            id: ActivityStableID.uuid(seed: "\(modelVersion)|\(verdict.interval.start.timeIntervalSince1970)|\(verdict.interval.end.timeIntervalSince1970)"),
+            // 밤마다 하나라 밤 시작으로 정한다. 구간 시각으로 정하면 다시 계산할 때마다 바뀌어 사용자가 지운 기록이 되살아난다.
+            id: ActivityStableID.uuid(seed: "\(modelVersion)|night|\(night.start.timeIntervalSince1970)"),
             planID: nil,
             title: "수면",
             categoryID: "sleep",
@@ -71,12 +74,20 @@ enum PhoneSleepScoreAdapter {
         asOf: Date
     ) -> [ClassifierInterval] {
         var events: [ClassifierInterval] = []
-        for activity in motionActivities {
+        var previous: MotionActivityRecord?
+        for activity in motionActivities.sorted(by: { $0.span.start < $1.span.start }) {
+            defer { previous = activity }
             switch activity.motion {
             case .walking, .running, .cycling, .automotive:
                 events.append(interval(activity.span))
             case .stationary, .unknown:
-                events.append(ClassifierInterval(start: activity.span.start, end: activity.span.start))
+                // iOS는 휴대폰을 두기만 해도 신뢰도가 바뀌면 정지 기록을 끊는다. 정지 기록끼리 이어진 경계는 깬 근거가 아니다.
+                if let previous, activity.motion == .stationary, previous.motion == .stationary,
+                   activity.span.start.timeIntervalSince(previous.span.end) <= stillJoinGap {
+                    if let last = events.last, last.duration == 0, last.start == previous.span.end { events.removeLast() }
+                } else {
+                    events.append(ClassifierInterval(start: activity.span.start, end: activity.span.start))
+                }
                 events.append(ClassifierInterval(start: activity.span.end, end: activity.span.end))
             }
         }

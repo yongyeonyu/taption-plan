@@ -299,10 +299,20 @@ struct MapHomeLandmarkSite: Equatable, Sendable {
     /// 섬 윤곽(위도, 경도를 번갈아). 있으면 반경 원 대신 윤곽 안인지 본다.
     var outline: [Double]? = nil
 
+    /// 판정이 닿는 거리. 윤곽이 있으면 반경 원이 아니라 윤곽의 가장 먼 점까지다.
+    /// 예전에는 윤곽을 원과 겹쳐 봐서 원보다 긴 섬(거제도)의 끝이 빠졌다(REV1110A03).
+    var reachMeters: Double {
+        guard let outline, outline.count >= 2 else { return radiusMeters }
+        return stride(from: 0, to: outline.count - 1, by: 2).reduce(0) { farthest, index in
+            max(farthest, Self.distance(outline[index], outline[index + 1], latitude, longitude))
+        }
+    }
+
     func contains(_ point: GeoPoint) -> Bool {
+        let reach = reachMeters
         // 위도 차로 먼저 거른다. 1도 ≈ 111 km.
-        guard abs(point.latitude - latitude) * 111_000 <= radiusMeters else { return false }
-        guard Self.distance(point.latitude, point.longitude, latitude, longitude) <= radiusMeters else { return false }
+        guard abs(point.latitude - latitude) * 111_000 <= reach else { return false }
+        guard Self.distance(point.latitude, point.longitude, latitude, longitude) <= reach else { return false }
         return outline.map { Self.isInside(point.latitude, point.longitude, ring: $0) } ?? true
     }
 

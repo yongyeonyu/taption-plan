@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import Security
 
@@ -67,28 +68,54 @@ enum TripRelay {
         """
     }
 
-    /// 도착한 계획을 받아 바로 서버에서 지운다. 없으면 nil.
-    static func fetchAndClear(session: URLSession = .shared) async -> String? {
+    private static let lastReceivedKey = "tripRelayLastReceivedHash"
+
+    /// 도착한 계획을 받는다. 없으면 nil. 반영하기 전에는 서버에서 지우지 않는다.
+    static func fetch(session: URLSession = .shared) async -> String? {
+        guard let request = request(method: "GET") else { return nil }
+        guard let (data, response) = try? await session.data(for: request),
+              (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    /// 반영을 마친 뒤 서버에서 지운다.
+    static func clear(session: URLSession = .shared) async {
+        guard let request = request(method: "DELETE") else { return }
+        _ = try? await session.data(for: request)
+    }
+
+    /// 자동으로 띄울 새 계획인가. 지운 뒤에도 서버 캐시가 잠깐 예전 값을 돌려주므로 같은 내용은 한 번만 띄운다.
+    static func isNew(_ text: String, defaults: UserDefaults = .standard) -> Bool {
+        guard !isLastReceived(text, defaults: defaults) else { return false }
+        defaults.set(hash(text), forKey: lastReceivedKey)
+        return true
+    }
+
+    /// 중계에서 마지막으로 받은 계획과 같은 글인가. 붙여 넣은 다른 계획을 반영할 때 서버의 새 계획을 지우지 않게 한다.
+    static func isLastReceived(_ text: String, defaults: UserDefaults = .standard) -> Bool {
+        defaults.string(forKey: lastReceivedKey) == hash(text)
+    }
+
+    private static func hash(_ text: String) -> String {
+        SHA256.hash(data: Data(text.utf8)).map { String(format: "%02x", $0) }.joined()
+    }
+
+    private static func request(method: String) -> URLRequest? {
         guard let endpoint, let key else { return nil }
         var request = URLRequest(url: endpoint, timeoutInterval: 10)
+        request.httpMethod = method
         request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
-        guard let (data, response) = try? await session.data(for: request),
-              (response as? HTTPURLResponse)?.statusCode == 200,
-              let text = String(data: data, encoding: .utf8) else { return nil }
-        var delete = request
-        delete.httpMethod = "DELETE"
-        _ = try? await session.data(for: delete)
-        return text
+        return request
     }
 }
 
 extension MapHomeView {
-    /// 앱을 열 때 한 번 확인한다. 도착한 계획이 있으면 여행 모드로 바꿔 미리보기를 띄운다.
+    /// 앱을 열 때 확인한다. 처음 보는 계획이 있으면 여행 모드로 바꿔 미리보기를 띄운다.
     func checkTripRelay() async {
         guard TripRelay.isAvailable, TripRelay.key != nil, !isTripImportPresented,
-              let text = await TripRelay.fetchAndClear() else { return }
+              let text = await TripRelay.fetch(), !isTripImportPresented, TripRelay.isNew(text) else { return }
         pastedTripText = text
-        isTripClipboardOfferVisible = false
+        if isTripClipboardOfferVisible { isTripClipboardOfferVisible = false }
         isTravelMode = true
         isTripImportPresented = true
     }

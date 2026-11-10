@@ -144,8 +144,9 @@ extension MapHomePlaybackLocation {
     /// 화랑이를 그릴 좌표. 위경도만 본다(PLY1108A01).
     /// 선로·역·예상 경로 좌표는 정확도가 -1(측정이 아니라 계산한 자리)이다. 화면이 정확도 0 이상만 받아
     /// SUB1108A01 뒤로 탑승 내내 화랑이가 사라지고 구동기가 그리는 화살표만 남았다.
-    static func lastRecordedCoordinate(in readings: [SensorReading]) -> CLLocationCoordinate2D? {
-        readings.max { ($0.point == nil ? .distantPast : $0.timestamp) < ($1.point == nil ? .distantPast : $1.timestamp) }?
+    /// `date`까지 기록된 마지막 자리. 그날 첫 기록보다 이른 시각이면 nil이라 화랑이를 저녁 자리로 옮기지 않는다(REV1110A03).
+    static func lastRecordedCoordinate(in readings: [SensorReading], notAfter date: Date = .distantFuture) -> CLLocationCoordinate2D? {
+        readings.filter { $0.point != nil && $0.timestamp <= date }.max { $0.timestamp < $1.timestamp }?
             .point.flatMap(drawableCoordinate)
     }
 

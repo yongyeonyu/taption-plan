@@ -46,7 +46,7 @@ public func distanceMeters(_ lhs: GeoPoint, _ rhs: GeoPoint) -> Double {
 public enum PlanarDistance {
     @inlinable
     public static func meters(_ a: GeoPoint, _ b: GeoPoint) -> Double {
-        let x = (a.longitude - b.longitude) * 111_320 * cos(a.latitude * .pi / 180)
+        let x = longitudeDelta(b.longitude, a.longitude) * 111_320 * cos(a.latitude * .pi / 180)
         let y = (a.latitude - b.latitude) * 111_320
         return (x * x + y * y).squareRoot()
     }
@@ -55,12 +55,20 @@ public enum PlanarDistance {
     @inlinable
     public static func segmentMeters(_ point: GeoPoint, _ start: GeoPoint, _ end: GeoPoint) -> Double {
         let scale = cos(point.latitude * .pi / 180)
-        let ax = (start.longitude - point.longitude) * 111_320 * scale, ay = (start.latitude - point.latitude) * 111_320
-        let bx = (end.longitude - point.longitude) * 111_320 * scale, by = (end.latitude - point.latitude) * 111_320
+        let ax = longitudeDelta(point.longitude, start.longitude) * 111_320 * scale, ay = (start.latitude - point.latitude) * 111_320
+        let bx = longitudeDelta(point.longitude, end.longitude) * 111_320 * scale, by = (end.latitude - point.latitude) * 111_320
         let dx = bx - ax, dy = by - ay
         let length = dx * dx + dy * dy
         let t = length > 0 ? min(1, max(0, -(ax * dx + ay * dy) / length)) : 0
         let x = ax + dx * t, y = ay + dy * t
         return (x * x + y * y).squareRoot()
+    }
+
+    /// `from`에서 `to`까지 짧은 쪽 경도 차(도). 날짜변경선을 넘어도 가깝게 잰다 (REV1110A04).
+    @inlinable
+    public static func longitudeDelta(_ from: Double, _ to: Double) -> Double {
+        var delta = (to - from).truncatingRemainder(dividingBy: 360)
+        if delta > 180 { delta -= 360 } else if delta < -180 { delta += 360 }
+        return delta
     }
 }

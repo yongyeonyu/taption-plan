@@ -32,7 +32,7 @@ struct TaptionActivityAttributes: ActivityAttributes {
         var catStyle: String
         var isRunning: Bool
         var majorCategoryID: String = "activity"
-        var majorCategoryTitle: String = "활동"
+        var majorCategoryTitle: String = AppLanguagePreference.text("활동", "Activity")
         var majorCategorySystemImage: String = "sparkles"
         var compactActivityTitle: String?
         var compactActivityCategoryID: String?
@@ -46,7 +46,7 @@ struct TaptionActivityAttributes: ActivityAttributes {
             catStyle: String,
             isRunning: Bool,
             majorCategoryID: String = "activity",
-            majorCategoryTitle: String = "활동",
+            majorCategoryTitle: String = AppLanguagePreference.text("활동", "Activity"),
             majorCategorySystemImage: String = "sparkles",
             compactActivityTitle: String? = nil,
             compactActivityCategoryID: String? = nil,
@@ -81,7 +81,7 @@ struct TaptionActivityAttributes: ActivityAttributes {
             self.majorCategoryTitle = try container.decodeIfPresent(
                 String.self,
                 forKey: .majorCategoryTitle
-            ) ?? "활동"
+            ) ?? AppLanguagePreference.text("활동", "Activity")
             self.majorCategorySystemImage = try container.decodeIfPresent(
                 String.self,
                 forKey: .majorCategorySystemImage
@@ -679,7 +679,7 @@ struct TaptionWidgetItem: Identifiable, Codable, Hashable, Sendable {
 
 enum TaptionWidgetPlaybackEngine {
     static let defaultWindowDuration: TimeInterval = 6 * 3_600
-    static let defaultResolutionLabel = "6시간"
+    static var defaultResolutionLabel: String { AppLanguagePreference.text("6시간", "6h") }
 
     static func lanes(
         for items: [TaptionWidgetItem],
@@ -1418,8 +1418,8 @@ enum TaptionWidgetSharedStore {
         category: "WidgetSyncStore"
     )
 
-    private static let payloadFileName = "widget-payload-v1.json"
-    private static let commandsFileName = "widget-commands-v1.json"
+    static let payloadFileName = "widget-payload-v1.json"
+    static let commandsFileName = "widget-commands-v1.json"
     private static let snapshotFileName = "taption-data-v1.json"
 
     struct Diagnostics: Equatable, Sendable {
@@ -1576,33 +1576,6 @@ enum TaptionWidgetSharedStore {
         }
     }
 
-    static func appendCommand(_ command: TaptionWidgetCommand) throws {
-        var commands = readCommands()
-        commands.removeAll {
-            $0.planID == command.planID
-                && $0.kind == command.kind
-                && command.requestedAt.timeIntervalSince($0.requestedAt) < 2
-        }
-        commands.append(command)
-        try write(encoder.encode(commands), to: fileURL(commandsFileName))
-    }
-
-    static func takeCommands() throws -> [TaptionWidgetCommand] {
-        let url = fileURL(commandsFileName)
-        guard FileManager.default.fileExists(atPath: url.path) else { return [] }
-        let claimed = url.appendingPathExtension("taking-\(UUID().uuidString)")
-        try FileManager.default.moveItem(at: url, to: claimed)
-        defer { try? FileManager.default.removeItem(at: claimed) }
-        guard let data = try? Data(contentsOf: claimed),
-              let commands = try? decoder.decode(
-                [TaptionWidgetCommand].self,
-                from: data
-              ) else {
-            return []
-        }
-        return commands.sorted { $0.requestedAt < $1.requestedAt }
-    }
-
     static func deleteAll() throws {
         for name in [payloadFileName, commandsFileName, snapshotFileName] {
             let url = fileURL(name)
@@ -1610,17 +1583,6 @@ enum TaptionWidgetSharedStore {
                 try FileManager.default.removeItem(at: url)
             }
         }
-    }
-
-    private static func readCommands() -> [TaptionWidgetCommand] {
-        guard let data = try? Data(contentsOf: fileURL(commandsFileName)),
-              let commands = try? decoder.decode(
-                [TaptionWidgetCommand].self,
-                from: data
-              ) else {
-            return []
-        }
-        return commands
     }
 
     private static func readGroundTruthSnapshot() -> TaptionDataSnapshot? {
@@ -1646,7 +1608,7 @@ enum TaptionWidgetSharedStore {
         do {
             let snapshot = try decoder.decode(
                 TaptionDataSnapshot.self,
-                from: TaptionSnapshotCompression.decode(data)
+                from: try TaptionSnapshotCompression.decode(data)
             )
             guard snapshot.updatedAt != .distantPast else {
                 return (nil, "uninitialized")
@@ -1657,7 +1619,7 @@ enum TaptionWidgetSharedStore {
         }
     }
 
-    private static func decodePayload(
+    static func decodePayload(
         _ data: Data?
     ) -> (value: TaptionWidgetPayload?, error: String?) {
         guard let data else { return (nil, "missing") }
@@ -1674,7 +1636,7 @@ enum TaptionWidgetSharedStore {
         )
     }
 
-    private static func fileURL(_ name: String) -> URL {
+    static func fileURL(_ name: String) -> URL {
         let fileManager = FileManager.default
         if let container = appGroupContainerURL() {
             return container.appendingPathComponent(name)
@@ -1688,7 +1650,7 @@ enum TaptionWidgetSharedStore {
             .appendingPathComponent(name)
     }
 
-    private static func write(_ data: Data, to url: URL) throws {
+    static func write(_ data: Data, to url: URL) throws {
         try FileManager.default.createDirectory(
             at: url.deletingLastPathComponent(),
             withIntermediateDirectories: true
@@ -1702,13 +1664,13 @@ enum TaptionWidgetSharedStore {
         )
     }
 
-    private static var encoder: JSONEncoder {
+    static var encoder: JSONEncoder {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .secondsSince1970
         return encoder
     }
 
-    private static var decoder: JSONDecoder {
+    static var decoder: JSONDecoder {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .secondsSince1970
         return decoder

@@ -150,7 +150,10 @@ extension AppModel {
         let task = Task { @MainActor [weak self] in
             _ = await previous?.value
             guard let self, !Task.isCancelled else { return false }
-            return await self.performSensorTimelineRefresh(containing: day, recomputing: recomputes)
+            // 이 작업이 바꾼 것만 실패 때 되돌린다. 다른 작업의 변경은 남긴다(REV1110A04).
+            return await SensorRefreshMutationScope.$isActive.withValue(true) {
+                await self.performSensorTimelineRefresh(containing: day, recomputing: recomputes)
+            }
         }
         sensorTimelineTask = task
         sensorTimelineRequestID = requestID
@@ -187,6 +190,7 @@ extension AppModel {
         activeDataMutationCount += 1
         defer {
             if !committed, userEditedDuringSensorRefresh {
+                // 편집뿐 아니라 갱신 밖의 모든 변경(다시 읽기·시계·가져오기)이 이 길로 온다(REV1110A04).
                 // Keep the edit and the revisions that already guard its save.
                 // Derived records are recomputed because the fingerprint is cleared.
                 sensorRefreshFingerprints.removeValue(
@@ -304,10 +308,11 @@ extension AppModel {
             // must never replace the current-location anchor.
             latestSensorReading = latest
         }
-        let motionActivities =
-            (try? await sensorService.motionActivities(in: span)) ?? []
-        let sleepMotionActivities =
-            (try? await sensorService.motionActivities(in: sleepSpan)) ?? []
+        // 하루와 밤 구간은 서로 기다리지 않고 함께 읽는다(REV1110A02).
+        async let dayMotion = try? sensorService.motionActivities(in: span)
+        async let nightMotion = try? sensorService.motionActivities(in: sleepSpan)
+        let motionActivities = await dayMotion ?? []
+        let sleepMotionActivities = await nightMotion ?? []
         guard !Task.isCancelled, acceptsDataMutation() else { return false }
         TaptionPlanDiagnosticsLogger.shared.record(
             "sensor_timeline_evidence_loaded",
@@ -728,7 +733,9 @@ extension AppModel {
         applyPlaceActivityRecords(stays: input.contextStays, inside: span)
         // Sleep inference depends on the current observation cutoff and also
         // consumes motion-only samples without a GPS point.
-        applyChargingInactivitySleepRecords(readings: input.sleepReadings, motionActivities: input.sleepMotionActivities, inside: input.sleepSpan)
+        applyChargingInactivitySleepRecords(readings: input.sleepReadings, inside: input.sleepSpan)
+        // 충전·정지 수면이 먼저 들어가야 점수형 수면이 그 밤을 건너뛴다.
+        applyPhoneSleepScoreRecords(readings: input.sleepReadings, motionActivities: input.sleepMotionActivities, night: input.sleepSpan)
         snapshot.settings.confirmedSleepSpans =
             TaptionActivityEngineAdapter.migratedConfirmedSleepSpans(
                 existing: snapshot.settings.confirmedSleepSpans,
@@ -931,10 +938,8 @@ extension AppModel {
 
     private func applyChargingInactivitySleepRecords(
         readings: [SensorReading],
-        motionActivities: [MotionActivityRecord] = [],
         inside span: TimeSpan
     ) {
-        defer { applyPhoneSleepScoreRecords(readings: readings, motionActivities: motionActivities, night: span) }
         let maximumSampleGap = max(
             20 * 60,
             settings.gpsLoggingPreferences.interval * 1.6 + 60

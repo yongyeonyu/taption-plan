@@ -378,7 +378,10 @@ extension MapHomeView {
         // GPS가 끊겨도 오늘은 화랑이를 마지막 위치에 둔다.
         // 재생이 24:00에 끝나 자리를 못 찾아도 그날 마지막 자리에 남긴다(대표 지시).
         if selectedTimelineMinute != nil {
-            return historicalPlaybackCoordinate ?? (isToday ? liveFocusCoordinate : MapHomePlaybackLocation.lastRecordedCoordinate(in: historicalPlaybackReadings))
+            guard historicalPlaybackCoordinate == nil, !isToday else { return historicalPlaybackCoordinate ?? liveFocusCoordinate }
+            // 다른 날을 불러오는 중에는 전날 기록을 쓰지 않는다.
+            guard routeReadingsLoadState.isLoaded(for: model.selectedDate) else { return nil }
+            return MapHomePlaybackLocation.lastRecordedCoordinate(in: historicalPlaybackReadings, notAfter: displayedLocationDate)
         }
         return isToday ? liveFocusCoordinate : nil
     }

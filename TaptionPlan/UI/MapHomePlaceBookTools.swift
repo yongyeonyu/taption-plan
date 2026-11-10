@@ -125,12 +125,6 @@ struct MapHomePassportStampStyle: Equatable {
         "vn": .init(shape: .rectangle, colorHex: "#3B4A9C", border: .single, rule: .topBand, mark: .arrow, hasDateBox: true, hasSideCodes: true),
     ]
 
-    private static let dateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "dd MMM yyyy"
-        return formatter
-    }()
 
     /// 도장의 일련번호 느낌만 내는 숫자. 날짜와 나라로 정해 같은 날 같은 나라는 늘 같다. 실제 번호가 아니다.
     static func stampNumber(country: String, date: Date, digits: Int, calendar: Calendar = .autoupdatingCurrent) -> String {
@@ -155,9 +149,15 @@ struct MapHomePassportStampStyle: Equatable {
     }
 
     /// 앱 언어와 관계없이 영어 일·월·년(09 NOV 2026).
+    /// 공유 포매터의 시간대를 매번 바꾸면 여러 스레드에서 부를 때 섞인다. 값 형식을 쓴다(REV1110A03).
     static func dateText(_ date: Date, calendar: Calendar = .autoupdatingCurrent) -> String {
-        dateFormatter.timeZone = calendar.timeZone
-        return dateFormatter.string(from: date).uppercased()
+        var gregorian = Calendar(identifier: .gregorian)
+        gregorian.timeZone = calendar.timeZone
+        let style = Date.VerbatimFormatStyle(
+            format: "\(day: .twoDigits) \(month: .abbreviated) \(year: .defaultDigits)",
+            locale: Locale(identifier: "en_US_POSIX"), timeZone: calendar.timeZone, calendar: gregorian
+        )
+        return date.formatted(style).uppercased()
     }
 
     var outline: AnyShape {
@@ -576,8 +576,12 @@ struct MapHomePlaceRequestSheet: View {
     @State private var center: CLLocationCoordinate2D?
     @State private var position: MapCameraPosition = .automatic
     @State private var attachment: MapHomeDeveloperAttachment?
+    /// 사용자가 자리를 직접 골랐는가(지도 이동·검색·현재 위치 단추). 처음 열면 지도가 현재 위치라,
+    /// 이름만 적고 보내면 집·회사 좌표가 그대로 메일로 갔다(REV1110A03).
+    @State private var pinChosen = false
+    @State private var sentFile: URL?
 
-    private var canSend: Bool { center != nil && !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    private var canSend: Bool { pinChosen && center != nil && !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 
     var body: some View {
         ScrollView {
@@ -595,7 +599,7 @@ struct MapHomePlaceRequestSheet: View {
                         .submitLabel(.search)
                         .onSubmit { Task { await search() } }
                     if let currentCoordinate {
-                        Button { move(to: currentCoordinate) } label: {
+                        Button { move(to: currentCoordinate); pinChosen = true } label: {
                             Image(systemName: "location.fill").frame(width: 44, height: 44)
                         }
                         .accessibilityLabel(language.text("현재 위치", "Current location"))
@@ -611,8 +615,14 @@ struct MapHomePlaceRequestSheet: View {
                             .offset(y: -15)
                             .allowsHitTesting(false)
                     }
-                    .onMapCameraChange(frequency: .onEnd) { center = $0.camera.centerCoordinate }
-                Text(language.text("지도를 움직여 핀을 맞춰 주세요.", "Move the map to place the pin."))
+                    .onMapCameraChange(frequency: .onEnd) { context in
+                        center = context.camera.centerCoordinate
+                        // 현재 위치를 모르면 처음 보이는 자리가 개인 위치가 아니다.
+                        if currentCoordinate.map({ Self.distance($0, context.camera.centerCoordinate) > 30 }) ?? true { pinChosen = true }
+                    }
+                Text(pinChosen
+                     ? language.text("지도를 움직여 핀을 맞춰 주세요.", "Move the map to place the pin.")
+                     : language.text("지도를 움직이거나 검색해 핀을 맞춰 주세요. 지금 위치를 보내려면 위치 단추를 누르세요.", "Move the map or search to place the pin. To send where you are, tap the location button."))
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.caption), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
                 Button(action: send) {
@@ -629,7 +639,14 @@ struct MapHomePlaceRequestSheet: View {
         }
         .background(Color.tpBackground)
         .onAppear { if let currentCoordinate { move(to: currentCoordinate) } }
-        .sheet(item: $attachment) { MapHomeDeveloperMailSheet(attachment: $0) }
+        // 보낸 뒤 임시 JSON을 남기지 않는다.
+        .sheet(item: $attachment, onDismiss: { sentFile.map { try? FileManager.default.removeItem(at: $0) }; sentFile = nil }) {
+            MapHomeDeveloperMailSheet(attachment: $0)
+        }
+    }
+
+    private static func distance(_ a: CLLocationCoordinate2D, _ b: CLLocationCoordinate2D) -> CLLocationDistance {
+        CLLocation(latitude: a.latitude, longitude: a.longitude).distance(from: CLLocation(latitude: b.latitude, longitude: b.longitude))
     }
 
     private func move(to coordinate: CLLocationCoordinate2D) {
@@ -642,6 +659,7 @@ struct MapHomePlaceRequestSheet: View {
         request.naturalLanguageQuery = query
         guard let item = try? await MKLocalSearch(request: request).start().mapItems.first else { return }
         move(to: item.placemark.coordinate)
+        pinChosen = true
         if name.isEmpty { name = item.name ?? "" }
     }
 
@@ -654,6 +672,7 @@ struct MapHomePlaceRequestSheet: View {
             latitude: center.latitude, longitude: center.longitude, requestedAt: .now, appBuild: build
         )
         guard let url = try? request.writeJSON() else { return }
+        sentFile = url
         attachment = MapHomeDeveloperAttachment(url: url, subject: "BOKKI Plan place request: \(request.name)", mimeType: "application/json")
     }
 }
@@ -664,7 +683,7 @@ extension AppModel {
     func addTravelStop(title: String, latitude: Double, longitude: Double, day: Date) -> TravelPlanStop? {
         guard acceptsDataMutation() else { return nil }
         let start = Calendar.autoupdatingCurrent.startOfDay(for: day)
-        let order = snapshot.settings.travelPlanStops.filter { $0.day == start }.count
+        let order = TravelPlanSchedule.stops(on: start, in: snapshot.settings.travelPlanStops).count
         let planStart = start.addingTimeInterval(Double(9 + min(order * 2, 12)) * 3_600)
         let planID = addPlan(title: title, categoryID: "movement", startAt: planStart, duration: 3_600)
         let stop = TravelPlanStop(id: UUID(), title: title, latitude: latitude, longitude: longitude, day: start, order: order, planID: planID)
@@ -688,11 +707,32 @@ extension AppModel {
 }
 
 /// 날짜별 순서 계산.
+/// 저장된 `day`는 만들 때 기기 시간대의 자정이다. 여행지에서 시간대가 바뀌어도 같은 날로 보도록 연·월·일로 비교한다(REV1110A02).
 enum TravelPlanSchedule {
-    static func days(_ stops: [TravelPlanStop]) -> [Date] { Array(Set(stops.map(\.day))).sorted() }
+    /// 저장된 자정을 연·월·일로 읽는다. 자정에 12시간을 더해 UTC로 읽으면 UTC−11~+12 어디서 만든 날짜든 그날이 된다.
+    static func dayKey(stored day: Date) -> DateComponents {
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = TimeZone(secondsFromGMT: 0) ?? .gmt
+        return utc.dateComponents([.year, .month, .day], from: day.addingTimeInterval(12 * 3_600))
+    }
 
-    static func stops(on day: Date, in stops: [TravelPlanStop]) -> [TravelPlanStop] {
-        stops.filter { $0.day == day }.sorted { $0.order < $1.order }
+    /// 지금 기기 달력에서 그날의 자정.
+    static func localDay(stored day: Date, calendar: Calendar = .autoupdatingCurrent) -> Date {
+        calendar.date(from: dayKey(stored: day)).map { calendar.startOfDay(for: $0) } ?? day
+    }
+
+    static func isSameDay(stored: Date, local day: Date, calendar: Calendar = .autoupdatingCurrent) -> Bool {
+        dayKey(stored: stored) == calendar.dateComponents([.year, .month, .day], from: day)
+    }
+
+    /// 일정이 있는 날(지금 기기 달력의 자정).
+    static func days(_ stops: [TravelPlanStop], calendar: Calendar = .autoupdatingCurrent) -> [Date] {
+        Array(Set(stops.map { localDay(stored: $0.day, calendar: calendar) })).sorted()
+    }
+
+    /// `day`는 지금 기기 달력의 날짜다.
+    static func stops(on day: Date, in stops: [TravelPlanStop], calendar: Calendar = .autoupdatingCurrent) -> [TravelPlanStop] {
+        stops.filter { isSameDay(stored: $0.day, local: day, calendar: calendar) }.sorted { $0.order < $1.order }
     }
 
     static func renumbered(_ stops: [TravelPlanStop]) -> [TravelPlanStop] {
@@ -707,7 +747,8 @@ enum TravelPlanSchedule {
 
     static func moved(_ all: [TravelPlanStop], id: UUID, by offset: Int) -> [TravelPlanStop] {
         guard let stop = all.first(where: { $0.id == id }) else { return all }
-        var day = stops(on: stop.day, in: all)
+        let key = dayKey(stored: stop.day)
+        var day = all.filter { dayKey(stored: $0.day) == key }.sorted { $0.order < $1.order }
         guard let from = day.firstIndex(where: { $0.id == id }), day.indices.contains(from + offset) else { return all }
         day.swapAt(from, from + offset)
         let ordered = day.enumerated().map { index, item in
@@ -715,7 +756,7 @@ enum TravelPlanSchedule {
             copy.order = index
             return copy
         }
-        return all.filter { $0.day != stop.day } + ordered
+        return all.filter { dayKey(stored: $0.day) != key } + ordered
     }
 }
 
@@ -922,15 +963,31 @@ extension MapHomeView {
 
     /// 여행 모드에서는 오늘 이후만 고른다.
     func keepSelectedDateInFuture() {
-        let today = Calendar.autoupdatingCurrent.startOfDay(for: .now)
-        if isTravelMode, model.selectedDate < today { model.selectedDate = .now }
+        guard isTravelMode, let minimum = travelModeMinimumDay, model.selectedDate < minimum else { return }
+        model.selectedDate = .now
     }
 
     var travelPlanDays: Set<Date> {
-        Set(model.settings.travelPlanStops.map { Calendar.autoupdatingCurrent.startOfDay(for: $0.day) })
+        Set(TravelPlanSchedule.days(model.settings.travelPlanStops))
     }
 
+    /// 여행 모드에서 고를 수 있는 첫날. 오늘이 기본이고, 이미 시작해 아직 끝나지 않은 여행이 있으면 그 첫날까지 연다.
     var travelModeMinimumDay: Date? {
-        isTravelMode ? Calendar.autoupdatingCurrent.startOfDay(for: .now) : nil
+        guard isTravelMode else { return nil }
+        return TravelTripSchedule.earliestSelectableDay(items: model.settings.travelTripItems ?? [], now: .now)
+    }
+}
+
+enum TravelTripSchedule {
+    /// 오늘, 또는 진행 중인 여행의 첫날(그곳 현지 날짜를 기기 달력의 같은 날짜로) 가운데 이른 쪽.
+    static func earliestSelectableDay(items: [TravelTripItem], now: Date, calendar: Calendar = .autoupdatingCurrent) -> Date {
+        let today = calendar.startOfDay(for: now)
+        let ongoingStarts = Dictionary(grouping: items, by: \.tripID).values.compactMap { trip -> Date? in
+            guard let last = trip.map(\.end).max(), last >= today, let first = trip.min(by: { $0.start < $1.start }) else { return nil }
+            var local = Calendar(identifier: .gregorian)
+            local.timeZone = TimeZone(secondsFromGMT: first.startOffsetSeconds) ?? calendar.timeZone
+            return calendar.date(from: local.dateComponents([.year, .month, .day], from: first.start)).map(calendar.startOfDay)
+        }
+        return min(today, ongoingStarts.min() ?? today)
     }
 }

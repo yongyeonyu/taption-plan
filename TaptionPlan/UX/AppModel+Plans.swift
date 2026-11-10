@@ -628,20 +628,22 @@ extension AppModel {
     }
 
     func deletePlan(_ planID: UUID) async {
-        guard let plan = snapshot.plans.first(where: {
-            $0.id == planID
-        }) else {
-            return
-        }
+        await deletePlans([planID])
+    }
+
+    /// 여러 계획을 한 번에 지우고 한 번만 저장한다(여행 다시 가져오기, REV1110A02).
+    func deletePlans(_ planIDs: [UUID]) async {
+        let wanted = Set(planIDs)
+        let roots = snapshot.plans.filter { wanted.contains($0.id) }
+        guard !roots.isEmpty else { return }
         clearUserEditRedoHistory()
         let previous = snapshot
-        let descendants = (try? PlanHierarchy.descendants(
-            of: planID,
-            in: snapshot.plans
-        )) ?? []
-        let deletedIDs = Set([planID] + descendants.map(\.id))
+        let descendants = roots.flatMap { plan in
+            (try? PlanHierarchy.descendants(of: plan.id, in: snapshot.plans)) ?? []
+        }
+        let deletedIDs = Set(roots.map(\.id) + descendants.map(\.id))
         invalidateReviewArchives(
-            spans: ([plan] + descendants).map(\.span),
+            spans: (roots + descendants).map(\.span),
             dates: snapshot.memos.compactMap { memo in
                 memo.planID.map(deletedIDs.contains) == true
                     ? memo.occurredAt
@@ -689,14 +691,16 @@ extension AppModel {
         groupNavigationPath.removeAll {
             deletedIDs.contains($0)
         }
-        let majorCategory = currentMajorCategory(for: plan)
-        try? await liveActivityController.stop(
-            plan: plan,
-            catStyle: snapshot.settings.catStyle,
-            majorCategoryID: majorCategory.id,
-            majorCategoryTitle: majorCategory.title,
-            majorCategorySystemImage: majorCategory.systemImage
-        )
+        for plan in roots {
+            let majorCategory = currentMajorCategory(for: plan)
+            try? await liveActivityController.stop(
+                plan: plan,
+                catStyle: snapshot.settings.catStyle,
+                majorCategoryID: majorCategory.id,
+                majorCategoryTitle: majorCategory.title,
+                majorCategorySystemImage: majorCategory.systemImage
+            )
+        }
         await persistOrRollBack(userEditRollback(from: previous))
     }
 

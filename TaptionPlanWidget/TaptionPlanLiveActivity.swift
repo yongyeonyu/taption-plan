@@ -113,8 +113,15 @@ private struct TaptionLiveActivityLockScreenView: View {
                         .lineLimit(1)
                 }
                 Spacer()
-                Text(remainingLabel)
+                // 남은 시간은 시스템 타이머로 그려 갱신 없이 줄어든다(REV1110A04).
+                Text(
+                    timerInterval: context.state.startedAt...max(context.state.startedAt, context.state.endsAt),
+                    countsDown: true
+                )
                     .font(.system(size: 11))
+                    .monospacedDigit()
+                    .multilineTextAlignment(.trailing)
+                    .frame(maxWidth: 64, alignment: .trailing)
                     .foregroundStyle(
                         Color(red: 0.78, green: 0.78, blue: 0.80)
                     )
@@ -161,18 +168,6 @@ private struct TaptionLiveActivityLockScreenView: View {
                     "taptionplan://plan/\(context.attributes.planID.uuidString)"
             )
         )
-    }
-
-    private var remainingLabel: String {
-        let minutes = max(
-            0,
-            Int(
-                ceil(
-                    context.state.endsAt.timeIntervalSinceNow / 60
-                )
-            )
-        )
-        return "\(minutes)분 남음"
     }
 
     private var timeLabel: String {

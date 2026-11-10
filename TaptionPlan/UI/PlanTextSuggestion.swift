@@ -96,7 +96,11 @@ enum PlanTextSuggestionFormat {
 /// 지원 기기에서만 Apple 온디바이스 모델을 쓴다. 미지원이면 nil을 돌려 화면은 공란으로 둔다.
 enum PlanTextSuggester {
     /// EXAONE은 약관상 영리 목적 사용이 안 돼 뺐다(AIE1110A02). 그때 저장한 키가 기기에 남지 않게 지운다.
-    static func removeLegacyExaoneKey() {
+    /// 한 번만 지운다. 화면이 다시 만들어질 때마다(언어 바꾸기 등) 키체인을 건드리지 않는다(REV1110A03).
+    static func removeLegacyExaoneKey(defaults: UserDefaults = .standard) {
+        let doneKey = "legacyExaoneKeyRemoved"
+        guard !defaults.bool(forKey: doneKey) else { return }
+        defaults.set(true, forKey: doneKey)
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: "com.taption.plan.exaone",

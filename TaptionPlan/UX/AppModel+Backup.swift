@@ -164,6 +164,7 @@ extension AppModel {
     /// 복원은 기존 로컬 행보다 새 것만 가져오고, 끝나면 repository를 다시 불러온다.
     func restoreBackup(_ scope: TaptionBackupScope, password: String, now: Date = .now) async {
         MapHomeRangeSampleCache.removeAll()
+        await MapHomeVisitLedgerStore.shared.reset()
         let name = PlanBackupPresenter.name(of: scope)
         guard beginBackupOperation(.restoring(name)) else {
             lastBackupReport = Self.backupBusyReport(.restore)
@@ -241,6 +242,7 @@ extension AppModel {
     func deleteAllUserData(includingBackups: Bool = false) async {
         guard acceptsDataMutation() || (isStartupSnapshotPartial && allowsRepositoryLoadAttempt()) else { return }
         MapHomeRangeSampleCache.removeAll()
+        await MapHomeVisitLedgerStore.shared.reset()
         isDeletingUserData = true
         let deletionCutoff = Date.now
         dataDeletionGeneration = TaptionDataDeletionFence.advance(
@@ -324,7 +326,7 @@ extension AppModel {
         voiceMemoPlayer.stop()
         isRecordingVoiceMemo = false
         playingVoiceAttachmentID = nil
-        await liveActivityController.concealAll()
+        await endLiveActivitiesForPurge()
         TrackingSessionRecoveryStore.clear()
         activeTrackingSession = nil
         trackingSessionWasRecovered = false

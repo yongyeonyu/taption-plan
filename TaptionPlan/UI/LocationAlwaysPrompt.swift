@@ -35,10 +35,12 @@ extension MapHomeView {
         guard !FirstRunTutorialStore().defersPermissionPrompts else { return }
         try? await Task.sleep(for: .seconds(3))
         await model.refreshPermissions()
-        guard LocationAlwaysPrompt.shouldPrompt(
-            state: model.permissionState(for: .location),
-            isAlways: model.sensorService?.hasAlwaysLocationAuthorization() == true
-        ) else { return }
+        // 앱에서 위치 기록을 끈 사람에게는 묻지 않는다. 센서가 아직 준비되지 않았으면 「항상」인지 모르니 묻지 않는다.
+        guard model.settings.locationEnabled, let sensorService = model.sensorService,
+              LocationAlwaysPrompt.shouldPrompt(
+                  state: model.permissionState(for: .location),
+                  isAlways: sensorService.hasAlwaysLocationAuthorization()
+              ) else { return }
         LocationAlwaysPrompt.markShown()
         isLocationAlwaysPromptPresented = true
     }

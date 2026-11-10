@@ -111,7 +111,7 @@ enum BiometricProtectedSnapshotCodec {
         let key = try symmetricKey(from: keyData)
         let sealed = try AES.GCM.SealedBox(combined: archive.encryptedPayload)
         let compressed = try AES.GCM.open(sealed, using: key)
-        let json = TaptionSnapshotCompression.decode(compressed)
+        let json = try TaptionSnapshotCompression.decode(compressed)
         guard compressed.count == archive.compressedByteCount,
               json.count == archive.jsonByteCount else {
             throw BiometricDataProtectionError.invalidArchive

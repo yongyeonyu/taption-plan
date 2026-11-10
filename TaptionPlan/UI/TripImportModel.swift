@@ -121,7 +121,12 @@ enum TripImportParser {
         guard document.version == version else { return .failure(.unsupportedVersion(document.version)) }
         guard !document.items.isEmpty else { return .failure(.empty) }
         var items: [TripImportItem] = []
+        // AI가 날마다 번호를 다시 매겨 id가 겹치면 뒤에 차례 번호를 붙인다. 같은 꼴로 다시 보내면 같은 id가 된다.
+        var seenIDs: [String: Int] = [:]
         for raw in document.items {
+            let count = seenIDs[raw.id, default: 0] + 1
+            seenIDs[raw.id] = count
+            let itemID = count == 1 ? raw.id : "\(raw.id)#\(count)"
             guard let startAt = date(raw.start) else { return .failure(.badTime(itemID: raw.id)) }
             let endAt = raw.end.flatMap(date).map { max($0, startAt.addingTimeInterval(60)) } ?? startAt.addingTimeInterval(TripImportItem.defaultDuration)
             let coordinate = raw.place.flatMap { place -> CLLocationCoordinate2D? in
@@ -130,7 +135,7 @@ enum TripImportParser {
                 return CLLocationCoordinate2DIsValid(value) && (lat != 0 || lng != 0) ? value : nil
             }
             items.append(TripImportItem(
-                id: raw.id,
+                id: itemID,
                 kind: TripImportItem.Kind(rawValue: raw.type.lowercased()) ?? .other,
                 title: raw.title.trimmingCharacters(in: .whitespacesAndNewlines),
                 start: startAt,
@@ -140,7 +145,7 @@ enum TripImportParser {
                 coordinate: coordinate,
                 placeName: raw.place?.name ?? raw.title,
                 address: raw.place?.address ?? "",
-                mapsURL: raw.place?.mapsUrl.flatMap(URL.init(string:)),
+                mapsURL: raw.place?.mapsUrl.flatMap(mapsURL),
                 travelMinutes: raw.travelFromPrevious?.minutes,
                 travelMode: raw.travelFromPrevious?.mode,
                 note: raw.note ?? ""
@@ -160,18 +165,31 @@ enum TripImportParser {
         return TimeZone(secondsFromGMT: seconds)
     }
 
+    /// 밖에서 온 계획의 링크는 구글 지도 https 주소만 연다. 피싱 주소나 다른 앱을 여는 주소는 버린다(REV1110A02).
+    static func mapsURL(_ text: String) -> URL? {
+        guard let url = URL(string: text.trimmingCharacters(in: .whitespaces)), url.scheme?.lowercased() == "https",
+              let host = url.host?.lowercased() else { return nil }
+        let isGoogle = host.range(of: #"(^|\.)google\.[a-z]{2,3}(\.[a-z]{2})?$"#, options: .regularExpression) != nil
+        return isGoogle || host == "goo.gl" || host.hasSuffix(".goo.gl") ? url : nil
+    }
+
     private static func looksLikeTrip(_ json: String) -> Bool { json.contains("\"\(format)\"") }
 
-    /// 「2026-12-01T09:05+09:00」, 초가 있는 꼴, `Z`를 받는다.
+    private static let timeRegex = try? NSRegularExpression(pattern: #"^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$"#)
+
+    /// 「2026-12-01T09:05+09:00」, 초·소수 초가 있는 꼴, `+0900`, `Z`를 받는다.
     static func date(_ text: String) -> Date? {
         let value = text.trimmingCharacters(in: .whitespaces)
-        for pattern in ["yyyy-MM-dd'T'HH:mmXXXXX", "yyyy-MM-dd'T'HH:mm:ssXXXXX", "yyyy-MM-dd'T'HH:mmXXX"] {
-            let formatter = DateFormatter()
-            formatter.locale = Locale(identifier: "en_US_POSIX")
-            formatter.dateFormat = pattern
-            if let date = formatter.date(from: value) { return date }
+        guard let match = timeRegex?.firstMatch(in: value, range: NSRange(value.startIndex..., in: value)),
+              let zone = timeZone(value) else { return nil }
+        func number(_ index: Int) -> Int? {
+            Range(match.range(at: index), in: value).flatMap { Int(value[$0]) }
         }
-        return nil
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = zone
+        let parts = DateComponents(year: number(1), month: number(2), day: number(3), hour: number(4), minute: number(5), second: number(6) ?? 0)
+        guard parts.isValidDate(in: calendar) else { return nil }
+        return calendar.date(from: parts)
     }
 }
 
@@ -183,17 +201,18 @@ struct TripImportDiff: Equatable {
 
     var isReplacing: Bool { added + changed + removed > 0 }
 
-    static func make(plan: TripImportPlan, existing: [TravelPlanStop], plans: [String: (title: String, start: Date)]) -> Self? {
-        let old = existing.filter { $0.tripID == plan.tripID }
+    /// 핀 유무와 상관없이 반영된 여행 일정 전체와 비교한다.
+    static func make(plan: TripImportPlan, existing: [TravelTripItem]) -> Self? {
+        let old = Dictionary(existing.filter { $0.tripID == plan.tripID }.map { ($0.itemID, $0) }, uniquingKeysWith: { first, _ in first })
         guard !old.isEmpty else { return nil }
-        let oldByItem = Dictionary(old.compactMap { stop in stop.itemID.map { ($0, stop) } }, uniquingKeysWith: { first, _ in first })
         var diff = Self()
         for item in plan.items {
-            guard let stop = oldByItem[item.id] else { diff.added += 1; continue }
-            let previous = plans[stop.itemID ?? ""]
-            if stop.title != item.title || previous?.start != item.start { diff.changed += 1 }
+            guard let previous = old[item.id] else { diff.added += 1; continue }
+            if previous.title != item.title || previous.start != item.start || previous.end != item.end || previous.kind != item.kind.rawValue {
+                diff.changed += 1
+            }
         }
-        diff.removed = Set(oldByItem.keys).subtracting(plan.items.map(\.id)).count
+        diff.removed = Set(old.keys).subtracting(plan.items.map(\.id)).count
         return diff
     }
 }

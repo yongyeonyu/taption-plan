@@ -85,14 +85,24 @@ public struct SleepInferenceEngine: Sendable {
             .sorted { $0.timestamp < $1.timestamp }
         guard let last = ordered.last else { return .init(state: .insufficientEvidence, confidence: 0) }
         if last.wakeConditionsMet(configuration: configuration) {
-            return makeResult(state: .wakeCandidate, samples: ordered, confidence: 0.9, evidence: ["화면 사용", "이동 또는 사용자 활동", "수면 보조 조건 해제"])
+            // 기상 구간은 전체 기록이 아니라 끝에서 이어지는 기상 조건 표본만 덮는다 (REV1110A04).
+            let waking = ordered.reversed().prefix { $0.wakeConditionsMet(configuration: configuration) }
+            return makeResult(state: .wakeCandidate, samples: Array(waking.reversed()), confidence: 0.9, evidence: ["화면 사용", "이동 또는 사용자 활동", "수면 보조 조건 해제"])
         }
         guard last.sleepConditionsMet(configuration: configuration) else { return .init(state: .insufficientEvidence, confidence: 0) }
         let continuous = ordered.reversed().prefix { $0.sleepConditionsMet(configuration: configuration) }
         guard let first = continuous.last else { return .init(state: .sleepCandidate, confidence: 0.7) }
         let state: SleepInferenceState = last.timestamp.timeIntervalSince(first.timestamp) >= configuration.persistenceDuration ? .asleep : .sleepCandidate
         let confidence = state == .asleep ? 0.85 : 0.7
-        return makeResult(state: state, samples: Array(continuous.reversed()), confidence: confidence, evidence: ["화면 꺼짐", "30분 무사용", "휴대폰 이동 없음", "보조 조건 모두 충족"])
+        return makeResult(state: state, samples: Array(continuous.reversed()), confidence: confidence, evidence: sleepEvidence)
+    }
+
+    /// 근거 문구를 실제 설정값으로 만든다 (REV1110A04).
+    private var sleepEvidence: [String] {
+        let minutes = Int((configuration.inactivityDuration / 60).rounded())
+        let support = configuration.minimumSupportingConditions
+        return ["화면 꺼짐", "\(minutes)분 무사용", "휴대폰 이동 없음"]
+            + (support > 0 ? ["보조 조건 \(support)개 이상 충족"] : [])
     }
 
     private func makeResult(state: SleepInferenceState, samples: [SleepRuleSample], confidence: Double, evidence: [String]) -> SleepInferenceResult {

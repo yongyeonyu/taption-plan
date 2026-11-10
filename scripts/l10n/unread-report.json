@@ -1,13 +1,7 @@
 {
- "ui": 3181,
+ "ui": 3188,
  "catalog": 461,
  "unread": [
-  {
-   "file": "TaptionPlan/UI/TripImportPrompt.swift",
-   "line": 6,
-   "ko": "String",
-   "en": "Date = .now"
-  },
   {
    "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
    "line": 41,
@@ -82,7 +76,7 @@
   },
   {
    "file": "TaptionPlan/Core/LiveActivityDaySummaryState.swift",
-   "line": 32,
+   "line": 35,
    "ko": "Bool?",
    "en": "Double?"
   },
@@ -262,19 +256,19 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeLocationSheets.swift",
-   "line": 247,
+   "line": 251,
    "ko": "FloorLabel.korean(floor)",
    "en": "FloorLabel.english(floor)"
   },
   {
    "file": "TaptionPlan/UI/MapHomeLocationSheets.swift",
-   "line": 273,
+   "line": 277,
    "ko": "destination.koreanName",
    "en": "destination.englishName"
   },
   {
    "file": "TaptionPlan/UI/MapHomeLocationSheets.swift",
-   "line": 307,
+   "line": 313,
    "ko": "kind.title",
    "en": "kind.englishTitle"
   },
@@ -423,6 +417,12 @@
    "en": "destination.englishName"
   },
   {
+   "file": "TaptionPlan/UI/TripImportPrompt.swift",
+   "line": 6,
+   "ko": "String",
+   "en": "Date = .now"
+  },
+  {
    "file": "TaptionPlanWatch/WatchTodayCards.swift",
    "line": 16,
    "ko": "_ minutes: Int",
@@ -448,13 +448,19 @@
   },
   {
    "file": "TaptionPlanWidget/SensorCollectionLiveActivity.swift",
-   "line": 185,
+   "line": 143,
+   "ko": "state.isExternalSample",
+   "en": "state.latestHeartRate"
+  },
+  {
+   "file": "TaptionPlanWidget/SensorCollectionLiveActivity.swift",
+   "line": 191,
    "ko": "context.state.isExternalSample",
    "en": "context.state.latestHeartRate"
   },
   {
    "file": "TaptionPlanWidget/SensorCollectionLiveActivity.swift",
-   "line": 271,
+   "line": 280,
    "ko": "base",
    "en": "rate"
   }

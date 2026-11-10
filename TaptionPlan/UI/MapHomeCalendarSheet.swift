@@ -35,11 +35,11 @@ struct MapHomeCalendarSheet: View {
     @State private var showsMonthAverage = false
     @Environment(\.mapHomeWidePanelColumns) private var panelColumns
 
-    @MainActor
     let starredDays: Set<Date>
     /// 여행 모드에서 고를 수 있는 첫 날.
     let minimumDay: Date?
 
+    @MainActor
     init(
         selectedDate: Binding<Date>,
         starredDays: Set<Date> = [],

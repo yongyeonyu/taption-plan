@@ -23,8 +23,13 @@ public struct MissingRouteEvidence: Hashable, Sendable {
 }
 
 public enum RouteEvidenceGate {
+    /// 지하철 근거로 경로를 대신 그릴 만큼 믿을 수 있는가 (REV1110A04: 경로 좌표와 같은 기준).
+    public static func isTrusted(_ subway: SubwayRouteEvidence) -> Bool {
+        subway.stationNames.count >= 2 && subway.coordinates.count >= 2 && subway.confidence >= 0.5
+    }
+
     public static func allowsDottedRoute(_ evidence: MissingRouteEvidence) -> Bool {
-        if let subway = evidence.subway, subway.stationNames.count >= 2, subway.coordinates.count >= 2, subway.confidence >= 0.5 {
+        if let subway = evidence.subway, isTrusted(subway) {
             return true
         }
         let signals = [evidence.motionDetected, evidence.cellularContinuity, evidence.subwayWiFi].filter { $0 }.count

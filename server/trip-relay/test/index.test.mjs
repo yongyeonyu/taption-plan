@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { handle, isTripPlan, storageKey } from "../src/index.js";
+import { handle, isTripPlan, kakaoKeyword, storageKey } from "../src/index.js";
 
 class MemoryKV {
   constructor() { this.map = new Map(); this.options = new Map(); }
@@ -52,4 +52,25 @@ test("trip plan contract matches the app", () => {
   assert.ok(isTripPlan(plan));
   assert.ok(!isTripPlan({ ...plan, version: 2 }));
   assert.ok(!isTripPlan({ ...plan, items: [] }));
+});
+
+test("post is refused with 429 once the per-IP limit is used up", async () => {
+  let calls = 0;
+  const env = { PLANS: new MemoryKV(), POST_LIMIT: { limit: async () => ({ success: ++calls <= 1 }) } };
+  assert.equal((await handle(call("POST", plan), env)).status, 201);
+  assert.equal((await handle(call("POST", plan), env)).status, 429);
+  assert.equal((await handle(call("GET"), env)).status, 200, "reads are not limited");
+});
+
+test("kakao proxy forwards allowed params with the secret key and hides it from the app", async () => {
+  let seen;
+  const fetcher = async (url, init) => { seen = { url: new URL(url), auth: init.headers.authorization }; return new Response("{\"documents\":[]}", { status: 200 }); };
+  const request = new Request("https://relay.example.com/kakao/keyword?query=%EC%B9%B4%ED%8E%98&x=127&y=37&sort=distance&evil=1");
+  const response = await kakaoKeyword(request, { KAKAO_REST_API_KEY: "secret" }, fetcher);
+  assert.equal(response.status, 200);
+  assert.equal(seen.auth, "KakaoAK secret");
+  assert.equal(seen.url.searchParams.get("query"), "카페");
+  assert.equal(seen.url.searchParams.get("evil"), null);
+  assert.equal((await kakaoKeyword(new Request("https://relay.example.com/kakao/keyword?query="), { KAKAO_REST_API_KEY: "secret" }, fetcher)).status, 400);
+  assert.equal((await kakaoKeyword(request, {}, fetcher)).status, 503);
 });

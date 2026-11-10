@@ -285,6 +285,14 @@ actor SensorCollectionLiveActivityController {
         activity?.id
     }
 
+    /// 데이터 삭제 때 센서 수집 활동을 모두 바로 끝낸다(REV1110A04).
+    func endAll() async {
+        for candidate in Activity<SensorCollectionActivityAttributes>.activities {
+            await candidate.end(nil, dismissalPolicy: .immediate)
+        }
+        activity = nil
+    }
+
     private func recoverAndRemoveDuplicates(
         sessionID: UUID?,
         now: Date
@@ -339,6 +347,7 @@ actor SensorCollectionLiveActivityController {
 
 actor TaptionLiveActivityController {
     private var activity: Activity<TaptionActivityAttributes>?
+    private var lastCompactUpdateAt: Date?
 
     func concealAll() async {
         for candidate in Activity<TaptionActivityAttributes>.activities {
@@ -347,17 +356,63 @@ actor TaptionLiveActivityController {
         activity = nil
     }
 
-    func updateCompactActivity(title: String, categoryID: String, animationFrame: Int? = nil) async {
-        guard let activity = activity ?? Activity<TaptionActivityAttributes>
-            .activities.first(where: { $0.content.state.isRunning }) else { return }
+    /// 앱이 다시 켜져 메모리 참조가 없으면 시스템 목록에서 같은 계획의 활동을 다시 잡는다(REV1110A04).
+    private func adopt(planID: UUID?) -> Activity<TaptionActivityAttributes>? {
+        if let activity, LiveActivityLiveness.isLive(activity.activityState),
+           planID.map({ activity.attributes.planID == $0 }) ?? true {
+            return activity
+        }
+        activity = Activity<TaptionActivityAttributes>.activities.first { candidate in
+            LiveActivityLiveness.isLive(candidate.activityState)
+                && (planID.map { candidate.attributes.planID == $0 } ?? candidate.content.state.isRunning)
+        }
+        return activity
+    }
+
+    /// 위젯·아일랜드의 종료 명령이 반영되면 그 계획의 활동을 끝낸다(REV1110A04).
+    func end(planID: UUID) async {
+        for candidate in Activity<TaptionActivityAttributes>.activities
+        where candidate.attributes.planID == planID {
+            await candidate.end(Self.endedContent(candidate), dismissalPolicy: .default)
+        }
+        if activity?.attributes.planID == planID { activity = nil }
+    }
+
+    static func endedContent(
+        _ activity: Activity<TaptionActivityAttributes>,
+        now: Date = .now
+    ) -> ActivityContent<TaptionActivityAttributes.ContentState> {
+        var state = activity.content.state
+        state.isRunning = false
+        state.endsAt = max(state.startedAt, min(now, state.endsAt))
+        return ActivityContent(state: state, staleDate: nil)
+    }
+
+    func updateCompactActivity(
+        title: String,
+        categoryID: String,
+        animationFrame: Int? = nil,
+        now: Date = .now
+    ) async {
+        // 끝난 계획은 고르지 않고, 고양이 프레임만 바뀌면 60초에 한 번만 보낸다(REV1110A04).
+        let running = { (candidate: Activity<TaptionActivityAttributes>) in
+            LiveActivityLiveness.isLive(candidate.activityState)
+                && candidate.content.state.isRunning
+                && candidate.content.state.endsAt > now
+        }
+        guard let activity = activity.flatMap({ running($0) ? $0 : nil })
+            ?? Activity<TaptionActivityAttributes>.activities.first(where: running) else { return }
         self.activity = activity
         var state = activity.content.state
-        guard state.compactActivityTitle != title
+        let contentChanged = state.compactActivityTitle != title
             || state.compactActivityCategoryID != categoryID
-            || state.compactAnimationFrame != animationFrame else { return }
+        let frameDue = state.compactAnimationFrame != animationFrame
+            && lastCompactUpdateAt.map { now.timeIntervalSince($0) >= 60 } ?? true
+        guard contentChanged || frameDue else { return }
         state.compactActivityTitle = title
         state.compactActivityCategoryID = categoryID
         state.compactAnimationFrame = animationFrame
+        lastCompactUpdateAt = now
         await activity.update(ActivityContent(
             state: state,
             staleDate: activity.content.staleDate
@@ -368,7 +423,7 @@ actor TaptionLiveActivityController {
         plan: PlanRecord,
         catStyle: CatStyle,
         majorCategoryID: String = "activity",
-        majorCategoryTitle: String = "활동",
+        majorCategoryTitle: String = AppLanguagePreference.text(korean: "활동", english: "Activity"),
         majorCategorySystemImage: String = "sparkles",
         compactActivityTitle: String? = nil,
         compactActivityCategoryID: String? = nil
@@ -380,9 +435,8 @@ actor TaptionLiveActivityController {
             throw LiveActivityError.durationExceedsEightHours
         }
 
-        if let activity {
-            await activity.end(nil, dismissalPolicy: .immediate)
-        }
+        // 앱 재실행 뒤 남은 활동까지 모두 끝내 하나만 남긴다(REV1110A04).
+        await concealAll()
 
         let state = TaptionActivityAttributes.ContentState(
             title: plan.title,
@@ -413,12 +467,12 @@ actor TaptionLiveActivityController {
         plan: PlanRecord,
         catStyle: CatStyle,
         majorCategoryID: String = "activity",
-        majorCategoryTitle: String = "활동",
+        majorCategoryTitle: String = AppLanguagePreference.text(korean: "활동", english: "Activity"),
         majorCategorySystemImage: String = "sparkles",
         compactActivityTitle: String? = nil,
         compactActivityCategoryID: String? = nil
     ) async throws {
-        guard let activity else { throw LiveActivityError.missingActivity }
+        guard let activity = adopt(planID: plan.id) else { throw LiveActivityError.missingActivity }
         let compactActivityTitle = compactActivityTitle
             ?? activity.content.state.compactActivityTitle
         let compactActivityCategoryID = compactActivityCategoryID
@@ -445,12 +499,12 @@ actor TaptionLiveActivityController {
         plan: PlanRecord,
         catStyle: CatStyle,
         majorCategoryID: String = "activity",
-        majorCategoryTitle: String = "활동",
+        majorCategoryTitle: String = AppLanguagePreference.text(korean: "활동", english: "Activity"),
         majorCategorySystemImage: String = "sparkles",
         compactActivityTitle: String? = nil,
         compactActivityCategoryID: String? = nil
     ) async throws {
-        guard let activity else { throw LiveActivityError.missingActivity }
+        guard let activity = adopt(planID: plan.id) else { throw LiveActivityError.missingActivity }
         let compactActivityTitle = compactActivityTitle
             ?? activity.content.state.compactActivityTitle
         let compactActivityCategoryID = compactActivityCategoryID
@@ -477,6 +531,15 @@ actor TaptionLiveActivityController {
 
     func activeID() -> String? {
         activity?.id
+    }
+}
+
+enum LiveActivityLiveness {
+    static func isLive(_ state: ActivityState) -> Bool {
+        switch state {
+        case .active, .pending, .stale: true
+        default: false
+        }
     }
 }
 

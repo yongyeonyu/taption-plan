@@ -760,7 +760,8 @@ enum StationaryContextActualEngine {
         .flatMap { ActualIntervalMergeEngine.subtracting(covered, from: $0) }
         .filter { $0.duration >= minimumDuration }
         // 위치 기록이 하나도 없는 정지 구간(위치를 끈 시간)은 머무름으로 지어내지 않고 미확인으로 둔다(SLP1110A01).
-        .filter { span in readings.contains { span.contains($0.timestamp) } }
+        // 위치가 붙은 표본만 근거로 친다. 기압·동작만 있는 표본은 위치를 끈 밤에도 남는다(REV1110A03).
+        .filter { span in readings.contains { $0.point != nil && span.contains($0.timestamp) } }
         .map {
             PlaceStay(
                 placeKey: motionOnlyPlaceKey,

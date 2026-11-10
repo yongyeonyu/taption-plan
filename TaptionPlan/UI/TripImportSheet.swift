@@ -6,9 +6,13 @@ extension AppModel {
     /// AI 여행을 반영한다. 같은 여행이 있으면 지우고 새로 넣는다(대표 결정: 바뀐 것 표시 후 교체).
     func applyTripImport(_ plan: TripImportPlan) async {
         guard acceptsDataMutation() else { return }
-        for stop in snapshot.settings.travelPlanStops where stop.tripID == plan.tripID {
-            await removeTravelStop(stop.id)
-        }
+        // 핀이 없는 일정(수면·좌표 없음)도 계획이 있으니 여행 일정 쪽 planID까지 함께 지운다.
+        let oldPlanIDs = Set(
+            snapshot.settings.travelPlanStops.filter { $0.tripID == plan.tripID }.compactMap(\.planID)
+                + (snapshot.settings.travelTripItems ?? []).filter { $0.tripID == plan.tripID }.compactMap(\.planID)
+        )
+        snapshot.settings.travelPlanStops = TravelPlanSchedule.renumbered(snapshot.settings.travelPlanStops.filter { $0.tripID != plan.tripID })
+        await deletePlans(Array(oldPlanIDs))
         let calendar = Calendar.autoupdatingCurrent
         var stops = snapshot.settings.travelPlanStops
         var tripItems = (snapshot.settings.travelTripItems ?? []).filter { $0.tripID != plan.tripID }
@@ -31,7 +35,7 @@ extension AppModel {
             let day = item.localDay(calendar: calendar)
             stops.append(TravelPlanStop(
                 id: UUID(), title: item.title, latitude: coordinate.latitude, longitude: coordinate.longitude,
-                day: day, order: stops.filter { $0.day == day }.count, planID: planID,
+                day: day, order: TravelPlanSchedule.stops(on: day, in: stops).count, planID: planID,
                 tripID: plan.tripID, itemID: item.id
             ))
         }
@@ -41,11 +45,7 @@ extension AppModel {
     }
 
     func tripImportDiff(for plan: TripImportPlan) -> TripImportDiff? {
-        let starts = Dictionary(snapshot.settings.travelPlanStops.compactMap { stop -> (String, (title: String, start: Date))? in
-            guard let itemID = stop.itemID, let plan = snapshot.plans.first(where: { $0.id == stop.planID }) else { return nil }
-            return (itemID, (stop.title, plan.span.start))
-        }, uniquingKeysWith: { first, _ in first })
-        return TripImportDiff.make(plan: plan, existing: snapshot.settings.travelPlanStops, plans: starts)
+        TripImportDiff.make(plan: plan, existing: snapshot.settings.travelTripItems ?? [])
     }
 }
 
@@ -172,6 +172,7 @@ struct MapHomeTripImportSheet: View {
     @State private var isApplying = false
 
     @State private var relayKey = TripRelay.key
+    @State private var isLoadingRelay = false
 
     /// 중계 서버와 키가 있으면 도구 호출이 되는 AI가 앱으로 바로 보내도록 안내를 붙인다.
     private var prompt: String {
@@ -217,7 +218,7 @@ struct MapHomeTripImportSheet: View {
             ForEach(TripImportAIApp.allCases) { app in
                 wideButton(language.text("\(app.title)에서 계획 세우기", "Plan in \(app.title)"), prominent: app == .chatGPT) { open(app) }
             }
-            if let copiedFor, !copiedFor.prefillsPrompt {
+            if let copiedFor, !copiedFor.prefillsPrompt || relayKey != nil {
                 caption(language.text("프롬프트를 복사했어요. \(copiedFor.title)에 붙여 넣고 보내 주세요.", "The prompt is copied. Paste it into \(copiedFor.title) and send."))
             }
             wideButton(language.text("프롬프트만 복사", "Copy prompt only"), prominent: false) {
@@ -242,6 +243,8 @@ struct MapHomeTripImportSheet: View {
                 wideButton(language.text("연동 키 만들기", "Create a link key"), prominent: false) { relayKey = TripRelay.issueKey() }
             } else {
                 caption(language.text("연동 키가 있어요. 프롬프트를 복사하면 함께 들어가요.", "A link key is set. It is included when you copy the prompt."))
+                wideButton(language.text("도착한 계획 불러오기", "Load the delivered plan"), prominent: false) { loadRelayPlan() }
+                    .disabled(isLoadingRelay)
                 wideButton(language.text("새 키로 바꾸기", "Replace with a new key"), prominent: false) { relayKey = TripRelay.issueKey() }
             }
         }
@@ -286,9 +289,12 @@ struct MapHomeTripImportSheet: View {
             }
             wideButton(language.text("여행 계획에 반영", "Add to trip plan"), prominent: true) {
                 isApplying = true
+                let appliedText = pasted
                 Task { @MainActor in
                     await model.applyTripImport(plan)
                     TripClipboardWatch.clear()
+                    // 중계에서 받은 바로 그 계획일 때만 서버에서 지운다. 기다리지 않는다.
+                    if TripRelay.isLastReceived(appliedText) { Task { await TripRelay.clear() } }
                     isApplying = false
                     onApplied(plan.items.first?.localDay() ?? .now)
                     dismiss()
@@ -334,7 +340,23 @@ struct MapHomeTripImportSheet: View {
         UIPasteboard.general.string = prompt
         TripClipboardWatch.promptCopied()
         copiedFor = app
-        if let url = app.url(prompt: prompt) { openURL(url) }
+        let prefills = app.prefillsPrompt && relayKey == nil
+        if let url = app.url(prompt: prefills ? prompt : nil) { openURL(url) }
+    }
+
+    /// 반영하지 않고 닫았던 계획도 서버에 남아 있으면(최대 3일) 다시 불러온다.
+    private func loadRelayPlan() {
+        isLoadingRelay = true
+        Task { @MainActor in
+            let text = await TripRelay.fetch()
+            isLoadingRelay = false
+            if let text {
+                _ = TripRelay.isNew(text)
+                read(text)
+            } else {
+                message = language.text("도착한 계획이 없어요.", "No plan has arrived.")
+            }
+        }
     }
 
     private func read(_ text: String) {

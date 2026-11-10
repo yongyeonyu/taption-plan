@@ -75,10 +75,20 @@ enum MapHomeSearchPolicy {
         }.map(\.element)
     }
 
-    /// 앞 무리를 우선해 이름이 같은 결과를 하나로 합친다.
+    /// 이 안에서 이름이 같으면 같은 곳으로 본다.
+    static let samePlaceMeters: CLLocationDistance = 150
+
+    /// 앞 무리를 우선해 같은 곳(이름이 같고 가까운 결과)을 하나로 합친다. 이름만 보면 근처
+    /// 여러 지점(스타벅스 ○○점들)이 하나로 줄었다(REV1110A03).
     static func merged(_ groups: [[MapHomeSearchResult]], limit: Int = 8) -> [MapHomeSearchResult] {
-        var seen = Set<String>()
-        return Array(groups.joined().filter { seen.insert(normalized($0.title)).inserted }.prefix(limit))
+        var kept: [(key: String, location: CLLocation, result: MapHomeSearchResult)] = []
+        for result in groups.joined() where kept.count < limit {
+            let key = normalized(result.title)
+            let location = CLLocation(latitude: result.coordinate.latitude, longitude: result.coordinate.longitude)
+            guard !kept.contains(where: { $0.key == key && $0.location.distance(from: location) <= samePlaceMeters }) else { continue }
+            kept.append((key, location, result))
+        }
+        return kept.map(\.result)
     }
 
     private static func normalized(_ text: String) -> String {
@@ -90,7 +100,9 @@ private extension GeoPoint {
     var coordinate: CLLocationCoordinate2D { CLLocationCoordinate2D(latitude: latitude, longitude: longitude) }
 }
 
-/// 현재 위치 둘레에서 먼저 찾고, 없으면 같은 중심으로 넓혀 두 번까지 더 찾는다. 전 세계로는 넘기지 않는다(SRC1108A02).
+/// 현재 위치 둘레에서 먼저 찾고, 없으면 같은 중심으로 넓혀 두 번까지 더 찾는다. 그래도 없으면 검색 단추에서만
+/// 지역 제한 없이 한 번 더 찾는다. 국내에서 해외 장소(「도쿄 타워」)가 안 나온다는 대표 지적으로 SRC1108A02의
+/// 「전 세계로 넘기지 않는다」를 바꿨다(KKO1110A01). 입력 중 추천은 여전히 넓히기만 한다.
 @MainActor
 enum MapHomeSearchRunner {
     static func items(for request: MKLocalSearch.Request) async -> (items: [MKMapItem], failed: Bool) {

@@ -99,11 +99,12 @@ enum TripImportAIApp: String, CaseIterable, Identifiable {
     /// ChatGPT만 주소의 `q`로 질문을 채운다. 나머지는 붙여 넣는다.
     var prefillsPrompt: Bool { self == .chatGPT }
 
-    func url(prompt: String) -> URL? {
+    /// `prompt`가 nil이면 질문 없이 연다. 연동 키가 든 프롬프트는 주소(방문 기록·서버 로그)에 싣지 않는다(REV1110A02).
+    func url(prompt: String?) -> URL? {
         switch self {
         case .chatGPT:
             var components = URLComponents(string: "https://chatgpt.com/")
-            components?.queryItems = [URLQueryItem(name: "q", value: prompt)]
+            if let prompt { components?.queryItems = [URLQueryItem(name: "q", value: prompt)] }
             return components?.url
         case .claude: return URL(string: "https://claude.ai/new")
         case .gemini: return URL(string: "https://gemini.google.com/app")

@@ -3030,3 +3030,49 @@ final class AppleWatchDataReceiptStoreTests: XCTestCase {
         )
     }
 }
+
+/// WCH1110A01: 워치 리뷰 수정.
+final class WatchReviewFixTests: XCTestCase {
+    private let suiteName = "WatchReviewFixTests"
+    private let now = Date(timeIntervalSinceReferenceDate: 816_000_000)
+
+    private func snapshot(_ offset: TimeInterval) -> TaptionWatchHealthSnapshot {
+        TaptionWatchHealthSnapshot(
+            capturedAt: now.addingTimeInterval(offset), dayStart: now, activeEnergyKilocalories: 20,
+            exerciseMinutes: 12, standHours: 4, sleepMinutes: 360, sleepSegments: nil, workoutCount: 1, source: "watch"
+        )
+    }
+
+    func testHealthSpoolKeepsTwoWeeksInsteadOfTwentySnapshots() {
+        var pending: [TaptionWatchHealthSnapshot] = []
+        for hour in 0..<(10 * 24) { TaptionWatchDurableSpoolPolicy.enqueue(snapshot(Double(hour) * 3_600), into: &pending) }
+        XCTAssertEqual(pending.count, TaptionWatchDurableSpoolPolicy.maximumHealthSnapshots, "열흘 치에서 개수 상한만 적용")
+        var old: [TaptionWatchHealthSnapshot] = []
+        TaptionWatchDurableSpoolPolicy.enqueue(snapshot(0), into: &old)
+        TaptionWatchDurableSpoolPolicy.enqueue(snapshot(15 * 86_400), into: &old)
+        XCTAssertEqual(old.count, 1, "보름 전 것은 버린다")
+    }
+
+    func testCommandPressedOfflineIsAcceptedAfterExpiryWithinGrace() throws {
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+        let planID = UUID()
+        let issued = try XCTUnwrap(TaptionWatchCommandCapabilityStore.reconcile(planIDs: [planID], now: now, defaults: defaults)
+            .first { $0.kind == .complete })
+        // 계획이 창에 남아 있으면, 다음 날 다시 맞춰도 만료된 권한은 유예 기간 동안 남는다.
+        let later = TaptionWatchCommandCapabilityStore.reconcile(planIDs: [planID], now: now.addingTimeInterval(30 * 3_600), defaults: defaults)
+        XCTAssertFalse(later.contains { $0.commandID == issued.commandID }, "워치에는 살아 있는 권한만 보낸다")
+        let pressed = now.addingTimeInterval(20 * 3_600)
+        let command = TaptionWatchCommand(id: issued.commandID, planID: planID, kind: .complete, requestedAt: pressed, capabilityToken: issued.token)
+        XCTAssertTrue(TaptionWatchCommandCapabilityStore.consume(command, at: pressed, defaults: defaults))
+        defaults.removePersistentDomain(forName: suiteName)
+    }
+
+    func testDaySummaryShowsOnlyOnItsDay() {
+        let calendar = Calendar.autoupdatingCurrent
+        let today = calendar.startOfDay(for: now)
+        let summary = TaptionWatchDaySummary(date: today, scheduledCount: 3, completedCount: 1, recordedMinutes: 900, activeMinutes: 30)
+        XCTAssertTrue(summary.isCurrent(at: today.addingTimeInterval(3_600)))
+        XCTAssertFalse(summary.isCurrent(at: today.addingTimeInterval(86_400 + 1_800)), "자정이 지나면 어제 요약")
+    }
+}

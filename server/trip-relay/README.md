@@ -5,7 +5,7 @@ AI 비서(도구 호출이 되는 비서, ChatGPT 맞춤 GPT Actions, 단축어 
 ## 동작
 - 앱이 기기에서 연동 키(무작위 32바이트, base64url 43자)를 만들어 키체인에만 둡니다.
 - AI가 `POST /plan`으로 JSON을 보냅니다. 헤더 `Authorization: Bearer <키>`, 본문은 앱의 여행 JSON 형식(`format: "bokki-trip"`, `version: 1`) 그대로입니다. 최대 64KB.
-- 앱은 앱을 열 때 `GET /plan`으로 한 번 확인하고, 받으면 바로 `DELETE /plan`으로 지운 뒤 미리보기를 띄웁니다. 반영은 사용자가 미리보기에서 누를 때만 합니다.
+- 앱은 앱을 열 때 `GET /plan`으로 확인하고, 처음 보는 내용이면 미리보기를 띄웁니다. 사용자가 반영하면 `DELETE /plan`으로 지웁니다. 지운 뒤 잠깐 캐시가 같은 값을 돌려줘도 앱은 내용 해시로 걸러 다시 띄우지 않습니다.
 - 서버는 키를 SHA-256으로만 저장하고(원래 키는 저장하지 않음), 계획은 3일 뒤 자동으로 지웁니다. 키마다 마지막 계획 하나만 둡니다. IP·요청을 기록하지 않습니다.
 
 | 요청 | 응답 |
@@ -34,3 +34,13 @@ npm test
 ```
 
 연동 규격(주소·인증·JSON 스키마·샘플)은 [docs/TRIP_RELAY_API.md](../../docs/TRIP_RELAY_API.md)를 보세요.
+
+## 카카오 검색 중계(REV1110A03)
+
+`GET /kakao/keyword?query=…&x=…&y=…&sort=…&radius=…&size=…` → 카카오 로컬 키워드 검색을 대신 부릅니다. 카카오 REST 키는 서버용이라 앱에 넣지 않고 Worker 비밀값으로만 둡니다(IP당 1분 60번).
+
+```sh
+npx wrangler secret put KAKAO_REST_API_KEY --config wrangler.local.toml
+```
+
+비밀값이 없으면 `503`을 돌려주고, 앱은 Apple 검색만 씁니다.

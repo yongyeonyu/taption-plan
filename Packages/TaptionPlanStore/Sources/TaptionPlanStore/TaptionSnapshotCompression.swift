@@ -66,8 +66,10 @@ public enum TaptionSnapshotCompression {
         return result
     }
 
-    public static func decode(_ data: Data) -> Data {
-        (try? decodeChecked(data)) ?? data
+    /// TPZ1이 아니면 옛 평문 JSON으로 보고 그대로 돌려준다. TPZ1인데 풀리지 않으면 바이트를 그대로 넘기지 않고
+    /// 던진다. 손상된 압축본을 평문처럼 읽어 빈 값으로 오인하지 않게 한다(REV1110A04).
+    public static func decode(_ data: Data) throws -> Data {
+        try decodeChecked(data)
     }
 
     public static func decodeChecked(

@@ -20,6 +20,8 @@ struct WatchAmbientDrainResult: Sendable {
     var archiveSamples: [WatchAmbientArchiveSample] = []
     var pendingHighWater: Date? = nil
     var pendingSampleDates: [String: Date] = [:]
+    /// 이번에 다 읽지 못한 창이 남았는가. 화면이 켜져 있으면 이어서 비운다.
+    var hasMoreWindows = false
 }
 
 /// 배경 기록이 실제로 살아 있는지. 워치 화면과 위젯이 같은 값을 본다.
@@ -51,6 +53,8 @@ actor WatchAmbientSensorRecorder {
     /// `recordAccelerometer(forDuration:)`가 허용하는 최대 창.
     static let maximumRecordingDuration: TimeInterval = 12 * 3_600
     private static let rearmMargin: TimeInterval = 30 * 60
+    /// 한 번 비울 때 처리하는 30분 창 수(3시간).
+    static let maximumWindowsPerCall = 6
 
     /// 남은 창이 30분 이하일 때만 다음 12시간 창을 건다. WC/background
     /// 콜백이 겹쳐도 actor 직렬화와 이 조건으로 중복 시작을 막는다.
@@ -201,7 +205,10 @@ actor WatchAmbientSensorRecorder {
         )
         var ledger = WatchSensorDrainLedger(highWater: highWater)
 
-        for window in windows {
+        // 한 번에 다 읽으면(최대 사흘 × 50Hz) 백그라운드 예산을 넘긴다. 앞쪽 몇 창만 처리하고
+        // 나머지는 처리 위치를 커밋한 뒤 다음 실행이 잇는다. 취소되면 바로 멈춘다(WCH1110A01).
+        for window in windows.prefix(Self.maximumWindowsPerCall) {
+            if Task.isCancelled { break }
             do {
                 // 조회와 열거를 한 @try 안에 넣는다. CMSensorDataList는
                 // 지연 목록이라 실제 읽기는 열거할 때 일어나고, 예외도
@@ -238,6 +245,7 @@ actor WatchAmbientSensorRecorder {
         // SQLite의 idempotent raw event insert가 중복을 막는다.
         var result = pipeline.finish()
         result.pendingHighWater = ledger.highWater
+        result.hasMoreWindows = ledger.failureCount == 0 && windows.count > Self.maximumWindowsPerCall
         if result.pendingSampleDates.isEmpty {
             defaults.removeObject(forKey: pendingSampleDatesKey)
         } else {

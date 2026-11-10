@@ -139,9 +139,14 @@ private struct SensorCollectionCompactHeartRate: View {
         ) { timeline in
             if state.isCollecting,
                state.sensorHUDUntil.map({ timeline.date < $0 }) == true {
-                if let heartRate = state.latestHeartRate,
-                   heartRate.isFinite, heartRate > 0, heartRate < 1000 {
-                    Text("♥︎ \(Int(heartRate.rounded()))")
+                // 빨간 심박은 외부 센서의 3분 안 값일 때만 보인다(REV1110A04).
+                if let heart = SensorExternalHeartPolicy.text(
+                    isExternalSample: state.isExternalSample,
+                    heartRate: state.latestHeartRate,
+                    updatedAt: state.heartRateUpdatedAt,
+                    now: timeline.date
+                ), let heartRate = state.latestHeartRate {
+                    Text(heart)
                         .font(.system(size: 12, weight: .bold, design: .rounded))
                         .monospacedDigit()
                         .foregroundStyle(.red)
@@ -182,14 +187,18 @@ private struct SensorCollectionLockScreenView: View {
 
             Spacer(minLength: 8)
 
-            if let heart = SensorExternalHeartPolicy.text(
-                isExternalSample: context.state.isExternalSample,
-                heartRate: context.state.latestHeartRate
-            ) {
-                Text(heart)
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(.red)
+            TimelineView(.periodic(from: .now, by: 30)) { timeline in
+                if let heart = SensorExternalHeartPolicy.text(
+                    isExternalSample: context.state.isExternalSample,
+                    heartRate: context.state.latestHeartRate,
+                    updatedAt: context.state.heartRateUpdatedAt,
+                    now: timeline.date
+                ) {
+                    Text(heart)
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(.red)
+                }
             }
 
             SensorCollectionSavedAtView(

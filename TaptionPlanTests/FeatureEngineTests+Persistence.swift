@@ -911,7 +911,7 @@ extension FeatureEngineTests {
         }
         stored.append(0)
 
-        XCTAssertEqual(TaptionSnapshotCompression.decode(stored), stored)
+        XCTAssertThrowsError(try TaptionSnapshotCompression.decode(stored))
     }
 
     func testBiometricProtectedSnapshotCodecEncryptsCompressedSnapshot() throws {

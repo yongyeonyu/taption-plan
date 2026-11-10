@@ -1,3 +1,4 @@
+import CoreLocation
 import SwiftUI
 import XCTest
 @testable import TaptionPlan
@@ -452,7 +453,7 @@ final class InkWashThemeTests: XCTestCase {
     func testEveryLanguageHasItsOwnPassportText() {
         let designs = MapHomePassportDesign.languageCodes.map(MapHomePassportDesign.design(languageCode:))
         XCTAssertEqual(Set(designs.map { $0.top + $0.bottom }).count, designs.count)
-        XCTAssertEqual(MapHomePassportDesign.design(languageCode: "pt-BR").bottom, ["PASSAPORTE"])
+        XCTAssertEqual(MapHomePassportDesign.design(languageCode: "pt-BR").bottom, ["PASSAPORTE DE VIAGEM"])
     }
 
     func testPlaybackEndKeepsLastRecordedCoordinate() {
@@ -505,11 +506,12 @@ final class InkWashThemeTests: XCTestCase {
         XCTAssertEqual(visits.map(\.id), [realVisit.id, afterBus.id])
     }
 
-    func testVisitLedgerMatchesFullScanAndIsFast() {
+    func testVisitLedgerMatchesFullScanWithinBudget() {
         let calendar = Calendar(identifier: .gregorian)
         let places = MapHomeKoreaPlaceBookData.places
         let base = Date(timeIntervalSince1970: 1_780_000_000)
-        var generator = SystemRandomNumberGenerator()
+        // 실행마다 같은 자료로 비교한다(REV1110A03). 예전에는 매번 다른 난수라 가끔만 실패할 수 있었다.
+        var generator = LedgerSeededGenerator(seed: 0x5EED_1110)
         let stays: [PlaceStay] = (0..<20_000).map { index in
             let anchor = places[index % places.count]
             let jitter = Double.random(in: -0.04...0.04, using: &generator)
@@ -541,6 +543,7 @@ final class InkWashThemeTests: XCTestCase {
         // 공항·해외 도시는 걷기 조건이 더해져 전수 비교와 다르다. 나머지는 같아야 한다.
         let passport = Set(places.filter(\.usesPassportStamp).map(\.id))
         XCTAssertEqual(ledger.filter { !passport.contains($0.key) }, full.filter { !passport.contains($0.key) })
+        XCTAssertLessThan(new, .seconds(10), "2만 곳 장부가 여권을 바로 열 만큼 빨라야 한다")
     }
 
     func testIslandUsesOutlineAndAirportStaysNearTerminals() throws {
@@ -605,6 +608,8 @@ final class InkWashThemeTests: XCTestCase {
     func testTripRelayDocSampleParses() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("docs/trip-relay-sample.json")
+        // 실기기에서는 Mac의 저장소 파일이 보이지 않는다. 시뮬레이터에서만 돈다.
+        try XCTSkipUnless(FileManager.default.fileExists(atPath: url.path), "저장소 파일을 읽을 수 없는 기기")
         let plan = try TripImportParser.parse(String(contentsOf: url, encoding: .utf8)).get()
         XCTAssertEqual(plan.tripID, "trip-20261201-bkk")
         XCTAssertEqual(plan.items.map(\.kind), [.flight, .lodging, .activity, .meal, .sleep, .sight])
@@ -745,5 +750,194 @@ final class InkWashThemeTests: XCTestCase {
         let text = TripRelay.deliveryInstruction(endpoint: try XCTUnwrap(URL(string: "https://relay.example.com/plan")), key: key)
         XCTAssertTrue(text.contains("POST https://relay.example.com/plan"))
         XCTAssertTrue(text.contains("Bearer \(key)"))
+    }
+
+    /// REV1110A01: 시각 꼴 여러 가지, 잘못된 날짜 거절.
+    func testTripTimeAcceptsCompactOffsetAndFraction() throws {
+        let base = try XCTUnwrap(TripImportParser.date("2026-12-01T09:05+07:00"))
+        XCTAssertEqual(TripImportParser.date("2026-12-01T09:05:00.000+0700"), base)
+        XCTAssertEqual(TripImportParser.date("2026-12-01T02:05:00Z"), base)
+        XCTAssertNil(TripImportParser.date("2026-13-01T09:05+07:00"))
+        XCTAssertNil(TripImportParser.date("2026-12-01 09:05"))
+    }
+
+    /// REV1110A01: 핀 없는 수면·좌표 없는 일정도 다시 가져올 때 지우고, 바뀐 것에 센다.
+    @MainActor
+    func testTripReimportReplacesItemsWithoutPins() async throws {
+        let model = AppModel(repository: InMemoryPlanRepository(), cloudSyncService: nil)
+        await model.bootstrapLocalSnapshot()
+        func plan(_ sleepTitle: String) throws -> TripImportPlan {
+            try TripImportParser.parse(#"""
+            {"format":"bokki-trip","version":1,"tripId":"t1","title":"t","items":[
+             {"id":"a","type":"sight","title":"왓 아룬","start":"2026-12-02T09:00+07:00","place":{"lat":13.74,"lng":100.49}},
+             {"id":"s","type":"sleep","title":"\#(sleepTitle)","start":"2026-12-01T23:00+07:00","end":"2026-12-02T07:00+07:00"},
+             {"id":"m","type":"meal","title":"야시장","start":"2026-12-01T19:00+07:00","place":{"lat":null,"lng":null}}]}
+            """#).get()
+        }
+        await model.applyTripImport(try plan("취침"))
+        XCTAssertEqual(model.snapshot.plans.count, 3)
+        let diff = try XCTUnwrap(model.tripImportDiff(for: try plan("늦잠")))
+        XCTAssertEqual(diff, TripImportDiff(added: 0, changed: 1, removed: 0))
+        await model.applyTripImport(try plan("늦잠"))
+        XCTAssertEqual(model.snapshot.plans.count, 3, "같은 여행을 다시 넣어도 계획이 두 벌이 되지 않는다")
+        XCTAssertEqual(model.settings.travelPlanStops.count, 1)
+        XCTAssertEqual(model.settings.travelTripItems?.count, 3)
+    }
+
+    /// REV1110A01: 같은 계획은 한 번만 자동으로 띄운다.
+    func testTripRelayShowsSamePlanOnce() throws {
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: "TripRelayTests"))
+        defaults.removePersistentDomain(forName: "TripRelayTests")
+        XCTAssertTrue(TripRelay.isNew("{\"a\":1}", defaults: defaults))
+        XCTAssertFalse(TripRelay.isNew("{\"a\":1}", defaults: defaults), "지운 뒤 캐시가 돌려준 같은 계획")
+        XCTAssertTrue(TripRelay.isNew("{\"a\":2}", defaults: defaults))
+    }
+
+    /// REV1110A01: 신뢰도가 바뀌어 끊긴 정지 기록은 깬 근거가 아니고, 기록 ID는 밤마다 하나다.
+    func testScoredSleepJoinsSplitStillRecords() throws {
+        var seoul = Calendar(identifier: .gregorian)
+        seoul.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        func at(_ day: Int, _ hour: Int, _ minute: Int = 0) -> Date { seoul.date(from: DateComponents(year: 2026, month: 11, day: day, hour: hour, minute: minute))! }
+        func run(wakeAt end: Date) -> [ActualRecord] {
+            let still = [(at(9, 0, 30), at(9, 2, 30)), (at(9, 2, 30), at(9, 4, 30)), (at(9, 4, 31), at(9, 6, 30)), (at(9, 6, 30), end)].map {
+                MotionActivityRecord(span: TimeSpan(start: $0.0, end: $0.1), motion: .stationary, confidence: .medium)
+            }
+            return PhoneSleepScoreAdapter.records(
+                night: TimeSpan(start: at(8, 18), end: at(9, 12)), readings: [], motionActivities: still + [
+                    MotionActivityRecord(span: TimeSpan(start: at(8, 23), end: at(9, 0, 30)), motion: .walking, confidence: .high),
+                    MotionActivityRecord(span: TimeSpan(start: end, end: at(9, 12)), motion: .walking, confidence: .high),
+                ], actuals: [], homePoint: nil, homeRadiusMeters: 100, wearableSleepSpans: [], asOf: at(10, 0), calendar: seoul
+            )
+        }
+        let first = try XCTUnwrap(run(wakeAt: at(9, 7, 30)).first, "2시간마다 끊긴 정지 기록도 한 밤")
+        XCTAssertEqual(first.startedAt, at(9, 0, 30))
+        XCTAssertEqual(first.endedAt, at(9, 7, 30))
+        XCTAssertEqual(try XCTUnwrap(run(wakeAt: at(9, 7, 40)).first).id, first.id, "구간이 조금 바뀌어도 같은 기록")
+    }
+
+    /// REV1110A02: 서울에서 만든 일정이 방콕 시간대에서도 같은 날에 보인다.
+    func testTravelStopDayStaysAfterTimeZoneChange() throws {
+        var seoul = Calendar(identifier: .gregorian)
+        seoul.timeZone = try XCTUnwrap(TimeZone(identifier: "Asia/Seoul"))
+        var bangkok = Calendar(identifier: .gregorian)
+        bangkok.timeZone = try XCTUnwrap(TimeZone(identifier: "Asia/Bangkok"))
+        let stored = try XCTUnwrap(seoul.date(from: DateComponents(year: 2026, month: 12, day: 1)))
+        let stop = TravelPlanStop(id: UUID(), title: "왓 아룬", latitude: 13.74, longitude: 100.49, day: stored, order: 0, planID: nil)
+        let bangkokDay = try XCTUnwrap(bangkok.date(from: DateComponents(year: 2026, month: 12, day: 1)))
+        XCTAssertEqual(TravelPlanSchedule.stops(on: bangkokDay, in: [stop], calendar: bangkok).count, 1)
+        XCTAssertEqual(TravelPlanSchedule.days([stop], calendar: bangkok), [bangkokDay])
+        XCTAssertTrue(TravelPlanSchedule.stops(on: bangkokDay.addingTimeInterval(86_400), in: [stop], calendar: bangkok).isEmpty)
+    }
+
+    /// REV1110A02: 국내 판정은 남한만. 후쿠오카·대마도·북한은 Apple 검색으로 간다.
+    func testKakaoSearchAreaIsSouthKoreaOnly() {
+        func inside(_ lat: Double, _ lng: Double) -> Bool { MapHomeKakaoSearch.isInKorea(CLLocationCoordinate2D(latitude: lat, longitude: lng)) }
+        for (lat, lng) in [(37.566, 126.978), (35.18, 129.08), (33.50, 126.53), (37.48, 130.90), (37.75, 128.90), (34.81, 126.39), (37.46, 126.44), (38.21, 128.59), (37.97, 124.71)] {
+            XCTAssertTrue(inside(lat, lng), "\(lat), \(lng)")
+        }
+        for (lat, lng) in [(33.59, 130.40), (34.40, 129.30), (39.03, 125.75), (37.97, 126.55), (34.69, 135.50), (40.0, 124.4)] {
+            XCTAssertFalse(inside(lat, lng), "\(lat), \(lng)")
+        }
+    }
+
+    /// REV1110A02: 외부 계획 링크는 구글 지도 https만, 같은 id는 차례 번호.
+    func testTripImportKeepsOnlyGoogleMapsLinksAndUniqueIDs() throws {
+        XCTAssertNotNil(TripImportParser.mapsURL("https://maps.google.com/?q=Wat+Arun"))
+        XCTAssertNotNil(TripImportParser.mapsURL("https://www.google.co.kr/maps/place/x"))
+        XCTAssertNotNil(TripImportParser.mapsURL("https://maps.app.goo.gl/abc"))
+        XCTAssertNil(TripImportParser.mapsURL("http://maps.google.com/?q=x"))
+        XCTAssertNil(TripImportParser.mapsURL("https://google.com.evil.example/"))
+        XCTAssertNil(TripImportParser.mapsURL("shortcuts://run-shortcut?name=x"))
+        let plan = try TripImportParser.parse(#"""
+        {"format":"bokki-trip","version":1,"tripId":"t","title":"t","items":[
+         {"id":"i1","type":"meal","title":"a","start":"2026-12-01T09:00+07:00","place":{"mapsUrl":"https://evil.example/"}},
+         {"id":"i1","type":"meal","title":"b","start":"2026-12-02T09:00+07:00"}]}
+        """#).get()
+        XCTAssertEqual(plan.items.map(\.id), ["i1", "i1#2"])
+        XCTAssertNil(plan.items[0].mapsURL)
+    }
+
+    /// REV1110A02: 중계에서 받은 그 글일 때만 서버에서 지운다. 키가 있으면 ChatGPT 주소에 프롬프트를 싣지 않는다.
+    func testTripRelayClearsOnlyReceivedPlan() throws {
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: "TripRelayClearTests"))
+        defaults.removePersistentDomain(forName: "TripRelayClearTests")
+        _ = TripRelay.isNew("{\"a\":1}", defaults: defaults)
+        XCTAssertTrue(TripRelay.isLastReceived("{\"a\":1}", defaults: defaults))
+        XCTAssertFalse(TripRelay.isLastReceived("{\"a\":2}", defaults: defaults))
+        XCTAssertNil(TripImportAIApp.chatGPT.url(prompt: nil)?.query)
+    }
+
+    /// REV1110A02: 이미 시작한 여행은 첫날부터 고를 수 있다.
+    func testTravelModeOpensOngoingTripStart() throws {
+        let now = Date(timeIntervalSinceReferenceDate: 816_000_000)
+        let calendar = Calendar.autoupdatingCurrent
+        let today = calendar.startOfDay(for: now)
+        func item(_ trip: String, _ start: TimeInterval, _ end: TimeInterval) -> TravelTripItem {
+            TravelTripItem(tripID: trip, itemID: "i", kind: "sight", title: "t", start: now.addingTimeInterval(start), end: now.addingTimeInterval(end),
+                           startOffsetSeconds: calendar.timeZone.secondsFromGMT(for: now), endOffsetSeconds: calendar.timeZone.secondsFromGMT(for: now), planID: nil)
+        }
+        XCTAssertEqual(TravelTripSchedule.earliestSelectableDay(items: [], now: now), today)
+        XCTAssertEqual(TravelTripSchedule.earliestSelectableDay(items: [item("old", -10 * 86_400, -9 * 86_400)], now: now), today, "끝난 여행은 열지 않는다")
+        let ongoing = TravelTripSchedule.earliestSelectableDay(items: [item("now", -2 * 86_400, 86_400)], now: now)
+        XCTAssertEqual(ongoing, calendar.startOfDay(for: now.addingTimeInterval(-2 * 86_400)))
+    }
+}
+
+/// REV1110A03: 3차 리뷰 수정.
+final class ReviewThirdPassTests: XCTestCase {
+    private func point(_ latitude: Double, _ longitude: Double) -> GeoPoint {
+        GeoPoint(latitude: latitude, longitude: longitude, altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5)
+    }
+
+    func testIslandOutlineReachesBeyondItsCircle() {
+        // 거제도 남쪽 끝은 중심에서 18km를 넘는다. 예전 15km 원과 겹쳐 보면 빠졌다.
+        XCTAssertTrue(MapHomePlaceSiteIndex.shared.places(containing: point(34.71, 128.59)).contains { $0.id == "kr.geojedo" })
+        XCTAssertTrue(MapHomePlaceSiteIndex.shared.places(containing: point(35.03, 128.705)).contains { $0.id == "kr.geojedo" })
+    }
+
+    func testSearchMergeKeepsNearbyBranchesWithSameName() {
+        func item(_ title: String, _ latitude: Double) -> MapHomeSearchResult {
+            MapHomeSearchResult(title: title, subtitle: "", coordinate: .init(latitude: latitude, longitude: 127))
+        }
+        let merged = MapHomeSearchPolicy.merged([[item("스타벅스", 37.50)], [item("스타벅스", 37.5001), item("스타벅스", 37.51)]])
+        XCTAssertEqual(merged.map(\.coordinate.latitude), [37.50, 37.51], "같은 자리는 하나, 1km 떨어진 지점은 따로")
+    }
+
+    func testPlaybackFallbackDoesNotJumpToLaterPlace() {
+        let base = Date(timeIntervalSince1970: 1_780_000_000)
+        let readings = [
+            SensorReading(timestamp: base.addingTimeInterval(7 * 3_600), point: point(37.1, 127)),
+            SensorReading(timestamp: base.addingTimeInterval(20 * 3_600), point: point(37.2, 127)),
+        ]
+        XCTAssertNil(MapHomePlaybackLocation.lastRecordedCoordinate(in: readings, notAfter: base.addingTimeInterval(3 * 3_600)), "첫 기록 전에는 저녁 자리로 가지 않는다")
+        XCTAssertEqual(MapHomePlaybackLocation.lastRecordedCoordinate(in: readings, notAfter: base.addingTimeInterval(12 * 3_600))?.latitude, 37.1)
+        XCTAssertEqual(MapHomePlaybackLocation.lastRecordedCoordinate(in: readings)?.latitude, 37.2)
+    }
+
+    func testStampDateTextIsEnglishDayMonthYear() throws {
+        var seoul = Calendar(identifier: .gregorian)
+        seoul.timeZone = try XCTUnwrap(TimeZone(identifier: "Asia/Seoul"))
+        let date = try XCTUnwrap(seoul.date(from: DateComponents(year: 2026, month: 11, day: 9, hour: 1)))
+        XCTAssertEqual(MapHomePassportStampStyle.dateText(date, calendar: seoul), "09 NOV 2026")
+    }
+
+    func testPassportCoversUseNoGovernmentNames() {
+        let words = MapHomePassportDesign.languageCodes.flatMap { MapHomePassportDesign.design(languageCode: $0).top + MapHomePassportDesign.design(languageCode: $0).bottom }
+        for banned in ["REPUBLIC", "대한민국", "United States", "UNIÓN EUROPEA", "BUNDESREPUBLIK", "中华人民共和国"] {
+            XCTAssertFalse(words.contains { $0.contains(banned) }, banned)
+        }
+    }
+}
+
+/// 시험용 고정 난수(SplitMix64).
+private struct LedgerSeededGenerator: RandomNumberGenerator {
+    private var state: UInt64
+    init(seed: UInt64) { state = seed }
+    mutating func next() -> UInt64 {
+        state &+= 0x9E37_79B9_7F4A_7C15
+        var value = state
+        value = (value ^ (value >> 30)) &* 0xBF58_476D_1CE4_E5B9
+        value = (value ^ (value >> 27)) &* 0x94D0_49BB_1331_11EB
+        return value ^ (value >> 31)
     }
 }

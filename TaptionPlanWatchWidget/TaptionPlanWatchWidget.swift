@@ -386,7 +386,7 @@ private struct TaptionWatchWidgetView: View {
     }
 
     private var summary: TaptionWatchDaySummary {
-        resolvedPayload?.todaySummary
+        resolvedPayload?.todaySummary.flatMap { $0.isCurrent(at: playbackDate) ? $0 : nil }
             ?? TaptionWatchDaySummary(
                 date: playbackDate,
                 scheduledCount: 0,

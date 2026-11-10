@@ -234,6 +234,10 @@ struct MapHomeSearchPinLocationSheet: View {
                 }
             }
 
+            // 저장 좌표를 찾는 동안에는 단추를 막고 기다림을 보인다. 예전에는 눌러도 아무 반응이 없었다(REV1110A03).
+            if result.isLiveOnly, isResolving {
+                ProgressView().frame(maxWidth: .infinity)
+            }
             if result.isLiveOnly, !isResolving, appleCoordinate == nil {
                 Text(language.text("이 장소는 바로 저장할 수 없어요. 지도를 길게 눌러 직접 추가해 주세요.", "This place can't be saved directly. Long-press the map to add it."))
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
@@ -282,6 +286,8 @@ struct MapHomeSearchPinLocationSheet: View {
                         )
                     }
                     .buttonStyle(.plain)
+                    .disabled(!canSave)
+                    .opacity(canSave ? 1 : 0.4)
                 }
             }
 
@@ -320,6 +326,8 @@ struct MapHomeSearchPinLocationSheet: View {
                         )
                     }
                     .buttonStyle(.plain)
+                    .disabled(!canSave)
+                    .opacity(canSave ? 1 : 0.4)
                 }
             }
         }

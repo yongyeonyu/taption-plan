@@ -10,10 +10,11 @@ public enum TaptionWatchDeviceLocalDefaults {
         )
     }
 
+    /// 앱 그룹 저장소를 열지 못하면 표준 저장을 그대로 쓴다. 예전에는 표준 값까지 지워
+    /// 보내지 못한 대기열이 사라졌다(WCH1110A01).
     public static func data(forKey key: String) -> Data? {
         guard let store = protectedStore else {
-            UserDefaults.standard.removeObject(forKey: key)
-            return nil
+            return UserDefaults.standard.data(forKey: key)
         }
         if let data = store.data(forKey: key) { return data }
         guard let legacy = UserDefaults.standard.data(forKey: key) else {
@@ -25,7 +26,11 @@ public enum TaptionWatchDeviceLocalDefaults {
     }
 
     public static func set(_ data: Data, forKey key: String) {
-        protectedStore?.set(data, forKey: key)
+        guard let store = protectedStore else {
+            UserDefaults.standard.set(data, forKey: key)
+            return
+        }
+        store.set(data, forKey: key)
         UserDefaults.standard.removeObject(forKey: key)
     }
 
@@ -50,28 +55,38 @@ public enum TaptionWatchCommandCapabilityStore {
         lock.lock()
         defer { lock.unlock() }
         let stored = readUnlocked(defaults: defaults)
-        let current = stored.filter {
-            planIDs.contains($0.planID) && $0.expiresAt > now
+        // 워치가 연결 없이 누른 명령은 만료 뒤에 도착할 수 있다. 누른 시각으로 검사하도록
+        // 만료된 권한도 유예 기간 동안 남겨 둔다. 다만 창에서 빠진 계획(지운 계획 등)의 권한은
+        // 바로 거둔다. 워치에는 살아 있는 권한만 보낸다(WCH1110A01).
+        let retained = stored.filter {
+            planIDs.contains($0.planID) && $0.expiresAt > now.addingTimeInterval(-expiredGrace)
         }
-        var result = current
+        var live = retained.filter { planIDs.contains($0.planID) && $0.expiresAt > now }
+        var added: [TaptionWatchCommandCapability] = []
         for planID in planIDs.sorted(by: { $0.uuidString < $1.uuidString }) {
-            for kind in TaptionWatchCommandKind.allCases where !result.contains(where: {
+            for kind in TaptionWatchCommandKind.allCases where !live.contains(where: {
                 $0.planID == planID && $0.kind == kind
             }) {
-                result.append(
-                    TaptionWatchCommandCapability(
-                        commandID: UUID(),
-                        token: UUID(),
-                        planID: planID,
-                        kind: kind,
-                        expiresAt: now.addingTimeInterval(lifetime)
-                    )
+                let capability = TaptionWatchCommandCapability(
+                    commandID: UUID(),
+                    token: UUID(),
+                    planID: planID,
+                    kind: kind,
+                    expiresAt: now.addingTimeInterval(lifetime)
                 )
+                live.append(capability)
+                added.append(capability)
             }
         }
-        guard result != stored else { return result }
-        return writeUnlocked(result, defaults: defaults) ? result : current
+        let next = retained + added
+        guard next != stored else { return live }
+        return writeUnlocked(next, defaults: defaults)
+            ? live
+            : stored.filter { planIDs.contains($0.planID) && $0.expiresAt > now }
     }
+
+    /// 만료된 권한을 남겨 두는 기간. iPhone이 명령을 받는 최대 지연과 같다.
+    public static let expiredGrace: TimeInterval = 7 * 86_400
 
     public static func consume(
         _ command: TaptionWatchCommand,

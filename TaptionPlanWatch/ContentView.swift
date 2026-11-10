@@ -73,7 +73,7 @@ struct WatchContentView: View {
             if let subject = confirmationSubject {
                 confirmationCard(subject)
             }
-            if let summary = connectivity.payload?.todaySummary {
+            if let summary = connectivity.payload?.todaySummary, summary.isCurrent(at: date) {
                 WatchTodayCard(summary: summary, language: language)
             }
             if let next = connectivity.orderedItems.nextPlan(after: date) {

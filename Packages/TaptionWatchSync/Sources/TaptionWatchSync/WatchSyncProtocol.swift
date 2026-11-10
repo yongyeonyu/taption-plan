@@ -470,6 +470,11 @@ public struct TaptionWatchDaySummary: Codable, Hashable, Sendable {
         self.categories = categories
     }
 
+    /// 이 요약이 `now`의 날짜인가. 자정이 지나 새 값이 오기 전에는 어제 요약을 오늘로 보이지 않는다(WCH1110A01).
+    public func isCurrent(at now: Date, calendar: Calendar = .autoupdatingCurrent) -> Bool {
+        calendar.isDate(date, inSameDayAs: now)
+    }
+
     /// 오늘 지나간 시간 중 기록된 비율(0~1). 시계 페이스 원형이 쓴다.
     public func recordedFraction(at now: Date, calendar: Calendar = .autoupdatingCurrent) -> Double {
         let elapsed = now.timeIntervalSince(calendar.startOfDay(for: now)) / 60

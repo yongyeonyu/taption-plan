@@ -1,5 +1,5 @@
 // Taption Plan trip relay (TRP1110A04). An AI assistant POSTs a trip JSON with the user's key;
-// the app GETs it on launch, shows a preview, then DELETEs it. Only a SHA-256 hash of the key is
+// the app GETs it on launch, shows a preview, and DELETEs it once the user applies it. Only a SHA-256 hash of the key is
 // stored, plans expire after 3 days, and nothing else about the user is kept or logged.
 
 const MAX_BODY_BYTES = 64 * 1024;
@@ -30,8 +30,36 @@ export function isTripPlan(value) {
     && value.items.length <= 500;
 }
 
+// Kakao Local keyword search proxy (REV1110A03). The REST key is a server key; shipping it inside the app
+// let anyone pull it from the IPA. The app calls this route instead and the key stays a Worker secret.
+const KAKAO_URL = "https://dapi.kakao.com/v2/local/search/keyword.json";
+const KAKAO_PARAMS = ["query", "x", "y", "radius", "sort", "size", "page"];
+
+export async function kakaoKeyword(request, env, fetcher = fetch) {
+  if (request.method !== "GET") return json({ error: "method_not_allowed" }, 405);
+  if (!env.KAKAO_REST_API_KEY) return json({ error: "unavailable" }, 503);
+  if (env.KAKAO_LIMIT) {
+    const { success } = await env.KAKAO_LIMIT.limit({ key: request.headers.get("cf-connecting-ip") ?? "unknown" });
+    if (!success) return json({ error: "rate_limited" }, 429);
+  }
+  const incoming = new URL(request.url).searchParams;
+  const query = incoming.get("query") ?? "";
+  if (!query.trim() || query.length > 100) return json({ error: "bad_query" }, 400);
+  const target = new URL(KAKAO_URL);
+  for (const name of KAKAO_PARAMS) {
+    const value = incoming.get(name);
+    if (value !== null) target.searchParams.set(name, value.slice(0, 100));
+  }
+  const upstream = await fetcher(target, { headers: { authorization: `KakaoAK ${env.KAKAO_REST_API_KEY}` } });
+  return new Response(await upstream.text(), {
+    status: upstream.status,
+    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+  });
+}
+
 export async function handle(request, env) {
   const url = new URL(request.url);
+  if (url.pathname === "/kakao/keyword") return kakaoKeyword(request, env);
   if (url.pathname !== "/plan") return json({ error: "not_found" }, 404);
   const token = bearer(request);
   if (!token) return json({ error: "unauthorized" }, 401);
@@ -39,6 +67,11 @@ export async function handle(request, env) {
 
   switch (request.method) {
     case "POST": {
+      // A per-IP write limit keeps one sender from using up the free daily KV writes for everyone.
+      if (env.POST_LIMIT) {
+        const { success } = await env.POST_LIMIT.limit({ key: request.headers.get("cf-connecting-ip") ?? "unknown" });
+        if (!success) return json({ error: "rate_limited" }, 429);
+      }
       const length = Number(request.headers.get("content-length") ?? 0);
       if (length > MAX_BODY_BYTES) return json({ error: "too_large" }, 413);
       const text = await request.text();

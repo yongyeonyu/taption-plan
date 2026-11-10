@@ -65,6 +65,14 @@ final class LiveActivityDaySummaryCache {
         return lastValue(day: day, language: language)
     }
 
+    /// 데이터 삭제 뒤 이전 요약을 돌려주지 않게 비운다(REV1110A04).
+    func clear() {
+        day = nil
+        language = nil
+        computedAt = nil
+        value = nil
+    }
+
     func store(_ value: SensorCollectionDaySummary, day: Date, language: MapHomeLanguage, now: Date) {
         self.day = day
         self.language = language

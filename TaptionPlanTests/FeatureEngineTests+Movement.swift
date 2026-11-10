@@ -3276,15 +3276,15 @@ extension FeatureEngineTests {
         XCTAssertEqual(restored.plans, [plan])
     }
 
-    func testSnapshotCompressionRoundTripAndLegacyJSON() {
+    func testSnapshotCompressionRoundTripAndLegacyJSON() throws {
         let json = Data(repeating: 0x41, count: 32 * 1024)
         let stored = TaptionSnapshotCompression.encode(json)
 
         XCTAssertLessThan(stored.count, json.count)
-        XCTAssertEqual(TaptionSnapshotCompression.decode(stored), json)
+        XCTAssertEqual(try TaptionSnapshotCompression.decode(stored), json)
 
         let legacy = Data("{\"schemaVersion\":1}".utf8)
-        XCTAssertEqual(TaptionSnapshotCompression.decode(legacy), legacy)
+        XCTAssertEqual(try TaptionSnapshotCompression.decode(legacy), legacy)
     }
 
     /// "대기"가 이동 종류였을 때는 앞뒤 이동과 겹친다고 보고 화면에서

@@ -430,10 +430,19 @@ public enum TaptionWatchDurableSpoolPolicy {
             pending.append(snapshot)
         }
         pending.sort { $0.capturedAt < $1.capturedAt }
-        if pending.count > 20 {
-            pending.removeFirst(pending.count - 20)
+        // 스냅샷에는 수면 구간 같은 원본이 들어 있다. 연결이 며칠 끊겨도 날마다 남도록
+        // 개수(20개)가 아니라 기간으로 자른다(WCH1110A01).
+        if let newest = pending.last?.capturedAt {
+            let cutoff = newest.addingTimeInterval(-healthSnapshotRetention)
+            pending.removeAll { $0.capturedAt < cutoff }
+        }
+        if pending.count > maximumHealthSnapshots {
+            pending.removeFirst(pending.count - maximumHealthSnapshots)
         }
     }
+
+    public static let healthSnapshotRetention: TimeInterval = 14 * 86_400
+    public static let maximumHealthSnapshots = 200
 
     public static func removingCommitted(
         _ committed: [TaptionWatchSensorSummary],
@@ -559,10 +568,24 @@ public struct TaptionWatchAccelerationArchiveAppendIndex: Sendable {
         trackedAmbientSessions = sessionIDs
     }
 
+    /// 다시 보내는 표본은 최근 것뿐이라 이보다 오래된 키는 버린다. 예전에는 20만 개에서 통째로
+    /// 비워 중복이 다시 들어오고, 세션별 집합은 줄지 않았다(WCH1110A01).
+    public static let ambientKeyRetentionMicros: Int64 = 6 * 3_600 * 1_000_000
+    private static let pruneThreshold = 200_000
+
+    private mutating func pruneAmbientKeys(newest: Int64) {
+        let floor = newest - Self.ambientKeyRetentionMicros
+        ambientSampleKeys = ambientSampleKeys.filter { $0 >= floor }
+        unscopedAmbientSampleKeys = unscopedAmbientSampleKeys.filter { $0 >= floor }
+        ambientSampleKeysBySession = ambientSampleKeysBySession
+            .mapValues { $0.filter { $0 >= floor } }
+            .filter { !$0.value.isEmpty }
+    }
+
     public mutating func insert(_ sample: TaptionWatchAccelerationSample) -> Bool {
-        if ambientSampleKeys.count > 200_000 { ambientSampleKeys.removeAll() }
-        if unscopedAmbientSampleKeys.count > 200_000 {
-            unscopedAmbientSampleKeys.removeAll()
+        if ambientSampleKeys.count + unscopedAmbientSampleKeys.count > Self.pruneThreshold,
+           let newest = TaptionWatchStableID.ambientAccelerationTimestampKey(capturedAt: sample.capturedAt) {
+            pruneAmbientKeys(newest: newest)
         }
         if sample.isAmbient,
            let stableKey = TaptionWatchStableID.ambientAccelerationTimestampKey(

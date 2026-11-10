@@ -66,7 +66,19 @@ actor TaptionStoreRepository: PlanDataRepository {
         return startup
     }
 
+    /// 줄 선 저장을 모두 기다린 뒤 읽는다. 저장 도중 읽으면 비교 기준(`known`)이 그 저장 전 상태로 돌아가
+    /// 방금 쓴 행을 다음 저장이 지울 수 있다. 읽기도 같은 줄에 서서 뒤의 저장이 읽기를 앞지르지 않는다(REV1110A04).
     func load() async throws -> TaptionDataSnapshot {
+        let previous = saveTail
+        let task = Task { [self] in
+            _ = try? await previous?.value
+            return try await self.loadNow()
+        }
+        saveTail = Task { _ = try await task.value }
+        return try await task.value
+    }
+
+    private func loadNow() async throws -> TaptionDataSnapshot {
         let readStartedAt = Date()
         let memoKind = Kind.memo.rawValue
         // 스냅샷에 담기는 종류만 읽는다. 같은 `records` 표에 사는 HealthKit 원본 표본은
@@ -283,7 +295,7 @@ actor TaptionStoreRepository: PlanDataRepository {
         guard TaptionDataDeletionFence.allows(generation: deletionGeneration) else {
             throw RepositoryError.staleGeneration
         }
-        if known == nil { _ = try await load() }
+        if known == nil { _ = try await loadNow() }
         var upserts: [TaptionStoreRecord] = []
         var deletes: [(kind: String, id: String)] = []
         /// 메모는 별도 파일에 쓴다(파일이 다르면 한 트랜잭션으로 묶을 수 없다).
