@@ -35,8 +35,50 @@ extension MapHomeNLEClipEditor {
             subTrack: subTrack,
             userOwnedSourceIDs: overwriteUserOwnedIDs,
             selectedCategoryID: selectedClip?.option.categoryID,
+            pickedClipIDs: pickedClipIDs,
             categories: categoryOptions
         ) { applyOverwrite($0) }
+    }
+
+    /// 분류 메뉴 아래: 전체 덮기와 여러 개 골라 덮기(대표 지시 2026-11-11: 한 번에 여러 클립 덮어쓰기).
+    /// 고르는 중에는 클립을 누를 때마다 넣고 빼며, 분류를 고르면 고른 클립 모두에 한 번에 적용한다.
+    @ViewBuilder
+    var overwriteMenuButtons: some View {
+        Divider()
+        if pickedClipIDs.isEmpty {
+            Button { startPicking() } label: {
+                Label(language.text("여러 개 골라 덮기", "Pick clips to overwrite"), systemImage: "checklist")
+            }
+        } else {
+            Button(role: .cancel) { pickedClipIDs = [] } label: {
+                Label(language.text("고르기 끝내기 (\(pickedClipIDs.count)개)", "Stop picking (\(pickedClipIDs.count))"), systemImage: "xmark.circle")
+            }
+        }
+        Button { presentOverwrite() } label: {
+            Label(language.text("전체 덮기", "Overwrite all"), systemImage: "rectangle.on.rectangle")
+        }
+    }
+
+    func startPicking() {
+        pickedClipIDs = Set([selectedClipID].compactMap { $0 })
+        if pickedClipIDs.isEmpty, let clip = track.clip(atMinute: playheadMinute) { pickedClipIDs = [clip.id] }
+        showEditorNotice(language.text(
+            "덮을 클립을 누르세요. 다 고르면 「분류」에서 고르면 한 번에 바뀝니다.",
+            "Tap the clips to overwrite, then choose a category to change them all."
+        ))
+    }
+
+    func togglePicked(_ id: String) {
+        UISelectionFeedbackGenerator().selectionChanged()
+        if pickedClipIDs.contains(id) { pickedClipIDs.remove(id) } else { pickedClipIDs.insert(id) }
+    }
+
+    /// 고른 클립이 있으면 그 클립 모두를 이 분류로 덮고 true. 고르기는 끝낸다.
+    func applyToPicked(_ category: MapHomeSidebarMajorCategory) -> Bool {
+        guard !pickedClipIDs.isEmpty else { return false }
+        applyOverwrite(NLEOverwriteRequest(category: category, scope: .picked, mergesAfter: true))
+        pickedClipIDs = []
+        return true
     }
 
     /// 전체 덮기·합치기를 적용한다. 실제로 바뀐 것이 없으면 되돌리기를 쌓지 않는다.
@@ -51,7 +93,8 @@ extension MapHomeNLEClipEditor {
             mergesAfter: request.mergesAfter,
             userOwnedSourceIDs: overwriteUserOwnedIDs,
             includesUserOwned: request.includesUserOwned,
-            clearsDetails: request.clearsDetails
+            clearsDetails: request.clearsDetails,
+            pickedClipIDs: pickedClipIDs
         )
         if result.skipped > 0 {
             showEditorNotice(language.text(
@@ -66,6 +109,7 @@ extension MapHomeNLEClipEditor {
         // 합쳐져 사라진 클립을 가리키지 않게 재생 헤드 자리의 클립으로 옮긴다.
         selectedClipID = track.clip(atMinute: playheadMinute)?.id
         selectedSubClipID = nil
+        pickedClipIDs = []
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
     }
 

@@ -69,6 +69,7 @@ struct MapHomeNLEClipEditor: View {
     @State var isOverwritePresented = false
     @State var overwriteUserOwnedIDs: Set<UUID> = []
     @State var editorNotice: String?
+    @State var pickedClipIDs: Set<String> = []
     /// 경계 손잡이를 이웃의 먼 쪽 끝까지 가져갔을 때 묻는 합치기 확인.
     @State private var mergePrompt: NLEMergePrompt?
     /// 이번 손잡이 끌기를 시작할 때 맞닿은 이웃의 길이(분). 이미 최소 길이였던 이웃은 "끝까지 갔다"고 보지 않는다.
@@ -352,7 +353,7 @@ struct MapHomeNLEClipEditor: View {
 
     private func clipBlock(_ clip: NLEClip, width: CGFloat, blockHeight: CGFloat) -> some View {
         let tint = Self.tint(for: clip.option.categoryID)
-        let isSelected = clip.id == selectedClipID
+        let isSelected = clip.id == selectedClipID || pickedClipIDs.contains(clip.id)
         let isLifted = clip.id == liftedClipID
         return ZStack(alignment: .topLeading) {
             RoundedRectangle(cornerRadius: 9, style: .continuous)
@@ -540,17 +541,10 @@ struct MapHomeNLEClipEditor: View {
     @ViewBuilder
     private var categoryMenuItems: some View {
         categoryButtons(categoryOptions) { category in
-            applyCategory(category)
+            if !applyToPicked(category) { applyCategory(category) }
             quickMenuMinute = nil
         }
-        // 고른 클립 하나가 아니라 나뉜 클립 전부를 바꾸는 문. 같은 메뉴에 두어
-        // '하나 고치기'와 '전체 덮기'를 같은 자리에서 고르게 한다.
-        Divider()
-        Button {
-            presentOverwrite()
-        } label: {
-            Label(language.text("전체 덮기", "Overwrite all"), systemImage: "rectangle.on.rectangle")
-        }
+        overwriteMenuButtons
     }
 
     private var categoryMenu: some View {
@@ -1037,6 +1031,7 @@ struct MapHomeNLEClipEditor: View {
         guard dragMode.touchesMainLane else { return }
         let minute = Int(geometry.minute(forY: point.y).rounded(.down))
         guard let clip = track.clip(atMinute: minute) else { return }
+        if !pickedClipIDs.isEmpty { return togglePicked(clip.id) }
         UISelectionFeedbackGenerator().selectionChanged()
         // 고른 클립을 다시 눌렀으면 선택을 푼다(NLE1103A03).
         if NLESelectionTapPolicy.clearsSelection(

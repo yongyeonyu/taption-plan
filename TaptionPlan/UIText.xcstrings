@@ -141065,6 +141065,83 @@
         }
       }
     },
+    "「여러 개 골라 덮기」로 고른 클립만 바꿉니다.|Only the clips you picked change." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「複数選んで上書き」で選んだクリップだけを変えます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只更改用“多选覆盖”选中的片段。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只變更用「多選覆蓋」選取的片段。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur die mit „Mehrere zum Überschreiben wählen“ gewählten Clips ändern sich."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seuls les clips choisis avec « Choisir des clips à remplacer » changent."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cambiano solo le clip scelte con «Scegli clip da sovrascrivere»."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Solo cambian los clips elegidos con «Elegir clips para sobrescribir»."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Só mudam os clipes escolhidos com “Escolher clipes para sobrescrever”."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chỉ thay đổi các clip đã chọn bằng “Chọn nhiều clip để ghi đè”."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hanya klip yang dipilih dengan “Pilih klip untuk ditimpa” yang berubah."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เปลี่ยนเฉพาะคลิปที่เลือกด้วย “เลือกหลายคลิปเพื่อเขียนทับ”"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सिर्फ़ “कई क्लिप चुनकर बदलें” से चुनी क्लिप बदलेंगी।"
+          }
+        }
+      }
+    },
     "가계부 {0}개|{0} ledger entr(ies)" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -148376,6 +148453,160 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ऊँचाई %.1f मी तक घटती-बढ़ती रही, इसलिए कैलिब्रेशन रद्द हो गया। एक जगह रुककर फिर कोशिश करें।"
+          }
+        }
+      }
+    },
+    "고르기 끝내기 ({0}개)|Stop picking ({0})" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選択を終える({0}件)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "结束选择({0} 个)"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "結束選取({0} 個)"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auswahl beenden ({0})"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terminer la sélection ({0})"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fine selezione ({0})"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terminar selección ({0})"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Encerrar seleção ({0})"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kết thúc chọn ({0})"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selesai memilih ({0})"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เลิกเลือก ({0})"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "चुनना बंद करें ({0})"
+          }
+        }
+      }
+    },
+    "고른 클립만|Picked clips" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選んだクリップのみ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仅选中的片段"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "僅選取的片段"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gewählte Clips"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clips choisis"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clip scelte"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clips elegidos"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clipes escolhidos"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clip đã chọn"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Klip terpilih"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เฉพาะคลิปที่เลือก"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "चुनी हुई क्लिप"
           }
         }
       }
@@ -155695,79 +155926,79 @@
         }
       }
     },
-    "기록이 있는 클립을 모두 바꿉니다. 기록이 없는 시간은 미확인으로 남습니다.|Every recorded clip changes. Hours without a record stay unconfirmed." : {
+    "기록이 있는 클립과 미확인 클립을 모두 바꿉니다.|Every recorded clip and every unconfirmed clip changes." : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "記録されたクリップがすべて変わります。記録のない時間は未確認のままです。"
+            "value" : "記録のあるクリップと未確認のクリップをすべて変えます。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "每个已记录的片段都会改变。没有记录的时段仍为未确认。"
+            "value" : "更改所有有记录的片段和未确认片段。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "每個已記錄的片段都會改變。沒有記錄的時段維持未確認。"
+            "value" : "變更所有有紀錄的片段和未確認片段。"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Jeder aufgezeichnete Clip ändert sich. Stunden ohne Eintrag bleiben unbestätigt."
+            "value" : "Alle Clips mit Aufzeichnung und alle unbestätigten Clips ändern sich."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Chaque clip enregistré change. Les heures sans enregistrement restent non confirmées."
+            "value" : "Tous les clips enregistrés et non confirmés changent."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ogni clip registrata cambia. Le ore senza registrazione restano non confermate."
+            "value" : "Cambiano tutte le clip registrate e quelle non confermate."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cambia cada clip registrado. Las horas sin registro quedan sin confirmar."
+            "value" : "Cambian todos los clips con registro y los no confirmados."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Todos os clipes gravados mudam. Horas sem registro continuam não identificadas."
+            "value" : "Mudam todos os clipes com registro e os não confirmados."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mọi clip đã ghi đều thay đổi. Những giờ không có bản ghi vẫn ở trạng thái chưa xác nhận."
+            "value" : "Đổi mọi clip có ghi nhận và mọi clip chưa xác nhận."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Setiap klip yang tercatat berubah. Jam tanpa catatan tetap belum dikonfirmasi."
+            "value" : "Semua klip yang tercatat dan yang belum dikonfirmasi berubah."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ทุกคลิปที่บันทึกไว้จะเปลี่ยน ชั่วโมงที่ไม่มีบันทึกจะยังไม่ยืนยัน"
+            "value" : "เปลี่ยนทุกคลิปที่มีบันทึกและทุกคลิปที่ยังไม่ยืนยัน"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "दर्ज की गई हर क्लिप बदल जाती है। रिकॉर्ड के बिना के घंटे अपुष्ट रहते हैं।"
+            "value" : "रिकॉर्ड वाली और अपुष्ट सारी क्लिप बदलेंगी।"
           }
         }
       }
@@ -164007,6 +164238,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "{0} क्लिप में आपके डाले रिकॉर्ड हैं। छोड़ने पर वे वैसे ही रहेंगी।"
+          }
+        }
+      }
+    },
+    "덮을 클립을 누르세요. 다 고르면 「분류」에서 고르면 한 번에 바뀝니다.|Tap the clips to overwrite, then choose a category to change them all." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上書きするクリップをタップしてください。選び終えたら「分類」で選ぶとまとめて変わります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "点按要覆盖的片段。选好后在“分类”中选择即可一次更改。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "點一下要覆蓋的片段。選好後在「分類」中選擇即可一次變更。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tippe die Clips an, die überschrieben werden sollen, und wähle dann unter „Kategorie“, um alle auf einmal zu ändern."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touchez les clips à remplacer, puis choisissez une catégorie dans « Catégorie » pour tous les changer."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tocca le clip da sovrascrivere, poi scegli una categoria in «Categoria» per cambiarle tutte."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toca los clips que quieres sobrescribir y luego elige una categoría en «Categoría» para cambiarlos todos."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toque nos clipes a sobrescrever e escolha uma categoria em “Categoria” para mudar todos de uma vez."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chạm vào các clip cần ghi đè, rồi chọn danh mục trong “Phân loại” để đổi tất cả một lần."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ketuk klip yang mau ditimpa, lalu pilih kategori di “Kategori” untuk mengubah semuanya sekaligus."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แตะคลิปที่จะเขียนทับ เลือกครบแล้วเลือกหมวดใน “หมวดหมู่” เพื่อเปลี่ยนทั้งหมดทีเดียว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "बदलने वाली क्लिप दबाएँ, फिर “श्रेणी” में चुनें, सब एक साथ बदल जाएँगी।"
           }
         }
       }
@@ -207512,6 +207820,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "खोलने का तरीका"
+          }
+        }
+      }
+    },
+    "여러 개 골라 덮기|Pick clips to overwrite" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "複数選んで上書き"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "多选覆盖"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "多選覆蓋"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mehrere zum Überschreiben wählen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisir des clips à remplacer"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scegli clip da sovrascrivere"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elegir clips para sobrescribir"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escolher clipes para sobrescrever"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chọn nhiều clip để ghi đè"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pilih klip untuk ditimpa"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เลือกหลายคลิปเพื่อเขียนทับ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कई क्लिप चुनकर बदलें"
           }
         }
       }

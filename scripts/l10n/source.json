@@ -22895,7 +22895,7 @@
    "ko": "‘{0}’ 구간을 ‘{1}’로 합칩니다. 센서 원본은 그대로 남습니다.",
    "en": "Merge ‘{0}’ into ‘{1}’. Sensor data is kept.",
    "files": [
-    "MapHomeNLEClipEditor.swift:164"
+    "MapHomeNLEClipEditor.swift:165"
    ],
    "args": [
     "prompt.neighborTitle",
@@ -22968,6 +22968,18 @@
    ]
   },
   {
+   "key": "「여러 개 골라 덮기」로 고른 클립만 바꿉니다.|Only the clips you picked change.",
+   "ko": "「여러 개 골라 덮기」로 고른 클립만 바꿉니다.",
+   "en": "Only the clips you picked change.",
+   "files": [
+    "MapHomeNLEOverwriteSheet.swift:38"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "가계부 {0}개|{0} ledger entr(ies)",
    "ko": "가계부 {0}개",
    "en": "{0} ledger entr(ies)",
@@ -23034,7 +23046,7 @@
    "ko": "가르기",
    "en": "Split",
    "files": [
-    "MapHomeNLEClipEditor.swift:479",
+    "MapHomeNLEClipEditor.swift:480",
     "MapHomeNLERawDetail.swift:52",
     "FirstRunTutorialGuides.swift:50"
    ],
@@ -23136,7 +23148,7 @@
    "ko": "같은 분류끼리 합치기",
    "en": "Merge same categories",
    "files": [
-    "MapHomeNLEOverwriteSheet.swift:287"
+    "MapHomeNLEOverwriteSheet.swift:300"
    ],
    "args": [],
    "targets": [
@@ -23148,7 +23160,7 @@
    "ko": "같은 분류만",
    "en": "Same category",
    "files": [
-    "MapHomeNLEOverwriteSheet.swift:18"
+    "MapHomeNLEOverwriteSheet.swift:20"
    ],
    "args": [],
    "targets": [
@@ -23176,7 +23188,7 @@
    "ko": "같은 원본 구간끼리만 합쳐집니다.",
    "en": "Only clips from the same source segment merge.",
    "files": [
-    "MapHomeNLEOverwriteSheet.swift:296"
+    "MapHomeNLEOverwriteSheet.swift:309"
    ],
    "args": [],
    "targets": [
@@ -24171,6 +24183,32 @@
    "en": "Altitude fluctuated by %.1f m, so calibration was cancelled. Stay in one place and try again.",
    "files": [
     "AppModel+FrequentPlaces.swift:279"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "고르기 끝내기 ({0}개)|Stop picking ({0})",
+   "ko": "고르기 끝내기 ({0}개)",
+   "en": "Stop picking ({0})",
+   "files": [
+    "MapHomeNLEClipEditor+Overwrite.swift:54"
+   ],
+   "args": [
+    "pickedClipIDs.count"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "고른 클립만|Picked clips",
+   "ko": "고른 클립만",
+   "en": "Picked clips",
+   "files": [
+    "MapHomeNLEOverwriteSheet.swift:21"
    ],
    "args": [],
    "targets": [
@@ -25408,11 +25446,11 @@
    ]
   },
   {
-   "key": "기록이 있는 클립을 모두 바꿉니다. 기록이 없는 시간은 미확인으로 남습니다.|Every recorded clip changes. Hours without a record stay unconfirmed.",
-   "ko": "기록이 있는 클립을 모두 바꿉니다. 기록이 없는 시간은 미확인으로 남습니다.",
-   "en": "Every recorded clip changes. Hours without a record stay unconfirmed.",
+   "key": "기록이 있는 클립과 미확인 클립을 모두 바꿉니다.|Every recorded clip and every unconfirmed clip changes.",
+   "ko": "기록이 있는 클립과 미확인 클립을 모두 바꿉니다.",
+   "en": "Every recorded clip and every unconfirmed clip changes.",
    "files": [
-    "MapHomeNLEOverwriteSheet.swift:25"
+    "MapHomeNLEOverwriteSheet.swift:28"
    ],
    "args": [],
    "targets": [
@@ -25721,7 +25759,7 @@
    "ko": "끄면 상세활동은 그대로 남습니다.",
    "en": "When off, detail activities stay.",
    "files": [
-    "MapHomeNLEOverwriteSheet.swift:163"
+    "MapHomeNLEOverwriteSheet.swift:175"
    ],
    "args": [],
    "targets": [
@@ -25770,7 +25808,7 @@
    "ko": "끝 자르기",
    "en": "Trim end",
    "files": [
-    "MapHomeNLEClipEditor.swift:419"
+    "MapHomeNLEClipEditor.swift:420"
    ],
    "args": [],
    "targets": [
@@ -25842,7 +25880,7 @@
    "ko": "나뉜 클립을 한 번에 같은 분류로 바꿉니다",
    "en": "Change every split clip to one category at once",
    "files": [
-    "MapHomeNLEOverwriteSheet.swift:175"
+    "MapHomeNLEOverwriteSheet.swift:187"
    ],
    "args": [],
    "targets": [
@@ -26394,7 +26432,7 @@
    "ko": "다시",
    "en": "Redo",
    "files": [
-    "MapHomeNLEClipEditor.swift:501"
+    "MapHomeNLEClipEditor.swift:502"
    ],
    "args": [],
    "targets": [
@@ -26643,7 +26681,7 @@
    "ko": "대분류",
    "en": "Main",
    "files": [
-    "MapHomeNLEClipEditor.swift:245"
+    "MapHomeNLEClipEditor.swift:246"
    ],
    "args": [],
    "targets": [
@@ -26769,7 +26807,7 @@
    "ko": "덮기",
    "en": "Overwrite",
    "files": [
-    "MapHomeNLEOverwriteSheet.swift:352"
+    "MapHomeNLEOverwriteSheet.swift:365"
    ],
    "args": [],
    "targets": [
@@ -26781,7 +26819,7 @@
    "ko": "덮을 분류",
    "en": "Category",
    "files": [
-    "MapHomeNLEOverwriteSheet.swift:229"
+    "MapHomeNLEOverwriteSheet.swift:242"
    ],
    "args": [],
    "targets": [
@@ -26793,7 +26831,7 @@
    "ko": "덮을 분류를 고르세요",
    "en": "Pick a category to overwrite",
    "files": [
-    "MapHomeNLEOverwriteSheet.swift:372"
+    "MapHomeNLEOverwriteSheet.swift:385"
    ],
    "args": [],
    "targets": [
@@ -26805,11 +26843,23 @@
    "ko": "덮을 클립 중 {0}개는 직접 입력한 기록입니다. 건너뛰면 그대로 남습니다.",
    "en": "{0} of the clips hold records you entered. Skipped clips stay as they are.",
    "files": [
-    "MapHomeNLEOverwriteSheet.swift:125"
+    "MapHomeNLEOverwriteSheet.swift:137"
    ],
    "args": [
     "userOwnedCount"
    ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "덮을 클립을 누르세요. 다 고르면 「분류」에서 고르면 한 번에 바뀝니다.|Tap the clips to overwrite, then choose a category to change them all.",
+   "ko": "덮을 클립을 누르세요. 다 고르면 「분류」에서 고르면 한 번에 바뀝니다.",
+   "en": "Tap the clips to overwrite, then choose a category to change them all.",
+   "files": [
+    "MapHomeNLEClipEditor+Overwrite.swift:65"
+   ],
+   "args": [],
    "targets": [
     "TaptionPlan"
    ]
@@ -27222,7 +27272,7 @@
    "en": "Undo",
    "files": [
     "AssistantSafetyViews.swift:341",
-    "MapHomeNLEClipEditor.swift:493",
+    "MapHomeNLEClipEditor.swift:494",
     "MapHomeStickerEditor.swift:332"
    ],
    "args": [],
@@ -28707,7 +28757,7 @@
    "en": "Unconfirmed",
    "files": [
     "MapHomeLocationPresentation.swift:311",
-    "MapHomeNLEClipEditor.swift:449",
+    "MapHomeNLEClipEditor.swift:450",
     "AppModel+WidgetLiveActivity.swift:109"
    ],
    "args": [],
@@ -29409,7 +29459,7 @@
    "ko": "범위 안 상세활동 {0}개를 지우고 새 분류로 채웁니다.",
    "en": "Clears {0} detail activit(ies) in range and fills them with the new category.",
    "files": [
-    "MapHomeNLEOverwriteSheet.swift:159"
+    "MapHomeNLEOverwriteSheet.swift:171"
    ],
    "args": [
     "detailCount"
@@ -29919,7 +29969,7 @@
    "en": "Category",
    "files": [
     "LedgerSheet.swift:257",
-    "MapHomeNLEClipEditor.swift:563",
+    "MapHomeNLEClipEditor.swift:557",
     "MapHomeNLERawDetail.swift:50"
    ],
    "args": [],
@@ -29932,7 +29982,7 @@
    "ko": "분류는 그대로 두고 손으로 가른 클립만 합칩니다",
    "en": "Merges hand-split clips without changing categories",
    "files": [
-    "MapHomeNLEOverwriteSheet.swift:338"
+    "MapHomeNLEOverwriteSheet.swift:351"
    ],
    "args": [],
    "targets": [
@@ -30748,7 +30798,7 @@
    "ko": "상세 활동",
    "en": "Detail",
    "files": [
-    "MapHomeNLEClipEditor.swift:246"
+    "MapHomeNLEClipEditor.swift:247"
    ],
    "args": [],
    "targets": [
@@ -30808,7 +30858,7 @@
    "ko": "상세활동도 지움",
    "en": "Clear detail activities too",
    "files": [
-    "MapHomeNLEOverwriteSheet.swift:152"
+    "MapHomeNLEOverwriteSheet.swift:164"
    ],
    "args": [],
    "targets": [
@@ -31928,7 +31978,7 @@
    "ko": "손으로 가른 클립을 하나로 되돌립니다. 지금 합칠 수 있는 곳 {0}군데.",
    "en": "Joins the clips you split by hand. {0} place(s) can merge now.",
    "files": [
-    "MapHomeNLEOverwriteSheet.swift:293"
+    "MapHomeNLEOverwriteSheet.swift:306"
    ],
    "args": [
     "mergeableCount"
@@ -31991,7 +32041,7 @@
    "ko": "수면 {0}시간이 바뀝니다",
    "en": "{0} h of sleep will change",
    "files": [
-    "MapHomeNLEOverwritePolicy.swift:80"
+    "MapHomeNLEOverwritePolicy.swift:86"
    ],
    "args": [
     "hours"
@@ -32636,7 +32686,7 @@
    "ko": "시작 자르기",
    "en": "Trim start",
    "files": [
-    "MapHomeNLEClipEditor.swift:418"
+    "MapHomeNLEClipEditor.swift:419"
    ],
    "args": [],
    "targets": [
@@ -34079,6 +34129,18 @@
    "en": "Open",
    "files": [
     "FirstRunTutorialGuides.swift:48"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "여러 개 골라 덮기|Pick clips to overwrite",
+   "ko": "여러 개 골라 덮기",
+   "en": "Pick clips to overwrite",
+   "files": [
+    "MapHomeNLEClipEditor+Overwrite.swift:50"
    ],
    "args": [],
    "targets": [
@@ -38943,7 +39005,7 @@
    "en": "Place",
    "files": [
     "LedgerSheet.swift:264",
-    "MapHomeNLEClipEditor.swift:244"
+    "MapHomeNLEClipEditor.swift:245"
    ],
    "args": [],
    "targets": [
@@ -39217,7 +39279,7 @@
    "ko": "저장하지 못했습니다. 기록은 하나도 바뀌지 않았습니다. 다시 적용해 보세요.",
    "en": "Couldn't save. No records changed. Try applying again.",
    "files": [
-    "MapHomeNLEClipEditor+Overwrite.swift:73"
+    "MapHomeNLEClipEditor+Overwrite.swift:117"
    ],
    "args": [],
    "targets": [
@@ -39280,7 +39342,7 @@
    "ko": "적용 범위",
    "en": "Scope",
    "files": [
-    "MapHomeNLEOverwriteSheet.swift:203"
+    "MapHomeNLEOverwriteSheet.swift:215"
    ],
    "args": [],
    "targets": [
@@ -39292,7 +39354,7 @@
    "ko": "적용",
    "en": "Apply",
    "files": [
-    "MapHomeNLEClipEditor.swift:211"
+    "MapHomeNLEClipEditor.swift:212"
    ],
    "args": [],
    "targets": [
@@ -39376,8 +39438,8 @@
    "ko": "전체 덮기",
    "en": "Overwrite all",
    "files": [
-    "MapHomeNLEClipEditor.swift:552",
-    "MapHomeNLEOverwriteSheet.swift:173",
+    "MapHomeNLEClipEditor+Overwrite.swift:58",
+    "MapHomeNLEOverwriteSheet.swift:185",
     "FirstRunTutorialGuides.swift:51"
    ],
    "args": [],
@@ -39927,7 +39989,7 @@
    "ko": "지금 고른 클립과 같은 분류인 클립만 바꿉니다.",
    "en": "Only clips in the same category as the selected clip change.",
    "files": [
-    "MapHomeNLEOverwriteSheet.swift:30"
+    "MapHomeNLEOverwriteSheet.swift:33"
    ],
    "args": [],
    "targets": [
@@ -40538,7 +40600,7 @@
    "ko": "지우기",
    "en": "Clear",
    "files": [
-    "MapHomeNLEClipEditor.swift:486",
+    "MapHomeNLEClipEditor.swift:487",
     "MapHomeNLERawDetail.swift:54"
    ],
    "args": [],
@@ -40767,7 +40829,7 @@
    "ko": "직접 입력 {0}개 건너뛰기",
    "en": "Skip {0} entered clip(s)",
    "files": [
-    "MapHomeNLEOverwriteSheet.swift:120"
+    "MapHomeNLEOverwriteSheet.swift:132"
    ],
    "args": [
     "userOwnedCount"
@@ -40806,7 +40868,7 @@
    "ko": "직접 입력한 기록이 있습니다",
    "en": "Includes records you entered",
    "files": [
-    "MapHomeNLEOverwriteSheet.swift:115"
+    "MapHomeNLEOverwriteSheet.swift:127"
    ],
    "args": [],
    "targets": [
@@ -40818,7 +40880,7 @@
    "ko": "직접 입력한 클립 {0}개는 그대로 두었습니다",
    "en": "Left {0} clip(s) you entered unchanged",
    "files": [
-    "MapHomeNLEClipEditor+Overwrite.swift:57"
+    "MapHomeNLEClipEditor+Overwrite.swift:100"
    ],
    "args": [
     "result.skipped"
@@ -42097,7 +42159,7 @@
    "ko": "클립 {0}개를 '{1}' 분류로 덮습니다",
    "en": "Overwrites {0} clip(s) with {1}",
    "files": [
-    "MapHomeNLEOverwriteSheet.swift:374"
+    "MapHomeNLEOverwriteSheet.swift:387"
    ],
    "args": [
     "affectedCount",
@@ -42138,7 +42200,7 @@
    "ko": "클립을 고르세요",
    "en": "Select a clip",
    "files": [
-    "MapHomeNLEClipEditor.swift:457"
+    "MapHomeNLEClipEditor.swift:458"
    ],
    "args": [],
    "targets": [
@@ -42905,7 +42967,7 @@
    "ko": "하루 전체",
    "en": "Whole day",
    "files": [
-    "MapHomeNLEOverwriteSheet.swift:17"
+    "MapHomeNLEOverwriteSheet.swift:19"
    ],
    "args": [],
    "targets": [
@@ -43214,7 +43276,7 @@
    "ko": "함께 덮기",
    "en": "Overwrite them too",
    "files": [
-    "MapHomeNLEOverwriteSheet.swift:119"
+    "MapHomeNLEOverwriteSheet.swift:131"
    ],
    "args": [],
    "targets": [
@@ -43250,7 +43312,7 @@
    "ko": "합치기",
    "en": "Merge",
    "files": [
-    "MapHomeNLEClipEditor.swift:161"
+    "MapHomeNLEClipEditor.swift:162"
    ],
    "args": [],
    "targets": [
@@ -43262,7 +43324,7 @@
    "ko": "합치기만",
    "en": "Merge only",
    "files": [
-    "MapHomeNLEOverwriteSheet.swift:330"
+    "MapHomeNLEOverwriteSheet.swift:343"
    ],
    "args": [],
    "targets": [
@@ -43274,7 +43336,7 @@
    "ko": "합칠까요?",
    "en": "Merge?",
    "files": [
-    "MapHomeNLEClipEditor.swift:157"
+    "MapHomeNLEClipEditor.swift:158"
    ],
    "args": [],
    "targets": [
@@ -43906,7 +43968,7 @@
    "ko": "확대",
    "en": "Zoom",
    "files": [
-    "MapHomeNLEClipEditor.swift:520",
+    "MapHomeNLEClipEditor.swift:521",
     "MapHomeNLEToolbar.swift:70"
    ],
    "args": [],

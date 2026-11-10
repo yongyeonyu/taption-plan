@@ -9,6 +9,8 @@ enum NLEOverwriteScope: String, CaseIterable, Identifiable {
     case wholeDay
     /// 지금 고른 클립과 같은 분류의 클립만.
     case sameCategory
+    /// 「여러 개 골라 덮기」로 고른 클립만.
+    case picked
 
     var id: String { rawValue }
 
@@ -16,6 +18,7 @@ enum NLEOverwriteScope: String, CaseIterable, Identifiable {
         switch self {
         case .wholeDay: language.text("하루 전체", "Whole day")
         case .sameCategory: language.text("같은 분류만", "Same category")
+        case .picked: language.text("고른 클립만", "Picked clips")
         }
     }
 
@@ -23,13 +26,18 @@ enum NLEOverwriteScope: String, CaseIterable, Identifiable {
         switch self {
         case .wholeDay:
             language.text(
-                "기록이 있는 클립을 모두 바꿉니다. 기록이 없는 시간은 미확인으로 남습니다.",
-                "Every recorded clip changes. Hours without a record stay unconfirmed."
+                "기록이 있는 클립과 미확인 클립을 모두 바꿉니다.",
+                "Every recorded clip and every unconfirmed clip changes."
             )
         case .sameCategory:
             language.text(
                 "지금 고른 클립과 같은 분류인 클립만 바꿉니다.",
                 "Only clips in the same category as the selected clip change."
+            )
+        case .picked:
+            language.text(
+                "「여러 개 골라 덮기」로 고른 클립만 바꿉니다.",
+                "Only the clips you picked change."
             )
         }
     }
@@ -49,6 +57,8 @@ struct MapHomeNLEOverwriteSheet: View {
     var userOwnedSourceIDs: Set<UUID> = []
     /// 지금 고른 클립의 분류. '같은 분류만'의 기준이다.
     let selectedCategoryID: String?
+    /// 「여러 개 고르기」로 고른 클립. 있으면 범위를 「고른 클립만」으로 연다.
+    var pickedClipIDs: Set<String> = []
     let categories: [MapHomeSidebarMajorCategory]
     var onApply: (NLEOverwriteRequest) -> Void
 
@@ -71,7 +81,7 @@ struct MapHomeNLEOverwriteSheet: View {
     private var targets: [NLEClip] {
         guard let pickedOption else { return [] }
         return NLEOverwritePolicy.targets(
-            track, option: pickedOption, scope: scope, selectedCategoryID: selectedCategoryID
+            track, option: pickedOption, scope: scope, selectedCategoryID: selectedCategoryID, pickedClipIDs: pickedClipIDs
         )
     }
 
@@ -84,7 +94,8 @@ struct MapHomeNLEOverwriteSheet: View {
         NLEOverwritePolicy.affectedCount(
             track,
             scope: scope,
-            selectedCategoryID: selectedCategoryID
+            selectedCategoryID: selectedCategoryID,
+            pickedClipIDs: pickedClipIDs
         )
     }
 
@@ -110,6 +121,7 @@ struct MapHomeNLEOverwriteSheet: View {
         }
         .background(Color.tpBackground)
         .presentationDetents([.medium, .large])
+        .onAppear { if !pickedClipIDs.isEmpty { scope = .picked } }
         .presentationDragIndicator(.visible)
         .confirmationDialog(
             language.text("직접 입력한 기록이 있습니다", "Includes records you entered"),
@@ -202,7 +214,7 @@ struct MapHomeNLEOverwriteSheet: View {
         VStack(alignment: .leading, spacing: 6) {
             sectionTitle(language.text("적용 범위", "Scope"))
             Picker("", selection: $scope) {
-                ForEach(NLEOverwriteScope.allCases) { option in
+                ForEach(NLEOverwriteScope.allCases.filter { $0 != .picked || !pickedClipIDs.isEmpty }) { option in
                     Text("\(option.title(language)) \(count(for: option))").tag(option)
                 }
             }
@@ -220,7 +232,8 @@ struct MapHomeNLEOverwriteSheet: View {
         NLEOverwritePolicy.affectedCount(
             track,
             scope: scope,
-            selectedCategoryID: selectedCategoryID
+            selectedCategoryID: selectedCategoryID,
+            pickedClipIDs: pickedClipIDs
         )
     }
 

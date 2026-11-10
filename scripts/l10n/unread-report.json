@@ -1,43 +1,7 @@
 {
- "ui": 3550,
+ "ui": 3555,
  "catalog": 461,
  "unread": [
-  {
-   "file": "TaptionPlan/UI/LedgerMemoChip.swift",
-   "line": 32,
-   "ko": "found.amount",
-   "en": "found.currency"
-  },
-  {
-   "file": "TaptionPlan/UI/LedgerMemoPanel.swift",
-   "line": 118,
-   "ko": "entry.amount",
-   "en": "entry.currency"
-  },
-  {
-   "file": "TaptionPlan/UI/LedgerMemoPanel.swift",
-   "line": 76,
-   "ko": "month",
-   "en": "language"
-  },
-  {
-   "file": "TaptionPlan/UI/LedgerMemoPanel.swift",
-   "line": 76,
-   "ko": "today",
-   "en": "language"
-  },
-  {
-   "file": "TaptionPlan/UI/LedgerMemoPanel.swift",
-   "line": 75,
-   "ko": "month",
-   "en": "language"
-  },
-  {
-   "file": "TaptionPlan/UI/LedgerMemoPanel.swift",
-   "line": 75,
-   "ko": "today",
-   "en": "language"
-  },
   {
    "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
    "line": 41,
@@ -181,6 +145,42 @@
    "line": 128,
    "ko": "coat.displayName",
    "en": "coat.englishName"
+  },
+  {
+   "file": "TaptionPlan/UI/LedgerMemoChip.swift",
+   "line": 32,
+   "ko": "found.amount",
+   "en": "found.currency"
+  },
+  {
+   "file": "TaptionPlan/UI/LedgerMemoPanel.swift",
+   "line": 118,
+   "ko": "entry.amount",
+   "en": "entry.currency"
+  },
+  {
+   "file": "TaptionPlan/UI/LedgerMemoPanel.swift",
+   "line": 76,
+   "ko": "month",
+   "en": "language"
+  },
+  {
+   "file": "TaptionPlan/UI/LedgerMemoPanel.swift",
+   "line": 76,
+   "ko": "today",
+   "en": "language"
+  },
+  {
+   "file": "TaptionPlan/UI/LedgerMemoPanel.swift",
+   "line": 75,
+   "ko": "month",
+   "en": "language"
+  },
+  {
+   "file": "TaptionPlan/UI/LedgerMemoPanel.swift",
+   "line": 75,
+   "ko": "today",
+   "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",

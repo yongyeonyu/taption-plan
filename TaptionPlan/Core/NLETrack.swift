@@ -19,6 +19,8 @@ struct NLEClip: Identifiable, Hashable, Sendable {
 
     /// 원본 기록이 없는 빈 시간. 자동 기록이 닿지 않은 구간이다.
     var isGap: Bool { option.categoryID == "unconfirmed" }
+    /// 덮을 수 있는 클립: 원본 기록이 있거나 미확인. 원본 없이 채운 분류(수면·활동 채움)는 지어내지 않게 둔다.
+    var isOverwritable: Bool { !parent.sourceIDs.isEmpty || isGap }
 
     var isDirty: Bool {
         startMinute != origin.startMinute
@@ -485,18 +487,21 @@ struct NLETrack: Hashable, Sendable {
     /// 하나씩 고치지 않고 한 번에 바꾼다. `matchingCategoryID`를 주면 그 분류의
     /// 클립만 바꾼다(같은 것끼리 모아 바꾸기).
     ///
-    /// 원본 기록이 없는 빈 시간(`parent.sourceIDs`가 빈 날 구멍)은 건드리지 않는다.
+    /// 미확인(원본 기록이 없는 빈 시간)도 덮는다(대표 신고 2026-11-11: 미확인이 덮어쓰기 안 됨).
+    /// `onlyClipIDs`를 주면 그 클립만 덮는다(여러 개 골라 덮기).
     /// 센서에 없는 시간을 지어내지 않는다는 이 트랙의 규칙과 같은 이유다.
     /// `skippingParents`의 원본 구간은 그대로 둔다(직접 입력 건너뛰기, OVW1108A01).
     @discardableResult
     mutating func overwrite(
         with option: ActivityCorrectionOption,
         matchingCategoryID: String? = nil,
-        skippingParents: Set<NLEClipParent> = []
+        skippingParents: Set<NLEClipParent> = [],
+        onlyClipIDs: Set<String>? = nil
     ) -> Int {
         var changed = 0
         for index in clips.indices {
-            guard !clips[index].parent.sourceIDs.isEmpty,
+            guard onlyClipIDs?.contains(clips[index].id) ?? true,
+                  clips[index].isOverwritable,
                   !skippingParents.contains(clips[index].parent),
                   clips[index].option != option,
                   matchingCategoryID == nil

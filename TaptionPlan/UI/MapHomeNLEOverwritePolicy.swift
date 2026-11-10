@@ -27,16 +27,23 @@ enum NLEOverwritePolicy {
 
     static let sleepCategoryID = "sleep"
 
-    /// 덮으면 바뀌는 클립 수. 원본 기록이 없는 빈 시간은 세지 않는다.
+    /// 덮으면 바뀌는 클립 수. 미확인도 센다(원본 없이 채운 분류는 세지 않는다).
     static func affectedCount(
         _ track: NLETrack,
         scope: NLEOverwriteScope,
-        selectedCategoryID: String?
+        selectedCategoryID: String?,
+        pickedClipIDs: Set<String> = []
     ) -> Int {
-        track.clips.filter { clip in
-            guard !clip.parent.sourceIDs.isEmpty else { return false }
-            return scope == .wholeDay || clip.option.categoryID == selectedCategoryID
-        }.count
+        track.clips.filter { includes($0, scope: scope, selectedCategoryID: selectedCategoryID, pickedClipIDs: pickedClipIDs) }.count
+    }
+
+    static func includes(_ clip: NLEClip, scope: NLEOverwriteScope, selectedCategoryID: String?, pickedClipIDs: Set<String>) -> Bool {
+        guard clip.isOverwritable else { return false }
+        return switch scope {
+        case .wholeDay: true
+        case .sameCategory: clip.option.categoryID == selectedCategoryID
+        case .picked: pickedClipIDs.contains(clip.id)
+        }
     }
 
     /// 이 분류로 덮을 때 실제로 바뀌는 클립. `NLETrack.overwrite`와 같은 조건이다.
@@ -44,13 +51,12 @@ enum NLEOverwritePolicy {
         _ track: NLETrack,
         option: ActivityCorrectionOption,
         scope: NLEOverwriteScope,
-        selectedCategoryID: String?
+        selectedCategoryID: String?,
+        pickedClipIDs: Set<String> = []
     ) -> [NLEClip] {
-        guard scope == .wholeDay || selectedCategoryID != nil else { return [] }
+        guard scope != .sameCategory || selectedCategoryID != nil else { return [] }
         return track.clips.filter { clip in
-            !clip.parent.sourceIDs.isEmpty
-                && clip.option != option
-                && (scope == .wholeDay || clip.option.categoryID == selectedCategoryID)
+            clip.option != option && includes(clip, scope: scope, selectedCategoryID: selectedCategoryID, pickedClipIDs: pickedClipIDs)
         }
     }
 
@@ -133,13 +139,14 @@ enum NLEOverwritePolicy {
         mergesAfter: Bool,
         userOwnedSourceIDs: Set<UUID> = [],
         includesUserOwned: Bool = true,
-        clearsDetails: Bool = false
+        clearsDetails: Bool = false,
+        pickedClipIDs: Set<String> = []
     ) -> Result {
         var next = track
         var result = Result(track: track, changed: 0, merged: 0, subTrack: subTrack)
         var skippedParents: Set<NLEClipParent> = []
         if let option {
-            let candidates = targets(track, option: option, scope: scope, selectedCategoryID: selectedCategoryID)
+            let candidates = targets(track, option: option, scope: scope, selectedCategoryID: selectedCategoryID, pickedClipIDs: pickedClipIDs)
             if !includesUserOwned {
                 skippedParents = userOwnedParents(candidates, userOwnedSourceIDs: userOwnedSourceIDs)
             }
@@ -149,7 +156,8 @@ enum NLEOverwritePolicy {
                 result.changed = next.overwrite(
                     with: option,
                     matchingCategoryID: scope == .sameCategory ? selectedCategoryID : nil,
-                    skippingParents: skippedParents
+                    skippingParents: skippedParents,
+                    onlyClipIDs: scope == .picked ? pickedClipIDs : nil
                 )
             }
             if clearsDetails, var detail = subTrack {

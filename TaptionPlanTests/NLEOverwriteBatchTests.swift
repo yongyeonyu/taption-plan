@@ -104,6 +104,38 @@ final class NLEOverwriteBatchTests: XCTestCase {
 
     // MARK: - 2. 직접 입력 기록
 
+    /// 대표 신고(2026-11-11): 미확인도 덮이고, 여러 개 골라 한 번에 덮는다. 미확인을 덮은 것도 저장 요청이 된다.
+    func testUnconfirmedAndPickedClipsAreOverwritten() throws {
+        let work = UUID(), meal = UUID()
+        // 시간 띠의 미확인 구간은 원본 기록이 없다. 원본 없이 채운 다른 분류(활동)는 덮지 않는다.
+        let unconfirmed = MapHomeTimeRailSegment(startMinute: 600, endMinute: 900, categoryID: "unconfirmed", title: "미확인", sourceIDs: [])
+        let invented = MapHomeTimeRailSegment(startMinute: 1_300, endMinute: 1_440, categoryID: "activity", title: "activity", sourceIDs: [])
+        let track = MapHomeNLEClipEditor.makeMainTrack(segments: [
+            segment(0, 600, "work", work), unconfirmed, segment(900, 1_300, "eating", meal), invented,
+        ])
+        let gap = try XCTUnwrap(track.clip(atMinute: 700))
+        XCTAssertTrue(gap.isGap)
+        XCTAssertEqual(NLEOverwritePolicy.affectedCount(track, scope: .wholeDay, selectedCategoryID: nil), 3)
+
+        let whole = NLEOverwritePolicy.apply(track, option: option("study"), scope: .wholeDay, selectedCategoryID: nil, mergesAfter: false)
+        XCTAssertEqual(whole.track.clip(atMinute: 700)?.option.categoryID, "study", "unconfirmed is overwritten too")
+        XCTAssertEqual(whole.track.clip(atMinute: 1_350)?.option.categoryID, "activity", "time filled without a record stays")
+        let requests = whole.track.editRequests(dayStart: dayStart, calendar: calendar)
+        let covered = requests.flatMap { ActivitySectionOverrideEngine.pieces(for: $0) }
+            .filter { $0.span.start <= at(700) && $0.span.end > at(700) }
+        XCTAssertEqual(covered.map(\.option.categoryID), ["study"], "the unconfirmed span is saved as a user cover")
+
+        let picked: Set<String> = [gap.id, try XCTUnwrap(track.clip(atMinute: 1_000)).id]
+        let some = NLEOverwritePolicy.apply(
+            track, option: option("rest"), scope: .picked, selectedCategoryID: nil, mergesAfter: true, pickedClipIDs: picked
+        )
+        XCTAssertEqual(some.changed, 2)
+        XCTAssertEqual(some.track.clip(atMinute: 700)?.option.categoryID, "rest")
+        XCTAssertEqual(some.track.clip(atMinute: 1_000)?.option.categoryID, "rest")
+        XCTAssertEqual(some.track.clip(atMinute: 100)?.option.categoryID, "work", "unpicked clips stay")
+        XCTAssertEqual(NLEOverwritePolicy.affectedCount(track, scope: .picked, selectedCategoryID: nil, pickedClipIDs: picked), 2)
+    }
+
     func testUserOwnedClipsAreSkippedWhenAskedAndCounted() {
         let automatic = UUID(), entered = UUID()
         let track = MapHomeNLEClipEditor.makeMainTrack(segments: [
