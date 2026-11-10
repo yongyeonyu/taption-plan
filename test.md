@@ -2,6 +2,13 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## TFB1111A02 · TestFlight 307 (2026-11-11)
+
+- `release.sh --yes`: 빌드 307 업로드, 처리 `VALID`, 「TP Taption Plan 내부 테스트」 그룹 연결·테스터 1명 노출을 스크립트가 읽어 확인(보고서 `build/validation/TFB1111A02/testflight-report.json`).
+- 아카이브의 네 번들(앱·위젯·Watch·Watch 위젯) `CFBundleVersion` 모두 307.
+- 아이폰 11에 그 아카이브의 Release 앱 설치, `devicectl`에서 Bundle Version 307 확인. 설치만 했고 기기 화면은 보지 않았다. 아이폰 18에는 설치하지 않았다.
+- 서버는 이 빌드와 같은 코드(리뷰 수정 포함)로 배포(버전 0d5508dd).
+
 ## BKS1111A03·리뷰 수정 · 미래 달은 계획이 있을 때만, 옛 백업 파일 갱신, 가계부 리뷰 (2026-11-11 02:20)
 
 - 원인(대표 화면 01:48의 2026-12~2029-03): 달 후보가 센서 표본·원본 이벤트·일기 예보까지 셌다. 0행 달은 머리글 행 수(센서+기록)에 들지 않는 원본 이벤트만 든 달.
