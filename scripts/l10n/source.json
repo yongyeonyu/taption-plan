@@ -1371,7 +1371,7 @@
    "ko": "PIN을 여러 번 틀려 15분 동안 잠겼어요.",
    "en": "Too many wrong PINs. Locked for 15 minutes.",
    "files": [
-    "AssistantPIN.swift:86"
+    "AssistantPIN.swift:89"
    ],
    "args": [],
    "targets": [
@@ -1383,7 +1383,7 @@
    "ko": "PIN을 여러 번 틀려 잠겼어요. {0}분 뒤 다시 해 주세요.",
    "en": "Too many wrong PINs. Try again in {0} min.",
    "files": [
-    "AssistantPIN.swift:85"
+    "AssistantPIN.swift:88"
    ],
    "args": [
     "$0"
@@ -1470,7 +1470,7 @@
    "ko": "PIN이 맞지 않아요. {0}번 더 틀리면 잠겨요.",
    "en": "Wrong PIN. {0} more tries before it locks.",
    "files": [
-    "AssistantPIN.swift:90"
+    "AssistantPIN.swift:93"
    ],
    "args": [
     "remaining"
@@ -1484,7 +1484,7 @@
    "ko": "PIN이 맞지 않아요.",
    "en": "Wrong PIN.",
    "files": [
-    "AssistantPIN.swift:92"
+    "AssistantPIN.swift:95"
    ],
    "args": [],
    "targets": [
@@ -27116,7 +27116,7 @@
    "ko": "먼저 「AI 연결」에서 PIN을 만들어 주세요.",
    "en": "Set a PIN in AI connections first.",
    "files": [
-    "AssistantPIN.swift:94"
+    "AssistantPIN.swift:97"
    ],
    "args": [],
    "targets": [
@@ -30272,6 +30272,18 @@
    "en": "Server URL",
    "files": [
     "AssistantConnectView.swift:198"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "서버가 아직 이 기능을 모르고 있어요. 앱이나 서버 업데이트가 필요해요.|The server doesn't support this yet. The app or server needs an update.",
+   "ko": "서버가 아직 이 기능을 모르고 있어요. 앱이나 서버 업데이트가 필요해요.",
+   "en": "The server doesn't support this yet. The app or server needs an update.",
+   "files": [
+    "AssistantPIN.swift:103"
    ],
    "args": [],
    "targets": [
@@ -36936,7 +36948,7 @@
    "ko": "잠시 뒤 다시 해 주세요.",
    "en": "Please try again in a moment.",
    "files": [
-    "AssistantPIN.swift:98"
+    "AssistantPIN.swift:101"
    ],
    "args": [],
    "targets": [
@@ -37953,7 +37965,7 @@
    "ko": "지금 PIN을 함께 넣어 주세요.",
    "en": "Enter your current PIN too.",
    "files": [
-    "AssistantPIN.swift:96"
+    "AssistantPIN.swift:99"
    ],
    "args": [],
    "targets": [
@@ -41787,8 +41799,8 @@
    "ko": "확인",
    "en": "OK",
    "files": [
-    "AssistantPINSheet.swift:60",
     "AppShellView.swift:1213",
+    "AssistantPINSheet.swift:60",
     "MapHomeView+Support.swift:311"
    ],
    "args": [],

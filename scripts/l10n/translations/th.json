@@ -2944,6 +2944,7 @@
 "서버 설정 필요|Server setup required": "ต้องตั้งค่าเซิร์ฟเวอร์",
 "서버 주소 복사|Copy server URL": "คัดลอก URL เซิร์ฟเวอร์",
 "서버 주소|Server URL": "URL เซิร์ฟเวอร์",
+"서버가 아직 이 기능을 모르고 있어요. 앱이나 서버 업데이트가 필요해요.|The server doesn't support this yet. The app or server needs an update.": "เซิร์ฟเวอร์ยังไม่รองรับฟีเจอร์นี้ ต้องอัปเดตแอปหรือเซิร์ฟเวอร์",
 "서버에 닿지 않아 키를 바꾸지 못했어요. 잠시 뒤 다시 해 주세요.|Couldn't reach the server, so the key wasn't replaced. Try again in a moment.": "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ จึงยังไม่ได้เปลี่ยนคีย์ โปรดลองอีกครั้งในอีกสักครู่",
 "서버에 올린 기록과 모든 AI 연결, PIN이 지워져요. 쓰던 AI는 다시 연결해야 해요.|The records on the server, every AI connection and the PIN are deleted. You'll need to reconnect the AIs you use.": "บันทึกบนเซิร์ฟเวอร์ การเชื่อมต่อ AI ทั้งหมด และ PIN จะถูกลบ คุณต้องเชื่อมต่อ AI ที่ใช้อีกครั้ง",
 "선과 발자국은 지나온 길, 아이콘은 등록한 곳입니다.|Lines and footprints show where you went. Icons mark saved places.": "เส้นและรอยเท้าแสดงเส้นทางที่ผ่านมา ไอคอนแสดงสถานที่ที่บันทึกไว้",

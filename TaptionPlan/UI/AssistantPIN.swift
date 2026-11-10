@@ -47,6 +47,8 @@ struct AssistantServerRefusal: Equatable, Sendable {
         case unavailable
         /// 422 `current_pin_required`: PIN을 바꿀 때 지금 PIN이 빠졌다.
         case currentPINRequired
+        /// 404 `not_found`: 서버가 이 주소를 모른다(앱보다 옛 서버).
+        case serverOutdated
     }
 
     var kind: Kind
@@ -63,6 +65,7 @@ struct AssistantServerRefusal: Equatable, Sendable {
             retry = max(0, Int(until.timeIntervalSince(now)))
         }
         let remaining = (object["remaining"] as? Int) ?? (object["attemptsLeft"] as? Int)
+        if status == 404, error == "not_found" { return Self(kind: .serverOutdated, message: nil) }
         if status == 503 || error == "pin_check_unavailable" { return Self(kind: .unavailable, message: nil) }
         if error == "current_pin_required" { return Self(kind: .currentPINRequired, message: message) }
         if status == 423 || error.contains("lock") || (status == 429 && error.contains("pin")) {
@@ -96,6 +99,8 @@ struct AssistantServerRefusal: Equatable, Sendable {
             return language.text("지금 PIN을 함께 넣어 주세요.", "Enter your current PIN too.")
         case .unavailable:
             return language.text("잠시 뒤 다시 해 주세요.", "Please try again in a moment.")
+        case .serverOutdated:
+            return language.text("서버가 아직 이 기능을 모르고 있어요. 앱이나 서버 업데이트가 필요해요.", "The server doesn't support this yet. The app or server needs an update.")
         }
     }
 }

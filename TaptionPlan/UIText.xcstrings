@@ -184955,6 +184955,83 @@
         }
       }
     },
+    "서버가 아직 이 기능을 모르고 있어요. 앱이나 서버 업데이트가 필요해요.|The server doesn't support this yet. The app or server needs an update." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サーバーはまだこの機能に対応していません。アプリかサーバーの更新が必要です。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务器尚不支持此功能。需要更新应用或服务器。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "伺服器尚不支援此功能。需要更新 App 或伺服器。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Server unterstützt dies noch nicht. Die App oder der Server muss aktualisiert werden."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le serveur ne prend pas encore cela en charge. L’app ou le serveur doit être mis à jour."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il server non lo supporta ancora. È necessario aggiornare l’app o il server."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El servidor aún no admite esto. Hay que actualizar la app o el servidor."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O servidor ainda não oferece suporte a isso. O app ou o servidor precisa ser atualizado."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Máy chủ chưa hỗ trợ tính năng này. Cần cập nhật ứng dụng hoặc máy chủ."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Server belum mendukung fitur ini. Aplikasi atau server perlu diperbarui."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เซิร์ฟเวอร์ยังไม่รองรับฟีเจอร์นี้ ต้องอัปเดตแอปหรือเซิร์ฟเวอร์"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सर्वर अभी इस सुविधा का समर्थन नहीं करता। ऐप या सर्वर को अपडेट करना होगा।"
+          }
+        }
+      }
+    },
     "서버에 닿지 않아 키를 바꾸지 못했어요. 잠시 뒤 다시 해 주세요.|Couldn't reach the server, so the key wasn't replaced. Try again in a moment." : {
       "extractionState" : "manual",
       "localizations" : {

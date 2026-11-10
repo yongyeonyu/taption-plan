@@ -592,6 +592,8 @@ final class AssistantPhase3Tests: XCTestCase {
         let refusal = AssistantServerRefusal.parse(status: 422, data: Data(#"{"error":"current_pin_required"}"#.utf8))
         XCTAssertEqual(refusal?.kind, .currentPINRequired)
         XCTAssertEqual(AssistantServerRefusal.parse(status: 503, data: Data(#"{"error":"pin_check_unavailable"}"#.utf8))?.kind, .unavailable)
+        // 옛 서버는 /pin을 몰라 404 not_found를 준다(아이폰 18, 2026-11-10).
+        XCTAssertEqual(AssistantServerRefusal.parse(status: 404, data: Data(#"{"error":"not_found"}"#.utf8))?.kind, .serverOutdated)
     }
 
     func testOldLogEntriesStillDecode() throws {
