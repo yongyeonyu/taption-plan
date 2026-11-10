@@ -2,6 +2,12 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## TFB1110A01 · TestFlight 빌드 305 (2026-11-10)
+
+- `scripts/testflight/release.sh --yes`: 304 → 305, 산출물 4개 번들 모두 305 확인, 처리 상태 VALID, `TP Taption Plan 내부 테스트` 그룹 연결·테스터 노출 확인(`build/validation/TFB1110A01/testflight-report.json`).
+- 포함: 커밋 0b1772e2(REV1110A01~A04, WCH1110A01). 이 빌드부터 앱에 카카오 키가 없어, 중계 서버에 키를 넣기 전까지 국내 검색은 Apple 검색만 됨.
+- 확인 못 함: TestFlight 빌드를 실기기에 설치해 쓰기.
+
 ## REV1110A04 · 안 한 영역 리뷰 30건 수정·남해도 윤곽 (2026-11-10)
 
 - 리뷰 3갈래(저장·백업·분류 / iPhone 위젯·Live Activity / 공유 엔진) 각 10건. 수정은 영역별 에이전트가 서로 다른 파일에서 함.
