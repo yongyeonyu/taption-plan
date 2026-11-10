@@ -36,6 +36,18 @@ extension AssistantActivityDay {
         var minutes: Int
         var source: String
     }
+
+    /// 가계부 기록(LED1110A01). 금액과 통화, 원화 환산. 장소·낸 사람·메모는 보내지 않는다.
+    struct Expense: Codable, Equatable, Sendable {
+        var id: String
+        var time: String
+        var title: String
+        var category: String
+        var kind: String
+        var amount: Double
+        var currency: String
+        var amountKRW: Double?
+    }
 }
 
 extension AssistantActivityBuilder {
@@ -68,6 +80,17 @@ extension AssistantActivityBuilder {
             }
             .sorted { $0.start < $1.start }
         if !sleep.isEmpty { result.sleep = sleep }
+        let expenses = input.ledger
+            .filter { $0.occurredAt >= day.start && $0.occurredAt < day.end }
+            .sorted { $0.occurredAt < $1.occurredAt }
+            .prefix(memoLimit)
+            .map {
+                AssistantActivityDay.Expense(
+                    id: $0.id.uuidString, time: stamp.instant($0.occurredAt), title: String($0.title.prefix(60)), category: $0.category.rawValue,
+                    kind: $0.kind.rawValue, amount: $0.amount, currency: $0.currency, amountKRW: $0.amountKRW
+                )
+            }
+        if !expenses.isEmpty { result.expenses = Array(expenses) }
     }
 
     /// 그날의 여행 핀과, 핀 없이 시간만 있는 여행 일정을 여행 번호로 묶는다.

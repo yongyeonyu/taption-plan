@@ -61,6 +61,7 @@
 | `summary` | ○ | ○ | `categories[{id,title,minutes}]`(미확인 제외, 긴 순), `recordedMinutes`, `steps`(있을 때), `plansScheduled`, `plansCompleted` |
 | `records` | ○ | ○ | `{id,start,end,title,category{id,title},source}` 시간순, 최대 200개. `id`는 앱 기록 id(UUID)로 `updateActivity`에 쓴다. `source`는 `auto`(센서·건강 자동) 또는 `user`(직접 입력·사용자 교정) |
 | `memos` | ○ | ○ | `{id,time?,text}` 시간순, 최대 50개(글 1,000자까지). 시각 없는 메모는 `time`이 없다 |
+| `expenses` (LED1110A01) | ○ | ○ | `{id,time,title,category,kind,amount,currency,amountKRW?}` 가계부 기록 시간순, 최대 50개. `kind`는 `expense`·`income`. 장소·낸 사람·메모는 보내지 않는다 |
 | `visits` | ✕ | ○ | `{place,start,end,minutes}` 5분 이상 머문 곳, 지하철·기차로 지나간 자리는 뺀다 |
 | `moves` | ✕ | ○ | `{from,to,mode,start,end,minutes}` 이동 구간. `from`·`to`는 앞뒤 머문 곳 이름 또는 `null`, `mode`는 `walk`·`subway`·`bus`·`car`·`train`·`flight`·`other` |
 
@@ -135,6 +136,7 @@
 | `setTripItemStatus` | `tripId`, `itemId`, `status` | 시간 일정의 예약·계획·미정을 바꾼다 |
 | `updateSleep` | `recordId`(하루의 `sleep[].recordId`), `start`·`end`(ISO 오프셋 포함 또는 `HH:mm`) 중 하나 이상, 둘 다 ISO면 끝이 뒤 | 수면 기록의 시작·끝을 사용자 교정으로 고친다 |
 | `setBubble` (BUB1110A01·A02) | `date`(`YYYY-MM-DD`), `kind`(`routine` 기본·`event`), `start`·`end`(`HH:mm`, 같은 날 `end` > `start`; `event`는 둘 다 없으면 그날 하루), `text` | **보이기만 한다**: 그 시각에 화랑이 말풍선을 띄운다. 기록·계획·메모를 만들거나 바꾸거나 지우지 않는다. 앱은 받은 말풍선을 기기와 앱 DB(`assistant-bubble`, 월별 백업 포함)에 남기고, 재생·사이드바 핸들로 그 시각을 보면 다시 보인다. 보이는 순서는 그날의 `event` → 그 시각의 `routine` → 앱 내장 기본 문구(대분류별). `event`는 그날이 지나면 앱이 지운다. 글 규칙은 아래. AI 쪽 사용법은 `docs/AI_ASSISTANT_GUIDE.md` |
+| `addExpense` (LED1110A01) | `amount`(0 초과 10¹⁰ 이하 숫자), `title`(1~60자), `currency`(세 글자 대문자, 없으면 `KRW`), `category`(`food`·`cafe`·`transport`·`shopping`·`living`·`health`·`culture`·`travel`·`lodging`·`education`·`gift`·`salary`·`other`, 없으면 제목으로 추정), `kind`(`expense` 기본·`income`), `payer`(1~30자, 다른 사람이 냈을 때만), `date`·`time`(없으면 지금) | 가계부에 기록 하나를 더한다. 원화 환산은 앱이 그때 환율(중계 `/fx` 또는 직접 넣은 환율)로 채운다. 「AI가 한 일」에서 되돌리면 지운다 |
 | `setLanguage` | `language`: `automatic`·`korean`·`english`·`ja`·`zh-Hans`·`zh-Hant`·`de`·`fr`·`it`·`es`·`pt-BR`·`vi`·`id`·`th`·`hi` | 앱 언어 |
 | `setTheme` | `theme`: `classic`·`navy`·`purple`·`brown`·`ink` | 화면 테마 |
 | `setMapStyle` | `mapStyle`: `standard`·`hybrid`·`mapLibreNight`·`mapLibreContrast`·`mapLibreCasual`·`mapLibreRPG`·`mapLibreInk` | 지도 모양 |

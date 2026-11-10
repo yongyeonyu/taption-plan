@@ -136,3 +136,35 @@ test("approval page: same-origin referrer, Origin null is left to the CSRF cooki
   const nullOrigin = await (await form("null")).text();
   assert.ok(!nullOrigin.includes("보안 확인에 실패했어요. · Security check failed."), "Origin null passes the origin check");
 });
+
+// TAU1110A01: 머문 곳 이름 후보용 카카오 카테고리 검색. 검색 키로 부르고, 좌표·반경·코드를 검사한다.
+test("kakao category search proxies with a search key and checks its parameters", async () => {
+  const seen = [];
+  const { env } = makeEnv({ KAKAO_REST_API_KEY: "k", FETCH: async (url) => { seen.push(String(url)); return new Response('{"documents":[{"place_name":"카페"}]}', { status: 200 }); } });
+  const search = randomKey();
+  assert.equal((await send(env, "/register", "POST", { purpose: "search" }, search)).status, 201);
+  const ok = await send(env, "/kakao/category?category_group_code=CE7&x=126.9&y=37.5&radius=50&sort=distance", "GET", undefined, search);
+  assert.equal(ok.status, 200);
+  assert.match(seen[0], /search\/category\.json\?category_group_code=CE7&x=126\.9&y=37\.5&radius=50&sort=distance/);
+  for (const bad of ["category_group_code=cafe&x=1&y=2", "category_group_code=CE7&x=a&y=2", "category_group_code=CE7&x=1&y=2&radius=900"]) {
+    assert.equal((await send(env, `/kakao/category?${bad}`, "GET", undefined, search)).status, 400, bad);
+  }
+});
+
+// LED1110A01: 환율은 그날 한 번만 받아 두고, 받지 못하면 전날 값을 stale로 준다.
+test("fx: fetched once a day, cached, stale fallback", async () => {
+  let calls = 0, fail = false;
+  const { env, clock } = makeEnv({ FETCH: async () => { calls++; return fail ? new Response("x", { status: 500 }) : new Response('{"base":"EUR","date":"2026-11-10","rates":{"KRW":1500,"JPY":170}}', { status: 200 }); } });
+  const key = randomKey();
+  assert.equal((await send(env, "/register", "POST", { purpose: "search" }, key)).status, 201);
+  const first = await (await send(env, "/fx", "GET", undefined, key)).json();
+  assert.equal(first.rates.KRW, 1500);
+  assert.equal(first.rates.EUR, 1);
+  await send(env, "/fx", "GET", undefined, key);
+  assert.equal(calls, 1, "cached for the day");
+  fail = true;
+  clock.now += 86_400_000;
+  const stale = await (await send(env, "/fx", "GET", undefined, key)).json();
+  assert.equal(stale.stale, true);
+  assert.equal(stale.rates.JPY, 170);
+});

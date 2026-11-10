@@ -206,6 +206,30 @@ final class TaptionBackupV2Tests: XCTestCase {
         XCTAssertEqual(count, sample.count)
     }
 
+    /// BKS1111A02: 건강 앱에서 가져온 표본만 있는 달(앱을 쓰기 전 몇 년치)은 백업하지 않고, 백업한 달에도 넣지 않는다.
+    func testHealthKitSamplesAreNotBackedUp() async throws {
+        let source = try makeHarness()
+        try await source.store.upsertRecords([
+            record("hk-old", kind: "healthkit-sample", start: date(2023, 4, 2, 9)),
+            record("hk-now", kind: "healthkit-sample", start: date(2026, 10, 3, 9)),
+            record("hk-state", kind: "healthkit-sync-state", start: nil),
+            record("memo", start: date(2026, 10, 4, 9)),
+        ])
+        let results = try await engine(source).backupAllMonths(password: password, now: date(2026, 11, 1))
+        let months = results.compactMap { result -> String? in
+            if case let .month(month) = result.scope { return "\(month.year)-\(month.month)" }
+            return nil
+        }
+        XCTAssertEqual(months, ["2026-10"], "a month with only HealthKit samples is not a backup month")
+        XCTAssertEqual(results.first?.header?.recordCount, 1, "the HealthKit sample in October stays out of the backup")
+        let undated = try await source.store.undatedRecordsForBackup()
+        XCTAssertTrue(undated.isEmpty, "the HealthKit sync state stays out of the settings backup")
+        let removed = try await source.store.deleteRecordRange(
+            from: date(2026, 10, 1, 0).timeIntervalSince1970, to: date(2026, 11, 1, 0).timeIntervalSince1970
+        )
+        XCTAssertEqual(removed, 1, "clearing a backed-up month locally keeps the HealthKit sample it never backed up")
+    }
+
     func testDefaultConfigurationUses600000IterationsAnd16ByteSalt() async throws {
         let harness = try makeHarness()
         try await harness.store.upsertReadings(readings(day: date(2026, 10, 4), count: 20))

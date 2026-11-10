@@ -6,6 +6,7 @@
 // SEC1110A02 requires registration (/register), adds a PIN, a per-master Durable Object (keys, queue, budgets, PIN tries),
 // per-route limits and encrypted metadata. AIR1110A03 adds OAuth 2.1 for MCP connectors and more AI actions.
 import { createSetup, readSetup } from "./setup.js";
+import { fxRoute } from "./fx.js";
 import { open, seal, sha256Hex, storageCryptoKey, vault } from "./crypto.js";
 import { bearer, json, limited, readBody, tooMany, writeAllowed } from "./http.js";
 import { allows, buryLegacyWrap, importLegacyKeys, keyring, keysRoute, pinResetRoute, pinRoute, registerRoute, resealLegacyWrap, resolveKey, sealInfo } from "./keys.js";
@@ -29,15 +30,25 @@ export async function storageKey(token) {
 // REV1110A06: the per-IP minute limit runs before auth (route), and each IP gets 2,000 searches a day across all its keys.
 const KAKAO_URL = "https://dapi.kakao.com/v2/local/search/keyword.json";
 const KAKAO_PARAMS = ["query", "x", "y", "radius", "sort", "size", "page"];
+// TAU1110A01: 머문 곳 이름 후보. 좌표 주변 카테고리(음식점 FD6·카페 CE7 등) 검색.
+const KAKAO_CATEGORY_URL = "https://dapi.kakao.com/v2/local/search/category.json";
+const KAKAO_CATEGORY_PARAMS = ["category_group_code", "x", "y", "radius", "sort", "size", "page"];
+const CATEGORY_CODE = /^[A-Z]{2}\d$/;
 
-export async function kakaoKeyword(request, env, fetcher = fetch) {
+export async function kakaoKeyword(request, env, fetcher = fetch, category = false) {
   if (request.method !== "GET") return json({ error: "method_not_allowed" }, 405);
   if (!env.KAKAO_REST_API_KEY) return json({ error: "unavailable" }, 503);
   const incoming = new URL(request.url).searchParams;
-  const query = incoming.get("query") ?? "";
-  if (!query.trim() || query.length > 100) return json({ error: "bad_query" }, 400);
-  const target = new URL(KAKAO_URL);
-  for (const name of KAKAO_PARAMS) {
+  if (category) {
+    const code = incoming.get("category_group_code") ?? "";
+    const x = Number(incoming.get("x")), y = Number(incoming.get("y")), radius = Number(incoming.get("radius") ?? 50);
+    if (!CATEGORY_CODE.test(code) || !Number.isFinite(x) || !Number.isFinite(y) || !(radius >= 1 && radius <= 500)) return json({ error: "bad_query" }, 400);
+  } else {
+    const query = incoming.get("query") ?? "";
+    if (!query.trim() || query.length > 100) return json({ error: "bad_query" }, 400);
+  }
+  const target = new URL(category ? KAKAO_CATEGORY_URL : KAKAO_URL);
+  for (const name of category ? KAKAO_CATEGORY_PARAMS : KAKAO_PARAMS) {
     const value = incoming.get(name);
     if (value !== null) target.searchParams.set(name, value.slice(0, 100));
   }
@@ -64,7 +75,7 @@ async function kakaoRoute(request, ctx) {
     const perIp = await (await ipState(ctx.env, request)).call("countDaily", { name: "kakao", limit: LIMITS.kakaoPerIpDay, now: ctx.now, expire: true });
     if (!perIp.ok) return tooMany("kakao_daily_limit", perIp.retryAfter);
   }
-  return kakaoKeyword(request, ctx.env, ctx.env.FETCH); // FETCH: 시험용 바꿔치기
+  return kakaoKeyword(request, ctx.env, ctx.env.FETCH, new URL(request.url).pathname === "/kakao/category"); // FETCH: 시험용 바꿔치기
 }
 
 const ROUTES = {
@@ -119,6 +130,12 @@ const ROUTES = {
   "/kakao/keyword": {
     GET: ["search", kakaoRoute],
   },
+  "/kakao/category": {
+    GET: ["search", kakaoRoute],
+  },
+  "/fx": {
+    GET: ["search", fxRoute],
+  },
 };
 
 // 인증 없이 받는 경로. OAuth 메타데이터·등록·토큰은 브라우저 클라이언트도 부를 수 있게 CORS를 연다.
@@ -161,7 +178,7 @@ async function authorized(request, env, url, route, pathKey = null) {
   const [need, run, part] = entry;
   const state = userState(env, auth.master);
   const admission = await state.call("admit", {
-    now, registration: auth.kind === "master", entry: auth.entry, adopt: await adoptInfo(auth), kakao: url.pathname === "/kakao/keyword",
+    now, registration: auth.kind === "master", entry: auth.entry, adopt: await adoptInfo(auth), kakao: url.pathname.startsWith("/kakao/"),
   });
   if (!admission.ok) {
     if (admission.tomb) await buryLegacyWrap(env.PLANS, auth.hash);
@@ -194,7 +211,7 @@ async function route(request, env, url) {
   if (publicRoute) return request.method === "GET" ? publicRoute(request, env, url) : json({ error: "method_not_allowed" }, 405);
   if (!env.USER_STATE) return json({ error: "unavailable" }, 503);
   // 인증 전에 IP마다 요청 수를 제한한다(finding 3). 카카오는 자기 제한(KAKAO_LIMIT)을 쓴다(N2: 이것도 인증 전).
-  if (await limited(url.pathname === "/kakao/keyword" ? env.KAKAO_LIMIT : env.REQUEST_LIMIT, request)) return tooMany();
+  if (await limited(url.pathname.startsWith("/kakao/") ? env.KAKAO_LIMIT : env.REQUEST_LIMIT, request)) return tooMany();
   switch (url.pathname) {
     case "/register": return registerRoute(request, env, now);
     case "/oauth/register": return registerClient(request, env, now);

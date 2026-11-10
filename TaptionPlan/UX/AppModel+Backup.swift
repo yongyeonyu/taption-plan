@@ -186,6 +186,7 @@ extension AppModel {
             let summary = try await backupService.restore(scope, password: password)
             securityService?.keepOpenedBackupPassword(password)
             try await reloadSnapshotAfterStoreChange()
+            LedgerBook.shared.reset()
             let detail = AppLanguagePreference.text(
                 korean: "센서 \(summary.newReadings)행 추가, 기록 \(summary.changedRecords)개 반영",
                 english: "\(summary.newReadings) sensor rows added, \(summary.changedRecords) records applied"

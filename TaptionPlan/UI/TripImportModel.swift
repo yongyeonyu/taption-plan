@@ -241,3 +241,38 @@ struct TripImportDiff: Equatable {
         return diff
     }
 }
+
+/// 미리보기 이동 시간 경고(TAU1110A01). 앞 일정이 끝나고 다음이 시작할 때까지가 직선 거리로 어림한 이동 시간보다 짧으면 알린다.
+/// 걷기 4.5km/h(1.5km 이하), 그 밖은 도시 이동 25km/h에 1.2배 여유. AI가 적은 이동 분이 더 길면 그것을 쓴다.
+/// 항공편 도착 뒤에는 입국·짐 찾기로 60분을 먼저 둔다.
+enum TripImportTimingCheck {
+    enum Warning: Equatable {
+        case tightMove(needMinutes: Int)
+        case afterFlight(needMinutes: Int)
+    }
+
+    static let arrivalMinutes = 60.0
+
+    static func warnings(_ items: [TripImportItem]) -> [String: Warning] {
+        var result: [String: Warning] = [:]
+        let sorted = items.sorted { $0.start < $1.start }
+        for (previous, next) in zip(sorted, sorted.dropFirst()) where next.kind != .flight {
+            let gapMinutes = next.start.timeIntervalSince(previous.end) / 60
+            if previous.kind == .flight {
+                if gapMinutes < arrivalMinutes, gapMinutes > -1 { result[next.id] = .afterFlight(needMinutes: Int(arrivalMinutes)) }
+                continue
+            }
+            guard let need = needMinutes(from: previous, to: next), gapMinutes < need else { continue }
+            result[next.id] = .tightMove(needMinutes: Int(need.rounded(.up)))
+        }
+        return result
+    }
+
+    static func needMinutes(from previous: TripImportItem, to next: TripImportItem) -> Double? {
+        guard let a = previous.coordinate, let b = next.coordinate else { return next.travelMinutes }
+        let meters = CLLocation(latitude: a.latitude, longitude: a.longitude).distance(from: CLLocation(latitude: b.latitude, longitude: b.longitude))
+        guard meters >= 200 else { return nil }
+        let guess = (meters <= 1_500 ? meters / 75 : meters / 416.7) * 1.2
+        return max(guess, next.travelMinutes ?? 0)
+    }
+}

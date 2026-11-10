@@ -22,6 +22,8 @@ struct AssistantEditDelta: Codable, Equatable, Sendable {
     var preferences: [AssistantPreferenceChange]?
     /// AI 말풍선(BUB1110A01). 예전 기록에는 없다.
     var bubbleID: UUID?
+    /// 가계부 기록(LED1110A01). 예전 기록에는 없다.
+    var ledgerEntryID: UUID?
 
     var isEmpty: Bool {
         plans.isEmpty && memos.isEmpty && actuals.isEmpty && corrections.isEmpty
@@ -236,6 +238,7 @@ extension AppModel {
         guard await persistOrRollBack(userEditRollback(from: previous, historyItemID: addedID)) else { return false }
         for change in stored { preferences.set(change.key, value: change.before, model: self) }
         if let bubbleID = entry.delta.bubbleID { AssistantBubbleStore.remove(bubbleID, file: preferences.bubbleFile) }
+        if let ledgerID = entry.delta.ledgerEntryID { await preferences.ledger.delete(ledgerID) }
         return true
     }
 }

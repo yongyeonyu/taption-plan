@@ -1,7 +1,79 @@
 {
- "ui": 3490,
+ "ui": 3541,
  "catalog": 461,
  "unread": [
+  {
+   "file": "TaptionPlan/Core/LedgerCore.swift",
+   "line": 281,
+   "ko": "_ amount: Double",
+   "en": "String = \"KRW\""
+  },
+  {
+   "file": "TaptionPlan/Core/LedgerIntents.swift",
+   "line": 20,
+   "ko": "saved.amount",
+   "en": "saved.currency"
+  },
+  {
+   "file": "TaptionPlan/UI/LedgerSheet.swift",
+   "line": 81,
+   "ko": "byCurrency[code] ?? 0",
+   "en": "code"
+  },
+  {
+   "file": "TaptionPlan/UI/LedgerSheet.swift",
+   "line": 83,
+   "ko": "LedgerBook.total(trip, .expense)",
+   "en": "language"
+  },
+  {
+   "file": "TaptionPlan/UI/LedgerSheet.swift",
+   "line": 147,
+   "ko": "spent",
+   "en": "language"
+  },
+  {
+   "file": "TaptionPlan/UI/LedgerSheet.swift",
+   "line": 148,
+   "ko": "earned",
+   "en": "language"
+  },
+  {
+   "file": "TaptionPlan/UI/LedgerSheet.swift",
+   "line": 151,
+   "ko": "left",
+   "en": "language"
+  },
+  {
+   "file": "TaptionPlan/UI/LedgerSheet.swift",
+   "line": 157,
+   "ko": "net",
+   "en": "language"
+  },
+  {
+   "file": "TaptionPlan/UI/LedgerSheet.swift",
+   "line": 192,
+   "ko": "entry.amount",
+   "en": "entry.currency"
+  },
+  {
+   "file": "TaptionPlan/UI/LedgerSheet.swift",
+   "line": 195,
+   "ko": "krw",
+   "en": "language"
+  },
+  {
+   "file": "TaptionPlan/UI/LedgerSheet.swift",
+   "line": 367,
+   "ko": "transfer.amountKRW",
+   "en": "language"
+  },
+  {
+   "file": "TaptionPlan/UI/LedgerSheet.swift",
+   "line": 371,
+   "ko": "LedgerBook.total(entries, .expense)",
+   "en": "language"
+  },
   {
    "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
    "line": 41,
@@ -85,6 +157,12 @@
    "line": 203,
    "ko": "koreanTitle",
    "en": "englishTitle"
+  },
+  {
+   "file": "TaptionPlan/UI/AssistantDataActions.swift",
+   "line": 111,
+   "ko": "value.amount",
+   "en": "value.currency"
   },
   {
    "file": "TaptionPlan/UI/FirstRunGuideStage.swift",

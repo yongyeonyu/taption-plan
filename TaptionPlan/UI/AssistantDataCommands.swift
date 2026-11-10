@@ -80,6 +80,8 @@ extension AssistantCommandParser {
             guard let start = raw.start.flatMap({ clock($0, on: day, calendar: calendar) }),
                   let end = raw.end.flatMap({ clock($0, on: day, calendar: calendar) }), end > start else { return nil }
             return .setBubble(start: start, end: end, text: text, kind: kind)
+        case "addExpense":
+            return expense(raw, calendar: calendar)
         default:
             return settingAction(raw)
         }
@@ -135,6 +137,32 @@ extension AssistantCommandParser {
 }
 
 /// 여행 핀·일정 목록 한 벌(되돌리기용).
+extension AssistantCommandParser {
+    /// 가계부 기록(LED1110A01). 서버와 같은 규칙: 금액 0~10¹⁰, 통화 세 글자, 제목 1~60자, 분류는 정해진 것만.
+    static func expense(_ raw: Raw, now: Date = .now, calendar: Calendar) -> AssistantCommand.Action? {
+        guard let amount = raw.amount, amount.isFinite, amount > 0, amount <= 1e10,
+              let title = clean(raw.title, max: 60),
+              let at = memoInstant(date: raw.date, time: raw.time, now: now, calendar: calendar) else { return nil }
+        let currency = (raw.currency ?? "KRW").uppercased()
+        guard currency.count == 3, currency.allSatisfy({ $0.isASCII && $0.isLetter }) else { return nil }
+        var category = LedgerCategory.guess(title)
+        if let name = raw.category {
+            guard let value = LedgerCategory(rawValue: name) else { return nil }
+            category = value
+        }
+        var kind = LedgerEntry.Kind.expense
+        if let name = raw.kind {
+            guard let value = LedgerEntry.Kind(rawValue: name) else { return nil }
+            kind = value
+        }
+        if raw.payer != nil, clean(raw.payer, max: 30) == nil { return nil }
+        return .addExpense(LedgerEntry(
+            occurredAt: at, amount: amount, currency: currency, kind: kind, category: category,
+            title: title, payer: clean(raw.payer, max: 30), note: clean(raw.note, max: 200), source: .assistant
+        ))
+    }
+}
+
 struct AssistantTravelState: Codable, Equatable, Sendable {
     var stops: [TravelPlanStop]
     var items: [TravelTripItem]?
@@ -180,6 +208,7 @@ struct AssistantPreferenceStore {
     var defaults: UserDefaults
     var isLive: Bool
     var bubbleFile = AssistantBubbleStore.url
+    var ledger = LedgerBook.shared
 
     static var live: Self { Self(defaults: .standard, isLive: true) }
 
@@ -187,7 +216,10 @@ struct AssistantPreferenceStore {
     static func test(_ defaults: UserDefaults) -> Self {
         let name = defaults.string(forKey: "assistantBubbleTestFile") ?? UUID().uuidString
         defaults.set(name, forKey: "assistantBubbleTestFile")
-        return Self(defaults: defaults, isLive: false, bubbleFile: FileManager.default.temporaryDirectory.appendingPathComponent("\(name).json"))
+        return Self(
+            defaults: defaults, isLive: false, bubbleFile: FileManager.default.temporaryDirectory.appendingPathComponent("\(name).json"),
+            ledger: LedgerBook(store: { nil })
+        )
     }
 
     func value(_ key: String) -> String? {

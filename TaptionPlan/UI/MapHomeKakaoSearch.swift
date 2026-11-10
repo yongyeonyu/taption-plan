@@ -85,6 +85,41 @@ enum MapHomeKakaoSearch {
         return status == 200 ? decode(data) : []
     }
 
+    /// 머문 곳 이름 후보(TAU1110A01). 식당·카페 가운데 반경 안 가장 가까운 곳. 국내가 아니거나 못 찾으면 nil이라 Apple 지도로 넘어간다.
+    static let stayCategories = ["FD6", "CE7"]
+
+    static func nearestStayName(at center: CLLocationCoordinate2D, radiusMeters: Int = 60) async -> String? {
+        guard isAvailable(at: center), let token = await AssistantRegistration.searchToken() else { return nil }
+        var best: (name: String, meters: Double)?
+        for code in stayCategories {
+            guard let request = categoryRequest(code: code, center: center, radiusMeters: radiusMeters, token: token),
+                  let (data, response) = try? await URLSession.shared.data(for: request),
+                  (response as? HTTPURLResponse)?.statusCode == 200 else { continue }
+            let origin = CLLocation(latitude: center.latitude, longitude: center.longitude)
+            for place in decode(data) {
+                let meters = origin.distance(from: CLLocation(latitude: place.coordinate.latitude, longitude: place.coordinate.longitude))
+                if meters <= Double(radiusMeters), meters < (best?.meters ?? .infinity) { best = (place.title, meters) }
+            }
+        }
+        return best?.name
+    }
+
+    static func categoryRequest(code: String, center: CLLocationCoordinate2D, radiusMeters: Int, token: String) -> URLRequest? {
+        guard let host = TripRelay.host, var components = URLComponents(string: "https://\(host)/kakao/category") else { return nil }
+        components.queryItems = [
+            URLQueryItem(name: "category_group_code", value: code),
+            URLQueryItem(name: "x", value: String(center.longitude)),
+            URLQueryItem(name: "y", value: String(center.latitude)),
+            URLQueryItem(name: "radius", value: String(radiusMeters)),
+            URLQueryItem(name: "sort", value: "distance"),
+            URLQueryItem(name: "size", value: "3"),
+        ]
+        guard let url = components.url else { return nil }
+        var request = URLRequest(url: url, timeoutInterval: 5)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        return request
+    }
+
     static func request(query: String, center: CLLocationCoordinate2D, nearby: Bool, token: String, endpoint: URL? = endpoint) -> URLRequest? {
         guard let endpoint else { return nil }
         var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: false)

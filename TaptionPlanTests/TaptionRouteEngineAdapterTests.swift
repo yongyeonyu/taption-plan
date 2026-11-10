@@ -1,3 +1,4 @@
+import CoreLocation
 import Foundation
 import Testing
 import TaptionRouteEngine
@@ -449,5 +450,17 @@ struct TaptionRouteEngineAdapterTests {
         )
 
         #expect(TaptionRouteEngineAdapter.allowsDottedRoute(for: segment, readings: values))
+    }
+
+    @Test func tripLinesCurveOnlyForFlights() {
+        let seoul = CLLocationCoordinate2D(latitude: 37.56, longitude: 126.97)
+        let gangnam = CLLocationCoordinate2D(latitude: 37.50, longitude: 127.03)
+        let honolulu = CLLocationCoordinate2D(latitude: 21.31, longitude: -157.86)
+        #expect(TravelGreatCircleAdapter.paths([seoul, gangnam]).map(\.count) == [2])
+        let flight = TravelGreatCircleAdapter.paths([seoul, gangnam, honolulu])
+        // 태평양을 건너며 경도 180도에서 둘로 나뉘고, 짧은 구간 끝점은 겹치지 않는다.
+        #expect(flight.count == 2)
+        #expect(flight.flatMap { $0 }.count > 60)
+        #expect(TravelGreatCircleAdapter.paths([seoul]).isEmpty)
     }
 }

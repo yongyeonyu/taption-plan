@@ -10,6 +10,7 @@ enum AssistantActionKind: String, CaseIterable, Identifiable, Codable, Sendable 
     case addGoal, updateGoal, deleteGoal
     case addTripStop, updateTripStop, deleteTripStop, setTripItemStatus
     case updateSleep, setLanguage, setMapStyle, setDisplayOption, setBubble
+    case addExpense
 
     var id: String { rawValue }
 
@@ -37,6 +38,7 @@ enum AssistantActionKind: String, CaseIterable, Identifiable, Codable, Sendable 
         case .setMapStyle: language.text("지도 스타일 바꾸기", "Change map style")
         case .setDisplayOption: language.text("지도 표시 켜고 끄기", "Toggle map display")
         case .setBubble: language.text("AI 말풍선", "AI speech bubbles")
+        case .addExpense: language.text("가계부 기록 더하기", "Add ledger entries")
         }
     }
 }
@@ -109,6 +111,7 @@ extension AssistantCommand.Action {
         case .setMapStyle: .setMapStyle
         case .setDisplayOption: .setDisplayOption
         case .setBubble: .setBubble
+        case .addExpense: .addExpense
         }
     }
 
@@ -116,7 +119,7 @@ extension AssistantCommand.Action {
     /// 루틴을 지우면 하위 일정도 함께 지워지므로 `plans`를 주면 그 수까지 센다(REV1110A06).
     func existingChangeCount(plans: [PlanRecord] = []) -> Int {
         switch self {
-        case .addMemo, .addSchedule, .addGoal, .addTripStop, .setBubble: 0
+        case .addMemo, .addSchedule, .addGoal, .addTripStop, .setBubble, .addExpense: 0
         case let .mergeRecords(_, ids, _, _): ids.count
         case let .deleteGoal(goalID):
             1 + (UUID(uuidString: goalID).flatMap { try? PlanHierarchy.descendants(of: $0, in: plans) }?.count ?? 0)
@@ -153,6 +156,8 @@ struct AssistantEditResult: Equatable, Sendable {
     var preferences: [AssistantPreferenceChange] = []
     /// 더한 말풍선(BUB1110A01). 되돌리면 지운다.
     var bubbleID: UUID?
+    /// 더한 가계부 기록(LED1110A01). 되돌리면 지운다.
+    var ledgerEntryID: UUID?
 
     static func rejected(_ reason: String) -> Self { Self(reason: reason) }
 }
@@ -204,7 +209,7 @@ extension AppModel {
         let language = MapHomeLanguage.current
         switch action {
         case let .addMemo(text, at):
-            // 서버는 2,000자까지 받지만 메모 저장 한도는 1,000자다. 넘으면 화면 오류 없이 거절로만 알린다.
+            // 서버도 1,000자(메모 저장 한도)로 막는다. 예전 서버 큐에 남은 더 긴 글은 화면 오류 없이 거절로만 알린다.
             guard text.count <= TaptionPlanMemoRecord.maximumTextLength else { return .rejected("memo_too_long") }
             guard addMemo(text: text, kind: .idea, categoryID: MemoTimelineEngine.categoryID, on: at) != nil else { return .rejected("memo_failed") }
             return AssistantEditResult(after: AssistantEditText.memo(text))

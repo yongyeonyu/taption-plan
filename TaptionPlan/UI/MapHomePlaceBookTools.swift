@@ -821,8 +821,9 @@ struct MapHomeTripPlanSheet: View {
             Text(date, format: .dateTime.month().day().weekday())
                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.bodyStrong), weight: .bold))
             Map(initialPosition: dayPosition(dayStops)) {
-                MapPolyline(coordinates: dayStops.map(\.coordinate))
-                    .stroke(Color(hex: MapHomeInkWash.sealHex), lineWidth: 3)
+                ForEach(Array(TravelGreatCircleAdapter.paths(dayStops.map(\.coordinate)).enumerated()), id: \.offset) { _, path in
+                    MapPolyline(coordinates: path).stroke(Color(hex: MapHomeInkWash.sealHex), lineWidth: 3)
+                }
                 ForEach(Array(dayStops.enumerated()), id: \.element.id) { index, stop in
                     Marker(stop.title, monogram: Text(verbatim: "\(index + 1)"), coordinate: stop.coordinate)
                 }

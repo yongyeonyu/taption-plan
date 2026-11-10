@@ -127,4 +127,22 @@ final class TripItemStatusTests: XCTestCase {
         XCTAssertEqual(TripItemStatus.booked.spoken("왓 아룬", .korean), "왓 아룬, 예약됨")
         XCTAssertEqual(TripItemStatus.tentative.spoken("Wat Arun", .english), "Wat Arun, Tentative")
     }
+
+    /// TAU1110A01: 빠듯한 이동과 항공편 도착 뒤 시간을 미리보기에서 알린다.
+    func testTimingWarnings() throws {
+        let json = #"""
+        {"format":"bokki-trip","version":1,"tripId":"t2","title":"t","items":[
+         {"id":"f","type":"flight","title":"ICN-BKK","start":"2026-12-02T08:00+09:00","end":"2026-12-02T12:00+07:00"},
+         {"id":"a","type":"sight","title":"왕궁","start":"2026-12-02T12:30+07:00","end":"2026-12-02T14:00+07:00","place":{"lat":13.7500,"lng":100.4913}},
+         {"id":"b","type":"meal","title":"짜뚜짝","start":"2026-12-02T14:10+07:00","end":"2026-12-02T15:00+07:00","place":{"lat":13.7999,"lng":100.5500}},
+         {"id":"c","type":"cafe","title":"근처 카페","start":"2026-12-02T15:10+07:00","place":{"lat":13.8000,"lng":100.5510}}
+        ]}
+        """#
+        let plan = try TripImportParser.parse(json).get()
+        let warnings = TripImportTimingCheck.warnings(plan.items)
+        XCTAssertEqual(warnings["a"], .afterFlight(needMinutes: 60))
+        guard case let .tightMove(need) = warnings["b"] else { return XCTFail("\(warnings)") }
+        XCTAssertGreaterThan(need, 10)
+        XCTAssertNil(warnings["c"], "100m 남짓 걷기는 10분이면 된다")
+    }
 }

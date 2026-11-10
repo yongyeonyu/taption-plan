@@ -33,6 +33,8 @@ struct AssistantCommand: Identifiable, Equatable, Sendable {
         case setDisplayOption(AssistantDisplayOption, enabled: Bool)
         /// 그날 그 시각 사이 화랑이 말풍선 글(BUB1110A01). 기록은 바꾸지 않는다.
         case setBubble(start: Date, end: Date, text: String, kind: AssistantBubble.Kind = .routine)
+        /// 가계부 기록 하나(LED1110A01). 되돌리면 지운다.
+        case addExpense(LedgerEntry)
     }
 
     let id: String
@@ -81,6 +83,8 @@ enum AssistantCommandParser {
         let language: String?, mapStyle: String?, theme: String?, option: String?, enabled: Bool?
         // BUB1110A02: setBubble의 routine|event.
         let kind: String?
+        // LED1110A01: addExpense.
+        let amount: Double?, currency: String?, category: String?, payer: String?
     }
 
     /// `{"commands":[...]}`를 읽는다. 서버와 같은 규칙으로 다시 본다.
@@ -294,6 +298,7 @@ struct AssistantCommandOutcome: Equatable, Sendable {
     var edits = 0
     var settings = 0
     var bubbles = 0
+    var ledger = 0
     /// 「AI가 한 일」에 남길 항목(AIR1110A02).
     var entries: [AssistantLogEntry] = []
 
@@ -305,6 +310,7 @@ struct AssistantCommandOutcome: Equatable, Sendable {
         case .updateActivity, .hideRecord, .mergeRecords, .updateRecordTime, .updateSleep: edits += 1
         case .setLanguage, .setMapStyle, .setDisplayOption: settings += 1
         case .setBubble: bubbles += 1
+        case .addExpense: ledger += 1
         }
     }
 
@@ -318,6 +324,7 @@ struct AssistantCommandOutcome: Equatable, Sendable {
         if edits > 0 { parts.append(language.text("기록 수정 \(edits)개", "\(edits) record edit(s)")) }
         if settings > 0 { parts.append(language.text("설정 \(settings)개", "\(settings) setting(s)")) }
         if bubbles > 0 { parts.append(language.text("말풍선 \(bubbles)개", "\(bubbles) bubble(s)")) }
+        if ledger > 0 { parts.append(language.text("가계부 \(ledger)개", "\(ledger) ledger entr(ies)")) }
         if rejected > 0 { parts.append(language.text("못 한 것 \(rejected)개", "\(rejected) not done")) }
         return language.text("AI 비서 요청을 반영했어요", "Applied AI assistant requests") + ": " + parts.joined(separator: " · ")
     }
@@ -403,6 +410,7 @@ extension AppModel {
         var delta = AssistantEditDelta.difference(from: before, to: snapshot, actualIDs: result.actualIDs)
         if !result.preferences.isEmpty { delta.preferences = (delta.preferences ?? []) + result.preferences }
         delta.bubbleID = result.bubbleID
+        delta.ledgerEntryID = result.ledgerEntryID
         return AssistantLogEntry(
             commandID: command.id, kind: command.action.kind, appliedAt: .now,
             before: result.before, after: result.after, delta: delta,

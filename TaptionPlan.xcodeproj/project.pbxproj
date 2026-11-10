@@ -312,6 +312,10 @@
 		B1080801000000000000A001 /* ActualRecordGroupingEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080801000000000000F001 /* ActualRecordGroupingEngine.swift */; };
 		B1080801000000000000A002 /* ReviewReportArchiveEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080801000000000000F002 /* ReviewReportArchiveEngine.swift */; };
 		B1080801000000000000A003 /* ReviewCoverageEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080801000000000000F003 /* ReviewCoverageEngine.swift */; };
+		A1L1110A0100000000000001 /* LedgerCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1110A0100000000000001 /* LedgerCore.swift */; };
+		A1T1111A0100000000000001 /* TravelGreatCircleAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1T1111A0100000000000001 /* TravelGreatCircleAdapter.swift */; };
+		A1L1111A0100000000000004 /* LedgerCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111A0100000000000004 /* LedgerCapture.swift */; };
+		A1L1111A0100000000000005 /* LedgerIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111A0100000000000005 /* LedgerIntents.swift */; };
 		B1080801000000000000A004 /* ActivitySectionOverrideEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080801000000000000F004 /* ActivitySectionOverrideEngine.swift */; };
 		B1080801000000000000A005 /* ReviewSelectionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080801000000000000F005 /* ReviewSelectionEngine.swift */; };
 		B1080801000000000000A006 /* RecordChartEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080801000000000000F006 /* RecordChartEngine.swift */; };
@@ -341,6 +345,7 @@
 		B1A1110A0200000000000001 /* BackupPasswordVault.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1B1110A0200000000000001 /* BackupPasswordVault.swift */; };
 		B1A1110A0300000000000001 /* AssistantPINDerivation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1B1110A0300000000000001 /* AssistantPINDerivation.swift */; };
 		5B0000000000000000000B1A /* AppLockAndPIN.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0000000000000000000B1F /* AppLockAndPIN.swift */; };
+		5BL1110A010000000000000A /* LedgerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BL1110A010000000000000F /* LedgerTests.swift */; };
 		5B00000000000000000000A4 /* TaptionBackupV2Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B00000000000000000000F4 /* TaptionBackupV2Tests.swift */; };
 		A1E0110A0400000000000002 /* StorageReviewFixTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E0110A0400000000000002 /* StorageReviewFixTests.swift */; };
 		5B0000000000000000000C2A /* AppModelBackupConnectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0000000000000000000C2F /* AppModelBackupConnectionTests.swift */; };
@@ -508,6 +513,8 @@
 		A1A1110A0300000000000007 /* AssistantPINSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000007 /* AssistantPINSheet.swift */; };
 		A1M1110A0200000000000001 /* MemoAIEdits.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1M1110A0200000000000001 /* MemoAIEdits.swift */; };
 		A1G1111A0100000000000001 /* AssistantConnectGuide.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1G1111A0100000000000001 /* AssistantConnectGuide.swift */; };
+		A1L1110A0100000000000002 /* LedgerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1110A0100000000000002 /* LedgerSheet.swift */; };
+		A1L1110A0100000000000003 /* MapHomeView+Ledger.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1110A0100000000000003 /* MapHomeView+Ledger.swift */; };
 		A1M1110A0300000000000001 /* MapHomeDefaultBubblePool.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1M1110A0300000000000001 /* MapHomeDefaultBubblePool.swift */; };
 		A1A1110A0300000000000008 /* AssistantConnectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000008 /* AssistantConnectView.swift */; };
 		A1A1110A0300000000000009 /* FirstRunAIConnectPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000009 /* FirstRunAIConnectPage.swift */; };
@@ -1014,6 +1021,10 @@
 		B1080801000000000000F001 /* ActualRecordGroupingEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActualRecordGroupingEngine.swift; sourceTree = "<group>"; };
 		B1080801000000000000F002 /* ReviewReportArchiveEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewReportArchiveEngine.swift; sourceTree = "<group>"; };
 		B1080801000000000000F003 /* ReviewCoverageEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewCoverageEngine.swift; sourceTree = "<group>"; };
+		F1L1110A0100000000000001 /* LedgerCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerCore.swift; sourceTree = "<group>"; };
+		F1T1111A0100000000000001 /* TravelGreatCircleAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelGreatCircleAdapter.swift; sourceTree = "<group>"; };
+		F1L1111A0100000000000004 /* LedgerCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerCapture.swift; sourceTree = "<group>"; };
+		F1L1111A0100000000000005 /* LedgerIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerIntents.swift; sourceTree = "<group>"; };
 		B1080801000000000000F004 /* ActivitySectionOverrideEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitySectionOverrideEngine.swift; sourceTree = "<group>"; };
 		B1080801000000000000F005 /* ReviewSelectionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewSelectionEngine.swift; sourceTree = "<group>"; };
 		B1080801000000000000F006 /* RecordChartEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordChartEngine.swift; sourceTree = "<group>"; };
@@ -1035,6 +1046,7 @@
 		F1B1110A0200000000000001 /* BackupPasswordVault.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupPasswordVault.swift; sourceTree = "<group>"; };
 		F1B1110A0300000000000001 /* AssistantPINDerivation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantPINDerivation.swift; sourceTree = "<group>"; };
 		5B0000000000000000000B1F /* AppLockAndPIN.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLockAndPIN.swift; sourceTree = "<group>"; };
+		5BL1110A010000000000000F /* LedgerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerTests.swift; sourceTree = "<group>"; };
 		5B00000000000000000000F4 /* TaptionBackupV2Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionBackupV2Tests.swift; sourceTree = "<group>"; };
 		F1E0110A0400000000000002 /* StorageReviewFixTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageReviewFixTests.swift; sourceTree = "<group>"; };
 		5B0000000000000000000C2F /* AppModelBackupConnectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModelBackupConnectionTests.swift; sourceTree = "<group>"; };
@@ -1200,6 +1212,8 @@
 		F1A1110A0300000000000007 /* AssistantPINSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantPINSheet.swift; sourceTree = "<group>"; };
 		F1M1110A0200000000000001 /* MemoAIEdits.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoAIEdits.swift; sourceTree = "<group>"; };
 		F1G1111A0100000000000001 /* AssistantConnectGuide.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantConnectGuide.swift; sourceTree = "<group>"; };
+		F1L1110A0100000000000002 /* LedgerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerSheet.swift; sourceTree = "<group>"; };
+		F1L1110A0100000000000003 /* MapHomeView+Ledger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Ledger.swift"; sourceTree = "<group>"; };
 		F1M1110A0300000000000001 /* MapHomeDefaultBubblePool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeDefaultBubblePool.swift; sourceTree = "<group>"; };
 		F1A1110A0300000000000008 /* AssistantConnectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantConnectView.swift; sourceTree = "<group>"; };
 		F1A1110A0300000000000009 /* FirstRunAIConnectPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstRunAIConnectPage.swift; sourceTree = "<group>"; };
@@ -1578,6 +1592,7 @@
 				F40000000000000000000007 /* TaptionStoreQualityTests.swift */,
 				F40000000000000000000008 /* TaptionStoreColumnCodingTests.swift */,
 				F40000000000000000000006 /* SensorDayStoreTests.swift */,
+				5BL1110A010000000000000F /* LedgerTests.swift */,
 				5B00000000000000000000F4 /* TaptionBackupV2Tests.swift */,
 				F1E0110A0400000000000002 /* StorageReviewFixTests.swift */,
 				5B0000000000000000000C2F /* AppModelBackupConnectionTests.swift */,
@@ -1699,6 +1714,8 @@
 				F1A1110A0300000000000007 /* AssistantPINSheet.swift */,
 				F1M1110A0200000000000001 /* MemoAIEdits.swift */,
 				F1G1111A0100000000000001 /* AssistantConnectGuide.swift */,
+				F1L1110A0100000000000002 /* LedgerSheet.swift */,
+				F1L1110A0100000000000003 /* MapHomeView+Ledger.swift */,
 				F1M1110A0300000000000001 /* MapHomeDefaultBubblePool.swift */,
 				F1A1110A0300000000000008 /* AssistantConnectView.swift */,
 				F1A1110A0300000000000009 /* FirstRunAIConnectPage.swift */,
@@ -1993,6 +2010,10 @@
 				B1080801000000000000F001 /* ActualRecordGroupingEngine.swift */,
 				B1080801000000000000F002 /* ReviewReportArchiveEngine.swift */,
 				B1080801000000000000F003 /* ReviewCoverageEngine.swift */,
+				F1L1110A0100000000000001 /* LedgerCore.swift */,
+				F1T1111A0100000000000001 /* TravelGreatCircleAdapter.swift */,
+				F1L1111A0100000000000004 /* LedgerCapture.swift */,
+				F1L1111A0100000000000005 /* LedgerIntents.swift */,
 				B1080801000000000000F004 /* ActivitySectionOverrideEngine.swift */,
 				B1080801000000000000F005 /* ReviewSelectionEngine.swift */,
 				B1080801000000000000F006 /* RecordChartEngine.swift */,
@@ -2627,6 +2648,8 @@
 				A1A1110A0300000000000007 /* AssistantPINSheet.swift in Sources */,
 				A1M1110A0200000000000001 /* MemoAIEdits.swift in Sources */,
 				A1G1111A0100000000000001 /* AssistantConnectGuide.swift in Sources */,
+				A1L1110A0100000000000002 /* LedgerSheet.swift in Sources */,
+				A1L1110A0100000000000003 /* MapHomeView+Ledger.swift in Sources */,
 				A1M1110A0300000000000001 /* MapHomeDefaultBubblePool.swift in Sources */,
 				A1A1110A0300000000000008 /* AssistantConnectView.swift in Sources */,
 				A1A1110A0300000000000009 /* FirstRunAIConnectPage.swift in Sources */,
@@ -2852,6 +2875,10 @@
 				B1080801000000000000A001 /* ActualRecordGroupingEngine.swift in Sources */,
 				B1080801000000000000A002 /* ReviewReportArchiveEngine.swift in Sources */,
 				B1080801000000000000A003 /* ReviewCoverageEngine.swift in Sources */,
+				A1L1110A0100000000000001 /* LedgerCore.swift in Sources */,
+				A1T1111A0100000000000001 /* TravelGreatCircleAdapter.swift in Sources */,
+				A1L1111A0100000000000004 /* LedgerCapture.swift in Sources */,
+				A1L1111A0100000000000005 /* LedgerIntents.swift in Sources */,
 				B1080801000000000000A004 /* ActivitySectionOverrideEngine.swift in Sources */,
 				B1080801000000000000A005 /* ReviewSelectionEngine.swift in Sources */,
 				B1080801000000000000A006 /* RecordChartEngine.swift in Sources */,
@@ -2989,6 +3016,7 @@
 				A4000000000000000000000D /* TaptionStoreQualityTests.swift in Sources */,
 				A4000000000000000000000E /* TaptionStoreColumnCodingTests.swift in Sources */,
 				A40000000000000000000008 /* SensorDayStoreTests.swift in Sources */,
+				5BL1110A010000000000000A /* LedgerTests.swift in Sources */,
 				5B00000000000000000000A4 /* TaptionBackupV2Tests.swift in Sources */,
 				A1E0110A0400000000000002 /* StorageReviewFixTests.swift in Sources */,
 				5B0000000000000000000C2A /* AppModelBackupConnectionTests.swift in Sources */,

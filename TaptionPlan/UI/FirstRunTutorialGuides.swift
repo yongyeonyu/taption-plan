@@ -77,7 +77,7 @@ struct FirstRunWelcomePage: View {
 
     private var chapters: [(icon: String, title: String, detail: String)] {
         [
-            ("checklist", language.text("먼저 설정", "Set up first"), language.text("권한, 센서 주기, 하루 카드, 집과 회사, 연봉, 고양이", "Permissions, sensor interval, day card, home and work, salary, your cat")),
+            ("checklist", language.text("먼저 설정", "Set up first"), language.text("권한, 하루 카드, 집과 회사, 연봉, 고양이, AI 연결", "Permissions, day card, home and work, salary, your cat, AI connection")),
             ("map", language.text("화면 익히기", "Learn the screen"), language.text("지도, 재생, 사이드바, 편집, 메모, 집 성장", "Map, playback, sidebar, editing, memos, home growth")),
             ("lock.shield", language.text("연결과 보호", "Connect and protect"), language.text("캘린더, 백업 비밀번호", "Calendars, backup password")),
         ]

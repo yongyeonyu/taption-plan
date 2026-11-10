@@ -238,8 +238,14 @@ extension AppModel {
             now: now,
             plans: snapshot.plans.filter { $0.span.end > span.start && $0.span.start < span.end },
             goals: snapshot.plans.filter { GoalRecordPolicy.isGoal($0) && $0.span.end > span.start && $0.span.start < span.end },
-            tripStops: settings.travelPlanStops, tripItems: settings.travelTripItems ?? []
+            tripStops: settings.travelPlanStops, tripItems: settings.travelTripItems ?? [],
+            ledger: await assistantLedger(on: span)
         )
+    }
+
+    private func assistantLedger(on span: TimeSpan) async -> [LedgerEntry] {
+        await LedgerBook.shared.load()
+        return LedgerBook.shared.entries.filter { $0.occurredAt >= span.start && $0.occurredAt < span.end }
     }
 
     func assistantCategoryTitle(_ id: String, language: MapHomeLanguage) -> String {

@@ -87,6 +87,7 @@ struct AssistantActivityDay: Codable, Equatable, Sendable {
     var goals: [Goal]?
     var trips: [Trip]?
     var sleep: [Sleep]?
+    var expenses: [Expense]?
 }
 
 /// 하루 기록을 만드는 데 필요한 값. 앱 상태에서 모으고, 시험은 직접 만든다.
@@ -110,6 +111,7 @@ struct AssistantActivityInput: Sendable {
     var goals: [PlanRecord] = []
     var tripStops: [TravelPlanStop] = []
     var tripItems: [TravelTripItem] = []
+    var ledger: [LedgerEntry] = []
 }
 
 enum AssistantActivityBuilder {

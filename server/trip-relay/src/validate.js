@@ -174,12 +174,15 @@ export const COMMAND_FIELDS = {
   setTripItemStatus: ["tripId", "itemId", "status"],
   updateSleep: ["recordId", "start", "end"],
   setBubble: ["date", "start", "end", "text", "kind"],
+  // LED1110A01: 가계부 지출·수입. amount는 그 통화의 금액(양수), kind는 expense 기본 | income.
+  addExpense: ["amount", "currency", "title", "category", "date", "time", "kind", "payer"],
   setLanguage: ["language"],
   setTheme: ["theme"],
   setMapStyle: ["mapStyle"],
   setDisplayOption: ["option", "enabled"],
 };
 export const ACTIONS = Object.keys(COMMAND_FIELDS);
+export const EXPENSE_CATEGORIES = ["food", "cafe", "transport", "shopping", "living", "health", "culture", "travel", "lodging", "education", "gift", "salary", "other"];
 
 // 알려진 칸만 남긴 명령. 동작을 모르면 null.
 export function cleanCommand(value) {
@@ -207,6 +210,11 @@ export function isCommand(value) {
   switch (v.action) {
     case "addMemo":
       return nonEmpty(v.text, 1000) && optional(v.date, isDate) && optional(v.time, isTime);
+    case "addExpense":
+      return typeof v.amount === "number" && Number.isFinite(v.amount) && v.amount > 0 && v.amount <= 1e10
+        && optional(v.currency, (c) => /^[A-Z]{3}$/.test(c)) && nonEmpty(v.title, 60)
+        && optional(v.category, (c) => EXPENSE_CATEGORIES.includes(c)) && optional(v.kind, (k) => k === "expense" || k === "income")
+        && optional(v.payer, (p) => nonEmpty(p, 30)) && optional(v.date, isDate) && optional(v.time, isTime);
     case "addSchedule":
       return nonEmpty(v.title, 200) && isInstant(v.start)
         && optional(v.end, (e) => isInstant(e) && Date.parse(e) > Date.parse(v.start)) && optional(v.note, note);

@@ -589,7 +589,7 @@ public actor TaptionStoreV2 {
             let statement = try prepare(db, """
                 DELETE FROM records
                 WHERE start_ts >= ?1 AND start_ts < ?2
-                  AND NOT (end_ts IS NOT NULL AND end_ts > ?2)
+                  AND NOT (end_ts IS NOT NULL AND end_ts > ?2) AND \(Self.backupKindFilter)
                 """)
             defer { sqlite3_finalize(statement) }
             bind(statement, 1, .real(from))
@@ -622,11 +622,11 @@ public actor TaptionStoreV2 {
         let statement = try prepare(db, """
             SELECT
               (SELECT COUNT(*) FROM readings WHERE ts >= ?1 AND ts < ?2),
-              (SELECT COUNT(*) FROM records WHERE start_ts >= ?1 AND start_ts < ?2),
+              (SELECT COUNT(*) FROM records WHERE start_ts >= ?1 AND start_ts < ?2 AND \(Self.backupKindFilter)),
               (SELECT MIN(v) FROM (SELECT MIN(ts) AS v FROM readings WHERE ts >= ?1 AND ts < ?2
-                 UNION ALL SELECT MIN(start_ts) FROM records WHERE start_ts >= ?1 AND start_ts < ?2)),
+                 UNION ALL SELECT MIN(start_ts) FROM records WHERE start_ts >= ?1 AND start_ts < ?2 AND \(Self.backupKindFilter))),
               (SELECT MAX(v) FROM (SELECT MAX(ts) AS v FROM readings WHERE ts >= ?1 AND ts < ?2
-                 UNION ALL SELECT MAX(start_ts) FROM records WHERE start_ts >= ?1 AND start_ts < ?2))
+                 UNION ALL SELECT MAX(start_ts) FROM records WHERE start_ts >= ?1 AND start_ts < ?2 AND \(Self.backupKindFilter)))
             """)
         defer { sqlite3_finalize(statement) }
         bind(statement, 1, .real(from))
@@ -641,16 +641,21 @@ public actor TaptionStoreV2 {
 
     /// 백업용 기록 행. 삭제 표시 행과 순서(`ord`)까지 포함하고 결정적 순서(종류, id)로 돌려준다.
     public func recordsForBackup(from: Double, to: Double) throws -> [TaptionStoreRecord] {
-        try loadBackupRecords(where: "start_ts >= ? AND start_ts < ?", bindings: [.real(from), .real(to)])
+        try loadBackupRecords(where: "start_ts >= ? AND start_ts < ? AND \(Self.backupKindFilter)", bindings: [.real(from), .real(to)])
     }
+
+    /// 건강 앱에서 가져온 표본(`healthkit-sample`·`healthkit-sync-state`)은 백업하지 않는다(BKS1111A02, 개인정보 문서와 같게).
+    /// 건강 앱이 원본이라 다시 가져올 수 있고, 앱을 쓰기 전 몇 년치가 백업 달로 잡혀 수만 행이 올라갔다.
+    /// 달 고르기·행 수 세기·기기에서 달 비우기도 같은 조건을 써서, 백업에 없는 건강 표본을 기기에서 지우지 않는다.
+    public static let backupKindFilter = "kind NOT LIKE 'healthkit-%'"
 
     /// 시작 시각이 없는 기록(설정 헤더·분류 등). 달에 속하지 않아 설정 백업 파일에 담는다.
     public func undatedRecordsForBackup() throws -> [TaptionStoreRecord] {
-        try loadBackupRecords(where: "start_ts IS NULL", bindings: [])
+        try loadBackupRecords(where: "start_ts IS NULL AND \(Self.backupKindFilter)", bindings: [])
     }
 
     public func undatedRecordCount() throws -> Int {
-        try scalarInt("SELECT COUNT(*) FROM records WHERE start_ts IS NULL")
+        try scalarInt("SELECT COUNT(*) FROM records WHERE start_ts IS NULL AND \(Self.backupKindFilter)")
     }
 
     private func loadBackupRecords(
@@ -812,7 +817,7 @@ public actor TaptionStoreV2 {
         let db = try handle()
         let statement = try prepare(db, """
             SELECT DISTINCT CAST(v / 86400.0 AS INTEGER) AS d FROM (
-              SELECT ts AS v FROM readings UNION ALL SELECT start_ts FROM records WHERE start_ts IS NOT NULL)
+              SELECT ts AS v FROM readings UNION ALL SELECT start_ts FROM records WHERE start_ts IS NOT NULL AND \(Self.backupKindFilter))
             ORDER BY d
             """)
         defer { sqlite3_finalize(statement) }

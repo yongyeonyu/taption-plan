@@ -332,11 +332,12 @@ struct MapHomeTripImportSheet: View {
                 ))
             }
             if isResolving { ProgressView().frame(maxWidth: .infinity) }
+            let warnings = TripImportTimingCheck.warnings(plan.items)
             ForEach(plan.days(), id: \.day) { group in
                 VStack(alignment: .leading, spacing: 6) {
                     Text(group.day, format: .dateTime.month().day().weekday())
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .bold))
-                    ForEach(group.items) { item in row(item) }
+                    ForEach(group.items) { item in row(item, warning: warnings[item.id]) }
                 }
             }
             wideButton(language.text("여행 계획에 반영", "Add to trip plan"), prominent: true) {
@@ -363,7 +364,7 @@ struct MapHomeTripImportSheet: View {
         }
     }
 
-    private func row(_ item: TripImportItem) -> some View {
+    private func row(_ item: TripImportItem, warning: TripImportTimingCheck.Warning? = nil) -> some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: item.kind.symbol).frame(width: 22).foregroundStyle(Color.tpInk)
             VStack(alignment: .leading, spacing: 2) {
@@ -372,6 +373,11 @@ struct MapHomeTripImportSheet: View {
                 TripItemStatusBadge(status: item.status, language: language)
                 if let minutes = item.travelMinutes, minutes > 0 {
                     caption(language.text("앞에서 이동 \(Int(minutes))분", "\(Int(minutes)) min from previous"))
+                }
+                if let warning {
+                    Text(warningText(warning))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.caption), weight: .semibold))
+                        .foregroundStyle(.orange)
                 }
                 if item.coordinate == nil {
                     Text(language.text("위치를 찾지 못해 지도에는 표시되지 않아요", "Location not found; not shown on the map"))
@@ -387,6 +393,13 @@ struct MapHomeTripImportSheet: View {
         }
         .padding(10)
         .background(Color.tpCard, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private func warningText(_ warning: TripImportTimingCheck.Warning) -> String {
+        switch warning {
+        case let .tightMove(need): language.text("이동 시간이 빠듯해요(약 \(need)분 필요)", "Tight move (about \(need) min needed)")
+        case let .afterFlight(need): language.text("도착 뒤 입국·짐 찾기로 \(need)분은 두세요", "Allow \(need) min after landing for arrival")
+        }
     }
 
     /// 현지 시각으로 보여 준다(방콕 도착은 방콕 시각).
@@ -414,8 +427,16 @@ struct MapHomeTripImportSheet: View {
         pendingApp = nil
         promptKey = key
         let text = prompt(key: key)
-        // 키가 든 글은 이 기기에만 10분 동안 둔다.
-        if key != nil { AssistantClipboard.copy(text) } else { UIPasteboard.general.string = text }
+        if let key, let endpoint = TripRelay.endpoint {
+            // 키는 글에 넣지 않고 1회용 주소(10분·3번)로 건넨다(SET1110A01). 서버에 닿지 못하면 키가 든 글을 이 기기에만 10분 둔다.
+            let base = TripImportPrompt.text(languageCode: TripImportPrompt.currentLanguageCode)
+            let delivery = TripRelay.deliveryInstruction(endpoint: endpoint, key: key)
+            Task { AssistantClipboard.copy(await TripRelay.setupLinkText(for: delivery).map { base + "\n\n" + $0 } ?? text) }
+        } else if key != nil {
+            AssistantClipboard.copy(text)
+        } else {
+            UIPasteboard.general.string = text
+        }
         TripClipboardWatch.promptCopied()
         copiedFor = app
         guard app == .pickle else {

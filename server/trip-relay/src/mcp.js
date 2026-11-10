@@ -6,7 +6,7 @@
 import { json, readBody, writeAllowed } from "./http.js";
 import { allows } from "./keys.js";
 import { queueCommand, readActivity, readPolish, readResults, readSummary, savePlan } from "./store.js";
-import { ACTIONS, DISPLAY_OPTIONS, LANGUAGES, MAP_STYLES, THEMES, TRIP_STATUSES } from "./validate.js";
+import { ACTIONS, DISPLAY_OPTIONS, EXPENSE_CATEGORIES, LANGUAGES, MAP_STYLES, THEMES, TRIP_STATUSES } from "./validate.js";
 
 export const PROTOCOL_VERSION = "2025-06-18";
 const SERVER_INFO = { name: "taption-plan", title: "Taption Plan", version: "3.0.0" };
@@ -51,6 +51,10 @@ const TOOLS = [
     object({}), (ctx) => readResults(ctx)),
   addTool("add_memo", "addMemo", "Add memo", "Add a memo at a time of a day (default: now today, noon other days).",
     { text: str("1-1000 characters"), date: DATE, time: HHMM("Time") }, ["text"]),
+  addTool("add_expense", "addExpense", "Add expense", "Add a ledger entry the user told you about, e.g. \"coffee 4,500 won\". amount is in currency (default KRW); kind expense (default) or income.",
+    { amount: { type: "number", description: "Positive amount in the currency", exclusiveMinimum: 0 }, currency: str("ISO 4217, e.g. KRW, JPY, USD", { pattern: "^[A-Z]{3}$" }),
+      title: str("1-60 characters, e.g. Coffee"), category: enumOf("Category", EXPENSE_CATEGORIES), kind: enumOf("expense or income", ["expense", "income"]),
+      payer: str("Who paid, 1-30 characters (for group trips)"), date: DATE, time: HHMM("Time") }, ["amount", "title"]),
   addTool("add_schedule", "addSchedule", "Add schedule", "Add a planned activity. Without end it lasts one hour.",
     { title: str("1-200 characters"), start: INSTANT("Start"), end: INSTANT("End, after start"), note: str("Up to 1000 characters") }, ["title", "start"]),
   commandTool("update_activity", "updateActivity", "Rename or recategorize a record", "Correct a record's title and/or category. Target by recordId or the startTime it covers.",

@@ -2,6 +2,23 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## NGT1111A01 · 밤사이 진행 — 아이폰 11 검증 (2026-11-11 01:40~)
+
+- 아이폰 11 Pro 실기기(시뮬레이터 아님) 앱 단위 시험 전체: 2,517건 중 통과 2,490, 실패 2, 건너뜀 25 (`build/validation/NGT1111A01/unit-iphone11.xcresult`, 19분). 실패 2건(`FeatureEngineTests` `testImmediateSensorAnalysisKeepsEveryPendingDay`·`testSensorAnalysisDefersBackgroundReadingsAndCoalescesOnForeground`)은 따로 다시 돌리면 둘 다 통과(`rerun-feature-iphone11.xcresult`). 전체 실행 부하에서 시간 기대가 밀리는 기기 타이밍 문제로 보고 코드는 그대로 뒀다(A13에서 20초 대기 안에 둘째 날 분석이 끝나지 않음). 화랑이 장식 시험(`testScarfAndRibbonStayOnTheBodyInEveryScene`)이 이 기기에서 수 분 걸린다.
+
+## BKS1111A01·BKS1111A02 · 백업이 다른 기기에 오는지, 건강 표본 달 빼기 (2026-11-11)
+
+- 아이폰 11에서 비밀번호 없이 iCloud 백업 폴더만 나열하는 기기 시험(`BackupArrivalProbeTests`, `TEST_RUNNER_TAPTION_BACKUP_PROBE=1`일 때만): 아이폰 18이 01:43~01:47(KST)에 올린 파일 57개가 보임(아직 내려받지 않은 자리표시자, `new-iphone11.log`). 2026-10 61.8MB·2026-11 51.6MB·설정 3.6MB, 2022-04~2026-09는 1~6MB씩, 2026-12~2029-03은 3~8KB(미래 일정). 복원은 대표가 아침에(비밀번호 필요) — 내려받기·복원은 확인하지 않았다.
+- 맥 iCloud 폴더는 비어 있고 컨테이너 마지막 동기화가 11-07(맥에 앱이 없어 이 컨테이너를 받지 않는 것으로 봄). 그래서 아이폰 11에서 확인했다.
+- BKS1111A02: 2022~2026-04 달은 건강 앱에서 가져온 `healthkit-*` 표본뿐인 달(앱은 반년 전 시작). 백업 질의·달 고르기·행 수·달 비우기에서 그 종류를 뺌. 시험 `testHealthKitSamplesAreNotBackedUp` 아이폰 11 통과(`TaptionBackupV2Tests` 48건 실패 0). 이미 올라간 옛 달 파일 삭제는 대표 판단으로 남김.
+
+## LED1111A02·TAU1111A01 · 가계부·결제 감지·여행 화면 연결 (2026-11-11)
+
+- 아이폰 11 실기기: `LedgerTests`(AI `addExpense` 읽기·거절, 환율, 최소 송금 정산, 장부·오늘 손익, 「AI가 한 일」 기록, 카드 문자 신한·KB·해외·취소·연도 넘김, 영수증 합계), `TripItemStatusTests`(이동 시간 경고), `TaptionRouteEngineAdapterTests`(대권 선·180도 나눔), `AssistantReviewFixTests`·`AssistantCommandEditTests`·`AssistantRelayTests` — 첫 실행 122건 중 실패 1(신한 문자: 같은 줄 뒤 「누적」 때문에 줄째 건너뜀 → 「누적」·「잔액」 앞까지만 보게 고침). 고친 뒤 아이폰 11에서 `LedgerTests` 12·`AssistantRelayTests` 8 실패 0(`ledger2-iphone11.xcresult`), Watch Debug 빌드 성공.
+- 서버: `npm test` 84건 통과, 실서버 배포(`/kakao/category`·`/fx`·`addExpense`), 인증 없이 부르면 둘 다 401(경로 있음). 키로 부르는 실제 왕복(환율 받기)은 기기 화면에서 확인할 몫.
+- 언어 팩 52개 문구 12개 언어, `check.py` 실패 0. 구조 지표·엔진 import 경계 통과.
+- 확인 못 함: 가계부·붙여넣기·영수증·단축어 동작 화면, 실제 카드 문자 5건(대표), 카카오 머문 곳 이름이 실제로 나오는지.
+
 ## SLP1111A01 · 화면을 쓰는 동안 충전 정지 수면, 워치 수면 우선 (2026-11-11)
 
 - 대표 신고: 11-10 23:17~11-11 00:58 테스트하느라 충전 연결·제자리, 워치는 충전 중인데 수면으로 기록. 원본(`build/validation/MOV1110A01/device4`): 그 시간 iPhone 표본 거의 전부 `screenIsOn=true`(10분 칸마다 여러 개), 기록은 `charging-inactivity-sleep`.

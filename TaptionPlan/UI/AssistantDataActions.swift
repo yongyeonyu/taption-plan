@@ -103,6 +103,14 @@ extension AppModel {
             var result = AssistantEditResult(after: "\(AssistantEditText.clock(start))–\(AssistantEditText.clock(end)) \(added.parsed?.display ?? text)")
             result.bubbleID = added.id
             return result
+        case let .addExpense(entry):
+            var value = entry
+            await preferences.ledger.load()
+            value.amountKRW = preferences.ledger.krw(value.amount, currency: value.currency)
+            await preferences.ledger.save(value)
+            var result = AssistantEditResult(after: "\(value.title) \(LedgerMoney.text(value.amount, currency: value.currency, language: language))")
+            result.ledgerEntryID = value.id
+            return result
         default:
             return .rejected("invalid")
         }

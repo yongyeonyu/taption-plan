@@ -913,7 +913,7 @@ extension MapHomeView {
                 HStack(spacing: 8) {
                     if passportReturnPage != nil { passportBackButton }
                     searchCircleButton
-                    travelModeButton
+                    modeButtons
                     if recordingShows(\.sidebarMemos), memoDisplayMode == .all {
                         memoCircleButton
                     }

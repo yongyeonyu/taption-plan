@@ -15,7 +15,7 @@ const empty = { 204: { description: "Nothing stored" } };
 const command = {
   type: "object",
   required: ["format", "version", "id", "action"],
-  description: "One edit. Fields by action — addMemo: text, date?, time?. addSchedule: title, start, end?, note?. "
+  description: "One edit. Fields by action — addMemo: text, date?, time?. addExpense: amount (>0), currency? (ISO, default KRW), title, category?, kind? (expense|income), payer?, date?, time?. addSchedule: title, start, end?, note?. "
     + "updateActivity: date, recordId|startTime, title?|categoryId?. hideRecord: date, recordId|startTime. "
     + "mergeRecords: date, recordIds (2-20), title?, categoryId?. updateRecordTime: date, recordId, start?|end? (HH:mm). "
     + "updateSchedule: planId | (date, startTime), then title?, start?, end?, note?. deleteSchedule: planId | (date, startTime). "
