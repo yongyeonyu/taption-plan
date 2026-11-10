@@ -496,13 +496,20 @@ public struct TaptionICloudDriveBackupDestination: TaptionBackupDestination {
     public func remove(name: String) async throws {
         let directory = try await folder()
         let target = directory.appendingPathComponent(name, isDirectory: false)
+        var removed = false
         if FileManager.default.fileExists(atPath: target.path) {
             try fileSystem.coordinatedRemove(target)
+            removed = true
         }
         let placeholder = directory.appendingPathComponent(Self.placeholderName(for: name), isDirectory: false)
         if FileManager.default.fileExists(atPath: placeholder.path) {
             try fileSystem.coordinatedRemove(placeholder)
+            removed = true
         }
+        // 다른 기기가 올리고 이 기기에 아직 내려오지 않은 파일은 iCloud 목록에만 있다. 그 주소로 지운다(BKS1111A03:
+        // 전에는 아무것도 지우지 않고 성공으로 끝났다).
+        guard !removed, let item = await discoveredItems().first(where: { $0.url.lastPathComponent == name }) else { return }
+        try fileSystem.coordinatedRemove(item.url)
     }
 
     public func cleanupStaleUploads() async {
