@@ -46,7 +46,7 @@ enum ChargingInactivitySleepEngine {
                 runs.append([sample])
             }
         }
-        let blockers = actuals.compactMap { actual -> TimeSpan? in
+        let blockers = screenUseSpans(readings, inside: observed) + actuals.compactMap { actual -> TimeSpan? in
             guard actual.source == .appUsage
                     || AutomaticRecordTimelineEngine.isSleep(actual)
                     || AutomaticRecordTimelineEngine.isConfirmedWorkout(actual)
@@ -83,6 +83,24 @@ enum ChargingInactivitySleepEngine {
                 evidence: ["iPhone 충전 중", "가속도·걸음·앱 사용 없음", "1시간 이상 지속"],
                 modelVersion: modelVersion
             )
+        }
+    }
+
+    /// 화면을 실제로 쓴 때(SLP1111A01). 5분 안에 화면 켜짐 표본이 3개 넘게 이어지면 깨어 있었다.
+    /// 알림처럼 한 번 켜진 것은 세지 않는다. 충전·정지여도 그 시간(앞뒤 1분)은 수면에서 뺀다.
+    static func screenUseSpans(_ readings: [SensorReading], inside observed: TimeSpan) -> [TimeSpan] {
+        let times = readings.filter { $0.screenIsOn == true && observed.contains($0.timestamp) }.map(\.timestamp).sorted()
+        var clusters: [[Date]] = []
+        for time in times {
+            if let last = clusters.last?.last, time.timeIntervalSince(last) <= 5 * 60 {
+                clusters[clusters.count - 1].append(time)
+            } else {
+                clusters.append([time])
+            }
+        }
+        return clusters.filter { $0.count >= 3 }.compactMap { cluster in
+            guard let first = cluster.first, let last = cluster.last else { return nil }
+            return TimeSpan(start: first.addingTimeInterval(-60), end: last.addingTimeInterval(60))
         }
     }
 

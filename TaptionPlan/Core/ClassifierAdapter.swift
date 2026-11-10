@@ -478,7 +478,11 @@ enum PhoneSleepFusion {
             wearable: wearable.map(ClassifierAdapter.interval),
             tiers: detectors.map { $0.map { ClassifierAdapter.interval($0.span(asOf: asOf)) } }
         )
-        return picks.map { detectors[$0.tier][$0.index] }.sorted {
+        // 같은 밤(앞뒤 6시간 안)에 워치·HealthKit 수면이 있으면 겹치지 않는 휴대폰 추정 수면도 버린다(SLP1111A01).
+        let wearableNights = wearable.map { TimeSpan(start: $0.start.addingTimeInterval(-6 * 3_600), end: $0.end.addingTimeInterval(6 * 3_600)) }
+        return picks.map { detectors[$0.tier][$0.index] }
+            .filter { record in !wearableNights.contains { $0.intersection(with: record.span(asOf: asOf)) != nil } }
+            .sorted {
             $0.startedAt != $1.startedAt ? $0.startedAt < $1.startedAt : $0.id.uuidString < $1.id.uuidString
         }
     }

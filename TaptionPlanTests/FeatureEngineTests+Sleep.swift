@@ -555,6 +555,42 @@ extension FeatureEngineTests {
         )
     }
 
+    /// SLP1111A01: 충전 중 제자리여도 화면을 계속 쓴 시간은 수면이 아니다(2026-11-10 23:17~00:58 실기기).
+    func testChargingSleepIsNotRecordedWhileTheScreenIsInUse() {
+        let start = makeDate(2026, 8, 9, 23, 0)
+        // 2시간 동안 10분마다 1분 간격으로 화면 켜짐 표본 4개씩(앱을 쓰는 중).
+        let readings = stride(from: 0, to: 120, by: 10).flatMap { block in
+            (0..<4).map { index in
+                SensorReading(
+                    timestamp: start.addingTimeInterval(Double(block * 60 + index * 60)),
+                    motion: .stationary, motionConfidence: .high, stepCount: 0, powerState: .charging, screenIsOn: true
+                )
+            }
+        }
+        let span = TimeSpan(start: start, end: start.addingTimeInterval(2 * hour))
+        XCTAssertTrue(ChargingInactivitySleepEngine.records(
+            readings: readings, actuals: [], inside: span, watchAvailable: false, maximumSampleGap: 15 * 60, asOf: span.end
+        ).isEmpty)
+        XCTAssertEqual(ChargingInactivitySleepEngine.screenUseSpans(readings, inside: span).count, 12)
+    }
+
+    /// SLP1111A01: 같은 밤에 워치·HealthKit 수면이 오면 겹치지 않는 휴대폰 추정 수면은 버린다.
+    func testWatchSleepOwnsTheNight() {
+        let start = Calendar.autoupdatingCurrent.startOfDay(for: makeDate(2026, 8, 24, 12, 0))
+        let readings = [0.0, 0.5, 1, 1.5, 2].map { hourOffset in
+            SensorReading(timestamp: start.addingTimeInterval(hourOffset * hour), motion: .stationary, motionConfidence: .high,
+                          stepCount: 0, powerState: .charging)
+        }
+        let span = TimeSpan(start: start, end: start.addingTimeInterval(8 * hour))
+        let phoneOnly = PhoneSleepFusion.records(readings: readings, actuals: [], inside: span, nominalMaximumSampleGap: 40 * 60, asOf: span.end)
+        XCTAssertFalse(phoneOnly.isEmpty, "without the Watch the phone guess stays")
+        let watch = TimeSpan(start: start.addingTimeInterval(3 * hour), end: start.addingTimeInterval(7 * hour))
+        let withWatch = PhoneSleepFusion.records(
+            readings: readings, actuals: [], inside: span, nominalMaximumSampleGap: 40 * 60, authoritativeSleepSpans: [watch], asOf: span.end
+        )
+        XCTAssertTrue(withWatch.isEmpty, "the Watch's sleep that night wins even where they don't overlap")
+    }
+
     func testChargingInactivitySleepIsBlockedByAppUsage() {
         let start = makeDate(2026, 8, 9, 14, 0)
         let readings = (0...4).map { index in
