@@ -84,6 +84,8 @@ struct LedgerEntry: Codable, Identifiable, Equatable, Sendable {
     /// 단체 정산용. 비우면 나.
     var payer: String?
     var tripID: String?
+    /// 메모에서 금액을 알아봐 만든 기록이면 그 메모 id(LED1111A03). 메모를 고치거나 지우면 따라간다.
+    var memoID: UUID?
     var note: String?
     var source: Source = .manual
     var createdAt = Date()

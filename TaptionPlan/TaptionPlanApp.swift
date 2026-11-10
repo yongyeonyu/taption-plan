@@ -45,6 +45,8 @@ struct TaptionPlanApp: App {
         )
         // 벡터 지도 오프라인 저장본을 MapLibre 요청보다 먼저 읽게 한다(MAP1108A02).
         OfflineVectorMap.install()
+        // 단축어 앱에 「결제 문자 넣기」가 보이도록 시스템에 다시 알린다(대표 신고: 단축어 앱에 없음).
+        BokkiShortcuts.updateAppShortcutParameters()
         #if DEBUG || BENCH
         BenchSeed.runIfRequested()
         #endif

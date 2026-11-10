@@ -212,8 +212,14 @@ extension AppModel {
         case let .addMemo(text, at):
             // 서버도 1,000자(메모 저장 한도)로 막는다. 예전 서버 큐에 남은 더 긴 글은 화면 오류 없이 거절로만 알린다.
             guard text.count <= TaptionPlanMemoRecord.maximumTextLength else { return .rejected("memo_too_long") }
-            guard addMemo(text: text, kind: .idea, categoryID: MemoTimelineEngine.categoryID, on: at) != nil else { return .rejected("memo_failed") }
-            return AssistantEditResult(after: AssistantEditText.memo(text))
+            guard let memoID = addMemo(text: text, kind: .idea, categoryID: MemoTimelineEngine.categoryID, on: at) else { return .rejected("memo_failed") }
+            var result = AssistantEditResult(after: AssistantEditText.memo(text))
+            // 금액이 든 메모는 화면의 메모처럼 가계부에도 이어진다(LED1111A03). 되돌리면 함께 지운다.
+            if let entry = await preferences.ledger.syncMemo(id: memoID, text: text, occurredAt: at, source: .assistant) {
+                result.ledgerEntryID = entry.id
+                result.ledgerEntry = entry
+            }
+            return result
         case let .addSchedule(title, start, end, note):
             // 분류를 알 수 없으니 일반 활동에 둔다.
             if let note, note.count > TaptionPlanMemoRecord.maximumTextLength { return .rejected("note_too_long") }

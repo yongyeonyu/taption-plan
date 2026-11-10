@@ -8,7 +8,8 @@ struct AddPaymentMessageIntent: AppIntent {
     static let description = IntentDescription("카드 결제 문자를 BOKKI Plan 가계부에 넣어요.")
     static let openAppWhenRun = false
 
-    @Parameter(title: "문자 내용")
+    /// 단축어 자동화 「메시지를 받을 때」의 받은 메시지가 바로 이어지게 한다(대표 신고: 넣을 내용이 비어 있음).
+    @Parameter(title: "문자 내용", inputConnectionBehavior: .connectToPreviousIntentResult)
     var text: String
 
     @MainActor

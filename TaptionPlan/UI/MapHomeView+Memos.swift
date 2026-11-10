@@ -200,34 +200,38 @@ extension MapHomeView {
     /// 메모 목록 패널. 폭은 일정 패널과 같은 280으로 맞춘다.
     var memoListPanel: some View {
         VStack(alignment: .leading, spacing: 8) {
+            LedgerMemoHeader(filter: $memoLedgerFilter, language: language, day: model.selectedDate)
+            if memoLedgerFilter == .expenses {
+                LedgerDayCards(language: language, day: model.selectedDate)
+            } else {
             // 큐는 3개를 항상 보여 주고, 넘치면 펼침 버튼으로 스크롤 목록을 연다.
             if queueExpanded {
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 8) {
-                        ForEach(queuedMemos) { memo in
+                        ForEach(panelMemos) { memo in
                             memoCard(memo, showsTime: memo.isTimeless != true)
                         }
                     }
                 }
                 .frame(maxHeight: 300)
             } else {
-                ForEach(queuedMemos.prefix(3)) { memo in
+                ForEach(panelMemos.prefix(3)) { memo in
                     memoCard(memo, showsTime: memo.isTimeless != true)
                 }
             }
             // 위 목록에 이미 있는 메모는 다시 보여 주지 않는다.
-            if let timed = nearbyTimedMemo, !queuedMemos.contains(where: { $0.id == timed.id }) {
+            if let timed = nearbyTimedMemo, !panelMemos.contains(where: { $0.id == timed.id }) {
                 memoCard(timed, showsTime: true)
             }
             if let legacy = nearbyScheduleMemo {
                 scheduleMemoPreview(legacy)
             }
-            if queuedMemos.count > 3 {
+            if panelMemos.count > 3 {
                 Button {
                     withAnimation(.snappy) { queueExpanded.toggle() }
                 } label: {
                     Label(
-                        queueExpanded ? language.text("접기", "Collapse") : "+\(queuedMemos.count - 3)",
+                        queueExpanded ? language.text("접기", "Collapse") : "+\(panelMemos.count - 3)",
                         systemImage: queueExpanded ? "chevron.up" : "chevron.down"
                     )
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
@@ -237,6 +241,7 @@ extension MapHomeView {
                     .mapHomeGlass(in: Capsule())
                 }
                 .buttonStyle(.plain)
+            }
             }
         }
         .frame(width: 280, alignment: .leading)
@@ -279,6 +284,11 @@ extension MapHomeView {
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
                     .foregroundStyle(Color.tpInk)
                     .lineLimit(2)
+                if let badge = memoLedgerBadge(memo) {
+                    Text(badge)
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
+                        .foregroundStyle(Color.tpAccent)
+                }
                 if showsTime {
                     Text(memo.occurredAt.formatted(date: .omitted, time: .shortened))
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))

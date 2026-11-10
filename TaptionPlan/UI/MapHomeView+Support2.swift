@@ -423,6 +423,8 @@ extension MapHomeView {
             bottomBarButton("plus", language.text("메모", "Memo")) {
                 addMemo()
             }
+            // 길게 누르면 가계부(결제 문자 붙여넣기·영수증이 맨 위에 있다, LED1111A03).
+            .contextMenu { Button(language.text("가계부 · 결제 문자 · 영수증", "Ledger · payment text · receipt"), systemImage: "wonsign.circle") { LedgerPresenter.shared.isPresented = true } }
             }
         }
         .padding(.horizontal, 8)

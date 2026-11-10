@@ -347,6 +347,7 @@ struct MapHomeStickerEditorSheet: View {
                         .foregroundStyle(Color.tpAccent)
                         .accessibilityIdentifier("memo-ai-edited")
                 }
+                if let memoID { LedgerMemoChip(memoID: memoID, text: memoText, language: language) }
                 if wantsAIPolish || isQueuedForAIPolish {
                     Text(wantsAIPolish
                         ? language.text("저장하면 연결된 AI에게 맡겨요. 다음에 AI와 대화할 때 다듬어 보내 줘요.", "Saving hands it to your connected AI. It polishes it the next time you chat.")
@@ -791,6 +792,8 @@ struct MapHomeStickerEditorSheet: View {
             ) else { return }
             model.setMemoSticker(id, symbol: chosenMemoSymbol, colorHex: colorHex)
             noteMemoAIEdits(id)
+            let text = memoText, at = occurredAt
+            Task { await LedgerBook.shared.syncMemo(id: id, text: text, occurredAt: at) }
             didSave = true
         }
         dismiss()
@@ -826,6 +829,7 @@ struct MapHomeStickerEditorSheet: View {
         case .sticker(let id): model.deleteMapSticker(id)
         case .memo(let id):
             model.deleteMemo(id)
+            Task { await LedgerBook.shared.removeMemo(id) }
             MemoPolishQueue.resolve(id)
             MemoAIEditMarks.clear(id)
         case .newMemo(let id): model.discardMapMemoDraft(id)

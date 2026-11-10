@@ -585,8 +585,8 @@
    "ko": "AI 다듬기",
    "en": "AI polish",
    "files": [
-    "MapHomeStickerEditor.swift:412",
-    "MapHomeStickerEditor.swift:430"
+    "MapHomeStickerEditor.swift:413",
+    "MapHomeStickerEditor.swift:431"
    ],
    "args": [],
    "targets": [
@@ -848,7 +848,7 @@
    "ko": "AI로 문장 다듬기",
    "en": "Polish text with AI",
    "files": [
-    "MapHomeStickerEditor.swift:438"
+    "MapHomeStickerEditor.swift:439"
    ],
    "args": [],
    "targets": [
@@ -932,7 +932,7 @@
    "ko": "Apple Intelligence 모델을 준비하는 중이에요.",
    "en": "The Apple Intelligence model is getting ready.",
    "files": [
-    "MapHomeStickerEditor.swift:448"
+    "MapHomeStickerEditor.swift:449"
    ],
    "args": [],
    "targets": [
@@ -944,7 +944,7 @@
    "ko": "Apple Intelligence로 다듬기",
    "en": "Polish with Apple Intelligence",
    "files": [
-    "MapHomeStickerEditor.swift:385"
+    "MapHomeStickerEditor.swift:386"
    ],
    "args": [],
    "targets": [
@@ -1106,7 +1106,7 @@
    "ko": "BOKKI Plan {0} (빌드 {1})",
    "en": "BOKKI Plan {0} (Build {1})",
    "files": [
-    "MapHomeView+Support2.swift:769"
+    "MapHomeView+Support2.swift:771"
    ],
    "args": [
     "version",
@@ -2541,7 +2541,7 @@
    "ko": "{0} {1}을 가계부에 넣었어요.",
    "en": "Added {0} {1} to the ledger.",
    "files": [
-    "LedgerIntents.swift:25"
+    "LedgerIntents.swift:26"
    ],
    "args": [
     "saved.title",
@@ -2628,7 +2628,7 @@
    "ko": "{0} 권한 요청",
    "en": "Request {0} permission",
    "files": [
-    "MapHomeView+Support2.swift:850"
+    "MapHomeView+Support2.swift:852"
    ],
    "args": [
     "sensorPermissionTitle(permission)"
@@ -3610,7 +3610,7 @@
    "ko": "{0}원",
    "en": "₩{0}",
    "files": [
-    "LedgerCore.swift:340"
+    "LedgerCore.swift:342"
    ],
    "args": [
     "number"
@@ -22982,6 +22982,18 @@
    ]
   },
   {
+   "key": "가계부 · 결제 문자 · 영수증|Ledger · payment text · receipt",
+   "ko": "가계부 · 결제 문자 · 영수증",
+   "en": "Ledger · payment text · receipt",
+   "files": [
+    "MapHomeView+Support2.swift:427"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "가계부 기록 더하기|Add ledger entries",
    "ko": "가계부 기록 더하기",
    "en": "Add ledger entries",
@@ -22998,8 +23010,7 @@
    "ko": "가계부",
    "en": "Ledger",
    "files": [
-    "LedgerSheet.swift:40",
-    "MapHomeView+Ledger.swift:30"
+    "LedgerSheet.swift:40"
    ],
    "args": [],
    "targets": [
@@ -23049,7 +23060,7 @@
    "ko": "가림",
    "en": "Hidden",
    "files": [
-    "AssistantCommandEdits.swift:242"
+    "AssistantCommandEdits.swift:248"
    ],
    "args": [],
    "targets": [
@@ -23813,7 +23824,7 @@
    "ko": "결과가 원문과 달라 적용하지 않았어요.",
    "en": "The result differed from your text, so it wasn't applied.",
    "files": [
-    "MapHomeStickerEditor.swift:457"
+    "MapHomeStickerEditor.swift:458"
    ],
    "args": [],
    "targets": [
@@ -23837,7 +23848,7 @@
    "ko": "결제 문자를 읽지 못했어요. 가계부에서 직접 넣어 주세요.",
    "en": "Couldn't read the payment text. Add it in the ledger yourself.",
    "files": [
-    "LedgerIntents.swift:19"
+    "LedgerIntents.swift:20"
    ],
    "args": [],
    "targets": [
@@ -24255,7 +24266,7 @@
    "ko": "고칠 곳을 찾지 못했어요.",
    "en": "Nothing to fix.",
    "files": [
-    "MapHomeStickerEditor.swift:454"
+    "MapHomeStickerEditor.swift:455"
    ],
    "args": [],
    "targets": [
@@ -24681,7 +24692,7 @@
    "en": "Permission needed",
    "files": [
     "ScreenTimeUsageService.swift:49",
-    "MapHomeView+Support2.swift:900",
+    "MapHomeView+Support2.swift:902",
     "AppModel+WatchHealth.swift:149"
    ],
    "args": [],
@@ -24799,6 +24810,33 @@
    "en": "Other automatic time",
    "files": [
     "MapHomeCounterDetailSheet.swift:183"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "그날 {0} · 이 달 {1}|Day {0} · Month {1}",
+   "ko": "그날 {0} · 이 달 {1}",
+   "en": "Day {0} · Month {1}",
+   "files": [
+    "LedgerMemoPanel.swift:74"
+   ],
+   "args": [
+    "LedgerMoney.text(today, language: language)",
+    "LedgerMoney.text(month, language: language)"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "그날 지출이 없어요. 메모에 「커피 4500」처럼 쓰면 들어가요.|No spending that day. Write a memo like \"Coffee 4500\" to add one.",
+   "ko": "그날 지출이 없어요. 메모에 「커피 4500」처럼 쓰면 들어가요.",
+   "en": "No spending that day. Write a memo like \"Coffee 4500\" to add one.",
+   "files": [
+    "LedgerMemoPanel.swift:90"
    ],
    "args": [],
    "targets": [
@@ -24940,7 +24978,7 @@
    "ko": "글이 길어 다듬지 못했어요. 1,500자 이하로 줄여 주세요.",
    "en": "This is too long to polish. Keep it under 1,500 characters.",
    "files": [
-    "MapHomeStickerEditor.swift:456"
+    "MapHomeStickerEditor.swift:457"
    ],
    "args": [],
    "targets": [
@@ -24952,7 +24990,7 @@
    "ko": "글이 바뀌어 다듬기를 멈췄어요.",
    "en": "The text changed, so polishing stopped.",
    "files": [
-    "MapHomeStickerEditor.swift:455"
+    "MapHomeStickerEditor.swift:456"
    ],
    "args": [],
    "targets": [
@@ -25930,7 +25968,7 @@
    "ko": "날짜 {0}",
    "en": "Date {0}",
    "files": [
-    "MapHomeView+Support2.swift:473"
+    "MapHomeView+Support2.swift:475"
    ],
    "args": [
     "dateTitle"
@@ -26214,6 +26252,19 @@
    ]
   },
   {
+   "key": "눌러서 메모로만|tap for memo only",
+   "ko": "눌러서 메모로만",
+   "en": "tap for memo only",
+   "files": [
+    "LedgerMemoChip.swift:37",
+    "LedgerMemoChip.swift:36"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "눌러서 보고 저장하거나 공유하세요.|Tap to view, save or share.",
    "ko": "눌러서 보고 저장하거나 공유하세요.",
    "en": "Tap to view, save or share.",
@@ -26254,8 +26305,8 @@
    "ko": "다듬는 중…",
    "en": "Polishing…",
    "files": [
-    "MapHomeStickerEditor.swift:412",
-    "MapHomeStickerEditor.swift:429"
+    "MapHomeStickerEditor.swift:413",
+    "MapHomeStickerEditor.swift:430"
    ],
    "args": [],
    "targets": [
@@ -26279,7 +26330,7 @@
    "ko": "다듬지 못했어요. 잠시 뒤 다시 해 주세요.",
    "en": "Couldn't polish this. Try again later.",
    "files": [
-    "MapHomeStickerEditor.swift:460"
+    "MapHomeStickerEditor.swift:461"
    ],
    "args": [],
    "targets": [
@@ -26355,7 +26406,7 @@
    "ko": "다음 날짜",
    "en": "Next date",
    "files": [
-    "MapHomeView+Support2.swift:611"
+    "MapHomeView+Support2.swift:613"
    ],
    "args": [],
    "targets": [
@@ -26512,7 +26563,7 @@
    "ko": "대기",
    "en": "Waiting",
    "files": [
-    "MapHomeView+Support2.swift:904",
+    "MapHomeView+Support2.swift:906",
     "SensorCollectionLiveActivity.swift:265",
     "TaptionPlanWidget.swift:521"
    ],
@@ -27134,7 +27185,7 @@
    "en": "Motion & Fitness",
    "files": [
     "AppShellView.swift:1085",
-    "MapHomeView+Support2.swift:883"
+    "MapHomeView+Support2.swift:885"
    ],
    "args": [],
    "targets": [
@@ -27764,7 +27815,7 @@
    "ko": "맡기지 않기",
    "en": "Don't ask",
    "files": [
-    "MapHomeStickerEditor.swift:395"
+    "MapHomeStickerEditor.swift:396"
    ],
    "args": [],
    "targets": [
@@ -28064,7 +28115,7 @@
    "ko": "메모 {0}",
    "en": "Memo {0}",
    "files": [
-    "MapHomeView+Memos.swift:297"
+    "MapHomeView+Memos.swift:307"
    ],
    "args": [
     "memo.text"
@@ -28132,7 +28183,7 @@
    "ko": "메모 내용",
    "en": "Memo text",
    "files": [
-    "MapHomeStickerEditor.swift:488"
+    "MapHomeStickerEditor.swift:489"
    ],
    "args": [],
    "targets": [
@@ -28192,7 +28243,7 @@
    "ko": "메모 스티커",
    "en": "Memo sticker",
    "files": [
-    "MapHomeStickerEditor.swift:564"
+    "MapHomeStickerEditor.swift:565"
    ],
    "args": [],
    "targets": [
@@ -28241,7 +28292,7 @@
    "en": "Memo",
    "files": [
     "FirstRunGuideStage.swift:650",
-    "MapHomeStickerEditor.swift:564",
+    "MapHomeStickerEditor.swift:565",
     "MapHomeView+Support2.swift:423"
    ],
    "args": [],
@@ -28254,9 +28305,9 @@
    "ko": "메모",
    "en": "Memos",
    "files": [
+    "LedgerMemoPanel.swift:12",
     "MapHomeAlarm.swift:547",
-    "MapHomeInfoSheets.swift:450",
-    "MapHomeView+Memos.swift:267"
+    "MapHomeInfoSheets.swift:450"
    ],
    "args": [],
    "targets": [
@@ -28292,7 +28343,19 @@
    "ko": "메모로 되돌리기",
    "en": "Turn back into a memo",
    "files": [
-    "MapHomeStickerEditor.swift:650"
+    "MapHomeStickerEditor.swift:651"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "메모로만 · 눌러서 가계부에 넣기|Memo only · tap to add to ledger",
+   "ko": "메모로만 · 눌러서 가계부에 넣기",
+   "en": "Memo only · tap to add to ledger",
+   "files": [
+    "LedgerMemoChip.swift:31"
    ],
    "args": [],
    "targets": [
@@ -29687,7 +29750,7 @@
    "ko": "보호 설정 안 됨",
    "en": "Not configured",
    "files": [
-    "MapHomeView+Support2.swift:786"
+    "MapHomeView+Support2.swift:788"
    ],
    "args": [],
    "targets": [
@@ -29936,7 +29999,7 @@
    "ko": "비밀번호 등록됨",
    "en": "Password registered",
    "files": [
-    "MapHomeView+Support2.swift:785"
+    "MapHomeView+Support2.swift:787"
    ],
    "args": [],
    "targets": [
@@ -30806,8 +30869,8 @@
    "ko": "새 메모",
    "en": "New memo",
    "files": [
-    "MapHomeStickerEditor.swift:568",
-    "MapHomeView+Memos.swift:310"
+    "MapHomeStickerEditor.swift:569",
+    "MapHomeView+Memos.swift:320"
    ],
    "args": [],
    "targets": [
@@ -30855,7 +30918,7 @@
    "ko": "새 지도 메모",
    "en": "New map memo",
    "files": [
-    "MapHomeView+Memos.swift:433"
+    "MapHomeView+Memos.swift:443"
    ],
    "args": [],
    "targets": [
@@ -31443,7 +31506,7 @@
    "ko": "설정에서 Apple Intelligence를 켜면 쓸 수 있어요.",
    "en": "Turn on Apple Intelligence in Settings to use this.",
    "files": [
-    "MapHomeStickerEditor.swift:446"
+    "MapHomeStickerEditor.swift:447"
    ],
    "args": [],
    "targets": [
@@ -31904,7 +31967,7 @@
    "ko": "수동 기록과 지도 메모는 지금 사용할 수 있습니다. 자동 기록을 켜려면 필요한 권한만 허용하세요.",
    "en": "Manual records and map memos are available now. Allow only the permissions needed for automatic recording.",
    "files": [
-    "MapHomeView+Support2.swift:804"
+    "MapHomeView+Support2.swift:806"
    ],
    "args": [],
    "targets": [
@@ -32089,8 +32152,9 @@
    "ko": "수입",
    "en": "Income",
    "files": [
-    "LedgerSheet.swift:149",
-    "LedgerSheet.swift:238"
+    "LedgerMemoChip.swift:33",
+    "LedgerMemoChip.swift:34",
+    "LedgerSheet.swift:149"
    ],
    "args": [],
    "targets": [
@@ -32138,7 +32202,7 @@
    "ko": "수집 중",
    "en": "Collecting",
    "files": [
-    "MapHomeView+Support2.swift:906"
+    "MapHomeView+Support2.swift:908"
    ],
    "args": [],
    "targets": [
@@ -32301,7 +32365,7 @@
    "ko": "스티커 고르기",
    "en": "Choose a sticker",
    "files": [
-    "MapHomeStickerEditor.swift:719",
+    "MapHomeStickerEditor.swift:720",
     "MapHomeStickerPicker.swift:122"
    ],
    "args": [],
@@ -32314,7 +32378,7 @@
    "ko": "스티커 내용을 메모로 다시 만들고 스티커는 지워요.",
    "en": "Creates a memo with this text and removes the sticker.",
    "files": [
-    "MapHomeStickerEditor.swift:653"
+    "MapHomeStickerEditor.swift:654"
    ],
    "args": [],
    "targets": [
@@ -32386,7 +32450,7 @@
    "ko": "시간 지정",
    "en": "Set a time",
    "files": [
-    "MapHomeStickerEditor.swift:610"
+    "MapHomeStickerEditor.swift:611"
    ],
    "args": [],
    "targets": [
@@ -32410,9 +32474,9 @@
    "ko": "시간",
    "en": "Time",
    "files": [
-    "MapHomeStickerEditor.swift:591",
-    "MapHomeStickerEditor.swift:594",
-    "MapHomeStickerEditor.swift:602"
+    "MapHomeStickerEditor.swift:592",
+    "MapHomeStickerEditor.swift:595",
+    "MapHomeStickerEditor.swift:603"
    ],
    "args": [],
    "targets": [
@@ -32875,7 +32939,7 @@
    "ko": "아이콘 표시",
    "en": "Show an icon",
    "files": [
-    "MapHomeStickerEditor.swift:579"
+    "MapHomeStickerEditor.swift:580"
    ],
    "args": [],
    "targets": [
@@ -33533,7 +33597,7 @@
    "ko": "앱 열 때마다 잠금",
    "en": "Locks whenever the app opens",
    "files": [
-    "MapHomeView+Support2.swift:782"
+    "MapHomeView+Support2.swift:784"
    ],
    "args": [],
    "targets": [
@@ -34002,7 +34066,7 @@
    "ko": "여기에 메모",
    "en": "Memo here",
    "files": [
-    "MapHomeView+Memos.swift:394"
+    "MapHomeView+Memos.swift:404"
    ],
    "args": [],
    "targets": [
@@ -34641,7 +34705,7 @@
    "ko": "연결된 AI에게 맡겼어요. 다듬은 글이 오면 바뀌어요.",
    "en": "Handed to your connected AI. It changes when the polished text arrives.",
    "files": [
-    "MapHomeStickerEditor.swift:353"
+    "MapHomeStickerEditor.swift:354"
    ],
    "args": [],
    "targets": [
@@ -34653,8 +34717,8 @@
    "ko": "연결된 AI에게 맡기기",
    "en": "Ask my connected AI",
    "files": [
-    "MapHomeStickerEditor.swift:386",
-    "MapHomeStickerEditor.swift:395"
+    "MapHomeStickerEditor.swift:387",
+    "MapHomeStickerEditor.swift:396"
    ],
    "args": [],
    "targets": [
@@ -35528,7 +35592,7 @@
    "ko": "오늘 날짜로 이동",
    "en": "Go to today",
    "files": [
-    "MapHomeView+Support2.swift:545"
+    "MapHomeView+Support2.swift:547"
    ],
    "args": [],
    "targets": [
@@ -36485,7 +36549,7 @@
    "ko": "위치 다시 고르기",
    "en": "Choose again",
    "files": [
-    "MapHomeStickerEditor.swift:635"
+    "MapHomeStickerEditor.swift:636"
    ],
    "args": [],
    "targets": [
@@ -36619,7 +36683,7 @@
    "ko": "위치 지우기",
    "en": "Remove location",
    "files": [
-    "MapHomeStickerEditor.swift:636"
+    "MapHomeStickerEditor.swift:637"
    ],
    "args": [],
    "targets": [
@@ -36632,7 +36696,7 @@
    "en": "Add location",
    "files": [
     "MapHomeLocationSheets.swift:225",
-    "MapHomeStickerEditor.swift:644"
+    "MapHomeStickerEditor.swift:645"
    ],
    "args": [],
    "targets": [
@@ -36657,7 +36721,7 @@
    "en": "Always Location",
    "files": [
     "AppShellView.swift:1081",
-    "MapHomeView+Support2.swift:879"
+    "MapHomeView+Support2.swift:881"
    ],
    "args": [],
    "targets": [
@@ -36695,7 +36759,7 @@
    "en": "Location",
    "files": [
     "WidgetShared.swift:603",
-    "MapHomeStickerEditor.swift:616",
+    "MapHomeStickerEditor.swift:617",
     "MapHomeView+Menu.swift:907"
    ],
    "args": [],
@@ -37323,7 +37387,7 @@
    "ko": "이 내용은 Apple Intelligence가 다듬지 못해요.",
    "en": "Apple Intelligence can't polish this content.",
    "files": [
-    "MapHomeStickerEditor.swift:458"
+    "MapHomeStickerEditor.swift:459"
    ],
    "args": [],
    "targets": [
@@ -37434,7 +37498,7 @@
    "ko": "이 언어는 다듬지 못해요.",
    "en": "This language isn't supported.",
    "files": [
-    "MapHomeStickerEditor.swift:459"
+    "MapHomeStickerEditor.swift:460"
    ],
    "args": [],
    "targets": [
@@ -37482,7 +37546,7 @@
    "ko": "이 위치로",
    "en": "Use this spot",
    "files": [
-    "MapHomeView+Memos.swift:393"
+    "MapHomeView+Memos.swift:403"
    ],
    "args": [],
    "targets": [
@@ -38009,7 +38073,7 @@
    "ko": "이전 날짜",
    "en": "Previous date",
    "files": [
-    "MapHomeView+Support2.swift:610"
+    "MapHomeView+Support2.swift:612"
    ],
    "args": [],
    "targets": [
@@ -38272,7 +38336,7 @@
    "en": "Schedule",
    "files": [
     "WidgetShared.swift:601",
-    "MapHomeStickerEditor.swift:668"
+    "MapHomeStickerEditor.swift:669"
    ],
    "args": [],
    "targets": [
@@ -38483,7 +38547,7 @@
    "ko": "자동 기록 권한",
    "en": "Automatic recording permissions",
    "files": [
-    "MapHomeView+Support2.swift:797"
+    "MapHomeView+Support2.swift:799"
    ],
    "args": [],
    "targets": [
@@ -38988,7 +39052,7 @@
    "en": "Record playback",
    "files": [
     "MapHomeScreenRecording.swift:558",
-    "MapHomeView+Support2.swift:560"
+    "MapHomeView+Support2.swift:562"
    ],
    "args": [],
    "targets": [
@@ -39141,7 +39205,7 @@
    "ko": "저장하면 연결된 AI에게 맡겨요. 다음에 AI와 대화할 때 다듬어 보내 줘요.",
    "en": "Saving hands it to your connected AI. It polishes it the next time you chat.",
    "files": [
-    "MapHomeStickerEditor.swift:352"
+    "MapHomeStickerEditor.swift:353"
    ],
    "args": [],
    "targets": [
@@ -39348,6 +39412,18 @@
    ]
   },
   {
+   "key": "전체|All",
+   "ko": "전체",
+   "en": "All",
+   "files": [
+    "LedgerMemoPanel.swift:11"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "전체|Fit",
    "ko": "전체",
    "en": "Fit",
@@ -39376,7 +39452,7 @@
    "ko": "접기",
    "en": "Collapse",
    "files": [
-    "MapHomeView+Memos.swift:230"
+    "MapHomeView+Memos.swift:234"
    ],
    "args": [],
    "targets": [
@@ -39429,7 +39505,7 @@
    "en": "Precise Location",
    "files": [
     "AppShellView.swift:1083",
-    "MapHomeView+Support2.swift:881"
+    "MapHomeView+Support2.swift:883"
    ],
    "args": [],
    "targets": [
@@ -39469,7 +39545,7 @@
    "ko": "제목",
    "en": "Title",
    "files": [
-    "MapHomeStickerEditor.swift:566"
+    "MapHomeStickerEditor.swift:567"
    ],
    "args": [],
    "targets": [
@@ -39547,7 +39623,7 @@
    "ko": "종료",
    "en": "Stopped",
    "files": [
-    "MapHomeView+Support2.swift:908"
+    "MapHomeView+Support2.swift:910"
    ],
    "args": [],
    "targets": [
@@ -40256,7 +40332,7 @@
    "en": "Map",
    "files": [
     "MapHomeScreenRecording.swift:580",
-    "MapHomeStickerEditor.swift:667",
+    "MapHomeStickerEditor.swift:668",
     "MapHomeView+Menu2.swift:13"
    ],
    "args": [],
@@ -40293,7 +40369,7 @@
    "ko": "지도를 움직여 핀 위치를 맞추세요",
    "en": "Move the map to place the pin",
    "files": [
-    "MapHomeView+Memos.swift:356"
+    "MapHomeView+Memos.swift:366"
    ],
    "args": [],
    "targets": [
@@ -40450,7 +40526,7 @@
    "ko": "지도와 사이드바에 이 아이콘으로 보여요.",
    "en": "This icon shows on the map and in the sidebar.",
    "files": [
-    "MapHomeStickerEditor.swift:585"
+    "MapHomeStickerEditor.swift:586"
    ],
    "args": [],
    "targets": [
@@ -40487,8 +40563,8 @@
    "ko": "지움",
    "en": "Deleted",
    "files": [
-    "AssistantCommandEdits.swift:259",
-    "AssistantCommandEdits.swift:270",
+    "AssistantCommandEdits.swift:265",
+    "AssistantCommandEdits.swift:276",
     "AssistantDataActions.swift:66"
    ],
    "args": [],
@@ -40501,7 +40577,20 @@
    "ko": "지출",
    "en": "Expense",
    "files": [
+    "LedgerMemoChip.swift:34",
     "LedgerSheet.swift:237"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "지출|Spending",
+   "ko": "지출",
+   "en": "Spending",
+   "files": [
+    "LedgerMemoPanel.swift:13"
    ],
    "args": [],
    "targets": [
@@ -41224,7 +41313,7 @@
    "ko": "추가 위치",
    "en": "Placement",
    "files": [
-    "MapHomeStickerEditor.swift:664"
+    "MapHomeStickerEditor.swift:665"
    ],
    "args": [],
    "targets": [
@@ -43065,7 +43154,7 @@
    "ko": "한 번 누르면 날짜 줄을 펼칩니다",
    "en": "Tap to show the date strip",
    "files": [
-    "MapHomeView+Support2.swift:474"
+    "MapHomeView+Support2.swift:476"
    ],
    "args": [],
    "targets": [
@@ -43392,7 +43481,7 @@
    "files": [
     "AppShellView.swift:1072",
     "FirstRunTutorialGuides.swift:548",
-    "MapHomeView+Support2.swift:894"
+    "MapHomeView+Support2.swift:896"
    ],
    "args": [],
    "targets": [

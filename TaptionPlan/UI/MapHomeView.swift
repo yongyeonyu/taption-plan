@@ -487,6 +487,7 @@ struct MapHomeView: View {
     @State var isPlaceBookPresented = false
     @State var isPassportPresented = false
     @State var isTravelAddChoicePresented = false
+    @State var memoLedgerFilter = LedgerMemoFilter.all
     @State var isTripImportPresented = false
     @State var isLocationAlwaysPromptPresented = false
     @State var isTripClipboardOfferVisible = false

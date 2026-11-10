@@ -316,6 +316,7 @@
 		A1T1111A0100000000000001 /* TravelGreatCircleAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1T1111A0100000000000001 /* TravelGreatCircleAdapter.swift */; };
 		A1L1111A0100000000000004 /* LedgerCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111A0100000000000004 /* LedgerCapture.swift */; };
 		A1L1111A0100000000000005 /* LedgerIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111A0100000000000005 /* LedgerIntents.swift */; };
+		A1L1111A0300000000000002 /* LedgerMemoLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111A0300000000000002 /* LedgerMemoLink.swift */; };
 		B1080801000000000000A004 /* ActivitySectionOverrideEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080801000000000000F004 /* ActivitySectionOverrideEngine.swift */; };
 		B1080801000000000000A005 /* ReviewSelectionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080801000000000000F005 /* ReviewSelectionEngine.swift */; };
 		B1080801000000000000A006 /* RecordChartEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080801000000000000F006 /* RecordChartEngine.swift */; };
@@ -515,6 +516,8 @@
 		A1G1111A0100000000000001 /* AssistantConnectGuide.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1G1111A0100000000000001 /* AssistantConnectGuide.swift */; };
 		A1L1110A0100000000000002 /* LedgerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1110A0100000000000002 /* LedgerSheet.swift */; };
 		A1L1110A0100000000000003 /* MapHomeView+Ledger.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1110A0100000000000003 /* MapHomeView+Ledger.swift */; };
+		A1L1111A0300000000000001 /* LedgerMemoChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111A0300000000000001 /* LedgerMemoChip.swift */; };
+		A1L1111A0300000000000003 /* LedgerMemoPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111A0300000000000003 /* LedgerMemoPanel.swift */; };
 		A1M1110A0300000000000001 /* MapHomeDefaultBubblePool.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1M1110A0300000000000001 /* MapHomeDefaultBubblePool.swift */; };
 		A1A1110A0300000000000008 /* AssistantConnectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000008 /* AssistantConnectView.swift */; };
 		A1A1110A0300000000000009 /* FirstRunAIConnectPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000009 /* FirstRunAIConnectPage.swift */; };
@@ -1025,6 +1028,7 @@
 		F1T1111A0100000000000001 /* TravelGreatCircleAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelGreatCircleAdapter.swift; sourceTree = "<group>"; };
 		F1L1111A0100000000000004 /* LedgerCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerCapture.swift; sourceTree = "<group>"; };
 		F1L1111A0100000000000005 /* LedgerIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerIntents.swift; sourceTree = "<group>"; };
+		F1L1111A0300000000000002 /* LedgerMemoLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerMemoLink.swift; sourceTree = "<group>"; };
 		B1080801000000000000F004 /* ActivitySectionOverrideEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitySectionOverrideEngine.swift; sourceTree = "<group>"; };
 		B1080801000000000000F005 /* ReviewSelectionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewSelectionEngine.swift; sourceTree = "<group>"; };
 		B1080801000000000000F006 /* RecordChartEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordChartEngine.swift; sourceTree = "<group>"; };
@@ -1214,6 +1218,8 @@
 		F1G1111A0100000000000001 /* AssistantConnectGuide.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantConnectGuide.swift; sourceTree = "<group>"; };
 		F1L1110A0100000000000002 /* LedgerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerSheet.swift; sourceTree = "<group>"; };
 		F1L1110A0100000000000003 /* MapHomeView+Ledger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Ledger.swift"; sourceTree = "<group>"; };
+		F1L1111A0300000000000001 /* LedgerMemoChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerMemoChip.swift; sourceTree = "<group>"; };
+		F1L1111A0300000000000003 /* LedgerMemoPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerMemoPanel.swift; sourceTree = "<group>"; };
 		F1M1110A0300000000000001 /* MapHomeDefaultBubblePool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeDefaultBubblePool.swift; sourceTree = "<group>"; };
 		F1A1110A0300000000000008 /* AssistantConnectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantConnectView.swift; sourceTree = "<group>"; };
 		F1A1110A0300000000000009 /* FirstRunAIConnectPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstRunAIConnectPage.swift; sourceTree = "<group>"; };
@@ -1716,6 +1722,8 @@
 				F1G1111A0100000000000001 /* AssistantConnectGuide.swift */,
 				F1L1110A0100000000000002 /* LedgerSheet.swift */,
 				F1L1110A0100000000000003 /* MapHomeView+Ledger.swift */,
+				F1L1111A0300000000000001 /* LedgerMemoChip.swift */,
+				F1L1111A0300000000000003 /* LedgerMemoPanel.swift */,
 				F1M1110A0300000000000001 /* MapHomeDefaultBubblePool.swift */,
 				F1A1110A0300000000000008 /* AssistantConnectView.swift */,
 				F1A1110A0300000000000009 /* FirstRunAIConnectPage.swift */,
@@ -2014,6 +2022,7 @@
 				F1T1111A0100000000000001 /* TravelGreatCircleAdapter.swift */,
 				F1L1111A0100000000000004 /* LedgerCapture.swift */,
 				F1L1111A0100000000000005 /* LedgerIntents.swift */,
+				F1L1111A0300000000000002 /* LedgerMemoLink.swift */,
 				B1080801000000000000F004 /* ActivitySectionOverrideEngine.swift */,
 				B1080801000000000000F005 /* ReviewSelectionEngine.swift */,
 				B1080801000000000000F006 /* RecordChartEngine.swift */,
@@ -2650,6 +2659,8 @@
 				A1G1111A0100000000000001 /* AssistantConnectGuide.swift in Sources */,
 				A1L1110A0100000000000002 /* LedgerSheet.swift in Sources */,
 				A1L1110A0100000000000003 /* MapHomeView+Ledger.swift in Sources */,
+				A1L1111A0300000000000001 /* LedgerMemoChip.swift in Sources */,
+				A1L1111A0300000000000003 /* LedgerMemoPanel.swift in Sources */,
 				A1M1110A0300000000000001 /* MapHomeDefaultBubblePool.swift in Sources */,
 				A1A1110A0300000000000008 /* AssistantConnectView.swift in Sources */,
 				A1A1110A0300000000000009 /* FirstRunAIConnectPage.swift in Sources */,
@@ -2879,6 +2890,7 @@
 				A1T1111A0100000000000001 /* TravelGreatCircleAdapter.swift in Sources */,
 				A1L1111A0100000000000004 /* LedgerCapture.swift in Sources */,
 				A1L1111A0100000000000005 /* LedgerIntents.swift in Sources */,
+				A1L1111A0300000000000002 /* LedgerMemoLink.swift in Sources */,
 				B1080801000000000000A004 /* ActivitySectionOverrideEngine.swift in Sources */,
 				B1080801000000000000A005 /* ReviewSelectionEngine.swift in Sources */,
 				B1080801000000000000A006 /* RecordChartEngine.swift in Sources */,

@@ -188,6 +188,44 @@ final class LedgerTests: XCTestCase {
         XCTAssertEqual(usd?.currency, "USD")
     }
 
+    /// LED1111A03: 메모 글에서 금액 알아보기. 시각·날짜·전화·단위·연도는 금액이 아니다.
+    func testMemoAmountDetection() {
+        XCTAssertEqual(LedgerMemoAmount.find("커피 4500"), .init(amount: 4_500, currency: "KRW", kind: .expense, title: "커피"))
+        XCTAssertEqual(LedgerMemoAmount.find("택시 12,000원 강남")?.title, "택시 강남")
+        XCTAssertEqual(LedgerMemoAmount.find("+3,000,000 월급")?.kind, .income)
+        XCTAssertEqual(LedgerMemoAmount.find("Lunch $12.50")?.currency, "USD")
+        XCTAssertEqual(LedgerMemoAmount.find("라멘 1200 JPY")?.amount, 1_200)
+        XCTAssertEqual(LedgerMemoAmount.find("4500 latte")?.amount, 4_500)
+        XCTAssertEqual(LedgerMemoAmount.find("4500 시원한 커피")?.amount, 4_500)
+        for text in ["14:30 회의", "11/12 병원", "2026 목표", "3층 1203호", "민수 010-1234-5678", "5000보 걷기", "만원 정도", "커피", "4500"] {
+            XCTAssertNil(LedgerMemoAmount.find(text), text)
+        }
+    }
+
+    func testMemoSyncCreatesUpdatesAndRemovesLinkedEntry() async {
+        let book = LedgerBook(store: { nil })
+        let memo = UUID()
+        let defaults = UserDefaults.standard
+        LedgerMemoOptOut.set(memo, optedOut: false, defaults: defaults)
+        let first = await book.syncMemo(id: memo, text: "커피 4500", occurredAt: at(9))
+        XCTAssertEqual(first?.amountKRW, 4_500)
+        XCTAssertEqual(first?.category, .cafe)
+        let second = await book.syncMemo(id: memo, text: "커피 5000", occurredAt: at(9))
+        XCTAssertEqual(second?.id, first?.id, "editing the memo updates the same entry")
+        XCTAssertEqual(book.entries.count, 1)
+        XCTAssertEqual(book.entry(forMemo: memo)?.amount, 5_000)
+        await book.syncMemo(id: memo, text: "커피 마셨다", occurredAt: at(9))
+        XCTAssertTrue(book.entries.isEmpty, "removing the amount removes the entry")
+        await book.syncMemo(id: memo, text: "점심 9000", occurredAt: at(12))
+        LedgerMemoOptOut.set(memo, optedOut: true, defaults: defaults)
+        await book.syncMemo(id: memo, text: "점심 9000", occurredAt: at(12))
+        XCTAssertTrue(book.entries.isEmpty, "memo only keeps it out of the ledger")
+        LedgerMemoOptOut.set(memo, optedOut: false, defaults: defaults)
+        await book.syncMemo(id: memo, text: "점심 9000", occurredAt: at(12))
+        await book.removeMemo(memo)
+        XCTAssertTrue(book.entries.isEmpty, "deleting the memo deletes the entry")
+    }
+
     func testReceiptTotalLine() {
         let lines = ["맛있는 분식", "사업자 123-45-67890", "떡볶이 1 5,000", "순대 1 4,000", "합계", "9,000", "카드 9,000"]
         let draft = LedgerReceiptReader.draft(lines)
