@@ -55,6 +55,8 @@ public enum RouteSampleDecisionReason: String, Codable, Hashable, Sendable {
     case innovationOutlier
     /// 근사·저정확도 위치가 뒤따르는 정밀 위치와 모순돼 버려졌다(근사 위치 1개가 멀리 튄 뒤 정밀 위치가 돌아오는 경우).
     case contradictedByPreciseFix
+    /// 3분 안에 앞뒤 위치와 먼 곳으로 튀었다 돌아온 묶음(유령 체류). 원본은 남는다 (CLN1110A01).
+    case ghostExcursion
 }
 
 public struct RouteSampleDecision: Codable, Hashable, Sendable {
@@ -219,6 +221,13 @@ public struct RouteLoggerRouteFilter: Sendable {
             }
             plausible.append(sample)
             lastPlausible = sample
+        }
+        // 짧게 튀었다 돌아온 묶음은 경로에서 빼고 근거를 남긴다. 돌아온 점의 재기준 표시도 지운다 (CLN1110A01).
+        for range in RouteGhostExcursion.ranges(in: plausible).reversed() {
+            decisions += plausible[range].map { .init(id: $0.id, timestamp: $0.timestamp, reason: .ghostExcursion) }
+            discontinuityIDs.remove(plausible[range.upperBound].id)
+            reanchorIDs.remove(plausible[range.upperBound].id)
+            plausible.removeSubrange(range)
         }
         let boundaries = try boundarySamples(
             from: plausible,
@@ -643,7 +652,7 @@ private extension RouteSample {
     }
 }
 
-private enum Geo {
+enum Geo {
     static let metersPerDegree = 111_320.0
 
     static func distance(_ lhs: RouteCoordinate, _ rhs: RouteCoordinate) -> Double {

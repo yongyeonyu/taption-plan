@@ -202,6 +202,8 @@ enum TaptionPlanBackgroundRefresh {
             let success = await model.performBackgroundRefresh(
                 wakeReason: .bgAppRefresh
             )
+            // 앱을 열지 않아도 AI 비서 명령을 반영하고 바뀐 날을 올린다(AIR1110A02).
+            await AssistantCommandRunner.runInBackground(model: model)
             taskBox.complete(success: success)
             logger.notice(
                 "Background refresh completed: success=\(success, privacy: .public)"

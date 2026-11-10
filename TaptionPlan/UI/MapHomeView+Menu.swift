@@ -454,6 +454,11 @@ extension MapHomeView {
                 menuGroupDivider
                 // 차량 오디오(블루투스·CarPlay)가 연결된 이동은 자동차로 확정한다(CAR1029A01).
                 menuRowButton("car.fill", language.text("내 차 등록", "My car"), tint: .tpMenuChip("#4F86B8")) { isCarAudioSheetPresented = true }
+                // 「AI 연결」(AIR1110A03, 예전 AI 비서): AI별 연결·PIN·공유 수준. 중계 서버가 없으면 숨긴다.
+                if TripRelay.isAvailable {
+                    menuGroupDivider
+                    menuRowButton("sparkles", language.text("AI 연결", "AI connections"), tint: .tpMenuChip("#7A6FD0")) { isAssistantPresented = true }
+                }
             }
             } trailing: {
             if !sensorCollectionPermissionGate.sensorCollectionReady, menuPanelKind.columns > 1 { sensorPermissionCard.padding(.bottom, 10) }

@@ -356,6 +356,7 @@ struct MapHomeSecuritySheet: View {
                     .tint(Color.tpReferenceRose)
                     .disabled(pin.count != PlanPINVerifier.currentDigits
                         || confirmation.count != PlanPINVerifier.currentDigits)
+                    if hasPIN { BackupPasswordForgotView(model: model, language: language) }
                     Text(language.text(
                         "비밀번호를 바꾸면 그 뒤에 만드는 백업부터 새 비밀번호를 씁니다. 바꾸기 전에 만든 백업 파일은 그때의 비밀번호로 열립니다.",
                         "After you change the password, new backups use it. Backup files made earlier still open with the password used at that time."
@@ -470,6 +471,7 @@ struct MapHomeSecuritySheet: View {
                         let shown = backupPassword.count == securityPINDigits ? backupPassword : nil
                         Task { await model.refreshBackupListings(password: shown) }
                     }
+                BackupPasswordForgotView(model: model, language: language) { backupPassword = $0 }
             }
             if let latestBackupText {
                 Text(language.text(
@@ -557,6 +559,7 @@ struct MapHomeSecuritySheet: View {
                         guard digits.count == securityPINDigits || digits.isEmpty else { return }
                         Task { await model.refreshBackupListings(password: listingPassword) }
                     }
+                BackupPasswordForgotView(model: model, language: language) { restorePassword = $0 }
             }
             if case .restoring(let name) = activity {
                 ProgressView(language.text("\(name) 불러오는 중", "Restoring \(name)"))

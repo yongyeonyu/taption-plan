@@ -31,17 +31,11 @@ enum TripRelay {
         return value
     }
 
-    /// 무작위 32바이트를 base64url 43자로. 이전 키는 바로 쓸 수 없게 된다.
-    @discardableResult
-    static func issueKey() -> String? {
+    /// 무작위 32바이트를 base64url 43자로(AI용 키도 같은 모양, SEC1110A01).
+    static func randomToken() -> String? {
         var bytes = [UInt8](repeating: 0, count: 32)
         guard SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes) == errSecSuccess else { return nil }
-        let value = base64URL(Data(bytes))
-        SecItemDelete(query as CFDictionary)
-        var item = query
-        item[kSecValueData as String] = Data(value.utf8)
-        item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-        return SecItemAdd(item as CFDictionary, nil) == errSecSuccess ? value : nil
+        return base64URL(Data(bytes))
     }
 
     static func base64URL(_ data: Data) -> String {
@@ -56,13 +50,14 @@ enum TripRelay {
     }
 
     /// 프롬프트 끝에 붙이는 전달 안내. 도구 호출이 되는 AI는 JSON을 서버로 바로 보낸다.
+    /// `key`에는 그 AI의 연결 키만 넣는다. 주 키는 넣지 않는다(SEC1110A02).
     static func deliveryInstruction(endpoint: URL, key: String) -> String {
         """
 
         Delivery to the app
         - After I confirm and you have output the JSON, if you can make HTTP requests, also send it:
           POST \(endpoint.absoluteString)
-          Headers: Authorization: Bearer \(key) and Content-Type: application/json
+          Headers: \(headerLines(key: key))
           Body: exactly the same JSON.
         - Then tell me whether it was sent (201 means delivered). If you cannot make HTTP requests, just show the JSON.
         """
@@ -72,16 +67,13 @@ enum TripRelay {
 
     /// 도착한 계획을 받는다. 없으면 nil. 반영하기 전에는 서버에서 지우지 않는다.
     static func fetch(session: URLSession = .shared) async -> String? {
-        guard let request = request(method: "GET") else { return nil }
-        guard let (data, response) = try? await session.data(for: request),
-              (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
-        return String(data: data, encoding: .utf8)
+        guard let reply = await send(request(method: "GET"), session: session), reply.status == 200 else { return nil }
+        return String(data: reply.data, encoding: .utf8)
     }
 
     /// 반영을 마친 뒤 서버에서 지운다.
     static func clear(session: URLSession = .shared) async {
-        guard let request = request(method: "DELETE") else { return }
-        _ = try? await session.data(for: request)
+        _ = await send(request(method: "DELETE"), session: session)
     }
 
     /// 자동으로 띄울 새 계획인가. 지운 뒤에도 서버 캐시가 잠깐 예전 값을 돌려주므로 같은 내용은 한 번만 띄운다.
@@ -112,6 +104,10 @@ enum TripRelay {
 extension MapHomeView {
     /// 앱을 열 때 확인한다. 처음 보는 계획이 있으면 여행 모드로 바꿔 미리보기를 띄운다.
     func checkTripRelay() async {
+        // 주 키는 앱이 만들어 등록하고, 이번 배포에서 한 번 바꾼다(SEC1110A02).
+        guard await AssistantRegistration.ensureReady() else { return }
+        // AI 비서 명령도 같은 때 받는다(TRP1110A07).
+        await checkAssistantCommands()
         guard TripRelay.isAvailable, TripRelay.key != nil, !isTripImportPresented,
               let text = await TripRelay.fetch(), !isTripImportPresented, TripRelay.isNew(text) else { return }
         pastedTripText = text

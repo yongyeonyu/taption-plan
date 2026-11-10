@@ -4,8 +4,12 @@ import TaptionPlanCore
 
 extension AppModel {
     /// AI 여행을 반영한다. 같은 여행이 있으면 지우고 새로 넣는다(대표 결정: 바뀐 것 표시 후 교체).
-    func applyTripImport(_ plan: TripImportPlan) async {
-        guard acceptsDataMutation() else { return }
+    /// 반영하지 못하면 false. 그때는 서버에 도착한 계획을 지우지 않는다(REV1110A06).
+    @discardableResult
+    func applyTripImport(_ incoming: TripImportPlan) async -> Bool {
+        guard acceptsDataMutation() else { return false }
+        // 다시 가져온 계획에 상태가 없으면 사용자가 정한 상태를 지킨다.
+        let plan = incoming.keepingUserStatus(from: snapshot.settings.travelTripItems ?? [])
         // 핀이 없는 일정(수면·좌표 없음)도 계획이 있으니 여행 일정 쪽 planID까지 함께 지운다.
         let oldPlanIDs = Set(
             snapshot.settings.travelPlanStops.filter { $0.tripID == plan.tripID }.compactMap(\.planID)
@@ -28,7 +32,7 @@ extension AppModel {
                 tripID: plan.tripID, itemID: item.id, kind: item.kind.rawValue, title: item.title,
                 start: item.start, end: item.end,
                 startOffsetSeconds: item.timeZone.secondsFromGMT(for: item.start),
-                endOffsetSeconds: item.endTimeZone.secondsFromGMT(for: item.end), planID: planID
+                endOffsetSeconds: item.endTimeZone.secondsFromGMT(for: item.end), planID: planID, status: item.status.stored
             ))
             // 잠은 숙소 자리라 지도에 핀을 따로 찍지 않는다.
             guard item.kind != .sleep, let coordinate = item.coordinate else { continue }
@@ -36,12 +40,12 @@ extension AppModel {
             stops.append(TravelPlanStop(
                 id: UUID(), title: item.title, latitude: coordinate.latitude, longitude: coordinate.longitude,
                 day: day, order: TravelPlanSchedule.stops(on: day, in: stops).count, planID: planID,
-                tripID: plan.tripID, itemID: item.id
+                tripID: plan.tripID, itemID: item.id, status: item.status.stored
             ))
         }
         snapshot.settings.travelPlanStops = stops
         snapshot.settings.travelTripItems = tripItems.isEmpty ? nil : tripItems
-        await persist()
+        return await persist()
     }
 
     func tripImportDiff(for plan: TripImportPlan) -> TripImportDiff? {
@@ -59,10 +63,12 @@ enum TravelTripRail {
             let startMinute = start.day == target ? start.minute : start.day < target ? 0 : nil
             let endMinute = end.day == target ? end.minute : end.day > target ? 1_440 : nil
             guard let startMinute, let endMinute, endMinute > startMinute else { return nil }
-            return MapHomeTimeRailSegment(
+            var segment = MapHomeTimeRailSegment(
                 startMinute: startMinute, endMinute: endMinute,
                 categoryID: railCategory(item.kind), title: item.title, sourceID: item.planID
             )
+            segment.tripStatus = TripItemStatus(raw: item.status) // 계획은 그대로 그린다(TRP1110A09).
+            return segment
         }
         .sorted { $0.startMinute < $1.startMinute }
     }
@@ -168,17 +174,24 @@ struct MapHomeTripImportSheet: View {
     @State private var diff: TripImportDiff?
     @State private var message: String?
     @State private var copiedFor: TripImportAIApp?
+    /// 피클을 누른 뒤 안내. 중계 구역에서 눌렀으면 그 아래에 보인다(TRP1110A08).
+    @State private var pickleNote: (text: String, inRelay: Bool)?
     @State private var isResolving = false
     @State private var isApplying = false
+    @State private var applyMessage: String?
 
-    @State private var relayKey = TripRelay.key
     @State private var isLoadingRelay = false
+    /// 프롬프트에 넣은 그 AI의 연결 키. 주 키는 넣지 않는다(SEC1110A02).
+    @State private var promptKey: String?
+    @State private var store = AssistantConnectionStore()
+    /// 연결 키가 없어 PIN을 묻는 중인 AI. 취소하면 키 없이 복사한다.
+    @State private var pinApp: TripImportAIApp?
+    @State private var pendingApp: (app: TripImportAIApp, inRelay: Bool)?
 
-    /// 중계 서버와 키가 있으면 도구 호출이 되는 AI가 앱으로 바로 보내도록 안내를 붙인다.
-    private var prompt: String {
+    private func prompt(key: String?) -> String {
         let base = TripImportPrompt.text(languageCode: TripImportPrompt.currentLanguageCode)
-        guard let endpoint = TripRelay.endpoint, let relayKey else { return base }
-        return base + TripRelay.deliveryInstruction(endpoint: endpoint, key: relayKey)
+        guard let endpoint = TripRelay.endpoint, let key else { return base }
+        return base + TripRelay.deliveryInstruction(endpoint: endpoint, key: key)
     }
 
     var body: some View {
@@ -198,6 +211,25 @@ struct MapHomeTripImportSheet: View {
             guard plan == nil, let initialText else { return }
             read(initialText)
         }
+        .sheet(item: $pinApp, onDismiss: {
+            // PIN을 넣지 않고 닫으면 키 없이 복사하고 연다.
+            if let pending = pendingApp { finishOpen(pending.app, key: nil, inRelay: pending.inRelay) }
+        }) { app in
+            let name = app.title(language)
+            AssistantPINSheet.gate(language: language, purpose: language.text(
+                "\(name)에 넣을 연결 키를 만들어요. 취소하면 키 없이 복사해요.",
+                "Creates a connection key for \(name). Cancel to copy without a key."
+            )) { pin in
+                switch await store.create(for: app.provider, pin: pin, language: language) {
+                case let .failure(text): return text
+                case let .key(_, token):
+                    let inRelay = pendingApp?.inRelay ?? false
+                    pendingApp = nil
+                    finishOpen(app, key: token, inRelay: inRelay)
+                    return nil
+                }
+            }
+        }
         #if DEBUG
         // 시뮬레이터 시험용: SIMCTL_CHILD_TRIP_IMPORT_SAMPLE=<파일>로 붙여 넣은 것처럼 읽는다.
         .onAppear {
@@ -216,13 +248,19 @@ struct MapHomeTripImportSheet: View {
                 "In the AI app, answer multiple-choice questions to pick flights, hotels and places. Copy the JSON it gives you at the end and come back."
             ))
             ForEach(TripImportAIApp.allCases) { app in
-                wideButton(language.text("\(app.title)에서 계획 세우기", "Plan in \(app.title)"), prominent: app == .chatGPT) { open(app) }
+                let name = app.title(language)
+                wideButton(app == .pickle
+                    ? language.text("피클에서 계획 세우기 (자동 연동)", "Plan in Pickle (Auto Sync)")
+                    : language.text("\(name)에서 계획 세우기", "Plan in \(name)"), prominent: app == .pickle) { open(app) }
+                if app == .pickle, let pickleNote, !pickleNote.inRelay { caption(pickleNote.text) }
             }
-            if let copiedFor, !copiedFor.prefillsPrompt || relayKey != nil {
-                caption(language.text("프롬프트를 복사했어요. \(copiedFor.title)에 붙여 넣고 보내 주세요.", "The prompt is copied. Paste it into \(copiedFor.title) and send."))
+            if let copiedFor, copiedFor != .pickle, !copiedFor.prefillsPrompt || promptKey != nil {
+                let name = copiedFor.title(language)
+                caption(language.text("프롬프트를 복사했어요. \(name)에 붙여 넣고 보내 주세요.", "The prompt is copied. Paste it into \(name) and send."))
             }
             wideButton(language.text("프롬프트만 복사", "Copy prompt only"), prominent: false) {
-                UIPasteboard.general.string = prompt
+                // 키 없는 프롬프트. 키를 넣으려면 AI를 골라 연다.
+                UIPasteboard.general.string = prompt(key: nil)
                 TripClipboardWatch.promptCopied()
                 message = language.text("프롬프트를 복사했어요.", "Prompt copied.")
             }
@@ -236,17 +274,13 @@ struct MapHomeTripImportSheet: View {
                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.bodyStrong), weight: .bold))
                 .foregroundStyle(Color.tpInk)
             caption(language.text(
-                "웹 요청을 할 수 있는 AI 비서(도구 연결 비서, 맞춤 GPT, 단축어)는 복사하지 않아도 계획을 보낼 수 있어요. 키를 만들면 프롬프트에 함께 들어가요. 계획은 서버에 최대 3일 머물고 앱이 받으면 바로 지워져요.",
-                "AI assistants that can make web requests (tool-enabled assistants, custom GPTs, Shortcuts) can send the plan without copying. Create a key and it goes into the prompt. Plans stay on the server for up to 3 days and are deleted as soon as the app receives them."
+                "웹 요청을 할 수 있는 AI 비서는 복사하지 않아도 계획을 보낼 수 있어요. AI를 고르면 그 AI의 연결 키가 프롬프트에 들어가고, 없으면 PIN을 물어 만들어요. 계획은 서버에 최대 3일 머물고 앱이 받으면 바로 지워져요.",
+                "AI assistants that can make web requests can send the plan without copying. Pick an AI and its connection key goes into the prompt; if it has none, you're asked for your PIN to make one. Plans stay on the server for up to 3 days and are deleted as soon as the app receives them."
             ))
-            if relayKey == nil {
-                wideButton(language.text("연동 키 만들기", "Create a link key"), prominent: false) { relayKey = TripRelay.issueKey() }
-            } else {
-                caption(language.text("연동 키가 있어요. 프롬프트를 복사하면 함께 들어가요.", "A link key is set. It is included when you copy the prompt."))
-                wideButton(language.text("도착한 계획 불러오기", "Load the delivered plan"), prominent: false) { loadRelayPlan() }
-                    .disabled(isLoadingRelay)
-                wideButton(language.text("새 키로 바꾸기", "Replace with a new key"), prominent: false) { relayKey = TripRelay.issueKey() }
-            }
+            wideButton(language.text("도착한 계획 불러오기", "Load the delivered plan"), prominent: false) { loadRelayPlan() }
+                .disabled(isLoadingRelay)
+            wideButton(language.text("피클 열기 / 받기", "Open / Get Pickle"), prominent: false) { open(.pickle, inRelay: true) }
+            if let pickleNote, pickleNote.inRelay { caption(pickleNote.text) }
         }
     }
 
@@ -289,18 +323,25 @@ struct MapHomeTripImportSheet: View {
             }
             wideButton(language.text("여행 계획에 반영", "Add to trip plan"), prominent: true) {
                 isApplying = true
+                applyMessage = nil
                 let appliedText = pasted
                 Task { @MainActor in
-                    await model.applyTripImport(plan)
+                    let applied = await model.applyTripImport(plan)
+                    isApplying = false
+                    guard applied else {
+                        // 반영하지 못했으면 닫지 않고, 서버의 계획도 그대로 둔다.
+                        applyMessage = language.text("지금은 반영하지 못했어요. 잠시 뒤 다시 해 주세요.", "Couldn't add it right now. Try again in a moment.")
+                        return
+                    }
                     TripClipboardWatch.clear()
                     // 중계에서 받은 바로 그 계획일 때만 서버에서 지운다. 기다리지 않는다.
                     if TripRelay.isLastReceived(appliedText) { Task { await TripRelay.clear() } }
-                    isApplying = false
                     onApplied(plan.items.first?.localDay() ?? .now)
                     dismiss()
                 }
             }
             .disabled(isResolving || isApplying)
+            if let applyMessage { caption(applyMessage) }
         }
     }
 
@@ -310,6 +351,7 @@ struct MapHomeTripImportSheet: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("\(localTime(item.start, item.timeZone))–\(localTime(item.end, item.endTimeZone)) \(item.title)")
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .semibold))
+                TripItemStatusBadge(status: item.status, language: language)
                 if let minutes = item.travelMinutes, minutes > 0 {
                     caption(language.text("앞에서 이동 \(Int(minutes))분", "\(Int(minutes)) min from previous"))
                 }
@@ -336,12 +378,42 @@ struct MapHomeTripImportSheet: View {
         return date.formatted(style)
     }
 
-    private func open(_ app: TripImportAIApp) {
-        UIPasteboard.general.string = prompt
+    /// 그 AI의 연결 키를 찾고, 없으면 PIN을 물어 만든다(SEC1110A02). 중계가 없으면 키 없이 연다.
+    private func open(_ app: TripImportAIApp, inRelay: Bool = false) {
+        guard TripRelay.isAvailable else { return finishOpen(app, key: nil, inRelay: inRelay) }
+        Task { @MainActor in
+            if store.keys == nil { await store.reload() }
+            if let found = store.token(for: app.provider), found.key.scope == .write {
+                finishOpen(app, key: found.token, inRelay: inRelay)
+            } else {
+                pendingApp = (app, inRelay)
+                pinApp = app
+            }
+        }
+    }
+
+    private func finishOpen(_ app: TripImportAIApp, key: String?, inRelay: Bool) {
+        pendingApp = nil
+        promptKey = key
+        let text = prompt(key: key)
+        // 키가 든 글은 이 기기에만 10분 동안 둔다.
+        if key != nil { AssistantClipboard.copy(text) } else { UIPasteboard.general.string = text }
         TripClipboardWatch.promptCopied()
         copiedFor = app
-        let prefills = app.prefillsPrompt && relayKey == nil
-        if let url = app.url(prompt: prefills ? prompt : nil) { openURL(url) }
+        guard app == .pickle else {
+            let prefills = app.prefillsPrompt && key == nil
+            if let url = app.url(prompt: prefills ? text : nil) { openURL(url) }
+            return
+        }
+        // 피클은 앱이 없으면 App Store를 연다(TRP1110A08).
+        let installed = AssistantAIProvider.pickle.isInstalled
+        let note = !installed
+            ? language.text("피클이 없어서 App Store를 열었어요. 설치한 뒤 다시 눌러 주세요.", "Pickle isn't installed, so the App Store opened. Install it and tap again.")
+            : key != nil
+                ? language.text("프롬프트와 피클 연결 키를 복사했어요. 피클 채팅창에 붙여 넣으면 계획이 앱으로 바로 와요.", "The prompt and Pickle's connection key are copied. Paste them into the Pickle chat and the plan comes straight to the app.")
+                : language.text("프롬프트를 복사했어요. 피클에 붙여 넣고 보내 주세요.", "The prompt is copied. Paste it into Pickle and send.")
+        pickleNote = (note, inRelay)
+        if let url = AssistantAIProvider.pickle.destination(installed: installed) { openURL(url) }
     }
 
     /// 반영하지 않고 닫았던 계획도 서버에 남아 있으면(최대 3일) 다시 불러온다.

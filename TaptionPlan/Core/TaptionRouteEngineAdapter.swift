@@ -34,6 +34,8 @@ struct TaptionPreparedRouteReadings: Sendable {
     let latestTrustedReading: SensorReading?
     let impossibleLocationCount: Int
     let innovationOutlierCount: Int
+    /// 짧게 튄 유령 체류로 뺀 위치 수. 진단 기록의 근거로 남긴다 (CLN1110A01).
+    var ghostExcursionCount = 0
 }
 
 enum TaptionRouteEngineAdapter {
@@ -181,6 +183,7 @@ enum TaptionRouteEngineAdapter {
         var latestTrustedReading: SensorReading?
         var impossibleLocationCount = 0
         var innovationOutlierCount = 0
+        var ghostExcursionCount = 0
         for (index, decision) in report.decisions.enumerated() {
             if index.isMultiple(of: 256) { try cancellationCheck() }
             switch decision.reason {
@@ -192,6 +195,8 @@ enum TaptionRouteEngineAdapter {
                 impossibleLocationCount += 1
             case .innovationOutlier:
                 innovationOutlierCount += 1
+            case .ghostExcursion:
+                ghostExcursionCount += 1
             default:
                 break
             }
@@ -201,7 +206,8 @@ enum TaptionRouteEngineAdapter {
             readings: unique,
             latestTrustedReading: latestTrustedReading,
             impossibleLocationCount: impossibleLocationCount,
-            innovationOutlierCount: innovationOutlierCount
+            innovationOutlierCount: innovationOutlierCount,
+            ghostExcursionCount: ghostExcursionCount
         )
     }
 

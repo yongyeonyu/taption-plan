@@ -32,6 +32,8 @@ struct TripImportDocument: Decodable, Equatable {
         var flight: Flight?
         var travelFromPrevious: Travel?
         var note: String?
+        /// "booked" | "planned" | "tentative". 없거나 모르면 계획(TRP1110A09).
+        var status: String?
     }
 
     var format: String
@@ -75,6 +77,9 @@ struct TripImportItem: Identifiable, Equatable {
     let travelMinutes: Double?
     let travelMode: String?
     let note: String
+    var status: TripItemStatus = .planned
+    /// AI가 `status`를 알아볼 수 있게 적어 보냈는가. 아니면 다시 가져올 때 사용자가 정한 상태를 지킨다(REV1110A06).
+    var hasExplicitStatus = false
 
     /// 현지 날짜를 기기 달력의 같은 날짜로 옮긴다. 방콕 12월 1일 밤 일정은 한국 시간으로 넘어가도 12월 1일이다.
     func localDay(calendar: Calendar = .autoupdatingCurrent) -> Date {
@@ -88,7 +93,7 @@ struct TripImportItem: Identifiable, Equatable {
     static let defaultDuration: TimeInterval = 3_600
 
     static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.id == rhs.id && lhs.kind == rhs.kind && lhs.title == rhs.title && lhs.start == rhs.start && lhs.end == rhs.end
+        lhs.id == rhs.id && lhs.kind == rhs.kind && lhs.title == rhs.title && lhs.start == rhs.start && lhs.end == rhs.end && lhs.status == rhs.status
             && lhs.coordinate?.latitude == rhs.coordinate?.latitude && lhs.coordinate?.longitude == rhs.coordinate?.longitude
     }
 }
@@ -103,6 +108,22 @@ struct TripImportPlan: Equatable {
         Dictionary(grouping: items) { $0.localDay(calendar: calendar) }
             .map { ($0.key, $0.value.sorted { $0.start < $1.start }) }
             .sorted { $0.day < $1.day }
+    }
+}
+
+extension TripImportPlan {
+    /// 들어온 일정에 `status`가 없으면 앱에 저장된 상태(사용자가 정한 값)를 이어 쓴다. 적어 보낸 값은 그대로 이긴다(REV1110A06).
+    func keepingUserStatus(from existing: [TravelTripItem]) -> TripImportPlan {
+        let stored = Dictionary(
+            existing.filter { $0.tripID == tripID && $0.status != nil }.map { ($0.itemID, TripItemStatus(raw: $0.status)) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        guard !stored.isEmpty else { return self }
+        var copy = self
+        for index in copy.items.indices where !copy.items[index].hasExplicitStatus {
+            if let status = stored[copy.items[index].id] { copy.items[index].status = status }
+        }
+        return copy
     }
 }
 
@@ -148,7 +169,9 @@ enum TripImportParser {
                 mapsURL: raw.place?.mapsUrl.flatMap(mapsURL),
                 travelMinutes: raw.travelFromPrevious?.minutes,
                 travelMode: raw.travelFromPrevious?.mode,
-                note: raw.note ?? ""
+                note: raw.note ?? "",
+                status: TripItemStatus(raw: raw.status),
+                hasExplicitStatus: TripItemStatus(explicit: raw.status) != nil
             ))
         }
         return .success(TripImportPlan(tripID: document.tripId, title: document.title, items: items.sorted { $0.start < $1.start }))
@@ -206,9 +229,11 @@ struct TripImportDiff: Equatable {
         let old = Dictionary(existing.filter { $0.tripID == plan.tripID }.map { ($0.itemID, $0) }, uniquingKeysWith: { first, _ in first })
         guard !old.isEmpty else { return nil }
         var diff = Self()
-        for item in plan.items {
+        // 상태를 안 적어 보낸 일정은 저장된 상태를 지키므로 바뀐 것으로 세지 않는다(REV1110A06).
+        for item in plan.keepingUserStatus(from: existing).items {
             guard let previous = old[item.id] else { diff.added += 1; continue }
-            if previous.title != item.title || previous.start != item.start || previous.end != item.end || previous.kind != item.kind.rawValue {
+            if previous.title != item.title || previous.start != item.start || previous.end != item.end || previous.kind != item.kind.rawValue
+                || TripItemStatus(raw: previous.status) != item.status {
                 diff.changed += 1
             }
         }

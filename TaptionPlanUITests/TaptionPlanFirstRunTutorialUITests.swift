@@ -143,39 +143,50 @@ final class TaptionPlanFirstRunTutorialUITests: XCTestCase {
         capture("02-permissions-after-location")
         element(app, "firstRunNext").tap()
 
+        // 센서 주기 단계는 없앴다(VER1109A01). 하루 카드 시각부터 이어진다.
         assertStep(app, 3)
-        XCTAssertTrue(app.sliders.firstMatch.waitForExistence(timeout: 5))
-        captureAndAdvance(app, 3, "sensor-interval")
-
-        assertStep(app, 4)
         XCTAssertTrue(element(app, "firstRunDayCardTime").waitForExistence(timeout: 5))
-        captureAndAdvance(app, 4, "day-card-time")
+        captureAndAdvance(app, 3, "day-card-time")
 
-        captureAndAdvance(app, 5, "home")
-        captureAndAdvance(app, 6, "work-school")
-        captureAndAdvance(app, 7, "salary")
+        captureAndAdvance(app, 4, "home")
+        captureAndAdvance(app, 5, "work-school")
+        captureAndAdvance(app, 6, "salary")
 
-        assertStep(app, 8)
+        assertStep(app, 7)
         let cat = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "firstRunCat.")).element(boundBy: 1)
         XCTAssertTrue(cat.waitForExistence(timeout: 5))
         cat.tap()
-        captureAndAdvance(app, 8, "cat")
+        captureAndAdvance(app, 7, "cat")
 
         for (offset, name) in ["map", "playback", "sidebar-calendar", "clip-editor", "memos", "summary", "counters"].enumerated() {
-            assertStep(app, 9 + offset)
-            capture(String(format: "%02d-%@-첫줄", 9 + offset, name))
+            assertStep(app, 8 + offset)
+            capture(String(format: "%02d-%@-첫줄", 8 + offset, name))
             usleep(3_500_000)
-            captureAndAdvance(app, 9 + offset, name)
+            captureAndAdvance(app, 8 + offset, name)
         }
 
-        assertStep(app, 16)
-        capture("16-calendar-before")
+        assertStep(app, 15)
+        capture("15-calendar-before")
         element(app, "firstRunCalendarAllow").tap()
         answerAlert(timeout: 10)
-        capture("16-calendar-after")
+        capture("15-calendar-after")
         element(app, "firstRunNext").tap()
 
-        captureAndAdvance(app, 17, "apple-watch")
+        captureAndAdvance(app, 16, "apple-watch")
+
+        // AI 연결(AIR1110A04): 네 AI 줄이 보이고, 연결 시트를 닫으면 같은 단계로 돌아온다. 나중에 해도 된다.
+        assertStep(app, 17)
+        for provider in ["pickle", "chatGPT", "claude", "gemini"] {
+            XCTAssertTrue(element(app, "assistantConnect.\(provider)").waitForExistence(timeout: 5), provider)
+        }
+        element(app, "assistantConnect.claude").tap()
+        let done = app.buttons.matching(NSPredicate(format: "label == %@ OR label == %@", "완료", "Done")).firstMatch
+        XCTAssertTrue(done.waitForExistence(timeout: 10))
+        capture("17-ai-connect-claude")
+        done.tap()
+        assertStep(app, 17)
+        element(app, "firstRunSkip").tap()
+
         captureAndAdvance(app, 18, "password")
         captureAndAdvance(app, 19, "finish")
 

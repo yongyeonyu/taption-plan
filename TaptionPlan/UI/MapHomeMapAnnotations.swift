@@ -340,12 +340,16 @@ struct MapHomeCatSpeechBubble: View {
     }
 
     var body: some View {
+        // AI 말풍선이 있으면 그 시간 동안 활동 이름 대신 보인다(BUB1110A01). 화면 폭의 60%, 세 줄까지.
+        let ai = AssistantBubbleBoard.current.text?.display
         HStack(spacing: -1) {
             if side == .right { tail(pointsLeft: true) }
-            Text(text)
+            Text(ai ?? text)
                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
                 .foregroundStyle(Color.tpInk)
-                .lineLimit(1)
+                .lineLimit(ai == nil ? 1 : 3)
+                .frame(width: ai.map(Self.width))
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
                 .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
@@ -355,6 +359,10 @@ struct MapHomeCatSpeechBubble: View {
         .fixedSize()
         .allowsHitTesting(false)
         .accessibilityHidden(true)
+    }
+
+    private static func width(_ text: String) -> CGFloat {
+        AssistantBubbleLayout.width(text, size: TaptionType.scaled(TaptionType.snapped(11)))
     }
 
     private func tail(pointsLeft: Bool) -> some View {

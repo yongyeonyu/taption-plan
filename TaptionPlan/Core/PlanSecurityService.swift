@@ -13,6 +13,8 @@ final class PlanSecurityService {
     private let credentialStore: PlanCredentialStore
     /// 백업·복원에 쓰는 6자리를 이 기기에만 보관한다(대표 결정, BKP1020A01). nil이면 보관하지 않는다.
     private let passwordStore: PlanCredentialStore?
+    /// 잊었을 때 Face ID 뒤 다시 보여 주려고 iCloud 키체인에 보관한다(대표 결정, BKP1110A02). nil이면 보관하지 않는다.
+    private let backupPasswordVault: BackupPasswordVault?
     private let biometricAuthenticator: PlanLocalBiometricAuthenticator
     private let settingsDefaults: UserDefaults
     private let settingsKey = "TaptionPlan.security.app-lock-settings-v1"
@@ -29,6 +31,7 @@ final class PlanSecurityService {
     init(
         credentialStore: PlanCredentialStore = KeychainPlanCredentialStore(),
         passwordStore: PlanCredentialStore? = nil,
+        backupPasswordVault: BackupPasswordVault? = nil,
         biometricAuthenticator: PlanLocalBiometricAuthenticator = SystemPlanLocalBiometricAuthenticator(),
         settingsDefaults: UserDefaults = .standard
     ) {
@@ -36,6 +39,8 @@ final class PlanSecurityService {
         self.passwordStore = passwordStore
             ?? (credentialStore is KeychainPlanCredentialStore
                 ? KeychainPlanCredentialStore(account: "backup-password-v1") : nil)
+        self.backupPasswordVault = backupPasswordVault
+            ?? (credentialStore is KeychainPlanCredentialStore ? BackupPasswordVault() : nil)
         self.biometricAuthenticator = biometricAuthenticator
         self.settingsDefaults = settingsDefaults
         if let data = try? credentialStore.read() {
@@ -71,6 +76,21 @@ final class PlanSecurityService {
 
     private func remember(_ pin: String) {
         try? passwordStore?.write(Data(pin.utf8))
+        backupPasswordVault?.save(pin)
+    }
+
+    /// 입력한 비밀번호로 백업이 열렸을 때 보관한다. 등록된 비밀번호가 있으면 그것과 같을 때만 담아,
+    /// 예전 백업의 다른 비밀번호가 지금 비밀번호를 덮지 않게 한다.
+    func keepOpenedBackupPassword(_ password: String) {
+        guard let backupPasswordVault, BackupPasswordVault.isStorable(password),
+              backupPasswordVault.stored != password else { return }
+        if let verifier, !verifier.matches(password) { return }
+        backupPasswordVault.save(password)
+    }
+
+    func revealBackupPassword(reason: String) async -> BackupPasswordReveal {
+        guard let backupPasswordVault else { return .nothingStored }
+        return await backupPasswordVault.reveal(reason: reason) { self.rememberedPassword }
     }
 
     var status: PlanSecurityStatus {

@@ -73,7 +73,9 @@ final class StorageReviewFixTests: XCTestCase {
         var snapshot = TaptionDataSnapshot.empty
         snapshot.updatedAt = Date(timeIntervalSince1970: 1_000)
         snapshot.plans = [PlanRecord(
-            title: "추가", span: TimeSpan(start: date(2026, 8, 1), end: date(2026, 8, 1, 13)), categoryID: "project"
+            title: "추가", span: TimeSpan(start: date(2026, 8, 1), end: date(2026, 8, 1, 13)), categoryID: "project",
+            // `Date.now`는 초 단위 JSON 왕복에서 마지막 비트가 바뀔 수 있어 고정 시각을 쓴다.
+            createdAt: Date(timeIntervalSince1970: 1_000), updatedAt: Date(timeIntervalSince1970: 1_000)
         )]
         await repository.handleMemoryPressure()
         // 저장이 비교 기준을 다시 읽어도(내부 읽기) 줄을 스스로 기다리다 멈추지 않는다.

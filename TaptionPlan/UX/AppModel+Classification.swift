@@ -406,7 +406,9 @@ extension AppModel {
             let generatedMotionActuals = MotionActivityActualEngine.records(
                 from: motionActivities,
                 existing: existingAutomatic,
-                inside: span
+                inside: span,
+                // 수정·숨김이 붙은 뒤 조각은 합치지 않고, 합친 기록(첫 조각 식별자)의 수정·숨김은 합친 채로 따른다 (REV1110A06).
+                protectedIDs: snapshot.settings.suppressedActualIDs.union(snapshot.settings.activityCorrections.keys)
             ).filter {
                 !snapshot.settings.suppressedActualIDs.contains($0.id)
             }

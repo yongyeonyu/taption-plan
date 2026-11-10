@@ -1,47 +1,37 @@
 // Taption Plan trip relay (TRP1110A04). An AI assistant POSTs a trip JSON with the user's key;
 // the app GETs it on launch, shows a preview, and DELETEs it once the user applies it. Only a SHA-256 hash of the key is
 // stored, plans expire after 3 days, and nothing else about the user is kept or logged.
+// AIR1110A01/TRP1110A07 add an activity history the app uploads for the AI and a command queue the AI fills for the app.
+// AIR1110A02/SEC1110A01 add scoped AI keys, per-user DEK encryption (v2), summaries, a remote MCP endpoint and OpenAPI.
+// SEC1110A02 requires registration (/register), adds a PIN, a per-master Durable Object (keys, queue, budgets, PIN tries),
+// per-route limits and encrypted metadata. AIR1110A03 adds OAuth 2.1 for MCP connectors and more AI actions.
+import { open, seal, sha256Hex, storageCryptoKey, vault } from "./crypto.js";
+import { bearer, json, limited, readBody, tooMany, writeAllowed } from "./http.js";
+import { allows, buryLegacyWrap, importLegacyKeys, keyring, keysRoute, pinResetRoute, pinRoute, registerRoute, resealLegacyWrap, resolveKey, sealInfo } from "./keys.js";
+import { mcpRoute } from "./mcp.js";
+import { authorizeRoute, authorizationServer, createConnectCode, protectedResource, registerClient, resourceMetadataUrl, tokenRoute } from "./oauth.js";
+import { openapi } from "./openapi.js";
+import { LIMITS, ipState, userState } from "./state.js";
+import * as store from "./store.js";
 
-const MAX_BODY_BYTES = 64 * 1024;
-const TTL_SECONDS = 3 * 24 * 60 * 60;
-const KEY_PATTERN = /^[A-Za-z0-9_-]{43}$/; // 32 random bytes, base64url without padding
-
-function json(body, status) {
-  return new Response(body === null ? null : JSON.stringify(body), {
-    status,
-    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
-  });
-}
+export { open, seal, storageCryptoKey, vault };
+export { UserState } from "./state.js";
+export { isActivityUpload, isCommand, isCommandResults, isTripPlan } from "./validate.js";
 
 export async function storageKey(token) {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
-  return "plan:" + [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-function bearer(request) {
-  const match = /^Bearer (.+)$/.exec(request.headers.get("authorization") ?? "");
-  return match && KEY_PATTERN.test(match[1]) ? match[1] : null;
-}
-
-// Same contract the app reads: format "bokki-trip", version 1, a tripId and at least one item.
-export function isTripPlan(value) {
-  return value?.format === "bokki-trip" && value?.version === 1 && typeof value?.tripId === "string"
-    && typeof value?.title === "string" && Array.isArray(value?.items) && value.items.length > 0
-    && value.items.length <= 500;
+  return "plan:" + (await sha256Hex(token));
 }
 
 // Kakao Local keyword search proxy (REV1110A03). The REST key is a server key; shipping it inside the app
 // let anyone pull it from the IPA. The app calls this route instead and the key stays a Worker secret.
+// SEC1110A02: only registered keys (the install's search key or the master) may call it; 500 a day per key (DO).
+// REV1110A06: the per-IP minute limit runs before auth (route), and each IP gets 2,000 searches a day across all its keys.
 const KAKAO_URL = "https://dapi.kakao.com/v2/local/search/keyword.json";
 const KAKAO_PARAMS = ["query", "x", "y", "radius", "sort", "size", "page"];
 
 export async function kakaoKeyword(request, env, fetcher = fetch) {
   if (request.method !== "GET") return json({ error: "method_not_allowed" }, 405);
   if (!env.KAKAO_REST_API_KEY) return json({ error: "unavailable" }, 503);
-  if (env.KAKAO_LIMIT) {
-    const { success } = await env.KAKAO_LIMIT.limit({ key: request.headers.get("cf-connecting-ip") ?? "unknown" });
-    if (!success) return json({ error: "rate_limited" }, 429);
-  }
   const incoming = new URL(request.url).searchParams;
   const query = incoming.get("query") ?? "";
   if (!query.trim() || query.length > 100) return json({ error: "bad_query" }, 400);
@@ -57,40 +47,149 @@ export async function kakaoKeyword(request, env, fetcher = fetch) {
   });
 }
 
+// 경로마다 메서드별로 필요한 범위(AIR1110A02). master > write > read. search는 카카오 중계만.
+// read: AI가 읽기만. write: 읽기 + 계획·명령 보내기. 앱 전용(올리기·지우기·큐 가져오기·키·PIN·연결 코드)은 master만.
+// 본문이 있는 쓰기는 IP마다 POST_LIMIT을 더 받는다(withBody). legacy: 이 요청 전에 마칠 예전 자료 옮기기.
+const withBody = (op) => async (request, ctx) => {
+  if (!(await writeAllowed(request, ctx.env))) return tooMany();
+  const body = await readBody(request);
+  return body.error ?? op(ctx, body.value);
+};
+const query = (request, name) => new URL(request.url).searchParams.get(name);
+
+// 검색 키는 누구나 등록할 수 있으므로 IP마다 하루 수도 센다(finding 4).
+async function kakaoRoute(request, ctx) {
+  if (request.method === "GET" && ctx.env.KAKAO_REST_API_KEY) {
+    const perIp = await (await ipState(ctx.env, request)).call("countDaily", { name: "kakao", limit: LIMITS.kakaoPerIpDay, now: ctx.now, expire: true });
+    if (!perIp.ok) return tooMany("kakao_daily_limit", perIp.retryAfter);
+  }
+  return kakaoKeyword(request, ctx.env, ctx.env.FETCH); // FETCH: 시험용 바꿔치기
+}
+
+const ROUTES = {
+  "/plan": {
+    GET: ["read", (request, ctx) => store.readPlan(ctx)],
+    POST: ["write", withBody(store.savePlan)],
+    DELETE: ["master", (request, ctx) => store.deletePlan(ctx)],
+  },
+  "/activity": {
+    GET: ["read", (request, ctx) => store.readActivity(ctx, query(request, "date"))],
+    POST: ["master", withBody(store.saveActivity)],
+    DELETE: ["master", (request, ctx) => store.deleteActivity(ctx)],
+  },
+  "/activity/summary": {
+    GET: ["read", (request, ctx) => store.readSummary(ctx, query(request, "range"), query(request, "end"))],
+  },
+  "/command": {
+    POST: ["write", withBody((ctx, value) => store.queueCommand(ctx, value, "rest"))],
+    GET: ["master", (request, ctx) => store.readCommands(ctx)],
+    DELETE: ["master", (request, ctx) => store.deleteCommands(ctx, query(request, "ids"))],
+  },
+  "/command/result": {
+    POST: ["master", withBody(store.saveResults)],
+    GET: ["read", (request, ctx) => store.readResults(ctx)],
+  },
+  "/keys": {
+    POST: ["master", keysRoute, "keys"],
+    GET: ["master", keysRoute, "keys"],
+    DELETE: ["master", keysRoute, "keys"],
+  },
+  "/pin": {
+    POST: ["master", pinRoute],
+    GET: ["master", pinRoute],
+  },
+  "/pin/reset": {
+    POST: ["master", pinResetRoute],
+  },
+  "/oauth/code": {
+    POST: ["master", createConnectCode],
+  },
+  "/mcp": {
+    POST: ["read", mcpRoute], // 도구마다 범위를 다시 본다.
+  },
+  "/kakao/keyword": {
+    GET: ["search", kakaoRoute],
+  },
+};
+
+// 인증 없이 받는 경로. OAuth 메타데이터·등록·토큰은 브라우저 클라이언트도 부를 수 있게 CORS를 연다.
+const PUBLIC = {
+  "/openapi.json": (request, env, url) => json(openapi(url.origin), 200),
+  "/.well-known/oauth-protected-resource": (request, env, url) => json(protectedResource(url.origin), 200),
+  "/.well-known/oauth-protected-resource/mcp": (request, env, url) => json(protectedResource(url.origin), 200),
+  "/.well-known/oauth-authorization-server": (request, env, url) => json(authorizationServer(url.origin), 200),
+};
+const CORS = { "access-control-allow-origin": "*", "access-control-allow-headers": "authorization, content-type, mcp-protocol-version", "access-control-allow-methods": "GET, POST, OPTIONS" };
+const CORS_PATHS = new Set([...Object.keys(PUBLIC), "/oauth/register", "/oauth/token", "/mcp"]);
+
+function withCors(response) {
+  const out = new Response(response.body, response);
+  for (const [name, value] of Object.entries(CORS)) out.headers.set(name, value);
+  return out;
+}
+
+// /mcp의 401은 보호 자원 메타데이터를 가리켜 OAuth를 시작하게 한다(RFC 9728). 토큰이 있었는데 틀렸을 때만 invalid_token.
+const unauthorized = (url, error, hadToken) => json({ error }, 401, url.pathname === "/mcp"
+  ? { "www-authenticate": `Bearer resource_metadata="${resourceMetadataUrl(url.origin)}"${hadToken && error !== "unregistered" ? ", error=\"invalid_token\"" : ""}` }
+  : {});
+
+// 예전 v2 감싼 기록으로 들어온 키는 DO가 목록에 넣도록(adopt) 잠근 정보를 같이 보낸다.
+async function adoptInfo(auth) {
+  if (!auth.legacyWrap) return undefined;
+  const ring = keyring({ scope: auth.scope, dekBytes: auth.dekBytes });
+  return { keyId: auth.keyId, info: await sealInfo(ring, auth.master, auth.hash, { scope: auth.scope, expiresAt: auth.expiresAt, source: "rest" }) };
+}
+
+async function authorized(request, env, url, route) {
+  const token = bearer(request);
+  const now = env.NOW?.() ?? Date.now(); // 시험에서 시계를 바꿀 수 있게 한다.
+  const auth = token ? await resolveKey(env.PLANS, token, now) : null;
+  if (!auth) return unauthorized(url, "unauthorized", !!request.headers.get("authorization"));
+  const entry = route[request.method];
+  if (!entry) return json({ error: "method_not_allowed" }, 405);
+  const [need, run, part] = entry;
+  const state = userState(env, auth.master);
+  const admission = await state.call("admit", {
+    now, registration: auth.kind === "master", entry: auth.entry, adopt: await adoptInfo(auth), kakao: url.pathname === "/kakao/keyword",
+  });
+  if (!admission.ok) {
+    if (admission.tomb) await buryLegacyWrap(env.PLANS, auth.hash);
+    if (admission.retryAfter) return tooMany(admission.error, admission.retryAfter);
+    return unauthorized(url, admission.error === "unregistered" ? "unregistered" : "unauthorized", true);
+  }
+  if (admission.purpose === "search") auth.scope = "search";
+  if (!allows(auth.scope, need)) return json({ error: "forbidden", scope: auth.scope }, 403);
+  const ring = keyring(auth);
+  const ctx = { env, kv: env.PLANS, store: vault(env.PLANS, ring, now), state, auth, ring, master: auth.master, now, legacy: admission.legacy };
+  if (auth.legacyWrap) await resealLegacyWrap(ctx);
+  if (part === "keys" && !ctx.legacy.keys) await importLegacyKeys(ctx);
+  return run(request, ctx);
+}
+
 export async function handle(request, env) {
   const url = new URL(request.url);
-  if (url.pathname === "/kakao/keyword") return kakaoKeyword(request, env);
-  if (url.pathname !== "/plan") return json({ error: "not_found" }, 404);
-  const token = bearer(request);
-  if (!token) return json({ error: "unauthorized" }, 401);
-  const key = await storageKey(token);
+  const cors = CORS_PATHS.has(url.pathname);
+  if (request.method === "OPTIONS" && cors) return new Response(null, { status: 204, headers: CORS });
+  const response = await route(request, env, url);
+  return cors ? withCors(response) : response;
+}
 
-  switch (request.method) {
-    case "POST": {
-      // A per-IP write limit keeps one sender from using up the free daily KV writes for everyone.
-      if (env.POST_LIMIT) {
-        const { success } = await env.POST_LIMIT.limit({ key: request.headers.get("cf-connecting-ip") ?? "unknown" });
-        if (!success) return json({ error: "rate_limited" }, 429);
-      }
-      const length = Number(request.headers.get("content-length") ?? 0);
-      if (length > MAX_BODY_BYTES) return json({ error: "too_large" }, 413);
-      const text = await request.text();
-      if (new TextEncoder().encode(text).length > MAX_BODY_BYTES) return json({ error: "too_large" }, 413);
-      let plan;
-      try { plan = JSON.parse(text); } catch { return json({ error: "invalid_json" }, 400); }
-      if (!isTripPlan(plan)) return json({ error: "not_trip_plan" }, 422);
-      await env.PLANS.put(key, JSON.stringify(plan), { expirationTtl: TTL_SECONDS });
-      return json({ ok: true, tripId: plan.tripId, expiresInSeconds: TTL_SECONDS }, 201);
+async function route(request, env, url) {
+  const now = env.NOW?.() ?? Date.now();
+  const publicRoute = PUBLIC[url.pathname];
+  if (publicRoute) return request.method === "GET" ? publicRoute(request, env, url) : json({ error: "method_not_allowed" }, 405);
+  if (!env.USER_STATE) return json({ error: "unavailable" }, 503);
+  // 인증 전에 IP마다 요청 수를 제한한다(finding 3). 카카오는 자기 제한(KAKAO_LIMIT)을 쓴다(N2: 이것도 인증 전).
+  if (await limited(url.pathname === "/kakao/keyword" ? env.KAKAO_LIMIT : env.REQUEST_LIMIT, request)) return tooMany();
+  switch (url.pathname) {
+    case "/register": return registerRoute(request, env, now);
+    case "/oauth/register": return registerClient(request, env, now);
+    case "/oauth/authorize": return authorizeRoute(request, env, now);
+    case "/oauth/token": return tokenRoute(request, env, now);
+    default: {
+      const entry = ROUTES[url.pathname];
+      return entry ? authorized(request, env, url, entry) : json({ error: "not_found" }, 404);
     }
-    case "GET": {
-      const stored = await env.PLANS.get(key);
-      return stored ? new Response(stored, { status: 200, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } }) : json(null, 204);
-    }
-    case "DELETE":
-      await env.PLANS.delete(key);
-      return json(null, 204);
-    default:
-      return json({ error: "method_not_allowed" }, 405);
   }
 }
 

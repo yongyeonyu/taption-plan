@@ -2,14 +2,16 @@
 
 도구 호출(HTTP 요청)이 되는 AI 비서(예: 피클, 맞춤 GPT Actions, 단축어)가 여행 계획을 앱으로 보내는 방법이다. 서버 코드는 `server/trip-relay`, 앱이 읽는 코드는 `TaptionPlan/UI/TripImportModel.swift`·`TripRelay.swift`다.
 
+같은 서버·같은 연동 키로 하루 기록 읽기(`/activity`)와 메모·일정·기록 수정 명령(`/command`)도 쓸 수 있다. 규격은 [ACTIVITY_RELAY_API.md](ACTIVITY_RELAY_API.md)를 보라(AIR1110A01·TRP1110A07).
+
 ## 1. 주소와 인증
 
 | 항목 | 값 |
 |---|---|
-| 주소 | `https://<RELAY_HOST>/plan` — 실제 호스트는 계정 이름이 들어 있어 저장소에 적지 않는다. 앱 빌드 설정 `TRIP_RELAY_HOST`와 같다 |
+| 주소 | `https://trip.bokkiyaw.com/plan` — 앱 빌드 설정 `TRIP_RELAY_HOST`와 같다. 이 주소는 305 다음 빌드부터 앱에 들어간다. 305까지의 빌드는 예전 workers.dev 주소를 쓰며 그 주소도 계속 동작한다 |
 | 인증 | `Authorization: Bearer <연동 키>` 한 가지만 받는다(`X-Trip-Key` 같은 다른 헤더는 받지 않는다) |
-| 연동 키 | 사용자마다 앱이 만든다: 여행 모드 → 추가 → AI로 만들기 → 「연동 키 만들기」. 무작위 32바이트를 base64url(패딩 없음)로 쓴 **43자** `[A-Za-z0-9_-]`. 「프롬프트만 복사」를 하면 프롬프트 끝에 주소와 키가 함께 들어간다 |
-| 키 저장 | 앱은 기기 키체인에만, 서버는 SHA-256 해시만 둔다. 「새 키로 바꾸기」를 누르면 예전 키는 더 이상 받지 않는다 |
+| 연동 키 | AI마다 따로 만드는 연결 키다. 앱만 가진 주 키는 AI에 주지 않는다. 6자리 PIN을 정한 뒤 메인 메뉴 → 연결 → 「AI 연결」에서 만들거나, 여행 모드 → 추가 → AI로 만들기에서 AI를 골라 열 때 PIN을 넣어 만든다([ACTIVITY_RELAY_API.md](ACTIVITY_RELAY_API.md) 13장). 무작위 32바이트를 base64url(패딩 없음)로 쓴 **43자** `[A-Za-z0-9_-]`. AI를 골라 열면 프롬프트 끝에 주소와 그 AI의 연결 키가 들어가고, 「프롬프트만 복사」는 키 없는 프롬프트만 복사한다 |
+| 키 저장 | 앱은 기기 키체인에만, 서버는 SHA-256 해시만 둔다. 「AI 연결」의 「새 키로 바꾸기」를 누르면 주 키가 바뀌고 서버의 기록과 AI 연결(연결 키)을 모두 지워 예전 키는 더 이상 받지 않는다 |
 
 ### 요청과 응답
 
@@ -19,13 +21,13 @@
 | `GET /plan` | 없음 | `200` 저장된 JSON, `204` 없음 (앱이 쓴다) |
 | `DELETE /plan` | 없음 | `204` (앱이 계획을 반영한 뒤 부른다) |
 
-오류: `400` JSON 아님, `401` 키 없음·형식 틀림, `413` 64KB 초과, `422` 여행 형식 아님, `429` 보내기가 너무 잦음(IP당 1분 5번 안팎, Cloudflare 지역별 집계라 정확하지 않음), `404` 다른 경로, `405` 다른 메서드.
+오류: `400` JSON 아님, `401` 키 없음·형식 틀림, `413` 64KB 초과, `422` 여행 형식 아님, `429` 보내기가 너무 잦거나 하루 한도를 넘음(IP당 본문 있는 쓰기 1분 20번 안팎 — Cloudflare 지역별 집계라 정확하지 않음, 연결마다 1분 60번·하루 1,000번, 서버 KV 쓰기 예산; 본문 `retryAfter` 초와 `Retry-After` 헤더, 자세한 것은 `docs/ACTIVITY_RELAY_API.md` 15장), `404` 다른 경로, `405` 다른 메서드.
 
 - 키마다 마지막 계획 하나만 둔다(새로 보내면 덮어씀). 서버는 3일 뒤 자동으로 지운다.
 - 쓰고 나서 다른 지역에서 읽히기까지 몇 초 걸릴 수 있다. 앱은 열릴 때(포그라운드로 올 때) 가져와 처음 보는 내용이면 미리보기를 띄우고, 사용자가 반영하면 서버에서 지운다. 반영하지 않고 닫은 계획은 3일 동안 남아 「도착한 계획 불러오기」로 다시 열 수 있다.
 
 ```sh
-curl -X POST "https://<RELAY_HOST>/plan" \
+curl -X POST "https://trip.bokkiyaw.com/plan" \
   -H "Authorization: Bearer <연동 키 43자>" \
   -H "Content-Type: application/json" \
   --data-binary @trip.json
@@ -55,6 +57,7 @@ curl -X POST "https://<RELAY_HOST>/plan" \
 | `id` | 문자열 | 필수 | 여행 안에서 겹치지 않는 값. 같은 여행을 다시 보낼 때 같은 일정이면 같은 `id`. 겹치면 앱이 뒤의 것에 `#2`처럼 차례 번호를 붙인다 |
 | `type` | 문자열 | 필수 | `flight` `lodging` `meal` `cafe` `sight` `photo` `shopping` `activity` `rest` `sleep` `transfer` `other` 중 하나(모르는 값은 `other`) |
 | `title` | 문자열 | 필수 | 일정 이름 |
+| `status` | 문자열 | 선택 | `booked`(예약·결제함) `planned`(계획) `tentative`(후보·미정). 없거나 모르는 값은 `planned`. 앱은 미리보기 배지, 시간 막대(예약은 진하게·체크, 미정은 반투명·점선), 지도 핀(미정은 반투명, 예약은 체크)으로 보이고 일정에서 바꿀 수 있다. 계획은 저장하지 않아 예전 기록 바이트가 그대로다 |
 | `start` | 시각 | 필수 | 현지 시차를 붙인다: `2026-12-01T09:05+09:00` (초·소수 초, `+0900`, `Z`도 받음). 읽지 못하면 그 계획 전체를 거절 |
 | `end` | 시각 | 선택 | 없으면 시작 + 1시간. 항공편은 **도착지 시차**로 쓴다 |
 | `place.name` | 문자열 | 권장 | 장소 이름 |
@@ -90,6 +93,7 @@ curl -X POST "https://<RELAY_HOST>/plan" \
       "id": "f1",
       "type": "flight",
       "title": "TG659 인천→방콕",
+      "status": "booked",
       "start": "2026-12-01T09:05+09:00",
       "end": "2026-12-01T13:05+07:00",
       "place": { "name": "수완나품 국제공항", "lat": 13.69, "lng": 100.7501, "mapsUrl": "https://maps.google.com/?q=Suvarnabhumi+Airport" },
@@ -99,6 +103,7 @@ curl -X POST "https://<RELAY_HOST>/plan" \
       "id": "h1",
       "type": "lodging",
       "title": "호텔 체크인",
+      "status": "booked",
       "start": "2026-12-01T15:00+07:00",
       "end": "2026-12-01T15:30+07:00",
       "place": { "name": "Siam Kempinski Hotel Bangkok", "address": "991/9 Rama I Rd, Bangkok", "lat": 13.7489, "lng": 100.5341, "mapsUrl": "https://maps.google.com/?q=Siam+Kempinski+Hotel+Bangkok" },
@@ -116,6 +121,7 @@ curl -X POST "https://<RELAY_HOST>/plan" \
       "id": "m1",
       "type": "meal",
       "title": "쩟페어 야시장",
+      "status": "tentative",
       "start": "2026-12-01T19:00+07:00",
       "end": "2026-12-01T21:00+07:00",
       "place": { "name": "Jodd Fairs", "lat": null, "lng": null },
@@ -144,3 +150,13 @@ curl -X POST "https://<RELAY_HOST>/plan" \
 ```
 
 이 샘플은 `docs/trip-relay-sample.json`과 같고, 서버 검사(`isTripPlan`)와 앱 읽기(`TripImportParser`)를 모두 통과한다.
+
+## 저장 암호화 (SEC1110A01)
+
+서버는 KV에 넣는 모든 값(`/plan`, `/activity`의 날마다, `/command` 큐, `/command/result`)을 서버에서 암호화한다.
+
+- 키: 요청의 연동 키(UTF-8)에서 WebCrypto HKDF-SHA256(salt `taption-relay-v1`, info `storage`)으로 AES-256-GCM 키를 만든다. 서버는 이 키를 저장하지 않으므로 연동 키 없이는 저장된 값을 풀 수 없다. KV 이름은 그대로 `접두어 + SHA-256(연동 키)`이며, 해시와 암호화 키는 서로 다른 값이다.
+- 저장 형식: `{"v":1,"iv":"<12바이트 base64>","ct":"<암호문 base64>"}`. KV 이름을 추가 인증 데이터(AAD)로 써서 값을 다른 이름으로 옮기면 풀리지 않는다.
+- 풀리지 않는 값(변조·다른 이름에서 옮김)은 없는 것으로 보고(`204`) 지운다.
+- 응답은 인증한 사용자에게 평문 JSON으로 돌려준다(전송은 TLS가 보호한다).
+- 암호화 전에 저장된 `/plan` 평문(최대 3일)은 한 번 그대로 읽고, 다음 쓰기부터 암호화한다. 이 예외는 2026-11-14 뒤 지운다.

@@ -76,7 +76,17 @@ enum MapHomeKakaoSearch {
     }
 
     private static func fetch(query: String, center: CLLocationCoordinate2D, nearby: Bool) async -> [MapHomeSearchResult] {
-        guard let endpoint else { return [] }
+        // 설치마다 만든 검색 전용 키를 붙인다. 등록하지 못하면 Apple 검색만 쓴다(SEC1110A02).
+        guard let token = await AssistantRegistration.searchToken(),
+              let request = request(query: query, center: center, nearby: nearby, token: token),
+              let (data, response) = try? await URLSession.shared.data(for: request),
+              let status = (response as? HTTPURLResponse)?.statusCode else { return [] }
+        if status == 401 { await AssistantRegistration.searchTokenRejected() }
+        return status == 200 ? decode(data) : []
+    }
+
+    static func request(query: String, center: CLLocationCoordinate2D, nearby: Bool, token: String, endpoint: URL? = endpoint) -> URLRequest? {
+        guard let endpoint else { return nil }
         var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: false)
         components?.queryItems = [
             URLQueryItem(name: "query", value: query),
@@ -85,11 +95,10 @@ enum MapHomeKakaoSearch {
             URLQueryItem(name: "size", value: "15"),
             URLQueryItem(name: "sort", value: nearby ? "distance" : "accuracy"),
         ] + (nearby ? [URLQueryItem(name: "radius", value: String(nearbyRadiusMeters))] : [])
-        guard let url = components?.url else { return [] }
-        let request = URLRequest(url: url, timeoutInterval: 5)
-        guard let (data, response) = try? await URLSession.shared.data(for: request),
-              (response as? HTTPURLResponse)?.statusCode == 200 else { return [] }
-        return decode(data)
+        guard let url = components?.url else { return nil }
+        var request = URLRequest(url: url, timeoutInterval: 5)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        return request
     }
 }
 

@@ -108,7 +108,7 @@ struct FirstRunTutorialView: View {
         switch step {
         case .welcome, .permissions, .dayCardTime, .cat: .groom
         case .home, .summary: .sleep
-        case .workAndSchool, .calendar, .appleWatch: .work
+        case .workAndSchool, .calendar, .appleWatch, .aiConnect: .work
         case .salary, .finish: .eat
         case .map: .atlas
         case .playback: .stroll
@@ -146,6 +146,7 @@ struct FirstRunTutorialView: View {
         case .counters: language.text("카운터", "Counters")
         case .calendar: language.text("캘린더 연결", "Connect calendars")
         case .appleWatch: language.text("Apple Watch", "Apple Watch")
+        case .aiConnect: language.text("AI 연결", "Connect an AI")
         case .password: language.text("백업 비밀번호", "Backup password")
         case .finish: language.text("준비됐습니다", "You're ready")
         }
@@ -169,6 +170,7 @@ struct FirstRunTutorialView: View {
         case .counters: language.text("지도 위 고양이 곁에 보여 줄 것을 고릅니다.", "Choose what appears next to the cat on the map.")
         case .calendar: language.text("일정을 하루 기록과 함께 봅니다. 읽기만 합니다.", "See events with your day. Read only.")
         case .appleWatch: language.text("손목의 움직임까지 더해 하루를 기록합니다.", "Adds movement from your wrist to your day.")
+        case .aiConnect: language.text("AI가 하루 기록을 읽고 일정·메모를 대신 정리합니다. 나중에 메뉴 > 연결에서도 할 수 있습니다.", "Let an AI read your day and tidy plans and memos for you. You can also do this later in Menu > Connections.")
         case .password: language.text("앱 잠금과 iCloud 백업에 같은 비밀번호를 씁니다.", "App lock and iCloud backup share this password.")
         case .finish: language.text("지금 상태입니다. 비어 있는 것은 나중에 해도 됩니다.", "Here's where things stand. Anything open can wait.")
         }
@@ -223,6 +225,8 @@ struct FirstRunTutorialView: View {
             FirstRunCountersPage(language: language)
         case .appleWatch:
             FirstRunAppleWatchPage(model: model, language: language)
+        case .aiConnect:
+            FirstRunAIConnectPage(language: language)
         case .calendar:
             FirstRunCalendarPage(model: model, language: language)
         case .finish:

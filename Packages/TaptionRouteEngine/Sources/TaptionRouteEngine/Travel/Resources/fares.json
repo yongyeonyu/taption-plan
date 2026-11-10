@@ -1,0 +1,125 @@
+{
+  "version": "2026-11",
+  "currency": "KRW",
+  "fareBasis": "교통카드",
+  "timeZone": "Asia/Seoul",
+  "ageBands": {
+    "childMinAge": 6,
+    "teenMinAge": 13,
+    "adultMinAge": 19,
+    "verified": true,
+    "note": "어린이 만 6~12세, 청소년 만 13~18세, 일반 만 19세 이상. 6세 미만·65세 이상 무임은 조건이 있어 다루지 않는다."
+  },
+  "regions": {
+    "수도권": {
+      "checkedOn": "2026-11-10",
+      "effectiveFrom": "철도 2025-06-28, 서울 버스 2023-08-12, 경기 버스 2025-10-25",
+      "sources": [
+        "https://www.ictr.or.kr/main/railway/guidance/fare.jsp",
+        "http://www.seoulmetro.co.kr/kr/page.do?menuIdx=354",
+        "https://news.seoul.go.kr/traffic/archives/345",
+        "https://news.seoul.go.kr/traffic/archives/1706",
+        "https://sftc.seoul.go.kr/seoul/mulga/main/contents.do?menuNo=200022",
+        "https://www.gg.go.kr/contents/contents.do?ciIdx=629&menuId=2344",
+        "https://www.gg.go.kr/contents/contents.do?ciIdx=758&menuId=2534"
+      ],
+      "transfer": {
+        "windowMinutes": 30,
+        "nightWindowMinutes": 60,
+        "nightStartHour": 21,
+        "nightEndHour": 7,
+        "maxBoardings": 5,
+        "unitKm": 5,
+        "verified": true,
+        "note": "통합거리비례: 높은 기본요금 1회, 기본거리(10km, 광역·좌석 포함 시 30km) 초과 5km마다 추가."
+      },
+      "modes": {
+        "rail": {
+          "kind": "rail",
+          "bands": [
+            { "fromKm": 10, "toKm": 50, "unitKm": 5 },
+            { "fromKm": 50, "unitKm": 8 }
+          ],
+          "transferBaseKm": 10,
+          "transfersToSameKind": false,
+          "fares": {
+            "adult": { "base": 1550, "extra": 100 },
+            "teen": { "base": 900, "extra": 80 },
+            "child": { "base": 550, "extra": 50 }
+          },
+          "verified": true,
+          "note": "신분당선·공항철도 독립 구간·의정부경전철 등 별도 운임 구간은 포함하지 않는다."
+        },
+        "서울_간선지선": {
+          "kind": "bus",
+          "transferBaseKm": 10,
+          "fares": {
+            "adult": { "base": 1500, "extra": 100 },
+            "teen": { "base": 900, "extra": 80 },
+            "child": { "base": 550, "extra": 50 }
+          },
+          "verified": true
+        },
+        "서울_광역": {
+          "kind": "bus",
+          "transferBaseKm": 30,
+          "fares": {
+            "adult": { "base": 3000, "extra": 100 },
+            "teen": { "base": 1700, "extra": 80 },
+            "child": { "base": 1500, "extra": 50 }
+          },
+          "verified": true
+        },
+        "경기_직행좌석": {
+          "kind": "bus",
+          "transferBaseKm": 30,
+          "fares": {
+            "adult": { "base": 3200, "extra": 100 },
+            "teen": { "base": 2300, "extra": 70 },
+            "child": { "base": 1600, "extra": 50 }
+          },
+          "verified": true,
+          "extraVerified": false,
+          "note": "기본요금은 경기도 요금표로 확인. 청소년·어린이 환승 추가요금(70·50원)은 공식 표에서 직접 확인하지 못했다."
+        },
+        "경기_광역급행M": {
+          "kind": "bus",
+          "transferBaseKm": 30,
+          "fares": {
+            "adult": { "base": 3200, "extra": 100 },
+            "teen": { "base": 2300, "extra": 70 },
+            "child": { "base": 1600, "extra": 50 }
+          },
+          "verified": true,
+          "extraVerified": false,
+          "note": "기본요금은 경기도 요금표로 확인. 청소년·어린이 환승 추가요금(70·50원)은 공식 표에서 직접 확인하지 못했다."
+        }
+      }
+    },
+    "대구": {
+      "checkedOn": "2026-11-10",
+      "effectiveFrom": "2024-01-13",
+      "sources": [
+        "https://www.daegu.go.kr/tra/index.do?menu_id=00000351"
+      ],
+      "transfer": {
+        "windowMinutes": 30,
+        "verified": false,
+        "note": "지시서 초안 값. 공식 운임 안내에서 환승 시간을 확인하지 못했다."
+      },
+      "modes": {
+        "rail": {
+          "kind": "rail",
+          "transfersToSameKind": false,
+          "fares": {
+            "adult": { "base": 1500 },
+            "teen": { "base": 850 },
+            "child": { "base": 400 }
+          },
+          "verified": true,
+          "note": "전 구간 균일요금."
+        }
+      }
+    }
+  }
+}

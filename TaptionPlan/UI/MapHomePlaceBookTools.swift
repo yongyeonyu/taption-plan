@@ -789,6 +789,7 @@ struct MapHomeTripPlanSheet: View {
                 ForEach(TravelPlanSchedule.days(stops), id: \.self) { date in
                     daySection(date, TravelPlanSchedule.stops(on: date, in: stops))
                 }
+                TripUnpinnedItemStatusList(model: model, language: language)
             }
             .padding(20)
         }
@@ -845,6 +846,7 @@ struct MapHomeTripPlanSheet: View {
                 .onTapGesture {
                     onSelect(MapHomePlaceBookPin(title: stop.title, subtitle: "", latitude: stop.latitude, longitude: stop.longitude))
                 }
+                TripItemStatusPicker(language: language, status: TripItemStatus(raw: stop.status)) { model.setTravelStopStatus($0, stopID: stop.id) }
             }
         }
     }
@@ -857,6 +859,7 @@ extension TravelPlanStop {
 /// 메인 지도의 여행 일정 번호 핀.
 struct MapHomeTravelStopPin: View {
     let number: Int
+    var status: TripItemStatus = .planned
 
     var body: some View {
         Text(verbatim: "\(number)")
@@ -865,6 +868,7 @@ struct MapHomeTravelStopPin: View {
             .frame(width: 30, height: 30)
             .background(Color(hex: MapHomeInkWash.sealHex), in: Circle())
             .overlay(Circle().stroke(.white, lineWidth: 2))
+            .tripStatusPinStyle(status)
     }
 }
 

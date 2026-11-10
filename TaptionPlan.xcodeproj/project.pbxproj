@@ -92,6 +92,7 @@
 		A1FA11E73D8EF4A0D46BA75B /* TransitBoardingEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1191E387639DDBE62829 /* TransitBoardingEngines.swift */; };
 		A1FA11E539E87EF9BECCEED3 /* PlaceDetectionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11F6DF3994BF0EFB09B0 /* PlaceDetectionEngine.swift */; };
 		A10000000000000004DA0002 /* PlaceStayMergeEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000004DA0002 /* PlaceStayMergeEngine.swift */; };
+		A1000000000000000C1A0001 /* MovementFragmentMerge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000C1A0001 /* MovementFragmentMerge.swift */; };
 		A1FA116E94306EBCD83FA237 /* UnregisteredPlaceSuggestionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA112726691A677BFF352A /* UnregisteredPlaceSuggestionEngine.swift */; };
 		A1FA11F2247EED1E851FD89B /* FrequentPlaceResolutionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11317768AD20F051874E /* FrequentPlaceResolutionEngine.swift */; };
 		A1FA110A399BEE8BE6C8AE89 /* FloorTimelineEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA118E292B101C6B3AA5B8 /* FloorTimelineEngine.swift */; };
@@ -223,11 +224,17 @@
 		A1102A0100000000000000B4 /* AlgorithmUpgradeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1102A0100000000000000F8 /* AlgorithmUpgradeTests.swift */; };
 		A1102A0100000000000000B5 /* PlaceZoneStayTrackerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1102A0100000000000000FA /* PlaceZoneStayTrackerTests.swift */; };
 		A10000000000000004DA0005 /* PlaceStayMergeEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000004DA0005 /* PlaceStayMergeEngineTests.swift */; };
+		A1000000000000000C1A0002 /* MovementFragmentMergeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000C1A0002 /* MovementFragmentMergeTests.swift */; };
 		A10000000000000004DA0004 /* UserEditRollbackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000004DA0004 /* UserEditRollbackTests.swift */; };
 		A5B1102A0200000000000048 /* MapHomeCounterTimelinePolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000047 /* MapHomeCounterTimelinePolicyTests.swift */; };
 		B10815000000000000000C03 /* MapHomeAppleCounterStabilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10815000000000000000C04 /* MapHomeAppleCounterStabilityTests.swift */; };
 		A5B1102A0200000000000046 /* MapHomePlaybackContinuityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000045 /* MapHomePlaybackContinuityTests.swift */; };
 		A5B1102A0200000000000044 /* MapHomeDateStripTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000043 /* MapHomeDateStripTests.swift */; };
+		A1A1110A0100000000000009 /* AssistantRelayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0100000000000009 /* AssistantRelayTests.swift */; };
+		A1A1110A0200000000000009 /* AssistantCommandEditTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0200000000000009 /* AssistantCommandEditTests.swift */; };
+		A1A1110A0300000000000010 /* AssistantPhase3Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000010 /* AssistantPhase3Tests.swift */; };
+		A1A1110A0600000000000002 /* AssistantReviewFixTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0600000000000002 /* AssistantReviewFixTests.swift */; };
+		A1C1110A0900000000000002 /* TripItemStatusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1C1110A0900000000000002 /* TripItemStatusTests.swift */; };
 		A1000000000000000B1104C2 /* TaptionRaisedFaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1104C2 /* TaptionRaisedFaceTests.swift */; };
 		A5B1102A0200000000000042 /* RawSensorReplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000041 /* RawSensorReplayTests.swift */; };
 		B10805000000000000000002 /* SubwayRideTrackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10805000000000000000001 /* SubwayRideTrackTests.swift */; };
@@ -331,10 +338,12 @@
 		5B0000000000000000000B3A /* PlanBackupPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0000000000000000000B3F /* PlanBackupPresentation.swift */; };
 		A100000000000000000000F1 /* PlanBackupRouteFallbackEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000F1 /* PlanBackupRouteFallbackEngine.swift */; };
 		5B0000000000000000000B2A /* PlanSecurityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0000000000000000000B2F /* PlanSecurityService.swift */; };
+		B1A1110A0200000000000001 /* BackupPasswordVault.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1B1110A0200000000000001 /* BackupPasswordVault.swift */; };
 		5B0000000000000000000B1A /* AppLockAndPIN.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0000000000000000000B1F /* AppLockAndPIN.swift */; };
 		5B00000000000000000000A4 /* TaptionBackupV2Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B00000000000000000000F4 /* TaptionBackupV2Tests.swift */; };
 		A1E0110A0400000000000002 /* StorageReviewFixTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E0110A0400000000000002 /* StorageReviewFixTests.swift */; };
 		5B0000000000000000000C2A /* AppModelBackupConnectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0000000000000000000C2F /* AppModelBackupConnectionTests.swift */; };
+		B1A1110A0200000000000003 /* BackupPasswordVaultTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1B1110A0200000000000003 /* BackupPasswordVaultTests.swift */; };
 		5B0000000000000000000C1A /* AppLockAndPINTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0000000000000000000C1F /* AppLockAndPINTests.swift */; };
 		5A00000000000000000000A3 /* TaptionStoreRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A00000000000000000000F3 /* TaptionStoreRepository.swift */; };
 		A51002000000000000000005 /* PlanDaySeal.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000003 /* PlanDaySeal.swift */; };
@@ -475,7 +484,30 @@
 		B1080900000000000000A0A6 /* TripImportModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000F0A6 /* TripImportModel.swift */; };
 		B1080900000000000000A0A7 /* TripImportPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000F0A7 /* TripImportPrompt.swift */; };
 		B1080900000000000000A0A8 /* TripImportSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000F0A8 /* TripImportSheet.swift */; };
+		A1C1110A0900000000000001 /* TripItemStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1C1110A0900000000000001 /* TripItemStatus.swift */; };
 		B1080900000000000000A0AC /* TripRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000F0AC /* TripRelay.swift */; };
+		A1A1110A0100000000000005 /* AssistantSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0100000000000005 /* AssistantSettingsView.swift */; };
+		A1A1110A0100000000000004 /* AssistantCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0100000000000004 /* AssistantCommands.swift */; };
+		A1A1110A0100000000000003 /* AssistantActivitySync.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0100000000000003 /* AssistantActivitySync.swift */; };
+		A1A1110A0100000000000002 /* AssistantActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0100000000000002 /* AssistantActivity.swift */; };
+		A1A1110A0100000000000001 /* AssistantRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0100000000000001 /* AssistantRelay.swift */; };
+		A1A1110A0200000000000001 /* AssistantCommandEdits.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0200000000000001 /* AssistantCommandEdits.swift */; };
+		A1A1110A0200000000000002 /* AssistantActionLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0200000000000002 /* AssistantActionLog.swift */; };
+		A1A1110A0200000000000003 /* AssistantCommandRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0200000000000003 /* AssistantCommandRunner.swift */; };
+		A1A1110A0200000000000004 /* AssistantKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0200000000000004 /* AssistantKeys.swift */; };
+		A1A1110A0300000000000011 /* AssistantBubble.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000011 /* AssistantBubble.swift */; };
+		A1A1110A0600000000000001 /* AssistantPINReset.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0600000000000001 /* AssistantPINReset.swift */; };
+		B1A1110A0200000000000002 /* BackupPasswordForgotView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1B1110A0200000000000002 /* BackupPasswordForgotView.swift */; };
+		A1A1110A0300000000000001 /* AssistantRegistration.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000001 /* AssistantRegistration.swift */; };
+		A1A1110A0300000000000002 /* AssistantPIN.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000002 /* AssistantPIN.swift */; };
+		A1A1110A0300000000000003 /* AssistantAIProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000003 /* AssistantAIProvider.swift */; };
+		A1A1110A0300000000000004 /* AssistantDataCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000004 /* AssistantDataCommands.swift */; };
+		A1A1110A0300000000000005 /* AssistantDataActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000005 /* AssistantDataActions.swift */; };
+		A1A1110A0300000000000006 /* AssistantActivityExtras.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000006 /* AssistantActivityExtras.swift */; };
+		A1A1110A0300000000000007 /* AssistantPINSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000007 /* AssistantPINSheet.swift */; };
+		A1A1110A0300000000000008 /* AssistantConnectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000008 /* AssistantConnectView.swift */; };
+		A1A1110A0300000000000009 /* FirstRunAIConnectPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000009 /* FirstRunAIConnectPage.swift */; };
+		A1A1110A0200000000000005 /* AssistantSafetyViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0200000000000005 /* AssistantSafetyViews.swift */; };
 		B1080900000000000000A0AB /* TripClipboardBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000F0AB /* TripClipboardBanner.swift */; };
 		B1080900000000000000A0A9 /* LocationAlwaysPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000F0A9 /* LocationAlwaysPrompt.swift */; };
 		B1080900000000000000A0A3 /* MapHomeIslandOutlines.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000A0F3 /* MapHomeIslandOutlines.swift */; };
@@ -773,6 +805,7 @@
 		F1FA1191E387639DDBE62829 /* TransitBoardingEngines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransitBoardingEngines.swift; sourceTree = "<group>"; };
 		F1FA11F6DF3994BF0EFB09B0 /* PlaceDetectionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceDetectionEngine.swift; sourceTree = "<group>"; };
 		F10000000000000004DA0002 /* PlaceStayMergeEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceStayMergeEngine.swift; sourceTree = "<group>"; };
+		F1000000000000000C1A0001 /* MovementFragmentMerge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovementFragmentMerge.swift; sourceTree = "<group>"; };
 		F1FA112726691A677BFF352A /* UnregisteredPlaceSuggestionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnregisteredPlaceSuggestionEngine.swift; sourceTree = "<group>"; };
 		F1FA11317768AD20F051874E /* FrequentPlaceResolutionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrequentPlaceResolutionEngine.swift; sourceTree = "<group>"; };
 		F1FA118E292B101C6B3AA5B8 /* FloorTimelineEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloorTimelineEngine.swift; sourceTree = "<group>"; };
@@ -890,11 +923,17 @@
 		A1102A0100000000000000F8 /* AlgorithmUpgradeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlgorithmUpgradeTests.swift; sourceTree = "<group>"; };
 		A1102A0100000000000000FA /* PlaceZoneStayTrackerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceZoneStayTrackerTests.swift; sourceTree = "<group>"; };
 		F10000000000000004DA0005 /* PlaceStayMergeEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceStayMergeEngineTests.swift; sourceTree = "<group>"; };
+		F1000000000000000C1A0002 /* MovementFragmentMergeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovementFragmentMergeTests.swift; sourceTree = "<group>"; };
 		F10000000000000004DA0004 /* UserEditRollbackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserEditRollbackTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000047 /* MapHomeCounterTimelinePolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCounterTimelinePolicyTests.swift; sourceTree = "<group>"; };
 		B10815000000000000000C04 /* MapHomeAppleCounterStabilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeAppleCounterStabilityTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000045 /* MapHomePlaybackContinuityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaybackContinuityTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000043 /* MapHomeDateStripTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeDateStripTests.swift; sourceTree = "<group>"; };
+		F1A1110A0100000000000009 /* AssistantRelayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantRelayTests.swift; sourceTree = "<group>"; };
+		F1A1110A0200000000000009 /* AssistantCommandEditTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantCommandEditTests.swift; sourceTree = "<group>"; };
+		F1A1110A0300000000000010 /* AssistantPhase3Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantPhase3Tests.swift; sourceTree = "<group>"; };
+		F1A1110A0600000000000002 /* AssistantReviewFixTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantReviewFixTests.swift; sourceTree = "<group>"; };
+		F1C1110A0900000000000002 /* TripItemStatusTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripItemStatusTests.swift; sourceTree = "<group>"; };
 		F1000000000000000B1104C2 /* TaptionRaisedFaceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionRaisedFaceTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000041 /* RawSensorReplayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RawSensorReplayTests.swift; sourceTree = "<group>"; };
 		B10805000000000000000001 /* SubwayRideTrackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubwayRideTrackTests.swift; sourceTree = "<group>"; };
@@ -989,10 +1028,12 @@
 		5B0000000000000000000B3F /* PlanBackupPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanBackupPresentation.swift; sourceTree = "<group>"; };
 		F100000000000000000000F1 /* PlanBackupRouteFallbackEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanBackupRouteFallbackEngine.swift; sourceTree = "<group>"; };
 		5B0000000000000000000B2F /* PlanSecurityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanSecurityService.swift; sourceTree = "<group>"; };
+		F1B1110A0200000000000001 /* BackupPasswordVault.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupPasswordVault.swift; sourceTree = "<group>"; };
 		5B0000000000000000000B1F /* AppLockAndPIN.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLockAndPIN.swift; sourceTree = "<group>"; };
 		5B00000000000000000000F4 /* TaptionBackupV2Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionBackupV2Tests.swift; sourceTree = "<group>"; };
 		F1E0110A0400000000000002 /* StorageReviewFixTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageReviewFixTests.swift; sourceTree = "<group>"; };
 		5B0000000000000000000C2F /* AppModelBackupConnectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModelBackupConnectionTests.swift; sourceTree = "<group>"; };
+		F1B1110A0200000000000003 /* BackupPasswordVaultTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupPasswordVaultTests.swift; sourceTree = "<group>"; };
 		5B0000000000000000000C1F /* AppLockAndPINTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLockAndPINTests.swift; sourceTree = "<group>"; };
 		5A00000000000000000000F3 /* TaptionStoreRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionStoreRepository.swift; sourceTree = "<group>"; };
 		F10150000000000000000001 /* SystemDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemDiagnostics.swift; sourceTree = "<group>"; };
@@ -1131,7 +1172,30 @@
 		B1080900000000000000F0A6 /* TripImportModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripImportModel.swift; sourceTree = "<group>"; };
 		B1080900000000000000F0A7 /* TripImportPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripImportPrompt.swift; sourceTree = "<group>"; };
 		B1080900000000000000F0A8 /* TripImportSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripImportSheet.swift; sourceTree = "<group>"; };
+		F1C1110A0900000000000001 /* TripItemStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripItemStatus.swift; sourceTree = "<group>"; };
 		B1080900000000000000F0AC /* TripRelay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripRelay.swift; sourceTree = "<group>"; };
+		F1A1110A0100000000000005 /* AssistantSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantSettingsView.swift; sourceTree = "<group>"; };
+		F1A1110A0100000000000004 /* AssistantCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantCommands.swift; sourceTree = "<group>"; };
+		F1A1110A0100000000000003 /* AssistantActivitySync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantActivitySync.swift; sourceTree = "<group>"; };
+		F1A1110A0100000000000002 /* AssistantActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantActivity.swift; sourceTree = "<group>"; };
+		F1A1110A0100000000000001 /* AssistantRelay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantRelay.swift; sourceTree = "<group>"; };
+		F1A1110A0200000000000001 /* AssistantCommandEdits.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantCommandEdits.swift; sourceTree = "<group>"; };
+		F1A1110A0200000000000002 /* AssistantActionLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantActionLog.swift; sourceTree = "<group>"; };
+		F1A1110A0200000000000003 /* AssistantCommandRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantCommandRunner.swift; sourceTree = "<group>"; };
+		F1A1110A0200000000000004 /* AssistantKeys.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantKeys.swift; sourceTree = "<group>"; };
+		F1A1110A0300000000000011 /* AssistantBubble.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantBubble.swift; sourceTree = "<group>"; };
+		F1A1110A0600000000000001 /* AssistantPINReset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantPINReset.swift; sourceTree = "<group>"; };
+		F1B1110A0200000000000002 /* BackupPasswordForgotView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupPasswordForgotView.swift; sourceTree = "<group>"; };
+		F1A1110A0300000000000001 /* AssistantRegistration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantRegistration.swift; sourceTree = "<group>"; };
+		F1A1110A0300000000000002 /* AssistantPIN.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantPIN.swift; sourceTree = "<group>"; };
+		F1A1110A0300000000000003 /* AssistantAIProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantAIProvider.swift; sourceTree = "<group>"; };
+		F1A1110A0300000000000004 /* AssistantDataCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantDataCommands.swift; sourceTree = "<group>"; };
+		F1A1110A0300000000000005 /* AssistantDataActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantDataActions.swift; sourceTree = "<group>"; };
+		F1A1110A0300000000000006 /* AssistantActivityExtras.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantActivityExtras.swift; sourceTree = "<group>"; };
+		F1A1110A0300000000000007 /* AssistantPINSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantPINSheet.swift; sourceTree = "<group>"; };
+		F1A1110A0300000000000008 /* AssistantConnectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantConnectView.swift; sourceTree = "<group>"; };
+		F1A1110A0300000000000009 /* FirstRunAIConnectPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstRunAIConnectPage.swift; sourceTree = "<group>"; };
+		F1A1110A0200000000000005 /* AssistantSafetyViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantSafetyViews.swift; sourceTree = "<group>"; };
 		B1080900000000000000F0AB /* TripClipboardBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripClipboardBanner.swift; sourceTree = "<group>"; };
 		B1080900000000000000F0A9 /* LocationAlwaysPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationAlwaysPrompt.swift; sourceTree = "<group>"; };
 		B1080900000000000000A0F3 /* MapHomeIslandOutlines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeIslandOutlines.swift; sourceTree = "<group>"; };
@@ -1445,11 +1509,17 @@
 				A1102A0100000000000000F8 /* AlgorithmUpgradeTests.swift */,
 				A1102A0100000000000000FA /* PlaceZoneStayTrackerTests.swift */,
 				F10000000000000004DA0005 /* PlaceStayMergeEngineTests.swift */,
+				F1000000000000000C1A0002 /* MovementFragmentMergeTests.swift */,
 				F10000000000000004DA0004 /* UserEditRollbackTests.swift */,
 				F5B1102A0200000000000047 /* MapHomeCounterTimelinePolicyTests.swift */,
 				B10815000000000000000C04 /* MapHomeAppleCounterStabilityTests.swift */,
 				F5B1102A0200000000000045 /* MapHomePlaybackContinuityTests.swift */,
 				F5B1102A0200000000000043 /* MapHomeDateStripTests.swift */,
+				F1A1110A0100000000000009 /* AssistantRelayTests.swift */,
+				F1A1110A0200000000000009 /* AssistantCommandEditTests.swift */,
+				F1A1110A0300000000000010 /* AssistantPhase3Tests.swift */,
+				F1A1110A0600000000000002 /* AssistantReviewFixTests.swift */,
+				F1C1110A0900000000000002 /* TripItemStatusTests.swift */,
 				F1000000000000000B1104C2 /* TaptionRaisedFaceTests.swift */,
 				F5B1102A0200000000000041 /* RawSensorReplayTests.swift */,
 				B10805000000000000000001 /* SubwayRideTrackTests.swift */,
@@ -1503,6 +1573,7 @@
 				5B00000000000000000000F4 /* TaptionBackupV2Tests.swift */,
 				F1E0110A0400000000000002 /* StorageReviewFixTests.swift */,
 				5B0000000000000000000C2F /* AppModelBackupConnectionTests.swift */,
+				F1B1110A0200000000000003 /* BackupPasswordVaultTests.swift */,
 				5B0000000000000000000C1F /* AppLockAndPINTests.swift */,
 				F60000000000000000000005 /* HealthKitIntegrationTests.swift */,
 			);
@@ -1597,7 +1668,30 @@
 				B1080900000000000000F0A6 /* TripImportModel.swift */,
 				B1080900000000000000F0A7 /* TripImportPrompt.swift */,
 				B1080900000000000000F0A8 /* TripImportSheet.swift */,
+				F1C1110A0900000000000001 /* TripItemStatus.swift */,
 				B1080900000000000000F0AC /* TripRelay.swift */,
+				F1A1110A0100000000000005 /* AssistantSettingsView.swift */,
+				F1A1110A0100000000000004 /* AssistantCommands.swift */,
+				F1A1110A0100000000000003 /* AssistantActivitySync.swift */,
+				F1A1110A0100000000000002 /* AssistantActivity.swift */,
+				F1A1110A0100000000000001 /* AssistantRelay.swift */,
+				F1A1110A0200000000000001 /* AssistantCommandEdits.swift */,
+				F1A1110A0200000000000002 /* AssistantActionLog.swift */,
+				F1A1110A0200000000000003 /* AssistantCommandRunner.swift */,
+				F1A1110A0200000000000004 /* AssistantKeys.swift */,
+				F1A1110A0300000000000011 /* AssistantBubble.swift */,
+				F1A1110A0600000000000001 /* AssistantPINReset.swift */,
+				F1B1110A0200000000000002 /* BackupPasswordForgotView.swift */,
+				F1A1110A0300000000000001 /* AssistantRegistration.swift */,
+				F1A1110A0300000000000002 /* AssistantPIN.swift */,
+				F1A1110A0300000000000003 /* AssistantAIProvider.swift */,
+				F1A1110A0300000000000004 /* AssistantDataCommands.swift */,
+				F1A1110A0300000000000005 /* AssistantDataActions.swift */,
+				F1A1110A0300000000000006 /* AssistantActivityExtras.swift */,
+				F1A1110A0300000000000007 /* AssistantPINSheet.swift */,
+				F1A1110A0300000000000008 /* AssistantConnectView.swift */,
+				F1A1110A0300000000000009 /* FirstRunAIConnectPage.swift */,
+				F1A1110A0200000000000005 /* AssistantSafetyViews.swift */,
 				B1080900000000000000F0AB /* TripClipboardBanner.swift */,
 				B1080900000000000000F0A9 /* LocationAlwaysPrompt.swift */,
 				B1080900000000000000A0F3 /* MapHomeIslandOutlines.swift */,
@@ -1824,6 +1918,7 @@
 				F1FA1191E387639DDBE62829 /* TransitBoardingEngines.swift */,
 				F1FA11F6DF3994BF0EFB09B0 /* PlaceDetectionEngine.swift */,
 				F10000000000000004DA0002 /* PlaceStayMergeEngine.swift */,
+				F1000000000000000C1A0001 /* MovementFragmentMerge.swift */,
 				F1FA112726691A677BFF352A /* UnregisteredPlaceSuggestionEngine.swift */,
 				F1FA11317768AD20F051874E /* FrequentPlaceResolutionEngine.swift */,
 				F1FA118E292B101C6B3AA5B8 /* FloorTimelineEngine.swift */,
@@ -1908,6 +2003,7 @@
 				5B0000000000000000000B3F /* PlanBackupPresentation.swift */,
 				F100000000000000000000F1 /* PlanBackupRouteFallbackEngine.swift */,
 				5B0000000000000000000B2F /* PlanSecurityService.swift */,
+				F1B1110A0200000000000001 /* BackupPasswordVault.swift */,
 				5B0000000000000000000B1F /* AppLockAndPIN.swift */,
 				F10150000000000000000001 /* SystemDiagnostics.swift */,
 				F1000000000000000000007C /* SubwayCatalog.swift */,
@@ -2496,7 +2592,30 @@
 				B1080900000000000000A0A6 /* TripImportModel.swift in Sources */,
 				B1080900000000000000A0A7 /* TripImportPrompt.swift in Sources */,
 				B1080900000000000000A0A8 /* TripImportSheet.swift in Sources */,
+				A1C1110A0900000000000001 /* TripItemStatus.swift in Sources */,
 				B1080900000000000000A0AC /* TripRelay.swift in Sources */,
+				A1A1110A0100000000000005 /* AssistantSettingsView.swift in Sources */,
+				A1A1110A0100000000000004 /* AssistantCommands.swift in Sources */,
+				A1A1110A0100000000000003 /* AssistantActivitySync.swift in Sources */,
+				A1A1110A0100000000000002 /* AssistantActivity.swift in Sources */,
+				A1A1110A0100000000000001 /* AssistantRelay.swift in Sources */,
+				A1A1110A0200000000000001 /* AssistantCommandEdits.swift in Sources */,
+				A1A1110A0200000000000002 /* AssistantActionLog.swift in Sources */,
+				A1A1110A0200000000000003 /* AssistantCommandRunner.swift in Sources */,
+				A1A1110A0200000000000004 /* AssistantKeys.swift in Sources */,
+				A1A1110A0300000000000011 /* AssistantBubble.swift in Sources */,
+				A1A1110A0600000000000001 /* AssistantPINReset.swift in Sources */,
+				B1A1110A0200000000000002 /* BackupPasswordForgotView.swift in Sources */,
+				A1A1110A0300000000000001 /* AssistantRegistration.swift in Sources */,
+				A1A1110A0300000000000002 /* AssistantPIN.swift in Sources */,
+				A1A1110A0300000000000003 /* AssistantAIProvider.swift in Sources */,
+				A1A1110A0300000000000004 /* AssistantDataCommands.swift in Sources */,
+				A1A1110A0300000000000005 /* AssistantDataActions.swift in Sources */,
+				A1A1110A0300000000000006 /* AssistantActivityExtras.swift in Sources */,
+				A1A1110A0300000000000007 /* AssistantPINSheet.swift in Sources */,
+				A1A1110A0300000000000008 /* AssistantConnectView.swift in Sources */,
+				A1A1110A0300000000000009 /* FirstRunAIConnectPage.swift in Sources */,
+				A1A1110A0200000000000005 /* AssistantSafetyViews.swift in Sources */,
 				B1080900000000000000A0AB /* TripClipboardBanner.swift in Sources */,
 				B1080900000000000000A0A9 /* LocationAlwaysPrompt.swift in Sources */,
 				B1080900000000000000A0A3 /* MapHomeIslandOutlines.swift in Sources */,
@@ -2647,6 +2766,7 @@
 				A1FA11E73D8EF4A0D46BA75B /* TransitBoardingEngines.swift in Sources */,
 				A1FA11E539E87EF9BECCEED3 /* PlaceDetectionEngine.swift in Sources */,
 				A10000000000000004DA0002 /* PlaceStayMergeEngine.swift in Sources */,
+				A1000000000000000C1A0001 /* MovementFragmentMerge.swift in Sources */,
 				A1FA116E94306EBCD83FA237 /* UnregisteredPlaceSuggestionEngine.swift in Sources */,
 				A1FA11F2247EED1E851FD89B /* FrequentPlaceResolutionEngine.swift in Sources */,
 				A1FA110A399BEE8BE6C8AE89 /* FloorTimelineEngine.swift in Sources */,
@@ -2731,6 +2851,7 @@
 				5B0000000000000000000B3A /* PlanBackupPresentation.swift in Sources */,
 				A100000000000000000000F1 /* PlanBackupRouteFallbackEngine.swift in Sources */,
 				5B0000000000000000000B2A /* PlanSecurityService.swift in Sources */,
+				B1A1110A0200000000000001 /* BackupPasswordVault.swift in Sources */,
 				5B0000000000000000000B1A /* AppLockAndPIN.swift in Sources */,
 				A10150000000000000000001 /* SystemDiagnostics.swift in Sources */,
 				A1000000000000000000007C /* SubwayCatalog.swift in Sources */,
@@ -2791,11 +2912,17 @@
 				A1102A0100000000000000B4 /* AlgorithmUpgradeTests.swift in Sources */,
 				A1102A0100000000000000B5 /* PlaceZoneStayTrackerTests.swift in Sources */,
 				A10000000000000004DA0005 /* PlaceStayMergeEngineTests.swift in Sources */,
+				A1000000000000000C1A0002 /* MovementFragmentMergeTests.swift in Sources */,
 				A10000000000000004DA0004 /* UserEditRollbackTests.swift in Sources */,
 				A5B1102A0200000000000048 /* MapHomeCounterTimelinePolicyTests.swift in Sources */,
 				B10815000000000000000C03 /* MapHomeAppleCounterStabilityTests.swift in Sources */,
 				A5B1102A0200000000000046 /* MapHomePlaybackContinuityTests.swift in Sources */,
 				A5B1102A0200000000000044 /* MapHomeDateStripTests.swift in Sources */,
+				A1A1110A0100000000000009 /* AssistantRelayTests.swift in Sources */,
+				A1A1110A0200000000000009 /* AssistantCommandEditTests.swift in Sources */,
+				A1A1110A0300000000000010 /* AssistantPhase3Tests.swift in Sources */,
+				A1A1110A0600000000000002 /* AssistantReviewFixTests.swift in Sources */,
+				A1C1110A0900000000000002 /* TripItemStatusTests.swift in Sources */,
 				A1000000000000000B1104C2 /* TaptionRaisedFaceTests.swift in Sources */,
 				A5B1102A0200000000000042 /* RawSensorReplayTests.swift in Sources */,
 				B10805000000000000000002 /* SubwayRideTrackTests.swift in Sources */,
@@ -2849,6 +2976,7 @@
 				5B00000000000000000000A4 /* TaptionBackupV2Tests.swift in Sources */,
 				A1E0110A0400000000000002 /* StorageReviewFixTests.swift in Sources */,
 				5B0000000000000000000C2A /* AppModelBackupConnectionTests.swift in Sources */,
+				B1A1110A0200000000000003 /* BackupPasswordVaultTests.swift in Sources */,
 				5B0000000000000000000C1A /* AppLockAndPINTests.swift in Sources */,
 				A60000000000000000000005 /* HealthKitIntegrationTests.swift in Sources */,
 			);

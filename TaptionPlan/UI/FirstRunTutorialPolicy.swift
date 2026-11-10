@@ -27,6 +27,8 @@ enum FirstRunTutorialStep: String, CaseIterable, Identifiable {
     case counters
     case calendar
     case appleWatch
+    /// AI 연결(AIR1110A04). 피클·ChatGPT·Claude·Gemini를 받고 잇는다.
+    case aiConnect
     case password
     case finish
 
@@ -45,7 +47,7 @@ enum FirstRunTutorialStep: String, CaseIterable, Identifiable {
         case .welcome: .start
         case .permissions, .dayCardTime, .home, .workAndSchool, .salary, .cat: .setup
         case .map, .playback, .sidebarCalendar, .clipEditor, .memos, .summary, .counters: .learn
-        case .calendar, .appleWatch, .password: .connect
+        case .calendar, .appleWatch, .aiConnect, .password: .connect
         case .finish: .finish
         }
     }
@@ -53,7 +55,7 @@ enum FirstRunTutorialStep: String, CaseIterable, Identifiable {
     /// 입력이 있는 단계에만 건너뛰기를 둔다. 설명 단계는 다음이 곧 건너뛰기다.
     var hasInput: Bool {
         switch self {
-        case .permissions, .dayCardTime, .home, .workAndSchool, .salary, .cat, .counters, .calendar, .appleWatch, .password: true
+        case .permissions, .dayCardTime, .home, .workAndSchool, .salary, .cat, .counters, .calendar, .appleWatch, .aiConnect, .password: true
         default: false
         }
     }

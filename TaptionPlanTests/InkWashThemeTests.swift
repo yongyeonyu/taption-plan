@@ -631,6 +631,10 @@ final class InkWashThemeTests: XCTestCase {
         XCTAssertFalse(prompt.contains("{TODAY}"))
         XCTAssertNotNil(TripImportAIApp.chatGPT.url(prompt: prompt))
         XCTAssertTrue(TripImportAIApp.allCases.allSatisfy { $0.url(prompt: prompt) != nil })
+        XCTAssertEqual(TripImportAIApp.allCases.first, .pickle, "피클이 맨 위(TRP1110A08)")
+        XCTAssertEqual(TripImportAIApp.pickle.fallbackURL?.absoluteString, "https://apps.apple.com/app/id6795790129")
+        XCTAssertFalse(TripImportAIApp.pickle.prefillsPrompt)
+        XCTAssertTrue(prompt.contains(#""status": "booked | planned | tentative""#))
     }
 
     func testTravelRailUsesLocalWallClockFromArrival() throws {

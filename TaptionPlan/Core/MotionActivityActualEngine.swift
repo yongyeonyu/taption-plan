@@ -60,7 +60,8 @@ enum MotionActivityActualEngine {
         from activities: [MotionActivityRecord],
         existing: [ActualRecord],
         inside: TimeSpan,
-        minimumDuration: TimeInterval = 30
+        minimumDuration: TimeInterval = 30,
+        protectedIDs: Set<UUID> = []
     ) -> [ActualRecord] {
         var inspectionCount: Int? = nil
         return records(
@@ -68,6 +69,7 @@ enum MotionActivityActualEngine {
             existing: existing,
             inside: inside,
             minimumDuration: minimumDuration,
+            protectedIDs: protectedIDs,
             inspectionCount: &inspectionCount
         )
     }
@@ -97,17 +99,20 @@ enum MotionActivityActualEngine {
         existing: [ActualRecord],
         inside: TimeSpan,
         minimumDuration: TimeInterval,
+        protectedIDs: Set<UUID> = [],
         inspectionCount: inout Int?
     ) -> [ActualRecord] {
-        let mergedActivities = merged(activities, inside: inside)
-            .filter { $0.span.duration >= minimumDuration }
+        // 장소 문맥 기록(5분 이상·등록 장소)이 덮은 틈은 머문 것이라 잇지 않는다 (CLN1110A01).
+        let stays = existing.filter { $0.source == .location }.map { $0.span(asOf: inside.end) }
+        let mergedActivities = bridgingFragments(merged(activities, inside: inside), protectedIDs: protectedIDs, stays: stays)
+            .filter { $0.activity.span.duration >= minimumDuration }
         guard !mergedActivities.isEmpty else { return [] }
         inspectionCount? += existing.count
         let existingIndex = CompetingActualIndexes(
             existing: existing,
             asOf: inside.end
         )
-        return mergedActivities.compactMap { activity in
+        return mergedActivities.compactMap { activity, id, mergeEvidence in
                 guard let title = activity.motion.activityTitle else {
                     return nil
                 }
@@ -122,7 +127,7 @@ enum MotionActivityActualEngine {
                 )
                 guard !covered else { return nil }
                 return ActualRecord(
-                    id: stableID(for: activity),
+                    id: id,
                     planID: nil,
                     routineID: nil,
                     title: title,
@@ -138,7 +143,7 @@ enum MotionActivityActualEngine {
                     evidence: [
                         "iPhone Core Motion",
                         "행동 구간 \(Int(activity.span.duration))초",
-                    ],
+                    ] + mergeEvidence,
                     modelVersion: AutomaticModelVersion.motion
                 )
             }
@@ -206,7 +211,7 @@ enum MotionActivityActualEngine {
         return (rank[lhs] ?? 0) >= (rank[rhs] ?? 0) ? lhs : rhs
     }
 
-    private static func stableID(for activity: MotionActivityRecord) -> UUID {
+    static func stableID(for activity: MotionActivityRecord) -> UUID {
         let key = [
             activity.motion.rawValue,
             String(Int(activity.span.start.timeIntervalSinceReferenceDate.rounded())),

@@ -20,6 +20,14 @@ extension AppModel {
         try securityService.verifyPIN(password, unlocking: false)
     }
 
+    /// 「비밀번호를 잊었어요」: Face ID(안 되면 기기 암호)를 통과하면 보관한 6자리를 돌려준다.
+    func revealBackupPassword() async -> BackupPasswordReveal {
+        guard let securityService else { return .nothingStored }
+        return await securityService.revealBackupPassword(reason: AppLanguagePreference.text(
+            korean: "보관한 백업 비밀번호 보기", english: "Show the saved backup password"
+        ))
+    }
+
     /// iCloud Drive의 백업 파일 목록. 비밀번호(`password`)를 넣은 뒤에만 보여 준다.
     /// 겹쳐 부르면 마지막 요청의 결과만 올린다.
     func refreshBackupListings(password: String? = nil) async {
@@ -36,6 +44,7 @@ extension AppModel {
             let unsupported = await backupService.unsupportedFileCount()
             guard generation == backupListingGeneration else { return }
             applyBackupListings(rows, unsupported: unsupported, error: nil)
+            if rows.contains(where: { $0.state == .ok }) { securityService?.keepOpenedBackupPassword(password) }
         } catch {
             guard generation == backupListingGeneration else { return }
             applyBackupListings([], unsupported: 0, error: PlanBackupPresenter.message(for: error))
@@ -175,6 +184,7 @@ extension AppModel {
             guard let backupService else { throw TaptionBackupError.destinationUnavailable("engine unavailable") }
             await flushPendingWrites()
             let summary = try await backupService.restore(scope, password: password)
+            securityService?.keepOpenedBackupPassword(password)
             try await reloadSnapshotAfterStoreChange()
             let detail = AppLanguagePreference.text(
                 korean: "센서 \(summary.newReadings)행 추가, 기록 \(summary.changedRecords)개 반영",

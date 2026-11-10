@@ -410,6 +410,8 @@ struct MapHomeTimeRailSegment: Identifiable, Hashable {
     let sourceIDs: [UUID]
     /// 등록 지점 안에서 걸은 분. 대분류는 그 곳의 것이고 상세 활동과 애니메이션만 걷기다.
     var walkSpans: [Range<Int>] = []
+    /// 여행 일정 상태. 기록 구간은 nil(TRP1110A09).
+    var tripStatus: TripItemStatus?
 
     var sourceID: UUID? { sourceIDs.first }
 
@@ -1425,16 +1427,9 @@ struct MapHomeTimeSidebar: View {
                         let end = min(max(segment.endMinute, visibleWindow.lowerBound), visibleWindow.upperBound)
                         if start < end {
                             Rectangle()
-                                .fill(
-                                    Color(hex: categoryColorHex(
-                                        segment.categoryID
-                                    )).opacity(
-                                        segment.categoryID == "unconfirmed"
-                                            ? 0.50
-                                            : 0.94
-                                    )
-                                )
+                                .fill(Color(hex: categoryColorHex(segment.categoryID)).opacity(segment.railFillOpacity))
                                 .overlay {
+                                    MapHomeTripStatusRailMark(status: segment.tripStatus, height: trackHeight * MapHomeTimeSidebarMath.spanFraction(start: start, end: end, window: visibleWindow), title: segment.title)
                                     if segment.categoryID == "unconfirmed" {
                                         MapHomeUnconfirmedChecker()
                                         if trackHeight * MapHomeTimeSidebarMath.spanFraction(start: start, end: end, window: visibleWindow) >= 12,

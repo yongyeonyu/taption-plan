@@ -660,7 +660,7 @@ enum TaptionActivityEngineAdapter {
         return TaptionSensorQualityProjection(
             readings: projected,
             routeReadings: route.readings,
-            rejectionCounts: rejectionCounts,
+            rejectionCounts: route.ghostExcursionCount > 0 ? rejectionCounts.merging(["location.ghostExcursion": route.ghostExcursionCount], uniquingKeysWith: +) : rejectionCounts, // 유령 체류 수도 거부 근거로 센다 (CLN1110A01)
             impossibleLocationCount: route.impossibleLocationCount,
             innovationOutlierCount: route.innovationOutlierCount
         )

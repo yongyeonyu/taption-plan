@@ -898,8 +898,8 @@ extension MapHomeView {
             ForEach(Array(travelStopsOnSelectedDay.enumerated()), id: \.element.id) { index, stop in
                 if let point = vectorPoint(in: viewport, for: travelStopMarkerID(stop)) {
                     MapHomeProjectedAnnotation(point: point, anchor: .center) {
-                        MapHomeTravelStopPin(number: index + 1)
-                            .accessibilityLabel(stop.title)
+                        MapHomeTravelStopPin(number: index + 1, status: TripItemStatus(raw: stop.status))
+                            .accessibilityLabel(TripItemStatus(raw: stop.status).spoken(stop.title, language))
                     }
                 }
             }

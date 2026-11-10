@@ -556,8 +556,10 @@ public struct TravelTripItem: Codable, Hashable, Sendable {
     public var startOffsetSeconds: Int
     public var endOffsetSeconds: Int
     public var planID: UUID?
+    /// 예약 "booked"·미정 "tentative"만 둔다. 계획은 nil이라 키가 없고 예전 바이트가 그대로다(TRP1110A09).
+    public var status: String?
 
-    public init(tripID: String, itemID: String, kind: String, title: String, start: Date, end: Date, startOffsetSeconds: Int, endOffsetSeconds: Int, planID: UUID?) {
+    public init(tripID: String, itemID: String, kind: String, title: String, start: Date, end: Date, startOffsetSeconds: Int, endOffsetSeconds: Int, planID: UUID?, status: String? = nil) {
         self.tripID = tripID
         self.itemID = itemID
         self.kind = kind
@@ -567,6 +569,7 @@ public struct TravelTripItem: Codable, Hashable, Sendable {
         self.startOffsetSeconds = startOffsetSeconds
         self.endOffsetSeconds = endOffsetSeconds
         self.planID = planID
+        self.status = status
     }
 }
 
@@ -582,8 +585,10 @@ public struct TravelPlanStop: Codable, Hashable, Sendable, Identifiable {
     /// AI로 만든 여행의 번호와 항목 번호(TRP1110A01). 같은 여행을 다시 붙이면 이 번호로 찾아 바꾼다. 예전 기록에는 없다.
     public var tripID: String?
     public var itemID: String?
+    /// 여행 일정 상태(TRP1110A09). 계획은 nil로 둬 키를 쓰지 않는다.
+    public var status: String?
 
-    public init(id: UUID, title: String, latitude: Double, longitude: Double, day: Date, order: Int, planID: UUID?, tripID: String? = nil, itemID: String? = nil) {
+    public init(id: UUID, title: String, latitude: Double, longitude: Double, day: Date, order: Int, planID: UUID?, tripID: String? = nil, itemID: String? = nil, status: String? = nil) {
         self.id = id
         self.title = title
         self.latitude = latitude
@@ -593,6 +598,7 @@ public struct TravelPlanStop: Codable, Hashable, Sendable, Identifiable {
         self.planID = planID
         self.tripID = tripID
         self.itemID = itemID
+        self.status = status
     }
 }
 

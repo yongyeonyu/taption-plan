@@ -2,6 +2,62 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## LCH1110A01 · 아이폰 11 Pro 시작 화면 멈춤 신고 (2026-11-10)
+
+- 신고: 아이폰 11 Pro에서 앱이 시작 화면(로딩)에서 멈춤.
+- 확인(실기기 iPhone 11 Pro, 오늘 작업 트리 Debug 빌드, `-TaptionDiagnosticsStdout` 콘솔 실행): 시작 1.9초에 끝남(`initial_launch_ready duration_ms=1879`, 저장소 적재 1.19초, 실제 기록 467·장소 21,558). 오류 수준 기록 없음. 로그 `build/validation/LCH1110A01/device-launch-diag-1.log`. 시뮬레이터 새 설치도 튜토리얼 첫 쪽까지 정상.
+- 재현 못 함. 추정 원인: 같은 시각 이 폰에서 전체 단위 시험(19분)과 재실행 3회가 돌았고, 시험 중에는 시험 호스트로 뜬 앱이 시작 화면에 머문다. 추정이며 입증하지 못함. 코드 수정 없음.
+
+## TAU1110A01 · 여행 자동화 1차: 요금표·여행 규칙·시차·대권 보간 (2026-11-10)
+
+- 구현: `Packages/TaptionRouteEngine/Sources/TaptionRouteEngine/Travel/`에 `fares.json`·`travel_rules.json`·`travel_rules.md`(패키지 리소스)와 `FareCalculator`·`TravelRules`·`FlightTimeMath`·`GreatCircle`. 요금·임계값은 JSON에만 있음. 청소년·어린이는 비율이 아니라 나이별 요금표.
+- 요금 확인(2026-11-10, 공식 페이지): 수도권 전철 1,550/900/550(10km, 5km마다 100/80/50, 50km 초과 8km마다), 대구 균일 1,500/850/400, 서울 간선·지선 1,500, 서울 광역 3,000, 경기 직행좌석·M 3,200. 미확인(JSON에 표시): 경기 버스 환승 추가 청소년·어린이 값, 대구 환승 30분.
+- 검증: 패키지 `swift test` 105개 통과(새 35개, 메인 세션 재실행 포함). 가정→마곡나루 20.0km 1,750원, 대구 하양→중앙로 1,500원, 광역 3,000·직행좌석 3,200, 환승 29·30분 한 묶음/31분 분리, 이동 20% 마진 올림, 공항 대기 40분 별도 블록, 인천 19:00 → LA 같은 날 14:00(겨울 12시간 비행). 앱 Debug 시뮬레이터 빌드 성공, 번들에 세 파일 포함. 로그 `build/validation/TAU1110A01/`.
+- 제한: 화면 연결 없음(엔진만). 항공편 대권 선은 가져온 항공편에 출발 공항 좌표가 없어 못 그림, 이동 시간 경고는 미리보기에 훅이 없음. 앱 런타임에서 번들 읽기는 빌드 산출물 확인까지. 나라별 공항 대기 값은 지시서 값 그대로(외부 검증 없음).
+
+## REV1110A06 · AI 연동·판정·여행 상태·말풍선 전체 리뷰 수정 (2026-11-10)
+
+- 원인: 독립 리뷰 세 건(`build/validation/REV1110A06/review-server.md` N1~N15·예전 3·4·7, `review-app-ai.md` 1~20, `review-other.md` 1~15).
+- 서버: N1~N10·N12~N15 고침, N11 일부(목록에 없던 예전 v2 감싼 키는 처음 쓰일 때까지 목록에 안 보임). `POST /pin/reset`(주인 키만, 하루 3번, 모든 AI 연결 끊음)·`GET /pin` 추가. KV 쓰기 한도: 주인 하루 600, 서버 전체 하루 900(무료 플랜 기준, 사용자가 늘면 유료 전환 뒤 올려야 함). 메모·노트 글 한도를 앱 저장 한도에 맞춰 2000 → 1000자. `npm test` 75/75 통과(Node·가짜 KV/DO, 실제 Workers 런타임 미확인). 배포 안 함.
+- 앱 AI: 1~20 고침. 키 바꾸기 뒤 예전 자료 지우기, 공유 수준 낮추면 서버 자료 지움, 쓰기 권한 끄면 바로 반영, `GET /pin`으로 PIN 상태 확인, 틀린 명령 하나가 큐를 막지 않음, 결과 장부, 되돌리기가 자동 기록을 덮지 않음, 「새 키로 바꾸기」 확인 창, PIN 잊음 → Face ID(기기 암호) 확인 → 초기화. 백그라운드에서도 명령 전부 반영(대표 결정).
+- 판정·여행: 합친 이동 기록 숨기기·고치기 뒤에도 합친 채 유지, GPS 튐 거르기가 빠른 굽은 기차·몇 시간 뒤 재방문을 지우지 않음(원본은 그대로, 파생 경로에서만 뺌), 걷기·달리기 합치기 3분 상한, 짧은 정지 중 증분 재계산, 다시 가져오기에서 `status` 없으면 사용자 상태 유지, 핀 없는 일정도 상태 변경, VoiceOver 상태 읽기, 말풍선 폭을 실제 글꼴·창 폭으로.
+- 검증(시뮬레이터 BOKKI-Preview iOS 27.1): 앱 단위 시험 전체 2,447개, 실패 0, 건너뜀 23(HealthKit·원본 재생·화랑이 그림 등 환경 조건 시험, 이번 변경과 무관), `final-unit-sim.log`. iPhone Debug 빌드·Watch Debug 빌드 BUILD SUCCEEDED(`final-ios-build.log`, `final-watch-build.log`). 패키지: TaptionRouteEngine 70개 통과, TaptionActivityEngine XCTest 47·Swift Testing 2 통과. `check.py` 실패 0(긴 문구 3), `architecture-metrics --check` 통과(206,496줄, 기준 205,101 +10% 안).
+- 검증(실기기 iPhone 11 Pro, 공유 잠금 사용): 앱 단위 시험 전체 2,447개, 건너뜀 24, 실패 1(`final-unit-device.log`). 실패는 시간 측정 시험 `CategoryCacheBenchmarkTests.testStickmanActionCacheSpeedup`(×1.95, 기준 ×2)로 예전에도 부하 때 같은 모양으로 실패한 시험이고, 같은 빌드로 단독 3회 재실행 모두 통과(×2.4·×2.1·×2.3, `bench-rerun-1~3.log`). 앱 코드와 무관하다는 것을 코드로 입증하지는 않음. iCloud 원본 데이터로 받은 기기 검증은 하지 않음.
+- 확인 못 함: 실제 서버 왕복(배포 전), Face ID 창, SwiftUI 화면(PIN 시트 전환·확인 창·연결 목록 호스트), VoiceOver 낭독, Watch 실기기. 번역은 기계 번역.
+
+## BKP1110A02 · 백업 비밀번호를 잊었을 때 Face ID로 다시 보기 (2026-11-10)
+
+- 해결: `BackupPasswordVault`(새 파일 `TaptionPlan/Core/BackupPasswordVault.swift`)가 6자리를 iCloud 키체인 동기화 일반 암호(`kSecAttrSynchronizable`, `AfterFirstUnlock`, 생체 접근 제어 없음)로 보관. 비밀번호를 정하거나 바꿀 때, 맞는 비밀번호를 확인했을 때, 입력한 비밀번호로 백업 목록이 열리거나 복원에 성공했을 때 저장(등록 비밀번호가 있으면 그것과 같을 때만). 「비밀번호를 잊었어요」(`BackupPasswordForgotView`)는 설정 보안 화면의 백업 비밀번호 칸·복원 비밀번호 칸·비밀번호 변경 카드에 있고, `.deviceOwnerAuthentication`을 통과해야 6자리와 「칸에 채우기」를 보여 줌. 기기 암호가 없으면 보여 주지 않음. 백업 파일 형식·키 유도·반복 횟수는 그대로.
+- 검증(시뮬레이터 BOKKI-Preview, 실기기 아님): `BackupPasswordVaultTests` 11개 + `AppModelBackupConnectionTests`·`AppLockAndPINTests`·`FirstRunTutorialTests` 합쳐 50개, 실패 0(`tests-4.log`). 앱 Debug 시뮬레이터 빌드 BUILD SUCCEEDED(`debug-build-1.log`). `architecture-metrics --check` 통과. 실행 1~3회는 다른 작업자의 Assistant 파일 컴파일 오류로 빌드 실패(이 변경과 무관). 로그 `build/validation/BKP1110A02/`. 새 문구는 12개 언어로 번역해 `check.py` 실패 0(REV1110A06에서 함께).
+- 확인 못 함: 실제 Face ID·기기 암호 창, iCloud 키체인으로 다른 기기에 동기화되는지(시뮬레이터에서는 키체인 쓰기·읽기·지우기만 확인).
+
+## ARC1110A01 · 구조 지표 기준선 다시 잡기 (2026-11-10)
+
+- 대표 결정(객관식): 오늘 늘어난 코드로 총 줄 수 기준선을 다시 잠금(186,501 → 205,101, 다시 +10% 여유). 큰 파일 동결 예산은 낮아지거나 그대로(WidgetShared 1716→1678, AddPlanSheet 2128→2125, MapHomeTimeSidebar 2768→2763, SettingsView 2151→2096, WatchConnectivityController 1623→1621), 생성기가 뺀 MapHomeVectorMap(1347)은 동결 목록에 그대로 둠.
+- 예전 기준선 사본: build/validation/AIR1110A03/architecture-baseline.before.json. 검사 통과.
+
+## TST1110A01 · 실기기 전체 실행에서 실패한 단위 시험 2개 (2026-11-10)
+
+- 원인 (1) `MovementFragmentMergeTests.testRegisteredPlaceContextBlocksTheBridge`: 잇기는 장소 기록 틈에서 정상으로 막혔다. 시험의 장소 기록이 `behavior` 없는 `activity` 위치 기록이라 `isCompetingAutomaticRecord`가 걷기와도 겹친다고 보고, 장소 기록에 덮인 둘째 걷기(240~420초)를 중복으로 지웠다. 실제 장소 문맥 기록은 `StationaryContextKind`를 달고 정지만 막는다. 시험 자료에 `homeRest`를 달았다(제품 코드 그대로).
+- 원인 (2) `StorageReviewFixTests.testLoadAfterQueuedSaveSeesSavedPlan`: `PlanRecord`의 `createdAt`·`updatedAt` 기본값 `Date.now`가 저장소 JSON(`secondsSince1970`) 왕복에서 기준 시각 차이를 더하고 빼며 마지막 비트가 바뀔 수 있다(로컬 재현 1,000회 중 491회 불일치, 출력 문자열은 같음). 순서·저장 줄 문제 아님. 시험 자료를 고정 시각으로 바꿨다. 1마이크로초 미만 차이는 본문 지문이 같아 다시 쓰지 않으므로 제품 영향 없음.
+- 검증(시뮬레이터 BOKKI-Preview, iOS 27.1, 실기기 아님): 두 시험 묶음 18개 3회 모두 통과, 두 시험 `-test-iterations 20` 40회 통과. 로그 `build/validation/TST1110A01/`.
+
+## CLN1110A01 · 앱 자체 판정: 유령 체류 빼기·쪼개진 이동 잇기 (2026-11-10)
+
+- 원인: (1) 경로 필터의 재기준(6점·90초 맞는 묶음)이 실내·지하에서 1~2분 다른 곳으로 튄 위치도 진짜 위치로 받아, 다른 곳 체류·왕복 이동이 생길 수 있었다. (2) Core Motion 기록은 30초 틈만 이어, 신호 대기·엘리베이터의 짧은 정지가 걷기를 2~3분 조각과 「정지·휴식」으로 나눴다. 분류 엔진도 짧은 정지에서 이동을 끊어 5분 미만 조각이 버려졌다.
+- 해결: `RouteGhostExcursion`(경로 엔진) — 3분 미만, 앞뒤 위치와 각각 200m 넘게 떨어지고 앞→뒤 직선에서도 200m 넘게 벗어나며, 왕복 속도 40m/s 초과 또는 평균 정확도 50m 초과, 걷기·달리기 근거 없음을 모두 만족하면 `ghostExcursion` 결정으로 경로에서 뺀다(원본 표본·`normalizedSamples` 유지, 진단 `location.ghostExcursion` 수). `MovementFragmentMerge`(앱) — 같은 Core Motion 이동 사이 3분 미만 틈·3분 미만 정지를 잇고(장소 문맥 기록이 덮은 틈, 사용자 수정·숨김 조각은 넘지 않음, id는 첫 조각), 이동 구간은 걷기·달리기를 3분 미만 틈에서 더 긴 쪽 수단으로 잇되 확정 수단·등록 장소 체류 틈은 넘지 않는다. `ActivityFragmentBridge`(분류 엔진) — 자동 이동 + 3분 미만 휴식 + 같은 이동을 하나로, 첫 조각 id·흡수한 정지 근거 유지.
+- 검증: `swift test` TaptionRouteEngine 63개 통과(새 `RouteGhostExcursionTests` 7개), TaptionActivityEngine XCTest 43개+Swift Testing 2개 통과(새 `ActivityFragmentBridgeTests` 4개, 이어 붙이기=전체 계산 일치 포함). 앱 `build-for-testing`(generic iOS, 서명 없음) TEST BUILD SUCCEEDED, `architecture-metrics --check` 통과. 로그 `build/validation/CLN1110A01/`.
+- 원본 재생(시험 기기 없이 경로 엔진만): 로컬 원본 27개(106,316점)에서 유령 판정 9점 — 모두 같은 날(11-05 14:37) 한 점짜리 근사 위치(정확도 202m, 앞뒤와 약 450m)로 중복 내보내기. 1~2분짜리 유령 묶음은 로컬 원본에 없어 실제 효과는 미확인. `ghost-replay.txt`(좌표 없음).
+- 확인 못 함: 앱 단위 시험 `MovementFragmentMergeTests`(12개)는 빌드만 됨 — 사용할 시뮬레이터가 없고 실기기 사용 안 함으로 실행 못 함. 실기기 하루 재계산 결과.
+
+## REV1110A05 · 중계 주소에서 계정 이름 빼기 (2026-11-10)
+
+- 원인: 연동 키를 만들고 프롬프트를 복사하면 끝에 붙는 중계 주소가 `…<계정 이름>.workers.dev`라, AI 대화에 계정 이름이 그대로 남았다.
+- 해결: 중계 Worker에 회사 도메인 `trip.bokkiyaw.com`을 사용자 지정 도메인으로 붙이고(대표 승인), 앱 `TRIP_RELAY_HOST`를 바꿈. 이제 공개 설정 `AppSecrets.xcconfig`에 둔다(계정 이름 없음). 빌드 305 이전 앱이 쓰는 예전 workers.dev 주소도 켜 두고, 미리보기 주소는 끔.
+- 검증: 새 도메인 키 없이 GET 401, 시험 키로 POST 201·GET 200·DELETE 204(시험 계획은 지움), 예전 주소 GET 401, 새 도메인 카카오 경로 503(키 미입력). iPhone Debug 빌드 성공, 빌드된 Info.plist의 `TRIP_RELAY_HOST`=trip.bokkiyaw.com, 계정 이름 없음.
+- 주의: 도메인을 붙이자 workers.dev 주소가 꺼져 잠깐 404였다가 `workers_dev = true`로 되살림.
+- 확인 못 함: 새 빌드를 기기에서 써 보기(TestFlight 미반영, 다음 빌드부터).
+
 ## TFB1110A01 · TestFlight 빌드 305 (2026-11-10)
 
 - `scripts/testflight/release.sh --yes`: 304 → 305, 산출물 4개 번들 모두 305 확인, 처리 상태 VALID, `TP Taption Plan 내부 테스트` 그룹 연결·테스터 노출 확인(`build/validation/TFB1110A01/testflight-report.json`).
@@ -2335,3 +2391,12 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
 
 - 대표 지시: 일반 모드 하단 링 가운데 영상은 다른 입력이 없는 동안 끊김 없이 계속 재생(넘기지 않음). 재생 모드 줄은 그대로. AVQueuePlayer+AVPlayerLooper로 무음 무한 반복(일반 모드 링만), 재생 모드는 예전 끝→되감기 방식 유지.
 - 검증: MapHomeLiveMapTests·InkWashThemeTests 통과(unit-1), Release(304) 설치(release-1). 실제 영상 반복 화면은 시뮬레이터에 영상 자료가 없어 미확인, 실기기 확인 필요.
+
+## AIR1110A01·TRP1110A07·SEC1110A01 (2026-11-10)
+
+- 요청 변경: 메모·일정 받은편지함(AIR1110A01)과 `/today`(TRP1110A06)는 대표 결정으로 `/activity`(하루 기록)·`/command`(명령 자동 반영) 하나로 대체. 두 갈래를 남기지 않음. 이어서 KV 저장 암호화(SEC1110A01).
+- 서버(`server/trip-relay`): `npm test` 21건 모두 통과(`build/validation/AIR1110A01/server-npm-test.log`). 인증 401, 동작별 422, 보관 1·7·30일 TTL, 날마다 저장·최근 7일 목록, 접두어 목록으로 전부 지우기(목록 쪽 나눔 포함), 명령 큐 교체·50개 제한·삭제, 결과 저장, 속도 제한 429, 저장 값에 평문 없음, 변조 값 204·삭제, 다른 이름으로 옮긴 값 풀리지 않음(AAD), 예전 평문 계획 읽기. 배포·실서버 호출은 하지 않음(메인 세션 몫).
+- 앱: `xcodebuild build-for-testing … -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO -derivedDataPath build/DerivedData-AIR` 성공(앱·시험 대상 모두 컴파일, `build-for-testing.log`, 새 파일 경고 없음). 단위 시험 `AssistantRelayTests`(12건)는 쓸 수 있는 기기가 없어 **실행하지 않음** — 통과로 보지 않는다.
+- 구조 지표 `--check` 통과(`architecture-check.log`).
+- 실기기·화면 확인 없음: 메뉴 「AI 비서」, 명령 반영 알림, 백그라운드 업로드는 미확인.
+

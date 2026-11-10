@@ -10,7 +10,8 @@ let package = Package(
     targets: [
         .target(
             name: "TaptionRouteEngine",
-            dependencies: []
+            dependencies: [],
+            resources: [.process("Travel/Resources")]
         ),
         .testTarget(
             name: "TaptionRouteEngineTests",

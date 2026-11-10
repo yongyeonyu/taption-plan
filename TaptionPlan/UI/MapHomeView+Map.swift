@@ -501,8 +501,8 @@ extension MapHomeView {
                 MapHomeAppleAnnotation(
                     id: travelStopMarkerID(stop),
                     coordinate: stop.coordinate,
-                    kind: .travelStop(number: index + 1),
-                    accessibilityLabel: stop.title,
+                    kind: .travelStop(number: index + 1, status: TripItemStatus(raw: stop.status)),
+                    accessibilityLabel: TripItemStatus(raw: stop.status).spoken(stop.title, language),
                     isInteractive: false
                 )
             )

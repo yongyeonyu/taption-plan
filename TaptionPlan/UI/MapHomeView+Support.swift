@@ -233,6 +233,7 @@ extension MapHomeView {
         }
         .task { await checkTripRelay() }
         .overlay(alignment: .top) { tripClipboardBanner }
+        .mapHomeAssistant(self)
         .task(id: model.selectedDate) { await loadPhotoMoments(asksPermission: showsPhotosOnMap && FirstRunTutorialStore().allowsUnaskedPermissionPrompts) }
         .task(id: MapHomeDayCalendarLoader.key(day: model.selectedDate)) { await loadDayCalendarEvents() }
         .task {

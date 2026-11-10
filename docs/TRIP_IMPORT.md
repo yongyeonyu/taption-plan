@@ -71,6 +71,7 @@ JSON format (keys in English, text values in {LANGUAGE})
       "id": "i1",
       "type": "flight | lodging | meal | cafe | sight | photo | shopping | activity | rest | sleep | transfer | other",
       "title": "",
+      "status": "booked | planned | tentative",
       "start": "YYYY-MM-DDTHH:MM+HH:MM",
       "end": "YYYY-MM-DDTHH:MM+HH:MM",
       "place": { "name": "", "address": "", "lat": 0, "lng": 0, "mapsUrl": "" },
@@ -83,6 +84,7 @@ JSON format (keys in English, text values in {LANGUAGE})
 - Times include the local UTC offset of where the item happens.
 - "items" are in time order across the whole trip. Use "flight" only for flights; for a flight, "place" is the arrival airport, "start" uses the departure time zone and "end" uses the arrival time zone.
 - Types: "sight" for sights and must-see places, "photo" for photo spots, "activity" for things to do such as the hotel pool, spa, gym, a show or a class, "rest" for free time or resting at the hotel, "sleep" for the night from bedtime to wake-up (place is the hotel).
+- Status: "booked" if I said it is reserved or paid, "tentative" for candidates I am unsure about, otherwise "planned".
 - If I paste this prompt again later with changes, keep the same "tripId".
 ````
 

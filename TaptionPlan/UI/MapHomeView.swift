@@ -491,6 +491,8 @@ struct MapHomeView: View {
     @State var isLocationAlwaysPromptPresented = false
     @State var isTripClipboardOfferVisible = false
     @State var pastedTripText: String?
+    /// 메뉴 → AI 비서 화면과 명령 반영 알림(AIR1110A01·TRP1110A07).
+    @State var isAssistantPresented = false
     /// 여권 도장을 눌러 나온 쪽. 있으면 왼쪽 위에 돌아가기 단추가 뜬다.
     @State var passportReturnPage: Int?
     @State var passportStartPage = 0

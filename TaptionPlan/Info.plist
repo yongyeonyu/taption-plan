@@ -49,6 +49,14 @@
 	<string>305</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>LSApplicationQueriesSchemes</key>
+	<!-- AI 앱 설치 확인용(AIR1110A03). 네 스킴 모두 확인하지 않은 값이라 못 열면 App Store로 간다. -->
+	<array>
+		<string>pickle</string>
+		<string>chatgpt</string>
+		<string>claude</string>
+		<string>googlegemini</string>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCalendarsFullAccessUsageDescription</key>

@@ -1,0 +1,12 @@
+{
+  "version": "2026-11",
+  "transit": { "marginRatio": 0.2 },
+  "airport": {
+    "arrivalBufferMinutes": { "default": 40, "US": 90, "TH": 25, "JP": 30 },
+    "checkinBeforeDomestic": 60,
+    "checkinBeforeInternational": 120,
+    "minimumConnectionMinutes": { "default": 90, "US": 150 }
+  },
+  "hotel": { "checkinBufferMinutes": 30 },
+  "taxRefund": { "minimizeQueueMinutes": 30 }
+}

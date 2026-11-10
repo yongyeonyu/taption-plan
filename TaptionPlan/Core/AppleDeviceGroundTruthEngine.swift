@@ -887,10 +887,12 @@ enum AppleDeviceGroundTruthEngine {
         let stayIndex = StayInterruptionIndex(stays: stays)
         var result: [TravelSegment] = []
         for segment in segments.sorted(by: { $0.span.start < $1.span.start }) {
+            // 맞는 수단(걷기·달리기)도 짧은 틈이면 잇고, 등록 장소에 머문 틈은 넘지 않는다 (CLN1110A01).
             guard var last = result.last,
-                  last.mode == segment.mode,
-                  segment.span.start.timeIntervalSince(last.span.end)
-                      <= maximumGap,
+                  let mode = MovementFragmentMerge.coalescedMode(last, segment, maximumGap: maximumGap),
+                  !MovementFragmentMerge.crossesRegisteredStay(
+                      TimeSpan(start: last.span.end, end: max(last.span.end, segment.span.start)), stays: stays
+                  ),
                   !stayIndex.containsInterruption(
                       in: TimeSpan(
                           start: last.span.end,
@@ -901,6 +903,8 @@ enum AppleDeviceGroundTruthEngine {
                 result.append(segment)
                 continue
             }
+            if mode != last.mode || mode != segment.mode { last.evidence.append("짧은 끊김 이어 붙임") }
+            last.mode = mode
             last.span = TimeSpan(
                 start: last.span.start,
                 end: max(last.span.end, segment.span.end)

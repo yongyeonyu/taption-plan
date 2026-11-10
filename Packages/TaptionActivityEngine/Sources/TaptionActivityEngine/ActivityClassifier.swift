@@ -157,7 +157,9 @@ public struct ActivityClassificationEngine: Sendable {
             guard let firstTail = tail.first else { return state }
             let prefix = Array(state.segments.dropLast())
             let nextSegments: [ActivitySegment]
-            if sameClassification(previousLast, firstTail),
+            // 짧은 정지 뒤에 새 구간이 붙어 앞 이동과 이어질 수 있을 때만 전체를 다시 계산한다 (REV1110A06).
+            if !ActivityFragmentBridge.mayBridge(before: prefix.last, pause: previousLast, tailCount: tail.count),
+               sameClassification(previousLast, firstTail),
                firstNew.timestamp.timeIntervalSince(lastEvidence.timestamp) <= configuration.maximumGap {
                 let merged = ActivitySegment(
                     id: previousLast.id,
@@ -378,7 +380,8 @@ public struct ActivityClassificationEngine: Sendable {
                 checkpoints: &checkpoints
             )
         }
-        return try mergeAdjacent(segments, checkpoints: &checkpoints)
+        // 짧은 정지로 쪼개진 같은 이동을 잇는다 (CLN1110A01).
+        return ActivityFragmentBridge.bridging(try mergeAdjacent(segments, checkpoints: &checkpoints))
     }
 
     private func classification(

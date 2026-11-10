@@ -66,6 +66,7 @@ JSON format (keys in English, text values in {LANGUAGE})
       "id": "i1",
       "type": "flight | lodging | meal | cafe | sight | photo | shopping | activity | rest | sleep | transfer | other",
       "title": "",
+      "status": "booked | planned | tentative",
       "start": "YYYY-MM-DDTHH:MM+HH:MM",
       "end": "YYYY-MM-DDTHH:MM+HH:MM",
       "place": { "name": "", "address": "", "lat": 0, "lng": 0, "mapsUrl": "" },
@@ -78,23 +79,19 @@ JSON format (keys in English, text values in {LANGUAGE})
 - Times include the local UTC offset of where the item happens.
 - "items" are in time order across the whole trip. Use "flight" only for flights; for a flight, "place" is the arrival airport, "start" uses the departure time zone and "end" uses the arrival time zone.
 - Types: "sight" for sights and must-see places, "photo" for photo spots, "activity" for things to do such as the hotel pool, spa, gym, a show or a class, "rest" for free time or resting at the hotel, "sleep" for the night from bedtime to wake-up (place is the hotel).
+- Status: "booked" if I said it is reserved or paid, "tentative" for candidates I am unsure about, otherwise "planned".
 - If I paste this prompt again later with changes, keep the same "tripId".
 """#
 }
 
 /// 프롬프트를 채워 여는 AI 앱. 주소에 질문을 못 싣는 곳은 복사한 뒤 연다.
 enum TripImportAIApp: String, CaseIterable, Identifiable {
-    case chatGPT, claude, gemini
+    case pickle, chatGPT, claude, gemini
 
     var id: String { rawValue }
 
-    var title: String {
-        switch self {
-        case .chatGPT: "ChatGPT"
-        case .claude: "Claude"
-        case .gemini: "Gemini"
-        }
-    }
+    /// 「AI 연결」과 같은 이름을 쓴다(한국어 화면은 「피클」).
+    func title(_ language: MapHomeLanguage) -> String { provider.title(language) }
 
     /// ChatGPT만 주소의 `q`로 질문을 채운다. 나머지는 붙여 넣는다.
     var prefillsPrompt: Bool { self == .chatGPT }
@@ -102,6 +99,8 @@ enum TripImportAIApp: String, CaseIterable, Identifiable {
     /// `prompt`가 nil이면 질문 없이 연다. 연동 키가 든 프롬프트는 주소(방문 기록·서버 로그)에 싣지 않는다(REV1110A02).
     func url(prompt: String?) -> URL? {
         switch self {
+        // 피클의 URL 스킴은 확인되지 않았다. 못 열면 App Store로 간다(TRP1110A08).
+        case .pickle: return URL(string: "pickle://")
         case .chatGPT:
             var components = URLComponents(string: "https://chatgpt.com/")
             if let prompt { components?.queryItems = [URLQueryItem(name: "q", value: prompt)] }
@@ -110,4 +109,17 @@ enum TripImportAIApp: String, CaseIterable, Identifiable {
         case .gemini: return URL(string: "https://gemini.google.com/app")
         }
     }
+
+    /// 「AI 연결」의 같은 AI. 연결 키와 App Store 번호를 함께 쓴다(AIR1110A03).
+    var provider: AssistantAIProvider {
+        switch self {
+        case .pickle: .pickle
+        case .chatGPT: .chatGPT
+        case .claude: .claude
+        case .gemini: .gemini
+        }
+    }
+
+    /// 앱이 없을 때 여는 App Store 쪽(TRP1110A08·AIR1110A03).
+    var fallbackURL: URL? { provider.appStoreURL }
 }

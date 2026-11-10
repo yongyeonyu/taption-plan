@@ -1,0 +1,353 @@
+// 저장소 읽기·쓰기. HTTP 경로와 MCP 도구가 같은 함수를 부른다(AIR1110A02).
+// ctx = { kv, store: 암호화 KV, state: 주인 DO, ring, auth, master: 주인 해시, now: 밀리초, legacy: DO의 이전 표시 }
+// SEC1110A02: 하루 기록 이름은 `act:<주인>:<HMAC(날짜)>`이고 날짜 목록은 DO가 잠근 채 가진다(KV list를 쓰지 않는다).
+// 명령 큐와 24시간 한도는 DO가 가진다. 여행 계획·명령 결과·추가 칸(goals·trips·placeBook)은 KV에 잠가 둔다.
+import { nameKey, openJson, sealJson, tagOf } from "./crypto.js";
+import { json, stored, tooMany } from "./http.js";
+import { chargeWrites } from "./state.js";
+import { ACTIVITY_EXTRAS, QUEUE_LIMIT, cleanCommand, commandReason, isActivityUpload, isCommand, isCommandResults, isDate, isTripPlan } from "./validate.js";
+
+const DAY = 24 * 60 * 60;
+const DAY_MS = DAY * 1000;
+export const PLAN_TTL_SECONDS = 3 * DAY;
+export const QUEUE_TTL_SECONDS = 7 * DAY;
+// 주인 이름마다 24시간 동안 받은 명령 30개까지(CLN1110A01). 세는 곳은 DO다.
+export const DAILY_COMMAND_LIMIT = 30;
+// 말풍선은 따로 24시간 48개(BUB1110A01). 30개 한도에 세지 않는다.
+export const DAILY_BUBBLE_LIMIT = 48;
+
+const planName = (ctx) => "plan:" + ctx.master;
+const dayPrefix = (ctx) => `act:${ctx.master}:`;
+const legacyQueueName = (ctx) => "cmd:" + ctx.master;
+const resultName = (ctx) => "cmdres:" + ctx.master;
+const extrasName = (ctx) => "ext:" + ctx.master;
+const iso = (ms) => new Date(ms).toISOString();
+
+function parse(text, fallback) {
+  try { return JSON.parse(text) ?? fallback; } catch { return fallback; }
+}
+
+const names = (ctx) => (ctx.names ??= ctx.ring.dekBytes().then(nameKey));
+export const dayName = async (ctx, date) => dayPrefix(ctx) + (await tagOf(await names(ctx), "day|" + date));
+const commandTag = async (ctx, id) => tagOf(await names(ctx), "cmd|" + id);
+const sealDate = async (ctx, name, date) => sealJson(await ctx.ring.dek(), "day|" + name, date);
+// 하루 내용의 표시(updatedAt 제외). 같은 내용을 다시 올리면 KV에 쓰지 않는다(N1).
+const contentTag = async (ctx, day) => tagOf(await names(ctx), "content|" + JSON.stringify({ ...day, updatedAt: undefined }));
+const overBudget = (charge) => tooMany(charge.error, charge.retryAfter);
+const sealCommand = async (ctx, tag, command) => sealJson(await ctx.ring.dek(), `cmd|${ctx.master}|${tag}`, command);
+
+export async function listNames(kv, prefix) {
+  const out = [];
+  let cursor;
+  do {
+    const page = await kv.list({ prefix, cursor });
+    out.push(...page.keys.map((key) => ({ name: key.name, expiration: key.expiration })));
+    cursor = page.list_complete ? undefined : page.cursor;
+  } while (cursor);
+  return out;
+}
+
+// MARK: plan
+
+export async function savePlan(ctx, value) {
+  if (!isTripPlan(value)) return json({ error: "not_trip_plan" }, 422);
+  const charge = await chargeWrites(ctx.env, ctx.state, 1, ctx.now);
+  if (!charge.ok) return overBudget(charge);
+  await ctx.store.put(planName(ctx), JSON.stringify(value), { expirationTtl: PLAN_TTL_SECONDS });
+  return json({ ok: true, tripId: value.tripId, expiresInSeconds: PLAN_TTL_SECONDS }, 201);
+}
+
+export async function readPlan(ctx) {
+  const text = await ctx.store.get(planName(ctx));
+  return text ? stored(text) : json(null, 204);
+}
+
+// 없으면 지우지 않는다(KV 지우기 한도를 아낀다).
+export async function deletePlan(ctx) {
+  if ((await ctx.kv.get(planName(ctx))) != null) await ctx.kv.delete(planName(ctx));
+  return json(null, 204);
+}
+
+// MARK: 예전 하루 기록 옮기기 (SEC1110A02)
+
+// `act:<주인>:YYYY-MM-DD`(v1·v2·평문)를 HMAC 이름으로 옮기고 DO 목록에 넣는다. 남은 TTL은 지킨다. 지우지 않고 옮긴다.
+// 범위 키는 v1을 풀 수 없으므로 한 번만 해 보고(daysScopedTried), 나머지는 주인(앱)이 다음 요청에서 마친다.
+// N11: 한 번에 한 요청만 옮기고(DO 잠금), 새 이름이 이미 있는지는 KV가 아니라 DO 목록으로 보고, 요청 하나에 10일씩 옮긴다.
+// 돌려주는 값: 다른 요청이 옮기는 중이면 false.
+const MIGRATE_DAYS_PER_REQUEST = 10;
+
+export async function ensureDays(ctx) {
+  if (ctx.legacy.days || (!ctx.ring.owner && ctx.legacy.daysScopedTried)) return true;
+  if (!(await ctx.state.call("claim", { name: "days", now: ctx.now })).ok) return false;
+  const prefix = dayPrefix(ctx);
+  const nowSeconds = Math.floor(ctx.now / 1000);
+  const indexed = new Set((await ctx.state.call("listDays")).days.map((d) => d.name));
+  const index = [];
+  let blocked = false;
+  let more = false;
+  for (const { name, expiration } of await listNames(ctx.kv, prefix)) {
+    const left = expiration ? expiration - nowSeconds : 7 * DAY;
+    if (left < 60 || indexed.has(name)) continue;
+    if (index.length >= MIGRATE_DAYS_PER_REQUEST) { more = true; break; }
+    const suffix = name.slice(prefix.length);
+    const text = await ctx.store.get(name, { reseal: false });
+    if (text === null) { if (!ctx.ring.owner) blocked = true; continue; }
+    const day = parse(text, null);
+    if (isDate(suffix)) {
+      const target = await dayName(ctx, suffix);
+      // 새 이름이 목록에 있으면 그것이 더 새롭다.
+      if (!indexed.has(target)) {
+        await ctx.store.put(target, text, { expirationTtl: left });
+        index.push({ name: target, date: await sealDate(ctx, target, suffix), exp: ctx.now + left * 1000 });
+      }
+      await ctx.kv.delete(name);
+    } else if (isDate(day?.date)) {
+      index.push({ name, date: await sealDate(ctx, name, day.date), exp: ctx.now + left * 1000 });
+    }
+  }
+  if (index.length) await ctx.state.call("putDays", { days: index, now: ctx.now });
+  const flags = more ? {} : blocked ? { daysScopedTried: true } : { days: true };
+  if (!more) await ctx.state.call("markLegacy", flags);
+  Object.assign(ctx.legacy, flags);
+  await ctx.state.call("release", { name: "days" });
+  return true;
+}
+
+// 저장된 날 [{name, date}] 날짜순. 만료된 이름표는 정리한다.
+async function storedDays(ctx) {
+  await ensureDays(ctx);
+  const { days } = await ctx.state.call("listDays");
+  const dek = await ctx.ring.dek();
+  const live = [];
+  const stale = [];
+  for (const d of days) {
+    const date = d.exp > ctx.now ? await openJson(dek, "day|" + d.name, d.date) : null;
+    if (isDate(date)) live.push({ name: d.name, date });
+    else stale.push(d.name);
+  }
+  if (stale.length) await ctx.state.call("removeDays", { names: stale });
+  return live.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+async function readDay(ctx, date) {
+  const text = await ctx.store.get(await dayName(ctx, date));
+  if (text || ctx.legacy.days) return text;
+  // 아직 옮기지 못한 예전 이름(범위 키가 먼저 온 경우).
+  return ctx.store.get(dayPrefix(ctx) + date, { reseal: false });
+}
+
+// MARK: activity
+
+async function saveExtras(ctx, value, ttl) {
+  const provided = ACTIVITY_EXTRAS.filter((name) => value[name] !== undefined);
+  if (!provided.length) return;
+  const extras = parse((await ctx.store.get(extrasName(ctx))) ?? "{}", {});
+  for (const name of provided) {
+    if (value[name] === null) delete extras[name];
+    else extras[name] = value[name];
+  }
+  if (Object.keys(extras).length) await ctx.store.put(extrasName(ctx), JSON.stringify(extras), { expirationTtl: ttl });
+  else if ((await ctx.kv.get(extrasName(ctx))) != null) await ctx.kv.delete(extrasName(ctx));
+}
+
+// 올린 뒤 보관 기간의 3/4 넘게 남아 있고 내용이 같으면 다시 쓰지 않는다.
+const unchanged = (row, hash, ttl, now) => !!row && row.hash === hash && row.exp - now <= ttl * 1000 && row.exp - now > ttl * 750;
+
+export async function saveActivity(ctx, value) {
+  if (!isActivityUpload(value)) return json({ error: "not_activity" }, 422);
+  if (!(await ensureDays(ctx))) return json({ error: "migrating", retryAfter: 60 }, 503, { "retry-after": "60" });
+  const ttl = value.retentionDays * DAY;
+  const known = new Map((await ctx.state.call("listDays")).days.map((d) => [d.name, d]));
+  const changed = [];
+  for (const day of value.days) {
+    const name = await dayName(ctx, day.date);
+    const hash = await contentTag(ctx, day);
+    if (!unchanged(known.get(name), hash, ttl, ctx.now)) changed.push({ day, name, hash });
+  }
+  const extras = ACTIVITY_EXTRAS.some((name) => value[name] !== undefined);
+  const charge = await chargeWrites(ctx.env, ctx.state, changed.length + (extras ? 1 : 0), ctx.now);
+  if (!charge.ok) return overBudget(charge);
+  const index = [];
+  for (const { day, name, hash } of changed) {
+    await ctx.store.put(name, JSON.stringify(day), { expirationTtl: ttl });
+    index.push({ name, date: await sealDate(ctx, name, day.date), exp: ctx.now + ttl * 1000, hash });
+  }
+  if (index.length) {
+    const { dropped } = await ctx.state.call("putDays", { days: index, now: ctx.now });
+    for (const name of dropped ?? []) await ctx.kv.delete(name);
+  }
+  await saveExtras(ctx, value, ttl);
+  return json({ ok: true, dates: value.days.map((day) => day.date), expiresInSeconds: ttl, written: changed.length }, 201);
+}
+
+export async function readActivity(ctx, date) {
+  if (date !== null && date !== undefined) {
+    if (!isDate(date)) return json({ error: "bad_date" }, 400);
+    await ensureDays(ctx);
+    const text = await readDay(ctx, date);
+    return text ? stored(text) : json(null, 204);
+  }
+  const newest = (await storedDays(ctx)).reverse().slice(0, 7);
+  const days = [];
+  for (const { name } of newest) {
+    const day = parse((await ctx.store.get(name)) ?? "null", null);
+    if (day) days.push(day);
+  }
+  const extras = parse((await ctx.store.get(extrasName(ctx))) ?? "{}", {});
+  return days.length ? json({ days, ...extras }, 200) : json(null, 204);
+}
+
+// 이 주인의 모든 날과 추가 칸을 지운다. 아무것도 없으면 KV를 건드리지 않는다.
+export async function deleteActivity(ctx) {
+  const { days } = await ctx.state.call("listDays");
+  const all = new Set(days.map((d) => d.name));
+  if (!ctx.legacy.days) for (const { name } of await listNames(ctx.kv, dayPrefix(ctx))) all.add(name);
+  const extras = (await ctx.kv.get(extrasName(ctx))) != null;
+  if (!all.size && !extras && ctx.legacy.days) return json(null, 204);
+  for (const name of all) await ctx.kv.delete(name);
+  if (extras) await ctx.kv.delete(extrasName(ctx));
+  if (days.length) await ctx.state.call("removeDays", { names: null });
+  if (!ctx.legacy.days) await ctx.state.call("markLegacy", { days: true });
+  return json(null, 204);
+}
+
+// MARK: summary (AIR1110A02)
+
+const RANGE_DAYS = { week: 7, month: 30 };
+const utcDate = (ms) => new Date(ms).toISOString().slice(0, 10);
+const number = (v) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+
+// 서버에 있는 날들을 모아 분류별 분·기록 분·걸음·계획 수를 더한다.
+export function summarize(days, range, start, end) {
+  const categories = new Map();
+  const total = { recordedMinutes: 0, steps: 0, plansScheduled: 0, plansCompleted: 0 };
+  let stepDays = 0;
+  for (const day of [...days].sort((a, b) => a.date.localeCompare(b.date))) {
+    const s = day.summary ?? {};
+    total.recordedMinutes += number(s.recordedMinutes);
+    total.plansScheduled += number(s.plansScheduled);
+    total.plansCompleted += number(s.plansCompleted);
+    if (typeof s.steps === "number") { total.steps += number(s.steps); stepDays++; }
+    for (const c of Array.isArray(s.categories) ? s.categories : []) {
+      if (typeof c?.id !== "string") continue;
+      const entry = categories.get(c.id) ?? { id: c.id, title: c.title ?? c.id, minutes: 0 };
+      entry.minutes += number(c.minutes);
+      if (typeof c.title === "string") entry.title = c.title; // 최신 날의 이름
+      categories.set(c.id, entry);
+    }
+  }
+  return {
+    range, start, end,
+    daysCovered: days.length,
+    dates: days.map((d) => d.date).sort(),
+    ...total,
+    stepDays,
+    categories: [...categories.values()].sort((a, b) => b.minutes - a.minutes || a.id.localeCompare(b.id)),
+  };
+}
+
+export async function readSummary(ctx, range, end) {
+  const length = RANGE_DAYS[range];
+  if (!length) return json({ error: "bad_range" }, 400);
+  if (end !== null && end !== undefined && !isDate(end)) return json({ error: "bad_date" }, 400);
+  const all = await storedDays(ctx);
+  // 끝 날짜가 없으면 오늘(UTC)과 가장 최근에 올린 날 중 늦은 날. 동쪽 시간대의 '오늘'을 놓치지 않는다.
+  const last = end ?? [utcDate(ctx.now), all.at(-1)?.date ?? ""].sort().at(-1);
+  const start = utcDate(Date.parse(last + "T00:00:00Z") - (length - 1) * DAY_MS);
+  const days = [];
+  for (const { name, date } of all.filter((d) => d.date >= start && d.date <= last)) {
+    const day = parse((await ctx.store.get(name)) ?? "null", null);
+    if (isDate(day?.date)) days.push(day);
+    else if (day) days.push({ ...day, date });
+  }
+  return days.length ? json(summarize(days, range, start, last), 200) : json(null, 204);
+}
+
+// MARK: commands (finding 6, 8, 14)
+
+// 예전 KV 큐(`cmd:<주인>`, 배열 또는 {commands, sent})를 DO로 한 번 옮긴다. keyId는 null, source는 "legacy"가 된다.
+export async function ensureQueue(ctx) {
+  if (ctx.legacy.queue) return;
+  const name = legacyQueueName(ctx);
+  if ((await ctx.kv.get(name)) != null) {
+    const text = await ctx.store.get(name, { reseal: false });
+    if (text === null && !ctx.ring.owner) return; // v1: 주인이 옮긴다.
+    const value = parse(text ?? "null", null);
+    const commands = Array.isArray(value) ? value : Array.isArray(value?.commands) ? value.commands : [];
+    const sent = Array.isArray(value?.sent) ? value.sent.filter((t) => typeof t === "number") : [];
+    const items = [];
+    for (const command of commands) {
+      if (typeof command?.id !== "string") continue;
+      const tag = await commandTag(ctx, command.id);
+      const { keyId, source, ...rest } = command;
+      items.push({ tag, sealed: await sealCommand(ctx, tag, rest), receivedAt: Date.parse(command.receivedAt) || ctx.now });
+    }
+    await ctx.state.call("importQueue", { items, sent });
+    await ctx.kv.delete(name);
+  }
+  await ctx.state.call("markLegacy", { queue: true });
+  ctx.legacy.queue = true;
+}
+
+// source: rest(REST 연결 키·주인) | mcp(MCP에 연결 키) | oauth(MCP에 OAuth 토큰).
+export async function queueCommand(ctx, value, source = "rest") {
+  const command = isCommand(value) ? cleanCommand(value) : null;
+  if (!command) {
+    const reason = commandReason(value);
+    return json({ error: "not_command", ...(reason ? { reason } : {}) }, 422);
+  }
+  await ensureQueue(ctx);
+  const tag = await commandTag(ctx, command.id);
+  const entry = { ...command, keyId: ctx.auth.keyId, source, receivedAt: iso(ctx.now) };
+  const bubble = command.action === "setBubble";
+  const result = await ctx.state.call("enqueue", { tag, keyId: ctx.auth.keyId, source, sealed: await sealCommand(ctx, tag, entry), now: ctx.now, bubble });
+  if (result.error === "id_conflict") return json({ error: "id_conflict" }, 409);
+  if (!result.ok) {
+    const retry = result.retryAfter;
+    const limit = bubble ? DAILY_BUBBLE_LIMIT : DAILY_COMMAND_LIMIT;
+    return json({ error: result.error, limit, retryAfter: retry, retryAfterSeconds: retry }, 429, { "retry-after": String(retry) });
+  }
+  return json({ ok: true, id: command.id, queued: result.queued, remainingToday: result.remaining, expiresInSeconds: QUEUE_TTL_SECONDS }, 201);
+}
+
+export async function readCommands(ctx) {
+  await ensureQueue(ctx);
+  const { commands } = await ctx.state.call("listQueue", { now: ctx.now });
+  const dek = await ctx.ring.dek();
+  const out = [];
+  for (const item of commands) {
+    const command = await openJson(dek, `cmd|${ctx.master}|${item.tag}`, item.sealed);
+    if (command) out.push({ ...command, keyId: item.keyId, source: item.source, receivedAt: command.receivedAt ?? iso(item.receivedAt) });
+  }
+  return out.length ? json({ commands: out }, 200) : json(null, 204);
+}
+
+// 지워도 24시간 받은 수는 남긴다. 그래야 앱이 큐를 비울 때마다 한도가 풀리지 않는다.
+export async function deleteCommands(ctx, ids) {
+  await ensureQueue(ctx);
+  // 예전에 받은 id는 앞뒤 공백이 있을 수 있어 그대로와 다듬은 것을 모두 지운다(N10).
+  const list = ids ? [...new Set(ids.split(",").flatMap((id) => [id, id.trim()]).filter(Boolean))] : null;
+  const tags = list ? await Promise.all(list.map((id) => commandTag(ctx, id))) : null;
+  await ctx.state.call("removeQueue", { tags });
+  return json(null, 204);
+}
+
+// MARK: command results
+
+export async function saveResults(ctx, value) {
+  if (!isCommandResults(value)) return json({ error: "not_results" }, 422);
+  const charge = await chargeWrites(ctx.env, ctx.state, 1, ctx.now);
+  if (!charge.ok) return overBudget(charge);
+  const at = iso(ctx.now);
+  const entries = value.results.map(({ id, status, reason }) => ({ id, status, ...(reason ? { reason } : {}), at }));
+  const ids = new Set(entries.map((e) => e.id));
+  const old = parse((await ctx.store.get(resultName(ctx))) ?? "[]", []);
+  const items = (Array.isArray(old) ? old : []).filter((e) => !ids.has(e.id)).concat(entries).slice(-QUEUE_LIMIT);
+  await ctx.store.put(resultName(ctx), JSON.stringify(items), { expirationTtl: QUEUE_TTL_SECONDS });
+  return json({ ok: true }, 201);
+}
+
+export async function readResults(ctx) {
+  const results = parse((await ctx.store.get(resultName(ctx))) ?? "[]", []);
+  return Array.isArray(results) && results.length ? json({ results }, 200) : json(null, 204);
+}
