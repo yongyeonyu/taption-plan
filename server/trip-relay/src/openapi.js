@@ -1,7 +1,7 @@
 // GPT Actions용 OpenAPI 3.1 문서(AIR1110A02). 인증 없이 받는다. AI가 부르는 경로만 담는다(앱 전용 경로 제외).
 
 // AIR1110A03: 목표·여행·수면·안전한 설정 동작을 더한다. 동작 목록은 validate.js 하나에서 온다.
-import { ACTIONS, DISPLAY_OPTIONS, LANGUAGES, MAP_STYLES, THEMES, TRIP_STATUSES } from "./validate.js";
+import { ACTIONS, DISPLAY_OPTIONS, EXPENSE_CATEGORIES, LANGUAGES, MAP_STYLES, THEMES, TRIP_STATUSES } from "./validate.js";
 
 const date = { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$", description: "YYYY-MM-DD in the user's time zone" };
 const hhmm = { type: "string", pattern: "^([01]\\d|2[0-3]):[0-5]\\d$", description: "HH:mm (24h)" };
@@ -60,6 +60,11 @@ const command = {
     mapStyle: { type: "string", enum: MAP_STYLES },
     option: { type: "string", enum: DISPLAY_OPTIONS },
     enabled: { type: "boolean" },
+    kind: { type: "string", enum: ["routine", "event", "expense", "income"], description: "setBubble: routine|event. addExpense: expense|income" },
+    amount: { type: "number", exclusiveMinimum: 0, maximum: 1e10, description: "addExpense: amount in currency" },
+    currency: { type: "string", pattern: "^[A-Z]{3}$", description: "addExpense: ISO 4217, default KRW" },
+    category: { type: "string", enum: EXPENSE_CATEGORIES, description: "addExpense category" },
+    payer: { type: "string", maxLength: 30, description: "addExpense: who paid, when not me" },
   },
 };
 

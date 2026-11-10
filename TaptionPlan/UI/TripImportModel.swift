@@ -257,6 +257,8 @@ enum TripImportTimingCheck {
         var result: [String: Warning] = [:]
         let sorted = items.sorted { $0.start < $1.start }
         for (previous, next) in zip(sorted, sorted.dropFirst()) where next.kind != .flight {
+            // 숙소·잠처럼 다음 일정을 감싸는 항목이나 겹친 일정은 이동 사이가 아니다.
+            guard previous.end <= next.start, previous.kind != .lodging, previous.kind != .sleep else { continue }
             let gapMinutes = next.start.timeIntervalSince(previous.end) / 60
             if previous.kind == .flight {
                 if gapMinutes < arrivalMinutes, gapMinutes > -1 { result[next.id] = .afterFlight(needMinutes: Int(arrivalMinutes)) }

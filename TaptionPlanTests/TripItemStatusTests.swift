@@ -144,5 +144,12 @@ final class TripItemStatusTests: XCTestCase {
         guard case let .tightMove(need) = warnings["b"] else { return XCTFail("\(warnings)") }
         XCTAssertGreaterThan(need, 10)
         XCTAssertNil(warnings["c"], "100m 남짓 걷기는 10분이면 된다")
+        let stay = try TripImportParser.parse(#"""
+        {"format":"bokki-trip","version":1,"tripId":"t3","title":"t","items":[
+         {"id":"h","type":"lodging","title":"호텔","start":"2026-12-02T15:00+07:00","end":"2026-12-03T11:00+07:00","place":{"lat":13.75,"lng":100.49}},
+         {"id":"d","type":"meal","title":"저녁","start":"2026-12-02T19:00+07:00","place":{"lat":13.80,"lng":100.55}}
+        ]}
+        """#).get()
+        XCTAssertTrue(TripImportTimingCheck.warnings(stay.items).isEmpty, "a stay that spans dinner is not a tight move")
     }
 }

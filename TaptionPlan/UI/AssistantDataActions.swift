@@ -107,9 +107,10 @@ extension AppModel {
             var value = entry
             await preferences.ledger.load()
             value.amountKRW = preferences.ledger.krw(value.amount, currency: value.currency)
-            await preferences.ledger.save(value)
+            let saved = await preferences.ledger.save(value)
             var result = AssistantEditResult(after: "\(value.title) \(LedgerMoney.text(value.amount, currency: value.currency, language: language))")
-            result.ledgerEntryID = value.id
+            result.ledgerEntryID = saved.id
+            result.ledgerEntry = saved
             return result
         default:
             return .rejected("invalid")

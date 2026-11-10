@@ -2,6 +2,14 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## BKS1111A03·리뷰 수정 · 미래 달은 계획이 있을 때만, 옛 백업 파일 갱신, 가계부 리뷰 (2026-11-11 02:20)
+
+- 원인(대표 화면 01:48의 2026-12~2029-03): 달 후보가 센서 표본·원본 이벤트·일기 예보까지 셌다. 0행 달은 머리글 행 수(센서+기록)에 들지 않는 원본 이벤트만 든 달.
+- 고침: 이번 달 뒤는 `plan`·`memo`·`calendarEvent`·`sticker`·`travel`·`assistant-bubble`·`ledger-entry` 기록(지움 표시 포함)이나 메모 저장소 기록이 있을 때만. 리뷰 지적 두 건도 고침: 건강 표본이 든 옛 파일을 합칠 때 그 행을 「새 파일에 꼭 있어야 할 행」에서 뺌(안 빼면 그 달·설정 백업이 매번 검증 실패), 오프로드의 지문·삭제에서 건강 표본 제외.
+- 가계부 리뷰 12건 반영: 단축어·AI로 먼저 들어온 외화도 환율을 받아 원화 채움·열 때 빈 값 채우기, 쉼표 소수점 지역 금액(12,50), 결제 예정·한도·광고 문자 거절과 단축어는 결제 시각이 읽힌 문자만, 여행 프롬프트는 복사가 끝난 뒤 안내, Vision 결과를 한 번만 받기, 장부 읽기 한 번만(동시 읽기가 저장을 덮지 않게)·메모리에 없어도 지움 표시, 영수증은 합계 줄(SUBTOTAL 제외)이나 「원」 붙은 금액만·소수·통화 표시, 사용자가 고친 AI 기록은 되돌리지 않음, 숙소·겹친 일정은 이동 경고 안 함, 분류 추정 오탐(메가박스·Cucina), 월급 날 이중 계산, 목록에 없는 낸 사람. 서버: 환율 저장 실패가 받은 환율을 버리지 않게·값 검사·이틀 전까지 대체, OpenAPI·MCP 칸 정의·한도, 카카오 반경 검색 좌표 필수.
+- 아이폰 11 실기기: `LedgerTests` 12·`TaptionBackupV2Tests` 50(새: 옛 파일 다시 백업, 미래 달은 계획 있을 때만)·`TripItemStatusTests`·`TaptionRouteEngineAdapterTests`·Assistant 3묶음, 모두 125건 실패 0(`build/validation/BKS1111A03/review-iphone11.xcresult`). 저장소 패키지 `swift test` 9건 통과. 서버 `npm test` 84건 통과(한 번은 기존 간헐 시험 1건 실패, 다시 돌려 통과).
+- 판단 남김: AI 공유 수준이 「보내지 않음」이 아니면 가계부 내용·금액이 하루 기록에 실린다(대표 결정대로). 이미 연결한 AI에 이번 업데이트부터 실리므로 따로 켜기를 둘지 대표 확인 필요.
+
 ## NGT1111A01 · 밤사이 진행 — 아이폰 11 검증 (2026-11-11 01:40~)
 
 - 아이폰 11 Pro 실기기(시뮬레이터 아님) 앱 단위 시험 전체: 2,517건 중 통과 2,490, 실패 2, 건너뜀 25 (`build/validation/NGT1111A01/unit-iphone11.xcresult`, 19분). 실패 2건(`FeatureEngineTests` `testImmediateSensorAnalysisKeepsEveryPendingDay`·`testSensorAnalysisDefersBackgroundReadingsAndCoalescesOnForeground`)은 따로 다시 돌리면 둘 다 통과(`rerun-feature-iphone11.xcresult`). 전체 실행 부하에서 시간 기대가 밀리는 기기 타이밍 문제로 보고 코드는 그대로 뒀다(A13에서 20초 대기 안에 둘째 날 분석이 끝나지 않음). 화랑이 장식 시험(`testScarfAndRibbonStayOnTheBodyInEveryScene`)이 이 기기에서 수 분 걸린다.

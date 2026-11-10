@@ -158,6 +158,7 @@ struct AssistantEditResult: Equatable, Sendable {
     var bubbleID: UUID?
     /// 더한 가계부 기록(LED1110A01). 되돌리면 지운다.
     var ledgerEntryID: UUID?
+    var ledgerEntry: LedgerEntry?
 
     static func rejected(_ reason: String) -> Self { Self(reason: reason) }
 }

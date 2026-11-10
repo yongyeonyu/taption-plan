@@ -53,6 +53,7 @@ struct LedgerSheet: View {
             .task {
                 await book.load()
                 await book.refreshRates()
+                await book.fillMissingKRW()
             }
             .sheet(isPresented: $isAdding) {
                 LedgerEntryForm(language: language, entry: LedgerEntry(occurredAt: .now, amount: 0, title: "", tripID: tripID))
@@ -285,17 +286,22 @@ struct LedgerEntryForm: View {
     }
 
     private var isValid: Bool {
-        (Double(amountText.replacingOccurrences(of: ",", with: "")) ?? 0) > 0 && !entry.title.trimmingCharacters(in: .whitespaces).isEmpty
+        (LedgerNumber.parse(amountText) ?? 0) > 0 && !entry.title.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
     private func save() {
-        entry.amount = Double(amountText.replacingOccurrences(of: ",", with: "")) ?? 0
-        if let rate = Double(manualRateText.replacingOccurrences(of: ",", with: "")), rate > 0 {
+        let original = entry
+        entry.amount = LedgerNumber.parse(amountText) ?? 0
+        let rate = LedgerNumber.parse(manualRateText).flatMap { $0 > 0 ? $0 : nil }
+        if let rate {
             var rates = book.manualRates
             rates[entry.currency] = rate
             book.manualRates = rates
         }
-        entry.amountKRW = book.krw(entry.amount, currency: entry.currency)
+        // 금액·통화·환율을 바꿨거나 환산이 비었을 때만 다시 계산한다(메모만 고친 옛 외화 기록의 원화 값은 그대로).
+        if isNew || rate != nil || entry.amountKRW == nil || entry.amount != original.amount || entry.currency != original.currency {
+            entry.amountKRW = book.krw(entry.amount, currency: entry.currency)
+        }
         let value = entry
         Task {
             await book.save(value)
@@ -327,7 +333,7 @@ struct LedgerBudgetForm: View {
                 ToolbarItem(placement: .cancellationAction) { Button(language.text("취소", "Cancel")) { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(language.text("저장", "Save")) {
-                        let amount = Double(amountText) ?? 0
+                        let amount = LedgerNumber.parse(amountText) ?? 0
                         let budget = amount > 0 ? LedgerBudget(period: period, category: nil, amountKRW: amount) : nil
                         Task {
                             await book.setBudget(budget, for: "\(period)|all", period: period, category: nil)
@@ -375,5 +381,20 @@ struct LedgerSettleView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button(language.text("완료", "Done")) { dismiss() } } }
         }
+    }
+}
+
+/// 입력 칸 숫자. 기기 지역의 소수점·자리 구분을 따른다(독일어 12,50 = 12.5).
+enum LedgerNumber {
+    static func parse(_ text: String, locale: Locale = .current) -> Double? {
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return nil }
+        let formatter = NumberFormatter()
+        formatter.locale = locale
+        formatter.numberStyle = .decimal
+        if let value = formatter.number(from: trimmed)?.doubleValue { return value }
+        let grouping = locale.groupingSeparator ?? ","
+        let decimal = locale.decimalSeparator ?? "."
+        return Double(trimmed.replacingOccurrences(of: grouping, with: "").replacingOccurrences(of: decimal, with: "."))
     }
 }

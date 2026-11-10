@@ -427,18 +427,27 @@ struct MapHomeTripImportSheet: View {
         pendingApp = nil
         promptKey = key
         let text = prompt(key: key)
-        if let key, let endpoint = TripRelay.endpoint {
-            // 키는 글에 넣지 않고 1회용 주소(10분·3번)로 건넨다(SET1110A01). 서버에 닿지 못하면 키가 든 글을 이 기기에만 10분 둔다.
+        Task { @MainActor in
+            // 복사를 끝낸 뒤에 복사 표시·붙여넣기 안내를 띄운다(늦게 복사되면 앱의 프롬프트를 계획으로 묻거나 옛 글을 붙여 넣게 된다).
+            await copyPrompt(text, key: key)
+            TripClipboardWatch.promptCopied()
+            copiedFor = app
+            presentAfterCopy(app, text: text, key: key, inRelay: inRelay)
+        }
+    }
+
+    /// 키는 글에 넣지 않고 1회용 주소(10분·3번)로 건넨다(SET1110A01). 서버에 닿지 못하면 키가 든 글을 이 기기에만 10분 둔다.
+    private func copyPrompt(_ text: String, key: String?) async {
+        guard let key else { UIPasteboard.general.string = text; return }
+        if let endpoint = TripRelay.endpoint {
             let base = TripImportPrompt.text(languageCode: TripImportPrompt.currentLanguageCode)
             let delivery = TripRelay.deliveryInstruction(endpoint: endpoint, key: key)
-            Task { AssistantClipboard.copy(await TripRelay.setupLinkText(for: delivery).map { base + "\n\n" + $0 } ?? text) }
-        } else if key != nil {
-            AssistantClipboard.copy(text)
-        } else {
-            UIPasteboard.general.string = text
+            if let link = await TripRelay.setupLinkText(for: delivery) { return AssistantClipboard.copy(base + "\n\n" + link) }
         }
-        TripClipboardWatch.promptCopied()
-        copiedFor = app
+        AssistantClipboard.copy(text)
+    }
+
+    private func presentAfterCopy(_ app: TripImportAIApp, text: String, key: String?, inRelay: Bool) {
         guard app == .pickle else {
             let prefills = app.prefillsPrompt && key == nil
             guard let url = app.url(prompt: prefills ? text : nil) else { return }

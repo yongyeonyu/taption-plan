@@ -411,6 +411,7 @@ extension AppModel {
         if !result.preferences.isEmpty { delta.preferences = (delta.preferences ?? []) + result.preferences }
         delta.bubbleID = result.bubbleID
         delta.ledgerEntryID = result.ledgerEntryID
+        delta.ledgerEntry = result.ledgerEntry
         return AssistantLogEntry(
             commandID: command.id, kind: command.action.kind, appliedAt: .now,
             before: result.before, after: result.after, delta: delta,

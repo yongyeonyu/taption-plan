@@ -13,7 +13,8 @@ struct AddPaymentMessageIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        guard let draft = LedgerMessageParser.parse(text) else {
+        // 묻지 않고 넣는 길이라 결제 시각까지 읽힌 문자만 넣는다.
+        guard let draft = LedgerMessageParser.parse(text), draft.occurredAt != nil else {
             return .result(dialog: "결제 문자를 읽지 못했어요. 가계부에서 직접 넣어 주세요.")
         }
         let saved = await LedgerBook.shared.save(LedgerMessageParser.entry(draft))

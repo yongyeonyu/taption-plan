@@ -123,6 +123,33 @@ final class LedgerTests: XCTestCase {
         XCTAssertEqual(late.occurredAt.map { calendar.component(.year, from: $0) }, 2026)
     }
 
+    /// 리뷰 지적: 청구 예정·한도·광고 문자는 기록 후보가 아니고, 쉼표 소수점 지역에서 금액이 100배가 되지 않는다.
+    func testReviewFixes() async {
+        let now = at(20)
+        XCTAssertNil(LedgerMessageParser.parse("[신한카드] 11월 결제예정금액 1,234,560원", now: now, calendar: calendar))
+        XCTAssertNil(LedgerMessageParser.parse("KB국민카드 사용가능한도 3,000,000원", now: now, calendar: calendar))
+        XCTAssertNil(LedgerMessageParser.parse("(광고) 쿠폰 사용하세요 5,000원", now: now, calendar: calendar))
+        XCTAssertEqual(LedgerNumber.parse("12,50", locale: Locale(identifier: "de_DE")), 12.5)
+        XCTAssertEqual(LedgerNumber.parse("12,000", locale: Locale(identifier: "ko_KR")), 12_000)
+        XCTAssertEqual(LedgerCategory.guess("메가박스 코엑스"), .culture)
+        XCTAssertEqual(LedgerCategory.guess("메가커피 강남"), .cafe)
+        XCTAssertEqual(LedgerCategory.guess("Cucina Italiana"), .other)
+        let book = LedgerBook(store: { nil })
+        await book.save(LedgerEntry(occurredAt: at(9), amount: 3_000_000, kind: .income, category: .salary, title: "월급"))
+        XCTAssertEqual(book.todayNet(now: at(20), calendar: calendar, monthlyNet: 3_000_000), 100_000, "payday salary is not counted twice")
+        let transfers = LedgerSettlement.transfers(
+            [LedgerEntry(occurredAt: at(9), amount: 20_000, amountKRW: 20_000, title: "택시", payer: "Minsu")], people: [], me: "나"
+        )
+        XCTAssertEqual(transfers.first?.to, "Minsu", "an unlisted payer still counts as a member")
+    }
+
+    func testReceiptIgnoresNumbersThatAreNotAmounts() {
+        XCTAssertNil(LedgerReceiptReader.draft(["가게", "승인번호 12345678", "2026-11-10"]))
+        let usd = LedgerReceiptReader.draft(["DINER", "SUBTOTAL 40.00", "TOTAL $45.99"])
+        XCTAssertEqual(usd?.amount, 45.99)
+        XCTAssertEqual(usd?.currency, "USD")
+    }
+
     func testReceiptTotalLine() {
         let lines = ["맛있는 분식", "사업자 123-45-67890", "떡볶이 1 5,000", "순대 1 4,000", "합계", "9,000", "카드 9,000"]
         let draft = LedgerReceiptReader.draft(lines)

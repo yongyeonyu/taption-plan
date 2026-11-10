@@ -24,6 +24,8 @@ struct AssistantEditDelta: Codable, Equatable, Sendable {
     var bubbleID: UUID?
     /// 가계부 기록(LED1110A01). 예전 기록에는 없다.
     var ledgerEntryID: UUID?
+    /// 더할 때의 기록. 그 뒤 사용자가 고쳤으면 되돌리지 않는다.
+    var ledgerEntry: LedgerEntry?
 
     var isEmpty: Bool {
         plans.isEmpty && memos.isEmpty && actuals.isEmpty && corrections.isEmpty
@@ -222,6 +224,16 @@ extension AppModel {
     /// 「AI가 한 일」의 되돌리기. 거꾸로 적용한 값을 저장하고, 실패하면 편집 전으로 돌린다.
     func undoAssistantEntry(_ entry: AssistantLogEntry, preferences: AssistantPreferenceStore = .live) async -> Bool {
         guard acceptsDataMutation(), entry.undoneAt == nil else { return false }
+        if let added = entry.delta.ledgerEntry {
+            await preferences.ledger.load()
+            if let current = preferences.ledger.entries.first(where: { $0.id == added.id }), current != added {
+                userFacingError = AppLanguagePreference.text(
+                    korean: "그 뒤에 바뀐 내용이 있어 되돌리지 못했어요. 앱에서 직접 고쳐 주세요.",
+                    english: "It changed afterwards, so it couldn't be undone. Please edit it in the app."
+                )
+                return false
+            }
+        }
         let stored = (entry.delta.preferences ?? []).filter { $0.key != AssistantPreferenceChange.mapStyleKey }
         guard stored.allSatisfy({ preferences.value($0.key) == $0.after }), let restored = entry.delta.undoing(in: snapshot) else {
             userFacingError = AppLanguagePreference.text(

@@ -16,16 +16,23 @@ export async function fxRoute(request, ctx) {
   try {
     const reply = await fetcher(FX_URL);
     const body = reply.ok ? await reply.json() : null;
-    if (body && typeof body.rates === "object" && body.base) {
-      const value = JSON.stringify({ day: today, date: body.date, base: body.base, rates: { ...body.rates, [body.base]: 1 }, source: "ECB via frankfurter.app" });
-      const charge = await chargeWrites(ctx.env, null, 1, ctx.now);
-      if (charge.ok) await ctx.kv.put(name(today), value, { expirationTtl: 3 * 86_400 });
+    const rates = Object.fromEntries(Object.entries(body?.rates && typeof body.rates === "object" ? body.rates : {})
+      .filter(([code, rate]) => /^[A-Z]{3}$/.test(code) && typeof rate === "number" && Number.isFinite(rate) && rate > 0));
+    if (/^[A-Z]{3}$/.test(body?.base ?? "") && Object.keys(rates).length > 0) {
+      const value = JSON.stringify({ day: today, date: body.date, base: body.base, rates: { ...rates, [body.base]: 1 }, source: "ECB via frankfurter.app" });
+      // 저장 실패(같은 키 동시 쓰기 등)가 방금 받은 환율을 버리게 하지 않는다.
+      try {
+        const charge = await chargeWrites(ctx.env, null, 1, ctx.now);
+        if (charge.ok) await ctx.kv.put(name(today), value, { expirationTtl: 3 * 86_400 });
+      } catch {}
       return new Response(value, { status: 200, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "private, max-age=3600" } });
     }
   } catch {
     // 아래에서 전날 값을 본다.
   }
-  const yesterday = await ctx.kv.get(name(dayOf(ctx.now - 86_400_000)));
-  if (yesterday) return json({ ...JSON.parse(yesterday), stale: true }, 200);
+  for (const back of [1, 2]) {
+    const older = await ctx.kv.get(name(dayOf(ctx.now - back * 86_400_000)));
+    if (older) return json({ ...JSON.parse(older), stale: true }, 200);
+  }
   return json({ error: "unavailable" }, 503);
 }

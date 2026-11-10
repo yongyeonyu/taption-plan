@@ -284,7 +284,7 @@ actor TaptionBackupEngine {
         guard !password.isEmpty else { throw TaptionBackupError.emptyPassword }
         return try await exclusive("backupAllMonths") {
             var results: [BackupResult] = []
-            let months = try await monthsWithData()
+            let months = try await monthsWithData(now: now)
             let total = months.count + 1
             progress?(0, total)
             for month in months {
@@ -551,7 +551,10 @@ actor TaptionBackupEngine {
                     if buffer.readings.count >= Self.restoreBatch { try await Self.flush(&buffer, into: target) }
                 case "c":
                     let record = try Self.record(from: fields)
-                    index.records["\(record.kind)\u{0}\(record.id)"] = record.updatedAt.timeIntervalSince1970
+                    // 예전 파일의 건강 표본은 기기로 돌려 놓되 새 파일이 꼭 담아야 할 행으로는 세지 않는다(BKS1111A02 리뷰).
+                    if !record.kind.hasPrefix(TaptionStoreV2.healthKitKindPrefix) {
+                        index.records["\(record.kind)\u{0}\(record.id)"] = record.updatedAt.timeIntervalSince1970
+                    }
                     buffer.records.append(record)
                     if buffer.records.count >= Self.restoreBatch { try await Self.flush(&buffer, into: target) }
                 case "w":
@@ -626,7 +629,7 @@ actor TaptionBackupEngine {
             let current = TaptionBackupMonth(date: now, calendar: calendar)
             let firstKept = current.adding(months: -(max(1, keepRecentMonths) - 1))
             var results: [OffloadResult] = []
-            for month in try await monthsWithData() where month < firstKept {
+            for month in try await monthsWithData(now: now) where month < firstKept {
                 if let outcome = try await offload(month: month, password: password) {
                     results.append(OffloadResult(month: month, outcome: outcome))
                 }
@@ -1097,7 +1100,7 @@ actor TaptionBackupEngine {
     }
 
     /// 실제 데이터가 있는 달(오름차순). 데이터가 있는 UTC 날짜의 양끝이 속한 달만 후보로 삼고 로컬 행이 있는 것만 남긴다.
-    private func monthsWithData() async throws -> [TaptionBackupMonth] {
+    private func monthsWithData(now: Date) async throws -> [TaptionBackupMonth] {
         var candidates = Set<TaptionBackupMonth>()
         // 메모 파일과 원본 이벤트에만 있는 달도 후보에 넣는다(REV1110A04).
         let days = try await store.dataUTCDays() + (try await memoStore?.dataUTCDays() ?? [])
@@ -1113,10 +1116,18 @@ actor TaptionBackupEngine {
             }
         }
         var months: [TaptionBackupMonth] = []
+        let thisMonth = TaptionBackupMonth(date: now, calendar: calendar)
         for month in candidates.sorted() {
+            // 이번 달 뒤는 계획·메모 같은 사용자 기록이 있을 때만. 미래 시각의 센서·예보는 시계 오류이거나 다시 받을 값이다(BKS1111A03, 대표 지시).
+            if month > thisMonth { if try await futureRowCount(month) > 0 { months.append(month) }; continue }
             if try await localRowCount(.month(month)) > 0 { months.append(month) }
         }
         return months
+    }
+
+    private func futureRowCount(_ month: TaptionBackupMonth) async throws -> Int {
+        let range = try interval(of: month), start = range.start.timeIntervalSince1970, end = range.end.timeIntervalSince1970
+        return try await store.futureRecordCount(from: start, to: end) + (try await memoStore?.rangeStats(from: start, to: end).records ?? 0)
     }
 
     /// 새 파일이 기존 파일의 상위 집합이 아닐 징후를 찾는다(손상된 기존 파일처럼 id 목록을 알 수 없을 때만 쓴다):

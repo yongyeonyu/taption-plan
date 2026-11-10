@@ -230,6 +230,46 @@ final class TaptionBackupV2Tests: XCTestCase {
         XCTAssertEqual(removed, 1, "clearing a backed-up month locally keeps the HealthKit sample it never backed up")
     }
 
+    /// 리뷰 지적(BKS1111A02): 건강 표본이 든 옛 파일이 있는 달·설정도 새 규칙으로 다시 백업되고, 오프로드는 건강 표본을 지우지 않는다.
+    func testOldBackupWithHealthKitRowsStillUpdates() async throws {
+        let source = try makeHarness()
+        try await source.store.upsertRecords([
+            record("hk-now", kind: "healthkit-sample", start: date(2026, 10, 3, 9)),
+            record("hk-state", kind: "healthkit-sync-state", start: nil),
+            record("memo", start: date(2026, 10, 4, 9)),
+        ])
+        await source.store.setExcludesHealthKitFromBackup(false)
+        let old = try await engine(source).backupAllMonths(password: password, now: date(2026, 10, 20))
+        XCTAssertEqual(old.first?.header?.recordCount, 2, "the old export carried the HealthKit sample")
+        await source.store.setExcludesHealthKitFromBackup(true)
+        try await source.store.upsertRecords([record("memo2", start: date(2026, 10, 5, 9))])
+        let results = try await engine(source).backupAllMonths(password: password, now: date(2026, 11, 2))
+        for result in results {
+            if case .keptExisting = result.outcome { XCTFail("\(result.scope) kept the old file: \(result.outcome)") }
+        }
+        let october = try XCTUnwrap(results.first { $0.scope == .month(TaptionBackupMonth(year: 2026, month: 10)) })
+        XCTAssertEqual(october.header?.recordCount, 2, "memo and memo2, without the HealthKit sample")
+        let all = try await source.store.allRecordRows(kinds: ["healthkit-sample"])
+        XCTAssertEqual(all.count, 1, "the HealthKit sample is still on the device")
+    }
+
+    /// BKS1111A03(대표 지시): 이번 달 뒤의 달은 계획·메모 같은 기록이 있을 때만 백업한다. 일기 예보·센서는 세지 않는다.
+    func testFutureMonthsNeedPlans() async throws {
+        let source = try makeHarness()
+        try await source.store.upsertReadings(readings(day: date(2028, 3, 4), count: 3))
+        try await source.store.upsertRecords([
+            record("forecast", kind: "weather-forecast-hourly", start: date(2026, 12, 2, 9)),
+            record("plan", kind: "plan", start: date(2027, 1, 5, 9)),
+            record("memo", start: date(2026, 11, 3, 9)),
+        ])
+        let results = try await engine(source).backupAllMonths(password: password, now: date(2026, 11, 11))
+        let months = results.compactMap { result -> String? in
+            if case let .month(month) = result.scope { return "\(month.year)-\(month.month)" }
+            return nil
+        }
+        XCTAssertEqual(months, ["2026-11", "2027-1"])
+    }
+
     func testDefaultConfigurationUses600000IterationsAnd16ByteSalt() async throws {
         let harness = try makeHarness()
         try await harness.store.upsertReadings(readings(day: date(2026, 10, 4), count: 20))

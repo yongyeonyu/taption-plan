@@ -48,15 +48,17 @@ enum LedgerCategory: String, Codable, CaseIterable, Identifiable, Sendable {
 
     /// 글에서 분류를 짐작한다(결제 문자·영수증·AI). 모르면 기타.
     static func guess(_ text: String) -> LedgerCategory {
-        let lower = text.lowercased()
+        let lower = text.lowercased() + " "
         let table: [(LedgerCategory, [String])] = [
-            (.cafe, ["카페", "커피", "스타벅스", "투썸", "이디야", "메가", "빽다방", "베이커리", "파리바게뜨", "cafe", "coffee", "starbucks"]),
+            (.culture, ["cgv", "메가박스", "롯데시네마", "영화", "넷플릭스", "공연", "netflix"]),
+            (.shopping, ["메가마트"]),
+            (.food, ["전기구이"]),
+            (.cafe, ["카페", "커피", "스타벅스", "투썸", "이디야", "메가커피", "메가mgc", "빽다방", "베이커리", "파리바게뜨", "cafe", "coffee", "starbucks"]),
             (.transport, ["택시", "카카오t", "버스", "지하철", "코레일", "ktx", "srt", "주유", "티머니", "교통", "taxi", "uber"]),
             (.food, ["식당", "치킨", "피자", "배달의민족", "배민", "요기요", "쿠팡이츠", "국밥", "김밥", "맥도날드", "버거", "restaurant"]),
             (.shopping, ["쿠팡", "11번가", "지마켓", "무신사", "올리브영", "다이소", "백화점", "마트", "이마트", "홈플러스", "amazon"]),
-            (.living, ["편의점", "gs25", "cu", "세븐일레븐", "관리비", "통신", "전기", "가스", "수도"]),
+            (.living, ["편의점", "gs25", "cu ", "씨유", "세븐일레븐", "관리비", "통신", "전기", "가스", "수도"]),
             (.health, ["병원", "약국", "의원", "치과", "pharmacy", "hospital"]),
-            (.culture, ["cgv", "메가박스", "롯데시네마", "영화", "넷플릭스", "공연", "netflix"]),
             (.lodging, ["호텔", "모텔", "에어비앤비", "숙소", "hotel", "airbnb"]),
             (.travel, ["항공", "공항", "면세", "airline"]),
         ]
@@ -137,7 +139,9 @@ enum LedgerSettlement {
 
     /// `entries`의 지출을 `people`이 똑같이 나눈다. 낸 사람이 비었으면 `me`가 낸 것이다.
     static func transfers(_ entries: [LedgerEntry], people: [String], me: String) -> [Transfer] {
-        let members = Array(Set(people + [me])).sorted()
+        // 낸 사람 칸에 적힌 이름은 목록에 없어도 함께한 사람으로 센다(다른 표기를 「나」로 돌리지 않는다).
+        let payers = entries.compactMap { $0.payer?.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        let members = Array(Set(people + [me] + payers)).sorted()
         guard members.count >= 2 else { return [] }
         var balance = Dictionary(uniqueKeysWithValues: members.map { ($0, 0.0) })
         for entry in entries where entry.kind == .expense {
@@ -175,18 +179,33 @@ final class LedgerBook {
     private(set) var fx: LedgerFX.Table?
     private(set) var isLoaded = false
     @ObservationIgnored private let storeFactory: () -> TaptionStoreV2?
+    @ObservationIgnored private var loading: Task<Void, Never>?
 
     init(store: @escaping () -> TaptionStoreV2? = { try? TaptionStoreV2.applicationSupport() }) {
         storeFactory = store
     }
 
+    /// 한 번만 읽는다. 동시에 부르면 같은 읽기를 기다린다(늦게 끝난 읽기가 그 사이 저장한 기록을 덮지 않게).
     func load() async {
+        guard !isLoaded else { return }
+        if let loading { return await loading.value }
+        let task = Task { await read() }
+        loading = task
+        await task.value
+        loading = nil
+    }
+
+    private func read() async {
         guard !isLoaded, let store = storeFactory() else { return }
         let decoder = JSONDecoder()
         let rows = (try? await store.records(kind: Self.entryKind)) ?? []
         let budgetRows = (try? await store.records(kind: Self.budgetKind)) ?? []
+        let saved = entries
         entries = rows.compactMap { try? decoder.decode(LedgerEntry.self, from: Data($0.body.utf8)) }.sorted { $0.occurredAt > $1.occurredAt }
         budgets = budgetRows.compactMap { try? decoder.decode(LedgerBudget.self, from: Data($0.body.utf8)) }
+        // 읽는 동안 메모리에만 들어온 기록(저장소가 없는 시험 포함)은 남긴다.
+        for entry in saved where !entries.contains(where: { $0.id == entry.id }) { entries.append(entry) }
+        entries.sort { $0.occurredAt > $1.occurredAt }
         isLoaded = true
     }
 
@@ -215,6 +234,8 @@ final class LedgerBook {
     func save(_ entry: LedgerEntry) async -> LedgerEntry {
         await load()
         var value = entry
+        // 단축어·AI처럼 가계부를 열기 전에 들어온 외화도 원화로 채운다. 환율을 못 받으면 비워 두고 다음에 채운다.
+        if value.amountKRW == nil, value.currency != "KRW", fx == nil, manualRates[value.currency] == nil { await refreshRates() }
         if value.amountKRW == nil { value.amountKRW = krw(value.amount, currency: value.currency) }
         if let index = entries.firstIndex(where: { $0.id == value.id }) { entries[index] = value } else { entries.append(value) }
         entries.sort { $0.occurredAt > $1.occurredAt }
@@ -224,9 +245,20 @@ final class LedgerBook {
 
     func delete(_ id: UUID) async {
         await load()
-        guard let entry = entries.first(where: { $0.id == id }) else { return }
+        let entry = entries.first { $0.id == id } ?? LedgerEntry(id: id, occurredAt: .now, amount: 0, title: "")
         entries.removeAll { $0.id == id }
+        // 메모리에 없어도 지움 표시를 남긴다(되돌리기가 저장소 행을 놓치지 않게).
         await write(entry, deleted: true)
+    }
+
+    /// 원화 환산이 빈 외화 기록을 지금 환율로 채운다(가계부를 열 때).
+    func fillMissingKRW() async {
+        for entry in entries where entry.amountKRW == nil {
+            guard let value = krw(entry.amount, currency: entry.currency) else { continue }
+            var filled = entry
+            filled.amountKRW = value
+            await save(filled)
+        }
     }
 
     func setBudget(_ budget: LedgerBudget?, for id: String, period: String, category: LedgerCategory?) async {
@@ -273,7 +305,8 @@ final class LedgerBook {
     func todayNet(now: Date = .now, calendar: Calendar = .autoupdatingCurrent, monthlyNet: Double) -> Double {
         let days = Double(calendar.range(of: .day, in: .month, for: now)?.count ?? 30)
         let today = entries(on: now, calendar: calendar)
-        return (monthlyNet / days).rounded() - Self.total(today, .expense) + Self.total(today, .income)
+        // 월급 기록은 이미 하루 몫으로 나눠 넣었으니 수입에서 뺀다.
+        return (monthlyNet / days).rounded() - Self.total(today, .expense) + Self.total(today.filter { $0.category != .salary }, .income)
     }
 }
 

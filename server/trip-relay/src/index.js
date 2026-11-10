@@ -41,8 +41,8 @@ export async function kakaoKeyword(request, env, fetcher = fetch, category = fal
   const incoming = new URL(request.url).searchParams;
   if (category) {
     const code = incoming.get("category_group_code") ?? "";
-    const x = Number(incoming.get("x")), y = Number(incoming.get("y")), radius = Number(incoming.get("radius") ?? 50);
-    if (!CATEGORY_CODE.test(code) || !Number.isFinite(x) || !Number.isFinite(y) || !(radius >= 1 && radius <= 500)) return json({ error: "bad_query" }, 400);
+    const x = Number(incoming.get("x") ?? NaN), y = Number(incoming.get("y") ?? NaN), radius = Number(incoming.get("radius") ?? 50);
+    if (!CATEGORY_CODE.test(code) || !(Math.abs(x) <= 180) || !(Math.abs(y) <= 90) || !(radius >= 1 && radius <= 500)) return json({ error: "bad_query" }, 400);
   } else {
     const query = incoming.get("query") ?? "";
     if (!query.trim() || query.length > 100) return json({ error: "bad_query" }, 400);

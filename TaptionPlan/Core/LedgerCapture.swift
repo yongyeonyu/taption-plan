@@ -15,11 +15,14 @@ enum LedgerMessageParser {
 
     static let cards = ["KB국민", "국민", "신한", "삼성", "현대", "롯데", "우리", "하나", "BC", "비씨", "NH농협", "농협", "씨티", "카카오뱅크", "카카오페이", "토스", "IBK", "기업"]
     private static let noise = ["누적", "잔액", "일시불", "할부", "Web발신", "web발신", "승인", "결제", "사용", "카드", "체크", "님", "*"]
+    /// 결제가 아닌 카드사 안내(청구 예정·한도·쿠폰·광고). 이런 글은 기록 후보로 보지 않는다.
+    static let notPayments = ["예정", "한도", "청구", "이용대금", "결제일", "쿠폰", "광고", "(광고)", "혜택", "이벤트"]
     private static let currencies = ["USD", "JPY", "EUR", "CNY", "TWD", "HKD", "THB", "VND", "SGD", "PHP", "IDR", "GBP", "AUD", "CAD"]
 
     static func parse(_ text: String, now: Date = .now, calendar: Calendar = .autoupdatingCurrent) -> Draft? {
         let flat = text.replacingOccurrences(of: "\r", with: "\n")
-        guard flat.count <= 1_000, ["승인", "결제", "사용", "approved", "Approved"].contains(where: flat.contains) else { return nil }
+        guard flat.count <= 1_000, ["승인", "결제", "사용", "approved", "Approved"].contains(where: flat.contains),
+              !notPayments.contains(where: flat.contains) else { return nil }
         guard let money = amount(flat) else { return nil }
         let time = when(flat, now: now, calendar: calendar)
         return Draft(
@@ -96,34 +99,50 @@ enum LedgerMessageParser {
 enum LedgerReceiptReader {
     static let totalWords = ["합계", "총액", "총 금액", "받을금액", "받을 금액", "결제금액", "결제 금액", "판매금액", "TOTAL", "Total", "AMOUNT", "合計", "合计"]
 
+    static func isTotalLine(_ line: String) -> Bool {
+        let upper = line.uppercased()
+        return totalWords.contains(where: line.contains) && !upper.contains("SUBTOTAL") && !upper.contains("SUB TOTAL") && !line.contains("소계")
+    }
+
+    /// 글자 속 통화 표시. 없으면 원.
+    static func currency(_ lines: [String]) -> String {
+        let text = lines.joined(separator: " ")
+        if text.contains("¥") || text.contains("円") || text.contains("合計") { return "JPY" }
+        if text.contains("€") { return "EUR" }
+        if text.contains("$") || text.contains("USD") { return "USD" }
+        if text.contains("合计") || text.contains("元") { return "CNY" }
+        return "KRW"
+    }
+
     static func recognize(_ image: CGImage) async -> [String] {
-        await withCheckedContinuation { continuation in
-            let request = VNRecognizeTextRequest { request, _ in
-                let lines = (request.results as? [VNRecognizedTextObservation])?.compactMap { $0.topCandidates(1).first?.string } ?? []
-                continuation.resume(returning: lines)
-            }
-            request.recognitionLevel = .accurate
-            request.recognitionLanguages = ["ko-KR", "en-US", "ja-JP", "zh-Hans"]
-            request.usesLanguageCorrection = false
-            do { try VNImageRequestHandler(cgImage: image).perform([request]) } catch { continuation.resume(returning: []) }
-        }
+        // perform은 동기라 끝나면 결과가 request에 있다. 완료 처리기 없이 읽어 이어 받기를 한 번만 한다.
+        let request = VNRecognizeTextRequest()
+        request.recognitionLevel = .accurate
+        request.recognitionLanguages = ["ko-KR", "en-US", "ja-JP", "zh-Hans"]
+        request.usesLanguageCorrection = false
+        guard (try? VNImageRequestHandler(cgImage: image).perform([request])) != nil else { return [] }
+        return request.results?.compactMap { $0.topCandidates(1).first?.string } ?? []
     }
 
     /// 합계 줄의 금액(그 줄에 없으면 다음 줄). 합계 줄이 없으면 가장 큰 금액. 가게 이름은 첫 글자 줄.
     static func draft(_ lines: [String]) -> LedgerMessageParser.Draft? {
         var total: Double?
-        for (index, line) in lines.enumerated() where totalWords.contains(where: line.contains) {
+        for (index, line) in lines.enumerated() where isTotalLine(line) {
             let candidates = [line] + (lines.indices.contains(index + 1) ? [lines[index + 1]] : [])
             if let value = candidates.lazy.compactMap(largestNumber).first { total = value; break }
         }
-        guard let amount = total ?? lines.compactMap(largestNumber).max(), amount > 0 else { return nil }
+        // 합계 줄이 없으면 「원」이 붙은 금액 가운데 가장 큰 것만. 승인 번호·사업자 번호·날짜를 금액으로 잡지 않는다.
+        let fallback = lines.compactMap { line in line.firstMatch(of: /([0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)\s*원/).flatMap { LedgerMessageParser.number(String($0.1)) } }.max()
+        guard let amount = total ?? fallback, amount > 0 else { return nil }
         let merchant = lines.first { line in
             line.count >= 2 && line.count <= 30 && line.contains(where: \.isLetter) && !line.contains(where: \.isNumber)
         }
-        return .init(amount: amount, currency: "KRW", merchant: merchant, card: nil, occurredAt: nil, isCancel: false)
+        return .init(amount: amount, currency: currency(lines), merchant: merchant, card: nil, occurredAt: nil, isCancel: false)
     }
 
     static func largestNumber(_ line: String) -> Double? {
-        line.matches(of: /[0-9]{1,3}(?:,[0-9]{3})+|[0-9]{3,8}/).compactMap { LedgerMessageParser.number(String($0.output)) }.max()
+        // 소수 둘째 자리 금액(45.99)도 읽는다. 아홉 자리 넘는 번호는 금액이 아니다.
+        line.matches(of: /[0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]{2})?|[0-9]{1,8}\.[0-9]{2}|[0-9]{3,8}/)
+            .compactMap { LedgerMessageParser.number(String($0.output)) }.max()
     }
 }
