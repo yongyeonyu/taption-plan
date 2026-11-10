@@ -1777,7 +1777,7 @@ enum ActivityClassificationLockEngine {
             if previousSubwayIsValidated,
                !candidate.isConfirmed,
                !isResolvedSubway,
-               !rejectsLockedSubway {
+               !rejectsLockedSubway, UnobservedAppSpans.inheritsMode(from: previous, to: candidate) {
                 value.mode = previous.mode
                 value.subwayRoute = previous.subwayRoute ?? value.subwayRoute
                 value.isConfirmed = previous.isConfirmed
@@ -1791,7 +1791,7 @@ enum ActivityClassificationLockEngine {
                 || previous.subwayRoute.map(SubwayStationCatalog.isValid) == true
             return validatedSubway && !isRememberedOnlySubway(previous)
                 && !matchedLockedIndices.contains(inputOrder) && !UnobservedAppSpans.isSuperseded(previous, by: fresh)
-                ? previous
+                ? UnobservedAppSpans.repairedLock(previous)
                 : nil
         }
         merged.append(contentsOf: retained)

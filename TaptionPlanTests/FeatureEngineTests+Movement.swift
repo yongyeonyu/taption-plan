@@ -1265,6 +1265,30 @@ extension FeatureEngineTests {
         _ = picked
     }
 
+    /// MOV1110A01: 긴 잠긴 자동차 구간 안의 짧은 걷기는 자동차를 물려받지 않고, 그렇게 잘못 남은 「걷기 근거 자동차」도 걷기로 돌아온다.
+    func testShortWalkInsideALockedCarDoesNotInheritCar() {
+        let base = makeDate(2026, 11, 10, 0)
+        func at(_ hour: Double) -> Date { base.addingTimeInterval(hour * 3_600) }
+        let whole = TimeSpan(start: base, end: at(24))
+        let longCar = TravelSegment(mode: .car, span: TimeSpan(start: at(16.73), end: at(20.74)), distanceMeters: 19_403, confidence: .high,
+                                    evidence: ["사용자 확인 차량 블루투스 · CarPlay"], isConfirmed: true, isClassificationLocked: true)
+        let walk = TravelSegment(mode: .walking, span: TimeSpan(start: at(18.11), end: at(18.22)), distanceMeters: 250, confidence: .high,
+                                 evidence: ["iPhone Core Motion 걷기", "iPhone Core Motion 기록"])
+        let merged = ActivityClassificationLockEngine.mergingLockedTravel(existing: [longCar], fresh: [walk], inside: whole)
+        XCTAssertEqual(merged.map(\.mode), [.walking])
+        XCTAssertEqual(merged.first?.isConfirmed, false)
+
+        var wrong = walk
+        wrong.mode = .car
+        wrong.isConfirmed = true
+        wrong.isClassificationLocked = true
+        let repaired = ActivityClassificationLockEngine.mergingLockedTravel(existing: [wrong], fresh: [walk], inside: whole)
+        XCTAssertEqual(repaired.map(\.mode), [.walking], "a car lock with only walking evidence is not passed on")
+        let alone = ActivityClassificationLockEngine.mergingLockedTravel(existing: [wrong], fresh: [], inside: whole)
+        XCTAssertEqual(alone.map(\.mode), [.walking], "kept on its own, it goes back to walking")
+        XCTAssertEqual(alone.first?.isConfirmed, false)
+    }
+
     func testMotionActivityActualsExposeEveryPassiveBehaviorWithoutDuplicates() {
         let base = makeDate(2026, 8, 1, 8)
         let span = TimeSpan(

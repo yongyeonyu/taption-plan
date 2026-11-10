@@ -273,6 +273,31 @@ enum UnobservedAppSpans {
         !previous.evidence.contains { $0.hasPrefix("사용자 확인 ·") } && fresh.contains { $0.span.intersection(with: previous.span) != nil }
     }
 
+    /// 잠긴 예전 구간의 수단을 새 구간이 물려받는가. 구간이 거의 같을 때만이다(긴 쪽의 절반 이상 겹침).
+    /// 4시간 자동차 구간 안의 짧은 걷기들이 자동차·확정을 물려받았다. 걷기 근거뿐인 차량 구간(그렇게 잘못 남은 것)은 물려주지 않는다.
+    static func inheritsMode(from previous: TravelSegment, to candidate: TravelSegment) -> Bool {
+        let overlap = previous.span.intersection(with: candidate.span)?.duration ?? 0
+        guard overlap >= max(previous.span.duration, candidate.span.duration) * 0.5 else { return false }
+        return !isFootOnlyVehicle(previous)
+    }
+
+    /// 근거는 걷기뿐인데 차량으로 잠긴 구간(물려받기로 잘못 남은 것).
+    static func isFootOnlyVehicle(_ segment: TravelSegment) -> Bool {
+        segment.mode != .walking && segment.mode != .running
+            && segment.evidence.contains("iPhone Core Motion 걷기")
+            && !segment.evidence.contains { $0.contains("차량") || $0.contains("자동차") || $0.contains("CarPlay") }
+    }
+
+    /// 짝 없이 남는 잠긴 구간 중 그렇게 잘못 남은 것은 걷기로 되돌린다. 나머지는 그대로.
+    static func repairedLock(_ segment: TravelSegment) -> TravelSegment {
+        guard isFootOnlyVehicle(segment) else { return segment }
+        var value = segment
+        value.mode = .walking
+        value.isConfirmed = false
+        value.subwayRoute = nil
+        return value
+    }
+
     /// 기록의 절반 넘게 그런 시간 안에 있다.
     static func covers(_ spans: [TimeSpan], _ span: TimeSpan) -> Bool {
         guard span.duration > 0 else { return false }
