@@ -24,6 +24,7 @@
 - 검증(시뮬레이터 BOKKI-Preview iOS 27.1): 앱 단위 시험 전체 2,447개, 실패 0, 건너뜀 23(HealthKit·원본 재생·화랑이 그림 등 환경 조건 시험, 이번 변경과 무관), `final-unit-sim.log`. iPhone Debug 빌드·Watch Debug 빌드 BUILD SUCCEEDED(`final-ios-build.log`, `final-watch-build.log`). 패키지: TaptionRouteEngine 70개 통과, TaptionActivityEngine XCTest 47·Swift Testing 2 통과. `check.py` 실패 0(긴 문구 3), `architecture-metrics --check` 통과(206,496줄, 기준 205,101 +10% 안).
 - 검증(실기기 iPhone 11 Pro, 공유 잠금 사용): 앱 단위 시험 전체 2,447개, 건너뜀 24, 실패 1(`final-unit-device.log`). 실패는 시간 측정 시험 `CategoryCacheBenchmarkTests.testStickmanActionCacheSpeedup`(×1.95, 기준 ×2)로 예전에도 부하 때 같은 모양으로 실패한 시험이고, 같은 빌드로 단독 3회 재실행 모두 통과(×2.4·×2.1·×2.3, `bench-rerun-1~3.log`). 앱 코드와 무관하다는 것을 코드로 입증하지는 않음. iCloud 원본 데이터로 받은 기기 검증은 하지 않음.
 - 확인 못 함: 실제 서버 왕복(배포 전), Face ID 창, SwiftUI 화면(PIN 시트 전환·확인 창·연결 목록 호스트), VoiceOver 낭독, Watch 실기기. 번역은 기계 번역.
+- 설치(실기기 iPhone 18 Pro Max, 커밋 `d111f8c0`): Release 빌드 성공(`build/validation/REV1110A06/release-device18-build.log`), `devicectl`로 설치, 기기 앱 목록에서 1.0 (305) 확인. 설치만 했고 기기 기능은 확인하지 않았다. 이 빌드의 AI 연결은 아직 배포하지 않은 3단계 서버 규격이라 실서버에서는 동작하지 않는다.
 
 ## BKP1110A02 · 백업 비밀번호를 잊었을 때 Face ID로 다시 보기 (2026-11-10)
 
