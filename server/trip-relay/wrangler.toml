@@ -1,0 +1,8 @@
+name = "taption-trip-relay"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+# KV는 대표님 계정에서 만든 뒤 id를 넣는다: `npx wrangler kv namespace create PLANS`
+[[kv_namespaces]]
+binding = "PLANS"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"

@@ -40,3 +40,7 @@ TaptionPlan.xcodeproj/-Xcc/
 
 # 공개하지 않는 빌드 값
 TaptionPlan/AppSecrets.local.xcconfig
+
+# Cloudflare 계정에 묶인 배포 설정(KV id 등)은 저장소에 올리지 않는다.
+server/*/wrangler.local.toml
+server/*/.wrangler/
