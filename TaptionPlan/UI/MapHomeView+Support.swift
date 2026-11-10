@@ -75,37 +75,9 @@ extension MapHomeView {
         guard model.isBootstrapped else { return false }
         let calendar = Calendar.autoupdatingCurrent
         let selectedDay = model.selectedDate
-        let startOfDay = calendar.startOfDay(for: selectedDay)
-        guard segment.categoryID == "unconfirmed",
-              segment.startMinute < segment.endMinute,
-              let start = calendar.date(byAdding: .minute, value: segment.startMinute, to: startOfDay),
-              let end = calendar.date(byAdding: .minute, value: segment.endMinute, to: startOfDay)
+        // 여러 개 정할 때와 같은 요청을 만든다(리뷰: 같은 구간이 길에 따라 다른 기록이 되지 않게).
+        guard let request = MapHomeUnconfirmedBatch.request(for: segment, category: category, day: selectedDay, calendar: calendar)
         else { return false }
-        let original = ActivityCorrectionOption(
-            id: "phase.unconfirmed",
-            title: segment.title,
-            behavior: segment.behavior,
-            categoryID: "unconfirmed",
-            systemImage: "questionmark",
-            isAutomatic: false,
-            isCustom: false
-        )
-        let choice = ActivityCorrectionOption(
-            id: "phase.\(category.id)",
-            title: category.title,
-            behavior: nil,
-            categoryID: category.id,
-            systemImage: category.systemImage,
-            isAutomatic: false,
-            isCustom: false
-        )
-        let span = TimeSpan(start: start, end: end)
-        let request = ActivitySectionEditRequest(
-            sourceIDs: segment.sourceIDs,
-            originalSpan: span,
-            originalOption: original,
-            mode: .replace(editedSpan: span, option: choice)
-        )
         guard await model.saveActivitySectionEdit(request) != nil else { return false }
         refreshTimeRailSegments()
         if calendar.isDate(model.selectedDate, inSameDayAs: selectedDay) {
@@ -386,7 +358,7 @@ extension MapHomeView {
                 growthData: $homeGrowthData,
                 language: language,
                 growthCard: MapHomeGrowthCardInfo(
-                    level: homeGrowthHistory.season.level,
+                    level: MapHomeGrowthPolicy.dailyLevel(for: model.selectedDate),
                     status: homeGrowthMarkerStatus,
                     isQualifiedToday: isHomeGrowthQualifiedToday,
                     streak: homeGrowthHistory.season.streak,

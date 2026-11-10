@@ -200,7 +200,7 @@ extension MapHomeView {
     /// 메모 목록 패널. 폭은 일정 패널과 같은 280으로 맞춘다.
     var memoListPanel: some View {
         VStack(alignment: .leading, spacing: 8) {
-            LedgerMemoHeader(filter: $memoLedgerFilter, language: language, day: model.selectedDate)
+            LedgerMemoHeader(filter: $memoLedgerFilter, linkedMemoIDs: $memoLedgerLinkedIDs, language: language, day: model.selectedDate)
             if memoLedgerFilter == .expenses {
                 LedgerDayCards(language: language, day: model.selectedDate)
             } else {
@@ -284,11 +284,7 @@ extension MapHomeView {
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
                     .foregroundStyle(Color.tpInk)
                     .lineLimit(2)
-                if let badge = memoLedgerBadge(memo) {
-                    Text(badge)
-                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
-                        .foregroundStyle(Color.tpAccent)
-                }
+                LedgerMemoBadge(memoID: memo.id, language: language)
                 if showsTime {
                     Text(memo.occurredAt.formatted(date: .omitted, time: .shortened))
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))

@@ -38,6 +38,8 @@ struct LedgerSheetHost: View {
 /// 메모 목록 맨 위: 거르기와 이 달 지출·오늘 지출, 가계부 열기.
 struct LedgerMemoHeader: View {
     @Binding var filter: LedgerMemoFilter
+    /// 가계부에 이어진 메모 id. 값이 실제로 바뀔 때만 써서 지도 화면을 다시 그리게 한다.
+    @Binding var linkedMemoIDs: Set<UUID>
     let language: MapHomeLanguage
     let day: Date
     private var book: LedgerBook { .shared }
@@ -65,7 +67,16 @@ struct LedgerMemoHeader: View {
             .buttonStyle(.plain)
             .accessibilityIdentifier("memo-ledger-open")
         }
-        .task { await book.load() }
+        .task {
+            await book.load()
+            publishLinkedIDs()
+        }
+        .onChange(of: book.entries) { _, _ in publishLinkedIDs() }
+    }
+
+    private func publishLinkedIDs() {
+        let ids = Set(book.entries.compactMap(\.memoID))
+        if ids != linkedMemoIDs { linkedMemoIDs = ids }
     }
 
     private var summary: String {
@@ -107,14 +118,23 @@ struct LedgerDayCards: View {
 }
 
 extension MapHomeView {
-    /// 「메모」로 거르면 가계부에 이어진 메모는 뺀다.
+    /// 「메모」로 거르면 가계부에 이어진 메모는 뺀다. 이어진 메모 id는 머리 줄이 바뀔 때만 넘겨 준다
+    /// (지도 화면이 장부를 직접 지켜보면 장부가 바뀔 때마다 지도 전체가 다시 그려진다, 리뷰).
     var panelMemos: [ActionMemo] {
-        memoLedgerFilter == .memos ? queuedMemos.filter { LedgerBook.shared.entry(forMemo: $0.id) == nil } : queuedMemos
+        memoLedgerFilter == .memos ? queuedMemos.filter { !memoLedgerLinkedIDs.contains($0.id) } : queuedMemos
     }
+}
 
-    /// 가계부에 이어진 메모 카드의 금액 표시.
-    func memoLedgerBadge(_ memo: ActionMemo) -> String? {
-        guard let entry = LedgerBook.shared.entry(forMemo: memo.id) else { return nil }
-        return (entry.kind == .expense ? "−" : "+") + LedgerMoney.text(entry.amount, currency: entry.currency, language: language)
+/// 가계부에 이어진 메모 카드의 금액. 장부를 이 작은 뷰만 지켜본다.
+struct LedgerMemoBadge: View {
+    let memoID: UUID
+    let language: MapHomeLanguage
+
+    var body: some View {
+        if let entry = LedgerBook.shared.entry(forMemo: memoID) {
+            Text((entry.kind == .expense ? "−" : "+") + LedgerMoney.text(entry.amount, currency: entry.currency, language: language))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
+                .foregroundStyle(Color.tpAccent)
+        }
     }
 }

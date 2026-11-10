@@ -2258,11 +2258,7 @@ struct MapHomeUnconfirmedReviewSheet: View {
     @State private var nextFocusedSegment: MapHomeTimeRailSegment?
     @State private var confirmedSegmentIDs: Set<String> = []
 
-    private var quickCategories: [MapHomeSidebarMajorCategory] {
-        let ids = ["work", "study", "sleep", "eating", "movement", "exercise", "hobby", "activity"]
-        let byID = Dictionary(uniqueKeysWithValues: MapHomeSidebarMajorCategory.all.map { ($0.id, $0) })
-        return ids.compactMap { byID[$0] }
-    }
+    private var quickCategories: [MapHomeSidebarMajorCategory] { MapHomeUnconfirmedBatch.quickCategories }
 
     private var quickCategoryRows: [[MapHomeSidebarMajorCategory]] {
         MapHomeUnconfirmedQuickCategoryLayout.rows(from: quickCategories)

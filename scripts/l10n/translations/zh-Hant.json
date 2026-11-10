@@ -2449,6 +2449,7 @@
 "고르기 끝내기 ({0}개)|Stop picking ({0})": "結束選取({0} 個)",
 "고른 구간 {0}개|{0} picked": "已選 {0} 個區間",
 "고른 구간 모두 이 분류로|Set all picked to": "把所選區間都設為",
+"고른 클립 {0}개는 편집으로 바뀌어 빠졌어요|{0} picked clip(s) changed while editing and were left out": "有 {0} 個所選片段因編輯而改變，已移除",
 "고른 클립만|Picked clips": "僅選取的片段",
 "고른 하나만 카운터에 쓰여요. 적은 금액은 나머지 칸에 환산해 보여 줘요.|Only the selected one runs the counter. Other tabs show the converted amount.": "只有所選項目會用於計數器，其他分頁顯示換算金額。",
 "고양이 고르기|Pick your cat": "選擇你的貓咪",

@@ -5427,16 +5427,11 @@ final class MapHomeStartupCameraTests: XCTestCase {
         func day(_ d: Int) -> Date { calendar.date(from: DateComponents(year: 2026, month: 11, day: d))! }
         var season = MapHomeGrowthSeason(year: 2026)
         season.level = 5
-        season.lastClosedDay = "2026-11-03"
-        var history = MapHomeGrowthHistory(season: season)
-        // 3일·1일만 달성: 3일 5, 2일 4, 1일 4, 10월 31일 3.
-        MapHomeGrowthPolicy.backfillDayLevelsIfNeeded(in: &history, calendar: calendar) { date in
-            [3, 1].contains(calendar.component(.day, from: date)) && calendar.component(.month, from: date) == 11
-        }
-        XCTAssertEqual(MapHomeGrowthPolicy.level(on: day(4), in: history, calendar: calendar), 5)
-        XCTAssertEqual(MapHomeGrowthPolicy.level(on: day(3), in: history, calendar: calendar), 5)
-        XCTAssertEqual(MapHomeGrowthPolicy.level(on: day(2), in: history, calendar: calendar), 4)
-        XCTAssertEqual(MapHomeGrowthPolicy.level(on: day(1), in: history, calendar: calendar), 4)
+        let history = MapHomeGrowthHistory(season: season)
+        // 그날 카드의 집은 그해 몇째 날인지로 정한다(HOM1111A01): 11월 1일은 305.
+        XCTAssertEqual(MapHomeGrowthPolicy.level(on: day(4), in: history, calendar: calendar), 308)
+        XCTAssertEqual(MapHomeGrowthPolicy.level(on: day(3), in: history, calendar: calendar), 307)
+        XCTAssertEqual(MapHomeGrowthPolicy.level(on: day(1), in: history, calendar: calendar), 305)
         let old = try JSONDecoder().decode(MapHomeGrowthSeason.self, from: Data(#"{"year":2026,"level":3}"#.utf8))
         XCTAssertNil(old.dayLevels)
     }

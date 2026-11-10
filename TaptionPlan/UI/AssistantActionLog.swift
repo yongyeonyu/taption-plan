@@ -249,6 +249,8 @@ extension AppModel {
         let addedID = userEditUndoHistory.last?.id != lastID ? userEditUndoHistory.last?.id : nil
         guard await persistOrRollBack(userEditRollback(from: previous, historyItemID: addedID)) else { return false }
         for change in stored { preferences.set(change.key, value: change.before, model: self) }
+        // 되돌린 메모의 금액대로 가계부도 맞춘다(AI가 고친 메모를 되돌리면 금액도 돌아온다).
+        for change in entry.delta.memos where change.id != entry.delta.ledgerEntry?.memoID { syncMemoLedger(change.id) }
         if let bubbleID = entry.delta.bubbleID { AssistantBubbleStore.remove(bubbleID, file: preferences.bubbleFile) }
         if let ledgerID = entry.delta.ledgerEntryID { await preferences.ledger.delete(ledgerID) }
         return true

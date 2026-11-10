@@ -144,7 +144,7 @@ final class MapHomeGrowthPolicyTests: XCTestCase {
             qualified: true,
             calendar: calendar
         ))
-        XCTAssertEqual(history.season.level, 2)
+        XCTAssertEqual(history.season.level, MapHomeGrowthPolicy.dailyLevel(for: date(2026, 9, 20), calendar: calendar), "레벨은 날짜로만 정해진다(HOM1111A01)")
         XCTAssertEqual(history.season.pendingWeeklyRewards, 0)
         XCTAssertTrue(history.season.accessories.isEmpty)
         XCTAssertEqual(history.season.streak, 0)
@@ -167,7 +167,7 @@ final class MapHomeGrowthPolicyTests: XCTestCase {
         )
         XCTAssertNil(history.season.pendingDay)
         XCTAssertEqual(history.season.lastClosedDay, "2026-09-26")
-        XCTAssertEqual(history.season.level, 2)
+        XCTAssertEqual(history.season.level, MapHomeGrowthPolicy.dailyLevel(for: date(2026, 9, 26), calendar: calendar))
         XCTAssertEqual(history.season.recentCompletionRewardedDays, ["2026-09-26"])
     }
 
@@ -186,7 +186,7 @@ final class MapHomeGrowthPolicyTests: XCTestCase {
             qualified: true,
             calendar: calendar
         ))
-        XCTAssertEqual(history.season.level, 2)
+        XCTAssertEqual(history.season.level, MapHomeGrowthPolicy.dailyLevel(for: date(2026, 9, 20), calendar: calendar))
     }
 
     func testRecentCompletionAcrossNewYearLevelsArchivedHouseOnly() {
@@ -201,7 +201,7 @@ final class MapHomeGrowthPolicyTests: XCTestCase {
             qualified: true,
             calendar: calendar
         ))
-        XCTAssertEqual(history.archives.first?.level, 2)
+        XCTAssertEqual(history.archives.first?.level, 1, "보상은 레벨을 올리지 않는다")
         XCTAssertEqual(history.season.level, 1)
         XCTAssertTrue(history.archives.first?.accessories.isEmpty == true)
     }
@@ -275,7 +275,7 @@ final class MapHomeGrowthPolicyTests: XCTestCase {
             )
         }
 
-        XCTAssertEqual(history.season.level, 8)
+        XCTAssertEqual(history.season.level, 7, "1월 7일은 7레벨")
         XCTAssertEqual(history.season.streak, 7)
         XCTAssertEqual(history.season.pendingWeeklyRewards, 1)
     }
@@ -415,6 +415,20 @@ final class MapHomeGrowthPolicyTests: XCTestCase {
             }
             previous = current
         }
+    }
+
+    /// HOM1111A01: 집은 날마다 레벨업하고 새해에 1로 돌아간다. 달성 여부와 상관없다.
+    func testHomeLevelIsTheDayOfTheYear() {
+        XCTAssertEqual(MapHomeGrowthPolicy.dailyLevel(for: date(2026, 1, 1), calendar: calendar), 1)
+        XCTAssertEqual(MapHomeGrowthPolicy.dailyLevel(for: date(2026, 11, 11), calendar: calendar), 315)
+        XCTAssertEqual(MapHomeGrowthPolicy.dailyLevel(for: date(2026, 12, 31), calendar: calendar), 365)
+        XCTAssertEqual(MapHomeGrowthPolicy.dailyLevel(for: date(2028, 12, 31), calendar: calendar), 366)
+        var history = MapHomeGrowthHistory.initial(for: date(2026, 11, 10), calendar: calendar)
+        MapHomeGrowthPolicy.observeCurrentDay(in: &history, date: date(2026, 11, 11), qualified: false, calendar: calendar)
+        XCTAssertEqual(history.season.level, 315, "a day without records still levels up")
+        XCTAssertEqual(MapHomeGrowthPolicy.level(on: date(2026, 3, 1), in: history, calendar: calendar), 60)
+        MapHomeGrowthPolicy.observeCurrentDay(in: &history, date: date(2027, 1, 1), qualified: true, calendar: calendar)
+        XCTAssertEqual(history.season.level, 1, "new year resets to 1")
     }
 
     func testYearChangeArchivesPreviousHouseAndStartsAtLevelOne() {

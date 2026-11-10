@@ -488,6 +488,7 @@ struct MapHomeView: View {
     @State var isPassportPresented = false
     @State var isTravelAddChoicePresented = false
     @State var memoLedgerFilter = LedgerMemoFilter.all
+    @State var memoLedgerLinkedIDs: Set<UUID> = []
     @State var isTripImportPresented = false
     @State var isLocationAlwaysPromptPresented = false
     @State var isTripClipboardOfferVisible = false

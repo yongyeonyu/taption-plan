@@ -13,13 +13,10 @@ struct MapHomeUnconfirmedBatchSheet: View {
     @State private var picked: Set<String> = []
     @State private var isSaving = false
     @State private var failed = false
+    /// 「›」로 고른 구간. 이 창이 다 닫힌 뒤에 그 구간 창을 연다(닫히는 중에 다른 창을 띄우면 무시된다).
+    @State private var openAfterClose: MapHomeTimeRailSegment?
 
-    static let categoryIDs = ["work", "study", "sleep", "eating", "movement", "exercise", "hobby", "activity"]
-
-    private var categories: [MapHomeSidebarMajorCategory] {
-        let byID = Dictionary(uniqueKeysWithValues: MapHomeSidebarMajorCategory.all.map { ($0.id, $0) })
-        return Self.categoryIDs.compactMap { byID[$0] }
-    }
+    private var categories: [MapHomeSidebarMajorCategory] { MapHomeUnconfirmedBatch.quickCategories }
 
     private var language: MapHomeLanguage { .current }
 
@@ -34,7 +31,7 @@ struct MapHomeUnconfirmedBatchSheet: View {
                             Text("\(timeLabel(segment.startMinute))–\(timeLabel(segment.endMinute))")
                                 .foregroundStyle(Color.tpInk)
                             Spacer()
-                            Button { onOpenOne(segment); dismiss() } label: { Image(systemName: "chevron.right") }
+                            Button { openAfterClose = segment; dismiss() } label: { Image(systemName: "chevron.right") }
                                 .buttonStyle(.borderless)
                                 .foregroundStyle(Color.tpSecondary)
                                 .accessibilityLabel(language.text("이 구간만 자세히", "Edit this one"))
@@ -78,6 +75,14 @@ struct MapHomeUnconfirmedBatchSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button(language.text("닫기", "Close")) { dismiss() } } }
             .onAppear { picked = Set(segments.map(\.id)) }
+            .onDisappear {
+                guard let segment = openAfterClose else { return }
+                openAfterClose = nil
+                Task { @MainActor in
+                    await Task.yield()
+                    onOpenOne(segment)
+                }
+            }
             .overlay { if isSaving { ProgressView() } }
         }
         .presentationDetents([.medium, .large])
@@ -117,6 +122,14 @@ extension MapHomeView {
 }
 
 enum MapHomeUnconfirmedBatch {
+    /// 미확인을 바로 정할 때 보이는 분류. 하나씩 정하는 창과 여러 개 정하는 창이 같이 쓴다.
+    static let quickCategoryIDs = ["work", "study", "sleep", "eating", "movement", "exercise", "hobby", "activity"]
+
+    static var quickCategories: [MapHomeSidebarMajorCategory] {
+        let byID = Dictionary(uniqueKeysWithValues: MapHomeSidebarMajorCategory.all.map { ($0.id, $0) })
+        return quickCategoryIDs.compactMap { byID[$0] }
+    }
+
     /// 한 미확인 구간을 그 분류로 바꾸는 요청. 하나씩 정할 때(`quickConfirmUnconfirmed`)와 같은 모양이다.
     static func request(
         for segment: MapHomeTimeRailSegment, category: MapHomeSidebarMajorCategory, day: Date, calendar: Calendar

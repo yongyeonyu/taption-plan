@@ -45,8 +45,6 @@ struct TaptionPlanApp: App {
         )
         // 벡터 지도 오프라인 저장본을 MapLibre 요청보다 먼저 읽게 한다(MAP1108A02).
         OfflineVectorMap.install()
-        // 단축어 앱에 「결제 문자 넣기」가 보이도록 시스템에 다시 알린다(대표 신고: 단축어 앱에 없음).
-        BokkiShortcuts.updateAppShortcutParameters()
         #if DEBUG || BENCH
         BenchSeed.runIfRequested()
         #endif
@@ -78,7 +76,8 @@ struct TaptionPlanApp: App {
                     .refreshesSupportedOrientations()
             }
             #else
-            AppShellView()
+            // 글꼴을 고르면 모든 화면이 바로 따르게 Release에도 글꼴 뿌리를 둔다(FNT1111A01: 글꼴 선택을 더할 때 Debug에만 들어갔다).
+            TaptionFontRoot { AppShellView() }
                 .refreshesSupportedOrientations()
             #endif
         }

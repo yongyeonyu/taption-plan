@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// 메모 편집 화면의 지출 칩(LED1111A03). 글에서 금액을 알아보면 「지출 4,500원 · 카페」를 보이고,
-/// 누르면 이 메모만 「메모로만」으로 바꾼다(가계부에 넣지 않음). 다시 누르면 되돌린다.
+/// 누르면 이 메모만 「메모로만」으로 바꾼다(가계부에 넣지 않음). 다시 누르면 되돌린다. 저장해야 반영된다.
 struct LedgerMemoChip: View {
     let memoID: UUID
     let text: String
@@ -12,7 +12,7 @@ struct LedgerMemoChip: View {
         if let found = LedgerMemoAmount.find(text) {
             Button {
                 optedOut.toggle()
-                LedgerMemoOptOut.set(memoID, optedOut: optedOut)
+                LedgerMemoOptOut.pending[memoID] = optedOut
             } label: {
                 Label(label(found), systemImage: optedOut ? "note.text" : (found.kind == .income ? "plus.circle.fill" : "wonsign.circle.fill"))
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
@@ -23,7 +23,10 @@ struct LedgerMemoChip: View {
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("memo-ledger-chip")
-            .onAppear { optedOut = LedgerMemoOptOut.contains(memoID) }
+            .onAppear {
+                LedgerMemoOptOut.pending[memoID] = nil
+                optedOut = LedgerMemoOptOut.contains(memoID)
+            }
         }
     }
 

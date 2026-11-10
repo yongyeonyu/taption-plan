@@ -165,15 +165,6 @@ extension MapHomeView {
             asOf: now,
             calendar: calendar
         )
-        MapHomeGrowthPolicy.backfillDayLevelsIfNeeded(in: &history, calendar: calendar) { day in
-            MapHomeGrowthPolicy.qualifiesDay(
-                actuals: model.snapshot.actuals,
-                travel: model.snapshot.travel,
-                on: day,
-                asOf: now,
-                calendar: calendar
-            )
-        }
         if calendar.isDate(model.selectedDate, inSameDayAs: now),
            let dayData = currentDayDataSnapshot {
             MapHomeGrowthPolicy.observeCurrentDay(
@@ -374,7 +365,7 @@ extension MapHomeView {
     var daySummaryHomeArtwork: some View {
         let point = model.settings.frequentPlaces.first { $0.kind == .home }?.point
         return MapHomePlacePin(
-            name: language.text("집", "Home"), floor: nil, destination: .home, growthLevel: homeGrowthHistory.season.level,
+            name: language.text("집", "Home"), floor: nil, destination: .home, growthLevel: MapHomeGrowthPolicy.dailyLevel(for: model.selectedDate),
             weatherBadge: MapHomeHomeWeatherBadgePolicy.badge(from: model.snapshot.weather, now: .now),
             homeSky: point.map {
                 MapHomeHomeSkyInput(coordinate: CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude),

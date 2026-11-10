@@ -72,7 +72,7 @@ extension MapHomeView {
                 floor: place.floor,
                 destination: destination,
                 growthLevel: destination == .home
-                    ? homeGrowthHistory.season.level
+                    ? MapHomeGrowthPolicy.dailyLevel(for: model.selectedDate)
                     : nil,
                 isLeapDay: MapHomeGrowthPolicy.isLeapDay(
                     model.selectedDate,

@@ -2,6 +2,13 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## REV1111A02·HOM1111A01 · 두 번째 리뷰 10건, Release 글꼴 뿌리, 집 날마다 레벨업 (2026-11-11)
+
+- 리뷰 10건 고침: (1) 메모 더하기·고치기·지우기 모든 길(지도 편집·메모 상세·목표·메모 입력·AI·AI 되돌리기)이 `AppModel.syncMemoLedger`를 지나 가계부와 맞춤 (2) 통화 표시 없는 숫자는 100으로 나눠떨어지고 7자리 이하일 때만, 번호·비번·코드·계좌·버스 같은 낱말이 있으면 안 봄 (3) 미확인 정리 창의 「›」는 창이 다 닫힌 뒤 연다 (4) 가계부 창 호스트를 늘 있는 하단 막대로 (5) 「메모로만」은 저장할 때만 반영 (6) 고르는 사이 바뀐 클립은 빼고 알림 (7) 통화 정규식 하나를 글자 상수로 (8) 단축어 다시 알림을 첫 화면 뒤 `.task`로 (9) 미확인 요청·분류 목록을 한 곳에서 (10) 지도 화면은 장부를 직접 지켜보지 않고, 이어진 메모 id가 실제로 바뀔 때만 받음.
+- 같이 찾음(FNT1111A01 원인): 글꼴 선택을 더할 때 `TaptionFontRoot`가 Debug 분기에만 들어가 Release(TestFlight)는 글꼴을 바꿔도 다시 그려지지 않는 화면이 그대로였고 기본 글자도 시스템 글꼴이었다 → Release에도 둠. Release 빌드 성공.
+- HOM1111A01: 집 레벨 = 그해 몇째 날. 지도 집·하루 카드는 보는 날짜의 건물. 기존 시험 기대값을 새 규칙으로 바꿈(달성 보상은 레벨을 올리지 않음, 1월 7일은 7) + 새 시험(11월 11일 315, 윤년 12월 31일 366, 기록 없는 날도 오름, 새해 1).
+- 아이폰 11 실기기: 리뷰 수정 묶음 172건 실패 0(`build/validation/REV1111A02/iphone11.xcresult`), 집 레벨 묶음(`MapHomeGrowthPolicyTests`·`TimeScaleTests`·`MapHomePlaybackStaticLayersTests`·`LedgerTests`·`NLEOverwriteBatchTests`) 240건 실패 0(`build/validation/HOM1111A01/iphone11.xcresult`). 화면은 기기에서 보지 않았다.
+
 ## FNT1111A01 · 시스템 글자 모양을 앱 글꼴로 (2026-11-11)
 
 - 8개 파일 44곳 `.font(.caption/.footnote/.headline/...)` → `.font(.taptionStyle(...))`. 남긴 것: 연결 키·코드의 `.monospaced()` 6곳.

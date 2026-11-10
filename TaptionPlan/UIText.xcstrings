@@ -148688,6 +148688,83 @@
         }
       }
     },
+    "고른 클립 {0}개는 편집으로 바뀌어 빠졌어요|{0} picked clip(s) changed while editing and were left out" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選んだクリップ {0}件は編集で変わったため外しました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "有 {0} 个所选片段因编辑而改变，已移除"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "有 {0} 個所選片段因編輯而改變，已移除"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} gewählte(r) Clip(s) wurde(n) beim Bearbeiten geändert und ausgelassen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} clip(s) choisi(s) modifié(s) pendant l’édition et retiré(s)"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} clip scelte sono cambiate durante la modifica e sono state escluse"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} clip(s) elegido(s) cambiaron al editar y se omitieron"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} clipe(s) escolhido(s) mudaram na edição e foram deixados de fora"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} clip đã chọn đã thay đổi khi chỉnh sửa nên bị bỏ ra"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} klip terpilih berubah saat diedit dan dikeluarkan"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คลิปที่เลือก {0} รายการเปลี่ยนระหว่างแก้ไขจึงถูกเอาออก"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "चुनी गई {0} क्लिप संपादन में बदल गईं, इसलिए हटा दी गईं"
+          }
+        }
+      }
+    },
     "고른 클립만|Picked clips" : {
       "extractionState" : "manual",
       "localizations" : {

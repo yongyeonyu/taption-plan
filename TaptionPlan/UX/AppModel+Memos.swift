@@ -49,6 +49,7 @@ extension AppModel {
             return nil
         }
         memoEntry?.memoIDs.append(id)
+        syncMemoLedger(id)
         return id
     }
 
@@ -142,15 +143,15 @@ extension AppModel {
         else {
             return
         }
-        snapshot.memos.append(
-            ActionMemo(
-                planID: planID,
-                categoryID: plan.categoryID,
-                occurredAt: plan.span.start,
-                kind: kind,
-                text: cleanText
-            )
+        let memo = ActionMemo(
+            planID: planID,
+            categoryID: plan.categoryID,
+            occurredAt: plan.span.start,
+            kind: kind,
+            text: cleanText
         )
+        snapshot.memos.append(memo)
+        syncMemoLedger(memo.id)
         Task { await persist() }
     }
 
@@ -301,6 +302,7 @@ extension AppModel {
         if pendingMapMemoIDs.remove(memoID) != nil {
             snapshot.memos.removeAll { $0.id == memoID }
             memoEntry?.memoIDs.removeAll { $0 == memoID }
+            syncMemoLedger(memoID)
             return
         }
         invalidateReviewArchives(dates: [memo.occurredAt])
@@ -309,6 +311,7 @@ extension AppModel {
         )
         snapshot.memos.removeAll { $0.id == memoID }
         memoEntry?.memoIDs.removeAll { $0 == memoID }
+        syncMemoLedger(memoID)
         Task { await persist() }
     }
 
@@ -328,6 +331,7 @@ extension AppModel {
             return
         }
         snapshot.memos[index] = updated
+        syncMemoLedger(memoID)
         Task { await persist() }
     }
 
@@ -378,6 +382,7 @@ extension AppModel {
         snapshot.memos[index] = value
         pendingMapMemoIDs.remove(memoID)
         invalidateReviewArchives(dates: [previousDate, occurredAt])
+        syncMemoLedger(memoID)
         Task { await persist() }
         return true
     }

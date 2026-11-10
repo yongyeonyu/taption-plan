@@ -12,6 +12,8 @@ enum LedgerMemoAmount {
 
     private static let currencyCodes = ["USD", "JPY", "EUR", "CNY", "TWD", "HKD", "THB", "VND", "SGD", "PHP", "IDR", "GBP", "AUD", "CAD"]
     /// 숫자 뒤에 붙으면 금액이 아니다(시각·차례·층·사람 수·거리 등).
+    /// 이 낱말이 있으면 통화 표시 없는 숫자를 금액으로 보지 않는다.
+    private static let notMoneyWords = ["비번", "비밀번호", "번호", "코드", "계좌", "주문", "인증", "우편", "사번", "학번", "버스", "호선", "출구", "좌석", "게이트"]
     private static let notMoneyUnits = ["시", "분", "초", "번", "층", "호", "명", "개", "살", "세", "km", "m", "kg", "g", "%", "일", "월", "년", "차", "회", "점", "등", "위", "cm", "mm", "ml", "l", "보", "걸음", "kcal", "칼로리", "장", "권", "곡", "편", "p"]
 
     static func find(_ text: String) -> Found? {
@@ -28,16 +30,18 @@ enum LedgerMemoAmount {
         if let match = line.firstMatch(of: /\$\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)/), let value = LedgerMessageParser.number(String(match.1)), value > 0 {
             return found(value, "USD", income, line, String(match.0))
         }
-        for code in currencyCodes {
-            if let regex = try? Regex("\(code)\\s*([0-9][0-9,]*(?:\\.[0-9]{1,2})?)|([0-9][0-9,]*(?:\\.[0-9]{1,2})?)\\s*\(code)"),
-               let match = line.firstMatch(of: regex) {
-                let digits = (match.output[1].substring ?? match.output[2].substring).map(String.init) ?? ""
-                if let value = LedgerMessageParser.number(digits), value > 0 { return found(value, code, income, line, String(line[match.range])) }
-            }
+        // 글자 단위 정규식 하나로 「USD 12」·「1200 JPY」를 찾는다(글자를 칠 때마다 정규식을 새로 만들지 않게).
+        for match in line.matches(of: /([A-Z]{3})\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)|([0-9][0-9,]*(?:\.[0-9]{1,2})?)\s*([A-Z]{3})/) {
+            guard let code = (match.1 ?? match.4).map(String.init), currencyCodes.contains(code),
+                  let digits = (match.2 ?? match.3).map(String.init), let value = LedgerMessageParser.number(digits), value > 0 else { continue }
+            return found(value, code, income, line, String(match.0))
         }
         // 2) 통화 표시 없는 숫자: 1,000 이상이고 날짜·시각·전화번호·단위가 아닌 낱말 하나
         // 전화번호가 든 글에서는 통화 표시 없는 숫자를 금액으로 보지 않는다.
         if line.contains(/01[016789][ \-]?[0-9]{3,4}[ \-]?[0-9]{4}/) { return nil }
+        // 번호·비밀번호·코드·계좌처럼 숫자가 금액이 아닌 글이면 통화 표시 없는 숫자는 보지 않는다(리뷰: 「현관 비번 482915」).
+        let lower = line.lowercased()
+        if notMoneyWords.contains(where: lower.contains) { return nil }
         let joiners: Set<Character> = [":", "/", ".", "-"]
         for match in line.matches(of: /[0-9]{1,3}(?:,[0-9]{3})+|[0-9]{3,}/) {
             // 앞뒤가 숫자·:·/·.·-로 이어지면 시각·날짜·전화번호다.
@@ -52,9 +56,11 @@ enum LedgerMemoAmount {
                 return !next.isLetter
             }
             guard !isUnit else { continue }
-            guard let value = LedgerMessageParser.number(String(match.output)), value >= 1_000, value <= 1e10,
-                  // 쉼표 없는 1900~2100은 연도로 본다.
-                  match.output.contains(",") || !(1_900...2_100).contains(value) else { continue }
+            guard let value = LedgerMessageParser.number(String(match.output)), value >= 1_000, value <= 1e10 else { continue }
+            // 쉼표 없는 숫자는 원 단위 값처럼 100으로 나눠떨어지고 일곱 자리 이하일 때만 금액이다(7016번·482915·연도 2026은 아님).
+            if !match.output.contains(",") {
+                guard value.truncatingRemainder(dividingBy: 100) == 0, value < 10_000_000 else { continue }
+            }
             return found(value, "KRW", income, line, String(match.0))
         }
         return nil
@@ -75,6 +81,14 @@ enum LedgerMemoOptOut {
 
     static func contains(_ id: UUID, defaults: UserDefaults = .standard) -> Bool {
         (defaults.stringArray(forKey: key) ?? []).contains(id.uuidString)
+    }
+
+    /// 편집 중에 누른 칩의 값. 저장할 때만 반영하고, 취소하면 버린다(리뷰: 취소해도 남던 것).
+    @MainActor static var pending: [UUID: Bool] = [:]
+
+    @MainActor static func commitPending(_ id: UUID, defaults: UserDefaults = .standard) {
+        guard let value = pending.removeValue(forKey: id) else { return }
+        set(id, optedOut: value, defaults: defaults)
     }
 
     static func set(_ id: UUID, optedOut: Bool, defaults: UserDefaults = .standard) {
@@ -114,5 +128,19 @@ extension LedgerBook {
     func removeMemo(_ id: UUID) async {
         await load()
         if let existing = entry(forMemo: id) { await delete(existing.id) }
+    }
+}
+
+extension AppModel {
+    /// 메모를 더하고·고치고·지우는 모든 길(지도 편집·메모 상세·목표·AI·되돌리기)이 여기를 지나 가계부와 맞춘다(LED1111A03 리뷰).
+    /// 메모가 없으면(지움) 이어진 기록을 지우고, 있으면 글의 금액대로 만들거나 고친다. 시험 앱에서는 실제 장부를 건드리지 않는다.
+    func syncMemoLedger(_ memoID: UUID, book: LedgerBook? = AssistantRegistration.isTestHost ? nil : .shared) {
+        guard let book else { return }
+        let memo = snapshot.memos.first { $0.id == memoID }
+        let isDraft = isMemoDraft(memoID)
+        Task { @MainActor in
+            guard let memo, !isDraft else { return await book.removeMemo(memoID) }
+            await book.syncMemo(id: memoID, text: memo.text, occurredAt: memo.occurredAt)
+        }
     }
 }

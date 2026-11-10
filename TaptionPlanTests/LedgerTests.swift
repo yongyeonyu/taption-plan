@@ -197,7 +197,9 @@ final class LedgerTests: XCTestCase {
         XCTAssertEqual(LedgerMemoAmount.find("라멘 1200 JPY")?.amount, 1_200)
         XCTAssertEqual(LedgerMemoAmount.find("4500 latte")?.amount, 4_500)
         XCTAssertEqual(LedgerMemoAmount.find("4500 시원한 커피")?.amount, 4_500)
-        for text in ["14:30 회의", "11/12 병원", "2026 목표", "3층 1203호", "민수 010-1234-5678", "5000보 걷기", "만원 정도", "커피", "4500"] {
+        XCTAssertEqual(LedgerMemoAmount.find("점심 12500")?.amount, 12_500)
+        for text in ["14:30 회의", "11/12 병원", "2026 목표", "3층 1203호", "민수 010-1234-5678", "5000보 걷기", "만원 정도", "커피", "4500",
+                     "현관 비번 482915", "버스 7016 타기", "주문번호 3000", "회의실 1205"] {
             XCTAssertNil(LedgerMemoAmount.find(text), text)
         }
     }

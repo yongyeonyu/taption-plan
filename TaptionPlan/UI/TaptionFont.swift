@@ -113,6 +113,8 @@ struct TaptionFontRoot<Content: View>: View {
         content
             .font(.taptionFixed(size: 17))
             .id(selection)
+            // 단축어 앱에 「결제 문자 넣기」가 보이도록 첫 화면 뒤에 시스템에 다시 알린다(시작 경로에서 빼냄, 리뷰).
+            .task { BokkiShortcuts.updateAppShortcutParameters() }
     }
 }
 

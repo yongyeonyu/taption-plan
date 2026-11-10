@@ -6,7 +6,19 @@ import SwiftUI
 /// 「적용」을 눌러야 `AppModel.saveClipEditBatch`가 한 번에 저장한다.
 extension MapHomeNLEClipEditor {
     /// 창을 열 때 한 번만 직접 입력 기록을 찾는다. 창이 떠 있는 동안 다시 세지 않는다.
+    /// 고르는 사이 자르기·합치기로 사라진 클립은 빼고 알린다(리뷰: 말없이 일부만 바뀌던 것).
+    func dropStalePicks() {
+        let alive = pickedClipIDs.filter { track.clip($0) != nil }
+        guard alive.count < pickedClipIDs.count else { return }
+        showEditorNotice(language.text(
+            "고른 클립 \(pickedClipIDs.count - alive.count)개는 편집으로 바뀌어 빠졌어요",
+            "\(pickedClipIDs.count - alive.count) picked clip(s) changed while editing and were left out"
+        ))
+        pickedClipIDs = alive
+    }
+
     func presentOverwrite() {
+        dropStalePicks()
         overwriteUserOwnedIDs = Self.userOwnedSourceIDs(
             in: track,
             actuals: model.snapshot.actuals,
@@ -76,6 +88,7 @@ extension MapHomeNLEClipEditor {
     /// 고른 클립이 있으면 그 클립 모두를 이 분류로 덮고 true. 고르기는 끝낸다.
     func applyToPicked(_ category: MapHomeSidebarMajorCategory) -> Bool {
         guard !pickedClipIDs.isEmpty else { return false }
+        dropStalePicks()
         applyOverwrite(NLEOverwriteRequest(category: category, scope: .picked, mergesAfter: true))
         pickedClipIDs = []
         return true

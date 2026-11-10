@@ -782,6 +782,7 @@ struct MapHomeStickerEditorSheet: View {
             ) else { return }
         case .memo(let id), .newMemo(let id):
             // 위치를 넣으면 그 자리에 지도 메모로 뜬다. 아이콘을 끈 메모는 위치가 없을 때만 일반 메모로 남는다.
+            LedgerMemoOptOut.commitPending(id)
             guard model.updateMapMemo(
                 id,
                 text: memoText,
@@ -792,8 +793,6 @@ struct MapHomeStickerEditorSheet: View {
             ) else { return }
             model.setMemoSticker(id, symbol: chosenMemoSymbol, colorHex: colorHex)
             noteMemoAIEdits(id)
-            let text = memoText, at = occurredAt
-            Task { await LedgerBook.shared.syncMemo(id: id, text: text, occurredAt: at) }
             didSave = true
         }
         dismiss()
@@ -829,7 +828,6 @@ struct MapHomeStickerEditorSheet: View {
         case .sticker(let id): model.deleteMapSticker(id)
         case .memo(let id):
             model.deleteMemo(id)
-            Task { await LedgerBook.shared.removeMemo(id) }
             MemoPolishQueue.resolve(id)
             MemoAIEditMarks.clear(id)
         case .newMemo(let id): model.discardMapMemoDraft(id)

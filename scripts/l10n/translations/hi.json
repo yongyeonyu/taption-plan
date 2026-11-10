@@ -2449,6 +2449,7 @@
 "고르기 끝내기 ({0}개)|Stop picking ({0})": "चुनना बंद करें ({0})",
 "고른 구간 {0}개|{0} picked": "{0} चुने",
 "고른 구간 모두 이 분류로|Set all picked to": "सभी चुने हुए को इस श्रेणी में करें",
+"고른 클립 {0}개는 편집으로 바뀌어 빠졌어요|{0} picked clip(s) changed while editing and were left out": "चुनी गई {0} क्लिप संपादन में बदल गईं, इसलिए हटा दी गईं",
 "고른 클립만|Picked clips": "चुनी हुई क्लिप",
 "고른 하나만 카운터에 쓰여요. 적은 금액은 나머지 칸에 환산해 보여 줘요.|Only the selected one runs the counter. Other tabs show the converted amount.": "काउंटर में केवल चुना हुआ विकल्प चलता है। अन्य टैब बदली हुई राशि दिखाते हैं।",
 "고양이 고르기|Pick your cat": "अपनी बिल्ली चुनें",
