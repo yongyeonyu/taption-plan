@@ -5,6 +5,7 @@
 남은 항목의 순서와 선행 조건은 `docs/NEXT_PLAN.md`(2026-11-10)에 있습니다. 요청별 남은 일은 아래 항목에, 원인·해결·검증 근거는 `test.md`(이전 기록은 `test_ARCHIVE.md`)에 있습니다.
 
 ### 진행 중
+- GDE1111A01: AI 연결을 튜토리얼처럼 단계별로, 다른 앱에 다녀와도 화면·단계 유지(대표 지시 2026-11-11). 원인: AI 연결 시트 안 화면이 다시 만들어지며 고른 AI·받은 코드·PIN 상태가 지워짐. 해결: `AssistantGuideMemory`(앱이 켜진 동안만, 30분), AI마다 단계 카드(`AssistantGuidePlan`), Claude는 코드·PIN을 따로 복사, 승인 화면 POST가 `Origin: null`로 막히던 것(referrer no-referrer)도 same-origin으로 고침(CLD1111A01). 남음: 대표 기기에서 Claude·ChatGPT 단계 끝까지.
 - CLD1111A01: Claude 「바로 추가」(Claude 앱이 알려 준 `claude.ai/customize/connectors?modal=add-custom-connector&connectorName&connectorUrl` 형식, 확인 못 함). 대표 결정 2026-11-11: 링크에 키를 넣지 않고(암호화해도 그 값이 곧 열쇠라 의미 없음) 키 없는 주소 + OAuth 승인. 앱이 앱 비밀번호 → 연결 코드 복사·승인 PIN 표시 → Claude 추가 창. 남음: 대표 기기에서 링크가 추가 창을 여는지, Add 뒤 승인까지.
 - GPT1111A01: ChatGPT 연결 안내 바로잡기(대표가 붙인 ChatGPT 답 2026-11-11). MCP 커넥터는 Business·Enterprise·Edu(Pro 읽기만)라 Plus는 맞춤 GPT Actions로. 해결: ChatGPT 화면 맨 위 「맞춤 GPT로 연결」(스키마 주소·연결 키 따로 복사·절차), 커넥터는 대상 요금제 표시. 남음: 대표 계정에서 맞춤 GPT 만들어 실제 호출.
 - MAP1110A01: 이전·다음 날로 넘길 때 GPS 기록이 없으면 지도가 서울시청(기본 중심)으로 감(대표 신고 2026-11-10). 원인: 경로 전체 보기(`focusMapOnAllRoutes`)가 경로가 없으면 `.automatic`이 되고, 지도의 마지막 기본값이 서울시청. 해결: 경로가 없으면 등록한 집을 가운데로, 시작 카메라 기본값도 집을 서울시청보다 먼저. 검증: 빌드, 기기에서 기록 없는 날로 넘겨 집이 가운데인지.

@@ -121,3 +121,18 @@ test("setBubble kind: routine needs a window, event may omit it, other kinds are
   const queued = (await (await send(env2, "/command", "GET", undefined, master)).json()).commands;
   assert.deepEqual(queued.map((c) => [c.id, c.kind ?? null]), [["r1", null], ["e1", "event"], ["e2", "event"]]);
 });
+
+// CLD1111A01: 승인 화면은 same-origin이라 우리 POST에 출처가 실린다. 출처가 null이어도 CSRF 쿠키가 맞으면 통과, 다른 출처는 막는다.
+test("approval page: same-origin referrer, Origin null is left to the CSRF cookie, a foreign Origin is refused", async () => {
+  const { env } = makeEnv();
+  const page = await handle(new Request(`${ORIGIN}/oauth/authorize?response_type=code&client_id=x`), env);
+  const head = await page.text();
+  assert.ok(!head.includes('content="no-referrer"'));
+  const form = (origin) => handle(new Request(`${ORIGIN}/oauth/authorize`, {
+    method: "POST", headers: { "content-type": "application/x-www-form-urlencoded", cookie: "__Host-tp_csrf=abc", ...(origin ? { origin } : {}) },
+    body: new URLSearchParams({ csrf: "abc", client_id: "x", decision: "approve" }).toString(),
+  }), env);
+  assert.equal((await form("https://evil.example")).status, 403, "foreign origin");
+  const nullOrigin = await (await form("null")).text();
+  assert.ok(!nullOrigin.includes("보안 확인에 실패했어요. · Security check failed."), "Origin null passes the origin check");
+});

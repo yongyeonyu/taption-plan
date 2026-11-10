@@ -138,6 +138,14 @@ struct AssistantProviderView: View {
             } footer: {
                 if provider.planBadge(language) != nil { Text(AssistantAIProvider.planFootnote(language)) }
             }
+            AssistantGuideSection(
+                provider: provider,
+                steps: AssistantGuidePlan.steps(
+                    provider, host: host, token: existing?.token,
+                    code: code.flatMap { $0.remaining(now: .now) > 0 ? $0.code : nil }, pin: approvalPIN, language: language
+                ),
+                language: language, isConnected: store.isConnected(provider), perform: performGuide
+            )
             if provider == .cue { cueSections } else if provider.usesOAuth { oauthSections } else { keySection }
             if provider.appStoreURL != nil {
                 Section {
@@ -151,6 +159,10 @@ struct AssistantProviderView: View {
         .disabled(isWorking)
         .task {
             installed = provider.isInstalled
+            // 다른 앱에 다녀와 화면이 다시 만들어졌으면 받아 둔 코드·PIN을 되살린다(GDE1111A01).
+            let memory = AssistantGuideMemory.shared
+            memory.begin(provider)
+            if code == nil, memory.code != nil { code = memory.code; approvalPIN = memory.approvalPIN }
             if store.keys == nil { await store.reload() }
             existing = store.token(for: provider)
         }
@@ -161,6 +173,10 @@ struct AssistantProviderView: View {
                     approvalPIN = pin
                     let failure = await fetchCode()
                     if failure == nil, opensClaudeAdd, let code { copy(code.code) }
+                    if failure == nil, let code {
+                        AssistantGuideMemory.shared.keep(code: code, pin: pin)
+                        advanceGuide(from: "code")
+                    }
                     return failure
                 }
             } else {
@@ -425,11 +441,18 @@ struct AssistantProviderView: View {
     private func codeView(_ code: AssistantOAuthCode) -> some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             let left = Int(code.remaining(now: context.date))
-            VStack(alignment: .leading, spacing: 4) {
-                Text(code.code).font(.title2.monospaced().weight(.bold)).textSelection(.enabled)
+            // 코드와 PIN을 각자 줄에 둔다. 길게 눌러 고르면 두 줄이 함께 잡혀 복사 버튼만 쓴다(CLD1111A01).
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(language.text("연결 코드", "Connection code")).font(.footnote).foregroundStyle(.secondary)
+                    Spacer()
+                    Text(code.code).font(.title2.monospaced().weight(.bold))
+                }
                 if let approvalPIN, left > 0 {
-                    LabeledContent(language.text("승인 화면 PIN", "Approval page PIN")) {
-                        Text(approvalPIN).font(.body.monospaced().weight(.semibold)).textSelection(.enabled)
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(language.text("승인 화면 PIN", "Approval page PIN")).font(.footnote).foregroundStyle(.secondary)
+                        Spacer()
+                        Text(approvalPIN).font(.title2.monospaced().weight(.bold))
                     }
                 }
                 Text(left > 0
@@ -476,6 +499,7 @@ struct AssistantProviderView: View {
         case let .failure(text): return text
         case let .key(key, token):
             existing = (key, token)
+            advanceGuide(from: "key")
             if provider == .cue {
                 // 새 키를 만들었으면 예전 Cue 키는 끊는다. 주소와 키는 화면에서 따로 복사한다.
                 if let old, old.id != key.id { _ = await TripRelay.revokeScopedKey(old.id) }
@@ -507,6 +531,41 @@ struct AssistantProviderView: View {
     }
 
     private func copy(_ text: String) { AssistantClipboard.copy(text) }
+
+    /// 단계 버튼(GDE1111A01). 복사·열기는 바로 다음 단계로, 키·코드는 만든 뒤에 넘어간다.
+    private func performGuide(_ action: AssistantGuideStep.Action) {
+        let memory = AssistantGuideMemory.shared
+        switch action {
+        case .makeKey:
+            if provider == .chatGPT { makesKeyURL = true }
+            isAskingPIN = true
+        case .getCode:
+            requestCode()
+        case let .copy(value):
+            copy(value)
+            message = language.text("복사했어요. 붙여 넣은 뒤 돌아오세요.", "Copied. Paste it, then come back.")
+            memory.go(to: memory.step(for: provider) + 1)
+        case let .open(url):
+            memory.go(to: memory.step(for: provider) + 1)
+            openURL(url)
+        case .check:
+            Task { @MainActor in
+                await store.reload()
+                existing = store.token(for: provider)
+                message = store.isConnected(provider)
+                    ? language.text("연결됐어요.", "Connected.")
+                    : language.text("아직 연결되지 않았어요. 앞 단계를 다시 확인해 주세요.", "Not connected yet. Check the previous steps.")
+            }
+        }
+    }
+
+    /// 그 단계를 보고 있을 때만 다음으로 넘긴다.
+    private func advanceGuide(from id: String) {
+        let memory = AssistantGuideMemory.shared
+        let steps = AssistantGuidePlan.steps(provider, host: host, token: existing?.token, code: code?.code, pin: approvalPIN, language: language)
+        let index = memory.step(for: provider)
+        if steps.indices.contains(index), steps[index].id == id { memory.go(to: index + 1) }
+    }
 
     private func showPendingPasteGuide() {
         makesKeyURL = false

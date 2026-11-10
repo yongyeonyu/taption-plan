@@ -759,6 +759,33 @@ final class AssistantPhase3Tests: XCTestCase {
         XCTAssertNil(MemoAIEditMarks.all(store)[id.uuidString])
     }
 
+    /// GDE1111A01: AI마다 단계가 있고, Claude는 코드와 PIN을 따로 복사하며, 기억은 30분 뒤 잊는다.
+    @MainActor
+    func testConnectGuideStepsAndMemory() {
+        let claude = AssistantGuidePlan.steps(.claude, host: "trip.bokkiyaw.com", token: nil, code: "PWCQM6U9", pin: "523408", language: .korean)
+        XCTAssertEqual(claude.map(\.id), ["code", "open", "copyCode", "copyPIN", "check"])
+        XCTAssertEqual(claude[2].action, .copy("PWCQM6U9"))
+        XCTAssertEqual(claude[3].action, .copy("523408"), "the PIN is its own step after the code")
+        let waiting = AssistantGuidePlan.steps(.claude, host: "trip.bokkiyaw.com", token: nil, code: nil, pin: nil, language: .korean)
+        XCTAssertNil(waiting[2].action, "no code yet, so the copy step waits")
+        let gpt = AssistantGuidePlan.steps(.chatGPT, host: "trip.bokkiyaw.com", token: "K", code: nil, pin: nil, language: .korean)
+        XCTAssertEqual(gpt.map(\.id), ["key", "open", "schema", "auth", "check"])
+        XCTAssertEqual(gpt[2].action, .copy("https://trip.bokkiyaw.com/openapi.json"))
+        XCTAssertEqual(gpt[3].action, .copy("K"))
+        XCTAssertEqual(AssistantGuidePlan.steps(.pickle, host: "h", token: nil, code: nil, pin: nil, language: .korean).first?.action, .makeKey)
+
+        let memory = AssistantGuideMemory()
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        memory.begin(.claude, now: now)
+        memory.go(to: 3, now: now)
+        memory.begin(.claude, now: now.addingTimeInterval(60))
+        XCTAssertEqual(memory.step(for: .claude, now: now.addingTimeInterval(60)), 3, "coming back from Claude keeps the step")
+        XCTAssertEqual(memory.step(for: .chatGPT, now: now.addingTimeInterval(60)), 0)
+        XCTAssertNil(memory.activeProvider(now: now.addingTimeInterval(31 * 60)), "forgotten after 30 minutes")
+        memory.end()
+        XCTAssertNil(memory.activeProvider(now: now))
+    }
+
     func testPasteGuideNamesWhereToPaste() {
         let korean = MapHomeLanguage.korean
         XCTAssertTrue(AssistantPasteGuide.message(.pickle, korean).contains("피클 채팅창에 붙여 넣고"))

@@ -203,12 +203,12 @@ const STYLE = "body{font:16px/1.5 -apple-system,system-ui,sans-serif;max-width:4
 
 function htmlPage(title, body, { status = 200, headers = {} } = {}) {
   const html = `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">`
-    + `<meta name="referrer" content="no-referrer"><title>${escapeHtml(title)}</title><style>${STYLE}</style></head><body>${body}</body></html>`;
+    + `<meta name="referrer" content="same-origin"><title>${escapeHtml(title)}</title><style>${STYLE}</style></head><body>${body}</body></html>`;
   return new Response(html, {
     status,
     headers: {
       "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "content-security-policy": AUTHORIZE_CSP,
-      "x-frame-options": "DENY", "referrer-policy": "no-referrer", "x-content-type-options": "nosniff", ...headers,
+      "x-frame-options": "DENY", "referrer-policy": "same-origin", "x-content-type-options": "nosniff", ...headers,
     },
   });
 }
@@ -281,7 +281,9 @@ export async function authorizeRoute(request, env, now) {
   if (request.method !== "POST") return json({ error: "method_not_allowed" }, 405);
   if (await limited(env.POST_LIMIT, request)) return errorPage("잠시 뒤 다시 해 주세요. · Too many attempts, try again in a minute.", 429, { "retry-after": "60" });
   const origin = request.headers.get("origin");
-  if (origin && origin !== url.origin) return errorPage("보안 확인에 실패했어요. · Security check failed.", 403);
+  // CLD1111A01: no-referrer였을 때 브라우저가 우리 화면의 POST에도 `Origin: null`을 보내 승인이 막혔다.
+  // 이제 same-origin이고, 앱 안 브라우저가 여전히 null을 보내면 아래 CSRF 쿠키 확인에 맡긴다.
+  if (origin && origin !== "null" && origin !== url.origin) return errorPage("보안 확인에 실패했어요. · Security check failed.", 403);
   const text = await readText(request, 8 * 1024);
   if (text.error) return text.error;
   const form = new URLSearchParams(text.value);

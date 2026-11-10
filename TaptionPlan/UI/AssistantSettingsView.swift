@@ -47,6 +47,10 @@ struct AssistantSettingsView: View {
             }
             .navigationTitle(language.text("AI 연결", "AI connections"))
             .navigationBarTitleDisplayMode(.inline)
+            .onChange(of: selected) { _, next in
+                // 목록으로 돌아오면 단계를 잊는다. 다시 만들어진 화면(다른 앱에 다녀옴)은 아래 task에서 되살린다.
+                if next == nil { AssistantGuideMemory.shared.end() }
+            }
             .navigationDestination(item: $selected) { provider in
                 AssistantProviderView(provider: provider, language: language, store: store)
             }
@@ -54,6 +58,7 @@ struct AssistantSettingsView: View {
                 ToolbarItem(placement: .confirmationAction) { Button(language.text("완료", "Done")) { dismiss() } }
             }
             .task {
+                if selected == nil, let active = AssistantGuideMemory.shared.activeProvider() { selected = active }
                 await AssistantRegistration.ensureReady()
                 relayKey = TripRelay.key
                 await store.reload()

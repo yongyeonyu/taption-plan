@@ -507,6 +507,7 @@
 		A1A1110A0300000000000006 /* AssistantActivityExtras.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000006 /* AssistantActivityExtras.swift */; };
 		A1A1110A0300000000000007 /* AssistantPINSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000007 /* AssistantPINSheet.swift */; };
 		A1M1110A0200000000000001 /* MemoAIEdits.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1M1110A0200000000000001 /* MemoAIEdits.swift */; };
+		A1G1111A0100000000000001 /* AssistantConnectGuide.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1G1111A0100000000000001 /* AssistantConnectGuide.swift */; };
 		A1M1110A0300000000000001 /* MapHomeDefaultBubblePool.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1M1110A0300000000000001 /* MapHomeDefaultBubblePool.swift */; };
 		A1A1110A0300000000000008 /* AssistantConnectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000008 /* AssistantConnectView.swift */; };
 		A1A1110A0300000000000009 /* FirstRunAIConnectPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000009 /* FirstRunAIConnectPage.swift */; };
@@ -1198,6 +1199,7 @@
 		F1A1110A0300000000000006 /* AssistantActivityExtras.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantActivityExtras.swift; sourceTree = "<group>"; };
 		F1A1110A0300000000000007 /* AssistantPINSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantPINSheet.swift; sourceTree = "<group>"; };
 		F1M1110A0200000000000001 /* MemoAIEdits.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoAIEdits.swift; sourceTree = "<group>"; };
+		F1G1111A0100000000000001 /* AssistantConnectGuide.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantConnectGuide.swift; sourceTree = "<group>"; };
 		F1M1110A0300000000000001 /* MapHomeDefaultBubblePool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeDefaultBubblePool.swift; sourceTree = "<group>"; };
 		F1A1110A0300000000000008 /* AssistantConnectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantConnectView.swift; sourceTree = "<group>"; };
 		F1A1110A0300000000000009 /* FirstRunAIConnectPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstRunAIConnectPage.swift; sourceTree = "<group>"; };
@@ -1696,6 +1698,7 @@
 				F1A1110A0300000000000006 /* AssistantActivityExtras.swift */,
 				F1A1110A0300000000000007 /* AssistantPINSheet.swift */,
 				F1M1110A0200000000000001 /* MemoAIEdits.swift */,
+				F1G1111A0100000000000001 /* AssistantConnectGuide.swift */,
 				F1M1110A0300000000000001 /* MapHomeDefaultBubblePool.swift */,
 				F1A1110A0300000000000008 /* AssistantConnectView.swift */,
 				F1A1110A0300000000000009 /* FirstRunAIConnectPage.swift */,
@@ -2623,6 +2626,7 @@
 				A1A1110A0300000000000006 /* AssistantActivityExtras.swift in Sources */,
 				A1A1110A0300000000000007 /* AssistantPINSheet.swift in Sources */,
 				A1M1110A0200000000000001 /* MemoAIEdits.swift in Sources */,
+				A1G1111A0100000000000001 /* AssistantConnectGuide.swift in Sources */,
 				A1M1110A0300000000000001 /* MapHomeDefaultBubblePool.swift in Sources */,
 				A1A1110A0300000000000008 /* AssistantConnectView.swift in Sources */,
 				A1A1110A0300000000000009 /* FirstRunAIConnectPage.swift in Sources */,
