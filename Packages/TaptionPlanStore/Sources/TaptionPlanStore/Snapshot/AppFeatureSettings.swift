@@ -16,7 +16,11 @@ public struct AppFeatureSettings: Codable, Hashable, Sendable {
     public var sensorCollectionProfile: SensorCollectionProfile
     public var gpsLoggingPreferences: GPSLoggingPreferences
     /// 장소 도감의 여행 일정(PLB1109A03). 옛 저장본에는 없다.
-    public var travelPlanStops: [TravelPlanStop]
+    /// 비어 있으면 저장하지 않는다. 예전 기록·백업과 저장 바이트를 똑같이 둔다(TRP1110A02).
+    @OmitIfEmpty public var travelPlanStops: [TravelPlanStop]
+    /// AI로 만든 여행의 시간 일정과 현지 시차(TRP1110A01). 시간 막대를 현지 벽시계로 그린다.
+    /// 없으면 nil이라 저장하지 않는다(예전 기록·백업 바이트를 그대로 둔다).
+    public var travelTripItems: [TravelTripItem]?
     /// Optional user-selected overrides for the automatic major
     /// categories. Missing values intentionally keep the shared defaults.
     public var mapCategoryColors: [String: String]
@@ -216,6 +220,7 @@ public struct AppFeatureSettings: Codable, Hashable, Sendable {
         case sensorCollectionProfile
         case gpsLoggingPreferences
         case travelPlanStops
+        case travelTripItems
         case mapCategoryColors
         case mapUserActivityCategories
         case mapDisplayStyle
@@ -293,6 +298,7 @@ public struct AppFeatureSettings: Codable, Hashable, Sendable {
         sensorCollectionProfile = defaults.sensorCollectionProfile
         gpsLoggingPreferences = defaults.gpsLoggingPreferences
         travelPlanStops = try values.decodeIfPresent([TravelPlanStop].self, forKey: .travelPlanStops) ?? []
+        travelTripItems = try values.decodeIfPresent([TravelTripItem].self, forKey: .travelTripItems)
         mapCategoryColors = Self.normalizedMapCategoryColors(
             try values.decodeIfPresent(
                 [String: String].self,
@@ -539,6 +545,31 @@ public struct CalendarTitleDetail: Codable, Hashable, Sendable {
     }
 }
 
+/// AI로 만든 여행의 일정 한 칸. 시작·끝마다 그곳의 UTC 차(초)를 함께 둔다.
+public struct TravelTripItem: Codable, Hashable, Sendable {
+    public var tripID: String
+    public var itemID: String
+    public var kind: String
+    public var title: String
+    public var start: Date
+    public var end: Date
+    public var startOffsetSeconds: Int
+    public var endOffsetSeconds: Int
+    public var planID: UUID?
+
+    public init(tripID: String, itemID: String, kind: String, title: String, start: Date, end: Date, startOffsetSeconds: Int, endOffsetSeconds: Int, planID: UUID?) {
+        self.tripID = tripID
+        self.itemID = itemID
+        self.kind = kind
+        self.title = title
+        self.start = start
+        self.end = end
+        self.startOffsetSeconds = startOffsetSeconds
+        self.endOffsetSeconds = endOffsetSeconds
+        self.planID = planID
+    }
+}
+
 /// 여행 일정 한 곳. 하루 안에서 `order` 순서로 잇는다.
 public struct TravelPlanStop: Codable, Hashable, Sendable, Identifiable {
     public var id: UUID
@@ -548,8 +579,11 @@ public struct TravelPlanStop: Codable, Hashable, Sendable, Identifiable {
     public var day: Date
     public var order: Int
     public var planID: UUID?
+    /// AI로 만든 여행의 번호와 항목 번호(TRP1110A01). 같은 여행을 다시 붙이면 이 번호로 찾아 바꾼다. 예전 기록에는 없다.
+    public var tripID: String?
+    public var itemID: String?
 
-    public init(id: UUID, title: String, latitude: Double, longitude: Double, day: Date, order: Int, planID: UUID?) {
+    public init(id: UUID, title: String, latitude: Double, longitude: Double, day: Date, order: Int, planID: UUID?, tripID: String? = nil, itemID: String? = nil) {
         self.id = id
         self.title = title
         self.latitude = latitude
@@ -557,5 +591,38 @@ public struct TravelPlanStop: Codable, Hashable, Sendable, Identifiable {
         self.day = day
         self.order = order
         self.planID = planID
+        self.tripID = tripID
+        self.itemID = itemID
+    }
+}
+
+/// 비어 있으면 키째 저장하지 않는 배열. 나중에 더한 항목이 예전 저장 바이트를 바꾸지 않게 한다.
+@propertyWrapper
+public struct OmitIfEmpty<Element: Codable & Hashable & Sendable>: Codable, Hashable, Sendable {
+    public var wrappedValue: [Element]
+
+    public init(wrappedValue: [Element]) {
+        self.wrappedValue = wrappedValue
+    }
+
+    public init(from decoder: Decoder) throws {
+        wrappedValue = try [Element](from: decoder)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        try wrappedValue.encode(to: encoder)
+    }
+}
+
+extension KeyedEncodingContainer {
+    mutating func encode<Element>(_ value: OmitIfEmpty<Element>, forKey key: Key) throws {
+        guard !value.wrappedValue.isEmpty else { return }
+        try encode(value.wrappedValue, forKey: key)
+    }
+}
+
+extension KeyedDecodingContainer {
+    func decode<Element>(_ type: OmitIfEmpty<Element>.Type, forKey key: Key) throws -> OmitIfEmpty<Element> {
+        OmitIfEmpty(wrappedValue: try decodeIfPresent([Element].self, forKey: key) ?? [])
     }
 }
