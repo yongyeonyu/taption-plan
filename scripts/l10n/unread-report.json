@@ -166,32 +166,26 @@
   },
   {
    "file": "TaptionPlan/UI/LedgerMemoPanel.swift",
-   "line": 137,
+   "line": 148,
    "ko": "entry.amount",
    "en": "entry.currency"
   },
   {
    "file": "TaptionPlan/UI/LedgerMemoPanel.swift",
-   "line": 183,
+   "line": 179,
    "ko": "entry.amount",
    "en": "entry.currency"
   },
   {
    "file": "TaptionPlan/UI/LedgerMemoPanel.swift",
-   "line": 190,
+   "line": 225,
+   "ko": "entry.amount",
+   "en": "entry.currency"
+  },
+  {
+   "file": "TaptionPlan/UI/LedgerMemoPanel.swift",
+   "line": 232,
    "ko": "item.1",
-   "en": "language"
-  },
-  {
-   "file": "TaptionPlan/UI/LedgerMemoPanel.swift",
-   "line": 89,
-   "ko": "month",
-   "en": "language"
-  },
-  {
-   "file": "TaptionPlan/UI/LedgerMemoPanel.swift",
-   "line": 89,
-   "ko": "today",
    "en": "language"
   },
   {
@@ -670,25 +664,25 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeView+Stickman.swift",
-   "line": 244,
+   "line": 255,
    "ko": "location.kind.title",
    "en": "location.kind.englishTitle"
   },
   {
    "file": "TaptionPlan/UI/MapHomeView+Stickman.swift",
-   "line": 270,
+   "line": 281,
    "ko": "destination.koreanName",
    "en": "destination.englishName"
   },
   {
    "file": "TaptionPlan/UI/MapHomeView+Stickman.swift",
-   "line": 347,
+   "line": 358,
    "ko": "FloorLabel.korean(place.floor ?? 1)",
    "en": "FloorLabel.english(place.floor ?? 1)"
   },
   {
    "file": "TaptionPlan/UI/MapHomeView+Stickman.swift",
-   "line": 355,
+   "line": 366,
    "ko": "destination.koreanName",
    "en": "destination.englishName"
   },

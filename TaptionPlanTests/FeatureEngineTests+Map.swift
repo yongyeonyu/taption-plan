@@ -32,6 +32,21 @@ extension FeatureEngineTests {
         XCTAssertNil(MapHomeFogRevealPolicy.currentLocationPoint(stickmanPoint: nil, viewportPoint: nil))
     }
 
+    /// LDT1111A01: 메모 위 지출 줄은 오늘이면 「오늘 · 이번 달」, 다른 날이면 그 날짜와 그 달이다.
+    func testLedgerMemoHeaderUsesTodayAndThisMonth() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        let now = calendar.date(from: DateComponents(year: 2026, month: 11, day: 11, hour: 12))!
+        let today = LedgerMemoHeader.periodLabels(day: now, now: now, language: .korean, calendar: calendar)
+        XCTAssertEqual(today.day, "오늘")
+        XCTAssertEqual(today.month, "이번 달")
+        let yesterday = LedgerMemoHeader.periodLabels(day: now.addingTimeInterval(-86_400), now: now, language: .korean, calendar: calendar)
+        XCTAssertNotEqual(yesterday.day, "오늘")
+        XCTAssertEqual(yesterday.month, "이번 달")
+        let lastMonth = LedgerMemoHeader.periodLabels(day: now.addingTimeInterval(-86_400 * 20), now: now, language: .korean, calendar: calendar)
+        XCTAssertNotEqual(lastMonth.month, "이번 달")
+    }
+
     /// 표시 > 카운터: 연봉은 설정 화면을 열고, 나머지 일곱 개(하루 지출 포함, SPD1111A01)는 켜고 끄기만 한다.
     func testCounterKindsMapToDayCategories() {
         XCTAssertEqual(MapHomeCounterKind.allCases.count, 7)

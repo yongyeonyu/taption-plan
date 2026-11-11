@@ -2985,7 +2985,7 @@
    "ko": "{0} 위치 보기",
    "en": "Show {0} location",
    "files": [
-    "MapHomeView+Stickman.swift:361"
+    "MapHomeView+Stickman.swift:372"
    ],
    "args": [
     "name"
@@ -2999,7 +2999,7 @@
    "ko": "{0} 위치 설정",
    "en": "Set {0} location",
    "files": [
-    "MapHomeView+Stickman.swift:363"
+    "MapHomeView+Stickman.swift:374"
    ],
    "args": [
     "name"
@@ -3028,7 +3028,7 @@
    "ko": "{0} 위치 편집",
    "en": "Edit {0} location",
    "files": [
-    "MapHomeView+Stickman.swift:297"
+    "MapHomeView+Stickman.swift:308"
    ],
    "args": [
     "destination.englishName"
@@ -3202,7 +3202,7 @@
    "ko": "{0} 현재 위치 보기",
    "en": "Show {0} location",
    "files": [
-    "MapHomeView+Stickman.swift:357"
+    "MapHomeView+Stickman.swift:368"
    ],
    "args": [
     "name"
@@ -3330,7 +3330,7 @@
    "ko": "{0}건",
    "en": "{0} entries",
    "files": [
-    "LedgerMemoPanel.swift:204"
+    "LedgerMemoPanel.swift:246"
    ],
    "args": [
     "list.count"
@@ -32895,7 +32895,7 @@
    "ko": "거리",
    "en": "Distance",
    "files": [
-    "MapHomeInteractionPolicy.swift:421"
+    "MapHomeInteractionPolicy.swift:455"
    ],
    "args": [],
    "targets": [
@@ -33312,7 +33312,7 @@
    "ko": "걸음",
    "en": "Steps",
    "files": [
-    "MapHomeInteractionPolicy.swift:420",
+    "MapHomeInteractionPolicy.swift:454",
     "SensorCollectionLiveActivity.swift:89",
     "SensorCollectionLiveActivity.swift:302"
    ],
@@ -33339,7 +33339,7 @@
    "ko": "걸음걸이 카운터",
    "en": "Step counter",
    "files": [
-    "MapHomeInteractionPolicy.swift:407"
+    "MapHomeInteractionPolicy.swift:441"
    ],
    "args": [],
    "targets": [
@@ -34540,27 +34540,12 @@
    ]
   },
   {
-   "key": "그날 {0} · 이 달 {1}|Day {0} · Month {1}",
-   "ko": "그날 {0} · 이 달 {1}",
-   "en": "Day {0} · Month {1}",
-   "files": [
-    "LedgerMemoPanel.swift:87"
-   ],
-   "args": [
-    "LedgerMoney.text(today, language: language)",
-    "LedgerMoney.text(month, language: language)"
-   ],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "그날 지출이 없어요. 메모에 「커피 4500」처럼 쓰면 들어가요.|No spending that day. Write a memo like \"Coffee 4500\" to add one.",
    "ko": "그날 지출이 없어요. 메모에 「커피 4500」처럼 쓰면 들어가요.",
    "en": "No spending that day. Write a memo like \"Coffee 4500\" to add one.",
    "files": [
-    "LedgerMemoPanel.swift:103",
-    "LedgerMemoPanel.swift:203"
+    "LedgerMemoPanel.swift:117",
+    "LedgerMemoPanel.swift:245"
    ],
    "args": [],
    "targets": [
@@ -38077,7 +38062,7 @@
    "ko": "메모 {0}",
    "en": "Memo {0}",
    "files": [
-    "MapHomeView+Memos.swift:304"
+    "MapHomeView+Memos.swift:308"
    ],
    "args": [
     "memo.text"
@@ -39931,7 +39916,7 @@
    "ko": "분류별",
    "en": "By category",
    "files": [
-    "LedgerMemoPanel.swift:200"
+    "LedgerMemoPanel.swift:242"
    ],
    "args": [],
    "targets": [
@@ -40327,7 +40312,7 @@
    "en": "User location",
    "files": [
     "MapHomeView+Menu.swift:124",
-    "MapHomeView+Stickman.swift:132"
+    "MapHomeView+Stickman.swift:143"
    ],
    "args": [],
    "targets": [
@@ -40894,7 +40879,7 @@
    "en": "New memo",
    "files": [
     "MapHomeStickerEditor.swift:569",
-    "MapHomeView+Memos.swift:317"
+    "MapHomeView+Memos.swift:321"
    ],
    "args": [],
    "targets": [
@@ -40954,7 +40939,7 @@
    "ko": "새 지도 메모",
    "en": "New map memo",
    "files": [
-    "MapHomeView+Memos.swift:440"
+    "MapHomeView+Memos.swift:444"
    ],
    "args": [],
    "targets": [
@@ -41518,7 +41503,7 @@
    "ko": "설정됨",
    "en": "Set",
    "files": [
-    "MapHomeView+Stickman.swift:347"
+    "MapHomeView+Stickman.swift:358"
    ],
    "args": [],
    "targets": [
@@ -42584,7 +42569,7 @@
    "ko": "시간순",
    "en": "By time",
    "files": [
-    "LedgerMemoPanel.swift:201"
+    "LedgerMemoPanel.swift:243"
    ],
    "args": [],
    "targets": [
@@ -43975,7 +43960,7 @@
    "files": [
     "MapHomeAlarm.swift:669",
     "MapHomeAlarm.swift:670",
-    "MapHomeInteractionPolicy.swift:422"
+    "MapHomeInteractionPolicy.swift:456"
    ],
    "args": [],
    "targets": [
@@ -43990,7 +43975,7 @@
    "ko": "업무시간 카운터",
    "en": "Work time counter",
    "files": [
-    "MapHomeInteractionPolicy.swift:409"
+    "MapHomeInteractionPolicy.swift:443"
    ],
    "args": [],
    "targets": [
@@ -44138,7 +44123,7 @@
    "ko": "여기에 땅 이어 붙이기",
    "en": "Attach land here",
    "files": [
-    "MapHomeView+Stickman.swift:95"
+    "MapHomeView+Stickman.swift:106"
    ],
    "args": [],
    "targets": [
@@ -44150,7 +44135,7 @@
    "ko": "여기에 메모",
    "en": "Memo here",
    "files": [
-    "MapHomeView+Memos.swift:401"
+    "MapHomeView+Memos.swift:405"
    ],
    "args": [],
    "targets": [
@@ -45877,7 +45862,7 @@
    "ko": "오늘 기록을 쌓아보세요",
    "en": "Build today's log",
    "files": [
-    "MapHomeView+Stickman.swift:390"
+    "MapHomeView+Stickman.swift:401"
    ],
    "args": [],
    "targets": [
@@ -45913,7 +45898,7 @@
    "ko": "오늘 성장 조건 충족",
    "en": "Today's growth goal met",
    "files": [
-    "MapHomeView+Stickman.swift:392"
+    "MapHomeView+Stickman.swift:403"
    ],
    "args": [],
    "targets": [
@@ -46038,10 +46023,12 @@
    "ko": "오늘",
    "en": "Today",
    "files": [
+    "LedgerMemoPanel.swift:95",
     "WatchTodayCards.swift:79"
    ],
    "args": [],
    "targets": [
+    "TaptionPlan",
     "TaptionPlanWatch"
    ]
   },
@@ -46420,7 +46407,7 @@
    "ko": "운동",
    "en": "Exercise",
    "files": [
-    "MapHomeInteractionPolicy.swift:425",
+    "MapHomeInteractionPolicy.swift:459",
     "MapHomeLocationPresentation.swift:310",
     "AppModel+WidgetLiveActivity.swift:108"
    ],
@@ -46449,7 +46436,7 @@
    "ko": "운동시간 카운터",
    "en": "Exercise time counter",
    "files": [
-    "MapHomeInteractionPolicy.swift:412"
+    "MapHomeInteractionPolicy.swift:446"
    ],
    "args": [],
    "targets": [
@@ -47018,7 +47005,7 @@
    "ko": "위치 확인 중",
    "en": "Locating",
    "files": [
-    "MapHomeView+Stickman.swift:338"
+    "MapHomeView+Stickman.swift:349"
    ],
    "args": [],
    "targets": [
@@ -47867,7 +47854,7 @@
    "ko": "이 위치로",
    "en": "Use this spot",
    "files": [
-    "MapHomeView+Memos.swift:400"
+    "MapHomeView+Memos.swift:404"
    ],
    "args": [],
    "targets": [
@@ -48129,7 +48116,7 @@
    "ko": "이동거리 카운터",
    "en": "Distance counter",
    "files": [
-    "MapHomeInteractionPolicy.swift:408"
+    "MapHomeInteractionPolicy.swift:442"
    ],
    "args": [],
    "targets": [
@@ -48432,6 +48419,18 @@
    "en": "Month total",
    "files": [
     "MapHomeCalendarSheet.swift:407"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "이번 달|This month",
+   "ko": "이번 달",
+   "en": "This month",
+   "files": [
+    "LedgerMemoPanel.swift:98"
    ],
    "args": [],
    "targets": [
@@ -49937,7 +49936,7 @@
    "ko": "접기",
    "en": "Collapse",
    "files": [
-    "MapHomeView+Memos.swift:235"
+    "MapHomeView+Memos.swift:239"
    ],
    "args": [],
    "targets": [
@@ -50941,7 +50940,7 @@
    "ko": "지도를 움직여 핀 위치를 맞추세요",
    "en": "Move the map to place the pin",
    "files": [
-    "MapHomeView+Memos.swift:363"
+    "MapHomeView+Memos.swift:367"
    ],
    "args": [],
    "targets": [
@@ -51050,7 +51049,7 @@
    "en": "Long-pressed map location",
    "files": [
     "MapHomeView+Menu.swift:125",
-    "MapHomeView+Stickman.swift:133"
+    "MapHomeView+Stickman.swift:144"
    ],
    "args": [],
    "targets": [
@@ -51204,7 +51203,7 @@
    "en": "Spent",
    "files": [
     "LedgerSheet.swift:209",
-    "MapHomeInteractionPolicy.swift:426"
+    "MapHomeInteractionPolicy.swift:460"
    ],
    "args": [],
    "targets": [
@@ -51508,7 +51507,7 @@
    "files": [
     "FirstRunGuideStage.swift:647",
     "FirstRunTutorialGuides.swift:694",
-    "MapHomeView+Stickman.swift:370"
+    "MapHomeView+Stickman.swift:381"
    ],
    "args": [],
    "targets": [
@@ -52096,7 +52095,7 @@
    "ko": "취미",
    "en": "Hobby",
    "files": [
-    "MapHomeInteractionPolicy.swift:424",
+    "MapHomeInteractionPolicy.swift:458",
     "MapHomeLocationPresentation.swift:291",
     "AppModel+WidgetLiveActivity.swift:104"
    ],
@@ -52113,7 +52112,7 @@
    "ko": "취미시간 카운터",
    "en": "Hobby time counter",
    "files": [
-    "MapHomeInteractionPolicy.swift:411"
+    "MapHomeInteractionPolicy.swift:445"
    ],
    "args": [],
    "targets": [
@@ -53556,7 +53555,7 @@
    "ko": "하루 지출 카운터",
    "en": "Daily spending counter",
    "files": [
-    "MapHomeInteractionPolicy.swift:413"
+    "MapHomeInteractionPolicy.swift:447"
    ],
    "args": [],
    "targets": [
@@ -53568,7 +53567,7 @@
    "ko": "하루 지출",
    "en": "Daily spending",
    "files": [
-    "LedgerMemoPanel.swift:197"
+    "LedgerMemoPanel.swift:239"
    ],
    "args": [],
    "targets": [
@@ -53731,7 +53730,7 @@
    "ko": "학습",
    "en": "Study",
    "files": [
-    "MapHomeInteractionPolicy.swift:423"
+    "MapHomeInteractionPolicy.swift:457"
    ],
    "args": [],
    "targets": [
@@ -53743,7 +53742,7 @@
    "ko": "학습시간 카운터",
    "en": "Study time counter",
    "files": [
-    "MapHomeInteractionPolicy.swift:410"
+    "MapHomeInteractionPolicy.swift:444"
    ],
    "args": [],
    "targets": [
@@ -54373,8 +54372,8 @@
    "ko": "현재 위치로 설정",
    "en": "Set from current location",
    "files": [
-    "MapHomeView+Stickman.swift:344",
-    "MapHomeView+Stickman.swift:349"
+    "MapHomeView+Stickman.swift:355",
+    "MapHomeView+Stickman.swift:360"
    ],
    "args": [],
    "targets": [
@@ -54558,7 +54557,7 @@
    "ko": "화랑이 카운터 보이기·숨기기",
    "en": "Show or hide counters",
    "files": [
-    "MapHomeView+Stickman.swift:215"
+    "MapHomeView+Stickman.swift:226"
    ],
    "args": [],
    "targets": [

@@ -227,6 +227,10 @@ extension MapHomeView {
             if let legacy = nearbyScheduleMemo {
                 scheduleMemoPreview(legacy)
             }
+            // 「전체」에는 메모로 넣지 않은 그날 지출도 보인다(LDT1111A01).
+            if memoLedgerFilter == .all {
+                LedgerDayCards(language: language, day: model.selectedDate, onlyUnlinked: true)
+            }
             if panelMemos.count > 3 {
                 Button {
                     withAnimation(.snappy) { queueExpanded.toggle() }

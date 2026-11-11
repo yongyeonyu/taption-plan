@@ -60,10 +60,10 @@ struct LedgerMemoHeader: View {
                     Spacer(minLength: 0)
                     Image(systemName: "chevron.right").foregroundStyle(Color.tpSecondary)
                 }
-                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
                 .foregroundStyle(Color.tpInk)
                 .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+                .padding(.vertical, 7)
                 .mapHomeGlass(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
             .buttonStyle(.plain)
@@ -84,38 +84,80 @@ struct LedgerMemoHeader: View {
     private var summary: String {
         let today = LedgerBook.total(book.entries(on: day), .expense)
         let month = LedgerBook.total(book.entries(inMonth: LedgerBook.monthKey(day)), .expense)
-        return language.text(
-            "그날 \(LedgerMoney.text(today, language: language)) · 이 달 \(LedgerMoney.text(month, language: language))",
-            "Day \(LedgerMoney.text(today, language: language)) · Month \(LedgerMoney.text(month, language: language))"
-        )
+        let dayLabel = Self.periodLabels(day: day, now: .now, language: language)
+        return "\(dayLabel.day) \(LedgerMoney.text(today, language: language)) · \(dayLabel.month) \(LedgerMoney.text(month, language: language))"
+    }
+
+    /// 오늘이면 「오늘 · 이번 달」, 다른 날이면 그 날짜와 그 달(대표 지시 2026-11-11, LDT1111A01).
+    static func periodLabels(day: Date, now: Date, language: MapHomeLanguage, calendar: Calendar = .autoupdatingCurrent) -> (day: String, month: String) {
+        let sameMonth = calendar.isDate(day, equalTo: now, toGranularity: .month)
+        let dayText = calendar.isDate(day, inSameDayAs: now)
+            ? language.text("오늘", "Today")
+            : day.formatted(.dateTime.month(.abbreviated).day().locale(language.locale))
+        let monthText = sameMonth
+            ? language.text("이번 달", "This month")
+            : day.formatted(.dateTime.month(.wide).locale(language.locale))
+        return (dayText, monthText)
     }
 }
 
 /// 「지출」로 거르면 그날 가계부 기록을 메모 카드처럼 보인다. 누르면 가계부가 열린다.
+/// 「전체」에서는 메모로 넣지 않은 지출(직접·AI·결제 문자·영수증)만 메모 아래에 붙인다(LDT1111A01).
 struct LedgerDayCards: View {
     let language: MapHomeLanguage
     let day: Date
+    var onlyUnlinked = false
     private var book: LedgerBook { .shared }
 
     var body: some View {
-        let entries = book.entries(on: day).sorted { $0.occurredAt < $1.occurredAt }
-        if entries.isEmpty {
+        let entries = book.entries(on: day)
+            .filter { !onlyUnlinked || $0.memoID == nil }
+            .sorted { $0.occurredAt < $1.occurredAt }
+        if entries.isEmpty, !onlyUnlinked {
             Text(language.text("그날 지출이 없어요. 메모에 「커피 4500」처럼 쓰면 들어가요.", "No spending that day. Write a memo like \"Coffee 4500\" to add one."))
-                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
                 .foregroundStyle(Color.tpSecondary)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 9)
                 .mapHomeGlass(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         ForEach(entries) { entry in
-            Button { LedgerPresenter.shared.isPresented = true } label: {
-                LedgerRow(entry: entry, language: language)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 9)
-                    .mapHomeGlass(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            }
-            .buttonStyle(.plain)
+            Button { LedgerPresenter.shared.isPresented = true } label: { LedgerMemoCard(entry: entry, language: language) }
+                .buttonStyle(.plain)
         }
+    }
+}
+
+/// 메모 카드와 같은 모양의 가계부 기록 한 줄: 동그란 아이콘, 13pt 제목, 11pt 금액·시각.
+struct LedgerMemoCard: View {
+    let entry: LedgerEntry
+    let language: MapHomeLanguage
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: entry.category.symbol)
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))
+                .foregroundStyle(Color.tpAccent)
+                .frame(width: 26, height: 26)
+                .background(Color.white.opacity(0.9), in: Circle())
+            VStack(alignment: .leading, spacing: 3) {
+                Text(entry.title)
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
+                    .foregroundStyle(Color.tpInk)
+                    .lineLimit(2)
+                Text((entry.kind == .expense ? "−" : "+") + LedgerMoney.text(entry.amount, currency: entry.currency, language: language))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
+                    .foregroundStyle(entry.kind == .expense ? Color.tpAccent : Color.green)
+                Text("\(entry.occurredAt.formatted(date: .omitted, time: .shortened)) · \(entry.category.title(language))")
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
+                    .foregroundStyle(Color.tpSecondary)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .mapHomeGlass(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .contentShape(Rectangle())
     }
 }
 
