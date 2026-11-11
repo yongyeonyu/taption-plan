@@ -226,7 +226,7 @@ final class AssistantRelayTests: XCTestCase {
     func testSetupTextNamesEveryRouteAndTheKey() {
         let key = String(repeating: "A", count: 43)
         let text = TripRelay.assistantSetupText(host: "relay.example.com", key: key, timeZone: TimeZone(identifier: "Asia/Seoul")!)
-        for part in ["https://relay.example.com", "Bearer \(key)", "GET /activity", "POST /plan", "POST /command", "addMemo", "addSchedule", "updateActivity", "GET /command/result", "+09:00"] {
+        for part in ["https://relay.example.com", "Bearer \(key)", "GET /activity", "POST /plan", "POST /command", "addMemo", "addSchedule", "updateActivity", "GET /command/result", "+09:00", "GET /polish", "cannot wake you", "every 10 minutes"] {
             XCTAssertTrue(text.contains(part), part)
         }
     }
