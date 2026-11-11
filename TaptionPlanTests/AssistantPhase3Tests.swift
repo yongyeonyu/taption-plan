@@ -742,6 +742,14 @@ final class AssistantPhase3Tests: XCTestCase {
         XCTAssertTrue(setup.contains("https://trip.bokkiyaw.com/mcp and the request header Authorization: Bearer K"))
         XCTAssertTrue(setup.contains("https://trip.bokkiyaw.com/mcp/K"))
         XCTAssertFalse(AssistantAIProvider.cue.usesOAuth)
+        // CUE1111A01: 이미 연결된 Cue는 「열기」(App Store 화면에서 열기), 무료 표시.
+        XCTAssertEqual(AssistantAIProvider.cue.planBadge(.korean), "무료")
+        XCTAssertTrue(AssistantAIProvider.cue.isFreePlan)
+        let connected = AssistantAIProvider.cue.openButton(installed: false, connected: true)
+        XCTAssertTrue(connected.isOpen)
+        XCTAssertEqual(connected.url, AssistantAIProvider.cue.appStoreURL)
+        XCTAssertFalse(AssistantAIProvider.cue.openButton(installed: false, connected: false).isOpen)
+        XCTAssertEqual(AssistantAIProvider.claude.openButton(installed: true, connected: false).url, AssistantAIProvider.claude.appURL)
         XCTAssertEqual(TripRelay.mcpURL(host: "trip.bokkiyaw.com"), "https://trip.bokkiyaw.com/mcp")
         let token = String(repeating: "a", count: 39) + "WXYZ"
         XCTAssertEqual(AssistantCueText.masked(token), "aaaa…WXYZ", "only the ends are shown")

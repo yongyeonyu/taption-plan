@@ -61,6 +61,7 @@ enum AssistantAIProvider: String, CaseIterable, Identifiable, Codable, Sendable 
         case .chatGPT: "chatgpt"
         case .claude: "claude"
         case .gemini: "googlegemini"
+        // Cue(Manus) 스킴은 공개 문서에서 확인하지 못해 두지 않는다. 연결돼 있으면 「열기」로 App Store 화면을 연다(CUE1111A01).
         case .cue, .other: nil
         }
     }
@@ -69,6 +70,13 @@ enum AssistantAIProvider: String, CaseIterable, Identifiable, Codable, Sendable 
 
     /// 설치돼 있으면 앱, 없으면 App Store.
     func destination(installed: Bool) -> URL? { installed ? appURL : appStoreURL }
+
+    /// 「받기」 자리 단추(CUE1111A01). 설치가 확인되거나 이미 연결된 AI는 「열기」다.
+    /// 앱 스킴으로 열 수 없으면 App Store 화면으로 간다(설치된 앱이면 거기서 「열기」).
+    func openButton(installed: Bool, connected: Bool) -> (isOpen: Bool, url: URL?) {
+        guard installed || connected else { return (false, appStoreURL) }
+        return (true, installed ? (appURL ?? appStoreURL) : appStoreURL)
+    }
 
     @MainActor
     var isInstalled: Bool { appURL.map { UIApplication.shared.canOpenURL($0) } ?? false }
@@ -84,11 +92,13 @@ enum AssistantAIProvider: String, CaseIterable, Identifiable, Codable, Sendable 
         // GPT1111A01: 맞춤 GPT(Actions)는 Plus 이상, MCP 커넥터는 Business·Enterprise·Edu(OpenAI 도움말 2026-11-11).
         case .chatGPT: language.text("유료 · 맞춤 GPT는 Plus 이상", "Paid · Custom GPT on Plus+")
         case .gemini: language.text("유료 · API 키 필요", "Paid · API key needed")
-        case .cue, .other: nil
+        // 대표 확인(2026-11-11): Cue는 무료로 연결된다.
+        case .cue: language.text("무료", "Free")
+        case .other: nil
         }
     }
 
-    var isFreePlan: Bool { self == .pickle || self == .claude }
+    var isFreePlan: Bool { self == .pickle || self == .claude || self == .cue }
 
     static func planFootnote(_ language: MapHomeLanguage) -> String {
         language.text("요금제 조건은 각 서비스 사정에 따라 바뀔 수 있어요.", "Plan requirements may change at each service's discretion.")

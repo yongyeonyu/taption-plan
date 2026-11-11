@@ -83,8 +83,9 @@ struct AssistantProviderRow: View {
             }
             HStack {
                 if provider.appStoreURL != nil {
-                    Button(installed ? language.text("열기", "Open") : language.text("받기", "Get")) {
-                        if let url = provider.destination(installed: installed) { openURL(url) }
+                    let open = provider.openButton(installed: installed, connected: isConnected)
+                    Button(open.isOpen ? language.text("열기", "Open") : language.text("받기", "Get")) {
+                        if let url = open.url { openURL(url) }
                     }
                     .accessibilityIdentifier("assistantGet.\(provider.rawValue)")
                 }

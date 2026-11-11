@@ -2,6 +2,12 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## CUE1111A01 · AI 연결의 Cue 「열기」·「무료」 (2026-11-11)
+
+- 대표 화면(11:04): Cue를 이미 받았는데 「받기」로 보였고, Cue는 무료로 연결된다. Cue(Manus) 앱 스킴은 공개 자료와 manus.im의 apple-app-site-association에서 찾지 못했다. 확인 안 된 딥 링크는 두지 않는다는 기존 결정에 따라 스킴은 넣지 않았다.
+- 고침: 설치가 확인되거나 이미 연결된 AI는 「열기」를 보인다. 앱 스킴으로 열 수 있으면 앱을, 없으면 App Store 화면을 연다(설치된 앱이면 App Store에 「열기」가 있다). Cue에 「무료」 표시를 더했다.
+- 아이폰 11 실기기: 앱 Debug 빌드와 `AssistantPhase3Tests` 35건 실패 0(`build/validation/CUE1111A01/iphone11.xcresult`). l10n 점검 실패 0. 화면은 기기에서 보지 않았다.
+
 ## PBH1111A01 · 장소 도감 머리 고정 (2026-11-11)
 
 - 대표 화면(10:52): 빨간 선 위(제목·장소 등록 요청·닫기·「찍은 도장 · 남은 곳」)를 고정 머리로. 머리를 ScrollView 밖 VStack 위로 옮기고, 나라·지역 고르기 줄부터 스크롤된다.
