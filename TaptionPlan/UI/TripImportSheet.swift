@@ -180,6 +180,8 @@ struct MapHomeTripImportSheet: View {
     @State private var pasteGuide: TripPasteGuide?
     @State private var pendingPasteGuide: TripPasteGuide?
     @State private var isResolving = false
+    /// AI 좌표가 지도 검색과 멀리 다른 일정(TRP1110A01).
+    @State private var mismatches: [String: TripImportCoordinateCheck.Mismatch] = [:]
     @State private var isApplying = false
     @State private var applyMessage: String?
 
@@ -383,6 +385,17 @@ struct MapHomeTripImportSheet: View {
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.caption), weight: .semibold))
                         .foregroundStyle(.orange)
                 }
+                if let mismatch = mismatches[item.id] {
+                    HStack(spacing: 8) {
+                        Text(language.text("AI 위치가 지도 검색과 \(distanceText(mismatch.meters)) 달라요", "AI location is \(distanceText(mismatch.meters)) from the map search"))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.caption), weight: .semibold))
+                            .foregroundStyle(.orange)
+                        Button(language.text("검색 위치로", "Use search")) { useSearchedCoordinate(item.id) }
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.caption), weight: .semibold))
+                            .buttonStyle(.bordered)
+                            .controlSize(.mini)
+                    }
+                }
                 if item.coordinate == nil {
                     Text(language.text("위치를 찾지 못해 지도에는 표시되지 않아요", "Location not found; not shown on the map"))
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.caption), weight: .semibold))
@@ -404,6 +417,11 @@ struct MapHomeTripImportSheet: View {
         case let .tightMove(need): language.text("이동 시간이 빠듯해요(약 \(need)분 필요)", "Tight move (about \(need) min needed)")
         case let .afterFlight(need): language.text("도착 뒤 입국·짐 찾기로 \(need)분은 두세요", "Allow \(need) min after landing for arrival")
         }
+    }
+
+    private func distanceText(_ meters: Int) -> String {
+        Measurement(value: Double(meters) / 1_000, unit: UnitLength.kilometers)
+            .formatted(.measurement(width: .abbreviated, usage: .asProvided, numberFormatStyle: .number.precision(.fractionLength(1))))
     }
 
     /// 현지 시각으로 보여 준다(방콕 도착은 방콕 시각).
@@ -498,7 +516,11 @@ struct MapHomeTripImportSheet: View {
             message = nil
             plan = parsed
             diff = model.tripImportDiff(for: parsed)
-            Task { @MainActor in await resolveMissingPlaces() }
+            mismatches = [:]
+            Task { @MainActor in
+                await resolveMissingPlaces()
+                await checkAICoordinates()
+            }
         case .failure(let error):
             plan = nil
             message = describe(error)
@@ -519,6 +541,27 @@ struct MapHomeTripImportSheet: View {
         }
         if plan?.tripID == current.tripID { plan = current }
         isResolving = false
+    }
+
+    /// AI가 준 좌표를 이름 검색과 견준다. 검색은 그 좌표 둘레 20km 안에서 한다.
+    private func checkAICoordinates() async {
+        guard let current = plan else { return }
+        var found: [String: TripImportCoordinateCheck.Mismatch] = [:]
+        for item in current.items.filter(TripImportCoordinateCheck.shouldCheck).prefix(TripImportCoordinateCheck.checkLimit) {
+            guard let ai = item.coordinate else { continue }
+            let request = MKLocalSearch.Request()
+            request.naturalLanguageQuery = item.placeName
+            request.region = MKCoordinateRegion(center: ai, latitudinalMeters: 20_000, longitudinalMeters: 20_000)
+            let searched = try? await MKLocalSearch(request: request).start().mapItems.first?.placemark.coordinate
+            if let mismatch = TripImportCoordinateCheck.mismatch(ai: ai, searched: searched) { found[item.id] = mismatch }
+        }
+        if plan?.tripID == current.tripID { mismatches = found }
+    }
+
+    private func useSearchedCoordinate(_ itemID: String) {
+        guard let mismatch = mismatches[itemID], let index = plan?.items.firstIndex(where: { $0.id == itemID }) else { return }
+        plan?.items[index].coordinate = mismatch.searched
+        mismatches[itemID] = nil
     }
 
     private func describe(_ error: TripImportError) -> String {

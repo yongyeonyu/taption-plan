@@ -199,4 +199,22 @@ final class TravelFareAndAirportTests: XCTestCase {
         XCTAssertNil(items.first { $0.id == "s" }?.coordinate, "항공편이 아니면 공항표로 채우지 않는다")
         XCTAssertNil(TravelAirports.coordinate("XXX"))
     }
+
+    /// TRP1110A01: AI 좌표가 지도 검색과 1km 넘게 다르면 알리고, 항공편·잠은 확인하지 않는다.
+    func testCoordinateMismatchNeedsMoreThanOneKilometre() throws {
+        let ai = CLLocationCoordinate2D(latitude: 37.5796, longitude: 126.9770)
+        XCTAssertNil(TripImportCoordinateCheck.mismatch(ai: ai, searched: CLLocationCoordinate2D(latitude: 37.5830, longitude: 126.9770)))
+        XCTAssertNil(TripImportCoordinateCheck.mismatch(ai: ai, searched: nil))
+        let far = try XCTUnwrap(TripImportCoordinateCheck.mismatch(ai: ai, searched: CLLocationCoordinate2D(latitude: 37.5900, longitude: 126.9770)))
+        XCTAssertEqual(Double(far.meters), 1_156, accuracy: 10)
+        let json = #"""
+        {"format":"bokki-trip","version":1,"tripId":"t","title":"t","items":[
+        {"id":"a","type":"sight","title":"경복궁","start":"2026-12-02T09:00+09:00","place":{"name":"경복궁","lat":37.5796,"lng":126.977}},
+        {"id":"b","type":"sleep","title":"잠","start":"2026-12-02T23:00+09:00","place":{"name":"호텔","lat":37.56,"lng":126.98}},
+        {"id":"c","type":"meal","title":"점심","start":"2026-12-02T12:00+09:00"}
+        ]}
+        """#
+        let items = try TripImportParser.parse(json).get().items
+        XCTAssertEqual(items.filter(TripImportCoordinateCheck.shouldCheck).map(\.id), ["a"])
+    }
 }

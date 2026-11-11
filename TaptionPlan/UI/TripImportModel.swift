@@ -278,3 +278,32 @@ enum TripImportTimingCheck {
         return max(guess, next.travelMinutes ?? 0)
     }
 }
+
+/// AI 좌표 확인(TRP1110A01 결정 2). AI가 준 좌표를 같은 이름의 지도 검색 결과와 견줘 1km 넘게 다르면 알린다.
+/// 지점이 여럿인 가게처럼 검색이 틀릴 수도 있으니 바꾸지 않고, 사용자가 「검색 위치로」를 고른다.
+enum TripImportCoordinateCheck {
+    struct Mismatch: Equatable {
+        let meters: Int
+        let searched: CLLocationCoordinate2D
+
+        static func == (lhs: Self, rhs: Self) -> Bool {
+            lhs.meters == rhs.meters && lhs.searched.latitude == rhs.searched.latitude && lhs.searched.longitude == rhs.searched.longitude
+        }
+    }
+
+    static let thresholdMeters = 1_000.0
+    /// 한 번에 확인하는 일정 수. 지도 검색 한도를 넘지 않게 한다.
+    static let checkLimit = 25
+
+    static func mismatch(ai: CLLocationCoordinate2D, searched: CLLocationCoordinate2D?) -> Mismatch? {
+        guard let searched else { return nil }
+        let meters = CLLocation(latitude: ai.latitude, longitude: ai.longitude)
+            .distance(from: CLLocation(latitude: searched.latitude, longitude: searched.longitude))
+        return meters > thresholdMeters ? Mismatch(meters: Int(meters.rounded()), searched: searched) : nil
+    }
+
+    /// 항공편·잠·이동처럼 이름이 장소가 아닌 일정은 확인하지 않는다.
+    static func shouldCheck(_ item: TripImportItem) -> Bool {
+        item.coordinate != nil && ![.flight, .sleep, .transfer, .rest].contains(item.kind)
+    }
+}
