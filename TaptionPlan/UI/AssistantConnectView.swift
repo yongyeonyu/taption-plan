@@ -132,6 +132,7 @@ struct AssistantProviderView: View {
 
     var body: some View {
         Form {
+            Group {
             Section {
                 LabeledContent(language.text("상태", "Status"), value: store.isConnected(provider) ? language.text("연결됨", "Connected") : language.text("안 됨", "Not connected"))
                 if let badge = provider.planBadge(language) { LabeledContent(language.text("요금제", "Plan"), value: badge) }
@@ -155,6 +156,9 @@ struct AssistantProviderView: View {
                 }
             }
         }
+            .listRowBackground(Color.tpSurface)
+        }
+        .tpListStyle()
         .navigationTitle(provider.title(language))
         .navigationBarTitleDisplayMode(.inline)
         .disabled(isWorking)

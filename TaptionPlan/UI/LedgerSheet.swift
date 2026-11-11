@@ -559,6 +559,7 @@ struct LedgerShortcutGuide: View {
     var body: some View {
         NavigationStack {
             List {
+                Group {
                 Section {
                     ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
                         Label { Text(step) } icon: { Text(verbatim: "\(index + 1)").font(.taptionStyle(.headline)) }
@@ -572,7 +573,10 @@ struct LedgerShortcutGuide: View {
                     } label: { Label(language.text("단축어 앱 열기", "Open Shortcuts"), systemImage: "square.2.layers.3d") }
                     ShortcutsLink()
                 }
+                }
+                .listRowBackground(Color.tpSurface)
             }
+            .tpListStyle()
             .navigationTitle(language.text("결제 문자 자동으로 넣기", "Add payment texts automatically"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button(language.text("완료", "Done")) { dismiss() } } }

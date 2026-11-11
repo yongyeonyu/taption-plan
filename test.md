@@ -4,6 +4,7 @@
 
 ## TFB1111A04 · TestFlight 308 (2026-11-11)
 
+- AIS1111A01 (2026-11-11): AI 연결 메뉴·하위 화면 7곳(AI 연결, AI별 연결, 연결 추가, 할 수 있는 일, 한 일, 승인 확인, PIN)과 결제 문자 안내에 앱 공통 `tpListStyle()`·줄 배경 `tpSurface`. 아이폰 11 AssistantPhase3Tests·AssistantRelayTests 48건 실패 0(`build/validation/AIS1111A01/iphone11.log`). Debug 전용 `-aiConnectPreview`로 연 화면을 시뮬레이터(BOKKI-Preview)에서 캡처해 크림 배경·밝은 줄·강조색 확인(`build/validation/AIS1111A01/sim-ai-connect.png`). 아이폰 11은 네트워크 연결이라 화면 캡처를 못 함. 하위 화면들은 캡처하지 않음.
 - TFB1111A06 (2026-11-11): TestFlight 309(`release.sh --yes --request-id TFB1111A06`): 처리 `VALID`, 내부 그룹 연결·테스터 노출 확인(`build/validation/TFB1111A06/testflight-report.json`, 로그 `build/validation/tfb-309.log`). 들어간 것: 범위 고르기·고양이 위치·오늘/이번 달·전체 지출·고속도로·다리·터널 표지·여권 넘기기 보강·말풍선 10자/좌우·결제 문자 안내. 말풍선 「…」 접기(BBL1111A02)·AI 시점 안내(AIT1111A01)는 아카이브 뒤라 빠짐. 외부 그룹은 아직 안 올림.
 - AIT1111A01 (2026-11-11): AI 연결 안내·MCP 안내에 「서버는 AI를 깨우지 못함 → `/polish`·명령 결과를 10분마다·대화 시작 때 확인, 앱 반영 시점(대화 중 약 10초·아니면 5분 안·앱 열 때 바로), 아직 안 보여도 다시 보내지 말 것」. 서버 시험 86건 실패 0(새 안내 검사 포함), 아이폰 11 AssistantRelayTests·ReviewFixTests·CommandEditTests 57건 실패 0(`build/validation/AIT1111A01/iphone11.log`). 서버 배포는 자동 권한 판정에 막혀 아직 안 함(대표 허락 필요) — 실서버 MCP 안내는 아직 옛 문구. 앱 연결 문구는 다음 빌드부터.
 - BBL1111A02 (2026-11-11): 말풍선을 누르면 「…」로 접고 다시 누르면 펼침(지도 탭이 말풍선 자리로 판정, 지도 화면 원점 보정). 아이폰 11 AssistantReviewFixTests 30건 실패 0(`build/validation/BBL1111A02/iphone11.log`). 빌드 309에는 들어가지 않음(309는 이 변경 전에 아카이브). 실제 탭은 기기 화면에서 직접 보지 않음.

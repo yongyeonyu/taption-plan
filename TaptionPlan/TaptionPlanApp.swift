@@ -71,6 +71,12 @@ struct TaptionPlanApp: App {
                 MapHomeStampPreviewHost()
             } else if ProcessInfo.processInfo.arguments.contains("-inkPreview") {
                 MapHomeInkPreviewHost()
+            } else if ProcessInfo.processInfo.arguments.contains("-aiConnectPreview") {
+                // AI 연결 화면 모양 확인용(AIS1111A01, Debug 전용).
+                TaptionFontRoot {
+                    AssistantSettingsView(model: AppModel(), language: .korean)
+                        .font(.taption(size: 17))
+                }
             } else {
                 TaptionFontRoot { AppShellView() }
                     .refreshesSupportedOrientations()

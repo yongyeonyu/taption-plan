@@ -30,6 +30,7 @@ struct AssistantPINSheet: View {
     var body: some View {
         NavigationStack {
             Form {
+            Group {
                 Section {
                     if AssistantAppPassword.isSet() {
                         field(language.text("앱 비밀번호 6자리", "6-digit app password"), $password)
@@ -47,6 +48,9 @@ struct AssistantPINSheet: View {
                     }
                 }
             }
+            .listRowBackground(Color.tpSurface)
+        }
+        .tpListStyle()
             .disabled(isWorking)
             .navigationTitle(language.text("앱 비밀번호", "App password"))
             .navigationBarTitleDisplayMode(.inline)

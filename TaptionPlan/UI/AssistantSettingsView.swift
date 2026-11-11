@@ -21,6 +21,7 @@ struct AssistantSettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+            Group {
                 if needsReconnect { reconnectSection }
                 AssistantProviderListSection(language: language, store: store) { selected = $0 }
                 if let relayKey, let host = TripRelay.host {
@@ -45,6 +46,9 @@ struct AssistantSettingsView: View {
                 }
                 keySection
             }
+            .listRowBackground(Color.tpSurface)
+        }
+        .tpListStyle()
             .navigationTitle(language.text("AI 연결", "AI connections"))
             .navigationBarTitleDisplayMode(.inline)
             .onChange(of: selected) { _, next in

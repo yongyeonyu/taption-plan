@@ -240,6 +240,7 @@ struct AssistantConnectionForm: View {
     var body: some View {
         NavigationStack {
             Form {
+            Group {
                 Section {
                     TextField(language.text("이름 (예: 피클, ChatGPT)", "Name (e.g. Pickle, ChatGPT)"), text: $name)
                     if name.count > AssistantKeyLabels.maxLength {
@@ -258,6 +259,9 @@ struct AssistantConnectionForm: View {
                     Text(language.text("이름은 이 기기에만 저장돼요.", "The name is stored only on this device."))
                 }
             }
+            .listRowBackground(Color.tpSurface)
+        }
+        .tpListStyle()
             .navigationTitle(language.text("AI 연결 추가", "Add AI connection"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -283,6 +287,7 @@ struct AssistantActionTogglesView: View {
 
     var body: some View {
         Form {
+            Group {
             Section {
                 ForEach(AssistantActionKind.allCases) { kind in
                     Toggle(kind.title(language), isOn: Binding(
@@ -300,6 +305,9 @@ struct AssistantActionTogglesView: View {
                 ))
             }
         }
+            .listRowBackground(Color.tpSurface)
+        }
+        .tpListStyle()
         .navigationTitle(language.text("AI가 할 수 있는 일", "What the AI can do"))
     }
 }
@@ -314,11 +322,15 @@ struct AssistantActionLogView: View {
 
     var body: some View {
         List {
+            Group {
             if entries.isEmpty {
                 Text(language.text("아직 AI가 한 일이 없어요", "The AI hasn't done anything yet")).foregroundStyle(.secondary)
             }
             ForEach(entries) { row($0) }
         }
+            .listRowBackground(Color.tpSurface)
+        }
+        .tpListStyle()
         .navigationTitle(language.text("AI가 한 일", "What the AI did"))
         .onAppear { entries = AssistantActionLog.load() }
     }
@@ -385,6 +397,7 @@ struct AssistantConfirmHost: View {
         let total = AssistantBatchPolicy.changeCount(batch, plans: model.snapshot.plans)
         return NavigationStack {
             List {
+            Group {
                 Section {
                     Text(language.text(
                         "AI 비서가 기존 항목 \(total)개를 한꺼번에 바꾸려고 해요. 반영할까요?",
@@ -402,6 +415,9 @@ struct AssistantConfirmHost: View {
                                        "You can still undo each one in What the AI did. If you close this, you'll be asked again next time."))
                 }
             }
+            .listRowBackground(Color.tpSurface)
+        }
+        .tpListStyle()
             .navigationTitle(language.text("AI 비서 요청 확인", "Review AI assistant requests"))
             .navigationBarTitleDisplayMode(.inline)
         }
