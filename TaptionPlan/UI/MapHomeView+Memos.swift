@@ -201,7 +201,9 @@ extension MapHomeView {
     var memoListPanel: some View {
         VStack(alignment: .leading, spacing: 8) {
             LedgerMemoHeader(filter: $memoLedgerFilter, linkedMemoIDs: $memoLedgerLinkedIDs, language: language, day: model.selectedDate)
-            if memoLedgerFilter == .expenses {
+            if memoLedgerFilter == .ai {
+                AITaskPanel(language: language)
+            } else if memoLedgerFilter == .expenses {
                 LedgerDayCards(language: language, day: model.selectedDate)
             } else {
             // 큐는 3개를 항상 보여 주고, 넘치면 펼침 버튼으로 스크롤 목록을 연다.

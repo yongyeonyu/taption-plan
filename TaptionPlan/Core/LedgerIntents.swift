@@ -17,11 +17,22 @@ struct AddPaymentMessageIntent: AppIntent {
         // 묻지 않고 넣는 길이라 결제 시각까지 읽힌 문자만 넣는다.
         let language = MapHomeLanguage.current
         guard let draft = LedgerMessageParser.parse(text), draft.occurredAt != nil else {
+            // 광고·안내가 아니면 연결된 AI에게 맡긴다(AIQ1111A01). 번호는 가려서 보낸다.
+            if !LedgerMessageParser.isNotice(text), AITaskQueue.enqueue(.paymentText, text: text, day: .now) {
+                await AITaskQueue.upload()
+                return .result(dialog: IntentDialog(stringLiteral: language.text(
+                    "결제 문자를 읽지 못해 AI에게 확인을 맡겼어요.", "Couldn't read the payment text, so it was sent to your AI to check."
+                )))
+            }
             return .result(dialog: IntentDialog(stringLiteral: language.text(
                 "결제 문자를 읽지 못했어요. 가계부에서 직접 넣어 주세요.", "Couldn't read the payment text. Add it in the ledger yourself."
             )))
         }
         let saved = await LedgerBook.shared.save(LedgerMessageParser.entry(draft))
+        // 앱이 먼저 넣고, 연결된 AI가 가게 이름·분류·취소 연결을 다듬는다(AIQ1111A01, 대표 결정).
+        if AITaskQueue.enqueue(.paymentText, text: text, day: saved.occurredAt, context: ["entryId": saved.id.uuidString]) {
+            await AITaskQueue.upload()
+        }
         let money = LedgerMoney.text(saved.amount, currency: saved.currency, language: language)
         return .result(dialog: IntentDialog(stringLiteral: language.text(
             "\(saved.title) \(money)을 가계부에 넣었어요.", "Added \(saved.title) \(money) to the ledger."

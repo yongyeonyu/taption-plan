@@ -112,6 +112,25 @@ extension AppModel {
             result.ledgerEntryID = saved.id
             result.ledgerEntry = saved
             return result
+        case let .updateExpense(entryID, change):
+            await preferences.ledger.load()
+            guard let before = preferences.ledger.entries.first(where: { $0.id == entryID }) else { return .rejected("no_record") }
+            var result = AssistantEditResult(before: "\(before.title) \(LedgerMoney.text(before.amount, currency: before.currency, language: language))")
+            result.ledgerBefore = before
+            if change.delete {
+                await preferences.ledger.delete(entryID)
+                result.after = language.text("지움", "Deleted")
+                return result
+            }
+            var value = change.applied(to: before)
+            if value.amount != before.amount || value.currency != before.currency {
+                value.amountKRW = preferences.ledger.krw(value.amount, currency: value.currency)
+            }
+            let saved = await preferences.ledger.save(value)
+            result.after = "\(saved.title) \(LedgerMoney.text(saved.amount, currency: saved.currency, language: language))"
+            result.ledgerEntryID = saved.id
+            result.ledgerEntry = saved
+            return result
         default:
             return .rejected("invalid")
         }

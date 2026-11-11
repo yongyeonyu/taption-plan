@@ -174,7 +174,7 @@ struct LedgerSheet: View {
             HStack {
                 PasteButton(payloadType: String.self) { strings in
                     let text = strings.joined(separator: "\n")
-                    Task { @MainActor in fill(LedgerMessageParser.parse(text), source: .message) }
+                    Task { @MainActor in fill(LedgerMessageParser.parse(text), source: .message, raw: text) }
                 }
                 .labelStyle(.titleAndIcon)
                 Spacer()
@@ -192,8 +192,14 @@ struct LedgerSheet: View {
         }
     }
 
-    private func fill(_ parsed: LedgerMessageParser.Draft?, source: LedgerEntry.Source) {
+    private func fill(_ parsed: LedgerMessageParser.Draft?, source: LedgerEntry.Source, raw: String? = nil) {
         guard let parsed else {
+            // 읽힌 글이 있으면 연결된 AI에게 맡긴다(AIQ1111A01).
+            let kind: AITaskQueue.Kind = source == .receipt ? .receiptText : .paymentText
+            if let raw, !raw.isEmpty, !LedgerMessageParser.isNotice(raw), AITaskQueue.enqueue(kind, text: raw, day: .now) {
+                captureNote = language.text("읽지 못해 AI에게 확인을 맡겼어요. 메모 › AI에서 볼 수 있어요.", "Couldn't read it, so it was sent to your AI. See Memo › AI.")
+                return
+            }
             captureNote = language.text("읽지 못했어요. + 로 직접 넣어 주세요.", "Couldn't read it. Tap + to enter it yourself.")
             return
         }
@@ -207,7 +213,8 @@ struct LedgerSheet: View {
         defer { receiptItem = nil }
         guard let data = try? await item.loadTransferable(type: Data.self),
               let image = UIImage(data: data)?.cgImage else { return fill(nil, source: .receipt) }
-        fill(LedgerReceiptReader.draft(await LedgerReceiptReader.recognize(image)), source: .receipt)
+        let lines = await LedgerReceiptReader.recognize(image)
+        fill(LedgerReceiptReader.draft(lines), source: .receipt, raw: lines.joined(separator: "\n"))
     }
 
     private var summarySection: some View {

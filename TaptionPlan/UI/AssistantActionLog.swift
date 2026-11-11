@@ -26,6 +26,8 @@ struct AssistantEditDelta: Codable, Equatable, Sendable {
     var ledgerEntryID: UUID?
     /// 더할 때의 기록. 그 뒤 사용자가 고쳤으면 되돌리지 않는다.
     var ledgerEntry: LedgerEntry?
+    /// 고치거나 지우기 전 기록(AIQ1111A01). 있으면 되돌릴 때 지우지 않고 이것으로 돌린다.
+    var ledgerBefore: LedgerEntry?
 
     var isEmpty: Bool {
         plans.isEmpty && memos.isEmpty && actuals.isEmpty && corrections.isEmpty
@@ -252,7 +254,11 @@ extension AppModel {
         // 되돌린 메모의 금액대로 가계부도 맞춘다(AI가 고친 메모를 되돌리면 금액도 돌아온다).
         resyncMemoLedger(changed: Set(entry.delta.memos.map(\.id)).subtracting([entry.delta.ledgerEntry?.memoID].compactMap { $0 }))
         if let bubbleID = entry.delta.bubbleID { AssistantBubbleStore.remove(bubbleID, file: preferences.bubbleFile) }
-        if let ledgerID = entry.delta.ledgerEntryID { await preferences.ledger.delete(ledgerID) }
+        if let before = entry.delta.ledgerBefore {
+            await preferences.ledger.save(before)
+        } else if let ledgerID = entry.delta.ledgerEntryID {
+            await preferences.ledger.delete(ledgerID)
+        }
         return true
     }
 }

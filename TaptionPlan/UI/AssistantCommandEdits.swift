@@ -11,6 +11,8 @@ enum AssistantActionKind: String, CaseIterable, Identifiable, Codable, Sendable 
     case addTripStop, updateTripStop, deleteTripStop, setTripItemStatus
     case updateSleep, setLanguage, setMapStyle, setDisplayOption, setBubble
     case addExpense
+    // AIQ1111A01: 앱이 넣은 결제 문자 기록을 AI가 다듬는다.
+    case updateExpense
 
     var id: String { rawValue }
 
@@ -39,6 +41,7 @@ enum AssistantActionKind: String, CaseIterable, Identifiable, Codable, Sendable 
         case .setDisplayOption: language.text("지도 표시 켜고 끄기", "Toggle map display")
         case .setBubble: language.text("AI 말풍선", "AI speech bubbles")
         case .addExpense: language.text("가계부 기록 더하기", "Add ledger entries")
+        case .updateExpense: language.text("가계부 기록 고치기", "Edit ledger entries")
         }
     }
 }
@@ -112,6 +115,7 @@ extension AssistantCommand.Action {
         case .setDisplayOption: .setDisplayOption
         case .setBubble: .setBubble
         case .addExpense: .addExpense
+        case .updateExpense: .updateExpense
         }
     }
 
@@ -159,6 +163,8 @@ struct AssistantEditResult: Equatable, Sendable {
     /// 더한 가계부 기록(LED1110A01). 되돌리면 지운다.
     var ledgerEntryID: UUID?
     var ledgerEntry: LedgerEntry?
+    /// 고치거나 지우기 전 가계부 기록(AIQ1111A01). 되돌리면 이것으로 돌린다.
+    var ledgerBefore: LedgerEntry?
 
     static func rejected(_ reason: String) -> Self { Self(reason: reason) }
 }

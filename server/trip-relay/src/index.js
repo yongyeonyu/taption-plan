@@ -105,6 +105,17 @@ const ROUTES = {
     POST: ["master", withBody(store.savePolish)],
     DELETE: ["master", (request, ctx) => store.deletePolish(ctx)],
   },
+  "/tasks": {
+    GET: ["read", (request, ctx) => store.readTasks(ctx)],
+    POST: ["master", withBody(store.saveTasks)],
+    DELETE: ["master", (request, ctx) => store.deleteFinishedTasks(ctx)],
+  },
+  "/tasks/claim": {
+    POST: ["read", (request, ctx) => store.claimTasks(ctx)],
+  },
+  "/tasks/result": {
+    POST: ["read", withBody(store.finishTask)],
+  },
   "/command/result": {
     POST: ["master", withBody(store.saveResults)],
     GET: ["read", (request, ctx) => store.readResults(ctx)],

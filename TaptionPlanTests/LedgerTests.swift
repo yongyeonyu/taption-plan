@@ -116,6 +116,42 @@ final class LedgerTests: XCTestCase {
         XCTAssertEqual(book.entries.first?.amount, 9_500)
     }
 
+    /// AIQ1111A01: 앱이 넣은 결제 문자 기록을 AI가 updateExpense로 다듬고, 「AI가 한 일」에서 되돌리면 원래대로 돌아온다.
+    func testUpdateExpenseParsesAppliesAndUndoesToTheAppEntry() async throws {
+        let id = UUID()
+        let batch = try parse(["action": "updateExpense", "entryId": id.uuidString, "title": "스타벅스 강남", "category": "cafe"])
+        guard case let .updateExpense(entryID, change) = batch.commands.first?.action else { return XCTFail("\(batch)") }
+        XCTAssertEqual(entryID, id)
+        XCTAssertEqual(change.title, "스타벅스 강남")
+        XCTAssertEqual(change.category, .cafe)
+        XCTAssertNil(change.amount)
+        XCTAssertTrue(try parse(["action": "updateExpense", "entryId": id.uuidString]).commands.isEmpty, "nothing to change")
+
+        let model = AppModel(repository: InMemoryPlanRepository(snapshot: .empty), cloudSyncService: nil)
+        await model.bootstrap()
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: "LedgerUpdate-\(UUID())"))
+        var preferences = AssistantPreferenceStore.test(defaults)
+        let book = LedgerBook(store: { nil })
+        preferences.ledger = book
+        let original = await book.save(LedgerEntry(id: id, occurredAt: at(9), amount: 12_000, title: "스타벅스", source: .message))
+        let result = await model.applyAssistantAction(.updateExpense(entryID: id, change: change), preferences: preferences)
+        XCTAssertEqual(book.entries.first?.title, "스타벅스 강남")
+        XCTAssertEqual(book.entries.first?.amount, 12_000, "fields not given stay")
+        var delta = AssistantEditDelta.difference(from: model.snapshot, to: model.snapshot, actualIDs: [])
+        delta.ledgerEntryID = result.ledgerEntryID
+        delta.ledgerEntry = result.ledgerEntry
+        delta.ledgerBefore = result.ledgerBefore
+        let undone = await model.undoAssistantEntry(
+            AssistantLogEntry(commandID: "u", kind: .updateExpense, appliedAt: .now, before: "", after: result.after, delta: delta),
+            preferences: preferences
+        )
+        XCTAssertTrue(undone)
+        XCTAssertEqual(book.entries, [original], "undo restores the entry the app added")
+
+        let missing = await model.applyAssistantAction(.updateExpense(entryID: UUID(), change: change), preferences: preferences)
+        XCTAssertEqual(missing.reason, "no_record")
+    }
+
     func testPromoLinesLocalePrefillAndResetDuringLoad() async {
         let now = at(20)
         let promo = LedgerMessageParser.parse("현대카드 승인 홍*동 15,000원 일시불 11/10 13:00 김밥천국 누적300,000원 청구할인 혜택 이벤트", now: now, calendar: calendar)
@@ -515,5 +551,40 @@ final class BackupArrivalProbeTests: XCTestCase {
             print("BACKUP_PROBE \(file.name) size=\(file.size) modified=\(formatter.string(from: file.modifiedAt)) downloaded=\(file.isDownloaded)")
         }
         print("BACKUP_PROBE count=\(files.count)")
+    }
+}
+
+/// AI 확인 목록(AIQ1111A01): 원문 가리기, 서버 목록 읽기, 연결이 없으면 넣지 않기.
+@MainActor
+final class AITaskQueueTests: XCTestCase {
+    func testMaskHidesCardAccountAndPhoneNumbersButKeepsAmountsDatesAndTimes() {
+        let text = "[Web발신] 신한 1234-5678-9012-3456 승인 12,000원 11/11 08:12 계좌 110-123-456789 문의 010-1234-5678 2026-11-11"
+        let masked = AITaskQueue.mask(text)
+        XCTAssertTrue(masked.contains("****-****-****-3456"), masked)
+        XCTAssertTrue(masked.contains("***-***-**6789"), masked)
+        XCTAssertTrue(masked.contains("***-****-5678"), masked)
+        XCTAssertTrue(masked.contains("12,000원"), masked)
+        XCTAssertTrue(masked.contains("11/11 08:12"), masked)
+        XCTAssertTrue(masked.contains("2026-11-11"), masked)
+    }
+
+    func testEnqueueNeedsAConnectionAndStoresMaskedText() throws {
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: "AITaskQueueTests-\(UUID())"))
+        XCTAssertFalse(AITaskQueue.enqueue(.paymentText, text: "카드 1234567890123 결제", defaults: defaults))
+        XCTAssertTrue(AITaskQueue.pendingUploads(defaults).isEmpty)
+        defaults.set(["key": "피클"], forKey: AssistantKeyLabels.labelsKey)
+        XCTAssertTrue(AITaskQueue.enqueue(.paymentText, text: "카드 1234567890123 결제", defaults: defaults))
+        XCTAssertEqual(AITaskQueue.pendingUploads(defaults).map(\.text), ["카드 *********0123 결제"])
+    }
+
+    func testServerTaskListDecodes() throws {
+        let json = #"{"format":"bokki-tasks","version":1,"tasks":[{"id":"a","kind":"payment_text","status":"done","result":"스타벅스 12,000원","createdAt":"2026-11-11T05:00:00.123Z","updatedAt":"2026-11-11T05:01:00.000Z"},{"id":"b","kind":"fare_check","text":"교대→마곡나루","status":"processing"}]}"#
+        struct Envelope: Decodable { var tasks: [AITaskQueue.Task] }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601withFractionalOrPlain
+        let tasks = try decoder.decode(Envelope.self, from: Data(json.utf8)).tasks
+        XCTAssertEqual(tasks.map(\.status), [.done, .processing])
+        XCTAssertEqual(tasks.first?.result, "스타벅스 12,000원")
+        XCTAssertNotNil(tasks.first?.createdAt)
     }
 }

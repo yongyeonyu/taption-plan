@@ -176,6 +176,8 @@ export const COMMAND_FIELDS = {
   setBubble: ["date", "start", "end", "text", "kind"],
   // LED1110A01: 가계부 지출·수입. amount는 그 통화의 금액(양수), kind는 expense 기본 | income.
   addExpense: ["amount", "currency", "title", "category", "date", "time", "kind", "payer"],
+  // AIQ1111A01: 앱이 넣은 가계부 기록 고치기·지우기. 고칠 칸이 하나 이상이거나 delete.
+  updateExpense: ["entryId", "amount", "currency", "title", "category", "kind", "delete"],
   setLanguage: ["language"],
   setTheme: ["theme"],
   setMapStyle: ["mapStyle"],
@@ -215,6 +217,12 @@ export function isCommand(value) {
         && optional(v.currency, (c) => /^[A-Z]{3}$/.test(c)) && nonEmpty(v.title, 60)
         && optional(v.category, (c) => EXPENSE_CATEGORIES.includes(c)) && optional(v.kind, (k) => k === "expense" || k === "income")
         && optional(v.payer, (p) => nonEmpty(p, 30)) && optional(v.date, isDate) && optional(v.time, isTime);
+    case "updateExpense":
+      return targetID(v.entryId) && optional(v.amount, (a) => typeof a === "number" && Number.isFinite(a) && a > 0 && a <= 1e10)
+        && optional(v.currency, (c) => /^[A-Z]{3}$/.test(c)) && optional(v.title, (t) => nonEmpty(t, 60))
+        && optional(v.category, (c) => EXPENSE_CATEGORIES.includes(c)) && optional(v.kind, (k) => k === "expense" || k === "income")
+        && optional(v.delete, (d) => d === true)
+        && (v.delete === true || ["amount", "currency", "title", "category", "kind"].some((k) => given(v[k])));
     case "addSchedule":
       return nonEmpty(v.title, 200) && isInstant(v.start)
         && optional(v.end, (e) => isInstant(e) && Date.parse(e) > Date.parse(v.start)) && optional(v.note, note);
@@ -289,4 +297,22 @@ export function isCommandResults(value) {
   return Array.isArray(value?.results) && value.results.length >= 1 && value.results.length <= QUEUE_LIMIT
     && value.results.every((r) => itemID(r?.id) && (r.status === "applied" || r.status === "rejected")
       && optional(r.reason, (v) => typeof v === "string" && v.length <= 300));
+}
+
+// AI 확인 목록(AIQ1111A01). 앱이 처리하지 못했거나 불분명한 것을 올리고, AI가 가져가 처리한 뒤 완료·실패를 남긴다.
+export const TASK_KINDS = ["payment_text", "receipt_text", "memo_polish", "route_check", "fare_check", "merge_review", "stay_place", "other"];
+export const TASK_STATUSES = ["waiting", "processing", "done", "failed"];
+export const TASK_LIMIT = 100;
+const contextOK = (v) => !given(v) || (typeof v === "object" && !Array.isArray(v) && JSON.stringify(v).length <= 2000);
+export function isTaskUpload(value) {
+  return value?.format === "bokki-tasks" && value?.version === 1 && Array.isArray(value?.tasks)
+    && value.tasks.length >= 1 && value.tasks.length <= 20
+    && new Set(value.tasks.map((t) => t?.id)).size === value.tasks.length
+    && value.tasks.every((t) => t && targetID(t.id) && TASK_KINDS.includes(t.kind) && typeof t.text === "string"
+      && codePoints(t.text.trim()) >= 1 && codePoints(t.text) <= 2000 && optional(t.date, isDate) && contextOK(t.context));
+}
+export function isTaskResult(value) {
+  return targetID(value?.id) && ["done", "failed"].includes(value?.status)
+    && optional(value.result, (v) => typeof v === "string" && codePoints(v) <= 300)
+    && optional(value.reason, (v) => typeof v === "string" && codePoints(v) <= 200);
 }

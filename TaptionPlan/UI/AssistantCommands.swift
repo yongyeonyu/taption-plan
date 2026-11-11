@@ -35,6 +35,8 @@ struct AssistantCommand: Identifiable, Equatable, Sendable {
         case setBubble(start: Date, end: Date, text: String, kind: AssistantBubble.Kind = .routine)
         /// 가계부 기록 하나(LED1110A01). 되돌리면 지운다.
         case addExpense(LedgerEntry)
+        /// AIQ1111A01: 있는 가계부 기록 고치기·지우기. nil인 칸은 그대로 둔다.
+        case updateExpense(entryID: UUID, change: AssistantExpenseChange)
     }
 
     let id: String
@@ -85,6 +87,8 @@ enum AssistantCommandParser {
         let kind: String?
         // LED1110A01: addExpense.
         let amount: Double?, currency: String?, category: String?, payer: String?
+        // AIQ1111A01: updateExpense.
+        let entryId: String?, delete: Bool?
     }
 
     /// `{"commands":[...]}`를 읽는다. 서버와 같은 규칙으로 다시 본다.
@@ -310,7 +314,7 @@ struct AssistantCommandOutcome: Equatable, Sendable {
         case .updateActivity, .hideRecord, .mergeRecords, .updateRecordTime, .updateSleep: edits += 1
         case .setLanguage, .setMapStyle, .setDisplayOption: settings += 1
         case .setBubble: bubbles += 1
-        case .addExpense: ledger += 1
+        case .addExpense, .updateExpense: ledger += 1
         }
     }
 
@@ -419,6 +423,7 @@ extension AppModel {
         delta.bubbleID = result.bubbleID
         delta.ledgerEntryID = result.ledgerEntryID
         delta.ledgerEntry = result.ledgerEntry
+        delta.ledgerBefore = result.ledgerBefore
         return AssistantLogEntry(
             commandID: command.id, kind: command.action.kind, appliedAt: .now,
             before: result.before, after: result.after, delta: delta,

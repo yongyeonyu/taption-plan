@@ -82,6 +82,8 @@ extension AssistantCommandParser {
             return .setBubble(start: start, end: end, text: text, kind: kind)
         case "addExpense":
             return expense(raw, calendar: calendar)
+        case "updateExpense":
+            return expenseChange(raw)
         default:
             return settingAction(raw)
         }
@@ -160,6 +162,54 @@ extension AssistantCommandParser {
             occurredAt: at, amount: amount, currency: currency, kind: kind, category: category,
             title: title, payer: clean(raw.payer, max: 30), note: clean(raw.note, max: 200), source: .assistant
         ))
+    }
+
+    /// updateExpense(AIQ1111A01): 고칠 칸이 하나라도 있거나 지우기여야 한다. 서버와 같은 규칙.
+    static func expenseChange(_ raw: Raw) -> AssistantCommand.Action? {
+        guard let id = raw.entryId.flatMap(UUID.init(uuidString:)) else { return nil }
+        var change = AssistantExpenseChange(delete: raw.delete == true)
+        if let amount = raw.amount {
+            guard amount.isFinite, amount > 0, amount <= 1e10 else { return nil }
+            change.amount = amount
+        }
+        if let currency = raw.currency?.uppercased() {
+            guard currency.count == 3, currency.allSatisfy({ $0.isASCII && $0.isLetter }) else { return nil }
+            change.currency = currency
+        }
+        if raw.title != nil {
+            guard let title = clean(raw.title, max: 60) else { return nil }
+            change.title = title
+        }
+        if let name = raw.category {
+            guard let value = LedgerCategory(rawValue: name) else { return nil }
+            change.category = value
+        }
+        if let name = raw.kind {
+            guard let value = LedgerEntry.Kind(rawValue: name) else { return nil }
+            change.kind = value
+        }
+        guard change.delete || change != AssistantExpenseChange() else { return nil }
+        return .updateExpense(entryID: id, change: change)
+    }
+}
+
+/// AI가 고치는 가계부 칸(AIQ1111A01). nil인 칸은 그대로 둔다.
+struct AssistantExpenseChange: Equatable, Sendable {
+    var delete = false
+    var amount: Double?
+    var currency: String?
+    var title: String?
+    var category: LedgerCategory?
+    var kind: LedgerEntry.Kind?
+
+    func applied(to entry: LedgerEntry) -> LedgerEntry {
+        var value = entry
+        if let amount { value.amount = amount }
+        if let currency { value.currency = currency }
+        if let title { value.title = title }
+        if let category { value.category = category }
+        if let kind { value.kind = kind }
+        return value
     }
 }
 

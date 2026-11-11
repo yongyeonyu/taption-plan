@@ -3,7 +3,7 @@ import SwiftUI
 
 /// 메모 목록의 거르기(LED1111A03): 전체 · 메모 · 지출.
 enum LedgerMemoFilter: String, CaseIterable, Identifiable {
-    case all, memos, expenses
+    case all, memos, expenses, ai
     var id: String { rawValue }
 
     func title(_ language: MapHomeLanguage) -> String {
@@ -11,6 +11,8 @@ enum LedgerMemoFilter: String, CaseIterable, Identifiable {
         case .all: language.text("전체", "All")
         case .memos: language.text("메모", "Memos")
         case .expenses: language.text("지출", "Spending")
+        // AI에게 맡긴 일(AIQ1111A01).
+        case .ai: "AI"
         }
     }
 }
