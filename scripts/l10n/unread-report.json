@@ -1,61 +1,7 @@
 {
- "ui": 3643,
+ "ui": 3648,
  "catalog": 461,
  "unread": [
-  {
-   "file": "TaptionPlan/UI/LedgerSummary.swift",
-   "line": 203,
-   "ko": "item.1",
-   "en": "language"
-  },
-  {
-   "file": "TaptionPlan/UI/LedgerSummary.swift",
-   "line": 219,
-   "ko": "entry.amountKRW ?? 0",
-   "en": "language"
-  },
-  {
-   "file": "TaptionPlan/UI/LedgerSummary.swift",
-   "line": 234,
-   "ko": "line.1",
-   "en": "language"
-  },
-  {
-   "file": "TaptionPlan/UI/LedgerSummary.swift",
-   "line": 248,
-   "ko": "value",
-   "en": "language"
-  },
-  {
-   "file": "TaptionPlan/UI/LedgerTripView.swift",
-   "line": 20,
-   "ko": "$0",
-   "en": "language"
-  },
-  {
-   "file": "TaptionPlan/UI/LedgerTripView.swift",
-   "line": 73,
-   "ko": "entry.amount",
-   "en": "entry.currency"
-  },
-  {
-   "file": "TaptionPlan/UI/LedgerTripView.swift",
-   "line": 140,
-   "ko": "amount",
-   "en": "language"
-  },
-  {
-   "file": "TaptionPlan/UI/LedgerTripView.swift",
-   "line": 128,
-   "ko": "transfer.amountKRW",
-   "en": "language"
-  },
-  {
-   "file": "TaptionPlan/UI/LedgerTripView.swift",
-   "line": 128,
-   "ko": "transfer.amountKRW",
-   "en": "language"
-  },
   {
    "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
    "line": 41,
@@ -304,14 +250,68 @@
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 432,
+   "line": 434,
    "ko": "transfer.amountKRW",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 436,
+   "line": 438,
    "ko": "LedgerBook.total(entries, .expense)",
+   "en": "language"
+  },
+  {
+   "file": "TaptionPlan/UI/LedgerSummary.swift",
+   "line": 210,
+   "ko": "item.1",
+   "en": "language"
+  },
+  {
+   "file": "TaptionPlan/UI/LedgerSummary.swift",
+   "line": 226,
+   "ko": "entry.amountKRW ?? 0",
+   "en": "language"
+  },
+  {
+   "file": "TaptionPlan/UI/LedgerSummary.swift",
+   "line": 241,
+   "ko": "line.1",
+   "en": "language"
+  },
+  {
+   "file": "TaptionPlan/UI/LedgerSummary.swift",
+   "line": 255,
+   "ko": "value",
+   "en": "language"
+  },
+  {
+   "file": "TaptionPlan/UI/LedgerTripView.swift",
+   "line": 20,
+   "ko": "$0",
+   "en": "language"
+  },
+  {
+   "file": "TaptionPlan/UI/LedgerTripView.swift",
+   "line": 73,
+   "ko": "entry.amount",
+   "en": "entry.currency"
+  },
+  {
+   "file": "TaptionPlan/UI/LedgerTripView.swift",
+   "line": 141,
+   "ko": "amount",
+   "en": "language"
+  },
+  {
+   "file": "TaptionPlan/UI/LedgerTripView.swift",
+   "line": 129,
+   "ko": "transfer.amountKRW",
+   "en": "language"
+  },
+  {
+   "file": "TaptionPlan/UI/LedgerTripView.swift",
+   "line": 129,
+   "ko": "transfer.amountKRW",
    "en": "language"
   },
   {

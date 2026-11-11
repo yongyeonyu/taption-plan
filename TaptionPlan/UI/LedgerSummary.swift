@@ -135,7 +135,10 @@ struct LedgerSummary: Equatable {
     }
 
     static func splitText(_ entry: LedgerEntry, language: MapHomeLanguage) -> String {
-        guard entry.tripID != nil, entry.transfer == nil, entry.kind == .expense else { return entry.payer ?? "" }
+        guard entry.tripID != nil, entry.transfer == nil else { return entry.payer ?? "" }
+        guard entry.kind == .expense else {
+            return entry.payer.map { language.text("\($0)에게 받음", "from \($0)") } ?? ""
+        }
         let payer = LedgerName.display(entry.payer ?? LedgerTrip.me, language)
         guard let names = entry.shareNames else { return language.text("\(payer) · 다 같이", "\(payer) · everyone") }
         return "\(payer) · " + names.map { LedgerName.display($0, language) }.joined(separator: "·")
@@ -146,10 +149,11 @@ struct LedgerSummary: Equatable {
             (language.text("일상에서 받은 예산", "Budget from daily"), sheet.budget),
             (language.text("내가 낸 돈", "I paid"), -sheet.myPaid),
             (language.text("지금 남은 돈", "Cash left now"), sheet.cashLeft),
-            (language.text("다 같이 쓴 돈(공금)", "Shared spending"), sheet.sharedTotal),
+            (language.text("다 같이 쓴 돈", "Spent together"), sheet.sharedTotal),
             (language.text("내 몫", "My share"), sheet.myCost),
         ]
         if sheet.otherIncome > 0 { lines.insert((language.text("그 밖의 수입", "Other income"), sheet.otherIncome), at: 1) }
+        if sheet.receivedFromOthers > 0 { lines.insert((language.text("친구에게 미리 받은 돈", "Collected from friends"), sheet.receivedFromOthers), at: 1) }
         for transfer in sheet.mine {
             if transfer.to == LedgerTrip.me {
                 lines.append((language.text("\(transfer.from)에게 받을 돈", "From \(transfer.from)"), transfer.amountKRW))

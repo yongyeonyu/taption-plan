@@ -315,6 +315,22 @@ final class LedgerTests: XCTestCase {
         XCTAssertEqual(Set(sheet.mine.map(\.from)), ["A", "B"])
     }
 
+    /// 대표 결정: 공금 없이 n분의 1. 총무로 A에게 미리 받은 돈은 A가 낸 돈으로 친다.
+    func testMoneyCollectedFromAFriendCountsForThem() {
+        var collected = LedgerEntry(occurredAt: at(9, day: 7), amount: 100_000, amountKRW: 100_000, kind: .income, title: "A 경비", payer: "A", tripID: "t1")
+        collected.shareNames = nil
+        var funding = LedgerEntry(occurredAt: at(0, day: 7), amount: 500_000, amountKRW: 500_000, kind: .income, title: "경비 받음", tripID: "t1")
+        funding.transfer = LedgerTransfer(kind: .funding, tripID: "t1")
+        let sheet = LedgerTripMath.sheet(trip(budget: 500_000), entries: [funding, collected, spend(300_000, "숙소")])
+        XCTAssertEqual(sheet.receivedFromOthers, 100_000)
+        XCTAssertEqual(sheet.otherIncome, 0, "a friend's money is not my income")
+        XCTAssertEqual(sheet.balances["A"] ?? 1, 0, accuracy: 0.5, "A already covered their share")
+        XCTAssertEqual(sheet.mine.map(\.from), ["B"])
+        XCTAssertEqual(sheet.receivable, 100_000)
+        XCTAssertEqual(sheet.leftover, 400_000, "budget minus my share")
+        XCTAssertEqual(sheet.cashLeft, 300_000, "500k + 100k from A − 300k paid")
+    }
+
     func testTripBudgetAndSettlementPairs() async {
         let book = LedgerBook(store: { nil })
         await book.saveTrip(trip(budget: 500_000), now: at(12, day: 7), calendar: calendar)

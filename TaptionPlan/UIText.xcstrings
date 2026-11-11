@@ -309,79 +309,79 @@
         }
       }
     },
-    "+ 로 여행 중 쓴 돈을 넣어요. 다 같이 나눈 돈이 공금이에요.|Tap + to add trip spending. Money split by everyone is the shared pot." : {
+    "+ 로 여행 중 쓴 돈을 넣어요. 다 같이 쓴 돈은 n분의 1로 나눠요.|Tap + to add trip spending. Money spent by everyone is split evenly." : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "+ で旅行中に使ったお金を入れます。みんなで割ったお金が共同資金です。"
+            "value" : "+ で旅行中に使ったお金を入れます。みんなで使ったお金はn等分します。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "点 + 记入旅行中的花费。大家平摊的钱就是公款。"
+            "value" : "点 + 记入旅行中的花费。大家一起花的钱按人数平摊。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "點 + 記入旅行中的花費。大家平分的錢就是公款。"
+            "value" : "點 + 記入旅行中的花費。大家一起花的錢按人數平分。"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mit + trägst du Reiseausgaben ein. Was alle teilen, ist die gemeinsame Kasse."
+            "value" : "Mit + trägst du Reiseausgaben ein. Was alle zusammen ausgeben, wird gleich geteilt."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Touchez + pour ajouter les dépenses du voyage. Ce qui est partagé par tous forme la cagnotte."
+            "value" : "Touchez + pour ajouter les dépenses du voyage. Ce qui est dépensé ensemble est partagé à parts égales."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tocca + per inserire le spese del viaggio. Ciò che si divide tra tutti è la cassa comune."
+            "value" : "Tocca + per inserire le spese del viaggio. Ciò che si spende insieme si divide in parti uguali."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Toca + para añadir gastos del viaje. Lo que se reparte entre todos es el bote."
+            "value" : "Toca + para añadir gastos del viaje. Lo gastado entre todos se divide a partes iguales."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Toque em + para lançar gastos da viagem. O que é dividido por todos é a vaquinha."
+            "value" : "Toque em + para lançar gastos da viagem. O que é gasto juntos é dividido igualmente."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Chạm + để ghi chi tiêu chuyến đi. Khoản chia đều cho mọi người là quỹ chung."
+            "value" : "Chạm + để ghi chi tiêu chuyến đi. Tiền tiêu chung chia đều n phần."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ketuk + untuk mencatat pengeluaran perjalanan. Yang dibagi semua orang adalah kas bersama."
+            "value" : "Ketuk + untuk mencatat pengeluaran perjalanan. Uang yang dipakai bersama dibagi rata."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "แตะ + เพื่อลงรายจ่ายระหว่างทริป เงินที่หารกันทุกคนคือเงินกองกลาง"
+            "value" : "แตะ + เพื่อลงรายจ่ายระหว่างทริป เงินที่ใช้ด้วยกันจะหารเท่ากัน"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "यात्रा का खर्च जोड़ने के लिए + दबाएँ। जो सब में बँटा वही साझा कोष है।"
+            "value" : "यात्रा का खर्च जोड़ने के लिए + दबाएँ। साथ में खर्च हुआ पैसा बराबर बँटता है।"
           }
         }
       }
@@ -20941,6 +20941,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "{0} से लेना"
+          }
+        }
+      }
+    },
+    "{0}에게 받음|from {0}" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0}から受け取り"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从 {0} 收到"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "從 {0} 收到"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "von {0}"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "de {0}"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "da {0}"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "de {0}"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "de {0}"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nhận từ {0}"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "dari {0}"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "รับจาก {0}"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} से मिला"
           }
         }
       }
@@ -141912,79 +141989,79 @@
         }
       }
     },
-    "「다 같이」는 n분의 1로 나눠 공금이 돼요. 남이 낸 돈도 넣으면 정산에 들어가요.|\"Everyone\" splits evenly as shared money. Add what others paid too so settling is right." : {
+    "「다 같이」는 n분의 1로 나눠요. 친구가 낸 돈도 넣으면 정산에 들어가요.|\"Everyone\" splits evenly. Add what friends paid too so settling is right." : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "「みんなで」はn等分で共同資金になります。他の人が払った分も入れると精算に入ります。"
+            "value" : "「みんなで」はn等分します。友達が払ったお金も入れると精算に入ります。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "“大家”按人数平摊，成为公款。别人付的钱也记上，结算才准确。"
+            "value" : "“大家”按人数平摊。朋友付的钱也记上就会计入结算。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "「大家」按人數平分，成為公款。別人付的錢也記上，結算才準確。"
+            "value" : "「大家」按人數平分。朋友付的錢也記上就會計入結算。"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "„Alle“ teilt durch n und wird zur gemeinsamen Kasse. Trag auch ein, was andere bezahlt haben."
+            "value" : "„Alle“ teilt gleichmäßig. Trag auch ein, was Freunde bezahlt haben."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "« Tous » divise par n et forme la cagnotte. Ajoutez aussi ce que les autres ont payé."
+            "value" : "« Tous » partage à parts égales. Ajoutez aussi ce que vos amis ont payé."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "«Tutti» divide per n e diventa cassa comune. Inserisci anche ciò che hanno pagato gli altri."
+            "value" : "«Tutti» divide in parti uguali. Inserisci anche ciò che hanno pagato gli amici."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "«Todos» divide entre n y forma el bote. Añade también lo que pagaron otros."
+            "value" : "«Todos» divide a partes iguales. Añade también lo que pagaron tus amigos."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "“Todos” divide por n e vira vaquinha. Lance também o que os outros pagaram."
+            "value" : "“Todos” divide igualmente. Lance também o que os amigos pagaram."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "“Mọi người” chia đều n phần thành quỹ chung. Ghi cả khoản người khác trả để quyết toán đúng."
+            "value" : "“Mọi người” chia đều. Ghi cả tiền bạn bè trả để quyết toán đúng."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "“Semua” dibagi n dan menjadi kas bersama. Catat juga yang dibayar orang lain."
+            "value" : "“Semua” dibagi rata. Catat juga yang dibayar teman agar penyelesaian tepat."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "“ทุกคน” หาร n เป็นเงินกองกลาง ลงเงินที่คนอื่นจ่ายด้วยเพื่อให้เคลียร์ถูก"
+            "value" : "“ทุกคน” หารเท่ากัน ลงเงินที่เพื่อนจ่ายด้วยเพื่อให้เคลียร์ถูก"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "“सब” n हिस्सों में बँटकर साझा कोष बनता है। दूसरों का भरा भी जोड़ें।"
+            "value" : "“सब” बराबर बाँटता है। दोस्तों का भरा भी जोड़ें तो हिसाब सही होगा।"
           }
         }
       }
@@ -161855,6 +161932,83 @@
         }
       }
     },
+    "내 수입(환불 등)|My income (refund etc.)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自分の収入(返金など)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我的收入(退款等)"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我的收入(退款等)"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meine Einnahme (Erstattung usw.)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mon revenu (remboursement, etc.)"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mia entrata (rimborso ecc.)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mi ingreso (reembolso, etc.)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minha receita (reembolso etc.)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thu nhập của tôi (hoàn tiền...)"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pemasukan saya (pengembalian dll.)"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "รายรับของฉัน (เงินคืน ฯลฯ)"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "मेरी आय (रिफ़ंड आदि)"
+          }
+        }
+      }
+    },
     "내 차 등록|My car" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -163395,6 +163549,83 @@
         }
       }
     },
+    "누구에게 받은 돈|Received from" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "誰から受け取ったか"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从谁那里收到"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "從誰那裡收到"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erhalten von"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reçu de"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ricevuto da"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recibido de"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recebido de"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nhận từ ai"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diterima dari"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "รับจากใคร"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "किससे मिला"
+          }
+        }
+      }
+    },
     "누르면 오늘 날짜로 이동합니다|Jumps to today" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -163703,79 +163934,79 @@
         }
       }
     },
-    "다 같이 쓴 돈(공금)|Shared spending" : {
+    "다 같이 쓴 돈|Spent together" : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "みんなで使ったお金(共同)"
+            "value" : "みんなで使ったお金"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "大家共用的钱(公款)"
+            "value" : "大家一起花的钱"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "大家共用的錢(公款)"
+            "value" : "大家一起花的錢"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gemeinsam ausgegeben"
+            "value" : "Zusammen ausgegeben"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dépenses partagées"
+            "value" : "Dépensé ensemble"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Spese condivise"
+            "value" : "Speso insieme"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gasto compartido"
+            "value" : "Gastado entre todos"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gasto compartilhado"
+            "value" : "Gasto juntos"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Chi chung"
+            "value" : "Tiêu chung"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pengeluaran bersama"
+            "value" : "Dipakai bersama"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ใช้ร่วมกัน (กองกลาง)"
+            "value" : "ใช้ด้วยกัน"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "साझा खर्च"
+            "value" : "साथ में खर्च"
           }
         }
       }
@@ -256334,6 +256565,83 @@
         }
       }
     },
+    "총무라서 친구에게 미리 받은 돈이면 그 사람을 고르세요. 정산에서 그 사람이 낸 돈으로 쳐요.|If you collected it from a friend as the organizer, pick them. It counts as what they paid when settling." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "幹事として友達から先に受け取ったお金なら、その人を選んでください。精算でその人が払った分になります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果是作为负责人先从朋友那里收的钱，请选这个人。结算时算作他付的钱。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果是以負責人身分先向朋友收的錢，請選這個人。結算時算作他付的錢。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hast du es als Organisator vorab von jemandem eingesammelt, wähle die Person. Beim Abrechnen zählt es als ihre Zahlung."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si vous l’avez collecté auprès d’un ami en tant qu’organisateur, choisissez-le. Au règlement, cela compte comme son paiement."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se l’hai raccolto da un amico come organizzatore, sceglilo. Al saldo conta come suo pagamento."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si lo recogiste de un amigo como organizador, elígelo. Al liquidar cuenta como su pago."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se você recolheu de um amigo como organizador, escolha-o. No acerto conta como pagamento dele."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nếu là tiền bạn thu trước từ bạn bè khi làm thủ quỹ, hãy chọn người đó. Khi quyết toán sẽ tính là họ đã trả."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jika Anda mengumpulkannya dari teman sebagai bendahara, pilih orangnya. Saat penyelesaian dihitung sebagai bayarannya."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ถ้าเป็นเงินที่เก็บจากเพื่อนล่วงหน้าในฐานะเหรัญญิก ให้เลือกคนนั้น ตอนเคลียร์จะนับเป็นเงินที่เขาจ่าย"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "अगर आयोजक होने के नाते दोस्त से पहले लिया है, तो उसे चुनें। हिसाब में यह उसका भरा माना जाएगा।"
+          }
+        }
+      }
+    },
     "최근 15분 내 센서·건강 데이터 수신 시 연결됨으로 표시합니다.|Shown as connected when sensor or Health data arrives within the last 15 minutes." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -258794,6 +259102,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "दोस्तों से मुलाकात"
+          }
+        }
+      }
+    },
+    "친구에게 미리 받은 돈|Collected from friends" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "友達から先に受け取ったお金"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先从朋友那里收的钱"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先向朋友收的錢"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vorab von Freunden eingesammelt"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collecté auprès des amis"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Raccolto dagli amici"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recogido de amigos"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recolhido dos amigos"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thu trước từ bạn bè"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dikumpulkan dari teman"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เก็บจากเพื่อนล่วงหน้า"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "दोस्तों से पहले लिया"
           }
         }
       }

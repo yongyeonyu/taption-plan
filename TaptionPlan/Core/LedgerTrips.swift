@@ -45,8 +45,10 @@ struct LedgerTripSheet: Equatable, Sendable {
 
     /// 일상에서 받은 예산.
     var budget: Double
-    /// 예산 밖 수입(환불 등). 짝 기록은 뺀다.
+    /// 예산 밖 내 수입(환불 등). 짝 기록과 친구에게 받은 돈은 뺀다.
     var otherIncome: Double
+    /// 친구에게 미리 받은 돈(총무일 때). 내 손에 있지만 내 돈이 아니라 정산에서 그 사람이 낸 돈으로 친다.
+    var receivedFromOthers: Double = 0
     /// 내가 실제로 낸 돈.
     var myPaid: Double
     /// 내 몫(나만 쓴 것 + 나눈 것의 내 몫). 여행이 내게 든 진짜 비용.
@@ -58,8 +60,8 @@ struct LedgerTripSheet: Equatable, Sendable {
     /// 최소 송금 경로.
     var transfers: [Transfer]
 
-    /// 지금 손에 남은 예산(친구 정산 전).
-    var cashLeft: Double { budget + otherIncome - myPaid }
+    /// 지금 손에 남은 돈(친구 정산 전). 친구에게 미리 받은 돈도 손에 있다.
+    var cashLeft: Double { budget + otherIncome + receivedFromOthers - myPaid }
     /// 친구와 정산까지 끝났을 때 남는 돈. +면 일상으로 반납, −면 일상에서 더 보냄.
     var leftover: Double { budget + otherIncome - myCost }
     var receivable: Double { transfers.filter { $0.to == LedgerTrip.me }.reduce(0) { $0 + $1.amountKRW } }
@@ -68,15 +70,25 @@ struct LedgerTripSheet: Equatable, Sendable {
 }
 
 enum LedgerTripMath {
-    /// 다 같이 나눈 지출이 곧 공금이다(대표 결정). 낸 사람은 비면 나, 몫은 비면 다 같이.
+    /// 공금은 따로 두지 않는다(대표 결정): 「다 같이」는 n분의 1, 낸 사람은 비면 나, 몫은 비면 다 같이.
+    /// 여행 수입에 낸 사람(A)이 있으면 「A에게 미리 받은 돈」이다(총무): A가 낸 돈으로 치고 내 쪽에서 뺀다.
     static func sheet(_ trip: LedgerTrip, entries: [LedgerEntry]) -> LedgerTripSheet {
         let mine = entries.filter { $0.tripID == trip.id }
         let everyone = trip.everyone
         var balances = Dictionary(uniqueKeysWithValues: everyone.map { ($0, 0.0) })
-        var myPaid = 0.0, myCost = 0.0, shared = 0.0, otherIncome = 0.0
+        var myPaid = 0.0, myCost = 0.0, shared = 0.0, otherIncome = 0.0, received = 0.0
         for entry in mine where entry.transfer == nil {
             let amount = entry.amountKRW ?? 0
-            guard entry.kind == .expense else { otherIncome += amount; continue }
+            guard entry.kind == .expense else {
+                if let giver = entry.payer, giver != LedgerTrip.me, everyone.contains(giver) {
+                    balances[giver, default: 0] += amount
+                    balances[LedgerTrip.me, default: 0] -= amount
+                    received += amount
+                } else {
+                    otherIncome += amount
+                }
+                continue
+            }
             let payer = entry.payer.flatMap { everyone.contains($0) ? $0 : nil } ?? LedgerTrip.me
             let sharers = (entry.shareNames ?? everyone).filter(everyone.contains)
             let split = sharers.isEmpty ? [payer] : sharers
@@ -88,7 +100,7 @@ enum LedgerTripMath {
         }
         let budget = mine.filter { $0.transfer?.kind == .funding }.reduce(0) { $0 + ($1.amountKRW ?? 0) }
         return LedgerTripSheet(
-            budget: budget, otherIncome: otherIncome, myPaid: myPaid, myCost: myCost.rounded(),
+            budget: budget, otherIncome: otherIncome, receivedFromOthers: received, myPaid: myPaid, myCost: myCost.rounded(),
             sharedTotal: shared, balances: balances, transfers: transfers(balances)
         )
     }

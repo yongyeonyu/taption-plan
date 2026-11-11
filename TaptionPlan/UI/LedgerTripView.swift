@@ -23,7 +23,7 @@ struct LedgerTripView: View {
                 }
                 Section(language.text("기록", "Entries")) {
                     if entries.isEmpty {
-                        Text(language.text("+ 로 여행 중 쓴 돈을 넣어요. 다 같이 나눈 돈이 공금이에요.", "Tap + to add trip spending. Money split by everyone is the shared pot."))
+                        Text(language.text("+ 로 여행 중 쓴 돈을 넣어요. 다 같이 쓴 돈은 n분의 1로 나눠요.", "Tap + to add trip spending. Money spent by everyone is split evenly."))
                             .foregroundStyle(.secondary)
                     }
                     ForEach(entries) { entry in
@@ -106,7 +106,8 @@ struct LedgerTripSheetSection: View {
             if sheet.otherIncome > 0 { line(language.text("그 밖의 수입", "Other income"), sheet.otherIncome) }
             line(language.text("내가 낸 돈", "I paid"), -sheet.myPaid)
             line(language.text("지금 남은 돈", "Cash left now"), sheet.cashLeft, bold: true)
-            line(language.text("다 같이 쓴 돈(공금)", "Shared spending"), sheet.sharedTotal, signed: false)
+            if sheet.receivedFromOthers > 0 { line(language.text("친구에게 미리 받은 돈", "Collected from friends"), sheet.receivedFromOthers) }
+            line(language.text("다 같이 쓴 돈", "Spent together"), sheet.sharedTotal, signed: false)
             line(language.text("내 몫", "My share"), sheet.myCost, signed: false)
         } header: {
             Text(language.text("대차대조", "Balance"))
@@ -146,7 +147,25 @@ struct LedgerTripSheetSection: View {
     }
 }
 
-/// 여행 지출의 「낸 사람」과 「누구 몫」(대표 결정: 다 같이 나눈 돈이 공금).
+/// 여행 수입이 누구에게 받은 돈인지(총무일 때 친구에게 미리 받은 돈). 나면 내 다른 수입(환불 등)이다.
+struct LedgerIncomeFromSection: View {
+    let language: MapHomeLanguage
+    let members: [String]
+    @Binding var payer: String?
+
+    var body: some View {
+        Section {
+            Picker(language.text("누구에게 받은 돈", "Received from"), selection: Binding(get: { payer ?? LedgerTrip.me }, set: { payer = $0 == LedgerTrip.me ? nil : $0 })) {
+                Text(language.text("내 수입(환불 등)", "My income (refund etc.)")).tag(LedgerTrip.me)
+                ForEach(members, id: \.self) { Text($0).tag($0) }
+            }
+        } footer: {
+            Text(language.text("총무라서 친구에게 미리 받은 돈이면 그 사람을 고르세요. 정산에서 그 사람이 낸 돈으로 쳐요.", "If you collected it from a friend as the organizer, pick them. It counts as what they paid when settling."))
+        }
+    }
+}
+
+/// 여행 지출의 「낸 사람」과 「누구 몫」(대표 결정: 공금 없이 「다 같이」는 n분의 1).
 struct LedgerShareSection: View {
     let language: MapHomeLanguage
     let members: [String]
@@ -192,7 +211,7 @@ struct LedgerShareSection: View {
         } header: {
             Text(language.text("나누기", "Split"))
         } footer: {
-            Text(language.text("「다 같이」는 n분의 1로 나눠 공금이 돼요. 남이 낸 돈도 넣으면 정산에 들어가요.", "\"Everyone\" splits evenly as shared money. Add what others paid too so settling is right."))
+            Text(language.text("「다 같이」는 n분의 1로 나눠요. 친구가 낸 돈도 넣으면 정산에 들어가요.", "\"Everyone\" splits evenly. Add what friends paid too so settling is right."))
         }
     }
 }

@@ -302,6 +302,8 @@ struct LedgerEntryForm: View {
                 }
                 if let members, entry.kind == .expense, entry.transfer == nil {
                     LedgerShareSection(language: language, members: members, payer: $entry.payer, shareNames: $entry.shareNames)
+                } else if let members, !members.isEmpty, entry.kind == .income, entry.transfer == nil {
+                    LedgerIncomeFromSection(language: language, members: members, payer: $entry.payer)
                 }
                 Section {
                     if members == nil {
