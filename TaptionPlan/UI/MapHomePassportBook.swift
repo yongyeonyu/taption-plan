@@ -462,6 +462,19 @@ private struct MapHomePassportPlaceStamp: View {
     }
 }
 
+/// 책장 번호 계산. 장부가 늦게 와 쪽 수가 줄어도 없는 쪽을 찾지 않는다(PSP1111A01).
+enum MapHomePassportPaging {
+    static func previous(of index: Int, pageCount: Int) -> Int? {
+        let last = pageCount - 1
+        guard last >= 0, index > 0 else { return nil }
+        return min(index - 1, last)
+    }
+
+    static func next(of index: Int, pageCount: Int) -> Int? {
+        index >= 0 && index + 1 < pageCount ? index + 1 : nil
+    }
+}
+
 /// 책장을 말아 넘긴다. 첫 쪽이 표지다.
 private struct MapHomePassportPageCurl: UIViewControllerRepresentable {
     let pageCount: Int
@@ -496,6 +509,7 @@ private struct MapHomePassportPageCurl: UIViewControllerRepresentable {
         weak var controller: UIPageViewController?
         private var drawnRevision: Int
         private var isTurning = false
+        private var turnToken = 0
         /// 처음 열 때 아직 쪽이 모자라 가지 못한 쪽. 장부가 와서 쪽이 늘면 그리로 간다(REV1110A02).
         private var pendingPage: Int?
 
@@ -505,9 +519,14 @@ private struct MapHomePassportPageCurl: UIViewControllerRepresentable {
             pendingPage = parent.initialPage >= parent.pageCount ? parent.initialPage : nil
         }
 
-        /// 넘기는 도중에 바꾸면 UIKit 상태가 어긋나므로 끝난 뒤에 한다.
+        /// 손가락이 책장 위에 있는가. 넘기기가 시작되기 전(`willTransitionTo` 전)에도 참이다.
+        private var isTouching: Bool {
+            controller?.gestureRecognizers.contains { [.began, .changed].contains($0.state) } ?? false
+        }
+
+        /// 넘기는 도중에 바꾸면 UIKit 상태가 어긋나 앱이 멈춘다(PSP1111A01). 끝난 뒤에 한다.
         func refreshIfNeeded() {
-            guard !isTurning, drawnRevision != parent.revision, let controller,
+            guard !isTurning, !isTouching, drawnRevision != parent.revision, let controller,
                   let current = controller.viewControllers?.first else { return }
             drawnRevision = parent.revision
             var index = min(current.view.tag, parent.pageCount - 1)
@@ -522,10 +541,22 @@ private struct MapHomePassportPageCurl: UIViewControllerRepresentable {
             isTurning = true
             // 사용자가 직접 넘기기 시작하면 예약한 쪽으로 끌고 가지 않는다.
             pendingPage = nil
+            // 넘기기가 끝났다는 알림이 오지 않아도 책이 굳지 않게 잠시 뒤 풀어 둔다.
+            turnToken &+= 1
+            let token = turnToken
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+                guard let self, self.turnToken == token, self.isTurning, !self.isTouching else { return }
+                self.isTurning = false
+                self.refreshIfNeeded()
+            }
         }
 
         func pageViewController(_ pageViewController: UIPageViewController, didFinishAnimating finished: Bool, previousViewControllers: [UIViewController], transitionCompleted completed: Bool) {
             isTurning = false
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "passport_page_turn",
+                metrics: ["page": Double(pageViewController.viewControllers?.first?.view.tag ?? -1), "completed": completed ? 1 : 0, "pages": Double(parent.pageCount)]
+            )
             refreshIfNeeded()
         }
 
@@ -536,14 +567,15 @@ private struct MapHomePassportPageCurl: UIViewControllerRepresentable {
             return controller
         }
 
+        // 한 장이 넘어가는 동안에는 다음 장을 주지 않는다. 연달아 밀면 말림이 겹쳐 UIKit이 멈췄다(PSP1111A01).
         func pageViewController(_ pageViewController: UIPageViewController, viewControllerBefore viewController: UIViewController) -> UIViewController? {
-            let index = viewController.view.tag
-            return index > 0 ? controller(at: index - 1) : nil
+            guard !isTurning else { return nil }
+            return MapHomePassportPaging.previous(of: viewController.view.tag, pageCount: parent.pageCount).map(controller(at:))
         }
 
         func pageViewController(_ pageViewController: UIPageViewController, viewControllerAfter viewController: UIViewController) -> UIViewController? {
-            let index = viewController.view.tag
-            return index + 1 < parent.pageCount ? controller(at: index + 1) : nil
+            guard !isTurning else { return nil }
+            return MapHomePassportPaging.next(of: viewController.view.tag, pageCount: parent.pageCount).map(controller(at:))
         }
     }
 }
@@ -599,7 +631,7 @@ struct MapHomePassportSheet: View {
             MapHomePassportPageCurl(pageCount: pages.count + 1, initialPage: initialPage, revision: revision) { index in
                 index == 0
                     ? AnyView(MapHomePassportCover(design: design))
-                    : AnyView(MapHomePassportPage(design: design, language: language, visas: pages[index - 1], pageIndex: index - 1) { onSelectDay($0, index) })
+                    : AnyView(MapHomePassportPage(design: design, language: language, visas: pages.indices.contains(index - 1) ? pages[index - 1] : [], pageIndex: index - 1) { onSelectDay($0, index) })
             }
             .frame(width: width, height: width * 125 / 88)
             .clipShape(RoundedRectangle(cornerRadius: width * 0.04, style: .continuous))

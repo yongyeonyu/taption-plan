@@ -32,6 +32,17 @@ extension FeatureEngineTests {
         XCTAssertNil(MapHomeFogRevealPolicy.currentLocationPoint(stickmanPoint: nil, viewportPoint: nil))
     }
 
+    /// PSP1111A01: 여권 책장 앞뒤 번호. 쪽 수가 줄어도 없는 쪽을 찾지 않는다.
+    func testPassportPagingStaysInRange() {
+        XCTAssertNil(MapHomePassportPaging.previous(of: 0, pageCount: 9))
+        XCTAssertEqual(MapHomePassportPaging.previous(of: 3, pageCount: 9), 2)
+        XCTAssertEqual(MapHomePassportPaging.previous(of: 10, pageCount: 9), 8, "page count shrank while on page 10")
+        XCTAssertNil(MapHomePassportPaging.next(of: 8, pageCount: 9))
+        XCTAssertNil(MapHomePassportPaging.next(of: 10, pageCount: 9))
+        XCTAssertEqual(MapHomePassportPaging.next(of: 0, pageCount: 9), 1)
+        XCTAssertNil(MapHomePassportPaging.previous(of: 1, pageCount: 0))
+    }
+
     /// LDT1111A01: 메모 위 지출 줄은 오늘이면 「오늘 · 이번 달」, 다른 날이면 그 날짜와 그 달이다.
     func testLedgerMemoHeaderUsesTodayAndThisMonth() {
         var calendar = Calendar(identifier: .gregorian)

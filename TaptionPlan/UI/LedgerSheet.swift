@@ -244,7 +244,7 @@ struct LedgerRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Image(systemName: entry.category.symbol).frame(width: 24).foregroundStyle(Color.tpAccent)
+            LedgerEntryIcon(entry: entry, size: 22).frame(width: 24)
             VStack(alignment: .leading, spacing: 2) {
                 Text(entry.title).lineLimit(1)
                 Text([entry.category.title(language), entry.payer, sourceText].compactMap { $0 }.joined(separator: " · "))

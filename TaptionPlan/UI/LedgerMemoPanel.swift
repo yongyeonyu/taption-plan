@@ -135,11 +135,15 @@ struct LedgerMemoCard: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            Image(systemName: entry.category.symbol)
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))
-                .foregroundStyle(Color.tpAccent)
-                .frame(width: 26, height: 26)
-                .background(Color.white.opacity(0.9), in: Circle())
+            if let number = LedgerHighway.number(for: entry) {
+                LedgerHighwayShield(number: number, size: 24).frame(width: 26, height: 26)
+            } else {
+                Image(systemName: entry.category.symbol)
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))
+                    .foregroundStyle(Color.tpAccent)
+                    .frame(width: 26, height: 26)
+                    .background(Color.white.opacity(0.9), in: Circle())
+            }
             VStack(alignment: .leading, spacing: 3) {
                 Text(entry.title)
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))

@@ -466,6 +466,18 @@ final class LedgerTests: XCTestCase {
         XCTAssertNil(LedgerReceiptReader.draft(["감사합니다"]))
     }
 
+    /// HWY1111A01: 고속도로 통행료는 노선 번호를 찾는다. 긴 이름이 먼저고, 고속도로 낌새가 없으면 찾지 않는다.
+    func testHighwayTollFindsRouteNumber() {
+        XCTAssertEqual(LedgerHighway.number(in: "경인고속도로 통행료"), 120)
+        XCTAssertEqual(LedgerHighway.number(in: "제2경인고속도로"), 110)
+        XCTAssertEqual(LedgerHighway.number(in: "중부내륙고속도로 요금소"), 45)
+        XCTAssertEqual(LedgerHighway.number(in: "경부 고속도로"), 1)
+        XCTAssertEqual(LedgerHighway.number(in: "서울외곽순환 톨게이트"), 100)
+        XCTAssertNil(LedgerHighway.number(in: "경인교대 앞 카페"))
+        XCTAssertNil(LedgerHighway.number(in: "고속버스 터미널"))
+        let entry = LedgerEntry(occurredAt: .now, amount: 900, category: .transport, title: "경인고속도로 통행료")
+        XCTAssertEqual(LedgerHighway.number(for: entry), 120)
+    }
 }
 
 /// BKS1111A01: 다른 기기(아이폰 18)가 올린 백업 파일이 이 기기 iCloud 폴더에 보이는지. 비밀번호 없이 이름·크기·시각만 읽고 복원하지 않는다.
