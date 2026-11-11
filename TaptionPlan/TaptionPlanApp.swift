@@ -71,6 +71,11 @@ struct TaptionPlanApp: App {
                 MapHomeStampPreviewHost()
             } else if ProcessInfo.processInfo.arguments.contains("-inkPreview") {
                 MapHomeInkPreviewHost()
+            } else if let index = ProcessInfo.processInfo.arguments.firstIndex(of: "-tutorialPreview") {
+                // 튜토리얼 모양 확인용(FRD1111A01, Debug 전용). 다음 인자가 단계 이름(없으면 첫 화면).
+                let arguments = ProcessInfo.processInfo.arguments
+                let step = arguments.indices.contains(index + 1) ? FirstRunTutorialStep(rawValue: arguments[index + 1]) : nil
+                TaptionFontRoot { FirstRunTutorialView(model: AppModel(), mode: .replay, startStep: step ?? .welcome) {} }
             } else if ProcessInfo.processInfo.arguments.contains("-aiConnectPreview") {
                 // AI 연결 화면 모양 확인용(AIS1111A01, Debug 전용).
                 TaptionFontRoot {

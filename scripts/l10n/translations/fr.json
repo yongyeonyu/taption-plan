@@ -3266,6 +3266,7 @@
 "계단·엘리베이터·양치·타이핑처럼 손목 움직임으로 나뉘는 세부 행동. iPhone만으로는 정지·걷기·달리기·자전거·자동차까지 구분합니다.|Fine-grained actions told apart by wrist movement, such as stairs, elevators, brushing teeth and typing. The iPhone alone distinguishes still, walking, running, cycling and driving.": "Actions fines distinguées par le mouvement du poignet, comme les escaliers, l'ascenseur, le brossage des dents et la frappe. L'iPhone seul distingue immobile, marche, course, vélo et conduite.",
 "계속 사용|Continue": "Continuer",
 "계속 사용하려면 Pro를 한 번 구매하거나 기존 구매 내역을 복원해 주세요.|Purchase Pro once or restore an existing purchase to continue.": "Achetez Pro une fois ou restaurez un achat existant pour continuer.",
+"계속|Continue": "Continuer",
 "계절|Seasons": "Saisons",
 "계절·행사|Seasons": "Saisons",
 "계정 확인 실패|Account check failed": "Échec de la vérification du compte",

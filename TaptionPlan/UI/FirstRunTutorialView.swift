@@ -21,21 +21,29 @@ struct FirstRunTutorialView: View {
     private let store = FirstRunTutorialStore()
     private let language = MapHomeLanguage.current
 
-    init(model: AppModel, mode: Mode = .firstRun, onFinished: @escaping () -> Void) {
+    init(model: AppModel, mode: Mode = .firstRun, startStep: FirstRunTutorialStep? = nil, onFinished: @escaping () -> Void) {
         self.model = model
         self.mode = mode
         self.onFinished = onFinished
-        _step = State(initialValue: mode == .replay ? .welcome : FirstRunTutorialStore().savedStep ?? .welcome)
+        _step = State(initialValue: startStep ?? (mode == .replay ? .welcome : FirstRunTutorialStore().savedStep ?? .welcome))
     }
 
+    // 참고 화면 모양(FRD1111A01, 대표 지시): 위에 내용 카드, 그 아래 작은 분류·큰 제목·설명, 아래 점 표시와 꽉 찬 「계속」.
+    // 색은 앱 시그니처(크림 바탕·흰 카드·테라코타 단추·먹색 글자).
     var body: some View {
         VStack(spacing: 0) {
             topBar
-            if step != .welcome { header }
             page
                 .id(step)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .scrollDismissesKeyboard(.interactively)
+                .background(Color.tpCard, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                .shadow(color: Color.tpInk.opacity(0.08), radius: 18, y: 8)
+                .padding(.horizontal, 22)
+                .padding(.top, 6)
+            if step != .welcome { header }
+            pageDots
             bottomBar
         }
         // 넓은 화면에서 글줄이 너무 길어지지 않게 묶는다.
@@ -51,25 +59,25 @@ struct FirstRunTutorialView: View {
     // MARK: 위쪽
 
     private var topBar: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 6) {
             Button(language.text("닫기", "Close")) { finish(.skipped) }
                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .semibold))
                 .foregroundStyle(Color.tpSecondary)
                 .buttonStyle(.plain)
                 .frame(minHeight: 44)
                 .accessibilityIdentifier("firstRunClose")
-
-            HStack(spacing: 3) {
-                ForEach(FirstRunTutorialStep.allCases) { item in
-                    Capsule()
-                        .fill(item.number <= step.number ? Color.tpAccent : Color.tpLine)
-                        .frame(height: 4)
+            if step != .welcome, let previous = step.previous {
+                Button { move(to: previous) } label: {
+                    Label(language.text("이전", "Back"), systemImage: "chevron.left")
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .semibold))
+                        .foregroundStyle(Color.tpInk)
                 }
+                .buttonStyle(.plain)
+                .frame(minHeight: 44)
+                .padding(.leading, 8)
+                .accessibilityIdentifier("firstRunBack")
             }
-            .accessibilityElement()
-            .accessibilityLabel("\(step.number) / \(FirstRunTutorialStep.allCases.count)")
-            .accessibilityIdentifier("firstRunProgress")
-
+            Spacer(minLength: 0)
             // 전체 건너뛰기는 첫 화면의 「바로 시작」이 맡는다.
             Button(language.text("건너뛰기", "Skip")) { skipStep() }
                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .semibold))
@@ -80,28 +88,50 @@ struct FirstRunTutorialView: View {
                 .disabled(!step.hasInput)
                 .accessibilityIdentifier("firstRunSkip")
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 20)
     }
 
+    /// 카드 아래 글: 작은 분류(고양이와 장 이름), 큰 제목, 설명. 가운데 맞춤.
     private var header: some View {
-        HStack(spacing: 12) {
-            FirstRunMascot(scene: scene(of: step), size: 72)
-            VStack(alignment: .leading, spacing: 4) {
-                Text("\(chapterTitle(step.chapter)) · \(step.number) / \(FirstRunTutorialStep.allCases.count)")
+        VStack(spacing: 8) {
+            HStack(spacing: 6) {
+                FirstRunMascot(scene: scene(of: step), size: 30)
+                Text(chapterTitle(step.chapter))
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.caption), weight: .bold))
+                    .tracking(1.5)
                     .foregroundStyle(Color.tpAccent)
-                Text(title(of: step))
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.display), weight: .bold))
-                    .foregroundStyle(Color.tpInk)
-                Text(detail(of: step))
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.body), weight: .medium))
-                    .foregroundStyle(Color.tpSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
             }
-            Spacer(minLength: 0)
+            Text(title(of: step))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.display), weight: .bold))
+                .foregroundStyle(Color.tpInk)
+                .multilineTextAlignment(.center)
+            Text(detail(of: step))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.body), weight: .medium))
+                .foregroundStyle(Color.tpSecondary)
+                .multilineTextAlignment(.center)
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(.horizontal, 18)
-        .padding(.bottom, 10)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 28)
+        .padding(.top, 18)
+    }
+
+    /// 지금 장(기본 설정·화면 익히기·연결과 보호)의 단계 점. 지금 단계만 길게.
+    private var pageDots: some View {
+        let steps = FirstRunTutorialStep.allCases.filter { $0.chapter == step.chapter }
+        return HStack(spacing: 7) {
+            ForEach(steps) { item in
+                Capsule()
+                    .fill(item == step ? Color.tpAccent : Color.tpBorder.opacity(0.5))
+                    .frame(width: item == step ? 22 : 7, height: 7)
+            }
+        }
+        .animation(.snappy, value: step)
+        .padding(.top, 18)
+        .accessibilityElement()
+        .accessibilityLabel("\(step.number) / \(FirstRunTutorialStep.allCases.count)")
+        .accessibilityIdentifier("firstRunProgress")
     }
 
     private func scene(of step: FirstRunTutorialStep) -> HwarangScene {
@@ -246,41 +276,39 @@ struct FirstRunTutorialView: View {
     // MARK: 아래쪽
 
     private var bottomBar: some View {
-        HStack(spacing: 12) {
-            if step == .welcome {
-                Button(language.text("바로 시작", "Start now")) { finish(.skipped) }
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.bodyStrong), weight: .semibold))
-                    .foregroundStyle(Color.tpSecondary)
-                    .buttonStyle(.plain)
-                    .frame(minWidth: 88, minHeight: 50)
-                    .accessibilityIdentifier("firstRunStartNow")
-            } else if let previous = step.previous {
-                Button(language.text("이전", "Back")) { move(to: previous) }
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.bodyStrong), weight: .semibold))
-                    .foregroundStyle(Color.tpInk)
-                    .buttonStyle(.plain)
-                    .frame(minWidth: 88, minHeight: 50)
-                    .accessibilityIdentifier("firstRunBack")
-            }
+        VStack(spacing: 6) {
             Button { confirmStep() } label: {
-                Text(primaryTitle)
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.bodyStrong), weight: .bold))
-                    .foregroundStyle(Color.tpSurface)
-                    .frame(maxWidth: .infinity, minHeight: 50)
-                    .background(Color.tpPrimaryFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                HStack(spacing: 8) {
+                    Text(primaryTitle)
+                    if step != .finish { Image(systemName: "arrow.right") }
+                }
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.bodyStrong), weight: .bold))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity, minHeight: 56)
+                .background(Color.tpAccent, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+                .shadow(color: Color.tpAccent.opacity(0.28), radius: 12, y: 6)
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("firstRunNext")
+            if step == .welcome {
+                Button(language.text("바로 시작", "Start now")) { finish(.skipped) }
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .semibold))
+                    .foregroundStyle(Color.tpSecondary)
+                    .buttonStyle(.plain)
+                    .frame(minHeight: 40)
+                    .accessibilityIdentifier("firstRunStartNow")
+            }
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 22)
+        .padding(.top, 16)
+        .padding(.bottom, 10)
     }
 
     private var primaryTitle: String {
         switch step {
         case .welcome: language.text("차근차근 따라 하기", "Walk me through")
         case .finish: mode == .replay ? language.text("닫기", "Close") : language.text("시작하기", "Get started")
-        default: language.text("다음", "Next")
+        default: language.text("계속", "Continue")
         }
     }
 
