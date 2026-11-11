@@ -119,7 +119,7 @@
    "ko": "1 {0} ≈ {1}원",
    "en": "1 {0} ≈ ₩{1}",
    "files": [
-    "LedgerSheet.swift:396"
+    "LedgerSheet.swift:403"
    ],
    "args": [
     "entry.currency",
@@ -194,7 +194,7 @@
    "ko": "12,300원",
    "en": "₩12,300",
    "files": [
-    "FirstRunTutorialView.swift:795"
+    "FirstRunTutorialView.swift:800"
    ],
    "args": [],
    "targets": [
@@ -330,7 +330,7 @@
    "ko": "1시간 5분",
    "en": "1h 5m",
    "files": [
-    "FirstRunTutorialView.swift:793"
+    "FirstRunTutorialView.swift:798"
    ],
    "args": [],
    "targets": [
@@ -427,7 +427,7 @@
    "ko": "25분",
    "en": "25m",
    "files": [
-    "FirstRunTutorialView.swift:794"
+    "FirstRunTutorialView.swift:799"
    ],
    "args": [],
    "targets": [
@@ -476,7 +476,7 @@
    "ko": "3시간 12분",
    "en": "3h 12m",
    "files": [
-    "FirstRunTutorialView.swift:791"
+    "FirstRunTutorialView.swift:796"
    ],
    "args": [],
    "targets": [
@@ -488,7 +488,7 @@
    "ko": "42분",
    "en": "42m",
    "files": [
-    "FirstRunTutorialView.swift:792"
+    "FirstRunTutorialView.swift:797"
    ],
    "args": [],
    "targets": [
@@ -537,7 +537,7 @@
    "ko": "6자리 숫자를 두 칸에 모두 입력해 주세요.",
    "en": "Enter 6 digits in both fields.",
    "files": [
-    "FirstRunTutorialView.swift:324"
+    "FirstRunTutorialView.swift:329"
    ],
    "args": [],
    "targets": [
@@ -636,7 +636,7 @@
    "ko": "AI 말풍선",
    "en": "AI speech bubbles",
    "files": [
-    "AssistantCommandEdits.swift:40"
+    "AssistantCommandEdits.swift:42"
    ],
    "args": [],
    "targets": [
@@ -660,7 +660,7 @@
    "ko": "AI 비서 요청을 반영했어요",
    "en": "Applied AI assistant requests",
    "files": [
-    "AssistantCommands.swift:329"
+    "AssistantCommands.swift:333"
    ],
    "args": [],
    "targets": [
@@ -772,7 +772,19 @@
    "ko": "AI 연결",
    "en": "Connect an AI",
    "files": [
-    "FirstRunTutorialView.swift:149"
+    "FirstRunTutorialView.swift:151"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "AI 연결이 없어요. 메뉴 › AI 연결에서 연결하면 앱이 못한 일을 AI가 처리해요.|No AI is connected. Connect one in Menu › AI connection to let it handle what the app couldn't.",
+   "ko": "AI 연결이 없어요. 메뉴 › AI 연결에서 연결하면 앱이 못한 일을 AI가 처리해요.",
+   "en": "No AI is connected. Connect one in Menu › AI connection to let it handle what the app couldn't.",
+   "files": [
+    "AITaskPanel.swift:14"
    ],
    "args": [],
    "targets": [
@@ -796,7 +808,7 @@
    "ko": "AI가 넣음",
    "en": "Added by AI",
    "files": [
-    "LedgerSheet.swift:296"
+    "LedgerSheet.swift:303"
    ],
    "args": [],
    "targets": [
@@ -822,7 +834,7 @@
    "ko": "AI가 하루 기록을 읽고 일정·메모를 대신 정리합니다. 나중에 메뉴 > 연결에서도 할 수 있습니다.",
    "en": "Let an AI read your day and tidy plans and memos for you. You can also do this later in Menu > Connections.",
    "files": [
-    "FirstRunTutorialView.swift:173"
+    "FirstRunTutorialView.swift:176"
    ],
    "args": [],
    "targets": [
@@ -860,7 +872,7 @@
    "ko": "AI로 만들기",
    "en": "Plan with AI",
    "files": [
-    "MapHomeView+Support.swift:683"
+    "MapHomeView+Support.swift:686"
    ],
    "args": [],
    "targets": [
@@ -885,6 +897,18 @@
    "en": "Plan a trip with AI",
    "files": [
     "TripImportSheet.swift:203"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "AI에게 맡긴 일이 없어요.|Nothing is waiting for your AI.",
+   "ko": "AI에게 맡긴 일이 없어요.",
+   "en": "Nothing is waiting for your AI.",
+   "files": [
+    "AITaskPanel.swift:17"
    ],
    "args": [],
    "targets": [
@@ -1248,6 +1272,18 @@
    "args": [],
    "targets": [
     "TaptionPlanWatchWidget"
+   ]
+  },
+  {
+   "key": "CarPlay로 연결되는 차는 고르지 않아도 저절로 등록돼요.|Cars that connect with CarPlay are registered automatically.",
+   "ko": "CarPlay로 연결되는 차는 고르지 않아도 저절로 등록돼요.",
+   "en": "Cars that connect with CarPlay are registered automatically.",
+   "files": [
+    "FirstRunCarPage.swift:56"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
    ]
   },
   {
@@ -2591,7 +2627,7 @@
    "ko": "{0} {1}을 가계부에 넣었어요.",
    "en": "Added {0} {1} to the ledger.",
    "files": [
-    "LedgerIntents.swift:26"
+    "LedgerIntents.swift:37"
    ],
    "args": [
     "saved.title",
@@ -3056,7 +3092,7 @@
    "ko": "{0} 일정 메모",
    "en": "{0} schedule memo",
    "files": [
-    "MapHomeView+Timeline.swift:372"
+    "MapHomeView+Timeline.swift:375"
    ],
    "args": [
     "sticker.title"
@@ -3345,7 +3381,7 @@
    "ko": "{0}건",
    "en": "{0} entries",
    "files": [
-    "LedgerMemoPanel.swift:250"
+    "LedgerMemoPanel.swift:252"
    ],
    "args": [
     "list.count"
@@ -3403,7 +3439,7 @@
    "ko": "{0}년 {1}월",
    "en": "{0}/{1}",
    "files": [
-    "LedgerSheet.swift:250",
+    "LedgerSheet.swift:257",
     "MapHomeSettingsSheets.swift:743"
    ],
    "args": [
@@ -20465,8 +20501,8 @@
    "ko": "그 뒤에 바뀐 내용이 있어 되돌리지 못했어요. 앱에서 직접 고쳐 주세요.",
    "en": "It changed afterwards, so it couldn't be undone. Please edit it in the app.",
    "files": [
-    "AssistantActionLog.swift:231",
-    "AssistantActionLog.swift:240"
+    "AssistantActionLog.swift:233",
+    "AssistantActionLog.swift:242"
    ],
    "args": [],
    "targets": [
@@ -32458,7 +32494,7 @@
    "ko": "‘{0}’ 기기가 탈 때만 연결됐어요. 등록할까요? 등록하면 이 기기가 연결된 이동을 자동차로 기록해요.",
    "en": "‘{0}’ connected only while you rode. Register it? Trips with it connected will be recorded as car.",
    "files": [
-    "MapHomeCarAudioSuggestion.swift:33"
+    "MapHomeLaunchPrompts.swift:129"
    ],
    "args": [
     "name"
@@ -32575,7 +32611,7 @@
    "ko": "「메시지」 → 「메시지 내용에 포함」에 카드사 이름이나 「승인」을 적기",
    "en": "Message → \"Message Contains\" → type your card company or \"approved\"",
    "files": [
-    "LedgerSheet.swift:586"
+    "LedgerSheet.swift:593"
    ],
    "args": [],
    "targets": [
@@ -32587,7 +32623,7 @@
    "ko": "「메시지」 칸이 받은 메시지로 채워졌는지 보고 완료",
    "en": "Check that the Message field is the received message, then Done",
    "files": [
-    "LedgerSheet.swift:589"
+    "LedgerSheet.swift:596"
    ],
    "args": [],
    "targets": [
@@ -32599,7 +32635,7 @@
    "ko": "「새로운 빈 자동화」 → 동작 검색에서 「결제 문자 넣기」(BOKKI Plan)",
    "en": "New Blank Automation → search actions for \"Add payment text\" (BOKKI Plan)",
    "files": [
-    "LedgerSheet.swift:588"
+    "LedgerSheet.swift:595"
    ],
    "args": [],
    "targets": [
@@ -32623,7 +32659,7 @@
    "ko": "「즉시 실행」을 고르고 다음",
    "en": "Choose \"Run Immediately\", then Next",
    "files": [
-    "LedgerSheet.swift:587"
+    "LedgerSheet.swift:594"
    ],
    "args": [],
    "targets": [
@@ -32649,7 +32685,7 @@
    "ko": "가계부 {0}개",
    "en": "{0} ledger entr(ies)",
    "files": [
-    "AssistantCommands.swift:327"
+    "AssistantCommands.swift:331"
    ],
    "args": [
     "ledger"
@@ -32671,11 +32707,23 @@
    ]
   },
   {
+   "key": "가계부 기록 고치기|Edit ledger entries",
+   "ko": "가계부 기록 고치기",
+   "en": "Edit ledger entries",
+   "files": [
+    "AssistantCommandEdits.swift:44"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "가계부 기록 더하기|Add ledger entries",
    "ko": "가계부 기록 더하기",
    "en": "Add ledger entries",
    "files": [
-    "AssistantCommandEdits.swift:41"
+    "AssistantCommandEdits.swift:43"
    ],
    "args": [],
    "targets": [
@@ -32773,7 +32821,7 @@
    "ko": "가림",
    "en": "Hidden",
    "files": [
-    "AssistantCommandEdits.swift:248"
+    "AssistantCommandEdits.swift:254"
    ],
    "args": [],
    "targets": [
@@ -33551,7 +33599,19 @@
    "files": [
     "LedgerSheet.swift:70",
     "LedgerSheet.swift:188",
-    "LedgerSheet.swift:614"
+    "LedgerSheet.swift:621"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "결제 문자 확인|Payment text",
+   "ko": "결제 문자 확인",
+   "en": "Payment text",
+   "files": [
+    "AITaskPanel.swift:125"
    ],
    "args": [],
    "targets": [
@@ -33564,7 +33624,19 @@
    "en": "Payment text",
    "files": [
     "LedgerExport.swift:48",
-    "LedgerSheet.swift:297"
+    "LedgerSheet.swift:304"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "결제 문자를 읽지 못해 AI에게 확인을 맡겼어요.|Couldn't read the payment text, so it was sent to your AI to check.",
+   "ko": "결제 문자를 읽지 못해 AI에게 확인을 맡겼어요.",
+   "en": "Couldn't read the payment text, so it was sent to your AI to check.",
+   "files": [
+    "LedgerIntents.swift:23"
    ],
    "args": [],
    "targets": [
@@ -33576,7 +33648,7 @@
    "ko": "결제 문자를 읽지 못했어요. 가계부에서 직접 넣어 주세요.",
    "en": "Couldn't read the payment text. Add it in the ledger yourself.",
    "files": [
-    "LedgerIntents.swift:20"
+    "LedgerIntents.swift:27"
    ],
    "args": [],
    "targets": [
@@ -33613,6 +33685,18 @@
    "en": "Edit route",
    "files": [
     "TravelMapVideoSection.swift:160"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "경로 확인|Route check",
+   "ko": "경로 확인",
+   "en": "Route check",
+   "files": [
+    "AITaskPanel.swift:128"
    ],
    "args": [],
    "targets": [
@@ -33708,7 +33792,7 @@
    "ko": "계절",
    "en": "Seasons",
    "files": [
-    "AssistantDataActions.swift:314",
+    "AssistantDataActions.swift:333",
     "MapHomeView+Map.swift:938"
    ],
    "args": [],
@@ -33822,7 +33906,7 @@
    "ko": "계획과 기록은 삭제되지 않습니다.",
    "en": "Your plans and records will not be deleted.",
    "files": [
-    "MapHomeView+Support.swift:762"
+    "MapHomeView+Support.swift:765"
    ],
    "args": [],
    "targets": [
@@ -34000,7 +34084,7 @@
    "ko": "고양이 고르기",
    "en": "Pick your cat",
    "files": [
-    "FirstRunTutorialView.swift:139"
+    "FirstRunTutorialView.swift:141"
    ],
    "args": [],
    "targets": [
@@ -34241,6 +34325,18 @@
    "en": "Transport",
    "files": [
     "LedgerCore.swift:17"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "교통비 확인|Fare check",
+   "ko": "교통비 확인",
+   "en": "Fare check",
+   "files": [
+    "AITaskPanel.swift:129"
    ],
    "args": [],
    "targets": [
@@ -34535,7 +34631,7 @@
    "ko": "권한 허용",
    "en": "Permissions",
    "files": [
-    "FirstRunTutorialView.swift:134"
+    "FirstRunTutorialView.swift:135"
    ],
    "args": [],
    "targets": [
@@ -34614,8 +34710,8 @@
    "ko": "그 뒤에 바뀐 내용이 있어 되돌리지 못했어요. 앱에서 직접 고쳐 주세요.",
    "en": "It changed afterwards, so it couldn't be undone. Please edit it in the app.",
    "files": [
-    "AssistantActionLog.swift:230",
-    "AssistantActionLog.swift:239"
+    "AssistantActionLog.swift:232",
+    "AssistantActionLog.swift:241"
    ],
    "args": [],
    "targets": [
@@ -34664,8 +34760,8 @@
    "ko": "그날 지출이 없어요. 메모에 「커피 4500」처럼 쓰면 들어가요.",
    "en": "No spending that day. Write a memo like \"Coffee 4500\" to add one.",
    "files": [
-    "LedgerMemoPanel.swift:117",
-    "LedgerMemoPanel.swift:249"
+    "LedgerMemoPanel.swift:119",
+    "LedgerMemoPanel.swift:251"
    ],
    "args": [],
    "targets": [
@@ -34831,7 +34927,7 @@
    "ko": "금액(원)",
    "en": "Amount (KRW)",
    "files": [
-    "LedgerSheet.swift:421"
+    "LedgerSheet.swift:428"
    ],
    "args": [],
    "targets": [
@@ -34843,7 +34939,7 @@
    "ko": "금액",
    "en": "Amount",
    "files": [
-    "LedgerSheet.swift:390",
+    "LedgerSheet.swift:397",
     "LedgerSummary.swift:132",
     "LedgerSummary.swift:137"
    ],
@@ -35020,7 +35116,7 @@
    "ko": "기록 가리기",
    "en": "Hide records",
    "files": [
-    "AssistantCommandEdits.swift:22"
+    "AssistantCommandEdits.swift:24"
    ],
    "args": [],
    "targets": [
@@ -35032,7 +35128,7 @@
    "ko": "기록 고치기",
    "en": "Edit entry",
    "files": [
-    "LedgerSheet.swift:367"
+    "LedgerSheet.swift:374"
    ],
    "args": [],
    "targets": [
@@ -35069,7 +35165,7 @@
    "en": "Add entry",
    "files": [
     "LedgerSheet.swift:86",
-    "LedgerSheet.swift:367"
+    "LedgerSheet.swift:374"
    ],
    "args": [],
    "targets": [
@@ -35094,7 +35190,7 @@
    "ko": "기록 수정 {0}개",
    "en": "{0} record edit(s)",
    "files": [
-    "AssistantCommands.swift:324"
+    "AssistantCommands.swift:328"
    ],
    "args": [
     "edits"
@@ -35122,7 +35218,7 @@
    "ko": "기록 시간 고치기",
    "en": "Change record times",
    "files": [
-    "AssistantCommandEdits.swift:24"
+    "AssistantCommandEdits.swift:26"
    ],
    "args": [],
    "targets": [
@@ -35134,7 +35230,7 @@
    "ko": "기록 이름·분류 고치기",
    "en": "Rename or reclassify records",
    "files": [
-    "AssistantCommandEdits.swift:21"
+    "AssistantCommandEdits.swift:23"
    ],
    "args": [],
    "targets": [
@@ -35170,7 +35266,7 @@
    "ko": "기록 합치기",
    "en": "Merge records",
    "files": [
-    "AssistantCommandEdits.swift:23"
+    "AssistantCommandEdits.swift:25"
    ],
    "args": [],
    "targets": [
@@ -35230,7 +35326,7 @@
    "ko": "기록을 마친 날이 쌓이면 집이 자랍니다.",
    "en": "Your home grows as you complete days.",
    "files": [
-    "FirstRunTutorialView.swift:169"
+    "FirstRunTutorialView.swift:172"
    ],
    "args": [],
    "targets": [
@@ -35290,7 +35386,7 @@
    "ko": "기본 설정",
    "en": "Setup",
    "files": [
-    "FirstRunTutorialView.swift:124"
+    "FirstRunTutorialView.swift:125"
    ],
    "args": [],
    "targets": [
@@ -35465,13 +35561,25 @@
    ]
   },
   {
+   "key": "기타 확인|Other",
+   "ko": "기타 확인",
+   "en": "Other",
+   "files": [
+    "AITaskPanel.swift:132"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "기타|Other",
    "ko": "기타",
    "en": "Other",
    "files": [
     "LedgerCore.swift:27",
     "AssistantAIProvider.swift:37",
-    "TripImportSheet.swift:130"
+    "MapHomeLaunchPrompts.swift:195"
    ],
    "args": [],
    "targets": [
@@ -35575,7 +35683,7 @@
    "ko": "끄면 비밀번호는 백업에만 쓰입니다.",
    "en": "When off, the password is used only for backups.",
    "files": [
-    "FirstRunTutorialView.swift:638"
+    "FirstRunTutorialView.swift:643"
    ],
    "args": [],
    "targets": [
@@ -35623,7 +35731,7 @@
    "ko": "끔",
    "en": "Off",
    "files": [
-    "AssistantDataActions.swift:326",
+    "AssistantDataActions.swift:345",
     "MapHomeAppleWatchMenuItem.swift:132"
    ],
    "args": [],
@@ -35669,6 +35777,18 @@
    ]
   },
   {
+   "key": "끝난 일 지우기|Clear finished",
+   "ko": "끝난 일 지우기",
+   "en": "Clear finished",
+   "files": [
+    "AITaskPanel.swift:32"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "끝남|Expired",
    "ko": "끝남",
    "en": "Expired",
@@ -35697,7 +35817,7 @@
    "ko": "나",
    "en": "Me",
    "files": [
-    "LedgerSheet.swift:536",
+    "LedgerSheet.swift:543",
     "LedgerTripView.swift:108"
    ],
    "args": [],
@@ -35746,7 +35866,7 @@
    "ko": "나도 포함해 똑같이 나눠요. 기록의 「낸 사람」이 비었으면 내가 낸 것이에요.",
    "en": "Split equally including you. A blank payer means you paid.",
    "files": [
-    "LedgerSheet.swift:534"
+    "LedgerSheet.swift:541"
    ],
    "args": [],
    "targets": [
@@ -35800,7 +35920,7 @@
    "files": [
     "FirstRunTutorialGuides.swift:372",
     "FirstRunTutorialGuides.swift:419",
-    "MapHomeView+Support.swift:677"
+    "MapHomeLaunchPrompts.swift:139"
    ],
    "args": [],
    "targets": [
@@ -36009,6 +36129,18 @@
    ]
   },
   {
+   "key": "내 차|My car",
+   "ko": "내 차",
+   "en": "My car",
+   "files": [
+    "FirstRunTutorialView.swift:139"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "내 차로 등록|Register",
    "ko": "내 차로 등록",
    "en": "Register",
@@ -36026,7 +36158,7 @@
    "ko": "내 차로 등록",
    "en": "Register as my car",
    "files": [
-    "MapHomeCarAudioSuggestion.swift:26"
+    "MapHomeLaunchPrompts.swift:126"
    ],
    "args": [],
    "targets": [
@@ -36051,7 +36183,7 @@
    "ko": "내가 만든 분류",
    "en": "My categories",
    "files": [
-    "MapHomeNLEDetailLane.swift:208"
+    "MapHomeNLEDetailLane.swift:220"
    ],
    "args": [],
    "targets": [
@@ -36063,7 +36195,7 @@
    "ko": "내용 (예: 커피)",
    "en": "What (e.g. Coffee)",
    "files": [
-    "LedgerSheet.swift:385"
+    "LedgerSheet.swift:392"
    ],
    "args": [],
    "targets": [
@@ -36075,7 +36207,7 @@
    "ko": "낸 사람 (비우면 나)",
    "en": "Paid by (blank = me)",
    "files": [
-    "LedgerSheet.swift:341"
+    "LedgerSheet.swift:348"
    ],
    "args": [],
    "targets": [
@@ -36099,7 +36231,7 @@
    "ko": "낸 사람을 적으면 「정산하기」에서 나눌 돈을 계산해요.",
    "en": "Add who paid to split costs in Settle up.",
    "files": [
-    "LedgerSheet.swift:346"
+    "LedgerSheet.swift:353"
    ],
    "args": [],
    "targets": [
@@ -36486,7 +36618,7 @@
    "en": "Next",
    "files": [
     "AssistantConnectGuide.swift:175",
-    "FirstRunTutorialView.swift:274",
+    "FirstRunTutorialView.swift:279",
     "WatchTodayCards.swift:120"
    ],
    "args": [],
@@ -36524,7 +36656,7 @@
    "ko": "단축어 앱 → 아래 「자동화」 → 오른쪽 위 +",
    "en": "Shortcuts app → Automation → + at the top right",
    "files": [
-    "LedgerSheet.swift:585"
+    "LedgerSheet.swift:592"
    ],
    "args": [],
    "targets": [
@@ -36536,7 +36668,7 @@
    "ko": "단축어 앱 열기",
    "en": "Open Shortcuts",
    "files": [
-    "LedgerSheet.swift:607"
+    "LedgerSheet.swift:614"
    ],
    "args": [],
    "targets": [
@@ -36587,7 +36719,7 @@
    "en": "Calendar",
    "files": [
     "FirstRunGuideStage.swift:643",
-    "MapHomeView+Support.swift:451",
+    "MapHomeView+Support.swift:454",
     "MapHomeView+Support2.swift:392"
    ],
    "args": [],
@@ -36628,9 +36760,9 @@
    "ko": "대기",
    "en": "Waiting",
    "files": [
+    "AITaskPanel.swift:103",
     "MapHomeView+Support2.swift:910",
-    "SensorCollectionLiveActivity.swift:265",
-    "TaptionPlanWidget.swift:521"
+    "SensorCollectionLiveActivity.swift:265"
    ],
    "args": [],
    "targets": [
@@ -37422,7 +37554,7 @@
    "ko": "등록된 비밀번호가 있습니다",
    "en": "A password is already set",
    "files": [
-    "FirstRunTutorialView.swift:601"
+    "FirstRunTutorialView.swift:606"
    ],
    "args": [],
    "targets": [
@@ -37545,8 +37677,8 @@
    "ko": "때",
    "en": "When",
    "files": [
-    "LedgerSheet.swift:404",
-    "LedgerSheet.swift:424"
+    "LedgerSheet.swift:411",
+    "LedgerSheet.swift:431"
    ],
    "args": [],
    "targets": [
@@ -37671,7 +37803,7 @@
    "ko": "루틴 고치기",
    "en": "Edit routines",
    "files": [
-    "AssistantCommandEdits.swift:30"
+    "AssistantCommandEdits.swift:32"
    ],
    "args": [],
    "targets": [
@@ -37683,7 +37815,7 @@
    "ko": "루틴 더하기",
    "en": "Add routines",
    "files": [
-    "AssistantCommandEdits.swift:29"
+    "AssistantCommandEdits.swift:31"
    ],
    "args": [],
    "targets": [
@@ -37695,7 +37827,7 @@
    "ko": "루틴 지우기",
    "en": "Delete routines",
    "files": [
-    "AssistantCommandEdits.swift:31"
+    "AssistantCommandEdits.swift:33"
    ],
    "args": [],
    "targets": [
@@ -37743,7 +37875,7 @@
    "ko": "마무리",
    "en": "Done",
    "files": [
-    "FirstRunTutorialView.swift:127"
+    "FirstRunTutorialView.swift:128"
    ],
    "args": [],
    "targets": [
@@ -37844,7 +37976,7 @@
    "ko": "말풍선 {0}개",
    "en": "{0} bubble(s)",
    "files": [
-    "AssistantCommands.swift:326"
+    "AssistantCommands.swift:330"
    ],
    "args": [
     "bubbles"
@@ -37980,6 +38112,18 @@
    "files": [
     "AssistantActivity.swift:189",
     "AssistantActivity.swift:275"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "머문 장소 확인|Stay place",
+   "ko": "머문 장소 확인",
+   "en": "Stay place",
+   "files": [
+    "AITaskPanel.swift:131"
    ],
    "args": [],
    "targets": [
@@ -38230,7 +38374,7 @@
    "ko": "메모 {0}",
    "en": "Memo {0}",
    "files": [
-    "MapHomeView+Memos.swift:313"
+    "MapHomeView+Memos.swift:315"
    ],
    "args": [
     "memo.text"
@@ -38260,7 +38404,7 @@
    "ko": "메모 {0}개",
    "en": "{0} memo(s)",
    "files": [
-    "AssistantCommands.swift:322"
+    "AssistantCommands.swift:326"
    ],
    "args": [
     "memos"
@@ -38274,7 +38418,7 @@
    "ko": "메모 · 지도 메모",
    "en": "Memos · Map memos",
    "files": [
-    "FirstRunTutorialView.swift:144"
+    "FirstRunTutorialView.swift:146"
    ],
    "args": [],
    "targets": [
@@ -38286,7 +38430,7 @@
    "ko": "메모 고치기",
    "en": "Edit memos",
    "files": [
-    "AssistantCommandEdits.swift:27"
+    "AssistantCommandEdits.swift:29"
    ],
    "args": [],
    "targets": [
@@ -38306,11 +38450,23 @@
    ]
   },
   {
+   "key": "메모 다듬기|Polish memo",
+   "ko": "메모 다듬기",
+   "en": "Polish memo",
+   "files": [
+    "AITaskPanel.swift:127"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "메모 더하기|Add memos",
    "ko": "메모 더하기",
    "en": "Add memos",
    "files": [
-    "AssistantCommandEdits.swift:19"
+    "AssistantCommandEdits.swift:21"
    ],
    "args": [],
    "targets": [
@@ -38370,7 +38526,7 @@
    "ko": "메모 지우기",
    "en": "Delete memos",
    "files": [
-    "AssistantCommandEdits.swift:28"
+    "AssistantCommandEdits.swift:30"
    ],
    "args": [],
    "targets": [
@@ -38434,7 +38590,7 @@
    "ko": "메모",
    "en": "Note",
    "files": [
-    "LedgerSheet.swift:344"
+    "LedgerSheet.swift:351"
    ],
    "args": [],
    "targets": [
@@ -38642,7 +38798,7 @@
    "ko": "못 한 것 {0}개",
    "en": "{0} not done",
    "files": [
-    "AssistantCommands.swift:328"
+    "AssistantCommands.swift:332"
    ],
    "args": [
     "rejected"
@@ -38887,7 +39043,7 @@
    "ko": "바꾸지 않으면 그대로 씁니다.",
    "en": "It stays as is unless you change it.",
    "files": [
-    "FirstRunTutorialView.swift:603"
+    "FirstRunTutorialView.swift:608"
    ],
    "args": [],
    "targets": [
@@ -38899,7 +39055,7 @@
    "ko": "바꾸지 않으면 이 번호로 시작합니다.",
    "en": "This is used unless you change it.",
    "files": [
-    "FirstRunTutorialView.swift:615"
+    "FirstRunTutorialView.swift:620"
    ],
    "args": [],
    "targets": [
@@ -38923,7 +39079,7 @@
    "ko": "바로 시작",
    "en": "Start now",
    "files": [
-    "FirstRunTutorialView.swift:242"
+    "FirstRunTutorialView.swift:247"
    ],
    "args": [],
    "targets": [
@@ -39291,7 +39447,7 @@
    "en": "Backup password",
    "files": [
     "FirstRunTutorialGuides.swift:709",
-    "FirstRunTutorialView.swift:150",
+    "FirstRunTutorialView.swift:152",
     "MapHomeSettingsSheets.swift:552"
    ],
    "args": [],
@@ -39740,7 +39896,7 @@
    "ko": "보낼 돈",
    "en": "Transfers",
    "files": [
-    "LedgerSheet.swift:539"
+    "LedgerSheet.swift:546"
    ],
    "args": [],
    "targets": [
@@ -40082,7 +40238,7 @@
    "ko": "분류",
    "en": "Category",
    "files": [
-    "LedgerSheet.swift:401",
+    "LedgerSheet.swift:408",
     "MapHomeNLEClipEditor.swift:566",
     "MapHomeNLERawDetail.swift:50"
    ],
@@ -40108,7 +40264,7 @@
    "ko": "분류별",
    "en": "By category",
    "files": [
-    "LedgerMemoPanel.swift:246"
+    "LedgerMemoPanel.swift:248"
    ],
    "args": [],
    "targets": [
@@ -40122,6 +40278,18 @@
    "files": [
     "MapHomeSettingsSheets.swift:433",
     "MapHomeSettingsSheets.swift:617"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "불러오는 중…|Loading…",
+   "ko": "불러오는 중…",
+   "en": "Loading…",
+   "files": [
+    "AITaskPanel.swift:17"
    ],
    "args": [],
    "targets": [
@@ -40211,7 +40379,7 @@
    "ko": "비밀번호 확인",
    "en": "Confirm password",
    "files": [
-    "FirstRunTutorialView.swift:623",
+    "FirstRunTutorialView.swift:628",
     "MapHomeSettingsSheets.swift:347"
    ],
    "args": [],
@@ -40224,7 +40392,7 @@
    "ko": "비밀번호 확인이 일치하지 않습니다.",
    "en": "Passwords do not match.",
    "files": [
-    "FirstRunTutorialView.swift:327",
+    "FirstRunTutorialView.swift:332",
     "MapHomeSettingsSheets.swift:685"
    ],
    "args": [],
@@ -40310,7 +40478,7 @@
    "ko": "비밀번호를 잊으면 백업을 복구할 수 없습니다. 예전 iCloud 백업은 그때 쓴 비밀번호로 열립니다.",
    "en": "Without the password, backups can't be restored. Older iCloud backups open with the password used then.",
    "files": [
-    "FirstRunTutorialView.swift:641"
+    "FirstRunTutorialView.swift:646"
    ],
    "args": [],
    "targets": [
@@ -40440,7 +40608,7 @@
    "ko": "사용 불가",
    "en": "Unavailable",
    "files": [
-    "FirstRunTutorialPolicy.swift:173",
+    "FirstRunTutorialPolicy.swift:175",
     "MapHomeAppleWatchMenuItem.swift:164",
     "AppModelSupportTypes.swift:268"
    ],
@@ -40625,7 +40793,7 @@
    "ko": "사이드바와 달력",
    "en": "Sidebar and calendar",
    "files": [
-    "FirstRunTutorialView.swift:142"
+    "FirstRunTutorialView.swift:144"
    ],
    "args": [],
    "targets": [
@@ -40997,7 +41165,7 @@
    "ko": "상세",
    "en": "Detail",
    "files": [
-    "MapHomeNLEDetailLane.swift:135"
+    "MapHomeNLEDetailLane.swift:147"
    ],
    "args": [],
    "targets": [
@@ -41083,7 +41251,7 @@
    "en": "New memo",
    "files": [
     "MapHomeStickerEditor.swift:569",
-    "MapHomeView+Memos.swift:326"
+    "MapHomeView+Memos.swift:328"
    ],
    "args": [],
    "targets": [
@@ -41095,7 +41263,7 @@
    "ko": "새 비밀번호(6자리)",
    "en": "New password (6 digits)",
    "files": [
-    "FirstRunTutorialView.swift:620"
+    "FirstRunTutorialView.swift:625"
    ],
    "args": [],
    "targets": [
@@ -41107,7 +41275,7 @@
    "ko": "새 비밀번호",
    "en": "New password",
    "files": [
-    "FirstRunTutorialView.swift:622"
+    "FirstRunTutorialView.swift:627"
    ],
    "args": [],
    "targets": [
@@ -41143,7 +41311,7 @@
    "ko": "새 지도 메모",
    "en": "New map memo",
    "files": [
-    "MapHomeView+Memos.swift:449"
+    "MapHomeView+Memos.swift:451"
    ],
    "args": [],
    "targets": [
@@ -41278,7 +41446,7 @@
    "ko": "생각과 장소를 그 시각에 남깁니다.",
    "en": "Keep thoughts and places at the moment they happen.",
    "files": [
-    "FirstRunTutorialView.swift:168"
+    "FirstRunTutorialView.swift:171"
    ],
    "args": [],
    "targets": [
@@ -41602,7 +41770,7 @@
    "ko": "설정 {0}개",
    "en": "{0} setting(s)",
    "files": [
-    "AssistantCommands.swift:325"
+    "AssistantCommands.swift:329"
    ],
    "args": [
     "settings"
@@ -41669,7 +41837,7 @@
    "files": [
     "MapHomeView+Menu2.swift:210",
     "MapHomeView+Menu2.swift:227",
-    "MapHomeView+Support.swift:756"
+    "MapHomeView+Support.swift:759"
    ],
    "args": [],
    "targets": [
@@ -41743,7 +41911,7 @@
    "ko": "설정을 기본값으로 초기화할까요?",
    "en": "Reset settings to defaults?",
    "files": [
-    "MapHomeView+Support.swift:752"
+    "MapHomeView+Support.swift:755"
    ],
    "args": [],
    "targets": [
@@ -42141,7 +42309,7 @@
    "ko": "손목의 움직임까지 더해 하루를 기록합니다.",
    "en": "Adds movement from your wrist to your day.",
    "files": [
-    "FirstRunTutorialView.swift:172"
+    "FirstRunTutorialView.swift:175"
    ],
    "args": [],
    "targets": [
@@ -42242,7 +42410,7 @@
    "ko": "수면 시간 고치기",
    "en": "Correct sleep times",
    "files": [
-    "AssistantCommandEdits.swift:36"
+    "AssistantCommandEdits.swift:38"
    ],
    "args": [],
    "targets": [
@@ -42296,7 +42464,7 @@
    "ko": "수묵",
    "en": "Ink Wash",
    "files": [
-    "AssistantDataActions.swift:316",
+    "AssistantDataActions.swift:335",
     "MapHomeView+Map.swift:940"
    ],
    "args": [],
@@ -42749,7 +42917,7 @@
    "ko": "시간선 축소",
    "en": "Zoom timeline out",
    "files": [
-    "MapHomeView+Timeline.swift:511"
+    "MapHomeView+Timeline.swift:514"
    ],
    "args": [],
    "targets": [
@@ -42761,7 +42929,7 @@
    "ko": "시간선 확대",
    "en": "Zoom timeline in",
    "files": [
-    "MapHomeView+Timeline.swift:510"
+    "MapHomeView+Timeline.swift:513"
    ],
    "args": [],
    "targets": [
@@ -42773,7 +42941,7 @@
    "ko": "시간순",
    "en": "By time",
    "files": [
-    "LedgerMemoPanel.swift:247"
+    "LedgerMemoPanel.swift:249"
    ],
    "args": [],
    "targets": [
@@ -42924,7 +43092,7 @@
    "ko": "시작",
    "en": "Start",
    "files": [
-    "FirstRunTutorialView.swift:123",
+    "FirstRunTutorialView.swift:124",
     "LedgerTripView.swift:262",
     "MapHomeSectionEditSheet.swift:206"
    ],
@@ -42938,7 +43106,7 @@
    "ko": "시작하기",
    "en": "Get started",
    "files": [
-    "FirstRunTutorialView.swift:273",
+    "FirstRunTutorialView.swift:278",
     "PermissionOnboardingSheet.swift:156"
    ],
    "args": [],
@@ -43064,7 +43232,7 @@
    "ko": "실외(고대비)",
    "en": "Outdoor (high contrast)",
    "files": [
-    "AssistantDataActions.swift:313",
+    "AssistantDataActions.swift:332",
     "MapHomeView+Map.swift:937"
    ],
    "args": [],
@@ -43116,6 +43284,7 @@
    "ko": "실패",
    "en": "Failed",
    "files": [
+    "AITaskPanel.swift:106",
     "AppModel+Export.swift:30"
    ],
    "args": [],
@@ -43140,7 +43309,7 @@
    "ko": "아니요",
    "en": "No",
    "files": [
-    "MapHomeCarAudioSuggestion.swift:29"
+    "MapHomeLaunchPrompts.swift:127"
    ],
    "args": [],
    "targets": [
@@ -43200,7 +43369,7 @@
    "ko": "아래에 적고 다음을 누르면 저장됩니다.",
    "en": "Enter one below and tap Next to save it.",
    "files": [
-    "FirstRunTutorialView.swift:607"
+    "FirstRunTutorialView.swift:612"
    ],
    "args": [],
    "targets": [
@@ -43336,7 +43505,7 @@
    "ko": "아직 비밀번호가 없습니다",
    "en": "No password yet",
    "files": [
-    "FirstRunTutorialView.swift:605"
+    "FirstRunTutorialView.swift:610"
    ],
    "args": [],
    "targets": [
@@ -43348,7 +43517,7 @@
    "ko": "아직 안 물음",
    "en": "Not asked",
    "files": [
-    "FirstRunTutorialPolicy.swift:167"
+    "FirstRunTutorialPolicy.swift:169"
    ],
    "args": [],
    "targets": [
@@ -43387,6 +43556,18 @@
    "en": "Not connected yet. Check the previous steps.",
    "files": [
     "AssistantConnectView.swift:562"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "아직 잡힌 블루투스 기기가 없어요. 차에 타서 블루투스를 연결한 뒤 이 화면이나 메뉴 › 내 차 오디오에서 고를 수 있어요.|No Bluetooth devices yet. Connect your car's Bluetooth, then pick it here or in Menu › My car audio.",
+   "ko": "아직 잡힌 블루투스 기기가 없어요. 차에 타서 블루투스를 연결한 뒤 이 화면이나 메뉴 › 내 차 오디오에서 고를 수 있어요.",
+   "en": "No Bluetooth devices yet. Connect your car's Bluetooth, then pick it here or in Menu › My car audio.",
+   "files": [
+    "FirstRunCarPage.swift:22"
    ],
    "args": [],
    "targets": [
@@ -43635,7 +43816,7 @@
    "ko": "애플맵",
    "en": "Apple Maps",
    "files": [
-    "AssistantDataActions.swift:310",
+    "AssistantDataActions.swift:329",
     "MapHomeView+Map.swift:933"
    ],
    "args": [],
@@ -43808,7 +43989,7 @@
    "ko": "앱 사용 중에만",
    "en": "While using",
    "files": [
-    "FirstRunTutorialPolicy.swift:177"
+    "FirstRunTutorialPolicy.swift:179"
    ],
    "args": [],
    "targets": [
@@ -43858,7 +44039,7 @@
    "ko": "앱 언어 바꾸기",
    "en": "Change app language",
    "files": [
-    "AssistantCommandEdits.swift:37"
+    "AssistantCommandEdits.swift:39"
    ],
    "args": [],
    "targets": [
@@ -43906,7 +44087,7 @@
    "ko": "앱 잠금과 iCloud 백업에 같은 비밀번호를 씁니다.",
    "en": "App lock and iCloud backup share this password.",
    "files": [
-    "FirstRunTutorialView.swift:174"
+    "FirstRunTutorialView.swift:177"
    ],
    "args": [],
    "targets": [
@@ -43942,7 +44123,7 @@
    "ko": "앱을 열 때마다 잠금",
    "en": "Lock whenever the app opens",
    "files": [
-    "FirstRunTutorialView.swift:633",
+    "FirstRunTutorialView.swift:638",
     "MapHomeSettingsSheets.swift:370"
    ],
    "args": [],
@@ -43991,7 +44172,7 @@
    "ko": "앱의 첫 화면입니다. 하루가 지도 위에 그려집니다.",
    "en": "This is the main screen. Your day is drawn on the map.",
    "files": [
-    "FirstRunTutorialView.swift:164"
+    "FirstRunTutorialView.swift:167"
    ],
    "args": [],
    "targets": [
@@ -44027,7 +44208,7 @@
    "ko": "야간",
    "en": "Night",
    "files": [
-    "AssistantDataActions.swift:312",
+    "AssistantDataActions.swift:331",
     "MapHomeView+Map.swift:936"
    ],
    "args": [],
@@ -44076,7 +44257,7 @@
    "ko": "어제 하루를 담은 카드를 알림으로 보낼 시각을 고릅니다.",
    "en": "Choose when yesterday's card arrives as a notification.",
    "files": [
-    "FirstRunTutorialView.swift:159"
+    "FirstRunTutorialView.swift:161"
    ],
    "args": [],
    "targets": [
@@ -44174,7 +44355,7 @@
    "ko": "업무 시간에만 번 돈이 쌓입니다. 금액은 이 기기에만 저장됩니다.",
    "en": "Earnings grow only during work time. Stored only on this device.",
    "files": [
-    "FirstRunTutorialView.swift:162"
+    "FirstRunTutorialView.swift:165"
    ],
    "args": [],
    "targets": [
@@ -44227,7 +44408,7 @@
    "ko": "업무와 학습 시간을 구분하는 기준이 됩니다.",
    "en": "Used to tell work and study time apart.",
    "files": [
-    "FirstRunTutorialView.swift:161"
+    "FirstRunTutorialView.swift:163"
    ],
    "args": [],
    "targets": [
@@ -44363,7 +44544,7 @@
    "ko": "여기에 메모",
    "en": "Memo here",
    "files": [
-    "MapHomeView+Memos.swift:410"
+    "MapHomeView+Memos.swift:412"
    ],
    "args": [],
    "targets": [
@@ -44449,7 +44630,7 @@
    "ko": "여행 계획 추가",
    "en": "Add to trip",
    "files": [
-    "MapHomeView+Support.swift:681"
+    "MapHomeView+Support.swift:684"
    ],
    "args": [],
    "targets": [
@@ -44510,7 +44691,7 @@
    "ko": "여행 예산이에요. 고치면 일상의 「여행 경비」와 여행의 「경비 받음」이 함께 바뀌어요.",
    "en": "This is the trip budget. Editing it changes both the daily and trip sides.",
    "files": [
-    "LedgerSheet.swift:427"
+    "LedgerSheet.swift:434"
    ],
    "args": [],
    "targets": [
@@ -44535,7 +44716,7 @@
    "ko": "여행 일정 고치기",
    "en": "Edit trip stops",
    "files": [
-    "AssistantCommandEdits.swift:33"
+    "AssistantCommandEdits.swift:35"
    ],
    "args": [],
    "targets": [
@@ -44547,7 +44728,7 @@
    "ko": "여행 일정 더하기",
    "en": "Add trip stops",
    "files": [
-    "AssistantCommandEdits.swift:32"
+    "AssistantCommandEdits.swift:34"
    ],
    "args": [],
    "targets": [
@@ -44559,7 +44740,7 @@
    "ko": "여행 일정 상태 바꾸기",
    "en": "Change trip stop status",
    "files": [
-    "AssistantCommandEdits.swift:35"
+    "AssistantCommandEdits.swift:37"
    ],
    "args": [],
    "targets": [
@@ -44571,7 +44752,7 @@
    "ko": "여행 일정 지우기",
    "en": "Delete trip stops",
    "files": [
-    "AssistantCommandEdits.swift:34"
+    "AssistantCommandEdits.swift:36"
    ],
    "args": [],
    "targets": [
@@ -44644,7 +44825,7 @@
    "ko": "여행 정산이에요. 고치면 그 금액으로 고정돼요. 일상 쪽 수입이면 반납, 지출이면 추가 경비예요.",
    "en": "This is the trip settlement. Editing fixes it to this amount. Daily income means returned, expense means extra.",
    "files": [
-    "LedgerSheet.swift:428"
+    "LedgerSheet.swift:435"
    ],
    "args": [],
    "targets": [
@@ -45111,7 +45292,7 @@
    "en": "Connect and protect",
    "files": [
     "FirstRunTutorialGuides.swift:82",
-    "FirstRunTutorialView.swift:126",
+    "FirstRunTutorialView.swift:127",
     "FirstRunTutorialGuides.swift:82"
    ],
    "args": [],
@@ -45505,7 +45686,7 @@
    "ko": "연봉 설정",
    "en": "Salary",
    "files": [
-    "FirstRunTutorialView.swift:138"
+    "FirstRunTutorialView.swift:140"
    ],
    "args": [],
    "targets": [
@@ -45567,7 +45748,7 @@
    "ko": "연봉 카운터",
    "en": "Salary counter",
    "files": [
-    "FirstRunTutorialView.swift:748",
+    "FirstRunTutorialView.swift:753",
     "MapHomeAlarm.swift:25",
     "MapHomeSalarySettingsSheet.swift:123"
    ],
@@ -45619,7 +45800,7 @@
    "ko": "연봉을 적으면 나타납니다",
    "en": "Appears once you enter a salary",
    "files": [
-    "FirstRunTutorialView.swift:750"
+    "FirstRunTutorialView.swift:755"
    ],
    "args": [],
    "targets": [
@@ -45844,13 +46025,25 @@
    ]
   },
   {
+   "key": "영수증 확인|Receipt",
+   "ko": "영수증 확인",
+   "en": "Receipt",
+   "files": [
+    "AITaskPanel.swift:126"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "영수증|Receipt",
    "ko": "영수증",
    "en": "Receipt",
    "files": [
     "LedgerExport.swift:49",
     "LedgerSheet.swift:182",
-    "LedgerSheet.swift:298"
+    "LedgerSheet.swift:305"
    ],
    "args": [],
    "targets": [
@@ -45889,7 +46082,7 @@
    "ko": "예산 남음",
    "en": "Budget left",
    "files": [
-    "LedgerSheet.swift:235",
+    "LedgerSheet.swift:242",
     "LedgerSummary.swift:94"
    ],
    "args": [],
@@ -45926,7 +46119,7 @@
    "ko": "예산",
    "en": "Budget",
    "files": [
-    "LedgerSheet.swift:499",
+    "LedgerSheet.swift:506",
     "LedgerSummary.swift:94",
     "LedgerTripView.swift:23"
    ],
@@ -45977,7 +46170,7 @@
    "ko": "예시",
    "en": "Example",
    "files": [
-    "FirstRunTutorialView.swift:730"
+    "FirstRunTutorialView.swift:735"
    ],
    "args": [],
    "targets": [
@@ -46152,7 +46345,7 @@
    "ko": "오늘 손익(세후 월급 기준)",
    "en": "Today's net (after-tax pay)",
    "files": [
-    "LedgerSheet.swift:241"
+    "LedgerSheet.swift:248"
    ],
    "args": [],
    "targets": [
@@ -46265,7 +46458,7 @@
    "ko": "오늘",
    "en": "Today",
    "files": [
-    "LedgerMemoPanel.swift:95",
+    "LedgerMemoPanel.swift:97",
     "WatchTodayCards.swift:79"
    ],
    "args": [],
@@ -46303,7 +46496,7 @@
    "ko": "오른쪽 시간 막대로 하루를, 달력으로 지난 날을 봅니다.",
    "en": "See the day on the right time bar and past days in the calendar.",
    "files": [
-    "FirstRunTutorialView.swift:166"
+    "FirstRunTutorialView.swift:169"
    ],
    "args": [],
    "targets": [
@@ -46440,9 +46633,9 @@
    "ko": "완료",
    "en": "Done",
    "files": [
+    "AITaskPanel.swift:105",
     "AssistantSettingsView.swift:62",
-    "FirstRunAIConnectPage.swift:37",
-    "LedgerSheet.swift:556"
+    "FirstRunAIConnectPage.swift:37"
    ],
    "args": [],
    "targets": [
@@ -46650,8 +46843,8 @@
    "en": "Exercise",
    "files": [
     "MapHomeInteractionPolicy.swift:459",
-    "MapHomeLocationPresentation.swift:310",
-    "AppModel+WidgetLiveActivity.swift:108"
+    "MapHomeLaunchPrompts.swift:193",
+    "MapHomeLocationPresentation.swift:310"
    ],
    "args": [],
    "targets": [
@@ -46899,7 +47092,7 @@
    "ko": "위성",
    "en": "Satellite",
    "files": [
-    "AssistantDataActions.swift:311",
+    "AssistantDataActions.swift:330",
     "MapHomeView+Map.swift:934"
    ],
    "args": [],
@@ -47311,7 +47504,7 @@
    "ko": "위치를 '항상 허용'으로 바꿔 주세요",
    "en": "Set location to Always",
    "files": [
-    "MapHomeView+Support.swift:675"
+    "MapHomeView+Support.swift:678"
    ],
    "args": [],
    "targets": [
@@ -47335,7 +47528,7 @@
    "ko": "위치를 찾지 못했습니다. 다른 이름으로 검색해 주세요.",
    "en": "Couldn't find it. Try another name.",
    "files": [
-    "FirstRunTutorialView.swift:518"
+    "FirstRunTutorialView.swift:523"
    ],
    "args": [],
    "targets": [
@@ -47347,7 +47540,7 @@
    "ko": "위치를 허용하면 현재 위치로도 저장할 수 있습니다.",
    "en": "Allow location to use your current position.",
    "files": [
-    "FirstRunTutorialView.swift:540"
+    "FirstRunTutorialView.swift:545"
    ],
    "args": [],
    "targets": [
@@ -47961,7 +48154,7 @@
    "ko": "이 달 지출 예산(원)",
    "en": "Spending budget this month (KRW)",
    "files": [
-    "LedgerSheet.swift:494"
+    "LedgerSheet.swift:501"
    ],
    "args": [],
    "targets": [
@@ -48108,7 +48301,7 @@
    "ko": "이 위치로",
    "en": "Use this spot",
    "files": [
-    "MapHomeView+Memos.swift:409"
+    "MapHomeView+Memos.swift:411"
    ],
    "args": [],
    "targets": [
@@ -48541,7 +48734,7 @@
    "ko": "이름을 넣으면 계산해요.",
    "en": "Enter names to calculate.",
    "files": [
-    "LedgerSheet.swift:541"
+    "LedgerSheet.swift:548"
    ],
    "args": [],
    "targets": [
@@ -48696,7 +48889,7 @@
    "ko": "이번 달",
    "en": "This month",
    "files": [
-    "LedgerMemoPanel.swift:98"
+    "LedgerMemoPanel.swift:100"
    ],
    "args": [],
    "targets": [
@@ -48709,7 +48902,7 @@
    "en": "Carried over",
    "files": [
     "LedgerExport.swift:84",
-    "LedgerSheet.swift:228",
+    "LedgerSheet.swift:235",
     "LedgerSummary.swift:92"
    ],
    "args": [],
@@ -48773,7 +48966,7 @@
    "en": "Back",
    "files": [
     "AssistantConnectGuide.swift:173",
-    "FirstRunTutorialView.swift:249"
+    "FirstRunTutorialView.swift:254"
    ],
    "args": [],
    "targets": [
@@ -48871,7 +49064,7 @@
    "ko": "일부 허용",
    "en": "Partly allowed",
    "files": [
-    "FirstRunTutorialPolicy.swift:171"
+    "FirstRunTutorialPolicy.swift:173"
    ],
    "args": [],
    "targets": [
@@ -48934,7 +49127,7 @@
    "ko": "일정 {0}개",
    "en": "{0} schedule(s)",
    "files": [
-    "AssistantCommands.swift:323"
+    "AssistantCommands.swift:327"
    ],
    "args": [
     "schedules"
@@ -48960,7 +49153,7 @@
    "ko": "일정 고치기",
    "en": "Edit schedules",
    "files": [
-    "AssistantCommandEdits.swift:25"
+    "AssistantCommandEdits.swift:27"
    ],
    "args": [],
    "targets": [
@@ -48972,7 +49165,7 @@
    "ko": "일정 더하기",
    "en": "Add schedules",
    "files": [
-    "AssistantCommandEdits.swift:20"
+    "AssistantCommandEdits.swift:22"
    ],
    "args": [],
    "targets": [
@@ -49011,7 +49204,7 @@
    "ko": "일정 지우기",
    "en": "Delete schedules",
    "files": [
-    "AssistantCommandEdits.swift:26"
+    "AssistantCommandEdits.swift:28"
    ],
    "args": [],
    "targets": [
@@ -49061,7 +49254,7 @@
    "ko": "일정에서 고르기",
    "en": "From calendar",
    "files": [
-    "MapHomeNLEDetailLane.swift:121"
+    "MapHomeNLEDetailLane.swift:133"
    ],
    "args": [],
    "targets": [
@@ -49085,7 +49278,7 @@
    "ko": "일정을 하루 기록과 함께 봅니다. 읽기만 합니다.",
    "en": "See events with your day. Read only.",
    "files": [
-    "FirstRunTutorialView.swift:171"
+    "FirstRunTutorialView.swift:174"
    ],
    "args": [],
    "targets": [
@@ -49117,11 +49310,23 @@
    ]
   },
   {
+   "key": "읽지 못해 AI에게 확인을 맡겼어요. 메모 › AI에서 볼 수 있어요.|Couldn't read it, so it was sent to your AI. See Memo › AI.",
+   "ko": "읽지 못해 AI에게 확인을 맡겼어요. 메모 › AI에서 볼 수 있어요.",
+   "en": "Couldn't read it, so it was sent to your AI. See Memo › AI.",
+   "files": [
+    "LedgerSheet.swift:200"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "읽지 못했어요. + 로 직접 넣어 주세요.|Couldn't read it. Tap + to enter it yourself.",
    "ko": "읽지 못했어요. + 로 직접 넣어 주세요.",
    "en": "Couldn't read it. Tap + to enter it yourself.",
    "files": [
-    "LedgerSheet.swift:197"
+    "LedgerSheet.swift:203"
    ],
    "args": [],
    "targets": [
@@ -49283,7 +49488,7 @@
    "ko": "자동 기록이 틀렸으면 영상 편집처럼 고칩니다.",
    "en": "Fix automatic records the way you edit a video.",
    "files": [
-    "FirstRunTutorialView.swift:167"
+    "FirstRunTutorialView.swift:170"
    ],
    "args": [],
    "targets": [
@@ -49310,7 +49515,7 @@
    "ko": "자동 정산으로 되돌리기",
    "en": "Back to automatic settlement",
    "files": [
-    "LedgerSheet.swift:432"
+    "LedgerSheet.swift:439"
    ],
    "args": [],
    "targets": [
@@ -49489,7 +49694,7 @@
    "en": "Balance",
    "files": [
     "LedgerExport.swift:22",
-    "LedgerSheet.swift:231",
+    "LedgerSheet.swift:238",
     "LedgerSummary.swift:93"
    ],
    "args": [],
@@ -49668,7 +49873,7 @@
    "ko": "장소",
    "en": "Place",
    "files": [
-    "LedgerSheet.swift:343",
+    "LedgerSheet.swift:350",
     "MapHomeNLEClipEditor.swift:254"
    ],
    "args": [],
@@ -49804,7 +50009,7 @@
    "ko": "재생과 녹화",
    "en": "Play and record",
    "files": [
-    "FirstRunTutorialView.swift:141"
+    "FirstRunTutorialView.swift:143"
    ],
    "args": [],
    "targets": [
@@ -49852,8 +50057,8 @@
    "ko": "저장",
    "en": "Save",
    "files": [
-    "LedgerSheet.swift:372",
-    "LedgerSheet.swift:505",
+    "LedgerSheet.swift:379",
+    "LedgerSheet.swift:512",
     "LedgerTripView.swift:294"
    ],
    "args": [],
@@ -49918,8 +50123,8 @@
    "en": "Saved",
    "files": [
     "FirstRunTutorialGuides.swift:670",
-    "FirstRunTutorialView.swift:437",
-    "FirstRunTutorialView.swift:447"
+    "FirstRunTutorialView.swift:442",
+    "FirstRunTutorialView.swift:452"
    ],
    "args": [],
    "targets": [
@@ -50214,7 +50419,7 @@
    "ko": "접기",
    "en": "Collapse",
    "files": [
-    "MapHomeView+Memos.swift:239"
+    "MapHomeView+Memos.swift:241"
    ],
    "args": [],
    "targets": [
@@ -50288,7 +50493,7 @@
    "en": "Settle up",
    "files": [
     "LedgerSheet.swift:68",
-    "LedgerSheet.swift:554"
+    "LedgerSheet.swift:561"
    ],
    "args": [],
    "targets": [
@@ -50377,6 +50582,18 @@
     "TaptionPlanWidget",
     "TaptionPlanWatch",
     "TaptionPlanWatchWidget"
+   ]
+  },
+  {
+   "key": "조각 합침 검토|Merge review",
+   "ko": "조각 합침 검토",
+   "en": "Merge review",
+   "files": [
+    "AITaskPanel.swift:130"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
    ]
   },
   {
@@ -50472,8 +50689,8 @@
    "ko": "종류",
    "en": "Type",
    "files": [
-    "LedgerSheet.swift:380",
-    "LedgerSheet.swift:414"
+    "LedgerSheet.swift:387",
+    "LedgerSheet.swift:421"
    ],
    "args": [],
    "targets": [
@@ -50617,7 +50834,7 @@
    "ko": "주소나 장소 이름 검색",
    "en": "Search address or place",
    "files": [
-    "FirstRunTutorialView.swift:467"
+    "FirstRunTutorialView.swift:472"
    ],
    "args": [],
    "targets": [
@@ -50677,7 +50894,7 @@
    "ko": "준비됐습니다",
    "en": "You're ready",
    "files": [
-    "FirstRunTutorialView.swift:151"
+    "FirstRunTutorialView.swift:153"
    ],
    "args": [],
    "targets": [
@@ -50812,7 +51029,7 @@
    "ko": "지금 상태입니다. 비어 있는 것은 나중에 해도 됩니다.",
    "en": "Here's where things stand. Anything open can wait.",
    "files": [
-    "FirstRunTutorialView.swift:175"
+    "FirstRunTutorialView.swift:178"
    ],
    "args": [],
    "targets": [
@@ -50837,6 +51054,18 @@
    "en": "Current outputs",
    "files": [
     "MapHomeCarAudioSheet.swift:128"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "지금 연결됨|Connected now",
+   "ko": "지금 연결됨",
+   "en": "Connected now",
+   "files": [
+    "FirstRunCarPage.swift:41"
    ],
    "args": [],
    "targets": [
@@ -50981,7 +51210,7 @@
    "ko": "지도 보는 법",
    "en": "Reading the map",
    "files": [
-    "FirstRunTutorialView.swift:140"
+    "FirstRunTutorialView.swift:142"
    ],
    "args": [],
    "targets": [
@@ -50993,7 +51222,7 @@
    "ko": "지도 스타일 바꾸기",
    "en": "Change map style",
    "files": [
-    "AssistantCommandEdits.swift:38"
+    "AssistantCommandEdits.swift:40"
    ],
    "args": [],
    "targets": [
@@ -51067,7 +51296,7 @@
    "ko": "지도 위 고양이 곁에 보여 줄 것을 고릅니다.",
    "en": "Choose what appears next to the cat on the map.",
    "files": [
-    "FirstRunTutorialView.swift:170"
+    "FirstRunTutorialView.swift:173"
    ],
    "args": [],
    "targets": [
@@ -51119,7 +51348,7 @@
    "ko": "지도 표시 켜고 끄기",
    "en": "Toggle map display",
    "files": [
-    "AssistantCommandEdits.swift:39"
+    "AssistantCommandEdits.swift:41"
    ],
    "args": [],
    "targets": [
@@ -51230,7 +51459,7 @@
    "ko": "지도를 움직여 핀 위치를 맞추세요",
    "en": "Move the map to place the pin",
    "files": [
-    "MapHomeView+Memos.swift:372"
+    "MapHomeView+Memos.swift:374"
    ],
    "args": [],
    "targets": [
@@ -51278,7 +51507,7 @@
    "ko": "지도에 경로 선",
    "en": "Route lines on map",
    "files": [
-    "AssistantDataActions.swift:323"
+    "AssistantDataActions.swift:342"
    ],
    "args": [],
    "targets": [
@@ -51290,7 +51519,7 @@
    "ko": "지도에 메모 추가",
    "en": "Add map memo",
    "files": [
-    "MapHomeView+Support.swift:659"
+    "MapHomeView+Support.swift:662"
    ],
    "args": [],
    "targets": [
@@ -51302,7 +51531,7 @@
    "ko": "지도에 발자국",
    "en": "Footprints on map",
    "files": [
-    "AssistantDataActions.swift:324"
+    "AssistantDataActions.swift:343"
    ],
    "args": [],
    "targets": [
@@ -51326,7 +51555,7 @@
    "ko": "지도에 사진",
    "en": "Photos on map",
    "files": [
-    "AssistantDataActions.swift:322"
+    "AssistantDataActions.swift:341"
    ],
    "args": [],
    "targets": [
@@ -51351,7 +51580,7 @@
    "ko": "지도에서 저장됨",
    "en": "Saved from the map",
    "files": [
-    "FirstRunTutorialView.swift:459"
+    "FirstRunTutorialView.swift:464"
    ],
    "args": [],
    "targets": [
@@ -51375,7 +51604,7 @@
    "ko": "지도에서 하루를 함께 걸을 고양이입니다.",
    "en": "This cat walks through your day on the map.",
    "files": [
-    "FirstRunTutorialView.swift:163"
+    "FirstRunTutorialView.swift:166"
    ],
    "args": [],
    "targets": [
@@ -51413,7 +51642,7 @@
    "en": "Delete",
    "files": [
     "LedgerSheet.swift:43",
-    "LedgerSheet.swift:350",
+    "LedgerSheet.swift:357",
     "LedgerTripView.swift:36"
    ],
    "args": [],
@@ -51426,7 +51655,7 @@
    "ko": "지우면 이 메모는 「메모로만」이 돼 다시 가계부에 들어오지 않아요.",
    "en": "Deleting makes this memo note-only so it won't come back to the ledger.",
    "files": [
-    "LedgerSheet.swift:359"
+    "LedgerSheet.swift:366"
    ],
    "args": [],
    "targets": [
@@ -51438,8 +51667,8 @@
    "ko": "지움",
    "en": "Deleted",
    "files": [
-    "AssistantCommandEdits.swift:265",
-    "AssistantCommandEdits.swift:276",
+    "AssistantCommandEdits.swift:271",
+    "AssistantCommandEdits.swift:282",
     "AssistantDataActions.swift:66"
    ],
    "args": [],
@@ -51492,7 +51721,7 @@
    "ko": "지출",
    "en": "Spent",
    "files": [
-    "LedgerSheet.swift:230",
+    "LedgerSheet.swift:237",
     "MapHomeInteractionPolicy.swift:460"
    ],
    "args": [],
@@ -51646,7 +51875,7 @@
    "ko": "직접 넣는 환율 (1단위 = 원)",
    "en": "Manual rate (1 unit = KRW)",
    "files": [
-    "LedgerSheet.swift:399"
+    "LedgerSheet.swift:406"
    ],
    "args": [],
    "targets": [
@@ -51672,7 +51901,7 @@
    "ko": "직접 입력",
    "en": "Enter manually",
    "files": [
-    "MapHomeView+Support.swift:682",
+    "MapHomeView+Support.swift:685",
     "TravelMapVideoSection.swift:38"
    ],
    "args": [],
@@ -51795,7 +52024,7 @@
    "ko": "집 위치",
    "en": "Home",
    "files": [
-    "FirstRunTutorialView.swift:136"
+    "FirstRunTutorialView.swift:137"
    ],
    "args": [],
    "targets": [
@@ -51809,7 +52038,7 @@
    "files": [
     "FirstRunGuideStage.swift:647",
     "FirstRunTutorialGuides.swift:694",
-    "MapHomeView+Stickman.swift:381"
+    "MapHomeLaunchPrompts.swift:188"
    ],
    "args": [],
    "targets": [
@@ -51865,7 +52094,7 @@
    "ko": "집에 머문 시간을 자동으로 구분합니다.",
    "en": "Time at home is recognized automatically.",
    "files": [
-    "FirstRunTutorialView.swift:160"
+    "FirstRunTutorialView.swift:162"
    ],
    "args": [],
    "targets": [
@@ -51952,7 +52181,7 @@
    "ko": "차근차근 따라 하기",
    "en": "Walk me through",
    "files": [
-    "FirstRunTutorialView.swift:272"
+    "FirstRunTutorialView.swift:277"
    ],
    "args": [],
    "targets": [
@@ -51984,11 +52213,35 @@
    ]
   },
   {
+   "key": "차에 블루투스로 연결되면 그 이동을 자동차로 기록합니다. 이어폰은 고르지 마세요.|Trips with your car's Bluetooth connected are recorded as car. Don't pick earphones.",
+   "ko": "차에 블루투스로 연결되면 그 이동을 자동차로 기록합니다. 이어폰은 고르지 마세요.",
+   "en": "Trips with your car's Bluetooth connected are recorded as car. Don't pick earphones.",
+   "files": [
+    "FirstRunTutorialView.swift:164"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "채팅창에 붙여 넣고 보내요. 앱이 없으면 App Store가 열려요.|Paste into the chat and send. The App Store opens if it isn't installed.",
    "ko": "채팅창에 붙여 넣고 보내요. 앱이 없으면 App Store가 열려요.",
    "en": "Paste into the chat and send. The App Store opens if it isn't installed.",
    "files": [
     "AssistantConnectGuide.swift:127"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "처리중|Working",
+   "ko": "처리중",
+   "en": "Working",
+   "files": [
+    "AITaskPanel.swift:104"
    ],
    "args": [],
    "targets": [
@@ -52036,7 +52289,7 @@
    "ko": "초기 비밀번호",
    "en": "Default password",
    "files": [
-    "FirstRunTutorialView.swift:609"
+    "FirstRunTutorialView.swift:614"
    ],
    "args": [],
    "targets": [
@@ -52398,8 +52651,8 @@
    "en": "Hobby",
    "files": [
     "MapHomeInteractionPolicy.swift:458",
-    "MapHomeLocationPresentation.swift:291",
-    "AppModel+WidgetLiveActivity.swift:104"
+    "MapHomeLaunchPrompts.swift:192",
+    "MapHomeLocationPresentation.swift:291"
    ],
    "args": [],
    "targets": [
@@ -52583,7 +52836,7 @@
    "ko": "카드 결제 문자가 오면 가계부에 바로 들어가요. 읽지 못한 형식은 「붙여넣기」로 넣어 주세요.",
    "en": "Card payment texts go straight into the ledger. Paste any format it can't read.",
    "files": [
-    "LedgerSheet.swift:602"
+    "LedgerSheet.swift:609"
    ],
    "args": [],
    "targets": [
@@ -52631,7 +52884,7 @@
    "ko": "카운터",
    "en": "Counters",
    "files": [
-    "FirstRunTutorialView.swift:146",
+    "FirstRunTutorialView.swift:148",
     "MapHomeView+Menu2.swift:49"
    ],
    "args": [],
@@ -52742,7 +52995,7 @@
    "ko": "캘린더 연결",
    "en": "Connect calendars",
    "files": [
-    "FirstRunTutorialView.swift:147"
+    "FirstRunTutorialView.swift:149"
    ],
    "args": [],
    "targets": [
@@ -52934,7 +53187,7 @@
    "ko": "켬",
    "en": "On",
    "files": [
-    "AssistantDataActions.swift:326"
+    "AssistantDataActions.swift:345"
    ],
    "args": [],
    "targets": [
@@ -53064,7 +53317,7 @@
    "ko": "클립 편집",
    "en": "Clip editor",
    "files": [
-    "FirstRunTutorialView.swift:143",
+    "FirstRunTutorialView.swift:145",
     "MapHomeSectionEditSheet.swift:369",
     "MapHomeSectionEditSheet.swift:396"
    ],
@@ -53367,7 +53620,7 @@
    "ko": "판타지 지도",
    "en": "Fantasy Map",
    "files": [
-    "AssistantDataActions.swift:315",
+    "AssistantDataActions.swift:334",
     "MapHomeView+Map.swift:939"
    ],
    "args": [],
@@ -53809,7 +54062,7 @@
    "ko": "하루 요약과 집 성장",
    "en": "Day summary and home growth",
    "files": [
-    "FirstRunTutorialView.swift:145"
+    "FirstRunTutorialView.swift:147"
    ],
    "args": [],
    "targets": [
@@ -53881,7 +54134,7 @@
    "ko": "하루 지출",
    "en": "Daily spending",
    "files": [
-    "LedgerMemoPanel.swift:243"
+    "LedgerMemoPanel.swift:245"
    ],
    "args": [],
    "targets": [
@@ -53893,7 +54146,7 @@
    "ko": "하루 카드 시각",
    "en": "Day card time",
    "files": [
-    "FirstRunTutorialView.swift:135"
+    "FirstRunTutorialView.swift:136"
    ],
    "args": [],
    "targets": [
@@ -53984,7 +54237,7 @@
    "ko": "하루를 다시 보고 영상으로 남깁니다.",
    "en": "Replay your day and keep it as a video.",
    "files": [
-    "FirstRunTutorialView.swift:165"
+    "FirstRunTutorialView.swift:168"
    ],
    "args": [],
    "targets": [
@@ -53996,7 +54249,7 @@
    "ko": "하루를 자동으로 기록하는 데 씁니다. 필요한 것만 허용해도 됩니다. 자동 기록 중에는 상단에 위치 표시가 보일 수 있습니다.",
    "en": "Used to record your day automatically. Allow only what you need. The location icon may stay visible during automatic recording.",
    "files": [
-    "FirstRunTutorialView.swift:158"
+    "FirstRunTutorialView.swift:160"
    ],
    "args": [],
    "targets": [
@@ -54080,6 +54333,7 @@
    "ko": "학원",
    "en": "Academy",
    "files": [
+    "MapHomeLaunchPrompts.swift:190",
     "record-classification.json:0"
    ],
    "args": [],
@@ -54263,7 +54517,7 @@
    "ko": "함께 쓴 돈",
    "en": "Total spent",
    "files": [
-    "LedgerSheet.swift:548"
+    "LedgerSheet.swift:555"
    ],
    "args": [],
    "targets": [
@@ -54275,7 +54529,7 @@
    "ko": "함께한 사람 (쉼표로, 예: 민수, 지영)",
    "en": "People (comma separated)",
    "files": [
-    "LedgerSheet.swift:532"
+    "LedgerSheet.swift:539"
    ],
    "args": [],
    "targets": [
@@ -54410,7 +54664,7 @@
    "ko": "항상 허용",
    "en": "Always",
    "files": [
-    "FirstRunTutorialPolicy.swift:176"
+    "FirstRunTutorialPolicy.swift:178"
    ],
    "args": [],
    "targets": [
@@ -54530,7 +54784,7 @@
    "ko": "허용 안 함",
    "en": "Not allowed",
    "files": [
-    "FirstRunTutorialPolicy.swift:169"
+    "FirstRunTutorialPolicy.swift:171"
    ],
    "args": [],
    "targets": [
@@ -54543,7 +54797,7 @@
    "en": "Allowed",
    "files": [
     "AppShellView.swift:1024",
-    "FirstRunTutorialPolicy.swift:178"
+    "FirstRunTutorialPolicy.swift:180"
    ],
    "args": [],
    "targets": [
@@ -54735,7 +54989,7 @@
    "ko": "현재 위치로 저장",
    "en": "Use current location",
    "files": [
-    "FirstRunTutorialView.swift:529"
+    "FirstRunTutorialView.swift:534"
    ],
    "args": [],
    "targets": [
@@ -54747,7 +55001,7 @@
    "ko": "현재 위치로 저장됨",
    "en": "Saved from current location",
    "files": [
-    "FirstRunTutorialView.swift:526"
+    "FirstRunTutorialView.swift:531"
    ],
    "args": [],
    "targets": [
@@ -54771,7 +55025,7 @@
    "ko": "현재 위치를 받는 중입니다. 검색으로도 저장할 수 있습니다.",
    "en": "Waiting for your location. You can also search.",
    "files": [
-    "FirstRunTutorialView.swift:539"
+    "FirstRunTutorialView.swift:544"
    ],
    "args": [],
    "targets": [
@@ -54945,7 +55199,7 @@
    "en": "Learn the screen",
    "files": [
     "FirstRunTutorialGuides.swift:81",
-    "FirstRunTutorialView.swift:125",
+    "FirstRunTutorialView.swift:126",
     "FirstRunTutorialGuides.swift:81"
    ],
    "args": [],
@@ -55134,7 +55388,7 @@
    "ko": "환율을 몰라요. 아래에 직접 넣어 주세요.",
    "en": "Rate unknown. Enter it below.",
    "files": [
-    "LedgerSheet.swift:397"
+    "LedgerSheet.swift:404"
    ],
    "args": [],
    "targets": [
@@ -55265,7 +55519,7 @@
    "ko": "회사 · 학교",
    "en": "Work · School",
    "files": [
-    "FirstRunTutorialView.swift:137"
+    "FirstRunTutorialView.swift:138"
    ],
    "args": [],
    "targets": [
@@ -55278,6 +55532,7 @@
    "en": "Work",
    "files": [
     "FirstRunTutorialGuides.swift:695",
+    "MapHomeLaunchPrompts.swift:191",
     "FirstRunTutorialGuides.swift:695"
    ],
    "args": [],

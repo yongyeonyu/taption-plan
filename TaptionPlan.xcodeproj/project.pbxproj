@@ -532,6 +532,7 @@
 		A1M1110A0300000000000001 /* MapHomeDefaultBubblePool.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1M1110A0300000000000001 /* MapHomeDefaultBubblePool.swift */; };
 		A1A1110A0300000000000008 /* AssistantConnectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000008 /* AssistantConnectView.swift */; };
 		A1A1110A0300000000000009 /* FirstRunAIConnectPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000009 /* FirstRunAIConnectPage.swift */; };
+		CC4A1111A010000000000002 /* FirstRunCarPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC4A1111A010000000000001 /* FirstRunCarPage.swift */; };
 		A1A1110A0200000000000005 /* AssistantSafetyViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0200000000000005 /* AssistantSafetyViews.swift */; };
 		B1080900000000000000A0AB /* TripClipboardBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000F0AB /* TripClipboardBanner.swift */; };
 		B1080900000000000000A0A9 /* LocationAlwaysPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000F0A9 /* LocationAlwaysPrompt.swift */; };
@@ -1247,6 +1248,7 @@
 		F1M1110A0300000000000001 /* MapHomeDefaultBubblePool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeDefaultBubblePool.swift; sourceTree = "<group>"; };
 		F1A1110A0300000000000008 /* AssistantConnectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantConnectView.swift; sourceTree = "<group>"; };
 		F1A1110A0300000000000009 /* FirstRunAIConnectPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstRunAIConnectPage.swift; sourceTree = "<group>"; };
+		CC4A1111A010000000000001 /* FirstRunCarPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstRunCarPage.swift; sourceTree = "<group>"; };
 		F1A1110A0200000000000005 /* AssistantSafetyViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantSafetyViews.swift; sourceTree = "<group>"; };
 		B1080900000000000000F0AB /* TripClipboardBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripClipboardBanner.swift; sourceTree = "<group>"; };
 		B1080900000000000000F0A9 /* LocationAlwaysPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationAlwaysPrompt.swift; sourceTree = "<group>"; };
@@ -1759,6 +1761,7 @@
 				F1M1110A0300000000000001 /* MapHomeDefaultBubblePool.swift */,
 				F1A1110A0300000000000008 /* AssistantConnectView.swift */,
 				F1A1110A0300000000000009 /* FirstRunAIConnectPage.swift */,
+				CC4A1111A010000000000001 /* FirstRunCarPage.swift */,
 				F1A1110A0200000000000005 /* AssistantSafetyViews.swift */,
 				B1080900000000000000F0AB /* TripClipboardBanner.swift */,
 				B1080900000000000000F0A9 /* LocationAlwaysPrompt.swift */,
@@ -2710,6 +2713,7 @@
 				A1M1110A0300000000000001 /* MapHomeDefaultBubblePool.swift in Sources */,
 				A1A1110A0300000000000008 /* AssistantConnectView.swift in Sources */,
 				A1A1110A0300000000000009 /* FirstRunAIConnectPage.swift in Sources */,
+				CC4A1111A010000000000002 /* FirstRunCarPage.swift in Sources */,
 				A1A1110A0200000000000005 /* AssistantSafetyViews.swift in Sources */,
 				B1080900000000000000A0AB /* TripClipboardBanner.swift in Sources */,
 				B1080900000000000000A0A9 /* LocationAlwaysPrompt.swift in Sources */,

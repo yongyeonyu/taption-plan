@@ -109,6 +109,7 @@ struct FirstRunTutorialView: View {
         case .welcome, .permissions, .dayCardTime, .cat: .groom
         case .home, .summary: .sleep
         case .workAndSchool, .calendar, .appleWatch, .aiConnect: .work
+        case .car: .stroll
         case .salary, .finish: .eat
         case .map: .atlas
         case .playback: .stroll
@@ -135,6 +136,7 @@ struct FirstRunTutorialView: View {
         case .dayCardTime: language.text("하루 카드 시각", "Day card time")
         case .home: language.text("집 위치", "Home")
         case .workAndSchool: language.text("회사 · 학교", "Work · School")
+        case .car: language.text("내 차", "My car")
         case .salary: language.text("연봉 설정", "Salary")
         case .cat: language.text("고양이 고르기", "Pick your cat")
         case .map: language.text("지도 보는 법", "Reading the map")
@@ -159,6 +161,7 @@ struct FirstRunTutorialView: View {
         case .dayCardTime: language.text("어제 하루를 담은 카드를 알림으로 보낼 시각을 고릅니다.", "Choose when yesterday's card arrives as a notification.")
         case .home: language.text("집에 머문 시간을 자동으로 구분합니다.", "Time at home is recognized automatically.")
         case .workAndSchool: language.text("업무와 학습 시간을 구분하는 기준이 됩니다.", "Used to tell work and study time apart.")
+        case .car: language.text("차에 블루투스로 연결되면 그 이동을 자동차로 기록합니다. 이어폰은 고르지 마세요.", "Trips with your car's Bluetooth connected are recorded as car. Don't pick earphones.")
         case .salary: language.text("업무 시간에만 번 돈이 쌓입니다. 금액은 이 기기에만 저장됩니다.", "Earnings grow only during work time. Stored only on this device.")
         case .cat: language.text("지도에서 하루를 함께 걸을 고양이입니다.", "This cat walks through your day on the map.")
         case .map: language.text("앱의 첫 화면입니다. 하루가 지도 위에 그려집니다.", "This is the main screen. Your day is drawn on the map.")
@@ -200,6 +203,8 @@ struct FirstRunTutorialView: View {
                 }
                 .padding(18)
             }
+        case .car:
+            FirstRunCarPage(model: model, language: language)
         case .salary:
             MapHomeSalarySettingsSheet(
                 language: language,

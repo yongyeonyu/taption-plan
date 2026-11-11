@@ -1,0 +1,71 @@
+import AVFoundation
+import SwiftUI
+
+/// 튜토리얼 「내 차」(CRT1111A01): 블루투스로 잡힌 오디오 기기 중 차를 고른다.
+/// iOS는 페어링된 기기 목록을 앱에 주지 않아, 지금 연결된 기기와 이동 중에 앱이 본 기기를 보인다. CarPlay는 연결되면 저절로 등록된다.
+struct FirstRunCarPage: View {
+    @Bindable var model: AppModel
+    let language: MapHomeLanguage
+
+    @State private var connected: [String] = []
+
+    private var registered: [String] { model.settings.registeredCarAudioNames }
+    /// 지금 연결된 기기, 이동 중에 본 기기, 이미 등록한 기기를 한 목록으로.
+    private var candidates: [String] {
+        AppFeatureSettings.normalizedCarAudioNames(connected + model.settings.recentCarAudioNames + registered)
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 10) {
+                if candidates.isEmpty {
+                    Text(language.text(
+                        "아직 잡힌 블루투스 기기가 없어요. 차에 타서 블루투스를 연결한 뒤 이 화면이나 메뉴 › 내 차 오디오에서 고를 수 있어요.",
+                        "No Bluetooth devices yet. Connect your car's Bluetooth, then pick it here or in Menu › My car audio."
+                    ))
+                    .font(.taptionStyle(.subheadline))
+                    .foregroundStyle(Color.tpSecondary)
+                }
+                ForEach(candidates, id: \.self) { name in
+                    let isCar = registered.contains(name)
+                    Button {
+                        Task { await model.setCarAudio(name, isMyCar: !isCar) }
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: isCar ? "car.fill" : "headphones")
+                                .foregroundStyle(isCar ? Color.tpAccent : Color.tpSecondary)
+                                .frame(width: 24)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(name).font(.taptionStyle(.body, weight: .semibold)).foregroundStyle(Color.tpInk)
+                                if connected.contains(name) {
+                                    Text(language.text("지금 연결됨", "Connected now"))
+                                        .font(.taptionStyle(.caption)).foregroundStyle(Color.tpSecondary)
+                                }
+                            }
+                            Spacer(minLength: 0)
+                            Image(systemName: isCar ? "checkmark.circle.fill" : "circle")
+                                .foregroundStyle(isCar ? Color.tpAccent : Color.tpBorder)
+                        }
+                        .padding(12)
+                        .background(Color.tpCard, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .overlay { RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color.tpBorder, lineWidth: TaptionBorder.width) }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(isCar ? .isSelected : [])
+                }
+                Text(language.text("CarPlay로 연결되는 차는 고르지 않아도 저절로 등록돼요.", "Cars that connect with CarPlay are registered automatically."))
+                    .font(.taptionStyle(.caption))
+                    .foregroundStyle(Color.tpSecondary)
+            }
+            .padding(18)
+        }
+        .onAppear(perform: refresh)
+        .onReceive(NotificationCenter.default.publisher(for: AVAudioSession.routeChangeNotification).receive(on: RunLoop.main)) { _ in refresh() }
+    }
+
+    private func refresh() {
+        let ports: Set<AVAudioSession.Port> = [.carAudio, .bluetoothA2DP, .bluetoothHFP, .bluetoothLE]
+        let names = AVAudioSession.sharedInstance().currentRoute.outputs.filter { ports.contains($0.portType) }.map(\.portName)
+        if names != connected { connected = names }
+    }
+}

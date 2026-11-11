@@ -16,6 +16,8 @@ enum FirstRunTutorialStep: String, CaseIterable, Identifiable {
     case dayCardTime
     case home
     case workAndSchool
+    /// 블루투스로 잡힌 기기 중 내 차 고르기(CRT1111A01).
+    case car
     case salary
     case cat
     case map
@@ -45,7 +47,7 @@ enum FirstRunTutorialStep: String, CaseIterable, Identifiable {
     var chapter: FirstRunTutorialChapter {
         switch self {
         case .welcome: .start
-        case .permissions, .dayCardTime, .home, .workAndSchool, .salary, .cat: .setup
+        case .permissions, .dayCardTime, .home, .workAndSchool, .car, .salary, .cat: .setup
         case .map, .playback, .sidebarCalendar, .clipEditor, .memos, .summary, .counters: .learn
         case .calendar, .appleWatch, .aiConnect, .password: .connect
         case .finish: .finish
@@ -55,7 +57,7 @@ enum FirstRunTutorialStep: String, CaseIterable, Identifiable {
     /// 입력이 있는 단계에만 건너뛰기를 둔다. 설명 단계는 다음이 곧 건너뛰기다.
     var hasInput: Bool {
         switch self {
-        case .permissions, .dayCardTime, .home, .workAndSchool, .salary, .cat, .counters, .calendar, .appleWatch, .aiConnect, .password: true
+        case .permissions, .dayCardTime, .home, .workAndSchool, .car, .salary, .cat, .counters, .calendar, .appleWatch, .aiConnect, .password: true
         default: false
         }
     }

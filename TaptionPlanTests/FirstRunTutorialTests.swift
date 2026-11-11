@@ -21,7 +21,7 @@ final class FirstRunTutorialTests: XCTestCase {
         XCTAssertEqual(
             FirstRunTutorialStep.allCases,
             [
-                .welcome, .permissions, .dayCardTime, .home, .workAndSchool, .salary, .cat,
+                .welcome, .permissions, .dayCardTime, .home, .workAndSchool, .car, .salary, .cat,
                 .map, .playback, .sidebarCalendar, .clipEditor, .memos, .summary, .counters,
                 .calendar, .appleWatch, .aiConnect, .password, .finish,
             ]
@@ -44,7 +44,7 @@ final class FirstRunTutorialTests: XCTestCase {
 
     func testOnlyInputStepsOfferStepSkip() {
         let skippable = FirstRunTutorialStep.allCases.filter(\.hasInput)
-        XCTAssertEqual(skippable, [.permissions, .dayCardTime, .home, .workAndSchool, .salary, .cat, .counters, .calendar, .appleWatch, .aiConnect, .password])
+        XCTAssertEqual(skippable, [.permissions, .dayCardTime, .home, .workAndSchool, .car, .salary, .cat, .counters, .calendar, .appleWatch, .aiConnect, .password])
     }
 
     func testEveryGuideStepHasRowsInBothLanguages() {
