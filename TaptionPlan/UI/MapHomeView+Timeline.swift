@@ -320,11 +320,12 @@ extension MapHomeView {
                                 recordTimelineWindow("handle_end")
                             }
                         },
-                        onSectionEdit: { selectedMinute in
+                        // 녹화 중에는 연필·접기·확대 단추를 그리지 않는다(REC1111A01, 영상에 필요 없음).
+                        onSectionEdit: isScreenRecording ? nil : { (selectedMinute: Int) in
                             guard model.isBootstrapped else { return }
                             openSectionEditor(at: selectedMinute)
                         },
-                        onCollapse: {
+                        onCollapse: isScreenRecording ? nil : {
                             withAnimation(MapHomeView.sidebarToggleSpring) { isSidebarVisible = false }
                         },
                         onUnconfirmedReview: { segment in
@@ -337,6 +338,8 @@ extension MapHomeView {
                     )
                     // 확대·축소는 시간선 아래 비워 둔 자리에 사이드바와 같은 폭·모서리의 알약으로 눕힌다.
                     timelineZoomControls
+                        .opacity(isScreenRecording ? 0 : 1)
+                        .allowsHitTesting(!isScreenRecording)
                         .position(
                             x: proxy.size.width - Layout.horizontalInset - timeRailWidth / 2,
                             y: proxy.size.height - 11
