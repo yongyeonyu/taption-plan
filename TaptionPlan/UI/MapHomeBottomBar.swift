@@ -76,10 +76,8 @@ struct MapHomeBottomBarBackground: View {
                 startPoint: .top, endPoint: .bottom
             ))
             .padding(3)
-            if let inner = palette.innerLine {
-                shape.stroke(inner, lineWidth: 2.4).padding(1.2)
-            }
-            shape.stroke(palette.outline, lineWidth: 1.6)
+            // 테두리는 사이드바와 같은 회색 한 줄(BAR1111A01, 대표 지시).
+            shape.stroke(Color.tpBorder, lineWidth: TaptionBorder.width)
         }
         .compositingGroup()
         .shadow(color: .black.opacity(0.22), radius: 2.5, y: 2)

@@ -232,6 +232,7 @@ extension MapHomeView {
                     .presentationDragIndicator(.visible)
             }
             .overlay(alignment: .bottom) {
+                LedgerTollRepeatObserver(model: model)
                 if TripRelay.isAvailable {
                     AssistantActivityObserver(model: model)
                     AssistantConfirmHost(model: model, language: language) { AssistantInbox.current.show($0) }

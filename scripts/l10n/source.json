@@ -32771,6 +32771,20 @@
    ]
   },
   {
+   "key": "「{0}」 복사|Copy \"{0}\"",
+   "ko": "「{0}」 복사",
+   "en": "Copy \"{0}\"",
+   "files": [
+    "BokkiShortcutsGuide.swift:77"
+   ],
+   "args": [
+    "copyText"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "「{0}」 연결을 끊으면 그 AI가 더는 기록을 읽거나 보낼 수 없어요. 그 AI가 보내 두고 아직 앱에 반영되지 않은 명령도 함께 지워져요. 다시 쓰려면 새로 연결해야 해요.|Disconnecting \"{0}\" stops that AI from reading or sending anything. Commands it sent that the app hasn't applied yet are deleted too. To use it again, connect anew.",
    "ko": "「{0}」 연결을 끊으면 그 AI가 더는 기록을 읽거나 보낼 수 없어요. 그 AI가 보내 두고 아직 앱에 반영되지 않은 명령도 함께 지워져요. 다시 쓰려면 새로 연결해야 해요.",
    "en": "Disconnecting \"{0}\" stops that AI from reading or sending anything. Commands it sent that the app hasn't applied yet are deleted too. To use it again, connect anew.",
@@ -32797,11 +32811,11 @@
    ]
   },
   {
-   "key": "「메시지」 → 「메시지 내용에 포함」에 「원」 하나만 적기(카드사마다 따로 만들 필요 없어요)|Message → \"Message Contains\" → type just the currency word your payment texts use (no need for one per card company)",
-   "ko": "「메시지」 → 「메시지 내용에 포함」에 「원」 하나만 적기(카드사마다 따로 만들 필요 없어요)",
-   "en": "Message → \"Message Contains\" → type just the currency word your payment texts use (no need for one per card company)",
+   "key": "「단축어 앱 열기」 → 「자동화」 → + → 「메시지」|Open Shortcuts → Automation → + → Message",
+   "ko": "「단축어 앱 열기」 → 「자동화」 → + → 「메시지」",
+   "en": "Open Shortcuts → Automation → + → Message",
    "files": [
-    "BokkiShortcutsGuide.swift:16"
+    "BokkiShortcutsGuide.swift:17"
    ],
    "args": [],
    "targets": [
@@ -32809,9 +32823,33 @@
    ]
   },
   {
-   "key": "「문자 내용」 칸이 받은 메시지로 채워졌는지 보고 완료|Check that the text field is the received message, then Done",
-   "ko": "「문자 내용」 칸이 받은 메시지로 채워졌는지 보고 완료",
-   "en": "Check that the text field is the received message, then Done",
+   "key": "「단축어 앱 열기」 → 「자동화」 → + → 「알림」 → 「앱 푸시」에서 은행·카드 앱(iOS 27부터)|Open Shortcuts → Automation → + → Notification → App Push → your bank and card apps (iOS 27 or later)",
+   "ko": "「단축어 앱 열기」 → 「자동화」 → + → 「알림」 → 「앱 푸시」에서 은행·카드 앱(iOS 27부터)",
+   "en": "Open Shortcuts → Automation → + → Notification → App Push → your bank and card apps (iOS 27 or later)",
+   "files": [
+    "BokkiShortcutsGuide.swift:27"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "「메시지 내용에 포함」에 복사한 「원」 붙여 넣기 → 「즉시 실행」 → 다음|Paste the copied word into \"Message Contains\" → Run Immediately → Next",
+   "ko": "「메시지 내용에 포함」에 복사한 「원」 붙여 넣기 → 「즉시 실행」 → 다음",
+   "en": "Paste the copied word into \"Message Contains\" → Run Immediately → Next",
+   "files": [
+    "BokkiShortcutsGuide.swift:18"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "「새로운 빈 자동화」 → BOKKI Plan 「결제 문자 넣기」 → 완료|New Blank Automation → BOKKI Plan \"Add payment text\" → Done",
+   "ko": "「새로운 빈 자동화」 → BOKKI Plan 「결제 문자 넣기」 → 완료",
+   "en": "New Blank Automation → BOKKI Plan \"Add payment text\" → Done",
    "files": [
     "BokkiShortcutsGuide.swift:19"
    ],
@@ -32821,11 +32859,11 @@
    ]
   },
   {
-   "key": "「새로운 빈 자동화」 → 동작 검색에서 「결제 문자 넣기」(BOKKI Plan)|New Blank Automation → search actions for \"Add payment text\" (BOKKI Plan)",
-   "ko": "「새로운 빈 자동화」 → 동작 검색에서 「결제 문자 넣기」(BOKKI Plan)",
-   "en": "New Blank Automation → search actions for \"Add payment text\" (BOKKI Plan)",
+   "key": "「새로운 빈 자동화」 → BOKKI Plan 「결제 알림 넣기」 → 완료|New Blank Automation → BOKKI Plan \"Add payment alert\" → Done",
+   "ko": "「새로운 빈 자동화」 → BOKKI Plan 「결제 알림 넣기」 → 완료",
+   "en": "New Blank Automation → BOKKI Plan \"Add payment alert\" → Done",
    "files": [
-    "BokkiShortcutsGuide.swift:18"
+    "BokkiShortcutsGuide.swift:29"
    ],
    "args": [],
    "targets": [
@@ -32845,71 +32883,11 @@
    ]
   },
   {
-   "key": "「알림 내용」 칸이 받은 알림으로 채워졌는지 보고 완료|Check that the alert field is the received notification, then Done",
-   "ko": "「알림 내용」 칸이 받은 알림으로 채워졌는지 보고 완료",
-   "en": "Check that the alert field is the received notification, then Done",
-   "files": [
-    "BokkiShortcutsGuide.swift:30"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "「알림 내용에 포함」은 비워 두기(결제 알림은 앱이 골라요)|Leave \"Contains\" empty (the app picks out payment alerts)",
-   "ko": "「알림 내용에 포함」은 비워 두기(결제 알림은 앱이 골라요)",
-   "en": "Leave \"Contains\" empty (the app picks out payment alerts)",
-   "files": [
-    "BokkiShortcutsGuide.swift:28"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "「알림」 → 「앱 푸시」에서 은행·카드 앱 고르기(iOS 27부터)|Notification → App Push → choose your bank and card apps (iOS 27 or later)",
-   "ko": "「알림」 → 「앱 푸시」에서 은행·카드 앱 고르기(iOS 27부터)",
-   "en": "Notification → App Push → choose your bank and card apps (iOS 27 or later)",
-   "files": [
-    "BokkiShortcutsGuide.swift:27"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "「여러 개 골라 덮기」로 고른 클립만 바꿉니다.|Only the clips you picked change.",
    "ko": "「여러 개 골라 덮기」로 고른 클립만 바꿉니다.",
    "en": "Only the clips you picked change.",
    "files": [
     "MapHomeNLEOverwriteSheet.swift:38"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "「즉시 실행」 → 동작 「결제 알림 넣기」(BOKKI Plan)|Run Immediately → action \"Add payment alert\" (BOKKI Plan)",
-   "ko": "「즉시 실행」 → 동작 「결제 알림 넣기」(BOKKI Plan)",
-   "en": "Run Immediately → action \"Add payment alert\" (BOKKI Plan)",
-   "files": [
-    "BokkiShortcutsGuide.swift:29"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "「즉시 실행」을 고르고 다음|Choose \"Run Immediately\", then Next",
-   "ko": "「즉시 실행」을 고르고 다음",
-   "en": "Choose \"Run Immediately\", then Next",
-   "files": [
-    "BokkiShortcutsGuide.swift:17"
    ],
    "args": [],
    "targets": [
@@ -33148,6 +33126,18 @@
    "en": "Riverbank Breeze",
    "files": [
     "MapHomePlaybackMusic.swift:35"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "같은 길 통행료 자동 추가|Same-route toll, added automatically",
+   "ko": "같은 길 통행료 자동 추가",
+   "en": "Same-route toll, added automatically",
+   "files": [
+    "LedgerTollRepeat.swift:120"
    ],
    "args": [],
    "targets": [
@@ -33896,7 +33886,7 @@
    "ko": "결제 문자 자동으로 넣기",
    "en": "Payment texts, automatically",
    "files": [
-    "BokkiShortcutsGuide.swift:13"
+    "BokkiShortcutsGuide.swift:15"
    ],
    "args": [],
    "targets": [
@@ -33969,7 +33959,7 @@
    "ko": "결제 앱 알림 자동으로 넣기",
    "en": "Payment app alerts, automatically",
    "files": [
-    "BokkiShortcutsGuide.swift:24"
+    "BokkiShortcutsGuide.swift:25"
    ],
    "args": [],
    "targets": [
@@ -36584,6 +36574,18 @@
    ]
   },
   {
+   "key": "내용 조건은 비워 두고 「즉시 실행」 → 다음|Leave the content filter empty → Run Immediately → Next",
+   "ko": "내용 조건은 비워 두고 「즉시 실행」 → 다음",
+   "en": "Leave the content filter empty → Run Immediately → Next",
+   "files": [
+    "BokkiShortcutsGuide.swift:28"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "낸 사람 (비우면 나)|Paid by (blank = me)",
    "ko": "낸 사람 (비우면 나)",
    "en": "Paid by (blank = me)",
@@ -37036,33 +37038,9 @@
    "ko": "단축어 · Siri",
    "en": "Shortcuts · Siri",
    "files": [
-    "BokkiShortcutsGuide.swift:88",
+    "BokkiShortcutsGuide.swift:104",
     "FirstRunTutorialView.swift:182",
     "MapHomeView+Menu.swift:467"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "단축어 앱 → 「자동화」 → +|Shortcuts app → Automation → +",
-   "ko": "단축어 앱 → 「자동화」 → +",
-   "en": "Shortcuts app → Automation → +",
-   "files": [
-    "BokkiShortcutsGuide.swift:26"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "단축어 앱 → 아래 「자동화」 → 오른쪽 위 +|Shortcuts app → Automation → + at the top right",
-   "ko": "단축어 앱 → 아래 「자동화」 → 오른쪽 위 +",
-   "en": "Shortcuts app → Automation → + at the top right",
-   "files": [
-    "BokkiShortcutsGuide.swift:15"
    ],
    "args": [],
    "targets": [
@@ -37074,7 +37052,8 @@
    "ko": "단축어 앱 열기",
    "en": "Open Shortcuts",
    "files": [
-    "BokkiShortcutsGuide.swift:46"
+    "BokkiShortcutsGuide.swift:46",
+    "BokkiShortcutsGuide.swift:71"
    ],
    "args": [],
    "targets": [
@@ -38517,9 +38496,9 @@
    "ko": "머문 곳",
    "en": "Place",
    "files": [
+    "LedgerTollRepeat.swift:131",
     "AssistantActivity.swift:189",
-    "AssistantActivity.swift:275",
-    "AITaskProducer.swift:57"
+    "AssistantActivity.swift:275"
    ],
    "args": [],
    "targets": [
@@ -40574,7 +40553,8 @@
    "ko": "복사했어요",
    "en": "Copied",
    "files": [
-    "AssistantSafetyViews.swift:135"
+    "AssistantSafetyViews.swift:135",
+    "BokkiShortcutsGuide.swift:77"
    ],
    "args": [],
    "targets": [
@@ -44652,7 +44632,7 @@
    "ko": "앱이 결제 문자만 골라 가계부에 넣고, 나머지 문자는 넣지도 AI에 보내지도 않아요. 같은 결제가 문자·앱 알림으로 두 번 와도 한 번만 넣고, 연결된 AI가 가게 이름·분류를 다듬어요.",
    "en": "The app picks out payment texts only; other texts are neither saved nor sent to AI. A payment that arrives as both a text and an app alert is saved once, and your connected AI tidies the shop name and category.",
    "files": [
-    "BokkiShortcutsGuide.swift:21"
+    "BokkiShortcutsGuide.swift:22"
    ],
    "args": [],
    "targets": [
@@ -47170,7 +47150,7 @@
    "files": [
     "AITaskPanel.swift:105",
     "AssistantSettingsView.swift:64",
-    "BokkiShortcutsGuide.swift:90"
+    "BokkiShortcutsGuide.swift:106"
    ],
    "args": [],
    "targets": [

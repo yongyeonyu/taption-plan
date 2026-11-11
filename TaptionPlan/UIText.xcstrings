@@ -203666,6 +203666,83 @@
         }
       }
     },
+    "「{0}」 복사|Copy \"{0}\"" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「{0}」をコピー"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "复制“{0}”"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "複製「{0}」"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "„{0}“ kopieren"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copier « {0} »"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copia \"{0}\""
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copiar \"{0}\""
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copiar \"{0}\""
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sao chép \"{0}\""
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salin \"{0}\""
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คัดลอก \"{0}\""
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "\"{0}\" कॉपी करें"
+          }
+        }
+      }
+    },
     "「{0}」 연결을 끊으면 그 AI가 더는 기록을 읽거나 보낼 수 없어요. 그 AI가 보내 두고 아직 앱에 반영되지 않은 명령도 함께 지워져요. 다시 쓰려면 새로 연결해야 해요.|Disconnecting \"{0}\" stops that AI from reading or sending anything. Commands it sent that the app hasn't applied yet are deleted too. To use it again, connect anew." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -203820,233 +203897,387 @@
         }
       }
     },
-    "「메시지」 → 「메시지 내용에 포함」에 「원」 하나만 적기(카드사마다 따로 만들 필요 없어요)|Message → \"Message Contains\" → type just the currency word your payment texts use (no need for one per card company)" : {
+    "「단축어 앱 열기」 → 「자동화」 → + → 「메시지」|Open Shortcuts → Automation → + → Message" : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "「メッセージ」→「メッセージに含む」に決済メッセージの通貨の語だけ入力(カード会社ごとに作る必要はありません)"
+            "value" : "「ショートカットを開く」→「オートメーション」→ + →「メッセージ」"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "“信息”→“信息包含”只填付款短信里的货币字样(不必为每家卡公司各建一个)"
+            "value" : "“打开快捷指令”→“自动化”→ + →“信息”"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "「訊息」→「訊息包含」只填付款簡訊裡的貨幣字樣(不必為每家卡公司各建一個)"
+            "value" : "「打開捷徑」→「自動化」→ + →「訊息」"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nachricht → „Nachricht enthält“ → nur das Währungswort deiner Zahlungs-SMS eingeben (nicht je Kartenanbieter einzeln)"
+            "value" : "Kurzbefehle öffnen → Automation → + → Nachricht"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Message → « Le message contient » → saisissez seulement le mot de la devise de vos SMS de paiement (inutile d’en créer un par émetteur)"
+            "value" : "Ouvrir Raccourcis → Automatisation → + → Message"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Messaggio → «Il messaggio contiene» → scrivi solo la parola della valuta dei tuoi SMS di pagamento (non serve uno per emittente)"
+            "value" : "Apri Comandi Rapidi → Automazione → + → Messaggio"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mensaje → «El mensaje contiene» → escribe solo la palabra de la moneda de tus SMS de pago (no hace falta uno por emisor)"
+            "value" : "Abrir Atajos → Automatización → + → Mensaje"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mensagem → “A mensagem contém” → digite só a palavra da moeda dos seus SMS de pagamento (não precisa de um por emissor)"
+            "value" : "Abrir Atalhos → Automação → + → Mensagem"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tin nhắn → “Tin nhắn chứa” → chỉ nhập từ chỉ tiền tệ trong tin nhắn thanh toán (không cần tạo riêng cho từng hãng thẻ)"
+            "value" : "Mở Phím tắt → Tự động hóa → + → Tin nhắn"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pesan → “Pesan Berisi” → ketik kata mata uang di SMS pembayaran saja (tak perlu satu per penerbit kartu)"
+            "value" : "Buka Pintasan → Otomatisasi → + → Pesan"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ข้อความ → “ข้อความมี” → พิมพ์แค่คำสกุลเงินที่อยู่ใน SMS การชำระเงิน (ไม่ต้องสร้างแยกตามบริษัทบัตร)"
+            "value" : "เปิดคำสั่งลัด → ระบบอัตโนมัติ → + → ข้อความ"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "संदेश → “संदेश में शामिल” → भुगतान SMS में आने वाला मुद्रा शब्द ही लिखें (हर कार्ड कंपनी के लिए अलग नहीं)"
+            "value" : "शॉर्टकट खोलें → ऑटोमेशन → + → संदेश"
           }
         }
       }
     },
-    "「문자 내용」 칸이 받은 메시지로 채워졌는지 보고 완료|Check that the text field is the received message, then Done" : {
+    "「단축어 앱 열기」 → 「자동화」 → + → 「알림」 → 「앱 푸시」에서 은행·카드 앱(iOS 27부터)|Open Shortcuts → Automation → + → Notification → App Push → your bank and card apps (iOS 27 or later)" : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "「メッセージ内容」欄が受け取ったメッセージになっているか確認して完了"
+            "value" : "「ショートカットを開く」→「オートメーション」→ + →「通知」→「アプリのプッシュ」で銀行・カードアプリ(iOS 27以降)"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "确认“短信内容”栏已填入收到的消息，然后完成"
+            "value" : "“打开快捷指令”→“自动化”→ + →“通知”→“App 推送”中选银行和银行卡 App(iOS 27 起)"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "確認「簡訊內容」欄已填入收到的訊息，然後完成"
+            "value" : "「打開捷徑」→「自動化」→ + →「通知」→「App 推播」中選銀行和信用卡 App(iOS 27 起)"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Prüfen, dass das Textfeld die empfangene Nachricht enthält, dann Fertig"
+            "value" : "Kurzbefehle öffnen → Automation → + → Mitteilung → App-Push → deine Bank- und Karten-Apps (ab iOS 27)"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vérifiez que le champ du texte contient le message reçu, puis OK"
+            "value" : "Ouvrir Raccourcis → Automatisation → + → Notification → Push d’app → vos apps bancaires et de carte (iOS 27 ou ultérieur)"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Controlla che il campo del testo sia il messaggio ricevuto, poi Fine"
+            "value" : "Apri Comandi Rapidi → Automazione → + → Notifica → Push dell’app → le app di banca e carta (iOS 27 o successivo)"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Comprueba que el campo de texto es el mensaje recibido y toca OK"
+            "value" : "Abrir Atajos → Automatización → + → Notificación → Push de app → tus apps de banco y tarjeta (iOS 27 o posterior)"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Confira se o campo do texto é a mensagem recebida e toque em OK"
+            "value" : "Abrir Atalhos → Automação → + → Notificação → Push do app → seus apps de banco e cartão (iOS 27 ou posterior)"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kiểm tra ô văn bản là tin nhắn đã nhận rồi Xong"
+            "value" : "Mở Phím tắt → Tự động hóa → + → Thông báo → Đẩy từ ứng dụng → ứng dụng ngân hàng, thẻ (iOS 27 trở lên)"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pastikan kolom teks berisi pesan yang diterima, lalu Selesai"
+            "value" : "Buka Pintasan → Otomatisasi → + → Notifikasi → Push App → app bank dan kartu (iOS 27 ke atas)"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ตรวจว่าช่องข้อความเป็นข้อความที่ได้รับ แล้วกดเสร็จสิ้น"
+            "value" : "เปิดคำสั่งลัด → ระบบอัตโนมัติ → + → การแจ้งเตือน → พุชจากแอป → แอปธนาคารและบัตร (iOS 27 ขึ้นไป)"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "जाँचें कि टेक्स्ट वाले खाने में मिला संदेश है, फिर हो गया"
+            "value" : "शॉर्टकट खोलें → ऑटोमेशन → + → सूचना → ऐप पुश → अपने बैंक और कार्ड ऐप (iOS 27 या बाद में)"
           }
         }
       }
     },
-    "「새로운 빈 자동화」 → 동작 검색에서 「결제 문자 넣기」(BOKKI Plan)|New Blank Automation → search actions for \"Add payment text\" (BOKKI Plan)" : {
+    "「메시지 내용에 포함」에 복사한 「원」 붙여 넣기 → 「즉시 실행」 → 다음|Paste the copied word into \"Message Contains\" → Run Immediately → Next" : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "「新規の空のオートメーション」→ アクション検索で「決済メッセージを追加」(BOKKI Plan)"
+            "value" : "「メッセージに含む」にコピーした語を貼り付け →「すぐに実行」→ 次へ"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "「新建空白自动化」→ 在操作中搜索「添加支付短信」(BOKKI Plan)"
+            "value" : "在“信息包含”中粘贴复制的字 →“立即运行”→ 下一步"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "「新增空白自動化操作」→ 在動作中搜尋「加入付款簡訊」(BOKKI Plan)"
+            "value" : "在「訊息包含」中貼上複製的字 →「立即執行」→ 下一步"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "„Neue leere Automation“ → in Aktionen nach „Zahlungsnachricht hinzufügen“ suchen (BOKKI Plan)"
+            "value" : "Kopiertes Wort bei „Nachricht enthält“ einfügen → Sofort ausführen → Weiter"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "« Nouvelle automatisation vide » → cherchez l’action « Ajouter un SMS de paiement » (BOKKI Plan)"
+            "value" : "Collez le mot copié dans « Le message contient » → Exécuter immédiatement → Suivant"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "«Nuova automazione vuota» → cerca l’azione «Aggiungi SMS di pagamento» (BOKKI Plan)"
+            "value" : "Incolla la parola copiata in \"Il messaggio contiene\" → Esegui subito → Avanti"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "«Nueva automatización en blanco» → busca la acción «Añadir mensaje de pago» (BOKKI Plan)"
+            "value" : "Pega la palabra copiada en \"El mensaje contiene\" → Ejecutar inmediatamente → Siguiente"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "“Nova automação em branco” → busque a ação “Adicionar mensagem de pagamento” (BOKKI Plan)"
+            "value" : "Cole a palavra copiada em \"A mensagem contém\" → Executar imediatamente → Seguinte"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "«Mục tự động hóa trống mới» → tìm tác vụ «Thêm tin nhắn thanh toán» (BOKKI Plan)"
+            "value" : "Dán từ đã sao chép vào \"Tin nhắn chứa\" → Chạy ngay → Tiếp"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "“Otomatisasi Kosong Baru” → cari tindakan “Tambah pesan pembayaran” (BOKKI Plan)"
+            "value" : "Tempel kata yang disalin ke \"Pesan Berisi\" → Jalankan Segera → Berikutnya"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "«การทำงานอัตโนมัติว่างใหม่» → ค้นหาการทำงาน «เพิ่มข้อความชำระเงิน» (BOKKI Plan)"
+            "value" : "วางคำที่คัดลอกใน \"ข้อความมี\" → เรียกใช้ทันที → ถัดไป"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "“नया खाली ऑटोमेशन” → क्रियाओं में “भुगतान संदेश जोड़ें” खोजें (BOKKI Plan)"
+            "value" : "कॉपी किया शब्द \"संदेश में शामिल\" में चिपकाएँ → तुरंत चलाएँ → आगे"
+          }
+        }
+      }
+    },
+    "「새로운 빈 자동화」 → BOKKI Plan 「결제 문자 넣기」 → 완료|New Blank Automation → BOKKI Plan \"Add payment text\" → Done" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「新規の空のオートメーション」→ BOKKI Plan「決済メッセージを追加」→ 完了"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“新建空白自动化”→ BOKKI Plan“添加付款短信”→ 完成"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「新增空白自動化」→ BOKKI Plan「加入付款簡訊」→ 完成"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neue leere Automation → BOKKI Plan „Zahlungs-SMS hinzufügen“ → Fertig"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nouvelle automatisation vierge → BOKKI Plan « Ajouter un SMS de paiement » → OK"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nuova automazione vuota → BOKKI Plan \"Aggiungi SMS di pagamento\" → Fine"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nueva automatización en blanco → BOKKI Plan \"Añadir SMS de pago\" → OK"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nova automação em branco → BOKKI Plan \"Adicionar SMS de pagamento\" → OK"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tự động hóa trống mới → BOKKI Plan \"Thêm tin nhắn thanh toán\" → Xong"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otomatisasi Kosong Baru → BOKKI Plan \"Tambah SMS Pembayaran\" → Selesai"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ระบบอัตโนมัติเปล่าใหม่ → BOKKI Plan \"เพิ่ม SMS การชำระเงิน\" → เสร็จ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "नया खाली ऑटोमेशन → BOKKI Plan \"भुगतान SMS जोड़ें\" → हो गया"
+          }
+        }
+      }
+    },
+    "「새로운 빈 자동화」 → BOKKI Plan 「결제 알림 넣기」 → 완료|New Blank Automation → BOKKI Plan \"Add payment alert\" → Done" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「新規の空のオートメーション」→ BOKKI Plan「決済通知を追加」→ 完了"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“新建空白自动化”→ BOKKI Plan“添加付款通知”→ 完成"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「新增空白自動化」→ BOKKI Plan「加入付款通知」→ 完成"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neue leere Automation → BOKKI Plan „Zahlungsmitteilung hinzufügen“ → Fertig"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nouvelle automatisation vierge → BOKKI Plan « Ajouter une notification de paiement » → OK"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nuova automazione vuota → BOKKI Plan \"Aggiungi notifica di pagamento\" → Fine"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nueva automatización en blanco → BOKKI Plan \"Añadir notificación de pago\" → OK"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nova automação em branco → BOKKI Plan \"Adicionar notificação de pagamento\" → OK"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tự động hóa trống mới → BOKKI Plan \"Thêm thông báo thanh toán\" → Xong"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otomatisasi Kosong Baru → BOKKI Plan \"Tambah Notifikasi Pembayaran\" → Selesai"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ระบบอัตโนมัติเปล่าใหม่ → BOKKI Plan \"เพิ่มการแจ้งเตือนการชำระเงิน\" → เสร็จ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "नया खाली ऑटोमेशन → BOKKI Plan \"भुगतान सूचना जोड़ें\" → हो गया"
           }
         }
       }
@@ -204128,237 +204359,6 @@
         }
       }
     },
-    "「알림 내용」 칸이 받은 알림으로 채워졌는지 보고 완료|Check that the alert field is the received notification, then Done" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "「通知内容」欄が受け取った通知になっているか確認して完了"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "确认“通知内容”栏已填入收到的通知，然后完成"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "確認「通知內容」欄已填入收到的通知，然後完成"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Prüfen, dass das Feld die empfangene Mitteilung enthält, dann Fertig"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vérifiez que le champ de l’alerte contient la notification reçue, puis OK"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Controlla che il campo dell’avviso sia la notifica ricevuta, poi Fine"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Comprueba que el campo del aviso es la notificación recibida y toca OK"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Confira se o campo do alerta é a notificação recebida e toque em OK"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kiểm tra ô thông báo là thông báo đã nhận rồi Xong"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pastikan kolom notifikasi berisi notifikasi yang diterima, lalu Selesai"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ตรวจว่าช่องการแจ้งเตือนเป็นการแจ้งเตือนที่ได้รับ แล้วกดเสร็จสิ้น"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "जाँचें कि अलर्ट वाले खाने में मिली सूचना है, फिर हो गया"
-          }
-        }
-      }
-    },
-    "「알림 내용에 포함」은 비워 두기(결제 알림은 앱이 골라요)|Leave \"Contains\" empty (the app picks out payment alerts)" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "「通知に含む」は空のまま(決済通知はアプリが選びます)"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "“通知包含”留空(付款通知由 App 挑选)"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "「通知包含」留空(付款通知由 App 挑選)"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "„Enthält“ leer lassen (die App wählt Zahlungsmitteilungen aus)"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Laissez « Contient » vide (l’app choisit les alertes de paiement)"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lascia vuoto «Contiene» (l’app sceglie gli avvisi di pagamento)"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deja «Contiene» vacío (la app elige los avisos de pago)"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deixe “Contém” vazio (o app escolhe os avisos de pagamento)"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Để trống “Chứa” (ứng dụng tự chọn thông báo thanh toán)"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Biarkan “Berisi” kosong (app memilih notifikasi pembayaran)"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "เว้น “มี” ว่างไว้ (แอปเลือกการแจ้งเตือนการชำระเงินเอง)"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "“शामिल” खाली छोड़ें (भुगतान सूचनाएँ ऐप चुनता है)"
-          }
-        }
-      }
-    },
-    "「알림」 → 「앱 푸시」에서 은행·카드 앱 고르기(iOS 27부터)|Notification → App Push → choose your bank and card apps (iOS 27 or later)" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "「通知」→「Appプッシュ」で銀行・カードAppを選ぶ（iOS 27以降）"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "“通知”→“App推送”中选择银行和信用卡App（iOS 27及以上）"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "「通知」→「App推播」中選擇銀行與信用卡App（iOS 27以上）"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mitteilung → App-Push → Bank- und Karten-Apps wählen (ab iOS 27)"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Notification → Push d’app → choisissez vos apps de banque et de carte (iOS 27 ou ultérieur)"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Notifica → Push dell’app → scegli le app di banca e carta (iOS 27 o successivo)"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Notificación → Push de app → elige tus apps de banco y tarjeta (iOS 27 o posterior)"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Notificação → Push de app → escolha os apps do banco e do cartão (iOS 27 ou posterior)"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Thông báo → Đẩy ứng dụng → chọn ứng dụng ngân hàng và thẻ (iOS 27 trở lên)"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Notifikasi → Push aplikasi → pilih aplikasi bank dan kartu (iOS 27 atau lebih baru)"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "การแจ้งเตือน → พุชของแอป → เลือกแอปธนาคารและบัตร (iOS 27 ขึ้นไป)"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "सूचना → ऐप पुश → बैंक और कार्ड ऐप चुनें (iOS 27 या बाद का)"
-          }
-        }
-      }
-    },
     "「여러 개 골라 덮기」로 고른 클립만 바꿉니다.|Only the clips you picked change." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -204432,160 +204432,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "सिर्फ़ “कई क्लिप चुनकर बदलें” से चुनी क्लिप बदलेंगी।"
-          }
-        }
-      }
-    },
-    "「즉시 실행」 → 동작 「결제 알림 넣기」(BOKKI Plan)|Run Immediately → action \"Add payment alert\" (BOKKI Plan)" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "「すぐに実行」→ アクション「決済通知を追加」（BOKKI Plan）"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "“立即运行”→ 操作“添加付款通知”（BOKKI Plan）"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "「立即執行」→ 動作「加入付款通知」（BOKKI Plan）"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sofort ausführen → Aktion „Zahlungsmitteilung hinzufügen“ (BOKKI Plan)"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Exécuter immédiatement → action « Ajouter l’alerte de paiement » (BOKKI Plan)"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Esegui subito → azione \"Aggiungi avviso di pagamento\" (BOKKI Plan)"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ejecutar de inmediato → acción \"Añadir aviso de pago\" (BOKKI Plan)"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Executar imediatamente → ação \"Adicionar alerta de pagamento\" (BOKKI Plan)"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chạy ngay → tác vụ \"Thêm thông báo thanh toán\" (BOKKI Plan)"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jalankan Segera → tindakan \"Tambah notifikasi pembayaran\" (BOKKI Plan)"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "เรียกใช้ทันที → การทำงาน \"เพิ่มการแจ้งเตือนชำระเงิน\" (BOKKI Plan)"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "तुरंत चलाएँ → क्रिया \"भुगतान अलर्ट जोड़ें\" (BOKKI Plan)"
-          }
-        }
-      }
-    },
-    "「즉시 실행」을 고르고 다음|Choose \"Run Immediately\", then Next" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "「すぐに実行」を選んで次へ"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "选择「立即运行」，然后下一步"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "選擇「立即執行」，然後下一步"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "„Sofort ausführen“ wählen, dann „Weiter“"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choisissez « Exécuter immédiatement », puis Suivant"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Scegli «Esegui immediatamente», poi Avanti"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Elige «Ejecutar inmediatamente» y luego Siguiente"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Escolha “Executar imediatamente” e depois Seguinte"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chọn «Chạy ngay lập tức» rồi Tiếp"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pilih “Jalankan Segera”, lalu Berikutnya"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "เลือก «เรียกใช้ทันที» แล้วถัดไป"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "“तुरंत चलाएँ” चुनें, फिर अगला"
           }
         }
       }
@@ -206049,6 +205895,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "नदी किनारे की हवा"
+          }
+        }
+      }
+    },
+    "같은 길 통행료 자동 추가|Same-route toll, added automatically" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同じルートの通行料を自動追加"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同一路线通行费自动添加"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同一路線通行費自動加入"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maut für dieselbe Strecke automatisch hinzugefügt"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Péage du même trajet ajouté automatiquement"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pedaggio dello stesso percorso aggiunto automaticamente"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Peaje de la misma ruta añadido automáticamente"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pedágio do mesmo trajeto adicionado automaticamente"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tự thêm phí cầu đường cùng tuyến"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tol rute yang sama ditambahkan otomatis"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เพิ่มค่าผ่านทางเส้นทางเดิมอัตโนมัติ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "उसी रास्ते का टोल अपने-आप जोड़ा गया"
           }
         }
       }
@@ -226689,6 +226612,83 @@
         }
       }
     },
+    "내용 조건은 비워 두고 「즉시 실행」 → 다음|Leave the content filter empty → Run Immediately → Next" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "内容の条件は空のまま「すぐに実行」→ 次へ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "内容条件留空 →“立即运行”→ 下一步"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "內容條件留空 →「立即執行」→ 下一步"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inhaltsfilter leer lassen → Sofort ausführen → Weiter"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Laissez le filtre de contenu vide → Exécuter immédiatement → Suivant"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lascia vuoto il filtro sul contenuto → Esegui subito → Avanti"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deja vacío el filtro de contenido → Ejecutar inmediatamente → Siguiente"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deixe o filtro de conteúdo vazio → Executar imediatamente → Seguinte"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Để trống điều kiện nội dung → Chạy ngay → Tiếp"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biarkan filter isi kosong → Jalankan Segera → Berikutnya"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เว้นเงื่อนไขเนื้อหาว่างไว้ → เรียกใช้ทันที → ถัดไป"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सामग्री की शर्त खाली छोड़ें → तुरंत चलाएँ → आगे"
+          }
+        }
+      }
+    },
     "낸 사람 (비우면 나)|Paid by (blank = me)" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -229380,160 +229380,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "शॉर्टकट · Siri"
-          }
-        }
-      }
-    },
-    "단축어 앱 → 「자동화」 → +|Shortcuts app → Automation → +" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ショートカットApp →「オートメーション」→ +"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "快捷指令App →“自动化”→ +"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "捷徑App →「自動化」→ +"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kurzbefehle-App → Automation → +"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "App Raccourcis → Automatisation → +"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "App Comandi rapidi → Automazione → +"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "App Atajos → Automatización → +"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "App Atalhos → Automação → +"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ứng dụng Phím tắt → Tự động hóa → +"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "App Pintasan → Otomatisasi → +"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "แอปคำสั่งลัด → ระบบอัตโนมัติ → +"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "शॉर्टकट ऐप → ऑटोमेशन → +"
-          }
-        }
-      }
-    },
-    "단축어 앱 → 아래 「자동화」 → 오른쪽 위 +|Shortcuts app → Automation → + at the top right" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ショートカット App → 下の「オートメーション」→ 右上の +"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "快捷指令 App → 下方「自动化」→ 右上角 +"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "捷徑 App → 下方「自動化操作」→ 右上角 +"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kurzbefehle-App → Automation → + oben rechts"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "App Raccourcis → Automatisation → + en haut à droite"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "App Comandi → Automazione → + in alto a destra"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "App Atajos → Automatización → + arriba a la derecha"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "App Atalhos → Automação → + no canto superior direito"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ứng dụng Phím tắt → Tự động hóa → + ở góc trên bên phải"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "App Pintasan → Otomatisasi → + di kanan atas"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "แอปคำสั่งลัด → อัตโนมัติ → + ที่มุมขวาบน"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "शॉर्टकट ऐप → ऑटोमेशन → ऊपर दाईं ओर +"
           }
         }
       }

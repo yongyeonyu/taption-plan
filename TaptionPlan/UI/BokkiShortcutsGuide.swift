@@ -6,29 +6,29 @@ import SwiftUI
 struct BokkiShortcutsGuideSections: View {
     let language: MapHomeLanguage
     @Environment(\.openURL) private var openURL
+    @State private var copied: String?
 
     var body: some View {
         Group {
+            // 앱은 자동화를 대신 만들거나 넣어 줄 수 없다(iOS 제한). 단계를 셋으로 줄이고 열기·복사 단추를 둔다(SCA1111A01).
             guideSection(
                 title: language.text("결제 문자 자동으로 넣기", "Payment texts, automatically"),
                 steps: [
-                    language.text("단축어 앱 → 아래 「자동화」 → 오른쪽 위 +", "Shortcuts app → Automation → + at the top right"),
-                    language.text("「메시지」 → 「메시지 내용에 포함」에 「원」 하나만 적기(카드사마다 따로 만들 필요 없어요)", "Message → \"Message Contains\" → type just the currency word your payment texts use (no need for one per card company)"),
-                    language.text("「즉시 실행」을 고르고 다음", "Choose \"Run Immediately\", then Next"),
-                    language.text("「새로운 빈 자동화」 → 동작 검색에서 「결제 문자 넣기」(BOKKI Plan)", "New Blank Automation → search actions for \"Add payment text\" (BOKKI Plan)"),
-                    language.text("「문자 내용」 칸이 받은 메시지로 채워졌는지 보고 완료", "Check that the text field is the received message, then Done"),
+                    language.text("「단축어 앱 열기」 → 「자동화」 → + → 「메시지」", "Open Shortcuts → Automation → + → Message"),
+                    language.text("「메시지 내용에 포함」에 복사한 「원」 붙여 넣기 → 「즉시 실행」 → 다음", "Paste the copied word into \"Message Contains\" → Run Immediately → Next"),
+                    language.text("「새로운 빈 자동화」 → BOKKI Plan 「결제 문자 넣기」 → 완료", "New Blank Automation → BOKKI Plan \"Add payment text\" → Done"),
                 ],
+                copyText: "원",
                 footer: language.text("앱이 결제 문자만 골라 가계부에 넣고, 나머지 문자는 넣지도 AI에 보내지도 않아요. 같은 결제가 문자·앱 알림으로 두 번 와도 한 번만 넣고, 연결된 AI가 가게 이름·분류를 다듬어요.", "The app picks out payment texts only; other texts are neither saved nor sent to AI. A payment that arrives as both a text and an app alert is saved once, and your connected AI tidies the shop name and category.")
             )
             guideSection(
                 title: language.text("결제 앱 알림 자동으로 넣기", "Payment app alerts, automatically"),
                 steps: [
-                    language.text("단축어 앱 → 「자동화」 → +", "Shortcuts app → Automation → +"),
-                    language.text("「알림」 → 「앱 푸시」에서 은행·카드 앱 고르기(iOS 27부터)", "Notification → App Push → choose your bank and card apps (iOS 27 or later)"),
-                    language.text("「알림 내용에 포함」은 비워 두기(결제 알림은 앱이 골라요)", "Leave \"Contains\" empty (the app picks out payment alerts)"),
-                    language.text("「즉시 실행」 → 동작 「결제 알림 넣기」(BOKKI Plan)", "Run Immediately → action \"Add payment alert\" (BOKKI Plan)"),
-                    language.text("「알림 내용」 칸이 받은 알림으로 채워졌는지 보고 완료", "Check that the alert field is the received notification, then Done"),
+                    language.text("「단축어 앱 열기」 → 「자동화」 → + → 「알림」 → 「앱 푸시」에서 은행·카드 앱(iOS 27부터)", "Open Shortcuts → Automation → + → Notification → App Push → your bank and card apps (iOS 27 or later)"),
+                    language.text("내용 조건은 비워 두고 「즉시 실행」 → 다음", "Leave the content filter empty → Run Immediately → Next"),
+                    language.text("「새로운 빈 자동화」 → BOKKI Plan 「결제 알림 넣기」 → 완료", "New Blank Automation → BOKKI Plan \"Add payment alert\" → Done"),
                 ],
+                copyText: nil,
                 footer: language.text("문자가 오지 않는 카드·은행도 앱 알림으로 들어와요. 광고 알림은 넣지 않아요.", "Cards and banks that don't text you still come in through app alerts. Ads are skipped.")
             )
             Section {
@@ -63,8 +63,24 @@ struct BokkiShortcutsGuideSections: View {
         ]
     }
 
-    private func guideSection(title: String, steps: [String], footer: String) -> some View {
+    private func guideSection(title: String, steps: [String], copyText: String?, footer: String) -> some View {
         Section {
+            HStack(spacing: 10) {
+                Button {
+                    if let url = URL(string: "shortcuts://") { openURL(url) }
+                } label: { Label(language.text("단축어 앱 열기", "Open Shortcuts"), systemImage: "square.2.layers.3d") }
+                if let copyText {
+                    Button {
+                        UIPasteboard.general.string = copyText
+                        copied = title
+                    } label: {
+                        Label(copied == title ? language.text("복사했어요", "Copied") : language.text("「\(copyText)」 복사", "Copy \"\(copyText)\""),
+                              systemImage: copied == title ? "checkmark" : "doc.on.doc")
+                    }
+                }
+            }
+            .buttonStyle(.bordered)
+            .font(.taptionStyle(.subheadline, weight: .semibold))
             ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
                 Label { Text(step) } icon: { Text(verbatim: "\(index + 1)").font(.taptionStyle(.headline)) }
             }

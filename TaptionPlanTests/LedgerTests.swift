@@ -782,3 +782,42 @@ final class MealPlaceLaneTests: XCTestCase {
         XCTAssertTrue(NLEMealPlaces.filling(places: [], actuals: [meal(10, 30)], readings: [], frequentPlaces: []).isEmpty)
     }
 }
+
+/// TOL1111A01: 통행료가 붙은 자동차 이동을 배워 같은 길·되돌아오는 길에 같은 통행료를 한 번만 넣는다.
+final class LedgerTollRepeatTests: XCTestCase {
+    private let base = Date(timeIntervalSince1970: 1_794_355_200) // 2026-11-11 00:00 KST 근처
+    private func at(_ hour: Double) -> Date { base.addingTimeInterval(hour * 3_600) }
+    private func toll(_ hour: Double, title: String = "경인고속도로 통행료 (출근)") -> LedgerEntry {
+        var entry = LedgerEntry(occurredAt: at(hour), amount: 900, title: title)
+        entry.category = .transport
+        return entry
+    }
+
+    func testLearnsMorningTollAndAddsReturnTripOnce() {
+        let morning = LedgerTollRepeat.Drive(from: "집", to: "회사", start: at(9), end: at(9.6))
+        let evening = LedgerTollRepeat.Drive(from: "회사", to: "집", start: at(19), end: at(19.7))
+        let entries = [toll(9.66)]
+        let rules = LedgerTollRepeat.learn(drives: [morning, evening], entries: entries, into: [:])
+        XCTAssertEqual(rules[LedgerTollRepeat.pair("집", "회사")]?.amount, 900)
+        let added = LedgerTollRepeat.entries(drives: [morning, evening], existing: entries, rules: rules, handled: [], now: at(20.5))
+        XCTAssertEqual(added.count, 1, "아침은 이미 있고 저녁만 넣는다")
+        XCTAssertEqual(added.first?.entry.title, "경인고속도로 통행료 (퇴근)")
+        XCTAssertEqual(added.first?.entry.occurredAt, evening.end)
+        XCTAssertEqual(added.first?.entry.category, .transport)
+        let again = LedgerTollRepeat.entries(drives: [evening], existing: entries, rules: rules,
+                                             handled: [evening.key], now: at(21))
+        XCTAssertTrue(again.isEmpty, "넣은 이동은 지워져도 다시 넣지 않는다")
+    }
+
+    func testSkipsUnsettledUnknownAndAlreadyPaidDrives() {
+        let rules = ["집→회사": LedgerTollRepeat.Rule(amount: 900, currency: "KRW", title: "통행료", learnedAt: at(0))]
+        let driving = LedgerTollRepeat.Drive(from: "집", to: "회사", start: at(20), end: at(20.45))
+        XCTAssertTrue(LedgerTollRepeat.entries(drives: [driving], existing: [], rules: rules, handled: [], now: at(20.5)).isEmpty, "도착 10분 전에는 기다린다")
+        let other = LedgerTollRepeat.Drive(from: "집", to: "마트", start: at(10), end: at(10.5))
+        XCTAssertTrue(LedgerTollRepeat.entries(drives: [other], existing: [], rules: rules, handled: [], now: at(12)).isEmpty)
+        let paid = LedgerTollRepeat.Drive(from: "집", to: "회사", start: at(8), end: at(9))
+        XCTAssertTrue(LedgerTollRepeat.entries(drives: [paid], existing: [toll(8.9, title: "톨비")], rules: rules, handled: [], now: at(12)).isEmpty)
+        XCTAssertEqual(LedgerTollRepeat.reversed("통행료 (퇴근)"), "통행료 (출근)")
+        XCTAssertFalse(LedgerTollRepeat.isToll(LedgerEntry(occurredAt: at(1), amount: 900, title: "통행료")), "교통 분류가 아니면 통행료로 보지 않는다")
+    }
+}
