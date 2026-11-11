@@ -272,15 +272,15 @@ final class LedgerTests: XCTestCase {
             LedgerEntry(occurredAt: at(9), amount: 12.5, currency: "USD", amountKRW: 17_000, title: "=SUM(A1)"),
             LedgerEntry(occurredAt: at(18), amount: 3_000, amountKRW: 3_000, kind: .income, title: "환불 \"부분\""),
         ]
-        let csv = LedgerTable.csv(entries, language: .korean, calendar: calendar)
-        XCTAssertTrue(csv.hasPrefix("\u{FEFF}날짜,시각,종류,분류,내용,금액,통화,원화,낸 사람"))
+        let csv = LedgerTable.csv(entries, carryOver: 100_000, language: .korean, calendar: calendar)
+        XCTAssertTrue(csv.hasPrefix("\u{FEFF}일자,구분,항목,적요,수입,지출,잔액,비고"), "standard ledger columns")
         let lines = csv.dropFirst().components(separatedBy: "\r\n")
-        XCTAssertTrue(lines[1].hasPrefix("2026-11-10,09:00,지출"), "sorted by time")
-        XCTAssertTrue(lines[1].contains("'=SUM(A1),12.50,USD,17000"), "formula text is neutralized")
-        XCTAssertTrue(lines[2].contains("\"점심, 김밥\",9000,KRW,9000,민수"))
-        XCTAssertTrue(lines[3].contains("\"환불 \"\"부분\"\"\""))
-        XCTAssertTrue(csv.contains("지출 합계,,,,,,KRW,26000"))
-        XCTAssertTrue(csv.contains("수입 합계,,,,,,KRW,3000"))
+        XCTAssertEqual(lines[1], "이월잔액,,,,,,100000,")
+        XCTAssertTrue(lines[2].hasPrefix("2026-11-10 09:00,지출,기타,'=SUM(A1),,17000,83000,USD 12.50"), lines[2])
+        XCTAssertTrue(lines[3].contains("\"점심, 김밥\",,9000,74000,민수"), lines[3])
+        XCTAssertTrue(lines[4].contains("수입,기타,\"환불 \"\"부분\"\"\",3000,,77000"), lines[4])
+        XCTAssertEqual(lines[5], "합계,,,,3000,26000,77000,")
+        XCTAssertTrue(csv.contains("항목별 지출,지출,비율\r\n기타,26000,100.0%"))
         XCTAssertEqual(MapHomeCardMetricOption(id: MapHomeCardMetricOption.spendingID)?.title(.korean), "지출")
         XCTAssertTrue(MapHomeCardMetricOption.all.contains { $0.id == "spending" })
     }

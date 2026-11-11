@@ -22,18 +22,23 @@ struct LedgerSummary: Equatable {
     var title: String
     var rangeText: String
     var entries: [LedgerEntry]
+    /// 이월잔액(여행은 0에서 시작하고 첫 줄이 「경비 받음」).
+    var carryOver: Double
     var income: Double
     var expense: Double
-    var byCategory: [(LedgerCategory, Double)]
+    /// 달 예산(달 요약일 때만).
+    var budget: Double?
     /// 여행이면 내 기준 대차대조.
     var trip: LedgerTrip?
     var sheet: LedgerTripSheet?
 
-    var balance: Double { income - expense }
+    var balance: Double { carryOver + income - expense }
 
-    static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.title == rhs.title && lhs.rangeText == rhs.rangeText && lhs.entries == rhs.entries && lhs.sheet == rhs.sheet
-    }
+    @MainActor
+    func rows(_ language: MapHomeLanguage) -> [LedgerStandard.Row] { LedgerStandard.rows(entries, carryOver: carryOver, language: language) }
+
+    @MainActor
+    func byCategory(_ language: MapHomeLanguage) -> [(String, Double)] { LedgerStandard.byCategory(entries, language: language) }
 
     @MainActor
     static func make(_ period: LedgerSummaryPeriod, day: Date, book: LedgerBook = .shared, language: MapHomeLanguage,
@@ -41,8 +46,9 @@ struct LedgerSummary: Equatable {
         let format = Date.FormatStyle(date: .abbreviated, time: .omitted)
         if period == .trip, let trip = book.trips.first(where: { $0.start <= day.addingTimeInterval(86_399) && calendar.startOfDay(for: $0.end).addingTimeInterval(86_400) > day }) {
             let entries = book.tripEntries(trip.id).sorted { $0.occurredAt < $1.occurredAt }
-            return summary(title: trip.name, range: "\(trip.start.formatted(format)) – \(trip.end.formatted(format))", entries: entries,
-                           trip: trip, sheet: LedgerTripMath.sheet(trip, entries: book.entries))
+            return summary(title: language.text("\(trip.name) 여행 가계부", "\(trip.name) trip ledger"),
+                           range: "\(trip.start.formatted(format)) – \(trip.end.formatted(format))", entries: entries, carryOver: 0,
+                           budget: nil, trip: trip, sheet: LedgerTripMath.sheet(trip, entries: book.entries))
         }
         let start: Date, end: Date
         switch period {
@@ -58,62 +64,68 @@ struct LedgerSummary: Equatable {
         let entries = book.dailyEntries.filter { $0.occurredAt >= start && $0.occurredAt < end }.sorted { $0.occurredAt < $1.occurredAt }
         let last = end.addingTimeInterval(-1)
         let range = period == .day ? start.formatted(format) : "\(start.formatted(format)) – \(last.formatted(format))"
-        return summary(title: language.text("가계부", "Ledger"), range: range, entries: entries, trip: nil, sheet: nil)
+        let budget = period == .month ? book.budget(for: LedgerBook.monthKey(start, calendar: calendar))?.amountKRW : nil
+        return summary(title: language.text("가계부", "Household ledger"), range: range, entries: entries,
+                       carryOver: book.carryOver(before: start), budget: budget, trip: nil, sheet: nil)
     }
 
-    private static func summary(title: String, range: String, entries: [LedgerEntry], trip: LedgerTrip?, sheet: LedgerTripSheet?) -> LedgerSummary {
-        let expenses = entries.filter { $0.kind == .expense && $0.transfer == nil }
-        let byCategory = Dictionary(grouping: expenses, by: \.category).map { ($0.key, $0.value.reduce(0) { $0 + ($1.amountKRW ?? 0) }) }.sorted { $0.1 > $1.1 }
-        return LedgerSummary(
-            title: title, rangeText: range, entries: entries,
+    private static func summary(title: String, range: String, entries: [LedgerEntry], carryOver: Double, budget: Double?,
+                                trip: LedgerTrip?, sheet: LedgerTripSheet?) -> LedgerSummary {
+        LedgerSummary(
+            title: title, rangeText: range, entries: entries, carryOver: carryOver,
             income: entries.filter { $0.kind == .income }.reduce(0) { $0 + ($1.amountKRW ?? 0) },
             expense: entries.filter { $0.kind == .expense }.reduce(0) { $0 + ($1.amountKRW ?? 0) },
-            byCategory: byCategory, trip: trip, sheet: sheet
+            budget: budget, trip: trip, sheet: sheet
         )
     }
 
-    /// 가계부 양식 엑셀: 제목·기간, 날짜|시각|분류|내용|수입|지출|잔액|원래 금액|낸 사람·몫, 합계(수식), 분류별(SUMIF), 여행이면 대차대조·정산.
+    /// 표준 가계부 엑셀(LED1111A07): 제목·기간, 요약(이월·수입·지출·잔액·예산), 내역(일자|구분|항목|적요|수입|지출|잔액|비고)
+    /// 이월잔액 줄에서 잔액 수식이 이어지고, 합계(SUM)·항목별 지출(SUMIF·비율), 여행이면 대차대조·정산.
     @MainActor
     func xlsx(language: MapHomeLanguage, calendar: Calendar = .autoupdatingCurrent) -> Data {
         typealias C = LedgerXLSX.Cell
-        var sheet = LedgerXLSX(sheetName: title, widths: [12, 7, 12, 26, 13, 13, 14, 16, 18])
+        var sheet = LedgerXLSX(sheetName: title, widths: [17, 7, 12, 24, 13, 13, 14, 30])
         sheet.add([C(value: .text("BOKKI \(title)"), style: .title)])
         sheet.add([C(value: .text(rangeText), style: .note)])
         sheet.add([])
-        let headers = [language.text("날짜", "Date"), language.text("시각", "Time"), language.text("분류", "Category"), language.text("내용", "What"),
-                       language.text("수입", "Income"), language.text("지출", "Expense"), language.text("잔액", "Balance"),
-                       language.text("원래 금액", "Original"), language.text("낸 사람·몫", "Paid by · split")]
-        sheet.add(headers.map { C(value: .text($0), style: .header) })
-        let first = sheet.rows.count + 1
-        let day = DateFormatter(), time = DateFormatter()
-        day.calendar = calendar; day.timeZone = calendar.timeZone; day.dateFormat = "yyyy-MM-dd"
-        time.calendar = calendar; time.timeZone = calendar.timeZone; time.dateFormat = "HH:mm"
-        var running = 0.0
-        for entry in entries {
+        let summaryLine: [(String, Double)] = [
+            (language.text("이월잔액", "Carried over"), carryOver), (language.text("수입", "Income"), income),
+            (language.text("지출", "Expense"), expense), (language.text("잔액", "Balance"), balance),
+        ] + (budget.map { [(language.text("예산", "Budget"), $0), (language.text("예산 남음", "Budget left"), $0 - expense)] } ?? [])
+        sheet.add(summaryLine.map { C(value: .text($0.0), style: .header) })
+        sheet.add(summaryLine.map { C(value: .number($0.1), style: .moneyBold) })
+        sheet.add([])
+        sheet.add(LedgerStandard.header(language).map { C(value: .text($0), style: .header) })
+        let carryRow = sheet.rows.count + 1
+        sheet.add([C(value: .text(language.text("이월잔액", "Carried over")), style: .bold), C(value: .empty), C(value: .empty), C(value: .empty),
+                   C(value: .empty), C(value: .empty), C(value: .number(carryOver), style: .moneyBold)])
+        let first = carryRow + 1
+        for row in rows(language) {
             let r = sheet.rows.count + 1
-            let krw = entry.amountKRW ?? 0
-            running += entry.kind == .income ? krw : -krw
-            let original = entry.currency == "KRW" ? "" : "\(entry.currency) \(LedgerTable.plain(entry.amount))"
             sheet.add([
-                C(value: .text(day.string(from: entry.occurredAt))), C(value: .text(time.string(from: entry.occurredAt))),
-                C(value: .text(entry.category.title(language))), C(value: .text(entry.title)),
-                entry.kind == .income ? C(value: .number(krw), style: .money) : C(value: .empty),
-                entry.kind == .expense ? C(value: .number(krw), style: .money) : C(value: .empty),
-                C(value: .formula(r == first ? "E\(r)-F\(r)" : "G\(r - 1)+E\(r)-F\(r)", cached: running), style: .money),
-                C(value: .text(original)), C(value: .text(Self.splitText(entry, language: language))),
+                C(value: .text(LedgerStandard.dateText(row.date, calendar: calendar))),
+                C(value: .text(row.isIncome ? language.text("수입", "Income") : language.text("지출", "Expense"))),
+                C(value: .text(row.category)), C(value: .text(row.memo)),
+                row.isIncome ? C(value: .number(row.amount), style: .money) : C(value: .empty),
+                row.isIncome ? C(value: .empty) : C(value: .number(row.amount), style: .money),
+                C(value: .formula("G\(r - 1)+E\(r)-F\(r)", cached: row.balance), style: .money),
+                C(value: .text(row.note)),
             ])
         }
         let last = max(first, sheet.rows.count)
-        sheet.add([])
         sheet.add([C(value: .text(language.text("합계", "Total")), style: .bold), C(value: .empty), C(value: .empty), C(value: .empty),
                    C(value: .formula("SUM(E\(first):E\(last))", cached: income), style: .moneyBold),
                    C(value: .formula("SUM(F\(first):F\(last))", cached: expense), style: .moneyBold),
-                   C(value: .formula("SUM(E\(first):E\(last))-SUM(F\(first):F\(last))", cached: balance), style: .moneyBold)])
+                   C(value: .formula("G\(carryRow)+SUM(E\(first):E\(last))-SUM(F\(first):F\(last))", cached: balance), style: .moneyBold)])
         sheet.add([])
-        sheet.add([C(value: .text(language.text("분류별 지출", "Spending by category")), style: .header), C(value: .text(language.text("금액", "Amount")), style: .header)])
-        for (category, total) in byCategory {
-            let name = category.title(language).replacingOccurrences(of: "\"", with: "")
-            sheet.add([C(value: .text(name)), C(value: .formula("SUMIF(C\(first):C\(last),\"\(name)\",F\(first):F\(last))", cached: total), style: .money)])
+        sheet.add([C(value: .text(language.text("항목별 지출", "Spending by category")), style: .header),
+                   C(value: .text(language.text("지출", "Expense")), style: .header), C(value: .text(language.text("비율", "Share")), style: .header)])
+        let categories = byCategory(language)
+        let spent = max(1, categories.reduce(0) { $0 + $1.1 })
+        for (name, total) in categories {
+            sheet.add([C(value: .text(name)),
+                       C(value: .formula("SUMIFS(F\(first):F\(last),C\(first):C\(last),\"\(name.replacingOccurrences(of: "\"", with: ""))\",H\(first):H\(last),\"<>*\(language.text("여행 이체", "Trip transfer"))*\")", cached: total), style: .money),
+                       C(value: .text(String(format: "%.1f%%", total / spent * 100)))])
         }
         if let trip, let tripSheet = self.sheet {
             sheet.add([])
@@ -180,7 +192,7 @@ struct LedgerXLSXFile: Transferable {
     }
 }
 
-/// 가계부 양식 표(화면·이미지 공용). 앱 글꼴로 그린다.
+/// 표준 가계부 표(화면·이미지 공용, LED1111A07). 엑셀과 같은 순서: 요약 → 이월 → 내역 → 합계 → 항목별 → (여행) 대차대조.
 struct LedgerSummaryTable: View {
     let summary: LedgerSummary
     let language: MapHomeLanguage
@@ -192,44 +204,65 @@ struct LedgerSummaryTable: View {
                 Text(summary.rangeText).font(.taptionFixed(size: 12)).foregroundStyle(Color.tpSecondary)
             }
             HStack {
+                total(language.text("이월잔액", "Carried over"), summary.carryOver, Color.tpInk)
                 total(language.text("수입", "Income"), summary.income, .green)
                 total(language.text("지출", "Expense"), summary.expense, .red)
                 total(language.text("잔액", "Balance"), summary.balance, summary.balance < 0 ? .red : Color.tpInk)
             }
-            if !summary.byCategory.isEmpty {
-                let maximum = max(1, summary.byCategory.first?.1 ?? 1)
-                VStack(alignment: .leading, spacing: 5) {
-                    ForEach(Array(summary.byCategory.enumerated()), id: \.offset) { _, item in
-                        HStack(spacing: 8) {
-                            Image(systemName: item.0.symbol).frame(width: 18).foregroundStyle(Color.tpAccent)
-                            Text(item.0.title(language)).frame(width: 72, alignment: .leading)
-                            GeometryReader { proxy in
-                                Capsule().fill(Color.tpAccent.opacity(0.35)).frame(width: max(4, proxy.size.width * item.1 / maximum))
-                            }
-                            .frame(height: 8)
-                            Text(LedgerMoney.text(item.1, language: language)).monospacedDigit().frame(width: 92, alignment: .trailing)
-                        }
-                        .font(.taptionFixed(size: 12))
-                    }
-                }
+            if let budget = summary.budget {
+                Text(language.text("예산 \(LedgerMoney.text(budget, language: language)) · 남음 \(LedgerMoney.text(budget - summary.expense, language: language))",
+                                   "Budget \(LedgerMoney.text(budget, language: language)) · left \(LedgerMoney.text(budget - summary.expense, language: language))"))
+                    .font(.taptionFixed(size: 12)).foregroundStyle(budget - summary.expense < 0 ? Color.red : Color.tpSecondary)
             }
             Divider()
-            ForEach(summary.entries) { entry in
-                HStack(spacing: 8) {
-                    Text(entry.occurredAt.formatted(.dateTime.month(.defaultDigits).day().hour().minute())).foregroundStyle(Color.tpSecondary).frame(width: 92, alignment: .leading)
+            HStack(spacing: 6) {
+                Text(language.text("일자", "Date")).frame(width: 58, alignment: .leading)
+                Text(language.text("항목·적요", "Category · description"))
+                Spacer()
+                Text(language.text("수입/지출", "In/Out")).frame(width: 82, alignment: .trailing)
+                Text(language.text("잔액", "Balance")).frame(width: 82, alignment: .trailing)
+            }
+            .font(.taptionFixed(size: 11, weight: .bold)).foregroundStyle(Color.tpSecondary)
+            HStack(spacing: 6) {
+                Text(language.text("이월잔액", "Carried over")).font(.taptionFixed(size: 12, weight: .semibold))
+                Spacer()
+                Text(LedgerMoney.text(summary.carryOver, language: language)).monospacedDigit().frame(width: 82, alignment: .trailing)
+            }
+            .font(.taptionFixed(size: 12))
+            ForEach(Array(summary.rows(language).enumerated()), id: \.offset) { _, row in
+                HStack(alignment: .top, spacing: 6) {
+                    Text(row.date.formatted(.dateTime.month(.defaultDigits).day().hour().minute())).foregroundStyle(Color.tpSecondary).frame(width: 58, alignment: .leading)
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(entry.title).lineLimit(1)
-                        let split = LedgerSummary.splitText(entry, language: language)
-                        if !split.isEmpty { Text(split).font(.taptionFixed(size: 10)).foregroundStyle(Color.tpSecondary) }
+                        Text("\(row.category) · \(row.memo)").lineLimit(1)
+                        if !row.note.isEmpty { Text(row.note).font(.taptionFixed(size: 10)).foregroundStyle(Color.tpSecondary).lineLimit(1) }
                     }
                     Spacer(minLength: 4)
-                    Text((entry.kind == .expense ? "−" : "+") + LedgerMoney.text(entry.amountKRW ?? 0, language: language))
-                        .monospacedDigit().foregroundStyle(entry.kind == .expense ? Color.tpInk : .green)
+                    Text((row.isIncome ? "+" : "−") + LedgerMoney.text(row.amount, language: language))
+                        .monospacedDigit().foregroundStyle(row.isIncome ? .green : Color.tpInk).frame(width: 82, alignment: .trailing)
+                    Text(LedgerMoney.text(row.balance, language: language)).monospacedDigit().foregroundStyle(Color.tpSecondary).frame(width: 82, alignment: .trailing)
                 }
                 .font(.taptionFixed(size: 12))
             }
             if summary.entries.isEmpty {
                 Text(language.text("이 기간에는 기록이 없어요.", "No entries in this period.")).font(.taptionFixed(size: 12)).foregroundStyle(Color.tpSecondary)
+            }
+            let categories = summary.byCategory(language)
+            if !categories.isEmpty {
+                Divider()
+                Text(language.text("항목별 지출", "Spending by category")).font(.taptionFixed(size: 13, weight: .bold))
+                let spent = max(1, categories.reduce(0) { $0 + $1.1 })
+                ForEach(Array(categories.enumerated()), id: \.offset) { _, item in
+                    HStack(spacing: 8) {
+                        Text(item.0).frame(width: 78, alignment: .leading)
+                        GeometryReader { proxy in
+                            Capsule().fill(Color.tpAccent.opacity(0.35)).frame(width: max(4, proxy.size.width * item.1 / spent))
+                        }
+                        .frame(height: 8)
+                        Text(String(format: "%.0f%%", item.1 / spent * 100)).frame(width: 36, alignment: .trailing).foregroundStyle(Color.tpSecondary)
+                        Text(LedgerMoney.text(item.1, language: language)).monospacedDigit().frame(width: 86, alignment: .trailing)
+                    }
+                    .font(.taptionFixed(size: 12))
+                }
             }
             if let sheet = summary.sheet {
                 Divider()
@@ -252,7 +285,8 @@ struct LedgerSummaryTable: View {
     private func total(_ title: String, _ value: Double, _ color: Color) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title).font(.taptionFixed(size: 11)).foregroundStyle(Color.tpSecondary)
-            Text(LedgerMoney.text(value, language: language)).font(.taptionFixed(size: 15, weight: .bold)).foregroundStyle(color).monospacedDigit()
+            Text(LedgerMoney.text(value, language: language)).font(.taptionFixed(size: 14, weight: .bold)).foregroundStyle(color)
+                .monospacedDigit().minimumScaleFactor(0.6).lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

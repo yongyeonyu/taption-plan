@@ -2,35 +2,99 @@ import CoreTransferable
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// 가계부를 표로 내보낸다(LED1111A04, 대표 지시 2026-11-11). 엑셀·넘버스·구글 시트에서 바로 열리는 CSV(UTF-8, 한글 깨짐 방지 BOM).
+/// 가계부 표준 양식(LED1111A07, 대표 지시: 흔히 쓰는 가계부 서식으로 일상·여행 모두 통일).
+/// 이월잔액 → 일자 | 구분 | 항목 | 적요 | 수입 | 지출 | 잔액 | 비고 → 합계 → 항목별 지출(비율·예산 대비).
+/// 엑셀·CSV·이미지·앱 요약이 모두 이 행을 쓴다.
 @MainActor
-enum LedgerTable {
-    static func header(_ language: MapHomeLanguage) -> [String] {
-        [
-            language.text("날짜", "Date"), language.text("시각", "Time"), language.text("종류", "Type"),
-            language.text("분류", "Category"), language.text("내용", "What"), language.text("금액", "Amount"),
-            language.text("통화", "Currency"), language.text("원화", "KRW"), language.text("낸 사람", "Paid by"),
-            language.text("장소", "Place"), language.text("메모", "Note"), language.text("들어온 길", "Source"),
-        ]
+enum LedgerStandard {
+    struct Row: Equatable {
+        var date: Date
+        var isIncome: Bool
+        var category: String
+        var memo: String
+        var amount: Double
+        var balance: Double
+        var note: String
     }
 
-    static func csv(_ entries: [LedgerEntry], language: MapHomeLanguage, calendar: Calendar = .autoupdatingCurrent) -> String {
-        let day = DateFormatter(), time = DateFormatter()
-        day.calendar = calendar; day.timeZone = calendar.timeZone; day.locale = Locale(identifier: "en_US_POSIX"); day.dateFormat = "yyyy-MM-dd"
-        time.calendar = calendar; time.timeZone = calendar.timeZone; time.locale = Locale(identifier: "en_US_POSIX"); time.dateFormat = "HH:mm"
-        var lines = [header(language).map(cell).joined(separator: ",")]
-        for entry in entries.sorted(by: { $0.occurredAt < $1.occurredAt }) {
+    static func header(_ language: MapHomeLanguage) -> [String] {
+        [language.text("일자", "Date"), language.text("구분", "Type"), language.text("항목", "Category"), language.text("적요", "Description"),
+         language.text("수입", "Income"), language.text("지출", "Expense"), language.text("잔액", "Balance"), language.text("비고", "Notes")]
+    }
+
+    /// 원화 기준 행. 잔액은 이월잔액에서 시작해 수입은 더하고 지출은 뺀다.
+    static func rows(_ entries: [LedgerEntry], carryOver: Double, language: MapHomeLanguage) -> [Row] {
+        var balance = carryOver
+        return entries.sorted { $0.occurredAt < $1.occurredAt }.map { entry in
+            let amount = entry.amountKRW ?? 0
+            balance += entry.kind == .income ? amount : -amount
+            return Row(date: entry.occurredAt, isIncome: entry.kind == .income, category: entry.category.title(language), memo: entry.title,
+                       amount: amount, balance: balance, note: note(entry, language: language))
+        }
+    }
+
+    /// 비고: 원래 통화 금액, 여행이면 낸 사람·몫, 여행 이체, 장소·메모, 들어온 길(AI·결제 문자·영수증).
+    static func note(_ entry: LedgerEntry, language: MapHomeLanguage) -> String {
+        var parts: [String] = []
+        if entry.currency != "KRW" { parts.append("\(entry.currency) \(LedgerTable.plain(entry.amount))") }
+        if entry.transfer != nil { parts.append(language.text("여행 이체", "Trip transfer")) }
+        let split = LedgerSummary.splitText(entry, language: language)
+        if !split.isEmpty { parts.append(split) }
+        if let place = entry.place, !place.isEmpty { parts.append(place) }
+        if let memo = entry.note, !memo.isEmpty, entry.source != .message || memo != entry.title { parts.append(memo) }
+        switch entry.source {
+        case .manual: break
+        case .assistant: parts.append("AI")
+        case .message: parts.append(language.text("결제 문자", "Payment text"))
+        case .receipt: parts.append(language.text("영수증", "Receipt"))
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    static func dateText(_ date: Date, calendar: Calendar = .autoupdatingCurrent) -> String {
+        let format = DateFormatter()
+        format.calendar = calendar; format.timeZone = calendar.timeZone; format.locale = Locale(identifier: "en_US_POSIX")
+        format.dateFormat = "yyyy-MM-dd HH:mm"
+        return format.string(from: date)
+    }
+
+    /// 항목별 지출(원화). 이체는 빼고 큰 순서.
+    static func byCategory(_ entries: [LedgerEntry], language: MapHomeLanguage) -> [(String, Double)] {
+        let expenses = entries.filter { $0.kind == .expense && $0.transfer == nil }
+        return Dictionary(grouping: expenses) { $0.category.title(language) }
+            .map { ($0.key, $0.value.reduce(0) { $0 + ($1.amountKRW ?? 0) }) }
+            .sorted { $0.1 != $1.1 ? $0.1 > $1.1 : $0.0 < $1.0 }
+    }
+}
+
+/// CSV 내보내기도 표준 양식(엑셀·넘버스·구글 시트에서 한글이 깨지지 않게 BOM).
+@MainActor
+enum LedgerTable {
+    static func csv(_ entries: [LedgerEntry], carryOver: Double = 0, title: String? = nil, language: MapHomeLanguage,
+                    calendar: Calendar = .autoupdatingCurrent) -> String {
+        var lines: [String] = []
+        if let title { lines.append(cell(title)) }
+        lines.append(LedgerStandard.header(language).map(cell).joined(separator: ","))
+        lines.append([language.text("이월잔액", "Carried over"), "", "", "", "", "", plain(carryOver), ""].map(cell).joined(separator: ","))
+        let rows = LedgerStandard.rows(entries, carryOver: carryOver, language: language)
+        for row in rows {
             lines.append([
-                day.string(from: entry.occurredAt), time.string(from: entry.occurredAt),
-                entry.kind == .expense ? language.text("지출", "Expense") : language.text("수입", "Income"),
-                entry.category.title(language), entry.title, plain(entry.amount), entry.currency,
-                entry.amountKRW.map(plain) ?? "", entry.payer ?? "", entry.place ?? "", entry.note ?? "", source(entry.source, language),
+                LedgerStandard.dateText(row.date, calendar: calendar),
+                row.isIncome ? language.text("수입", "Income") : language.text("지출", "Expense"),
+                row.category, row.memo,
+                row.isIncome ? plain(row.amount) : "", row.isIncome ? "" : plain(row.amount),
+                plain(row.balance), row.note,
             ].map(cell).joined(separator: ","))
         }
-        let spent = LedgerBook.total(entries, .expense), earned = LedgerBook.total(entries, .income)
+        let income = rows.filter(\.isIncome).reduce(0) { $0 + $1.amount }, expense = rows.filter { !$0.isIncome }.reduce(0) { $0 + $1.amount }
+        lines.append([language.text("합계", "Total"), "", "", "", plain(income), plain(expense), plain(carryOver + income - expense), ""].map(cell).joined(separator: ","))
         lines.append("")
-        lines.append([language.text("지출 합계", "Total spent"), "", "", "", "", "", "KRW", plain(spent)].map(cell).joined(separator: ","))
-        lines.append([language.text("수입 합계", "Total income"), "", "", "", "", "", "KRW", plain(earned)].map(cell).joined(separator: ","))
+        lines.append([language.text("항목별 지출", "Spending by category"), language.text("지출", "Expense"), language.text("비율", "Share")].map(cell).joined(separator: ","))
+        let byCategory = LedgerStandard.byCategory(entries, language: language)
+        let total = max(1, byCategory.reduce(0) { $0 + $1.1 })
+        for (name, amount) in byCategory {
+            lines.append([name, plain(amount), String(format: "%.1f%%", amount / total * 100)].map(cell).joined(separator: ","))
+        }
         return "\u{FEFF}" + lines.joined(separator: "\r\n") + "\r\n"
     }
 
@@ -44,15 +108,6 @@ enum LedgerTable {
 
     static func plain(_ value: Double) -> String {
         value.rounded() == value ? String(Int(value)) : String(format: "%.2f", value)
-    }
-
-    private static func source(_ source: LedgerEntry.Source, _ language: MapHomeLanguage) -> String {
-        switch source {
-        case .manual: language.text("직접", "Manual")
-        case .assistant: "AI"
-        case .message: language.text("결제 문자", "Payment text")
-        case .receipt: language.text("영수증", "Receipt")
-        }
     }
 }
 

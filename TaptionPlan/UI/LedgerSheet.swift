@@ -49,11 +49,11 @@ struct LedgerSheet: View {
                     Menu {
                         Button(language.text("이 달 예산", "Monthly budget")) { isEditingBudget = true }
                         Button(language.text("정산하기", "Settle up")) { isSettling = true }
-                        ShareLink(item: LedgerTableFile(name: "BOKKI-\(month).csv", text: LedgerTable.csv(monthEntries, language: language)),
+                        ShareLink(item: LedgerTableFile(name: "BOKKI-\(month).csv", text: LedgerTable.csv(monthEntries, carryOver: monthCarryOver, title: language.text("BOKKI 가계부 \(monthTitle)", "BOKKI ledger \(monthTitle)"), language: language)),
                                   preview: SharePreview(language.text("가계부 \(monthTitle) 표", "Ledger \(monthTitle) table"))) {
                             Label(language.text("이 달 표로 내보내기", "Export this month as a table"), systemImage: "tablecells")
                         }
-                        ShareLink(item: LedgerTableFile(name: "BOKKI-ledger.csv", text: LedgerTable.csv(book.entries, language: language)),
+                        ShareLink(item: LedgerTableFile(name: "BOKKI-ledger.csv", text: LedgerTable.csv(book.dailyEntries, title: language.text("BOKKI 가계부 전체", "BOKKI ledger (all)"), language: language)),
                                   preview: SharePreview(language.text("가계부 전체 표", "Whole ledger table"))) {
                             Label(language.text("전체 표로 내보내기", "Export everything as a table"), systemImage: "square.and.arrow.up")
                         }
@@ -93,6 +93,13 @@ struct LedgerSheet: View {
 
     /// 일상 장부의 이 달: 여행 안 기록은 빼고 여행과 오간 짝 기록(경비·정산)만 담는다(LED1111A05).
     private var monthEntries: [LedgerEntry] { book.dailyEntries.filter { LedgerBook.monthKey($0.occurredAt) == month } }
+
+    /// 이 달 첫날까지의 이월잔액.
+    private var monthCarryOver: Double {
+        let first = month.split(separator: "-").compactMap { Int($0) }
+        guard first.count == 2, let start = Calendar.autoupdatingCurrent.date(from: DateComponents(year: first[0], month: first[1], day: 1)) else { return 0 }
+        return book.carryOver(before: start)
+    }
 
     /// 여행 장부 목록. 장부가 있는 여행과, 앱 여행 계획 중 아직 장부가 없는 여행(누르면 만든다).
     @ViewBuilder
@@ -183,8 +190,12 @@ struct LedgerSheet: View {
                 Button { shiftMonth(1) } label: { Image(systemName: "chevron.right") }
             }
             .buttonStyle(.borderless)
-            LabeledContent(language.text("지출", "Spent"), value: LedgerMoney.text(spent, language: language))
+            // 표준 가계부 순서: 이월잔액 · 수입 · 지출 · 잔액(LED1111A07).
+            LabeledContent(language.text("이월잔액", "Carried over"), value: LedgerMoney.text(monthCarryOver, language: language))
             LabeledContent(language.text("수입", "Income"), value: LedgerMoney.text(earned, language: language))
+            LabeledContent(language.text("지출", "Spent"), value: LedgerMoney.text(spent, language: language))
+            LabeledContent(language.text("잔액", "Balance"), value: LedgerMoney.text(monthCarryOver + earned - spent, language: language))
+                .fontWeight(.bold)
             if let budget {
                 let left = budget.amountKRW - spent
                 LabeledContent(language.text("예산 남음", "Budget left"), value: LedgerMoney.text(left, language: language))

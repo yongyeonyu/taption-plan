@@ -126,6 +126,11 @@ extension LedgerBook {
     /// 일상 장부: 여행 안 기록은 빼고 여행과 오간 짝 기록만 남는다.
     var dailyEntries: [LedgerEntry] { entries.filter { $0.tripID == nil } }
 
+    /// 이월잔액: 그때까지 일상 장부의 수입 − 지출(LED1111A07).
+    func carryOver(before date: Date) -> Double {
+        dailyEntries.filter { $0.occurredAt < date }.reduce(0) { $0 + $1.signedKRW }
+    }
+
     func tripEntries(_ tripID: String) -> [LedgerEntry] { entries.filter { $0.tripID == tripID } }
 
     func trip(_ id: String) -> LedgerTrip? { trips.first { $0.id == id } }
