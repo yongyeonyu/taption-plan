@@ -195,6 +195,45 @@ extension MapHomeView {
     }
 }
 
+/// 여행 모드에서 실제 기록 옆에 나란히 그리는 계획 한 칸(TVC1112A01).
+struct MapHomeRailPlanSpan: Hashable {
+    var startMinute: Int
+    var endMinute: Int
+    /// 예약은 진하게, 미정은 옅게.
+    var opacity: Double
+    /// 계획과 실제의 비교 결과. 건너뛰었거나 늦은 일정에 표시를 단다.
+    var status: TravelPlanComparison.Status
+}
+
+/// 시간 막대 왼쪽 반의 계획 띠(남색). 건너뛴 일정은 주홍 테두리, 늦은 일정은 위쪽 주홍 줄.
+struct MapHomeRailPlanBandView: View {
+    let spans: [MapHomeRailPlanSpan]
+    let window: ClosedRange<Int>
+    let width: CGFloat
+    let height: CGFloat
+
+    var body: some View {
+        ForEach(spans, id: \.self) { span in
+            let start = max(min(span.startMinute, window.upperBound), window.lowerBound)
+            let end = min(max(span.endMinute, window.lowerBound), window.upperBound)
+            if start < end {
+                let barHeight = max(1, height * MapHomeTimeSidebarMath.spanFraction(start: start, end: end, window: window))
+                Rectangle()
+                    .fill(TravelInk.plan.opacity(span.opacity))
+                    .overlay(alignment: .top) {
+                        if span.status == .skipped {
+                            Rectangle().strokeBorder(TravelInk.actual, lineWidth: 1.5)
+                        } else if span.status == .late {
+                            Rectangle().fill(TravelInk.actual).frame(height: min(3, barHeight))
+                        }
+                    }
+                    .frame(width: width - 1, height: barHeight)
+                    .position(x: width / 2, y: height * MapHomeTimeSidebarMath.segmentCenterPosition(start: start, end: end, window: window))
+            }
+        }
+    }
+}
+
 /// 계획 띠 만들기: 그날의 계획과 실제 기록을 견줘 일정마다 상태를 붙인다.
 enum TravelPlanBand {
     static func spans(

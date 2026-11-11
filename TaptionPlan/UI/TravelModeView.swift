@@ -13,6 +13,23 @@ enum TravelInk {
     static let actual = Color(hex: "#C8442E")
     /// 지도 위에 뜨는 판(머리말·돈 줄). 땅 색과 겹쳐 묻히지 않게 더 밝다.
     static let panel = Color.white.opacity(0.94)
+    /// 깃발 기본 색. 여행 순서대로 돌려 쓴다(대표 지시: 사용자가 정하되 기본은 테마 색 순서).
+    static let flagHexes = ["#C8442E", "#2F3E6B", "#C58B1B", "#2E7D6B", "#8A4F9E", "#D9722B"]
+
+    static func flagHex(_ trip: TravelTrip, order: Int) -> String {
+        trip.flagColorHex ?? flagHexes[max(0, order) % flagHexes.count]
+    }
+
+    static func flagName(_ hex: String, language: MapHomeLanguage) -> String {
+        switch hex {
+        case "#C8442E": language.text("주홍 깃발", "Vermilion flag")
+        case "#2F3E6B": language.text("남색 깃발", "Navy flag")
+        case "#C58B1B": language.text("겨자색 깃발", "Mustard flag")
+        case "#2E7D6B": language.text("청록 깃발", "Teal flag")
+        case "#8A4F9E": language.text("자주 깃발", "Purple flag")
+        default: language.text("주황 깃발", "Orange flag")
+        }
+    }
 }
 
 /// 앱에 넣은 나라·시도 경계(`ne-regions.bin`). 처음 쓸 때 한 번 읽는다.
@@ -90,18 +107,30 @@ enum TravelGlobeRenderer {
     }
 
     struct Flag {
+        var id = ""
         var longitude: Double
         var latitude: Double
         var text: String
         /// 0 = 아직 없음, 1 = 꽂힘.
         var progress: Double
+        var color: Color = TravelInk.actual
+        /// 지난 여행은 옅게.
+        var opacity: Double = 1
+        /// 고른 깃발만 D-Day 이름표를 단다.
+        var showsLabel = true
+    }
+
+    /// 그 깃발이 화면에서 꽂힌 자리. 지구 뒤쪽이면 nil.
+    static func foot(of flag: Flag, camera: TravelGlobeCamera, size: CGSize) -> CGPoint? {
+        let (base, front) = point(camera, center(in: size), flag.longitude, flag.latitude)
+        return front ? base : nil
     }
 
     static func center(in size: CGSize) -> CGPoint { CGPoint(x: size.width / 2, y: size.height * 0.54) }
 
     static func draw(
         _ context: inout GraphicsContext, size: CGSize, camera: TravelGlobeCamera, highlight: Set<String>,
-        flag: Flag?, pins: [Pin]
+        flags: [Flag], pins: [Pin]
     ) {
         let center = center(in: size)
         let radius = camera.radius
@@ -139,7 +168,10 @@ enum TravelGlobeRenderer {
             context.stroke(chosen, with: .color(TravelInk.plan), lineWidth: 1.5)
         }
         drawPins(&context, pins: pins, camera: camera, center: center)
-        if let flag, flag.progress > 0 { drawFlag(&context, flag: flag, camera: camera, center: center) }
+        // 이름표를 단 깃발을 맨 위에 그린다.
+        for flag in flags.sorted(by: { !$0.showsLabel && $1.showsLabel }) where flag.progress > 0 {
+            drawFlag(&context, flag: flag, camera: camera, center: center)
+        }
     }
 
     private static func point(_ camera: TravelGlobeCamera, _ center: CGPoint, _ longitude: Double, _ latitude: Double) -> (CGPoint, Bool) {
@@ -229,24 +261,24 @@ enum TravelGlobeRenderer {
         let (base, front) = point(camera, center, flag.longitude, flag.latitude)
         guard front else { return }
         var layer = context
-        layer.opacity = min(1, flag.progress * 2)
+        layer.opacity = min(1, flag.progress * 2) * flag.opacity
         let foot = CGPoint(x: base.x, y: base.y - (1 - flag.progress) * 60)
         var pole = Path()
         pole.move(to: foot)
         pole.addLine(to: CGPoint(x: foot.x, y: foot.y - 32))
-        layer.stroke(pole, with: .color(TravelInk.actual), lineWidth: 2)
+        layer.stroke(pole, with: .color(flag.color), lineWidth: 2)
         var cloth = Path()
         cloth.move(to: CGPoint(x: foot.x, y: foot.y - 32))
         cloth.addLine(to: CGPoint(x: foot.x + 20, y: foot.y - 26))
         cloth.addLine(to: CGPoint(x: foot.x, y: foot.y - 20))
         cloth.closeSubpath()
-        layer.fill(cloth, with: .color(TravelInk.actual))
-        layer.fill(Path(ellipseIn: CGRect(x: foot.x - 3, y: foot.y - 3, width: 6, height: 6)), with: .color(TravelInk.actual))
-        guard flag.progress >= 1, !flag.text.isEmpty else { return }
+        layer.fill(cloth, with: .color(flag.color))
+        layer.fill(Path(ellipseIn: CGRect(x: foot.x - 3, y: foot.y - 3, width: 6, height: 6)), with: .color(flag.color))
+        guard flag.showsLabel, flag.progress >= 1, !flag.text.isEmpty else { return }
         let label = layer.resolve(Text(flag.text).font(.system(size: 12, weight: .semibold)).foregroundStyle(TravelInk.land))
         let textSize = label.measure(in: CGSize(width: 200, height: 40))
         let pill = CGRect(x: foot.x + 24, y: foot.y - 36, width: textSize.width + 16, height: textSize.height + 6)
-        layer.fill(Path(roundedRect: pill, cornerRadius: pill.height / 2), with: .color(TravelInk.actual))
+        layer.fill(Path(roundedRect: pill, cornerRadius: pill.height / 2), with: .color(flag.color))
         layer.draw(label, at: CGPoint(x: pill.midX, y: pill.midY))
     }
 }
@@ -265,6 +297,11 @@ struct TravelModeView: View {
     @State private var flightStart = Date.distantPast
     @State private var flyingID: String?
     @State private var openedID: String?
+    /// 지구본에서 고른(포커싱한) 여행. 그 깃발이나 카드를 한 번 더 누르면 여행 화면으로 들어간다.
+    @State private var focusedID: String?
+    @State private var dragBase: TravelGlobeCamera?
+    @State private var pinchBase: Double?
+    @State private var lastGestureUpdate = Date.distantPast
     @State private var viewSize = CGSize(width: 390, height: 760)
     @State private var newTripDraft: TravelNewTripSheet.Draft?
     @State private var ledgerTripID: String?
@@ -284,7 +321,7 @@ struct TravelModeView: View {
 
     var body: some View {
         let entries = self.entries
-        let focused = entries.first { $0.id == (openedID ?? flyingID) }
+        let focused = entries.first { $0.id == (openedID ?? flyingID ?? focusedID) }
         let destination = focused.map { TravelModeDestination(trip: $0.trip, stops: model.settings.travelPlanStops) }
         GeometryReader { proxy in
             TimelineView(.animation(minimumInterval: 1.0 / 60, paused: flight == nil)) { timeline in
@@ -293,15 +330,17 @@ struct TravelModeView: View {
                 Canvas { context, size in
                     TravelGlobeRenderer.draw(
                         &context, size: size, camera: now, highlight: highlight(destination),
-                        flag: flag(for: focused, destination: destination, progress: flight.map { $0.flagProgress(at: elapsed) } ?? 1),
+                        flags: flags(entries, flightProgress: flight.map { $0.flagProgress(at: elapsed) } ?? 1),
                         pins: openedID == nil ? [] : pins(destination)
                     )
                 }
             }
-            .ignoresSafeArea()
+            // 그리는 크기와 누른 자리를 재는 크기가 같아야 깃발이 눌린다. 그래서 안전 영역까지 포함한 이 크기 하나만 쓴다.
+            .gesture(globeGestures(entries, size: proxy.size), isEnabled: openedID == nil && flight == nil)
             .onAppear { viewSize = proxy.size; enter(entries) }
             .onChange(of: proxy.size) { _, size in viewSize = size }
         }
+        .ignoresSafeArea()
         .overlay(alignment: .topLeading) {
             if openedID == nil { cardColumn(entries) }
         }
@@ -352,6 +391,7 @@ struct TravelModeView: View {
         didEnter = true
         camera.radius = restRadius
         guard let active = entries.first(where: { $0.state == .active }) else { return }
+        focusedID = active.id
         let destination = TravelModeDestination(trip: active.trip, stops: model.settings.travelPlanStops)
         if let last = cameras(for: destination).last { camera = last }
         openedID = active.id
@@ -377,11 +417,88 @@ struct TravelModeView: View {
         return stops
     }
 
+    // MARK: 지구본 만지기(TVE1112A01): 끌어서 돌리기, 벌려서 확대, 깃발 누르기
+
+    /// 손가락 입력은 화면 갱신(60Hz)보다 자주 와도 한 번만 반영한다.
+    private func acceptsGestureUpdate() -> Bool {
+        let now = Date.now
+        guard now.timeIntervalSince(lastGestureUpdate) >= 1.0 / 60 else { return false }
+        lastGestureUpdate = now
+        return true
+    }
+
+    private func globeGestures(_ entries: [TravelTripDirectory.Entry], size: CGSize) -> some Gesture {
+        let drag = DragGesture(minimumDistance: 6)
+            .onChanged { value in
+                let base = dragBase ?? camera
+                if dragBase == nil { dragBase = base }
+                guard acceptsGestureUpdate() else { return }
+                camera = TravelGlobeTouch.rotated(base, by: value.translation)
+            }
+            .onEnded { value in
+                if let base = dragBase { camera = TravelGlobeTouch.rotated(base, by: value.translation) }
+                dragBase = nil
+            }
+        let pinch = MagnifyGesture()
+            .onChanged { value in
+                let base = pinchBase ?? camera.radius
+                if pinchBase == nil { pinchBase = base }
+                guard acceptsGestureUpdate() else { return }
+                camera.radius = TravelGlobeTouch.zoomed(base, by: value.magnification, rest: restRadius)
+            }
+            .onEnded { value in
+                if let base = pinchBase { camera.radius = TravelGlobeTouch.zoomed(base, by: value.magnification, rest: restRadius) }
+                pinchBase = nil
+            }
+        let tap = SpatialTapGesture()
+            .onEnded { value in
+                let all = flags(entries, flightProgress: 1)
+                guard let id = TravelGlobeTouch.flag(at: value.location, flags: all, camera: camera, size: size),
+                      let entry = entries.first(where: { $0.id == id }) else { return }
+                select(entry)
+            }
+        return drag.simultaneously(with: pinch).simultaneously(with: tap)
+    }
+
+    /// 깃발이나 카드를 누르면 그 여행지로 돌아가 포커싱하고, 포커싱된 것을 한 번 더 누르면 여행 화면으로 들어간다(대표 결정).
+    private func select(_ entry: TravelTripDirectory.Entry) {
+        guard flight == nil else { return }
+        if focusedID == entry.id {
+            let destination = TravelModeDestination(trip: entry.trip, stops: model.settings.travelPlanStops)
+            if let last = cameras(for: destination).last { camera = last }
+            openedID = entry.id
+        } else {
+            fly(to: entry)
+        }
+    }
+
+    /// 여행마다 깃발 하나. 색은 사용자가 정한 것, 없으면 순서대로 기본 색. 지난 여행은 옅게.
+    private func flags(_ entries: [TravelTripDirectory.Entry], flightProgress: Double) -> [TravelGlobeRenderer.Flag] {
+        guard openedID == nil else { return [] }
+        return entries.enumerated().compactMap { index, entry in
+            guard let point = TravelModeDestination(trip: entry.trip, stops: model.settings.travelPlanStops).point else { return nil }
+            let chosen = entry.id == (flyingID ?? focusedID)
+            return TravelGlobeRenderer.Flag(
+                id: entry.id, longitude: point.x, latitude: point.y, text: tag(entry),
+                progress: entry.id == flyingID ? flightProgress : 1,
+                color: Color(hex: TravelInk.flagHex(entry.trip, order: index)),
+                opacity: entry.state == .past && !chosen ? 0.45 : 1, showsLabel: chosen
+            )
+        }
+    }
+
+    private func setFlagColor(_ hex: String?, for entry: TravelTripDirectory.Entry) {
+        var trip = entry.trip
+        trip.flagColorHex = hex
+        Task { await model.saveTravelTrip(trip) }
+    }
+
     private func fly(to entry: TravelTripDirectory.Entry) {
         guard flight == nil else { return }
         let destination = TravelModeDestination(trip: entry.trip, stops: model.settings.travelPlanStops)
         guard let point = destination.point else {
             // 어디인지 모르는 여행은 지구를 돌리지 않고 바로 연다.
+            focusedID = entry.id
             openedID = entry.id
             return
         }
@@ -393,7 +510,7 @@ struct TravelModeView: View {
         flyingID = entry.id
         if reduceMotion {
             camera = plan.camera(at: plan.duration)
-            openedID = entry.id
+            focusedID = entry.id
             flyingID = nil
             return
         }
@@ -408,10 +525,11 @@ struct TravelModeView: View {
         camera = plan.camera(at: plan.duration)
         flight = nil
         flyingID = nil
-        openedID = id
+        focusedID = id
     }
 
     private func backToGlobe() {
+        focusedID = nil
         isPlanUp = false
         planDayKey = nil
         openedID = nil
@@ -424,11 +542,6 @@ struct TravelModeView: View {
         guard let destination else { return [] }
         if let province = destination.province { return [province.code] }
         return destination.country.map { [$0.code] } ?? []
-    }
-
-    private func flag(for entry: TravelTripDirectory.Entry?, destination: TravelModeDestination?, progress: Double) -> TravelGlobeRenderer.Flag? {
-        guard let entry, openedID == nil, let point = destination?.point else { return nil }
-        return .init(longitude: point.x, latitude: point.y, text: tag(entry), progress: progress)
     }
 
     private func pins(_ destination: TravelModeDestination?) -> [TravelGlobeRenderer.Pin] {
@@ -462,10 +575,14 @@ struct TravelModeView: View {
             HStack(spacing: 10) {
                 Button { dismiss() } label: {
                     Image(systemName: "house.fill").font(.system(size: 17, weight: .semibold)).frame(width: 40, height: 40)
-                        .background(TravelInk.land, in: Circle())
+                        .background(TravelInk.panel, in: Circle())
+                        .overlay { Circle().stroke(TravelInk.border, lineWidth: 1) }
                 }
                 .accessibilityLabel(language.text("일상으로 돌아가기", "Back to everyday"))
-                Text(language.text("여행", "Trips")).font(.title3.weight(.semibold)).foregroundStyle(TravelInk.land)
+                // 확대하면 바탕이 밝은 땅이 된다. 어느 바탕에서도 읽히게 판 위에 쓴다.
+                Text(language.text("여행", "Trips")).font(.headline).padding(.horizontal, 12).frame(height: 34)
+                    .background(TravelInk.panel, in: Capsule())
+                    .overlay { Capsule().stroke(TravelInk.border, lineWidth: 1) }
             }
             ScrollView {
                 VStack(alignment: .leading, spacing: 8) {
@@ -481,7 +598,9 @@ struct TravelModeView: View {
     }
 
     private func card(_ entry: TravelTripDirectory.Entry) -> some View {
-        Button { fly(to: entry) } label: {
+        let order = entries.firstIndex { $0.id == entry.id } ?? 0
+        let flagColor = Color(hex: TravelInk.flagHex(entry.trip, order: order))
+        return Button { select(entry) } label: {
             VStack(alignment: .leading, spacing: 0) {
                 HStack {
                     Text(tag(entry))
@@ -492,7 +611,7 @@ struct TravelModeView: View {
                 .foregroundStyle(TravelInk.land)
                 .padding(.horizontal, 9)
                 .frame(height: 26)
-                .background(entry.state == .active ? TravelInk.actual : TravelInk.plan)
+                .background(flagColor.opacity(entry.state == .past ? 0.6 : 1))
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title(entry)).font(.subheadline.weight(.semibold)).lineLimit(1)
                     Text(length(entry)).font(.caption).opacity(0.8)
@@ -502,11 +621,22 @@ struct TravelModeView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .frame(width: 150)
-            .background(TravelInk.land)
+            .background(Color.white)
             .clipShape(RoundedRectangle(cornerRadius: 10))
-            .overlay { RoundedRectangle(cornerRadius: 10).stroke(flyingID == entry.id ? TravelInk.actual : .clear, lineWidth: 2) }
+            .overlay { RoundedRectangle(cornerRadius: 10).stroke(entry.id == (flyingID ?? focusedID) ? flagColor : .clear, lineWidth: 2.5) }
         }
         .buttonStyle(.plain)
+        .contextMenu {
+            // 깃발 색 고르기. 저장한 여행만 바꿀 수 있다.
+            if entry.isStored {
+                ForEach(TravelInk.flagHexes, id: \.self) { hex in
+                    Button { setFlagColor(hex, for: entry) } label: {
+                        Label(TravelInk.flagName(hex, language: language), systemImage: entry.trip.flagColorHex == hex ? "checkmark.circle.fill" : "flag.fill")
+                    }
+                }
+                Button(language.text("기본 색으로", "Use default color")) { setFlagColor(nil, for: entry) }
+            }
+        }
         .accessibilityIdentifier("travelTripCard-\(entry.id)")
     }
 
@@ -522,7 +652,8 @@ struct TravelModeView: View {
     private func footerButton(_ symbol: String, _ label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Label(label, systemImage: symbol).font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity).frame(height: 46)
-                .background(TravelInk.land, in: Capsule())
+                .background(TravelInk.panel, in: Capsule())
+                .overlay { Capsule().stroke(TravelInk.border, lineWidth: 1) }
         }
         .buttonStyle(.plain)
         .foregroundStyle(TravelInk.plan)
@@ -794,255 +925,36 @@ struct TravelNewTripSheet: View {
     }
 }
 
-// MARK: - 계획표(TVD1112A01)
-
-/// 계획표 하루치: 분류 열에 놓인 계획 칸, 그 옆에 나란히 보일 실제 기록, 지금 시각.
-struct TravelPlanTableModel: Equatable {
-    /// 열 순서: 이동 · 식사 · 관광 · 숙소.
-    static let columnCount = 4
-
-    struct Block: Identifiable, Equatable {
-        let id: String
-        var column: Int
-        var startMinute: Int
-        var endMinute: Int
-        var title: String
-        var tripStatus: TripItemStatus?
-        var status: TravelPlanComparison.Status
-    }
-
-    struct Actual: Identifiable, Equatable {
-        let id: String
-        var startMinute: Int
-        var endMinute: Int
-        var title: String
-        var isMove: Bool
-        /// 계획에 없던 머묾.
-        var isUnplanned: Bool
-    }
-
-    var blocks: [Block]
-    var actuals: [Actual]
-    /// 그날이 오늘일 때만 있다.
-    var nowMinute: Int?
-
-    /// 처음 보여 줄 시각: 오늘이면 지금 한 시간 전, 아니면 첫 일정 30분 전.
-    var focusMinute: Int {
-        if let nowMinute { return max(0, nowMinute - 60) }
-        return max(0, (blocks.map(\.startMinute).min() ?? 9 * 60) - 30)
-    }
-
-    static func column(forKind kind: String) -> Int {
-        switch kind {
-        case "flight", "transfer": 0
-        case "meal", "cafe": 1
-        case "lodging", "sleep", "rest": 3
-        default: 2
-        }
-    }
-
-    /// `day`는 기기 달력의 그날. 일정은 그곳 벽시계 시각에 놓는다(시간 막대와 같은 규칙).
-    static func make(
-        items: [TravelTripItem], tripID: String, day: Date, actual: [MapHomeTimeRailSegment], now: Date, calendar: Calendar = .autoupdatingCurrent
-    ) -> TravelPlanTableModel {
-        var blocks: [Block] = []
-        var spans: [TravelPlanComparison.Span] = []
-        for item in items where item.tripID == tripID {
-            guard let segment = TravelTripRail.segments([item], day: day, calendar: calendar).first else { continue }
-            let column = column(forKind: item.kind)
-            blocks.append(Block(
-                id: item.itemID, column: column, startMinute: segment.startMinute, endMinute: segment.endMinute, title: item.title,
-                tripStatus: segment.tripStatus, status: .pending
-            ))
-            spans.append(.init(id: item.itemID, start: segment.startMinute, end: segment.endMinute, isMove: column == 0))
-        }
-        var nowMinute: Int?
-        let limit: Int
-        if calendar.isDate(day, inSameDayAs: now) {
-            let parts = calendar.dateComponents([.hour, .minute], from: now)
-            nowMinute = (parts.hour ?? 0) * 60 + (parts.minute ?? 0)
-            limit = nowMinute ?? 0
-        } else {
-            limit = day < now ? 1_440 : 0
-        }
-        let records = actual.filter { $0.categoryID != "unconfirmed" && $0.endMinute > $0.startMinute }
-        let result = TravelPlanComparison.compare(
-            plan: spans,
-            actual: records.map { .init(id: $0.id, start: $0.startMinute, end: $0.endMinute, isMove: $0.categoryID == "movement") },
-            nowMinute: limit
-        )
-        for index in blocks.indices { blocks[index].status = result.statuses[blocks[index].id] ?? .pending }
-        let unplanned = Set(result.unplanned)
-        return TravelPlanTableModel(
-            blocks: blocks.sorted { ($0.startMinute, $0.id) < ($1.startMinute, $1.id) },
-            actuals: records.map {
-                Actual(id: $0.id, startMinute: $0.startMinute, endMinute: $0.endMinute, title: $0.title, isMove: $0.categoryID == "movement", isUnplanned: unplanned.contains($0.id))
-            },
-            nowMinute: nowMinute
+/// 지구본 손가락 조작의 계산(TVE1112A01).
+enum TravelGlobeTouch {
+    /// 손가락이 간 만큼 지구가 따라 돈다(확대할수록 같은 거리에 덜 돈다). 극을 넘지 않게 위도 ±80°에서 멈춘다.
+    static func rotated(_ camera: TravelGlobeCamera, by translation: CGSize) -> TravelGlobeCamera {
+        let degreesPerPoint = 180 / (Double.pi * max(1, camera.radius))
+        var longitude = camera.longitude - Double(translation.width) * degreesPerPoint
+        longitude = (longitude + 180).truncatingRemainder(dividingBy: 360)
+        if longitude < 0 { longitude += 360 }
+        return TravelGlobeCamera(
+            longitude: longitude - 180,
+            latitude: min(80, max(-80, camera.latitude + Double(translation.height) * degreesPerPoint)),
+            radius: camera.radius
         )
     }
-}
 
-/// 여행의 날짜들(`YYYY-MM-DD`)과 기기 달력의 그날.
-enum TravelPlanDays {
-    static func days(of trip: TravelTrip, calendar: Calendar = .autoupdatingCurrent) -> [(key: String, date: Date)] {
-        guard let first = TravelTripDay.components(trip.startDay).flatMap(calendar.date(from:)),
-              let count = TravelTripDay.days(from: trip.startDay, to: trip.endDay), count >= 0 else { return [] }
-        return (0...min(count, 60)).compactMap { offset in
-            guard let date = calendar.date(byAdding: .day, value: offset, to: first) else { return nil }
-            let parts = calendar.dateComponents([.year, .month, .day], from: date)
-            return (TravelTripDay.string(year: parts.year ?? 0, month: parts.month ?? 1, day: parts.day ?? 1), date)
-        }
-    }
-}
-
-/// 계획표: 이동·식사·관광·숙소 열에 계획 칸을 놓고, 시간축 옆에 실제 기록을 나란히 둔다.
-struct TravelPlanTable: View {
-    let table: TravelPlanTableModel
-    let language: MapHomeLanguage
-    let onSelect: (TravelPlanTableModel.Block) -> Void
-
-    private let minuteHeight: CGFloat = 0.9
-    private let axisWidth: CGFloat = 38
-    private let actualWidth: CGFloat = 12
-
-    private var titles: [String] {
-        [language.text("이동", "Move"), language.text("식사", "Meals"), language.text("관광", "Sights"), language.text("숙소", "Stay")]
+    /// 벌린 배율만큼 확대. 지구본 기본 크기의 0.6배보다 작아지거나 거리 단위보다 가까워지지 않는다.
+    static func zoomed(_ radius: Double, by magnification: CGFloat, rest: Double) -> Double {
+        min(60_000, max(rest * 0.6, radius * Double(magnification)))
     }
 
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 0) {
-                Text(language.text("실제", "Actual")).font(.caption2).frame(width: axisWidth + actualWidth, alignment: .trailing)
-                ForEach(titles.indices, id: \.self) { index in
-                    Text(titles[index]).font(.caption.weight(.semibold)).frame(maxWidth: .infinity)
-                }
-            }
-            .foregroundStyle(TravelInk.plan.opacity(0.8))
-            .padding(.vertical, 6)
-            Divider().overlay(TravelInk.border)
-            ScrollViewReader { reader in
-                ScrollView { dayBody }
-                    .onAppear { reader.scrollTo(table.focusMinute / 60, anchor: .top) }
-            }
+    /// 누른 자리의 깃발. 깃대(발에서 위로 32pt)와 깃발 천 둘레 22pt 안이면 그 깃발이다. 여럿이면 가까운 것.
+    static func flag(at location: CGPoint, flags: [TravelGlobeRenderer.Flag], camera: TravelGlobeCamera, size: CGSize) -> String? {
+        var best: (id: String, distance: CGFloat)?
+        for flag in flags {
+            guard let foot = TravelGlobeRenderer.foot(of: flag, camera: camera, size: size) else { continue }
+            let nearestX = min(max(location.x, foot.x), foot.x + 20)
+            let nearestY = min(max(location.y, foot.y - 32), foot.y)
+            let distance = hypot(location.x - nearestX, location.y - nearestY)
+            if distance <= 22, distance < (best?.distance ?? .infinity) { best = (flag.id, distance) }
         }
-    }
-
-    /// 하루 전체(0~24시)를 그린 본문. 스크롤 없이도 그릴 수 있게 따로 둔다.
-    var dayBody: some View {
-        GeometryReader { proxy in
-            let columnWidth = (proxy.size.width - axisWidth - actualWidth) / CGFloat(TravelPlanTableModel.columnCount)
-            ZStack(alignment: .topLeading) {
-                grid(width: proxy.size.width)
-                ForEach(table.actuals) { record in actualBar(record, columnWidth: columnWidth) }
-                ForEach(table.blocks) { block in planBlock(block, columnWidth: columnWidth) }
-                if let now = table.nowMinute {
-                    Rectangle().fill(TravelInk.actual).frame(width: proxy.size.width, height: 1.5).offset(y: CGFloat(now) * minuteHeight)
-                }
-                // 스크롤 자리 표시(한 시간마다).
-                ForEach(0..<24, id: \.self) { hour in
-                    Color.clear.frame(width: 1, height: 1).offset(y: CGFloat(hour * 60) * minuteHeight).id(hour)
-                }
-            }
-        }
-        .frame(height: 1_440 * minuteHeight)
-    }
-
-    private func grid(width: CGFloat) -> some View {
-        Canvas { context, size in
-            for hour in 0...24 {
-                let y = CGFloat(hour * 60) * minuteHeight
-                var line = Path()
-                line.move(to: CGPoint(x: axisWidth, y: y))
-                line.addLine(to: CGPoint(x: size.width, y: y))
-                context.stroke(line, with: .color(TravelInk.border.opacity(0.7)), lineWidth: 0.5)
-                guard hour < 24 else { continue }
-                context.draw(
-                    Text(String(format: "%02d", hour)).font(.system(size: 11)).foregroundStyle(TravelInk.plan.opacity(0.7)),
-                    at: CGPoint(x: axisWidth - 6, y: y + 8), anchor: .trailing
-                )
-            }
-        }
-        .frame(width: width, height: 1_440 * minuteHeight)
-    }
-
-    /// 실제 기록: 시간축 바로 옆의 주홍 띠. 계획에 없던 머묾은 이름을 관광 열에 점선 칸으로 보인다.
-    @ViewBuilder
-    private func actualBar(_ record: TravelPlanTableModel.Actual, columnWidth: CGFloat) -> some View {
-        let height = max(2, CGFloat(record.endMinute - record.startMinute) * minuteHeight)
-        RoundedRectangle(cornerRadius: 2)
-            .fill(TravelInk.actual.opacity(record.isMove ? 0.45 : 0.9))
-            .frame(width: actualWidth - 4, height: height)
-            .offset(x: axisWidth + 2, y: CGFloat(record.startMinute) * minuteHeight)
-        if record.isUnplanned {
-            Text(record.title.isEmpty ? language.text("계획에 없던 방문", "Unplanned stop") : record.title)
-                .font(.caption2).lineLimit(2).foregroundStyle(TravelInk.actual)
-                .padding(3)
-                .frame(width: columnWidth - 4, height: max(18, height), alignment: .topLeading)
-                .overlay { RoundedRectangle(cornerRadius: 5).stroke(TravelInk.actual, style: StrokeStyle(lineWidth: 1, dash: [3, 3])) }
-                .offset(x: axisWidth + actualWidth + columnWidth * 2 + 2, y: CGFloat(record.startMinute) * minuteHeight)
-                .accessibilityLabel(language.text("계획에 없던 방문", "Unplanned stop"))
-        }
-    }
-
-    private func planBlock(_ block: TravelPlanTableModel.Block, columnWidth: CGFloat) -> some View {
-        let height = max(18, CGFloat(block.endMinute - block.startMinute) * minuteHeight)
-        let missed = block.status == .skipped
-        return Button { onSelect(block) } label: {
-            VStack(alignment: .leading, spacing: 1) {
-                HStack(spacing: 2) {
-                    if block.status == .done { Image(systemName: "checkmark").font(.system(size: 8, weight: .bold)) }
-                    if block.status == .late { Image(systemName: "clock.badge.exclamationmark").font(.system(size: 9)).foregroundStyle(TravelInk.actual) }
-                    Text(block.title).font(.caption2.weight(.semibold)).lineLimit(height > 30 ? 2 : 1)
-                }
-                if height > 34 {
-                    Text(String(format: "%02d:%02d", block.startMinute / 60, block.startMinute % 60)).font(.system(size: 10)).opacity(0.75)
-                }
-            }
-            .padding(3)
-            .frame(width: columnWidth - 4, height: height, alignment: .topLeading)
-            .background(TravelInk.planTint.opacity(block.tripStatus == .tentative ? 0.5 : 1), in: RoundedRectangle(cornerRadius: 5))
-            .overlay {
-                RoundedRectangle(cornerRadius: 5).stroke(
-                    missed ? TravelInk.actual : TravelInk.plan,
-                    style: StrokeStyle(lineWidth: block.tripStatus == .booked || missed ? 1.5 : 1, dash: block.tripStatus == .tentative ? [3, 3] : [])
-                )
-            }
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(TravelInk.plan)
-        .offset(x: axisWidth + actualWidth + columnWidth * CGFloat(block.column) + 2, y: CGFloat(block.startMinute) * minuteHeight)
-        .accessibilityIdentifier("travelPlanBlock-\(block.id)")
-    }
-}
-
-/// 시트를 내렸을 때 오른쪽에 뜨는 작은 시간 막대: 왼쪽 계획(남색), 오른쪽 실제(주홍). 누르면 계획표가 올라온다.
-struct TravelMiniRail: View {
-    let table: TravelPlanTableModel
-
-    var body: some View {
-        Canvas { context, size in
-            let top: CGFloat = 8, height = size.height - 16
-            func y(_ minute: Int) -> CGFloat { top + height * CGFloat(minute) / 1_440 }
-            let half = (size.width - 14) / 2
-            for block in table.blocks {
-                let rect = CGRect(x: 6, y: y(block.startMinute), width: half, height: max(2, y(block.endMinute) - y(block.startMinute)))
-                context.fill(Path(roundedRect: rect, cornerRadius: 2), with: .color(TravelInk.plan.opacity(block.tripStatus == .tentative ? 0.4 : 0.85)))
-                if block.status == .skipped { context.stroke(Path(roundedRect: rect, cornerRadius: 2), with: .color(TravelInk.actual), lineWidth: 1.5) }
-            }
-            for record in table.actuals {
-                let rect = CGRect(x: 8 + half, y: y(record.startMinute), width: half, height: max(2, y(record.endMinute) - y(record.startMinute)))
-                context.fill(Path(roundedRect: rect, cornerRadius: 2), with: .color(TravelInk.actual.opacity(record.isMove ? 0.45 : 0.9)))
-            }
-            if let now = table.nowMinute {
-                var line = Path()
-                line.move(to: CGPoint(x: 2, y: y(now)))
-                line.addLine(to: CGPoint(x: size.width - 2, y: y(now)))
-                context.stroke(line, with: .color(TravelInk.actual), lineWidth: 1.5)
-            }
-        }
-        .frame(width: 40)
-        .background(TravelInk.panel, in: RoundedRectangle(cornerRadius: 14))
-        .overlay { RoundedRectangle(cornerRadius: 14).stroke(TravelInk.border, lineWidth: 1) }
+        return best?.id
     }
 }

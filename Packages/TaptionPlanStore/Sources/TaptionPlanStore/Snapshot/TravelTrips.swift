@@ -17,10 +17,13 @@ public struct TravelTrip: Codable, Hashable, Sendable, Identifiable {
     public var currencyCode: String?
     /// IANA 시간대 이름.
     public var timeZoneID: String?
+    /// 지구본 깃발 색(`#RRGGBB`). 없으면 여행 순서대로 기본 색을 쓴다(TVE1112A01).
+    public var flagColorHex: String?
 
     public init(
         id: String, title: String, startDay: String, endDay: String, countryCode: String? = nil, regionName: String? = nil,
-        latitude: Double? = nil, longitude: Double? = nil, currencyCode: String? = nil, timeZoneID: String? = nil
+        latitude: Double? = nil, longitude: Double? = nil, currencyCode: String? = nil, timeZoneID: String? = nil,
+        flagColorHex: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -32,6 +35,7 @@ public struct TravelTrip: Codable, Hashable, Sendable, Identifiable {
         self.longitude = longitude
         self.currencyCode = currencyCode
         self.timeZoneID = timeZoneID
+        self.flagColorHex = flagColorHex
     }
 }
 

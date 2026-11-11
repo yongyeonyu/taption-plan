@@ -413,7 +413,7 @@ final class TravelModeGlobeTests: XCTestCase {
             let frameStart = CFAbsoluteTimeGetCurrent()
             _ = renderer.image { _ in
                 let view = Canvas { context, size in
-                    TravelGlobeRenderer.draw(&context, size: size, camera: camera, highlight: ["JP"], flag: .init(longitude: 135.5, latitude: 34.7, text: "D-24", progress: 1), pins: [])
+                    TravelGlobeRenderer.draw(&context, size: size, camera: camera, highlight: ["JP"], flags: [.init(longitude: 135.5, latitude: 34.7, text: "D-24", progress: 1)], pins: [])
                 }.frame(width: 390, height: 760)
                 let image = ImageRenderer(content: view)
                 image.scale = 2
@@ -462,7 +462,7 @@ final class TravelModeGlobeTests: XCTestCase {
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         for (name, camera, highlight, flag, pins) in shots {
             let renderer = ImageRenderer(content: Canvas { context, canvas in
-                TravelGlobeRenderer.draw(&context, size: canvas, camera: camera, highlight: highlight, flag: flag, pins: pins)
+                TravelGlobeRenderer.draw(&context, size: canvas, camera: camera, highlight: highlight, flags: flag.map { [$0] } ?? [], pins: pins)
             }.frame(width: size.width, height: size.height))
             renderer.scale = 2
             let image = try XCTUnwrap(renderer.uiImage, name)
@@ -628,5 +628,53 @@ final class TravelPlanTableTests: XCTestCase {
         rail.scale = 3
         try? XCTUnwrap(rail.uiImage).pngData()?.write(to: folder.appendingPathComponent("mini-rail.png"))
         XCTAssertNotNil(tableImage.uiImage)
+    }
+}
+
+
+/// TVE1112A01: 지구본 손가락 조작과 깃발.
+final class TravelGlobeTouchTests: XCTestCase {
+    func testDragRotatesWithTheFingerAndStopsBeforeThePoles() {
+        let camera = TravelGlobeCamera(longitude: 127, latitude: 28, radius: 180 / Double.pi) // 1pt = 1도
+        let moved = TravelGlobeTouch.rotated(camera, by: CGSize(width: 30, height: 10))
+        XCTAssertEqual(moved.longitude, 97, accuracy: 1e-9, "오른쪽으로 끌면 서쪽 땅이 따라온다")
+        XCTAssertEqual(moved.latitude, 38, accuracy: 1e-9)
+        XCTAssertEqual(moved.radius, camera.radius)
+        XCTAssertEqual(TravelGlobeTouch.rotated(camera, by: CGSize(width: 0, height: 500)).latitude, 80)
+        XCTAssertEqual(TravelGlobeTouch.rotated(camera, by: CGSize(width: 0, height: -500)).latitude, -80)
+        XCTAssertEqual(TravelGlobeTouch.rotated(camera, by: CGSize(width: -100, height: 0)).longitude, -133, accuracy: 1e-9, "날짜 변경선을 넘으면 −180~180으로 돌아온다")
+        let zoomedIn = TravelGlobeCamera(longitude: 0, latitude: 0, radius: 1_800 / Double.pi)
+        XCTAssertEqual(TravelGlobeTouch.rotated(zoomedIn, by: CGSize(width: 30, height: 0)).longitude, -3, accuracy: 1e-9, "확대하면 같은 거리에 덜 돈다")
+    }
+
+    func testPinchZoomIsClamped() {
+        XCTAssertEqual(TravelGlobeTouch.zoomed(150, by: 2, rest: 150), 300)
+        XCTAssertEqual(TravelGlobeTouch.zoomed(150, by: 0.1, rest: 150), 90, "기본 크기의 0.6배에서 멈춘다")
+        XCTAssertEqual(TravelGlobeTouch.zoomed(50_000, by: 3, rest: 150), 60_000)
+    }
+
+    func testTappingNearAFlagPicksItAndHiddenFlagsAreIgnored() throws {
+        let size = CGSize(width: 390, height: 760)
+        let camera = TravelGlobeCamera(longitude: 127, latitude: 28, radius: 148)
+        let osaka = TravelGlobeRenderer.Flag(id: "osaka", longitude: 135.5, latitude: 34.7, text: "", progress: 1)
+        let bangkok = TravelGlobeRenderer.Flag(id: "bangkok", longitude: 100.5, latitude: 13.75, text: "", progress: 1)
+        let paris = TravelGlobeRenderer.Flag(id: "paris", longitude: -60, latitude: -20, text: "", progress: 1)
+        let foot = try XCTUnwrap(TravelGlobeRenderer.foot(of: osaka, camera: camera, size: size))
+        XCTAssertNil(TravelGlobeRenderer.foot(of: paris, camera: camera, size: size), "지구 뒤쪽 깃발은 누를 수 없다")
+        let flags = [osaka, bangkok, paris]
+        XCTAssertEqual(TravelGlobeTouch.flag(at: foot, flags: flags, camera: camera, size: size), "osaka")
+        XCTAssertEqual(TravelGlobeTouch.flag(at: CGPoint(x: foot.x + 12, y: foot.y - 28), flags: flags, camera: camera, size: size), "osaka", "깃발 천을 눌러도 된다")
+        XCTAssertNil(TravelGlobeTouch.flag(at: CGPoint(x: foot.x + 80, y: foot.y), flags: flags, camera: camera, size: size))
+        XCTAssertNil(TravelGlobeTouch.flag(at: CGPoint(x: 20, y: 20), flags: flags, camera: camera, size: size))
+    }
+
+    func testFlagColorsFollowOrderUnlessTheUserChoseOne() {
+        let trip = TravelTrip(id: "t", title: "일본", startDay: "2026-11-23", endDay: "2026-11-27")
+        XCTAssertEqual(TravelInk.flagHex(trip, order: 0), "#C8442E")
+        XCTAssertEqual(TravelInk.flagHex(trip, order: 1), "#2F3E6B")
+        XCTAssertEqual(TravelInk.flagHex(trip, order: TravelInk.flagHexes.count), "#C8442E", "색이 모자라면 처음부터 다시")
+        var chosen = trip
+        chosen.flagColorHex = "#2E7D6B"
+        XCTAssertEqual(TravelInk.flagHex(chosen, order: 0), "#2E7D6B")
     }
 }
