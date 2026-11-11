@@ -160,6 +160,8 @@ extension MapHomeView {
                 calendar: calendar
             )
         }
+        // 어느 날을 보고 있어도 올해 집 레벨은 오늘 날짜다(성장 화면·카드가 같은 값을 읽게, 리뷰).
+        MapHomeGrowthPolicy.refreshDailyLevel(in: &history, now: now, calendar: calendar)
         MapHomeGrowthPolicy.closePendingDay(
             in: &history,
             asOf: now,

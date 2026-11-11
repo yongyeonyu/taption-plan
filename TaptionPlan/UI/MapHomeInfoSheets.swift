@@ -501,6 +501,8 @@ struct MapHomeDaySummarySheet: View {
                 travelDistanceSection
             }
 
+            LedgerDaySummarySection(day: date, language: language)
+
             // 범위 지정은 요약 내용 아래에 둔다.
             if let model, let homePlaceID {
                 MapHomePlaceRangeEditor(model: model, placeID: homePlaceID, language: language)

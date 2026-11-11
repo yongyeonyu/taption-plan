@@ -14,6 +14,8 @@ enum LedgerMemoAmount {
     /// 숫자 뒤에 붙으면 금액이 아니다(시각·차례·층·사람 수·거리 등).
     /// 이 낱말이 있으면 통화 표시 없는 숫자를 금액으로 보지 않는다.
     private static let notMoneyWords = ["비번", "비밀번호", "번호", "코드", "계좌", "주문", "인증", "우편", "사번", "학번", "버스", "호선", "출구", "좌석", "게이트"]
+    /// 늘 숫자가 금액이 아닌 낱말(비번·코드·계좌 등). 「주문」·「버스」는 둥근 값이면 금액으로 본다(「커피 주문 4500」·「버스비 1500」).
+    private static let codeWords = ["비번", "비밀번호", "번호", "코드", "계좌", "인증", "우편", "사번", "학번", "호선", "출구", "좌석", "게이트"]
     private static let notMoneyUnits = ["시", "분", "초", "번", "층", "호", "명", "개", "살", "세", "km", "m", "kg", "g", "%", "일", "월", "년", "차", "회", "점", "등", "위", "cm", "mm", "ml", "l", "보", "걸음", "kcal", "칼로리", "장", "권", "곡", "편", "p"]
 
     static func find(_ text: String) -> Found? {
@@ -39,9 +41,6 @@ enum LedgerMemoAmount {
         // 2) 통화 표시 없는 숫자: 1,000 이상이고 날짜·시각·전화번호·단위가 아닌 낱말 하나
         // 전화번호가 든 글에서는 통화 표시 없는 숫자를 금액으로 보지 않는다.
         if line.contains(/01[016789][ \-]?[0-9]{3,4}[ \-]?[0-9]{4}/) { return nil }
-        // 번호·비밀번호·코드·계좌처럼 숫자가 금액이 아닌 글이면 통화 표시 없는 숫자는 보지 않는다(리뷰: 「현관 비번 482915」).
-        let lower = line.lowercased()
-        if notMoneyWords.contains(where: lower.contains) { return nil }
         let joiners: Set<Character> = [":", "/", ".", "-"]
         for match in line.matches(of: /[0-9]{1,3}(?:,[0-9]{3})+|[0-9]{3,}/) {
             // 앞뒤가 숫자·:·/·.·-로 이어지면 시각·날짜·전화번호다.
@@ -56,10 +55,15 @@ enum LedgerMemoAmount {
                 return !next.isLetter
             }
             guard !isUnit else { continue }
+            // 번호·비번·코드·계좌 같은 낱말이 숫자 바로 앞(여덟 글자 안)에 있으면 금액이 아니다(「현관 비번 482915」).
+            // 낱말이 멀리 있으면 금액이다(「커피 주문 4500」은 주문 뒤에 바로 숫자가 와도 원 단위 값이라 아래에서 다시 본다).
+            let lead = String(line[..<match.range.lowerBound].suffix(8)).lowercased()
+            if notMoneyWords.contains(where: lead.contains), !match.output.contains(","),
+               !(match.output.count <= 6 && (LedgerMessageParser.number(String(match.output)) ?? 1).truncatingRemainder(dividingBy: 100) == 0 && !Self.codeWords.contains(where: lead.contains)) { continue }
             guard let value = LedgerMessageParser.number(String(match.output)), value >= 1_000, value <= 1e10 else { continue }
-            // 쉼표 없는 숫자는 원 단위 값처럼 100으로 나눠떨어지고 일곱 자리 이하일 때만 금액이다(7016번·482915·연도 2026은 아님).
+            // 쉼표 없는 숫자는 원 단위 값처럼 10으로 나눠떨어지고 일곱 자리 이하일 때만 금액이다(편의점 4950은 금액, 7016·482915·연도 2026은 아님).
             if !match.output.contains(",") {
-                guard value.truncatingRemainder(dividingBy: 100) == 0, value < 10_000_000 else { continue }
+                guard value.truncatingRemainder(dividingBy: 10) == 0, value < 10_000_000, !(1_900...2_100).contains(value) else { continue }
             }
             return found(value, "KRW", income, line, String(match.0))
         }
@@ -104,6 +108,29 @@ extension LedgerBook {
     /// 메모를 저장한 뒤 부른다. 금액이 있으면 이어진 기록을 만들거나 고치고, 없거나 「메모로만」이면 지운다.
     @discardableResult
     func syncMemo(id: UUID, text: String, occurredAt: Date, source: LedgerEntry.Source = .manual) async -> LedgerEntry? {
+        await queued(id) { await self.syncMemoNow(id: id, text: text, occurredAt: occurredAt, source: source) }
+    }
+
+    func removeMemo(_ id: UUID) async {
+        _ = await queued(id) { () -> LedgerEntry? in
+            await self.load()
+            if let existing = self.entry(forMemo: id) { await self.delete(existing.id) }
+            return nil
+        }
+    }
+
+    /// 같은 메모의 앞 작업이 끝난 뒤에 이 작업을 한다.
+    private func queued(_ id: UUID, _ work: @escaping @MainActor () async -> LedgerEntry?) async -> LedgerEntry? {
+        let previous = memoQueues[id]
+        let task = Task { @MainActor () -> LedgerEntry? in
+            await previous?.value
+            return await work()
+        }
+        memoQueues[id] = Task { _ = await task.value }
+        return await task.value
+    }
+
+    private func syncMemoNow(id: UUID, text: String, occurredAt: Date, source: LedgerEntry.Source) async -> LedgerEntry? {
         await load()
         let existing = entry(forMemo: id)
         guard !LedgerMemoOptOut.contains(id), let found = LedgerMemoAmount.find(text) else {
@@ -125,22 +152,46 @@ extension LedgerBook {
         return await save(value)
     }
 
-    func removeMemo(_ id: UUID) async {
-        await load()
-        if let existing = entry(forMemo: id) { await delete(existing.id) }
-    }
 }
 
 extension AppModel {
+    /// 시험에서 넣는 장부. 시험 앱은 실제 장부를 건드리지 않고, 이 값이 있으면 여기에 맞춘다.
+    @MainActor static var memoLedgerBookForTests: LedgerBook?
+
+    var memoLedgerBook: LedgerBook? { AssistantRegistration.isTestHost ? Self.memoLedgerBookForTests : .shared }
+
     /// 메모를 더하고·고치고·지우는 모든 길(지도 편집·메모 상세·목표·AI·되돌리기)이 여기를 지나 가계부와 맞춘다(LED1111A03 리뷰).
-    /// 메모가 없으면(지움) 이어진 기록을 지우고, 있으면 글의 금액대로 만들거나 고친다. 시험 앱에서는 실제 장부를 건드리지 않는다.
-    func syncMemoLedger(_ memoID: UUID, book: LedgerBook? = AssistantRegistration.isTestHost ? nil : .shared) {
-        guard let book else { return }
+    /// 메모가 없으면(지움) 이어진 기록을 지우고, 있으면 글의 금액대로 만들거나 고친다. 같은 메모는 차례로 처리한다.
+    func syncMemoLedger(_ memoID: UUID) {
+        guard let book = memoLedgerBook else { return }
         let memo = snapshot.memos.first { $0.id == memoID }
         let isDraft = isMemoDraft(memoID)
         Task { @MainActor in
             guard let memo, !isDraft else { return await book.removeMemo(memoID) }
             await book.syncMemo(id: memoID, text: memo.text, occurredAt: memo.occurredAt)
         }
+    }
+
+    /// 메모를 저장한 뒤에만 가계부를 맞춘다(리뷰: 저장이 실패해 되돌려져도 가계부만 바뀌던 것).
+    func persistThenSyncMemoLedger(_ memoID: UUID) {
+        Task { @MainActor in
+            if await persist() { syncMemoLedger(memoID) }
+        }
+    }
+
+    /// 앞뒤 메모 목록에서 글·시각이 바뀌었거나 생기고 사라진 메모.
+    nonisolated static func changedMemoIDs(_ before: [ActionMemo], _ after: [ActionMemo]) -> Set<UUID> {
+        let old = Dictionary(before.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let new = Dictionary(after.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        return Set(old.keys).union(new.keys).filter { id in
+            old[id]?.text != new[id]?.text || old[id]?.occurredAt != new[id]?.occurredAt
+        }
+    }
+
+    /// 되돌리기처럼 메모 여러 개가 한꺼번에 바뀐 뒤 부른다. 바뀐 메모와 가계부에 이어진 메모를 모두 맞춘다.
+    func resyncMemoLedger(changed ids: Set<UUID>) {
+        guard let book = memoLedgerBook else { return }
+        let linked = Set(book.entries.compactMap(\.memoID))
+        for id in ids.union(linked.subtracting(Set(snapshot.memos.map(\.id)))) { syncMemoLedger(id) }
     }
 }

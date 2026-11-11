@@ -5433,7 +5433,7 @@ final class MapHomeStartupCameraTests: XCTestCase {
         XCTAssertEqual(MapHomeGrowthPolicy.level(on: day(3), in: history, calendar: calendar), 307)
         XCTAssertEqual(MapHomeGrowthPolicy.level(on: day(1), in: history, calendar: calendar), 305)
         let old = try JSONDecoder().decode(MapHomeGrowthSeason.self, from: Data(#"{"year":2026,"level":3}"#.utf8))
-        XCTAssertNil(old.dayLevels)
+        XCTAssertEqual(old.level, 3, "예전 저장본도 읽는다(날짜별 레벨 칸은 HOM1111A01에서 없앰)")
     }
 
     func testLabelNamesFollowLanguageOrder() {

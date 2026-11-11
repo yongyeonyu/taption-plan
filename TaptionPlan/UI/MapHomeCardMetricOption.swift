@@ -3,6 +3,8 @@ import Foundation
 /// 공유 카드 고르기 목록의 항목 하나. 달력 지표에 카드 전용 "메모 수"를 더한다(CARD1022N01).
 struct MapHomeCardMetricOption: Identifiable, Equatable {
     static let memosID = "memos"
+    /// 그날 가계부 지출 합계(SPD1111A01).
+    static let spendingID = "spending"
 
     let id: String
     let systemImage: String
@@ -16,12 +18,12 @@ struct MapHomeCardMetricOption: Identifiable, Equatable {
 
     private init(memoID: String) {
         id = memoID
-        systemImage = "note.text"
+        systemImage = memoID == Self.spendingID ? "wonsign.circle.fill" : "note.text"
         kind = nil
     }
 
     init?(id: String) {
-        if id == Self.memosID {
+        if id == Self.memosID || id == Self.spendingID {
             self.init(memoID: id)
         } else if let kind = MapHomeCalendarTimeKind(rawValue: id) {
             self.init(kind: kind)
@@ -32,13 +34,17 @@ struct MapHomeCardMetricOption: Identifiable, Equatable {
 
     /// 고르기 목록 순서: 달력 지표 다음에 메모 수.
     static let all: [MapHomeCardMetricOption] =
-        MapHomeCalendarTimeKind.allCases.map(MapHomeCardMetricOption.init(kind:)) + [MapHomeCardMetricOption(memoID: memosID)]
+        MapHomeCalendarTimeKind.allCases.map(MapHomeCardMetricOption.init(kind:))
+            + [MapHomeCardMetricOption(memoID: memosID), MapHomeCardMetricOption(memoID: spendingID)]
 
     func title(_ language: MapHomeLanguage) -> String {
-        kind?.title(language) ?? language.text("메모 수", "Memos")
+        if id == Self.spendingID { return language.text("지출", "Spent") }
+        return kind?.title(language) ?? language.text("메모 수", "Memos")
     }
 
+    @MainActor
     func valueText(_ number: Double) -> String {
+        if id == Self.spendingID { return LedgerMoney.text(number, language: .current) }
         guard let kind else { return MapHomeCalendarTimeTotalsPolicy.countCellText(count: number) }
         return MapHomeCardMetricSelection.value(for: kind, number: number)
     }

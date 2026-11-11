@@ -269,11 +269,12 @@ extension AppModel {
             return
         }
         guard restored != snapshot else { return }
+        let changedMemos = Self.changedMemoIDs(snapshot.memos, restored.memos)
         snapshot = restored
         userEditUndoHistory.removeLast()
         userEditRedoHistory.append(item)
         synchronizeUserEditHistoryAvailability()
-        Task { await persist() }
+        Task { if await persist() { resyncMemoLedger(changed: changedMemos) } }
     }
 
     func redoLastUserEdit() {
@@ -288,11 +289,12 @@ extension AppModel {
             return
         }
         guard reapplied != snapshot else { return }
+        let changedMemos = Self.changedMemoIDs(snapshot.memos, reapplied.memos)
         snapshot = reapplied
         userEditRedoHistory.removeLast()
         userEditUndoHistory.append(item)
         synchronizeUserEditHistoryAvailability()
-        Task { await persist() }
+        Task { if await persist() { resyncMemoLedger(changed: changedMemos) } }
     }
 
     func recordUserEdit(

@@ -127,6 +127,7 @@ extension MapHomeView {
         case .study: showsStudyCounter
         case .hobby: showsHobbyCounter
         case .exercise: showsExerciseCounter
+        case .spending: showsSpendingCounter
         }
     }
 
@@ -138,6 +139,7 @@ extension MapHomeView {
         case .study: showsStudyCounter = isOn
         case .hobby: showsHobbyCounter = isOn
         case .exercise: showsExerciseCounter = isOn
+        case .spending: showsSpendingCounter = isOn
         }
     }
 

@@ -370,6 +370,8 @@ enum MapHomeCounterKind: String, CaseIterable, Identifiable {
     case study
     case hobby
     case exercise
+    /// 그날 가계부 지출 합계(SPD1111A01).
+    case spending
 
     var id: String { rawValue }
 
@@ -384,13 +386,14 @@ enum MapHomeCounterKind: String, CaseIterable, Identifiable {
         case .study: "book.fill"
         case .hobby: "paintpalette.fill"
         case .exercise: "figure.strengthtraining.traditional"
+        case .spending: "wonsign.circle.fill"
         }
     }
 
     /// 하루요약 대분류 id. 걸음·이동은 대분류가 아니라 따로 센다.
     var categoryID: String? {
         switch self {
-        case .steps, .distance: nil
+        case .steps, .distance, .spending: nil
         case .work: "work"
         case .study: "study"
         case .hobby: "hobby"
@@ -407,6 +410,7 @@ enum MapHomeCounterKind: String, CaseIterable, Identifiable {
         case .study: language.text("학습시간 카운터", "Study time counter")
         case .hobby: language.text("취미시간 카운터", "Hobby time counter")
         case .exercise: language.text("운동시간 카운터", "Exercise time counter")
+        case .spending: language.text("하루 지출 카운터", "Daily spending counter")
         }
     }
 
@@ -419,6 +423,7 @@ enum MapHomeCounterKind: String, CaseIterable, Identifiable {
         case .study: language.text("학습", "Study")
         case .hobby: language.text("취미", "Hobby")
         case .exercise: language.text("운동", "Exercise")
+        case .spending: language.text("지출", "Spent")
         }
     }
 }

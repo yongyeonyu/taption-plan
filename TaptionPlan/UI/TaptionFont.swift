@@ -104,15 +104,28 @@ extension Font {
     }
 }
 
-/// 글꼴을 고르면 화면을 다시 만들어 모든 글자에 바로 적용한다.
+extension TaptionFont {
+    /// 메뉴가 닫힐 때 보낸다. 그때 화면 전체를 새 글꼴로 다시 만든다.
+    static let applyNotification = Notification.Name("taptionFontApply")
+
+    static func applyPending() { NotificationCenter.default.post(name: applyNotification, object: nil) }
+}
+
+/// 글꼴을 고르면 메뉴를 닫을 때 화면을 다시 만들어 모든 글자에 적용한다(리뷰: 고르는 즉시 다시 만들면 메뉴·지도·재생이
+/// 처음으로 돌아갔다). 그 사이 다시 그려지는 글자는 새 글꼴을 바로 읽는다.
 struct TaptionFontRoot<Content: View>: View {
     @AppStorage(TaptionFont.storageKey) private var selection = TaptionFont.jua.rawValue
+    @State private var applied: String?
     @ViewBuilder let content: Content
 
     var body: some View {
         content
             .font(.taptionFixed(size: 17))
-            .id(selection)
+            .id(applied ?? selection)
+            .onAppear { if applied == nil { applied = selection } }
+            .onReceive(NotificationCenter.default.publisher(for: TaptionFont.applyNotification)) { _ in
+                if applied != selection { applied = selection }
+            }
             // 단축어 앱에 「결제 문자 넣기」가 보이도록 첫 화면 뒤에 시스템에 다시 알린다(시작 경로에서 빼냄, 리뷰).
             .task { BokkiShortcuts.updateAppShortcutParameters() }
     }

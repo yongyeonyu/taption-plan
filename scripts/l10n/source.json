@@ -107,7 +107,7 @@
    "ko": "1 {0} ≈ {1}원",
    "en": "1 {0} ≈ ₩{1}",
    "files": [
-    "LedgerSheet.swift:252"
+    "LedgerSheet.swift:260"
    ],
    "args": [
     "entry.currency",
@@ -178,6 +178,18 @@
    ]
   },
   {
+   "key": "12,300원|₩12,300",
+   "ko": "12,300원",
+   "en": "₩12,300",
+   "files": [
+    "FirstRunTutorialView.swift:795"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "12시간|12-hour",
    "ko": "12시간",
    "en": "12-hour",
@@ -195,7 +207,7 @@
    "en": "14-day free trial · {0} days left",
    "files": [
     "AppShellView.swift:1226",
-    "MapHomeView+Menu2.swift:238"
+    "MapHomeView+Menu2.swift:240"
    ],
    "args": [
     "remainingDays"
@@ -306,7 +318,7 @@
    "ko": "1시간 5분",
    "en": "1h 5m",
    "files": [
-    "FirstRunTutorialView.swift:791"
+    "FirstRunTutorialView.swift:793"
    ],
    "args": [],
    "targets": [
@@ -403,7 +415,7 @@
    "ko": "25분",
    "en": "25m",
    "files": [
-    "FirstRunTutorialView.swift:792"
+    "FirstRunTutorialView.swift:794"
    ],
    "args": [],
    "targets": [
@@ -452,7 +464,7 @@
    "ko": "3시간 12분",
    "en": "3h 12m",
    "files": [
-    "FirstRunTutorialView.swift:789"
+    "FirstRunTutorialView.swift:791"
    ],
    "args": [],
    "targets": [
@@ -464,7 +476,7 @@
    "ko": "42분",
    "en": "42m",
    "files": [
-    "FirstRunTutorialView.swift:790"
+    "FirstRunTutorialView.swift:792"
    ],
    "args": [],
    "targets": [
@@ -736,7 +748,7 @@
    "en": "AI connections",
    "files": [
     "AssistantSettingsView.swift:48",
-    "MapHomeView+Menu.swift:460"
+    "MapHomeView+Menu.swift:468"
    ],
    "args": [],
    "targets": [
@@ -772,7 +784,7 @@
    "ko": "AI가 넣음",
    "en": "Added by AI",
    "files": [
-    "LedgerSheet.swift:206"
+    "LedgerSheet.swift:214"
    ],
    "args": [],
    "targets": [
@@ -836,7 +848,7 @@
    "ko": "AI로 만들기",
    "en": "Plan with AI",
    "files": [
-    "MapHomeView+Support.swift:662"
+    "MapHomeView+Support.swift:664"
    ],
    "args": [],
    "targets": [
@@ -1106,7 +1118,7 @@
    "ko": "BOKKI Plan {0} (빌드 {1})",
    "en": "BOKKI Plan {0} (Build {1})",
    "files": [
-    "MapHomeView+Support2.swift:772"
+    "MapHomeView+Support2.swift:774"
    ],
    "args": [
     "version",
@@ -1412,7 +1424,7 @@
    "ko": "GPS 및 센서 데이터",
    "en": "GPS & Sensor Data",
    "files": [
-    "MapHomeView+Menu2.swift:257"
+    "MapHomeView+Menu2.swift:259"
    ],
    "args": [],
    "targets": [
@@ -1768,7 +1780,7 @@
    "ko": "Pro 구매 완료",
    "en": "Pro purchased",
    "files": [
-    "MapHomeView+Menu2.swift:243"
+    "MapHomeView+Menu2.swift:245"
    ],
    "args": [],
    "targets": [
@@ -1780,7 +1792,7 @@
    "ko": "Pro 구매",
    "en": "Buy Pro",
    "files": [
-    "MapHomeView+Menu2.swift:236"
+    "MapHomeView+Menu2.swift:238"
    ],
    "args": [],
    "targets": [
@@ -2628,7 +2640,7 @@
    "ko": "{0} 권한 요청",
    "en": "Request {0} permission",
    "files": [
-    "MapHomeView+Support2.swift:853"
+    "MapHomeView+Support2.swift:855"
    ],
    "args": [
     "sensorPermissionTitle(permission)"
@@ -2760,7 +2772,7 @@
    "ko": "{0} 상세 분류",
    "en": "{0} details",
    "files": [
-    "MapHomeView+Menu.swift:709"
+    "MapHomeView+Menu.swift:717"
    ],
    "args": [
     "category.localizedTitle(language)"
@@ -2774,8 +2786,8 @@
    "ko": "{0} 색상 팔레트",
    "en": "{0} color palette",
    "files": [
-    "MapHomeView+Menu.swift:738",
-    "MapHomeView+Menu.swift:856"
+    "MapHomeView+Menu.swift:746",
+    "MapHomeView+Menu.swift:864"
    ],
    "args": [
     "category.localizedTitle(language)"
@@ -2789,7 +2801,7 @@
    "ko": "{0} 수정",
    "en": "Edit {0}",
    "files": [
-    "MapHomeView+Menu.swift:841"
+    "MapHomeView+Menu.swift:849"
    ],
    "args": [
     "category.title"
@@ -2849,7 +2861,7 @@
    "ko": "{0} 위치 보기",
    "en": "Show {0} location",
    "files": [
-    "MapHomeView+Stickman.swift:359"
+    "MapHomeView+Stickman.swift:361"
    ],
    "args": [
     "name"
@@ -2863,7 +2875,7 @@
    "ko": "{0} 위치 설정",
    "en": "Set {0} location",
    "files": [
-    "MapHomeView+Stickman.swift:361"
+    "MapHomeView+Stickman.swift:363"
    ],
    "args": [
     "name"
@@ -2892,7 +2904,7 @@
    "ko": "{0} 위치 편집",
    "en": "Edit {0} location",
    "files": [
-    "MapHomeView+Stickman.swift:295"
+    "MapHomeView+Stickman.swift:297"
    ],
    "args": [
     "destination.englishName"
@@ -3052,7 +3064,7 @@
    "ko": "{0} 현재 위치 보기",
    "en": "Show {0} location",
    "files": [
-    "MapHomeView+Stickman.swift:355"
+    "MapHomeView+Stickman.swift:357"
    ],
    "args": [
     "name"
@@ -3176,6 +3188,20 @@
    ]
   },
   {
+   "key": "{0}건|{0} entries",
+   "ko": "{0}건",
+   "en": "{0} entries",
+   "files": [
+    "LedgerMemoPanel.swift:183"
+   ],
+   "args": [
+    "list.count"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "{0}걸음|{0} steps",
    "ko": "{0}걸음",
    "en": "{0} steps",
@@ -3224,7 +3250,7 @@
    "ko": "{0}년 {1}월",
    "en": "{0}/{1}",
    "files": [
-    "LedgerSheet.swift:167",
+    "LedgerSheet.swift:175",
     "MapHomeSettingsSheets.swift:743"
    ],
    "args": [
@@ -3610,7 +3636,7 @@
    "ko": "{0}원",
    "en": "₩{0}",
    "files": [
-    "LedgerCore.swift:342"
+    "LedgerCore.swift:350"
    ],
    "args": [
     "number"
@@ -4294,7 +4320,7 @@
    "ko": "알람브라",
    "en": "Alhambra",
    "files": [
-    "MapHomeGrowthPolicy.swift:156",
+    "MapHomeGrowthPolicy.swift:153",
     "MapHomeHomeNames.swift:0"
    ],
    "args": [],
@@ -4367,7 +4393,7 @@
    "ko": "아말피 해안",
    "en": "Amalfi Coast",
    "files": [
-    "MapHomeGrowthPolicy.swift:149"
+    "MapHomeGrowthPolicy.swift:146"
    ],
    "args": [],
    "targets": [
@@ -4638,7 +4664,7 @@
    "ko": "아라시야마",
    "en": "Arashiyama",
    "files": [
-    "MapHomeGrowthPolicy.swift:129"
+    "MapHomeGrowthPolicy.swift:126"
    ],
    "args": [],
    "targets": [
@@ -4847,7 +4873,7 @@
    "ko": "아유타야",
    "en": "Ayutthaya",
    "files": [
-    "MapHomeGrowthPolicy.swift:162"
+    "MapHomeGrowthPolicy.swift:159"
    ],
    "args": [],
    "targets": [
@@ -5382,7 +5408,7 @@
    "ko": "빅벤",
    "en": "Big Ben",
    "files": [
-    "MapHomeGrowthPolicy.swift:135",
+    "MapHomeGrowthPolicy.swift:132",
     "MapHomeHomeNames.swift:0"
    ],
    "args": [],
@@ -5794,7 +5820,7 @@
    "ko": "불국사",
    "en": "Bulguksa",
    "files": [
-    "MapHomeGrowthPolicy.swift:118",
+    "MapHomeGrowthPolicy.swift:115",
     "MapHomeKoreaPlaceBookData.swift:209"
    ],
    "args": [],
@@ -6059,7 +6085,7 @@
    "ko": "산티아고 순례길",
    "en": "Camino de Santiago",
    "files": [
-    "MapHomeGrowthPolicy.swift:158"
+    "MapHomeGrowthPolicy.swift:155"
    ],
    "args": [],
    "targets": [
@@ -6454,7 +6480,7 @@
    "ko": "마이크 입력 장치를 확인해 주세요.",
    "en": "Check your microphone input device.",
    "files": [
-    "AppModel+Memos.swift:469"
+    "AppModel+Memos.swift:465"
    ],
    "args": [],
    "targets": [
@@ -7121,7 +7147,7 @@
    "ko": "콜로세움",
    "en": "Colosseum",
    "files": [
-    "MapHomeGrowthPolicy.swift:145",
+    "MapHomeGrowthPolicy.swift:142",
     "MapHomeHomeNames.swift:0"
    ],
    "args": [],
@@ -7520,7 +7546,7 @@
    "ko": "음성 메모를 재생하지 못했습니다. {0}",
    "en": "Could not play the voice memo. {0}",
    "files": [
-    "AppModel+Memos.swift:494"
+    "AppModel+Memos.swift:490"
    ],
    "args": [
     "error.localizedDescription"
@@ -7676,7 +7702,7 @@
    "ko": "음성 녹음을 시작하지 못했습니다. {0}",
    "en": "Could not start voice recording. {0}",
    "files": [
-    "AppModel+Memos.swift:473"
+    "AppModel+Memos.swift:469"
    ],
    "args": [
     "reason"
@@ -8613,7 +8639,7 @@
    "ko": "도이인타논",
    "en": "Doi Inthanon",
    "files": [
-    "MapHomeGrowthPolicy.swift:163"
+    "MapHomeGrowthPolicy.swift:160"
    ],
    "args": [],
    "targets": [
@@ -8649,7 +8675,7 @@
    "ko": "돌로미티",
    "en": "Dolomites",
    "files": [
-    "MapHomeGrowthPolicy.swift:148"
+    "MapHomeGrowthPolicy.swift:145"
    ],
    "args": [],
    "targets": [
@@ -8949,7 +8975,7 @@
    "ko": "에든버러성",
    "en": "Edinburgh Castle",
    "files": [
-    "MapHomeGrowthPolicy.swift:137"
+    "MapHomeGrowthPolicy.swift:134"
    ],
    "args": [],
    "targets": [
@@ -8973,7 +8999,7 @@
    "ko": "에펠탑",
    "en": "Eiffel Tower",
    "files": [
-    "MapHomeGrowthPolicy.swift:140",
+    "MapHomeGrowthPolicy.swift:137",
     "MapHomeHomeNames.swift:0"
    ],
    "args": [],
@@ -9439,7 +9465,7 @@
    "ko": "자금성",
    "en": "Forbidden City",
    "files": [
-    "MapHomeGrowthPolicy.swift:151",
+    "MapHomeGrowthPolicy.swift:148",
     "MapHomeHomeNames.swift:0"
    ],
    "args": [],
@@ -9488,7 +9514,7 @@
    "ko": "프랑스 알프스",
    "en": "French Alps",
    "files": [
-    "MapHomeGrowthPolicy.swift:144"
+    "MapHomeGrowthPolicy.swift:141"
    ],
    "args": [],
    "targets": [
@@ -9550,7 +9576,7 @@
    "ko": "후시미 이나리",
    "en": "Fushimi Inari",
    "files": [
-    "MapHomeGrowthPolicy.swift:127"
+    "MapHomeGrowthPolicy.swift:124"
    ],
    "args": [],
    "targets": [
@@ -10253,7 +10279,7 @@
    "ko": "금문교",
    "en": "Golden Gate Bridge",
    "files": [
-    "MapHomeGrowthPolicy.swift:132",
+    "MapHomeGrowthPolicy.swift:129",
     "MapHomeHomeNames.swift:0"
    ],
    "args": [],
@@ -10326,7 +10352,7 @@
    "ko": "그랜드 캐니언",
    "en": "Grand Canyon",
    "files": [
-    "MapHomeGrowthPolicy.swift:131"
+    "MapHomeGrowthPolicy.swift:128"
    ],
    "args": [],
    "targets": [
@@ -10350,7 +10376,7 @@
    "ko": "왕궁",
    "en": "Grand Palace",
    "files": [
-    "MapHomeGrowthPolicy.swift:160"
+    "MapHomeGrowthPolicy.swift:157"
    ],
    "args": [],
    "targets": [
@@ -10362,7 +10388,7 @@
    "ko": "그레이트 배리어 리프",
    "en": "Great Barrier Reef",
    "files": [
-    "MapHomeGrowthPolicy.swift:166"
+    "MapHomeGrowthPolicy.swift:163"
    ],
    "args": [],
    "targets": [
@@ -10434,7 +10460,7 @@
    "ko": "만리장성",
    "en": "Great Wall",
    "files": [
-    "MapHomeGrowthPolicy.swift:150",
+    "MapHomeGrowthPolicy.swift:147",
     "MapHomeHomeNames.swift:0"
    ],
    "args": [],
@@ -10846,7 +10872,7 @@
    "ko": "경복궁",
    "en": "Gyeongbokgung",
    "files": [
-    "MapHomeGrowthPolicy.swift:117",
+    "MapHomeGrowthPolicy.swift:114",
     "MapHomeKoreaPlaceBookData.swift:37"
    ],
    "args": [],
@@ -11123,7 +11149,7 @@
    "ko": "해운대",
    "en": "Haeundae",
    "files": [
-    "MapHomeGrowthPolicy.swift:120",
+    "MapHomeGrowthPolicy.swift:117",
     "MapHomeKoreaPlaceBookData.swift:100"
    ],
    "args": [],
@@ -11160,7 +11186,7 @@
    "ko": "하회마을",
    "en": "Hahoe Folk Village",
    "files": [
-    "MapHomeGrowthPolicy.swift:121",
+    "MapHomeGrowthPolicy.swift:118",
     "MapHomeKoreaPlaceBookData.swift:214"
    ],
    "args": [],
@@ -11209,7 +11235,7 @@
    "ko": "한라산",
    "en": "Hallasan",
    "files": [
-    "MapHomeGrowthPolicy.swift:124",
+    "MapHomeGrowthPolicy.swift:121",
     "MapHomeKoreaPlaceBookData.swift:231"
    ],
    "args": [],
@@ -11657,7 +11683,7 @@
    "ko": "히메지성",
    "en": "Himeji Castle",
    "files": [
-    "MapHomeGrowthPolicy.swift:126",
+    "MapHomeGrowthPolicy.swift:123",
     "MapHomeHomeNames.swift:0"
    ],
    "args": [],
@@ -12646,7 +12672,7 @@
    "ko": "이쓰쿠시마 신사",
    "en": "Itsukushima Shrine",
    "files": [
-    "MapHomeGrowthPolicy.swift:128"
+    "MapHomeGrowthPolicy.swift:125"
    ],
    "args": [],
    "targets": [
@@ -13862,7 +13888,7 @@
    "ko": "레이크 디스트릭트",
    "en": "Lake District",
    "files": [
-    "MapHomeGrowthPolicy.swift:138"
+    "MapHomeGrowthPolicy.swift:135"
    ],
    "args": [],
    "targets": [
@@ -13928,7 +13954,7 @@
    "ko": "피사의 사탑",
    "en": "Leaning Tower of Pisa",
    "files": [
-    "MapHomeGrowthPolicy.swift:147",
+    "MapHomeGrowthPolicy.swift:144",
     "MapHomeHomeNames.swift:0"
    ],
    "args": [],
@@ -13965,7 +13991,7 @@
    "ko": "리강",
    "en": "Li River",
    "files": [
-    "MapHomeGrowthPolicy.swift:154"
+    "MapHomeGrowthPolicy.swift:151"
    ],
    "args": [],
    "targets": [
@@ -14219,7 +14245,7 @@
    "ko": "루브르 박물관",
    "en": "Louvre Museum",
    "files": [
-    "MapHomeGrowthPolicy.swift:142"
+    "MapHomeGrowthPolicy.swift:139"
    ],
    "args": [],
    "targets": [
@@ -14643,7 +14669,7 @@
    "ko": "메모는 1,000자까지 저장할 수 있습니다.",
    "en": "Memos can contain up to 1,000 characters.",
    "files": [
-    "AppModel+Memos.swift:410"
+    "AppModel+Memos.swift:406"
    ],
    "args": [],
    "targets": [
@@ -14715,7 +14741,7 @@
    "ko": "음성 메모를 사용하려면 마이크 권한이 필요합니다.",
    "en": "Microphone access is required to use voice memos.",
    "files": [
-    "AppModel+Memos.swift:443"
+    "AppModel+Memos.swift:439"
    ],
    "args": [],
    "targets": [
@@ -14943,7 +14969,7 @@
    "ko": "몽생미셸",
    "en": "Mont-Saint-Michel",
    "files": [
-    "MapHomeGrowthPolicy.swift:141",
+    "MapHomeGrowthPolicy.swift:138",
     "MapHomeHomeNames.swift:0"
    ],
    "args": [],
@@ -15040,7 +15066,7 @@
    "ko": "후지산",
    "en": "Mount Fuji",
    "files": [
-    "MapHomeGrowthPolicy.swift:125"
+    "MapHomeGrowthPolicy.swift:122"
    ],
    "args": [],
    "targets": [
@@ -15052,7 +15078,7 @@
    "ko": "러시모어산",
    "en": "Mount Rushmore",
    "files": [
-    "MapHomeGrowthPolicy.swift:134",
+    "MapHomeGrowthPolicy.swift:131",
     "MapHomeHomeNames.swift:0"
    ],
    "args": [],
@@ -15065,7 +15091,7 @@
    "ko": "테이데산",
    "en": "Mount Teide",
    "files": [
-    "MapHomeGrowthPolicy.swift:159"
+    "MapHomeGrowthPolicy.swift:156"
    ],
    "args": [],
    "targets": [
@@ -15273,7 +15299,7 @@
    "ko": "N서울타워",
    "en": "N Seoul Tower",
    "files": [
-    "MapHomeGrowthPolicy.swift:123",
+    "MapHomeGrowthPolicy.swift:120",
     "MapHomeKoreaPlaceBookData.swift:38",
     "MapHomeHomeNames.swift:0"
    ],
@@ -16268,7 +16294,7 @@
    "ko": "베르사유 궁전",
    "en": "Palace of Versailles",
    "files": [
-    "MapHomeGrowthPolicy.swift:143",
+    "MapHomeGrowthPolicy.swift:140",
     "MapHomeHomeNames.swift:0"
    ],
    "args": [],
@@ -16425,7 +16451,7 @@
    "ko": "구엘 공원",
    "en": "Park Güell",
    "files": [
-    "MapHomeGrowthPolicy.swift:157"
+    "MapHomeGrowthPolicy.swift:154"
    ],
    "args": [],
    "targets": [
@@ -16656,7 +16682,7 @@
    "ko": "피피섬",
    "en": "Phi Phi Islands",
    "files": [
-    "MapHomeGrowthPolicy.swift:161"
+    "MapHomeGrowthPolicy.swift:158"
    ],
    "args": [],
    "targets": [
@@ -17165,7 +17191,7 @@
    "ko": "동기화된 변경과 충돌해 다시실행하지 못했습니다.",
    "en": "Redo failed because it conflicts with synced changes.",
    "files": [
-    "AppModel+EditHistory.swift:285"
+    "AppModel+EditHistory.swift:286"
    ],
    "args": [],
    "targets": [
@@ -17525,7 +17551,7 @@
    "ko": "사그라다 파밀리아",
    "en": "Sagrada Família",
    "files": [
-    "MapHomeGrowthPolicy.swift:155"
+    "MapHomeGrowthPolicy.swift:152"
    ],
    "args": [],
    "targets": [
@@ -18190,7 +18216,7 @@
    "ko": "성산일출봉",
    "en": "Seongsan Ilchulbong",
    "files": [
-    "MapHomeGrowthPolicy.swift:119",
+    "MapHomeGrowthPolicy.swift:116",
     "MapHomeKoreaPlaceBookData.swift:232"
    ],
    "args": [],
@@ -19372,7 +19398,7 @@
    "ko": "자유의 여신상",
    "en": "Statue of Liberty",
    "files": [
-    "MapHomeGrowthPolicy.swift:130",
+    "MapHomeGrowthPolicy.swift:127",
     "MapHomeHomeNames.swift:0"
    ],
    "args": [],
@@ -19409,7 +19435,7 @@
    "ko": "스톤헨지",
    "en": "Stonehenge",
    "files": [
-    "MapHomeGrowthPolicy.swift:136",
+    "MapHomeGrowthPolicy.swift:133",
     "MapHomeHomeNames.swift:0"
    ],
    "args": [],
@@ -19719,7 +19745,7 @@
    "ko": "시드니 하버 브리지",
    "en": "Sydney Harbour Bridge",
    "files": [
-    "MapHomeGrowthPolicy.swift:169",
+    "MapHomeGrowthPolicy.swift:166",
     "MapHomeHomeNames.swift:0"
    ],
    "args": [],
@@ -19732,7 +19758,7 @@
    "ko": "시드니 오페라 하우스",
    "en": "Sydney Opera House",
    "files": [
-    "MapHomeGrowthPolicy.swift:165",
+    "MapHomeGrowthPolicy.swift:162",
     "MapHomeHomeNames.swift:0"
    ],
    "args": [],
@@ -20062,7 +20088,7 @@
    "ko": "병마용",
    "en": "Terracotta Army",
    "files": [
-    "MapHomeGrowthPolicy.swift:153",
+    "MapHomeGrowthPolicy.swift:150",
     "MapHomeHomeNames.swift:0"
    ],
    "args": [],
@@ -20610,7 +20636,7 @@
    "ko": "타워 브리지",
    "en": "Tower Bridge",
    "files": [
-    "MapHomeGrowthPolicy.swift:139",
+    "MapHomeGrowthPolicy.swift:136",
     "MapHomeHomeNames.swift:0"
    ],
    "args": [],
@@ -20800,7 +20826,7 @@
    "ko": "12사도 바위",
    "en": "Twelve Apostles",
    "files": [
-    "MapHomeGrowthPolicy.swift:168"
+    "MapHomeGrowthPolicy.swift:165"
    ],
    "args": [],
    "targets": [
@@ -20971,7 +20997,7 @@
    "ko": "울루루",
    "en": "Uluru",
    "files": [
-    "MapHomeGrowthPolicy.swift:167"
+    "MapHomeGrowthPolicy.swift:164"
    ],
    "args": [],
    "targets": [
@@ -21278,7 +21304,7 @@
    "ko": "베네치아",
    "en": "Venice",
    "files": [
-    "MapHomeGrowthPolicy.swift:146"
+    "MapHomeGrowthPolicy.swift:143"
    ],
    "args": [],
    "targets": [
@@ -21541,7 +21567,7 @@
    "ko": "왓 아룬",
    "en": "Wat Arun",
    "files": [
-    "MapHomeGrowthPolicy.swift:164",
+    "MapHomeGrowthPolicy.swift:161",
     "MapHomeHomeNames.swift:0"
    ],
    "args": [],
@@ -22437,7 +22463,7 @@
    "ko": "요세미티",
    "en": "Yosemite",
    "files": [
-    "MapHomeGrowthPolicy.swift:133"
+    "MapHomeGrowthPolicy.swift:130"
    ],
    "args": [],
    "targets": [
@@ -22569,7 +22595,7 @@
    "ko": "장자제",
    "en": "Zhangjiajie",
    "files": [
-    "MapHomeGrowthPolicy.swift:152",
+    "MapHomeGrowthPolicy.swift:149",
     "MapHomeKoreaPlaceBookData.swift:552"
    ],
    "args": [],
@@ -22980,6 +23006,20 @@
    ]
   },
   {
+   "key": "가계부 {0} 표|Ledger {0} table",
+   "ko": "가계부 {0} 표",
+   "en": "Ledger {0} table",
+   "files": [
+    "LedgerSheet.swift:49"
+   ],
+   "args": [
+    "monthTitle"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "가계부 {0}개|{0} ledger entr(ies)",
    "ko": "가계부 {0}개",
    "en": "{0} ledger entr(ies)",
@@ -22998,7 +23038,7 @@
    "ko": "가계부 · 결제 문자 · 영수증",
    "en": "Ledger · payment text · receipt",
    "files": [
-    "MapHomeView+Support2.swift:427"
+    "MapHomeView+Support2.swift:430"
    ],
    "args": [],
    "targets": [
@@ -23011,6 +23051,18 @@
    "en": "Add ledger entries",
    "files": [
     "AssistantCommandEdits.swift:41"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "가계부 전체 표|Whole ledger table",
+   "ko": "가계부 전체 표",
+   "en": "Whole ledger table",
+   "files": [
+    "LedgerSheet.swift:53"
    ],
    "args": [],
    "targets": [
@@ -23300,7 +23352,7 @@
    "ko": "거리",
    "en": "Distance",
    "files": [
-    "MapHomeInteractionPolicy.swift:417"
+    "MapHomeInteractionPolicy.swift:421"
    ],
    "args": [],
    "targets": [
@@ -23717,7 +23769,7 @@
    "ko": "걸음",
    "en": "Steps",
    "files": [
-    "MapHomeInteractionPolicy.swift:416",
+    "MapHomeInteractionPolicy.swift:420",
     "SensorCollectionLiveActivity.swift:89",
     "SensorCollectionLiveActivity.swift:302"
    ],
@@ -23744,7 +23796,7 @@
    "ko": "걸음걸이 카운터",
    "en": "Step counter",
    "files": [
-    "MapHomeInteractionPolicy.swift:404"
+    "MapHomeInteractionPolicy.swift:407"
    ],
    "args": [],
    "targets": [
@@ -23848,7 +23900,8 @@
    "ko": "결제 문자",
    "en": "Payment text",
    "files": [
-    "LedgerSheet.swift:207"
+    "LedgerExport.swift:52",
+    "LedgerSheet.swift:215"
    ],
    "args": [],
    "targets": [
@@ -24094,7 +24147,7 @@
    "ko": "계획과 기록은 삭제되지 않습니다.",
    "en": "Your plans and records will not be deleted.",
    "files": [
-    "MapHomeView+Support.swift:741"
+    "MapHomeView+Support.swift:743"
    ],
    "args": [],
    "targets": [
@@ -24770,7 +24823,7 @@
    "en": "Permission needed",
    "files": [
     "ScreenTimeUsageService.swift:49",
-    "MapHomeView+Support2.swift:903",
+    "MapHomeView+Support2.swift:905",
     "AppModel+WatchHealth.swift:149"
    ],
    "args": [],
@@ -24914,7 +24967,8 @@
    "ko": "그날 지출이 없어요. 메모에 「커피 4500」처럼 쓰면 들어가요.",
    "en": "No spending that day. Write a memo like \"Coffee 4500\" to add one.",
    "files": [
-    "LedgerMemoPanel.swift:101"
+    "LedgerMemoPanel.swift:101",
+    "LedgerMemoPanel.swift:182"
    ],
    "args": [],
    "targets": [
@@ -25032,7 +25086,7 @@
    "ko": "글꼴 선택",
    "en": "Choose font",
    "files": [
-    "TaptionFont.swift:159"
+    "TaptionFont.swift:172"
    ],
    "args": [],
    "targets": [
@@ -25044,7 +25098,7 @@
    "ko": "글꼴",
    "en": "Font",
    "files": [
-    "TaptionFont.swift:145"
+    "TaptionFont.swift:158"
    ],
    "args": [],
    "targets": [
@@ -25080,7 +25134,8 @@
    "ko": "금액",
    "en": "Amount",
    "files": [
-    "LedgerSheet.swift:246",
+    "LedgerExport.swift:10",
+    "LedgerSheet.swift:254",
     "MapHomeSalarySettingsSheet.swift:358"
    ],
    "args": [],
@@ -25256,7 +25311,7 @@
    "ko": "기록 고치기",
    "en": "Edit entry",
    "files": [
-    "LedgerSheet.swift:277"
+    "LedgerSheet.swift:285"
    ],
    "args": [],
    "targets": [
@@ -25292,8 +25347,8 @@
    "ko": "기록 더하기",
    "en": "Add entry",
    "files": [
-    "LedgerSheet.swift:50",
-    "LedgerSheet.swift:277"
+    "LedgerSheet.swift:58",
+    "LedgerSheet.swift:285"
    ],
    "args": [],
    "targets": [
@@ -25406,7 +25461,7 @@
    "ko": "기록",
    "en": "Record",
    "files": [
-    "MapHomeView+Menu.swift:422"
+    "MapHomeView+Menu.swift:430"
    ],
    "args": [],
    "targets": [
@@ -25896,7 +25951,7 @@
    "ko": "나",
    "en": "Me",
    "files": [
-    "LedgerSheet.swift:371"
+    "LedgerSheet.swift:379"
    ],
    "args": [],
    "targets": [
@@ -25932,7 +25987,7 @@
    "ko": "나도 포함해 똑같이 나눠요. 기록의 「낸 사람」이 비었으면 내가 낸 것이에요.",
    "en": "Split equally including you. A blank payer means you paid.",
    "files": [
-    "LedgerSheet.swift:369"
+    "LedgerSheet.swift:377"
    ],
    "args": [],
    "targets": [
@@ -25973,7 +26028,7 @@
    "files": [
     "FirstRunTutorialGuides.swift:372",
     "FirstRunTutorialGuides.swift:419",
-    "MapHomeView+Support.swift:656"
+    "MapHomeView+Support.swift:658"
    ],
    "args": [],
    "targets": [
@@ -25985,7 +26040,7 @@
    "ko": "나중에",
    "en": "Not now",
    "files": [
-    "MapHomeView+Support.swift:420"
+    "MapHomeView+Support.swift:422"
    ],
    "args": [],
    "targets": [
@@ -26033,7 +26088,7 @@
    "ko": "날씨",
    "en": "Weather",
    "files": [
-    "MapHomeView+Menu.swift:531",
+    "MapHomeView+Menu.swift:539",
     "StickerArtBasics.swift:7"
    ],
    "args": [],
@@ -26046,7 +26101,7 @@
    "ko": "날짜 {0}",
    "en": "Date {0}",
    "files": [
-    "MapHomeView+Support2.swift:476"
+    "MapHomeView+Support2.swift:478"
    ],
    "args": [
     "dateTitle"
@@ -26072,6 +26127,7 @@
    "ko": "날짜",
    "en": "Date",
    "files": [
+    "LedgerExport.swift:9",
     "MapHomeDailyCard.swift:361",
     "MapHomePlaceBookTools.swift:780"
    ],
@@ -26137,7 +26193,7 @@
    "ko": "내 차 등록",
    "en": "My car",
    "files": [
-    "MapHomeView+Menu.swift:456"
+    "MapHomeView+Menu.swift:464"
    ],
    "args": [],
    "targets": [
@@ -26186,7 +26242,19 @@
    "ko": "내용 (예: 커피)",
    "en": "What (e.g. Coffee)",
    "files": [
-    "LedgerSheet.swift:241"
+    "LedgerSheet.swift:249"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "내용|What",
+   "ko": "내용",
+   "en": "What",
+   "files": [
+    "LedgerExport.swift:10"
    ],
    "args": [],
    "targets": [
@@ -26198,7 +26266,19 @@
    "ko": "낸 사람 (비우면 나)",
    "en": "Paid by (blank = me)",
    "files": [
-    "LedgerSheet.swift:263"
+    "LedgerSheet.swift:271"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "낸 사람|Paid by",
+   "ko": "낸 사람",
+   "en": "Paid by",
+   "files": [
+    "LedgerExport.swift:11"
    ],
    "args": [],
    "targets": [
@@ -26210,7 +26290,7 @@
    "ko": "낸 사람을 적으면 「정산하기」에서 나눌 돈을 계산해요.",
    "en": "Add who paid to split costs in Settle up.",
    "files": [
-    "LedgerSheet.swift:267"
+    "LedgerSheet.swift:275"
    ],
    "args": [],
    "targets": [
@@ -26271,7 +26351,7 @@
    "en": "Record",
    "files": [
     "FirstRunGuideStage.swift:649",
-    "MapHomeView+Support2.swift:420",
+    "MapHomeView+Support2.swift:423",
     "FirstRunTutorialGuides.swift:35"
    ],
    "args": [],
@@ -26484,7 +26564,7 @@
    "ko": "다음 날짜",
    "en": "Next date",
    "files": [
-    "MapHomeView+Support2.swift:614"
+    "MapHomeView+Support2.swift:616"
    ],
    "args": [],
    "targets": [
@@ -26600,8 +26680,8 @@
    "en": "Calendar",
    "files": [
     "FirstRunGuideStage.swift:643",
-    "MapHomeView+Support.swift:430",
-    "MapHomeView+Support2.swift:388"
+    "MapHomeView+Support.swift:432",
+    "MapHomeView+Support2.swift:391"
    ],
    "args": [],
    "targets": [
@@ -26641,7 +26721,7 @@
    "ko": "대기",
    "en": "Waiting",
    "files": [
-    "MapHomeView+Support2.swift:907",
+    "MapHomeView+Support2.swift:909",
     "SensorCollectionLiveActivity.swift:265",
     "TaptionPlanWidget.swift:521"
    ],
@@ -26909,7 +26989,7 @@
    "ko": "데이터 보호 열기",
    "en": "Open data protection",
    "files": [
-    "MapHomeView+Menu2.swift:194"
+    "MapHomeView+Menu2.swift:196"
    ],
    "args": [],
    "targets": [
@@ -26922,7 +27002,7 @@
    "en": "Data Protection",
    "files": [
     "MapHomeSettingsSheets.swift:274",
-    "MapHomeView+Menu2.swift:177"
+    "MapHomeView+Menu2.swift:179"
    ],
    "args": [],
    "targets": [
@@ -27202,7 +27282,7 @@
    "ko": "동기화된 변경과 충돌해 다시실행하지 못했습니다.",
    "en": "Redo failed because it conflicts with synced changes.",
    "files": [
-    "AppModel+EditHistory.swift:284"
+    "AppModel+EditHistory.swift:285"
    ],
    "args": [],
    "targets": [
@@ -27275,7 +27355,7 @@
    "en": "Motion & Fitness",
    "files": [
     "AppShellView.swift:1085",
-    "MapHomeView+Support2.swift:886"
+    "MapHomeView+Support2.swift:888"
    ],
    "args": [],
    "targets": [
@@ -27338,6 +27418,18 @@
    "en": "Eat well 🍱",
    "files": [
     "MapHomeDefaultBubblePool.swift:50"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "들어온 길|Source",
+   "ko": "들어온 길",
+   "en": "Source",
+   "files": [
+    "LedgerExport.swift:12"
    ],
    "args": [],
    "targets": [
@@ -27410,7 +27502,7 @@
    "ko": "등록된 사용자 위치 {0}개",
    "en": "{0} saved user locations",
    "files": [
-    "MapHomeView+Menu.swift:948"
+    "MapHomeView+Menu.swift:956"
    ],
    "args": [
     "userLocationCount"
@@ -27424,7 +27516,7 @@
    "ko": "등록된 사용자 위치가 없습니다.",
    "en": "No saved user locations.",
    "files": [
-    "MapHomeView+Menu.swift:978"
+    "MapHomeView+Menu.swift:986"
    ],
    "args": [],
    "targets": [
@@ -27521,7 +27613,7 @@
    "ko": "때",
    "en": "When",
    "files": [
-    "LedgerSheet.swift:260"
+    "LedgerSheet.swift:268"
    ],
    "args": [],
    "targets": [
@@ -27742,7 +27834,7 @@
    "ko": "마이크 입력 장치를 확인해 주세요.",
    "en": "Check your microphone input device.",
    "files": [
-    "AppModel+Memos.swift:468"
+    "AppModel+Memos.swift:464"
    ],
    "args": [],
    "targets": [
@@ -28039,7 +28131,7 @@
    "ko": "멈춤",
    "en": "Pause",
    "files": [
-    "MapHomeView+Support2.swift:410"
+    "MapHomeView+Support2.swift:413"
    ],
    "args": [],
    "targets": [
@@ -28118,7 +28210,7 @@
    "ko": "메뉴 > 위치에서 집을 먼저 등록해 주세요.",
    "en": "Add your home in Menu > Location first.",
    "files": [
-    "MapHomeView+Support.swift:423"
+    "MapHomeView+Support.swift:425"
    ],
    "args": [],
    "targets": [
@@ -28155,7 +28247,7 @@
    "ko": "메뉴 닫기",
    "en": "Close menu",
    "files": [
-    "MapHomeView+Menu.swift:413"
+    "MapHomeView+Menu.swift:421"
    ],
    "args": [],
    "targets": [
@@ -28168,7 +28260,7 @@
    "en": "Menu",
    "files": [
     "FirstRunGuideStage.swift:641",
-    "MapHomeView+Support2.swift:385"
+    "MapHomeView+Support2.swift:388"
    ],
    "args": [],
    "targets": [
@@ -28297,7 +28389,7 @@
    "ko": "메모 수",
    "en": "Memos",
    "files": [
-    "MapHomeCardMetricOption.swift:38"
+    "MapHomeCardMetricOption.swift:42"
    ],
    "args": [],
    "targets": [
@@ -28369,7 +28461,7 @@
    "ko": "메모 표시",
    "en": "Show memos",
    "files": [
-    "MapHomeView+Menu.swift:539"
+    "MapHomeView+Menu.swift:547"
    ],
    "args": [],
    "targets": [
@@ -28383,7 +28475,7 @@
    "files": [
     "FirstRunGuideStage.swift:650",
     "MapHomeStickerEditor.swift:565",
-    "MapHomeView+Support2.swift:423"
+    "MapHomeView+Support2.swift:426"
    ],
    "args": [],
    "targets": [
@@ -28409,7 +28501,8 @@
    "ko": "메모",
    "en": "Note",
    "files": [
-    "LedgerSheet.swift:265"
+    "LedgerExport.swift:12",
+    "LedgerSheet.swift:273"
    ],
    "args": [],
    "targets": [
@@ -28421,7 +28514,7 @@
    "ko": "메모는 1,000자까지 저장할 수 있습니다.",
    "en": "Memos can contain up to 1,000 characters.",
    "files": [
-    "AppModel+Memos.swift:409"
+    "AppModel+Memos.swift:405"
    ],
    "args": [],
    "targets": [
@@ -29511,7 +29604,7 @@
    "en": "Earned",
    "files": [
     "MapHomeCounterDetailSheet.swift:236",
-    "MapHomeCounterTable.swift:400"
+    "MapHomeCounterTable.swift:402"
    ],
    "args": [],
    "targets": [
@@ -29702,7 +29795,7 @@
    "ko": "보낼 돈",
    "en": "Transfers",
    "files": [
-    "LedgerSheet.swift:374"
+    "LedgerSheet.swift:382"
    ],
    "args": [],
    "targets": [
@@ -29864,7 +29957,7 @@
    "ko": "보호 설정 안 됨",
    "en": "Not configured",
    "files": [
-    "MapHomeView+Support2.swift:789"
+    "MapHomeView+Support2.swift:791"
    ],
    "args": [],
    "targets": [
@@ -30032,9 +30125,9 @@
    "ko": "분류",
    "en": "Category",
    "files": [
-    "LedgerSheet.swift:257",
-    "MapHomeNLEClipEditor.swift:557",
-    "MapHomeNLERawDetail.swift:50"
+    "LedgerExport.swift:10",
+    "LedgerSheet.swift:265",
+    "MapHomeNLEClipEditor.swift:557"
    ],
    "args": [],
    "targets": [
@@ -30047,6 +30140,18 @@
    "en": "Merges hand-split clips without changing categories",
    "files": [
     "MapHomeNLEOverwriteSheet.swift:351"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "분류별|By category",
+   "ko": "분류별",
+   "en": "By category",
+   "files": [
+    "LedgerMemoPanel.swift:179"
    ],
    "args": [],
    "targets": [
@@ -30113,7 +30218,7 @@
    "ko": "비밀번호 등록됨",
    "en": "Password registered",
    "files": [
-    "MapHomeView+Support2.swift:788"
+    "MapHomeView+Support2.swift:790"
    ],
    "args": [],
    "targets": [
@@ -30367,7 +30472,7 @@
    "ko": "사용자 위치 관리",
    "en": "Manage user locations",
    "files": [
-    "MapHomeView+Menu.swift:997"
+    "MapHomeView+Menu.swift:1005"
    ],
    "args": [],
    "targets": [
@@ -30379,7 +30484,7 @@
    "ko": "사용자 위치 목록",
    "en": "User location list",
    "files": [
-    "MapHomeView+Menu.swift:972"
+    "MapHomeView+Menu.swift:980"
    ],
    "args": [],
    "targets": [
@@ -30416,7 +30521,7 @@
    "ko": "사용자 지점",
    "en": "User location",
    "files": [
-    "MapHomeView+Menu.swift:122",
+    "MapHomeView+Menu.swift:124",
     "MapHomeView+Stickman.swift:132"
    ],
    "args": [],
@@ -30429,7 +30534,7 @@
    "ko": "사용자 지정 색상",
    "en": "Custom category color",
    "files": [
-    "MapHomeView+Menu.swift:787"
+    "MapHomeView+Menu.swift:795"
    ],
    "args": [],
    "targets": [
@@ -30441,8 +30546,8 @@
    "ko": "사용자 지정",
    "en": "Custom",
    "files": [
-    "MapHomeView+Menu.swift:770",
-    "MapHomeView+Menu.swift:869"
+    "MapHomeView+Menu.swift:778",
+    "MapHomeView+Menu.swift:877"
    ],
    "args": [],
    "targets": [
@@ -30454,7 +30559,7 @@
    "ko": "사용자 추가",
    "en": "Add custom",
    "files": [
-    "MapHomeView+Menu.swift:810"
+    "MapHomeView+Menu.swift:818"
    ],
    "args": [],
    "targets": [
@@ -30466,7 +30571,7 @@
    "ko": "사용자",
    "en": "User",
    "files": [
-    "MapHomeView+Menu.swift:945"
+    "MapHomeView+Menu.swift:953"
    ],
    "args": [],
    "targets": [
@@ -30526,7 +30631,7 @@
    "ko": "사이드바",
    "en": "Sidebar",
    "files": [
-    "MapHomeView+Menu.swift:528"
+    "MapHomeView+Menu.swift:536"
    ],
    "args": [],
    "targets": [
@@ -31119,7 +31224,7 @@
    "ko": "색상 선택",
    "en": "Choose color",
    "files": [
-    "MapHomeView+Menu.swift:766"
+    "MapHomeView+Menu.swift:774"
    ],
    "args": [],
    "targets": [
@@ -31143,7 +31248,7 @@
    "ko": "색상을 선택하면 즉시 저장됩니다.",
    "en": "Colors save immediately.",
    "files": [
-    "MapHomeView+Menu.swift:892"
+    "MapHomeView+Menu.swift:900"
    ],
    "args": [],
    "targets": [
@@ -31505,7 +31610,7 @@
    "ko": "설정 목록",
    "en": "Settings list",
    "files": [
-    "MapHomeView+Menu2.swift:167"
+    "MapHomeView+Menu2.swift:169"
    ],
    "args": [],
    "targets": [
@@ -31556,9 +31661,9 @@
    "ko": "설정 초기화",
    "en": "Reset settings",
    "files": [
-    "MapHomeView+Menu2.swift:208",
-    "MapHomeView+Menu2.swift:225",
-    "MapHomeView+Support.swift:735"
+    "MapHomeView+Menu2.swift:210",
+    "MapHomeView+Menu2.swift:227",
+    "MapHomeView+Support.swift:737"
    ],
    "args": [],
    "targets": [
@@ -31584,7 +31689,7 @@
    "files": [
     "MapHomeSettingsSheets.swift:741",
     "MapHomeSettingsSheets.swift:642",
-    "MapHomeView+Menu2.swift:153"
+    "MapHomeView+Menu2.swift:155"
    ],
    "args": [],
    "targets": [
@@ -31596,7 +31701,7 @@
    "ko": "설정됨",
    "en": "Set",
    "files": [
-    "MapHomeView+Stickman.swift:345"
+    "MapHomeView+Stickman.swift:347"
    ],
    "args": [],
    "targets": [
@@ -31632,7 +31737,7 @@
    "ko": "설정을 기본값으로 초기화할까요?",
    "en": "Reset settings to defaults?",
    "files": [
-    "MapHomeView+Support.swift:731"
+    "MapHomeView+Support.swift:733"
    ],
    "args": [],
    "targets": [
@@ -32081,7 +32186,7 @@
    "ko": "수동 기록과 지도 메모는 지금 사용할 수 있습니다. 자동 기록을 켜려면 필요한 권한만 허용하세요.",
    "en": "Manual records and map memos are available now. Allow only the permissions needed for automatic recording.",
    "files": [
-    "MapHomeView+Support2.swift:807"
+    "MapHomeView+Support2.swift:809"
    ],
    "args": [],
    "targets": [
@@ -32262,13 +32367,25 @@
    ]
   },
   {
+   "key": "수입 합계|Total income",
+   "ko": "수입 합계",
+   "en": "Total income",
+   "files": [
+    "LedgerExport.swift:32"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "수입|Income",
    "ko": "수입",
    "en": "Income",
    "files": [
+    "LedgerExport.swift:24",
     "LedgerMemoChip.swift:36",
-    "LedgerMemoChip.swift:37",
-    "LedgerSheet.swift:149"
+    "LedgerMemoChip.swift:37"
    ],
    "args": [],
    "targets": [
@@ -32316,7 +32433,7 @@
    "ko": "수집 중",
    "en": "Collecting",
    "files": [
-    "MapHomeView+Support2.swift:909"
+    "MapHomeView+Support2.swift:911"
    ],
    "args": [],
    "targets": [
@@ -32524,6 +32641,18 @@
    ]
   },
   {
+   "key": "시각|Time",
+   "ko": "시각",
+   "en": "Time",
+   "files": [
+    "LedgerExport.swift:9"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "시간 = 돈. 근무 시간이 늘면 금액도 같이 올라요. 입력하지 않은 쪽은 세금 방식으로 자동 계산해요.|Time = money. Earnings rise with work hours. The other field is computed from the tax method.",
    "ko": "시간 = 돈. 근무 시간이 늘면 금액도 같이 올라요. 입력하지 않은 쪽은 세금 방식으로 자동 계산해요.",
    "en": "Time = money. Earnings rise with work hours. The other field is computed from the tax method.",
@@ -32576,7 +32705,7 @@
    "ko": "시간 표시",
    "en": "Time format",
    "files": [
-    "MapHomeView+Menu.swift:555"
+    "MapHomeView+Menu.swift:563"
    ],
    "args": [],
    "targets": [
@@ -32639,6 +32768,18 @@
    "en": "Zoom timeline in",
    "files": [
     "MapHomeView+Timeline.swift:509"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "시간순|By time",
+   "ko": "시간순",
+   "en": "By time",
+   "files": [
+    "LedgerMemoPanel.swift:180"
    ],
    "args": [],
    "targets": [
@@ -33252,7 +33393,7 @@
    "ko": "안개 탐험 선택",
    "en": "Choose fog of exploration",
    "files": [
-    "MapHomeView+Menu.swift:1067"
+    "MapHomeView+Menu.swift:1075"
    ],
    "args": [],
    "targets": [
@@ -33264,7 +33405,7 @@
    "ko": "안개 탐험",
    "en": "Fog of Exploration",
    "files": [
-    "MapHomeView+Menu.swift:1063"
+    "MapHomeView+Menu.swift:1071"
    ],
    "args": [],
    "targets": [
@@ -33351,7 +33492,7 @@
    "en": "Alerts",
    "files": [
     "MapHomeAlarm.swift:479",
-    "MapHomeView+Menu.swift:469"
+    "MapHomeView+Menu.swift:477"
    ],
    "args": [],
    "targets": [
@@ -33711,7 +33852,7 @@
    "ko": "앱 열 때마다 잠금",
    "en": "Locks whenever the app opens",
    "files": [
-    "MapHomeView+Support2.swift:785"
+    "MapHomeView+Support2.swift:787"
    ],
    "args": [],
    "targets": [
@@ -33759,7 +33900,7 @@
    "ko": "앱",
    "en": "App",
    "files": [
-    "MapHomeView+Menu.swift:465"
+    "MapHomeView+Menu.swift:473"
    ],
    "args": [],
    "targets": [
@@ -34029,7 +34170,7 @@
    "files": [
     "MapHomeAlarm.swift:669",
     "MapHomeAlarm.swift:670",
-    "MapHomeInteractionPolicy.swift:418"
+    "MapHomeInteractionPolicy.swift:422"
    ],
    "args": [],
    "targets": [
@@ -34044,7 +34185,7 @@
    "ko": "업무시간 카운터",
    "en": "Work time counter",
    "files": [
-    "MapHomeInteractionPolicy.swift:406"
+    "MapHomeInteractionPolicy.swift:409"
    ],
    "args": [],
    "targets": [
@@ -34120,7 +34261,7 @@
    "ko": "여권",
    "en": "Passport",
    "files": [
-    "MapHomeView+Menu.swift:431"
+    "MapHomeView+Menu.swift:439"
    ],
    "args": [],
    "targets": [
@@ -34266,7 +34407,7 @@
    "ko": "여행 계획 추가",
    "en": "Add to trip",
    "files": [
-    "MapHomeView+Support.swift:660"
+    "MapHomeView+Support.swift:662"
    ],
    "args": [],
    "targets": [
@@ -34351,7 +34492,7 @@
    "ko": "여행 중에 넣은 기록이 여기 모여요.",
    "en": "Entries added during this trip gather here.",
    "files": [
-    "LedgerSheet.swift:86"
+    "LedgerSheet.swift:94"
    ],
    "args": [],
    "targets": [
@@ -34781,7 +34922,7 @@
    "en": "Connections",
    "files": [
     "MapHomeNLEClipFactory.swift:307",
-    "MapHomeView+Menu.swift:449"
+    "MapHomeView+Menu.swift:457"
    ],
    "args": [],
    "targets": [
@@ -35238,7 +35379,7 @@
    "ko": "연봉 카운터",
    "en": "Salary counter",
    "files": [
-    "FirstRunTutorialView.swift:747",
+    "FirstRunTutorialView.swift:748",
     "MapHomeAlarm.swift:25",
     "MapHomeSalarySettingsSheet.swift:123"
    ],
@@ -35290,7 +35431,7 @@
    "ko": "연봉을 적으면 나타납니다",
    "en": "Appears once you enter a salary",
    "files": [
-    "FirstRunTutorialView.swift:749"
+    "FirstRunTutorialView.swift:750"
    ],
    "args": [],
    "targets": [
@@ -35519,8 +35660,9 @@
    "ko": "영수증",
    "en": "Receipt",
    "files": [
-    "LedgerSheet.swift:102",
-    "LedgerSheet.swift:208"
+    "LedgerExport.swift:53",
+    "LedgerSheet.swift:110",
+    "LedgerSheet.swift:216"
    ],
    "args": [],
    "targets": [
@@ -35544,7 +35686,7 @@
    "ko": "예산 남음",
    "en": "Budget left",
    "files": [
-    "LedgerSheet.swift:152"
+    "LedgerSheet.swift:160"
    ],
    "args": [],
    "targets": [
@@ -35556,7 +35698,7 @@
    "ko": "예산",
    "en": "Budget",
    "files": [
-    "LedgerSheet.swift:335"
+    "LedgerSheet.swift:343"
    ],
    "args": [],
    "targets": [
@@ -35581,7 +35723,7 @@
    "ko": "예상 경로 위치",
    "en": "Expected route location",
    "files": [
-    "MapHomeView+Menu2.swift:462"
+    "MapHomeView+Menu2.swift:464"
    ],
    "args": [],
    "targets": [
@@ -35593,7 +35735,7 @@
    "ko": "예시",
    "en": "Example",
    "files": [
-    "FirstRunTutorialView.swift:729"
+    "FirstRunTutorialView.swift:730"
    ],
    "args": [],
    "targets": [
@@ -35706,7 +35848,7 @@
    "ko": "오늘 기록을 쌓아보세요",
    "en": "Build today's log",
    "files": [
-    "MapHomeView+Stickman.swift:388"
+    "MapHomeView+Stickman.swift:390"
    ],
    "args": [],
    "targets": [
@@ -35718,7 +35860,7 @@
    "ko": "오늘 날짜로 이동",
    "en": "Go to today",
    "files": [
-    "MapHomeView+Support2.swift:548"
+    "MapHomeView+Support2.swift:550"
    ],
    "args": [],
    "targets": [
@@ -35742,7 +35884,7 @@
    "ko": "오늘 성장 조건 충족",
    "en": "Today's growth goal met",
    "files": [
-    "MapHomeView+Stickman.swift:390"
+    "MapHomeView+Stickman.swift:392"
    ],
    "args": [],
    "targets": [
@@ -35754,7 +35896,7 @@
    "ko": "오늘 손익(세후 월급 기준)",
    "en": "Today's net (after-tax pay)",
    "files": [
-    "LedgerSheet.swift:158"
+    "LedgerSheet.swift:166"
    ],
    "args": [],
    "targets": [
@@ -36042,7 +36184,7 @@
    "files": [
     "AssistantSettingsView.swift:58",
     "FirstRunAIConnectPage.swift:37",
-    "LedgerSheet.swift:388"
+    "LedgerSheet.swift:396"
    ],
    "args": [],
    "targets": [
@@ -36182,7 +36324,7 @@
    "en": "Allowance",
    "files": [
     "MapHomeAllowancePolicy.swift:127",
-    "MapHomeCounterTable.swift:400",
+    "MapHomeCounterTable.swift:402",
     "MapHomeSalarySettingsSheet.swift:141"
    ],
    "args": [],
@@ -36207,7 +36349,7 @@
    "ko": "우리집 ({0})",
    "en": "Our home ({0})",
    "files": [
-    "MapHomeGrowthPolicy.swift:377"
+    "MapHomeGrowthPolicy.swift:382"
    ],
    "args": [
     "name"
@@ -36249,7 +36391,7 @@
    "ko": "운동",
    "en": "Exercise",
    "files": [
-    "MapHomeInteractionPolicy.swift:421",
+    "MapHomeInteractionPolicy.swift:425",
     "MapHomeLocationPresentation.swift:310",
     "AppModel+WidgetLiveActivity.swift:108"
    ],
@@ -36278,7 +36420,7 @@
    "ko": "운동시간 카운터",
    "en": "Exercise time counter",
    "files": [
-    "MapHomeInteractionPolicy.swift:409"
+    "MapHomeInteractionPolicy.swift:412"
    ],
    "args": [],
    "targets": [
@@ -36447,11 +36589,23 @@
    ]
   },
   {
+   "key": "원화|KRW",
+   "ko": "원화",
+   "en": "KRW",
+   "files": [
+    "LedgerExport.swift:11"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "원화로 모두|Total in KRW",
    "ko": "원화로 모두",
    "en": "Total in KRW",
    "files": [
-    "LedgerSheet.swift:84"
+    "LedgerSheet.swift:92"
    ],
    "args": [],
    "targets": [
@@ -36625,7 +36779,7 @@
    "ko": "위치 기록을 기다리는 중",
    "en": "Waiting for location",
    "files": [
-    "MapHomeView+Menu.swift:497"
+    "MapHomeView+Menu.swift:505"
    ],
    "args": [],
    "targets": [
@@ -36699,7 +36853,7 @@
    "ko": "위치 목록",
    "en": "Location list",
    "files": [
-    "MapHomeView+Menu.swift:920"
+    "MapHomeView+Menu.swift:928"
    ],
    "args": [],
    "targets": [
@@ -36737,7 +36891,7 @@
    "ko": "위치 설정 열기",
    "en": "Open location settings",
    "files": [
-    "MapHomeView+Support.swift:421"
+    "MapHomeView+Support.swift:423"
    ],
    "args": [],
    "targets": [
@@ -36847,7 +37001,7 @@
    "en": "Always Location",
    "files": [
     "AppShellView.swift:1081",
-    "MapHomeView+Support2.swift:882"
+    "MapHomeView+Support2.swift:884"
    ],
    "args": [],
    "targets": [
@@ -36859,7 +37013,7 @@
    "ko": "위치 확인 중",
    "en": "Locating",
    "files": [
-    "MapHomeView+Stickman.swift:336"
+    "MapHomeView+Stickman.swift:338"
    ],
    "args": [],
    "targets": [
@@ -36886,7 +37040,7 @@
    "files": [
     "WidgetShared.swift:603",
     "MapHomeStickerEditor.swift:617",
-    "MapHomeView+Menu.swift:907"
+    "MapHomeView+Menu.swift:915"
    ],
    "args": [],
    "targets": [
@@ -36923,7 +37077,7 @@
    "ko": "위치를 '항상 허용'으로 바꿔 주세요",
    "en": "Set location to Always",
    "files": [
-    "MapHomeView+Support.swift:654"
+    "MapHomeView+Support.swift:656"
    ],
    "args": [],
    "targets": [
@@ -37020,7 +37174,7 @@
    "ko": "음성 녹음을 시작하지 못했습니다. {0}",
    "en": "Could not start voice recording. {0}",
    "files": [
-    "AppModel+Memos.swift:472"
+    "AppModel+Memos.swift:468"
    ],
    "args": [
     "reason"
@@ -37058,7 +37212,7 @@
    "ko": "음성 메모를 사용하려면 마이크 권한이 필요합니다.",
    "en": "Microphone access is required to use voice memos.",
    "files": [
-    "AppModel+Memos.swift:442"
+    "AppModel+Memos.swift:438"
    ],
    "args": [],
    "targets": [
@@ -37070,7 +37224,7 @@
    "ko": "음성 메모를 재생하지 못했습니다. {0}",
    "en": "Could not play the voice memo. {0}",
    "files": [
-    "AppModel+Memos.swift:493"
+    "AppModel+Memos.swift:489"
    ],
    "args": [
     "error.localizedDescription"
@@ -37549,7 +37703,19 @@
    "ko": "이 달 지출 예산(원)",
    "en": "Spending budget this month (KRW)",
    "files": [
-    "LedgerSheet.swift:333"
+    "LedgerSheet.swift:341"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "이 달 표로 내보내기|Export this month as a table",
+   "ko": "이 달 표로 내보내기",
+   "en": "Export this month as a table",
+   "files": [
+    "LedgerSheet.swift:50"
    ],
    "args": [],
    "targets": [
@@ -37648,7 +37814,7 @@
    "ko": "이 여행",
    "en": "This trip",
    "files": [
-    "LedgerSheet.swift:80"
+    "LedgerSheet.swift:88"
    ],
    "args": [],
    "targets": [
@@ -37819,7 +37985,7 @@
    "ko": "이동 거리",
    "en": "Distance by mode",
    "files": [
-    "MapHomeInfoSheets.swift:513"
+    "MapHomeInfoSheets.swift:515"
    ],
    "args": [],
    "targets": [
@@ -37946,7 +38112,7 @@
    "ko": "이동거리 카운터",
    "en": "Distance counter",
    "files": [
-    "MapHomeInteractionPolicy.swift:405"
+    "MapHomeInteractionPolicy.swift:408"
    ],
    "args": [],
    "targets": [
@@ -38081,7 +38247,7 @@
    "ko": "이름을 넣으면 계산해요.",
    "en": "Enter names to calculate.",
    "files": [
-    "LedgerSheet.swift:376"
+    "LedgerSheet.swift:384"
    ],
    "args": [],
    "targets": [
@@ -38211,7 +38377,7 @@
    "ko": "이전 날짜",
    "en": "Previous date",
    "files": [
-    "MapHomeView+Support2.swift:613"
+    "MapHomeView+Support2.swift:615"
    ],
    "args": [],
    "targets": [
@@ -38571,7 +38737,7 @@
    "ko": "읽지 못했어요. + 로 직접 넣어 주세요.",
    "en": "Couldn't read it. Tap + to enter it yourself.",
    "files": [
-    "LedgerSheet.swift:113"
+    "LedgerSheet.swift:121"
    ],
    "args": [],
    "targets": [
@@ -38685,7 +38851,7 @@
    "ko": "자동 기록 권한",
    "en": "Automatic recording permissions",
    "files": [
-    "MapHomeView+Support2.swift:800"
+    "MapHomeView+Support2.swift:802"
    ],
    "args": [],
    "targets": [
@@ -38721,7 +38887,7 @@
    "ko": "자동 기록을 위해 저전력으로 위치 변화를 지켜보는 동안 상단에 위치 표시가 보일 수 있습니다.",
    "en": "The location icon may stay visible while the app watches for movement at low power to keep automatic records.",
    "files": [
-    "MapHomeView+Menu2.swift:262"
+    "MapHomeView+Menu2.swift:264"
    ],
    "args": [],
    "targets": [
@@ -39006,7 +39172,7 @@
    "en": "Place book",
    "files": [
     "MapHomePlaceBook.swift:549",
-    "MapHomeView+Menu.swift:429"
+    "MapHomeView+Menu.swift:437"
    ],
    "args": [],
    "targets": [
@@ -39080,7 +39246,8 @@
    "ko": "장소",
    "en": "Place",
    "files": [
-    "LedgerSheet.swift:264",
+    "LedgerExport.swift:12",
+    "LedgerSheet.swift:272",
     "MapHomeNLEClipEditor.swift:245"
    ],
    "args": [],
@@ -39190,7 +39357,7 @@
    "en": "Record playback",
    "files": [
     "MapHomeScreenRecording.swift:558",
-    "MapHomeView+Support2.swift:563"
+    "MapHomeView+Support2.swift:565"
    ],
    "args": [],
    "targets": [
@@ -39203,7 +39370,7 @@
    "en": "Play",
    "files": [
     "FirstRunGuideStage.swift:648",
-    "MapHomeView+Support2.swift:414",
+    "MapHomeView+Support2.swift:417",
     "FirstRunTutorialGuides.swift:34"
    ],
    "args": [],
@@ -39264,8 +39431,8 @@
    "ko": "저장",
    "en": "Save",
    "files": [
-    "LedgerSheet.swift:282",
-    "LedgerSheet.swift:341",
+    "LedgerSheet.swift:290",
+    "LedgerSheet.swift:349",
     "MapHomeLocationSheets.swift:131"
    ],
    "args": [],
@@ -39562,6 +39729,18 @@
    ]
   },
   {
+   "key": "전체 표로 내보내기|Export everything as a table",
+   "ko": "전체 표로 내보내기",
+   "en": "Export everything as a table",
+   "files": [
+    "LedgerSheet.swift:54"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "전체|All",
    "ko": "전체",
    "en": "All",
@@ -39627,7 +39806,7 @@
    "en": "Settle up",
    "files": [
     "LedgerSheet.swift:47",
-    "LedgerSheet.swift:386"
+    "LedgerSheet.swift:394"
    ],
    "args": [],
    "targets": [
@@ -39655,7 +39834,7 @@
    "en": "Precise Location",
    "files": [
     "AppShellView.swift:1083",
-    "MapHomeView+Support2.swift:884"
+    "MapHomeView+Support2.swift:886"
    ],
    "args": [],
    "targets": [
@@ -39773,7 +39952,7 @@
    "ko": "종료",
    "en": "Stopped",
    "files": [
-    "MapHomeView+Support2.swift:911"
+    "MapHomeView+Support2.swift:913"
    ],
    "args": [],
    "targets": [
@@ -39811,7 +39990,8 @@
    "ko": "종류",
    "en": "Type",
    "files": [
-    "LedgerSheet.swift:236"
+    "LedgerExport.swift:9",
+    "LedgerSheet.swift:244"
    ],
    "args": [],
    "targets": [
@@ -40294,7 +40474,7 @@
    "ko": "지도 스타일 선택",
    "en": "Choose map style",
    "files": [
-    "MapHomeView+Menu.swift:1051"
+    "MapHomeView+Menu.swift:1059"
    ],
    "args": [],
    "targets": [
@@ -40306,7 +40486,7 @@
    "ko": "지도 스타일",
    "en": "Map style",
    "files": [
-    "MapHomeView+Menu.swift:1047"
+    "MapHomeView+Menu.swift:1055"
    ],
    "args": [],
    "targets": [
@@ -40381,7 +40561,7 @@
    "en": "Map attribution",
    "files": [
     "MapHomeSupportViews.swift:109",
-    "MapHomeView+Menu.swift:473"
+    "MapHomeView+Menu.swift:481"
    ],
    "args": [],
    "targets": [
@@ -40579,7 +40759,7 @@
    "ko": "지도에 메모 추가",
    "en": "Add map memo",
    "files": [
-    "MapHomeView+Support.swift:638"
+    "MapHomeView+Support.swift:640"
    ],
    "args": [],
    "targets": [
@@ -40627,7 +40807,7 @@
    "ko": "지도에서 선택한 위치",
    "en": "Long-pressed map location",
    "files": [
-    "MapHomeView+Menu.swift:123",
+    "MapHomeView+Menu.swift:125",
     "MapHomeView+Stickman.swift:133"
    ],
    "args": [],
@@ -40701,7 +40881,7 @@
    "ko": "지우기",
    "en": "Delete",
    "files": [
-    "LedgerSheet.swift:271"
+    "LedgerSheet.swift:279"
    ],
    "args": [],
    "targets": [
@@ -40723,12 +40903,25 @@
    ]
   },
   {
+   "key": "지출 합계|Total spent",
+   "ko": "지출 합계",
+   "en": "Total spent",
+   "files": [
+    "LedgerExport.swift:31"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "지출|Expense",
    "ko": "지출",
    "en": "Expense",
    "files": [
+    "LedgerExport.swift:24",
     "LedgerMemoChip.swift:37",
-    "LedgerSheet.swift:237"
+    "LedgerSheet.swift:245"
    ],
    "args": [],
    "targets": [
@@ -40740,6 +40933,7 @@
    "ko": "지출",
    "en": "Spending",
    "files": [
+    "LedgerExport.swift:83",
     "LedgerMemoPanel.swift:13"
    ],
    "args": [],
@@ -40752,7 +40946,9 @@
    "ko": "지출",
    "en": "Spent",
    "files": [
-    "LedgerSheet.swift:148"
+    "LedgerSheet.swift:156",
+    "MapHomeCardMetricOption.swift:41",
+    "MapHomeInteractionPolicy.swift:426"
    ],
    "args": [],
    "targets": [
@@ -40905,7 +41101,7 @@
    "ko": "직접 넣는 환율 (1단위 = 원)",
    "en": "Manual rate (1 unit = KRW)",
    "files": [
-    "LedgerSheet.swift:255"
+    "LedgerSheet.swift:263"
    ],
    "args": [],
    "targets": [
@@ -40931,7 +41127,7 @@
    "ko": "직접 입력",
    "en": "Enter manually",
    "files": [
-    "MapHomeView+Support.swift:661",
+    "MapHomeView+Support.swift:663",
     "TravelMapVideoSection.swift:38"
    ],
    "args": [],
@@ -40973,6 +41169,18 @@
    "args": [
     "result.skipped"
    ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "직접|Manual",
+   "ko": "직접",
+   "en": "Manual",
+   "files": [
+    "LedgerExport.swift:50"
+   ],
+   "args": [],
    "targets": [
     "TaptionPlan"
    ]
@@ -41056,7 +41264,7 @@
    "files": [
     "FirstRunGuideStage.swift:647",
     "FirstRunTutorialGuides.swift:694",
-    "MapHomeView+Stickman.swift:368"
+    "MapHomeView+Stickman.swift:370"
    ],
    "args": [],
    "targets": [
@@ -41148,7 +41356,7 @@
    "ko": "집이 등록돼 있지 않아요",
    "en": "No home place yet",
    "files": [
-    "MapHomeView+Support.swift:417"
+    "MapHomeView+Support.swift:419"
    ],
    "args": [],
    "targets": [
@@ -41620,7 +41828,7 @@
    "ko": "취미",
    "en": "Hobby",
    "files": [
-    "MapHomeInteractionPolicy.swift:420",
+    "MapHomeInteractionPolicy.swift:424",
     "MapHomeLocationPresentation.swift:291",
     "AppModel+WidgetLiveActivity.swift:104"
    ],
@@ -41637,7 +41845,7 @@
    "ko": "취미시간 카운터",
    "en": "Hobby time counter",
    "files": [
-    "MapHomeInteractionPolicy.swift:408"
+    "MapHomeInteractionPolicy.swift:411"
    ],
    "args": [],
    "targets": [
@@ -41793,7 +42001,7 @@
    "ko": "카드 결제 문자를 복사해 붙여 넣거나 영수증 사진을 고르면 채워 드려요. 단축어 「결제 문자 넣기」로 문자가 오면 바로 넣을 수도 있어요.",
    "en": "Paste a card payment text or pick a receipt photo to fill an entry. The Shortcuts action \"Add payment text\" can add texts as they arrive.",
    "files": [
-    "LedgerSheet.swift:107"
+    "LedgerSheet.swift:115"
    ],
    "args": [],
    "targets": [
@@ -41916,7 +42124,7 @@
    "ko": "캘린더 연결",
    "en": "Calendar",
    "files": [
-    "MapHomeView+Menu.swift:453"
+    "MapHomeView+Menu.swift:461"
    ],
    "args": [],
    "targets": [
@@ -42480,6 +42688,18 @@
    ]
   },
   {
+   "key": "통화|Currency",
+   "ko": "통화",
+   "en": "Currency",
+   "files": [
+    "LedgerExport.swift:11"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "통화|Phone call",
    "ko": "통화",
    "en": "Phone call",
@@ -42727,7 +42947,7 @@
    "ko": "표시",
    "en": "Display",
    "files": [
-    "MapHomeView+Menu.swift:1019"
+    "MapHomeView+Menu.swift:1027"
    ],
    "args": [],
    "targets": [
@@ -43063,6 +43283,30 @@
    ]
   },
   {
+   "key": "하루 지출 카운터|Daily spending counter",
+   "ko": "하루 지출 카운터",
+   "en": "Daily spending counter",
+   "files": [
+    "MapHomeInteractionPolicy.swift:413"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "하루 지출|Daily spending",
+   "ko": "하루 지출",
+   "en": "Daily spending",
+   "files": [
+    "LedgerMemoPanel.swift:176"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "하루 카드 시각|Day card time",
    "ko": "하루 카드 시각",
    "en": "Day card time",
@@ -43094,8 +43338,8 @@
    "en": "Day card",
    "files": [
     "MapHomeDailyCard.swift:354",
-    "MapHomeView+Menu.swift:471",
-    "MapHomeView+Support.swift:563"
+    "MapHomeView+Menu.swift:479",
+    "MapHomeView+Support.swift:565"
    ],
    "args": [],
    "targets": [
@@ -43217,7 +43461,7 @@
    "ko": "학습",
    "en": "Study",
    "files": [
-    "MapHomeInteractionPolicy.swift:419"
+    "MapHomeInteractionPolicy.swift:423"
    ],
    "args": [],
    "targets": [
@@ -43229,7 +43473,7 @@
    "ko": "학습시간 카운터",
    "en": "Study time counter",
    "files": [
-    "MapHomeInteractionPolicy.swift:407"
+    "MapHomeInteractionPolicy.swift:410"
    ],
    "args": [],
    "targets": [
@@ -43304,7 +43548,7 @@
    "ko": "한 번 누르면 날짜 줄을 펼칩니다",
    "en": "Tap to show the date strip",
    "files": [
-    "MapHomeView+Support2.swift:477"
+    "MapHomeView+Support2.swift:479"
    ],
    "args": [],
    "targets": [
@@ -43376,7 +43620,7 @@
    "ko": "함께 쓴 돈",
    "en": "Total spent",
    "files": [
-    "LedgerSheet.swift:383"
+    "LedgerSheet.swift:391"
    ],
    "args": [],
    "targets": [
@@ -43388,7 +43632,7 @@
    "ko": "함께한 사람 (쉼표로, 예: 민수, 지영)",
    "en": "People (comma separated)",
    "files": [
-    "LedgerSheet.swift:367"
+    "LedgerSheet.swift:375"
    ],
    "args": [],
    "targets": [
@@ -43520,7 +43764,7 @@
    "ko": "행동 분류 목록",
    "en": "Activity category list",
    "files": [
-    "MapHomeView+Menu.swift:672"
+    "MapHomeView+Menu.swift:680"
    ],
    "args": [],
    "targets": [
@@ -43532,7 +43776,7 @@
    "ko": "행동 분류",
    "en": "Activity categories",
    "files": [
-    "MapHomeView+Menu.swift:659"
+    "MapHomeView+Menu.swift:667"
    ],
    "args": [],
    "targets": [
@@ -43631,7 +43875,7 @@
    "files": [
     "AppShellView.swift:1072",
     "FirstRunTutorialGuides.swift:548",
-    "MapHomeView+Support2.swift:897"
+    "MapHomeView+Support2.swift:899"
    ],
    "args": [],
    "targets": [
@@ -43720,7 +43964,7 @@
    "ko": "현재 위치 기록 중",
    "en": "Recording current location",
    "files": [
-    "MapHomeView+Menu.swift:498"
+    "MapHomeView+Menu.swift:506"
    ],
    "args": [],
    "targets": [
@@ -43734,7 +43978,7 @@
    "files": [
     "MapHomePlaceBookTools.swift:605",
     "MapHomeTransitSheets.swift:399",
-    "MapHomeView+Menu2.swift:465"
+    "MapHomeView+Menu2.swift:467"
    ],
    "args": [],
    "targets": [
@@ -43747,7 +43991,7 @@
    "en": "Location",
    "files": [
     "FirstRunGuideStage.swift:646",
-    "MapHomeView+Support2.swift:391",
+    "MapHomeView+Support2.swift:394",
     "FirstRunTutorialGuides.swift:27"
    ],
    "args": [],
@@ -43772,8 +44016,8 @@
    "ko": "현재 위치로 설정",
    "en": "Set from current location",
    "files": [
-    "MapHomeView+Stickman.swift:342",
-    "MapHomeView+Stickman.swift:347"
+    "MapHomeView+Stickman.swift:344",
+    "MapHomeView+Stickman.swift:349"
    ],
    "args": [],
    "targets": [
@@ -43957,7 +44201,7 @@
    "ko": "화랑이 카운터 보이기·숨기기",
    "en": "Show or hide counters",
    "files": [
-    "MapHomeView+Stickman.swift:213"
+    "MapHomeView+Stickman.swift:215"
    ],
    "args": [],
    "targets": [
@@ -43994,7 +44238,7 @@
    "ko": "화면 녹화",
    "en": "Screen recording",
    "files": [
-    "MapHomeView+Support.swift:277"
+    "MapHomeView+Support.swift:279"
    ],
    "args": [],
    "targets": [
@@ -44020,7 +44264,7 @@
    "ko": "화면",
    "en": "View",
    "files": [
-    "MapHomeView+Menu.swift:437"
+    "MapHomeView+Menu.swift:445"
    ],
    "args": [],
    "targets": [
@@ -44032,7 +44276,7 @@
    "ko": "화면·연동 설정을 기본값으로 복원",
    "en": "Restore display and integration settings",
    "files": [
-    "MapHomeView+Menu2.swift:210"
+    "MapHomeView+Menu2.swift:212"
    ],
    "args": [],
    "targets": [
@@ -44196,7 +44440,7 @@
    "ko": "환율을 몰라요. 아래에 직접 넣어 주세요.",
    "en": "Rate unknown. Enter it below.",
    "files": [
-    "LedgerSheet.swift:253"
+    "LedgerSheet.swift:261"
    ],
    "args": [],
    "targets": [

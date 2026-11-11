@@ -240,6 +240,8 @@ final class MapHomeCounterBadgeThrottle {
         var english: Bool
         /// 멈춰 있을 때의 사이드바 핸들 분.
         var handleMinute: Int? = nil
+        /// 가계부가 바뀌면 지출 카운터를 다시 센다(SPD1111A01).
+        var ledgerRevision = 0
     }
 
     private var lastKey: Key?

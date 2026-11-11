@@ -22,8 +22,6 @@ struct MapHomeGrowthSeason: Codable, Equatable {
     var equippedRibbon: String?
     var landPlotPlacements: [MapHomeGrowthPlotPlacement]?
     var recentCompletionRewardedDays: [String]?
-    /// 그날을 닫았을 때의 레벨(GRW1105A01). 예전 저장본에는 없어 최초 1회 거꾸로 채운다.
-    var dayLevels: [String: Int]?
 }
 
 extension MapHomeGrowthSeason {
@@ -44,7 +42,6 @@ extension MapHomeGrowthSeason {
         equippedScarf = try c.decodeIfPresent(String.self, forKey: .equippedScarf)
         equippedRibbon = try c.decodeIfPresent(String.self, forKey: .equippedRibbon)
         landPlotPlacements = try c.decodeIfPresent([MapHomeGrowthPlotPlacement].self, forKey: .landPlotPlacements)
-        dayLevels = try c.decodeIfPresent([String: Int].self, forKey: .dayLevels)
         recentCompletionRewardedDays = try c.decodeIfPresent([String].self, forKey: .recentCompletionRewardedDays)
         // 착용 칸이 하나이던 때의 값을 그 장식의 종류 칸으로 옮긴다. 새 칸이 있으면 옛 값은 보지 않는다.
         if equippedHat == nil, equippedScarf == nil, equippedRibbon == nil,
@@ -353,6 +350,14 @@ enum MapHomeGrowthPolicy {
     /// (HOM1111A01, 대표 결정 2026-11-11). 기록을 채운 날은 연속 달성·주간 보상에만 쓴다.
     static func dailyLevel(for date: Date, calendar: Calendar = localCalendar) -> Int {
         min(max(calendar.ordinality(of: .day, in: .year, for: date) ?? 1, 1), 366)
+    }
+
+    /// 오늘 날짜로 올해 시즌 레벨을 맞춘다. 해가 바뀌었으면 지난 시즌을 넣어 두고 1부터 시작한다.
+    static func refreshDailyLevel(in history: inout MapHomeGrowthHistory, now: Date, calendar: Calendar) {
+        advanceSeason(in: &history, to: calendar.component(.year, from: now))
+        if history.season.year == calendar.component(.year, from: now) {
+            history.season.level = dailyLevel(for: now, calendar: calendar)
+        }
     }
 
     static func maximumLevel(year: Int, timeZone: TimeZone = .autoupdatingCurrent) -> Int {

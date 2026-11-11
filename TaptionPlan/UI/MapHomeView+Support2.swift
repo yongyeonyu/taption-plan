@@ -342,7 +342,10 @@ extension MapHomeView {
         let start = calendar.startOfDay(for: day)
         let span = TimeSpan(start: start, end: calendar.date(byAdding: .day, value: 1, to: start) ?? start.addingTimeInterval(24 * 60 * 60))
         let photoCount = await photoLibrary.momentCount(in: span)
-        return content.addingCounts(day: day, memos: model.snapshot.memos, photoCount: photoCount)
+        var filled = content.addingCounts(day: day, memos: model.snapshot.memos, photoCount: photoCount)
+        await LedgerBook.shared.load()
+        filled.values[MapHomeCardMetricOption.spendingID] = LedgerDaySpending.total(day: day, cutoff: .distantFuture)
+        return filled
     }
 
     private func dailyCardBaseContent(for day: Date) async -> MapHomeDailyCardContent {
@@ -428,7 +431,6 @@ extension MapHomeView {
             }
         }
         .padding(.horizontal, 8)
-        .background { ledgerSheetHost }
         .mapHomeBottomBarPill(showsTab: showsPhotoRingTab)
         // 반달 단추는 알약 위 같은 레이아웃 안에 둬야 눌린다(겹침으로 밖에 두면 지도가 터치를 가져간다).
         .safeAreaInset(edge: .top, spacing: 0) {

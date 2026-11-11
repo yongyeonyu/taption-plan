@@ -198,6 +198,9 @@ final class LedgerTests: XCTestCase {
         XCTAssertEqual(LedgerMemoAmount.find("4500 latte")?.amount, 4_500)
         XCTAssertEqual(LedgerMemoAmount.find("4500 시원한 커피")?.amount, 4_500)
         XCTAssertEqual(LedgerMemoAmount.find("점심 12500")?.amount, 12_500)
+        XCTAssertEqual(LedgerMemoAmount.find("커피 주문 4500")?.amount, 4_500, "주문 뒤 둥근 값은 금액")
+        XCTAssertEqual(LedgerMemoAmount.find("버스비 1500")?.amount, 1_500)
+        XCTAssertEqual(LedgerMemoAmount.find("편의점 4950")?.amount, 4_950, "10원 단위 값도 금액")
         for text in ["14:30 회의", "11/12 병원", "2026 목표", "3층 1203호", "민수 010-1234-5678", "5000보 걷기", "만원 정도", "커피", "4500",
                      "현관 비번 482915", "버스 7016 타기", "주문번호 3000", "회의실 1205"] {
             XCTAssertNil(LedgerMemoAmount.find(text), text)
@@ -226,6 +229,60 @@ final class LedgerTests: XCTestCase {
         await book.syncMemo(id: memo, text: "점심 9000", occurredAt: at(12))
         await book.removeMemo(memo)
         XCTAssertTrue(book.entries.isEmpty, "deleting the memo deletes the entry")
+    }
+
+    /// 리뷰: 메모를 고치고 지우는 모델의 길이 가계부를 따라오게 하는지, 빨리 두 번 고쳐도 기록이 하나인지.
+    func testModelMemoEditsKeepTheLedgerInStep() async throws {
+        let book = LedgerBook(store: { nil })
+        AppModel.memoLedgerBookForTests = book
+        defer { AppModel.memoLedgerBookForTests = nil }
+        let model = AppModel(repository: InMemoryPlanRepository(snapshot: .empty), cloudSyncService: nil)
+        await model.bootstrap()
+        let id = try XCTUnwrap(model.addMemo(text: "메모", kind: .idea, categoryID: MemoTimelineEngine.categoryID, on: at(9)))
+        model.updateMemo(id, text: "커피 4500", kind: .idea)
+        model.updateMemo(id, text: "커피 5000", kind: .idea)
+        try await waitUntil { book.entry(forMemo: id)?.amount == 5_000 }
+        XCTAssertEqual(book.entries.count, 1, "two quick edits keep one linked entry")
+        model.deleteMemo(id)
+        try await waitUntil { book.entries.isEmpty }
+    }
+
+    private func waitUntil(_ condition: @MainActor () -> Bool) async throws {
+        for _ in 0..<100 where !condition() { try await Task.sleep(for: .milliseconds(30)) }
+        XCTAssertTrue(condition())
+    }
+
+    /// SPD1111A01: 하루 지출 카운터는 그날 지출만, 재생·핸들 시각까지 더한다. 수입은 빼고 다른 날도 뺀다.
+    func testDailySpendingCounter() async {
+        let book = LedgerBook(store: { nil })
+        await book.save(LedgerEntry(occurredAt: at(9), amount: 4_500, title: "커피"))
+        await book.save(LedgerEntry(occurredAt: at(13), amount: 9_000, title: "점심"))
+        await book.save(LedgerEntry(occurredAt: at(14), amount: 3_000, kind: .income, title: "환불"))
+        await book.save(LedgerEntry(occurredAt: at(10, day: 9), amount: 7_000, title: "어제"))
+        XCTAssertEqual(LedgerDaySpending.total(day: at(0), cutoff: at(23), calendar: calendar, book: book), 13_500)
+        XCTAssertEqual(LedgerDaySpending.total(day: at(0), cutoff: at(12), calendar: calendar, book: book), 4_500, "playback cutoff")
+        XCTAssertEqual(MapHomeCounterKind.spending.badgeTitle(.korean), "지출")
+        XCTAssertNil(MapHomeCounterKind.spending.categoryID)
+    }
+
+    /// LED1111A04: 표 내보내기는 시각순·합계 줄·쉼표와 따옴표 감싸기·계산식 막기, 엑셀용 BOM.
+    func testLedgerTableCSV() {
+        let entries = [
+            LedgerEntry(occurredAt: at(13), amount: 9_000, amountKRW: 9_000, title: "점심, 김밥", payer: "민수"),
+            LedgerEntry(occurredAt: at(9), amount: 12.5, currency: "USD", amountKRW: 17_000, title: "=SUM(A1)"),
+            LedgerEntry(occurredAt: at(18), amount: 3_000, amountKRW: 3_000, kind: .income, title: "환불 \"부분\""),
+        ]
+        let csv = LedgerTable.csv(entries, language: .korean, calendar: calendar)
+        XCTAssertTrue(csv.hasPrefix("\u{FEFF}날짜,시각,종류,분류,내용,금액,통화,원화,낸 사람"))
+        let lines = csv.dropFirst().components(separatedBy: "\r\n")
+        XCTAssertTrue(lines[1].hasPrefix("2026-11-10,09:00,지출"), "sorted by time")
+        XCTAssertTrue(lines[1].contains("'=SUM(A1),12.50,USD,17000"), "formula text is neutralized")
+        XCTAssertTrue(lines[2].contains("\"점심, 김밥\",9000,KRW,9000,민수"))
+        XCTAssertTrue(lines[3].contains("\"환불 \"\"부분\"\"\""))
+        XCTAssertTrue(csv.contains("지출 합계,,,,,,KRW,26000"))
+        XCTAssertTrue(csv.contains("수입 합계,,,,,,KRW,3000"))
+        XCTAssertEqual(MapHomeCardMetricOption(id: MapHomeCardMetricOption.spendingID)?.title(.korean), "지출")
+        XCTAssertTrue(MapHomeCardMetricOption.all.contains { $0.id == "spending" })
     }
 
     func testReceiptTotalLine() {

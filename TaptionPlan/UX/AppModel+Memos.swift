@@ -151,8 +151,7 @@ extension AppModel {
             text: cleanText
         )
         snapshot.memos.append(memo)
-        syncMemoLedger(memo.id)
-        Task { await persist() }
+        persistThenSyncMemoLedger(memo.id)
     }
 
     @discardableResult
@@ -311,8 +310,7 @@ extension AppModel {
         )
         snapshot.memos.removeAll { $0.id == memoID }
         memoEntry?.memoIDs.removeAll { $0 == memoID }
-        syncMemoLedger(memoID)
-        Task { await persist() }
+        persistThenSyncMemoLedger(memoID)
     }
 
     func updateMemo(
@@ -331,8 +329,7 @@ extension AppModel {
             return
         }
         snapshot.memos[index] = updated
-        syncMemoLedger(memoID)
-        Task { await persist() }
+        persistThenSyncMemoLedger(memoID)
     }
 
     @discardableResult
@@ -382,8 +379,7 @@ extension AppModel {
         snapshot.memos[index] = value
         pendingMapMemoIDs.remove(memoID)
         invalidateReviewArchives(dates: [previousDate, occurredAt])
-        syncMemoLedger(memoID)
-        Task { await persist() }
+        persistThenSyncMemoLedger(memoID)
         return true
     }
 

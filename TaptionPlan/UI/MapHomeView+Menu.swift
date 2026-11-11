@@ -89,6 +89,8 @@ extension MapHomeView {
                         displayDayDataSnapshot?.travel ?? [], cutoff: counterCutoffDate, day: selectedDaySpan
                     ), total: total, language: language
                 )
+            case .spending:
+                return LedgerDaySpending.detail(day: dayStart, cutoff: counterCutoffDate ?? now, total: total, language: language)
             case .work, .study, .hobby, .exercise:
                 let seconds = kind.categoryID.flatMap { daySummaryCategorySeconds(asOf: counterCutoffDate, now: now)[$0] } ?? 0
                 return MapHomeCounterDetailBuilder.time(
@@ -305,7 +307,8 @@ extension MapHomeView {
             day: model.selectedDate,
             kinds: enabledCounterKinds,
             english: language == .english,
-            handleMinute: isDayPlaybackRunning ? nil : selectedTimelineMinute
+            handleMinute: isDayPlaybackRunning ? nil : selectedTimelineMinute,
+            ledgerRevision: enabledCounterKinds.contains(.spending) ? LedgerBook.shared.revision : 0
         )
         return counterBadgeThrottle.badges(
             key: key,
@@ -324,8 +327,9 @@ extension MapHomeView {
         let steps = MapHomeCounterTimelinePolicy.stepCount(readings: currentDayReadings, cutoff: cutoff)
         let meters = MapHomeCounterTimelinePolicy.travelMeters(
             segments: displayDayDataSnapshot?.travel ?? [], cutoff: cutoff, day: selectedDaySpan)
+        let spent = LedgerDaySpending.total(day: model.selectedDate, cutoff: cutoff ?? now)
         return enabledCounterKinds.compactMap { kind in
-            counterText(kind, seconds: seconds, steps: steps, meters: meters, showsZero: cutoff != nil)
+            counterText(kind, seconds: seconds, steps: steps, meters: meters, spent: spent, showsZero: cutoff != nil)
                 .map { MapHomeCounterBadge(kind: kind, text: $0) }
         }
     }
@@ -347,6 +351,7 @@ extension MapHomeView {
         seconds categorySeconds: [String: TimeInterval],
         steps: Int?,
         meters: Double,
+        spent: Double = 0,
         showsZero: Bool
     ) -> String? {
         // 핸들·재생 시각을 움직이는 동안 0이라고 줄을 없애면 창이 들썩인다.
@@ -361,6 +366,9 @@ extension MapHomeView {
             // 켜 둔 시간 카운터는 위치와 상관없이 늘 보인다. 값이 없으면 0으로 보이고, 사라졌다 나타나지 않는다(대표 지시, ARC1030A07).
             guard let categoryID = kind.categoryID else { return nil }
             return DurationText.localized(max(0, categorySeconds[categoryID] ?? 0), english: language == .english)
+        case .spending:
+            guard showsZero || spent > 0 else { return nil }
+            return LedgerMoney.text(spent, language: language)
         }
     }
 

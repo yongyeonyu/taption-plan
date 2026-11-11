@@ -180,8 +180,12 @@ final class LedgerBook {
     private(set) var budgets: [LedgerBudget] = []
     private(set) var fx: LedgerFX.Table?
     private(set) var isLoaded = false
+    /// 기록이 바뀔 때마다 1씩 는다. 카운터가 다시 셀지 정한다.
+    private(set) var revision = 0
     @ObservationIgnored private let storeFactory: () -> TaptionStoreV2?
     @ObservationIgnored private var loading: Task<Void, Never>?
+    /// 메모마다 이어진 기록 맞추기를 차례로 한다(리뷰: 빨리 두 번 고치면 기록이 둘 생기던 것).
+    @ObservationIgnored var memoQueues: [UUID: Task<Void, Never>] = [:]
     /// `reset()`마다 늘린다. 그 전에 시작한 읽기는 결과를 버린다.
     @ObservationIgnored private var generation = 0
     /// 환율을 마지막으로 받으려 한 때. 실패해도 10분 안에는 다시 기다리지 않는다.
@@ -217,6 +221,7 @@ final class LedgerBook {
         for entry in saved where !entries.contains(where: { $0.id == entry.id }) { entries.append(entry) }
         entries.sort { $0.occurredAt > $1.occurredAt }
         isLoaded = true
+        revision += 1
     }
 
     /// 복원·전체 삭제 뒤 저장소에서 다시 읽게 한다.
@@ -226,6 +231,7 @@ final class LedgerBook {
         entries = []
         budgets = []
         isLoaded = false
+        revision += 1
     }
 
     func refreshRates(now: Date = .now) async {
@@ -253,6 +259,7 @@ final class LedgerBook {
         if value.amountKRW == nil { value.amountKRW = krw(value.amount, currency: value.currency) }
         if let index = entries.firstIndex(where: { $0.id == value.id }) { entries[index] = value } else { entries.append(value) }
         entries.sort { $0.occurredAt > $1.occurredAt }
+        revision += 1
         await write(value, deleted: false)
         return value
     }
@@ -261,6 +268,7 @@ final class LedgerBook {
         await load()
         let entry = entries.first { $0.id == id } ?? LedgerEntry(id: id, occurredAt: .now, amount: 0, title: "")
         entries.removeAll { $0.id == id }
+        revision += 1
         // 메모리에 없어도 지움 표시를 남긴다(되돌리기가 저장소 행을 놓치지 않게).
         await write(entry, deleted: true)
     }

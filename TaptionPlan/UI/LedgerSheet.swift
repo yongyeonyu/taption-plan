@@ -45,6 +45,14 @@ struct LedgerSheet: View {
                     Menu {
                         Button(language.text("이 달 예산", "Monthly budget")) { isEditingBudget = true }
                         Button(language.text("정산하기", "Settle up")) { isSettling = true }
+                        ShareLink(item: LedgerTableFile(name: "BOKKI-\(month).csv", text: LedgerTable.csv(monthEntries, language: language)),
+                                  preview: SharePreview(language.text("가계부 \(monthTitle) 표", "Ledger \(monthTitle) table"))) {
+                            Label(language.text("이 달 표로 내보내기", "Export this month as a table"), systemImage: "tablecells")
+                        }
+                        ShareLink(item: LedgerTableFile(name: "BOKKI-ledger.csv", text: LedgerTable.csv(book.entries, language: language)),
+                                  preview: SharePreview(language.text("가계부 전체 표", "Whole ledger table"))) {
+                            Label(language.text("전체 표로 내보내기", "Export everything as a table"), systemImage: "square.and.arrow.up")
+                        }
                     } label: { Image(systemName: "ellipsis.circle") }
                     Button { isAdding = true } label: { Image(systemName: "plus") }
                         .accessibilityLabel(language.text("기록 더하기", "Add entry"))

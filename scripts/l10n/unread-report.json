@@ -1,7 +1,19 @@
 {
- "ui": 3562,
+ "ui": 3581,
  "catalog": 461,
  "unread": [
+  {
+   "file": "TaptionPlan/UI/LedgerExport.swift",
+   "line": 87,
+   "ko": "LedgerBook.total(entries, .expense)",
+   "en": "language"
+  },
+  {
+   "file": "TaptionPlan/UI/LedgerExport.swift",
+   "line": 99,
+   "ko": "entry.amount",
+   "en": "entry.currency"
+  },
   {
    "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
    "line": 41,
@@ -76,7 +88,7 @@
   },
   {
    "file": "TaptionPlan/Core/LedgerCore.swift",
-   "line": 339,
+   "line": 347,
    "ko": "_ amount: Double",
    "en": "String = \"KRW\""
   },
@@ -160,6 +172,18 @@
   },
   {
    "file": "TaptionPlan/UI/LedgerMemoPanel.swift",
+   "line": 162,
+   "ko": "entry.amount",
+   "en": "entry.currency"
+  },
+  {
+   "file": "TaptionPlan/UI/LedgerMemoPanel.swift",
+   "line": 169,
+   "ko": "item.1",
+   "en": "language"
+  },
+  {
+   "file": "TaptionPlan/UI/LedgerMemoPanel.swift",
    "line": 87,
    "ko": "month",
    "en": "language"
@@ -184,61 +208,61 @@
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 82,
+   "line": 90,
    "ko": "byCurrency[code] ?? 0",
    "en": "code"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 84,
+   "line": 92,
    "ko": "LedgerBook.total(trip, .expense)",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 148,
+   "line": 156,
    "ko": "spent",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 149,
+   "line": 157,
    "ko": "earned",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 152,
+   "line": 160,
    "ko": "left",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 158,
+   "line": 166,
    "ko": "net",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 193,
+   "line": 201,
    "ko": "entry.amount",
    "en": "entry.currency"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 196,
+   "line": 204,
    "ko": "krw",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 379,
+   "line": 387,
    "ko": "transfer.amountKRW",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 383,
+   "line": 391,
    "ko": "LedgerBook.total(entries, .expense)",
    "en": "language"
   },
@@ -261,6 +285,12 @@
    "en": "selected.formatted(Date.FormatStyle().month(.abbreviated).day().locale(language.locale))"
   },
   {
+   "file": "TaptionPlan/UI/MapHomeCardMetricOption.swift",
+   "line": 47,
+   "ko": "number",
+   "en": ".current"
+  },
+  {
    "file": "TaptionPlan/UI/MapHomeCounterDetailSheet.swift",
    "line": 123,
    "ko": "entry.mode.summaryKoreanTitle",
@@ -280,7 +310,7 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeGrowthPolicy.swift",
-   "line": 382,
+   "line": 387,
    "ko": "name.korean",
    "en": "name.english"
   },
@@ -304,7 +334,7 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeInfoSheets.swift",
-   "line": 522,
+   "line": 524,
    "ko": "entry.mode.summaryKoreanTitle",
    "en": "entry.mode.summaryEnglishTitle"
   },
@@ -502,37 +532,43 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeView+Menu.swift",
-   "line": 1056,
+   "line": 371,
+   "ko": "spent",
+   "en": "language"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeView+Menu.swift",
+   "line": 1064,
    "ko": "strength.koreanLabel",
    "en": "strength.englishLabel"
   },
   {
    "file": "TaptionPlan/UI/MapHomeView+Menu.swift",
-   "line": 1064,
+   "line": 1072,
    "ko": "fogStrength.koreanLabel",
    "en": "fogStrength.englishLabel"
   },
   {
    "file": "TaptionPlan/UI/MapHomeView+Stickman.swift",
-   "line": 242,
+   "line": 244,
    "ko": "location.kind.title",
    "en": "location.kind.englishTitle"
   },
   {
    "file": "TaptionPlan/UI/MapHomeView+Stickman.swift",
-   "line": 268,
+   "line": 270,
    "ko": "destination.koreanName",
    "en": "destination.englishName"
   },
   {
    "file": "TaptionPlan/UI/MapHomeView+Stickman.swift",
-   "line": 345,
+   "line": 347,
    "ko": "FloorLabel.korean(place.floor ?? 1)",
    "en": "FloorLabel.english(place.floor ?? 1)"
   },
   {
    "file": "TaptionPlan/UI/MapHomeView+Stickman.swift",
-   "line": 353,
+   "line": 355,
    "ko": "destination.koreanName",
    "en": "destination.englishName"
   },

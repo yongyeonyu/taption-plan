@@ -138,3 +138,50 @@ struct LedgerMemoBadge: View {
         }
     }
 }
+
+/// 하루 지출 카운터(SPD1111A01, 대표 지시 2026-11-11). 그날 가계부 지출을 재생·핸들 시각까지 더한다.
+@MainActor
+enum LedgerDaySpending {
+    static func entries(day: Date, cutoff: Date, calendar: Calendar = MapHomeGrowthPolicy.localCalendar, book: LedgerBook = .shared) -> [LedgerEntry] {
+        if !book.isLoaded { Task { await book.load() } }
+        return book.entries(on: day, calendar: calendar).filter { $0.kind == .expense && $0.occurredAt <= cutoff }
+    }
+
+    static func total(day: Date, cutoff: Date, calendar: Calendar = MapHomeGrowthPolicy.localCalendar, book: LedgerBook = .shared) -> Double {
+        LedgerBook.total(entries(day: day, cutoff: cutoff, calendar: calendar, book: book), .expense)
+    }
+
+    /// 카운터를 누르면 뜨는 상세: 그날 지출을 시각순으로, 분류별 합계와 함께.
+    static func detail(day: Date, cutoff: Date, total: String, language: MapHomeLanguage) -> MapHomeCounterDetailContent {
+        let list = entries(day: day, cutoff: cutoff).sorted { $0.occurredAt < $1.occurredAt }
+        let sum = max(1, LedgerBook.total(list, .expense))
+        let rows = list.enumerated().map { index, entry in
+            MapHomeCounterDetailContent.Row(
+                id: index, title: entry.title,
+                subtitle: "\(MapHomeCounterDetailBuilder.timeText(entry.occurredAt)) · \(entry.category.title(language))",
+                value: LedgerMoney.text(entry.amount, currency: entry.currency, language: language)
+            )
+        }
+        let byCategory = Dictionary(grouping: list, by: \.category).map { ($0.key, LedgerBook.total($0.value, .expense)) }.sorted { $0.1 > $1.1 }
+        let categoryRows = byCategory.enumerated().map { index, item in
+            MapHomeCounterDetailContent.Row(
+                id: index, title: item.0.title(language), subtitle: nil,
+                value: LedgerMoney.text(item.1, language: language), share: item.1 / sum
+            )
+        }
+        var hourly = Array(repeating: 0.0, count: 24)
+        for entry in list { hourly[min(23, max(0, MapHomeGrowthPolicy.localCalendar.component(.hour, from: entry.occurredAt)))] += entry.amountKRW ?? 0 }
+        return MapHomeCounterDetailContent(
+            systemImage: MapHomeCounterKind.spending.systemImage,
+            title: language.text("하루 지출", "Daily spending"),
+            value: total,
+            sections: list.isEmpty ? [] : [
+                .init(id: 0, title: language.text("분류별", "By category"), rows: categoryRows),
+                .init(id: 1, title: language.text("시간순", "By time"), rows: rows),
+            ],
+            note: list.isEmpty ? language.text("그날 지출이 없어요. 메모에 「커피 4500」처럼 쓰면 들어가요.", "No spending that day. Write a memo like \"Coffee 4500\" to add one.") : nil,
+            caption: language.text("\(list.count)건", "\(list.count) entries"),
+            hourly: list.isEmpty ? [] : hourly
+        )
+    }
+}

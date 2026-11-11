@@ -171,6 +171,8 @@ extension MapHomeView {
                     .zIndex(MapHomeLayerPriority.header)
             }
 
+            // 가계부 창 호스트: 하단 막대·왼쪽 위 단추가 숨는 화면(녹화·메뉴·다른 배치)에서도 열리게 늘 있는 층에 둔다(리뷰).
+            ledgerSheetHost.frame(width: 0, height: 0)
             // 사진 반달은 하단 메뉴 아래에 깔린다. 메뉴를 가리면 안 된다(대표 지시).
             photoArcLayer
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
@@ -755,7 +757,7 @@ extension MapHomeView {
         .animation(.easeInOut(duration: 0.22), value: isMenuOpen)
         .mapHomeWidePanelsExclusive(viewportWidth: mapViewportSize.width, [$isMenuOpen, $isCalendarPresented, $isDaySummaryPresented, $isDailyCardPresented, $isSearchExpanded, $todayCalendarExpanded])
         .onChange(of: isMenuOpen) { _, isOpen in
-            guard isOpen else { return }
+            guard isOpen else { return TaptionFont.applyPending() }
             Task { @MainActor in await model.refreshPermissions() }
         }
     }

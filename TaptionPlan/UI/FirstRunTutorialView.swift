@@ -705,6 +705,7 @@ private struct FirstRunCountersPage: View {
     @AppStorage(MapHomeCounterKind.study.storageKey) private var showsStudy = true
     @AppStorage(MapHomeCounterKind.hobby.storageKey) private var showsHobby = true
     @AppStorage(MapHomeCounterKind.exercise.storageKey) private var showsExercise = true
+    @AppStorage(MapHomeCounterKind.spending.storageKey) private var showsSpending = true
     @AppStorage("mapHomeCounter.salary") private var showsSalary = true
     @AppStorage(MapHomeSalaryPolicy.annualKey) private var annualPay = 0.0
     @AppStorage(MapHomeSalaryPolicy.monthlyPayKey) private var monthlyPay = 0.0
@@ -779,6 +780,7 @@ private struct FirstRunCountersPage: View {
         case .study: $showsStudy
         case .hobby: $showsHobby
         case .exercise: $showsExercise
+        case .spending: $showsSpending
         }
     }
 
@@ -790,6 +792,7 @@ private struct FirstRunCountersPage: View {
         case .study: language.text("42분", "42m")
         case .hobby: language.text("1시간 5분", "1h 5m")
         case .exercise: language.text("25분", "25m")
+        case .spending: language.text("12,300원", "₩12,300")
         }
     }
 }

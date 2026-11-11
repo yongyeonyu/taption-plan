@@ -196,6 +196,7 @@ struct MapHomeView: View {
     @AppStorage(MapHomeCounterKind.hobby.storageKey) var showsHobbyCounter = true
 
     @AppStorage(MapHomeCounterKind.exercise.storageKey) var showsExerciseCounter = true
+    @AppStorage(MapHomeCounterKind.spending.storageKey) var showsSpendingCounter = true
 
     @AppStorage("mapHomeCounter.salary") var showsSalaryCounter = true
 
