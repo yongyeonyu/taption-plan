@@ -186,7 +186,9 @@ extension MapHomeView {
                 let pillGap = statusColumn > 0 ? max(0, MapHomeOverlayLayoutMath.sideStatusPillBottom - timeSidebarFrame.minY) : 0
                 currentTimeRail
                     .frame(width: timeSidebarWidth, height: timeSidebarFrame.height - pillGap)
-                    .offset(x: statusColumn, y: timeSidebarFrame.minY - frame.minY + pillGap)
+                    // 듀오 바깥 화면은 막대 가운데를 상태 줄(알약) 가운데에 맞춘다(DUO1111A02).
+                    .offset(x: statusColumn > 0 ? statusColumn / 2 + Layout.horizontalInset + timeRailWidth / 2 : 0,
+                            y: timeSidebarFrame.minY - frame.minY + pillGap)
                     .transition(.sidebarDrop)
             }
         }
