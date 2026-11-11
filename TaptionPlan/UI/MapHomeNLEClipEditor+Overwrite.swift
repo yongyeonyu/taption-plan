@@ -75,9 +75,17 @@ extension MapHomeNLEClipEditor {
         pickedClipIDs = Set([selectedClipID].compactMap { $0 })
         if pickedClipIDs.isEmpty, let clip = track.clip(atMinute: playheadMinute) { pickedClipIDs = [clip.id] }
         showEditorNotice(language.text(
-            "덮을 클립을 누르세요. 다 고르면 「분류」에서 고르면 한 번에 바뀝니다.",
-            "Tap the clips to overwrite, then choose a category to change them all."
+            "덮을 클립을 누르거나 위아래로 끌어 한 번에 고르세요. 「분류」에서 고르면 모두 바뀌고 한 덩어리로 합쳐집니다.",
+            "Tap clips or drag up and down to pick many at once. Choose a category to change and merge them."
         ))
+    }
+
+    /// 고르는 중에 대분류 줄을 끌면 손가락이 지나간 클립을 모두 고른다(RNG1111A01).
+    func pickRange(from anchor: Int, to minute: Int, adding base: Set<String>) {
+        let next = base.union(track.clipIDs(from: anchor, to: minute))
+        guard next != pickedClipIDs else { return }
+        UISelectionFeedbackGenerator().selectionChanged()
+        pickedClipIDs = next
     }
 
     func togglePicked(_ id: String) {

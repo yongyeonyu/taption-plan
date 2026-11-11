@@ -3493,7 +3493,7 @@
 "덮을 분류|Category": "要覆盖的分类",
 "덮을 분류를 고르세요|Pick a category to overwrite": "选择要覆盖的分类",
 "덮을 클립 중 {0}개는 직접 입력한 기록입니다. 건너뛰면 그대로 남습니다.|{0} of the clips hold records you entered. Skipped clips stay as they are.": "要覆盖的片段中有{0}个是手动输入的记录。跳过则保持不变。",
-"덮을 클립을 누르세요. 다 고르면 「분류」에서 고르면 한 번에 바뀝니다.|Tap the clips to overwrite, then choose a category to change them all.": "点按要覆盖的片段。选好后在“分类”中选择即可一次更改。",
+"덮을 클립을 누르거나 위아래로 끌어 한 번에 고르세요. 「분류」에서 고르면 모두 바뀌고 한 덩어리로 합쳐집니다.|Tap clips or drag up and down to pick many at once. Choose a category to change and merge them.": "点按片段或上下拖动可一次选择多个。在「分类」中选择后会全部更改并合并为一段。",
 "데이터 보호 열기|Open data protection": "打开数据保护",
 "데이터 보호|Data Protection": "数据保护",
 "데이터 불러오는 중…|Loading data…": "正在载入数据…",

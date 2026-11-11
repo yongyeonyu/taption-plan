@@ -169,8 +169,13 @@ enum NLEOverwritePolicy {
                 result.subTrack = detail
             }
         }
+        // 고른 클립은 원본 구간이 달라도 맞닿은 같은 분류끼리 한 덩어리로 합친다(RNG1111A01).
+        if scope == .picked, mergesAfter, option != nil {
+            let mergeable = Set(next.clips.filter { pickedClipIDs.contains($0.id) && !skippedParents.contains($0.parent) }.map(\.id))
+            result.merged += next.mergeRuns(of: mergeable)
+        }
         // 분류를 고르지 않았으면 합치기만 하는 요청이다. 건너뛴 직접 입력 구간은 합치지도 않는다.
-        result.merged = mergesAfter || option == nil ? next.mergeAdjacent(skippingParents: skippedParents) : 0
+        result.merged += mergesAfter || option == nil ? next.mergeAdjacent(skippingParents: skippedParents) : 0
         result.track = next
         return result
     }

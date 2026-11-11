@@ -626,6 +626,8 @@ struct MapHomeNLEClipEditor: View {
                     if touchLeftTapSlop { applyTrim(lane: lane, id: id, edge: .start, minute: minute) }
                 case let .trimEnd(lane, id):
                     if touchLeftTapSlop { applyTrim(lane: lane, id: id, edge: .end, minute: minute) }
+                case let .pickRange(anchor, base):
+                    if touchLeftTapSlop { pickRange(from: anchor, to: minute, adding: base) }
                 }
                 // 위·아래 끝까지 끌면 화면이 따라 흐른다.
                 updateAutoScroll(atY: value.location.y, height: height)
@@ -640,6 +642,7 @@ struct MapHomeNLEClipEditor: View {
                     switch dragMode {
                     case let .trimStart(lane, id): applyTrim(lane: lane, id: id, edge: .start, minute: minute)
                     case let .trimEnd(lane, id): applyTrim(lane: lane, id: id, edge: .end, minute: minute)
+                    case let .pickRange(anchor, base): pickRange(from: anchor, to: minute, adding: base)
                     case .scrub: applyScrub(rawMinute: geometry.minute(forY: value.location.y) + dragScrollShift)
                     default: break
                     }
@@ -792,10 +795,11 @@ struct MapHomeNLEClipEditor: View {
         case move(lane: NLEEditorLane, id: String, originMinute: Int, grabMinute: Int)
         case trimStart(lane: NLEEditorLane, id: String)
         case trimEnd(lane: NLEEditorLane, id: String)
+        case pickRange(anchorMinute: Int, base: Set<String>)
 
         var touchesMainLane: Bool {
             switch self {
-            case .move(.main, _, _, _), .trimStart(.main, _), .trimEnd(.main, _): true
+            case .move(.main, _, _, _), .trimStart(.main, _), .trimEnd(.main, _), .pickRange: true
             default: false
             }
         }
@@ -910,7 +914,7 @@ struct MapHomeNLEClipEditor: View {
         switch dragMode {
         case .none, .pan: false
         case .scrub: true
-        case .trimStart, .trimEnd: touchLeftTapSlop
+        case .trimStart, .trimEnd, .pickRange: touchLeftTapSlop
         case .move: isLifted
         }
     }
@@ -958,7 +962,10 @@ struct MapHomeNLEClipEditor: View {
         case .right:
             return subDragMode(at: point, geometry: geometry)
         case .main:
-            break
+            // 고르는 중에는 끌면 지나간 클립을 모두 고른다(RNG1111A01).
+            if !pickedClipIDs.isEmpty {
+                return .pickRange(anchorMinute: Int(geometry.minute(forY: point.y).rounded(.down)), base: pickedClipIDs)
+            }
         }
         if let selectedClip, let trim = trimMode(at: point, clip: selectedClip, geometry: geometry) {
             return trim

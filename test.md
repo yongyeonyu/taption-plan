@@ -4,6 +4,7 @@
 
 ## TFB1111A04 · TestFlight 308 (2026-11-11)
 
+- RNG1111A01 (2026-11-11): 하루 편집 범위 고르기·고른 클립 구간 넘어 합치기. 아이폰 11 단위 시험 NLEOverwriteBatchTests·NLETrackTests·NLEMultiDayTests·NLESubActivityTests 93건 실패 0(`build/validation/RNG1111A01/iphone11-3.log`, 앞선 두 번은 switch 누락 컴파일 오류·시험의 없는 분류 id로 실패 후 고침). 새 시험: 업무 732~996·미확인·집안일·휴식·집안일 조각을 끌어 고르고 업무로 덮으면 732~1197 한 클립, 이어진 다른 분류는 그대로, 각 원본 기록에 업무 조각 저장. l10n check 실패 0, 구조 지표 위반 없음. 기기 화면에서 끌어 고르기는 직접 보지 않음(대표 확인 몫).
 - 내용: LED1111A09·PBH1111A01·CUE1111A01·SYN1111A01~A04·PBD1111A01(장소도감 설명 합침)까지. 처음 시작한 배포는 5분 간격 변경을 넣으려고 아카이브 중에 멈췄고, 올린 번호를 되돌린 뒤 다시 돌렸다(`build/validation/tfb-308.log`, 업로드 전 중단).
 - `release.sh --yes`: 307 → 308. 산출물의 네 번들(앱·위젯·Watch·Watch 위젯) 모두 308. App Store Connect 처리 `VALID`, 「TP Taption Plan 내부 테스트」 그룹 연결·테스터 1명 노출 확인(`build/validation/TFB1111A04/testflight-report.json`, 로그 `build/validation/tfb-308b.log`).
 - 외부 그룹 `TP 지인 테스트` 연결·베타 심사 제출(대표 요청 「베타 빌드업도해」, TFB1111A05): 제출 응답 `WAITING_FOR_REVIEW`, 다시 읽으니 외부 상태 `IN_BETA_TESTING`, 그룹 빌드에 308(`build/validation/TFB1111A05/external-submit.log`). 지인 기기 설치는 확인하지 않음.

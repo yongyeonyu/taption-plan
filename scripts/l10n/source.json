@@ -36764,9 +36764,9 @@
    ]
   },
   {
-   "key": "덮을 클립을 누르세요. 다 고르면 「분류」에서 고르면 한 번에 바뀝니다.|Tap the clips to overwrite, then choose a category to change them all.",
-   "ko": "덮을 클립을 누르세요. 다 고르면 「분류」에서 고르면 한 번에 바뀝니다.",
-   "en": "Tap the clips to overwrite, then choose a category to change them all.",
+   "key": "덮을 클립을 누르거나 위아래로 끌어 한 번에 고르세요. 「분류」에서 고르면 모두 바뀌고 한 덩어리로 합쳐집니다.|Tap clips or drag up and down to pick many at once. Choose a category to change and merge them.",
+   "ko": "덮을 클립을 누르거나 위아래로 끌어 한 번에 고르세요. 「분류」에서 고르면 모두 바뀌고 한 덩어리로 합쳐집니다.",
+   "en": "Tap clips or drag up and down to pick many at once. Choose a category to change and merge them.",
    "files": [
     "MapHomeNLEClipEditor+Overwrite.swift:77"
    ],
@@ -49666,7 +49666,7 @@
    "ko": "저장하지 못했습니다. 기록은 하나도 바뀌지 않았습니다. 다시 적용해 보세요.",
    "en": "Couldn't save. No records changed. Try applying again.",
    "files": [
-    "MapHomeNLEClipEditor+Overwrite.swift:130"
+    "MapHomeNLEClipEditor+Overwrite.swift:138"
    ],
    "args": [],
    "targets": [
@@ -51420,7 +51420,7 @@
    "ko": "직접 입력한 클립 {0}개는 그대로 두었습니다",
    "en": "Left {0} clip(s) you entered unchanged",
    "files": [
-    "MapHomeNLEClipEditor+Overwrite.swift:113"
+    "MapHomeNLEClipEditor+Overwrite.swift:121"
    ],
    "args": [
     "result.skipped"

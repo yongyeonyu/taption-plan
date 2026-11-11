@@ -542,6 +542,39 @@ struct NLETrack: Hashable, Sendable {
         return merged
     }
 
+    /// 고른 클립 중 맞닿은 같은 분류를 원본 구간이 달라도 하나로 합친다(RNG1111A01).
+    ///
+    /// 롤 편집처럼 남는 클립이 이웃 자리까지 넓어지고, 사라진 클립의 시간은 그 원본 구간의
+    /// 요청에 조각으로 실린다. 남는 클립은 원본 기록이 있는 가장 긴 클립이다.
+    @discardableResult
+    mutating func mergeRuns(of ids: Set<String>) -> Int {
+        let ordered = clips.filter { ids.contains($0.id) }.sorted { $0.startMinute < $1.startMinute }
+        var runs: [[NLEClip]] = []
+        for clip in ordered {
+            if let last = runs.last?.last, last.endMinute == clip.startMinute, last.option == clip.option {
+                runs[runs.count - 1].append(clip)
+            } else {
+                runs.append([clip])
+            }
+        }
+        var merged = 0
+        for run in runs where run.count > 1 {
+            let survivor = run.filter { !$0.parent.sourceIDs.isEmpty }.max { $0.lengthMinutes < $1.lengthMinutes } ?? run[0]
+            guard let at = run.firstIndex(of: survivor) else { continue }
+            for other in run[(at + 1)...] + run[..<at].reversed()
+            where mergeIntoDragged(survivor.id, neighborID: other.id) {
+                merged += 1
+            }
+        }
+        return merged
+    }
+
+    /// 손가락이 지나간 범위에 걸친 클립.
+    func clipIDs(from lower: Int, to upper: Int) -> [String] {
+        let range = min(lower, upper)...max(lower, upper)
+        return clips.filter { $0.startMinute <= range.upperBound && $0.endMinute > range.lowerBound }.map(\.id)
+    }
+
     /// 두 클립을 하나로 합칠 수 있으면 합친 클립을 돌려준다.
     ///
     /// 기준점(`origin`)이 이어져 있으면(가르기만 한 상태) 합친 구간으로 넓힌다.

@@ -3493,7 +3493,7 @@
 "덮을 분류|Category": "上書きする大分類",
 "덮을 분류를 고르세요|Pick a category to overwrite": "上書きする大分類を選択",
 "덮을 클립 중 {0}개는 직접 입력한 기록입니다. 건너뛰면 그대로 남습니다.|{0} of the clips hold records you entered. Skipped clips stay as they are.": "上書きするクリップのうち{0}件は手入力の記録です。スキップするとそのまま残ります。",
-"덮을 클립을 누르세요. 다 고르면 「분류」에서 고르면 한 번에 바뀝니다.|Tap the clips to overwrite, then choose a category to change them all.": "上書きするクリップをタップしてください。選び終えたら「分類」で選ぶとまとめて変わります。",
+"덮을 클립을 누르거나 위아래로 끌어 한 번에 고르세요. 「분류」에서 고르면 모두 바뀌고 한 덩어리로 합쳐집니다.|Tap clips or drag up and down to pick many at once. Choose a category to change and merge them.": "クリップをタップするか上下にドラッグしてまとめて選びます。「分類」で選ぶとすべて変わり、ひとつにまとまります。",
 "데이터 보호 열기|Open data protection": "データ保護を開く",
 "데이터 보호|Data Protection": "データ保護",
 "데이터 불러오는 중…|Loading data…": "データを読み込み中…",

@@ -136,6 +136,41 @@ final class NLEOverwriteBatchTests: XCTestCase {
         XCTAssertEqual(NLEOverwritePolicy.affectedCount(track, scope: .picked, selectedCategoryID: nil, pickedClipIDs: picked), 2)
     }
 
+    /// RNG1111A01: 조각난 클립을 끌어 한 번에 고르고 업무로 덮으면, 원본 구간이 달라도 한 덩어리가 되고
+    /// 각 원본 기록에는 그 시간만큼 업무 조각이 저장된다.
+    func testRangePickedFragmentsMergeIntoOneClip() throws {
+        let work = UUID(), home1 = UUID(), home2 = UUID(), rest = UUID(), move = UUID()
+        let track = MapHomeNLEClipEditor.makeMainTrack(segments: [
+            segment(732, 996, "work", work),
+            MapHomeTimeRailSegment(startMinute: 996, endMinute: 1_020, categoryID: "unconfirmed", title: "미확인", sourceIDs: []),
+            segment(1_020, 1_060, "household", home1),
+            segment(1_060, 1_150, "rest", rest),
+            segment(1_150, 1_197, "household", home2),
+            segment(1_197, 1_250, "eating", move),
+        ])
+        let first = try XCTUnwrap(track.clip(atMinute: 800))
+        // 업무 끝에서 이동 바로 앞까지 끈다. 이동은 고르지 않는다.
+        let picked = Set([first.id]).union(track.clipIDs(from: 990, to: 1_196))
+        XCTAssertEqual(picked.count, 5)
+        XCTAssertNil(picked.first { track.clip($0)?.option.categoryID == "eating" })
+
+        let result = NLEOverwritePolicy.apply(
+            track, option: option("work"), scope: .picked, selectedCategoryID: nil, mergesAfter: true, pickedClipIDs: picked
+        )
+        let merged = try XCTUnwrap(result.track.clip(atMinute: 1_100))
+        XCTAssertEqual(merged.option.categoryID, "work")
+        XCTAssertEqual(merged.startMinute, 732)
+        XCTAssertEqual(merged.endMinute, 1_197)
+        XCTAssertEqual(merged.id, first.id, "the longest recorded clip survives")
+        XCTAssertEqual(result.track.clip(atMinute: 1_200)?.option.categoryID, "eating")
+
+        let requests = result.track.editRequests(dayStart: dayStart, calendar: calendar)
+        for source in [home1, rest, home2] {
+            let request = try XCTUnwrap(requests.first { $0.sourceIDs == [source] })
+            XCTAssertEqual(ActivitySectionOverrideEngine.pieces(for: request).map(\.option.categoryID), ["work"])
+        }
+    }
+
     /// UNC1111A01: 사이드바에서 고른 미확인 구간 여러 개가 한 번의 일괄 저장 요청으로 바뀐다. 미확인이 아닌 구간은 빠진다.
     func testUnconfirmedBatchBuildsOneRequestPerPickedSpan() throws {
         let category = try XCTUnwrap(MapHomeSidebarMajorCategory.all.first { $0.id == "work" })

@@ -227536,79 +227536,79 @@
         }
       }
     },
-    "덮을 클립을 누르세요. 다 고르면 「분류」에서 고르면 한 번에 바뀝니다.|Tap the clips to overwrite, then choose a category to change them all." : {
+    "덮을 클립을 누르거나 위아래로 끌어 한 번에 고르세요. 「분류」에서 고르면 모두 바뀌고 한 덩어리로 합쳐집니다.|Tap clips or drag up and down to pick many at once. Choose a category to change and merge them." : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "上書きするクリップをタップしてください。選び終えたら「分類」で選ぶとまとめて変わります。"
+            "value" : "クリップをタップするか上下にドラッグしてまとめて選びます。「分類」で選ぶとすべて変わり、ひとつにまとまります。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "点按要覆盖的片段。选好后在“分类”中选择即可一次更改。"
+            "value" : "点按片段或上下拖动可一次选择多个。在「分类」中选择后会全部更改并合并为一段。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "點一下要覆蓋的片段。選好後在「分類」中選擇即可一次變更。"
+            "value" : "點按片段或上下拖曳可一次選取多個。在「分類」中選擇後會全部變更並合併為一段。"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tippe die Clips an, die überschrieben werden sollen, und wähle dann unter „Kategorie“, um alle auf einmal zu ändern."
+            "value" : "Tippe Clips an oder ziehe nach oben und unten, um viele auf einmal auszuwählen. Wähle eine Kategorie, um sie zu ändern und zusammenzuführen."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Touchez les clips à remplacer, puis choisissez une catégorie dans « Catégorie » pour tous les changer."
+            "value" : "Touchez des clips ou faites glisser vers le haut et le bas pour en choisir plusieurs. Choisissez une catégorie pour les modifier et les fusionner."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tocca le clip da sovrascrivere, poi scegli una categoria in «Categoria» per cambiarle tutte."
+            "value" : "Tocca le clip o trascina su e giù per sceglierne molte insieme. Scegli una categoria per cambiarle e unirle."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Toca los clips que quieres sobrescribir y luego elige una categoría en «Categoría» para cambiarlos todos."
+            "value" : "Toca clips o arrastra arriba y abajo para elegir varios a la vez. Elige una categoría para cambiarlos y unirlos."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Toque nos clipes a sobrescrever e escolha uma categoria em “Categoria” para mudar todos de uma vez."
+            "value" : "Toque nos clipes ou arraste para cima e para baixo para escolher vários de uma vez. Escolha uma categoria para alterá-los e juntá-los."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Chạm vào các clip cần ghi đè, rồi chọn danh mục trong “Phân loại” để đổi tất cả một lần."
+            "value" : "Chạm vào các đoạn hoặc kéo lên xuống để chọn nhiều đoạn cùng lúc. Chọn danh mục để đổi và gộp chúng lại."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ketuk klip yang mau ditimpa, lalu pilih kategori di “Kategori” untuk mengubah semuanya sekaligus."
+            "value" : "Ketuk klip atau seret ke atas dan bawah untuk memilih banyak sekaligus. Pilih kategori untuk mengubah dan menggabungkannya."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "แตะคลิปที่จะเขียนทับ เลือกครบแล้วเลือกหมวดใน “หมวดหมู่” เพื่อเปลี่ยนทั้งหมดทีเดียว"
+            "value" : "แตะคลิปหรือลากขึ้นลงเพื่อเลือกหลายรายการพร้อมกัน เลือกหมวดหมู่เพื่อเปลี่ยนและรวมเป็นหนึ่งเดียว"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "बदलने वाली क्लिप दबाएँ, फिर “श्रेणी” में चुनें, सब एक साथ बदल जाएँगी।"
+            "value" : "क्लिप पर टैप करें या ऊपर-नीचे खींचकर एक साथ कई चुनें। श्रेणी चुनने पर सब बदलकर एक में जुड़ जाएँगी।"
           }
         }
       }

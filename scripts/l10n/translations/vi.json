@@ -3493,7 +3493,7 @@
 "덮을 분류|Category": "Danh mục để ghi đè",
 "덮을 분류를 고르세요|Pick a category to overwrite": "Chọn danh mục để ghi đè",
 "덮을 클립 중 {0}개는 직접 입력한 기록입니다. 건너뛰면 그대로 남습니다.|{0} of the clips hold records you entered. Skipped clips stay as they are.": "{0} đoạn chứa bản ghi bạn tự nhập. Bỏ qua thì giữ nguyên.",
-"덮을 클립을 누르세요. 다 고르면 「분류」에서 고르면 한 번에 바뀝니다.|Tap the clips to overwrite, then choose a category to change them all.": "Chạm vào các clip cần ghi đè, rồi chọn danh mục trong “Phân loại” để đổi tất cả một lần.",
+"덮을 클립을 누르거나 위아래로 끌어 한 번에 고르세요. 「분류」에서 고르면 모두 바뀌고 한 덩어리로 합쳐집니다.|Tap clips or drag up and down to pick many at once. Choose a category to change and merge them.": "Chạm vào các đoạn hoặc kéo lên xuống để chọn nhiều đoạn cùng lúc. Chọn danh mục để đổi và gộp chúng lại.",
 "데이터 보호 열기|Open data protection": "Mở Bảo vệ dữ liệu",
 "데이터 보호|Data Protection": "Bảo vệ dữ liệu",
 "데이터 불러오는 중…|Loading data…": "Đang tải dữ liệu…",
