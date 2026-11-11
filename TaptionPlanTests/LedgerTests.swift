@@ -329,6 +329,57 @@ final class LedgerTests: XCTestCase {
         XCTAssertTrue(MapHomeCalendarTimeKind.extraKinds.contains(.expense))
     }
 
+    /// LED1111A09: 짝 기록·메모 기록까지 모든 기록을 고치고 지운다.
+    func testEveryEntryCanBeEditedAndDeleted() async {
+        let book = LedgerBook(store: { nil })
+        await book.saveTrip(LedgerTrip(id: "t9", name: "부산", start: at(0, day: 1), end: at(0, day: 1), budgetKRW: 500_000))
+        await book.save(LedgerEntry(occurredAt: at(12, day: 1), amount: 300_000, amountKRW: 300_000, title: "숙소", tripID: "t9"))
+        await book.syncTrip("t9")
+        func pair(_ kind: LedgerTransfer.Kind) -> [LedgerEntry] { book.entries.filter { $0.transfer?.kind == kind } }
+        XCTAssertEqual(pair(.settlement).first { $0.tripID == nil }?.amountKRW, 200_000)
+
+        var funding = try! XCTUnwrap(pair(.funding).first { $0.tripID == nil })
+        funding.amount = 400_000
+        funding.amountKRW = 400_000
+        funding.note = "카드에서"
+        await book.saveTransfer(funding)
+        XCTAssertEqual(book.trip("t9")?.budgetKRW, 400_000)
+        XCTAssertEqual(pair(.funding).map(\.amountKRW), [400_000, 400_000], "both sides follow the edit")
+        XCTAssertEqual(pair(.funding).first { $0.tripID == nil }?.note, "카드에서")
+        XCTAssertEqual(pair(.settlement).first { $0.tripID == nil }?.amountKRW, 100_000, "settlement follows the new budget")
+
+        var settlement = try! XCTUnwrap(pair(.settlement).first { $0.tripID == nil })
+        settlement.kind = .expense
+        settlement.amount = 50_000
+        settlement.amountKRW = 50_000
+        await book.saveTransfer(settlement)
+        let fixed = try! XCTUnwrap(pair(.settlement).first { $0.tripID == nil })
+        XCTAssertEqual(fixed.kind, .expense)
+        XCTAssertEqual(fixed.amountKRW, 50_000)
+        await book.syncTrip("t9")
+        XCTAssertEqual(pair(.settlement).first { $0.tripID == nil }?.amountKRW, 50_000, "an edited settlement stays")
+
+        await book.resetSettlement("t9")
+        XCTAssertEqual(pair(.settlement).first { $0.tripID == nil }?.kind, .income)
+        XCTAssertEqual(pair(.settlement).first { $0.tripID == nil }?.amountKRW, 100_000)
+
+        await book.remove(try! XCTUnwrap(pair(.settlement).first { $0.tripID == "t9" }))
+        await book.syncTrip("t9")
+        XCTAssertTrue(pair(.settlement).isEmpty, "a deleted settlement does not come back")
+        await book.remove(try! XCTUnwrap(pair(.funding).first))
+        XCTAssertTrue(pair(.funding).isEmpty)
+        XCTAssertNil(book.trip("t9")?.budgetKRW)
+
+        let memoID = UUID()
+        defer { LedgerMemoOptOut.set(memoID, optedOut: false) }
+        let created = await book.syncMemo(id: memoID, text: "커피 4500원", occurredAt: at(9))
+        let memoEntry = try! XCTUnwrap(created)
+        await book.remove(memoEntry)
+        let again = await book.syncMemo(id: memoID, text: "커피 4500원 맛있음", occurredAt: at(9))
+        XCTAssertNil(again, "a deleted memo entry does not come back")
+        XCTAssertNil(book.entry(forMemo: memoID))
+    }
+
     private func spend10(_ amount: Double, _ title: String) -> LedgerEntry {
         LedgerEntry(occurredAt: at(13), amount: amount, amountKRW: amount, title: title, tripID: "t1")
     }

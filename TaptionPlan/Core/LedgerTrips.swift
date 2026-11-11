@@ -27,6 +27,12 @@ struct LedgerTrip: Codable, Equatable, Identifiable, Sendable {
     var budgetKRW: Double?
     /// 함께 간 사람(나 빼고). 이름만 기기에 둔다.
     var members: [String] = []
+    /// 예산 이체 날짜를 고쳤으면 그 날(LED1111A09). nil이면 여행 첫날.
+    var fundingDate: Date?
+    /// 정산을 손으로 고쳤으면 그 금액(+면 일상으로 반납, −면 추가 경비, 0이면 정산 없음). nil이면 자동 정산.
+    var settlementKRW: Double?
+    /// 정산 날짜를 고쳤으면 그 날. nil이면 여행 다음 날 아침.
+    var settlementDate: Date?
 
     var everyone: [String] { [Self.me] + members }
 
@@ -173,14 +179,14 @@ extension LedgerBook {
         guard let trip = trip(id) else { return }
         let budget = max(0, trip.budgetKRW ?? 0)
         let language = MapHomeLanguage.current
-        await setPair(trip: trip, kind: .funding, dailyIsExpense: true, amount: budget, at: calendar.startOfDay(for: trip.start),
+        await setPair(trip: trip, kind: .funding, dailyIsExpense: true, amount: budget, at: trip.fundingDate ?? calendar.startOfDay(for: trip.start),
                       dailyTitle: language.text("\(trip.name) 여행 경비", "\(trip.name) trip budget"), tripTitle: language.text("경비 받음", "Budget received"))
         guard trip.hasEnded(asOf: now, calendar: calendar) else {
             await setPair(trip: trip, kind: .settlement, dailyIsExpense: false, amount: 0, at: now, dailyTitle: "", tripTitle: "")
             return
         }
-        let leftover = LedgerTripMath.sheet(trip, entries: entries).leftover
-        let settleDay = calendar.startOfDay(for: trip.end).addingTimeInterval(86_400 + 9 * 3_600)
+        let leftover = trip.settlementKRW ?? LedgerTripMath.sheet(trip, entries: entries).leftover
+        let settleDay = trip.settlementDate ?? calendar.startOfDay(for: trip.end).addingTimeInterval(86_400 + 9 * 3_600)
         if leftover >= 0 {
             await setPair(trip: trip, kind: .settlement, dailyIsExpense: false, amount: leftover, at: settleDay,
                           dailyTitle: language.text("\(trip.name) 여행 정산", "\(trip.name) trip refund"), tripTitle: language.text("정산 반납", "Returned to daily"))
@@ -188,6 +194,63 @@ extension LedgerBook {
             await setPair(trip: trip, kind: .settlement, dailyIsExpense: true, amount: -leftover, at: settleDay,
                           dailyTitle: language.text("\(trip.name) 여행 추가 경비", "\(trip.name) extra trip cost"), tripTitle: language.text("추가 경비 받음", "Extra budget received"))
         }
+    }
+
+    /// 짝 기록을 고친다(LED1111A09). 금액·날짜를 여행 값에 담아 일상 쪽·여행 쪽을 함께 맞춘다.
+    /// 정산은 고친 쪽의 수입·지출로 방향을 정한다(일상 쪽 수입이면 반납, 지출이면 추가 경비).
+    func saveTransfer(_ entry: LedgerEntry) async {
+        await load()
+        guard let transfer = entry.transfer, var trip = trip(transfer.tripID) else { return }
+        let amount = max(0, (entry.amountKRW ?? entry.amount).rounded())
+        switch transfer.kind {
+        case .funding:
+            trip.budgetKRW = amount > 0 ? amount : nil
+            trip.fundingDate = entry.occurredAt
+        case .settlement:
+            let isDailySide = entry.tripID == nil
+            let returned = isDailySide ? entry.kind == .income : entry.kind == .expense
+            trip.settlementKRW = returned ? amount : -amount
+            trip.settlementDate = entry.occurredAt
+        }
+        // 고친 기록의 장소·메모는 짝 기록이 다시 만들어져도 남게 먼저 담는다.
+        if var kept = entries.first(where: { $0.id == entry.id }), kept.place != entry.place || kept.note != entry.note {
+            kept.place = entry.place
+            kept.note = entry.note
+            await save(kept)
+        }
+        await saveTrip(trip)
+    }
+
+    /// 짝 기록을 지운다(LED1111A09): 예산은 없음, 정산은 0으로 고정해 다시 생기지 않게 한다.
+    func deleteTransfer(_ entry: LedgerEntry) async {
+        await load()
+        guard let transfer = entry.transfer, var trip = trip(transfer.tripID) else { return await delete(entry.id) }
+        switch transfer.kind {
+        case .funding:
+            trip.budgetKRW = nil
+            trip.fundingDate = nil
+        case .settlement:
+            trip.settlementKRW = 0
+            trip.settlementDate = nil
+        }
+        await saveTrip(trip)
+    }
+
+    /// 손으로 고친 정산을 다시 자동으로 돌린다.
+    func resetSettlement(_ tripID: String) async {
+        await load()
+        guard var trip = trip(tripID) else { return }
+        trip.settlementKRW = nil
+        trip.settlementDate = nil
+        await saveTrip(trip)
+    }
+
+    /// 기록 하나를 지운다. 짝 기록은 여행 값으로, 메모에서 생긴 기록은 그 메모를 「메모로만」으로 바꿔 다시 생기지 않게 한다.
+    func remove(_ entry: LedgerEntry) async {
+        if entry.transfer != nil { return await deleteTransfer(entry) }
+        if let memoID = entry.memoID { LedgerMemoOptOut.set(memoID, optedOut: true) }
+        await delete(entry.id)
+        if let tripID = entry.tripID { await syncTrip(tripID) }
     }
 
     /// 끝난 여행을 모두 정산한다(가계부·카운터를 열 때).

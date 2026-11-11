@@ -31,7 +31,9 @@ struct LedgerTripView: View {
                     ForEach(entries) { entry in
                         Button { editing = entry } label: { LedgerTripRow(entry: entry, trip: trip, language: language) }
                             .buttonStyle(.plain)
-                            .disabled(entry.transfer != nil)
+                            .swipeActions {
+                                Button(language.text("지우기", "Delete"), role: .destructive) { Task { await book.remove(entry) } }
+                            }
                     }
                 }
                 LedgerTripSheetSection(trip: trip, sheet: sheet, language: language)

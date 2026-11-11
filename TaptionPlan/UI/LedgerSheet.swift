@@ -31,11 +31,15 @@ struct LedgerSheet: View {
                 ForEach(days, id: \.self) { day in
                     Section(day.formatted(date: .abbreviated, time: .omitted)) {
                         ForEach(monthEntries.filter { Calendar.autoupdatingCurrent.isDate($0.occurredAt, inSameDayAs: day) }) { entry in
-                            // 여행 이체 짝 기록은 여기서 고치지 않고 그 여행 장부를 연다(리뷰: 고쳐도 되돌아오던 것).
-                            Button {
-                                if let tripID = entry.transfer?.tripID, book.trip(tripID) != nil { path = [tripID] } else { editing = entry }
-                            } label: { LedgerRow(entry: entry, language: language) }
+                            // 짝 기록도 여기서 고치고 지운다(LED1111A09). 그 여행 장부는 밀어서 연다.
+                            Button { editing = entry } label: { LedgerRow(entry: entry, language: language) }
                                 .buttonStyle(.plain)
+                                .swipeActions {
+                                    Button(language.text("지우기", "Delete"), role: .destructive) { Task { await book.remove(entry) } }
+                                    if let tripID = entry.transfer?.tripID, book.trip(tripID) != nil {
+                                        Button(language.text("여행 장부", "Trip ledger")) { path = [tripID] }
+                                    }
+                                }
                         }
                     }
                 }
@@ -291,32 +295,10 @@ struct LedgerEntryForm: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section {
-                    Picker(language.text("종류", "Type"), selection: $entry.kind) {
-                        Text(language.text("지출", "Expense")).tag(LedgerEntry.Kind.expense)
-                        Text(language.text("수입", "Income")).tag(LedgerEntry.Kind.income)
-                    }
-                    .pickerStyle(.segmented)
-                    TextField(language.text("내용 (예: 커피)", "What (e.g. Coffee)"), text: $entry.title)
-                        .onChange(of: entry.title) { _, title in
-                            if isNew, entry.category == .other { entry.category = LedgerCategory.guess(title) }
-                        }
-                    HStack {
-                        TextField(language.text("금액", "Amount"), text: $amountText).keyboardType(.decimalPad)
-                        Picker("", selection: $entry.currency) { ForEach(Self.currencies, id: \.self) { Text($0).tag($0) } }
-                            .labelsHidden()
-                    }
-                    if entry.currency != "KRW" {
-                        let rate = LedgerFX.krwPerUnit(entry.currency, table: book.fx, manual: book.manualRates)
-                        Text(rate.map { language.text("1 \(entry.currency) ≈ \(Int($0.rounded()))원", "1 \(entry.currency) ≈ ₩\(Int($0.rounded()))") }
-                             ?? language.text("환율을 몰라요. 아래에 직접 넣어 주세요.", "Rate unknown. Enter it below."))
-                            .font(.taptionStyle(.caption)).foregroundStyle(.secondary)
-                        TextField(language.text("직접 넣는 환율 (1단위 = 원)", "Manual rate (1 unit = KRW)"), text: $manualRateText).keyboardType(.decimalPad)
-                    }
-                    Picker(language.text("분류", "Category"), selection: $entry.category) {
-                        ForEach(LedgerCategory.allCases) { Label($0.title(language), systemImage: $0.symbol).tag($0) }
-                    }
-                    DatePicker(language.text("때", "When"), selection: $entry.occurredAt)
+                if let transfer = entry.transfer {
+                    transferSection(transfer)
+                } else {
+                    entrySection
                 }
                 if let members, entry.kind == .expense, entry.transfer == nil {
                     LedgerShareSection(language: language, members: members, payer: $entry.payer, shareNames: $entry.shareNames)
@@ -324,7 +306,7 @@ struct LedgerEntryForm: View {
                     LedgerIncomeFromSection(language: language, members: members, payer: $entry.payer)
                 }
                 Section {
-                    if members == nil {
+                    if members == nil, entry.transfer == nil {
                         TextField(language.text("낸 사람 (비우면 나)", "Paid by (blank = me)"), text: Binding(get: { entry.payer ?? "" }, set: { entry.payer = $0.isEmpty ? nil : $0 }))
                     }
                     TextField(language.text("장소", "Place"), text: Binding(get: { entry.place ?? "" }, set: { entry.place = $0.isEmpty ? nil : $0 }))
@@ -335,12 +317,15 @@ struct LedgerEntryForm: View {
                 if !isNew {
                     Section {
                         Button(language.text("지우기", "Delete"), role: .destructive) {
-                            let tripID = entry.tripID
+                            let value = entry
                             Task {
-                                await book.delete(entry.id)
-                                if let tripID { await book.syncTrip(tripID) }
+                                await book.remove(value)
                                 dismiss()
                             }
+                        }
+                    } footer: {
+                        if entry.memoID != nil {
+                            Text(language.text("지우면 이 메모는 「메모로만」이 돼 다시 가계부에 들어오지 않아요.", "Deleting makes this memo note-only so it won't come back to the ledger."))
                         }
                     }
                 }
@@ -351,6 +336,70 @@ struct LedgerEntryForm: View {
                 ToolbarItem(placement: .cancellationAction) { Button(language.text("취소", "Cancel")) { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(language.text("저장", "Save")) { save() }.disabled(!isValid)
+                }
+            }
+        }
+    }
+
+    private var entrySection: some View {
+        Section {
+            Picker(language.text("종류", "Type"), selection: $entry.kind) {
+                Text(language.text("지출", "Expense")).tag(LedgerEntry.Kind.expense)
+                Text(language.text("수입", "Income")).tag(LedgerEntry.Kind.income)
+            }
+            .pickerStyle(.segmented)
+            TextField(language.text("내용 (예: 커피)", "What (e.g. Coffee)"), text: $entry.title)
+                .onChange(of: entry.title) { _, title in
+                    if isNew, entry.category == .other { entry.category = LedgerCategory.guess(title) }
+                }
+            HStack {
+                TextField(language.text("금액", "Amount"), text: $amountText).keyboardType(.decimalPad)
+                Picker("", selection: $entry.currency) { ForEach(Self.currencies, id: \.self) { Text($0).tag($0) } }
+                    .labelsHidden()
+            }
+            if entry.currency != "KRW" {
+                let rate = LedgerFX.krwPerUnit(entry.currency, table: book.fx, manual: book.manualRates)
+                Text(rate.map { language.text("1 \(entry.currency) ≈ \(Int($0.rounded()))원", "1 \(entry.currency) ≈ ₩\(Int($0.rounded()))") }
+                     ?? language.text("환율을 몰라요. 아래에 직접 넣어 주세요.", "Rate unknown. Enter it below."))
+                    .font(.taptionStyle(.caption)).foregroundStyle(.secondary)
+                TextField(language.text("직접 넣는 환율 (1단위 = 원)", "Manual rate (1 unit = KRW)"), text: $manualRateText).keyboardType(.decimalPad)
+            }
+            Picker(language.text("분류", "Category"), selection: $entry.category) {
+                ForEach(LedgerCategory.allCases) { Label($0.title(language), systemImage: $0.symbol).tag($0) }
+            }
+            DatePicker(language.text("때", "When"), selection: $entry.occurredAt)
+        }
+    }
+
+    /// 예산 이체·정산 짝 기록(LED1111A09). 금액·날짜를 고치면 일상 쪽과 여행 쪽이 함께 바뀐다.
+    @ViewBuilder private func transferSection(_ transfer: LedgerTransfer) -> some View {
+        let trip = book.trip(transfer.tripID)
+        Section {
+            Text(entry.title)
+            if transfer.kind == .settlement {
+                Picker(language.text("종류", "Type"), selection: $entry.kind) {
+                    Text(language.text("지출", "Expense")).tag(LedgerEntry.Kind.expense)
+                    Text(language.text("수입", "Income")).tag(LedgerEntry.Kind.income)
+                }
+                .pickerStyle(.segmented)
+            }
+            HStack {
+                TextField(language.text("금액(원)", "Amount (KRW)"), text: $amountText).keyboardType(.numberPad)
+                Text("KRW").foregroundStyle(.secondary)
+            }
+            DatePicker(language.text("때", "When"), selection: $entry.occurredAt)
+        } footer: {
+            Text(transfer.kind == .funding
+                 ? language.text("여행 예산이에요. 고치면 일상의 「여행 경비」와 여행의 「경비 받음」이 함께 바뀌어요.", "This is the trip budget. Editing it changes both the daily and trip sides.")
+                 : language.text("여행 정산이에요. 고치면 그 금액으로 고정돼요. 일상 쪽 수입이면 반납, 지출이면 추가 경비예요.", "This is the trip settlement. Editing fixes it to this amount. Daily income means returned, expense means extra."))
+        }
+        if transfer.kind == .settlement, trip?.settlementKRW != nil, !isNew {
+            Section {
+                Button(language.text("자동 정산으로 되돌리기", "Back to automatic settlement")) {
+                    Task {
+                        await book.resetSettlement(transfer.tripID)
+                        dismiss()
+                    }
                 }
             }
         }
@@ -375,6 +424,10 @@ struct LedgerEntryForm: View {
         }
         let value = entry
         Task {
+            if value.transfer != nil {
+                await book.saveTransfer(value)
+                return dismiss()
+            }
             await book.save(value)
             // 여행 기록이 바뀌면 끝난 여행의 정산 짝 기록도 다시 맞춘다.
             if let tripID = value.tripID { await book.syncTrip(tripID) }

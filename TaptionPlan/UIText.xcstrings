@@ -155618,6 +155618,83 @@
         }
       }
     },
+    "금액(원)|Amount (KRW)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "金額（ウォン）"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "金额（韩元）"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "金額（韓元）"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Betrag (KRW)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Montant (KRW)"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importo (KRW)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importe (KRW)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Valor (KRW)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Số tiền (KRW)"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jumlah (KRW)"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "จำนวนเงิน (KRW)"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "राशि (KRW)"
+          }
+        }
+      }
+    },
     "금액|Amount" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -212752,6 +212829,83 @@
         }
       }
     },
+    "여행 예산이에요. 고치면 일상의 「여행 경비」와 여행의 「경비 받음」이 함께 바뀌어요.|This is the trip budget. Editing it changes both the daily and trip sides." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "旅行の予算です。変更すると日常側と旅行側の両方が変わります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这是旅行预算。修改后日常和旅行两边都会改变。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這是旅行預算。修改後日常和旅行兩邊都會改變。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das ist das Reisebudget. Eine Änderung betrifft Alltag und Reise."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "C’est le budget du voyage. Le modifier change le quotidien et le voyage."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questo è il budget del viaggio. Modificarlo cambia sia il quotidiano sia il viaggio."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Es el presupuesto del viaje. Al editarlo cambian el día a día y el viaje."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este é o orçamento da viagem. Editá-lo altera o dia a dia e a viagem."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đây là ngân sách chuyến đi. Sửa sẽ thay đổi cả phần hằng ngày và chuyến đi."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ini anggaran perjalanan. Mengubahnya mengubah sisi harian dan perjalanan."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "นี่คืองบประมาณทริป การแก้ไขจะเปลี่ยนทั้งฝั่งประจำวันและฝั่งทริป"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "यह यात्रा का बजट है। बदलने पर रोज़ाना और यात्रा दोनों तरफ़ बदलेगा।"
+          }
+        }
+      }
+    },
     "여행 이체|Trip transfer" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -213518,6 +213672,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "यह यात्रा खाता हटाएँ?"
+          }
+        }
+      }
+    },
+    "여행 정산이에요. 고치면 그 금액으로 고정돼요. 일상 쪽 수입이면 반납, 지출이면 추가 경비예요.|This is the trip settlement. Editing fixes it to this amount. Daily income means returned, expense means extra." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "旅行の精算です。変更するとその金額で固定されます。日常側が収入なら返金、支出なら追加経費です。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这是旅行结算。修改后将固定为该金额。日常一侧为收入表示退回，为支出表示追加费用。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這是旅行結算。修改後將固定為該金額。日常一側為收入表示退回，為支出表示追加費用。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das ist die Reiseabrechnung. Eine Änderung legt diesen Betrag fest. Einnahme im Alltag heißt zurückgegeben, Ausgabe heißt Zusatzkosten."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "C’est le règlement du voyage. Le modifier fixe ce montant. Un revenu au quotidien signifie un remboursement, une dépense un coût supplémentaire."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questo è il saldo del viaggio. Modificarlo fissa questo importo. Un’entrata nel quotidiano è un rimborso, una spesa è un costo extra."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Es la liquidación del viaje. Al editarla se fija este importe. Un ingreso en el día a día es una devolución; un gasto, un coste extra."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este é o acerto da viagem. Editá-lo fixa este valor. Receita no dia a dia significa devolução; despesa, custo extra."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đây là quyết toán chuyến đi. Sửa sẽ cố định số tiền này. Thu ở phần hằng ngày là hoàn lại, chi là chi phí thêm."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ini penyelesaian perjalanan. Mengubahnya menetapkan jumlah ini. Pemasukan di sisi harian berarti dikembalikan, pengeluaran berarti biaya tambahan."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "นี่คือการเคลียร์เงินทริป การแก้ไขจะตรึงจำนวนนี้ไว้ รายรับฝั่งประจำวันคือเงินคืน รายจ่ายคือค่าใช้จ่ายเพิ่ม"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "यह यात्रा का हिसाब है। बदलने पर यही राशि तय हो जाएगी। रोज़ाना तरफ़ आय का मतलब वापसी, खर्च का मतलब अतिरिक्त खर्च।"
           }
         }
       }
@@ -240934,6 +241165,83 @@
         }
       }
     },
+    "자동 정산으로 되돌리기|Back to automatic settlement" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動精算に戻す"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "恢复自动结算"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "恢復自動結算"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zurück zur automatischen Abrechnung"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Revenir au règlement automatique"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Torna al saldo automatico"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Volver a la liquidación automática"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voltar ao acerto automático"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quay lại quyết toán tự động"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kembali ke penyelesaian otomatis"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "กลับไปเคลียร์อัตโนมัติ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "स्वचालित हिसाब पर लौटें"
+          }
+        }
+      }
+    },
     "자동|Auto" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -253404,6 +253712,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "हटाएँ"
+          }
+        }
+      }
+    },
+    "지우면 이 메모는 「메모로만」이 돼 다시 가계부에 들어오지 않아요.|Deleting makes this memo note-only so it won't come back to the ledger." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "削除するとこのメモは「メモのみ」になり、家計簿には戻りません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "删除后此备忘将变为“仅备忘”，不会再回到账本。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "刪除後此備忘將變為「僅備忘」，不會再回到帳本。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beim Löschen wird diese Notiz zu „Nur Notiz“ und kommt nicht ins Haushaltsbuch zurück."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La suppression rend cette note « note seule » ; elle ne reviendra pas dans le budget."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eliminandola, questa nota diventa «solo nota» e non tornerà nel registro."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al eliminarla, esta nota pasa a «solo nota» y no volverá al registro."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ao excluir, esta nota vira “só nota” e não volta ao livro-caixa."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Khi xóa, ghi chú này thành “chỉ ghi chú” và sẽ không quay lại sổ chi tiêu."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jika dihapus, catatan ini menjadi “hanya catatan” dan tidak kembali ke buku kas."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เมื่อลบ บันทึกนี้จะเป็น “บันทึกเท่านั้น” และจะไม่กลับเข้าบัญชีรายรับรายจ่าย"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "हटाने पर यह नोट “सिर्फ़ नोट” बन जाएगा और खाते में वापस नहीं आएगा।"
           }
         }
       }
