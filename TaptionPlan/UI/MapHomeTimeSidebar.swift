@@ -787,7 +787,7 @@ enum MapHomeTimeRailSegmentEngine {
             )
             append(next, to: &result)
         }
-        let segments = result.map { $0.segment() }
+        let segments = labelingAlighting(result.map { $0.segment() })
         return segments.isEmpty ? [.wholeDayUnconfirmed] : segments
     }
 
@@ -2705,10 +2705,10 @@ enum KnownActivityTitleLocalizer {
     static func localized(_ title: String, language: MapHomeLanguage) -> String {
         guard language == .english else { return title }
         if let value = english[title] { return UITextPack.translate(english: value) }
-        if title.hasSuffix(" 탑승") {
+        if title.hasSuffix(" 탑승") || title.hasSuffix(" 하차") {
             let base = String(title.dropLast(3))
             let name = english[base].map { UITextPack.translate(english: $0) } ?? base
-            return language.text("\(name) 탑승", "\(name) ride")
+            return title.hasSuffix(" 하차") ? language.text("\(name) 하차", "Leaving \(name)") : language.text("\(name) 탑승", "\(name) ride")
         }
         return title
     }

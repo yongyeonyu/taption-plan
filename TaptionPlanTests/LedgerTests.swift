@@ -632,3 +632,18 @@ final class SiriIntentsTests: XCTestCase {
         XCTAssertEqual(SiriCheckIn.arriveWork.memoText(.korean), "출근")
     }
 }
+
+/// RDE1111A01: 같은 수단의 동작 기록 바로 뒤에 붙은 이동 기록 조각은 「하차」다.
+final class RailRidePhaseTests: XCTestCase {
+    func testRideRightAfterSameModeMotionBecomesAlighting() {
+        let segments = [
+            MapHomeTimeRailSegment(startMinute: 568, endMinute: 607, categoryID: "movement", title: "자동차", behavior: "car"),
+            MapHomeTimeRailSegment(startMinute: 607, endMinute: 622, categoryID: "movement", title: "자동차 탑승", behavior: "car"),
+            MapHomeTimeRailSegment(startMinute: 622, endMinute: 634, categoryID: "movement", title: "걷기", behavior: "walking"),
+            MapHomeTimeRailSegment(startMinute: 700, endMinute: 710, categoryID: "movement", title: "지하철 탑승", behavior: "subway"),
+        ]
+        let labeled = MapHomeTimeRailSegmentEngine.labelingAlighting(segments)
+        XCTAssertEqual(labeled.map(\.title), ["자동차", "자동차 하차", "걷기", "지하철 탑승"])
+        XCTAssertEqual(labeled[1].startMinute, 607)
+    }
+}
