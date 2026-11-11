@@ -349,6 +349,7 @@ struct MapHomeCatSpeechBubble: View {
 
     /// 말풍선이 차지하는 폭(꼬리·여백 포함).
     static func outerWidth(_ text: String, isPhrase: Bool) -> CGFloat {
+        if MapHomeCatBubbleState.shared.isCollapsed { return 30 }
         let size = TaptionType.scaled(TaptionType.snapped(11))
         let body = isPhrase ? width(text) : ceil((text as NSString).size(withAttributes: [.font: AssistantBubbleLayout.font(size: size)]).width)
         return body + 16 + 6
@@ -356,11 +357,13 @@ struct MapHomeCatSpeechBubble: View {
 
     var body: some View {
         // AI 말풍선이 있으면 그 시간 동안 활동 이름 대신 보인다(BUB1110A01). 10자 안팎에서 접어 아래로 여덟 줄까지(BBL1111A01).
-        let shown = Self.displayText(action: action, fallback: text)
+        // 누르면 「…」만 남는다(BBL1111A02).
+        let collapsed = MapHomeCatBubbleState.shared.isCollapsed
+        let shown = collapsed ? (text: "…", isPhrase: false) : Self.displayText(action: action, fallback: text)
         let ai: String? = shown.isPhrase ? shown.text : nil
         HStack(spacing: -1) {
             if side == .right { tail(pointsLeft: true) }
-            Text(ai ?? text)
+            Text(ai ?? shown.text)
                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
                 .foregroundStyle(Color.tpInk)
                 .lineLimit(ai == nil ? 1 : AssistantBubbleLayout.maxLines)
@@ -421,6 +424,7 @@ private struct MapHomeCatSpeechBubblePlacement: ViewModifier {
             .background { MapHomeWindowFrameProbe(frame: $catFrame) }
             .overlay(alignment: side == .right ? .trailing : .leading) {
                 MapHomeCatSpeechBubble(text: action.title, side: side, action: action)
+                    .background { MapHomeWindowFrameProbe(frame: Binding(get: { nil }, set: { MapHomeCatBubbleState.shared.publish(frame: $0) })) }
                     .alignmentGuide(side == .right ? .trailing : .leading) { size in
                         side == .right ? -gap : size.width + gap
                     }
@@ -445,8 +449,33 @@ extension MapHomeCatSpeechBubble {
     }
 }
 
+/// 말풍선 접힘과 화면 자리(BBL1111A02). 말풍선은 터치를 받지 않으므로 지도 탭이 이 자리로 판정한다.
+@MainActor
+@Observable
+final class MapHomeCatBubbleState {
+    static let shared = MapHomeCatBubbleState()
+    var isCollapsed = false
+    /// 창 기준 말풍선 자리. 화면 탭 판정에만 쓰므로 지켜보지 않는다.
+    @ObservationIgnored private(set) var frame: CGRect?
+
+    func publish(frame next: CGRect?) {
+        frame = next.flatMap { $0.width > 0 ? $0 : nil }
+    }
+
+    /// 지도 화면(`mapHomeViewport`)의 창 기준 원점. 위쪽 안전 영역만큼 내려와 있다.
+    @ObservationIgnored var viewportOrigin: CGPoint = .zero
+
+    /// 말풍선을 눌렀으면 접기·펼치기를 하고 true. 손가락 여유 8pt.
+    func toggleIfTapped(viewportPoint: CGPoint) -> Bool {
+        let point = CGPoint(x: viewportPoint.x + viewportOrigin.x, y: viewportPoint.y + viewportOrigin.y)
+        guard let frame, frame.insetBy(dx: -8, dy: -8).contains(point) else { return false }
+        isCollapsed.toggle()
+        return true
+    }
+}
+
 /// 이 뷰가 창에서 차지하는 자리를 1초마다 알린다. 지도 위 주석은 움직여도 레이아웃이 다시 돌지 않는다.
-private struct MapHomeWindowFrameProbe: UIViewRepresentable {
+struct MapHomeWindowFrameProbe: UIViewRepresentable {
     @Binding var frame: CGRect?
 
     func makeUIView(context: Context) -> ProbeView {
@@ -467,7 +496,7 @@ private struct MapHomeWindowFrameProbe: UIViewRepresentable {
         override func didMoveToWindow() {
             super.didMoveToWindow()
             timer?.invalidate()
-            guard window != nil else { timer = nil; return }
+            guard window != nil else { timer = nil; onChange?(nil); return }
             report()
             timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
                 MainActor.assumeIsolated { self?.report() }

@@ -672,6 +672,11 @@ extension MapHomeView {
             openCounterDetail(at: local)
             return
         }
+        // 말풍선을 누르면 「…」로 접고 다시 누르면 펼친다(BBL1111A02). 화랑이 탭보다 먼저 본다.
+        if MapHomeCatBubbleState.shared.toggleIfTapped(viewportPoint: viewportPoint(fromMapLocal: local)) {
+            UISelectionFeedbackGenerator().selectionChanged()
+            return
+        }
         if isStickmanTapped(at: local) {
             toggleCounterFromCat()
             return

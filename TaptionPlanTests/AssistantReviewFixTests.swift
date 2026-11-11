@@ -563,6 +563,20 @@ final class AssistantReviewFixTests: XCTestCase {
         XCTAssertEqual(MapHomeCatSpeechBubble.placedSide(text: String(repeating: "가", count: 20), bubbleWidth: 150, catFrame: nil, windowWidth: 440, trailingReserve: 139), .left)
     }
 
+    /// BBL1111A02: 말풍선 자리를 누르면 접고, 다시 누르면 편다. 지도 화면 원점(안전 영역)을 더해 창 기준으로 본다.
+    func testBubbleTapCollapsesAndExpands() {
+        let state = MapHomeCatBubbleState()
+        state.viewportOrigin = CGPoint(x: 0, y: 59)
+        state.publish(frame: CGRect(x: 100, y: 300, width: 120, height: 40))
+        XCTAssertFalse(state.toggleIfTapped(viewportPoint: CGPoint(x: 150, y: 150)))
+        XCTAssertTrue(state.toggleIfTapped(viewportPoint: CGPoint(x: 150, y: 261)))
+        XCTAssertTrue(state.isCollapsed)
+        XCTAssertTrue(state.toggleIfTapped(viewportPoint: CGPoint(x: 95, y: 245)), "8pt finger slack")
+        XCTAssertFalse(state.isCollapsed)
+        state.publish(frame: nil)
+        XCTAssertFalse(state.toggleIfTapped(viewportPoint: CGPoint(x: 150, y: 261)), "no bubble on screen")
+    }
+
     // MARK: - 주소 거르기 (16)
 
     func testAddressFilterGapsFromTheReview() {

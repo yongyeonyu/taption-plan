@@ -317,6 +317,10 @@ extension MapHomeView {
             }
         }
         .coordinateSpace(name: "mapHomeViewport")
+        // 말풍선 탭 판정을 위해 지도 화면의 창 기준 원점을 알려 둔다(BBL1111A02).
+        .background {
+            MapHomeWindowFrameProbe(frame: Binding(get: { nil }, set: { MapHomeCatBubbleState.shared.viewportOrigin = $0?.origin ?? .zero }))
+        }
         .ignoresSafeArea(.container, edges: .bottom)
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .onGeometryChange(
