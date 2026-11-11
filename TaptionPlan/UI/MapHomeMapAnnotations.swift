@@ -125,7 +125,7 @@ struct MapHomePlacePin: View {
                         RoundedRectangle(cornerRadius: 15, style: .continuous)
                             .stroke(Color.tpBorder, lineWidth: TaptionBorder.width)
                     }
-                    .shadow(color: Color.tpInk.opacity(0.2), radius: 4, y: 2)
+                    .taptionShadow(.floating)
                     .overlay(alignment: .topTrailing) { stampSeal }
                 Text(AppLanguagePreference.runtimeText(FloorLabel.korean(floor ?? 1), FloorLabel.english(floor ?? 1)))
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
@@ -134,7 +134,7 @@ struct MapHomePlacePin: View {
                     .padding(.vertical, 5)
                     .background(Color.tpSurface.opacity(0.98), in: Capsule())
                     .overlay { Capsule().stroke(Color.tpBorder, lineWidth: TaptionBorder.width) }
-                    .shadow(color: Color.tpInk.opacity(0.12), radius: 4, y: 2)
+                    .taptionShadow(.floating)
             }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("\(name), \(FloorLabel.korean(floor ?? 1))")
@@ -200,7 +200,7 @@ struct MapHomePlacePin: View {
             )
             .clipShape(Circle())
             .overlay { Circle().stroke(Color.white.opacity(0.92), lineWidth: 2) }
-            .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
+            .taptionShadow(.floating)
             .overlay { if showsCatAtHome { homeCat } }
             .overlay(alignment: .topTrailing) {
                 if isLeapDay {
@@ -239,7 +239,7 @@ struct MapHomePlacePin: View {
             .frame(height: MapHomePlacePinLayout.levelLabelHeight)
             .background(Color.tpSurface.opacity(0.98), in: Capsule())
             .overlay { Capsule().stroke(Color.tpBorder, lineWidth: TaptionBorder.width) }
-            .shadow(color: Color.tpInk.opacity(0.12), radius: 4, y: 2)
+            .taptionShadow(.floating)
             .contentShape(Capsule())
         if let onOpenDaySummary {
             Button(action: onOpenDaySummary) { label }
@@ -374,7 +374,7 @@ struct MapHomeCatSpeechBubble: View {
                 .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
             if side == .left { tail(pointsLeft: false) }
         }
-        .shadow(color: .black.opacity(0.14), radius: 3, y: 1)
+        .taptionShadow(.floating)
         .fixedSize()
         .allowsHitTesting(false)
         .accessibilityHidden(true)
@@ -525,7 +525,7 @@ struct MapHomeTransitPlacePin: View {
                 .frame(width: 22, height: 22)
                 .background(Color.tpTransitDark, in: Circle())
                 .overlay { Circle().stroke(.white, lineWidth: 1) }
-                .shadow(color: .black.opacity(0.15), radius: 3, y: 1)
+                .taptionShadow(.floating)
         }
         .accessibilityLabel("\(name), \(kind.title)")
     }
@@ -544,7 +544,7 @@ struct MapHomeTransitBoardingCandidatePin: View {
                 .frame(width: 28, height: 28)
                 .background(Color.tpTransitDark, in: Circle())
                 .overlay { Circle().stroke(.white, lineWidth: 1.5) }
-                .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
+                .taptionShadow(.floating)
         }
         .accessibilityLabel("\(name), \(kind.title) 탑승 확인")
     }
@@ -718,7 +718,7 @@ struct MapHomeHistoricalLocationMarker: View {
         .overlay {
             Circle().stroke(Color.tpPastelRose.opacity(0.35), lineWidth: 1)
         }
-        .shadow(color: Color.black.opacity(0.18), radius: 3, y: 2)
+        .taptionShadow(.floating)
         .accessibilityHidden(true)
     }
 }
@@ -936,7 +936,7 @@ struct MapHomeMarkerLabel: View {
             .overlay {
                 Capsule().stroke(color.opacity(0.42), lineWidth: 1)
             }
-            .shadow(color: Color.tpInk.opacity(0.13), radius: 5, y: 2)
+            .taptionShadow(.floating)
     }
 }
 

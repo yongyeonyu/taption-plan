@@ -355,7 +355,8 @@ extension View {
     @ViewBuilder
     func taptionShadow(_ level: TaptionShadowLevel) -> some View {
         switch level {
-        case .floating: shadow(color: .black.opacity(0.12), radius: 8, y: 3)
+        // 지도 위 칩·카드·패널이 모두 같은 높이로 떠 보이게 한 값(3묶음에서 지도 화면 21곳을 이것으로 모음).
+        case .floating: shadow(color: .black.opacity(0.14), radius: 5, y: 2)
         case .card: shadow(color: .black.opacity(0.06), radius: 3, y: 1)
         case .none: self
         }

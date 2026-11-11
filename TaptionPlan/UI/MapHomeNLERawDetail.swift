@@ -57,7 +57,7 @@ struct NLEQuickMenuPill<MenuItems: View>: View {
         .frame(height: NLEQuickMenuMetrics.height)
         .background(Color.tpSurface, in: Capsule())
         .overlay(Capsule().stroke(Color.tpBorder, lineWidth: TaptionBorder.width))
-        .shadow(color: .black.opacity(0.18), radius: 8, y: 3)
+        .taptionShadow(.floating)
     }
 
     private func icon(_ systemImage: String, _ label: String) -> some View {

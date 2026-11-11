@@ -3,7 +3,7 @@ import SwiftUI
 /// 앱을 열 때 사용자 판단이 필요한 것을 한 번에 하나씩 묻는다(ASK1111A01, 대표 결정).
 /// 순서: 위치 「항상 허용」 → 내 차 → 지하철·버스 탑승 확인 → 처음 보는 일정 분류 → 자주 가는 곳 → 미확인 시간.
 /// 한 번 연 동안 같은 질문은 다시 묻지 않는다. 「나중에 확인」을 누르면 그날은 더 묻지 않고
-/// 왼쪽 위에 「확인할 것」 아이콘을 둔다. 아이콘을 누르면 다시 차례로 묻는다(LPR1111A01, 대표 결정).
+/// 위쪽 단추 줄의 돋보기 오른쪽에 「확인할 것」 단추를 둔다. 단추를 누르면 다시 차례로 묻는다(LPR1111A01, 대표 결정).
 enum MapHomeLaunchPrompt: Identifiable, Hashable {
     case carAudio(String)
     case boarding(String)
@@ -124,7 +124,7 @@ extension MapHomeView {
         #endif
         await checkLocationAlways()
         while !Task.isCancelled, scenePhase == .active {
-            // 「나중에 확인」을 누른 날은 더 묻지 않는다. 왼쪽 위 아이콘으로 다시 열 수 있다.
+            // 「나중에 확인」을 누른 날은 더 묻지 않는다. 돋보기 오른쪽 단추로 다시 열 수 있다.
             if MapHomeLaunchPromptDeferral.isDeferred() { return }
             while isLocationAlwaysPromptPresented || launchPrompt != nil
                 || selectedTransitBoardingCandidate != nil || isUnconfirmedReviewPresented {
@@ -159,15 +159,40 @@ extension MapHomeView {
     }
 }
 
+/// 「나중에 확인」을 누른 날에만 보이는 「확인할 것」 단추. 위쪽 단추 줄에서 돋보기 바로 오른쪽에 놓인다(대표 지시: 한 줄로).
+/// 누르면 그날 미룬 질문을 다시 차례로 묻는다.
+struct MapHomeLaunchPromptDeferredButton: View {
+    let language: MapHomeLanguage
+    let onResume: () -> Void
+    @AppStorage(MapHomeLaunchPromptDeferral.key) private var deferredDay = ""
+
+    var body: some View {
+        if MapHomeLaunchPromptDeferral.isDeferred(deferredDay) {
+            Button {
+                deferredDay = ""
+                onResume()
+            } label: {
+                Image(systemName: "checklist")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(Color.tpAccent)
+                    .frame(width: 40, height: 40)
+                    .background { TaptionStickerDisc() }
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(language.text("확인할 것", "Things to check"))
+            .accessibilityIdentifier("launchPrompts.deferred")
+        }
+    }
+}
+
 extension View {
     func mapHomeLaunchPrompts(
         _ prompt: Binding<MapHomeLaunchPrompt?>,
         model: AppModel,
         language: MapHomeLanguage,
-        onResume: @escaping () -> Void = {},
         onReviewUnconfirmed: @escaping () -> Void
     ) -> some View {
-        modifier(MapHomeLaunchPromptAlerts(prompt: prompt, model: model, language: language, onResume: onResume, onReviewUnconfirmed: onReviewUnconfirmed))
+        modifier(MapHomeLaunchPromptAlerts(prompt: prompt, model: model, language: language, onReviewUnconfirmed: onReviewUnconfirmed))
     }
 }
 
@@ -175,7 +200,6 @@ private struct MapHomeLaunchPromptAlerts: ViewModifier {
     @Binding var prompt: MapHomeLaunchPrompt?
     let model: AppModel
     let language: MapHomeLanguage
-    let onResume: () -> Void
     let onReviewUnconfirmed: () -> Void
     /// 「나중에 확인」을 누른 날. 오늘이면 질문을 띄우지 않고 아이콘만 보인다.
     @AppStorage(MapHomeLaunchPromptDeferral.key) private var deferredDay = ""
@@ -198,27 +222,6 @@ private struct MapHomeLaunchPromptAlerts: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .overlay(alignment: .topLeading) {
-                if MapHomeLaunchPromptDeferral.isDeferred(deferredDay) {
-                    Button {
-                        deferredDay = ""
-                        onResume()
-                    } label: {
-                        Image(systemName: "checklist")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(Color.tpAccent)
-                            .frame(width: 34, height: 34)
-                            .mapHomeGlass(in: Circle())
-                            .frame(width: 44, height: 44)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(language.text("확인할 것", "Things to check"))
-                    .accessibilityIdentifier("launchPrompts.deferred")
-                    .padding(.leading, 8)
-                    .padding(.top, MapHomeLaunchPromptAlerts.iconTop)
-                }
-            }
             .alert(language.text("이 기기가 내 차 같아요", "This looks like your car"), isPresented: isShowing { if case .carAudio = $0 { true } else { false } }, presenting: carName) { name in
                 Button(language.text("내 차로 등록", "Register as my car")) { Task { await model.setCarAudio(name, isMyCar: true) } }
                 Button(language.text("아니요", "No")) { Task { await model.setCarAudio(name, isMyCar: false) } }
@@ -277,9 +280,6 @@ private struct MapHomeLaunchPromptAlerts: ViewModifier {
                 Text(language.text("오늘 \(minutes)분이 무엇을 했는지 모르는 시간이에요. 지금 정할까요?", "\(minutes) min today are unconfirmed. Review them now?"))
             }
     }
-
-    /// 위쪽 둥근 단추 줄 바로 아래.
-    static let iconTop: CGFloat = 66
 
     private var carName: String? { if case .carAudio(let name) = prompt { name } else { nil } }
     private var calendarTitle: String? { if case .calendarTitle(let title) = prompt { title } else { nil } }

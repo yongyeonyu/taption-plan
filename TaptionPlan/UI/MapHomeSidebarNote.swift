@@ -102,7 +102,7 @@ struct MapHomeSidebarNoteBubble: View {
                     .rotationEffect(.degrees(45))
                     .offset(x: 4)
             }
-            .shadow(color: .black.opacity(0.18), radius: 5, y: 2)
+            .taptionShadow(.floating)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(note.time) \(note.title)")

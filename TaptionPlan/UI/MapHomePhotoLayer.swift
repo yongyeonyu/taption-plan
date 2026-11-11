@@ -944,7 +944,7 @@ struct MapHomePlaybackMomentsOverlay: View {
                     .padding(.horizontal, 14).padding(.vertical, 10)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .shadow(color: .black.opacity(0.18), radius: 8, y: 3)
+                    .taptionShadow(.floating)
                     .id(shown.id)
                     .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
             }

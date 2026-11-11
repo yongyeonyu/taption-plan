@@ -510,7 +510,7 @@ struct MapHomeDailyCardSheet: View {
                         .resizable()
                         .scaledToFit()
                         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                        .shadow(color: .black.opacity(0.12), radius: 10, y: 4)
+                        .taptionShadow(.floating)
                         .opacity(isDayReady ? 1 : 0.45)
                         .overlay { if !isDayReady { ProgressView() } }
                 } else {

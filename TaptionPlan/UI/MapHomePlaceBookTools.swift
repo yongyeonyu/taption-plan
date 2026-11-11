@@ -543,7 +543,7 @@ struct MapHomePassportStamp: View {
                     .padding(size * 0.07)
             }
         }
-        .shadow(color: .black.opacity(0.14), radius: 1.5, y: 1)
+        .taptionShadow(.floating)
     }
 }
 

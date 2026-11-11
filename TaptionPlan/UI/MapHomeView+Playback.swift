@@ -119,7 +119,7 @@ extension MapHomeView {
                 .overlay {
                     Circle().stroke(Color.tpBorder, lineWidth: TaptionBorder.width)
                 }
-                .shadow(color: Color.black.opacity(0.07), radius: 9, y: 3)
+                .taptionShadow(.floating)
                 .frame(
                     width: MapHomeSearchLayoutMath.playbackTouchSize,
                     height: MapHomeSearchLayoutMath.playbackTouchSize

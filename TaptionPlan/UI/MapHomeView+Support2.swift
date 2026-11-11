@@ -576,7 +576,7 @@ extension MapHomeView {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(Color.tpBorder, lineWidth: TaptionBorder.width)
         }
-        .shadow(color: Color.black.opacity(0.07), radius: 9, y: 3)
+        .taptionShadow(.floating)
         .simultaneousGesture(
             SpatialTapGesture().onEnded { _ in
                 dismissMapSearchOverlay()

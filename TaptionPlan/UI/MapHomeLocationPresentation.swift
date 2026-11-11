@@ -1115,7 +1115,7 @@ struct MapHomeStickmanMarker: View {
             }
         }
         .frame(width: Self.size.width, height: Self.size.height)
-        .shadow(color: .black.opacity(0.14), radius: 3, y: 1)
+        .taptionShadow(.floating)
         .accessibilityHidden(true)
     }
 }

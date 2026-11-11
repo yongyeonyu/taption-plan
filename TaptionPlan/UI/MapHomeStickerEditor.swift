@@ -37,7 +37,7 @@ struct MapHomeMapStickerMarker: View {
                 .background(Color.white.opacity(0.94), in: Capsule())
                 .overlay { Capsule().stroke(Color.black, lineWidth: 1) }
         }
-        .shadow(color: .black.opacity(0.12), radius: 4, y: 2)
+        .taptionShadow(.floating)
         .fixedSize()
         .frame(
             minWidth: TaptionMenuMetrics.minimumHitSize,
@@ -84,7 +84,7 @@ struct MapHomeMapMemoMarker: View {
                 }
                 .frame(width: 14, height: 8)
         }
-        .shadow(color: .black.opacity(0.10), radius: 4, y: 2)
+        .taptionShadow(.floating)
         .fixedSize()
         .frame(
             minWidth: TaptionMenuMetrics.minimumHitSize,

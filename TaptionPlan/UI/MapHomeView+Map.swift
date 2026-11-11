@@ -1123,7 +1123,7 @@ extension MapHomeView {
         return Color.clear
             .frame(width: timeRailWidth, height: railHeight)
             .allowsHitTesting(false)
-        .shadow(color: .black.opacity(0.045), radius: 5, y: 1)
+        .taptionShadow(.floating)
     }
 
     func mapZoomButton(
