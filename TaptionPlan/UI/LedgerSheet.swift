@@ -1,3 +1,4 @@
+import AppIntents
 import PhotosUI
 import SwiftUI
 
@@ -15,6 +16,7 @@ struct LedgerSheet: View {
     @State private var isAdding = false
     @State private var isEditingBudget = false
     @State private var isSettling = false
+    @State private var isShowingShortcutGuide = false
     @State private var draft: LedgerEntry?
     @State private var receiptItem: PhotosPickerItem?
     @State private var captureNote: String?
@@ -58,6 +60,9 @@ struct LedgerSheet: View {
                     Menu {
                         Button(language.text("이 달 예산", "Monthly budget")) { isEditingBudget = true }
                         Button(language.text("정산하기", "Settle up")) { isSettling = true }
+                        Button { isShowingShortcutGuide = true } label: {
+                            Label(language.text("결제 문자 자동으로 넣기", "Add payment texts automatically"), systemImage: "message.badge")
+                        }
                         ShareLink(item: LedgerTableFile(name: "BOKKI-\(month).csv") { [monthEntries, monthCarryOver, monthTitle, language] in
                             LedgerTable.csv(monthEntries, carryOver: monthCarryOver, title: language.text("BOKKI 가계부 \(monthTitle)", "BOKKI ledger \(monthTitle)"), language: language)
                         },
@@ -98,6 +103,7 @@ struct LedgerSheet: View {
                 Task { await readReceipt(item) }
             }
             .sheet(isPresented: $isEditingBudget) { LedgerBudgetForm(language: language, period: month) }
+            .sheet(isPresented: $isShowingShortcutGuide) { LedgerShortcutGuide(language: language) }
             .sheet(isPresented: $isSettling) {
                 LedgerSettleView(language: language, entries: monthEntries.filter { $0.transfer == nil })
             }
@@ -162,7 +168,7 @@ struct LedgerSheet: View {
             }
             .buttonStyle(.borderless)
         } footer: {
-            Text(captureNote ?? language.text("카드 결제 문자를 복사해 붙여 넣거나 영수증 사진을 고르면 채워 드려요. 단축어 「결제 문자 넣기」로 문자가 오면 바로 넣을 수도 있어요.", "Paste a card payment text or pick a receipt photo to fill an entry. The Shortcuts action \"Add payment text\" can add texts as they arrive."))
+            Text(captureNote ?? language.text("카드 결제 문자를 복사해 붙여 넣거나 영수증 사진을 고르면 채워 드려요. 오른쪽 위 ⋯ → 「결제 문자 자동으로 넣기」로 문자가 오면 바로 넣을 수도 있어요.", "Paste a card payment text or pick a receipt photo to fill an entry. Use ⋯ → \"Add payment texts automatically\" to add texts as they arrive."))
         }
     }
 
@@ -530,5 +536,46 @@ enum LedgerNumber {
         let grouping = locale.groupingSeparator ?? ","
         let decimal = locale.decimalSeparator ?? "."
         return Double(trimmed.replacingOccurrences(of: grouping, with: "").replacingOccurrences(of: decimal, with: "."))
+    }
+}
+
+/// 결제 문자 자동 넣기 안내(LED1111A10, 대표 질문 2026-11-11: 단축어 추가 메뉴가 어디 있나).
+/// 단축어 자동화는 앱이 대신 만들 수 없어 순서를 보여 주고 단축어 앱을 연다.
+struct LedgerShortcutGuide: View {
+    let language: MapHomeLanguage
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
+
+    private var steps: [String] {
+        [
+            language.text("단축어 앱 → 아래 「자동화」 → 오른쪽 위 +", "Shortcuts app → Automation → + at the top right"),
+            language.text("「메시지」 → 「메시지 내용에 포함」에 카드사 이름이나 「승인」을 적기", "Message → \"Message Contains\" → type your card company or \"approved\""),
+            language.text("「즉시 실행」을 고르고 다음", "Choose \"Run Immediately\", then Next"),
+            language.text("「새로운 빈 자동화」 → 동작 검색에서 「결제 문자 넣기」(BOKKI Plan)", "New Blank Automation → search actions for \"Add payment text\" (BOKKI Plan)"),
+            language.text("「메시지」 칸이 받은 메시지로 채워졌는지 보고 완료", "Check that the Message field is the received message, then Done"),
+        ]
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
+                        Label { Text(step) } icon: { Text(verbatim: "\(index + 1)").font(.taptionStyle(.headline)) }
+                    }
+                } footer: {
+                    Text(language.text("카드 결제 문자가 오면 가계부에 바로 들어가요. 읽지 못한 형식은 「붙여넣기」로 넣어 주세요.", "Card payment texts go straight into the ledger. Paste any format it can't read."))
+                }
+                Section {
+                    Button {
+                        if let url = URL(string: "shortcuts://") { openURL(url) }
+                    } label: { Label(language.text("단축어 앱 열기", "Open Shortcuts"), systemImage: "square.2.layers.3d") }
+                    ShortcutsLink()
+                }
+            }
+            .navigationTitle(language.text("결제 문자 자동으로 넣기", "Add payment texts automatically"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button(language.text("완료", "Done")) { dismiss() } } }
+        }
     }
 }

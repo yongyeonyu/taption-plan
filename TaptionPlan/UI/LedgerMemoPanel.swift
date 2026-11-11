@@ -135,8 +135,8 @@ struct LedgerMemoCard: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            if let number = LedgerHighway.number(for: entry) {
-                LedgerHighwayShield(number: number, size: 24).frame(width: 26, height: 26)
+            if let toll = LedgerToll.kind(for: entry) {
+                LedgerTollIcon(toll: toll, size: 24).frame(width: 26, height: 26)
             } else {
                 Image(systemName: entry.category.symbol)
                     .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))

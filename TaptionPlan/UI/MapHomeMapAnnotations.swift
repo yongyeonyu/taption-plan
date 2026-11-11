@@ -332,20 +332,32 @@ struct MapHomeCatSpeechBubble: View {
     /// 3순위 기본 문구를 고르는 대분류(BUB1110A02). 없으면 동작 이름.
     var action: MapHomeStickmanAction?
 
-    /// 소품이 오른쪽에 있는 동작은 왼쪽에, 이동 중에는 가는 방향을 가리지 않게 뒤쪽에 둔다.
-    static func side(for action: MapHomeStickmanAction, facesLeft: Bool) -> Side {
-        if action.isMoving { return facesLeft ? .right : .left }
-        switch action {
-        case .computer, .company, .school, .reading, .restCroissant, .meeting, .game, .video: return .left
-        default: return .right
-        }
+    /// 15자 이하는 오른쪽, 넘으면 왼쪽(대표 지시 2026-11-11, BBL1111A01).
+    static let shortLimit = 15
+
+    static func side(text: String) -> Side {
+        text.count <= shortLimit ? .right : .left
     }
 
-    var body: some View {
-        // AI 말풍선이 있으면 그 시간 동안 활동 이름 대신 보인다(BUB1110A01). 창 폭의 40%에서 접어 아래로 다섯 줄까지(넘치면 60%까지 넓힘).
+    /// 지금 보일 글: AI 말풍선 → 기본 문구 → 동작 이름.
+    static func displayText(action: MapHomeStickmanAction?, fallback: String) -> (text: String, isPhrase: Bool) {
         let board = AssistantBubbleBoard.current
         let ai = board.text?.display
             ?? action.flatMap { MapHomeDefaultBubblePool.phrase(for: $0, at: board.viewedTime ?? .now, language: .current) }
+        return (ai ?? fallback, ai != nil)
+    }
+
+    /// 말풍선이 차지하는 폭(꼬리·여백 포함).
+    static func outerWidth(_ text: String, isPhrase: Bool) -> CGFloat {
+        let size = TaptionType.scaled(TaptionType.snapped(11))
+        let body = isPhrase ? width(text) : ceil((text as NSString).size(withAttributes: [.font: AssistantBubbleLayout.font(size: size)]).width)
+        return body + 16 + 6
+    }
+
+    var body: some View {
+        // AI 말풍선이 있으면 그 시간 동안 활동 이름 대신 보인다(BUB1110A01). 10자 안팎에서 접어 아래로 여덟 줄까지(BBL1111A01).
+        let shown = Self.displayText(action: action, fallback: text)
+        let ai: String? = shown.isPhrase ? shown.text : nil
         HStack(spacing: -1) {
             if side == .right { tail(pointsLeft: true) }
             Text(ai ?? text)
@@ -384,13 +396,89 @@ struct MapHomeCatSpeechBubble: View {
 extension View {
     /// 화랑이 칸 바로 바깥에 말풍선을 붙인다. 칸 크기와 레이아웃은 그대로다.
     func catSpeechBubble(action: MapHomeStickmanAction, facesLeft: Bool = false) -> some View {
-        let side = MapHomeCatSpeechBubble.side(for: action, facesLeft: facesLeft)
+        modifier(MapHomeCatSpeechBubblePlacement(action: action))
+    }
+}
+
+/// 말풍선 좌우: 짧으면 오른쪽, 길면 왼쪽. 오른쪽에 두면 시간 사이드바·화면 끝에 가릴 때도 왼쪽(BBL1111A01).
+private struct MapHomeCatSpeechBubblePlacement: ViewModifier {
+    let action: MapHomeStickmanAction
+    @AppStorage("mapHomeSidebarVisible") private var isSidebarVisible = true
+    /// 화랑이 칸의 창 기준 자리. 지도가 움직여도 레이아웃이 다시 돌지 않으므로 1초마다 잰다.
+    @State private var catFrame: CGRect?
+
+    func body(content: Content) -> some View {
+        let shown = MapHomeCatSpeechBubble.displayText(action: action, fallback: action.title)
         let gap = MapHomeStickmanMarker.size.width * 0.3
-        return overlay(alignment: side == .right ? .trailing : .leading) {
-            MapHomeCatSpeechBubble(text: action.title, side: side, action: action)
-                .alignmentGuide(side == .right ? .trailing : .leading) { size in
-                    side == .right ? -gap : size.width + gap
-                }
+        let side = MapHomeCatSpeechBubble.placedSide(
+            text: shown.text,
+            bubbleWidth: MapHomeCatSpeechBubble.outerWidth(shown.text, isPhrase: shown.isPhrase) + gap,
+            catFrame: catFrame,
+            windowWidth: AssistantBubbleLayout.windowWidth,
+            trailingReserve: isSidebarVisible ? MapHomeCatSpeechBubble.sidebarReserve : 8
+        )
+        return content
+            .background { MapHomeWindowFrameProbe(frame: $catFrame) }
+            .overlay(alignment: side == .right ? .trailing : .leading) {
+                MapHomeCatSpeechBubble(text: action.title, side: side, action: action)
+                    .alignmentGuide(side == .right ? .trailing : .leading) { size in
+                        side == .right ? -gap : size.width + gap
+                    }
+            }
+    }
+}
+
+extension MapHomeCatSpeechBubble {
+    /// 시간 사이드바가 열려 있을 때 오른쪽에서 비워 둘 폭(손잡이 줄·날씨 + 시간선 + 여백).
+    static let sidebarReserve: CGFloat = MapHomeTimeSidebarMath.interactionWidth(railWidth: 44, trailingInteractionWidth: 10) + 6
+
+    /// 글 길이로 정한 쪽에 두되, 오른쪽이 가리고 왼쪽이 들어가면 왼쪽, 왼쪽이 화면 밖이고 오른쪽이 들어가면 오른쪽.
+    static func placedSide(text: String, bubbleWidth: CGFloat, catFrame: CGRect?, windowWidth: CGFloat, trailingReserve: CGFloat) -> Side {
+        let preferred = side(text: text)
+        guard let catFrame else { return preferred }
+        let rightFits = catFrame.maxX + bubbleWidth <= windowWidth - trailingReserve
+        let leftFits = catFrame.minX - bubbleWidth >= 0
+        switch preferred {
+        case .right: return !rightFits && leftFits ? .left : .right
+        case .left: return !leftFits && rightFits ? .right : .left
+        }
+    }
+}
+
+/// 이 뷰가 창에서 차지하는 자리를 1초마다 알린다. 지도 위 주석은 움직여도 레이아웃이 다시 돌지 않는다.
+private struct MapHomeWindowFrameProbe: UIViewRepresentable {
+    @Binding var frame: CGRect?
+
+    func makeUIView(context: Context) -> ProbeView {
+        let view = ProbeView()
+        view.isUserInteractionEnabled = false
+        view.onChange = { next in if frame != next { frame = next } }
+        return view
+    }
+
+    func updateUIView(_ uiView: ProbeView, context: Context) {
+        uiView.onChange = { next in if frame != next { frame = next } }
+    }
+
+    final class ProbeView: UIView {
+        var onChange: ((CGRect?) -> Void)?
+        private var timer: Timer?
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            timer?.invalidate()
+            guard window != nil else { timer = nil; return }
+            report()
+            timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+                MainActor.assumeIsolated { self?.report() }
+            }
+        }
+
+        private func report() {
+            guard let window else { return }
+            let rect = convert(bounds, to: window)
+            // 반 포인트 떨림으로 다시 그리지 않게 정수로 맞춘다.
+            onChange?(CGRect(x: rect.minX.rounded(), y: rect.minY.rounded(), width: rect.width.rounded(), height: rect.height.rounded()))
         }
     }
 }

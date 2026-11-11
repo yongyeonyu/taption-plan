@@ -477,6 +477,13 @@ final class LedgerTests: XCTestCase {
         XCTAssertNil(LedgerHighway.number(in: "고속버스 터미널"))
         let entry = LedgerEntry(occurredAt: .now, amount: 900, category: .transport, title: "경인고속도로 통행료")
         XCTAssertEqual(LedgerHighway.number(for: entry), 120)
+        // HWY1111A02: 다리·터널 통행료. 영종대교는 공항고속도로 위지만 다리로 본다.
+        XCTAssertEqual(LedgerToll.kind(in: "영종대교 통행료"), .bridge)
+        XCTAssertEqual(LedgerToll.kind(in: "인천대교"), .bridge)
+        XCTAssertEqual(LedgerToll.kind(in: "남산1호터널 혼잡통행료"), .tunnel)
+        XCTAssertEqual(LedgerToll.kind(in: "미시령 통행료"), .tunnel)
+        XCTAssertEqual(LedgerToll.kind(in: "경인고속도로 통행료"), .highway(120))
+        XCTAssertNil(LedgerToll.kind(in: "광화문 대교 칼국수"))
     }
 }
 

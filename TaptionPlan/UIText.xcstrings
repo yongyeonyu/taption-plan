@@ -202126,6 +202126,237 @@
         }
       }
     },
+    "「메시지」 → 「메시지 내용에 포함」에 카드사 이름이나 「승인」을 적기|Message → \"Message Contains\" → type your card company or \"approved\"" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「メッセージ」→「メッセージに含む」にカード会社名か「承認」を入力"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「信息」→「信息包含」中填写发卡机构名称或「批准」"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「訊息」→「訊息包含」中填入發卡機構名稱或「核准」"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "„Nachricht“ → „Nachricht enthält“ → Name des Kartenanbieters oder „genehmigt“ eingeben"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "« Message » → « Le message contient » → saisissez le nom de votre carte ou « approuvé »"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«Messaggio» → «Il messaggio contiene» → scrivi il nome della carta o «approvato»"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«Mensaje» → «El mensaje contiene» → escribe el nombre de tu tarjeta o «aprobado»"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“Mensagem” → “Mensagem contém” → digite o nome do cartão ou “aprovado”"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«Tin nhắn» → «Tin nhắn chứa» → nhập tên thẻ hoặc «phê duyệt»"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“Pesan” → “Pesan Berisi” → ketik nama kartu atau “disetujui”"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«ข้อความ» → «ข้อความมี» → พิมพ์ชื่อบัตรหรือ «อนุมัติ»"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“संदेश” → “संदेश में शामिल” → कार्ड कंपनी का नाम या “स्वीकृत” लिखें"
+          }
+        }
+      }
+    },
+    "「메시지」 칸이 받은 메시지로 채워졌는지 보고 완료|Check that the Message field is the received message, then Done" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「メッセージ」欄が受信したメッセージになっているか確認して完了"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "确认「信息」栏为收到的信息，然后完成"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "確認「訊息」欄為收到的訊息，然後完成"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prüfen, ob das Feld „Nachricht“ die empfangene Nachricht ist, dann „Fertig“"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vérifiez que le champ « Message » est le message reçu, puis OK"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Controlla che il campo «Messaggio» sia il messaggio ricevuto, poi Fine"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Comprueba que el campo «Mensaje» sea el mensaje recibido y pulsa OK"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confira se o campo “Mensagem” é a mensagem recebida e toque em OK"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kiểm tra ô «Tin nhắn» là tin nhắn nhận được rồi Xong"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pastikan kolom “Pesan” berisi pesan yang diterima, lalu Selesai"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ตรวจว่าช่อง «ข้อความ» เป็นข้อความที่ได้รับ แล้วแตะเสร็จสิ้น"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "देखें कि “संदेश” फ़ील्ड में प्राप्त संदेश है, फिर हो गया"
+          }
+        }
+      }
+    },
+    "「새로운 빈 자동화」 → 동작 검색에서 「결제 문자 넣기」(BOKKI Plan)|New Blank Automation → search actions for \"Add payment text\" (BOKKI Plan)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「新規の空のオートメーション」→ アクション検索で「決済メッセージを追加」(BOKKI Plan)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「新建空白自动化」→ 在操作中搜索「添加支付短信」(BOKKI Plan)"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「新增空白自動化操作」→ 在動作中搜尋「加入付款簡訊」(BOKKI Plan)"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "„Neue leere Automation“ → in Aktionen nach „Zahlungsnachricht hinzufügen“ suchen (BOKKI Plan)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "« Nouvelle automatisation vide » → cherchez l’action « Ajouter un SMS de paiement » (BOKKI Plan)"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«Nuova automazione vuota» → cerca l’azione «Aggiungi SMS di pagamento» (BOKKI Plan)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«Nueva automatización en blanco» → busca la acción «Añadir mensaje de pago» (BOKKI Plan)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“Nova automação em branco” → busque a ação “Adicionar mensagem de pagamento” (BOKKI Plan)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«Mục tự động hóa trống mới» → tìm tác vụ «Thêm tin nhắn thanh toán» (BOKKI Plan)"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“Otomatisasi Kosong Baru” → cari tindakan “Tambah pesan pembayaran” (BOKKI Plan)"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«การทำงานอัตโนมัติว่างใหม่» → ค้นหาการทำงาน «เพิ่มข้อความชำระเงิน» (BOKKI Plan)"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“नया खाली ऑटोमेशन” → क्रियाओं में “भुगतान संदेश जोड़ें” खोजें (BOKKI Plan)"
+          }
+        }
+      }
+    },
     "「여러 개 골라 덮기」로 고른 클립만 바꿉니다.|Only the clips you picked change." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -202199,6 +202430,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "सिर्फ़ “कई क्लिप चुनकर बदलें” से चुनी क्लिप बदलेंगी।"
+          }
+        }
+      }
+    },
+    "「즉시 실행」을 고르고 다음|Choose \"Run Immediately\", then Next" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「すぐに実行」を選んで次へ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择「立即运行」，然后下一步"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選擇「立即執行」，然後下一步"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "„Sofort ausführen“ wählen, dann „Weiter“"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisissez « Exécuter immédiatement », puis Suivant"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scegli «Esegui immediatamente», poi Avanti"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elige «Ejecutar inmediatamente» y luego Siguiente"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escolha “Executar imediatamente” e depois Seguinte"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chọn «Chạy ngay lập tức» rồi Tiếp"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pilih “Jalankan Segera”, lalu Berikutnya"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เลือก «เรียกใช้ทันที» แล้วถัดไป"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“तुरंत चलाएँ” चुनें, फिर अगला"
           }
         }
       }
@@ -207743,6 +208051,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "नतीजा आपके टेक्स्ट से अलग था, इसलिए लागू नहीं किया गया।"
+          }
+        }
+      }
+    },
+    "결제 문자 자동으로 넣기|Add payment texts automatically" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "決済メッセージを自動で追加"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动添加支付短信"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動加入付款簡訊"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zahlungsnachrichten automatisch hinzufügen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter les SMS de paiement automatiquement"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aggiungi SMS di pagamento automaticamente"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Añadir mensajes de pago automáticamente"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adicionar mensagens de pagamento automaticamente"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tự động thêm tin nhắn thanh toán"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tambah pesan pembayaran otomatis"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เพิ่มข้อความชำระเงินอัตโนมัติ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "भुगतान संदेश अपने-आप जोड़ें"
           }
         }
       }
@@ -225299,6 +225684,160 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "एक-एक चरण"
+          }
+        }
+      }
+    },
+    "단축어 앱 → 아래 「자동화」 → 오른쪽 위 +|Shortcuts app → Automation → + at the top right" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ショートカット App → 下の「オートメーション」→ 右上の +"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "快捷指令 App → 下方「自动化」→ 右上角 +"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "捷徑 App → 下方「自動化操作」→ 右上角 +"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kurzbefehle-App → Automation → + oben rechts"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App Raccourcis → Automatisation → + en haut à droite"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App Comandi → Automazione → + in alto a destra"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App Atajos → Automatización → + arriba a la derecha"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App Atalhos → Automação → + no canto superior direito"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ứng dụng Phím tắt → Tự động hóa → + ở góc trên bên phải"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App Pintasan → Otomatisasi → + di kanan atas"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แอปคำสั่งลัด → อัตโนมัติ → + ที่มุมขวาบน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "शॉर्टकट ऐप → ऑटोमेशन → ऊपर दाईं ओर +"
+          }
+        }
+      }
+    },
+    "단축어 앱 열기|Open Shortcuts" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ショートカットを開く"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开快捷指令"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打開捷徑"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kurzbefehle öffnen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrir Raccourcis"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apri Comandi"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abrir Atajos"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abrir Atalhos"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mở Phím tắt"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka Pintasan"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เปิดคำสั่งลัด"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "शॉर्टकट खोलें"
           }
         }
       }
@@ -320090,79 +320629,156 @@
         }
       }
     },
-    "카드 결제 문자를 복사해 붙여 넣거나 영수증 사진을 고르면 채워 드려요. 단축어 「결제 문자 넣기」로 문자가 오면 바로 넣을 수도 있어요.|Paste a card payment text or pick a receipt photo to fill an entry. The Shortcuts action \"Add payment text\" can add texts as they arrive." : {
+    "카드 결제 문자가 오면 가계부에 바로 들어가요. 읽지 못한 형식은 「붙여넣기」로 넣어 주세요.|Card payment texts go straight into the ledger. Paste any format it can't read." : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "カード決済メッセージをコピーして貼り付けるか、レシート写真を選ぶと入力します。ショートカットの「決済メッセージを追加」でメッセージが届いたらすぐ入れることもできます。"
+            "value" : "カード決済のメッセージが届くと家計簿にすぐ入ります。読めない形式は「貼り付け」で追加してください。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "复制并粘贴银行卡支付短信，或选择收据照片即可自动填写。用快捷指令“添加支付短信”还能在收到短信时直接记入。"
+            "value" : "收到银行卡支付短信时会直接记入账本。无法识别的格式请用「粘贴」添加。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "拷貝並貼上信用卡付款簡訊，或選擇收據照片即可自動填入。用捷徑「新增付款簡訊」還能在收到簡訊時直接記入。"
+            "value" : "收到信用卡付款簡訊時會直接記入帳本。無法讀取的格式請用「貼上」加入。"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Füge eine Kartenzahlungs-SMS ein oder wähle ein Belegfoto, um einen Eintrag auszufüllen. Die Kurzbefehl-Aktion „Zahlungs-SMS hinzufügen“ trägt SMS direkt beim Eingang ein."
+            "value" : "Kartenzahlungs-SMS landen direkt im Haushaltsbuch. Formate, die nicht gelesen werden, bitte einfügen."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Collez un SMS de paiement par carte ou choisissez une photo de reçu pour remplir une entrée. L’action Raccourcis « Ajouter un SMS de paiement » peut l’ajouter dès réception."
+            "value" : "Les SMS de paiement par carte arrivent directement dans le carnet. Collez les formats qu’il ne sait pas lire."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Incolla un SMS di pagamento con carta o scegli la foto di uno scontrino per compilare una voce. L’azione Comandi «Aggiungi SMS di pagamento» la aggiunge appena arriva."
+            "value" : "Gli SMS di pagamento con carta entrano subito nel registro. Incolla i formati che non riesce a leggere."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pega un SMS de pago con tarjeta o elige la foto de un recibo para rellenar una entrada. La acción de Atajos «Añadir SMS de pago» puede añadirlos al llegar."
+            "value" : "Los mensajes de pago con tarjeta entran directamente en el libro de gastos. Pega los formatos que no pueda leer."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cole um SMS de pagamento com cartão ou escolha a foto de um recibo para preencher um lançamento. A ação do Atalhos “Adicionar SMS de pagamento” pode lançar ao chegar."
+            "value" : "Mensagens de pagamento com cartão entram direto no caderno. Cole os formatos que ele não conseguir ler."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dán tin nhắn thanh toán thẻ hoặc chọn ảnh hóa đơn để điền sẵn. Tác vụ Phím tắt “Thêm tin nhắn thanh toán” có thể ghi ngay khi tin nhắn đến."
+            "value" : "Tin nhắn thanh toán thẻ sẽ vào sổ chi tiêu ngay. Hãy dán những định dạng không đọc được."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tempel SMS pembayaran kartu atau pilih foto struk untuk mengisi catatan. Tindakan Pintasan “Tambah SMS pembayaran” bisa langsung mencatat saat SMS masuk."
+            "value" : "Pesan pembayaran kartu langsung masuk ke buku catatan. Tempel format yang tidak bisa dibaca."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "วางข้อความชำระเงินด้วยบัตรหรือเลือกรูปใบเสร็จเพื่อกรอกให้ คำสั่งลัด “เพิ่มข้อความชำระเงิน” บันทึกได้ทันทีเมื่อข้อความมาถึง"
+            "value" : "ข้อความชำระเงินด้วยบัตรจะเข้าสมุดบัญชีทันที รูปแบบที่อ่านไม่ได้ให้วางเอง"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "कार्ड भुगतान संदेश पेस्ट करें या रसीद की फ़ोटो चुनें, प्रविष्टि भर जाएगी। शॉर्टकट्स क्रिया “भुगतान संदेश जोड़ें” संदेश आते ही जोड़ सकती है।"
+            "value" : "कार्ड भुगतान संदेश सीधे खाता-बही में जाते हैं। जो प्रारूप न पढ़ा जाए उसे चिपकाएँ।"
+          }
+        }
+      }
+    },
+    "카드 결제 문자를 복사해 붙여 넣거나 영수증 사진을 고르면 채워 드려요. 오른쪽 위 ⋯ → 「결제 문자 자동으로 넣기」로 문자가 오면 바로 넣을 수도 있어요.|Paste a card payment text or pick a receipt photo to fill an entry. Use ⋯ → \"Add payment texts automatically\" to add texts as they arrive." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カード決済のメッセージを貼り付けるか、レシート写真を選ぶと入力されます。右上の ⋯ →「決済メッセージを自動で追加」で、届いたメッセージをすぐ追加することもできます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "粘贴银行卡支付短信或选择小票照片即可填写。也可通过右上角 ⋯ →「自动添加支付短信」在收到短信时立即添加。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "貼上信用卡付款簡訊或選擇收據照片即可填寫。也可透過右上角 ⋯ →「自動加入付款簡訊」在收到簡訊時立即加入。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Füge eine Kartenzahlungs-SMS ein oder wähle ein Belegfoto, um einen Eintrag auszufüllen. Über ⋯ → „Zahlungsnachrichten automatisch hinzufügen“ kommen Nachrichten direkt beim Eintreffen hinein."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collez un SMS de paiement par carte ou choisissez une photo de reçu pour remplir une entrée. Avec ⋯ → « Ajouter les SMS de paiement automatiquement », ils s’ajoutent dès leur arrivée."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Incolla un SMS di pagamento con carta o scegli la foto di uno scontrino per compilare una voce. Con ⋯ → «Aggiungi SMS di pagamento automaticamente» vengono aggiunti appena arrivano."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pega un mensaje de pago con tarjeta o elige una foto del recibo para rellenar un registro. Con ⋯ → «Añadir mensajes de pago automáticamente» se añaden al llegar."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cole uma mensagem de pagamento com cartão ou escolha a foto de um recibo para preencher um registro. Em ⋯ → “Adicionar mensagens de pagamento automaticamente”, elas entram assim que chegam."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dán tin nhắn thanh toán thẻ hoặc chọn ảnh hóa đơn để điền mục. Với ⋯ → «Tự động thêm tin nhắn thanh toán», tin nhắn được thêm ngay khi đến."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tempel pesan pembayaran kartu atau pilih foto struk untuk mengisi catatan. Lewat ⋯ → “Tambah pesan pembayaran otomatis”, pesan langsung masuk saat tiba."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "วางข้อความชำระเงินด้วยบัตรหรือเลือกรูปใบเสร็จเพื่อกรอกรายการ ใช้ ⋯ → «เพิ่มข้อความชำระเงินอัตโนมัติ» เพื่อเพิ่มทันทีเมื่อข้อความมาถึง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कार्ड भुगतान संदेश चिपकाएँ या रसीद की फ़ोटो चुनें, प्रविष्टि भर जाएगी। ⋯ → “भुगतान संदेश अपने-आप जोड़ें” से संदेश आते ही जुड़ जाएँगे।"
           }
         }
       }

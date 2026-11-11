@@ -542,14 +542,25 @@ final class AssistantReviewFixTests: XCTestCase {
         XCTAssertEqual(parsed.invalidIDs, ["b2"])
     }
 
+    /// BBL1111A01: 10자 안팎에서 접어 아래로 늘리고, 여덟 줄에 안 들어갈 때만 넓힌다. 15자 이하는 오른쪽, 넘으면 왼쪽.
     func testBubbleWidthUsesTheWindowNotTheScreen() {
-        let long = AssistantBubbleLayout.width(String(repeating: "가", count: 80), size: 11, container: 300)
-        XCTAssertEqual(long, 300 * 0.6 - 16, "80 chars don't fit five lines at 40%, so it widens up to 60% of the window")
+        let ten = AssistantBubbleLayout.width(String(repeating: "가", count: 10), size: 11, container: 430)
+        XCTAssertEqual(AssistantBubbleLayout.width(String(repeating: "가", count: 30), size: 11, container: 430), ten, "wraps at ten characters")
         XCTAssertLessThan(AssistantBubbleLayout.width("가", size: 11, container: 300), 40)
-        // 한 줄에 다 들어가지 않는 중간 길이 글은 40%에서 접혀 아래로 늘어난다.
-        let mid = AssistantBubbleLayout.width("대표님, 비야 연결 성공했어요! 오늘도 고생 많으셨습니다.", size: 11, container: 430)
-        XCTAssertEqual(mid, 430 * 0.4 - 16, "wraps at 40% instead of stretching sideways")
-        XCTAssertEqual(AssistantBubbleLayout.maxLines, 5)
+        let long = AssistantBubbleLayout.width(String(repeating: "가", count: 200), size: 11, container: 300)
+        XCTAssertEqual(long, 300 * 0.6 - 16, "200 chars don't fit eight lines, so it widens up to 60% of the window")
+        XCTAssertEqual(AssistantBubbleLayout.maxLines, 8)
+
+        XCTAssertEqual(MapHomeCatSpeechBubble.side(text: "점심 맛있게 드세요"), .right)
+        XCTAssertEqual(MapHomeCatSpeechBubble.side(text: String(repeating: "가", count: 15)), .right)
+        XCTAssertEqual(MapHomeCatSpeechBubble.side(text: String(repeating: "가", count: 16)), .left)
+        // 짧아도 오른쪽이 사이드바에 가리면 왼쪽, 길어도 왼쪽이 화면 밖이면 오른쪽.
+        let nearSidebar = CGRect(x: 250, y: 400, width: 60, height: 60)
+        XCTAssertEqual(MapHomeCatSpeechBubble.placedSide(text: "안녕", bubbleWidth: 80, catFrame: nearSidebar, windowWidth: 440, trailingReserve: 139), .left)
+        XCTAssertEqual(MapHomeCatSpeechBubble.placedSide(text: "안녕", bubbleWidth: 80, catFrame: nearSidebar, windowWidth: 440, trailingReserve: 8), .right)
+        let atLeftEdge = CGRect(x: 10, y: 400, width: 60, height: 60)
+        XCTAssertEqual(MapHomeCatSpeechBubble.placedSide(text: String(repeating: "가", count: 20), bubbleWidth: 150, catFrame: atLeftEdge, windowWidth: 440, trailingReserve: 139), .right)
+        XCTAssertEqual(MapHomeCatSpeechBubble.placedSide(text: String(repeating: "가", count: 20), bubbleWidth: 150, catFrame: nil, windowWidth: 440, trailingReserve: 139), .left)
     }
 
     // MARK: - 주소 거르기 (16)

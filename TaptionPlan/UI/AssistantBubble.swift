@@ -280,19 +280,22 @@ enum AssistantBubbleLayout {
         return scene?.keyWindow?.bounds.width ?? scene?.coordinateSpace.bounds.width ?? 320
     }
 
-    /// 아래로 늘어나는 최대 줄 수(대표 결정 2026-11-10).
-    static let maxLines = 5
+    /// 아래로 늘어나는 최대 줄 수(대표 결정 2026-11-11: 옆으로 좁게, 아래로 길게).
+    static let maxLines = 8
+    /// 한 줄에 들어가는 글자 수(한글 기준).
+    static let wrapCharacters = 10
 
-    /// 글 폭. 옆으로 길게 지도를 가리지 않게 창 폭의 40%에서 접어 아래로 늘리고, 다섯 줄에 안 들어갈 때만 60%까지 넓힌다.
+    /// 글 폭. 10자 안팎에서 접어 아래로 늘리고(BBL1111A01), 여덟 줄에 안 들어갈 때만 창 폭의 60%까지 넓힌다.
     /// `padding`은 말풍선 좌우 여백 합.
     static func width(_ text: String, size: CGFloat, padding: CGFloat = 16, container: CGFloat? = nil) -> CGFloat {
-        let measured = ceil((text as NSString).size(withAttributes: [.font: font(size: size)]).width) + 2
-        let window = container ?? windowWidth
-        let narrow = window * 0.4 - padding, wide = window * 0.6 - padding
-        guard measured > narrow else { return max(1, measured) }
+        let attributes: [NSAttributedString.Key: Any] = [.font: font(size: size)]
+        let measured = ceil((text as NSString).size(withAttributes: attributes).width) + 2
+        let wrap = ceil((String(repeating: "가", count: wrapCharacters) as NSString).size(withAttributes: attributes).width) + 2
+        guard measured > wrap else { return max(1, measured) }
+        let wide = (container ?? windowWidth) * 0.6 - padding
         // 줄이 단어 사이에서 끊겨 남는 자리를 글자 두 개만큼 둔다.
-        let fiveLines = ceil(measured / CGFloat(maxLines)) + size * 2
-        return max(1, min(wide, max(narrow, fiveLines)))
+        let fullLines = ceil(measured / CGFloat(maxLines)) + size * 2
+        return max(1, min(max(wrap, wide), max(wrap, fullLines)))
     }
 }
 
