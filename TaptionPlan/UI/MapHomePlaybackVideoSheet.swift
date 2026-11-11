@@ -25,7 +25,7 @@ struct MapHomePlaybackVideoSheet: View {
     @AppStorage("playbackVideoRangeSeconds") private var targetSeconds = 0
     @AppStorage("playbackVideoHidesPrivatePlaces") private var hidesPrivatePlaces = true
     @State private var isClosing = false
-    @AppStorage("playbackVideoMusic") private var musicRaw = MapHomePlaybackMusicTrack.defaultID
+    @AppStorage(MapHomePlaybackMusicTrack.storageKey) private var musicRaw = MapHomePlaybackMusicTrack.defaultID
     @AppStorage(MapHomePlaybackRangePicker.customStartKey) private var customStartRaw = 0.0
     @AppStorage(MapHomePlaybackRangePicker.customEndKey) private var customEndRaw = 0.0
     @State private var rangePlan: MapHomeRangeTripPlan?

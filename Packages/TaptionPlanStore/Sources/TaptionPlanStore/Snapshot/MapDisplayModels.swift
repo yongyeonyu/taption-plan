@@ -75,6 +75,8 @@ public enum MapDisplayStyle: String, Codable, CaseIterable, Sendable {
     case mapLibreRPG
     /// 수묵(INK1108A01). 예전 앱은 모르는 값을 `standard`로 읽으므로 백업을 깨지 않는다.
     case mapLibreInk
+    /// 백자(PLN1111A01): 가라앉힌 땅·길 위에 경로가 뚜렷한 모양. 예전 앱은 모르는 값을 `standard`로 읽는다.
+    case mapLibrePorcelain
 
     /// 없앤 스타일(밝게·파스텔, UIX1101A03)로 저장된 값은 가장 비슷한 산책 지도로 읽는다.
     public static let retiredRawValues: Set<String> = ["mapLibreLight", "mapLibrePastel"]
@@ -151,6 +153,7 @@ extension MapDisplayStyle {
         .mapLibreNight,
         .mapLibreContrast,
         .mapLibreInk,
+        .mapLibrePorcelain,
     ]
 
     public var provider: MapDisplayProvider {
@@ -161,7 +164,8 @@ extension MapDisplayStyle {
              .mapLibreContrast,
              .mapLibreCasual,
              .mapLibreRPG,
-             .mapLibreInk:
+             .mapLibreInk,
+             .mapLibrePorcelain:
             .openFreeMap
         }
     }

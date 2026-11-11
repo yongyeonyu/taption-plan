@@ -319,7 +319,8 @@ struct MapHomeTripImportSheet: View {
                 .background(Color.tpCard, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             wideButton(language.text("확인", "Check"), prominent: false) { read(pasted) }
                 .disabled(pasted.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            if let message { caption(message) }
+            // 못 읽은 까닭은 경고색으로 보인다(회색 보조 글자는 눈에 안 띈다, PLN1111A01 제안 7-5).
+            if let message { caption(message, color: .tpHoliday) }
         }
     }
 
@@ -585,10 +586,10 @@ struct MapHomeTripImportSheet: View {
             .foregroundStyle(Color.tpInk)
     }
 
-    private func caption(_ text: String) -> some View {
+    private func caption(_ text: String, color: Color = .tpSecondary) -> some View {
         Text(text)
             .font(.taptionFixed(size: TaptionType.scaled(TaptionType.caption), weight: .medium))
-            .foregroundStyle(Color.tpSecondary)
+            .foregroundStyle(color)
     }
 
     private func wideButton(_ title: String, prominent: Bool, action: @escaping () -> Void) -> some View {

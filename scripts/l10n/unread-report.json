@@ -1,5 +1,5 @@
 {
- "ui": 4534,
+ "ui": 4545,
  "catalog": 502,
  "unread": [
   {
@@ -100,13 +100,13 @@
   },
   {
    "file": "TaptionPlan/Core/SiriIntents.swift",
-   "line": 127,
+   "line": 129,
    "ko": "saved.amount",
    "en": "saved.currency"
   },
   {
    "file": "TaptionPlan/Core/SiriIntents.swift",
-   "line": 166,
+   "line": 168,
    "ko": "spent",
    "en": "\"KRW\""
   },
@@ -610,19 +610,19 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeSettingsSheets.swift",
-   "line": 871,
+   "line": 877,
    "ko": "destination.koreanName",
    "en": "destination.englishName"
   },
   {
    "file": "TaptionPlan/UI/MapHomeSettingsSheets.swift",
-   "line": 879,
+   "line": 885,
    "ko": "FloorLabel.korean(place.floor ?? 1)",
    "en": "FloorLabel.english(place.floor ?? 1)"
   },
   {
    "file": "TaptionPlan/UI/MapHomeSettingsSheets.swift",
-   "line": 928,
+   "line": 934,
    "ko": "FloorLabel.korean(floor)",
    "en": "FloorLabel.english(floor)"
   },

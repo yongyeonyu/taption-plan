@@ -16,11 +16,13 @@ enum LedgerMessageParser {
     static let cards = ["KB국민", "국민", "신한", "삼성", "현대", "롯데", "우리", "하나", "BC", "비씨", "NH농협", "농협", "씨티", "카카오뱅크", "카카오페이", "토스", "IBK", "기업"]
     private static let noise = ["누적", "잔액", "일시불", "할부", "Web발신", "web발신", "승인", "결제", "사용", "출금", "카드", "체크", "님", "*"]
     /// 결제가 아닌 카드사 안내(청구 예정·한도·쿠폰·광고). 이런 글은 기록 후보로 보지 않는다.
-    static let notPayments = ["예정", "한도", "청구", "이용대금", "결제일", "쿠폰"]
+    static let notPayments = ["예정", "한도", "청구", "이용대금", "결제일", "쿠폰", "결제대금", "카드대금"]
+    /// 결제가 되지 않았다는 글. 「승인」이 들어 있어도 지출이 아니다(「승인거절」).
+    static let declined = ["거절", "한도초과", "잔액부족", "승인불가"]
 
     /// 광고 문자는 늘 빼고, 안내 낱말은 「승인」이 없을 때만 뺀다(승인 문자 끝의 혜택·청구할인 홍보 줄은 결제다).
     static func isNotice(_ text: String) -> Bool {
-        if text.contains("(광고)") || text.contains("[광고]") { return true }
+        if text.contains("(광고)") || text.contains("[광고]") || declined.contains(where: text.contains) { return true }
         return !text.contains("승인") && notPayments.contains(where: text.contains)
     }
     static let paymentWords = ["승인", "결제", "사용", "출금", "approved", "Approved"]
@@ -48,7 +50,7 @@ enum LedgerMessageParser {
         let time = when(flat, now: now, calendar: calendar)
         return Draft(
             amount: money.value, currency: money.currency, merchant: merchant(flat, after: time?.range),
-            card: cards.first { flat.contains($0) }.map { $0 + (flat.contains("체크") ? "체크" : "카드") },
+            card: card(flat).map { $0 + (flat.contains("체크") ? "체크" : "카드") },
             occurredAt: time?.date, isCancel: flat.contains("취소")
         )
     }
@@ -58,7 +60,7 @@ enum LedgerMessageParser {
         for raw in text.split(separator: "\n").map(String.init) {
             // 같은 줄 뒤에 붙은 누적·잔액 금액은 앞까지만 본다.
             let line = ["누적", "잔액"].compactMap { raw.range(of: $0)?.lowerBound }.min().map { String(raw[..<$0]) } ?? raw
-            if let match = line.firstMatch(of: /([0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)\s*원/), let value = number(String(match.1)), value > 0 {
+            if let value = wonAmounts(line).first?.value {
                 return (value, "KRW")
             }
             for code in currencies {
@@ -94,13 +96,99 @@ enum LedgerMessageParser {
         for raw in tail.split(separator: "\n").map(String.init) {
             var line = raw
             if let cut = line.range(of: "누적") { line = String(line[..<cut.lowerBound]) }
-            line = line.replacing(/([0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)\s*원/, with: "")
+            line = strippingWon(line)
             line = line.trimmingCharacters(in: .whitespaces.union(.punctuationCharacters))
-            guard line.count >= 2, line.count <= 40, !noise.contains(where: line.contains), !cards.contains(where: line.hasPrefix),
+            guard line.count >= 2, line.count <= 40, !noise.contains(where: line.contains), !startsWithCardName(line),
                   line.contains(where: \.isLetter) else { continue }
             return line
         }
+        return inlineMerchant(text)
+    }
+
+    // MARK: 읽기 규칙 (PLN1111A01 제안 8-1)
+
+    /// 카드사 이름 뒤에 이것이 오면 가게가 아니라 카드·은행 이름이다(「롯데카드」·「삼성1234」). 「롯데마트」·「하나로마트」는 가게다.
+    private static let cardFollowers = ["카드", "체크", "은행", "뱅크", "페이"]
+
+    private static func isCardName(_ name: String, followedBy rest: Substring) -> Bool {
+        guard let next = rest.first else { return true }
+        return next.isNumber || next == "(" || next == "[" || cardFollowers.contains(where: rest.hasPrefix)
+    }
+
+    static func startsWithCardName(_ line: String) -> Bool {
+        cards.contains { line.hasPrefix($0) && isCardName($0, followedBy: line.dropFirst($0.count)) }
+    }
+
+    /// 글에서 가장 앞에 나온 카드사. 가게 이름 속 낱말(「삼성전자서비스」·「이삭토스트」)은 카드로 보지 않는다.
+    /// 카드 이름이 맞는 자리: 뒤에 카드·체크·은행·숫자·괄호가 오거나, 줄 맨 앞·대괄호 안에서 낱말로 끝날 때.
+    static func card(_ text: String) -> String? {
+        var best: (index: String.Index, name: String)?
+        for name in cards {
+            var from = text.startIndex
+            while let range = text.range(of: name, range: from..<text.endIndex) {
+                from = range.upperBound
+                let rest = text[range.upperBound...]
+                let atStart = range.lowerBound == text.startIndex || ["\n", "[", "]"].contains(text[text.index(before: range.lowerBound)])
+                    || (text[text.index(before: range.lowerBound)] == " " && text[..<range.lowerBound].last(where: { $0 != " " }) == "]")
+                let endsWord = rest.first.map { $0 == " " || $0 == "]" || $0 == "\n" } ?? true
+                guard cardFollowers.contains(where: rest.hasPrefix) || rest.first.map({ $0.isNumber || $0 == "(" }) == true || (atStart && endsWord) else { continue }
+                if best == nil || range.lowerBound < best!.index || (range.lowerBound == best!.index && name.count > best!.name.count) {
+                    best = (range.lowerBound, name)
+                }
+                break
+            }
+        }
+        return best?.name
+    }
+
+    /// 「원」 뒤에 올 수 있는 말. 그 밖의 한글이 이어지면 금액이 아니라 낱말이다(「원조국밥」·「원효로점」).
+    private static let wonParticles = ["입니다", "을", "이 ", "에 ", "어치", "이며", "으로", "의 ", "짜리", "정", "만 ", "씩",
+                                       "승인", "결제", "사용", "출금", "입금", "취소", "일시불", "할부"]
+
+    /// 줄 안의 원화 금액. 시각 `12:30` 뒤 「원조」처럼 앞이 시각·숫자이거나 뒤가 낱말이면 금액이 아니다.
+    static func wonAmounts(_ line: String) -> [(value: Double, range: Range<String.Index>)] {
+        line.matches(of: /([0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)\s*원/).compactMap { match in
+            if match.range.lowerBound > line.startIndex {
+                // 「12:30 원조」의 30처럼 숫자에 이어진 조각만 거른다. 「금액:12,000원」의 쌍점은 금액 앞 구두점이다.
+                let before = line.index(before: match.range.lowerBound), previous = line[before]
+                if previous.isNumber { return nil }
+                if [":", ".", ","].contains(previous), before > line.startIndex, line[line.index(before: before)].isNumber { return nil }
+            }
+            let rest = line[match.range.upperBound...]
+            if let next = rest.first, ("가"..."힣").contains(next), !wonParticles.contains(where: rest.hasPrefix) { return nil }
+            guard let value = number(String(match.1)), value > 0 else { return nil }
+            return (value, match.range)
+        }
+    }
+
+    static func strippingWon(_ line: String) -> String {
+        var result = line
+        for amount in wonAmounts(line).reversed() { result.removeSubrange(amount.range) }
+        return result
+    }
+
+    /// 한 줄짜리 앱 알림(「KB국민은행 출금 12,000원 스타벅스강남 잔액 …」)의 가게: 금액이 있는 줄에서
+    /// 잔액·누적 뒤를 자르고 금액·카드 이름·결제 낱말·시각을 뺀 나머지.
+    static func inlineMerchant(_ text: String) -> String? {
+        for raw in text.split(separator: "\n").map(String.init) where !wonAmounts(raw).isEmpty {
+            let head = ["누적", "잔액"].compactMap { raw.range(of: $0)?.lowerBound }.min().map { String(raw[..<$0]) } ?? raw
+            let words = strippingWon(head).split(separator: " ").map { $0.trimmingCharacters(in: .punctuationCharacters) }.filter { word in
+                word.contains(where: \.isLetter) && !noise.contains(where: word.contains) && !startsWithCardName(word)
+            }
+            let name = words.joined(separator: " ")
+            if name.count >= 2, name.count <= 40 { return name }
+        }
         return nil
+    }
+
+    /// 결제로 보이는 글인가(금액을 못 읽었더라도). 붙여넣기·영수증에서 AI에게 맡기기 전에 본다: 결제 아닌 글은 보내지 않는다.
+    static func looksLikePayment(_ text: String) -> Bool {
+        guard text.count <= 4_000, !isNotice(text), text.contains(where: \.isNumber) else { return false }
+        let upper = text.uppercased()
+        return paymentWords.contains(where: text.contains)
+            || LedgerReceiptReader.totalWords.contains { upper.contains($0.uppercased()) }
+            || (["₩", "$", "¥", "円", "€", "£", "元", "SUMME", "SUMA", "TOTALE"] + currencies).contains(where: upper.contains)
+            || text.split(separator: "\n").contains { !wonAmounts(String($0)).isEmpty }
     }
 
     static func number(_ text: String) -> Double? { Double(text.replacingOccurrences(of: ",", with: "")) }

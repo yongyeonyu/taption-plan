@@ -196,7 +196,7 @@ struct LedgerSheet: View {
         guard let parsed else {
             // 읽힌 글이 있으면 연결된 AI에게 맡긴다(AIQ1111A01).
             let kind: AITaskQueue.Kind = source == .receipt ? .receiptText : .paymentText
-            if let raw, !raw.isEmpty, !LedgerMessageParser.isNotice(raw), AITaskQueue.enqueue(kind, text: raw, day: .now) {
+            if let raw, LedgerMessageParser.looksLikePayment(raw), AITaskQueue.enqueue(kind, text: raw, day: .now) {
                 captureNote = language.text("읽지 못해 AI에게 확인을 맡겼어요. 메모 › AI에서 볼 수 있어요.", "Couldn't read it, so it was sent to your AI. See Memo › AI.")
                 return
             }

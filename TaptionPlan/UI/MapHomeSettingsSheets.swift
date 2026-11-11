@@ -338,6 +338,8 @@ struct MapHomeSecuritySheet: View {
                     developerMailButtons
                 }
 
+                card(language.text("GPS 로그", "GPS log")) { GPXExportCard(model: model, language: language) }
+
                 card(language.text("\(PlanPINVerifier.currentDigits)자리 비밀번호", "\(PlanPINVerifier.currentDigits)-digit password")) {
                     SecureField(hasPIN ? registeredPINDots : language.text("비밀번호", "Password"), text: $pin)
                         .keyboardType(.numberPad)
@@ -357,6 +359,10 @@ struct MapHomeSecuritySheet: View {
                     .disabled(pin.count != PlanPINVerifier.currentDigits
                         || confirmation.count != PlanPINVerifier.currentDigits)
                     if hasPIN { BackupPasswordForgotView(model: model, language: language) }
+                    // 잊으면 못 연다는 말은 정하는 자리에서 먼저 보인다(PLN1111A01 제안 7-6).
+                    Text(language.text("이 비밀번호를 잊으면 백업을 열 수 없어요. 꼭 기억해 두세요.", "If you forget this password, your backups can't be opened. Keep it safe."))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
+                        .foregroundStyle(Color.tpHoliday)
                     Text(language.text(
                         "비밀번호를 바꾸면 그 뒤에 만드는 백업부터 새 비밀번호를 씁니다. 바꾸기 전에 만든 백업 파일은 그때의 비밀번호로 열립니다.",
                         "After you change the password, new backups use it. Backup files made earlier still open with the password used at that time."

@@ -63,7 +63,7 @@ const distinctIDs = (ids, min, max) => Array.isArray(ids) && ids.length >= min &
 // 설정은 안전한 것만: 언어·테마·지도 모양·표시 켜고 끄기. 값은 앱의 저장값 그대로다.
 export const LANGUAGES = ["automatic", "korean", "english", "ja", "zh-Hans", "zh-Hant", "de", "fr", "it", "es", "pt-BR", "vi", "id", "th", "hi"];
 export const THEMES = ["classic", "navy", "purple", "brown", "ink"];
-export const MAP_STYLES = ["standard", "hybrid", "mapLibreNight", "mapLibreContrast", "mapLibreCasual", "mapLibreRPG", "mapLibreInk"];
+export const MAP_STYLES = ["standard", "hybrid", "mapLibreNight", "mapLibreContrast", "mapLibreCasual", "mapLibreRPG", "mapLibreInk", "mapLibrePorcelain"];
 export const DISPLAY_OPTIONS = ["mapPhotos", "mapRoutes", "mapFootprints"];
 export const TRIP_STATUSES = ["booked", "planned", "tentative"];
 

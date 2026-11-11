@@ -241,8 +241,18 @@ extension AppModel {
             plans: snapshot.plans.filter { $0.span.end > span.start && $0.span.start < span.end },
             goals: snapshot.plans.filter { GoalRecordPolicy.isGoal($0) && $0.span.end > span.start && $0.span.start < span.end },
             tripStops: settings.travelPlanStops, tripItems: settings.travelTripItems ?? [],
-            ledger: await assistantLedger(on: span)
+            ledger: await assistantLedger(on: span),
+            budget: calendar.isDate(day, inSameDayAs: now) ? assistantBudget(now: now, calendar: calendar) : nil
         )
+    }
+
+    /// 이 달 예산을 정했을 때만. 쓴 돈은 가계부 화면이 예산과 견주는 값과 같다(일상 장부의 지출: 여행 안 기록은 빼고 여행 경비 이체는 포함).
+    /// 가계부는 바로 앞에서 읽어 둔다.
+    private func assistantBudget(now: Date, calendar: Calendar) -> AssistantActivityDay.Budget? {
+        let month = LedgerBook.monthKey(now, calendar: calendar)
+        guard let budget = LedgerBook.shared.budget(for: month) else { return nil }
+        let spent = LedgerBook.total(LedgerBook.shared.entries(inMonth: month, calendar: calendar).filter(LedgerBook.shared.isDaily), .expense)
+        return AssistantActivityDay.Budget(month: month, amountKRW: budget.amountKRW, spentKRW: spent)
     }
 
     private func assistantLedger(on span: TimeSpan) async -> [LedgerEntry] {

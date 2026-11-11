@@ -14,7 +14,7 @@ struct TravelMapVideoSection: View {
     }
 
     @AppStorage("travelMapVideoSource") private var sourceRaw = "records"
-    @AppStorage("playbackVideoMusic") private var musicRaw = MapHomePlaybackMusicTrack.defaultID
+    @AppStorage(MapHomePlaybackMusicTrack.storageKey) private var musicRaw = MapHomePlaybackMusicTrack.defaultID
     @State private var recordTrip: TravelMapTrip?
     @State private var isLoading = false
     @State private var loadPercent = 0

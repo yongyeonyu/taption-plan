@@ -45,7 +45,7 @@
    "ko": " 위치 설정",
    "en": " location",
    "files": [
-    "MapHomeSettingsSheets.swift:872"
+    "MapHomeSettingsSheets.swift:878"
    ],
    "args": [],
    "targets": [
@@ -784,7 +784,7 @@
    "ko": "AI 연결이 없거나 내용이 비어 있어요.",
    "en": "No AI is connected, or the text is empty.",
    "files": [
-    "SiriIntents.swift:145"
+    "SiriIntents.swift:147"
    ],
    "args": [],
    "targets": [
@@ -820,7 +820,7 @@
    "ko": "AI 위치가 지도 검색과 {0} 달라요",
    "en": "AI location is {0} from the map search",
    "files": [
-    "TripImportSheet.swift:390"
+    "TripImportSheet.swift:391"
    ],
    "args": [
     "distanceText(mismatch.meters)"
@@ -934,7 +934,7 @@
    "ko": "AI에게 맡겼어요. 메모 › AI에서 볼 수 있어요.",
    "en": "Sent to your AI. See Memo › AI.",
    "files": [
-    "SiriIntents.swift:148"
+    "SiriIntents.swift:150"
    ],
    "args": [],
    "targets": [
@@ -1596,7 +1596,7 @@
    "ko": "Face ID / Touch ID 사용",
    "en": "Use Face ID / Touch ID",
    "files": [
-    "MapHomeSettingsSheets.swift:378"
+    "MapHomeSettingsSheets.swift:384"
    ],
    "args": [],
    "targets": [
@@ -1621,6 +1621,18 @@
    "en": "Face ID or Touch ID is unavailable.",
    "files": [
     "AppLockAndPIN.swift:166"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "GPS 로그|GPS log",
+   "ko": "GPS 로그",
+   "en": "GPS log",
+   "files": [
+    "MapHomeSettingsSheets.swift:341"
    ],
    "args": [],
    "targets": [
@@ -1752,7 +1764,7 @@
    "ko": "JSON 일부가 잘렸거나 형식이 달라요. AI에게 JSON을 다시 출력해 달라고 해 주세요.",
    "en": "Part of the JSON is cut off or malformed. Ask the AI to output the JSON again.",
    "files": [
-    "TripImportSheet.swift:572"
+    "TripImportSheet.swift:573"
    ],
    "args": [],
    "targets": [
@@ -2277,7 +2289,7 @@
    "ko": "iCloud Drive/TaptionBackup에 달마다 파일 하나로 압축·암호화해 저장합니다. 자동으로 올리지 않으며, ‘지금 백업’을 누를 때만 올립니다.",
    "en": "Saved to iCloud Drive/TaptionBackup as one compressed, encrypted file per month. Nothing is uploaded automatically; it runs only when you tap Back up now.",
    "files": [
-    "MapHomeSettingsSheets.swift:458"
+    "MapHomeSettingsSheets.swift:464"
    ],
    "args": [],
    "targets": [
@@ -2378,7 +2390,7 @@
    "ko": "iCloud 백업",
    "en": "iCloud Backup",
    "files": [
-    "MapHomeSettingsSheets.swift:457"
+    "MapHomeSettingsSheets.swift:463"
    ],
    "args": [],
    "targets": [
@@ -2475,7 +2487,7 @@
    "ko": "iCloud에 백업 파일이 없습니다.",
    "en": "No backup files in iCloud.",
    "files": [
-    "MapHomeSettingsSheets.swift:752"
+    "MapHomeSettingsSheets.swift:758"
    ],
    "args": [],
    "targets": [
@@ -2487,7 +2499,7 @@
    "ko": "iCloud에서 내려받는 중 · 불러오기를 눌러도 됩니다",
    "en": "Downloading from iCloud · you can tap Restore",
    "files": [
-    "MapHomeSettingsSheets.swift:759"
+    "MapHomeSettingsSheets.swift:765"
    ],
    "args": [],
    "targets": [
@@ -2499,7 +2511,7 @@
    "ko": "iCloud에서 목록을 읽는 중",
    "en": "Reading the list from iCloud",
    "files": [
-    "MapHomeSettingsSheets.swift:570"
+    "MapHomeSettingsSheets.swift:576"
    ],
    "args": [],
    "targets": [
@@ -2775,7 +2787,7 @@
    "files": [
     "LedgerIntents.swift:67",
     "SiriIntents.swift:96",
-    "SiriIntents.swift:128"
+    "SiriIntents.swift:130"
    ],
    "args": [
     "saved.title",
@@ -2850,7 +2862,7 @@
    "ko": "{0} · 다른 비밀번호로 만든 백업입니다. 위에 그 비밀번호를 넣어 주세요",
    "en": "{0} · made with another password. Enter that password above",
    "files": [
-    "MapHomeSettingsSheets.swift:762"
+    "MapHomeSettingsSheets.swift:768"
    ],
    "args": [
     "size"
@@ -2864,7 +2876,7 @@
    "ko": "{0} · 열 수 없음(손상되었거나 충돌 버전이 있음)",
    "en": "{0} · unreadable (damaged or has conflicting versions)",
    "files": [
-    "MapHomeSettingsSheets.swift:764"
+    "MapHomeSettingsSheets.swift:770"
    ],
    "args": [
     "size"
@@ -2980,7 +2992,7 @@
    "ko": "{0} 불러오는 중",
    "en": "Restoring {0}",
    "files": [
-    "MapHomeSettingsSheets.swift:565"
+    "MapHomeSettingsSheets.swift:571"
    ],
    "args": [
     "name"
@@ -3386,7 +3398,7 @@
    "ko": "{0} 항목의 시각을 읽지 못했어요.",
    "en": "Couldn't read the time of item {0}.",
    "files": [
-    "TripImportSheet.swift:578"
+    "TripImportSheet.swift:579"
    ],
    "args": [
     "itemID"
@@ -3602,7 +3614,7 @@
    "en": "{0}/{1}",
    "files": [
     "LedgerSheet.swift:257",
-    "MapHomeSettingsSheets.swift:743"
+    "MapHomeSettingsSheets.swift:749"
    ],
    "args": [
     "parts[1]",
@@ -4087,7 +4099,7 @@
    "ko": "{0}의 백업을 이 기기로 가져옵니다. 이 기기에 더 새로운 기록이 있으면 그대로 유지됩니다. 위 입력란의 비밀번호는 그 백업을 만들 때 쓴 비밀번호여야 합니다.",
    "en": "Brings the backup for {0} onto this device. Newer records already on this device are kept. The password above must be the one used when that backup was made.",
    "files": [
-    "MapHomeSettingsSheets.swift:435"
+    "MapHomeSettingsSheets.swift:441"
    ],
    "args": [
     "restoreTarget.map(title(of:)) ?? \"\""
@@ -4173,7 +4185,7 @@
    "ko": "{0}자리 비밀번호",
    "en": "{0}-digit password",
    "files": [
-    "MapHomeSettingsSheets.swift:341"
+    "MapHomeSettingsSheets.swift:343"
    ],
    "args": [
     "PlanPINVerifier.currentDigits"
@@ -4236,7 +4248,7 @@
    "ko": "{0}행",
    "en": "{0} rows",
    "files": [
-    "MapHomeSettingsSheets.swift:769"
+    "MapHomeSettingsSheets.swift:775"
    ],
    "args": [
     "rows"
@@ -32670,7 +32682,7 @@
    "ko": "‘{0}’ 기기가 탈 때만 연결됐어요. 등록할까요? 등록하면 이 기기가 연결된 이동을 자동차로 기록해요.",
    "en": "‘{0}’ connected only while you rode. Register it? Trips with it connected will be recorded as car.",
    "files": [
-    "MapHomeLaunchPrompts.swift:139"
+    "MapHomeLaunchPrompts.swift:147"
    ],
    "args": [
     "name"
@@ -32684,7 +32696,7 @@
    "ko": "‘{0}’ 일정은 무엇인가요?",
    "en": "What is ‘{0}’?",
    "files": [
-    "MapHomeLaunchPrompts.swift:198"
+    "MapHomeLaunchPrompts.swift:206"
    ],
    "args": [
     "calendarTitle ?? \"\""
@@ -32698,7 +32710,7 @@
    "ko": "‘{0}’ 중 무엇인가요?",
    "en": "Which ‘{0}’?",
    "files": [
-    "MapHomeLaunchPrompts.swift:226"
+    "MapHomeLaunchPrompts.swift:234"
    ],
    "args": [
     "category?.localizedTitle(language) ?? \"\""
@@ -32712,7 +32724,7 @@
    "ko": "‘{0}’에 {1}번 머물렀어요. 어떤 곳인가요?",
    "en": "You stayed at ‘{0}’ {1} times. What is it?",
    "files": [
-    "MapHomeLaunchPrompts.swift:254"
+    "MapHomeLaunchPrompts.swift:262"
    ],
    "args": [
     "name",
@@ -33125,7 +33137,7 @@
    "ko": "강변 산들바람",
    "en": "Riverbank Breeze",
    "files": [
-    "MapHomePlaybackMusic.swift:35"
+    "MapHomePlaybackMusic.swift:38"
    ],
    "args": [],
    "targets": [
@@ -33173,7 +33185,7 @@
    "ko": "같은 여행이 있어 바꿉니다 · 추가 {0} · 변경 {1} · 삭제 {2}",
    "en": "Replaces the same trip · added {0} · changed {1} · removed {2}",
    "files": [
-    "TripImportSheet.swift:331"
+    "TripImportSheet.swift:332"
    ],
    "args": [
     "diff.added",
@@ -33274,7 +33286,7 @@
    "ko": "개발자에게 보내기",
    "en": "Send to developer",
    "files": [
-    "MapHomeSettingsSheets.swift:797"
+    "MapHomeSettingsSheets.swift:803"
    ],
    "args": [],
    "targets": [
@@ -33694,7 +33706,7 @@
    "ko": "걸음 수를 읽지 못했어요. 건강 앱 권한을 확인해 주세요.",
    "en": "Couldn't read steps. Check Health access.",
    "files": [
-    "SiriIntents.swift:181"
+    "SiriIntents.swift:183"
    ],
    "args": [],
    "targets": [
@@ -33783,7 +33795,7 @@
    "ko": "검색 결과가 없습니다.",
    "en": "No results.",
    "files": [
-    "MapHomeView+Map.swift:1075",
+    "MapHomeView+Map.swift:1077",
     "TravelMapTripEditorSheet.swift:151"
    ],
    "args": [],
@@ -33796,7 +33808,7 @@
    "ko": "검색 위치로",
    "en": "Use search",
    "files": [
-    "TripImportSheet.swift:393"
+    "TripImportSheet.swift:394"
    ],
    "args": [],
    "targets": [
@@ -33832,7 +33844,7 @@
    "ko": "검색하지 못했습니다. 연결을 확인해 주세요.",
    "en": "Search failed. Check your connection.",
    "files": [
-    "MapHomeView+Map.swift:1074",
+    "MapHomeView+Map.swift:1076",
     "TravelMapTripEditorSheet.swift:150"
    ],
    "args": [],
@@ -34431,7 +34443,7 @@
    "ko": "고양이 행진",
    "en": "Cat Parade",
    "files": [
-    "MapHomePlaybackMusic.swift:42"
+    "MapHomePlaybackMusic.swift:45"
    ],
    "args": [],
    "targets": [
@@ -34527,6 +34539,7 @@
    "ko": "공유",
    "en": "Share",
    "files": [
+    "GPXExportCard.swift:29",
     "MapHomeDailyCard.swift:526"
    ],
    "args": [],
@@ -34734,7 +34747,7 @@
    "ko": "구글 지도에서 보기",
    "en": "Open in Google Maps",
    "files": [
-    "TripImportSheet.swift:405"
+    "TripImportSheet.swift:406"
    ],
    "args": [],
    "targets": [
@@ -34794,7 +34807,7 @@
    "ko": "구름 자전거",
    "en": "Cloud Bicycle",
    "files": [
-    "MapHomePlaybackMusic.swift:40"
+    "MapHomePlaybackMusic.swift:43"
    ],
    "args": [],
    "targets": [
@@ -35301,6 +35314,18 @@
    "en": "Salary",
    "files": [
     "LedgerCore.swift:26"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "기간 고르기|Choose period",
+   "ko": "기간 고르기",
+   "en": "Choose period",
+   "files": [
+    "GPXExportCard.swift:19"
    ],
    "args": [],
    "targets": [
@@ -35938,7 +35963,7 @@
    "files": [
     "LedgerCore.swift:27",
     "AssistantAIProvider.swift:37",
-    "MapHomeLaunchPrompts.swift:269"
+    "MapHomeLaunchPrompts.swift:277"
    ],
    "args": [],
    "targets": [
@@ -36090,7 +36115,7 @@
    "ko": "끔",
    "en": "Off",
    "files": [
-    "AssistantDataActions.swift:345",
+    "AssistantDataActions.swift:346",
     "MapHomeAppleWatchMenuItem.swift:132"
    ],
    "args": [],
@@ -36279,7 +36304,7 @@
    "files": [
     "FirstRunTutorialGuides.swift:372",
     "FirstRunTutorialGuides.swift:419",
-    "MapHomeLaunchPrompts.swift:159"
+    "MapHomeLaunchPrompts.swift:167"
    ],
    "args": [],
    "targets": [
@@ -36529,7 +36554,7 @@
    "ko": "내 차로 등록",
    "en": "Register as my car",
    "files": [
-    "MapHomeLaunchPrompts.swift:136"
+    "MapHomeLaunchPrompts.swift:144"
    ],
    "args": [],
    "targets": [
@@ -36650,7 +36675,7 @@
    "ko": "노을 지는 귀갓길",
    "en": "Sunset Home",
    "files": [
-    "MapHomePlaybackMusic.swift:37"
+    "MapHomePlaybackMusic.swift:40"
    ],
    "args": [],
    "targets": [
@@ -37641,7 +37666,7 @@
    "ko": "도착 뒤 입국·짐 찾기로 {0}분은 두세요",
    "en": "Allow {0} min after landing for arrival",
    "files": [
-    "TripImportSheet.swift:418"
+    "TripImportSheet.swift:419"
    ],
    "args": [
     "need"
@@ -37667,7 +37692,7 @@
    "ko": "도착한 계획이 없어요.",
    "en": "No plan has arrived.",
    "files": [
-    "TripImportSheet.swift:507"
+    "TripImportSheet.swift:508"
    ],
    "args": [],
    "targets": [
@@ -37755,7 +37780,7 @@
    "ko": "동네 한 바퀴",
    "en": "Neighborhood Loop",
    "files": [
-    "MapHomePlaybackMusic.swift:36"
+    "MapHomePlaybackMusic.swift:39"
    ],
    "args": [],
    "targets": [
@@ -37854,7 +37879,7 @@
    "ko": "뒤로",
    "en": "Back",
    "files": [
-    "MapHomeLaunchPrompts.swift:168",
+    "MapHomeLaunchPrompts.swift:176",
     "MapHomeWideLayoutPolicy.swift:239"
    ],
    "args": [],
@@ -37904,7 +37929,7 @@
    "ko": "등록 안 함",
    "en": "Don't register",
    "files": [
-    "MapHomeLaunchPrompts.swift:180"
+    "MapHomeLaunchPrompts.swift:188"
    ],
    "args": [],
    "targets": [
@@ -38126,7 +38151,7 @@
    "ko": "로그 보내기",
    "en": "Logs",
    "files": [
-    "MapHomeSettingsSheets.swift:801"
+    "MapHomeSettingsSheets.swift:807"
    ],
    "args": [],
    "targets": [
@@ -38177,7 +38202,7 @@
    "ko": "로컬 정리",
    "en": "Clear from this device",
    "files": [
-    "MapHomeSettingsSheets.swift:441"
+    "MapHomeSettingsSheets.swift:447"
    ],
    "args": [],
    "targets": [
@@ -38297,7 +38322,7 @@
    "ko": "마지막 기록 {0}",
    "en": "last record {0}",
    "files": [
-    "MapHomeSettingsSheets.swift:771"
+    "MapHomeSettingsSheets.swift:777"
    ],
    "args": [
     "formatted(last)"
@@ -38311,7 +38336,7 @@
    "ko": "마지막 백업: {0}",
    "en": "Last backup: {0}",
    "files": [
-    "MapHomeSettingsSheets.swift:477"
+    "MapHomeSettingsSheets.swift:483"
    ],
    "args": [
     "latestBackupText"
@@ -38326,6 +38351,18 @@
    "en": "Drag along the bar's right edge to see that moment.",
    "files": [
     "FirstRunTutorialGuides.swift:42"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "만드는 중…|Preparing…",
+   "ko": "만드는 중…",
+   "en": "Preparing…",
+   "files": [
+    "GPXExportCard.swift:48"
    ],
    "args": [],
    "targets": [
@@ -38497,8 +38534,8 @@
    "en": "Place",
    "files": [
     "LedgerTollRepeat.swift:131",
-    "AssistantActivity.swift:189",
-    "AssistantActivity.swift:275"
+    "AssistantActivity.swift:193",
+    "AssistantActivity.swift:279"
    ],
    "args": [],
    "targets": [
@@ -38546,7 +38583,7 @@
    "ko": "먼저 대분류를 고르세요. 한 번 정하면 같은 제목의 일정은 다시 묻지 않아요.",
    "en": "Pick a category first. Once set, events with the same title won't be asked again.",
    "files": [
-    "MapHomeLaunchPrompts.swift:161"
+    "MapHomeLaunchPrompts.swift:169"
    ],
    "args": [],
    "targets": [
@@ -39197,7 +39234,7 @@
    "ko": "목록 새로고침",
    "en": "Refresh list",
    "files": [
-    "MapHomeSettingsSheets.swift:592"
+    "MapHomeSettingsSheets.swift:598"
    ],
    "args": [],
    "targets": [
@@ -39308,7 +39345,7 @@
    "ko": "미리듣기 멈춤",
    "en": "Stop preview",
    "files": [
-    "MapHomePlaybackMusic.swift:414"
+    "MapHomePlaybackMusic.swift:417"
    ],
    "args": [],
    "targets": [
@@ -39320,7 +39357,7 @@
    "ko": "미리듣기",
    "en": "Preview",
    "files": [
-    "MapHomePlaybackMusic.swift:414"
+    "MapHomePlaybackMusic.swift:417"
    ],
    "args": [],
    "targets": [
@@ -39413,7 +39450,7 @@
    "ko": "미확인 시간이 있어요",
    "en": "Some time is unconfirmed",
    "files": [
-    "MapHomeLaunchPrompts.swift:185"
+    "MapHomeLaunchPrompts.swift:193"
    ],
    "args": [],
    "targets": [
@@ -39831,7 +39868,7 @@
    "ko": "백업 {0}",
    "en": "backed up {0}",
    "files": [
-    "MapHomeSettingsSheets.swift:774"
+    "MapHomeSettingsSheets.swift:780"
    ],
    "args": [
     "formatted(created)"
@@ -39857,7 +39894,7 @@
    "ko": "백업 목록과 복원",
    "en": "Backups and restore",
    "files": [
-    "MapHomeSettingsSheets.swift:544"
+    "MapHomeSettingsSheets.swift:550"
    ],
    "args": [],
    "targets": [
@@ -39871,7 +39908,7 @@
    "files": [
     "FirstRunTutorialGuides.swift:709",
     "FirstRunTutorialView.swift:183",
-    "MapHomeSettingsSheets.swift:552"
+    "MapHomeSettingsSheets.swift:558"
    ],
    "args": [],
    "targets": [
@@ -39934,7 +39971,7 @@
    "ko": "백업 중 {0}/{1}",
    "en": "Backing up {0}/{1}",
    "files": [
-    "MapHomeSettingsSheets.swift:486"
+    "MapHomeSettingsSheets.swift:492"
    ],
    "args": [
     "completed",
@@ -39997,7 +40034,7 @@
    "ko": "백업 후 로컬 정리",
    "en": "Clear after backup",
    "files": [
-    "MapHomeSettingsSheets.swift:532"
+    "MapHomeSettingsSheets.swift:538"
    ],
    "args": [],
    "targets": [
@@ -40009,7 +40046,7 @@
    "ko": "백업 후 로컬 정리",
    "en": "Clear from device after backup",
    "files": [
-    "MapHomeSettingsSheets.swift:509"
+    "MapHomeSettingsSheets.swift:515"
    ],
    "args": [],
    "targets": [
@@ -40021,7 +40058,7 @@
    "ko": "백업을 다시 읽어 확인된 지난 달만 이 기기에서 지웁니다. 먼저 ‘지금 백업’을 해야 하며, 설정은 지우지 않습니다.",
    "en": "Only past months whose backup was read back and verified are removed from this device. Run ‘Back up now’ first; settings are never removed.",
    "files": [
-    "MapHomeSettingsSheets.swift:523"
+    "MapHomeSettingsSheets.swift:529"
    ],
    "args": [],
    "targets": [
@@ -40049,6 +40086,19 @@
    "en": "A backup is already in progress. Try again when it finishes.",
    "files": [
     "AppLockAndPIN.swift:163"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "백자|Porcelain",
+   "ko": "백자",
+   "en": "Porcelain",
+   "files": [
+    "AssistantDataActions.swift:336",
+    "MapHomeView+Map.swift:941"
    ],
    "args": [],
    "targets": [
@@ -40241,7 +40291,7 @@
    "ko": "별빛 지도",
    "en": "Starlight Map",
    "files": [
-    "MapHomePlaybackMusic.swift:39"
+    "MapHomePlaybackMusic.swift:42"
    ],
    "args": [],
    "targets": [
@@ -40382,7 +40432,7 @@
    "ko": "보안 설정을 저장했습니다.",
    "en": "Security settings saved.",
    "files": [
-    "MapHomeSettingsSheets.swift:712"
+    "MapHomeSettingsSheets.swift:718"
    ],
    "args": [],
    "targets": [
@@ -40626,7 +40676,7 @@
    "ko": "분류 안 함",
    "en": "Don't classify",
    "files": [
-    "MapHomeLaunchPrompts.swift:158"
+    "MapHomeLaunchPrompts.swift:166"
    ],
    "args": [],
    "targets": [
@@ -40700,8 +40750,8 @@
    "ko": "불러오기",
    "en": "Restore",
    "files": [
-    "MapHomeSettingsSheets.swift:433",
-    "MapHomeSettingsSheets.swift:617"
+    "MapHomeSettingsSheets.swift:439",
+    "MapHomeSettingsSheets.swift:623"
    ],
    "args": [],
    "targets": [
@@ -40751,7 +40801,7 @@
    "ko": "비밀번호 {0}자리를 넣으면 iCloud 백업이 보입니다.",
    "en": "Enter your {0}-digit password to see iCloud backups.",
    "files": [
-    "MapHomeSettingsSheets.swift:750"
+    "MapHomeSettingsSheets.swift:756"
    ],
    "args": [
     "securityPINDigits"
@@ -40791,7 +40841,7 @@
    "ko": "비밀번호 저장",
    "en": "Save password",
    "files": [
-    "MapHomeSettingsSheets.swift:352"
+    "MapHomeSettingsSheets.swift:354"
    ],
    "args": [],
    "targets": [
@@ -40804,7 +40854,7 @@
    "en": "Confirm password",
    "files": [
     "FirstRunTutorialView.swift:660",
-    "MapHomeSettingsSheets.swift:347"
+    "MapHomeSettingsSheets.swift:349"
    ],
    "args": [],
    "targets": [
@@ -40817,7 +40867,7 @@
    "en": "Passwords do not match.",
    "files": [
     "FirstRunTutorialView.swift:364",
-    "MapHomeSettingsSheets.swift:685"
+    "MapHomeSettingsSheets.swift:691"
    ],
    "args": [],
    "targets": [
@@ -40829,8 +40879,8 @@
    "ko": "비밀번호",
    "en": "Password",
    "files": [
-    "MapHomeSettingsSheets.swift:342",
-    "MapHomeSettingsSheets.swift:465"
+    "MapHomeSettingsSheets.swift:344",
+    "MapHomeSettingsSheets.swift:471"
    ],
    "args": [],
    "targets": [
@@ -40842,7 +40892,7 @@
    "ko": "비밀번호를 넣으면 같은 iCloud의 다른 기기에서 만든 백업까지 보입니다. 백업을 만들 때 쓴 비밀번호로 열립니다.",
    "en": "Enter the password to see backups from every device on this iCloud account. They open with the password used when they were made.",
    "files": [
-    "MapHomeSettingsSheets.swift:545"
+    "MapHomeSettingsSheets.swift:551"
    ],
    "args": [],
    "targets": [
@@ -40854,7 +40904,7 @@
    "ko": "비밀번호를 먼저 입력해 주세요.",
    "en": "Enter your password first.",
    "files": [
-    "MapHomeSettingsSheets.swift:619"
+    "MapHomeSettingsSheets.swift:625"
    ],
    "args": [],
    "targets": [
@@ -40866,7 +40916,7 @@
    "ko": "비밀번호를 바꾸면 그 뒤에 만드는 백업부터 새 비밀번호를 씁니다. 바꾸기 전에 만든 백업 파일은 그때의 비밀번호로 열립니다.",
    "en": "After you change the password, new backups use it. Backup files made earlier still open with the password used at that time.",
    "files": [
-    "MapHomeSettingsSheets.swift:360"
+    "MapHomeSettingsSheets.swift:366"
    ],
    "args": [],
    "targets": [
@@ -40914,7 +40964,7 @@
    "ko": "비밀번호를 저장했습니다.",
    "en": "Password saved.",
    "files": [
-    "MapHomeSettingsSheets.swift:692"
+    "MapHomeSettingsSheets.swift:698"
    ],
    "args": [],
    "targets": [
@@ -41517,7 +41567,7 @@
    "ko": "살금살금 골목",
    "en": "Tiptoe Alley",
    "files": [
-    "MapHomePlaybackMusic.swift:34"
+    "MapHomePlaybackMusic.swift:37"
    ],
    "args": [],
    "targets": [
@@ -41894,7 +41944,7 @@
    "ko": "생체 인증은 빠른 잠금 해제용이며, 생체 정보는 앱이나 백업에 저장되지 않습니다.",
    "en": "Biometrics are only a fast local unlock; biometric data is never stored.",
    "files": [
-    "MapHomeSettingsSheets.swift:385"
+    "MapHomeSettingsSheets.swift:391"
    ],
    "args": [],
    "targets": [
@@ -42297,8 +42347,8 @@
    "ko": "설정",
    "en": "Settings",
    "files": [
-    "MapHomeSettingsSheets.swift:741",
-    "MapHomeSettingsSheets.swift:642",
+    "MapHomeSettingsSheets.swift:747",
+    "MapHomeSettingsSheets.swift:648",
     "MapHomeView+Menu2.swift:155"
    ],
    "args": [],
@@ -43579,7 +43629,7 @@
    "ko": "식당",
    "en": "Restaurant",
    "files": [
-    "MapHomeLaunchPrompts.swift:268"
+    "MapHomeLaunchPrompts.swift:276"
    ],
    "args": [],
    "targets": [
@@ -43705,7 +43755,7 @@
    "ko": "실패 · {0}",
    "en": "Failed · {0}",
    "files": [
-    "MapHomeSettingsSheets.swift:833",
+    "MapHomeSettingsSheets.swift:839",
     "AppModel+Export.swift:110"
    ],
    "args": [
@@ -43745,7 +43795,7 @@
    "ko": "아니요",
    "en": "No",
    "files": [
-    "MapHomeLaunchPrompts.swift:137"
+    "MapHomeLaunchPrompts.swift:145"
    ],
    "args": [],
    "targets": [
@@ -44190,7 +44240,7 @@
    "ko": "압축 중…",
    "en": "Compressing…",
    "files": [
-    "MapHomeSettingsSheets.swift:825"
+    "MapHomeSettingsSheets.swift:831"
    ],
    "args": [],
    "targets": [
@@ -44214,7 +44264,7 @@
    "ko": "앞에서 이동 {0}분",
    "en": "{0} min from previous",
    "files": [
-    "TripImportSheet.swift:378"
+    "TripImportSheet.swift:379"
    ],
    "args": [
     "Int(minutes)"
@@ -44511,7 +44561,7 @@
    "ko": "앱 잠금",
    "en": "App lock",
    "files": [
-    "MapHomeSettingsSheets.swift:368"
+    "MapHomeSettingsSheets.swift:374"
    ],
    "args": [],
    "targets": [
@@ -44547,7 +44597,7 @@
    "ko": "앱보다 새 형식이에요. 앱을 업데이트해 주세요.",
    "en": "This format is newer than the app. Please update the app.",
    "files": [
-    "TripImportSheet.swift:574"
+    "TripImportSheet.swift:575"
    ],
    "args": [],
    "targets": [
@@ -44560,7 +44610,7 @@
    "en": "Lock whenever the app opens",
    "files": [
     "FirstRunTutorialView.swift:670",
-    "MapHomeSettingsSheets.swift:370"
+    "MapHomeSettingsSheets.swift:376"
    ],
    "args": [],
    "targets": [
@@ -44717,7 +44767,7 @@
    "ko": "어제·오늘 데이터",
    "en": "2 days data",
    "files": [
-    "MapHomeSettingsSheets.swift:804"
+    "MapHomeSettingsSheets.swift:810"
    ],
    "args": [],
    "targets": [
@@ -45042,7 +45092,7 @@
    "ko": "여행 가방",
    "en": "Travel Bag",
    "files": [
-    "MapHomePlaybackMusic.swift:41"
+    "MapHomePlaybackMusic.swift:44"
    ],
    "args": [],
    "targets": [
@@ -45066,7 +45116,7 @@
    "ko": "여행 계획 JSON이 아니에요. AI가 마지막에 준 JSON 전체를 복사해 주세요.",
    "en": "This isn't trip JSON. Copy the whole JSON the AI gave at the end.",
    "files": [
-    "TripImportSheet.swift:570"
+    "TripImportSheet.swift:571"
    ],
    "args": [],
    "targets": [
@@ -45103,7 +45153,7 @@
    "ko": "여행 계획에 반영",
    "en": "Add to trip plan",
    "files": [
-    "TripImportSheet.swift:346"
+    "TripImportSheet.swift:347"
    ],
    "args": [],
    "targets": [
@@ -46503,7 +46553,7 @@
    "ko": "영수증을 읽지 못해 AI에게 맡겼어요.",
    "en": "Couldn't read the receipt, so it was sent to your AI.",
    "files": [
-    "SiriIntents.swift:119"
+    "SiriIntents.swift:121"
    ],
    "args": [],
    "targets": [
@@ -46515,7 +46565,7 @@
    "ko": "영수증을 읽지 못했어요.",
    "en": "Couldn't read the receipt.",
    "files": [
-    "SiriIntents.swift:121"
+    "SiriIntents.swift:123"
    ],
    "args": [],
    "targets": [
@@ -46642,7 +46692,7 @@
    "ko": "예상 요금 {0}원",
    "en": "Estimated fare ₩{0}",
    "files": [
-    "TripImportSheet.swift:381"
+    "TripImportSheet.swift:382"
    ],
    "args": [
     "fare.formatted()"
@@ -46757,7 +46807,7 @@
    "ko": "오늘 {0}건, {1} 썼어요.",
    "en": "Today: {0} entries, {1} spent.",
    "files": [
-    "SiriIntents.swift:168"
+    "SiriIntents.swift:170"
    ],
    "args": [
     "count",
@@ -46772,7 +46822,7 @@
    "ko": "오늘 {0}걸음 걸었어요.",
    "en": "{0} steps today.",
    "files": [
-    "SiriIntents.swift:183"
+    "SiriIntents.swift:185"
    ],
    "args": [
     "steps.formatted()"
@@ -46786,7 +46836,7 @@
    "ko": "오늘 {0}분이 무엇을 했는지 모르는 시간이에요. 지금 정할까요?",
    "en": "{0} min today are unconfirmed. Review them now?",
    "files": [
-    "MapHomeLaunchPrompts.swift:189"
+    "MapHomeLaunchPrompts.swift:197"
    ],
    "args": [
     "minutes"
@@ -46973,6 +47023,7 @@
    "ko": "오늘",
    "en": "Today",
    "files": [
+    "GPXExportCard.swift:15",
     "LedgerMemoPanel.swift:97",
     "WatchTodayCards.swift:79"
    ],
@@ -47370,7 +47421,7 @@
    "en": "Exercise",
    "files": [
     "MapHomeInteractionPolicy.swift:459",
-    "MapHomeLaunchPrompts.swift:267",
+    "MapHomeLaunchPrompts.swift:275",
     "MapHomeLocationPresentation.swift:310"
    ],
    "args": [],
@@ -47771,7 +47822,7 @@
    "ko": "위치 기록이 포함될 수 있어요. 메일 화면에서 보내기를 눌러야 전송됩니다.",
    "en": "May include location history. Nothing is sent until you tap Send in Mail.",
    "files": [
-    "MapHomeSettingsSheets.swift:808"
+    "MapHomeSettingsSheets.swift:814"
    ],
    "args": [],
    "targets": [
@@ -47882,6 +47933,32 @@
    "en": "Enter a location name.",
    "files": [
     "AppModel+FrequentPlaces.swift:577"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "위치 점 {0}개를 담았어요. 공유를 눌러 보내세요.|{0} location points ready. Tap Share to send.",
+   "ko": "위치 점 {0}개를 담았어요. 공유를 눌러 보내세요.",
+   "en": "{0} location points ready. Tap Share to send.",
+   "files": [
+    "GPXExportCard.swift:58"
+   ],
+   "args": [
+    "result.pointCount"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "위치 점(위도·경도·고도·시각)만 담아요. 활동·건강·가계부·메모는 들어가지 않고, 다른 지도·운동 앱에서 열 수 있어요.|Contains location points only (latitude, longitude, altitude, time). No activities, health, ledger or memos. Opens in other map and fitness apps.",
+   "ko": "위치 점(위도·경도·고도·시각)만 담아요. 활동·건강·가계부·메모는 들어가지 않고, 다른 지도·운동 앱에서 열 수 있어요.",
+   "en": "Contains location points only (latitude, longitude, altitude, time). No activities, health, ledger or memos. Opens in other map and fitness apps.",
+   "files": [
+    "GPXExportCard.swift:37"
    ],
    "args": [],
    "targets": [
@@ -48043,7 +48120,7 @@
    "ko": "위치를 찾지 못해 지도에는 표시되지 않아요",
    "en": "Location not found; not shown on the map",
    "files": [
-    "TripImportSheet.swift:400"
+    "TripImportSheet.swift:401"
    ],
    "args": [],
    "targets": [
@@ -48216,8 +48293,8 @@
    "ko": "음악 없음",
    "en": "No music",
    "files": [
-    "MapHomePlaybackMusic.swift:387",
-    "MapHomePlaybackMusic.swift:395"
+    "MapHomePlaybackMusic.swift:390",
+    "MapHomePlaybackMusic.swift:398"
    ],
    "args": [],
    "targets": [
@@ -48230,7 +48307,7 @@
    "en": "Music",
    "files": [
     "MapHomeLocationPresentation.swift:284",
-    "MapHomePlaybackMusic.swift:386",
+    "MapHomePlaybackMusic.swift:389",
     "record-classification.json:0"
    ],
    "args": [],
@@ -48314,6 +48391,18 @@
    ]
   },
   {
+   "key": "이 기간에는 기기에 남은 위치 기록이 없어요.|No location records on this device for that period.",
+   "ko": "이 기간에는 기기에 남은 위치 기록이 없어요.",
+   "en": "No location records on this device for that period.",
+   "files": [
+    "GPXExportCard.swift:54"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "이 기간에는 기록이 없어요.|No entries in this period.",
    "ko": "이 기간에는 기록이 없어요.",
    "en": "No entries in this period.",
@@ -48378,7 +48467,7 @@
    "ko": "이 기기가 내 차 같아요",
    "en": "This looks like your car",
    "files": [
-    "MapHomeLaunchPrompts.swift:135"
+    "MapHomeLaunchPrompts.swift:143"
    ],
    "args": [],
    "targets": [
@@ -48390,7 +48479,7 @@
    "ko": "이 기기에 남길 최근 {0}개 달(이번 달 포함)",
    "en": "Keep the latest {0} months on this device (this month included)",
    "files": [
-    "MapHomeSettingsSheets.swift:517"
+    "MapHomeSettingsSheets.swift:523"
    ],
    "args": [
     "security.localMonthsToKeep"
@@ -48501,7 +48590,7 @@
    "ko": "이 기기에서는 정리됨 · 불러올 수 있음",
    "en": "Cleared from this device · can be restored",
    "files": [
-    "MapHomeSettingsSheets.swift:611"
+    "MapHomeSettingsSheets.swift:617"
    ],
    "args": [],
    "targets": [
@@ -48717,7 +48806,7 @@
    "ko": "이 달을 불러올까요?",
    "en": "Restore this month?",
    "files": [
-    "MapHomeSettingsSheets.swift:426"
+    "MapHomeSettingsSheets.swift:432"
    ],
    "args": [],
    "targets": [
@@ -48743,6 +48832,18 @@
    "en": "This is not the password used for this backup. Backups made before a password change open with the old password.",
    "files": [
     "PlanBackupPresentation.swift:179"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "이 비밀번호를 잊으면 백업을 열 수 없어요. 꼭 기억해 두세요.|If you forget this password, your backups can't be opened. Keep it safe.",
+   "ko": "이 비밀번호를 잊으면 백업을 열 수 없어요. 꼭 기억해 두세요.",
+   "en": "If you forget this password, your backups can't be opened. Keep it safe.",
+   "files": [
+    "MapHomeSettingsSheets.swift:363"
    ],
    "args": [],
    "targets": [
@@ -48853,7 +48954,7 @@
    "ko": "이 자리",
    "en": "This spot",
    "files": [
-    "MapHomeLaunchPrompts.swift:253"
+    "MapHomeLaunchPrompts.swift:261"
    ],
    "args": [],
    "targets": [
@@ -49023,7 +49124,7 @@
    "ko": "이동 시간이 빠듯해요(약 {0}분 필요)",
    "en": "Tight move (about {0} min needed)",
    "files": [
-    "TripImportSheet.swift:417"
+    "TripImportSheet.swift:418"
    ],
    "args": [
     "need"
@@ -49478,7 +49579,7 @@
    "ko": "이전 버전에서 만든 백업 {0}개는 이 버전에서 열 수 없어 목록에서 뺐습니다. 파일은 그대로 있습니다.",
    "en": "{0} backups from an earlier version cannot be opened here and are not listed. The files are untouched.",
    "files": [
-    "MapHomeSettingsSheets.swift:582"
+    "MapHomeSettingsSheets.swift:588"
    ],
    "args": [
     "model.backupUnsupportedFileCount"
@@ -49829,7 +49930,7 @@
    "ko": "일정이 비어 있어요.",
    "en": "The trip has no items.",
    "files": [
-    "TripImportSheet.swift:576"
+    "TripImportSheet.swift:577"
    ],
    "args": [],
    "targets": [
@@ -50184,7 +50285,7 @@
    "ko": "자주 머무는 곳이 있어요",
    "en": "You stay here often",
    "files": [
-    "MapHomeLaunchPrompts.swift:176"
+    "MapHomeLaunchPrompts.swift:184"
    ],
    "args": [],
    "targets": [
@@ -50208,7 +50309,7 @@
    "ko": "작업 중입니다",
    "en": "Working",
    "files": [
-    "MapHomeSettingsSheets.swift:490"
+    "MapHomeSettingsSheets.swift:496"
    ],
    "args": [],
    "targets": [
@@ -50622,8 +50723,8 @@
    "ko": "저장된 위치 삭제",
    "en": "Delete saved location",
    "files": [
-    "MapHomeSettingsSheets.swift:980",
-    "MapHomeSettingsSheets.swift:1011"
+    "MapHomeSettingsSheets.swift:986",
+    "MapHomeSettingsSheets.swift:1017"
    ],
    "args": [],
    "targets": [
@@ -50635,7 +50736,7 @@
    "ko": "저장된 위치를 삭제할까요?",
    "en": "Delete the saved location?",
    "files": [
-    "MapHomeSettingsSheets.swift:1003"
+    "MapHomeSettingsSheets.swift:1009"
    ],
    "args": [],
    "targets": [
@@ -50749,7 +50850,7 @@
    "en": "Floor to save",
    "files": [
     "MapHomeLocationSheets.swift:249",
-    "MapHomeSettingsSheets.swift:926",
+    "MapHomeSettingsSheets.swift:932",
     "MapHomeTransitSheets.swift:430"
    ],
    "args": [],
@@ -50970,7 +51071,7 @@
    "ko": "정리",
    "en": "Clear",
    "files": [
-    "MapHomeSettingsSheets.swift:445"
+    "MapHomeSettingsSheets.swift:451"
    ],
    "args": [],
    "targets": [
@@ -51531,7 +51632,7 @@
    "ko": "지금 기록된 활동이 없어요.",
    "en": "Nothing is being recorded right now.",
    "files": [
-    "SiriIntents.swift:196"
+    "SiriIntents.swift:198"
    ],
    "args": [],
    "targets": [
@@ -51556,7 +51657,7 @@
    "ko": "지금 백업",
    "en": "Back up now",
    "files": [
-    "MapHomeSettingsSheets.swift:490"
+    "MapHomeSettingsSheets.swift:496"
    ],
    "args": [],
    "targets": [
@@ -51628,7 +51729,7 @@
    "ko": "지금 정하기",
    "en": "Review now",
    "files": [
-    "MapHomeLaunchPrompts.swift:186"
+    "MapHomeLaunchPrompts.swift:194"
    ],
    "args": [],
    "targets": [
@@ -51689,7 +51790,7 @@
    "ko": "지금은 ‘{0}’({1}부터)로 기록되고 있어요.",
    "en": "Now recorded as “{0}” since {1}.",
    "files": [
-    "SiriIntents.swift:199"
+    "SiriIntents.swift:201"
    ],
    "args": [
     "item.title",
@@ -51704,7 +51805,7 @@
    "ko": "지금은 반영하지 못했어요. 잠시 뒤 다시 해 주세요.",
    "en": "Couldn't add it right now. Try again in a moment.",
    "files": [
-    "TripImportSheet.swift:355"
+    "TripImportSheet.swift:356"
    ],
    "args": [],
    "targets": [
@@ -51874,7 +51975,7 @@
    "ko": "지도 축소",
    "en": "Zoom map out",
    "files": [
-    "MapHomeView+Map.swift:1143"
+    "MapHomeView+Map.swift:1145"
    ],
    "args": [],
    "targets": [
@@ -51962,7 +52063,7 @@
    "ko": "지도 확대",
    "en": "Zoom map in",
    "files": [
-    "MapHomeView+Map.swift:1142"
+    "MapHomeView+Map.swift:1144"
    ],
    "args": [],
    "targets": [
@@ -52073,7 +52174,7 @@
    "ko": "지도에 경로 선",
    "en": "Route lines on map",
    "files": [
-    "AssistantDataActions.swift:342"
+    "AssistantDataActions.swift:343"
    ],
    "args": [],
    "targets": [
@@ -52097,7 +52198,7 @@
    "ko": "지도에 발자국",
    "en": "Footprints on map",
    "files": [
-    "AssistantDataActions.swift:343"
+    "AssistantDataActions.swift:344"
    ],
    "args": [],
    "targets": [
@@ -52121,7 +52222,7 @@
    "ko": "지도에 사진",
    "en": "Photos on map",
    "files": [
-    "AssistantDataActions.swift:341"
+    "AssistantDataActions.swift:342"
    ],
    "args": [],
    "targets": [
@@ -52604,7 +52705,7 @@
    "files": [
     "FirstRunGuideStage.swift:647",
     "FirstRunTutorialGuides.swift:694",
-    "MapHomeLaunchPrompts.swift:262"
+    "MapHomeLaunchPrompts.swift:270"
    ],
    "args": [],
    "targets": [
@@ -52916,11 +53017,35 @@
    ]
   },
   {
+   "key": "최근 30일|Last 30 days",
+   "ko": "최근 30일",
+   "en": "Last 30 days",
+   "files": [
+    "GPXExportCard.swift:17"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "최근 7일|Last 7 days",
+   "ko": "최근 7일",
+   "en": "Last 7 days",
+   "files": [
+    "GPXExportCard.swift:16"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "최근 {0}개 달을 뺀 지난 달 중 백업을 다시 읽어 확인된 달만 이 기기에서 지웁니다. 지운 달은 백업 목록에서 다시 불러올 수 있습니다.|Past months older than the latest {0} are removed from this device only after their backup is read back and verified. You can restore them from the backup list.",
    "ko": "최근 {0}개 달을 뺀 지난 달 중 백업을 다시 읽어 확인된 달만 이 기기에서 지웁니다. 지운 달은 백업 목록에서 다시 불러올 수 있습니다.",
    "en": "Past months older than the latest {0} are removed from this device only after their backup is read back and verified. You can restore them from the backup list.",
    "files": [
-    "MapHomeSettingsSheets.swift:447"
+    "MapHomeSettingsSheets.swift:453"
    ],
    "args": [
     "security.localMonthsToKeep"
@@ -53111,7 +53236,7 @@
    "ko": "추천: {0}",
    "en": "Suggested: {0}",
    "files": [
-    "MapHomeLaunchPrompts.swift:147"
+    "MapHomeLaunchPrompts.swift:155"
    ],
    "args": [
     "rule.label"
@@ -53243,7 +53368,7 @@
    "en": "Hobby",
    "files": [
     "MapHomeInteractionPolicy.swift:458",
-    "MapHomeLaunchPrompts.swift:266",
+    "MapHomeLaunchPrompts.swift:274",
     "MapHomeLocationPresentation.swift:291"
    ],
    "args": [],
@@ -53357,7 +53482,7 @@
    "ko": "층수 저장",
    "en": "Save floor",
    "files": [
-    "MapHomeSettingsSheets.swift:942"
+    "MapHomeSettingsSheets.swift:948"
    ],
    "args": [],
    "targets": [
@@ -53779,7 +53904,7 @@
    "ko": "켬",
    "en": "On",
    "files": [
-    "AssistantDataActions.swift:345"
+    "AssistantDataActions.swift:346"
    ],
    "args": [],
    "targets": [
@@ -54220,6 +54345,18 @@
    ]
   },
   {
+   "key": "파일을 만들지 못했어요.|Couldn't create the file.",
+   "ko": "파일을 만들지 못했어요.",
+   "en": "Couldn't create the file.",
+   "files": [
+    "GPXExportCard.swift:60"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "판타지 지도|Fantasy Map",
    "ko": "판타지 지도",
    "en": "Fantasy Map",
@@ -54448,7 +54585,7 @@
    "ko": "프롬프트를 복사했어요. 피클에 붙여 넣고 보내 주세요.",
    "en": "The prompt is copied. Paste it into Pickle and send.",
    "files": [
-    "TripImportSheet.swift:486"
+    "TripImportSheet.swift:487"
    ],
    "args": [],
    "targets": [
@@ -54496,7 +54633,7 @@
    "ko": "프롬프트와 피클 연결 키를 복사했어요. 피클 채팅창에 붙여 넣으면 계획이 앱으로 바로 와요.",
    "en": "The prompt and Pickle's connection key are copied. Paste them into the Pickle chat and the plan comes straight to the app.",
    "files": [
-    "TripImportSheet.swift:485"
+    "TripImportSheet.swift:486"
    ],
    "args": [],
    "targets": [
@@ -54556,7 +54693,7 @@
    "ko": "피클이 없어서 App Store를 열었어요. 설치한 뒤 다시 눌러 주세요.",
    "en": "Pickle isn't installed, so the App Store opened. Install it and tap again.",
    "files": [
-    "TripImportSheet.swift:483"
+    "TripImportSheet.swift:484"
    ],
    "args": [],
    "targets": [
@@ -54568,7 +54705,7 @@
    "ko": "픽셀 소풍",
    "en": "Pixel Picnic",
    "files": [
-    "MapHomePlaybackMusic.swift:38"
+    "MapHomePlaybackMusic.swift:41"
    ],
    "args": [],
    "targets": [
@@ -54877,7 +55014,7 @@
    "ko": "학교",
    "en": "School",
    "files": [
-    "MapHomeLaunchPrompts.swift:263"
+    "MapHomeLaunchPrompts.swift:271"
    ],
    "args": [],
    "targets": [
@@ -54937,7 +55074,7 @@
    "ko": "학원",
    "en": "Academy",
    "files": [
-    "MapHomeLaunchPrompts.swift:264",
+    "MapHomeLaunchPrompts.swift:272",
     "record-classification.json:0"
    ],
    "args": [],
@@ -55268,7 +55405,7 @@
    "ko": "햇살 산책",
    "en": "Sunny Stroll",
    "files": [
-    "MapHomePlaybackMusic.swift:33"
+    "MapHomePlaybackMusic.swift:36"
    ],
    "args": [],
    "targets": [
@@ -55544,7 +55681,7 @@
    "ko": "현재 위치로 다시 저장",
    "en": "Update current location",
    "files": [
-    "MapHomeSettingsSheets.swift:963"
+    "MapHomeSettingsSheets.swift:969"
    ],
    "args": [],
    "targets": [
@@ -55569,7 +55706,7 @@
    "ko": "현재 위치로 저장",
    "en": "Save current location",
    "files": [
-    "MapHomeSettingsSheets.swift:962"
+    "MapHomeSettingsSheets.swift:968"
    ],
    "args": [],
    "targets": [
@@ -55605,7 +55742,7 @@
    "ko": "현재 위치를 기준으로 저장할 수 있습니다",
    "en": "Save this place from your current location",
    "files": [
-    "MapHomeSettingsSheets.swift:885"
+    "MapHomeSettingsSheets.swift:891"
    ],
    "args": [],
    "targets": [
@@ -55629,7 +55766,7 @@
    "ko": "현재 위치를 받는 중입니다. 위치 기록이 잡히면 저장할 수 있습니다.",
    "en": "Waiting for location. Save becomes available when a location is recorded.",
    "files": [
-    "MapHomeSettingsSheets.swift:916"
+    "MapHomeSettingsSheets.swift:922"
    ],
    "args": [],
    "targets": [
@@ -55655,7 +55792,7 @@
    "ko": "현재 위치를 이 장소의 기준 위치로 저장합니다. 좌표는 화면에 표시하지 않습니다.",
    "en": "Save the current location as this place. Coordinates are not shown.",
    "files": [
-    "MapHomeSettingsSheets.swift:912"
+    "MapHomeSettingsSheets.swift:918"
    ],
    "args": [],
    "targets": [
@@ -55667,7 +55804,7 @@
    "ko": "현재 저장 상태",
    "en": "Saved",
    "files": [
-    "MapHomeSettingsSheets.swift:877"
+    "MapHomeSettingsSheets.swift:883"
    ],
    "args": [],
    "targets": [
@@ -55920,7 +56057,7 @@
    "ko": "확인하고 반영하기",
    "en": "Review and add",
    "files": [
-    "TripImportSheet.swift:328"
+    "TripImportSheet.swift:329"
    ],
    "args": [],
    "targets": [
@@ -56124,7 +56261,7 @@
    "en": "Work",
    "files": [
     "FirstRunTutorialGuides.swift:695",
-    "MapHomeLaunchPrompts.swift:265",
+    "MapHomeLaunchPrompts.swift:273",
     "FirstRunTutorialGuides.swift:695"
    ],
    "args": [],

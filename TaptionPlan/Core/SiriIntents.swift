@@ -114,7 +114,9 @@ struct AddReceiptIntent: AppIntent {
         }
         let lines = await LedgerReceiptReader.recognize(image)
         guard let draft = LedgerReceiptReader.draft(lines) else {
-            if AITaskQueue.enqueue(.receiptText, text: lines.joined(separator: "\n"), day: .now) {
+            // 영수증·결제로 보이는 글만 AI에게 맡긴다(아무 사진의 글자나 보내지 않는다).
+            let text = lines.joined(separator: "\n")
+            if LedgerMessageParser.looksLikePayment(text), AITaskQueue.enqueue(.receiptText, text: text, day: .now) {
                 await AITaskQueue.upload()
                 return .result(dialog: IntentDialog(stringLiteral: language.text("영수증을 읽지 못해 AI에게 맡겼어요.", "Couldn't read the receipt, so it was sent to your AI.")))
             }

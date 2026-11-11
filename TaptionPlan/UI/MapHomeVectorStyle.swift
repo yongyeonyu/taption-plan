@@ -8,6 +8,8 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
     case rpg
     /// 수묵(INK1108A01): 한지 바탕·먹 도로·옅은 물. 색은 `MapHomeInkWash`에 모았다.
     case ink
+    /// 백자(PLN1111A01): 색은 `MapHomePorcelainMap`에 모았다.
+    case porcelain
 
     static let sourceURL = "https://tiles.openfreemap.org/planet"
     static let glyphsURL = "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf"
@@ -21,6 +23,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         case .casual: TaptionSeasonStore.current.colors.map.background
         case .rpg: "#ECDFC0"
         case .ink: MapHomeInkWash.Map.paper
+        case .porcelain: MapHomePorcelainMap.paper
         }
     }
 
@@ -31,6 +34,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         case .casual: TaptionSeasonStore.current.colors.map.water
         case .rpg: "#86C3E0"
         case .ink: MapHomeInkWash.Map.water
+        case .porcelain: MapHomePorcelainMap.water
         }
     }
 
@@ -41,6 +45,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         case .casual: TaptionSeasonStore.current.colors.map.land
         case .rpg: "#DCCB9E"
         case .ink: MapHomeInkWash.Map.landuse
+        case .porcelain: MapHomePorcelainMap.landuse
         }
     }
 
@@ -51,6 +56,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         case .casual: TaptionSeasonStore.current.colors.map.building
         case .rpg: "#CBAE7C"
         case .ink: MapHomeInkWash.Map.building
+        case .porcelain: MapHomePorcelainMap.building
         }
     }
 
@@ -61,6 +67,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         case .casual: "#FFFFFF"
         case .rpg: "#F3E7C8"
         case .ink: MapHomeInkWash.Map.roadCasing
+        case .porcelain: MapHomePorcelainMap.roadCasing
         }
     }
 
@@ -71,6 +78,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         case .casual: TaptionSeasonStore.current.colors.map.road
         case .rpg: "#9A7B4A"
         case .ink: MapHomeInkWash.Map.road
+        case .porcelain: MapHomePorcelainMap.road
         }
     }
 
@@ -81,6 +89,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         case .casual: .season(TaptionSeasonStore.current.colors.map)
         case .rpg: .rpg
         case .ink: MapHomeInkWash.Map.labels
+        case .porcelain: MapHomePorcelainMap.labels
         }
     }
 
@@ -91,11 +100,13 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         case .casual: "Taption Vector Casual"
         case .rpg: "Taption Vector RPG"
         case .ink: "Taption Vector Ink"
+        case .porcelain: "Taption Vector Porcelain"
         }
     }
 
     private var casualLandLayersJSON: String {
         if self == .ink { return MapHomeInkWash.Map.landLayersJSON }
+        if self == .porcelain { return MapHomePorcelainMap.landLayersJSON }
         if self == .rpg {
             return #"""
             ,
@@ -247,6 +258,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
 
     private var casualOverlayLayersJSON: String {
         if self == .ink { return MapHomeInkWash.Map.overlayLayersJSON }
+        if self == .porcelain { return MapHomePorcelainMap.overlayLayersJSON }
         if self == .rpg {
             return #"""
             ,
@@ -476,6 +488,7 @@ extension MapDisplayStyle {
         case .mapLibreCasual: .casual
         case .mapLibreRPG: .rpg
         case .mapLibreInk: .ink
+        case .mapLibrePorcelain: .porcelain
         case .standard, .hybrid: nil
         }
     }

@@ -5,6 +5,9 @@ import SwiftUI
 
 /// 재생 영상의 배경 음악(BGM1104A02). 코드로 합성한 곡만 앱 target에 넣는다.
 enum MapHomePlaybackMusicTrack: String, CaseIterable, Identifiable, Sendable {
+    /// 고른 곡을 기억하는 저장 키. 영상 시트·여행 영상·재생이 같은 값을 쓴다.
+    static let storageKey = "playbackVideoMusic"
+
     case sunnyStroll = "01-sunny-stroll"
     case tiptoeAlley = "02-tiptoe-alley"
     case riverbankBreeze = "03-riverbank-breeze"
@@ -373,7 +376,7 @@ struct MapHomePlaybackMusicPicker: View {
     /// 음성 메모를 녹음하는 동안에는 오디오 세션을 건드리지 않는다.
     let canUseAudio: Bool
 
-    @AppStorage("playbackVideoMusic") private var musicRaw = MapHomePlaybackMusicTrack.defaultID
+    @AppStorage(MapHomePlaybackMusicTrack.storageKey) private var musicRaw = MapHomePlaybackMusicTrack.defaultID
     @Environment(\.scenePhase) private var scenePhase
     @State private var preview = MapHomePlaybackMusicPreview()
 

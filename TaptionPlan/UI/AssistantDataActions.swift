@@ -333,6 +333,7 @@ enum AssistantDataText {
         case .mapLibreCasual: language.text("계절", "Seasons")
         case .mapLibreRPG: language.text("판타지 지도", "Fantasy Map")
         case .mapLibreInk: language.text("수묵", "Ink Wash")
+        case .mapLibrePorcelain: language.text("백자", "Porcelain")
         }
     }
 

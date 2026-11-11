@@ -4222,6 +4222,7 @@ final class TimeScaleTests: XCTestCase {
                 .mapLibreCasual,
                 .mapLibreRPG,
                 .mapLibreInk,
+                .mapLibrePorcelain,
             ]
         )
         // 없앤 밝게·파스텔로 저장된 값은 산책 지도로 읽는다(UIX1101A03).
@@ -4951,7 +4952,7 @@ final class TimeScaleTests: XCTestCase {
     func testMapHomeVectorStylesKeepOnlyStyledRoadMapLayers() throws {
         XCTAssertEqual(
             MapHomeVectorStyle.allCases,
-            [.night, .contrast, .casual, .rpg, .ink]
+            [.night, .contrast, .casual, .rpg, .ink, .porcelain]
         )
 
         let baseLayerIDs = [
@@ -5024,6 +5025,23 @@ final class TimeScaleTests: XCTestCase {
                     "road",
                     "ink-road-major",
                     "ink-waterway",
+                ] + labelIDs
+            case .porcelain:
+                expectedLayerIDs = [
+                    "background",
+                    "water",
+                    "landuse",
+                    "porcelain-landcover",
+                    "porcelain-park",
+                    "porcelain-coastline",
+                    "building",
+                    "road-casing",
+                    "road",
+                    "porcelain-building-outline",
+                    "porcelain-road-major",
+                    "porcelain-road-highway",
+                    "porcelain-rail",
+                    "porcelain-waterway",
                 ] + labelIDs
             default:
                 expectedLayerIDs = baseLayerIDs + labelIDs
@@ -5122,9 +5140,13 @@ final class TimeScaleTests: XCTestCase {
                 .mapLibreNight,
                 .mapLibreContrast,
                 .mapLibreInk,
+                .mapLibrePorcelain,
             ]
         )
         XCTAssertEqual(MapDisplayStyle.standard.provider, .apple)
+        XCTAssertEqual(MapDisplayStyle.mapLibrePorcelain.mapHomeVectorStyle, .porcelain)
+        XCTAssertEqual(MapDisplayStyle.defaultStyle(for: .openFreeMap), .mapLibreRPG, "새 모양을 더해도 기본 지도는 그대로다")
+        XCTAssertNotNil(try? JSONSerialization.jsonObject(with: Data(MapHomeVectorStyle.porcelain.json.utf8)), "백자 지도 스타일 JSON이 깨지지 않는다")
         XCTAssertEqual(MapDisplayStyle.mapLibreCasual.provider, .openFreeMap)
         XCTAssertEqual(
             MapDisplayStyle.defaultStyle(for: .openFreeMap),

@@ -67,6 +67,29 @@ final class AssistantRelayTests: XCTestCase {
         XCTAssertNil(AssistantActivityBuilder.make(input(), level: .off))
     }
 
+    /// PLN1111A01 제안 4(T0 읽기): 오늘에만 이 달 예산, 10분 넘는 미확인 시간은 id와 함께. 없으면 칸째 빠져 예전 날의 글자가 그대로다.
+    func testBudgetOnlyTodayAndUnconfirmedSpansCarryIDs() throws {
+        let plain = try XCTUnwrap(AssistantActivityBuilder.make(input(), level: .summary))
+        XCTAssertNil(plain.budget)
+        XCTAssertNil(plain.unconfirmed)
+        XCTAssertTrue(keys(try json(plain)).isDisjoint(with: ["budget", "unconfirmed"]))
+
+        var today = input()
+        let long = ActualRecord(planID: nil, title: "미확인", categoryID: "unconfirmed", startedAt: at(19, 30), endedAt: at(20, 15), source: .location)
+        let short = ActualRecord(planID: nil, title: "미확인", categoryID: "unconfirmed", startedAt: at(20, 15), endedAt: at(20, 20), source: .location)
+        today.actuals += [long, short]
+        today.budget = .init(month: "2026-11", amountKRW: 500_000, spentKRW: 123_400)
+        let day = try XCTUnwrap(AssistantActivityBuilder.make(today, level: .summary))
+        XCTAssertEqual(day.budget, .init(month: "2026-11", amountKRW: 500_000, spentKRW: 123_400))
+        XCTAssertEqual(day.unconfirmed?.map(\.id), [long.id.uuidString], "10분이 안 되는 것은 뺀다")
+        XCTAssertEqual(day.unconfirmed?.first?.minutes, 45)
+        XCTAssertFalse(day.records.contains { $0.id == long.id.uuidString }, "기록 목록에는 미확인을 넣지 않는다")
+
+        var yesterday = today
+        yesterday.now = at(23).addingTimeInterval(86_400)
+        XCTAssertNil(AssistantActivityBuilder.make(yesterday, level: .summary)?.budget, "지난 날에는 예산을 싣지 않는다")
+    }
+
     func testSummaryLevelHasRecordsAndMemosButNoPlaces() throws {
         let day = try XCTUnwrap(AssistantActivityBuilder.make(input(), level: .summary))
         XCTAssertNil(day.visits)

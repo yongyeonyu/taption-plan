@@ -46,7 +46,10 @@ const addTool = (...args) => commandTool(...args, false);
 
 const TOOLS = [
   readTool("get_activity", "Get day records", "Get one day (date) or the newest 7 stored days: summary, records, memos, plans, and when the user shares them "
-    + "goals [{id,title,start,end}], trips [{tripId, items:[{stopId,itemId,title,order,start,end,status}]}] and sleep [{recordId,start,end,minutes,source}].",
+    + "goals [{id,title,start,end}], trips [{tripId, items:[{stopId,itemId,title,order,start,end,status}]}], sleep [{recordId,start,end,minutes,source}], "
+    + "expenses [{id,time,title,category,kind,amount,currency,amountKRW}], unconfirmed [{id,start,end,minutes}] (time the app could not classify; "
+    + "settle it with update_activity using that id), on today's day budget {month,amountKRW,spentKRW}, and at the place-name share level "
+    + "visits [{place,start,end,minutes}] and moves [{from,to,mode,start,end,minutes}]. Never coordinates or addresses.",
   object({ date: DATE }), (ctx, a) => readActivity(ctx, a.date ?? null)),
   readTool("get_summary", "Get week/month summary", "Totals over the last 7 (week) or 30 (month) days ending at end: minutes per category, recorded minutes, steps, plan counts, days covered.",
     object({ range: str("week or month", { enum: ["week", "month"] }), end: DATE }, ["range"]), (ctx, a) => readSummary(ctx, a.range, a.end ?? null)),

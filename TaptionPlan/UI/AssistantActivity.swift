@@ -88,6 +88,9 @@ struct AssistantActivityDay: Codable, Equatable, Sendable {
     var trips: [Trip]?
     var sleep: [Sleep]?
     var expenses: [Expense]?
+    /// 비면 칸째 뺀다(예전 날의 해시가 그대로).
+    var budget: Budget?
+    var unconfirmed: [Unconfirmed]?
 }
 
 /// 하루 기록을 만드는 데 필요한 값. 앱 상태에서 모으고, 시험은 직접 만든다.
@@ -112,6 +115,7 @@ struct AssistantActivityInput: Sendable {
     var tripStops: [TravelPlanStop] = []
     var tripItems: [TravelTripItem] = []
     var ledger: [LedgerEntry] = []
+    var budget: AssistantActivityDay.Budget?
 }
 
 enum AssistantActivityBuilder {
@@ -324,6 +328,15 @@ enum AssistantActivityBuilder {
             instantFormatter = make("yyyy-MM-dd'T'HH:mmxxx")
             clockFormatter = make("HH:mm")
         }
+
+        /// `instant`가 쓴 글자(`yyyy-MM-dd'T'HH:mmxxx`)를 다시 읽는다. 시간대는 글자에 든 값을 따른다.
+        @MainActor static let instantParser: DateFormatter = {
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.calendar = Calendar(identifier: .gregorian)
+            formatter.dateFormat = "yyyy-MM-dd'T'HH:mmxxx"
+            return formatter
+        }()
 
         func date(_ value: Date) -> String { dayFormatter.string(from: value) }
         func instant(_ value: Date) -> String { instantFormatter.string(from: value) }

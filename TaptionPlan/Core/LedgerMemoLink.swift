@@ -32,6 +32,14 @@ enum LedgerMemoAmount {
         if let match = line.firstMatch(of: /\$\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)/), let value = LedgerMessageParser.number(String(match.1)), value > 0 {
             return found(value, "USD", income, line, String(match.0))
         }
+        // 「1200엔」·「12달러」·「9유로」·「¥1200」·「€9」(PLN1111A01 제안 7-3). 낱말 속 글자(「엔진」)는 단위가 아니다.
+        if let match = line.firstMatch(of: /([0-9][0-9,]*(?:\.[0-9]{1,2})?)\s*(엔|달러|유로)/), let value = LedgerMessageParser.number(String(match.1)), value > 0,
+           Self.endsUnit(line[match.range.upperBound...]) {
+            return found(value, ["엔": "JPY", "달러": "USD", "유로": "EUR"][String(match.2)] ?? "KRW", income, line, String(match.0))
+        }
+        if let match = line.firstMatch(of: /([¥€])\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)/), let value = LedgerMessageParser.number(String(match.2)), value > 0 {
+            return found(value, match.1 == "¥" ? "JPY" : "EUR", income, line, String(match.0))
+        }
         // 글자 단위 정규식 하나로 「USD 12」·「1200 JPY」를 찾는다(글자를 칠 때마다 정규식을 새로 만들지 않게).
         for match in line.matches(of: /([A-Z]{3})\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)|([0-9][0-9,]*(?:\.[0-9]{1,2})?)\s*([A-Z]{3})/) {
             guard let code = (match.1 ?? match.4).map(String.init), currencyCodes.contains(code),
@@ -68,6 +76,12 @@ enum LedgerMemoAmount {
             return found(value, "KRW", income, line, String(match.0))
         }
         return nil
+    }
+
+    /// 단위 뒤가 비었거나 한글이 아니거나 조사면 단위가 맞다(「1200엔에」·「12달러짜리」). 「엔진」·「엔드」는 낱말이다.
+    private static func endsUnit(_ rest: Substring) -> Bool {
+        guard let next = rest.first, ("가"..."힣").contains(next) else { return true }
+        return ["을", "를", "에", "이", "은", "는", "도", "만", "짜리", "어치", "으로", "입니다"].contains { rest.hasPrefix($0) }
     }
 
     private static func found(_ amount: Double, _ currency: String, _ income: Bool, _ line: String, _ token: String) -> Found? {

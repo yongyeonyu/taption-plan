@@ -516,7 +516,8 @@ final class MapHomeStickmanTests: XCTestCase {
         let activity = MapHomeCategoryDetailRows.details(for: "activity").map(\.title)
         XCTAssertFalse(activity.contains("집안일"))
         XCTAssertFalse(activity.contains("장보기"))
-        XCTAssertEqual(MapHomeCategoryDetailRows.details(for: "housework").map(\.title), ["집안일", "빨래", "장보기", "요리", "설거지"])
+        // 빨래·장보기·요리·설거지는 센서로 정할 수 없어 기본 목록에서 빠지고 「직접 추가」로 갔다(DTL1111A01, 대표 결정).
+        XCTAssertEqual(MapHomeCategoryDetailRows.details(for: "housework").map(\.title), ["집안일"])
         XCTAssertEqual(MapHomeCategoryDetailRows.details(for: "eating").map(\.title), ["식사", "커피·티타임"])
         XCTAssertTrue(activity.contains("샤워"))
         XCTAssertFalse(RecordClassificationCatalog.categoryIDs.contains("shower"))

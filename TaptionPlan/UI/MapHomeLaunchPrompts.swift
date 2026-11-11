@@ -71,6 +71,14 @@ extension MapHomeView {
             launchPrompt = .calendarTitle("Invitation: MB ATHOS1.0 주간 회의")
             return
         }
+        // 지도 모양 확인용(PLN1111A01, Debug 전용): `-mapStylePreview mapLibrePorcelain`.
+        if let index = ProcessInfo.processInfo.arguments.firstIndex(of: "-mapStylePreview"),
+           let raw = ProcessInfo.processInfo.arguments.dropFirst(index + 1).first, let style = MapDisplayStyle(rawValue: raw) {
+            // 저장된 설정을 다 읽은 뒤에 바꿔야 덮어쓰이지 않는다.
+            try? await Task.sleep(for: .seconds(4))
+            model.setMapDisplayStyle(style)
+            return
+        }
         #endif
         await checkLocationAlways()
         while !Task.isCancelled, scenePhase == .active {

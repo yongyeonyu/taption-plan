@@ -55,7 +55,7 @@ struct MapHomeUnconfirmedBatchSheet: View {
                             Button { Task { await confirm(category) } } label: {
                                 Label(category.localizedTitle(language), systemImage: category.systemImage)
                                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
-                                    .frame(maxWidth: .infinity, minHeight: 36)
+                                    .frame(maxWidth: .infinity, minHeight: 44)
                             }
                             .buttonStyle(.bordered)
                             .disabled(picked.isEmpty || isSaving)

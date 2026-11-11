@@ -73,7 +73,7 @@ struct MapHomeWBSPlaybackLeg: Hashable, Sendable {
         var result = [Double](repeating: 0, count: coordinates.count)
         for index in 1..<coordinates.count {
             result[index] = result[index - 1]
-                + MapHomeWBSPlaybackProjection.distanceMeters(
+                + distanceMeters(
                     coordinates[index - 1],
                     coordinates[index]
                 )
@@ -517,10 +517,6 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
         let normalized = degrees >= 0 ? degrees : degrees + 360
         let slot = Int(floor((normalized + 22.5) / 45)) % 8
         return MapHomeWBSPlaybackDirection(rawValue: slot) ?? .north
-    }
-
-    static func distanceMeters(_ lhs: GeoPoint, _ rhs: GeoPoint) -> Double {
-        TaptionPlan.distanceMeters(lhs, rhs)
     }
 
     private struct ResolvedLocation {

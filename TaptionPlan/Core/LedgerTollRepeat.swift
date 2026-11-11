@@ -137,13 +137,7 @@ enum LedgerTollRepeatRunner {
         }
     }
 
-    private static let parser: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.dateFormat = "yyyy-MM-dd'T'HH:mmxxx"
-        return formatter
-    }()
+    private static var parser: DateFormatter { AssistantActivityBuilder.Stamp.instantParser }
 }
 
 /// 지도 화면에 붙는 보이지 않는 관찰자. 앱을 열 때·앞으로 올 때·기록이 바뀔 때 통행료를 본다.

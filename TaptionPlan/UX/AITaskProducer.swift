@@ -164,14 +164,7 @@ enum AITaskProducer {
         return Span(value: value, start: from, end: to)
     }
 
-    /// 하루 기록 시각 글자(`yyyy-MM-dd'T'HH:mmxxx`)를 읽는다.
-    private static let parser: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.dateFormat = "yyyy-MM-dd'T'HH:mmxxx"
-        return formatter
-    }()
+    private static var parser: DateFormatter { AssistantActivityBuilder.Stamp.instantParser }
 
     private static let dayFormatter: DateFormatter = {
         let formatter = DateFormatter()

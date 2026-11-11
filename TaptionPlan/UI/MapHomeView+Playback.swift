@@ -203,7 +203,7 @@ extension MapHomeView {
 
     /// 고른 곡을 넣은 파일을 돌려준다. 넣지 못하면 음악 없는 원본을 살리고 알린다.
     func recordingWithSelectedMusic(_ recorded: URL) async -> URL {
-        let raw = UserDefaults.standard.string(forKey: "playbackVideoMusic") ?? MapHomePlaybackMusicTrack.defaultID
+        let raw = UserDefaults.standard.string(forKey: MapHomePlaybackMusicTrack.storageKey) ?? MapHomePlaybackMusicTrack.defaultID
         guard let music = MapHomePlaybackMusicTrack.stored(raw)?.url else { return recorded }
         do {
             let url = try await MapHomeRecordingMusicMuxer.mux(video: recorded, music: music)

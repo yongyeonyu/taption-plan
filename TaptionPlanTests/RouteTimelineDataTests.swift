@@ -3631,7 +3631,7 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertEqual(stay.activity, .stay)
         XCTAssertEqual(stay.cameraCoordinate, firstPoint)
         XCTAssertEqual(
-            MapHomeWBSPlaybackProjection.distanceMeters(
+            distanceMeters(
                 stay.coordinate,
                 stay.cameraCoordinate
             ),
