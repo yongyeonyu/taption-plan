@@ -338,6 +338,40 @@ enum MapHomeDaySummaryLayout {
         )
     }
 
+    /// 왼쪽 패널·오른쪽 시간 사이드바·아래 시트에 가리지 않고 남은 지도의 가운데(CTR1111A01).
+    static func targetPoint(
+        viewportSize: CGSize,
+        coverage: CGFloat,
+        leadingInset: CGFloat,
+        trailingInset: CGFloat
+    ) -> CGPoint {
+        let base = targetPoint(viewportSize: viewportSize, coverage: coverage)
+        let open = max(0, viewportSize.width - max(0, leadingInset) - max(0, trailingInset))
+        guard open > 0 else { return base }
+        return CGPoint(x: max(0, leadingInset) + open / 2, y: base.y)
+    }
+
+    /// `coordinate`가 화면 가운데에서 `offset`(포인트, 오른쪽·아래가 +)만큼 떨어진 자리에 오게 하는 카메라 중심.
+    /// 지도가 `heading`만큼 돌아 있어도 화면 방향 그대로 옮긴다.
+    static func cameraCenter(
+        placing coordinate: CLLocationCoordinate2D,
+        at offset: CGPoint,
+        heading: CLLocationDirection,
+        latitudeDegreesPerPoint: Double
+    ) -> CLLocationCoordinate2D {
+        guard latitudeDegreesPerPoint.isFinite, latitudeDegreesPerPoint > 0 else { return coordinate }
+        let radians = heading * .pi / 180
+        // 카메라 중심은 기준점에서 화면으로 -offset만큼 떨어져 있다.
+        let sx = -Double(offset.x), sy = -Double(offset.y)
+        let east = sx * cos(radians) - sy * sin(radians)
+        let north = -sx * sin(radians) - sy * cos(radians)
+        let latitudeScale = max(0.01, cos(coordinate.latitude * .pi / 180))
+        return CLLocationCoordinate2D(
+            latitude: coordinate.latitude + north * latitudeDegreesPerPoint,
+            longitude: coordinate.longitude + east * latitudeDegreesPerPoint / latitudeScale
+        )
+    }
+
     /// 집(지도 가운데)을 남은 영역의 가운데로 옮기려면 카메라 중심을 화면 아래로 몇 포인트
     /// 내려야 하는지. 시트를 내리면(coverage 0) 0이라 지도 전체 가운데로 돌아온다.
     static func centerShift(viewportHeight: CGFloat, coverage: CGFloat) -> CGFloat {

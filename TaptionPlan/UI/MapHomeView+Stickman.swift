@@ -11,8 +11,19 @@ extension MapHomeView {
     var currentLocationTargetPoint: CGPoint {
         MapHomeDaySummaryLayout.targetPoint(
             viewportSize: mapViewportSize,
-            coverage: daySummaryCoverage
-        ).applying(CGAffineTransform(translationX: mapLeadingInset / 2, y: 0))
+            coverage: daySummaryCoverage,
+            leadingInset: mapLeadingInset,
+            trailingInset: mapTrailingInset
+        )
+    }
+
+    /// 시간 사이드바가 열려 있으면 지도 오른쪽에서 가리는 폭(손잡이 줄·날씨 + 시간선 + 바깥 여백).
+    var mapTrailingInset: CGFloat {
+        guard isSidebarVisible else { return 0 }
+        return MapHomeTimeSidebarMath.interactionWidth(
+            railWidth: timeRailWidth,
+            trailingInteractionWidth: Layout.horizontalInset
+        )
     }
 
     func locationDestinationSheet(
@@ -528,17 +539,15 @@ extension MapHomeView {
         let camera = visibleMapCamera
         let coordinate = currentCoordinate ?? visibleMapCenter
         let distance = MapHomeCameraZoomMath.distance(forScale: 80)
-        // 하루요약 시트가 아래를 덮으면 가려지지 않은 영역의 가운데에 오도록 중심을 남쪽으로 내린다.
+        // 하루요약 시트·시간 사이드바에 가리지 않고 남은 지도의 가운데에 오게 중심을 옮긴다(CTR1111A01).
         var center = coordinate
         if let camera, camera.distance > 0, mapViewportSize.height > 0 {
-            let shift = MapHomeDaySummaryLayout.centerShift(
-                viewportHeight: mapViewportSize.height,
-                coverage: daySummaryCoverage
-            )
-            center.latitude -= MapHomeDaySummaryLayout.latitudeShift(
-                shift: shift,
-                viewportHeight: mapViewportSize.height,
-                latitudeDelta: visibleMapSpan.latitudeDelta * distance / camera.distance
+            let target = currentLocationTargetPoint
+            center = MapHomeDaySummaryLayout.cameraCenter(
+                placing: coordinate,
+                at: CGPoint(x: target.x - mapViewportSize.width / 2, y: target.y - mapViewportSize.height / 2),
+                heading: camera.heading,
+                latitudeDegreesPerPoint: visibleMapSpan.latitudeDelta * distance / camera.distance / Double(mapViewportSize.height)
             )
         }
         setMapPosition(.camera(MapCamera(

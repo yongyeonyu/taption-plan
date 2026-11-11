@@ -58,6 +58,32 @@ extension FeatureEngineTests {
         )
     }
 
+    /// CTR1111A01: 시간 사이드바가 열려 있으면 가운데는 사이드바를 뺀 지도의 가운데(왼쪽), 닫혀 있으면 화면 가운데다.
+    func testCurrentLocationCenterAvoidsTimeSidebar() {
+        let size = CGSize(width: 440, height: 900)
+        let sidebar = MapHomeTimeSidebarMath.interactionWidth(railWidth: 44, trailingInteractionWidth: 16)
+        XCTAssertEqual(sidebar, 129)
+        let closed = MapHomeDaySummaryLayout.targetPoint(viewportSize: size, coverage: 0, leadingInset: 0, trailingInset: 0)
+        XCTAssertEqual(closed, CGPoint(x: 220, y: 450))
+        let open = MapHomeDaySummaryLayout.targetPoint(viewportSize: size, coverage: 0, leadingInset: 0, trailingInset: sidebar)
+        XCTAssertEqual(open.x, (440 - 129) / 2, accuracy: 0.001)
+        XCTAssertLessThan(open.x + 40, 440 - sidebar, "the cat stays clear of the sidebar")
+        // 왼쪽 패널만 있을 때는 예전과 같다.
+        XCTAssertEqual(
+            MapHomeDaySummaryLayout.targetPoint(viewportSize: size, coverage: 0, leadingInset: 100, trailingInset: 0).x, 270
+        )
+
+        // 북쪽이 위인 지도: 기준점을 왼쪽에 두려면 카메라 중심은 기준점의 동쪽, 위에 두려면 남쪽이다.
+        let point = CLLocationCoordinate2D(latitude: 37.5, longitude: 127)
+        let north = MapHomeDaySummaryLayout.cameraCenter(placing: point, at: CGPoint(x: -64, y: -100), heading: 0, latitudeDegreesPerPoint: 0.0001)
+        XCTAssertGreaterThan(north.longitude, point.longitude)
+        XCTAssertEqual(north.latitude, 37.49, accuracy: 0.000_001)
+        // 지도가 180도 돌아 있으면 방향이 뒤집힌다.
+        let south = MapHomeDaySummaryLayout.cameraCenter(placing: point, at: CGPoint(x: -64, y: -100), heading: 180, latitudeDegreesPerPoint: 0.0001)
+        XCTAssertLessThan(south.longitude, point.longitude)
+        XCTAssertEqual(south.latitude, 37.51, accuracy: 0.000_001)
+    }
+
     /// 하루요약 시트가 지도를 덮으면 집은 가려지지 않은 영역의 가운데로 올라가고,
     /// 시트를 내리면 다시 지도 전체 가운데로 돌아온다.
     func testDaySummarySheetCentersHomeInTheRemainingMapArea() {

@@ -4,6 +4,7 @@
 
 ## TFB1111A04 · TestFlight 308 (2026-11-11)
 
+- CTR1111A01 (2026-11-11): 시간 사이드바가 열려 있으면 화랑이·현재 위치 가운데를 사이드바 폭만큼 뺀 지도 가운데로, 닫히면 화면 가운데로. 아이폰 11 FeatureEngineTests 698건 중 실패 3(`build/validation/CTR1111A01/iphone11.log`): 카운터 종류 시험 2건은 하루 지출 카운터(SPD1111A01)를 넣을 때 고치지 않은 옛 기대값이라 7개로 고침, 센서 분석 1건은 기기 타이밍. 고친 뒤 넷(새 가운데 시험·하루요약 가운데·카운터·센서)을 다시 돌려 실패 0(`iphone11-2.log`). 기기 화면에서 고양이 자리는 직접 보지 않음(대표 확인 몫).
 - RNG1111A01 (2026-11-11): 하루 편집 범위 고르기·고른 클립 구간 넘어 합치기. 아이폰 11 단위 시험 NLEOverwriteBatchTests·NLETrackTests·NLEMultiDayTests·NLESubActivityTests 93건 실패 0(`build/validation/RNG1111A01/iphone11-3.log`, 앞선 두 번은 switch 누락 컴파일 오류·시험의 없는 분류 id로 실패 후 고침). 새 시험: 업무 732~996·미확인·집안일·휴식·집안일 조각을 끌어 고르고 업무로 덮으면 732~1197 한 클립, 이어진 다른 분류는 그대로, 각 원본 기록에 업무 조각 저장. l10n check 실패 0, 구조 지표 위반 없음. 기기 화면에서 끌어 고르기는 직접 보지 않음(대표 확인 몫).
 - 내용: LED1111A09·PBH1111A01·CUE1111A01·SYN1111A01~A04·PBD1111A01(장소도감 설명 합침)까지. 처음 시작한 배포는 5분 간격 변경을 넣으려고 아카이브 중에 멈췄고, 올린 번호를 되돌린 뒤 다시 돌렸다(`build/validation/tfb-308.log`, 업로드 전 중단).
 - `release.sh --yes`: 307 → 308. 산출물의 네 번들(앱·위젯·Watch·Watch 위젯) 모두 308. App Store Connect 처리 `VALID`, 「TP Taption Plan 내부 테스트」 그룹 연결·테스터 1명 노출 확인(`build/validation/TFB1111A04/testflight-report.json`, 로그 `build/validation/tfb-308b.log`).

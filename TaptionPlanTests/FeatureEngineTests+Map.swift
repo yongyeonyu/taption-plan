@@ -32,9 +32,9 @@ extension FeatureEngineTests {
         XCTAssertNil(MapHomeFogRevealPolicy.currentLocationPoint(stickmanPoint: nil, viewportPoint: nil))
     }
 
-    /// 표시 > 카운터: 연봉은 설정 화면을 열고, 나머지 여섯 개는 켜고 끄기만 한다.
+    /// 표시 > 카운터: 연봉은 설정 화면을 열고, 나머지 일곱 개(하루 지출 포함, SPD1111A01)는 켜고 끄기만 한다.
     func testCounterKindsMapToDayCategories() {
-        XCTAssertEqual(MapHomeCounterKind.allCases.count, 6)
+        XCTAssertEqual(MapHomeCounterKind.allCases.count, 7)
         XCTAssertEqual(
             MapHomeCounterKind.allCases.map(\.storageKey),
             [
@@ -44,6 +44,7 @@ extension FeatureEngineTests {
                 "mapHomeCounter.study",
                 "mapHomeCounter.hobby",
                 "mapHomeCounter.exercise",
+                "mapHomeCounter.spending",
             ]
         )
         // 걸음·이동은 대분류가 아니라 따로 세고, 나머지는 하루요약 대분류 시간을 그대로 쓴다.
