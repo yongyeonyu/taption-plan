@@ -338,7 +338,7 @@ struct AssistantActionLogView: View {
     private func row(_ entry: AssistantLogEntry) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text(entry.kind.title(language)).font(.taptionStyle(.subheadline, weight: .semibold))
+                Text(entry.kind.title(language)).font(.taptionStyle(.subheadline, weight: .medium))
                 Spacer()
                 Text(entry.appliedAt.formatted(date: .abbreviated, time: .shortened)).font(.taptionStyle(.caption)).foregroundStyle(.secondary)
             }

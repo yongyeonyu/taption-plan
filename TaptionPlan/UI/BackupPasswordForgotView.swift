@@ -14,7 +14,7 @@ struct BackupPasswordForgotView: View {
         VStack(alignment: .leading, spacing: 6) {
             Button(language.text("비밀번호를 잊었어요", "Forgot password")) { check() }
                 .buttonStyle(.borderless)
-                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                 .disabled(isChecking)
                 .accessibilityIdentifier("backupPasswordForgot")
             switch reveal {
@@ -31,7 +31,7 @@ struct BackupPasswordForgotView: View {
     private func revealed(_ password: String) -> some View {
         HStack(spacing: 10) {
             Text(password)
-                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(17)), weight: .bold).monospacedDigit())
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(17)), weight: .semibold).monospacedDigit())
                 .privacySensitive()
                 .accessibilityIdentifier("backupPasswordRevealed")
             if let fill {
@@ -43,12 +43,12 @@ struct BackupPasswordForgotView: View {
             Button(language.text("가리기", "Hide")) { reveal = nil }
         }
         .buttonStyle(.bordered)
-        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
+        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
     }
 
     private func note(_ text: String) -> some View {
         Text(text)
-            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
             .foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
     }

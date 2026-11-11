@@ -107,6 +107,12 @@ extension MapHomeView {
             LedgerPresenter.shared.isPresented = true
             return
         }
+        // 데이터 보호 시트 확인용(UIR1111A01, Debug 전용).
+        if ProcessInfo.processInfo.arguments.contains("-dataProtectionPreview") {
+            try? await Task.sleep(for: .seconds(3))
+            isDataProtectionPresented = true
+            return
+        }
         // 지도 모양 확인용(PLN1111A01, Debug 전용): `-mapStylePreview mapLibrePorcelain`.
         if let index = ProcessInfo.processInfo.arguments.firstIndex(of: "-mapStylePreview"),
            let raw = ProcessInfo.processInfo.arguments.dropFirst(index + 1).first, let style = MapDisplayStyle(rawValue: raw) {
