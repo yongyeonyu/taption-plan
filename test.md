@@ -4,6 +4,7 @@
 
 ## TFB1111A04 · TestFlight 308 (2026-11-11)
 
+- TFB1111A08 (2026-11-11): TestFlight 311(`release.sh --yes --request-id TFB1111A08`): 아카이브 산출물 네 번들(앱·위젯·Watch·Watch 위젯) 311 일치, 처리 `VALID`, 「TP Taption Plan 내부 테스트」 그룹 연결·테스터 노출 1명 확인(`build/validation/TFB1111A08/testflight-report.json`, 로그 `build/validation/tfb-311.log`). 처음 들어간 것: RNG1111A02(경계 손잡이로 여러 클립 지나가 한 번에 합치기)·RNG1111A03(미확인도 합치기). 테스트는 `--with-tests` 없이 아카이브 컴파일만, 기기 동작은 대표 확인 전.
 - AIT1111A01 마무리 (2026-11-11): 대표 허락 뒤 서버 배포(버전 ef664aae)로 MCP 안내에 확인 시점 문구 반영, 앱 연결 문구는 310부터.
 - TFB1111A07 (2026-11-11): 서버 배포(버전 ef664aae, AI 확인 시점 안내) 뒤 TestFlight 310(`release.sh --yes --request-id TFB1111A07`): 처리 `VALID`, 내부 그룹 연결·테스터 노출 확인(`build/validation/TFB1111A07/testflight-report.json`, 로그 `build/validation/tfb-310.log`). 들어간 것: 가계부 앱 모양·시간순·시각, 메모 배경판, AI 연결 화면 모양, 말풍선 「…」 접기, AI 시점 안내. 여러 개 합치기(RNG1111A02)·미확인 합치기(RNG1111A03)는 아카이브 뒤라 빠짐.
 - RNG1111A03 (2026-11-11): 경계를 끌어 이웃 하나를 합칠 때도 미확인을 기록 있는 클립이 품게 함(미확인은 남는 쪽만 안 됨, 옛 UIX1031A19 규칙 바꿈). 아이폰 11 NLETrackTests·NLEOverwriteBatchTests 76건 실패 0(`build/validation/RNG1111A03/iphone11-2.log`; 첫 실행은 시험의 기대값을 하루 끝으로 잘못 적어 실패, 미확인의 끝으로 고침). 309·310에는 없음, 다음 빌드 몫.
