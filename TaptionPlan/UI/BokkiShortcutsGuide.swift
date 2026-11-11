@@ -16,9 +16,10 @@ struct BokkiShortcutsGuideSections: View {
                 steps: [
                     language.text("「단축어 앱 열기」 → 「자동화」 → + → 「메시지」", "Open Shortcuts → Automation → + → Message"),
                     language.text("「메시지 내용에 포함」에 복사한 「원」 붙여 넣기 → 「즉시 실행」 → 다음", "Paste the copied word into \"Message Contains\" → Run Immediately → Next"),
-                    language.text("「새로운 빈 자동화」 → BOKKI Plan 「결제 문자 넣기」 → 완료", "New Blank Automation → BOKKI Plan \"Add payment text\" → Done"),
+                    language.text("「단축어 실행」 → 「BOKKI 결제 문자」 → 완료", "Run Shortcut → \"BOKKI Payment Text\" → Done"),
                 ],
                 copyText: "원",
+                shortcut: .paymentText,
                 footer: language.text("앱이 결제 문자만 골라 가계부에 넣고, 나머지 문자는 넣지도 AI에 보내지도 않아요. 같은 결제가 문자·앱 알림으로 두 번 와도 한 번만 넣고, 연결된 AI가 가게 이름·분류를 다듬어요.", "The app picks out payment texts only; other texts are neither saved nor sent to AI. A payment that arrives as both a text and an app alert is saved once, and your connected AI tidies the shop name and category.")
             )
             guideSection(
@@ -26,9 +27,10 @@ struct BokkiShortcutsGuideSections: View {
                 steps: [
                     language.text("「단축어 앱 열기」 → 「자동화」 → + → 「알림」 → 「앱 푸시」에서 은행·카드 앱(iOS 27부터)", "Open Shortcuts → Automation → + → Notification → App Push → your bank and card apps (iOS 27 or later)"),
                     language.text("내용 조건은 비워 두고 「즉시 실행」 → 다음", "Leave the content filter empty → Run Immediately → Next"),
-                    language.text("「새로운 빈 자동화」 → BOKKI Plan 「결제 알림 넣기」 → 완료", "New Blank Automation → BOKKI Plan \"Add payment alert\" → Done"),
+                    language.text("「단축어 실행」 → 「BOKKI 결제 알림」 → 완료", "Run Shortcut → \"BOKKI Payment Alert\" → Done"),
                 ],
                 copyText: nil,
+                shortcut: .paymentAlert,
                 footer: language.text("문자가 오지 않는 카드·은행도 앱 알림으로 들어와요. 광고 알림은 넣지 않아요.", "Cards and banks that don't text you still come in through app alerts. Ads are skipped.")
             )
             Section {
@@ -63,8 +65,16 @@ struct BokkiShortcutsGuideSections: View {
         ]
     }
 
-    private func guideSection(title: String, steps: [String], copyText: String?, footer: String) -> some View {
+    private func guideSection(title: String, steps: [String], copyText: String?, shortcut: BokkiBundledShortcut, footer: String) -> some View {
         Section {
+            // 앱에 든 서명된 단축어를 공유 시트로 넘기면 단축어 앱이 「단축어 추가」를 띄운다(SCA1112A01).
+            if let file = shortcut.file(language) {
+                ShareLink(item: file) {
+                    Label(language.text("「\(shortcut.title(language))」 단축어 추가", "Add the \"\(shortcut.title(language))\" shortcut"),
+                          systemImage: "square.and.arrow.down")
+                }
+                .font(.taptionStyle(.subheadline, weight: .semibold))
+            }
             HStack(spacing: 10) {
                 Button {
                     if let url = URL(string: "shortcuts://") { openURL(url) }
@@ -105,5 +115,33 @@ struct BokkiShortcutsGuide: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button(language.text("완료", "Done")) { dismiss() } } }
         }
+    }
+}
+
+/// 앱에 미리 든 서명된 단축어(SCA1112A01). 받은 문자·알림을 그대로 「결제 문자 넣기」·「결제 알림 넣기」에 넘긴다.
+/// 원본은 Assets의 데이터 묶음 `Shortcuts/`, 만드는 법은 `scripts/shortcuts/build.py`.
+enum BokkiBundledShortcut {
+    case paymentText, paymentAlert
+
+    private var assetName: String {
+        switch self {
+        case .paymentText: "BokkiShortcutPaymentText"
+        case .paymentAlert: "BokkiShortcutPaymentAlert"
+        }
+    }
+
+    func title(_ language: MapHomeLanguage) -> String {
+        switch self {
+        case .paymentText: language.text("BOKKI 결제 문자", "BOKKI Payment Text")
+        case .paymentAlert: language.text("BOKKI 결제 알림", "BOKKI Payment Alert")
+        }
+    }
+
+    /// 단축어 앱은 파일 이름을 단축어 이름으로 쓴다. 같은 파일이 있으면 다시 쓰지 않는다(뷰 본문에서 불린다).
+    func file(_ language: MapHomeLanguage) -> URL? {
+        guard let data = NSDataAsset(name: assetName)?.data else { return nil }
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(title(language) + ".shortcut")
+        if (try? Data(contentsOf: url)) == data { return url }
+        return (try? data.write(to: url, options: .atomic)) != nil ? url : nil
     }
 }
