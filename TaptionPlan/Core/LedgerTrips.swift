@@ -400,8 +400,11 @@ extension LedgerBook {
         if tripEntry != inTrip { await save(tripEntry) }
     }
 
-    /// 앱 여행 계획에서 고를 여행: 여행 번호별 첫날·마지막 날과 첫 일정 이름.
-    static func plannedTrips(stops: [TravelPlanStop], items: [TravelTripItem]) -> [LedgerTrip] {
+    /// 앱 여행 계획에서 고를 여행: 여행 번호별 첫날·마지막 날과 이름.
+    /// 저장한 여행(`trips`, TVA1111A01)이 있으면 그 이름과 기간을 쓰고, 없으면 일정에서 알아낸다(이름은 첫 일정).
+    static func plannedTrips(
+        stops: [TravelPlanStop], items: [TravelTripItem], trips: [TravelTrip] = [], calendar: Calendar = .autoupdatingCurrent
+    ) -> [LedgerTrip] {
         var days: [String: (start: Date, end: Date, name: String)] = [:]
         for stop in stops {
             guard let id = stop.tripID else { continue }
@@ -411,6 +414,13 @@ extension LedgerBook {
         for item in items {
             let old = days[item.tripID]
             days[item.tripID] = (min(old?.start ?? item.start, item.start), max(old?.end ?? item.end, item.end), old?.name ?? item.title)
+        }
+        for trip in trips {
+            let old = days[trip.id]
+            let first = TravelTripDay.components(trip.startDay).flatMap(calendar.date(from:)) ?? old?.start
+            guard let start = first else { continue }
+            let end = TravelTripDay.components(trip.endDay).flatMap(calendar.date(from:)) ?? old?.end ?? start
+            days[trip.id] = (start, max(start, end), trip.title.isEmpty ? (old?.name ?? "") : trip.title)
         }
         return days.map { LedgerTrip(id: $0.key, name: $0.value.name, start: $0.value.start, end: $0.value.end) }.sorted { $0.start > $1.start }
     }

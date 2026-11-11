@@ -21,6 +21,9 @@ public struct AppFeatureSettings: Codable, Hashable, Sendable {
     /// AI로 만든 여행의 시간 일정과 현지 시차(TRP1110A01). 시간 막대를 현지 벽시계로 그린다.
     /// 없으면 nil이라 저장하지 않는다(예전 기록·백업 바이트를 그대로 둔다).
     public var travelTripItems: [TravelTripItem]?
+    /// 여행 단위(TVA1111A01): 이름·기간·여행지·통화. 일정·핀·가계부 여행 장부가 같은 번호를 쓴다.
+    /// 없으면 nil이라 저장하지 않는다(예전 기록·백업 바이트를 그대로 둔다).
+    public var travelTrips: [TravelTrip]?
     /// Optional user-selected overrides for the automatic major
     /// categories. Missing values intentionally keep the shared defaults.
     public var mapCategoryColors: [String: String]
@@ -226,6 +229,7 @@ public struct AppFeatureSettings: Codable, Hashable, Sendable {
         case gpsLoggingPreferences
         case travelPlanStops
         case travelTripItems
+        case travelTrips
         case mapCategoryColors
         case mapUserActivityCategories
         case mapDisplayStyle
@@ -305,6 +309,7 @@ public struct AppFeatureSettings: Codable, Hashable, Sendable {
         gpsLoggingPreferences = defaults.gpsLoggingPreferences
         travelPlanStops = try values.decodeIfPresent([TravelPlanStop].self, forKey: .travelPlanStops) ?? []
         travelTripItems = try values.decodeIfPresent([TravelTripItem].self, forKey: .travelTripItems)
+        travelTrips = try values.decodeIfPresent([TravelTrip].self, forKey: .travelTrips)
         mapCategoryColors = Self.normalizedMapCategoryColors(
             try values.decodeIfPresent(
                 [String: String].self,

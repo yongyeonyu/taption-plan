@@ -6,9 +6,9 @@ extension MapHomeView {
 
     /// 가계부 화면 호스트. 지도 앞 층에 늘 둔다(하단 막대·왼쪽 위 단추는 화면에 따라 숨는다).
     var ledgerSheetHost: some View {
-        let stops = model.settings.travelPlanStops, items = model.settings.travelTripItems ?? []
+        let stops = model.settings.travelPlanStops, items = model.settings.travelTripItems ?? [], trips = model.settings.travelTrips ?? []
         return LedgerSheetHost(language: language, tripID: isTravelMode ? ledgerTripID : nil) {
-            LedgerBook.plannedTrips(stops: stops, items: items)
+            LedgerBook.plannedTrips(stops: stops, items: items, trips: trips)
         }
     }
 

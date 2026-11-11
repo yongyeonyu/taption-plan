@@ -251,3 +251,114 @@ final class TripPlaybackPathTests: XCTestCase {
         XCTAssertNil(MapHomeTripPlaybackPath(stops: [stop("a", 37.5, 127, order: 0)], items: []))
     }
 }
+
+/// TVA1111A01: 여행 단위(이름·기간 저장), 일정 시각 고치기와 일상 계획·핀 동기, 가계부 여행 고르기.
+final class TravelTripUnitTests: XCTestCase {
+    private func json(title: String) -> String {
+        #"{"format":"bokki-trip","version":1,"tripId":"t1","title":"\#(title)","items":["#
+            + #"{"id":"a","type":"sight","title":"왓 아룬","start":"2026-12-02T09:00+07:00","end":"2026-12-02T10:00+07:00","place":{"lat":13.74,"lng":100.49}},"#
+            + #"{"id":"b","type":"meal","title":"저녁","start":"2026-12-04T18:00+07:00"}]}"#
+    }
+
+    @MainActor
+    private func importedModel() async throws -> AppModel {
+        let model = AppModel(repository: InMemoryPlanRepository(), cloudSyncService: nil)
+        await model.bootstrapLocalSnapshot()
+        let applied = await model.applyTripImport(try TripImportParser.parse(json(title: "방콕")).get())
+        XCTAssertTrue(applied)
+        return model
+    }
+
+    @MainActor
+    func testImportStoresTitleAndDaysAndKeepsUserChosenCurrency() async throws {
+        let model = try await importedModel()
+        var trip = try XCTUnwrap(model.settings.travelTrips?.first)
+        XCTAssertEqual(trip, TravelTrip(id: "t1", title: "방콕", startDay: "2026-12-02", endDay: "2026-12-04"))
+        trip.currencyCode = "THB"
+        trip.countryCode = "TH"
+        let saved = await model.saveTravelTrip(trip)
+        XCTAssertTrue(saved)
+        await model.applyTripImport(try TripImportParser.parse(json(title: "방콕 가족 여행")).get())
+        XCTAssertEqual(model.settings.travelTrips, [TravelTrip(id: "t1", title: "방콕 가족 여행", startDay: "2026-12-02", endDay: "2026-12-04", countryCode: "TH", currencyCode: "THB")])
+    }
+
+    @MainActor
+    func testMovingAndResizingAnItemKeepsDailyPlanAndPinInStep() async throws {
+        let model = try await importedModel()
+        let before = try XCTUnwrap(model.settings.travelTripItems?.first { $0.itemID == "a" })
+        let planID = try XCTUnwrap(before.planID)
+
+        let moved = await model.moveTripItem(tripID: "t1", itemID: "a", by: 3_600)
+        XCTAssertTrue(moved)
+        var item = try XCTUnwrap(model.settings.travelTripItems?.first { $0.itemID == "a" })
+        XCTAssertEqual(item.start, before.start.addingTimeInterval(3_600))
+        XCTAssertEqual(item.end, before.end.addingTimeInterval(3_600))
+        var plan = try XCTUnwrap(model.snapshot.plans.first { $0.id == planID })
+        XCTAssertEqual(plan.span.start, item.start, "일상 계획 기록이 같은 시각으로 따라온다")
+        XCTAssertEqual(plan.span.end, item.end)
+
+        let resized = await model.resizeTripItem(tripID: "t1", itemID: "a", endDelta: 1_800)
+        XCTAssertTrue(resized)
+        item = try XCTUnwrap(model.settings.travelTripItems?.first { $0.itemID == "a" })
+        plan = try XCTUnwrap(model.snapshot.plans.first { $0.id == planID })
+        XCTAssertEqual(item.end.timeIntervalSince(item.start), 5_400)
+        XCTAssertEqual(plan.span.end, item.end)
+
+        let tooShort = await model.resizeTripItem(tripID: "t1", itemID: "a", startDelta: 5_300)
+        XCTAssertFalse(tooShort, "5분보다 짧아지면 바꾸지 않는다")
+        XCTAssertEqual(model.settings.travelTripItems?.first { $0.itemID == "a" }, item)
+        let missing = await model.moveTripItem(tripID: "t1", itemID: "없음", by: 60)
+        XCTAssertFalse(missing)
+
+        // 사흘 뒤로 옮기면 지도 핀 날짜가 따라가고 여행 기간이 늘어난다.
+        let later = await model.moveTripItem(tripID: "t1", itemID: "a", by: 3 * 86_400)
+        XCTAssertTrue(later)
+        let stop = try XCTUnwrap(model.settings.travelPlanStops.first { $0.itemID == "a" })
+        XCTAssertEqual(TravelPlanSchedule.dayKey(stored: stop.day), DateComponents(year: 2026, month: 12, day: 5))
+        XCTAssertEqual(stop.order, 0)
+        XCTAssertEqual(model.settings.travelTrips?.first?.endDay, "2026-12-05")
+        XCTAssertEqual(model.settings.travelTrips?.first?.startDay, "2026-12-02", "기간은 늘리기만 한다")
+    }
+
+    @MainActor
+    func testDayTripAndPastDayCanBecomeTripsAndBadRangeIsRejected() async throws {
+        let model = AppModel(repository: InMemoryPlanRepository(), cloudSyncService: nil)
+        await model.bootstrapLocalSnapshot()
+        let bad = await model.saveTravelTrip(TravelTrip(id: "x", title: "거꾸로", startDay: "2026-11-09", endDay: "2026-11-08"))
+        XCTAssertFalse(bad)
+        let empty = await model.saveTravelTrip(TravelTrip(id: "", title: "번호 없음", startDay: "2026-11-08", endDay: "2026-11-08"))
+        XCTAssertFalse(empty)
+        XCTAssertNil(model.settings.travelTrips)
+        let dayTrip = await model.saveTravelTrip(TravelTrip(id: "gapyeong", title: "가평", startDay: "2026-11-08", endDay: "2026-11-08"))
+        XCTAssertTrue(dayTrip)
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "Asia/Seoul"))
+        let onTheDay = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 11, day: 8, hour: 15)))
+        let today = try XCTUnwrap(model.travelTripEntries(now: onTheDay, calendar: calendar).first)
+        XCTAssertTrue(today.isDayTrip)
+        XCTAssertEqual(today.state, .active)
+        XCTAssertEqual(today.dayNumber, 1)
+        let nextDay = try XCTUnwrap(model.travelTripEntries(now: onTheDay.addingTimeInterval(86_400), calendar: calendar).first)
+        XCTAssertEqual(nextDay.state, .past, "지난 날짜의 여행도 목록에 남는다")
+    }
+
+    @MainActor
+    func testLedgerTripChoicesUseStoredTripNameAndDays() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "Asia/Seoul"))
+        let start = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 12, day: 2, hour: 2)))
+        let item = TravelTripItem(tripID: "t1", itemID: "a", kind: "sight", title: "왓 아룬", start: start, end: start.addingTimeInterval(3_600),
+                                  startOffsetSeconds: 25_200, endOffsetSeconds: 25_200, planID: nil)
+        XCTAssertEqual(LedgerBook.plannedTrips(stops: [], items: [item]).map(\.name), ["왓 아룬"], "저장한 여행이 없으면 예전처럼 첫 일정 이름")
+        let trips = [
+            TravelTrip(id: "t1", title: "방콕", startDay: "2026-12-02", endDay: "2026-12-06"),
+            TravelTrip(id: "gapyeong", title: "가평", startDay: "2026-11-08", endDay: "2026-11-08"),
+        ]
+        let choices = LedgerBook.plannedTrips(stops: [], items: [item], trips: trips, calendar: calendar)
+        XCTAssertEqual(choices.map(\.id), ["t1", "gapyeong"])
+        XCTAssertEqual(choices.map(\.name), ["방콕", "가평"])
+        XCTAssertEqual(choices[0].end, calendar.date(from: DateComponents(year: 2026, month: 12, day: 6)))
+        XCTAssertEqual(choices[1].start, choices[1].end, "일정이 없는 당일치기도 고를 수 있다")
+    }
+}
