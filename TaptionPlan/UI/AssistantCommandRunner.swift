@@ -196,7 +196,7 @@ final class AssistantInbox {
 }
 
 /// 앱이 켜져 있는 동안 명령을 확인하는 간격(SYN1111A03, 대표 결정).
-/// AI와 대화 중이면 빠르게(10초, 저전력 20초, 과열 60초), 그 밖에는 10분마다 본다.
+/// AI와 대화 중이면 빠르게(10초, 저전력 20초, 과열 60초), 그 밖에는 5분마다 본다(대표 결정).
 /// 대화 중: AI가 5분 안에 왔고 「대화 끝」을 보내지 않았거나, 앱에서 직접 새로고침한 뒤 2분.
 @MainActor
 enum AssistantCommandPolling {
@@ -208,7 +208,7 @@ enum AssistantCommandPolling {
         var receivedAt: Date
     }
 
-    nonisolated static let idleInterval: TimeInterval = 600
+    nonisolated static let idleInterval: TimeInterval = 300
     nonisolated static let aiIdleTimeout: TimeInterval = 300
     nonisolated static let manualWindow: TimeInterval = 120
 

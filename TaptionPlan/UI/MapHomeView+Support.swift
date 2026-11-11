@@ -206,7 +206,7 @@ extension MapHomeView {
             Task { await checkTripRelay() }
         }
         .task { await checkTripRelay() }
-        // 켜져 있는 동안 AI 비서 명령을 받는다(SYN1111A03). AI와 대화 중이면 10초, 아니면 10분.
+        // 켜져 있는 동안 AI 비서 명령을 받는다(SYN1111A03). AI와 대화 중이면 10초, 아니면 5분.
         // 10초마다 깨어 간격만 다시 본다(네트워크 없음). 직접 새로고침하면 다음 깸에 바로 빨라진다.
         .task(id: scenePhase == .active) {
             guard scenePhase == .active else { return }

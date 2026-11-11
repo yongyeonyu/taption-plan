@@ -246,7 +246,7 @@ final class AssistantRelayTests: XCTestCase {
         XCTAssertEqual(P.interval(conversation: true, lowPower: false, thermal: .nominal), 10)
         XCTAssertEqual(P.interval(conversation: true, lowPower: true, thermal: .nominal), 20)
         XCTAssertEqual(P.interval(conversation: true, lowPower: false, thermal: .serious), 60)
-        XCTAssertEqual(P.interval(conversation: false, lowPower: false, thermal: .nominal), 600)
+        XCTAssertEqual(P.interval(conversation: false, lowPower: false, thermal: .nominal), 300)
         let response = HTTPURLResponse(url: URL(string: "https://example.com/command")!, statusCode: 204, httpVersion: nil,
                                        headerFields: ["x-ai-seen-ago": "42", "x-ai-ended": "1"])!
         XCTAssertEqual(P.signal(from: response, now: now), P.Signal(seenAgo: 42, ended: true, receivedAt: now))
