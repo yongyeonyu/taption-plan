@@ -333,14 +333,18 @@ struct AssistantCommandOutcome: Equatable, Sendable {
 extension TripRelay {
     @MainActor
     private static func commandRequest(
-        _ path: String, method: String, query: [URLQueryItem] = [], body: Data? = nil, env: AssistantRegistration.Environment
+        _ path: String, method: String, query: [URLQueryItem] = [], body: Data? = nil, env: AssistantRegistration.Environment,
+        timeout: TimeInterval = 10
     ) -> URLRequest? {
-        env.secrets.read(.master).flatMap { relayRequest(path, method: method, query: query, body: body, token: $0, host: env.host) }
+        env.secrets.read(.master).flatMap { relayRequest(path, method: method, query: query, body: body, token: $0, host: env.host, timeout: timeout) }
     }
+
+    static let commandFetchTimeout: TimeInterval = 5
 
     @MainActor
     static func fetchCommands(env: AssistantRegistration.Environment = .live) async -> AssistantCommandBatch? {
-        guard let reply = await send(commandRequest("/command", method: "GET", env: env), session: env.session) else { return nil }
+        // 화면에서 기다리는 요청이라 5초 안에 끝낸다(SYN1111A01).
+        guard let reply = await send(commandRequest("/command", method: "GET", env: env, timeout: commandFetchTimeout), session: env.session) else { return nil }
         if reply.status == 204 { return AssistantCommandBatch(commands: [], invalidIDs: []) }
         return reply.status == 200 ? AssistantCommandParser.parse(reply.data) : nil
     }
@@ -424,13 +428,10 @@ extension MapHomeView {
     /// 여행 계획 확인과 같은 때(앱을 열 때) 명령을 받아 반영하고 알림을 띄운다.
     /// 한 번에 기존 항목 20개를 넘게 바꾸면 반영하지 않고 확인 시트를 띄운다(AIR1110A02).
     func checkAssistantCommands() async {
-        // 올리지 못한 다듬기 목록을 먼저 다시 올린다(MEM1110A02).
+        // 명령을 먼저 받아 바로 보이게 하고(SYN1111A01), 올리지 못한 다듬기 목록은 그 뒤에 다시 올린다(MEM1110A02).
+        AssistantCommandRefresh.model = model
+        await AssistantCommandRefresh.now(language: language)
         await MemoPolishQueue.upload()
-        switch await AssistantCommandRunner.run(model: model) {
-        case let .applied(outcome): AssistantInbox.current.show(outcome.notice(language))
-        case let .needsConfirmation(batch): AssistantInbox.current.pending = batch
-        case .nothing: break
-        }
     }
 }
 

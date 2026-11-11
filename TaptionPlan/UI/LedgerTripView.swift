@@ -38,6 +38,7 @@ struct LedgerTripView: View {
                 }
                 LedgerTripSheetSection(trip: trip, sheet: sheet, language: language)
             }
+            .refreshable { await AssistantCommandRefresh.now(language: language) }
             .navigationTitle(trip.name)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

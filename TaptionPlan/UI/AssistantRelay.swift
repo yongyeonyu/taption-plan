@@ -67,10 +67,11 @@ extension TripRelay {
     /// `token`을 주면 그 키로 부른다(키를 바꾸기 전 예전 키로 지울 때, SEC1110A01).
     /// `host`는 시험에서만 바꾼다(SEC1110A02).
     static func relayRequest(
-        _ path: String, method: String, query: [URLQueryItem] = [], body: Data? = nil, token: String? = nil, host: String? = TripRelay.host
+        _ path: String, method: String, query: [URLQueryItem] = [], body: Data? = nil, token: String? = nil, host: String? = TripRelay.host,
+        timeout: TimeInterval = 10
     ) -> URLRequest? {
         guard let url = url(path, query: query, host: host), let key = token ?? key else { return nil }
-        var request = URLRequest(url: url, timeoutInterval: 10)
+        var request = URLRequest(url: url, timeoutInterval: timeout)
         request.httpMethod = method
         request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
         if let body {

@@ -2,6 +2,12 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## SYN1111A01 · AI 비서 명령 바로 받기·당겨서 새로고침 (2026-11-11)
+
+- 확인: 앱 활성화 때는 이미 `checkTripRelay` → 명령 확인을 부르고 있었다. 늦은 이유는 앱이 켜져 있는 동안 확인하지 않았고, 활성화 때도 다듬기 목록 올리기를 먼저 했기 때문이다.
+- 고침: 활성화 때 명령을 먼저 받는다. 켜져 있는 동안 주기 확인을 더했다. 대표 제안은 10초 고정이었지만, 주 키 하루 2,000회 한도(`server/trip-relay/src/state.js` `perDay`)를 5시간 반이면 다 쓴다. 그래서 복귀·새 명령 뒤 2분은 10초, 10분까지 30초, 그 뒤 2분으로 했다(8시간 켜 두면 약 260회). 주기 확인과 당겨서 새로고침은 429를 기다리지 않는다. 가계부·여행 장부·펼친 메모 목록에 당겨서 새로고침을 더했다. `ScheduleView`는 스크롤 목록이 없는 옛 시간표라 넣지 않았다. 명령 받기(`GET /command`) 제한 시간은 5초다.
+- 아이폰 11 실기기: 앱 Debug 빌드와 `AssistantRelayTests`·`AssistantCommandEditTests`·`LedgerTests` 49건 실패 0(`build/validation/SYN1111A01/iphone11.xcresult`). l10n 점검·구조 지표 통과. 실제 AI가 보낸 명령이 10초 안에 들어오는지는 기기에서 보지 않았다.
+
 ## CUE1111A01 · AI 연결의 Cue 「열기」·「무료」 (2026-11-11)
 
 - 대표 화면(11:04): Cue를 이미 받았는데 「받기」로 보였고, Cue는 무료로 연결된다. Cue(Manus) 앱 스킴은 공개 자료와 manus.im의 apple-app-site-association에서 찾지 못했다. 확인 안 된 딥 링크는 두지 않는다는 기존 결정에 따라 스킴은 넣지 않았다.

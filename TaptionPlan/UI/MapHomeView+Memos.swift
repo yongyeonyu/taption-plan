@@ -213,6 +213,7 @@ extension MapHomeView {
                         }
                     }
                 }
+                .refreshable { await AssistantCommandRefresh.now(language: language) }
                 .frame(maxHeight: 300)
             } else {
                 ForEach(panelMemos.prefix(3)) { memo in

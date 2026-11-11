@@ -194,3 +194,36 @@ final class AssistantInbox {
         if next != notice { notice = next }
     }
 }
+
+/// 앱이 켜져 있는 동안 명령을 확인하는 간격(SYN1111A01). 주 키는 하루 2,000회 한도라
+/// 복귀 직후·새 명령 뒤 2분은 10초, 10분까지 30초, 그 뒤는 2분마다 본다.
+enum AssistantCommandPolling {
+    static func interval(sinceActivity elapsed: TimeInterval) -> TimeInterval {
+        if elapsed < 120 { return 10 }
+        if elapsed < 600 { return 30 }
+        return 120
+    }
+}
+
+/// 주기 확인과 당겨서 새로고침이 함께 쓴다. 지도 화면이 모델을 넣어 둔다(SYN1111A01).
+@MainActor
+enum AssistantCommandRefresh {
+    static weak var model: AppModel?
+
+    /// 명령을 받아 반영하고 알림을 띄운다. 새 명령이 있었으면 true. 429는 기다리지 않는다.
+    @discardableResult
+    static func now(language: MapHomeLanguage = .current) async -> Bool {
+        guard let model else { return false }
+        let result = await TripRelay.$singleAttempt.withValue(true) { await AssistantCommandRunner.run(model: model) }
+        switch result {
+        case let .applied(outcome):
+            AssistantInbox.current.show(outcome.notice(language))
+            return true
+        case let .needsConfirmation(batch):
+            AssistantInbox.current.pending = batch
+            return true
+        case .nothing:
+            return false
+        }
+    }
+}

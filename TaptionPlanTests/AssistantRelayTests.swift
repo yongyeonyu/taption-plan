@@ -230,4 +230,23 @@ final class AssistantRelayTests: XCTestCase {
             XCTAssertTrue(text.contains(part), part)
         }
     }
+
+    /// SYN1111A01: 켜져 있는 동안 명령 확인 간격과 명령 받기 제한 시간.
+    func testCommandPollingIntervalAndFetchTimeout() {
+        XCTAssertEqual(AssistantCommandPolling.interval(sinceActivity: 0), 10)
+        XCTAssertEqual(AssistantCommandPolling.interval(sinceActivity: 119), 10)
+        XCTAssertEqual(AssistantCommandPolling.interval(sinceActivity: 120), 30)
+        XCTAssertEqual(AssistantCommandPolling.interval(sinceActivity: 599), 30)
+        XCTAssertEqual(AssistantCommandPolling.interval(sinceActivity: 3_600), 120)
+        // 앱을 하루 8시간 켜 두어도 주 키 하루 한도(2,000회)의 절반을 넘지 않는다.
+        var elapsed: TimeInterval = 0, calls = 0
+        while elapsed < 8 * 3_600 {
+            elapsed += AssistantCommandPolling.interval(sinceActivity: elapsed)
+            calls += 1
+        }
+        XCTAssertLessThan(calls, 1_000)
+        XCTAssertLessThanOrEqual(TripRelay.commandFetchTimeout, 5)
+        let request = TripRelay.relayRequest("/command", method: "GET", token: "K", host: "example.com", timeout: TripRelay.commandFetchTimeout)
+        XCTAssertEqual(request?.timeoutInterval, 5)
+    }
 }

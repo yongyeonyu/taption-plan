@@ -119,7 +119,7 @@
    "ko": "1 {0} ≈ {1}원",
    "en": "1 {0} ≈ ₩{1}",
    "files": [
-    "LedgerSheet.swift:362"
+    "LedgerSheet.swift:364"
    ],
    "args": [
     "entry.currency",
@@ -796,7 +796,7 @@
    "ko": "AI가 넣음",
    "en": "Added by AI",
    "files": [
-    "LedgerSheet.swift:266"
+    "LedgerSheet.swift:268"
    ],
    "args": [],
    "targets": [
@@ -860,7 +860,7 @@
    "ko": "AI로 만들기",
    "en": "Plan with AI",
    "files": [
-    "MapHomeView+Support.swift:664"
+    "MapHomeView+Support.swift:675"
    ],
    "args": [],
    "targets": [
@@ -1217,7 +1217,7 @@
    "ko": "BOKKI 가계부 {0}",
    "en": "BOKKI ledger {0}",
    "files": [
-    "LedgerSheet.swift:60"
+    "LedgerSheet.swift:62"
    ],
    "args": [
     "monthTitle"
@@ -1231,7 +1231,7 @@
    "ko": "BOKKI 가계부 전체",
    "en": "BOKKI ledger (all)",
    "files": [
-    "LedgerSheet.swift:66"
+    "LedgerSheet.swift:68"
    ],
    "args": [],
    "targets": [
@@ -2621,7 +2621,7 @@
    "ko": "{0} · {1} 냄 · {2}",
    "en": "{0} · {1} paid · {2}",
    "files": [
-    "LedgerTripView.swift:97"
+    "LedgerTripView.swift:98"
    ],
    "args": [
     "time",
@@ -3084,7 +3084,7 @@
    "ko": "{0} 장부 만들기",
    "en": "Start a ledger for {0}",
    "files": [
-    "LedgerSheet.swift:127"
+    "LedgerSheet.swift:129"
    ],
    "args": [
     "trip.name"
@@ -3388,7 +3388,7 @@
    "ko": "{0}년 {1}월",
    "en": "{0}/{1}",
    "files": [
-    "LedgerSheet.swift:227",
+    "LedgerSheet.swift:229",
     "MapHomeSettingsSheets.swift:743"
    ],
    "args": [
@@ -3747,7 +3747,7 @@
    "en": "From {0}",
    "files": [
     "LedgerSummary.swift:171",
-    "LedgerTripView.swift:131"
+    "LedgerTripView.swift:132"
    ],
    "args": [
     "transfer.from"
@@ -3776,7 +3776,7 @@
    "en": "To {0}",
    "files": [
     "LedgerSummary.swift:173",
-    "LedgerTripView.swift:133"
+    "LedgerTripView.swift:134"
    ],
    "args": [
     "transfer.to"
@@ -23181,7 +23181,7 @@
    "ko": "「다 같이」는 n분의 1로 나눠요. 친구가 낸 돈도 넣으면 정산에 들어가요.",
    "en": "\"Everyone\" splits evenly. Add what friends paid too so settling is right.",
    "files": [
-    "LedgerTripView.swift:224"
+    "LedgerTripView.swift:225"
    ],
    "args": [],
    "targets": [
@@ -23205,7 +23205,7 @@
    "ko": "가계부 {0} 표",
    "en": "Ledger {0} table",
    "files": [
-    "LedgerSheet.swift:62"
+    "LedgerSheet.swift:64"
    ],
    "args": [
     "monthTitle"
@@ -23269,7 +23269,7 @@
    "ko": "가계부 전체 표",
    "en": "Whole ledger table",
    "files": [
-    "LedgerSheet.swift:68"
+    "LedgerSheet.swift:70"
    ],
    "args": [],
    "targets": [
@@ -23293,7 +23293,7 @@
    "ko": "가계부",
    "en": "Ledger",
    "files": [
-    "LedgerSheet.swift:51"
+    "LedgerSheet.swift:53"
    ],
    "args": [],
    "targets": [
@@ -24120,7 +24120,7 @@
    "en": "Payment text",
    "files": [
     "LedgerExport.swift:48",
-    "LedgerSheet.swift:267"
+    "LedgerSheet.swift:269"
    ],
    "args": [],
    "targets": [
@@ -24378,7 +24378,7 @@
    "ko": "계획과 기록은 삭제되지 않습니다.",
    "en": "Your plans and records will not be deleted.",
    "files": [
-    "MapHomeView+Support.swift:743"
+    "MapHomeView+Support.swift:754"
    ],
    "args": [],
    "targets": [
@@ -24640,7 +24640,7 @@
    "ko": "골라서",
    "en": "Pick",
    "files": [
-    "LedgerTripView.swift:206"
+    "LedgerTripView.swift:207"
    ],
    "args": [],
    "targets": [
@@ -25196,7 +25196,7 @@
    "en": "Other income",
    "files": [
     "LedgerSummary.swift:167",
-    "LedgerTripView.swift:116"
+    "LedgerTripView.swift:117"
    ],
    "args": [],
    "targets": [
@@ -25402,7 +25402,7 @@
    "ko": "금액(원)",
    "en": "Amount (KRW)",
    "files": [
-    "LedgerSheet.swift:387"
+    "LedgerSheet.swift:389"
    ],
    "args": [],
    "targets": [
@@ -25414,7 +25414,7 @@
    "ko": "금액",
    "en": "Amount",
    "files": [
-    "LedgerSheet.swift:356",
+    "LedgerSheet.swift:358",
     "LedgerSummary.swift:132",
     "LedgerSummary.swift:137"
    ],
@@ -25603,7 +25603,7 @@
    "ko": "기록 고치기",
    "en": "Edit entry",
    "files": [
-    "LedgerSheet.swift:333"
+    "LedgerSheet.swift:335"
    ],
    "args": [],
    "targets": [
@@ -25639,8 +25639,8 @@
    "ko": "기록 더하기",
    "en": "Add entry",
    "files": [
-    "LedgerSheet.swift:73",
-    "LedgerSheet.swift:333"
+    "LedgerSheet.swift:75",
+    "LedgerSheet.swift:335"
    ],
    "args": [],
    "targets": [
@@ -26219,7 +26219,7 @@
    "ko": "끝",
    "en": "End",
    "files": [
-    "LedgerTripView.swift:257",
+    "LedgerTripView.swift:258",
     "MapHomeSectionEditSheet.swift:214"
    ],
    "args": [],
@@ -26268,8 +26268,8 @@
    "ko": "나",
    "en": "Me",
    "files": [
-    "LedgerSheet.swift:497",
-    "LedgerTripView.swift:103"
+    "LedgerSheet.swift:499",
+    "LedgerTripView.swift:104"
    ],
    "args": [],
    "targets": [
@@ -26281,7 +26281,7 @@
    "ko": "나누기",
    "en": "Split",
    "files": [
-    "LedgerTripView.swift:222"
+    "LedgerTripView.swift:223"
    ],
    "args": [],
    "targets": [
@@ -26317,7 +26317,7 @@
    "ko": "나도 포함해 똑같이 나눠요. 기록의 「낸 사람」이 비었으면 내가 낸 것이에요.",
    "en": "Split equally including you. A blank payer means you paid.",
    "files": [
-    "LedgerSheet.swift:495"
+    "LedgerSheet.swift:497"
    ],
    "args": [],
    "targets": [
@@ -26329,8 +26329,8 @@
    "ko": "나만",
    "en": "Only me",
    "files": [
-    "LedgerTripView.swift:94",
-    "LedgerTripView.swift:204"
+    "LedgerTripView.swift:95",
+    "LedgerTripView.swift:205"
    ],
    "args": [],
    "targets": [
@@ -26371,7 +26371,7 @@
    "files": [
     "FirstRunTutorialGuides.swift:372",
     "FirstRunTutorialGuides.swift:419",
-    "MapHomeView+Support.swift:658"
+    "MapHomeView+Support.swift:669"
    ],
    "args": [],
    "targets": [
@@ -26383,7 +26383,7 @@
    "ko": "나중에",
    "en": "Not now",
    "files": [
-    "MapHomeView+Support.swift:422"
+    "MapHomeView+Support.swift:433"
    ],
    "args": [],
    "targets": [
@@ -26536,7 +26536,7 @@
    "en": "My share",
    "files": [
     "LedgerSummary.swift:165",
-    "LedgerTripView.swift:121"
+    "LedgerTripView.swift:122"
    ],
    "args": [],
    "targets": [
@@ -26548,7 +26548,7 @@
    "ko": "내 수입(환불 등)",
    "en": "My income (refund etc.)",
    "files": [
-    "LedgerTripView.swift:169"
+    "LedgerTripView.swift:170"
    ],
    "args": [],
    "targets": [
@@ -26598,7 +26598,7 @@
    "en": "I paid",
    "files": [
     "LedgerSummary.swift:162",
-    "LedgerTripView.swift:117"
+    "LedgerTripView.swift:118"
    ],
    "args": [],
    "targets": [
@@ -26622,7 +26622,7 @@
    "ko": "내용 (예: 커피)",
    "en": "What (e.g. Coffee)",
    "files": [
-    "LedgerSheet.swift:351"
+    "LedgerSheet.swift:353"
    ],
    "args": [],
    "targets": [
@@ -26634,7 +26634,7 @@
    "ko": "낸 사람 (비우면 나)",
    "en": "Paid by (blank = me)",
    "files": [
-    "LedgerSheet.swift:310"
+    "LedgerSheet.swift:312"
    ],
    "args": [],
    "targets": [
@@ -26646,7 +26646,7 @@
    "ko": "낸 사람",
    "en": "Paid by",
    "files": [
-    "LedgerTripView.swift:194"
+    "LedgerTripView.swift:195"
    ],
    "args": [],
    "targets": [
@@ -26658,7 +26658,7 @@
    "ko": "낸 사람을 적으면 「정산하기」에서 나눌 돈을 계산해요.",
    "en": "Add who paid to split costs in Settle up.",
    "files": [
-    "LedgerSheet.swift:315"
+    "LedgerSheet.swift:317"
    ],
    "args": [],
    "targets": [
@@ -26682,7 +26682,7 @@
    "ko": "넣기",
    "en": "Add",
    "files": [
-    "LedgerTripView.swift:267"
+    "LedgerTripView.swift:268"
    ],
    "args": [],
    "targets": [
@@ -26768,7 +26768,7 @@
    "ko": "누구 몫",
    "en": "For whom",
    "files": [
-    "LedgerTripView.swift:197"
+    "LedgerTripView.swift:198"
    ],
    "args": [],
    "targets": [
@@ -26780,7 +26780,7 @@
    "ko": "누구에게 받은 돈",
    "en": "Received from",
    "files": [
-    "LedgerTripView.swift:168"
+    "LedgerTripView.swift:169"
    ],
    "args": [],
    "targets": [
@@ -26844,7 +26844,7 @@
    "en": "Spent together",
    "files": [
     "LedgerSummary.swift:164",
-    "LedgerTripView.swift:120"
+    "LedgerTripView.swift:121"
    ],
    "args": [],
    "targets": [
@@ -26856,8 +26856,8 @@
    "ko": "다 같이",
    "en": "Everyone",
    "files": [
-    "LedgerTripView.swift:93",
-    "LedgerTripView.swift:205"
+    "LedgerTripView.swift:94",
+    "LedgerTripView.swift:206"
    ],
    "args": [],
    "targets": [
@@ -27122,7 +27122,7 @@
    "en": "Calendar",
    "files": [
     "FirstRunGuideStage.swift:643",
-    "MapHomeView+Support.swift:432",
+    "MapHomeView+Support.swift:443",
     "MapHomeView+Support2.swift:392"
    ],
    "args": [],
@@ -27358,7 +27358,7 @@
    "ko": "대차대조",
    "en": "Balance",
    "files": [
-    "LedgerTripView.swift:123"
+    "LedgerTripView.swift:124"
    ],
    "args": [],
    "targets": [
@@ -28068,8 +28068,8 @@
    "ko": "때",
    "en": "When",
    "files": [
-    "LedgerSheet.swift:370",
-    "LedgerSheet.swift:390"
+    "LedgerSheet.swift:372",
+    "LedgerSheet.swift:392"
    ],
    "args": [],
    "targets": [
@@ -28666,7 +28666,7 @@
    "ko": "메뉴 > 위치에서 집을 먼저 등록해 주세요.",
    "en": "Add your home in Menu > Location first.",
    "files": [
-    "MapHomeView+Support.swift:425"
+    "MapHomeView+Support.swift:436"
    ],
    "args": [],
    "targets": [
@@ -28753,7 +28753,7 @@
    "ko": "메모 {0}",
    "en": "Memo {0}",
    "files": [
-    "MapHomeView+Memos.swift:303"
+    "MapHomeView+Memos.swift:304"
    ],
    "args": [
     "memo.text"
@@ -28957,7 +28957,7 @@
    "ko": "메모",
    "en": "Note",
    "files": [
-    "LedgerSheet.swift:313"
+    "LedgerSheet.swift:315"
    ],
    "args": [],
    "targets": [
@@ -30251,7 +30251,7 @@
    "ko": "보낼 돈",
    "en": "Transfers",
    "files": [
-    "LedgerSheet.swift:500"
+    "LedgerSheet.swift:502"
    ],
    "args": [],
    "targets": [
@@ -30581,7 +30581,7 @@
    "ko": "분류",
    "en": "Category",
    "files": [
-    "LedgerSheet.swift:367",
+    "LedgerSheet.swift:369",
     "MapHomeNLEClipEditor.swift:557",
     "MapHomeNLERawDetail.swift:50"
    ],
@@ -31570,7 +31570,7 @@
    "en": "New memo",
    "files": [
     "MapHomeStickerEditor.swift:569",
-    "MapHomeView+Memos.swift:316"
+    "MapHomeView+Memos.swift:317"
    ],
    "args": [],
    "targets": [
@@ -31606,7 +31606,7 @@
    "ko": "새 여행 장부",
    "en": "New trip ledger",
    "files": [
-    "LedgerSheet.swift:131"
+    "LedgerSheet.swift:133"
    ],
    "args": [],
    "targets": [
@@ -31630,7 +31630,7 @@
    "ko": "새 지도 메모",
    "en": "New map memo",
    "files": [
-    "MapHomeView+Memos.swift:439"
+    "MapHomeView+Memos.swift:440"
    ],
    "args": [],
    "targets": [
@@ -32156,7 +32156,7 @@
    "files": [
     "MapHomeView+Menu2.swift:210",
     "MapHomeView+Menu2.swift:227",
-    "MapHomeView+Support.swift:737"
+    "MapHomeView+Support.swift:748"
    ],
    "args": [],
    "targets": [
@@ -32230,7 +32230,7 @@
    "ko": "설정을 기본값으로 초기화할까요?",
    "en": "Reset settings to defaults?",
    "files": [
-    "MapHomeView+Support.swift:733"
+    "MapHomeView+Support.swift:744"
    ],
    "args": [],
    "targets": [
@@ -33412,7 +33412,7 @@
    "en": "Start",
    "files": [
     "FirstRunTutorialView.swift:123",
-    "LedgerTripView.swift:256",
+    "LedgerTripView.swift:257",
     "MapHomeSectionEditSheet.swift:206"
    ],
    "args": [],
@@ -34826,7 +34826,7 @@
    "ko": "여기에 메모",
    "en": "Memo here",
    "files": [
-    "MapHomeView+Memos.swift:400"
+    "MapHomeView+Memos.swift:401"
    ],
    "args": [],
    "targets": [
@@ -34912,7 +34912,7 @@
    "ko": "여행 계획 추가",
    "en": "Add to trip",
    "files": [
-    "MapHomeView+Support.swift:662"
+    "MapHomeView+Support.swift:673"
    ],
    "args": [],
    "targets": [
@@ -34949,7 +34949,7 @@
    "ko": "여행 기록 더하기",
    "en": "Add trip entry",
    "files": [
-    "LedgerTripView.swift:46"
+    "LedgerTripView.swift:47"
    ],
    "args": [],
    "targets": [
@@ -34961,7 +34961,7 @@
    "ko": "여행 예산은 일상에서 「여행 경비」로 나가고, 여행이 끝나면 남은 돈이 「여행 정산」으로 돌아와요.",
    "en": "A trip budget leaves daily as a trip expense; leftovers come back as a trip refund when it ends.",
    "files": [
-    "LedgerSheet.swift:136"
+    "LedgerSheet.swift:138"
    ],
    "args": [],
    "targets": [
@@ -34973,7 +34973,7 @@
    "ko": "여행 예산이에요. 고치면 일상의 「여행 경비」와 여행의 「경비 받음」이 함께 바뀌어요.",
    "en": "This is the trip budget. Editing it changes both the daily and trip sides.",
    "files": [
-    "LedgerSheet.swift:393"
+    "LedgerSheet.swift:395"
    ],
    "args": [],
    "targets": [
@@ -35058,7 +35058,7 @@
    "ko": "여행 장부 지우기",
    "en": "Delete trip ledger",
    "files": [
-    "LedgerTripView.swift:274"
+    "LedgerTripView.swift:275"
    ],
    "args": [],
    "targets": [
@@ -35071,7 +35071,7 @@
    "en": "Trip ledger",
    "files": [
     "LedgerSheet.swift:40",
-    "LedgerTripView.swift:280"
+    "LedgerTripView.swift:281"
    ],
    "args": [],
    "targets": [
@@ -35083,7 +35083,7 @@
    "ko": "여행 장부",
    "en": "Trip ledgers",
    "files": [
-    "LedgerSheet.swift:134"
+    "LedgerSheet.swift:136"
    ],
    "args": [],
    "targets": [
@@ -35095,7 +35095,7 @@
    "ko": "여행 장부를 지울까요?",
    "en": "Delete this trip ledger?",
    "files": [
-    "LedgerTripView.swift:295"
+    "LedgerTripView.swift:296"
    ],
    "args": [],
    "targets": [
@@ -35107,7 +35107,7 @@
    "ko": "여행 정산이에요. 고치면 그 금액으로 고정돼요. 일상 쪽 수입이면 반납, 지출이면 추가 경비예요.",
    "en": "This is the trip settlement. Editing fixes it to this amount. Daily income means returned, expense means extra.",
    "files": [
-    "LedgerSheet.swift:394"
+    "LedgerSheet.swift:396"
    ],
    "args": [],
    "targets": [
@@ -35155,7 +35155,7 @@
    "ko": "여행이 끝난 다음 날 남은 돈은 일상으로 돌아가고, 모자라면 일상에서 더 보내요.",
    "en": "The day after the trip, leftovers go back to daily; a shortfall is topped up from daily.",
    "files": [
-    "LedgerTripView.swift:145"
+    "LedgerTripView.swift:146"
    ],
    "args": [],
    "targets": [
@@ -35956,7 +35956,7 @@
    "ko": "연락처에서 고르기",
    "en": "Pick from Contacts",
    "files": [
-    "LedgerTripView.swift:270"
+    "LedgerTripView.swift:271"
    ],
    "args": [],
    "targets": [
@@ -36312,8 +36312,8 @@
    "en": "Receipt",
    "files": [
     "LedgerExport.swift:49",
-    "LedgerSheet.swift:158",
-    "LedgerSheet.swift:268"
+    "LedgerSheet.swift:160",
+    "LedgerSheet.swift:270"
    ],
    "args": [],
    "targets": [
@@ -36352,7 +36352,7 @@
    "ko": "예산 남음",
    "en": "Budget left",
    "files": [
-    "LedgerSheet.swift:212",
+    "LedgerSheet.swift:214",
     "LedgerSummary.swift:94"
    ],
    "args": [],
@@ -36365,7 +36365,7 @@
    "ko": "예산 이체와 정산은 지우고, 여행 중 기록은 일상 가계부로 옮겨요.",
    "en": "Budget transfers and settlement are removed; trip entries move to the daily ledger.",
    "files": [
-    "LedgerTripView.swift:276"
+    "LedgerTripView.swift:277"
    ],
    "args": [],
    "targets": [
@@ -36377,7 +36377,7 @@
    "ko": "예산(원, 비우면 없음)",
    "en": "Budget (KRW, blank = none)",
    "files": [
-    "LedgerTripView.swift:258"
+    "LedgerTripView.swift:259"
    ],
    "args": [],
    "targets": [
@@ -36389,7 +36389,7 @@
    "ko": "예산",
    "en": "Budget",
    "files": [
-    "LedgerSheet.swift:461",
+    "LedgerSheet.swift:463",
     "LedgerSummary.swift:94",
     "LedgerTripView.swift:22"
    ],
@@ -36403,7 +36403,7 @@
    "ko": "예산은 일상 가계부에서 「여행 경비」로 나가요.",
    "en": "The budget leaves the daily ledger as a trip expense.",
    "files": [
-    "LedgerTripView.swift:260"
+    "LedgerTripView.swift:261"
    ],
    "args": [],
    "targets": [
@@ -36601,7 +36601,7 @@
    "ko": "오늘 손익(세후 월급 기준)",
    "en": "Today's net (after-tax pay)",
    "files": [
-    "LedgerSheet.swift:218"
+    "LedgerSheet.swift:220"
    ],
    "args": [],
    "targets": [
@@ -36889,7 +36889,7 @@
    "files": [
     "AssistantSettingsView.swift:58",
     "FirstRunAIConnectPage.swift:37",
-    "LedgerSheet.swift:514"
+    "LedgerSheet.swift:516"
    ],
    "args": [],
    "targets": [
@@ -37572,7 +37572,7 @@
    "ko": "위치 설정 열기",
    "en": "Open location settings",
    "files": [
-    "MapHomeView+Support.swift:423"
+    "MapHomeView+Support.swift:434"
    ],
    "args": [],
    "targets": [
@@ -37758,7 +37758,7 @@
    "ko": "위치를 '항상 허용'으로 바꿔 주세요",
    "en": "Set location to Always",
    "files": [
-    "MapHomeView+Support.swift:656"
+    "MapHomeView+Support.swift:667"
    ],
    "args": [],
    "targets": [
@@ -38384,7 +38384,7 @@
    "ko": "이 달 예산",
    "en": "Monthly budget",
    "files": [
-    "LedgerSheet.swift:57"
+    "LedgerSheet.swift:59"
    ],
    "args": [],
    "targets": [
@@ -38396,7 +38396,7 @@
    "ko": "이 달 지출 예산(원)",
    "en": "Spending budget this month (KRW)",
    "files": [
-    "LedgerSheet.swift:459"
+    "LedgerSheet.swift:461"
    ],
    "args": [],
    "targets": [
@@ -38408,7 +38408,7 @@
    "ko": "이 달 표로 내보내기",
    "en": "Export this month as a table",
    "files": [
-    "LedgerSheet.swift:63"
+    "LedgerSheet.swift:65"
    ],
    "args": [],
    "targets": [
@@ -38507,7 +38507,7 @@
    "ko": "이 여행 장부가 없어요. 가계부의 「여행 장부」에서 만들 수 있어요.",
    "en": "This trip ledger doesn't exist. You can create one under Trip ledgers.",
    "files": [
-    "LedgerTripView.swift:61"
+    "LedgerTripView.swift:62"
    ],
    "args": [],
    "targets": [
@@ -38543,7 +38543,7 @@
    "ko": "이 위치로",
    "en": "Use this spot",
    "files": [
-    "MapHomeView+Memos.swift:399"
+    "MapHomeView+Memos.swift:400"
    ],
    "args": [],
    "targets": [
@@ -38853,7 +38853,7 @@
    "ko": "이름 (예: 대구 여행)",
    "en": "Name (e.g. Daegu trip)",
    "files": [
-    "LedgerTripView.swift:255"
+    "LedgerTripView.swift:256"
    ],
    "args": [],
    "targets": [
@@ -38877,7 +38877,7 @@
    "ko": "이름 넣기",
    "en": "Add a name",
    "files": [
-    "LedgerTripView.swift:266"
+    "LedgerTripView.swift:267"
    ],
    "args": [],
    "targets": [
@@ -38964,7 +38964,7 @@
    "ko": "이름을 넣으면 계산해요.",
    "en": "Enter names to calculate.",
    "files": [
-    "LedgerSheet.swift:502"
+    "LedgerSheet.swift:504"
    ],
    "args": [],
    "targets": [
@@ -39120,7 +39120,7 @@
    "en": "Carried over",
    "files": [
     "LedgerExport.swift:84",
-    "LedgerSheet.swift:205",
+    "LedgerSheet.swift:207",
     "LedgerSummary.swift:92"
    ],
    "args": [],
@@ -39295,7 +39295,7 @@
    "en": "More from daily",
    "files": [
     "LedgerSummary.swift:176",
-    "LedgerTripView.swift:136"
+    "LedgerTripView.swift:137"
    ],
    "args": [],
    "targets": [
@@ -39308,7 +39308,7 @@
    "en": "Budget from daily",
    "files": [
     "LedgerSummary.swift:161",
-    "LedgerTripView.swift:115"
+    "LedgerTripView.swift:116"
    ],
    "args": [],
    "targets": [
@@ -39532,7 +39532,7 @@
    "ko": "읽지 못했어요. + 로 직접 넣어 주세요.",
    "en": "Couldn't read it. Tap + to enter it yourself.",
    "files": [
-    "LedgerSheet.swift:169"
+    "LedgerSheet.swift:171"
    ],
    "args": [],
    "targets": [
@@ -39721,7 +39721,7 @@
    "ko": "자동 정산으로 되돌리기",
    "en": "Back to automatic settlement",
    "files": [
-    "LedgerSheet.swift:398"
+    "LedgerSheet.swift:400"
    ],
    "args": [],
    "targets": [
@@ -39888,7 +39888,7 @@
    "en": "Balance",
    "files": [
     "LedgerExport.swift:22",
-    "LedgerSheet.swift:208",
+    "LedgerSheet.swift:210",
     "LedgerSummary.swift:93"
    ],
    "args": [],
@@ -40067,7 +40067,7 @@
    "ko": "장소",
    "en": "Place",
    "files": [
-    "LedgerSheet.swift:312",
+    "LedgerSheet.swift:314",
     "MapHomeNLEClipEditor.swift:245"
    ],
    "args": [],
@@ -40251,9 +40251,9 @@
    "ko": "저장",
    "en": "Save",
    "files": [
-    "LedgerSheet.swift:338",
-    "LedgerSheet.swift:467",
-    "LedgerTripView.swift:285"
+    "LedgerSheet.swift:340",
+    "LedgerSheet.swift:469",
+    "LedgerTripView.swift:286"
    ],
    "args": [],
    "targets": [
@@ -40565,7 +40565,7 @@
    "ko": "전체 표로 내보내기",
    "en": "Export everything as a table",
    "files": [
-    "LedgerSheet.swift:69"
+    "LedgerSheet.swift:71"
    ],
    "args": [],
    "targets": [
@@ -40613,7 +40613,7 @@
    "ko": "접기",
    "en": "Collapse",
    "files": [
-    "MapHomeView+Memos.swift:234"
+    "MapHomeView+Memos.swift:235"
    ],
    "args": [],
    "targets": [
@@ -40638,7 +40638,7 @@
    "en": "Back to daily after settling",
    "files": [
     "LedgerSummary.swift:176",
-    "LedgerTripView.swift:136"
+    "LedgerTripView.swift:137"
    ],
    "args": [],
    "targets": [
@@ -40662,7 +40662,7 @@
    "ko": "정산(내 기준)",
    "en": "Settle up (for me)",
    "files": [
-    "LedgerTripView.swift:143"
+    "LedgerTripView.swift:144"
    ],
    "args": [],
    "targets": [
@@ -40686,8 +40686,8 @@
    "ko": "정산하기",
    "en": "Settle up",
    "files": [
-    "LedgerSheet.swift:58",
-    "LedgerSheet.swift:512"
+    "LedgerSheet.swift:60",
+    "LedgerSheet.swift:514"
    ],
    "args": [],
    "targets": [
@@ -40871,8 +40871,8 @@
    "ko": "종류",
    "en": "Type",
    "files": [
-    "LedgerSheet.swift:346",
-    "LedgerSheet.swift:380"
+    "LedgerSheet.swift:348",
+    "LedgerSheet.swift:382"
    ],
    "args": [],
    "targets": [
@@ -40980,7 +40980,7 @@
    "ko": "주고받을 돈이 없어요.",
    "en": "Nothing to settle.",
    "files": [
-    "LedgerTripView.swift:127"
+    "LedgerTripView.swift:128"
    ],
    "args": [],
    "targets": [
@@ -41175,7 +41175,7 @@
    "en": "Cash left now",
    "files": [
     "LedgerSummary.swift:163",
-    "LedgerTripView.swift:118"
+    "LedgerTripView.swift:119"
    ],
    "args": [],
    "targets": [
@@ -41617,7 +41617,7 @@
    "ko": "지도를 움직여 핀 위치를 맞추세요",
    "en": "Move the map to place the pin",
    "files": [
-    "MapHomeView+Memos.swift:362"
+    "MapHomeView+Memos.swift:363"
    ],
    "args": [],
    "targets": [
@@ -41677,7 +41677,7 @@
    "ko": "지도에 메모 추가",
    "en": "Add map memo",
    "files": [
-    "MapHomeView+Support.swift:640"
+    "MapHomeView+Support.swift:651"
    ],
    "args": [],
    "targets": [
@@ -41800,7 +41800,7 @@
    "en": "Delete",
    "files": [
     "LedgerSheet.swift:38",
-    "LedgerSheet.swift:319",
+    "LedgerSheet.swift:321",
     "LedgerTripView.swift:35"
    ],
    "args": [],
@@ -41813,7 +41813,7 @@
    "ko": "지우면 이 메모는 「메모로만」이 돼 다시 가계부에 들어오지 않아요.",
    "en": "Deleting makes this memo note-only so it won't come back to the ledger.",
    "files": [
-    "LedgerSheet.swift:328"
+    "LedgerSheet.swift:330"
    ],
    "args": [],
    "targets": [
@@ -41879,7 +41879,7 @@
    "ko": "지출",
    "en": "Spent",
    "files": [
-    "LedgerSheet.swift:207",
+    "LedgerSheet.swift:209",
     "MapHomeInteractionPolicy.swift:426"
    ],
    "args": [],
@@ -42033,7 +42033,7 @@
    "ko": "직접 넣는 환율 (1단위 = 원)",
    "en": "Manual rate (1 unit = KRW)",
    "files": [
-    "LedgerSheet.swift:365"
+    "LedgerSheet.swift:367"
    ],
    "args": [],
    "targets": [
@@ -42059,7 +42059,7 @@
    "ko": "직접 입력",
    "en": "Enter manually",
    "files": [
-    "MapHomeView+Support.swift:663",
+    "MapHomeView+Support.swift:674",
     "TravelMapVideoSection.swift:38"
    ],
    "args": [],
@@ -42276,7 +42276,7 @@
    "ko": "집이 등록돼 있지 않아요",
    "en": "No home place yet",
    "files": [
-    "MapHomeView+Support.swift:419"
+    "MapHomeView+Support.swift:430"
    ],
    "args": [],
    "targets": [
@@ -42452,7 +42452,7 @@
    "ko": "총무라서 친구에게 미리 받은 돈이면 그 사람을 고르세요. 정산에서 그 사람이 낸 돈으로 쳐요.",
    "en": "If you collected it from a friend as the organizer, pick them. It counts as what they paid when settling.",
    "files": [
-    "LedgerTripView.swift:173"
+    "LedgerTripView.swift:174"
    ],
    "args": [],
    "targets": [
@@ -42931,7 +42931,7 @@
    "en": "Collected from friends",
    "files": [
     "LedgerSummary.swift:168",
-    "LedgerTripView.swift:119"
+    "LedgerTripView.swift:120"
    ],
    "args": [],
    "targets": [
@@ -42958,7 +42958,7 @@
    "ko": "카드 결제 문자를 복사해 붙여 넣거나 영수증 사진을 고르면 채워 드려요. 단축어 「결제 문자 넣기」로 문자가 오면 바로 넣을 수도 있어요.",
    "en": "Paste a card payment text or pick a receipt photo to fill an entry. The Shortcuts action \"Add payment text\" can add texts as they arrive.",
    "files": [
-    "LedgerSheet.swift:163"
+    "LedgerSheet.swift:165"
    ],
    "args": [],
    "targets": [
@@ -44566,7 +44566,7 @@
    "ko": "함께 간 사람",
    "en": "Travelling with",
    "files": [
-    "LedgerTripView.swift:262"
+    "LedgerTripView.swift:263"
    ],
    "args": [],
    "targets": [
@@ -44602,7 +44602,7 @@
    "ko": "함께 쓴 돈",
    "en": "Total spent",
    "files": [
-    "LedgerSheet.swift:509"
+    "LedgerSheet.swift:511"
    ],
    "args": [],
    "targets": [
@@ -44614,7 +44614,7 @@
    "ko": "함께한 사람 (쉼표로, 예: 민수, 지영)",
    "en": "People (comma separated)",
    "files": [
-    "LedgerSheet.swift:493"
+    "LedgerSheet.swift:495"
    ],
    "args": [],
    "targets": [
@@ -45271,7 +45271,7 @@
    "ko": "화면 녹화",
    "en": "Screen recording",
    "files": [
-    "MapHomeView+Support.swift:279"
+    "MapHomeView+Support.swift:290"
    ],
    "args": [],
    "targets": [
@@ -45473,7 +45473,7 @@
    "ko": "환율을 몰라요. 아래에 직접 넣어 주세요.",
    "en": "Rate unknown. Enter it below.",
    "files": [
-    "LedgerSheet.swift:363"
+    "LedgerSheet.swift:365"
    ],
    "args": [],
    "targets": [

@@ -206,6 +206,17 @@ extension MapHomeView {
             Task { await checkTripRelay() }
         }
         .task { await checkTripRelay() }
+        // 켜져 있는 동안 AI 비서 명령을 주기적으로 받는다(SYN1111A01). 복귀하면 처음부터 다시 잰다.
+        .task(id: scenePhase == .active) {
+            guard scenePhase == .active else { return }
+            var lastActivity = Date.now
+            while !Task.isCancelled {
+                let wait = AssistantCommandPolling.interval(sinceActivity: Date.now.timeIntervalSince(lastActivity))
+                try? await Task.sleep(for: .seconds(wait))
+                guard !Task.isCancelled else { return }
+                if await AssistantCommandRefresh.now(language: language) { lastActivity = .now }
+            }
+        }
         .overlay(alignment: .top) { tripClipboardBanner }
         .mapHomeAssistant(self)
         .task(id: model.selectedDate) { await loadPhotoMoments(asksPermission: showsPhotosOnMap && FirstRunTutorialStore().allowsUnaskedPermissionPrompts) }
