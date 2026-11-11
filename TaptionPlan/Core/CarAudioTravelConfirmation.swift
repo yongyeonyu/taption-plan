@@ -111,6 +111,32 @@ enum CarAudioTravelConfirmation {
         }
     }
 
+    /// 하루 판정에 넘기는 표본. 등록한 차 이름만 남긴다(CAR1111A01: 등록 안 한 블루투스는 차 근거가 아니다). 원본은 그대로다.
+    static func registeredOnly(_ readings: [SensorReading], registered: Set<String>) -> [SensorReading] {
+        readings.map { reading in
+            guard let name = reading.carAudioRouteName, !registered.contains(name) else { return reading }
+            var value = reading
+            value.carAudioRouteName = nil
+            return value
+        }
+    }
+
+    /// 등록 안내 후보: 자동차 구간에서 타는 동안만 연결·해제된 미등록 기기, 최근 순. 걸으며 쓴 이어폰은 뺀다(CAR1111A01).
+    static func suggestedNames(readings: [SensorReading], travel: [TravelSegment], registered: Set<String>) -> [String] {
+        let unworn = withoutWornAudio(readings.sorted { $0.timestamp < $1.timestamp }, registered: registered)
+        var result: [String] = []
+        for segment in travel.sorted(by: { $0.span.start > $1.span.start }) where segment.mode == .car || segment.mode == .taxi {
+            let context = unworn.filter {
+                $0.timestamp >= segment.span.start.addingTimeInterval(-2 * edgeTolerance)
+                    && $0.timestamp <= segment.span.end.addingTimeInterval(2 * edgeTolerance)
+            }
+            guard let match = evaluate(readings: context, span: segment.span, registered: []),
+                  !registered.contains(match.name), !result.contains(match.name) else { continue }
+            result.append(match.name)
+        }
+        return result
+    }
+
     /// 잠근 구간의 미등록 기기 확정을 새 판정이 다시 찾지 못했다. 이어폰을 차로 본 옛 판정이다(SUB1111A01).
     static func dropsStaleMatch(_ previous: TravelSegment, for candidate: TravelSegment) -> Bool {
         func matched(_ segment: TravelSegment) -> Bool { segment.evidence.contains { $0.hasPrefix(matchedEvidencePrefix) } }
@@ -123,12 +149,8 @@ enum CarAudioTravelConfirmation {
         }
     }
 
-    /// 미등록 기기로 확정된 구간의 기기 이름을 최근 순으로 모은다. 기존 목록 뒤에 붙이고 10개까지 남긴다.
-    static func recentNames(from travel: [TravelSegment], merging existing: [String]) -> [String] {
-        let fresh = travel
-            .sorted { $0.span.start > $1.span.start }
-            .flatMap(\.evidence)
-            .compactMap { matchedName(in: $0) }
+    /// 새 등록 후보를 기존 목록 앞에 붙이고 10개까지 남긴다.
+    static func recentNames(_ fresh: [String], merging existing: [String]) -> [String] {
         var result: [String] = []
         for name in fresh + existing where !result.contains(name) {
             result.append(name)

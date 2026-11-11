@@ -860,7 +860,7 @@
    "ko": "AI로 만들기",
    "en": "Plan with AI",
    "files": [
-    "MapHomeView+Support.swift:682"
+    "MapHomeView+Support.swift:683"
    ],
    "args": [],
    "targets": [
@@ -29529,7 +29529,7 @@
    "ko": "음성 메모 파일을 찾지 못했습니다.",
    "en": "The voice memo file could not be found.",
    "files": [
-    "VoiceMemoServices.swift:183"
+    "VoiceMemoServices.swift:192"
    ],
    "args": [],
    "targets": [
@@ -30706,7 +30706,7 @@
    "ko": "음성 메모 재생을 시작하지 못했습니다.",
    "en": "Voice memo playback could not be started.",
    "files": [
-    "VoiceMemoServices.swift:189"
+    "VoiceMemoServices.swift:198"
    ],
    "args": [],
    "targets": [
@@ -32454,6 +32454,20 @@
    ]
   },
   {
+   "key": "‘{0}’ 기기가 탈 때만 연결됐어요. 등록할까요? 등록하면 이 기기가 연결된 이동을 자동차로 기록해요.|‘{0}’ connected only while you rode. Register it? Trips with it connected will be recorded as car.",
+   "ko": "‘{0}’ 기기가 탈 때만 연결됐어요. 등록할까요? 등록하면 이 기기가 연결된 이동을 자동차로 기록해요.",
+   "en": "‘{0}’ connected only while you rode. Register it? Trips with it connected will be recorded as car.",
+   "files": [
+    "MapHomeCarAudioSuggestion.swift:33"
+   ],
+   "args": [
+    "name"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "‘끊김 없는 영상 만들기’는 몇 분 걸리지만 끊기지 않습니다.|‘Render smooth video’ takes a few minutes but never stutters.",
    "ko": "‘끊김 없는 영상 만들기’는 몇 분 걸리지만 끊기지 않습니다.",
    "en": "‘Render smooth video’ takes a few minutes but never stutters.",
@@ -33779,7 +33793,7 @@
    "ko": "계획과 기록은 삭제되지 않습니다.",
    "en": "Your plans and records will not be deleted.",
    "files": [
-    "MapHomeView+Support.swift:761"
+    "MapHomeView+Support.swift:762"
    ],
    "args": [],
    "targets": [
@@ -35757,7 +35771,7 @@
    "files": [
     "FirstRunTutorialGuides.swift:372",
     "FirstRunTutorialGuides.swift:419",
-    "MapHomeView+Support.swift:676"
+    "MapHomeView+Support.swift:677"
    ],
    "args": [],
    "targets": [
@@ -35972,6 +35986,18 @@
    "files": [
     "MapHomeCarAudioSheet.swift:118",
     "MapHomeCarAudioSheet.swift:135"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "내 차로 등록|Register as my car",
+   "ko": "내 차로 등록",
+   "en": "Register as my car",
+   "files": [
+    "MapHomeCarAudioSuggestion.swift:26"
    ],
    "args": [],
    "targets": [
@@ -36532,7 +36558,7 @@
    "en": "Calendar",
    "files": [
     "FirstRunGuideStage.swift:643",
-    "MapHomeView+Support.swift:450",
+    "MapHomeView+Support.swift:451",
     "MapHomeView+Support2.swift:392"
    ],
    "args": [],
@@ -41566,7 +41592,7 @@
    "files": [
     "MapHomeView+Menu2.swift:210",
     "MapHomeView+Menu2.swift:227",
-    "MapHomeView+Support.swift:755"
+    "MapHomeView+Support.swift:756"
    ],
    "args": [],
    "targets": [
@@ -41640,7 +41666,7 @@
    "ko": "설정을 기본값으로 초기화할까요?",
    "en": "Reset settings to defaults?",
    "files": [
-    "MapHomeView+Support.swift:751"
+    "MapHomeView+Support.swift:752"
    ],
    "args": [],
    "targets": [
@@ -43021,6 +43047,18 @@
    ]
   },
   {
+   "key": "아니요|No",
+   "ko": "아니요",
+   "en": "No",
+   "files": [
+    "MapHomeCarAudioSuggestion.swift:29"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "아래 막대의 달력에서 지난 날을 찾아 고릅니다.|Find and pick past days with Calendar in the bottom bar.",
    "ko": "아래 막대의 달력에서 지난 날을 찾아 고릅니다.",
    "en": "Find and pick past days with Calendar in the bottom bar.",
@@ -44322,7 +44360,7 @@
    "ko": "여행 계획 추가",
    "en": "Add to trip",
    "files": [
-    "MapHomeView+Support.swift:680"
+    "MapHomeView+Support.swift:681"
    ],
    "args": [],
    "targets": [
@@ -45735,7 +45773,7 @@
    "ko": "옆으로 넘겨 보세요",
    "en": "Swipe to turn the page",
    "files": [
-    "MapHomePassportBook.swift:639"
+    "MapHomePassportBook.swift:640"
    ],
    "args": [],
    "targets": [
@@ -47170,7 +47208,7 @@
    "ko": "위치를 '항상 허용'으로 바꿔 주세요",
    "en": "Set location to Always",
    "files": [
-    "MapHomeView+Support.swift:674"
+    "MapHomeView+Support.swift:675"
    ],
    "args": [],
    "targets": [
@@ -47281,7 +47319,7 @@
    "ko": "음성 메모 재생을 시작하지 못했습니다.",
    "en": "Voice memo playback could not be started.",
    "files": [
-    "VoiceMemoServices.swift:188"
+    "VoiceMemoServices.swift:197"
    ],
    "args": [],
    "targets": [
@@ -47293,7 +47331,7 @@
    "ko": "음성 메모 파일을 찾지 못했습니다.",
    "en": "The voice memo file could not be found.",
    "files": [
-    "VoiceMemoServices.swift:182"
+    "VoiceMemoServices.swift:191"
    ],
    "args": [],
    "targets": [
@@ -47506,6 +47544,18 @@
    "en": "The 14-day free trial has already been used on this device or in its synced iCloud record.",
    "files": [
     "AppShellView.swift:1363"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "이 기기가 내 차 같아요|This looks like your car",
+   "ko": "이 기기가 내 차 같아요",
+   "en": "This looks like your car",
+   "files": [
+    "MapHomeCarAudioSuggestion.swift:22"
    ],
    "args": [],
    "targets": [
@@ -51101,7 +51151,7 @@
    "ko": "지도에 메모 추가",
    "en": "Add map memo",
    "files": [
-    "MapHomeView+Support.swift:658"
+    "MapHomeView+Support.swift:659"
    ],
    "args": [],
    "targets": [
@@ -51483,7 +51533,7 @@
    "ko": "직접 입력",
    "en": "Enter manually",
    "files": [
-    "MapHomeView+Support.swift:681",
+    "MapHomeView+Support.swift:682",
     "TravelMapVideoSection.swift:38"
    ],
    "args": [],

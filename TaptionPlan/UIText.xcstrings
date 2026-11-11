@@ -201818,6 +201818,83 @@
         }
       }
     },
+    "‘{0}’ 기기가 탈 때만 연결됐어요. 등록할까요? 등록하면 이 기기가 연결된 이동을 자동차로 기록해요.|‘{0}’ connected only while you rode. Register it? Trips with it connected will be recorded as car." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "‘{0}’は乗っている間だけ接続されました。登録しますか？登録すると、このデバイスが接続された移動を車として記録します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "‘{0}’ 仅在乘车时连接。要登记吗？登记后，连接此设备的出行将记录为汽车。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "‘{0}’ 僅在乘車時連線。要登記嗎？登記後，連線此裝置的移動將記錄為汽車。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "‘{0}’ war nur während der Fahrt verbunden. Registrieren? Fahrten mit diesem Gerät werden als Auto erfasst."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "‘{0}’ ne s’est connecté que pendant vos trajets. L’enregistrer ? Les trajets avec cet appareil connecté seront enregistrés en voiture."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "‘{0}’ si è collegato solo durante il viaggio. Registrarlo? Gli spostamenti con questo dispositivo collegato saranno registrati come auto."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "‘{0}’ solo se conectó mientras ibas en el vehículo. ¿Registrarlo? Los trayectos con él conectado se registrarán como coche."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "‘{0}’ só se conectou enquanto você estava no veículo. Registrar? Trajetos com ele conectado serão registrados como carro."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "‘{0}’ chỉ kết nối khi bạn đi xe. Đăng ký không? Các chuyến đi có thiết bị này kết nối sẽ được ghi là ô tô."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "‘{0}’ hanya terhubung saat Anda berkendara. Daftarkan? Perjalanan dengan perangkat ini terhubung akan dicatat sebagai mobil."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "‘{0}’ เชื่อมต่อเฉพาะตอนที่คุณโดยสาร ลงทะเบียนไหม การเดินทางที่เชื่อมต่ออุปกรณ์นี้จะถูกบันทึกเป็นรถยนต์"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "‘{0}’ केवल सवारी के दौरान जुड़ा। पंजीकृत करें? इससे जुड़ी यात्राएँ कार के रूप में दर्ज होंगी।"
+          }
+        }
+      }
+    },
     "‘끊김 없는 영상 만들기’는 몇 분 걸리지만 끊기지 않습니다.|‘Render smooth video’ takes a few minutes but never stutters." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -222912,6 +222989,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "रजिस्टर करें"
+          }
+        }
+      }
+    },
+    "내 차로 등록|Register as my car" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "マイカーとして登録"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登记为我的车"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登記為我的車"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Als mein Auto registrieren"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistrer comme ma voiture"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registra come mia auto"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registrar como mi coche"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registrar como meu carro"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đăng ký là xe của tôi"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Daftarkan sebagai mobil saya"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลงทะเบียนเป็นรถของฉัน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "मेरी कार के रूप में पंजीकृत करें"
           }
         }
       }
@@ -264881,6 +265035,83 @@
         }
       }
     },
+    "아니요|No" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "いいえ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "否"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "否"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nein"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Non"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ไม่"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "नहीं"
+          }
+        }
+      }
+    },
     "아래 막대의 달력에서 지난 날을 찾아 고릅니다.|Find and pick past days with Calendar in the bottom bar." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -291673,6 +291904,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "14 दिन का मुफ़्त ट्रायल इस डिवाइस पर या इसके सिंक किए iCloud रिकॉर्ड में पहले ही इस्तेमाल हो चुका है।"
+          }
+        }
+      }
+    },
+    "이 기기가 내 차 같아요|This looks like your car" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このデバイスはあなたの車のようです"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这个设备像是你的车"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這個裝置像是你的車"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das scheint dein Auto zu sein"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cet appareil semble être votre voiture"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sembra che questa sia la tua auto"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Parece que este es tu coche"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Parece que este é o seu carro"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thiết bị này có vẻ là xe của bạn"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sepertinya ini mobil Anda"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "อุปกรณ์นี้น่าจะเป็นรถของคุณ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "यह आपकी कार लगती है"
           }
         }
       }

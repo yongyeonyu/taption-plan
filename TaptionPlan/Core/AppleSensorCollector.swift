@@ -149,6 +149,8 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     var altitudeBurstSamples: [AltitudeBurstSample]?
     /// 지금 연결된 차량 오디오(CarPlay·블루투스) 출력 이름. iOS 보고값 그대로(CAR1029A01).
     var latestCarAudioRouteName: String?
+    /// CarPlay에 연결되면 그 이름을 알린다. 차에서만 연결되므로 묻지 않고 내 차로 등록한다(CAR1111A01).
+    var onCarPlayConnected: ((String) -> Void)?
     private var audioRouteObserver: NSObjectProtocol?
 
     override init() {
@@ -178,6 +180,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
             Self.isCarAudioPort($0.portType)
         }
         let name = output?.portName
+        if let name, output?.portType == .carAudio { onCarPlayConnected?(name) }
         guard name != latestCarAudioRouteName else { return }
         latestCarAudioRouteName = name
         TaptionPlanDiagnosticsLogger.shared.record(
@@ -188,6 +191,11 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                 "name": name ?? "",
             ]
         )
+    }
+
+    /// 지금 연결된 CarPlay 출력 이름. 앱을 켤 때 이미 연결돼 있던 차를 등록한다.
+    static func currentCarPlayName() -> String? {
+        AVAudioSession.sharedInstance().currentRoute.outputs.first { $0.portType == .carAudio }?.portName
     }
 
     /// iOS는 클래식 블루투스를 직접 보여 주지 않아 오디오 출력 종류로 차량을 본다.

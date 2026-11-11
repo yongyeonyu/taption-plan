@@ -518,8 +518,10 @@ extension AppModel {
             readings,
             userTransitLocations: settings.userTransitLocations
         )
-        // 걸으면서도 연결돼 있던 이어폰은 하루 판정에서 차량 오디오로 보지 않는다. 저장된 원본은 그대로다(SUB1111A01).
-        readings = CarAudioTravelConfirmation.withoutWornAudio(readings, registered: Set(settings.registeredCarAudioNames))
+        // 하루 판정은 등록한 차의 오디오만 본다. 등록 안내 후보는 아래에서 원본 이름으로 찾는다. 저장된 원본은 그대로다(CAR1111A01).
+        let registeredCars = Set(settings.registeredCarAudioNames)
+        let audioReadings = readings
+        readings = CarAudioTravelConfirmation.registeredOnly(readings, registered: registeredCars)
         guard !Task.isCancelled, acceptsDataMutation() else { return false }
         let knownPlaces = snapshot.places
         // 계산은 주 스레드 밖에서 한다(RFA1105A02). 저장은 아래에서 최신 snapshot에 한 번에 한다.
@@ -578,7 +580,8 @@ extension AppModel {
         guard !Task.isCancelled, acceptsDataMutation() else { return false }
         let generatedTravel = generated.travel
         let recentCarAudio = CarAudioTravelConfirmation.recentNames(
-            from: generatedTravel, merging: snapshot.settings.recentCarAudioNames
+            CarAudioTravelConfirmation.suggestedNames(readings: audioReadings, travel: generatedTravel, registered: registeredCars),
+            merging: snapshot.settings.recentCarAudioNames
         )
         if recentCarAudio != snapshot.settings.recentCarAudioNames {
             snapshot.settings.recentCarAudioNames = recentCarAudio

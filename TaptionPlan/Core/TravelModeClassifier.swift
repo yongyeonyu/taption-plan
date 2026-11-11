@@ -53,17 +53,17 @@ struct TravelModeClassifier: Sendable {
 
         let ordered = validReadings.sorted { $0.timestamp < $1.timestamp }
         let inferenceSpan = requestedSpan ?? sensorSpan(for: ordered)
-        // 차량 오디오 연결은 사용자 교정 다음으로 강한 근거다(CAR1029A01).
+        // 등록한 차의 오디오 연결은 사용자 교정 다음으로 강한 근거다(CAR1029A01). 등록 안 한 기기는 근거가 아니다(CAR1111A01).
         if let carAudio = CarAudioTravelConfirmation.evaluate(
             readings: ordered,
             context: altitudeContext,
             span: inferenceSpan,
             registered: registeredCarAudioNames
-        ) {
+        ), carAudio.isRegistered {
             return MovementInference(
                 mode: .car,
                 confidence: .high,
-                score: carAudio.isRegistered ? 1 : 0.95,
+                score: 1,
                 evidence: [carAudio.evidence]
             )
         }

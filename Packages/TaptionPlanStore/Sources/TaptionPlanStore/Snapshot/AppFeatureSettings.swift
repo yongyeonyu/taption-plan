@@ -65,6 +65,8 @@ public struct AppFeatureSettings: Codable, Hashable, Sendable {
     public var registeredCarAudioNames: [String]
     /// 연결·해제가 이동과 맞아떨어진 미등록 기기, 최근 순 최대 10개.
     public var recentCarAudioNames: [String]
+    /// 「내 차로 등록할까요?」에 아니요라고 한 기기. 다시 묻지 않는다(CAR1111A01).
+    @OmitIfEmpty public var dismissedCarAudioNames: [String]
 
     public static let defaults = AppFeatureSettings(
         startScale: .day,
@@ -107,7 +109,8 @@ public struct AppFeatureSettings: Codable, Hashable, Sendable {
         customActivityLabels: [],
         confirmedSleepSpans: [],
         registeredCarAudioNames: [],
-        recentCarAudioNames: []
+        recentCarAudioNames: [],
+        dismissedCarAudioNames: []
     )
 
     public init(
@@ -151,7 +154,8 @@ public struct AppFeatureSettings: Codable, Hashable, Sendable {
         customActivityLabels: [String] = [],
         confirmedSleepSpans: [TimeSpan] = [],
         registeredCarAudioNames: [String] = [],
-        recentCarAudioNames: [String] = []
+        recentCarAudioNames: [String] = [],
+        dismissedCarAudioNames: [String] = []
     ) {
         self.startScale = startScale
         self.rememberLastScale = rememberLastScale
@@ -204,6 +208,7 @@ public struct AppFeatureSettings: Codable, Hashable, Sendable {
         )
         self.registeredCarAudioNames = Self.normalizedCarAudioNames(registeredCarAudioNames)
         self.recentCarAudioNames = Self.normalizedCarAudioNames(recentCarAudioNames)
+        self.dismissedCarAudioNames = Self.normalizedCarAudioNames(dismissedCarAudioNames)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -249,6 +254,7 @@ public struct AppFeatureSettings: Codable, Hashable, Sendable {
         case confirmedSleepSpans
         case registeredCarAudioNames
         case recentCarAudioNames
+        case dismissedCarAudioNames
     }
 
     public init(from decoder: Decoder) throws {
@@ -421,6 +427,10 @@ public struct AppFeatureSettings: Codable, Hashable, Sendable {
         recentCarAudioNames = Self.normalizedCarAudioNames(
             try values.decodeIfPresent([String].self, forKey: .recentCarAudioNames)
                 ?? defaults.recentCarAudioNames
+        )
+        dismissedCarAudioNames = Self.normalizedCarAudioNames(
+            try values.decodeIfPresent([String].self, forKey: .dismissedCarAudioNames)
+                ?? defaults.dismissedCarAudioNames
         )
         for feature in PermissionFeature.allCases
         where permissions[feature] == nil {

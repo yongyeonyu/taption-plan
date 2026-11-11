@@ -528,6 +528,11 @@ final class AppleSensorDataService {
     /// 저장 전에 전달되는 표시 전용 실시간 위치. 저장·분석 경로와 무관하다.
     var onLiveReadingPreview: ((SensorReading) -> Void)?
     var onPersistenceFailed: ((String) -> Void)?
+    /// CarPlay 연결 알림(CAR1111A01).
+    var onCarPlayConnected: ((String) -> Void)? {
+        get { collector.onCarPlayConnected }
+        set { collector.onCarPlayConnected = newValue }
+    }
 
     init(
         collector: AppleSensorCollector? = nil,

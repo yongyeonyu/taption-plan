@@ -190,15 +190,11 @@ struct MapHomeCarAudioSheet: View {
     }
 
     private func register(_ name: String) {
-        let nextRegistered = AppFeatureSettings.normalizedCarAudioNames(registered + [name])
-        let nextRecent = model.settings.recentCarAudioNames.filter { $0 != name }
-        Task { await model.updateCarAudioNames(registered: nextRegistered, recent: nextRecent) }
+        Task { await model.setCarAudio(name, isMyCar: true) }
     }
 
     private func unregister(_ name: String) {
-        let nextRegistered = registered.filter { $0 != name }
-        let recent = model.settings.recentCarAudioNames
-        Task { await model.updateCarAudioNames(registered: nextRegistered, recent: recent) }
+        Task { await model.setCarAudio(name, isMyCar: false) }
     }
 
     private func refreshLiveOutputs() {

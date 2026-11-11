@@ -111,6 +111,7 @@
 		A5B1102A020000000000002B /* AppModel+Bootstrap.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000002A /* AppModel+Bootstrap.swift */; };
 		A1000000000000000B1105C7 /* SensorTimelineDerivation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1105C7 /* SensorTimelineDerivation.swift */; };
 		A5B1102A0200000000000029 /* AppModel+Classification.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000028 /* AppModel+Classification.swift */; };
+		C1CA1111A010000000000002 /* AppModel+CarAudio.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1CA1111A010000000000001 /* AppModel+CarAudio.swift */; };
 		A5B1102A0200000000000027 /* AppModel+DayData.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000026 /* AppModel+DayData.swift */; };
 		A5B1102A0200000000000025 /* AppModel+EditHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000024 /* AppModel+EditHistory.swift */; };
 		A5B1102A0200000000000023 /* AppModel+Export.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000022 /* AppModel+Export.swift */; };
@@ -653,6 +654,7 @@
 		A1102A0100000000000000A5 /* PlaceZoneStayTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1102A0100000000000000F9 /* PlaceZoneStayTracker.swift */; };
 		1C417B9717B86DB458FABFBC /* RailJourneyRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 224225E0023E3C60D75BFFBC /* RailJourneyRecognizer.swift */; };
 		A1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift */; };
+		C1CA1111A010000000000004 /* MapHomeCarAudioSuggestion.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1CA1111A010000000000003 /* MapHomeCarAudioSuggestion.swift */; };
 		A51002000000000000000003 /* PlanDaySeal.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000003 /* PlanDaySeal.swift */; };
 		A51002000000000000000001 /* PlanDayDataSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000001 /* PlanDayDataSnapshot.swift */; };
 		A51002000000000000000002 /* MapHomeInteractionPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000002 /* MapHomeInteractionPolicy.swift */; };
@@ -853,6 +855,7 @@
 		F5B1102A020000000000002A /* AppModel+Bootstrap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Bootstrap.swift"; sourceTree = "<group>"; };
 		F1000000000000000B1105C7 /* SensorTimelineDerivation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorTimelineDerivation.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000028 /* AppModel+Classification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Classification.swift"; sourceTree = "<group>"; };
+		C1CA1111A010000000000001 /* AppModel+CarAudio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+CarAudio.swift"; sourceTree = "<group>"; };
 		F5B1102A0200000000000026 /* AppModel+DayData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+DayData.swift"; sourceTree = "<group>"; };
 		F5B1102A0200000000000024 /* AppModel+EditHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+EditHistory.swift"; sourceTree = "<group>"; };
 		F5B1102A0200000000000022 /* AppModel+Export.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Export.swift"; sourceTree = "<group>"; };
@@ -1355,6 +1358,7 @@
 		A1102A0100000000000000F9 /* PlaceZoneStayTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceZoneStayTracker.swift; sourceTree = "<group>"; };
 		224225E0023E3C60D75BFFBC /* RailJourneyRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RailJourneyRecognizer.swift; sourceTree = "<group>"; };
 		F1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCarAudioSheet.swift; sourceTree = "<group>"; };
+		C1CA1111A010000000000003 /* MapHomeCarAudioSuggestion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCarAudioSuggestion.swift; sourceTree = "<group>"; };
 		F100000000000000000000F4 /* MapHomeSectionDetailEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeSectionDetailEngine.swift; sourceTree = "<group>"; };
 		F10000000000000000000073 /* WatchObjCExceptionCatcher.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WatchObjCExceptionCatcher.h; sourceTree = "<group>"; };
 		F10000000000000000000074 /* WatchObjCExceptionCatcher.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WatchObjCExceptionCatcher.m; sourceTree = "<group>"; };
@@ -1846,6 +1850,7 @@
 				F1AB1029A0200000000000D2 /* MapHomeNLEEditorViewport.swift */,
 				F1PLY1029A0300000000001 /* MapHomePlaybackDriver.swift */,
 				F1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift */,
+				C1CA1111A010000000000003 /* MapHomeCarAudioSuggestion.swift */,
 				F100000000000000000000F4 /* MapHomeSectionDetailEngine.swift */,
 				F10000000000000000000087 /* MapHomeLocationPresentation.swift */,
 				F10000000000000000000005 /* AppShellView.swift */,
@@ -1918,6 +1923,7 @@
 				F5B1102A020000000000002C /* AppModel+Backup.swift */,
 				F5B1102A020000000000002A /* AppModel+Bootstrap.swift */,
 				F5B1102A0200000000000028 /* AppModel+Classification.swift */,
+				C1CA1111A010000000000001 /* AppModel+CarAudio.swift */,
 				F1000000000000000B1105C7 /* SensorTimelineDerivation.swift */,
 				F10000000000000000CA1003 /* AppModel+CalendarTitles.swift */,
 				F5B1102A0200000000000026 /* AppModel+DayData.swift */,
@@ -2533,6 +2539,7 @@
 				A5B1102A020000000000002D /* AppModel+Backup.swift in Sources */,
 				A5B1102A020000000000002B /* AppModel+Bootstrap.swift in Sources */,
 				A5B1102A0200000000000029 /* AppModel+Classification.swift in Sources */,
+				C1CA1111A010000000000002 /* AppModel+CarAudio.swift in Sources */,
 				A1000000000000000B1105C7 /* SensorTimelineDerivation.swift in Sources */,
 				A5B1102A0200000000000027 /* AppModel+DayData.swift in Sources */,
 				A5B1102A0200000000000025 /* AppModel+EditHistory.swift in Sources */,
@@ -2798,6 +2805,7 @@
 				A1102A0100000000000000A5 /* PlaceZoneStayTracker.swift in Sources */,
 				1C417B9717B86DB458FABFBC /* RailJourneyRecognizer.swift in Sources */,
 				A1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift in Sources */,
+				C1CA1111A010000000000004 /* MapHomeCarAudioSuggestion.swift in Sources */,
 				A100000000000000000000F4 /* MapHomeSectionDetailEngine.swift in Sources */,
 				A10000000000000000000007 /* GoalsView.swift in Sources */,
 				A10000000000000000000008 /* ReviewView.swift in Sources */,

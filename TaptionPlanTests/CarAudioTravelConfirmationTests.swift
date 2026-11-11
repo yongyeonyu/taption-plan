@@ -52,21 +52,28 @@ final class CarAudioTravelConfirmationTests: XCTestCase {
         XCTAssertTrue(CarAudioTravelConfirmation.confirms(inference.evidence))
     }
 
-    func testUnregisteredConnectAndDisconnectMatchingSpanConfirmsCar() {
+    /// 등록 안 한 기기는 연결·해제가 구간과 맞아도 차 근거가 아니고, 등록 안내 후보가 된다(CAR1111A01).
+    func testUnregisteredConnectAndDisconnectMatchingSpanIsSuggestedNotConfirmed() {
         let samples = readings({ minute in (2...28).contains(minute) ? "KIA K5" : nil },
                                minutes: stride(from: -10, through: 40, by: 2))
         let inside = samples.filter { span.contains($0.timestamp) }
 
-        let inference = TravelModeClassifier().classify(
-            readings: inside,
-            inside: span,
-            altitudeContext: samples
-        )
+        let inference = TravelModeClassifier().classify(readings: inside, inside: span, altitudeContext: samples)
+        XCTAssertFalse(CarAudioTravelConfirmation.confirms(inference.evidence), "\(inference.evidence)")
 
-        XCTAssertEqual(inference.mode, .car)
-        XCTAssertEqual(inference.evidence, ["차량 오디오 연결·해제 일치 · KIA K5"])
-        XCTAssertTrue(CarAudioTravelConfirmation.confirms(inference.evidence))
-        XCTAssertEqual(CarAudioTravelConfirmation.matchedName(in: inference.evidence[0]), "KIA K5")
+        let car = TravelSegment(mode: .car, span: span, distanceMeters: 1, confidence: .high, evidence: [])
+        XCTAssertEqual(CarAudioTravelConfirmation.suggestedNames(readings: samples, travel: [car], registered: []), ["KIA K5"])
+        XCTAssertEqual(CarAudioTravelConfirmation.suggestedNames(readings: samples, travel: [car], registered: ["KIA K5"]), [])
+        var subway = car
+        subway.mode = .subway
+        XCTAssertEqual(CarAudioTravelConfirmation.suggestedNames(readings: samples, travel: [subway], registered: []), [])
+    }
+
+    /// 하루 판정 입력에는 등록한 차 이름만 남는다.
+    func testRegisteredOnlyKeepsRegisteredNamesAndClearsOthers() {
+        let samples = [reading(minute: 0, carAudio: "KIA K5"), reading(minute: 1, carAudio: "넥밴드"), reading(minute: 2, carAudio: nil)]
+        let kept = CarAudioTravelConfirmation.registeredOnly(samples, registered: ["KIA K5"])
+        XCTAssertEqual(kept.map(\.carAudioRouteName), ["KIA K5", nil, nil])
     }
 
     /// 걷는 동안 연결돼 있던 이어폰은 연결·해제가 구간과 맞아도 차로 확정하지 않는다(SUB1111A01).
@@ -136,26 +143,8 @@ final class CarAudioTravelConfirmationTests: XCTestCase {
         ))
     }
 
-    func testRecentNamesCollectMatchedDevicesMostRecentFirst() {
-        let older = TravelSegment(
-            mode: .car, span: span, distanceMeters: 1, confidence: .high,
-            evidence: ["차량 오디오 연결·해제 일치 · KIA K5"], isConfirmed: true
-        )
-        let newer = TravelSegment(
-            mode: .car,
-            span: TimeSpan(start: base.addingTimeInterval(3600), end: base.addingTimeInterval(5400)),
-            distanceMeters: 1, confidence: .high,
-            evidence: ["차량 오디오 연결·해제 일치 · 렌터카"], isConfirmed: true
-        )
-        let registered = TravelSegment(
-            mode: .car, span: span, distanceMeters: 1, confidence: .high,
-            evidence: ["사용자 확인 차량 블루투스 · 내 차"], isConfirmed: true
-        )
-
-        let names = CarAudioTravelConfirmation.recentNames(
-            from: [older, newer, registered], merging: ["KIA K5", "예전 기기"]
-        )
-
+    func testRecentNamesPutFreshSuggestionsFirst() {
+        let names = CarAudioTravelConfirmation.recentNames(["렌터카", "KIA K5"], merging: ["KIA K5", "예전 기기"])
         XCTAssertEqual(names, ["렌터카", "KIA K5", "예전 기기"])
     }
 
@@ -197,5 +186,33 @@ final class CarAudioTravelConfirmationTests: XCTestCase {
         )
         XCTAssertEqual(legacy.registeredCarAudioNames, [])
         XCTAssertEqual(legacy.recentCarAudioNames, [])
+        // 새 칸(CAR1111A01)은 비어 있으면 저장하지 않아 예전 저장 바이트가 그대로다. 없는 저장본은 빈 목록으로 읽는다.
+        XCTAssertNil(object["dismissedCarAudioNames"])
+        XCTAssertEqual(legacy.dismissedCarAudioNames, [])
+    }
+
+    /// CarPlay로 연결된 차는 여러 대 모두 묻지 않고 등록한다. 아니요·빼기 한 기기는 다시 넣거나 묻지 않는다(CAR1111A01).
+    @MainActor
+    func testCarPlayRegistersEveryCarAndRemembersNo() async throws {
+        var source = TaptionDataSnapshot.empty
+        source.settings.recentCarAudioNames = ["Audi MMI", "넥밴드"]
+        let model = AppModel(repository: InMemoryPlanRepository(snapshot: source), cloudSyncService: nil)
+        await model.bootstrap()
+
+        await model.registerCarPlay("KIA K5")
+        await model.registerCarPlay("BMW")
+        await model.registerCarPlay("KIA K5")
+        XCTAssertEqual(model.settings.registeredCarAudioNames, ["KIA K5", "BMW"])
+
+        XCTAssertEqual(model.pendingCarAudioSuggestion, "Audi MMI")
+        await model.setCarAudio("Audi MMI", isMyCar: true)
+        XCTAssertEqual(model.settings.registeredCarAudioNames, ["KIA K5", "BMW", "Audi MMI"])
+        XCTAssertEqual(model.pendingCarAudioSuggestion, "넥밴드")
+        await model.setCarAudio("넥밴드", isMyCar: false)
+        XCTAssertNil(model.pendingCarAudioSuggestion)
+
+        await model.setCarAudio("BMW", isMyCar: false)
+        await model.registerCarPlay("BMW")
+        XCTAssertEqual(model.settings.registeredCarAudioNames, ["KIA K5", "Audi MMI"])
     }
 }

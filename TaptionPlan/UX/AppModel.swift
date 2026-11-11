@@ -754,6 +754,9 @@ final class AppModel {
                 self.handlePersistedSensorReadings(accepted)
             }
         }
+        self.sensorService?.onCarPlayConnected = { [weak self] name in
+            Task { @MainActor [weak self] in await self?.registerCarPlay(name) }
+        }
         self.sensorService?.onPersistenceFailed = { [weak self] description in
             Task { @MainActor [weak self] in
                 guard let self, self.acceptsDataMutation() else { return }
