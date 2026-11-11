@@ -109,6 +109,8 @@
 			<string>Any</string>
 		</dict>
 	</dict>
+	<key>PAYMENT_SHORTCUT_ICLOUD_ID</key>
+	<string>$(PAYMENT_SHORTCUT_ICLOUD_ID)</string>
 	<key>TRIP_RELAY_HOST</key>
 	<string>$(TRIP_RELAY_HOST)</string>
 	<key>UIAppFonts</key>

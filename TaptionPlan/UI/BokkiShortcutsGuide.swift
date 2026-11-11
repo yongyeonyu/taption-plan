@@ -6,33 +6,21 @@ import SwiftUI
 struct BokkiShortcutsGuideSections: View {
     let language: MapHomeLanguage
     @Environment(\.openURL) private var openURL
-    @State private var copied: String?
 
     var body: some View {
         Group {
-            // 앱은 자동화를 대신 만들거나 넣어 줄 수 없다(iOS 제한). 단계를 셋으로 줄이고 열기·복사 단추를 둔다(SCA1111A01).
-            guideSection(
-                title: language.text("결제 문자 자동으로 넣기", "Payment texts, automatically"),
-                steps: [
-                    language.text("「단축어 앱 열기」 → 「자동화」 → + → 「메시지」", "Open Shortcuts → Automation → + → Message"),
-                    language.text("「메시지 내용에 포함」에 복사한 「원」 붙여 넣기 → 「즉시 실행」 → 다음", "Paste the copied word into \"Message Contains\" → Run Immediately → Next"),
-                    language.text("「단축어 실행」 → 「BOKKI 결제 문자」 → 완료", "Run Shortcut → \"BOKKI Payment Text\" → Done"),
-                ],
-                copyText: "원",
-                shortcut: .paymentText,
-                footer: language.text("앱이 결제 문자만 골라 가계부에 넣고, 나머지 문자는 넣지도 AI에 보내지도 않아요. 같은 결제가 문자·앱 알림으로 두 번 와도 한 번만 넣고, 연결된 AI가 가게 이름·분류를 다듬어요.", "The app picks out payment texts only; other texts are neither saved nor sent to AI. A payment that arrives as both a text and an app alert is saved once, and your connected AI tidies the shop name and category.")
-            )
-            guideSection(
-                title: language.text("결제 앱 알림 자동으로 넣기", "Payment app alerts, automatically"),
-                steps: [
-                    language.text("「단축어 앱 열기」 → 「자동화」 → + → 「알림」 → 「앱 푸시」에서 은행·카드 앱(iOS 27부터)", "Open Shortcuts → Automation → + → Notification → App Push → your bank and card apps (iOS 27 or later)"),
-                    language.text("내용 조건은 비워 두고 「즉시 실행」 → 다음", "Leave the content filter empty → Run Immediately → Next"),
-                    language.text("「단축어 실행」 → 「BOKKI 결제 알림」 → 완료", "Run Shortcut → \"BOKKI Payment Alert\" → Done"),
-                ],
-                copyText: nil,
-                shortcut: .paymentAlert,
-                footer: language.text("문자가 오지 않는 카드·은행도 앱 알림으로 들어와요. 광고 알림은 넣지 않아요.", "Cards and banks that don't text you still come in through app alerts. Ads are skipped.")
-            )
+            // 「원이 든 메시지를 받을 때」 트리거까지 든 단축어를 iCloud 링크로 한 번에 넣는다(SCB1112A01, iOS 26).
+            // 파일로 넣으면 iOS가 트리거를 빼므로 링크가 없을 때만 파일을 쓴다. 결제 앱 알림(iOS 27)은 따라 하기로 만든다.
+            Section {
+                BokkiPaymentShortcutButton(language: language)
+                BokkiPaymentAutomationRow(language: language)
+            } header: {
+                Text(language.text("결제 문자·알림 자동으로 넣기", "Payments, automatically"))
+            } footer: {
+                Text(BokkiPaymentShortcut.hasAutomationLink
+                     ? language.text("「BOKKI 결제」를 추가한 뒤 단축어 앱 › 자동화에서 「메시지를 받을 때」 스위치를 켜면 끝이에요. 앱이 결제만 골라 가계부에 넣고, 나머지 문자는 넣지도 AI에 보내지도 않아요.", "Add BOKKI Payment, then turn on its \"When I get a message\" switch in Shortcuts › Automation. The app keeps payments only; other texts are neither saved nor sent to AI.")
+                     : language.text("「BOKKI 결제」를 넣은 뒤 따라 하기로 자동화를 만들어요. 앱이 결제만 골라 가계부에 넣고, 나머지는 넣지도 AI에 보내지도 않아요.", "Add BOKKI Payment, then follow the steps to make the automation. The app keeps payments only; nothing else is saved or sent to AI."))
+            }
             Section {
                 ForEach(Self.siriExamples(language), id: \.self) { phrase in
                     Label(phrase, systemImage: "mic")
@@ -64,42 +52,6 @@ struct BokkiShortcutsGuideSections: View {
             language.text("BOKKI Plan AI에게 맡겨", "Ask BOKKI Plan AI"),
         ]
     }
-
-    private func guideSection(title: String, steps: [String], copyText: String?, shortcut: BokkiBundledShortcut, footer: String) -> some View {
-        Section {
-            // 앱에 든 서명된 단축어를 공유 시트로 넘기면 단축어 앱이 「단축어 추가」를 띄운다(SCA1112A01).
-            if let file = shortcut.file(language) {
-                ShareLink(item: file) {
-                    Label(language.text("「\(shortcut.title(language))」 단축어 추가", "Add the \"\(shortcut.title(language))\" shortcut"),
-                          systemImage: "square.and.arrow.down")
-                }
-                .font(.taptionStyle(.subheadline, weight: .semibold))
-            }
-            HStack(spacing: 10) {
-                Button {
-                    if let url = URL(string: "shortcuts://") { openURL(url) }
-                } label: { Label(language.text("단축어 앱 열기", "Open Shortcuts"), systemImage: "square.2.layers.3d") }
-                if let copyText {
-                    Button {
-                        UIPasteboard.general.string = copyText
-                        copied = title
-                    } label: {
-                        Label(copied == title ? language.text("복사했어요", "Copied") : language.text("「\(copyText)」 복사", "Copy \"\(copyText)\""),
-                              systemImage: copied == title ? "checkmark" : "doc.on.doc")
-                    }
-                }
-            }
-            .buttonStyle(.bordered)
-            .font(.taptionStyle(.subheadline, weight: .semibold))
-            ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
-                Label { Text(step) } icon: { Text(verbatim: "\(index + 1)").font(.taptionStyle(.headline)) }
-            }
-        } header: {
-            Text(title)
-        } footer: {
-            Text(footer)
-        }
-    }
 }
 
 /// 메뉴 › 연결 「단축어 · Siri」와 가계부의 안내 창.
@@ -118,30 +70,157 @@ struct BokkiShortcutsGuide: View {
     }
 }
 
-/// 앱에 미리 든 서명된 단축어(SCA1112A01). 받은 문자·알림을 그대로 「결제 문자 넣기」·「결제 알림 넣기」에 넘긴다.
-/// 원본은 Assets의 데이터 묶음 `Shortcuts/`, 만드는 법은 `scripts/shortcuts/build.py`.
-enum BokkiBundledShortcut {
-    case paymentText, paymentAlert
+/// 「BOKKI 결제」 단축어(SCA1112A01·SCB1112A01). 받은 문자·알림을 그대로 「결제 알림 넣기」에 넘긴다.
+/// iCloud 링크판에는 「원이 든 메시지를 받을 때」 트리거가 들어 있다. ID는 git에 넣지 않는 `AppSecrets.local.xcconfig`의
+/// `PAYMENT_SHORTCUT_ICLOUD_ID`. 링크가 없으면 Assets 데이터 `Shortcuts/BokkiShortcutPayment`(트리거 없음)를 공유 시트로 넘긴다.
+/// 파일은 `scripts/shortcuts/build.py`가 만든다.
+enum BokkiPaymentShortcut {
+    static func title(_ language: MapHomeLanguage) -> String { language.text("BOKKI 결제", "BOKKI Payment") }
 
-    private var assetName: String {
-        switch self {
-        case .paymentText: "BokkiShortcutPaymentText"
-        case .paymentAlert: "BokkiShortcutPaymentAlert"
-        }
+    static var automationLink: URL? {
+        let id = (Bundle.main.object(forInfoDictionaryKey: "PAYMENT_SHORTCUT_ICLOUD_ID") as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard id.count == 32, id.allSatisfy(\.isHexDigit) else { return nil }
+        return URL(string: "https://www.icloud.com/shortcuts/\(id)")
     }
 
-    func title(_ language: MapHomeLanguage) -> String {
-        switch self {
-        case .paymentText: language.text("BOKKI 결제 문자", "BOKKI Payment Text")
-        case .paymentAlert: language.text("BOKKI 결제 알림", "BOKKI Payment Alert")
-        }
-    }
+    static var hasAutomationLink: Bool { automationLink != nil }
 
-    /// 단축어 앱은 파일 이름을 단축어 이름으로 쓴다. 같은 파일이 있으면 다시 쓰지 않는다(뷰 본문에서 불린다).
-    func file(_ language: MapHomeLanguage) -> URL? {
-        guard let data = NSDataAsset(name: assetName)?.data else { return nil }
+    /// 공유 시트용 사본. 단축어 앱은 파일 이름을 단축어 이름으로 쓴다. 같은 파일이 있으면 다시 쓰지 않는다(뷰 본문에서 불린다).
+    static func file(_ language: MapHomeLanguage) -> URL? {
+        guard let data = NSDataAsset(name: "BokkiShortcutPayment")?.data else { return nil }
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(title(language) + ".shortcut")
         if (try? Data(contentsOf: url)) == data { return url }
         return (try? data.write(to: url, options: .atomic)) != nil ? url : nil
+    }
+}
+
+/// 「BOKKI 결제」 추가 단추. iCloud 링크면 단축어 앱이 자동화까지 담아 바로 「단축어 추가」를 띄운다.
+struct BokkiPaymentShortcutButton: View {
+    let language: MapHomeLanguage
+    @Environment(\.openURL) private var openURL
+
+    var body: some View {
+        let title = BokkiPaymentShortcut.title(language)
+        let label = Label(language.text("「\(title)」 자동화 추가", "Add the \"\(title)\" automation"), systemImage: "square.and.arrow.down")
+            .font(.taptionStyle(.subheadline, weight: .semibold))
+        if let link = BokkiPaymentShortcut.automationLink {
+            Button { openURL(link) } label: { label }
+        } else if let file = BokkiPaymentShortcut.file(language) {
+            ShareLink(item: file) { label }
+        }
+    }
+}
+
+/// 결제 앱 알림 따라 하기 줄. 시트를 이 줄에 단다(Group에 달면 줄마다 겹쳐 뜬다).
+struct BokkiPaymentAutomationRow: View {
+    let language: MapHomeLanguage
+    @State private var isPresented = false
+
+    var body: some View {
+        Button { isPresented = true } label: {
+            Label(language.text("결제 앱 알림으로도 넣기(iOS 27) 따라 하기", "Also use payment app alerts (iOS 27)"), systemImage: "app.badge")
+        }
+        .sheet(isPresented: $isPresented) { BokkiPaymentAutomationSetup(language: language) }
+    }
+}
+
+/// 결제 앱 알림 자동화 만들기를 아이폰 단축어 앱 화면(iOS 26, SCB1112A01 캡처)대로 한 단계씩 보여 준다.
+/// 단축어 앱에 다녀와도 단계가 남는다.
+struct BokkiPaymentAutomationSetup: View {
+    let language: MapHomeLanguage
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
+    @SceneStorage("bokkiPaymentSetupStep") private var step = 0
+
+    private struct Step {
+        var title: String
+        var screen: String
+        var rows: [String]
+        var pick: Int
+        var note: String
+    }
+
+    private var steps: [Step] {
+        [
+            Step(title: language.text("자동화 › +", "Automation › +"),
+                 screen: language.text("자동화", "Automation"),
+                 rows: [language.text("개인용", "Personal"), "+"], pick: 1,
+                 note: language.text("단축어 앱 › 자동화에서 아래 + 를 누르면 새 단축어 편집 화면이 열려요.", "In Shortcuts › Automation, tap + at the bottom. A new shortcut editor opens.")),
+            Step(title: language.text("「자동화」 › 「알림」", "Automation › Notification"),
+                 screen: language.text("자동화", "Automation"),
+                 rows: [language.text("특정 시간", "Time of Day"), language.text("메시지", "Message"), language.text("알림", "Notification")], pick: 2,
+                 note: language.text("아래 목록 위의 「자동화」를 누르고 「알림」을 고른 뒤, 은행·카드 앱을 골라요.", "Tap Automation above the list, choose Notification, then pick your bank and card apps.")),
+            Step(title: language.text("「결제 알림 넣기」 넣기", "Add \"Add payment alert\""),
+                 screen: language.text("검색: BOKKI", "Search: BOKKI"),
+                 rows: [language.text("결제 알림 넣기", "Add payment alert"), language.text("알림 내용: 입력", "Alert text: Input")], pick: 0,
+                 note: language.text("아래 검색에 BOKKI를 적어 「결제 알림 넣기」를 넣고, 「알림 내용」 칸을 눌러 「단축어 입력」을 골라요.", "Search BOKKI, add \"Add payment alert\", tap its text field and choose Shortcut Input.")),
+            Step(title: language.text("「실행 시 보기」 끄기 · 완료", "Turn off Show When Run · Done"),
+                 screen: language.text("결제 알림 넣기", "Add payment alert"),
+                 rows: [language.text("실행 시 보기", "Show When Run"), language.text("실행 전에 확인", "Ask Before Running")], pick: 0,
+                 note: language.text("두 스위치를 끄고 왼쪽 위 「<」로 저장하면 끝이에요.", "Turn both switches off and tap < to save.")),
+        ]
+    }
+
+    var body: some View {
+        let all = steps
+        let index = min(max(step, 0), all.count - 1)
+        let current = all[index]
+        NavigationStack {
+            VStack(spacing: 18) {
+                Text(verbatim: "\(index + 1) / \(all.count)")
+                    .font(.taptionStyle(.subheadline, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                Text(current.title)
+                    .font(.taptionStyle(.title3, weight: .bold))
+                    .multilineTextAlignment(.center)
+                mockScreen(current)
+                Text(current.note)
+                    .font(.taptionStyle(.subheadline))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                Button {
+                    if let url = URL(string: "shortcuts://") { openURL(url) }
+                } label: { Label(language.text("단축어 앱 열기", "Open Shortcuts"), systemImage: "square.2.layers.3d") }
+                    .buttonStyle(.bordered)
+                    .font(.taptionStyle(.subheadline, weight: .semibold))
+                Spacer(minLength: 0)
+                HStack {
+                    Button(language.text("이전", "Back")) { step = index - 1 }.disabled(index == 0)
+                    Spacer()
+                    if index == all.count - 1 {
+                        Button(language.text("다 했어요", "All done")) { step = 0; dismiss() }.buttonStyle(.borderedProminent)
+                    } else {
+                        Button(language.text("다음", "Next")) { step = index + 1 }.buttonStyle(.borderedProminent)
+                    }
+                }
+            }
+            .padding(20)
+            .navigationTitle(language.text("결제 앱 알림 자동화", "Payment alert automation"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button(language.text("닫기", "Close")) { dismiss() } } }
+        }
+    }
+
+    /// 단축어 앱 화면을 흉내 낸 그림. 눌러야 할 줄만 강조한다.
+    private func mockScreen(_ step: Step) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(step.screen)
+                .font(.taptionStyle(.headline))
+                .padding(.horizontal, 14).padding(.vertical, 10)
+            ForEach(Array(step.rows.enumerated()), id: \.offset) { offset, row in
+                HStack {
+                    Text(row).font(.taptionStyle(.body, weight: offset == step.pick ? .semibold : .regular))
+                    Spacer()
+                    if offset == step.pick { Image(systemName: "hand.tap.fill").foregroundStyle(Color.accentColor) }
+                }
+                .padding(.horizontal, 14).padding(.vertical, 11)
+                .background(offset == step.pick ? Color.accentColor.opacity(0.14) : Color.clear)
+                .overlay(alignment: .top) { Rectangle().fill(Color.tpBorder).frame(height: 0.5) }
+            }
+        }
+        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous).stroke(Color.tpBorder, lineWidth: TaptionBorder.width))
+        .accessibilityHidden(true)
     }
 }

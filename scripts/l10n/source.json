@@ -1215,18 +1215,6 @@
    ]
   },
   {
-   "key": "BOKKI Plan · 결제 알림 넣기|BOKKI Plan · Add payment alert",
-   "ko": "BOKKI Plan · 결제 알림 넣기",
-   "en": "BOKKI Plan · Add payment alert",
-   "files": [
-    "BokkiShortcutsGuide.swift:174"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "BOKKI Plan 가계부 열어|Open ledger in BOKKI Plan",
    "ko": "BOKKI Plan 가계부 열어",
    "en": "Open ledger in BOKKI Plan",
@@ -1413,7 +1401,7 @@
    "ko": "BOKKI 결제",
    "en": "BOKKI Payment",
    "files": [
-    "BokkiShortcutsGuide.swift:77"
+    "BokkiShortcutsGuide.swift:78"
    ],
    "args": [],
    "targets": [
@@ -32895,9 +32883,9 @@
    ]
   },
   {
-   "key": "「BOKKI 결제」 단축어를 넣은 뒤, 문자·알림 중 쓰는 쪽을 골라 따라 하세요. 앱이 결제만 골라 가계부에 넣고, 나머지는 넣지도 AI에 보내지도 않아요. 같은 결제가 문자·알림으로 두 번 와도 한 번만 넣어요.|Add the BOKKI Payment shortcut, then follow the steps for texts, alerts or both. The app keeps payments only; nothing else is saved or sent to AI. A payment that arrives as both is saved once.",
-   "ko": "「BOKKI 결제」 단축어를 넣은 뒤, 문자·알림 중 쓰는 쪽을 골라 따라 하세요. 앱이 결제만 골라 가계부에 넣고, 나머지는 넣지도 AI에 보내지도 않아요. 같은 결제가 문자·알림으로 두 번 와도 한 번만 넣어요.",
-   "en": "Add the BOKKI Payment shortcut, then follow the steps for texts, alerts or both. The app keeps payments only; nothing else is saved or sent to AI. A payment that arrives as both is saved once.",
+   "key": "「BOKKI 결제」를 넣은 뒤 따라 하기로 자동화를 만들어요. 앱이 결제만 골라 가계부에 넣고, 나머지는 넣지도 AI에 보내지도 않아요.|Add BOKKI Payment, then follow the steps to make the automation. The app keeps payments only; nothing else is saved or sent to AI.",
+   "ko": "「BOKKI 결제」를 넣은 뒤 따라 하기로 자동화를 만들어요. 앱이 결제만 골라 가계부에 넣고, 나머지는 넣지도 AI에 보내지도 않아요.",
+   "en": "Add BOKKI Payment, then follow the steps to make the automation. The app keeps payments only; nothing else is saved or sent to AI.",
    "files": [
     "BokkiShortcutsGuide.swift:22"
    ],
@@ -32907,43 +32895,13 @@
    ]
   },
   {
-   "key": "「{0}」 단축어 넣기|Add \"{0}\"",
-   "ko": "「{0}」 단축어 넣기",
-   "en": "Add \"{0}\"",
+   "key": "「BOKKI 결제」를 추가한 뒤 단축어 앱 › 자동화에서 「메시지를 받을 때」 스위치를 켜면 끝이에요. 앱이 결제만 골라 가계부에 넣고, 나머지 문자는 넣지도 AI에 보내지도 않아요.|Add BOKKI Payment, then turn on its \"When I get a message\" switch in Shortcuts › Automation. The app keeps payments only; other texts are neither saved nor sent to AI.",
+   "ko": "「BOKKI 결제」를 추가한 뒤 단축어 앱 › 자동화에서 「메시지를 받을 때」 스위치를 켜면 끝이에요. 앱이 결제만 골라 가계부에 넣고, 나머지 문자는 넣지도 AI에 보내지도 않아요.",
+   "en": "Add BOKKI Payment, then turn on its \"When I get a message\" switch in Shortcuts › Automation. The app keeps payments only; other texts are neither saved nor sent to AI.",
    "files": [
-    "BokkiShortcutsGuide.swift:172"
+    "BokkiShortcutsGuide.swift:21"
    ],
-   "args": [
-    "shortcut"
-   ],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "「{0}」 단축어 추가|Add the \"{0}\" shortcut",
-   "ko": "「{0}」 단축어 추가",
-   "en": "Add the \"{0}\" shortcut",
-   "files": [
-    "BokkiShortcutsGuide.swift:96"
-   ],
-   "args": [
-    "title"
-   ],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "「{0}」 복사|Copy \"{0}\"",
-   "ko": "「{0}」 복사",
-   "en": "Copy \"{0}\"",
-   "files": [
-    "BokkiShortcutsGuide.swift:259"
-   ],
-   "args": [
-    "Self.word"
-   ],
+   "args": [],
    "targets": [
     "TaptionPlan"
    ]
@@ -32963,15 +32921,27 @@
    ]
   },
   {
-   "key": "「{0}」 포함 · 즉시 실행|Contains {0} · Run Immediately",
-   "ko": "「{0}」 포함 · 즉시 실행",
-   "en": "Contains {0} · Run Immediately",
+   "key": "「{0}」 자동화 추가|Add the \"{0}\" automation",
+   "ko": "「{0}」 자동화 추가",
+   "en": "Add the \"{0}\" automation",
    "files": [
-    "BokkiShortcutsGuide.swift:163"
+    "BokkiShortcutsGuide.swift:105"
    ],
    "args": [
-    "word"
+    "title"
    ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "「결제 알림 넣기」 넣기|Add \"Add payment alert\"",
+   "ko": "「결제 알림 넣기」 넣기",
+   "en": "Add \"Add payment alert\"",
+   "files": [
+    "BokkiShortcutsGuide.swift:154"
+   ],
+   "args": [],
    "targets": [
     "TaptionPlan"
    ]
@@ -32989,48 +32959,6 @@
    ]
   },
   {
-   "key": "「단축어 실행」 › 「{0}」|Run Shortcut › \"{0}\"",
-   "ko": "「단축어 실행」 › 「{0}」",
-   "en": "Run Shortcut › \"{0}\"",
-   "files": [
-    "BokkiShortcutsGuide.swift:178"
-   ],
-   "args": [
-    "shortcut"
-   ],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "「단축어 실행」을 찾아 「{0}」를 고르고 완료. 이제 결제가 오면 저절로 가계부에 들어가요.|Find Run Shortcut, pick \"{0}\" and tap Done. Payments now go into the ledger by themselves.",
-   "ko": "「단축어 실행」을 찾아 「{0}」를 고르고 완료. 이제 결제가 오면 저절로 가계부에 들어가요.",
-   "en": "Find Run Shortcut, pick \"{0}\" and tap Done. Payments now go into the ledger by themselves.",
-   "files": [
-    "BokkiShortcutsGuide.swift:181"
-   ],
-   "args": [
-    "shortcut"
-   ],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "「메시지 내용에 포함」에 복사한 「{0}」을 붙여 넣고, 「즉시 실행」을 고른 뒤 다음.|Paste the copied {0} into Message Contains, choose Run Immediately, then Next.",
-   "ko": "「메시지 내용에 포함」에 복사한 「{0}」을 붙여 넣고, 「즉시 실행」을 고른 뒤 다음.",
-   "en": "Paste the copied {0} into Message Contains, choose Run Immediately, then Next.",
-   "files": [
-    "BokkiShortcutsGuide.swift:166"
-   ],
-   "args": [
-    "word"
-   ],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "「시리야」 다음에 그대로 말하면 앱을 열지 않고 들어가요. 금액을 말하면 가계부에도 들어가요. 「보키 플랜」이라고 불러도 돼요.|Say these after \"Hey Siri\"; they go in without opening the app. Say an amount and it goes into the ledger too.",
    "ko": "「시리야」 다음에 그대로 말하면 앱을 열지 않고 들어가요. 금액을 말하면 가계부에도 들어가요. 「보키 플랜」이라고 불러도 돼요.",
    "en": "Say these after \"Hey Siri\"; they go in without opening the app. Say an amount and it goes into the ledger too.",
@@ -33043,11 +32971,11 @@
    ]
   },
   {
-   "key": "「앱 푸시」에서 은행·카드 앱을 골라요(iOS 27부터).|Under App Push, choose your bank and card apps (iOS 27 or later).",
-   "ko": "「앱 푸시」에서 은행·카드 앱을 골라요(iOS 27부터).",
-   "en": "Under App Push, choose your bank and card apps (iOS 27 or later).",
+   "key": "「실행 시 보기」 끄기 · 완료|Turn off Show When Run · Done",
+   "ko": "「실행 시 보기」 끄기 · 완료",
+   "en": "Turn off Show When Run · Done",
    "files": [
-    "BokkiShortcutsGuide.swift:161"
+    "BokkiShortcutsGuide.swift:158"
    ],
    "args": [],
    "targets": [
@@ -33060,6 +32988,18 @@
    "en": "Only the clips you picked change.",
    "files": [
     "MapHomeNLEOverwriteSheet.swift:38"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "「자동화」 › 「알림」|Automation › Notification",
+   "ko": "「자동화」 › 「알림」",
+   "en": "Automation › Notification",
+   "files": [
+    "BokkiShortcutsGuide.swift:150"
    ],
    "args": [],
    "targets": [
@@ -33495,6 +33435,18 @@
    "en": "Send to developer",
    "files": [
     "MapHomeSettingsSheets.swift:803"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "개인용|Personal",
+   "ko": "개인용",
+   "en": "Personal",
+   "files": [
+    "BokkiShortcutsGuide.swift:148"
    ],
    "args": [],
    "targets": [
@@ -34036,6 +33988,18 @@
    ]
   },
   {
+   "key": "검색: BOKKI|Search: BOKKI",
+   "ko": "검색: BOKKI",
+   "en": "Search: BOKKI",
+   "files": [
+    "BokkiShortcutsGuide.swift:155"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "검색|Search",
    "ko": "검색",
    "en": "Search",
@@ -34131,7 +34095,7 @@
    "ko": "결제 문자·알림 자동으로 넣기",
    "en": "Payments, automatically",
    "files": [
-    "BokkiShortcutsGuide.swift:20"
+    "BokkiShortcutsGuide.swift:18"
    ],
    "args": [],
    "targets": [
@@ -34144,18 +34108,6 @@
    "en": "Let payment texts and app alerts flow into the ledger, and add things by talking to Siri. Also in Menu › Connections.",
    "files": [
     "FirstRunTutorialView.swift:208"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "결제 문자로 자동 넣기 따라 하기|Set up payment texts",
-   "ko": "결제 문자로 자동 넣기 따라 하기",
-   "en": "Set up payment texts",
-   "files": [
-    "BokkiShortcutsGuide.swift:124"
    ],
    "args": [],
    "targets": [
@@ -34187,11 +34139,36 @@
    ]
   },
   {
-   "key": "결제 앱 알림으로 자동 넣기 따라 하기|Set up payment app alerts",
-   "ko": "결제 앱 알림으로 자동 넣기 따라 하기",
-   "en": "Set up payment app alerts",
+   "key": "결제 알림 넣기|Add payment alert",
+   "ko": "결제 알림 넣기",
+   "en": "Add payment alert",
    "files": [
-    "BokkiShortcutsGuide.swift:125"
+    "BokkiShortcutsGuide.swift:156",
+    "BokkiShortcutsGuide.swift:159"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "결제 앱 알림 자동화|Payment alert automation",
+   "ko": "결제 앱 알림 자동화",
+   "en": "Payment alert automation",
+   "files": [
+    "BokkiShortcutsGuide.swift:199"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "결제 앱 알림으로도 넣기(iOS 27) 따라 하기|Also use payment app alerts (iOS 27)",
+   "ko": "결제 앱 알림으로도 넣기(iOS 27) 따라 하기",
+   "en": "Also use payment app alerts (iOS 27)",
+   "files": [
+    "BokkiShortcutsGuide.swift:122"
    ],
    "args": [],
    "targets": [
@@ -36919,30 +36896,6 @@
    ]
   },
   {
-   "key": "내용 조건 비워 두기|Leave content empty",
-   "ko": "내용 조건 비워 두기",
-   "en": "Leave content empty",
-   "files": [
-    "BokkiShortcutsGuide.swift:169"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "내용 조건은 비워 두고 「즉시 실행」을 고른 뒤 다음.|Leave the content filter empty, choose Run Immediately, then Next.",
-   "ko": "내용 조건은 비워 두고 「즉시 실행」을 고른 뒤 다음.",
-   "en": "Leave the content filter empty, choose Run Immediately, then Next.",
-   "files": [
-    "BokkiShortcutsGuide.swift:170"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "낸 사람 (비우면 나)|Paid by (blank = me)",
    "ko": "낸 사람 (비우면 나)",
    "en": "Paid by (blank = me)",
@@ -37194,7 +37147,7 @@
    "ko": "다 했어요",
    "en": "All done",
    "files": [
-    "BokkiShortcutsGuide.swift:208"
+    "BokkiShortcutsGuide.swift:192"
    ],
    "args": [],
    "targets": [
@@ -37396,7 +37349,7 @@
    "en": "Next",
    "files": [
     "AssistantConnectGuide.swift:175",
-    "BokkiShortcutsGuide.swift:210",
+    "BokkiShortcutsGuide.swift:194",
     "WatchTodayCards.swift:120"
    ],
    "args": [],
@@ -37444,23 +37397,11 @@
    ]
   },
   {
-   "key": "단축어 실행|Run Shortcut",
-   "ko": "단축어 실행",
-   "en": "Run Shortcut",
+   "key": "단축어 앱 › 자동화에서 아래 + 를 누르면 새 단축어 편집 화면이 열려요.|In Shortcuts › Automation, tap + at the bottom. A new shortcut editor opens.",
+   "ko": "단축어 앱 › 자동화에서 아래 + 를 누르면 새 단축어 편집 화면이 열려요.",
+   "en": "In Shortcuts › Automation, tap + at the bottom. A new shortcut editor opens.",
    "files": [
-    "BokkiShortcutsGuide.swift:180"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "단축어 앱 아래 「자동화」 탭에서 + 를 누르고 「메시지」를 골라요.|In Shortcuts, open the Automation tab, tap + and choose Message.",
-   "ko": "단축어 앱 아래 「자동화」 탭에서 + 를 누르고 「메시지」를 골라요.",
-   "en": "In Shortcuts, open the Automation tab, tap + and choose Message.",
-   "files": [
-    "BokkiShortcutsGuide.swift:157"
+    "BokkiShortcutsGuide.swift:149"
    ],
    "args": [],
    "targets": [
@@ -37473,19 +37414,7 @@
    "en": "Open Shortcuts",
    "files": [
     "BokkiShortcutsGuide.swift:36",
-    "BokkiShortcutsGuide.swift:251"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "단축어 추가|Add Shortcut",
-   "ko": "단축어 추가",
-   "en": "Add Shortcut",
-   "files": [
-    "BokkiShortcutsGuide.swift:173"
+    "BokkiShortcutsGuide.swift:184"
    ],
    "args": [],
    "targets": [
@@ -37498,7 +37427,7 @@
    "en": "Close",
    "files": [
     "AppShellView.swift:1131",
-    "BokkiShortcutsGuide.swift:217",
+    "BokkiShortcutsGuide.swift:201",
     "FirstRunTutorialGuides.swift:459"
    ],
    "args": [],
@@ -38312,6 +38241,18 @@
     "AssistantSafetyViews.swift:353",
     "MapHomeNLEClipEditor.swift:503",
     "MapHomeStickerEditor.swift:332"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "두 스위치를 끄고 왼쪽 위 「<」로 저장하면 끝이에요.|Turn both switches off and tap < to save.",
+   "ko": "두 스위치를 끄고 왼쪽 위 「<」로 저장하면 끝이에요.",
+   "en": "Turn both switches off and tap < to save.",
+   "files": [
+    "BokkiShortcutsGuide.swift:161"
    ],
    "args": [],
    "targets": [
@@ -39539,27 +39480,11 @@
    ]
   },
   {
-   "key": "메시지 내용에 포함: {0}|Message Contains: {0}",
-   "ko": "메시지 내용에 포함: {0}",
-   "en": "Message Contains: {0}",
-   "files": [
-    "BokkiShortcutsGuide.swift:165"
-   ],
-   "args": [
-    "word"
-   ],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "메시지|Message",
    "ko": "메시지",
    "en": "Message",
    "files": [
-    "BokkiShortcutsGuide.swift:156",
-    "BokkiShortcutsGuide.swift:160",
-    "BokkiShortcutsGuide.swift:164"
+    "BokkiShortcutsGuide.swift:152"
    ],
    "args": [],
    "targets": [
@@ -41112,8 +41037,7 @@
    "ko": "복사했어요",
    "en": "Copied",
    "files": [
-    "AssistantSafetyViews.swift:135",
-    "BokkiShortcutsGuide.swift:259"
+    "AssistantSafetyViews.swift:135"
    ],
    "args": [],
    "targets": [
@@ -42369,31 +42293,6 @@
    "en": "New",
    "files": [
     "AssistantSafetyViews.swift:345"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "새로운 빈 자동화|New Blank Automation",
-   "ko": "새로운 빈 자동화",
-   "en": "New Blank Automation",
-   "files": [
-    "BokkiShortcutsGuide.swift:179"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "새로운 자동화|New Automation",
-   "ko": "새로운 자동화",
-   "en": "New Automation",
-   "files": [
-    "BokkiShortcutsGuide.swift:155",
-    "BokkiShortcutsGuide.swift:159"
    ],
    "args": [],
    "targets": [
@@ -44362,6 +44261,30 @@
    ]
   },
   {
+   "key": "실행 시 보기|Show When Run",
+   "ko": "실행 시 보기",
+   "en": "Show When Run",
+   "files": [
+    "BokkiShortcutsGuide.swift:160"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "실행 전에 확인|Ask Before Running",
+   "ko": "실행 전에 확인",
+   "en": "Ask Before Running",
+   "files": [
+    "BokkiShortcutsGuide.swift:160"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "심박수. 앱이 심박수를 읽을 수 있는 곳은 워치뿐입니다.|Heart rate. The Watch is the only place the app can read heart rate.",
    "ko": "심박수. 앱이 심박수를 읽을 수 있는 곳은 워치뿐입니다.",
    "en": "Heart rate. The Watch is the only place the app can read heart rate.",
@@ -44400,11 +44323,11 @@
    ]
   },
   {
-   "key": "아래 단추 → 「단축어」 → 「단축어 추가」. 이미 넣었으면 넘어가요.|Tap the button below → Shortcuts → Add Shortcut. Skip if you already have it.",
-   "ko": "아래 단추 → 「단축어」 → 「단축어 추가」. 이미 넣었으면 넘어가요.",
-   "en": "Tap the button below → Shortcuts → Add Shortcut. Skip if you already have it.",
+   "key": "아래 검색에 BOKKI를 적어 「결제 알림 넣기」를 넣고, 「알림 내용」 칸을 눌러 「단축어 입력」을 골라요.|Search BOKKI, add \"Add payment alert\", tap its text field and choose Shortcut Input.",
+   "ko": "아래 검색에 BOKKI를 적어 「결제 알림 넣기」를 넣고, 「알림 내용」 칸을 눌러 「단축어 입력」을 골라요.",
+   "en": "Search BOKKI, add \"Add payment alert\", tap its text field and choose Shortcut Input.",
    "files": [
-    "BokkiShortcutsGuide.swift:175"
+    "BokkiShortcutsGuide.swift:157"
    ],
    "args": [],
    "targets": [
@@ -44453,6 +44376,18 @@
    "en": "Tap Location in the bottom bar to return to today and where you are.",
    "files": [
     "FirstRunTutorialGuides.swift:27"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "아래 목록 위의 「자동화」를 누르고 「알림」을 고른 뒤, 은행·카드 앱을 골라요.|Tap Automation above the list, choose Notification, then pick your bank and card apps.",
+   "ko": "아래 목록 위의 「자동화」를 누르고 「알림」을 고른 뒤, 은행·카드 앱을 골라요.",
+   "en": "Tap Automation above the list, choose Notification, then pick your bank and card apps.",
+   "files": [
+    "BokkiShortcutsGuide.swift:153"
    ],
    "args": [],
    "targets": [
@@ -44793,6 +44728,18 @@
    ]
   },
   {
+   "key": "알림 내용: 입력|Alert text: Input",
+   "ko": "알림 내용: 입력",
+   "en": "Alert text: Input",
+   "files": [
+    "BokkiShortcutsGuide.swift:156"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "알림|Alerts",
    "ko": "알림",
    "en": "Alerts",
@@ -44810,9 +44757,7 @@
    "ko": "알림",
    "en": "Notification",
    "files": [
-    "BokkiShortcutsGuide.swift:156",
-    "BokkiShortcutsGuide.swift:160",
-    "BokkiShortcutsGuide.swift:168"
+    "BokkiShortcutsGuide.swift:152"
    ],
    "args": [],
    "targets": [
@@ -45220,8 +45165,6 @@
    "ko": "앱",
    "en": "App",
    "files": [
-    "BokkiShortcutsGuide.swift:156",
-    "BokkiShortcutsGuide.swift:160",
     "MapHomeView+Menu.swift:476"
    ],
    "args": [],
@@ -50150,18 +50093,6 @@
    ]
   },
   {
-   "key": "이메일|Email",
-   "ko": "이메일",
-   "en": "Email",
-   "files": [
-    "BokkiShortcutsGuide.swift:156"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "이미 가계부에 넣은 결제예요.|That payment is already in the ledger.",
    "ko": "이미 가계부에 넣은 결제예요.",
    "en": "That payment is already in the ledger.",
@@ -50410,7 +50341,7 @@
    "en": "Back",
    "files": [
     "AssistantConnectGuide.swift:173",
-    "BokkiShortcutsGuide.swift:205",
+    "BokkiShortcutsGuide.swift:189",
     "FirstRunTutorialView.swift:71"
    ],
    "args": [],
@@ -51096,11 +51027,11 @@
    ]
   },
   {
-   "key": "자동화 › + › 「메시지」|Automation › + › Message",
-   "ko": "자동화 › + › 「메시지」",
-   "en": "Automation › + › Message",
+   "key": "자동화 › +|Automation › +",
+   "ko": "자동화 › +",
+   "en": "Automation › +",
    "files": [
-    "BokkiShortcutsGuide.swift:154"
+    "BokkiShortcutsGuide.swift:146"
    ],
    "args": [],
    "targets": [
@@ -51108,11 +51039,12 @@
    ]
   },
   {
-   "key": "자동화 › + › 「알림」|Automation › + › Notification",
-   "ko": "자동화 › + › 「알림」",
-   "en": "Automation › + › Notification",
+   "key": "자동화|Automation",
+   "ko": "자동화",
+   "en": "Automation",
    "files": [
-    "BokkiShortcutsGuide.swift:158"
+    "BokkiShortcutsGuide.swift:147",
+    "BokkiShortcutsGuide.swift:151"
    ],
    "args": [],
    "targets": [
@@ -52490,20 +52422,6 @@
    "args": [
     "context.middleCategoryName"
    ],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "즉시 실행|Run Immediately",
-   "ko": "즉시 실행",
-   "en": "Run Immediately",
-   "files": [
-    "BokkiShortcutsGuide.swift:165",
-    "BokkiShortcutsGuide.swift:167",
-    "BokkiShortcutsGuide.swift:169"
-   ],
-   "args": [],
    "targets": [
     "TaptionPlan"
    ]
@@ -55353,6 +55271,18 @@
    "en": "Custom",
    "files": [
     "MapHomePlaybackVideoSheet.swift:394"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "특정 시간|Time of Day",
+   "ko": "특정 시간",
+   "en": "Time of Day",
+   "files": [
+    "BokkiShortcutsGuide.swift:152"
    ],
    "args": [],
    "targets": [
