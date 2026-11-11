@@ -5408,17 +5408,36 @@ final class MapHomeStartupCameraTests: XCTestCase {
         XCTAssertEqual(MapHomeMeetingPolicy.action(.walking, at: inside, events: events, travel: []), .meeting)
         XCTAssertEqual(MapHomeMeetingPolicy.action(.eating, at: inside, events: events, travel: []), .eating)
         XCTAssertEqual(MapHomeMeetingPolicy.action(.walking, at: start.addingTimeInterval(8_000), events: events, travel: []), .walking)
+        // 회의 조각은 머문 구간(업무)에만, 이동 구간은 제 상세 무늬(지하철 세로줄)를 쓴다(DTP1111A01).
         XCTAssertEqual(
             MapHomeTimeSidebarMath.detailPatternSpans(
-                [60..<120],
+                [MapHomeRailDetailSpan(range: 60..<120, pattern: .diagonal)],
                 segments: [
                     MapHomeTimeRailSegment(startMinute: 0, endMinute: 90, categoryID: "work", title: ""),
-                    MapHomeTimeRailSegment(startMinute: 90, endMinute: 200, categoryID: "movement", title: ""),
+                    MapHomeTimeRailSegment(startMinute: 90, endMinute: 200, categoryID: "movement", title: "", behavior: "subway"),
+                    MapHomeTimeRailSegment(startMinute: 200, endMinute: 300, categoryID: "sleep", title: "", behavior: "core"),
+                    MapHomeTimeRailSegment(startMinute: 300, endMinute: 400, categoryID: "sleep", title: "", behavior: "deep"),
                 ],
                 window: 0...1_440
             ),
-            [60..<90]
+            [
+                MapHomeRailDetailSpan(range: 60..<90, pattern: .diagonal),
+                MapHomeRailDetailSpan(range: 90..<200, pattern: .vertical),
+                MapHomeRailDetailSpan(range: 300..<400, pattern: .crosshatch),
+            ]
         )
+    }
+
+    /// 한 대분류 안의 상세끼리는 무늬가 겹치지 않고, 기본 상세는 무늬가 없다(DTP1111A01).
+    func testDetailPatternsAreDistinctWithinEachCategory() {
+        for category in RecordClassificationCatalog.categories {
+            let patterns = category.details.compactMap { MapHomeDetailPattern.pattern(for: $0.behavior) }
+            XCTAssertEqual(Set(patterns).count, patterns.count, category.id)
+        }
+        XCTAssertNil(MapHomeDetailPattern.pattern(for: "stationary"))
+        XCTAssertNil(MapHomeDetailPattern.pattern(for: "core"))
+        XCTAssertNil(MapHomeDetailPattern.pattern(for: "meal"))
+        XCTAssertNotNil(MapHomeDetailPattern.pattern(for: "automotive"))
     }
 
     func testDailyCardLevelFollowsTheDay() throws {

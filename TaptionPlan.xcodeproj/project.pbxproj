@@ -595,6 +595,7 @@
 		A1000000000000000B1102F4 /* HwarangRigAccessoryStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102F4 /* HwarangRigAccessoryStyles.swift */; };
 		A1000000000000000B1102F5 /* HwarangRigDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102F5 /* HwarangRigDiagnostics.swift */; };
 		A1000000000000000B1101A1 /* MapHomeTimeSidebarMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1101A1 /* MapHomeTimeSidebarMath.swift */; };
+		D7F111100000000000000002 /* MapHomeDetailPattern.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7F111100000000000000001 /* MapHomeDetailPattern.swift */; };
 		A100000000000000000000F2 /* MapHomeTimeSidebarHandleMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000F2 /* MapHomeTimeSidebarHandleMath.swift */; };
 		A100000000000000000000F3 /* MapHomeDayPlaybackTestHooks.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000F3 /* MapHomeDayPlaybackTestHooks.swift */; };
 		A100000000000000000000F4 /* MapHomeSectionDetailEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000F4 /* MapHomeSectionDetailEngine.swift */; };
@@ -1300,6 +1301,7 @@
 		F1000000000000000B1102F4 /* HwarangRigAccessoryStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HwarangRigAccessoryStyles.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102F5 /* HwarangRigDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HwarangRigDiagnostics.swift; sourceTree = "<group>"; };
 		F1000000000000000B1101A1 /* MapHomeTimeSidebarMath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeTimeSidebarMath.swift; sourceTree = "<group>"; };
+		D7F111100000000000000001 /* MapHomeDetailPattern.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeDetailPattern.swift; sourceTree = "<group>"; };
 		F100000000000000000000F2 /* MapHomeTimeSidebarHandleMath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeTimeSidebarHandleMath.swift; sourceTree = "<group>"; };
 		F100000000000000000000F3 /* MapHomeDayPlaybackTestHooks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeDayPlaybackTestHooks.swift; sourceTree = "<group>"; };
 		F100000000000000000000C1 /* MapHomeCounterTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCounterTable.swift; sourceTree = "<group>"; };
@@ -1814,6 +1816,7 @@
 				F1000000000000000B1102F4 /* HwarangRigAccessoryStyles.swift */,
 				F1000000000000000B1102F5 /* HwarangRigDiagnostics.swift */,
 				F1000000000000000B1101A1 /* MapHomeTimeSidebarMath.swift */,
+				D7F111100000000000000001 /* MapHomeDetailPattern.swift */,
 				F100000000000000000000F2 /* MapHomeTimeSidebarHandleMath.swift */,
 				F100000000000000000000F3 /* MapHomeDayPlaybackTestHooks.swift */,
 				F100000000000000000000C1 /* MapHomeCounterTable.swift */,
@@ -2761,6 +2764,7 @@
 				A1000000000000000B1102F4 /* HwarangRigAccessoryStyles.swift in Sources */,
 				A1000000000000000B1102F5 /* HwarangRigDiagnostics.swift in Sources */,
 				A1000000000000000B1101A1 /* MapHomeTimeSidebarMath.swift in Sources */,
+				D7F111100000000000000002 /* MapHomeDetailPattern.swift in Sources */,
 				A100000000000000000000F2 /* MapHomeTimeSidebarHandleMath.swift in Sources */,
 				A100000000000000000000F3 /* MapHomeDayPlaybackTestHooks.swift in Sources */,
 				A100000000000000000000C1 /* MapHomeCounterTable.swift in Sources */,

@@ -294,7 +294,8 @@ extension MapHomeView {
                             ? currentActivity(at: minute)
                             : nil,
                         segments: travelSidebarSegments ?? timeRailSegments,
-                        detailSpans: meetingRailSpans + timeRailSegments.flatMap(\.walkSpans),
+                        detailSpans: meetingRailSpans.map { MapHomeRailDetailSpan(range: $0, pattern: .diagonal) }
+                            + timeRailSegments.flatMap(\.walkSpans).map { MapHomeRailDetailSpan(range: $0, pattern: .dots) },
                         categoryColors: model.settings.mapCategoryColors,
                         zoomResetToken: zoomResetToken,
                         zoomStepToken: zoomStepToken,

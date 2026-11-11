@@ -81,7 +81,7 @@
    "ko": ", 미세먼지 {0}",
    "en": ", air quality {0}",
    "files": [
-    "MapHomeTimeSidebar.swift:2563"
+    "MapHomeTimeSidebar.swift:2551"
    ],
    "args": [
     "grade"
@@ -206,7 +206,7 @@
    "ko": "12시간",
    "en": "12-hour",
    "files": [
-    "MapHomeTimeSidebar.swift:2673"
+    "MapHomeTimeSidebar.swift:2661"
    ],
    "args": [],
    "targets": [
@@ -415,7 +415,7 @@
    "ko": "24시간",
    "en": "24-hour",
    "files": [
-    "MapHomeTimeSidebar.swift:2672"
+    "MapHomeTimeSidebar.swift:2660"
    ],
    "args": [],
    "targets": [
@@ -2768,7 +2768,7 @@
    "ko": "{0} 미확인",
    "en": "{0} unconfirmed",
    "files": [
-    "MapHomeTimeSidebar.swift:2344"
+    "MapHomeTimeSidebar.swift:2332"
    ],
    "args": [
     "duration(segment.endMinute - segment.startMinute)"
@@ -3056,7 +3056,7 @@
    "ko": "{0} 일정 메모",
    "en": "{0} schedule memo",
    "files": [
-    "MapHomeView+Timeline.swift:371"
+    "MapHomeView+Timeline.swift:372"
    ],
    "args": [
     "sticker.title"
@@ -3173,8 +3173,8 @@
    "en": "{0} ride",
    "files": [
     "MapHomeSectionDetailEngine.swift:141",
-    "MapHomeTimeSidebar.swift:870",
-    "MapHomeTimeSidebar.swift:2723"
+    "MapHomeTimeSidebar.swift:852",
+    "MapHomeTimeSidebar.swift:2711"
    ],
    "args": [
     "MovementPresentation.englishTitle(for: item.mode)"
@@ -3542,7 +3542,7 @@
    "ko": "{0}시 날씨 {1}, {2}도",
    "en": "{0}:00 weather: {1}, {2} degrees",
    "files": [
-    "MapHomeTimeSidebar.swift:2558"
+    "MapHomeTimeSidebar.swift:2546"
    ],
    "args": [
     "entryMinute / 60",
@@ -32305,7 +32305,7 @@
    "en": "{0} ride",
    "files": [
     "MapHomeSectionDetailEngine.swift:142",
-    "MapHomeTimeSidebar.swift:870"
+    "MapHomeTimeSidebar.swift:852"
    ],
    "args": [
     "MovementPresentation.englishTitle(for: item.mode)"
@@ -34187,7 +34187,7 @@
    "ko": "관측된 날씨 · 활성",
    "en": "Observed weather · active",
    "files": [
-    "MapHomeTimeSidebar.swift:2574"
+    "MapHomeTimeSidebar.swift:2562"
    ],
    "args": [],
    "targets": [
@@ -38676,7 +38676,7 @@
    "ko": "미래 예보 · 비활성",
    "en": "Future forecast · inactive",
    "files": [
-    "MapHomeTimeSidebar.swift:2570"
+    "MapHomeTimeSidebar.swift:2558"
    ],
    "args": [],
    "targets": [
@@ -38740,7 +38740,7 @@
    "ko": "미확인 구간 {0}–{1} 입력",
    "en": "Enter unconfirmed interval {0}–{1}",
    "files": [
-    "MapHomeTimeSidebar.swift:2752"
+    "MapHomeTimeSidebar.swift:2740"
    ],
    "args": [
     "start",
@@ -38755,7 +38755,7 @@
    "ko": "미확인 구간 {0}개 선택",
    "en": "Choose from {0} unconfirmed intervals",
    "files": [
-    "MapHomeTimeSidebar.swift:2753"
+    "MapHomeTimeSidebar.swift:2741"
    ],
    "args": [
     "count"
@@ -38781,7 +38781,7 @@
    "ko": "미확인 구간이 없습니다",
    "en": "No unconfirmed intervals",
    "files": [
-    "MapHomeTimeSidebar.swift:2323"
+    "MapHomeTimeSidebar.swift:2311"
    ],
    "args": [],
    "targets": [
@@ -38793,7 +38793,7 @@
    "ko": "미확인 활동",
    "en": "Unconfirmed activity",
    "files": [
-    "MapHomeTimeSidebar.swift:2418"
+    "MapHomeTimeSidebar.swift:2406"
    ],
    "args": [],
    "targets": [
@@ -40512,7 +40512,7 @@
    "ko": "사이드바 닫기",
    "en": "Close sidebar",
    "files": [
-    "MapHomeTimeSidebar.swift:1709"
+    "MapHomeTimeSidebar.swift:1694"
    ],
    "args": [],
    "targets": [
@@ -40861,6 +40861,18 @@
    "en": "Relative altitude ",
    "files": [
     "MapHomeNLEClipFactory.swift:585"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "상세 무늬|Detail patterns",
+   "ko": "상세 무늬",
+   "en": "Detail patterns",
+   "files": [
+    "MapHomeDetailPattern.swift:143"
    ],
    "args": [],
    "targets": [
@@ -41411,7 +41423,7 @@
    "ko": "선택된 시간",
    "en": "Selected time",
    "files": [
-    "MapHomeTimeSidebar.swift:2568"
+    "MapHomeTimeSidebar.swift:2556"
    ],
    "args": [],
    "targets": [
@@ -42672,7 +42684,7 @@
    "ko": "시간선 축소",
    "en": "Zoom timeline out",
    "files": [
-    "MapHomeView+Timeline.swift:510"
+    "MapHomeView+Timeline.swift:511"
    ],
    "args": [],
    "targets": [
@@ -42684,7 +42696,7 @@
    "ko": "시간선 확대",
    "en": "Zoom timeline in",
    "files": [
-    "MapHomeView+Timeline.swift:509"
+    "MapHomeView+Timeline.swift:510"
    ],
    "args": [],
    "targets": [
@@ -42708,7 +42720,7 @@
    "ko": "시간을 자세히 편집합니다",
    "en": "Edit this time interval",
    "files": [
-    "MapHomeTimeSidebar.swift:2358"
+    "MapHomeTimeSidebar.swift:2346"
    ],
    "args": [],
    "targets": [
@@ -42732,7 +42744,7 @@
    "ko": "시간축 날씨",
    "en": "Weather timeline",
    "files": [
-    "MapHomeTimeSidebar.swift:2584"
+    "MapHomeTimeSidebar.swift:2572"
    ],
    "args": [],
    "targets": [
@@ -46248,7 +46260,7 @@
    "ko": "오전 ",
    "en": "AM ",
    "files": [
-    "MapHomeTimeSidebar.swift:2700"
+    "MapHomeTimeSidebar.swift:2688"
    ],
    "args": [],
    "targets": [
@@ -46260,8 +46272,8 @@
    "ko": "오전",
    "en": "AM",
    "files": [
-    "MapHomeTimeSidebar.swift:2203",
-    "MapHomeTimeSidebar.swift:2684"
+    "MapHomeTimeSidebar.swift:2191",
+    "MapHomeTimeSidebar.swift:2672"
    ],
    "args": [],
    "targets": [
@@ -46273,7 +46285,7 @@
    "ko": "오후 ",
    "en": "PM ",
    "files": [
-    "MapHomeTimeSidebar.swift:2700"
+    "MapHomeTimeSidebar.swift:2688"
    ],
    "args": [],
    "targets": [
@@ -46285,8 +46297,8 @@
    "ko": "오후",
    "en": "PM",
    "files": [
-    "MapHomeTimeSidebar.swift:2203",
-    "MapHomeTimeSidebar.swift:2685"
+    "MapHomeTimeSidebar.swift:2191",
+    "MapHomeTimeSidebar.swift:2673"
    ],
    "args": [],
    "targets": [
@@ -48114,7 +48126,7 @@
    "ko": "이날의 활동이 모두 확인되었습니다.",
    "en": "All activity for this day is confirmed.",
    "files": [
-    "MapHomeTimeSidebar.swift:2325"
+    "MapHomeTimeSidebar.swift:2313"
    ],
    "args": [],
    "targets": [
@@ -49828,7 +49840,7 @@
    "ko": "저장하지 못했습니다. 다시 시도해 주세요.",
    "en": "Could not save. Please try again.",
    "files": [
-    "MapHomeTimeSidebar.swift:2400"
+    "MapHomeTimeSidebar.swift:2388"
    ],
    "args": [],
    "targets": [
@@ -55062,7 +55074,7 @@
    "ko": "활동을 누르면 바로 저장됩니다. 시간을 누르면 자세히 편집할 수 있습니다.",
    "en": "Tap an activity to save it, or tap the time to edit details.",
    "files": [
-    "MapHomeTimeSidebar.swift:2310"
+    "MapHomeTimeSidebar.swift:2298"
    ],
    "args": [],
    "targets": [

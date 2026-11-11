@@ -297,24 +297,6 @@ private struct MapHomeUnconfirmedChecker: View {
     }
 }
 
-/// 대분류 색은 그대로 두고 상세 활동을 표시하는 빗금 무늬.
-private struct MapHomeDetailStripes: View {
-    var body: some View {
-        Canvas { context, size in
-            var path = Path()
-            let spacing: CGFloat = 7
-            var offset = -size.width
-            while offset < size.height {
-                path.move(to: CGPoint(x: 0, y: offset + size.width))
-                path.addLine(to: CGPoint(x: size.width, y: offset))
-                offset += spacing
-            }
-            context.stroke(path, with: .color(.white.opacity(0.45)), lineWidth: 1.5)
-        }
-        .allowsHitTesting(false)
-    }
-}
-
 /// 오른쪽 시간 레일에서 공통으로 보이는 대분류 모형이다. 제목과 아이콘은
 /// 단일 JSON 분류표에서, 색상은 앱 공통 팔레트에서 읽는다.
 struct MapHomeSidebarMajorCategory: Identifiable, Hashable {
@@ -1151,7 +1133,7 @@ struct MapHomeTimeSidebar: View {
     let activity: MapHomeTimeSidebarActivity?
     let segments: [MapHomeTimeRailSegment]
     /// 업무 구간 위에 무늬로 표시할 상세 활동(회의) 구간.
-    let detailSpans: [Range<Int>]
+    let detailSpans: [MapHomeRailDetailSpan]
     let categoryColors: [String: String]
     let zoomResetToken: Int
     let zoomStepToken: Int
@@ -1166,6 +1148,7 @@ struct MapHomeTimeSidebar: View {
     var unconfirmedMode: ((MapHomeTimeRailSegment) -> TravelMode?)?
     /// 묶인 미확인 아이콘을 누르면 여기 담긴 구간들을 작은 메뉴로 고른다.
     @State private var reviewChoices: [MapHomeTimeRailSegment]?
+    @State private var isPatternLegendPresented = false
 
     /// 보이는 시간 창. 지도 홈이 들고 있는 값 하나를 시간 레일·날씨 띠·선택 캡슐이
     /// 함께 쓴다. 예전에는 이 화면이 `@State`로 따로 들고 `onViewportChanged`로
@@ -1219,7 +1202,7 @@ struct MapHomeTimeSidebar: View {
         visibleDurationMinutes: Binding<Int>,
         activity: MapHomeTimeSidebarActivity? = nil,
         segments: [MapHomeTimeRailSegment] = [],
-        detailSpans: [Range<Int>] = [],
+        detailSpans: [MapHomeRailDetailSpan] = [],
         categoryColors: [String: String] = [:],
         zoomResetToken: Int = 0,
         zoomStepToken: Int = 0,
@@ -1407,6 +1390,8 @@ struct MapHomeTimeSidebar: View {
                         )
                         .simultaneousGesture(viewportDragGesture(trackHeight: trackHeight))
                         .simultaneousGesture(timelineMagnificationGesture)
+                        // 길게 누르면 상세 무늬 범례(DTP1111A01).
+                        .simultaneousGesture(LongPressGesture(minimumDuration: 0.6, maximumDistance: 8).onEnded { _ in isPatternLegendPresented = true })
 
                     Rectangle()
                     .fill(MapHomeTimeSidebarStyle.numericColumnBackground)
@@ -1465,16 +1450,16 @@ struct MapHomeTimeSidebar: View {
                         }
                     }
 
-                    ForEach(MapHomeTimeSidebarMath.detailPatternSpans(detailSpans, segments: visibleSegments, window: visibleWindow), id: \.lowerBound) { span in
-                        MapHomeDetailStripes()
+                    ForEach(MapHomeTimeSidebarMath.detailPatternSpans(detailSpans, segments: visibleSegments, window: visibleWindow), id: \.self) { span in
+                        MapHomeDetailPatternView(pattern: span.pattern)
                             .frame(
                                 width: activeRailWidth,
-                                height: max(1, trackHeight * MapHomeTimeSidebarMath.spanFraction(start: span.lowerBound, end: span.upperBound, window: visibleWindow))
+                                height: max(1, trackHeight * MapHomeTimeSidebarMath.spanFraction(start: span.range.lowerBound, end: span.range.upperBound, window: visibleWindow))
                             )
                             .clipped()
                             .position(
                                 x: activeRailWidth / 2,
-                                y: trackHeight * MapHomeTimeSidebarMath.segmentCenterPosition(start: span.lowerBound, end: span.upperBound, window: visibleWindow)
+                                y: trackHeight * MapHomeTimeSidebarMath.segmentCenterPosition(start: span.range.lowerBound, end: span.range.upperBound, window: visibleWindow)
                             )
                     }
                 }
@@ -1727,6 +1712,9 @@ struct MapHomeTimeSidebar: View {
                     segments: reviewChoices ?? [], timeLabel: { timeLabel(for: $0) },
                     onOpenOne: { onUnconfirmedReview?($0) }, onConfirm: { await onUnconfirmedBatch?($0, $1) ?? false }
                 )
+            }
+            .sheet(isPresented: $isPatternLegendPresented) {
+                MapHomeDetailPatternLegend(language: .current, categoryColorHex: categoryColorHex)
             }
             .accessibilityElement(children: .contain)
             .accessibilityLabel("시간 선택")
