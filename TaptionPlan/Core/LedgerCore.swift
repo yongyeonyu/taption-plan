@@ -93,8 +93,12 @@ struct LedgerEntry: Codable, Identifiable, Equatable, Sendable {
     var shareNames: [String]?
     /// 일상↔여행 사이를 오가는 짝 기록(예산 이체·정산). 비용 계산에서 뺀다.
     var transfer: LedgerTransfer?
+    /// 취소된 결제면 그 시각(LCN1111A01, 대표 결정). 기록은 남기고 합계에서만 뺀다. 예전 기록에는 없다.
+    var canceledAt: Date?
 
-    var signedKRW: Double { (amountKRW ?? 0) * (kind == .expense ? -1 : 1) }
+    /// 합계에 더하는 원화 금액. 취소된 결제는 0이다.
+    var countedKRW: Double { canceledAt == nil ? (amountKRW ?? 0) : 0 }
+    var signedKRW: Double { countedKRW * (kind == .expense ? -1 : 1) }
 }
 
 struct LedgerBudget: Codable, Equatable, Identifiable, Sendable {
@@ -325,7 +329,7 @@ final class LedgerBook {
     }
 
     static func total(_ list: [LedgerEntry], _ kind: LedgerEntry.Kind) -> Double {
-        list.filter { $0.kind == kind }.reduce(0) { $0 + ($1.amountKRW ?? 0) }
+        list.filter { $0.kind == kind }.reduce(0) { $0 + $1.countedKRW }
     }
 
     func budget(for period: String, category: LedgerCategory? = nil) -> LedgerBudget? {

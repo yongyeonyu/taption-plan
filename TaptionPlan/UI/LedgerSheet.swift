@@ -17,6 +17,7 @@ struct LedgerSheet: View {
     @State private var isEditingBudget = false
     @State private var isSettling = false
     @State private var isShowingShortcutGuide = false
+    @State private var isShowingOwnAccounts = false
     @State private var draft: LedgerEntry?
     @State private var receiptItem: PhotosPickerItem?
     @State private var captureNote: String?
@@ -69,6 +70,9 @@ struct LedgerSheet: View {
                         Button { isShowingShortcutGuide = true } label: {
                             Label(language.text("결제 문자 자동으로 넣기", "Add payment texts automatically"), systemImage: "message.badge")
                         }
+                        Button { isShowingOwnAccounts = true } label: {
+                            Label(language.text("내 계좌 이름", "My account names"), systemImage: "building.columns")
+                        }
                         ShareLink(item: LedgerTableFile(name: "BOKKI-\(month).csv") { [monthEntries, monthCarryOver, monthTitle, language] in
                             LedgerTable.csv(monthEntries, carryOver: monthCarryOver, title: language.text("BOKKI 가계부 \(monthTitle)", "BOKKI ledger \(monthTitle)"), language: language)
                         },
@@ -110,6 +114,7 @@ struct LedgerSheet: View {
             }
             .sheet(isPresented: $isEditingBudget) { LedgerBudgetForm(language: language, period: month) }
             .sheet(isPresented: $isShowingShortcutGuide) { BokkiShortcutsGuide(language: language) }
+            .sheet(isPresented: $isShowingOwnAccounts) { LedgerOwnAccountsSheet(language: language) }
             .sheet(isPresented: $isSettling) {
                 LedgerSettleView(language: language, entries: monthEntries.filter { $0.transfer == nil })
             }
@@ -278,7 +283,8 @@ struct LedgerRow: View {
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
                     .foregroundStyle(Color.tpInk)
                 // 시각을 맨 앞에(LDU1111A01).
-                Text([entry.occurredAt.formatted(date: .omitted, time: .shortened), entry.category.title(language), entry.payer, sourceText].compactMap { $0 }.joined(separator: " · "))
+                Text([entry.occurredAt.formatted(date: .omitted, time: .shortened), entry.category.title(language), entry.payer, sourceText,
+                      entry.canceledAt == nil ? nil : language.text("취소됨", "Canceled")].compactMap { $0 }.joined(separator: " · "))
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
                     .foregroundStyle(Color.tpSecondary)
             }
@@ -286,7 +292,8 @@ struct LedgerRow: View {
             VStack(alignment: .trailing, spacing: 2) {
                 Text((entry.kind == .expense ? "−" : "+") + LedgerMoney.text(entry.amount, currency: entry.currency, language: language))
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold))
-                    .foregroundStyle(entry.kind == .expense ? Color.tpInk : Color.green)
+                    .strikethrough(entry.canceledAt != nil)
+                    .foregroundStyle(entry.canceledAt != nil ? Color.tpSecondary : entry.kind == .expense ? Color.tpInk : Color.green)
                 if entry.currency != "KRW", let krw = entry.amountKRW {
                     Text(LedgerMoney.text(krw, language: language))
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))

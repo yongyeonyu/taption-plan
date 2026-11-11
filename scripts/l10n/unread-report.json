@@ -1,7 +1,13 @@
 {
- "ui": 4549,
+ "ui": 4568,
  "catalog": 502,
  "unread": [
+  {
+   "file": "TaptionPlan/UI/LedgerReviewBand.swift",
+   "line": 62,
+   "ko": "item.entry.amount",
+   "en": "item.entry.currency"
+  },
   {
    "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
    "line": 41,
@@ -76,15 +82,21 @@
   },
   {
    "file": "TaptionPlan/Core/LedgerCore.swift",
-   "line": 357,
+   "line": 350,
    "ko": "_ amount: Double",
    "en": "String = \"KRW\""
   },
   {
    "file": "TaptionPlan/Core/LedgerIntents.swift",
-   "line": 66,
+   "line": 50,
    "ko": "saved.amount",
    "en": "saved.currency"
+  },
+  {
+   "file": "TaptionPlan/Core/LedgerIntents.swift",
+   "line": 72,
+   "ko": "entry.amount",
+   "en": "entry.currency"
   },
   {
    "file": "TaptionPlan/Core/LiveActivityDaySummaryState.swift",
@@ -196,103 +208,103 @@
   },
   {
    "file": "TaptionPlan/UI/LedgerMemoPanel.swift",
-   "line": 154,
+   "line": 157,
    "ko": "entry.amount",
    "en": "entry.currency"
   },
   {
    "file": "TaptionPlan/UI/LedgerMemoPanel.swift",
-   "line": 185,
+   "line": 190,
    "ko": "entry.amount",
    "en": "entry.currency"
   },
   {
    "file": "TaptionPlan/UI/LedgerMemoPanel.swift",
-   "line": 231,
+   "line": 236,
    "ko": "entry.amount",
    "en": "entry.currency"
   },
   {
    "file": "TaptionPlan/UI/LedgerMemoPanel.swift",
-   "line": 238,
+   "line": 243,
    "ko": "item.1",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerMemoPanel.swift",
-   "line": 90,
+   "line": 92,
    "ko": "month",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerMemoPanel.swift",
-   "line": 90,
+   "line": 92,
    "ko": "today",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 146,
+   "line": 151,
    "ko": "LedgerTripMath.sheet(trip, entries: book.entries).myCost",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 235,
+   "line": 240,
    "ko": "monthCarryOver",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 236,
+   "line": 241,
    "ko": "earned",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 237,
+   "line": 242,
    "ko": "spent",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 238,
+   "line": 243,
    "ko": "monthCarryOver + earned - spent",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 242,
+   "line": 247,
    "ko": "left",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 248,
+   "line": 253,
    "ko": "net",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 287,
+   "line": 293,
    "ko": "entry.amount",
    "en": "entry.currency"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 291,
+   "line": 298,
    "ko": "krw",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 551,
+   "line": 558,
    "ko": "transfer.amountKRW",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 555,
+   "line": 562,
    "ko": "LedgerBook.total(entries, .expense)",
    "en": "language"
   },

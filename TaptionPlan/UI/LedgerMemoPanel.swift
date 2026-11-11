@@ -70,6 +70,8 @@ struct LedgerMemoHeader: View {
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("memo-ledger-open")
+            // 조용히 넣지 않은 결제는 「지출」·「전체」 위에 띠로 모아 보인다(LRV1111A01).
+            if filter == .expenses || filter == .all { LedgerReviewBand(language: language) }
         }
         .task {
             await book.load()
@@ -151,9 +153,12 @@ struct LedgerMemoCard: View {
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
                     .foregroundStyle(Color.tpInk)
                     .lineLimit(2)
-                Text((entry.kind == .expense ? "−" : "+") + LedgerMoney.text(entry.amount, currency: entry.currency, language: language))
+                // 취소된 결제는 줄을 긋고 합계에서 뺀다(LCN1111A01).
+                Text((entry.kind == .expense ? "−" : "+") + LedgerMoney.text(entry.amount, currency: entry.currency, language: language)
+                     + (entry.canceledAt == nil ? "" : " · " + language.text("취소됨", "Canceled")))
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
-                    .foregroundStyle(entry.kind == .expense ? Color.tpAccent : Color.green)
+                    .strikethrough(entry.canceledAt != nil)
+                    .foregroundStyle(entry.canceledAt != nil ? Color.tpSecondary : entry.kind == .expense ? Color.tpAccent : Color.green)
                 Text("\(entry.occurredAt.formatted(date: .omitted, time: .shortened)) · \(entry.category.title(language))")
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
                     .foregroundStyle(Color.tpSecondary)
@@ -210,7 +215,7 @@ enum LedgerDaySpending {
         for entry in book.entries where entry.transfer == nil && entry.occurredAt >= interval.start && entry.occurredAt < interval.end {
             let day = calendar.startOfDay(for: entry.occurredAt)
             var value = result[day] ?? (0, 0)
-            if entry.kind == .expense { value.expense += entry.amountKRW ?? 0 } else if book.isDaily(entry) { value.income += entry.amountKRW ?? 0 }
+            if entry.kind == .expense { value.expense += entry.countedKRW } else if book.isDaily(entry) { value.income += entry.countedKRW }
             result[day] = value
         }
         return result
@@ -239,7 +244,7 @@ enum LedgerDaySpending {
             )
         }
         var hourly = Array(repeating: 0.0, count: 24)
-        for entry in list { hourly[min(23, max(0, MapHomeGrowthPolicy.localCalendar.component(.hour, from: entry.occurredAt)))] += entry.amountKRW ?? 0 }
+        for entry in list { hourly[min(23, max(0, MapHomeGrowthPolicy.localCalendar.component(.hour, from: entry.occurredAt)))] += entry.countedKRW }
         return MapHomeCounterDetailContent(
             systemImage: MapHomeCounterKind.spending.systemImage,
             title: language.text("하루 지출", "Daily spending"),

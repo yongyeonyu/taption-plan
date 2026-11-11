@@ -40,9 +40,23 @@ struct AddPaymentNotificationIntent: AppIntent {
 enum PaymentTextCapture {
     static func capture(_ text: String, requiresTime: Bool, now: Date = .now) async -> String {
         let language = MapHomeLanguage.current
+        // 급여 입금은 수입으로 넣는다(LIN1111A01). 그 밖의 입금은 넣지 않는다.
+        if let salary = LedgerMessageParser.salaryDeposit(text, now: now) {
+            await LedgerBook.shared.load()
+            guard LedgerMessageParser.duplicateVerdict(salary, in: LedgerBook.shared.entries) == .none else {
+                return language.text("이미 가계부에 넣은 입금이에요.", "That deposit is already in the ledger.")
+            }
+            let saved = await LedgerBook.shared.save(salary)
+            let money = LedgerMoney.text(saved.amount, currency: saved.currency, language: language)
+            return language.text("\(saved.title) \(money)을 수입으로 넣었어요.", "Added \(saved.title) \(money) as income.")
+        }
         // 자동화는 결제가 아닌 문자·알림도 넘긴다. 그런 글은 넣지도 AI에게 보내지도 않는다(SMA1111A01).
         guard LedgerMessageParser.isPaymentCandidate(text) else {
             return language.text("가계부에 넣을 결제 문자가 아니에요.", "Not a payment message, so nothing was added.")
+        }
+        // 등록한 내 계좌로 옮기는 돈은 지출이 아니다(LIN1111A01).
+        if LedgerOwnAccounts.isOwnTransfer(text, names: LedgerOwnAccounts.names()) {
+            return language.text("내 계좌로 옮긴 돈이라 가계부에 넣지 않았어요.", "That was a transfer to your own account, so nothing was added.")
         }
         guard var draft = LedgerMessageParser.parse(text, now: now), !requiresTime || draft.occurredAt != nil else {
             // 광고·안내가 아니면 연결된 AI에게 맡긴다. 번호는 가려서 보낸다.
@@ -55,15 +69,34 @@ enum PaymentTextCapture {
         if draft.occurredAt == nil { draft.occurredAt = now }
         let entry = LedgerMessageParser.entry(draft)
         await LedgerBook.shared.load()
-        guard !LedgerMessageParser.isDuplicate(entry, in: LedgerBook.shared.entries) else {
+        let money = LedgerMoney.text(entry.amount, currency: entry.currency, language: language)
+        // 취소 문자는 원래 결제를 찾아 「취소됨」으로 표시한다. 못 찾으면 예전처럼 환불 수입으로 넣는다(LCN1111A01).
+        if draft.isCancel, var original = LedgerMessageParser.canceledOriginal(for: entry, in: LedgerBook.shared.entries) {
+            original.canceledAt = entry.occurredAt
+            await LedgerBook.shared.save(original)
+            return language.text("\(original.title) \(money) 결제를 취소됨으로 표시했어요.", "Marked \(original.title) \(money) as canceled.")
+        }
+        switch LedgerMessageParser.duplicateVerdict(entry, in: LedgerBook.shared.entries) {
+        case .same:
             return language.text("이미 가계부에 넣은 결제예요.", "That payment is already in the ledger.")
+        case .suspect:
+            // 10분 안 같은 금액의 다른 가게: 조용히 버리지 않고 확인 필요에 둔다(LRV1111A01).
+            LedgerReviewStore.shared.add(entry, reason: .duplicate, now: now)
+            return language.text("방금 같은 금액의 결제가 있어 「확인 필요」에 두었어요.", "A payment of the same amount was just added, so this one is waiting in Needs review.")
+        case .none:
+            break
+        }
+        if !draft.isCancel, draft.merchant == nil {
+            // 가게 이름을 못 읽었으면 조용히 넣지 않는다. 이체 낱말이 있으면 이체 의심으로 둔다.
+            let reason: LedgerReviewStore.Reason = LedgerMessageParser.looksLikeTransfer(text) ? .transfer : .noMerchant
+            LedgerReviewStore.shared.add(entry, reason: reason, now: now)
+            return language.text("\(money) 결제를 「확인 필요」에 두었어요. 메모 › 지출에서 넣거나 버릴 수 있어요.", "\(money) is waiting in Needs review. Add or discard it in Memo › Spending.")
         }
         let saved = await LedgerBook.shared.save(entry)
-        // 앱이 먼저 넣고, 연결된 AI가 가게 이름·분류·취소 연결을 다듬는다(대표 결정).
+        // 앱이 먼저 넣고, 연결된 AI가 가게 이름·분류를 다듬는다(대표 결정).
         if AITaskQueue.enqueue(.paymentText, text: text, day: saved.occurredAt, context: ["entryId": saved.id.uuidString]) {
             await AITaskQueue.upload()
         }
-        let money = LedgerMoney.text(saved.amount, currency: saved.currency, language: language)
         return language.text("\(saved.title) \(money)을 가계부에 넣었어요.", "Added \(saved.title) \(money) to the ledger.")
     }
 }

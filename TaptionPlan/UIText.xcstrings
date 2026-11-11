@@ -16479,6 +16479,83 @@
         }
       }
     },
+    "{0} {1} 결제를 취소됨으로 표시했어요.|Marked {0} {1} as canceled." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} {1} の決済を取消済みにしました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已将 {0} {1} 标记为已取消。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已將 {0} {1} 標記為已取消。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} {1} als storniert markiert."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} {1} marqué comme annulé."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} {1} segnato come annullato."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} {1} marcado como cancelado."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} {1} marcado como cancelado."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã đánh dấu {0} {1} là đã hủy."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} {1} ditandai dibatalkan."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ทำเครื่องหมาย {0} {1} ว่ายกเลิกแล้ว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} {1} को रद्द के रूप में चिह्नित किया।"
+          }
+        }
+      }
+    },
     "{0} {1} 고도 보정을 적용했습니다.|Applied altitude calibration for {0} {1}." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -16783,6 +16860,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "{0} {1} खर्च खाते में जोड़ा गया।"
+          }
+        }
+      }
+    },
+    "{0} {1}을 수입으로 넣었어요.|Added {0} {1} as income." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} {1} を収入として追加しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已将 {0} {1} 记为收入。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已將 {0} {1} 記為收入。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} {1} als Einnahme hinzugefügt."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} {1} ajouté comme revenu."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} {1} aggiunto come entrata."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} {1} añadido como ingreso."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} {1} adicionado como receita."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã thêm {0} {1} là thu nhập."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} {1} ditambahkan sebagai pemasukan."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เพิ่ม {0} {1} เป็นรายรับแล้ว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} {1} को आय के रूप में जोड़ा।"
           }
         }
       }
@@ -17245,6 +17399,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "{0} · पढ़ा नहीं जा सकता (क्षतिग्रस्त या परस्पर विरोधी संस्करण)"
+          }
+        }
+      }
+    },
+    "{0} 결제를 「확인 필요」에 두었어요. 메모 › 지출에서 넣거나 버릴 수 있어요.|{0} is waiting in Needs review. Add or discard it in Memo › Spending." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} の決済を「要確認」に置きました。メモ › 支出で追加または破棄できます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} 的付款已放入“待确认”。可在 备忘 › 支出 中添加或丢弃。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} 的付款已放入「待確認」。可在 備忘 › 支出 中加入或捨棄。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} wartet unter „Zu prüfen“. Unter Notiz › Ausgaben hinzufügen oder verwerfen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} attend dans À vérifier. Ajoutez-le ou supprimez-le dans Note › Dépenses."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} è in attesa in Da controllare. Aggiungilo o scartalo in Nota › Spese."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} espera en Por revisar. Añádelo o descártalo en Nota › Gastos."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} aguarda em Para verificar. Adicione ou descarte em Nota › Gastos."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} đang chờ ở Cần xác nhận. Thêm hoặc bỏ trong Ghi chú › Chi tiêu."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} menunggu di Perlu diperiksa. Tambahkan atau buang di Memo › Pengeluaran."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} รออยู่ในสิ่งที่ต้องตรวจ เพิ่มหรือทิ้งได้ที่ โน้ต › รายจ่าย"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} जाँच के लिए रखा है। मेमो › खर्च में जोड़ें या हटाएँ।"
           }
         }
       }
@@ -204513,6 +204744,160 @@
         }
       }
     },
+    "가게 이름 없음|No shop name" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "店名なし"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无店名"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無店名"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kein Händlername"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pas de nom de commerce"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nessun nome negozio"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sin nombre de comercio"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sem nome da loja"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không có tên cửa hàng"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tanpa nama toko"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ไม่มีชื่อร้าน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "दुकान का नाम नहीं"
+          }
+        }
+      }
+    },
+    "가게 이름을 읽지 못했거나, 방금 같은 금액의 결제가 있었거나, 이체로 보이는 결제예요. 넣기 전에는 합계에 들어가지 않아요.|These had no shop name, matched a payment just added, or look like a transfer. They don't count until you add them." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "店名を読めなかった、同じ金額の決済が直前にあった、または振替に見える決済です。追加するまで合計には入りません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这些付款没有读到店名、刚有相同金额的付款，或看起来像转账。添加前不计入合计。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這些付款沒有讀到店名、剛有相同金額的付款，或看起來像轉帳。加入前不計入合計。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bei diesen Zahlungen fehlte der Händlername, es gab gerade eine Zahlung über denselben Betrag, oder sie sehen wie eine Überweisung aus. Sie zählen erst, wenn du sie hinzufügst."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ces paiements n’avaient pas de nom de commerce, suivaient un paiement du même montant ou ressemblent à un virement. Ils ne comptent pas tant que vous ne les ajoutez pas."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questi pagamenti non avevano il nome del negozio, seguivano un pagamento dello stesso importo o sembrano un trasferimento. Non contano finché non li aggiungi."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estos pagos no tenían nombre de comercio, coincidían con un pago recién añadido o parecen una transferencia. No cuentan hasta que los añadas."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estes pagamentos não tinham nome da loja, coincidiam com um pagamento recém-adicionado ou parecem uma transferência. Só contam depois que você adicionar."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Các khoản này không đọc được tên cửa hàng, trùng số tiền với khoản vừa thêm, hoặc giống chuyển khoản. Chưa tính vào tổng cho đến khi bạn thêm."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pembayaran ini tanpa nama toko, sama dengan pembayaran yang baru ditambahkan, atau tampak seperti transfer. Belum dihitung sampai Anda menambahkannya."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "รายการเหล่านี้อ่านชื่อร้านไม่ได้ มียอดเท่ากับรายการที่เพิ่งเพิ่ม หรือดูเหมือนการโอน จะยังไม่นับรวมจนกว่าจะเพิ่ม"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "इन भुगतानों में दुकान का नाम नहीं था, अभी-अभी इतनी ही राशि का भुगतान जुड़ा था, या ये ट्रांसफ़र जैसे लगते हैं। जोड़ने तक ये कुल में नहीं गिने जाते।"
+          }
+        }
+      }
+    },
     "가계부 {0} 표|Ledger {0} table" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -205202,6 +205587,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "खर्च खाता"
+          }
+        }
+      }
+    },
+    "가계부에 넣기|Add to ledger" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "家計簿に追加"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "记入账本"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "記入帳本"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ins Haushaltsbuch"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter au budget"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aggiungi al registro"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Añadir al libro"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adicionar ao controle"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thêm vào sổ"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tambah ke buku kas"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เพิ่มลงบัญชี"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "खाते में जोड़ें"
           }
         }
       }
@@ -205972,6 +206434,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "नदी किनारे की हवा"
+          }
+        }
+      }
+    },
+    "같은 금액이 방금 있었음|Same amount just added" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同じ金額が直前にあり"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "刚有相同金额"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "剛有相同金額"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gleicher Betrag gerade erfasst"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Même montant ajouté à l’instant"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stesso importo appena aggiunto"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mismo importe recién añadido"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mesmo valor recém-adicionado"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vừa có cùng số tiền"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jumlah sama baru ditambahkan"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เพิ่งมียอดเท่ากัน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "अभी इतनी ही राशि जुड़ी"
           }
         }
       }
@@ -225996,6 +226535,160 @@
         }
       }
     },
+    "내 계좌 이름|My account names" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自分の口座名"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我的账户名称"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我的帳戶名稱"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meine Kontonamen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noms de mes comptes"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nomi dei miei conti"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nombres de mis cuentas"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nomes das minhas contas"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tên tài khoản của tôi"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nama rekening saya"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ชื่อบัญชีของฉัน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "मेरे खातों के नाम"
+          }
+        }
+      }
+    },
+    "내 계좌로 옮긴 돈이라 가계부에 넣지 않았어요.|That was a transfer to your own account, so nothing was added." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自分の口座への移動なので家計簿に入れませんでした。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这是转入自己账户的钱，未记入账本。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這是轉入自己帳戶的錢，未記入帳本。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das war eine Umbuchung auf dein eigenes Konto, daher wurde nichts erfasst."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "C’était un transfert vers votre propre compte, rien n’a été ajouté."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Era un trasferimento sul tuo conto, quindi non è stato aggiunto nulla."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Era una transferencia a tu propia cuenta, así que no se añadió nada."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Foi uma transferência para a sua própria conta, então nada foi adicionado."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đó là chuyển sang tài khoản của bạn nên không thêm gì."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Itu transfer ke rekening sendiri, jadi tidak ada yang ditambahkan."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เป็นการโอนเข้าบัญชีของคุณเอง จึงไม่ได้เพิ่ม"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "यह आपके अपने खाते में ट्रांसफ़र था, इसलिए कुछ नहीं जोड़ा गया।"
+          }
+        }
+      }
+    },
     "내 기록|My records" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -231536,6 +232229,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ज़ूम+"
+          }
+        }
+      }
+    },
+    "더하기|Add" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "追加"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加入"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hinzufügen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aggiungi"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Añadir"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adicionar"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thêm"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tambah"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เพิ่ม"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "जोड़ें"
           }
         }
       }
@@ -245862,6 +246632,83 @@
         }
       }
     },
+    "방금 같은 금액의 결제가 있어 「확인 필요」에 두었어요.|A payment of the same amount was just added, so this one is waiting in Needs review." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同じ金額の決済が直前にあったので「要確認」に置きました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "刚有相同金额的付款，已放入“待确认”。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "剛有相同金額的付款，已放入「待確認」。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gerade wurde derselbe Betrag erfasst, daher wartet diese Zahlung unter „Zu prüfen“."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un paiement du même montant vient d’être ajouté ; celui-ci attend dans À vérifier."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "È appena stato aggiunto un pagamento dello stesso importo; questo è in attesa in Da controllare."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se acaba de añadir un pago del mismo importe; este espera en Por revisar."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Um pagamento do mesmo valor acabou de ser adicionado; este aguarda em Para verificar."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vừa có khoản cùng số tiền nên khoản này đang chờ ở Cần xác nhận."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pembayaran berjumlah sama baru ditambahkan, jadi yang ini menunggu di Perlu diperiksa."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เพิ่งมีรายการยอดเท่ากัน รายการนี้จึงรออยู่ในสิ่งที่ต้องตรวจ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "अभी इतनी ही राशि का भुगतान जुड़ा था, इसलिए यह जाँच के लिए रखा है।"
+          }
+        }
+      }
+    },
     "방문 장소|Places" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -247860,6 +248707,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "पोर्सिलेन"
+          }
+        }
+      }
+    },
+    "버리기|Discard" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "破棄"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "丢弃"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "捨棄"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verwerfen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supprimer"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scarta"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Descartar"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Descartar"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bỏ"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buang"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ทิ้ง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "हटाएँ"
           }
         }
       }
@@ -286672,6 +287596,83 @@
         }
       }
     },
+    "예: 토스통장, 홍길동|e.g. Toss account, my name" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "例：普通預金、自分の名前"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "例如：储蓄账户、我的名字"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "例如：儲蓄帳戶、我的名字"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "z. B. Sparkonto, mein Name"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ex. : compte épargne, mon nom"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "es. conto risparmio, il mio nome"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "p. ej., cuenta de ahorro, mi nombre"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ex.: conta poupança, meu nome"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VD: tài khoản tiết kiệm, tên tôi"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "mis. rekening tabungan, nama saya"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เช่น บัญชีออมทรัพย์ ชื่อของฉัน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "जैसे बचत खाता, मेरा नाम"
+          }
+        }
+      }
+    },
     "예산 {0} · 남음 {1}|Budget {0} · left {1}" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -303535,6 +304536,83 @@
         }
       }
     },
+    "이미 가계부에 넣은 입금이에요.|That deposit is already in the ledger." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "その入金はすでに家計簿にあります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这笔入账已在账本中。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這筆入帳已在帳本中。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieser Eingang steht schon im Haushaltsbuch."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce dépôt est déjà dans le budget."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questo accredito è già nel registro."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ese ingreso ya está en el libro."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esse depósito já está no controle."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Khoản nộp này đã có trong sổ."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setoran itu sudah ada di buku kas."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เงินเข้ารายการนี้อยู่ในบัญชีแล้ว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "यह जमा पहले से खाते में है।"
+          }
+        }
+      }
+    },
     "이미 남긴 기록의 이름은 그대로 남습니다.|Existing records keep this name." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -304917,6 +305995,160 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "वापस"
+          }
+        }
+      }
+    },
+    "이체·출금 문자에 이 이름이 들어 있으면 내 계좌로 옮긴 돈으로 보고 지출에 넣지 않아요. 이름은 이 기기에만 둬요.|If a transfer or withdrawal text contains one of these names, it's treated as moving money to your own account and isn't added as spending. Names stay on this device." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "振替・出金のメッセージにこの名前があれば、自分の口座への移動とみなして支出に入れません。名前はこのデバイスにだけ保存します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "转账或取款短信中含有这些名称时，视为转入自己的账户，不计入支出。名称只保存在此设备上。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "轉帳或提款簡訊中含有這些名稱時，視為轉入自己的帳戶，不計入支出。名稱只保存在此裝置上。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enthält eine Überweisungs- oder Abbuchungs-SMS einen dieser Namen, gilt sie als Umbuchung auf dein eigenes Konto und wird nicht als Ausgabe erfasst. Die Namen bleiben auf diesem Gerät."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si un SMS de virement ou de retrait contient l’un de ces noms, il est traité comme un transfert vers votre propre compte et n’est pas ajouté aux dépenses. Les noms restent sur cet appareil."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se un SMS di bonifico o prelievo contiene uno di questi nomi, viene trattato come spostamento sul tuo conto e non è aggiunto alle spese. I nomi restano su questo dispositivo."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si un SMS de transferencia o retiro contiene uno de estos nombres, se trata como dinero movido a tu propia cuenta y no se añade como gasto. Los nombres se quedan en este dispositivo."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se um SMS de transferência ou saque tiver um destes nomes, é tratado como dinheiro movido para a sua própria conta e não entra como gasto. Os nomes ficam neste dispositivo."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nếu tin nhắn chuyển khoản hoặc rút tiền có một trong các tên này, nó được coi là chuyển sang tài khoản của bạn và không tính là chi tiêu. Tên chỉ lưu trên thiết bị này."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jika SMS transfer atau penarikan memuat salah satu nama ini, dianggap memindahkan uang ke rekening sendiri dan tidak dicatat sebagai pengeluaran. Nama hanya disimpan di perangkat ini."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "หากข้อความโอนหรือถอนเงินมีชื่อเหล่านี้ จะถือว่าเป็นการย้ายเงินเข้าบัญชีของคุณเองและไม่นับเป็นรายจ่าย ชื่อจะเก็บไว้ในอุปกรณ์นี้เท่านั้น"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "अगर ट्रांसफ़र या निकासी के SMS में इनमें से कोई नाम हो, तो उसे अपने ही खाते में भेजा पैसा माना जाता है और खर्च में नहीं जोड़ा जाता। नाम केवल इसी डिवाइस पर रहते हैं।"
+          }
+        }
+      }
+    },
+    "이체로 보임|Looks like a transfer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "振替に見える"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "看起来像转账"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "看起來像轉帳"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sieht wie eine Überweisung aus"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ressemble à un virement"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sembra un trasferimento"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Parece una transferencia"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Parece uma transferência"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Giống chuyển khoản"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tampak seperti transfer"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ดูเหมือนการโอน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ट्रांसफ़र जैसा लगता है"
           }
         }
       }
@@ -327559,6 +328791,83 @@
         }
       }
     },
+    "취소됨|Canceled" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消済み"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已取消"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已取消"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Storniert"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Annulé"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Annullato"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancelado"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancelado"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã hủy"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dibatalkan"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ยกเลิกแล้ว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "रद्द"
+          }
+        }
+      }
+    },
     "취침|Went to bed" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -343340,6 +344649,160 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "जाँच रहे हैं"
+          }
+        }
+      }
+    },
+    "확인 필요 {0}건|{0} to review" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要確認 {0}件"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "待确认 {0} 项"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "待確認 {0} 項"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} zu prüfen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} à vérifier"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} da controllare"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} por revisar"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} para verificar"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} mục cần xác nhận"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} perlu diperiksa"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ต้องตรวจ {0} รายการ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} जाँचने हैं"
+          }
+        }
+      }
+    },
+    "확인 필요|Needs review" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要確認"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "待确认"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "待確認"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zu prüfen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "À vérifier"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Da controllare"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Por revisar"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Para verificar"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cần xác nhận"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perlu diperiksa"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ต้องตรวจ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "जाँच ज़रूरी"
           }
         }
       }

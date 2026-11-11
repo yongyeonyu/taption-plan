@@ -73,8 +73,8 @@ struct LedgerSummary: Equatable {
                                 trip: LedgerTrip?, sheet: LedgerTripSheet?) -> LedgerSummary {
         LedgerSummary(
             title: title, rangeText: range, entries: entries, carryOver: carryOver,
-            income: entries.filter { $0.kind == .income }.reduce(0) { $0 + ($1.amountKRW ?? 0) },
-            expense: entries.filter { $0.kind == .expense }.reduce(0) { $0 + ($1.amountKRW ?? 0) },
+            income: entries.filter { $0.kind == .income }.reduce(0) { $0 + $1.countedKRW },
+            expense: entries.filter { $0.kind == .expense }.reduce(0) { $0 + $1.countedKRW },
             budget: budget, trip: trip, sheet: sheet
         )
     }

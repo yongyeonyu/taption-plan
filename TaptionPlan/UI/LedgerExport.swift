@@ -26,7 +26,7 @@ enum LedgerStandard {
     static func rows(_ entries: [LedgerEntry], carryOver: Double, language: MapHomeLanguage) -> [Row] {
         var balance = carryOver
         return entries.sorted { $0.occurredAt < $1.occurredAt }.map { entry in
-            let amount = entry.amountKRW ?? 0
+            let amount = entry.countedKRW
             balance += entry.kind == .income ? amount : -amount
             return Row(date: entry.occurredAt, isIncome: entry.kind == .income, category: entry.category.title(language), memo: entry.title,
                        amount: amount, balance: balance, note: note(entry, language: language))
@@ -68,7 +68,7 @@ enum LedgerStandard {
     static func byCategory(_ entries: [LedgerEntry], language: MapHomeLanguage) -> [(String, Double)] {
         let expenses = entries.filter { $0.kind == .expense && $0.transfer == nil }
         return Dictionary(grouping: expenses) { $0.category.title(language) }
-            .map { ($0.key, $0.value.reduce(0) { $0 + ($1.amountKRW ?? 0) }) }
+            .map { ($0.key, $0.value.reduce(0) { $0 + $1.countedKRW }) }
             .sorted { $0.1 != $1.1 ? $0.1 > $1.1 : $0.0 < $1.0 }
     }
 }

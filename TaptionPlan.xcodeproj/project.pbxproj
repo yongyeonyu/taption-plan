@@ -239,6 +239,7 @@
 		A1A1110A0300000000000010 /* AssistantPhase3Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000010 /* AssistantPhase3Tests.swift */; };
 		A1A1110A0600000000000002 /* AssistantReviewFixTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0600000000000002 /* AssistantReviewFixTests.swift */; };
 		A1C1110A0900000000000002 /* TripItemStatusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1C1110A0900000000000002 /* TripItemStatusTests.swift */; };
+		A1P1111S0200000000000031 /* LedgerReviewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1P1111S0200000000000031 /* LedgerReviewTests.swift */; };
 		A1P1111S0200000000000021 /* LedgerMessageAccuracyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1P1111S0200000000000021 /* LedgerMessageAccuracyTests.swift */; };
 		A1P1111S0200000000000011 /* GPXTrackExportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1P1111S0200000000000011 /* GPXTrackExportTests.swift */; };
 		A1000000000000000B1104C2 /* TaptionRaisedFaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1104C2 /* TaptionRaisedFaceTests.swift */; };
@@ -320,6 +321,8 @@
 		B1080801000000000000A003 /* ReviewCoverageEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080801000000000000F003 /* ReviewCoverageEngine.swift */; };
 		A1L1110A0100000000000001 /* LedgerCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1110A0100000000000001 /* LedgerCore.swift */; };
 		A1T1111A0100000000000001 /* TravelGreatCircleAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1T1111A0100000000000001 /* TravelGreatCircleAdapter.swift */; };
+		A1L1111R0200000000000001 /* LedgerReviewBand.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111R0200000000000001 /* LedgerReviewBand.swift */; };
+		A1L1111R0100000000000001 /* LedgerReview.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111R0100000000000001 /* LedgerReview.swift */; };
 		A1G1111X0300000000000001 /* MapHomePorcelainMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1G1111X0300000000000001 /* MapHomePorcelainMap.swift */; };
 		A1G1111X0200000000000001 /* GPXExportCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1G1111X0200000000000001 /* GPXExportCard.swift */; };
 		A1G1111X0100000000000001 /* GPXTrackExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1G1111X0100000000000001 /* GPXTrackExport.swift */; };
@@ -982,6 +985,7 @@
 		F1A1110A0300000000000010 /* AssistantPhase3Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantPhase3Tests.swift; sourceTree = "<group>"; };
 		F1A1110A0600000000000002 /* AssistantReviewFixTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantReviewFixTests.swift; sourceTree = "<group>"; };
 		F1C1110A0900000000000002 /* TripItemStatusTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripItemStatusTests.swift; sourceTree = "<group>"; };
+		F1P1111S0200000000000031 /* LedgerReviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerReviewTests.swift; sourceTree = "<group>"; };
 		F1P1111S0200000000000021 /* LedgerMessageAccuracyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerMessageAccuracyTests.swift; sourceTree = "<group>"; };
 		F1P1111S0200000000000011 /* GPXTrackExportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GPXTrackExportTests.swift; sourceTree = "<group>"; };
 		F1000000000000000B1104C2 /* TaptionRaisedFaceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionRaisedFaceTests.swift; sourceTree = "<group>"; };
@@ -1062,6 +1066,8 @@
 		B1080801000000000000F003 /* ReviewCoverageEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewCoverageEngine.swift; sourceTree = "<group>"; };
 		F1L1110A0100000000000001 /* LedgerCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerCore.swift; sourceTree = "<group>"; };
 		F1T1111A0100000000000001 /* TravelGreatCircleAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelGreatCircleAdapter.swift; sourceTree = "<group>"; };
+		F1L1111R0200000000000001 /* LedgerReviewBand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerReviewBand.swift; sourceTree = "<group>"; };
+		F1L1111R0100000000000001 /* LedgerReview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerReview.swift; sourceTree = "<group>"; };
 		F1G1111X0300000000000001 /* MapHomePorcelainMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePorcelainMap.swift; sourceTree = "<group>"; };
 		F1G1111X0200000000000001 /* GPXExportCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GPXExportCard.swift; sourceTree = "<group>"; };
 		F1G1111X0100000000000001 /* GPXTrackExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GPXTrackExport.swift; sourceTree = "<group>"; };
@@ -1608,6 +1614,7 @@
 				F1A1110A0300000000000010 /* AssistantPhase3Tests.swift */,
 				F1A1110A0600000000000002 /* AssistantReviewFixTests.swift */,
 				F1C1110A0900000000000002 /* TripItemStatusTests.swift */,
+				F1P1111S0200000000000031 /* LedgerReviewTests.swift */,
 				F1P1111S0200000000000021 /* LedgerMessageAccuracyTests.swift */,
 				F1P1111S0200000000000011 /* GPXTrackExportTests.swift */,
 				F1000000000000000B1104C2 /* TaptionRaisedFaceTests.swift */,
@@ -1896,6 +1903,7 @@
 				F1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift */,
 				C1CA1111A010000000000003 /* MapHomeLaunchPrompts.swift */,
 				CA1A1111A010000000000003 /* AITaskPanel.swift */,
+				F1L1111R0200000000000001 /* LedgerReviewBand.swift */,
 				F1G1111X0300000000000001 /* MapHomePorcelainMap.swift */,
 				F1G1111X0200000000000001 /* GPXExportCard.swift */,
 				F1R1111A0200000000000001 /* MapHomeTripPlayback.swift */,
@@ -2103,6 +2111,7 @@
 				B1080801000000000000F003 /* ReviewCoverageEngine.swift */,
 				F1L1110A0100000000000001 /* LedgerCore.swift */,
 				F1T1111A0100000000000001 /* TravelGreatCircleAdapter.swift */,
+				F1L1111R0100000000000001 /* LedgerReview.swift */,
 				F1G1111X0100000000000001 /* GPXTrackExport.swift */,
 				F1L1111T0100000000000001 /* LedgerTollRepeat.swift */,
 				F1T1111B0100000000000001 /* TravelAirportsAndFares.swift */,
@@ -2996,6 +3005,8 @@
 				B1080801000000000000A003 /* ReviewCoverageEngine.swift in Sources */,
 				A1L1110A0100000000000001 /* LedgerCore.swift in Sources */,
 				A1T1111A0100000000000001 /* TravelGreatCircleAdapter.swift in Sources */,
+				A1L1111R0200000000000001 /* LedgerReviewBand.swift in Sources */,
+				A1L1111R0100000000000001 /* LedgerReview.swift in Sources */,
 				A1G1111X0300000000000001 /* MapHomePorcelainMap.swift in Sources */,
 				A1G1111X0200000000000001 /* GPXExportCard.swift in Sources */,
 				A1G1111X0100000000000001 /* GPXTrackExport.swift in Sources */,
@@ -3096,6 +3107,7 @@
 				A1A1110A0300000000000010 /* AssistantPhase3Tests.swift in Sources */,
 				A1A1110A0600000000000002 /* AssistantReviewFixTests.swift in Sources */,
 				A1C1110A0900000000000002 /* TripItemStatusTests.swift in Sources */,
+				A1P1111S0200000000000031 /* LedgerReviewTests.swift in Sources */,
 				A1P1111S0200000000000021 /* LedgerMessageAccuracyTests.swift in Sources */,
 				A1P1111S0200000000000011 /* GPXTrackExportTests.swift in Sources */,
 				A1000000000000000B1104C2 /* TaptionRaisedFaceTests.swift in Sources */,
