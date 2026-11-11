@@ -6,7 +6,7 @@
 import { json, readBody, writeAllowed } from "./http.js";
 import { allows } from "./keys.js";
 import { claimTasks, endConversation, finishTask, queueCommand, readActivity, readPolish, readResults, readSummary, savePlan } from "./store.js";
-import { ACTIONS, DISPLAY_OPTIONS, EXPENSE_CATEGORIES, LANGUAGES, MAP_STYLES, TASK_KINDS, TASK_STATUSES, THEMES, TRAVEL_MODES, TRIP_STATUSES } from "./validate.js";
+import { ACTIONS, DISPLAY_OPTIONS, EXPENSE_CATEGORIES, LANGUAGES, MAP_STYLES, PAYMENT_RULE_KINDS, TASK_KINDS, TASK_STATUSES, THEMES, TRAVEL_MODES, TRIP_STATUSES } from "./validate.js";
 
 export const PROTOCOL_VERSION = "2025-06-18";
 const SERVER_INFO = { name: "taption-plan", title: "Taption Plan", version: "3.0.0" };
@@ -64,6 +64,8 @@ const TOOLS = [
     + "the merchant, category or amount with update_expense (or delete it if the text is not a payment, or cancels an earlier one). "
     + "Without entryId the app could not read it: find amount, currency, merchant and time and call add_expense (date from the text or date). "
     + "If it is not a payment, complete with status failed and a reason. "
+    + "payment_rule: text is a payment message the app could not read. Send add_payment_rule with a pattern for that issuer's layout "
+    + "(text as sample) so the app reads this format by itself from now on, or kind ignore if it is not a payment; then complete the task. "
     + "memo_polish: polish context.memoId with update_memo (keep facts). "
     + "route_check / merge_review / stay_place: read get_activity for date, then fix with update_activity, merge_records, update_record_time, "
     + "set_travel_mode or classify_unconfirmed as context describes. fare_check: work out the bus, subway or toll fare for the trip in context and record it with add_expense "
@@ -88,6 +90,17 @@ const TOOLS = [
     { entryId: str("Ledger entry id"), amount: { type: "number", description: "Positive amount in the currency", exclusiveMinimum: 0, maximum: 1e10 },
       currency: str("ISO 4217", { pattern: "^[A-Z]{3}$" }), title: str("1-60 characters", { maxLength: 60 }), category: enumOf("Category", EXPENSE_CATEGORIES),
       kind: enumOf("expense or income", ["expense", "income"]), delete: { type: "boolean", description: "true to delete the entry" } }, ["entryId"]),
+  addTool("add_payment_rule", "addPaymentRule", "Add payment message rule", "Teach the app to read one issuer's payment message layout by itself "
+    + "(answer to an AI task of kind payment_rule). pattern is an ICU regular expression (iOS NSRegularExpression; the dot also matches newlines) "
+    + "with named groups: (?<amount>...) required unless kind is ignore, digits with optional commas or a decimal point; optional (?<merchant>...), "
+    + "(?<month>...), (?<day>...), (?<hour>...), (?<minute>...) and (?<currency>...) (3-letter code, default KRW). Make the pattern specific to "
+    + "that issuer's layout: anchor on the fixed words of the message and never send a catch-all such as .* alone. Masked digits (*) vary, so match "
+    + "them with a class, and do not put the user's name or card digits in the pattern literally. The pattern must match sample (the task text); "
+    + "the app checks this and rejects the rule otherwise. kind: expense (default), income, or ignore (this kind of text is not a payment and "
+    + "should never be added; no amount group needed).",
+    { name: str("Issuer label, 1-40 characters, e.g. 신한카드", { maxLength: 40 }), pattern: str("ICU regular expression with named groups, 1-300 characters", { maxLength: 300 }),
+      sample: str("The message the pattern must match, 1-1000 characters", { maxLength: 1000 }), kind: enumOf("expense (default), income or ignore", PAYMENT_RULE_KINDS) },
+    ["name", "pattern", "sample"]),
   addTool("add_schedule", "addSchedule", "Add schedule", "Add a planned activity. Without end it lasts one hour.",
     { title: str("1-200 characters"), start: INSTANT("Start"), end: INSTANT("End, after start"), note: str("Up to 1000 characters") }, ["title", "start"]),
   commandTool("update_activity", "updateActivity", "Rename or recategorize a record", "Correct a record's title and/or category. Target by recordId or the startTime it covers.",

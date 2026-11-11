@@ -636,7 +636,7 @@
    "ko": "AI 말풍선",
    "en": "AI speech bubbles",
    "files": [
-    "AssistantCommandEdits.swift:44"
+    "AssistantCommandEdits.swift:46"
    ],
    "args": [],
    "targets": [
@@ -660,7 +660,7 @@
    "ko": "AI 비서 요청을 반영했어요",
    "en": "Applied AI assistant requests",
    "files": [
-    "AssistantCommands.swift:339"
+    "AssistantCommands.swift:343"
    ],
    "args": [],
    "targets": [
@@ -796,7 +796,7 @@
    "ko": "AI 연결이 없어요. 메뉴 › AI 연결에서 연결하면 앱이 못한 일을 AI가 처리해요.",
    "en": "No AI is connected. Connect one in Menu › AI connection to let it handle what the app couldn't.",
    "files": [
-    "AITaskPanel.swift:14"
+    "AITaskPanel.swift:17"
    ],
    "args": [],
    "targets": [
@@ -851,6 +851,18 @@
    "args": [
     "mark.by"
    ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "AI가 이 형식을 읽는 규칙을 보내면 앱이 저장하고, 그 뒤 같은 문자는 앱이 스스로 넣어요. 개발자에게 보내면 다음 버전에 모두에게 반영돼요.|When your AI sends a rule for this format the app saves it and reads the same kind of text by itself. Mail the developer to get it built in for everyone.",
+   "ko": "AI가 이 형식을 읽는 규칙을 보내면 앱이 저장하고, 그 뒤 같은 문자는 앱이 스스로 넣어요. 개발자에게 보내면 다음 버전에 모두에게 반영돼요.",
+   "en": "When your AI sends a rule for this format the app saves it and reads the same kind of text by itself. Mail the developer to get it built in for everyone.",
+   "files": [
+    "LedgerMessageRules.swift:263"
+   ],
+   "args": [],
    "targets": [
     "TaptionPlan"
    ]
@@ -930,6 +942,30 @@
    ]
   },
   {
+   "key": "AI에게 규칙 추가 요청|Ask AI to add a rule",
+   "ko": "AI에게 규칙 추가 요청",
+   "en": "Ask AI to add a rule",
+   "files": [
+    "LedgerMessageRules.swift:253"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "AI에게 맡겼어요. 규칙이 오면 이 문자도 다시 읽어 넣어요.|Sent to your AI. When the rule arrives this text is read again.",
+   "ko": "AI에게 맡겼어요. 규칙이 오면 이 문자도 다시 읽어 넣어요.",
+   "en": "Sent to your AI. When the rule arrives this text is read again.",
+   "files": [
+    "LedgerMessageRules.swift:282"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "AI에게 맡겼어요. 메모 › AI에서 볼 수 있어요.|Sent to your AI. See Memo › AI.",
    "ko": "AI에게 맡겼어요. 메모 › AI에서 볼 수 있어요.",
    "en": "Sent to your AI. See Memo › AI.",
@@ -946,7 +982,7 @@
    "ko": "AI에게 맡긴 일이 없어요.",
    "en": "Nothing is waiting for your AI.",
    "files": [
-    "AITaskPanel.swift:17"
+    "AITaskPanel.swift:20"
    ],
    "args": [],
    "targets": [
@@ -2751,7 +2787,7 @@
    "ko": "{0} {1} 결제를 취소됨으로 표시했어요.",
    "en": "Marked {0} {1} as canceled.",
    "files": [
-    "LedgerIntents.swift:77"
+    "LedgerIntents.swift:99"
    ],
    "args": [
     "original.title",
@@ -2812,9 +2848,9 @@
    "ko": "{0} {1}을 가계부에 넣었어요.",
    "en": "Added {0} {1} to the ledger.",
    "files": [
-    "LedgerIntents.swift:100",
-    "SiriIntents.swift:96",
-    "SiriIntents.swift:130"
+    "LedgerIntents.swift:63",
+    "LedgerIntents.swift:122",
+    "SiriIntents.swift:96"
    ],
    "args": [
     "saved.title",
@@ -2829,7 +2865,7 @@
    "ko": "{0} {1}을 수입으로 넣었어요.",
    "en": "Added {0} {1} as income.",
    "files": [
-    "LedgerIntents.swift:51"
+    "LedgerIntents.swift:73"
    ],
    "args": [
     "saved.title",
@@ -2914,6 +2950,21 @@
    ]
   },
   {
+   "key": "{0} · 받은 문자 {1}건 넣음|{0} · added {1} received text(s)",
+   "ko": "{0} · 받은 문자 {1}건 넣음",
+   "en": "{0} · added {1} received text(s)",
+   "files": [
+    "LedgerMessageRules.swift:114"
+   ],
+   "args": [
+    "rule.name",
+    "added"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "{0} · 열 수 없음(손상되었거나 충돌 버전이 있음)|{0} · unreadable (damaged or has conflicting versions)",
    "ko": "{0} · 열 수 없음(손상되었거나 충돌 버전이 있음)",
    "en": "{0} · unreadable (damaged or has conflicting versions)",
@@ -2932,7 +2983,7 @@
    "ko": "{0} 결제를 「확인 필요」에 두었어요. 메모 › 지출에서 넣거나 버릴 수 있어요.",
    "en": "{0} is waiting in Needs review. Add or discard it in Memo › Spending.",
    "files": [
-    "LedgerIntents.swift:93"
+    "LedgerIntents.swift:115"
    ],
    "args": [
     "money"
@@ -20789,8 +20840,8 @@
    "ko": "그 뒤에 바뀐 내용이 있어 되돌리지 못했어요. 앱에서 직접 고쳐 주세요.",
    "en": "It changed afterwards, so it couldn't be undone. Please edit it in the app.",
    "files": [
-    "AssistantActionLog.swift:259",
-    "AssistantActionLog.swift:268"
+    "AssistantActionLog.swift:261",
+    "AssistantActionLog.swift:270"
    ],
    "args": [],
    "targets": [
@@ -32883,6 +32934,18 @@
    ]
   },
   {
+   "key": "「BOKKI 결제」 스위치를 켜요. iOS는 가져온 자동화를 꺼진 채로 넣어요.|Turn on the BOKKI Payment switch. iOS adds shared automations switched off.",
+   "ko": "「BOKKI 결제」 스위치를 켜요. iOS는 가져온 자동화를 꺼진 채로 넣어요.",
+   "en": "Turn on the BOKKI Payment switch. iOS adds shared automations switched off.",
+   "files": [
+    "BokkiShortcutsGuide.swift:131"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "「BOKKI 결제」를 넣은 뒤 따라 하기로 자동화를 만들어요. 앱이 결제만 골라 가계부에 넣고, 나머지는 넣지도 AI에 보내지도 않아요.|Add BOKKI Payment, then follow the steps to make the automation. The app keeps payments only; nothing else is saved or sent to AI.",
    "ko": "「BOKKI 결제」를 넣은 뒤 따라 하기로 자동화를 만들어요. 앱이 결제만 골라 가계부에 넣고, 나머지는 넣지도 AI에 보내지도 않아요.",
    "en": "Add BOKKI Payment, then follow the steps to make the automation. The app keeps payments only; nothing else is saved or sent to AI.",
@@ -32939,7 +33002,7 @@
    "ko": "「결제 알림 넣기」 넣기",
    "en": "Add \"Add payment alert\"",
    "files": [
-    "BokkiShortcutsGuide.swift:154"
+    "BokkiShortcutsGuide.swift:238"
    ],
    "args": [],
    "targets": [
@@ -32975,7 +33038,7 @@
    "ko": "「실행 시 보기」 끄기 · 완료",
    "en": "Turn off Show When Run · Done",
    "files": [
-    "BokkiShortcutsGuide.swift:158"
+    "BokkiShortcutsGuide.swift:242"
    ],
    "args": [],
    "targets": [
@@ -32999,7 +33062,7 @@
    "ko": "「자동화」 › 「알림」",
    "en": "Automation › Notification",
    "files": [
-    "BokkiShortcutsGuide.swift:150"
+    "BokkiShortcutsGuide.swift:234"
    ],
    "args": [],
    "targets": [
@@ -33049,7 +33112,7 @@
    "ko": "가계부 {0}개",
    "en": "{0} ledger entr(ies)",
    "files": [
-    "AssistantCommands.swift:337"
+    "AssistantCommands.swift:341"
    ],
    "args": [
     "ledger"
@@ -33075,7 +33138,7 @@
    "ko": "가계부 기록 고치기",
    "en": "Edit ledger entries",
    "files": [
-    "AssistantCommandEdits.swift:46"
+    "AssistantCommandEdits.swift:48"
    ],
    "args": [],
    "targets": [
@@ -33087,7 +33150,7 @@
    "ko": "가계부 기록 더하기",
    "en": "Add ledger entries",
    "files": [
-    "AssistantCommandEdits.swift:45"
+    "AssistantCommandEdits.swift:47"
    ],
    "args": [],
    "targets": [
@@ -33159,7 +33222,19 @@
    "ko": "가계부에 넣을 결제 문자가 아니에요.",
    "en": "Not a payment message, so nothing was added.",
    "files": [
-    "LedgerIntents.swift:55"
+    "LedgerIntents.swift:77"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "가계부에 넣지 않는 문자예요.|This kind of text is not added to the ledger.",
+   "ko": "가계부에 넣지 않는 문자예요.",
+   "en": "This kind of text is not added to the ledger.",
+   "files": [
+    "LedgerIntents.swift:53"
    ],
    "args": [],
    "targets": [
@@ -33209,7 +33284,7 @@
    "ko": "가림",
    "en": "Hidden",
    "files": [
-    "AssistantCommandEdits.swift:262"
+    "AssistantCommandEdits.swift:268"
    ],
    "args": [],
    "targets": [
@@ -33442,11 +33517,23 @@
    ]
   },
   {
+   "key": "개발자에게 추가 요청 메일|Email the developer",
+   "ko": "개발자에게 추가 요청 메일",
+   "en": "Email the developer",
+   "files": [
+    "LedgerMessageRules.swift:256"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "개인용|Personal",
    "ko": "개인용",
    "en": "Personal",
    "files": [
-    "BokkiShortcutsGuide.swift:148"
+    "BokkiShortcutsGuide.swift:232"
    ],
    "args": [],
    "targets": [
@@ -33992,7 +34079,7 @@
    "ko": "검색: BOKKI",
    "en": "Search: BOKKI",
    "files": [
-    "BokkiShortcutsGuide.swift:155"
+    "BokkiShortcutsGuide.swift:239"
    ],
    "args": [],
    "targets": [
@@ -34053,6 +34140,30 @@
    ]
   },
   {
+   "key": "결제 문자 규칙 요청|Payment rule request",
+   "ko": "결제 문자 규칙 요청",
+   "en": "Payment rule request",
+   "files": [
+    "AITaskPanel.swift:139"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "결제 문자 읽기 규칙 더하기|Add payment text rules",
+   "ko": "결제 문자 읽기 규칙 더하기",
+   "en": "Add payment text rules",
+   "files": [
+    "AssistantCommandEdits.swift:51"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "결제 문자 자동으로 넣기|Add payment texts automatically",
    "ko": "결제 문자 자동으로 넣기",
    "en": "Add payment texts automatically",
@@ -34070,7 +34181,7 @@
    "ko": "결제 문자 확인",
    "en": "Payment text",
    "files": [
-    "AITaskPanel.swift:125"
+    "AITaskPanel.swift:132"
    ],
    "args": [],
    "targets": [
@@ -34119,7 +34230,7 @@
    "ko": "결제 문자를 읽지 못해 AI에게 확인을 맡겼어요.",
    "en": "Couldn't read the payment text, so it was sent to your AI to check.",
    "files": [
-    "LedgerIntents.swift:65"
+    "LedgerIntents.swift:87"
    ],
    "args": [],
    "targets": [
@@ -34131,7 +34242,7 @@
    "ko": "결제 문자를 읽지 못했어요. 가계부에서 직접 넣어 주세요.",
    "en": "Couldn't read the payment text. Add it in the ledger yourself.",
    "files": [
-    "LedgerIntents.swift:67"
+    "LedgerIntents.swift:89"
    ],
    "args": [],
    "targets": [
@@ -34143,8 +34254,8 @@
    "ko": "결제 알림 넣기",
    "en": "Add payment alert",
    "files": [
-    "BokkiShortcutsGuide.swift:156",
-    "BokkiShortcutsGuide.swift:159"
+    "BokkiShortcutsGuide.swift:240",
+    "BokkiShortcutsGuide.swift:243"
    ],
    "args": [],
    "targets": [
@@ -34156,7 +34267,7 @@
    "ko": "결제 앱 알림 자동화",
    "en": "Payment alert automation",
    "files": [
-    "BokkiShortcutsGuide.swift:199"
+    "BokkiShortcutsGuide.swift:283"
    ],
    "args": [],
    "targets": [
@@ -34168,7 +34279,7 @@
    "ko": "결제 앱 알림으로도 넣기(iOS 27) 따라 하기",
    "en": "Also use payment app alerts (iOS 27)",
    "files": [
-    "BokkiShortcutsGuide.swift:122"
+    "BokkiShortcutsGuide.swift:206"
    ],
    "args": [],
    "targets": [
@@ -34216,7 +34327,7 @@
    "ko": "경로 확인",
    "en": "Route check",
    "files": [
-    "AITaskPanel.swift:128"
+    "AITaskPanel.swift:135"
    ],
    "args": [],
    "targets": [
@@ -34324,7 +34435,7 @@
    "ko": "계절",
    "en": "Seasons",
    "files": [
-    "AssistantDataActions.swift:362",
+    "AssistantDataActions.swift:369",
     "MapHomeView+Map.swift:938"
    ],
    "args": [],
@@ -34919,7 +35030,7 @@
    "ko": "교통비 확인",
    "en": "Fare check",
    "files": [
-    "AITaskPanel.swift:129"
+    "AITaskPanel.swift:136"
    ],
    "args": [],
    "targets": [
@@ -35305,8 +35416,8 @@
    "ko": "그 뒤에 바뀐 내용이 있어 되돌리지 못했어요. 앱에서 직접 고쳐 주세요.",
    "en": "It changed afterwards, so it couldn't be undone. Please edit it in the app.",
    "files": [
-    "AssistantActionLog.swift:258",
-    "AssistantActionLog.swift:267"
+    "AssistantActionLog.swift:260",
+    "AssistantActionLog.swift:269"
    ],
    "args": [],
    "targets": [
@@ -35735,7 +35846,7 @@
    "ko": "기록 가리기",
    "en": "Hide records",
    "files": [
-    "AssistantCommandEdits.swift:26"
+    "AssistantCommandEdits.swift:28"
    ],
    "args": [],
    "targets": [
@@ -35809,7 +35920,7 @@
    "ko": "기록 수정 {0}개",
    "en": "{0} record edit(s)",
    "files": [
-    "AssistantCommands.swift:334"
+    "AssistantCommands.swift:338"
    ],
    "args": [
     "edits"
@@ -35837,7 +35948,7 @@
    "ko": "기록 시간 고치기",
    "en": "Change record times",
    "files": [
-    "AssistantCommandEdits.swift:28"
+    "AssistantCommandEdits.swift:30"
    ],
    "args": [],
    "targets": [
@@ -35849,7 +35960,7 @@
    "ko": "기록 이름·분류 고치기",
    "en": "Rename or reclassify records",
    "files": [
-    "AssistantCommandEdits.swift:25"
+    "AssistantCommandEdits.swift:27"
    ],
    "args": [],
    "targets": [
@@ -35885,7 +35996,7 @@
    "ko": "기록 합치기",
    "en": "Merge records",
    "files": [
-    "AssistantCommandEdits.swift:27"
+    "AssistantCommandEdits.swift:29"
    ],
    "args": [],
    "targets": [
@@ -36196,7 +36307,7 @@
    "ko": "기타 확인",
    "en": "Other",
    "files": [
-    "AITaskPanel.swift:132"
+    "AITaskPanel.swift:140"
    ],
    "args": [],
    "targets": [
@@ -36362,7 +36473,7 @@
    "ko": "끔",
    "en": "Off",
    "files": [
-    "AssistantDataActions.swift:375",
+    "AssistantDataActions.swift:382",
     "MapHomeAppleWatchMenuItem.swift:132"
    ],
    "args": [],
@@ -36412,7 +36523,7 @@
    "ko": "끝난 일 지우기",
    "en": "Clear finished",
    "files": [
-    "AITaskPanel.swift:32"
+    "AITaskPanel.swift:35"
    ],
    "args": [],
    "targets": [
@@ -36753,7 +36864,7 @@
    "ko": "내 계좌로 옮긴 돈이라 가계부에 넣지 않았어요.",
    "en": "That was a transfer to your own account, so nothing was added.",
    "files": [
-    "LedgerIntents.swift:59"
+    "LedgerIntents.swift:81"
    ],
    "args": [],
    "targets": [
@@ -37147,7 +37258,7 @@
    "ko": "다 했어요",
    "en": "All done",
    "files": [
-    "BokkiShortcutsGuide.swift:192"
+    "BokkiShortcutsGuide.swift:276"
    ],
    "args": [],
    "targets": [
@@ -37349,8 +37460,8 @@
    "en": "Next",
    "files": [
     "AssistantConnectGuide.swift:175",
-    "BokkiShortcutsGuide.swift:194",
-    "WatchTodayCards.swift:120"
+    "BokkiShortcutsGuide.swift:190",
+    "BokkiShortcutsGuide.swift:278"
    ],
    "args": [],
    "targets": [
@@ -37401,7 +37512,7 @@
    "ko": "단축어 앱 › 자동화에서 아래 + 를 누르면 새 단축어 편집 화면이 열려요.",
    "en": "In Shortcuts › Automation, tap + at the bottom. A new shortcut editor opens.",
    "files": [
-    "BokkiShortcutsGuide.swift:149"
+    "BokkiShortcutsGuide.swift:233"
    ],
    "args": [],
    "targets": [
@@ -37414,7 +37525,32 @@
    "en": "Open Shortcuts",
    "files": [
     "BokkiShortcutsGuide.swift:36",
-    "BokkiShortcutsGuide.swift:184"
+    "BokkiShortcutsGuide.swift:182",
+    "BokkiShortcutsGuide.swift:268"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "단축어 앱에서 추가하기|Add in Shortcuts",
+   "ko": "단축어 앱에서 추가하기",
+   "en": "Add in Shortcuts",
+   "files": [
+    "BokkiShortcutsGuide.swift:177"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "단축어 앱이 열리면 「단축어 추가」를 눌러요.|When Shortcuts opens, tap Add Shortcut.",
+   "ko": "단축어 앱이 열리면 「단축어 추가」를 눌러요.",
+   "en": "When Shortcuts opens, tap Add Shortcut.",
+   "files": [
+    "BokkiShortcutsGuide.swift:128"
    ],
    "args": [],
    "targets": [
@@ -37427,8 +37563,8 @@
    "en": "Close",
    "files": [
     "AppShellView.swift:1131",
-    "BokkiShortcutsGuide.swift:201",
-    "FirstRunTutorialGuides.swift:459"
+    "BokkiShortcutsGuide.swift:166",
+    "BokkiShortcutsGuide.swift:285"
    ],
    "args": [],
    "targets": [
@@ -37531,7 +37667,7 @@
    "ko": "대기",
    "en": "Waiting",
    "files": [
-    "AITaskPanel.swift:103",
+    "AITaskPanel.swift:110",
     "MapHomeView+Support2.swift:910",
     "SensorCollectionLiveActivity.swift:265"
    ],
@@ -38252,7 +38388,7 @@
    "ko": "두 스위치를 끄고 왼쪽 위 「<」로 저장하면 끝이에요.",
    "en": "Turn both switches off and tap < to save.",
    "files": [
-    "BokkiShortcutsGuide.swift:161"
+    "BokkiShortcutsGuide.swift:245"
    ],
    "args": [],
    "targets": [
@@ -38599,7 +38735,7 @@
    "ko": "루틴 고치기",
    "en": "Edit routines",
    "files": [
-    "AssistantCommandEdits.swift:34"
+    "AssistantCommandEdits.swift:36"
    ],
    "args": [],
    "targets": [
@@ -38611,7 +38747,7 @@
    "ko": "루틴 더하기",
    "en": "Add routines",
    "files": [
-    "AssistantCommandEdits.swift:33"
+    "AssistantCommandEdits.swift:35"
    ],
    "args": [],
    "targets": [
@@ -38623,7 +38759,7 @@
    "ko": "루틴 지우기",
    "en": "Delete routines",
    "files": [
-    "AssistantCommandEdits.swift:35"
+    "AssistantCommandEdits.swift:37"
    ],
    "args": [],
    "targets": [
@@ -38797,7 +38933,7 @@
    "ko": "말풍선 {0}개",
    "en": "{0} bubble(s)",
    "files": [
-    "AssistantCommands.swift:336"
+    "AssistantCommands.swift:340"
    ],
    "args": [
     "bubbles"
@@ -38945,7 +39081,7 @@
    "ko": "머문 장소 확인",
    "en": "Stay place",
    "files": [
-    "AITaskPanel.swift:131"
+    "AITaskPanel.swift:138"
    ],
    "args": [],
    "targets": [
@@ -39238,7 +39374,7 @@
    "ko": "메모 {0}개",
    "en": "{0} memo(s)",
    "files": [
-    "AssistantCommands.swift:332"
+    "AssistantCommands.swift:336"
    ],
    "args": [
     "memos"
@@ -39264,7 +39400,7 @@
    "ko": "메모 고치기",
    "en": "Edit memos",
    "files": [
-    "AssistantCommandEdits.swift:31"
+    "AssistantCommandEdits.swift:33"
    ],
    "args": [],
    "targets": [
@@ -39288,7 +39424,7 @@
    "ko": "메모 다듬기",
    "en": "Polish memo",
    "files": [
-    "AITaskPanel.swift:127"
+    "AITaskPanel.swift:134"
    ],
    "args": [],
    "targets": [
@@ -39300,7 +39436,7 @@
    "ko": "메모 더하기",
    "en": "Add memos",
    "files": [
-    "AssistantCommandEdits.swift:23"
+    "AssistantCommandEdits.swift:25"
    ],
    "args": [],
    "targets": [
@@ -39360,7 +39496,7 @@
    "ko": "메모 지우기",
    "en": "Delete memos",
    "files": [
-    "AssistantCommandEdits.swift:32"
+    "AssistantCommandEdits.swift:34"
    ],
    "args": [],
    "targets": [
@@ -39484,7 +39620,7 @@
    "ko": "메시지",
    "en": "Message",
    "files": [
-    "BokkiShortcutsGuide.swift:152"
+    "BokkiShortcutsGuide.swift:236"
    ],
    "args": [],
    "targets": [
@@ -39656,7 +39792,7 @@
    "ko": "못 한 것 {0}개",
    "en": "{0} not done",
    "files": [
-    "AssistantCommands.swift:338"
+    "AssistantCommands.swift:342"
    ],
    "args": [
     "rejected"
@@ -39848,7 +39984,7 @@
    "ko": "미확인 시간 분류하기",
    "en": "Classify unconfirmed time",
    "files": [
-    "AssistantCommandEdits.swift:47"
+    "AssistantCommandEdits.swift:49"
    ],
    "args": [],
    "targets": [
@@ -39884,7 +40020,7 @@
    "ko": "미확인",
    "en": "Unconfirmed",
    "files": [
-    "AssistantDataActions.swift:133",
+    "AssistantDataActions.swift:140",
     "MapHomeLocationPresentation.swift:311",
     "MapHomeNLEClipEditor.swift:459"
    ],
@@ -40095,11 +40231,35 @@
    ]
   },
   {
+   "key": "받은 결제 문자·알림|Payment texts received",
+   "ko": "받은 결제 문자·알림",
+   "en": "Payment texts received",
+   "files": [
+    "LedgerMessageRules.swift:186"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "받은 금액|Received",
    "ko": "받은 금액",
    "en": "Received",
    "files": [
     "MapHomeSalarySettingsSheet.swift:238"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "받은 문자|Received text",
+   "ko": "받은 문자",
+   "en": "Received text",
+   "files": [
+    "LedgerMessageRules.swift:267"
    ],
    "args": [],
    "targets": [
@@ -40160,7 +40320,7 @@
    "ko": "방금 같은 금액의 결제가 있어 「확인 필요」에 두었어요.",
    "en": "A payment of the same amount was just added, so this one is waiting in Needs review.",
    "files": [
-    "LedgerIntents.swift:85"
+    "LedgerIntents.swift:107"
    ],
    "args": [],
    "targets": [
@@ -40519,7 +40679,7 @@
    "ko": "백자",
    "en": "Porcelain",
    "files": [
-    "AssistantDataActions.swift:365",
+    "AssistantDataActions.swift:372",
     "MapHomeView+Map.swift:941"
    ],
    "args": [],
@@ -40613,6 +40773,18 @@
    "files": [
     "MapHomeCounterDetailSheet.swift:236",
     "MapHomeCounterTable.swift:402"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "번호는 가려서 이 기기에만 7일 동안 둬요.|Numbers are masked. Kept on this device only, for 7 days.",
+   "ko": "번호는 가려서 이 기기에만 7일 동안 둬요.",
+   "en": "Numbers are masked. Kept on this device only, for 7 days.",
+   "files": [
+    "LedgerMessageRules.swift:247"
    ],
    "args": [],
    "targets": [
@@ -40766,6 +40938,18 @@
    "en": "Show the saved backup password",
    "files": [
     "AppModel+Backup.swift:26"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "보관함에서 「자동화」를 눌러요.|In the library, tap Automation.",
+   "ko": "보관함에서 「자동화」를 눌러요.",
+   "en": "In the library, tap Automation.",
+   "files": [
+    "BokkiShortcutsGuide.swift:130"
    ],
    "args": [],
    "targets": [
@@ -41196,7 +41380,7 @@
    "ko": "불러오는 중…",
    "en": "Loading…",
    "files": [
-    "AITaskPanel.swift:17"
+    "AITaskPanel.swift:20"
    ],
    "args": [],
    "targets": [
@@ -42702,7 +42886,7 @@
    "ko": "설정 {0}개",
    "en": "{0} setting(s)",
    "files": [
-    "AssistantCommands.swift:335"
+    "AssistantCommands.swift:339"
    ],
    "args": [
     "settings"
@@ -43342,7 +43526,7 @@
    "ko": "수면 시간 고치기",
    "en": "Correct sleep times",
    "files": [
-    "AssistantCommandEdits.swift:40"
+    "AssistantCommandEdits.swift:42"
    ],
    "args": [],
    "targets": [
@@ -43396,7 +43580,7 @@
    "ko": "수묵",
    "en": "Ink Wash",
    "files": [
-    "AssistantDataActions.swift:364",
+    "AssistantDataActions.swift:371",
     "MapHomeView+Map.swift:940"
    ],
    "args": [],
@@ -43590,6 +43774,18 @@
    "en": "Stay",
    "files": [
     "TravelModeView.swift:910"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "스위치를 켰어요|I turned it on",
+   "ko": "스위치를 켰어요",
+   "en": "I turned it on",
+   "files": [
+    "BokkiShortcutsGuide.swift:188"
    ],
    "args": [],
    "targets": [
@@ -44188,7 +44384,7 @@
    "ko": "실외(고대비)",
    "en": "Outdoor (high contrast)",
    "files": [
-    "AssistantDataActions.swift:361",
+    "AssistantDataActions.swift:368",
     "MapHomeView+Map.swift:937"
    ],
    "args": [],
@@ -44252,7 +44448,7 @@
    "ko": "실패",
    "en": "Failed",
    "files": [
-    "AITaskPanel.swift:106",
+    "AITaskPanel.swift:113",
     "AppModel+Export.swift:30"
    ],
    "args": [],
@@ -44265,7 +44461,7 @@
    "ko": "실행 시 보기",
    "en": "Show When Run",
    "files": [
-    "BokkiShortcutsGuide.swift:160"
+    "BokkiShortcutsGuide.swift:244"
    ],
    "args": [],
    "targets": [
@@ -44277,7 +44473,7 @@
    "ko": "실행 전에 확인",
    "en": "Ask Before Running",
    "files": [
-    "BokkiShortcutsGuide.swift:160"
+    "BokkiShortcutsGuide.swift:244"
    ],
    "args": [],
    "targets": [
@@ -44327,7 +44523,7 @@
    "ko": "아래 검색에 BOKKI를 적어 「결제 알림 넣기」를 넣고, 「알림 내용」 칸을 눌러 「단축어 입력」을 골라요.",
    "en": "Search BOKKI, add \"Add payment alert\", tap its text field and choose Shortcut Input.",
    "files": [
-    "BokkiShortcutsGuide.swift:157"
+    "BokkiShortcutsGuide.swift:241"
    ],
    "args": [],
    "targets": [
@@ -44387,7 +44583,7 @@
    "ko": "아래 목록 위의 「자동화」를 누르고 「알림」을 고른 뒤, 은행·카드 앱을 골라요.",
    "en": "Tap Automation above the list, choose Notification, then pick your bank and card apps.",
    "files": [
-    "BokkiShortcutsGuide.swift:153"
+    "BokkiShortcutsGuide.swift:237"
    ],
    "args": [],
    "targets": [
@@ -44732,7 +44928,7 @@
    "ko": "알림 내용: 입력",
    "en": "Alert text: Input",
    "files": [
-    "BokkiShortcutsGuide.swift:156"
+    "BokkiShortcutsGuide.swift:240"
    ],
    "args": [],
    "targets": [
@@ -44757,7 +44953,7 @@
    "ko": "알림",
    "en": "Notification",
    "files": [
-    "BokkiShortcutsGuide.swift:152"
+    "BokkiShortcutsGuide.swift:236"
    ],
    "args": [],
    "targets": [
@@ -44882,7 +45078,7 @@
    "ko": "애플맵",
    "en": "Apple Maps",
    "files": [
-    "AssistantDataActions.swift:358",
+    "AssistantDataActions.swift:365",
     "MapHomeView+Map.swift:933"
    ],
    "args": [],
@@ -45105,7 +45301,7 @@
    "ko": "앱 언어 바꾸기",
    "en": "Change app language",
    "files": [
-    "AssistantCommandEdits.swift:41"
+    "AssistantCommandEdits.swift:43"
    ],
    "args": [],
    "targets": [
@@ -45274,7 +45470,7 @@
    "ko": "야간",
    "en": "Night",
    "files": [
-    "AssistantDataActions.swift:360",
+    "AssistantDataActions.swift:367",
     "MapHomeView+Map.swift:936"
    ],
    "args": [],
@@ -45794,7 +45990,7 @@
    "ko": "여행 일정 고치기",
    "en": "Edit trip stops",
    "files": [
-    "AssistantCommandEdits.swift:37"
+    "AssistantCommandEdits.swift:39"
    ],
    "args": [],
    "targets": [
@@ -45806,7 +46002,7 @@
    "ko": "여행 일정 더하기",
    "en": "Add trip stops",
    "files": [
-    "AssistantCommandEdits.swift:36"
+    "AssistantCommandEdits.swift:38"
    ],
    "args": [],
    "targets": [
@@ -45818,7 +46014,7 @@
    "ko": "여행 일정 상태 바꾸기",
    "en": "Change trip stop status",
    "files": [
-    "AssistantCommandEdits.swift:39"
+    "AssistantCommandEdits.swift:41"
    ],
    "args": [],
    "targets": [
@@ -45830,7 +46026,7 @@
    "ko": "여행 일정 지우기",
    "en": "Delete trip stops",
    "files": [
-    "AssistantCommandEdits.swift:38"
+    "AssistantCommandEdits.swift:40"
    ],
    "args": [],
    "targets": [
@@ -46456,6 +46652,18 @@
    "en": "Connected AI",
    "files": [
     "MemoAIEdits.swift:139"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "연결된 AI가 없어요. 메뉴 › AI 연결에서 먼저 연결해 주세요.|No AI is connected. Connect one in Menu › AI connection first.",
+   "ko": "연결된 AI가 없어요. 메뉴 › AI 연결에서 먼저 연결해 주세요.",
+   "en": "No AI is connected. Connect one in Menu › AI connection first.",
+   "files": [
+    "LedgerMessageRules.swift:276"
    ],
    "args": [],
    "targets": [
@@ -47167,7 +47375,7 @@
    "ko": "영수증 확인",
    "en": "Receipt",
    "files": [
-    "AITaskPanel.swift:126"
+    "AITaskPanel.swift:133"
    ],
    "args": [],
    "targets": [
@@ -47874,9 +48082,9 @@
    "ko": "완료",
    "en": "Done",
    "files": [
-    "AITaskPanel.swift:105",
-    "AssistantSettingsView.swift:64",
-    "BokkiShortcutsGuide.swift:68"
+    "LedgerMessageRules.swift:269",
+    "AITaskPanel.swift:112",
+    "AssistantSettingsView.swift:64"
    ],
    "args": [],
    "targets": [
@@ -48357,7 +48565,7 @@
    "ko": "위성",
    "en": "Satellite",
    "files": [
-    "AssistantDataActions.swift:359",
+    "AssistantDataActions.swift:366",
     "MapHomeView+Map.swift:934"
    ],
    "args": [],
@@ -49071,6 +49279,18 @@
    "en": "You left a memo near here.",
    "files": [
     "NearbyMemoNotifications.swift:171"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "이 글 지우기|Delete this text",
+   "ko": "이 글 지우기",
+   "en": "Delete this text",
+   "files": [
+    "LedgerMessageRules.swift:261"
    ],
    "args": [],
    "targets": [
@@ -49799,7 +50019,7 @@
    "ko": "이동 수단 고치기",
    "en": "Correct travel modes",
    "files": [
-    "AssistantCommandEdits.swift:48"
+    "AssistantCommandEdits.swift:50"
    ],
    "args": [],
    "targets": [
@@ -49958,6 +50178,18 @@
    ]
   },
   {
+   "key": "이렇게 초록색이 되면 끝이에요. 이제 결제 문자가 저절로 가계부에 들어가요.|Green means done. Payment texts now go into the ledger by themselves.",
+   "ko": "이렇게 초록색이 되면 끝이에요. 이제 결제 문자가 저절로 가계부에 들어가요.",
+   "en": "Green means done. Payment texts now go into the ledger by themselves.",
+   "files": [
+    "BokkiShortcutsGuide.swift:132"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "이름 (예: 대구 여행)|Name (e.g. Daegu trip)",
    "ko": "이름 (예: 대구 여행)",
    "en": "Name (e.g. Daegu trip)",
@@ -50097,7 +50329,8 @@
    "ko": "이미 가계부에 넣은 결제예요.",
    "en": "That payment is already in the ledger.",
    "files": [
-    "LedgerIntents.swift:81"
+    "LedgerIntents.swift:59",
+    "LedgerIntents.swift:103"
    ],
    "args": [],
    "targets": [
@@ -50109,7 +50342,7 @@
    "ko": "이미 가계부에 넣은 입금이에요.",
    "en": "That deposit is already in the ledger.",
    "files": [
-    "LedgerIntents.swift:47"
+    "LedgerIntents.swift:69"
    ],
    "args": [],
    "targets": [
@@ -50341,8 +50574,8 @@
    "en": "Back",
    "files": [
     "AssistantConnectGuide.swift:173",
-    "BokkiShortcutsGuide.swift:189",
-    "FirstRunTutorialView.swift:71"
+    "BokkiShortcutsGuide.swift:185",
+    "BokkiShortcutsGuide.swift:273"
    ],
    "args": [],
    "targets": [
@@ -50553,7 +50786,7 @@
    "ko": "일정 {0}개",
    "en": "{0} schedule(s)",
    "files": [
-    "AssistantCommands.swift:333"
+    "AssistantCommands.swift:337"
    ],
    "args": [
     "schedules"
@@ -50579,7 +50812,7 @@
    "ko": "일정 고치기",
    "en": "Edit schedules",
    "files": [
-    "AssistantCommandEdits.swift:29"
+    "AssistantCommandEdits.swift:31"
    ],
    "args": [],
    "targets": [
@@ -50591,7 +50824,7 @@
    "ko": "일정 더하기",
    "en": "Add schedules",
    "files": [
-    "AssistantCommandEdits.swift:24"
+    "AssistantCommandEdits.swift:26"
    ],
    "args": [],
    "targets": [
@@ -50642,7 +50875,7 @@
    "ko": "일정 지우기",
    "en": "Delete schedules",
    "files": [
-    "AssistantCommandEdits.swift:30"
+    "AssistantCommandEdits.swift:32"
    ],
    "args": [],
    "targets": [
@@ -51031,7 +51264,7 @@
    "ko": "자동화 › +",
    "en": "Automation › +",
    "files": [
-    "BokkiShortcutsGuide.swift:146"
+    "BokkiShortcutsGuide.swift:230"
    ],
    "args": [],
    "targets": [
@@ -51043,8 +51276,8 @@
    "ko": "자동화",
    "en": "Automation",
    "files": [
-    "BokkiShortcutsGuide.swift:147",
-    "BokkiShortcutsGuide.swift:151"
+    "BokkiShortcutsGuide.swift:231",
+    "BokkiShortcutsGuide.swift:235"
    ],
    "args": [],
    "targets": [
@@ -52064,7 +52297,7 @@
    "ko": "조각 합침 검토",
    "en": "Merge review",
    "files": [
-    "AITaskPanel.swift:130"
+    "AITaskPanel.swift:137"
    ],
    "args": [],
    "targets": [
@@ -52761,7 +52994,7 @@
    "ko": "지도 스타일 바꾸기",
    "en": "Change map style",
    "files": [
-    "AssistantCommandEdits.swift:42"
+    "AssistantCommandEdits.swift:44"
    ],
    "args": [],
    "targets": [
@@ -52887,7 +53120,7 @@
    "ko": "지도 표시 켜고 끄기",
    "en": "Toggle map display",
    "files": [
-    "AssistantCommandEdits.swift:43"
+    "AssistantCommandEdits.swift:45"
    ],
    "args": [],
    "targets": [
@@ -53046,7 +53279,7 @@
    "ko": "지도에 경로 선",
    "en": "Route lines on map",
    "files": [
-    "AssistantDataActions.swift:372"
+    "AssistantDataActions.swift:379"
    ],
    "args": [],
    "targets": [
@@ -53070,7 +53303,7 @@
    "ko": "지도에 발자국",
    "en": "Footprints on map",
    "files": [
-    "AssistantDataActions.swift:373"
+    "AssistantDataActions.swift:380"
    ],
    "args": [],
    "targets": [
@@ -53094,7 +53327,7 @@
    "ko": "지도에 사진",
    "en": "Photos on map",
    "files": [
-    "AssistantDataActions.swift:371"
+    "AssistantDataActions.swift:378"
    ],
    "args": [],
    "targets": [
@@ -53218,8 +53451,8 @@
    "ko": "지움",
    "en": "Deleted",
    "files": [
-    "AssistantCommandEdits.swift:279",
-    "AssistantCommandEdits.swift:290",
+    "AssistantCommandEdits.swift:285",
+    "AssistantCommandEdits.swift:296",
     "AssistantDataActions.swift:66"
    ],
    "args": [],
@@ -53804,7 +54037,7 @@
    "ko": "처리중",
    "en": "Working",
    "files": [
-    "AITaskPanel.swift:104"
+    "AITaskPanel.swift:111"
    ],
    "args": [],
    "targets": [
@@ -54107,6 +54340,18 @@
     "MapHomeCalendarSheet.swift:337",
     "MapHomePlaceBookTools.swift:944",
     "MapHomeSettingsSheets.swift:99"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "추가가 끝나면 왼쪽 위 「<」를 눌러요.|Then tap < at the top left.",
+   "ko": "추가가 끝나면 왼쪽 위 「<」를 눌러요.",
+   "en": "Then tap < at the top left.",
+   "files": [
+    "BokkiShortcutsGuide.swift:129"
    ],
    "args": [],
    "targets": [
@@ -54837,7 +55082,7 @@
    "ko": "켬",
    "en": "On",
    "files": [
-    "AssistantDataActions.swift:375"
+    "AssistantDataActions.swift:382"
    ],
    "args": [],
    "targets": [
@@ -55282,7 +55527,7 @@
    "ko": "특정 시간",
    "en": "Time of Day",
    "files": [
-    "BokkiShortcutsGuide.swift:152"
+    "BokkiShortcutsGuide.swift:236"
    ],
    "args": [],
    "targets": [
@@ -55306,7 +55551,7 @@
    "ko": "판타지 지도",
    "en": "Fantasy Map",
    "files": [
-    "AssistantDataActions.swift:363",
+    "AssistantDataActions.swift:370",
     "MapHomeView+Map.swift:939"
    ],
    "args": [],

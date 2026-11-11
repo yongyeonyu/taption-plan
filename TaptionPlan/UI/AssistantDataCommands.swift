@@ -84,6 +84,8 @@ extension AssistantCommandParser {
             return expense(raw, calendar: calendar)
         case "updateExpense":
             return expenseChange(raw)
+        case "addPaymentRule":
+            return LedgerMessageRules.rule(name: raw.name, pattern: raw.pattern, sample: raw.sample, kind: raw.kind).map { .addPaymentRule($0) }
         case "classifyUnconfirmed":
             guard let day, let categoryID = clean(raw.categoryId, max: 100),
                   let start = raw.start.flatMap({ clock($0, on: day, calendar: calendar) }),

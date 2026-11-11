@@ -951,3 +951,150 @@ final class Phase3RelayStub: URLProtocol, @unchecked Sendable {
 
     override func stopLoading() {}
 }
+
+/// PRL1112A01: AI가 보태는 결제 문자 읽기 규칙. 명령 읽기·검사·적용·되돌리기.
+@MainActor
+final class AssistantPaymentRuleTests: XCTestCase {
+    private let sample = "[OO카드] 승인 홍*동 12,300원 11/12 08:10 스타벅스"
+    private let pattern = #"\[OO카드\] 승인 \S+ (?<amount>[\d,]+)원 (?<month>\d{1,2})/(?<day>\d{1,2}) (?<hour>\d{1,2}):(?<minute>\d{2}) (?<merchant>.+)"#
+
+    private var calendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        return calendar
+    }
+
+    private func at(year: Int = 2026, _ month: Int, _ day: Int, _ hour: Int, _ minute: Int = 0) -> Date {
+        calendar.date(from: DateComponents(year: year, month: month, day: day, hour: hour, minute: minute))!
+    }
+
+    private func defaults() -> UserDefaults {
+        let name = "AssistantPaymentRuleTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: name)!
+        addTeardownBlock { UserDefaults(suiteName: name)?.removePersistentDomain(forName: name) }
+        return defaults
+    }
+
+    private func command(_ id: String, _ extra: [String: Any]) -> [String: Any] {
+        ["format": "bokki-command", "version": 1, "id": id, "action": "addPaymentRule", "name": "OO카드"].merging(extra) { $1 }
+    }
+
+    private func batch(_ items: [[String: Any]]) throws -> AssistantCommandBatch {
+        let data = try JSONSerialization.data(withJSONObject: ["commands": items])
+        return try XCTUnwrap(AssistantCommandParser.parse(data, now: at(11, 12, 9), calendar: calendar))
+    }
+
+    private func rule(_ name: String = "OO카드", _ pattern: String? = nil, kind: LedgerMessageRules.Kind = .expense) throws -> LedgerMessageRules.Rule {
+        try LedgerMessageRules.validated(name: name, pattern: pattern ?? self.pattern, sample: sample, kind: kind).get()
+    }
+
+    func testCommandParsesToRuleAndRejectsBadRules() throws {
+        let parsed = try batch([
+            command("ok", ["pattern": pattern, "sample": sample]),
+            command("ignore", ["pattern": "OO카드", "sample": sample, "kind": "ignore"]),
+            command("badRegex", ["pattern": "(?<amount>[0-9", "sample": sample]),
+            command("noMatch", ["pattern": "XX카드 (?<amount>[0-9,]+)원", "sample": sample]),
+            command("noAmount", ["pattern": "OO카드", "sample": sample]),
+            command("badKind", ["pattern": pattern, "sample": sample, "kind": "refund"]),
+            command("noSample", ["pattern": pattern]),
+        ])
+        XCTAssertEqual(parsed.commands.map(\.id), ["ok", "ignore"])
+        XCTAssertEqual(parsed.commands.map(\.action.kind), [.addPaymentRule, .addPaymentRule])
+        XCTAssertEqual(Set(parsed.invalidIDs), ["badRegex", "noMatch", "noAmount", "badKind", "noSample"])
+        guard case let .addPaymentRule(first) = parsed.commands[0].action, case let .addPaymentRule(second) = parsed.commands[1].action else {
+            return XCTFail("\(parsed)")
+        }
+        XCTAssertEqual([first.name, first.pattern, first.sample], ["OO카드", pattern, sample])
+        XCTAssertEqual(first.kind, .expense, "kind가 없으면 지출")
+        XCTAssertEqual(second.kind, .ignore)
+        XCTAssertEqual(parsed.commands[0].action.existingChangeCount, 0)
+    }
+
+    func testValidationNamesTheFailure() {
+        func failure(_ pattern: String, sample: String? = nil, kind: LedgerMessageRules.Kind = .expense) -> LedgerMessageRules.Failure? {
+            if case let .failure(reason) = LedgerMessageRules.validated(name: "OO카드", pattern: pattern, sample: sample ?? self.sample, kind: kind) { return reason }
+            return nil
+        }
+        XCTAssertNil(failure(pattern))
+        XCTAssertEqual(failure("(?<amount>[0-9"), .badPattern)
+        XCTAssertEqual(failure("XX카드 (?<amount>[0-9,]+)원"), .noMatch)
+        XCTAssertEqual(failure("OO카드"), .noAmount)
+        XCTAssertEqual(failure("(?<amount>승인)"), .noAmount, "숫자가 아닌 금액")
+        XCTAssertNil(failure("OO카드", kind: .ignore), "넣지 않는 규칙은 금액이 없어도 된다")
+        XCTAssertEqual(failure(String(repeating: "a", count: 301)), .tooLong)
+        XCTAssertEqual(failure(pattern, sample: ""), .tooLong)
+    }
+
+    func testRuleReadsAmountMerchantAndDate() throws {
+        let store = defaults()
+        XCTAssertNil(LedgerMessageRules.match(sample, now: at(11, 12, 9), calendar: calendar, defaults: store))
+        LedgerMessageRules.add(try rule(), defaults: store)
+        guard case let .draft(draft, income) = LedgerMessageRules.match(sample, now: at(11, 12, 9), calendar: calendar, defaults: store) else {
+            return XCTFail("규칙이 견본을 읽어야 한다")
+        }
+        XCTAssertFalse(income)
+        XCTAssertEqual(draft.amount, 12_300)
+        XCTAssertEqual(draft.currency, "KRW")
+        XCTAssertEqual(draft.merchant, "스타벅스")
+        XCTAssertEqual(draft.card, "OO카드")
+        XCTAssertEqual(draft.occurredAt, at(11, 12, 8, 10))
+        XCTAssertFalse(draft.isCancel)
+
+        // 해를 넘긴 문자는 작년으로 읽는다.
+        guard case let .draft(old, _) = LedgerMessageRules.match(sample, now: at(1, 5, 9), calendar: calendar, defaults: store) else { return XCTFail() }
+        XCTAssertEqual(old.occurredAt, at(year: 2025, 11, 12, 8, 10))
+        XCTAssertNil(LedgerMessageRules.match("[XX은행] 입금 5,000원", now: at(11, 12, 9), calendar: calendar, defaults: store))
+    }
+
+    func testIgnoreIncomeAndNewestRuleWins() throws {
+        let store = defaults()
+        LedgerMessageRules.add(try rule("먼저"), defaults: store)
+        LedgerMessageRules.add(try rule("수입", #"OO카드\] 승인 \S+ (?<amount>[\d,]+)원"#, kind: .income), defaults: store)
+        guard case let .draft(draft, income) = LedgerMessageRules.match(sample, now: at(11, 12, 9), calendar: calendar, defaults: store) else { return XCTFail() }
+        XCTAssertTrue(income)
+        XCTAssertEqual(draft.card, "수입", "나중에 넣은 규칙이 먼저다")
+        XCTAssertNil(draft.occurredAt, "월·일·시·분이 없으면 시각을 짓지 않는다")
+
+        LedgerMessageRules.add(try rule("무시", "OO카드", kind: .ignore), defaults: store)
+        XCTAssertEqual(LedgerMessageRules.match(sample, now: at(11, 12, 9), calendar: calendar, defaults: store), .ignore)
+    }
+
+    func testRulesKeepTheNewestTwentyAndReplaceTheSamePattern() throws {
+        let store = defaults()
+        for index in 0...LedgerMessageRules.limit {
+            LedgerMessageRules.add(try rule("규칙\(index)", "(?<amount>[0-9,]+)원.{0,\(index + 1)}"), defaults: store)
+        }
+        let kept = LedgerMessageRules.rules(store)
+        XCTAssertEqual(kept.count, 20)
+        XCTAssertEqual(kept.first?.name, "규칙1", "넘치면 오래된 것부터 버린다")
+        XCTAssertEqual(kept.last?.name, "규칙20")
+
+        LedgerMessageRules.add(try rule("바꿈", kept[5].pattern), defaults: store)
+        XCTAssertEqual(LedgerMessageRules.rules(store).count, 20)
+        XCTAssertEqual(LedgerMessageRules.rules(store).last?.name, "바꿈")
+        LedgerMessageRules.remove(try XCTUnwrap(LedgerMessageRules.rules(store).last).id, defaults: store)
+        XCTAssertEqual(LedgerMessageRules.rules(store).count, 19)
+    }
+
+    func testCommandAddsTheRuleAndUndoRemovesIt() async throws {
+        let store = defaults()
+        let model = AppModel(repository: InMemoryPlanRepository(snapshot: .empty), cloudSyncService: nil)
+        await model.bootstrap()
+        let applied = await model.applyAssistantCommands(try batch([command("p1", ["pattern": pattern, "sample": sample])]), defaults: store)
+        let outcome = try XCTUnwrap(applied)
+        XCTAssertEqual(outcome.results, [.init(id: "p1", applied: true, reason: nil)])
+        let entry = try XCTUnwrap(outcome.entries.first)
+        XCTAssertEqual(entry.kind, .addPaymentRule)
+        XCTAssertEqual(entry.after, "OO카드")
+        XCTAssertEqual(LedgerMessageRules.rules(store).map(\.id), [try XCTUnwrap(entry.delta.paymentRuleID)])
+
+        let undone = await model.undoAssistantEntry(entry, preferences: .test(store))
+        XCTAssertTrue(undone)
+        XCTAssertTrue(LedgerMessageRules.rules(store).isEmpty)
+
+        AssistantActionToggles.set(.addPaymentRule, enabled: false, defaults: store)
+        let refused = await model.applyAssistantCommands(try batch([command("p2", ["pattern": pattern, "sample": sample])]), defaults: store)
+        XCTAssertEqual(refused?.results, [.init(id: "p2", applied: false, reason: "disabled")])
+        XCTAssertTrue(LedgerMessageRules.rules(store).isEmpty)
+    }
+}

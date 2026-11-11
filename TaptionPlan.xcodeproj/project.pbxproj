@@ -327,6 +327,7 @@
 		A1G1111X0200000000000001 /* GPXExportCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1G1111X0200000000000001 /* GPXExportCard.swift */; };
 		A1G1111X0100000000000001 /* GPXTrackExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1G1111X0100000000000001 /* GPXTrackExport.swift */; };
 		A1L1111T0100000000000001 /* LedgerTollRepeat.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111T0100000000000001 /* LedgerTollRepeat.swift */; };
+		A1PRL1112A01000000000001 /* LedgerMessageRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1PRL1112A01000000000001 /* LedgerMessageRules.swift */; };
 		A1R1111A0200000000000001 /* MapHomeTripPlayback.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1R1111A0200000000000001 /* MapHomeTripPlayback.swift */; };
 		A1T1111B0100000000000001 /* TravelAirportsAndFares.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1T1111B0100000000000001 /* TravelAirportsAndFares.swift */; };
 		A1L1111A0100000000000004 /* LedgerCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111A0100000000000004 /* LedgerCapture.swift */; };
@@ -1074,6 +1075,7 @@
 		F1G1111X0200000000000001 /* GPXExportCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GPXExportCard.swift; sourceTree = "<group>"; };
 		F1G1111X0100000000000001 /* GPXTrackExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GPXTrackExport.swift; sourceTree = "<group>"; };
 		F1L1111T0100000000000001 /* LedgerTollRepeat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerTollRepeat.swift; sourceTree = "<group>"; };
+		F1PRL1112A01000000000001 /* LedgerMessageRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerMessageRules.swift; sourceTree = "<group>"; };
 		F1R1111A0200000000000001 /* MapHomeTripPlayback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeTripPlayback.swift; sourceTree = "<group>"; };
 		F1T1111B0100000000000001 /* TravelAirportsAndFares.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelAirportsAndFares.swift; sourceTree = "<group>"; };
 		F1L1111A0100000000000004 /* LedgerCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerCapture.swift; sourceTree = "<group>"; };
@@ -2120,6 +2122,7 @@
 				F1L1111R0100000000000001 /* LedgerReview.swift */,
 				F1G1111X0100000000000001 /* GPXTrackExport.swift */,
 				F1L1111T0100000000000001 /* LedgerTollRepeat.swift */,
+				F1PRL1112A01000000000001 /* LedgerMessageRules.swift */,
 				F1T1111B0100000000000001 /* TravelAirportsAndFares.swift */,
 				F1L1111A0100000000000004 /* LedgerCapture.swift */,
 				F1L1111A0100000000000005 /* LedgerIntents.swift */,
@@ -3019,6 +3022,7 @@
 				A1G1111X0200000000000001 /* GPXExportCard.swift in Sources */,
 				A1G1111X0100000000000001 /* GPXTrackExport.swift in Sources */,
 				A1L1111T0100000000000001 /* LedgerTollRepeat.swift in Sources */,
+				A1PRL1112A01000000000001 /* LedgerMessageRules.swift in Sources */,
 				A1R1111A0200000000000001 /* MapHomeTripPlayback.swift in Sources */,
 				A1T1111B0100000000000001 /* TravelAirportsAndFares.swift in Sources */,
 				A1L1111A0100000000000004 /* LedgerCapture.swift in Sources */,

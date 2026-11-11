@@ -41,6 +41,8 @@ struct AssistantCommand: Identifiable, Equatable, Sendable {
         case classifyUnconfirmed(start: Date, end: Date, title: String?, categoryID: String)
         /// ACT1111A01: 이동 구간 하나의 수단을 사용자 교정으로 바꾼다.
         case setTravelMode(moveID: UUID, mode: TravelMode)
+        /// PRL1112A01: 결제 문자 읽기 규칙. 견본과 맞는지 본 것만 담는다.
+        case addPaymentRule(LedgerMessageRules.Rule)
     }
 
     let id: String
@@ -95,6 +97,8 @@ enum AssistantCommandParser {
         let entryId: String?, delete: Bool?
         // ACT1111A01: setTravelMode.
         let moveId: String?, mode: String?
+        // PRL1112A01: addPaymentRule.
+        let name: String?, pattern: String?, sample: String?
     }
 
     /// `{"commands":[...]}`를 읽는다. 서버와 같은 규칙으로 다시 본다.
@@ -318,7 +322,7 @@ struct AssistantCommandOutcome: Equatable, Sendable {
         case .addSchedule, .updateSchedule, .deleteSchedule: schedules += 1
         case .addGoal, .updateGoal, .deleteGoal, .addTripStop, .updateTripStop, .deleteTripStop, .setTripItemStatus: schedules += 1
         case .updateActivity, .hideRecord, .mergeRecords, .updateRecordTime, .updateSleep, .classifyUnconfirmed, .setTravelMode: edits += 1
-        case .setLanguage, .setMapStyle, .setDisplayOption: settings += 1
+        case .setLanguage, .setMapStyle, .setDisplayOption, .addPaymentRule: settings += 1
         case .setBubble: bubbles += 1
         case .addExpense, .updateExpense: ledger += 1
         }
@@ -427,6 +431,7 @@ extension AppModel {
         var delta = AssistantEditDelta.difference(from: before, to: snapshot, actualIDs: result.actualIDs)
         if !result.preferences.isEmpty { delta.preferences = (delta.preferences ?? []) + result.preferences }
         delta.bubbleID = result.bubbleID
+        delta.paymentRuleID = result.paymentRuleID
         delta.ledgerEntryID = result.ledgerEntryID
         delta.ledgerEntry = result.ledgerEntry
         delta.ledgerBefore = result.ledgerBefore

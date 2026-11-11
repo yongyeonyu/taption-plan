@@ -5314,6 +5314,83 @@
         }
       }
     },
+    "AI가 이 형식을 읽는 규칙을 보내면 앱이 저장하고, 그 뒤 같은 문자는 앱이 스스로 넣어요. 개발자에게 보내면 다음 버전에 모두에게 반영돼요.|When your AI sends a rule for this format the app saves it and reads the same kind of text by itself. Mail the developer to get it built in for everyone." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AIがこの形式を読むルールを送るとアプリが保存し、以後は同じメッセージをアプリが自動で読み取ります。開発者に送ると次のバージョンで全員に反映されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI 发来读取此格式的规则后，App 会保存，以后同类短信由 App 自动读取。发给开发者，下个版本会为所有人内置。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI 傳來讀取此格式的規則後，App 會儲存，之後同類簡訊由 App 自動讀取。寄給開發者，下個版本會為所有人內建。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schickt deine KI eine Regel für dieses Format, speichert die App sie und liest solche Nachrichten künftig selbst. Per Mail an den Entwickler wird es in der nächsten Version für alle eingebaut."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quand votre IA envoie une règle pour ce format, l’app l’enregistre et lit ensuite ce type de message toute seule. Écrivez au développeur pour l’intégrer à tous dans la prochaine version."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quando la tua IA invia una regola per questo formato, l’app la salva e poi legge da sola questi messaggi. Scrivi allo sviluppatore per averla integrata per tutti nella prossima versione."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cuando tu IA envía una regla para este formato, la app la guarda y después lee sola este tipo de mensajes. Escribe al desarrollador para que se incluya para todos en la próxima versión."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quando sua IA envia uma regra para este formato, o app a salva e passa a ler sozinho esse tipo de mensagem. Escreva ao desenvolvedor para incluir para todos na próxima versão."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Khi AI gửi quy tắc cho định dạng này, ứng dụng sẽ lưu và từ đó tự đọc loại tin nhắn này. Gửi thư cho nhà phát triển để được tích hợp cho mọi người ở phiên bản sau."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saat AI mengirim aturan untuk format ini, app menyimpannya dan selanjutnya membaca sendiri pesan sejenis. Kirim email ke pengembang agar ditanamkan untuk semua orang di versi berikutnya."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เมื่อ AI ส่งกฎสำหรับรูปแบบนี้ แอปจะบันทึกไว้และอ่านข้อความแบบเดียวกันได้เองหลังจากนั้น ส่งอีเมลถึงนักพัฒนาเพื่อให้ใส่ไว้สำหรับทุกคนในเวอร์ชันถัดไป"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "जब आपका AI इस फ़ॉर्मैट का नियम भेजता है, ऐप उसे सहेज लेता है और आगे ऐसे संदेश खुद पढ़ता है। डेवलपर को मेल करें ताकि अगले संस्करण में सबके लिए जुड़ जाए।"
+          }
+        }
+      }
+    },
     "AI가 하루 기록을 읽고 일정·메모를 대신 정리합니다. 나중에 메뉴 > 연결에서도 할 수 있습니다.|Let an AI read your day and tidy plans and memos for you. You can also do this later in Menu > Connections." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5772,6 +5849,160 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "AI के साथ यात्रा योजना बनाएँ"
+          }
+        }
+      }
+    },
+    "AI에게 규칙 추가 요청|Ask AI to add a rule" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AIにルール追加を依頼"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请 AI 添加规则"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請 AI 加入規則"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "KI um eine Regel bitten"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Demander une règle à l’IA"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chiedi una regola all’IA"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pedir una regla a la IA"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pedir uma regra à IA"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nhờ AI thêm quy tắc"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minta AI menambah aturan"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ขอให้ AI เพิ่มกฎ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI से नियम जोड़ने को कहें"
+          }
+        }
+      }
+    },
+    "AI에게 맡겼어요. 규칙이 오면 이 문자도 다시 읽어 넣어요.|Sent to your AI. When the rule arrives this text is read again." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AIに依頼しました。ルールが届いたらこのメッセージも読み直して追加します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已交给 AI。规则到达后会重新读取这条短信并记账。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已交給 AI。規則送達後會重新讀取這則簡訊並記帳。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An deine KI gesendet. Kommt die Regel an, wird diese Nachricht erneut gelesen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoyé à votre IA. Quand la règle arrive, ce message est relu."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inviato alla tua IA. Quando arriva la regola, questo messaggio viene riletto."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviado a tu IA. Cuando llegue la regla, este mensaje se volverá a leer."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviado à sua IA. Quando a regra chegar, esta mensagem será lida de novo."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã gửi cho AI. Khi có quy tắc, tin nhắn này sẽ được đọc lại."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dikirim ke AI. Saat aturan tiba, pesan ini dibaca ulang."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ส่งให้ AI แล้ว เมื่อกฎมาถึงจะอ่านข้อความนี้อีกครั้ง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "आपके AI को भेज दिया। नियम आने पर यह संदेश फिर पढ़ा जाएगा।"
           }
         }
       }
@@ -17399,6 +17630,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "{0} · किसी और पासवर्ड से बना है। ऊपर वही पासवर्ड डालें"
+          }
+        }
+      }
+    },
+    "{0} · 받은 문자 {1}건 넣음|{0} · added {1} received text(s)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} · 受信メッセージ{1}件を追加"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} · 已记入 {1} 条收到的短信"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} · 已記入 {1} 則收到的簡訊"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} · {1} empfangene Nachricht(en) eingetragen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} · {1} message(s) reçu(s) ajouté(s)"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} · aggiunti {1} messaggi ricevuti"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} · {1} mensaje(s) recibido(s) añadido(s)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} · {1} mensagem(ns) recebida(s) adicionada(s)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} · đã thêm {1} tin nhắn nhận được"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} · {1} pesan diterima ditambahkan"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} · เพิ่มข้อความที่ได้รับ {1} รายการ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} · {1} प्राप्त संदेश जोड़े गए"
           }
         }
       }
@@ -204282,6 +204590,83 @@
         }
       }
     },
+    "「BOKKI 결제」 스위치를 켜요. iOS는 가져온 자동화를 꺼진 채로 넣어요.|Turn on the BOKKI Payment switch. iOS adds shared automations switched off." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「BOKKI 決済」のスイッチをオンに。iOSは共有されたオートメーションをオフのまま追加します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开“BOKKI 支付”开关。iOS 会以关闭状态添加共享的自动化。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打開「BOKKI 付款」開關。iOS 會以關閉狀態加入分享的自動化。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schalte „BOKKI Zahlung“ ein. iOS fügt geteilte Automationen ausgeschaltet hinzu."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activez l’interrupteur « BOKKI Paiement ». iOS ajoute les automatisations partagées désactivées."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Attiva l’interruttore «BOKKI Pagamento». iOS aggiunge le automazioni condivise disattivate."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activa el interruptor «BOKKI Pago». iOS añade las automatizaciones compartidas desactivadas."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ative o botão “BOKKI Pagamento”. O iOS adiciona automações compartilhadas desativadas."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bật công tắc “BOKKI Thanh toán”. iOS thêm mục tự động hóa được chia sẻ ở trạng thái tắt."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nyalakan sakelar “BOKKI Pembayaran”. iOS menambahkan otomatisasi yang dibagikan dalam keadaan mati."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เปิดสวิตช์ “BOKKI ชำระเงิน” iOS จะเพิ่มการทำงานอัตโนมัติที่แชร์มาแบบปิดไว้"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“BOKKI भुगतान” स्विच चालू करें। iOS शेयर किए गए ऑटोमेशन को बंद अवस्था में जोड़ता है।"
+          }
+        }
+      }
+    },
     "「BOKKI 결제」를 넣은 뒤 따라 하기로 자동화를 만들어요. 앱이 결제만 골라 가계부에 넣고, 나머지는 넣지도 AI에 보내지도 않아요.|Add BOKKI Payment, then follow the steps to make the automation. The app keeps payments only; nothing else is saved or sent to AI." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -206053,6 +206438,83 @@
         }
       }
     },
+    "가계부에 넣지 않는 문자예요.|This kind of text is not added to the ledger." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "家計簿に入れないメッセージです。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这类短信不会记入账本。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這類簡訊不會記入帳本。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Solche Nachrichten werden nicht ins Haushaltsbuch eingetragen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce type de message n’est pas ajouté au budget."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questo tipo di messaggio non viene aggiunto al registro spese."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este tipo de mensaje no se añade a tus cuentas."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esse tipo de mensagem não é adicionado ao controle de gastos."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loại tin nhắn này không được thêm vào sổ chi tiêu."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pesan seperti ini tidak ditambahkan ke catatan keuangan."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ข้อความประเภทนี้จะไม่ถูกเพิ่มลงบัญชีรายรับรายจ่าย"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "इस तरह का संदेश खाते में नहीं जोड़ा जाता।"
+          }
+        }
+      }
+    },
     "가까운 정류장 |Nearest stop " : {
       "extractionState" : "manual",
       "localizations" : {
@@ -207743,6 +208205,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "डेवलपर को भेजें"
+          }
+        }
+      }
+    },
+    "개발자에게 추가 요청 메일|Email the developer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開発者に追加依頼メール"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "给开发者发邮件请求添加"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "寄信請開發者加入"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mail an den Entwickler"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Écrire au développeur"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scrivi allo sviluppatore"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escribir al desarrollador"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escrever ao desenvolvedor"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gửi thư cho nhà phát triển"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Email pengembang"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ส่งอีเมลถึงนักพัฒนา"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "डेवलपर को मेल करें"
           }
         }
       }
@@ -211439,6 +211978,160 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "नतीजा आपके टेक्स्ट से अलग था, इसलिए लागू नहीं किया गया।"
+          }
+        }
+      }
+    },
+    "결제 문자 규칙 요청|Payment rule request" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "決済メッセージのルール依頼"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "付款短信规则请求"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "付款簡訊規則請求"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Regelanfrage für Zahlungs-SMS"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Demande de règle pour SMS de paiement"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Richiesta regola per SMS di pagamento"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Solicitud de regla para SMS de pago"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pedido de regra para SMS de pagamento"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yêu cầu quy tắc tin nhắn thanh toán"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permintaan aturan SMS pembayaran"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คำขอกฎข้อความการชำระเงิน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "भुगतान SMS नियम अनुरोध"
+          }
+        }
+      }
+    },
+    "결제 문자 읽기 규칙 더하기|Add payment text rules" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "決済メッセージの読み取りルールを追加"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加付款短信读取规则"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加入付款簡訊讀取規則"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leseregeln für Zahlungs-SMS hinzufügen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter des règles de lecture des SMS de paiement"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aggiungi regole di lettura degli SMS di pagamento"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Añadir reglas de lectura de SMS de pago"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adicionar regras de leitura de SMS de pagamento"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thêm quy tắc đọc tin nhắn thanh toán"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tambah aturan pembacaan SMS pembayaran"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เพิ่มกฎการอ่านข้อความการชำระเงิน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "भुगतान SMS पढ़ने के नियम जोड़ें"
           }
         }
       }
@@ -231617,6 +232310,160 @@
         }
       }
     },
+    "단축어 앱에서 추가하기|Add in Shortcuts" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ショートカットAppで追加"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在快捷指令中添加"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在捷徑 App 中加入"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In Kurzbefehle hinzufügen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter dans Raccourcis"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aggiungi in Comandi rapidi"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Añadir en Atajos"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adicionar no Atalhos"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thêm trong Phím tắt"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tambahkan di Pintasan"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เพิ่มในคำสั่งลัด"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "शॉर्टकट में जोड़ें"
+          }
+        }
+      }
+    },
+    "단축어 앱이 열리면 「단축어 추가」를 눌러요.|When Shortcuts opens, tap Add Shortcut." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ショートカットAppが開いたら「ショートカットを追加」をタップ。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "快捷指令打开后，点按“添加快捷指令”。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "捷徑 App 打開後，點一下「加入捷徑」。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn Kurzbefehle öffnet, tippe auf „Kurzbefehl hinzufügen“."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quand Raccourcis s’ouvre, touchez « Ajouter un raccourci »."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quando si apre Comandi rapidi, tocca «Aggiungi comando rapido»."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cuando se abra Atajos, toca «Añadir atajo»."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quando o Atalhos abrir, toque em “Adicionar Atalho”."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Khi Phím tắt mở, chạm “Thêm phím tắt”."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saat Pintasan terbuka, ketuk “Tambah Pintasan”."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เมื่อคำสั่งลัดเปิดขึ้น ให้แตะ “เพิ่มคำสั่งลัด”"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "शॉर्टकट खुलने पर “शॉर्टकट जोड़ें” टैप करें।"
+          }
+        }
+      }
+    },
     "닫기|Close" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -247787,6 +248634,83 @@
         }
       }
     },
+    "받은 결제 문자·알림|Payment texts received" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "受信した決済メッセージ・通知"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "收到的付款短信和通知"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "收到的付款簡訊與通知"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Empfangene Zahlungs-SMS und Mitteilungen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SMS et notifications de paiement reçus"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SMS e notifiche di pagamento ricevuti"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SMS y avisos de pago recibidos"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SMS e alertas de pagamento recebidos"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tin nhắn và thông báo thanh toán đã nhận"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SMS dan notifikasi pembayaran yang diterima"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ข้อความและการแจ้งเตือนการชำระเงินที่ได้รับ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "प्राप्त भुगतान SMS और सूचनाएँ"
+          }
+        }
+      }
+    },
     "받은 금액|Received" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -247860,6 +248784,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "मिली राशि"
+          }
+        }
+      }
+    },
+    "받은 문자|Received text" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "受信メッセージ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "收到的短信"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "收到的簡訊"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Empfangene Nachricht"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Message reçu"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Messaggio ricevuto"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mensaje recibido"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mensagem recebida"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tin nhắn đã nhận"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pesan diterima"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ข้อความที่ได้รับ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "प्राप्त संदेश"
           }
         }
       }
@@ -250790,6 +251791,83 @@
         }
       }
     },
+    "번호는 가려서 이 기기에만 7일 동안 둬요.|Numbers are masked. Kept on this device only, for 7 days." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "番号は伏せて、このデバイスにだけ7日間保存します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "号码已隐藏，仅在此设备保存 7 天。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "號碼已隱藏，只在此裝置保存 7 天。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nummern sind unkenntlich. Nur auf diesem Gerät, 7 Tage lang."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Numéros masqués. Conservé sur cet appareil seulement, 7 jours."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Numeri oscurati. Conservato solo su questo dispositivo, per 7 giorni."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Números ocultos. Solo en este dispositivo, durante 7 días."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Números ocultos. Só neste aparelho, por 7 dias."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Số đã được che. Chỉ lưu trên thiết bị này trong 7 ngày."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nomor disamarkan. Hanya di perangkat ini, selama 7 hari."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ปิดบังหมายเลขไว้ เก็บเฉพาะในอุปกรณ์นี้ 7 วัน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "नंबर छिपाए गए हैं। केवल इस डिवाइस पर, 7 दिन तक।"
+          }
+        }
+      }
+    },
     "범위 안 상세활동 {0}개를 지우고 새 분류로 채웁니다.|Clears {0} detail activit(ies) in range and fills them with the new category." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -251710,6 +252788,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "सहेजा गया बैकअप पासवर्ड दिखाएँ"
+          }
+        }
+      }
+    },
+    "보관함에서 「자동화」를 눌러요.|In the library, tap Automation." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ライブラリで「オートメーション」をタップ。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在资源库中点按“自动化”。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在資料庫點一下「自動化」。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tippe in der Mediathek auf „Automation“."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dans la bibliothèque, touchez « Automatisation »."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nella libreria, tocca «Automazione»."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En la biblioteca, toca «Automatización»."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Na biblioteca, toque em “Automação”."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trong thư viện, chạm “Mục tự động hóa”."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Di perpustakaan, ketuk “Otomatisasi”."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ในคลัง ให้แตะ “การทำงานอัตโนมัติ”"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "लाइब्रेरी में “ऑटोमेशन” टैप करें।"
           }
         }
       }
@@ -268573,6 +269728,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ठहरना"
+          }
+        }
+      }
+    },
+    "스위치를 켰어요|I turned it on" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "オンにしました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已打开"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已打開"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eingeschaltet"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "C’est activé"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’ho attivato"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ya lo activé"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Já ativei"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã bật"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sudah saya nyalakan"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เปิดแล้ว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "चालू कर दिया"
           }
         }
       }
@@ -285979,6 +287211,83 @@
         }
       }
     },
+    "연결된 AI가 없어요. 메뉴 › AI 연결에서 먼저 연결해 주세요.|No AI is connected. Connect one in Menu › AI connection first." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続されたAIがありません。先にメニュー › AI接続で接続してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有已连接的 AI。请先在菜单 › AI 连接中连接。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "沒有已連接的 AI。請先在選單 › AI 連接中連接。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine KI verbunden. Verbinde zuerst eine unter Menü › KI-Verbindung."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucune IA connectée. Connectez-en une dans Menu › Connexion IA."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nessuna IA collegata. Collegane una in Menu › Connessione IA."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No hay ninguna IA conectada. Conecta una en Menú › Conexión de IA."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nenhuma IA conectada. Conecte uma em Menu › Conexão de IA."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chưa kết nối AI. Hãy kết nối trong Menu › Kết nối AI trước."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belum ada AI yang terhubung. Hubungkan dulu di Menu › Koneksi AI."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ยังไม่ได้เชื่อมต่อ AI โปรดเชื่อมต่อที่ เมนู › การเชื่อมต่อ AI ก่อน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कोई AI कनेक्ट नहीं है। पहले मेनू › AI कनेक्शन में कनेक्ट करें।"
+          }
+        }
+      }
+    },
     "연결된 AI에게 맡겼어요. 다듬은 글이 오면 바뀌어요.|Handed to your connected AI. It changes when the polished text arrives." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -301302,6 +302611,83 @@
         }
       }
     },
+    "이 글 지우기|Delete this text" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このメッセージを削除"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "删除这条短信"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "刪除這則簡訊"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Nachricht löschen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supprimer ce message"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elimina questo messaggio"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eliminar este mensaje"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apagar esta mensagem"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xóa tin nhắn này"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hapus pesan ini"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลบข้อความนี้"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "यह संदेश हटाएँ"
+          }
+        }
+      }
+    },
     "이 기간에는 기기에 남은 위치 기록이 없어요.|No location records on this device for that period." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -306842,6 +308228,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "यात्रा का समय"
+          }
+        }
+      }
+    },
+    "이렇게 초록색이 되면 끝이에요. 이제 결제 문자가 저절로 가계부에 들어가요.|Green means done. Payment texts now go into the ledger by themselves." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このように緑になれば完了。決済メッセージが自動で家計簿に入ります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "变成绿色就完成了。付款短信会自动记入账本。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "變成綠色就完成了。付款簡訊會自動記入帳本。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grün heißt fertig. Zahlungs-SMS landen jetzt von selbst im Haushaltsbuch."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vert, c’est fini. Les SMS de paiement arrivent tout seuls dans le budget."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verde vuol dire fatto. Gli SMS di pagamento entrano da soli nel registro spese."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verde significa listo. Los SMS de pago entran solos en tus cuentas."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verde significa pronto. Os SMS de pagamento entram sozinhos no controle de gastos."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Màu xanh là xong. Tin nhắn thanh toán sẽ tự vào sổ chi tiêu."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hijau berarti selesai. SMS pembayaran kini masuk sendiri ke catatan keuangan."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เป็นสีเขียวแบบนี้ก็เสร็จ ข้อความการชำระเงินจะเข้าบัญชีรายรับรายจ่ายเอง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "हरा हो गया तो काम पूरा। अब भुगतान SMS अपने-आप खाते में आएँगे।"
           }
         }
       }
@@ -331713,6 +333176,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "जोड़ें"
+          }
+        }
+      }
+    },
+    "추가가 끝나면 왼쪽 위 「<」를 눌러요.|Then tap < at the top left." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "追加したら左上の「<」をタップ。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加完成后，点按左上角的“<”。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加入完成後，點一下左上角的「<」。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tippe danach oben links auf „<“."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Puis touchez « < » en haut à gauche."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Poi tocca «<» in alto a sinistra."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Luego toca «<» arriba a la izquierda."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Depois toque em “<” no canto superior esquerdo."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sau đó chạm “<” ở góc trên bên trái."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lalu ketuk “<” di kiri atas."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "จากนั้นแตะ “<” ที่มุมซ้ายบน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "फिर ऊपर बाईं ओर “<” टैप करें।"
           }
         }
       }

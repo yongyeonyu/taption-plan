@@ -13,6 +13,8 @@ enum AITaskQueue {
         case fareCheck = "fare_check"
         case mergeReview = "merge_review"
         case stayPlace = "stay_place"
+        /// 앱이 못 읽은 결제 문자: AI가 읽는 규칙(addPaymentRule)을 보내 달라는 부탁(PRL1112A01).
+        case paymentRule = "payment_rule"
         case other
     }
 

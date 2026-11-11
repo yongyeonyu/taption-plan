@@ -1,5 +1,5 @@
 {
- "ui": 4624,
+ "ui": 4644,
  "catalog": 502,
  "unread": [
   {
@@ -82,13 +82,19 @@
   },
   {
    "file": "TaptionPlan/Core/LedgerIntents.swift",
-   "line": 50,
+   "line": 62,
    "ko": "saved.amount",
    "en": "saved.currency"
   },
   {
    "file": "TaptionPlan/Core/LedgerIntents.swift",
    "line": 72,
+   "ko": "saved.amount",
+   "en": "saved.currency"
+  },
+  {
+   "file": "TaptionPlan/Core/LedgerIntents.swift",
+   "line": 94,
    "ko": "entry.amount",
    "en": "entry.currency"
   },
@@ -124,13 +130,13 @@
   },
   {
    "file": "TaptionPlan/UI/AssistantDataActions.swift",
-   "line": 159,
+   "line": 166,
    "ko": "saved.amount",
    "en": "saved.currency"
   },
   {
    "file": "TaptionPlan/UI/AssistantDataActions.swift",
-   "line": 147,
+   "line": 154,
    "ko": "before.amount",
    "en": "before.currency"
   },

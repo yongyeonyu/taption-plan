@@ -112,6 +112,13 @@ extension AppModel {
             result.ledgerEntryID = saved.id
             result.ledgerEntry = saved
             return result
+        case let .addPaymentRule(rule):
+            LedgerMessageRules.add(rule, defaults: preferences.defaults)
+            // 시험 저장소로는 실제 받은 문자함·가계부를 건드리지 않는다.
+            let added = preferences.isLive ? await PaymentInbox.reprocess(now: .now) : 0
+            var result = AssistantEditResult(after: LedgerMessageRules.summary(rule, added: added, language: language))
+            result.paymentRuleID = rule.id
+            return result
         case let .classifyUnconfirmed(start, end, title, categoryID):
             guard isAssistantCategory(categoryID) else { return .rejected("unknown_category") }
             let limit = min(end, Date.now)

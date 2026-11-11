@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "BokkiShortcutGuideLibrary.png",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

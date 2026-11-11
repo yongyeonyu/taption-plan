@@ -181,6 +181,8 @@ export const COMMAND_FIELDS = {
   addExpense: ["amount", "currency", "title", "category", "date", "time", "kind", "payer"],
   // AIQ1111A01: 앱이 넣은 가계부 기록 고치기·지우기. 고칠 칸이 하나 이상이거나 delete.
   updateExpense: ["entryId", "amount", "currency", "title", "category", "kind", "delete"],
+  // PRL1112A01: 앱이 읽지 못한 결제 문자 형식을 읽는 규칙. pattern은 ICU 정규식, 앱이 sample로 다시 확인한다.
+  addPaymentRule: ["name", "pattern", "sample", "kind"],
   setLanguage: ["language"],
   setTheme: ["theme"],
   setMapStyle: ["mapStyle"],
@@ -188,6 +190,7 @@ export const COMMAND_FIELDS = {
 };
 export const ACTIONS = Object.keys(COMMAND_FIELDS);
 export const TRAVEL_MODES = ["walk", "subway", "bus", "car", "train", "flight"];
+export const PAYMENT_RULE_KINDS = ["expense", "income", "ignore"];
 export const EXPENSE_CATEGORIES = ["food", "cafe", "transport", "shopping", "living", "health", "culture", "travel", "lodging", "education", "gift", "salary", "other"];
 
 // 알려진 칸만 남긴 명령. 동작을 모르면 null.
@@ -289,6 +292,10 @@ export function isCommand(value) {
         : kind === "event";
       return isDate(v.date) && window && !!bubbleText(v.text).text;
     }
+    // 서버는 모양·길이만 본다. ignore가 아니면 금액 그룹이 있어야 한다. 정규식이 sample에 맞는지는 앱이 확인한다.
+    case "addPaymentRule":
+      return nonEmpty(v.name, 40) && nonEmpty(v.pattern, 300) && nonEmpty(v.sample, 1000)
+        && optional(v.kind, oneOf(PAYMENT_RULE_KINDS)) && (v.kind === "ignore" || v.pattern.includes("(?<amount>"));
     case "setLanguage":
       return oneOf(LANGUAGES)(v.language);
     case "setTheme":
@@ -309,7 +316,7 @@ export function isCommandResults(value) {
 }
 
 // AI 확인 목록(AIQ1111A01). 앱이 처리하지 못했거나 불분명한 것을 올리고, AI가 가져가 처리한 뒤 완료·실패를 남긴다.
-export const TASK_KINDS = ["payment_text", "receipt_text", "memo_polish", "route_check", "fare_check", "merge_review", "stay_place", "other"];
+export const TASK_KINDS = ["payment_text", "receipt_text", "payment_rule", "memo_polish", "route_check", "fare_check", "merge_review", "stay_place", "other"];
 export const TASK_STATUSES = ["waiting", "processing", "done", "failed"];
 export const TASK_LIMIT = 100;
 const contextOK = (v) => !given(v) || (typeof v === "object" && !Array.isArray(v) && JSON.stringify(v).length <= 2000);

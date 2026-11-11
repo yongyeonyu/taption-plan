@@ -7,9 +7,12 @@ struct AITaskPanel: View {
 
     @State private var tasks: [AITaskQueue.Task] = []
     @State private var isLoading = false
+    @State private var inbox: [PaymentInbox.Item] = []
+    @State private var opened: PaymentInbox.Item?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
+            PaymentInboxList(language: language, items: inbox) { opened = $0 }
             if !MemoPolishQueue.hasConnection() {
                 note(language.text("AI 연결이 없어요. 메뉴 › AI 연결에서 연결하면 앱이 못한 일을 AI가 처리해요.",
                                    "No AI is connected. Connect one in Menu › AI connection to let it handle what the app couldn't."))
@@ -38,7 +41,11 @@ struct AITaskPanel: View {
         }
         .task {
             tasks = Self.merged()
+            inbox = PaymentInbox.items().reversed()
             await reload()
+        }
+        .sheet(item: $opened, onDismiss: { inbox = PaymentInbox.items().reversed(); tasks = Self.merged() }) {
+            PaymentInboxDetail(language: language, item: $0)
         }
     }
 
@@ -129,6 +136,7 @@ struct AITaskPanel: View {
         case .fareCheck: language.text("교통비 확인", "Fare check")
         case .mergeReview: language.text("조각 합침 검토", "Merge review")
         case .stayPlace: language.text("머문 장소 확인", "Stay place")
+        case .paymentRule: language.text("결제 문자 규칙 요청", "Payment rule request")
         case .other: language.text("기타 확인", "Other")
         }
     }
@@ -142,6 +150,7 @@ struct AITaskPanel: View {
         case .fareCheck: "creditcard"
         case .mergeReview: "rectangle.compress.vertical"
         case .stayPlace: "mappin.and.ellipse"
+        case .paymentRule: "text.badge.plus"
         case .other: "questionmark.bubble"
         }
     }

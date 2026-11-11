@@ -30,6 +30,8 @@ struct AssistantEditDelta: Codable, Equatable, Sendable {
     var ledgerBefore: LedgerEntry?
     /// 이동 수단 교정 전·후(ACT1111A01). 예전 기록에는 없다.
     var movement: AssistantMovementChange?
+    /// 결제 문자 읽기 규칙(PRL1112A01). 예전 기록에는 없다.
+    var paymentRuleID: UUID?
 
     var isEmpty: Bool {
         plans.isEmpty && memos.isEmpty && actuals.isEmpty && corrections.isEmpty
@@ -280,6 +282,8 @@ extension AppModel {
         // 되돌린 메모의 금액대로 가계부도 맞춘다(AI가 고친 메모를 되돌리면 금액도 돌아온다).
         resyncMemoLedger(changed: Set(entry.delta.memos.map(\.id)).subtracting([entry.delta.ledgerEntry?.memoID].compactMap { $0 }))
         if let bubbleID = entry.delta.bubbleID { AssistantBubbleStore.remove(bubbleID, file: preferences.bubbleFile) }
+        // 규칙만 지운다. 그 규칙으로 다시 읽어 넣은 가계부 기록은 그대로 둔다(PRL1112A01).
+        if let ruleID = entry.delta.paymentRuleID { LedgerMessageRules.remove(ruleID, defaults: preferences.defaults) }
         if let before = entry.delta.ledgerBefore {
             await preferences.ledger.save(before)
         } else if let ledgerID = entry.delta.ledgerEntryID {

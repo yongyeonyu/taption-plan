@@ -15,6 +15,8 @@ enum AssistantActionKind: String, CaseIterable, Identifiable, Codable, Sendable 
     case updateExpense
     // ACT1111A01
     case classifyUnconfirmed, setTravelMode
+    // PRL1112A01
+    case addPaymentRule
 
     var id: String { rawValue }
 
@@ -46,6 +48,7 @@ enum AssistantActionKind: String, CaseIterable, Identifiable, Codable, Sendable 
         case .updateExpense: language.text("가계부 기록 고치기", "Edit ledger entries")
         case .classifyUnconfirmed: language.text("미확인 시간 분류하기", "Classify unconfirmed time")
         case .setTravelMode: language.text("이동 수단 고치기", "Correct travel modes")
+        case .addPaymentRule: language.text("결제 문자 읽기 규칙 더하기", "Add payment text rules")
         }
     }
 }
@@ -122,6 +125,7 @@ extension AssistantCommand.Action {
         case .updateExpense: .updateExpense
         case .classifyUnconfirmed: .classifyUnconfirmed
         case .setTravelMode: .setTravelMode
+        case .addPaymentRule: .addPaymentRule
         }
     }
 
@@ -129,7 +133,7 @@ extension AssistantCommand.Action {
     /// 루틴을 지우면 하위 일정도 함께 지워지므로 `plans`를 주면 그 수까지 센다(REV1110A06).
     func existingChangeCount(plans: [PlanRecord] = []) -> Int {
         switch self {
-        case .addMemo, .addSchedule, .addGoal, .addTripStop, .setBubble, .addExpense, .classifyUnconfirmed: 0
+        case .addMemo, .addSchedule, .addGoal, .addTripStop, .setBubble, .addExpense, .classifyUnconfirmed, .addPaymentRule: 0
         case let .mergeRecords(_, ids, _, _): ids.count
         case let .deleteGoal(goalID):
             1 + (UUID(uuidString: goalID).flatMap { try? PlanHierarchy.descendants(of: $0, in: plans) }?.count ?? 0)
@@ -173,6 +177,8 @@ struct AssistantEditResult: Equatable, Sendable {
     var ledgerBefore: LedgerEntry?
     /// 고치기 전 이동 구간과 수단 교정표(ACT1111A01). 되돌리면 이것으로 돌린다.
     var movementBefore: AssistantMovementChange.State?
+    /// 더한 결제 문자 규칙(PRL1112A01). 되돌리면 지운다.
+    var paymentRuleID: UUID?
 
     static func rejected(_ reason: String) -> Self { Self(reason: reason) }
 }

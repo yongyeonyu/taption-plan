@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """앱과 중계 서버에 넣는 「BOKKI 결제」 단축어를 만들고 서명한다(SCA1112A01, SCB1112A01).
 
-「원」이 든 메시지를 받으면(트리거가 단축어 안에 든다, iOS 26부터) 받은 내용을 BOKKI Plan의 「결제 알림 넣기」에 넘긴다.
-트리거 형식은 아이폰 11(iOS 26)에서 직접 만든 자동화를 iCloud 링크로 내보내 읽은 것과 같다(SCB1112A01).
+「원」이 든 메시지를 받으면(트리거가 단축어 안에 든다, iOS 27부터) 받은 내용을 BOKKI Plan의 「결제 알림 넣기」에 넘긴다.
+트리거 형식은 아이폰 11(iOS 27)에서 직접 만든 자동화를 iCloud 링크로 내보내 읽은 것과 같다(SCB1112A01).
 앱 Assets 데이터로 쓰고, 안내 화면이 공유 시트로 단축어 앱에 넘긴다.
 `shortcuts sign --mode anyone`은 macOS에서만 되고 Apple 계정 로그인이 필요하다.
 사용: python3 scripts/shortcuts/build.py

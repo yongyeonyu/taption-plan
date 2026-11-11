@@ -9,7 +9,7 @@ struct BokkiShortcutsGuideSections: View {
 
     var body: some View {
         Group {
-            // 「원이 든 메시지를 받을 때」 트리거까지 든 단축어를 iCloud 링크로 한 번에 넣는다(SCB1112A01, iOS 26).
+            // 「원이 든 메시지를 받을 때」 트리거까지 든 단축어를 iCloud 링크로 한 번에 넣는다(SCB1112A01, iOS 27).
             // 파일로 넣으면 iOS가 트리거를 빼므로 링크가 없을 때만 파일을 쓴다. 결제 앱 알림(iOS 27)은 따라 하기로 만든다.
             Section {
                 BokkiPaymentShortcutButton(language: language)
@@ -95,20 +95,104 @@ enum BokkiPaymentShortcut {
     }
 }
 
-/// 「BOKKI 결제」 추가 단추. iCloud 링크면 단축어 앱이 자동화까지 담아 바로 「단축어 추가」를 띄운다.
+/// 「BOKKI 결제」 추가 단추. iCloud 링크가 있으면 먼저 사진 두 장으로 할 일을 보여 준 뒤 링크를 연다.
 struct BokkiPaymentShortcutButton: View {
     let language: MapHomeLanguage
-    @Environment(\.openURL) private var openURL
+    @State private var isPresented = false
 
     var body: some View {
         let title = BokkiPaymentShortcut.title(language)
         let label = Label(language.text("「\(title)」 자동화 추가", "Add the \"\(title)\" automation"), systemImage: "square.and.arrow.down")
             .font(.taptionStyle(.subheadline, weight: .semibold))
         if let link = BokkiPaymentShortcut.automationLink {
-            Button { openURL(link) } label: { label }
+            Button { isPresented = true } label: { label }
+                .sheet(isPresented: $isPresented) { BokkiPaymentAddPopup(link: link, language: language) }
         } else if let file = BokkiPaymentShortcut.file(language) {
             ShareLink(item: file) { label }
         }
+    }
+}
+
+/// 추가 튜토리얼(SCB1112A01): 아이폰 11에서 찍은 실제 단축어 앱 화면 다섯 장에 누를 곳을 빨갛게 표시했다.
+/// ① 「단축어 추가」 → ② 「<」로 보관함 → ③ 「자동화」 → ④ 스위치 켜기 → ⑤ 켜진 모습. 가져온 자동화는 iOS가 꺼 두므로 ④가 꼭 필요하다.
+/// 단축어 앱에 다녀와도 시트와 단계가 남는다.
+struct BokkiPaymentAddPopup: View {
+    let link: URL
+    let language: MapHomeLanguage
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
+    @State private var page = 0
+
+    private var pages: [(image: String, text: String)] {
+        [
+            ("BokkiShortcutGuideAdd", language.text("단축어 앱이 열리면 「단축어 추가」를 눌러요.", "When Shortcuts opens, tap Add Shortcut.")),
+            ("BokkiShortcutGuideBack", language.text("추가가 끝나면 왼쪽 위 「<」를 눌러요.", "Then tap < at the top left.")),
+            ("BokkiShortcutGuideLibrary", language.text("보관함에서 「자동화」를 눌러요.", "In the library, tap Automation.")),
+            ("BokkiShortcutGuideSwitch", language.text("「BOKKI 결제」 스위치를 켜요. iOS는 가져온 자동화를 꺼진 채로 넣어요.", "Turn on the BOKKI Payment switch. iOS adds shared automations switched off.")),
+            ("BokkiShortcutGuideDone", language.text("이렇게 초록색이 되면 끝이에요. 이제 결제 문자가 저절로 가계부에 들어가요.", "Green means done. Payment texts now go into the ledger by themselves.")),
+        ]
+    }
+
+    var body: some View {
+        let all = pages
+        NavigationStack {
+            VStack(spacing: 16) {
+                TabView(selection: $page) {
+                    ForEach(all.indices, id: \.self) { index in
+                        VStack(spacing: 14) {
+                            Image(all[index].image)
+                                .resizable()
+                                .scaledToFit()
+                                .clipShape(RoundedRectangle(cornerRadius: TaptionCorner.large, style: .continuous))
+                                .overlay(RoundedRectangle(cornerRadius: TaptionCorner.large, style: .continuous).stroke(Color.tpBorder, lineWidth: TaptionBorder.width))
+                                .frame(maxHeight: 420)
+                                .accessibilityHidden(true)
+                            Text(all[index].text)
+                                .font(.taptionStyle(.body, weight: .semibold))
+                                .multilineTextAlignment(.center)
+                        }
+                        .padding(.horizontal, 20)
+                        .tag(index)
+                    }
+                }
+                .tabViewStyle(.page(indexDisplayMode: .always))
+                .indexViewStyle(.page(backgroundDisplayMode: .always))
+                actions(last: all.count - 1)
+                    .padding(.horizontal, 20)
+            }
+            .padding(.vertical, 12)
+            .navigationTitle(Text(verbatim: "\(page + 1) / \(all.count)"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button(language.text("닫기", "Close")) { dismiss() } } }
+        }
+    }
+
+    @ViewBuilder
+    private func actions(last: Int) -> some View {
+        VStack(spacing: 10) {
+            if page == 0 {
+                Button {
+                    openURL(link)
+                    page = 1
+                } label: { Text(language.text("단축어 앱에서 추가하기", "Add in Shortcuts")).frame(maxWidth: .infinity) }
+                    .buttonStyle(.borderedProminent)
+            } else {
+                Button {
+                    if let url = URL(string: "shortcuts://") { openURL(url) }
+                } label: { Text(language.text("단축어 앱 열기", "Open Shortcuts")).frame(maxWidth: .infinity) }
+                    .buttonStyle(.bordered)
+                HStack {
+                    Button(language.text("이전", "Back")) { page -= 1 }
+                    Spacer()
+                    if page == last {
+                        Button(language.text("스위치를 켰어요", "I turned it on")) { dismiss() }.buttonStyle(.borderedProminent)
+                    } else {
+                        Button(language.text("다음", "Next")) { page += 1 }.buttonStyle(.borderedProminent)
+                    }
+                }
+            }
+        }
+        .font(.taptionStyle(.subheadline, weight: .semibold))
     }
 }
 
@@ -125,7 +209,7 @@ struct BokkiPaymentAutomationRow: View {
     }
 }
 
-/// 결제 앱 알림 자동화 만들기를 아이폰 단축어 앱 화면(iOS 26, SCB1112A01 캡처)대로 한 단계씩 보여 준다.
+/// 결제 앱 알림 자동화 만들기를 아이폰 단축어 앱 화면(iOS 27, SCB1112A01 캡처)대로 한 단계씩 보여 준다.
 /// 단축어 앱에 다녀와도 단계가 남는다.
 struct BokkiPaymentAutomationSetup: View {
     let language: MapHomeLanguage

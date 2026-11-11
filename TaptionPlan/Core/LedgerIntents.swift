@@ -38,33 +38,55 @@ struct AddPaymentNotificationIntent: AppIntent {
 /// 결제 문자·알림 공통 처리(AIQ1111A01·SHT1111A01): 앱이 읽으면 바로 넣고 AI가 다듬으며, 못 읽으면 AI에게 맡긴다.
 @MainActor
 enum PaymentTextCapture {
+    /// 넘어온 글을 처리하고 결과를 받은 문자함에 남긴다(PRL1112A01). 「AI」 탭이 이것을 보여 준다.
     static func capture(_ text: String, requiresTime: Bool, now: Date = .now) async -> String {
+        let (message, outcome) = await process(text, requiresTime: requiresTime, now: now)
+        PaymentInbox.record(text, outcome: outcome, message: message, now: now)
+        return message
+    }
+
+    static func process(_ text: String, requiresTime: Bool, now: Date = .now) async -> (String, PaymentInbox.Outcome) {
         let language = MapHomeLanguage.current
+        // AI가 보탠 규칙이 먼저다. 앱 규칙이 못 읽거나 잘못 읽는 형식을 고치려고 넣은 것이기 때문이다.
+        if let match = LedgerMessageRules.match(text, now: now) {
+            guard case let .draft(draft, income) = match else {
+                return (language.text("가계부에 넣지 않는 문자예요.", "This kind of text is not added to the ledger."), .skipped)
+            }
+            var entry = LedgerMessageParser.entry(draft, now: now)
+            if income { entry.kind = .income }
+            await LedgerBook.shared.load()
+            guard LedgerMessageParser.duplicateVerdict(entry, in: LedgerBook.shared.entries) == .none else {
+                return (language.text("이미 가계부에 넣은 결제예요.", "That payment is already in the ledger."), .duplicate)
+            }
+            let saved = await LedgerBook.shared.save(entry)
+            let money = LedgerMoney.text(saved.amount, currency: saved.currency, language: language)
+            return (language.text("\(saved.title) \(money)을 가계부에 넣었어요.", "Added \(saved.title) \(money) to the ledger."), .added)
+        }
         // 급여 입금은 수입으로 넣는다(LIN1111A01). 그 밖의 입금은 넣지 않는다.
         if let salary = LedgerMessageParser.salaryDeposit(text, now: now) {
             await LedgerBook.shared.load()
             guard LedgerMessageParser.duplicateVerdict(salary, in: LedgerBook.shared.entries) == .none else {
-                return language.text("이미 가계부에 넣은 입금이에요.", "That deposit is already in the ledger.")
+                return (language.text("이미 가계부에 넣은 입금이에요.", "That deposit is already in the ledger."), .duplicate)
             }
             let saved = await LedgerBook.shared.save(salary)
             let money = LedgerMoney.text(saved.amount, currency: saved.currency, language: language)
-            return language.text("\(saved.title) \(money)을 수입으로 넣었어요.", "Added \(saved.title) \(money) as income.")
+            return (language.text("\(saved.title) \(money)을 수입으로 넣었어요.", "Added \(saved.title) \(money) as income."), .added)
         }
         // 자동화는 결제가 아닌 문자·알림도 넘긴다. 그런 글은 넣지도 AI에게 보내지도 않는다(SMA1111A01).
         guard LedgerMessageParser.isPaymentCandidate(text) else {
-            return language.text("가계부에 넣을 결제 문자가 아니에요.", "Not a payment message, so nothing was added.")
+            return (language.text("가계부에 넣을 결제 문자가 아니에요.", "Not a payment message, so nothing was added."), .skipped)
         }
         // 등록한 내 계좌로 옮기는 돈은 지출이 아니다(LIN1111A01).
         if LedgerOwnAccounts.isOwnTransfer(text, names: LedgerOwnAccounts.names()) {
-            return language.text("내 계좌로 옮긴 돈이라 가계부에 넣지 않았어요.", "That was a transfer to your own account, so nothing was added.")
+            return (language.text("내 계좌로 옮긴 돈이라 가계부에 넣지 않았어요.", "That was a transfer to your own account, so nothing was added."), .skipped)
         }
         guard var draft = LedgerMessageParser.parse(text, now: now), !requiresTime || draft.occurredAt != nil else {
             // 광고·안내가 아니면 연결된 AI에게 맡긴다. 번호는 가려서 보낸다.
             if !LedgerMessageParser.isNotice(text), AITaskQueue.enqueue(.paymentText, text: text, day: now) {
                 await AITaskQueue.upload()
-                return language.text("결제 문자를 읽지 못해 AI에게 확인을 맡겼어요.", "Couldn't read the payment text, so it was sent to your AI to check.")
+                return (language.text("결제 문자를 읽지 못해 AI에게 확인을 맡겼어요.", "Couldn't read the payment text, so it was sent to your AI to check."), .askedAI)
             }
-            return language.text("결제 문자를 읽지 못했어요. 가계부에서 직접 넣어 주세요.", "Couldn't read the payment text. Add it in the ledger yourself.")
+            return (language.text("결제 문자를 읽지 못했어요. 가계부에서 직접 넣어 주세요.", "Couldn't read the payment text. Add it in the ledger yourself."), .unread)
         }
         if draft.occurredAt == nil { draft.occurredAt = now }
         let entry = LedgerMessageParser.entry(draft)
@@ -74,15 +96,15 @@ enum PaymentTextCapture {
         if draft.isCancel, var original = LedgerMessageParser.canceledOriginal(for: entry, in: LedgerBook.shared.entries) {
             original.canceledAt = entry.occurredAt
             await LedgerBook.shared.save(original)
-            return language.text("\(original.title) \(money) 결제를 취소됨으로 표시했어요.", "Marked \(original.title) \(money) as canceled.")
+            return (language.text("\(original.title) \(money) 결제를 취소됨으로 표시했어요.", "Marked \(original.title) \(money) as canceled."), .added)
         }
         switch LedgerMessageParser.duplicateVerdict(entry, in: LedgerBook.shared.entries) {
         case .same:
-            return language.text("이미 가계부에 넣은 결제예요.", "That payment is already in the ledger.")
+            return (language.text("이미 가계부에 넣은 결제예요.", "That payment is already in the ledger."), .duplicate)
         case .suspect:
             // 10분 안 같은 금액의 다른 가게: 조용히 버리지 않고 확인 필요에 둔다(LRV1111A01).
             LedgerReviewStore.shared.add(entry, reason: .duplicate, now: now)
-            return language.text("방금 같은 금액의 결제가 있어 「확인 필요」에 두었어요.", "A payment of the same amount was just added, so this one is waiting in Needs review.")
+            return (language.text("방금 같은 금액의 결제가 있어 「확인 필요」에 두었어요.", "A payment of the same amount was just added, so this one is waiting in Needs review."), .review)
         case .none:
             break
         }
@@ -90,14 +112,14 @@ enum PaymentTextCapture {
             // 가게 이름을 못 읽었으면 조용히 넣지 않는다. 이체 낱말이 있으면 이체 의심으로 둔다.
             let reason: LedgerReviewStore.Reason = LedgerMessageParser.looksLikeTransfer(text) ? .transfer : .noMerchant
             LedgerReviewStore.shared.add(entry, reason: reason, now: now)
-            return language.text("\(money) 결제를 「확인 필요」에 두었어요. 메모 › 지출에서 넣거나 버릴 수 있어요.", "\(money) is waiting in Needs review. Add or discard it in Memo › Spending.")
+            return (language.text("\(money) 결제를 「확인 필요」에 두었어요. 메모 › 지출에서 넣거나 버릴 수 있어요.", "\(money) is waiting in Needs review. Add or discard it in Memo › Spending."), .review)
         }
         let saved = await LedgerBook.shared.save(entry)
         // 앱이 먼저 넣고, 연결된 AI가 가게 이름·분류를 다듬는다(대표 결정).
         if AITaskQueue.enqueue(.paymentText, text: text, day: saved.occurredAt, context: ["entryId": saved.id.uuidString]) {
             await AITaskQueue.upload()
         }
-        return language.text("\(saved.title) \(money)을 가계부에 넣었어요.", "Added \(saved.title) \(money) to the ledger.")
+        return (language.text("\(saved.title) \(money)을 가계부에 넣었어요.", "Added \(saved.title) \(money) to the ledger."), .added)
     }
 }
 
@@ -228,5 +250,21 @@ struct BokkiShortcuts: AppShortcutsProvider {
             shortTitle: "화면 열기",
             systemImageName: "rectangle.portrait.on.rectangle.portrait"
         )
+    }
+}
+
+extension PaymentInbox {
+    /// 규칙이 생긴 뒤 못 읽었던 글을 다시 읽는다(PRL1112A01). 가계부에 들어간 건수를 돌려준다.
+    @MainActor
+    static func reprocess(now: Date = .now) async -> Int {
+        var added = 0
+        for var item in readable(now: now) {
+            let (message, outcome) = await PaymentTextCapture.process(item.text, requiresTime: false, now: item.receivedAt)
+            item.outcome = outcome
+            item.message = message
+            update(item)
+            if outcome == .added { added += 1 }
+        }
+        return added
     }
 }
