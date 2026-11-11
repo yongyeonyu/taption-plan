@@ -454,23 +454,13 @@ struct MapHomePlaceBookSheet: View {
     private static let columnCount = 3
 
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 18) {
-                    header
-                    menuRows
-                    if let state {
-                        section(
-                            MapHomePlaceBookMenu.isCountry(menu.selected) ? language.runtimeText("도시", "Cities") : language.text("랜드마크", "Landmarks"),
-                            entries: state.landmarks,
-                            proxy: proxy
-                        )
-                    } else {
-                        ProgressView().frame(maxWidth: .infinity)
-                    }
-                }
-                .padding(20)
-            }
+        // 제목·도장 수는 스크롤 밖 고정 머리(대표 지시 PBH1111A01).
+        VStack(spacing: 0) {
+            header
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .padding(.bottom, 12)
+            scrollContent
         }
         .background(Color.tpBackground)
         .onChange(of: menu.selected) {
@@ -496,6 +486,26 @@ struct MapHomePlaceBookSheet: View {
         ) {
             ForEach(airportChoice?.pins ?? [], id: \.self) { pin in
                 Button(pin.title) { onSelect(pin) }
+            }
+        }
+    }
+
+    private var scrollContent: some View {
+        ScrollViewReader { proxy in
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 18) {
+                    menuRows
+                    if let state {
+                        section(
+                            MapHomePlaceBookMenu.isCountry(menu.selected) ? language.runtimeText("도시", "Cities") : language.text("랜드마크", "Landmarks"),
+                            entries: state.landmarks,
+                            proxy: proxy
+                        )
+                    } else {
+                        ProgressView().frame(maxWidth: .infinity)
+                    }
+                }
+                .padding([.horizontal, .bottom], 20)
             }
         }
     }
