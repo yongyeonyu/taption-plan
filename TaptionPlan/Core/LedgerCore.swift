@@ -352,7 +352,7 @@ final class LedgerBook {
 
     // MARK: 모아 보기
 
-    static func monthKey(_ date: Date, calendar: Calendar = .autoupdatingCurrent) -> String {
+    nonisolated static func monthKey(_ date: Date, calendar: Calendar = .autoupdatingCurrent) -> String {
         let parts = calendar.dateComponents([.year, .month], from: date)
         return String(format: "%04d-%02d", parts.year ?? 0, parts.month ?? 0)
     }

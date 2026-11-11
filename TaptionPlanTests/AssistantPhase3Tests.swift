@@ -1098,3 +1098,354 @@ final class AssistantPaymentRuleTests: XCTestCase {
         XCTAssertTrue(LedgerMessageRules.rules(store).isEmpty)
     }
 }
+
+/// ACX1112A01: AI가 읽는 앱 상태와 가계부 설정·정리·화면 열기 명령. 읽기·검사·적용·되돌리기.
+@MainActor
+final class AssistantAppControlTests: XCTestCase {
+    private var calendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        return calendar
+    }
+
+    private func at(_ month: Int, _ day: Int, _ hour: Int, _ minute: Int = 0) -> Date {
+        calendar.date(from: DateComponents(year: 2026, month: month, day: day, hour: hour, minute: minute))!
+    }
+
+    private func defaults() -> UserDefaults {
+        let name = "AssistantAppControlTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: name)!
+        addTeardownBlock { UserDefaults(suiteName: name)?.removePersistentDomain(forName: name) }
+        return defaults
+    }
+
+    private func command(_ id: String, _ action: String, _ extra: [String: Any] = [:]) -> [String: Any] {
+        ["format": "bokki-command", "version": 1, "id": id, "action": action].merging(extra) { $1 }
+    }
+
+    private func batch(_ items: [[String: Any]]) throws -> AssistantCommandBatch {
+        let data = try JSONSerialization.data(withJSONObject: ["commands": items])
+        return try XCTUnwrap(AssistantCommandParser.parse(data, now: at(11, 12, 9), calendar: calendar))
+    }
+
+    private func model() async -> AppModel {
+        let model = AppModel(repository: InMemoryPlanRepository(snapshot: .empty), cloudSyncService: nil)
+        await model.bootstrap()
+        return model
+    }
+
+    private func logEntry(_ kind: AssistantActionKind, _ result: AssistantEditResult) -> AssistantLogEntry {
+        var delta = AssistantEditDelta()
+        delta.appChange = result.appChange
+        delta.ledgerEntryID = result.ledgerEntryID
+        delta.ledgerEntry = result.ledgerEntry
+        return AssistantLogEntry(commandID: UUID().uuidString, kind: kind, appliedAt: .now, before: result.before, after: result.after, delta: delta)
+    }
+
+    private let id = "A1B2C3D4-E5F6-4789-9ABC-DEF012345678"
+
+    func testCommandsParseWithTheServerRules() throws {
+        let parsed = try batch([
+            command("budget", "setBudget", ["amountKRW": 500_000]),
+            command("budgetMonth", "setBudget", ["amountKRW": 0, "month": "2026-12"]),
+            command("add", "addOwnAccount", ["name": " 비상금 통장 "]),
+            command("remove", "removeOwnAccount", ["name": "비상금 통장"]),
+            command("rule", "deletePaymentRule", ["ruleId": id]),
+            command("keep", "resolveReview", ["reviewId": id, "decision": "add"]),
+            command("drop", "resolveReview", ["reviewId": id, "decision": "discard"]),
+            command("inbox", "deleteInboxItem", ["inboxId": id]),
+            command("screen", "openScreen", ["screen": "paymentAutomation"]),
+            command("negative", "setBudget", ["amountKRW": -1]),
+            command("huge", "setBudget", ["amountKRW": 1e12 + 1]),
+            command("noAmount", "setBudget", ["month": "2026-11"]),
+            command("badMonth", "setBudget", ["amountKRW": 1, "month": "2026-13"]),
+            command("shortMonth", "setBudget", ["amountKRW": 1, "month": "2026-1"]),
+            command("signedMonth", "setBudget", ["amountKRW": 1, "month": "2026-+1"]),
+            command("oneLetter", "addOwnAccount", ["name": " 가 "]),
+            command("longName", "addOwnAccount", ["name": String(repeating: "가", count: 31)]),
+            command("number", "addOwnAccount", ["name": "110-123-456789"]),
+            command("spacedNumber", "removeOwnAccount", ["name": "통장 1234 5678 9012"]),
+            command("badRule", "deletePaymentRule", ["ruleId": "all"]),
+            command("badDecision", "resolveReview", ["reviewId": id, "decision": "delete"]),
+            command("noDecision", "resolveReview", ["reviewId": id]),
+            command("badInbox", "deleteInboxItem", ["inboxId": "1"]),
+            command("badScreen", "openScreen", ["screen": "backupPin"]),
+            command("noScreen", "openScreen"),
+        ])
+        XCTAssertEqual(parsed.commands.map(\.id), ["budget", "budgetMonth", "add", "remove", "rule", "keep", "drop", "inbox", "screen"])
+        XCTAssertEqual(parsed.commands.map(\.action.kind), [
+            .setBudget, .setBudget, .addOwnAccount, .removeOwnAccount, .deletePaymentRule, .resolveReview, .resolveReview, .deleteInboxItem, .openScreen,
+        ])
+        XCTAssertEqual(parsed.invalidIDs.count, 16)
+        let uuid = try XCTUnwrap(UUID(uuidString: id))
+        XCTAssertEqual(parsed.commands.map(\.action), [
+            // 달을 주지 않으면 명령을 읽는 때의 이번 달이다.
+            .setBudget(month: LedgerBook.monthKey(.now, calendar: calendar), amountKRW: 500_000), .setBudget(month: "2026-12", amountKRW: 0),
+            .addOwnAccount("비상금 통장"), .removeOwnAccount("비상금 통장"), .deletePaymentRule(uuid),
+            .resolveReview(uuid, add: true), .resolveReview(uuid, add: false), .deleteInboxItem(uuid), .openScreen(.paymentAutomation),
+        ])
+        // 더하기와 화면 열기는 기존 것을 바꾸지 않는다. 지우기·버리기·예산은 20개 확인 규칙에 센다.
+        XCTAssertEqual(parsed.commands.map(\.action.existingChangeCount), [1, 1, 0, 1, 1, 1, 1, 1, 0])
+        XCTAssertEqual(Set(AssistantScreen.allCases.map(\.rawValue)), ["paymentAutomation", "shortcuts", "aiConnection", "ledger", "dataProtection", "settings"])
+    }
+
+    func testOwnAccountsRuleAndInboxCommandsApplyAndUndo() async throws {
+        let store = defaults()
+        let model = await model()
+        LedgerOwnAccounts.set(["월급 통장"], defaults: store)
+        let rule = try LedgerMessageRules.validated(name: "OO카드", pattern: "OO카드 (?<amount>[0-9,]+)원", sample: "OO카드 1,000원", kind: .expense).get()
+        LedgerMessageRules.add(rule, defaults: store)
+        PaymentInbox.record("OO카드 1,000원", outcome: .unread, message: "읽지 못함", defaults: store)
+        let inboxID = try XCTUnwrap(PaymentInbox.items(store).first?.id)
+
+        let applied = await model.applyAssistantCommands(try batch([
+            command("a1", "addOwnAccount", ["name": "비상금 통장"]),
+            command("a2", "addOwnAccount", ["name": "비상금 통장"]),
+            command("a3", "removeOwnAccount", ["name": "월급 통장"]),
+            command("a4", "removeOwnAccount", ["name": "없는 통장"]),
+            command("r1", "deletePaymentRule", ["ruleId": rule.id.uuidString]),
+            command("r2", "deletePaymentRule", ["ruleId": rule.id.uuidString]),
+            command("i1", "deleteInboxItem", ["inboxId": inboxID.uuidString]),
+            command("i2", "deleteInboxItem", ["inboxId": inboxID.uuidString]),
+        ]), defaults: store)
+        let outcome = try XCTUnwrap(applied)
+        XCTAssertEqual(outcome.results.map(\.reason), [nil, "no_change", nil, "no_account", nil, "no_rule", nil, "no_inbox_item"])
+        XCTAssertEqual(outcome.settings, 4)
+        XCTAssertEqual(LedgerOwnAccounts.names(store), ["비상금 통장"])
+        XCTAssertTrue(LedgerMessageRules.rules(store).isEmpty)
+        XCTAssertTrue(PaymentInbox.items(store).isEmpty)
+        XCTAssertEqual(outcome.entries.map(\.kind), [.addOwnAccount, .removeOwnAccount, .deletePaymentRule, .deleteInboxItem])
+
+        // 나중 것부터 되돌린다. 계좌 이름은 그 뒤 값이 그대로일 때만 돌아간다.
+        let preferences = AssistantPreferenceStore.test(store)
+        for entry in outcome.entries.reversed().prefix(3) {
+            let undone = await model.undoAssistantEntry(entry, preferences: preferences)
+            XCTAssertTrue(undone, "\(entry.kind)")
+        }
+        XCTAssertEqual(PaymentInbox.items(store).map(\.id), [inboxID])
+        XCTAssertEqual(LedgerMessageRules.rules(store), [rule])
+        XCTAssertEqual(LedgerOwnAccounts.names(store), ["월급 통장", "비상금 통장"])
+        LedgerOwnAccounts.set(["월급 통장", "비상금 통장", "새 통장"], defaults: store)
+        let blocked = await model.undoAssistantEntry(outcome.entries[0], preferences: preferences)
+        XCTAssertFalse(blocked, "사용자가 그 뒤 목록을 바꿨으면 되돌리지 않는다")
+        XCTAssertEqual(LedgerOwnAccounts.names(store).count, 3)
+        model.userFacingError = nil
+    }
+
+    func testOwnAccountLimitAndDisabledKinds() async throws {
+        let store = defaults()
+        let model = await model()
+        LedgerOwnAccounts.set((1...LedgerOwnAccounts.limit).map { "통장\($0)" }, defaults: store)
+        AssistantActionToggles.set(.openScreen, enabled: false, defaults: store)
+        let applied = await model.applyAssistantCommands(try batch([
+            command("full", "addOwnAccount", ["name": "하나 더"]),
+            command("off", "openScreen", ["screen": "ledger"]),
+        ]), defaults: store)
+        XCTAssertEqual(applied?.results.map(\.reason), ["account_limit", "disabled"])
+        XCTAssertNil(AssistantScreenRequest(defaults: store).pending)
+    }
+
+    func testBudgetAppliesAndUndoRestoresThePreviousAmount() async throws {
+        let store = defaults()
+        let model = await model()
+        let preferences = AssistantPreferenceStore.test(store)
+        let set = await model.applyAssistantAction(.setBudget(month: "2026-11", amountKRW: 500_000), preferences: preferences)
+        XCTAssertNil(set.reason)
+        XCTAssertEqual(preferences.ledger.budget(for: "2026-11")?.amountKRW, 500_000)
+        XCTAssertEqual(set.appChange?.budget, .init(month: "2026-11", before: nil, after: 500_000))
+        let same = await model.applyAssistantAction(.setBudget(month: "2026-11", amountKRW: 500_000), preferences: preferences)
+        XCTAssertEqual(same.reason, "no_change")
+        let changed = await model.applyAssistantAction(.setBudget(month: "2026-11", amountKRW: 300_000), preferences: preferences)
+        XCTAssertEqual(changed.appChange?.budget, .init(month: "2026-11", before: 500_000, after: 300_000))
+
+        let stale = await model.undoAssistantEntry(logEntry(.setBudget, set), preferences: preferences)
+        XCTAssertFalse(stale, "그 뒤 예산이 바뀌었으면 되돌리지 않는다")
+        model.userFacingError = nil
+        let undone = await model.undoAssistantEntry(logEntry(.setBudget, changed), preferences: preferences)
+        XCTAssertTrue(undone)
+        XCTAssertEqual(preferences.ledger.budget(for: "2026-11")?.amountKRW, 500_000)
+
+        let removed = await model.applyAssistantAction(.setBudget(month: "2026-11", amountKRW: 0), preferences: preferences)
+        XCTAssertNil(removed.reason)
+        XCTAssertNil(preferences.ledger.budget(for: "2026-11"), "0원은 예산을 없앤다")
+        let none = await model.applyAssistantAction(.setBudget(month: "2026-12", amountKRW: 0), preferences: preferences)
+        XCTAssertEqual(none.reason, "no_change")
+    }
+
+    func testReviewItemsAreAddedOrDiscardedAndUndoPutsThemBack() async throws {
+        let store = defaults()
+        let model = await model()
+        let preferences = AssistantPreferenceStore.test(store)
+        preferences.review.add(LedgerEntry(occurredAt: at(11, 12, 8), amount: 3_000, title: "결제", source: .message), reason: .noMerchant, now: at(11, 12, 8, 1))
+        preferences.review.add(LedgerEntry(occurredAt: at(11, 12, 9), amount: 7_000, title: "분식", source: .message), reason: .duplicate, now: at(11, 12, 9, 1))
+        let first = preferences.review.items[0], second = preferences.review.items[1]
+
+        let missing = await model.applyAssistantAction(.resolveReview(UUID(), add: true), preferences: preferences)
+        XCTAssertEqual(missing.reason, "no_review")
+        let dropped = await model.applyAssistantAction(.resolveReview(first.id, add: false), preferences: preferences)
+        XCTAssertNil(dropped.reason)
+        XCTAssertNil(dropped.ledgerEntryID)
+        XCTAssertEqual(preferences.review.items.map(\.id), [second.id])
+        XCTAssertTrue(preferences.ledger.entries.isEmpty, "버린 것은 가계부에 넣지 않는다")
+
+        let added = await model.applyAssistantAction(.resolveReview(second.id, add: true), preferences: preferences)
+        XCTAssertNil(added.reason)
+        XCTAssertTrue(preferences.review.items.isEmpty)
+        XCTAssertEqual(preferences.ledger.entries.map(\.id), [second.entry.id])
+        XCTAssertEqual(added.ledgerEntryID, second.entry.id)
+
+        let undoneAdd = await model.undoAssistantEntry(logEntry(.resolveReview, added), preferences: preferences)
+        XCTAssertTrue(undoneAdd)
+        XCTAssertTrue(preferences.ledger.entries.isEmpty, "넣은 기록을 지운다")
+        XCTAssertEqual(preferences.review.items.map(\.id), [second.id])
+        let undoneDrop = await model.undoAssistantEntry(logEntry(.resolveReview, dropped), preferences: preferences)
+        XCTAssertTrue(undoneDrop)
+        XCTAssertEqual(preferences.review.items, [first, second], "받은 순서 자리로 돌아온다")
+        XCTAssertEqual(LedgerReviewStore(defaults: store).items, [first, second], "기기에 남는다")
+    }
+
+    func testOpenScreenWaitsUntilTakenExpiresAndUndoCancelsIt() async throws {
+        let store = defaults()
+        let model = await model()
+        let preferences = AssistantPreferenceStore.test(store)
+        let result = await model.applyAssistantAction(.openScreen(.paymentAutomation), preferences: preferences)
+        XCTAssertNil(result.reason)
+        XCTAssertEqual(result.appChange?.screen, .paymentAutomation)
+        XCTAssertEqual(preferences.screens.pending, .paymentAutomation)
+        XCTAssertEqual(AssistantScreenRequest(defaults: store).pending, .paymentAutomation, "앱이 다시 켜져도 남는다")
+        XCTAssertTrue(model.snapshot.plans.isEmpty && model.snapshot.memos.isEmpty, "자료는 바꾸지 않는다")
+
+        let newer = await model.applyAssistantAction(.openScreen(.ledger), preferences: preferences)
+        XCTAssertEqual(preferences.screens.pending, .ledger, "새 요청이 앞의 것을 바꾼다")
+        let ignored = await model.undoAssistantEntry(logEntry(.openScreen, result), preferences: preferences)
+        XCTAssertTrue(ignored)
+        XCTAssertEqual(preferences.screens.pending, .ledger, "다른 화면 요청은 거두지 않는다")
+        let undone = await model.undoAssistantEntry(logEntry(.openScreen, newer), preferences: preferences)
+        XCTAssertTrue(undone)
+        XCTAssertNil(preferences.screens.pending)
+
+        let requests = AssistantScreenRequest(defaults: store)
+        requests.request(.settings, now: at(11, 12, 9))
+        XCTAssertEqual(requests.take(now: at(11, 12, 10)), .settings)
+        XCTAssertNil(requests.take(now: at(11, 12, 10)), "한 번만 띄운다")
+        requests.request(.settings, now: at(11, 12, 9))
+        XCTAssertNil(requests.take(now: at(11, 13, 10)), "하루가 지난 요청은 버린다")
+        XCTAssertNil(requests.pending)
+    }
+
+    func testSetupTextExplainsAppStateAndTheNewCommands() {
+        let key = String(repeating: "A", count: 43)
+        let write = TripRelay.assistantSetupText(host: "relay.example.com", key: key, timeZone: calendar.timeZone)
+        for part in ["GET /app", "get_app_state", "\"setBudget\"", "\"addOwnAccount\"", "removeOwnAccount", "\"deletePaymentRule\"", "\"resolveReview\"", "\"deleteInboxItem\"",
+                     "\"openScreen\",\"screen\":\"paymentAutomation|shortcuts|aiConnection|ledger|dataProtection|settings\"",
+                     "cannot create or switch on an iOS automation", "turn the switch on myself", "no_review"] {
+            XCTAssertTrue(write.contains(part), part)
+        }
+        let read = TripRelay.assistantSetupText(host: "relay.example.com", key: key, scope: .read, timeZone: calendar.timeZone)
+        XCTAssertTrue(read.contains("GET /app"))
+        XCTAssertFalse(read.contains("openScreen"), "읽기 키에는 쓰기 안내가 없다")
+    }
+
+    private func input() throws -> AssistantAppStateSync.Input {
+        let rule = try LedgerMessageRules.validated(name: "OO카드", pattern: "OO카드 (?<amount>[0-9,]+)원", sample: "OO카드 1,000원", kind: .expense).get()
+        var canceled = LedgerEntry(occurredAt: at(11, 11, 20), amount: 9_000, title: "환불한 저녁", source: .message)
+        canceled.canceledAt = at(11, 11, 21)
+        return AssistantAppStateSync.Input(
+            now: at(11, 12, 10), calendar: calendar, language: "korean", mapStyle: .mapLibreNight,
+            display: ["mapPhotos": true, "mapRoutes": false, "mapFootprints": true], shareLevel: .summary, retentionDays: 7,
+            aiConnections: 2, actionsOff: [.deleteMemo, .openScreen], paymentShortcutLink: true,
+            entries: [
+                canceled,
+                LedgerEntry(occurredAt: at(11, 12, 8, 41), amount: 12_000, category: .cafe, title: "스타벅스 1234-5678-9012-3456", source: .message),
+            ],
+            budgetKRW: 500_000, spentKRW: 12_000, incomeKRW: 0, ownAccounts: ["비상금 통장", "110-123-456789"],
+            review: [.init(entry: LedgerEntry(occurredAt: at(11, 12, 9), amount: 3_000, title: "결제", source: .message), reason: .noMerchant, receivedAt: at(11, 12, 9, 1))],
+            inbox: [.init(text: "OO카드 1234567890123 승인 " + String(repeating: "가", count: 400), receivedAt: at(11, 12, 8, 41), outcome: .unread, message: "읽지 못했어요")],
+            rules: [rule]
+        )
+    }
+
+    func testAppStateCarriesSettingsLedgerReviewInboxAndRulesWithNumbersMasked() throws {
+        let state = AssistantAppStateSync.make(try input())
+        XCTAssertEqual([state.format, state.timeZone, state.settings.language, state.settings.mapStyle, state.settings.shareLevel],
+                       ["bokki-app", "Asia/Seoul", "korean", "mapLibreNight", "summary"])
+        XCTAssertEqual(state.settings.theme, "navy")
+        XCTAssertEqual(state.settings.actionsOff, ["deleteMemo", "openScreen"])
+        XCTAssertEqual([state.settings.aiConnections, state.settings.paymentTexts, state.retentionDays], [2, 1, 7])
+        XCTAssertEqual(state.settings.lastPaymentTextAt, "2026-11-12T08:41+09:00")
+        XCTAssertEqual([state.ledger.month, state.ledger.budgetKRW.map { "\($0)" } ?? "", "\(state.ledger.spentKRW)"], ["2026-11", "500000.0", "12000.0"])
+        XCTAssertEqual(state.ledger.ownAccounts, ["비상금 통장", "***-***-**6789"], "번호처럼 보이는 이름은 가린다")
+        XCTAssertEqual(state.ledger.entries.map(\.title), ["스타벅스 ****-****-****-3456", "환불한 저녁"], "새 것부터, 번호는 가린다")
+        XCTAssertEqual(state.ledger.entries.map(\.canceled), [false, true])
+        XCTAssertEqual([state.ledger.entries[0].category, state.ledger.entries[0].kind, state.ledger.entries[0].source, state.ledger.entries[0].time],
+                       ["cafe", "expense", "message", "2026-11-12T08:41+09:00"])
+        XCTAssertEqual([state.review[0].reason, state.review[0].title, state.review[0].time], ["noMerchant", "결제", "2026-11-12T09:00+09:00"])
+        XCTAssertEqual(state.inbox[0].outcome, "unread")
+        XCTAssertTrue(state.inbox[0].text.hasPrefix("OO카드 *********0123 승인"))
+        XCTAssertEqual(state.inbox[0].text.count, AssistantAppStateSync.inboxTextLimit)
+        XCTAssertEqual(state.rules.map(\.name), ["OO카드"])
+        XCTAssertEqual(state.rules[0].pattern, "OO카드 (?<amount>[0-9,]+)원")
+
+        // 올리는 글에 좌표·백업·키 같은 칸은 없다.
+        let json = try XCTUnwrap(String(data: try XCTUnwrap(AssistantAppStateSync.body(state)), encoding: .utf8))
+        for word in ["latitude", "longitude", "backup", "token", "sample", "payer", "note", "1234567890123", "110-123-456789"] {
+            XCTAssertFalse(json.contains(word), word)
+        }
+        let top = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any])
+        XCTAssertEqual(Set(top.keys), ["format", "version", "retentionDays", "timeZone", "settings", "ledger", "review", "inbox", "rules"])
+    }
+
+    func testAppStateHashIgnoresTheStampAndTheBodyFitsTheServerLimit() throws {
+        var source = try input()
+        var state = AssistantAppStateSync.make(source)
+        let tag = AssistantAppStateSync.hash(state)
+        state.updatedAt = "2026-11-12T10:00+09:00"
+        XCTAssertEqual(AssistantAppStateSync.hash(state), tag)
+        state.ledger.budgetKRW = 1
+        XCTAssertNotEqual(AssistantAppStateSync.hash(state), tag)
+
+        source.entries = (0..<500).map { LedgerEntry(occurredAt: at(11, 1, 0).addingTimeInterval(Double($0) * 60), amount: Double($0 + 1), title: String(repeating: "가", count: 60)) }
+        let large = AssistantAppStateSync.make(source)
+        XCTAssertEqual(large.ledger.entries.count, AssistantAppStateSync.entryLimit)
+        XCTAssertEqual(large.ledger.entries.first?.amount, 500, "새 것부터 100개")
+        let small = try XCTUnwrap(AssistantAppStateSync.body(large, limit: 12_000))
+        XCTAssertLessThanOrEqual(small.count, 12_000)
+        let kept = try JSONDecoder().decode(AssistantAppState.self, from: small)
+        XCTAssertLessThan(kept.ledger.entries.count, 100)
+        XCTAssertEqual(kept.ledger.entries.first?.amount, 500, "덜어 낼 때도 새 것을 남긴다")
+        XCTAssertEqual(kept.rules, large.rules)
+    }
+
+    func testAppStateUploadsOnceThenOnlyWhenChangedAndIsDeletedWhenSharingIsOff() async throws {
+        let store = defaults()
+        let model = await model()
+        let master = "m".padding(toLength: 43, withPad: "a", startingAt: 0)
+        Phase3RelayStub.reset { $0.httpMethod == "DELETE" ? 204 : 201 }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [Phase3RelayStub.self]
+        let env = AssistantRegistration.Environment(
+            secrets: AssistantMemorySecrets([.master: master]), defaults: store, session: URLSession(configuration: configuration),
+            host: "relay.example.com", clearConnections: {}
+        )
+        await AssistantAppStateSync.run(model: model, defaults: store, env: env, now: at(11, 12, 10))
+        XCTAssertEqual(Phase3RelayStub.requests.map(\.summary), ["POST /app"])
+        let sent = try XCTUnwrap(JSONSerialization.jsonObject(with: try XCTUnwrap(Phase3RelayStub.requests.first?.body)) as? [String: Any])
+        XCTAssertEqual(sent["format"] as? String, "bokki-app")
+        XCTAssertNotNil(sent["updatedAt"])
+        XCTAssertEqual(Phase3RelayStub.requests.first?.token, master)
+
+        await AssistantAppStateSync.run(model: model, defaults: store, env: env, now: at(11, 12, 11))
+        XCTAssertEqual(Phase3RelayStub.requests.count, 1, "바뀌지 않았으면 다시 올리지 않는다")
+        LedgerOwnAccounts.set(["비상금 통장"], defaults: store)
+        await AssistantAppStateSync.run(model: model, defaults: store, env: env, now: at(11, 12, 12))
+        XCTAssertEqual(Phase3RelayStub.requests.count, 2)
+        await AssistantAppStateSync.run(model: model, defaults: store, env: env, now: at(11, 13, 9))
+        XCTAssertEqual(Phase3RelayStub.requests.count, 3, "서버 보관이 끝나기 전에 다시 올린다")
+
+        store.set(AssistantShareLevel.off.rawValue, forKey: AssistantShareLevel.defaultsKey)
+        await AssistantAppStateSync.run(model: model, defaults: store, env: env, now: at(11, 13, 10))
+        XCTAssertEqual(Phase3RelayStub.requests.last?.summary, "DELETE /app")
+        await AssistantAppStateSync.run(model: model, defaults: store, env: env, now: at(11, 13, 11))
+        XCTAssertEqual(Phase3RelayStub.requests.count, 4, "지운 뒤에는 아무것도 보내지 않는다")
+    }
+}

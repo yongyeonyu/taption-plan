@@ -105,6 +105,12 @@ const ROUTES = {
     POST: ["master", withBody(store.savePolish)],
     DELETE: ["master", (request, ctx) => store.deletePolish(ctx)],
   },
+  // ACX1112A01: 앱 상태(설정·가계부·확인 필요·받은 문자·규칙). 앱이 올리고 AI가 읽는다.
+  "/app": {
+    GET: ["read", (request, ctx) => store.readAppState(ctx)],
+    POST: ["master", withBody(store.saveAppState)],
+    DELETE: ["master", (request, ctx) => store.deleteAppState(ctx)],
+  },
   "/tasks": {
     GET: ["read", (request, ctx) => store.readTasks(ctx)],
     POST: ["master", withBody(store.saveTasks)],

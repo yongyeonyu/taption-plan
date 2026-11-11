@@ -183,6 +183,14 @@ export const COMMAND_FIELDS = {
   updateExpense: ["entryId", "amount", "currency", "title", "category", "kind", "delete"],
   // PRL1112A01: 앱이 읽지 못한 결제 문자 형식을 읽는 규칙. pattern은 ICU 정규식, 앱이 sample로 다시 확인한다.
   addPaymentRule: ["name", "pattern", "sample", "kind"],
+  // ACX1112A01: 가계부 설정(이 달 예산·내 계좌 이름), 규칙·확인 필요·받은 문자 정리, 화면 열기.
+  setBudget: ["amountKRW", "month"],
+  addOwnAccount: ["name"],
+  removeOwnAccount: ["name"],
+  deletePaymentRule: ["ruleId"],
+  resolveReview: ["reviewId", "decision"],
+  deleteInboxItem: ["inboxId"],
+  openScreen: ["screen"],
   setLanguage: ["language"],
   setTheme: ["theme"],
   setMapStyle: ["mapStyle"],
@@ -191,6 +199,16 @@ export const COMMAND_FIELDS = {
 export const ACTIONS = Object.keys(COMMAND_FIELDS);
 export const TRAVEL_MODES = ["walk", "subway", "bus", "car", "train", "flight"];
 export const PAYMENT_RULE_KINDS = ["expense", "income", "ignore"];
+// ACX1112A01
+export const SCREENS = ["paymentAutomation", "shortcuts", "aiConnection", "ledger", "dataProtection", "settings"];
+export const REVIEW_DECISIONS = ["add", "discard"];
+export const BUDGET_MAX_KRW = 1e12;
+const UUID = /^[0-9A-Fa-f]{8}(?:-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12}$/;
+const uuid = (v) => typeof v === "string" && UUID.test(v);
+const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
+const isMonth = (v) => typeof v === "string" && MONTH.test(v);
+// 내 계좌 이름: 다듬어 2~30자이고 번호처럼 보이는 숫자 덩어리가 없어야 한다(앱 규칙과 같다).
+const accountName = (v) => nonEmpty(v, 30) && v.trim().length >= 2 && !/\d[\d -]{7,}\d/.test(v);
 export const EXPENSE_CATEGORIES = ["food", "cafe", "transport", "shopping", "living", "health", "culture", "travel", "lodging", "education", "gift", "salary", "other"];
 
 // 알려진 칸만 남긴 명령. 동작을 모르면 null.
@@ -296,6 +314,21 @@ export function isCommand(value) {
     case "addPaymentRule":
       return nonEmpty(v.name, 40) && nonEmpty(v.pattern, 300) && nonEmpty(v.sample, 1000)
         && optional(v.kind, oneOf(PAYMENT_RULE_KINDS)) && (v.kind === "ignore" || v.pattern.includes("(?<amount>"));
+    // ACX1112A01. amountKRW 0은 그 달 예산을 없앤다. month가 없으면 앱의 이번 달.
+    case "setBudget":
+      return typeof v.amountKRW === "number" && Number.isFinite(v.amountKRW) && v.amountKRW >= 0 && v.amountKRW <= BUDGET_MAX_KRW
+        && optional(v.month, isMonth);
+    case "addOwnAccount":
+    case "removeOwnAccount":
+      return accountName(v.name);
+    case "deletePaymentRule":
+      return uuid(v.ruleId);
+    case "resolveReview":
+      return uuid(v.reviewId) && oneOf(REVIEW_DECISIONS)(v.decision);
+    case "deleteInboxItem":
+      return uuid(v.inboxId);
+    case "openScreen":
+      return oneOf(SCREENS)(v.screen);
     case "setLanguage":
       return oneOf(LANGUAGES)(v.language);
     case "setTheme":
@@ -331,4 +364,25 @@ export function isTaskResult(value) {
   return targetID(value?.id) && ["done", "failed"].includes(value?.status)
     && optional(value.result, (v) => typeof v === "string" && codePoints(v) <= 300)
     && optional(value.reason, (v) => typeof v === "string" && codePoints(v) <= 200);
+}
+
+// 앱 상태(ACX1112A01). 앱이 통째로 올리고 AI는 읽기만 한다: 설정, 가계부(이 달 합계·예산·최근 기록), 확인 필요,
+// 받은 결제 문자(번호는 앱이 가린다), 결제 문자 규칙. 서버는 모양·개수만 보고 알려진 칸만 잠가 둔다.
+export const APP_STATE_FIELDS = ["updatedAt", "timeZone", "settings", "ledger", "review", "inbox", "rules"];
+export const APP_STATE_LIMITS = { entries: 200, review: 50, inbox: 30, rules: 20 };
+const plainObject = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+const objectList = (v, max) => Array.isArray(v) && v.length <= max && v.every(plainObject);
+export function isAppState(value) {
+  return value?.format === "bokki-app" && value?.version === 1 && RETENTION_DAYS.has(value?.retentionDays)
+    && plainObject(value.settings)
+    && optional(value.updatedAt, isInstant) && optional(value.timeZone, (z) => nonEmpty(z, 40))
+    && optional(value.ledger, (l) => plainObject(l) && optional(l.entries, (e) => objectList(e, APP_STATE_LIMITS.entries)))
+    && optional(value.review, (l) => objectList(l, APP_STATE_LIMITS.review))
+    && optional(value.inbox, (l) => objectList(l, APP_STATE_LIMITS.inbox))
+    && optional(value.rules, (l) => objectList(l, APP_STATE_LIMITS.rules));
+}
+export function cleanAppState(value) {
+  const out = { format: "bokki-app", version: 1 };
+  for (const name of APP_STATE_FIELDS) if (given(value[name])) out[name] = value[name];
+  return out;
 }

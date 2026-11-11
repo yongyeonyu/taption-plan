@@ -43,6 +43,16 @@ struct AssistantCommand: Identifiable, Equatable, Sendable {
         case setTravelMode(moveID: UUID, mode: TravelMode)
         /// PRL1112A01: 결제 문자 읽기 규칙. 견본과 맞는지 본 것만 담는다.
         case addPaymentRule(LedgerMessageRules.Rule)
+        /// ACX1112A01: 가계부 설정과 정리, 화면 열기. 0원은 그 달 예산을 없앤다.
+        case setBudget(month: String, amountKRW: Double)
+        case addOwnAccount(String)
+        case removeOwnAccount(String)
+        case deletePaymentRule(UUID)
+        /// 「확인 필요」 하나를 가계부에 넣거나(`add`) 버린다.
+        case resolveReview(UUID, add: Bool)
+        case deleteInboxItem(UUID)
+        /// 앱이 앞에 있을 때 화면을 띄운다. 자료는 바꾸지 않는다.
+        case openScreen(AssistantScreen)
     }
 
     let id: String
@@ -99,6 +109,8 @@ enum AssistantCommandParser {
         let moveId: String?, mode: String?
         // PRL1112A01: addPaymentRule.
         let name: String?, pattern: String?, sample: String?
+        // ACX1112A01: setBudget·deletePaymentRule·resolveReview·deleteInboxItem·openScreen.
+        let amountKRW: Double?, month: String?, ruleId: String?, reviewId: String?, decision: String?, inboxId: String?, screen: String?
     }
 
     /// `{"commands":[...]}`를 읽는다. 서버와 같은 규칙으로 다시 본다.
@@ -323,6 +335,8 @@ struct AssistantCommandOutcome: Equatable, Sendable {
         case .addGoal, .updateGoal, .deleteGoal, .addTripStop, .updateTripStop, .deleteTripStop, .setTripItemStatus: schedules += 1
         case .updateActivity, .hideRecord, .mergeRecords, .updateRecordTime, .updateSleep, .classifyUnconfirmed, .setTravelMode: edits += 1
         case .setLanguage, .setMapStyle, .setDisplayOption, .addPaymentRule: settings += 1
+        case .setBudget, .addOwnAccount, .removeOwnAccount, .deletePaymentRule, .deleteInboxItem, .openScreen: settings += 1
+        case .resolveReview: ledger += 1
         case .setBubble: bubbles += 1
         case .addExpense, .updateExpense: ledger += 1
         }
@@ -432,6 +446,7 @@ extension AppModel {
         if !result.preferences.isEmpty { delta.preferences = (delta.preferences ?? []) + result.preferences }
         delta.bubbleID = result.bubbleID
         delta.paymentRuleID = result.paymentRuleID
+        delta.appChange = result.appChange
         delta.ledgerEntryID = result.ledgerEntryID
         delta.ledgerEntry = result.ledgerEntry
         delta.ledgerBefore = result.ledgerBefore

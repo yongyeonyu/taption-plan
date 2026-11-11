@@ -294,3 +294,168 @@ struct PaymentInboxDetail: View {
         if let url = components.url { openURL(url) }
     }
 }
+
+// MARK: AI가 하는 가계부 설정·정리 (ACX1112A01) — 새 파일을 늘리지 않으려고 여기 둔다.
+
+extension LedgerBudget {
+    /// AI가 정할 수 있는 한 달 예산의 위쪽 끝(서버와 같다).
+    static let assistantLimitKRW: Double = 1e12
+}
+
+extension LedgerOwnAccounts {
+    static let limit = 20
+
+    /// 명령으로 받은 이름: 다듬어 2~30자이고, 번호처럼 보이는 숫자 덩어리(9자 넘게 이어진 숫자·띄어쓰기·붙임표)가 없어야 한다.
+    static func commandName(_ raw: String?) -> String? {
+        guard let raw, raw.count <= 30 else { return nil }
+        let name = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard name.count >= 2, name.range(of: #"\d[\d -]{7,}\d"#, options: .regularExpression) == nil else { return nil }
+        return name
+    }
+}
+
+extension LedgerMessageRules {
+    /// 되돌리기: 지운 규칙을 만든 순서 자리에 다시 둔다(새 규칙이 먼저라는 차례를 지킨다).
+    static func restore(_ rule: Rule, defaults: UserDefaults = .standard) {
+        var list = rules(defaults).filter { $0.id != rule.id && $0.pattern != rule.pattern }
+        list.append(rule)
+        list.sort { $0.createdAt < $1.createdAt }
+        if list.count > limit { list.removeFirst(list.count - limit) }
+        save(list, defaults)
+    }
+}
+
+extension PaymentInbox {
+    /// 되돌리기: 지운 글을 받은 순서 자리에 다시 둔다. 7일이 지난 글은 `items`가 걸러 낸다.
+    static func restore(_ item: Item, defaults: UserDefaults = .standard) {
+        var list = items(defaults).filter { $0.id != item.id }
+        list.append(item)
+        list.sort { $0.receivedAt < $1.receivedAt }
+        if list.count > limit { list.removeFirst(list.count - limit) }
+        save(list, defaults)
+    }
+}
+
+extension LedgerBook {
+    /// 그 달 전체 예산을 정한다. nil이면 없앤다(가계부 화면과 같은 칸).
+    func setMonthBudget(_ amountKRW: Double?, month: String) async {
+        let budget = amountKRW.map { LedgerBudget(period: month, category: nil, amountKRW: $0) }
+        await setBudget(budget, for: "\(month)|all", period: month, category: nil)
+    }
+}
+
+/// AI 명령이 바꾼 가계부 설정·정리의 전·후(ACX1112A01). 「AI가 한 일」에서 되돌릴 때 쓴다. 한 명령은 한 칸만 채운다.
+struct AssistantAppChange: Codable, Equatable, Sendable {
+    struct Budget: Codable, Equatable, Sendable {
+        var month: String
+        var before: Double?
+        var after: Double?
+    }
+
+    struct Names: Codable, Equatable, Sendable {
+        var before: [String]
+        var after: [String]
+    }
+
+    var budget: Budget?
+    var ownAccounts: Names?
+    var removedRule: LedgerMessageRules.Rule?
+    var removedInbox: PaymentInbox.Item?
+    /// 넣거나 버린 「확인 필요」. 넣은 가계부 기록은 `ledgerEntry`로 따로 되돌린다.
+    var review: LedgerReviewStore.Item?
+    /// 열어 달라고 한 화면. 아직 띄우지 않았을 때만 거둔다.
+    var screen: AssistantScreen?
+
+    /// 그 뒤 사용자가 같은 값을 바꿨으면 되돌리지 않는다.
+    @MainActor
+    func isCurrent(_ preferences: AssistantPreferenceStore) async -> Bool {
+        if let budget {
+            await preferences.ledger.load()
+            if preferences.ledger.budget(for: budget.month)?.amountKRW != budget.after { return false }
+        }
+        if let ownAccounts, LedgerOwnAccounts.names(preferences.defaults) != ownAccounts.after { return false }
+        return true
+    }
+
+    @MainActor
+    func undo(_ preferences: AssistantPreferenceStore) async {
+        if let budget { await preferences.ledger.setMonthBudget(budget.before, month: budget.month) }
+        if let ownAccounts { LedgerOwnAccounts.set(ownAccounts.before, defaults: preferences.defaults) }
+        if let removedRule { LedgerMessageRules.restore(removedRule, defaults: preferences.defaults) }
+        if let removedInbox { PaymentInbox.restore(removedInbox, defaults: preferences.defaults) }
+        if let review { preferences.review.restore(review) }
+        if let screen { preferences.screens.cancel(screen) }
+    }
+}
+
+extension AppModel {
+    /// 가계부 설정·정리와 화면 열기(ACX1112A01). 숫자·이름은 읽을 때 이미 검사했다.
+    func applyAssistantAppAction(_ action: AssistantCommand.Action, preferences: AssistantPreferenceStore) async -> AssistantEditResult {
+        let language = MapHomeLanguage.current
+        let defaults = preferences.defaults
+        func money(_ amount: Double?) -> String {
+            amount.map { LedgerMoney.text($0, language: language) } ?? language.text("예산 없음", "No budget")
+        }
+        switch action {
+        case let .setBudget(month, amountKRW):
+            await preferences.ledger.load()
+            let before = preferences.ledger.budget(for: month)?.amountKRW
+            let after: Double? = amountKRW > 0 ? amountKRW : nil
+            guard before != after else { return .rejected("no_change") }
+            await preferences.ledger.setMonthBudget(after, month: month)
+            var result = AssistantEditResult(before: "\(month) \(money(before))", after: "\(month) \(money(after))")
+            result.appChange = AssistantAppChange(budget: .init(month: month, before: before, after: after))
+            return result
+        case let .addOwnAccount(name):
+            let before = LedgerOwnAccounts.names(defaults)
+            guard !before.contains(name) else { return .rejected("no_change") }
+            guard before.count < LedgerOwnAccounts.limit else { return .rejected("account_limit") }
+            LedgerOwnAccounts.set(before + [name], defaults: defaults)
+            var result = AssistantEditResult(after: name)
+            result.appChange = AssistantAppChange(ownAccounts: .init(before: before, after: LedgerOwnAccounts.names(defaults)))
+            return result
+        case let .removeOwnAccount(name):
+            let before = LedgerOwnAccounts.names(defaults)
+            guard before.contains(name) else { return .rejected("no_account") }
+            LedgerOwnAccounts.set(before.filter { $0 != name }, defaults: defaults)
+            var result = AssistantEditResult(before: name, after: language.text("지움", "Deleted"))
+            result.appChange = AssistantAppChange(ownAccounts: .init(before: before, after: LedgerOwnAccounts.names(defaults)))
+            return result
+        case let .deletePaymentRule(id):
+            guard let rule = LedgerMessageRules.rules(defaults).first(where: { $0.id == id }) else { return .rejected("no_rule") }
+            LedgerMessageRules.remove(id, defaults: defaults)
+            var result = AssistantEditResult(before: rule.name, after: language.text("지움", "Deleted"))
+            result.appChange = AssistantAppChange(removedRule: rule)
+            return result
+        case let .resolveReview(id, add):
+            guard let item = preferences.review.items.first(where: { $0.id == id }) else { return .rejected("no_review") }
+            let entry = item.entry
+            var result = AssistantEditResult(before: "\(entry.title) \(LedgerMoney.text(entry.amount, currency: entry.currency, language: language))")
+            result.appChange = AssistantAppChange(review: item)
+            guard add else {
+                preferences.review.remove(id)
+                result.after = language.text("버림", "Discarded")
+                return result
+            }
+            await preferences.review.accept(id, into: preferences.ledger)
+            let saved = preferences.ledger.entries.first { $0.id == entry.id } ?? entry
+            result.ledgerEntryID = saved.id
+            result.ledgerEntry = saved
+            result.after = language.text("가계부에 넣음", "Added to the ledger")
+            return result
+        case let .deleteInboxItem(id):
+            guard let item = PaymentInbox.items(defaults).first(where: { $0.id == id }) else { return .rejected("no_inbox_item") }
+            PaymentInbox.remove(id, defaults: defaults)
+            var result = AssistantEditResult(before: String(item.text.replacingOccurrences(of: "\n", with: " ").prefix(40)), after: language.text("지움", "Deleted"))
+            result.appChange = AssistantAppChange(removedInbox: item)
+            return result
+        case let .openScreen(screen):
+            preferences.screens.request(screen)
+            var result = AssistantEditResult(after: screen.title(language))
+            result.appChange = AssistantAppChange(screen: screen)
+            return result
+        default:
+            return .rejected("invalid")
+        }
+    }
+}

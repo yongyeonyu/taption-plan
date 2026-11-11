@@ -32,6 +32,8 @@ struct AssistantEditDelta: Codable, Equatable, Sendable {
     var movement: AssistantMovementChange?
     /// 결제 문자 읽기 규칙(PRL1112A01). 예전 기록에는 없다.
     var paymentRuleID: UUID?
+    /// 가계부 설정·정리·화면 열기(ACX1112A01). 예전 기록에는 없다.
+    var appChange: AssistantAppChange?
 
     var isEmpty: Bool {
         plans.isEmpty && memos.isEmpty && actuals.isEmpty && corrections.isEmpty
@@ -265,7 +267,8 @@ extension AppModel {
             }
         }
         let stored = (entry.delta.preferences ?? []).filter { $0.key != AssistantPreferenceChange.mapStyleKey }
-        guard stored.allSatisfy({ preferences.value($0.key) == $0.after }), let restored = entry.delta.undoing(in: snapshot) else {
+        let appChangeIsCurrent = await entry.delta.appChange?.isCurrent(preferences) ?? true
+        guard appChangeIsCurrent, stored.allSatisfy({ preferences.value($0.key) == $0.after }), let restored = entry.delta.undoing(in: snapshot) else {
             userFacingError = AppLanguagePreference.text(
                 korean: "그 뒤에 바뀐 내용이 있어 되돌리지 못했어요. 앱에서 직접 고쳐 주세요.",
                 english: "It changed afterwards, so it couldn't be undone. Please edit it in the app."
@@ -289,6 +292,7 @@ extension AppModel {
         } else if let ledgerID = entry.delta.ledgerEntryID {
             await preferences.ledger.delete(ledgerID)
         }
+        await entry.delta.appChange?.undo(preferences)
         return true
     }
 }

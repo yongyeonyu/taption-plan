@@ -236,6 +236,7 @@ extension MapHomeView {
                 if TripRelay.isAvailable {
                     AssistantActivityObserver(model: model)
                     AssistantConfirmHost(model: model, language: language) { AssistantInbox.current.show($0) }
+                    AssistantScreenHost(language: language) { openAssistantScreen($0) }
                 }
                 AssistantBubbleLinkBar(language: language)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -243,6 +244,46 @@ extension MapHomeView {
                     .padding(.bottom, 150)
                 AssistantNoticeHost()
             }
+    }
+}
+
+extension MapHomeView {
+    /// AI가 열어 달라고 한 화면(ACX1112A01). 메뉴 단추가 하는 일과 같다.
+    func openAssistantScreen(_ screen: AssistantScreen) {
+        switch screen {
+        case .paymentAutomation, .shortcuts: isShortcutsGuidePresented = true
+        case .aiConnection: isAssistantPresented = true
+        case .ledger: LedgerPresenter.shared.isPresented = true
+        case .dataProtection: isDataProtectionPresented = true
+        case .settings:
+            openMenu()
+            isSettingsMenuExpanded = true
+        }
+    }
+}
+
+/// 열어 달라는 화면 요청을 지켜보다 앱이 앞에 있을 때 띄운다(ACX1112A01). 지도 화면 본문은 이 때문에 다시 계산되지 않는다.
+/// 「BOKKI 결제」 자동화 안내는 링크가 있으면 여기서 바로 띄운다. 스위치는 사용자가 단축어 앱에서 켠다.
+private struct AssistantScreenHost: View {
+    let language: MapHomeLanguage
+    let open: (AssistantScreen) -> Void
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var isTutorialPresented = false
+
+    var body: some View {
+        Color.clear
+            .frame(width: 0, height: 0)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+            .task(id: "\(AssistantScreenRequest.shared.pending?.rawValue ?? "")|\(scenePhase == .active)") { show() }
+            .sheet(isPresented: $isTutorialPresented) {
+                if let link = BokkiPaymentShortcut.automationLink { BokkiPaymentAddPopup(link: link, language: language) }
+            }
+    }
+
+    private func show() {
+        guard scenePhase == .active, let screen = AssistantScreenRequest.shared.take() else { return }
+        if screen == .paymentAutomation, BokkiPaymentShortcut.hasAutomationLink { isTutorialPresented = true } else { open(screen) }
     }
 }
 

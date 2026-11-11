@@ -5,7 +5,7 @@
 import { nameKey, openJson, sealJson, tagOf } from "./crypto.js";
 import { json, stored, tooMany } from "./http.js";
 import { chargeWrites } from "./state.js";
-import { ACTIVITY_EXTRAS, QUEUE_LIMIT, cleanCommand, commandReason, isActivityUpload, isCommand, isCommandResults, isDate, isPolishList, isTaskResult, isTaskUpload, isTripPlan, TASK_LIMIT } from "./validate.js";
+import { ACTIVITY_EXTRAS, QUEUE_LIMIT, cleanCommand, commandReason, isActivityUpload, isAppState, cleanAppState, isCommand, isCommandResults, isDate, isPolishList, isTaskResult, isTaskUpload, isTripPlan, TASK_LIMIT } from "./validate.js";
 
 const DAY = 24 * 60 * 60;
 const DAY_MS = DAY * 1000;
@@ -89,6 +89,29 @@ export async function readPolish(ctx) {
 
 export async function deletePolish(ctx) {
   if ((await ctx.kv.get(polishName(ctx))) != null) await ctx.kv.delete(polishName(ctx));
+  return json(null, 204);
+}
+
+// MARK: 앱 상태 (ACX1112A01)
+
+// 앱이 통째로 바꿔 쓴다. AI는 읽기만 한다. 하루 기록과 같은 보관 기간 뒤 사라진다.
+const appName = (ctx) => "app:" + ctx.master;
+export async function saveAppState(ctx, value) {
+  if (!isAppState(value)) return json({ error: "not_app_state" }, 422);
+  const charge = await chargeWrites(ctx.env, ctx.state, 1, ctx.now);
+  if (!charge.ok) return overBudget(charge);
+  const ttl = value.retentionDays * DAY;
+  await ctx.store.put(appName(ctx), JSON.stringify(cleanAppState(value)), { expirationTtl: ttl });
+  return json({ ok: true, expiresInSeconds: ttl }, 201);
+}
+
+export async function readAppState(ctx) {
+  const text = await ctx.store.get(appName(ctx));
+  return text ? stored(text) : json(null, 204);
+}
+
+export async function deleteAppState(ctx) {
+  if ((await ctx.kv.get(appName(ctx))) != null) await ctx.kv.delete(appName(ctx));
   return json(null, 204);
 }
 

@@ -48,6 +48,15 @@ final class LedgerReviewStore {
         remove(id)
     }
 
+    /// 되돌리기(ACX1112A01): AI가 넣거나 버린 것을 받은 순서 자리에 다시 둔다.
+    func restore(_ item: Item) {
+        guard !items.contains(where: { $0.id == item.id }) else { return }
+        items.append(item)
+        items.sort { $0.receivedAt < $1.receivedAt }
+        if items.count > Self.limit { items.removeFirst(items.count - Self.limit) }
+        persist()
+    }
+
     private func persist() {
         if let data = try? JSONEncoder().encode(items) { defaults.set(data, forKey: Self.key) }
     }

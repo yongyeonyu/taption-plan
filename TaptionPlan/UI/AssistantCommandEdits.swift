@@ -17,6 +17,8 @@ enum AssistantActionKind: String, CaseIterable, Identifiable, Codable, Sendable 
     case classifyUnconfirmed, setTravelMode
     // PRL1112A01
     case addPaymentRule
+    // ACX1112A01
+    case setBudget, addOwnAccount, removeOwnAccount, deletePaymentRule, resolveReview, deleteInboxItem, openScreen
 
     var id: String { rawValue }
 
@@ -49,6 +51,13 @@ enum AssistantActionKind: String, CaseIterable, Identifiable, Codable, Sendable 
         case .classifyUnconfirmed: language.text("미확인 시간 분류하기", "Classify unconfirmed time")
         case .setTravelMode: language.text("이동 수단 고치기", "Correct travel modes")
         case .addPaymentRule: language.text("결제 문자 읽기 규칙 더하기", "Add payment text rules")
+        case .setBudget: language.text("가계부 예산 정하기", "Set the ledger budget")
+        case .addOwnAccount: language.text("내 계좌 이름 더하기", "Add own account names")
+        case .removeOwnAccount: language.text("내 계좌 이름 지우기", "Remove own account names")
+        case .deletePaymentRule: language.text("결제 문자 읽기 규칙 지우기", "Delete payment text rules")
+        case .resolveReview: language.text("확인 필요 결제 넣기·버리기", "Add or discard payments to review")
+        case .deleteInboxItem: language.text("받은 결제 문자 지우기", "Delete received payment texts")
+        case .openScreen: language.text("앱 화면 열기", "Open app screens")
         }
     }
 }
@@ -126,6 +135,13 @@ extension AssistantCommand.Action {
         case .classifyUnconfirmed: .classifyUnconfirmed
         case .setTravelMode: .setTravelMode
         case .addPaymentRule: .addPaymentRule
+        case .setBudget: .setBudget
+        case .addOwnAccount: .addOwnAccount
+        case .removeOwnAccount: .removeOwnAccount
+        case .deletePaymentRule: .deletePaymentRule
+        case .resolveReview: .resolveReview
+        case .deleteInboxItem: .deleteInboxItem
+        case .openScreen: .openScreen
         }
     }
 
@@ -133,7 +149,7 @@ extension AssistantCommand.Action {
     /// 루틴을 지우면 하위 일정도 함께 지워지므로 `plans`를 주면 그 수까지 센다(REV1110A06).
     func existingChangeCount(plans: [PlanRecord] = []) -> Int {
         switch self {
-        case .addMemo, .addSchedule, .addGoal, .addTripStop, .setBubble, .addExpense, .classifyUnconfirmed, .addPaymentRule: 0
+        case .addMemo, .addSchedule, .addGoal, .addTripStop, .setBubble, .addExpense, .classifyUnconfirmed, .addPaymentRule, .addOwnAccount, .openScreen: 0
         case let .mergeRecords(_, ids, _, _): ids.count
         case let .deleteGoal(goalID):
             1 + (UUID(uuidString: goalID).flatMap { try? PlanHierarchy.descendants(of: $0, in: plans) }?.count ?? 0)
@@ -179,6 +195,8 @@ struct AssistantEditResult: Equatable, Sendable {
     var movementBefore: AssistantMovementChange.State?
     /// 더한 결제 문자 규칙(PRL1112A01). 되돌리면 지운다.
     var paymentRuleID: UUID?
+    /// 가계부 설정·정리·화면 열기의 전·후(ACX1112A01).
+    var appChange: AssistantAppChange?
 
     static func rejected(_ reason: String) -> Self { Self(reason: reason) }
 }

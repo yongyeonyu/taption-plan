@@ -168,7 +168,7 @@ extension AppModel {
             result.ledgerEntry = saved
             return result
         default:
-            return .rejected("invalid")
+            return await applyAssistantAppAction(action, preferences: preferences)
         }
     }
 

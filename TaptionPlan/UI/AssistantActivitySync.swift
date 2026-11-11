@@ -123,6 +123,7 @@ enum AssistantActivitySync {
         let level = AssistantShareLevel.current(defaults)
         guard level != .off else {
             if defaults.bool(forKey: sharedKey) || defaults.bool(forKey: pendingClearKey) { await clearRemote(defaults: defaults, env: env) }
+            await AssistantAppStateSync.run(model: model, defaults: defaults, env: env)
             return
         }
         // 더 자세한 예전 기록이 서버에 남아 있으면 먼저 지운다. 못 지우면 다음에 다시 한다.
@@ -158,6 +159,8 @@ enum AssistantActivitySync {
             count += batch.days.count
         }
         if count > 0 { record("assistant_activity_uploaded", status: 201, days: count) }
+        // 설정·가계부·받은 문자 같은 앱 상태도 바뀌었으면 올린다(ACX1112A01).
+        await AssistantAppStateSync.run(model: model, defaults: defaults, env: env)
     }
 
     /// 공유 수준을 낮추거나 보관 기간을 줄였다. 서버의 날들을 지우도록 적어 둔다(다음 `run`이 지운 뒤 다시 올린다).

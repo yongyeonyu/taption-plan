@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import TaptionPlanCore
 
 /// AI가 켜고 끌 수 있는 표시 설정(AIR1110A03). 이 셋만 받는다.
@@ -96,7 +97,7 @@ extension AssistantCommandParser {
             guard day != nil, let moveID = raw.moveId.flatMap(UUID.init(uuidString:)), let mode = raw.mode.flatMap(travelMode) else { return nil }
             return .setTravelMode(moveID: moveID, mode: mode)
         default:
-            return settingAction(raw)
+            return settingAction(raw) ?? appAction(raw, calendar: calendar)
         }
     }
 
@@ -128,6 +129,39 @@ extension AssistantCommandParser {
         default:
             return nil
         }
+    }
+
+    /// 가계부 설정·정리와 화면 열기(ACX1112A01). 서버와 같은 규칙으로 다시 본다.
+    static func appAction(_ raw: Raw, now: Date = .now, calendar: Calendar) -> AssistantCommand.Action? {
+        switch raw.action {
+        case "setBudget":
+            guard let amount = raw.amountKRW, amount.isFinite, (0...LedgerBudget.assistantLimitKRW).contains(amount) else { return nil }
+            guard let text = raw.month else { return .setBudget(month: LedgerBook.monthKey(now, calendar: calendar), amountKRW: amount.rounded()) }
+            return month(text).map { .setBudget(month: $0, amountKRW: amount.rounded()) }
+        case "addOwnAccount":
+            return LedgerOwnAccounts.commandName(raw.name).map { .addOwnAccount($0) }
+        case "removeOwnAccount":
+            return LedgerOwnAccounts.commandName(raw.name).map { .removeOwnAccount($0) }
+        case "deletePaymentRule":
+            return raw.ruleId.flatMap(UUID.init(uuidString:)).map { .deletePaymentRule($0) }
+        case "resolveReview":
+            guard let id = raw.reviewId.flatMap(UUID.init(uuidString:)), raw.decision == "add" || raw.decision == "discard" else { return nil }
+            return .resolveReview(id, add: raw.decision == "add")
+        case "deleteInboxItem":
+            return raw.inboxId.flatMap(UUID.init(uuidString:)).map { .deleteInboxItem($0) }
+        case "openScreen":
+            return raw.screen.flatMap(AssistantScreen.init(rawValue:)).map { .openScreen($0) }
+        default:
+            return nil
+        }
+    }
+
+    /// `YYYY-MM`(2000년부터)만 받는다.
+    static func month(_ text: String) -> String? {
+        let parts = text.split(separator: "-", omittingEmptySubsequences: false)
+        guard text.count == 7, parts.count == 2, parts[0].count == 4, text.allSatisfy({ $0.isASCII && ($0.isNumber || $0 == "-") }),
+              let year = Int(parts[0]), let month = Int(parts[1]), year >= 2_000, (1...12).contains(month) else { return nil }
+        return text
     }
 
     /// 좌표는 둘 다 없거나(이름으로 찾는다) 둘 다 범위 안이어야 한다. 서버와 같은 규칙이다.
@@ -283,6 +317,9 @@ struct AssistantPreferenceStore {
     var isLive: Bool
     var bubbleFile = AssistantBubbleStore.url
     var ledger = LedgerBook.shared
+    /// 확인 필요·화면 열기 요청(ACX1112A01). 시험은 따로 만든 저장소의 것을 쓴다.
+    var review = LedgerReviewStore.shared
+    var screens = AssistantScreenRequest.shared
 
     static var live: Self { Self(defaults: .standard, isLive: true) }
 
@@ -292,7 +329,7 @@ struct AssistantPreferenceStore {
         defaults.set(name, forKey: "assistantBubbleTestFile")
         return Self(
             defaults: defaults, isLive: false, bubbleFile: FileManager.default.temporaryDirectory.appendingPathComponent("\(name).json"),
-            ledger: LedgerBook(store: { nil })
+            ledger: LedgerBook(store: { nil }), review: LedgerReviewStore(defaults: defaults), screens: AssistantScreenRequest(defaults: defaults)
         )
     }
 
@@ -313,5 +350,65 @@ struct AssistantPreferenceStore {
         }
         guard AssistantDisplayOption.allCases.contains(where: { $0.defaultsKey == key }) else { return }
         defaults.set(value == "true", forKey: key)
+    }
+}
+
+/// AI가 열어 달라고 할 수 있는 화면(ACX1112A01). 이 여섯만 받는다. 자료를 바꾸는 화면 동작은 없다.
+enum AssistantScreen: String, CaseIterable, Codable, Sendable {
+    case paymentAutomation, shortcuts, aiConnection, ledger, dataProtection, settings
+
+    func title(_ language: MapHomeLanguage) -> String {
+        switch self {
+        case .paymentAutomation: language.text("BOKKI 결제 자동화 안내", "BOKKI Payment automation guide")
+        case .shortcuts: language.text("단축어 · Siri", "Shortcuts · Siri")
+        case .aiConnection: language.text("AI 연결", "AI connections")
+        case .ledger: language.text("가계부", "Ledger")
+        case .dataProtection: language.text("데이터 보호", "Data Protection")
+        case .settings: language.text("설정", "Settings")
+        }
+    }
+}
+
+/// 열어 달라는 화면 하나를 앱이 앞에 올 때까지 둔다(ACX1112A01). 새 요청이 앞의 것을 바꾸고, 하루가 지나면 버린다.
+/// 지도 화면의 작은 뷰가 지켜보다 띄운다.
+@MainActor
+@Observable
+final class AssistantScreenRequest {
+    static let shared = AssistantScreenRequest()
+    static let key = "assistantPendingScreen"
+    static let dateKey = "assistantPendingScreenAt"
+    static let lifetime: TimeInterval = 86_400
+
+    private(set) var pending: AssistantScreen?
+    @ObservationIgnored private let defaults: UserDefaults
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        pending = defaults.string(forKey: Self.key).flatMap(AssistantScreen.init(rawValue:))
+    }
+
+    func request(_ screen: AssistantScreen, now: Date = .now) {
+        defaults.set(screen.rawValue, forKey: Self.key)
+        defaults.set(now.timeIntervalSince1970, forKey: Self.dateKey)
+        pending = screen
+    }
+
+    /// 띄울 화면을 꺼낸다. 오래된 요청은 버린다.
+    func take(now: Date = .now) -> AssistantScreen? {
+        guard let screen = pending else { return nil }
+        let age = now.timeIntervalSince1970 - defaults.double(forKey: Self.dateKey)
+        clear()
+        return age >= 0 && age < Self.lifetime ? screen : nil
+    }
+
+    /// 되돌리기: 아직 띄우지 않은 같은 요청만 거둔다.
+    func cancel(_ screen: AssistantScreen) {
+        if pending == screen { clear() }
+    }
+
+    private func clear() {
+        defaults.removeObject(forKey: Self.key)
+        defaults.removeObject(forKey: Self.dateKey)
+        pending = nil
     }
 }
