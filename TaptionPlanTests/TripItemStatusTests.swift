@@ -668,6 +668,22 @@ final class TravelGlobeTouchTests: XCTestCase {
         XCTAssertNil(TravelGlobeTouch.flag(at: CGPoint(x: 20, y: 20), flags: flags, camera: camera, size: size))
     }
 
+    /// 색 견본은 메뉴가 한 색으로 덮어 칠하지 않게 원래 색 그림이어야 하고, 가운데가 그 색이다.
+    func testSwatchKeepsItsOwnColor() throws {
+        for hex in TravelInk.flagHexes {
+            let image = TravelInk.swatch(hex, isChosen: false)
+            XCTAssertEqual(image.renderingMode, .alwaysOriginal)
+            let cg = try XCTUnwrap(image.cgImage)
+            let data = try XCTUnwrap(cg.dataProvider?.data as Data?)
+            let offset = (cg.height / 2) * cg.bytesPerRow + (cg.width / 2) * 4
+            var expected = UInt64(0)
+            Scanner(string: String(hex.dropFirst())).scanHexInt64(&expected)
+            let channels = Set([Int(data[offset]), Int(data[offset + 1]), Int(data[offset + 2])])
+            XCTAssertEqual(channels, Set([Int(expected >> 16 & 0xFF), Int(expected >> 8 & 0xFF), Int(expected & 0xFF)]), hex)
+        }
+        XCTAssertNotEqual(TravelInk.swatch("#C8442E", isChosen: true).pngData(), TravelInk.swatch("#C8442E", isChosen: false).pngData(), "고른 색에는 체크가 그려진다")
+    }
+
     func testFlagColorsFollowOrderUnlessTheUserChoseOne() {
         let trip = TravelTrip(id: "t", title: "일본", startDay: "2026-11-23", endDay: "2026-11-27")
         XCTAssertEqual(TravelInk.flagHex(trip, order: 0), "#C8442E")

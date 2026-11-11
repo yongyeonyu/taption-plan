@@ -20,6 +20,25 @@ enum TravelInk {
         trip.flagColorHex ?? flagHexes[max(0, order) % flagHexes.count]
     }
 
+    /// 깃발 색 견본(메뉴용): 그 색으로 칠한 동그라미. 고른 색이면 가운데 흰 체크.
+    static func swatch(_ hex: String, isChosen: Bool, side: CGFloat = 22) -> UIImage {
+        let image = UIGraphicsImageRenderer(size: CGSize(width: side, height: side)).image { context in
+            UIColor(Color(hex: hex)).setFill()
+            context.cgContext.fillEllipse(in: CGRect(x: 1, y: 1, width: side - 2, height: side - 2))
+            guard isChosen else { return }
+            UIColor.white.setStroke()
+            let check = UIBezierPath()
+            check.move(to: CGPoint(x: side * 0.30, y: side * 0.52))
+            check.addLine(to: CGPoint(x: side * 0.45, y: side * 0.67))
+            check.addLine(to: CGPoint(x: side * 0.72, y: side * 0.36))
+            check.lineWidth = 2.2
+            check.lineCapStyle = .round
+            check.lineJoinStyle = .round
+            check.stroke()
+        }
+        return image.withRenderingMode(.alwaysOriginal)
+    }
+
     static func flagName(_ hex: String, language: MapHomeLanguage) -> String {
         switch hex {
         case "#C8442E": language.text("주홍 깃발", "Vermilion flag")
@@ -631,7 +650,10 @@ struct TravelModeView: View {
             if entry.isStored {
                 ForEach(TravelInk.flagHexes, id: \.self) { hex in
                     Button { setFlagColor(hex, for: entry) } label: {
-                        Label(TravelInk.flagName(hex, language: language), systemImage: entry.trip.flagColorHex == hex ? "checkmark.circle.fill" : "flag.fill")
+                        // 메뉴는 아이콘을 한 색으로 칠하므로, 원래 색 그림으로 견본을 넣는다. 고른 색에는 체크가 들어간다.
+                        Label { Text(TravelInk.flagName(hex, language: language)) } icon: {
+                            Image(uiImage: TravelInk.swatch(hex, isChosen: entry.trip.flagColorHex == hex))
+                        }
                     }
                 }
                 Button(language.text("기본 색으로", "Use default color")) { setFlagColor(nil, for: entry) }
