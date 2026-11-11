@@ -134,7 +134,7 @@
    "ko": "1. 「Claude에서 바로 추가」를 누르고 앱 비밀번호를 넣어요.\n2. 연결 코드가 복사되고 승인 PIN이 보여요.\n3. Claude가 열리면 「Add」를 누르고, 승인 화면에 코드를 붙여 넣고 PIN을 넣어요.",
    "en": "1. Tap Add in Claude now and enter your app password.\n2. A connection code is copied and the approval PIN is shown.\n3. In Claude tap Add, then paste the code and enter the PIN on the approval page.",
    "files": [
-    "AssistantConnectView.swift:390"
+    "AssistantConnectView.swift:394"
    ],
    "args": [],
    "targets": [
@@ -146,7 +146,7 @@
    "ko": "1. 「연결 키 만들기」를 눌러 앱 비밀번호를 넣어요.\n2. ChatGPT → GPT 만들기 → 구성 → 작업(Actions) → 새 작업 만들기 → 가져오기(URL)에 스키마 주소를 붙여 넣어요.\n3. 인증 → API 키 → 인증 유형 Bearer를 고르고 연결 키를 붙여 넣어요.\n4. 미리보기에서 「오늘 기록 읽어 줘」로 확인한 뒤 저장해요.",
    "en": "1. Tap Make a key and enter your app password.\n2. In ChatGPT, open Create a GPT → Configure → Actions → Create new action → Import from URL and paste the schema URL.\n3. Under Authentication choose API key, auth type Bearer, and paste the key.\n4. Check in the preview with \"read today's records\", then save.",
    "files": [
-    "AssistantConnectView.swift:357"
+    "AssistantConnectView.swift:361"
    ],
    "args": [],
    "targets": [
@@ -170,7 +170,7 @@
    "ko": "1. 위에서 권한·기간을 고르고 「Cue 연결 키 만들기」를 눌러요.\n2. Cue에서 MCP 서버(커넥터)를 추가하는 화면을 열어요.\n3. 서버 주소에 MCP 주소를 붙여 넣어요.\n4. 인증 칸(요청 헤더)에 Authorization: Bearer 뒤에 연결 키를 붙여 넣어요. 칸 이름은 Cue 화면을 따라 주세요.\n5. 저장한 뒤 Cue에서 「오늘 기록 읽어 줘」처럼 물어 확인해요.",
    "en": "1. Pick access and period above, then tap Make a Cue key.\n2. In Cue, open the screen for adding an MCP server (connector).\n3. Paste the MCP URL as the server address.\n4. In the auth field (request header), enter Authorization: Bearer followed by the connection key. Field names follow Cue's screen.\n5. Save, then ask Cue something like \"read today's records\" to check.",
    "files": [
-    "AssistantConnectView.swift:278"
+    "AssistantConnectView.swift:282"
    ],
    "args": [],
    "targets": [
@@ -597,7 +597,7 @@
    "ko": "AI 고르기",
    "en": "Choose an AI",
    "files": [
-    "AssistantConnectView.swift:607"
+    "AssistantConnectView.swift:611"
    ],
    "args": [],
    "targets": [
@@ -759,7 +759,7 @@
    "ko": "AI 연결",
    "en": "AI connections",
    "files": [
-    "AssistantSettingsView.swift:52",
+    "AssistantSettingsView.swift:54",
     "MapHomeView+Menu.swift:471"
    ],
    "args": [],
@@ -992,7 +992,7 @@
    "ko": "App Store에서 받기",
    "en": "Get it on the App Store",
    "files": [
-    "AssistantConnectView.swift:155"
+    "AssistantConnectView.swift:158"
    ],
    "args": [],
    "targets": [
@@ -1411,7 +1411,7 @@
    "ko": "ChatGPT → 설정 → 앱과 커넥터 → 고급에서 개발자 모드를 켜고, 커넥터 만들기에 서버 주소를 넣으세요(OAuth). 열린 화면에 아래 연결 코드와 PIN을 넣으면 끝나요.",
    "en": "In ChatGPT, open Settings → Apps & Connectors → Advanced, turn on developer mode and create a connector with the server URL (OAuth). Enter the code below and your PIN on the page that opens.",
    "files": [
-    "AssistantConnectView.swift:440"
+    "AssistantConnectView.swift:444"
    ],
    "args": [],
    "targets": [
@@ -1447,7 +1447,7 @@
    "ko": "Claude → 설정 → 커넥터 → 맞춤 커넥터 추가에 주소를 붙여 넣고 인증은 「로그인 없음」을 고르세요. 클립보드는 10분 뒤 지워져요.",
    "en": "In Claude, open Settings → Connectors → Add custom connector, paste the link and choose No sign-in. The clipboard is cleared in 10 minutes.",
    "files": [
-    "AssistantConnectView.swift:627"
+    "AssistantConnectView.swift:631"
    ],
    "args": [],
    "targets": [
@@ -1460,7 +1460,7 @@
    "en": "Open Claude",
    "files": [
     "AssistantConnectGuide.swift:97",
-    "AssistantConnectView.swift:193"
+    "AssistantConnectView.swift:197"
    ],
    "args": [],
    "targets": [
@@ -1484,7 +1484,7 @@
    "ko": "Claude에서 「Add」를 누르면 승인 화면이 열려요. 코드를 붙여 넣고 PIN {0}을 넣어 주세요. 코드는 10분 안에 한 번만 쓸 수 있어요.",
    "en": "Tap Add in Claude to open the approval page. Paste the code and enter PIN {0}. The code works once within 10 minutes.",
    "files": [
-    "AssistantConnectView.swift:197"
+    "AssistantConnectView.swift:201"
    ],
    "args": [
     "approvalPIN ?? \"\""
@@ -1498,7 +1498,7 @@
    "ko": "Claude에서 바로 추가 (추천)",
    "en": "Add in Claude now (recommended)",
    "files": [
-    "AssistantConnectView.swift:394"
+    "AssistantConnectView.swift:398"
    ],
    "args": [],
    "targets": [
@@ -1522,7 +1522,7 @@
    "ko": "Cue 연결 키 만들기",
    "en": "Make a Cue key",
    "files": [
-    "AssistantConnectView.swift:237"
+    "AssistantConnectView.swift:241"
    ],
    "args": [],
    "targets": [
@@ -1534,7 +1534,7 @@
    "ko": "Cue 채팅창에 붙여 넣고 보내 주세요. Cue가 주소를 열어 MCP 주소와 키를 받아 가요. 안 되면 아래에서 MCP 주소와 키를 따로 넣어 주세요.",
    "en": "Paste it into the Cue chat and send. Cue opens the link to get the MCP URL and key. If that fails, enter them separately below.",
    "files": [
-    "AssistantConnectView.swift:639"
+    "AssistantConnectView.swift:643"
    ],
    "args": [],
    "targets": [
@@ -1546,7 +1546,7 @@
    "ko": "Cue가 기록을 읽고 메모·일정·기록 수정을 보낼 수 있어요. 보낸 것은 앱에서 되돌릴 수 있어요.",
    "en": "Cue can read records and send memo, schedule and record edits. You can undo them in the app.",
    "files": [
-    "AssistantConnectView.swift:242"
+    "AssistantConnectView.swift:246"
    ],
    "args": [],
    "targets": [
@@ -1558,7 +1558,7 @@
    "ko": "Cue는 기록을 읽기만 해요.",
    "en": "Cue can only read records.",
    "files": [
-    "AssistantConnectView.swift:243"
+    "AssistantConnectView.swift:247"
    ],
    "args": [],
    "targets": [
@@ -1570,7 +1570,7 @@
    "ko": "Cue에서 직접 등록",
    "en": "Register in Cue",
    "files": [
-    "AssistantConnectView.swift:268"
+    "AssistantConnectView.swift:272"
    ],
    "args": [],
    "targets": [
@@ -1666,7 +1666,7 @@
    "ko": "Gemini CLI: 연결하기를 누르면 settings.json에 넣을 설정이 복사돼요. ~/.gemini/settings.json에 붙여 넣고 gemini를 다시 시작하세요.",
    "en": "Gemini CLI: Connect copies a block for settings.json. Paste it into ~/.gemini/settings.json and restart gemini.",
    "files": [
-    "AssistantConnectView.swift:311"
+    "AssistantConnectView.swift:315"
    ],
    "args": [],
    "targets": [
@@ -1678,7 +1678,7 @@
    "ko": "Gemini 앱은 연결할 수 없어요. 앱에서는 여행 프롬프트를 복사해 붙여 넣고, 받은 JSON을 이 앱에 붙여 넣어 주세요.",
    "en": "The Gemini app can't connect. In the app, paste the trip prompt and bring the JSON back here.",
    "files": [
-    "AssistantConnectView.swift:300"
+    "AssistantConnectView.swift:304"
    ],
    "args": [],
    "targets": [
@@ -1764,7 +1764,7 @@
    "ko": "MCP 주소 복사",
    "en": "Copy MCP URL",
    "files": [
-    "AssistantConnectView.swift:248"
+    "AssistantConnectView.swift:252"
    ],
    "args": [],
    "targets": [
@@ -1776,7 +1776,7 @@
    "ko": "MCP 주소",
    "en": "MCP URL",
    "files": [
-    "AssistantConnectView.swift:247"
+    "AssistantConnectView.swift:251"
    ],
    "args": [],
    "targets": [
@@ -1788,7 +1788,7 @@
    "ko": "MCP 주소를 복사했어요.",
    "en": "MCP URL copied.",
    "files": [
-    "AssistantConnectView.swift:250"
+    "AssistantConnectView.swift:254"
    ],
    "args": [],
    "targets": [
@@ -2239,7 +2239,7 @@
    "ko": "claude.ai → 설정 → 커넥터 → 맞춤 커넥터 추가에 서버 주소를 넣고 연결을 누르세요. 열린 화면에 아래 연결 코드와 PIN을 넣으면 끝나요.",
    "en": "On claude.ai, open Settings → Connectors → Add custom connector, enter the server URL and connect. Enter the code below and your PIN on the page that opens.",
    "files": [
-    "AssistantConnectView.swift:436"
+    "AssistantConnectView.swift:440"
    ],
    "args": [],
    "targets": [
@@ -2251,7 +2251,7 @@
    "ko": "claude.ai 열기",
    "en": "Open claude.ai",
    "files": [
-    "AssistantConnectView.swift:204"
+    "AssistantConnectView.swift:208"
    ],
    "args": [],
    "targets": [
@@ -3125,7 +3125,7 @@
    "ko": "{0} 연결 키를 만들어요.",
    "en": "Creates a connection key for {0}.",
    "files": [
-    "AssistantConnectView.swift:220"
+    "AssistantConnectView.swift:224"
    ],
    "args": [
     "name"
@@ -3140,8 +3140,8 @@
    "en": "Open {0}",
    "files": [
     "AssistantConnectGuide.swift:124",
-    "AssistantConnectView.swift:154",
-    "AssistantConnectView.swift:207"
+    "AssistantConnectView.swift:157",
+    "AssistantConnectView.swift:211"
    ],
    "args": [
     "provider.title(language)"
@@ -3327,7 +3327,7 @@
    "ko": "{0} 채팅창에 붙여 넣고 보내 주세요.",
    "en": "Paste it into the {0} chat and send.",
    "files": [
-    "AssistantConnectView.swift:641",
+    "AssistantConnectView.swift:645",
     "TripImportSheet.swift:226"
    ],
    "args": [
@@ -3631,7 +3631,7 @@
    "ko": "{0}분 {1}초 남음 · 한 번만 쓸 수 있어요",
    "en": "{0}m {1}s left · single use",
    "files": [
-    "AssistantConnectView.swift:464"
+    "AssistantConnectView.swift:468"
    ],
    "args": [
     "left / 60",
@@ -3689,12 +3689,12 @@
    "ko": "{0}분",
    "en": "{0} min",
    "files": [
+    "AITaskProducer.swift:62",
     "ScreenTimeUsageService.swift:667",
-    "MapHomeCalendarPolicies.swift:484",
-    "MapHomeSalaryPolicy.swift:425"
+    "MapHomeCalendarPolicies.swift:484"
    ],
    "args": [
-    "minutes"
+    "visit.value.minutes"
    ],
    "targets": [
     "TaptionPlan",
@@ -32605,7 +32605,7 @@
    "ko": "~/.gemini/settings.json에 붙여 넣고 gemini를 다시 시작해 주세요.",
    "en": "Paste it into ~/.gemini/settings.json and restart gemini.",
    "files": [
-    "AssistantConnectView.swift:625"
+    "AssistantConnectView.swift:629"
    ],
    "args": [],
    "targets": [
@@ -34976,7 +34976,7 @@
    "ko": "권한과 기간",
    "en": "Access and period",
    "files": [
-    "AssistantConnectView.swift:239"
+    "AssistantConnectView.swift:243"
    ],
    "args": [],
    "targets": [
@@ -35535,7 +35535,7 @@
    "ko": "기록 수정 허용",
    "en": "Allow record edits",
    "files": [
-    "AssistantConnectView.swift:230",
+    "AssistantConnectView.swift:234",
     "AssistantSafetyViews.swift:128",
     "AssistantSafetyViews.swift:250"
    ],
@@ -35896,7 +35896,7 @@
    "ko": "기타 AI (웹 요청)",
    "en": "Other AI (web requests)",
    "files": [
-    "AssistantConnectView.swift:605"
+    "AssistantConnectView.swift:608"
    ],
    "args": [],
    "targets": [
@@ -35920,9 +35920,9 @@
    "ko": "기타",
    "en": "Other",
    "files": [
+    "AITaskProducer.swift:159",
     "LedgerCore.swift:27",
-    "AssistantAIProvider.swift:37",
-    "MapHomeLaunchPrompts.swift:269"
+    "AssistantAIProvider.swift:37"
    ],
    "args": [],
    "targets": [
@@ -38244,7 +38244,7 @@
    "ko": "링크와 Claude 설정에는 서버 주소만 남고, 승인은 8시간마다 바뀌는 토큰으로 이어져요.",
    "en": "Only the server URL is in the link and in Claude; access runs on a token that rotates every 8 hours.",
    "files": [
-    "AssistantConnectView.swift:401"
+    "AssistantConnectView.swift:405"
    ],
    "args": [],
    "targets": [
@@ -38419,7 +38419,7 @@
    "ko": "맞춤 GPT는 그 GPT 안에서만 BOKKI를 읽고 보내요. 키는 이 연결에만 쓰고, 「연결 키 관리」에서 언제든 끊을 수 있어요.",
    "en": "The custom GPT reads and sends only inside that GPT. The key is only for this connection; cut it anytime under connection keys.",
    "files": [
-    "AssistantConnectView.swift:380"
+    "AssistantConnectView.swift:384"
    ],
    "args": [],
    "targets": [
@@ -38431,7 +38431,7 @@
    "ko": "맞춤 GPT로 연결 (Plus 이상, 추천)",
    "en": "Custom GPT (Plus or higher, recommended)",
    "files": [
-    "AssistantConnectView.swift:378"
+    "AssistantConnectView.swift:382"
    ],
    "args": [],
    "targets": [
@@ -38491,6 +38491,7 @@
    "ko": "머문 곳",
    "en": "Place",
    "files": [
+    "AITaskProducer.swift:57",
     "AssistantActivity.swift:189",
     "AssistantActivity.swift:275"
    ],
@@ -39055,7 +39056,7 @@
    "ko": "명령 복사",
    "en": "Copy command",
    "files": [
-    "AssistantConnectView.swift:343"
+    "AssistantConnectView.swift:347"
    ],
    "args": [],
    "targets": [
@@ -39448,7 +39449,7 @@
    "ko": "바꾸고 모두 지우기",
    "en": "Replace and delete everything",
    "files": [
-    "AssistantSettingsView.swift:104"
+    "AssistantSettingsView.swift:106"
    ],
    "args": [],
    "targets": [
@@ -39508,7 +39509,7 @@
    "ko": "바로 추가 (키가 남지 않음)",
    "en": "Quick add (no key left anywhere)",
    "files": [
-    "AssistantConnectView.swift:399"
+    "AssistantConnectView.swift:403"
    ],
    "args": [],
    "targets": [
@@ -40388,7 +40389,7 @@
    "ko": "보안 업데이트로 예전 AI 연결을 모두 끊었어요. 쓰던 AI를 아래에서 다시 연결해 주세요.",
    "en": "A security update disconnected your previous AI connections. Reconnect the AIs you use below.",
    "files": [
-    "AssistantSettingsView.swift:85"
+    "AssistantSettingsView.swift:87"
    ],
    "args": [],
    "targets": [
@@ -40535,7 +40536,7 @@
    "ko": "복사했어요. 붙여 넣은 뒤 돌아오세요.",
    "en": "Copied. Paste it, then come back.",
    "files": [
-    "AssistantConnectView.swift:551"
+    "AssistantConnectView.swift:555"
    ],
    "args": [],
    "targets": [
@@ -41012,7 +41013,7 @@
    "ko": "사용 기간",
    "en": "Valid for",
    "files": [
-    "AssistantConnectView.swift:231",
+    "AssistantConnectView.swift:235",
     "AssistantSafetyViews.swift:251"
    ],
    "args": [],
@@ -41666,7 +41667,7 @@
    "ko": "상태",
    "en": "Status",
    "files": [
-    "AssistantConnectView.swift:137",
+    "AssistantConnectView.swift:140",
     "TripItemStatus.swift:78"
    ],
    "args": [],
@@ -41752,8 +41753,8 @@
    "ko": "새 키로 다시 만들기",
    "en": "Make a new key",
    "files": [
-    "AssistantConnectView.swift:237",
-    "AssistantConnectView.swift:366"
+    "AssistantConnectView.swift:241",
+    "AssistantConnectView.swift:370"
    ],
    "args": [],
    "targets": [
@@ -41765,7 +41766,7 @@
    "ko": "새 키로 바꾸기",
    "en": "Replace with a new key",
    "files": [
-    "AssistantSettingsView.swift:99"
+    "AssistantSettingsView.swift:101"
    ],
    "args": [],
    "targets": [
@@ -41777,7 +41778,7 @@
    "ko": "새 키로 바꿀까요?",
    "en": "Replace the link key?",
    "files": [
-    "AssistantSettingsView.swift:102"
+    "AssistantSettingsView.swift:104"
    ],
    "args": [],
    "targets": [
@@ -41988,7 +41989,7 @@
    "ko": "서버 주소 복사",
    "en": "Copy server URL",
    "files": [
-    "AssistantConnectView.swift:332"
+    "AssistantConnectView.swift:336"
    ],
    "args": [],
    "targets": [
@@ -42000,7 +42001,7 @@
    "ko": "서버 주소",
    "en": "Server URL",
    "files": [
-    "AssistantConnectView.swift:331"
+    "AssistantConnectView.swift:335"
    ],
    "args": [],
    "targets": [
@@ -42036,7 +42037,7 @@
    "ko": "서버에 올린 기록과 모든 AI 연결, PIN이 지워져요. 쓰던 AI는 다시 연결해야 해요.",
    "en": "The records on the server, every AI connection and the PIN are deleted. You'll need to reconnect the AIs you use.",
    "files": [
-    "AssistantSettingsView.swift:107"
+    "AssistantSettingsView.swift:109"
    ],
    "args": [],
    "targets": [
@@ -43136,7 +43137,7 @@
    "en": "Copy schema URL",
    "files": [
     "AssistantConnectGuide.swift:116",
-    "AssistantConnectView.swift:362"
+    "AssistantConnectView.swift:366"
    ],
    "args": [],
    "targets": [
@@ -43148,7 +43149,7 @@
    "ko": "스키마 주소",
    "en": "Schema URL",
    "files": [
-    "AssistantConnectView.swift:361"
+    "AssistantConnectView.swift:365"
    ],
    "args": [],
    "targets": [
@@ -43172,7 +43173,7 @@
    "ko": "스키마 주소를 복사했어요.",
    "en": "Schema URL copied.",
    "files": [
-    "AssistantConnectView.swift:364"
+    "AssistantConnectView.swift:368"
    ],
    "args": [],
    "targets": [
@@ -43224,7 +43225,7 @@
    "ko": "승인 화면 PIN",
    "en": "Approval page PIN",
    "files": [
-    "AssistantConnectView.swift:458"
+    "AssistantConnectView.swift:462"
    ],
    "args": [],
    "targets": [
@@ -43984,7 +43985,7 @@
    "ko": "아직 연결되지 않았어요. 앞 단계를 다시 확인해 주세요.",
    "en": "Not connected yet. Check the previous steps.",
    "files": [
-    "AssistantConnectView.swift:562"
+    "AssistantConnectView.swift:566"
    ],
    "args": [],
    "targets": [
@@ -44009,7 +44010,7 @@
    "en": "Not connected",
    "files": [
     "AssistantConnectView.swift:81",
-    "AssistantConnectView.swift:137"
+    "AssistantConnectView.swift:140"
    ],
    "args": [],
    "targets": [
@@ -44081,7 +44082,7 @@
    "ko": "알겠어요",
    "en": "Got it",
    "files": [
-    "AssistantSettingsView.swift:89"
+    "AssistantSettingsView.swift:91"
    ],
    "args": [],
    "targets": [
@@ -44382,7 +44383,7 @@
    "ko": "앱 비밀번호를 넣으면 연결 코드와 승인 화면에 넣을 PIN이 나와요.",
    "en": "Enter your app password to get a code and the PIN for the approval page.",
    "files": [
-    "AssistantConnectView.swift:219"
+    "AssistantConnectView.swift:223"
    ],
    "args": [],
    "targets": [
@@ -44613,7 +44614,7 @@
    "ko": "앱이 Cue에 자동으로 연결해 주지는 않아요. 연결 키는 이 연결에만 쓰는 키이고, 앱의 주 키는 보내지 않아요. 아래 「연결 키 관리」에서 언제든 끊을 수 있어요.",
    "en": "The app doesn't connect to Cue for you. The key is only for this connection; the app's own key is never sent. You can cut it anytime under connection keys.",
    "files": [
-    "AssistantConnectView.swift:270"
+    "AssistantConnectView.swift:274"
    ],
    "args": [],
    "targets": [
@@ -45413,7 +45414,7 @@
    "ko": "연결 안내 다시 복사",
    "en": "Copy setup again",
    "files": [
-    "AssistantConnectView.swift:291"
+    "AssistantConnectView.swift:295"
    ],
    "args": [],
    "targets": [
@@ -45437,7 +45438,7 @@
    "ko": "연결 안내 한 번에 복사 (추천)",
    "en": "Copy everything at once (recommended)",
    "files": [
-    "AssistantConnectView.swift:254"
+    "AssistantConnectView.swift:258"
    ],
    "args": [],
    "targets": [
@@ -45449,7 +45450,7 @@
    "ko": "연결 안내를 복사했어요. 10분 뒤 클립보드에서 지워져요.",
    "en": "Setup copied. It is cleared from the clipboard in 10 minutes.",
    "files": [
-    "AssistantConnectView.swift:535"
+    "AssistantConnectView.swift:539"
    ],
    "args": [],
    "targets": [
@@ -45473,7 +45474,7 @@
    "ko": "연결 안내를 복사했어요. Cue 채팅창에 붙여 넣어 주세요. MCP 주소와 키를 따로 넣어도 돼요.",
    "en": "Setup copied. Paste it into the Cue chat, or enter the MCP URL and key separately.",
    "files": [
-    "AssistantConnectView.swift:514"
+    "AssistantConnectView.swift:518"
    ],
    "args": [],
    "targets": [
@@ -45485,7 +45486,7 @@
    "ko": "연결 안내를 복사했어요",
    "en": "Setup copied",
    "files": [
-    "AssistantConnectView.swift:617"
+    "AssistantConnectView.swift:621"
    ],
    "args": [],
    "targets": [
@@ -45497,7 +45498,7 @@
    "ko": "연결 주소 다시 복사",
    "en": "Copy the link again",
    "files": [
-    "AssistantConnectView.swift:417"
+    "AssistantConnectView.swift:421"
    ],
    "args": [],
    "targets": [
@@ -45509,7 +45510,7 @@
    "ko": "연결 주소 만들기",
    "en": "Make a connection link",
    "files": [
-    "AssistantConnectView.swift:412"
+    "AssistantConnectView.swift:416"
    ],
    "args": [],
    "targets": [
@@ -45521,7 +45522,7 @@
    "ko": "연결 주소를 만들면 복사돼요. Claude → 설정 → 커넥터 → 맞춤 커넥터 추가에 주소를 붙여 넣고, 인증은 「로그인 없음」을 고르면 끝나요.",
    "en": "Make a link and it's copied. In Claude, open Settings → Connectors → Add custom connector, paste the link and choose No sign-in.",
    "files": [
-    "AssistantConnectView.swift:408"
+    "AssistantConnectView.swift:412"
    ],
    "args": [],
    "targets": [
@@ -45546,7 +45547,7 @@
    "en": "Get a connection code",
    "files": [
     "AssistantConnectGuide.swift:92",
-    "AssistantConnectView.swift:333"
+    "AssistantConnectView.swift:337"
    ],
    "args": [],
    "targets": [
@@ -45558,7 +45559,7 @@
    "ko": "연결 코드",
    "en": "Connection code",
    "files": [
-    "AssistantConnectView.swift:452"
+    "AssistantConnectView.swift:456"
    ],
    "args": [],
    "targets": [
@@ -45570,7 +45571,7 @@
    "ko": "연결 코드를 받지 못했어요.",
    "en": "Couldn't get a connection code.",
    "files": [
-    "AssistantConnectView.swift:483"
+    "AssistantConnectView.swift:487"
    ],
    "args": [],
    "targets": [
@@ -45582,7 +45583,7 @@
    "ko": "연결 코드를 복사했어요",
    "en": "Code copied",
    "files": [
-    "AssistantConnectView.swift:191"
+    "AssistantConnectView.swift:195"
    ],
    "args": [],
    "targets": [
@@ -45608,7 +45609,7 @@
    "files": [
     "AssistantConnectGuide.swift:108",
     "AssistantConnectGuide.swift:131",
-    "AssistantConnectView.swift:366"
+    "AssistantConnectView.swift:370"
    ],
    "args": [],
    "targets": [
@@ -45620,8 +45621,8 @@
    "ko": "연결 키 복사",
    "en": "Copy connection key",
    "files": [
-    "AssistantConnectView.swift:262",
-    "AssistantConnectView.swift:372"
+    "AssistantConnectView.swift:266",
+    "AssistantConnectView.swift:376"
    ],
    "args": [],
    "targets": [
@@ -45645,8 +45646,8 @@
    "ko": "연결 키",
    "en": "Connection key",
    "files": [
-    "AssistantConnectView.swift:261",
-    "AssistantConnectView.swift:371"
+    "AssistantConnectView.swift:265",
+    "AssistantConnectView.swift:375"
    ],
    "args": [],
    "targets": [
@@ -45658,8 +45659,8 @@
    "ko": "연결 키를 복사했어요. 10분 뒤 클립보드에서 지워져요.",
    "en": "Key copied. It is cleared from the clipboard in 10 minutes.",
    "files": [
-    "AssistantConnectView.swift:264",
-    "AssistantConnectView.swift:374"
+    "AssistantConnectView.swift:268",
+    "AssistantConnectView.swift:378"
    ],
    "args": [],
    "targets": [
@@ -45671,7 +45672,7 @@
    "ko": "연결 키를 복사했어요. GPT 구성 → 작업 → 인증에서 API 키·Bearer를 고르고 붙여 넣어 주세요. 스키마 주소는 이 화면에서 따로 복사해요. 클립보드는 10분 뒤 지워져요.",
    "en": "Key copied. In the GPT's Configure → Actions → Authentication, choose API key and Bearer, then paste it. Copy the schema URL from this screen. The clipboard is cleared in 10 minutes.",
    "files": [
-    "AssistantConnectView.swift:634"
+    "AssistantConnectView.swift:638"
    ],
    "args": [],
    "targets": [
@@ -45746,7 +45747,7 @@
    "ko": "연결됐어요.",
    "en": "Connected.",
    "files": [
-    "AssistantConnectView.swift:561"
+    "AssistantConnectView.swift:565"
    ],
    "args": [],
    "targets": [
@@ -45895,7 +45896,7 @@
    "files": [
     "AssistantConnectGuide.swift:159",
     "AssistantConnectView.swift:81",
-    "AssistantConnectView.swift:137"
+    "AssistantConnectView.swift:140"
    ],
    "args": [],
    "targets": [
@@ -45979,7 +45980,7 @@
    "ko": "연결하기",
    "en": "Connect",
    "files": [
-    "AssistantConnectView.swift:289",
+    "AssistantConnectView.swift:293",
     "AppModelSupportTypes.swift:260"
    ],
    "args": [],
@@ -45992,7 +45993,7 @@
    "ko": "연결하기를 누르면 연결 안내가 복사돼요. 웹 요청을 할 수 있는 AI에 붙여 넣어 주세요.",
    "en": "Connect copies the setup. Paste it into any AI that can make web requests.",
    "files": [
-    "AssistantConnectView.swift:318"
+    "AssistantConnectView.swift:322"
    ],
    "args": [],
    "targets": [
@@ -46004,7 +46005,7 @@
    "ko": "연결하기를 누르면 연결 안내가 복사되고 피클이 열려요. 피클 채팅창에 붙여 넣어 주세요.",
    "en": "Connect copies the setup and opens Pickle. Paste it into the Pickle chat.",
    "files": [
-    "AssistantConnectView.swift:316"
+    "AssistantConnectView.swift:320"
    ],
    "args": [],
    "targets": [
@@ -46067,7 +46068,7 @@
    "ko": "연동 키가 없어요",
    "en": "No link key",
    "files": [
-    "AssistantSettingsView.swift:96"
+    "AssistantSettingsView.swift:98"
    ],
    "args": [],
    "targets": [
@@ -46079,7 +46080,7 @@
    "ko": "연동 키가 있어요",
    "en": "Link key is set",
    "files": [
-    "AssistantSettingsView.swift:96"
+    "AssistantSettingsView.swift:98"
    ],
    "args": [],
    "targets": [
@@ -46091,7 +46092,7 @@
    "ko": "연동 키는 이 기기에만 있고 AI에게 주지 않아요. 키를 바꾸면 서버의 기록과 AI 연결을 모두 지워요.",
    "en": "The link key stays on this device and is never given to the AI. Replacing it deletes the server records and all AI connections.",
    "files": [
-    "AssistantSettingsView.swift:114"
+    "AssistantSettingsView.swift:116"
    ],
    "args": [],
    "targets": [
@@ -47128,7 +47129,7 @@
    "en": "Done",
    "files": [
     "AITaskPanel.swift:105",
-    "AssistantSettingsView.swift:62",
+    "AssistantSettingsView.swift:64",
     "BokkiShortcutsGuide.swift:90"
    ],
    "args": [],
@@ -47201,7 +47202,7 @@
    "ko": "요금제",
    "en": "Plan",
    "files": [
-    "AssistantConnectView.swift:138"
+    "AssistantConnectView.swift:141"
    ],
    "args": [],
    "targets": [
@@ -47586,7 +47587,7 @@
    "ko": "웹 요청을 할 수 있는 AI의 채팅창에 붙여 넣고 보내 주세요.",
    "en": "Paste it into the chat of an AI that can make web requests, then send.",
    "files": [
-    "AssistantConnectView.swift:632"
+    "AssistantConnectView.swift:636"
    ],
    "args": [],
    "targets": [
@@ -51340,7 +51341,7 @@
    "ko": "주소 하나로 연결 (추천)",
    "en": "Connect with one link (recommended)",
    "files": [
-    "AssistantConnectView.swift:425"
+    "AssistantConnectView.swift:429"
    ],
    "args": [],
    "targets": [
@@ -51364,7 +51365,7 @@
    "ko": "주소에 연결 키가 들어 있어요. 다른 사람에게 보이지 마세요. 아래 「연결 키 관리」에서 언제든 끊을 수 있어요.",
    "en": "The link contains a connection key. Don't share it. You can cut it anytime under connection keys.",
    "files": [
-    "AssistantConnectView.swift:427"
+    "AssistantConnectView.swift:431"
    ],
    "args": [],
    "targets": [
@@ -53263,7 +53264,7 @@
    "en": "Cancel",
    "files": [
     "AssistantBubble.swift:342",
-    "AssistantConnectView.swift:195",
+    "AssistantConnectView.swift:199",
     "AssistantPINReset.swift:96"
    ],
    "args": [],
@@ -53694,7 +53695,7 @@
    "ko": "커넥터로 연결 (Business·Enterprise·Edu, Pro는 읽기만)",
    "en": "Connector (Business, Enterprise, Edu; Pro read-only)",
    "files": [
-    "AssistantConnectView.swift:337"
+    "AssistantConnectView.swift:341"
    ],
    "args": [],
    "targets": [
@@ -53706,7 +53707,7 @@
    "ko": "커넥터로 연결",
    "en": "Connect as a connector",
    "files": [
-    "AssistantConnectView.swift:338"
+    "AssistantConnectView.swift:342"
    ],
    "args": [],
    "targets": [
@@ -53797,7 +53798,7 @@
    "en": "Copy code",
    "files": [
     "AssistantConnectGuide.swift:100",
-    "AssistantConnectView.swift:467"
+    "AssistantConnectView.swift:471"
    ],
    "args": [],
    "targets": [
@@ -53809,7 +53810,7 @@
    "ko": "코드가 끝났어요. 새로 받아 주세요.",
    "en": "The code expired. Get a new one.",
    "files": [
-    "AssistantConnectView.swift:465"
+    "AssistantConnectView.swift:469"
    ],
    "args": [],
    "targets": [
@@ -53902,7 +53903,7 @@
    "ko": "클립보드는 10분 뒤 지워져요.",
    "en": "The clipboard is cleared in 10 minutes.",
    "files": [
-    "AssistantConnectView.swift:643"
+    "AssistantConnectView.swift:647"
    ],
    "args": [],
    "targets": [
@@ -53951,7 +53952,7 @@
    "ko": "키가 새면 직접 끊어야 해요.",
    "en": "If the key leaks, you have to cut it yourself.",
    "files": [
-    "AssistantConnectView.swift:235"
+    "AssistantConnectView.swift:239"
    ],
    "args": [],
    "targets": [
@@ -54071,7 +54072,7 @@
    "ko": "터미널에 붙여 넣은 뒤 /mcp에서 bokki를 인증하고, 열린 화면에 연결 코드와 PIN을 넣어요.",
    "en": "Paste it in a terminal, authenticate bokki in /mcp, then enter the code and PIN on the page that opens.",
    "files": [
-    "AssistantConnectView.swift:347"
+    "AssistantConnectView.swift:351"
    ],
    "args": [],
    "targets": [
@@ -55885,7 +55886,7 @@
    "en": "OK",
    "files": [
     "AppShellView.swift:1213",
-    "AssistantConnectView.swift:209",
+    "AssistantConnectView.swift:213",
     "AssistantPINSheet.swift:60"
    ],
    "args": [],

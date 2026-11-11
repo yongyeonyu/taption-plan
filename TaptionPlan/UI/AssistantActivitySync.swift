@@ -153,6 +153,8 @@ enum AssistantActivitySync {
             }
             AssistantActivityUploadGate.markSent(batch.days, defaults: defaults)
             defaults.set(true, forKey: sharedKey)
+            // AI가 읽을 수 있게 된 날에서만 확인 거리를 고른다(AIQ1111A02).
+            AITaskProducer.enqueue(batch.days, language: MapHomeLanguage.current, now: now, defaults: defaults)
             count += batch.days.count
         }
         if count > 0 { record("assistant_activity_uploaded", status: 201, days: count) }

@@ -113,6 +113,7 @@
 		A5B1102A0200000000000029 /* AppModel+Classification.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000028 /* AppModel+Classification.swift */; };
 		C1CA1111A010000000000002 /* AppModel+CarAudio.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1CA1111A010000000000001 /* AppModel+CarAudio.swift */; };
 		CA1A1111A010000000000002 /* AITaskQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1A1111A010000000000001 /* AITaskQueue.swift */; };
+		CA1A1111A020000000000002 /* AITaskProducer.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1A1111A020000000000001 /* AITaskProducer.swift */; };
 		A5B1102A0200000000000027 /* AppModel+DayData.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000026 /* AppModel+DayData.swift */; };
 		A5B1102A0200000000000025 /* AppModel+EditHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000024 /* AppModel+EditHistory.swift */; };
 		A5B1102A0200000000000023 /* AppModel+Export.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000022 /* AppModel+Export.swift */; };
@@ -866,6 +867,7 @@
 		F5B1102A0200000000000028 /* AppModel+Classification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Classification.swift"; sourceTree = "<group>"; };
 		C1CA1111A010000000000001 /* AppModel+CarAudio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+CarAudio.swift"; sourceTree = "<group>"; };
 		CA1A1111A010000000000001 /* AITaskQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AITaskQueue.swift; sourceTree = "<group>"; };
+		CA1A1111A020000000000001 /* AITaskProducer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AITaskProducer.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000026 /* AppModel+DayData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+DayData.swift"; sourceTree = "<group>"; };
 		F5B1102A0200000000000024 /* AppModel+EditHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+EditHistory.swift"; sourceTree = "<group>"; };
 		F5B1102A0200000000000022 /* AppModel+Export.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Export.swift"; sourceTree = "<group>"; };
@@ -1950,6 +1952,7 @@
 				F5B1102A0200000000000028 /* AppModel+Classification.swift */,
 				C1CA1111A010000000000001 /* AppModel+CarAudio.swift */,
 				CA1A1111A010000000000001 /* AITaskQueue.swift */,
+				CA1A1111A020000000000001 /* AITaskProducer.swift */,
 				F1000000000000000B1105C7 /* SensorTimelineDerivation.swift */,
 				F10000000000000000CA1003 /* AppModel+CalendarTitles.swift */,
 				F5B1102A0200000000000026 /* AppModel+DayData.swift */,
@@ -2568,6 +2571,7 @@
 				A5B1102A0200000000000029 /* AppModel+Classification.swift in Sources */,
 				C1CA1111A010000000000002 /* AppModel+CarAudio.swift in Sources */,
 				CA1A1111A010000000000002 /* AITaskQueue.swift in Sources */,
+				CA1A1111A020000000000002 /* AITaskProducer.swift in Sources */,
 				A1000000000000000B1105C7 /* SensorTimelineDerivation.swift in Sources */,
 				A5B1102A0200000000000027 /* AppModel+DayData.swift in Sources */,
 				A5B1102A0200000000000025 /* AppModel+EditHistory.swift in Sources */,

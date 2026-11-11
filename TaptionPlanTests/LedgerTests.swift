@@ -597,6 +597,91 @@ final class AITaskQueueTests: XCTestCase {
     }
 }
 
+/// AI 확인 목록 2단계(AIQ1111A02): 하루 기록에서 머문 곳·교통비·조각 합침·경로 확인 거리를 고르고 한 번만 올린다.
+@MainActor
+final class AITaskProducerTests: XCTestCase {
+    private typealias Day = AssistantActivityDay
+    private let now = ISO8601DateFormatter().date(from: "2026-11-11T23:00:00+09:00")!
+
+    private func move(_ mode: String, _ start: String, _ end: String, minutes: Int, from: String? = "집", to: String? = "회사") -> Day.Move {
+        Day.Move(from: from, to: to, mode: mode, start: "2026-11-11T\(start)+09:00", end: "2026-11-11T\(end)+09:00", minutes: minutes)
+    }
+
+    private func day(visits: [Day.Visit] = [], moves: [Day.Move] = [], expenses: [Day.Expense]? = nil) -> Day {
+        var value = Day(
+            date: "2026-11-11", timeZone: "Asia/Seoul",
+            summary: .init(categories: [], recordedMinutes: 0, steps: nil, plansScheduled: 0, plansCompleted: 0),
+            records: [Day.Record(id: "r1", start: "2026-11-11T11:40+09:00", end: "2026-11-11T12:30+09:00", title: "머문 곳",
+                                 category: .init(id: "activity", title: "활동"), source: "auto")],
+            memos: []
+        )
+        value.visits = visits
+        value.moves = moves
+        value.expenses = expenses
+        return value
+    }
+
+    func testPicksUnnamedLongStayOnly() {
+        let visits = [
+            Day.Visit(place: "머문 곳", start: "2026-11-11T11:45+09:00", end: "2026-11-11T12:20+09:00", minutes: 35),
+            Day.Visit(place: "머문 곳", start: "2026-11-11T13:00+09:00", end: "2026-11-11T13:10+09:00", minutes: 10),
+            Day.Visit(place: "회사", start: "2026-11-11T13:10+09:00", end: "2026-11-11T18:00+09:00", minutes: 290),
+        ]
+        let found = AITaskProducer.candidates(day(visits: visits), language: .korean, now: now)
+        XCTAssertEqual(found.map(\.kind), [.stayPlace])
+        XCTAssertEqual(found.first?.context["recordIds"], "r1")
+    }
+
+    func testTransferIsOneFareAndPaidTripIsSkipped() {
+        let moves = [
+            move("walk", "07:58", "08:20", minutes: 22),
+            move("subway", "08:20", "08:40", minutes: 20, from: "교대", to: "고속터미널"),
+            move("walk", "08:40", "08:45", minutes: 5),
+            move("subway", "08:45", "09:20", minutes: 35, from: "고속터미널", to: "마곡나루"),
+            move("car", "18:00", "18:40", minutes: 40),
+            move("bus", "19:00", "19:20", minutes: 20, from: "역", to: "집"),
+        ]
+        let paid = [Day.Expense(id: "e", time: "2026-11-11T19:25+09:00", title: "버스", category: "transport", kind: "expense", amount: 1_500, currency: "KRW", amountKRW: nil)]
+        let fares = AITaskProducer.candidates(day(moves: moves, expenses: paid), language: .korean, now: now).filter { $0.kind == .fareCheck }
+        XCTAssertEqual(fares.count, 1)
+        XCTAssertEqual(fares.first?.context["modes"], "subway,subway")
+        XCTAssertEqual(fares.first?.context["from"], "교대")
+        XCTAssertEqual(fares.first?.context["to"], "마곡나루")
+    }
+
+    func testShortSameModeFragmentsAndUnclearMoves() {
+        let moves = [
+            move("walk", "10:00", "10:04", minutes: 4),
+            move("walk", "10:06", "10:09", minutes: 3),
+            move("walk", "10:10", "10:15", minutes: 5),
+            move("other", "14:00", "14:10", minutes: 10),
+            move("car", "16:00", "16:20", minutes: 20, from: nil, to: nil),
+        ]
+        let found = AITaskProducer.candidates(day(moves: moves), language: .korean, now: now)
+        XCTAssertEqual(found.filter { $0.kind == .mergeReview }.count, 1)
+        XCTAssertTrue(found.first { $0.kind == .mergeReview }?.text.contains("× 3") == true)
+        XCTAssertEqual(found.filter { $0.kind == .routeCheck }.count, 2)
+    }
+
+    func testRecentItemsWaitAndDayIsCapped() {
+        let late = [move("other", "22:40", "22:55", minutes: 15)]
+        XCTAssertTrue(AITaskProducer.candidates(day(moves: late), language: .korean, now: now).isEmpty)
+        let many = (0..<8).map { move("other", String(format: "%02d:00", 8 + $0), String(format: "%02d:10", 8 + $0), minutes: 10) }
+        XCTAssertEqual(AITaskProducer.candidates(day(moves: many), language: .korean, now: now).count, AITaskProducer.perDayLimit)
+    }
+
+    func testEnqueuesOnceAndRetriesAfterConnecting() throws {
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: "AITaskProducerTests-\(UUID())"))
+        let value = day(moves: [move("other", "14:00", "14:10", minutes: 10)])
+        XCTAssertEqual(AITaskProducer.enqueue([value], language: .korean, now: now, defaults: defaults), 0)
+        defaults.set(["key": "피클"], forKey: AssistantKeyLabels.labelsKey)
+        XCTAssertEqual(AITaskProducer.enqueue([value], language: .korean, now: now, defaults: defaults), 1)
+        XCTAssertEqual(AITaskProducer.enqueue([value], language: .korean, now: now, defaults: defaults), 0)
+        XCTAssertEqual(AITaskQueue.pendingUploads(defaults).map(\.kind), [.routeCheck])
+        XCTAssertEqual(AITaskQueue.pendingUploads(defaults).first?.date, "2026-11-11")
+    }
+}
+
 /// Siri·단축어(SIR1111A01): 앱이 꺼져 있을 때 받은 메모는 쌓였다가 앱이 열리면 반영되고, 화면 열기 요청은 한 번만 꺼낸다.
 @MainActor
 final class SiriIntentsTests: XCTestCase {
