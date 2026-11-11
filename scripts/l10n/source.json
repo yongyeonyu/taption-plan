@@ -56694,6 +56694,22 @@
   },
   {
    "table": "Localizable",
+   "key": "AI 목록",
+   "en": "AI List",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
+   "key": "AI에게 맡기기",
+   "en": "Send to AI",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
    "key": "App Store에서 구매 항목을 아직 불러오지 못했습니다.",
    "en": "The purchase is not yet available from the App Store.",
    "targets": [
@@ -56817,6 +56833,14 @@
    "table": "Localizable",
    "key": "BOKKI Plan %@ (빌드 %@)",
    "en": "BOKKI Plan %1$@ (Build %2$@)",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
+   "key": "BOKKI Plan에 저장",
+   "en": "Save to BOKKI Plan",
    "targets": [
     "TaptionPlan"
    ]
@@ -56999,6 +57023,22 @@
   },
   {
    "table": "Localizable",
+   "key": "가계부",
+   "en": "Ledger",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
+   "key": "가계부·AI 목록·메모·하루 카드·달력을 바로 열어요.",
+   "en": "Opens the ledger, AI list, memos, day card or calendar directly.",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
    "key": "가까운 루틴이 없습니다",
    "en": "No nearby routines",
    "targets": [
@@ -57031,6 +57071,14 @@
   },
   {
    "table": "Localizable",
+   "key": "건강 앱의 오늘 걸음 수를 알려 줘요.",
+   "en": "Tells you today’s step count from the Health app.",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
    "key": "건너뛰기",
    "en": "Skip",
    "targets": [
@@ -57049,6 +57097,22 @@
    "table": "Localizable",
    "key": "결정이나 아이디어를 짧게 남겨보세요.",
    "en": "Leave a short decision or idea.",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
+   "key": "결제 문자 넣기",
+   "en": "Add Payment Text",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
+   "key": "결제 알림 넣기",
+   "en": "Add Payment Notification",
    "targets": [
     "TaptionPlan"
    ]
@@ -57176,6 +57240,22 @@
   },
   {
    "table": "Localizable",
+   "key": "귀가",
+   "en": "Came Home",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
+   "key": "금액(원)",
+   "en": "Amount (KRW)",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
    "key": "기간 · %@–%@",
    "en": "Period · %1$@–%2$@",
    "targets": [
@@ -57280,6 +57360,14 @@
   },
   {
    "table": "Localizable",
+   "key": "기상",
+   "en": "Woke Up",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
    "key": "기존 액션아이템 연결",
    "en": "Connect existing action item",
    "targets": [
@@ -57344,6 +57432,14 @@
   },
   {
    "table": "Localizable",
+   "key": "내용",
+   "en": "Description",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
    "key": "다른 수단",
    "en": "Other mode",
    "targets": [
@@ -57362,6 +57458,14 @@
    "table": "Localizable",
    "key": "닫기",
    "en": "Close",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
+   "key": "달력",
+   "en": "Calendar",
    "targets": [
     "TaptionPlan"
    ]
@@ -57664,6 +57768,14 @@
   },
   {
    "table": "Localizable",
+   "key": "맡길 내용",
+   "en": "What to Send",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
    "key": "먼저 루틴 탭에서 루틴을 만들어 주세요.",
    "en": "Create a routine in the Routine tab first.",
    "targets": [
@@ -57682,6 +57794,14 @@
    "table": "Localizable",
    "key": "메모 %lld개",
    "en": "%lld notes",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
+   "key": "메모 남기기",
+   "en": "Leave a Memo",
    "targets": [
     "TaptionPlan"
    ]
@@ -57770,6 +57890,14 @@
    "table": "Localizable",
    "key": "목표 %@",
    "en": "Goal %@",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
+   "key": "문자 내용",
+   "en": "Message Text",
    "targets": [
     "TaptionPlan"
    ]
@@ -57866,6 +57994,14 @@
    "table": "Localizable",
    "key": "반복 이름 · 예: 주중 수면",
    "en": "Repeat name · e.g. Weekday sleep",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
+   "key": "방금 쓴 돈을 가계부에 넣어요. 예: 커피 4500원",
+   "en": "Adds money you just spent to the ledger. Example: coffee 4500",
    "targets": [
     "TaptionPlan"
    ]
@@ -58192,6 +58328,14 @@
   },
   {
    "table": "Localizable",
+   "key": "순간",
+   "en": "Moment",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
    "key": "습관 대시보드",
    "en": "Habit dashboard",
    "targets": [
@@ -58464,6 +58608,14 @@
   },
   {
    "table": "Localizable",
+   "key": "알림 내용",
+   "en": "Notification Text",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
    "key": "애플·구글·네이버 캘린더에서 가져온 내용은 ‘일정’ 카드에 표시됩니다.",
    "en": "Items imported from Apple, Google, and Naver Calendar appear on the Schedule card.",
    "targets": [
@@ -58648,6 +58800,30 @@
   },
   {
    "table": "Localizable",
+   "key": "영수증 넣기",
+   "en": "Add a Receipt",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
+   "key": "영수증 사진",
+   "en": "Receipt Photo",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
+   "key": "영수증 사진을 읽어 가계부에 넣어요. 공유 시트나 단축어에서 사진을 넘기면 돼요.",
+   "en": "Reads a receipt photo and adds it to the ledger. Pass the photo from the share sheet or Shortcuts.",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
    "key": "영어 공부",
    "en": "English study",
    "targets": [
@@ -58658,6 +58834,22 @@
    "table": "Localizable",
    "key": "예: 주중 23:00 취침 → 다음날 06:30 기상, 주말 01:00 → 10:00",
    "en": "Example: Weekday sleep 23:00 → wake 06:30 next day, weekend 01:00 → 10:00",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
+   "key": "오늘 가계부 지출 합계를 알려 줘요.",
+   "en": "Tells you today’s total spending in the ledger.",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
+   "key": "오늘 걸음 수",
+   "en": "Today’s Steps",
    "targets": [
     "TaptionPlan"
    ]
@@ -58688,6 +58880,14 @@
   },
   {
    "table": "Localizable",
+   "key": "오늘 지출",
+   "en": "Today’s Spending",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
    "key": "오늘의 위치·이동 기록이 아직 없습니다",
    "en": "No location or travel records for today yet",
    "targets": [
@@ -58698,6 +58898,14 @@
    "table": "Localizable",
    "key": "완료",
    "en": "Done",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
+   "key": "외출",
+   "en": "Went Out",
    "targets": [
     "TaptionPlan"
    ]
@@ -58762,6 +58970,14 @@
    "table": "Localizable",
    "key": "위치는 이미 채워져 있습니다. 이름과 감지 범위는 다음 화면에서 고칠 수 있습니다.",
    "en": "The location is already filled in. You can edit its name and detection range on the next screen.",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
+   "key": "은행·카드 앱의 결제·출금 알림을 BOKKI Plan 가계부에 넣어요. 단축어 자동화 「알림 › 앱 푸시」에 걸어 쓰세요.",
+   "en": "Adds payment and withdrawal notifications from bank and card apps to the BOKKI Plan ledger. Use it in a Shortcuts automation for app notifications.",
    "targets": [
     "TaptionPlan"
    ]
@@ -59385,6 +59601,38 @@
   },
   {
    "table": "Localizable",
+   "key": "지금 기록",
+   "en": "Current Record",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
+   "key": "지금 무엇으로 기록되고 있는지 알려 줘요.",
+   "en": "Tells you what is being recorded right now.",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
+   "key": "지금 순간 기록",
+   "en": "Log This Moment",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
+   "key": "지금 시각으로 BOKKI Plan에 메모를 남겨요. 금액이 있으면 가계부에도 들어가요.",
+   "en": "Leaves a memo in BOKKI Plan at the current time. If it has an amount, it also goes into the ledger.",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
    "key": "지금 있는 층",
    "en": "Current floor",
    "targets": [
@@ -59436,6 +59684,14 @@
    "table": "Localizable",
    "key": "지우기",
    "en": "Clear",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
+   "key": "지출 기록",
+   "en": "Log an Expense",
    "targets": [
     "TaptionPlan"
    ]
@@ -59538,6 +59794,22 @@
   },
   {
    "table": "Localizable",
+   "key": "출근",
+   "en": "Arrived at Work",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
+   "key": "출근·퇴근·기상·취침·외출·귀가를 지금 시각으로 남겨요. 단축어 자동화에 걸어 두면 저절로 남아요.",
+   "en": "Logs arriving at or leaving work, waking up, going to bed, going out or coming home at the current time. Add it to a Shortcuts automation to log it automatically.",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
    "key": "출발",
    "en": "Depart",
    "targets": [
@@ -59554,8 +59826,24 @@
   },
   {
    "table": "Localizable",
+   "key": "취침",
+   "en": "Going to Bed",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
    "key": "측정 근거",
    "en": "Measurement evidence",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
+   "key": "카드 결제 문자를 BOKKI Plan 가계부에 넣어요.",
+   "en": "Adds a card payment text to the BOKKI Plan ledger.",
    "targets": [
     "TaptionPlan"
    ]
@@ -59612,6 +59900,14 @@
    "table": "Localizable",
    "key": "통합 미세먼지 %@",
    "en": "Combined fine dust %@",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
+   "key": "퇴근",
+   "en": "Left Work",
    "targets": [
     "TaptionPlan"
    ]
@@ -59684,6 +59980,14 @@
    "table": "Localizable",
    "key": "하루 기록 재생",
    "en": "Play day's record",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
+   "key": "하루 카드",
+   "en": "Day Card",
    "targets": [
     "TaptionPlan"
    ]
@@ -59818,6 +60122,22 @@
   },
   {
    "table": "Localizable",
+   "key": "화면",
+   "en": "Screen",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
+   "key": "화면 열기",
+   "en": "Open a Screen",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
    "key": "화면 오른쪽 끝까지 끌어 시간을 선택합니다",
    "en": "Drag to the right edge of the screen to select a time",
    "targets": [
@@ -59852,6 +60172,14 @@
    "table": "Localizable",
    "key": "확인",
    "en": "OK",
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "table": "Localizable",
+   "key": "확인할 내용을 연결된 AI에게 맡겨요. 처리되면 메모 › AI에 결과가 보여요.",
+   "en": "Sends something to check to your connected AI. When it is done, the result appears in Memo › AI.",
    "targets": [
     "TaptionPlan"
    ]
