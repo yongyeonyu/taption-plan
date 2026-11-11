@@ -32468,6 +32468,35 @@
    ]
   },
   {
+   "key": "‘{0}’ 일정은 무엇인가요?|What is ‘{0}’?",
+   "ko": "‘{0}’ 일정은 무엇인가요?",
+   "en": "What is ‘{0}’?",
+   "files": [
+    "MapHomeLaunchPrompts.swift:165"
+   ],
+   "args": [
+    "calendarTitle ?? \"\""
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "‘{0}’에 {1}번 머물렀어요. 어떤 곳인가요?|You stayed at ‘{0}’ {1} times. What is it?",
+   "ko": "‘{0}’에 {1}번 머물렀어요. 어떤 곳인가요?",
+   "en": "You stayed at ‘{0}’ {1} times. What is it?",
+   "files": [
+    "MapHomeLaunchPrompts.swift:180"
+   ],
+   "args": [
+    "name",
+    "suggestion.visitCount"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "‘끊김 없는 영상 만들기’는 몇 분 걸리지만 끊기지 않습니다.|‘Render smooth video’ takes a few minutes but never stutters.",
    "ko": "‘끊김 없는 영상 만들기’는 몇 분 걸리지만 끊기지 않습니다.",
    "en": "‘Render smooth video’ takes a few minutes but never stutters.",
@@ -37353,6 +37382,18 @@
    ]
   },
   {
+   "key": "등록 안 함|Don't register",
+   "ko": "등록 안 함",
+   "en": "Don't register",
+   "files": [
+    "MapHomeLaunchPrompts.swift:147"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "등록 지점 아이콘|Saved place icons",
    "ko": "등록 지점 아이콘",
    "en": "Saved place icons",
@@ -38789,6 +38830,18 @@
    ]
   },
   {
+   "key": "미확인 시간이 있어요|Some time is unconfirmed",
+   "ko": "미확인 시간이 있어요",
+   "en": "Some time is unconfirmed",
+   "files": [
+    "MapHomeLaunchPrompts.swift:152"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "미확인 활동|Unconfirmed activity",
    "ko": "미확인 활동",
    "en": "Unconfirmed activity",
@@ -39982,6 +40035,18 @@
    "en": "Don't categorize",
    "files": [
     "MapHomeTodayCalendar.swift:72"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "분류 안 함|Don't classify",
+   "ko": "분류 안 함",
+   "en": "Don't classify",
+   "files": [
+    "MapHomeLaunchPrompts.swift:138"
    ],
    "args": [],
    "targets": [
@@ -42899,6 +42964,18 @@
    "en": "Enter a restaurant name.",
    "files": [
     "AppModel+FrequentPlaces.swift:541"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "식당|Restaurant",
+   "ko": "식당",
+   "en": "Restaurant",
+   "files": [
+    "MapHomeLaunchPrompts.swift:194"
    ],
    "args": [],
    "targets": [
@@ -45997,6 +46074,20 @@
    ]
   },
   {
+   "key": "오늘 {0}분이 무엇을 했는지 모르는 시간이에요. 지금 정할까요?|{0} min today are unconfirmed. Review them now?",
+   "ko": "오늘 {0}분이 무엇을 했는지 모르는 시간이에요. 지금 정할까요?",
+   "en": "{0} min today are unconfirmed. Review them now?",
+   "files": [
+    "MapHomeLaunchPrompts.swift:156"
+   ],
+   "args": [
+    "minutes"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "오늘 기록 없음|No records today",
    "ko": "오늘 기록 없음",
    "en": "No records today",
@@ -47567,7 +47658,7 @@
    "ko": "이 기기가 내 차 같아요",
    "en": "This looks like your car",
    "files": [
-    "MapHomeCarAudioSuggestion.swift:22"
+    "MapHomeLaunchPrompts.swift:125"
    ],
    "args": [],
    "targets": [
@@ -48031,6 +48122,18 @@
    "files": [
     "MapHomeLocationSheets.swift:84",
     "MapHomeTransitSheets.swift:235"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "이 자리|This spot",
+   "ko": "이 자리",
+   "en": "This spot",
+   "files": [
+    "MapHomeLaunchPrompts.swift:179"
    ],
    "args": [],
    "targets": [
@@ -49330,6 +49433,18 @@
     "TaptionPlanWidget",
     "TaptionPlanWatch",
     "TaptionPlanWatchWidget"
+   ]
+  },
+  {
+   "key": "자주 머무는 곳이 있어요|You stay here often",
+   "ko": "자주 머무는 곳이 있어요",
+   "en": "You stay here often",
+   "files": [
+    "MapHomeLaunchPrompts.swift:143"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
    ]
   },
   {
@@ -50722,6 +50837,18 @@
    "en": "Current outputs",
    "files": [
     "MapHomeCarAudioSheet.swift:128"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "지금 정하기|Review now",
+   "ko": "지금 정하기",
+   "en": "Review now",
+   "files": [
+    "MapHomeLaunchPrompts.swift:153"
    ],
    "args": [],
    "targets": [
@@ -53889,6 +54016,18 @@
    ]
   },
   {
+   "key": "학교|School",
+   "ko": "학교",
+   "en": "School",
+   "files": [
+    "MapHomeLaunchPrompts.swift:189"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "학교에서 학습|Studying at school",
    "ko": "학교에서 학습",
    "en": "Studying at school",
@@ -54005,6 +54144,18 @@
    "en": "Tap to show the date strip",
    "files": [
     "MapHomeView+Support2.swift:480"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "한 번 정하면 같은 제목의 일정은 다시 묻지 않아요.|Once set, events with the same title won't be asked again.",
+   "ko": "한 번 정하면 같은 제목의 일정은 다시 묻지 않아요.",
+   "en": "Once set, events with the same title won't be asked again.",
+   "files": [
+    "MapHomeLaunchPrompts.swift:141"
    ],
    "args": [],
    "targets": [

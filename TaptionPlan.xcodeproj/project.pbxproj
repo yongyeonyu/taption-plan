@@ -655,7 +655,7 @@
 		A1102A0100000000000000A5 /* PlaceZoneStayTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1102A0100000000000000F9 /* PlaceZoneStayTracker.swift */; };
 		1C417B9717B86DB458FABFBC /* RailJourneyRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 224225E0023E3C60D75BFFBC /* RailJourneyRecognizer.swift */; };
 		A1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift */; };
-		C1CA1111A010000000000004 /* MapHomeCarAudioSuggestion.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1CA1111A010000000000003 /* MapHomeCarAudioSuggestion.swift */; };
+		C1CA1111A010000000000004 /* MapHomeLaunchPrompts.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1CA1111A010000000000003 /* MapHomeLaunchPrompts.swift */; };
 		A51002000000000000000003 /* PlanDaySeal.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000003 /* PlanDaySeal.swift */; };
 		A51002000000000000000001 /* PlanDayDataSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000001 /* PlanDayDataSnapshot.swift */; };
 		A51002000000000000000002 /* MapHomeInteractionPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000002 /* MapHomeInteractionPolicy.swift */; };
@@ -1360,7 +1360,7 @@
 		A1102A0100000000000000F9 /* PlaceZoneStayTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceZoneStayTracker.swift; sourceTree = "<group>"; };
 		224225E0023E3C60D75BFFBC /* RailJourneyRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RailJourneyRecognizer.swift; sourceTree = "<group>"; };
 		F1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCarAudioSheet.swift; sourceTree = "<group>"; };
-		C1CA1111A010000000000003 /* MapHomeCarAudioSuggestion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCarAudioSuggestion.swift; sourceTree = "<group>"; };
+		C1CA1111A010000000000003 /* MapHomeLaunchPrompts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLaunchPrompts.swift; sourceTree = "<group>"; };
 		F100000000000000000000F4 /* MapHomeSectionDetailEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeSectionDetailEngine.swift; sourceTree = "<group>"; };
 		F10000000000000000000073 /* WatchObjCExceptionCatcher.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WatchObjCExceptionCatcher.h; sourceTree = "<group>"; };
 		F10000000000000000000074 /* WatchObjCExceptionCatcher.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WatchObjCExceptionCatcher.m; sourceTree = "<group>"; };
@@ -1853,7 +1853,7 @@
 				F1AB1029A0200000000000D2 /* MapHomeNLEEditorViewport.swift */,
 				F1PLY1029A0300000000001 /* MapHomePlaybackDriver.swift */,
 				F1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift */,
-				C1CA1111A010000000000003 /* MapHomeCarAudioSuggestion.swift */,
+				C1CA1111A010000000000003 /* MapHomeLaunchPrompts.swift */,
 				F100000000000000000000F4 /* MapHomeSectionDetailEngine.swift */,
 				F10000000000000000000087 /* MapHomeLocationPresentation.swift */,
 				F10000000000000000000005 /* AppShellView.swift */,
@@ -2809,7 +2809,7 @@
 				A1102A0100000000000000A5 /* PlaceZoneStayTracker.swift in Sources */,
 				1C417B9717B86DB458FABFBC /* RailJourneyRecognizer.swift in Sources */,
 				A1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift in Sources */,
-				C1CA1111A010000000000004 /* MapHomeCarAudioSuggestion.swift in Sources */,
+				C1CA1111A010000000000004 /* MapHomeLaunchPrompts.swift in Sources */,
 				A100000000000000000000F4 /* MapHomeSectionDetailEngine.swift in Sources */,
 				A10000000000000000000007 /* GoalsView.swift in Sources */,
 				A10000000000000000000008 /* ReviewView.swift in Sources */,

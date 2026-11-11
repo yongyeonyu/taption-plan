@@ -261,6 +261,9 @@ struct MapHomeView: View {
     @State var sectionEditSelection: MapHomeSectionEditSelection?
 
     @State var isUnconfirmedReviewPresented = false
+    /// 앱을 열 때 묻는 질문 하나와, 이번에 이미 물은 것(ASK1111A01).
+    @State var launchPrompt: MapHomeLaunchPrompt?
+    @State var launchPromptsAsked: Set<String> = []
 
     @State var focusedUnconfirmedReviewSegment: MapHomeTimeRailSegment?
 

@@ -5428,6 +5428,35 @@ final class MapHomeStartupCameraTests: XCTestCase {
         )
     }
 
+    /// 앱을 열 때 묻는 순서: 내 차 → 탑승 → 일정 → 자주 가는 곳 → 미확인. 한 번 연 동안 같은 것은 다시 묻지 않는다(ASK1111A01).
+    func testLaunchPromptsComeOneAtATimeInOrder() {
+        func next(_ asked: Set<String>, unconfirmed: Int = 30) -> MapHomeLaunchPrompt? {
+            MapHomeLaunchPromptPolicy.next(
+                carAudio: "Audi", boardingIDs: ["b1"], calendarTitles: ["주간 회의"],
+                placeSuggestionID: "p1", unconfirmedMinutes: unconfirmed, asked: asked
+            )
+        }
+        var asked = Set<String>()
+        var order: [MapHomeLaunchPrompt] = []
+        while let prompt = next(asked) { order.append(prompt); asked.insert(prompt.id) }
+        XCTAssertEqual(order, [.carAudio("Audi"), .boarding("b1"), .calendarTitle("주간 회의"), .frequentPlace("p1"), .unconfirmed(minutes: 30)])
+        XCTAssertNil(next(["car:Audi", "boarding:b1", "calendar:\(CalendarTitleClassification.key("주간 회의"))", "place:p1"], unconfirmed: 5))
+    }
+
+    /// 분류를 정하지 않은 오늘·어제 일정 제목만, 같은 제목은 한 번, 종일·취소·아직 안 시작한 일정은 빼고.
+    func testUnansweredCalendarTitlesSkipAnsweredAllDayAndFuture() {
+        let now = Date(timeIntervalSinceReferenceDate: 816_066_000)
+        func event(_ title: String, hoursAgo: Double, allDay: Bool = false) -> CalendarRecord {
+            CalendarRecord(id: title + "\(hoursAgo)", calendarID: "c", title: title,
+                           span: TimeSpan(start: now.addingTimeInterval(-hoursAgo * 3600), end: now.addingTimeInterval(-hoursAgo * 3600 + 3600)),
+                           isAllDay: allDay, calendarTitle: "c")
+        }
+        let events = [event("주간 회의", hoursAgo: 2), event("주간 회의", hoursAgo: 26), event("치과", hoursAgo: 3),
+                      event("휴가", hoursAgo: 4, allDay: true), event("저녁 약속", hoursAgo: -2), event("오래전", hoursAgo: 80)]
+        let stored = [CalendarTitleClassification.key("치과"): CalendarTitleDetail(detailID: "health.hospital")]
+        XCTAssertEqual(MapHomeLaunchPromptPolicy.unansweredCalendarTitles(events, stored: stored, now: now), ["주간 회의"])
+    }
+
     /// 센서로 정할 수 없는 상세 17개는 기본 목록에서 빠져 「직접 추가」로 가고, 일정 제목으로는 그대로 붙는다(DTL1111A01).
     func testUserAddedDetailsLeaveTheDefaultListButCalendarStillSetsThem() {
         let userAdded = RecordClassificationCatalog.categories.flatMap(\.details).filter { $0.userAdded == true }.map(\.id)
