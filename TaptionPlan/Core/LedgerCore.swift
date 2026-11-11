@@ -139,7 +139,7 @@ enum LedgerFX {
     }
 }
 
-/// 단체 정산: 누가 냈는지와 나눌 사람으로 최소 송금 목록을 만든다(큰 빚부터 큰 받을 돈에 맞춘다).
+/// 단체 정산: 누가 냈는지와 나눌 사람으로 최소 송금 목록을 만든다(`LedgerSplit`, 원 단위).
 enum LedgerSettlement {
     struct Transfer: Equatable, Sendable {
         var from: String
@@ -153,25 +153,14 @@ enum LedgerSettlement {
         let payers = entries.compactMap { $0.payer?.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
         let members = Array(Set(people + [me] + payers)).sorted()
         guard members.count >= 2 else { return [] }
-        var balance = Dictionary(uniqueKeysWithValues: members.map { ($0, 0.0) })
+        var balance = Dictionary(uniqueKeysWithValues: members.map { ($0, 0) })
         for entry in entries where entry.kind == .expense {
-            let krw = entry.amountKRW ?? 0
+            let won = LedgerSplit.won(entry.countedKRW)
             let payer = entry.payer.flatMap { members.contains($0) ? $0 : nil } ?? me
-            balance[payer, default: 0] += krw
-            for member in members { balance[member, default: 0] -= krw / Double(members.count) }
+            balance[payer, default: 0] += won
+            for (member, share) in zip(members, LedgerSplit.even(won, among: members, payer: payer)) { balance[member, default: 0] -= share }
         }
-        var debtors = balance.filter { $0.value < -0.5 }.map { ($0.key, -$0.value) }.sorted { $0.1 > $1.1 }
-        var creditors = balance.filter { $0.value > 0.5 }.map { ($0.key, $0.value) }.sorted { $0.1 > $1.1 }
-        var result: [Transfer] = []
-        while let debtor = debtors.first, let creditor = creditors.first {
-            let amount = min(debtor.1, creditor.1)
-            result.append(Transfer(from: debtor.0, to: creditor.0, amountKRW: amount.rounded()))
-            debtors[0].1 -= amount
-            creditors[0].1 -= amount
-            if debtors[0].1 < 0.5 { debtors.removeFirst() }
-            if creditors[0].1 < 0.5 { creditors.removeFirst() }
-        }
-        return result
+        return LedgerSplit.transfers(balance, order: members).map { Transfer(from: $0.from, to: $0.to, amountKRW: Double($0.amount)) }
     }
 }
 

@@ -821,3 +821,130 @@ final class LedgerTollRepeatTests: XCTestCase {
         XCTAssertFalse(LedgerTollRepeat.isToll(LedgerEntry(occurredAt: at(1), amount: 900, title: "통행료")), "교통 분류가 아니면 통행료로 보지 않는다")
     }
 }
+
+/// STL1111A01: 원 단위 나누기와 최소 송금(Taption Trip `TripSettlementChecksTests`·`TripSettlementTests`의 숫자를 그대로 옮김).
+final class LedgerSplitTests: XCTestCase {
+    private struct SeededGenerator: RandomNumberGenerator {
+        var state: UInt64
+        mutating func next() -> UInt64 {
+            state &+= 0x9E37_79B9_7F4A_7C15
+            var z = state
+            z = (z ^ (z >> 30)) &* 0xBF58_476D_1CE4_E5B9
+            z = (z ^ (z >> 27)) &* 0x94D0_49BB_1331_11EB
+            return z ^ (z >> 31)
+        }
+    }
+
+    private func nets(_ pairs: [(String, Int)]) -> [(name: String, net: Int)] { pairs.map { (name: $0.0, net: $0.1) } }
+
+    private func residual(_ balances: [String: Int], _ transfers: [LedgerSplit.Transfer]) -> [String: Int] {
+        var left = balances
+        for transfer in transfers {
+            left[transfer.from, default: 0] += transfer.amount
+            left[transfer.to, default: 0] -= transfer.amount
+        }
+        return left
+    }
+
+    func testExactSearchUsesFewerTransfersWhenBalancesSplitIntoZeroSumGroups() {
+        let order = ["나", "현우", "지연", "민수", "수아"]
+        let balances = ["나": 5_000, "현우": 4_000, "지연": -4_000, "민수": -3_000, "수아": -2_000]
+        // {+5, −2, −3}과 {+4, −4}: 그냥 짝지으면 4건, 묶으면 3건.
+        XCTAssertEqual(LedgerSplit.greedy(order.map { (name: $0, net: balances[$0]!) }).count, 4)
+        let transfers = LedgerSplit.transfers(balances, order: order)
+        XCTAssertEqual(transfers.count, 3)
+        XCTAssertTrue(residual(balances, transfers).values.allSatisfy { $0 == 0 })
+        XCTAssertTrue(transfers.contains(.init(from: "지연", to: "현우", amount: 4_000)))
+        XCTAssertEqual(transfers, LedgerSplit.transfers(balances, order: order), "결과 순서가 매번 같아야 한다")
+    }
+
+    func testGreedyResultIsKeptUnchangedWhenAlreadyMinimal() {
+        let order = ["나", "A", "B", "C"]
+        let balances = ["나": 9_000, "A": -3_000, "B": -3_000, "C": -3_000]
+        XCTAssertEqual(LedgerSplit.transfers(balances, order: order), LedgerSplit.greedy(order.map { (name: $0, net: balances[$0]!) }))
+    }
+
+    func testMoreThanTwelveNonZeroBalancesKeepGreedy() {
+        let pairs = (0..<14).map { ("P\($0)", $0 < 7 ? ($0 + 1) * 1_000 : -($0 - 6) * 1_000) }
+        XCTAssertNil(LedgerSplit.zeroSumGroups(nets(pairs)))
+        XCTAssertEqual(LedgerSplit.transfers(Dictionary(uniqueKeysWithValues: pairs), order: pairs.map(\.0)), LedgerSplit.greedy(nets(pairs)))
+    }
+
+    func testRandomBalancesSettleExactlyWithNoMoreTransfersThanGreedy() {
+        var generator = SeededGenerator(state: 0x5EED_0006)
+        var improved = 0
+        for _ in 0..<400 {
+            let count = Int.random(in: 2...10, using: &generator)
+            let names = (0..<count).map { "P\($0)" }
+            var values = (0..<(count - 1)).map { _ in Int.random(in: -30...30, using: &generator) * 1_000 }
+            values.append(-values.reduce(0, +))
+            let balances = Dictionary(uniqueKeysWithValues: zip(names, values).map { ($0, $1) })
+            let transfers = LedgerSplit.transfers(balances, order: names)
+            let greedy = LedgerSplit.greedy(nets(Array(zip(names, values))))
+            XCTAssertLessThanOrEqual(transfers.count, greedy.count)
+            if transfers.count < greedy.count { improved += 1 }
+            XCTAssertTrue(residual(balances, transfers).values.allSatisfy { $0 == 0 }, "\(values)")
+            XCTAssertTrue(transfers.allSatisfy { $0.amount > 0 && $0.from != $0.to })
+            XCTAssertLessThanOrEqual(transfers.count, max(0, values.filter { $0 != 0 }.count - 1))
+        }
+        XCTAssertGreaterThan(improved, 0, "묶음 탐색이 한 번도 줄이지 못하면 탐색이 동작하지 않는 것이다")
+    }
+
+    func testEvenSplitGivesLeftoverWonToThePayerFirst() {
+        XCTAssertEqual(LedgerSplit.even(10_000, among: ["나", "A", "B"], payer: "나"), [3_334, 3_333, 3_333])
+        XCTAssertEqual(LedgerSplit.even(10_000, among: ["나", "A", "B"], payer: "B"), [3_333, 3_333, 3_334])
+        XCTAssertEqual(LedgerSplit.even(10_001, among: ["나", "A", "B"], payer: "C"), [3_334, 3_334, 3_333], "낸 사람이 없으면 목록 순서")
+        var generator = SeededGenerator(state: 0xC0FFEE)
+        for _ in 0..<200 {
+            let people = (0..<Int.random(in: 1...9, using: &generator)).map { "P\($0)" }
+            let total = Int.random(in: 0...1_000_000, using: &generator)
+            let shares = LedgerSplit.even(total, among: people, payer: people.randomElement(using: &generator)!)
+            XCTAssertEqual(shares.reduce(0, +), total)
+            XCTAssertLessThanOrEqual((shares.max() ?? 0) - (shares.min() ?? 0), 1)
+        }
+    }
+
+    func testTripSheetUsesWholeWonAndBalancesSumToZero() {
+        let trip = LedgerTrip(id: "t1", name: "대구", start: .distantPast, end: .distantPast, budgetKRW: nil, members: ["A", "B"])
+        let entry = LedgerEntry(occurredAt: .distantPast, amount: 10_000, amountKRW: 10_000, title: "택시", tripID: "t1")
+        let sheet = LedgerTripMath.sheet(trip, entries: [entry])
+        XCTAssertEqual(sheet.myCost, 3_334)
+        XCTAssertEqual(sheet.balances["A"], -3_333)
+        XCTAssertEqual(sheet.balances["B"], -3_333)
+        XCTAssertEqual(sheet.transfers.reduce(0) { $0 + $1.amountKRW }, 6_666)
+        XCTAssertEqual(sheet.receivable, 6_666)
+
+        var generator = SeededGenerator(state: 0xBEEF)
+        let pool = ["A", "B", "C", "D", "E"]
+        for _ in 0..<120 {
+            let members = Array(pool.prefix(Int.random(in: 1...pool.count, using: &generator)))
+            let trip = LedgerTrip(id: "t1", name: "여행", start: .distantPast, end: .distantPast, budgetKRW: nil, members: members)
+            let everyone = trip.everyone
+            let entries = (0..<Int.random(in: 1...12, using: &generator)).map { _ -> LedgerEntry in
+                let amount = Double(Int.random(in: 1...200_000, using: &generator)) + (Bool.random(using: &generator) ? 0.5 : 0)
+                var entry = LedgerEntry(occurredAt: .distantPast, amount: amount, amountKRW: amount, title: "지출",
+                                        payer: everyone.randomElement(using: &generator), tripID: "t1")
+                let share = everyone.filter { _ in Bool.random(using: &generator) }
+                entry.shareNames = Bool.random(using: &generator) ? nil : share
+                return entry
+            }
+            let sheet = LedgerTripMath.sheet(trip, entries: entries)
+            XCTAssertEqual(sheet.balances.values.reduce(0, +), 0)
+            XCTAssertTrue(sheet.balances.values.allSatisfy { $0 == $0.rounded() }, "잔액은 원 단위")
+            var left = sheet.balances
+            for transfer in sheet.transfers {
+                left[transfer.from, default: 0] += transfer.amountKRW
+                left[transfer.to, default: 0] -= transfer.amountKRW
+            }
+            XCTAssertTrue(left.values.allSatisfy { $0 == 0 }, "송금하면 모두 0원")
+        }
+    }
+
+    func testDailySettlementIsDeterministicForEqualDebts() {
+        let entries = [LedgerEntry(occurredAt: .distantPast, amount: 30_000, amountKRW: 30_000, title: "저녁")]
+        let first = LedgerSettlement.transfers(entries, people: ["지영", "민수"], me: "나")
+        XCTAssertEqual(first.map(\.from), ["민수", "지영"])
+        XCTAssertEqual(first.map(\.amountKRW), [10_000, 10_000])
+        for _ in 0..<20 { XCTAssertEqual(LedgerSettlement.transfers(entries, people: ["지영", "민수"], me: "나"), first) }
+    }
+}

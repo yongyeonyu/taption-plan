@@ -86,15 +86,17 @@ enum LedgerTripMath {
         for entry in mine {
             for name in [entry.payer].compactMap({ $0 }) + (entry.shareNames ?? []) where !people.contains(name) { people.append(name) }
         }
-        var balances = Dictionary(uniqueKeysWithValues: people.map { ($0, 0.0) })
-        var myPaid = 0.0, myCost = 0.0, shared = 0.0, otherIncome = 0.0, received = 0.0
+        // 모두 원 단위 정수로 센다: 지출마다 몫의 합이 그 지출과 같아 잔액 합이 늘 0이다(STL1111A01).
+        var balances = Dictionary(uniqueKeysWithValues: people.map { ($0, 0) })
+        var myPaid = 0, myCost = 0, shared = 0, received = 0, otherIncome = 0.0
         for entry in mine where entry.transfer == nil {
-            let amount = entry.amountKRW ?? 0
+            let amount = entry.countedKRW
+            let won = LedgerSplit.won(amount)
             guard entry.kind == .expense else {
                 if let giver = entry.payer, giver != LedgerTrip.me {
-                    balances[giver, default: 0] += amount
-                    balances[LedgerTrip.me, default: 0] -= amount
-                    received += amount
+                    balances[giver, default: 0] += won
+                    balances[LedgerTrip.me, default: 0] -= won
+                    received += won
                 } else {
                     otherIncome += amount
                 }
@@ -103,33 +105,124 @@ enum LedgerTripMath {
             let payer = entry.payer ?? LedgerTrip.me
             let sharers = entry.shareNames ?? everyone
             let split = sharers.isEmpty ? [payer] : sharers
-            balances[payer, default: 0] += amount
-            for name in split { balances[name, default: 0] -= amount / Double(split.count) }
-            if payer == LedgerTrip.me { myPaid += amount }
-            if split.contains(LedgerTrip.me) { myCost += amount / Double(split.count) }
-            if split.count > 1 { shared += amount }
+            balances[payer, default: 0] += won
+            for (name, share) in zip(split, LedgerSplit.even(won, among: split, payer: payer)) {
+                balances[name, default: 0] -= share
+                if name == LedgerTrip.me { myCost += share }
+            }
+            if payer == LedgerTrip.me { myPaid += won }
+            if split.count > 1 { shared += won }
         }
-        let budget = mine.filter { $0.transfer?.kind == .funding }.reduce(0) { $0 + ($1.amountKRW ?? 0) }
+        let budget = mine.filter { $0.transfer?.kind == .funding }.reduce(0) { $0 + $1.countedKRW }
+        let transfers = LedgerSplit.transfers(balances, order: people).map {
+            LedgerTripSheet.Transfer(from: $0.from, to: $0.to, amountKRW: Double($0.amount))
+        }
         return LedgerTripSheet(
-            budget: budget, otherIncome: otherIncome, receivedFromOthers: received, myPaid: myPaid, myCost: myCost.rounded(),
-            sharedTotal: shared, balances: balances, transfers: transfers(balances)
+            budget: budget, otherIncome: otherIncome, receivedFromOthers: Double(received), myPaid: Double(myPaid), myCost: Double(myCost),
+            sharedTotal: Double(shared), balances: balances.mapValues(Double.init), transfers: transfers
         )
     }
+}
 
-    /// 받을 사람과 줄 사람을 큰 금액부터 짝지어 송금 수를 줄인다.
-    static func transfers(_ balances: [String: Double]) -> [LedgerTripSheet.Transfer] {
-        var debtors = balances.filter { $0.value < -0.5 }.map { ($0.key, -$0.value) }.sorted { $0.1 != $1.1 ? $0.1 > $1.1 : $0.0 < $1.0 }
-        var creditors = balances.filter { $0.value > 0.5 }.map { ($0.key, $0.value) }.sorted { $0.1 != $1.1 ? $0.1 > $1.1 : $0.0 < $1.0 }
-        var result: [LedgerTripSheet.Transfer] = []
-        while let debtor = debtors.first, let creditor = creditors.first {
-            let amount = min(debtor.1, creditor.1)
-            result.append(.init(from: debtor.0, to: creditor.0, amountKRW: amount.rounded()))
-            debtors[0].1 -= amount
-            creditors[0].1 -= amount
-            if debtors[0].1 < 0.5 { debtors.removeFirst() }
-            if creditors[0].1 < 0.5 { creditors.removeFirst() }
+/// 원 단위 나누기와 최소 송금(Taption Trip `TripSettlementEngine`에서 옮김, STL1111A01). 같은 입력이면 결과와 순서가 늘 같다.
+enum LedgerSplit {
+    struct Transfer: Equatable, Sendable {
+        var from: String
+        var to: String
+        var amount: Int
+    }
+
+    /// 원화 금액을 원 단위로. 셀 수 없는 값은 0.
+    static func won(_ amount: Double) -> Int {
+        guard amount.isFinite, abs(amount) < 1e15 else { return 0 }
+        return Int(amount.rounded())
+    }
+
+    /// `total`원을 `people` 자리마다 똑같이 원 단위로 나눈다. 남는 원은 낸 사람 자리부터, 그다음 목록 순서로 1원씩 준다. 합은 늘 `total`.
+    static func even(_ total: Int, among people: [String], payer: String) -> [Int] {
+        guard !people.isEmpty else { return [] }
+        guard total >= 0 else { return even(-total, among: people, payer: payer).map { -$0 } }
+        var shares = Array(repeating: total / people.count, count: people.count)
+        var left = total % people.count
+        let order = people.indices.filter { people[$0] == payer } + people.indices.filter { people[$0] != payer }
+        for index in order where left > 0 {
+            shares[index] += 1
+            left -= 1
+        }
+        return shares
+    }
+
+    /// 송금 수를 줄인다. 큰 빚 ↔ 큰 받을 돈을 짝짓는 결과(같은 금액은 `order` 순서)를 기본으로 하고, 0이 아닌 사람이 4~12명이고
+    /// 합이 0인 묶음 여럿으로 나뉠 때 묶음마다 짝지은 결과가 더 적을 때만 그것을 쓴다(k명 묶음은 k−1건).
+    static func transfers(_ balances: [String: Int], order: [String]) -> [Transfer] {
+        var seen = Set<String>()
+        let names = (order + balances.keys.sorted()).filter { balances[$0] != nil && seen.insert($0).inserted }
+        let nets = names.map { (name: $0, net: balances[$0] ?? 0) }
+        let plain = greedy(nets)
+        guard plain.count > 2, let groups = zeroSumGroups(nets), groups.count > 1 else { return plain }
+        let grouped = groups.flatMap { greedy($0.map { nets[$0] }) }
+        return grouped.count < plain.count ? grouped : plain
+    }
+
+    private typealias Side = (name: String, amount: Int, order: Int)
+
+    static func greedy(_ nets: [(name: String, net: Int)]) -> [Transfer] {
+        let first: (Side, Side) -> Bool = { $0.amount == $1.amount ? $0.order < $1.order : $0.amount > $1.amount }
+        var creditors: [Side] = nets.enumerated().filter { $0.element.net > 0 }.map { ($0.element.name, $0.element.net, $0.offset) }.sorted(by: first)
+        var debtors: [Side] = nets.enumerated().filter { $0.element.net < 0 }.map { ($0.element.name, -$0.element.net, $0.offset) }.sorted(by: first)
+        var result: [Transfer] = []
+        var creditor = 0, debtor = 0
+        while creditor < creditors.count, debtor < debtors.count {
+            let amount = min(creditors[creditor].amount, debtors[debtor].amount)
+            result.append(Transfer(from: debtors[debtor].name, to: creditors[creditor].name, amount: amount))
+            creditors[creditor].amount -= amount
+            debtors[debtor].amount -= amount
+            if creditors[creditor].amount == 0 { creditor += 1 }
+            if debtors[debtor].amount == 0 { debtor += 1 }
         }
         return result
+    }
+
+    /// 0이 아닌 잔액을 합이 0인 묶음으로 가장 많이 나눈다(`nets` 자리 번호, 묶음 안은 목록 순서). 4~12명이 아니거나 합이 0이 아니면 nil.
+    static func zeroSumGroups(_ nets: [(name: String, net: Int)]) -> [[Int]]? {
+        let indices = nets.indices.filter { nets[$0].net != 0 }
+        let units = indices.map { nets[$0].net }
+        let count = indices.count
+        guard count >= 4, count <= 12, units.reduce(0, +) == 0 else { return nil }
+        let full = (1 << count) - 1
+        var sums = [Int](repeating: 0, count: full + 1)
+        for mask in 1...full { sums[mask] = sums[mask & (mask - 1)] + units[mask.trailingZeroBitCount] }
+        // best[mask]: mask에서 한 명씩 빼 나갈 때 만날 수 있는 합 0 묶음의 최대 수.
+        var best = [Int](repeating: 0, count: full + 1)
+        for mask in 1...full {
+            var value = 0, rest = mask
+            while rest != 0 {
+                let bit = rest & -rest
+                value = max(value, best[mask ^ bit])
+                rest ^= bit
+            }
+            best[mask] = value + (sums[mask] == 0 ? 1 : 0)
+        }
+        // 같은 사슬을 낮은 자리부터 거슬러 가며 합이 0이 될 때마다 묶음을 끊는다.
+        var groups: [[Int]] = [], current: [Int] = [], mask = full
+        while mask != 0 {
+            let target = best[mask] - (sums[mask] == 0 ? 1 : 0)
+            var rest = mask, chosen = -1
+            while rest != 0 {
+                let bit = rest & -rest
+                if best[mask ^ bit] == target { chosen = bit.trailingZeroBitCount; break }
+                rest ^= bit
+            }
+            guard chosen >= 0 else { return nil }
+            current.append(chosen)
+            mask ^= 1 << chosen
+            if sums[mask] == 0 {
+                groups.append(current.sorted().map { indices[$0] })
+                current = []
+            }
+        }
+        guard current.isEmpty else { return nil }
+        return groups.sorted { ($0.first ?? 0) < ($1.first ?? 0) }
     }
 }
 

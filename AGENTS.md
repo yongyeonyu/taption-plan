@@ -47,6 +47,7 @@
 - `docs/DATA_PIPELINE.md`: 저장소 파이프라인 측정 결과와 개선 설계(P0~P3). 측정 도구는 `scripts/pipeline-bench.py`.
 - `docs/ARCHITECTURE_ROADMAP.md`: 구조 로드맵(Phase 0~5)과 결정 기록(ADR).
 - `docs/PROPOSALS.md`: 구조·DB·AI 연결·UI·지도 색·UX·가계부·리팩토링 제안과 근거, 대표 결정 목록(PLN1111A01). 순서는 `docs/NEXT_PLAN.md`.
+- `docs/TRIP_PORT_ANALYSIS.md`: Taption Trip 여행·정산 기능 이식 분석과 단위 U1~U13(TRP1111A01).
 - `docs/HOME_EVOLUTION_LIST.md`: 집 성장 366일 건축물 목록(생성물).
 - `docs/CLIENT_REPORT.md`·`docs/UX_ARCHITECTURE.md`·`docs/DESIGN_SYSTEM.md`: 2026-10-24 UX 진단·설계 자료.
 - `scripts/l10n/README.md`: 12개 언어 팩의 추출·번역·점검·생성 절차.
