@@ -4,6 +4,7 @@
 
 ## TFB1111A04 · TestFlight 308 (2026-11-11)
 
+- CIF1111A01 (2026-11-11): GitHub CI 실패 메일(대표 신고). 원인: app 작업은 10-27부터 CI의 Xcode 26.6이 `VoiceMemoPlayer`(@MainActor)의 `AVAudioPlayerDelegate` 준수를 동시성 오류로 막아 계속 실패(이 맥 Xcode 27.2는 통과), architecture 작업은 오늘 `main_queue` 7→8(여권 넘김 풀기)·`MapHomeNLEClipEditor.swift` 1,211→1,241줄. 고침: 대리자 메서드 nonisolated + 같은 플레이어일 때만 메인 액터에서 마무리, 여권 풀기는 `Task.sleep`, 경계 합치기 판단·확정을 `MapHomeNLEClipEditor+Merge.swift`로(본문 1,164줄). 구조 지표 `--check` 통과, CI와 같은 generic iOS Debug 빌드 성공(`build/validation/CIF1111A01/debug-build-2.log`), 아이폰 11 NLETrackTests·NLEOverwriteBatchTests 76건 실패 0(`iphone11.log`). Xcode 26.6에서의 통과는 push 뒤 CI로 확인.
 - TFB1111A08 (2026-11-11): TestFlight 311(`release.sh --yes --request-id TFB1111A08`): 아카이브 산출물 네 번들(앱·위젯·Watch·Watch 위젯) 311 일치, 처리 `VALID`, 「TP Taption Plan 내부 테스트」 그룹 연결·테스터 노출 1명 확인(`build/validation/TFB1111A08/testflight-report.json`, 로그 `build/validation/tfb-311.log`). 처음 들어간 것: RNG1111A02(경계 손잡이로 여러 클립 지나가 한 번에 합치기)·RNG1111A03(미확인도 합치기). 테스트는 `--with-tests` 없이 아카이브 컴파일만, 기기 동작은 대표 확인 전.
 - AIT1111A01 마무리 (2026-11-11): 대표 허락 뒤 서버 배포(버전 ef664aae)로 MCP 안내에 확인 시점 문구 반영, 앱 연결 문구는 310부터.
 - TFB1111A07 (2026-11-11): 서버 배포(버전 ef664aae, AI 확인 시점 안내) 뒤 TestFlight 310(`release.sh --yes --request-id TFB1111A07`): 처리 `VALID`, 내부 그룹 연결·테스터 노출 확인(`build/validation/TFB1111A07/testflight-report.json`, 로그 `build/validation/tfb-310.log`). 들어간 것: 가계부 앱 모양·시간순·시각, 메모 배경판, AI 연결 화면 모양, 말풍선 「…」 접기, AI 시점 안내. 여러 개 합치기(RNG1111A02)·미확인 합치기(RNG1111A03)는 아카이브 뒤라 빠짐.

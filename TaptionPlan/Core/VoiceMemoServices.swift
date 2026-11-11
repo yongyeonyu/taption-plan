@@ -158,10 +158,19 @@ final class VoiceMemoPlayer: NSObject, AVAudioPlayerDelegate {
         try? AVAudioSession.sharedInstance().setActive(false)
     }
 
-    func audioPlayerDidFinishPlaying(
+    /// 대리자는 메인 액터 밖에서 불릴 수 있어(옛 Xcode는 준수를 막음) 같은 플레이어일 때만 메인에서 마무리한다.
+    nonisolated func audioPlayerDidFinishPlaying(
         _ player: AVAudioPlayer,
         successfully flag: Bool
     ) {
+        let finished = ObjectIdentifier(player)
+        Task { @MainActor [weak self] in
+            self?.finishPlayback(of: finished)
+        }
+    }
+
+    private func finishPlayback(of finished: ObjectIdentifier) {
+        guard let player, ObjectIdentifier(player) == finished else { return }
         self.player = nil
         try? AVAudioSession.sharedInstance().setActive(false)
         onFinish?()

@@ -19,6 +19,7 @@
 		B10806000000000000000008 /* AppModel+ClipEditBatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10806000000000000000007 /* AppModel+ClipEditBatch.swift */; };
 		B10806000000000000000006 /* ActivitySectionEditStaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10806000000000000000005 /* ActivitySectionEditStaging.swift */; };
 		B10806000000000000000004 /* MapHomeNLEClipEditor+Overwrite.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10806000000000000000003 /* MapHomeNLEClipEditor+Overwrite.swift */; };
+		C1F111100000000000000002 /* MapHomeNLEClipEditor+Merge.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1F111100000000000000001 /* MapHomeNLEClipEditor+Merge.swift */; };
 		B10806000000000000000002 /* MapHomeNLEOverwritePolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10806000000000000000001 /* MapHomeNLEOverwritePolicy.swift */; };
 		A1000000000000000D1104A3 /* NearbyMemoNotificationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000D1104A3 /* NearbyMemoNotificationTests.swift */; };
 		A1000000000000000D1104A2 /* AppModel+NearbyMemos.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000D1104A2 /* AppModel+NearbyMemos.swift */; };
@@ -756,6 +757,7 @@
 		B10806000000000000000007 /* AppModel+ClipEditBatch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+ClipEditBatch.swift"; sourceTree = "<group>"; };
 		B10806000000000000000005 /* ActivitySectionEditStaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitySectionEditStaging.swift; sourceTree = "<group>"; };
 		B10806000000000000000003 /* MapHomeNLEClipEditor+Overwrite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeNLEClipEditor+Overwrite.swift"; sourceTree = "<group>"; };
+		C1F111100000000000000001 /* MapHomeNLEClipEditor+Merge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeNLEClipEditor+Merge.swift"; sourceTree = "<group>"; };
 		B10806000000000000000001 /* MapHomeNLEOverwritePolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeNLEOverwritePolicy.swift; sourceTree = "<group>"; };
 		F1000000000000000B1104A3 /* AppSecrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = AppSecrets.xcconfig; sourceTree = "<group>"; };
 		F1000000000000000D1104A3 /* NearbyMemoNotificationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NearbyMemoNotificationTests.swift"; sourceTree = "<group>"; };
@@ -1816,6 +1818,7 @@
 				F10000000000000004DA0003 /* MapHomeNLESaveGate.swift */,
 				F100000000000000000000ED /* MapHomeNLEOverwriteSheet.swift */,
 				B10806000000000000000003 /* MapHomeNLEClipEditor+Overwrite.swift */,
+				C1F111100000000000000001 /* MapHomeNLEClipEditor+Merge.swift */,
 				B10806000000000000000001 /* MapHomeNLEOverwritePolicy.swift */,
 				F100000000000000000000EE /* MapHomeNLEPreviewHost.swift */,
 				F100000000000000000000EF /* MapHomeDateStrip.swift */,
@@ -2758,6 +2761,7 @@
 				A10000000000000004DA0003 /* MapHomeNLESaveGate.swift in Sources */,
 				A100000000000000000000ED /* MapHomeNLEOverwriteSheet.swift in Sources */,
 				B10806000000000000000004 /* MapHomeNLEClipEditor+Overwrite.swift in Sources */,
+				C1F111100000000000000002 /* MapHomeNLEClipEditor+Merge.swift in Sources */,
 				B10806000000000000000002 /* MapHomeNLEOverwritePolicy.swift in Sources */,
 				A100000000000000000000EE /* MapHomeNLEPreviewHost.swift in Sources */,
 				A100000000000000000000EF /* MapHomeDateStrip.swift in Sources */,

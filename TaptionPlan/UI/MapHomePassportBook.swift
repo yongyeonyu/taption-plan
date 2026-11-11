@@ -544,7 +544,8 @@ private struct MapHomePassportPageCurl: UIViewControllerRepresentable {
             // 넘기기가 끝났다는 알림이 오지 않아도 책이 굳지 않게 잠시 뒤 풀어 둔다.
             turnToken &+= 1
             let token = turnToken
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(2))
                 guard let self, self.turnToken == token, self.isTurning, !self.isTouching else { return }
                 self.isTurning = false
                 self.refreshIfNeeded()

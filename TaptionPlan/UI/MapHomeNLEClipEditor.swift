@@ -36,7 +36,7 @@ struct MapHomeNLEClipEditor: View {
     @State private var panBaseStartMinute: Double = 0
     @State var undoStack: [NLEEditorSnapshot] = []
     @State var redoStack: [NLEEditorSnapshot] = []
-    @State private var dragMode: NLEEditorDragMode = .none
+    @State var dragMode: NLEEditorDragMode = .none
     @State private var didPushUndoForDrag = false
     @State private var isSaving = false
     /// 그날 기록을 다 읽기 전에는 저장하지 않는다(NLE1103A04).
@@ -50,7 +50,7 @@ struct MapHomeNLEClipEditor: View {
     @State private var reorderCandidate: NLEEditorDragMode?
     @State private var liftTask: Task<Void, Never>?
     @State private var isLifted = false
-    @State private var lastDragMinute = 0
+    @State var lastDragMinute = 0
     /// 팬을 시작한 손가락 높이. 집어 들기 전에 팬으로 바뀌어도 화면이 튀지 않게 한다.
     @State private var panAnchorY: CGFloat = 0
     /// 가장자리 자동 스크롤 타이머와 방향.
@@ -71,12 +71,12 @@ struct MapHomeNLEClipEditor: View {
     @State var editorNotice: String?
     @State var pickedClipIDs: Set<String> = []
     /// 경계 손잡이를 이웃의 먼 쪽 끝까지 가져갔을 때 묻는 합치기 확인.
-    @State private var mergePrompt: NLEMergePrompt?
+    @State var mergePrompt: NLEMergePrompt?
     /// 경계를 끄는 동안 손가락이 지나간 클립. 손을 떼면 한꺼번에 합칠지 묻는다(RNG1111A02).
     @State private var mergePreviewIDs: [String] = []
     /// 이번 손잡이 끌기를 시작할 때 맞닿은 이웃의 길이(분). 이미 최소 길이였던 이웃은 "끝까지 갔다"고 보지 않는다.
     /// 경계를 끌기 시작할 때 잡은 클립과 맞닿은 이웃의 길이.
-    @State private var trimLengthsAtStart: (clip: Int, neighbor: Int)?
+    @State var trimLengthsAtStart: (clip: Int, neighbor: Int)?
 
     init(
         model: AppModel,
@@ -185,7 +185,7 @@ struct MapHomeNLEClipEditor: View {
     /// 클립 경계를 '다듬기'로 받아 주는 손가락 여유. 예전 12pt는 손가락에 너무 좁았다.
     private static let trimReach: CGFloat = 16
     /// 이보다 얇게 눌린 클립은 이웃에 합칠지 묻는다.
-    private static let mergeSqueezePoints: CGFloat = 18
+    static let mergeSqueezePoints: CGFloat = 18
     /// 머리말·선택 요약·도구 막대의 높이. 셋 다 손가락이 닿는 44pt를 지킨다.
     private static let headerRowHeight: CGFloat = 44
     private static let selectionRowHeight: CGFloat = 44
@@ -712,83 +712,6 @@ struct MapHomeNLEClipEditor: View {
 
     /// 대분류 경계를 끌어 한쪽 클립이 최소 길이까지 눌린 채 손을 뗐으면 "합칠까요?"를 묻는다.
     /// 끌기 시작할 때 잡은 클립과 이웃의 길이를 한 번만 적어 둔다.
-    private func recordTrimNeighborLength(lane: NLEEditorLane, id: String, edge: NLEClipEdge) {
-        guard lane == .main, trimLengthsAtStart == nil else { return }
-        trimLengthsAtStart = (
-            track.clip(id)?.lengthMinutes ?? 0,
-            track.adjacentClip(of: id, edge: edge)?.lengthMinutes ?? 0
-        )
-    }
-
-    private func askToMergeIfReachedNeighborEnd() {
-        guard let lengths = trimLengthsAtStart else { return }
-        let target: (id: String, edge: NLEClipEdge)
-        switch dragMode {
-        case let .trimStart(.main, id): target = (id, .start)
-        case let .trimEnd(.main, id): target = (id, .end)
-        default: return
-        }
-        // 손가락이 이웃 클립의 가운데를 지나갔으면 지나간 것 모두를 끈 클립으로 합칠지 묻는다(RNG1111A02).
-        let chain = track.clipsPassed(from: target.id, edge: target.edge, fingerMinute: lastDragMinute)
-        if let first = chain.first, let dragged = track.clip(target.id), !dragged.isGap {
-            stopAutoScroll()
-            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-            mergePrompt = NLEMergePrompt(
-                clipID: dragged.id, neighborID: first.id,
-                clipTitle: Self.mainTitle(dragged.option, language: language),
-                neighborTitle: Self.mainTitle(first.option, language: language),
-                chainIDs: chain.map(\.id)
-            )
-            return
-        }
-        // 지금 배율에서 18pt보다 얇게 눌린 클립은 끝까지 민 것으로 본다.
-        let squeezeMinutes = Int((Self.mergeSqueezePoints / max(0.01, minuteHeight)).rounded(.up))
-        let pair = track.squeezedMergePair(
-            of: target.id, edge: target.edge,
-            clipLengthAtStart: lengths.clip, neighborLengthAtStart: lengths.neighbor,
-            squeezeMinutes: squeezeMinutes,
-            fingerMinute: lastDragMinute
-        )
-        #if DEBUG
-        let neighbor = track.adjacentClip(of: target.id, edge: target.edge)
-        NSLog("[NLEMerge] edge=%@ clip=%@ %d→%d neighbor=%@ %d→%d squeeze=%d offered=%d",
-              target.edge == .end ? "end" : "start",
-              track.clip(target.id)?.option.title ?? "-", lengths.clip, track.clip(target.id)?.lengthMinutes ?? -1,
-              neighbor?.option.title ?? "-", lengths.neighbor, neighbor?.lengthMinutes ?? -1,
-              squeezeMinutes, pair == nil ? 0 : 1)
-        #endif
-        guard let pair else { return }
-        TaptionPlanDiagnosticsLogger.shared.record(
-            "nle_merge_offer",
-            metrics: [
-                "edge_end": target.edge == .end ? 1 : 0,
-                "clip_start_len": Double(lengths.clip),
-                "neighbor_start_len": Double(lengths.neighbor),
-                "clip_len": Double(track.clip(target.id)?.lengthMinutes ?? -1),
-                "neighbor_len": Double(track.adjacentClip(of: target.id, edge: target.edge)?.lengthMinutes ?? -1),
-                "squeeze_min": Double(squeezeMinutes),
-            ]
-        )
-        // 손을 떼지 않아도 눌리는 순간 묻는다. 화면 흐름은 멈춘다.
-        stopAutoScroll()
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        mergePrompt = NLEMergePrompt(
-            clipID: pair.survivor.id, neighborID: pair.absorbed.id,
-            clipTitle: Self.mainTitle(pair.survivor.option, language: language),
-            neighborTitle: Self.mainTitle(pair.absorbed.option, language: language)
-        )
-    }
-
-    private func confirmMerge(_ prompt: NLEMergePrompt) {
-        guard track.clip(prompt.clipID) != nil else { return }
-        pushUndo()
-        let neighbors = prompt.chainIDs.isEmpty ? [prompt.neighborID] : prompt.chainIDs
-        if track.mergeChain(into: prompt.clipID, neighbors: neighbors) > 0 {
-            selectedClipID = prompt.clipID
-            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        }
-    }
-
     private func magnifyGesture(height: CGFloat) -> some Gesture {
         MagnifyGesture(minimumScaleDelta: 0.01)
             .onChanged { value in
@@ -811,12 +734,12 @@ struct MapHomeNLEClipEditor: View {
     // MARK: - 상태
 
     /// 대분류 줄과 서브클립 띠 중 어디를 만지고 있는지.
-    private enum NLEEditorLane: Equatable {
+    enum NLEEditorLane: Equatable {
         case main
         case sub
     }
 
-    private enum NLEEditorDragMode: Equatable {
+    enum NLEEditorDragMode: Equatable {
         case none
         case pan
         case scrub
@@ -931,7 +854,7 @@ struct MapHomeNLEClipEditor: View {
         }
     }
 
-    private func stopAutoScroll() {
+    func stopAutoScroll() {
         scrollTask?.cancel()
         scrollTask = nil
         scrollDirection = 0
