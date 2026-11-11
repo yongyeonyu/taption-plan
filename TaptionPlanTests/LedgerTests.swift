@@ -666,3 +666,34 @@ final class PaymentAutomationFilterTests: XCTestCase {
         XCTAssertFalse(LedgerMessageParser.isDuplicate(LedgerEntry(occurredAt: at, amount: 4_500, title: "스타벅스", source: .message), in: [saved]))
     }
 }
+
+final class MealPlaceLaneTests: XCTestCase {
+    private let base = Date(timeIntervalSince1970: 1_800_000_000)
+    private func at(_ minute: Int) -> Date { base.addingTimeInterval(TimeInterval(minute * 60)) }
+    private func point(_ lat: Double, _ accuracy: Double = 30) -> GeoPoint {
+        GeoPoint(latitude: lat, longitude: 127, altitude: 0, horizontalAccuracy: accuracy, verticalAccuracy: -1)
+    }
+    private func meal(_ start: Int, _ end: Int, evidence: [String] = []) -> ActualRecord {
+        ActualRecord(id: UUID(), planID: nil, title: "식사", categoryID: "eating", startedAt: at(start), endedAt: at(end),
+                     source: .location, confidence: .medium, createdAt: at(start), behavior: "meal", evidence: evidence)
+    }
+
+    func testShortIndoorMealBetweenOfficeStaysGetsAPlace() {
+        let office = [
+            PlaceStay(placeKey: "frequent-office", displayName: "회사", span: TimeSpan(start: at(0), end: at(40)), confidence: .high, point: point(37.5)),
+            PlaceStay(placeKey: "frequent-office", displayName: "회사", span: TimeSpan(start: at(75), end: at(200)), confidence: .high, point: point(37.5)),
+        ]
+        let readings = [50, 55, 60].map { SensorReading(timestamp: at($0), point: point(37.503)) }
+        let filled = NLEMealPlaces.filling(places: office, actuals: [meal(45, 61)], readings: readings, frequentPlaces: [])
+        XCTAssertEqual(filled.count, 3)
+        XCTAssertEqual(filled[1].span, TimeSpan(start: at(45), end: at(61)))
+        XCTAssertEqual(filled[1].point?.latitude ?? 0, 37.503, accuracy: 0.0001)
+    }
+
+    func testCoveredMealAddsNothingAndRegisteredRestaurantKeepsItsKey() {
+        let stay = PlaceStay(placeKey: "a", displayName: "식당", span: TimeSpan(start: at(0), end: at(60)), confidence: .high, point: point(37.5))
+        XCTAssertEqual(NLEMealPlaces.filling(places: [stay], actuals: [meal(10, 30)], readings: [], frequentPlaces: []).count, 1)
+        XCTAssertEqual(NLEMealPlaces.uncovered(TimeSpan(start: at(0), end: at(30)), by: [TimeSpan(start: at(10), end: at(20))]).count, 2)
+        XCTAssertTrue(NLEMealPlaces.filling(places: [], actuals: [meal(10, 30)], readings: [], frequentPlaces: []).isEmpty)
+    }
+}

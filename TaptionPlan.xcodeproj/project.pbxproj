@@ -649,6 +649,7 @@
 		B1080700000000000000010C /* TravelMapVideoRenderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080700000000000000000C /* TravelMapVideoRenderTests.swift */; };
 		A1PLR1104A0100000000003 /* MapHomeRangePlaybackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1PLR1104A0100000000003 /* MapHomeRangePlaybackTests.swift */; };
 		A1PLR1104A0100000000004 /* MapHomeRangeRenderBenchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1PLR1104A0100000000004 /* MapHomeRangeRenderBenchTests.swift */; };
+		CDE11112A010000000000001 /* MapHomeNLEMealPlaces.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDE11112A010000000000002 /* MapHomeNLEMealPlaces.swift */; };
 		A1AB1029A0200000000000D1 /* MapHomeNLEMultiDay.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1AB1029A0200000000000D1 /* MapHomeNLEMultiDay.swift */; };
 		A1AB1029A0200000000000D2 /* MapHomeNLEEditorViewport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1AB1029A0200000000000D2 /* MapHomeNLEEditorViewport.swift */; };
 		A1PLY1029A0300000000001 /* MapHomePlaybackDriver.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1PLY1029A0300000000001 /* MapHomePlaybackDriver.swift */; };
@@ -1361,6 +1362,7 @@
 		B1080700000000000000000C /* TravelMapVideoRenderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelMapVideoRenderTests.swift; sourceTree = "<group>"; };
 		F1PLR1104A0100000000003 /* MapHomeRangePlaybackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeRangePlaybackTests.swift; sourceTree = "<group>"; };
 		F1PLR1104A0100000000004 /* MapHomeRangeRenderBenchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeRangeRenderBenchTests.swift; sourceTree = "<group>"; };
+		CDE11112A010000000000002 /* MapHomeNLEMealPlaces.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeNLEMealPlaces.swift; sourceTree = "<group>"; };
 		F1AB1029A0200000000000D1 /* MapHomeNLEMultiDay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeNLEMultiDay.swift; sourceTree = "<group>"; };
 		F1AB1029A0200000000000D2 /* MapHomeNLEEditorViewport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeNLEEditorViewport.swift; sourceTree = "<group>"; };
 		F1PLY1029A0300000000001 /* MapHomePlaybackDriver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaybackDriver.swift; sourceTree = "<group>"; };
@@ -1867,6 +1869,7 @@
 				B10807000000000000000006 /* TravelMapVideoSection.swift */,
 				B10807000000000000000007 /* TravelMapTripEditorSheet.swift */,
 				B10807000000000000000008 /* MapHomeRangeSampleLoader.swift */,
+				CDE11112A010000000000002 /* MapHomeNLEMealPlaces.swift */,
 				F1AB1029A0200000000000D1 /* MapHomeNLEMultiDay.swift */,
 				F1AB1029A0200000000000D2 /* MapHomeNLEEditorViewport.swift */,
 				F1PLY1029A0300000000001 /* MapHomePlaybackDriver.swift */,
@@ -2823,6 +2826,7 @@
 				B10807000000000000000106 /* TravelMapVideoSection.swift in Sources */,
 				B10807000000000000000107 /* TravelMapTripEditorSheet.swift in Sources */,
 				B10807000000000000000108 /* MapHomeRangeSampleLoader.swift in Sources */,
+				CDE11112A010000000000001 /* MapHomeNLEMealPlaces.swift in Sources */,
 				A1AB1029A0200000000000D1 /* MapHomeNLEMultiDay.swift in Sources */,
 				A1AB1029A0200000000000D2 /* MapHomeNLEEditorViewport.swift in Sources */,
 				A1PLY1029A0300000000001 /* MapHomePlaybackDriver.swift in Sources */,

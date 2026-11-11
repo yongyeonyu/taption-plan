@@ -239,7 +239,10 @@ let segments = MapHomePlaceFirstPolicy.apply(
         #if DEBUG
         if let preview = previewPlaces[Calendar.autoupdatingCurrent.startOfDay(for: date)] { return preview }
         #endif
-        return await model.planDayDataSnapshot(for: date, forceReload: false).places
+        let day = await model.planDayDataSnapshot(for: date, forceReload: false)
+        return NLEMealPlaces.filling(
+            places: day.places, actuals: day.actuals, readings: day.readings, frequentPlaces: model.settings.frequentPlaces
+        )
     }
 
     @MainActor
