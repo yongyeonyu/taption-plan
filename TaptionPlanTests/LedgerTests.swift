@@ -948,3 +948,94 @@ final class LedgerSplitTests: XCTestCase {
         for _ in 0..<20 { XCTAssertEqual(LedgerSettlement.transfers(entries, people: ["지영", "민수"], me: "나"), first) }
     }
 }
+
+/// LDS1111A01: 가계부 기록 읽기 안전망. 빌드 316이 쓴 모양, 키가 빠진 기록, 모르는 값, 모든 칸 왕복, 읽기 실패 개수.
+final class LedgerDecodeSafetyTests: XCTestCase {
+    private let id = "6F9C1C2E-3B7A-4F7E-9C11-2A1D5B6E7F80"
+
+    private func decode<Value: Decodable>(_ json: String, as type: Value.Type) -> Value? {
+        try? JSONDecoder().decode(type, from: Data(json.utf8))
+    }
+
+    private func keyCount(_ data: Data) throws -> Int {
+        try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any]).count
+    }
+
+    func testReadsAnEntryWrittenByBuild316() throws {
+        let json = """
+        {"id":"\(id)","occurredAt":800000000,"amount":12000,"currency":"KRW","amountKRW":12000,"kind":"expense","category":"food",\
+        "title":"점심","place":"강남","payer":"민수","tripID":"t1","source":"message","createdAt":800000100,\
+        "shareNames":["@me","민수"],"transfer":{"kind":"funding","tripID":"t1"}}
+        """
+        let entry = try XCTUnwrap(decode(json, as: LedgerEntry.self))
+        XCTAssertEqual(entry.id.uuidString, id)
+        XCTAssertEqual(entry.occurredAt, Date(timeIntervalSinceReferenceDate: 800_000_000))
+        XCTAssertEqual(entry.amountKRW, 12_000)
+        XCTAssertEqual(entry.category, .food)
+        XCTAssertEqual(entry.title, "점심")
+        XCTAssertEqual(entry.payer, "민수")
+        XCTAssertEqual(entry.source, .message)
+        XCTAssertEqual(entry.createdAt, Date(timeIntervalSinceReferenceDate: 800_000_100))
+        XCTAssertEqual(entry.shareNames, [LedgerTrip.me, "민수"])
+        XCTAssertEqual(entry.transfer, LedgerTransfer(kind: .funding, tripID: "t1"))
+        XCTAssertNil(entry.canceledAt)
+    }
+
+    func testMissingKeysGetDefaultsInsteadOfDroppingTheEntry() throws {
+        let entry = try XCTUnwrap(decode(#"{"id":"\#(id)","occurredAt":800000000,"amount":5000}"#, as: LedgerEntry.self))
+        XCTAssertEqual(entry.currency, "KRW")
+        XCTAssertNil(entry.amountKRW)
+        XCTAssertEqual(entry.kind, .expense)
+        XCTAssertEqual(entry.category, .other)
+        XCTAssertEqual(entry.title, "")
+        XCTAssertEqual(entry.source, .manual)
+        XCTAssertEqual(entry.createdAt, entry.occurredAt, "만든 시각이 없으면 쓴 시각(읽을 때마다 바뀌지 않게)")
+        XCTAssertNil(decode(#"{"id":"\#(id)","amount":5000}"#, as: LedgerEntry.self), "시각이 없으면 읽지 않는다")
+        XCTAssertNil(decode(#"{"occurredAt":800000000,"amount":5000}"#, as: LedgerEntry.self), "id가 없으면 읽지 않는다")
+    }
+
+    func testUnknownCategoryAndSourceAreReplacedButUnknownMoneyDirectionIsNotRead() throws {
+        let base = #""id":"\#(id)","occurredAt":800000000,"amount":5000"#
+        let entry = try XCTUnwrap(decode("{\(base),\"category\":\"pet\",\"source\":\"bank\"}", as: LedgerEntry.self))
+        XCTAssertEqual(entry.category, .other)
+        XCTAssertEqual(entry.source, .manual)
+        XCTAssertNil(decode("{\(base),\"kind\":\"refund\"}", as: LedgerEntry.self), "지출/수입을 모르면 잘못 세지 않게 읽지 않는다")
+        XCTAssertNil(decode("{\(base),\"transfer\":{\"kind\":\"loan\",\"tripID\":\"t1\"}}", as: LedgerEntry.self), "이체 종류를 모르면 읽지 않는다")
+    }
+
+    func testEveryFieldSurvivesARoundTrip() throws {
+        var entry = LedgerEntry(occurredAt: Date(timeIntervalSinceReferenceDate: 800_000_000), amount: 15.5, currency: "USD", amountKRW: 21_000,
+                                kind: .income, category: .travel, title: "환불", place: "JFK", payer: "A", tripID: "t1",
+                                memoID: UUID(), note: "메모", source: .receipt, createdAt: Date(timeIntervalSinceReferenceDate: 800_000_050))
+        entry.shareNames = [LedgerTrip.me, "A"]
+        entry.transfer = LedgerTransfer(kind: .settlement, tripID: "t1")
+        entry.canceledAt = Date(timeIntervalSinceReferenceDate: 800_000_200)
+        let data = try JSONEncoder().encode(entry)
+        XCTAssertEqual(try keyCount(data), Mirror(reflecting: entry).children.count, "새 칸이 생겼으면 이 시험 기록에도 채우고 디코더에도 더한다")
+        XCTAssertEqual(try JSONDecoder().decode(LedgerEntry.self, from: data), entry)
+
+        let trip = LedgerTrip(id: "t1", name: "오사카", start: Date(timeIntervalSinceReferenceDate: 800_000_000), end: Date(timeIntervalSinceReferenceDate: 800_259_200),
+                              budgetKRW: 500_000, members: ["A", "B"], fundingDate: Date(timeIntervalSinceReferenceDate: 799_990_000),
+                              settlementKRW: -20_000, settlementDate: Date(timeIntervalSinceReferenceDate: 800_300_000))
+        let tripData = try JSONEncoder().encode(trip)
+        XCTAssertEqual(try keyCount(tripData), Mirror(reflecting: trip).children.count, "새 칸이 생겼으면 이 시험 여행에도 채우고 디코더에도 더한다")
+        XCTAssertEqual(try JSONDecoder().decode(LedgerTrip.self, from: tripData), trip)
+    }
+
+    func testTripWithoutMembersAndBudgetWithUnknownCategory() throws {
+        let trip = try XCTUnwrap(decode(#"{"id":"t1","name":"대구","start":800000000,"end":800086400}"#, as: LedgerTrip.self))
+        XCTAssertEqual(trip.members, [])
+        XCTAssertNil(trip.budgetKRW)
+        XCTAssertEqual(decode(#"{"period":"2026-11","amountKRW":300000}"#, as: LedgerBudget.self)?.id, "2026-11|all")
+        XCTAssertNil(decode(#"{"period":"2026-11","category":"pet","amountKRW":300000}"#, as: LedgerBudget.self),
+                     "모르는 분류 예산을 기타 예산으로 바꾸면 id가 달라져 다른 예산을 덮는다")
+    }
+
+    func testUnreadableRowsAreCountedAndTheRestStillLoad() {
+        let good = #"{"id":"\#(id)","occurredAt":800000000,"amount":5000}"#
+        let unknownKind = #"{"id":"\#(UUID().uuidString)","occurredAt":800000000,"amount":5000,"kind":"refund"}"#
+        let result = LedgerBook.decodeRows([good, "{broken", unknownKind], as: LedgerEntry.self)
+        XCTAssertEqual(result.values.map(\.id.uuidString), [id])
+        XCTAssertEqual(result.failed, 2)
+    }
+}

@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import os
 import TaptionPlanStore
 
 /// 가계부(LED1110A01, 추천안으로 만듦 2026-11-11 — 바꿀 수 있음).
@@ -109,6 +110,33 @@ struct LedgerBudget: Codable, Equatable, Identifiable, Sendable {
     var id: String { "\(period)|\(category?.rawValue ?? "all")" }
 }
 
+/// 읽기 안전망(LDS1111A01). 꼭 있어야 하는 칸(id·시각·금액)만 필수로 읽고 나머지는 없으면 기본값으로 둔다.
+/// 모르는 분류는 기타, 모르는 출처는 직접 넣음으로 읽는다. 돈 방향(지출/수입)과 이체 종류는 모르면 읽지 않는다:
+/// 잘못 세는 것보다 빼고 알리는 게 낫다(`LedgerBook.unreadable`). 새 칸을 더하면 여기에도 더한다(왕복 시험이 잡는다).
+extension LedgerEntry {
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(UUID.self, forKey: .id)
+        occurredAt = try values.decode(Date.self, forKey: .occurredAt)
+        amount = try values.decode(Double.self, forKey: .amount)
+        currency = try values.decodeIfPresent(String.self, forKey: .currency) ?? "KRW"
+        amountKRW = try values.decodeIfPresent(Double.self, forKey: .amountKRW)
+        kind = try values.decodeIfPresent(Kind.self, forKey: .kind) ?? .expense
+        category = try values.decodeIfPresent(String.self, forKey: .category).flatMap(LedgerCategory.init(rawValue:)) ?? .other
+        title = try values.decodeIfPresent(String.self, forKey: .title) ?? ""
+        place = try values.decodeIfPresent(String.self, forKey: .place)
+        payer = try values.decodeIfPresent(String.self, forKey: .payer)
+        tripID = try values.decodeIfPresent(String.self, forKey: .tripID)
+        memoID = try values.decodeIfPresent(UUID.self, forKey: .memoID)
+        note = try values.decodeIfPresent(String.self, forKey: .note)
+        source = try values.decodeIfPresent(String.self, forKey: .source).flatMap(Source.init(rawValue:)) ?? .manual
+        createdAt = try values.decodeIfPresent(Date.self, forKey: .createdAt) ?? occurredAt
+        shareNames = try values.decodeIfPresent([String].self, forKey: .shareNames)
+        transfer = try values.decodeIfPresent(LedgerTransfer.self, forKey: .transfer)
+        canceledAt = try values.decodeIfPresent(Date.self, forKey: .canceledAt)
+    }
+}
+
 /// 환율(원화 환산). 중계 서버 `GET /fx`(하루 한 번 공개 환율)를 쓰고, 사용자가 넣은 값이 있으면 그것을 먼저 쓴다.
 enum LedgerFX {
     struct Table: Codable, Equatable, Sendable {
@@ -179,6 +207,8 @@ final class LedgerBook {
     var trips: [LedgerTrip] = []
     private(set) var fx: LedgerFX.Table?
     private(set) var isLoaded = false
+    /// 읽지 못한 행 수(저장 종류별, LDS1111A01). 행은 저장소에 그대로 남아 백업에 들어가고 다음 빌드가 다시 읽는다.
+    private(set) var unreadable: [String: Int] = [:]
     /// 기록이 바뀔 때마다 1씩 는다. 카운터가 다시 셀지 정한다.
     private(set) var revision = 0
     @ObservationIgnored let storeFactory: () -> TaptionStoreV2?
@@ -209,20 +239,37 @@ final class LedgerBook {
 
     private func read(generation started: Int) async {
         guard !isLoaded, let store = storeFactory() else { return }
-        let decoder = JSONDecoder()
         let rows = (try? await store.records(kind: Self.entryKind)) ?? []
         let budgetRows = (try? await store.records(kind: Self.budgetKind)) ?? []
         let tripRows = (try? await store.records(kind: LedgerTrip.kind)) ?? []
         guard generation == started else { return }
-        trips = tripRows.compactMap { try? decoder.decode(LedgerTrip.self, from: Data($0.body.utf8)) }.sorted { $0.start > $1.start }
+        let readTrips = Self.decodeRows(tripRows.map(\.body), as: LedgerTrip.self)
+        let readEntries = Self.decodeRows(rows.map(\.body), as: LedgerEntry.self)
+        let readBudgets = Self.decodeRows(budgetRows.map(\.body), as: LedgerBudget.self)
+        let failed = [LedgerTrip.kind: readTrips.failed, Self.entryKind: readEntries.failed, Self.budgetKind: readBudgets.failed].filter { $0.value > 0 }
+        if unreadable != failed { unreadable = failed }
+        if !failed.isEmpty { Self.log.error("ledger rows left unread: \(failed.description, privacy: .public)") }
+        trips = readTrips.values.sorted { $0.start > $1.start }
         let saved = entries
-        entries = rows.compactMap { try? decoder.decode(LedgerEntry.self, from: Data($0.body.utf8)) }.sorted { $0.occurredAt > $1.occurredAt }
-        budgets = budgetRows.compactMap { try? decoder.decode(LedgerBudget.self, from: Data($0.body.utf8)) }
+        entries = readEntries.values.sorted { $0.occurredAt > $1.occurredAt }
+        budgets = readBudgets.values
         // 읽는 동안 메모리에만 들어온 기록(저장소가 없는 시험 포함)은 남긴다.
         for entry in saved where !entries.contains(where: { $0.id == entry.id }) { entries.append(entry) }
         entries.sort { $0.occurredAt > $1.occurredAt }
         isLoaded = true
         revision += 1
+    }
+
+    private static let log = Logger(subsystem: "TaptionPlan", category: "ledger")
+
+    /// 저장된 글을 하나씩 읽는다. 못 읽은 것은 건너뛰고 개수만 돌려준다(한 행 때문에 나머지를 잃지 않게).
+    nonisolated static func decodeRows<Value: Decodable>(_ bodies: [String], as type: Value.Type) -> (values: [Value], failed: Int) {
+        let decoder = JSONDecoder()
+        var values: [Value] = []
+        for body in bodies {
+            if let value = try? decoder.decode(type, from: Data(body.utf8)) { values.append(value) }
+        }
+        return (values, bodies.count - values.count)
     }
 
     /// 복원·전체 삭제 뒤 저장소에서 다시 읽게 한다.
@@ -232,6 +279,7 @@ final class LedgerBook {
         entries = []
         budgets = []
         trips = []
+        unreadable = [:]
         isLoaded = false
         revision += 1
     }

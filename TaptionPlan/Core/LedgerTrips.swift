@@ -41,6 +41,22 @@ struct LedgerTrip: Codable, Equatable, Identifiable, Sendable {
     }
 }
 
+/// 읽기 안전망(LDS1111A01): id·이름·기간만 필수, 나머지는 없으면 기본값. 새 칸을 더하면 여기에도 더한다.
+extension LedgerTrip {
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(String.self, forKey: .id)
+        name = try values.decode(String.self, forKey: .name)
+        start = try values.decode(Date.self, forKey: .start)
+        end = try values.decode(Date.self, forKey: .end)
+        budgetKRW = try values.decodeIfPresent(Double.self, forKey: .budgetKRW)
+        members = try values.decodeIfPresent([String].self, forKey: .members) ?? []
+        fundingDate = try values.decodeIfPresent(Date.self, forKey: .fundingDate)
+        settlementKRW = try values.decodeIfPresent(Double.self, forKey: .settlementKRW)
+        settlementDate = try values.decodeIfPresent(Date.self, forKey: .settlementDate)
+    }
+}
+
 /// 여행 장부 맨 아래 정산(내 기준 대차대조).
 struct LedgerTripSheet: Equatable, Sendable {
     struct Transfer: Equatable, Sendable {
