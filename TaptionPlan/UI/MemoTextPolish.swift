@@ -274,6 +274,8 @@ enum FoundationMemoPolisher {
             default: return MemoPolishNotice.failed
             }
         }
+        // iOS 27 SDK(Swift 6.4)에만 있는 형식이라 CI의 Xcode 26에서는 뺀다.
+        #if compiler(>=6.4)
         if #available(iOS 27.0, *), let error = error as? LanguageModelError {
             switch error {
             case .contextSizeExceeded: return MemoPolishNotice.tooLong
@@ -282,6 +284,7 @@ enum FoundationMemoPolisher {
             default: return MemoPolishNotice.failed
             }
         }
+        #endif
         return MemoPolishNotice.failed
     }
 }
