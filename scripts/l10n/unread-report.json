@@ -1,7 +1,25 @@
 {
- "ui": 4487,
+ "ui": 4507,
  "catalog": 461,
  "unread": [
+  {
+   "file": "TaptionPlan/Core/SiriIntents.swift",
+   "line": 90,
+   "ko": "saved.amount",
+   "en": "saved.currency"
+  },
+  {
+   "file": "TaptionPlan/Core/SiriIntents.swift",
+   "line": 122,
+   "ko": "saved.amount",
+   "en": "saved.currency"
+  },
+  {
+   "file": "TaptionPlan/Core/SiriIntents.swift",
+   "line": 161,
+   "ko": "spent",
+   "en": "\"KRW\""
+  },
   {
    "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
    "line": 41,

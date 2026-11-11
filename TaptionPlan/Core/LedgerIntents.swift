@@ -40,6 +40,7 @@ struct AddPaymentMessageIntent: AppIntent {
     }
 }
 
+/// Siri·단축어 앱에 바로 보이는 동작(SIR1111A01). 앱 하나당 10개까지다.
 struct BokkiShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(
@@ -47,6 +48,60 @@ struct BokkiShortcuts: AppShortcutsProvider {
             phrases: ["\(.applicationName) 결제 문자 넣기", "Add payment text to \(.applicationName)"],
             shortTitle: "결제 문자 넣기",
             systemImageName: "creditcard"
+        )
+        AppShortcut(
+            intent: AddMemoIntent(),
+            phrases: ["\(.applicationName)에 메모 남겨", "\(.applicationName) 메모", "Add a memo in \(.applicationName)"],
+            shortTitle: "메모 남기기",
+            systemImageName: "note.text"
+        )
+        AppShortcut(
+            intent: CheckInIntent(),
+            phrases: ["\(.applicationName) \(\.$moment) 기록", "\(.applicationName)에 \(\.$moment) 남겨", "Log \(\.$moment) in \(.applicationName)"],
+            shortTitle: "지금 순간 기록",
+            systemImageName: "clock.badge.checkmark"
+        )
+        AppShortcut(
+            intent: AddExpenseIntent(),
+            phrases: ["\(.applicationName) 지출 기록", "\(.applicationName)에 지출 넣어", "Add an expense in \(.applicationName)"],
+            shortTitle: "지출 기록",
+            systemImageName: "wonsign.circle"
+        )
+        AppShortcut(
+            intent: AddReceiptIntent(),
+            phrases: ["\(.applicationName) 영수증 넣기", "Add a receipt to \(.applicationName)"],
+            shortTitle: "영수증 넣기",
+            systemImageName: "doc.text.viewfinder"
+        )
+        AppShortcut(
+            intent: AskAIIntent(),
+            phrases: ["\(.applicationName) AI에게 맡겨", "Ask \(.applicationName) AI"],
+            shortTitle: "AI에게 맡기기",
+            systemImageName: "sparkles"
+        )
+        AppShortcut(
+            intent: TodaySpendingIntent(),
+            phrases: ["\(.applicationName) 오늘 얼마 썼어", "\(.applicationName) 오늘 지출", "How much did I spend today in \(.applicationName)"],
+            shortTitle: "오늘 지출",
+            systemImageName: "chart.bar"
+        )
+        AppShortcut(
+            intent: TodayStepsIntent(),
+            phrases: ["\(.applicationName) 오늘 몇 걸음", "\(.applicationName) 걸음 수", "Steps today in \(.applicationName)"],
+            shortTitle: "오늘 걸음 수",
+            systemImageName: "figure.walk"
+        )
+        AppShortcut(
+            intent: CurrentActivityIntent(),
+            phrases: ["\(.applicationName) 지금 뭐로 기록돼", "\(.applicationName) 지금 기록", "What is \(.applicationName) recording now"],
+            shortTitle: "지금 기록",
+            systemImageName: "waveform.path.ecg"
+        )
+        AppShortcut(
+            intent: OpenScreenIntent(),
+            phrases: ["\(.applicationName) \(\.$screen) 열어", "Open \(\.$screen) in \(.applicationName)"],
+            shortTitle: "화면 열기",
+            systemImageName: "rectangle.portrait.on.rectangle.portrait"
         )
     }
 }

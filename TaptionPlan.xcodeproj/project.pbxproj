@@ -319,6 +319,7 @@
 		A1T1111A0100000000000001 /* TravelGreatCircleAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1T1111A0100000000000001 /* TravelGreatCircleAdapter.swift */; };
 		A1L1111A0100000000000004 /* LedgerCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111A0100000000000004 /* LedgerCapture.swift */; };
 		A1L1111A0100000000000005 /* LedgerIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111A0100000000000005 /* LedgerIntents.swift */; };
+		C51A1111A010000000000002 /* SiriIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = C51A1111A010000000000001 /* SiriIntents.swift */; };
 		A1L1111A0300000000000002 /* LedgerMemoLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111A0300000000000002 /* LedgerMemoLink.swift */; };
 		A1L1111A0500000000000001 /* LedgerTrips.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111A0500000000000001 /* LedgerTrips.swift */; };
 		A1L1111A0500000000000003 /* LedgerXLSX.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111A0500000000000003 /* LedgerXLSX.swift */; };
@@ -425,6 +426,7 @@
 		A1EEF6FAFDD9B3AE536F4390 /* MapHomeView+Playback2.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1EEF6FAFDD9B3AE536F4390 /* MapHomeView+Playback2.swift */; };
 		A10000000000000001A70001 /* MapHomeView+Work.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000001A70001 /* MapHomeView+Work.swift */; };
 		A1E32009FB49172F1DBAF950 /* MapHomeView+Support.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E32009FB49172F1DBAF950 /* MapHomeView+Support.swift */; };
+		C51A1111A010000000000004 /* MapHomeView+Siri.swift in Sources */ = {isa = PBXBuildFile; fileRef = C51A1111A010000000000003 /* MapHomeView+Siri.swift */; };
 		A1EF1870E9BA90AF77FBB630 /* MapHomeView+Support2.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1EF1870E9BA90AF77FBB630 /* MapHomeView+Support2.swift */; };
 		A1E4358522139E5590681710 /* MapHomeView+Support3.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E4358522139E5590681710 /* MapHomeView+Support3.swift */; };
 		A1E7006AF3F40D36507FBCF0 /* MapHomeView+Menu.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E7006AF3F40D36507FBCF0 /* MapHomeView+Menu.swift */; };
@@ -1047,6 +1049,7 @@
 		F1T1111A0100000000000001 /* TravelGreatCircleAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelGreatCircleAdapter.swift; sourceTree = "<group>"; };
 		F1L1111A0100000000000004 /* LedgerCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerCapture.swift; sourceTree = "<group>"; };
 		F1L1111A0100000000000005 /* LedgerIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerIntents.swift; sourceTree = "<group>"; };
+		C51A1111A010000000000001 /* SiriIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SiriIntents.swift; sourceTree = "<group>"; };
 		F1L1111A0300000000000002 /* LedgerMemoLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerMemoLink.swift; sourceTree = "<group>"; };
 		F1L1111A0500000000000001 /* LedgerTrips.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerTrips.swift; sourceTree = "<group>"; };
 		F1L1111A0500000000000003 /* LedgerXLSX.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerXLSX.swift; sourceTree = "<group>"; };
@@ -1143,6 +1146,7 @@
 		F1EEF6FAFDD9B3AE536F4390 /* MapHomeView+Playback2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Playback2.swift"; sourceTree = "<group>"; };
 		F10000000000000001A70001 /* MapHomeView+Work.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Work.swift"; sourceTree = "<group>"; };
 		F1E32009FB49172F1DBAF950 /* MapHomeView+Support.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Support.swift"; sourceTree = "<group>"; };
+		C51A1111A010000000000003 /* MapHomeView+Siri.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Siri.swift"; sourceTree = "<group>"; };
 		F1EF1870E9BA90AF77FBB630 /* MapHomeView+Support2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Support2.swift"; sourceTree = "<group>"; };
 		F1E4358522139E5590681710 /* MapHomeView+Support3.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Support3.swift"; sourceTree = "<group>"; };
 		F1E7006AF3F40D36507FBCF0 /* MapHomeView+Menu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapHomeView+Menu.swift"; sourceTree = "<group>"; };
@@ -1660,6 +1664,7 @@
 				F1E4358522139E5590681710 /* MapHomeView+Support3.swift */,
 				F1EF1870E9BA90AF77FBB630 /* MapHomeView+Support2.swift */,
 				F1E32009FB49172F1DBAF950 /* MapHomeView+Support.swift */,
+				C51A1111A010000000000003 /* MapHomeView+Siri.swift */,
 				F1EEF6FAFDD9B3AE536F4390 /* MapHomeView+Playback2.swift */,
 				F10000000000000001A70001 /* MapHomeView+Work.swift */,
 				F1EF724568A9B22CAC66C750 /* MapHomeView+Playback.swift */,
@@ -2067,6 +2072,7 @@
 				F1T1111A0100000000000001 /* TravelGreatCircleAdapter.swift */,
 				F1L1111A0100000000000004 /* LedgerCapture.swift */,
 				F1L1111A0100000000000005 /* LedgerIntents.swift */,
+				C51A1111A010000000000001 /* SiriIntents.swift */,
 				F1L1111A0300000000000002 /* LedgerMemoLink.swift */,
 				F1L1111A0500000000000001 /* LedgerTrips.swift */,
 				F1L1111A0500000000000003 /* LedgerXLSX.swift */,
@@ -2615,6 +2621,7 @@
 				A1E4358522139E5590681710 /* MapHomeView+Support3.swift in Sources */,
 				A1EF1870E9BA90AF77FBB630 /* MapHomeView+Support2.swift in Sources */,
 				A1E32009FB49172F1DBAF950 /* MapHomeView+Support.swift in Sources */,
+				C51A1111A010000000000004 /* MapHomeView+Siri.swift in Sources */,
 				A1EEF6FAFDD9B3AE536F4390 /* MapHomeView+Playback2.swift in Sources */,
 				A10000000000000001A70001 /* MapHomeView+Work.swift in Sources */,
 				A1EF724568A9B22CAC66C750 /* MapHomeView+Playback.swift in Sources */,
@@ -2951,6 +2958,7 @@
 				A1T1111A0100000000000001 /* TravelGreatCircleAdapter.swift in Sources */,
 				A1L1111A0100000000000004 /* LedgerCapture.swift in Sources */,
 				A1L1111A0100000000000005 /* LedgerIntents.swift in Sources */,
+				C51A1111A010000000000002 /* SiriIntents.swift in Sources */,
 				A1L1111A0300000000000002 /* LedgerMemoLink.swift in Sources */,
 				A1L1111A0500000000000001 /* LedgerTrips.swift in Sources */,
 				A1L1111A0500000000000003 /* LedgerXLSX.swift in Sources */,

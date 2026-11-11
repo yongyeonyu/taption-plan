@@ -588,3 +588,39 @@ final class AITaskQueueTests: XCTestCase {
         XCTAssertNotNil(tasks.first?.createdAt)
     }
 }
+
+/// Siri·단축어(SIR1111A01): 앱이 꺼져 있을 때 받은 메모는 쌓였다가 앱이 열리면 반영되고, 화면 열기 요청은 한 번만 꺼낸다.
+@MainActor
+final class SiriIntentsTests: XCTestCase {
+    func testInboxQueuesWithoutALiveModelAndDrainsIntoTheModel() async throws {
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: "SiriInbox-\(UUID())"))
+        let previous = AppModel.live
+        AppModel.live = nil
+        defer { AppModel.live = previous }
+        let at = Date(timeIntervalSince1970: 1_794_365_000)
+        await SiriInbox.addMemo("출근", at: at, defaults: defaults)
+        XCTAssertEqual(SiriInbox.pending(defaults).map(\.text), ["출근"])
+
+        let model = AppModel(repository: InMemoryPlanRepository(snapshot: .empty), cloudSyncService: nil)
+        await model.bootstrap()
+        await SiriInbox.drain(into: model, defaults: defaults)
+        XCTAssertTrue(SiriInbox.pending(defaults).isEmpty)
+        XCTAssertEqual(model.snapshot.memos.map(\.text), ["출근"])
+        XCTAssertEqual(model.snapshot.memos.first?.occurredAt, at)
+    }
+
+    /// 요청은 알림으로 홈 화면에 가고, 꺼내면 비워진다(시험 앱의 홈 화면이 먼저 꺼낼 수 있다).
+    func testNavigationRequestPostsAndIsTakenOnce() {
+        let posted = expectation(forNotification: SiriNavigation.notification, object: nil)
+        SiriNavigation.request(.ledger)
+        wait(for: [posted], timeout: 1)
+        _ = SiriNavigation.take()
+        XCTAssertNil(SiriNavigation.take())
+    }
+
+    func testCheckInTextsAreDistinct() {
+        let texts = [SiriCheckIn.arriveWork, .leaveWork, .wakeUp, .goToBed, .goOut, .comeHome].map { $0.memoText(.korean) }
+        XCTAssertEqual(Set(texts).count, texts.count)
+        XCTAssertEqual(SiriCheckIn.arriveWork.memoText(.korean), "출근")
+    }
+}
