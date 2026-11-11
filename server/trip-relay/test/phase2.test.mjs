@@ -325,9 +325,9 @@ test("MCP initialize, tools/list per scope, notifications and JSON-RPC errors", 
   assert.ok(init.body.result.capabilities.tools);
   assert.equal((await mcp(env, { jsonrpc: "2.0", method: "notifications/initialized" }, writer)).status, 202);
   const all = (await mcp(env, rpc("tools/list"), writer)).body.result.tools.map((t) => t.name);
-  assert.deepEqual(all.sort(), ["add_expense", "add_goal", "add_memo", "add_schedule", "add_trip_stop", "complete_ai_task", "delete_goal", "delete_memo", "delete_schedule", "delete_trip_stop",
+  assert.deepEqual(all.sort(), ["add_expense", "add_goal", "add_memo", "add_schedule", "add_trip_stop", "classify_unconfirmed", "complete_ai_task", "delete_goal", "delete_memo", "delete_schedule", "delete_trip_stop",
     "end_conversation", "get_activity", "get_ai_tasks", "get_command_results", "get_polish_requests", "get_summary", "hide_record", "merge_records", "send_trip_plan", "set_bubble", "set_display_option", "set_language",
-    "set_map_style", "set_theme", "set_trip_item_status", "update_activity", "update_expense", "update_goal", "update_memo", "update_record_time", "update_schedule",
+    "set_map_style", "set_theme", "set_travel_mode", "set_trip_item_status", "update_activity", "update_expense", "update_goal", "update_memo", "update_record_time", "update_schedule",
     "update_sleep", "update_trip_stop"]);
   const read = (await mcp(env, rpc("tools/list"), reader)).body.result.tools;
   assert.deepEqual(read.map((t) => t.name).sort(), ["complete_ai_task", "end_conversation", "get_activity", "get_ai_tasks", "get_command_results", "get_polish_requests", "get_summary"]);

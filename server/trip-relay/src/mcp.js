@@ -6,7 +6,7 @@
 import { json, readBody, writeAllowed } from "./http.js";
 import { allows } from "./keys.js";
 import { claimTasks, endConversation, finishTask, queueCommand, readActivity, readPolish, readResults, readSummary, savePlan } from "./store.js";
-import { ACTIONS, DISPLAY_OPTIONS, EXPENSE_CATEGORIES, LANGUAGES, MAP_STYLES, TASK_KINDS, TASK_STATUSES, THEMES, TRIP_STATUSES } from "./validate.js";
+import { ACTIONS, DISPLAY_OPTIONS, EXPENSE_CATEGORIES, LANGUAGES, MAP_STYLES, TASK_KINDS, TASK_STATUSES, THEMES, TRAVEL_MODES, TRIP_STATUSES } from "./validate.js";
 
 export const PROTOCOL_VERSION = "2025-06-18";
 const SERVER_INFO = { name: "taption-plan", title: "Taption Plan", version: "3.0.0" };
@@ -47,9 +47,10 @@ const addTool = (...args) => commandTool(...args, false);
 const TOOLS = [
   readTool("get_activity", "Get day records", "Get one day (date) or the newest 7 stored days: summary, records, memos, plans, and when the user shares them "
     + "goals [{id,title,start,end}], trips [{tripId, items:[{stopId,itemId,title,order,start,end,status}]}], sleep [{recordId,start,end,minutes,source}], "
-    + "expenses [{id,time,title,category,kind,amount,currency,amountKRW}], unconfirmed [{id,start,end,minutes}] (time the app could not classify; "
-    + "settle it with update_activity using that id), on today's day budget {month,amountKRW,spentKRW}, and at the place-name share level "
-    + "visits [{place,start,end,minutes}] and moves [{from,to,mode,start,end,minutes}]. Never coordinates or addresses.",
+    + "expenses [{id,time,title,category,kind,amount,currency,amountKRW}], unconfirmed [{start,end,minutes}] (time the app could not classify; "
+    + "settle it with classify_unconfirmed), on today's day budget {month,amountKRW,spentKRW}, and at the place-name share level "
+    + "visits [{place,start,end,minutes}] and moves [{id,from,to,mode,start,end,minutes}] (fix a wrong mode with set_travel_mode). "
+    + "Never coordinates or addresses.",
   object({ date: DATE }), (ctx, a) => readActivity(ctx, a.date ?? null)),
   readTool("get_summary", "Get week/month summary", "Totals over the last 7 (week) or 30 (month) days ending at end: minutes per category, recorded minutes, steps, plan counts, days covered.",
     object({ range: str("week or month", { enum: ["week", "month"] }), end: DATE }, ["range"]), (ctx, a) => readSummary(ctx, a.range, a.end ?? null)),
@@ -64,8 +65,8 @@ const TOOLS = [
     + "Without entryId the app could not read it: find amount, currency, merchant and time and call add_expense (date from the text or date). "
     + "If it is not a payment, complete with status failed and a reason. "
     + "memo_polish: polish context.memoId with update_memo (keep facts). "
-    + "route_check / merge_review / stay_place: read get_activity for date, then fix with update_activity, merge_records or update_record_time "
-    + "as context describes. fare_check: work out the bus, subway or toll fare for the trip in context and record it with add_expense "
+    + "route_check / merge_review / stay_place: read get_activity for date, then fix with update_activity, merge_records, update_record_time, "
+    + "set_travel_mode or classify_unconfirmed as context describes. fare_check: work out the bus, subway or toll fare for the trip in context and record it with add_expense "
     + "(category transport). Always finish each task with complete_ai_task.",
     object({}), (ctx) => claimTasks(ctx)),
   readTool("complete_ai_task", "Complete AI task", "Report one AI task as done (with a short result the user sees) or failed (with a reason).",
@@ -91,6 +92,12 @@ const TOOLS = [
     { title: str("1-200 characters"), start: INSTANT("Start"), end: INSTANT("End, after start"), note: str("Up to 1000 characters") }, ["title", "start"]),
   commandTool("update_activity", "updateActivity", "Rename or recategorize a record", "Correct a record's title and/or category. Target by recordId or the startTime it covers.",
     { date: DATE, recordId: str("Record id from get_activity"), startTime: HHMM("A time the record covers"), title: str("New title"), categoryId: str("Category id from get_activity") }, ["date"]),
+  commandTool("classify_unconfirmed", "classifyUnconfirmed", "Classify unconfirmed time", "Fill time the app could not classify (get_activity unconfirmed) with a category. "
+    + "Only the part of start-end that is still unconfirmed is filled; existing records are not changed. Undoable.",
+    { date: DATE, start: HHMM("Start of the unconfirmed time"), end: HHMM("End, after start"), categoryId: str("Category id from get_activity"), title: str("Optional title, up to 100 characters") },
+    ["date", "start", "end", "categoryId"]),
+  commandTool("set_travel_mode", "setTravelMode", "Correct a travel mode", "Set the transport mode of one move from get_activity moves (user correction, undoable).",
+    { date: DATE, moveId: str("Move id from get_activity moves"), mode: enumOf("Transport mode", TRAVEL_MODES) }, ["date", "moveId", "mode"]),
   commandTool("hide_record", "hideRecord", "Hide a record", "Hide an automatic record as a user correction (undoable; raw data is kept).",
     { date: DATE, recordId: str("Record id from get_activity"), startTime: HHMM("A time the record covers") }, ["date"]),
   commandTool("merge_records", "mergeRecords", "Merge records", "Merge 2-20 consecutive records of one day into one corrected block.",

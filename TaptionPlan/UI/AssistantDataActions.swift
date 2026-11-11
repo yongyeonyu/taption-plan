@@ -112,6 +112,35 @@ extension AppModel {
             result.ledgerEntryID = saved.id
             result.ledgerEntry = saved
             return result
+        case let .classifyUnconfirmed(start, end, title, categoryID):
+            guard isAssistantCategory(categoryID) else { return .rejected("unknown_category") }
+            let limit = min(end, Date.now)
+            guard limit.timeIntervalSince(start) >= 60 else { return .rejected("no_gap") }
+            // 아직 아무 기록도 덮지 않은 부분만 채운다. 있는 기록은 건드리지 않는다.
+            let gaps = ReviewCoverageEngine.unconfirmedRecords(actuals: snapshot.actuals, in: [TimeSpan(start: start, end: limit)])
+                .map { $0.span(asOf: .now) }.filter { $0.duration >= 60 }
+            guard !gaps.isEmpty else { return .rejected("no_gap") }
+            let name = title ?? assistantCategoryTitle(categoryID, language: language)
+            let option = ActivityCorrectionOption(
+                id: "assistant.\(name)", title: name, behavior: nil, categoryID: categoryID,
+                systemImage: "tag.fill", isAutomatic: false, isCustom: false
+            )
+            let known = Set(snapshot.actuals.map(\.id))
+            for gap in gaps { await classifyUnconfirmedSpan(gap, with: option) }
+            let added = snapshot.actuals.filter { !known.contains($0.id) }
+            guard !added.isEmpty else { return .rejected("edit_failed") }
+            return AssistantEditResult(
+                before: "\(language.text("미확인", "Unconfirmed")) \(AssistantEditText.clock(start))–\(AssistantEditText.clock(limit))",
+                after: name, actualIDs: Set(added.map(\.id))
+            )
+        case let .setTravelMode(moveID, mode):
+            guard let segment = snapshot.travel.first(where: { $0.id == moveID }) else { return .rejected("no_record") }
+            var result = AssistantEditResult(before: TravelMapMode(segment.mode).title(language))
+            result.movementBefore = .init(snapshot, ids: [moveID])
+            confirmTravel(moveID, mode: mode)
+            guard snapshot.travel.first(where: { $0.id == moveID })?.mode == mode else { return .rejected("edit_failed") }
+            result.after = TravelMapMode(mode).title(language)
+            return result
         case let .updateExpense(entryID, change):
             await preferences.ledger.load()
             guard let before = preferences.ledger.entries.first(where: { $0.id == entryID }) else { return .rejected("no_record") }

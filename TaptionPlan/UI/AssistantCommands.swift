@@ -37,6 +37,10 @@ struct AssistantCommand: Identifiable, Equatable, Sendable {
         case addExpense(LedgerEntry)
         /// AIQ1111A01: 있는 가계부 기록 고치기·지우기. nil인 칸은 그대로 둔다.
         case updateExpense(entryID: UUID, change: AssistantExpenseChange)
+        /// ACT1111A01: 앱이 분류하지 못한 시간을 분류로 채운다. 아직 미확인인 부분만 사용자 기록으로 남는다.
+        case classifyUnconfirmed(start: Date, end: Date, title: String?, categoryID: String)
+        /// ACT1111A01: 이동 구간 하나의 수단을 사용자 교정으로 바꾼다.
+        case setTravelMode(moveID: UUID, mode: TravelMode)
     }
 
     let id: String
@@ -89,6 +93,8 @@ enum AssistantCommandParser {
         let amount: Double?, currency: String?, category: String?, payer: String?
         // AIQ1111A01: updateExpense.
         let entryId: String?, delete: Bool?
+        // ACT1111A01: setTravelMode.
+        let moveId: String?, mode: String?
     }
 
     /// `{"commands":[...]}`를 읽는다. 서버와 같은 규칙으로 다시 본다.
@@ -311,7 +317,7 @@ struct AssistantCommandOutcome: Equatable, Sendable {
         case .addMemo, .updateMemo, .deleteMemo: memos += 1
         case .addSchedule, .updateSchedule, .deleteSchedule: schedules += 1
         case .addGoal, .updateGoal, .deleteGoal, .addTripStop, .updateTripStop, .deleteTripStop, .setTripItemStatus: schedules += 1
-        case .updateActivity, .hideRecord, .mergeRecords, .updateRecordTime, .updateSleep: edits += 1
+        case .updateActivity, .hideRecord, .mergeRecords, .updateRecordTime, .updateSleep, .classifyUnconfirmed, .setTravelMode: edits += 1
         case .setLanguage, .setMapStyle, .setDisplayOption: settings += 1
         case .setBubble: bubbles += 1
         case .addExpense, .updateExpense: ledger += 1
@@ -424,6 +430,9 @@ extension AppModel {
         delta.ledgerEntryID = result.ledgerEntryID
         delta.ledgerEntry = result.ledgerEntry
         delta.ledgerBefore = result.ledgerBefore
+        delta.movement = result.movementBefore.map {
+            AssistantMovementChange(before: $0, after: .init(snapshot, ids: Set($0.segments.map(\.id))))
+        }
         return AssistantLogEntry(
             commandID: command.id, kind: command.action.kind, appliedAt: .now,
             before: result.before, after: result.after, delta: delta,

@@ -1,7 +1,7 @@
 // GPT Actions용 OpenAPI 3.1 문서(AIR1110A02). 인증 없이 받는다. AI가 부르는 경로만 담는다(앱 전용 경로 제외).
 
 // AIR1110A03: 목표·여행·수면·안전한 설정 동작을 더한다. 동작 목록은 validate.js 하나에서 온다.
-import { ACTIONS, DISPLAY_OPTIONS, EXPENSE_CATEGORIES, LANGUAGES, MAP_STYLES, THEMES, TRIP_STATUSES } from "./validate.js";
+import { ACTIONS, DISPLAY_OPTIONS, EXPENSE_CATEGORIES, LANGUAGES, MAP_STYLES, THEMES, TRAVEL_MODES, TRIP_STATUSES } from "./validate.js";
 
 const date = { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$", description: "YYYY-MM-DD in the user's time zone" };
 const hhmm = { type: "string", pattern: "^([01]\\d|2[0-3]):[0-5]\\d$", description: "HH:mm (24h)" };
@@ -17,6 +17,8 @@ const command = {
   required: ["format", "version", "id", "action"],
   description: "One edit. Fields by action — addMemo: text, date?, time?. addExpense: amount (>0), currency? (ISO, default KRW), title, category?, kind? (expense|income), payer?, date?, time?. updateExpense: entryId (from an AI task context), amount?|currency?|title?|category?|kind?|delete:true. addSchedule: title, start, end?, note?. "
     + "updateActivity: date, recordId|startTime, title?|categoryId?. hideRecord: date, recordId|startTime. "
+    + "classifyUnconfirmed: date, start, end (HH:mm, a span from the day's unconfirmed list), categoryId, title?. "
+    + "setTravelMode: date, moveId (from the day's moves), mode. "
     + "mergeRecords: date, recordIds (2-20), title?, categoryId?. updateRecordTime: date, recordId, start?|end? (HH:mm). "
     + "updateSchedule: planId | (date, startTime), then title?, start?, end?, note?. deleteSchedule: planId | (date, startTime). "
     + "updateMemo: memoId, text. deleteMemo: memoId. addGoal: title, start (YYYY-MM-DD), end?, categoryId?. "
@@ -58,6 +60,8 @@ const command = {
     language: { type: "string", enum: LANGUAGES },
     theme: { type: "string", enum: THEMES },
     mapStyle: { type: "string", enum: MAP_STYLES },
+    moveId: { type: "string" },
+    mode: { type: "string", enum: TRAVEL_MODES },
     option: { type: "string", enum: DISPLAY_OPTIONS },
     enabled: { type: "boolean" },
     kind: { type: "string", enum: ["routine", "event", "expense", "income"], description: "setBubble: routine|event. addExpense: expense|income" },

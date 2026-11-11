@@ -84,8 +84,30 @@ extension AssistantCommandParser {
             return expense(raw, calendar: calendar)
         case "updateExpense":
             return expenseChange(raw)
+        case "classifyUnconfirmed":
+            guard let day, let categoryID = clean(raw.categoryId, max: 100),
+                  let start = raw.start.flatMap({ clock($0, on: day, calendar: calendar) }),
+                  let end = raw.end.flatMap({ clock($0, on: day, calendar: calendar) }), end > start else { return nil }
+            if raw.title != nil, clean(raw.title, max: 100) == nil { return nil }
+            return .classifyUnconfirmed(start: start, end: end, title: clean(raw.title, max: 100), categoryID: categoryID)
+        case "setTravelMode":
+            guard day != nil, let moveID = raw.moveId.flatMap(UUID.init(uuidString:)), let mode = raw.mode.flatMap(travelMode) else { return nil }
+            return .setTravelMode(moveID: moveID, mode: mode)
         default:
             return settingAction(raw)
+        }
+    }
+
+    /// 하루 기록의 수단 이름(`AssistantActivityBuilder.mode`)을 앱 수단으로. 「other」는 받지 않는다.
+    static func travelMode(_ name: String) -> TravelMode? {
+        switch name {
+        case "walk": .walking
+        case "subway": .subway
+        case "bus": .bus
+        case "car": .car
+        case "train": .train
+        case "flight": .airplane
+        default: nil
         }
     }
 

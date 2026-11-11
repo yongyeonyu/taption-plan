@@ -56,9 +56,8 @@ extension AssistantActivityDay {
         var spentKRW: Double
     }
 
-    /// 앱이 분류하지 못한 시간. `id`로 `updateActivity`를 골라 분류를 정한다. 10분 넘는 것만.
+    /// 앱이 분류하지 못한 시간(아무 기록도 덮지 않은 틈). `classifyUnconfirmed`가 그 시각으로 채운다. 10분 넘는 것만.
     struct Unconfirmed: Codable, Equatable, Sendable {
-        var id: String
         var start: String
         var end: String
         var minutes: Int
@@ -107,21 +106,21 @@ extension AssistantActivityBuilder {
             }
         if !expenses.isEmpty { result.expenses = Array(expenses) }
         if let budget = input.budget, input.calendar.isDate(input.day, inSameDayAs: input.now) { result.budget = budget }
-        // 사용자가 가리거나(미확인으로 교정) 구간 편집이 덮은 것은 다시 묻지 않는다.
-        let covers = input.actuals.filter { $0.modelVersion == ActivitySectionOverrideEngine.modelVersion }.map { $0.span(asOf: input.now) }
-        let unconfirmed = input.actuals
-            .filter { $0.categoryID == "unconfirmed" && !isUserRecord($0) }
-            .filter { actual in !covers.contains { $0.start <= actual.startedAt && actual.span(asOf: input.now).end <= $0.end } }
-            .compactMap { actual -> AssistantActivityDay.Unconfirmed? in
-                guard let span = actual.span(asOf: input.now).intersection(with: day), span.duration >= unconfirmedMinimum else { return nil }
-                return AssistantActivityDay.Unconfirmed(
-                    id: actual.id.uuidString, start: stamp.instant(span.start), end: stamp.instant(span.end),
-                    minutes: Int((span.duration / 60).rounded())
-                )
-            }
-            .sorted { $0.start < $1.start }
-            .prefix(goalLimit)
-        if !unconfirmed.isEmpty { result.unconfirmed = Array(unconfirmed) }
+        // 아무 기록도 덮지 않은 틈만(화면의 미확인과 같은 계산). 사용자가 가린 기록은 기록이 있는 시간이라 틈이 아니다.
+        let until = min(day.end, input.now)
+        if until > day.start {
+            let unconfirmed = ReviewCoverageEngine.unconfirmedRecords(actuals: input.actuals, in: [TimeSpan(start: day.start, end: until)], asOf: input.now)
+                .compactMap { gap -> AssistantActivityDay.Unconfirmed? in
+                    let span = gap.span(asOf: input.now)
+                    guard span.duration >= unconfirmedMinimum else { return nil }
+                    return AssistantActivityDay.Unconfirmed(
+                        start: stamp.instant(span.start), end: stamp.instant(span.end), minutes: Int((span.duration / 60).rounded())
+                    )
+                }
+                .sorted { $0.start < $1.start }
+                .prefix(goalLimit)
+            if !unconfirmed.isEmpty { result.unconfirmed = Array(unconfirmed) }
+        }
     }
 
     static let unconfirmedMinimum: TimeInterval = 10 * 60

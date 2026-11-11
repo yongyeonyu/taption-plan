@@ -96,3 +96,20 @@ test("updateExpense: entryId plus at least one field or delete", async () => {
   const reply = JSON.stringify(await (await mcp(env, writer, "update_expense", { entryId: A, amount: 4500 })).json());
   assert.doesNotMatch(reply, /isError":true/);
 });
+
+test("classifyUnconfirmed and setTravelMode: required fields and allowed modes (ACT1111A01)", async () => {
+  const { env, master } = await setup();
+  const writer = randomKey();
+  assert.equal((await send(env, "/keys", "POST", { keys: [{ token: writer, scope: "write", expiresAt: null }], pin: PIN }, master)).status, 201);
+  const command = (action, extra) => ({ format: "bokki-command", version: 1, id: crypto.randomUUID(), action, ...extra });
+  const post = async (action, extra) => (await send(env, "/command", "POST", command(action, extra), writer)).status;
+  assert.equal(await post("classifyUnconfirmed", { date: "2026-11-11", start: "19:30", end: "20:15", categoryId: "rest" }), 201);
+  assert.equal(await post("classifyUnconfirmed", { date: "2026-11-11", start: "19:30", end: "20:15", categoryId: "rest", title: "산책" }), 201);
+  assert.equal(await post("classifyUnconfirmed", { date: "2026-11-11", start: "20:15", end: "19:30", categoryId: "rest" }), 422, "end before start");
+  assert.equal(await post("classifyUnconfirmed", { date: "2026-11-11", start: "19:30", end: "20:15" }), 422, "category required");
+  assert.equal(await post("setTravelMode", { date: "2026-11-11", moveId: A, mode: "subway" }), 201);
+  assert.equal(await post("setTravelMode", { date: "2026-11-11", moveId: A, mode: "rocket" }), 422);
+  assert.equal(await post("setTravelMode", { date: "2026-11-11", mode: "bus" }), 422, "move id required");
+  const reply = JSON.stringify(await (await mcp(env, writer, "set_travel_mode", { date: "2026-11-11", moveId: A, mode: "car" })).json());
+  assert.doesNotMatch(reply, /isError":true/);
+});

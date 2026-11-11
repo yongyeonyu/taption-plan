@@ -636,7 +636,7 @@
    "ko": "AI 말풍선",
    "en": "AI speech bubbles",
    "files": [
-    "AssistantCommandEdits.swift:42"
+    "AssistantCommandEdits.swift:44"
    ],
    "args": [],
    "targets": [
@@ -660,7 +660,7 @@
    "ko": "AI 비서 요청을 반영했어요",
    "en": "Applied AI assistant requests",
    "files": [
-    "AssistantCommands.swift:333"
+    "AssistantCommands.swift:339"
    ],
    "args": [],
    "targets": [
@@ -20689,8 +20689,8 @@
    "ko": "그 뒤에 바뀐 내용이 있어 되돌리지 못했어요. 앱에서 직접 고쳐 주세요.",
    "en": "It changed afterwards, so it couldn't be undone. Please edit it in the app.",
    "files": [
-    "AssistantActionLog.swift:233",
-    "AssistantActionLog.swift:242"
+    "AssistantActionLog.swift:259",
+    "AssistantActionLog.swift:268"
    ],
    "args": [],
    "targets": [
@@ -32925,7 +32925,7 @@
    "ko": "가계부 {0}개",
    "en": "{0} ledger entr(ies)",
    "files": [
-    "AssistantCommands.swift:331"
+    "AssistantCommands.swift:337"
    ],
    "args": [
     "ledger"
@@ -32951,7 +32951,7 @@
    "ko": "가계부 기록 고치기",
    "en": "Edit ledger entries",
    "files": [
-    "AssistantCommandEdits.swift:44"
+    "AssistantCommandEdits.swift:46"
    ],
    "args": [],
    "targets": [
@@ -32963,7 +32963,7 @@
    "ko": "가계부 기록 더하기",
    "en": "Add ledger entries",
    "files": [
-    "AssistantCommandEdits.swift:43"
+    "AssistantCommandEdits.swift:45"
    ],
    "args": [],
    "targets": [
@@ -33073,7 +33073,7 @@
    "ko": "가림",
    "en": "Hidden",
    "files": [
-    "AssistantCommandEdits.swift:254"
+    "AssistantCommandEdits.swift:262"
    ],
    "args": [],
    "targets": [
@@ -34127,7 +34127,7 @@
    "ko": "계절",
    "en": "Seasons",
    "files": [
-    "AssistantDataActions.swift:333",
+    "AssistantDataActions.swift:362",
     "MapHomeView+Map.swift:938"
    ],
    "args": [],
@@ -35058,8 +35058,8 @@
    "ko": "그 뒤에 바뀐 내용이 있어 되돌리지 못했어요. 앱에서 직접 고쳐 주세요.",
    "en": "It changed afterwards, so it couldn't be undone. Please edit it in the app.",
    "files": [
-    "AssistantActionLog.swift:232",
-    "AssistantActionLog.swift:241"
+    "AssistantActionLog.swift:258",
+    "AssistantActionLog.swift:267"
    ],
    "args": [],
    "targets": [
@@ -35488,7 +35488,7 @@
    "ko": "기록 가리기",
    "en": "Hide records",
    "files": [
-    "AssistantCommandEdits.swift:24"
+    "AssistantCommandEdits.swift:26"
    ],
    "args": [],
    "targets": [
@@ -35562,7 +35562,7 @@
    "ko": "기록 수정 {0}개",
    "en": "{0} record edit(s)",
    "files": [
-    "AssistantCommands.swift:328"
+    "AssistantCommands.swift:334"
    ],
    "args": [
     "edits"
@@ -35590,7 +35590,7 @@
    "ko": "기록 시간 고치기",
    "en": "Change record times",
    "files": [
-    "AssistantCommandEdits.swift:26"
+    "AssistantCommandEdits.swift:28"
    ],
    "args": [],
    "targets": [
@@ -35602,7 +35602,7 @@
    "ko": "기록 이름·분류 고치기",
    "en": "Rename or reclassify records",
    "files": [
-    "AssistantCommandEdits.swift:23"
+    "AssistantCommandEdits.swift:25"
    ],
    "args": [],
    "targets": [
@@ -35638,7 +35638,7 @@
    "ko": "기록 합치기",
    "en": "Merge records",
    "files": [
-    "AssistantCommandEdits.swift:25"
+    "AssistantCommandEdits.swift:27"
    ],
    "args": [],
    "targets": [
@@ -36115,7 +36115,7 @@
    "ko": "끔",
    "en": "Off",
    "files": [
-    "AssistantDataActions.swift:346",
+    "AssistantDataActions.swift:375",
     "MapHomeAppleWatchMenuItem.swift:132"
    ],
    "args": [],
@@ -38214,7 +38214,7 @@
    "ko": "루틴 고치기",
    "en": "Edit routines",
    "files": [
-    "AssistantCommandEdits.swift:32"
+    "AssistantCommandEdits.swift:34"
    ],
    "args": [],
    "targets": [
@@ -38226,7 +38226,7 @@
    "ko": "루틴 더하기",
    "en": "Add routines",
    "files": [
-    "AssistantCommandEdits.swift:31"
+    "AssistantCommandEdits.swift:33"
    ],
    "args": [],
    "targets": [
@@ -38238,7 +38238,7 @@
    "ko": "루틴 지우기",
    "en": "Delete routines",
    "files": [
-    "AssistantCommandEdits.swift:33"
+    "AssistantCommandEdits.swift:35"
    ],
    "args": [],
    "targets": [
@@ -38399,7 +38399,7 @@
    "ko": "말풍선 {0}개",
    "en": "{0} bubble(s)",
    "files": [
-    "AssistantCommands.swift:330"
+    "AssistantCommands.swift:336"
    ],
    "args": [
     "bubbles"
@@ -38534,8 +38534,8 @@
    "en": "Place",
    "files": [
     "LedgerTollRepeat.swift:131",
-    "AssistantActivity.swift:193",
-    "AssistantActivity.swift:279"
+    "AssistantActivity.swift:196",
+    "AssistantActivity.swift:283"
    ],
    "args": [],
    "targets": [
@@ -38840,7 +38840,7 @@
    "ko": "메모 {0}개",
    "en": "{0} memo(s)",
    "files": [
-    "AssistantCommands.swift:326"
+    "AssistantCommands.swift:332"
    ],
    "args": [
     "memos"
@@ -38866,7 +38866,7 @@
    "ko": "메모 고치기",
    "en": "Edit memos",
    "files": [
-    "AssistantCommandEdits.swift:29"
+    "AssistantCommandEdits.swift:31"
    ],
    "args": [],
    "targets": [
@@ -38902,7 +38902,7 @@
    "ko": "메모 더하기",
    "en": "Add memos",
    "files": [
-    "AssistantCommandEdits.swift:21"
+    "AssistantCommandEdits.swift:23"
    ],
    "args": [],
    "targets": [
@@ -38962,7 +38962,7 @@
    "ko": "메모 지우기",
    "en": "Delete memos",
    "files": [
-    "AssistantCommandEdits.swift:30"
+    "AssistantCommandEdits.swift:32"
    ],
    "args": [],
    "targets": [
@@ -39246,7 +39246,7 @@
    "ko": "못 한 것 {0}개",
    "en": "{0} not done",
    "files": [
-    "AssistantCommands.swift:332"
+    "AssistantCommands.swift:338"
    ],
    "args": [
     "rejected"
@@ -39446,6 +39446,18 @@
    ]
   },
   {
+   "key": "미확인 시간 분류하기|Classify unconfirmed time",
+   "ko": "미확인 시간 분류하기",
+   "en": "Classify unconfirmed time",
+   "files": [
+    "AssistantCommandEdits.swift:47"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "미확인 시간이 있어요|Some time is unconfirmed",
    "ko": "미확인 시간이 있어요",
    "en": "Some time is unconfirmed",
@@ -39474,9 +39486,9 @@
    "ko": "미확인",
    "en": "Unconfirmed",
    "files": [
+    "AssistantDataActions.swift:133",
     "MapHomeLocationPresentation.swift:311",
-    "MapHomeNLEClipEditor.swift:459",
-    "AppModel+WidgetLiveActivity.swift:109"
+    "MapHomeNLEClipEditor.swift:459"
    ],
    "args": [],
    "targets": [
@@ -40097,7 +40109,7 @@
    "ko": "백자",
    "en": "Porcelain",
    "files": [
-    "AssistantDataActions.swift:336",
+    "AssistantDataActions.swift:365",
     "MapHomeView+Map.swift:941"
    ],
    "args": [],
@@ -42256,7 +42268,7 @@
    "ko": "설정 {0}개",
    "en": "{0} setting(s)",
    "files": [
-    "AssistantCommands.swift:329"
+    "AssistantCommands.swift:335"
    ],
    "args": [
     "settings"
@@ -42896,7 +42908,7 @@
    "ko": "수면 시간 고치기",
    "en": "Correct sleep times",
    "files": [
-    "AssistantCommandEdits.swift:38"
+    "AssistantCommandEdits.swift:40"
    ],
    "args": [],
    "targets": [
@@ -42950,7 +42962,7 @@
    "ko": "수묵",
    "en": "Ink Wash",
    "files": [
-    "AssistantDataActions.swift:335",
+    "AssistantDataActions.swift:364",
     "MapHomeView+Map.swift:940"
    ],
    "args": [],
@@ -43718,7 +43730,7 @@
    "ko": "실외(고대비)",
    "en": "Outdoor (high contrast)",
    "files": [
-    "AssistantDataActions.swift:332",
+    "AssistantDataActions.swift:361",
     "MapHomeView+Map.swift:937"
    ],
    "args": [],
@@ -44302,7 +44314,7 @@
    "ko": "애플맵",
    "en": "Apple Maps",
    "files": [
-    "AssistantDataActions.swift:329",
+    "AssistantDataActions.swift:358",
     "MapHomeView+Map.swift:933"
    ],
    "args": [],
@@ -44525,7 +44537,7 @@
    "ko": "앱 언어 바꾸기",
    "en": "Change app language",
    "files": [
-    "AssistantCommandEdits.swift:39"
+    "AssistantCommandEdits.swift:41"
    ],
    "args": [],
    "targets": [
@@ -44706,7 +44718,7 @@
    "ko": "야간",
    "en": "Night",
    "files": [
-    "AssistantDataActions.swift:331",
+    "AssistantDataActions.swift:360",
     "MapHomeView+Map.swift:936"
    ],
    "args": [],
@@ -45214,7 +45226,7 @@
    "ko": "여행 일정 고치기",
    "en": "Edit trip stops",
    "files": [
-    "AssistantCommandEdits.swift:35"
+    "AssistantCommandEdits.swift:37"
    ],
    "args": [],
    "targets": [
@@ -45226,7 +45238,7 @@
    "ko": "여행 일정 더하기",
    "en": "Add trip stops",
    "files": [
-    "AssistantCommandEdits.swift:34"
+    "AssistantCommandEdits.swift:36"
    ],
    "args": [],
    "targets": [
@@ -45238,7 +45250,7 @@
    "ko": "여행 일정 상태 바꾸기",
    "en": "Change trip stop status",
    "files": [
-    "AssistantCommandEdits.swift:37"
+    "AssistantCommandEdits.swift:39"
    ],
    "args": [],
    "targets": [
@@ -45250,7 +45262,7 @@
    "ko": "여행 일정 지우기",
    "en": "Delete trip stops",
    "files": [
-    "AssistantCommandEdits.swift:36"
+    "AssistantCommandEdits.swift:38"
    ],
    "args": [],
    "targets": [
@@ -47670,7 +47682,7 @@
    "ko": "위성",
    "en": "Satellite",
    "files": [
-    "AssistantDataActions.swift:330",
+    "AssistantDataActions.swift:359",
     "MapHomeView+Map.swift:934"
    ],
    "args": [],
@@ -49108,6 +49120,18 @@
    ]
   },
   {
+   "key": "이동 수단 고치기|Correct travel modes",
+   "ko": "이동 수단 고치기",
+   "en": "Correct travel modes",
+   "files": [
+    "AssistantCommandEdits.swift:48"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "이동 수단|Transport",
    "ko": "이동 수단",
    "en": "Transport",
@@ -49767,7 +49791,7 @@
    "ko": "일정 {0}개",
    "en": "{0} schedule(s)",
    "files": [
-    "AssistantCommands.swift:327"
+    "AssistantCommands.swift:333"
    ],
    "args": [
     "schedules"
@@ -49793,7 +49817,7 @@
    "ko": "일정 고치기",
    "en": "Edit schedules",
    "files": [
-    "AssistantCommandEdits.swift:27"
+    "AssistantCommandEdits.swift:29"
    ],
    "args": [],
    "targets": [
@@ -49805,7 +49829,7 @@
    "ko": "일정 더하기",
    "en": "Add schedules",
    "files": [
-    "AssistantCommandEdits.swift:22"
+    "AssistantCommandEdits.swift:24"
    ],
    "args": [],
    "targets": [
@@ -49844,7 +49868,7 @@
    "ko": "일정 지우기",
    "en": "Delete schedules",
    "files": [
-    "AssistantCommandEdits.swift:28"
+    "AssistantCommandEdits.swift:30"
    ],
    "args": [],
    "targets": [
@@ -51889,7 +51913,7 @@
    "ko": "지도 스타일 바꾸기",
    "en": "Change map style",
    "files": [
-    "AssistantCommandEdits.swift:40"
+    "AssistantCommandEdits.swift:42"
    ],
    "args": [],
    "targets": [
@@ -52015,7 +52039,7 @@
    "ko": "지도 표시 켜고 끄기",
    "en": "Toggle map display",
    "files": [
-    "AssistantCommandEdits.swift:41"
+    "AssistantCommandEdits.swift:43"
    ],
    "args": [],
    "targets": [
@@ -52174,7 +52198,7 @@
    "ko": "지도에 경로 선",
    "en": "Route lines on map",
    "files": [
-    "AssistantDataActions.swift:343"
+    "AssistantDataActions.swift:372"
    ],
    "args": [],
    "targets": [
@@ -52198,7 +52222,7 @@
    "ko": "지도에 발자국",
    "en": "Footprints on map",
    "files": [
-    "AssistantDataActions.swift:344"
+    "AssistantDataActions.swift:373"
    ],
    "args": [],
    "targets": [
@@ -52222,7 +52246,7 @@
    "ko": "지도에 사진",
    "en": "Photos on map",
    "files": [
-    "AssistantDataActions.swift:342"
+    "AssistantDataActions.swift:371"
    ],
    "args": [],
    "targets": [
@@ -52334,8 +52358,8 @@
    "ko": "지움",
    "en": "Deleted",
    "files": [
-    "AssistantCommandEdits.swift:271",
-    "AssistantCommandEdits.swift:282",
+    "AssistantCommandEdits.swift:279",
+    "AssistantCommandEdits.swift:290",
     "AssistantDataActions.swift:66"
    ],
    "args": [],
@@ -53904,7 +53928,7 @@
    "ko": "켬",
    "en": "On",
    "files": [
-    "AssistantDataActions.swift:346"
+    "AssistantDataActions.swift:375"
    ],
    "args": [],
    "targets": [
@@ -54361,7 +54385,7 @@
    "ko": "판타지 지도",
    "en": "Fantasy Map",
    "files": [
-    "AssistantDataActions.swift:334",
+    "AssistantDataActions.swift:363",
     "MapHomeView+Map.swift:939"
    ],
    "args": [],

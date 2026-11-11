@@ -13,6 +13,8 @@ enum AssistantActionKind: String, CaseIterable, Identifiable, Codable, Sendable 
     case addExpense
     // AIQ1111A01: 앱이 넣은 결제 문자 기록을 AI가 다듬는다.
     case updateExpense
+    // ACT1111A01
+    case classifyUnconfirmed, setTravelMode
 
     var id: String { rawValue }
 
@@ -42,6 +44,8 @@ enum AssistantActionKind: String, CaseIterable, Identifiable, Codable, Sendable 
         case .setBubble: language.text("AI 말풍선", "AI speech bubbles")
         case .addExpense: language.text("가계부 기록 더하기", "Add ledger entries")
         case .updateExpense: language.text("가계부 기록 고치기", "Edit ledger entries")
+        case .classifyUnconfirmed: language.text("미확인 시간 분류하기", "Classify unconfirmed time")
+        case .setTravelMode: language.text("이동 수단 고치기", "Correct travel modes")
         }
     }
 }
@@ -116,6 +120,8 @@ extension AssistantCommand.Action {
         case .setBubble: .setBubble
         case .addExpense: .addExpense
         case .updateExpense: .updateExpense
+        case .classifyUnconfirmed: .classifyUnconfirmed
+        case .setTravelMode: .setTravelMode
         }
     }
 
@@ -123,7 +129,7 @@ extension AssistantCommand.Action {
     /// 루틴을 지우면 하위 일정도 함께 지워지므로 `plans`를 주면 그 수까지 센다(REV1110A06).
     func existingChangeCount(plans: [PlanRecord] = []) -> Int {
         switch self {
-        case .addMemo, .addSchedule, .addGoal, .addTripStop, .setBubble, .addExpense: 0
+        case .addMemo, .addSchedule, .addGoal, .addTripStop, .setBubble, .addExpense, .classifyUnconfirmed: 0
         case let .mergeRecords(_, ids, _, _): ids.count
         case let .deleteGoal(goalID):
             1 + (UUID(uuidString: goalID).flatMap { try? PlanHierarchy.descendants(of: $0, in: plans) }?.count ?? 0)
@@ -165,6 +171,8 @@ struct AssistantEditResult: Equatable, Sendable {
     var ledgerEntry: LedgerEntry?
     /// 고치거나 지우기 전 가계부 기록(AIQ1111A01). 되돌리면 이것으로 돌린다.
     var ledgerBefore: LedgerEntry?
+    /// 고치기 전 이동 구간과 수단 교정표(ACT1111A01). 되돌리면 이것으로 돌린다.
+    var movementBefore: AssistantMovementChange.State?
 
     static func rejected(_ reason: String) -> Self { Self(reason: reason) }
 }

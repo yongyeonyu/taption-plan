@@ -408,6 +408,49 @@ final class AssistantPhase3Tests: XCTestCase {
         XCTAssertTrue(undone)
     }
 
+    /// ACT1111A01: 미확인 시간은 아직 기록이 없는 부분만 채우고, 이동 수단 교정은 되돌리면 구간과 교정표가 그대로 돌아온다.
+    func testClassifyUnconfirmedFillsOnlyTheGapAndTravelModeIsUndoable() async throws {
+        let store = defaults()
+        var seed = TaptionDataSnapshot.empty
+        let work = ActualRecord(planID: nil, title: "업무", categoryID: "work", startedAt: at(9), endedAt: at(12), source: .location)
+        let ride = TravelSegment(mode: .car, span: TimeSpan(start: at(8, 30), end: at(9)), distanceMeters: 8_000, confidence: .medium, evidence: [])
+        seed.actuals = [work]
+        seed.travel = [ride]
+        let model = AppModel(repository: InMemoryPlanRepository(snapshot: seed), cloudSyncService: nil)
+        await model.bootstrap()
+        let category = try XCTUnwrap(model.snapshot.categories.first { $0.id != "unconfirmed" }).id
+
+        let parsed = try batch([
+            command("c0", "classifyUnconfirmed", ["date": "2026-11-10", "start": "11:00", "end": "13:00", "categoryId": category, "title": "산책"]),
+            command("t0", "setTravelMode", ["date": "2026-11-10", "moveId": ride.id.uuidString, "mode": "subway"]),
+            command("bad1", "classifyUnconfirmed", ["date": "2026-11-10", "start": "13:00", "end": "11:00", "categoryId": category]),
+            command("bad2", "setTravelMode", ["date": "2026-11-10", "moveId": ride.id.uuidString, "mode": "other"]),
+        ])
+        XCTAssertEqual(parsed.commands.map(\.action.kind), [.classifyUnconfirmed, .setTravelMode])
+        XCTAssertEqual(Set(parsed.invalidIDs), ["bad1", "bad2"])
+
+        let filled = try await apply(model, command("c1", "classifyUnconfirmed", ["date": "2026-11-10", "start": "11:00", "end": "13:00", "categoryId": category, "title": "산책"]), store: store)
+        let added = model.snapshot.actuals.filter { $0.id != work.id }
+        XCTAssertEqual(added.map(\.title), ["산책"])
+        XCTAssertEqual(added.first?.startedAt, at(12), "업무가 덮은 11~12시는 건드리지 않는다")
+        XCTAssertEqual(added.first?.endedAt, at(13))
+        XCTAssertEqual(added.first?.source, .manual)
+        let again = await model.applyAssistantCommands(try batch([command("c2", "classifyUnconfirmed", ["date": "2026-11-10", "start": "12:00", "end": "13:00", "categoryId": category])]), defaults: store)
+        XCTAssertEqual(again?.results, [.init(id: "c2", applied: false, reason: "no_gap")], "이미 채운 시간은 미확인이 아니다")
+        await undo(model, filled, store: store)
+        XCTAssertEqual(model.snapshot.actuals.map(\.id), [work.id])
+
+        let corrected = try await apply(model, command("t1", "setTravelMode", ["date": "2026-11-10", "moveId": ride.id.uuidString, "mode": "subway"]), store: store)
+        XCTAssertEqual(model.snapshot.travel.first?.mode, .subway)
+        XCTAssertEqual(model.snapshot.travel.first?.isConfirmed, true)
+        XCTAssertNotNil(corrected.delta.movement)
+        await undo(model, corrected, store: store)
+        XCTAssertEqual(model.snapshot.travel.first?.mode, .car)
+        XCTAssertEqual(model.snapshot.settings.movementCorrections, seed.settings.movementCorrections)
+        let missing = await model.applyAssistantCommands(try batch([command("t2", "setTravelMode", ["date": "2026-11-10", "moveId": UUID().uuidString, "mode": "bus"])]), defaults: store)
+        XCTAssertEqual(missing?.results, [.init(id: "t2", applied: false, reason: "no_record")])
+    }
+
     func testGoalAddUpdateDeleteAreUndoable() async throws {
         let store = defaults()
         let model = await makeModel()

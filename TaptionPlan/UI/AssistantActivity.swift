@@ -59,8 +59,10 @@ struct AssistantActivityDay: Codable, Equatable, Sendable {
         var start: String
         var end: String
         var minutes: Int
+        /// 이동 구간 id(ACT1111A01). `setTravelMode`가 이것으로 고른다. 예전 기록에는 없다.
+        var id: String?
 
-        private enum CodingKeys: String, CodingKey { case from, to, mode, start, end, minutes }
+        private enum CodingKeys: String, CodingKey { case from, to, mode, start, end, minutes, id }
 
         /// 출발·도착을 모르면 칸을 빼지 않고 null로 둔다.
         func encode(to encoder: Encoder) throws {
@@ -71,6 +73,7 @@ struct AssistantActivityDay: Codable, Equatable, Sendable {
             try values.encode(start, forKey: .start)
             try values.encode(end, forKey: .end)
             try values.encode(minutes, forKey: .minutes)
+            try values.encodeIfPresent(id, forKey: .id)
         }
     }
 
@@ -252,7 +255,8 @@ enum AssistantActivityBuilder {
                     ?? stays.first { $0.span.start >= segment.span.end.addingTimeInterval(-60) && $0.span.start.timeIntervalSince(segment.span.end) <= neighbourGap }
                 return AssistantActivityDay.Move(
                     from: name(from), to: name(to), mode: mode(segment.mode),
-                    start: stamp.instant(span.start), end: stamp.instant(span.end), minutes: minutes(span)
+                    start: stamp.instant(span.start), end: stamp.instant(span.end), minutes: minutes(span),
+                    id: segment.id.uuidString
                 )
             }
     }

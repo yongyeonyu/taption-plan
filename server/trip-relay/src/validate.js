@@ -173,6 +173,9 @@ export const COMMAND_FIELDS = {
   deleteTripStop: ["stopId"],
   setTripItemStatus: ["tripId", "itemId", "status"],
   updateSleep: ["recordId", "start", "end"],
+  // ACT1111A01: 앱이 분류하지 못한 시간(하루 기록의 unconfirmed)을 분류로 채우기, 이동 구간(moves의 id)의 수단 고치기.
+  classifyUnconfirmed: ["date", "start", "end", "title", "categoryId"],
+  setTravelMode: ["date", "moveId", "mode"],
   setBubble: ["date", "start", "end", "text", "kind"],
   // LED1110A01: 가계부 지출·수입. amount는 그 통화의 금액(양수), kind는 expense 기본 | income.
   addExpense: ["amount", "currency", "title", "category", "date", "time", "kind", "payer"],
@@ -184,6 +187,7 @@ export const COMMAND_FIELDS = {
   setDisplayOption: ["option", "enabled"],
 };
 export const ACTIONS = Object.keys(COMMAND_FIELDS);
+export const TRAVEL_MODES = ["walk", "subway", "bus", "car", "train", "flight"];
 export const EXPENSE_CATEGORIES = ["food", "cafe", "transport", "shopping", "living", "health", "culture", "travel", "lodging", "education", "gift", "salary", "other"];
 
 // 알려진 칸만 남긴 명령. 동작을 모르면 null.
@@ -270,6 +274,11 @@ export function isCommand(value) {
     case "updateSleep":
       return targetID(v.recordId) && optional(v.start, isClock) && optional(v.end, isClock) && (given(v.start) || given(v.end))
         && !(given(v.start) && v.start === v.end) && !(isInstant(v.start) && isInstant(v.end) && Date.parse(v.end) <= Date.parse(v.start));
+    case "classifyUnconfirmed":
+      return isDate(v.date) && isTime(v.start) && isTime(v.end) && v.end > v.start && targetID(v.categoryId)
+        && optional(v.title, title(100));
+    case "setTravelMode":
+      return isDate(v.date) && targetID(v.moveId) && oneOf(TRAVEL_MODES)(v.mode);
     // 같은 날 start < end(HH:mm).
     case "setBubble": {
       // BUB1110A02: kind "routine"(기본, 시간대 필수) | "event"(그날 하루 내내 맨 앞, 날이 지나면 앱이 지움, 시간대는 없어도 됨).

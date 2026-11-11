@@ -28,10 +28,12 @@ struct AssistantEditDelta: Codable, Equatable, Sendable {
     var ledgerEntry: LedgerEntry?
     /// 고치거나 지우기 전 기록(AIQ1111A01). 있으면 되돌릴 때 지우지 않고 이것으로 돌린다.
     var ledgerBefore: LedgerEntry?
+    /// 이동 수단 교정 전·후(ACT1111A01). 예전 기록에는 없다.
+    var movement: AssistantMovementChange?
 
     var isEmpty: Bool {
         plans.isEmpty && memos.isEmpty && actuals.isEmpty && corrections.isEmpty
-            && addedSleepSpans.isEmpty && removedSleepSpans.isEmpty && travel == nil && (preferences ?? []).isEmpty
+            && addedSleepSpans.isEmpty && removedSleepSpans.isEmpty && travel == nil && (preferences ?? []).isEmpty && movement == nil
     }
 
     /// 기록은 명령이 고른 id와 새로 생기거나 사라진 수동 기록만 본다. 그 사이 센서 갱신이 바꾼 자동 기록은 담지 않는다.
@@ -90,6 +92,8 @@ struct AssistantEditDelta: Codable, Equatable, Sendable {
         if let style, result.settings.mapDisplayStyle.rawValue != style.after { return nil }
         let actualsByID = Dictionary(result.actuals.map { ($0.id, $0) }, uniquingKeysWith: { _, last in last })
         for change in actuals where Self.blocksUndo(change, current: actualsByID[change.id]) { return nil }
+        // 이동 수단은 그 뒤 사용자나 센서가 같은 구간·교정표를 바꿨으면 되돌리지 않는다.
+        if let movement, AssistantMovementChange.State(result, ids: Set(movement.after.segments.map(\.id))) != movement.after { return nil }
 
         var renamed: [UUID: UUID] = [:]
         for change in plans {
@@ -115,6 +119,12 @@ struct AssistantEditDelta: Codable, Equatable, Sendable {
             }
         }
         for change in corrections { result.settings.activityCorrections[change.id] = change.before }
+        if let movement {
+            for segment in movement.before.segments {
+                if let index = result.travel.firstIndex(where: { $0.id == segment.id }) { result.travel[index] = segment }
+            }
+            result.settings.movementCorrections = movement.before.corrections
+        }
         if let travel { travel.before.apply(to: &result.settings, renamed: renamed) }
         if let style, let raw = style.before, let value = MapDisplayStyle(rawValue: raw) { result.settings.mapDisplayStyle = value }
         // 기록은 AI가 바꾼 칸만 예전 값으로 돌린다. 그 뒤 센서가 고친 자동 기록 위에 옛 사본을 덮어쓰지 않는다(REV1110A06).
@@ -181,6 +191,22 @@ struct AssistantLogEntry: Codable, Equatable, Identifiable, Sendable {
     /// 명령을 보낸 연결 키 id와 그때의 연결 이름(SEC1110A02). 예전 기록에는 없다.
     var keyID: String?
     var connection: String?
+}
+
+/// AI가 고친 이동 구간과 수단 교정표의 전·후(ACT1111A01). 구간은 명령이 고른 것만 담는다.
+struct AssistantMovementChange: Codable, Equatable, Sendable {
+    struct State: Codable, Equatable, Sendable {
+        var segments: [TravelSegment]
+        var corrections: [TravelModeCorrection]
+
+        init(_ snapshot: TaptionDataSnapshot, ids: Set<UUID>) {
+            segments = snapshot.travel.filter { ids.contains($0.id) }.sorted { $0.id.uuidString < $1.id.uuidString }
+            corrections = snapshot.settings.movementCorrections
+        }
+    }
+
+    var before: State
+    var after: State
 }
 
 /// 최근 200개를 앱 Application Support의 파일 하나에 둔다. 메모 글이 들어 있어 기기 밖으로 보내지 않는다.
