@@ -569,6 +569,27 @@ struct NLETrack: Hashable, Sendable {
         return merged
     }
 
+    /// 경계를 끌어 손가락이 지나간 이웃 클립들(RNG1111A02). 맞닿은 이웃부터 차례로, 가운데를 지나간 것만.
+    func clipsPassed(from id: String, edge: NLEClipEdge, fingerMinute: Int) -> [NLEClip] {
+        guard var current = clip(id) else { return [] }
+        var result: [NLEClip] = []
+        while let next = adjacentClip(of: current.id, edge: edge) {
+            let middle = Double(next.startMinute + next.endMinute) / 2
+            guard edge == .end ? Double(fingerMinute) > middle : Double(fingerMinute) < middle else { break }
+            result.append(next)
+            current = next
+        }
+        return result
+    }
+
+    /// 끈 클립이 이웃들을 차례로 품는다. 원본 구간이 달라도 롤 편집처럼 각 원본에 조각으로 저장된다.
+    @discardableResult
+    mutating func mergeChain(into id: String, neighbors: [String]) -> Int {
+        var merged = 0
+        for neighbor in neighbors where mergeIntoDragged(id, neighborID: neighbor) { merged += 1 }
+        return merged
+    }
+
     /// 손가락이 지나간 범위에 걸친 클립.
     func clipIDs(from lower: Int, to upper: Int) -> [String] {
         let range = min(lower, upper)...max(lower, upper)

@@ -3284,6 +3284,21 @@
    ]
   },
   {
+   "key": "{0}개 구간을 ‘{1}’로 합칩니다. 센서 원본은 그대로 남습니다.|Merge {0} spans into ‘{1}’. Sensor data is kept.",
+   "ko": "{0}개 구간을 ‘{1}’로 합칩니다. 센서 원본은 그대로 남습니다.",
+   "en": "Merge {0} spans into ‘{1}’. Sensor data is kept.",
+   "files": [
+    "MapHomeNLEClipEditor.swift:168"
+   ],
+   "args": [
+    "prompt.chainIDs.count",
+    "prompt.clipTitle"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "{0}개 유형|{0} types",
    "ko": "{0}개 유형",
    "en": "{0} types",
@@ -32428,7 +32443,7 @@
    "ko": "‘{0}’ 구간을 ‘{1}’로 합칩니다. 센서 원본은 그대로 남습니다.",
    "en": "Merge ‘{0}’ into ‘{1}’. Sensor data is kept.",
    "files": [
-    "MapHomeNLEClipEditor.swift:165"
+    "MapHomeNLEClipEditor.swift:173"
    ],
    "args": [
     "prompt.neighborTitle",
@@ -32689,7 +32704,7 @@
    "ko": "가르기",
    "en": "Split",
    "files": [
-    "MapHomeNLEClipEditor.swift:480",
+    "MapHomeNLEClipEditor.swift:489",
     "MapHomeNLERawDetail.swift:52",
     "FirstRunTutorialGuides.swift:50"
    ],
@@ -35578,7 +35593,7 @@
    "ko": "끝 자르기",
    "en": "Trim end",
    "files": [
-    "MapHomeNLEClipEditor.swift:420"
+    "MapHomeNLEClipEditor.swift:429"
    ],
    "args": [],
    "targets": [
@@ -36353,7 +36368,7 @@
    "ko": "다시",
    "en": "Redo",
    "files": [
-    "MapHomeNLEClipEditor.swift:502"
+    "MapHomeNLEClipEditor.swift:511"
    ],
    "args": [],
    "targets": [
@@ -36638,7 +36653,7 @@
    "ko": "대분류",
    "en": "Main",
    "files": [
-    "MapHomeNLEClipEditor.swift:246"
+    "MapHomeNLEClipEditor.swift:255"
    ],
    "args": [],
    "targets": [
@@ -37254,7 +37269,7 @@
    "en": "Undo",
    "files": [
     "AssistantSafetyViews.swift:353",
-    "MapHomeNLEClipEditor.swift:494",
+    "MapHomeNLEClipEditor.swift:503",
     "MapHomeStickerEditor.swift:332"
    ],
    "args": [],
@@ -38765,7 +38780,7 @@
    "en": "Unconfirmed",
    "files": [
     "MapHomeLocationPresentation.swift:311",
-    "MapHomeNLEClipEditor.swift:450",
+    "MapHomeNLEClipEditor.swift:459",
     "AppModel+WidgetLiveActivity.swift:109"
    ],
    "args": [],
@@ -39977,7 +39992,7 @@
    "en": "Category",
    "files": [
     "LedgerSheet.swift:401",
-    "MapHomeNLEClipEditor.swift:557",
+    "MapHomeNLEClipEditor.swift:566",
     "MapHomeNLERawDetail.swift:50"
    ],
    "args": [],
@@ -40843,7 +40858,7 @@
    "ko": "상세 활동",
    "en": "Detail",
    "files": [
-    "MapHomeNLEClipEditor.swift:247"
+    "MapHomeNLEClipEditor.swift:256"
    ],
    "args": [],
    "targets": [
@@ -42767,7 +42782,7 @@
    "ko": "시작 자르기",
    "en": "Trim start",
    "files": [
-    "MapHomeNLEClipEditor.swift:419"
+    "MapHomeNLEClipEditor.swift:428"
    ],
    "args": [],
    "targets": [
@@ -49477,7 +49492,7 @@
    "en": "Place",
    "files": [
     "LedgerSheet.swift:343",
-    "MapHomeNLEClipEditor.swift:245"
+    "MapHomeNLEClipEditor.swift:254"
    ],
    "args": [],
    "targets": [
@@ -49850,7 +49865,7 @@
    "ko": "적용",
    "en": "Apply",
    "files": [
-    "MapHomeNLEClipEditor.swift:212"
+    "MapHomeNLEClipEditor.swift:221"
    ],
    "args": [],
    "targets": [
@@ -51195,7 +51210,7 @@
    "ko": "지우기",
    "en": "Clear",
    "files": [
-    "MapHomeNLEClipEditor.swift:487",
+    "MapHomeNLEClipEditor.swift:496",
     "MapHomeNLERawDetail.swift:54"
    ],
    "args": [],
@@ -52874,7 +52889,7 @@
    "ko": "클립을 고르세요",
    "en": "Select a clip",
    "files": [
-    "MapHomeNLEClipEditor.swift:458"
+    "MapHomeNLEClipEditor.swift:467"
    ],
    "args": [],
    "targets": [
@@ -54060,7 +54075,7 @@
    "ko": "합치기",
    "en": "Merge",
    "files": [
-    "MapHomeNLEClipEditor.swift:162"
+    "MapHomeNLEClipEditor.swift:164"
    ],
    "args": [],
    "targets": [
@@ -54084,7 +54099,7 @@
    "ko": "합칠까요?",
    "en": "Merge?",
    "files": [
-    "MapHomeNLEClipEditor.swift:158"
+    "MapHomeNLEClipEditor.swift:160"
    ],
    "args": [],
    "targets": [
@@ -54754,7 +54769,7 @@
    "ko": "확대",
    "en": "Zoom",
    "files": [
-    "MapHomeNLEClipEditor.swift:521",
+    "MapHomeNLEClipEditor.swift:530",
     "MapHomeNLEToolbar.swift:70"
    ],
    "args": [],

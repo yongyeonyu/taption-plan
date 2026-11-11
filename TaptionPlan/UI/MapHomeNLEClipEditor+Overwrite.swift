@@ -175,5 +175,7 @@ struct NLEMergePrompt: Equatable {
     let neighborID: String
     let clipTitle: String
     let neighborTitle: String
+    /// 손가락이 여러 클립을 지나갔으면 그 전부(맞닿은 것부터). 비어 있으면 `neighborID` 하나.
+    var chainIDs: [String] = []
 }
 

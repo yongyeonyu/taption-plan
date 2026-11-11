@@ -72,6 +72,8 @@ struct MapHomeNLEClipEditor: View {
     @State var pickedClipIDs: Set<String> = []
     /// 경계 손잡이를 이웃의 먼 쪽 끝까지 가져갔을 때 묻는 합치기 확인.
     @State private var mergePrompt: NLEMergePrompt?
+    /// 경계를 끄는 동안 손가락이 지나간 클립. 손을 떼면 한꺼번에 합칠지 묻는다(RNG1111A02).
+    @State private var mergePreviewIDs: [String] = []
     /// 이번 손잡이 끌기를 시작할 때 맞닿은 이웃의 길이(분). 이미 최소 길이였던 이웃은 "끝까지 갔다"고 보지 않는다.
     /// 경계를 끌기 시작할 때 잡은 클립과 맞닿은 이웃의 길이.
     @State private var trimLengthsAtStart: (clip: Int, neighbor: Int)?
@@ -162,10 +164,17 @@ struct MapHomeNLEClipEditor: View {
             Button(language.text("합치기", "Merge")) { confirmMerge(prompt); resetDragState() }
             Button(language.text("취소", "Cancel"), role: .cancel) { resetDragState() }
         } message: { prompt in
-            Text(language.text(
-                "‘\(prompt.neighborTitle)’ 구간을 ‘\(prompt.clipTitle)’로 합칩니다. 센서 원본은 그대로 남습니다.",
-                "Merge ‘\(prompt.neighborTitle)’ into ‘\(prompt.clipTitle)’. Sensor data is kept."
-            ))
+            if prompt.chainIDs.count > 1 {
+                Text(language.text(
+                    "\(prompt.chainIDs.count)개 구간을 ‘\(prompt.clipTitle)’로 합칩니다. 센서 원본은 그대로 남습니다.",
+                    "Merge \(prompt.chainIDs.count) spans into ‘\(prompt.clipTitle)’. Sensor data is kept."
+                ))
+            } else {
+                Text(language.text(
+                    "‘\(prompt.neighborTitle)’ 구간을 ‘\(prompt.clipTitle)’로 합칩니다. 센서 원본은 그대로 남습니다.",
+                    "Merge ‘\(prompt.neighborTitle)’ into ‘\(prompt.clipTitle)’. Sensor data is kept."
+                ))
+            }
         }
         .sheet(isPresented: $isOverwritePresented) { overwriteSheet }
         .overlay(alignment: .top) { editorNoticeBanner }
@@ -353,7 +362,7 @@ struct MapHomeNLEClipEditor: View {
 
     private func clipBlock(_ clip: NLEClip, width: CGFloat, blockHeight: CGFloat) -> some View {
         let tint = Self.tint(for: clip.option.categoryID)
-        let isSelected = clip.id == selectedClipID || pickedClipIDs.contains(clip.id)
+        let isSelected = clip.id == selectedClipID || pickedClipIDs.contains(clip.id) || mergePreviewIDs.contains(clip.id)
         let isLifted = clip.id == liftedClipID
         return ZStack(alignment: .topLeading) {
             RoundedRectangle(cornerRadius: 9, style: .continuous)
@@ -682,11 +691,16 @@ struct MapHomeNLEClipEditor: View {
         pushUndoIfNeeded()
         let snapped = NLESnapPolicy.snapped(minute, to: snapTargets(lane: lane, excluding: id), threshold: snapThresholdMinutes)
         trimClip(lane: lane, id: id, edge: edge, toMinute: snapped)
-        askToMergeIfReachedNeighborEnd()
+        // 끄는 도중에는 묻지 않고 지나간 클립만 표시한다. 여러 개를 한 번에 지나갈 수 있게(RNG1111A02).
+        if lane == .main {
+            let passed = track.clipsPassed(from: id, edge: edge, fingerMinute: minute).map(\.id)
+            if passed != mergePreviewIDs { mergePreviewIDs = passed }
+        }
     }
 
     private func resetDragState() {
         trimLengthsAtStart = nil
+        mergePreviewIDs = []
         dragMode = .none
         isLifted = false
         didPushUndoForDrag = false
@@ -713,6 +727,19 @@ struct MapHomeNLEClipEditor: View {
         case let .trimStart(.main, id): target = (id, .start)
         case let .trimEnd(.main, id): target = (id, .end)
         default: return
+        }
+        // 손가락이 이웃 클립의 가운데를 지나갔으면 지나간 것 모두를 끈 클립으로 합칠지 묻는다(RNG1111A02).
+        let chain = track.clipsPassed(from: target.id, edge: target.edge, fingerMinute: lastDragMinute)
+        if let first = chain.first, let dragged = track.clip(target.id), !dragged.isGap {
+            stopAutoScroll()
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            mergePrompt = NLEMergePrompt(
+                clipID: dragged.id, neighborID: first.id,
+                clipTitle: Self.mainTitle(dragged.option, language: language),
+                neighborTitle: Self.mainTitle(first.option, language: language),
+                chainIDs: chain.map(\.id)
+            )
+            return
         }
         // 지금 배율에서 18pt보다 얇게 눌린 클립은 끝까지 민 것으로 본다.
         let squeezeMinutes = Int((Self.mergeSqueezePoints / max(0.01, minuteHeight)).rounded(.up))
@@ -755,7 +782,8 @@ struct MapHomeNLEClipEditor: View {
     private func confirmMerge(_ prompt: NLEMergePrompt) {
         guard track.clip(prompt.clipID) != nil else { return }
         pushUndo()
-        if track.mergeIntoDragged(prompt.clipID, neighborID: prompt.neighborID) {
+        let neighbors = prompt.chainIDs.isEmpty ? [prompt.neighborID] : prompt.chainIDs
+        if track.mergeChain(into: prompt.clipID, neighbors: neighbors) > 0 {
             selectedClipID = prompt.clipID
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         }

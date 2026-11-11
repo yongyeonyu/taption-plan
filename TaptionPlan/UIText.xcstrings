@@ -19020,6 +19020,83 @@
         }
       }
     },
+    "{0}개 구간을 ‘{1}’로 합칩니다. 센서 원본은 그대로 남습니다.|Merge {0} spans into ‘{1}’. Sensor data is kept." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0}個の区間を「{1}」にまとめます。センサーの元データはそのまま残ります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将 {0} 个区间合并为「{1}」。传感器原始数据会保留。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "將 {0} 個區間合併為「{1}」。感測器原始資料會保留。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} Abschnitte zu „{1}“ zusammenführen. Sensordaten bleiben erhalten."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fusionner {0} plages dans « {1} ». Les données des capteurs sont conservées."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unisci {0} intervalli in «{1}». I dati dei sensori restano."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unir {0} tramos en «{1}». Los datos del sensor se conservan."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Juntar {0} trechos em “{1}”. Os dados dos sensores são mantidos."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gộp {0} đoạn vào «{1}». Dữ liệu cảm biến gốc vẫn được giữ."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gabungkan {0} rentang ke “{1}”. Data sensor tetap disimpan."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "รวม {0} ช่วงเป็น «{1}» ข้อมูลเซ็นเซอร์เดิมยังอยู่"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} हिस्सों को “{1}” में मिलाएँ। सेंसर का मूल डेटा बना रहेगा।"
+          }
+        }
+      }
+    },
     "{0}개 유형|{0} types" : {
       "extractionState" : "manual",
       "localizations" : {

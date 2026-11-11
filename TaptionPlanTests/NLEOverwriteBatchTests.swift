@@ -171,6 +171,33 @@ final class NLEOverwriteBatchTests: XCTestCase {
         }
     }
 
+    /// RNG1111A02: 업무 끝 손잡이를 아래로 끌어 조각들의 가운데를 지나가면 지나간 것 모두를 한 번에 합친다.
+    func testDraggingEdgeAcrossFragmentsMergesThemAll() throws {
+        let work = UUID(), home1 = UUID(), rest = UUID(), home2 = UUID(), move = UUID()
+        var track = MapHomeNLEClipEditor.makeMainTrack(segments: [
+            segment(732, 996, "work", work),
+            MapHomeTimeRailSegment(startMinute: 996, endMinute: 1_020, categoryID: "unconfirmed", title: "미확인", sourceIDs: []),
+            segment(1_020, 1_060, "household", home1),
+            segment(1_060, 1_150, "rest", rest),
+            segment(1_150, 1_197, "household", home2),
+            segment(1_197, 1_250, "eating", move),
+        ])
+        let first = try XCTUnwrap(track.clip(atMinute: 800))
+        XCTAssertEqual(track.clipsPassed(from: first.id, edge: .end, fingerMinute: 1_000).count, 0, "not past the middle yet")
+        let passed = track.clipsPassed(from: first.id, edge: .end, fingerMinute: 1_190)
+        XCTAssertEqual(passed.count, 4, "gap, household, rest, household; not the next clip")
+        XCTAssertEqual(track.mergeChain(into: first.id, neighbors: passed.map(\.id)), 4)
+        let merged = try XCTUnwrap(track.clip(first.id))
+        XCTAssertEqual([merged.startMinute, merged.endMinute], [732, 1_197])
+        XCTAssertEqual(merged.option.categoryID, "work")
+        XCTAssertEqual(track.clip(atMinute: 1_200)?.option.categoryID, "eating")
+        let requests = track.editRequests(dayStart: dayStart, calendar: calendar)
+        for source in [home1, rest, home2] {
+            let request = try XCTUnwrap(requests.first { $0.sourceIDs == [source] })
+            XCTAssertEqual(ActivitySectionOverrideEngine.pieces(for: request).map(\.option.categoryID), ["work"])
+        }
+    }
+
     /// UNC1111A01: 사이드바에서 고른 미확인 구간 여러 개가 한 번의 일괄 저장 요청으로 바뀐다. 미확인이 아닌 구간은 빠진다.
     func testUnconfirmedBatchBuildsOneRequestPerPickedSpan() throws {
         let category = try XCTUnwrap(MapHomeSidebarMajorCategory.all.first { $0.id == "work" })
