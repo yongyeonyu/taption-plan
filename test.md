@@ -2,6 +2,12 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## TFB1111A04 · TestFlight 308 (2026-11-11)
+
+- 내용: LED1111A09·PBH1111A01·CUE1111A01·SYN1111A01~A04·PBD1111A01(장소도감 설명 합침)까지. 처음 시작한 배포는 5분 간격 변경을 넣으려고 아카이브 중에 멈췄고, 올린 번호를 되돌린 뒤 다시 돌렸다(`build/validation/tfb-308.log`, 업로드 전 중단).
+- `release.sh --yes`: 307 → 308. 산출물의 네 번들(앱·위젯·Watch·Watch 위젯) 모두 308. App Store Connect 처리 `VALID`, 「TP Taption Plan 내부 테스트」 그룹 연결·테스터 1명 노출 확인(`build/validation/TFB1111A04/testflight-report.json`, 로그 `build/validation/tfb-308b.log`).
+- 기기 설치·화면 확인은 하지 않았다.
+
 ## SYN1111A04 · 평소 확인 간격 5분 (2026-11-11)
 
 - 대표 결정: AI와 대화 중이 아닐 때 확인 간격을 10분에서 5분으로 줄였다(앱이 화면에 있을 때만, 한 시간 12번).
