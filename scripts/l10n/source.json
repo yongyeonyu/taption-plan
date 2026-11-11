@@ -119,7 +119,7 @@
    "ko": "1 {0} ≈ {1}원",
    "en": "1 {0} ≈ ₩{1}",
    "files": [
-    "LedgerSheet.swift:412"
+    "LedgerSheet.swift:423"
    ],
    "args": [
     "entry.currency",
@@ -686,7 +686,7 @@
    "ko": "AI 비서가 앱으로 바로 보내기",
    "en": "Let the AI send it to the app",
    "files": [
-    "TripImportSheet.swift:293"
+    "TripImportSheet.swift:370"
    ],
    "args": [],
    "targets": [
@@ -722,7 +722,7 @@
    "ko": "AI 앱이 열리면 객관식 질문에 답하며 항공편·숙소·관광지를 정해요. 마지막에 나오는 JSON을 복사해 돌아오세요.",
    "en": "In the AI app, answer multiple-choice questions to pick flights, hotels and places. Copy the JSON it gives you at the end and come back.",
    "files": [
-    "TripImportSheet.swift:266"
+    "TripImportSheet.swift:343"
    ],
    "args": [],
    "targets": [
@@ -820,7 +820,7 @@
    "ko": "AI 위치가 지도 검색과 {0} 달라요",
    "en": "AI location is {0} from the map search",
    "files": [
-    "TripImportSheet.swift:391"
+    "TripImportSheet.swift:468"
    ],
    "args": [
     "distanceText(mismatch.meters)"
@@ -834,7 +834,7 @@
    "ko": "AI가 넣음",
    "en": "Added by AI",
    "files": [
-    "LedgerSheet.swift:311"
+    "LedgerSheet.swift:322"
    ],
    "args": [],
    "targets": [
@@ -898,7 +898,7 @@
    "ko": "AI로 만들기",
    "en": "Plan with AI",
    "files": [
-    "MapHomeView+Support.swift:693"
+    "MapHomeView+Support.swift:698"
    ],
    "args": [],
    "targets": [
@@ -922,7 +922,7 @@
    "ko": "AI로 여행 계획 만들기",
    "en": "Plan a trip with AI",
    "files": [
-    "TripImportSheet.swift:205"
+    "TripImportSheet.swift:282"
    ],
    "args": [],
    "targets": [
@@ -982,7 +982,7 @@
    "ko": "AI와 대화하기",
    "en": "Talk with an AI",
    "files": [
-    "TripImportSheet.swift:265"
+    "TripImportSheet.swift:342"
    ],
    "args": [],
    "targets": [
@@ -1375,7 +1375,7 @@
    "ko": "BOKKI 가계부 {0}",
    "en": "BOKKI ledger {0}",
    "files": [
-    "LedgerSheet.swift:78"
+    "LedgerSheet.swift:79"
    ],
    "args": [
     "monthTitle"
@@ -1389,7 +1389,7 @@
    "ko": "BOKKI 가계부 전체",
    "en": "BOKKI ledger (all)",
    "files": [
-    "LedgerSheet.swift:84"
+    "LedgerSheet.swift:85"
    ],
    "args": [],
    "targets": [
@@ -1764,7 +1764,7 @@
    "ko": "JSON 일부가 잘렸거나 형식이 달라요. AI에게 JSON을 다시 출력해 달라고 해 주세요.",
    "en": "Part of the JSON is cut off or malformed. Ask the AI to output the JSON again.",
    "files": [
-    "TripImportSheet.swift:573"
+    "TripImportSheet.swift:650"
    ],
    "args": [],
    "targets": [
@@ -3324,7 +3324,7 @@
    "ko": "{0} 장부 만들기",
    "en": "Start a ledger for {0}",
    "files": [
-    "LedgerSheet.swift:157"
+    "LedgerSheet.swift:159"
    ],
    "args": [
     "trip.name"
@@ -3383,7 +3383,7 @@
    "ko": "{0} 채팅창에 붙여 넣고 보내 주세요. 연결 키가 들어 있어 계획이 앱으로 바로 와요. 클립보드는 10분 뒤 지워져요.",
    "en": "Paste it into the {0} chat and send. It includes a connection key, so the plan comes straight to the app. The clipboard is cleared in 10 minutes.",
    "files": [
-    "TripImportSheet.swift:226"
+    "TripImportSheet.swift:303"
    ],
    "args": [
     "guide.name"
@@ -3398,7 +3398,7 @@
    "en": "Paste it into the {0} chat and send.",
    "files": [
     "AssistantConnectView.swift:645",
-    "TripImportSheet.swift:228"
+    "TripImportSheet.swift:305"
    ],
    "args": [
     "name"
@@ -3442,7 +3442,7 @@
    "ko": "{0} 항목의 시각을 읽지 못했어요.",
    "en": "Couldn't read the time of item {0}.",
    "files": [
-    "TripImportSheet.swift:579"
+    "TripImportSheet.swift:656"
    ],
    "args": [
     "itemID"
@@ -3595,6 +3595,20 @@
    ]
   },
   {
+   "key": "{0}건 넣기|Add {0}",
+   "ko": "{0}건 넣기",
+   "en": "Add {0}",
+   "files": [
+    "LedgerReviewBand.swift:162"
+   ],
+   "args": [
+    "batch.selected.count"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "{0}건|{0} entries",
    "ko": "{0}건",
    "en": "{0} entries",
@@ -3657,7 +3671,7 @@
    "ko": "{0}년 {1}월",
    "en": "{0}/{1}",
    "files": [
-    "LedgerSheet.swift:263",
+    "LedgerSheet.swift:274",
     "MapHomeSettingsSheets.swift:749"
    ],
    "args": [
@@ -3691,6 +3705,20 @@
    ],
    "args": [
     "MapHomeSalaryPolicy.intervalTitle(tickSeconds, language: language)"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "{0}박 {1}일|{0} nights",
+   "ko": "{0}박 {1}일",
+   "en": "{0} nights",
+   "files": [
+    "TravelModeView.swift:389"
+   ],
+   "args": [
+    "entry.nights"
    ],
    "targets": [
     "TaptionPlan"
@@ -4001,7 +4029,7 @@
    "ko": "{0}에 넣을 연결 키를 만들어요. 취소하면 키 없이 복사해요.",
    "en": "Creates a connection key for {0}. Cancel to copy without a key.",
    "files": [
-    "TripImportSheet.swift:239"
+    "TripImportSheet.swift:316"
    ],
    "args": [
     "name"
@@ -4059,7 +4087,7 @@
    "ko": "{0}에서 계획 세우기",
    "en": "Plan in {0}",
    "files": [
-    "TripImportSheet.swift:274"
+    "TripImportSheet.swift:351"
    ],
    "args": [
     "name"
@@ -4191,6 +4219,20 @@
    ],
    "args": [
     "season.streak"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "{0}일차|Day {0}",
+   "ko": "{0}일차",
+   "en": "Day {0}",
+   "files": [
+    "TravelModeView.swift:496"
+   ],
+   "args": [
+    "entry.dayNumber ?? 1"
    ],
    "targets": [
     "TaptionPlan"
@@ -32726,7 +32768,7 @@
    "ko": "‘{0}’ 기기가 탈 때만 연결됐어요. 등록할까요? 등록하면 이 기기가 연결된 이동을 자동차로 기록해요.",
    "en": "‘{0}’ connected only while you rode. Register it? Trips with it connected will be recorded as car.",
    "files": [
-    "MapHomeLaunchPrompts.swift:221"
+    "MapHomeLaunchPrompts.swift:230"
    ],
    "args": [
     "name"
@@ -32740,7 +32782,7 @@
    "ko": "‘{0}’ 일정은 무엇인가요?",
    "en": "What is ‘{0}’?",
    "files": [
-    "MapHomeLaunchPrompts.swift:283"
+    "MapHomeLaunchPrompts.swift:289"
    ],
    "args": [
     "calendarTitle ?? \"\""
@@ -32754,7 +32796,7 @@
    "ko": "‘{0}’ 중 무엇인가요?",
    "en": "Which ‘{0}’?",
    "files": [
-    "MapHomeLaunchPrompts.swift:311"
+    "MapHomeLaunchPrompts.swift:317"
    ],
    "args": [
     "category?.localizedTitle(language) ?? \"\""
@@ -32768,7 +32810,7 @@
    "ko": "‘{0}’에 {1}번 머물렀어요. 어떤 곳인가요?",
    "en": "You stayed at ‘{0}’ {1} times. What is it?",
    "files": [
-    "MapHomeLaunchPrompts.swift:339"
+    "MapHomeLaunchPrompts.swift:345"
    ],
    "args": [
     "name",
@@ -32979,7 +33021,7 @@
    "ko": "가계부 {0} 표",
    "en": "Ledger {0} table",
    "files": [
-    "LedgerSheet.swift:80"
+    "LedgerSheet.swift:81"
    ],
    "args": [
     "monthTitle"
@@ -33055,7 +33097,7 @@
    "ko": "가계부 전체 표",
    "en": "Whole ledger table",
    "files": [
-    "LedgerSheet.swift:86"
+    "LedgerSheet.swift:87"
    ],
    "args": [],
    "targets": [
@@ -33079,7 +33121,7 @@
    "ko": "가계부",
    "en": "Ledger",
    "files": [
-    "LedgerSheet.swift:63"
+    "LedgerSheet.swift:64"
    ],
    "args": [],
    "targets": [
@@ -33277,7 +33319,7 @@
    "ko": "같은 여행이 있어 바꿉니다 · 추가 {0} · 변경 {1} · 삭제 {2}",
    "en": "Replaces the same trip · added {0} · changed {1} · removed {2}",
    "files": [
-    "TripImportSheet.swift:332"
+    "TripImportSheet.swift:409"
    ],
    "args": [
     "diff.added",
@@ -33900,7 +33942,7 @@
    "ko": "검색 위치로",
    "en": "Use search",
    "files": [
-    "TripImportSheet.swift:394"
+    "TripImportSheet.swift:471"
    ],
    "args": [],
    "targets": [
@@ -33977,8 +34019,8 @@
    "ko": "결제 문자 자동으로 넣기",
    "en": "Add payment texts automatically",
    "files": [
-    "LedgerSheet.swift:72",
-    "LedgerSheet.swift:194"
+    "LedgerSheet.swift:73",
+    "LedgerSheet.swift:196"
    ],
    "args": [],
    "targets": [
@@ -34015,7 +34057,7 @@
    "en": "Payment text",
    "files": [
     "LedgerExport.swift:48",
-    "LedgerSheet.swift:312"
+    "LedgerSheet.swift:323"
    ],
    "args": [],
    "targets": [
@@ -34333,7 +34375,7 @@
    "ko": "계획과 기록은 삭제되지 않습니다.",
    "en": "Your plans and records will not be deleted.",
    "files": [
-    "MapHomeView+Support.swift:772"
+    "MapHomeView+Support.swift:777"
    ],
    "args": [],
    "targets": [
@@ -34686,7 +34728,7 @@
    "ko": "관광",
    "en": "Sightseeing",
    "files": [
-    "TripImportSheet.swift:127"
+    "TripImportSheet.swift:204"
    ],
    "args": [],
    "targets": [
@@ -34839,7 +34881,7 @@
    "ko": "구글 지도에서 보기",
    "en": "Open in Google Maps",
    "files": [
-    "TripImportSheet.swift:406"
+    "TripImportSheet.swift:483"
    ],
    "args": [],
    "targets": [
@@ -35367,7 +35409,7 @@
    "ko": "금액(원)",
    "en": "Amount (KRW)",
    "files": [
-    "LedgerSheet.swift:437"
+    "LedgerSheet.swift:448"
    ],
    "args": [],
    "targets": [
@@ -35379,7 +35421,7 @@
    "ko": "금액",
    "en": "Amount",
    "files": [
-    "LedgerSheet.swift:406",
+    "LedgerSheet.swift:417",
     "LedgerSummary.swift:132",
     "LedgerSummary.swift:137"
    ],
@@ -35592,7 +35634,7 @@
    "ko": "기록 고치기",
    "en": "Edit entry",
    "files": [
-    "LedgerSheet.swift:383"
+    "LedgerSheet.swift:394"
    ],
    "args": [],
    "targets": [
@@ -35628,8 +35670,8 @@
    "ko": "기록 더하기",
    "en": "Add entry",
    "files": [
-    "LedgerSheet.swift:91",
-    "LedgerSheet.swift:383"
+    "LedgerSheet.swift:92",
+    "LedgerSheet.swift:394"
    ],
    "args": [],
    "targets": [
@@ -36055,7 +36097,7 @@
    "files": [
     "LedgerCore.swift:28",
     "AssistantAIProvider.swift:37",
-    "MapHomeLaunchPrompts.swift:354"
+    "MapHomeLaunchPrompts.swift:360"
    ],
    "args": [],
    "targets": [
@@ -36293,7 +36335,7 @@
    "ko": "나",
    "en": "Me",
    "files": [
-    "LedgerSheet.swift:553",
+    "LedgerSheet.swift:564",
     "LedgerTripView.swift:109"
    ],
    "args": [],
@@ -36342,7 +36384,19 @@
    "ko": "나도 포함해 똑같이 나눠요. 기록의 「낸 사람」이 비었으면 내가 낸 것이에요.",
    "en": "Split equally including you. A blank payer means you paid.",
    "files": [
-    "LedgerSheet.swift:551"
+    "LedgerSheet.swift:562"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "나라|Country",
+   "ko": "나라",
+   "en": "Country",
+   "files": [
+    "TravelModeView.swift:613"
    ],
    "args": [],
    "targets": [
@@ -36394,7 +36448,7 @@
    "ko": "나중에 확인",
    "en": "Check later",
    "files": [
-    "MapHomeLaunchPrompts.swift:191"
+    "MapHomeLaunchPrompts.swift:221"
    ],
    "args": [],
    "targets": [
@@ -36408,7 +36462,7 @@
    "files": [
     "FirstRunTutorialGuides.swift:372",
     "FirstRunTutorialGuides.swift:419",
-    "MapHomeView+Support.swift:687"
+    "MapHomeView+Support.swift:692"
    ],
    "args": [],
    "targets": [
@@ -36507,6 +36561,7 @@
    "ko": "날짜",
    "en": "Date",
    "files": [
+    "TravelModeView.swift:605",
     "MapHomeDailyCard.swift:365",
     "MapHomePlaceBookTools.swift:780"
    ],
@@ -36573,7 +36628,7 @@
    "en": "My account names",
    "files": [
     "LedgerReviewBand.swift:125",
-    "LedgerSheet.swift:75"
+    "LedgerSheet.swift:76"
    ],
    "args": [],
    "targets": [
@@ -36683,7 +36738,7 @@
    "ko": "내 차로 등록",
    "en": "Register as my car",
    "files": [
-    "MapHomeLaunchPrompts.swift:217"
+    "MapHomeLaunchPrompts.swift:226"
    ],
    "args": [],
    "targets": [
@@ -36720,7 +36775,7 @@
    "ko": "내용 (예: 커피)",
    "en": "What (e.g. Coffee)",
    "files": [
-    "LedgerSheet.swift:401"
+    "LedgerSheet.swift:412"
    ],
    "args": [],
    "targets": [
@@ -36744,7 +36799,7 @@
    "ko": "낸 사람 (비우면 나)",
    "en": "Paid by (blank = me)",
    "files": [
-    "LedgerSheet.swift:356"
+    "LedgerSheet.swift:367"
    ],
    "args": [],
    "targets": [
@@ -36768,7 +36823,7 @@
    "ko": "낸 사람을 적으면 「정산하기」에서 나눌 돈을 계산해요.",
    "en": "Add who paid to split costs in Settle up.",
    "files": [
-    "LedgerSheet.swift:361"
+    "LedgerSheet.swift:372"
    ],
    "args": [],
    "targets": [
@@ -36793,6 +36848,18 @@
    "en": "Add",
    "files": [
     "LedgerTripView.swift:274"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "넣을 것만 골라 주세요. 이미 가계부에 있는 것 같은 줄은 꺼 두었어요.|Pick the ones to add. Lines that look already recorded are turned off.",
+   "ko": "넣을 것만 골라 주세요. 이미 가계부에 있는 것 같은 줄은 꺼 두었어요.",
+   "en": "Pick the ones to add. Lines that look already recorded are turned off.",
+   "files": [
+    "LedgerReviewBand.swift:153"
    ],
    "args": [],
    "targets": [
@@ -37150,6 +37217,20 @@
    ]
   },
   {
+   "key": "다음: {0}|Next: {0}",
+   "ko": "다음: {0}",
+   "en": "Next: {0}",
+   "files": [
+    "TravelModeView.swift:533"
+   ],
+   "args": [
+    "$0.title"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "다음|Next",
    "ko": "다음",
    "en": "Next",
@@ -37258,7 +37339,7 @@
    "en": "Calendar",
    "files": [
     "FirstRunGuideStage.swift:643",
-    "MapHomeView+Support.swift:461",
+    "MapHomeView+Support.swift:458",
     "MapHomeView+Support2.swift:392"
    ],
    "args": [],
@@ -37288,6 +37369,30 @@
    "en": "The backup was made before the month ended, so nothing was removed. Back up again.",
    "files": [
     "PlanBackupPresentation.swift:151"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "당일|Day trip",
+   "ko": "당일",
+   "en": "Day trip",
+   "files": [
+    "TravelModeView.swift:388"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "당일치기|Day trip",
+   "ko": "당일치기",
+   "en": "Day trip",
+   "files": [
+    "TravelModeView.swift:604"
    ],
    "args": [],
    "targets": [
@@ -37807,7 +37912,7 @@
    "ko": "도착 뒤 입국·짐 찾기로 {0}분은 두세요",
    "en": "Allow {0} min after landing for arrival",
    "files": [
-    "TripImportSheet.swift:419"
+    "TripImportSheet.swift:496"
    ],
    "args": [
     "need"
@@ -37821,7 +37926,7 @@
    "ko": "도착한 계획 불러오기",
    "en": "Load the delivered plan",
    "files": [
-    "TripImportSheet.swift:300"
+    "TripImportSheet.swift:377"
    ],
    "args": [],
    "targets": [
@@ -37833,7 +37938,7 @@
    "ko": "도착한 계획이 없어요.",
    "en": "No plan has arrived.",
    "files": [
-    "TripImportSheet.swift:508"
+    "TripImportSheet.swift:585"
    ],
    "args": [],
    "targets": [
@@ -38020,7 +38125,7 @@
    "ko": "뒤로",
    "en": "Back",
    "files": [
-    "MapHomeLaunchPrompts.swift:250",
+    "MapHomeLaunchPrompts.swift:259",
     "MapHomeWideLayoutPolicy.swift:239"
    ],
    "args": [],
@@ -38070,7 +38175,7 @@
    "ko": "등록 안 함",
    "en": "Don't register",
    "files": [
-    "MapHomeLaunchPrompts.swift:262"
+    "MapHomeLaunchPrompts.swift:271"
    ],
    "args": [],
    "targets": [
@@ -38229,8 +38334,8 @@
    "ko": "때",
    "en": "When",
    "files": [
-    "LedgerSheet.swift:420",
-    "LedgerSheet.swift:440"
+    "LedgerSheet.swift:431",
+    "LedgerSheet.swift:451"
    ],
    "args": [],
    "targets": [
@@ -38473,6 +38578,18 @@
    ]
   },
   {
+   "key": "마지막 날|Last day",
+   "ko": "마지막 날",
+   "en": "Last day",
+   "files": [
+    "TravelModeView.swift:607"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "마지막 백업: {0}|Last backup: {0}",
    "ko": "마지막 백업: {0}",
    "en": "Last backup: {0}",
@@ -38515,6 +38632,7 @@
    "ko": "만들기",
    "en": "Create",
    "files": [
+    "TravelModeView.swift:630",
     "AssistantSafetyViews.swift:270"
    ],
    "args": [],
@@ -38724,7 +38842,7 @@
    "ko": "먼저 대분류를 고르세요. 한 번 정하면 같은 제목의 일정은 다시 묻지 않아요.",
    "en": "Pick a category first. Once set, events with the same title won't be asked again.",
    "files": [
-    "MapHomeLaunchPrompts.swift:243"
+    "MapHomeLaunchPrompts.swift:252"
    ],
    "args": [],
    "targets": [
@@ -39167,7 +39285,7 @@
    "ko": "메모",
    "en": "Note",
    "files": [
-    "LedgerSheet.swift:359"
+    "LedgerSheet.swift:370"
    ],
    "args": [],
    "targets": [
@@ -39603,7 +39721,7 @@
    "ko": "미확인 시간이 있어요",
    "en": "Some time is unconfirmed",
    "files": [
-    "MapHomeLaunchPrompts.swift:267"
+    "MapHomeLaunchPrompts.swift:276"
    ],
    "args": [],
    "targets": [
@@ -39830,7 +39948,7 @@
    "ko": "받은 JSON 붙여 넣기",
    "en": "Paste the JSON",
    "files": [
-    "TripImportSheet.swift:309"
+    "TripImportSheet.swift:386"
    ],
    "args": [],
    "targets": [
@@ -40546,7 +40664,7 @@
    "ko": "보낼 돈",
    "en": "Transfers",
    "files": [
-    "LedgerSheet.swift:556"
+    "LedgerSheet.swift:567"
    ],
    "args": [],
    "targets": [
@@ -40853,7 +40971,7 @@
    "ko": "분류 안 함",
    "en": "Don't classify",
    "files": [
-    "MapHomeLaunchPrompts.swift:240"
+    "MapHomeLaunchPrompts.swift:249"
    ],
    "args": [],
    "targets": [
@@ -40889,7 +41007,7 @@
    "ko": "분류",
    "en": "Category",
    "files": [
-    "LedgerSheet.swift:417",
+    "LedgerSheet.swift:428",
     "MapHomeNLEClipEditor.swift:566",
     "MapHomeNLERawDetail.swift:50"
    ],
@@ -41510,7 +41628,7 @@
    "ko": "사진 명소",
    "en": "Photo spot",
    "files": [
-    "TripImportSheet.swift:123"
+    "TripImportSheet.swift:200"
    ],
    "args": [],
    "targets": [
@@ -41950,7 +42068,20 @@
    "ko": "새 여행 장부",
    "en": "New trip ledger",
    "files": [
-    "LedgerSheet.swift:161"
+    "LedgerSheet.swift:163"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "새 여행|New trip",
+   "ko": "새 여행",
+   "en": "New trip",
+   "files": [
+    "TravelModeView.swift:453",
+    "TravelModeView.swift:625"
    ],
    "args": [],
    "targets": [
@@ -42500,7 +42631,7 @@
    "files": [
     "MapHomeView+Menu2.swift:210",
     "MapHomeView+Menu2.swift:227",
-    "MapHomeView+Support.swift:766"
+    "MapHomeView+Support.swift:771"
    ],
    "args": [],
    "targets": [
@@ -42574,7 +42705,7 @@
    "ko": "설정을 기본값으로 초기화할까요?",
    "en": "Reset settings to defaults?",
    "files": [
-    "MapHomeView+Support.swift:762"
+    "MapHomeView+Support.swift:767"
    ],
    "args": [],
    "targets": [
@@ -42999,7 +43130,7 @@
    "en": "Shopping",
    "files": [
     "LedgerCore.swift:19",
-    "TripImportSheet.swift:128"
+    "TripImportSheet.swift:205"
    ],
    "args": [],
    "targets": [
@@ -43308,7 +43439,7 @@
    "en": "Lodging",
    "files": [
     "LedgerCore.swift:24",
-    "TripImportSheet.swift:120"
+    "TripImportSheet.swift:197"
    ],
    "args": [],
    "targets": [
@@ -43806,7 +43937,7 @@
    "ko": "식당",
    "en": "Restaurant",
    "files": [
-    "MapHomeLaunchPrompts.swift:353"
+    "MapHomeLaunchPrompts.swift:359"
    ],
    "args": [],
    "targets": [
@@ -43843,7 +43974,7 @@
    "en": "Meal",
    "files": [
     "MapHomeLocationPresentation.swift:309",
-    "TripImportSheet.swift:121",
+    "TripImportSheet.swift:198",
     "record-classification.json:0"
    ],
    "args": [],
@@ -43968,11 +44099,25 @@
    ]
   },
   {
+   "key": "쓴 돈 {0}|Spent {0}",
+   "ko": "쓴 돈 {0}",
+   "en": "Spent {0}",
+   "files": [
+    "TravelModeView.swift:512"
+   ],
+   "args": [
+    "LedgerMoney.text(sheet.myCost, language: language)"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "아니요|No",
    "ko": "아니요",
    "en": "No",
    "files": [
-    "MapHomeLaunchPrompts.swift:218"
+    "MapHomeLaunchPrompts.swift:227"
    ],
    "args": [],
    "targets": [
@@ -44226,6 +44371,18 @@
    ]
   },
   {
+   "key": "아직 일정이 없습니다|No plans yet",
+   "ko": "아직 일정이 없습니다",
+   "en": "No plans yet",
+   "files": [
+    "TravelModeView.swift:533"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "아직 잡힌 블루투스 기기가 없어요. 차에 타서 블루투스를 연결한 뒤 이 화면이나 메뉴 › 내 차 오디오에서 고를 수 있어요.|No Bluetooth devices yet. Connect your car's Bluetooth, then pick it here or in Menu › My car audio.",
    "ko": "아직 잡힌 블루투스 기기가 없어요. 차에 타서 블루투스를 연결한 뒤 이 화면이나 메뉴 › 내 차 오디오에서 고를 수 있어요.",
    "en": "No Bluetooth devices yet. Connect your car's Bluetooth, then pick it here or in Menu › My car audio.",
@@ -44441,7 +44598,7 @@
    "ko": "앞에서 이동 {0}분",
    "en": "{0} min from previous",
    "files": [
-    "TripImportSheet.swift:379"
+    "TripImportSheet.swift:456"
    ],
    "args": [
     "Int(minutes)"
@@ -44774,7 +44931,7 @@
    "ko": "앱보다 새 형식이에요. 앱을 업데이트해 주세요.",
    "en": "This format is newer than the app. Please update the app.",
    "files": [
-    "TripImportSheet.swift:575"
+    "TripImportSheet.swift:652"
    ],
    "args": [],
    "targets": [
@@ -45293,7 +45450,7 @@
    "ko": "여행 계획 JSON이 아니에요. AI가 마지막에 준 JSON 전체를 복사해 주세요.",
    "en": "This isn't trip JSON. Copy the whole JSON the AI gave at the end.",
    "files": [
-    "TripImportSheet.swift:571"
+    "TripImportSheet.swift:648"
    ],
    "args": [],
    "targets": [
@@ -45305,7 +45462,7 @@
    "ko": "여행 계획 추가",
    "en": "Add to trip",
    "files": [
-    "MapHomeView+Support.swift:691"
+    "MapHomeView+Support.swift:696"
    ],
    "args": [],
    "targets": [
@@ -45330,7 +45487,7 @@
    "ko": "여행 계획에 반영",
    "en": "Add to trip plan",
    "files": [
-    "TripImportSheet.swift:347"
+    "TripImportSheet.swift:424"
    ],
    "args": [],
    "targets": [
@@ -45354,7 +45511,7 @@
    "ko": "여행 예산은 일상에서 「여행 경비」로 나가고, 여행이 끝나면 남은 돈이 「여행 정산」으로 돌아와요.",
    "en": "A trip budget leaves daily as a trip expense; leftovers come back as a trip refund when it ends.",
    "files": [
-    "LedgerSheet.swift:166"
+    "LedgerSheet.swift:168"
    ],
    "args": [],
    "targets": [
@@ -45366,7 +45523,19 @@
    "ko": "여행 예산이에요. 고치면 일상의 「여행 경비」와 여행의 「경비 받음」이 함께 바뀌어요.",
    "en": "This is the trip budget. Editing it changes both the daily and trip sides.",
    "files": [
-    "LedgerSheet.swift:443"
+    "LedgerSheet.swift:454"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "여행 이름|Trip name",
+   "ko": "여행 이름",
+   "en": "Trip name",
+   "files": [
+    "TravelModeView.swift:603"
    ],
    "args": [],
    "targets": [
@@ -45447,6 +45616,18 @@
    ]
   },
   {
+   "key": "여행 장부 만들기|Start trip ledger",
+   "ko": "여행 장부 만들기",
+   "en": "Start trip ledger",
+   "files": [
+    "TravelModeView.swift:515"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "여행 장부 지우기|Delete trip ledger",
    "ko": "여행 장부 지우기",
    "en": "Delete trip ledger",
@@ -45463,7 +45644,7 @@
    "ko": "여행 장부",
    "en": "Trip ledger",
    "files": [
-    "LedgerSheet.swift:46",
+    "LedgerSheet.swift:47",
     "LedgerTripView.swift:291"
    ],
    "args": [],
@@ -45476,7 +45657,7 @@
    "ko": "여행 장부",
    "en": "Trip ledgers",
    "files": [
-    "LedgerSheet.swift:164"
+    "LedgerSheet.swift:166"
    ],
    "args": [],
    "targets": [
@@ -45500,7 +45681,19 @@
    "ko": "여행 정산이에요. 고치면 그 금액으로 고정돼요. 일상 쪽 수입이면 반납, 지출이면 추가 경비예요.",
    "en": "This is the trip settlement. Editing fixes it to this amount. Daily income means returned, expense means extra.",
    "files": [
-    "LedgerSheet.swift:444"
+    "LedgerSheet.swift:455"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "여행 중|On trip",
+   "ko": "여행 중",
+   "en": "On trip",
+   "files": [
+    "TravelModeView.swift:380"
    ],
    "args": [],
    "targets": [
@@ -45532,6 +45725,18 @@
    ]
   },
   {
+   "key": "여행|Trips",
+   "ko": "여행",
+   "en": "Trips",
+   "files": [
+    "TravelModeView.swift:406"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "여행·교통|Travel",
    "ko": "여행·교통",
    "en": "Travel",
@@ -45549,6 +45754,30 @@
    "en": "The day after the trip, leftovers go back to daily; a shortfall is topped up from daily.",
    "files": [
     "LedgerTripView.swift:151"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "여행지 통화|Trip currency",
+   "ko": "여행지 통화",
+   "en": "Trip currency",
+   "files": [
+    "TravelModeView.swift:622"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "여행지|Destination",
+   "ko": "여행지",
+   "en": "Destination",
+   "files": [
+    "TravelModeView.swift:612"
    ],
    "args": [],
    "targets": [
@@ -46717,8 +46946,19 @@
    "en": "Receipt",
    "files": [
     "LedgerExport.swift:49",
-    "LedgerSheet.swift:188",
-    "LedgerSheet.swift:313"
+    "LedgerSheet.swift:324"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "영수증·캡처|Receipt or capture",
+   "ko": "영수증·캡처",
+   "en": "Receipt or capture",
+   "files": [
+    "LedgerSheet.swift:190"
    ],
    "args": [],
    "targets": [
@@ -46793,7 +47033,7 @@
    "ko": "예산 남음",
    "en": "Budget left",
    "files": [
-    "LedgerSheet.swift:248",
+    "LedgerSheet.swift:259",
     "LedgerSummary.swift:94"
    ],
    "args": [],
@@ -46830,7 +47070,7 @@
    "ko": "예산",
    "en": "Budget",
    "files": [
-    "LedgerSheet.swift:516",
+    "LedgerSheet.swift:527",
     "LedgerSummary.swift:94",
     "LedgerTripView.swift:23"
    ],
@@ -46881,7 +47121,7 @@
    "ko": "예상 요금 {0}원",
    "en": "Estimated fare ₩{0}",
    "files": [
-    "TripImportSheet.swift:382"
+    "TripImportSheet.swift:459"
    ],
    "args": [
     "fare.formatted()"
@@ -47025,7 +47265,7 @@
    "ko": "오늘 {0}분이 무엇을 했는지 모르는 시간이에요. 지금 정할까요?",
    "en": "{0} min today are unconfirmed. Review them now?",
    "files": [
-    "MapHomeLaunchPrompts.swift:271"
+    "MapHomeLaunchPrompts.swift:280"
    ],
    "args": [
     "minutes"
@@ -47071,6 +47311,18 @@
    ]
   },
   {
+   "key": "오늘 당일치기|Day trip today",
+   "ko": "오늘 당일치기",
+   "en": "Day trip today",
+   "files": [
+    "TravelModeView.swift:454"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "오늘 번 돈|Earned today",
    "ko": "오늘 번 돈",
    "en": "Earned today",
@@ -47099,7 +47351,7 @@
    "ko": "오늘 손익(세후 월급 기준)",
    "en": "Today's net (after-tax pay)",
    "files": [
-    "LedgerSheet.swift:254"
+    "LedgerSheet.swift:265"
    ],
    "args": [],
    "targets": [
@@ -47610,7 +47862,7 @@
    "en": "Exercise",
    "files": [
     "MapHomeInteractionPolicy.swift:459",
-    "MapHomeLaunchPrompts.swift:352",
+    "MapHomeLaunchPrompts.swift:358",
     "MapHomeLocationPresentation.swift:310"
    ],
    "args": [],
@@ -47807,6 +48059,18 @@
    ]
   },
   {
+   "key": "원화만|Home currency only",
+   "ko": "원화만",
+   "en": "Home currency only",
+   "files": [
+    "TravelModeView.swift:622"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "월급|Monthly",
    "ko": "월급",
    "en": "Monthly",
@@ -47835,7 +48099,7 @@
    "ko": "웹 요청을 할 수 있는 AI 비서는 복사하지 않아도 계획을 보낼 수 있어요. AI를 고르면 그 AI의 연결 키가 프롬프트에 들어가고, 없으면 PIN을 물어 만들어요. 계획은 서버에 최대 3일 머물고 앱이 받으면 바로 지워져요.",
    "en": "AI assistants that can make web requests can send the plan without copying. Pick an AI and its connection key goes into the prompt; if it has none, you're asked for your PIN to make one. Plans stay on the server for up to 3 days and are deleted as soon as the app receives them.",
    "files": [
-    "TripImportSheet.swift:296"
+    "TripImportSheet.swift:373"
    ],
    "args": [],
    "targets": [
@@ -48297,7 +48561,7 @@
    "ko": "위치를 '항상 허용'으로 바꿔 주세요",
    "en": "Set location to Always",
    "files": [
-    "MapHomeView+Support.swift:685"
+    "MapHomeView+Support.swift:690"
    ],
    "args": [],
    "targets": [
@@ -48309,7 +48573,7 @@
    "ko": "위치를 찾지 못해 지도에는 표시되지 않아요",
    "en": "Location not found; not shown on the map",
    "files": [
-    "TripImportSheet.swift:401"
+    "TripImportSheet.swift:478"
    ],
    "args": [],
    "targets": [
@@ -48656,7 +48920,7 @@
    "ko": "이 기기가 내 차 같아요",
    "en": "This looks like your car",
    "files": [
-    "MapHomeLaunchPrompts.swift:216"
+    "MapHomeLaunchPrompts.swift:225"
    ],
    "args": [],
    "targets": [
@@ -48947,7 +49211,7 @@
    "ko": "이 달 예산",
    "en": "Monthly budget",
    "files": [
-    "LedgerSheet.swift:69"
+    "LedgerSheet.swift:70"
    ],
    "args": [],
    "targets": [
@@ -48959,7 +49223,7 @@
    "ko": "이 달 지출 예산(원)",
    "en": "Spending budget this month (KRW)",
    "files": [
-    "LedgerSheet.swift:510"
+    "LedgerSheet.swift:521"
    ],
    "args": [],
    "targets": [
@@ -48971,7 +49235,7 @@
    "ko": "이 달 표로 내보내기",
    "en": "Export this month as a table",
    "files": [
-    "LedgerSheet.swift:81"
+    "LedgerSheet.swift:82"
    ],
    "args": [],
    "targets": [
@@ -48983,7 +49247,7 @@
    "ko": "이 달에는 기록이 없어요. + 로 더해 보세요.",
    "en": "No entries this month. Tap + to add one.",
    "files": [
-    "LedgerSheet.swift:53"
+    "LedgerSheet.swift:54"
    ],
    "args": [],
    "targets": [
@@ -49143,7 +49407,7 @@
    "ko": "이 자리",
    "en": "This spot",
    "files": [
-    "MapHomeLaunchPrompts.swift:338"
+    "MapHomeLaunchPrompts.swift:344"
    ],
    "args": [],
    "targets": [
@@ -49325,7 +49589,7 @@
    "ko": "이동 시간이 빠듯해요(약 {0}분 필요)",
    "en": "Tight move (about {0} min needed)",
    "files": [
-    "TripImportSheet.swift:418"
+    "TripImportSheet.swift:495"
    ],
    "args": [
     "need"
@@ -49392,7 +49656,7 @@
    "ko": "이동",
    "en": "Transfer",
    "files": [
-    "TripImportSheet.swift:129"
+    "TripImportSheet.swift:206"
    ],
    "args": [],
    "targets": [
@@ -49484,6 +49748,18 @@
    ]
   },
   {
+   "key": "이름 없는 여행|Untitled trip",
+   "ko": "이름 없는 여행",
+   "en": "Untitled trip",
+   "files": [
+    "TravelModeView.swift:393"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "이름 없는 연결|Unnamed connection",
    "ko": "이름 없는 연결",
    "en": "Unnamed connection",
@@ -49563,7 +49839,7 @@
    "ko": "이름을 넣으면 계산해요.",
    "en": "Enter names to calculate.",
    "files": [
-    "LedgerSheet.swift:558"
+    "LedgerSheet.swift:569"
    ],
    "args": [],
    "targets": [
@@ -49755,7 +50031,7 @@
    "en": "Carried over",
    "files": [
     "LedgerExport.swift:84",
-    "LedgerSheet.swift:241",
+    "LedgerSheet.swift:252",
     "LedgerSummary.swift:92"
    ],
    "args": [],
@@ -49975,6 +50251,18 @@
    ]
   },
   {
+   "key": "일상으로 돌아가기|Back to everyday",
+   "ko": "일상으로 돌아가기",
+   "en": "Back to everyday",
+   "files": [
+    "TravelModeView.swift:405"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "일어났어요|Woke up",
    "ko": "일어났어요",
    "en": "Woke up",
@@ -49995,6 +50283,20 @@
     "LedgerSummary.swift:221"
    ],
    "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "일정 {0}개|{0} plans",
+   "ko": "일정 {0}개",
+   "en": "{0} plans",
+   "files": [
+    "TravelModeView.swift:535"
+   ],
+   "args": [
+    "items.count"
+   ],
    "targets": [
     "TaptionPlan"
    ]
@@ -50059,6 +50361,18 @@
    "args": [
     "memo.title"
    ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "일정 보기·고치기|View and edit plans",
+   "ko": "일정 보기·고치기",
+   "en": "View and edit plans",
+   "files": [
+    "TravelModeView.swift:539"
+   ],
+   "args": [],
    "targets": [
     "TaptionPlan"
    ]
@@ -50167,7 +50481,7 @@
    "ko": "일정이 비어 있어요.",
    "en": "The trip has no items.",
    "files": [
-    "TripImportSheet.swift:577"
+    "TripImportSheet.swift:654"
    ],
    "args": [],
    "targets": [
@@ -50191,7 +50505,7 @@
    "ko": "읽지 못해 AI에게 확인을 맡겼어요. 메모 › AI에서 볼 수 있어요.",
    "en": "Couldn't read it, so it was sent to your AI. See Memo › AI.",
    "files": [
-    "LedgerSheet.swift:206"
+    "LedgerSheet.swift:208"
    ],
    "args": [],
    "targets": [
@@ -50203,7 +50517,7 @@
    "ko": "읽지 못했어요. + 로 직접 넣어 주세요.",
    "en": "Couldn't read it. Tap + to enter it yourself.",
    "files": [
-    "LedgerSheet.swift:209"
+    "LedgerSheet.swift:211"
    ],
    "args": [],
    "targets": [
@@ -50392,7 +50706,7 @@
    "ko": "자동 정산으로 되돌리기",
    "en": "Back to automatic settlement",
    "files": [
-    "LedgerSheet.swift:448"
+    "LedgerSheet.swift:459"
    ],
    "args": [],
    "targets": [
@@ -50522,7 +50836,7 @@
    "ko": "자주 머무는 곳이 있어요",
    "en": "You stay here often",
    "files": [
-    "MapHomeLaunchPrompts.swift:258"
+    "MapHomeLaunchPrompts.swift:267"
    ],
    "args": [],
    "targets": [
@@ -50571,7 +50885,7 @@
    "en": "Balance",
    "files": [
     "LedgerExport.swift:22",
-    "LedgerSheet.swift:244",
+    "LedgerSheet.swift:255",
     "LedgerSummary.swift:93"
    ],
    "args": [],
@@ -50750,7 +51064,7 @@
    "ko": "장소",
    "en": "Place",
    "files": [
-    "LedgerSheet.swift:358",
+    "LedgerSheet.swift:369",
     "MapHomeNLEClipEditor.swift:254"
    ],
    "args": [],
@@ -50934,8 +51248,8 @@
    "ko": "저장",
    "en": "Save",
    "files": [
-    "LedgerSheet.swift:388",
-    "LedgerSheet.swift:522",
+    "LedgerSheet.swift:399",
+    "LedgerSheet.swift:533",
     "LedgerTripView.swift:296"
    ],
    "args": [],
@@ -51248,7 +51562,7 @@
    "ko": "전체 표로 내보내기",
    "en": "Export everything as a table",
    "files": [
-    "LedgerSheet.swift:87"
+    "LedgerSheet.swift:88"
    ],
    "args": [],
    "targets": [
@@ -51369,8 +51683,20 @@
    "ko": "정산하기",
    "en": "Settle up",
    "files": [
-    "LedgerSheet.swift:70",
-    "LedgerSheet.swift:572"
+    "LedgerSheet.swift:71",
+    "LedgerSheet.swift:583"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "정하지 않음|Not set",
+   "ko": "정하지 않음",
+   "en": "Not set",
+   "files": [
+    "TravelModeView.swift:618"
    ],
    "args": [],
    "targets": [
@@ -51566,8 +51892,8 @@
    "ko": "종류",
    "en": "Type",
    "files": [
-    "LedgerSheet.swift:396",
-    "LedgerSheet.swift:430"
+    "LedgerSheet.swift:407",
+    "LedgerSheet.swift:441"
    ],
    "args": [],
    "targets": [
@@ -51829,6 +52155,18 @@
    ]
   },
   {
+   "key": "지구본으로|Back to globe",
+   "ko": "지구본으로",
+   "en": "Back to globe",
+   "files": [
+    "TravelModeView.swift:479"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "지금 PIN을 함께 넣어 주세요.|Enter your current PIN too.",
    "ko": "지금 PIN을 함께 넣어 주세요.",
    "en": "Enter your current PIN too.",
@@ -51966,7 +52304,7 @@
    "ko": "지금 정하기",
    "en": "Review now",
    "files": [
-    "MapHomeLaunchPrompts.swift:268"
+    "MapHomeLaunchPrompts.swift:277"
    ],
    "args": [],
    "targets": [
@@ -52042,7 +52380,32 @@
    "ko": "지금은 반영하지 못했어요. 잠시 뒤 다시 해 주세요.",
    "en": "Couldn't add it right now. Try again in a moment.",
    "files": [
-    "TripImportSheet.swift:356"
+    "TripImportSheet.swift:433"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "지난 날짜로 만들면 그날의 기록이 이 여행의 실제 기록이 됩니다.|A past date turns that day's records into this trip's actual records.",
+   "ko": "지난 날짜로 만들면 그날의 기록이 이 여행의 실제 기록이 됩니다.",
+   "en": "A past date turns that day's records into this trip's actual records.",
+   "files": [
+    "TravelModeView.swift:610"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "지난 여행|Past",
+   "ko": "지난 여행",
+   "en": "Past",
+   "files": [
+    "TravelModeView.swift:382",
+    "TravelModeView.swift:498"
    ],
    "args": [],
    "targets": [
@@ -52423,7 +52786,7 @@
    "ko": "지도에 메모 추가",
    "en": "Add map memo",
    "files": [
-    "MapHomeView+Support.swift:669"
+    "MapHomeView+Support.swift:674"
    ],
    "args": [],
    "targets": [
@@ -52528,6 +52891,18 @@
    ]
   },
   {
+   "key": "지역|Region",
+   "ko": "지역",
+   "en": "Region",
+   "files": [
+    "TravelModeView.swift:617"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "지우기|Clear",
    "ko": "지우기",
    "en": "Clear",
@@ -52545,8 +52920,8 @@
    "ko": "지우기",
    "en": "Delete",
    "files": [
-    "LedgerSheet.swift:44",
-    "LedgerSheet.swift:365",
+    "LedgerSheet.swift:45",
+    "LedgerSheet.swift:376",
     "LedgerTripView.swift:36"
    ],
    "args": [],
@@ -52559,7 +52934,7 @@
    "ko": "지우면 이 메모는 「메모로만」이 돼 다시 가계부에 들어오지 않아요.",
    "en": "Deleting makes this memo note-only so it won't come back to the ledger.",
    "files": [
-    "LedgerSheet.swift:374"
+    "LedgerSheet.swift:385"
    ],
    "args": [],
    "targets": [
@@ -52574,6 +52949,18 @@
     "AssistantCommandEdits.swift:279",
     "AssistantCommandEdits.swift:290",
     "AssistantDataActions.swift:66"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "지출 넣기|Add expense",
+   "ko": "지출 넣기",
+   "en": "Add expense",
+   "files": [
+    "TravelModeView.swift:540"
    ],
    "args": [],
    "targets": [
@@ -52625,7 +53012,7 @@
    "ko": "지출",
    "en": "Spent",
    "files": [
-    "LedgerSheet.swift:243",
+    "LedgerSheet.swift:254",
     "MapHomeInteractionPolicy.swift:460"
    ],
    "args": [],
@@ -52779,7 +53166,7 @@
    "ko": "직접 넣는 환율 (1단위 = 원)",
    "en": "Manual rate (1 unit = KRW)",
    "files": [
-    "LedgerSheet.swift:415"
+    "LedgerSheet.swift:426"
    ],
    "args": [],
    "targets": [
@@ -52805,7 +53192,7 @@
    "ko": "직접 입력",
    "en": "Enter manually",
    "files": [
-    "MapHomeView+Support.swift:692",
+    "MapHomeView+Support.swift:697",
     "TravelMapVideoSection.swift:38"
    ],
    "args": [],
@@ -52942,7 +53329,7 @@
    "files": [
     "FirstRunGuideStage.swift:647",
     "FirstRunTutorialGuides.swift:694",
-    "MapHomeLaunchPrompts.swift:347"
+    "MapHomeLaunchPrompts.swift:353"
    ],
    "args": [],
    "targets": [
@@ -53170,6 +53557,18 @@
    "en": "Your first weekly reward will add a land plot.",
    "files": [
     "MapHomeGrowthSheet.swift:183"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "첫날|First day",
+   "ko": "첫날",
+   "en": "First day",
+   "files": [
+    "TravelModeView.swift:605"
    ],
    "args": [],
    "targets": [
@@ -53433,9 +53832,9 @@
    "ko": "추가",
    "en": "Add",
    "files": [
+    "TravelModeView.swift:545",
     "MapHomeCalendarSheet.swift:337",
-    "MapHomePlaceBookTools.swift:944",
-    "MapHomeSettingsSheets.swift:99"
+    "MapHomePlaceBookTools.swift:944"
    ],
    "args": [],
    "targets": [
@@ -53473,7 +53872,7 @@
    "ko": "추천: {0}",
    "en": "Suggested: {0}",
    "files": [
-    "MapHomeLaunchPrompts.swift:229"
+    "MapHomeLaunchPrompts.swift:238"
    ],
    "args": [
     "rule.label"
@@ -53605,7 +54004,7 @@
    "en": "Hobby",
    "files": [
     "MapHomeInteractionPolicy.swift:458",
-    "MapHomeLaunchPrompts.swift:351",
+    "MapHomeLaunchPrompts.swift:357",
     "MapHomeLocationPresentation.swift:291"
    ],
    "args": [],
@@ -53645,9 +54044,9 @@
    "ko": "취소",
    "en": "Cancel",
    "files": [
+    "TravelModeView.swift:628",
     "AssistantBubble.swift:342",
-    "AssistantConnectView.swift:199",
-    "AssistantPINReset.swift:96"
+    "AssistantConnectView.swift:199"
    ],
    "args": [],
    "targets": [
@@ -53660,7 +54059,7 @@
    "en": "Canceled",
    "files": [
     "LedgerMemoPanel.swift:158",
-    "LedgerSheet.swift:288"
+    "LedgerSheet.swift:299"
    ],
    "args": [],
    "targets": [
@@ -53811,11 +54210,11 @@
    ]
   },
   {
-   "key": "카드 결제 문자를 복사해 붙여 넣거나 영수증 사진을 고르면 채워 드려요. 「결제 문자 자동으로 넣기」로 단축어를 걸면 문자가 오자마자 들어가요.|Paste a card payment text or pick a receipt photo to fill an entry. Set up \"Add payment texts automatically\" so texts go in as they arrive.",
-   "ko": "카드 결제 문자를 복사해 붙여 넣거나 영수증 사진을 고르면 채워 드려요. 「결제 문자 자동으로 넣기」로 단축어를 걸면 문자가 오자마자 들어가요.",
-   "en": "Paste a card payment text or pick a receipt photo to fill an entry. Set up \"Add payment texts automatically\" so texts go in as they arrive.",
+   "key": "카드 결제 문자를 복사해 붙여 넣거나 영수증 사진·결제 화면 캡처를 고르면 채워 드려요. 「결제 문자 자동으로 넣기」로 단축어를 걸면 문자가 오자마자 들어가요.|Paste a card payment text, or pick a receipt photo or a payment screenshot, to fill an entry. Set up \"Add payment texts automatically\" so texts go in as they arrive.",
+   "ko": "카드 결제 문자를 복사해 붙여 넣거나 영수증 사진·결제 화면 캡처를 고르면 채워 드려요. 「결제 문자 자동으로 넣기」로 단축어를 걸면 문자가 오자마자 들어가요.",
+   "en": "Paste a card payment text, or pick a receipt photo or a payment screenshot, to fill an entry. Set up \"Add payment texts automatically\" so texts go in as they arrive.",
    "files": [
-    "LedgerSheet.swift:197"
+    "LedgerSheet.swift:199"
    ],
    "args": [],
    "targets": [
@@ -53864,7 +54263,7 @@
    "ko": "카페",
    "en": "Cafe",
    "files": [
-    "TripImportSheet.swift:122"
+    "TripImportSheet.swift:199"
    ],
    "args": [],
    "targets": [
@@ -54064,6 +54463,18 @@
    "en": "Fixed calendar events cannot be moved here.",
    "files": [
     "AppModel+Plans.swift:813"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "캡처에서 읽은 결제|Payments in the capture",
+   "ko": "캡처에서 읽은 결제",
+   "en": "Payments in the capture",
+   "files": [
+    "LedgerReviewBand.swift:157"
    ],
    "args": [],
    "targets": [
@@ -54821,7 +55232,7 @@
    "ko": "프롬프트를 복사했어요. {0}에 붙여 넣고 보내 주세요.",
    "en": "The prompt is copied. Paste it into {0} and send.",
    "files": [
-    "TripImportSheet.swift:279"
+    "TripImportSheet.swift:356"
    ],
    "args": [
     "name"
@@ -54835,7 +55246,7 @@
    "ko": "프롬프트를 복사했어요. 피클에 붙여 넣고 보내 주세요.",
    "en": "The prompt is copied. Paste it into Pickle and send.",
    "files": [
-    "TripImportSheet.swift:487"
+    "TripImportSheet.swift:564"
    ],
    "args": [],
    "targets": [
@@ -54847,7 +55258,7 @@
    "ko": "프롬프트를 복사했어요.",
    "en": "Prompt copied.",
    "files": [
-    "TripImportSheet.swift:285"
+    "TripImportSheet.swift:362"
    ],
    "args": [],
    "targets": [
@@ -54859,7 +55270,7 @@
    "ko": "프롬프트를 복사했어요",
    "en": "Prompt copied",
    "files": [
-    "TripImportSheet.swift:219"
+    "TripImportSheet.swift:296"
    ],
    "args": [],
    "targets": [
@@ -54871,7 +55282,7 @@
    "ko": "프롬프트만 복사",
    "en": "Copy prompt only",
    "files": [
-    "TripImportSheet.swift:281"
+    "TripImportSheet.swift:358"
    ],
    "args": [],
    "targets": [
@@ -54883,7 +55294,7 @@
    "ko": "프롬프트와 피클 연결 키를 복사했어요. 피클 채팅창에 붙여 넣으면 계획이 앱으로 바로 와요.",
    "en": "The prompt and Pickle's connection key are copied. Paste them into the Pickle chat and the plan comes straight to the app.",
    "files": [
-    "TripImportSheet.swift:486"
+    "TripImportSheet.swift:563"
    ],
    "args": [],
    "targets": [
@@ -54907,7 +55318,7 @@
    "ko": "피클 열기 / 받기",
    "en": "Open / Get Pickle",
    "files": [
-    "TripImportSheet.swift:302"
+    "TripImportSheet.swift:379"
    ],
    "args": [],
    "targets": [
@@ -54931,7 +55342,7 @@
    "ko": "피클에서 계획 세우기 (자동 연동)",
    "en": "Plan in Pickle (Auto Sync)",
    "files": [
-    "TripImportSheet.swift:273"
+    "TripImportSheet.swift:350"
    ],
    "args": [],
    "targets": [
@@ -54943,7 +55354,7 @@
    "ko": "피클이 없어서 App Store를 열었어요. 설치한 뒤 다시 눌러 주세요.",
    "en": "Pickle isn't installed, so the App Store opened. Install it and tap again.",
    "files": [
-    "TripImportSheet.swift:484"
+    "TripImportSheet.swift:561"
    ],
    "args": [],
    "targets": [
@@ -55264,7 +55675,7 @@
    "ko": "학교",
    "en": "School",
    "files": [
-    "MapHomeLaunchPrompts.swift:348"
+    "MapHomeLaunchPrompts.swift:354"
    ],
    "args": [],
    "targets": [
@@ -55324,7 +55735,7 @@
    "ko": "학원",
    "en": "Academy",
    "files": [
-    "MapHomeLaunchPrompts.swift:349",
+    "MapHomeLaunchPrompts.swift:355",
     "record-classification.json:0"
    ],
    "args": [],
@@ -55496,7 +55907,7 @@
    "ko": "함께 쓴 돈",
    "en": "Total spent",
    "files": [
-    "LedgerSheet.swift:565"
+    "LedgerSheet.swift:576"
    ],
    "args": [],
    "targets": [
@@ -55508,7 +55919,7 @@
    "ko": "함께한 사람 (쉼표로, 예: 민수, 지영)",
    "en": "People (comma separated)",
    "files": [
-    "LedgerSheet.swift:549"
+    "LedgerSheet.swift:560"
    ],
    "args": [],
    "targets": [
@@ -55569,7 +55980,7 @@
    "ko": "항공편",
    "en": "Flight",
    "files": [
-    "TripImportSheet.swift:119"
+    "TripImportSheet.swift:196"
    ],
    "args": [],
    "targets": [
@@ -56294,7 +56705,7 @@
    "ko": "확인",
    "en": "Check",
    "files": [
-    "TripImportSheet.swift:320"
+    "TripImportSheet.swift:397"
    ],
    "args": [],
    "targets": [
@@ -56333,7 +56744,7 @@
    "ko": "확인하고 반영하기",
    "en": "Review and add",
    "files": [
-    "TripImportSheet.swift:329"
+    "TripImportSheet.swift:406"
    ],
    "args": [],
    "targets": [
@@ -56357,7 +56768,7 @@
    "ko": "확인할 것",
    "en": "Things to check",
    "files": [
-    "MapHomeLaunchPrompts.swift:210"
+    "MapHomeLaunchPrompts.swift:182"
    ],
    "args": [],
    "targets": [
@@ -56405,7 +56816,7 @@
    "ko": "환율을 몰라요. 아래에 직접 넣어 주세요.",
    "en": "Rate unknown. Enter it below.",
    "files": [
-    "LedgerSheet.swift:413"
+    "LedgerSheet.swift:424"
    ],
    "args": [],
    "targets": [
@@ -56549,7 +56960,7 @@
    "en": "Work",
    "files": [
     "FirstRunTutorialGuides.swift:695",
-    "MapHomeLaunchPrompts.swift:350",
+    "MapHomeLaunchPrompts.swift:356",
     "FirstRunTutorialGuides.swift:695"
    ],
    "args": [],
@@ -56615,7 +57026,7 @@
    "en": "Rest",
    "files": [
     "MapHomeLocationPresentation.swift:296",
-    "TripImportSheet.swift:125",
+    "TripImportSheet.swift:202",
     "record-classification.json:0"
    ],
    "args": [],

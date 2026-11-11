@@ -137,3 +137,55 @@ struct LedgerOwnAccountsSheet: View {
         draft = ""
     }
 }
+
+/// 캡처에서 읽은 여러 건을 골라 넣는 미리보기(OCR1112A01). 이미 있는 것으로 보이는 줄은 꺼져 있다.
+struct LedgerCapturePreviewSheet: View {
+    let language: MapHomeLanguage
+    @State var batch: LedgerCaptureBatch
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    ForEach(batch.entries) { entry in row(entry) }
+                } footer: {
+                    Text(language.text("넣을 것만 골라 주세요. 이미 가계부에 있는 것 같은 줄은 꺼 두었어요.", "Pick the ones to add. Lines that look already recorded are turned off."))
+                }
+            }
+            .font(.taptionStyle(.subheadline))
+            .navigationTitle(language.text("캡처에서 읽은 결제", "Payments in the capture"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button(language.text("취소", "Cancel")) { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(language.text("\(batch.selected.count)건 넣기", "Add \(batch.selected.count)")) { Task { await save() } }
+                        .disabled(batch.selected.isEmpty)
+                }
+            }
+        }
+    }
+
+    private func row(_ entry: LedgerEntry) -> some View {
+        let isOn = batch.selected.contains(entry.id)
+        return Button {
+            if isOn { batch.selected.remove(entry.id) } else { batch.selected.insert(entry.id) }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: isOn ? "checkmark.circle.fill" : "circle").foregroundStyle(isOn ? Color.accentColor : Color.tpSecondary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(entry.title).foregroundStyle(Color.tpInk).lineLimit(1)
+                    Text(entry.occurredAt.formatted(date: .abbreviated, time: .shortened)).font(.taptionStyle(.caption)).foregroundStyle(Color.tpSecondary)
+                }
+                Spacer(minLength: 8)
+                Text(LedgerMoney.text(entry.amount, language: language)).foregroundStyle(entry.kind == .income ? Color.green : Color.tpInk)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func save() async {
+        for entry in batch.entries where batch.selected.contains(entry.id) { _ = await LedgerBook.shared.save(entry) }
+        dismiss()
+    }
+}

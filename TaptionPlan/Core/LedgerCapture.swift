@@ -255,3 +255,98 @@ enum LedgerReceiptReader {
             .compactMap { LedgerMessageParser.number(String($0.output)) }.max()
     }
 }
+
+/// 결제 화면 캡처(카드 앱 이용 내역·결제 문자 캡처)의 글자를 읽는다(OCR1112A01, 제안 8-10).
+/// 합계 줄이 있으면 영수증, 날짜·시각이 붙은 금액 줄이 둘 이상이면 내역 목록, 아니면 결제 문자 규칙, 끝으로 영수증 규칙.
+enum LedgerScreenshotReader {
+    typealias Draft = LedgerMessageParser.Draft
+    /// 결제 한 건이 아닌 금액 줄.
+    static let skipWords = ["누적", "잔액", "합계", "총액", "총 ", "포인트", "적립", "한도", "청구", "예정", "할인", "이용금액"]
+    private static let statusWords = ["승인", "일시불", "할부", "체크", "취소", "결제완료", "결제", "이용내역", "사용"]
+
+    static func drafts(_ lines: [String], now: Date = .now, calendar: Calendar = .autoupdatingCurrent) -> [Draft] {
+        if lines.contains(where: LedgerReceiptReader.isTotalLine), let receipt = LedgerReceiptReader.draft(lines) { return [receipt] }
+        let rows = rows(lines, now: now, calendar: calendar)
+        if rows.count >= 2 { return rows }
+        if let message = LedgerMessageParser.parse(lines.joined(separator: "\n"), now: now, calendar: calendar) { return [message] }
+        return rows.isEmpty ? (LedgerReceiptReader.draft(lines).map { [$0] } ?? []) : rows
+    }
+
+    /// 내역 목록의 줄들. 날짜 머리줄(「11월 10일」·「11.10」)이나 곁의 시각이 있는 원화 금액만 결제로 본다(영수증 품목 줄과 가른다).
+    static func rows(_ lines: [String], now: Date = .now, calendar: Calendar = .autoupdatingCurrent) -> [Draft] {
+        var day: (month: Int, day: Int)?
+        var result: [Draft] = []
+        for (index, line) in lines.enumerated() {
+            if let found = dayHeader(line) { day = found }
+            guard !skipWords.contains(where: line.contains), let amount = LedgerMessageParser.wonAmounts(line).first else { continue }
+            let near = [index - 1, index, index + 1].filter(lines.indices.contains).map { lines[$0] }
+            let time = near.lazy.compactMap(clock).first
+            guard day != nil || time != nil else { continue }
+            let above = [index - 1, index - 2].filter(lines.indices.contains).map { lines[$0] }
+                .filter { LedgerMessageParser.wonAmounts($0).isEmpty }
+            result.append(Draft(
+                amount: amount.value, currency: "KRW", merchant: ([line] + above).lazy.compactMap(name).first, card: nil,
+                occurredAt: date(day: day, time: time, now: now, calendar: calendar), isCancel: (near + above).contains { $0.contains("취소") }
+            ))
+        }
+        return result
+    }
+
+    static func dayHeader(_ line: String) -> (month: Int, day: Int)? {
+        let pair: (Substring, Substring)?
+        if let match = line.firstMatch(of: /(\d{1,2})월\s*(\d{1,2})일/) { pair = (match.1, match.2) }
+        else if let match = line.firstMatch(of: /(?:^|[^\d,.:])(\d{1,2})[\/.](\d{1,2})(?:$|[^\d,:])/) { pair = (match.1, match.2) }
+        else { pair = nil }
+        guard let pair, let month = Int(pair.0), let day = Int(pair.1), (1...12).contains(month), (1...31).contains(day) else { return nil }
+        return (month, day)
+    }
+
+    static func clock(_ line: String) -> (hour: Int, minute: Int)? {
+        guard let match = line.firstMatch(of: /(?:^|\D)(\d{1,2}):(\d{2})(?:$|\D)/), let hour = Int(match.1), let minute = Int(match.2),
+              (0..<24).contains(hour), (0..<60).contains(minute) else { return nil }
+        return (hour, minute)
+    }
+
+    /// 줄에서 금액·날짜·시각·상태 낱말을 뺀 가게 이름.
+    static func name(_ line: String) -> String? {
+        var text = LedgerMessageParser.strippingWon(line)
+        text = text.replacing(/\d{1,2}월\s*\d{1,2}일|\d{1,2}[\/.]\d{1,2}|\d{1,2}:\d{2}/, with: " ")
+        for word in statusWords { text = text.replacingOccurrences(of: word, with: " ") }
+        text = text.split(separator: " ").joined(separator: " ").trimmingCharacters(in: .whitespaces.union(.punctuationCharacters).union(.symbols))
+        guard text.count >= 2, text.count <= 30, text.contains(where: \.isLetter), !LedgerMessageParser.startsWithCardName(text) else { return nil }
+        return text
+    }
+
+    /// 날짜가 없으면 오늘, 시각이 없으면 낮 12시. 내일보다 뒤가 되면 작년으로 본다.
+    static func date(day: (month: Int, day: Int)?, time: (hour: Int, minute: Int)?, now: Date, calendar: Calendar) -> Date? {
+        var parts = calendar.dateComponents([.year, .month, .day], from: now)
+        if let day { parts.month = day.month; parts.day = day.day }
+        parts.hour = time?.hour ?? 12
+        parts.minute = time?.minute ?? 0
+        guard let date = calendar.date(from: parts) else { return nil }
+        guard date > now.addingTimeInterval(86_400) else { return date }
+        parts.year = (parts.year ?? 0) - 1
+        return calendar.date(from: parts) ?? date
+    }
+}
+
+/// 캡처에서 읽은 여러 건. 이미 가계부에 있는 것으로 보이는 줄(같은 금액·통화·종류가 10분 안, 시각을 못 읽었으면 같은 날)은 꺼 둔다.
+struct LedgerCaptureBatch: Identifiable {
+    let id = UUID()
+    var entries: [LedgerEntry]
+    var selected: Set<LedgerEntry.ID>
+
+    init(entries: [LedgerEntry], existing: [LedgerEntry], calendar: Calendar = .autoupdatingCurrent) {
+        self.entries = entries
+        selected = Set(entries.filter { !Self.exists($0, in: existing, calendar: calendar) }.map(\.id))
+    }
+
+    static func exists(_ entry: LedgerEntry, in existing: [LedgerEntry], calendar: Calendar = .autoupdatingCurrent) -> Bool {
+        let hasClock = calendar.dateComponents([.hour, .minute], from: entry.occurredAt) != DateComponents(hour: 12, minute: 0)
+        return existing.contains { other in
+            guard other.amount == entry.amount, other.currency == entry.currency, other.kind == entry.kind else { return false }
+            return hasClock ? abs(other.occurredAt.timeIntervalSince(entry.occurredAt)) <= 600
+                : calendar.isDate(other.occurredAt, inSameDayAs: entry.occurredAt)
+        }
+    }
+}

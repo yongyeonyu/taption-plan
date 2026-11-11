@@ -1,7 +1,25 @@
 {
- "ui": 4568,
+ "ui": 4601,
  "catalog": 502,
  "unread": [
+  {
+   "file": "TaptionPlan/UI/TravelModeView.swift",
+   "line": 509,
+   "ko": "sheet.leftover",
+   "en": "language"
+  },
+  {
+   "file": "TaptionPlan/UI/TravelModeView.swift",
+   "line": 512,
+   "ko": "sheet.myCost",
+   "en": "language"
+  },
+  {
+   "file": "TaptionPlan/UI/TravelModeView.swift",
+   "line": 512,
+   "ko": "sheet.myCost",
+   "en": "language"
+  },
   {
    "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
    "line": 41,
@@ -243,68 +261,74 @@
    "en": "item.entry.currency"
   },
   {
+   "file": "TaptionPlan/UI/LedgerReviewBand.swift",
+   "line": 181,
+   "ko": "entry.amount",
+   "en": "language"
+  },
+  {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 152,
+   "line": 154,
    "ko": "LedgerTripMath.sheet(trip, entries: book.entries).myCost",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 241,
+   "line": 252,
    "ko": "monthCarryOver",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 242,
+   "line": 253,
    "ko": "earned",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 243,
+   "line": 254,
    "ko": "spent",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 244,
+   "line": 255,
    "ko": "monthCarryOver + earned - spent",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 248,
+   "line": 259,
    "ko": "left",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 254,
+   "line": 265,
    "ko": "net",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 294,
+   "line": 305,
    "ko": "entry.amount",
    "en": "entry.currency"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 299,
+   "line": 310,
    "ko": "krw",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 561,
+   "line": 572,
    "ko": "transfer.amountKRW",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/LedgerSheet.swift",
-   "line": 565,
+   "line": 576,
    "ko": "LedgerBook.total(entries, .expense)",
    "en": "language"
   },

@@ -85,4 +85,61 @@ final class LedgerMessageAccuracyTests: XCTestCase {
         XCTAssertTrue(LedgerMessageParser.looksLikePayment("REWE\nSUMME 12,50 €"))
         XCTAssertFalse(LedgerMessageParser.looksLikePayment("병원 3시 예약"))
     }
+
+    // MARK: 결제 화면 캡처 (OCR1112A01)
+
+    private var seoul: Calendar { var calendar = Calendar(identifier: .gregorian); calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!; return calendar }
+    private var captureNow: Date { seoul.date(from: DateComponents(year: 2026, month: 11, day: 12, hour: 9))! }
+
+    func testReceiptWithTotalLineStaysOneReceipt() {
+        let drafts = LedgerScreenshotReader.drafts(["스타벅스", "11/10 12:30", "아메리카노 4,500원", "라떼 5,000원", "합계 9,500원"], now: captureNow, calendar: seoul)
+        XCTAssertEqual(drafts.map(\.amount), [9_500])
+        XCTAssertEqual(drafts.first?.merchant, "스타벅스")
+    }
+
+    func testReceiptItemsWithoutDatesAreNotSeparatePayments() {
+        let drafts = LedgerScreenshotReader.drafts(["동네빵집", "소금빵 3,500원", "식빵 6,000원"], now: captureNow, calendar: seoul)
+        XCTAssertEqual(drafts.map(\.amount), [6_000], "날짜·시각이 없는 품목 줄은 예전처럼 가장 큰 금액 한 건")
+    }
+
+    func testMessageScreenshotUsesMessageRulesAndSkipsRunningTotal() {
+        let drafts = LedgerScreenshotReader.drafts(["[Web발신]", "신한카드 승인 홍*동", "12,000원 일시불", "11/10 12:30 스타벅스강남", "누적 1,234,000원"], now: captureNow, calendar: seoul)
+        XCTAssertEqual(drafts.count, 1)
+        XCTAssertEqual(drafts.first?.amount, 12_000)
+        XCTAssertEqual(drafts.first?.merchant, "스타벅스강남")
+        XCTAssertEqual(drafts.first?.card, "신한카드")
+    }
+
+    func testCardHistoryScreenshotBecomesSeveralPayments() {
+        let lines = ["이용내역", "11월 10일", "스타벅스 강남점", "12:30 일시불", "4,500원", "GS25 원효로점", "18:05", "2,300원",
+                     "11월 9일", "쿠팡 취소", "09:10", "15,000원", "이번 달 이용금액 21,800원"]
+        let drafts = LedgerScreenshotReader.drafts(lines, now: captureNow, calendar: seoul)
+        XCTAssertEqual(drafts.map(\.amount), [4_500, 2_300, 15_000])
+        XCTAssertEqual(drafts.map(\.merchant), ["스타벅스 강남점", "GS25 원효로점", "쿠팡"])
+        XCTAssertEqual(drafts.map(\.isCancel), [false, false, true])
+        XCTAssertEqual(drafts[0].occurredAt, seoul.date(from: DateComponents(year: 2026, month: 11, day: 10, hour: 12, minute: 30)))
+        XCTAssertEqual(drafts[2].occurredAt, seoul.date(from: DateComponents(year: 2026, month: 11, day: 9, hour: 9, minute: 10)))
+    }
+
+    func testOneLineHistoryRowsAndFutureDateFallsToLastYear() {
+        let drafts = LedgerScreenshotReader.drafts(["12.30 이마트 35,000원", "12.31 주유소 60,000원"], now: captureNow, calendar: seoul)
+        XCTAssertEqual(drafts.map(\.merchant), ["이마트", "주유소"])
+        XCTAssertEqual(drafts.first?.occurredAt, seoul.date(from: DateComponents(year: 2025, month: 12, day: 30, hour: 12)))
+    }
+
+    func testUnreadableCaptureGivesNothing() {
+        XCTAssertTrue(LedgerScreenshotReader.drafts(["내일 3시 회의", "자료 챙기기"], now: captureNow, calendar: seoul).isEmpty)
+    }
+
+    func testBatchTurnsOffRowsAlreadyInTheLedger() {
+        let at = seoul.date(from: DateComponents(year: 2026, month: 11, day: 10, hour: 12, minute: 30))!
+        let noon = seoul.date(from: DateComponents(year: 2026, month: 11, day: 9, hour: 12))!
+        let fresh = LedgerEntry(occurredAt: at, amount: 4_500, title: "스타벅스")
+        let other = LedgerEntry(occurredAt: at, amount: 2_300, title: "GS25")
+        let dayOnly = LedgerEntry(occurredAt: noon, amount: 9_000, title: "국밥")
+        let existing = [LedgerEntry(occurredAt: at.addingTimeInterval(300), amount: 4_500, title: "스타벅스강남"),
+                        LedgerEntry(occurredAt: noon.addingTimeInterval(7 * 3_600), amount: 9_000, title: "원조국밥")]
+        let batch = LedgerCaptureBatch(entries: [fresh, other, dayOnly], existing: existing, calendar: seoul)
+        XCTAssertEqual(batch.selected, [other.id])
+    }
 }

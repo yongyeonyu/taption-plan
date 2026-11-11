@@ -21,6 +21,7 @@ struct LedgerSheet: View {
     @State private var draft: LedgerEntry?
     @State private var receiptItem: PhotosPickerItem?
     @State private var captureNote: String?
+    @State private var captureBatch: LedgerCaptureBatch?
     @State private var path: [String] = []
     @State private var isAddingTrip = false
     private var book: LedgerBook { .shared }
@@ -109,6 +110,7 @@ struct LedgerSheet: View {
             }
             .sheet(item: $editing) { entry in LedgerEntryForm(language: language, entry: entry, isNew: false) }
             .sheet(item: $draft) { entry in LedgerEntryForm(language: language, entry: entry) }
+            .sheet(item: $captureBatch) { batch in LedgerCapturePreviewSheet(language: language, batch: batch) }
             .onChange(of: receiptItem) { _, item in
                 guard let item else { return }
                 Task { await readReceipt(item) }
@@ -185,7 +187,7 @@ struct LedgerSheet: View {
                 .labelStyle(.titleAndIcon)
                 Spacer()
                 PhotosPicker(selection: $receiptItem, matching: .images) {
-                    Label(language.text("영수증", "Receipt"), systemImage: "doc.text.viewfinder")
+                    Label(language.text("영수증·캡처", "Receipt or capture"), systemImage: "doc.text.viewfinder")
                 }
             }
             .buttonStyle(.borderless)
@@ -194,7 +196,7 @@ struct LedgerSheet: View {
                 Label(language.text("결제 문자 자동으로 넣기", "Add payment texts automatically"), systemImage: "message.badge")
             }
         } footer: {
-            Text(captureNote ?? language.text("카드 결제 문자를 복사해 붙여 넣거나 영수증 사진을 고르면 채워 드려요. 「결제 문자 자동으로 넣기」로 단축어를 걸면 문자가 오자마자 들어가요.", "Paste a card payment text or pick a receipt photo to fill an entry. Set up \"Add payment texts automatically\" so texts go in as they arrive."))
+            Text(captureNote ?? language.text("카드 결제 문자를 복사해 붙여 넣거나 영수증 사진·결제 화면 캡처를 고르면 채워 드려요. 「결제 문자 자동으로 넣기」로 단축어를 걸면 문자가 오자마자 들어가요.", "Paste a card payment text, or pick a receipt photo or a payment screenshot, to fill an entry. Set up \"Add payment texts automatically\" so texts go in as they arrive."))
         }
     }
 
@@ -220,7 +222,16 @@ struct LedgerSheet: View {
         guard let data = try? await item.loadTransferable(type: Data.self),
               let image = UIImage(data: data)?.cgImage else { return fill(nil, source: .receipt) }
         let lines = await LedgerReceiptReader.recognize(image)
-        fill(LedgerReceiptReader.draft(lines), source: .receipt, raw: lines.joined(separator: "\n"))
+        let drafts = LedgerScreenshotReader.drafts(lines)
+        // 결제가 여러 건인 캡처는 골라 넣게 한다(OCR1112A01).
+        guard drafts.count >= 2 else { return fill(drafts.first, source: .receipt, raw: lines.joined(separator: "\n")) }
+        captureNote = nil
+        let entries = drafts.map { parsed in
+            var entry = LedgerMessageParser.entry(parsed, source: .receipt)
+            entry.tripID = tripID
+            return entry
+        }
+        captureBatch = LedgerCaptureBatch(entries: entries, existing: book.entries)
     }
 
     private var summarySection: some View {

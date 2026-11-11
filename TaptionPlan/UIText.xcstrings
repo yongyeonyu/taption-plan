@@ -20791,6 +20791,83 @@
         }
       }
     },
+    "{0}건 넣기|Add {0}" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0}件を追加"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加{0}笔"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加入{0}筆"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} hinzufügen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter {0}"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aggiungi {0}"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Añadir {0}"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adicionar {0}"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thêm {0}"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tambah {0}"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เพิ่ม {0} รายการ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} जोड़ें"
+          }
+        }
+      }
+    },
     "{0}건|{0} entries" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -227998,6 +228075,83 @@
         }
       }
     },
+    "넣을 것만 골라 주세요. 이미 가계부에 있는 것 같은 줄은 꺼 두었어요.|Pick the ones to add. Lines that look already recorded are turned off." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "追加するものだけ選んでください。すでに記録済みと思われる行はオフにしてあります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请只选择要添加的项目。看起来已记录的行已关闭。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請只選擇要加入的項目。看起來已記錄的列已關閉。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle aus, was hinzugefügt werden soll. Zeilen, die bereits erfasst scheinen, sind ausgeschaltet."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisissez ce qu’il faut ajouter. Les lignes qui semblent déjà enregistrées sont désactivées."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scegli cosa aggiungere. Le righe che sembrano già registrate sono disattivate."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elige lo que quieras añadir. Las líneas que parecen ya registradas están desactivadas."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escolha o que adicionar. As linhas que parecem já registradas estão desativadas."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hãy chọn những mục cần thêm. Các dòng có vẻ đã được ghi thì đã tắt sẵn."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pilih yang ingin ditambahkan. Baris yang tampaknya sudah tercatat dimatikan."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เลือกเฉพาะรายการที่จะเพิ่ม รายการที่ดูเหมือนบันทึกไว้แล้วถูกปิดไว้"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "जो जोड़ना है वही चुनें। जो पंक्तियाँ पहले से दर्ज लगती हैं, वे बंद रखी गई हैं।"
+          }
+        }
+      }
+    },
     "노을 지는 귀갓길|Sunset Home" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -287365,6 +287519,83 @@
         }
       }
     },
+    "영수증·캡처|Receipt or capture" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "レシート・キャプチャ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "小票或截图"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "收據或截圖"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beleg oder Screenshot"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reçu ou capture"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scontrino o screenshot"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recibo o captura"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recibo ou captura"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hóa đơn hoặc ảnh chụp"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Struk atau tangkapan layar"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ใบเสร็จหรือภาพหน้าจอ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "रसीद या स्क्रीनशॉट"
+          }
+        }
+      }
+    },
     "영수증을 읽지 못해 AI에게 맡겼어요.|Couldn't read the receipt, so it was sent to your AI." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -329561,79 +329792,79 @@
         }
       }
     },
-    "카드 결제 문자를 복사해 붙여 넣거나 영수증 사진을 고르면 채워 드려요. 「결제 문자 자동으로 넣기」로 단축어를 걸면 문자가 오자마자 들어가요.|Paste a card payment text or pick a receipt photo to fill an entry. Set up \"Add payment texts automatically\" so texts go in as they arrive." : {
+    "카드 결제 문자를 복사해 붙여 넣거나 영수증 사진·결제 화면 캡처를 고르면 채워 드려요. 「결제 문자 자동으로 넣기」로 단축어를 걸면 문자가 오자마자 들어가요.|Paste a card payment text, or pick a receipt photo or a payment screenshot, to fill an entry. Set up \"Add payment texts automatically\" so texts go in as they arrive." : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "カード決済のメッセージを貼り付けるか、レシート写真を選ぶと入力されます。「決済メッセージを自動で追加」でショートカットを設定すると、届いたらすぐ入ります。"
+            "value" : "カード決済のメッセージを貼り付けるか、レシートの写真や決済画面のキャプチャを選ぶと入力されます。「決済メッセージを自動で追加」でショートカットを設定すると、届いたらすぐ入ります。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "粘贴银行卡支付短信或选择小票照片即可填写。用「自动添加支付短信」设置快捷指令后，短信一到就会记入。"
+            "value" : "粘贴刷卡短信，或选择小票照片或付款截图，即可自动填写。通过“自动添加付款短信”设置快捷指令后，短信一到就会记入。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "貼上信用卡付款簡訊或選擇收據照片即可填寫。用「自動加入付款簡訊」設定捷徑後，簡訊一到就會記入。"
+            "value" : "貼上刷卡簡訊，或選擇收據照片或付款截圖，即可自動填寫。透過「自動加入付款簡訊」設定捷徑後，簡訊一到就會記入。"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Füge eine Kartenzahlungs-SMS ein oder wähle ein Belegfoto, um einen Eintrag auszufüllen. Richte „Zahlungsnachrichten automatisch hinzufügen“ ein, dann kommen Nachrichten sofort hinein."
+            "value" : "Füge eine Kartenzahlungs-SMS ein oder wähle ein Belegfoto oder einen Zahlungs-Screenshot, um einen Eintrag auszufüllen. Mit „Zahlungs-SMS automatisch hinzufügen“ werden SMS sofort beim Eintreffen erfasst."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Collez un SMS de paiement par carte ou choisissez une photo de reçu pour remplir une entrée. Configurez « Ajouter les SMS de paiement automatiquement » pour qu’ils s’ajoutent dès leur arrivée."
+            "value" : "Collez un SMS de paiement par carte, ou choisissez une photo de reçu ou une capture de paiement, pour remplir une entrée. Configurez « Ajouter automatiquement les SMS de paiement » pour que les SMS soient saisis dès leur arrivée."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Incolla un SMS di pagamento con carta o scegli la foto di uno scontrino per compilare una voce. Imposta «Aggiungi SMS di pagamento automaticamente» per inserirli appena arrivano."
+            "value" : "Incolla un SMS di pagamento con carta, oppure scegli la foto di uno scontrino o uno screenshot di pagamento, per compilare una voce. Imposta «Aggiungi automaticamente gli SMS di pagamento» per registrarli appena arrivano."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pega un mensaje de pago con tarjeta o elige una foto del recibo para rellenar un registro. Configura «Añadir mensajes de pago automáticamente» para que entren al llegar."
+            "value" : "Pega un SMS de pago con tarjeta, o elige una foto de recibo o una captura de pago, para rellenar una entrada. Configura «Añadir SMS de pago automáticamente» para que entren en cuanto lleguen."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cole uma mensagem de pagamento com cartão ou escolha a foto de um recibo para preencher um registro. Configure “Adicionar mensagens de pagamento automaticamente” para que entrem assim que chegarem."
+            "value" : "Cole um SMS de pagamento com cartão ou escolha uma foto de recibo ou uma captura de pagamento para preencher um lançamento. Configure “Adicionar SMS de pagamento automaticamente” para que entrem assim que chegarem."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dán tin nhắn thanh toán thẻ hoặc chọn ảnh hóa đơn để điền mục. Thiết lập «Tự động thêm tin nhắn thanh toán» để tin nhắn vào ngay khi đến."
+            "value" : "Dán tin nhắn thanh toán thẻ, hoặc chọn ảnh hóa đơn hay ảnh chụp màn hình thanh toán, để điền mục mới. Thiết lập “Tự động thêm tin nhắn thanh toán” để tin nhắn được ghi ngay khi đến."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tempel pesan pembayaran kartu atau pilih foto struk untuk mengisi catatan. Atur “Tambah pesan pembayaran otomatis” agar pesan langsung masuk saat tiba."
+            "value" : "Tempel SMS pembayaran kartu, atau pilih foto struk atau tangkapan layar pembayaran, untuk mengisi catatan. Atur “Tambahkan SMS pembayaran otomatis” agar SMS langsung tercatat saat masuk."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "วางข้อความชำระเงินด้วยบัตรหรือเลือกรูปใบเสร็จเพื่อกรอกรายการ ตั้งค่า «เพิ่มข้อความชำระเงินอัตโนมัติ» เพื่อให้ข้อความเข้าทันทีเมื่อมาถึง"
+            "value" : "วางข้อความแจ้งชำระเงินด้วยบัตร หรือเลือกรูปใบเสร็จหรือภาพหน้าจอการชำระเงิน เพื่อกรอกรายการ ตั้งค่า “เพิ่มข้อความชำระเงินอัตโนมัติ” เพื่อให้บันทึกทันทีที่ข้อความเข้ามา"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "कार्ड भुगतान संदेश चिपकाएँ या रसीद की फ़ोटो चुनें, प्रविष्टि भर जाएगी। “भुगतान संदेश अपने-आप जोड़ें” सेट करें तो संदेश आते ही जुड़ जाएँगे।"
+            "value" : "कार्ड भुगतान का संदेश चिपकाएँ, या रसीद की फ़ोटो या भुगतान का स्क्रीनशॉट चुनें, तो प्रविष्टि भर दी जाएगी। “भुगतान संदेश अपने आप जोड़ें” सेट करें ताकि संदेश आते ही दर्ज हो जाएँ।"
           }
         }
       }
@@ -331174,6 +331405,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "तय कैलेंडर इवेंट यहाँ नहीं ले जाए जा सकते।"
+          }
+        }
+      }
+    },
+    "캡처에서 읽은 결제|Payments in the capture" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キャプチャから読み取った決済"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从截图读取的付款"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "從截圖讀取的付款"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zahlungen im Screenshot"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paiements dans la capture"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pagamenti nello screenshot"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pagos en la captura"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pagamentos na captura"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thanh toán trong ảnh chụp"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pembayaran dalam tangkapan layar"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "รายการชำระเงินในภาพหน้าจอ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "स्क्रीनशॉट में मिले भुगतान"
           }
         }
       }
