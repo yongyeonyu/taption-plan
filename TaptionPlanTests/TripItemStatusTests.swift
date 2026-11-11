@@ -218,3 +218,36 @@ final class TravelFareAndAirportTests: XCTestCase {
         XCTAssertEqual(items.filter(TripImportCoordinateCheck.shouldCheck).map(\.id), ["a"])
     }
 }
+
+/// TRP1110A01 재생: 기록 없는 여행 날은 화랑이가 일정 핀을 시간 순서대로 따라간다.
+final class TripPlaybackPathTests: XCTestCase {
+    private let base = Date(timeIntervalSince1970: 1_796_000_000)
+
+    private func stop(_ itemID: String, _ lat: Double, _ lng: Double, order: Int) -> TravelPlanStop {
+        TravelPlanStop(id: UUID(), title: itemID, latitude: lat, longitude: lng, day: base, order: order, planID: nil, tripID: "t", itemID: itemID)
+    }
+
+    private func item(_ itemID: String, from: Double, to: Double) -> TravelTripItem {
+        TravelTripItem(tripID: "t", itemID: itemID, kind: "sight", title: itemID, start: base.addingTimeInterval(from * 60),
+                       end: base.addingTimeInterval(to * 60), startOffsetSeconds: 32_400, endOffsetSeconds: 32_400, planID: nil, status: nil)
+    }
+
+    func testStaysOnPinsAndMovesStraightBetweenThem() throws {
+        // 순서 번호와 달리 시각 순서로 따라간다.
+        let path = try XCTUnwrap(MapHomeTripPlaybackPath(
+            stops: [stop("b", 37.60, 127.00, order: 0), stop("a", 37.50, 127.00, order: 1), stop("x", 1, 1, order: 2)],
+            items: [item("a", from: 60, to: 120), item("b", from: 180, to: 240)]
+        ))
+        XCTAssertEqual(path.stops.count, 2, "시각을 모르는 핀은 뺀다")
+        XCTAssertEqual(path.coordinate(at: base).latitude, 37.50, accuracy: 1e-9)
+        XCTAssertEqual(path.coordinate(at: base.addingTimeInterval(90 * 60)).latitude, 37.50, accuracy: 1e-9)
+        XCTAssertEqual(path.coordinate(at: base.addingTimeInterval(150 * 60)).latitude, 37.55, accuracy: 1e-9)
+        XCTAssertEqual(path.coordinate(at: base.addingTimeInterval(600 * 60)).latitude, 37.60, accuracy: 1e-9)
+        XCTAssertEqual(path.moves.count, 1)
+        XCTAssertEqual(path.moves.first?.start, base.addingTimeInterval(120 * 60))
+    }
+
+    func testNoTimedStopsMeansNoPath() {
+        XCTAssertNil(MapHomeTripPlaybackPath(stops: [stop("a", 37.5, 127, order: 0)], items: []))
+    }
+}

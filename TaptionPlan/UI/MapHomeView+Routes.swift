@@ -1028,12 +1028,15 @@ extension MapHomeView {
     func expectedRouteCoordinateLookup() -> (Date) -> GeoPoint? {
         let overlays = expectedRouteOverlays
         let visibleIDs = Set(displayedExpectedRouteOverlays.map(\.id))
+        let trip = tripPlaybackPath
         return { date in
             let route = overlays.filter {
                 visibleIDs.contains($0.id) && $0.coordinates.count >= 2
                     && $0.departureDate <= date && date <= $0.arrivalDate
             }.min { $0.departureDate < $1.departureDate }
-            guard let coordinate = route?.coordinate(at: date), CLLocationCoordinate2DIsValid(coordinate) else { return nil }
+            // 기록 없는 여행 날은 일정 핀을 따라간다(TRP1110A01).
+            guard let coordinate = route?.coordinate(at: date) ?? trip?.coordinate(at: date),
+                  CLLocationCoordinate2DIsValid(coordinate) else { return nil }
             return wbsGeoPoint(coordinate)
         }
     }

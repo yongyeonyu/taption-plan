@@ -323,8 +323,14 @@ extension MapHomeView {
         let categoryRanges = MapHomePlaybackCategoryRanges.movementRanges(
             snapshot: dayData, frequentPlaces: model.snapshot.settings.frequentPlaces,
             dayStart: dayStart, dayEnd: dayEnd)
+        // 기록 없는 여행 날은 일정 사이 옮겨 가는 시간을 이동 배속으로(TRP1110A01).
+        let tripRanges = (tripPlaybackPath?.moves ?? []).map {
+            MapHomePlaybackMovementRange(
+                startMinute: $0.start.timeIntervalSince(dayStart) / 60, endMinute: $0.end.timeIntervalSince(dayStart) / 60
+            )
+        }
         return MapHomePlaybackCategoryRanges.removingSleep(MapHomePlaybackMovementRange.normalized(
-            readingRanges + travelRanges + categoryRanges
+            readingRanges + travelRanges + categoryRanges + tripRanges
         ), snapshot: dayData, dayStart: dayStart)
     }
 
@@ -780,7 +786,7 @@ extension MapHomeView {
     }
 
     var expectedRoutePlaybackCoordinate: CLLocationCoordinate2D? {
-        activeExpectedRoute?.coordinate(at: displayedLocationDate)
+        activeExpectedRoute?.coordinate(at: displayedLocationDate) ?? tripPlaybackPath?.coordinate(at: displayedLocationDate)
     }
 
     func computeRecordedStickmanAction() -> MapHomeStickmanAction {

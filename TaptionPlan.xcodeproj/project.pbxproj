@@ -318,6 +318,7 @@
 		B1080801000000000000A003 /* ReviewCoverageEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080801000000000000F003 /* ReviewCoverageEngine.swift */; };
 		A1L1110A0100000000000001 /* LedgerCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1110A0100000000000001 /* LedgerCore.swift */; };
 		A1T1111A0100000000000001 /* TravelGreatCircleAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1T1111A0100000000000001 /* TravelGreatCircleAdapter.swift */; };
+		A1R1111A0200000000000001 /* MapHomeTripPlayback.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1R1111A0200000000000001 /* MapHomeTripPlayback.swift */; };
 		A1T1111B0100000000000001 /* TravelAirportsAndFares.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1T1111B0100000000000001 /* TravelAirportsAndFares.swift */; };
 		A1L1111A0100000000000004 /* LedgerCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111A0100000000000004 /* LedgerCapture.swift */; };
 		A1L1111A0100000000000005 /* LedgerIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111A0100000000000005 /* LedgerIntents.swift */; };
@@ -1053,6 +1054,7 @@
 		B1080801000000000000F003 /* ReviewCoverageEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewCoverageEngine.swift; sourceTree = "<group>"; };
 		F1L1110A0100000000000001 /* LedgerCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerCore.swift; sourceTree = "<group>"; };
 		F1T1111A0100000000000001 /* TravelGreatCircleAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelGreatCircleAdapter.swift; sourceTree = "<group>"; };
+		F1R1111A0200000000000001 /* MapHomeTripPlayback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeTripPlayback.swift; sourceTree = "<group>"; };
 		F1T1111B0100000000000001 /* TravelAirportsAndFares.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelAirportsAndFares.swift; sourceTree = "<group>"; };
 		F1L1111A0100000000000004 /* LedgerCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerCapture.swift; sourceTree = "<group>"; };
 		F1L1111A0100000000000005 /* LedgerIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerIntents.swift; sourceTree = "<group>"; };
@@ -1880,6 +1882,7 @@
 				F1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift */,
 				C1CA1111A010000000000003 /* MapHomeLaunchPrompts.swift */,
 				CA1A1111A010000000000003 /* AITaskPanel.swift */,
+				F1R1111A0200000000000001 /* MapHomeTripPlayback.swift */,
 				F100000000000000000000F4 /* MapHomeSectionDetailEngine.swift */,
 				F10000000000000000000087 /* MapHomeLocationPresentation.swift */,
 				F10000000000000000000005 /* AppShellView.swift */,
@@ -2975,6 +2978,7 @@
 				B1080801000000000000A003 /* ReviewCoverageEngine.swift in Sources */,
 				A1L1110A0100000000000001 /* LedgerCore.swift in Sources */,
 				A1T1111A0100000000000001 /* TravelGreatCircleAdapter.swift in Sources */,
+				A1R1111A0200000000000001 /* MapHomeTripPlayback.swift in Sources */,
 				A1T1111B0100000000000001 /* TravelAirportsAndFares.swift in Sources */,
 				A1L1111A0100000000000004 /* LedgerCapture.swift in Sources */,
 				A1L1111A0100000000000005 /* LedgerIntents.swift in Sources */,
