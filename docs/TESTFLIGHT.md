@@ -106,6 +106,18 @@ build/validation/TFB1024A04/
 └── export/TaptionPlan.ipa
 ```
 
+## 외부 테스트(「TP 지인 테스트」)
+
+대표가 「외부 테스트까지」라고 할 때만 한다(메모리 규칙). `release.sh`가 내부 그룹까지 끝낸 뒤:
+
+```bash
+python3 scripts/testflight/asc.py groups      # 외부 그룹 id 확인
+python3 scripts/testflight/external.py --build <번호> --group <외부 그룹 id> --notes "테스트할 내용"
+python3 scripts/testflight/external.py --build <번호> --group <외부 그룹 id> --status
+```
+
+`external.py`는 외부 그룹 연결 → 「테스트할 내용」(ko) → 베타 앱 심사 제출(이미 있으면 넘김) → 상태(`betaReviewState`·`externalBuildState`·그룹 연결)를 읽는다. 심사가 `APPROVED`이고 `externalBuildState`가 `IN_BETA_TESTING`이어야 외부 테스터에게 보인다. 대기 중이면 `--status`로 다시 읽어 기록한다.
+
 ## 실행 주의
 
 `release.sh`에 시간 제한을 걸지 않고, 오래 걸리면 백그라운드로 돌린다. 2026-11-04에 590초 제한을 걸었다가 익스포트 단계에서 끊겨 번호만 오르고 업로드되지 않은 일이 있다(빌드 270). 결과는 종료 코드와 `testflight-report.json`을 읽은 뒤에 기록한다. 번호는 되돌리지 않으므로 끊긴 번호는 건너뛴다.

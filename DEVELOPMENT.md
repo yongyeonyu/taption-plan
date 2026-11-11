@@ -163,6 +163,24 @@ HealthKit 운동 경로를 보완할 때는 기존 위치와 20초 시간 중복
 - 재생·지도의 고양이 동작은 머무는 대분류면 `MapHomeStickmanActionResolver.railAction`이 대분류 줄과 그 시각 상세 활동으로 먼저 정합니다. 이동·활동·미확인은 위치·센서 판정에 맡기고, 회의 일정은 `MapHomeMeetingPolicy`가 덮습니다.
 - 첫 실행 튜토리얼이 끝나기 전에는 앱이 건강 권한을 먼저 묻지 않습니다(`FirstRunTutorialStore.allowsUnaskedPermissionPrompts`). 먼저 물으면 시트가 튜토리얼 뒤에서 멈추고 `isRequestingPermission` 때문에 다른 권한 단추도 듣지 않습니다.
 
+## 2026-11-11에 더한 규칙
+
+판정
+- 차량 오디오: 하루 판정은 등록한 차 이름만 봅니다(`CarAudioTravelConfirmation.registeredOnly`, 원본은 그대로). 걸으며 3분 넘게 연결된 기기는 이어폰입니다(`wornAudioNames`). CarPlay(`.carAudio`)는 연결되면 묻지 않고 등록하고(`AppModel.registerCarPlay`, 여러 대), 타는 동안만 연결된 미등록 기기는 앱을 열 때 묻습니다. 아니요·등록 빼기는 `dismissedCarAudioNames`(`@OmitIfEmpty`라 예전 저장 바이트가 그대로)에 남아 다시 묻지 않습니다.
+- 철도 인식: 짧은 방문인데 이웃까지 열차로도 못 가는 속도면 튄 방문으로 뺍니다(`RailJourneyRecognizer.droppingTeleportVisits`). 역 사이 길은 거리 + 환승 1.5km 벌점으로 고릅니다(`SubwayCatalog+Routing.swift`). 거부 사유는 `RailJourneyRecognizer.rejections`가 「역 사이 이동 아님 · 사유」로 남깁니다. 탑승 경계를 넘는 자동 걷기는 경계에서 자릅니다.
+- 등록 장소 체류: 위치가 한 점도 없는 공백은 종일·취소 아닌 일정이 덮는 시간을 빼고 60분 이하면 잇고, 돌아온 직후 아직 체류가 안 된 위치도 그 곳 조각으로 넣어 잇습니다(`StationaryContextActualEngine.ongoingTail`, CAL1111A02).
+- 집 레벨: 미래 날짜는 오늘 레벨입니다(`MapHomeGrowthPolicy.level(on:now:)`).
+
+화면
+- 홈 화면 테두리는 `Color.tpBorder`(밝은 테마 #8C8C8C)와 `TaptionBorder.width`(1pt) 하나만 씁니다. 고른 상태 강조 테두리와 아이콘 선은 예외입니다.
+- 듀오 바깥 화면(세로인데 오른쪽 안전 영역이 30pt 이상, `MapHomeOverlayLayoutMath.sideStatusColumn`): 시계·와이파이 알약은 시스템이 그려 숨길 수 없습니다. 날짜 배지·사이드바·확대 단추를 알약 세로 중심선에, 왼쪽 위 단추 윗줄을 알약 위쪽에 맞춥니다(`sideStatusPill*` 값은 시뮬레이터 화면에서 잰 것).
+- 녹화 중에는 사이드바의 접기·연필·확대 단추를 그리지 않습니다.
+
+AI·Siri·단축어
+- AI 확인 목록: 앱 `AITaskQueue`(카드·계좌·전화번호는 끝 4자리만 남기고 가림) → 서버 `/tasks` → MCP `get_ai_tasks`(가져가면 처리중)·`complete_ai_task`, 결과는 기존 명령으로 바로 반영(가계부 고치기는 `updateExpense`, 되돌리기는 고치기 전 기록으로). 화면은 메모 패널 「AI」 탭(`AITaskPanel`).
+- 결제 문자·결제 앱 알림은 `PaymentTextCapture` 하나로: 앱이 읽으면 넣고 기록 id와 함께 AI 목록에 올려 다듬게, 못 읽으면 AI에게 맡김. 「출금」도 결제로 읽습니다.
+- Siri 동작은 `Core/SiriIntents.swift`, Siri 문구 단축어는 `LedgerIntents.swift`의 `BokkiShortcuts`(앱당 10개 한도라 동작은 묶고 문구를 늘림). 앱이 떠 있으면 `AppModel.live`로 바로, 아니면 `SiriInbox`에 두었다가 부트스트랩이 반영합니다. 화면 열기는 `SiriNavigation` → `MapHomeView+Siri.swift`. Siri가 「보키 플랜」으로도 알아듣게 `Info.plist`의 `INAlternativeAppNames`. 안내 화면은 `BokkiShortcutsGuide`(메뉴 › 연결 「단축어 · Siri」, 가계부, 튜토리얼 공용).
+
 ## 구글 캘린더 연결
 
 - 프로젝트 `bokki-plan`, 범위 `calendar.readonly`, iOS 클라이언트 하나입니다. 일정은 기기 안에서만 쓰고, 연결 해제 때 토큰을 취소하고 구글 일정을 지웁니다.
@@ -290,6 +308,9 @@ xcodebuild test -project TaptionPlan.xcodeproj -scheme TaptionPlan \
 - 튜토리얼 UI 시험은 시험마다 새 시뮬레이터가 필요합니다. 같은 시뮬레이터에서 이어 돌리면 실패합니다.
 - watchOS 시뮬레이터 런타임이 없어 Watch 화면은 빌드로만 확인됩니다.
 - 지도의 지하철 선은 `SubwayTrackCatalog.following`으로 역 사이를 선로 모양으로 잇습니다. 시험 기대값을 역 좌표 수로 두면 틀립니다.
+- 시뮬레이터 BOKKI-Preview(듀오)는 화면이 둘이라 `simctl io <id> screenshot --display=1`(바깥 화면)로 찍습니다. 안쪽 화면(display 3)은 접힌 상태라 검고, Xcode 27에는 펼칠 Simulator 앱이 없습니다. 튜토리얼·권한 시트를 건너뛰려면 `simctl spawn <id> defaults write com.taption.plan taption.firstRunTutorial.outcome skipped`.
+- CI는 GitHub의 Xcode 26.6(Swift 6.3)으로 빌드합니다. iOS 27 SDK 전용 형식은 `#if compiler(>=6.4)`로 감싸고, 메인 액터 대리자 준수는 `nonisolated`로 받습니다(CIF1111A01).
+- 같은 폴더에서 다른 세션이 함께 일하면 `git add -A`를 쓰지 않습니다. `project.pbxproj`처럼 둘이 같이 고친 파일은 내 줄만 남긴 내용을 `git hash-object -w`로 만들어 `git update-index --cacheinfo`로 스테이징합니다.
 - `cancellationCheck`에 실제 취소 검사를 넣으면 그 경로의 `preconditionFailure` 4곳이 앱 종료가 됩니다. 그때는 `throw`로 바꿉니다(REV1026A01).
 
 ## 문서
