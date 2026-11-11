@@ -203127,6 +203127,83 @@
         }
       }
     },
+    "‘{0}’ 중 무엇인가요?|Which ‘{0}’?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「{0}」のどれですか？"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "是哪一种“{0}”？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "是哪一種「{0}」？"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Welche Art von „{0}“?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quel type de « {0} » ?"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quale tipo di “{0}”?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Qué tipo de “{0}”?"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Qual tipo de “{0}”?"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loại “{0}” nào?"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“{0}” yang mana?"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“{0}” แบบไหน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कौन-सा “{0}”?"
+          }
+        }
+      }
+    },
     "‘{0}’에 {1}번 머물렀어요. 어떤 곳인가요?|You stayed at ‘{0}’ {1} times. What is it?" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -238004,6 +238081,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "पहले “AI कनेक्ट करें” में PIN बनाएँ।"
+          }
+        }
+      }
+    },
+    "먼저 대분류를 고르세요. 한 번 정하면 같은 제목의 일정은 다시 묻지 않아요.|Pick a category first. Once set, events with the same title won't be asked again." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "まず大分類を選んでください。一度決めると同じタイトルの予定は再び聞きません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请先选择大类。设定一次后，同名日程不会再问。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請先選擇大類。設定一次後，同名行程不會再問。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle zuerst eine Kategorie. Danach wird bei Terminen mit gleichem Titel nicht mehr gefragt."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisissez d’abord une catégorie. Une fois choisie, les événements du même titre ne seront plus demandés."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scegli prima una categoria. Una volta scelta, non verrà più chiesto per eventi con lo stesso titolo."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elige primero una categoría. Una vez elegida, no se volverá a preguntar por eventos con el mismo título."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escolha primeiro uma categoria. Depois disso, eventos com o mesmo título não serão perguntados de novo."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hãy chọn danh mục trước. Đã chọn rồi thì sự kiện cùng tên sẽ không hỏi lại."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pilih kategori dulu. Setelah dipilih, acara dengan judul sama tidak akan ditanya lagi."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เลือกหมวดหลักก่อน เลือกแล้วกิจกรรมชื่อเดียวกันจะไม่ถามอีก"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "पहले श्रेणी चुनें। एक बार चुनने पर उसी शीर्षक वाले कार्यक्रम दोबारा नहीं पूछे जाएँगे।"
           }
         }
       }
@@ -324864,6 +325018,83 @@
         }
       }
     },
+    "추천: {0}|Suggested: {0}" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "おすすめ：{0}"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "推荐：{0}"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "推薦：{0}"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vorschlag: {0}"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suggestion : {0}"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suggerito: {0}"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sugerencia: {0}"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sugestão: {0}"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gợi ý: {0}"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saran: {0}"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แนะนำ: {0}"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सुझाव: {0}"
+          }
+        }
+      }
+    },
     "축소|Zoom out" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -336333,83 +336564,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "तारीख़ पट्टी दिखाने के लिए दबाएँ"
-          }
-        }
-      }
-    },
-    "한 번 정하면 같은 제목의 일정은 다시 묻지 않아요.|Once set, events with the same title won't be asked again." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "一度決めると、同じタイトルの予定はもう聞きません。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "设定一次后，相同标题的日程不会再询问。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "設定一次後，相同標題的行程不會再詢問。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Einmal festgelegt, wird bei Terminen mit gleichem Titel nicht mehr gefragt."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Une fois choisi, les événements de même titre ne seront plus demandés."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Una volta scelto, non verrà più chiesto per eventi con lo stesso titolo."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Una vez elegido, no se volverá a preguntar por eventos con el mismo título."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Depois de definido, eventos com o mesmo título não serão perguntados de novo."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Đã chọn một lần thì lịch cùng tiêu đề sẽ không hỏi lại."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Setelah dipilih, acara dengan judul yang sama tidak akan ditanyakan lagi."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "เลือกครั้งเดียว นัดที่ชื่อเดียวกันจะไม่ถามอีก"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "एक बार तय करने पर उसी शीर्षक के कार्यक्रम के बारे में फिर नहीं पूछा जाएगा।"
           }
         }
       }

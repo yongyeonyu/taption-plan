@@ -65,6 +65,13 @@ enum MapHomeLaunchPromptPolicy {
 extension MapHomeView {
     /// 앱이 앞으로 올 때마다 돈다. 앞 질문이 닫혀야 다음을 묻는다.
     func runLaunchPrompts() async {
+        #if DEBUG
+        // 일정 분류 질문 모양 확인용(CAT1111A01, Debug 전용).
+        if ProcessInfo.processInfo.arguments.contains("-calendarPromptPreview") {
+            launchPrompt = .calendarTitle("Invitation: MB ATHOS1.0 주간 회의")
+            return
+        }
+        #endif
         await checkLocationAlways()
         while !Task.isCancelled, scenePhase == .active {
             while isLocationAlwaysPromptPresented || launchPrompt != nil
@@ -115,6 +122,9 @@ private struct MapHomeLaunchPromptAlerts: ViewModifier {
     let model: AppModel
     let language: MapHomeLanguage
     let onReviewUnconfirmed: () -> Void
+    /// 일정 분류 두 번째 단계에서 고른 대분류(CAT1111A01: 대분류 → 상세 두 단계로 묻는다).
+    @State private var calendarCategory: String?
+    @State private var isReturningToCategories = false
 
     private func isShowing(_ match: @escaping (MapHomeLaunchPrompt) -> Bool) -> Binding<Bool> {
         Binding(get: { prompt.map(match) ?? false }, set: { if !$0 { prompt = nil } })
@@ -131,14 +141,37 @@ private struct MapHomeLaunchPromptAlerts: ViewModifier {
                     "‘\(name)’ connected only while you rode. Register it? Trips with it connected will be recorded as car."
                 ))
             }
-            .confirmationDialog(calendarDialogTitle, isPresented: isShowing { if case .calendarTitle = $0 { true } else { false } }, titleVisibility: .visible, presenting: calendarTitle) { title in
-                ForEach(calendarChoices(for: title), id: \.id) { choice in
-                    Button(choice.label) { Task { await model.setCalendarTitleDetail(choice.id, title: title, on: model.selectedDate) } }
+            // 1단계: 대분류. 제목 규칙이 고른 상세가 있으면 맨 위에 한 번에 고르는 추천으로 둔다.
+            .confirmationDialog(calendarDialogTitle, isPresented: calendarStepBinding(detail: false), titleVisibility: .visible, presenting: calendarTitle) { title in
+                if let rule = calendarRule(for: title) {
+                    Button(language.text("추천: \(rule.label)", "Suggested: \(rule.label)")) { saveCalendar(rule.id, title: title) }
                 }
-                Button(language.text("분류 안 함", "Don't classify")) { Task { await model.setCalendarTitleDetail(nil, title: title, on: model.selectedDate) } }
+                ForEach(calendarCategories(for: title), id: \.id) { category in
+                    Button(category.localizedTitle(language)) {
+                        if category.details.count == 1, let only = category.details.first {
+                            saveCalendar(only.id, title: title)
+                        } else {
+                            calendarCategory = category.id
+                        }
+                    }
+                }
+                Button(language.text("분류 안 함", "Don't classify")) { saveCalendar(nil, title: title) }
                 Button(language.text("나중에", "Later"), role: .cancel) {}
             } message: { _ in
-                Text(language.text("한 번 정하면 같은 제목의 일정은 다시 묻지 않아요.", "Once set, events with the same title won't be asked again."))
+                Text(language.text("먼저 대분류를 고르세요. 한 번 정하면 같은 제목의 일정은 다시 묻지 않아요.", "Pick a category first. Once set, events with the same title won't be asked again."))
+            }
+            // 2단계: 고른 대분류 안의 상세.
+            .confirmationDialog(calendarDetailTitle, isPresented: calendarStepBinding(detail: true), titleVisibility: .visible, presenting: calendarTitle) { title in
+                ForEach(calendarDetails, id: \.id) { detail in
+                    Button(detail.localizedTitle(language)) { saveCalendar(detail.id, title: title) }
+                }
+                Button(language.text("뒤로", "Back")) {
+                    isReturningToCategories = true
+                    calendarCategory = nil
+                }
+                Button(language.text("나중에", "Later"), role: .cancel) {}
+            } message: { title in
+                Text(language.text("‘\(title)’", "‘\(title)’"))
             }
             .confirmationDialog(language.text("자주 머무는 곳이 있어요", "You stay here often"), isPresented: isShowing { if case .frequentPlace = $0 { true } else { false } }, titleVisibility: .visible) {
                 ForEach(FrequentPlaceKind.allCases, id: \.self) { kind in
@@ -165,13 +198,54 @@ private struct MapHomeLaunchPromptAlerts: ViewModifier {
         language.text("‘\(calendarTitle ?? "")’ 일정은 무엇인가요?", "What is ‘\(calendarTitle ?? "")’?")
     }
 
-    /// 제목 규칙이 고른 상세를 맨 위에 둔다.
-    private func calendarChoices(for title: String) -> [(id: String, label: String)] {
-        let rule = CalendarTitleClassification.ruleDetailID(for: title)
-        let all = CalendarTitleClassification.selectableCategories.flatMap { category in
-            category.details.map { (id: $0.id, label: "\(category.localizedTitle(language)) · \($0.localizedTitle(language))") }
+    /// 일정 질문 두 단계의 표시. 1단계에서 대분류를 고르면 질문을 닫지 않고 2단계로 넘긴다.
+    private func calendarStepBinding(detail: Bool) -> Binding<Bool> {
+        Binding(
+            get: {
+                guard case .calendarTitle = prompt else { return false }
+                return (calendarCategory != nil) == detail
+            },
+            set: { shown in
+                guard !shown else { return }
+                if isReturningToCategories { isReturningToCategories = false; return }
+                // 1단계에서 대분류를 골랐으면 2단계가 이어 뜬다.
+                if !detail, calendarCategory != nil { return }
+                calendarCategory = nil
+                prompt = nil
+            }
+        )
+    }
+
+    private func saveCalendar(_ detailID: String?, title: String) {
+        calendarCategory = nil
+        Task { await model.setCalendarTitleDetail(detailID, title: title, on: model.selectedDate) }
+    }
+
+    private var calendarDetailTitle: String {
+        let category = CalendarTitleClassification.selectableCategories.first { $0.id == calendarCategory }
+        return language.text("‘\(category?.localizedTitle(language) ?? "")’ 중 무엇인가요?", "Which ‘\(category?.localizedTitle(language) ?? "")’?")
+    }
+
+    private var calendarDetails: [RecordClassificationDetail] {
+        CalendarTitleClassification.selectableCategories.first { $0.id == calendarCategory }?.details ?? []
+    }
+
+    /// 제목 규칙이 고른 상세(있으면 1단계 맨 위 추천).
+    private func calendarRule(for title: String) -> (id: String, label: String)? {
+        guard let rule = CalendarTitleClassification.ruleDetailID(for: title) else { return nil }
+        for category in CalendarTitleClassification.selectableCategories {
+            if let detail = category.details.first(where: { $0.id == rule }) {
+                return (rule, "\(category.localizedTitle(language)) · \(detail.localizedTitle(language))")
+            }
         }
-        return all.filter { $0.id == rule } + all.filter { $0.id != rule }
+        return nil
+    }
+
+    /// 규칙이 고른 상세의 대분류를 맨 위에.
+    private func calendarCategories(for title: String) -> [RecordClassificationCategory] {
+        let all = CalendarTitleClassification.selectableCategories.filter { !$0.details.isEmpty }
+        let ruleCategory = CalendarTitleClassification.ruleDetailID(for: title).flatMap { id in all.first { $0.details.contains { $0.id == id } }?.id }
+        return all.filter { $0.id == ruleCategory } + all.filter { $0.id != ruleCategory }
     }
 
     private var placeMessage: String {
