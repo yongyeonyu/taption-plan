@@ -1,25 +1,7 @@
 {
- "ui": 4604,
+ "ui": 4628,
  "catalog": 502,
  "unread": [
-  {
-   "file": "TaptionPlan/UI/TravelModeView.swift",
-   "line": 512,
-   "ko": "sheet.leftover",
-   "en": "language"
-  },
-  {
-   "file": "TaptionPlan/UI/TravelModeView.swift",
-   "line": 515,
-   "ko": "sheet.myCost",
-   "en": "language"
-  },
-  {
-   "file": "TaptionPlan/UI/TravelModeView.swift",
-   "line": 515,
-   "ko": "sheet.myCost",
-   "en": "language"
-  },
   {
    "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
    "line": 41,
@@ -757,6 +739,24 @@
    "line": 47,
    "ko": "_ mark: Mark",
    "en": "MapHomeLanguage"
+  },
+  {
+   "file": "TaptionPlan/UI/TravelModeView.swift",
+   "line": 572,
+   "ko": "sheet.leftover",
+   "en": "language"
+  },
+  {
+   "file": "TaptionPlan/UI/TravelModeView.swift",
+   "line": 575,
+   "ko": "sheet.myCost",
+   "en": "language"
+  },
+  {
+   "file": "TaptionPlan/UI/TravelModeView.swift",
+   "line": 575,
+   "ko": "sheet.myCost",
+   "en": "language"
   },
   {
    "file": "TaptionPlan/UI/TripImportPrompt.swift",

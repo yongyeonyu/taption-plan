@@ -546,3 +546,87 @@ final class TravelPlanBandTests: XCTestCase {
         XCTAssertTrue(TravelPlanBand.spans(plan: [], actual: [], day: at(0), now: at(12), calendar: calendar).isEmpty)
     }
 }
+
+/// TVD1112A01: 계획표 하루치 자료와 여행 날짜 목록.
+final class TravelPlanTableTests: XCTestCase {
+    private var calendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul") ?? .gmt
+        return calendar
+    }
+
+    private func at(_ day: Int, _ hour: Int, _ minute: Int = 0) -> Date {
+        calendar.date(from: DateComponents(year: 2026, month: 11, day: day, hour: hour, minute: minute)) ?? .distantPast
+    }
+
+    private func item(_ id: String, _ kind: String, day: Int = 20, from: Int, to: Int, trip: String = "t", status: String? = nil) -> TravelTripItem {
+        TravelTripItem(tripID: trip, itemID: id, kind: kind, title: id, start: at(day, from / 60, from % 60), end: at(day, to / 60, to % 60),
+                       startOffsetSeconds: 32_400, endOffsetSeconds: 32_400, planID: nil, status: status)
+    }
+
+    private func record(_ start: Int, _ end: Int, _ category: String, _ title: String = "") -> MapHomeTimeRailSegment {
+        MapHomeTimeRailSegment(startMinute: start, endMinute: end, categoryID: category, title: title)
+    }
+
+    func testBlocksGoToTheirColumnsWithStatusesAndUnplannedStops() {
+        let items = [
+            item("metro", "transfer", from: 600, to: 630), item("lunch", "meal", from: 720, to: 780, status: "booked"),
+            item("castle", "sight", from: 840, to: 960), item("hotel", "lodging", from: 1_200, to: 1_260),
+            item("other-day", "sight", day: 21, from: 600, to: 660), item("other-trip", "sight", from: 600, to: 660, trip: "x"),
+        ]
+        let actual = [record(605, 628, "movement"), record(745, 800, "eating", "라멘"), record(1_000, 1_040, "hobby", "기념품 가게"), record(300, 360, "unconfirmed")]
+        let table = TravelPlanTableModel.make(items: items, tripID: "t", day: at(20, 0), actual: actual, now: at(20, 17), calendar: calendar)
+        XCTAssertEqual(table.blocks.map(\.id), ["metro", "lunch", "castle", "hotel"])
+        XCTAssertEqual(table.blocks.map(\.column), [0, 1, 2, 3])
+        XCTAssertEqual(table.blocks.map(\.status), [.done, .late, .skipped, .pending])
+        XCTAssertEqual(table.blocks[1].tripStatus, .booked)
+        XCTAssertEqual(table.actuals.count, 3, "미확인 구간은 실제 띠에 넣지 않는다")
+        XCTAssertEqual(table.actuals.filter(\.isUnplanned).map(\.title), ["기념품 가게"])
+        XCTAssertEqual(table.nowMinute, 1_020)
+        XCTAssertEqual(table.focusMinute, 960, "오늘은 지금 한 시간 전부터 보인다")
+    }
+
+    func testOtherDaysHaveNoNowLineAndStartNearTheFirstItem() {
+        let items = [item("castle", "sight", day: 21, from: 840, to: 960)]
+        let future = TravelPlanTableModel.make(items: items, tripID: "t", day: at(21, 0), actual: [], now: at(20, 17), calendar: calendar)
+        XCTAssertNil(future.nowMinute)
+        XCTAssertEqual(future.blocks.map(\.status), [.pending])
+        XCTAssertEqual(future.focusMinute, 810)
+        let empty = TravelPlanTableModel.make(items: [], tripID: "t", day: at(21, 0), actual: [], now: at(20, 17), calendar: calendar)
+        XCTAssertEqual(empty.focusMinute, 510, "일정이 없으면 아침 8시 반")
+        XCTAssertEqual(TravelPlanTableModel.column(forKind: "cafe"), 1)
+        XCTAssertEqual(TravelPlanTableModel.column(forKind: "sleep"), 3)
+        XCTAssertEqual(TravelPlanTableModel.column(forKind: "모르는 값"), 2)
+    }
+
+    func testTripDaysListEveryDayInOrder() {
+        let trip = TravelTrip(id: "t", title: "오사카", startDay: "2026-11-19", endDay: "2026-11-22")
+        let days = TravelPlanDays.days(of: trip, calendar: calendar)
+        XCTAssertEqual(days.map(\.key), ["2026-11-19", "2026-11-20", "2026-11-21", "2026-11-22"])
+        XCTAssertEqual(days.first?.date, at(19, 0))
+        XCTAssertEqual(TravelPlanDays.days(of: TravelTrip(id: "d", title: "가평", startDay: "2026-11-08", endDay: "2026-11-08"), calendar: calendar).count, 1)
+        XCTAssertTrue(TravelPlanDays.days(of: TravelTrip(id: "b", title: "거꾸로", startDay: "2026-11-09", endDay: "2026-11-08"), calendar: calendar).isEmpty)
+    }
+
+    /// 계획표와 작은 시간 막대를 그림으로 남긴다(시뮬레이터에서만 파일을 쓴다).
+    @MainActor
+    func testPlanTableAndMiniRailRender() throws {
+        let items = [
+            item("지하철", "transfer", from: 600, to: 630), item("점심 라멘", "meal", from: 720, to: 780, status: "booked"),
+            item("오사카성", "sight", from: 840, to: 960, status: "tentative"), item("저녁", "meal", from: 1_080, to: 1_140), item("호텔 체크인", "lodging", from: 1_200, to: 1_260),
+        ]
+        let actual = [record(605, 628, "movement"), record(745, 800, "eating", "라멘"), record(1_000, 1_040, "hobby", "기념품 가게")]
+        let table = TravelPlanTableModel.make(items: items, tripID: "t", day: at(20, 0), actual: actual, now: at(20, 17), calendar: calendar)
+        let folder = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("build/validation/TVD1112A01/shots", isDirectory: true)
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let tableImage = ImageRenderer(content: TravelPlanTable(table: table, language: .korean) { _ in }.dayBody
+            .frame(width: 370).background(Color.white))
+        tableImage.scale = 2
+        try? XCTUnwrap(tableImage.uiImage).pngData()?.write(to: folder.appendingPathComponent("plan-table.png"))
+        let rail = ImageRenderer(content: TravelMiniRail(table: table).frame(height: 520).padding(8).background(Color(hex: "#F6F1E4")))
+        rail.scale = 3
+        try? XCTUnwrap(rail.uiImage).pngData()?.write(to: folder.appendingPathComponent("mini-rail.png"))
+        XCTAssertNotNil(tableImage.uiImage)
+    }
+}
