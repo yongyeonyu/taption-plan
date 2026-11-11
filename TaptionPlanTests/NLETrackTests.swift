@@ -628,13 +628,18 @@ final class NLETrackTests: XCTestCase {
         XCTAssertEqual(ActivitySectionOverrideEngine.pieces(for: owner).first?.option.categoryID, "work")
     }
 
-    /// 이웃이 기록 없는 빈 시간이면 묻지 않고, 같은 분류로 나뉜 두 덩어리는 묻고 하나로 합친다(UIX1031A21).
-    func testMergeIsNotOfferedForGapOrSameCategoryNeighbors() throws {
+    /// 이웃이 미확인이면 기록 있는 클립이 품도록 묻고(RNG1111A03), 같은 분류로 나뉜 두 덩어리도 묻고 하나로 합친다(UIX1031A21).
+    func testMergeIsOfferedForGapAndSameCategoryNeighbors() throws {
         var gapTrack = MapHomeNLEClipEditor.makeMainTrack(segments: threeSegmentDay(sources: [UUID()]))
         let work = try XCTUnwrap(gapTrack.clip(atMinute: 400))
         gapTrack.trim(work.id, edge: .end, toMinute: 480)
         XCTAssertTrue(gapTrack.roll(work.id, edge: .end, toMinute: NLETrack.dayMinutes))
-        XCTAssertNil(gapTrack.squeezedMergePair(of: work.id, edge: .end, clipLengthAtStart: 120, neighborLengthAtStart: 960))
+        let gapPair = try XCTUnwrap(gapTrack.squeezedMergePair(of: work.id, edge: .end, clipLengthAtStart: 120, neighborLengthAtStart: 960))
+        XCTAssertEqual(gapPair.survivor.id, work.id)
+        XCTAssertTrue(gapPair.absorbed.isGap)
+        XCTAssertTrue(gapTrack.mergeIntoDragged(gapPair.survivor.id, neighborID: gapPair.absorbed.id))
+        XCTAssertEqual(gapTrack.clip(work.id)?.endMinute, gapPair.absorbed.endMinute)
+        XCTAssertNil(gapTrack.clip(gapPair.absorbed.id))
 
         var sameTrack = MapHomeNLEClipEditor.makeMainTrack(segments: [
             segment(0, 300, "work", sources: [UUID()]),

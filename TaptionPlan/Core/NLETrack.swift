@@ -227,8 +227,9 @@ struct NLETrack: Hashable, Sendable {
                 && (edge == .start ? fingerMinute <= neighbor.startMinute : fingerMinute >= neighbor.endMinute)
             let pushedThroughClip = clipLengthAtStart <= Self.minimumClipMinutes
                 && (edge == .start ? fingerMinute >= clip.endMinute : fingerMinute <= clip.startMinute)
-            if pushedThroughNeighbor, !neighbor.isGap, !clip.isGap { return (clip, neighbor) }
-            if pushedThroughClip, !neighbor.isGap, !clip.isGap { return (neighbor, clip) }
+            // 미확인은 남는 쪽이 될 수 없지만 기록 있는 클립에 품길 수는 있다(대표 신고 2026-11-11, RNG1111A03).
+            if pushedThroughNeighbor, !clip.isGap { return (clip, neighbor) }
+            if pushedThroughClip, !neighbor.isGap { return (neighbor, clip) }
         }
         // 화면에서 거의 사라질 만큼 눌렸으면 끝까지 간 것으로 본다. 1분까지 밀지 않아도 묻는다.
         // 기준은 화면 두께(squeezeMinutes)와 처음 길이의 4분의 1 중 작은 쪽이다. 하루 전체 배율에서는
@@ -246,9 +247,9 @@ struct NLETrack: Hashable, Sendable {
         } else {
             return nil
         }
-        // 기록 없는 미확인 자리는 합칠 대상이 아니다. 아직 원본 ID가 없는 진행 중 구간(아래쪽 마지막 클립)은 합칠 수 있다(UIX1031A19).
+        // 미확인은 남는 쪽이 되지 않는다. 기록 있는 클립이 미확인을 품는 것은 된다(RNG1111A03, 예전 UIX1031A19는 막았음).
         // 같은 분류·이름이어도 두 덩어리로 나뉘어 있으면 하나로 합칠 수 있다(UIX1031A21).
-        guard !pair.survivor.isGap, !pair.absorbed.isGap else { return nil }
+        guard !pair.survivor.isGap else { return nil }
         return pair
     }
 
