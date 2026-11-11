@@ -455,7 +455,7 @@ struct MapHomeDailyCardSheet: View {
             .background(filled == nil ? Color.clear : Color.tpBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .strokeBorder(Color.tpLine, style: StrokeStyle(lineWidth: 1, dash: filled == nil ? [5, 4] : []))
+                    .strokeBorder(Color.tpBorder, style: StrokeStyle(lineWidth: TaptionBorder.width, dash: filled == nil ? [5, 4] : []))
             }
         }
         .buttonStyle(.plain)

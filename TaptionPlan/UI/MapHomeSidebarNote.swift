@@ -93,7 +93,7 @@ struct MapHomeSidebarNoteBubble: View {
             .frame(width: MapHomeSidebarNoteLayout.width - 20, alignment: .leading)
             .padding(10)
             .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.tpLine, lineWidth: 0.8))
+            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.tpBorder, lineWidth: TaptionBorder.width))
             .overlay(alignment: .trailing) {
                 // 아이콘 쪽을 가리키는 꼬리
                 Rectangle()

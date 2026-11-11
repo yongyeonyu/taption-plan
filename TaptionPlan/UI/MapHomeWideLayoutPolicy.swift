@@ -326,7 +326,7 @@ extension View {
             .frame(maxHeight: .infinity, alignment: .top)
             .background(Color.tpBackground)
             .clipShape(shape)
-            .overlay { shape.stroke(Color.tpLine.opacity(0.6), lineWidth: 0.8) }
+            .overlay { shape.stroke(Color.tpBorder, lineWidth: TaptionBorder.width) }
             .shadow(color: Color.black.opacity(0.14), radius: 16, x: 4, y: 0)
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("mapHomeWidePanel")

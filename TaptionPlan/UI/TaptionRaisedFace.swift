@@ -58,7 +58,7 @@ struct TaptionRaisedFace: View {
     var fill: Color? = nil
     /// 비우면 테마의 스티커 테두리 색이다.
     var line: Color? = nil
-    var lineWidth: CGFloat = 1.2
+    var lineWidth: CGFloat = TaptionBorder.width
     var gloss: Bool = true
     private let palette = TaptionBarPalette.current
 
@@ -91,7 +91,7 @@ struct TaptionRaisedFace: View {
                 ),
                 lineWidth: 1
             )
-            shape.strokeBorder(line ?? palette.outline, lineWidth: lineWidth)
+            shape.strokeBorder(line ?? Color.tpBorder, lineWidth: lineWidth)
             if gloss {
                 // 어두운 테마에서는 광택이 튀지 않게 낮춘다.
                 TaptionRaisedGloss().fill(.white.opacity(palette.innerLine == nil ? 0.6 : 0.3))
@@ -106,7 +106,7 @@ extension View {
         _ shape: TaptionRaisedShape,
         fill: Color? = nil,
         line: Color? = nil,
-        lineWidth: CGFloat = 1.2,
+        lineWidth: CGFloat = TaptionBorder.width,
         gloss: Bool = true
     ) -> some View {
         contentShape(shape)

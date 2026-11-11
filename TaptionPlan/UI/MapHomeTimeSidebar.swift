@@ -2,11 +2,11 @@ import SwiftUI
 import UIKit
 
 extension View {
-    /// 반투명 면 + 테마 선 색 얇은 테두리. 리퀴드 글래스는 가장자리 굴절 띠가 두꺼워 보여 쓰지 않는다(UIX1101B01, 대표).
+    /// 반투명 면 + 홈 화면 공통 테두리(BRD1111A01). 리퀴드 글래스는 가장자리 굴절 띠가 두꺼워 보여 쓰지 않는다(UIX1101B01, 대표).
     func mapHomeGlass<S: Shape>(in shape: S) -> some View {
         background(Color.tpGlassTint, in: shape)
             .background(.ultraThinMaterial, in: shape)
-            .overlay(shape.stroke(Color.tpLine.opacity(0.8), lineWidth: 0.6))
+            .overlay(shape.stroke(Color.tpBorder, lineWidth: TaptionBorder.width))
     }
 }
 
@@ -142,7 +142,7 @@ enum MapHomeTimeSidebarViewportProjection {
 
 enum MapHomeTimeSidebarStyle {
     static var panelBackground: Color { Color.tpSurface.opacity(0.10) }
-    static var panelBorder: Color { Color.tpLine.opacity(0.64) }
+    static var panelBorder: Color { Color.tpBorder }
     static var numericColumnBackground: Color { Color.tpSurface.opacity(0.10) }
     static var trackBackground: Color { Color.tpBackground.opacity(0.62) }
     static var handleBackground: Color { Color.tpSurface }

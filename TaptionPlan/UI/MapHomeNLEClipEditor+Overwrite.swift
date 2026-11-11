@@ -159,7 +159,7 @@ extension MapHomeNLEClipEditor {
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
                 .background(Color.tpSurface, in: Capsule())
-                .overlay { Capsule().stroke(Color.tpLine, lineWidth: 1) }
+                .overlay { Capsule().stroke(Color.tpBorder, lineWidth: TaptionBorder.width) }
                 .padding(.top, 8)
                 .padding(.horizontal, 16)
                 .onTapGesture { self.editorNotice = nil }

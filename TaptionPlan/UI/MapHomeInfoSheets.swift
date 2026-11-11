@@ -319,7 +319,7 @@ struct MapHomeDaySummarySheet: View {
         .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.tpLine.opacity(0.9), lineWidth: 0.9)
+                .stroke(Color.tpBorder, lineWidth: TaptionBorder.width)
         }
         .accessibilityElement(children: .combine)
     }
@@ -357,7 +357,7 @@ struct MapHomeDaySummarySheet: View {
         .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.tpLine.opacity(0.9), lineWidth: 0.9)
+                .stroke(Color.tpBorder, lineWidth: TaptionBorder.width)
         }
         .accessibilityElement(children: .combine)
     }

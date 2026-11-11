@@ -356,7 +356,7 @@ struct MapHomeCounterDetailSheet: View {
             Capsule().fill(isSelected ? Color.tpAccent : Color.tpSurface)
         }
         .overlay {
-            Capsule().stroke(Color.tpLine.opacity(isSelected ? 0 : 0.7), lineWidth: 1)
+            Capsule().stroke(Color.tpBorder.opacity(isSelected ? 0 : 1), lineWidth: TaptionBorder.width)
         }
         .contentShape(Capsule())
     }
@@ -415,7 +415,7 @@ struct MapHomeCounterDetailSheet: View {
         .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.tpLine.opacity(0.6), lineWidth: 1)
+                .stroke(Color.tpBorder, lineWidth: TaptionBorder.width)
         }
     }
 

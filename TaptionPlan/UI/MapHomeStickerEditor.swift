@@ -555,7 +555,7 @@ struct MapHomeStickerEditorSheet: View {
         .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(Color.tpLine, lineWidth: 1)
+                .stroke(Color.tpBorder, lineWidth: TaptionBorder.width)
         }
     }
 

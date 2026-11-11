@@ -282,7 +282,7 @@ struct MapHomeCalendarSheet: View {
                     .background(isOn ? tint.opacity(0.14) : Color.clear, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                     .overlay {
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .stroke(isOn ? tint : Color.tpLine, lineWidth: isOn ? 1.2 : 0.8)
+                            .stroke(isOn ? tint : Color.tpBorder, lineWidth: isOn ? 1.2 : TaptionBorder.width)
                     }
                 }
                 .buttonStyle(.plain)
@@ -311,7 +311,7 @@ struct MapHomeCalendarSheet: View {
             .background(showsMonthAverage ? Color.tpAccent.opacity(0.14) : Color.clear, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(showsMonthAverage ? Color.tpAccent : Color.tpLine, lineWidth: showsMonthAverage ? 1.2 : 0.8)
+                    .stroke(showsMonthAverage ? Color.tpAccent : Color.tpBorder, lineWidth: showsMonthAverage ? 1.2 : TaptionBorder.width)
             }
         }
         .buttonStyle(.plain)
@@ -341,7 +341,7 @@ struct MapHomeCalendarSheet: View {
             .frame(maxWidth: .infinity, minHeight: 44)
             .overlay {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(Color.tpLine, style: StrokeStyle(lineWidth: 0.8, dash: [4, 3]))
+                    .stroke(Color.tpBorder, style: StrokeStyle(lineWidth: TaptionBorder.width, dash: [4, 3]))
             }
         }
         .accessibilityLabel(language.text("지표 추가", "Add metric"))
@@ -412,7 +412,7 @@ struct MapHomeCalendarSheet: View {
         }
         .padding(12)
         .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay { RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.tpLine.opacity(0.9), lineWidth: 0.8) }
+        .overlay { RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.tpBorder, lineWidth: TaptionBorder.width) }
     }
 
     /// 고른 날 방문한 곳(10분 이상, 30 m 안은 한 곳). 달력 시트 전체 스크롤에 이어 내려가며 본다.
@@ -457,7 +457,7 @@ struct MapHomeCalendarSheet: View {
         }
         .padding(12)
         .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay { RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.tpLine.opacity(0.9), lineWidth: 0.8) }
+        .overlay { RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.tpBorder, lineWidth: TaptionBorder.width) }
     }
 
     private static func durationText(_ seconds: TimeInterval, language: MapHomeLanguage) -> String {

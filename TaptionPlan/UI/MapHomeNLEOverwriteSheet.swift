@@ -285,7 +285,7 @@ struct MapHomeNLEOverwriteSheet: View {
             )
             .overlay {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(isPicked ? Color.tpAccent : Color.tpLine, lineWidth: isPicked ? 1.6 : 1)
+                    .stroke(isPicked ? Color.tpAccent : Color.tpBorder, lineWidth: isPicked ? 1.6 : TaptionBorder.width)
             }
             .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         }

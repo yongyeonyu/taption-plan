@@ -321,7 +321,7 @@ struct MapHomeNLEClipEditor: View {
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Color.tpLine, lineWidth: 1)
+                    .stroke(Color.tpBorder, lineWidth: TaptionBorder.width)
             }
             .contentShape(Rectangle())
             .gesture(dragGesture(geometry: geometry, width: width, height: height))

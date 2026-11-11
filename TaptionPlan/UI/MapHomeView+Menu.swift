@@ -393,7 +393,7 @@ extension MapHomeView {
                 .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                 .overlay {
                     RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .stroke(Color.tpLine.opacity(0.6), lineWidth: 0.8)
+                        .stroke(Color.tpBorder, lineWidth: TaptionBorder.width)
                 }
                 .padding(.top, menuTop)
                 // 왼쪽 가장자리에서 펼쳐져 오른쪽 시간 사이드바를 가리지 않는다.
@@ -646,7 +646,7 @@ extension MapHomeView {
         .background(Color.tpSurface.opacity(0.78), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.tpLine.opacity(0.7), lineWidth: 0.8)
+                .stroke(Color.tpBorder, lineWidth: TaptionBorder.width)
         }
     }
 

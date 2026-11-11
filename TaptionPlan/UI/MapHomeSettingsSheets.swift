@@ -65,7 +65,7 @@ struct MapHomeCategoryAddSheet: View {
             .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14))
             .overlay {
                 RoundedRectangle(cornerRadius: 14)
-                    .stroke(Color.tpLine.opacity(0.7), lineWidth: 1)
+                    .stroke(Color.tpBorder, lineWidth: TaptionBorder.width)
             }
 
             // 분류 메뉴에 나올 고양이 그림을 그대로 보여 주고 고른다. 기호 아이콘은 겹치지 않게 알아서 붙인다.

@@ -178,6 +178,11 @@ extension Color {
     static var tpSky: Color { TaptionUITheme.current.palette?.line ?? Color(red: 185 / 255, green: 221 / 255, blue: 237 / 255) }
     static var tpLine: Color { TaptionUITheme.current.palette?.line ?? classicLine }
     static let classicLine = Color(red: 227 / 255, green: 214 / 255, blue: 184 / 255)
+    /// 홈 화면 테두리 한 가지 색(BRD1111A01, 대표: 진한 회색으로 통일). 어두운 테마는 면 위에서 보이는 테마 선 색.
+    static var tpBorder: Color {
+        TaptionUITheme.current.isDark ? tpLine : classicBorder
+    }
+    static let classicBorder = Color(hex: "#8C8C8C")
     static let tpHoliday = Color(red: 0.86, green: 0.27, blue: 0.30)
     static let tpSaturday = Color(red: 0.24, green: 0.47, blue: 0.77)
     /// 강조 글자·배지에 쓰인다. 흰 글자를 얹어도 5.9:1이 되도록 명도를 낮췄다.
@@ -677,4 +682,9 @@ extension View {
             .background(Color.tpBackground)
             .tint(Color.tpAccent)
     }
+}
+
+/// 홈 화면 테두리 한 가지 두께(BRD1111A01).
+enum TaptionBorder {
+    static let width: CGFloat = 1
 }

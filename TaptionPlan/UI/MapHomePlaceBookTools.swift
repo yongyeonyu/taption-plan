@@ -307,7 +307,7 @@ struct MapHomePassportStamp: View {
                 .blur(radius: size * 0.003)
                 .opacity(0.95)
             } else {
-                Circle().stroke(Color.tpLine, style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                Circle().stroke(Color.tpBorder, style: StrokeStyle(lineWidth: TaptionBorder.width, dash: [3, 3]))
                 Image(systemName: "airplane").font(.system(size: size * 0.3)).foregroundStyle(Color.tpSecondary.opacity(0.6))
             }
         }

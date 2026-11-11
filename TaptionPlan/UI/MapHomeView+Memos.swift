@@ -126,7 +126,7 @@ extension MapHomeView {
         .background(Color.tpSurface.opacity(0.97), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.tpLine.opacity(0.8), lineWidth: 0.8)
+                .stroke(Color.tpBorder, lineWidth: TaptionBorder.width)
         }
         .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
         .contentShape(Rectangle())
@@ -253,7 +253,7 @@ extension MapHomeView {
         .frame(width: 280 - 16, alignment: .leading)
         .padding(8)
         .background(Color.tpBackground.opacity(0.92), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay { RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Color.tpLine.opacity(0.8), lineWidth: 0.6) }
+        .overlay { RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Color.tpBorder, lineWidth: TaptionBorder.width) }
         .shadow(color: .black.opacity(0.12), radius: 8, y: 3)
     }
 

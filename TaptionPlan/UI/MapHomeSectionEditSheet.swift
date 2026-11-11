@@ -343,7 +343,7 @@ struct MapHomeSectionEditSheet: View {
                 .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 .overlay {
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(Color.tpLine.opacity(0.7), lineWidth: 1)
+                        .stroke(Color.tpBorder, lineWidth: TaptionBorder.width)
                 }
                 .simultaneousGesture(sectionMagnifyGesture(height: trackHeight))
                 .simultaneousGesture(sectionPanGesture(height: trackHeight))
@@ -388,7 +388,7 @@ struct MapHomeSectionEditSheet: View {
             .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Color.tpLine, lineWidth: 1)
+                    .stroke(Color.tpBorder, lineWidth: TaptionBorder.width)
             }
             .contentShape(Rectangle())
         }
@@ -524,7 +524,7 @@ struct MapHomeSectionEditSheet: View {
                     path.move(to: CGPoint(x: 0, y: y))
                     path.addLine(to: CGPoint(x: 1_000, y: y))
                 }
-                .stroke(Color.tpLine.opacity(0.45), lineWidth: 1)
+                .stroke(Color.tpBorder, lineWidth: TaptionBorder.width)
                 Text(timeLabel(minute))
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .semibold))
                     .foregroundStyle(.secondary)

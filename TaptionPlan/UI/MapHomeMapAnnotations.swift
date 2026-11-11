@@ -123,7 +123,7 @@ struct MapHomePlacePin: View {
                     )
                     .overlay {
                         RoundedRectangle(cornerRadius: 15, style: .continuous)
-                            .stroke(Color.tpLine.opacity(0.95), lineWidth: 1)
+                            .stroke(Color.tpBorder, lineWidth: TaptionBorder.width)
                     }
                     .shadow(color: Color.tpInk.opacity(0.2), radius: 4, y: 2)
                     .overlay(alignment: .topTrailing) { stampSeal }
@@ -133,7 +133,7 @@ struct MapHomePlacePin: View {
                     .padding(.horizontal, 12)
                     .padding(.vertical, 5)
                     .background(Color.tpSurface.opacity(0.98), in: Capsule())
-                    .overlay { Capsule().stroke(Color.tpLine, lineWidth: 0.8) }
+                    .overlay { Capsule().stroke(Color.tpBorder, lineWidth: TaptionBorder.width) }
                     .shadow(color: Color.tpInk.opacity(0.12), radius: 4, y: 2)
             }
             .accessibilityElement(children: .ignore)
@@ -238,7 +238,7 @@ struct MapHomePlacePin: View {
             .padding(.horizontal, 12)
             .frame(height: MapHomePlacePinLayout.levelLabelHeight)
             .background(Color.tpSurface.opacity(0.98), in: Capsule())
-            .overlay { Capsule().stroke(Color.tpLine, lineWidth: 0.8) }
+            .overlay { Capsule().stroke(Color.tpBorder, lineWidth: TaptionBorder.width) }
             .shadow(color: Color.tpInk.opacity(0.12), radius: 4, y: 2)
             .contentShape(Capsule())
         if let onOpenDaySummary {

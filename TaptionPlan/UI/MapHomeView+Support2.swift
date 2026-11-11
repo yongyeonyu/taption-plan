@@ -574,7 +574,7 @@ extension MapHomeView {
         .background(Color.tpSurface.opacity(0.96), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.tpLine.opacity(0.78), lineWidth: 1)
+                .stroke(Color.tpBorder, lineWidth: TaptionBorder.width)
         }
         .shadow(color: Color.black.opacity(0.07), radius: 9, y: 3)
         .simultaneousGesture(
