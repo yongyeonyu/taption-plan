@@ -335,7 +335,8 @@ final class LedgerBook {
     /// 오늘 손익: 오늘 번 돈(세후 월급을 그 달 날수로 나눔) − 오늘 쓴 돈 + 오늘 들어온 돈.
     func todayNet(now: Date = .now, calendar: Calendar = .autoupdatingCurrent, monthlyNet: Double) -> Double {
         let days = Double(calendar.range(of: .day, in: .month, for: now)?.count ?? 30)
-        let today = entries(on: now, calendar: calendar)
+        // 일상 장부만: 여행 안 기록까지 더하면 여행 경비 이체와 겹쳐 두 번 빠진다(리뷰).
+        let today = entries(on: now, calendar: calendar).filter(isDaily)
         // 월급 기록은 이미 하루 몫으로 나눠 넣었으니 수입에서 뺀다.
         return (monthlyNet / days).rounded() - Self.total(today, .expense) + Self.total(today.filter { $0.category != .salary }, .income)
     }

@@ -181,12 +181,14 @@ struct LedgerSummary: Equatable {
 /// 엑셀 파일. 공유를 누를 때 만든다.
 struct LedgerXLSXFile: Transferable {
     let name: String
-    let data: Data
+    /// 공유를 누를 때만 엑셀을 만든다(리뷰).
+    let make: @MainActor @Sendable () -> Data
 
     static var transferRepresentation: some TransferRepresentation {
         FileRepresentation(exportedContentType: UTType("org.openxmlformats.spreadsheetml.sheet") ?? .data) { file in
+            let data = await file.make()
             let url = FileManager.default.temporaryDirectory.appendingPathComponent(file.name)
-            try file.data.write(to: url, options: .atomic)
+            try data.write(to: url, options: .atomic)
             return SentTransferredFile(url)
         }
     }
@@ -315,7 +317,7 @@ struct LedgerSummaryPanel: View {
             .pickerStyle(.segmented)
             LedgerSummaryTable(summary: summary, language: language)
             HStack(spacing: 12) {
-                ShareLink(item: LedgerXLSXFile(name: "BOKKI-\(fileStem(summary)).xlsx", data: summary.xlsx(language: language)),
+                ShareLink(item: LedgerXLSXFile(name: "BOKKI-\(fileStem(summary)).xlsx") { [summary, language] in summary.xlsx(language: language) },
                           preview: SharePreview(language.text("가계부 엑셀", "Ledger spreadsheet"))) {
                     Label(language.text("엑셀", "Excel"), systemImage: "tablecells").frame(maxWidth: .infinity, minHeight: 44)
                 }

@@ -160,7 +160,9 @@ enum MapHomeCardMetricSelection {
     }
 
     /// 항목 id에 해당하는 값을 카드용 문자열로 바꾼다.
+    @MainActor
     static func value(for kind: MapHomeCalendarTimeKind, number: Double) -> String {
+        if kind.isMoney { return LedgerMoney.text(number, language: .current) }
         if kind.isCount { return MapHomeCalendarTimeTotalsPolicy.countCellText(count: number) }
         if kind.isDistance { return MapHomeCalendarTimeTotalsPolicy.distanceCellText(meters: number) }
         return MapHomeCalendarTimeTotalsPolicy.cellText(seconds: number)

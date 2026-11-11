@@ -245,7 +245,8 @@ extension AppModel {
 
     private func assistantLedger(on span: TimeSpan) async -> [LedgerEntry] {
         await LedgerBook.shared.load()
-        return LedgerBook.shared.entries.filter { $0.occurredAt >= span.start && $0.occurredAt < span.end }
+        // 실제로 쓰고 번 돈만: 일상↔여행 이체 짝 기록은 빼야 AI가 여행 돈을 두 번 세지 않는다(리뷰).
+        return LedgerBook.shared.entries.filter { $0.transfer == nil && $0.occurredAt >= span.start && $0.occurredAt < span.end }
     }
 
     func assistantCategoryTitle(_ id: String, language: MapHomeLanguage) -> String {

@@ -63,7 +63,7 @@ final class MapHomeGrowthPolicyTests: XCTestCase {
         XCTAssertEqual(Policy.durationText(seconds: 30 * 60, language: .korean), "30분")
         XCTAssertEqual(Policy.durationText(seconds: 0, language: .korean), "0분")
         XCTAssertEqual(MapHomeCalendarTimeKind.allCases.map(\.rawValue),
-                       ["sleep", "movement", "study", "work", "exercise", "hobby", "distance", "places", "trips", "steps", "photos", "walkDistance", "carDistance", "transitDistance", "awayTime", "stepDistance", "calories"])
+                       ["sleep", "movement", "study", "work", "exercise", "hobby", "distance", "places", "trips", "steps", "photos", "walkDistance", "carDistance", "transitDistance", "awayTime", "stepDistance", "calories", "income", "expense"])
         // 26.5걸음에 20m(대표 측정)로 정한 기본 보폭, 범위를 벗어난 값은 거부한다.
         XCTAssertEqual(MapHomeStride.defaultMeters, 20.0 / 26.5, accuracy: 0.0001)
         XCTAssertEqual(try XCTUnwrap(MapHomeStride.calibrated(distanceMeters: 10, steps: 14)), 10.0 / 14.0, accuracy: 0.0001)

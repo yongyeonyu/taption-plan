@@ -150,6 +150,24 @@ enum LedgerDaySpending {
         return book.entries(on: day, calendar: calendar).filter { $0.kind == .expense && $0.transfer == nil && $0.occurredAt <= cutoff }
     }
 
+    /// 그날 수입: 일상 수입만(여행 이체·친구에게 받은 여행 경비는 뺀다).
+    static func income(day: Date, calendar: Calendar = MapHomeGrowthPolicy.localCalendar, book: LedgerBook = .shared) -> Double {
+        LedgerBook.total(book.entries(on: day, calendar: calendar).filter { $0.kind == .income && $0.transfer == nil && book.isDaily($0) }, .income)
+    }
+
+    /// 달력용 한 달 날짜별 수입·지출(원). 지출은 실제로 쓴 돈(이체 제외, 여행 중 지출 포함).
+    static func monthTotals(month: Date, calendar: Calendar = MapHomeGrowthPolicy.localCalendar, book: LedgerBook = .shared) -> [Date: (income: Double, expense: Double)] {
+        guard let interval = calendar.dateInterval(of: .month, for: month) else { return [:] }
+        var result: [Date: (income: Double, expense: Double)] = [:]
+        for entry in book.entries where entry.transfer == nil && entry.occurredAt >= interval.start && entry.occurredAt < interval.end {
+            let day = calendar.startOfDay(for: entry.occurredAt)
+            var value = result[day] ?? (0, 0)
+            if entry.kind == .expense { value.expense += entry.amountKRW ?? 0 } else if book.isDaily(entry) { value.income += entry.amountKRW ?? 0 }
+            result[day] = value
+        }
+        return result
+    }
+
     static func total(day: Date, cutoff: Date, calendar: Calendar = MapHomeGrowthPolicy.localCalendar, book: LedgerBook = .shared) -> Double {
         LedgerBook.total(entries(day: day, cutoff: cutoff, calendar: calendar, book: book), .expense)
     }

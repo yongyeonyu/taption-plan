@@ -75,12 +75,17 @@ enum LedgerTripMath {
     static func sheet(_ trip: LedgerTrip, entries: [LedgerEntry]) -> LedgerTripSheet {
         let mine = entries.filter { $0.tripID == trip.id }
         let everyone = trip.everyone
-        var balances = Dictionary(uniqueKeysWithValues: everyone.map { ($0, 0.0) })
+        // 동행 목록에서 빠지거나 이름이 바뀐 사람도 자기 줄로 남긴다(리뷰: 그 사람이 낸 돈이 「내가 낸 돈」이 되던 것).
+        var people = everyone
+        for entry in mine {
+            for name in [entry.payer].compactMap({ $0 }) + (entry.shareNames ?? []) where !people.contains(name) { people.append(name) }
+        }
+        var balances = Dictionary(uniqueKeysWithValues: people.map { ($0, 0.0) })
         var myPaid = 0.0, myCost = 0.0, shared = 0.0, otherIncome = 0.0, received = 0.0
         for entry in mine where entry.transfer == nil {
             let amount = entry.amountKRW ?? 0
             guard entry.kind == .expense else {
-                if let giver = entry.payer, giver != LedgerTrip.me, everyone.contains(giver) {
+                if let giver = entry.payer, giver != LedgerTrip.me {
                     balances[giver, default: 0] += amount
                     balances[LedgerTrip.me, default: 0] -= amount
                     received += amount
@@ -89,8 +94,8 @@ enum LedgerTripMath {
                 }
                 continue
             }
-            let payer = entry.payer.flatMap { everyone.contains($0) ? $0 : nil } ?? LedgerTrip.me
-            let sharers = (entry.shareNames ?? everyone).filter(everyone.contains)
+            let payer = entry.payer ?? LedgerTrip.me
+            let sharers = entry.shareNames ?? everyone
             let split = sharers.isEmpty ? [payer] : sharers
             balances[payer, default: 0] += amount
             for name in split { balances[name, default: 0] -= amount / Double(split.count) }
@@ -124,7 +129,13 @@ enum LedgerTripMath {
 
 extension LedgerBook {
     /// 일상 장부: 여행 안 기록은 빼고 여행과 오간 짝 기록만 남는다.
-    var dailyEntries: [LedgerEntry] { entries.filter { $0.tripID == nil } }
+    var dailyEntries: [LedgerEntry] { entries.filter(isDaily) }
+
+    /// 일상 장부 기록인가. 여행 번호가 있어도 그 여행 장부가 없으면(예전 여행 모드 기록·지운 장부) 일상으로 본다(리뷰).
+    func isDaily(_ entry: LedgerEntry) -> Bool {
+        guard let tripID = entry.tripID else { return true }
+        return !trips.contains { $0.id == tripID }
+    }
 
     /// 이월잔액: 그때까지 일상 장부의 수입 − 지출(LED1111A07).
     func carryOver(before date: Date) -> Double {
@@ -143,6 +154,17 @@ extension LedgerBook {
             try? await store.upsertRecords([TaptionStoreRecord(id: trip.id, kind: LedgerTrip.kind, updatedAt: .now, origin: .user, isDeleted: false, body: text)])
         }
         await syncTrip(trip.id, now: now, calendar: calendar)
+    }
+
+    /// 여행 장부를 지운다(리뷰). 일상↔여행 짝 기록은 지우고, 여행 안 기록은 남겨 일상 장부로 돌아간다.
+    func deleteTrip(_ id: String) async {
+        await load()
+        for entry in entries where entry.transfer?.tripID == id { await delete(entry.id) }
+        guard let trip = trip(id) else { return }
+        trips.removeAll { $0.id == id }
+        if let store = storeFactory(), let body = try? JSONEncoder().encode(trip), let text = String(data: body, encoding: .utf8) {
+            try? await store.upsertRecords([TaptionStoreRecord(id: id, kind: LedgerTrip.kind, updatedAt: .now, origin: .user, isDeleted: true, body: text)])
+        }
     }
 
     /// 여행의 짝 기록을 맞춘다: 예산 이체는 늘, 정산은 여행이 끝난 뒤에(대표 결정: 자동 정산·모자라면 추가 이체).

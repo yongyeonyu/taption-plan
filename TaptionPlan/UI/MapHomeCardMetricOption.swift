@@ -18,13 +18,16 @@ struct MapHomeCardMetricOption: Identifiable, Equatable {
 
     private init(memoID: String) {
         id = memoID
-        systemImage = memoID == Self.spendingID ? "wonsign.circle.fill" : "note.text"
+        systemImage = "note.text"
         kind = nil
     }
 
     init?(id: String) {
-        if id == Self.memosID || id == Self.spendingID {
+        if id == Self.memosID {
             self.init(memoID: id)
+        } else if id == Self.spendingID {
+            // 예전 「지출」 칸은 달력 지표 「지출」로 합쳤다(LED1111A08).
+            self.init(kind: .expense)
         } else if let kind = MapHomeCalendarTimeKind(rawValue: id) {
             self.init(kind: kind)
         } else {
@@ -35,16 +38,14 @@ struct MapHomeCardMetricOption: Identifiable, Equatable {
     /// 고르기 목록 순서: 달력 지표 다음에 메모 수.
     static let all: [MapHomeCardMetricOption] =
         MapHomeCalendarTimeKind.allCases.map(MapHomeCardMetricOption.init(kind:))
-            + [MapHomeCardMetricOption(memoID: memosID), MapHomeCardMetricOption(memoID: spendingID)]
+            + [MapHomeCardMetricOption(memoID: memosID)]
 
     func title(_ language: MapHomeLanguage) -> String {
-        if id == Self.spendingID { return language.text("지출", "Spent") }
-        return kind?.title(language) ?? language.text("메모 수", "Memos")
+        kind?.title(language) ?? language.text("메모 수", "Memos")
     }
 
     @MainActor
     func valueText(_ number: Double) -> String {
-        if id == Self.spendingID { return LedgerMoney.text(number, language: .current) }
         guard let kind else { return MapHomeCalendarTimeTotalsPolicy.countCellText(count: number) }
         return MapHomeCardMetricSelection.value(for: kind, number: number)
     }

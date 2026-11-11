@@ -8,6 +8,8 @@ struct LedgerTripView: View {
     @State private var isAdding = false
     @State private var isEditingTrip = false
     @State private var editing: LedgerEntry?
+    @State private var hasLoaded = false
+    @Environment(\.dismiss) private var dismissView
     private var book: LedgerBook { .shared }
 
     var body: some View {
@@ -48,10 +50,16 @@ struct LedgerTripView: View {
             }
             .sheet(item: $editing) { entry in LedgerEntryForm(language: language, entry: entry, isNew: false, members: trip.members) }
             .sheet(isPresented: $isEditingTrip) {
-                LedgerTripForm(language: language, trip: trip) { updated in Task { await book.saveTrip(updated) } }
+                LedgerTripForm(language: language, trip: trip, onDelete: {
+                    Task { await book.deleteTrip(trip.id); dismissView() }
+                }) { updated in Task { await book.saveTrip(updated) } }
             }
+        } else if hasLoaded {
+            // 지웠거나 없는 여행 장부: 끝없이 기다리지 않고 알린다(리뷰).
+            Text(language.text("이 여행 장부가 없어요. 가계부의 「여행 장부」에서 만들 수 있어요.", "This trip ledger doesn't exist. You can create one under Trip ledgers."))
+                .foregroundStyle(.secondary).padding()
         } else {
-            ProgressView().task { await book.load() }
+            ProgressView().task { await book.load(); hasLoaded = true }
         }
     }
 }
@@ -220,15 +228,20 @@ struct LedgerShareSection: View {
 struct LedgerTripForm: View {
     let language: MapHomeLanguage
     @State var trip: LedgerTrip
+    /// 있으면 「여행 장부 지우기」를 보인다(고칠 때만).
+    var onDelete: (() -> Void)? = nil
     let onSave: (LedgerTrip) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var budgetText = ""
     @State private var newMember = ""
     @State private var isPickingContact = false
 
-    init(language: MapHomeLanguage, trip: LedgerTrip, onSave: @escaping (LedgerTrip) -> Void) {
+    @State private var isConfirmingDelete = false
+
+    init(language: MapHomeLanguage, trip: LedgerTrip, onDelete: (() -> Void)? = nil, onSave: @escaping (LedgerTrip) -> Void) {
         self.language = language
         _trip = State(initialValue: trip)
+        self.onDelete = onDelete
         self.onSave = onSave
         _budgetText = State(initialValue: trip.budgetKRW.map { LedgerEntryForm.plain($0) } ?? "")
     }
@@ -254,6 +267,13 @@ struct LedgerTripForm: View {
                     }
                     Button(language.text("연락처에서 고르기", "Pick from Contacts")) { isPickingContact = true }
                 }
+                if onDelete != nil {
+                    Section {
+                        Button(language.text("여행 장부 지우기", "Delete trip ledger"), role: .destructive) { isConfirmingDelete = true }
+                    } footer: {
+                        Text(language.text("예산 이체와 정산은 지우고, 여행 중 기록은 일상 가계부로 옮겨요.", "Budget transfers and settlement are removed; trip entries move to the daily ledger."))
+                    }
+                }
             }
             .navigationTitle(language.text("여행 장부", "Trip ledger"))
             .navigationBarTitleDisplayMode(.inline)
@@ -270,6 +290,12 @@ struct LedgerTripForm: View {
                 }
             }
             .sheet(isPresented: $isPickingContact) { LedgerContactPicker { names in names.forEach(addMember) } }
+            .confirmationDialog(language.text("여행 장부를 지울까요?", "Delete this trip ledger?"), isPresented: $isConfirmingDelete, titleVisibility: .visible) {
+                Button(language.text("지우기", "Delete"), role: .destructive) {
+                    dismiss()
+                    onDelete?()
+                }
+            }
         }
     }
 

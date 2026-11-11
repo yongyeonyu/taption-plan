@@ -52,6 +52,8 @@ enum MapHomeCalendarTimeKind: String, CaseIterable, Identifiable {
     case sleep, movement, study, work, exercise, hobby, distance, places, trips
     // 사용자가 "+"로 골라 쓰는 추가 지표
     case steps, photos, walkDistance, carDistance, transitDistance, awayTime, stepDistance, calories
+    /// 가계부 수입·지출(원, LED1111A08). 지출은 실제로 쓴 돈(일상↔여행 이체 제외, 여행 중 지출 포함).
+    case income, expense
 
     var id: String { rawValue }
 
@@ -74,6 +76,8 @@ enum MapHomeCalendarTimeKind: String, CaseIterable, Identifiable {
         case .transitDistance: language.text("대중교통 거리", "Transit")
         case .awayTime: language.text("외출 시간", "Time away")
         case .calories: language.text("활동 칼로리", "Active calories")
+        case .income: language.text("수입", "Income")
+        case .expense: language.text("지출", "Spending")
         }
     }
 
@@ -96,6 +100,8 @@ enum MapHomeCalendarTimeKind: String, CaseIterable, Identifiable {
         case .transitDistance: "tram.fill"
         case .awayTime: "door.left.hand.open"
         case .calories: "flame.fill"
+        case .income: "plus.circle.fill"
+        case .expense: "wonsign.circle.fill"
         }
     }
 
@@ -107,9 +113,12 @@ enum MapHomeCalendarTimeKind: String, CaseIterable, Identifiable {
     /// 방문 장소 수·이동 횟수·걸음 수·사진 수는 개수를 같은 딕셔너리에 담는다.
     var isCount: Bool { self == .places || self == .trips || self == .steps || self == .photos || self == .calories }
 
+    /// 원 금액(가계부). 칸에는 짧게(1.2만), 자세히는 원으로.
+    var isMoney: Bool { self == .income || self == .expense }
+
     /// 기본으로 늘 보이는 지표와, 사용자가 "+"로 더하는 지표.
     static let coreKinds: [MapHomeCalendarTimeKind] = [.sleep, .movement, .study, .work, .exercise, .hobby, .distance, .places, .trips]
-    static let extraKinds: [MapHomeCalendarTimeKind] = [.steps, .photos, .walkDistance, .carDistance, .transitDistance, .awayTime, .stepDistance, .calories]
+    static let extraKinds: [MapHomeCalendarTimeKind] = [.steps, .photos, .walkDistance, .carDistance, .transitDistance, .awayTime, .stepDistance, .calories, .income, .expense]
     static let extraStorageKey = "mapHomeCalendarExtraKinds"
     /// 그날 칼로리가 걸음 수로 추정한 값이면 1. 합계 표의 지표 칸이 아니다.
     static let caloriesEstimatedKey = "caloriesEstimated"
@@ -413,6 +422,24 @@ enum MapHomeCalendarTimeTotalsPolicy {
             guard overlap > 0 else { return sum }
             return sum + (total > 0 ? segment.distanceMeters * min(1, overlap / total) : segment.distanceMeters)
         }
+    }
+
+    /// 자세한 금액(원). 메인 액터 밖에서도 쓴다.
+    static func moneyText(_ amount: Double, language: MapHomeLanguage) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.maximumFractionDigits = 0
+        let number = formatter.string(from: NSNumber(value: amount.rounded())) ?? String(Int(amount.rounded()))
+        return language.text("\(number)원", "₩\(number)")
+    }
+
+    /// 달력 칸의 금액 표기(원). 1만 이상은 「1.2만」, 영어는 「12k」. 0은 빈 문자열.
+    static func moneyCellText(_ amount: Double, language: MapHomeLanguage) -> String {
+        guard amount >= 1 else { return "" }
+        if language == .korean {
+            return amount >= 10_000 ? String(format: amount >= 100_000 ? "%.0f만" : "%.1f만", amount / 10_000) : String(Int(amount.rounded()))
+        }
+        return amount >= 1_000 ? String(format: amount >= 100_000 ? "%.0fk" : "%.1fk", amount / 1_000) : String(Int(amount.rounded()))
     }
 
     /// 달력 칸의 개수 표기. 0은 빈 문자열.

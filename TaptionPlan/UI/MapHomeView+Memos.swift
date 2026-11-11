@@ -518,6 +518,13 @@ extension MapHomeView {
         if result.isEmpty {
             result = await dayFallbackTotals(month: month)
         }
+        if enabled.contains(.income) || enabled.contains(.expense) {
+            await LedgerBook.shared.load()
+            for (day, value) in LedgerDaySpending.monthTotals(month: month) {
+                if enabled.contains(.income), value.income > 0 { result[day, default: [:]][MapHomeCalendarTimeKind.income.rawValue] = value.income }
+                if enabled.contains(.expense), value.expense > 0 { result[day, default: [:]][MapHomeCalendarTimeKind.expense.rawValue] = value.expense }
+            }
+        }
         if includePhotos, enabled.contains(.photos) {
             let library = photoLibrary
             let counts = await Task.detached(priority: .utility) {

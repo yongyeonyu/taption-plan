@@ -213214,6 +213214,83 @@
         }
       }
     },
+    "여행 장부 지우기|Delete trip ledger" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "旅行家計簿を削除"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "删除旅行账本"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "刪除旅行帳本"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reise-Haushaltsbuch löschen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supprimer le budget voyage"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elimina spese di viaggio"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eliminar gastos de viaje"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apagar finança de viagem"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xóa sổ chuyến đi"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hapus catatan perjalanan"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลบบัญชีทริป"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "यात्रा खाता हटाएँ"
+          }
+        }
+      }
+    },
     "여행 장부|Trip ledger" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -213364,6 +213441,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "यात्रा खाते"
+          }
+        }
+      }
+    },
+    "여행 장부를 지울까요?|Delete this trip ledger?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この旅行家計簿を削除しますか?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要删除这个旅行账本吗?"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要刪除這個旅行帳本嗎?"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieses Reise-Haushaltsbuch löschen?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supprimer ce budget voyage ?"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eliminare queste spese di viaggio?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Eliminar estos gastos de viaje?"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apagar esta finança de viagem?"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xóa sổ chuyến đi này?"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hapus catatan perjalanan ini?"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลบบัญชีทริปนี้ไหม"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "यह यात्रा खाता हटाएँ?"
           }
         }
       }
@@ -220679,6 +220833,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "बचा बजट"
+          }
+        }
+      }
+    },
+    "예산 이체와 정산은 지우고, 여행 중 기록은 일상 가계부로 옮겨요.|Budget transfers and settlement are removed; trip entries move to the daily ledger." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "予算の振替と精算は削除し、旅行中の記録は日常の家計簿に移します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "删除预算转账和结算，旅行中的记录移到日常账本。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "刪除預算轉帳和結算，旅行中的紀錄移到日常帳本。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Budgetüberträge und Abrechnung werden entfernt; Reiseeinträge wandern ins Alltags-Haushaltsbuch."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les virements de budget et le solde sont supprimés ; les dépenses du voyage passent au budget quotidien."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I trasferimenti di budget e il saldo vengono rimossi; le voci del viaggio passano alle spese quotidiane."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se quitan los traspasos de presupuesto y la liquidación; las entradas del viaje pasan a los gastos diarios."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "As transferências de verba e o acerto são removidos; os lançamentos da viagem vão para o dia a dia."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xóa chuyển kinh phí và quyết toán; các mục chuyến đi chuyển về sổ hằng ngày."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Transfer anggaran dan penyelesaian dihapus; catatan perjalanan pindah ke catatan harian."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลบการโอนงบและการเคลียร์ รายการระหว่างทริปย้ายไปบัญชีประจำวัน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "बजट ट्रांसफ़र और हिसाब हटेंगे; यात्रा की प्रविष्टियाँ रोज़ के खाते में जाएँगी।"
           }
         }
       }
@@ -233307,6 +233538,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "यह भाषा समर्थित नहीं है।"
+          }
+        }
+      }
+    },
+    "이 여행 장부가 없어요. 가계부의 「여행 장부」에서 만들 수 있어요.|This trip ledger doesn't exist. You can create one under Trip ledgers." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この旅行家計簿はありません。家計簿の「旅行家計簿」から作れます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有这个旅行账本。可在记账本的“旅行账本”中创建。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "沒有這個旅行帳本。可在記帳本的「旅行帳本」中建立。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieses Reise-Haushaltsbuch gibt es nicht. Du kannst eins unter Reise-Haushaltsbücher anlegen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce budget voyage n’existe pas. Vous pouvez en créer un dans Budgets voyage."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Queste spese di viaggio non esistono. Puoi crearle in Spese di viaggio."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estos gastos de viaje no existen. Puedes crearlos en Gastos de viaje."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta finança de viagem não existe. Você pode criar uma em Finanças de viagem."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không có sổ chuyến đi này. Bạn có thể tạo trong Sổ chuyến đi."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catatan perjalanan ini tidak ada. Anda bisa membuatnya di Catatan perjalanan."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ไม่มีบัญชีทริปนี้ สร้างได้ที่ “บัญชีทริป”"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "यह यात्रा खाता नहीं है। “यात्रा खाते” में बना सकते हैं।"
           }
         }
       }

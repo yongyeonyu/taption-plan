@@ -281,8 +281,8 @@ final class LedgerTests: XCTestCase {
         XCTAssertTrue(lines[4].contains("수입,기타,\"환불 \"\"부분\"\"\",3000,,77000"), lines[4])
         XCTAssertEqual(lines[5], "합계,,,,3000,26000,77000,")
         XCTAssertTrue(csv.contains("항목별 지출,지출,비율\r\n기타,26000,100.0%"))
-        XCTAssertEqual(MapHomeCardMetricOption(id: MapHomeCardMetricOption.spendingID)?.title(.korean), "지출")
-        XCTAssertTrue(MapHomeCardMetricOption.all.contains { $0.id == "spending" })
+        XCTAssertEqual(MapHomeCardMetricOption(id: MapHomeCardMetricOption.spendingID)?.title(.korean), "지출", "the old card id maps to the calendar expense")
+        XCTAssertTrue(MapHomeCardMetricOption.all.contains { $0.id == "expense" })
     }
 
     // MARK: - LED1111A05 여행 장부(일상 아래 대차대조)
@@ -295,6 +295,42 @@ final class LedgerTests: XCTestCase {
         var entry = LedgerEntry(occurredAt: at(12, day: 7), amount: amount, amountKRW: amount, title: title, payer: payer, tripID: "t1")
         entry.shareNames = share
         return entry
+    }
+
+    /// 리뷰 LED1111A08: 장부 없는 여행 기록은 일상으로, 오늘 손익은 일상만, 빠진 동행은 자기 줄, 장부 지우기, 시트 이름, 달력 금액.
+    func testLedgerReviewFixes() async {
+        let book = LedgerBook(store: { nil })
+        await book.save(LedgerEntry(occurredAt: at(12), amount: 15_000, amountKRW: 15_000, title: "예전 여행 점심", tripID: "old-trip"))
+        XCTAssertEqual(book.dailyEntries.count, 1, "an entry of a trip without a ledger stays in daily")
+
+        await book.saveTrip(LedgerTrip(id: "t1", name: "대구", start: at(0), end: at(0), budgetKRW: 500_000, members: ["A"]), now: at(12), calendar: calendar)
+        await book.save(spend10(300_000, "숙소"))
+        XCTAssertEqual(book.todayNet(now: at(20), calendar: calendar, monthlyNet: 0), -515_000, "trip budget transfer + old lunch, not the hotel again")
+
+        let renamed = LedgerTrip(id: "t1", name: "대구", start: at(0), end: at(0), budgetKRW: 500_000, members: ["민수"])
+        var dinner = spend10(90_000, "저녁")
+        dinner.payer = "A"
+        let sheet = LedgerTripMath.sheet(renamed, entries: [dinner])
+        XCTAssertEqual(sheet.myPaid, 0, "a removed member's payment is not mine")
+        XCTAssertEqual(sheet.balances["A"] ?? 0, 90_000, accuracy: 0.5, "A keeps their own line and is owed the dinner")
+
+        await book.deleteTrip("t1")
+        XCTAssertNil(book.trip("t1"))
+        XCTAssertTrue(book.entries.allSatisfy { $0.transfer == nil }, "transfer pairs go with the ledger")
+        XCTAssertEqual(book.dailyEntries.map(\.title).sorted(), ["숙소", "예전 여행 점심"], "trip entries return to daily")
+
+        XCTAssertEqual(LedgerXLSX.safeSheetName("서울/부산: 1일차"), "서울-부산- 1일차")
+        XCTAssertEqual(LedgerXLSX.safeSheetName("'''"), "Sheet1")
+        let totals = LedgerDaySpending.monthTotals(month: at(0), calendar: calendar, book: book)
+        XCTAssertEqual(totals[calendar.startOfDay(for: at(0))]?.expense, 315_000)
+        XCTAssertEqual(MapHomeCalendarTimeTotalsPolicy.moneyCellText(12_600, language: .korean), "1.3만")
+        XCTAssertEqual(MapHomeCalendarTimeTotalsPolicy.moneyCellText(350_000, language: .korean), "35만")
+        XCTAssertEqual(MapHomeCalendarTimeTotalsPolicy.moneyCellText(0, language: .korean), "")
+        XCTAssertTrue(MapHomeCalendarTimeKind.extraKinds.contains(.expense))
+    }
+
+    private func spend10(_ amount: Double, _ title: String) -> LedgerEntry {
+        LedgerEntry(occurredAt: at(13), amount: amount, amountKRW: amount, title: title, tripID: "t1")
     }
 
     func testTripSheetSettlesForMe() {

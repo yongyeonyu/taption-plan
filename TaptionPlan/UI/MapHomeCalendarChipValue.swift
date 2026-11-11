@@ -11,6 +11,7 @@ enum MapHomeCalendarChipValue {
         language: MapHomeLanguage
     ) -> String? {
         guard value.isFinite, value > 0 else { return nil }
+        if kind.isMoney { return MapHomeCalendarTimeTotalsPolicy.moneyText(value, language: language) }
         if kind.isCount {
             return MapHomeCalendarTimeTotalsPolicy.countText(count: value, kind: kind, language: language)
         }

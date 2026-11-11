@@ -344,7 +344,8 @@ extension MapHomeView {
         let photoCount = await photoLibrary.momentCount(in: span)
         var filled = content.addingCounts(day: day, memos: model.snapshot.memos, photoCount: photoCount)
         await LedgerBook.shared.load()
-        filled.values[MapHomeCardMetricOption.spendingID] = LedgerDaySpending.total(day: day, cutoff: .distantFuture)
+        filled.values[MapHomeCalendarTimeKind.expense.rawValue] = LedgerDaySpending.total(day: day, cutoff: .distantFuture)
+        filled.values[MapHomeCalendarTimeKind.income.rawValue] = LedgerDaySpending.income(day: day)
         return filled
     }
 

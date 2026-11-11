@@ -38,6 +38,15 @@ struct LedgerXLSX {
         return zip.finish()
     }
 
+    /// 엑셀 시트 이름 규칙: [ ] : * ? / \ 를 쓸 수 없고, 작은따옴표로 시작·끝날 수 없으며 31자까지(리뷰).
+    static func safeSheetName(_ name: String) -> String {
+        var clean = String(name.map { "[]:*?/\\".contains($0) ? "-" : $0 })
+        while clean.hasPrefix("'") { clean.removeFirst() }
+        while clean.hasSuffix("'") { clean.removeLast() }
+        clean = String(clean.prefix(31)).trimmingCharacters(in: .whitespaces)
+        return clean.isEmpty ? "Sheet1" : clean
+    }
+
     static func column(_ index: Int) -> String {
         var n = index + 1, name = ""
         while n > 0 { let r = (n - 1) % 26; name = String(UnicodeScalar(65 + r)!) + name; n = (n - 1) / 26 }
@@ -87,7 +96,7 @@ struct LedgerXLSX {
     }
 
     private var workbook: String {
-        #"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="\#(Self.escape(String(sheetName.prefix(31))))" sheetId="1" r:id="rId1"/></sheets><calcPr fullCalcOnLoad="1"/></workbook>"#
+        #"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="\#(Self.escape(Self.safeSheetName(sheetName)))" sheetId="1" r:id="rId1"/></sheets><calcPr fullCalcOnLoad="1"/></workbook>"#
     }
 
     private static let contentTypes = #"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>"#

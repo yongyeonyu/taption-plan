@@ -51,10 +51,16 @@ enum LedgerStandard {
         return parts.joined(separator: " · ")
     }
 
+    /// 시간대마다 하나만 만들어 쓴다(리뷰: 줄마다 새로 만들던 것).
+    private static var formatters: [String: DateFormatter] = [:]
+
     static func dateText(_ date: Date, calendar: Calendar = .autoupdatingCurrent) -> String {
+        let key = calendar.timeZone.identifier
+        if let format = formatters[key] { return format.string(from: date) }
         let format = DateFormatter()
         format.calendar = calendar; format.timeZone = calendar.timeZone; format.locale = Locale(identifier: "en_US_POSIX")
         format.dateFormat = "yyyy-MM-dd HH:mm"
+        formatters[key] = format
         return format.string(from: date)
     }
 
@@ -114,12 +120,14 @@ enum LedgerTable {
 /// 공유 시트에 넘기는 표 파일. 누를 때 만든다.
 struct LedgerTableFile: Transferable {
     let name: String
-    let text: String
+    /// 공유를 누를 때만 표를 만든다(리뷰: 화면이 다시 그려질 때마다 전체 표를 만들던 것).
+    let make: @MainActor @Sendable () -> String
 
     static var transferRepresentation: some TransferRepresentation {
         FileRepresentation(exportedContentType: .commaSeparatedText) { file in
+            let text = await file.make()
             let url = FileManager.default.temporaryDirectory.appendingPathComponent(file.name)
-            try Data(file.text.utf8).write(to: url, options: .atomic)
+            try Data(text.utf8).write(to: url, options: .atomic)
             return SentTransferredFile(url)
         }
     }

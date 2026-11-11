@@ -31,7 +31,10 @@ struct LedgerSheet: View {
                 ForEach(days, id: \.self) { day in
                     Section(day.formatted(date: .abbreviated, time: .omitted)) {
                         ForEach(monthEntries.filter { Calendar.autoupdatingCurrent.isDate($0.occurredAt, inSameDayAs: day) }) { entry in
-                            Button { editing = entry } label: { LedgerRow(entry: entry, language: language) }
+                            // 여행 이체 짝 기록은 여기서 고치지 않고 그 여행 장부를 연다(리뷰: 고쳐도 되돌아오던 것).
+                            Button {
+                                if let tripID = entry.transfer?.tripID, book.trip(tripID) != nil { path = [tripID] } else { editing = entry }
+                            } label: { LedgerRow(entry: entry, language: language) }
                                 .buttonStyle(.plain)
                         }
                     }
@@ -49,11 +52,15 @@ struct LedgerSheet: View {
                     Menu {
                         Button(language.text("이 달 예산", "Monthly budget")) { isEditingBudget = true }
                         Button(language.text("정산하기", "Settle up")) { isSettling = true }
-                        ShareLink(item: LedgerTableFile(name: "BOKKI-\(month).csv", text: LedgerTable.csv(monthEntries, carryOver: monthCarryOver, title: language.text("BOKKI 가계부 \(monthTitle)", "BOKKI ledger \(monthTitle)"), language: language)),
+                        ShareLink(item: LedgerTableFile(name: "BOKKI-\(month).csv") { [monthEntries, monthCarryOver, monthTitle, language] in
+                            LedgerTable.csv(monthEntries, carryOver: monthCarryOver, title: language.text("BOKKI 가계부 \(monthTitle)", "BOKKI ledger \(monthTitle)"), language: language)
+                        },
                                   preview: SharePreview(language.text("가계부 \(monthTitle) 표", "Ledger \(monthTitle) table"))) {
                             Label(language.text("이 달 표로 내보내기", "Export this month as a table"), systemImage: "tablecells")
                         }
-                        ShareLink(item: LedgerTableFile(name: "BOKKI-ledger.csv", text: LedgerTable.csv(book.dailyEntries, title: language.text("BOKKI 가계부 전체", "BOKKI ledger (all)"), language: language)),
+                        ShareLink(item: LedgerTableFile(name: "BOKKI-ledger.csv") { [language] in
+                            LedgerTable.csv(LedgerBook.shared.dailyEntries, title: language.text("BOKKI 가계부 전체", "BOKKI ledger (all)"), language: language)
+                        },
                                   preview: SharePreview(language.text("가계부 전체 표", "Whole ledger table"))) {
                             Label(language.text("전체 표로 내보내기", "Export everything as a table"), systemImage: "square.and.arrow.up")
                         }

@@ -233,6 +233,7 @@ struct MapHomeCalendarSheet: View {
 
     private func cellValueText(_ kind: MapHomeCalendarTimeKind, on date: Date) -> String {
         let value = seconds(of: kind, on: date)
+        if kind.isMoney { return MapHomeCalendarTimeTotalsPolicy.moneyCellText(value, language: language) }
         if kind.isCount { return MapHomeCalendarTimeTotalsPolicy.countCellText(count: value) }
         return kind.isDistance
             ? MapHomeCalendarTimeTotalsPolicy.distanceCellText(meters: value)
@@ -347,6 +348,7 @@ struct MapHomeCalendarSheet: View {
     }
 
     private func panelText(_ value: Double, for kind: MapHomeCalendarTimeKind) -> String {
+        if kind.isMoney { return LedgerMoney.text(value, language: language) }
         if kind.isCount {
             return MapHomeCalendarTimeTotalsPolicy.countText(count: value, kind: kind, language: language)
         }
