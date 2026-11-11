@@ -2,6 +2,11 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## SYN1111A02 · 현재 위치 단추로 AI 비서 명령 받기 (2026-11-11)
+
+- 대표 지시: 지도의 현재 위치 단추를 누르면 비서 명령을 불러온다. 두 화면 배치의 위치 단추가 모두 지나는 `requestAndFollowUserLocation`에서 `AssistantCommandRefresh.now`를 부른다. 이 함수는 429를 기다리지 않고 받기 제한 시간은 5초다. 당겨서 새로고침(SYN1111A01)은 그대로 둔다.
+- 아이폰 11 실기기: 앱 Debug 빌드와 `AssistantRelayTests` 13건 실패 0(`build/validation/SYN1111A02/iphone11.xcresult`). 단추를 눌러 실제 명령이 들어오는지는 기기에서 보지 않았다.
+
 ## SYN1111A01 · AI 비서 명령 바로 받기·당겨서 새로고침 (2026-11-11)
 
 - 확인: 앱 활성화 때는 이미 `checkTripRelay` → 명령 확인을 부르고 있었다. 늦은 이유는 앱이 켜져 있는 동안 확인하지 않았고, 활성화 때도 다듬기 목록 올리기를 먼저 했기 때문이다.

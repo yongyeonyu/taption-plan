@@ -570,6 +570,8 @@ extension MapHomeView {
         // 현재 위치로 가면 재생을 취소한다. 두 레이아웃의 위치 단추가 모두 여기를
         // 지나므로 한 곳에서 처리한다(대표 요청, 2026-10-26).
         cancelDayPlaybackIfRunning()
+        // 현재 위치 단추를 누르면 AI 비서 명령도 바로 받는다(대표 지시 SYN1111A02).
+        Task { await AssistantCommandRefresh.now(language: language) }
         recordTimelineWindow("recenter_before")
         // 지도만 지금으로 옮기고 시간선은 보던 시각에 두면, 확대해 둔 사이드바가
         // 지금과 다른 시각을 가리킨다. 날짜와 선택을 함께 지금으로 되돌린다
