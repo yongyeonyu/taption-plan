@@ -13,10 +13,10 @@
 
 | | 2026-10-24 | 2026-11-08 | 목표 | 왜 |
 |---|---:|---:|---:|---|
-| 가장 큰 파일 | 21,998줄 | 2,988줄 (`RecordSummaryEngine.swift`) | ≤ 1,200줄 | 파일 하나를 열면 컨텍스트를 다 잃는다 |
+| 가장 큰 파일 | 21,998줄 | 2,753줄 (`RouteTimelineData.swift`, 2026-11-11 실측. `RecordSummaryEngine.swift`는 343줄) | ≤ 1,200줄 | 파일 하나를 열면 컨텍스트를 다 잃는다 |
 | 가장 큰 타입 | 13,535줄 | 2,162줄 (`extension ReviewView`) | ≤ 1,500줄 | 타입 하나가 8개 도메인의 상태를 들고 있다 |
 | UI/UX → 엔진 직접 의존 | 0곳 (1 → 0) | 0곳 | 0곳 | **달성** — 뷰는 이제 엔진을 모른다. 경계 스크립트가 지킨다 |
-| 도메인 모델 위치 | 앱 타깃 (`internal`) | 6개 중 5개 `TaptionPlanCore` (`TaptionDataSnapshot` 남음) | `TaptionPlanCore` (`public`) | 지금은 패키지가 도메인을 못 봐서 어댑터가 번역만 한다 |
+| 도메인 모델 위치 | 앱 타깃 (`internal`) | 6개 모두 패키지(`TaptionDataSnapshot`은 2026-11-08 `TaptionPlanStore`로) | `TaptionPlanCore` (`public`) | 지금은 패키지가 도메인을 못 봐서 어댑터가 번역만 한다 |
 | 어댑터 줄 수 | 2,385줄 | 2,391줄 | ≤ 600줄 | 위 항목의 직접 비용 |
 | Swift 6 탈출구 | 70곳 | 76곳 (22 · 11 · 34 · 2 · 7) | 0곳 | `@unchecked Sendable` 25 · `nonisolated(unsafe)` 10 · `Task.detached` 29 · `fatalError` 1 · `DispatchQueue.main` 5 |
 | 테스트 파일 최대 | 29,456줄 (756개) | 6,536줄 (`TimeScaleTests.swift`) | ≤ 3,000줄 | 실패 하나가 어느 경계의 문제인지 안 보인다 |
@@ -167,6 +167,8 @@ RoutePathSimplifier.simplify(routePoints, ...)                    // 2801
 엔진을 다시 빌드해야 하고, 뷰 테스트에 엔진 픽스처가 딸려 온다.
 
 **처방.** 남은 `Core/` 4개 파일의 배럴 의존을 정리하고, 배럴을 없앤다. → ADR-002
+
+> 2026-11-11 실측: 앱에서 `import TaptionPlanEngine`을 쓰는 파일은 4개가 아니라 43개다(모두 `Core/`). Phase 3 범위를 이 수로 다시 잡는다(`docs/PROPOSALS.md` 1-1).
 
 ### F3. 세 개의 거대 타입이 변경 반경을 지배한다
 
