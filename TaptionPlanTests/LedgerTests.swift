@@ -152,6 +152,14 @@ final class LedgerTests: XCTestCase {
         XCTAssertEqual(missing.reason, "no_record")
     }
 
+    /// SHT1111A01: 은행 앱 알림은 「출금」으로 온다. 시각이 없으면 알림 넣기가 받은 때로 채운다.
+    func testBankWithdrawalNotificationParses() {
+        let draft = LedgerMessageParser.parse("KB국민은행 출금 12,000원 스타벅스강남 잔액 345,000원", now: at(9), calendar: calendar)
+        XCTAssertEqual(draft?.amount, 12_000)
+        XCTAssertNil(draft?.occurredAt)
+        XCTAssertNil(LedgerMessageParser.parse("[광고] KB국민은행 출금 이벤트 10,000원", now: at(9), calendar: calendar))
+    }
+
     func testPromoLinesLocalePrefillAndResetDuringLoad() async {
         let now = at(20)
         let promo = LedgerMessageParser.parse("현대카드 승인 홍*동 15,000원 일시불 11/10 13:00 김밥천국 누적300,000원 청구할인 혜택 이벤트", now: now, calendar: calendar)

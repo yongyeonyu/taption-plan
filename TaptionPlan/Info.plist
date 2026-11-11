@@ -47,6 +47,21 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>312</string>
+	<key>INAlternativeAppNames</key>
+	<array>
+		<dict>
+			<key>INAlternativeAppName</key>
+			<string>보키 플랜</string>
+		</dict>
+		<dict>
+			<key>INAlternativeAppName</key>
+			<string>보키</string>
+		</dict>
+		<dict>
+			<key>INAlternativeAppName</key>
+			<string>복키 플랜</string>
+		</dict>
+	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSApplicationQueriesSchemes</key>

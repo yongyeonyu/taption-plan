@@ -109,7 +109,7 @@ struct LedgerSheet: View {
                 Task { await readReceipt(item) }
             }
             .sheet(isPresented: $isEditingBudget) { LedgerBudgetForm(language: language, period: month) }
-            .sheet(isPresented: $isShowingShortcutGuide) { LedgerShortcutGuide(language: language) }
+            .sheet(isPresented: $isShowingShortcutGuide) { BokkiShortcutsGuide(language: language) }
             .sheet(isPresented: $isSettling) {
                 LedgerSettleView(language: language, entries: monthEntries.filter { $0.transfer == nil })
             }
@@ -582,49 +582,6 @@ enum LedgerNumber {
 
 /// 결제 문자 자동 넣기 안내(LED1111A10, 대표 질문 2026-11-11: 단축어 추가 메뉴가 어디 있나).
 /// 단축어 자동화는 앱이 대신 만들 수 없어 순서를 보여 주고 단축어 앱을 연다.
-struct LedgerShortcutGuide: View {
-    let language: MapHomeLanguage
-    @Environment(\.dismiss) private var dismiss
-    @Environment(\.openURL) private var openURL
-
-    private var steps: [String] {
-        [
-            language.text("단축어 앱 → 아래 「자동화」 → 오른쪽 위 +", "Shortcuts app → Automation → + at the top right"),
-            language.text("「메시지」 → 「메시지 내용에 포함」에 카드사 이름이나 「승인」을 적기", "Message → \"Message Contains\" → type your card company or \"approved\""),
-            language.text("「즉시 실행」을 고르고 다음", "Choose \"Run Immediately\", then Next"),
-            language.text("「새로운 빈 자동화」 → 동작 검색에서 「결제 문자 넣기」(BOKKI Plan)", "New Blank Automation → search actions for \"Add payment text\" (BOKKI Plan)"),
-            language.text("「메시지」 칸이 받은 메시지로 채워졌는지 보고 완료", "Check that the Message field is the received message, then Done"),
-        ]
-    }
-
-    var body: some View {
-        NavigationStack {
-            List {
-                Group {
-                Section {
-                    ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
-                        Label { Text(step) } icon: { Text(verbatim: "\(index + 1)").font(.taptionStyle(.headline)) }
-                    }
-                } footer: {
-                    Text(language.text("카드 결제 문자가 오면 가계부에 바로 들어가요. 읽지 못한 형식은 「붙여넣기」로 넣어 주세요.", "Card payment texts go straight into the ledger. Paste any format it can't read."))
-                }
-                Section {
-                    Button {
-                        if let url = URL(string: "shortcuts://") { openURL(url) }
-                    } label: { Label(language.text("단축어 앱 열기", "Open Shortcuts"), systemImage: "square.2.layers.3d") }
-                    ShortcutsLink()
-                }
-                }
-                .listRowBackground(Color.tpSurface)
-            }
-            .tpListStyle()
-            .navigationTitle(language.text("결제 문자 자동으로 넣기", "Add payment texts automatically"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button(language.text("완료", "Done")) { dismiss() } } }
-        }
-    }
-}
-
 /// 가계부 한 달을 날짜별로 묶는다. 날짜도, 같은 날 안도 오래된 것부터 시간순(LDU1111A01).
 struct LedgerDayGroup: Identifiable, Equatable {
     let day: Date

@@ -34,7 +34,12 @@ enum SiriCheckIn: String, AppEnum {
 
     static let typeDisplayRepresentation: TypeDisplayRepresentation = "순간"
     static let caseDisplayRepresentations: [SiriCheckIn: DisplayRepresentation] = [
-        .arriveWork: "출근", .leaveWork: "퇴근", .wakeUp: "기상", .goToBed: "취침", .goOut: "외출", .comeHome: "귀가",
+        .arriveWork: DisplayRepresentation(title: "출근", synonyms: ["출근했어", "회사 도착", "arrived at work"]),
+        .leaveWork: DisplayRepresentation(title: "퇴근", synonyms: ["퇴근했어", "회사에서 나옴", "left work"]),
+        .wakeUp: DisplayRepresentation(title: "기상", synonyms: ["일어났어", "기상했어", "woke up"]),
+        .goToBed: DisplayRepresentation(title: "취침", synonyms: ["잘게", "잠자리", "going to bed"]),
+        .goOut: DisplayRepresentation(title: "외출", synonyms: ["나갔어", "외출했어", "went out"]),
+        .comeHome: DisplayRepresentation(title: "귀가", synonyms: ["집 도착", "집에 왔어", "came home"]),
     ]
 
     func memoText(_ language: MapHomeLanguage) -> String {
@@ -202,7 +207,11 @@ enum SiriScreen: String, AppEnum {
 
     static let typeDisplayRepresentation: TypeDisplayRepresentation = "화면"
     static let caseDisplayRepresentations: [SiriScreen: DisplayRepresentation] = [
-        .ledger: "가계부", .aiTasks: "AI 목록", .memos: "메모", .dayCard: "하루 카드", .calendar: "달력",
+        .ledger: DisplayRepresentation(title: "가계부", synonyms: ["장부", "지출 목록", "ledger"]),
+        .aiTasks: DisplayRepresentation(title: "AI 목록", synonyms: ["AI 확인 목록", "AI 할 일", "AI tasks"]),
+        .memos: DisplayRepresentation(title: "메모", synonyms: ["메모 목록", "memos"]),
+        .dayCard: DisplayRepresentation(title: "하루 카드", synonyms: ["오늘 카드", "day card"]),
+        .calendar: DisplayRepresentation(title: "달력", synonyms: ["캘린더", "calendar"]),
     ]
 }
 

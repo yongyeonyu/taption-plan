@@ -462,6 +462,9 @@ extension MapHomeView {
                 menuGroupDivider
                 // 차량 오디오(블루투스·CarPlay)가 연결된 이동은 자동차로 확정한다(CAR1029A01).
                 menuRowButton("car.fill", language.text("내 차 등록", "My car"), tint: .tpMenuChip("#4F86B8")) { isCarAudioSheetPresented = true }
+                menuGroupDivider
+                // 결제 문자·결제 앱 알림 자동 넣기와 Siri로 넣기(SHT1111A01).
+                menuRowButton("square.2.layers.3d", language.text("단축어 · Siri", "Shortcuts · Siri"), tint: .tpMenuChip("#C2557A")) { isShortcutsGuidePresented = true }
                 // 「AI 연결」(AIR1110A03, 예전 AI 비서): AI별 연결·PIN·공유 수준. 중계 서버가 없으면 숨긴다.
                 if TripRelay.isAvailable {
                     menuGroupDivider

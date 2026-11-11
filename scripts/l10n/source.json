@@ -194,7 +194,7 @@
    "ko": "12,300원",
    "en": "₩12,300",
    "files": [
-    "FirstRunTutorialView.swift:800"
+    "FirstRunTutorialView.swift:804"
    ],
    "args": [],
    "targets": [
@@ -218,7 +218,7 @@
    "ko": "14일 무료 체험 · {0}일 남음",
    "en": "14-day free trial · {0} days left",
    "files": [
-    "AppShellView.swift:1230",
+    "AppShellView.swift:1226",
     "MapHomeView+Menu2.swift:240"
    ],
    "args": [
@@ -233,7 +233,7 @@
    "ko": "14일 무료 체험 시작",
    "en": "Start 14-day free trial",
    "files": [
-    "AppShellView.swift:1282"
+    "AppShellView.swift:1278"
    ],
    "args": [],
    "targets": [
@@ -245,7 +245,7 @@
    "ko": "14일 무료 체험",
    "en": "14-day free trial",
    "files": [
-    "AppShellView.swift:1228"
+    "AppShellView.swift:1224"
    ],
    "args": [],
    "targets": [
@@ -257,7 +257,7 @@
    "ko": "14일 무료 체험이 끝나도 자동 결제되지 않으며, 한 번 구매하면 계속 사용할 수 있습니다.",
    "en": "The trial does not renew automatically. A single purchase unlocks Pro permanently.",
    "files": [
-    "AppShellView.swift:1254"
+    "AppShellView.swift:1250"
    ],
    "args": [],
    "targets": [
@@ -269,7 +269,7 @@
    "ko": "14일 무료 체험이 시작되었습니다.",
    "en": "Your 14-day free trial has started.",
    "files": [
-    "AppShellView.swift:1365"
+    "AppShellView.swift:1361"
    ],
    "args": [],
    "targets": [
@@ -281,7 +281,7 @@
    "ko": "14일 무료 체험이 종료되었습니다",
    "en": "Your 14-day free trial has ended",
    "files": [
-    "AppShellView.swift:1237"
+    "AppShellView.swift:1233"
    ],
    "args": [],
    "targets": [
@@ -330,7 +330,7 @@
    "ko": "1시간 5분",
    "en": "1h 5m",
    "files": [
-    "FirstRunTutorialView.swift:798"
+    "FirstRunTutorialView.swift:802"
    ],
    "args": [],
    "targets": [
@@ -427,7 +427,7 @@
    "ko": "25분",
    "en": "25m",
    "files": [
-    "FirstRunTutorialView.swift:799"
+    "FirstRunTutorialView.swift:803"
    ],
    "args": [],
    "targets": [
@@ -476,7 +476,7 @@
    "ko": "3시간 12분",
    "en": "3h 12m",
    "files": [
-    "FirstRunTutorialView.swift:796"
+    "FirstRunTutorialView.swift:800"
    ],
    "args": [],
    "targets": [
@@ -488,7 +488,7 @@
    "ko": "42분",
    "en": "42m",
    "files": [
-    "FirstRunTutorialView.swift:797"
+    "FirstRunTutorialView.swift:801"
    ],
    "args": [],
    "targets": [
@@ -537,7 +537,7 @@
    "ko": "6자리 숫자를 두 칸에 모두 입력해 주세요.",
    "en": "Enter 6 digits in both fields.",
    "files": [
-    "FirstRunTutorialView.swift:329"
+    "FirstRunTutorialView.swift:333"
    ],
    "args": [],
    "targets": [
@@ -760,7 +760,7 @@
    "en": "AI connections",
    "files": [
     "AssistantSettingsView.swift:52",
-    "MapHomeView+Menu.swift:468"
+    "MapHomeView+Menu.swift:471"
    ],
    "args": [],
    "targets": [
@@ -784,7 +784,7 @@
    "ko": "AI 연결이 없거나 내용이 비어 있어요.",
    "en": "No AI is connected, or the text is empty.",
    "files": [
-    "SiriIntents.swift:140"
+    "SiriIntents.swift:145"
    ],
    "args": [],
    "targets": [
@@ -846,7 +846,7 @@
    "ko": "AI가 하루 기록을 읽고 일정·메모를 대신 정리합니다. 나중에 메뉴 > 연결에서도 할 수 있습니다.",
    "en": "Let an AI read your day and tidy plans and memos for you. You can also do this later in Menu > Connections.",
    "files": [
-    "FirstRunTutorialView.swift:176"
+    "FirstRunTutorialView.swift:177"
    ],
    "args": [],
    "targets": [
@@ -884,7 +884,7 @@
    "ko": "AI로 만들기",
    "en": "Plan with AI",
    "files": [
-    "MapHomeView+Support.swift:687"
+    "MapHomeView+Support.swift:690"
    ],
    "args": [],
    "targets": [
@@ -920,7 +920,7 @@
    "ko": "AI에게 맡겼어요. 메모 › AI에서 볼 수 있어요.",
    "en": "Sent to your AI. See Memo › AI.",
    "files": [
-    "SiriIntents.swift:143"
+    "SiriIntents.swift:148"
    ],
    "args": [],
    "targets": [
@@ -980,7 +980,7 @@
    "ko": "App Store에서 구매 항목을 아직 불러오지 못했습니다.",
    "en": "The purchase is not available from the App Store yet.",
    "files": [
-    "AppShellView.swift:1383"
+    "AppShellView.swift:1379"
    ],
    "args": [],
    "targets": [
@@ -1174,6 +1174,18 @@
    ]
   },
   {
+   "key": "BOKKI Plan AI에게 맡겨|Ask BOKKI Plan AI",
+   "ko": "BOKKI Plan AI에게 맡겨",
+   "en": "Ask BOKKI Plan AI",
+   "files": [
+    "BokkiShortcutsGuide.swift:62"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "BOKKI Plan {0} (빌드 {1})|BOKKI Plan {0} (Build {1})",
    "ko": "BOKKI Plan {0} (빌드 {1})",
    "en": "BOKKI Plan {0} (Build {1})",
@@ -1189,11 +1201,23 @@
    ]
   },
   {
+   "key": "BOKKI Plan 가계부 열어|Open ledger in BOKKI Plan",
+   "ko": "BOKKI Plan 가계부 열어",
+   "en": "Open ledger in BOKKI Plan",
+   "files": [
+    "BokkiShortcutsGuide.swift:61"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "BOKKI Plan 불러오는 중|Loading BOKKI Plan",
    "ko": "BOKKI Plan 불러오는 중",
    "en": "Loading BOKKI Plan",
    "files": [
-    "AppShellView.swift:431"
+    "AppShellView.swift:427"
    ],
    "args": [],
    "targets": [
@@ -1213,11 +1237,83 @@
    ]
   },
   {
+   "key": "BOKKI Plan 오늘 몇 걸음|Steps today in BOKKI Plan",
+   "ko": "BOKKI Plan 오늘 몇 걸음",
+   "en": "Steps today in BOKKI Plan",
+   "files": [
+    "BokkiShortcutsGuide.swift:59"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "BOKKI Plan 오늘 얼마 썼어|How much did I spend today in BOKKI Plan",
+   "ko": "BOKKI Plan 오늘 얼마 썼어",
+   "en": "How much did I spend today in BOKKI Plan",
+   "files": [
+    "BokkiShortcutsGuide.swift:58"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "BOKKI Plan 잠금 해제|Unlock BOKKI Plan",
    "ko": "BOKKI Plan 잠금 해제",
    "en": "Unlock BOKKI Plan",
    "files": [
     "PlanSecurityService.swift:156"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "BOKKI Plan 지금 뭐로 기록돼|What is BOKKI Plan recording now",
+   "ko": "BOKKI Plan 지금 뭐로 기록돼",
+   "en": "What is BOKKI Plan recording now",
+   "files": [
+    "BokkiShortcutsGuide.swift:60"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "BOKKI Plan 지출 기록|Add an expense in BOKKI Plan",
+   "ko": "BOKKI Plan 지출 기록",
+   "en": "Add an expense in BOKKI Plan",
+   "files": [
+    "BokkiShortcutsGuide.swift:57"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "BOKKI Plan 출근 기록 · 퇴근 · 기상 · 귀가|Log arrived at work in BOKKI Plan",
+   "ko": "BOKKI Plan 출근 기록 · 퇴근 · 기상 · 귀가",
+   "en": "Log arrived at work in BOKKI Plan",
+   "files": [
+    "BokkiShortcutsGuide.swift:56"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "BOKKI Plan에 저장 → 커피 4500원|Save to BOKKI Plan → coffee 4,500 won",
+   "ko": "BOKKI Plan에 저장 → 커피 4500원",
+   "en": "Save to BOKKI Plan → coffee 4,500 won",
+   "files": [
+    "BokkiShortcutsGuide.swift:55"
    ],
    "args": [],
    "targets": [
@@ -1902,7 +1998,7 @@
    "ko": "Pro 상태 확인 중",
    "en": "Checking Pro status",
    "files": [
-    "AppShellView.swift:1193"
+    "AppShellView.swift:1189"
    ],
    "args": [],
    "targets": [
@@ -1914,7 +2010,7 @@
    "ko": "Pro 영구 구매",
    "en": "Buy Pro permanently",
    "files": [
-    "AppShellView.swift:1358"
+    "AppShellView.swift:1354"
    ],
    "args": [],
    "targets": [
@@ -1926,7 +2022,7 @@
    "ko": "Pro 영구 구매가 완료되었습니다.",
    "en": "Your permanent Pro purchase is complete.",
    "files": [
-    "AppShellView.swift:1379"
+    "AppShellView.swift:1375"
    ],
    "args": [],
    "targets": [
@@ -1938,7 +2034,7 @@
    "ko": "Pro를 영구 이용 중입니다",
    "en": "You own Pro permanently",
    "files": [
-    "AppShellView.swift:1235"
+    "AppShellView.swift:1231"
    ],
    "args": [],
    "targets": [
@@ -1960,6 +2056,18 @@
     "TaptionPlanWidget",
     "TaptionPlanWatch",
     "TaptionPlanWatchWidget"
+   ]
+  },
+  {
+   "key": "Siri로 BOKKI Plan에 넣기|Add to BOKKI Plan with Siri",
+   "ko": "Siri로 BOKKI Plan에 넣기",
+   "en": "Add to BOKKI Plan with Siri",
+   "files": [
+    "BokkiShortcutsGuide.swift:39"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
    ]
   },
   {
@@ -2280,7 +2388,7 @@
    "ko": "iCloud 백업과 기기 연동",
    "en": "iCloud backup and device sync",
    "files": [
-    "AppShellView.swift:1179"
+    "AppShellView.swift:1175"
    ],
    "args": [],
    "targets": [
@@ -2651,9 +2759,9 @@
    "ko": "{0} {1}을 가계부에 넣었어요.",
    "en": "Added {0} {1} to the ledger.",
    "files": [
-    "SiriIntents.swift:91",
-    "SiriIntents.swift:123",
-    "LedgerIntents.swift:37"
+    "LedgerIntents.swift:58",
+    "SiriIntents.swift:96",
+    "SiriIntents.swift:128"
    ],
    "args": [
     "saved.title",
@@ -2902,7 +3010,7 @@
    "ko": "{0} 상세 분류",
    "en": "{0} details",
    "files": [
-    "MapHomeView+Menu.swift:717"
+    "MapHomeView+Menu.swift:720"
    ],
    "args": [
     "category.localizedTitle(language)"
@@ -2916,8 +3024,8 @@
    "ko": "{0} 색상 팔레트",
    "en": "{0} color palette",
    "files": [
-    "MapHomeView+Menu.swift:746",
-    "MapHomeView+Menu.swift:864"
+    "MapHomeView+Menu.swift:749",
+    "MapHomeView+Menu.swift:867"
    ],
    "args": [
     "category.localizedTitle(language)"
@@ -2931,7 +3039,7 @@
    "ko": "{0} 수정",
    "en": "Edit {0}",
    "files": [
-    "MapHomeView+Menu.swift:849"
+    "MapHomeView+Menu.swift:852"
    ],
    "args": [
     "category.title"
@@ -3118,7 +3226,7 @@
    "ko": "{0} 일정 메모",
    "en": "{0} schedule memo",
    "files": [
-    "MapHomeView+Timeline.swift:375"
+    "MapHomeView+Timeline.swift:381"
    ],
    "args": [
     "sticker.title"
@@ -3132,7 +3240,7 @@
    "ko": "{0} 일정",
    "en": "Events on {0}",
    "files": [
-    "MapHomeTodayCalendar.swift:221"
+    "MapHomeTodayCalendar.swift:222"
    ],
    "args": [
     "day"
@@ -3481,7 +3589,7 @@
    "ko": "{0}로 Pro 영구 구매",
    "en": "Buy Pro permanently for {0}",
    "files": [
-    "AppShellView.swift:1353"
+    "AppShellView.swift:1349"
    ],
    "args": [
     "displayPrice"
@@ -3937,7 +4045,7 @@
    "ko": "{0}을(를) 남겼어요.",
    "en": "Saved: {0}.",
    "files": [
-    "SiriIntents.swift:65"
+    "SiriIntents.swift:70"
    ],
    "args": [
     "text"
@@ -4023,7 +4131,7 @@
    "ko": "{0}자리 비밀번호",
    "en": "{0}-digit PIN",
    "files": [
-    "AppShellView.swift:901"
+    "AppShellView.swift:897"
    ],
    "args": [
     "pinDigits"
@@ -12059,7 +12167,7 @@
    "ko": "앱 잠금 해제 필요",
    "en": "App unlock required",
    "files": [
-    "AppShellView.swift:810"
+    "AppShellView.swift:806"
    ],
    "args": [],
    "targets": [
@@ -22089,7 +22197,7 @@
    "ko": "BOKKI Plan 불러오는 중",
    "en": "Loading BOKKI Plan",
    "files": [
-    "AppShellView.swift:432"
+    "AppShellView.swift:428"
    ],
    "args": [],
    "targets": [
@@ -22101,7 +22209,7 @@
    "ko": "활동과 이동 경로 불러오는 중",
    "en": "Loading activities and routes",
    "files": [
-    "AppShellView.swift:412"
+    "AppShellView.swift:408"
    ],
    "args": [],
    "targets": [
@@ -22113,7 +22221,7 @@
    "ko": "데이터 불러오는 중…",
    "en": "Loading data…",
    "files": [
-    "AppShellView.swift:386"
+    "AppShellView.swift:382"
    ],
    "args": [],
    "targets": [
@@ -22125,7 +22233,7 @@
    "ko": "경로 불러오는 중…",
    "en": "Loading routes…",
    "files": [
-    "AppShellView.swift:388"
+    "AppShellView.swift:384"
    ],
    "args": [],
    "targets": [
@@ -32454,7 +32562,7 @@
    "ko": "{0}자리 비밀번호",
    "en": "{0}-digit PIN",
    "files": [
-    "AppShellView.swift:902"
+    "AppShellView.swift:898"
    ],
    "args": [
     "pinDigits"
@@ -32651,7 +32759,7 @@
    "ko": "「메시지」 → 「메시지 내용에 포함」에 카드사 이름이나 「승인」을 적기",
    "en": "Message → \"Message Contains\" → type your card company or \"approved\"",
    "files": [
-    "LedgerSheet.swift:593"
+    "BokkiShortcutsGuide.swift:16"
    ],
    "args": [],
    "targets": [
@@ -32659,11 +32767,11 @@
    ]
   },
   {
-   "key": "「메시지」 칸이 받은 메시지로 채워졌는지 보고 완료|Check that the Message field is the received message, then Done",
-   "ko": "「메시지」 칸이 받은 메시지로 채워졌는지 보고 완료",
-   "en": "Check that the Message field is the received message, then Done",
+   "key": "「문자 내용」 칸이 받은 메시지로 채워졌는지 보고 완료|Check that the text field is the received message, then Done",
+   "ko": "「문자 내용」 칸이 받은 메시지로 채워졌는지 보고 완료",
+   "en": "Check that the text field is the received message, then Done",
    "files": [
-    "LedgerSheet.swift:596"
+    "BokkiShortcutsGuide.swift:19"
    ],
    "args": [],
    "targets": [
@@ -32675,7 +32783,43 @@
    "ko": "「새로운 빈 자동화」 → 동작 검색에서 「결제 문자 넣기」(BOKKI Plan)",
    "en": "New Blank Automation → search actions for \"Add payment text\" (BOKKI Plan)",
    "files": [
-    "LedgerSheet.swift:595"
+    "BokkiShortcutsGuide.swift:18"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "「시리야」 다음에 그대로 말하면 앱을 열지 않고 들어가요. 금액을 말하면 가계부에도 들어가요. 「보키 플랜」이라고 불러도 돼요.|Say these after \"Hey Siri\"; they go in without opening the app. Say an amount and it goes into the ledger too.",
+   "ko": "「시리야」 다음에 그대로 말하면 앱을 열지 않고 들어가요. 금액을 말하면 가계부에도 들어가요. 「보키 플랜」이라고 불러도 돼요.",
+   "en": "Say these after \"Hey Siri\"; they go in without opening the app. Say an amount and it goes into the ledger too.",
+   "files": [
+    "BokkiShortcutsGuide.swift:41"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "「알림 내용」 칸이 받은 알림으로 채워졌는지 보고 완료|Check that the alert field is the received notification, then Done",
+   "ko": "「알림 내용」 칸이 받은 알림으로 채워졌는지 보고 완료",
+   "en": "Check that the alert field is the received notification, then Done",
+   "files": [
+    "BokkiShortcutsGuide.swift:30"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "「알림」 → 「앱 푸시」에서 은행·카드 앱 고르기(iOS 27부터)|Notification → App Push → choose your bank and card apps (iOS 27 or later)",
+   "ko": "「알림」 → 「앱 푸시」에서 은행·카드 앱 고르기(iOS 27부터)",
+   "en": "Notification → App Push → choose your bank and card apps (iOS 27 or later)",
+   "files": [
+    "BokkiShortcutsGuide.swift:27"
    ],
    "args": [],
    "targets": [
@@ -32695,11 +32839,23 @@
    ]
   },
   {
+   "key": "「즉시 실행」 → 동작 「결제 알림 넣기」(BOKKI Plan)|Run Immediately → action \"Add payment alert\" (BOKKI Plan)",
+   "ko": "「즉시 실행」 → 동작 「결제 알림 넣기」(BOKKI Plan)",
+   "en": "Run Immediately → action \"Add payment alert\" (BOKKI Plan)",
+   "files": [
+    "BokkiShortcutsGuide.swift:29"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "「즉시 실행」을 고르고 다음|Choose \"Run Immediately\", then Next",
    "ko": "「즉시 실행」을 고르고 다음",
    "en": "Choose \"Run Immediately\", then Next",
    "files": [
-    "LedgerSheet.swift:594"
+    "BokkiShortcutsGuide.swift:17"
    ],
    "args": [],
    "targets": [
@@ -33038,7 +33194,7 @@
    "ko": "개발자 체험 14일 초기화",
    "en": "Reset developer trial for 14 days",
    "files": [
-    "AppShellView.swift:1296"
+    "AppShellView.swift:1292"
    ],
    "args": [],
    "targets": [
@@ -33050,7 +33206,7 @@
    "ko": "개발자 체험 기록을 초기화하지 못했습니다.",
    "en": "The developer trial record could not be reset.",
    "files": [
-    "AppShellView.swift:1373"
+    "AppShellView.swift:1369"
    ],
    "args": [],
    "targets": [
@@ -33161,7 +33317,7 @@
    "ko": "건강 데이터",
    "en": "Health Data",
    "files": [
-    "AppShellView.swift:1091"
+    "AppShellView.swift:1087"
    ],
    "args": [],
    "targets": [
@@ -33482,7 +33638,7 @@
    "ko": "걸음 수를 읽지 못했어요. 건강 앱 권한을 확인해 주세요.",
    "en": "Couldn't read steps. Check Health access.",
    "files": [
-    "SiriIntents.swift:176"
+    "SiriIntents.swift:181"
    ],
    "args": [],
    "targets": [
@@ -33650,8 +33806,19 @@
    "en": "Add payment texts automatically",
    "files": [
     "LedgerSheet.swift:70",
-    "LedgerSheet.swift:188",
-    "LedgerSheet.swift:621"
+    "LedgerSheet.swift:188"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "결제 문자 자동으로 넣기|Payment texts, automatically",
+   "ko": "결제 문자 자동으로 넣기",
+   "en": "Payment texts, automatically",
+   "files": [
+    "BokkiShortcutsGuide.swift:13"
    ],
    "args": [],
    "targets": [
@@ -33684,11 +33851,23 @@
    ]
   },
   {
+   "key": "결제 문자·앱 알림이 오면 가계부에 저절로 들어가게 하고, Siri로 말해서 바로 넣습니다. 나중에 메뉴 › 연결에서도 볼 수 있습니다.|Let payment texts and app alerts flow into the ledger, and add things by talking to Siri. Also in Menu › Connections.",
+   "ko": "결제 문자·앱 알림이 오면 가계부에 저절로 들어가게 하고, Siri로 말해서 바로 넣습니다. 나중에 메뉴 › 연결에서도 볼 수 있습니다.",
+   "en": "Let payment texts and app alerts flow into the ledger, and add things by talking to Siri. Also in Menu › Connections.",
+   "files": [
+    "FirstRunTutorialView.swift:178"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "결제 문자를 읽지 못해 AI에게 확인을 맡겼어요.|Couldn't read the payment text, so it was sent to your AI to check.",
    "ko": "결제 문자를 읽지 못해 AI에게 확인을 맡겼어요.",
    "en": "Couldn't read the payment text, so it was sent to your AI to check.",
    "files": [
-    "LedgerIntents.swift:23"
+    "LedgerIntents.swift:47"
    ],
    "args": [],
    "targets": [
@@ -33700,7 +33879,19 @@
    "ko": "결제 문자를 읽지 못했어요. 가계부에서 직접 넣어 주세요.",
    "en": "Couldn't read the payment text. Add it in the ledger yourself.",
    "files": [
-    "LedgerIntents.swift:27"
+    "LedgerIntents.swift:49"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "결제 앱 알림 자동으로 넣기|Payment app alerts, automatically",
+   "ko": "결제 앱 알림 자동으로 넣기",
+   "en": "Payment app alerts, automatically",
+   "files": [
+    "BokkiShortcutsGuide.swift:24"
    ],
    "args": [],
    "targets": [
@@ -33712,7 +33903,7 @@
    "ko": "경로 불러오는 중…",
    "en": "Loading routes…",
    "files": [
-    "AppShellView.swift:388"
+    "AppShellView.swift:384"
    ],
    "args": [],
    "targets": [
@@ -33820,7 +34011,7 @@
    "ko": "계속 사용",
    "en": "Continue",
    "files": [
-    "AppShellView.swift:1337"
+    "AppShellView.swift:1333"
    ],
    "args": [],
    "targets": [
@@ -33832,7 +34023,7 @@
    "ko": "계속 사용하려면 Pro를 한 번 구매하거나 기존 구매 내역을 복원해 주세요.",
    "en": "Purchase Pro once or restore an existing purchase to continue.",
    "files": [
-    "AppShellView.swift:1264"
+    "AppShellView.swift:1260"
    ],
    "args": [],
    "targets": [
@@ -33958,7 +34149,7 @@
    "ko": "계획과 기록은 삭제되지 않습니다.",
    "en": "Your plans and records will not be deleted.",
    "files": [
-    "MapHomeView+Support.swift:766"
+    "MapHomeView+Support.swift:769"
    ],
    "args": [],
    "targets": [
@@ -34400,7 +34591,7 @@
    "ko": "구글 계정 일정을 보려면 캘린더 접근을 허용해 주세요.",
    "en": "Allow calendar access to see Google events.",
    "files": [
-    "MapHomeTodayCalendar.swift:161"
+    "MapHomeTodayCalendar.swift:162"
    ],
    "args": [],
    "targets": [
@@ -34451,7 +34642,7 @@
    "ko": "구글 연결을 해제했습니다.",
    "en": "Google disconnected.",
    "files": [
-    "MapHomeTodayCalendar.swift:351"
+    "MapHomeTodayCalendar.swift:352"
    ],
    "args": [],
    "targets": [
@@ -34475,7 +34666,7 @@
    "ko": "구글 캘린더 바로 연결",
    "en": "Connect Google Calendar",
    "files": [
-    "MapHomeTodayCalendar.swift:310"
+    "MapHomeTodayCalendar.swift:311"
    ],
    "args": [],
    "targets": [
@@ -34487,7 +34678,7 @@
    "ko": "구글 캘린더 연결 해제",
    "en": "Disconnect Google",
    "files": [
-    "MapHomeTodayCalendar.swift:310"
+    "MapHomeTodayCalendar.swift:311"
    ],
    "args": [],
    "targets": [
@@ -34499,7 +34690,7 @@
    "ko": "구글 캘린더를 불러오지 못했어요. 설정에서 연결을 확인해 주세요.",
    "en": "Could not load Google Calendar. Check the connection in Settings.",
    "files": [
-    "MapHomeTodayCalendar.swift:172"
+    "MapHomeTodayCalendar.swift:173"
    ],
    "args": [],
    "targets": [
@@ -34511,7 +34702,7 @@
    "ko": "구글 캘린더를 연결했습니다.",
    "en": "Google Calendar connected.",
    "files": [
-    "MapHomeTodayCalendar.swift:356"
+    "MapHomeTodayCalendar.swift:357"
    ],
    "args": [],
    "targets": [
@@ -34535,7 +34726,7 @@
    "ko": "구매 내역을 복원하지 못했습니다. 잠시 후 다시 시도해 주세요.",
    "en": "Your purchase could not be restored. Please try again later.",
    "files": [
-    "AppShellView.swift:1399"
+    "AppShellView.swift:1395"
    ],
    "args": [],
    "targets": [
@@ -34547,7 +34738,7 @@
    "ko": "구매 내역을 복원했습니다.",
    "en": "Your purchase was restored.",
    "files": [
-    "AppShellView.swift:1395"
+    "AppShellView.swift:1391"
    ],
    "args": [],
    "targets": [
@@ -34559,7 +34750,7 @@
    "ko": "구매 및 체험 상태를 확인하고 있습니다.",
    "en": "Checking your purchase and trial status.",
    "files": [
-    "AppShellView.swift:1244"
+    "AppShellView.swift:1240"
    ],
    "args": [],
    "targets": [
@@ -34571,7 +34762,7 @@
    "ko": "구매 복원",
    "en": "Restore purchase",
    "files": [
-    "AppShellView.swift:1330"
+    "AppShellView.swift:1326"
    ],
    "args": [],
    "targets": [
@@ -34583,7 +34774,7 @@
    "ko": "구매 승인을 기다리고 있습니다.",
    "en": "Waiting for purchase approval.",
    "files": [
-    "AppShellView.swift:1381"
+    "AppShellView.swift:1377"
    ],
    "args": [],
    "targets": [
@@ -34595,7 +34786,7 @@
    "ko": "구매 영수증을 확인하지 못했습니다.",
    "en": "The purchase receipt could not be verified.",
    "files": [
-    "AppShellView.swift:1388"
+    "AppShellView.swift:1384"
    ],
    "args": [],
    "targets": [
@@ -34607,7 +34798,7 @@
    "ko": "구매를 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.",
    "en": "The purchase could not be completed. Please try again later.",
    "files": [
-    "AppShellView.swift:1390"
+    "AppShellView.swift:1386"
    ],
    "args": [],
    "targets": [
@@ -34746,7 +34937,7 @@
    "ko": "귀가",
    "en": "Came home",
    "files": [
-    "SiriIntents.swift:47"
+    "SiriIntents.swift:52"
    ],
    "args": [],
    "targets": [
@@ -35017,7 +35208,7 @@
    "ko": "금액과 내용을 알려 주세요.",
    "en": "Tell me the amount and what it was for.",
    "files": [
-    "SiriIntents.swift:85"
+    "SiriIntents.swift:90"
    ],
    "args": [],
    "targets": [
@@ -35402,7 +35593,7 @@
    "ko": "기록을 마친 날이 쌓이면 집이 자랍니다.",
    "en": "Your home grows as you complete days.",
    "files": [
-    "FirstRunTutorialView.swift:172"
+    "FirstRunTutorialView.swift:173"
    ],
    "args": [],
    "targets": [
@@ -35510,7 +35701,7 @@
    "ko": "기상",
    "en": "Woke up",
    "files": [
-    "SiriIntents.swift:44"
+    "SiriIntents.swift:49"
    ],
    "args": [],
    "targets": [
@@ -35771,7 +35962,7 @@
    "ko": "끄면 비밀번호는 백업에만 쓰입니다.",
    "en": "When off, the password is used only for backups.",
    "files": [
-    "FirstRunTutorialView.swift:643"
+    "FirstRunTutorialView.swift:647"
    ],
    "args": [],
    "targets": [
@@ -36020,7 +36211,7 @@
    "ko": "나중에",
    "en": "Not now",
    "files": [
-    "MapHomeView+Support.swift:440"
+    "MapHomeView+Support.swift:443"
    ],
    "args": [],
    "targets": [
@@ -36068,7 +36259,7 @@
    "ko": "날씨",
    "en": "Weather",
    "files": [
-    "MapHomeView+Menu.swift:539",
+    "MapHomeView+Menu.swift:542",
     "StickerArtBasics.swift:7"
    ],
    "args": [],
@@ -36718,7 +36909,7 @@
    "en": "Next",
    "files": [
     "AssistantConnectGuide.swift:175",
-    "FirstRunTutorialView.swift:279",
+    "FirstRunTutorialView.swift:283",
     "WatchTodayCards.swift:120"
    ],
    "args": [],
@@ -36752,11 +36943,37 @@
    ]
   },
   {
+   "key": "단축어 · Siri|Shortcuts · Siri",
+   "ko": "단축어 · Siri",
+   "en": "Shortcuts · Siri",
+   "files": [
+    "BokkiShortcutsGuide.swift:88",
+    "FirstRunTutorialView.swift:152",
+    "MapHomeView+Menu.swift:467"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "단축어 앱 → 「자동화」 → +|Shortcuts app → Automation → +",
+   "ko": "단축어 앱 → 「자동화」 → +",
+   "en": "Shortcuts app → Automation → +",
+   "files": [
+    "BokkiShortcutsGuide.swift:26"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "단축어 앱 → 아래 「자동화」 → 오른쪽 위 +|Shortcuts app → Automation → + at the top right",
    "ko": "단축어 앱 → 아래 「자동화」 → 오른쪽 위 +",
    "en": "Shortcuts app → Automation → + at the top right",
    "files": [
-    "LedgerSheet.swift:592"
+    "BokkiShortcutsGuide.swift:15"
    ],
    "args": [],
    "targets": [
@@ -36768,7 +36985,7 @@
    "ko": "단축어 앱 열기",
    "en": "Open Shortcuts",
    "files": [
-    "LedgerSheet.swift:614"
+    "BokkiShortcutsGuide.swift:46"
    ],
    "args": [],
    "targets": [
@@ -36780,7 +36997,7 @@
    "ko": "닫기",
    "en": "Close",
    "files": [
-    "AppShellView.swift:1135",
+    "AppShellView.swift:1131",
     "FirstRunTutorialGuides.swift:459",
     "FirstRunTutorialView.swift:55"
    ],
@@ -36819,7 +37036,7 @@
    "en": "Calendar",
    "files": [
     "FirstRunGuideStage.swift:643",
-    "MapHomeView+Support.swift:455",
+    "MapHomeView+Support.swift:458",
     "MapHomeView+Support2.swift:392"
    ],
    "args": [],
@@ -37178,7 +37395,7 @@
    "ko": "데이터 불러오는 중…",
    "en": "Loading data…",
    "files": [
-    "AppShellView.swift:386"
+    "AppShellView.swift:382"
    ],
    "args": [],
    "targets": [
@@ -37518,7 +37735,7 @@
    "ko": "동작 및 피트니스",
    "en": "Motion & Fitness",
    "files": [
-    "AppShellView.swift:1089",
+    "AppShellView.swift:1085",
     "MapHomeView+Support2.swift:889"
    ],
    "args": [],
@@ -37654,7 +37871,7 @@
    "ko": "등록된 비밀번호가 있습니다",
    "en": "A password is already set",
    "files": [
-    "FirstRunTutorialView.swift:606"
+    "FirstRunTutorialView.swift:610"
    ],
    "args": [],
    "targets": [
@@ -37666,7 +37883,7 @@
    "ko": "등록된 사용자 위치 {0}개",
    "en": "{0} saved user locations",
    "files": [
-    "MapHomeView+Menu.swift:956"
+    "MapHomeView+Menu.swift:959"
    ],
    "args": [
     "userLocationCount"
@@ -37680,7 +37897,7 @@
    "ko": "등록된 사용자 위치가 없습니다.",
    "en": "No saved user locations.",
    "files": [
-    "MapHomeView+Menu.swift:986"
+    "MapHomeView+Menu.swift:989"
    ],
    "args": [],
    "targets": [
@@ -38387,7 +38604,7 @@
    "ko": "메뉴 > 위치에서 집을 먼저 등록해 주세요.",
    "en": "Add your home in Menu > Location first.",
    "files": [
-    "MapHomeView+Support.swift:443"
+    "MapHomeView+Support.swift:446"
    ],
    "args": [],
    "targets": [
@@ -38650,7 +38867,7 @@
    "ko": "메모 표시",
    "en": "Show memos",
    "files": [
-    "MapHomeView+Menu.swift:547"
+    "MapHomeView+Menu.swift:550"
    ],
    "args": [],
    "targets": [
@@ -38850,7 +39067,7 @@
    "ko": "모든 권한이 확인되면 GPS와 센서 기록이 5분 간격으로 자동 시작됩니다.",
    "en": "GPS and sensor recording starts automatically every 5 minutes after all permissions are verified.",
    "files": [
-    "AppShellView.swift:963"
+    "AppShellView.swift:959"
    ],
    "args": [],
    "targets": [
@@ -38950,6 +39167,18 @@
    "en": "Stationery",
    "files": [
     "StickerArtBasics.swift:12"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "문자가 오지 않는 카드·은행도 앱 알림으로 들어와요. 광고 알림은 넣지 않아요.|Cards and banks that don't text you still come in through app alerts. Ads are skipped.",
+   "ko": "문자가 오지 않는 카드·은행도 앱 알림으로 들어와요. 광고 알림은 넣지 않아요.",
+   "en": "Cards and banks that don't text you still come in through app alerts. Ads are skipped.",
+   "files": [
+    "BokkiShortcutsGuide.swift:32"
    ],
    "args": [],
    "targets": [
@@ -39155,7 +39384,7 @@
    "ko": "바꾸지 않으면 그대로 씁니다.",
    "en": "It stays as is unless you change it.",
    "files": [
-    "FirstRunTutorialView.swift:608"
+    "FirstRunTutorialView.swift:612"
    ],
    "args": [],
    "targets": [
@@ -39167,7 +39396,7 @@
    "ko": "바꾸지 않으면 이 번호로 시작합니다.",
    "en": "This is used unless you change it.",
    "files": [
-    "FirstRunTutorialView.swift:620"
+    "FirstRunTutorialView.swift:624"
    ],
    "args": [],
    "targets": [
@@ -39191,7 +39420,7 @@
    "ko": "바로 시작",
    "en": "Start now",
    "files": [
-    "FirstRunTutorialView.swift:247"
+    "FirstRunTutorialView.swift:251"
    ],
    "args": [],
    "targets": [
@@ -39559,7 +39788,7 @@
    "en": "Backup password",
    "files": [
     "FirstRunTutorialGuides.swift:709",
-    "FirstRunTutorialView.swift:152",
+    "FirstRunTutorialView.swift:153",
     "MapHomeSettingsSheets.swift:552"
    ],
    "args": [],
@@ -39804,7 +40033,7 @@
    "ko": "버튼을 누르면 14일 무료 체험이 시작됩니다. 자동 결제는 없습니다.",
    "en": "Tap the button to start a 14-day free trial. You will not be charged automatically.",
    "files": [
-    "AppShellView.swift:1249"
+    "AppShellView.swift:1245"
    ],
    "args": [],
    "targets": [
@@ -40266,7 +40495,7 @@
    "ko": "복원할 Pro 구매 내역이 없습니다.",
    "en": "No Pro purchase was found to restore.",
    "files": [
-    "AppShellView.swift:1397"
+    "AppShellView.swift:1393"
    ],
    "args": [],
    "targets": [
@@ -40491,7 +40720,7 @@
    "ko": "비밀번호 확인",
    "en": "Confirm password",
    "files": [
-    "FirstRunTutorialView.swift:628",
+    "FirstRunTutorialView.swift:632",
     "MapHomeSettingsSheets.swift:347"
    ],
    "args": [],
@@ -40504,7 +40733,7 @@
    "ko": "비밀번호 확인이 일치하지 않습니다.",
    "en": "Passwords do not match.",
    "files": [
-    "FirstRunTutorialView.swift:332",
+    "FirstRunTutorialView.swift:336",
     "MapHomeSettingsSheets.swift:685"
    ],
    "args": [],
@@ -40590,7 +40819,7 @@
    "ko": "비밀번호를 잊으면 백업을 복구할 수 없습니다. 예전 iCloud 백업은 그때 쓴 비밀번호로 열립니다.",
    "en": "Without the password, backups can't be restored. Older iCloud backups open with the password used then.",
    "files": [
-    "FirstRunTutorialView.swift:646"
+    "FirstRunTutorialView.swift:650"
    ],
    "args": [],
    "targets": [
@@ -40720,7 +40949,7 @@
    "ko": "사용 불가",
    "en": "Unavailable",
    "files": [
-    "FirstRunTutorialPolicy.swift:175",
+    "FirstRunTutorialPolicy.swift:177",
     "MapHomeAppleWatchMenuItem.swift:164",
     "AppModelSupportTypes.swift:268"
    ],
@@ -40734,7 +40963,7 @@
    "ko": "사용자 위치 관리",
    "en": "Manage user locations",
    "files": [
-    "MapHomeView+Menu.swift:1005"
+    "MapHomeView+Menu.swift:1008"
    ],
    "args": [],
    "targets": [
@@ -40746,7 +40975,7 @@
    "ko": "사용자 위치 목록",
    "en": "User location list",
    "files": [
-    "MapHomeView+Menu.swift:980"
+    "MapHomeView+Menu.swift:983"
    ],
    "args": [],
    "targets": [
@@ -40796,7 +41025,7 @@
    "ko": "사용자 지정 색상",
    "en": "Custom category color",
    "files": [
-    "MapHomeView+Menu.swift:795"
+    "MapHomeView+Menu.swift:798"
    ],
    "args": [],
    "targets": [
@@ -40808,8 +41037,8 @@
    "ko": "사용자 지정",
    "en": "Custom",
    "files": [
-    "MapHomeView+Menu.swift:778",
-    "MapHomeView+Menu.swift:877"
+    "MapHomeView+Menu.swift:781",
+    "MapHomeView+Menu.swift:880"
    ],
    "args": [],
    "targets": [
@@ -40821,7 +41050,7 @@
    "ko": "사용자 추가",
    "en": "Add custom",
    "files": [
-    "MapHomeView+Menu.swift:818"
+    "MapHomeView+Menu.swift:821"
    ],
    "args": [],
    "targets": [
@@ -40833,7 +41062,7 @@
    "ko": "사용자",
    "en": "User",
    "files": [
-    "MapHomeView+Menu.swift:953"
+    "MapHomeView+Menu.swift:956"
    ],
    "args": [],
    "targets": [
@@ -40893,7 +41122,7 @@
    "ko": "사이드바",
    "en": "Sidebar",
    "files": [
-    "MapHomeView+Menu.swift:536"
+    "MapHomeView+Menu.swift:539"
    ],
    "args": [],
    "targets": [
@@ -41143,7 +41372,7 @@
    "ko": "사진을 열지 못했어요.",
    "en": "Couldn't open the photo.",
    "files": [
-    "SiriIntents.swift:108"
+    "SiriIntents.swift:113"
    ],
    "args": [],
    "targets": [
@@ -41387,7 +41616,7 @@
    "ko": "새 비밀번호(6자리)",
    "en": "New password (6 digits)",
    "files": [
-    "FirstRunTutorialView.swift:625"
+    "FirstRunTutorialView.swift:629"
    ],
    "args": [],
    "targets": [
@@ -41399,7 +41628,7 @@
    "ko": "새 비밀번호",
    "en": "New password",
    "files": [
-    "FirstRunTutorialView.swift:627"
+    "FirstRunTutorialView.swift:631"
    ],
    "args": [],
    "targets": [
@@ -41522,7 +41751,7 @@
    "ko": "색상 선택",
    "en": "Choose color",
    "files": [
-    "MapHomeView+Menu.swift:774"
+    "MapHomeView+Menu.swift:777"
    ],
    "args": [],
    "targets": [
@@ -41546,7 +41775,7 @@
    "ko": "색상을 선택하면 즉시 저장됩니다.",
    "en": "Colors save immediately.",
    "files": [
-    "MapHomeView+Menu.swift:900"
+    "MapHomeView+Menu.swift:903"
    ],
    "args": [],
    "targets": [
@@ -41570,7 +41799,7 @@
    "ko": "생각과 장소를 그 시각에 남깁니다.",
    "en": "Keep thoughts and places at the moment they happen.",
    "files": [
-    "FirstRunTutorialView.swift:171"
+    "FirstRunTutorialView.swift:172"
    ],
    "args": [],
    "targets": [
@@ -41933,7 +42162,7 @@
    "ko": "설정 앱에서 캘린더 권한을 켜 주세요.",
    "en": "Turn on calendar access in Settings.",
    "files": [
-    "MapHomeTodayCalendar.swift:367"
+    "MapHomeTodayCalendar.swift:368"
    ],
    "args": [],
    "targets": [
@@ -41945,7 +42174,7 @@
    "ko": "설정 열기",
    "en": "Open Settings",
    "files": [
-    "AppShellView.swift:1074",
+    "AppShellView.swift:1070",
     "MapHomeScreenRecording.swift:669",
     "MapHomeStickerEditor.swift:266"
    ],
@@ -41961,7 +42190,7 @@
    "files": [
     "MapHomeView+Menu2.swift:210",
     "MapHomeView+Menu2.swift:227",
-    "MapHomeView+Support.swift:760"
+    "MapHomeView+Support.swift:763"
    ],
    "args": [],
    "targets": [
@@ -41973,7 +42202,7 @@
    "ko": "설정 필요",
    "en": "Required",
    "files": [
-    "AppShellView.swift:1027"
+    "AppShellView.swift:1023"
    ],
    "args": [],
    "targets": [
@@ -42035,7 +42264,7 @@
    "ko": "설정을 기본값으로 초기화할까요?",
    "en": "Reset settings to defaults?",
    "files": [
-    "MapHomeView+Support.swift:756"
+    "MapHomeView+Support.swift:759"
    ],
    "args": [],
    "targets": [
@@ -42433,7 +42662,7 @@
    "ko": "손목의 움직임까지 더해 하루를 기록합니다.",
    "en": "Adds movement from your wrist to your day.",
    "files": [
-    "FirstRunTutorialView.swift:175"
+    "FirstRunTutorialView.swift:176"
    ],
    "args": [],
    "targets": [
@@ -42991,7 +43220,7 @@
    "ko": "시간 표시",
    "en": "Time format",
    "files": [
-    "MapHomeView+Menu.swift:563"
+    "MapHomeView+Menu.swift:566"
    ],
    "args": [],
    "targets": [
@@ -43017,7 +43246,7 @@
    "ko": "시간대별 날씨 기록",
    "en": "Hourly weather records",
    "files": [
-    "AppShellView.swift:1167"
+    "AppShellView.swift:1163"
    ],
    "args": [],
    "targets": [
@@ -43041,7 +43270,7 @@
    "ko": "시간선 축소",
    "en": "Zoom timeline out",
    "files": [
-    "MapHomeView+Timeline.swift:514"
+    "MapHomeView+Timeline.swift:520"
    ],
    "args": [],
    "targets": [
@@ -43053,7 +43282,7 @@
    "ko": "시간선 확대",
    "en": "Zoom timeline in",
    "files": [
-    "MapHomeView+Timeline.swift:513"
+    "MapHomeView+Timeline.swift:519"
    ],
    "args": [],
    "targets": [
@@ -43230,7 +43459,7 @@
    "ko": "시작하기",
    "en": "Get started",
    "files": [
-    "FirstRunTutorialView.swift:278",
+    "FirstRunTutorialView.swift:282",
     "PermissionOnboardingSheet.swift:156"
    ],
    "args": [],
@@ -43332,7 +43561,7 @@
    "ko": "실시간 GPS와 이동 경로",
    "en": "Live GPS and travel routes",
    "files": [
-    "AppShellView.swift:1171"
+    "AppShellView.swift:1167"
    ],
    "args": [],
    "targets": [
@@ -43344,7 +43573,7 @@
    "ko": "실시간 현황",
    "en": "Live Activities",
    "files": [
-    "AppShellView.swift:1097"
+    "AppShellView.swift:1093"
    ],
    "args": [],
    "targets": [
@@ -43493,7 +43722,7 @@
    "ko": "아래에 적고 다음을 누르면 저장됩니다.",
    "en": "Enter one below and tap Next to save it.",
    "files": [
-    "FirstRunTutorialView.swift:612"
+    "FirstRunTutorialView.swift:616"
    ],
    "args": [],
    "targets": [
@@ -43629,7 +43858,7 @@
    "ko": "아직 비밀번호가 없습니다",
    "en": "No password yet",
    "files": [
-    "FirstRunTutorialView.swift:610"
+    "FirstRunTutorialView.swift:614"
    ],
    "args": [],
    "targets": [
@@ -43641,7 +43870,7 @@
    "ko": "아직 안 물음",
    "en": "Not asked",
    "files": [
-    "FirstRunTutorialPolicy.swift:169"
+    "FirstRunTutorialPolicy.swift:171"
    ],
    "args": [],
    "targets": [
@@ -43716,7 +43945,7 @@
    "ko": "안개 탐험 선택",
    "en": "Choose fog of exploration",
    "files": [
-    "MapHomeView+Menu.swift:1075"
+    "MapHomeView+Menu.swift:1078"
    ],
    "args": [],
    "targets": [
@@ -43728,7 +43957,7 @@
    "ko": "안개 탐험",
    "en": "Fog of Exploration",
    "files": [
-    "MapHomeView+Menu.swift:1071"
+    "MapHomeView+Menu.swift:1074"
    ],
    "args": [],
    "targets": [
@@ -43815,7 +44044,7 @@
    "en": "Alerts",
    "files": [
     "MapHomeAlarm.swift:479",
-    "MapHomeView+Menu.swift:477"
+    "MapHomeView+Menu.swift:480"
    ],
    "args": [],
    "targets": [
@@ -43827,7 +44056,7 @@
    "ko": "알림",
    "en": "Notifications",
    "files": [
-    "AppShellView.swift:1095",
+    "AppShellView.swift:1091",
     "PermissionOnboardingSheet.swift:80"
    ],
    "args": [],
@@ -43916,7 +44145,7 @@
    "ko": "애플 캘린더 사용",
    "en": "Use Apple Calendar",
    "files": [
-    "MapHomeTodayCalendar.swift:314"
+    "MapHomeTodayCalendar.swift:315"
    ],
    "args": [],
    "targets": [
@@ -43928,7 +44157,7 @@
    "ko": "애플 캘린더를 연결했습니다.",
    "en": "Apple Calendar connected.",
    "files": [
-    "MapHomeTodayCalendar.swift:366"
+    "MapHomeTodayCalendar.swift:367"
    ],
    "args": [],
    "targets": [
@@ -44113,7 +44342,7 @@
    "ko": "앱 사용 중에만",
    "en": "While using",
    "files": [
-    "FirstRunTutorialPolicy.swift:179"
+    "FirstRunTutorialPolicy.swift:181"
    ],
    "args": [],
    "targets": [
@@ -44187,7 +44416,7 @@
    "ko": "앱 잠금 해제 필요",
    "en": "App unlock required",
    "files": [
-    "AppShellView.swift:809"
+    "AppShellView.swift:805"
    ],
    "args": [],
    "targets": [
@@ -44211,7 +44440,7 @@
    "ko": "앱 잠금과 iCloud 백업에 같은 비밀번호를 씁니다.",
    "en": "App lock and iCloud backup share this password.",
    "files": [
-    "FirstRunTutorialView.swift:177"
+    "FirstRunTutorialView.swift:179"
    ],
    "args": [],
    "targets": [
@@ -44223,7 +44452,7 @@
    "ko": "앱",
    "en": "App",
    "files": [
-    "MapHomeView+Menu.swift:473"
+    "MapHomeView+Menu.swift:476"
    ],
    "args": [],
    "targets": [
@@ -44247,7 +44476,7 @@
    "ko": "앱을 열 때마다 잠금",
    "en": "Lock whenever the app opens",
    "files": [
-    "FirstRunTutorialView.swift:638",
+    "FirstRunTutorialView.swift:642",
     "MapHomeSettingsSheets.swift:370"
    ],
    "args": [],
@@ -44296,7 +44525,7 @@
    "ko": "앱의 첫 화면입니다. 하루가 지도 위에 그려집니다.",
    "en": "This is the main screen. Your day is drawn on the map.",
    "files": [
-    "FirstRunTutorialView.swift:167"
+    "FirstRunTutorialView.swift:168"
    ],
    "args": [],
    "targets": [
@@ -44381,7 +44610,7 @@
    "ko": "어제 하루를 담은 카드를 알림으로 보낼 시각을 고릅니다.",
    "en": "Choose when yesterday's card arrives as a notification.",
    "files": [
-    "FirstRunTutorialView.swift:161"
+    "FirstRunTutorialView.swift:162"
    ],
    "args": [],
    "targets": [
@@ -44479,7 +44708,7 @@
    "ko": "업무 시간에만 번 돈이 쌓입니다. 금액은 이 기기에만 저장됩니다.",
    "en": "Earnings grow only during work time. Stored only on this device.",
    "files": [
-    "FirstRunTutorialView.swift:165"
+    "FirstRunTutorialView.swift:166"
    ],
    "args": [],
    "targets": [
@@ -44532,7 +44761,7 @@
    "ko": "업무와 학습 시간을 구분하는 기준이 됩니다.",
    "en": "Used to tell work and study time apart.",
    "files": [
-    "FirstRunTutorialView.swift:163"
+    "FirstRunTutorialView.swift:164"
    ],
    "args": [],
    "targets": [
@@ -44754,7 +44983,7 @@
    "ko": "여행 계획 추가",
    "en": "Add to trip",
    "files": [
-    "MapHomeView+Support.swift:685"
+    "MapHomeView+Support.swift:688"
    ],
    "args": [],
    "targets": [
@@ -45872,7 +46101,7 @@
    "ko": "연봉 카운터",
    "en": "Salary counter",
    "files": [
-    "FirstRunTutorialView.swift:753",
+    "FirstRunTutorialView.swift:757",
     "MapHomeAlarm.swift:25",
     "MapHomeSalarySettingsSheet.swift:123"
    ],
@@ -45924,7 +46153,7 @@
    "ko": "연봉을 적으면 나타납니다",
    "en": "Appears once you enter a salary",
    "files": [
-    "FirstRunTutorialView.swift:755"
+    "FirstRunTutorialView.swift:759"
    ],
    "args": [],
    "targets": [
@@ -46179,7 +46408,7 @@
    "ko": "영수증을 읽지 못해 AI에게 맡겼어요.",
    "en": "Couldn't read the receipt, so it was sent to your AI.",
    "files": [
-    "SiriIntents.swift:114"
+    "SiriIntents.swift:119"
    ],
    "args": [],
    "targets": [
@@ -46191,7 +46420,7 @@
    "ko": "영수증을 읽지 못했어요.",
    "en": "Couldn't read the receipt.",
    "files": [
-    "SiriIntents.swift:116"
+    "SiriIntents.swift:121"
    ],
    "args": [],
    "targets": [
@@ -46318,7 +46547,7 @@
    "ko": "예시",
    "en": "Example",
    "files": [
-    "FirstRunTutorialView.swift:735"
+    "FirstRunTutorialView.swift:739"
    ],
    "args": [],
    "targets": [
@@ -46419,7 +46648,7 @@
    "ko": "오늘 {0}건, {1} 썼어요.",
    "en": "Today: {0} entries, {1} spent.",
    "files": [
-    "SiriIntents.swift:163"
+    "SiriIntents.swift:168"
    ],
    "args": [
     "count",
@@ -46434,7 +46663,7 @@
    "ko": "오늘 {0}걸음 걸었어요.",
    "en": "{0} steps today.",
    "files": [
-    "SiriIntents.swift:178"
+    "SiriIntents.swift:183"
    ],
    "args": [
     "steps.formatted()"
@@ -46558,7 +46787,7 @@
    "ko": "오늘 일정",
    "en": "Today",
    "files": [
-    "MapHomeTodayCalendar.swift:219"
+    "MapHomeTodayCalendar.swift:220"
    ],
    "args": [],
    "targets": [
@@ -46570,7 +46799,7 @@
    "ko": "오늘 일정이 없어요.",
    "en": "No events today.",
    "files": [
-    "MapHomeTodayCalendar.swift:227"
+    "MapHomeTodayCalendar.swift:228"
    ],
    "args": [],
    "targets": [
@@ -46673,7 +46902,7 @@
    "ko": "오른쪽 시간 막대로 하루를, 달력으로 지난 날을 봅니다.",
    "en": "See the day on the right time bar and past days in the calendar.",
    "files": [
-    "FirstRunTutorialView.swift:169"
+    "FirstRunTutorialView.swift:170"
    ],
    "args": [],
    "targets": [
@@ -46810,9 +47039,9 @@
    "ko": "완료",
    "en": "Done",
    "files": [
+    "BokkiShortcutsGuide.swift:90",
     "AITaskPanel.swift:105",
-    "AssistantSettingsView.swift:62",
-    "FirstRunAIConnectPage.swift:37"
+    "AssistantSettingsView.swift:62"
    ],
    "args": [],
    "targets": [
@@ -46836,7 +47065,7 @@
    "ko": "외출",
    "en": "Went out",
    "files": [
-    "SiriIntents.swift:46"
+    "SiriIntents.swift:51"
    ],
    "args": [],
    "targets": [
@@ -47395,7 +47624,7 @@
    "ko": "위치 기록을 기다리는 중",
    "en": "Waiting for location",
    "files": [
-    "MapHomeView+Menu.swift:505"
+    "MapHomeView+Menu.swift:508"
    ],
    "args": [],
    "targets": [
@@ -47469,7 +47698,7 @@
    "ko": "위치 목록",
    "en": "Location list",
    "files": [
-    "MapHomeView+Menu.swift:928"
+    "MapHomeView+Menu.swift:931"
    ],
    "args": [],
    "targets": [
@@ -47507,7 +47736,7 @@
    "ko": "위치 설정 열기",
    "en": "Open location settings",
    "files": [
-    "MapHomeView+Support.swift:441"
+    "MapHomeView+Support.swift:444"
    ],
    "args": [],
    "targets": [
@@ -47616,7 +47845,7 @@
    "ko": "위치 항상 허용",
    "en": "Always Location",
    "files": [
-    "AppShellView.swift:1085",
+    "AppShellView.swift:1081",
     "MapHomeView+Support2.swift:885"
    ],
    "args": [],
@@ -47656,7 +47885,7 @@
    "files": [
     "WidgetShared.swift:603",
     "MapHomeStickerEditor.swift:617",
-    "MapHomeView+Menu.swift:915"
+    "MapHomeView+Menu.swift:918"
    ],
    "args": [],
    "targets": [
@@ -47693,7 +47922,7 @@
    "ko": "위치를 '항상 허용'으로 바꿔 주세요",
    "en": "Set location to Always",
    "files": [
-    "MapHomeView+Support.swift:679"
+    "MapHomeView+Support.swift:682"
    ],
    "args": [],
    "targets": [
@@ -47717,7 +47946,7 @@
    "ko": "위치를 찾지 못했습니다. 다른 이름으로 검색해 주세요.",
    "en": "Couldn't find it. Try another name.",
    "files": [
-    "FirstRunTutorialView.swift:523"
+    "FirstRunTutorialView.swift:527"
    ],
    "args": [],
    "targets": [
@@ -47729,7 +47958,7 @@
    "ko": "위치를 허용하면 현재 위치로도 저장할 수 있습니다.",
    "en": "Allow location to use your current position.",
    "files": [
-    "FirstRunTutorialView.swift:545"
+    "FirstRunTutorialView.swift:549"
    ],
    "args": [],
    "targets": [
@@ -48028,7 +48257,7 @@
    "ko": "이 기기 또는 iCloud에 저장된 기록에서 14일 무료 체험을 이미 사용했습니다.",
    "en": "The 14-day free trial has already been used on this device or in its synced iCloud record.",
    "files": [
-    "AppShellView.swift:1367"
+    "AppShellView.swift:1363"
    ],
    "args": [],
    "targets": [
@@ -48283,7 +48512,7 @@
    "ko": "이 날 일정이 없어요.",
    "en": "No events on this day.",
    "files": [
-    "MapHomeTodayCalendar.swift:229"
+    "MapHomeTodayCalendar.swift:230"
    ],
    "args": [],
    "targets": [
@@ -49155,7 +49384,7 @@
    "en": "Back",
    "files": [
     "AssistantConnectGuide.swift:173",
-    "FirstRunTutorialView.swift:254"
+    "FirstRunTutorialView.swift:258"
    ],
    "args": [],
    "targets": [
@@ -49253,7 +49482,7 @@
    "ko": "일부 허용",
    "en": "Partly allowed",
    "files": [
-    "FirstRunTutorialPolicy.swift:173"
+    "FirstRunTutorialPolicy.swift:175"
    ],
    "args": [],
    "targets": [
@@ -49455,7 +49684,7 @@
    "ko": "일정을 읽어 지도와 활동 판정에 씁니다. 일정은 기기에만 저장합니다.",
    "en": "Events are read for the map and activity detection and stay on this device.",
    "files": [
-    "MapHomeTodayCalendar.swift:306"
+    "MapHomeTodayCalendar.swift:307"
    ],
    "args": [],
    "targets": [
@@ -49467,7 +49696,7 @@
    "ko": "일정을 하루 기록과 함께 봅니다. 읽기만 합니다.",
    "en": "See events with your day. Read only.",
    "files": [
-    "FirstRunTutorialView.swift:174"
+    "FirstRunTutorialView.swift:175"
    ],
    "args": [],
    "targets": [
@@ -49641,7 +49870,7 @@
    "ko": "자동 기록에 필요한 권한입니다. 빠진 권한이 있으면 기록 화면을 사용할 수 없습니다.",
    "en": "These permissions are required for automatic recording. The timeline remains locked until all are enabled.",
    "files": [
-    "AppShellView.swift:990"
+    "AppShellView.swift:986"
    ],
    "args": [],
    "targets": [
@@ -49677,7 +49906,7 @@
    "ko": "자동 기록이 틀렸으면 영상 편집처럼 고칩니다.",
    "en": "Fix automatic records the way you edit a video.",
    "files": [
-    "FirstRunTutorialView.swift:170"
+    "FirstRunTutorialView.swift:171"
    ],
    "args": [],
    "targets": [
@@ -50312,8 +50541,8 @@
    "en": "Saved",
    "files": [
     "FirstRunTutorialGuides.swift:670",
-    "FirstRunTutorialView.swift:442",
-    "FirstRunTutorialView.swift:452"
+    "FirstRunTutorialView.swift:446",
+    "FirstRunTutorialView.swift:456"
    ],
    "args": [],
    "targets": [
@@ -50709,7 +50938,7 @@
    "ko": "정확한 위치",
    "en": "Precise Location",
    "files": [
-    "AppShellView.swift:1087",
+    "AppShellView.swift:1083",
     "MapHomeView+Support2.swift:887"
    ],
    "args": [],
@@ -50891,7 +51120,7 @@
    "ko": "종일",
    "en": "All day",
    "files": [
-    "MapHomeTodayCalendar.swift:233"
+    "MapHomeTodayCalendar.swift:234"
    ],
    "args": [],
    "targets": [
@@ -51023,7 +51252,7 @@
    "ko": "주소나 장소 이름 검색",
    "en": "Search address or place",
    "files": [
-    "FirstRunTutorialView.swift:472"
+    "FirstRunTutorialView.swift:476"
    ],
    "args": [],
    "targets": [
@@ -51083,7 +51312,7 @@
    "ko": "준비됐습니다",
    "en": "You're ready",
    "files": [
-    "FirstRunTutorialView.swift:153"
+    "FirstRunTutorialView.swift:154"
    ],
    "args": [],
    "targets": [
@@ -51181,7 +51410,7 @@
    "ko": "지금 기록된 활동이 없어요.",
    "en": "Nothing is being recorded right now.",
    "files": [
-    "SiriIntents.swift:191"
+    "SiriIntents.swift:196"
    ],
    "args": [],
    "targets": [
@@ -51230,7 +51459,7 @@
    "ko": "지금 상태입니다. 비어 있는 것은 나중에 해도 됩니다.",
    "en": "Here's where things stand. Anything open can wait.",
    "files": [
-    "FirstRunTutorialView.swift:178"
+    "FirstRunTutorialView.swift:180"
    ],
    "args": [],
    "targets": [
@@ -51339,7 +51568,7 @@
    "ko": "지금은 ‘{0}’({1}부터)로 기록되고 있어요.",
    "en": "Now recorded as “{0}” since {1}.",
    "files": [
-    "SiriIntents.swift:194"
+    "SiriIntents.swift:199"
    ],
    "args": [
     "item.title",
@@ -51450,7 +51679,7 @@
    "ko": "지도 스타일 선택",
    "en": "Choose map style",
    "files": [
-    "MapHomeView+Menu.swift:1059"
+    "MapHomeView+Menu.swift:1062"
    ],
    "args": [],
    "targets": [
@@ -51462,7 +51691,7 @@
    "ko": "지도 스타일",
    "en": "Map style",
    "files": [
-    "MapHomeView+Menu.swift:1055"
+    "MapHomeView+Menu.swift:1058"
    ],
    "args": [],
    "targets": [
@@ -51512,7 +51741,7 @@
    "ko": "지도 위 고양이 곁에 보여 줄 것을 고릅니다.",
    "en": "Choose what appears next to the cat on the map.",
    "files": [
-    "FirstRunTutorialView.swift:173"
+    "FirstRunTutorialView.swift:174"
    ],
    "args": [],
    "targets": [
@@ -51537,7 +51766,7 @@
    "en": "Map attribution",
    "files": [
     "MapHomeSupportViews.swift:109",
-    "MapHomeView+Menu.swift:481"
+    "MapHomeView+Menu.swift:484"
    ],
    "args": [],
    "targets": [
@@ -51735,7 +51964,7 @@
    "ko": "지도에 메모 추가",
    "en": "Add map memo",
    "files": [
-    "MapHomeView+Support.swift:663"
+    "MapHomeView+Support.swift:666"
    ],
    "args": [],
    "targets": [
@@ -51796,7 +52025,7 @@
    "ko": "지도에서 저장됨",
    "en": "Saved from the map",
    "files": [
-    "FirstRunTutorialView.swift:464"
+    "FirstRunTutorialView.swift:468"
    ],
    "args": [],
    "targets": [
@@ -51820,7 +52049,7 @@
    "ko": "지도에서 하루를 함께 걸을 고양이입니다.",
    "en": "This cat walks through your day on the map.",
    "files": [
-    "FirstRunTutorialView.swift:166"
+    "FirstRunTutorialView.swift:167"
    ],
    "args": [],
    "targets": [
@@ -52026,7 +52255,7 @@
    "ko": "지하철·버스 자동 판정",
    "en": "Automatic subway and bus detection",
    "files": [
-    "AppShellView.swift:1175"
+    "AppShellView.swift:1171"
    ],
    "args": [],
    "targets": [
@@ -52117,7 +52346,7 @@
    "ko": "직접 입력",
    "en": "Enter manually",
    "files": [
-    "MapHomeView+Support.swift:686",
+    "MapHomeView+Support.swift:689",
     "TravelMapVideoSection.swift:38"
    ],
    "args": [],
@@ -52310,7 +52539,7 @@
    "ko": "집에 머문 시간을 자동으로 구분합니다.",
    "en": "Time at home is recognized automatically.",
    "files": [
-    "FirstRunTutorialView.swift:162"
+    "FirstRunTutorialView.swift:163"
    ],
    "args": [],
    "targets": [
@@ -52346,7 +52575,7 @@
    "ko": "집이 등록돼 있지 않아요",
    "en": "No home place yet",
    "files": [
-    "MapHomeView+Support.swift:437"
+    "MapHomeView+Support.swift:440"
    ],
    "args": [],
    "targets": [
@@ -52397,7 +52626,7 @@
    "ko": "차근차근 따라 하기",
    "en": "Walk me through",
    "files": [
-    "FirstRunTutorialView.swift:277"
+    "FirstRunTutorialView.swift:281"
    ],
    "args": [],
    "targets": [
@@ -52433,7 +52662,7 @@
    "ko": "차에 블루투스로 연결되면 그 이동을 자동차로 기록합니다. 이어폰은 고르지 마세요.",
    "en": "Trips with your car's Bluetooth connected are recorded as car. Don't pick earphones.",
    "files": [
-    "FirstRunTutorialView.swift:164"
+    "FirstRunTutorialView.swift:165"
    ],
    "args": [],
    "targets": [
@@ -52505,7 +52734,7 @@
    "ko": "초기 비밀번호",
    "en": "Default password",
    "files": [
-    "FirstRunTutorialView.swift:614"
+    "FirstRunTutorialView.swift:618"
    ],
    "args": [],
    "targets": [
@@ -52685,7 +52914,7 @@
    "ko": "추가 결제나 자동 갱신 없이 모든 기능을 계속 사용할 수 있습니다.",
    "en": "Keep using every feature with no additional payment or renewal.",
    "files": [
-    "AppShellView.swift:1259"
+    "AppShellView.swift:1255"
    ],
    "args": [],
    "targets": [
@@ -52786,7 +53015,7 @@
    "ko": "출근",
    "en": "Arrived at work",
    "files": [
-    "SiriIntents.swift:42"
+    "SiriIntents.swift:47"
    ],
    "args": [],
    "targets": [
@@ -52933,7 +53162,7 @@
    "ko": "취침",
    "en": "Went to bed",
    "files": [
-    "SiriIntents.swift:45"
+    "SiriIntents.swift:50"
    ],
    "args": [],
    "targets": [
@@ -53072,11 +53301,11 @@
    ]
   },
   {
-   "key": "카드 결제 문자가 오면 가계부에 바로 들어가요. 읽지 못한 형식은 「붙여넣기」로 넣어 주세요.|Card payment texts go straight into the ledger. Paste any format it can't read.",
-   "ko": "카드 결제 문자가 오면 가계부에 바로 들어가요. 읽지 못한 형식은 「붙여넣기」로 넣어 주세요.",
-   "en": "Card payment texts go straight into the ledger. Paste any format it can't read.",
+   "key": "카드 결제 문자가 오면 앱이 바로 가계부에 넣고, 연결된 AI가 가게 이름·분류를 다듬어요.|Card texts go into the ledger at once; your connected AI tidies the shop name and category.",
+   "ko": "카드 결제 문자가 오면 앱이 바로 가계부에 넣고, 연결된 AI가 가게 이름·분류를 다듬어요.",
+   "en": "Card texts go into the ledger at once; your connected AI tidies the shop name and category.",
    "files": [
-    "LedgerSheet.swift:609"
+    "BokkiShortcutsGuide.swift:21"
    ],
    "args": [],
    "targets": [
@@ -53223,7 +53452,7 @@
    "ko": "캘린더 연결",
    "en": "Connect calendar",
    "files": [
-    "MapHomeTodayCalendar.swift:301"
+    "MapHomeTodayCalendar.swift:302"
    ],
    "args": [],
    "targets": [
@@ -53247,7 +53476,7 @@
    "ko": "캘린더 전체 접근",
    "en": "Full Calendar Access",
    "files": [
-    "AppShellView.swift:1093"
+    "AppShellView.swift:1089"
    ],
    "args": [],
    "targets": [
@@ -53259,7 +53488,7 @@
    "ko": "캘린더 접근 허용",
    "en": "Allow calendar access",
    "files": [
-    "MapHomeTodayCalendar.swift:164"
+    "MapHomeTodayCalendar.swift:165"
    ],
    "args": [],
    "targets": [
@@ -53271,7 +53500,7 @@
    "ko": "캘린더 접근이 꺼져 있어요. 설정 > 개인정보 보호에서 허용해 주세요.",
    "en": "Calendar access is off. Enable it in Settings > Privacy.",
    "files": [
-    "MapHomeTodayCalendar.swift:176"
+    "MapHomeTodayCalendar.swift:177"
    ],
    "args": [],
    "targets": [
@@ -53807,7 +54036,7 @@
    "ko": "퇴근",
    "en": "Left work",
    "files": [
-    "SiriIntents.swift:43"
+    "SiriIntents.swift:48"
    ],
    "args": [],
    "targets": [
@@ -54034,7 +54263,7 @@
    "ko": "표시",
    "en": "Display",
    "files": [
-    "MapHomeView+Menu.swift:1027"
+    "MapHomeView+Menu.swift:1030"
    ],
    "args": [],
    "targets": [
@@ -54228,7 +54457,19 @@
    "ko": "필수 권한 설정",
    "en": "Required permissions",
    "files": [
-    "AppShellView.swift:986"
+    "AppShellView.swift:982"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "필요하면 「알림 내용에 포함」에 「승인」이나 「출금」 적기|Optionally set \"Contains\" to \"approved\" or \"withdrawal\"",
+   "ko": "필요하면 「알림 내용에 포함」에 「승인」이나 「출금」 적기",
+   "en": "Optionally set \"Contains\" to \"approved\" or \"withdrawal\"",
+   "files": [
+    "BokkiShortcutsGuide.swift:28"
    ],
    "args": [],
    "targets": [
@@ -54426,7 +54667,7 @@
    "files": [
     "MapHomeDailyCard.swift:358",
     "MapHomeDailyCard.swift:499",
-    "MapHomeView+Menu.swift:479"
+    "MapHomeView+Menu.swift:482"
    ],
    "args": [],
    "targets": [
@@ -54489,7 +54730,7 @@
    "ko": "하루를 다시 보고 영상으로 남깁니다.",
    "en": "Replay your day and keep it as a video.",
    "files": [
-    "FirstRunTutorialView.swift:168"
+    "FirstRunTutorialView.swift:169"
    ],
    "args": [],
    "targets": [
@@ -54501,7 +54742,7 @@
    "ko": "하루를 자동으로 기록하는 데 씁니다. 필요한 것만 허용해도 됩니다. 자동 기록 중에는 상단에 위치 표시가 보일 수 있습니다.",
    "en": "Used to record your day automatically. Allow only what you need. The location icon may stay visible during automatic recording.",
    "files": [
-    "FirstRunTutorialView.swift:160"
+    "FirstRunTutorialView.swift:161"
    ],
    "args": [],
    "targets": [
@@ -54637,7 +54878,7 @@
    "ko": "한 번 결제 · 자동 갱신 없음",
    "en": "One-time purchase · No auto-renewal",
    "files": [
-    "AppShellView.swift:1318"
+    "AppShellView.swift:1314"
    ],
    "args": [],
    "targets": [
@@ -54916,7 +55157,7 @@
    "ko": "항상 허용",
    "en": "Always",
    "files": [
-    "FirstRunTutorialPolicy.swift:178"
+    "FirstRunTutorialPolicy.swift:180"
    ],
    "args": [],
    "targets": [
@@ -54964,7 +55205,7 @@
    "ko": "행동 분류 목록",
    "en": "Activity category list",
    "files": [
-    "MapHomeView+Menu.swift:680"
+    "MapHomeView+Menu.swift:683"
    ],
    "args": [],
    "targets": [
@@ -54976,7 +55217,7 @@
    "ko": "행동 분류",
    "en": "Activity categories",
    "files": [
-    "MapHomeView+Menu.swift:667"
+    "MapHomeView+Menu.swift:670"
    ],
    "args": [],
    "targets": [
@@ -55036,7 +55277,7 @@
    "ko": "허용 안 함",
    "en": "Not allowed",
    "files": [
-    "FirstRunTutorialPolicy.swift:171"
+    "FirstRunTutorialPolicy.swift:173"
    ],
    "args": [],
    "targets": [
@@ -55048,8 +55289,8 @@
    "ko": "허용됨",
    "en": "Allowed",
    "files": [
-    "AppShellView.swift:1028",
-    "FirstRunTutorialPolicy.swift:180"
+    "AppShellView.swift:1024",
+    "FirstRunTutorialPolicy.swift:182"
    ],
    "args": [],
    "targets": [
@@ -55061,7 +55302,7 @@
    "ko": "허용됨",
    "en": "Granted",
    "files": [
-    "AppShellView.swift:1053"
+    "AppShellView.swift:1049"
    ],
    "args": [],
    "targets": [
@@ -55073,7 +55314,7 @@
    "ko": "허용하기",
    "en": "Allow",
    "files": [
-    "AppShellView.swift:1076",
+    "AppShellView.swift:1072",
     "FirstRunTutorialGuides.swift:548",
     "MapHomeView+Support2.swift:900"
    ],
@@ -55164,7 +55405,7 @@
    "ko": "현재 위치 기록 중",
    "en": "Recording current location",
    "files": [
-    "MapHomeView+Menu.swift:506"
+    "MapHomeView+Menu.swift:509"
    ],
    "args": [],
    "targets": [
@@ -55241,7 +55482,7 @@
    "ko": "현재 위치로 저장",
    "en": "Use current location",
    "files": [
-    "FirstRunTutorialView.swift:534"
+    "FirstRunTutorialView.swift:538"
    ],
    "args": [],
    "targets": [
@@ -55253,7 +55494,7 @@
    "ko": "현재 위치로 저장됨",
    "en": "Saved from current location",
    "files": [
-    "FirstRunTutorialView.swift:531"
+    "FirstRunTutorialView.swift:535"
    ],
    "args": [],
    "targets": [
@@ -55277,7 +55518,7 @@
    "ko": "현재 위치를 받는 중입니다. 검색으로도 저장할 수 있습니다.",
    "en": "Waiting for your location. You can also search.",
    "files": [
-    "FirstRunTutorialView.swift:544"
+    "FirstRunTutorialView.swift:548"
    ],
    "args": [],
    "targets": [
@@ -55438,7 +55679,7 @@
    "ko": "화면 녹화",
    "en": "Screen recording",
    "files": [
-    "MapHomeView+Support.swift:293"
+    "MapHomeView+Support.swift:295"
    ],
    "args": [],
    "targets": [
@@ -55565,7 +55806,7 @@
    "ko": "확인",
    "en": "OK",
    "files": [
-    "AppShellView.swift:1217",
+    "AppShellView.swift:1213",
     "AssistantConnectView.swift:209",
     "AssistantPINSheet.swift:60"
    ],
@@ -55731,7 +55972,7 @@
    "ko": "활동과 이동 경로 불러오는 중",
    "en": "Loading activities and routes",
    "files": [
-    "AppShellView.swift:411"
+    "AppShellView.swift:407"
    ],
    "args": [],
    "targets": [
