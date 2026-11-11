@@ -487,6 +487,7 @@
 		B10809000000000000000A04 /* MapHomePlaceBook.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10809000000000000000F04 /* MapHomePlaceBook.swift */; };
 		B10809000000000000000A99 /* MapHomeKoreaPlaceBookData.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10809000000000000000F99 /* MapHomeKoreaPlaceBookData.swift */; };
 		B10809000000000000000A98 /* MapHomePlaceBookTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10809000000000000000F98 /* MapHomePlaceBookTools.swift */; };
+		B1080900000000000000A0D1 /* MapHomePlaceBookDescriptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000F0D1 /* MapHomePlaceBookDescriptions.swift */; };
 		B1080900000000000000A0A0 /* MapHomePassportBook.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000A0F0 /* MapHomePassportBook.swift */; };
 		B1080900000000000000A0A1 /* MapHomeKakaoSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000A0F1 /* MapHomeKakaoSearch.swift */; };
 		B1080900000000000000A0A2 /* MapHomeVisitLedger.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000A0F2 /* MapHomeVisitLedger.swift */; };
@@ -1195,6 +1196,7 @@
 		B10809000000000000000F04 /* MapHomePlaceBook.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaceBook.swift; sourceTree = "<group>"; };
 		B10809000000000000000F99 /* MapHomeKoreaPlaceBookData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeKoreaPlaceBookData.swift; sourceTree = "<group>"; };
 		B10809000000000000000F98 /* MapHomePlaceBookTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaceBookTools.swift; sourceTree = "<group>"; };
+		B1080900000000000000F0D1 /* MapHomePlaceBookDescriptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaceBookDescriptions.swift; sourceTree = "<group>"; };
 		B1080900000000000000A0F0 /* MapHomePassportBook.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePassportBook.swift; sourceTree = "<group>"; };
 		B1080900000000000000A0F1 /* MapHomeKakaoSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeKakaoSearch.swift; sourceTree = "<group>"; };
 		B1080900000000000000A0F2 /* MapHomeVisitLedger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeVisitLedger.swift; sourceTree = "<group>"; };
@@ -1703,6 +1705,7 @@
 				B10809000000000000000F04 /* MapHomePlaceBook.swift */,
 				B10809000000000000000F99 /* MapHomeKoreaPlaceBookData.swift */,
 				B10809000000000000000F98 /* MapHomePlaceBookTools.swift */,
+				B1080900000000000000F0D1 /* MapHomePlaceBookDescriptions.swift */,
 				B1080900000000000000A0F0 /* MapHomePassportBook.swift */,
 				B1080900000000000000A0F1 /* MapHomeKakaoSearch.swift */,
 				B1080900000000000000A0F2 /* MapHomeVisitLedger.swift */,
@@ -2646,6 +2649,7 @@
 				B10809000000000000000A04 /* MapHomePlaceBook.swift in Sources */,
 				B10809000000000000000A99 /* MapHomeKoreaPlaceBookData.swift in Sources */,
 				B10809000000000000000A98 /* MapHomePlaceBookTools.swift in Sources */,
+				B1080900000000000000A0D1 /* MapHomePlaceBookDescriptions.swift in Sources */,
 				B1080900000000000000A0A0 /* MapHomePassportBook.swift in Sources */,
 				B1080900000000000000A0A1 /* MapHomeKakaoSearch.swift in Sources */,
 				B1080900000000000000A0A2 /* MapHomeVisitLedger.swift in Sources */,

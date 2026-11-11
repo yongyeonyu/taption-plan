@@ -68,6 +68,26 @@ final class InkWashThemeTests: XCTestCase {
     // MARK: - 장소 도감
 
     /// 국내 도감 자료: 17개 시·도와 해외 직항 도시, id 중복 없음, 국내 좌표 범위, 기존 7곳 id 유지(PLB1109A01).
+    /// PBD1111A01: 모든 도감 장소에 한·영 설명이 있고, 설명 없는 항목은 빈 글이다.
+    func testPlaceBookDescriptionsCoverEveryPlace() {
+        let places = MapHomeKoreaPlaceBookData.places
+        XCTAssertEqual(MapHomePlaceBookDescriptions.items.count, places.count)
+        XCTAssertEqual(Set(MapHomePlaceBookDescriptions.items.map(\.id)), Set(places.map(\.id)))
+        let hangul = try! NSRegularExpression(pattern: "[가-힣]")
+        func hasHangul(_ text: String) -> Bool {
+            hangul.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) != nil
+        }
+        for item in MapHomePlaceBookDescriptions.items {
+            XCTAssertTrue(hasHangul(item.ko) && item.ko.count >= 20, item.id)
+            XCTAssertFalse(hasHangul(item.english) || item.english.count < 30, item.id)
+        }
+        XCTAssertEqual(Set(MapHomePlaceBookDescriptions.items.map(\.english)).count, places.count)
+        XCTAssertEqual(MapHomePlaceBookDescriptions.text(for: "kr.unknown", language: .korean), "")
+        let state = MapHomePlaceBookState.make(visits: [:], language: .korean, region: "seoul")
+        XCTAssertFalse(state.entries.isEmpty)
+        XCTAssertTrue(state.entries.allSatisfy { !$0.summary.isEmpty })
+    }
+
     func testKoreaPlaceBookData() {
         let places = MapHomeKoreaPlaceBookData.places
         let regions = Set(MapHomeKoreaPlaceBookData.regions.map(\.id))
