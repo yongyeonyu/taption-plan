@@ -164,10 +164,12 @@ extension MapHomeView {
             }
 
             if !isScreenRecording {
+                // 듀오 바깥 화면: 날짜 배지를 알약 바로 아래, 사이드바와 같은 세로 중심선에(DUO1111A03).
                 dateBadge
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                    .padding(.top, Layout.topRowInset)
-                    .padding(.horizontal, Layout.horizontalInset)
+                    .padding(.top, duoStatusColumn > 0 ? MapHomeOverlayLayoutMath.sideStatusPillBottom + 6 : Layout.topRowInset)
+                    .padding(.leading, Layout.horizontalInset)
+                    .padding(.trailing, Layout.horizontalInset - (duoStatusColumn > 0 ? MapHomeOverlayLayoutMath.pillCenterShift(column: duoStatusColumn, trailing: Layout.horizontalInset, width: Layout.dateBadgeSize) : 0))
                     .zIndex(MapHomeLayerPriority.header)
             }
 
@@ -991,7 +993,8 @@ extension MapHomeView {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(.leading, Layout.horizontalInset)
-        .padding(.top, Layout.topRowInset)
+        // 듀오 바깥 화면은 단추 윗줄을 상태 줄 알약 위쪽에 맞춘다(DUO1111A03).
+        .padding(.top, duoStatusColumn > 0 ? MapHomeOverlayLayoutMath.sideStatusPillTop : Layout.topRowInset)
         .onChange(of: memoStackExpanded) { _, open in setTopPanel(.memo, open: open) }
         .onChange(of: todayCalendarExpanded) { _, open in setTopPanel(.calendar, open: open) }
     }

@@ -164,6 +164,8 @@ struct MapHomeView: View {
     var recordingLayersRaw = ""
 
     @State var isScreenRecording = false
+    /// 듀오 바깥 화면의 오른쪽 상태 줄 폭. 0이면 보통 화면(DUO1111A03).
+    @State var duoStatusColumn: CGFloat = 0
 
     @State var photoMoments: [PhotoMoment] = []
 

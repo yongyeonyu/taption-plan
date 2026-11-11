@@ -88,6 +88,16 @@ enum MapHomeOverlayLayoutMath {
     /// 그 줄 위쪽의 시각·와이파이 알약은 시스템이 그려 앱이 숨길 수 없다(상태 막대 숨김을 걸어도 남음, 시뮬레이터 확인).
     /// 사이드바는 그 아래부터 쓴다.
     static let sideStatusPillBottom: CGFloat = 158
+    /// 알약 위쪽과 가운데(오른쪽 끝에서). 왼쪽 위 단추 윗줄과 날짜 배지·사이드바·확대 단추의 세로 중심선을 여기에 맞춘다(DUO1111A03).
+    static let sideStatusPillTop: CGFloat = 26
+    static let sideStatusPillCenterFromTrailing: CGFloat = 48
+    /// 날짜 배지(알약 아래) 다음, 사이드바가 시작하는 높이.
+    static let sideStatusRailTop: CGFloat = sideStatusPillBottom + 54
+
+    /// 안전 영역 오른쪽 끝에서 `trailing`만큼 안쪽에 붙은 폭 `width`짜리를 알약 세로 중심선으로 옮기는 x 이동.
+    static func pillCenterShift(column: CGFloat, trailing: CGFloat, width: CGFloat) -> CGFloat {
+        column - sideStatusPillCenterFromTrailing + trailing + width / 2
+    }
 
     /// 그 줄의 폭. 보통 아이폰(세로)과 가로 화면은 0이다(DUO1111A01).
     static func sideStatusColumn(size: CGSize, trailingInset: CGFloat) -> CGFloat {

@@ -139,6 +139,7 @@ extension MapHomeView {
                 let column = MapHomeOverlayLayoutMath.sideStatusColumn(size: proxy.size, trailingInset: proxy.safeAreaInsets.trailing)
                 // 듀오 바깥 화면: 오른쪽 상태 아이콘 줄 자리, 시스템 알약 아래에 사이드바를 둔다(DUO1111A01).
                 mapSideRailsContent(viewportSize: proxy.size, statusColumn: column)
+                    .onChange(of: column, initial: true) { _, value in if duoStatusColumn != value { duoStatusColumn = value } }
             }
             .zIndex(MapHomeLayerPriority.sidebar)
         }
@@ -183,11 +184,11 @@ extension MapHomeView {
         .frame(height: frame.height)
         .overlay(alignment: .topTrailing) {
             if isSidebarVisible {
-                let pillGap = statusColumn > 0 ? max(0, MapHomeOverlayLayoutMath.sideStatusPillBottom - timeSidebarFrame.minY) : 0
+                let pillGap = statusColumn > 0 ? max(0, MapHomeOverlayLayoutMath.sideStatusRailTop - timeSidebarFrame.minY) : 0
                 currentTimeRail
                     .frame(width: timeSidebarWidth, height: timeSidebarFrame.height - pillGap)
-                    // 듀오 바깥 화면은 막대 가운데를 상태 줄(알약) 가운데에 맞춘다(DUO1111A02).
-                    .offset(x: statusColumn > 0 ? statusColumn / 2 + Layout.horizontalInset + timeRailWidth / 2 : 0,
+                    // 듀오 바깥 화면은 막대 가운데를 상태 줄 알약의 세로 중심선에 맞춘다(DUO1111A03).
+                    .offset(x: statusColumn > 0 ? MapHomeOverlayLayoutMath.pillCenterShift(column: statusColumn, trailing: Layout.horizontalInset, width: timeRailWidth) : 0,
                             y: timeSidebarFrame.minY - frame.minY + pillGap)
                     .transition(.sidebarDrop)
             }
