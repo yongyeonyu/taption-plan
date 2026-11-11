@@ -299,7 +299,8 @@ extension MapHomeView {
                         activity: model.isBootstrapped
                             ? currentActivity(at: minute)
                             : nil,
-                        segments: travelSidebarSegments ?? timeRailSegments,
+                        segments: timeRailSegments,
+                        planBand: travelPlanBand,
                         detailSpans: meetingRailSpans.map { MapHomeRailDetailSpan(range: $0, pattern: .diagonal) }
                             + timeRailSegments.flatMap(\.walkSpans).map { MapHomeRailDetailSpan(range: $0, pattern: .dots) },
                         categoryColors: model.settings.mapCategoryColors,

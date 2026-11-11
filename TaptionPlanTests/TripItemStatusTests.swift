@@ -480,3 +480,69 @@ final class TravelModeGlobeTests: XCTestCase {
         }
     }
 }
+
+/// TVC1112A01: 시간 막대의 계획 띠. 그날의 계획을 실제 기록과 견줘 상태를 붙인다.
+final class TravelPlanBandTests: XCTestCase {
+    private var calendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul") ?? .gmt
+        return calendar
+    }
+
+    private func at(_ hour: Int, _ minute: Int = 0, day: Int = 20) -> Date {
+        calendar.date(from: DateComponents(year: 2026, month: 11, day: day, hour: hour, minute: minute)) ?? .distantPast
+    }
+
+    private func segment(_ start: Int, _ end: Int, _ category: String, status: TripItemStatus? = nil) -> MapHomeTimeRailSegment {
+        var segment = MapHomeTimeRailSegment(startMinute: start, endMinute: end, categoryID: category, title: category)
+        segment.tripStatus = status
+        return segment
+    }
+
+    func testBandMarksDoneLateSkippedAndPendingForToday() {
+        let plan = [
+            segment(600, 630, "movement", status: .booked),
+            segment(720, 780, "eating"),
+            segment(840, 960, "hobby", status: .tentative),
+            segment(1_080, 1_140, "eating"),
+        ]
+        let actual = [
+            segment(605, 628, "movement"),
+            segment(745, 800, "eating"),
+            segment(850, 950, "unconfirmed"),
+        ]
+        let band = TravelPlanBand.spans(plan: plan, actual: actual, day: at(0), now: at(16, 40), calendar: calendar)
+        XCTAssertEqual(band.map(\.status), [.done, .late, .skipped, .pending], "미확인 구간은 한 것으로 치지 않는다")
+        XCTAssertEqual(band.map(\.opacity), [1, 0.75, 0.4, 0.75])
+        XCTAssertEqual(band.map(\.startMinute), [600, 720, 840, 1_080])
+    }
+
+    /// 시간 막대에 계획 띠와 실제 띠가 나란히 그려지는지 그림으로 남긴다(시뮬레이터에서만 파일을 쓴다).
+    @MainActor
+    func testSidebarDrawsPlanBesideActual() throws {
+        let plan = [segment(600, 630, "movement", status: .booked), segment(720, 780, "eating"), segment(840, 960, "hobby", status: .tentative), segment(1_080, 1_140, "eating")]
+        let actual = [segment(605, 628, "movement"), segment(745, 800, "eating"), segment(820, 1_000, "activity")]
+        let band = TravelPlanBand.spans(plan: plan, actual: actual, day: at(0), now: at(16, 40), calendar: calendar)
+        let view = MapHomeTimeSidebar(
+            date: at(0), selectedMinute: .constant(1_000), visibleStartMinute: .constant(480), visibleDurationMinutes: .constant(720),
+            segments: actual, planBand: band
+        )
+        .frame(width: 90, height: 620)
+        .background(Color(hex: "#F6F1E4"))
+        let renderer = ImageRenderer(content: view)
+        renderer.scale = 3
+        let image = try XCTUnwrap(renderer.uiImage)
+        let folder = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("build/validation/TVC1112A01/shots", isDirectory: true)
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try? image.pngData()?.write(to: folder.appendingPathComponent("sidebar-plan-and-actual.png"))
+        XCTAssertGreaterThan(image.size.height, 0)
+    }
+
+    func testFutureDayIsAllPendingAndPastDayWithoutRecordsIsSkipped() {
+        let plan = [segment(600, 660, "hobby")]
+        XCTAssertEqual(TravelPlanBand.spans(plan: plan, actual: [], day: at(0, day: 21), now: at(12), calendar: calendar).map(\.status), [.pending])
+        XCTAssertEqual(TravelPlanBand.spans(plan: plan, actual: [], day: at(0, day: 19), now: at(12), calendar: calendar).map(\.status), [.skipped])
+        XCTAssertTrue(TravelPlanBand.spans(plan: [], actual: [], day: at(0), now: at(12), calendar: calendar).isEmpty)
+    }
+}

@@ -181,11 +181,45 @@ private func < (lhs: DateComponents, rhs: DateComponents) -> Bool {
 private func > (lhs: DateComponents, rhs: DateComponents) -> Bool { rhs < lhs }
 
 extension MapHomeView {
-    /// 여행 모드에서 가져온 여행이 있는 날은 기록 대신 여행 일정을 시간 막대에 그린다.
+    /// 여행 모드에서 그날의 여행 일정(시간 막대의 계획 띠).
     var travelSidebarSegments: [MapHomeTimeRailSegment]? {
         guard isTravelMode, let items = model.settings.travelTripItems, !items.isEmpty else { return nil }
         let segments = TravelTripRail.segments(items, day: model.selectedDate)
         return segments.isEmpty ? nil : segments
+    }
+
+    /// 여행 모드의 시간 막대는 계획과 실제 기록을 나란히 그린다(TVC1112A01). 계획이 없는 날은 비어 있어 예전 모습 그대로다.
+    var travelPlanBand: [MapHomeRailPlanSpan] {
+        guard let plan = travelSidebarSegments else { return [] }
+        return TravelPlanBand.spans(plan: plan, actual: timeRailSegments, day: model.selectedDate, now: .now)
+    }
+}
+
+/// 계획 띠 만들기: 그날의 계획과 실제 기록을 견줘 일정마다 상태를 붙인다.
+enum TravelPlanBand {
+    static func spans(
+        plan: [MapHomeTimeRailSegment], actual: [MapHomeTimeRailSegment], day: Date, now: Date, calendar: Calendar = .autoupdatingCurrent
+    ) -> [MapHomeRailPlanSpan] {
+        let nowMinute: Int
+        if calendar.isDate(day, inSameDayAs: now) {
+            let parts = calendar.dateComponents([.hour, .minute], from: now)
+            nowMinute = (parts.hour ?? 0) * 60 + (parts.minute ?? 0)
+        } else {
+            nowMinute = day < now ? 1_440 : 0
+        }
+        func span(_ segment: MapHomeTimeRailSegment) -> TravelPlanComparison.Span {
+            .init(id: segment.id, start: segment.startMinute, end: segment.endMinute, isMove: segment.categoryID == "movement")
+        }
+        let result = TravelPlanComparison.compare(
+            plan: plan.map(span), actual: actual.filter { $0.categoryID != "unconfirmed" }.map(span), nowMinute: nowMinute
+        )
+        return plan.map {
+            MapHomeRailPlanSpan(
+                startMinute: $0.startMinute, endMinute: $0.endMinute,
+                opacity: $0.tripStatus == .tentative ? 0.4 : ($0.tripStatus == .booked ? 1 : 0.75),
+                status: result.statuses[$0.id] ?? .pending
+            )
+        }
     }
 }
 

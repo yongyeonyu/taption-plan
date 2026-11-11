@@ -1127,11 +1127,23 @@ final class MapHomeTimeSidebarHandleDrag {
 }
 
 /// A narrow, playhead-centered time rail for the map home screen.
+/// 여행 모드에서 실제 기록 옆에 나란히 그리는 계획 한 칸(TVC1112A01).
+struct MapHomeRailPlanSpan: Hashable {
+    var startMinute: Int
+    var endMinute: Int
+    /// 예약은 진하게, 미정은 옅게.
+    var opacity: Double
+    /// 계획과 실제의 비교 결과. 건너뛰었거나 늦은 일정에 표시를 단다.
+    var status: TravelPlanComparison.Status
+}
+
 struct MapHomeTimeSidebar: View {
     let date: Date
     @Binding var selectedMinute: Int
     let activity: MapHomeTimeSidebarActivity?
     let segments: [MapHomeTimeRailSegment]
+    /// 여행 계획 띠. 있으면 막대를 반으로 나눠 왼쪽에 계획, 오른쪽에 실제 기록을 그린다.
+    let planBand: [MapHomeRailPlanSpan]
     /// 업무 구간 위에 무늬로 표시할 상세 활동(회의) 구간.
     let detailSpans: [MapHomeRailDetailSpan]
     let categoryColors: [String: String]
@@ -1202,6 +1214,7 @@ struct MapHomeTimeSidebar: View {
         visibleDurationMinutes: Binding<Int>,
         activity: MapHomeTimeSidebarActivity? = nil,
         segments: [MapHomeTimeRailSegment] = [],
+        planBand: [MapHomeRailPlanSpan] = [],
         detailSpans: [MapHomeRailDetailSpan] = [],
         categoryColors: [String: String] = [:],
         zoomResetToken: Int = 0,
@@ -1223,6 +1236,7 @@ struct MapHomeTimeSidebar: View {
         self._visibleDurationMinutes = visibleDurationMinutes
         self.activity = activity
         self.segments = segments
+        self.planBand = planBand
         self.detailSpans = detailSpans
         self.categoryColors = categoryColors
         self.zoomResetToken = zoomResetToken
@@ -1410,6 +1424,32 @@ struct MapHomeTimeSidebar: View {
                     Rectangle()
                         .fill(MapHomeTimeSidebarStyle.trackBackground)
 
+                    // 여행 계획이 있으면 왼쪽 반은 계획(남색), 오른쪽 반은 실제 기록이다.
+                    let actualWidth = planBand.isEmpty ? activeRailWidth : activeRailWidth / 2
+                    let actualX = planBand.isEmpty ? activeRailWidth / 2 : activeRailWidth * 0.75
+                    ForEach(planBand, id: \.self) { span in
+                        let start = max(min(span.startMinute, visibleWindow.upperBound), visibleWindow.lowerBound)
+                        let end = min(max(span.endMinute, visibleWindow.lowerBound), visibleWindow.upperBound)
+                        if start < end {
+                            let height = max(1, trackHeight * MapHomeTimeSidebarMath.spanFraction(start: start, end: end, window: visibleWindow))
+                            Rectangle()
+                                .fill(TravelInk.plan.opacity(span.opacity))
+                                .overlay(alignment: .top) {
+                                    // 건너뛴 일정은 주홍 테두리, 늦은 일정은 위쪽 주홍 줄.
+                                    if span.status == .skipped {
+                                        Rectangle().strokeBorder(TravelInk.actual, lineWidth: 1.5)
+                                    } else if span.status == .late {
+                                        Rectangle().fill(TravelInk.actual).frame(height: min(3, height))
+                                    }
+                                }
+                                .frame(width: activeRailWidth / 2 - 1, height: height)
+                                .position(
+                                    x: activeRailWidth * 0.25,
+                                    y: trackHeight * MapHomeTimeSidebarMath.segmentCenterPosition(start: start, end: end, window: visibleWindow)
+                                )
+                        }
+                    }
+
                     ForEach(Self.benchHidden("segments") ? [] : visibleSegments) { segment in
                         let start = max(min(segment.startMinute, visibleWindow.upperBound), visibleWindow.lowerBound)
                         let end = min(max(segment.endMinute, visibleWindow.lowerBound), visibleWindow.upperBound)
@@ -1429,7 +1469,7 @@ struct MapHomeTimeSidebar: View {
                                     }
                                 }
                                 .frame(
-                                    width: activeRailWidth,
+                                    width: actualWidth,
                                     height: max(
                                         1,
                                         trackHeight * MapHomeTimeSidebarMath.spanFraction(
@@ -1440,7 +1480,7 @@ struct MapHomeTimeSidebar: View {
                                     )
                                 )
                                 .position(
-                                    x: activeRailWidth / 2,
+                                    x: actualX,
                                     y: trackHeight * MapHomeTimeSidebarMath.segmentCenterPosition(
                                         start: start,
                                         end: end,
