@@ -136,13 +136,15 @@ extension MapHomeView {
     var mapSideRails: some View {
         if !isMenuOpen || isWideLayout {
             GeometryReader { proxy in
-                mapSideRailsContent(viewportSize: proxy.size)
+                let column = MapHomeOverlayLayoutMath.sideStatusColumn(size: proxy.size, trailingInset: proxy.safeAreaInsets.trailing)
+                // 듀오 바깥 화면: 오른쪽 상태 아이콘 줄 자리, 시스템 알약 아래에 사이드바를 둔다(DUO1111A01).
+                mapSideRailsContent(viewportSize: proxy.size, statusColumn: column)
             }
             .zIndex(MapHomeLayerPriority.sidebar)
         }
     }
 
-    func mapSideRailsContent(viewportSize: CGSize) -> some View {
+    func mapSideRailsContent(viewportSize: CGSize, statusColumn: CGFloat = 0) -> some View {
         let frame = MapHomeOverlayLayoutMath.alignedRailFrame(
             viewportHeight: viewportSize.height,
             topInset: topOverlayHeight + Layout.timeRailTopMargin,
@@ -181,9 +183,10 @@ extension MapHomeView {
         .frame(height: frame.height)
         .overlay(alignment: .topTrailing) {
             if isSidebarVisible {
+                let pillGap = statusColumn > 0 ? max(0, MapHomeOverlayLayoutMath.sideStatusPillBottom - timeSidebarFrame.minY) : 0
                 currentTimeRail
-                    .frame(width: timeSidebarWidth, height: timeSidebarFrame.height)
-                    .offset(y: timeSidebarFrame.minY - frame.minY)
+                    .frame(width: timeSidebarWidth, height: timeSidebarFrame.height - pillGap)
+                    .offset(x: statusColumn, y: timeSidebarFrame.minY - frame.minY + pillGap)
                     .transition(.sidebarDrop)
             }
         }

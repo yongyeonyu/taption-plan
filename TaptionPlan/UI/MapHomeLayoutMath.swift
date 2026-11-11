@@ -82,6 +82,18 @@ enum MapHomeRouteFitMath {
 }
 
 enum MapHomeOverlayLayoutMath {
+    /// 세로 화면인데 오른쪽 안전 영역이 이만큼 넓으면 상태 아이콘이 오른쪽 줄에 따로 있는 화면(듀오 바깥 화면)이다.
+    static let sideStatusColumnMinimum: CGFloat = 30
+
+    /// 그 줄 위쪽의 시각·와이파이 알약은 시스템이 그려 앱이 숨길 수 없다(상태 막대 숨김을 걸어도 남음, 시뮬레이터 확인).
+    /// 사이드바는 그 아래부터 쓴다.
+    static let sideStatusPillBottom: CGFloat = 158
+
+    /// 그 줄의 폭. 보통 아이폰(세로)과 가로 화면은 0이다(DUO1111A01).
+    static func sideStatusColumn(size: CGSize, trailingInset: CGFloat) -> CGFloat {
+        size.height > size.width && trailingInset >= sideStatusColumnMinimum ? trailingInset : 0
+    }
+
     static let controlSize: CGFloat = 44
     static let controlSpacing: CGFloat = 9
     static let sharedBottomMargin: CGFloat = 48
