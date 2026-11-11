@@ -333,11 +333,12 @@ struct MapHomeTripImportSheet: View {
             }
             if isResolving { ProgressView().frame(maxWidth: .infinity) }
             let warnings = TripImportTimingCheck.warnings(plan.items)
+            let fares = TravelFareEstimate.fares(plan.items)
             ForEach(plan.days(), id: \.day) { group in
                 VStack(alignment: .leading, spacing: 6) {
                     Text(group.day, format: .dateTime.month().day().weekday())
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .bold))
-                    ForEach(group.items) { item in row(item, warning: warnings[item.id]) }
+                    ForEach(group.items) { item in row(item, warning: warnings[item.id], fare: fares[item.id]) }
                 }
             }
             wideButton(language.text("여행 계획에 반영", "Add to trip plan"), prominent: true) {
@@ -364,7 +365,7 @@ struct MapHomeTripImportSheet: View {
         }
     }
 
-    private func row(_ item: TripImportItem, warning: TripImportTimingCheck.Warning? = nil) -> some View {
+    private func row(_ item: TripImportItem, warning: TripImportTimingCheck.Warning? = nil, fare: Int? = nil) -> some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: item.kind.symbol).frame(width: 22).foregroundStyle(Color.tpInk)
             VStack(alignment: .leading, spacing: 2) {
@@ -373,6 +374,9 @@ struct MapHomeTripImportSheet: View {
                 TripItemStatusBadge(status: item.status, language: language)
                 if let minutes = item.travelMinutes, minutes > 0 {
                     caption(language.text("앞에서 이동 \(Int(minutes))분", "\(Int(minutes)) min from previous"))
+                }
+                if let fare {
+                    caption(language.text("예상 요금 \(fare.formatted())원", "Estimated fare ₩\(fare.formatted())"))
                 }
                 if let warning {
                     Text(warningText(warning))

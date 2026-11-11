@@ -1,5 +1,7 @@
 import XCTest
 @testable import TaptionPlan
+import CoreLocation
+import TaptionPlanEngine
 
 /// TRP1110A09: 여행 일정 상태 예약·계획·미정.
 final class TripItemStatusTests: XCTestCase {
@@ -151,5 +153,50 @@ final class TripItemStatusTests: XCTestCase {
         ]}
         """#).get()
         XCTAssertTrue(TripImportTimingCheck.warnings(stay.items).isEmpty, "a stay that spans dinner is not a tight move")
+    }
+}
+
+/// TAU1111A01: 가져온 여행의 대중교통 구간 예상 요금, 항공편 위치를 비우면 도착 공항 좌표.
+final class TravelFareAndAirportTests: XCTestCase {
+    private let gangnam = CLLocationCoordinate2D(latitude: 37.498, longitude: 127.028)
+    private let seoulStation = CLLocationCoordinate2D(latitude: 37.555, longitude: 126.972)
+
+    func testCapitalAreaTransitUsesTableAndOtherCasesAreNil() throws {
+        XCTAssertNotNil(FareCalculator.bundled, "요금표가 앱 번들에서 읽혀야 한다")
+        XCTAssertEqual(TravelFareEstimate.won(from: gangnam, to: seoulStation, mode: "transit"), 1_550)
+        XCTAssertEqual(TravelFareEstimate.won(from: gangnam, to: seoulStation, mode: "bus"), 1_500)
+        let far = CLLocationCoordinate2D(latitude: 37.70, longitude: 127.20)
+        XCTAssertGreaterThan(try XCTUnwrap(TravelFareEstimate.won(from: gangnam, to: far, mode: "subway")), 1_550)
+        let daegu = (CLLocationCoordinate2D(latitude: 35.87, longitude: 128.60), CLLocationCoordinate2D(latitude: 35.88, longitude: 128.63))
+        XCTAssertEqual(TravelFareEstimate.won(from: daegu.0, to: daegu.1, mode: "transit"), 1_500)
+        XCTAssertNil(TravelFareEstimate.won(from: gangnam, to: seoulStation, mode: "walk"))
+        XCTAssertNil(TravelFareEstimate.won(from: gangnam, to: daegu.0, mode: "transit"), "지역이 다르면 요금표 밖")
+        let bangkok = CLLocationCoordinate2D(latitude: 13.74, longitude: 100.49)
+        XCTAssertNil(TravelFareEstimate.won(from: bangkok, to: CLLocationCoordinate2D(latitude: 13.75, longitude: 100.53), mode: "transit"))
+    }
+
+    func testImportedPlanShowsFareOnTheTransitItemOnly() throws {
+        let json = #"""
+        {"format":"bokki-trip","version":1,"tripId":"t","title":"서울","items":[
+        {"id":"a","type":"sight","title":"강남","start":"2026-12-02T09:00+09:00","end":"2026-12-02T10:00+09:00","place":{"name":"강남","lat":37.498,"lng":127.028}},
+        {"id":"b","type":"sight","title":"서울역","start":"2026-12-02T11:00+09:00","place":{"name":"서울역","lat":37.555,"lng":126.972},"travelFromPrevious":{"mode":"transit","minutes":25}},
+        {"id":"c","type":"meal","title":"점심","start":"2026-12-02T13:00+09:00","place":{"name":"남대문","lat":37.559,"lng":126.977},"travelFromPrevious":{"mode":"walk","minutes":10}}
+        ]}
+        """#
+        let plan = try TripImportParser.parse(json).get()
+        XCTAssertEqual(TravelFareEstimate.fares(plan.items), ["b": 1_550])
+    }
+
+    func testFlightWithoutCoordinateUsesArrivalAirport() throws {
+        let json = #"""
+        {"format":"bokki-trip","version":1,"tripId":"t","title":"도쿄","items":[
+        {"id":"f","type":"flight","title":"인천 → 나리타","start":"2026-12-02T09:00+09:00","end":"2026-12-02T11:30+09:00","place":{"name":"나리타","lat":null,"lng":null},"flight":{"number":"KE701","fromAirport":"ICN","toAirport":"nrt"}},
+        {"id":"s","type":"sight","title":"아사쿠사","start":"2026-12-02T14:00+09:00"}
+        ]}
+        """#
+        let items = try TripImportParser.parse(json).get().items
+        XCTAssertEqual(try XCTUnwrap(items.first { $0.id == "f" }?.coordinate?.latitude), 35.77, accuracy: 0.01)
+        XCTAssertNil(items.first { $0.id == "s" }?.coordinate, "항공편이 아니면 공항표로 채우지 않는다")
+        XCTAssertNil(TravelAirports.coordinate("XXX"))
     }
 }

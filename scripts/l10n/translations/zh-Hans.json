@@ -4331,6 +4331,7 @@
 "예상 {0} · 타일 {1}개|About {0} · {1} tiles": "约{0} · {1}个图块",
 "예상 경로 선택|Select predicted route": "选择预测路线",
 "예상 경로 위치|Expected route location": "预计路线位置",
+"예상 요금 {0}원|Estimated fare ₩{0}": "预计票价 ₩{0}",
 "예시|Example": "示例",
 "예약됨|Booked": "已预订",
 "예전 AI 연결 PIN 6자리|Old 6-digit AI PIN": "旧的 6 位 AI 连接 PIN",

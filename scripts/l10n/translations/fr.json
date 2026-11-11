@@ -4331,6 +4331,7 @@
 "예상 {0} · 타일 {1}개|About {0} · {1} tiles": "Env. {0} · {1} tuiles",
 "예상 경로 선택|Select predicted route": "Sélectionner l'itinéraire prévu",
 "예상 경로 위치|Expected route location": "Lieu de l'itinéraire prévu",
+"예상 요금 {0}원|Estimated fare ₩{0}": "Tarif estimé ₩{0}",
 "예시|Example": "Exemple",
 "예약됨|Booked": "Réservé",
 "예전 AI 연결 PIN 6자리|Old 6-digit AI PIN": "Ancien PIN IA à 6 chiffres",

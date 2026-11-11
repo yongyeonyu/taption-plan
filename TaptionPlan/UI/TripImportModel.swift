@@ -154,7 +154,7 @@ enum TripImportParser {
                 guard let lat = place.lat, let lng = place.lng else { return nil }
                 let value = CLLocationCoordinate2D(latitude: lat, longitude: lng)
                 return CLLocationCoordinate2DIsValid(value) && (lat != 0 || lng != 0) ? value : nil
-            }
+            } ?? (raw.type.lowercased() == "flight" ? TravelAirports.coordinate(raw.flight?.toAirport) : nil)
             items.append(TripImportItem(
                 id: itemID,
                 kind: TripImportItem.Kind(rawValue: raw.type.lowercased()) ?? .other,

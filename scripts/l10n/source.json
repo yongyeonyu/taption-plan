@@ -1738,7 +1738,7 @@
    "ko": "JSON 일부가 잘렸거나 형식이 달라요. AI에게 JSON을 다시 출력해 달라고 해 주세요.",
    "en": "Part of the JSON is cut off or malformed. Ask the AI to output the JSON again.",
    "files": [
-    "TripImportSheet.swift:525"
+    "TripImportSheet.swift:529"
    ],
    "args": [],
    "targets": [
@@ -3372,7 +3372,7 @@
    "ko": "{0} 항목의 시각을 읽지 못했어요.",
    "en": "Couldn't read the time of item {0}.",
    "files": [
-    "TripImportSheet.swift:531"
+    "TripImportSheet.swift:535"
    ],
    "args": [
     "itemID"
@@ -3689,12 +3689,12 @@
    "ko": "{0}분",
    "en": "{0} min",
    "files": [
-    "AITaskProducer.swift:62",
     "ScreenTimeUsageService.swift:667",
-    "MapHomeCalendarPolicies.swift:484"
+    "MapHomeCalendarPolicies.swift:484",
+    "MapHomeSalaryPolicy.swift:425"
    ],
    "args": [
-    "visit.value.minutes"
+    "minutes"
    ],
    "targets": [
     "TaptionPlan",
@@ -34718,7 +34718,7 @@
    "ko": "구글 지도에서 보기",
    "en": "Open in Google Maps",
    "files": [
-    "TripImportSheet.swift:388"
+    "TripImportSheet.swift:392"
    ],
    "args": [],
    "targets": [
@@ -35920,9 +35920,9 @@
    "ko": "기타",
    "en": "Other",
    "files": [
-    "AITaskProducer.swift:159",
     "LedgerCore.swift:27",
-    "AssistantAIProvider.swift:37"
+    "AssistantAIProvider.swift:37",
+    "MapHomeLaunchPrompts.swift:269"
    ],
    "args": [],
    "targets": [
@@ -37636,7 +37636,7 @@
    "ko": "도착 뒤 입국·짐 찾기로 {0}분은 두세요",
    "en": "Allow {0} min after landing for arrival",
    "files": [
-    "TripImportSheet.swift:401"
+    "TripImportSheet.swift:405"
    ],
    "args": [
     "need"
@@ -37662,7 +37662,7 @@
    "ko": "도착한 계획이 없어요.",
    "en": "No plan has arrived.",
    "files": [
-    "TripImportSheet.swift:485"
+    "TripImportSheet.swift:489"
    ],
    "args": [],
    "targets": [
@@ -38491,9 +38491,9 @@
    "ko": "머문 곳",
    "en": "Place",
    "files": [
-    "AITaskProducer.swift:57",
     "AssistantActivity.swift:189",
-    "AssistantActivity.swift:275"
+    "AssistantActivity.swift:275",
+    "AITaskProducer.swift:57"
    ],
    "args": [],
    "targets": [
@@ -44208,7 +44208,7 @@
    "ko": "앞에서 이동 {0}분",
    "en": "{0} min from previous",
    "files": [
-    "TripImportSheet.swift:375"
+    "TripImportSheet.swift:376"
    ],
    "args": [
     "Int(minutes)"
@@ -44541,7 +44541,7 @@
    "ko": "앱보다 새 형식이에요. 앱을 업데이트해 주세요.",
    "en": "This format is newer than the app. Please update the app.",
    "files": [
-    "TripImportSheet.swift:527"
+    "TripImportSheet.swift:531"
    ],
    "args": [],
    "targets": [
@@ -45060,7 +45060,7 @@
    "ko": "여행 계획 JSON이 아니에요. AI가 마지막에 준 JSON 전체를 복사해 주세요.",
    "en": "This isn't trip JSON. Copy the whole JSON the AI gave at the end.",
    "files": [
-    "TripImportSheet.swift:523"
+    "TripImportSheet.swift:527"
    ],
    "args": [],
    "targets": [
@@ -45097,7 +45097,7 @@
    "ko": "여행 계획에 반영",
    "en": "Add to trip plan",
    "files": [
-    "TripImportSheet.swift:343"
+    "TripImportSheet.swift:344"
    ],
    "args": [],
    "targets": [
@@ -46632,6 +46632,20 @@
    ]
   },
   {
+   "key": "예상 요금 {0}원|Estimated fare ₩{0}",
+   "ko": "예상 요금 {0}원",
+   "en": "Estimated fare ₩{0}",
+   "files": [
+    "TripImportSheet.swift:379"
+   ],
+   "args": [
+    "fare.formatted()"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "예시|Example",
    "ko": "예시",
    "en": "Example",
@@ -48023,7 +48037,7 @@
    "ko": "위치를 찾지 못해 지도에는 표시되지 않아요",
    "en": "Location not found; not shown on the map",
    "files": [
-    "TripImportSheet.swift:383"
+    "TripImportSheet.swift:387"
    ],
    "args": [],
    "targets": [
@@ -49003,7 +49017,7 @@
    "ko": "이동 시간이 빠듯해요(약 {0}분 필요)",
    "en": "Tight move (about {0} min needed)",
    "files": [
-    "TripImportSheet.swift:400"
+    "TripImportSheet.swift:404"
    ],
    "args": [
     "need"
@@ -49809,7 +49823,7 @@
    "ko": "일정이 비어 있어요.",
    "en": "The trip has no items.",
    "files": [
-    "TripImportSheet.swift:529"
+    "TripImportSheet.swift:533"
    ],
    "args": [],
    "targets": [
@@ -51684,7 +51698,7 @@
    "ko": "지금은 반영하지 못했어요. 잠시 뒤 다시 해 주세요.",
    "en": "Couldn't add it right now. Try again in a moment.",
    "files": [
-    "TripImportSheet.swift:352"
+    "TripImportSheet.swift:353"
    ],
    "args": [],
    "targets": [
@@ -54428,7 +54442,7 @@
    "ko": "프롬프트를 복사했어요. 피클에 붙여 넣고 보내 주세요.",
    "en": "The prompt is copied. Paste it into Pickle and send.",
    "files": [
-    "TripImportSheet.swift:464"
+    "TripImportSheet.swift:468"
    ],
    "args": [],
    "targets": [
@@ -54476,7 +54490,7 @@
    "ko": "프롬프트와 피클 연결 키를 복사했어요. 피클 채팅창에 붙여 넣으면 계획이 앱으로 바로 와요.",
    "en": "The prompt and Pickle's connection key are copied. Paste them into the Pickle chat and the plan comes straight to the app.",
    "files": [
-    "TripImportSheet.swift:463"
+    "TripImportSheet.swift:467"
    ],
    "args": [],
    "targets": [
@@ -54536,7 +54550,7 @@
    "ko": "피클이 없어서 App Store를 열었어요. 설치한 뒤 다시 눌러 주세요.",
    "en": "Pickle isn't installed, so the App Store opened. Install it and tap again.",
    "files": [
-    "TripImportSheet.swift:461"
+    "TripImportSheet.swift:465"
    ],
    "args": [],
    "targets": [

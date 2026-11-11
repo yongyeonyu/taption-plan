@@ -318,6 +318,7 @@
 		B1080801000000000000A003 /* ReviewCoverageEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080801000000000000F003 /* ReviewCoverageEngine.swift */; };
 		A1L1110A0100000000000001 /* LedgerCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1110A0100000000000001 /* LedgerCore.swift */; };
 		A1T1111A0100000000000001 /* TravelGreatCircleAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1T1111A0100000000000001 /* TravelGreatCircleAdapter.swift */; };
+		A1T1111B0100000000000001 /* TravelAirportsAndFares.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1T1111B0100000000000001 /* TravelAirportsAndFares.swift */; };
 		A1L1111A0100000000000004 /* LedgerCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111A0100000000000004 /* LedgerCapture.swift */; };
 		A1L1111A0100000000000005 /* LedgerIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111A0100000000000005 /* LedgerIntents.swift */; };
 		C51A1111A010000000000002 /* SiriIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = C51A1111A010000000000001 /* SiriIntents.swift */; };
@@ -1052,6 +1053,7 @@
 		B1080801000000000000F003 /* ReviewCoverageEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewCoverageEngine.swift; sourceTree = "<group>"; };
 		F1L1110A0100000000000001 /* LedgerCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerCore.swift; sourceTree = "<group>"; };
 		F1T1111A0100000000000001 /* TravelGreatCircleAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelGreatCircleAdapter.swift; sourceTree = "<group>"; };
+		F1T1111B0100000000000001 /* TravelAirportsAndFares.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelAirportsAndFares.swift; sourceTree = "<group>"; };
 		F1L1111A0100000000000004 /* LedgerCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerCapture.swift; sourceTree = "<group>"; };
 		F1L1111A0100000000000005 /* LedgerIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerIntents.swift; sourceTree = "<group>"; };
 		C51A1111A010000000000001 /* SiriIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SiriIntents.swift; sourceTree = "<group>"; };
@@ -2082,6 +2084,7 @@
 				B1080801000000000000F003 /* ReviewCoverageEngine.swift */,
 				F1L1110A0100000000000001 /* LedgerCore.swift */,
 				F1T1111A0100000000000001 /* TravelGreatCircleAdapter.swift */,
+				F1T1111B0100000000000001 /* TravelAirportsAndFares.swift */,
 				F1L1111A0100000000000004 /* LedgerCapture.swift */,
 				F1L1111A0100000000000005 /* LedgerIntents.swift */,
 				C51A1111A010000000000001 /* SiriIntents.swift */,
@@ -2972,6 +2975,7 @@
 				B1080801000000000000A003 /* ReviewCoverageEngine.swift in Sources */,
 				A1L1110A0100000000000001 /* LedgerCore.swift in Sources */,
 				A1T1111A0100000000000001 /* TravelGreatCircleAdapter.swift in Sources */,
+				A1T1111B0100000000000001 /* TravelAirportsAndFares.swift in Sources */,
 				A1L1111A0100000000000004 /* LedgerCapture.swift in Sources */,
 				A1L1111A0100000000000005 /* LedgerIntents.swift in Sources */,
 				C51A1111A010000000000002 /* SiriIntents.swift in Sources */,
