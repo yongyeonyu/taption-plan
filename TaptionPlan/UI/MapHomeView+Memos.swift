@@ -249,7 +249,12 @@ extension MapHomeView {
             }
             }
         }
-        .frame(width: 280, alignment: .leading)
+        // 메모 목록 전체를 한 판으로 감싼다(MBG1111A01). 바깥 폭은 일정 패널과 같은 280.
+        .frame(width: 280 - 16, alignment: .leading)
+        .padding(8)
+        .background(Color.tpBackground.opacity(0.92), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay { RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Color.tpLine.opacity(0.8), lineWidth: 0.6) }
+        .shadow(color: .black.opacity(0.12), radius: 8, y: 3)
     }
 
     /// 메모를 원형 아이콘 하나로 모은다. 누르면 펼쳐서 목록을 보여 준다.
