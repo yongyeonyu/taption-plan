@@ -518,6 +518,8 @@ extension AppModel {
             readings,
             userTransitLocations: settings.userTransitLocations
         )
+        // 걸으면서도 연결돼 있던 이어폰은 하루 판정에서 차량 오디오로 보지 않는다. 저장된 원본은 그대로다(SUB1111A01).
+        readings = CarAudioTravelConfirmation.withoutWornAudio(readings, registered: Set(settings.registeredCarAudioNames))
         guard !Task.isCancelled, acceptsDataMutation() else { return false }
         let knownPlaces = snapshot.places
         // 계산은 주 스레드 밖에서 한다(RFA1105A02). 저장은 아래에서 최신 snapshot에 한 번에 한다.

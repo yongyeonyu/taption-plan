@@ -194,7 +194,7 @@ enum SubwayStationCatalog {
         return first
     }
 
-    private static let adjacency: [[Int]] = {
+    static let adjacency: [[Int]] = {
         var edges = Array(repeating: Set<Int>(), count: stations.count)
         let byLine = Dictionary(grouping: stations.indices) {
             stations[$0].lineName
@@ -1084,39 +1084,6 @@ enum SubwayStationCatalog {
     private static func routeScore(_ route: SubwayRoutePath) -> Int {
         let repeatPenalty = hasNonAdjacentStationRepeat(route) ? 10_000 : 0
         return route.stops.count - repeatPenalty
-    }
-
-    private static func shortestPath(
-        from starts: [Int],
-        to ends: [Int]
-    ) -> [Int]? {
-        let destinations = Set(ends)
-        var parents = Array(repeating: -1, count: stations.count)
-        var queue: [Int] = []
-        for start in starts where parents[start] == -1 {
-            parents[start] = start
-            queue.append(start)
-        }
-        var cursor = 0
-        while cursor < queue.count {
-            let current = queue[cursor]
-            cursor += 1
-            if destinations.contains(current) {
-                var result: [Int] = []
-                var node = current
-                while parents[node] != node {
-                    result.append(node)
-                    node = parents[node]
-                }
-                result.append(node)
-                return result.reversed()
-            }
-            for next in adjacency[current] where parents[next] == -1 {
-                parents[next] = current
-                queue.append(next)
-            }
-        }
-        return nil
     }
 
     private static func normalized(_ value: String) -> String {

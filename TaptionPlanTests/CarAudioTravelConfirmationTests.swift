@@ -69,6 +69,43 @@ final class CarAudioTravelConfirmationTests: XCTestCase {
         XCTAssertEqual(CarAudioTravelConfirmation.matchedName(in: inference.evidence[0]), "KIA K5")
     }
 
+    /// 걷는 동안 연결돼 있던 이어폰은 연결·해제가 구간과 맞아도 차로 확정하지 않는다(SUB1111A01).
+    func testHeadsetWornWhileWalkingDoesNotConfirmCar() {
+        var walk = stride(from: -10.0, through: 0, by: 0.25).map { reading(minute: $0, carAudio: "넥밴드", subwayLike: false) }
+        for index in walk.indices { walk[index].motion = .walking }
+        let ride = readings({ minute in (0...28).contains(minute) ? "넥밴드" : nil }, minutes: stride(from: 2, through: 40, by: 2))
+        let samples = walk + ride
+        let inside = samples.filter { span.contains($0.timestamp) }
+
+        XCTAssertEqual(CarAudioTravelConfirmation.wornAudioNames(in: samples), ["넥밴드"])
+        let inference = TravelModeClassifier().classify(readings: inside, inside: span, altitudeContext: samples)
+        XCTAssertFalse(CarAudioTravelConfirmation.confirms(inference.evidence), "\(inference.evidence)")
+        // 등록한 차 이름이면 걸으며 연결돼 있었어도 차다.
+        let registered = TravelModeClassifier().classify(readings: inside, inside: span, altitudeContext: samples,
+                                                         registeredCarAudioNames: ["넥밴드"])
+        XCTAssertEqual(registered.mode, .car)
+    }
+
+    /// 차에 탄 뒤에만 연결되는 차량 오디오는 걷기 표본과 겹치지 않아 그대로 차다.
+    func testCarAudioConnectedOnlyInsideTheCarIsNotWorn() {
+        var walk = stride(from: -10.0, through: 0, by: 0.25).map { reading(minute: $0, carAudio: nil, subwayLike: false) }
+        for index in walk.indices { walk[index].motion = .walking }
+        let ride = readings({ minute in (2...28).contains(minute) ? "KIA K5" : nil }, minutes: stride(from: 2, through: 40, by: 2))
+        XCTAssertTrue(CarAudioTravelConfirmation.wornAudioNames(in: walk + ride).isEmpty)
+    }
+
+    /// 잠근 구간이 이어폰으로 확정된 자동차였어도, 새 판정이 그 근거를 못 찾으면 자동차·확정을 물려받지 않는다.
+    func testLockedMatchedCarAudioIsNotInheritedWhenFreshJudgementDropsIt() {
+        var previous = TravelSegment(mode: .car, span: span, distanceMeters: 300, confidence: .high,
+                                     evidence: ["차량 오디오 연결·해제 일치 · 넥밴드"], isConfirmed: true)
+        previous.isClassificationLocked = true
+        let fresh = TravelSegment(mode: .walking, span: span, distanceMeters: 300, confidence: .high,
+                                  evidence: ["iPhone Core Motion 걷기"], isConfirmed: false)
+        let merged = ActivityClassificationLockEngine.mergingLockedTravel(existing: [previous], fresh: [fresh], inside: span)
+        XCTAssertEqual(merged.map(\.mode), [.walking])
+        XCTAssertEqual(merged.map(\.isConfirmed), [false])
+    }
+
     func testUnregisteredDeviceConnectedAllDayDoesNotConfirm() {
         let samples = readings({ _ in "홈 스피커" }, minutes: stride(from: -120, through: 150, by: 2))
         let inside = samples.filter { span.contains($0.timestamp) }

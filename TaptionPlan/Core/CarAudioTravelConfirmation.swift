@@ -33,7 +33,8 @@ enum CarAudioTravelConfirmation {
             .filter { seen.insert($0.id).inserted }
             .sorted { $0.timestamp < $1.timestamp }
         let inside = all.filter { span.contains($0.timestamp) }
-        let names = inside.compactMap(\.carAudioRouteName)
+        let worn = wornAudioNames(in: all).subtracting(registered)
+        let names = inside.compactMap(\.carAudioRouteName).filter { !worn.contains($0) }
         guard !names.isEmpty else { return nil }
         if let name = names.first(where: registered.contains) {
             return Result(name: name, isRegistered: true)
@@ -76,6 +77,44 @@ enum CarAudioTravelConfirmation {
             value.evidence.append(Result(name: name, isRegistered: true).evidence)
             return value
         }
+    }
+
+    /// 걸으면서 이만큼 연결돼 있던 기기는 차가 아니라 몸에 지닌 이어폰·넥밴드다(SUB1111A01).
+    /// 수집은 블루투스 출력 전부를 차량 오디오 후보로 남기므로, 판정 쪽에서 걸은 시간으로 가른다.
+    static let wornWhileWalking: TimeInterval = 3 * 60
+    /// 걷기 표본 사이 간격이 이보다 길면 그 사이를 걸은 시간으로 치지 않는다.
+    private static let wornSampleGap: TimeInterval = 60
+
+    /// 걷거나 뛰는 표본에 붙어 `wornWhileWalking` 넘게 이어진 기기 이름.
+    static func wornAudioNames(in readings: [SensorReading]) -> Set<String> {
+        let ordered = readings.sorted { $0.timestamp < $1.timestamp }
+        var walked: [String: TimeInterval] = [:]
+        for (previous, next) in zip(ordered, ordered.dropFirst()) {
+            guard let name = previous.carAudioRouteName, !name.isEmpty, next.carAudioRouteName == name,
+                  previous.motion == .walking || previous.motion == .running,
+                  next.motion == .walking || next.motion == .running else { continue }
+            let gap = next.timestamp.timeIntervalSince(previous.timestamp)
+            if gap > 0, gap <= wornSampleGap { walked[name, default: 0] += gap }
+        }
+        return Set(walked.filter { $0.value >= wornWhileWalking }.keys)
+    }
+
+    /// 몸에 지닌 오디오 기기 이름을 지운 표본. 등록한 차 이름은 그대로 둔다.
+    static func withoutWornAudio(_ readings: [SensorReading], registered: Set<String> = []) -> [SensorReading] {
+        let worn = wornAudioNames(in: readings).subtracting(registered)
+        guard !worn.isEmpty else { return readings }
+        return readings.map { reading in
+            guard let name = reading.carAudioRouteName, worn.contains(name) else { return reading }
+            var value = reading
+            value.carAudioRouteName = nil
+            return value
+        }
+    }
+
+    /// 잠근 구간의 미등록 기기 확정을 새 판정이 다시 찾지 못했다. 이어폰을 차로 본 옛 판정이다(SUB1111A01).
+    static func dropsStaleMatch(_ previous: TravelSegment, for candidate: TravelSegment) -> Bool {
+        func matched(_ segment: TravelSegment) -> Bool { segment.evidence.contains { $0.hasPrefix(matchedEvidencePrefix) } }
+        return matched(previous) && !matched(candidate)
     }
 
     static func confirms(_ evidence: [String]) -> Bool {

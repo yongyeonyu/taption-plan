@@ -364,6 +364,7 @@
 		A10150000000000000000001 /* SystemDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10150000000000000000001 /* SystemDiagnostics.swift */; };
 		A1000000000000000000007B /* DiagnosticsLogSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000007A /* DiagnosticsLogSupport.swift */; };
 		A1000000000000000000007C /* SubwayCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000007C /* SubwayCatalog.swift */; };
+		C1F111100000000000000004 /* SubwayCatalog+Routing.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1F111100000000000000003 /* SubwayCatalog+Routing.swift */; };
 		A10000000000000000000085 /* RouteTimelineData.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000085 /* RouteTimelineData.swift */; };
 		A100000000000000000C0DE1 /* MapHomeWBSPlayback.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000C0DE1 /* MapHomeWBSPlayback.swift */; };
 		A10000000000000000000095 /* RoutePolylineDecimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000095 /* RoutePolylineDecimator.swift */; };
@@ -1071,6 +1072,7 @@
 		5A00000000000000000000F3 /* TaptionStoreRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionStoreRepository.swift; sourceTree = "<group>"; };
 		F10150000000000000000001 /* SystemDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemDiagnostics.swift; sourceTree = "<group>"; };
 		F1000000000000000000007C /* SubwayCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubwayCatalog.swift; sourceTree = "<group>"; };
+		C1F111100000000000000003 /* SubwayCatalog+Routing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SubwayCatalog+Routing.swift"; sourceTree = "<group>"; };
 		F10000000000000000000085 /* RouteTimelineData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteTimelineData.swift; sourceTree = "<group>"; };
 		F100000000000000000C0DE1 /* MapHomeWBSPlayback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeWBSPlayback.swift; sourceTree = "<group>"; };
 		F10000000000000000000095 /* RoutePolylineDecimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutePolylineDecimator.swift; sourceTree = "<group>"; };
@@ -2076,6 +2078,7 @@
 				5B0000000000000000000B1F /* AppLockAndPIN.swift */,
 				F10150000000000000000001 /* SystemDiagnostics.swift */,
 				F1000000000000000000007C /* SubwayCatalog.swift */,
+				C1F111100000000000000003 /* SubwayCatalog+Routing.swift */,
 				F10000000000000000000085 /* RouteTimelineData.swift */,
 				F100000000000000000C0DE1 /* MapHomeWBSPlayback.swift */,
 				F10000000000000000000095 /* RoutePolylineDecimator.swift */,
@@ -2946,6 +2949,7 @@
 				5B0000000000000000000B1A /* AppLockAndPIN.swift in Sources */,
 				A10150000000000000000001 /* SystemDiagnostics.swift in Sources */,
 				A1000000000000000000007C /* SubwayCatalog.swift in Sources */,
+				C1F111100000000000000004 /* SubwayCatalog+Routing.swift in Sources */,
 				A10000000000000000000085 /* RouteTimelineData.swift in Sources */,
 				A100000000000000000C0DE1 /* MapHomeWBSPlayback.swift in Sources */,
 				A10000000000000000000095 /* RoutePolylineDecimator.swift in Sources */,

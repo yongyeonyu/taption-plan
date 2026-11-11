@@ -40,6 +40,27 @@ final class RawSensorReplayTests: XCTestCase {
             for line in RailJourneyRecognizer.rejections(readings: readings) {
                 print("REPLAY rail-reject \(line)")
             }
+            // 몸에 지닌 오디오로 본 기기, 그리고 저장된 구간을 새로 판정해 잠금과 합친 뒤 탑승을 얹은 결과(SUB1111A01).
+            print("REPLAY worn-audio \(CarAudioTravelConfirmation.wornAudioNames(in: readings).sorted().joined(separator: ","))")
+            let dayReadings = CarAudioTravelConfirmation.withoutWornAudio(readings)
+            let reclassified = day.travel.map { segment -> TravelSegment in
+                let inside = dayReadings.filter { segment.span.contains($0.timestamp) }
+                let around = dayReadings.filter { TravelModeClassifier.altitudeContextSpan(segment.span).contains($0.timestamp) }
+                let fresh = TravelModeClassifier().classify(readings: inside, inside: segment.span, altitudeContext: around)
+                var value = segment
+                value.mode = fresh.mode
+                value.evidence = fresh.evidence
+                value.isConfirmed = CarAudioTravelConfirmation.confirms(fresh.evidence)
+                value.isClassificationLocked = false
+                return value
+            }
+            let replaySpan = TimeSpan(start: day.day, end: day.day.addingTimeInterval(86_400))
+            let relocked = ActivityClassificationLockEngine.mergingLockedTravel(existing: day.travel, fresh: reclassified, inside: replaySpan)
+            let applied = RailJourneyRecognizer.applying(RailJourneyRecognizer.journeys(readings: readings), to: relocked, corrections: [])
+            for segment in applied {
+                print("REPLAY applied \(formatter.string(from: segment.span.start))–\(formatter.string(from: segment.span.end)) "
+                    + "\(segment.mode.rawValue) confirmed=\(segment.isConfirmed) evidence=\(segment.evidence.prefix(3).joined(separator: "|"))")
+            }
             // 원본 표본만으로 역 궤적 엔진이 지하철을 새로 찾는지 본다(EXP1029A02 — 자차 출근에 회색 지하철 경로).
             for detected in SubwayTravelSegmentEngine.segments(from: readings) {
                 print("REPLAY detected-subway \(formatter.string(from: detected.span.start))–\(formatter.string(from: detected.span.end)) "

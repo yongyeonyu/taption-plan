@@ -1774,10 +1774,10 @@ enum ActivityClassificationLockEngine {
                 || (previous.mode == .subway && !previous.isConfirmed
                     && (candidate.evidence.contains(TravelModeClassifier.noAltitudeChangeEvidence)
                         || TravelModeClassifier.isMotionBackedCar(candidate)))
-            if previousSubwayIsValidated,
-               !candidate.isConfirmed,
-               !isResolvedSubway,
-               !rejectsLockedSubway, UnobservedAppSpans.inheritsMode(from: previous, to: candidate) {
+            // 이어폰을 차로 본 옛 확정은 새 판정이 그 근거를 다시 찾지 못하면 물려받지 않는다(SUB1111A01).
+            if previousSubwayIsValidated, !candidate.isConfirmed, !isResolvedSubway, !rejectsLockedSubway,
+               !CarAudioTravelConfirmation.dropsStaleMatch(previous, for: candidate),
+               UnobservedAppSpans.inheritsMode(from: previous, to: candidate) {
                 value.mode = previous.mode
                 value.subwayRoute = previous.subwayRoute ?? value.subwayRoute
                 value.isConfirmed = previous.isConfirmed

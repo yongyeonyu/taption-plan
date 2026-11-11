@@ -104,6 +104,40 @@ final class RailRideLikelihoodTests: XCTestCase {
         XCTAssertTrue(RailJourneyRecognizer.journeys(readings: rail).isEmpty)
     }
 
+    /// 걸으면서도 연결돼 있던 이어폰은 차량 오디오가 아니다. 탑승 내내 연결돼 있어도 철도다(SUB1111A01).
+    func testHeadsetWornWhileWalkingDoesNotVetoRail() throws {
+        let stops = try stops()
+        let lat = stops[0].latitude!, lng = stops[0].longitude!
+        let walk = (0..<24).map { step in
+            reading(lat + Double(step) * 0.00002, lng, minute: -13 + Double(step) * 0.25, speed: 1.3, motion: .walking, car: "넥밴드")
+        }
+        var dwell = dwellAtBoarding(stops[0], minutes: 6)
+        for index in dwell.indices { dwell[index].carAudioRouteName = "넥밴드" }
+        let ride = walk + dwell + drive(stops: stops, minutesPerLeg: 4, startMinute: 0, stopAtStations: true, car: "넥밴드")
+        XCTAssertEqual(CarAudioTravelConfirmation.wornAudioNames(in: ride), ["넥밴드"])
+        XCTAssertFalse(RailJourneyRecognizer.journeys(readings: ride).isEmpty, "\(RailJourneyRecognizer.rejections(readings: ride))")
+    }
+
+    /// 지하에서 위치 하나가 먼 역으로 튀어도 그 역을 방문으로 넣지 않고 탑승을 잇는다(SUB1111A01).
+    func testSingleTeleportFixToAFarStationDoesNotBreakTheRide() throws {
+        let stops = try stops()
+        let platform = reading(stops[0].latitude!, stops[0].longitude!, minute: -7, speed: 1.2, motion: .walking)
+        var rail = [platform] + dwellAtBoarding(stops[0], minutes: 6)
+            + drive(stops: stops, minutesPerLeg: 4, startMinute: 0, stopAtStations: true)
+        let far = try XCTUnwrap(SubwayStationCatalog.route(for: ["고속터미널", "교대"])?.stops.first)
+        let middle = rail.count / 2
+        rail.insert(reading(far.latitude!, far.longitude!, minute: rail[middle].timestamp.timeIntervalSince(start) / 60 + 0.05, speed: nil), at: middle + 1)
+        let journey = try XCTUnwrap(RailJourneyRecognizer.journeys(readings: rail).first, "\(RailJourneyRecognizer.rejections(readings: rail))")
+        XCTAssertFalse(journey.stationNames.contains(far.stationName))
+        XCTAssertEqual(journey.stationNames.last, stops.last?.stationName)
+    }
+
+    /// 경로는 정거장 수가 아니라 거리와 환승으로 고른다. 마곡나루→노량진은 9호선 직통이다(SUB1111A01).
+    func testRouteBetweenStationsOnOneLinePrefersThatLine() throws {
+        let route = try XCTUnwrap(SubwayStationCatalog.route(for: ["마곡나루", "노량진"]))
+        XCTAssertEqual(route.lineNames, ["9호선"])
+    }
+
     private func rideWithLastStop() throws -> (readings: [SensorReading], last: SubwayRouteStop, minute: Double) {
         let stops = try stops()
         let platform = reading(stops[0].latitude!, stops[0].longitude!, minute: -7, speed: 1.2, motion: .walking)
