@@ -4819,7 +4819,7 @@
 "친구에게 미리 받은 돈|Collected from friends": "Collecté auprès des amis",
 "침대에 있음|In bed": "Au lit",
 "카드 결제 문자가 오면 가계부에 바로 들어가요. 읽지 못한 형식은 「붙여넣기」로 넣어 주세요.|Card payment texts go straight into the ledger. Paste any format it can't read.": "Les SMS de paiement par carte arrivent directement dans le carnet. Collez les formats qu’il ne sait pas lire.",
-"카드 결제 문자를 복사해 붙여 넣거나 영수증 사진을 고르면 채워 드려요. 오른쪽 위 ⋯ → 「결제 문자 자동으로 넣기」로 문자가 오면 바로 넣을 수도 있어요.|Paste a card payment text or pick a receipt photo to fill an entry. Use ⋯ → \"Add payment texts automatically\" to add texts as they arrive.": "Collez un SMS de paiement par carte ou choisissez une photo de reçu pour remplir une entrée. Avec ⋯ → « Ajouter les SMS de paiement automatiquement », ils s’ajoutent dès leur arrivée.",
+"카드 결제 문자를 복사해 붙여 넣거나 영수증 사진을 고르면 채워 드려요. 「결제 문자 자동으로 넣기」로 단축어를 걸면 문자가 오자마자 들어가요.|Paste a card payment text or pick a receipt photo to fill an entry. Set up \"Add payment texts automatically\" so texts go in as they arrive.": "Collez un SMS de paiement par carte ou choisissez une photo de reçu pour remplir une entrée. Configurez « Ajouter les SMS de paiement automatiquement » pour qu’ils s’ajoutent dès leur arrivée.",
 "카운터 메뉴 열기|Open counter menu": "Ouvrir le menu des compteurs",
 "카운터 위젯|Counter widget": "Widget compteur",
 "카운터|Counters": "Compteurs",

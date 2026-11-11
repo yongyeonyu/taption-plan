@@ -320706,79 +320706,79 @@
         }
       }
     },
-    "카드 결제 문자를 복사해 붙여 넣거나 영수증 사진을 고르면 채워 드려요. 오른쪽 위 ⋯ → 「결제 문자 자동으로 넣기」로 문자가 오면 바로 넣을 수도 있어요.|Paste a card payment text or pick a receipt photo to fill an entry. Use ⋯ → \"Add payment texts automatically\" to add texts as they arrive." : {
+    "카드 결제 문자를 복사해 붙여 넣거나 영수증 사진을 고르면 채워 드려요. 「결제 문자 자동으로 넣기」로 단축어를 걸면 문자가 오자마자 들어가요.|Paste a card payment text or pick a receipt photo to fill an entry. Set up \"Add payment texts automatically\" so texts go in as they arrive." : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "カード決済のメッセージを貼り付けるか、レシート写真を選ぶと入力されます。右上の ⋯ →「決済メッセージを自動で追加」で、届いたメッセージをすぐ追加することもできます。"
+            "value" : "カード決済のメッセージを貼り付けるか、レシート写真を選ぶと入力されます。「決済メッセージを自動で追加」でショートカットを設定すると、届いたらすぐ入ります。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "粘贴银行卡支付短信或选择小票照片即可填写。也可通过右上角 ⋯ →「自动添加支付短信」在收到短信时立即添加。"
+            "value" : "粘贴银行卡支付短信或选择小票照片即可填写。用「自动添加支付短信」设置快捷指令后，短信一到就会记入。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "貼上信用卡付款簡訊或選擇收據照片即可填寫。也可透過右上角 ⋯ →「自動加入付款簡訊」在收到簡訊時立即加入。"
+            "value" : "貼上信用卡付款簡訊或選擇收據照片即可填寫。用「自動加入付款簡訊」設定捷徑後，簡訊一到就會記入。"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Füge eine Kartenzahlungs-SMS ein oder wähle ein Belegfoto, um einen Eintrag auszufüllen. Über ⋯ → „Zahlungsnachrichten automatisch hinzufügen“ kommen Nachrichten direkt beim Eintreffen hinein."
+            "value" : "Füge eine Kartenzahlungs-SMS ein oder wähle ein Belegfoto, um einen Eintrag auszufüllen. Richte „Zahlungsnachrichten automatisch hinzufügen“ ein, dann kommen Nachrichten sofort hinein."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Collez un SMS de paiement par carte ou choisissez une photo de reçu pour remplir une entrée. Avec ⋯ → « Ajouter les SMS de paiement automatiquement », ils s’ajoutent dès leur arrivée."
+            "value" : "Collez un SMS de paiement par carte ou choisissez une photo de reçu pour remplir une entrée. Configurez « Ajouter les SMS de paiement automatiquement » pour qu’ils s’ajoutent dès leur arrivée."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Incolla un SMS di pagamento con carta o scegli la foto di uno scontrino per compilare una voce. Con ⋯ → «Aggiungi SMS di pagamento automaticamente» vengono aggiunti appena arrivano."
+            "value" : "Incolla un SMS di pagamento con carta o scegli la foto di uno scontrino per compilare una voce. Imposta «Aggiungi SMS di pagamento automaticamente» per inserirli appena arrivano."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pega un mensaje de pago con tarjeta o elige una foto del recibo para rellenar un registro. Con ⋯ → «Añadir mensajes de pago automáticamente» se añaden al llegar."
+            "value" : "Pega un mensaje de pago con tarjeta o elige una foto del recibo para rellenar un registro. Configura «Añadir mensajes de pago automáticamente» para que entren al llegar."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cole uma mensagem de pagamento com cartão ou escolha a foto de um recibo para preencher um registro. Em ⋯ → “Adicionar mensagens de pagamento automaticamente”, elas entram assim que chegam."
+            "value" : "Cole uma mensagem de pagamento com cartão ou escolha a foto de um recibo para preencher um registro. Configure “Adicionar mensagens de pagamento automaticamente” para que entrem assim que chegarem."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dán tin nhắn thanh toán thẻ hoặc chọn ảnh hóa đơn để điền mục. Với ⋯ → «Tự động thêm tin nhắn thanh toán», tin nhắn được thêm ngay khi đến."
+            "value" : "Dán tin nhắn thanh toán thẻ hoặc chọn ảnh hóa đơn để điền mục. Thiết lập «Tự động thêm tin nhắn thanh toán» để tin nhắn vào ngay khi đến."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tempel pesan pembayaran kartu atau pilih foto struk untuk mengisi catatan. Lewat ⋯ → “Tambah pesan pembayaran otomatis”, pesan langsung masuk saat tiba."
+            "value" : "Tempel pesan pembayaran kartu atau pilih foto struk untuk mengisi catatan. Atur “Tambah pesan pembayaran otomatis” agar pesan langsung masuk saat tiba."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "วางข้อความชำระเงินด้วยบัตรหรือเลือกรูปใบเสร็จเพื่อกรอกรายการ ใช้ ⋯ → «เพิ่มข้อความชำระเงินอัตโนมัติ» เพื่อเพิ่มทันทีเมื่อข้อความมาถึง"
+            "value" : "วางข้อความชำระเงินด้วยบัตรหรือเลือกรูปใบเสร็จเพื่อกรอกรายการ ตั้งค่า «เพิ่มข้อความชำระเงินอัตโนมัติ» เพื่อให้ข้อความเข้าทันทีเมื่อมาถึง"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "कार्ड भुगतान संदेश चिपकाएँ या रसीद की फ़ोटो चुनें, प्रविष्टि भर जाएगी। ⋯ → “भुगतान संदेश अपने-आप जोड़ें” से संदेश आते ही जुड़ जाएँगे।"
+            "value" : "कार्ड भुगतान संदेश चिपकाएँ या रसीद की फ़ोटो चुनें, प्रविष्टि भर जाएगी। “भुगतान संदेश अपने-आप जोड़ें” सेट करें तो संदेश आते ही जुड़ जाएँगे।"
           }
         }
       }

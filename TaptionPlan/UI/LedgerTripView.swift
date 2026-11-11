@@ -17,6 +17,7 @@ struct LedgerTripView: View {
             let entries = book.tripEntries(tripID).sorted { $0.occurredAt < $1.occurredAt }
             let sheet = LedgerTripMath.sheet(trip, entries: book.entries)
             List {
+            Group {
                 Section {
                     LabeledContent(language.text("기간", "Dates"), value: "\(trip.start.formatted(date: .abbreviated, time: .omitted)) – \(trip.end.formatted(date: .abbreviated, time: .omitted))")
                     LabeledContent(language.text("예산", "Budget"), value: trip.budgetKRW.map { LedgerMoney.text($0, language: language) } ?? language.text("없음", "None"))
@@ -38,6 +39,9 @@ struct LedgerTripView: View {
                 }
                 LedgerTripSheetSection(trip: trip, sheet: sheet, language: language)
             }
+            .listRowBackground(Color.tpSurface)
+        }
+        .tpListStyle()
             .refreshable { await AssistantCommandRefresh.now(language: language, manual: true) }
             .navigationTitle(trip.name)
             .navigationBarTitleDisplayMode(.inline)
@@ -252,6 +256,7 @@ struct LedgerTripForm: View {
     var body: some View {
         NavigationStack {
             Form {
+            Group {
                 Section {
                     TextField(language.text("이름 (예: 대구 여행)", "Name (e.g. Daegu trip)"), text: $trip.name)
                     DatePicker(language.text("시작", "Start"), selection: $trip.start, displayedComponents: .date)
@@ -278,6 +283,9 @@ struct LedgerTripForm: View {
                     }
                 }
             }
+            .listRowBackground(Color.tpSurface)
+        }
+        .tpListStyle()
             .navigationTitle(language.text("여행 장부", "Trip ledger"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

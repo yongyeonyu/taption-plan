@@ -4,6 +4,7 @@
 
 ## TFB1111A04 · TestFlight 308 (2026-11-11)
 
+- LDU1111A01 (2026-11-11): 가계부·여행 장부·입력·예산·정산 화면에 앱 공통 모양(크림 배경·밝은 줄·앱 글꼴·강조색), 이 달 기록을 본문에서 한 번만 걸러 날짜별로 묶음(스크롤 때 묶음마다 다시 거르던 것 제거, 달 거르기는 날짜 구간 비교), 날짜·같은 날 모두 오래된 것부터 시간순, 줄 앞에 시각, 붙여넣기·영수증 아래 「결제 문자 자동으로 넣기」 줄. 아이폰 11 LedgerTests 24건 실패 0(새 시간순 묶기 시험 포함, `build/validation/LDU1111A01/iphone11.log`), l10n 실패 0. 스크롤이 실제로 부드러운지·화면 모양은 기기에서 직접 보지 않음.
 - MBG1111A01 (2026-11-11): 메모 목록 패널 전체에 둥근 크림 배경판(92%·테두리·옅은 그림자), 바깥 폭 280 유지. 아이폰 11 Debug 빌드·관련 시험 통과(`build/validation/MBG1111A01/iphone11.log`). 화면 모양은 기기에서 직접 보지 않음.
 - AIS1111A01 (2026-11-11): AI 연결 메뉴·하위 화면 7곳(AI 연결, AI별 연결, 연결 추가, 할 수 있는 일, 한 일, 승인 확인, PIN)과 결제 문자 안내에 앱 공통 `tpListStyle()`·줄 배경 `tpSurface`. 아이폰 11 AssistantPhase3Tests·AssistantRelayTests 48건 실패 0(`build/validation/AIS1111A01/iphone11.log`). Debug 전용 `-aiConnectPreview`로 연 화면을 시뮬레이터(BOKKI-Preview)에서 캡처해 크림 배경·밝은 줄·강조색 확인(`build/validation/AIS1111A01/sim-ai-connect.png`). 아이폰 11은 네트워크 연결이라 화면 캡처를 못 함. 하위 화면들은 캡처하지 않음.
 - TFB1111A06 (2026-11-11): TestFlight 309(`release.sh --yes --request-id TFB1111A06`): 처리 `VALID`, 내부 그룹 연결·테스터 노출 확인(`build/validation/TFB1111A06/testflight-report.json`, 로그 `build/validation/tfb-309.log`). 들어간 것: 범위 고르기·고양이 위치·오늘/이번 달·전체 지출·고속도로·다리·터널 표지·여권 넘기기 보강·말풍선 10자/좌우·결제 문자 안내. 말풍선 「…」 접기(BBL1111A02)·AI 시점 안내(AIT1111A01)는 아카이브 뒤라 빠짐. 외부 그룹은 아직 안 올림.

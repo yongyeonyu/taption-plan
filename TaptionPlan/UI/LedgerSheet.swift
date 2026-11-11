@@ -25,14 +25,17 @@ struct LedgerSheet: View {
     private var book: LedgerBook { .shared }
 
     var body: some View {
-        NavigationStack(path: $path) {
+        // 이 달 기록을 한 번만 걸러 시간순으로 날짜별로 묶는다. 묶음마다 다시 거르면 스크롤이 끊겼다(LDU1111A01).
+        let groups = LedgerDayGroup.groups(monthEntries)
+        return NavigationStack(path: $path) {
             List {
+                Group {
                 summarySection
                 tripsSection
                 captureSection
-                ForEach(days, id: \.self) { day in
-                    Section(day.formatted(date: .abbreviated, time: .omitted)) {
-                        ForEach(monthEntries.filter { Calendar.autoupdatingCurrent.isDate($0.occurredAt, inSameDayAs: day) }) { entry in
+                ForEach(groups) { group in
+                    Section(group.day.formatted(date: .abbreviated, time: .omitted)) {
+                        ForEach(group.entries) { entry in
                             // 짝 기록도 여기서 고치고 지운다(LED1111A09). 그 여행 장부는 밀어서 연다.
                             Button { editing = entry } label: { LedgerRow(entry: entry, language: language) }
                                 .buttonStyle(.plain)
@@ -45,11 +48,14 @@ struct LedgerSheet: View {
                         }
                     }
                 }
-                if days.isEmpty {
+                if groups.isEmpty {
                     Text(language.text("이 달에는 기록이 없어요. + 로 더해 보세요.", "No entries this month. Tap + to add one."))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.tpSecondary)
                 }
+                }
+                .listRowBackground(Color.tpSurface)
             }
+            .tpListStyle()
             // 당겨서 AI 비서 명령을 바로 받는다(SYN1111A01).
             .refreshable { await AssistantCommandRefresh.now(language: language, manual: true) }
             .navigationTitle(language.text("가계부", "Ledger"))
@@ -111,7 +117,17 @@ struct LedgerSheet: View {
     }
 
     /// 일상 장부의 이 달: 여행 안 기록은 빼고 여행과 오간 짝 기록(경비·정산)만 담는다(LED1111A05).
-    private var monthEntries: [LedgerEntry] { book.dailyEntries.filter { LedgerBook.monthKey($0.occurredAt) == month } }
+    private var monthEntries: [LedgerEntry] {
+        guard let interval = monthInterval else { return [] }
+        return book.dailyEntries.filter { interval.contains($0.occurredAt) && $0.occurredAt != interval.end }
+    }
+
+    private var monthInterval: DateInterval? {
+        let parts = month.split(separator: "-").compactMap { Int($0) }
+        let calendar = Calendar.autoupdatingCurrent
+        guard parts.count == 2, let start = calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: 1)) else { return nil }
+        return calendar.dateInterval(of: .month, for: start)
+    }
 
     /// 이 달 첫날까지의 이월잔액.
     private var monthCarryOver: Double {
@@ -167,8 +183,12 @@ struct LedgerSheet: View {
                 }
             }
             .buttonStyle(.borderless)
+            // 단축어 자동화 안내를 메뉴 안에만 두면 찾기 어렵다(대표 질문 2026-11-11).
+            Button { isShowingShortcutGuide = true } label: {
+                Label(language.text("결제 문자 자동으로 넣기", "Add payment texts automatically"), systemImage: "message.badge")
+            }
         } footer: {
-            Text(captureNote ?? language.text("카드 결제 문자를 복사해 붙여 넣거나 영수증 사진을 고르면 채워 드려요. 오른쪽 위 ⋯ → 「결제 문자 자동으로 넣기」로 문자가 오면 바로 넣을 수도 있어요.", "Paste a card payment text or pick a receipt photo to fill an entry. Use ⋯ → \"Add payment texts automatically\" to add texts as they arrive."))
+            Text(captureNote ?? language.text("카드 결제 문자를 복사해 붙여 넣거나 영수증 사진을 고르면 채워 드려요. 「결제 문자 자동으로 넣기」로 단축어를 걸면 문자가 오자마자 들어가요.", "Paste a card payment text or pick a receipt photo to fill an entry. Set up \"Add payment texts automatically\" so texts go in as they arrive."))
         }
     }
 
@@ -188,11 +208,6 @@ struct LedgerSheet: View {
         guard let data = try? await item.loadTransferable(type: Data.self),
               let image = UIImage(data: data)?.cgImage else { return fill(nil, source: .receipt) }
         fill(LedgerReceiptReader.draft(await LedgerReceiptReader.recognize(image)), source: .receipt)
-    }
-
-    private var days: [Date] {
-        let calendar = Calendar.autoupdatingCurrent
-        return Array(Set(monthEntries.map { calendar.startOfDay(for: $0.occurredAt) })).sorted(by: >)
     }
 
     private var summarySection: some View {
@@ -253,15 +268,22 @@ struct LedgerRow: View {
             LedgerEntryIcon(entry: entry, size: 22).frame(width: 24)
             VStack(alignment: .leading, spacing: 2) {
                 Text(entry.title).lineLimit(1)
-                Text([entry.category.title(language), entry.payer, sourceText].compactMap { $0 }.joined(separator: " · "))
-                    .font(.taptionStyle(.caption)).foregroundStyle(.secondary)
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
+                    .foregroundStyle(Color.tpInk)
+                // 시각을 맨 앞에(LDU1111A01).
+                Text([entry.occurredAt.formatted(date: .omitted, time: .shortened), entry.category.title(language), entry.payer, sourceText].compactMap { $0 }.joined(separator: " · "))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
+                    .foregroundStyle(Color.tpSecondary)
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
                 Text((entry.kind == .expense ? "−" : "+") + LedgerMoney.text(entry.amount, currency: entry.currency, language: language))
-                    .foregroundStyle(entry.kind == .expense ? Color.primary : Color.green)
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold))
+                    .foregroundStyle(entry.kind == .expense ? Color.tpInk : Color.green)
                 if entry.currency != "KRW", let krw = entry.amountKRW {
-                    Text(LedgerMoney.text(krw, language: language)).font(.taptionStyle(.caption)).foregroundStyle(.secondary)
+                    Text(LedgerMoney.text(krw, language: language))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
+                        .foregroundStyle(Color.tpSecondary)
                 }
             }
         }
@@ -303,6 +325,7 @@ struct LedgerEntryForm: View {
     var body: some View {
         NavigationStack {
             Form {
+            Group {
                 if let transfer = entry.transfer {
                     transferSection(transfer)
                 } else {
@@ -338,6 +361,9 @@ struct LedgerEntryForm: View {
                     }
                 }
             }
+            .listRowBackground(Color.tpSurface)
+        }
+        .tpListStyle()
             .navigationTitle(isNew ? language.text("기록 더하기", "Add entry") : language.text("기록 고치기", "Edit entry"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -464,8 +490,12 @@ struct LedgerBudgetForm: View {
     var body: some View {
         NavigationStack {
             Form {
+            Group {
                 TextField(language.text("이 달 지출 예산(원)", "Spending budget this month (KRW)"), text: $amountText).keyboardType(.numberPad)
             }
+            .listRowBackground(Color.tpSurface)
+        }
+        .tpListStyle()
             .navigationTitle(language.text("예산", "Budget"))
             .navigationBarTitleDisplayMode(.inline)
             .onAppear { amountText = book.budget(for: period).map { String(Int($0.amountKRW)) } ?? "" }
@@ -497,6 +527,7 @@ struct LedgerSettleView: View {
     var body: some View {
         NavigationStack {
             Form {
+            Group {
                 Section {
                     TextField(language.text("함께한 사람 (쉼표로, 예: 민수, 지영)", "People (comma separated)"), text: $namesText)
                 } footer: {
@@ -517,6 +548,9 @@ struct LedgerSettleView: View {
                     LabeledContent(language.text("함께 쓴 돈", "Total spent"), value: LedgerMoney.text(LedgerBook.total(entries, .expense), language: language))
                 }
             }
+            .listRowBackground(Color.tpSurface)
+        }
+        .tpListStyle()
             .navigationTitle(language.text("정산하기", "Settle up"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button(language.text("완료", "Done")) { dismiss() } } }
@@ -581,5 +615,26 @@ struct LedgerShortcutGuide: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button(language.text("완료", "Done")) { dismiss() } } }
         }
+    }
+}
+
+/// 가계부 한 달을 날짜별로 묶는다. 날짜도, 같은 날 안도 오래된 것부터 시간순(LDU1111A01).
+struct LedgerDayGroup: Identifiable, Equatable {
+    let day: Date
+    let entries: [LedgerEntry]
+    var id: Date { day }
+
+    static func groups(_ entries: [LedgerEntry], calendar: Calendar = .autoupdatingCurrent) -> [LedgerDayGroup] {
+        let sorted = entries.sorted { $0.occurredAt == $1.occurredAt ? $0.createdAt < $1.createdAt : $0.occurredAt < $1.occurredAt }
+        var result: [LedgerDayGroup] = []
+        for entry in sorted {
+            let day = calendar.startOfDay(for: entry.occurredAt)
+            if let last = result.last, last.day == day {
+                result[result.count - 1] = LedgerDayGroup(day: day, entries: last.entries + [entry])
+            } else {
+                result.append(LedgerDayGroup(day: day, entries: [entry]))
+            }
+        }
+        return result
     }
 }

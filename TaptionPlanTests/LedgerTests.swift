@@ -466,6 +466,23 @@ final class LedgerTests: XCTestCase {
         XCTAssertNil(LedgerReceiptReader.draft(["감사합니다"]))
     }
 
+    /// LDU1111A01: 가계부 한 달은 날짜도, 같은 날 안도 오래된 것부터 시간순으로 묶인다.
+    func testLedgerDayGroupsAreChronological() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        let day1 = calendar.date(from: DateComponents(year: 2026, month: 11, day: 10, hour: 18))!
+        let day2 = calendar.date(from: DateComponents(year: 2026, month: 11, day: 11, hour: 9, minute: 40))!
+        let entries = [
+            LedgerEntry(occurredAt: day2.addingTimeInterval(2_280), amount: 1_000, title: "coffee"),
+            LedgerEntry(occurredAt: day1, amount: 5_000, title: "dinner"),
+            LedgerEntry(occurredAt: day2, amount: 900, title: "toll"),
+        ]
+        let groups = LedgerDayGroup.groups(entries, calendar: calendar)
+        XCTAssertEqual(groups.map(\.entries.count), [1, 2])
+        XCTAssertEqual(groups.flatMap(\.entries).map(\.title), ["dinner", "toll", "coffee"])
+        XCTAssertEqual(groups.first?.day, calendar.startOfDay(for: day1))
+    }
+
     /// HWY1111A01: 고속도로 통행료는 노선 번호를 찾는다. 긴 이름이 먼저고, 고속도로 낌새가 없으면 찾지 않는다.
     func testHighwayTollFindsRouteNumber() {
         XCTAssertEqual(LedgerHighway.number(in: "경인고속도로 통행료"), 120)
