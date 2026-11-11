@@ -6,6 +6,7 @@
 
 - 내용: LED1111A09·PBH1111A01·CUE1111A01·SYN1111A01~A04·PBD1111A01(장소도감 설명 합침)까지. 처음 시작한 배포는 5분 간격 변경을 넣으려고 아카이브 중에 멈췄고, 올린 번호를 되돌린 뒤 다시 돌렸다(`build/validation/tfb-308.log`, 업로드 전 중단).
 - `release.sh --yes`: 307 → 308. 산출물의 네 번들(앱·위젯·Watch·Watch 위젯) 모두 308. App Store Connect 처리 `VALID`, 「TP Taption Plan 내부 테스트」 그룹 연결·테스터 1명 노출 확인(`build/validation/TFB1111A04/testflight-report.json`, 로그 `build/validation/tfb-308b.log`).
+- 외부 그룹 `TP 지인 테스트` 연결·베타 심사 제출(대표 요청 「베타 빌드업도해」, TFB1111A05): 제출 응답 `WAITING_FOR_REVIEW`, 다시 읽으니 외부 상태 `IN_BETA_TESTING`, 그룹 빌드에 308(`build/validation/TFB1111A05/external-submit.log`). 지인 기기 설치는 확인하지 않음.
 - 기기 설치·화면 확인은 하지 않았다.
 
 ## SYN1111A04 · 평소 확인 간격 5분 (2026-11-11)
