@@ -426,7 +426,10 @@ final class MapHomeGrowthPolicyTests: XCTestCase {
         var history = MapHomeGrowthHistory.initial(for: date(2026, 11, 10), calendar: calendar)
         MapHomeGrowthPolicy.observeCurrentDay(in: &history, date: date(2026, 11, 11), qualified: false, calendar: calendar)
         XCTAssertEqual(history.season.level, 315, "a day without records still levels up")
-        XCTAssertEqual(MapHomeGrowthPolicy.level(on: date(2026, 3, 1), in: history, calendar: calendar), 60)
+        XCTAssertEqual(MapHomeGrowthPolicy.level(on: date(2026, 3, 1), in: history, calendar: calendar, now: date(2026, 11, 11)), 60)
+        // LVL1111A01: 미래 날짜는 오늘 레벨이다.
+        XCTAssertEqual(MapHomeGrowthPolicy.level(on: date(2026, 12, 25), in: history, calendar: calendar, now: date(2026, 11, 11)), 315)
+        XCTAssertEqual(MapHomeGrowthPolicy.level(on: date(2026, 11, 11), in: history, calendar: calendar, now: date(2026, 11, 11)), 315)
         MapHomeGrowthPolicy.observeCurrentDay(in: &history, date: date(2027, 1, 1), qualified: true, calendar: calendar)
         XCTAssertEqual(history.season.level, 1, "new year resets to 1")
     }

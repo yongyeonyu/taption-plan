@@ -508,8 +508,9 @@ enum MapHomeGrowthPolicy {
     }
 
     /// 그날의 집 레벨: 그해 몇째 날(HOM1111A01). 지난 날을 봐도 그날의 건물이 보인다.
-    static func level(on day: Date, in history: MapHomeGrowthHistory, calendar: Calendar) -> Int? {
-        dailyLevel(for: day, calendar: calendar)
+    /// 미래 날짜는 아직 오지 않았으므로 오늘 레벨이다(LVL1111A01, 대표 지시).
+    static func level(on day: Date, in history: MapHomeGrowthHistory, calendar: Calendar, now: Date = .now) -> Int? {
+        dailyLevel(for: calendar.startOfDay(for: day) > calendar.startOfDay(for: now) ? now : day, calendar: calendar)
     }
 
 
