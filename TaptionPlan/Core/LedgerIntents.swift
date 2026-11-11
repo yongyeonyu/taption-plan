@@ -40,6 +40,10 @@ struct AddPaymentNotificationIntent: AppIntent {
 enum PaymentTextCapture {
     static func capture(_ text: String, requiresTime: Bool, now: Date = .now) async -> String {
         let language = MapHomeLanguage.current
+        // 자동화는 결제가 아닌 문자·알림도 넘긴다. 그런 글은 넣지도 AI에게 보내지도 않는다(SMA1111A01).
+        guard LedgerMessageParser.isPaymentCandidate(text) else {
+            return language.text("가계부에 넣을 결제 문자가 아니에요.", "Not a payment message, so nothing was added.")
+        }
         guard var draft = LedgerMessageParser.parse(text, now: now), !requiresTime || draft.occurredAt != nil else {
             // 광고·안내가 아니면 연결된 AI에게 맡긴다. 번호는 가려서 보낸다.
             if !LedgerMessageParser.isNotice(text), AITaskQueue.enqueue(.paymentText, text: text, day: now) {
@@ -49,7 +53,12 @@ enum PaymentTextCapture {
             return language.text("결제 문자를 읽지 못했어요. 가계부에서 직접 넣어 주세요.", "Couldn't read the payment text. Add it in the ledger yourself.")
         }
         if draft.occurredAt == nil { draft.occurredAt = now }
-        let saved = await LedgerBook.shared.save(LedgerMessageParser.entry(draft))
+        let entry = LedgerMessageParser.entry(draft)
+        await LedgerBook.shared.load()
+        guard !LedgerMessageParser.isDuplicate(entry, in: LedgerBook.shared.entries) else {
+            return language.text("이미 가계부에 넣은 결제예요.", "That payment is already in the ledger.")
+        }
+        let saved = await LedgerBook.shared.save(entry)
         // 앱이 먼저 넣고, 연결된 AI가 가게 이름·분류·취소 연결을 다듬는다(대표 결정).
         if AITaskQueue.enqueue(.paymentText, text: text, day: saved.occurredAt, context: ["entryId": saved.id.uuidString]) {
             await AITaskQueue.upload()

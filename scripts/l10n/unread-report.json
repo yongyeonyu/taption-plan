@@ -1,5 +1,5 @@
 {
- "ui": 4530,
+ "ui": 4533,
  "catalog": 461,
  "unread": [
   {
@@ -82,7 +82,7 @@
   },
   {
    "file": "TaptionPlan/Core/LedgerIntents.swift",
-   "line": 57,
+   "line": 66,
    "ko": "saved.amount",
    "en": "saved.currency"
   },

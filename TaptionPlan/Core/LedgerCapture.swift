@@ -23,12 +23,26 @@ enum LedgerMessageParser {
         if text.contains("(광고)") || text.contains("[광고]") { return true }
         return !text.contains("승인") && notPayments.contains(where: text.contains)
     }
+    static let paymentWords = ["승인", "결제", "사용", "출금", "approved", "Approved"]
+
+    /// 단축어 자동화가 모든 문자·알림을 넘겨도 가계부에 넣을 것만 고른다(SMA1111A01): 결제 낱말과 금액이 있고 안내·광고가 아닌 글.
+    static func isPaymentCandidate(_ text: String) -> Bool {
+        text.count <= 1_000 && paymentWords.contains(where: text.contains) && !isNotice(text) && amount(text) != nil
+    }
+
+    /// 문자 자동화와 앱 알림 자동화가 같은 결제를 두 번 넘기면 하나만 남긴다. 같은 금액·통화·종류가 10분 안에 이미 있으면 같은 결제다.
+    static func isDuplicate(_ entry: LedgerEntry, in entries: [LedgerEntry]) -> Bool {
+        entries.contains {
+            $0.source == .message && $0.amount == entry.amount && $0.currency == entry.currency && $0.kind == entry.kind
+                && abs($0.occurredAt.timeIntervalSince(entry.occurredAt)) <= 600
+        }
+    }
     private static let currencies = ["USD", "JPY", "EUR", "CNY", "TWD", "HKD", "THB", "VND", "SGD", "PHP", "IDR", "GBP", "AUD", "CAD"]
 
     static func parse(_ text: String, now: Date = .now, calendar: Calendar = .autoupdatingCurrent) -> Draft? {
         let flat = text.replacingOccurrences(of: "\r", with: "\n")
         // 은행 앱 알림은 「출금」으로 온다(SHT1111A01).
-        guard flat.count <= 1_000, ["승인", "결제", "사용", "출금", "approved", "Approved"].contains(where: flat.contains),
+        guard flat.count <= 1_000, paymentWords.contains(where: flat.contains),
               !isNotice(flat) else { return nil }
         guard let money = amount(flat) else { return nil }
         let time = when(flat, now: now, calendar: calendar)

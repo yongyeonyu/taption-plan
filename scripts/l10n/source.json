@@ -2759,7 +2759,7 @@
    "ko": "{0} {1}을 가계부에 넣었어요.",
    "en": "Added {0} {1} to the ledger.",
    "files": [
-    "LedgerIntents.swift:58",
+    "LedgerIntents.swift:67",
     "SiriIntents.swift:96",
     "SiriIntents.swift:128"
    ],
@@ -3348,6 +3348,20 @@
    ],
    "args": [
     "MovementPresentation.englishTitle(for: item.mode)"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "{0} 하차|Leaving {0}",
+   "ko": "{0} 하차",
+   "en": "Leaving {0}",
+   "files": [
+    "MapHomeTimeSidebar.swift:2711"
+   ],
+   "args": [
+    "name"
    ],
    "targets": [
     "TaptionPlan"
@@ -32769,9 +32783,9 @@
    ]
   },
   {
-   "key": "「메시지」 → 「메시지 내용에 포함」에 카드사 이름이나 「승인」을 적기|Message → \"Message Contains\" → type your card company or \"approved\"",
-   "ko": "「메시지」 → 「메시지 내용에 포함」에 카드사 이름이나 「승인」을 적기",
-   "en": "Message → \"Message Contains\" → type your card company or \"approved\"",
+   "key": "「메시지」 → 「메시지 내용에 포함」에 「원」 하나만 적기(카드사마다 따로 만들 필요 없어요)|Message → \"Message Contains\" → type just the currency word your payment texts use (no need for one per card company)",
+   "ko": "「메시지」 → 「메시지 내용에 포함」에 「원」 하나만 적기(카드사마다 따로 만들 필요 없어요)",
+   "en": "Message → \"Message Contains\" → type just the currency word your payment texts use (no need for one per card company)",
    "files": [
     "BokkiShortcutsGuide.swift:16"
    ],
@@ -32822,6 +32836,18 @@
    "en": "Check that the alert field is the received notification, then Done",
    "files": [
     "BokkiShortcutsGuide.swift:30"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "「알림 내용에 포함」은 비워 두기(결제 알림은 앱이 골라요)|Leave \"Contains\" empty (the app picks out payment alerts)",
+   "ko": "「알림 내용에 포함」은 비워 두기(결제 알림은 앱이 골라요)",
+   "en": "Leave \"Contains\" empty (the app picks out payment alerts)",
+   "files": [
+    "BokkiShortcutsGuide.swift:28"
    ],
    "args": [],
    "targets": [
@@ -32982,6 +33008,18 @@
    "en": "Ledger",
    "files": [
     "LedgerSheet.swift:61"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "가계부에 넣을 결제 문자가 아니에요.|Not a payment message, so nothing was added.",
+   "ko": "가계부에 넣을 결제 문자가 아니에요.",
+   "en": "Not a payment message, so nothing was added.",
+   "files": [
+    "LedgerIntents.swift:45"
    ],
    "args": [],
    "targets": [
@@ -33881,7 +33919,7 @@
    "ko": "결제 문자를 읽지 못해 AI에게 확인을 맡겼어요.",
    "en": "Couldn't read the payment text, so it was sent to your AI to check.",
    "files": [
-    "LedgerIntents.swift:47"
+    "LedgerIntents.swift:51"
    ],
    "args": [],
    "targets": [
@@ -33893,7 +33931,7 @@
    "ko": "결제 문자를 읽지 못했어요. 가계부에서 직접 넣어 주세요.",
    "en": "Couldn't read the payment text. Add it in the ledger yourself.",
    "files": [
-    "LedgerIntents.swift:49"
+    "LedgerIntents.swift:53"
    ],
    "args": [],
    "targets": [
@@ -44583,6 +44621,18 @@
    ]
   },
   {
+   "key": "앱이 결제 문자만 골라 가계부에 넣고, 나머지 문자는 넣지도 AI에 보내지도 않아요. 같은 결제가 문자·앱 알림으로 두 번 와도 한 번만 넣고, 연결된 AI가 가게 이름·분류를 다듬어요.|The app picks out payment texts only; other texts are neither saved nor sent to AI. A payment that arrives as both a text and an app alert is saved once, and your connected AI tidies the shop name and category.",
+   "ko": "앱이 결제 문자만 골라 가계부에 넣고, 나머지 문자는 넣지도 AI에 보내지도 않아요. 같은 결제가 문자·앱 알림으로 두 번 와도 한 번만 넣고, 연결된 AI가 가게 이름·분류를 다듬어요.",
+   "en": "The app picks out payment texts only; other texts are neither saved nor sent to AI. A payment that arrives as both a text and an app alert is saved once, and your connected AI tidies the shop name and category.",
+   "files": [
+    "BokkiShortcutsGuide.swift:21"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "앱이 기록을 갱신할 때(켜져 있을 때·iOS가 허용한 백그라운드 새로 고침) 찾은 일을 알려요. 위치 '항상 허용'이 있어야 앱이 꺼져 있어도 받을 수 있어요.|Sent when the app refreshes its records (foreground or iOS-allowed background refresh). 'Always' location access lets alerts arrive while closed.",
    "ko": "앱이 기록을 갱신할 때(켜져 있을 때·iOS가 허용한 백그라운드 새로 고침) 찾은 일을 알려요. 위치 '항상 허용'이 있어야 앱이 꺼져 있어도 받을 수 있어요.",
    "en": "Sent when the app refreshes its records (foreground or iOS-allowed background refresh). 'Always' location access lets alerts arrive while closed.",
@@ -49198,6 +49248,18 @@
    ]
   },
   {
+   "key": "이미 가계부에 넣은 결제예요.|That payment is already in the ledger.",
+   "ko": "이미 가계부에 넣은 결제예요.",
+   "en": "That payment is already in the ledger.",
+   "files": [
+    "LedgerIntents.swift:59"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "이미 남긴 기록의 이름은 그대로 남습니다.|Existing records keep this name.",
    "ko": "이미 남긴 기록의 이름은 그대로 남습니다.",
    "en": "Existing records keep this name.",
@@ -53353,18 +53415,6 @@
    ]
   },
   {
-   "key": "카드 결제 문자가 오면 앱이 바로 가계부에 넣고, 연결된 AI가 가게 이름·분류를 다듬어요.|Card texts go into the ledger at once; your connected AI tidies the shop name and category.",
-   "ko": "카드 결제 문자가 오면 앱이 바로 가계부에 넣고, 연결된 AI가 가게 이름·분류를 다듬어요.",
-   "en": "Card texts go into the ledger at once; your connected AI tidies the shop name and category.",
-   "files": [
-    "BokkiShortcutsGuide.swift:21"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "카드 결제 문자를 복사해 붙여 넣거나 영수증 사진을 고르면 채워 드려요. 「결제 문자 자동으로 넣기」로 단축어를 걸면 문자가 오자마자 들어가요.|Paste a card payment text or pick a receipt photo to fill an entry. Set up \"Add payment texts automatically\" so texts go in as they arrive.",
    "ko": "카드 결제 문자를 복사해 붙여 넣거나 영수증 사진을 고르면 채워 드려요. 「결제 문자 자동으로 넣기」로 단축어를 걸면 문자가 오자마자 들어가요.",
    "en": "Paste a card payment text or pick a receipt photo to fill an entry. Set up \"Add payment texts automatically\" so texts go in as they arrive.",
@@ -54510,18 +54560,6 @@
    "en": "Required permissions",
    "files": [
     "AppShellView.swift:982"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "필요하면 「알림 내용에 포함」에 「승인」이나 「출금」 적기|Optionally set \"Contains\" to \"approved\" or \"withdrawal\"",
-   "ko": "필요하면 「알림 내용에 포함」에 「승인」이나 「출금」 적기",
-   "en": "Optionally set \"Contains\" to \"approved\" or \"withdrawal\"",
-   "files": [
-    "BokkiShortcutsGuide.swift:28"
    ],
    "args": [],
    "targets": [

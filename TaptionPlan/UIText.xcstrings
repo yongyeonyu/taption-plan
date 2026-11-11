@@ -19636,6 +19636,83 @@
         }
       }
     },
+    "{0} 하차|Leaving {0}" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0}で降車"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0}下车"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0}下車"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ausstieg: {0}"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Descente : {0}"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Discesa: {0}"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bajada: {0}"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Descida: {0}"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xuống {0}"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turun dari {0}"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลง{0}"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} से उतरना"
+          }
+        }
+      }
+    },
     "{0} 항목의 시각을 읽지 못했어요.|Couldn't read the time of item {0}." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -203666,79 +203743,79 @@
         }
       }
     },
-    "「메시지」 → 「메시지 내용에 포함」에 카드사 이름이나 「승인」을 적기|Message → \"Message Contains\" → type your card company or \"approved\"" : {
+    "「메시지」 → 「메시지 내용에 포함」에 「원」 하나만 적기(카드사마다 따로 만들 필요 없어요)|Message → \"Message Contains\" → type just the currency word your payment texts use (no need for one per card company)" : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "「メッセージ」→「メッセージに含む」にカード会社名か「承認」を入力"
+            "value" : "「メッセージ」→「メッセージに含む」に決済メッセージの通貨の語だけ入力(カード会社ごとに作る必要はありません)"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "「信息」→「信息包含」中填写发卡机构名称或「批准」"
+            "value" : "“信息”→“信息包含”只填付款短信里的货币字样(不必为每家卡公司各建一个)"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "「訊息」→「訊息包含」中填入發卡機構名稱或「核准」"
+            "value" : "「訊息」→「訊息包含」只填付款簡訊裡的貨幣字樣(不必為每家卡公司各建一個)"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "„Nachricht“ → „Nachricht enthält“ → Name des Kartenanbieters oder „genehmigt“ eingeben"
+            "value" : "Nachricht → „Nachricht enthält“ → nur das Währungswort deiner Zahlungs-SMS eingeben (nicht je Kartenanbieter einzeln)"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "« Message » → « Le message contient » → saisissez le nom de votre carte ou « approuvé »"
+            "value" : "Message → « Le message contient » → saisissez seulement le mot de la devise de vos SMS de paiement (inutile d’en créer un par émetteur)"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "«Messaggio» → «Il messaggio contiene» → scrivi il nome della carta o «approvato»"
+            "value" : "Messaggio → «Il messaggio contiene» → scrivi solo la parola della valuta dei tuoi SMS di pagamento (non serve uno per emittente)"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "«Mensaje» → «El mensaje contiene» → escribe el nombre de tu tarjeta o «aprobado»"
+            "value" : "Mensaje → «El mensaje contiene» → escribe solo la palabra de la moneda de tus SMS de pago (no hace falta uno por emisor)"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "“Mensagem” → “Mensagem contém” → digite o nome do cartão ou “aprovado”"
+            "value" : "Mensagem → “A mensagem contém” → digite só a palavra da moeda dos seus SMS de pagamento (não precisa de um por emissor)"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "«Tin nhắn» → «Tin nhắn chứa» → nhập tên thẻ hoặc «phê duyệt»"
+            "value" : "Tin nhắn → “Tin nhắn chứa” → chỉ nhập từ chỉ tiền tệ trong tin nhắn thanh toán (không cần tạo riêng cho từng hãng thẻ)"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "“Pesan” → “Pesan Berisi” → ketik nama kartu atau “disetujui”"
+            "value" : "Pesan → “Pesan Berisi” → ketik kata mata uang di SMS pembayaran saja (tak perlu satu per penerbit kartu)"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "«ข้อความ» → «ข้อความมี» → พิมพ์ชื่อบัตรหรือ «อนุมัติ»"
+            "value" : "ข้อความ → “ข้อความมี” → พิมพ์แค่คำสกุลเงินที่อยู่ใน SMS การชำระเงิน (ไม่ต้องสร้างแยกตามบริษัทบัตร)"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "“संदेश” → “संदेश में शामिल” → कार्ड कंपनी का नाम या “स्वीकृत” लिखें"
+            "value" : "संदेश → “संदेश में शामिल” → भुगतान SMS में आने वाला मुद्रा शब्द ही लिखें (हर कार्ड कंपनी के लिए अलग नहीं)"
           }
         }
       }
@@ -204047,6 +204124,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "जाँचें कि अलर्ट वाले खाने में मिली सूचना है, फिर हो गया"
+          }
+        }
+      }
+    },
+    "「알림 내용에 포함」은 비워 두기(결제 알림은 앱이 골라요)|Leave \"Contains\" empty (the app picks out payment alerts)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「通知に含む」は空のまま(決済通知はアプリが選びます)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“通知包含”留空(付款通知由 App 挑选)"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「通知包含」留空(付款通知由 App 挑選)"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "„Enthält“ leer lassen (die App wählt Zahlungsmitteilungen aus)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Laissez « Contient » vide (l’app choisit les alertes de paiement)"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lascia vuoto «Contiene» (l’app sceglie gli avvisi di pagamento)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deja «Contiene» vacío (la app elige los avisos de pago)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deixe “Contém” vazio (o app escolhe os avisos de pagamento)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Để trống “Chứa” (ứng dụng tự chọn thông báo thanh toán)"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biarkan “Berisi” kosong (app memilih notifikasi pembayaran)"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เว้น “มี” ว่างไว้ (แอปเลือกการแจ้งเตือนการชำระเงินเอง)"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“शामिल” खाली छोड़ें (भुगतान सूचनाएँ ऐप चुनता है)"
           }
         }
       }
@@ -205048,6 +205202,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "खर्च खाता"
+          }
+        }
+      }
+    },
+    "가계부에 넣을 결제 문자가 아니에요.|Not a payment message, so nothing was added." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "決済メッセージではないため、追加しませんでした。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不是付款信息,未添加。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不是付款訊息,未加入。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Zahlungsnachricht, daher nichts hinzugefügt."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce n’est pas un message de paiement, rien n’a été ajouté."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Non è un messaggio di pagamento, non è stato aggiunto nulla."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No es un mensaje de pago; no se añadió nada."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não é uma mensagem de pagamento; nada foi adicionado."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không phải tin nhắn thanh toán nên không thêm gì."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bukan pesan pembayaran, jadi tidak ditambahkan."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ไม่ใช่ข้อความการชำระเงิน จึงไม่ได้เพิ่ม"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "यह भुगतान संदेश नहीं है, इसलिए कुछ नहीं जोड़ा।"
           }
         }
       }
@@ -274506,6 +274737,83 @@
         }
       }
     },
+    "앱이 결제 문자만 골라 가계부에 넣고, 나머지 문자는 넣지도 AI에 보내지도 않아요. 같은 결제가 문자·앱 알림으로 두 번 와도 한 번만 넣고, 연결된 AI가 가게 이름·분류를 다듬어요.|The app picks out payment texts only; other texts are neither saved nor sent to AI. A payment that arrives as both a text and an app alert is saved once, and your connected AI tidies the shop name and category." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリは決済メッセージだけを選んで家計簿に入れ、ほかのメッセージは保存もAI送信もしません。同じ決済がSMSとアプリ通知の両方で届いても1回だけ入れ、連携したAIが店名と分類を整えます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App 只挑出付款短信记入账本,其他短信既不保存也不发送给 AI。同一笔付款同时以短信和 App 通知到达也只记一次,已连接的 AI 会整理店名和分类。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App 只挑出付款簡訊記入帳本,其他簡訊既不儲存也不傳給 AI。同一筆付款同時以簡訊和 App 通知送達也只記一次,已連結的 AI 會整理店名和分類。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die App übernimmt nur Zahlungsnachrichten ins Haushaltsbuch; andere Nachrichten werden weder gespeichert noch an die KI gesendet. Kommt eine Zahlung als SMS und als App-Mitteilung, wird sie nur einmal gespeichert, und deine verbundene KI ordnet Geschäftsname und Kategorie."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’app ne garde que les messages de paiement pour le carnet de dépenses ; les autres ne sont ni enregistrés ni envoyés à l’IA. Un paiement reçu par SMS et par alerte d’app n’est enregistré qu’une fois, et votre IA connectée range le commerce et la catégorie."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’app prende solo i messaggi di pagamento per il registro spese; gli altri non vengono salvati né inviati all’IA. Un pagamento arrivato sia via SMS sia come avviso dell’app viene salvato una volta, e la tua IA collegata sistema esercente e categoria."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La app toma solo los mensajes de pago para el libro de gastos; los demás no se guardan ni se envían a la IA. Si un pago llega por SMS y por aviso de app, se guarda una vez, y tu IA conectada ordena el comercio y la categoría."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O app pega só as mensagens de pagamento para o livro de gastos; as outras não são salvas nem enviadas à IA. Um pagamento que chega por SMS e por aviso do app é salvo uma vez, e sua IA conectada ajusta o estabelecimento e a categoria."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ứng dụng chỉ chọn tin nhắn thanh toán để ghi vào sổ chi tiêu; tin khác không được lưu cũng không gửi cho AI. Cùng một khoản đến qua cả tin nhắn và thông báo ứng dụng chỉ được ghi một lần, và AI đã kết nối sẽ chỉnh tên cửa hàng và danh mục."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App hanya mengambil pesan pembayaran ke buku pengeluaran; pesan lain tidak disimpan maupun dikirim ke AI. Pembayaran yang datang lewat SMS dan notifikasi app hanya disimpan sekali, dan AI yang terhubung merapikan nama toko dan kategori."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แอปเลือกเฉพาะข้อความการชำระเงินลงบัญชีรายจ่าย ข้อความอื่นไม่บันทึกและไม่ส่งให้ AI การชำระเงินเดียวกันที่มาทั้งทาง SMS และการแจ้งเตือนแอปจะบันทึกครั้งเดียว และ AI ที่เชื่อมไว้จะจัดชื่อร้านและหมวดหมู่ให้"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ऐप सिर्फ़ भुगतान संदेश खाता-बही में डालता है; बाकी संदेश न सहेजे जाते हैं न AI को भेजे जाते हैं। एक ही भुगतान SMS और ऐप सूचना दोनों से आए तो एक बार ही सहेजा जाता है, और जुड़ा AI दुकान का नाम और श्रेणी ठीक करता है।"
+          }
+        }
+      }
+    },
     "앱이 기록을 갱신할 때(켜져 있을 때·iOS가 허용한 백그라운드 새로 고침) 찾은 일을 알려요. 위치 '항상 허용'이 있어야 앱이 꺼져 있어도 받을 수 있어요.|Sent when the app refreshes its records (foreground or iOS-allowed background refresh). 'Always' location access lets alerts arrive while closed." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -302226,6 +302534,83 @@
         }
       }
     },
+    "이미 가계부에 넣은 결제예요.|That payment is already in the ledger." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この決済はすでに家計簿にあります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这笔付款已在账本中。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這筆付款已在帳本中。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Zahlung ist bereits im Haushaltsbuch."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce paiement est déjà dans le carnet de dépenses."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questo pagamento è già nel registro spese."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ese pago ya está en el libro de gastos."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esse pagamento já está no livro de gastos."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Khoản thanh toán này đã có trong sổ chi tiêu."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pembayaran ini sudah ada di buku pengeluaran."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "การชำระเงินนี้อยู่ในบัญชีรายจ่ายแล้ว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "यह भुगतान पहले से खाता-बही में है।"
+          }
+        }
+      }
+    },
     "이미 남긴 기록의 이름은 그대로 남습니다.|Existing records keep this name." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -326789,83 +327174,6 @@
         }
       }
     },
-    "카드 결제 문자가 오면 앱이 바로 가계부에 넣고, 연결된 AI가 가게 이름·분류를 다듬어요.|Card texts go into the ledger at once; your connected AI tidies the shop name and category." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "カード決済メッセージが届くとアプリがすぐ家計簿に追加し、接続したAIが店名・分類を整えます。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "收到刷卡短信时应用会立即记入账本，已连接的AI会整理商家名称和分类。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "收到刷卡簡訊時App會立即記入帳本，已連接的AI會整理商家名稱和分類。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Karten-SMS landen sofort im Haushaltsbuch; deine KI ordnet Geschäft und Kategorie."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Les messages de carte entrent aussitôt ; votre IA connectée affine le commerce et la catégorie."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "I messaggi della carta entrano subito; la tua IA collegata sistema negozio e categoria."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Los mensajes de tarjeta entran al instante; tu IA conectada ajusta el comercio y la categoría."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mensagens do cartão entram na hora; sua IA conectada ajusta a loja e a categoria."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tin nhắn thẻ được ghi ngay; AI đã kết nối chỉnh tên cửa hàng và danh mục."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pesan kartu langsung masuk; AI yang terhubung merapikan nama toko dan kategori."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ข้อความบัตรจะถูกบันทึกทันที AI ที่เชื่อมต่อจะปรับชื่อร้านและหมวดหมู่"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "कार्ड संदेश तुरंत बही में जाते हैं; जुड़ा AI दुकान का नाम और श्रेणी ठीक करता है।"
-          }
-        }
-      }
-    },
     "카드 결제 문자를 복사해 붙여 넣거나 영수증 사진을 고르면 채워 드려요. 「결제 문자 자동으로 넣기」로 단축어를 걸면 문자가 오자마자 들어가요.|Paste a card payment text or pick a receipt photo to fill an entry. Set up \"Add payment texts automatically\" so texts go in as they arrive." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -333869,83 +334177,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ज़रूरी अनुमतियाँ"
-          }
-        }
-      }
-    },
-    "필요하면 「알림 내용에 포함」에 「승인」이나 「출금」 적기|Optionally set \"Contains\" to \"approved\" or \"withdrawal\"" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "必要なら「通知内容に含む」に「承認」や「出金」を入力"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "如有需要，在“通知内容包含”中填“批准”或“取款”"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "如有需要，在「通知內容包含」填入「核准」或「提款」"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Optional „genehmigt“ oder „Abbuchung“ bei „Enthält“ eintragen"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Si besoin, mettez « approuvé » ou « retrait » dans « Contient »"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Se vuoi, scrivi \"approvato\" o \"prelievo\" in \"Contiene\""
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Si quieres, pon \"aprobado\" o \"retiro\" en \"Contiene\""
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Se quiser, coloque \"aprovado\" ou \"saque\" em \"Contém\""
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nếu cần, nhập \"phê duyệt\" hoặc \"rút tiền\" vào \"Chứa\""
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jika perlu, isi \"disetujui\" atau \"penarikan\" pada \"Berisi\""
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ถ้าต้องการ ใส่ \"อนุมัติ\" หรือ \"ถอน\" ในช่อง \"มีข้อความ\""
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "चाहें तो \"शामिल है\" में \"स्वीकृत\" या \"निकासी\" लिखें"
           }
         }
       }

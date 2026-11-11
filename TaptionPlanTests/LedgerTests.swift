@@ -647,3 +647,22 @@ final class RailRidePhaseTests: XCTestCase {
         XCTAssertEqual(labeled[1].startMinute, 607)
     }
 }
+
+final class PaymentAutomationFilterTests: XCTestCase {
+    func testOnlyPaymentMessagesAreCandidates() {
+        XCTAssertTrue(LedgerMessageParser.isPaymentCandidate("[Web발신]\n신한카드(1234)승인 홍*동 12,000원(일시불)11/10 12:30 스타벅스"))
+        XCTAssertTrue(LedgerMessageParser.isPaymentCandidate("KB국민은행 출금 12,000원 스타벅스강남 잔액 345,000원"))
+        XCTAssertFalse(LedgerMessageParser.isPaymentCandidate("엄마: 저녁 먹었어? 반찬 3만원어치 샀어"))
+        XCTAssertFalse(LedgerMessageParser.isPaymentCandidate("인증번호 [123456]을 입력해 주세요"))
+        XCTAssertFalse(LedgerMessageParser.isPaymentCandidate("[광고] 신한카드 승인 이벤트 10,000원"))
+        XCTAssertFalse(LedgerMessageParser.isPaymentCandidate("현대카드 11월 결제 예정 금액 320,000원"))
+    }
+
+    func testSamePaymentFromTextAndAlertIsSavedOnce() {
+        let at = Date(timeIntervalSince1970: 1_800_000_000)
+        let saved = LedgerEntry(occurredAt: at, amount: 12_000, title: "스타벅스", source: .message)
+        XCTAssertTrue(LedgerMessageParser.isDuplicate(LedgerEntry(occurredAt: at.addingTimeInterval(120), amount: 12_000, title: "결제", source: .message), in: [saved]))
+        XCTAssertFalse(LedgerMessageParser.isDuplicate(LedgerEntry(occurredAt: at.addingTimeInterval(3_600), amount: 12_000, title: "스타벅스", source: .message), in: [saved]))
+        XCTAssertFalse(LedgerMessageParser.isDuplicate(LedgerEntry(occurredAt: at, amount: 4_500, title: "스타벅스", source: .message), in: [saved]))
+    }
+}

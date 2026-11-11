@@ -13,19 +13,19 @@ struct BokkiShortcutsGuideSections: View {
                 title: language.text("결제 문자 자동으로 넣기", "Payment texts, automatically"),
                 steps: [
                     language.text("단축어 앱 → 아래 「자동화」 → 오른쪽 위 +", "Shortcuts app → Automation → + at the top right"),
-                    language.text("「메시지」 → 「메시지 내용에 포함」에 카드사 이름이나 「승인」을 적기", "Message → \"Message Contains\" → type your card company or \"approved\""),
+                    language.text("「메시지」 → 「메시지 내용에 포함」에 「원」 하나만 적기(카드사마다 따로 만들 필요 없어요)", "Message → \"Message Contains\" → type just the currency word your payment texts use (no need for one per card company)"),
                     language.text("「즉시 실행」을 고르고 다음", "Choose \"Run Immediately\", then Next"),
                     language.text("「새로운 빈 자동화」 → 동작 검색에서 「결제 문자 넣기」(BOKKI Plan)", "New Blank Automation → search actions for \"Add payment text\" (BOKKI Plan)"),
                     language.text("「문자 내용」 칸이 받은 메시지로 채워졌는지 보고 완료", "Check that the text field is the received message, then Done"),
                 ],
-                footer: language.text("카드 결제 문자가 오면 앱이 바로 가계부에 넣고, 연결된 AI가 가게 이름·분류를 다듬어요.", "Card texts go into the ledger at once; your connected AI tidies the shop name and category.")
+                footer: language.text("앱이 결제 문자만 골라 가계부에 넣고, 나머지 문자는 넣지도 AI에 보내지도 않아요. 같은 결제가 문자·앱 알림으로 두 번 와도 한 번만 넣고, 연결된 AI가 가게 이름·분류를 다듬어요.", "The app picks out payment texts only; other texts are neither saved nor sent to AI. A payment that arrives as both a text and an app alert is saved once, and your connected AI tidies the shop name and category.")
             )
             guideSection(
                 title: language.text("결제 앱 알림 자동으로 넣기", "Payment app alerts, automatically"),
                 steps: [
                     language.text("단축어 앱 → 「자동화」 → +", "Shortcuts app → Automation → +"),
                     language.text("「알림」 → 「앱 푸시」에서 은행·카드 앱 고르기(iOS 27부터)", "Notification → App Push → choose your bank and card apps (iOS 27 or later)"),
-                    language.text("필요하면 「알림 내용에 포함」에 「승인」이나 「출금」 적기", "Optionally set \"Contains\" to \"approved\" or \"withdrawal\""),
+                    language.text("「알림 내용에 포함」은 비워 두기(결제 알림은 앱이 골라요)", "Leave \"Contains\" empty (the app picks out payment alerts)"),
                     language.text("「즉시 실행」 → 동작 「결제 알림 넣기」(BOKKI Plan)", "Run Immediately → action \"Add payment alert\" (BOKKI Plan)"),
                     language.text("「알림 내용」 칸이 받은 알림으로 채워졌는지 보고 완료", "Check that the alert field is the received notification, then Done"),
                 ],
