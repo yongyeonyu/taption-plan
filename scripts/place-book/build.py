@@ -233,7 +233,7 @@ def write_icons(ids):
 
 
 def svg(body):
-    return ('<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">'
+    return ('<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 96 96">'
             '<g stroke-linecap="round" stroke-linejoin="round">'
             f'<ellipse cx="48" cy="82" rx="35" ry="6" fill="#A8B483"/>{body}</g></svg>')
 
