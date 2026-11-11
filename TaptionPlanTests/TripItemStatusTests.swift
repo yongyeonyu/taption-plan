@@ -1,6 +1,7 @@
 import XCTest
 @testable import TaptionPlan
 import CoreLocation
+import SwiftUI
 import TaptionPlanEngine
 
 /// TRP1110A09: 여행 일정 상태 예약·계획·미정.
@@ -360,5 +361,122 @@ final class TravelTripUnitTests: XCTestCase {
         XCTAssertEqual(choices.map(\.name), ["방콕", "가평"])
         XCTAssertEqual(choices[0].end, calendar.date(from: DateComponents(year: 2026, month: 12, day: 6)))
         XCTAssertEqual(choices[1].start, choices[1].end, "일정이 없는 당일치기도 고를 수 있다")
+    }
+}
+
+/// TVB1112A01: 여행 모드 지구본. 번들 경계 자료, 여행지 찾기, 그림이 실제로 그려지는지(캡처는 임시 폴더에 남긴다).
+final class TravelModeGlobeTests: XCTestCase {
+    func testBundledRegionsLoadAndCurrencyFollowsCountry() {
+        XCTAssertEqual(TravelModeRegions.countries.count, 240)
+        XCTAssertEqual(TravelModeRegions.provinces.count, 17)
+        XCTAssertEqual(TravelModeRegions.currency(forCountry: "JP"), "JPY")
+        XCTAssertEqual(TravelModeRegions.currency(forCountry: "TH"), "THB")
+        XCTAssertEqual(TravelModeRegions.currency(forCountry: "FR"), "EUR")
+    }
+
+    func testDestinationComesFromTripFieldsOrItsPins() {
+        let daegu = TravelModeDestination(trip: TravelTrip(id: "d", title: "대구", startDay: "2026-11-17", endDay: "2026-11-18", countryCode: "KR", regionName: "대구광역시"), stops: [])
+        XCTAssertEqual(daegu.country?.code, "KR")
+        XCTAssertEqual(daegu.province?.code, "KR-27")
+        XCTAssertNotNil(daegu.point)
+        // 예전에 가져온 여행은 나라가 없다. 핀이 있는 곳으로 알아낸다.
+        let day = Date(timeIntervalSince1970: 1_795_046_400)
+        let stops = [
+            TravelPlanStop(id: UUID(), title: "오사카성", latitude: 34.687, longitude: 135.526, day: day, order: 1, planID: nil, tripID: "o"),
+            TravelPlanStop(id: UUID(), title: "도톤보리", latitude: 34.669, longitude: 135.501, day: day, order: 0, planID: nil, tripID: "o"),
+            TravelPlanStop(id: UUID(), title: "다른 여행", latitude: 13.7, longitude: 100.5, day: day, order: 0, planID: nil, tripID: "x"),
+        ]
+        let osaka = TravelModeDestination(trip: TravelTrip(id: "o", title: "오사카", startDay: "2026-11-19", endDay: "2026-11-22"), stops: stops)
+        XCTAssertEqual(osaka.country?.code, "JP")
+        XCTAssertNil(osaka.province)
+        XCTAssertEqual(osaka.stops.map(\.title), ["도톤보리", "오사카성"])
+        XCTAssertEqual(osaka.point?.x ?? 0, 135.5135, accuracy: 0.001)
+        let unknown = TravelModeDestination(trip: TravelTrip(id: "u", title: "모름", startDay: "2026-11-19", endDay: "2026-11-19"), stops: [])
+        XCTAssertNil(unknown.point, "어디인지 모르면 깃발을 꽂지 않는다")
+    }
+
+    /// 회전·확대 60장을 그리는 데 걸리는 시간. 한 장이 화면 한 번(60Hz 기준 16.7ms) 안에 그려지는지 본다.
+    @MainActor
+    func testFlightFramesRenderFastEnough() throws {
+        let japan = try XCTUnwrap(TravelModeRegions.countries.first { $0.code == "JP" })
+        let box = japan.mainBox
+        let fitted = TravelGlobeCamera.fitting(west: box.west, south: box.south, east: box.east, north: box.north, width: 390, height: 760, padding: 56, minimumRadius: 148, maximumRadius: 60_000)
+        let flight = TravelGlobeFlight(start: TravelGlobeCamera(longitude: 20, latitude: 10, radius: 148), targetLongitude: 135.5, targetLatitude: 34.7, stops: [fitted])
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 2
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 390, height: 760), format: format)
+        let frames = 60
+        var slowest = 0.0
+        let started = CFAbsoluteTimeGetCurrent()
+        for index in 0..<frames {
+            let camera = flight.camera(at: flight.duration * Double(index) / Double(frames - 1))
+            let frameStart = CFAbsoluteTimeGetCurrent()
+            _ = renderer.image { _ in
+                let view = Canvas { context, size in
+                    TravelGlobeRenderer.draw(&context, size: size, camera: camera, highlight: ["JP"], flag: .init(longitude: 135.5, latitude: 34.7, text: "D-24", progress: 1), pins: [])
+                }.frame(width: 390, height: 760)
+                let image = ImageRenderer(content: view)
+                image.scale = 2
+                image.uiImage?.draw(at: .zero)
+            }
+            slowest = max(slowest, CFAbsoluteTimeGetCurrent() - frameStart)
+        }
+        let average = (CFAbsoluteTimeGetCurrent() - started) / Double(frames)
+        print(String(format: "TVB1112A01 globe frame average %.2f ms, slowest %.2f ms", average * 1_000, slowest * 1_000))
+        // 그림 파일로 굽는 값이라 화면에 그릴 때보다 느리다. 넉넉한 상한만 둔다.
+        XCTAssertLessThan(average, 0.05)
+    }
+
+    func testPrecomputedVectorsMatchTheCameraProjection() throws {
+        let japan = try XCTUnwrap(TravelModeRegions.countries.first { $0.code == "JP" })
+        let vectors = try XCTUnwrap(TravelModeRegions.vectors["JP"])
+        XCTAssertEqual(vectors.map(\.count), japan.rings.map(\.count))
+        let camera = TravelGlobeCamera(longitude: 100, latitude: 20, radius: 300)
+        let lambda = camera.longitude * .pi / 180, phi = camera.latitude * .pi / 180
+        let east = SIMD3(-sin(lambda), cos(lambda), 0), north = SIMD3(-sin(phi) * cos(lambda), -sin(phi) * sin(lambda), cos(phi))
+        for (point, vector) in zip(japan.rings[0], vectors[0]) {
+            let expected = camera.project(longitude: point.x, latitude: point.y)
+            guard expected.isFront else { continue }
+            XCTAssertEqual((vector * east).sum() * 300, expected.point.x, accuracy: 1e-6)
+            XCTAssertEqual(-(vector * north).sum() * 300, expected.point.y, accuracy: 1e-6)
+        }
+    }
+
+    @MainActor
+    func testGlobeRendersLandFlagAndPins() throws {
+        let size = CGSize(width: 390, height: 760)
+        let japan = try XCTUnwrap(TravelModeRegions.countries.first { $0.code == "JP" })
+        let daegu = try XCTUnwrap(TravelModeRegions.provinces.first { $0.code == "KR-27" })
+        func fit(_ box: (west: Double, south: Double, east: Double, north: Double)) -> TravelGlobeCamera {
+            TravelGlobeCamera.fitting(west: box.west, south: box.south, east: box.east, north: box.north, width: 390, height: 760, padding: 56, minimumRadius: 148, maximumRadius: 60_000)
+        }
+        let shots: [(String, TravelGlobeCamera, Set<String>, TravelGlobeRenderer.Flag?, [TravelGlobeRenderer.Pin])] = [
+            ("1-globe", TravelGlobeCamera(longitude: 127, latitude: 28, radius: 148), [], nil, []),
+            ("2-flag", TravelGlobeCamera(longitude: 135.5, latitude: 34.7, radius: 148), ["JP"], .init(longitude: 135.5, latitude: 34.7, text: "D-24", progress: 1), []),
+            ("3-japan", fit(japan.mainBox), ["JP"], .init(longitude: 135.5, latitude: 34.7, text: "여행 중", progress: 1), []),
+            ("4-daegu", fit(daegu.mainBox), ["KR-27"], nil, [.init(longitude: 128.60, latitude: 35.87, label: "1"), .init(longitude: 128.65, latitude: 35.83, label: "2")]),
+        ]
+        // 시뮬레이터에서는 저장소의 검증 폴더에 캡처를 남긴다(기기에서는 쓸 수 없어 건너뛴다).
+        let folder = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("build/validation/TVB1112A01/shots", isDirectory: true)
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        for (name, camera, highlight, flag, pins) in shots {
+            let renderer = ImageRenderer(content: Canvas { context, canvas in
+                TravelGlobeRenderer.draw(&context, size: canvas, camera: camera, highlight: highlight, flag: flag, pins: pins)
+            }.frame(width: size.width, height: size.height))
+            renderer.scale = 2
+            let image = try XCTUnwrap(renderer.uiImage, name)
+            let data = try XCTUnwrap(image.pngData())
+            try? data.write(to: folder.appendingPathComponent("\(name).png"))
+            // 한 색으로만 칠해진 그림이 아닌지(땅과 바다가 함께 있는지) 가운데 줄의 색 수로 본다.
+            let pixels = try XCTUnwrap(image.cgImage?.dataProvider?.data as Data?)
+            let row = Int(image.size.height * image.scale / 2) * (image.cgImage?.bytesPerRow ?? 0)
+            var colors = Set<UInt32>()
+            for x in stride(from: 0, to: Int(image.size.width * image.scale), by: 4) {
+                let offset = row + x * 4
+                colors.insert(UInt32(pixels[offset]) << 16 | UInt32(pixels[offset + 1]) << 8 | UInt32(pixels[offset + 2]))
+            }
+            XCTAssertGreaterThanOrEqual(colors.count, 2, "\(name): 땅과 바다가 그려져야 한다")
+        }
     }
 }

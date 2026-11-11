@@ -656,6 +656,8 @@
 		B10807000000000000000107 /* TravelMapTripEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10807000000000000000007 /* TravelMapTripEditorSheet.swift */; };
 		B10807000000000000000108 /* MapHomeRangeSampleLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10807000000000000000008 /* MapHomeRangeSampleLoader.swift */; };
 		B10807000000000000000109 /* ne-basemap.bin in Resources */ = {isa = PBXBuildFile; fileRef = B10807000000000000000009 /* ne-basemap.bin */; };
+		B1TV11120000000000000102 /* ne-regions.bin in Resources */ = {isa = PBXBuildFile; fileRef = B1TV11120000000000000002 /* ne-regions.bin */; };
+		B1TV11120000000000000101 /* TravelModeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV11120000000000000001 /* TravelModeView.swift */; };
 		B1080700000000000000010A /* ne-cities.tsv in Resources */ = {isa = PBXBuildFile; fileRef = B1080700000000000000000A /* ne-cities.tsv */; };
 		B1080700000000000000010B /* TravelMapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080700000000000000000B /* TravelMapTests.swift */; };
 		B1080700000000000000010C /* TravelMapVideoRenderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080700000000000000000C /* TravelMapVideoRenderTests.swift */; };
@@ -1381,6 +1383,8 @@
 		B10807000000000000000007 /* TravelMapTripEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelMapTripEditorSheet.swift; sourceTree = "<group>"; };
 		B10807000000000000000008 /* MapHomeRangeSampleLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeRangeSampleLoader.swift; sourceTree = "<group>"; };
 		B10807000000000000000009 /* ne-basemap.bin */ = {isa = PBXFileReference; lastKnownFileType = file; name = ne-basemap.bin; path = MapData/ne-basemap.bin; sourceTree = "<group>"; };
+		B1TV11120000000000000002 /* ne-regions.bin */ = {isa = PBXFileReference; lastKnownFileType = file; name = "ne-regions.bin"; path = "MapData/ne-regions.bin"; sourceTree = "<group>"; };
+		B1TV11120000000000000001 /* TravelModeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelModeView.swift; sourceTree = "<group>"; };
 		B1080700000000000000000A /* ne-cities.tsv */ = {isa = PBXFileReference; lastKnownFileType = text; name = ne-cities.tsv; path = MapData/ne-cities.tsv; sourceTree = "<group>"; };
 		B1080700000000000000000B /* TravelMapTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelMapTests.swift; sourceTree = "<group>"; };
 		B1080700000000000000000C /* TravelMapVideoRenderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelMapVideoRenderTests.swift; sourceTree = "<group>"; };
@@ -1553,6 +1557,7 @@
 				F1BGM1104A0200000000009 /* 11-travel-bag.m4a */,
 				F1BGM1104A0200000000010 /* 12-cat-parade.m4a */,
 				B10807000000000000000009 /* ne-basemap.bin */,
+				B1TV11120000000000000002 /* ne-regions.bin */,
 				B1080700000000000000000A /* ne-cities.tsv */,
 				F1000000000000000B110302 /* SUIT-Medium.otf */,
 				F1000000000000000B110303 /* SUIT-SemiBold.otf */,
@@ -1889,6 +1894,7 @@
 				F1PLR1104A0100000000001 /* MapHomeRangePlayback.swift */,
 				F1PLR1104A0100000000002 /* MapHomeRangeVideoOverlay.swift */,
 				B10807000000000000000001 /* TravelMapBaseMap.swift */,
+				B1TV11120000000000000001 /* TravelModeView.swift */,
 				B10807000000000000000002 /* TravelMapCityCatalog.swift */,
 				B10807000000000000000003 /* TravelMapTrip.swift */,
 				B10807000000000000000004 /* TravelMapVideoPlan.swift */,
@@ -2516,6 +2522,7 @@
 				A1BGM1104A0200000000009 /* 11-travel-bag.m4a in Resources */,
 				A1BGM1104A0200000000010 /* 12-cat-parade.m4a in Resources */,
 				B10807000000000000000109 /* ne-basemap.bin in Resources */,
+				B1TV11120000000000000102 /* ne-regions.bin in Resources */,
 				B1080700000000000000010A /* ne-cities.tsv in Resources */,
 				A1000000000000000B110302 /* SUIT-Medium.otf in Resources */,
 				A1000000000000000B110303 /* SUIT-SemiBold.otf in Resources */,
@@ -2856,6 +2863,7 @@
 				A1PLR1104A0100000000001 /* MapHomeRangePlayback.swift in Sources */,
 				A1PLR1104A0100000000002 /* MapHomeRangeVideoOverlay.swift in Sources */,
 				B10807000000000000000101 /* TravelMapBaseMap.swift in Sources */,
+				B1TV11120000000000000101 /* TravelModeView.swift in Sources */,
 				B10807000000000000000102 /* TravelMapCityCatalog.swift in Sources */,
 				B10807000000000000000103 /* TravelMapTrip.swift in Sources */,
 				B10807000000000000000104 /* TravelMapVideoPlan.swift in Sources */,

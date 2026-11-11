@@ -507,6 +507,8 @@ struct MapHomeView: View {
     @State var passportStartPage = 0
     /// 여행 계획 모드. 미래 날짜만 고른다.
     @State var isTravelMode = false
+    /// 여행 모드 화면(TVB1112A01): 지구본과 여행 목록, 여행별 화면.
+    @State var isTravelHomePresented = false
     @State var isTravelPlanPresented = false
 
     @State var stickmanActionMemo = MapHomeMemo<MapHomeStickmanActionKey, MapHomeStickmanAction>()

@@ -633,6 +633,14 @@ extension MapHomeView {
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
         }
+        .fullScreenCover(isPresented: $isTravelHomePresented) {
+            TravelModeView(model: model, language: language) { day in
+                // 일정 편집은 계획표가 생길 때까지 지도 여행 모드에서 한다.
+                isTravelHomePresented = false
+                model.selectedDate = day
+                isTravelMode = true
+            }
+        }
         .fullScreenCover(isPresented: $isPlaceBookPresented) {
             MapHomePlaceBookSheet(
                 source: model.placeBookVisitSource,

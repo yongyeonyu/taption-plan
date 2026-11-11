@@ -948,12 +948,12 @@ extension MapHomeView {
     /// 돋보기 옆 여행 모드 전환. 지금 모드를 보여 준다: 현실은 집, 여행은 비행기(대표 지시).
     var travelModeButton: some View {
         Button {
-            let entering = !isTravelMode
-            withAnimation(.easeInOut(duration: 0.2)) { isTravelMode = entering }
-            if entering {
-                keepSelectedDateInFuture()
-            } else {
+            // 집 단추는 여행 화면(지구본)을 연다. 지도 여행 모드에 있을 때는 일상으로 돌아간다(TVB1112A01).
+            if isTravelMode {
+                withAnimation(.easeInOut(duration: 0.2)) { isTravelMode = false }
                 model.selectedDate = .now
+            } else {
+                isTravelHomePresented = true
             }
         } label: {
             TaptionBarIcon(systemImage: isTravelMode ? "airplane" : "house.fill", size: 25)
