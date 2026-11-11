@@ -5428,6 +5428,20 @@ final class MapHomeStartupCameraTests: XCTestCase {
         )
     }
 
+    /// 센서로 정할 수 없는 상세 17개는 기본 목록에서 빠져 「직접 추가」로 가고, 일정 제목으로는 그대로 붙는다(DTL1111A01).
+    func testUserAddedDetailsLeaveTheDefaultListButCalendarStillSetsThem() {
+        let userAdded = RecordClassificationCatalog.categories.flatMap(\.details).filter { $0.userAdded == true }.map(\.id)
+        XCTAssertEqual(userAdded.count, 17)
+        XCTAssertFalse(MapHomeCategoryDetailRows.details(for: "hobby").contains { $0.id == "hobby.reading" })
+        XCTAssertTrue(MapHomeCategoryDetailRows.userAddedDetails(for: "hobby").contains { $0.id == "hobby.reading" })
+        XCTAssertTrue(MapHomeCategoryDetailRows.details(for: "work").contains { $0.id == "work.meeting" })
+        XCTAssertTrue(MapHomeCategoryDetailRows.userAddedDetails(for: "movement").isEmpty)
+        XCTAssertEqual(CalendarTitleClassification.ruleDetailID(for: "독서 모임"), "hobby.reading")
+        XCTAssertTrue(CalendarTitleClassification.selectableDetailIDs.contains("hobby.reading"))
+        // 예전 기록의 상세 이름은 계속 읽힌다.
+        XCTAssertEqual(RecordClassificationCatalog.detailTitle(categoryID: "hobby", behavior: "reading"), "독서")
+    }
+
     /// 한 대분류 안의 상세끼리는 무늬가 겹치지 않고, 기본 상세는 무늬가 없다(DTP1111A01).
     func testDetailPatternsAreDistinctWithinEachCategory() {
         for category in RecordClassificationCatalog.categories {

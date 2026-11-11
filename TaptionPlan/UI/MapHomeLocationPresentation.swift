@@ -1126,7 +1126,16 @@ struct MapHomeCategoryDetailRows: View {
     let language: MapHomeLanguage
     let accessoryID: String?
 
+    /// 기본 상세 목록. 센서로 정할 수 없는 상세는 `userAddedDetails`로 따로 둔다(DTL1111A01).
     static func details(for categoryID: String) -> [RecordClassificationDetail] {
+        allDetails(for: categoryID).filter { $0.userAdded != true }
+    }
+
+    static func userAddedDetails(for categoryID: String) -> [RecordClassificationDetail] {
+        allDetails(for: categoryID).filter { $0.userAdded == true }
+    }
+
+    private static func allDetails(for categoryID: String) -> [RecordClassificationDetail] {
         guard categoryID != "unconfirmed" else { return [] }
         return RecordClassificationCatalog.categories.first { $0.id == categoryID }?.details ?? []
     }

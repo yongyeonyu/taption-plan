@@ -19,7 +19,8 @@
           "title": "멍때리기",
           "englishTitle": "Zoning out",
           "behavior": "zoningOut",
-          "systemImage": "shippingbox.fill"
+          "systemImage": "shippingbox.fill",
+          "userAdded": true
         },
         {
           "id": "activity.shower",
@@ -33,28 +34,32 @@
           "title": "친구 만남",
           "englishTitle": "Friends",
           "behavior": "friends",
-          "systemImage": "person.2.fill"
+          "systemImage": "person.2.fill",
+          "userAdded": true
         },
         {
           "id": "activity.date",
           "title": "데이트",
           "englishTitle": "Date",
           "behavior": "dating",
-          "systemImage": "heart.fill"
+          "systemImage": "heart.fill",
+          "userAdded": true
         },
         {
           "id": "activity.family",
           "title": "가족",
           "englishTitle": "Family",
           "behavior": "family",
-          "systemImage": "figure.2.and.child.holdinghands"
+          "systemImage": "figure.2.and.child.holdinghands",
+          "userAdded": true
         },
         {
           "id": "activity.phoneCall",
           "title": "통화",
           "englishTitle": "Phone call",
           "behavior": "phoneCall",
-          "systemImage": "phone.fill"
+          "systemImage": "phone.fill",
+          "userAdded": true
         }
       ]
     },
@@ -141,35 +146,40 @@
           "title": "독서",
           "englishTitle": "Reading",
           "behavior": "reading",
-          "systemImage": "book.closed.fill"
+          "systemImage": "book.closed.fill",
+          "userAdded": true
         },
         {
           "id": "hobby.game",
           "title": "게임",
           "englishTitle": "Games",
           "behavior": "gaming",
-          "systemImage": "gamecontroller.fill"
+          "systemImage": "gamecontroller.fill",
+          "userAdded": true
         },
         {
           "id": "hobby.music",
           "title": "음악",
           "englishTitle": "Music",
           "behavior": "music",
-          "systemImage": "music.note"
+          "systemImage": "music.note",
+          "userAdded": true
         },
         {
           "id": "hobby.video",
           "title": "영상 보기",
           "englishTitle": "Watching videos",
           "behavior": "video",
-          "systemImage": "play.rectangle.fill"
+          "systemImage": "play.rectangle.fill",
+          "userAdded": true
         },
         {
           "id": "hobby.pet",
           "title": "반려동물 돌보기",
           "englishTitle": "Pet care",
           "behavior": "petCare",
-          "systemImage": "pawprint.fill"
+          "systemImage": "pawprint.fill",
+          "userAdded": true
         }
       ]
     },
@@ -337,7 +347,8 @@
           "englishTitle": "Recovery",
           "behavior": "recovery",
           "systemImage": "bed.double.fill",
-          "automaticOnly": false
+          "automaticOnly": false,
+          "userAdded": true
         },
         {
           "id": "health.medication",
@@ -345,7 +356,8 @@
           "englishTitle": "Medication",
           "behavior": "medication",
           "systemImage": "pills.fill",
-          "automaticOnly": false
+          "automaticOnly": false,
+          "userAdded": true
         },
         {
           "id": "health.meditation",
@@ -353,7 +365,8 @@
           "englishTitle": "Meditation",
           "behavior": "meditation",
           "systemImage": "figure.mind.and.body",
-          "automaticOnly": false
+          "automaticOnly": false,
+          "userAdded": true
         },
         {
           "id": "health.hospital",
@@ -391,28 +404,32 @@
           "title": "빨래",
           "englishTitle": "Laundry",
           "behavior": "laundry",
-          "systemImage": "washer.fill"
+          "systemImage": "washer.fill",
+          "userAdded": true
         },
         {
           "id": "housework.groceries",
           "title": "장보기",
           "englishTitle": "Groceries",
           "behavior": "groceries",
-          "systemImage": "cart.fill"
+          "systemImage": "cart.fill",
+          "userAdded": true
         },
         {
           "id": "housework.cooking",
           "title": "요리",
           "englishTitle": "Cooking",
           "behavior": "cooking",
-          "systemImage": "frying.pan"
+          "systemImage": "frying.pan",
+          "userAdded": true
         },
         {
           "id": "housework.dishes",
           "title": "설거지",
           "englishTitle": "Dishes",
           "behavior": "dishes",
-          "systemImage": "sink.fill"
+          "systemImage": "sink.fill",
+          "userAdded": true
         }
       ]
     },

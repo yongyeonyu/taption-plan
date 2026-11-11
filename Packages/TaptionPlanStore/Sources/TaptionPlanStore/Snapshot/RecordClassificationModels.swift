@@ -116,6 +116,8 @@ public struct RecordClassificationDetail: Codable, Identifiable, Sendable {
     public var behavior: String
     public var systemImage: String
     public var automaticOnly: Bool?
+    /// 센서로 정할 수 없는 상세. 기본 목록에서 빠지고 사용자가 직접 추가할 때·일정 제목·AI로만 붙는다(DTL1111A01).
+    public var userAdded: Bool?
 }
 
 /// 앱·위젯·테스트가 함께 읽는 유일한 일과/상세활동 카탈로그다. 원본은

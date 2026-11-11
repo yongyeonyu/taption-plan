@@ -117,6 +117,18 @@ extension MapHomeNLEClipEditor {
                     Label(detail.localizedTitle(language), systemImage: detail.systemImage)
                 }
             }
+            if let owner = detailOwner, !MapHomeCategoryDetailRows.userAddedDetails(for: owner.option.categoryID).isEmpty {
+                // 센서로 알 수 없는 상세는 직접 고를 때만 붙는다(DTL1111A01).
+                Section(language.text("직접 추가", "Add your own")) {
+                    ForEach(MapHomeCategoryDetailRows.userAddedDetails(for: owner.option.categoryID)) { detail in
+                        Button {
+                            applyDetail(title: detailTitle(detail), behavior: detail.behavior)
+                        } label: {
+                            Label(detail.localizedTitle(language), systemImage: detail.systemImage)
+                        }
+                    }
+                }
+            }
             if !dayEvents.isEmpty {
                 Section(language.text("일정에서 고르기", "From calendar")) {
                     ForEach(dayEvents) { event in

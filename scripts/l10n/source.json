@@ -51592,6 +51592,18 @@
    ]
   },
   {
+   "key": "직접 추가|Add your own",
+   "ko": "직접 추가",
+   "en": "Add your own",
+   "files": [
+    "MapHomeNLEDetailLane.swift:122"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "직접|You",
    "ko": "직접",
    "en": "You",
