@@ -38,6 +38,17 @@
 - 대표 화면(10:52): 빨간 선 위(제목·장소 등록 요청·닫기·「찍은 도장 · 남은 곳」)를 고정 머리로. 머리를 ScrollView 밖 VStack 위로 옮기고, 나라·지역 고르기 줄부터 스크롤된다.
 - 아이폰 11 실기기: 앱 Debug 빌드와 `InkWashThemeTests` 59건(통과 57, 건너뜀 2, 실패 0, `build/validation/PBH1111A01/iphone11-2.xcresult`). 첫 실행은 시험 인자를 잘못 넘겨 xcodebuild가 시작하지 않음(`iphone11.log`). 화면은 기기에서 직접 보지 않았다.
 
+## PBD1111A01 · 장소도감 지도 아래 설명 (2026-11-11)
+
+- 원인: 도감 항목에 설명 자료가 없고 `inlineMap`은 지도와 「큰 지도에서 보기」만 그렸다.
+- 고침: 장소 id별 한·영 설명 777건(`scripts/place-book/descriptions.json` → `descriptions.py` → `MapHomePlaceBookDescriptions.swift`)을 `MapHomePlaceBookEntry.summary`로 읽어 지도 아래(`taptionFixed` 14pt, `tpSecondary`)에 그림, 비어 있으면 그리지 않음. 12개 언어는 `extract.py`(새 키 777) → 번역 → `check.py` → `generate.py`. 설명은 일반적으로 확실한 사실만 쓰도록 했고 AI가 작성·번역했다(사람 검수 없음, LNG1104A01과 같은 제한). 고유 이름 점검 때문에 「춘향전」 문장은 5개 언어에 「(Chunhyang)」을 붙였다.
+- 단위 시험: 시뮬레이터 `InkWashThemeTests` 통과, 새 `testPlaceBookDescriptionsCoverEveryPlace`(모든 장소에 한·영 설명·영어 중복 없음·없는 id는 빈 글·서울 항목 전부 summary 있음) 통과(`build/validation/PBD1111A01/app-tests.log`).
+- `check.py`: 실패 0(긴 문구 3은 기존과 같은 고유 이름). 번역 숫자 대조로 줄 어긋남 없음을 확인(불일치는 5·18, 1100 같은 표기 차이).
+- 구조 지표: `architecture-metrics.py --check` 통과. 새 파일 pbxproj 4줄.
+- 앱 Debug 빌드(generic iOS) 성공(`build/validation/PBD1111A01/app-build.log`).
+- 메인 합치기(2026-11-11): `test.md`·`source.json` 충돌만 정리(source.json은 다시 뽑음, check 실패 0). 아이폰 11 실기기 `InkWashThemeTests`·`AssistantRelayTests`·`LedgerTests` 95건(통과 93, 건너뜀 2, 실패 0, `build/validation/PBD1111A01/iphone11-merge.xcresult`).
+- 한계: 화면은 기기에서 직접 보지 않음. `UIText.xcstrings`는 생성물이라 키 순서 때문에 diff가 크지만 키는 777개 늘었을 뿐 빠진 것 없음.
+
 ## LED1111A09 · 가계부 모든 기록 고치기·지우기 (2026-11-11)
 
 - 원인: 예산 이체·정산 짝 기록은 동기화가 늘 다시 써서 일상 목록에서는 여행 장부로만 열리고 여행 장부에서는 눌리지 않았다. 메모에서 생긴 기록은 지워도 메모를 고치면 다시 생겼다. 목록에 밀어서 지우기가 없었다.

@@ -1,5 +1,5 @@
 {
- "ui": 3662,
+ "ui": 4439,
  "catalog": 461,
  "unread": [
   {
@@ -538,33 +538,51 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomePlaceBook.swift",
-   "line": 72,
+   "line": 75,
    "ko": "$0.name",
    "en": "$0.englishName"
   },
   {
    "file": "TaptionPlan/UI/MapHomePlaceBook.swift",
-   "line": 77,
+   "line": 80,
    "ko": "place.name",
    "en": "place.englishName"
   },
   {
    "file": "TaptionPlan/UI/MapHomePlaceBook.swift",
-   "line": 116,
+   "line": 84,
+   "ko": "place.id",
+   "en": "language"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomePlaceBook.swift",
+   "line": 120,
    "ko": "name",
    "en": "englishName"
   },
   {
    "file": "TaptionPlan/UI/MapHomePlaceBook.swift",
-   "line": 270,
+   "line": 274,
    "ko": "name",
    "en": "englishName"
   },
   {
    "file": "TaptionPlan/UI/MapHomePlaceBook.swift",
-   "line": 275,
+   "line": 279,
    "ko": "airport.name",
    "en": "airport.englishName"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomePlaceBookDescriptions.swift",
+   "line": 793,
+   "ko": "for id: String",
+   "en": "MapHomeLanguage"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomePlaceBookDescriptions.swift",
+   "line": 794,
+   "ko": "$0.ko",
+   "en": "$0.english"
   },
   {
    "file": "TaptionPlan/UI/MapHomeSettingsSheets.swift",

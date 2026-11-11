@@ -9,6 +9,8 @@ struct MapHomePlaceBookEntry: Identifiable, Equatable {
     let subtitle: String
     let glyph: String
     let artworkName: String
+    /// 지도 아래에 보일 짧은 설명(PBD1111A01). 없으면 아무것도 그리지 않는다.
+    var summary = ""
     private let storedFirstVisit: Date?
     /// 방문한 날들(오래된 순). 여러 번 가면 도장이 쌓인다.
     var visitDates: [Date] = []
@@ -23,12 +25,13 @@ struct MapHomePlaceBookEntry: Identifiable, Equatable {
 
     var isVisited: Bool { firstVisit != nil }
 
-    init(id: String, title: String, subtitle: String, glyph: String, artworkName: String, firstVisit: Date?, visitDates: [Date] = [], pins: [MapHomePlaceBookPin] = [], usesPassportStamp: Bool = false, stampCountry: String = "kr", stampPlace: String = "") {
+    init(id: String, title: String, subtitle: String, glyph: String, artworkName: String, summary: String = "", firstVisit: Date?, visitDates: [Date] = [], pins: [MapHomePlaceBookPin] = [], usesPassportStamp: Bool = false, stampCountry: String = "kr", stampPlace: String = "") {
         self.id = id
         self.title = title
         self.subtitle = subtitle
         self.glyph = glyph
         self.artworkName = artworkName
+        self.summary = summary
         self.storedFirstVisit = firstVisit
         self.visitDates = visitDates
         self.pins = pins
@@ -78,6 +81,7 @@ struct MapHomePlaceBookState: Equatable {
                 subtitle: place.countryCode.map { MapHomePlaceBookMenu.countryName($0, language: language) } ?? regionNames[place.region] ?? "",
                 glyph: place.stampGlyph,
                 artworkName: place.artworkName,
+                summary: MapHomePlaceBookDescriptions.text(for: place.id, language: language),
                 firstVisit: nil,
                 visitDates: allVisits[place.id] ?? [],
                 pins: place.pins(language: language),
@@ -638,6 +642,15 @@ struct MapHomePlaceBookSheet: View {
             }
             .frame(height: 260)
             .clipShape(RoundedRectangle(cornerRadius: TaptionRadius.card, style: .continuous))
+            if !entry.summary.isEmpty {
+                Text(entry.summary)
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.body), weight: .regular))
+                    .foregroundStyle(Color.tpSecondary)
+                    .lineSpacing(3)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 4)
+            }
             Button {
                 if entry.pins.count > 1 { airportChoice = entry } else if let pin = entry.pins.first { onSelect(pin) }
             } label: {
