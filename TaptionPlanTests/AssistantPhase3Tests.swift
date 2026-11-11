@@ -327,7 +327,7 @@ final class AssistantPhase3Tests: XCTestCase {
         }
         for app in TripImportAIApp.allCases { XCTAssertEqual(app.fallbackURL, app.provider.appStoreURL) }
         XCTAssertEqual(AssistantAIProvider.pickle.planBadge(.korean), "무료")
-        XCTAssertEqual(AssistantAIProvider.featured, [.pickle, .chatGPT, .claude, .gemini])
+        XCTAssertEqual(AssistantAIProvider.featured, [.pickle, .chatGPT, .claude, .gemini, .cue])
     }
 
     func testOAuthCodeParsingCapsAtTenMinutes() {

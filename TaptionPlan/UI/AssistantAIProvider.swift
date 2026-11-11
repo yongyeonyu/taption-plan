@@ -24,8 +24,8 @@ enum AssistantAIProvider: String, CaseIterable, Identifiable, Codable, Sendable 
 
     var id: String { rawValue }
 
-    /// 튜토리얼과 「AI 연결」 맨 위에 함께 보이는 넷(AIR1110A04).
-    static let featured: [Self] = [.pickle, .chatGPT, .claude, .gemini]
+    /// 튜토리얼과 「AI 연결」 맨 위에 함께 보이는 AI(AIR1110A04, Cue는 AIC1111A01).
+    static let featured: [Self] = [.pickle, .chatGPT, .claude, .gemini, .cue]
 
     func title(_ language: MapHomeLanguage) -> String {
         switch self {

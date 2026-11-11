@@ -68,7 +68,7 @@ struct AssistantProviderRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
-                Text(provider.title(language)).font(.taptionStyle(.body, weight: .semibold))
+                Text(provider.title(language)).font(.taptionStyle(.subheadline, weight: .medium))
                 if let badge = provider.planBadge(language) {
                     Text(badge)
                         .font(.taptionStyle(.caption2, weight: .bold))
@@ -93,7 +93,10 @@ struct AssistantProviderRow: View {
                 Button(language.text("연결", "Connect"), action: onConnect)
                     .accessibilityIdentifier("assistantConnect.\(provider.rawValue)")
             }
+            // 대표 지시(AIC1111A01): 단추 글자를 작고 굵지 않게. 튜토리얼과 메뉴가 같은 줄을 쓴다.
+            .font(.taptionStyle(.footnote, weight: .regular))
             .buttonStyle(.bordered)
+            .controlSize(.small)
         }
         .padding(.vertical, 2)
         .task { installed = provider.isInstalled }
@@ -159,6 +162,7 @@ struct AssistantProviderView: View {
             .listRowBackground(Color.tpSurface)
         }
         .tpListStyle()
+        .font(.taptionStyle(.subheadline))
         .navigationTitle(provider.title(language))
         .navigationBarTitleDisplayMode(.inline)
         .disabled(isWorking)
@@ -601,12 +605,12 @@ struct AssistantProviderListSection: View {
             ForEach(AssistantAIProvider.featured) { provider in
                 AssistantProviderRow(provider: provider, language: language, isConnected: store.isConnected(provider)) { onConnect(provider) }
             }
-            AssistantProviderRow(provider: .cue, language: language, isConnected: store.isConnected(.cue)) { onConnect(.cue) }
             Button(language.text("기타 AI (웹 요청)", "Other AI (web requests)")) { onConnect(.other) }
+                .font(.taptionStyle(.subheadline, weight: .regular))
         } header: {
-            Text(language.text("AI 고르기", "Choose an AI"))
+            Text(language.text("AI 고르기", "Choose an AI")).font(.taptionStyle(.footnote, weight: .medium))
         } footer: {
-            Text(AssistantAIProvider.planFootnote(language))
+            Text(AssistantAIProvider.planFootnote(language)).font(.taptionStyle(.caption))
         }
     }
 }

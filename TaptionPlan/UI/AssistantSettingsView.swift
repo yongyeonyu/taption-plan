@@ -49,6 +49,8 @@ struct AssistantSettingsView: View {
             .listRowBackground(Color.tpSurface)
         }
         .tpListStyle()
+        // 대표 지시(AIC1111A01): 메뉴 「AI 연결」 글자를 한 단계 작게.
+        .font(.taptionStyle(.subheadline))
             .navigationTitle(language.text("AI 연결", "AI connections"))
             .navigationBarTitleDisplayMode(.inline)
             .onChange(of: selected) { _, next in
