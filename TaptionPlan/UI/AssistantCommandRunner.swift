@@ -195,13 +195,45 @@ final class AssistantInbox {
     }
 }
 
-/// 앱이 켜져 있는 동안 명령을 확인하는 간격(SYN1111A01). 주 키는 하루 2,000회 한도라
-/// 복귀 직후·새 명령 뒤 2분은 10초, 10분까지 30초, 그 뒤는 2분마다 본다.
+/// 앱이 켜져 있는 동안 명령을 확인하는 간격(SYN1111A03, 대표 결정).
+/// AI와 대화 중이면 빠르게(10초, 저전력 20초, 과열 60초), 그 밖에는 10분마다 본다.
+/// 대화 중: AI가 5분 안에 왔고 「대화 끝」을 보내지 않았거나, 앱에서 직접 새로고침한 뒤 2분.
+@MainActor
 enum AssistantCommandPolling {
-    static func interval(sinceActivity elapsed: TimeInterval) -> TimeInterval {
-        if elapsed < 120 { return 10 }
-        if elapsed < 600 { return 30 }
-        return 120
+    /// 서버가 `GET /command` 응답 머리에 준 값.
+    struct Signal: Equatable {
+        /// AI가 마지막으로 온 지 몇 초. 온 적 없으면 nil.
+        var seenAgo: TimeInterval?
+        var ended: Bool
+        var receivedAt: Date
+    }
+
+    nonisolated static let idleInterval: TimeInterval = 600
+    nonisolated static let aiIdleTimeout: TimeInterval = 300
+    nonisolated static let manualWindow: TimeInterval = 120
+
+    static var signal: Signal?
+    static var manualAt: Date?
+
+    nonisolated static func signal(from response: HTTPURLResponse, now: Date = .now) -> Signal? {
+        guard let text = response.value(forHTTPHeaderField: "x-ai-seen-ago"), let ago = TimeInterval(text) else { return nil }
+        return Signal(seenAgo: ago < 0 ? nil : ago, ended: response.value(forHTTPHeaderField: "x-ai-ended") == "1", receivedAt: now)
+    }
+
+    nonisolated static func isConversation(signal: Signal?, manualAt: Date?, now: Date = .now) -> Bool {
+        if let manualAt, now.timeIntervalSince(manualAt) < manualWindow { return true }
+        guard let signal, !signal.ended, let ago = signal.seenAgo else { return false }
+        return ago + now.timeIntervalSince(signal.receivedAt) < aiIdleTimeout
+    }
+
+    nonisolated static func interval(conversation: Bool, lowPower: Bool, thermal: ProcessInfo.ThermalState) -> TimeInterval {
+        guard conversation else { return idleInterval }
+        if thermal == .serious || thermal == .critical { return 60 }
+        return lowPower ? 20 : 10
+    }
+
+    static func nextInterval(now: Date = .now, info: ProcessInfo = .processInfo) -> TimeInterval {
+        interval(conversation: isConversation(signal: signal, manualAt: manualAt, now: now), lowPower: info.isLowPowerModeEnabled, thermal: info.thermalState)
     }
 }
 
@@ -211,8 +243,10 @@ enum AssistantCommandRefresh {
     static weak var model: AppModel?
 
     /// 명령을 받아 반영하고 알림을 띄운다. 새 명령이 있었으면 true. 429는 기다리지 않는다.
+    /// `manual`(현재 위치 단추·당겨서 새로고침)이면 빠른 확인을 다시 시작한다.
     @discardableResult
-    static func now(language: MapHomeLanguage = .current) async -> Bool {
+    static func now(language: MapHomeLanguage = .current, manual: Bool = false) async -> Bool {
+        if manual { AssistantCommandPolling.manualAt = .now }
         guard let model else { return false }
         let result = await TripRelay.$singleAttempt.withValue(true) { await AssistantCommandRunner.run(model: model) }
         switch result {

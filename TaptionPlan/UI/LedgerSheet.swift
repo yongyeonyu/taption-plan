@@ -49,7 +49,7 @@ struct LedgerSheet: View {
                 }
             }
             // 당겨서 AI 비서 명령을 바로 받는다(SYN1111A01).
-            .refreshable { await AssistantCommandRefresh.now(language: language) }
+            .refreshable { await AssistantCommandRefresh.now(language: language, manual: true) }
             .navigationTitle(language.text("가계부", "Ledger"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

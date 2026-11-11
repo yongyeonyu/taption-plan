@@ -206,15 +206,18 @@ extension MapHomeView {
             Task { await checkTripRelay() }
         }
         .task { await checkTripRelay() }
-        // 켜져 있는 동안 AI 비서 명령을 주기적으로 받는다(SYN1111A01). 복귀하면 처음부터 다시 잰다.
+        // 켜져 있는 동안 AI 비서 명령을 받는다(SYN1111A03). AI와 대화 중이면 10초, 아니면 10분.
+        // 10초마다 깨어 간격만 다시 본다(네트워크 없음). 직접 새로고침하면 다음 깸에 바로 빨라진다.
         .task(id: scenePhase == .active) {
             guard scenePhase == .active else { return }
-            var lastActivity = Date.now
+            var lastFetch = Date.now
             while !Task.isCancelled {
-                let wait = AssistantCommandPolling.interval(sinceActivity: Date.now.timeIntervalSince(lastActivity))
-                try? await Task.sleep(for: .seconds(wait))
+                try? await Task.sleep(for: .seconds(10))
                 guard !Task.isCancelled else { return }
-                if await AssistantCommandRefresh.now(language: language) { lastActivity = .now }
+                let now = Date.now
+                guard now.timeIntervalSince(lastFetch) >= AssistantCommandPolling.nextInterval(now: now) - 1 else { continue }
+                lastFetch = now
+                await AssistantCommandRefresh.now(language: language)
             }
         }
         .overlay(alignment: .top) { tripClipboardBanner }

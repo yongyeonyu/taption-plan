@@ -336,14 +336,25 @@ export async function queueCommand(ctx, value, source = "rest") {
 
 export async function readCommands(ctx) {
   await ensureQueue(ctx);
-  const { commands } = await ctx.state.call("listQueue", { now: ctx.now });
+  const { commands, aiSeen, aiEnded } = await ctx.state.call("listQueue", { now: ctx.now });
+  // 앱이 확인 간격을 정하게 AI가 마지막으로 온 지 몇 초인지(온 적 없으면 -1), 그 뒤 대화를 마쳤는지 알린다(SYN1111A03).
+  const headers = {
+    "x-ai-seen-ago": String(aiSeen ? Math.max(0, Math.floor((ctx.now - aiSeen) / 1000)) : -1),
+    "x-ai-ended": aiEnded && (!aiSeen || aiEnded >= aiSeen) ? "1" : "0",
+  };
   const dek = await ctx.ring.dek();
   const out = [];
   for (const item of commands) {
     const command = await openJson(dek, `cmd|${ctx.master}|${item.tag}`, item.sealed);
     if (command) out.push({ ...command, keyId: item.keyId, source: item.source, receivedAt: command.receivedAt ?? iso(item.receivedAt) });
   }
-  return out.length ? json({ commands: out }, 200) : json(null, 204);
+  return out.length ? json({ commands: out }, 200, headers) : json(null, 204, headers);
+}
+
+// AI가 대화를 마쳤다(SYN1111A03). 읽기 키도 부를 수 있다.
+export async function endConversation(ctx) {
+  await ctx.state.call("endSession", { now: ctx.now });
+  return json({ ok: true }, 200);
 }
 
 // 지워도 24시간 받은 수는 남긴다. 그래야 앱이 큐를 비울 때마다 한도가 풀리지 않는다.

@@ -344,9 +344,12 @@ extension TripRelay {
     @MainActor
     static func fetchCommands(env: AssistantRegistration.Environment = .live) async -> AssistantCommandBatch? {
         // 화면에서 기다리는 요청이라 5초 안에 끝낸다(SYN1111A01).
-        guard let reply = await send(commandRequest("/command", method: "GET", env: env, timeout: commandFetchTimeout), session: env.session) else { return nil }
-        if reply.status == 204 { return AssistantCommandBatch(commands: [], invalidIDs: []) }
-        return reply.status == 200 ? AssistantCommandParser.parse(reply.data) : nil
+        guard let (response, data) = await sendResponse(commandRequest("/command", method: "GET", env: env, timeout: commandFetchTimeout), session: env.session)
+        else { return nil }
+        // AI가 대화 중인지 알려 주는 머리 값으로 다음 확인 간격을 정한다(SYN1111A03).
+        if let signal = AssistantCommandPolling.signal(from: response) { AssistantCommandPolling.signal = signal }
+        if response.statusCode == 204 { return AssistantCommandBatch(commands: [], invalidIDs: []) }
+        return response.statusCode == 200 ? AssistantCommandParser.parse(data) : nil
     }
 
     /// 결과를 AI가 볼 수 있게 남긴다. 서버가 받았을 때만 true.

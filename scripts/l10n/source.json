@@ -860,7 +860,7 @@
    "ko": "AI로 만들기",
    "en": "Plan with AI",
    "files": [
-    "MapHomeView+Support.swift:675"
+    "MapHomeView+Support.swift:678"
    ],
    "args": [],
    "targets": [
@@ -24378,7 +24378,7 @@
    "ko": "계획과 기록은 삭제되지 않습니다.",
    "en": "Your plans and records will not be deleted.",
    "files": [
-    "MapHomeView+Support.swift:754"
+    "MapHomeView+Support.swift:757"
    ],
    "args": [],
    "targets": [
@@ -26371,7 +26371,7 @@
    "files": [
     "FirstRunTutorialGuides.swift:372",
     "FirstRunTutorialGuides.swift:419",
-    "MapHomeView+Support.swift:669"
+    "MapHomeView+Support.swift:672"
    ],
    "args": [],
    "targets": [
@@ -26383,7 +26383,7 @@
    "ko": "나중에",
    "en": "Not now",
    "files": [
-    "MapHomeView+Support.swift:433"
+    "MapHomeView+Support.swift:436"
    ],
    "args": [],
    "targets": [
@@ -27122,7 +27122,7 @@
    "en": "Calendar",
    "files": [
     "FirstRunGuideStage.swift:643",
-    "MapHomeView+Support.swift:443",
+    "MapHomeView+Support.swift:446",
     "MapHomeView+Support2.swift:392"
    ],
    "args": [],
@@ -28666,7 +28666,7 @@
    "ko": "메뉴 > 위치에서 집을 먼저 등록해 주세요.",
    "en": "Add your home in Menu > Location first.",
    "files": [
-    "MapHomeView+Support.swift:436"
+    "MapHomeView+Support.swift:439"
    ],
    "args": [],
    "targets": [
@@ -32156,7 +32156,7 @@
    "files": [
     "MapHomeView+Menu2.swift:210",
     "MapHomeView+Menu2.swift:227",
-    "MapHomeView+Support.swift:748"
+    "MapHomeView+Support.swift:751"
    ],
    "args": [],
    "targets": [
@@ -32230,7 +32230,7 @@
    "ko": "설정을 기본값으로 초기화할까요?",
    "en": "Reset settings to defaults?",
    "files": [
-    "MapHomeView+Support.swift:744"
+    "MapHomeView+Support.swift:747"
    ],
    "args": [],
    "targets": [
@@ -34912,7 +34912,7 @@
    "ko": "여행 계획 추가",
    "en": "Add to trip",
    "files": [
-    "MapHomeView+Support.swift:673"
+    "MapHomeView+Support.swift:676"
    ],
    "args": [],
    "targets": [
@@ -37572,7 +37572,7 @@
    "ko": "위치 설정 열기",
    "en": "Open location settings",
    "files": [
-    "MapHomeView+Support.swift:434"
+    "MapHomeView+Support.swift:437"
    ],
    "args": [],
    "targets": [
@@ -37758,7 +37758,7 @@
    "ko": "위치를 '항상 허용'으로 바꿔 주세요",
    "en": "Set location to Always",
    "files": [
-    "MapHomeView+Support.swift:667"
+    "MapHomeView+Support.swift:670"
    ],
    "args": [],
    "targets": [
@@ -41677,7 +41677,7 @@
    "ko": "지도에 메모 추가",
    "en": "Add map memo",
    "files": [
-    "MapHomeView+Support.swift:651"
+    "MapHomeView+Support.swift:654"
    ],
    "args": [],
    "targets": [
@@ -42059,7 +42059,7 @@
    "ko": "직접 입력",
    "en": "Enter manually",
    "files": [
-    "MapHomeView+Support.swift:674",
+    "MapHomeView+Support.swift:677",
     "TravelMapVideoSection.swift:38"
    ],
    "args": [],
@@ -42276,7 +42276,7 @@
    "ko": "집이 등록돼 있지 않아요",
    "en": "No home place yet",
    "files": [
-    "MapHomeView+Support.swift:430"
+    "MapHomeView+Support.swift:433"
    ],
    "args": [],
    "targets": [
@@ -45271,7 +45271,7 @@
    "ko": "화면 녹화",
    "en": "Screen recording",
    "files": [
-    "MapHomeView+Support.swift:290"
+    "MapHomeView+Support.swift:293"
    ],
    "args": [],
    "targets": [

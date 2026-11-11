@@ -97,6 +97,9 @@ const ROUTES = {
     GET: ["master", (request, ctx) => store.readCommands(ctx)],
     DELETE: ["master", (request, ctx) => store.deleteCommands(ctx, query(request, "ids"))],
   },
+  "/session/end": {
+    POST: ["read", (request, ctx) => store.endConversation(ctx)],
+  },
   "/polish": {
     GET: ["read", (request, ctx) => store.readPolish(ctx)],
     POST: ["master", withBody(store.savePolish)],

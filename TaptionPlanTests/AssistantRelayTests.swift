@@ -231,22 +231,28 @@ final class AssistantRelayTests: XCTestCase {
         }
     }
 
-    /// SYN1111A01: 켜져 있는 동안 명령 확인 간격과 명령 받기 제한 시간.
-    func testCommandPollingIntervalAndFetchTimeout() {
-        XCTAssertEqual(AssistantCommandPolling.interval(sinceActivity: 0), 10)
-        XCTAssertEqual(AssistantCommandPolling.interval(sinceActivity: 119), 10)
-        XCTAssertEqual(AssistantCommandPolling.interval(sinceActivity: 120), 30)
-        XCTAssertEqual(AssistantCommandPolling.interval(sinceActivity: 599), 30)
-        XCTAssertEqual(AssistantCommandPolling.interval(sinceActivity: 3_600), 120)
-        // 앱을 하루 8시간 켜 두어도 주 키 하루 한도(2,000회)의 절반을 넘지 않는다.
-        var elapsed: TimeInterval = 0, calls = 0
-        while elapsed < 8 * 3_600 {
-            elapsed += AssistantCommandPolling.interval(sinceActivity: elapsed)
-            calls += 1
-        }
-        XCTAssertLessThan(calls, 1_000)
-        XCTAssertLessThanOrEqual(TripRelay.commandFetchTimeout, 5)
-        let request = TripRelay.relayRequest("/command", method: "GET", token: "K", host: "example.com", timeout: TripRelay.commandFetchTimeout)
-        XCTAssertEqual(request?.timeoutInterval, 5)
+    /// SYN1111A03: AI와 대화 중이면 빠르게, 「대화 끝」이나 5분 조용하면 10분, 직접 새로고침하면 2분 빠르게.
+    @MainActor
+    func testCommandPollingFollowsConversation() {
+        let now = at(12)
+        typealias P = AssistantCommandPolling
+        let talking = P.Signal(seenAgo: 30, ended: false, receivedAt: now)
+        XCTAssertTrue(P.isConversation(signal: talking, manualAt: nil, now: now))
+        XCTAssertFalse(P.isConversation(signal: talking, manualAt: nil, now: now.addingTimeInterval(271)), "5 minutes without AI")
+        XCTAssertFalse(P.isConversation(signal: P.Signal(seenAgo: 5, ended: true, receivedAt: now), manualAt: nil, now: now), "AI ended it")
+        XCTAssertFalse(P.isConversation(signal: P.Signal(seenAgo: nil, ended: false, receivedAt: now), manualAt: nil, now: now), "AI never came")
+        XCTAssertTrue(P.isConversation(signal: P.Signal(seenAgo: 5, ended: true, receivedAt: now), manualAt: now.addingTimeInterval(-60), now: now), "manual refresh restarts")
+        XCTAssertFalse(P.isConversation(signal: nil, manualAt: now.addingTimeInterval(-121), now: now))
+        XCTAssertEqual(P.interval(conversation: true, lowPower: false, thermal: .nominal), 10)
+        XCTAssertEqual(P.interval(conversation: true, lowPower: true, thermal: .nominal), 20)
+        XCTAssertEqual(P.interval(conversation: true, lowPower: false, thermal: .serious), 60)
+        XCTAssertEqual(P.interval(conversation: false, lowPower: false, thermal: .nominal), 600)
+        let response = HTTPURLResponse(url: URL(string: "https://example.com/command")!, statusCode: 204, httpVersion: nil,
+                                       headerFields: ["x-ai-seen-ago": "42", "x-ai-ended": "1"])!
+        XCTAssertEqual(P.signal(from: response, now: now), P.Signal(seenAgo: 42, ended: true, receivedAt: now))
+        let never = HTTPURLResponse(url: URL(string: "https://example.com/command")!, statusCode: 204, httpVersion: nil, headerFields: ["x-ai-seen-ago": "-1"])!
+        XCTAssertNil(P.signal(from: never, now: now)?.seenAgo)
+        XCTAssertEqual(TripRelay.commandFetchTimeout, 5)
+        XCTAssertEqual(TripRelay.relayRequest("/command", method: "GET", token: "K", host: "example.com", timeout: TripRelay.commandFetchTimeout)?.timeoutInterval, 5)
     }
 }

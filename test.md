@@ -2,6 +2,20 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## SYN1111A03 · AI 대화 때만 빠르게 받기, 배터리 보호 (2026-11-11)
+
+- 대표 결정: AI와 대화를 시작하면 빠르게 확인한다. AI가 대화 끝을 보내면 바로 멈춘다. 앱에서 직접 새로고침(현재 위치 단추·당겨서 새로고침)하면 다시 빠르게 한다. 그 밖에는 10분마다다. 덧붙임: AI가 5분 동안 오지 않으면 끝난 것으로 보고, 직접 새로고침은 2분 동안 빠르게 한다.
+- 서버:
+  - AI 연결 키(주 키 아님)가 오면 사용자 상태에 그 시각을 남긴다(10초 안에 다시 오면 쓰지 않음).
+  - `GET /command` 응답 머리에 `x-ai-seen-ago`(초, 온 적 없으면 -1)와 `x-ai-ended`를 준다.
+  - `POST /session/end`(읽기 키부터), MCP `end_conversation`, OpenAPI 경로, MCP 안내문, 앱의 REST 연결 안내문을 더했다.
+  - `npm test` 86건 통과(새 `test/sync.test.mjs`). 도구·경로 목록을 고정한 기존 시험 두 개에 새 이름을 넣었다.
+  - 배포 버전 9ede1202. 실서버 `openapi.json`에 `/session/end`가 있고, 키 없이 부르면 401이다. 실서버의 머리 값은 주 키가 있어야 볼 수 있어 확인하지 않았다.
+- 앱:
+  - 대화 중이면 10초, 저전력 모드 20초, 과열(serious 이상) 60초, 아니면 10분마다 확인한다.
+  - 10초마다 깨어 간격만 다시 본다(네트워크 없음).
+- 아이폰 11 실기기: 앱 Debug 빌드와 `AssistantRelayTests`·`AssistantCommandEditTests`·`AssistantPhase3Tests` 62건 실패 0(`build/validation/SYN1111A03/iphone11-2.xcresult`). 첫 실행은 비격리 함수에서 메인 액터 상수를 읽어 컴파일이 실패했다(`iphone11.log`). 실제 AI 대화 중 간격 변화는 기기에서 보지 않았다.
+
 ## SYN1111A02 · 현재 위치 단추로 AI 비서 명령 받기 (2026-11-11)
 
 - 대표 지시: 지도의 현재 위치 단추를 누르면 비서 명령을 불러온다. 두 화면 배치의 위치 단추가 모두 지나는 `requestAndFollowUserLocation`에서 `AssistantCommandRefresh.now`를 부른다. 이 함수는 429를 기다리지 않고 받기 제한 시간은 5초다. 당겨서 새로고침(SYN1111A01)은 그대로 둔다.

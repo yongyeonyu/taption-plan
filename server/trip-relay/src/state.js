@@ -132,7 +132,16 @@ const OPS = {
       await s.put("kakao", { day, count: count + 1 });
     }
     await s.put("budget", charged.budget);
+    // AI 연결 키(주 키가 아닌 것)가 마지막으로 온 때. 앱이 AI와 대화 중인지 보고 확인 간격을 정한다(SYN1111A03).
+    // 10초 안에 다시 오면 쓰지 않는다(저장 쓰기 절약).
+    if (!registration && entry && !((await s.get("aiSeen")) > now - 10_000)) await s.put("aiSeen", now);
     return { ok: true, purpose: reg?.purpose ?? null, legacy: await legacyFlags(s) };
+  },
+
+  // AI가 대화를 마쳤다고 알림(SYN1111A03). 앱은 빠른 확인을 바로 멈춘다.
+  async endSession(s, { now }) {
+    await s.put("aiEnded", now);
+    return { ok: true };
   },
 
   async markLegacy(s, flags) {
@@ -366,7 +375,7 @@ const OPS = {
       else items.push({ name, ...c });
     }
     items.sort((a, b) => a.receivedAt - b.receivedAt || a.name.localeCompare(b.name));
-    return { commands: items.map(({ tag, keyId, source, sealed, receivedAt }) => ({ tag, keyId, source, sealed, receivedAt })) };
+    return { aiSeen: (await s.get("aiSeen")) ?? null, aiEnded: (await s.get("aiEnded")) ?? null, commands: items.map(({ tag, keyId, source, sealed, receivedAt }) => ({ tag, keyId, source, sealed, receivedAt })) };
   },
 
   // tags가 null이면 전부. 24시간 받은 수는 남긴다(앱이 비울 때마다 한도가 풀리지 않게).

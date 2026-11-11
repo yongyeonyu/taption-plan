@@ -126,6 +126,13 @@ export function openapi(origin) {
           responses: { 200: ok("{results:[{id,status,reason?,at}]}", { type: "object" }), ...empty, ...errors },
         },
       },
+      "/session/end": {
+        post: {
+          operationId: "endConversation",
+          summary: "Call once when the conversation with the user is over, so the app stops checking quickly for your edits (saves battery).",
+          responses: { 200: ok("{ok:true}", { type: "object" }), ...errors },
+        },
+      },
       "/polish": {
         get: {
           operationId: "getPolishRequests",
