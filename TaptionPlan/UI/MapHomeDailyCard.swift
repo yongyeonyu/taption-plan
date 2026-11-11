@@ -323,6 +323,8 @@ struct MapHomeDailyCardSheet: View {
     @State private var message: String?
     @State private var selectedIDs: [String] = MapHomeCardMetricSelection.load()
     @State private var isPickerPresented = false
+    /// 위쪽 탭: 하루 카드 | 지출 요약(LED1111A05, 대표 결정).
+    @State private var showsSpending = false
 
     init(
         initialDay: Date,
@@ -491,7 +493,15 @@ struct MapHomeDailyCardSheet: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
+                Picker("", selection: $showsSpending) {
+                    Text(language.text("하루 카드", "Day card")).tag(false)
+                    Text(language.text("지출 요약", "Spending")).tag(true)
+                }
+                .pickerStyle(.segmented)
                 header
+                if showsSpending {
+                    LedgerSummaryPanel(day: selectedDay, language: language)
+                } else {
                 metricPanel
                 if let image {
                     Image(uiImage: image)
@@ -523,6 +533,7 @@ struct MapHomeDailyCardSheet: View {
                 }
                 Text(language.text("1080×1080 · 인스타그램 피드 크기", "1080×1080 · Instagram feed size"))
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)))).foregroundStyle(Color.tpSecondary)
+                }
             }
             .padding(22)
         }

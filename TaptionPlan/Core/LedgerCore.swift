@@ -89,6 +89,10 @@ struct LedgerEntry: Codable, Identifiable, Equatable, Sendable {
     var note: String?
     var source: Source = .manual
     var createdAt = Date()
+    /// 여행 지출의 몫을 나누는 사람(LED1111A05). nil이면 「다 같이 n분의 1」(= 공금), `[LedgerTrip.me]`면 나만.
+    var shareNames: [String]?
+    /// 일상↔여행 사이를 오가는 짝 기록(예산 이체·정산). 비용 계산에서 뺀다.
+    var transfer: LedgerTransfer?
 
     var signedKRW: Double { (amountKRW ?? 0) * (kind == .expense ? -1 : 1) }
 }
@@ -178,11 +182,13 @@ final class LedgerBook {
 
     private(set) var entries: [LedgerEntry] = []
     private(set) var budgets: [LedgerBudget] = []
+    /// 여행 장부(LED1111A05). 일상 장부 아래 칸이다.
+    var trips: [LedgerTrip] = []
     private(set) var fx: LedgerFX.Table?
     private(set) var isLoaded = false
     /// 기록이 바뀔 때마다 1씩 는다. 카운터가 다시 셀지 정한다.
     private(set) var revision = 0
-    @ObservationIgnored private let storeFactory: () -> TaptionStoreV2?
+    @ObservationIgnored let storeFactory: () -> TaptionStoreV2?
     @ObservationIgnored private var loading: Task<Void, Never>?
     /// 메모마다 이어진 기록 맞추기를 차례로 한다(리뷰: 빨리 두 번 고치면 기록이 둘 생기던 것).
     @ObservationIgnored var memoQueues: [UUID: Task<Void, Never>] = [:]
@@ -213,7 +219,9 @@ final class LedgerBook {
         let decoder = JSONDecoder()
         let rows = (try? await store.records(kind: Self.entryKind)) ?? []
         let budgetRows = (try? await store.records(kind: Self.budgetKind)) ?? []
+        let tripRows = (try? await store.records(kind: LedgerTrip.kind)) ?? []
         guard generation == started else { return }
+        trips = tripRows.compactMap { try? decoder.decode(LedgerTrip.self, from: Data($0.body.utf8)) }.sorted { $0.start > $1.start }
         let saved = entries
         entries = rows.compactMap { try? decoder.decode(LedgerEntry.self, from: Data($0.body.utf8)) }.sorted { $0.occurredAt > $1.occurredAt }
         budgets = budgetRows.compactMap { try? decoder.decode(LedgerBudget.self, from: Data($0.body.utf8)) }
@@ -230,6 +238,7 @@ final class LedgerBook {
         loading = nil
         entries = []
         budgets = []
+        trips = []
         isLoaded = false
         revision += 1
     }

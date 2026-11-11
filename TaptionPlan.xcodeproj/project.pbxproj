@@ -317,6 +317,8 @@
 		A1L1111A0100000000000004 /* LedgerCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111A0100000000000004 /* LedgerCapture.swift */; };
 		A1L1111A0100000000000005 /* LedgerIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111A0100000000000005 /* LedgerIntents.swift */; };
 		A1L1111A0300000000000002 /* LedgerMemoLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111A0300000000000002 /* LedgerMemoLink.swift */; };
+		A1L1111A0500000000000001 /* LedgerTrips.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111A0500000000000001 /* LedgerTrips.swift */; };
+		A1L1111A0500000000000003 /* LedgerXLSX.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111A0500000000000003 /* LedgerXLSX.swift */; };
 		B1080801000000000000A004 /* ActivitySectionOverrideEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080801000000000000F004 /* ActivitySectionOverrideEngine.swift */; };
 		B1080801000000000000A005 /* ReviewSelectionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080801000000000000F005 /* ReviewSelectionEngine.swift */; };
 		B1080801000000000000A006 /* RecordChartEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080801000000000000F006 /* RecordChartEngine.swift */; };
@@ -520,6 +522,8 @@
 		A1L1111A0300000000000003 /* LedgerMemoPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111A0300000000000003 /* LedgerMemoPanel.swift */; };
 		A1U1111A0100000000000001 /* MapHomeUnconfirmedBatchSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1U1111A0100000000000001 /* MapHomeUnconfirmedBatchSheet.swift */; };
 		A1L1111A0400000000000001 /* LedgerExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111A0400000000000001 /* LedgerExport.swift */; };
+		A1L1111A0500000000000002 /* LedgerTripView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111A0500000000000002 /* LedgerTripView.swift */; };
+		A1L1111A0500000000000004 /* LedgerSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111A0500000000000004 /* LedgerSummary.swift */; };
 		A1M1110A0300000000000001 /* MapHomeDefaultBubblePool.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1M1110A0300000000000001 /* MapHomeDefaultBubblePool.swift */; };
 		A1A1110A0300000000000008 /* AssistantConnectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000008 /* AssistantConnectView.swift */; };
 		A1A1110A0300000000000009 /* FirstRunAIConnectPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000009 /* FirstRunAIConnectPage.swift */; };
@@ -1031,6 +1035,8 @@
 		F1L1111A0100000000000004 /* LedgerCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerCapture.swift; sourceTree = "<group>"; };
 		F1L1111A0100000000000005 /* LedgerIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerIntents.swift; sourceTree = "<group>"; };
 		F1L1111A0300000000000002 /* LedgerMemoLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerMemoLink.swift; sourceTree = "<group>"; };
+		F1L1111A0500000000000001 /* LedgerTrips.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerTrips.swift; sourceTree = "<group>"; };
+		F1L1111A0500000000000003 /* LedgerXLSX.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerXLSX.swift; sourceTree = "<group>"; };
 		B1080801000000000000F004 /* ActivitySectionOverrideEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitySectionOverrideEngine.swift; sourceTree = "<group>"; };
 		B1080801000000000000F005 /* ReviewSelectionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewSelectionEngine.swift; sourceTree = "<group>"; };
 		B1080801000000000000F006 /* RecordChartEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordChartEngine.swift; sourceTree = "<group>"; };
@@ -1224,6 +1230,8 @@
 		F1L1111A0300000000000003 /* LedgerMemoPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerMemoPanel.swift; sourceTree = "<group>"; };
 		F1U1111A0100000000000001 /* MapHomeUnconfirmedBatchSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeUnconfirmedBatchSheet.swift; sourceTree = "<group>"; };
 		F1L1111A0400000000000001 /* LedgerExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerExport.swift; sourceTree = "<group>"; };
+		F1L1111A0500000000000002 /* LedgerTripView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerTripView.swift; sourceTree = "<group>"; };
+		F1L1111A0500000000000004 /* LedgerSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerSummary.swift; sourceTree = "<group>"; };
 		F1M1110A0300000000000001 /* MapHomeDefaultBubblePool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeDefaultBubblePool.swift; sourceTree = "<group>"; };
 		F1A1110A0300000000000008 /* AssistantConnectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantConnectView.swift; sourceTree = "<group>"; };
 		F1A1110A0300000000000009 /* FirstRunAIConnectPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstRunAIConnectPage.swift; sourceTree = "<group>"; };
@@ -1730,6 +1738,8 @@
 				F1L1111A0300000000000003 /* LedgerMemoPanel.swift */,
 				F1U1111A0100000000000001 /* MapHomeUnconfirmedBatchSheet.swift */,
 				F1L1111A0400000000000001 /* LedgerExport.swift */,
+				F1L1111A0500000000000002 /* LedgerTripView.swift */,
+				F1L1111A0500000000000004 /* LedgerSummary.swift */,
 				F1M1110A0300000000000001 /* MapHomeDefaultBubblePool.swift */,
 				F1A1110A0300000000000008 /* AssistantConnectView.swift */,
 				F1A1110A0300000000000009 /* FirstRunAIConnectPage.swift */,
@@ -2029,6 +2039,8 @@
 				F1L1111A0100000000000004 /* LedgerCapture.swift */,
 				F1L1111A0100000000000005 /* LedgerIntents.swift */,
 				F1L1111A0300000000000002 /* LedgerMemoLink.swift */,
+				F1L1111A0500000000000001 /* LedgerTrips.swift */,
+				F1L1111A0500000000000003 /* LedgerXLSX.swift */,
 				B1080801000000000000F004 /* ActivitySectionOverrideEngine.swift */,
 				B1080801000000000000F005 /* ReviewSelectionEngine.swift */,
 				B1080801000000000000F006 /* RecordChartEngine.swift */,
@@ -2669,6 +2681,8 @@
 				A1L1111A0300000000000003 /* LedgerMemoPanel.swift in Sources */,
 				A1U1111A0100000000000001 /* MapHomeUnconfirmedBatchSheet.swift in Sources */,
 				A1L1111A0400000000000001 /* LedgerExport.swift in Sources */,
+				A1L1111A0500000000000002 /* LedgerTripView.swift in Sources */,
+				A1L1111A0500000000000004 /* LedgerSummary.swift in Sources */,
 				A1M1110A0300000000000001 /* MapHomeDefaultBubblePool.swift in Sources */,
 				A1A1110A0300000000000008 /* AssistantConnectView.swift in Sources */,
 				A1A1110A0300000000000009 /* FirstRunAIConnectPage.swift in Sources */,
@@ -2899,6 +2913,8 @@
 				A1L1111A0100000000000004 /* LedgerCapture.swift in Sources */,
 				A1L1111A0100000000000005 /* LedgerIntents.swift in Sources */,
 				A1L1111A0300000000000002 /* LedgerMemoLink.swift in Sources */,
+				A1L1111A0500000000000001 /* LedgerTrips.swift in Sources */,
+				A1L1111A0500000000000003 /* LedgerXLSX.swift in Sources */,
 				B1080801000000000000A004 /* ActivitySectionOverrideEngine.swift in Sources */,
 				B1080801000000000000A005 /* ReviewSelectionEngine.swift in Sources */,
 				B1080801000000000000A006 /* RecordChartEngine.swift in Sources */,

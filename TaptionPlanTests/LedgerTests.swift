@@ -285,6 +285,76 @@ final class LedgerTests: XCTestCase {
         XCTAssertTrue(MapHomeCardMetricOption.all.contains { $0.id == "spending" })
     }
 
+    // MARK: - LED1111A05 여행 장부(일상 아래 대차대조)
+
+    private func trip(budget: Double?) -> LedgerTrip {
+        LedgerTrip(id: "t1", name: "대구", start: at(0, day: 7), end: at(0, day: 8), budgetKRW: budget, members: ["A", "B"])
+    }
+
+    private func spend(_ amount: Double, _ title: String, payer: String? = nil, share: [String]? = nil) -> LedgerEntry {
+        var entry = LedgerEntry(occurredAt: at(12, day: 7), amount: amount, amountKRW: amount, title: title, payer: payer, tripID: "t1")
+        entry.shareNames = share
+        return entry
+    }
+
+    func testTripSheetSettlesForMe() {
+        let entries = [
+            spend(300_000, "숙소"),                                   // 내가 내고 다 같이
+            spend(90_000, "저녁", payer: "A"),                         // A가 내고 다 같이
+            spend(20_000, "기념품", share: [LedgerTrip.me]),           // 나만
+            spend(30_000, "택시", payer: "B", share: [LedgerTrip.me, "B"]),
+        ]
+        let sheet = LedgerTripMath.sheet(trip(budget: 500_000), entries: entries)
+        XCTAssertEqual(sheet.myPaid, 320_000)
+        XCTAssertEqual(sheet.myCost, 165_000, "100k + 30k + 20k + 15k")
+        XCTAssertEqual(sheet.sharedTotal, 420_000)
+        XCTAssertEqual(sheet.balances["A"] ?? 0, -40_000, accuracy: 0.5)
+        XCTAssertEqual(sheet.balances["B"] ?? 0, -115_000, accuracy: 0.5)
+        XCTAssertEqual(sheet.receivable, 155_000)
+        XCTAssertEqual(sheet.payable, 0)
+        XCTAssertEqual(Set(sheet.mine.map(\.from)), ["A", "B"])
+    }
+
+    func testTripBudgetAndSettlementPairs() async {
+        let book = LedgerBook(store: { nil })
+        await book.saveTrip(trip(budget: 500_000), now: at(12, day: 7), calendar: calendar)
+        XCTAssertEqual(book.dailyEntries.map(\.amount), [500_000], "the budget leaves daily as an expense")
+        XCTAssertEqual(book.tripEntries("t1").first?.kind, .income)
+        await book.save(spend(300_000, "숙소"))
+        await book.save(spend(90_000, "저녁", payer: "A"))
+        await book.syncTrip("t1", now: at(12, day: 8), calendar: calendar)
+        XCTAssertNil(book.dailyEntries.first { $0.transfer?.kind == .settlement }, "no settlement before the trip ends")
+        await book.syncTrip("t1", now: at(12, day: 10), calendar: calendar)
+        let refund = book.dailyEntries.first { $0.transfer?.kind == .settlement }
+        XCTAssertEqual(refund?.kind, .income)
+        XCTAssertEqual(refund?.amount, 370_000, "500k − my share 130k comes back to daily")
+        XCTAssertEqual(book.tripEntries("t1").filter { $0.transfer?.kind == .settlement }.first?.kind, .expense)
+        // 예산을 줄이면 모자란 만큼 일상에서 더 보낸다.
+        var small = trip(budget: 100_000)
+        small.name = "대구"
+        await book.saveTrip(small, now: at(12, day: 10), calendar: calendar)
+        let topUp = book.dailyEntries.first { $0.transfer?.kind == .settlement }
+        XCTAssertEqual(topUp?.kind, .expense)
+        XCTAssertEqual(topUp?.amount, 30_000)
+        XCTAssertEqual(book.dailyEntries.filter { $0.transfer?.kind == .funding }.map(\.amount), [100_000], "editing the budget moves both pair entries")
+        XCTAssertEqual(LedgerDaySpending.total(day: at(0, day: 7), cutoff: at(23, day: 7), calendar: calendar, book: book), 390_000,
+                       "the day counter shows real spending, not the transfer")
+    }
+
+    func testXLSXIsAZipWithFormulas() {
+        XCTAssertEqual(StoreZip.crc32(Data("123456789".utf8)), 0xCBF4_3926)
+        var sheet = LedgerXLSX(sheetName: "가계부 <1>", widths: [10])
+        sheet.add([.init(value: .text("점심 & 커피")), .init(value: .number(9_000), style: .money), .init(value: .formula("SUM(B1:B1)", cached: 9_000), style: .money)])
+        let data = sheet.data()
+        XCTAssertEqual(data.prefix(2), Data("PK".utf8))
+        let text = String(decoding: data, as: UTF8.self)
+        XCTAssertTrue(text.contains("xl/worksheets/sheet1.xml"))
+        XCTAssertTrue(text.contains("<f>SUM(B1:B1)</f><v>9000.0</v>"), "the formula carries its value for previews")
+        XCTAssertTrue(text.contains("점심 &amp; 커피"))
+        XCTAssertTrue(text.contains(#"name="가계부 &lt;1&gt;""#))
+        XCTAssertEqual(data.suffix(22).prefix(4), Data([0x50, 0x4B, 0x05, 0x06]), "ends with the zip directory record")
+    }
+
     func testReceiptTotalLine() {
         let lines = ["맛있는 분식", "사업자 123-45-67890", "떡볶이 1 5,000", "순대 1 4,000", "합계", "9,000", "카드 9,000"]
         let draft = LedgerReceiptReader.draft(lines)

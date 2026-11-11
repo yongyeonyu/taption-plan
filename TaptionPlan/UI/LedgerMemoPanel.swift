@@ -26,12 +26,14 @@ final class LedgerPresenter {
 struct LedgerSheetHost: View {
     let language: MapHomeLanguage
     var tripID: String?
+    /// 앱 여행 계획에서 가져온 여행. 창을 열 때만 계산한다.
+    var plannedTrips: () -> [LedgerTrip] = { [] }
     @Bindable private var presenter = LedgerPresenter.shared
 
     var body: some View {
         Color.clear
             .allowsHitTesting(false)
-            .sheet(isPresented: $presenter.isPresented) { LedgerSheet(language: language, tripID: tripID) }
+            .sheet(isPresented: $presenter.isPresented) { LedgerSheet(language: language, tripID: tripID, plannedTrips: plannedTrips()) }
     }
 }
 
@@ -144,7 +146,8 @@ struct LedgerMemoBadge: View {
 enum LedgerDaySpending {
     static func entries(day: Date, cutoff: Date, calendar: Calendar = MapHomeGrowthPolicy.localCalendar, book: LedgerBook = .shared) -> [LedgerEntry] {
         if !book.isLoaded { Task { await book.load() } }
-        return book.entries(on: day, calendar: calendar).filter { $0.kind == .expense && $0.occurredAt <= cutoff }
+        // 실제로 쓴 돈만: 일상↔여행 짝 기록(예산 이체·정산)은 뺀다(LED1111A05).
+        return book.entries(on: day, calendar: calendar).filter { $0.kind == .expense && $0.transfer == nil && $0.occurredAt <= cutoff }
     }
 
     static func total(day: Date, cutoff: Date, calendar: Calendar = MapHomeGrowthPolicy.localCalendar, book: LedgerBook = .shared) -> Double {

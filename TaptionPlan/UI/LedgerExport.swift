@@ -77,7 +77,7 @@ struct LedgerDaySummarySection: View {
     private var book: LedgerBook { .shared }
 
     var body: some View {
-        let entries = book.entries(on: day).filter { $0.kind == .expense }.sorted { $0.occurredAt < $1.occurredAt }
+        let entries = book.entries(on: day).filter { $0.kind == .expense && $0.transfer == nil }.sorted { $0.occurredAt < $1.occurredAt }
         VStack(alignment: .leading, spacing: 10) {
             if !entries.isEmpty {
                 HStack {

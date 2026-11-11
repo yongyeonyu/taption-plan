@@ -4,8 +4,10 @@ import SwiftUI
 /// 가계부 화면(LED1110A01). 왼쪽 위 `₩` 버튼으로 연다. 달마다 지출·수입·예산과 오늘 손익, 날짜별 목록.
 struct LedgerSheet: View {
     let language: MapHomeLanguage
-    /// 여행 모드에서 열면 그 여행에 붙여 넣는다.
+    /// 여행 모드에서 열면 그 여행 장부를 바로 연다.
     var tripID: String?
+    /// 앱 여행 계획에서 가져온 여행(장부가 아직 없으면 눌러서 만든다).
+    var plannedTrips: [LedgerTrip] = []
 
     @Environment(\.dismiss) private var dismiss
     @State private var month = LedgerBook.monthKey(.now)
@@ -16,17 +18,19 @@ struct LedgerSheet: View {
     @State private var draft: LedgerEntry?
     @State private var receiptItem: PhotosPickerItem?
     @State private var captureNote: String?
+    @State private var path: [String] = []
+    @State private var isAddingTrip = false
     private var book: LedgerBook { .shared }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             List {
                 summarySection
-                if tripID != nil { tripSection }
+                tripsSection
                 captureSection
                 ForEach(days, id: \.self) { day in
                     Section(day.formatted(date: .abbreviated, time: .omitted)) {
-                        ForEach(book.entries(on: day).filter { LedgerBook.monthKey($0.occurredAt) == month }) { entry in
+                        ForEach(monthEntries.filter { Calendar.autoupdatingCurrent.isDate($0.occurredAt, inSameDayAs: day) }) { entry in
                             Button { editing = entry } label: { LedgerRow(entry: entry, language: language) }
                                 .buttonStyle(.plain)
                         }
@@ -62,9 +66,17 @@ struct LedgerSheet: View {
                 await book.load()
                 await book.refreshRates()
                 await book.fillMissingKRW()
+                await book.syncEndedTrips()
+                if let tripID, path.isEmpty { await openTrip(tripID) }
+            }
+            .navigationDestination(for: String.self) { id in LedgerTripView(tripID: id, language: language) }
+            .sheet(isPresented: $isAddingTrip) {
+                LedgerTripForm(language: language, trip: LedgerTrip(id: "ledger-" + UUID().uuidString, name: "", start: .now, end: .now)) { trip in
+                    Task { await book.saveTrip(trip); path = [trip.id] }
+                }
             }
             .sheet(isPresented: $isAdding) {
-                LedgerEntryForm(language: language, entry: LedgerEntry(occurredAt: .now, amount: 0, title: "", tripID: tripID))
+                LedgerEntryForm(language: language, entry: LedgerEntry(occurredAt: .now, amount: 0, title: ""))
             }
             .sheet(item: $editing) { entry in LedgerEntryForm(language: language, entry: entry, isNew: false) }
             .sheet(item: $draft) { entry in LedgerEntryForm(language: language, entry: entry) }
@@ -74,26 +86,44 @@ struct LedgerSheet: View {
             }
             .sheet(isPresented: $isEditingBudget) { LedgerBudgetForm(language: language, period: month) }
             .sheet(isPresented: $isSettling) {
-                LedgerSettleView(language: language, entries: tripID.map { id in book.entries.filter { $0.tripID == id } } ?? book.entries(inMonth: month))
+                LedgerSettleView(language: language, entries: monthEntries.filter { $0.transfer == nil })
             }
         }
     }
 
-    private var monthEntries: [LedgerEntry] { book.entries(inMonth: month) }
+    /// 일상 장부의 이 달: 여행 안 기록은 빼고 여행과 오간 짝 기록(경비·정산)만 담는다(LED1111A05).
+    private var monthEntries: [LedgerEntry] { book.dailyEntries.filter { LedgerBook.monthKey($0.occurredAt) == month } }
 
-    /// 여행 정산(귀국 정산): 이 여행에 묶인 기록을 통화별로 더하고 원화 합계를 보인다.
-    private var tripSection: some View {
-        let trip = book.entries.filter { $0.tripID == tripID && $0.kind == .expense }
-        let byCurrency = Dictionary(grouping: trip, by: \.currency).mapValues { $0.reduce(0) { $0 + $1.amount } }
-        return Section(language.text("이 여행", "This trip")) {
-            ForEach(byCurrency.keys.sorted(), id: \.self) { code in
-                LabeledContent(code, value: LedgerMoney.text(byCurrency[code] ?? 0, currency: code, language: language))
-            }
-            LabeledContent(language.text("원화로 모두", "Total in KRW"), value: LedgerMoney.text(LedgerBook.total(trip, .expense), language: language))
-            if trip.isEmpty {
-                Text(language.text("여행 중에 넣은 기록이 여기 모여요.", "Entries added during this trip gather here.")).foregroundStyle(.secondary)
-            }
+    /// 여행 장부 목록. 장부가 있는 여행과, 앱 여행 계획 중 아직 장부가 없는 여행(누르면 만든다).
+    @ViewBuilder
+    private var tripsSection: some View {
+        let missing = plannedTrips.filter { planned in !book.trips.contains { $0.id == planned.id } }
+        Section {
+                ForEach(book.trips) { trip in
+                    NavigationLink(value: trip.id) {
+                        LabeledContent(trip.name, value: LedgerMoney.text(LedgerTripMath.sheet(trip, entries: book.entries).myCost, language: language))
+                    }
+                }
+                ForEach(missing) { trip in
+                    Button { Task { await openTrip(trip.id) } } label: {
+                        Label(language.text("\(trip.name) 장부 만들기", "Start a ledger for \(trip.name)"), systemImage: "plus.circle")
+                    }
+                }
+                Button { isAddingTrip = true } label: {
+                    Label(language.text("새 여행 장부", "New trip ledger"), systemImage: "airplane.circle")
+                }
+        } header: {
+            Text(language.text("여행 장부", "Trip ledgers"))
+        } footer: {
+            Text(language.text("여행 예산은 일상에서 「여행 경비」로 나가고, 여행이 끝나면 남은 돈이 「여행 정산」으로 돌아와요.", "A trip budget leaves daily as a trip expense; leftovers come back as a trip refund when it ends."))
         }
+    }
+
+    /// 여행 장부를 연다. 앱 여행 계획에만 있으면 그 이름·기간으로 만든다.
+    private func openTrip(_ id: String) async {
+        if book.trip(id) == nil, let planned = plannedTrips.first(where: { $0.id == id }) { await book.saveTrip(planned) }
+        guard book.trip(id) != nil else { return }
+        path = [id]
     }
 
     /// 결제 문자 붙여넣기와 영수증 사진. 읽은 값으로 입력 화면을 채우고, 저장은 확인한 뒤에만.
@@ -223,6 +253,8 @@ struct LedgerEntryForm: View {
     let language: MapHomeLanguage
     @State var entry: LedgerEntry
     var isNew = true
+    /// 여행 장부에서 쓸 때 동행(나 빼고). 있으면 「낸 사람」·「누구 몫」을 고른다(LED1111A05).
+    var members: [String]? = nil
 
     @Environment(\.dismiss) private var dismiss
     @State private var amountText = ""
@@ -230,10 +262,11 @@ struct LedgerEntryForm: View {
     private var book: LedgerBook { .shared }
     static let currencies = ["KRW", "USD", "JPY", "EUR", "CNY", "TWD", "HKD", "THB", "VND", "SGD", "PHP", "IDR", "GBP", "AUD", "CAD"]
 
-    init(language: MapHomeLanguage, entry: LedgerEntry, isNew: Bool = true) {
+    init(language: MapHomeLanguage, entry: LedgerEntry, isNew: Bool = true, members: [String]? = nil) {
         self.language = language
         _entry = State(initialValue: entry)
         self.isNew = isNew
+        self.members = members
         _amountText = State(initialValue: entry.amount > 0 ? Self.plain(entry.amount) : "")
     }
 
@@ -267,8 +300,13 @@ struct LedgerEntryForm: View {
                     }
                     DatePicker(language.text("때", "When"), selection: $entry.occurredAt)
                 }
+                if let members, entry.kind == .expense, entry.transfer == nil {
+                    LedgerShareSection(language: language, members: members, payer: $entry.payer, shareNames: $entry.shareNames)
+                }
                 Section {
-                    TextField(language.text("낸 사람 (비우면 나)", "Paid by (blank = me)"), text: Binding(get: { entry.payer ?? "" }, set: { entry.payer = $0.isEmpty ? nil : $0 }))
+                    if members == nil {
+                        TextField(language.text("낸 사람 (비우면 나)", "Paid by (blank = me)"), text: Binding(get: { entry.payer ?? "" }, set: { entry.payer = $0.isEmpty ? nil : $0 }))
+                    }
                     TextField(language.text("장소", "Place"), text: Binding(get: { entry.place ?? "" }, set: { entry.place = $0.isEmpty ? nil : $0 }))
                     TextField(language.text("메모", "Note"), text: Binding(get: { entry.note ?? "" }, set: { entry.note = $0.isEmpty ? nil : $0 }))
                 } footer: {
@@ -277,7 +315,12 @@ struct LedgerEntryForm: View {
                 if !isNew {
                     Section {
                         Button(language.text("지우기", "Delete"), role: .destructive) {
-                            Task { await book.delete(entry.id); dismiss() }
+                            let tripID = entry.tripID
+                            Task {
+                                await book.delete(entry.id)
+                                if let tripID { await book.syncTrip(tripID) }
+                                dismiss()
+                            }
                         }
                     }
                 }
@@ -313,6 +356,8 @@ struct LedgerEntryForm: View {
         let value = entry
         Task {
             await book.save(value)
+            // 여행 기록이 바뀌면 끝난 여행의 정산 짝 기록도 다시 맞춘다.
+            if let tripID = value.tripID { await book.syncTrip(tripID) }
             dismiss()
         }
     }
