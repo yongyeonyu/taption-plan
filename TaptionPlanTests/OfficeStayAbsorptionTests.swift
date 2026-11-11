@@ -119,6 +119,56 @@ final class OfficeStayAbsorptionTests: XCTestCase, UTCDateFixture {
         XCTAssertEqual(records.last?.startedAt, stays[1].span.start)
     }
 
+    /// 회사 회의 중 실내에서 위치가 1시간 넘게 끊겨도, 앞뒤가 회사이고 그 사이에 일정이 있으면 이어서 회의로 기록한다(CAL1111A02).
+    func testCalendarMeetingBridgesALongNoLocationGapAtTheOffice() {
+        let before = officeStay(start: makeDate(2026, 10, 29, 12, 18), end: makeDate(2026, 10, 29, 13, 54))
+        let after = officeStay(start: makeDate(2026, 10, 29, 15, 37), end: makeDate(2026, 10, 29, 17, 0))
+        // 마지막 위치는 체류 끝 6분 전, 다음 위치는 15:37. 공백 안에는 위치가 한 점도 없다.
+        let readings = officeReadings(from: before.span.start, to: before.span.end.addingTimeInterval(-360)) { _ in 10 }
+            + officeReadings(from: after.span.start, to: after.span.end) { _ in 10 }
+        let meeting = CalendarRecord(
+            id: "m", calendarID: "c", title: "주간 회의",
+            span: TimeSpan(start: makeDate(2026, 10, 29, 14, 0), end: makeDate(2026, 10, 29, 15, 0)),
+            isAllDay: false, calendarTitle: "업무"
+        )
+        let day = TimeSpan(start: makeDate(2026, 10, 29, 0, 0), end: makeDate(2026, 10, 30, 0, 0))
+        func records(_ events: [CalendarRecord]) -> [ActualRecord] {
+            StationaryContextActualEngine.records(
+                stays: [before, after], placeKinds: [officeKey: .company],
+                placeAnchors: [officeKey: FrequentPlaceAnchor(point: officePoint(0), radiusMeters: 70)],
+                readings: readings, calendarEvents: events, inside: day, calendar: utcCalendar, now: day.end
+            )
+        }
+
+        let bridged = records([meeting])
+        let atMeeting = bridged.first { $0.startedAt <= makeDate(2026, 10, 29, 14, 30) && ($0.endedAt ?? .distantPast) > makeDate(2026, 10, 29, 14, 30) }
+        XCTAssertEqual(atMeeting?.categoryID, "work")
+        XCTAssertEqual(atMeeting?.startedAt, meeting.span.start)
+        XCTAssertEqual(atMeeting?.endedAt, meeting.span.end)
+    }
+
+    /// 돌아온 지 얼마 안 돼 다음 체류가 아직 안 생겼어도, 회사 반경 안 최근 위치를 이어서 회의를 채운다(CAL1111A02: 15:37 복귀, 15:46 기록).
+    func testCalendarMeetingBridgesToRecentReadingsBeforeTheNextStayForms() {
+        let before = officeStay(start: makeDate(2026, 10, 29, 12, 18), end: makeDate(2026, 10, 29, 13, 54))
+        let readings = officeReadings(from: before.span.start, to: before.span.end.addingTimeInterval(-360)) { _ in 10 }
+            + officeReadings(from: makeDate(2026, 10, 29, 15, 37), to: makeDate(2026, 10, 29, 15, 46)) { _ in 5 }
+        let meeting = CalendarRecord(
+            id: "m", calendarID: "c", title: "주간 회의",
+            span: TimeSpan(start: makeDate(2026, 10, 29, 14, 0), end: makeDate(2026, 10, 29, 15, 0)),
+            isAllDay: false, calendarTitle: "업무"
+        )
+        let day = TimeSpan(start: makeDate(2026, 10, 29, 0, 0), end: makeDate(2026, 10, 30, 0, 0))
+        let records = StationaryContextActualEngine.records(
+            stays: [before], placeKinds: [officeKey: .company],
+            placeAnchors: [officeKey: FrequentPlaceAnchor(point: officePoint(0), radiusMeters: 70)],
+            readings: readings, calendarEvents: [meeting], inside: day, calendar: utcCalendar,
+            now: makeDate(2026, 10, 29, 15, 46)
+        )
+        let atMeeting = records.first { $0.startedAt <= makeDate(2026, 10, 29, 14, 30) && ($0.endedAt ?? .distantPast) > makeDate(2026, 10, 29, 14, 30) }
+        XCTAssertEqual(atMeeting?.categoryID, "work")
+        XCTAssertEqual(atMeeting?.startedAt, meeting.span.start)
+    }
+
     // MARK: - 재료
 
     private func officePoint(_ metersNorth: Double) -> GeoPoint {

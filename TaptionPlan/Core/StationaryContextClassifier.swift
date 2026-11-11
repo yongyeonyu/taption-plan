@@ -640,6 +640,7 @@ enum StationaryContextActualEngine {
             registeredKeys: Set(placeKinds.keys),
             readings: readings,
             stationarySpans: stationarySpans,
+            explained: explainedSpans(calendarEvents, travel: travel),
             inside: inside,
             minimumDuration: minimumDuration
         )
@@ -725,12 +726,46 @@ enum StationaryContextActualEngine {
     /// 아예 만들어지지 않는다. 그 시간이 "정지·휴식" 한 덩어리로 남지 않게
     /// 체류가 덮지 못한 정지 구간도 후보로 넣는다. 근거가 없으면 분류를
     /// 지어내지 않고 "머무름"으로 남는다.
+    /// 돌아온 지 얼마 안 돼 체류가 아직 생기지 않은 마지막 위치들. 모두 한 등록 장소 반경 안이면 그 곳의 조각으로 본다(CAL1111A02).
+    /// 같은 곳의 앞 체류와 이어져야만 기록이 되고(짧은 조각은 잇고 난 뒤 걸러진다), 원본 체류는 바꾸지 않는다.
+    private static func ongoingTail(
+        after stays: [PlaceStay],
+        readings: [SensorReading],
+        anchors: [String: FrequentPlaceAnchor],
+        registeredKeys: Set<String>,
+        inside: TimeSpan
+    ) -> [PlaceStay] {
+        guard let last = stays.last else { return [] }
+        let tail = readings
+            .filter { $0.timestamp > last.span.end && inside.contains($0.timestamp) }
+            .compactMap { reading -> (Date, GeoPoint)? in
+                guard let point = reading.point, (0...50).contains(point.horizontalAccuracy) else { return nil }
+                return (reading.timestamp, point)
+            }
+            .sorted { $0.0 < $1.0 }
+        guard tail.count >= 2, let first = tail.first, let end = tail.last else { return [] }
+        guard let key = anchors.first(where: { entry in
+            registeredKeys.contains(entry.key) && tail.allSatisfy { !outside($0.1, entry.value) }
+        })?.key else { return [] }
+        let name = stays.last { $0.placeKey == key }?.displayName ?? key
+        return [PlaceStay(placeKey: key, displayName: name, span: TimeSpan(start: first.0, end: end.0), confidence: .low, point: first.1)]
+    }
+
+    /// 위치가 끊긴 체류 사이를 일정으로 이어도 되는 시간: 종일·취소 아닌 일정 가운데 차·대중교통 이동과 겹치지 않는 부분.
+    private static func explainedSpans(_ events: [CalendarRecord], travel: [TravelSegment]) -> [TimeSpan] {
+        let rides = travel.filter { ![.walking, .running].contains($0.mode) }.map(\.span)
+        return events
+            .filter { !$0.isAllDay && $0.isCancelled != true }
+            .flatMap { ActualIntervalMergeEngine.subtracting(rides, from: $0.span) }
+    }
+
     private static func contextStays(
         stays: [PlaceStay],
         placeAnchors: [String: FrequentPlaceAnchor],
         registeredKeys: Set<String>,
         readings: [SensorReading],
         stationarySpans: [TimeSpan],
+        explained: [TimeSpan] = [],
         inside: TimeSpan,
         minimumDuration: TimeInterval
     ) -> [PlaceStay] {
@@ -743,13 +778,15 @@ enum StationaryContextActualEngine {
             return value
         }
         .sorted { $0.span.start < $1.span.start }
+        let withTail = clipped + ongoingTail(after: clipped, readings: readings, anchors: placeAnchors, registeredKeys: registeredKeys, inside: inside)
         // 짧은 체류를 먼저 버리면 이어 붙일 조각까지 사라진다. 잇고 난 뒤에
         // 재어야 한 곳에 오래 있었다는 사실이 그대로 남는다.
         let placed = joiningContinuousStays(
-            clipped,
+            withTail,
             anchors: placeAnchors,
             registeredKeys: registeredKeys,
-            readings: readings
+            readings: readings,
+            explained: explained
         )
         .filter { $0.span.duration >= minimumDuration }
         let covered = ActualIntervalMergeEngine.union(placed.map(\.span))
@@ -782,7 +819,8 @@ enum StationaryContextActualEngine {
         _ stays: [PlaceStay],
         anchors: [String: FrequentPlaceAnchor],
         registeredKeys: Set<String>,
-        readings: [SensorReading]
+        readings: [SensorReading],
+        explained: [TimeSpan] = []
     ) -> [PlaceStay] {
         guard stays.count > 1 else { return stays }
         let located = readings
@@ -807,7 +845,8 @@ enum StationaryContextActualEngine {
                 placeKey: key,
                 anchor: anchors[key],
                 registeredKeys: registeredKeys,
-                readings: located
+                readings: located,
+                explained: explained
             ) else {
                 result.append(stay)
                 continue
@@ -860,7 +899,8 @@ enum StationaryContextActualEngine {
         placeKey: String,
         anchor: FrequentPlaceAnchor?,
         registeredKeys: Set<String>,
-        readings: [SensorReading]
+        readings: [SensorReading],
+        explained: [TimeSpan] = []
     ) -> Bool {
         // 사이에 다른 등록된 곳에 머문 자국이 있으면 그리로 옮겨 간 것이다.
         if passing.contains(where: {
@@ -882,7 +922,9 @@ enum StationaryContextActualEngine {
         let sampled = readings.filter { gap.contains($0.timestamp) }
         let points = pieces.compactMap(\.point) + sampled.compactMap(\.point)
         guard !points.isEmpty else {
-            return gap.duration <= unprovenJoinLimit
+            // 위치가 한 점도 없는 동안 일정이 있었으면 그 시간은 그 곳에 있던 것으로 본다(CAL1111A02: 회사 회의 중 실내에서 GPS가 끊김).
+            let unexplained = ActualIntervalMergeEngine.subtracting(explained, from: gap).map(\.duration).reduce(0, +)
+            return unexplained <= unprovenJoinLimit
         }
         // 반경 안에서 찍힌 위치가 대부분이면 얼마나 벌어졌든 머문 것이다.
         // 점심을 먹으러 건물 안을 돌아다닌 시간이 여기에 들어온다.
