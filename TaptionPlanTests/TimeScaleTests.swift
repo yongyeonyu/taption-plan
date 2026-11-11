@@ -5145,6 +5145,10 @@ final class TimeScaleTests: XCTestCase {
         )
         XCTAssertEqual(MapDisplayStyle.standard.provider, .apple)
         XCTAssertEqual(MapDisplayStyle.mapLibrePorcelain.mapHomeVectorStyle, .porcelain)
+        // RTC1111A01: 경로 색은 백자에서만 테라코타, 나머지 모양은 모두 예전 청록.
+        for style in MapDisplayStyle.allCases {
+            XCTAssertEqual(MapHomeWBSTripStyle.actualRouteHex(for: style), style == .mapLibrePorcelain ? "#A8442F" : "#458B88", style.rawValue)
+        }
         XCTAssertEqual(MapDisplayStyle.defaultStyle(for: .openFreeMap), .mapLibreRPG, "새 모양을 더해도 기본 지도는 그대로다")
         XCTAssertNotNil(try? JSONSerialization.jsonObject(with: Data(MapHomeVectorStyle.porcelain.json.utf8)), "백자 지도 스타일 JSON이 깨지지 않는다")
         XCTAssertEqual(MapDisplayStyle.mapLibreCasual.provider, .openFreeMap)
@@ -5448,6 +5452,19 @@ final class MapHomeStartupCameraTests: XCTestCase {
                 MapHomeRailDetailSpan(range: 300..<400, pattern: .crosshatch),
             ]
         )
+    }
+
+    /// LPR1111A01: 「나중에 확인」을 누른 날에만 질문을 쉬고, 날이 바뀌면 다시 묻는다.
+    func testLaunchPromptDeferralLastsOnlyForThatDay() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        let evening = calendar.date(from: DateComponents(year: 2026, month: 11, day: 11, hour: 22))!
+        let key = MapHomeLaunchPromptDeferral.dayKey(evening, calendar: calendar)
+        XCTAssertEqual(key, "2026-11-11")
+        XCTAssertTrue(MapHomeLaunchPromptDeferral.isDeferred(key, now: evening.addingTimeInterval(3_600), calendar: calendar))
+        XCTAssertFalse(MapHomeLaunchPromptDeferral.isDeferred(key, now: evening.addingTimeInterval(3 * 3_600), calendar: calendar), "자정이 지나면 다시 묻는다")
+        XCTAssertFalse(MapHomeLaunchPromptDeferral.isDeferred(nil, now: evening, calendar: calendar))
+        XCTAssertFalse(MapHomeLaunchPromptDeferral.isDeferred("", now: evening, calendar: calendar))
     }
 
     /// 앱을 열 때 묻는 순서: 내 차 → 탑승 → 일정 → 자주 가는 곳 → 미확인. 한 번 연 동안 같은 것은 다시 묻지 않는다(ASK1111A01).

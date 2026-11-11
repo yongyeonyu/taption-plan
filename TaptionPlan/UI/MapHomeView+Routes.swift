@@ -7,6 +7,9 @@ import UIKit
 import TaptionPlanCore
 
 extension MapHomeView {
+    /// 지금 지도 모양에서 내 경로를 그리는 색(RTC1111A01).
+    var actualRouteHex: String { MapHomeWBSTripStyle.actualRouteHex(for: model.settings.mapDisplayStyle.runtimeStyle) }
+
     var isMapSearchOverlayPresented: Bool {
         isMapSearchFocused
             || hasMapSearchResults
@@ -259,7 +262,7 @@ extension MapHomeView {
                     id: idPrefix + overlay.id,
                     coordinates: overlay.coordinates,
                     geometrySignature: overlay.geometrySignature,
-                    colorHex: MapHomeWBSTripStyle.actualRouteHex,
+                    colorHex: actualRouteHex,
                     opacity: opacity
                 )
             ]
@@ -290,7 +293,7 @@ extension MapHomeView {
                         id: "timeline-\(overlay.id)",
                         coordinates: overlay.coordinates,
                         geometrySignature: overlay.geometrySignature,
-                        colorHex: MapHomeWBSTripStyle.actualRouteHex,
+                        colorHex: actualRouteHex,
                         opacity: opacity,
                         phase: .actual,
                         transport: nil
@@ -343,7 +346,7 @@ extension MapHomeView {
                 id: "confirmed-predicted-\(route.id)",
                 coordinates: points,
                 geometrySignature: MapHomeRouteGeometrySignature.value(for: points),
-                colorHex: MapHomeWBSTripStyle.actualRouteHex,
+                colorHex: actualRouteHex,
                 opacity: 0.95,
                 phase: .actual,
                 transport: nil
@@ -446,7 +449,7 @@ extension MapHomeView {
             id: "active-\(overlay.id)",
             coordinates: overlay.coordinates,
             geometrySignature: overlay.geometrySignature,
-            colorHex: MapHomeWBSTripStyle.actualRouteHex,
+            colorHex: actualRouteHex,
             opacity: MapHomeWBSTripStyle.actualRouteOpacity
                 * min(max(overlay.opacity, 0), 1)
         )
@@ -603,7 +606,7 @@ extension MapHomeView {
             let points = coordinates(for: route, through: routeOverlayCutoff)
             return MapHomeVectorRoute(id: "confirmed-predicted-\(route.id)", coordinates: points,
                 geometrySignature: MapHomeRouteGeometrySignature.value(for: points),
-                colorHex: MapHomeWBSTripStyle.actualRouteHex, opacity: 0.95)
+                colorHex: actualRouteHex, opacity: 0.95)
         }
         if let selectedPredictedRoute {
             let points = coordinates(for: selectedPredictedRoute)

@@ -2,7 +2,8 @@ import SwiftUI
 
 /// 앱을 열 때 사용자 판단이 필요한 것을 한 번에 하나씩 묻는다(ASK1111A01, 대표 결정).
 /// 순서: 위치 「항상 허용」 → 내 차 → 지하철·버스 탑승 확인 → 처음 보는 일정 분류 → 자주 가는 곳 → 미확인 시간.
-/// 한 번 연 동안 같은 질문은 다시 묻지 않고, 「나중에」는 다음에 열 때 다시 묻는다.
+/// 한 번 연 동안 같은 질문은 다시 묻지 않는다. 「나중에 확인」을 누르면 그날은 더 묻지 않고
+/// 왼쪽 위에 「확인할 것」 아이콘을 둔다. 아이콘을 누르면 다시 차례로 묻는다(LPR1111A01, 대표 결정).
 enum MapHomeLaunchPrompt: Identifiable, Hashable {
     case carAudio(String)
     case boarding(String)
@@ -18,6 +19,24 @@ enum MapHomeLaunchPrompt: Identifiable, Hashable {
         case .frequentPlace(let id): "place:\(id)"
         case .unconfirmed: "unconfirmed"
         }
+    }
+}
+
+/// 「나중에 확인」을 누른 날을 기기에 적어 둔다. 날이 바뀌면 다시 묻는다.
+enum MapHomeLaunchPromptDeferral {
+    static let key = "launchPromptsDeferredDay"
+
+    static func dayKey(_ date: Date, calendar: Calendar = .autoupdatingCurrent) -> String {
+        let parts = calendar.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
+    }
+
+    static func isDeferred(_ stored: String?, now: Date = .now, calendar: Calendar = .autoupdatingCurrent) -> Bool {
+        stored == dayKey(now, calendar: calendar)
+    }
+
+    static func isDeferred(now: Date = .now, defaults: UserDefaults = .standard) -> Bool {
+        isDeferred(defaults.string(forKey: key), now: now)
     }
 }
 
@@ -82,11 +101,14 @@ extension MapHomeView {
         #endif
         await checkLocationAlways()
         while !Task.isCancelled, scenePhase == .active {
+            // 「나중에 확인」을 누른 날은 더 묻지 않는다. 왼쪽 위 아이콘으로 다시 열 수 있다.
+            if MapHomeLaunchPromptDeferral.isDeferred() { return }
             while isLocationAlwaysPromptPresented || launchPrompt != nil
                 || selectedTransitBoardingCandidate != nil || isUnconfirmedReviewPresented {
                 try? await Task.sleep(for: .milliseconds(400))
                 if Task.isCancelled { return }
             }
+            if MapHomeLaunchPromptDeferral.isDeferred() { return }
             await model.registerConnectedCarPlay()
             model.refreshFrequentPlaceSuggestion()
             let isToday = Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate)
@@ -119,9 +141,10 @@ extension View {
         _ prompt: Binding<MapHomeLaunchPrompt?>,
         model: AppModel,
         language: MapHomeLanguage,
+        onResume: @escaping () -> Void = {},
         onReviewUnconfirmed: @escaping () -> Void
     ) -> some View {
-        modifier(MapHomeLaunchPromptAlerts(prompt: prompt, model: model, language: language, onReviewUnconfirmed: onReviewUnconfirmed))
+        modifier(MapHomeLaunchPromptAlerts(prompt: prompt, model: model, language: language, onResume: onResume, onReviewUnconfirmed: onReviewUnconfirmed))
     }
 }
 
@@ -129,7 +152,10 @@ private struct MapHomeLaunchPromptAlerts: ViewModifier {
     @Binding var prompt: MapHomeLaunchPrompt?
     let model: AppModel
     let language: MapHomeLanguage
+    let onResume: () -> Void
     let onReviewUnconfirmed: () -> Void
+    /// 「나중에 확인」을 누른 날. 오늘이면 질문을 띄우지 않고 아이콘만 보인다.
+    @AppStorage(MapHomeLaunchPromptDeferral.key) private var deferredDay = ""
     /// 일정 분류 두 번째 단계에서 고른 대분류(CAT1111A01: 대분류 → 상세 두 단계로 묻는다).
     @State private var calendarCategory: String?
     @State private var isReturningToCategories = false
@@ -138,11 +164,42 @@ private struct MapHomeLaunchPromptAlerts: ViewModifier {
         Binding(get: { prompt.map(match) ?? false }, set: { if !$0 { prompt = nil } })
     }
 
+    /// 그날은 더 묻지 않는다.
+    private func confirmLater() {
+        deferredDay = MapHomeLaunchPromptDeferral.dayKey(.now)
+        calendarCategory = nil
+        prompt = nil
+    }
+
+    private var laterTitle: String { language.text("나중에 확인", "Check later") }
+
     func body(content: Content) -> some View {
         content
+            .overlay(alignment: .topLeading) {
+                if MapHomeLaunchPromptDeferral.isDeferred(deferredDay) {
+                    Button {
+                        deferredDay = ""
+                        onResume()
+                    } label: {
+                        Image(systemName: "checklist")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Color.tpAccent)
+                            .frame(width: 34, height: 34)
+                            .mapHomeGlass(in: Circle())
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(language.text("확인할 것", "Things to check"))
+                    .accessibilityIdentifier("launchPrompts.deferred")
+                    .padding(.leading, 8)
+                    .padding(.top, MapHomeLaunchPromptAlerts.iconTop)
+                }
+            }
             .alert(language.text("이 기기가 내 차 같아요", "This looks like your car"), isPresented: isShowing { if case .carAudio = $0 { true } else { false } }, presenting: carName) { name in
                 Button(language.text("내 차로 등록", "Register as my car")) { Task { await model.setCarAudio(name, isMyCar: true) } }
-                Button(language.text("아니요", "No"), role: .cancel) { Task { await model.setCarAudio(name, isMyCar: false) } }
+                Button(language.text("아니요", "No")) { Task { await model.setCarAudio(name, isMyCar: false) } }
+                Button(laterTitle, role: .cancel) { confirmLater() }
             } message: { name in
                 Text(language.text(
                     "‘\(name)’ 기기가 탈 때만 연결됐어요. 등록할까요? 등록하면 이 기기가 연결된 이동을 자동차로 기록해요.",
@@ -164,7 +221,7 @@ private struct MapHomeLaunchPromptAlerts: ViewModifier {
                     }
                 }
                 Button(language.text("분류 안 함", "Don't classify")) { saveCalendar(nil, title: title) }
-                Button(language.text("나중에", "Later"), role: .cancel) {}
+                Button(laterTitle, role: .cancel) { confirmLater() }
             } message: { _ in
                 Text(language.text("먼저 대분류를 고르세요. 한 번 정하면 같은 제목의 일정은 다시 묻지 않아요.", "Pick a category first. Once set, events with the same title won't be asked again."))
             }
@@ -177,7 +234,7 @@ private struct MapHomeLaunchPromptAlerts: ViewModifier {
                     isReturningToCategories = true
                     calendarCategory = nil
                 }
-                Button(language.text("나중에", "Later"), role: .cancel) {}
+                Button(laterTitle, role: .cancel) { confirmLater() }
             } message: { title in
                 Text(language.text("‘\(title)’", "‘\(title)’"))
             }
@@ -186,17 +243,20 @@ private struct MapHomeLaunchPromptAlerts: ViewModifier {
                     Button(placeKindTitle(kind)) { model.registerFrequentPlaceSuggestion(as: kind) }
                 }
                 Button(language.text("등록 안 함", "Don't register")) { model.dismissFrequentPlaceSuggestion() }
-                Button(language.text("나중에", "Later"), role: .cancel) {}
+                Button(laterTitle, role: .cancel) { confirmLater() }
             } message: {
                 Text(placeMessage)
             }
             .alert(language.text("미확인 시간이 있어요", "Some time is unconfirmed"), isPresented: isShowing { if case .unconfirmed = $0 { true } else { false } }, presenting: unconfirmedMinutes) { _ in
                 Button(language.text("지금 정하기", "Review now")) { onReviewUnconfirmed() }
-                Button(language.text("나중에", "Later"), role: .cancel) {}
+                Button(laterTitle, role: .cancel) { confirmLater() }
             } message: { minutes in
                 Text(language.text("오늘 \(minutes)분이 무엇을 했는지 모르는 시간이에요. 지금 정할까요?", "\(minutes) min today are unconfirmed. Review them now?"))
             }
     }
+
+    /// 위쪽 둥근 단추 줄 바로 아래.
+    static let iconTop: CGFloat = 66
 
     private var carName: String? { if case .carAudio(let name) = prompt { name } else { nil } }
     private var calendarTitle: String? { if case .calendarTitle(let title) = prompt { title } else { nil } }

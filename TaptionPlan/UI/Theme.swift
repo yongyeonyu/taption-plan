@@ -11,6 +11,13 @@ enum MapHomeWBSTripStyle {
     static let actualRouteLineWidth: CGFloat = 2.2
     static let forecastRouteLineWidth: CGFloat = 1.8
     static let routeDash: [NSNumber] = [4, 3]
+    /// 「백자」 지도에서만 쓰는 경로 색(RTC1111A01, 대표 결정). 가라앉힌 땅 위에서 대비 5.14.
+    static let porcelainRouteHex = "#A8442F"
+
+    /// 지도 모양별 내 경로 색. 「백자」만 테라코타이고 나머지는 그대로 청록이다.
+    static func actualRouteHex(for style: MapDisplayStyle) -> String {
+        style == .mapLibrePorcelain ? porcelainRouteHex : actualRouteHex
+    }
 }
 
 /// 글자 크기 8단계. 화면마다 흩어져 있던 27가지 크기를 이 여덟 값으로 모은다.

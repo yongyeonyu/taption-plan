@@ -446,7 +446,10 @@ extension MapHomeView {
             Text(language.text("메뉴 > 위치에서 집을 먼저 등록해 주세요.", "Add your home in Menu > Location first."))
         }
         .onSiriScreenRequest { openSiriScreen() }
-        .mapHomeLaunchPrompts($launchPrompt, model: model, language: language) {
+        .mapHomeLaunchPrompts($launchPrompt, model: model, language: language, onResume: {
+            launchPromptsAsked = []
+            Task { await runLaunchPrompts() }
+        }) {
             focusedUnconfirmedReviewSegment = nil
             isUnconfirmedReviewPresented = true
         }

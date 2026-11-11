@@ -898,7 +898,7 @@
    "ko": "AI로 만들기",
    "en": "Plan with AI",
    "files": [
-    "MapHomeView+Support.swift:690"
+    "MapHomeView+Support.swift:693"
    ],
    "args": [],
    "targets": [
@@ -2770,7 +2770,7 @@
    "en": "Confirm boarding at {0} {1}",
    "files": [
     "MapHomeView+Map.swift:451",
-    "MapHomeView+Routes.swift:759"
+    "MapHomeView+Routes.swift:762"
    ],
    "args": [
     "candidate.name",
@@ -2950,7 +2950,7 @@
    "en": "{0} memo sticker",
    "files": [
     "MapHomeView+Map.swift:467",
-    "MapHomeView+Routes.swift:782"
+    "MapHomeView+Routes.swift:785"
    ],
    "args": [
     "sticker.title"
@@ -3210,7 +3210,7 @@
    "en": "Add {0} location",
    "files": [
     "MapHomeView+Map.swift:517",
-    "MapHomeView+Routes.swift:928"
+    "MapHomeView+Routes.swift:931"
    ],
    "args": [
     "selectedSearchPin.title"
@@ -3309,7 +3309,7 @@
    "en": "{0} map memo, {1}",
    "files": [
     "MapHomeView+Map.swift:493",
-    "MapHomeView+Routes.swift:826"
+    "MapHomeView+Routes.swift:829"
    ],
    "args": [
     "memo.text",
@@ -3325,7 +3325,7 @@
    "en": "{0} temporary subway location",
    "files": [
     "MapHomeView+Map.swift:412",
-    "MapHomeView+Routes.swift:690"
+    "MapHomeView+Routes.swift:693"
    ],
    "args": [
     "location.stationName"
@@ -32682,7 +32682,7 @@
    "ko": "‘{0}’ 기기가 탈 때만 연결됐어요. 등록할까요? 등록하면 이 기기가 연결된 이동을 자동차로 기록해요.",
    "en": "‘{0}’ connected only while you rode. Register it? Trips with it connected will be recorded as car.",
    "files": [
-    "MapHomeLaunchPrompts.swift:147"
+    "MapHomeLaunchPrompts.swift:204"
    ],
    "args": [
     "name"
@@ -32696,7 +32696,7 @@
    "ko": "‘{0}’ 일정은 무엇인가요?",
    "en": "What is ‘{0}’?",
    "files": [
-    "MapHomeLaunchPrompts.swift:206"
+    "MapHomeLaunchPrompts.swift:266"
    ],
    "args": [
     "calendarTitle ?? \"\""
@@ -32710,7 +32710,7 @@
    "ko": "‘{0}’ 중 무엇인가요?",
    "en": "Which ‘{0}’?",
    "files": [
-    "MapHomeLaunchPrompts.swift:234"
+    "MapHomeLaunchPrompts.swift:294"
    ],
    "args": [
     "category?.localizedTitle(language) ?? \"\""
@@ -32724,7 +32724,7 @@
    "ko": "‘{0}’에 {1}번 머물렀어요. 어떤 곳인가요?",
    "en": "You stayed at ‘{0}’ {1} times. What is it?",
    "files": [
-    "MapHomeLaunchPrompts.swift:262"
+    "MapHomeLaunchPrompts.swift:322"
    ],
    "args": [
     "name",
@@ -34241,7 +34241,7 @@
    "ko": "계획과 기록은 삭제되지 않습니다.",
    "en": "Your plans and records will not be deleted.",
    "files": [
-    "MapHomeView+Support.swift:769"
+    "MapHomeView+Support.swift:772"
    ],
    "args": [],
    "targets": [
@@ -35550,7 +35550,7 @@
    "en": "Recorded paw ",
    "files": [
     "MapHomeView+Map.swift:542",
-    "MapHomeView+Routes.swift:650"
+    "MapHomeView+Routes.swift:653"
    ],
    "args": [],
    "targets": [
@@ -35963,7 +35963,7 @@
    "files": [
     "LedgerCore.swift:27",
     "AssistantAIProvider.swift:37",
-    "MapHomeLaunchPrompts.swift:277"
+    "MapHomeLaunchPrompts.swift:337"
    ],
    "args": [],
    "targets": [
@@ -36298,13 +36298,25 @@
    ]
   },
   {
+   "key": "나중에 확인|Check later",
+   "ko": "나중에 확인",
+   "en": "Check later",
+   "files": [
+    "MapHomeLaunchPrompts.swift:174"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "나중에|Later",
    "ko": "나중에",
    "en": "Later",
    "files": [
     "FirstRunTutorialGuides.swift:372",
     "FirstRunTutorialGuides.swift:419",
-    "MapHomeLaunchPrompts.swift:167"
+    "MapHomeView+Support.swift:687"
    ],
    "args": [],
    "targets": [
@@ -36554,7 +36566,7 @@
    "ko": "내 차로 등록",
    "en": "Register as my car",
    "files": [
-    "MapHomeLaunchPrompts.swift:144"
+    "MapHomeLaunchPrompts.swift:200"
    ],
    "args": [],
    "targets": [
@@ -37129,7 +37141,7 @@
    "en": "Calendar",
    "files": [
     "FirstRunGuideStage.swift:643",
-    "MapHomeView+Support.swift:458",
+    "MapHomeView+Support.swift:461",
     "MapHomeView+Support2.swift:392"
    ],
    "args": [],
@@ -37879,7 +37891,7 @@
    "ko": "뒤로",
    "en": "Back",
    "files": [
-    "MapHomeLaunchPrompts.swift:176",
+    "MapHomeLaunchPrompts.swift:233",
     "MapHomeWideLayoutPolicy.swift:239"
    ],
    "args": [],
@@ -37929,7 +37941,7 @@
    "ko": "등록 안 함",
    "en": "Don't register",
    "files": [
-    "MapHomeLaunchPrompts.swift:188"
+    "MapHomeLaunchPrompts.swift:245"
    ],
    "args": [],
    "targets": [
@@ -38583,7 +38595,7 @@
    "ko": "먼저 대분류를 고르세요. 한 번 정하면 같은 제목의 일정은 다시 묻지 않아요.",
    "en": "Pick a category first. Once set, events with the same title won't be asked again.",
    "files": [
-    "MapHomeLaunchPrompts.swift:169"
+    "MapHomeLaunchPrompts.swift:226"
    ],
    "args": [],
    "targets": [
@@ -39462,7 +39474,7 @@
    "ko": "미확인 시간이 있어요",
    "en": "Some time is unconfirmed",
    "files": [
-    "MapHomeLaunchPrompts.swift:193"
+    "MapHomeLaunchPrompts.swift:250"
    ],
    "args": [],
    "targets": [
@@ -40688,7 +40700,7 @@
    "ko": "분류 안 함",
    "en": "Don't classify",
    "files": [
-    "MapHomeLaunchPrompts.swift:166"
+    "MapHomeLaunchPrompts.swift:223"
    ],
    "args": [],
    "targets": [
@@ -42220,7 +42232,7 @@
    "ko": "설명 보기",
    "en": "Show info",
    "files": [
-    "MapHomeView+Routes.swift:893"
+    "MapHomeView+Routes.swift:896"
    ],
    "args": [],
    "targets": [
@@ -42335,7 +42347,7 @@
    "files": [
     "MapHomeView+Menu2.swift:210",
     "MapHomeView+Menu2.swift:227",
-    "MapHomeView+Support.swift:763"
+    "MapHomeView+Support.swift:766"
    ],
    "args": [],
    "targets": [
@@ -42409,7 +42421,7 @@
    "ko": "설정을 기본값으로 초기화할까요?",
    "en": "Reset settings to defaults?",
    "files": [
-    "MapHomeView+Support.swift:759"
+    "MapHomeView+Support.swift:762"
    ],
    "args": [],
    "targets": [
@@ -43641,7 +43653,7 @@
    "ko": "식당",
    "en": "Restaurant",
    "files": [
-    "MapHomeLaunchPrompts.swift:276"
+    "MapHomeLaunchPrompts.swift:336"
    ],
    "args": [],
    "targets": [
@@ -43807,7 +43819,7 @@
    "ko": "아니요",
    "en": "No",
    "files": [
-    "MapHomeLaunchPrompts.swift:145"
+    "MapHomeLaunchPrompts.swift:201"
    ],
    "args": [],
    "targets": [
@@ -45140,7 +45152,7 @@
    "ko": "여행 계획 추가",
    "en": "Add to trip",
    "files": [
-    "MapHomeView+Support.swift:688"
+    "MapHomeView+Support.swift:691"
    ],
    "args": [],
    "targets": [
@@ -46680,7 +46692,7 @@
    "en": "Select predicted route",
    "files": [
     "MapHomeView+Map.swift:540",
-    "MapHomeView+Routes.swift:657"
+    "MapHomeView+Routes.swift:660"
    ],
    "args": [],
    "targets": [
@@ -46848,7 +46860,7 @@
    "ko": "오늘 {0}분이 무엇을 했는지 모르는 시간이에요. 지금 정할까요?",
    "en": "{0} min today are unconfirmed. Review them now?",
    "files": [
-    "MapHomeLaunchPrompts.swift:197"
+    "MapHomeLaunchPrompts.swift:254"
    ],
    "args": [
     "minutes"
@@ -47433,7 +47445,7 @@
    "en": "Exercise",
    "files": [
     "MapHomeInteractionPolicy.swift:459",
-    "MapHomeLaunchPrompts.swift:275",
+    "MapHomeLaunchPrompts.swift:335",
     "MapHomeLocationPresentation.swift:310"
    ],
    "args": [],
@@ -48120,7 +48132,7 @@
    "ko": "위치를 '항상 허용'으로 바꿔 주세요",
    "en": "Set location to Always",
    "files": [
-    "MapHomeView+Support.swift:682"
+    "MapHomeView+Support.swift:685"
    ],
    "args": [],
    "targets": [
@@ -48479,7 +48491,7 @@
    "ko": "이 기기가 내 차 같아요",
    "en": "This looks like your car",
    "files": [
-    "MapHomeLaunchPrompts.swift:143"
+    "MapHomeLaunchPrompts.swift:199"
    ],
    "args": [],
    "targets": [
@@ -48966,7 +48978,7 @@
    "ko": "이 자리",
    "en": "This spot",
    "files": [
-    "MapHomeLaunchPrompts.swift:261"
+    "MapHomeLaunchPrompts.swift:321"
    ],
    "args": [],
    "targets": [
@@ -50003,7 +50015,7 @@
    "en": "Temporary",
    "files": [
     "MapHomeView+Map.swift:410",
-    "MapHomeView+Routes.swift:676"
+    "MapHomeView+Routes.swift:679"
    ],
    "args": [],
    "targets": [
@@ -50309,7 +50321,7 @@
    "ko": "자주 머무는 곳이 있어요",
    "en": "You stay here often",
    "files": [
-    "MapHomeLaunchPrompts.swift:184"
+    "MapHomeLaunchPrompts.swift:241"
    ],
    "args": [],
    "targets": [
@@ -51753,7 +51765,7 @@
    "ko": "지금 정하기",
    "en": "Review now",
    "files": [
-    "MapHomeLaunchPrompts.swift:194"
+    "MapHomeLaunchPrompts.swift:251"
    ],
    "args": [],
    "targets": [
@@ -52210,7 +52222,7 @@
    "ko": "지도에 메모 추가",
    "en": "Add map memo",
    "files": [
-    "MapHomeView+Support.swift:666"
+    "MapHomeView+Support.swift:669"
    ],
    "args": [],
    "targets": [
@@ -52592,7 +52604,7 @@
    "ko": "직접 입력",
    "en": "Enter manually",
    "files": [
-    "MapHomeView+Support.swift:689",
+    "MapHomeView+Support.swift:692",
     "TravelMapVideoSection.swift:38"
    ],
    "args": [],
@@ -52729,7 +52741,7 @@
    "files": [
     "FirstRunGuideStage.swift:647",
     "FirstRunTutorialGuides.swift:694",
-    "MapHomeLaunchPrompts.swift:270"
+    "MapHomeLaunchPrompts.swift:330"
    ],
    "args": [],
    "targets": [
@@ -53260,7 +53272,7 @@
    "ko": "추천: {0}",
    "en": "Suggested: {0}",
    "files": [
-    "MapHomeLaunchPrompts.swift:155"
+    "MapHomeLaunchPrompts.swift:212"
    ],
    "args": [
     "rule.label"
@@ -53392,7 +53404,7 @@
    "en": "Hobby",
    "files": [
     "MapHomeInteractionPolicy.swift:458",
-    "MapHomeLaunchPrompts.swift:274",
+    "MapHomeLaunchPrompts.swift:334",
     "MapHomeLocationPresentation.swift:291"
    ],
    "args": [],
@@ -55038,7 +55050,7 @@
    "ko": "학교",
    "en": "School",
    "files": [
-    "MapHomeLaunchPrompts.swift:271"
+    "MapHomeLaunchPrompts.swift:331"
    ],
    "args": [],
    "targets": [
@@ -55098,7 +55110,7 @@
    "ko": "학원",
    "en": "Academy",
    "files": [
-    "MapHomeLaunchPrompts.swift:272",
+    "MapHomeLaunchPrompts.swift:332",
     "record-classification.json:0"
    ],
    "args": [],
@@ -56101,6 +56113,18 @@
    ]
   },
   {
+   "key": "확인할 것|Things to check",
+   "ko": "확인할 것",
+   "en": "Things to check",
+   "files": [
+    "MapHomeLaunchPrompts.swift:193"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "확인해 주세요|Please check",
    "ko": "확인해 주세요",
    "en": "Please check",
@@ -56285,7 +56309,7 @@
    "en": "Work",
    "files": [
     "FirstRunTutorialGuides.swift:695",
-    "MapHomeLaunchPrompts.swift:273",
+    "MapHomeLaunchPrompts.swift:333",
     "FirstRunTutorialGuides.swift:695"
    ],
    "args": [],
