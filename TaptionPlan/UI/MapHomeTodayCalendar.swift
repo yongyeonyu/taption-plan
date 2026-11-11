@@ -118,6 +118,7 @@ struct MapHomeCalendarButton: View {
                         .font(.system(size: TaptionType.scaled(TaptionType.snapped(13))))
                         .foregroundStyle(Color.tpSecondary)
                         .background(Color.white, in: Circle())
+                        .overlay { Circle().strokeBorder(Color.tpBorder, lineWidth: TaptionBorder.width) }
                         .offset(x: 2, y: 2)
                 }
         }

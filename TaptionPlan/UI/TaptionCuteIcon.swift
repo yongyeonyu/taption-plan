@@ -577,7 +577,8 @@ struct TaptionStickerDisc: View {
             if let inner = palette.innerLine {
                 Circle().strokeBorder(inner, lineWidth: 2.4)
             }
-            Circle().strokeBorder(palette.outline, lineWidth: 1.6)
+            // 홈 화면 공통 테두리(BRD1111A02): 예전 진한 갈색 1.6pt.
+            Circle().strokeBorder(Color.tpBorder, lineWidth: TaptionBorder.width)
             Ellipse()
                 .fill(.white.opacity(0.6))
                 .frame(width: side * 0.46, height: side * 0.16)
