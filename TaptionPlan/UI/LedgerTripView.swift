@@ -42,6 +42,7 @@ struct LedgerTripView: View {
             .listRowBackground(Color.tpSurface)
         }
         .tpListStyle()
+            .font(.taptionStyle(.subheadline))
             .refreshable { await AssistantCommandRefresh.now(language: language, manual: true) }
             .navigationTitle(trip.name)
             .navigationBarTitleDisplayMode(.inline)
@@ -286,6 +287,7 @@ struct LedgerTripForm: View {
             .listRowBackground(Color.tpSurface)
         }
         .tpListStyle()
+            .font(.taptionStyle(.subheadline))
             .navigationTitle(language.text("여행 장부", "Trip ledger"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

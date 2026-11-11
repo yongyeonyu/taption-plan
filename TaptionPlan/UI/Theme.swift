@@ -337,6 +337,31 @@ enum TaptionRadius {
     static let card: CGFloat = 14
 }
 
+/// 모서리 네 단계(UIR1111A01, 대표 결정). 새로 다듬는 화면은 이 넷만 쓴다: 작은 단추·칩 8, 카드·띠 12, 묶음 패널 16, 시트 24.
+/// 안쪽 면은 바깥보다 한 단계 작게 써서 모서리가 나란히 돈다.
+enum TaptionCorner {
+    static let small: CGFloat = 8
+    static let medium: CGFloat = 12
+    static let large: CGFloat = 16
+    static let sheet: CGFloat = 24
+}
+
+/// 그림자 세 높이(UIR1111A01): 지도 위에 뜬 것, 시트 안 카드, 없음.
+enum TaptionShadowLevel {
+    case floating, card, none
+}
+
+extension View {
+    @ViewBuilder
+    func taptionShadow(_ level: TaptionShadowLevel) -> some View {
+        switch level {
+        case .floating: shadow(color: .black.opacity(0.12), radius: 8, y: 3)
+        case .card: shadow(color: .black.opacity(0.06), radius: 3, y: 1)
+        case .none: self
+        }
+    }
+}
+
 /// 스택 간격 토큰. 화면에서 실제로 쓰이던 값을 이름만 붙여 모았다.
 enum TaptionSpacing {
     static let tight: CGFloat = 4

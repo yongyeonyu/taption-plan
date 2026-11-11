@@ -224,9 +224,9 @@ struct LedgerSummaryTable: View {
                 Text(language.text("수입/지출", "In/Out")).frame(width: 82, alignment: .trailing)
                 Text(language.text("잔액", "Balance")).frame(width: 82, alignment: .trailing)
             }
-            .font(.taptionFixed(size: 11, weight: .bold)).foregroundStyle(Color.tpSecondary)
+            .font(.taptionFixed(size: 11, weight: .semibold)).foregroundStyle(Color.tpSecondary)
             HStack(spacing: 6) {
-                Text(language.text("이월잔액", "Carried over")).font(.taptionFixed(size: 12, weight: .semibold))
+                Text(language.text("이월잔액", "Carried over")).font(.taptionFixed(size: 12, weight: .medium))
                 Spacer()
                 Text(LedgerMoney.text(summary.carryOver, language: language)).monospacedDigit().frame(width: 82, alignment: .trailing)
             }
@@ -251,7 +251,7 @@ struct LedgerSummaryTable: View {
             let categories = summary.byCategory(language)
             if !categories.isEmpty {
                 Divider()
-                Text(language.text("항목별 지출", "Spending by category")).font(.taptionFixed(size: 13, weight: .bold))
+                Text(language.text("항목별 지출", "Spending by category")).font(.taptionFixed(size: 13, weight: .semibold))
                 let spent = max(1, categories.reduce(0) { $0 + $1.1 })
                 ForEach(Array(categories.enumerated()), id: \.offset) { _, item in
                     HStack(spacing: 8) {
@@ -268,7 +268,7 @@ struct LedgerSummaryTable: View {
             }
             if let sheet = summary.sheet {
                 Divider()
-                Text(language.text("대차대조(내 기준)", "Balance (for me)")).font(.taptionFixed(size: 13, weight: .bold))
+                Text(language.text("대차대조(내 기준)", "Balance (for me)")).font(.taptionFixed(size: 13, weight: .semibold))
                 ForEach(Array(LedgerSummary.balanceLines(sheet, language: language).enumerated()), id: \.offset) { _, line in
                     HStack {
                         Text(line.0)
@@ -281,13 +281,13 @@ struct LedgerSummaryTable: View {
             }
         }
         .padding(18)
-        .background(Color.tpCard, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionCorner.large, style: .continuous))
     }
 
     private func total(_ title: String, _ value: Double, _ color: Color) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title).font(.taptionFixed(size: 11)).foregroundStyle(Color.tpSecondary)
-            Text(LedgerMoney.text(value, language: language)).font(.taptionFixed(size: 14, weight: .bold)).foregroundStyle(color)
+            Text(LedgerMoney.text(value, language: language)).font(.taptionFixed(size: 14, weight: .semibold)).foregroundStyle(color)
                 .monospacedDigit().minimumScaleFactor(0.6).lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

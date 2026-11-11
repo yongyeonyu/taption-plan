@@ -87,14 +87,14 @@ extension MapHomeView {
     func scheduleMemoPreview(_ memo: MapSticker) -> some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: memo.systemImage)
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .semibold))
                 .foregroundStyle(Color(hex: memo.colorHex))
                 .frame(width: 30, height: 30)
                 .background(Color.white.opacity(0.96), in: Circle())
                 .overlay(Circle().stroke(Color(hex: memo.colorHex), lineWidth: 1))
             VStack(alignment: .leading, spacing: 3) {
                 Text(memo.title)
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
                     .lineLimit(1)
                 if let text = memo.memo, !text.isEmpty {
                     Text(text)
@@ -103,7 +103,7 @@ extension MapHomeView {
                         .lineLimit(2)
                 }
                 Text(memo.occurredAt.formatted(date: .omitted, time: .shortened))
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
             }
             .foregroundStyle(Color.tpInk)
@@ -112,7 +112,7 @@ extension MapHomeView {
                 dismissedMemoPreviewIDs.insert(memo.id)
             } label: {
                 Image(systemName: "xmark")
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
                     .foregroundStyle(Color.tpSecondary)
                     .frame(width: 28, height: 28)
                     .contentShape(Rectangle())
@@ -123,12 +123,12 @@ extension MapHomeView {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .frame(maxWidth: 280, alignment: .leading)
-        .background(Color.tpSurface.opacity(0.97), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Color.tpSurface.opacity(0.97), in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
                 .stroke(Color.tpBorder, lineWidth: TaptionBorder.width)
         }
-        .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
+        .taptionShadow(.floating)
         .contentShape(Rectangle())
         .onTapGesture { selectedMapStickerEditor = .sticker(memo.id) }
         .accessibilityElement(children: .combine)
@@ -241,7 +241,7 @@ extension MapHomeView {
                         queueExpanded ? language.text("접기", "Collapse") : "+\(panelMemos.count - 3)",
                         systemImage: queueExpanded ? "chevron.up" : "chevron.down"
                     )
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
                     .foregroundStyle(Color.tpSecondary)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
@@ -254,9 +254,9 @@ extension MapHomeView {
         // 메모 목록 전체를 한 판으로 감싼다(MBG1111A01). 바깥 폭은 일정 패널과 같은 280.
         .frame(width: 280 - 16, alignment: .leading)
         .padding(8)
-        .background(Color.tpBackground.opacity(0.92), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay { RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Color.tpBorder, lineWidth: TaptionBorder.width) }
-        .shadow(color: .black.opacity(0.12), radius: 8, y: 3)
+        .background(Color.tpBackground.opacity(0.92), in: RoundedRectangle(cornerRadius: TaptionCorner.large, style: .continuous))
+        .overlay { RoundedRectangle(cornerRadius: TaptionCorner.large, style: .continuous).stroke(Color.tpBorder, lineWidth: TaptionBorder.width) }
+        .taptionShadow(.floating)
     }
 
     /// 메모를 원형 아이콘 하나로 모은다. 누르면 펼쳐서 목록을 보여 준다.
@@ -272,7 +272,7 @@ extension MapHomeView {
                 .overlay(alignment: .topTrailing) {
                     if count > 0, !memoStackExpanded {
                         Text("\(count)")
-                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 5)
                             .padding(.vertical, 2)
@@ -287,19 +287,19 @@ extension MapHomeView {
     func memoCard(_ memo: ActionMemo, showsTime: Bool) -> some View {
         HStack(alignment: .top, spacing: 10) {
             StickerGlyph(symbol: memo.iconSymbol(fallback: showsTime ? "clock.fill" : "note.text"), colorHex: memo.iconColorHex, size: 24)
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
                 .foregroundStyle(Color.tpReferenceBlue)
                 .frame(width: 26, height: 26)
                 .background(Color.white.opacity(0.9), in: Circle())
             VStack(alignment: .leading, spacing: 3) {
                 Text(memo.text)
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                     .foregroundStyle(Color.tpInk)
                     .lineLimit(2)
                 LedgerMemoBadge(memoID: memo.id, language: language)
                 if showsTime {
                     Text(memo.occurredAt.formatted(date: .omitted, time: .shortened))
-                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .regular))
                         .foregroundStyle(Color.tpSecondary)
                 }
             }
@@ -307,7 +307,7 @@ extension MapHomeView {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 9)
-        .mapHomeGlass(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .mapHomeGlass(in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
         .contentShape(Rectangle())
         .onTapGesture { selectedMapStickerEditor = .memo(memo.id) }
         .accessibilityElement(children: .combine)

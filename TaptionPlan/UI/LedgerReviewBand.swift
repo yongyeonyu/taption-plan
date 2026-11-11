@@ -15,11 +15,11 @@ struct LedgerReviewBand: View {
                     Spacer(minLength: 0)
                     Image(systemName: "chevron.right").foregroundStyle(Color.tpSecondary)
                 }
-                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                 .foregroundStyle(Color.tpInk)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 7)
-                .mapHomeGlass(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .mapHomeGlass(in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("ledger-review-band")
@@ -46,6 +46,7 @@ struct LedgerReviewSheet: View {
                 }
             }
             .tpListStyle()
+            .font(.taptionStyle(.subheadline))
             .navigationTitle(language.text("확인 필요", "Needs review"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button(language.text("완료", "Done")) { dismiss() } } }
@@ -120,6 +121,7 @@ struct LedgerOwnAccountsSheet: View {
                 .listRowBackground(Color.tpSurface)
             }
             .tpListStyle()
+            .font(.taptionStyle(.subheadline))
             .navigationTitle(language.text("내 계좌 이름", "My account names"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button(language.text("완료", "Done")) { dismiss() } } }

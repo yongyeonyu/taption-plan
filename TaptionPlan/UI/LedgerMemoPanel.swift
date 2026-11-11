@@ -62,11 +62,11 @@ struct LedgerMemoHeader: View {
                     Spacer(minLength: 0)
                     Image(systemName: "chevron.right").foregroundStyle(Color.tpSecondary)
                 }
-                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                 .foregroundStyle(Color.tpInk)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 7)
-                .mapHomeGlass(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .mapHomeGlass(in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("memo-ledger-open")
@@ -119,11 +119,11 @@ struct LedgerDayCards: View {
             .sorted { $0.occurredAt < $1.occurredAt }
         if entries.isEmpty, !onlyUnlinked {
             Text(language.text("그날 지출이 없어요. 메모에 「커피 4500」처럼 쓰면 들어가요.", "No spending that day. Write a memo like \"Coffee 4500\" to add one."))
-                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .regular))
                 .foregroundStyle(Color.tpSecondary)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 9)
-                .mapHomeGlass(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .mapHomeGlass(in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
         }
         ForEach(entries) { entry in
             Button { LedgerPresenter.shared.isPresented = true } label: { LedgerMemoCard(entry: entry, language: language) }
@@ -143,31 +143,31 @@ struct LedgerMemoCard: View {
                 LedgerTollIcon(toll: toll, size: 24).frame(width: 26, height: 26)
             } else {
                 Image(systemName: entry.category.symbol)
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
                     .foregroundStyle(Color.tpAccent)
                     .frame(width: 26, height: 26)
                     .background(Color.white.opacity(0.9), in: Circle())
             }
             VStack(alignment: .leading, spacing: 3) {
                 Text(entry.title)
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                     .foregroundStyle(Color.tpInk)
                     .lineLimit(2)
                 // 취소된 결제는 줄을 긋고 합계에서 뺀다(LCN1111A01).
                 Text((entry.kind == .expense ? "−" : "+") + LedgerMoney.text(entry.amount, currency: entry.currency, language: language)
                      + (entry.canceledAt == nil ? "" : " · " + language.text("취소됨", "Canceled")))
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
                     .strikethrough(entry.canceledAt != nil)
                     .foregroundStyle(entry.canceledAt != nil ? Color.tpSecondary : entry.kind == .expense ? Color.tpAccent : Color.green)
                 Text("\(entry.occurredAt.formatted(date: .omitted, time: .shortened)) · \(entry.category.title(language))")
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .regular))
                     .foregroundStyle(Color.tpSecondary)
             }
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 9)
-        .mapHomeGlass(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .mapHomeGlass(in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
         .contentShape(Rectangle())
     }
 }
@@ -188,7 +188,7 @@ struct LedgerMemoBadge: View {
     var body: some View {
         if let entry = LedgerBook.shared.entry(forMemo: memoID) {
             Text((entry.kind == .expense ? "−" : "+") + LedgerMoney.text(entry.amount, currency: entry.currency, language: language))
-                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
                 .foregroundStyle(Color.tpAccent)
         }
     }

@@ -90,6 +90,23 @@ extension MapHomeView {
             launchPrompt = .calendarTitle("Invitation: MB ATHOS1.0 주간 회의")
             return
         }
+        // 가계부 화면 확인용(UIR1111A01, Debug 전용): 기록이 없으면 보기 몇 줄을 넣고 가계부를 연다. 시뮬레이터에서만 쓴다.
+        if ProcessInfo.processInfo.arguments.contains("-ledgerPreview") {
+            try? await Task.sleep(for: .seconds(3))
+            await LedgerBook.shared.load()
+            if LedgerBook.shared.entries.isEmpty {
+                let samples: [(String, Double, LedgerCategory, TimeInterval)] = [
+                    ("회사 커피숍 라떼", 4_500, .cafe, -3_600), ("점심 국밥", 9_000, .food, -7_200), ("경인고속도로 통행료", 900, .transport, -10_800),
+                ]
+                for sample in samples {
+                    var entry = LedgerEntry(occurredAt: Date.now.addingTimeInterval(sample.3), amount: sample.1, title: sample.0)
+                    entry.category = sample.2
+                    await LedgerBook.shared.save(entry)
+                }
+            }
+            LedgerPresenter.shared.isPresented = true
+            return
+        }
         // 지도 모양 확인용(PLN1111A01, Debug 전용): `-mapStylePreview mapLibrePorcelain`.
         if let index = ProcessInfo.processInfo.arguments.firstIndex(of: "-mapStylePreview"),
            let raw = ProcessInfo.processInfo.arguments.dropFirst(index + 1).first, let style = MapDisplayStyle(rawValue: raw) {

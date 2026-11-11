@@ -30,7 +30,7 @@ struct AITaskPanel: View {
                     }
                 } label: {
                     Label(language.text("끝난 일 지우기", "Clear finished"), systemImage: "trash")
-                        .font(.taptionStyle(.caption, weight: .bold))
+                        .font(.taptionStyle(.caption, weight: .semibold))
                         .foregroundStyle(Color.tpSecondary)
                 }
                 .buttonStyle(.plain)
@@ -68,14 +68,14 @@ struct AITaskPanel: View {
     private func row(_ task: AITaskQueue.Task) -> some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: Self.symbol(task.kind))
-                .font(.system(size: 13, weight: .bold))
+                .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(Color.tpAccent)
                 .frame(width: 26, height: 26)
                 .background(Color.white.opacity(0.9), in: Circle())
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Text(title(task.kind))
-                        .font(.taptionStyle(.subheadline, weight: .semibold))
+                        .font(.taptionStyle(.subheadline, weight: .medium))
                         .foregroundStyle(Color.tpInk)
                     Spacer(minLength: 0)
                     statusChip(task.status)
@@ -94,8 +94,8 @@ struct AITaskPanel: View {
             }
         }
         .padding(10)
-        .background(Color.tpCard.opacity(0.9), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay { RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color.tpBorder, lineWidth: TaptionBorder.width) }
+        .background(Color.tpCard.opacity(0.9), in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
+        .overlay { RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous).stroke(Color.tpBorder, lineWidth: TaptionBorder.width) }
     }
 
     private func statusChip(_ status: AITaskQueue.Status) -> some View {
@@ -106,7 +106,7 @@ struct AITaskPanel: View {
         case .failed: (language.text("실패", "Failed"), Color.tpHoliday)
         }
         return Text(text)
-            .font(.taptionStyle(.caption2, weight: .bold))
+            .font(.taptionStyle(.caption2, weight: .semibold))
             .foregroundStyle(.white)
             .padding(.horizontal, 7)
             .padding(.vertical, 2)

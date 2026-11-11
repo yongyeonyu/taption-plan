@@ -57,6 +57,7 @@ struct LedgerSheet: View {
                 .listRowBackground(Color.tpSurface)
             }
             .tpListStyle()
+            .font(.taptionStyle(.subheadline))
             // 당겨서 AI 비서 명령을 바로 받는다(SYN1111A01).
             .refreshable { await AssistantCommandRefresh.now(language: language, manual: true) }
             .navigationTitle(language.text("가계부", "Ledger"))
@@ -280,23 +281,23 @@ struct LedgerRow: View {
             LedgerEntryIcon(entry: entry, size: 22).frame(width: 24)
             VStack(alignment: .leading, spacing: 2) {
                 Text(entry.title).lineLimit(1)
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .regular))
                     .foregroundStyle(Color.tpInk)
                 // 시각을 맨 앞에(LDU1111A01).
                 Text([entry.occurredAt.formatted(date: .omitted, time: .shortened), entry.category.title(language), entry.payer, sourceText,
                       entry.canceledAt == nil ? nil : language.text("취소됨", "Canceled")].compactMap { $0 }.joined(separator: " · "))
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .regular))
                     .foregroundStyle(Color.tpSecondary)
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
                 Text((entry.kind == .expense ? "−" : "+") + LedgerMoney.text(entry.amount, currency: entry.currency, language: language))
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold))
                     .strikethrough(entry.canceledAt != nil)
                     .foregroundStyle(entry.canceledAt != nil ? Color.tpSecondary : entry.kind == .expense ? Color.tpInk : Color.green)
                 if entry.currency != "KRW", let krw = entry.amountKRW {
                     Text(LedgerMoney.text(krw, language: language))
-                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .regular))
                         .foregroundStyle(Color.tpSecondary)
                 }
             }
@@ -378,6 +379,7 @@ struct LedgerEntryForm: View {
             .listRowBackground(Color.tpSurface)
         }
         .tpListStyle()
+            .font(.taptionStyle(.subheadline))
             .navigationTitle(isNew ? language.text("기록 더하기", "Add entry") : language.text("기록 고치기", "Edit entry"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -510,6 +512,7 @@ struct LedgerBudgetForm: View {
             .listRowBackground(Color.tpSurface)
         }
         .tpListStyle()
+            .font(.taptionStyle(.subheadline))
             .navigationTitle(language.text("예산", "Budget"))
             .navigationBarTitleDisplayMode(.inline)
             .onAppear { amountText = book.budget(for: period).map { String(Int($0.amountKRW)) } ?? "" }
@@ -565,6 +568,7 @@ struct LedgerSettleView: View {
             .listRowBackground(Color.tpSurface)
         }
         .tpListStyle()
+            .font(.taptionStyle(.subheadline))
             .navigationTitle(language.text("정산하기", "Settle up"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button(language.text("완료", "Done")) { dismiss() } } }
