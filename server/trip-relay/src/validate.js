@@ -199,6 +199,11 @@ export const COMMAND_FIELDS = {
   deletePlace: ["placeId"],
   addCategory: ["name", "color", "icon"],
   updateCategory: ["categoryId", "name", "color", "icon", "hidden"],
+  // ACB1112A01: 여행 만들기·고치기·지우기와 급여·통행료 차종 설정.
+  addTrip: ["title", "start", "end", "wishDays", "countryCode", "regionName", "currency"],
+  updateTrip: ["tripId", "title", "start", "end"],
+  deleteTrip: ["tripId"],
+  setSetting: ["setting", "value"],
   setLanguage: ["language"],
   setTheme: ["theme"],
   setMapStyle: ["mapStyle"],
@@ -251,6 +256,26 @@ export const CATEGORY_ICONS = ["briefcase", "building", "book", "graduation", "t
 const isBoolean = (v) => typeof v === "boolean";
 const placeRadius = (v) => typeof v === "number" && Number.isFinite(v) && v >= PLACE_LIMITS.minRadius && v <= PLACE_LIMITS.maxRadius;
 const hexColor = (v) => typeof v === "string" && /^#[0-9A-Fa-f]{6}$/.test(v);
+
+// ACB1112A01: 여행 이름 1~60자, 날짜 없는 여행은 1~60일. 설정은 이 표의 이름만 받는다(값의 형과 범위).
+export const TRIP_LIMITS = { title: 60, region: 40, wishDays: 60, trips: 100 };
+const amountUpTo = (max) => (v) => typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= max;
+export const TOLL_VEHICLES = ["standard", "compact", "electric"];
+export const SALARY_MODES = ["salary", "hourly"];
+export const HOURLY_TAXES = ["threePointThree", "fourInsurance", "none"];
+export const SETTINGS = {
+  tollVehicle: oneOf(TOLL_VEHICLES),
+  salaryMode: oneOf(SALARY_MODES),
+  annualPay: amountUpTo(1e11),
+  monthlyPay: amountUpTo(1e10),
+  payIsNet: isBoolean,
+  showsNetPay: isBoolean,
+  hourlyPay: amountUpTo(1e7),
+  hourlyPayIsNet: isBoolean,
+  hourlyTax: oneOf(HOURLY_TAXES),
+  weeklyHolidayPay: isBoolean,
+};
+export const SETTING_NAMES = Object.keys(SETTINGS);
 
 // 알려진 칸만 남긴 명령. 동작을 모르면 null.
 export function cleanCommand(value) {
@@ -383,6 +408,19 @@ export function isCommand(value) {
     case "updateCategory":
       return targetID(v.categoryId) && optional(v.name, (n) => lengthIn(n, PLACE_LIMITS.category)) && optional(v.color, hexColor)
         && optional(v.icon, oneOf(CATEGORY_ICONS)) && optional(v.hidden, isBoolean) && [v.name, v.color, v.icon, v.hidden].some(given);
+    case "addTrip":
+      return lengthIn(v.title, TRIP_LIMITS.title) && optional(v.countryCode, (c) => typeof c === "string" && /^[A-Z]{2}$/.test(c))
+        && optional(v.regionName, (r) => lengthIn(r, TRIP_LIMITS.region)) && optional(v.currency, (c) => typeof c === "string" && /^[A-Z]{3}$/.test(c))
+        && (given(v.wishDays)
+          ? Number.isInteger(v.wishDays) && v.wishDays >= 1 && v.wishDays <= TRIP_LIMITS.wishDays && !given(v.start) && !given(v.end)
+          : isDate(v.start) && optional(v.end, isDate) && notBefore(v.start, v.end));
+    case "updateTrip":
+      return targetID(v.tripId) && optional(v.title, (t) => lengthIn(t, TRIP_LIMITS.title)) && optional(v.start, isDate) && optional(v.end, isDate)
+        && notBefore(v.start, v.end) && [v.title, v.start, v.end].some(given);
+    case "deleteTrip":
+      return targetID(v.tripId);
+    case "setSetting":
+      return Object.hasOwn(SETTINGS, v.setting) && SETTINGS[v.setting](v.value);
     case "askUser":
       return questionText(v.question) && answerOptions(v.options) && optional(v.multiSelect, (b) => typeof b === "boolean");
     case "setLanguage":
@@ -424,7 +462,7 @@ export function isTaskResult(value) {
 
 // 앱 상태(ACX1112A01). 앱이 통째로 올리고 AI는 읽기만 한다: 설정, 가계부(이 달 합계·예산·최근 기록), 확인 필요,
 // 받은 결제 문자(번호는 앱이 가린다), 결제 문자 규칙. 서버는 모양·개수만 보고 알려진 칸만 잠가 둔다.
-export const APP_STATE_FIELDS = ["updatedAt", "timeZone", "settings", "ledger", "review", "inbox", "rules", "places", "categories"];
+export const APP_STATE_FIELDS = ["updatedAt", "timeZone", "settings", "ledger", "review", "inbox", "rules", "places", "categories", "trips"];
 export const APP_STATE_LIMITS = { entries: 200, review: 50, inbox: 30, rules: 20 };
 const plainObject = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 const objectList = (v, max) => Array.isArray(v) && v.length <= max && v.every(plainObject);
@@ -436,7 +474,8 @@ export function isAppState(value) {
     && optional(value.review, (l) => objectList(l, APP_STATE_LIMITS.review))
     && optional(value.inbox, (l) => objectList(l, APP_STATE_LIMITS.inbox))
     && optional(value.rules, (l) => objectList(l, APP_STATE_LIMITS.rules))
-    && optional(value.places, (l) => objectList(l, PLACE_LIMITS.places)) && optional(value.categories, (l) => objectList(l, PLACE_LIMITS.categories));
+    && optional(value.places, (l) => objectList(l, PLACE_LIMITS.places)) && optional(value.categories, (l) => objectList(l, PLACE_LIMITS.categories))
+    && optional(value.trips, (l) => objectList(l, TRIP_LIMITS.trips));
 }
 export function cleanAppState(value) {
   const out = { format: "bokki-app", version: 1 };

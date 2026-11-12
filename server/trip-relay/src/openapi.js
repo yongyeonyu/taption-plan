@@ -44,6 +44,9 @@ const command = {
     + "addPlace: name (1-40), latitude+longitude? (together), radius? (30-500 m), autoRecord?. updatePlace: placeId (getAppState places), then "
     + "name?, latitude+longitude?, radius?, autoRecord?. deletePlace: placeId. addCategory: name (1-20), color (#RRGGBB), icon?. "
     + "updateCategory: categoryId (getAppState categories), then name?, color?, icon?, hidden?. "
+    + "addTrip: title (1-60), start (YYYY-MM-DD) and end? or wishDays (1-60, a trip without dates), countryCode?, regionName?, currency?. "
+    + "updateTrip: tripId (getAppState trips), then title?, start?, end? (moving start moves its items). deleteTrip: tripId (items and pins too). "
+    + "setSetting: setting (tollVehicle|salaryMode|annualPay|monthlyPay|payIsNet|showsNetPay|hourlyPay|hourlyPayIsNet|hourlyTax|weeklyHolidayPay), value. "
     + "askUser: question (1-200), options (2-4 distinct strings of 1-60), multiSelect? (asks the user a multiple-choice question in the app; "
     + "changes no records; the app always adds free text; read the answer with getAnswers, matched by this command's id). Unknown fields are dropped.",
   properties: {
@@ -88,6 +91,11 @@ const command = {
     decision: { type: "string", enum: REVIEW_DECISIONS, description: "resolveReview: add to the ledger or discard" },
     inboxId: { type: "string", description: "deleteInboxItem: inbox item id (UUID)" },
     screen: { type: "string", enum: SCREENS, description: "openScreen: screen to show" },
+    wishDays: { type: "integer", minimum: 1, maximum: 60, description: "addTrip: days of a trip without dates" },
+    countryCode: { type: "string", pattern: "^[A-Z]{2}$", description: "addTrip: ISO 3166-1 alpha-2" },
+    regionName: { type: "string", maxLength: 40, description: "addTrip: city or region" },
+    setting: { type: "string", description: "setSetting: setting name" },
+    value: { description: "setSetting: string, number or boolean" },
     placeId: { type: "string", description: "updatePlace, deletePlace: place id (UUID)" },
     radius: { type: "number", minimum: 30, maximum: 500, description: "addPlace, updatePlace: radius in meters" },
     autoRecord: { type: "boolean", description: "addPlace, updatePlace: automatic recording at the place" },

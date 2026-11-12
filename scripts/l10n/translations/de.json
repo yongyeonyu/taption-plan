@@ -5442,6 +5442,20 @@
 "자주 가는 장소 지우기|Delete frequent places": "Häufige Orte löschen",
 "분류 더하기|Add categories": "Kategorien hinzufügen",
 "분류 고치기|Edit categories": "Kategorien bearbeiten",
-"숨김|Hidden": "Ausgeblendet"
+"숨김|Hidden": "Ausgeblendet",
+"{0}일(날짜 미정)|{0} day(s), no dates": "{0} Tag(e), ohne Datum",
+"급여 방식|Pay type": "Vergütungsart",
+"급여·통행료 차종 설정 바꾸기|Change pay and toll vehicle settings": "Gehalts- und Mautfahrzeug-Einstellungen ändern",
+"급여를 세후로 입력|Pay entered after tax": "Gehalt netto eingegeben",
+"세후 금액으로 보기|Show after-tax amounts": "Nettobeträge anzeigen",
+"시급 세금 방식|Hourly tax method": "Steuerart für Stundenlohn",
+"시급|Hourly pay": "Stundenlohn",
+"시급을 세후로 입력|Hourly pay entered after tax": "Stundenlohn netto eingegeben",
+"여행 고치기|Edit trips": "Reisen bearbeiten",
+"여행 만들기|Create trips": "Reisen erstellen",
+"여행 지우기|Delete trips": "Reisen löschen",
+"연봉|Annual pay": "Jahresgehalt",
+"주휴수당 포함|Weekly holiday pay": "Wochenruhegeld einbeziehen",
+"통행료 차종|Toll vehicle": "Mautfahrzeugklasse"
 }
 }

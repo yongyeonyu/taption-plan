@@ -177,6 +177,36 @@ extension AssistantCommandParser {
                 categoryID: id, name: clean(raw.name, max: AssistantCatalogLimits.categoryName), color: raw.color?.uppercased(),
                 icon: raw.icon.flatMap(CategoryIcon.init(rawValue:)), hidden: raw.hidden
             )
+        case "addTrip":
+            guard let title = clean(raw.title, max: AssistantSetting.tripTitleLimit) else { return nil }
+            if let code = raw.countryCode, code.range(of: "^[A-Z]{2}$", options: .regularExpression) == nil { return nil }
+            if raw.regionName != nil, clean(raw.regionName, max: 40) == nil { return nil }
+            if let currency = raw.currency, currency.range(of: "^[A-Z]{3}$", options: .regularExpression) == nil { return nil }
+            var trip = TravelTrip(id: "trip-\(UUID().uuidString.lowercased())", title: title, startDay: "", endDay: "", countryCode: raw.countryCode,
+                                  regionName: clean(raw.regionName, max: 40), currencyCode: raw.currency)
+            if let days = raw.wishDays {
+                guard (1...60).contains(days), raw.start == nil, raw.end == nil else { return nil }
+                trip.wishDays = days
+            } else {
+                guard let start = raw.start, TravelTripDay.components(start) != nil else { return nil }
+                let end = raw.end ?? start
+                guard let length = TravelTripDay.days(from: start, to: end), length >= 0 else { return nil }
+                trip.startDay = start
+                trip.endDay = end
+            }
+            return .addTrip(trip)
+        case "updateTrip":
+            guard let id = clean(raw.tripId, max: 100) else { return nil }
+            if raw.title != nil, clean(raw.title, max: AssistantSetting.tripTitleLimit) == nil { return nil }
+            for day in [raw.start, raw.end].compactMap({ $0 }) where TravelTripDay.components(day) == nil { return nil }
+            if let start = raw.start, let end = raw.end, (TravelTripDay.days(from: start, to: end) ?? -1) < 0 { return nil }
+            guard raw.title != nil || raw.start != nil || raw.end != nil else { return nil }
+            return .updateTrip(tripID: id, title: clean(raw.title, max: AssistantSetting.tripTitleLimit), start: raw.start, end: raw.end)
+        case "deleteTrip":
+            return clean(raw.tripId, max: 100).map { .deleteTrip(tripID: $0) }
+        case "setSetting":
+            guard let setting = raw.setting.flatMap(AssistantSetting.init(rawValue:)), let value = raw.value.flatMap(setting.canonical) else { return nil }
+            return .setSetting(setting, value: value)
         case "askUser":
             return AssistantQuestion.make(id: raw.id, question: raw.question, options: raw.options, multiSelect: raw.multiSelect, now: now).map { .askUser($0) }
         default:
@@ -368,6 +398,7 @@ struct AssistantPreferenceStore {
         if key == AssistantPreferenceChange.languageKey {
             return isLive ? AppLanguagePreference.current.rawValue : AppLanguagePreference.load(from: defaults).rawValue
         }
+        if let setting = AssistantSetting.allCases.first(where: { $0.key == key }) { return setting.read(defaults) }
         guard let option = AssistantDisplayOption.allCases.first(where: { $0.defaultsKey == key }) else { return nil }
         return String(defaults.object(forKey: option.defaultsKey) as? Bool ?? true)
     }
@@ -377,6 +408,10 @@ struct AssistantPreferenceStore {
             let preference = value.flatMap(AppLanguagePreference.init(rawValue:)) ?? .automatic
             AppLanguagePreference.save(preference, to: isLive ? nil : defaults)
             if isLive { model?.languagePreferenceDidChange() }
+            return
+        }
+        if let setting = AssistantSetting.allCases.first(where: { $0.key == key }) {
+            setting.write(value, defaults: defaults)
             return
         }
         guard AssistantDisplayOption.allCases.contains(where: { $0.defaultsKey == key }) else { return }
@@ -441,5 +476,107 @@ final class AssistantScreenRequest {
         defaults.removeObject(forKey: Self.key)
         defaults.removeObject(forKey: Self.dateKey)
         pending = nil
+    }
+}
+
+/// 명령의 `value`처럼 글자·숫자·참거짓이 다 올 수 있는 칸(ACB1112A01).
+enum AssistantLooseValue: Decodable, Equatable, Sendable {
+    case flag(Bool)
+    case number(Double)
+    case text(String)
+
+    init(from decoder: Decoder) throws {
+        let value = try decoder.singleValueContainer()
+        if let flag = try? value.decode(Bool.self) { self = .flag(flag) }
+        else if let number = try? value.decode(Double.self) { self = .number(number) }
+        else { self = .text(try value.decode(String.self)) }
+    }
+}
+
+/// AI가 바꿀 수 있는 기기 설정(ACB1112A01). 이 이름만 받고, 값은 형과 범위를 본 뒤 정해진 글자 꼴로 다룬다.
+/// 급여 금액은 받기만 하고 AI에게 올리지 않는다.
+enum AssistantSetting: String, CaseIterable, Codable, Sendable {
+    case tollVehicle, salaryMode, annualPay, monthlyPay, payIsNet, showsNetPay, hourlyPay, hourlyPayIsNet, hourlyTax, weeklyHolidayPay
+
+    static let tripTitleLimit = 60
+
+    private enum Kind {
+        case choice([String])
+        case amount(Double)
+        case flag
+    }
+
+    var key: String {
+        switch self {
+        case .tollVehicle: LedgerTollDiscount.vehicleKey
+        case .salaryMode: MapHomeSalaryPolicy.isHourlyKey
+        case .annualPay: MapHomeSalaryPolicy.annualKey
+        case .monthlyPay: MapHomeSalaryPolicy.monthlyPayKey
+        case .payIsNet: MapHomeSalaryPolicy.isNetInputKey
+        case .showsNetPay: MapHomeSalaryPolicy.showsNetKey
+        case .hourlyPay: MapHomeSalaryPolicy.hourlyKey
+        case .hourlyPayIsNet: MapHomeSalaryPolicy.hourlyIsNetKey
+        case .hourlyTax: MapHomeSalaryPolicy.hourlyTaxKey
+        case .weeklyHolidayPay: MapHomeSalaryPolicy.weeklyHolidayKey
+        }
+    }
+
+    private var kind: Kind {
+        switch self {
+        case .tollVehicle: .choice(LedgerTollDiscount.Vehicle.allCases.map(\.rawValue))
+        case .salaryMode: .choice(["salary", "hourly"])
+        case .hourlyTax: .choice(MapHomeSalaryPolicy.HourlyTax.allCases.map(\.rawValue))
+        case .annualPay: .amount(1e11)
+        case .monthlyPay: .amount(1e10)
+        case .hourlyPay: .amount(1e7)
+        case .payIsNet, .showsNetPay, .hourlyPayIsNet, .weeklyHolidayPay: .flag
+        }
+    }
+
+    /// 받은 값을 정해진 글자 꼴로. 형이나 범위가 틀리면 nil.
+    func canonical(_ value: AssistantLooseValue) -> String? {
+        switch (kind, value) {
+        case let (.choice(names), .text(text)): names.contains(text) ? text : nil
+        case let (.amount(limit), .number(number)): number.isFinite && (0...limit).contains(number) ? String(number.rounded()) : nil
+        case let (.flag, .flag(flag)): String(flag)
+        default: nil
+        }
+    }
+
+    /// 지금 값. 한 번도 정하지 않았으면 nil.
+    func read(_ defaults: UserDefaults) -> String? {
+        guard let stored = defaults.object(forKey: key) else { return nil }
+        switch kind {
+        case .choice where self == .salaryMode: return (stored as? Bool).map { $0 ? "hourly" : "salary" }
+        case .choice: return stored as? String
+        case .amount: return (stored as? Double).map { String($0.rounded()) }
+        case .flag: return (stored as? Bool).map(String.init)
+        }
+    }
+
+    /// nil이면 정하기 전으로 돌린다.
+    func write(_ value: String?, defaults: UserDefaults) {
+        guard let value else { return defaults.removeObject(forKey: key) }
+        switch kind {
+        case .choice where self == .salaryMode: defaults.set(value == "hourly", forKey: key)
+        case .choice: defaults.set(value, forKey: key)
+        case .amount: defaults.set(Double(value) ?? 0, forKey: key)
+        case .flag: defaults.set(value == "true", forKey: key)
+        }
+    }
+
+    func title(_ language: MapHomeLanguage) -> String {
+        switch self {
+        case .tollVehicle: language.text("통행료 차종", "Toll vehicle")
+        case .salaryMode: language.text("급여 방식", "Pay type")
+        case .annualPay: language.text("연봉", "Annual pay")
+        case .monthlyPay: language.text("월급", "Monthly pay")
+        case .payIsNet: language.text("급여를 세후로 입력", "Pay entered after tax")
+        case .showsNetPay: language.text("세후 금액으로 보기", "Show after-tax amounts")
+        case .hourlyPay: language.text("시급", "Hourly pay")
+        case .hourlyPayIsNet: language.text("시급을 세후로 입력", "Hourly pay entered after tax")
+        case .hourlyTax: language.text("시급 세금 방식", "Hourly tax method")
+        case .weeklyHolidayPay: language.text("주휴수당 포함", "Weekly holiday pay")
+        }
     }
 }

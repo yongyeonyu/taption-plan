@@ -5442,6 +5442,20 @@
 "자주 가는 장소 지우기|Delete frequent places": "Supprimer des lieux fréquents",
 "분류 더하기|Add categories": "Ajouter des catégories",
 "분류 고치기|Edit categories": "Modifier les catégories",
-"숨김|Hidden": "Masqué"
+"숨김|Hidden": "Masqué",
+"{0}일(날짜 미정)|{0} day(s), no dates": "{0} jour(s), sans dates",
+"급여 방식|Pay type": "Type de rémunération",
+"급여·통행료 차종 설정 바꾸기|Change pay and toll vehicle settings": "Modifier les réglages de paie et de véhicule de péage",
+"급여를 세후로 입력|Pay entered after tax": "Paie saisie après impôt",
+"세후 금액으로 보기|Show after-tax amounts": "Afficher les montants après impôt",
+"시급 세금 방식|Hourly tax method": "Mode d’imposition horaire",
+"시급|Hourly pay": "Salaire horaire",
+"시급을 세후로 입력|Hourly pay entered after tax": "Salaire horaire saisi après impôt",
+"여행 고치기|Edit trips": "Modifier les voyages",
+"여행 만들기|Create trips": "Créer des voyages",
+"여행 지우기|Delete trips": "Supprimer des voyages",
+"연봉|Annual pay": "Salaire annuel",
+"주휴수당 포함|Weekly holiday pay": "Inclure l’indemnité de repos hebdomadaire",
+"통행료 차종|Toll vehicle": "Véhicule pour le péage"
 }
 }

@@ -5442,6 +5442,20 @@
 "자주 가는 장소 지우기|Delete frequent places": "よく行く場所を削除",
 "분류 더하기|Add categories": "カテゴリを追加",
 "분류 고치기|Edit categories": "カテゴリを編集",
-"숨김|Hidden": "非表示"
+"숨김|Hidden": "非表示",
+"{0}일(날짜 미정)|{0} day(s), no dates": "{0}日(日付未定)",
+"급여 방식|Pay type": "給与の種類",
+"급여·통행료 차종 설정 바꾸기|Change pay and toll vehicle settings": "給与・通行料車種の設定を変更",
+"급여를 세후로 입력|Pay entered after tax": "給与を手取りで入力",
+"세후 금액으로 보기|Show after-tax amounts": "手取り額で表示",
+"시급 세금 방식|Hourly tax method": "時給の税金方式",
+"시급|Hourly pay": "時給",
+"시급을 세후로 입력|Hourly pay entered after tax": "時給を手取りで入力",
+"여행 고치기|Edit trips": "旅行を編集",
+"여행 만들기|Create trips": "旅行を作成",
+"여행 지우기|Delete trips": "旅行を削除",
+"연봉|Annual pay": "年収",
+"주휴수당 포함|Weekly holiday pay": "週休手当を含む",
+"통행료 차종|Toll vehicle": "通行料の車種"
 }
 }

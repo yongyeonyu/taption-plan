@@ -23,6 +23,8 @@ enum AssistantActionKind: String, CaseIterable, Identifiable, Codable, Sendable 
     case askUser
     // ACA1112A01
     case addPlace, updatePlace, deletePlace, addCategory, updateCategory
+    // ACB1112A01
+    case addTrip, updateTrip, deleteTrip, setSetting
 
     var id: String { rawValue }
 
@@ -68,6 +70,10 @@ enum AssistantActionKind: String, CaseIterable, Identifiable, Codable, Sendable 
         case .deletePlace: language.text("자주 가는 장소 지우기", "Delete frequent places")
         case .addCategory: language.text("분류 더하기", "Add categories")
         case .updateCategory: language.text("분류 고치기", "Edit categories")
+        case .addTrip: language.text("여행 만들기", "Create trips")
+        case .updateTrip: language.text("여행 고치기", "Edit trips")
+        case .deleteTrip: language.text("여행 지우기", "Delete trips")
+        case .setSetting: language.text("급여·통행료 차종 설정 바꾸기", "Change pay and toll vehicle settings")
         }
     }
 }
@@ -158,6 +164,10 @@ extension AssistantCommand.Action {
         case .deletePlace: .deletePlace
         case .addCategory: .addCategory
         case .updateCategory: .updateCategory
+        case .addTrip: .addTrip
+        case .updateTrip: .updateTrip
+        case .deleteTrip: .deleteTrip
+        case .setSetting: .setSetting
         }
     }
 
@@ -165,7 +175,7 @@ extension AssistantCommand.Action {
     /// 루틴을 지우면 하위 일정도 함께 지워지므로 `plans`를 주면 그 수까지 센다(REV1110A06).
     func existingChangeCount(plans: [PlanRecord] = []) -> Int {
         switch self {
-        case .addMemo, .addSchedule, .addGoal, .addTripStop, .setBubble, .addExpense, .classifyUnconfirmed, .addPaymentRule, .addOwnAccount, .openScreen, .askUser, .addPlace, .addCategory: 0
+        case .addMemo, .addSchedule, .addGoal, .addTripStop, .setBubble, .addExpense, .classifyUnconfirmed, .addPaymentRule, .addOwnAccount, .openScreen, .askUser, .addPlace, .addCategory, .addTrip: 0
         case let .mergeRecords(_, ids, _, _): ids.count
         case let .deleteGoal(goalID):
             1 + (UUID(uuidString: goalID).flatMap { try? PlanHierarchy.descendants(of: $0, in: plans) }?.count ?? 0)

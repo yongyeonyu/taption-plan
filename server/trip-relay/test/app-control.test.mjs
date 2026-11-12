@@ -283,3 +283,44 @@ test("place and category commands are validated; app state carries places and ca
   assert.deepEqual([viaMcp.categories[0].id, viaMcp.categories[0].color, viaMcp.categories[0].icon], ["study", "#3366FF", "book"]);
   assert.equal((await send("/app", "POST", { ...state, places: Array.from({ length: 101 }, () => ({})) }, owner)).status, 422);
 });
+
+// ACB1112A01: 여행 만들기·고치기·지우기와 설정 바꾸기.
+test("trip and setting commands are validated; app state carries trips", async () => {
+  const { handle } = await import("../src/index.js");
+  const { makeEnv } = await import("./fakes.mjs");
+  const { env } = makeEnv();
+  const key = () => Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url");
+  const owner = key(), write = key();
+  const send = (path, method, body, token) => handle(new Request(`https://relay.example.com${path}`, {
+    method, headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body),
+  }), env);
+  assert.equal((await send("/register", "POST", {}, owner)).status, 201);
+  assert.equal((await send("/pin", "POST", { pin: "135790" }, owner)).status, 200);
+  assert.equal((await send("/keys", "POST", { keys: [{ token: write, scope: "write", expiresAt: null }], pin: "135790" }, owner)).status, 201);
+  const post = async (action, fields) => (await send("/command", "POST", { format: "bokki-command", version: 1, id: `c-${crypto.randomUUID()}`, action, ...fields }, write)).status;
+  const good = [
+    ["addTrip", { title: "오사카", start: "2026-12-01", end: "2026-12-04", countryCode: "JP", regionName: "오사카", currency: "JPY" }],
+    ["addTrip", { title: "당일치기", start: "2026-12-01" }], ["addTrip", { title: "언젠가 아이슬란드", wishDays: 7 }],
+    ["updateTrip", { tripId: "trip-1", start: "2026-12-02" }], ["updateTrip", { tripId: "trip-1", title: "교토" }], ["deleteTrip", { tripId: "trip-1" }],
+    ["setSetting", { setting: "tollVehicle", value: "electric" }], ["setSetting", { setting: "annualPay", value: 50000000 }],
+    ["setSetting", { setting: "weeklyHolidayPay", value: true }], ["setSetting", { setting: "hourlyTax", value: "none" }],
+  ];
+  for (const [action, fields] of good) assert.equal(await post(action, fields), 201, `${action} ${JSON.stringify(fields)}`);
+  const bad = [
+    ["addTrip", {}], ["addTrip", { title: "X" }], ["addTrip", { title: "X", start: "2026-12-04", end: "2026-12-01" }], ["addTrip", { title: "X", wishDays: 0 }],
+    ["addTrip", { title: "X", wishDays: 3, start: "2026-12-01" }], ["addTrip", { title: "X", start: "2026-12-01", countryCode: "jp" }],
+    ["addTrip", { title: "가".repeat(61), start: "2026-12-01" }], ["updateTrip", { tripId: "trip-1" }], ["updateTrip", { title: "X" }],
+    ["updateTrip", { tripId: "trip-1", start: "2026-12-04", end: "2026-12-01" }], ["deleteTrip", {}],
+    ["setSetting", { setting: "backupPin", value: "123456" }], ["setSetting", { setting: "tollVehicle", value: "truck" }],
+    ["setSetting", { setting: "annualPay", value: -1 }], ["setSetting", { setting: "annualPay", value: "많이" }], ["setSetting", { setting: "payIsNet", value: "true" }],
+    ["setSetting", { setting: "toString", value: 1 }], ["setSetting", { setting: "tollVehicle" }],
+  ];
+  for (const [action, fields] of bad) assert.equal(await post(action, fields), 422, `${action} ${JSON.stringify(fields)}`);
+  const state = { format: "bokki-app", version: 1, retentionDays: 7, settings: { language: "korean", tollVehicle: "electric", salaryMode: "salary" },
+    trips: [{ id: "trip-1", title: "오사카", start: "2026-12-01", end: "2026-12-04", country: "JP", region: "오사카", currency: "JPY" }] };
+  assert.equal((await send("/app", "POST", state, owner)).status, 201);
+  const viaMcp = (await (await send("/mcp", "POST", { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "get_app_state", arguments: {} } }, write)).json()).result.structuredContent;
+  assert.deepEqual([viaMcp.trips[0].start, viaMcp.trips[0].country, viaMcp.trips[0].currency, viaMcp.settings.tollVehicle, viaMcp.settings.salaryMode],
+    ["2026-12-01", "JP", "JPY", "electric", "salary"]);
+  assert.deepEqual(viaMcp.trips[0].title, { untrusted_user_text: "오사카" });
+});

@@ -173,6 +173,9 @@ struct AssistantAppState: Codable, Equatable, Sendable {
         var paymentShortcutLink: Bool
         var paymentTexts: Int
         var lastPaymentTextAt: String?
+        /// ACB1112A01: 통행료 차종과 급여 방식(정했을 때만). 급여 금액은 올리지 않는다.
+        var tollVehicle: String?
+        var salaryMode: String?
     }
 
     struct Entry: Codable, Equatable, Sendable {
@@ -234,6 +237,18 @@ struct AssistantAppState: Codable, Equatable, Sendable {
         var located: Bool
     }
 
+    /// 여행 하나(ACB1112A01). 날짜를 정하지 않은 여행은 `wishDays`만 있다. 좌표는 담지 않는다.
+    struct Trip: Codable, Equatable, Sendable {
+        var id: String
+        var title: String
+        var start: String?
+        var end: String?
+        var wishDays: Int?
+        var country: String?
+        var region: String?
+        var currency: String?
+    }
+
     struct Category: Codable, Equatable, Sendable {
         var id: String
         var name: String
@@ -256,6 +271,7 @@ struct AssistantAppState: Codable, Equatable, Sendable {
     /// 비면 칸째 뺀다. 장소는 「머문 곳 이름과 시각」 공유 수준에서만.
     var places: [Place]?
     var categories: [Category]?
+    var trips: [Trip]?
 }
 
 /// 앱 상태를 중계 서버에 올린다. 하루 기록을 올린 뒤 함께 돌고, 바뀌었을 때만(또는 20시간마다) 보낸다.
@@ -291,6 +307,9 @@ enum AssistantAppStateSync {
         var rules: [LedgerMessageRules.Rule]
         var places: [FrequentPlace] = []
         var categories: [CategoryDefinition] = []
+        var trips: [TravelTrip] = []
+        var tollVehicle: String?
+        var salaryMode: String?
     }
 
     static func make(_ input: Input) -> AssistantAppState {
@@ -303,7 +322,8 @@ enum AssistantAppStateSync {
                 mapStyle: input.mapStyle.rawValue, display: input.display, shareLevel: input.shareLevel.rawValue,
                 retentionDays: input.retentionDays, aiConnections: input.aiConnections, actionsOff: input.actionsOff.map(\.rawValue),
                 paymentShortcutLink: input.paymentShortcutLink, paymentTexts: input.inbox.count,
-                lastPaymentTextAt: input.inbox.map(\.receivedAt).max().map(stamp.instant)
+                lastPaymentTextAt: input.inbox.map(\.receivedAt).max().map(stamp.instant),
+                tollVehicle: input.tollVehicle, salaryMode: input.salaryMode
             ),
             ledger: .init(
                 month: LedgerBook.monthKey(input.now, calendar: input.calendar), budgetKRW: input.budgetKRW,
@@ -340,6 +360,13 @@ enum AssistantAppStateSync {
             } : nil,
             categories: input.categories.isEmpty ? nil : input.categories.filter { $0.id != "unconfirmed" }.prefix(AssistantCatalogLimits.places).map {
                 .init(id: $0.id, name: mask($0.name, 40), color: $0.lightHex, icon: $0.icon.rawValue, hidden: $0.isHidden, custom: !$0.isBuiltIn)
+            },
+            trips: input.trips.isEmpty ? nil : input.trips.prefix(AssistantCatalogLimits.places).map {
+                .init(
+                    id: $0.id, title: mask($0.title, AssistantSetting.tripTitleLimit), start: $0.startDay.isEmpty ? nil : $0.startDay,
+                    end: $0.endDay.isEmpty ? nil : $0.endDay, wishDays: $0.isWish ? $0.wishDays : nil, country: $0.countryCode,
+                    region: $0.regionName.map { mask($0, 40) }, currency: $0.currencyCode
+                )
             }
         )
     }
@@ -381,7 +408,9 @@ enum AssistantAppStateSync {
             spentKRW: LedgerBook.total(daily, .expense), incomeKRW: LedgerBook.total(daily, .income),
             ownAccounts: LedgerOwnAccounts.names(defaults), review: preferences.review.items,
             inbox: PaymentInbox.items(defaults, now: now), rules: LedgerMessageRules.rules(defaults),
-            places: model.snapshot.settings.frequentPlaces, categories: model.snapshot.categories
+            places: model.snapshot.settings.frequentPlaces, categories: model.snapshot.categories,
+            trips: model.snapshot.settings.travelTrips ?? [],
+            tollVehicle: AssistantSetting.tollVehicle.read(defaults), salaryMode: AssistantSetting.salaryMode.read(defaults)
         )
     }
 

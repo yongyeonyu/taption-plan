@@ -484,6 +484,75 @@ extension AppModel {
                 "\(value.name) \(value.lightHex)" + (value.isHidden ? " · " + language.text("숨김", "Hidden") : "")
             }
             return AssistantEditResult(before: describe(current), after: describe(updated))
+        case .addTrip, .updateTrip, .deleteTrip:
+            return await applyAssistantTripAction(action)
+        default:
+            return .rejected("invalid")
+        }
+    }
+}
+
+extension AppModel {
+    /// `YYYY-MM-DD`에서 `days`일 뒤의 날짜 글.
+    static func assistantDay(_ day: String, plus days: Int) -> String? {
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = TimeZone(secondsFromGMT: 0) ?? .gmt
+        guard let parts = TravelTripDay.components(day), let first = utc.date(from: parts),
+              let moved = utc.date(byAdding: .day, value: days, to: first) else { return nil }
+        return TravelTripDay.string(for: moved, offsetSeconds: 0)
+    }
+
+    /// 여행 만들기·고치기·지우기(ACB1112A01). 화면과 같은 함수(`saveTravelTrip`·`shiftTravelTrip`·`deleteTravelTrip`)를 쓴다.
+    func applyAssistantTripAction(_ action: AssistantCommand.Action) async -> AssistantEditResult {
+        let language = MapHomeLanguage.current
+        let trips = snapshot.settings.travelTrips ?? []
+        func describe(_ trip: TravelTrip) -> String {
+            if trip.isWish { return "\(trip.title) · " + language.text("\(trip.wishDays ?? 1)일(날짜 미정)", "\(trip.wishDays ?? 1) day(s), no dates") }
+            return trip.startDay == trip.endDay ? "\(trip.title) · \(trip.startDay)" : "\(trip.title) · \(trip.startDay)–\(trip.endDay)"
+        }
+        switch action {
+        case let .addTrip(draft):
+            guard trips.count < AssistantCatalogLimits.places else { return .rejected("trip_limit") }
+            var trip = draft
+            // 나라를 주면 화면에서 만들 때처럼 깃발 자리와 여행지 통화를 잡는다.
+            if let code = trip.countryCode, let country = TravelModeRegions.countries.first(where: { $0.code == code }) {
+                trip.latitude = country.anchor.y
+                trip.longitude = country.anchor.x
+                if trip.currencyCode == nil, code != "KR" { trip.currencyCode = TravelModeRegions.currency(forCountry: code) }
+            }
+            guard await saveTravelTrip(trip) else { return .rejected("edit_failed") }
+            return AssistantEditResult(after: describe(trip))
+        case let .updateTrip(tripID, title, start, end):
+            guard let old = trips.first(where: { $0.id == tripID }) else { return .rejected("no_trip") }
+            var trip = old
+            if let title { trip.title = title }
+            if start != nil || end != nil {
+                guard let first = start ?? (old.startDay.isEmpty ? nil : old.startDay) else { return .rejected("no_dates") }
+                if end == nil, old.isWish {
+                    // 날짜 없는 여행에 첫날을 정하면 정해 둔 날 수만큼 이어진다.
+                    trip = TravelTripDirectory.scheduled(trip, startDay: first)
+                } else if end == nil, let length = TravelTripDay.days(from: old.startDay, to: old.endDay), let last = Self.assistantDay(first, plus: length) {
+                    // 첫날만 옮기면 길이를 지킨다.
+                    trip.startDay = first
+                    trip.endDay = last
+                } else {
+                    trip.startDay = first
+                    trip.endDay = end ?? first
+                    trip.wishDays = nil
+                }
+                guard (TravelTripDay.days(from: trip.startDay, to: trip.endDay) ?? -1) >= 0 else { return .rejected("end_before_start") }
+            }
+            guard trip != old else { return .rejected("no_change") }
+            guard await saveTravelTrip(trip) else { return .rejected("edit_failed") }
+            // 첫날을 옮겼으면 넣어 둔 일정 전체를 같은 날 수만큼 함께 옮긴다(화면과 같다).
+            if !old.isWish, let moved = TravelTripDay.days(from: old.startDay, to: trip.startDay), moved != 0 {
+                await shiftTravelTrip(trip.id, byDays: moved)
+            }
+            return AssistantEditResult(before: describe(old), after: describe(trip))
+        case let .deleteTrip(tripID):
+            guard let old = trips.first(where: { $0.id == tripID }) else { return .rejected("no_trip") }
+            guard await deleteTravelTrip(tripID) else { return .rejected("edit_failed") }
+            return AssistantEditResult(before: describe(old), after: language.text("지움", "Deleted"))
         default:
             return .rejected("invalid")
         }

@@ -5442,6 +5442,20 @@
 "자주 가는 장소 지우기|Delete frequent places": "Hapus tempat yang sering dikunjungi",
 "분류 더하기|Add categories": "Tambah kategori",
 "분류 고치기|Edit categories": "Edit kategori",
-"숨김|Hidden": "Disembunyikan"
+"숨김|Hidden": "Disembunyikan",
+"{0}일(날짜 미정)|{0} day(s), no dates": "{0} hari, belum ada tanggal",
+"급여 방식|Pay type": "Jenis gaji",
+"급여·통행료 차종 설정 바꾸기|Change pay and toll vehicle settings": "Ubah pengaturan gaji dan kendaraan tol",
+"급여를 세후로 입력|Pay entered after tax": "Gaji dimasukkan setelah pajak",
+"세후 금액으로 보기|Show after-tax amounts": "Tampilkan jumlah setelah pajak",
+"시급 세금 방식|Hourly tax method": "Metode pajak per jam",
+"시급|Hourly pay": "Gaji per jam",
+"시급을 세후로 입력|Hourly pay entered after tax": "Gaji per jam dimasukkan setelah pajak",
+"여행 고치기|Edit trips": "Edit perjalanan",
+"여행 만들기|Create trips": "Buat perjalanan",
+"여행 지우기|Delete trips": "Hapus perjalanan",
+"연봉|Annual pay": "Gaji tahunan",
+"주휴수당 포함|Weekly holiday pay": "Termasuk tunjangan libur mingguan",
+"통행료 차종|Toll vehicle": "Kendaraan tol"
 }
 }

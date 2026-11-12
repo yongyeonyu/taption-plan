@@ -5442,6 +5442,20 @@
 "자주 가는 장소 지우기|Delete frequent places": "अक्सर जाने की जगहें हटाएँ",
 "분류 더하기|Add categories": "श्रेणियाँ जोड़ें",
 "분류 고치기|Edit categories": "श्रेणियाँ संपादित करें",
-"숨김|Hidden": "छिपा हुआ"
+"숨김|Hidden": "छिपा हुआ",
+"{0}일(날짜 미정)|{0} day(s), no dates": "{0} दिन, तारीख़ तय नहीं",
+"급여 방식|Pay type": "वेतन का प्रकार",
+"급여·통행료 차종 설정 바꾸기|Change pay and toll vehicle settings": "वेतन और टोल वाहन की सेटिंग बदलें",
+"급여를 세후로 입력|Pay entered after tax": "वेतन कर के बाद दर्ज",
+"세후 금액으로 보기|Show after-tax amounts": "कर के बाद की राशि दिखाएँ",
+"시급 세금 방식|Hourly tax method": "प्रति घंटा कर का तरीका",
+"시급|Hourly pay": "प्रति घंटा वेतन",
+"시급을 세후로 입력|Hourly pay entered after tax": "प्रति घंटा वेतन कर के बाद दर्ज",
+"여행 고치기|Edit trips": "यात्राएँ संपादित करें",
+"여행 만들기|Create trips": "यात्राएँ बनाएँ",
+"여행 지우기|Delete trips": "यात्राएँ हटाएँ",
+"연봉|Annual pay": "वार्षिक वेतन",
+"주휴수당 포함|Weekly holiday pay": "साप्ताहिक अवकाश भत्ता शामिल",
+"통행료 차종|Toll vehicle": "टोल वाहन"
 }
 }

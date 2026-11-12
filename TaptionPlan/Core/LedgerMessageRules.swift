@@ -462,6 +462,14 @@ extension AppModel {
             var result = AssistantEditResult(after: String(question.question.prefix(80)))
             result.appChange = AssistantAppChange(questionID: question.id)
             return result
+        case let .setSetting(setting, value):
+            let change = AssistantPreferenceChange(key: setting.key, before: preferences.value(setting.key), after: value)
+            guard change.before != change.after else { return .rejected("no_change") }
+            preferences.set(setting.key, value: value, model: self)
+            let name = setting.title(language)
+            return AssistantEditResult(
+                before: "\(name): \(change.before ?? language.text("정하지 않음", "Not set"))", after: "\(name): \(value)", preferences: [change]
+            )
         default:
             return await applyAssistantCatalogAction(action)
         }

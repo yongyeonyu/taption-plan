@@ -5442,6 +5442,20 @@
 "자주 가는 장소 지우기|Delete frequent places": "Xóa địa điểm thường đến",
 "분류 더하기|Add categories": "Thêm danh mục",
 "분류 고치기|Edit categories": "Sửa danh mục",
-"숨김|Hidden": "Đã ẩn"
+"숨김|Hidden": "Đã ẩn",
+"{0}일(날짜 미정)|{0} day(s), no dates": "{0} ngày, chưa có ngày",
+"급여 방식|Pay type": "Hình thức lương",
+"급여·통행료 차종 설정 바꾸기|Change pay and toll vehicle settings": "Đổi cài đặt lương và loại xe tính phí đường",
+"급여를 세후로 입력|Pay entered after tax": "Nhập lương sau thuế",
+"세후 금액으로 보기|Show after-tax amounts": "Hiện số tiền sau thuế",
+"시급 세금 방식|Hourly tax method": "Cách tính thuế lương giờ",
+"시급|Hourly pay": "Lương theo giờ",
+"시급을 세후로 입력|Hourly pay entered after tax": "Nhập lương giờ sau thuế",
+"여행 고치기|Edit trips": "Sửa chuyến đi",
+"여행 만들기|Create trips": "Tạo chuyến đi",
+"여행 지우기|Delete trips": "Xóa chuyến đi",
+"연봉|Annual pay": "Lương năm",
+"주휴수당 포함|Weekly holiday pay": "Gồm trợ cấp nghỉ tuần",
+"통행료 차종|Toll vehicle": "Loại xe tính phí đường"
 }
 }

@@ -1548,6 +1548,118 @@ final class AssistantAppControlTests: XCTestCase {
         XCTAssertFalse(json.contains("37.56") || json.contains("126.83") || json.contains("latitude"), "좌표는 내보내지 않는다")
     }
 
+    /// ACB1112A01: 여행·설정 명령을 서버와 같은 규칙으로 읽는다.
+    func testTripAndSettingCommandsParseWithTheServerRules() throws {
+        let parsed = try batch([
+            command("t1", "addTrip", ["title": " 오사카 ", "start": "2026-12-01", "end": "2026-12-04", "countryCode": "JP", "currency": "JPY"]),
+            command("t2", "addTrip", ["title": "당일치기", "start": "2026-12-01"]),
+            command("t3", "addTrip", ["title": "언젠가", "wishDays": 7]),
+            command("t4", "updateTrip", ["tripId": "trip-1", "start": "2026-12-02"]),
+            command("t5", "deleteTrip", ["tripId": "trip-1"]),
+            command("s1", "setSetting", ["setting": "tollVehicle", "value": "electric"]),
+            command("s2", "setSetting", ["setting": "annualPay", "value": 50_000_000]),
+            command("s3", "setSetting", ["setting": "weeklyHolidayPay", "value": true]),
+            command("noDates", "addTrip", ["title": "X"]),
+            command("backwards", "addTrip", ["title": "X", "start": "2026-12-04", "end": "2026-12-01"]),
+            command("both", "addTrip", ["title": "X", "wishDays": 3, "start": "2026-12-01"]),
+            command("lower", "addTrip", ["title": "X", "start": "2026-12-01", "countryCode": "jp"]),
+            command("empty", "updateTrip", ["tripId": "trip-1"]),
+            command("unknown", "setSetting", ["setting": "backupPin", "value": "123456"]),
+            command("truck", "setSetting", ["setting": "tollVehicle", "value": "truck"]),
+            command("negative", "setSetting", ["setting": "annualPay", "value": -1]),
+            command("wrongType", "setSetting", ["setting": "payIsNet", "value": "true"]),
+        ])
+        XCTAssertEqual(parsed.invalidIDs, ["noDates", "backwards", "both", "lower", "empty", "unknown", "truck", "negative", "wrongType"])
+        XCTAssertEqual(parsed.commands.map(\.action.kind), [.addTrip, .addTrip, .addTrip, .updateTrip, .deleteTrip, .setSetting, .setSetting, .setSetting])
+        guard case let .addTrip(osaka) = parsed.commands[0].action, case let .addTrip(dayTrip) = parsed.commands[1].action,
+              case let .addTrip(wish) = parsed.commands[2].action else { return XCTFail("addTrip") }
+        XCTAssertEqual([osaka.title, osaka.startDay, osaka.endDay, osaka.countryCode, osaka.currencyCode], ["오사카", "2026-12-01", "2026-12-04", "JP", "JPY"])
+        XCTAssertTrue(osaka.id.hasPrefix("trip-"))
+        XCTAssertEqual([dayTrip.startDay, dayTrip.endDay], ["2026-12-01", "2026-12-01"])
+        XCTAssertTrue(wish.isWish)
+        XCTAssertEqual(wish.wishDays, 7)
+        XCTAssertEqual(Array(parsed.commands.map(\.action).suffix(3)), [
+            .setSetting(.tollVehicle, value: "electric"), .setSetting(.annualPay, value: "50000000.0"), .setSetting(.weeklyHolidayPay, value: "true"),
+        ])
+    }
+
+    /// ACB1112A01: 여행을 만들고 날짜를 옮기고 지우며 되돌린다.
+    func testTripsAreCreatedMovedDeletedAndUndone() async throws {
+        let store = defaults()
+        let model = await model()
+        let preferences = AssistantPreferenceStore.test(store)
+        let addedOutcome = await model.applyAssistantCommands(try batch([
+            command("t1", "addTrip", ["title": "오사카", "start": "2026-12-01", "end": "2026-12-04", "countryCode": "JP"]),
+            command("t2", "addTrip", ["title": "언젠가 아이슬란드", "wishDays": 7]),
+        ]), defaults: store)
+        let added = try XCTUnwrap(addedOutcome)
+        XCTAssertEqual(added.results.map(\.reason), [nil, nil])
+        XCTAssertEqual(added.schedules, 2)
+        let trips = try XCTUnwrap(model.snapshot.settings.travelTrips)
+        let osaka = try XCTUnwrap(trips.first { $0.title == "오사카" }), wish = try XCTUnwrap(trips.first { $0.isWish })
+        XCTAssertEqual(osaka.currencyCode, "JPY", "나라를 주면 화면처럼 여행지 통화를 잡는다")
+        XCTAssertNotNil(osaka.latitude)
+
+        let movedOutcome = await model.applyAssistantCommands(try batch([
+            command("m1", "updateTrip", ["tripId": osaka.id, "start": "2026-12-10"]),
+            command("m2", "updateTrip", ["tripId": wish.id, "start": "2027-06-01"]),
+            command("same", "updateTrip", ["tripId": osaka.id, "title": "오사카"]),
+            command("missing", "updateTrip", ["tripId": "trip-nope", "title": "X"]),
+        ]), defaults: store)
+        let moved = try XCTUnwrap(movedOutcome)
+        XCTAssertEqual(moved.results.map(\.reason), [nil, nil, "no_change", "no_trip"])
+        let shifted = try XCTUnwrap(model.snapshot.settings.travelTrips?.first { $0.id == osaka.id })
+        XCTAssertEqual([shifted.startDay, shifted.endDay], ["2026-12-10", "2026-12-13"], "첫날만 옮기면 길이를 지킨다")
+        let scheduled = try XCTUnwrap(model.snapshot.settings.travelTrips?.first { $0.id == wish.id })
+        XCTAssertEqual([scheduled.startDay, scheduled.endDay], ["2027-06-01", "2027-06-07"], "날짜 없는 여행은 정해 둔 날 수만큼")
+        XCTAssertNil(scheduled.wishDays)
+
+        let undoneWish = await model.undoAssistantEntry(try XCTUnwrap(moved.entries.last), preferences: preferences)
+        XCTAssertTrue(undoneWish)
+        XCTAssertEqual(model.snapshot.settings.travelTrips?.first { $0.id == wish.id }?.isWish, true)
+
+        let deletedOutcome = await model.applyAssistantCommands(try batch([command("d1", "deleteTrip", ["tripId": osaka.id])]), defaults: store)
+        let deleted = try XCTUnwrap(deletedOutcome)
+        XCTAssertEqual(deleted.results.map(\.reason), [nil])
+        XCTAssertNil(model.snapshot.settings.travelTrips?.first { $0.id == osaka.id })
+        let restored = await model.undoAssistantEntry(try XCTUnwrap(deleted.entries.first), preferences: preferences)
+        XCTAssertTrue(restored)
+        XCTAssertEqual(model.snapshot.settings.travelTrips?.first { $0.id == osaka.id }, shifted)
+    }
+
+    /// ACB1112A01: 설정은 정해진 이름·형만 바꾸고 되돌리며, 급여 금액은 앱 상태에 올리지 않는다.
+    func testSettingsChangeUndoAndPayAmountsStayOnTheDevice() async throws {
+        let store = defaults()
+        let model = await model()
+        let preferences = AssistantPreferenceStore.test(store)
+        let outcome = await model.applyAssistantCommands(try batch([
+            command("s1", "setSetting", ["setting": "tollVehicle", "value": "electric"]),
+            command("s2", "setSetting", ["setting": "annualPay", "value": 50_000_000]),
+            command("s3", "setSetting", ["setting": "salaryMode", "value": "hourly"]),
+            command("again", "setSetting", ["setting": "tollVehicle", "value": "electric"]),
+        ]), defaults: store)
+        let changed = try XCTUnwrap(outcome)
+        XCTAssertEqual(changed.results.map(\.reason), [nil, nil, nil, "no_change"])
+        XCTAssertEqual(LedgerTollDiscount.vehicle(store), .electric)
+        XCTAssertEqual(store.double(forKey: MapHomeSalaryPolicy.annualKey), 50_000_000)
+        XCTAssertTrue(store.bool(forKey: MapHomeSalaryPolicy.isHourlyKey))
+        XCTAssertEqual(changed.entries.first?.before, "통행료 차종: 정하지 않음")
+
+        let undone = await model.undoAssistantEntry(try XCTUnwrap(changed.entries.first), preferences: preferences)
+        XCTAssertTrue(undone)
+        XCTAssertNil(store.object(forKey: LedgerTollDiscount.vehicleKey), "정하기 전으로 돌아간다")
+
+        var value = try input()
+        value.tollVehicle = "compact"
+        value.salaryMode = "hourly"
+        value.trips = [TravelTrip(id: "trip-1", title: "오사카", startDay: "2026-12-01", endDay: "2026-12-04", countryCode: "JP", latitude: 34.69, longitude: 135.5, currencyCode: "JPY")]
+        let state = AssistantAppStateSync.make(value)
+        XCTAssertEqual([state.settings.tollVehicle, state.settings.salaryMode], ["compact", "hourly"])
+        XCTAssertEqual(state.trips?.map(\.id), ["trip-1"])
+        let json = String(decoding: try XCTUnwrap(AssistantAppStateSync.body(state)), as: UTF8.self)
+        XCTAssertFalse(json.contains("annualPay") || json.contains("50000000") || json.contains("34.69"), "급여 금액과 좌표는 올리지 않는다")
+    }
+
     func testOpenScreenWaitsUntilTakenExpiresAndUndoCancelsIt() async throws {
         let store = defaults()
         let model = await model()

@@ -6,7 +6,7 @@
 import { json, readBody, writeAllowed } from "./http.js";
 import { allows } from "./keys.js";
 import { claimTasks, endConversation, finishTask, queueCommand, readActivity, readAnswers, readAppState, readPolish, readResults, readSummary, readSync, savePlan } from "./store.js";
-import { ACTIONS, ANSWER_STATUSES, CATEGORY_ICONS, DISPLAY_OPTIONS, EXPENSE_CATEGORIES, LANGUAGES, MAP_STYLES, PAYMENT_RULE_KINDS, REVIEW_DECISIONS, SCREENS, TASK_KINDS, TASK_STATUSES, THEMES, TRAVEL_MODES, TRIP_STATUSES } from "./validate.js";
+import { ACTIONS, ANSWER_STATUSES, CATEGORY_ICONS, DISPLAY_OPTIONS, EXPENSE_CATEGORIES, LANGUAGES, MAP_STYLES, PAYMENT_RULE_KINDS, REVIEW_DECISIONS, SCREENS, SETTING_NAMES, TASK_KINDS, TASK_STATUSES, THEMES, TRAVEL_MODES, TRIP_STATUSES } from "./validate.js";
 
 export const PROTOCOL_VERSION = "2025-06-18";
 const SERVER_INFO = { name: "taption-plan", title: "Taption Plan", version: "3.1.0" };
@@ -85,7 +85,8 @@ const TOOLS = [
     + "category,kind,amount,currency,amountKRW,canceled,source}]} (newest first; entry ids work with update_expense), review [{id,reason "
     + "noMerchant|duplicate|transfer,receivedAt,time,title,category,kind,amount,currency}] (payments the app did not add by itself; settle with "
     + "resolve_review), inbox [{id,receivedAt,outcome added|review|duplicate|skipped|unread|askedAI,message,text}] (payment texts the iOS "
-    + "automation handed over; card, account and phone numbers are masked) rules [{id,name,kind,pattern}] (payment text rules), categories [{id,name,color,icon,hidden,custom}] (every category; ids work with "
+    + "automation handed over; card, account and phone numbers are masked) rules [{id,name,kind,pattern}] (payment text rules), trips [{id,title,start,end,wishDays,country,region,currency}] (every trip; ids work with update_trip, delete_trip and add_trip_stop), "
+    + "categories [{id,name,color,icon,hidden,custom}] (every category; ids work with "
     + "update_category and as categoryId elsewhere) and, at the place-name share level, places [{id,name,kind,radius,autoRecord,located}] "
     + "(registered places, never coordinates; ids work with update_place and delete_place). "
     + "The app cannot see iOS Shortcuts: whether the payment automation exists or is switched on is unknown; lastPaymentTextAt only shows "
@@ -203,6 +204,26 @@ const TOOLS = [
     + "categories). Give at least one field. Hiding keeps its records. Undoable.",
     { categoryId: str("Category id from get_app_state categories"), name: str("New name, 1-20 characters", { maxLength: 20 }), color: str("Color as #RRGGBB", { pattern: "^#[0-9A-Fa-f]{6}$" }),
       icon: enumOf("Icon", CATEGORY_ICONS), hidden: { type: "boolean", description: "true hides the category from pickers" } }, ["categoryId"]),
+  // ACB1112A01
+  addTool("add_trip", "addTrip", "Create a trip", "Create a trip in the app's travel mode. Give start (and end for more than one day), or wishDays "
+    + "for a someday trip without dates. countryCode (ISO 3166-1, e.g. JP) places its flag on the globe; currency is the trip currency. "
+    + "Add its stops afterwards with add_trip_stop and the tripId from get_app_state trips. Undoable.",
+    { title: str("Trip name, 1-60 characters", { maxLength: 60 }), start: DATE, end: str("Last day, YYYY-MM-DD, not before start (default: start)", { pattern: "^\\d{4}-\\d{2}-\\d{2}$" }),
+      wishDays: integer("Length in days of a trip without dates yet; use instead of start/end", 1, 60), countryCode: str("ISO 3166-1 alpha-2, e.g. JP", { pattern: "^[A-Z]{2}$" }),
+      regionName: str("City or region, up to 40 characters", { maxLength: 40 }), currency: str("ISO 4217 trip currency, e.g. JPY", { pattern: "^[A-Z]{3}$" }) },
+    ["title"]),
+  commandTool("update_trip", "updateTrip", "Edit a trip", "Change a trip's name or dates (tripId from get_app_state trips or get_activity trips). Moving the first "
+    + "day moves all of its planned items by the same number of days, as in the app. Undoable.",
+    { tripId: str("Trip id"), title: str("New name, 1-60 characters", { maxLength: 60 }), start: DATE, end: str("New last day, YYYY-MM-DD", { pattern: "^\\d{4}-\\d{2}-\\d{2}$" }) }, ["tripId"]),
+  commandTool("delete_trip", "deleteTrip", "Delete a trip", "Delete a trip with all of its planned items and map pins. Its ledger entries stay. Only when the user "
+    + "asked for it. Undoable.",
+    { tripId: str("Trip id") }, ["tripId"]),
+  commandTool("set_setting", "setSetting", "Change an app setting", "Change one app setting the user asked you to change. setting and value: "
+    + "tollVehicle standard|compact|electric (toll discounts); salaryMode salary|hourly; annualPay, monthlyPay, hourlyPay (numbers in the user's "
+    + "currency, 0 clears); payIsNet, hourlyPayIsNet (the amount entered is after tax), showsNetPay (show after-tax amounts), "
+    + "hourlyTax threePointThree|fourInsurance|none, weeklyHolidayPay true|false. Pay amounts are write-only: the app never sends them back, "
+    + "so do not repeat or store them. Undoable.",
+    { setting: enumOf("Setting name", SETTING_NAMES), value: { description: "New value: a string, number or boolean as the setting needs" } }, ["setting", "value"]),
   addTool("add_schedule", "addSchedule", "Add schedule", "Add a planned activity. Without end it lasts one hour.",
     { title: str("1-200 characters"), start: INSTANT("Start"), end: INSTANT("End, after start"), note: str("Up to 1000 characters") }, ["title", "start"]),
   commandTool("update_activity", "updateActivity", "Rename or recategorize a record", "Correct a record's title and/or category. Target by recordId or the startTime it covers.",
@@ -320,6 +341,9 @@ const RAW_VALUES = {
   outcome: oneOf("added", "review", "duplicate", "skipped", "unread", "askedAI"),
   category: oneOf(...EXPENSE_CATEGORIES),
   icon: oneOf(...CATEGORY_ICONS),
+  country: (v) => /^[A-Z]{2}$/.test(v),
+  tollVehicle: oneOf("standard", "compact", "electric"),
+  salaryMode: oneOf("salary", "hourly"),
   color: (v) => /^#[0-9A-Fa-f]{6}$/.test(v),
   currency: (v) => /^[A-Z]{3}$/.test(v),
   month: (v) => /^\d{4}-\d{2}$/.test(v),

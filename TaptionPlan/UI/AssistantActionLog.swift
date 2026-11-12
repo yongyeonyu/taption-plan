@@ -37,6 +37,8 @@ struct AssistantEditDelta: Codable, Equatable, Sendable {
     /// 자주 가는 장소·분류 목록 전·후(ACA1112A01). 예전 기록에는 없다.
     var places: ListChange<FrequentPlace>?
     var categories: ListChange<CategoryDefinition>?
+    /// 여행 목록 전·후(ACB1112A01). 일정·핀은 `travel`이, 일상 쪽 계획은 `plans`가 담는다.
+    var trips: ListChange<TravelTrip>?
 
     struct ListChange<Value: Codable & Equatable & Sendable>: Codable, Equatable, Sendable {
         var before: [Value]
@@ -46,7 +48,7 @@ struct AssistantEditDelta: Codable, Equatable, Sendable {
     var isEmpty: Bool {
         plans.isEmpty && memos.isEmpty && actuals.isEmpty && corrections.isEmpty
             && addedSleepSpans.isEmpty && removedSleepSpans.isEmpty && travel == nil && (preferences ?? []).isEmpty && movement == nil
-            && places == nil && categories == nil
+            && places == nil && categories == nil && trips == nil
     }
 
     /// 기록은 명령이 고른 id와 새로 생기거나 사라진 수동 기록만 본다. 그 사이 센서 갱신이 바꾼 자동 기록은 담지 않는다.
@@ -80,7 +82,9 @@ struct AssistantEditDelta: Codable, Equatable, Sendable {
             preferences: style.map { [$0] },
             places: before.settings.frequentPlaces == after.settings.frequentPlaces
                 ? nil : ListChange(before: before.settings.frequentPlaces, after: after.settings.frequentPlaces),
-            categories: before.categories == after.categories ? nil : ListChange(before: before.categories, after: after.categories)
+            categories: before.categories == after.categories ? nil : ListChange(before: before.categories, after: after.categories),
+            trips: before.settings.travelTrips == after.settings.travelTrips
+                ? nil : ListChange(before: before.settings.travelTrips ?? [], after: after.settings.travelTrips ?? [])
         )
     }
 
@@ -114,6 +118,8 @@ struct AssistantEditDelta: Codable, Equatable, Sendable {
         // 장소·분류는 그 뒤 목록이 바뀌었으면 되돌리지 않는다.
         if let places, result.settings.frequentPlaces != places.after { return nil }
         if let categories, result.categories != categories.after { return nil }
+        if let trips, (result.settings.travelTrips ?? []) != trips.after { return nil }
+        if let trips { result.settings.travelTrips = trips.before.isEmpty ? nil : trips.before }
         if let places { result.settings.frequentPlaces = places.before }
         if let categories { result.categories = categories.before }
 

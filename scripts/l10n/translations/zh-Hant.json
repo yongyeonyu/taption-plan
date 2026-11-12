@@ -5442,6 +5442,20 @@
 "자주 가는 장소 지우기|Delete frequent places": "刪除常去地點",
 "분류 더하기|Add categories": "新增分類",
 "분류 고치기|Edit categories": "編輯分類",
-"숨김|Hidden": "已隱藏"
+"숨김|Hidden": "已隱藏",
+"{0}일(날짜 미정)|{0} day(s), no dates": "{0}天(日期未定)",
+"급여 방식|Pay type": "薪資方式",
+"급여·통행료 차종 설정 바꾸기|Change pay and toll vehicle settings": "更改薪資和通行費車種設定",
+"급여를 세후로 입력|Pay entered after tax": "薪資以稅後輸入",
+"세후 금액으로 보기|Show after-tax amounts": "顯示稅後金額",
+"시급 세금 방식|Hourly tax method": "時薪計稅方式",
+"시급|Hourly pay": "時薪",
+"시급을 세후로 입력|Hourly pay entered after tax": "時薪以稅後輸入",
+"여행 고치기|Edit trips": "編輯旅行",
+"여행 만들기|Create trips": "建立旅行",
+"여행 지우기|Delete trips": "刪除旅行",
+"연봉|Annual pay": "年薪",
+"주휴수당 포함|Weekly holiday pay": "包含週休津貼",
+"통행료 차종|Toll vehicle": "通行費車種"
 }
 }

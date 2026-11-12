@@ -61,6 +61,11 @@ struct AssistantCommand: Identifiable, Equatable, Sendable {
         case deletePlace(UUID)
         case addCategory(name: String, color: String, icon: CategoryIcon?)
         case updateCategory(categoryID: String, name: String?, color: String?, icon: CategoryIcon?, hidden: Bool?)
+        /// ACB1112A01: 여행 만들기·고치기·지우기와 기기 설정 하나 바꾸기(값은 정해진 글자 꼴).
+        case addTrip(TravelTrip)
+        case updateTrip(tripID: String, title: String?, start: String?, end: String?)
+        case deleteTrip(tripID: String)
+        case setSetting(AssistantSetting, value: String)
     }
 
     let id: String
@@ -123,6 +128,8 @@ enum AssistantCommandParser {
         let question: String?, options: [String]?, multiSelect: Bool?
         // ACA1112A01: 장소·분류.
         let placeId: String?, radius: Double?, autoRecord: Bool?, color: String?, icon: String?, hidden: Bool?
+        // ACB1112A01: 여행·설정.
+        let wishDays: Int?, countryCode: String?, regionName: String?, setting: String?, value: AssistantLooseValue?
     }
 
     /// `{"commands":[...]}`를 읽는다. 서버와 같은 규칙으로 다시 본다.
@@ -351,7 +358,8 @@ struct AssistantCommandOutcome: Equatable, Sendable {
         case .setBudget, .addOwnAccount, .removeOwnAccount, .deletePaymentRule, .deleteInboxItem, .openScreen: settings += 1
         case .resolveReview: ledger += 1
         case .askUser: questions += 1
-        case .addPlace, .updatePlace, .deletePlace, .addCategory, .updateCategory: settings += 1
+        case .addPlace, .updatePlace, .deletePlace, .addCategory, .updateCategory, .setSetting: settings += 1
+        case .addTrip, .updateTrip, .deleteTrip: schedules += 1
         case .setBubble: bubbles += 1
         case .addExpense, .updateExpense: ledger += 1
         }
