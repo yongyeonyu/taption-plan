@@ -176,6 +176,8 @@ struct AssistantAppState: Codable, Equatable, Sendable {
         /// ACB1112A01: 통행료 차종과 급여 방식(정했을 때만). 급여 금액은 올리지 않는다.
         var tollVehicle: String?
         var salaryMode: String?
+        /// ACC1112A01: `setSetting`으로 바꿀 수 있는 설정의 지금 값(금액 제외).
+        var values: [String: String]?
     }
 
     struct Entry: Codable, Equatable, Sendable {
@@ -310,6 +312,7 @@ enum AssistantAppStateSync {
         var trips: [TravelTrip] = []
         var tollVehicle: String?
         var salaryMode: String?
+        var settingValues: [String: String] = [:]
     }
 
     static func make(_ input: Input) -> AssistantAppState {
@@ -323,7 +326,8 @@ enum AssistantAppStateSync {
                 retentionDays: input.retentionDays, aiConnections: input.aiConnections, actionsOff: input.actionsOff.map(\.rawValue),
                 paymentShortcutLink: input.paymentShortcutLink, paymentTexts: input.inbox.count,
                 lastPaymentTextAt: input.inbox.map(\.receivedAt).max().map(stamp.instant),
-                tollVehicle: input.tollVehicle, salaryMode: input.salaryMode
+                tollVehicle: input.tollVehicle, salaryMode: input.salaryMode,
+                values: input.settingValues.isEmpty ? nil : input.settingValues
             ),
             ledger: .init(
                 month: LedgerBook.monthKey(input.now, calendar: input.calendar), budgetKRW: input.budgetKRW,
@@ -410,7 +414,10 @@ enum AssistantAppStateSync {
             inbox: PaymentInbox.items(defaults, now: now), rules: LedgerMessageRules.rules(defaults),
             places: model.snapshot.settings.frequentPlaces, categories: model.snapshot.categories,
             trips: model.snapshot.settings.travelTrips ?? [],
-            tollVehicle: AssistantSetting.tollVehicle.read(defaults), salaryMode: AssistantSetting.salaryMode.read(defaults)
+            tollVehicle: AssistantSetting.tollVehicle.read(defaults), salaryMode: AssistantSetting.salaryMode.read(defaults),
+            settingValues: Dictionary(uniqueKeysWithValues: AssistantSetting.allCases.filter { !$0.isWriteOnly }.compactMap { setting in
+                (setting.isModelBacked ? setting.read(model: model) : setting.read(defaults)).map { (setting.rawValue, $0) }
+            })
         )
     }
 

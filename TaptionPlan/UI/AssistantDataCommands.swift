@@ -394,6 +394,12 @@ struct AssistantPreferenceStore {
         )
     }
 
+    /// 앱 자료 쪽 설정(ACC1112A01)은 `model`이 있어야 읽는다.
+    func value(_ key: String, model: AppModel) -> String? {
+        if let setting = AssistantSetting.allCases.first(where: { $0.key == key }), setting.isModelBacked { return setting.read(model: model) }
+        return value(key)
+    }
+
     func value(_ key: String) -> String? {
         if key == AssistantPreferenceChange.languageKey {
             return isLive ? AppLanguagePreference.current.rawValue : AppLanguagePreference.load(from: defaults).rawValue
@@ -411,7 +417,11 @@ struct AssistantPreferenceStore {
             return
         }
         if let setting = AssistantSetting.allCases.first(where: { $0.key == key }) {
-            setting.write(value, defaults: defaults)
+            if setting.isModelBacked {
+                if let value, let model { Task { @MainActor in await setting.apply(value, to: model) } }
+            } else {
+                setting.write(value, defaults: defaults)
+            }
             return
         }
         guard AssistantDisplayOption.allCases.contains(where: { $0.defaultsKey == key }) else { return }
@@ -422,6 +432,8 @@ struct AssistantPreferenceStore {
 /// AI가 열어 달라고 할 수 있는 화면(ACX1112A01). 이 여섯만 받는다. 자료를 바꾸는 화면 동작은 없다.
 enum AssistantScreen: String, CaseIterable, Codable, Sendable {
     case paymentAutomation, shortcuts, aiConnection, ledger, dataProtection, settings
+    // ACC1112A01
+    case salary, carAudio, alarm, placeBook, passport, unconfirmedReview, travel
 
     func title(_ language: MapHomeLanguage) -> String {
         switch self {
@@ -431,6 +443,13 @@ enum AssistantScreen: String, CaseIterable, Codable, Sendable {
         case .ledger: language.text("가계부", "Ledger")
         case .dataProtection: language.text("데이터 보호", "Data Protection")
         case .settings: language.text("설정", "Settings")
+        case .salary: language.text("급여 설정", "Pay settings")
+        case .carAudio: language.text("내 차", "My car")
+        case .alarm: language.text("알람 설정", "Alarm settings")
+        case .placeBook: language.text("장소 도감", "Place collection")
+        case .passport: language.text("여권", "Passport")
+        case .unconfirmedReview: language.text("미확인 시간 검토", "Unconfirmed time review")
+        case .travel: language.text("여행 모드", "Travel mode")
         }
     }
 }
@@ -497,6 +516,8 @@ enum AssistantLooseValue: Decodable, Equatable, Sendable {
 /// 급여 금액은 받기만 하고 AI에게 올리지 않는다.
 enum AssistantSetting: String, CaseIterable, Codable, Sendable {
     case tollVehicle, salaryMode, annualPay, monthlyPay, payIsNet, showsNetPay, hourlyPay, hourlyPayIsNet, hourlyTax, weeklyHolidayPay
+    /// ACC1112A01: 앱 자료에 있는 설정. 화면의 설정 함수로 바꾼다. 알림은 끄기만 받는다(켜기는 iOS 권한 창이 필요하다).
+    case reduceMotion, weather, weatherSidebar, gpsIntervalSeconds, cat, notifications
 
     static let tripTitleLimit = 60
 
@@ -504,7 +525,22 @@ enum AssistantSetting: String, CaseIterable, Codable, Sendable {
         case choice([String])
         case amount(Double)
         case flag
+        /// 정해진 간격의 정수.
+        case count(ClosedRange<Int>, step: Int)
+        /// 끄기만.
+        case offOnly
     }
+
+    /// 앱 자료(`snapshot.settings`)에 있어 모델의 설정 함수로 바꾸는 것.
+    var isModelBacked: Bool {
+        switch self {
+        case .reduceMotion, .weather, .weatherSidebar, .gpsIntervalSeconds, .cat, .notifications: true
+        default: false
+        }
+    }
+
+    /// 금액이라 AI에게 올리지 않는 것.
+    var isWriteOnly: Bool { self == .annualPay || self == .monthlyPay || self == .hourlyPay }
 
     var key: String {
         switch self {
@@ -518,6 +554,7 @@ enum AssistantSetting: String, CaseIterable, Codable, Sendable {
         case .hourlyPayIsNet: MapHomeSalaryPolicy.hourlyIsNetKey
         case .hourlyTax: MapHomeSalaryPolicy.hourlyTaxKey
         case .weeklyHolidayPay: MapHomeSalaryPolicy.weeklyHolidayKey
+        case .reduceMotion, .weather, .weatherSidebar, .gpsIntervalSeconds, .cat, .notifications: "appSetting.\(rawValue)"
         }
     }
 
@@ -530,6 +567,10 @@ enum AssistantSetting: String, CaseIterable, Codable, Sendable {
         case .monthlyPay: .amount(1e10)
         case .hourlyPay: .amount(1e7)
         case .payIsNet, .showsNetPay, .hourlyPayIsNet, .weeklyHolidayPay: .flag
+        case .reduceMotion, .weather, .weatherSidebar: .flag
+        case .gpsIntervalSeconds: .count(GPSLoggingPreferences.intervalStepSeconds...1_800, step: GPSLoggingPreferences.intervalStepSeconds)
+        case .cat: .choice(CatCoat.characters.map(\.catStyle.rawValue))
+        case .notifications: .offOnly
         }
     }
 
@@ -539,14 +580,47 @@ enum AssistantSetting: String, CaseIterable, Codable, Sendable {
         case let (.choice(names), .text(text)): names.contains(text) ? text : nil
         case let (.amount(limit), .number(number)): number.isFinite && (0...limit).contains(number) ? String(number.rounded()) : nil
         case let (.flag, .flag(flag)): String(flag)
+        case let (.count(range, step), .number(number)):
+            number == number.rounded() && range.contains(Int(number)) && Int(number) % step == 0 ? String(Int(number)) : nil
+        case (.offOnly, .flag(false)): "false"
         default: nil
+        }
+    }
+
+    /// 앱 자료 쪽 설정의 지금 값.
+    @MainActor
+    func read(model: AppModel) -> String? {
+        let settings = model.snapshot.settings
+        switch self {
+        case .reduceMotion: return String(settings.reduceMotion)
+        case .weather: return String(settings.weatherEnabled)
+        case .weatherSidebar: return String(settings.weatherSidebarVisible)
+        case .gpsIntervalSeconds: return String(settings.gpsLoggingPreferences.intervalSeconds)
+        case .cat: return settings.catStyle.rawValue
+        case .notifications: return String(settings.notificationsEnabled)
+        default: return nil
+        }
+    }
+
+    /// 화면의 설정 함수로 바꾼다(부수 동작까지 같다: Watch 알림, 수집 설정 다시 맞추기, 예약 알림 지우기).
+    @MainActor
+    func apply(_ value: String, to model: AppModel) async {
+        switch self {
+        case .reduceMotion: model.setReduceMotion(value == "true")
+        case .weather: await model.setWeatherEnabled(value == "true")
+        case .weatherSidebar: model.setWeatherSidebarVisible(value == "true")
+        case .gpsIntervalSeconds: if let seconds = Int(value) { model.setGPSLoggingIntervalSeconds(seconds) }
+        case .cat: if let coat = CatCoat.characters.first(where: { $0.catStyle.rawValue == value }) { model.selectCatCoat(coat) }
+        case .notifications: await model.setNotificationsEnabled(value == "true")
+        default: break
         }
     }
 
     /// 지금 값. 한 번도 정하지 않았으면 nil.
     func read(_ defaults: UserDefaults) -> String? {
-        guard let stored = defaults.object(forKey: key) else { return nil }
+        guard !isModelBacked, let stored = defaults.object(forKey: key) else { return nil }
         switch kind {
+        case .count, .offOnly: return nil
         case .choice where self == .salaryMode: return (stored as? Bool).map { $0 ? "hourly" : "salary" }
         case .choice: return stored as? String
         case .amount: return (stored as? Double).map { String($0.rounded()) }
@@ -556,8 +630,10 @@ enum AssistantSetting: String, CaseIterable, Codable, Sendable {
 
     /// nil이면 정하기 전으로 돌린다.
     func write(_ value: String?, defaults: UserDefaults) {
+        guard !isModelBacked else { return }
         guard let value else { return defaults.removeObject(forKey: key) }
         switch kind {
+        case .count, .offOnly: break
         case .choice where self == .salaryMode: defaults.set(value == "hourly", forKey: key)
         case .choice: defaults.set(value, forKey: key)
         case .amount: defaults.set(Double(value) ?? 0, forKey: key)
@@ -577,6 +653,12 @@ enum AssistantSetting: String, CaseIterable, Codable, Sendable {
         case .hourlyPayIsNet: language.text("시급을 세후로 입력", "Hourly pay entered after tax")
         case .hourlyTax: language.text("시급 세금 방식", "Hourly tax method")
         case .weeklyHolidayPay: language.text("주휴수당 포함", "Weekly holiday pay")
+        case .reduceMotion: language.text("움직임 줄이기", "Reduce motion")
+        case .weather: language.text("날씨", "Weather")
+        case .weatherSidebar: language.text("날씨 옆 칸", "Weather sidebar")
+        case .gpsIntervalSeconds: language.text("위치 기록 간격(초)", "Location logging interval (s)")
+        case .cat: language.text("고양이", "Cat")
+        case .notifications: language.text("알림", "Notifications")
         }
     }
 }

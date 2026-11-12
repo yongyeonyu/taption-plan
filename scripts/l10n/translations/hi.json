@@ -5456,6 +5456,21 @@
 "여행 지우기|Delete trips": "यात्राएँ हटाएँ",
 "연봉|Annual pay": "वार्षिक वेतन",
 "주휴수당 포함|Weekly holiday pay": "साप्ताहिक अवकाश भत्ता शामिल",
-"통행료 차종|Toll vehicle": "टोल वाहन"
+"통행료 차종|Toll vehicle": "टोल वाहन",
+"고양이|Cat": "बिल्ली",
+"급여 설정|Pay settings": "वेतन सेटिंग",
+"날씨 옆 칸|Weather sidebar": "मौसम साइडबार",
+"미확인 시간 검토|Unconfirmed time review": "अपुष्ट समय की समीक्षा",
+"알람 설정|Alarm settings": "अलार्म सेटिंग",
+"여행 모드|Travel mode": "यात्रा मोड",
+"움직임 줄이기|Reduce motion": "गति कम करें",
+"위치 기록 간격(초)|Location logging interval (s)": "स्थान रिकॉर्ड अंतराल (से.)",
+"장소 도감|Place collection": "स्थान संग्रह",
+"계획표 축소|Zoom out": "ज़ूम आउट",
+"계획표 확대|Zoom in": "ज़ूम इन",
+"남은 돈 {0}|Left {0}": "बचा {0}",
+"메모 (선택)|Note (optional)": "नोट (वैकल्पिक)",
+"여기까지 {0}|So far {0}": "अब तक {0}",
+"일정에 장소를 붙이면 지도에 나옵니다|Add a place to a plan to see it on the map": "मानचित्र पर देखने के लिए योजना में जगह जोड़ें"
 }
 }

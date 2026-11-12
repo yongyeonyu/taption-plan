@@ -1186,7 +1186,7 @@ final class AssistantAppControlTests: XCTestCase {
         ])
         // 더하기와 화면 열기는 기존 것을 바꾸지 않는다. 지우기·버리기·예산은 20개 확인 규칙에 센다.
         XCTAssertEqual(parsed.commands.map(\.action.existingChangeCount), [1, 1, 0, 1, 1, 1, 1, 1, 0])
-        XCTAssertEqual(Set(AssistantScreen.allCases.map(\.rawValue)), ["paymentAutomation", "shortcuts", "aiConnection", "ledger", "dataProtection", "settings"])
+        XCTAssertEqual(Set(AssistantScreen.allCases.map(\.rawValue)), ["paymentAutomation", "shortcuts", "aiConnection", "ledger", "dataProtection", "settings", "salary", "carAudio", "alarm", "placeBook", "passport", "unconfirmedReview", "travel"])
     }
 
     func testOwnAccountsRuleAndInboxCommandsApplyAndUndo() async throws {
@@ -1660,6 +1660,45 @@ final class AssistantAppControlTests: XCTestCase {
         XCTAssertFalse(json.contains("annualPay") || json.contains("50000000") || json.contains("34.69"), "급여 금액과 좌표는 올리지 않는다")
     }
 
+    /// ACC1112A01: 앱 자료 쪽 설정은 화면의 설정 함수로 바꾸고 되돌리며, 알림은 끄기만 받는다.
+    func testAppSettingsChangeThroughTheModelAndUndo() async throws {
+        let store = defaults()
+        let model = await model()
+        let preferences = AssistantPreferenceStore.test(store)
+        let parsed = try batch([
+            command("s1", "setSetting", ["setting": "reduceMotion", "value": true]),
+            command("s2", "setSetting", ["setting": "gpsIntervalSeconds", "value": 600]),
+            command("s3", "setSetting", ["setting": "cat", "value": "mackerel"]),
+            command("s4", "setSetting", ["setting": "weatherSidebar", "value": !model.snapshot.settings.weatherSidebarVisible]),
+            command("on", "setSetting", ["setting": "notifications", "value": true]),
+            command("odd", "setSetting", ["setting": "gpsIntervalSeconds", "value": 45]),
+            command("far", "setSetting", ["setting": "gpsIntervalSeconds", "value": 3_600]),
+            command("tiger", "setSetting", ["setting": "cat", "value": "tiger"]),
+        ])
+        XCTAssertEqual(parsed.invalidIDs, ["on", "odd", "far", "tiger"])
+        let gpsBefore = model.snapshot.settings.gpsLoggingPreferences.intervalSeconds
+        let sidebarBefore = model.snapshot.settings.weatherSidebarVisible
+        let outcome = await model.applyAssistantCommands(parsed, defaults: store)
+        let changed = try XCTUnwrap(outcome)
+        XCTAssertEqual(changed.results.filter(\.applied).map(\.id), ["s1", "s2", "s3", "s4"].filter { $0 != "s2" || gpsBefore != 600 })
+        XCTAssertTrue(model.snapshot.settings.reduceMotion)
+        XCTAssertEqual(model.snapshot.settings.gpsLoggingPreferences.intervalSeconds, 600)
+        XCTAssertEqual(model.snapshot.settings.catStyle, .mackerel)
+        XCTAssertEqual(model.snapshot.settings.weatherSidebarVisible, !sidebarBefore)
+        XCTAssertNil(store.object(forKey: AssistantSetting.reduceMotion.key), "앱 자료 쪽 설정은 기기 설정에 쓰지 않는다")
+
+        let entry = try XCTUnwrap(changed.entries.first { $0.commandID == "s1" })
+        let undone = await model.undoAssistantEntry(entry, preferences: preferences)
+        XCTAssertTrue(undone)
+        for _ in 0..<50 where model.snapshot.settings.reduceMotion { await Task.yield() }
+        XCTAssertFalse(model.snapshot.settings.reduceMotion)
+
+        let state = AssistantAppStateSync.make(await AssistantAppStateSync.input(model: model, preferences: preferences, now: at(11, 12, 10), calendar: calendar))
+        XCTAssertEqual(state.settings.values?["gpsIntervalSeconds"], "600")
+        XCTAssertEqual(state.settings.values?["cat"], "mackerel")
+        XCTAssertNil(state.settings.values?["annualPay"])
+    }
+
     func testOpenScreenWaitsUntilTakenExpiresAndUndoCancelsIt() async throws {
         let store = defaults()
         let model = await model()
@@ -1693,7 +1732,7 @@ final class AssistantAppControlTests: XCTestCase {
         let key = String(repeating: "A", count: 43)
         let write = TripRelay.assistantSetupText(host: "relay.example.com", key: key, timeZone: calendar.timeZone)
         for part in ["GET /app", "get_app_state", "\"setBudget\"", "\"addOwnAccount\"", "removeOwnAccount", "\"deletePaymentRule\"", "\"resolveReview\"", "\"deleteInboxItem\"",
-                     "\"openScreen\",\"screen\":\"paymentAutomation|shortcuts|aiConnection|ledger|dataProtection|settings\"",
+                     "\"openScreen\",\"screen\":\"paymentAutomation|shortcuts|aiConnection|ledger|dataProtection|settings|salary|carAudio|alarm|placeBook|passport|unconfirmedReview|travel\"",
                      "cannot create or switch on an iOS automation", "turn the switch on myself", "no_review"] {
             XCTAssertTrue(write.contains(part), part)
         }

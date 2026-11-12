@@ -5456,6 +5456,21 @@
 "여행 지우기|Delete trips": "刪除旅行",
 "연봉|Annual pay": "年薪",
 "주휴수당 포함|Weekly holiday pay": "包含週休津貼",
-"통행료 차종|Toll vehicle": "通行費車種"
+"통행료 차종|Toll vehicle": "通行費車種",
+"고양이|Cat": "貓",
+"급여 설정|Pay settings": "薪資設定",
+"날씨 옆 칸|Weather sidebar": "天氣側欄",
+"미확인 시간 검토|Unconfirmed time review": "檢視未確認時間",
+"알람 설정|Alarm settings": "鬧鐘設定",
+"여행 모드|Travel mode": "旅行模式",
+"움직임 줄이기|Reduce motion": "減少動態效果",
+"위치 기록 간격(초)|Location logging interval (s)": "位置記錄間隔(秒)",
+"장소 도감|Place collection": "地點圖鑑",
+"계획표 축소|Zoom out": "縮小",
+"계획표 확대|Zoom in": "放大",
+"남은 돈 {0}|Left {0}": "剩餘 {0}",
+"메모 (선택)|Note (optional)": "備註（選填）",
+"여기까지 {0}|So far {0}": "到這裡 {0}",
+"일정에 장소를 붙이면 지도에 나옵니다|Add a place to a plan to see it on the map": "為行程加上地點後會顯示在地圖上"
 }
 }

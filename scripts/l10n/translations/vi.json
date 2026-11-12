@@ -5456,6 +5456,21 @@
 "여행 지우기|Delete trips": "Xóa chuyến đi",
 "연봉|Annual pay": "Lương năm",
 "주휴수당 포함|Weekly holiday pay": "Gồm trợ cấp nghỉ tuần",
-"통행료 차종|Toll vehicle": "Loại xe tính phí đường"
+"통행료 차종|Toll vehicle": "Loại xe tính phí đường",
+"고양이|Cat": "Mèo",
+"급여 설정|Pay settings": "Cài đặt lương",
+"날씨 옆 칸|Weather sidebar": "Thanh bên thời tiết",
+"미확인 시간 검토|Unconfirmed time review": "Xem lại thời gian chưa xác nhận",
+"알람 설정|Alarm settings": "Cài đặt báo thức",
+"여행 모드|Travel mode": "Chế độ du lịch",
+"움직임 줄이기|Reduce motion": "Giảm chuyển động",
+"위치 기록 간격(초)|Location logging interval (s)": "Khoảng ghi vị trí (giây)",
+"장소 도감|Place collection": "Bộ sưu tập địa điểm",
+"계획표 축소|Zoom out": "Thu nhỏ",
+"계획표 확대|Zoom in": "Phóng to",
+"남은 돈 {0}|Left {0}": "Còn {0}",
+"메모 (선택)|Note (optional)": "Ghi chú (tùy chọn)",
+"여기까지 {0}|So far {0}": "Đến đây {0}",
+"일정에 장소를 붙이면 지도에 나옵니다|Add a place to a plan to see it on the map": "Thêm địa điểm vào kế hoạch để hiện trên bản đồ"
 }
 }

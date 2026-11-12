@@ -292,7 +292,7 @@ extension AppModel {
         }
         let stored = (entry.delta.preferences ?? []).filter { $0.key != AssistantPreferenceChange.mapStyleKey }
         let appChangeIsCurrent = await entry.delta.appChange?.isCurrent(preferences) ?? true
-        guard appChangeIsCurrent, stored.allSatisfy({ preferences.value($0.key) == $0.after }), let restored = entry.delta.undoing(in: snapshot) else {
+        guard appChangeIsCurrent, stored.allSatisfy({ preferences.value($0.key, model: self) == $0.after }), let restored = entry.delta.undoing(in: snapshot) else {
             userFacingError = AppLanguagePreference.text(
                 korean: "그 뒤에 바뀐 내용이 있어 되돌리지 못했어요. 앱에서 직접 고쳐 주세요.",
                 english: "It changed afterwards, so it couldn't be undone. Please edit it in the app."

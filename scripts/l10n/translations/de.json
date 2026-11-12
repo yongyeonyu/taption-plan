@@ -5456,6 +5456,21 @@
 "여행 지우기|Delete trips": "Reisen löschen",
 "연봉|Annual pay": "Jahresgehalt",
 "주휴수당 포함|Weekly holiday pay": "Wochenruhegeld einbeziehen",
-"통행료 차종|Toll vehicle": "Mautfahrzeugklasse"
+"통행료 차종|Toll vehicle": "Mautfahrzeugklasse",
+"고양이|Cat": "Katze",
+"급여 설정|Pay settings": "Gehaltseinstellungen",
+"날씨 옆 칸|Weather sidebar": "Wetter-Seitenleiste",
+"미확인 시간 검토|Unconfirmed time review": "Unbestätigte Zeit prüfen",
+"알람 설정|Alarm settings": "Weckereinstellungen",
+"여행 모드|Travel mode": "Reisemodus",
+"움직임 줄이기|Reduce motion": "Bewegung reduzieren",
+"위치 기록 간격(초)|Location logging interval (s)": "Intervall der Standortaufzeichnung (s)",
+"장소 도감|Place collection": "Ortssammlung",
+"계획표 축소|Zoom out": "Verkleinern",
+"계획표 확대|Zoom in": "Vergrößern",
+"남은 돈 {0}|Left {0}": "Übrig {0}",
+"메모 (선택)|Note (optional)": "Notiz (optional)",
+"여기까지 {0}|So far {0}": "Bis hier {0}",
+"일정에 장소를 붙이면 지도에 나옵니다|Add a place to a plan to see it on the map": "Ort zu einem Plan hinzufügen, um ihn auf der Karte zu sehen"
 }
 }

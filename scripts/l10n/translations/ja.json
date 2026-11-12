@@ -5456,6 +5456,21 @@
 "여행 지우기|Delete trips": "旅行を削除",
 "연봉|Annual pay": "年収",
 "주휴수당 포함|Weekly holiday pay": "週休手当を含む",
-"통행료 차종|Toll vehicle": "通行料の車種"
+"통행료 차종|Toll vehicle": "通行料の車種",
+"고양이|Cat": "ネコ",
+"급여 설정|Pay settings": "給与設定",
+"날씨 옆 칸|Weather sidebar": "天気サイドバー",
+"미확인 시간 검토|Unconfirmed time review": "未確認時間の確認",
+"알람 설정|Alarm settings": "アラーム設定",
+"여행 모드|Travel mode": "旅行モード",
+"움직임 줄이기|Reduce motion": "視差効果を減らす",
+"위치 기록 간격(초)|Location logging interval (s)": "位置記録の間隔(秒)",
+"장소 도감|Place collection": "場所図鑑",
+"계획표 축소|Zoom out": "縮小",
+"계획표 확대|Zoom in": "拡大",
+"남은 돈 {0}|Left {0}": "残り {0}",
+"메모 (선택)|Note (optional)": "メモ（任意）",
+"여기까지 {0}|So far {0}": "ここまで {0}",
+"일정에 장소를 붙이면 지도에 나옵니다|Add a place to a plan to see it on the map": "予定に場所を付けると地図に表示されます"
 }
 }

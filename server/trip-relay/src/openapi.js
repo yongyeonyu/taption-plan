@@ -46,7 +46,8 @@ const command = {
     + "updateCategory: categoryId (getAppState categories), then name?, color?, icon?, hidden?. "
     + "addTrip: title (1-60), start (YYYY-MM-DD) and end? or wishDays (1-60, a trip without dates), countryCode?, regionName?, currency?. "
     + "updateTrip: tripId (getAppState trips), then title?, start?, end? (moving start moves its items). deleteTrip: tripId (items and pins too). "
-    + "setSetting: setting (tollVehicle|salaryMode|annualPay|monthlyPay|payIsNet|showsNetPay|hourlyPay|hourlyPayIsNet|hourlyTax|weeklyHolidayPay), value. "
+    + "setSetting: setting (tollVehicle|salaryMode|annualPay|monthlyPay|payIsNet|showsNetPay|hourlyPay|hourlyPayIsNet|hourlyTax|weeklyHolidayPay|reduceMotion|weather|"
+    + "weatherSidebar|gpsIntervalSeconds 30-1800 step 30|cat white|calico|mackerel|notifications false only), value. "
     + "askUser: question (1-200), options (2-4 distinct strings of 1-60), multiSelect? (asks the user a multiple-choice question in the app; "
     + "changes no records; the app always adds free text; read the answer with getAnswers, matched by this command's id). Unknown fields are dropped.",
   properties: {

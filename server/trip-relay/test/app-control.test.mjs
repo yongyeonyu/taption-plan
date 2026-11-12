@@ -304,6 +304,9 @@ test("trip and setting commands are validated; app state carries trips", async (
     ["updateTrip", { tripId: "trip-1", start: "2026-12-02" }], ["updateTrip", { tripId: "trip-1", title: "교토" }], ["deleteTrip", { tripId: "trip-1" }],
     ["setSetting", { setting: "tollVehicle", value: "electric" }], ["setSetting", { setting: "annualPay", value: 50000000 }],
     ["setSetting", { setting: "weeklyHolidayPay", value: true }], ["setSetting", { setting: "hourlyTax", value: "none" }],
+    // ACC1112A01
+    ["setSetting", { setting: "reduceMotion", value: true }], ["setSetting", { setting: "gpsIntervalSeconds", value: 300 }],
+    ["setSetting", { setting: "cat", value: "calico" }], ["setSetting", { setting: "notifications", value: false }],
   ];
   for (const [action, fields] of good) assert.equal(await post(action, fields), 201, `${action} ${JSON.stringify(fields)}`);
   const bad = [
@@ -314,6 +317,9 @@ test("trip and setting commands are validated; app state carries trips", async (
     ["setSetting", { setting: "backupPin", value: "123456" }], ["setSetting", { setting: "tollVehicle", value: "truck" }],
     ["setSetting", { setting: "annualPay", value: -1 }], ["setSetting", { setting: "annualPay", value: "많이" }], ["setSetting", { setting: "payIsNet", value: "true" }],
     ["setSetting", { setting: "toString", value: 1 }], ["setSetting", { setting: "tollVehicle" }],
+    ["setSetting", { setting: "notifications", value: true }], ["setSetting", { setting: "gpsIntervalSeconds", value: 45 }],
+    ["setSetting", { setting: "gpsIntervalSeconds", value: 3600 }], ["setSetting", { setting: "cat", value: "tiger" }],
+    ["setSetting", { setting: "healthEnabled", value: false }],
   ];
   for (const [action, fields] of bad) assert.equal(await post(action, fields), 422, `${action} ${JSON.stringify(fields)}`);
   const state = { format: "bokki-app", version: 1, retentionDays: 7, settings: { language: "korean", tollVehicle: "electric", salaryMode: "salary" },

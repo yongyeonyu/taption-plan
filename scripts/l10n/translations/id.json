@@ -5456,6 +5456,21 @@
 "여행 지우기|Delete trips": "Hapus perjalanan",
 "연봉|Annual pay": "Gaji tahunan",
 "주휴수당 포함|Weekly holiday pay": "Termasuk tunjangan libur mingguan",
-"통행료 차종|Toll vehicle": "Kendaraan tol"
+"통행료 차종|Toll vehicle": "Kendaraan tol",
+"고양이|Cat": "Kucing",
+"급여 설정|Pay settings": "Pengaturan gaji",
+"날씨 옆 칸|Weather sidebar": "Bilah sisi cuaca",
+"미확인 시간 검토|Unconfirmed time review": "Tinjau waktu belum dikonfirmasi",
+"알람 설정|Alarm settings": "Pengaturan alarm",
+"여행 모드|Travel mode": "Mode perjalanan",
+"움직임 줄이기|Reduce motion": "Kurangi gerakan",
+"위치 기록 간격(초)|Location logging interval (s)": "Interval pencatatan lokasi (dtk)",
+"장소 도감|Place collection": "Koleksi tempat",
+"계획표 축소|Zoom out": "Perkecil",
+"계획표 확대|Zoom in": "Perbesar",
+"남은 돈 {0}|Left {0}": "Sisa {0}",
+"메모 (선택)|Note (optional)": "Catatan (opsional)",
+"여기까지 {0}|So far {0}": "Sejauh ini {0}",
+"일정에 장소를 붙이면 지도에 나옵니다|Add a place to a plan to see it on the map": "Tambahkan tempat ke rencana agar muncul di peta"
 }
 }

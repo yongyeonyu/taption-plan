@@ -259,6 +259,13 @@ extension MapHomeView {
         case .settings:
             openMenu()
             isSettingsMenuExpanded = true
+        case .salary: isSalarySettingsPresented = true
+        case .carAudio: isCarAudioSheetPresented = true
+        case .alarm: isAlarmSettingsPresented = true
+        case .placeBook: isPlaceBookPresented = true
+        case .passport: isPassportPresented = true
+        case .unconfirmedReview: isUnconfirmedReviewPresented = true
+        case .travel: isTravelHomePresented = true
         }
     }
 }

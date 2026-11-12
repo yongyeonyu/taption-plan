@@ -463,9 +463,14 @@ extension AppModel {
             result.appChange = AssistantAppChange(questionID: question.id)
             return result
         case let .setSetting(setting, value):
-            let change = AssistantPreferenceChange(key: setting.key, before: preferences.value(setting.key), after: value)
+            let change = AssistantPreferenceChange(key: setting.key, before: preferences.value(setting.key, model: self), after: value)
             guard change.before != change.after else { return .rejected("no_change") }
-            preferences.set(setting.key, value: value, model: self)
+            if setting.isModelBacked {
+                await setting.apply(value, to: self)
+                guard setting.read(model: self) == value else { return .rejected("edit_failed") }
+            } else {
+                preferences.set(setting.key, value: value, model: self)
+            }
             let name = setting.title(language)
             return AssistantEditResult(
                 before: "\(name): \(change.before ?? language.text("정하지 않음", "Not set"))", after: "\(name): \(value)", preferences: [change]

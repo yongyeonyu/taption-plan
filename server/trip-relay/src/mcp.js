@@ -168,7 +168,9 @@ const TOOLS = [
   addTool("open_screen", "openScreen", "Open an app screen", "Ask the app to show a screen the next time it is in the foreground (at once if the user has it open and no other "
     + "sheet is showing). It changes no data and cannot be undone; a newer request replaces an older one and a request not shown within 24 hours is dropped. "
     + "paymentAutomation: the BOKKI Payment automation tutorial; shortcuts: the Shortcuts and Siri guide; aiConnection: AI connections; ledger: the ledger; "
-    + "dataProtection: backup and data protection; settings: the menu with Settings opened. The app cannot create or switch on an iOS Shortcuts "
+    + "dataProtection: backup and data protection; settings: the menu with Settings opened; salary: pay settings; carAudio: my car (car audio and toll "
+    + "vehicle); alarm: alarm settings; placeBook: the place collection; passport: the travel passport; unconfirmedReview: the list of unconfirmed "
+    + "time to settle; travel: travel mode home. The app cannot create or switch on an iOS Shortcuts "
     + "automation and cannot see whether one is on: after opening paymentAutomation, tell the user to follow the steps and tap the automation's switch themselves.",
     { screen: enumOf("Screen to show", SCREENS) }, ["screen"]),
   // ASK1112A01
@@ -221,8 +223,11 @@ const TOOLS = [
   commandTool("set_setting", "setSetting", "Change an app setting", "Change one app setting the user asked you to change. setting and value: "
     + "tollVehicle standard|compact|electric (toll discounts); salaryMode salary|hourly; annualPay, monthlyPay, hourlyPay (numbers in the user's "
     + "currency, 0 clears); payIsNet, hourlyPayIsNet (the amount entered is after tax), showsNetPay (show after-tax amounts), "
-    + "hourlyTax threePointThree|fourInsurance|none, weeklyHolidayPay true|false. Pay amounts are write-only: the app never sends them back, "
-    + "so do not repeat or store them. Undoable.",
+    + "hourlyTax threePointThree|fourInsurance|none, weeklyHolidayPay true|false; reduceMotion, weather (weather on the timeline), "
+    + "weatherSidebar true|false; gpsIntervalSeconds 30-1800 in steps of 30 (how often location is logged; longer saves battery); "
+    + "cat white|calico|mackerel (the map cat); notifications false only (turning notifications, Health, Photos, Calendar or location ON "
+    + "needs an iOS permission prompt the user must answer: use open_screen settings and tell them what to tap). Current values are in "
+    + "get_app_state settings.values. Pay amounts are write-only: the app never sends them back, so do not repeat or store them. Undoable.",
     { setting: enumOf("Setting name", SETTING_NAMES), value: { description: "New value: a string, number or boolean as the setting needs" } }, ["setting", "value"]),
   addTool("add_schedule", "addSchedule", "Add schedule", "Add a planned activity. Without end it lasts one hour.",
     { title: str("1-200 characters"), start: INSTANT("Start"), end: INSTANT("End, after start"), note: str("Up to 1000 characters") }, ["title", "start"]),

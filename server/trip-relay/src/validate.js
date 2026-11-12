@@ -213,7 +213,9 @@ export const ACTIONS = Object.keys(COMMAND_FIELDS);
 export const TRAVEL_MODES = ["walk", "subway", "bus", "car", "train", "flight"];
 export const PAYMENT_RULE_KINDS = ["expense", "income", "ignore"];
 // ACX1112A01
-export const SCREENS = ["paymentAutomation", "shortcuts", "aiConnection", "ledger", "dataProtection", "settings"];
+export const SCREENS = ["paymentAutomation", "shortcuts", "aiConnection", "ledger", "dataProtection", "settings",
+  // ACC1112A01
+  "salary", "carAudio", "alarm", "placeBook", "passport", "unconfirmedReview", "travel"];
 export const REVIEW_DECISIONS = ["add", "discard"];
 export const BUDGET_MAX_KRW = 1e12;
 const UUID = /^[0-9A-Fa-f]{8}(?:-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12}$/;
@@ -263,6 +265,7 @@ const amountUpTo = (max) => (v) => typeof v === "number" && Number.isFinite(v) &
 export const TOLL_VEHICLES = ["standard", "compact", "electric"];
 export const SALARY_MODES = ["salary", "hourly"];
 export const HOURLY_TAXES = ["threePointThree", "fourInsurance", "none"];
+export const CATS = ["white", "calico", "mackerel"];
 export const SETTINGS = {
   tollVehicle: oneOf(TOLL_VEHICLES),
   salaryMode: oneOf(SALARY_MODES),
@@ -274,6 +277,13 @@ export const SETTINGS = {
   hourlyPayIsNet: isBoolean,
   hourlyTax: oneOf(HOURLY_TAXES),
   weeklyHolidayPay: isBoolean,
+  // ACC1112A01: 앱 자료 쪽 설정. 알림은 끄기만(켜기는 iOS 권한 창이 필요해 사용자가 한다).
+  reduceMotion: isBoolean,
+  weather: isBoolean,
+  weatherSidebar: isBoolean,
+  gpsIntervalSeconds: (v) => Number.isInteger(v) && v >= 30 && v <= 1800 && v % 30 === 0,
+  cat: oneOf(CATS),
+  notifications: (v) => v === false,
 };
 export const SETTING_NAMES = Object.keys(SETTINGS);
 
