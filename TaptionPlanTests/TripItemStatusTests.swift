@@ -410,6 +410,19 @@ final class TravelTripUnitTests: XCTestCase {
         XCTAssertNil(TravelModeView.entryToOpen(later, selectedDay: "2026-11-12", lastTripID: ""), "없으면 지구본")
     }
 
+    /// TVS1112A01: 오픈맵을 맞출 상자는 핀을 모두 품고, 한 점이어도 넓이가 있다.
+    func testStreetMapBoundsCoverEveryPin() throws {
+        XCTAssertNil(TravelStreetMap.bounds([]))
+        let one = try XCTUnwrap(TravelStreetMap.bounds([.init(longitude: 130.4, latitude: 33.59, label: "1")]))
+        XCTAssertLessThan(one.west, 130.4)
+        XCTAssertGreaterThan(one.north, 33.59)
+        let pins: [TravelStreetMap.Pin] = [.init(longitude: 130.37, latitude: 33.58, label: "1"), .init(longitude: 130.53, latitude: 33.52, label: "2")]
+        let box = try XCTUnwrap(TravelStreetMap.bounds(pins))
+        for pin in pins {
+            XCTAssertTrue(box.west < pin.longitude && pin.longitude < box.east && box.south < pin.latitude && pin.latitude < box.north)
+        }
+    }
+
     func testTitleSuggestionsAreRecentTitlesOfTheSameKind() {
         func item(_ id: String, _ kind: String, _ title: String, trip: String = "t1") -> TravelTripItem {
             TravelTripItem(tripID: trip, itemID: id, kind: kind, title: title, start: .now, end: .now.addingTimeInterval(60), startOffsetSeconds: 0, endOffsetSeconds: 0, planID: nil)
