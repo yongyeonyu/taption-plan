@@ -3709,7 +3709,7 @@
    "ko": "{0}건 넣기",
    "en": "Add {0}",
    "files": [
-    "LedgerReviewBand.swift:162"
+    "LedgerReviewBand.swift:163"
    ],
    "args": [
     "batch.selected.count"
@@ -3825,7 +3825,7 @@
    "ko": "{0}박 {1}일",
    "en": "{0} nights, {1} days",
    "files": [
-    "TravelModeView.swift:736"
+    "TravelModeView.swift:787"
    ],
    "args": [
     "entry.nights",
@@ -4341,8 +4341,8 @@
    "ko": "{0}일차",
    "en": "Day {0}",
    "files": [
-    "TravelModeView.swift:877",
-    "TravelModeView.swift:998"
+    "TravelModeView.swift:928",
+    "TravelModeView.swift:1049"
    ],
    "args": [
     "entry.dayNumber ?? 1"
@@ -33495,7 +33495,7 @@
    "ko": "같은 길 통행료 자동 추가",
    "en": "Same-route toll, added automatically",
    "files": [
-    "LedgerTollRepeat.swift:120"
+    "LedgerTollRepeat.swift:276"
    ],
    "args": [],
    "targets": [
@@ -34532,6 +34532,30 @@
    ]
   },
   {
+   "key": "경차 할인 50%|Compact car discount 50%",
+   "ko": "경차 할인 50%",
+   "en": "Compact car discount 50%",
+   "files": [
+    "LedgerTollRepeat.swift:208"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "경차|Compact",
+   "ko": "경차",
+   "en": "Compact",
+   "files": [
+    "LedgerTollRepeat.swift:217"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "계단·엘리베이터·양치·타이핑처럼 손목 움직임으로 나뉘는 세부 행동. iPhone만으로는 정지·걷기·달리기·자전거·자동차까지 구분합니다.|Fine-grained actions told apart by wrist movement, such as stairs, elevators, brushing teeth and typing. The iPhone alone distinguishes still, walking, running, cycling and driving.",
    "ko": "계단·엘리베이터·양치·타이핑처럼 손목 움직임으로 나뉘는 세부 행동. iPhone만으로는 정지·걷기·달리기·자전거·자동차까지 구분합니다.",
    "en": "Fine-grained actions told apart by wrist movement, such as stairs, elevators, brushing teeth and typing. The iPhone alone distinguishes still, walking, running, cycling and driving.",
@@ -34775,7 +34799,7 @@
    "ko": "계획표 내리기",
    "en": "Close plan table",
    "files": [
-    "TravelModeView.swift:963"
+    "TravelModeView.swift:1014"
    ],
    "args": [],
    "targets": [
@@ -34787,8 +34811,8 @@
    "ko": "계획표 올리기",
    "en": "Open plan table",
    "files": [
-    "TravelModeView.swift:420",
-    "TravelModeView.swift:963"
+    "TravelModeView.swift:453",
+    "TravelModeView.swift:1014"
    ],
    "args": [],
    "targets": [
@@ -34903,6 +34927,18 @@
    "en": "Only the selected one runs the counter. Other tabs show the converted amount.",
    "files": [
     "MapHomeSalarySettingsSheet.swift:144"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "고속도로 통행료를 자동으로 넣을 때 할인을 계산해요. 경차는 50%, 전기·수소차는 올해 30%, 평일 출퇴근 시간에는 20~50%예요. 하이브리드는 일반이에요.|Used for highway toll discounts when tolls are added automatically: compact cars 50%, EVs 30% this year, weekday commute hours 20–50%. Hybrids count as standard.",
+   "ko": "고속도로 통행료를 자동으로 넣을 때 할인을 계산해요. 경차는 50%, 전기·수소차는 올해 30%, 평일 출퇴근 시간에는 20~50%예요. 하이브리드는 일반이에요.",
+   "en": "Used for highway toll discounts when tolls are added automatically: compact cars 50%, EVs 30% this year, weekday commute hours 20–50%. Hybrids count as standard.",
+   "files": [
+    "FirstRunCarPage.swift:92"
    ],
    "args": [],
    "targets": [
@@ -36277,7 +36313,7 @@
    "ko": "기본 색으로",
    "en": "Use default color",
    "files": [
-    "TravelModeView.swift:812"
+    "TravelModeView.swift:863"
    ],
    "args": [],
    "targets": [
@@ -36805,7 +36841,7 @@
    "ko": "나라",
    "en": "Country",
    "files": [
-    "TravelModeView.swift:1150"
+    "TravelNewTripSheet.swift:51"
    ],
    "args": [],
    "targets": [
@@ -36970,9 +37006,9 @@
    "ko": "날짜",
    "en": "Date",
    "files": [
+    "TravelNewTripSheet.swift:43",
     "MapHomeDailyCard.swift:365",
-    "MapHomePlaceBookTools.swift:780",
-    "TravelModeView.swift:1142"
+    "MapHomePlaceBookTools.swift:780"
    ],
    "args": [],
    "targets": [
@@ -37072,7 +37108,7 @@
    "ko": "내 계좌 이름",
    "en": "My account names",
    "files": [
-    "LedgerReviewBand.swift:125",
+    "LedgerReviewBand.swift:126",
     "LedgerSheet.swift:76"
    ],
    "args": [],
@@ -37146,7 +37182,20 @@
    "ko": "내 차 오디오",
    "en": "My car audio",
    "files": [
-    "MapHomeCarAudioSheet.swift:60"
+    "MapHomeCarAudioSheet.swift:61"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "내 차 종류|My car type",
+   "ko": "내 차 종류",
+   "en": "My car type",
+   "files": [
+    "FirstRunCarPage.swift:83",
+    "FirstRunCarPage.swift:86"
    ],
    "args": [],
    "targets": [
@@ -37170,8 +37219,8 @@
    "ko": "내 차로 등록",
    "en": "Register",
    "files": [
-    "MapHomeCarAudioSheet.swift:118",
-    "MapHomeCarAudioSheet.swift:135"
+    "MapHomeCarAudioSheet.swift:119",
+    "MapHomeCarAudioSheet.swift:136"
    ],
    "args": [],
    "targets": [
@@ -37293,7 +37342,7 @@
    "ko": "넣을 것만 골라 주세요. 이미 가계부에 있는 것 같은 줄은 꺼 두었어요.",
    "en": "Pick the ones to add. Lines that look already recorded are turned off.",
    "files": [
-    "LedgerReviewBand.swift:153"
+    "LedgerReviewBand.swift:154"
    ],
    "args": [],
    "targets": [
@@ -37717,7 +37766,7 @@
    "ko": "다음: {0}",
    "en": "Next: {0}",
    "files": [
-    "TravelModeView.swift:915"
+    "TravelModeView.swift:966"
    ],
    "args": [
     "$0.title"
@@ -37913,8 +37962,8 @@
    "ko": "당일",
    "en": "Day trip",
    "files": [
-    "TravelModeView.swift:735",
-    "TravelModeView.swift:997"
+    "TravelModeView.swift:786",
+    "TravelModeView.swift:1048"
    ],
    "args": [],
    "targets": [
@@ -37926,7 +37975,7 @@
    "ko": "당일치기",
    "en": "Day trip",
    "files": [
-    "TravelModeView.swift:1141"
+    "TravelNewTripSheet.swift:42"
    ],
    "args": [],
    "targets": [
@@ -38181,7 +38230,7 @@
    "ko": "더하기",
    "en": "Add",
    "files": [
-    "LedgerReviewBand.swift:112"
+    "LedgerReviewBand.swift:113"
    ],
    "args": [],
    "targets": [
@@ -38833,7 +38882,7 @@
    "ko": "등록한 기기",
    "en": "Registered devices",
    "files": [
-    "MapHomeCarAudioSheet.swift:90"
+    "MapHomeCarAudioSheet.swift:91"
    ],
    "args": [],
    "targets": [
@@ -38845,7 +38894,7 @@
    "ko": "등록한 기기가 연결된 이동은 자동차로 확정합니다",
    "en": "Trips with a registered device connected are confirmed as car",
    "files": [
-    "MapHomeCarAudioSheet.swift:62"
+    "MapHomeCarAudioSheet.swift:63"
    ],
    "args": [],
    "targets": [
@@ -39141,7 +39190,7 @@
    "ko": "마지막 날",
    "en": "Last day",
    "files": [
-    "TravelModeView.swift:1144"
+    "TravelNewTripSheet.swift:45"
    ],
    "args": [],
    "targets": [
@@ -39191,8 +39240,8 @@
    "ko": "만들기",
    "en": "Create",
    "files": [
-    "AssistantSafetyViews.swift:270",
-    "TravelModeView.swift:1167"
+    "TravelNewTripSheet.swift:68",
+    "AssistantSafetyViews.swift:270"
    ],
    "args": [],
    "targets": [
@@ -39351,7 +39400,7 @@
    "ko": "머문 곳",
    "en": "Place",
    "files": [
-    "LedgerTollRepeat.swift:131",
+    "LedgerTollRepeat.swift:289",
     "AssistantActivity.swift:196",
     "AssistantActivity.swift:283"
    ],
@@ -42480,7 +42529,7 @@
    "ko": "삭제",
    "en": "Remove",
    "files": [
-    "MapHomeCarAudioSheet.swift:96"
+    "MapHomeCarAudioSheet.swift:97"
    ],
    "args": [],
    "targets": [
@@ -42722,8 +42771,8 @@
    "ko": "새 여행",
    "en": "New trip",
    "files": [
-    "TravelModeView.swift:820",
-    "TravelModeView.swift:1162"
+    "TravelNewTripSheet.swift:63",
+    "TravelModeView.swift:871"
    ],
    "args": [],
    "targets": [
@@ -44817,7 +44866,7 @@
    "ko": "쓴 돈 {0}",
    "en": "Spent {0}",
    "files": [
-    "TravelModeView.swift:893"
+    "TravelModeView.swift:944"
    ],
    "args": [
     "LedgerMoney.text(sheet.myCost, language: language)"
@@ -45015,7 +45064,7 @@
    "ko": "아직 등록한 기기가 없습니다",
    "en": "No device registered yet",
    "files": [
-    "MapHomeCarAudioSheet.swift:92"
+    "MapHomeCarAudioSheet.swift:93"
    ],
    "args": [],
    "targets": [
@@ -45075,7 +45124,7 @@
    "ko": "아직 없습니다",
    "en": "None yet",
    "files": [
-    "MapHomeCarAudioSheet.swift:114"
+    "MapHomeCarAudioSheet.swift:115"
    ],
    "args": [],
    "targets": [
@@ -45113,7 +45162,7 @@
    "ko": "아직 일정이 없습니다",
    "en": "No plans yet",
    "files": [
-    "TravelModeView.swift:915"
+    "TravelModeView.swift:966"
    ],
    "args": [],
    "targets": [
@@ -46273,7 +46322,7 @@
    "ko": "여행 목록으로",
    "en": "Back to trips",
    "files": [
-    "TravelModeView.swift:848"
+    "TravelModeView.swift:899"
    ],
    "args": [],
    "targets": [
@@ -46309,7 +46358,7 @@
    "ko": "여행 이름",
    "en": "Trip name",
    "files": [
-    "TravelModeView.swift:1140"
+    "TravelNewTripSheet.swift:41"
    ],
    "args": [],
    "targets": [
@@ -46394,7 +46443,7 @@
    "ko": "여행 장부 만들기",
    "en": "Start trip ledger",
    "files": [
-    "TravelModeView.swift:896"
+    "TravelModeView.swift:947"
    ],
    "args": [],
    "targets": [
@@ -46467,7 +46516,7 @@
    "ko": "여행 중",
    "en": "On trip",
    "files": [
-    "TravelModeView.swift:727"
+    "TravelModeView.swift:778"
    ],
    "args": [],
    "targets": [
@@ -46503,7 +46552,7 @@
    "ko": "여행",
    "en": "Trips",
    "files": [
-    "TravelModeView.swift:755"
+    "TravelModeView.swift:806"
    ],
    "args": [],
    "targets": [
@@ -46539,7 +46588,7 @@
    "ko": "여행지 통화",
    "en": "Trip currency",
    "files": [
-    "TravelModeView.swift:1159"
+    "TravelNewTripSheet.swift:60"
    ],
    "args": [],
    "targets": [
@@ -46551,7 +46600,7 @@
    "ko": "여행지",
    "en": "Destination",
    "files": [
-    "TravelModeView.swift:1149"
+    "TravelNewTripSheet.swift:50"
    ],
    "args": [],
    "targets": [
@@ -47080,7 +47129,7 @@
    "ko": "연결된 출력이 없습니다",
    "en": "No output connected",
    "files": [
-    "MapHomeCarAudioSheet.swift:130"
+    "MapHomeCarAudioSheet.swift:131"
    ],
    "args": [],
    "targets": [
@@ -47792,7 +47841,7 @@
    "ko": "예: 토스통장, 홍길동",
    "en": "e.g. Toss account, my name",
    "files": [
-    "LedgerReviewBand.swift:109"
+    "LedgerReviewBand.swift:110"
    ],
    "args": [],
    "targets": [
@@ -48141,7 +48190,7 @@
    "ko": "오늘 당일치기",
    "en": "Day trip today",
    "files": [
-    "TravelModeView.swift:821"
+    "TravelModeView.swift:872"
    ],
    "args": [],
    "targets": [
@@ -48889,7 +48938,7 @@
    "ko": "원화만",
    "en": "Home currency only",
    "files": [
-    "TravelModeView.swift:1159"
+    "TravelNewTripSheet.swift:60"
    ],
    "args": [],
    "targets": [
@@ -50441,7 +50490,7 @@
    "ko": "이동 시작·끝과 연결·해제가 맞았던 기기입니다",
    "en": "Devices whose connect and disconnect matched a trip",
    "files": [
-    "MapHomeCarAudioSheet.swift:107"
+    "MapHomeCarAudioSheet.swift:108"
    ],
    "args": [],
    "targets": [
@@ -50626,7 +50675,7 @@
    "ko": "이름 없는 여행",
    "en": "Untitled trip",
    "files": [
-    "TravelModeView.swift:740"
+    "TravelModeView.swift:791"
    ],
    "args": [],
    "targets": [
@@ -50983,7 +51032,7 @@
    "ko": "이체·출금 문자에 이 이름이 들어 있으면 내 계좌로 옮긴 돈으로 보고 지출에 넣지 않아요. 이름은 이 기기에만 둬요.",
    "en": "If a transfer or withdrawal text contains one of these names, it's treated as moving money to your own account and isn't added as spending. Names stay on this device.",
    "files": [
-    "LedgerReviewBand.swift:116"
+    "LedgerReviewBand.swift:117"
    ],
    "args": [],
    "targets": [
@@ -51044,6 +51093,18 @@
    "en": "Per day (8 h)",
    "files": [
     "MapHomeSalarySettingsSheet.swift:304"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "일반|Standard",
+   "ko": "일반",
+   "en": "Standard",
+   "files": [
+    "LedgerTollRepeat.swift:216"
    ],
    "args": [],
    "targets": [
@@ -51131,8 +51192,8 @@
    "ko": "일상으로 돌아가기",
    "en": "Back to everyday",
    "files": [
-    "TravelModeView.swift:753",
-    "TravelModeView.swift:860"
+    "TravelModeView.swift:804",
+    "TravelModeView.swift:911"
    ],
    "args": [],
    "targets": [
@@ -51169,7 +51230,7 @@
    "ko": "일정 {0}개",
    "en": "{0} plans",
    "files": [
-    "TravelModeView.swift:917"
+    "TravelModeView.swift:968"
    ],
    "args": [
     "items.count"
@@ -51233,7 +51294,7 @@
    "ko": "일정 넣기",
    "en": "Add plan",
    "files": [
-    "TravelModeView.swift:921",
+    "TravelModeView.swift:972",
     "TravelQuickEntrySheet.swift:125"
    ],
    "args": [],
@@ -52376,6 +52437,30 @@
    ]
   },
   {
+   "key": "전기·수소차 할인|EV discount",
+   "ko": "전기·수소차 할인",
+   "en": "EV discount",
+   "files": [
+    "LedgerTollRepeat.swift:209"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "전기·수소차|EV · hydrogen",
+   "ko": "전기·수소차",
+   "en": "EV · hydrogen",
+   "files": [
+    "LedgerTollRepeat.swift:218"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "전날|Previous day",
    "ko": "전날",
    "en": "Previous day",
@@ -52638,7 +52723,7 @@
    "ko": "정하지 않음",
    "en": "Not set",
    "files": [
-    "TravelModeView.swift:1155"
+    "TravelNewTripSheet.swift:56"
    ],
    "args": [],
    "targets": [
@@ -52951,6 +53036,18 @@
    ]
   },
   {
+   "key": "주말 할증 5%|Weekend surcharge 5%",
+   "ko": "주말 할증 5%",
+   "en": "Weekend surcharge 5%",
+   "files": [
+    "LedgerTollRepeat.swift:210"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "주말|Weekends",
    "ko": "주말",
    "en": "Weekends",
@@ -53248,7 +53345,7 @@
    "ko": "지금 연결된 출력",
    "en": "Current outputs",
    "files": [
-    "MapHomeCarAudioSheet.swift:128"
+    "MapHomeCarAudioSheet.swift:129"
    ],
    "args": [],
    "targets": [
@@ -53348,7 +53445,7 @@
    "ko": "지난 날짜로 만들면 그날의 기록이 이 여행의 실제 기록이 됩니다.",
    "en": "A past date turns that day's records into this trip's actual records.",
    "files": [
-    "TravelModeView.swift:1147"
+    "TravelNewTripSheet.swift:48"
    ],
    "args": [],
    "targets": [
@@ -53360,8 +53457,8 @@
    "ko": "지난 여행",
    "en": "Past",
    "files": [
-    "TravelModeView.swift:729",
-    "TravelModeView.swift:879"
+    "TravelModeView.swift:780",
+    "TravelModeView.swift:930"
    ],
    "args": [],
    "targets": [
@@ -53803,7 +53900,7 @@
    "ko": "지도에서 일정 보기",
    "en": "View plans on the map",
    "files": [
-    "TravelModeView.swift:922"
+    "TravelModeView.swift:973"
    ],
    "args": [],
    "targets": [
@@ -53863,7 +53960,7 @@
    "ko": "지역",
    "en": "Region",
    "files": [
-    "TravelModeView.swift:1154"
+    "TravelNewTripSheet.swift:55"
    ],
    "args": [],
    "targets": [
@@ -53928,7 +54025,7 @@
    "ko": "지출 넣기",
    "en": "Add expense",
    "files": [
-    "TravelModeView.swift:923"
+    "TravelModeView.swift:974"
    ],
    "args": [],
    "targets": [
@@ -54548,7 +54645,7 @@
    "ko": "첫날",
    "en": "First day",
    "files": [
-    "TravelModeView.swift:1142"
+    "TravelNewTripSheet.swift:43"
    ],
    "args": [],
    "targets": [
@@ -54687,7 +54784,7 @@
    "ko": "최근 연결된 기기",
    "en": "Recently connected",
    "files": [
-    "MapHomeCarAudioSheet.swift:106"
+    "MapHomeCarAudioSheet.swift:107"
    ],
    "args": [],
    "targets": [
@@ -54964,6 +55061,30 @@
    ]
   },
   {
+   "key": "출퇴근 할인 20%|Commute discount 20%",
+   "ko": "출퇴근 할인 20%",
+   "en": "Commute discount 20%",
+   "files": [
+    "LedgerTollRepeat.swift:207"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "출퇴근 할인 50%|Commute discount 50%",
+   "ko": "출퇴근 할인 50%",
+   "en": "Commute discount 50%",
+   "files": [
+    "LedgerTollRepeat.swift:206"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "취미 휴식|Hobby break",
    "ko": "취미 휴식",
    "en": "Hobby break",
@@ -55048,9 +55169,9 @@
    "ko": "취소",
    "en": "Cancel",
    "files": [
+    "TravelNewTripSheet.swift:66",
     "AssistantBubble.swift:342",
-    "AssistantConnectView.swift:199",
-    "AssistantPINReset.swift:96"
+    "AssistantConnectView.swift:199"
    ],
    "args": [],
    "targets": [
@@ -55478,7 +55599,7 @@
    "ko": "캡처에서 읽은 결제",
    "en": "Payments in the capture",
    "files": [
-    "LedgerReviewBand.swift:157"
+    "LedgerReviewBand.swift:158"
    ],
    "args": [],
    "targets": [
@@ -55910,6 +56031,18 @@
    "en": "Test mode · not saved",
    "files": [
     "MapHomePlaceBook.swift:578"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "통행료 할인 시간에 걸침|Toll near a discount time",
+   "ko": "통행료 할인 시간에 걸침",
+   "en": "Toll near a discount time",
+   "files": [
+    "LedgerReviewBand.swift:88"
    ],
    "args": [],
    "targets": [

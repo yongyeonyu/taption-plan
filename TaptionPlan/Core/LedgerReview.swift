@@ -6,7 +6,7 @@ import Observation
 @MainActor
 @Observable
 final class LedgerReviewStore {
-    enum Reason: String, Codable, Sendable { case noMerchant, duplicate, transfer }
+    enum Reason: String, Codable, Sendable { case noMerchant, duplicate, transfer, toll }
 
     struct Item: Codable, Equatable, Identifiable, Sendable {
         var id = UUID()

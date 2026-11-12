@@ -35,6 +35,7 @@ struct MapHomeCarAudioSheet: View {
                     registeredSection
                     recentSection
                     liveSection
+                    LedgerTollVehiclePicker(model: model, language: language)
                 }
                 .padding(.horizontal, 18)
                 .padding(.top, 6)

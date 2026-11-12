@@ -1,5 +1,5 @@
 {
- "ui": 4683,
+ "ui": 4694,
  "catalog": 502,
  "unread": [
   {
@@ -262,7 +262,7 @@
   },
   {
    "file": "TaptionPlan/UI/LedgerReviewBand.swift",
-   "line": 181,
+   "line": 182,
    "ko": "entry.amount",
    "en": "language"
   },
@@ -760,19 +760,19 @@
   },
   {
    "file": "TaptionPlan/UI/TravelModeView.swift",
-   "line": 890,
+   "line": 941,
    "ko": "sheet.leftover",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/TravelModeView.swift",
-   "line": 893,
+   "line": 944,
    "ko": "sheet.myCost",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/TravelModeView.swift",
-   "line": 893,
+   "line": 944,
    "ko": "sheet.myCost",
    "en": "language"
   },

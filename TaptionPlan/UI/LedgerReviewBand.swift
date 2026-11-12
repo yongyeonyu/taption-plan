@@ -85,6 +85,7 @@ struct LedgerReviewSheet: View {
         case .noMerchant: language.text("가게 이름 없음", "No shop name")
         case .duplicate: language.text("같은 금액이 방금 있었음", "Same amount just added")
         case .transfer: language.text("이체로 보임", "Looks like a transfer")
+        case .toll: language.text("통행료 할인 시간에 걸침", "Toll near a discount time")
         }
     }
 }

@@ -56,6 +56,8 @@ struct FirstRunCarPage: View {
                 Text(language.text("CarPlay로 연결되는 차는 고르지 않아도 저절로 등록돼요.", "Cars that connect with CarPlay are registered automatically."))
                     .font(.taptionStyle(.caption))
                     .foregroundStyle(Color.tpSecondary)
+                LedgerTollVehiclePicker(model: model, language: language)
+                    .padding(.top, 8)
             }
             .padding(18)
         }
@@ -67,5 +69,33 @@ struct FirstRunCarPage: View {
         let ports: Set<AVAudioSession.Port> = [.carAudio, .bluetoothA2DP, .bluetoothHFP, .bluetoothLE]
         let names = AVAudioSession.sharedInstance().currentRoute.outputs.filter { ports.contains($0.portType) }.map(\.portName)
         if names != connected { connected = names }
+    }
+}
+
+/// 내 차 종류(TOL1112B01). 고속도로 통행료 할인을 여기에 맞춰 계산한다. 튜토리얼 「내 차」와 메뉴 › 내 차 오디오에 같이 쓴다.
+struct LedgerTollVehiclePicker: View {
+    let model: AppModel
+    let language: MapHomeLanguage
+    @AppStorage(LedgerTollDiscount.vehicleKey) private var raw = LedgerTollDiscount.Vehicle.standard.rawValue
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(language.text("내 차 종류", "My car type"))
+                .font(.taptionStyle(.subheadline, weight: .semibold))
+                .foregroundStyle(Color.tpInk)
+            Picker(language.text("내 차 종류", "My car type"), selection: $raw) {
+                ForEach(LedgerTollDiscount.Vehicle.allCases, id: \.rawValue) { vehicle in
+                    Text(LedgerTollDiscount.name(vehicle, language: language)).tag(vehicle.rawValue)
+                }
+            }
+            .pickerStyle(.segmented)
+            Text(language.text(
+                "고속도로 통행료를 자동으로 넣을 때 할인을 계산해요. 경차는 50%, 전기·수소차는 올해 30%, 평일 출퇴근 시간에는 20~50%예요. 하이브리드는 일반이에요.",
+                "Used for highway toll discounts when tolls are added automatically: compact cars 50%, EVs 30% this year, weekday commute hours 20–50%. Hybrids count as standard."
+            ))
+            .font(.taptionStyle(.caption))
+            .foregroundStyle(Color.tpSecondary)
+        }
+        .onChange(of: raw) { _, _ in Task { await LedgerTollRepeatRunner.run(model: model, force: true) } }
     }
 }

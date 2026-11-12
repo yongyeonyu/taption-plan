@@ -820,6 +820,86 @@ final class LedgerTollRepeatTests: XCTestCase {
         XCTAssertEqual(LedgerTollRepeat.reversed("통행료 (퇴근)"), "통행료 (출근)")
         XCTAssertFalse(LedgerTollRepeat.isToll(LedgerEntry(occurredAt: at(1), amount: 900, title: "통행료")), "교통 분류가 아니면 통행료로 보지 않는다")
     }
+
+    /// TOL1112A01: 퇴근길이 일곱 조각으로 잡혀 통행료가 일곱 번 들어간 것(대표 신고 2026-11-12).
+    func testFragmentedDriveAddsOneTollAndOldDuplicatesAreRemoved() {
+        let rules = ["집→회사": LedgerTollRepeat.Rule(amount: 900, currency: "KRW", title: "통행료 (출근)", learnedAt: at(0))]
+        let fragments = (0..<7).map { LedgerTollRepeat.Drive(from: "회사", to: "집", start: at(19 + Double($0) * 0.1), end: at(19.78)) }
+        let added = LedgerTollRepeat.entries(drives: fragments, existing: [], rules: rules, handled: [], now: at(21))
+        XCTAssertEqual(added.count, 1)
+        let apart = [LedgerTollRepeat.Drive(from: "회사", to: "집", start: at(12), end: at(12.5)),
+                     LedgerTollRepeat.Drive(from: "회사", to: "집", start: at(19), end: at(19.7))]
+        XCTAssertEqual(LedgerTollRepeat.entries(drives: apart, existing: [], rules: rules, handled: [], now: at(21)).count, 2, "떨어진 두 번은 따로")
+
+        func auto(_ hour: Double, note: String = "같은 길 통행료 자동 추가 · 회사 → 집") -> LedgerEntry {
+            var entry = toll(hour, title: "통행료 (퇴근)")
+            entry.note = note
+            return entry
+        }
+        let book = (0..<7).map { _ in auto(19.78) } + [auto(9.6, note: "같은 길 통행료 자동 추가 · 집 → 회사"), toll(19.78, title: "통행료 (퇴근)")]
+        let extra = LedgerTollRepeat.duplicates(in: book)
+        XCTAssertEqual(extra.count, 6, "자동으로 넣은 같은 것만, 하나는 남긴다")
+        XCTAssertFalse(extra.contains(book[7].id))
+        XCTAssertFalse(extra.contains(book[8].id), "손으로 넣은 것은 지우지 않는다")
+        XCTAssertTrue(LedgerTollRepeat.duplicates(in: [auto(19.78), auto(19.78 + 24)]).isEmpty, "다음 날 것은 중복이 아니다")
+    }
+
+    /// TOL1112B01: 시간·차종 할인. base는 2026-11-11(수) 00:00 UTC.
+    func testTollDiscountByTimeAndVehicle() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")! // base가 UTC 자정(수요일)이라 시각을 그대로 읽는다
+        let rate = { (hour: Double, vehicle: LedgerTollDiscount.Vehicle, off: Bool) in
+            LedgerTollDiscount.applied(at: self.at(hour), vehicle: vehicle, isOffDay: off, calendar: calendar)
+        }
+        XCTAssertEqual(rate(6.5, .standard, false), .init(rate: 0.5, reason: .commuteHalf))
+        XCTAssertEqual(rate(8, .standard, false), .init(rate: 0.2, reason: .commuteFifth))
+        XCTAssertEqual(rate(10, .standard, false), .init(rate: 0, reason: .none))
+        XCTAssertEqual(rate(19.5, .standard, false), .init(rate: 0.2, reason: .commuteFifth))
+        XCTAssertEqual(rate(21, .standard, false), .init(rate: 0.5, reason: .commuteHalf))
+        XCTAssertEqual(rate(22, .standard, false).rate, 0)
+        XCTAssertEqual(rate(8, .standard, true), .init(rate: -0.05, reason: .weekend), "주말에는 출퇴근 할인이 없고 할증")
+        XCTAssertEqual(rate(23, .standard, true).rate, 0)
+        XCTAssertEqual(rate(10, .compact, false), .init(rate: 0.5, reason: .compact))
+        XCTAssertEqual(rate(10, .compact, true).rate, 0.5, "할인받는 차는 할증하지 않는다")
+        XCTAssertEqual(rate(8, .electric, false), .init(rate: 0.3, reason: .electric), "2026년 30%가 출퇴근 20%보다 크다")
+        XCTAssertEqual(rate(6, .electric, false).reason, .commuteHalf, "큰 것 하나만")
+        XCTAssertEqual(LedgerTollDiscount.vehicleRate(.electric, year: 2027), 0.2)
+        XCTAssertEqual(LedgerTollDiscount.vehicleRate(.electric, year: 2028), 0)
+        XCTAssertEqual(LedgerTollDiscount.amount(base: 900, rate: 0.2), 720)
+        XCTAssertEqual(LedgerTollDiscount.amount(base: 900, rate: -0.05), 950, "945는 10원 단위로")
+        XCTAssertEqual(LedgerTollDiscount.base(from: 720, rate: 0.2), 900)
+    }
+
+    func testReturnTollUsesDiscountAndAsksWhenBandsDiffer() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")! // base가 UTC 자정(수요일)이라 시각을 그대로 읽는다
+        let rules = ["집→회사": LedgerTollRepeat.Rule(amount: 900, currency: "KRW", title: "통행료 (출근)", learnedAt: at(9.66))]
+        let add = { (start: Double, end: Double, vehicle: LedgerTollDiscount.Vehicle) in
+            LedgerTollRepeat.entries(drives: [.init(from: "회사", to: "집", start: self.at(start), end: self.at(end))], existing: [], rules: rules,
+                                     handled: [], now: self.at(23.5), vehicle: vehicle, calendar: calendar).first
+        }
+        let evening = add(19.1, 19.78, .standard)
+        XCTAssertEqual(evening?.entry.amount, 720, "18~20시 20%")
+        XCTAssertEqual(evening?.suspicious, false)
+        XCTAssertEqual(add(19.1, 19.78, .compact)?.entry.amount, 450)
+        XCTAssertEqual(add(13, 13.5, .standard)?.entry.amount, 900)
+        let crossing = add(19.7, 20.3, .standard)
+        XCTAssertEqual(crossing?.suspicious, true, "20%와 50% 사이에 걸치면 확인을 받는다")
+
+        // 이미 900원으로 넣은 퇴근 통행료를 720원으로 맞추고, 손으로 고친 금액은 두기.
+        var old = toll(19.78, title: "통행료 (퇴근)")
+        old.note = "같은 길 통행료 자동 추가 · 회사 → 집"
+        let applied = LedgerTollDiscount.applied(at: old.occurredAt, vehicle: .standard, isOffDay: false, calendar: calendar)
+        let fixed = LedgerTollRepeat.adjusted(old, rules: rules, base: { $0.amount }, applied: applied, label: "출퇴근 할인 20%")
+        XCTAssertEqual(fixed?.amount, 720)
+        XCTAssertEqual(fixed?.note, "같은 길 통행료 자동 추가 · 회사 → 집 · 출퇴근 할인 20%")
+        XCTAssertNil(fixed.flatMap { LedgerTollRepeat.adjusted($0, rules: rules, base: { $0.amount }, applied: applied, label: "출퇴근 할인 20%") }, "한 번 맞춘 것은 다시 안 고친다")
+        old.amount = 1_000
+        XCTAssertNil(LedgerTollRepeat.adjusted(old, rules: rules, base: { $0.amount }, applied: applied, label: nil), "손으로 고친 금액")
+        var manual = toll(19.78, title: "통행료 (퇴근)")
+        manual.note = "내가 넣음"
+        XCTAssertNil(LedgerTollRepeat.adjusted(manual, rules: rules, base: { $0.amount }, applied: applied, label: nil))
+    }
 }
 
 /// STL1111A01: 원 단위 나누기와 최소 송금(Taption Trip `TripSettlementChecksTests`·`TripSettlementTests`의 숫자를 그대로 옮김).
