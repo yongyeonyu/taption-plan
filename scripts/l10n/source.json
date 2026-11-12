@@ -33495,7 +33495,7 @@
    "ko": "같은 길 통행료 자동 추가",
    "en": "Same-route toll, added automatically",
    "files": [
-    "LedgerTollRepeat.swift:276"
+    "LedgerTollRepeat.swift:282"
    ],
    "args": [],
    "targets": [
@@ -34536,7 +34536,7 @@
    "ko": "경차 할인 50%",
    "en": "Compact car discount 50%",
    "files": [
-    "LedgerTollRepeat.swift:208"
+    "LedgerTollRepeat.swift:214"
    ],
    "args": [],
    "targets": [
@@ -34548,7 +34548,7 @@
    "ko": "경차",
    "en": "Compact",
    "files": [
-    "LedgerTollRepeat.swift:217"
+    "LedgerTollRepeat.swift:223"
    ],
    "args": [],
    "targets": [
@@ -37006,9 +37006,9 @@
    "ko": "날짜",
    "en": "Date",
    "files": [
-    "TravelNewTripSheet.swift:43",
     "MapHomeDailyCard.swift:365",
-    "MapHomePlaceBookTools.swift:780"
+    "MapHomePlaceBookTools.swift:780",
+    "TravelNewTripSheet.swift:43"
    ],
    "args": [],
    "targets": [
@@ -39240,8 +39240,8 @@
    "ko": "만들기",
    "en": "Create",
    "files": [
-    "TravelNewTripSheet.swift:68",
-    "AssistantSafetyViews.swift:270"
+    "AssistantSafetyViews.swift:270",
+    "TravelNewTripSheet.swift:68"
    ],
    "args": [],
    "targets": [
@@ -39400,7 +39400,7 @@
    "ko": "머문 곳",
    "en": "Place",
    "files": [
-    "LedgerTollRepeat.swift:289",
+    "LedgerTollRepeat.swift:295",
     "AssistantActivity.swift:196",
     "AssistantActivity.swift:283"
    ],
@@ -42771,8 +42771,8 @@
    "ko": "새 여행",
    "en": "New trip",
    "files": [
-    "TravelNewTripSheet.swift:63",
-    "TravelModeView.swift:871"
+    "TravelModeView.swift:871",
+    "TravelNewTripSheet.swift:63"
    ],
    "args": [],
    "targets": [
@@ -51104,7 +51104,7 @@
    "ko": "일반",
    "en": "Standard",
    "files": [
-    "LedgerTollRepeat.swift:216"
+    "LedgerTollRepeat.swift:222"
    ],
    "args": [],
    "targets": [
@@ -52441,7 +52441,7 @@
    "ko": "전기·수소차 할인",
    "en": "EV discount",
    "files": [
-    "LedgerTollRepeat.swift:209"
+    "LedgerTollRepeat.swift:215"
    ],
    "args": [],
    "targets": [
@@ -52453,7 +52453,7 @@
    "ko": "전기·수소차",
    "en": "EV · hydrogen",
    "files": [
-    "LedgerTollRepeat.swift:218"
+    "LedgerTollRepeat.swift:224"
    ],
    "args": [],
    "targets": [
@@ -53040,7 +53040,7 @@
    "ko": "주말 할증 5%",
    "en": "Weekend surcharge 5%",
    "files": [
-    "LedgerTollRepeat.swift:210"
+    "LedgerTollRepeat.swift:216"
    ],
    "args": [],
    "targets": [
@@ -55065,7 +55065,7 @@
    "ko": "출퇴근 할인 20%",
    "en": "Commute discount 20%",
    "files": [
-    "LedgerTollRepeat.swift:207"
+    "LedgerTollRepeat.swift:213"
    ],
    "args": [],
    "targets": [
@@ -55077,7 +55077,7 @@
    "ko": "출퇴근 할인 50%",
    "en": "Commute discount 50%",
    "files": [
-    "LedgerTollRepeat.swift:206"
+    "LedgerTollRepeat.swift:212"
    ],
    "args": [],
    "targets": [
@@ -55169,9 +55169,9 @@
    "ko": "취소",
    "en": "Cancel",
    "files": [
-    "TravelNewTripSheet.swift:66",
     "AssistantBubble.swift:342",
-    "AssistantConnectView.swift:199"
+    "AssistantConnectView.swift:199",
+    "AssistantPINReset.swift:96"
    ],
    "args": [],
    "targets": [
