@@ -330,7 +330,7 @@ struct TravelModeView: View {
         // 여행에 들어가면 경계 그림 위에 오픈맵을 띄운다(대표 지시).
         .overlay { if let focused, openedID != nil, flight == nil { streetMap(focused, destination).ignoresSafeArea() } }
         .overlay {
-            if let focused, openedID != nil, flight == nil, focused.state != .someday, pins(destination).isEmpty {
+            if let focused, openedID != nil, flight == nil, focused.state != .someday, !isPlanUp, pins(destination).isEmpty {
                 Text(language.text("일정에 장소를 붙이면 지도에 나옵니다", "Add a place to a plan to see it on the map"))
                     .font(.footnote.weight(.semibold)).foregroundStyle(TravelInk.plan)
                     .padding(.horizontal, 12).frame(height: 32)
