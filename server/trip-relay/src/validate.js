@@ -263,7 +263,7 @@ export const PLACE_LIMITS = { name: 40, category: 20, minRadius: 30, maxRadius: 
 export const PLACE_KINDS = ["home", "school", "academy", "company", "hobby", "exercise", "restaurant", "custom"];
 export const CATEGORY_ICONS = ["briefcase", "building", "book", "graduation", "target", "award", "stroller", "family", "shield", "health", "exercise",
   "sleep", "performance", "music", "travel", "location", "photo", "home", "meal", "cafe", "pet", "shopping", "nature", "calendar", "event", "memo",
-  "movement", "activity", "relationship", "work", "community", "student", "exam", "military", "athlete", "pregnancy"];
+  "movement", "activity", "relationship", "work", "community", "student", "exam", "military", "athlete", "pregnancy", "caregiver", "government", "food"];
 const isBoolean = (v) => typeof v === "boolean";
 const placeRadius = (v) => typeof v === "number" && Number.isFinite(v) && v >= PLACE_LIMITS.minRadius && v <= PLACE_LIMITS.maxRadius;
 const hexColor = (v) => typeof v === "string" && /^#[0-9A-Fa-f]{6}$/.test(v);

@@ -355,7 +355,8 @@ const describe = (tool) => ({
 // 칸마다 정한 엄격한 모양일 때만 값을 그대로 둔다(N9). 그 밖의 글은 모두 감싼다.
 const UUID = "[0-9A-Fa-f]{8}(?:-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12}";
 // id: UUID, 16진수, `mcp-<UUID>`, 또는 기호 없는 한 단어(분류 id 같은 것, 24자까지).
-const ID_VALUE = new RegExp(`^(?:${UUID}|mcp-${UUID}|[0-9a-f]{8,64}|[A-Za-z][A-Za-z0-9]{0,23})$`);
+// VFY1112A01: 앱이 만든 여행(`trip-<UUID>`)·분류(`custom.<UUID>`)·가계부 여행 장부(`ledger-<UUID>`) id도 그대로 둔다.
+const ID_VALUE = new RegExp(`^(?:${UUID}|(?:mcp|trip|ledger)-${UUID}|custom\\.${UUID}|[0-9a-f]{8,64}|[A-Za-z][A-Za-z0-9]{0,23})$`);
 const DATE_VALUE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_VALUE = /^([01]\d|2[0-3]):[0-5]\d$/;
 const INSTANT_VALUE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,9})?)?(Z|[+-]\d{2}:\d{2})$/;
@@ -374,6 +375,12 @@ const RAW_VALUES = {
   device: (v) => /^[A-Za-z][A-Za-z0-9,]{0,23}$/.test(v),
   appBuild: (v) => /^\d{1,8}$/.test(v),
   uploadsPaused: oneOf("privacyLock"),
+  // VFY1112A01: settings.values의 값. 정해진 꼴(참/거짓·숫자 글·고르는 값)만 그대로 둔다.
+  ...Object.fromEntries(["payIsNet", "showsNetPay", "hourlyPayIsNet", "weeklyHolidayPay", "reduceMotion", "weather", "weatherSidebar", "notifications"]
+    .map((k) => [k, oneOf("true", "false")])),
+  ...Object.fromEntries(["annualPay", "monthlyPay", "hourlyPay", "gpsIntervalSeconds"].map((k) => [k, (v) => /^\d{1,12}(\.\d{1,2})?$/.test(v)])),
+  cat: oneOf("white", "calico", "mackerel"),
+  hourlyTax: oneOf("threePointThree", "fourInsurance", "none"),
   status: oneOf("applied", "rejected", ...TRIP_STATUSES, ...TASK_STATUSES, ...ANSWER_STATUSES),
   kind: oneOf(...TASK_KINDS, "expense", "income", "ignore"),
   source: oneOf("auto", "user", "rest", "mcp", "oauth", "legacy", "manual", "assistant", "message", "receipt"),

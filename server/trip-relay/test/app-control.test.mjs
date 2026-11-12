@@ -335,6 +335,18 @@ test("trip and setting commands are validated; app state carries trips", async (
   assert.deepEqual([viaMcp.trips[0].start, viaMcp.trips[0].country, viaMcp.trips[0].currency, viaMcp.settings.tollVehicle, viaMcp.settings.salaryMode],
     ["2026-12-01", "JP", "JPY", "electric", "salary"]);
   assert.deepEqual(viaMcp.trips[0].title, { untrusted_user_text: "오사카" });
+
+  // VFY1112A01: 실제 왕복에서 감싸져 나오던 것 — 앱이 만든 id와 settings.values의 정해진 값은 그대로 둔다.
+  const real = { format: "bokki-app", version: 1, retentionDays: 7,
+    settings: { language: "korean", values: { annualPay: "26400000.0", cat: "calico", gpsIntervalSeconds: "300", notifications: "true", hourlyTax: "fourInsurance", salaryMode: "hourly", weather: "<b>" } },
+    trips: [{ id: "trip-b709749f-9c9d-489b-9e50-e3d1054ca57f", title: "시험 여행", start: "2026-12-20", end: "2026-12-20" }],
+    categories: [{ id: "custom.19cc469c-f473-4f6e-b438-4db76ce7d35c", name: "시험 분류", color: "#3366FF", icon: "food", hidden: false, custom: true }] };
+  assert.equal((await send("/app", "POST", real, owner)).status, 201);
+  const raw = (await (await send("/mcp", "POST", { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "get_app_state", arguments: {} } }, write)).json()).result.structuredContent;
+  assert.deepEqual(raw.settings.values, { annualPay: "26400000.0", cat: "calico", gpsIntervalSeconds: "300", notifications: "true", hourlyTax: "fourInsurance", salaryMode: "hourly", weather: { untrusted_user_text: "<b>" } });
+  assert.equal(raw.trips[0].id, "trip-b709749f-9c9d-489b-9e50-e3d1054ca57f");
+  assert.deepEqual([raw.categories[0].id, raw.categories[0].icon], ["custom.19cc469c-f473-4f6e-b438-4db76ce7d35c", "food"]);
+  assert.equal(await post("updateCategory", { categoryId: "custom.19cc469c-f473-4f6e-b438-4db76ce7d35c", icon: "caregiver" }), 201);
 });
 
 // HND1112A01: 앱의 「확인할 것」을 AI가 끝내는 명령 세 가지.
