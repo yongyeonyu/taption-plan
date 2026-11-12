@@ -59,6 +59,13 @@ struct AssistantScopedKey: Identifiable, Equatable, Sendable {
 enum AssistantKeyLabels {
     static let labelsKey = "assistantKeyLabels"
     static let periodsKey = "assistantKeyPeriods"
+    /// 마지막으로 서버에서 읽은 연결 수(OAuth 포함). 이름표가 없는 연결도 「연결됨」으로 본다.
+    static let serverCountKey = "assistantServerKeyCount"
+
+    /// 연결된 AI 수: 기기의 이름표와 서버가 알려 준 수 가운데 큰 쪽.
+    static func connectionCount(_ defaults: UserDefaults = .standard) -> Int {
+        max((defaults.dictionary(forKey: labelsKey) ?? [:]).count, defaults.integer(forKey: serverCountKey))
+    }
     static let maxLength = 20
 
     static func clean(_ text: String) -> String? {
@@ -97,6 +104,7 @@ enum AssistantKeyLabels {
         defaults.removeObject(forKey: labelsKey)
         defaults.removeObject(forKey: periodsKey)
         defaults.removeObject(forKey: AssistantKeyProviders.defaultsKey)
+        defaults.removeObject(forKey: serverCountKey)
     }
 }
 
@@ -223,8 +231,10 @@ extension TripRelay {
     static func scopedKeys(env: AssistantRegistration.Environment = .live) async -> [AssistantScopedKey]? {
         guard let master = env.secrets.read(.master),
               let reply = await send(relayRequest("/keys", method: "GET", token: master, host: env.host), session: env.session) else { return nil }
-        if reply.status == 204 { return [] }
-        return reply.status == 200 ? parseKeys(reply.data) : nil
+        let keys: [AssistantScopedKey]? = reply.status == 204 ? [] : (reply.status == 200 ? parseKeys(reply.data) : nil)
+        // 서버가 아는 연결 수를 적어 둔다. Claude처럼 OAuth로 붙은 연결은 기기에 이름표가 없다(OAC1113A01).
+        if let keys { env.defaults.set(keys.count, forKey: AssistantKeyLabels.serverCountKey) }
+        return keys
     }
 
     static func revokeScopedKey(_ id: String, session: URLSession = .shared) async -> Bool {

@@ -457,7 +457,7 @@ enum AssistantAppStateSync {
             mapStyle: model.snapshot.settings.mapDisplayStyle,
             display: Dictionary(uniqueKeysWithValues: AssistantDisplayOption.allCases.map { ($0.rawValue, preferences.value($0.defaultsKey) != "false") }),
             shareLevel: AssistantShareLevel.current(defaults), retentionDays: AssistantRetention.current(defaults).rawValue,
-            aiConnections: (defaults.dictionary(forKey: AssistantKeyLabels.labelsKey) ?? [:]).count,
+            aiConnections: AssistantKeyLabels.connectionCount(defaults),
             actionsOff: AssistantActionKind.allCases.filter { !AssistantActionToggles.isEnabled($0, defaults: defaults) },
             paymentShortcutLink: BokkiPaymentShortcut.hasAutomationLink,
             entries: book.entries.filter { $0.transfer == nil }, budgetKRW: book.budget(for: month)?.amountKRW,

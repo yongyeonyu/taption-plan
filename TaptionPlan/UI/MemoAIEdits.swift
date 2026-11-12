@@ -72,7 +72,7 @@ enum MemoPolishQueue {
 
     /// 연결이 하나라도 있어야 맡길 수 있다.
     static func hasConnection(_ defaults: UserDefaults = .standard) -> Bool {
-        !((defaults.dictionary(forKey: AssistantKeyLabels.labelsKey) ?? [:]).isEmpty)
+        AssistantKeyLabels.connectionCount(defaults) > 0
     }
 
     /// 넣고 올린다. 같은 메모는 새 글로 바꾼다. 20개가 넘으면 오래된 것부터 뺀다.
