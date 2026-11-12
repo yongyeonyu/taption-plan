@@ -1161,3 +1161,108 @@ final class TaptionPlanTodoListUITests: XCTestCase {
         XCTAssertTrue(app.alerts.firstMatch.waitForExistence(timeout: 8) || app.sheets.firstMatch.waitForExistence(timeout: 2), "고른 질문이 뜬다")
     }
 }
+
+/// 여행 화면의 눈 확인을 사진과 화면 글자로 남긴다(TVY·TVZ·TVA 인계 확인). 단계는 있으면 하고 없으면 건너뛴다.
+final class TaptionPlanTravelScreensUITests: XCTestCase {
+    private func note(_ app: XCUIApplication, _ name: String) {
+        let image = XCUIScreen.main.screenshot()
+        let attachment = XCTAttachment(screenshot: image)
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        guard let folder = ProcessInfo.processInfo.environment["TVU_SHOTS"] else { return }
+        let base = URL(fileURLWithPath: folder)
+        try? image.pngRepresentation.write(to: base.appendingPathComponent(name + ".png"))
+        let labels = (app.buttons.allElementsBoundByIndex + app.staticTexts.allElementsBoundByIndex)
+            .map { "\($0.elementType == .button ? "B" : "T") \($0.label)" }.joined(separator: "\n")
+        try? labels.write(to: base.appendingPathComponent(name + ".txt"), atomically: true, encoding: .utf8)
+    }
+
+    func testTravelScreensForTheRecord() throws {
+        let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
+        app.launchArguments += ["-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR"]
+        app.launch()
+        let travel = app.buttons["여행 계획"]
+        XCTAssertTrue(travel.waitForExistence(timeout: 40))
+        let later = app.buttons["나중에 확인"]
+        if later.waitForExistence(timeout: 3) { later.tap() }
+        travel.tap()
+        sleep(3)
+        note(app, "a-travel-opened")
+        let raise = app.buttons["계획표 올리기"]
+        try XCTSkipUnless(raise.waitForExistence(timeout: 20), "열 여행이 없는 기기")
+        raise.tap()
+        sleep(1)
+        note(app, "b-table")
+        // 일정 하나를 눌러 선택 막대를 띄우고, 지출 단추로 입력 칸을 연다.
+        let block = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "다자이후 텐만구")).firstMatch
+        if block.waitForExistence(timeout: 3) {
+            block.tap()
+            sleep(1)
+            note(app, "d-block-selected")
+            let spend = app.buttons["지출 넣기"]
+            if spend.waitForExistence(timeout: 2) {
+                spend.tap()
+                sleep(2)
+                note(app, "e-spend-entry")
+                // 금액을 넣고 저장한 뒤 칸의 금액 표시와 머리말의 돈 줄을 본다.
+                // 첫 칸은 제목, 둘째 칸이 금액이다.
+                let title = app.textFields.element(boundBy: 0)
+                let field = app.textFields.element(boundBy: 1)
+                if field.waitForExistence(timeout: 3) {
+                    title.tap()
+                    title.typeText("입장료")
+                    field.tap()
+                    field.typeText("1200")
+                    note(app, "e2-spend-typed")
+                    for title in ["저장", "넣기", "추가", "완료"] where app.buttons[title].exists {
+                        app.buttons[title].firstMatch.tap()
+                        break
+                    }
+                    sleep(2)
+                    note(app, "g-after-spend")
+                }
+            }
+        }
+    }
+
+    /// 이동 일정의 속성(편집기)에서 이름 후보에 탈것이 나오는지.
+    func testMoveItemEditorForTheRecord() throws {
+        let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
+        app.launchArguments += ["-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR"]
+        app.launch()
+        let travel = app.buttons["여행 계획"]
+        XCTAssertTrue(travel.waitForExistence(timeout: 40))
+        let later = app.buttons["나중에 확인"]
+        if later.waitForExistence(timeout: 3) { later.tap() }
+        travel.tap()
+        let raise = app.buttons["계획표 올리기"]
+        try XCTSkipUnless(raise.waitForExistence(timeout: 20), "열 여행이 없는 기기")
+        raise.tap()
+        let move = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "니시테츠 전철")).firstMatch
+        try XCTSkipUnless(move.waitForExistence(timeout: 5), "이동 일정이 없는 여행")
+        move.tap()
+        let details = app.buttons["속성"]
+        try XCTSkipUnless(details.waitForExistence(timeout: 3), "선택 막대가 없음")
+        details.tap()
+        sleep(2)
+        note(app, "h-move-editor")
+    }
+
+    /// 여행 목록(카드)과 장부 없는 여행의 「여행 장부 만들기」.
+    func testTravelListForTheRecord() throws {
+        let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
+        app.launchArguments += ["-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR"]
+        app.launch()
+        let travel = app.buttons["여행 계획"]
+        XCTAssertTrue(travel.waitForExistence(timeout: 40))
+        let later = app.buttons["나중에 확인"]
+        if later.waitForExistence(timeout: 3) { later.tap() }
+        travel.tap()
+        let list = app.buttons["여행 목록으로"]
+        try XCTSkipUnless(list.waitForExistence(timeout: 20), "여행 화면이 열리지 않음")
+        list.tap()
+        sleep(3)
+        note(app, "f-trip-list")
+    }
+}
