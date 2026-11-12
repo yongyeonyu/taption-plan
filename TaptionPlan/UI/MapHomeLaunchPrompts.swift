@@ -81,7 +81,19 @@ enum MapHomeLaunchPromptPolicy {
     }
 }
 
+/// 이번에 앱을 연 동안 이미 물은 질문(LPR1112A01). 화면 상태가 아니라 앱이 떠 있는 동안 유지한다:
+/// 넓은 화면에서 지도 화면이 다시 만들어지면 화면 상태가 비워져 같은 질문이 되풀이해 떴다.
+@MainActor
+enum MapHomeLaunchPromptSession {
+    static var asked: Set<String> = []
+}
+
 extension MapHomeView {
+    var launchPromptsAsked: Set<String> {
+        get { MapHomeLaunchPromptSession.asked }
+        nonmutating set { MapHomeLaunchPromptSession.asked = newValue }
+    }
+
     /// 앱이 앞으로 올 때마다 돈다. 앞 질문이 닫혀야 다음을 묻는다.
     func runLaunchPrompts() async {
         #if DEBUG
