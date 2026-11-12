@@ -138,10 +138,14 @@ enum PaymentInbox {
         return all.filter { now.timeIntervalSince($0.receivedAt) < lifetime }
     }
 
+    /// 문자함에 남는 모양: 번호를 가리고 1,000자까지.
+    @MainActor
+    static func stored(_ text: String) -> String { String(AITaskQueue.mask(text).prefix(1_000)) }
+
     @MainActor
     static func record(_ text: String, outcome: Outcome, message: String, now: Date = .now, defaults: UserDefaults = .standard) {
         var list = items(defaults, now: now)
-        list.append(Item(text: String(AITaskQueue.mask(text).prefix(1_000)), receivedAt: now, outcome: outcome, message: message))
+        list.append(Item(text: stored(text), receivedAt: now, outcome: outcome, message: message))
         if list.count > limit { list.removeFirst(list.count - limit) }
         save(list, defaults)
     }

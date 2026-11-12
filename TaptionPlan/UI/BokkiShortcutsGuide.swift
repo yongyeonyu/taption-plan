@@ -9,8 +9,8 @@ struct BokkiShortcutsGuideSections: View {
 
     var body: some View {
         Group {
-            // 「원이 든 메시지를 받을 때」 트리거까지 든 단축어를 iCloud 링크로 한 번에 넣는다(SCB1112A01, iOS 27).
-            // 파일로 넣으면 iOS가 트리거를 빼므로 링크가 없을 때만 파일을 쓴다. 결제 앱 알림(iOS 27)은 따라 하기로 만든다.
+            // 결제 낱말 트리거까지 든 단축어를 iCloud 링크로 한 번에 넣는다(SCB1112A01, iOS 27).
+            // 파일로 넣으면 iOS가 트리거를 빼므로 링크가 없을 때만 파일을 쓴다. 결제 앱 알림도 링크가 있으면 링크로, 없으면 따라 하기로.
             Section {
                 BokkiPaymentShortcutButton(language: language)
                 BokkiPaymentAutomationRow(language: language)
@@ -77,8 +77,15 @@ struct BokkiShortcutsGuide: View {
 enum BokkiPaymentShortcut {
     static func title(_ language: MapHomeLanguage) -> String { language.text("BOKKI 결제", "BOKKI Payment") }
 
-    static var automationLink: URL? {
-        let id = (Bundle.main.object(forInfoDictionaryKey: "PAYMENT_SHORTCUT_ICLOUD_ID") as? String)?
+    static func alertTitle(_ language: MapHomeLanguage) -> String { language.text("BOKKI 결제 알림", "BOKKI Payment Alerts") }
+
+    /// 결제 낱말 여덟 개(원·승인·출금·취소·입금·결제·일시불·할부) 가운데 하나라도 든 메시지를 받을 때.
+    static var automationLink: URL? { link("PAYMENT_SHORTCUT_ICLOUD_ID") }
+    /// 은행·카드 앱의 알림을 받을 때(NTF1112A01). 앱 목록은 받은 뒤 고칠 수 있다.
+    static var alertLink: URL? { link("PAYMENT_ALERT_SHORTCUT_ICLOUD_ID") }
+
+    private static func link(_ key: String) -> URL? {
+        let id = (Bundle.main.object(forInfoDictionaryKey: key) as? String)?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         guard id.count == 32, id.allSatisfy(\.isHexDigit) else { return nil }
         return URL(string: "https://www.icloud.com/shortcuts/\(id)")
@@ -119,16 +126,27 @@ struct BokkiPaymentShortcutButton: View {
 struct BokkiPaymentAddPopup: View {
     let link: URL
     let language: MapHomeLanguage
+    var isAlert = false
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @State private var page = 0
 
     private var pages: [(image: String, text: String)] {
-        [
+        // 알림 자동화(NTF1112A01): 아이폰 18에서 링크로 받아 본 실제 화면.
+        if isAlert {
+            return [
+                ("BokkiShortcutGuideAlertAdd", language.text("단축어 앱이 열리면 「단축어 추가」를 눌러요.", "When Shortcuts opens, tap Add Shortcut.")),
+                ("BokkiShortcutGuideBack", language.text("추가가 끝나면 왼쪽 위 「<」를 눌러요.", "Then tap < at the top left.")),
+                ("BokkiShortcutGuideLibrary", language.text("보관함에서 「자동화」를 눌러요.", "In the library, tap Automation.")),
+                ("BokkiShortcutGuideAlertSwitch", language.text("「BOKKI 결제 알림」 스위치를 켜요. 내 은행·카드 앱이 빠져 있으면 이 줄을 눌러 앱 이름 옆 「+」로 넣어요.", "Turn on the BOKKI Payment Alerts switch. If your bank or card app is missing, tap the row and add it with + next to the app names.")),
+                ("BokkiShortcutGuideAlertDone", language.text("이렇게 초록색이 되면 끝이에요. 이제 결제 앱 알림이 저절로 가계부에 들어가요.", "Green means done. Payment app alerts now go into the ledger by themselves.")),
+            ]
+        }
+        return [
             ("BokkiShortcutGuideAdd", language.text("단축어 앱이 열리면 「단축어 추가」를 눌러요.", "When Shortcuts opens, tap Add Shortcut.")),
             ("BokkiShortcutGuideBack", language.text("추가가 끝나면 왼쪽 위 「<」를 눌러요.", "Then tap < at the top left.")),
             ("BokkiShortcutGuideLibrary", language.text("보관함에서 「자동화」를 눌러요.", "In the library, tap Automation.")),
-            ("BokkiShortcutGuideSwitch", language.text("「BOKKI 결제」 스위치를 켜요. iOS는 가져온 자동화를 꺼진 채로 넣어요.", "Turn on the BOKKI Payment switch. iOS adds shared automations switched off.")),
+            ("BokkiShortcutGuideSwitch", language.text("「BOKKI 결제」라고 적힌 줄의 스위치를 모두 켜요(낱말마다 한 줄). iOS는 가져온 자동화를 꺼진 채로 넣어요.", "Turn on every switch labelled BOKKI Payment (one row per word). iOS adds shared automations switched off.")),
             ("BokkiShortcutGuideDone", language.text("이렇게 초록색이 되면 끝이에요. 이제 결제 문자가 저절로 가계부에 들어가요.", "Green means done. Payment texts now go into the ledger by themselves.")),
         ]
     }
@@ -202,10 +220,18 @@ struct BokkiPaymentAutomationRow: View {
     @State private var isPresented = false
 
     var body: some View {
-        Button { isPresented = true } label: {
-            Label(language.text("결제 앱 알림 자동화 따라 하기", "Set up payment app alerts"), systemImage: "app.badge")
+        if let link = BokkiPaymentShortcut.alertLink {
+            let title = BokkiPaymentShortcut.alertTitle(language)
+            Button { isPresented = true } label: {
+                Label(language.text("「\(title)」 자동화 추가", "Add the \"\(title)\" automation"), systemImage: "app.badge")
+            }
+            .sheet(isPresented: $isPresented) { BokkiPaymentAddPopup(link: link, language: language, isAlert: true) }
+        } else {
+            Button { isPresented = true } label: {
+                Label(language.text("결제 앱 알림 자동화 따라 하기", "Set up payment app alerts"), systemImage: "app.badge")
+            }
+            .sheet(isPresented: $isPresented) { BokkiPaymentAutomationSetup(language: language) }
         }
-        .sheet(isPresented: $isPresented) { BokkiPaymentAutomationSetup(language: language) }
     }
 }
 

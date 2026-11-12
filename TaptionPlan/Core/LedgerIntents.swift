@@ -40,9 +40,25 @@ struct AddPaymentNotificationIntent: AppIntent {
 enum PaymentTextCapture {
     /// 넘어온 글을 처리하고 결과를 받은 문자함에 남긴다(PRL1112A01). 「AI」 탭이 이것을 보여 준다.
     static func capture(_ text: String, requiresTime: Bool, now: Date = .now) async -> String {
+        // 「BOKKI 결제」는 낱말마다 트리거가 있어 한 문자가 여러 번 넘어온다. 같은 글은 한 번만 처리한다(NTF1112A01).
+        if let earlier = repeated(text, now: now) { return earlier }
+        inFlight[PaymentInbox.stored(text)] = now
         let (message, outcome) = await process(text, requiresTime: requiresTime, now: now)
         PaymentInbox.record(text, outcome: outcome, message: message, now: now)
         return message
+    }
+
+    static let repeatWindow: TimeInterval = 120
+    private static var inFlight: [String: Date] = [:]
+
+    /// 방금(2분 안) 같은 글을 받았으면 그때의 안내를 돌려준다. 처리 중인 글이면 빈 안내.
+    static func repeated(_ text: String, now: Date, defaults: UserDefaults = .standard) -> String? {
+        let key = PaymentInbox.stored(text)
+        inFlight = inFlight.filter { abs(now.timeIntervalSince($0.value)) < repeatWindow }
+        if let earlier = PaymentInbox.items(defaults, now: now).last(where: { $0.text == key && abs(now.timeIntervalSince($0.receivedAt)) < repeatWindow }) {
+            return earlier.message
+        }
+        return inFlight[key] == nil ? nil : ""
     }
 
     static func process(_ text: String, requiresTime: Bool, now: Date = .now) async -> (String, PaymentInbox.Outcome) {

@@ -1849,160 +1849,6 @@
         }
       }
     },
-    "15분 뒤로|15 minutes later" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "15分後へ"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "延后15分钟"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "延後15分鐘"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "15 Minuten später"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "15 minutes plus tard"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "15 minuti dopo"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "15 minutos después"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "15 minutos depois"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Muộn hơn 15 phút"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "15 menit lebih lambat"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ช้าลง 15 นาที"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "15 मिनट बाद"
-          }
-        }
-      }
-    },
-    "15분 앞으로|15 minutes earlier" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "15分前へ"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "提前15分钟"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "提前15分鐘"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "15 Minuten früher"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "15 minutes plus tôt"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "15 minuti prima"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "15 minutos antes"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "15 minutos antes"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sớm hơn 15 phút"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "15 menit lebih awal"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "เร็วขึ้น 15 นาที"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "15 मिनट पहले"
-          }
-        }
-      }
-    },
     "1년|1 year" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -9699,6 +9545,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "BOKKI खर्च खाता (सब)"
+          }
+        }
+      }
+    },
+    "BOKKI 결제 알림|BOKKI Payment Alerts" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BOKKI 決済通知"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BOKKI 支付通知"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BOKKI 付款通知"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BOKKI Zahlungsmitteilungen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BOKKI Alertes de paiement"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BOKKI Avvisi di pagamento"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BOKKI Avisos de pago"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BOKKI Alertas de pagamento"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BOKKI Thông báo thanh toán"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BOKKI Notifikasi Pembayaran"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BOKKI แจ้งเตือนการชำระเงิน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BOKKI भुगतान सूचनाएँ"
           }
         }
       }
@@ -205822,79 +205745,156 @@
         }
       }
     },
-    "「BOKKI 결제」 스위치를 켜요. iOS는 가져온 자동화를 꺼진 채로 넣어요.|Turn on the BOKKI Payment switch. iOS adds shared automations switched off." : {
+    "「BOKKI 결제 알림」 스위치를 켜요. 내 은행·카드 앱이 빠져 있으면 이 줄을 눌러 앱 이름 옆 「+」로 넣어요.|Turn on the BOKKI Payment Alerts switch. If your bank or card app is missing, tap the row and add it with + next to the app names." : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "「BOKKI 決済」のスイッチをオンに。iOSは共有されたオートメーションをオフのまま追加します。"
+            "value" : "「BOKKI 決済通知」のスイッチをオンに。自分の銀行・カードのAppがなければ、この行をタップしてApp名の横の「+」で追加します。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "打开“BOKKI 支付”开关。iOS 会以关闭状态添加共享的自动化。"
+            "value" : "打开“BOKKI 支付通知”开关。如果没有你的银行或信用卡 App，轻点这一行，用 App 名称旁的“+”添加。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "打開「BOKKI 付款」開關。iOS 會以關閉狀態加入分享的自動化。"
+            "value" : "打開「BOKKI 付款通知」開關。如果沒有你的銀行或信用卡 App，點一下這一列，用 App 名稱旁的「+」加入。"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Schalte „BOKKI Zahlung“ ein. iOS fügt geteilte Automationen ausgeschaltet hinzu."
+            "value" : "Schalte „BOKKI Zahlungsmitteilungen“ ein. Fehlt deine Bank- oder Karten-App, tippe auf die Zeile und füge sie mit + neben den App-Namen hinzu."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Activez l’interrupteur « BOKKI Paiement ». iOS ajoute les automatisations partagées désactivées."
+            "value" : "Activez l’interrupteur « BOKKI Alertes de paiement ». Si l’app de votre banque ou de votre carte manque, touchez la ligne et ajoutez-la avec + à côté des noms d’apps."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Attiva l’interruttore «BOKKI Pagamento». iOS aggiunge le automazioni condivise disattivate."
+            "value" : "Attiva l’interruttore «BOKKI Avvisi di pagamento». Se manca l’app della tua banca o carta, tocca la riga e aggiungila con + accanto ai nomi delle app."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Activa el interruptor «BOKKI Pago». iOS añade las automatizaciones compartidas desactivadas."
+            "value" : "Activa el interruptor «BOKKI Avisos de pago». Si falta la app de tu banco o tarjeta, toca la fila y añádela con + junto a los nombres de las apps."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ative o botão “BOKKI Pagamento”. O iOS adiciona automações compartilhadas desativadas."
+            "value" : "Ative o botão “BOKKI Alertas de pagamento”. Se faltar o app do seu banco ou cartão, toque na linha e adicione com + ao lado dos nomes dos apps."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bật công tắc “BOKKI Thanh toán”. iOS thêm mục tự động hóa được chia sẻ ở trạng thái tắt."
+            "value" : "Bật công tắc “BOKKI Thông báo thanh toán”. Nếu thiếu ứng dụng ngân hàng hoặc thẻ của bạn, chạm vào dòng này rồi thêm bằng dấu + cạnh tên ứng dụng."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nyalakan sakelar “BOKKI Pembayaran”. iOS menambahkan otomatisasi yang dibagikan dalam keadaan mati."
+            "value" : "Nyalakan sakelar “BOKKI Notifikasi Pembayaran”. Jika app bank atau kartu Anda belum ada, ketuk baris ini lalu tambahkan dengan + di samping nama app."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "เปิดสวิตช์ “BOKKI ชำระเงิน” iOS จะเพิ่มการทำงานอัตโนมัติที่แชร์มาแบบปิดไว้"
+            "value" : "เปิดสวิตช์ “BOKKI แจ้งเตือนการชำระเงิน” หากไม่มีแอปธนาคารหรือบัตรของคุณ ให้แตะแถวนี้แล้วเพิ่มด้วย + ข้างชื่อแอป"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "“BOKKI भुगतान” स्विच चालू करें। iOS शेयर किए गए ऑटोमेशन को बंद अवस्था में जोड़ता है।"
+            "value" : "“BOKKI भुगतान सूचनाएँ” स्विच चालू करें। अगर आपका बैंक या कार्ड ऐप नहीं है, तो इस पंक्ति पर टैप करें और ऐप नामों के पास + से जोड़ें।"
+          }
+        }
+      }
+    },
+    "「BOKKI 결제」라고 적힌 줄의 스위치를 모두 켜요(낱말마다 한 줄). iOS는 가져온 자동화를 꺼진 채로 넣어요.|Turn on every switch labelled BOKKI Payment (one row per word). iOS adds shared automations switched off." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「BOKKI 決済」と書かれた行のスイッチをすべてオンに（単語ごとに1行）。iOSは共有されたオートメーションをオフのまま追加します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开所有标有“BOKKI 支付”的开关（每个词一行）。iOS 会以关闭状态添加共享的自动化。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打開所有標示「BOKKI 付款」的開關（每個詞一列）。iOS 會以關閉狀態加入分享的自動化。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schalte alle Schalter mit „BOKKI Zahlung“ ein (eine Zeile pro Wort). iOS fügt geteilte Automationen ausgeschaltet hinzu."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activez tous les interrupteurs marqués « BOKKI Paiement » (une ligne par mot). iOS ajoute les automatisations partagées désactivées."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Attiva tutti gli interruttori con scritto «BOKKI Pagamento» (una riga per parola). iOS aggiunge le automazioni condivise disattivate."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activa todos los interruptores marcados «BOKKI Pago» (una fila por palabra). iOS añade las automatizaciones compartidas desactivadas."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ative todos os botões marcados “BOKKI Pagamento” (uma linha por palavra). O iOS adiciona automações compartilhadas desativadas."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bật tất cả công tắc có ghi “BOKKI Thanh toán” (mỗi từ một dòng). iOS thêm mục tự động hóa được chia sẻ ở trạng thái tắt."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nyalakan semua sakelar bertanda “BOKKI Pembayaran” (satu baris per kata). iOS menambahkan otomatisasi yang dibagikan dalam keadaan mati."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เปิดสวิตช์ทุกอันที่เขียนว่า “BOKKI ชำระเงิน” (หนึ่งแถวต่อหนึ่งคำ) iOS จะเพิ่มการทำงานอัตโนมัติที่แชร์มาแบบปิดไว้"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“BOKKI भुगतान” लिखे सभी स्विच चालू करें (हर शब्द की एक पंक्ति)। iOS शेयर किए गए ऑटोमेशन को बंद अवस्था में जोड़ता है।"
           }
         }
       }
@@ -218446,83 +218446,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "बिल्ली आपके दिन के रास्ते पर चलती है। रोकने के लिए उसी जगह रोकें पर टैप करें।"
-          }
-        }
-      }
-    },
-    "고치기|Save" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "保存"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "保存"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "儲存"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sichern"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enregistrer"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Salva"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Guardar"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Salvar"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lưu"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Simpan"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "บันทึก"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "सहेजें"
           }
         }
       }
@@ -316548,6 +316471,83 @@
         }
       }
     },
+    "이렇게 초록색이 되면 끝이에요. 이제 결제 앱 알림이 저절로 가계부에 들어가요.|Green means done. Payment app alerts now go into the ledger by themselves." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このように緑になれば完了です。これで決済アプリの通知が自動で家計簿に入ります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "像这样变成绿色就完成了。现在付款 App 的通知会自动记入账本。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "像這樣變成綠色就完成了。現在付款 App 的通知會自動記入帳本。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn es grün ist, bist du fertig. Mitteilungen von Zahlungs-Apps landen jetzt von selbst im Haushaltsbuch."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quand c’est vert, c’est terminé. Les alertes des apps de paiement entrent désormais toutes seules dans le livre de comptes."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quando diventa verde, hai finito. Ora gli avvisi delle app di pagamento entrano da soli nel registro delle spese."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cuando se vea en verde, ya está. Ahora los avisos de las apps de pago entran solos en el libro de gastos."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quando ficar verde, está pronto. Agora os alertas dos apps de pagamento entram sozinhos no livro de gastos."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Khi chuyển sang màu xanh như thế này là xong. Giờ thông báo từ ứng dụng thanh toán sẽ tự vào sổ chi tiêu."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jika sudah hijau seperti ini, selesai. Sekarang notifikasi app pembayaran masuk sendiri ke buku kas."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เมื่อเป็นสีเขียวแบบนี้ก็เสร็จแล้ว ตอนนี้การแจ้งเตือนจากแอปชำระเงินจะเข้าบัญชีรายจ่ายเอง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "इस तरह हरा हो जाए तो काम पूरा। अब भुगतान ऐप की सूचनाएँ अपने आप खाते में दर्ज होंगी।"
+          }
+        }
+      }
+    },
     "이름 (예: 대구 여행)|Name (e.g. Daegu trip)" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -320394,83 +320394,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "{0} शेड्यूल"
-          }
-        }
-      }
-    },
-    "일정 고치기|Edit plan" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "予定を編集"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "编辑行程"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "編輯行程"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Plan bearbeiten"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Modifier le plan"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Modifica piano"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Editar plan"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Editar plano"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sửa kế hoạch"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Edit rencana"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "แก้ไขแผน"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "योजना संपादित करें"
           }
         }
       }
@@ -331020,6 +330943,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "सफ़र सुरक्षित हो!"
+          }
+        }
+      }
+    },
+    "종료|End" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "終了"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "结束"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "結束"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ende"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fin"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fine"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fin"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Encerrar"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kết thúc"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akhiri"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "สิ้นสุด"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "अंत"
           }
         }
       }

@@ -69,6 +69,18 @@ final class LedgerReviewTests: XCTestCase {
         XCTAssertNil(LedgerMessageParser.salaryDeposit("(광고) 급여 통장 입금 이벤트 10,000원", now: base))
     }
 
+    @MainActor
+    func testSameTextWithinTwoMinutesIsHandledOnce() throws {
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: "PaymentRepeat-\(UUID())"))
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let text = "신한카드 승인 12,000원 스타벅스"
+        XCTAssertNil(PaymentTextCapture.repeated(text, now: now, defaults: defaults))
+        PaymentInbox.record(text, outcome: .added, message: "넣었어요", now: now, defaults: defaults)
+        XCTAssertEqual(PaymentTextCapture.repeated(text, now: now.addingTimeInterval(5), defaults: defaults), "넣었어요", "여덟 트리거가 같은 문자를 다시 넘긴다")
+        XCTAssertNil(PaymentTextCapture.repeated(text, now: now.addingTimeInterval(121), defaults: defaults))
+        XCTAssertNil(PaymentTextCapture.repeated("신한카드 승인 3,000원 편의점", now: now.addingTimeInterval(5), defaults: defaults))
+    }
+
     func testOwnAccountTransfersAreRecognisedOnlyWhenRegistered() throws {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: "LedgerOwnAccounts-\(UUID())"))
         LedgerOwnAccounts.set([" 토스통장 ", "토스통장", "a", "홍길동"], defaults: defaults)
