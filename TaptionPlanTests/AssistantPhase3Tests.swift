@@ -2009,6 +2009,11 @@ final class AssistantAppControlTests: XCTestCase {
         XCTAssertEqual(state.settings.actionsOff, ["deleteMemo", "openScreen"])
         XCTAssertEqual([state.settings.aiConnections, state.settings.paymentTexts, state.retentionDays], [2, 1, 7])
         XCTAssertEqual(state.settings.lastPaymentTextAt, "2026-11-12T08:41+09:00")
+        XCTAssertEqual(state.settings.paymentTriggerWords, ["원", "승인", "출금", "취소", "입금", "결제", "일시불", "할부"], "AI가 어떤 문자가 넘어오는지 안다")
+        XCTAssertEqual(state.settings.paymentAlertLink, false)
+        var noLink = try input()
+        noLink.paymentShortcutLink = false
+        XCTAssertNil(AssistantAppStateSync.make(noLink).settings.paymentTriggerWords, "링크가 없으면 낱말을 알 수 없다")
         XCTAssertEqual([state.ledger.month, state.ledger.budgetKRW.map { "\($0)" } ?? "", "\(state.ledger.spentKRW)"], ["2026-11", "500000.0", "12000.0"])
         XCTAssertEqual(state.ledger.ownAccounts, ["비상금 통장", "***-***-**6789"], "번호처럼 보이는 이름은 가린다")
         XCTAssertEqual(state.ledger.entries.map(\.title), ["스타벅스 ****-****-****-3456", "환불한 저녁"], "새 것부터, 번호는 가린다")

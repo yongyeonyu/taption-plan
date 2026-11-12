@@ -79,7 +79,10 @@ enum BokkiPaymentShortcut {
 
     static func alertTitle(_ language: MapHomeLanguage) -> String { language.text("BOKKI 결제 알림", "BOKKI Payment Alerts") }
 
-    /// 결제 낱말 여덟 개(원·승인·출금·취소·입금·결제·일시불·할부) 가운데 하나라도 든 메시지를 받을 때.
+    /// 링크판 「BOKKI 결제」의 메시지 트리거 낱말. 하나라도 들어 있으면 앱으로 넘어온다. 링크를 다시 만들면 여기도 맞춘다.
+    static let triggerWords = ["원", "승인", "출금", "취소", "입금", "결제", "일시불", "할부"]
+
+    /// 결제 낱말 여덟 개 가운데 하나라도 든 메시지를 받을 때.
     static var automationLink: URL? { link("PAYMENT_SHORTCUT_ICLOUD_ID") }
     /// 은행·카드 앱의 알림을 받을 때(NTF1112A01). 앱 목록은 받은 뒤 고칠 수 있다.
     static var alertLink: URL? { link("PAYMENT_ALERT_SHORTCUT_ICLOUD_ID") }

@@ -173,6 +173,9 @@ struct AssistantAppState: Codable, Equatable, Sendable {
         var paymentShortcutLink: Bool
         var paymentTexts: Int
         var lastPaymentTextAt: String?
+        /// NTF1112A01: 결제 앱 알림 자동화 링크가 있는가, 문자 자동화가 넘기는 낱말(하나라도 들면 넘어옴).
+        var paymentAlertLink: Bool?
+        var paymentTriggerWords: [String]?
         /// ACB1112A01: 통행료 차종과 급여 방식(정했을 때만).
         var tollVehicle: String?
         var salaryMode: String?
@@ -327,6 +330,7 @@ enum AssistantAppStateSync {
         var aiConnections: Int
         var actionsOff: [AssistantActionKind]
         var paymentShortcutLink: Bool
+        var paymentAlertLink: Bool = false
         /// 이체 짝 기록을 뺀 가계부 기록.
         var entries: [LedgerEntry]
         var budgetKRW: Double?
@@ -362,6 +366,7 @@ enum AssistantAppStateSync {
                 retentionDays: input.retentionDays, aiConnections: input.aiConnections, actionsOff: input.actionsOff.map(\.rawValue),
                 paymentShortcutLink: input.paymentShortcutLink, paymentTexts: input.inbox.count,
                 lastPaymentTextAt: input.inbox.map(\.receivedAt).max().map(stamp.instant),
+                paymentAlertLink: input.paymentAlertLink, paymentTriggerWords: input.paymentShortcutLink ? BokkiPaymentShortcut.triggerWords : nil,
                 tollVehicle: input.tollVehicle, salaryMode: input.salaryMode,
                 values: input.settingValues.isEmpty ? nil : input.settingValues
             ),
@@ -459,7 +464,7 @@ enum AssistantAppStateSync {
             shareLevel: AssistantShareLevel.current(defaults), retentionDays: AssistantRetention.current(defaults).rawValue,
             aiConnections: AssistantKeyLabels.connectionCount(defaults),
             actionsOff: AssistantActionKind.allCases.filter { !AssistantActionToggles.isEnabled($0, defaults: defaults) },
-            paymentShortcutLink: BokkiPaymentShortcut.hasAutomationLink,
+            paymentShortcutLink: BokkiPaymentShortcut.hasAutomationLink, paymentAlertLink: BokkiPaymentShortcut.alertLink != nil,
             entries: book.entries.filter { $0.transfer == nil }, budgetKRW: book.budget(for: month)?.amountKRW,
             spentKRW: LedgerBook.total(daily, .expense), incomeKRW: LedgerBook.total(daily, .income),
             ownAccounts: LedgerOwnAccounts.names(defaults), review: preferences.review.items,

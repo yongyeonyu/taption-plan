@@ -83,13 +83,13 @@ const TOOLS = [
   // ACX1112A01
   readTool("get_app_state", "Get app state", "The app's own state, refreshed when the app runs: settings {language, theme, mapStyle, display{mapPhotos,mapRoutes,mapFootprints}, "
     + "shareLevel, retentionDays, aiConnections, actionsOff[] (actions the user turned off), paymentShortcutLink (the app ships a link to its "
-    + "BOKKI Payment automation), paymentTexts, lastPaymentTextAt}, ledger {month, budgetKRW, spentKRW, incomeKRW, ownAccounts[], entries[{id,time,title,"
+    + "BOKKI Payment automation), paymentTriggerWords[] (words the message automation fires on, any one), paymentAlertLink (the app also ships a bank and card app alert automation), paymentTexts, lastPaymentTextAt}, ledger {month, budgetKRW, spentKRW, incomeKRW, ownAccounts[], entries[{id,time,title,"
     + "category,kind,amount,currency,amountKRW,canceled,source}], trips[{id,name,start,end,budgetKRW,myCostKRW,leftoverKRW,ended}] (trip ledgers: "
     + "myCostKRW is the user's own share so far, leftoverKRW what goes back to the daily ledger (negative: more is owed); set the budget with "
     + "set_trip_budget)} (entries newest first; entry ids work with update_expense), review [{id,reason "
-    + "noMerchant|duplicate|transfer,receivedAt,time,title,category,kind,amount,currency}] (payments the app did not add by itself; settle with "
+    + "noMerchant|duplicate|transfer|toll|cardBill,receivedAt,time,title,category,kind,amount,currency}] (payments the app did not add by itself; settle with "
     + "resolve_review), inbox [{id,receivedAt,outcome added|review|duplicate|skipped|unread|askedAI,message,text}] (payment texts the iOS "
-    + "automation handed over; card, account and phone numbers are masked) rules [{id,name,kind,pattern}] (payment text rules), trips [{id,title,start,end,wishDays,country,region,currency}] (every trip; ids work with update_trip, delete_trip and add_trip_stop), "
+    + "automation handed over; card, account and phone numbers are masked; for outcome unread, askedAI or review the app could not read the text by itself: when the user asks, work out the layout and send add_payment_rule so the app reads it from then on), rules [{id,name,kind,pattern}] (payment text rules), trips [{id,title,start,end,wishDays,country,region,currency}] (every trip; ids work with update_trip, delete_trip and add_trip_stop), "
     + "placeSuggestion {id,name?,visits} (a place the app suggests registering, at the place-name share level; answer with resolve_place_suggestion), "
     + "carAudio {registered[],pending[]} (car audio device names; answer pending ones with set_car_audio), "
     + "categories [{id,name,color,icon,hidden,custom}] (every category; ids work with "
@@ -406,7 +406,9 @@ const RAW_VALUES = {
   scope: oneOf("read", "write"),
   type: oneOf("flight", "lodging", "meal", "cafe", "sight", "photo", "shopping", "activity", "rest", "sleep", "transfer", "other"),
   error: (v) => /^[a-z][a-z_]{0,39}$/.test(v) && SERVER_ERRORS.has(v),
-  reason: oneOf("invalid", "no_record", "unknown_category", "memo_failed", "schedule_failed", "noMerchant", "duplicate", "transfer"),
+  reason: oneOf("invalid", "no_record", "unknown_category", "memo_failed", "schedule_failed", "noMerchant", "duplicate", "transfer", "toll", "cardBill"),
+  // NTF1112A01: 문자 자동화의 트리거 낱말(앱이 정한 값).
+  paymentTriggerWords: oneOf("원", "승인", "출금", "취소", "입금", "결제", "일시불", "할부"),
 };
 const SERVER_ERRORS = new Set(["not_command", "not_trip_plan", "bad_date", "bad_range", "rate_limited", "daily_command_limit", "daily_bubble_limit",
   "daily_request_limit", "daily_write_limit", "write_budget_exhausted", "id_conflict", "forbidden", "not_task_result", "no_task"]);
