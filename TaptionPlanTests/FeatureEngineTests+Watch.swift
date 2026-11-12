@@ -1444,6 +1444,109 @@ extension FeatureEngineTests {
         XCTAssertTrue(replayed.first?.behaviorEvidence?.contains("raw 표본 120개 (창 재생성 불가)") == true)
     }
 
+    // MARK: - WSN1112A02 HealthKit 심박·걸음, 기기 이름 가리기
+
+    private func healthSample(
+        _ type: String, _ value: Double, at start: Date, length: TimeInterval = 0,
+        product: String? = "Watch7,1", bundle: String = "com.apple.health"
+    ) -> HealthKitSampleRecord {
+        HealthKitSampleRecord(
+            uuid: UUID(), typeIdentifier: type, startDate: start,
+            endDate: start.addingTimeInterval(length), numericValue: value,
+            sourceBundleIdentifier: bundle, sourceProductType: product
+        )
+    }
+
+    func testWatchChunkVitalsUseWatchStepsAndRestingHeartRate() throws {
+        let base = makeDate(2026, 11, 10, 20)
+        let span = TimeSpan(start: base, end: base.addingTimeInterval(600))
+        var records = (0..<24).map {
+            healthSample("HKQuantityTypeIdentifierHeartRate", 58 + Double($0 % 6) * 4,
+                         at: base.addingTimeInterval(-Double($0 + 1) * 600))
+        }
+        records += [100, 104, 96].enumerated().map {
+            healthSample("HKQuantityTypeIdentifierHeartRate", $0.element,
+                         at: base.addingTimeInterval(Double($0.offset) * 200 + 10))
+        }
+        // Watch 300걸음(5분, 절반만 묶음에 겹침)과 iPhone 500걸음(같은 걸음을 따로 적은 것).
+        records.append(healthSample("HKQuantityTypeIdentifierStepCount", 300,
+                                    at: base.addingTimeInterval(-150), length: 300))
+        records.append(healthSample("HKQuantityTypeIdentifierStepCount", 500,
+                                    at: base, length: 600, product: "iPhone17,1"))
+
+        let vitals = try XCTUnwrap(WatchChunkVitals.measured(in: span, records: records))
+
+        XCTAssertEqual(try XCTUnwrap(vitals.averageHeartRate), 100, accuracy: 0.001)
+        XCTAssertEqual(vitals.heartRateSampleCount, 3)
+        XCTAssertEqual(try XCTUnwrap(vitals.restingHeartRate), 62, accuracy: 0.001)
+        XCTAssertEqual(try XCTUnwrap(vitals.stepsPerMinute), 15, accuracy: 0.001)
+        XCTAssertFalse(vitals.isExerciseLevel)
+        XCTAssertNil(WatchChunkVitals.measured(in: span, records: []))
+    }
+
+    func testHealthKitStepsAndHeartRateRefineAmbientHomeActivity() {
+        let base = makeDate(2026, 11, 10, 20)
+        let sessionID = UUID()
+        let irregular = [WatchBehaviorClassifier.irregularMotionEvidence]
+        let busy = ambientSummary(
+            sessionID: sessionID, sequence: 1, start: base, standardDeviation: 0.09,
+            segments: [(.unknown, 0, 400, irregular), (.stationary, 400, 600, [])]
+        )
+        func apply(_ vitals: WatchChunkVitals?) -> [ActualRecord] {
+            AppleWatchSensorActivityEngine.upserting(
+                busy, into: [], linkedPlan: nil, atHome: true, vitals: vitals
+            )
+        }
+
+        // 건강 자료가 없으면 가속도만으로 집안일.
+        XCTAssertEqual(apply(nil).first?.behavior, WatchBehaviorKind.housework.rawValue)
+
+        // 걸음이 분당 80이면 걷던 시간이라 집안일을 만들지 않는다.
+        XCTAssertTrue(apply(WatchChunkVitals(stepsPerMinute: 80)).isEmpty)
+
+        // 심박이 평소보다 뚜렷이 높으면 운동, 근거에 값이 남는다.
+        let workout = apply(WatchChunkVitals(
+            averageHeartRate: 134, heartRateSampleCount: 4, restingHeartRate: 62, stepsPerMinute: 8
+        ))
+        XCTAssertEqual(workout.first?.behavior, WatchBehaviorKind.exercise.rawValue)
+        XCTAssertEqual(workout.first?.title, "운동")
+        XCTAssertTrue(workout.first?.evidence.contains("심박 평균 134bpm(표본 4개)") == true)
+        XCTAssertTrue(workout.first?.evidence.contains("평소 낮은 심박 62bpm") == true)
+        XCTAssertTrue(workout.first?.evidence.contains("걸음 분당 8") == true)
+
+        // 조금 높은 심박은 집안일 그대로.
+        let chores = apply(WatchChunkVitals(
+            averageHeartRate: 98, heartRateSampleCount: 3, restingHeartRate: 62, stepsPerMinute: 12
+        ))
+        XCTAssertEqual(chores.first?.behavior, WatchBehaviorKind.housework.rawValue)
+        // 평소 심박을 모르면 높은 심박만으로 운동이라 하지 않는다.
+        let unknownBaseline = apply(WatchChunkVitals(averageHeartRate: 134, heartRateSampleCount: 4))
+        XCTAssertEqual(unknownBaseline.first?.behavior, WatchBehaviorKind.housework.rawValue)
+    }
+
+    func testHealthSourceNamesKeepOnlyDeviceKind() {
+        XCTAssertEqual(HealthSourcePrivacy.label("홍길동의 Apple\u{00A0}Watch"), "Apple Watch")
+        XCTAssertEqual(HealthSourcePrivacy.label("Gildong’s iPhone"), "iPhone")
+        XCTAssertEqual(HealthSourcePrivacy.label("홍길동의 반지"), "건강 앱")
+        XCTAssertEqual(HealthSourcePrivacy.label("AutoSleep"), "AutoSleep")
+
+        let sanitized = HealthSourcePrivacy.sanitized([
+            "HealthKit 수면 기록",
+            "홍길동의 Apple\u{00A0}Watch",
+            "sources=홍길동의 Apple Watch,홍길동의 iPhone",
+            "Apple Watch + iPhone 조합",
+            "자주가는 곳: 집",
+        ])
+        XCTAssertEqual(sanitized, [
+            "HealthKit 수면 기록",
+            "Apple Watch",
+            "sources=Apple Watch,iPhone",
+            "Apple Watch + iPhone 조합",
+            "자주가는 곳: 집",
+        ])
+        XCTAssertFalse(sanitized.joined().contains("홍길동"))
+    }
+
     func testWatchAsksAboutShowerFromHomeWaterLockAndMotion() throws {
         let base = makeDate(2026, 8, 9, 7)
         let summary = TaptionWatchSensorSummary(

@@ -382,6 +382,11 @@ extension AppModel {
                 return false
             }
         }
+        let vitals = await watchChunkVitals(for: [summary], atHome: atHome)[WatchChunkVitals.key(for: summary)]
+        guard acceptsDataMutation(capturedAt: summary.endedAt),
+              isCurrentWatchSummary(summary, version: version) else {
+            return false
+        }
         let linkedPlan = summary.linkedPlanID.flatMap { planID in
             snapshot.plans.first { $0.id == planID }
         }
@@ -390,7 +395,8 @@ extension AppModel {
                 interpretedSummary,
                 into: snapshot.actuals,
                 linkedPlan: linkedPlan,
-                atHome: atHome
+                atHome: atHome,
+                vitals: vitals
             )
         } else {
             // 답변 전에는 후보를 최종 활동으로 보이지 않는다. 원시 센서와
@@ -920,5 +926,48 @@ extension AppModel {
         if behavior.isMovement { return "movement" }
         if behavior == .sleep { return "sleep" }
         return "activity"
+    }
+}
+
+extension AppModel {
+    /// 묶음 앞 몇 시간을 함께 읽어 평소 낮은 심박을 구한다.
+    static let watchVitalsLookback: TimeInterval = 6 * 3_600
+
+    /// 집에서 잰 평상시 묶음마다 HealthKit 심박·걸음을 붙인다. 건강 연동이 꺼져 있거나
+    /// 읽지 못하면 비어 있고, 판정은 가속도만으로 한다(WSN1112A02).
+    func watchChunkVitals(
+        for summaries: [TaptionWatchSensorSummary],
+        atHome: Bool? = nil
+    ) async -> [UUID: WatchChunkVitals] {
+        guard snapshot.settings.healthEnabled else { return [:] }
+        let ambient = summaries.filter {
+            $0.isAmbient == true && (atHome ?? isWatchSummaryAtHome($0))
+        }
+        guard let first = ambient.map(\.startedAt).min(),
+              let last = ambient.map(\.endedAt).max(), first <= last,
+              let records = try? await healthService.importedRecords(
+                in: TimeSpan(
+                    start: first.addingTimeInterval(-Self.watchVitalsLookback),
+                    end: last
+                )
+              ) else { return [:] }
+        let relevant = records.filter {
+            $0.typeIdentifier == "HKQuantityTypeIdentifierHeartRate"
+                || $0.typeIdentifier == "HKQuantityTypeIdentifierStepCount"
+        }
+        guard !relevant.isEmpty else { return [:] }
+        var result: [UUID: WatchChunkVitals] = [:]
+        for summary in ambient {
+            let span = TimeSpan(
+                start: summary.startedAt,
+                end: max(summary.startedAt, summary.endedAt)
+            )
+            let window = relevant.filter {
+                $0.endDate >= span.start.addingTimeInterval(-Self.watchVitalsLookback)
+                    && $0.startDate <= span.end
+            }
+            result[WatchChunkVitals.key(for: summary)] = WatchChunkVitals.measured(in: span, records: window)
+        }
+        return result
     }
 }

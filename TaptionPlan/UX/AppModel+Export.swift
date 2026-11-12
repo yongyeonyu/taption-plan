@@ -44,7 +44,8 @@ extension AppModel {
                 places: day.places, actuals: day.actuals.map { actual in
                     // 개발자에게 보내는 원본에는 구글·기기 일정 제목을 넣지 않는다(GOO1106A01).
                     var safe = actual
-                    safe.evidence = CalendarTitleClassification.withoutCalendarTitleEvidence(actual.evidence)
+                    // 예전에 저장된 근거의 기기 이름(사람 이름이 든 것)도 가린다(WSN1112A02).
+                    safe.evidence = HealthSourcePrivacy.sanitized(CalendarTitleClassification.withoutCalendarTitleEvidence(actual.evidence))
                     return safe
                 }))
         }

@@ -69,6 +69,11 @@ actor WatchAmbientSensorRecorder {
     private let armedAtKey = "TaptionPlan.watchSensorRecorderArmedAt"
     private let failureCountKey = "TaptionPlan.watchSensorRecorderDrainFailures"
     private let retryAfterKey = "TaptionPlan.watchSensorRecorderRetryAfter"
+    /// 밀렸을 때 앞질러 읽어 둔 최근 덩어리(WSN1112A02). 메우기가 닿으면 지운다.
+    private let recentStartKey = "TaptionPlan.watchSensorRecorderRecentStart"
+    private let recentEndKey = "TaptionPlan.watchSensorRecorderRecentEnd"
+    /// `drain`이 계산한 다음 처리 위치. 결과가 저장된 뒤 `commit`이 적는다.
+    private var pendingCursor: WatchSensorDrainCursor?
     /// 묶음 번호 단위를 초로 바꾸며 새 세션으로 시작한다. 옛 세션의 큰 번호가 iPhone 처리 위치로 남아
     /// 새 번호를 지난 것으로 보지 않게 한다(WCH1106A02).
     private let pendingSessionKey = "TaptionPlan.watchSensorRecorderPendingSession.v2"
@@ -107,6 +112,9 @@ actor WatchAmbientSensorRecorder {
         defaults.removeObject(forKey: pendingSessionKey)
         defaults.removeObject(forKey: committedSampleDatesKey)
         defaults.removeObject(forKey: pendingSampleDatesKey)
+        defaults.removeObject(forKey: recentStartKey)
+        defaults.removeObject(forKey: recentEndKey)
+        pendingCursor = nil
     }
 
     /// 앱이 실행될 때마다 API가 허용하는 가장 먼 미래까지 기록을 다시 건다.
@@ -177,16 +185,26 @@ actor WatchAmbientSensorRecorder {
         let armedAt = armedAt()
         let pendingSessionID = defaults.string(forKey: pendingSessionKey)
             .flatMap(UUID.init(uuidString:))
-        let windows = WatchSensorQueryPlan.windows(
+        // 밀린 양이 한 번 분량을 넘으면 최근 것을 먼저 읽고 남은 몫으로 오래된 쪽을 메운다.
+        let cursor = WatchSensorDrainCursor(
+            highWater: highWater,
+            recentStart: defaults.object(forKey: recentStartKey) as? Date,
+            recentEnd: defaults.object(forKey: recentEndKey) as? Date
+        )
+        let plan = WatchSensorQueryPlan.plan(
             now: now,
             armedAt: armedAt,
-            highWater: highWater
+            cursor: cursor,
+            budget: Self.maximumWindowsPerCall
         )
+        let windows = plan.ordered
         guard !windows.isEmpty else {
             WatchLaunchDiagnostics.mark("ambient drain no-window")
             return WatchAmbientDrainResult()
         }
-        WatchLaunchDiagnostics.mark("ambient drain windows=\(windows.count)")
+        WatchLaunchDiagnostics.mark(
+            "ambient drain windows=\(windows.count) backfill=\(plan.backfill.count) recent=\(plan.recent.count)"
+        )
 
         let recorder = self.recorder
         let sessionID = pendingSessionID ?? UUID()
@@ -203,11 +221,12 @@ actor WatchAmbientSensorRecorder {
                 committedSampleDates.keys.compactMap(UUID.init(uuidString:))
             )
         )
-        var ledger = WatchSensorDrainLedger(highWater: highWater)
+        var completed = 0
+        var failureCount = 0
 
         // 한 번에 다 읽으면(최대 사흘 × 50Hz) 백그라운드 예산을 넘긴다. 앞쪽 몇 창만 처리하고
         // 나머지는 처리 위치를 커밋한 뒤 다음 실행이 잇는다. 취소되면 바로 멈춘다(WCH1110A01).
-        for window in windows.prefix(Self.maximumWindowsPerCall) {
+        for window in windows {
             if Task.isCancelled { break }
             do {
                 // 조회와 열거를 한 @try 안에 넣는다. CMSensorDataList는
@@ -222,7 +241,7 @@ actor WatchAmbientSensorRecorder {
                         pipeline.ingest(sample)
                     }
                 }
-                ledger.succeeded(window)
+                completed += 1
                 pipeline.pruneSampleHistory(
                     keepingFrom: window.end.addingTimeInterval(
                         -(WatchSensorQueryPlan.availabilityLag + 60)
@@ -231,12 +250,12 @@ actor WatchAmbientSensorRecorder {
                 defaults.removeObject(forKey: failureCountKey)
                 defaults.removeObject(forKey: retryAfterKey)
             } catch {
-                ledger.failed(window)
+                failureCount += 1
                 _ = reportDrainFailure(window, error: error, now: now)
                 break
             }
         }
-        if ledger.failureCount == 0 {
+        if failureCount == 0 {
             defaults.removeObject(forKey: failureCountKey)
             defaults.removeObject(forKey: retryAfterKey)
         }
@@ -244,26 +263,35 @@ actor WatchAmbientSensorRecorder {
         // watermark를 커밋한다. 중간 종료 시 같은 session ID로 재시도해
         // SQLite의 idempotent raw event insert가 중복을 막는다.
         var result = pipeline.finish()
-        result.pendingHighWater = ledger.highWater
-        result.hasMoreWindows = ledger.failureCount == 0 && windows.count > Self.maximumWindowsPerCall
+        let advanced = WatchSensorQueryPlan.advanced(
+            cursor, plan: plan, completed: completed, now: now, armedAt: armedAt
+        )
+        pendingCursor = advanced
+        result.pendingHighWater = advanced.highWater
+        result.hasMoreWindows = failureCount == 0 && completed == windows.count
+            && !Task.isCancelled && (plan.hasMoreBackfill || plan.hasMoreRecent)
         if result.pendingSampleDates.isEmpty {
             defaults.removeObject(forKey: pendingSampleDatesKey)
         } else {
             defaults.set(result.pendingSampleDates, forKey: pendingSampleDatesKey)
         }
         WatchLaunchDiagnostics.mark(
-            "ambient drain complete summaries=\(result.summaries.count) samples=\(result.archiveSamples.count) failures=\(ledger.failureCount)"
+            "ambient drain complete summaries=\(result.summaries.count) samples=\(result.archiveSamples.count) failures=\(failureCount)"
         )
         return result
     }
 
     func commit(highWater: Date?, now: Date = .now) {
-        guard let highWater, highWater <= now else { return }
+        let cursor = pendingCursor
+        pendingCursor = nil
+        let recentEnd = cursor?.recentEnd.flatMap { $0 <= now ? $0 : nil }
+        if let highWater, highWater > now { return }
+        guard highWater != nil || recentEnd != nil else { return }
         let current = WatchSensorQueryPlan.sanitizedHighWater(
             defaults.object(forKey: highWaterKey) as? Date,
             now: now
         )
-        let committedHighWater = max(current ?? highWater, highWater)
+        let committedHighWater = [current, highWater].compactMap { $0 }.max()
         var committedSamples = defaults.dictionary(
             forKey: committedSampleDatesKey
         ) as? [String: Date] ?? [:]
@@ -271,17 +299,30 @@ actor WatchAmbientSensorRecorder {
             forKey: pendingSampleDatesKey
         ) as? [String: Date] ?? [:]
         pendingSamples.forEach { committedSamples[$0.key] = $0.value }
-        let overlapFloor = committedHighWater.addingTimeInterval(
-            -(WatchSensorQueryPlan.availabilityLag + 60)
-        )
-        committedSamples = committedSamples.filter { $0.value >= overlapFloor }
+        // 다음에 겹쳐 읽는 곳은 가장 최근에 읽은 끝이다(최근 덩어리가 있으면 그 끝).
+        if let overlapAnchor = [committedHighWater, recentEnd].compactMap({ $0 }).max() {
+            let overlapFloor = overlapAnchor.addingTimeInterval(
+                -(WatchSensorQueryPlan.availabilityLag + 60)
+            )
+            committedSamples = committedSamples.filter { $0.value >= overlapFloor }
+        }
         if committedSamples.isEmpty {
             defaults.removeObject(forKey: committedSampleDatesKey)
         } else {
             defaults.set(committedSamples, forKey: committedSampleDatesKey)
         }
         defaults.removeObject(forKey: pendingSampleDatesKey)
-        defaults.set(committedHighWater, forKey: highWaterKey)
+        if let committedHighWater {
+            defaults.set(committedHighWater, forKey: highWaterKey)
+        }
+        guard let cursor else { return }
+        if let start = cursor.recentStart, let recentEnd {
+            defaults.set(start, forKey: recentStartKey)
+            defaults.set(recentEnd, forKey: recentEndKey)
+        } else {
+            defaults.removeObject(forKey: recentStartKey)
+            defaults.removeObject(forKey: recentEndKey)
+        }
     }
 
     /// 기록을 처음 건 시각. 이보다 앞은 표본이 존재할 수 없다.

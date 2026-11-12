@@ -244,7 +244,8 @@ extension AppModel {
         guard !Task.isCancelled, acceptsDataMutation() else { return false }
         let watchSummaries = watchData.summaries
         let watchAccelerationSamples = watchData.accelerationSamples
-        applyReplayedWatchSummaries(watchSummaries)
+        await applyReplayedWatchSummaries(watchSummaries)
+        guard !Task.isCancelled, acceptsDataMutation() else { return false }
         do {
             archivedReadings = try await sensorService.archivedReadings(
                 in: span
@@ -696,7 +697,10 @@ extension AppModel {
 
     private func applyReplayedWatchSummaries(
         _ summaries: [TaptionWatchSensorSummary]
-    ) {
+    ) async {
+        // 받을 때와 같은 심박·걸음 근거로 다시 판정해야 결과가 뒤바뀌지 않는다.
+        let vitals = await watchChunkVitals(for: summaries)
+        guard !Task.isCancelled, acceptsDataMutation() else { return }
         for summary in summaries {
             let linkedPlan = summary.linkedPlanID.flatMap { planID in
                 snapshot.plans.first { $0.id == planID }
@@ -705,7 +709,8 @@ extension AppModel {
                 summary,
                 into: snapshot.actuals,
                 linkedPlan: linkedPlan,
-                atHome: isWatchSummaryAtHome(summary)
+                atHome: isWatchSummaryAtHome(summary),
+                vitals: vitals[WatchChunkVitals.key(for: summary)]
             )
         }
         snapshot.actuals = ActualRecordSuppressionEngine.visibleRecords(

@@ -373,6 +373,11 @@ final class AppleHealthService: @unchecked Sendable {
         return overview
     }
 
+    /// 평상시 Watch 묶음 판정에 쓸 심박·걸음 원본(WSN1112A02).
+    func importedRecords(in span: TimeSpan) async throws -> [HealthKitSampleRecord] {
+        try await importCoordinator.records(in: span)
+    }
+
     func importedActuals(in span: TimeSpan) async throws -> [ActualRecord] {
         let baselineSpan = TimeSpan(
             start: span.start.addingTimeInterval(-28 * 86_400),
@@ -465,7 +470,7 @@ final class AppleHealthService: @unchecked Sendable {
     func sleepActuals(from sessions: [SleepSession]) -> [ActualRecord] {
         sessions.map { session in
             let evidence = Array(
-                Set(["HealthKit 수면 기록"] + session.sourceNames)
+                Set(["HealthKit 수면 기록"] + session.sourceNames.map(HealthSourcePrivacy.label))
             ).sorted()
             return ActualRecord(
                 id: session.id,

@@ -1660,6 +1660,143 @@ final class WatchSensorQueryPlanTests: XCTestCase {
     }
 }
 
+/// WSN1112A02: 밀리면 최근 것을 먼저 읽고 오래된 쪽을 나중에 메운다.
+final class WatchSensorDrainPlanTests: XCTestCase {
+    private let now = Date(timeIntervalSince1970: 1_800_000_000)
+    private let hour: TimeInterval = 3_600
+    private var end: Date { now.addingTimeInterval(-WatchSensorQueryPlan.availabilityLag) }
+
+    private func run(
+        _ cursor: WatchSensorDrainCursor,
+        armedAt: Date,
+        at time: Date? = nil,
+        completed: Int? = nil
+    ) -> (plan: WatchSensorDrainPlan, cursor: WatchSensorDrainCursor) {
+        let time = time ?? now
+        let plan = WatchSensorQueryPlan.plan(now: time, armedAt: armedAt, cursor: cursor, budget: 6)
+        let next = WatchSensorQueryPlan.advanced(
+            cursor, plan: plan, completed: completed ?? plan.ordered.count, now: time, armedAt: armedAt
+        )
+        return (plan, next)
+    }
+
+    func testSmallBacklogReadsOldestFirstExactlyAsBefore() {
+        let armedAt = now.addingTimeInterval(-10 * hour)
+        let highWater = now.addingTimeInterval(-2 * hour)
+        let legacy = WatchSensorQueryPlan.windows(now: now, armedAt: armedAt, highWater: highWater)
+        let result = run(WatchSensorDrainCursor(highWater: highWater), armedAt: armedAt)
+
+        XCTAssertEqual(result.plan.backfill, legacy)
+        XCTAssertTrue(result.plan.recent.isEmpty)
+        XCTAssertFalse(result.plan.hasMoreBackfill)
+        XCTAssertEqual(result.cursor, WatchSensorDrainCursor(highWater: end))
+    }
+
+    func testLargeBacklogReadsRecentFirstThenFillsWithoutOverlap() {
+        let armedAt = now.addingTimeInterval(-40 * hour)
+        let highWater = now.addingTimeInterval(-30 * hour)
+        var state = run(WatchSensorDrainCursor(highWater: highWater), armedAt: armedAt)
+
+        // 첫 실행: 최근 1.5시간과 가장 오래된 1.5시간.
+        XCTAssertEqual(state.plan.recent.count, 3)
+        XCTAssertEqual(state.plan.backfill.count, 3)
+        XCTAssertEqual(state.plan.recent.last?.end, end)
+        XCTAssertEqual(state.plan.recent.first?.start, end.addingTimeInterval(-1.5 * hour))
+        XCTAssertEqual(state.plan.backfill.first?.start, highWater)
+        XCTAssertTrue(state.plan.hasMoreBackfill)
+        XCTAssertEqual(state.cursor.recentStart, end.addingTimeInterval(-1.5 * hour))
+        XCTAssertEqual(state.cursor.recentEnd, end)
+        XCTAssertEqual(state.cursor.highWater, highWater.addingTimeInterval(1.5 * hour))
+
+        // 같은 시각에 이어 돌리면 메우기만 나아가고, 다 메우면 처리 위치가 하나로 합쳐진다.
+        var covered = state.plan.ordered
+        var rounds = 1
+        while state.cursor.hasRecentBlock, rounds < 40 {
+            state = run(state.cursor, armedAt: armedAt)
+            covered += state.plan.ordered
+            rounds += 1
+        }
+        XCTAssertEqual(state.cursor, WatchSensorDrainCursor(highWater: end))
+        XCTAssertLessThanOrEqual(rounds, 12)
+        let sorted = covered.sorted { $0.start < $1.start }
+        XCTAssertEqual(sorted.first?.start, highWater)
+        XCTAssertEqual(sorted.last?.end, end)
+        for (previous, next) in zip(sorted, sorted.dropFirst()) {
+            XCTAssertEqual(previous.end, next.start, "틈이나 겹침이 없어야 한다")
+        }
+    }
+
+    func testLaterRunExtendsRecentBlockAndKeepsFilling() {
+        let armedAt = now.addingTimeInterval(-40 * hour)
+        let first = run(WatchSensorDrainCursor(highWater: now.addingTimeInterval(-30 * hour)), armedAt: armedAt)
+        let later = now.addingTimeInterval(40 * 60)
+        let second = run(first.cursor, armedAt: armedAt, at: later)
+
+        // 최근 덩어리 끝에서 3분 겹쳐 지금까지 잇는다.
+        XCTAssertEqual(
+            second.plan.recent.first?.start,
+            end.addingTimeInterval(-WatchSensorQueryPlan.availabilityLag)
+        )
+        XCTAssertEqual(second.plan.recent.last?.end, later.addingTimeInterval(-WatchSensorQueryPlan.availabilityLag))
+        XCTAssertEqual(second.plan.backfill.first?.start, first.cursor.highWater)
+        XCTAssertEqual(second.plan.backfill.count + second.plan.recent.count, 6)
+        XCTAssertEqual(second.cursor.recentStart, first.cursor.recentStart)
+    }
+
+    func testFailureKeepsUnreadWindowsForNextRun() {
+        let armedAt = now.addingTimeInterval(-40 * hour)
+        let highWater = now.addingTimeInterval(-30 * hour)
+        // 메우기 3토막 가운데 1토막만 성공하고 멈춘 경우: 최근 덩어리는 아직 없다.
+        let failed = run(WatchSensorDrainCursor(highWater: highWater), armedAt: armedAt, completed: 1)
+        XCTAssertEqual(failed.cursor.highWater, highWater.addingTimeInterval(0.5 * hour))
+        XCTAssertFalse(failed.cursor.hasRecentBlock)
+
+        // 메우기는 끝났고 최근 3토막 가운데 2토막만 성공한 경우.
+        let partial = run(WatchSensorDrainCursor(highWater: highWater), armedAt: armedAt, completed: 5)
+        XCTAssertEqual(partial.cursor.recentEnd, end.addingTimeInterval(-0.5 * hour))
+        XCTAssertTrue(partial.cursor.hasRecentBlock)
+    }
+
+    func testBacklogBeyondRetentionStartsAtRetentionFloor() {
+        let armedAt = now.addingTimeInterval(-10 * 86_400)
+        let result = run(WatchSensorDrainCursor(highWater: now.addingTimeInterval(-5 * 86_400)), armedAt: armedAt)
+        let floor = now.addingTimeInterval(
+            -WatchSensorQueryPlan.retentionSpan + WatchSensorQueryPlan.retentionMargin
+        )
+        XCTAssertEqual(result.plan.backfill.first?.start, floor)
+        XCTAssertEqual(result.plan.recent.last?.end, end)
+    }
+
+    func testStaleRecentBlockOutsideRetentionIsMerged() {
+        let armedAt = now.addingTimeInterval(-10 * 86_400)
+        let stale = WatchSensorDrainCursor(
+            highWater: now.addingTimeInterval(-6 * 86_400),
+            recentStart: now.addingTimeInterval(-4 * 86_400),
+            recentEnd: now.addingTimeInterval(-3.5 * 86_400)
+        )
+        let normalized = WatchSensorQueryPlan.normalized(stale, now: now, armedAt: armedAt)
+        XCTAssertEqual(normalized, WatchSensorDrainCursor(highWater: stale.recentEnd))
+    }
+
+    func testEveryWindowStaysWithinQueryLimits() {
+        let armedAt = now.addingTimeInterval(-40 * hour)
+        var state = run(WatchSensorDrainCursor(), armedAt: armedAt)
+        var rounds = 0
+        repeat {
+            for window in state.plan.ordered {
+                XCTAssertGreaterThan(window.end, window.start)
+                XCTAssertLessThanOrEqual(window.duration, WatchSensorQueryPlan.chunkSpan)
+                XCTAssertGreaterThanOrEqual(window.start, armedAt)
+                XCTAssertLessThanOrEqual(window.end, end)
+            }
+            XCTAssertLessThanOrEqual(state.plan.ordered.count, 6)
+            state = run(state.cursor, armedAt: armedAt)
+            rounds += 1
+        } while state.cursor.hasRecentBlock && rounds < 40
+        XCTAssertEqual(state.cursor.highWater, end)
+    }
+}
+
 final class WatchCommandCapabilityTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 1_800_000_000)
     private let suiteName = "TaptionPlanTests.WatchCommandCapability.\(UUID().uuidString)"

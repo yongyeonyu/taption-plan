@@ -6,13 +6,15 @@ enum AppleWatchSensorActivityEngine {
         _ summary: TaptionWatchSensorSummary,
         into existing: [ActualRecord],
         linkedPlan: PlanRecord?,
-        atHome: Bool = false
+        atHome: Bool = false,
+        vitals: WatchChunkVitals? = nil
     ) -> [ActualRecord] {
         if summary.isAmbient == true {
             return upsertingAmbientActivity(
                 summary,
                 into: existing,
-                atHome: atHome
+                atHome: atHome,
+                vitals: vitals
             )
         }
         let previous = existing.first {
@@ -156,7 +158,8 @@ enum AppleWatchSensorActivityEngine {
     private static func upsertingAmbientActivity(
         _ summary: TaptionWatchSensorSummary,
         into existing: [ActualRecord],
-        atHome: Bool
+        atHome: Bool,
+        vitals: WatchChunkVitals?
     ) -> [ActualRecord] {
         let recordID = TaptionWatchStableID.ambientActivityRecord(
             sessionID: summary.sessionID,
@@ -177,7 +180,10 @@ enum AppleWatchSensorActivityEngine {
             standardDeviationG: summary.accelerometerStandardDeviationG,
             segments: summary.behaviorSegments ?? []
         )
-        guard atHome, verdict.outcome == .mixedActivity else {
+        // 손목은 걸음 주기를 놓쳐도 HealthKit 걸음 수가 많으면 걷던 시간이다(WSN1112A02).
+        let isWalkingBySteps = (vitals?.stepsPerMinute ?? 0)
+            >= WatchChunkVitals.walkingStepsPerMinute
+        guard atHome, verdict.outcome == .mixedActivity, !isWalkingBySteps else {
             records.removeAll {
                 $0.id == recordID && $0.source == .appleWatch
                     && !ActualRecord.userOwned($0)
@@ -191,12 +197,12 @@ enum AppleWatchSensorActivityEngine {
         let behavior: WatchBehaviorKind = {
             guard let kind = summary.behavior, specific.contains(kind),
                   (summary.behaviorConfidenceScore ?? 0) >= 0.55 else {
-                return .housework
+                return vitals?.isExerciseLevel == true ? .exercise : .housework
             }
             return kind
         }()
         let evidence = Array(Set(
-            verdict.evidence + [
+            verdict.evidence + (vitals?.evidence ?? []) + [
                 "Apple Watch 가속도 원시 기록",
                 "집 위치 내 지속 움직임",
             ]
@@ -274,5 +280,108 @@ enum AppleWatchSensorActivityEngine {
             segments: summary.behaviorSegments ?? []
         ).outcome
         return outcome == .mixedActivity || outcome == .mostlyGait
+    }
+}
+
+/// 평상시 묶음 시간에 HealthKit에 들어와 있던 심박·걸음(WSN1112A02).
+/// Watch가 따로 재지 않고, 시스템이 건강 앱으로 옮겨 둔 값만 읽는다. 없으면 판정은 가속도만으로 한다.
+struct WatchChunkVitals: Equatable, Sendable {
+    /// 10분 묶음의 걸음이 분당 이만큼이면 걷던 시간으로 본다.
+    static let walkingStepsPerMinute = 50.0
+    /// 「운동」으로 보는 심박: 이 값 이상이고 평소 낮은 심박보다 `exerciseRise` 이상 높을 때.
+    static let exerciseHeartRate = 120.0
+    static let exerciseRise = 45.0
+    /// 이보다 긴 걸음 표본은 묶음에 나눠 넣기엔 너무 거칠다.
+    static let maximumStepSampleDuration: TimeInterval = 30 * 60
+
+    /// 평상시 요약은 세션 ID가 같으므로 묶음 번호까지 넣어 가른다.
+    static func key(for summary: TaptionWatchSensorSummary) -> UUID {
+        TaptionWatchStableID.ambientActivityRecord(
+            sessionID: summary.sessionID, sequence: summary.sequence
+        )
+    }
+
+    var averageHeartRate: Double?
+    var heartRateSampleCount = 0
+    /// 묶음 앞 몇 시간 심박의 낮은 쪽 4분의 1 지점. 표본이 모자라면 nil.
+    var restingHeartRate: Double?
+    var stepsPerMinute: Double?
+
+    var isExerciseLevel: Bool {
+        guard let average = averageHeartRate, heartRateSampleCount >= 2,
+              average >= Self.exerciseHeartRate else { return false }
+        guard let resting = restingHeartRate else { return false }
+        return average - resting >= Self.exerciseRise
+    }
+
+    var evidence: [String] {
+        var lines: [String] = []
+        if let average = averageHeartRate {
+            lines.append("심박 평균 \(Int(average.rounded()))bpm(표본 \(heartRateSampleCount)개)")
+        }
+        if let resting = restingHeartRate {
+            lines.append("평소 낮은 심박 \(Int(resting.rounded()))bpm")
+        }
+        if let steps = stepsPerMinute {
+            lines.append("걸음 분당 \(Int(steps.rounded()))")
+        }
+        return lines
+    }
+
+    static func measured(
+        in span: TimeSpan,
+        records: [HealthKitSampleRecord]
+    ) -> WatchChunkVitals? {
+        let usable = records.filter { !$0.userEntered && $0.numericValue?.isFinite == true }
+        let heartRates = usable.filter {
+            $0.typeIdentifier == "HKQuantityTypeIdentifierHeartRate"
+                && (30...240).contains($0.numericValue ?? 0)
+        }
+        let inside = heartRates.filter { span.contains($0.startDate) }
+            .compactMap(\.numericValue)
+        let before = heartRates.filter { $0.startDate < span.start }
+            .compactMap(\.numericValue).sorted()
+        var vitals = WatchChunkVitals()
+        if !inside.isEmpty {
+            vitals.averageHeartRate = inside.reduce(0, +) / Double(inside.count)
+            vitals.heartRateSampleCount = inside.count
+        }
+        if before.count >= 12 {
+            vitals.restingHeartRate = before[before.count / 4]
+        }
+        vitals.stepsPerMinute = stepsPerMinute(in: span, records: usable)
+        guard vitals.averageHeartRate != nil || vitals.stepsPerMinute != nil else {
+            return nil
+        }
+        return vitals
+    }
+
+    /// iPhone과 Watch가 같은 걸음을 따로 적으므로 더하지 않는다. Watch 표본이 있으면 그것만,
+    /// 없으면 출처별 합 가운데 가장 큰 값을 쓴다.
+    private static func stepsPerMinute(
+        in span: TimeSpan,
+        records: [HealthKitSampleRecord]
+    ) -> Double? {
+        guard span.duration >= 60 else { return nil }
+        var bySource: [String: Double] = [:]
+        for record in records
+        where record.typeIdentifier == "HKQuantityTypeIdentifierStepCount" {
+            let length = record.endDate.timeIntervalSince(record.startDate)
+            guard length <= maximumStepSampleDuration, let count = record.numericValue,
+                  count >= 0 else { continue }
+            let overlap = min(span.end, record.endDate)
+                .timeIntervalSince(max(span.start, record.startDate))
+            guard overlap > 0 || (length == 0 && span.contains(record.startDate)) else {
+                continue
+            }
+            let share = length > 0 ? overlap / length : 1
+            let isWatch = record.sourceProductType?.hasPrefix("Watch") == true
+            let key = isWatch
+                ? "watch"
+                : (record.sourceBundleIdentifier ?? record.sourceName ?? "other")
+            bySource[key, default: 0] += count * share
+        }
+        guard let steps = bySource["watch"] ?? bySource.values.max() else { return nil }
+        return steps / (span.duration / 60)
     }
 }

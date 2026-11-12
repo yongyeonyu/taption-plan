@@ -109,6 +109,175 @@ enum WatchSensorQueryPlan {
     }
 }
 
+/// 처리 위치 둘. 밀린 양이 많으면 최근 자료를 먼저 읽고(`recentStart`…`recentEnd`),
+/// 오래된 쪽은 `highWater`부터 `recentStart`까지 나중에 메운다(WSN1112A02).
+struct WatchSensorDrainCursor: Equatable, Sendable {
+    /// 이 시각까지는 빠짐없이 읽었다.
+    var highWater: Date?
+    /// 앞질러 읽어 둔 최근 덩어리. 없으면 둘 다 nil.
+    var recentStart: Date?
+    var recentEnd: Date?
+
+    var hasRecentBlock: Bool { recentStart != nil && recentEnd != nil }
+}
+
+/// 한 번 실행에서 읽을 토막. 둘 다 시간순이고 서로 겹치지 않는다.
+struct WatchSensorDrainPlan: Equatable, Sendable {
+    /// 오래된 쪽을 메우는 토막.
+    var backfill: [WatchSensorQueryWindow] = []
+    /// 최근 덩어리를 잇는 토막.
+    var recent: [WatchSensorQueryWindow] = []
+    /// 최근 덩어리가 시작하는 시각. 메우기는 여기서 멈춘다.
+    var recentStart: Date?
+    /// 이번 실행 뒤에도 메울 것이 남는다.
+    var hasMoreBackfill = false
+    /// 최근 덩어리가 아직 지금까지 닿지 못했다(오래 안 돌아 한 번 분량을 넘음).
+    var hasMoreRecent = false
+
+    var isEmpty: Bool { backfill.isEmpty && recent.isEmpty }
+    /// 읽는 순서. 시간순이라 창 분석기가 그대로 이어 받는다.
+    var ordered: [WatchSensorQueryWindow] { backfill + recent }
+}
+
+extension WatchSensorQueryPlan {
+    /// 밀렸을 때 처음 앞질러 읽는 양(토막 수). 1.5시간.
+    static let initialRecentWindows = 3
+
+    /// 보관 기간을 벗어났거나 메우기가 따라잡은 최근 덩어리를 정리한다.
+    static func normalized(
+        _ cursor: WatchSensorDrainCursor,
+        now: Date,
+        armedAt: Date?
+    ) -> WatchSensorDrainCursor {
+        var value = cursor
+        value.highWater = sanitizedHighWater(cursor.highWater, now: now)
+        guard let start = cursor.recentStart, let end = cursor.recentEnd,
+              start < end, end <= now else {
+            value.recentStart = nil
+            value.recentEnd = nil
+            return value
+        }
+        let floor = max(
+            armedAt ?? .distantPast,
+            now.addingTimeInterval(-retentionSpan + retentionMargin)
+        )
+        // 메우기가 덩어리 시작에 닿았거나, 덩어리 앞이 이미 보관 기간 밖이면 하나로 합친다.
+        if start <= max(value.highWater ?? floor, floor) {
+            value.highWater = max(value.highWater ?? end, end)
+            value.recentStart = nil
+            value.recentEnd = nil
+        }
+        return value
+    }
+
+    /// 이번 실행에서 읽을 토막을 정한다.
+    ///
+    /// 밀린 양이 `budget` 토막 안이면 예전과 똑같이 오래된 것부터 읽는다. 넘으면 최근
+    /// `initialRecentWindows` 토막을 먼저 잡고(이미 덩어리가 있으면 그 끝부터 지금까지),
+    /// 남은 몫으로 오래된 쪽을 메운다.
+    static func plan(
+        now: Date,
+        armedAt: Date?,
+        cursor rawCursor: WatchSensorDrainCursor,
+        budget: Int,
+        chunk: TimeInterval = chunkSpan
+    ) -> WatchSensorDrainPlan {
+        let cursor = normalized(rawCursor, now: now, armedAt: armedAt)
+        let all = windows(
+            now: now, armedAt: armedAt, highWater: cursor.highWater, chunk: chunk
+        )
+        let budget = max(1, budget)
+        guard let armedAt else { return WatchSensorDrainPlan() }
+        if !cursor.hasRecentBlock, all.count <= budget {
+            return WatchSensorDrainPlan(backfill: all)
+        }
+        let end = now.addingTimeInterval(-availabilityLag)
+        let floor = max(
+            armedAt, now.addingTimeInterval(-retentionSpan + retentionMargin)
+        )
+        let backfillStart = max(cursor.highWater ?? floor, floor)
+        let span = min(max(chunk, 1), maximumQuerySpan)
+
+        // 최근 덩어리: 있으면 그 끝에서(늦게 풀린 표본을 위해 조금 겹쳐), 없으면 최근 몇 토막.
+        let recentStart: Date
+        var recentCursor: Date
+        if let start = cursor.recentStart, let blockEnd = cursor.recentEnd {
+            recentStart = start
+            // 방금 읽은 끝에서 창 하나도 안 지났으면 다시 읽지 않는다(`windows`와 같은 기준).
+            recentCursor = end.timeIntervalSince(blockEnd)
+                < WatchBehaviorWindowAnalyzer.windowDuration
+                ? end
+                : max(start, blockEnd.addingTimeInterval(-availabilityLag))
+        } else {
+            let fresh = max(
+                backfillStart,
+                end.addingTimeInterval(-span * Double(min(budget, initialRecentWindows)))
+            )
+            recentStart = fresh
+            recentCursor = fresh
+        }
+        var plan = WatchSensorDrainPlan(recentStart: recentStart)
+        while recentCursor < end, plan.recent.count < budget,
+              end.timeIntervalSince(recentCursor)
+                >= WatchBehaviorWindowAnalyzer.windowDuration {
+            let windowEnd = min(end, recentCursor.addingTimeInterval(span))
+            plan.recent.append(WatchSensorQueryWindow(start: recentCursor, end: windowEnd))
+            recentCursor = windowEnd
+        }
+        plan.hasMoreRecent = end.timeIntervalSince(recentCursor)
+            >= WatchBehaviorWindowAnalyzer.windowDuration
+        // 메우기: 오래된 쪽에서 덩어리 시작까지. 오래 지난 자료라 겹쳐 읽지 않는다.
+        var fillCursor = backfillStart
+        while fillCursor < recentStart,
+              plan.backfill.count + plan.recent.count < budget {
+            let windowEnd = min(recentStart, fillCursor.addingTimeInterval(span))
+            plan.backfill.append(WatchSensorQueryWindow(start: fillCursor, end: windowEnd))
+            fillCursor = windowEnd
+        }
+        plan.hasMoreBackfill = fillCursor < recentStart
+        return plan
+    }
+
+    /// 읽기 결과로 처리 위치를 옮긴다. 실패한 토막부터는 다음 실행이 다시 읽는다.
+    /// - Parameter completed: `plan.ordered` 앞에서부터 성공한 토막 수.
+    static func advanced(
+        _ rawCursor: WatchSensorDrainCursor,
+        plan: WatchSensorDrainPlan,
+        completed: Int,
+        now: Date,
+        armedAt: Date?
+    ) -> WatchSensorDrainCursor {
+        var cursor = normalized(rawCursor, now: now, armedAt: armedAt)
+        let done = max(0, min(completed, plan.ordered.count))
+        let backfillDone = min(done, plan.backfill.count)
+        let recentDone = done - backfillDone
+        if backfillDone > 0 {
+            let reached = plan.backfill[backfillDone - 1].end
+            cursor.highWater = max(cursor.highWater ?? reached, reached)
+        }
+        guard let recentStart = plan.recentStart else {
+            return cursor
+        }
+        if recentDone > 0 {
+            cursor.recentStart = recentStart
+            cursor.recentEnd = max(
+                cursor.recentEnd ?? plan.recent[recentDone - 1].end,
+                plan.recent[recentDone - 1].end
+            )
+        }
+        // 메우기가 덩어리 시작에 닿으면 하나로 합친다.
+        let filled = plan.backfill.isEmpty
+            ? !plan.hasMoreBackfill
+            : backfillDone == plan.backfill.count && !plan.hasMoreBackfill
+        if filled, let recentEnd = cursor.recentEnd, cursor.recentStart != nil {
+            cursor.highWater = max(cursor.highWater ?? recentEnd, recentEnd)
+            cursor.recentStart = nil
+            cursor.recentEnd = nil
+        }
+        return cursor
+    }
+}
+
 /// 조회 결과에 따라 워터마크를 옮기는 규칙.
 ///
 /// 성공한 토막까지만 워터마크를 올린다. 실패한 범위는 다음 실행에서 다시

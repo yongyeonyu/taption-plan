@@ -461,12 +461,72 @@ enum HealthKitBehaviorProjectionEngine {
             evidence.append("sampleCount=\(records.count)")
         }
         if !sources.isEmpty {
-            evidence.append("sources=\(sources.joined(separator: ","))")
+            let labels = Set(sources.map(HealthSourcePrivacy.label)).sorted()
+            evidence.append("sources=\(labels.joined(separator: ","))")
         }
         return evidence
     }
 
     private static func stableUUID(_ seed: String) -> UUID {
         StableRecordID.dualFNV(seed)
+    }
+}
+
+/// 건강 자료의 출처 이름을 근거에 남길 때 기기 종류만 남긴다(WSN1112A02).
+/// 기기 이름에는 「…의 Apple Watch」처럼 사람 이름이 들어 있고, 근거는 원본 내보내기에 실린다.
+enum HealthSourcePrivacy {
+    static let watch = "Apple Watch"
+    static let phone = "iPhone"
+    static let pad = "iPad"
+    static let other = "건강 앱"
+
+    static func label(_ name: String) -> String {
+        let plain = normalized(name)
+        if plain.localizedCaseInsensitiveContains("watch") { return watch }
+        if plain.localizedCaseInsensitiveContains("iphone") { return phone }
+        if plain.localizedCaseInsensitiveContains("ipad") { return pad }
+        return isPossessive(plain) ? other : plain
+    }
+
+    /// 이미 저장된 근거에서 기기 이름을 가린다. 다른 문구는 그대로 둔다.
+    static func sanitized(_ evidence: [String]) -> [String] {
+        var seen = Set<String>()
+        return evidence.compactMap { line -> String? in
+            let value: String
+            if line.hasPrefix("sources=") {
+                let labels = Set(
+                    line.dropFirst("sources=".count)
+                        .split(separator: ",")
+                        .map { label(String($0)) }
+                ).sorted()
+                value = "sources=" + labels.joined(separator: ",")
+            } else if isDeviceName(line) {
+                value = label(line)
+            } else {
+                value = line
+            }
+            return seen.insert(value).inserted ? value : nil
+        }
+    }
+
+    private static func normalized(_ text: String) -> String {
+        text.replacingOccurrences(of: "\u{00A0}", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func isPossessive(_ plain: String) -> Bool {
+        plain.contains("의 ") || plain.contains("'s ") || plain.contains("’s ")
+    }
+
+    /// 「…의 Apple Watch」처럼 소유격 뒤에 기기 종류가 오는 줄만 기기 이름으로 본다.
+    private static func isDeviceName(_ line: String) -> Bool {
+        let plain = normalized(line)
+        guard plain.count <= 80 else { return false }
+        let lowered = plain.lowercased()
+        guard let marker = ["의 ", "'s ", "’s "].compactMap({ lowered.range(of: $0) })
+            .min(by: { $0.lowerBound < $1.lowerBound }) else { return false }
+        return ["watch", "iphone", "ipad"].contains {
+            lowered.range(of: $0, range: marker.upperBound..<lowered.endIndex) != nil
+        }
     }
 }
