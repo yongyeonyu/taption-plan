@@ -239,18 +239,18 @@ struct MapHomeLaunchPromptDeferredButton: View {
     /// 「내가 확인」: 그 질문을 띄운다.
     let onConfirm: (MapHomeLaunchPrompt) -> Void
     @AppStorage(MapHomeLaunchPromptDeferral.key) private var deferredDay = ""
-    @State private var isListPresented = false
-    @State private var list: [MapHomeLaunchPrompt] = []
-    @State private var handed: Set<String> = []
+    /// 목록 내용을 시트와 함께 넘긴다. 따로 둔 상태는 시트가 뜰 때 예전 값(빈 목록)으로 읽혔다(TDL1113A02).
+    @State private var presented: Listing?
+
+    struct Listing: Identifiable {
+        let id = UUID()
+        let items: [MapHomeLaunchPrompt]
+    }
 
     var body: some View {
         // 늘 같은 자리에 둔다(대표 지시 2026-11-12: 생겼다 없어지면 옆 단추가 밀린다). 미뤄 둔 날에만 강조색.
         Button {
-            Task {
-                list = await items()
-                handed = MapHomeLaunchPromptHandoff.handed()
-                isListPresented = true
-            }
+            Task { presented = Listing(items: await items()) }
         } label: {
             Image(systemName: "checklist")
                 .font(.system(size: 18, weight: .semibold))
@@ -261,17 +261,17 @@ struct MapHomeLaunchPromptDeferredButton: View {
         .buttonStyle(.plain)
         .accessibilityLabel(language.text("확인할 것", "Things to check"))
         .accessibilityIdentifier("launchPrompts.deferred")
-        .sheet(isPresented: $isListPresented) {
-            MapHomeTodoSheet(language: language, items: list, handed: handed, canUseAI: MemoPolishQueue.hasConnection()) { prompt in
-                isListPresented = false
+        .sheet(item: $presented) { listing in
+            MapHomeTodoSheet(language: language, items: listing.items, canUseAI: MemoPolishQueue.hasConnection()) { prompt in
+                presented = nil
                 deferredDay = ""
                 // 시트가 닫힌 뒤에 띄운다(두 표시가 겹치면 뒤의 것이 안 뜬다).
                 Task { try? await Task.sleep(for: .milliseconds(450)); onConfirm(prompt) }
             } onHandOff: { prompt in
                 guard let task = MapHomeLaunchPromptHandoff.task(for: prompt),
-                      AITaskQueue.enqueue(task.kind, text: task.text, day: .now) else { return }
+                      AITaskQueue.enqueue(task.kind, text: task.text, day: .now) else { return false }
                 MapHomeLaunchPromptHandoff.markHanded(prompt.id)
-                handed.insert(prompt.id)
+                return true
             }
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
@@ -283,10 +283,11 @@ struct MapHomeLaunchPromptDeferredButton: View {
 struct MapHomeTodoSheet: View {
     let language: MapHomeLanguage
     let items: [MapHomeLaunchPrompt]
-    let handed: Set<String>
     let canUseAI: Bool
     let onConfirm: (MapHomeLaunchPrompt) -> Void
-    let onHandOff: (MapHomeLaunchPrompt) -> Void
+    /// 넘겼으면 true.
+    let onHandOff: (MapHomeLaunchPrompt) -> Bool
+    @State private var handed = MapHomeLaunchPromptHandoff.handed()
 
     var body: some View {
         NavigationStack {
@@ -310,7 +311,7 @@ struct MapHomeTodoSheet: View {
                                     .font(.taptionStyle(.caption))
                                     .foregroundStyle(Color.tpSecondary)
                             } else if canUseAI, MapHomeLaunchPromptHandoff.task(for: item) != nil {
-                                Button(language.text("AI에게 넘기기", "Hand to AI")) { onHandOff(item) }
+                                Button(language.text("AI에게 넘기기", "Hand to AI")) { if onHandOff(item) { handed.insert(item.id) } }
                                     .buttonStyle(.bordered)
                                     .tint(Color.tpAccent)
                             }

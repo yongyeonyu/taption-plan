@@ -1109,5 +1109,50 @@ final class TaptionPlanTravelPlanUITests: XCTestCase {
         blockSpot.tap()
         XCTAssertTrue(app.buttons["더 보기"].waitForExistence(timeout: 5), "선택된 일정을 다시 누르면 편집기가 열린다")
         shot(app, "5-editor")
+        app.buttons["취소"].tap()
+
+        // 지도 접기: 계획표가 커지고 단추가 「지도 펼치기」로 바뀐다. 다시 누르면 돌아온다.
+        let fold = app.buttons["지도 접기"]
+        XCTAssertTrue(fold.waitForExistence(timeout: 5))
+        let before = handle.frame.minY
+        fold.tap()
+        let unfold = app.buttons["지도 펼치기"]
+        XCTAssertTrue(unfold.waitForExistence(timeout: 3))
+        sleep(1)
+        XCTAssertLessThan(handle.frame.minY, before - 40, "지도 접기를 누르면 계획표가 위로 넓어진다")
+        shot(app, "6-map-folded")
+        unfold.tap()
+        XCTAssertTrue(fold.waitForExistence(timeout: 3))
+    }
+}
+
+/// TDL1112A01: 체크리스트 단추를 누르면 「확인할 것」 목록이 열리고, 「내가 확인」이 그 질문을 띄운다.
+final class TaptionPlanTodoListUITests: XCTestCase {
+    func testChecklistButtonOpensTodoListAndConfirmAsks() throws {
+        let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
+        app.launchArguments += ["-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR"]
+        app.launch()
+        let checklist = app.buttons["launchPrompts.deferred"]
+        XCTAssertTrue(checklist.waitForExistence(timeout: 40), "체크리스트 단추는 늘 있다")
+        let later = app.buttons["나중에 확인"]
+        let hadPrompt = later.waitForExistence(timeout: 5)
+        if hadPrompt { later.tap() }
+        XCTAssertTrue(checklist.exists, "미룬 뒤에도 같은 자리에 있다")
+        checklist.tap()
+        XCTAssertTrue(app.navigationBars["확인할 것"].waitForExistence(timeout: 10), "목록이 열린다")
+        let image = XCUIScreen.main.screenshot()
+        let attachment = XCTAttachment(screenshot: image)
+        attachment.name = "todo-list"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        if let folder = ProcessInfo.processInfo.environment["TVU_SHOTS"] {
+            try? image.pngRepresentation.write(to: URL(fileURLWithPath: folder).appendingPathComponent("todo-list.png"))
+        }
+        let confirm = app.buttons["내가 확인"].firstMatch
+        // 방금 미룬 질문이 있었다면 목록에 그 항목이 있어야 한다(빈 목록으로 뜨던 것, TDL1113A02).
+        if hadPrompt { XCTAssertTrue(confirm.waitForExistence(timeout: 3), "미룬 질문이 목록에 보인다") }
+        try XCTSkipUnless(confirm.waitForExistence(timeout: 3), "확인할 것이 없는 기기")
+        confirm.tap()
+        XCTAssertTrue(app.alerts.firstMatch.waitForExistence(timeout: 8) || app.sheets.firstMatch.waitForExistence(timeout: 2), "고른 질문이 뜬다")
     }
 }
