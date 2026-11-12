@@ -367,7 +367,7 @@ test("OAuth: codes are single-use, the app can disconnect, the PIN lock covers a
   const readTokens = await (await handle(formReq("/oauth/token", { grant_type: "authorization_code", code: second.code, redirect_uri: REDIRECT, client_id: client.client_id, code_verifier: second.codeVerifier }), env)).json();
   assert.equal(readTokens.scope, "read");
   const tools = (await mcp(env, readTokens.access_token, rpc("tools/list"))).result.tools;
-  assert.ok(tools.every((t) => t.annotations.readOnlyHint));
+  assert.ok(tools.every((t) => t.annotations.readOnlyHint === !["complete_ai_task", "end_conversation"].includes(t.name)));
   const [grant] = (await (await send(env, "/keys", "GET", undefined, master)).json()).keys;
   assert.equal((await send(env, `/keys?id=${grant.id}`, "DELETE", undefined, master)).status, 204);
   assert.equal((await send(env, "/mcp", "POST", rpc("ping"), readTokens.access_token)).status, 401, "disconnected in the app");

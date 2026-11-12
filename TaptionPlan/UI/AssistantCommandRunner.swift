@@ -160,8 +160,9 @@ enum AssistantCommandRunner {
     /// 앱을 열지 않아도 iOS가 허락한 새로 고침 때 명령을 반영하고 바뀐 날을 올린다.
     /// 대표 결정(2026-11-10): 백그라운드·기기 잠금 중에도 명령을 전부 반영한다. 화면 알림은 띄우지 않고, 사생활 잠금 중에는 올리기만 쉰다.
     /// 큰 묶음은 반영하지 않고 서버에 남겨 다음에 앱을 열 때 묻는다. 남은 시간이 없으면 올리기는 건너뛴다.
+    /// 위치 이벤트로 다시 켜졌을 때도 부른다(AIC1112A01). 그런 깨어남은 잦을 수 있어 5분에 한 번만 돌고, 프로세스가 새로 떠도 지키도록 기기에 적어 둔다.
     static func runInBackground(model: AppModel, budget: TimeInterval = 12) async {
-        guard TripRelay.isAvailable, AssistantRegistration.isReady(), !model.isSceneActive else { return }
+        guard TripRelay.isAvailable, AssistantRegistration.isReady(), !model.isSceneActive, takeBackgroundTurn() else { return }
         let deadline = Date.now.addingTimeInterval(budget)
         // 시간이 짧아 429는 기다리지 않는다.
         await TripRelay.$singleAttempt.withValue(true) {
@@ -171,6 +172,21 @@ enum AssistantCommandRunner {
             guard Date.now < deadline, !Task.isCancelled else { return }
             await AssistantActivitySync.run(model: model)
         }
+    }
+}
+
+extension AssistantCommandRunner {
+    static let backgroundRunKey = "assistantBackgroundRunAt"
+
+    /// 마지막 백그라운드 실행에서 `minimum`이 지났으면 지금을 적고 true. 시계가 뒤로 갔으면 다시 허락한다.
+    static func takeBackgroundTurn(
+        now: Date = .now, defaults: UserDefaults = .standard, minimum: TimeInterval = AssistantActivitySync.minimumInterval
+    ) -> Bool {
+        let last = defaults.double(forKey: backgroundRunKey)
+        let elapsed = now.timeIntervalSince1970 - last
+        guard last == 0 || elapsed >= minimum || elapsed < 0 else { return false }
+        defaults.set(now.timeIntervalSince1970, forKey: backgroundRunKey)
+        return true
     }
 }
 

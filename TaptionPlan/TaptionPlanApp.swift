@@ -296,6 +296,8 @@ final class TaptionPlanAppDelegate:
                 _ = await model.performBackgroundRefresh(
                     wakeReason: .locationRelaunch
                 )
+                // 위치 이벤트로 다시 켜졌을 때도 AI 명령을 반영하고 바뀐 날을 올린다(AIC1112A01).
+                await AssistantCommandRunner.runInBackground(model: model)
             }
         }
         AppleHealthService.shared.startObservingChanges {

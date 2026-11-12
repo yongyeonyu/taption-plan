@@ -64,6 +64,35 @@ extension TripRelay {
         return parts.url
     }
 
+    static let clientHeaderName = "x-bokki-client"
+
+    /// `<기기 종류 식별자>;<빌드>;<공유 수준>[;debug]`. 서버가 AI 응답의 `sync`에 실어 어느 기기의 기록인지 알린다(AIC1112A01).
+    /// 기기 이름·사용자 정보는 넣지 않는다. 모양이 맞지 않으면 보내지 않는다.
+    static func clientHeader(
+        model: String = hardwareModel, build: String? = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String,
+        level: AssistantShareLevel = .current(), debug: Bool = isDebugBuild
+    ) -> String? {
+        let device = String(model.unicodeScalars.filter { $0.isASCII && (CharacterSet.alphanumerics.contains($0) || $0 == ",") }.prefix(24))
+        guard let build, let first = device.unicodeScalars.first, CharacterSet.letters.contains(first),
+              !build.isEmpty, build.count <= 8, build.allSatisfy({ $0.isASCII && $0.isNumber }) else { return nil }
+        return ([device, build, level.rawValue] + (debug ? ["debug"] : [])).joined(separator: ";")
+    }
+
+    /// `iPhone12,3` 같은 기기 종류 식별자(사용자가 붙인 기기 이름이 아니다).
+    static let hardwareModel: String = {
+        var info = utsname()
+        uname(&info)
+        return withUnsafeBytes(of: &info.machine) { String(decoding: $0.prefix { $0 != 0 }, as: UTF8.self) }
+    }()
+
+    static var isDebugBuild: Bool {
+        #if DEBUG
+        true
+        #else
+        false
+        #endif
+    }
+
     /// `token`을 주면 그 키로 부른다(키를 바꾸기 전 예전 키로 지울 때, SEC1110A01).
     /// `host`는 시험에서만 바꾼다(SEC1110A02).
     static func relayRequest(
@@ -74,6 +103,7 @@ extension TripRelay {
         var request = URLRequest(url: url, timeoutInterval: timeout)
         request.httpMethod = method
         request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+        request.setValue(clientHeader(), forHTTPHeaderField: clientHeaderName)
         if let body {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = body

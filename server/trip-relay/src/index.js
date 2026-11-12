@@ -186,6 +186,14 @@ async function adoptInfo(auth) {
   return { keyId: auth.keyId, info: await sealInfo(ring, auth.master, auth.hash, { scope: auth.scope, expiresAt: auth.expiresAt, source: "rest" }) };
 }
 
+// 앱이 보내는 `x-bokki-client: <기기 종류 식별자>;<빌드>;<공유 수준>[;debug]`(AIC1112A01). 모양이 다르면 버린다.
+export function clientInfo(header) {
+  const [device, appBuild, shareLevel, flag, ...rest] = (header ?? "").split(";");
+  if (!/^[A-Za-z][A-Za-z0-9,]{0,23}$/.test(device) || !/^\d{1,8}$/.test(appBuild ?? "") || !["off", "summary", "visits"].includes(shareLevel)
+    || rest.length || (flag !== undefined && flag !== "debug")) return undefined;
+  return { device, appBuild, shareLevel, ...(flag ? { debugBuild: true } : {}) };
+}
+
 async function authorized(request, env, url, route, pathKey = null) {
   const token = pathKey ?? bearer(request);
   const now = env.NOW?.() ?? Date.now(); // 시험에서 시계를 바꿀 수 있게 한다.
@@ -199,6 +207,7 @@ async function authorized(request, env, url, route, pathKey = null) {
   const state = userState(env, auth.master);
   const admission = await state.call("admit", {
     now, registration: auth.kind === "master", entry: auth.entry, adopt: await adoptInfo(auth), kakao: url.pathname.startsWith("/kakao/"),
+    client: auth.kind === "master" ? clientInfo(request.headers.get("x-bokki-client")) : undefined,
   });
   if (!admission.ok) {
     if (admission.tomb) await buryLegacyWrap(env.PLANS, auth.hash);

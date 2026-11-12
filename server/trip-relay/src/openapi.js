@@ -115,7 +115,7 @@ export function openapi(origin) {
       "/activity": {
         get: {
           operationId: "getActivity",
-          summary: "One day (date) or the newest 7 stored days; days may carry goals, trips and sleep when shared",
+          summary: "One day (date) or the newest 7 stored days; days may carry goals, trips and sleep when shared. sync {appLastSeenAt, lastUploadAt, device, appBuild, debugBuild, shareLevel} tells which device uploads and how fresh the data is",
           parameters: [{ name: "date", in: "query", required: false, schema: date }],
           responses: { 200: ok("A day, or {days:[...]}", { type: "object" }), ...empty, 400: { description: "Bad date" }, ...errors },
         },

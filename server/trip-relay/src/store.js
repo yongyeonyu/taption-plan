@@ -306,12 +306,23 @@ export async function saveActivity(ctx, value) {
   return json({ ok: true, dates: value.days.map((day) => day.date), expiresInSeconds: ttl, written: changed.length }, 201);
 }
 
+// 이 연결이 어느 기기 것이고 얼마나 새것인지(AIC1112A01). 앱이 한 번도 오지 않았으면 null.
+export async function readSync(ctx) {
+  const { seenAt, uploadedAt, client } = await ctx.state.call("syncInfo");
+  if (seenAt === null && uploadedAt === null) return null;
+  return { ...(seenAt === null ? {} : { appLastSeenAt: iso(seenAt) }), ...(uploadedAt === null ? {} : { lastUploadAt: iso(uploadedAt) }), ...(client ?? {}) };
+}
+const withSync = async (ctx, value) => {
+  const sync = await readSync(ctx);
+  return sync ? { ...value, sync } : value;
+};
+
 export async function readActivity(ctx, date) {
   if (date !== null && date !== undefined) {
     if (!isDate(date)) return json({ error: "bad_date" }, 400);
     await ensureDays(ctx);
-    const text = await readDay(ctx, date);
-    return text ? stored(text) : json(null, 204);
+    const day = parse((await readDay(ctx, date)) ?? "null", null);
+    return day && typeof day === "object" ? json(await withSync(ctx, day), 200) : json(null, 204);
   }
   const newest = (await storedDays(ctx)).reverse().slice(0, 7);
   const days = [];
@@ -320,7 +331,7 @@ export async function readActivity(ctx, date) {
     if (day) days.push(day);
   }
   const extras = parse((await ctx.store.get(extrasName(ctx))) ?? "{}", {});
-  return days.length ? json({ days, ...extras }, 200) : json(null, 204);
+  return days.length ? json(await withSync(ctx, { days, ...extras }), 200) : json(null, 204);
 }
 
 // 이 주인의 모든 날과 추가 칸을 지운다. 아무것도 없으면 KV를 건드리지 않는다.
@@ -386,7 +397,7 @@ export async function readSummary(ctx, range, end) {
     if (isDate(day?.date)) days.push(day);
     else if (day) days.push({ ...day, date });
   }
-  return days.length ? json(summarize(days, range, start, last), 200) : json(null, 204);
+  return days.length ? json(await withSync(ctx, summarize(days, range, start, last)), 200) : json(null, 204);
 }
 
 // MARK: commands (finding 6, 8, 14)

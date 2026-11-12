@@ -298,6 +298,7 @@ test("activity summary adds up stored days in the week or month ending at end", 
     range: "week", start: "2026-11-04", end: "2026-11-10", daysCovered: 3, dates: ["2026-11-08", "2026-11-09", "2026-11-10"],
     recordedMinutes: 1160, steps: 10000, plansScheduled: 3, plansCompleted: 2, stepDays: 2,
     categories: [{ id: "rest", title: "휴식", minutes: 660 }, { id: "work", title: "Work", minutes: 500 }],
+    sync: week.sync,
   });
   const month = await (await handle(req("/activity/summary?range=month", "GET", undefined, reader), env)).json();
   assert.equal(month.end, "2026-11-10", "defaults to today or the newest stored day");
@@ -331,7 +332,8 @@ test("MCP initialize, tools/list per scope, notifications and JSON-RPC errors", 
     "update_sleep", "update_trip_stop"]);
   const read = (await mcp(env, rpc("tools/list"), reader)).body.result.tools;
   assert.deepEqual(read.map((t) => t.name).sort(), ["complete_ai_task", "end_conversation", "get_activity", "get_ai_tasks", "get_app_state", "get_command_results", "get_polish_requests", "get_summary"]);
-  assert.ok(read.every((t) => t.inputSchema.type === "object" && t.annotations.readOnlyHint));
+  // AIC1112A01: 상태를 바꾸는 둘은 읽기 전용으로 표시하지 않는다.
+  assert.ok(read.every((t) => t.inputSchema.type === "object" && t.annotations.readOnlyHint === !["complete_ai_task", "end_conversation"].includes(t.name)));
   assert.equal((await mcp(env, rpc("resources/list"), reader)).body.error.code, -32601);
   assert.equal((await mcp(env, rpc("tools/call", { name: "nope", arguments: {} }), reader)).body.error.code, -32602);
   assert.equal((await mcp(env, "{not json", reader)).body.error.code, -32700);
@@ -356,7 +358,7 @@ test("MCP tools/call: read tool reads storage, write tool queues a command, read
   const summary = await mcp(env, rpc("tools/call", { name: "get_summary", arguments: { range: "week", end: "2026-11-10" } }), reader);
   assert.equal(summary.body.result.structuredContent.recordedMinutes, 42);
   const nothing = await mcp(env, rpc("tools/call", { name: "get_command_results", arguments: {} }), reader);
-  assert.equal(nothing.body.result.content[0].text, "No data stored.");
+  assert.match(nothing.body.result.content[0].text, /^No edit results yet/);
 
   const denied = await mcp(env, rpc("tools/call", { name: "add_memo", arguments: { text: "우유" } }), reader);
   assert.equal(denied.body.error.code, -32003);

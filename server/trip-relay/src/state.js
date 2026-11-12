@@ -106,7 +106,7 @@ const OPS = {
   },
 
   // 모든 인증 요청이 지나간다: 등록·키 유효성·분당/일당 예산·카카오 하루 수를 한 번에 본다.
-  async admit(s, { now, registration, entry, adopt, kakao }) {
+  async admit(s, { now, registration, entry, adopt, kakao, client }) {
     const reg = await s.get("registration");
     if (registration && !reg) return { ok: false, error: "unregistered" };
     if (entry) {
@@ -135,6 +135,12 @@ const OPS = {
     // AI 연결 키(주 키가 아닌 것)가 마지막으로 온 때. 앱이 AI와 대화 중인지 보고 확인 간격을 정한다(SYN1111A03).
     // 10초 안에 다시 오면 쓰지 않는다(저장 쓰기 절약).
     if (!registration && entry && !((await s.get("aiSeen")) > now - 10_000)) await s.put("aiSeen", now);
+    // 앱(주 키)이 마지막으로 온 때와 그 기기(AIC1112A01). 1분 안에 다시 오면 기기 정보가 바뀌었을 때만 쓴다.
+    if (registration && reg?.purpose !== "search") {
+      const seen = await s.get("appSeen");
+      const next = client ?? seen?.client ?? null;
+      if (!(seen?.at > now - MINUTE_MS) || JSON.stringify(seen.client ?? null) !== JSON.stringify(next)) await s.put("appSeen", { at: now, client: next });
+    }
     return { ok: true, purpose: reg?.purpose ?? null, legacy: await legacyFlags(s) };
   },
 
@@ -413,6 +419,7 @@ const OPS = {
 
   // 만료된 줄을 지우고, 62줄을 넘으면 먼저 끝나는 날부터 뺀다(N13). 뺀 이름은 Worker가 KV에서 지운다.
   async putDays(s, { days, now }) {
+    await s.put("appUploaded", now);
     for (const d of days) await s.put("day:" + d.name, d);
     const rows = (await values(s, "day:")).sort(([, a], [, b]) => a.exp - b.exp);
     const live = rows.filter(([, d]) => d.exp > now);
@@ -420,6 +427,12 @@ const OPS = {
     for (const [name, d] of rows) if (d.exp <= now) await s.delete(name);
     for (const [name] of over) await s.delete(name);
     return { ok: true, dropped: over.map(([, d]) => d.name) };
+  },
+
+  // 앱이 다녀간 때·올린 때·기기 정보(AIC1112A01). 없으면 null.
+  async syncInfo(s) {
+    const seen = await s.get("appSeen");
+    return { seenAt: seen?.at ?? null, uploadedAt: (await s.get("appUploaded")) ?? null, client: seen?.client ?? null };
   },
 
   // names가 null이면 전부.

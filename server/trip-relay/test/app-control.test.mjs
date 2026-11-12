@@ -98,7 +98,7 @@ test("/app: rejects wrong shapes and too many rows", async () => {
 
 test("MCP get_app_state wraps user text and keeps fixed values plain", async () => {
   const { env, master, reader } = await setup();
-  assert.match(JSON.stringify(await (await mcp(env, reader, "get_app_state")).json()), /No data stored/);
+  assert.match(JSON.stringify(await (await mcp(env, reader, "get_app_state")).json()), /No app state stored/);
   await send(env, "/app", "POST", state(), master);
   const value = (await (await mcp(env, reader, "get_app_state")).json()).result.structuredContent;
   assert.deepEqual([value.format, value.settings.language, value.settings.theme, value.settings.mapStyle, value.settings.shareLevel], ["bokki-app", "korean", "classic", "standard", "summary"]);

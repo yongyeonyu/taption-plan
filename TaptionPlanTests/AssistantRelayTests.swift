@@ -58,6 +58,29 @@ final class AssistantRelayTests: XCTestCase {
         return []
     }
 
+    /// AIC1112A01: 서버가 받는 모양(`기기;빌드;공유 수준[;debug]`)만 보내고, 맞지 않으면 보내지 않는다.
+    func testClientHeaderCarriesModelBuildShareLevelAndNothingElse() {
+        XCTAssertEqual(TripRelay.clientHeader(model: "iPhone12,3", build: "323", level: .summary, debug: false), "iPhone12,3;323;summary")
+        XCTAssertEqual(TripRelay.clientHeader(model: "iPhone19,7", build: "324", level: .visits, debug: true), "iPhone19,7;324;visits;debug")
+        XCTAssertEqual(TripRelay.clientHeader(model: "민수의 iPhone;x", build: "1", level: .off, debug: false), "iPhonex;1;off")
+        XCTAssertNil(TripRelay.clientHeader(model: "12,3", build: "323", level: .summary, debug: false))
+        XCTAssertNil(TripRelay.clientHeader(model: "iPhone12,3", build: "3.2", level: .summary, debug: false))
+        XCTAssertNil(TripRelay.clientHeader(model: "iPhone12,3", build: nil, level: .summary, debug: false))
+        let request = TripRelay.relayRequest("/command", method: "GET", token: "K", host: "example.com")
+        XCTAssertEqual(request?.value(forHTTPHeaderField: TripRelay.clientHeaderName), TripRelay.clientHeader())
+        XCTAssertFalse(TripRelay.hardwareModel.isEmpty)
+    }
+
+    /// AIC1112A01: 백그라운드 깨어남이 잦아도 5분에 한 번만 돈다.
+    @MainActor
+    func testBackgroundTurnIsTakenOncePerInterval() {
+        let defaults = defaults()
+        XCTAssertTrue(AssistantCommandRunner.takeBackgroundTurn(now: at(9), defaults: defaults))
+        XCTAssertFalse(AssistantCommandRunner.takeBackgroundTurn(now: at(9, 4), defaults: defaults))
+        XCTAssertTrue(AssistantCommandRunner.takeBackgroundTurn(now: at(9, 5), defaults: defaults))
+        XCTAssertTrue(AssistantCommandRunner.takeBackgroundTurn(now: at(8), defaults: defaults), "시계가 뒤로 가면 막지 않는다")
+    }
+
     func testDayJSONHasNoCoordinateOrAddressKeysAtEitherLevel() throws {
         for level in [AssistantShareLevel.summary, .visits] {
             let day = try XCTUnwrap(AssistantActivityBuilder.make(input(), level: level))
