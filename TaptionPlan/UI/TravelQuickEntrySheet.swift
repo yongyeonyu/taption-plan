@@ -75,13 +75,38 @@ struct TravelQuickEntrySheet: View {
 
     private var isEditing: Bool { target.editing != nil }
 
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+
+    /// 가로로 눕힌 폰처럼 높이가 낮으면 시트를 끝까지 올리고 안을 스크롤한다(자판이 올라와도 이름 칸이 보이게).
+    private var isShort: Bool { verticalSizeClass == .compact }
+
+    static func sheetHeight(hasAdded: Bool, hasSuggestions: Bool) -> CGFloat {
+        236 + (hasAdded ? 40 : 0) + (hasSuggestions ? 38 : 0)
+    }
+
     var body: some View {
+        Group {
+            if isShort { ScrollView { form } } else { form }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(TravelInk.land)
+        .presentationDetents(isShort ? [.large] : [.height(Self.sheetHeight(hasAdded: added != nil, hasSuggestions: !suggestions.isEmpty))])
+        // 패드·펼친 듀오에서는 가운데 뜨는 시트를 내용 높이에 맞춘다.
+        .presentationSizing(.form.fitted(horizontal: false, vertical: true))
+        .presentationDragIndicator(.visible)
+        .preferredColorScheme(.light)
+        .onAppear(perform: prepare)
+        .onChange(of: text) { _, value in read(value) }
+    }
+
+    private var form: some View {
         VStack(alignment: .leading, spacing: 10) {
             header
             if let added { addedRow(added) }
             kindChips
             timeRow
             durationChips
+            if !suggestions.isEmpty { suggestionChips }
             titleRow
             if didFail {
                 Text(language.text("넣지 못했습니다. 다시 해 주세요.", "Could not save. Try again.")).font(.caption).foregroundStyle(TravelInk.actual)
@@ -89,13 +114,10 @@ struct TravelQuickEntrySheet: View {
         }
         .padding(.horizontal, 14)
         .padding(.top, 14)
-        .frame(maxHeight: .infinity, alignment: .top)
-        .background(TravelInk.land)
-        .presentationDetents([.height(added == nil ? 236 : 276)])
-        .presentationDragIndicator(.visible)
-        .preferredColorScheme(.light)
-        .onAppear(perform: prepare)
-        .onChange(of: text) { _, value in read(value) }
+        .padding(.bottom, 12)
+        // 넓은 시트에서도 칩과 이름 칸이 한눈에 들어오게 폭을 묶는다.
+        .frame(maxWidth: 560)
+        .frame(maxWidth: .infinity)
     }
 
     private var header: some View {
@@ -104,6 +126,16 @@ struct TravelQuickEntrySheet: View {
                 .font(.headline).foregroundStyle(TravelInk.plan)
             Spacer()
             if isEditing {
+                // 자주 하는 고치기는 한 번에: 바로 뒤에 복제, 하루 옮기기, 지우기.
+                Menu {
+                    Button(language.text("바로 뒤에 복제", "Duplicate right after"), systemImage: "plus.square.on.square") { Task { await duplicate() } }
+                    Button(language.text("전날로", "Move to previous day"), systemImage: "arrow.left") { Task { await shiftDay(-1) } }
+                    Button(language.text("다음 날로", "Move to next day"), systemImage: "arrow.right") { Task { await shiftDay(1) } }
+                } label: {
+                    Image(systemName: "ellipsis.circle").font(.title3).foregroundStyle(TravelInk.plan).frame(width: 40, height: 32)
+                }
+                .accessibilityLabel(language.text("더 보기", "More"))
+                .accessibilityIdentifier("travelEntryMore")
                 Button(language.text("지우기", "Delete"), role: .destructive) { Task { await remove() } }
                     .accessibilityIdentifier("travelEntryDelete")
             } else {
@@ -182,6 +214,39 @@ struct TravelQuickEntrySheet: View {
                     .buttonStyle(.plain)
                 }
             }
+        }
+        .scrollIndicators(.hidden)
+    }
+
+    /// 이름 후보: 이 여행에서 같은 분류로 이미 쓴 이름(최근 것부터 6개). 누르면 이름 칸에 들어간다.
+    static func suggestions(items: [TravelTripItem], tripID: String, kind: TripImportItem.Kind, typed: String) -> [String] {
+        let typed = typed.trimmingCharacters(in: .whitespaces)
+        var seen = Set<String>(), result: [String] = []
+        for item in items.reversed() where item.tripID == tripID && item.kind == kind.rawValue && item.title != kind.planName && item.title != typed {
+            if seen.insert(item.title).inserted { result.append(item.title) }
+            if result.count == 6 { break }
+        }
+        return result
+    }
+
+    private var suggestions: [String] {
+        isEditing ? [] : Self.suggestions(items: model.settings.travelTripItems ?? [], tripID: target.tripID, kind: kind, typed: text)
+    }
+
+    private var suggestionChips: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 6) {
+                ForEach(suggestions, id: \.self) { title in
+                    Button { text = title } label: {
+                        Text(title).font(.footnote).lineLimit(1)
+                            .padding(.horizontal, 10).frame(height: 28)
+                            .foregroundStyle(TravelInk.plan)
+                            .overlay { Capsule().stroke(TravelInk.border, lineWidth: 1) }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.vertical, 1)
         }
         .scrollIndicators(.hidden)
     }
@@ -278,6 +343,24 @@ struct TravelQuickEntrySheet: View {
             startMinute = ((local % 86_400) + 86_400) % 86_400 / 60
             added = nil
         }
+    }
+
+    /// 같은 종류·이름·길이로 바로 뒤에 하나 더 넣는다.
+    private func duplicate() async {
+        guard let item = target.editing else { return }
+        let length = item.end.timeIntervalSince(item.start)
+        let added = await model.addTripItem(
+            tripID: item.tripID, kind: TripImportItem.Kind(rawValue: item.kind) ?? .other, title: item.title,
+            start: item.end, end: item.end.addingTimeInterval(length), offsetSeconds: item.endOffsetSeconds
+        )
+        didFail = added == nil
+        if !didFail { dismiss() }
+    }
+
+    private func shiftDay(_ days: Int) async {
+        guard let item = target.editing else { return }
+        didFail = !(await model.moveTripItem(tripID: item.tripID, itemID: item.itemID, by: TimeInterval(days * 86_400)))
+        if !didFail { dismiss() }
     }
 
     private func remove() async {

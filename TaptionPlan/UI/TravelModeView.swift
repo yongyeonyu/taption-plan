@@ -325,6 +325,7 @@ struct TravelModeView: View {
     @State private var newTripDraft: TravelNewTripSheet.Draft?
     @State private var ledgerTripID: String?
     @State private var entryTarget: TravelQuickEntrySheet.Target?
+    @State private var timeUndo: TravelTimeUndo?
     @State private var didEnter = false
     /// 계획표 시트가 올라와 있는지. 올라오면 작은 시간 막대는 사라진다(대표 결정).
     @State private var isPlanUp = false
@@ -335,6 +336,14 @@ struct TravelModeView: View {
 
     private var entries: [TravelTripDirectory.Entry] {
         model.travelTripEntries(names: Dictionary(book.trips.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first }))
+    }
+
+    /// 넓은 화면(패드, 펼친 듀오)이나 가로 모드: 계획표를 아래 전체가 아니라 오른쪽 판으로 둔다.
+    static func isWide(_ size: CGSize) -> Bool { size.width >= 700 || size.width > size.height }
+
+    /// 계획표 높이: 세로 폰은 화면의 절반, 넓은 화면·가로는 머리말과 아래 줄을 뺀 나머지(화면의 70%까지).
+    static func planTableHeight(_ size: CGSize) -> CGFloat {
+        isWide(size) ? max(120, min(size.height - 250, size.height * 0.7)) : size.height * 0.5
     }
 
     private var restRadius: Double { Double(min(viewSize.width, viewSize.height)) * 0.38 }
@@ -804,18 +813,23 @@ struct TravelModeView: View {
                 TravelPlanTable(
                     table: table(entry), language: language,
                     onSelect: { block in editEntry(entry, itemID: block.id) },
-                    onAdd: { column, minute in addEntry(entry, column: column, minute: minute) }
+                    onAdd: { column, minute in addEntry(entry, column: column, minute: minute) },
+                    onMove: { block, minutes in editTimes(entry, block: block, move: minutes) },
+                    onResize: { block, minutes in editTimes(entry, block: block, resize: minutes) }
                 )
                     .id(dayKey(entry))
-                    .frame(height: viewSize.height * 0.5)
+                    .frame(height: Self.planTableHeight(viewSize))
                     .padding(.horizontal, 8)
             }
+            if let undo = timeUndo, undo.tripID == entry.id, isPlanUp { undoRow(undo) }
             tripFooter(entry)
         }
         .background(TravelInk.panel, in: RoundedRectangle(cornerRadius: 18))
         .overlay { RoundedRectangle(cornerRadius: 18).stroke(TravelInk.border, lineWidth: 1) }
+        .frame(maxWidth: Self.isWide(viewSize) ? min(460, viewSize.width * 0.5) : .infinity)
         .padding(.horizontal, 10)
         .padding(.bottom, 8)
+        .frame(maxWidth: .infinity, alignment: .trailing)
         .gesture(DragGesture(minimumDistance: 12).onEnded { value in
             // 위로 끌면 올리고 아래로 끌면 내린다.
             guard abs(value.translation.height) > 30 else { return }
@@ -837,6 +851,49 @@ struct TravelModeView: View {
             trip: entry.trip, dayKey: key, dayLabel: dayLabel(entry, key: key),
             startMinute: minute ?? TravelQuickEntry.nextStart(lastEndMinute: last?.endMinute, nowMinute: table.nowMinute), kind: kind
         )
+    }
+
+    /// 계획표에서 끌어 옮기거나 길이를 바꾼 것을 저장하고, 되돌릴 수 있게 남긴다.
+    private func editTimes(_ entry: TravelTripDirectory.Entry, block: TravelPlanTableModel.Block, move: Int = 0, resize: Int = 0) {
+        Task {
+            let done = move != 0
+                ? await model.moveTripItem(tripID: entry.id, itemID: block.id, by: TimeInterval(move * 60))
+                : await model.resizeTripItem(tripID: entry.id, itemID: block.id, endDelta: TimeInterval(resize * 60))
+            guard done else { return }
+            let start = block.startMinute + move, end = block.endMinute + move + resize
+            withAnimation(.snappy(duration: 0.2)) {
+                timeUndo = TravelTimeUndo(
+                    tripID: entry.id, itemID: block.id, move: move, resize: resize,
+                    summary: block.title + " " + TravelQuickEntrySheet.clock(start) + "–" + TravelQuickEntrySheet.clock(end)
+                )
+            }
+        }
+    }
+
+    private func undoRow(_ undo: TravelTimeUndo) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "arrow.up.and.down")
+            Text(undo.summary).lineLimit(1)
+            Spacer()
+            Button(language.text("되돌리기", "Undo")) {
+                Task {
+                    if undo.move != 0 {
+                        await model.moveTripItem(tripID: undo.tripID, itemID: undo.itemID, by: TimeInterval(-undo.move * 60))
+                    } else {
+                        await model.resizeTripItem(tripID: undo.tripID, itemID: undo.itemID, endDelta: TimeInterval(-undo.resize * 60))
+                    }
+                    withAnimation(.snappy(duration: 0.2)) { timeUndo = nil }
+                }
+            }
+            .accessibilityIdentifier("travelPlanUndo")
+        }
+        .font(.footnote)
+        .foregroundStyle(TravelInk.plan)
+        .padding(.horizontal, 10)
+        .frame(height: 30)
+        .background(TravelInk.planTint, in: RoundedRectangle(cornerRadius: 8))
+        .padding(.horizontal, 10)
+        .padding(.top, 4)
     }
 
     private func editEntry(_ entry: TravelTripDirectory.Entry, itemID: String) {
@@ -872,6 +929,15 @@ struct TravelModeView: View {
         let calendar = Calendar.autoupdatingCurrent
         return TravelTripDay.components(entry.trip.startDay).flatMap(calendar.date(from:)) ?? items.first?.start ?? .now
     }
+}
+
+/// 계획표에서 방금 끌어 바꾼 시각(되돌리기용).
+struct TravelTimeUndo: Equatable {
+    var tripID: String
+    var itemID: String
+    var move: Int
+    var resize: Int
+    var summary: String
 }
 
 private struct TravelLedgerTarget: Identifiable {

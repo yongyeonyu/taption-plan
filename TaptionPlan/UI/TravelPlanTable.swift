@@ -110,6 +110,16 @@ struct TravelPlanTable: View {
     let onSelect: (TravelPlanTableModel.Block) -> Void
     /// 빈 곳을 누름: 열과 15분 단위 시각.
     var onAdd: (Int, Int) -> Void = { _, _ in }
+    /// 길게 눌러 끌어 옮김: 옮긴 분.
+    var onMove: (TravelPlanTableModel.Block, Int) -> Void = { _, _ in }
+    /// 들어 올린 칸의 아래 손잡이를 끌어 길이를 바꿈: 끝이 옮겨진 분.
+    var onResize: (TravelPlanTableModel.Block, Int) -> Void = { _, _ in }
+
+    /// 길게 눌러 들어 올린 칸. 들린 칸은 몸통을 끌면 옮겨지고 아래 손잡이를 끌면 길이가 바뀐다.
+    @State private var liftedID: String?
+    /// 끄는 동안의 변화(5분 단위로만 바뀌어 화면 갱신이 드물다).
+    @State private var moveMinutes = 0
+    @State private var resizeMinutes = 0
 
     private let minuteHeight = TravelPlanTable.minuteHeight
     private let axisWidth = TravelPlanTable.leading - 12
@@ -118,6 +128,19 @@ struct TravelPlanTable: View {
     static let minuteHeight: CGFloat = 0.9
     /// 시간축과 실제 띠가 차지하는 왼쪽 너비.
     static let leading: CGFloat = 50
+    static let dragStep = 5
+
+    /// 끈 거리를 5분 단위 분으로. 시작이 0시 앞으로, 끝이 24시 뒤로 나가지 않게 막는다.
+    static func moveDelta(translation: CGFloat, start: Int, end: Int) -> Int {
+        let raw = Int((translation / minuteHeight / CGFloat(dragStep)).rounded()) * dragStep
+        return min(max(raw, -start), 1_440 - end)
+    }
+
+    /// 끝을 끈 거리를 5분 단위 분으로. 길이가 15분보다 짧아지거나 24시를 넘지 않게 막는다.
+    static func resizeDelta(translation: CGFloat, start: Int, end: Int) -> Int {
+        let raw = Int((translation / minuteHeight / CGFloat(dragStep)).rounded()) * dragStep
+        return min(max(raw, start + 15 - end), 1_440 - end)
+    }
 
     /// 누른 자리의 열과 시각(15분 단위). 시간축 쪽을 누르면 nil.
     static func slot(x: CGFloat, y: CGFloat, width: CGFloat) -> (column: Int, minute: Int)? {
@@ -143,7 +166,9 @@ struct TravelPlanTable: View {
             .padding(.vertical, 6)
             Divider().overlay(TravelInk.border)
             ScrollViewReader { reader in
+                // 칸을 들어 올린 동안에는 스크롤을 멈춰, 손잡이를 끌 때 표가 대신 밀리지 않게 한다.
                 ScrollView { dayBody }
+                    .scrollDisabled(liftedID != nil)
                     // 처음 그린 뒤에 옮겨야 자리가 잡힌다.
                     .task {
                         await Task.yield()
@@ -194,7 +219,12 @@ struct TravelPlanTable: View {
         .frame(width: width, height: 1_440 * minuteHeight)
         .contentShape(Rectangle())
         .gesture(SpatialTapGesture().onEnded { value in
-            if let slot = Self.slot(x: value.location.x, y: value.location.y, width: width) { onAdd(slot.column, slot.minute) }
+            // 들어 올린 칸이 있으면 먼저 내려놓는다.
+            if liftedID != nil {
+                liftedID = nil
+            } else if let slot = Self.slot(x: value.location.x, y: value.location.y, width: width) {
+                onAdd(slot.column, slot.minute)
+            }
         })
         .accessibilityIdentifier("travelPlanGrid")
     }
@@ -219,33 +249,91 @@ struct TravelPlanTable: View {
     }
 
     private func planBlock(_ block: TravelPlanTableModel.Block, columnWidth: CGFloat) -> some View {
-        let height = max(18, CGFloat(block.endMinute - block.startMinute) * minuteHeight)
+        let isLifted = liftedID == block.id
+        let start = block.startMinute + (isLifted ? moveMinutes : 0)
+        let end = block.endMinute + (isLifted ? moveMinutes + resizeMinutes : 0)
+        let height = max(18, CGFloat(end - start) * minuteHeight)
         let missed = block.status == .skipped
-        return Button { onSelect(block) } label: {
-            VStack(alignment: .leading, spacing: 1) {
-                HStack(spacing: 2) {
-                    if block.status == .done { Image(systemName: "checkmark").font(.system(size: 8, weight: .bold)) }
-                    if block.status == .late { Image(systemName: "clock.badge.exclamationmark").font(.system(size: 9)).foregroundStyle(TravelInk.actual) }
-                    Text(block.title).font(.caption2.weight(.semibold)).lineLimit(height > 30 ? 2 : 1)
-                }
-                if height > 34 {
-                    Text(String(format: "%02d:%02d", block.startMinute / 60, block.startMinute % 60)).font(.system(size: 10)).opacity(0.75)
-                }
+        return VStack(alignment: .leading, spacing: 1) {
+            HStack(spacing: 2) {
+                if block.status == .done { Image(systemName: "checkmark").font(.system(size: 8, weight: .bold)) }
+                if block.status == .late { Image(systemName: "clock.badge.exclamationmark").font(.system(size: 9)).foregroundStyle(TravelInk.actual) }
+                Text(block.title).font(.caption2.weight(.semibold)).lineLimit(height > 30 ? 2 : 1)
             }
-            .padding(3)
-            .frame(width: columnWidth - 4, height: height, alignment: .topLeading)
-            .background(TravelInk.planTint.opacity(block.tripStatus == .tentative ? 0.5 : 1), in: RoundedRectangle(cornerRadius: 5))
-            .overlay {
-                RoundedRectangle(cornerRadius: 5).stroke(
-                    missed ? TravelInk.actual : TravelInk.plan,
-                    style: StrokeStyle(lineWidth: block.tripStatus == .booked || missed ? 1.5 : 1, dash: block.tripStatus == .tentative ? [3, 3] : [])
-                )
+            if height > 34 || isLifted {
+                Text(isLifted ? Self.clock(start) + "–" + Self.clock(end) : Self.clock(start)).font(.system(size: 10).monospacedDigit()).opacity(0.75)
             }
         }
-        .buttonStyle(.plain)
+        .padding(3)
+        .frame(width: columnWidth - 4, height: height, alignment: .topLeading)
+        .background(isLifted ? Color.white : TravelInk.planTint.opacity(block.tripStatus == .tentative ? 0.5 : 1), in: RoundedRectangle(cornerRadius: 5))
+        .overlay {
+            RoundedRectangle(cornerRadius: 5).stroke(
+                missed ? TravelInk.actual : TravelInk.plan,
+                style: StrokeStyle(lineWidth: isLifted ? 2 : block.tripStatus == .booked || missed ? 1.5 : 1, dash: block.tripStatus == .tentative ? [3, 3] : [])
+            )
+        }
+        .overlay(alignment: .bottom) { if isLifted { resizeHandle(block) } }
+        .shadow(color: .black.opacity(isLifted ? 0.25 : 0), radius: 6, y: 3)
+        .contentShape(Rectangle())
+        // 들린 칸은 눌러도 그대로 둔다(길게 누른 손을 뗄 때 바로 내려놓이지 않게). 내려놓기는 빈 곳을 누른다.
+        .onTapGesture { if !isLifted { onSelect(block) } }
+        .gesture(moveGesture(block))
         .foregroundStyle(TravelInk.plan)
-        .offset(x: axisWidth + actualWidth + columnWidth * CGFloat(block.column) + 2, y: CGFloat(block.startMinute) * minuteHeight)
+        .offset(x: axisWidth + actualWidth + columnWidth * CGFloat(block.column) + 2, y: CGFloat(start) * minuteHeight)
+        .zIndex(isLifted ? 1 : 0)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
         .accessibilityIdentifier("travelPlanBlock-\(block.id)")
+    }
+
+    private static func clock(_ minute: Int) -> String { String(format: "%02d:%02d", minute / 60 % 24, minute % 60) }
+
+    /// 길게 누르면 들리고, 그대로 끌면 옮겨진다. 손을 떼면 그 자리에 놓는다(들린 채로 남아 길이 손잡이를 쓸 수 있다).
+    private func moveGesture(_ block: TravelPlanTableModel.Block) -> some Gesture {
+        LongPressGesture(minimumDuration: 0.3)
+            .onEnded { _ in
+                liftedID = block.id
+                moveMinutes = 0
+                resizeMinutes = 0
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            }
+            .sequenced(before: DragGesture(minimumDistance: 0))
+            .onChanged { value in
+                guard case .second(true, let drag?) = value else { return }
+                let next = Self.moveDelta(translation: drag.translation.height, start: block.startMinute, end: block.endMinute)
+                if next != moveMinutes {
+                    moveMinutes = next
+                    UISelectionFeedbackGenerator().selectionChanged()
+                }
+            }
+            .onEnded { _ in
+                let moved = moveMinutes
+                moveMinutes = 0
+                if moved != 0 { onMove(block, moved) }
+            }
+    }
+
+    /// 들린 칸 아래의 손잡이: 끌면 끝 시각이 바뀐다.
+    private func resizeHandle(_ block: TravelPlanTableModel.Block) -> some View {
+        Capsule().fill(TravelInk.plan).frame(width: 26, height: 5)
+            // 칸 밖은 눌리지 않으므로 손잡이 자리를 칸 안쪽 아래 20pt로 둔다.
+            .frame(maxWidth: .infinity).frame(height: 20, alignment: .bottom)
+            .contentShape(Rectangle())
+            .highPriorityGesture(DragGesture(minimumDistance: 1)
+                .onChanged { value in
+                    let next = Self.resizeDelta(translation: value.translation.height, start: block.startMinute, end: block.endMinute)
+                    if next != resizeMinutes {
+                        resizeMinutes = next
+                        UISelectionFeedbackGenerator().selectionChanged()
+                    }
+                }
+                .onEnded { _ in
+                    let changed = resizeMinutes
+                    resizeMinutes = 0
+                    if changed != 0 { onResize(block, changed) }
+                })
+            .accessibilityLabel(language.text("길이 바꾸기", "Change length"))
     }
 }
 

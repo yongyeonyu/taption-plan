@@ -372,6 +372,42 @@ final class TravelTripUnitTests: XCTestCase {
         XCTAssertFalse(missing)
     }
 
+    /// TVR1112A01: 끌어 옮기기·길이 바꾸기의 5분 단위 계산과 하루 경계, 이름 후보.
+    func testDragDeltasSnapAndStayInsideTheDay() {
+        let h = TravelPlanTable.minuteHeight
+        XCTAssertEqual(TravelPlanTable.moveDelta(translation: 32 * h, start: 600, end: 660), 30)
+        XCTAssertEqual(TravelPlanTable.moveDelta(translation: -34 * h, start: 600, end: 660), -35)
+        XCTAssertEqual(TravelPlanTable.moveDelta(translation: -900 * h, start: 600, end: 660), -600, "0시 앞으로 나가지 않는다")
+        XCTAssertEqual(TravelPlanTable.moveDelta(translation: 2_000 * h, start: 600, end: 660), 780, "24시 뒤로 나가지 않는다")
+        XCTAssertEqual(TravelPlanTable.resizeDelta(translation: 28 * h, start: 600, end: 660), 30)
+        XCTAssertEqual(TravelPlanTable.resizeDelta(translation: -200 * h, start: 600, end: 660), -45, "15분보다 짧아지지 않는다")
+        XCTAssertEqual(TravelPlanTable.resizeDelta(translation: 2_000 * h, start: 600, end: 660), 780)
+    }
+
+    /// 듀오·패드와 가로 모드: 넓으면 오른쪽 판, 계획표 높이는 화면 안에 든다.
+    func testWideAndLandscapeLayouts() {
+        let phone = CGSize(width: 402, height: 874), phoneLandscape = CGSize(width: 874, height: 402)
+        let pad = CGSize(width: 820, height: 1_180), padLandscape = CGSize(width: 1_180, height: 820), duo = CGSize(width: 720, height: 800)
+        XCTAssertFalse(TravelModeView.isWide(phone))
+        for size in [phoneLandscape, pad, padLandscape, duo] { XCTAssertTrue(TravelModeView.isWide(size), "\(size)") }
+        XCTAssertEqual(TravelModeView.planTableHeight(phone), 437)
+        XCTAssertEqual(TravelModeView.planTableHeight(phoneLandscape), 152)
+        XCTAssertEqual(TravelModeView.planTableHeight(pad), 826)
+        XCTAssertEqual(TravelModeView.planTableHeight(padLandscape), 570)
+        XCTAssertEqual(TravelQuickEntrySheet.sheetHeight(hasAdded: true, hasSuggestions: true), 314)
+    }
+
+    func testTitleSuggestionsAreRecentTitlesOfTheSameKind() {
+        func item(_ id: String, _ kind: String, _ title: String, trip: String = "t1") -> TravelTripItem {
+            TravelTripItem(tripID: trip, itemID: id, kind: kind, title: title, start: .now, end: .now.addingTimeInterval(60), startOffsetSeconds: 0, endOffsetSeconds: 0, planID: nil)
+        }
+        let items = [item("1", "meal", "라멘"), item("2", "sight", "성"), item("3", "meal", TripImportItem.Kind.meal.planName), item("4", "meal", "야타이"),
+                     item("5", "meal", "라멘"), item("6", "meal", "스시", trip: "t2")]
+        XCTAssertEqual(TravelQuickEntrySheet.suggestions(items: items, tripID: "t1", kind: .meal, typed: ""), ["라멘", "야타이"])
+        XCTAssertEqual(TravelQuickEntrySheet.suggestions(items: items, tripID: "t1", kind: .meal, typed: "라멘 "), ["야타이"])
+        XCTAssertEqual(TravelQuickEntrySheet.suggestions(items: items, tripID: "t1", kind: .cafe, typed: ""), [])
+    }
+
     func testTappedSpotBecomesColumnAndQuarterHour() throws {
         // 너비 350: 왼쪽 50은 시간축, 열 하나는 75.
         let slot = try XCTUnwrap(TravelPlanTable.slot(x: 130, y: 12 * 60 * TravelPlanTable.minuteHeight + 9, width: 350))

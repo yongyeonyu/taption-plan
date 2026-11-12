@@ -1,0 +1,437 @@
+{
+ "format": "bokki-trip",
+ "version": 1,
+ "tripId": "trip-20261120-fuk",
+ "title": "후쿠오카 2박 3일",
+ "startDate": "2026-11-20",
+ "endDate": "2026-11-22",
+ "returnsToOrigin": true,
+ "items": [
+  {
+   "id": "d1-train",
+   "type": "transfer",
+   "title": "니시테츠 전철 텐진→다자이후",
+   "start": "2026-11-20T08:50+09:00",
+   "end": "2026-11-20T09:20+09:00",
+   "place": {
+    "name": "Nishitetsu Dazaifu Station",
+    "lat": 33.51944,
+    "lng": 130.53139,
+    "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Nishitetsu+Dazaifu+Station"
+   },
+   "note": "전철 30분 (Crossroad Fukuoka)"
+  },
+  {
+   "id": "d1-dazaifu",
+   "type": "sight",
+   "title": "다자이후 텐만구",
+   "start": "2026-11-20T09:30+09:00",
+   "end": "2026-11-20T10:30+09:00",
+   "place": {
+    "name": "Dazaifu Tenmangu",
+    "lat": 33.52139,
+    "lng": 130.53472,
+    "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Dazaifu+Tenmangu"
+   },
+   "travelFromPrevious": {
+    "mode": "walk",
+    "minutes": 5
+   },
+   "note": "우메가에모치, 구마 겐고 스타벅스"
+  },
+  {
+   "id": "d1-museum",
+   "type": "sight",
+   "title": "규슈 국립박물관",
+   "start": "2026-11-20T10:40+09:00",
+   "end": "2026-11-20T11:15+09:00",
+   "place": {
+    "name": "Kyushu National Museum",
+    "lat": 33.51806,
+    "lng": 130.53833,
+    "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Kyushu+National+Museum"
+   },
+   "travelFromPrevious": {
+    "mode": "walk",
+    "minutes": 10
+   }
+  },
+  {
+   "id": "d1-back",
+   "type": "transfer",
+   "title": "다자이후→오호리 공원",
+   "start": "2026-11-20T11:15+09:00",
+   "end": "2026-11-20T12:00+09:00",
+   "place": {
+    "name": "Ohori Park",
+    "lat": 33.58611,
+    "lng": 130.37639,
+    "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Ohori+Park"
+   },
+   "travelFromPrevious": {
+    "mode": "transit",
+    "minutes": 55
+   },
+   "note": "도보 15분 + 전철 20분 + 도보 20분"
+  },
+  {
+   "id": "d1-ohori",
+   "type": "sight",
+   "title": "오호리 공원·후쿠오카 성터",
+   "start": "2026-11-20T12:00+09:00",
+   "end": "2026-11-20T13:30+09:00",
+   "place": {
+    "name": "Ohori Park",
+    "lat": 33.58611,
+    "lng": 130.37639,
+    "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Ohori+Park"
+   },
+   "note": "백조 보트, 성터 산책"
+  },
+  {
+   "id": "d1-lunch",
+   "type": "meal",
+   "title": "공원 점심",
+   "start": "2026-11-20T13:30+09:00",
+   "end": "2026-11-20T14:15+09:00",
+   "place": {
+    "name": "Fukuoka Art Museum",
+    "lat": 33.58417,
+    "lng": 130.37917,
+    "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Fukuoka+Art+Museum"
+   },
+   "travelFromPrevious": {
+    "mode": "walk",
+    "minutes": 5
+   }
+  },
+  {
+   "id": "d1-daimyo",
+   "type": "meal",
+   "title": "다이묘: 잇푸도 본점 라멘",
+   "start": "2026-11-20T14:30+09:00",
+   "end": "2026-11-20T15:30+09:00",
+   "place": {
+    "name": "Ippudo Daimyo Honten",
+    "lat": 33.58806,
+    "lng": 130.39417,
+    "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Ippudo+Daimyo+Honten"
+   },
+   "travelFromPrevious": {
+    "mode": "walk",
+    "minutes": 15
+   }
+  },
+  {
+   "id": "d1-craft",
+   "type": "cafe",
+   "title": "Fukuoka Craft",
+   "start": "2026-11-20T15:30+09:00",
+   "end": "2026-11-20T16:10+09:00",
+   "place": {
+    "name": "Fukuoka Craft Daimyo",
+    "lat": 33.5875,
+    "lng": 130.39333,
+    "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Fukuoka+Craft+Daimyo"
+   },
+   "travelFromPrevious": {
+    "mode": "walk",
+    "minutes": 3
+   },
+   "note": "15시부터 영업",
+   "status": "tentative"
+  },
+  {
+   "id": "d1-canal",
+   "type": "shopping",
+   "title": "캐널시티 하카타",
+   "start": "2026-11-20T16:30+09:00",
+   "end": "2026-11-20T18:00+09:00",
+   "place": {
+    "name": "Canal City Hakata",
+    "lat": 33.58972,
+    "lng": 130.41083,
+    "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Canal+City+Hakata"
+   },
+   "travelFromPrevious": {
+    "mode": "walk",
+    "minutes": 20
+   },
+   "note": "라멘 스타디움"
+  },
+  {
+   "id": "d1-yatai",
+   "type": "meal",
+   "title": "나카스 야타이",
+   "start": "2026-11-20T18:15+09:00",
+   "end": "2026-11-20T19:45+09:00",
+   "place": {
+    "name": "Nakasu Yatai Yokocho",
+    "lat": 33.59083,
+    "lng": 130.40667,
+    "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Nakasu+Yatai+Yokocho"
+   },
+   "travelFromPrevious": {
+    "mode": "walk",
+    "minutes": 8
+   },
+   "note": "18시 이후"
+  },
+  {
+   "id": "d1-hotel",
+   "type": "lodging",
+   "title": "호텔 체크인",
+   "start": "2026-11-20T20:10+09:00",
+   "end": "2026-11-20T20:30+09:00",
+   "place": {
+    "name": "Hakata Station",
+    "lat": 33.58972,
+    "lng": 130.42056,
+    "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Hakata+Station"
+   },
+   "travelFromPrevious": {
+    "mode": "walk",
+    "minutes": 15
+   },
+   "status": "booked"
+  },
+  {
+   "id": "d1-sleep",
+   "type": "sleep",
+   "title": "취침",
+   "start": "2026-11-20T23:00+09:00",
+   "end": "2026-11-20T23:59+09:00",
+   "place": {
+    "name": "Hakata Station",
+    "lat": 33.58972,
+    "lng": 130.42056,
+    "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Hakata+Station"
+   }
+  },
+  {
+   "id": "d2-bus",
+   "type": "transfer",
+   "title": "하카타역→메이노하마 선착장",
+   "start": "2026-11-21T08:10+09:00",
+   "end": "2026-11-21T08:57+09:00",
+   "place": {
+    "name": "Meinohama Ferry Terminal",
+    "lat": 33.59694,
+    "lng": 130.3125,
+    "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Meinohama+Ferry+Terminal"
+   },
+   "travelFromPrevious": {
+    "mode": "transit",
+    "minutes": 47
+   },
+   "note": "버스 47분"
+  },
+  {
+   "id": "d2-ferry",
+   "type": "transfer",
+   "title": "노코노시마 페리",
+   "start": "2026-11-21T09:15+09:00",
+   "end": "2026-11-21T09:25+09:00",
+   "place": {
+    "name": "Nokonoshima Ferry Terminal",
+    "lat": 33.61417,
+    "lng": 130.30889,
+    "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Nokonoshima+Ferry+Terminal"
+   },
+   "travelFromPrevious": {
+    "mode": "transit",
+    "minutes": 10
+   },
+   "note": "09:15 배"
+  },
+  {
+   "id": "d2-park",
+   "type": "sight",
+   "title": "노코노시마 아일랜드 파크",
+   "start": "2026-11-21T09:45+09:00",
+   "end": "2026-11-21T12:30+09:00",
+   "place": {
+    "name": "Nokonoshima Island Park",
+    "lat": 33.63444,
+    "lng": 130.30083,
+    "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Nokonoshima+Island+Park"
+   },
+   "travelFromPrevious": {
+    "mode": "transit",
+    "minutes": 15
+   },
+   "note": "섬 버스 15분, 노코 우동 점심"
+  },
+  {
+   "id": "d2-return",
+   "type": "transfer",
+   "title": "섬→메이노하마→모모치",
+   "start": "2026-11-21T12:45+09:00",
+   "end": "2026-11-21T14:15+09:00",
+   "place": {
+    "name": "Fukuoka Tower",
+    "lat": 33.59333,
+    "lng": 130.35139,
+    "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Fukuoka+Tower"
+   },
+   "travelFromPrevious": {
+    "mode": "transit",
+    "minutes": 90
+   },
+   "note": "버스·페리·버스 301/302(13분)"
+  },
+  {
+   "id": "d2-momochi",
+   "type": "sight",
+   "title": "모모치 해변 공원",
+   "start": "2026-11-21T14:30+09:00",
+   "end": "2026-11-21T16:20+09:00",
+   "place": {
+    "name": "Seaside Momochi Beach Park",
+    "lat": 33.595,
+    "lng": 130.35194,
+    "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Seaside+Momochi+Beach+Park"
+   },
+   "travelFromPrevious": {
+    "mode": "walk",
+    "minutes": 5
+   }
+  },
+  {
+   "id": "d2-tower",
+   "type": "photo",
+   "title": "후쿠오카 타워 일몰",
+   "start": "2026-11-21T16:30+09:00",
+   "end": "2026-11-21T17:45+09:00",
+   "place": {
+    "name": "Fukuoka Tower",
+    "lat": 33.59333,
+    "lng": 130.35139,
+    "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Fukuoka+Tower"
+   },
+   "travelFromPrevious": {
+    "mode": "walk",
+    "minutes": 5
+   }
+  },
+  {
+   "id": "d2-dinner",
+   "type": "meal",
+   "title": "모츠나베 저녁",
+   "start": "2026-11-21T18:45+09:00",
+   "end": "2026-11-21T20:15+09:00",
+   "place": {
+    "name": "Hakata Motsunabe Yamanaka",
+    "lat": 33.57556,
+    "lng": 130.40889,
+    "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Hakata+Motsunabe+Yamanaka"
+   },
+   "travelFromPrevious": {
+    "mode": "transit",
+    "minutes": 35
+   },
+   "note": "가게는 글에 없어 임의 후보",
+   "status": "tentative"
+  },
+  {
+   "id": "d2-sleep",
+   "type": "sleep",
+   "title": "취침",
+   "start": "2026-11-21T23:00+09:00",
+   "end": "2026-11-21T23:59+09:00",
+   "place": {
+    "name": "Hakata Station",
+    "lat": 33.58972,
+    "lng": 130.42056,
+    "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Hakata+Station"
+   }
+  },
+  {
+   "id": "d3-kushida",
+   "type": "sight",
+   "title": "구시다 신사",
+   "start": "2026-11-22T09:30+09:00",
+   "end": "2026-11-22T10:20+09:00",
+   "place": {
+    "name": "Kushida Shrine",
+    "lat": 33.59306,
+    "lng": 130.41056,
+    "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Kushida+Shrine"
+   },
+   "travelFromPrevious": {
+    "mode": "walk",
+    "minutes": 15
+   },
+   "note": "야마카사 장식"
+  },
+  {
+   "id": "d3-sumiyoshi",
+   "type": "sight",
+   "title": "스미요시 신사",
+   "start": "2026-11-22T10:40+09:00",
+   "end": "2026-11-22T11:20+09:00",
+   "place": {
+    "name": "Sumiyoshi Shrine Fukuoka",
+    "lat": 33.58556,
+    "lng": 130.41361,
+    "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Sumiyoshi+Shrine+Fukuoka"
+   },
+   "travelFromPrevious": {
+    "mode": "walk",
+    "minutes": 15
+   }
+  },
+  {
+   "id": "d3-shop",
+   "type": "shopping",
+   "title": "JR 하카타 시티 기념품",
+   "start": "2026-11-22T11:40+09:00",
+   "end": "2026-11-22T12:30+09:00",
+   "place": {
+    "name": "JR Hakata City",
+    "lat": 33.59,
+    "lng": 130.42,
+    "mapsUrl": "https://www.google.com/maps/search/?api=1&query=JR+Hakata+City"
+   },
+   "travelFromPrevious": {
+    "mode": "walk",
+    "minutes": 12
+   }
+  },
+  {
+   "id": "d3-lunch",
+   "type": "meal",
+   "title": "하카타 멘카이도",
+   "start": "2026-11-22T12:30+09:00",
+   "end": "2026-11-22T13:15+09:00",
+   "place": {
+    "name": "Hakata Station",
+    "lat": 33.58972,
+    "lng": 130.42056,
+    "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Hakata+Station"
+   },
+   "travelFromPrevious": {
+    "mode": "walk",
+    "minutes": 3
+   }
+  },
+  {
+   "id": "d3-airport",
+   "type": "transfer",
+   "title": "하카타역→후쿠오카 공항",
+   "start": "2026-11-22T13:30+09:00",
+   "end": "2026-11-22T13:45+09:00",
+   "place": {
+    "name": "Fukuoka Airport",
+    "lat": 33.58444,
+    "lng": 130.45167,
+    "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Fukuoka+Airport"
+   },
+   "travelFromPrevious": {
+    "mode": "transit",
+    "minutes": 15
+   },
+   "note": "지하철 2정거장"
+  }
+ ]
+}
