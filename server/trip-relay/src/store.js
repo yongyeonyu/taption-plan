@@ -5,7 +5,7 @@
 import { nameKey, openJson, sealJson, tagOf } from "./crypto.js";
 import { json, stored, tooMany } from "./http.js";
 import { chargeWrites } from "./state.js";
-import { ACTIVITY_EXTRAS, QUEUE_LIMIT, cleanCommand, commandReason, isActivityUpload, isAppState, cleanAppState, isCommand, isCommandResults, isDate, isPolishList, isTaskResult, isTaskUpload, isTripPlan, TASK_LIMIT } from "./validate.js";
+import { ACTIVITY_EXTRAS, QUEUE_LIMIT, cleanCommand, commandReason, isActivityUpload, isAnswerList, cleanAnswers, isAppState, cleanAppState, isCommand, isCommandResults, isDate, isPolishList, isTaskResult, isTaskUpload, isTripPlan, TASK_LIMIT } from "./validate.js";
 
 const DAY = 24 * 60 * 60;
 const DAY_MS = DAY * 1000;
@@ -89,6 +89,29 @@ export async function readPolish(ctx) {
 
 export async function deletePolish(ctx) {
   if ((await ctx.kv.get(polishName(ctx))) != null) await ctx.kv.delete(polishName(ctx));
+  return json(null, 204);
+}
+
+// MARK: 질문과 답 (ASK1112A01)
+
+// AI가 askUser 명령으로 물은 것과 사용자의 답. 앱이 목록 전체를 바꿔 쓰고 AI는 읽기만 한다. 7일 뒤 사라진다.
+const answersName = (ctx) => "answers:" + ctx.master;
+export async function saveAnswers(ctx, value) {
+  if (!isAnswerList(value)) return json({ error: "not_answer_list" }, 422);
+  const charge = await chargeWrites(ctx.env, ctx.state, 1, ctx.now);
+  if (!charge.ok) return overBudget(charge);
+  const answers = cleanAnswers(value);
+  await ctx.store.put(answersName(ctx), JSON.stringify({ format: "bokki-answers", version: 1, answers }), { expirationTtl: POLISH_TTL_SECONDS });
+  return json({ ok: true, count: answers.length, expiresInSeconds: POLISH_TTL_SECONDS }, 201);
+}
+
+export async function readAnswers(ctx) {
+  const text = await ctx.store.get(answersName(ctx));
+  return text ? stored(text) : json(null, 204);
+}
+
+export async function deleteAnswers(ctx) {
+  if ((await ctx.kv.get(answersName(ctx))) != null) await ctx.kv.delete(answersName(ctx));
   return json(null, 204);
 }
 

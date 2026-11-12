@@ -1304,6 +1304,110 @@ final class AssistantAppControlTests: XCTestCase {
         XCTAssertEqual(LedgerReviewStore(defaults: store).items, [first, second], "기기에 남는다")
     }
 
+    /// ASK1112A01: 질문 명령을 서버와 같은 규칙으로 읽는다.
+    func testAskUserParsesQuestionWithTwoToFourDistinctOptions() throws {
+        let parsed = try batch([
+            command("q1", "askUser", ["question": " 어제 14시에 머문 곳은 어디였나요? ", "options": ["회사", " 카페 "], "multiSelect": true]),
+            command("q2", "askUser", ["question": "Which?", "options": ["A", "B", "C", "D"]]),
+            command("one", "askUser", ["question": "Q?", "options": ["A"]]),
+            command("five", "askUser", ["question": "Q?", "options": ["A", "B", "C", "D", "E"]]),
+            command("same", "askUser", ["question": "Q?", "options": ["A", "A "]]),
+            command("blank", "askUser", ["question": "Q?", "options": ["A", " "]]),
+            command("noQuestion", "askUser", ["options": ["A", "B"]]),
+            command("long", "askUser", ["question": String(repeating: "가", count: 201), "options": ["A", "B"]]),
+            command("longOption", "askUser", ["question": "Q?", "options": ["A", String(repeating: "나", count: 61)]]),
+        ])
+        XCTAssertEqual(parsed.invalidIDs, ["one", "five", "same", "blank", "noQuestion", "long", "longOption"])
+        guard case let .askUser(first) = parsed.commands[0].action, case let .askUser(second) = parsed.commands[1].action else { return XCTFail("askUser") }
+        XCTAssertEqual([first.id, first.question], ["q1", "어제 14시에 머문 곳은 어디였나요?"], "질문 id는 명령 id다")
+        XCTAssertEqual(first.options, ["회사", "카페"])
+        XCTAssertTrue(first.multiSelect)
+        XCTAssertFalse(second.multiSelect)
+        XCTAssertEqual(parsed.commands.map(\.action.kind), [.askUser, .askUser])
+        XCTAssertEqual(parsed.commands[0].action.existingChangeCount, 0)
+    }
+
+    /// ASK1112A01: 질문은 자료를 바꾸지 않고 기기에 남으며, 답·건너뛰기·되돌리기와 올릴 본문.
+    func testAskUserStoresTheQuestionAnswersUploadAndUndoWithdrawsOnlyUnanswered() async throws {
+        let store = defaults()
+        let model = await model()
+        let preferences = AssistantPreferenceStore.test(store)
+        func question(_ id: String, multi: Bool = false) throws -> AssistantQuestion {
+            try XCTUnwrap(AssistantQuestion.make(id: id, question: "어디였나요?", options: ["회사", "카페", "집"], multiSelect: multi, now: at(11, 12, 9)))
+        }
+        let asked = await model.applyAssistantAction(.askUser(try question("q1")), preferences: preferences)
+        XCTAssertNil(asked.reason)
+        XCTAssertEqual(asked.appChange?.questionID, "q1")
+        XCTAssertEqual(preferences.questions.waiting.map(\.id), ["q1"])
+        XCTAssertEqual(preferences.questions.announced?.id, "q1", "알림으로 보인다")
+        XCTAssertTrue(preferences.questions.needsUpload, "기다리는 질문도 AI가 볼 수 있게 올린다")
+        XCTAssertTrue(model.snapshot.plans.isEmpty && model.snapshot.memos.isEmpty, "자료는 바꾸지 않는다")
+        let again = await model.applyAssistantAction(.askUser(try question("q1")), preferences: preferences)
+        XCTAssertEqual(again.reason, "duplicate")
+
+        let questions = preferences.questions
+        XCTAssertFalse(questions.answer("q1", choices: ["없는 보기"], text: "  "), "보기에 없는 것과 빈 글은 답이 아니다")
+        XCTAssertTrue(questions.answer("q1", choices: ["카페", "회사"], text: " 스타벅스 2층 ", now: at(11, 12, 10)))
+        XCTAssertEqual(questions.items[0].choices, ["회사"], "하나만 고르는 질문은 보기 순서의 첫 것만")
+        XCTAssertEqual(questions.items[0].text, "스타벅스 2층")
+        XCTAssertNil(questions.announced)
+        XCTAssertFalse(questions.answer("q1", choices: ["집"], text: nil), "한 번만 답한다")
+
+        _ = await model.applyAssistantAction(.askUser(try question("q2", multi: true)), preferences: preferences)
+        _ = await model.applyAssistantAction(.askUser(try question("q3")), preferences: preferences)
+        XCTAssertTrue(questions.answer("q2", choices: ["집", "회사"], text: nil, now: at(11, 12, 11)))
+        XCTAssertEqual(questions.items[1].choices, ["회사", "집"])
+        let reloaded = AssistantQuestionStore(defaults: store)
+        XCTAssertEqual(reloaded.items, questions.items, "앱이 다시 켜져도 남는다")
+
+        let body = try XCTUnwrap(questions.uploadBody())
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+        XCTAssertEqual(json["format"] as? String, "bokki-answers")
+        let answers = try XCTUnwrap(json["answers"] as? [[String: Any]])
+        XCTAssertEqual(answers.map { $0["status"] as? String }, ["answered", "answered", "waiting"])
+        XCTAssertEqual(answers[0]["choices"] as? [String], ["회사"])
+        XCTAssertEqual(answers[0]["text"] as? String, "스타벅스 2층")
+        XCTAssertNil(answers[2]["choices"])
+        XCTAssertNotNil(answers[0]["answeredAt"])
+
+        let kept = await model.undoAssistantEntry(logEntry(.askUser, asked), preferences: preferences)
+        XCTAssertTrue(kept)
+        XCTAssertEqual(questions.items.count, 3, "답한 질문은 되돌려도 남는다")
+        let third = AssistantEditResult(after: "어디였나요?", appChange: AssistantAppChange(questionID: "q3"))
+        _ = await model.undoAssistantEntry(logEntry(.askUser, third), preferences: preferences)
+        XCTAssertEqual(questions.items.map(\.id), ["q1", "q2"], "답하지 않은 질문은 거둔다")
+
+        questions.skip("q2")
+        XCTAssertEqual(questions.items[1].status, .answered, "답한 것은 건너뛰기로 바뀌지 않는다")
+        questions.clearFinished()
+        XCTAssertNil(questions.uploadBody(), "비면 서버 목록을 지운다")
+        let old = AssistantQuestionStore(defaults: store)
+        var stale = try question("old")
+        stale.askedAt = at(11, 1, 9)
+        old.add(stale, now: at(11, 1, 9))
+        XCTAssertEqual(old.items.map(\.id), ["old"])
+        old.prune(now: at(11, 12, 9))
+        XCTAssertTrue(old.items.isEmpty, "7일 지난 질문은 버린다")
+    }
+
+    /// ASK1112A01: 꺼 두면 받지 않고, 안내문에 질문 명령과 답 읽는 길이 있다.
+    func testAskUserCanBeTurnedOffAndIsInTheSetupText() async throws {
+        let store = defaults()
+        let model = await model()
+        AssistantActionToggles.set(.askUser, enabled: false, defaults: store)
+        let outcome = await model.applyAssistantCommands(try batch([command("off", "askUser", ["question": "Q?", "options": ["A", "B"]])]), defaults: store)
+        XCTAssertEqual(outcome?.results.map(\.reason), ["disabled"])
+        XCTAssertTrue(AssistantQuestionStore(defaults: store).items.isEmpty)
+        AssistantActionToggles.set(.askUser, enabled: true, defaults: store)
+        let applied = await model.applyAssistantCommands(try batch([command("on", "askUser", ["question": "Q?", "options": ["A", "B"]])]), defaults: store)
+        XCTAssertEqual(applied?.questions, 1)
+        XCTAssertEqual(applied?.notice(.korean)?.contains("질문 1개"), true)
+        let write = TripRelay.assistantSetupText(host: "relay.example.com", key: "K", scope: .write)
+        XCTAssertTrue(write.contains("\"askUser\",\"question\""))
+        XCTAssertTrue(write.contains("GET /answers"))
+        XCTAssertFalse(TripRelay.assistantSetupText(host: "relay.example.com", key: "K", scope: .read).contains("askUser"))
+    }
+
     func testOpenScreenWaitsUntilTakenExpiresAndUndoCancelsIt() async throws {
         let store = defaults()
         let model = await model()

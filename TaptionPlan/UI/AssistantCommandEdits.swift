@@ -19,6 +19,8 @@ enum AssistantActionKind: String, CaseIterable, Identifiable, Codable, Sendable 
     case addPaymentRule
     // ACX1112A01
     case setBudget, addOwnAccount, removeOwnAccount, deletePaymentRule, resolveReview, deleteInboxItem, openScreen
+    // ASK1112A01
+    case askUser
 
     var id: String { rawValue }
 
@@ -58,6 +60,7 @@ enum AssistantActionKind: String, CaseIterable, Identifiable, Codable, Sendable 
         case .resolveReview: language.text("확인 필요 결제 넣기·버리기", "Add or discard payments to review")
         case .deleteInboxItem: language.text("받은 결제 문자 지우기", "Delete received payment texts")
         case .openScreen: language.text("앱 화면 열기", "Open app screens")
+        case .askUser: language.text("앱에서 질문하기", "Ask questions in the app")
         }
     }
 }
@@ -142,6 +145,7 @@ extension AssistantCommand.Action {
         case .resolveReview: .resolveReview
         case .deleteInboxItem: .deleteInboxItem
         case .openScreen: .openScreen
+        case .askUser: .askUser
         }
     }
 
@@ -149,7 +153,7 @@ extension AssistantCommand.Action {
     /// 루틴을 지우면 하위 일정도 함께 지워지므로 `plans`를 주면 그 수까지 센다(REV1110A06).
     func existingChangeCount(plans: [PlanRecord] = []) -> Int {
         switch self {
-        case .addMemo, .addSchedule, .addGoal, .addTripStop, .setBubble, .addExpense, .classifyUnconfirmed, .addPaymentRule, .addOwnAccount, .openScreen: 0
+        case .addMemo, .addSchedule, .addGoal, .addTripStop, .setBubble, .addExpense, .classifyUnconfirmed, .addPaymentRule, .addOwnAccount, .openScreen, .askUser: 0
         case let .mergeRecords(_, ids, _, _): ids.count
         case let .deleteGoal(goalID):
             1 + (UUID(uuidString: goalID).flatMap { try? PlanHierarchy.descendants(of: $0, in: plans) }?.count ?? 0)

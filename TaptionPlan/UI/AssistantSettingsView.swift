@@ -237,6 +237,7 @@ extension MapHomeView {
                     AssistantActivityObserver(model: model)
                     AssistantConfirmHost(model: model, language: language) { AssistantInbox.current.show($0) }
                     AssistantScreenHost(language: language) { openAssistantScreen($0) }
+                    AssistantQuestionHost(language: language)
                 }
                 AssistantBubbleLinkBar(language: language)
                     .frame(maxWidth: .infinity, alignment: .leading)

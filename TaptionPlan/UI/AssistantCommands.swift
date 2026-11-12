@@ -53,6 +53,8 @@ struct AssistantCommand: Identifiable, Equatable, Sendable {
         case deleteInboxItem(UUID)
         /// 앱이 앞에 있을 때 화면을 띄운다. 자료는 바꾸지 않는다.
         case openScreen(AssistantScreen)
+        /// ASK1112A01: 앱에서 객관식으로 묻는다. 기록은 바꾸지 않고, 답은 앱이 서버에 올린다.
+        case askUser(AssistantQuestion)
     }
 
     let id: String
@@ -111,6 +113,8 @@ enum AssistantCommandParser {
         let name: String?, pattern: String?, sample: String?
         // ACX1112A01: setBudget·deletePaymentRule·resolveReview·deleteInboxItem·openScreen.
         let amountKRW: Double?, month: String?, ruleId: String?, reviewId: String?, decision: String?, inboxId: String?, screen: String?
+        // ASK1112A01: askUser.
+        let question: String?, options: [String]?, multiSelect: Bool?
     }
 
     /// `{"commands":[...]}`를 읽는다. 서버와 같은 규칙으로 다시 본다.
@@ -325,6 +329,7 @@ struct AssistantCommandOutcome: Equatable, Sendable {
     var settings = 0
     var bubbles = 0
     var ledger = 0
+    var questions = 0
     /// 「AI가 한 일」에 남길 항목(AIR1110A02).
     var entries: [AssistantLogEntry] = []
 
@@ -337,6 +342,7 @@ struct AssistantCommandOutcome: Equatable, Sendable {
         case .setLanguage, .setMapStyle, .setDisplayOption, .addPaymentRule: settings += 1
         case .setBudget, .addOwnAccount, .removeOwnAccount, .deletePaymentRule, .deleteInboxItem, .openScreen: settings += 1
         case .resolveReview: ledger += 1
+        case .askUser: questions += 1
         case .setBubble: bubbles += 1
         case .addExpense, .updateExpense: ledger += 1
         }
@@ -353,6 +359,7 @@ struct AssistantCommandOutcome: Equatable, Sendable {
         if settings > 0 { parts.append(language.text("설정 \(settings)개", "\(settings) setting(s)")) }
         if bubbles > 0 { parts.append(language.text("말풍선 \(bubbles)개", "\(bubbles) bubble(s)")) }
         if ledger > 0 { parts.append(language.text("가계부 \(ledger)개", "\(ledger) ledger entr(ies)")) }
+        if questions > 0 { parts.append(language.text("질문 \(questions)개", "\(questions) question(s)")) }
         if rejected > 0 { parts.append(language.text("못 한 것 \(rejected)개", "\(rejected) not done")) }
         return language.text("AI 비서 요청을 반영했어요", "Applied AI assistant requests") + ": " + parts.joined(separator: " · ")
     }

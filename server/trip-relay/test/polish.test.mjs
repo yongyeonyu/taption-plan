@@ -168,3 +168,70 @@ test("fx: fetched once a day, cached, stale fallback", async () => {
   assert.equal(stale.stale, true);
   assert.equal(stale.rates.JPY, 170);
 });
+
+// ASK1112A01: AI가 묻고(askUser) 앱이 답을 올리면(/answers) AI가 읽는다.
+const answers = (items) => ({ format: "bokki-answers", version: 1, answers: items });
+const mcpCall = async (env, key, name, args = {}) =>
+  (await (await send(env, "/mcp", "POST", { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name, arguments: args } }, key)).json()).result;
+
+test("askUser: 2-4 distinct options, a question, optional multiSelect; read keys cannot ask", async () => {
+  const { env, master, ai } = await setup();
+  const writer = randomKey();
+  assert.equal((await send(env, "/keys", "POST", { keys: [{ token: writer, scope: "write", expiresAt: null }], pin: PIN }, master)).status, 201);
+  const ask = (fields, key = writer, id = `q-${crypto.randomUUID()}`) =>
+    send(env, "/command", "POST", { format: "bokki-command", version: 1, id, action: "askUser", ...fields }, key).then((r) => r.status);
+  assert.equal(await ask({ question: "어제 14시에 머문 곳은 어디였나요?", options: ["회사", "카페"], multiSelect: false, extra: "x" }), 201);
+  assert.equal(await ask({ question: "Which?", options: ["A", "B", "C", "D"] }), 201);
+  const bad = [
+    {}, { question: "Q?" }, { question: "Q?", options: ["A"] }, { question: "Q?", options: ["A", "B", "C", "D", "E"] },
+    { question: "Q?", options: ["A", "A "] }, { question: "Q?", options: ["A", ""] }, { question: "Q?", options: ["A", 2] },
+    { question: " ", options: ["A", "B"] }, { question: "가".repeat(201), options: ["A", "B"] }, { question: "Q?", options: ["A", "나".repeat(61)] },
+    { question: "Q?", options: ["A", "B"], multiSelect: "yes" }, { question: "Q?", options: "A,B" },
+  ];
+  for (const fields of bad) assert.equal(await ask(fields), 422, JSON.stringify(fields).slice(0, 60));
+  assert.equal(await ask({ question: "Q?", options: ["A", "B"] }, ai), 403);
+
+  const queued = await (await send(env, "/command", "GET", undefined, master)).json();
+  assert.deepEqual(queued.commands.map((c) => [c.action, c.question, c.options, c.multiSelect, c.extra]),
+    [["askUser", "어제 14시에 머문 곳은 어디였나요?", ["회사", "카페"], false, undefined], ["askUser", "Which?", ["A", "B", "C", "D"], undefined, undefined]]);
+
+  const viaMcp = await mcpCall(env, writer, "ask_user", { question: "점심 결제는 본인 것인가요?", options: ["네", "아니요"] });
+  assert.equal(viaMcp.isError, undefined);
+  assert.match(viaMcp.structuredContent.id, /^mcp-/);
+});
+
+test("answers: app writes the whole list, AI reads it, MCP wraps the user's words", async () => {
+  const { env, master, ai } = await setup();
+  assert.equal((await send(env, "/answers", "GET", undefined, ai)).status, 204);
+  assert.match((await mcpCall(env, ai, "get_answers")).content[0].text, /^No questions stored/);
+  const items = [
+    { id: "mcp-A1B2C3D4-E5F6-4789-9ABC-DEF012345678", question: "어디였나요?", status: "answered", choices: ["카페"], text: "스타벅스 2층", askedAt: "2026-11-12T03:00:00Z", answeredAt: "2026-11-12T03:05:00Z", extra: 1 },
+    { id: "q-2", question: "Which?", status: "waiting", choices: ["ignored while waiting"], askedAt: "2026-11-12T03:10:00Z" },
+    { id: "q-3", question: "Keep?", status: "skipped" },
+  ];
+  const saved = await send(env, "/answers", "POST", answers(items), master);
+  assert.equal(saved.status, 201);
+  assert.equal((await saved.json()).count, 3);
+  assert.deepEqual((await (await send(env, "/answers", "GET", undefined, ai)).json()).answers, [
+    { id: items[0].id, question: "어디였나요?", status: "answered", choices: ["카페"], text: "스타벅스 2층", askedAt: "2026-11-12T03:00:00Z", answeredAt: "2026-11-12T03:05:00Z" },
+    { id: "q-2", question: "Which?", status: "waiting", askedAt: "2026-11-12T03:10:00Z" },
+    { id: "q-3", question: "Keep?", status: "skipped" },
+  ]);
+  const [first] = (await mcpCall(env, ai, "get_answers")).structuredContent.answers;
+  assert.equal(first.status, "answered");
+  assert.equal(first.answeredAt, "2026-11-12T03:05:00Z");
+  assert.deepEqual(first.text, { untrusted_user_text: "스타벅스 2층" });
+  assert.deepEqual(first.choices, [{ untrusted_user_text: "카페" }]);
+
+  assert.equal((await send(env, "/answers", "POST", answers(items), ai)).status, 403, "only the app writes answers");
+  const bad = [
+    answers([]), answers([{ id: "q", question: "Q?", status: "done" }]), answers([{ id: "q", question: "Q?", status: "answered" }]),
+    answers([{ id: "q", question: "Q?", status: "answered", text: "가".repeat(201) }]), answers([{ id: "q", question: "", status: "waiting" }]),
+    answers([{ id: "q", question: "Q?", status: "waiting" }, { id: "q", question: "Q2?", status: "waiting" }]),
+    answers([{ id: "q", question: "Q?", status: "waiting", askedAt: "soon" }]), { ...answers(items), format: "bokki-polish" },
+    answers(Array.from({ length: 21 }, (_, n) => ({ id: `q-${n}`, question: "Q?", status: "waiting" }))),
+  ];
+  for (const value of bad) assert.equal((await send(env, "/answers", "POST", value, master)).status, 422, JSON.stringify(value).slice(0, 80));
+  assert.equal((await send(env, "/answers", "DELETE", undefined, master)).status, 204);
+  assert.equal((await send(env, "/answers", "GET", undefined, ai)).status, 204);
+});

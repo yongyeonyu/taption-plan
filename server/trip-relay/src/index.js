@@ -105,6 +105,12 @@ const ROUTES = {
     POST: ["master", withBody(store.savePolish)],
     DELETE: ["master", (request, ctx) => store.deletePolish(ctx)],
   },
+  // ASK1112A01: AI가 물은 질문과 사용자의 답. 앱이 올리고 AI가 읽는다.
+  "/answers": {
+    GET: ["read", (request, ctx) => store.readAnswers(ctx)],
+    POST: ["master", withBody(store.saveAnswers)],
+    DELETE: ["master", (request, ctx) => store.deleteAnswers(ctx)],
+  },
   // ACX1112A01: 앱 상태(설정·가계부·확인 필요·받은 문자·규칙). 앱이 올리고 AI가 읽는다.
   "/app": {
     GET: ["read", (request, ctx) => store.readAppState(ctx)],

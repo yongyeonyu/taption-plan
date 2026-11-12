@@ -365,6 +365,8 @@ struct AssistantAppChange: Codable, Equatable, Sendable {
     var review: LedgerReviewStore.Item?
     /// 열어 달라고 한 화면. 아직 띄우지 않았을 때만 거둔다.
     var screen: AssistantScreen?
+    /// 보낸 질문(ASK1112A01). 아직 답하지 않았을 때만 거둔다.
+    var questionID: String?
 
     /// 그 뒤 사용자가 같은 값을 바꿨으면 되돌리지 않는다.
     @MainActor
@@ -385,6 +387,7 @@ struct AssistantAppChange: Codable, Equatable, Sendable {
         if let removedInbox { PaymentInbox.restore(removedInbox, defaults: preferences.defaults) }
         if let review { preferences.review.restore(review) }
         if let screen { preferences.screens.cancel(screen) }
+        if let questionID { preferences.questions.withdraw(questionID) }
     }
 }
 
@@ -453,6 +456,11 @@ extension AppModel {
             preferences.screens.request(screen)
             var result = AssistantEditResult(after: screen.title(language))
             result.appChange = AssistantAppChange(screen: screen)
+            return result
+        case let .askUser(question):
+            guard preferences.questions.add(question) else { return .rejected("duplicate") }
+            var result = AssistantEditResult(after: String(question.question.prefix(80)))
+            result.appChange = AssistantAppChange(questionID: question.id)
             return result
         default:
             return .rejected("invalid")

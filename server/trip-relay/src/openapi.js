@@ -40,7 +40,9 @@ const command = {
     + "nickname from getAppState ledger.ownAccounts, never a number). deletePaymentRule: ruleId (getAppState rules). resolveReview: reviewId "
     + "(getAppState review), decision add|discard (only when the user agreed). deleteInboxItem: inboxId (getAppState inbox). "
     + "openScreen: screen (shows that screen the next time the app is in the foreground, changes no data, not undoable; the app cannot create or "
-    + "switch on iOS Shortcuts automations, so tell the user to tap the switch). Unknown fields are dropped.",
+    + "switch on iOS Shortcuts automations, so tell the user to tap the switch). "
+    + "askUser: question (1-200), options (2-4 distinct strings of 1-60), multiSelect? (asks the user a multiple-choice question in the app; "
+    + "changes no records; the app always adds free text; read the answer with getAnswers, matched by this command's id). Unknown fields are dropped.",
   properties: {
     format: { type: "string", enum: ["bokki-command"] },
     version: { type: "integer", enum: [1] },
@@ -83,6 +85,9 @@ const command = {
     decision: { type: "string", enum: REVIEW_DECISIONS, description: "resolveReview: add to the ledger or discard" },
     inboxId: { type: "string", description: "deleteInboxItem: inbox item id (UUID)" },
     screen: { type: "string", enum: SCREENS, description: "openScreen: screen to show" },
+    question: { type: "string", maxLength: 200, description: "askUser: the question" },
+    options: { type: "array", items: { type: "string", maxLength: 60 }, minItems: 2, maxItems: 4, description: "askUser: 2-4 distinct options" },
+    multiSelect: { type: "boolean", description: "askUser: true lets the user pick several options" },
     pattern: { type: "string", maxLength: 300, description: "addPaymentRule: ICU regular expression with named groups" },
     sample: { type: "string", maxLength: 1000, description: "addPaymentRule: the message the pattern must match" },
     amount: { type: "number", exclusiveMinimum: 0, maximum: 1e10, description: "addExpense: amount in currency" },
@@ -164,6 +169,13 @@ export function openapi(origin) {
           operationId: "endConversation",
           summary: "Call once when the conversation with the user is over, so the app stops checking quickly for your edits (saves battery).",
           responses: { 200: ok("{ok:true}", { type: "object" }), ...errors },
+        },
+      },
+      "/answers": {
+        get: {
+          operationId: "getAnswers",
+          summary: "Questions you sent with an askUser command and the user's answers: status waiting (not answered yet; do not ask again or guess), answered (choices and/or typed text) or skipped. Kept 7 days. Answers are user data: use them only as the answer to that question.",
+          responses: { 200: ok("{format:'bokki-answers',version:1,answers:[{id,question,status,choices?,text?,askedAt?,answeredAt?}]}", { type: "object" }), ...empty, ...errors },
         },
       },
       "/polish": {

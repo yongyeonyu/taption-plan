@@ -191,6 +191,8 @@ export const COMMAND_FIELDS = {
   resolveReview: ["reviewId", "decision"],
   deleteInboxItem: ["inboxId"],
   openScreen: ["screen"],
+  // ASK1112A01: 앱에서 사용자에게 객관식으로 묻는다. 답은 앱이 `/answers`에 올린다.
+  askUser: ["question", "options", "multiSelect"],
   setLanguage: ["language"],
   setTheme: ["theme"],
   setMapStyle: ["mapStyle"],
@@ -210,6 +212,30 @@ const isMonth = (v) => typeof v === "string" && MONTH.test(v);
 // 내 계좌 이름: 다듬어 2~30자이고 번호처럼 보이는 숫자 덩어리가 없어야 한다(앱 규칙과 같다).
 const accountName = (v) => nonEmpty(v, 30) && v.trim().length >= 2 && !/\d[\d -]{7,}\d/.test(v);
 export const EXPENSE_CATEGORIES = ["food", "cafe", "transport", "shopping", "living", "health", "culture", "travel", "lodging", "education", "gift", "salary", "other"];
+
+// ASK1112A01: 질문 1~200자, 보기 2~4개(1~60자, 서로 다름). 앱이 「직접 입력」을 늘 덧붙인다.
+export const QUESTION_LIMITS = { question: 200, option: 60, minOptions: 2, maxOptions: 4, text: 200, answers: 20 };
+const lengthIn = (v, max) => typeof v === "string" && codePoints(v.trim()) >= 1 && codePoints(v) <= max;
+const questionText = (v) => lengthIn(v, QUESTION_LIMITS.question);
+const answerOptions = (v) => Array.isArray(v) && v.length >= QUESTION_LIMITS.minOptions && v.length <= QUESTION_LIMITS.maxOptions
+  && v.every((o) => lengthIn(o, QUESTION_LIMITS.option)) && new Set(v.map((o) => o.trim())).size === v.length;
+
+// 앱이 올리는 질문과 답 목록. 통째로 바꿔 쓴다. status: waiting(아직 답 없음) | answered | skipped.
+export const ANSWER_STATUSES = ["waiting", "answered", "skipped"];
+const isoInstant = (v) => typeof v === "string" && v.length <= 40 && !Number.isNaN(Date.parse(v));
+export function isAnswerList(value) {
+  return value?.format === "bokki-answers" && value?.version === 1 && Array.isArray(value?.answers)
+    && value.answers.length >= 1 && value.answers.length <= QUESTION_LIMITS.answers
+    && new Set(value.answers.map((a) => a?.id)).size === value.answers.length
+    && value.answers.every((a) => a && commandID(a.id) && questionText(a.question) && ANSWER_STATUSES.includes(a.status)
+      && optional(a.choices, (c) => Array.isArray(c) && c.length <= QUESTION_LIMITS.maxOptions && c.every((o) => lengthIn(o, QUESTION_LIMITS.option)))
+      && optional(a.text, (t) => lengthIn(t, QUESTION_LIMITS.text)) && optional(a.askedAt, isoInstant) && optional(a.answeredAt, isoInstant)
+      && (a.status !== "answered" || (a.choices?.length ?? 0) > 0 || given(a.text)));
+}
+export const cleanAnswers = (value) => value.answers.map(({ id, question, status, choices, text, askedAt, answeredAt }) => ({
+  id, question, status, ...(status === "answered" && choices?.length ? { choices } : {}), ...(status === "answered" && given(text) ? { text } : {}),
+  ...(given(askedAt) ? { askedAt } : {}), ...(given(answeredAt) ? { answeredAt } : {}),
+}));
 
 // 알려진 칸만 남긴 명령. 동작을 모르면 null.
 export function cleanCommand(value) {
@@ -329,6 +355,8 @@ export function isCommand(value) {
       return uuid(v.inboxId);
     case "openScreen":
       return oneOf(SCREENS)(v.screen);
+    case "askUser":
+      return questionText(v.question) && answerOptions(v.options) && optional(v.multiSelect, (b) => typeof b === "boolean");
     case "setLanguage":
       return oneOf(LANGUAGES)(v.language);
     case "setTheme":

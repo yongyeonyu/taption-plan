@@ -265,6 +265,8 @@ enum AssistantCommandRefresh {
         if manual { AssistantCommandPolling.manualAt = .now }
         guard let model else { return false }
         let result = await TripRelay.$singleAttempt.withValue(true) { await AssistantCommandRunner.run(model: model) }
+        // 새 질문(답 기다림)과 아직 못 올린 답을 올린다(ASK1112A01).
+        await AssistantQuestionStore.shared.uploadIfNeeded()
         switch result {
         case let .applied(outcome):
             AssistantInbox.current.show(outcome.notice(language))

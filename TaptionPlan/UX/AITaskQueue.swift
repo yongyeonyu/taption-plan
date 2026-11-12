@@ -178,3 +178,156 @@ extension JSONDecoder.DateDecodingStrategy {
         throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "bad date \(text)"))
     }
 }
+
+/// AI가 앱에서 묻는 객관식 질문 하나(ASK1112A01). `id`는 그 `askUser` 명령의 id이고, AI는 이것으로 답을 찾는다.
+struct AssistantQuestion: Codable, Equatable, Identifiable, Sendable {
+    enum Status: String, Codable, Sendable { case waiting, answered, skipped }
+
+    static let questionLimit = 200
+    static let optionLimit = 60
+    static let textLimit = 200
+    static let optionRange = 2...4
+
+    var id: String
+    var question: String
+    var options: [String]
+    var multiSelect: Bool
+    var askedAt: Date
+    var status: Status = .waiting
+    /// 고른 보기. 보기에 없는 글은 받지 않는다.
+    var choices: [String] = []
+    /// 직접 입력한 답.
+    var text: String?
+    var answeredAt: Date?
+
+    /// 서버와 같은 규칙으로 다시 본다: 질문 1~200자, 서로 다른 보기 2~4개(1~60자).
+    static func make(id: String?, question: String?, options: [String]?, multiSelect: Bool?, now: Date) -> Self? {
+        guard let id, !id.isEmpty, let question = trimmed(question, max: questionLimit), let options,
+              optionRange.contains(options.count) else { return nil }
+        let cleaned = options.compactMap { trimmed($0, max: optionLimit) }
+        guard cleaned.count == options.count, Set(cleaned).count == cleaned.count else { return nil }
+        return Self(id: id, question: question, options: cleaned, multiSelect: multiSelect ?? false, askedAt: now)
+    }
+
+    static func trimmed(_ text: String?, max: Int) -> String? {
+        guard let value = text?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty, value.count <= max else { return nil }
+        return value
+    }
+}
+
+/// 받은 질문과 답을 기기에 둔다(20개·7일). 답하거나 건너뛰면 `/answers`에 목록 전체를 올리고, AI가 `get_answers`로 읽는다.
+@MainActor
+@Observable
+final class AssistantQuestionStore {
+    static let shared = AssistantQuestionStore()
+    static let key = "assistantQuestions"
+    static let dirtyKey = "assistantQuestionsDirty"
+    static let limit = 20
+    static let lifetime: TimeInterval = 7 * 86_400
+
+    private(set) var items: [AssistantQuestion]
+    /// 방금 도착해 알림으로 보일 질문.
+    var announced: AssistantQuestion?
+    @ObservationIgnored private let defaults: UserDefaults
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        items = defaults.data(forKey: Self.key).flatMap { try? JSONDecoder().decode([AssistantQuestion].self, from: $0) } ?? []
+    }
+
+    var waiting: [AssistantQuestion] { items.filter { $0.status == .waiting } }
+    var finished: [AssistantQuestion] { items.filter { $0.status != .waiting } }
+
+    /// 새 질문을 넣는다. 같은 id가 이미 있으면 넣지 않는다. 넘치면 끝난 것부터, 그다음 오래된 것부터 뺀다.
+    @discardableResult
+    func add(_ question: AssistantQuestion, now: Date = .now) -> Bool {
+        prune(now: now)
+        guard !items.contains(where: { $0.id == question.id }) else { return false }
+        items.append(question)
+        while items.count > Self.limit {
+            items.remove(at: items.firstIndex { $0.status != .waiting } ?? 0)
+        }
+        announced = question
+        save()
+        return true
+    }
+
+    /// 보기에 있는 것만 고른 답으로 남긴다. 고른 것도 쓴 글도 없으면 답으로 치지 않는다.
+    @discardableResult
+    func answer(_ id: String, choices: [String], text: String?, now: Date = .now) -> Bool {
+        guard let index = items.firstIndex(where: { $0.id == id && $0.status == .waiting }) else { return false }
+        let picked = items[index].options.filter(choices.contains)
+        let typed = text.flatMap { AssistantQuestion.trimmed(String($0.prefix(AssistantQuestion.textLimit)), max: AssistantQuestion.textLimit) }
+        guard !picked.isEmpty || typed != nil else { return false }
+        items[index].choices = items[index].multiSelect ? picked : Array(picked.prefix(1))
+        items[index].text = typed
+        finish(index, .answered, now: now)
+        return true
+    }
+
+    func skip(_ id: String, now: Date = .now) {
+        guard let index = items.firstIndex(where: { $0.id == id && $0.status == .waiting }) else { return }
+        finish(index, .skipped, now: now)
+    }
+
+    /// 「AI가 한 일」에서 되돌리기: 아직 답하지 않은 질문만 거둔다.
+    func withdraw(_ id: String) {
+        guard let index = items.firstIndex(where: { $0.id == id && $0.status == .waiting }) else { return }
+        items.remove(at: index)
+        if announced?.id == id { announced = nil }
+        save()
+    }
+
+    func clearFinished() {
+        guard !finished.isEmpty else { return }
+        items.removeAll { $0.status != .waiting }
+        save()
+    }
+
+    func prune(now: Date = .now) {
+        let kept = items.filter { now.timeIntervalSince($0.askedAt) < Self.lifetime }
+        guard kept.count != items.count else { return }
+        items = kept
+        save()
+    }
+
+    var needsUpload: Bool { defaults.bool(forKey: Self.dirtyKey) }
+
+    /// `POST /answers` 본문. 질문이 없으면 nil(그때는 서버 목록을 지운다).
+    func uploadBody() -> Data? {
+        guard !items.isEmpty else { return nil }
+        let stamp = ISO8601DateFormatter()
+        let answers: [[String: Any]] = items.map { item in
+            var value: [String: Any] = ["id": item.id, "question": item.question, "status": item.status.rawValue, "askedAt": stamp.string(from: item.askedAt)]
+            if item.status == .answered {
+                if !item.choices.isEmpty { value["choices"] = item.choices }
+                if let text = item.text { value["text"] = text }
+            }
+            if let answeredAt = item.answeredAt { value["answeredAt"] = stamp.string(from: answeredAt) }
+            return value
+        }
+        return try? JSONSerialization.data(withJSONObject: ["format": "bokki-answers", "version": 1, "answers": answers] as [String: Any])
+    }
+
+    /// 바뀐 것이 있으면 올린다. 실패하면 다음에 다시 한다.
+    func uploadIfNeeded(env: AssistantRegistration.Environment = .live) async {
+        guard needsUpload, let master = env.secrets.read(.master) else { return }
+        let body = uploadBody()
+        let request = TripRelay.relayRequest("/answers", method: body == nil ? "DELETE" : "POST", body: body, token: master, host: env.host)
+        guard let reply = await TripRelay.send(request, session: env.session), (200..<300).contains(reply.status) else { return }
+        // 올리는 사이 또 바뀌었으면 표시를 남겨 다음에 다시 올린다.
+        if uploadBody() == body { defaults.set(false, forKey: Self.dirtyKey) }
+    }
+
+    private func finish(_ index: Int, _ status: AssistantQuestion.Status, now: Date) {
+        items[index].status = status
+        items[index].answeredAt = now
+        if announced?.id == items[index].id { announced = nil }
+        save()
+    }
+
+    private func save() {
+        if let data = try? JSONEncoder().encode(items) { defaults.set(data, forKey: Self.key) }
+        defaults.set(true, forKey: Self.dirtyKey)
+    }
+}

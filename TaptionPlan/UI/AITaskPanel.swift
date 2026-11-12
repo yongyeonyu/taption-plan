@@ -12,11 +12,12 @@ struct AITaskPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
+            AssistantQuestionList(language: language)
             PaymentInboxList(language: language, items: inbox) { opened = $0 }
             if !MemoPolishQueue.hasConnection() {
                 note(language.text("AI 연결이 없어요. 메뉴 › AI 연결에서 연결하면 앱이 못한 일을 AI가 처리해요.",
                                    "No AI is connected. Connect one in Menu › AI connection to let it handle what the app couldn't."))
-            } else if tasks.isEmpty {
+            } else if tasks.isEmpty, AssistantQuestionStore.shared.items.isEmpty {
                 note(isLoading ? language.text("불러오는 중…", "Loading…") : language.text("AI에게 맡긴 일이 없어요.", "Nothing is waiting for your AI."))
             }
             ScrollView(showsIndicators: false) {
@@ -152,6 +153,195 @@ struct AITaskPanel: View {
         case .stayPlace: "mappin.and.ellipse"
         case .paymentRule: "text.badge.plus"
         case .other: "questionmark.bubble"
+        }
+    }
+}
+
+/// AI가 보낸 객관식 질문(ASK1112A01). 「AI」 탭 맨 위와 알림을 눌러 연 시트가 함께 쓴다.
+/// 답하면 기기에 적고 서버에 올려 AI가 읽어 간다. 질문과 보기는 AI가 쓴 글이라 글로만 보인다(링크로 만들지 않는다).
+struct AssistantQuestionList: View {
+    let language: MapHomeLanguage
+    var showsFinished = true
+    private var store: AssistantQuestionStore { .shared }
+
+    var body: some View {
+        let waiting = store.waiting, finished = showsFinished ? Array(store.finished.suffix(3).reversed()) : []
+        if !waiting.isEmpty || !finished.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(waiting) { AssistantQuestionCard(question: $0, language: language) }
+                ForEach(finished) { answered($0) }
+                if !finished.isEmpty {
+                    Button {
+                        store.clearFinished()
+                        Task { await store.uploadIfNeeded() }
+                    } label: {
+                        Label(language.text("끝난 질문 지우기", "Clear answered questions"), systemImage: "trash")
+                            .font(.taptionStyle(.caption, weight: .semibold))
+                            .foregroundStyle(Color.tpSecondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    private func answered(_ question: AssistantQuestion) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(verbatim: question.question)
+                .font(.taptionStyle(.caption))
+                .foregroundStyle(Color.tpSecondary)
+                .lineLimit(2)
+            Text(verbatim: question.status == .skipped
+                ? language.text("건너뜀", "Skipped")
+                : (question.choices + [question.text].compactMap { $0 }).joined(separator: " · "))
+                .font(.taptionStyle(.subheadline, weight: .medium))
+                .foregroundStyle(Color.tpInk)
+                .lineLimit(2)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(Color.tpCard.opacity(0.9), in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
+        .overlay { RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous).stroke(Color.tpBorder, lineWidth: TaptionBorder.width) }
+    }
+}
+
+/// 질문 하나. 하나만 고르는 질문은 보기를 누르면 바로 답하고, 여러 개 고르는 질문과 직접 입력은 「답하기」로 보낸다.
+private struct AssistantQuestionCard: View {
+    let question: AssistantQuestion
+    let language: MapHomeLanguage
+    @State private var picked: Set<String> = []
+    @State private var typed = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label(language.text("AI 질문", "AI question"), systemImage: "questionmark.bubble")
+                .font(.taptionStyle(.caption2, weight: .semibold))
+                .foregroundStyle(Color.tpAccent)
+            Text(verbatim: question.question)
+                .font(.taptionStyle(.subheadline, weight: .medium))
+                .foregroundStyle(Color.tpInk)
+                .fixedSize(horizontal: false, vertical: true)
+            if question.multiSelect {
+                Text(language.text("여러 개 고를 수 있어요.", "You can pick more than one."))
+                    .font(.taptionStyle(.caption2))
+                    .foregroundStyle(Color.tpSecondary)
+            }
+            ForEach(question.options, id: \.self) { option($0) }
+            HStack(spacing: 6) {
+                TextField(language.text("직접 입력", "Type your own answer"), text: $typed)
+                    .font(.taptionStyle(.caption))
+                    .textFieldStyle(.roundedBorder)
+                    .submitLabel(.send)
+                    .onSubmit(send)
+                Button(language.text("답하기", "Answer"), action: send)
+                    .font(.taptionStyle(.caption, weight: .semibold))
+                    .foregroundStyle(canSend ? Color.tpAccent : Color.tpSecondary)
+                    .disabled(!canSend)
+            }
+            Button(language.text("건너뛰기", "Skip")) {
+                AssistantQuestionStore.shared.skip(question.id)
+                upload()
+            }
+            .font(.taptionStyle(.caption2))
+            .foregroundStyle(Color.tpSecondary)
+        }
+        .buttonStyle(.plain)
+        .padding(10)
+        .background(Color.tpCard.opacity(0.9), in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
+        .overlay { RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous).stroke(Color.tpAccent.opacity(0.5), lineWidth: TaptionBorder.width) }
+    }
+
+    private var canSend: Bool {
+        !picked.isEmpty || !typed.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private func option(_ text: String) -> some View {
+        Button {
+            if question.multiSelect {
+                if !picked.insert(text).inserted { picked.remove(text) }
+            } else {
+                picked = [text]
+                send()
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: picked.contains(text) ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(picked.contains(text) ? Color.tpAccent : Color.tpSecondary)
+                Text(verbatim: text)
+                    .font(.taptionStyle(.subheadline))
+                    .foregroundStyle(Color.tpInk)
+                    .multilineTextAlignment(.leading)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(Color.white.opacity(0.9), in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .accessibilityAddTraits(picked.contains(text) ? .isSelected : [])
+    }
+
+    private func send() {
+        guard AssistantQuestionStore.shared.answer(question.id, choices: Array(picked), text: typed) else { return }
+        upload()
+    }
+
+    private func upload() {
+        Task { await AssistantQuestionStore.shared.uploadIfNeeded() }
+    }
+}
+
+/// 새 질문이 오면 잠깐 알리고, 누르면 답하는 시트를 연다(ASK1112A01). 사생활 잠금 중에는 알리지 않는다.
+struct AssistantQuestionHost: View {
+    let language: MapHomeLanguage
+    @State private var isPresented = false
+    private var store: AssistantQuestionStore { .shared }
+
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            Color.clear
+                .frame(width: 0, height: 0)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+            if let question = store.announced, !TaptionExternalPrivacyStore.isLocked {
+                Button {
+                    store.announced = nil
+                    isPresented = true
+                } label: {
+                    Label {
+                        Text(verbatim: language.text("AI 질문", "AI question") + ": " + question.question).lineLimit(2)
+                    } icon: {
+                        Image(systemName: "questionmark.bubble")
+                    }
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
+                    .foregroundStyle(Color.tpInk)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .mapHomeGlass(in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 144)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .task(id: question.id) {
+                    try? await Task.sleep(for: .seconds(10))
+                    if store.announced?.id == question.id { store.announced = nil }
+                }
+            }
+        }
+        .sheet(isPresented: $isPresented) {
+            ScrollView {
+                AssistantQuestionList(language: language, showsFinished: false)
+                    .padding(16)
+                if store.waiting.isEmpty {
+                    Text(language.text("답할 질문이 없어요.", "No questions to answer."))
+                        .font(.taptionStyle(.caption))
+                        .foregroundStyle(Color.tpSecondary)
+                        .padding(16)
+                }
+            }
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
         }
     }
 }

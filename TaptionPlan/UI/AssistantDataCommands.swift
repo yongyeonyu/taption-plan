@@ -151,6 +151,8 @@ extension AssistantCommandParser {
             return raw.inboxId.flatMap(UUID.init(uuidString:)).map { .deleteInboxItem($0) }
         case "openScreen":
             return raw.screen.flatMap(AssistantScreen.init(rawValue:)).map { .openScreen($0) }
+        case "askUser":
+            return AssistantQuestion.make(id: raw.id, question: raw.question, options: raw.options, multiSelect: raw.multiSelect, now: now).map { .askUser($0) }
         default:
             return nil
         }
@@ -320,6 +322,8 @@ struct AssistantPreferenceStore {
     /// 확인 필요·화면 열기 요청(ACX1112A01). 시험은 따로 만든 저장소의 것을 쓴다.
     var review = LedgerReviewStore.shared
     var screens = AssistantScreenRequest.shared
+    /// AI가 보낸 질문(ASK1112A01).
+    var questions = AssistantQuestionStore.shared
 
     static var live: Self { Self(defaults: .standard, isLive: true) }
 
@@ -329,7 +333,8 @@ struct AssistantPreferenceStore {
         defaults.set(name, forKey: "assistantBubbleTestFile")
         return Self(
             defaults: defaults, isLive: false, bubbleFile: FileManager.default.temporaryDirectory.appendingPathComponent("\(name).json"),
-            ledger: LedgerBook(store: { nil }), review: LedgerReviewStore(defaults: defaults), screens: AssistantScreenRequest(defaults: defaults)
+            ledger: LedgerBook(store: { nil }), review: LedgerReviewStore(defaults: defaults), screens: AssistantScreenRequest(defaults: defaults),
+            questions: AssistantQuestionStore(defaults: defaults)
         )
     }
 
