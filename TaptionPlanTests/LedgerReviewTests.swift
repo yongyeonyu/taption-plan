@@ -79,5 +79,9 @@ final class LedgerReviewTests: XCTestCase {
         XCTAssertFalse(LedgerOwnAccounts.isOwnTransfer("신한카드 승인 4,500원 홍길동커피", names: names), "이체 낱말이 없으면 결제다")
         XCTAssertFalse(LedgerOwnAccounts.isOwnTransfer("카카오뱅크 출금 500,000원 홍길동", names: []))
         XCTAssertTrue(LedgerMessageParser.looksLikeTransfer("토스 송금 30,000원"))
+        let bill = "출금 1,450,770원 입출금통장(1234) → 홍길동현대카드 잔액 825,430원"
+        XCTAssertTrue(LedgerMessageParser.looksLikeCardBill(bill, merchant: LedgerMessageParser.parse(bill, now: .now)?.merchant))
+        XCTAssertFalse(LedgerMessageParser.looksLikeCardBill("출금 12,000원 입출금통장(1234) → 김밥천국", merchant: "김밥천국"))
+        XCTAssertFalse(LedgerMessageParser.looksLikeCardBill("신한카드 승인 12,000원 스타벅스", merchant: "스타벅스"))
     }
 }

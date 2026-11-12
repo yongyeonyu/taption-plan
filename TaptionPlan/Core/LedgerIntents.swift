@@ -108,9 +108,9 @@ enum PaymentTextCapture {
         case .none:
             break
         }
-        if !draft.isCancel, draft.merchant == nil {
-            // 가게 이름을 못 읽었으면 조용히 넣지 않는다. 이체 낱말이 있으면 이체 의심으로 둔다.
-            let reason: LedgerReviewStore.Reason = LedgerMessageParser.looksLikeTransfer(text) ? .transfer : .noMerchant
+        if !draft.isCancel, draft.merchant == nil || LedgerMessageParser.looksLikeCardBill(text, merchant: draft.merchant) {
+            // 가게 이름을 못 읽었으면 조용히 넣지 않는다. 이체 낱말이 있으면 이체 의심, 카드사로 나간 출금은 카드 대금으로 둔다.
+            let reason: LedgerReviewStore.Reason = draft.merchant != nil ? .cardBill : LedgerMessageParser.looksLikeTransfer(text) ? .transfer : .noMerchant
             LedgerReviewStore.shared.add(entry, reason: reason, now: now)
             return (language.text("\(money) 결제를 「확인 필요」에 두었어요. 메모 › 지출에서 넣거나 버릴 수 있어요.", "\(money) is waiting in Needs review. Add or discard it in Memo › Spending."), .review)
         }

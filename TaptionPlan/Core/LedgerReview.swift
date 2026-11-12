@@ -6,7 +6,7 @@ import Observation
 @MainActor
 @Observable
 final class LedgerReviewStore {
-    enum Reason: String, Codable, Sendable { case noMerchant, duplicate, transfer, toll }
+    enum Reason: String, Codable, Sendable { case noMerchant, duplicate, transfer, toll, cardBill }
 
     struct Item: Codable, Equatable, Identifiable, Sendable {
         var id = UUID()
@@ -138,5 +138,11 @@ extension LedgerMessageParser {
     /// 가게 없이 이체·송금·충전 낱말만 있는 결제 문자.
     static func looksLikeTransfer(_ text: String) -> Bool {
         ["이체", "송금", "충전", "적금"].contains(where: text.contains)
+    }
+
+    /// 통장에서 카드사로 빠져나간 카드 대금. 카드 결제 문자와 두 번 잡히므로 스스로 넣지 않는다(CBR1112A01).
+    static func looksLikeCardBill(_ text: String, merchant: String?) -> Bool {
+        guard text.contains("출금"), let merchant, merchant.hasSuffix("카드") else { return false }
+        return cards.contains(where: merchant.contains)
     }
 }
