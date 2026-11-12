@@ -213291,6 +213291,83 @@
         }
       }
     },
+    "결제 앱 알림 자동화 따라 하기|Set up payment app alerts" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "決済アプリ通知のオートメーションを設定"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设置付款 App 通知自动化"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定付款 App 通知自動化"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zahlungs-App-Mitteilungen einrichten"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configurer les alertes d’apps de paiement"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configura gli avvisi delle app di pagamento"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configurar avisos de apps de pago"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configurar alertas de apps de pagamento"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thiết lập thông báo ứng dụng thanh toán"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Atur notifikasi app pembayaran"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ตั้งค่าการแจ้งเตือนแอปชำระเงิน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "भुगतान ऐप सूचनाएँ सेट करें"
+          }
+        }
+      }
+    },
     "결제 앱 알림 자동화|Payment alert automation" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -213364,83 +213441,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "भुगतान ऐप सूचना ऑटोमेशन"
-          }
-        }
-      }
-    },
-    "결제 앱 알림으로도 넣기(iOS 27) 따라 하기|Also use payment app alerts (iOS 27)" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "決済アプリの通知でも記録する（iOS 27）の手順"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "也通过付款 App 通知记录（iOS 27）操作步骤"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "也透過付款 App 通知記錄（iOS 27）操作步驟"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Anleitung: Auch Mitteilungen von Zahlungs-Apps nutzen (iOS 27)"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Utiliser aussi les notifications des apps de paiement (iOS 27) : étapes"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Usa anche le notifiche delle app di pagamento (iOS 27): passaggi"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Usar también las notificaciones de apps de pago (iOS 27): pasos"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Usar também notificações de apps de pagamento (iOS 27): passo a passo"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hướng dẫn dùng cả thông báo ứng dụng thanh toán (iOS 27)"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Langkah: gunakan juga pemberitahuan app pembayaran (iOS 27)"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ขั้นตอนใช้การแจ้งเตือนจากแอปชำระเงินด้วย (iOS 27)"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "भुगतान ऐप सूचनाओं से भी जोड़ें (iOS 27) — चरण"
           }
         }
       }
@@ -284362,6 +284362,83 @@
         }
       }
     },
+    "여행 목록으로|Back to trips" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "旅行一覧へ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "返回旅行列表"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "返回旅行列表"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zurück zu den Reisen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retour aux voyages"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Torna ai viaggi"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Volver a los viajes"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voltar às viagens"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Về danh sách chuyến đi"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kembali ke perjalanan"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "กลับไปที่รายการทริป"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "यात्राओं पर वापस"
+          }
+        }
+      }
+    },
     "여행 예산은 일상에서 「여행 경비」로 나가고, 여행이 끝나면 남은 돈이 「여행 정산」으로 돌아와요.|A trip budget leaves daily as a trip expense; leftovers come back as a trip refund when it ends." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -325322,83 +325399,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "उप-श्रेणी: {0}"
-          }
-        }
-      }
-    },
-    "지구본으로|Back to globe" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "地球儀に戻る"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "返回地球仪"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "返回地球儀"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zurück zum Globus"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Retour au globe"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Torna al globo"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Volver al globo"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Voltar ao globo"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Về quả địa cầu"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kembali ke bola dunia"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "กลับไปที่ลูกโลก"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ग्लोब पर लौटें"
           }
         }
       }

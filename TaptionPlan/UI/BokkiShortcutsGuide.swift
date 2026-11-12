@@ -102,8 +102,8 @@ struct BokkiPaymentShortcutButton: View {
 
     var body: some View {
         let title = BokkiPaymentShortcut.title(language)
+        // 아래 「결제 앱 알림」 줄과 같은 글자 크기로 둔다(목록 기본 글꼴).
         let label = Label(language.text("「\(title)」 자동화 추가", "Add the \"\(title)\" automation"), systemImage: "square.and.arrow.down")
-            .font(.taptionStyle(.subheadline, weight: .semibold))
         if let link = BokkiPaymentShortcut.automationLink {
             Button { isPresented = true } label: { label }
                 .sheet(isPresented: $isPresented) { BokkiPaymentAddPopup(link: link, language: language) }
@@ -203,7 +203,7 @@ struct BokkiPaymentAutomationRow: View {
 
     var body: some View {
         Button { isPresented = true } label: {
-            Label(language.text("결제 앱 알림으로도 넣기(iOS 27) 따라 하기", "Also use payment app alerts (iOS 27)"), systemImage: "app.badge")
+            Label(language.text("결제 앱 알림 자동화 따라 하기", "Set up payment app alerts"), systemImage: "app.badge")
         }
         .sheet(isPresented: $isPresented) { BokkiPaymentAutomationSetup(language: language) }
     }
