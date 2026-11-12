@@ -173,10 +173,10 @@ struct AssistantAppState: Codable, Equatable, Sendable {
         var paymentShortcutLink: Bool
         var paymentTexts: Int
         var lastPaymentTextAt: String?
-        /// ACB1112A01: 통행료 차종과 급여 방식(정했을 때만). 급여 금액은 올리지 않는다.
+        /// ACB1112A01: 통행료 차종과 급여 방식(정했을 때만).
         var tollVehicle: String?
         var salaryMode: String?
-        /// ACC1112A01: `setSetting`으로 바꿀 수 있는 설정의 지금 값(금액 제외).
+        /// ACC1112A01: `setSetting`으로 바꿀 수 있는 설정의 지금 값. 급여 금액도 담는다(PAY1112A01).
         var values: [String: String]?
     }
 
@@ -415,7 +415,7 @@ enum AssistantAppStateSync {
             places: model.snapshot.settings.frequentPlaces, categories: model.snapshot.categories,
             trips: model.snapshot.settings.travelTrips ?? [],
             tollVehicle: AssistantSetting.tollVehicle.read(defaults), salaryMode: AssistantSetting.salaryMode.read(defaults),
-            settingValues: Dictionary(uniqueKeysWithValues: AssistantSetting.allCases.filter { !$0.isWriteOnly }.compactMap { setting in
+            settingValues: Dictionary(uniqueKeysWithValues: AssistantSetting.allCases.compactMap { setting in
                 (setting.isModelBacked ? setting.read(model: model) : setting.read(defaults)).map { (setting.rawValue, $0) }
             })
         )

@@ -229,7 +229,7 @@ const TOOLS = [
     + "weatherSidebar true|false; gpsIntervalSeconds 30-1800 in steps of 30 (how often location is logged; longer saves battery); "
     + "cat white|calico|mackerel (the map cat); notifications false only (turning notifications, Health, Photos, Calendar or location ON "
     + "needs an iOS permission prompt the user must answer: use open_screen settings and tell them what to tap). Current values are in "
-    + "get_app_state settings.values. Pay amounts are write-only: the app never sends them back, so do not repeat or store them. Undoable.",
+    + "get_app_state settings.values, pay amounts included (annualPay, monthlyPay, hourlyPay as the user entered them). Undoable.",
     { setting: enumOf("Setting name", SETTING_NAMES), value: { description: "New value: a string, number or boolean as the setting needs" } }, ["setting", "value"]),
   // ACD1112A01
   addTool("request_approval", "requestApproval", "Ask the user to approve a protected action", "Some actions are never done on your word alone. "

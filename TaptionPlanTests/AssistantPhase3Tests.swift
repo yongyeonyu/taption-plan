@@ -1627,8 +1627,8 @@ final class AssistantAppControlTests: XCTestCase {
         XCTAssertEqual(model.snapshot.settings.travelTrips?.first { $0.id == osaka.id }, shifted)
     }
 
-    /// ACB1112A01: 설정은 정해진 이름·형만 바꾸고 되돌리며, 급여 금액은 앱 상태에 올리지 않는다.
-    func testSettingsChangeUndoAndPayAmountsStayOnTheDevice() async throws {
+    /// ACB1112A01·PAY1112A01: 설정은 정해진 이름·형만 바꾸고 되돌리며, 급여 금액도 앱 상태에 올린다.
+    func testSettingsChangeUndoAndPayAmountsAreReadable() async throws {
         let store = defaults()
         let model = await model()
         let preferences = AssistantPreferenceStore.test(store)
@@ -1653,11 +1653,14 @@ final class AssistantAppControlTests: XCTestCase {
         value.tollVehicle = "compact"
         value.salaryMode = "hourly"
         value.trips = [TravelTrip(id: "trip-1", title: "오사카", startDay: "2026-12-01", endDay: "2026-12-04", countryCode: "JP", latitude: 34.69, longitude: 135.5, currencyCode: "JPY")]
+        value.settingValues = ["annualPay": "50000000.0", "salaryMode": "hourly"]
         let state = AssistantAppStateSync.make(value)
         XCTAssertEqual([state.settings.tollVehicle, state.settings.salaryMode], ["compact", "hourly"])
+        XCTAssertEqual(state.settings.values?["annualPay"], "50000000.0", "급여 금액도 AI가 읽는다(PAY1112A01)")
         XCTAssertEqual(state.trips?.map(\.id), ["trip-1"])
         let json = String(decoding: try XCTUnwrap(AssistantAppStateSync.body(state)), as: UTF8.self)
-        XCTAssertFalse(json.contains("annualPay") || json.contains("50000000") || json.contains("34.69"), "급여 금액과 좌표는 올리지 않는다")
+        XCTAssertTrue(json.contains("annualPay"))
+        XCTAssertFalse(json.contains("34.69") || json.contains("latitude"), "좌표는 올리지 않는다")
     }
 
     /// ACC1112A01: 앱 자료 쪽 설정은 화면의 설정 함수로 바꾸고 되돌리며, 알림은 끄기만 받는다.
@@ -1696,7 +1699,10 @@ final class AssistantAppControlTests: XCTestCase {
         let state = AssistantAppStateSync.make(await AssistantAppStateSync.input(model: model, preferences: preferences, now: at(11, 12, 10), calendar: calendar))
         XCTAssertEqual(state.settings.values?["gpsIntervalSeconds"], "600")
         XCTAssertEqual(state.settings.values?["cat"], "mackerel")
-        XCTAssertNil(state.settings.values?["annualPay"])
+        XCTAssertNil(state.settings.values?["annualPay"], "정하지 않은 금액은 칸이 없다")
+        store.set(42_000_000.0, forKey: MapHomeSalaryPolicy.annualKey)
+        let withPay = AssistantAppStateSync.make(await AssistantAppStateSync.input(model: model, preferences: preferences, now: at(11, 12, 10), calendar: calendar))
+        XCTAssertEqual(withPay.settings.values?["annualPay"], "42000000.0", "정해 둔 연봉은 읽힌다(PAY1112A01)")
     }
 
     /// ACD1112A01: 승인 요청은 정해진 종류와 값만 읽고, 승인하기 전에는 아무것도 바꾸지 않는다.

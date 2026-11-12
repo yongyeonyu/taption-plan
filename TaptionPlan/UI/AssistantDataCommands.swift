@@ -516,7 +516,7 @@ enum AssistantLooseValue: Decodable, Equatable, Sendable {
 }
 
 /// AI가 바꿀 수 있는 기기 설정(ACB1112A01). 이 이름만 받고, 값은 형과 범위를 본 뒤 정해진 글자 꼴로 다룬다.
-/// 급여 금액은 받기만 하고 AI에게 올리지 않는다.
+/// 급여 금액도 읽기·바꾸기 모두 된다(대표 결정 2026-11-12, PAY1112A01).
 enum AssistantSetting: String, CaseIterable, Codable, Sendable {
     case tollVehicle, salaryMode, annualPay, monthlyPay, payIsNet, showsNetPay, hourlyPay, hourlyPayIsNet, hourlyTax, weeklyHolidayPay
     /// ACC1112A01: 앱 자료에 있는 설정. 화면의 설정 함수로 바꾼다. 알림은 끄기만 받는다(켜기는 iOS 권한 창이 필요하다).
@@ -542,8 +542,6 @@ enum AssistantSetting: String, CaseIterable, Codable, Sendable {
         }
     }
 
-    /// 금액이라 AI에게 올리지 않는 것.
-    var isWriteOnly: Bool { self == .annualPay || self == .monthlyPay || self == .hourlyPay }
 
     var key: String {
         switch self {
