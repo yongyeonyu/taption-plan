@@ -445,6 +445,42 @@ final class TravelTripUnitTests: XCTestCase {
         XCTAssertEqual(TravelQuickEntrySheet.durationText(90, language: .korean), "1시간 30분")
     }
 
+    /// TVX1112A01: 여행 날짜를 옮기면 일정 전체가 한 덩어리로 옮겨진다(대표 결정).
+    @MainActor
+    func testShiftingATripMovesEveryItemPlanAndPinTogether() async throws {
+        let model = try await importedModel()
+        let before = try XCTUnwrap(model.settings.travelTripItems)
+        let pinDay = try XCTUnwrap(model.settings.travelPlanStops.first { $0.itemID == "a" }).day
+        let plansBefore = Dictionary(uniqueKeysWithValues: before.compactMap { item in
+            item.planID.flatMap { id in model.snapshot.plans.first { $0.id == id }.map { (item.itemID, $0.span) } }
+        })
+        var trip = try XCTUnwrap(model.settings.travelTrips?.first)
+        trip.startDay = "2026-12-09"
+        trip.endDay = "2026-12-11"
+        let saved = await model.saveTravelTrip(trip)
+        XCTAssertTrue(saved)
+        let shifted = await model.shiftTravelTrip("t1", byDays: 7)
+        XCTAssertTrue(shifted)
+
+        let after = try XCTUnwrap(model.settings.travelTripItems)
+        for old in before {
+            let new = try XCTUnwrap(after.first { $0.itemID == old.itemID })
+            XCTAssertEqual(new.start, old.start.addingTimeInterval(7 * 86_400))
+            XCTAssertEqual(new.end, old.end.addingTimeInterval(7 * 86_400))
+            XCTAssertEqual(new.startOffsetSeconds, old.startOffsetSeconds, "그곳 시각은 그대로")
+            if let planID = new.planID, let span = plansBefore[old.itemID] {
+                let plan = try XCTUnwrap(model.snapshot.plans.first { $0.id == planID })
+                XCTAssertEqual(plan.span.start, span.start.addingTimeInterval(7 * 86_400), "일상 계획 기록도 함께")
+            }
+        }
+        let pin = try XCTUnwrap(model.settings.travelPlanStops.first { $0.itemID == "a" })
+        XCTAssertEqual(pin.day, Calendar.autoupdatingCurrent.date(byAdding: .day, value: 7, to: pinDay), "지도 핀 날짜도 함께")
+        XCTAssertEqual(model.settings.travelTrips?.first?.startDay, "2026-12-09")
+        XCTAssertEqual(model.settings.travelTrips?.first?.endDay, "2026-12-11")
+        let nothing = await model.shiftTravelTrip("t1", byDays: 0)
+        XCTAssertTrue(nothing)
+    }
+
     /// TVX1112A01: 손으로 넣은 일정에 장소를 붙이면 지도 핀이 생기고, 옮기고 뗄 수 있다.
     @MainActor
     func testManualItemPlaceBecomesAMapPin() async throws {

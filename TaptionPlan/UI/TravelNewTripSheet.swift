@@ -135,6 +135,10 @@ struct TravelNewTripSheet: View {
             }
         }
         guard await model.saveTravelTrip(trip) else { return }
+        // 첫날을 옮겼으면 넣어 둔 일정 전체를 같은 날 수만큼 함께 옮긴다.
+        if let old, !old.isWish, !trip.isWish, let moved = TravelTripDay.days(from: old.startDay, to: trip.startDay), moved != 0 {
+            await model.shiftTravelTrip(trip.id, byDays: moved)
+        }
         dismiss()
         onCreate(trip)
     }

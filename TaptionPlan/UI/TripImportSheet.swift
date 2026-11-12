@@ -81,6 +81,41 @@ extension AppModel {
         return await persist()
     }
 
+    /// 여행의 일정 전체를 `days`일만큼 한 덩어리로 옮긴다(대표 결정: 여행 날짜를 옮기면 일정도 함께).
+    /// 일상 쪽 계획 기록과 지도 핀 날짜가 같이 옮겨진다. 캘린더 고정 일정에 묶인 것은 그 자리에 둔다.
+    @discardableResult
+    func shiftTravelTrip(_ tripID: String, byDays days: Int, calendar: Calendar = .autoupdatingCurrent) async -> Bool {
+        guard acceptsDataMutation(), !tripID.isEmpty else { return false }
+        guard days != 0 else { return true }
+        let delta = TimeInterval(days * 86_400)
+        var items = snapshot.settings.travelTripItems ?? []
+        var kept: Set<String> = []
+        for index in items.indices where items[index].tripID == tripID {
+            if let planID = items[index].planID, let planIndex = snapshot.plans.firstIndex(where: { $0.id == planID }) {
+                if snapshot.plans[planIndex].isFixed {
+                    kept.insert(items[index].itemID)
+                    continue
+                }
+                let span = snapshot.plans[planIndex].span
+                snapshot.plans[planIndex].span = TimeSpan(start: span.start.addingTimeInterval(delta), end: span.end.addingTimeInterval(delta))
+                snapshot.plans[planIndex].updatedAt = .now
+            }
+            items[index].start = items[index].start.addingTimeInterval(delta)
+            items[index].end = items[index].end.addingTimeInterval(delta)
+        }
+        snapshot.plans.sort { $0.span.start < $1.span.start }
+        snapshot.settings.travelTripItems = items.isEmpty ? nil : items
+        var stops = snapshot.settings.travelPlanStops
+        for index in stops.indices where stops[index].tripID == tripID && !kept.contains(stops[index].itemID ?? "") {
+            stops[index].day = calendar.date(byAdding: .day, value: days, to: stops[index].day) ?? stops[index].day.addingTimeInterval(delta)
+        }
+        snapshot.settings.travelPlanStops = TravelPlanSchedule.renumbered(stops)
+        if let trips = snapshot.settings.travelTrips {
+            snapshot.settings.travelTrips = TravelTripDirectory.extended(trips, toCover: items)
+        }
+        return await persist()
+    }
+
     /// 여행을 지운다: 그 여행의 일정과 일상 쪽 계획 기록, 지도 핀까지. 가계부의 여행 장부는 그대로 둔다.
     @discardableResult
     func deleteTravelTrip(_ tripID: String) async -> Bool {
