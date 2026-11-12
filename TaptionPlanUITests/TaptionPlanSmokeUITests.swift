@@ -1049,3 +1049,65 @@ final class TaptionPlanInteractionPerfUITests: XCTestCase {
         }
     }
 }
+
+/// TVU1113A01: 여행 계획표에서 빈 셀 선택 → 「+」 → 입력 시트, 일정 선택 → 선택 막대. 여행이 저장돼 있는 기기에서만 돈다.
+final class TaptionPlanTravelPlanUITests: XCTestCase {
+    private func shot(_ app: XCUIApplication, _ name: String) {
+        let image = XCUIScreen.main.screenshot()
+        let attachment = XCTAttachment(screenshot: image)
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        if let folder = ProcessInfo.processInfo.environment["TVU_SHOTS"] {
+            try? image.pngRepresentation.write(to: URL(fileURLWithPath: folder).appendingPathComponent(name + ".png"))
+        }
+    }
+
+    func testEmptyCellSelectsThenPlusOpensEntryAndBlockTapShowsSelectionBar() throws {
+        let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
+        app.launchArguments += ["-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR"]
+        app.launch()
+        let travel = app.buttons["여행 계획"]
+        XCTAssertTrue(travel.waitForExistence(timeout: 40))
+        let later = app.buttons["나중에 확인"]
+        if later.waitForExistence(timeout: 3) { later.tap() }
+        travel.tap()
+        // 여행 화면 전체에 식별자가 하나 붙어 있어 안쪽은 읽기 이름으로 찾는다.
+        let raise = app.buttons["계획표 올리기"]
+        try XCTSkipUnless(raise.waitForExistence(timeout: 20), "열 여행이 없는 기기")
+        raise.tap()
+        let handle = app.descendants(matching: .any)["계획표 내리기"]
+        XCTAssertTrue(handle.waitForExistence(timeout: 5), "계획표가 올라온다")
+        sleep(1)
+        shot(app, "1-table")
+
+        // 재생 헤드 위쪽의 빈 곳(식사 열)을 누른다: 계획표는 그대로 있고 선택 칸과 「+」가 뜬다.
+        let frame = handle.frame
+        let cellSpot = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: frame.minX + frame.width * 0.47, dy: frame.maxY + 170))
+        cellSpot.tap()
+        let plus = app.buttons["일정 넣기"]
+        XCTAssertTrue(plus.waitForExistence(timeout: 3), "빈 셀을 누르면 선택 칸과 +가 뜬다")
+        XCTAssertTrue(handle.exists, "빈 셀을 눌러도 계획표가 내려가지 않는다")
+        XCTAssertFalse(app.buttons["완료"].exists, "+를 누르기 전에는 입력 시트가 뜨지 않는다")
+        shot(app, "2-cell-selected")
+
+        plus.tap()
+        let done = app.buttons.matching(NSPredicate(format: "label == %@", "완료")).firstMatch
+        XCTAssertTrue(done.waitForExistence(timeout: 5), "+를 누르면 입력 시트가 열린다")
+        shot(app, "3-entry-sheet")
+        done.tap()
+        XCTAssertTrue(handle.waitForExistence(timeout: 5))
+        XCTAssertFalse(plus.waitForExistence(timeout: 1), "열고 나면 선택이 풀린다")
+        shot(app, "3b-after-entry")
+
+        // 있는 일정(재생 헤드 바로 아래 이동 열의 첫 일정)을 한 번 누르면 선택 막대, 다시 누르면 편집기.
+        let blockSpot = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: frame.minX + frame.width * 0.24, dy: frame.maxY + 290))
+        blockSpot.tap()
+        XCTAssertTrue(app.buttons["속성"].waitForExistence(timeout: 3), "일정을 누르면 선택 막대가 뜬다")
+        XCTAssertFalse(app.buttons["지우기"].exists && app.buttons["완료"].exists, "한 번 눌러서는 편집기가 뜨지 않는다")
+        shot(app, "4-block-selected")
+        blockSpot.tap()
+        XCTAssertTrue(app.buttons["더 보기"].waitForExistence(timeout: 5), "선택된 일정을 다시 누르면 편집기가 열린다")
+        shot(app, "5-editor")
+    }
+}
