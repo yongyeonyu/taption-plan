@@ -5471,6 +5471,22 @@
 "남은 돈 {0}|Left {0}": "Còn {0}",
 "메모 (선택)|Note (optional)": "Ghi chú (tùy chọn)",
 "여기까지 {0}|So far {0}": "Đến đây {0}",
-"일정에 장소를 붙이면 지도에 나옵니다|Add a place to a plan to see it on the map": "Thêm địa điểm vào kế hoạch để hiện trên bản đồ"
+"일정에 장소를 붙이면 지도에 나옵니다|Add a place to a plan to see it on the map": "Thêm địa điểm vào kế hoạch để hiện trên bản đồ",
+"AI 공유 수준을 「{0}」(으)로 바꿀까요?|Change AI sharing to “{0}”?": "Đổi mức chia sẻ với AI thành “{0}”?",
+"AI 승인 요청|AI approval request": "Yêu cầu phê duyệt từ AI",
+"AI 연결 화면에서 PIN을 바꿀까요?|Change the PIN in AI connections?": "Đổi mã PIN trong kết nối AI?",
+"거절|Decline": "Từ chối",
+"거절함|Declined": "Đã từ chối",
+"건강 연동을 끌까요?|Turn off Health sync?": "Tắt đồng bộ Sức khỏe?",
+"모든 데이터 삭제 화면을 열까요?|Open the screen to erase all data?": "Mở màn hình xóa toàn bộ dữ liệu?",
+"백업 화면을 열까요?|Open the backup screen?": "Mở màn hình sao lưu?",
+"복원 화면을 열까요?|Open the restore screen?": "Mở màn hình khôi phục?",
+"서버 보관 기간을 {0}로 바꿀까요?|Change server retention to {0}?": "Đổi thời gian lưu trên máy chủ thành {0}?",
+"승인 요청 받기(공유 수준·삭제·백업 등)|Receive approval requests (sharing, erase, backup…)": "Nhận yêu cầu phê duyệt (chia sẻ, xóa, sao lưu…)",
+"승인|Approve": "Phê duyệt",
+"승인하면 건강·Apple Watch에서 가져온 기록이 앱에서 지워집니다.|Approving removes the records brought from Health and Apple Watch from the app.": "Khi phê duyệt, các bản ghi lấy từ Sức khỏe và Apple Watch sẽ bị xóa khỏi ứng dụng.",
+"승인하면 그 화면만 엽니다. 실제 실행과 비밀번호 입력은 직접 하세요.|Approving only opens that screen. You do the action and enter any password yourself.": "Phê duyệt chỉ mở màn hình đó. Bạn tự thực hiện và nhập mật khẩu.",
+"승인하면 바로 바뀝니다. 덜 보내거나 기간을 줄이면 서버에 올린 기록을 지웁니다.|It changes as soon as you approve. Sharing less or keeping it shorter deletes what the server holds.": "Thay đổi ngay khi bạn phê duyệt. Chia sẻ ít hơn hoặc lưu ngắn hơn sẽ xóa dữ liệu trên máy chủ.",
+"승인함|Approved": "Đã phê duyệt"
 }
 }

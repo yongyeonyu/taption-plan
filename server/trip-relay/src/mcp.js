@@ -6,7 +6,7 @@
 import { json, readBody, writeAllowed } from "./http.js";
 import { allows } from "./keys.js";
 import { claimTasks, endConversation, finishTask, queueCommand, readActivity, readAnswers, readAppState, readPolish, readResults, readSummary, readSync, savePlan } from "./store.js";
-import { ACTIONS, ANSWER_STATUSES, CATEGORY_ICONS, DISPLAY_OPTIONS, EXPENSE_CATEGORIES, LANGUAGES, MAP_STYLES, PAYMENT_RULE_KINDS, REVIEW_DECISIONS, SCREENS, SETTING_NAMES, TASK_KINDS, TASK_STATUSES, THEMES, TRAVEL_MODES, TRIP_STATUSES } from "./validate.js";
+import { ACTIONS, ANSWER_STATUSES, APPROVAL_NAMES, CATEGORY_ICONS, DISPLAY_OPTIONS, EXPENSE_CATEGORIES, LANGUAGES, MAP_STYLES, PAYMENT_RULE_KINDS, REVIEW_DECISIONS, SCREENS, SETTING_NAMES, TASK_KINDS, TASK_STATUSES, THEMES, TRAVEL_MODES, TRIP_STATUSES } from "./validate.js";
 
 export const PROTOCOL_VERSION = "2025-06-18";
 const SERVER_INFO = { name: "taption-plan", title: "Taption Plan", version: "3.1.0" };
@@ -229,6 +229,14 @@ const TOOLS = [
     + "needs an iOS permission prompt the user must answer: use open_screen settings and tell them what to tap). Current values are in "
     + "get_app_state settings.values. Pay amounts are write-only: the app never sends them back, so do not repeat or store them. Undoable.",
     { setting: enumOf("Setting name", SETTING_NAMES), value: { description: "New value: a string, number or boolean as the setting needs" } }, ["setting", "value"]),
+  // ACD1112A01
+  addTool("request_approval", "requestApproval", "Ask the user to approve a protected action", "Some actions are never done on your word alone. "
+    + "This asks the user, inside the app, to approve one; nothing happens until they tap Approve there. request: shareLevel (value off|summary|visits: "
+    + "how much the app shares with you; lowering it deletes what the server holds), retentionDays (value 1|7|30), healthOff (stop Health sync; "
+    + "this removes Health and Watch records from the app), eraseAllData, backup, restore, changePin (for these four the app only opens the "
+    + "screen where the user does it themselves; you never see or handle the backup password or PIN). The result comes back in get_answers "
+    + "with choices approved or declined. Send it only when the user asked for that action, and never ask again after declined.",
+    { request: enumOf("What to approve", APPROVAL_NAMES), value: { description: "shareLevel: off|summary|visits. retentionDays: 1, 7 or 30. Omit for the others" } }, ["request"]),
   addTool("add_schedule", "addSchedule", "Add schedule", "Add a planned activity. Without end it lasts one hour.",
     { title: str("1-200 characters"), start: INSTANT("Start"), end: INSTANT("End, after start"), note: str("Up to 1000 characters") }, ["title", "start"]),
   commandTool("update_activity", "updateActivity", "Rename or recategorize a record", "Correct a record's title and/or category. Target by recordId or the startTime it covers.",

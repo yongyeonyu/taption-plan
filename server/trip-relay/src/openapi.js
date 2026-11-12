@@ -48,6 +48,8 @@ const command = {
     + "updateTrip: tripId (getAppState trips), then title?, start?, end? (moving start moves its items). deleteTrip: tripId (items and pins too). "
     + "setSetting: setting (tollVehicle|salaryMode|annualPay|monthlyPay|payIsNet|showsNetPay|hourlyPay|hourlyPayIsNet|hourlyTax|weeklyHolidayPay|reduceMotion|weather|"
     + "weatherSidebar|gpsIntervalSeconds 30-1800 step 30|cat white|calico|mackerel|notifications false only), value. "
+    + "requestApproval: request (shareLevel with value off|summary|visits, retentionDays with value 1|7|30, healthOff, eraseAllData, backup, restore, "
+    + "changePin) asks the user to approve a protected action in the app; nothing happens until they approve, and the result is in getAnswers. "
     + "askUser: question (1-200), options (2-4 distinct strings of 1-60), multiSelect? (asks the user a multiple-choice question in the app; "
     + "changes no records; the app always adds free text; read the answer with getAnswers, matched by this command's id). Unknown fields are dropped.",
   properties: {
@@ -96,6 +98,7 @@ const command = {
     countryCode: { type: "string", pattern: "^[A-Z]{2}$", description: "addTrip: ISO 3166-1 alpha-2" },
     regionName: { type: "string", maxLength: 40, description: "addTrip: city or region" },
     setting: { type: "string", description: "setSetting: setting name" },
+    request: { type: "string", description: "requestApproval: what to approve" },
     value: { description: "setSetting: string, number or boolean" },
     placeId: { type: "string", description: "updatePlace, deletePlace: place id (UUID)" },
     radius: { type: "number", minimum: 30, maximum: 500, description: "addPlace, updatePlace: radius in meters" },

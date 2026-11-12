@@ -5471,6 +5471,22 @@
 "남은 돈 {0}|Left {0}": "बचा {0}",
 "메모 (선택)|Note (optional)": "नोट (वैकल्पिक)",
 "여기까지 {0}|So far {0}": "अब तक {0}",
-"일정에 장소를 붙이면 지도에 나옵니다|Add a place to a plan to see it on the map": "मानचित्र पर देखने के लिए योजना में जगह जोड़ें"
+"일정에 장소를 붙이면 지도에 나옵니다|Add a place to a plan to see it on the map": "मानचित्र पर देखने के लिए योजना में जगह जोड़ें",
+"AI 공유 수준을 「{0}」(으)로 바꿀까요?|Change AI sharing to “{0}”?": "AI साझाकरण को “{0}” में बदलें?",
+"AI 승인 요청|AI approval request": "AI का अनुमोदन अनुरोध",
+"AI 연결 화면에서 PIN을 바꿀까요?|Change the PIN in AI connections?": "AI कनेक्शन में PIN बदलें?",
+"거절|Decline": "अस्वीकार करें",
+"거절함|Declined": "अस्वीकार किया",
+"건강 연동을 끌까요?|Turn off Health sync?": "स्वास्थ्य सिंक बंद करें?",
+"모든 데이터 삭제 화면을 열까요?|Open the screen to erase all data?": "सारा डेटा मिटाने की स्क्रीन खोलें?",
+"백업 화면을 열까요?|Open the backup screen?": "बैकअप स्क्रीन खोलें?",
+"복원 화면을 열까요?|Open the restore screen?": "पुनर्स्थापना स्क्रीन खोलें?",
+"서버 보관 기간을 {0}로 바꿀까요?|Change server retention to {0}?": "सर्वर पर रखने की अवधि {0} करें?",
+"승인 요청 받기(공유 수준·삭제·백업 등)|Receive approval requests (sharing, erase, backup…)": "अनुमोदन अनुरोध पाएँ (साझाकरण, मिटाना, बैकअप…)",
+"승인|Approve": "स्वीकृत करें",
+"승인하면 건강·Apple Watch에서 가져온 기록이 앱에서 지워집니다.|Approving removes the records brought from Health and Apple Watch from the app.": "स्वीकृति देने पर स्वास्थ्य और Apple Watch से लाए रिकॉर्ड ऐप से हट जाएँगे।",
+"승인하면 그 화면만 엽니다. 실제 실행과 비밀번호 입력은 직접 하세요.|Approving only opens that screen. You do the action and enter any password yourself.": "स्वीकृति केवल वह स्क्रीन खोलती है। कार्रवाई और पासवर्ड आप खुद दर्ज करें।",
+"승인하면 바로 바뀝니다. 덜 보내거나 기간을 줄이면 서버에 올린 기록을 지웁니다.|It changes as soon as you approve. Sharing less or keeping it shorter deletes what the server holds.": "स्वीकृति देते ही बदल जाता है। कम साझा करने या अवधि घटाने पर सर्वर का डेटा मिट जाता है।",
+"승인함|Approved": "स्वीकृत किया"
 }
 }

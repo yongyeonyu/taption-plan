@@ -204,6 +204,8 @@ export const COMMAND_FIELDS = {
   updateTrip: ["tripId", "title", "start", "end"],
   deleteTrip: ["tripId"],
   setSetting: ["setting", "value"],
+  // ACD1112A01: 위험한 일은 앱에서 사용자가 승인해야 한다. AI는 요청만 보낸다.
+  requestApproval: ["request", "value"],
   setLanguage: ["language"],
   setTheme: ["theme"],
   setMapStyle: ["mapStyle"],
@@ -286,6 +288,18 @@ export const SETTINGS = {
   notifications: (v) => v === false,
 };
 export const SETTING_NAMES = Object.keys(SETTINGS);
+// ACD1112A01: 승인 요청 종류. 값이 있는 것은 그 값만, 없는 것은 값을 받지 않는다.
+const noValue = (v) => !given(v);
+export const APPROVALS = {
+  shareLevel: oneOf(["off", "summary", "visits"]),
+  retentionDays: (v) => RETENTION_DAYS.has(v),
+  healthOff: noValue,
+  eraseAllData: noValue,
+  backup: noValue,
+  restore: noValue,
+  changePin: noValue,
+};
+export const APPROVAL_NAMES = Object.keys(APPROVALS);
 
 // 알려진 칸만 남긴 명령. 동작을 모르면 null.
 export function cleanCommand(value) {
@@ -431,6 +445,8 @@ export function isCommand(value) {
       return targetID(v.tripId);
     case "setSetting":
       return Object.hasOwn(SETTINGS, v.setting) && SETTINGS[v.setting](v.value);
+    case "requestApproval":
+      return Object.hasOwn(APPROVALS, v.request) && APPROVALS[v.request](v.value);
     case "askUser":
       return questionText(v.question) && answerOptions(v.options) && optional(v.multiSelect, (b) => typeof b === "boolean");
     case "setLanguage":

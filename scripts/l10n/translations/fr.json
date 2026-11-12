@@ -5471,6 +5471,22 @@
 "남은 돈 {0}|Left {0}": "Reste {0}",
 "메모 (선택)|Note (optional)": "Note (facultatif)",
 "여기까지 {0}|So far {0}": "Jusqu’ici {0}",
-"일정에 장소를 붙이면 지도에 나옵니다|Add a place to a plan to see it on the map": "Ajoutez un lieu à un plan pour le voir sur la carte"
+"일정에 장소를 붙이면 지도에 나옵니다|Add a place to a plan to see it on the map": "Ajoutez un lieu à un plan pour le voir sur la carte",
+"AI 공유 수준을 「{0}」(으)로 바꿀까요?|Change AI sharing to “{0}”?": "Passer le partage avec l’IA à « {0} » ?",
+"AI 승인 요청|AI approval request": "Demande d’approbation de l’IA",
+"AI 연결 화면에서 PIN을 바꿀까요?|Change the PIN in AI connections?": "Modifier le code PIN dans les connexions IA ?",
+"거절|Decline": "Refuser",
+"거절함|Declined": "Refusé",
+"건강 연동을 끌까요?|Turn off Health sync?": "Désactiver la synchronisation Santé ?",
+"모든 데이터 삭제 화면을 열까요?|Open the screen to erase all data?": "Ouvrir l’écran pour effacer toutes les données ?",
+"백업 화면을 열까요?|Open the backup screen?": "Ouvrir l’écran de sauvegarde ?",
+"복원 화면을 열까요?|Open the restore screen?": "Ouvrir l’écran de restauration ?",
+"서버 보관 기간을 {0}로 바꿀까요?|Change server retention to {0}?": "Passer la conservation sur le serveur à {0} ?",
+"승인 요청 받기(공유 수준·삭제·백업 등)|Receive approval requests (sharing, erase, backup…)": "Recevoir les demandes d’approbation (partage, effacement, sauvegarde…)",
+"승인|Approve": "Approuver",
+"승인하면 건강·Apple Watch에서 가져온 기록이 앱에서 지워집니다.|Approving removes the records brought from Health and Apple Watch from the app.": "Si vous approuvez, les enregistrements importés de Santé et de l’Apple Watch sont supprimés de l’app.",
+"승인하면 그 화면만 엽니다. 실제 실행과 비밀번호 입력은 직접 하세요.|Approving only opens that screen. You do the action and enter any password yourself.": "L’approbation ouvre seulement cet écran. Vous effectuez l’action et saisissez le mot de passe vous-même.",
+"승인하면 바로 바뀝니다. 덜 보내거나 기간을 줄이면 서버에 올린 기록을 지웁니다.|It changes as soon as you approve. Sharing less or keeping it shorter deletes what the server holds.": "Le changement s’applique dès l’approbation. Partager moins ou conserver moins longtemps supprime ce que le serveur détient.",
+"승인함|Approved": "Approuvé"
 }
 }

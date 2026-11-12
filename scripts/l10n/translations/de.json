@@ -5471,6 +5471,22 @@
 "남은 돈 {0}|Left {0}": "Übrig {0}",
 "메모 (선택)|Note (optional)": "Notiz (optional)",
 "여기까지 {0}|So far {0}": "Bis hier {0}",
-"일정에 장소를 붙이면 지도에 나옵니다|Add a place to a plan to see it on the map": "Ort zu einem Plan hinzufügen, um ihn auf der Karte zu sehen"
+"일정에 장소를 붙이면 지도에 나옵니다|Add a place to a plan to see it on the map": "Ort zu einem Plan hinzufügen, um ihn auf der Karte zu sehen",
+"AI 공유 수준을 「{0}」(으)로 바꿀까요?|Change AI sharing to “{0}”?": "KI-Freigabe auf „{0}“ ändern?",
+"AI 승인 요청|AI approval request": "KI-Genehmigungsanfrage",
+"AI 연결 화면에서 PIN을 바꿀까요?|Change the PIN in AI connections?": "PIN in den KI-Verbindungen ändern?",
+"거절|Decline": "Ablehnen",
+"거절함|Declined": "Abgelehnt",
+"건강 연동을 끌까요?|Turn off Health sync?": "Health-Synchronisierung ausschalten?",
+"모든 데이터 삭제 화면을 열까요?|Open the screen to erase all data?": "Bildschirm zum Löschen aller Daten öffnen?",
+"백업 화면을 열까요?|Open the backup screen?": "Backup-Bildschirm öffnen?",
+"복원 화면을 열까요?|Open the restore screen?": "Wiederherstellungs-Bildschirm öffnen?",
+"서버 보관 기간을 {0}로 바꿀까요?|Change server retention to {0}?": "Aufbewahrung auf dem Server auf {0} ändern?",
+"승인 요청 받기(공유 수준·삭제·백업 등)|Receive approval requests (sharing, erase, backup…)": "Genehmigungsanfragen erhalten (Freigabe, Löschen, Backup …)",
+"승인|Approve": "Genehmigen",
+"승인하면 건강·Apple Watch에서 가져온 기록이 앱에서 지워집니다.|Approving removes the records brought from Health and Apple Watch from the app.": "Bei Genehmigung werden die aus Health und Apple Watch übernommenen Einträge aus der App entfernt.",
+"승인하면 그 화면만 엽니다. 실제 실행과 비밀번호 입력은 직접 하세요.|Approving only opens that screen. You do the action and enter any password yourself.": "Die Genehmigung öffnet nur diesen Bildschirm. Aktion und Passworteingabe erledigst du selbst.",
+"승인하면 바로 바뀝니다. 덜 보내거나 기간을 줄이면 서버에 올린 기록을 지웁니다.|It changes as soon as you approve. Sharing less or keeping it shorter deletes what the server holds.": "Die Änderung gilt sofort nach der Genehmigung. Weniger Freigabe oder kürzere Aufbewahrung löscht die Daten auf dem Server.",
+"승인함|Approved": "Genehmigt"
 }
 }

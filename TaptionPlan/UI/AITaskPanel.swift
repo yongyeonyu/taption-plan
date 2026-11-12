@@ -168,7 +168,13 @@ struct AssistantQuestionList: View {
         let waiting = store.waiting, finished = showsFinished ? Array(store.finished.suffix(3).reversed()) : []
         if !waiting.isEmpty || !finished.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
-                ForEach(waiting) { AssistantQuestionCard(question: $0, language: language) }
+                ForEach(waiting) { question in
+                    if let approval = question.approval {
+                        AssistantApprovalCard(question: question, approval: approval, language: language)
+                    } else {
+                        AssistantQuestionCard(question: question, language: language)
+                    }
+                }
                 ForEach(finished) { answered($0) }
                 if !finished.isEmpty {
                     Button {
@@ -187,13 +193,15 @@ struct AssistantQuestionList: View {
 
     private func answered(_ question: AssistantQuestion) -> some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(verbatim: question.question)
+            Text(verbatim: question.approval?.title(language) ?? question.question)
                 .font(.taptionStyle(.caption))
                 .foregroundStyle(Color.tpSecondary)
                 .lineLimit(2)
             Text(verbatim: question.status == .skipped
                 ? language.text("건너뜀", "Skipped")
-                : (question.choices + [question.text].compactMap { $0 }).joined(separator: " · "))
+                : question.approval != nil
+                    ? (question.choices == [AssistantApproval.approved] ? language.text("승인함", "Approved") : language.text("거절함", "Declined"))
+                    : (question.choices + [question.text].compactMap { $0 }).joined(separator: " · "))
                 .font(.taptionStyle(.subheadline, weight: .medium))
                 .foregroundStyle(Color.tpInk)
                 .lineLimit(2)
@@ -291,6 +299,50 @@ private struct AssistantQuestionCard: View {
     }
 }
 
+/// 승인 요청 카드(ACD1112A01). 문구는 앱이 쓰고, 「승인」을 눌러야 실행된다. 결과는 AI가 읽어 간다.
+private struct AssistantApprovalCard: View {
+    let question: AssistantQuestion
+    let approval: AssistantApproval
+    let language: MapHomeLanguage
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label(language.text("AI 승인 요청", "AI approval request"), systemImage: "hand.raised")
+                .font(.taptionStyle(.caption2, weight: .semibold))
+                .foregroundStyle(Color.tpHoliday)
+            Text(verbatim: approval.title(language))
+                .font(.taptionStyle(.subheadline, weight: .medium))
+                .foregroundStyle(Color.tpInk)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(verbatim: approval.detail(language))
+                .font(.taptionStyle(.caption))
+                .foregroundStyle(Color.tpSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 10) {
+                Button(language.text("승인", "Approve")) { answer(AssistantApproval.approved) }
+                    .font(.taptionStyle(.subheadline, weight: .semibold))
+                    .foregroundStyle(Color.tpHoliday)
+                Button(language.text("거절", "Decline")) { answer(AssistantApproval.declined) }
+                    .font(.taptionStyle(.subheadline, weight: .semibold))
+                    .foregroundStyle(Color.tpSecondary)
+            }
+        }
+        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(Color.tpCard.opacity(0.9), in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
+        .overlay { RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous).stroke(Color.tpHoliday.opacity(0.5), lineWidth: TaptionBorder.width) }
+    }
+
+    private func answer(_ choice: String) {
+        guard AssistantQuestionStore.shared.answer(question.id, choices: [choice], text: nil) else { return }
+        Task {
+            if choice == AssistantApproval.approved { await approval.perform(model: AssistantCommandRefresh.model) }
+            await AssistantQuestionStore.shared.uploadIfNeeded()
+        }
+    }
+}
+
 /// 새 질문이 오면 잠깐 알리고, 누르면 답하는 시트를 연다(ASK1112A01). 사생활 잠금 중에는 알리지 않는다.
 struct AssistantQuestionHost: View {
     let language: MapHomeLanguage
@@ -309,7 +361,8 @@ struct AssistantQuestionHost: View {
                     isPresented = true
                 } label: {
                     Label {
-                        Text(verbatim: language.text("AI 질문", "AI question") + ": " + question.question).lineLimit(2)
+                        Text(verbatim: question.approval.map { language.text("AI 승인 요청", "AI approval request") + ": " + $0.title(language) }
+                            ?? language.text("AI 질문", "AI question") + ": " + question.question).lineLimit(2)
                     } icon: {
                         Image(systemName: "questionmark.bubble")
                     }

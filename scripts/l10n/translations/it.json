@@ -5471,6 +5471,22 @@
 "남은 돈 {0}|Left {0}": "Restano {0}",
 "메모 (선택)|Note (optional)": "Nota (facoltativa)",
 "여기까지 {0}|So far {0}": "Fin qui {0}",
-"일정에 장소를 붙이면 지도에 나옵니다|Add a place to a plan to see it on the map": "Aggiungi un luogo a un piano per vederlo sulla mappa"
+"일정에 장소를 붙이면 지도에 나옵니다|Add a place to a plan to see it on the map": "Aggiungi un luogo a un piano per vederlo sulla mappa",
+"AI 공유 수준을 「{0}」(으)로 바꿀까요?|Change AI sharing to “{0}”?": "Cambiare la condivisione con l’IA in “{0}”?",
+"AI 승인 요청|AI approval request": "Richiesta di approvazione dell’IA",
+"AI 연결 화면에서 PIN을 바꿀까요?|Change the PIN in AI connections?": "Cambiare il PIN nelle connessioni IA?",
+"거절|Decline": "Rifiuta",
+"거절함|Declined": "Rifiutato",
+"건강 연동을 끌까요?|Turn off Health sync?": "Disattivare la sincronizzazione con Salute?",
+"모든 데이터 삭제 화면을 열까요?|Open the screen to erase all data?": "Aprire la schermata per cancellare tutti i dati?",
+"백업 화면을 열까요?|Open the backup screen?": "Aprire la schermata di backup?",
+"복원 화면을 열까요?|Open the restore screen?": "Aprire la schermata di ripristino?",
+"서버 보관 기간을 {0}로 바꿀까요?|Change server retention to {0}?": "Cambiare la conservazione sul server in {0}?",
+"승인 요청 받기(공유 수준·삭제·백업 등)|Receive approval requests (sharing, erase, backup…)": "Ricevere richieste di approvazione (condivisione, cancellazione, backup…)",
+"승인|Approve": "Approva",
+"승인하면 건강·Apple Watch에서 가져온 기록이 앱에서 지워집니다.|Approving removes the records brought from Health and Apple Watch from the app.": "Approvando, i dati importati da Salute e Apple Watch vengono rimossi dall’app.",
+"승인하면 그 화면만 엽니다. 실제 실행과 비밀번호 입력은 직접 하세요.|Approving only opens that screen. You do the action and enter any password yourself.": "L’approvazione apre solo quella schermata. Esegui tu l’azione e inserisci la password.",
+"승인하면 바로 바뀝니다. 덜 보내거나 기간을 줄이면 서버에 올린 기록을 지웁니다.|It changes as soon as you approve. Sharing less or keeping it shorter deletes what the server holds.": "La modifica vale appena approvi. Condividere meno o conservare per meno tempo elimina ciò che è sul server.",
+"승인함|Approved": "Approvato"
 }
 }

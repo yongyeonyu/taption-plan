@@ -307,6 +307,9 @@ test("trip and setting commands are validated; app state carries trips", async (
     // ACC1112A01
     ["setSetting", { setting: "reduceMotion", value: true }], ["setSetting", { setting: "gpsIntervalSeconds", value: 300 }],
     ["setSetting", { setting: "cat", value: "calico" }], ["setSetting", { setting: "notifications", value: false }],
+    // ACD1112A01
+    ["requestApproval", { request: "shareLevel", value: "visits" }], ["requestApproval", { request: "retentionDays", value: 30 }],
+    ["requestApproval", { request: "eraseAllData" }], ["requestApproval", { request: "healthOff" }],
   ];
   for (const [action, fields] of good) assert.equal(await post(action, fields), 201, `${action} ${JSON.stringify(fields)}`);
   const bad = [
@@ -320,6 +323,9 @@ test("trip and setting commands are validated; app state carries trips", async (
     ["setSetting", { setting: "notifications", value: true }], ["setSetting", { setting: "gpsIntervalSeconds", value: 45 }],
     ["setSetting", { setting: "gpsIntervalSeconds", value: 3600 }], ["setSetting", { setting: "cat", value: "tiger" }],
     ["setSetting", { setting: "healthEnabled", value: false }],
+    ["requestApproval", {}], ["requestApproval", { request: "shareLevel" }], ["requestApproval", { request: "shareLevel", value: "everything" }],
+    ["requestApproval", { request: "retentionDays", value: 365 }], ["requestApproval", { request: "eraseAllData", value: true }],
+    ["requestApproval", { request: "sendMoney" }], ["requestApproval", { request: "constructor" }],
   ];
   for (const [action, fields] of bad) assert.equal(await post(action, fields), 422, `${action} ${JSON.stringify(fields)}`);
   const state = { format: "bokki-app", version: 1, retentionDays: 7, settings: { language: "korean", tollVehicle: "electric", salaryMode: "salary" },

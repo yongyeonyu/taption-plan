@@ -457,9 +457,9 @@ extension AppModel {
             var result = AssistantEditResult(after: screen.title(language))
             result.appChange = AssistantAppChange(screen: screen)
             return result
-        case let .askUser(question):
+        case let .askUser(question), let .requestApproval(question):
             guard preferences.questions.add(question) else { return .rejected("duplicate") }
-            var result = AssistantEditResult(after: String(question.question.prefix(80)))
+            var result = AssistantEditResult(after: String((question.approval?.title(language) ?? question.question).prefix(80)))
             result.appChange = AssistantAppChange(questionID: question.id)
             return result
         case let .setSetting(setting, value):

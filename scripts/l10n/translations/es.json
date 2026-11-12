@@ -5471,6 +5471,22 @@
 "남은 돈 {0}|Left {0}": "Quedan {0}",
 "메모 (선택)|Note (optional)": "Nota (opcional)",
 "여기까지 {0}|So far {0}": "Hasta aquí {0}",
-"일정에 장소를 붙이면 지도에 나옵니다|Add a place to a plan to see it on the map": "Añade un lugar a un plan para verlo en el mapa"
+"일정에 장소를 붙이면 지도에 나옵니다|Add a place to a plan to see it on the map": "Añade un lugar a un plan para verlo en el mapa",
+"AI 공유 수준을 「{0}」(으)로 바꿀까요?|Change AI sharing to “{0}”?": "¿Cambiar el uso compartido con la IA a “{0}”?",
+"AI 승인 요청|AI approval request": "Solicitud de aprobación de la IA",
+"AI 연결 화면에서 PIN을 바꿀까요?|Change the PIN in AI connections?": "¿Cambiar el PIN en las conexiones de IA?",
+"거절|Decline": "Rechazar",
+"거절함|Declined": "Rechazado",
+"건강 연동을 끌까요?|Turn off Health sync?": "¿Desactivar la sincronización con Salud?",
+"모든 데이터 삭제 화면을 열까요?|Open the screen to erase all data?": "¿Abrir la pantalla para borrar todos los datos?",
+"백업 화면을 열까요?|Open the backup screen?": "¿Abrir la pantalla de copia de seguridad?",
+"복원 화면을 열까요?|Open the restore screen?": "¿Abrir la pantalla de restauración?",
+"서버 보관 기간을 {0}로 바꿀까요?|Change server retention to {0}?": "¿Cambiar la retención en el servidor a {0}?",
+"승인 요청 받기(공유 수준·삭제·백업 등)|Receive approval requests (sharing, erase, backup…)": "Recibir solicitudes de aprobación (compartir, borrar, copia…)",
+"승인|Approve": "Aprobar",
+"승인하면 건강·Apple Watch에서 가져온 기록이 앱에서 지워집니다.|Approving removes the records brought from Health and Apple Watch from the app.": "Al aprobar, se eliminan de la app los registros traídos de Salud y Apple Watch.",
+"승인하면 그 화면만 엽니다. 실제 실행과 비밀번호 입력은 직접 하세요.|Approving only opens that screen. You do the action and enter any password yourself.": "Aprobar solo abre esa pantalla. Tú realizas la acción e introduces la contraseña.",
+"승인하면 바로 바뀝니다. 덜 보내거나 기간을 줄이면 서버에 올린 기록을 지웁니다.|It changes as soon as you approve. Sharing less or keeping it shorter deletes what the server holds.": "Cambia en cuanto apruebas. Compartir menos o conservar menos tiempo borra lo que guarda el servidor.",
+"승인함|Approved": "Aprobado"
 }
 }

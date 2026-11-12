@@ -25,6 +25,8 @@ enum AssistantActionKind: String, CaseIterable, Identifiable, Codable, Sendable 
     case addPlace, updatePlace, deletePlace, addCategory, updateCategory
     // ACB1112A01
     case addTrip, updateTrip, deleteTrip, setSetting
+    // ACD1112A01
+    case requestApproval
 
     var id: String { rawValue }
 
@@ -74,6 +76,7 @@ enum AssistantActionKind: String, CaseIterable, Identifiable, Codable, Sendable 
         case .updateTrip: language.text("여행 고치기", "Edit trips")
         case .deleteTrip: language.text("여행 지우기", "Delete trips")
         case .setSetting: language.text("급여·통행료 차종 설정 바꾸기", "Change pay and toll vehicle settings")
+        case .requestApproval: language.text("승인 요청 받기(공유 수준·삭제·백업 등)", "Receive approval requests (sharing, erase, backup…)")
         }
     }
 }
@@ -168,6 +171,7 @@ extension AssistantCommand.Action {
         case .updateTrip: .updateTrip
         case .deleteTrip: .deleteTrip
         case .setSetting: .setSetting
+        case .requestApproval: .requestApproval
         }
     }
 
@@ -175,7 +179,7 @@ extension AssistantCommand.Action {
     /// 루틴을 지우면 하위 일정도 함께 지워지므로 `plans`를 주면 그 수까지 센다(REV1110A06).
     func existingChangeCount(plans: [PlanRecord] = []) -> Int {
         switch self {
-        case .addMemo, .addSchedule, .addGoal, .addTripStop, .setBubble, .addExpense, .classifyUnconfirmed, .addPaymentRule, .addOwnAccount, .openScreen, .askUser, .addPlace, .addCategory, .addTrip: 0
+        case .addMemo, .addSchedule, .addGoal, .addTripStop, .setBubble, .addExpense, .classifyUnconfirmed, .addPaymentRule, .addOwnAccount, .openScreen, .askUser, .addPlace, .addCategory, .addTrip, .requestApproval: 0
         case let .mergeRecords(_, ids, _, _): ids.count
         case let .deleteGoal(goalID):
             1 + (UUID(uuidString: goalID).flatMap { try? PlanHierarchy.descendants(of: $0, in: plans) }?.count ?? 0)

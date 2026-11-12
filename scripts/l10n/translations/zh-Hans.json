@@ -5471,6 +5471,22 @@
 "남은 돈 {0}|Left {0}": "剩余 {0}",
 "메모 (선택)|Note (optional)": "备注（可选）",
 "여기까지 {0}|So far {0}": "到这里 {0}",
-"일정에 장소를 붙이면 지도에 나옵니다|Add a place to a plan to see it on the map": "给行程添加地点后会显示在地图上"
+"일정에 장소를 붙이면 지도에 나옵니다|Add a place to a plan to see it on the map": "给行程添加地点后会显示在地图上",
+"AI 공유 수준을 「{0}」(으)로 바꿀까요?|Change AI sharing to “{0}”?": "将 AI 共享级别改为“{0}”吗？",
+"AI 승인 요청|AI approval request": "AI 批准请求",
+"AI 연결 화면에서 PIN을 바꿀까요?|Change the PIN in AI connections?": "在 AI 连接界面更改 PIN 吗？",
+"거절|Decline": "拒绝",
+"거절함|Declined": "已拒绝",
+"건강 연동을 끌까요?|Turn off Health sync?": "关闭健康同步吗？",
+"모든 데이터 삭제 화면을 열까요?|Open the screen to erase all data?": "打开删除所有数据的界面吗？",
+"백업 화면을 열까요?|Open the backup screen?": "打开备份界面吗？",
+"복원 화면을 열까요?|Open the restore screen?": "打开恢复界面吗？",
+"서버 보관 기간을 {0}로 바꿀까요?|Change server retention to {0}?": "将服务器保留期改为{0}吗？",
+"승인 요청 받기(공유 수준·삭제·백업 등)|Receive approval requests (sharing, erase, backup…)": "接收批准请求(共享、删除、备份等)",
+"승인|Approve": "批准",
+"승인하면 건강·Apple Watch에서 가져온 기록이 앱에서 지워집니다.|Approving removes the records brought from Health and Apple Watch from the app.": "批准后，从“健康”和 Apple Watch 导入的记录会从 App 中删除。",
+"승인하면 그 화면만 엽니다. 실제 실행과 비밀번호 입력은 직접 하세요.|Approving only opens that screen. You do the action and enter any password yourself.": "批准后只会打开该界面。实际操作和输入密码请自行完成。",
+"승인하면 바로 바뀝니다. 덜 보내거나 기간을 줄이면 서버에 올린 기록을 지웁니다.|It changes as soon as you approve. Sharing less or keeping it shorter deletes what the server holds.": "批准后立即生效。减少共享或缩短期限会删除服务器上的记录。",
+"승인함|Approved": "已批准"
 }
 }

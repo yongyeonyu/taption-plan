@@ -327,7 +327,7 @@ test("MCP initialize, tools/list per scope, notifications and JSON-RPC errors", 
   assert.equal((await mcp(env, { jsonrpc: "2.0", method: "notifications/initialized" }, writer)).status, 202);
   const all = (await mcp(env, rpc("tools/list"), writer)).body.result.tools.map((t) => t.name);
   assert.deepEqual(all.sort(), ["add_category", "add_expense", "add_goal", "add_memo", "add_own_account", "add_payment_rule", "add_place", "add_schedule", "add_trip", "add_trip_stop", "ask_user", "classify_unconfirmed", "complete_ai_task", "delete_goal", "delete_inbox_item", "delete_memo", "delete_payment_rule", "delete_place", "delete_schedule", "delete_trip", "delete_trip_stop",
-    "end_conversation", "get_activity", "get_ai_tasks", "get_answers", "get_app_state", "get_command_results", "get_polish_requests", "get_summary", "hide_record", "list_actions", "merge_records", "open_screen", "remove_own_account", "resolve_review", "run_action", "send_trip_plan", "set_bubble", "set_budget", "set_display_option", "set_language",
+    "end_conversation", "get_activity", "get_ai_tasks", "get_answers", "get_app_state", "get_command_results", "get_polish_requests", "get_summary", "hide_record", "list_actions", "merge_records", "open_screen", "remove_own_account", "request_approval", "resolve_review", "run_action", "send_trip_plan", "set_bubble", "set_budget", "set_display_option", "set_language",
     "set_map_style", "set_setting", "set_theme", "set_travel_mode", "set_trip_item_status", "update_activity", "update_category", "update_expense", "update_goal", "update_memo", "update_place", "update_record_time", "update_schedule",
     "update_sleep", "update_trip", "update_trip_stop"]);
   const read = (await mcp(env, rpc("tools/list"), reader)).body.result.tools;

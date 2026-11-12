@@ -207,6 +207,9 @@ extension AssistantCommandParser {
         case "setSetting":
             guard let setting = raw.setting.flatMap(AssistantSetting.init(rawValue:)), let value = raw.value.flatMap(setting.canonical) else { return nil }
             return .setSetting(setting, value: value)
+        case "requestApproval":
+            guard let id = raw.id, let approval = AssistantApproval.make(request: raw.request, value: raw.value) else { return nil }
+            return .requestApproval(approval.question(id: id, now: now))
         case "askUser":
             return AssistantQuestion.make(id: raw.id, question: raw.question, options: raw.options, multiSelect: raw.multiSelect, now: now).map { .askUser($0) }
         default:

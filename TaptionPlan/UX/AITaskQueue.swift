@@ -199,6 +199,8 @@ struct AssistantQuestion: Codable, Equatable, Identifiable, Sendable {
     /// 직접 입력한 답.
     var text: String?
     var answeredAt: Date?
+    /// 승인 요청이면 무엇을 승인하는지(ACD1112A01). 보통 질문은 nil. 카드 문구는 앱이 쓴다.
+    var approval: AssistantApproval?
 
     /// 서버와 같은 규칙으로 다시 본다: 질문 1~200자, 서로 다른 보기 2~4개(1~60자).
     static func make(id: String?, question: String?, options: [String]?, multiSelect: Bool?, now: Date) -> Self? {
@@ -329,5 +331,105 @@ final class AssistantQuestionStore {
     private func save() {
         if let data = try? JSONEncoder().encode(items) { defaults.set(data, forKey: Self.key) }
         defaults.set(true, forKey: Self.dirtyKey)
+    }
+}
+
+/// AI가 혼자 할 수 없는 일의 승인 요청(ACD1112A01). 앱에서 사용자가 「승인」을 눌러야 실행된다.
+/// 값을 바꾸는 것은 승인하면 바로 적용하고, 비밀번호·확인이 필요한 것은 그 화면을 열어 사용자가 직접 한다.
+struct AssistantApproval: Codable, Equatable, Sendable {
+    enum Request: String, Codable, CaseIterable, Sendable {
+        case shareLevel, retentionDays, healthOff, eraseAllData, backup, restore, changePin
+    }
+
+    static let approved = "approved"
+    static let declined = "declined"
+
+    var request: Request
+    /// `shareLevel`은 off|summary|visits, `retentionDays`는 1|7|30. 나머지는 nil.
+    var value: String?
+
+    /// 서버와 같은 규칙으로 다시 본다.
+    static func make(request: String?, value: AssistantLooseValue?) -> Self? {
+        guard let request = request.flatMap(Request.init(rawValue:)) else { return nil }
+        switch (request, value) {
+        case let (.shareLevel, .text(level)) where AssistantShareLevel(rawValue: level) != nil: return Self(request: request, value: level)
+        case let (.retentionDays, .number(days)) where days == days.rounded() && AssistantRetention(rawValue: Int(days)) != nil:
+            return Self(request: request, value: String(Int(days)))
+        case (.healthOff, nil), (.eraseAllData, nil), (.backup, nil), (.restore, nil), (.changePin, nil): return Self(request: request, value: nil)
+        default: return nil
+        }
+    }
+
+    /// 승인 카드로 쓸 질문. `question`은 AI가 `get_answers`에서 다시 읽는 영어 글이고, 화면 문구는 `title`이 만든다.
+    func question(id: String, now: Date) -> AssistantQuestion {
+        AssistantQuestion(
+            id: id, question: "Approval request: \(request.rawValue)" + (value.map { " = \($0)" } ?? ""),
+            options: [Self.approved, Self.declined], multiSelect: false, askedAt: now, approval: self
+        )
+    }
+
+    /// 승인하면 열 화면. 값을 바로 적용하는 요청은 nil.
+    var screen: AssistantScreen? {
+        switch request {
+        case .eraseAllData: .settings
+        case .backup, .restore: .dataProtection
+        case .changePin: .aiConnection
+        case .shareLevel, .retentionDays, .healthOff: nil
+        }
+    }
+
+    func title(_ language: MapHomeLanguage) -> String {
+        switch request {
+        case .shareLevel:
+            let level = value.flatMap(AssistantShareLevel.init(rawValue:)) ?? .summary
+            return language.text("AI 공유 수준을 「\(level.title(language))」(으)로 바꿀까요?", "Change AI sharing to “\(level.title(language))”?")
+        case .retentionDays:
+            let days = value.flatMap(Int.init).flatMap(AssistantRetention.init(rawValue:)) ?? .week
+            return language.text("서버 보관 기간을 \(days.title(language))로 바꿀까요?", "Change server retention to \(days.title(language))?")
+        case .healthOff: return language.text("건강 연동을 끌까요?", "Turn off Health sync?")
+        case .eraseAllData: return language.text("모든 데이터 삭제 화면을 열까요?", "Open the screen to erase all data?")
+        case .backup: return language.text("백업 화면을 열까요?", "Open the backup screen?")
+        case .restore: return language.text("복원 화면을 열까요?", "Open the restore screen?")
+        case .changePin: return language.text("AI 연결 화면에서 PIN을 바꿀까요?", "Change the PIN in AI connections?")
+        }
+    }
+
+    /// 승인하면 무슨 일이 생기는지.
+    func detail(_ language: MapHomeLanguage) -> String {
+        switch request {
+        case .shareLevel, .retentionDays:
+            language.text("승인하면 바로 바뀝니다. 덜 보내거나 기간을 줄이면 서버에 올린 기록을 지웁니다.",
+                          "It changes as soon as you approve. Sharing less or keeping it shorter deletes what the server holds.")
+        case .healthOff:
+            language.text("승인하면 건강·Apple Watch에서 가져온 기록이 앱에서 지워집니다.",
+                          "Approving removes the records brought from Health and Apple Watch from the app.")
+        case .eraseAllData, .backup, .restore, .changePin:
+            language.text("승인하면 그 화면만 엽니다. 실제 실행과 비밀번호 입력은 직접 하세요.",
+                          "Approving only opens that screen. You do the action and enter any password yourself.")
+        }
+    }
+
+    /// 승인된 요청을 실행한다. 값 설정은 여기서 적용하고, 화면이 필요한 것은 열어 달라고 맡긴다.
+    @MainActor
+    func perform(model: AppModel?, defaults: UserDefaults = .standard, screens: AssistantScreenRequest = .shared) async {
+        switch request {
+        case .shareLevel:
+            guard let level = value.flatMap(AssistantShareLevel.init(rawValue:)) else { return }
+            let old = AssistantShareLevel.current(defaults)
+            defaults.set(level.rawValue, forKey: AssistantShareLevel.defaultsKey)
+            if AssistantShareLevel.isDowngrade(from: old, to: level) { AssistantActivitySync.requestClear(defaults: defaults) }
+        case .retentionDays:
+            guard let days = value.flatMap(Int.init), AssistantRetention(rawValue: days) != nil else { return }
+            let old = AssistantRetention.current(defaults).rawValue
+            defaults.set(days, forKey: AssistantRetention.defaultsKey)
+            if days < old { AssistantActivitySync.requestClear(defaults: defaults) }
+        case .healthOff:
+            await model?.setHealthEnabled(false)
+        case .eraseAllData, .backup, .restore, .changePin:
+            if let screen { screens.request(screen) }
+        }
+        if let model, defaults === UserDefaults.standard, request == .shareLevel || request == .retentionDays {
+            await AssistantActivitySync.run(model: model)
+        }
     }
 }

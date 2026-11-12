@@ -1699,6 +1699,57 @@ final class AssistantAppControlTests: XCTestCase {
         XCTAssertNil(state.settings.values?["annualPay"])
     }
 
+    /// ACD1112A01: 승인 요청은 정해진 종류와 값만 읽고, 승인하기 전에는 아무것도 바꾸지 않는다.
+    func testApprovalRequestsWaitForTheUserAndApplyOnlyWhenApproved() async throws {
+        let store = defaults()
+        let model = await model()
+        let parsed = try batch([
+            command("a1", "requestApproval", ["request": "shareLevel", "value": "visits"]),
+            command("a2", "requestApproval", ["request": "retentionDays", "value": 1]),
+            command("a3", "requestApproval", ["request": "eraseAllData"]),
+            command("a4", "requestApproval", ["request": "backup"]),
+            command("noValue", "requestApproval", ["request": "shareLevel"]),
+            command("badLevel", "requestApproval", ["request": "shareLevel", "value": "everything"]),
+            command("badDays", "requestApproval", ["request": "retentionDays", "value": 365]),
+            command("extra", "requestApproval", ["request": "eraseAllData", "value": true]),
+            command("unknown", "requestApproval", ["request": "sendMoney"]),
+        ])
+        XCTAssertEqual(parsed.invalidIDs, ["noValue", "badLevel", "badDays", "extra", "unknown"])
+        XCTAssertEqual(parsed.commands.map(\.action.kind), [.requestApproval, .requestApproval, .requestApproval, .requestApproval])
+
+        store.set(AssistantShareLevel.summary.rawValue, forKey: AssistantShareLevel.defaultsKey)
+        store.set(AssistantRetention.week.rawValue, forKey: AssistantRetention.defaultsKey)
+        let outcome = await model.applyAssistantCommands(parsed, defaults: store)
+        let asked = try XCTUnwrap(outcome)
+        XCTAssertEqual(asked.questions, 4)
+        let questions = AssistantQuestionStore(defaults: store)
+        XCTAssertEqual(questions.waiting.map(\.id), ["a1", "a2", "a3", "a4"])
+        XCTAssertEqual(AssistantShareLevel.current(store), .summary, "승인 전에는 바뀌지 않는다")
+        XCTAssertEqual(asked.entries.first?.after, "AI 공유 수준을 「머문 곳 이름과 시각」(으)로 바꿀까요?")
+
+        let screens = AssistantScreenRequest(defaults: store)
+        let share = try XCTUnwrap(questions.waiting[0].approval), retention = try XCTUnwrap(questions.waiting[1].approval)
+        let erase = try XCTUnwrap(questions.waiting[2].approval)
+        XCTAssertTrue(questions.answer("a1", choices: [AssistantApproval.approved], text: nil))
+        await share.perform(model: model, defaults: store, screens: screens)
+        XCTAssertEqual(AssistantShareLevel.current(store), .visits)
+        XCTAssertFalse(store.bool(forKey: AssistantActivitySync.pendingClearKey), "더 보내는 쪽은 서버 기록을 지우지 않는다")
+        await retention.perform(model: model, defaults: store, screens: screens)
+        XCTAssertEqual(AssistantRetention.current(store), .oneDay)
+        XCTAssertTrue(store.bool(forKey: AssistantActivitySync.pendingClearKey), "기간을 줄이면 서버 기록을 지운다")
+        XCTAssertNil(screens.pending)
+        await erase.perform(model: model, defaults: store, screens: screens)
+        XCTAssertEqual(screens.pending, .settings, "삭제는 화면만 연다")
+
+        XCTAssertTrue(questions.answer("a4", choices: [AssistantApproval.declined], text: nil))
+        let body = try XCTUnwrap(questions.uploadBody())
+        let answers = try XCTUnwrap((JSONSerialization.jsonObject(with: body) as? [String: Any])?["answers"] as? [[String: Any]])
+        XCTAssertEqual(answers.map { $0["status"] as? String }, ["answered", "waiting", "waiting", "answered"])
+        XCTAssertEqual(answers[0]["choices"] as? [String], ["approved"])
+        XCTAssertEqual(answers[3]["choices"] as? [String], ["declined"])
+        XCTAssertEqual(answers[0]["question"] as? String, "Approval request: shareLevel = visits")
+    }
+
     func testOpenScreenWaitsUntilTakenExpiresAndUndoCancelsIt() async throws {
         let store = defaults()
         let model = await model()
