@@ -293,7 +293,7 @@
    "ko": "15분 뒤로",
    "en": "15 minutes later",
    "files": [
-    "TravelQuickEntrySheet.swift:155"
+    "TravelQuickEntrySheet.swift:187"
    ],
    "args": [],
    "targets": [
@@ -305,7 +305,7 @@
    "ko": "15분 앞으로",
    "en": "15 minutes earlier",
    "files": [
-    "TravelQuickEntrySheet.swift:150"
+    "TravelQuickEntrySheet.swift:182"
    ],
    "args": [],
    "targets": [
@@ -3825,7 +3825,7 @@
    "ko": "{0}박 {1}일",
    "en": "{0} nights, {1} days",
    "files": [
-    "TravelModeView.swift:585"
+    "TravelModeView.swift:594"
    ],
    "args": [
     "entry.nights",
@@ -3917,12 +3917,12 @@
    "ko": "{0}분",
    "en": "{0}m",
    "files": [
-    "TravelQuickEntrySheet.swift:54",
     "HealthAndSensorModels.swift:706",
-    "RecordSummaryEngine.swift:30"
+    "RecordSummaryEngine.swift:30",
+    "MapHomeCalendarSheet.swift:469"
    ],
    "args": [
-    "rest"
+    "minutes"
    ],
    "targets": [
     "TaptionPlan",
@@ -3986,13 +3986,13 @@
    "ko": "{0}시간 {1}분",
    "en": "{0}h {1}m",
    "files": [
-    "TravelQuickEntrySheet.swift:56",
     "RecordSummaryEngine.swift:32",
-    "MapHomeCalendarSheet.swift:467"
+    "MapHomeCalendarSheet.swift:467",
+    "MapHomeNLEClipFactory.swift:274"
    ],
    "args": [
     "hours",
-    "rest"
+    "minutes"
    ],
    "targets": [
     "TaptionPlan"
@@ -4064,9 +4064,9 @@
    "ko": "{0}시간",
    "en": "{0}h",
    "files": [
-    "TravelQuickEntrySheet.swift:55",
     "RecordSummaryEngine.swift:31",
-    "MapHomeCalendarSheet.swift:467"
+    "MapHomeCalendarSheet.swift:467",
+    "MapHomeNLEClipFactory.swift:275"
    ],
    "args": [
     "hours"
@@ -4341,8 +4341,8 @@
    "ko": "{0}일차",
    "en": "Day {0}",
    "files": [
-    "TravelModeView.swift:714",
-    "TravelModeView.swift:828"
+    "TravelModeView.swift:723",
+    "TravelModeView.swift:842"
    ],
    "args": [
     "entry.dayNumber ?? 1"
@@ -34710,8 +34710,8 @@
    "ko": "계획에 없던 방문",
    "en": "Unplanned stop",
    "files": [
-    "TravelPlanTable.swift:211",
-    "TravelPlanTable.swift:217"
+    "TravelPlanTable.swift:241",
+    "TravelPlanTable.swift:247"
    ],
    "args": [],
    "targets": [
@@ -34775,7 +34775,7 @@
    "ko": "계획표 내리기",
    "en": "Close plan table",
    "files": [
-    "TravelModeView.swift:800"
+    "TravelModeView.swift:809"
    ],
    "args": [],
    "targets": [
@@ -34787,8 +34787,8 @@
    "ko": "계획표 올리기",
    "en": "Open plan table",
    "files": [
-    "TravelModeView.swift:377",
-    "TravelModeView.swift:800"
+    "TravelModeView.swift:386",
+    "TravelModeView.swift:809"
    ],
    "args": [],
    "targets": [
@@ -34986,7 +34986,7 @@
    "ko": "고치기",
    "en": "Save",
    "files": [
-    "TravelQuickEntrySheet.swift:200"
+    "TravelQuickEntrySheet.swift:265"
    ],
    "args": [],
    "targets": [
@@ -35101,7 +35101,7 @@
    "ko": "관광",
    "en": "Sights",
    "files": [
-    "TravelPlanTable.swift:131"
+    "TravelPlanTable.swift:154"
    ],
    "args": [],
    "targets": [
@@ -36277,7 +36277,7 @@
    "ko": "기본 색으로",
    "en": "Use default color",
    "files": [
-    "TravelModeView.swift:661"
+    "TravelModeView.swift:670"
    ],
    "args": [],
    "targets": [
@@ -36495,6 +36495,18 @@
     "LedgerCore.swift:28",
     "AssistantAIProvider.swift:37",
     "MapHomeLaunchPrompts.swift:360"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "길이 바꾸기|Change length",
+   "ko": "길이 바꾸기",
+   "en": "Change length",
+   "files": [
+    "TravelPlanTable.swift:336"
    ],
    "args": [],
    "targets": [
@@ -36793,7 +36805,7 @@
    "ko": "나라",
    "en": "Country",
    "files": [
-    "TravelModeView.swift:928"
+    "TravelModeView.swift:994"
    ],
    "args": [],
    "targets": [
@@ -36960,7 +36972,7 @@
    "files": [
     "MapHomeDailyCard.swift:365",
     "MapHomePlaceBookTools.swift:780",
-    "TravelModeView.swift:920"
+    "TravelModeView.swift:986"
    ],
    "args": [],
    "targets": [
@@ -37268,8 +37280,8 @@
    "ko": "넣기",
    "en": "Add",
    "files": [
-    "TravelQuickEntrySheet.swift:200",
-    "LedgerTripView.swift:274"
+    "LedgerTripView.swift:274",
+    "TravelQuickEntrySheet.swift:265"
    ],
    "args": [],
    "targets": [
@@ -37293,7 +37305,7 @@
    "ko": "넣지 못했습니다. 다시 해 주세요.",
    "en": "Could not save. Try again.",
    "files": [
-    "TravelQuickEntrySheet.swift:87"
+    "TravelQuickEntrySheet.swift:112"
    ],
    "args": [],
    "targets": [
@@ -37613,6 +37625,18 @@
    ]
   },
   {
+   "key": "다음 날로|Move to next day",
+   "ko": "다음 날로",
+   "en": "Move to next day",
+   "files": [
+    "TravelQuickEntrySheet.swift:133"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "다음 날짜|Next date",
    "ko": "다음 날짜",
    "en": "Next date",
@@ -37693,7 +37717,7 @@
    "ko": "다음: {0}",
    "en": "Next: {0}",
    "files": [
-    "TravelModeView.swift:752"
+    "TravelModeView.swift:761"
    ],
    "args": [
     "$0.title"
@@ -37889,8 +37913,8 @@
    "ko": "당일",
    "en": "Day trip",
    "files": [
-    "TravelModeView.swift:584",
-    "TravelModeView.swift:827"
+    "TravelModeView.swift:593",
+    "TravelModeView.swift:841"
    ],
    "args": [],
    "targets": [
@@ -37902,7 +37926,7 @@
    "ko": "당일치기",
    "en": "Day trip",
    "files": [
-    "TravelModeView.swift:919"
+    "TravelModeView.swift:985"
    ],
    "args": [],
    "targets": [
@@ -38110,6 +38134,18 @@
    "en": "Balance",
    "files": [
     "LedgerTripView.swift:129"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "더 보기|More",
+   "ko": "더 보기",
+   "en": "More",
+   "files": [
+    "TravelQuickEntrySheet.swift:137"
    ],
    "args": [],
    "targets": [
@@ -38622,9 +38658,9 @@
    "ko": "되돌리기",
    "en": "Undo",
    "files": [
-    "TravelQuickEntrySheet.swift:120",
     "AssistantSafetyViews.swift:353",
-    "MapHomeNLEClipEditor.swift:503"
+    "MapHomeNLEClipEditor.swift:503",
+    "MapHomeStickerEditor.swift:332"
    ],
    "args": [],
    "targets": [
@@ -39105,7 +39141,7 @@
    "ko": "마지막 날",
    "en": "Last day",
    "files": [
-    "TravelModeView.swift:922"
+    "TravelModeView.swift:988"
    ],
    "args": [],
    "targets": [
@@ -39156,7 +39192,7 @@
    "en": "Create",
    "files": [
     "AssistantSafetyViews.swift:270",
-    "TravelModeView.swift:945"
+    "TravelModeView.swift:1011"
    ],
    "args": [],
    "targets": [
@@ -40322,6 +40358,18 @@
    "en": "No changes, left as is.",
    "files": [
     "PlanBackupPresentation.swift:76"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "바로 뒤에 복제|Duplicate right after",
+   "ko": "바로 뒤에 복제",
+   "en": "Duplicate right after",
+   "files": [
+    "TravelQuickEntrySheet.swift:131"
    ],
    "args": [],
    "targets": [
@@ -42674,8 +42722,8 @@
    "ko": "새 여행",
    "en": "New trip",
    "files": [
-    "TravelModeView.swift:669",
-    "TravelModeView.swift:940"
+    "TravelModeView.swift:678",
+    "TravelModeView.swift:1006"
    ],
    "args": [],
    "targets": [
@@ -44033,7 +44081,7 @@
    "ko": "숙소",
    "en": "Stay",
    "files": [
-    "TravelPlanTable.swift:131"
+    "TravelPlanTable.swift:154"
    ],
    "args": [],
    "targets": [
@@ -44596,7 +44644,7 @@
    "ko": "식사",
    "en": "Meals",
    "files": [
-    "TravelPlanTable.swift:131"
+    "TravelPlanTable.swift:154"
    ],
    "args": [],
    "targets": [
@@ -44669,7 +44717,7 @@
    "ko": "실제",
    "en": "Actual",
    "files": [
-    "TravelPlanTable.swift:137"
+    "TravelPlanTable.swift:160"
    ],
    "args": [],
    "targets": [
@@ -44769,7 +44817,7 @@
    "ko": "쓴 돈 {0}",
    "en": "Spent {0}",
    "files": [
-    "TravelModeView.swift:730"
+    "TravelModeView.swift:739"
    ],
    "args": [
     "LedgerMoney.text(sheet.myCost, language: language)"
@@ -45065,7 +45113,7 @@
    "ko": "아직 일정이 없습니다",
    "en": "No plans yet",
    "files": [
-    "TravelModeView.swift:752"
+    "TravelModeView.swift:761"
    ],
    "args": [],
    "targets": [
@@ -46249,7 +46297,7 @@
    "ko": "여행 이름",
    "en": "Trip name",
    "files": [
-    "TravelModeView.swift:918"
+    "TravelModeView.swift:984"
    ],
    "args": [],
    "targets": [
@@ -46334,7 +46382,7 @@
    "ko": "여행 장부 만들기",
    "en": "Start trip ledger",
    "files": [
-    "TravelModeView.swift:733"
+    "TravelModeView.swift:742"
    ],
    "args": [],
    "targets": [
@@ -46407,7 +46455,7 @@
    "ko": "여행 중",
    "en": "On trip",
    "files": [
-    "TravelModeView.swift:576"
+    "TravelModeView.swift:585"
    ],
    "args": [],
    "targets": [
@@ -46443,7 +46491,7 @@
    "ko": "여행",
    "en": "Trips",
    "files": [
-    "TravelModeView.swift:604"
+    "TravelModeView.swift:613"
    ],
    "args": [],
    "targets": [
@@ -46479,7 +46527,7 @@
    "ko": "여행지 통화",
    "en": "Trip currency",
    "files": [
-    "TravelModeView.swift:937"
+    "TravelModeView.swift:1003"
    ],
    "args": [],
    "targets": [
@@ -46491,7 +46539,7 @@
    "ko": "여행지",
    "en": "Destination",
    "files": [
-    "TravelModeView.swift:927"
+    "TravelModeView.swift:993"
    ],
    "args": [],
    "targets": [
@@ -48081,7 +48129,7 @@
    "ko": "오늘 당일치기",
    "en": "Day trip today",
    "files": [
-    "TravelModeView.swift:670"
+    "TravelModeView.swift:679"
    ],
    "args": [],
    "targets": [
@@ -48406,9 +48454,9 @@
    "ko": "완료",
    "en": "Done",
    "files": [
-    "TravelQuickEntrySheet.swift:110",
     "LedgerMessageRules.swift:269",
-    "AITaskPanel.swift:112"
+    "AITaskPanel.swift:112",
+    "AssistantSettingsView.swift:64"
    ],
    "args": [],
    "targets": [
@@ -48829,7 +48877,7 @@
    "ko": "원화만",
    "en": "Home currency only",
    "files": [
-    "TravelModeView.swift:937"
+    "TravelModeView.swift:1003"
    ],
    "args": [],
    "targets": [
@@ -50405,7 +50453,7 @@
    "ko": "이동",
    "en": "Move",
    "files": [
-    "TravelPlanTable.swift:131"
+    "TravelPlanTable.swift:154"
    ],
    "args": [],
    "targets": [
@@ -50530,7 +50578,7 @@
    "ko": "이름 (예: 점심 12시 1시간)",
    "en": "Name (e.g. lunch 12:30 1h)",
    "files": [
-    "TravelQuickEntrySheet.swift:191"
+    "TravelQuickEntrySheet.swift:256"
    ],
    "args": [],
    "targets": [
@@ -50566,7 +50614,7 @@
    "ko": "이름 없는 여행",
    "en": "Untitled trip",
    "files": [
-    "TravelModeView.swift:589"
+    "TravelModeView.swift:598"
    ],
    "args": [],
    "targets": [
@@ -51071,7 +51119,7 @@
    "ko": "일상으로 돌아가기",
    "en": "Back to everyday",
    "files": [
-    "TravelModeView.swift:602"
+    "TravelModeView.swift:611"
    ],
    "args": [],
    "targets": [
@@ -51108,7 +51156,7 @@
    "ko": "일정 {0}개",
    "en": "{0} plans",
    "files": [
-    "TravelModeView.swift:754"
+    "TravelModeView.swift:763"
    ],
    "args": [
     "items.count"
@@ -51148,7 +51196,7 @@
    "ko": "일정 고치기",
    "en": "Edit plan",
    "files": [
-    "TravelQuickEntrySheet.swift:103"
+    "TravelQuickEntrySheet.swift:125"
    ],
    "args": [],
    "targets": [
@@ -51172,8 +51220,8 @@
    "ko": "일정 넣기",
    "en": "Add plan",
    "files": [
-    "TravelQuickEntrySheet.swift:103",
-    "TravelModeView.swift:758"
+    "TravelModeView.swift:767",
+    "TravelQuickEntrySheet.swift:125"
    ],
    "args": [],
    "targets": [
@@ -52326,6 +52374,18 @@
    ]
   },
   {
+   "key": "전날로|Move to previous day",
+   "ko": "전날로",
+   "en": "Move to previous day",
+   "files": [
+    "TravelQuickEntrySheet.swift:132"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "전송 중|Exporting",
    "ko": "전송 중",
    "en": "Exporting",
@@ -52564,7 +52624,7 @@
    "ko": "정하지 않음",
    "en": "Not set",
    "files": [
-    "TravelModeView.swift:933"
+    "TravelModeView.swift:999"
    ],
    "args": [],
    "targets": [
@@ -53051,7 +53111,7 @@
    "ko": "지구본으로",
    "en": "Back to globe",
    "files": [
-    "TravelModeView.swift:696"
+    "TravelModeView.swift:705"
    ],
    "args": [],
    "targets": [
@@ -53286,7 +53346,7 @@
    "ko": "지난 날짜로 만들면 그날의 기록이 이 여행의 실제 기록이 됩니다.",
    "en": "A past date turns that day's records into this trip's actual records.",
    "files": [
-    "TravelModeView.swift:925"
+    "TravelModeView.swift:991"
    ],
    "args": [],
    "targets": [
@@ -53298,8 +53358,8 @@
    "ko": "지난 여행",
    "en": "Past",
    "files": [
-    "TravelModeView.swift:578",
-    "TravelModeView.swift:716"
+    "TravelModeView.swift:587",
+    "TravelModeView.swift:725"
    ],
    "args": [],
    "targets": [
@@ -53741,7 +53801,7 @@
    "ko": "지도에서 일정 보기",
    "en": "View plans on the map",
    "files": [
-    "TravelModeView.swift:759"
+    "TravelModeView.swift:768"
    ],
    "args": [],
    "targets": [
@@ -53801,7 +53861,7 @@
    "ko": "지역",
    "en": "Region",
    "files": [
-    "TravelModeView.swift:932"
+    "TravelModeView.swift:998"
    ],
    "args": [],
    "targets": [
@@ -53826,9 +53886,9 @@
    "ko": "지우기",
    "en": "Delete",
    "files": [
-    "TravelQuickEntrySheet.swift:107",
     "LedgerSheet.swift:45",
-    "LedgerSheet.swift:376"
+    "LedgerSheet.swift:376",
+    "LedgerTripView.swift:36"
    ],
    "args": [],
    "targets": [
@@ -53866,7 +53926,7 @@
    "ko": "지출 넣기",
    "en": "Add expense",
    "files": [
-    "TravelModeView.swift:760"
+    "TravelModeView.swift:769"
    ],
    "args": [],
    "targets": [
@@ -54486,7 +54546,7 @@
    "ko": "첫날",
    "en": "First day",
    "files": [
-    "TravelModeView.swift:920"
+    "TravelModeView.swift:986"
    ],
    "args": [],
    "targets": [
