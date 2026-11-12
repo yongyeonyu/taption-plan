@@ -343,7 +343,7 @@ struct TravelModeView: View {
 
     /// 계획표 높이: 세로 폰은 화면의 절반, 넓은 화면·가로는 머리말과 아래 줄을 뺀 나머지(화면의 70%까지).
     static func planTableHeight(_ size: CGSize) -> CGFloat {
-        isWide(size) ? max(120, min(size.height - 250, size.height * 0.7)) : size.height * 0.5
+        isWide(size) ? max(120, min(size.height - 280, size.height * 0.7)) : size.height * 0.5
     }
 
     private var restRadius: Double { Double(min(viewSize.width, viewSize.height)) * 0.38 }
@@ -366,8 +366,15 @@ struct TravelModeView: View {
             }
             // 그리는 크기와 누른 자리를 재는 크기가 같아야 깃발이 눌린다. 그래서 안전 영역까지 포함한 이 크기 하나만 쓴다.
             .gesture(globeGestures(entries, size: proxy.size), isEnabled: openedID == nil && flight == nil)
-            .onAppear { viewSize = proxy.size; enter(entries) }
-            .onChange(of: proxy.size) { _, size in viewSize = size }
+            // 크기를 먼저 넣고 다음 차례에 들어가야, 패드에서도 그 화면 크기로 지구본을 잡는다.
+            .onAppear {
+                viewSize = proxy.size
+                Task { @MainActor in enter(entries) }
+            }
+            .onChange(of: proxy.size) { _, size in
+                viewSize = size
+                Task { @MainActor in refit() }
+            }
         }
         .ignoresSafeArea()
         .overlay(alignment: .topLeading) {
@@ -425,6 +432,17 @@ struct TravelModeView: View {
         let destination = TravelModeDestination(trip: active.trip, stops: model.settings.travelPlanStops)
         if let last = cameras(for: destination).last { camera = last }
         openedID = active.id
+    }
+
+    /// 화면이 돌거나 크기가 바뀌면 지금 보던 것을 새 크기에 다시 맞춘다(움직이는 중에는 그대로 둔다).
+    private func refit() {
+        guard flight == nil else { return }
+        guard let id = openedID ?? focusedID, let entry = entries.first(where: { $0.id == id }) else {
+            camera.radius = restRadius
+            return
+        }
+        let destination = TravelModeDestination(trip: entry.trip, stops: model.settings.travelPlanStops)
+        if let last = cameras(for: destination).last { camera = last }
     }
 
     private func fit(_ box: (west: Double, south: Double, east: Double, north: Double)) -> TravelGlobeCamera {
@@ -698,24 +716,36 @@ struct TravelModeView: View {
         VStack(spacing: 8) {
             moneyBar(entry)
             HStack(spacing: 8) {
+                // 뒤로가기: 여행 목록(지구본)으로. 지구본 그림만으로는 뒤로가기인 줄 알기 어려웠다(대표 지적).
                 Button(action: backToGlobe) {
-                    Image(systemName: "globe.asia.australia.fill").font(.system(size: 17, weight: .semibold)).frame(width: 40, height: 40)
+                    Image(systemName: "chevron.left").font(.system(size: 17, weight: .semibold)).frame(width: 40, height: 40)
                         .background(TravelInk.land, in: Circle())
                 }
-                .accessibilityLabel(language.text("지구본으로", "Back to globe"))
+                .accessibilityLabel(language.text("여행 목록으로", "Back to trips"))
+                .accessibilityIdentifier("travelTripBack")
                 VStack(alignment: .leading, spacing: 1) {
                     Text(title(entry)).font(.headline).lineLimit(1)
                     Text(subtitle(entry)).font(.caption).opacity(0.8)
                 }
                 Spacer(minLength: 0)
+                // 일상 화면으로 바로 나간다.
+                Button { dismiss() } label: {
+                    Image(systemName: "house.fill").font(.system(size: 16, weight: .semibold)).frame(width: 40, height: 40)
+                        .background(TravelInk.land, in: Circle())
+                }
+                .accessibilityLabel(language.text("일상으로 돌아가기", "Back to everyday"))
+                .accessibilityIdentifier("travelTripHome")
             }
             .padding(8)
             .background(TravelInk.panel, in: RoundedRectangle(cornerRadius: 14))
             .overlay { RoundedRectangle(cornerRadius: 14).stroke(TravelInk.border, lineWidth: 1) }
         }
         .foregroundStyle(TravelInk.plan)
+        // 넓은 화면에서 줄이 끝까지 늘어나지 않게 왼쪽에 묶는다.
+        .frame(maxWidth: 520)
         .padding(.horizontal, 12)
         .padding(.top, 6)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func subtitle(_ entry: TravelTripDirectory.Entry) -> String {
@@ -1014,6 +1044,8 @@ struct TravelNewTripSheet: View {
             .onAppear { isDayTrip = draft.isDayTrip }
             .onChange(of: start) { _, value in if end < value { end = value } }
         }
+        // 지구본 화면이 어두워도 이 시트는 밝게: 어두운 바탕에서 「취소」·「만들기」 글자가 묻혔다.
+        .preferredColorScheme(.light)
     }
 
     private func day(_ date: Date) -> String {

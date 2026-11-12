@@ -391,9 +391,9 @@ final class TravelTripUnitTests: XCTestCase {
         XCTAssertFalse(TravelModeView.isWide(phone))
         for size in [phoneLandscape, pad, padLandscape, duo] { XCTAssertTrue(TravelModeView.isWide(size), "\(size)") }
         XCTAssertEqual(TravelModeView.planTableHeight(phone), 437)
-        XCTAssertEqual(TravelModeView.planTableHeight(phoneLandscape), 152)
+        XCTAssertEqual(TravelModeView.planTableHeight(phoneLandscape), 122)
         XCTAssertEqual(TravelModeView.planTableHeight(pad), 826)
-        XCTAssertEqual(TravelModeView.planTableHeight(padLandscape), 570)
+        XCTAssertEqual(TravelModeView.planTableHeight(padLandscape), 540)
         XCTAssertEqual(TravelQuickEntrySheet.sheetHeight(hasAdded: true, hasSuggestions: true), 314)
     }
 
