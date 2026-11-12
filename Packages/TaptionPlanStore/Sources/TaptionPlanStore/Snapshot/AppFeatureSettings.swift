@@ -575,8 +575,12 @@ public struct TravelTripItem: Codable, Hashable, Sendable {
     public var status: String?
     /// 일정 메모(TVY1112A01). 없으면 키를 쓰지 않아 예전 바이트가 그대로다.
     public var note: String?
+    /// 일정 색(TVU1113A01, `#RRGGBB`). 없으면 종류 기본 색이고 키를 쓰지 않아 예전 바이트가 그대로다.
+    public var colorHex: String?
+    /// 예상 지출(원, 0보다 큰 값만). 없으면 키를 쓰지 않는다.
+    public var plannedSpendKRW: Double?
 
-    public init(tripID: String, itemID: String, kind: String, title: String, start: Date, end: Date, startOffsetSeconds: Int, endOffsetSeconds: Int, planID: UUID?, status: String? = nil, note: String? = nil) {
+    public init(tripID: String, itemID: String, kind: String, title: String, start: Date, end: Date, startOffsetSeconds: Int, endOffsetSeconds: Int, planID: UUID?, status: String? = nil, note: String? = nil, colorHex: String? = nil, plannedSpendKRW: Double? = nil) {
         self.tripID = tripID
         self.itemID = itemID
         self.kind = kind
@@ -588,6 +592,21 @@ public struct TravelTripItem: Codable, Hashable, Sendable {
         self.planID = planID
         self.status = status
         self.note = note
+        self.colorHex = colorHex
+        self.plannedSpendKRW = plannedSpendKRW
+    }
+
+    /// 저장할 색: `#RRGGBB`(대문자)만. 그 밖의 글은 nil(기본 색).
+    public static func cleanColorHex(_ text: String?) -> String? {
+        guard let text = text?.trimmingCharacters(in: .whitespaces).uppercased(), text.count == 7, text.hasPrefix("#"),
+              text.dropFirst().allSatisfy({ $0.isHexDigit }) else { return nil }
+        return text
+    }
+
+    /// 저장할 예상 지출: 0보다 크고 유한한 값만(원 단위로 반올림).
+    public static func cleanPlannedSpend(_ value: Double?) -> Double? {
+        guard let value, value.isFinite, value >= 0.5 else { return nil }
+        return value.rounded()
     }
 }
 

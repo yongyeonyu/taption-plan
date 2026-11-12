@@ -134,6 +134,41 @@ struct TravelTripsTests {
 
     // MARK: 일정 시각 고치기
 
+    /// TVU1113A01: 일정 색·예상 지출은 없으면 키를 쓰지 않아 예전 바이트 그대로이고, 예전 빌드는 모르는 키를 건너뛴다.
+    @Test func itemColorAndPlannedSpendKeepOldBytesAndOldReaders() throws {
+        let plain = Self.item("t", "a", hour: 1)
+        let old = try Self.encoder().encode(plain)
+        let oldText = String(decoding: old, as: UTF8.self)
+        #expect(!oldText.contains("colorHex") && !oldText.contains("plannedSpendKRW"))
+        // 예전 바이트(두 키 없음)를 읽으면 둘 다 nil이고, 다시 쓰면 같은 바이트다.
+        let reread = try Self.decoder().decode(TravelTripItem.self, from: old)
+        #expect(reread == plain)
+        #expect(try Self.encoder().encode(reread) == old)
+
+        var colored = plain
+        colored.colorHex = "#C8442E"
+        colored.plannedSpendKRW = 12_000
+        let new = try Self.encoder().encode(colored)
+        #expect(try Self.decoder().decode(TravelTripItem.self, from: new) == colored)
+        // 두 칸을 모르는 예전 빌드의 모양으로 읽어도 나머지는 그대로 읽힌다.
+        struct OldItem: Decodable {
+            var tripID: String, itemID: String, kind: String, title: String
+            var start: Date, end: Date, startOffsetSeconds: Int, endOffsetSeconds: Int
+            var planID: UUID?, status: String?, note: String?
+        }
+        let seen = try Self.decoder().decode(OldItem.self, from: new)
+        #expect(seen.itemID == "a" && seen.start == plain.start && seen.end == plain.end && seen.startOffsetSeconds == 32_400)
+
+        #expect(TravelTripItem.cleanColorHex(" #c8442e ") == "#C8442E")
+        #expect(TravelTripItem.cleanColorHex("빨강") == nil)
+        #expect(TravelTripItem.cleanColorHex("#12345") == nil)
+        #expect(TravelTripItem.cleanColorHex(nil) == nil)
+        #expect(TravelTripItem.cleanPlannedSpend(11_999.6) == 12_000)
+        #expect(TravelTripItem.cleanPlannedSpend(0) == nil)
+        #expect(TravelTripItem.cleanPlannedSpend(-5) == nil)
+        #expect(TravelTripItem.cleanPlannedSpend(.infinity) == nil)
+    }
+
     @Test func movingKeepsLengthAndOffsets() throws {
         let items = [Self.item("t", "a", hour: 1), Self.item("t", "b", hour: 3)]
         let moved = try #require(TravelTripItemEditor.moved(items, tripID: "t", itemID: "a", by: 1_800))
