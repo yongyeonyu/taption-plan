@@ -205,3 +205,36 @@ test("OpenAPI documents /app and the new commands", () => {
   for (const name of ["amountKRW", "month", "ruleId", "reviewId", "decision", "inboxId", "screen"]) assert.ok(command.properties[name], name);
   assert.deepEqual(command.properties.screen.enum, SCREENS);
 });
+
+// ACL1112A01: 도구 목록이 옛것인 클라이언트도 list_actions·run_action으로 모든 명령을 쓴다.
+test("list_actions lists every action from the tool table and run_action queues any of them with the same checks", async () => {
+  const { handle } = await import("../src/index.js");
+  const { makeEnv } = await import("./fakes.mjs");
+  const { env } = makeEnv();
+  const key = () => Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url");
+  const owner = key(), write = key(), read = key();
+  const send = (path, method, body, token) => handle(new Request(`https://relay.example.com${path}`, {
+    method, headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body),
+  }), env);
+  const call = async (token, name, args = {}) => (await (await send("/mcp", "POST", { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name, arguments: args } }, token)).json());
+  assert.equal((await send("/register", "POST", {}, owner)).status, 201);
+  assert.equal((await send("/pin", "POST", { pin: "135790" }, owner)).status, 200);
+  assert.equal((await send("/keys", "POST", { keys: [{ token: write, scope: "write", expiresAt: null }, { token: read, scope: "read", expiresAt: null }], pin: "135790" }, owner)).status, 201);
+
+  const listed = (await call(read, "list_actions")).result.structuredContent.actions;
+  assert.deepEqual(listed.map((a) => a.action).sort(), [...ACTIONS].sort(), "every command action is listed once");
+  const ask = listed.find((a) => a.action === "askUser");
+  assert.equal(ask.tool, "ask_user");
+  assert.deepEqual(ask.required, ["question", "options"]);
+  assert.equal(ask.fields.id, undefined);
+  assert.equal(ask.fields.options.maxItems, 4);
+
+  const ok = await call(write, "run_action", { action: "setBudget", args: { amountKRW: 500000, month: "2026-11" }, id: "run1" });
+  assert.equal(ok.result.isError, undefined);
+  assert.equal(ok.result.structuredContent.id, "run1");
+  const queued = (await (await send("/command", "GET", undefined, owner)).json()).commands;
+  assert.deepEqual(queued.map((c) => [c.id, c.action, c.amountKRW, c.month, c.source]), [["run1", "setBudget", 500000, "2026-11", "mcp"]]);
+  assert.equal((await call(write, "run_action", { action: "setBudget", args: { amountKRW: -1 } })).result.isError, true, "same validation as the dedicated tool");
+  assert.equal((await call(write, "run_action", { action: "openScreen", args: { screen: "ledger", action: "deleteEverything", format: "x" } })).result.isError, undefined, "args cannot replace the action or format");
+  assert.equal((await call(read, "run_action", { action: "setBudget", args: { amountKRW: 1 } })).error.code, -32003, "read keys cannot run actions");
+});

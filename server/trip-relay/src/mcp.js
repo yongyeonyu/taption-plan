@@ -30,7 +30,8 @@ export const INSTRUCTIONS = "Reads the user's Taption Plan day records and sends
   + "get_answers. Check get_answers at the start of a conversation and before acting on something you asked about. "
   + "TIMING: this server cannot wake you. Memos the user taps Polish on wait in get_polish_requests; if you can run scheduled "
   + "tasks, check get_ai_tasks and get_polish_requests (and get_command_results) every 10 minutes and handle them without being asked, and check them "
-  + "at the start of every conversation. FRESHNESS: get_activity and get_summary carry sync {appLastSeenAt, lastUploadAt, device, appBuild, "
+  + "at the start of every conversation. ACTIONS: if a tool named in these instructions is not in your tool list, your client holds an old list: call list_actions and "
+  + "send the action with run_action instead of telling the user it is impossible. FRESHNESS: get_activity and get_summary carry sync {appLastSeenAt, lastUploadAt, device, appBuild, "
   + "debugBuild, shareLevel}. Days only change when the app runs on that device, so compare appLastSeenAt with the current time: if it is "
   + "old, say the records stop there instead of saying nothing happened, and suggest opening the app. Each device has its own connection; "
   + "another phone's records are not in this one. The app picks up edits about every 10 seconds while you are talking with the user, "
@@ -235,6 +236,29 @@ const TOOLS = [
     run: (ctx, a) => savePlan(ctx, a.plan),
   },
 ];
+// ACL1112A01: 도구 목록을 옛것으로 붙들고 있는 클라이언트도 새 명령을 쓸 수 있게, 모든 명령을 보내는 도구 하나와
+// 지금 되는 명령을 알려 주는 도구 하나를 둔다. 목록은 위 TOOLS에서 만들어 늘 서버와 같다.
+const ACTION_TOOLS = TOOLS.filter((tool) => tool.action);
+TOOLS.push(
+  readTool("list_actions", "List every app action", "Every action the app accepts right now, with its fields: {actions:[{action, tool, title, "
+    + "description, destructive, fields (JSON Schema properties), required[]}]}. Call this when a tool you expect is missing from your tool list "
+    + "(clients may hold an old list) or before run_action. An action listed here can always be sent with run_action.",
+    object({}), () => json({ actions: ACTION_TOOLS.map((tool) => {
+      const { id, ...fields } = tool.inputSchema.properties;
+      return { action: tool.action, tool: tool.name, title: tool.title, description: tool.description, destructive: tool.destructive, fields, required: tool.inputSchema.required };
+    }) }, 200), { trusted: true }),
+  {
+    name: "run_action", title: "Run any app action", scope: "write", destructive: true,
+    description: "Send any action from list_actions by its action name, with that action's fields in args. Same checks, limits and undo as the "
+      + "dedicated tools; prefer a dedicated tool when you have it, and use this for actions your tool list does not show yet. Returns the "
+      + "queued command id; check get_command_results later.",
+    inputSchema: object({ action: enumOf("Action name from list_actions", ACTIONS), args: { type: "object", description: "The action's fields, as list_actions describes them" }, id: ID }, ["action"]),
+    run: (ctx, a) => {
+      const args = a.args && typeof a.args === "object" && !Array.isArray(a.args) ? a.args : {};
+      return queueCommand(ctx, { ...args, format: "bokki-command", version: 1, id: a.id ?? `mcp-${crypto.randomUUID()}`, action: a.action }, ctx.auth.kind === "access" ? "oauth" : "mcp");
+    },
+  },
+);
 const BY_NAME = new Map(TOOLS.map((tool) => [tool.name, tool]));
 
 const describe = (tool) => ({
@@ -311,11 +335,12 @@ const rpcError = (id, code, message, data) => ({ jsonrpc: "2.0", id, error: { co
 export const FORBIDDEN = -32003;
 
 // 저장소 응답을 도구 결과로 바꾼다. 4xx·5xx는 도구 오류(isError)다.
-async function toolResult(response, empty = "No data stored.") {
+// trusted: 서버가 쓴 글만 담긴 결과(list_actions)는 감싸지 않는다.
+async function toolResult(response, empty = "No data stored.", trusted = false) {
   const text = response.status === 204 ? "" : await response.text();
   if (response.status >= 400) return { content: [{ type: "text", text: `Error ${response.status}: ${text}` }], isError: true };
   if (!text) return { content: [{ type: "text", text: empty }] };
-  const value = wrapUntrusted(JSON.parse(text));
+  const value = trusted ? JSON.parse(text) : wrapUntrusted(JSON.parse(text));
   return {
     content: [{ type: "text", text: JSON.stringify(value) }],
     ...(value && typeof value === "object" && !Array.isArray(value) ? { structuredContent: value } : {}),
@@ -335,7 +360,7 @@ async function callTool(request, ctx, id, params) {
   const response = tool.action
     ? await queueCommand(ctx, { ...args, format: "bokki-command", version: 1, id: args.id ?? `mcp-${crypto.randomUUID()}`, action: tool.action }, source)
     : await tool.run(ctx, args);
-  return rpcResult(id, await toolResult(response, tool.empty));
+  return rpcResult(id, await toolResult(response, tool.empty, tool.trusted === true));
 }
 
 async function dispatch(request, ctx, message) {
