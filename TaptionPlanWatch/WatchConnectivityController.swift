@@ -1261,14 +1261,12 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         guard (try? TaptionWatchWidgetStore.write(payload)) != nil else {
             return
         }
-        WidgetCenter.shared.reloadTimelines(ofKind: TaptionWatchWidgetKind.status)
+        TaptionWatchWidgetKind.reloadForPayload()
         widgetReloadFollowupTask?.cancel()
         widgetReloadFollowupTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 700_000_000)
             guard !Task.isCancelled else { return }
-            WidgetCenter.shared.reloadTimelines(
-                ofKind: TaptionWatchWidgetKind.status
-            )
+            TaptionWatchWidgetKind.reloadForPayload()
         }
     }
 

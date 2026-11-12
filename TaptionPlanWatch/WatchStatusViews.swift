@@ -1,64 +1,122 @@
 import SwiftUI
+import WatchKit
 
-/// 수집·전송 상태 한 줄. 눌러야 자세히 본다. 실제로 받은 값만 적는다.
-struct WatchStatusLink: View {
-    @EnvironmentObject private var workout: WatchWorkoutManager
-
-    let date: Date
-    let language: AppLanguagePreference.ResolvedLanguage
-
-    var body: some View {
-        let alert = TaptionWatchAlertPolicy.alerts(for: workout.measurement, now: date, language: language).first
-        NavigationLink {
-            WatchStatusDetail(language: language)
-        } label: {
-            HStack(spacing: 5) {
-                Image(systemName: alert?.symbolName ?? "waveform.path.ecg")
-                    .foregroundStyle(alert == nil ? Color.green : Color.orange)
-                    .accessibilityHidden(true)
-                Text(alert?.detail ?? WatchStatusText.collection(workout: workout, language: language))
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.8)
-                Spacer(minLength: 2)
-            }
-            .font(.caption2.weight(.semibold))
-        }
-    }
-}
-
-struct WatchStatusDetail: View {
+/// 마지막 쪽. 수집·전송 상태와 고정밀 수집 중의 실제 값. 받은 값만 적는다.
+/// 자주 바뀌는 수집 값은 이 쪽만 지켜본다.
+struct WatchStatusPage: View {
     @EnvironmentObject private var connectivity: WatchConnectivityController
     @EnvironmentObject private var workout: WatchWorkoutManager
 
     let language: AppLanguagePreference.ResolvedLanguage
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 30)) { context in
-            List {
-                row(language.text("수집", "Collection"), WatchStatusText.collection(workout: workout, language: language))
-                row(language.text("전송", "Transfer"), connectivity.statusText)
-                row(language.text("최근 측정", "Last measurement"), freshnessText(at: context.date))
-                if workout.isActive {
+        TimelineView(.everyMinute) { context in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 8) {
+                    if let alert = TaptionWatchAlertPolicy.primary(
+                        for: workout.measurement, now: context.date, language: language
+                    ) {
+                        alertCard(alert)
+                    }
                     row(
-                        language.text("원시 표본", "Raw samples"),
-                        language.text("\(workout.sensorSampleCount)개", "\(workout.sensorSampleCount)")
+                        language.text("수집", "Collection"),
+                        WatchStatusText.collection(workout: workout, language: language),
+                        symbol: "waveform.path.ecg"
                     )
+                    if workout.isActive {
+                        liveMetrics
+                    }
+                    row(language.text("전송", "Transfer"), connectivity.statusText, symbol: "iphone.and.arrow.forward")
+                    row(
+                        language.text("최근 측정", "Last measurement"),
+                        freshnessText(at: context.date),
+                        symbol: "clock"
+                    )
+                    Button {
+                        connectivity.requestSync()
+                        WKInterfaceDevice.current().play(.click)
+                    } label: {
+                        Label(language.text("지금 보내기", "Send now"), systemImage: "arrow.clockwise")
+                            .font(.footnote.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
                 }
-                Button { connectivity.requestSync() } label: {
-                    Label(language.text("지금 보내기", "Send now"), systemImage: "arrow.clockwise")
-                }
+                .padding(.horizontal, 6)
             }
         }
-        .navigationTitle(language.text("수집 상태", "Collection status"))
+        .containerBackground(Color(white: 0.1).gradient, for: .tabView)
     }
 
-    private func row(_ title: String, _ value: String) -> some View {
+    private func alertCard(_ alert: TaptionWatchAlert) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(title)
+            Label(alert.title, systemImage: alert.symbolName)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.orange)
+            Text(alert.detail)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
+        }
+        .padding(8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.orange.opacity(0.15), in: RoundedRectangle(cornerRadius: 12))
+        .accessibilityElement(children: .combine)
+    }
+
+    /// 고정밀 수집(운동 세션) 중에 Watch가 실제로 받은 값. 0인 값은 아직 받지 못한 것이라 적지 않는다.
+    private var liveMetrics: some View {
+        HStack(spacing: 6) {
+            if workout.heartRate > 0 {
+                metric("heart.fill", .red, "\(Int(workout.heartRate.rounded()))", language.text("심박", "Heart rate"))
+            }
+            if workout.distanceMeters > 0 {
+                metric(
+                    "figure.walk", .green,
+                    Measurement(value: workout.distanceMeters, unit: UnitLength.meters)
+                        .formatted(.measurement(width: .abbreviated, usage: .road)),
+                    language.text("거리", "Distance")
+                )
+            }
+            metric(
+                "waveform", .blue,
+                workout.sensorSampleCount.formatted(.number.notation(.compactName)),
+                language.text("원시 표본", "Raw samples")
+            )
+        }
+    }
+
+    private func metric(_ symbol: String, _ tint: Color, _ value: String, _ label: String) -> some View {
+        VStack(spacing: 1) {
+            Image(systemName: symbol)
+                .font(.caption2)
+                .foregroundStyle(tint)
+                .accessibilityHidden(true)
             Text(value)
-                .font(.footnote)
+                .font(.caption.weight(.bold).monospacedDigit())
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 6)
+        .background(tint.opacity(0.15), in: RoundedRectangle(cornerRadius: 10))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(label) \(value)")
+    }
+
+    private func row(_ title: String, _ value: String, symbol: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Image(systemName: symbol)
+                .font(.caption2)
+                .foregroundStyle(.green)
+                .frame(width: 16)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Text(value)
+                    .font(.footnote)
+            }
         }
         .accessibilityElement(children: .combine)
     }

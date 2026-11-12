@@ -112,7 +112,7 @@ struct TaptionPlanWatchApp: App {
 
     var body: some Scene {
         WindowGroup {
-            WatchContentView()
+            WatchContentView(workout: workout)
                 .environmentObject(connectivity)
                 .environmentObject(workout)
         }
