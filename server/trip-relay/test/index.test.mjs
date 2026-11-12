@@ -233,12 +233,14 @@ test("every new write route shares the per-IP limit", async () => {
 });
 
 // SEC1110A01: storage encryption.
+// 무작위 암호문(base64)에 우연히 나오지 않을 만큼 긴 명령 id. 두 글자 "m1"은 6번에 1번쯤 우연히 걸렸다(FLK1112A01).
+const SECRET_ID = "memo-id.secret:0001";
 test("stored values are encrypted envelopes without plaintext", async () => {
   const env = await fresh();
   await handle(call("POST", plan), env);
-  await handle(at("/command", "POST", memoCommand("m1", { text: "비밀 메모 우유" })), env);
+  await handle(at("/command", "POST", memoCommand(SECRET_ID, { text: "비밀 메모 우유" })), env);
   await handle(at("/activity", "POST", upload([day("2026-11-10", { memos: [{ id: "x", text: "비밀 일기" }] })])), env);
-  await handle(at("/command/result", "POST", { results: [{ id: "m1", status: "applied", reason: "secret_reason" }] }), env);
+  await handle(at("/command/result", "POST", { results: [{ id: SECRET_ID, status: "applied", reason: "secret_reason" }] }), env);
   assert.equal(dataNames(env).length, 3, "plan, one day, results; the queue is in the DO");
   for (const name of dataNames(env)) {
     const value = env.PLANS.map.get(name);
@@ -249,7 +251,7 @@ test("stored values are encrypted envelopes without plaintext", async () => {
   }
   for (const instance of env.USER_STATE.instances.values()) {
     const dump = JSON.stringify([...instance.storage.map.entries()]);
-    for (const secret of ["비밀 메모", "m1", "2026-11-10", "bokki"]) assert.ok(!dump.includes(secret), `DO leaks ${secret}`);
+    for (const secret of ["비밀 메모", SECRET_ID, "2026-11-10", "bokki"]) assert.ok(!dump.includes(secret), `DO leaks ${secret}`);
   }
   assert.equal((await (await handle(call("GET"), env)).json()).title, "방콕", "the right token still reads it");
 });
