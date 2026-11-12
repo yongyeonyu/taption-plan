@@ -41,7 +41,7 @@ enum MapHomeLaunchPromptDeferral {
 }
 
 /// 「확인할 것」을 AI에게 넘긴 기록(TDL1112A01, 대표 지시). 넘긴 것은 그날 다시 묻지 않는다.
-/// AI가 지금 명령으로 끝낼 수 있는 것만 넘긴다: 미확인 시간(`classify_unconfirmed`)과 탑승 확인(`set_travel_mode`).
+/// 다섯 가지 모두 AI가 명령으로 끝낼 수 있다(HND1112A01에서 내 차·일정 제목·자주 머무는 곳 명령이 생김).
 enum MapHomeLaunchPromptHandoff {
     static let key = "launchPromptsHandedToAI"
 
@@ -321,8 +321,8 @@ struct MapHomeTodoSheet: View {
                 }
                 Section {} footer: {
                     Text(canUseAI
-                        ? language.text("미확인 시간과 탑승 확인은 연결된 AI에게 넘길 수 있어요. 넘긴 것은 「AI」 탭에서 볼 수 있고, AI가 확신이 없으면 앱에서 다시 물어봐요.", "Unconfirmed time and ride checks can be handed to your connected AI. Handed items appear in the AI tab, and the AI asks you in the app when it isn't sure.")
-                        : language.text("AI를 연결하면 미확인 시간과 탑승 확인을 AI에게 넘길 수 있어요.", "Connect an AI to hand off unconfirmed time and ride checks."))
+                        ? language.text("확인할 것은 연결된 AI에게 넘길 수 있어요. 넘긴 것은 「AI」 탭에서 볼 수 있고, AI가 확신이 없으면 앱에서 다시 물어봐요.", "You can hand these to your connected AI. Handed items appear in the AI tab, and the AI asks you in the app when it isn't sure.")
+                        : language.text("AI를 연결하면 확인할 것을 AI에게 넘길 수 있어요.", "Connect an AI to hand these off."))
                 }
             }
             .navigationTitle(language.text("확인할 것", "Things to check"))

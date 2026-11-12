@@ -6392,79 +6392,79 @@
         }
       }
     },
-    "AI를 연결하면 미확인 시간과 탑승 확인을 AI에게 넘길 수 있어요.|Connect an AI to hand off unconfirmed time and ride checks." : {
+    "AI를 연결하면 확인할 것을 AI에게 넘길 수 있어요.|Connect an AI to hand these off." : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "AIを連携すると、未確認の時間と乗車確認をAIに任せられます。"
+            "value" : "AIを連携すると、確認事項をAIに任せられます。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "连接 AI 后，可以把未确认的时间和乘车确认交给 AI。"
+            "value" : "连接 AI 后，可以把待确认的内容交给 AI。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "連接 AI 後，可以把未確認的時間和搭乘確認交給 AI。"
+            "value" : "連接 AI 後，可以把待確認的內容交給 AI。"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Verbinde eine KI, um unbestätigte Zeit und Fahrtprüfungen abzugeben."
+            "value" : "Verbinde eine KI, um diese Punkte abzugeben."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Connectez une IA pour lui confier le temps non confirmé et les vérifications de trajet."
+            "value" : "Connectez une IA pour lui confier ces éléments."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Collega un'IA per affidarle il tempo non confermato e le verifiche dei tragitti."
+            "value" : "Collega un'IA per affidarle questi elementi."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Conecta una IA para encargarle el tiempo sin confirmar y las comprobaciones de trayecto."
+            "value" : "Conecta una IA para encargarle estos elementos."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Conecte uma IA para passar a ela o tempo não confirmado e as verificações de trajeto."
+            "value" : "Conecte uma IA para passar estes itens a ela."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kết nối AI để giao thời gian chưa xác nhận và việc kiểm tra chuyến đi cho AI."
+            "value" : "Kết nối AI để giao các mục này cho AI."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hubungkan AI untuk menyerahkan waktu yang belum dikonfirmasi dan pengecekan perjalanan."
+            "value" : "Hubungkan AI untuk menyerahkan hal-hal ini."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "เชื่อมต่อ AI เพื่อมอบเวลาที่ยังไม่ยืนยันและการตรวจการเดินทางให้ AI"
+            "value" : "เชื่อมต่อ AI เพื่อมอบรายการเหล่านี้ให้ AI"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "अपुष्ट समय और यात्रा जाँच AI को सौंपने के लिए AI जोड़ें।"
+            "value" : "ये चीज़ें AI को सौंपने के लिए AI जोड़ें।"
           }
         }
       }
@@ -232079,6 +232079,160 @@
         }
       }
     },
+    "내 차 등록·빼기|Register or remove my car" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "マイカーの登録・解除"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登记或移除我的车"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登記或移除我的車"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mein Auto registrieren oder entfernen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistrer ou retirer ma voiture"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registrare o rimuovere la mia auto"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registrar o quitar mi coche"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registrar ou remover meu carro"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đăng ký hoặc gỡ xe của tôi"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Daftarkan atau hapus mobil saya"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลงทะเบียนหรือนำรถของฉันออก"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "मेरी कार दर्ज करें या हटाएँ"
+          }
+        }
+      }
+    },
+    "내 차 아님|Not my car" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "マイカーではない"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不是我的车"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不是我的車"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht mein Auto"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pas ma voiture"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Non è la mia auto"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No es mi coche"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não é meu carro"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không phải xe của tôi"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bukan mobil saya"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ไม่ใช่รถของฉัน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "मेरी कार नहीं"
+          }
+        }
+      }
+    },
     "내 차 오디오|My car audio" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -232460,6 +232614,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "मेरी कार के रूप में पंजीकृत करें"
+          }
+        }
+      }
+    },
+    "내 차로 등록|Registered as my car" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "マイカーとして登録"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已登记为我的车"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已登記為我的車"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Als mein Auto registriert"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistrée comme ma voiture"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registrata come la mia auto"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registrado como mi coche"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registrado como meu carro"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã đăng ký là xe của tôi"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terdaftar sebagai mobil saya"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลงทะเบียนเป็นรถของฉันแล้ว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "मेरी कार के रूप में दर्ज"
           }
         }
       }
@@ -235001,6 +235232,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "दूसरा ऐप"
+          }
+        }
+      }
+    },
+    "다시 묻지 않음|Won't ask again" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今後は確認しない"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不再询问"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不再詢問"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht mehr fragen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ne plus demander"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Non chiedere più"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No volver a preguntar"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não perguntar de novo"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không hỏi lại"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak ditanya lagi"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ไม่ถามอีก"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "दोबारा नहीं पूछेगा"
           }
         }
       }
@@ -251406,83 +251714,6 @@
         }
       }
     },
-    "미확인 시간과 탑승 확인은 연결된 AI에게 넘길 수 있어요. 넘긴 것은 「AI」 탭에서 볼 수 있고, AI가 확신이 없으면 앱에서 다시 물어봐요.|Unconfirmed time and ride checks can be handed to your connected AI. Handed items appear in the AI tab, and the AI asks you in the app when it isn't sure." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未確認の時間と乗車確認は、連携したAIに任せられます。任せたものは「AI」タブで見られ、AIに確信がないときはアプリで改めて尋ねます。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未确认的时间和乘车确认可以交给已连接的 AI。交出的项目可在“AI”标签页查看，AI 没把握时会在应用中再次询问。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未確認的時間和搭乘確認可以交給已連接的 AI。交出的項目可在「AI」分頁查看，AI 沒把握時會在 App 中再次詢問。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unbestätigte Zeit und Fahrtprüfungen kannst du an deine verbundene KI übergeben. Übergebenes erscheint im KI-Tab, und die KI fragt dich in der App, wenn sie unsicher ist."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Le temps non confirmé et les vérifications de trajet peuvent être confiés à votre IA connectée. Les éléments confiés apparaissent dans l'onglet IA, et l'IA vous demande dans l'app si elle n'est pas sûre."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Il tempo non confermato e le verifiche dei tragitti possono essere affidati all'IA collegata. Gli elementi affidati compaiono nella scheda IA e l'IA ti chiede nell'app quando non è sicura."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "El tiempo sin confirmar y las comprobaciones de trayecto se pueden encargar a tu IA conectada. Lo encargado aparece en la pestaña IA, y la IA te pregunta en la app cuando no está segura."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "O tempo não confirmado e as verificações de trajeto podem ser passados para a IA conectada. Os itens passados aparecem na aba IA, e a IA pergunta no app quando não tem certeza."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Thời gian chưa xác nhận và việc kiểm tra chuyến đi có thể giao cho AI đã kết nối. Mục đã giao hiện trong thẻ AI, và AI sẽ hỏi lại trong ứng dụng khi không chắc."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Waktu yang belum dikonfirmasi dan pengecekan perjalanan bisa diserahkan ke AI yang terhubung. Yang diserahkan tampil di tab AI, dan AI bertanya di aplikasi bila tidak yakin."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "เวลาที่ยังไม่ยืนยันและการตรวจการเดินทางมอบให้ AI ที่เชื่อมต่อได้ รายการที่มอบจะอยู่ในแท็บ AI และ AI จะถามในแอปเมื่อไม่แน่ใจ"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "अपुष्ट समय और यात्रा जाँच जुड़े हुए AI को सौंपी जा सकती है। सौंपी गई चीज़ें AI टैब में दिखती हैं, और AI को भरोसा न हो तो वह ऐप में पूछता है।"
-          }
-        }
-      }
-    },
     "미확인 시간이 있어요|Some time is unconfirmed" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -260026,6 +260257,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "श्रेणी नहीं दी गई"
+          }
+        }
+      }
+    },
+    "분류 안 함|Not classified" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分類しない"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不分类"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不分類"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht klassifiziert"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Non classé"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Non classificato"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sin clasificar"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não classificado"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không phân loại"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak diklasifikasikan"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ไม่จัดหมวด"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "वर्गीकृत नहीं"
           }
         }
       }
@@ -320167,6 +320475,83 @@
         }
       }
     },
+    "일정 제목 분류 정하기|Classify calendar event titles" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "予定タイトルの分類を決める"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "为日程标题分类"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "為行程標題分類"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kalendertitel klassifizieren"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Classer les titres d’événements"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Classificare i titoli degli eventi"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clasificar títulos de eventos"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Classificar títulos de eventos"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phân loại tiêu đề sự kiện lịch"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Klasifikasikan judul acara kalender"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "จัดหมวดชื่อกิจกรรมในปฏิทิน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कैलेंडर इवेंट शीर्षक वर्गीकृत करें"
+          }
+        }
+      }
+    },
     "일정 지우기|Delete schedules" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -323474,6 +323859,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "अक्सर रुकने की जगह दर्ज करें"
+          }
+        }
+      }
+    },
+    "자주 머무는 곳 제안 등록·거절|Register or dismiss suggested places" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "よく滞在する場所の提案を登録・拒否"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登记或忽略建议的常驻地点"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登記或忽略建議的常駐地點"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vorgeschlagene Orte registrieren oder ablehnen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistrer ou ignorer les lieux suggérés"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registrare o ignorare i luoghi suggeriti"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registrar o descartar lugares sugeridos"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registrar ou dispensar lugares sugeridos"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đăng ký hoặc bỏ qua địa điểm được gợi ý"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Daftarkan atau abaikan tempat yang disarankan"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลงทะเบียนหรือปัดสถานที่ที่แนะนำ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सुझाई गई जगहें दर्ज करें या ख़ारिज करें"
           }
         }
       }
@@ -329788,6 +330250,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "शीर्षक"
+          }
+        }
+      }
+    },
+    "제안한 곳|Suggested place" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "提案された場所"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "建议的地点"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "建議的地點"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vorgeschlagener Ort"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lieu suggéré"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Luogo suggerito"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lugar sugerido"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lugar sugerido"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Địa điểm được gợi ý"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tempat yang disarankan"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "สถานที่ที่แนะนำ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सुझाई गई जगह"
           }
         }
       }
@@ -361204,6 +361743,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "जाँचने की चीज़ें"
+          }
+        }
+      }
+    },
+    "확인할 것은 연결된 AI에게 넘길 수 있어요. 넘긴 것은 「AI」 탭에서 볼 수 있고, AI가 확신이 없으면 앱에서 다시 물어봐요.|You can hand these to your connected AI. Handed items appear in the AI tab, and the AI asks you in the app when it isn't sure." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "確認事項は連携したAIに任せられます。任せたものは「AI」タブで見られ、AIに確信がないときはアプリで改めて尋ねます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "待确认的内容可以交给已连接的 AI。交出的项目可在“AI”标签页查看，AI 没把握时会在应用中再次询问。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "待確認的內容可以交給已連接的 AI。交出的項目可在「AI」分頁查看，AI 沒把握時會在 App 中再次詢問。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du kannst diese Punkte an deine verbundene KI übergeben. Übergebenes erscheint im KI-Tab, und die KI fragt dich in der App, wenn sie unsicher ist."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vous pouvez confier ces éléments à votre IA connectée. Les éléments confiés apparaissent dans l'onglet IA, et l'IA vous demande dans l'app si elle n'est pas sûre."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Puoi affidare questi elementi all'IA collegata. Gli elementi affidati compaiono nella scheda IA e l'IA ti chiede nell'app quando non è sicura."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Puedes encargar estos elementos a tu IA conectada. Lo encargado aparece en la pestaña IA, y la IA te pregunta en la app cuando no está segura."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Você pode passar estes itens para a IA conectada. Os itens passados aparecem na aba IA, e a IA pergunta no app quando não tem certeza."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bạn có thể giao các mục này cho AI đã kết nối. Mục đã giao hiện trong thẻ AI, và AI sẽ hỏi lại trong ứng dụng khi không chắc."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anda bisa menyerahkan hal-hal ini ke AI yang terhubung. Yang diserahkan tampil di tab AI, dan AI bertanya di aplikasi bila tidak yakin."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "มอบรายการเหล่านี้ให้ AI ที่เชื่อมต่อได้ รายการที่มอบจะอยู่ในแท็บ AI และ AI จะถามในแอปเมื่อไม่แน่ใจ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "आप ये चीज़ें जुड़े हुए AI को सौंप सकते हैं। सौंपी गई चीज़ें AI टैब में दिखती हैं, और AI को भरोसा न हो तो वह ऐप में पूछता है।"
           }
         }
       }
