@@ -96,6 +96,12 @@ struct TravelPlanTableModel: Equatable {
 
 /// 여행의 날짜들(`YYYY-MM-DD`)과 기기 달력의 그날.
 enum TravelPlanDays {
+    /// `YYYY-MM-DD` → `11/20`. 일차 칩에 붙인다.
+    static func shortDate(_ key: String) -> String {
+        let parts = key.split(separator: "-").compactMap { Int($0) }
+        return parts.count == 3 ? "\(parts[1])/\(parts[2])" : ""
+    }
+
     static func days(of trip: TravelTrip, calendar: Calendar = .autoupdatingCurrent) -> [(key: String, date: Date)] {
         guard let first = TravelTripDay.components(trip.startDay).flatMap(calendar.date(from:)),
               let count = TravelTripDay.days(from: trip.startDay, to: trip.endDay), count >= 0 else { return [] }

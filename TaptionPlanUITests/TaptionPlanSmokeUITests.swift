@@ -1123,6 +1123,11 @@ final class TaptionPlanTravelPlanUITests: XCTestCase {
         shot(app, "6-map-folded")
         unfold.tap()
         XCTAssertTrue(fold.waitForExistence(timeout: 3))
+
+        // 여행 이름을 누르면 여행 속성 시트가 열린다.
+        app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "후쿠오카")).firstMatch.tap()
+        XCTAssertTrue(app.buttons["취소"].waitForExistence(timeout: 5), "여행 이름을 누르면 여행 고치기 시트가 열린다")
+        shot(app, "7-trip-properties")
     }
 }
 

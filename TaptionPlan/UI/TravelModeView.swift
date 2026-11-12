@@ -892,11 +892,17 @@ struct TravelModeView: View {
                 }
                 .accessibilityLabel(language.text("여행 목록으로", "Back to trips"))
                 .accessibilityIdentifier("travelTripBack")
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(title(entry)).font(.headline).lineLimit(1)
-                    Text(subtitle(entry)).font(.caption).opacity(0.8)
+                // Trip 원본처럼 여행 이름을 누르면 여행 속성(이름·기간·나라)을 고친다.
+                Button { newTripDraft = .init(isDayTrip: entry.isDayTrip, editing: entry.trip) } label: {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(title(entry)).font(.headline).lineLimit(1)
+                        Text(subtitle(entry)).font(.caption).opacity(0.8)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
                 }
-                Spacer(minLength: 0)
+                .buttonStyle(.plain)
+                .accessibilityHint(language.text("여행 고치기", "Edit trip"))
                 // 일상 화면으로 바로 나간다.
                 Button { exitToDaily(entry) } label: {
                     Image(systemName: "house.fill").font(.system(size: 16, weight: .semibold)).frame(width: 40, height: 40)
@@ -1143,7 +1149,8 @@ struct TravelModeView: View {
             HStack(spacing: 6) {
                 ForEach(TravelPlanDays.days(of: entry.trip), id: \.key) { day in
                     Button { planDayKey = day.key } label: {
-                        Text(dayLabel(entry, key: day.key))
+                        // Trip 원본의 날짜 띠처럼 일차 옆에 월/일을 붙인다.
+                        Text(entry.isDayTrip ? dayLabel(entry, key: day.key) : dayLabel(entry, key: day.key) + " " + TravelPlanDays.shortDate(day.key))
                             .font(.caption.weight(.semibold))
                             .padding(.horizontal, 10)
                             .frame(height: 28)

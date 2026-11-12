@@ -407,6 +407,9 @@ final class TravelTripUnitTests: XCTestCase {
         XCTAssertEqual(TravelPlanSheetHeight.toggled(437, size: phone), 544, "지도 접기")
         XCTAssertEqual(TravelPlanSheetHeight.toggled(544, size: phone), 437, "지도 펼치기")
         XCTAssertEqual(TravelModeView.mapArea(phone, isPlanUp: true, tableHeight: 544).height, 80, "지도 접기에서도 지도 자리는 80pt 남는다")
+        XCTAssertEqual(TravelPlanDays.shortDate("2026-11-20"), "11/20")
+        XCTAssertEqual(TravelPlanDays.shortDate("2026-01-05"), "1/5")
+        XCTAssertEqual(TravelPlanDays.shortDate("잘못"), "")
         // TVU1113A01: 편집기의 시작·종료 슬라이더(5분 단위).
         let moved = TravelQuickEntrySheet.movingStart(to: 607, duration: 90)
         XCTAssertEqual([moved.start, moved.duration], [605, 90], "시작을 옮기면 길이는 그대로")
