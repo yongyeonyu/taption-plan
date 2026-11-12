@@ -1,5 +1,5 @@
 {
- "ui": 4792,
+ "ui": 4793,
  "catalog": 502,
  "unread": [
   {
@@ -100,13 +100,13 @@
   },
   {
    "file": "TaptionPlan/Core/LedgerMessageRules.swift",
-   "line": 422,
+   "line": 437,
    "ko": "$0",
    "en": "language"
   },
   {
    "file": "TaptionPlan/Core/LedgerMessageRules.swift",
-   "line": 458,
+   "line": 473,
    "ko": "entry.amount",
    "en": "entry.currency"
   },
@@ -760,26 +760,38 @@
   },
   {
    "file": "TaptionPlan/UI/TravelModeView.swift",
-   "line": 920,
+   "line": 922,
    "ko": "sheet.leftover",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/TravelModeView.swift",
-   "line": 923,
+   "line": 925,
    "ko": "sheet.myCost",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/TravelModeView.swift",
-   "line": 808,
+   "line": 810,
    "ko": "money.leftover",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/TravelModeView.swift",
-   "line": 808,
+   "line": 810,
    "ko": "money.leftover",
+   "en": "language"
+  },
+  {
+   "file": "TaptionPlan/UI/TravelPlanSpend.swift",
+   "line": 26,
+   "ko": "$0.0",
+   "en": "$0.1"
+  },
+  {
+   "file": "TaptionPlan/UI/TravelPlanTable.swift",
+   "line": 323,
+   "ko": "block.spent",
    "en": "language"
   },
   {
