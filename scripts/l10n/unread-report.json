@@ -1,5 +1,5 @@
 {
- "ui": 4702,
+ "ui": 4719,
  "catalog": 502,
  "unread": [
   {
@@ -100,13 +100,13 @@
   },
   {
    "file": "TaptionPlan/Core/LedgerMessageRules.swift",
-   "line": 397,
+   "line": 400,
    "ko": "$0",
    "en": "language"
   },
   {
    "file": "TaptionPlan/Core/LedgerMessageRules.swift",
-   "line": 433,
+   "line": 436,
    "ko": "entry.amount",
    "en": "entry.currency"
   },
@@ -760,19 +760,19 @@
   },
   {
    "file": "TaptionPlan/UI/TravelModeView.swift",
-   "line": 872,
+   "line": 893,
    "ko": "sheet.leftover",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/TravelModeView.swift",
-   "line": 875,
+   "line": 896,
    "ko": "sheet.myCost",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/TravelModeView.swift",
-   "line": 875,
+   "line": 896,
    "ko": "sheet.myCost",
    "en": "language"
   },
