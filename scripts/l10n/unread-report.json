@@ -1,5 +1,5 @@
 {
- "ui": 4694,
+ "ui": 4695,
  "catalog": 502,
  "unread": [
   {
@@ -760,19 +760,19 @@
   },
   {
    "file": "TaptionPlan/UI/TravelModeView.swift",
-   "line": 941,
+   "line": 942,
    "ko": "sheet.leftover",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/TravelModeView.swift",
-   "line": 944,
+   "line": 945,
    "ko": "sheet.myCost",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/TravelModeView.swift",
-   "line": 944,
+   "line": 945,
    "ko": "sheet.myCost",
    "en": "language"
   },

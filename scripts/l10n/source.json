@@ -194,7 +194,7 @@
    "ko": "12,300원",
    "en": "₩12,300",
    "files": [
-    "FirstRunTutorialView.swift:832"
+    "FirstRunTutorialView.swift:838"
    ],
    "args": [],
    "targets": [
@@ -354,7 +354,7 @@
    "ko": "1시간 5분",
    "en": "1h 5m",
    "files": [
-    "FirstRunTutorialView.swift:830"
+    "FirstRunTutorialView.swift:836"
    ],
    "args": [],
    "targets": [
@@ -451,7 +451,7 @@
    "ko": "25분",
    "en": "25m",
    "files": [
-    "FirstRunTutorialView.swift:831"
+    "FirstRunTutorialView.swift:837"
    ],
    "args": [],
    "targets": [
@@ -500,7 +500,7 @@
    "ko": "3시간 12분",
    "en": "3h 12m",
    "files": [
-    "FirstRunTutorialView.swift:828"
+    "FirstRunTutorialView.swift:834"
    ],
    "args": [],
    "targets": [
@@ -512,7 +512,7 @@
    "ko": "42분",
    "en": "42m",
    "files": [
-    "FirstRunTutorialView.swift:829"
+    "FirstRunTutorialView.swift:835"
    ],
    "args": [],
    "targets": [
@@ -4341,8 +4341,8 @@
    "ko": "{0}일차",
    "en": "Day {0}",
    "files": [
-    "TravelModeView.swift:928",
-    "TravelModeView.swift:1049"
+    "TravelModeView.swift:929",
+    "TravelModeView.swift:1050"
    ],
    "args": [
     "entry.dayNumber ?? 1"
@@ -34799,7 +34799,7 @@
    "ko": "계획표 내리기",
    "en": "Close plan table",
    "files": [
-    "TravelModeView.swift:1014"
+    "TravelModeView.swift:1015"
    ],
    "args": [],
    "targets": [
@@ -34812,7 +34812,7 @@
    "en": "Open plan table",
    "files": [
     "TravelModeView.swift:453",
-    "TravelModeView.swift:1014"
+    "TravelModeView.swift:1015"
    ],
    "args": [],
    "targets": [
@@ -36646,7 +36646,7 @@
    "ko": "끄면 비밀번호는 백업에만 쓰입니다.",
    "en": "When off, the password is used only for backups.",
    "files": [
-    "FirstRunTutorialView.swift:675"
+    "FirstRunTutorialView.swift:681"
    ],
    "args": [],
    "targets": [
@@ -37766,7 +37766,7 @@
    "ko": "다음: {0}",
    "en": "Next: {0}",
    "files": [
-    "TravelModeView.swift:966"
+    "TravelModeView.swift:967"
    ],
    "args": [
     "$0.title"
@@ -37963,7 +37963,7 @@
    "en": "Day trip",
    "files": [
     "TravelModeView.swift:786",
-    "TravelModeView.swift:1048"
+    "TravelModeView.swift:1049"
    ],
    "args": [],
    "targets": [
@@ -38819,7 +38819,7 @@
    "ko": "등록된 비밀번호가 있습니다",
    "en": "A password is already set",
    "files": [
-    "FirstRunTutorialView.swift:638"
+    "FirstRunTutorialView.swift:644"
    ],
    "args": [],
    "targets": [
@@ -40382,7 +40382,7 @@
    "ko": "바꾸지 않으면 그대로 씁니다.",
    "en": "It stays as is unless you change it.",
    "files": [
-    "FirstRunTutorialView.swift:640"
+    "FirstRunTutorialView.swift:646"
    ],
    "args": [],
    "targets": [
@@ -40394,7 +40394,7 @@
    "ko": "바꾸지 않으면 이 번호로 시작합니다.",
    "en": "This is used unless you change it.",
    "files": [
-    "FirstRunTutorialView.swift:652"
+    "FirstRunTutorialView.swift:658"
    ],
    "args": [],
    "targets": [
@@ -40454,6 +40454,7 @@
    "ko": "반경",
    "en": "Radius",
    "files": [
+    "FirstRunTutorialView.swift:582",
     "MapHomeInfoSheets.swift:99"
    ],
    "args": [],
@@ -41839,7 +41840,7 @@
    "ko": "비밀번호 확인",
    "en": "Confirm password",
    "files": [
-    "FirstRunTutorialView.swift:660",
+    "FirstRunTutorialView.swift:666",
     "MapHomeSettingsSheets.swift:349"
    ],
    "args": [],
@@ -41938,7 +41939,7 @@
    "ko": "비밀번호를 잊으면 백업을 복구할 수 없습니다. 예전 iCloud 백업은 그때 쓴 비밀번호로 열립니다.",
    "en": "Without the password, backups can't be restored. Older iCloud backups open with the password used then.",
    "files": [
-    "FirstRunTutorialView.swift:678"
+    "FirstRunTutorialView.swift:684"
    ],
    "args": [],
    "targets": [
@@ -42735,7 +42736,7 @@
    "ko": "새 비밀번호(6자리)",
    "en": "New password (6 digits)",
    "files": [
-    "FirstRunTutorialView.swift:657"
+    "FirstRunTutorialView.swift:663"
    ],
    "args": [],
    "targets": [
@@ -42747,7 +42748,7 @@
    "ko": "새 비밀번호",
    "en": "New password",
    "files": [
-    "FirstRunTutorialView.swift:659"
+    "FirstRunTutorialView.swift:665"
    ],
    "args": [],
    "targets": [
@@ -44866,7 +44867,7 @@
    "ko": "쓴 돈 {0}",
    "en": "Spent {0}",
    "files": [
-    "TravelModeView.swift:944"
+    "TravelModeView.swift:945"
    ],
    "args": [
     "LedgerMoney.text(sheet.myCost, language: language)"
@@ -44964,7 +44965,7 @@
    "ko": "아래에 적고 다음을 누르면 저장됩니다.",
    "en": "Enter one below and tap Next to save it.",
    "files": [
-    "FirstRunTutorialView.swift:644"
+    "FirstRunTutorialView.swift:650"
    ],
    "args": [],
    "targets": [
@@ -45100,7 +45101,7 @@
    "ko": "아직 비밀번호가 없습니다",
    "en": "No password yet",
    "files": [
-    "FirstRunTutorialView.swift:642"
+    "FirstRunTutorialView.swift:648"
    ],
    "args": [],
    "targets": [
@@ -45162,7 +45163,7 @@
    "ko": "아직 일정이 없습니다",
    "en": "No plans yet",
    "files": [
-    "TravelModeView.swift:966"
+    "TravelModeView.swift:967"
    ],
    "args": [],
    "targets": [
@@ -45766,7 +45767,7 @@
    "ko": "앱을 열 때마다 잠금",
    "en": "Lock whenever the app opens",
    "files": [
-    "FirstRunTutorialView.swift:670",
+    "FirstRunTutorialView.swift:676",
     "MapHomeSettingsSheets.swift:376"
    ],
    "args": [],
@@ -46443,7 +46444,7 @@
    "ko": "여행 장부 만들기",
    "en": "Start trip ledger",
    "files": [
-    "TravelModeView.swift:947"
+    "TravelModeView.swift:948"
    ],
    "args": [],
    "targets": [
@@ -47487,7 +47488,7 @@
    "ko": "연봉 카운터",
    "en": "Salary counter",
    "files": [
-    "FirstRunTutorialView.swift:785",
+    "FirstRunTutorialView.swift:791",
     "MapHomeAlarm.swift:25",
     "MapHomeSalarySettingsSheet.swift:123"
    ],
@@ -47539,7 +47540,7 @@
    "ko": "연봉을 적으면 나타납니다",
    "en": "Appears once you enter a salary",
    "files": [
-    "FirstRunTutorialView.swift:787"
+    "FirstRunTutorialView.swift:793"
    ],
    "args": [],
    "targets": [
@@ -47982,7 +47983,7 @@
    "ko": "예시",
    "en": "Example",
    "files": [
-    "FirstRunTutorialView.swift:767"
+    "FirstRunTutorialView.swift:773"
    ],
    "args": [],
    "targets": [
@@ -50217,6 +50218,18 @@
    ]
   },
   {
+   "key": "이 안에 있으면 이 장소로 봐요. 나중에 장소 정보에서 바꿀 수 있어요.|Inside this range counts as this place. You can change it later in the place details.",
+   "ko": "이 안에 있으면 이 장소로 봐요. 나중에 장소 정보에서 바꿀 수 있어요.",
+   "en": "Inside this range counts as this place. You can change it later in the place details.",
+   "files": [
+    "FirstRunTutorialView.swift:584"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "이 언어는 다듬지 못해요.|This language isn't supported.",
    "ko": "이 언어는 다듬지 못해요.",
    "en": "This language isn't supported.",
@@ -51230,7 +51243,7 @@
    "ko": "일정 {0}개",
    "en": "{0} plans",
    "files": [
-    "TravelModeView.swift:968"
+    "TravelModeView.swift:969"
    ],
    "args": [
     "items.count"
@@ -51294,7 +51307,7 @@
    "ko": "일정 넣기",
    "en": "Add plan",
    "files": [
-    "TravelModeView.swift:972",
+    "TravelModeView.swift:973",
     "TravelQuickEntrySheet.swift:125"
    ],
    "args": [],
@@ -53458,7 +53471,7 @@
    "en": "Past",
    "files": [
     "TravelModeView.swift:780",
-    "TravelModeView.swift:930"
+    "TravelModeView.swift:931"
    ],
    "args": [],
    "targets": [
@@ -53900,7 +53913,7 @@
    "ko": "지도에서 일정 보기",
    "en": "View plans on the map",
    "files": [
-    "TravelModeView.swift:973"
+    "TravelModeView.swift:974"
    ],
    "args": [],
    "targets": [
@@ -54025,7 +54038,7 @@
    "ko": "지출 넣기",
    "en": "Add expense",
    "files": [
-    "TravelModeView.swift:974"
+    "TravelModeView.swift:975"
    ],
    "args": [],
    "targets": [
@@ -54681,7 +54694,7 @@
    "ko": "초기 비밀번호",
    "en": "Default password",
    "files": [
-    "FirstRunTutorialView.swift:646"
+    "FirstRunTutorialView.swift:652"
    ],
    "args": [],
    "targets": [

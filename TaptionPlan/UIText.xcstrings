@@ -307770,6 +307770,83 @@
         }
       }
     },
+    "이 안에 있으면 이 장소로 봐요. 나중에 장소 정보에서 바꿀 수 있어요.|Inside this range counts as this place. You can change it later in the place details." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この範囲内にいるとこの場所として扱います。あとで場所の情報から変更できます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在此范围内即视为该地点。之后可在地点信息中更改。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在此範圍內即視為該地點。之後可在地點資訊中更改。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Innerhalb dieses Bereichs zählt als dieser Ort. Du kannst es später in den Ortsdetails ändern."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "À l'intérieur de ce rayon, c'est compté comme ce lieu. Vous pourrez le modifier plus tard dans les détails du lieu."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dentro questo raggio conta come questo luogo. Puoi cambiarlo più tardi nei dettagli del luogo."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dentro de este radio cuenta como este lugar. Puedes cambiarlo más tarde en los detalles del lugar."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dentro deste raio conta como este lugar. Você pode alterar depois nos detalhes do lugar."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ở trong phạm vi này được tính là địa điểm này. Bạn có thể đổi sau trong chi tiết địa điểm."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Di dalam jangkauan ini dihitung sebagai tempat ini. Anda bisa mengubahnya nanti di detail tempat."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "อยู่ในระยะนี้จะนับเป็นสถานที่นี้ เปลี่ยนภายหลังได้ในรายละเอียดสถานที่"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "इस दायरे के भीतर होने पर यही स्थान माना जाएगा। बाद में स्थान के विवरण में बदल सकते हैं।"
+          }
+        }
+      }
+    },
     "이 언어는 다듬지 못해요.|This language isn't supported." : {
       "extractionState" : "manual",
       "localizations" : {

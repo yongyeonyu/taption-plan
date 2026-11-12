@@ -578,6 +578,12 @@ private struct FirstRunPlacePicker: View {
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
             }
+            // 새로 등록하면 기본 200m(PLR1112A01). 이미 등록한 장소는 그 장소의 반경을 보인다.
+            Text(language.text("반경", "Radius")
+                + " \(Int((place?.point == nil ? FrequentPlace.defaultRadiusMeters : place?.radiusMeters ?? FrequentPlace.defaultRadiusMeters).rounded()))m · "
+                + language.text("이 안에 있으면 이 장소로 봐요. 나중에 장소 정보에서 바꿀 수 있어요.", "Inside this range counts as this place. You can change it later in the place details."))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .medium))
+                .foregroundStyle(Color.tpSecondary)
         }
         .padding(14)
         .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
