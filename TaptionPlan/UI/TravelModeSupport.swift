@@ -1,3 +1,4 @@
+import CoreLocation
 import SwiftUI
 import TaptionPlanStore
 
@@ -189,5 +190,54 @@ struct TravelPlanHandleBar: View {
                     .accessibilityIdentifier("travelPlanMapToggle")
                 }
             }
+    }
+}
+
+/// 일차 칩 줄(Trip 원본의 날짜 띠): 「1일차 11/20」. 누르면 그날 계획표.
+struct TravelDayChips: View {
+    let days: [(key: String, label: String)]
+    let selected: String
+    let onPick: (String) -> Void
+
+    var body: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 6) {
+                ForEach(days, id: \.key) { day in
+                    Button { onPick(day.key) } label: {
+                        Text(day.label)
+                            .font(.caption.weight(.semibold))
+                            .padding(.horizontal, 10)
+                            .frame(height: 28)
+                            .foregroundStyle(day.key == selected ? TravelInk.land : TravelInk.plan)
+                            .background(day.key == selected ? TravelInk.plan : TravelInk.planTint, in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 10)
+        }
+        .scrollIndicators(.hidden)
+        .padding(.bottom, 4)
+    }
+}
+
+/// 지도에서 길게 눌러 고른 자리(TVU1113A01).
+enum TravelMapSpot {
+    /// 주소를 못 찾았을 때의 이름: 좌표.
+    static func fallbackName(latitude: Double, longitude: Double) -> String {
+        String(format: "%.4f, %.4f", latitude, longitude)
+    }
+
+    /// 그 자리의 이름(장소 이름 → 동네 → 좌표). Apple 주소 찾기를 쓴다.
+    static func place(latitude: Double, longitude: Double) async -> TravelItemPlace {
+        let mark = try? await CLGeocoder().reverseGeocodeLocation(CLLocation(latitude: latitude, longitude: longitude)).first
+        let name = [mark?.name, mark?.subLocality, mark?.locality].compactMap { $0 }.first { !$0.isEmpty }
+        return TravelItemPlace(name: name ?? fallbackName(latitude: latitude, longitude: longitude), latitude: latitude, longitude: longitude)
+    }
+
+    /// 핀을 눌렀을 때 옮겨 갈 날과 재생 시각: 그 일정이 놓인 날(그곳 날짜)과 시작 분.
+    static func focus(_ item: TravelTripItem) -> (dayKey: String, minute: Int) {
+        let local = Int(item.start.timeIntervalSince1970) + item.startOffsetSeconds
+        return (TravelTripDay.string(for: item.start, offsetSeconds: item.startOffsetSeconds), ((local % 86_400) + 86_400) % 86_400 / 60)
     }
 }

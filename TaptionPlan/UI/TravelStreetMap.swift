@@ -32,6 +32,8 @@ struct TravelStreetMap: UIViewRepresentable {
     var fitKey: String
     /// 핀을 누르면 그 일정 번호를 알린다.
     var onSelect: (String) -> Void = { _ in }
+    /// 빈 지도를 길게 누르면 그 자리(경도, 위도)를 알린다(Trip 원본: 그 자리에 일정 만들기).
+    var onLongPress: (SIMD2<Double>) -> Void = { _ in }
 
     /// 핀들을 품는 상자. 한 점이면 둘레를 조금 넓힌다. 핀이 없으면 nil.
     static func bounds(_ pins: [Pin]) -> (west: Double, south: Double, east: Double, north: Double)? {
@@ -61,6 +63,9 @@ struct TravelStreetMap: UIViewRepresentable {
         mapView.showsAttributionButton = true
         mapView.attributionButtonPosition = .topRight
         mapView.attributionButtonMargins = CGPoint(x: 10, y: 150)
+        let press = UILongPressGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.longPressed(_:)))
+        press.minimumPressDuration = 0.55
+        mapView.addGestureRecognizer(press)
         return mapView
     }
 
@@ -201,6 +206,13 @@ struct TravelStreetMap: UIViewRepresentable {
             shownRoute = []
             isReady = true
             if let pending { drawRoute(pending) }
+        }
+
+        @objc func longPressed(_ press: UILongPressGestureRecognizer) {
+            guard press.state == .began, let mapView = press.view as? MLNMapView else { return }
+            let spot = mapView.convert(press.location(in: mapView), toCoordinateFrom: mapView)
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            pending?.onLongPress(SIMD2(spot.longitude, spot.latitude))
         }
 
         func mapView(_ mapView: MLNMapView, didSelect annotation: MLNAnnotation) {

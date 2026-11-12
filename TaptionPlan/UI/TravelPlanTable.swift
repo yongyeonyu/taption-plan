@@ -205,8 +205,14 @@ struct TravelPlanTable: View {
     /// 끄는 동안의 변화(5분 단위로만 바뀌어 화면 갱신이 드물다).
     @State private var moveMinutes = 0
     @State private var resizeMinutes = 0
-    /// 눌러서 고른 일정. 아래에 선택 막대가 뜬다.
-    @State private var selectedID: String?
+    /// 눌러서 고른 일정. 아래에 선택 막대가 뜬다. 화면이 들고 있어 지도 핀을 눌러도 같은 일정이 선택된다(Trip 원본).
+    var selection: Binding<String?> = .constant(nil)
+    private var selectedID: String? {
+        get { selection.wrappedValue }
+        nonmutating set { selection.wrappedValue = newValue }
+    }
+    /// 표를 밀어서 알린 마지막 시각. 바깥에서 재생 시각을 바꾸면(핀 누르기) 그 시각으로 표를 옮긴다.
+    @State private var scrubbed: Int?
     @State private var isConfirmingDelete = false
     /// 셀 손잡이를 끌기 시작했을 때의 셀. 끄는 동안에는 표 스크롤을 멈춘다.
     @State private var cellDragBase: TravelPlanCell?
@@ -279,7 +285,15 @@ struct TravelPlanTable: View {
                 .onScrollGeometryChange(for: Int.self) { geometry in
                     Self.scrubMinute(start: 0, translation: geometry.contentOffset.y, scale: zoom)
                 } action: { _, minute in
-                    if didPlace, minute != playMinute { onScrub(minute) }
+                    if didPlace, minute != playMinute {
+                        scrubbed = minute
+                        onScrub(minute)
+                    }
+                }
+                .onChange(of: playMinute) { _, minute in
+                    guard didPlace, let minute, minute != scrubbed else { return }
+                    scrubbed = minute
+                    withAnimation(.snappy(duration: 0.25)) { position.scrollTo(y: CGFloat(minute) * minuteHeight) }
                 }
                 .overlay(alignment: .leading) { if let playMinute { playhead(playMinute, width: box.size.width) } }
                 .overlay(alignment: .bottom) {

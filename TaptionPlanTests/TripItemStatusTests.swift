@@ -525,6 +525,17 @@ final class TravelTripUnitTests: XCTestCase {
         XCTAssertTrue(TravelPlanSelection.canNudge(-5, start: 1_380, end: 1_440))
     }
 
+    /// TVU1113A01: 지도 핀을 누르면 그 일정의 날·시작 시각으로 가고, 길게 누른 자리는 주소가 없으면 좌표가 이름이 된다.
+    func testPinFocusAndMapSpotName() throws {
+        let start = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-11-21T00:30:00+09:00"))
+        let item = TravelTripItem(tripID: "t1", itemID: "a", kind: "meal", title: "야타이", start: start, end: start.addingTimeInterval(3_600),
+                                  startOffsetSeconds: 32_400, endOffsetSeconds: 32_400, planID: nil)
+        let focus = TravelMapSpot.focus(item)
+        XCTAssertEqual(focus.dayKey, "2026-11-21", "그곳 날짜")
+        XCTAssertEqual(focus.minute, 30)
+        XCTAssertEqual(TravelMapSpot.fallbackName(latitude: 33.59012, longitude: 130.40171), "33.5901, 130.4017")
+    }
+
     /// TVZ1112A01: 지출은 그 시각의 일정 칸에 모이고(겹치면 늦게 시작한 일정), 이동 일정은 탈것을 먼저 권한다.
     func testSpendByItemAndVehicleSuggestions() throws {
         let base = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-12-03T10:00:00+09:00"))

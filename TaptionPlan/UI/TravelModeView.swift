@@ -265,6 +265,7 @@ struct TravelModeView: View {
     @State private var entryTarget: TravelQuickEntrySheet.Target?
     /// 계획표에서 고른 빈 셀(TVU1113A01).
     @State private var planCell: TravelPlanCell?
+    @State private var planSelectedID: String?
     @State private var timeUndo: TravelTimeUndo?
     @State private var deleteCandidate: TravelTripDirectory.Entry?
     /// 재생 헤드의 시각(그날 0시부터의 분). nil이면 처음 자리(오늘은 지금, 아니면 첫 일정 시작).
@@ -581,7 +582,7 @@ struct TravelModeView: View {
             // 위쪽 핀에 선 고양이가 머리말에 가리지 않게 고양이 키만큼 더 띄운다.
             insets: UIEdgeInsets(top: area.minY + 74, left: 28, bottom: viewSize.height - area.maxY + 24, right: viewSize.width - area.maxX + 28),
             fitKey: "\(entry.id)|\(dayKey(entry))|\(isPlanUp)|\(Int(viewSize.width))x\(Int(viewSize.height))|\(Int(tableHeight))",
-            onSelect: { editEntry(entry, itemID: $0) }
+            onSelect: { selectPin(entry, itemID: $0) }, onLongPress: { addEntry(entry, at: $0) }
         )
     }
 
@@ -1045,7 +1046,7 @@ struct TravelModeView: View {
                     onMove: { block, minutes in editTimes(entry, block: block, move: minutes) },
                     onResize: { block, minutes in editTimes(entry, block: block, resize: minutes) },
                     playMinute: currentPlayMinute(entry),
-                    onScrub: { playMinute = $0 },
+                    onScrub: { playMinute = $0 }, selection: $planSelectedID,
                     tightIDs: TravelPlayhead.tightStops(playStops(entry), travelMinutes: routes.minutes)
                 )
                     .id(dayKey(entry))
@@ -1143,27 +1144,33 @@ struct TravelModeView: View {
         entryTarget = target
     }
 
-    private func dayChips(_ entry: TravelTripDirectory.Entry) -> some View {
-        let selected = dayKey(entry)
-        return ScrollView(.horizontal) {
-            HStack(spacing: 6) {
-                ForEach(TravelPlanDays.days(of: entry.trip), id: \.key) { day in
-                    Button { planDayKey = day.key } label: {
-                        // Trip 원본의 날짜 띠처럼 일차 옆에 월/일을 붙인다.
-                        Text(entry.isDayTrip ? dayLabel(entry, key: day.key) : dayLabel(entry, key: day.key) + " " + TravelPlanDays.shortDate(day.key))
-                            .font(.caption.weight(.semibold))
-                            .padding(.horizontal, 10)
-                            .frame(height: 28)
-                            .foregroundStyle(day.key == selected ? TravelInk.land : TravelInk.plan)
-                            .background(day.key == selected ? TravelInk.plan : TravelInk.planTint, in: Capsule())
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.horizontal, 10)
+    private func dayChips(_ entry: TravelTripDirectory.Entry) -> TravelDayChips {
+        TravelDayChips(days: TravelPlanDays.days(of: entry.trip).map { day in
+            let label = dayLabel(entry, key: day.key)
+            return (day.key, entry.isDayTrip ? label : label + " " + TravelPlanDays.shortDate(day.key))
+        }, selected: dayKey(entry)) { planDayKey = $0 }
+    }
+
+    /// 지도 핀을 누름(Trip 원본): 편집기를 열지 않고 그 일정을 고르고, 계획표를 그날·그 시각으로 옮긴다.
+    private func selectPin(_ entry: TravelTripDirectory.Entry, itemID: String) {
+        guard let item = (model.settings.travelTripItems ?? []).first(where: { $0.tripID == entry.id && $0.itemID == itemID }) else { return }
+        let focus = TravelMapSpot.focus(item)
+        if dayKey(entry) != focus.dayKey { planDayKey = focus.dayKey }
+        withAnimation(.snappy(duration: 0.25)) { isPlanUp = true }
+        // 날이 바뀌면 재생 시각이 지워지므로 그 뒤에 넣는다.
+        Task { @MainActor in
+            playMinute = focus.minute
+            planSelectedID = itemID
         }
-        .scrollIndicators(.hidden)
-        .padding(.bottom, 4)
+    }
+
+    /// 빈 지도를 길게 누름(Trip 원본): 그 자리를 장소로 붙인 새 일정 편집기를 연다.
+    private func addEntry(_ entry: TravelTripDirectory.Entry, at spot: SIMD2<Double>) {
+        Task { @MainActor in
+            let place = await TravelMapSpot.place(latitude: spot.y, longitude: spot.x)
+            addEntry(entry)
+            entryTarget?.place = place
+        }
     }
 
     /// 예전 지도 여행 모드에서 열 날: 여행 중이면 오늘, 아니면 여행 첫날.
