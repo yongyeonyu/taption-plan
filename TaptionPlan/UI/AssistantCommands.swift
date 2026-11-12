@@ -55,6 +55,12 @@ struct AssistantCommand: Identifiable, Equatable, Sendable {
         case openScreen(AssistantScreen)
         /// ASK1112A01: 앱에서 객관식으로 묻는다. 기록은 바꾸지 않고, 답은 앱이 서버에 올린다.
         case askUser(AssistantQuestion)
+        /// ACA1112A01: 자주 가는 장소와 분류. nil인 칸은 그대로 둔다. 좌표는 받기만 한다.
+        case addPlace(name: String, coordinate: AssistantCoordinate?, radius: Double?, autoRecord: Bool?)
+        case updatePlace(placeID: UUID, name: String?, coordinate: AssistantCoordinate?, radius: Double?, autoRecord: Bool?)
+        case deletePlace(UUID)
+        case addCategory(name: String, color: String, icon: CategoryIcon?)
+        case updateCategory(categoryID: String, name: String?, color: String?, icon: CategoryIcon?, hidden: Bool?)
     }
 
     let id: String
@@ -115,6 +121,8 @@ enum AssistantCommandParser {
         let amountKRW: Double?, month: String?, ruleId: String?, reviewId: String?, decision: String?, inboxId: String?, screen: String?
         // ASK1112A01: askUser.
         let question: String?, options: [String]?, multiSelect: Bool?
+        // ACA1112A01: 장소·분류.
+        let placeId: String?, radius: Double?, autoRecord: Bool?, color: String?, icon: String?, hidden: Bool?
     }
 
     /// `{"commands":[...]}`를 읽는다. 서버와 같은 규칙으로 다시 본다.
@@ -343,6 +351,7 @@ struct AssistantCommandOutcome: Equatable, Sendable {
         case .setBudget, .addOwnAccount, .removeOwnAccount, .deletePaymentRule, .deleteInboxItem, .openScreen: settings += 1
         case .resolveReview: ledger += 1
         case .askUser: questions += 1
+        case .addPlace, .updatePlace, .deletePlace, .addCategory, .updateCategory: settings += 1
         case .setBubble: bubbles += 1
         case .addExpense, .updateExpense: ledger += 1
         }

@@ -401,3 +401,91 @@ enum AssistantPlaceSearch {
         return AssistantCoordinate(latitude: found.latitude, longitude: found.longitude)
     }
 }
+
+/// 장소·분류 명령의 한도(ACA1112A01). 서버와 같다.
+enum AssistantCatalogLimits {
+    static let placeName = 40
+    static let categoryName = 20
+    static let radius = 30.0...500.0
+    static let places = 100
+
+    static func radiusOK(_ value: Double?) -> Bool { value.map { $0.isFinite && radius.contains($0) } ?? true }
+
+    static func isColor(_ text: String) -> Bool {
+        text.range(of: "^#[0-9A-Fa-f]{6}$", options: .regularExpression) != nil
+    }
+}
+
+extension AppModel {
+    /// 자주 가는 장소와 분류(ACA1112A01). 화면의 편집과 같은 함수를 쓰고, 화면 오류 알림은 띄우지 않는다.
+    /// 되돌리기는 목록 전·후를 견준다(`AssistantEditDelta.places`·`categories`).
+    func applyAssistantCatalogAction(_ action: AssistantCommand.Action) async -> AssistantEditResult {
+        let language = MapHomeLanguage.current
+        func sameName(_ name: String, except id: UUID? = nil) -> Bool {
+            snapshot.settings.frequentPlaces.contains { $0.id != id && $0.name.localizedCaseInsensitiveCompare(name) == .orderedSame }
+        }
+        func describe(_ place: FrequentPlace) -> String { "\(place.displayName) · \(Int(place.radiusMeters.rounded()))m" }
+        switch action {
+        case let .addPlace(name, coordinate, radius, autoRecord):
+            guard !sameName(name) else { return .rejected("duplicate") }
+            guard snapshot.settings.frequentPlaces.count < AssistantCatalogLimits.places else { return .rejected("place_limit") }
+            var place = FrequentPlace(kind: .custom, name: name)
+            if let radius { place.radiusMeters = radius }
+            if let autoRecord { place.isAutomaticRecordingEnabled = autoRecord }
+            snapshot.settings.frequentPlaces.append(place)
+            if let coordinate { setFrequentPlaceLocation(place.id, latitude: coordinate.latitude, longitude: coordinate.longitude) }
+            await persist()
+            // 가까운 등록 장소와 합쳐졌으면 그 장소로 남는다.
+            let saved = snapshot.settings.frequentPlaces.first { $0.id == place.id } ?? place
+            return AssistantEditResult(after: describe(saved))
+        case let .updatePlace(placeID, name, coordinate, radius, autoRecord):
+            guard let current = snapshot.settings.frequentPlaces.first(where: { $0.id == placeID }) else { return .rejected("no_place") }
+            if let name, sameName(name, except: placeID) { return .rejected("duplicate") }
+            // 바뀌는 값이 없으면 손대지 않는다(수정 시각만 바뀌어 되돌리기가 막히지 않게).
+            let changesDetails = (name.map { $0 != current.name } ?? false) || (radius.map { $0 != current.radiusMeters } ?? false)
+                || (autoRecord.map { $0 != current.isAutomaticRecordingEnabled } ?? false)
+            let moves = coordinate.map { $0.latitude != current.point?.latitude || $0.longitude != current.point?.longitude } ?? false
+            guard changesDetails || moves else { return .rejected("no_change") }
+            if changesDetails {
+                updateFrequentPlaceDetails(
+                    placeID, name: name ?? current.name, radiusMeters: radius ?? current.radiusMeters,
+                    minimumDwellMinutes: current.minimumDwellMinutes, isAutomaticRecordingEnabled: autoRecord ?? current.isAutomaticRecordingEnabled
+                )
+            }
+            if moves, let coordinate { setFrequentPlaceLocation(placeID, latitude: coordinate.latitude, longitude: coordinate.longitude) }
+            await persist()
+            guard let saved = snapshot.settings.frequentPlaces.first(where: { $0.id == placeID }) else { return .rejected("edit_failed") }
+            return AssistantEditResult(before: describe(current), after: describe(saved))
+        case let .deletePlace(placeID):
+            guard let current = snapshot.settings.frequentPlaces.first(where: { $0.id == placeID }) else { return .rejected("no_place") }
+            let before = snapshot.settings.frequentPlaces
+            deleteFrequentPlace(placeID)
+            await persist()
+            guard snapshot.settings.frequentPlaces != before else { return .rejected("no_change") }
+            return AssistantEditResult(before: describe(current), after: language.text("지움", "Deleted"))
+        case let .addCategory(name, color, icon):
+            guard let category = try? CategoryCatalog.makeCustom(name: name, icon: icon ?? .activity, lightHex: color, existing: snapshot.categories)
+            else { return .rejected("invalid_category") }
+            snapshot.categories.append(category)
+            snapshot.categories.sort { $0.sortOrder < $1.sortOrder }
+            await persist()
+            return AssistantEditResult(after: "\(category.name) \(category.lightHex)")
+        case let .updateCategory(categoryID, name, color, icon, hidden):
+            guard categoryID != "unconfirmed", let index = snapshot.categories.firstIndex(where: { $0.id == categoryID }) else { return .rejected("unknown_category") }
+            let current = snapshot.categories[index]
+            if let name, snapshot.categories.contains(where: { $0.id != categoryID && $0.name.localizedCaseInsensitiveCompare(name) == .orderedSame }) {
+                return .rejected("duplicate")
+            }
+            guard let updated = try? CategoryCatalog.update(current, name: name, icon: icon, lightHex: color, hidden: hidden) else { return .rejected("invalid_category") }
+            guard updated != current else { return .rejected("no_change") }
+            snapshot.categories[index] = updated
+            await persist()
+            func describe(_ value: CategoryDefinition) -> String {
+                "\(value.name) \(value.lightHex)" + (value.isHidden ? " · " + language.text("숨김", "Hidden") : "")
+            }
+            return AssistantEditResult(before: describe(current), after: describe(updated))
+        default:
+            return .rejected("invalid")
+        }
+    }
+}

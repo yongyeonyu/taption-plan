@@ -34,10 +34,19 @@ struct AssistantEditDelta: Codable, Equatable, Sendable {
     var paymentRuleID: UUID?
     /// 가계부 설정·정리·화면 열기(ACX1112A01). 예전 기록에는 없다.
     var appChange: AssistantAppChange?
+    /// 자주 가는 장소·분류 목록 전·후(ACA1112A01). 예전 기록에는 없다.
+    var places: ListChange<FrequentPlace>?
+    var categories: ListChange<CategoryDefinition>?
+
+    struct ListChange<Value: Codable & Equatable & Sendable>: Codable, Equatable, Sendable {
+        var before: [Value]
+        var after: [Value]
+    }
 
     var isEmpty: Bool {
         plans.isEmpty && memos.isEmpty && actuals.isEmpty && corrections.isEmpty
             && addedSleepSpans.isEmpty && removedSleepSpans.isEmpty && travel == nil && (preferences ?? []).isEmpty && movement == nil
+            && places == nil && categories == nil
     }
 
     /// 기록은 명령이 고른 id와 새로 생기거나 사라진 수동 기록만 본다. 그 사이 센서 갱신이 바꾼 자동 기록은 담지 않는다.
@@ -68,7 +77,10 @@ struct AssistantEditDelta: Codable, Equatable, Sendable {
             addedSleepSpans: newSleep.subtracting(oldSleep).sorted { $0.start < $1.start },
             removedSleepSpans: oldSleep.subtracting(newSleep).sorted { $0.start < $1.start },
             travel: oldTravel == newTravel ? nil : AssistantTravelChange(before: oldTravel, after: newTravel),
-            preferences: style.map { [$0] }
+            preferences: style.map { [$0] },
+            places: before.settings.frequentPlaces == after.settings.frequentPlaces
+                ? nil : ListChange(before: before.settings.frequentPlaces, after: after.settings.frequentPlaces),
+            categories: before.categories == after.categories ? nil : ListChange(before: before.categories, after: after.categories)
         )
     }
 
@@ -98,6 +110,12 @@ struct AssistantEditDelta: Codable, Equatable, Sendable {
         for change in actuals where Self.blocksUndo(change, current: actualsByID[change.id]) { return nil }
         // 이동 수단은 그 뒤 사용자나 센서가 같은 구간·교정표를 바꿨으면 되돌리지 않는다.
         if let movement, AssistantMovementChange.State(result, ids: Set(movement.after.segments.map(\.id))) != movement.after { return nil }
+
+        // 장소·분류는 그 뒤 목록이 바뀌었으면 되돌리지 않는다.
+        if let places, result.settings.frequentPlaces != places.after { return nil }
+        if let categories, result.categories != categories.after { return nil }
+        if let places { result.settings.frequentPlaces = places.before }
+        if let categories { result.categories = categories.before }
 
         var renamed: [UUID: UUID] = [:]
         for change in plans {

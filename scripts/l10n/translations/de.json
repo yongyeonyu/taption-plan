@@ -5436,6 +5436,12 @@
 "회사에서 업무|Working at the office": "Arbeit im Büro",
 "회사에서 휴식|Break at the office": "Pause im Büro",
 "회의|Meeting": "Meeting",
-"휴식|Rest": "Ausruhen"
+"휴식|Rest": "Ausruhen",
+"자주 가는 장소 더하기|Add frequent places": "Häufige Orte hinzufügen",
+"자주 가는 장소 고치기|Edit frequent places": "Häufige Orte bearbeiten",
+"자주 가는 장소 지우기|Delete frequent places": "Häufige Orte löschen",
+"분류 더하기|Add categories": "Kategorien hinzufügen",
+"분류 고치기|Edit categories": "Kategorien bearbeiten",
+"숨김|Hidden": "Ausgeblendet"
 }
 }

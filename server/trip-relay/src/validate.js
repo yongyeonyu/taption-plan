@@ -193,6 +193,12 @@ export const COMMAND_FIELDS = {
   openScreen: ["screen"],
   // ASK1112A01: 앱에서 사용자에게 객관식으로 묻는다. 답은 앱이 `/answers`에 올린다.
   askUser: ["question", "options", "multiSelect"],
+  // ACA1112A01: 자주 가는 장소와 분류. 좌표는 받기만 하고 내보내지 않는다.
+  addPlace: ["name", "latitude", "longitude", "radius", "autoRecord"],
+  updatePlace: ["placeId", "name", "latitude", "longitude", "radius", "autoRecord"],
+  deletePlace: ["placeId"],
+  addCategory: ["name", "color", "icon"],
+  updateCategory: ["categoryId", "name", "color", "icon", "hidden"],
   setLanguage: ["language"],
   setTheme: ["theme"],
   setMapStyle: ["mapStyle"],
@@ -236,6 +242,15 @@ export const cleanAnswers = (value) => value.answers.map(({ id, question, status
   id, question, status, ...(status === "answered" && choices?.length ? { choices } : {}), ...(status === "answered" && given(text) ? { text } : {}),
   ...(given(askedAt) ? { askedAt } : {}), ...(given(answeredAt) ? { answeredAt } : {}),
 }));
+
+// ACA1112A01: 장소 이름 1~40자·반경 30~500m, 분류 이름 1~20자·색 #RRGGBB·아이콘은 앱의 CategoryIcon 이름.
+export const PLACE_LIMITS = { name: 40, category: 20, minRadius: 30, maxRadius: 500, places: 100, categories: 100 };
+export const CATEGORY_ICONS = ["briefcase", "building", "book", "graduation", "target", "award", "stroller", "family", "shield", "health", "exercise",
+  "sleep", "performance", "music", "travel", "location", "photo", "home", "meal", "cafe", "pet", "shopping", "nature", "calendar", "event", "memo",
+  "movement", "activity", "relationship", "work", "community", "student", "exam", "military", "athlete", "pregnancy"];
+const isBoolean = (v) => typeof v === "boolean";
+const placeRadius = (v) => typeof v === "number" && Number.isFinite(v) && v >= PLACE_LIMITS.minRadius && v <= PLACE_LIMITS.maxRadius;
+const hexColor = (v) => typeof v === "string" && /^#[0-9A-Fa-f]{6}$/.test(v);
 
 // 알려진 칸만 남긴 명령. 동작을 모르면 null.
 export function cleanCommand(value) {
@@ -355,6 +370,19 @@ export function isCommand(value) {
       return uuid(v.inboxId);
     case "openScreen":
       return oneOf(SCREENS)(v.screen);
+    case "addPlace":
+      return lengthIn(v.name, PLACE_LIMITS.name) && pair(v.latitude, v.longitude) && optional(v.radius, placeRadius) && optional(v.autoRecord, isBoolean);
+    case "updatePlace":
+      return uuid(v.placeId) && optional(v.name, (n) => lengthIn(n, PLACE_LIMITS.name)) && pair(v.latitude, v.longitude)
+        && optional(v.radius, placeRadius) && optional(v.autoRecord, isBoolean)
+        && [v.name, v.latitude, v.radius, v.autoRecord].some(given);
+    case "deletePlace":
+      return uuid(v.placeId);
+    case "addCategory":
+      return lengthIn(v.name, PLACE_LIMITS.category) && hexColor(v.color) && optional(v.icon, oneOf(CATEGORY_ICONS));
+    case "updateCategory":
+      return targetID(v.categoryId) && optional(v.name, (n) => lengthIn(n, PLACE_LIMITS.category)) && optional(v.color, hexColor)
+        && optional(v.icon, oneOf(CATEGORY_ICONS)) && optional(v.hidden, isBoolean) && [v.name, v.color, v.icon, v.hidden].some(given);
     case "askUser":
       return questionText(v.question) && answerOptions(v.options) && optional(v.multiSelect, (b) => typeof b === "boolean");
     case "setLanguage":
@@ -396,7 +424,7 @@ export function isTaskResult(value) {
 
 // 앱 상태(ACX1112A01). 앱이 통째로 올리고 AI는 읽기만 한다: 설정, 가계부(이 달 합계·예산·최근 기록), 확인 필요,
 // 받은 결제 문자(번호는 앱이 가린다), 결제 문자 규칙. 서버는 모양·개수만 보고 알려진 칸만 잠가 둔다.
-export const APP_STATE_FIELDS = ["updatedAt", "timeZone", "settings", "ledger", "review", "inbox", "rules"];
+export const APP_STATE_FIELDS = ["updatedAt", "timeZone", "settings", "ledger", "review", "inbox", "rules", "places", "categories"];
 export const APP_STATE_LIMITS = { entries: 200, review: 50, inbox: 30, rules: 20 };
 const plainObject = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 const objectList = (v, max) => Array.isArray(v) && v.length <= max && v.every(plainObject);
@@ -407,7 +435,8 @@ export function isAppState(value) {
     && optional(value.ledger, (l) => plainObject(l) && optional(l.entries, (e) => objectList(e, APP_STATE_LIMITS.entries)))
     && optional(value.review, (l) => objectList(l, APP_STATE_LIMITS.review))
     && optional(value.inbox, (l) => objectList(l, APP_STATE_LIMITS.inbox))
-    && optional(value.rules, (l) => objectList(l, APP_STATE_LIMITS.rules));
+    && optional(value.rules, (l) => objectList(l, APP_STATE_LIMITS.rules))
+    && optional(value.places, (l) => objectList(l, PLACE_LIMITS.places)) && optional(value.categories, (l) => objectList(l, PLACE_LIMITS.categories));
 }
 export function cleanAppState(value) {
   const out = { format: "bokki-app", version: 1 };

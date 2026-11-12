@@ -6,7 +6,7 @@
 import { json, readBody, writeAllowed } from "./http.js";
 import { allows } from "./keys.js";
 import { claimTasks, endConversation, finishTask, queueCommand, readActivity, readAnswers, readAppState, readPolish, readResults, readSummary, readSync, savePlan } from "./store.js";
-import { ACTIONS, ANSWER_STATUSES, DISPLAY_OPTIONS, EXPENSE_CATEGORIES, LANGUAGES, MAP_STYLES, PAYMENT_RULE_KINDS, REVIEW_DECISIONS, SCREENS, TASK_KINDS, TASK_STATUSES, THEMES, TRAVEL_MODES, TRIP_STATUSES } from "./validate.js";
+import { ACTIONS, ANSWER_STATUSES, CATEGORY_ICONS, DISPLAY_OPTIONS, EXPENSE_CATEGORIES, LANGUAGES, MAP_STYLES, PAYMENT_RULE_KINDS, REVIEW_DECISIONS, SCREENS, TASK_KINDS, TASK_STATUSES, THEMES, TRAVEL_MODES, TRIP_STATUSES } from "./validate.js";
 
 export const PROTOCOL_VERSION = "2025-06-18";
 const SERVER_INFO = { name: "taption-plan", title: "Taption Plan", version: "3.1.0" };
@@ -85,7 +85,9 @@ const TOOLS = [
     + "category,kind,amount,currency,amountKRW,canceled,source}]} (newest first; entry ids work with update_expense), review [{id,reason "
     + "noMerchant|duplicate|transfer,receivedAt,time,title,category,kind,amount,currency}] (payments the app did not add by itself; settle with "
     + "resolve_review), inbox [{id,receivedAt,outcome added|review|duplicate|skipped|unread|askedAI,message,text}] (payment texts the iOS "
-    + "automation handed over; card, account and phone numbers are masked) and rules [{id,name,kind,pattern}] (payment text rules). "
+    + "automation handed over; card, account and phone numbers are masked) rules [{id,name,kind,pattern}] (payment text rules), categories [{id,name,color,icon,hidden,custom}] (every category; ids work with "
+    + "update_category and as categoryId elsewhere) and, at the place-name share level, places [{id,name,kind,radius,autoRecord,located}] "
+    + "(registered places, never coordinates; ids work with update_place and delete_place). "
     + "The app cannot see iOS Shortcuts: whether the payment automation exists or is switched on is unknown; lastPaymentTextAt only shows "
     + "when a text last arrived through it. Returns nothing when the user shares nothing.",
     object({}), (ctx) => readAppState(ctx), { empty: "No app state stored: the user shares nothing, or the app has not run since this was added." }),
@@ -179,6 +181,28 @@ const TOOLS = [
       options: { type: "array", items: { type: "string", maxLength: 60 }, minItems: 2, maxItems: 4, description: "2-4 distinct options, each 1-60 characters" },
       multiSelect: { type: "boolean", description: "true lets the user pick more than one option (default false)" } },
     ["question", "options"]),
+  // ACA1112A01
+  addTool("add_place", "addPlace", "Register a frequent place", "Register a place the user visits often so the app names stays there by itself. "
+    + "Give latitude and longitude together when you know them (the app never sends coordinates back); without them the place has a name only "
+    + "and the user sets its spot in the app. radius 30-500 m (default 200). Names must be unique. Undoable.",
+    { name: str("Place name, 1-40 characters", { maxLength: 40 }), latitude: { type: "number", minimum: -90, maximum: 90 }, longitude: { type: "number", minimum: -180, maximum: 180 },
+      radius: { type: "number", minimum: 30, maximum: 500, description: "Radius in meters" }, autoRecord: { type: "boolean", description: "false keeps the place out of automatic records (default true)" } },
+    ["name"]),
+  commandTool("update_place", "updatePlace", "Edit a frequent place", "Change a registered place's name, radius, automatic recording or spot "
+    + "(placeId from get_app_state places). Give at least one field; latitude and longitude always together. Undoable.",
+    { placeId: str("Place id (UUID) from get_app_state places"), name: str("New name, 1-40 characters", { maxLength: 40 }), latitude: { type: "number", minimum: -90, maximum: 90 },
+      longitude: { type: "number", minimum: -180, maximum: 180 }, radius: { type: "number", minimum: 30, maximum: 500, description: "Radius in meters" },
+      autoRecord: { type: "boolean", description: "Automatic recording at this place" } }, ["placeId"]),
+  commandTool("delete_place", "deletePlace", "Delete a frequent place", "Delete a registered place (get_app_state places). Home, work and other built-in "
+    + "places are emptied instead of removed. Past records stay. Undoable.",
+    { placeId: str("Place id (UUID) from get_app_state places") }, ["placeId"]),
+  addTool("add_category", "addCategory", "Add a category", "Add a custom major category (name must be unique). color is #RRGGBB. Undoable.",
+    { name: str("Category name, 1-20 characters", { maxLength: 20 }), color: str("Color as #RRGGBB", { pattern: "^#[0-9A-Fa-f]{6}$" }), icon: enumOf("Icon (default activity)", CATEGORY_ICONS) },
+    ["name", "color"]),
+  commandTool("update_category", "updateCategory", "Edit a category", "Change a category's name, color, icon or hide it (categoryId from get_app_state "
+    + "categories). Give at least one field. Hiding keeps its records. Undoable.",
+    { categoryId: str("Category id from get_app_state categories"), name: str("New name, 1-20 characters", { maxLength: 20 }), color: str("Color as #RRGGBB", { pattern: "^#[0-9A-Fa-f]{6}$" }),
+      icon: enumOf("Icon", CATEGORY_ICONS), hidden: { type: "boolean", description: "true hides the category from pickers" } }, ["categoryId"]),
   addTool("add_schedule", "addSchedule", "Add schedule", "Add a planned activity. Without end it lasts one hour.",
     { title: str("1-200 characters"), start: INSTANT("Start"), end: INSTANT("End, after start"), note: str("Up to 1000 characters") }, ["title", "start"]),
   commandTool("update_activity", "updateActivity", "Rename or recategorize a record", "Correct a record's title and/or category. Target by recordId or the startTime it covers.",
@@ -283,7 +307,7 @@ function isTimeZone(v) {
   try { new Intl.DateTimeFormat("en", { timeZone: v }); return true; } catch { return false; }
 }
 const RAW_VALUES = {
-  ...Object.fromEntries(["id", "entryId", "ruleId", "reviewId", "inboxId", "recordId", "planId", "memoId", "goalId", "tripId", "itemId", "stopId", "sleepId", "categoryId", "keyId", "recordIds"].map((k) => [k, isId])),
+  ...Object.fromEntries(["id", "entryId", "ruleId", "reviewId", "inboxId", "placeId", "recordId", "planId", "memoId", "goalId", "tripId", "itemId", "stopId", "sleepId", "categoryId", "keyId", "recordIds"].map((k) => [k, isId])),
   ...Object.fromEntries(["date", "start", "end", "time", "startTime", "endTime", "startDate", "endDate", "updatedAt", "receivedAt", "at", "expiresAt", "lastPaymentTextAt", "appLastSeenAt", "lastUploadAt", "askedAt", "answeredAt"].map((k) => [k, isWhen])),
   dates: (v) => DATE_VALUE.test(v),
   timeZone: isTimeZone,
@@ -295,6 +319,8 @@ const RAW_VALUES = {
   // ACX1112A01: 앱 상태의 정해진 값.
   outcome: oneOf("added", "review", "duplicate", "skipped", "unread", "askedAI"),
   category: oneOf(...EXPENSE_CATEGORIES),
+  icon: oneOf(...CATEGORY_ICONS),
+  color: (v) => /^#[0-9A-Fa-f]{6}$/.test(v),
   currency: (v) => /^[A-Z]{3}$/.test(v),
   month: (v) => /^\d{4}-\d{2}$/.test(v),
   language: oneOf(...LANGUAGES),

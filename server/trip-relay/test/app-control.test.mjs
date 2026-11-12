@@ -238,3 +238,48 @@ test("list_actions lists every action from the tool table and run_action queues 
   assert.equal((await call(write, "run_action", { action: "openScreen", args: { screen: "ledger", action: "deleteEverything", format: "x" } })).result.isError, undefined, "args cannot replace the action or format");
   assert.equal((await call(read, "run_action", { action: "setBudget", args: { amountKRW: 1 } })).error.code, -32003, "read keys cannot run actions");
 });
+
+// ACA1112A01: 장소·분류 명령과 앱 상태의 places·categories.
+test("place and category commands are validated; app state carries places and categories", async () => {
+  const { handle } = await import("../src/index.js");
+  const { makeEnv } = await import("./fakes.mjs");
+  const { env } = makeEnv();
+  const key = () => Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url");
+  const owner = key(), write = key();
+  const send = (path, method, body, token) => handle(new Request(`https://relay.example.com${path}`, {
+    method, headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body),
+  }), env);
+  assert.equal((await send("/register", "POST", {}, owner)).status, 201);
+  assert.equal((await send("/pin", "POST", { pin: "135790" }, owner)).status, 200);
+  assert.equal((await send("/keys", "POST", { keys: [{ token: write, scope: "write", expiresAt: null }], pin: "135790" }, owner)).status, 201);
+  const post = async (action, fields) => (await send("/command", "POST", { format: "bokki-command", version: 1, id: `c-${crypto.randomUUID()}`, action, ...fields }, write)).status;
+  const place = "A1B2C3D4-E5F6-4789-9ABC-DEF012345678";
+  const good = [
+    ["addPlace", { name: "체육관" }], ["addPlace", { name: "Gym", latitude: 37.5, longitude: 127, radius: 150, autoRecord: false }],
+    ["updatePlace", { placeId: place, radius: 30 }], ["updatePlace", { placeId: place, latitude: 37.5, longitude: 127 }], ["deletePlace", { placeId: place }],
+    ["addCategory", { name: "독서", color: "#3366FF", icon: "book" }], ["updateCategory", { categoryId: "study", hidden: true }],
+  ];
+  for (const [action, fields] of good) assert.equal(await post(action, fields), 201, `${action} ${JSON.stringify(fields)}`);
+  const bad = [
+    ["addPlace", {}], ["addPlace", { name: " " }], ["addPlace", { name: "가".repeat(41) }], ["addPlace", { name: "X", latitude: 37.5 }],
+    ["addPlace", { name: "X", radius: 29 }], ["addPlace", { name: "X", radius: 501 }], ["addPlace", { name: "X", autoRecord: "yes" }],
+    ["updatePlace", { placeId: place }], ["updatePlace", { placeId: "home", name: "X" }], ["updatePlace", { placeId: place, latitude: 91, longitude: 0 }],
+    ["deletePlace", {}], ["addCategory", { name: "X" }], ["addCategory", { name: "X", color: "blue" }], ["addCategory", { name: "X", color: "#3366FF", icon: "rocket" }],
+    ["addCategory", { name: "가".repeat(21), color: "#3366FF" }], ["updateCategory", { categoryId: "study" }], ["updateCategory", { name: "X" }],
+    ["updateCategory", { categoryId: "study", hidden: 1 }],
+  ];
+  for (const [action, fields] of bad) assert.equal(await post(action, fields), 422, `${action} ${JSON.stringify(fields)}`);
+
+  const state = { format: "bokki-app", version: 1, retentionDays: 7, settings: { language: "korean" },
+    places: [{ id: place, name: "회사", kind: "work", radius: 200, autoRecord: true, located: true }],
+    categories: [{ id: "study", name: "공부", color: "#3366FF", icon: "book", hidden: false, custom: false }] };
+  assert.equal((await send("/app", "POST", state, owner)).status, 201);
+  const read = await (await send("/app", "GET", undefined, write)).json();
+  assert.deepEqual(read.places, state.places);
+  assert.deepEqual(read.categories, state.categories);
+  const viaMcp = (await (await send("/mcp", "POST", { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "get_app_state", arguments: {} } }, write)).json()).result.structuredContent;
+  assert.equal(viaMcp.places[0].id, place);
+  assert.deepEqual(viaMcp.places[0].name, { untrusted_user_text: "회사" });
+  assert.deepEqual([viaMcp.categories[0].id, viaMcp.categories[0].color, viaMcp.categories[0].icon], ["study", "#3366FF", "book"]);
+  assert.equal((await send("/app", "POST", { ...state, places: Array.from({ length: 101 }, () => ({})) }, owner)).status, 422);
+});

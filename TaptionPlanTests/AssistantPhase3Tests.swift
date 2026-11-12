@@ -1408,6 +1408,146 @@ final class AssistantAppControlTests: XCTestCase {
         XCTAssertFalse(TripRelay.assistantSetupText(host: "relay.example.com", key: "K", scope: .read).contains("askUser"))
     }
 
+    /// ACA1112A01: 장소·분류 명령을 서버와 같은 규칙으로 읽는다.
+    func testPlaceAndCategoryCommandsParseWithTheServerRules() throws {
+        let parsed = try batch([
+            command("p1", "addPlace", ["name": " 체육관 ", "latitude": 37.5, "longitude": 127.0, "radius": 150, "autoRecord": false]),
+            command("p2", "addPlace", ["name": "도서관"]),
+            command("p3", "updatePlace", ["placeId": id, "radius": 30]),
+            command("p4", "deletePlace", ["placeId": id]),
+            command("c1", "addCategory", ["name": "독서", "color": "#3366ff", "icon": "book"]),
+            command("c2", "updateCategory", ["categoryId": "study", "hidden": true]),
+            command("half", "addPlace", ["name": "X", "latitude": 37.5]),
+            command("small", "addPlace", ["name": "X", "radius": 29]),
+            command("big", "updatePlace", ["placeId": id, "radius": 501]),
+            command("nothing", "updatePlace", ["placeId": id]),
+            command("badId", "deletePlace", ["placeId": "home"]),
+            command("noColor", "addCategory", ["name": "X"]),
+            command("badColor", "addCategory", ["name": "X", "color": "blue"]),
+            command("badIcon", "addCategory", ["name": "X", "color": "#3366FF", "icon": "rocket"]),
+            command("empty", "updateCategory", ["categoryId": "study"]),
+        ])
+        XCTAssertEqual(parsed.invalidIDs, ["half", "small", "big", "nothing", "badId", "noColor", "badColor", "badIcon", "empty"])
+        let uuid = try XCTUnwrap(UUID(uuidString: id))
+        XCTAssertEqual(parsed.commands.map(\.action), [
+            .addPlace(name: "체육관", coordinate: AssistantCoordinate(latitude: 37.5, longitude: 127.0), radius: 150, autoRecord: false),
+            .addPlace(name: "도서관", coordinate: nil, radius: nil, autoRecord: nil),
+            .updatePlace(placeID: uuid, name: nil, coordinate: nil, radius: 30, autoRecord: nil),
+            .deletePlace(uuid),
+            .addCategory(name: "독서", color: "#3366FF", icon: .book),
+            .updateCategory(categoryID: "study", name: nil, color: nil, icon: nil, hidden: true),
+        ])
+        XCTAssertEqual(parsed.commands.map(\.action.existingChangeCount), [0, 0, 1, 1, 0, 1])
+    }
+
+    /// ACA1112A01: 장소를 더하고 고치고 지우며, 「AI가 한 일」에서 되돌린다. 그 뒤 목록이 바뀌었으면 되돌리지 않는다.
+    func testPlacesAreAddedEditedDeletedAndUndone() async throws {
+        let store = defaults()
+        let model = await model()
+        let preferences = AssistantPreferenceStore.test(store)
+        let start = model.snapshot.settings.frequentPlaces
+        let addedOutcome = await model.applyAssistantCommands(try batch([
+            command("p1", "addPlace", ["name": "체육관", "latitude": 37.5, "longitude": 127.0, "radius": 150, "autoRecord": false]),
+            command("dup", "addPlace", ["name": "체육관"]),
+        ]), defaults: store)
+        let added = try XCTUnwrap(addedOutcome)
+        XCTAssertEqual(added.results.map(\.reason), [nil, "duplicate"])
+        XCTAssertEqual(added.settings, 1)
+        let gym = try XCTUnwrap(model.snapshot.settings.frequentPlaces.first { $0.name == "체육관" })
+        XCTAssertEqual([gym.radiusMeters, gym.point?.latitude, gym.point?.longitude], [150, 37.5, 127.0])
+        XCTAssertFalse(gym.isAutomaticRecordingEnabled)
+        XCTAssertEqual(gym.kind, .custom)
+
+        let editedOutcome = await model.applyAssistantCommands(try batch([
+            command("p2", "updatePlace", ["placeId": gym.id.uuidString, "name": "헬스장", "radius": 80, "autoRecord": true]),
+            command("same", "updatePlace", ["placeId": gym.id.uuidString, "radius": 80]),
+            command("missing", "updatePlace", ["placeId": id, "radius": 80]),
+        ]), defaults: store)
+        let edited = try XCTUnwrap(editedOutcome)
+        XCTAssertEqual(edited.results.map(\.reason), [nil, "no_change", "no_place"])
+        let renamed = try XCTUnwrap(model.snapshot.settings.frequentPlaces.first { $0.id == gym.id })
+        XCTAssertEqual(renamed.name, "헬스장")
+        XCTAssertEqual(renamed.radiusMeters, 80)
+        XCTAssertTrue(renamed.isAutomaticRecordingEnabled)
+        XCTAssertEqual(edited.entries.first?.before, "체육관 · 150m")
+        XCTAssertEqual(edited.entries.first?.after, "헬스장 · 80m")
+
+        let undoneEdit = await model.undoAssistantEntry(try XCTUnwrap(edited.entries.first), preferences: preferences)
+        XCTAssertTrue(undoneEdit)
+        XCTAssertEqual(model.snapshot.settings.frequentPlaces.first { $0.id == gym.id }?.name, "체육관")
+
+        let deletedOutcome = await model.applyAssistantCommands(try batch([command("p3", "deletePlace", ["placeId": gym.id.uuidString])]), defaults: store)
+        let deleted = try XCTUnwrap(deletedOutcome)
+        XCTAssertEqual(deleted.results.map(\.reason), [nil])
+        XCTAssertNil(model.snapshot.settings.frequentPlaces.first { $0.id == gym.id })
+        let undoneDelete = await model.undoAssistantEntry(try XCTUnwrap(deleted.entries.first), preferences: preferences)
+        XCTAssertTrue(undoneDelete)
+        XCTAssertNotNil(model.snapshot.settings.frequentPlaces.first { $0.id == gym.id })
+
+        model.renameFrequentPlace(gym.id, name: "내가 고친 이름")
+        let blocked = await model.undoAssistantEntry(try XCTUnwrap(added.entries.first), preferences: preferences)
+        XCTAssertFalse(blocked, "그 뒤 사용자가 고쳤으면 되돌리지 않는다")
+        model.renameFrequentPlace(gym.id, name: "체육관")
+        _ = start
+    }
+
+    /// ACA1112A01: 분류를 더하고 고치고 숨기며 되돌린다. 화면 오류 알림은 띄우지 않는다.
+    func testCategoriesAreAddedEditedHiddenAndUndone() async throws {
+        let store = defaults()
+        let model = await model()
+        let preferences = AssistantPreferenceStore.test(store)
+        let addedOutcome = await model.applyAssistantCommands(try batch([
+            command("c1", "addCategory", ["name": "독서", "color": "#3366FF", "icon": "book"]),
+            command("dup", "addCategory", ["name": "독서", "color": "#112233"]),
+        ]), defaults: store)
+        let added = try XCTUnwrap(addedOutcome)
+        XCTAssertEqual(added.results.map(\.applied), [true, false])
+        XCTAssertNil(model.userFacingError, "AI 명령 실패는 화면 오류로 띄우지 않는다")
+        let reading = try XCTUnwrap(model.snapshot.categories.first { $0.name == "독서" })
+        XCTAssertEqual([reading.lightHex.uppercased(), reading.icon.rawValue], ["#3366FF", "book"])
+        XCTAssertFalse(reading.isBuiltIn)
+
+        let editedOutcome = await model.applyAssistantCommands(try batch([
+            command("c2", "updateCategory", ["categoryId": reading.id, "name": "책 읽기", "hidden": true]),
+            command("missing", "updateCategory", ["categoryId": "nope", "hidden": true]),
+            command("unconfirmed", "updateCategory", ["categoryId": "unconfirmed", "hidden": true]),
+        ]), defaults: store)
+        let edited = try XCTUnwrap(editedOutcome)
+        XCTAssertEqual(edited.results.map(\.reason), [nil, "unknown_category", "unknown_category"])
+        let hidden = try XCTUnwrap(model.snapshot.categories.first { $0.id == reading.id })
+        XCTAssertEqual(hidden.name, "책 읽기")
+        XCTAssertTrue(hidden.isHidden)
+
+        let undone = await model.undoAssistantEntry(try XCTUnwrap(edited.entries.first), preferences: preferences)
+        XCTAssertTrue(undone)
+        XCTAssertEqual(model.snapshot.categories.first { $0.id == reading.id }, reading)
+        let removed = await model.undoAssistantEntry(try XCTUnwrap(added.entries.first), preferences: preferences)
+        XCTAssertTrue(removed)
+        XCTAssertNil(model.snapshot.categories.first { $0.id == reading.id })
+    }
+
+    /// ACA1112A01: 앱 상태에 분류는 늘, 장소는 「머문 곳 이름」 공유 수준에서만. 좌표는 없다.
+    func testAppStateCarriesCategoriesAndPlacesOnlyAtThePlaceNameLevel() throws {
+        var value = try input()
+        var office = FrequentPlace(kind: .company, name: "마곡 회사")
+        office.setMapLocation(GeoPoint(latitude: 37.56, longitude: 126.83, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: 5))
+        value.places = [office, FrequentPlace(kind: .custom, name: "체육관")]
+        value.categories = [
+            try CategoryCatalog.makeCustom(name: "독서", icon: .book, lightHex: "#3366FF", existing: []),
+        ]
+        let summary = AssistantAppStateSync.make(value)
+        XCTAssertNil(summary.places, "하루 요약 수준에서는 장소 이름을 올리지 않는다")
+        XCTAssertEqual(summary.categories?.map(\.name), ["독서"])
+        XCTAssertEqual(summary.categories?.first?.custom, true)
+        value.shareLevel = .visits
+        let detailed = AssistantAppStateSync.make(value)
+        XCTAssertEqual(detailed.places?.map(\.name), ["마곡 회사", "체육관"])
+        XCTAssertEqual(detailed.places?.map(\.located), [true, false])
+        XCTAssertEqual(detailed.places?.first?.kind, "company")
+        let json = String(decoding: try XCTUnwrap(AssistantAppStateSync.body(detailed)), as: UTF8.self)
+        XCTAssertFalse(json.contains("37.56") || json.contains("126.83") || json.contains("latitude"), "좌표는 내보내지 않는다")
+    }
+
     func testOpenScreenWaitsUntilTakenExpiresAndUndoCancelsIt() async throws {
         let store = defaults()
         let model = await model()

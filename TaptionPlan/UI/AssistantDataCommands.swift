@@ -151,6 +151,32 @@ extension AssistantCommandParser {
             return raw.inboxId.flatMap(UUID.init(uuidString:)).map { .deleteInboxItem($0) }
         case "openScreen":
             return raw.screen.flatMap(AssistantScreen.init(rawValue:)).map { .openScreen($0) }
+        case "addPlace":
+            let place = coordinate(raw)
+            guard let name = clean(raw.name, max: AssistantCatalogLimits.placeName), place.ok, AssistantCatalogLimits.radiusOK(raw.radius) else { return nil }
+            return .addPlace(name: name, coordinate: place.value, radius: raw.radius, autoRecord: raw.autoRecord)
+        case "updatePlace":
+            let place = coordinate(raw)
+            guard let id = raw.placeId.flatMap(UUID.init(uuidString:)), place.ok, AssistantCatalogLimits.radiusOK(raw.radius) else { return nil }
+            if raw.name != nil, clean(raw.name, max: AssistantCatalogLimits.placeName) == nil { return nil }
+            guard raw.name != nil || place.value != nil || raw.radius != nil || raw.autoRecord != nil else { return nil }
+            return .updatePlace(placeID: id, name: clean(raw.name, max: AssistantCatalogLimits.placeName), coordinate: place.value, radius: raw.radius, autoRecord: raw.autoRecord)
+        case "deletePlace":
+            return raw.placeId.flatMap(UUID.init(uuidString:)).map { .deletePlace($0) }
+        case "addCategory":
+            guard let name = clean(raw.name, max: AssistantCatalogLimits.categoryName), let color = raw.color, AssistantCatalogLimits.isColor(color) else { return nil }
+            if raw.icon != nil, raw.icon.flatMap(CategoryIcon.init(rawValue:)) == nil { return nil }
+            return .addCategory(name: name, color: color.uppercased(), icon: raw.icon.flatMap(CategoryIcon.init(rawValue:)))
+        case "updateCategory":
+            guard let id = clean(raw.categoryId, max: 100) else { return nil }
+            if raw.name != nil, clean(raw.name, max: AssistantCatalogLimits.categoryName) == nil { return nil }
+            if let color = raw.color, !AssistantCatalogLimits.isColor(color) { return nil }
+            if raw.icon != nil, raw.icon.flatMap(CategoryIcon.init(rawValue:)) == nil { return nil }
+            guard raw.name != nil || raw.color != nil || raw.icon != nil || raw.hidden != nil else { return nil }
+            return .updateCategory(
+                categoryID: id, name: clean(raw.name, max: AssistantCatalogLimits.categoryName), color: raw.color?.uppercased(),
+                icon: raw.icon.flatMap(CategoryIcon.init(rawValue:)), hidden: raw.hidden
+            )
         case "askUser":
             return AssistantQuestion.make(id: raw.id, question: raw.question, options: raw.options, multiSelect: raw.multiSelect, now: now).map { .askUser($0) }
         default:

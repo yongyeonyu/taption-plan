@@ -224,6 +224,25 @@ struct AssistantAppState: Codable, Equatable, Sendable {
         var pattern: String
     }
 
+    /// 등록한 장소(ACA1112A01). 좌표·주소는 담지 않고 자리가 정해졌는지만 알린다.
+    struct Place: Codable, Equatable, Sendable {
+        var id: String
+        var name: String
+        var kind: String
+        var radius: Int
+        var autoRecord: Bool
+        var located: Bool
+    }
+
+    struct Category: Codable, Equatable, Sendable {
+        var id: String
+        var name: String
+        var color: String
+        var icon: String
+        var hidden: Bool
+        var custom: Bool
+    }
+
     var format = "bokki-app"
     var version = 1
     var retentionDays: Int
@@ -234,6 +253,9 @@ struct AssistantAppState: Codable, Equatable, Sendable {
     var review: [Review]
     var inbox: [Inbox]
     var rules: [Rule]
+    /// 비면 칸째 뺀다. 장소는 「머문 곳 이름과 시각」 공유 수준에서만.
+    var places: [Place]?
+    var categories: [Category]?
 }
 
 /// 앱 상태를 중계 서버에 올린다. 하루 기록을 올린 뒤 함께 돌고, 바뀌었을 때만(또는 20시간마다) 보낸다.
@@ -267,6 +289,8 @@ enum AssistantAppStateSync {
         var review: [LedgerReviewStore.Item]
         var inbox: [PaymentInbox.Item]
         var rules: [LedgerMessageRules.Rule]
+        var places: [FrequentPlace] = []
+        var categories: [CategoryDefinition] = []
     }
 
     static func make(_ input: Input) -> AssistantAppState {
@@ -307,6 +331,15 @@ enum AssistantAppStateSync {
             },
             rules: input.rules.suffix(LedgerMessageRules.limit).map {
                 .init(id: $0.id.uuidString, name: mask($0.name, 40), kind: $0.kind.rawValue, pattern: mask($0.pattern, 300))
+            },
+            places: input.shareLevel == .visits && !input.places.isEmpty ? input.places.prefix(AssistantCatalogLimits.places).map {
+                .init(
+                    id: $0.id.uuidString, name: mask($0.displayName, AssistantCatalogLimits.placeName), kind: $0.kind.rawValue,
+                    radius: Int($0.radiusMeters.rounded()), autoRecord: $0.isAutomaticRecordingEnabled, located: $0.point != nil
+                )
+            } : nil,
+            categories: input.categories.isEmpty ? nil : input.categories.filter { $0.id != "unconfirmed" }.prefix(AssistantCatalogLimits.places).map {
+                .init(id: $0.id, name: mask($0.name, 40), color: $0.lightHex, icon: $0.icon.rawValue, hidden: $0.isHidden, custom: !$0.isBuiltIn)
             }
         )
     }
@@ -347,7 +380,8 @@ enum AssistantAppStateSync {
             entries: book.entries.filter { $0.transfer == nil }, budgetKRW: book.budget(for: month)?.amountKRW,
             spentKRW: LedgerBook.total(daily, .expense), incomeKRW: LedgerBook.total(daily, .income),
             ownAccounts: LedgerOwnAccounts.names(defaults), review: preferences.review.items,
-            inbox: PaymentInbox.items(defaults, now: now), rules: LedgerMessageRules.rules(defaults)
+            inbox: PaymentInbox.items(defaults, now: now), rules: LedgerMessageRules.rules(defaults),
+            places: model.snapshot.settings.frequentPlaces, categories: model.snapshot.categories
         )
     }
 

@@ -463,7 +463,7 @@ extension AppModel {
             result.appChange = AssistantAppChange(questionID: question.id)
             return result
         default:
-            return .rejected("invalid")
+            return await applyAssistantCatalogAction(action)
         }
     }
 }

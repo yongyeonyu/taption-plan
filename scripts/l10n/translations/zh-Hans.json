@@ -5436,6 +5436,12 @@
 "회사에서 업무|Working at the office": "在公司工作",
 "회사에서 휴식|Break at the office": "在公司休息",
 "회의|Meeting": "会议",
-"휴식|Rest": "休息"
+"휴식|Rest": "休息",
+"자주 가는 장소 더하기|Add frequent places": "添加常去地点",
+"자주 가는 장소 고치기|Edit frequent places": "编辑常去地点",
+"자주 가는 장소 지우기|Delete frequent places": "删除常去地点",
+"분류 더하기|Add categories": "添加分类",
+"분류 고치기|Edit categories": "编辑分类",
+"숨김|Hidden": "已隐藏"
 }
 }

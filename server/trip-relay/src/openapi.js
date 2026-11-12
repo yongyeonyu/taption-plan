@@ -41,6 +41,9 @@ const command = {
     + "(getAppState review), decision add|discard (only when the user agreed). deleteInboxItem: inboxId (getAppState inbox). "
     + "openScreen: screen (shows that screen the next time the app is in the foreground, changes no data, not undoable; the app cannot create or "
     + "switch on iOS Shortcuts automations, so tell the user to tap the switch). "
+    + "addPlace: name (1-40), latitude+longitude? (together), radius? (30-500 m), autoRecord?. updatePlace: placeId (getAppState places), then "
+    + "name?, latitude+longitude?, radius?, autoRecord?. deletePlace: placeId. addCategory: name (1-20), color (#RRGGBB), icon?. "
+    + "updateCategory: categoryId (getAppState categories), then name?, color?, icon?, hidden?. "
     + "askUser: question (1-200), options (2-4 distinct strings of 1-60), multiSelect? (asks the user a multiple-choice question in the app; "
     + "changes no records; the app always adds free text; read the answer with getAnswers, matched by this command's id). Unknown fields are dropped.",
   properties: {
@@ -85,6 +88,12 @@ const command = {
     decision: { type: "string", enum: REVIEW_DECISIONS, description: "resolveReview: add to the ledger or discard" },
     inboxId: { type: "string", description: "deleteInboxItem: inbox item id (UUID)" },
     screen: { type: "string", enum: SCREENS, description: "openScreen: screen to show" },
+    placeId: { type: "string", description: "updatePlace, deletePlace: place id (UUID)" },
+    radius: { type: "number", minimum: 30, maximum: 500, description: "addPlace, updatePlace: radius in meters" },
+    autoRecord: { type: "boolean", description: "addPlace, updatePlace: automatic recording at the place" },
+    color: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$", description: "addCategory, updateCategory: #RRGGBB" },
+    icon: { type: "string", description: "addCategory, updateCategory: icon name" },
+    hidden: { type: "boolean", description: "updateCategory: hide the category" },
     question: { type: "string", maxLength: 200, description: "askUser: the question" },
     options: { type: "array", items: { type: "string", maxLength: 60 }, minItems: 2, maxItems: 4, description: "askUser: 2-4 distinct options" },
     multiSelect: { type: "boolean", description: "askUser: true lets the user pick several options" },

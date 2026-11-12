@@ -21,6 +21,8 @@ enum AssistantActionKind: String, CaseIterable, Identifiable, Codable, Sendable 
     case setBudget, addOwnAccount, removeOwnAccount, deletePaymentRule, resolveReview, deleteInboxItem, openScreen
     // ASK1112A01
     case askUser
+    // ACA1112A01
+    case addPlace, updatePlace, deletePlace, addCategory, updateCategory
 
     var id: String { rawValue }
 
@@ -61,6 +63,11 @@ enum AssistantActionKind: String, CaseIterable, Identifiable, Codable, Sendable 
         case .deleteInboxItem: language.text("받은 결제 문자 지우기", "Delete received payment texts")
         case .openScreen: language.text("앱 화면 열기", "Open app screens")
         case .askUser: language.text("앱에서 질문하기", "Ask questions in the app")
+        case .addPlace: language.text("자주 가는 장소 더하기", "Add frequent places")
+        case .updatePlace: language.text("자주 가는 장소 고치기", "Edit frequent places")
+        case .deletePlace: language.text("자주 가는 장소 지우기", "Delete frequent places")
+        case .addCategory: language.text("분류 더하기", "Add categories")
+        case .updateCategory: language.text("분류 고치기", "Edit categories")
         }
     }
 }
@@ -146,6 +153,11 @@ extension AssistantCommand.Action {
         case .deleteInboxItem: .deleteInboxItem
         case .openScreen: .openScreen
         case .askUser: .askUser
+        case .addPlace: .addPlace
+        case .updatePlace: .updatePlace
+        case .deletePlace: .deletePlace
+        case .addCategory: .addCategory
+        case .updateCategory: .updateCategory
         }
     }
 
@@ -153,7 +165,7 @@ extension AssistantCommand.Action {
     /// 루틴을 지우면 하위 일정도 함께 지워지므로 `plans`를 주면 그 수까지 센다(REV1110A06).
     func existingChangeCount(plans: [PlanRecord] = []) -> Int {
         switch self {
-        case .addMemo, .addSchedule, .addGoal, .addTripStop, .setBubble, .addExpense, .classifyUnconfirmed, .addPaymentRule, .addOwnAccount, .openScreen, .askUser: 0
+        case .addMemo, .addSchedule, .addGoal, .addTripStop, .setBubble, .addExpense, .classifyUnconfirmed, .addPaymentRule, .addOwnAccount, .openScreen, .askUser, .addPlace, .addCategory: 0
         case let .mergeRecords(_, ids, _, _): ids.count
         case let .deleteGoal(goalID):
             1 + (UUID(uuidString: goalID).flatMap { try? PlanHierarchy.descendants(of: $0, in: plans) }?.count ?? 0)
