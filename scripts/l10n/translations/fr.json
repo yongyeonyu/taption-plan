@@ -5394,6 +5394,11 @@
 "회사에서 업무|Working at the office": "Travail au bureau",
 "회사에서 휴식|Break at the office": "Pause au bureau",
 "회의|Meeting": "Réunion",
-"휴식|Rest": "Repos"
+"휴식|Rest": "Repos",
+"길이 바꾸기|Change length": "Modifier la durée",
+"다음 날로|Move to next day": "Au jour suivant",
+"더 보기|More": "Plus",
+"바로 뒤에 복제|Duplicate right after": "Dupliquer juste après",
+"전날로|Move to previous day": "Au jour précédent"
 }
 }
