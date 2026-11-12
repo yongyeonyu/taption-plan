@@ -278,6 +278,10 @@ struct TravelModeView: View {
     @State private var didEnter = false
     /// 마지막으로 열어 둔 여행. 여행 화면에서 일상으로 나갔다가 돌아오면 그 여행으로 바로 온다(지구본에서 나갔으면 지구본).
     @AppStorage("travelLastOpenedTripID") private var lastTripID = ""
+    /// 손잡이로 정한 계획표 높이(0이면 반반)와, 끄는 동안의 높이(TVU1113A01).
+    @AppStorage("travelPlanSheetHeight") private var planHeight = 0.0
+    @State private var planDragHeight: CGFloat?
+    private var tableHeight: CGFloat { TravelPlanSheetHeight.height(viewSize, stored: planHeight) }
     /// 계획표 시트가 올라와 있는지. 올라오면 작은 시간 막대는 사라진다(대표 결정).
     @State private var isPlanUp = false
     /// 계획표와 시간 막대가 함께 보는 날(`YYYY-MM-DD`). nil이면 여행 중엔 오늘, 아니면 첫날.
@@ -476,20 +480,20 @@ struct TravelModeView: View {
     // MARK: 재생 헤드와 지도(TVP1112A01)
 
     /// 계획표가 올라왔을 때 지도에 남는 자리. 세로 폰은 머리말 아래~시트 위, 넓은 화면은 판 왼쪽.
-    static func mapArea(_ size: CGSize, isPlanUp: Bool) -> CGRect {
+    static func mapArea(_ size: CGSize, isPlanUp: Bool, tableHeight: CGFloat? = nil) -> CGRect {
         guard isPlanUp else { return CGRect(origin: .zero, size: size) }
         if isWide(size) {
             let panel = min(460, size.width * 0.5) + 20
             return CGRect(x: 0, y: 120, width: size.width - panel, height: max(80, size.height - 120))
         }
-        let sheet = planTableHeight(size) + 150
+        let sheet = (tableHeight ?? planTableHeight(size)) + 150
         return CGRect(x: 0, y: 130, width: size.width, height: max(80, size.height - sheet - 130))
     }
 
     /// 그 자리의 가운데로 지도 가운데를 옮기는 양.
     private func mapOffset(_ entry: TravelTripDirectory.Entry) -> CGSize {
         guard isPlanUp, openedID == entry.id else { return .zero }
-        let area = Self.mapArea(viewSize, isPlanUp: true), base = TravelGlobeRenderer.center(in: viewSize)
+        let area = Self.mapArea(viewSize, isPlanUp: true, tableHeight: tableHeight), base = TravelGlobeRenderer.center(in: viewSize)
         return CGSize(width: area.midX - base.x, height: area.midY - base.y)
     }
 
@@ -568,7 +572,7 @@ struct TravelModeView: View {
 
     /// 여행 화면의 오픈맵: 핀·계획 길·고양이를 올리고, 머리말과 계획표가 가리지 않는 자리에 맞춘다.
     private func streetMap(_ entry: TravelTripDirectory.Entry, _ destination: TravelModeDestination?) -> TravelStreetMap {
-        let area = isPlanUp ? Self.mapArea(viewSize, isPlanUp: true) : CGRect(x: 0, y: 150, width: viewSize.width, height: max(80, viewSize.height - 270))
+        let area = isPlanUp ? Self.mapArea(viewSize, isPlanUp: true, tableHeight: tableHeight) : CGRect(x: 0, y: 150, width: viewSize.width, height: max(80, viewSize.height - 270))
         let spot = actor(entry)
         return TravelStreetMap(
             pins: planPins(entry, destination).map { .init(longitude: $0.longitude, latitude: $0.latitude, label: $0.label, id: $0.id, title: $0.title) },
@@ -576,7 +580,7 @@ struct TravelModeView: View {
             actorImage: pose(entry).map { actorArt.image($0, coat: model.settings.catStyle.rawValue) } ?? actorUIImage, fallback: destination?.point,
             // 위쪽 핀에 선 고양이가 머리말에 가리지 않게 고양이 키만큼 더 띄운다.
             insets: UIEdgeInsets(top: area.minY + 74, left: 28, bottom: viewSize.height - area.maxY + 24, right: viewSize.width - area.maxX + 28),
-            fitKey: "\(entry.id)|\(dayKey(entry))|\(isPlanUp)|\(Int(viewSize.width))x\(Int(viewSize.height))",
+            fitKey: "\(entry.id)|\(dayKey(entry))|\(isPlanUp)|\(Int(viewSize.width))x\(Int(viewSize.height))|\(Int(tableHeight))",
             onSelect: { editEntry(entry, itemID: $0) }
         )
     }
@@ -601,7 +605,7 @@ struct TravelModeView: View {
         Task { await routes.load(stops) }
         camera = fit(
             ((lons.min() ?? 0) - pad, (lats.min() ?? 0) - pad, (lons.max() ?? 0) + pad, (lats.max() ?? 0) + pad),
-            in: Self.mapArea(viewSize, isPlanUp: true).size
+            in: Self.mapArea(viewSize, isPlanUp: true, tableHeight: tableHeight).size
         )
     }
 
@@ -1011,13 +1015,19 @@ struct TravelModeView: View {
         let corner = MapHomeBottomBarMetrics.pillHeight / 2
         return VStack(spacing: 0) {
             if isPlanUp {
-            Capsule().fill(TravelInk.border).frame(width: 44, height: 5).padding(.top, 7).padding(.bottom, 3)
-                .frame(maxWidth: .infinity)
-                .contentShape(Rectangle())
-                .onTapGesture { withAnimation(.snappy(duration: 0.25)) { isPlanUp.toggle() } }
-                .accessibilityAddTraits(.isButton)
-                .accessibilityLabel(isPlanUp ? language.text("계획표 내리기", "Close plan table") : language.text("계획표 올리기", "Open plan table"))
-                .accessibilityIdentifier("travelPlanHandle")
+                TravelPlanHandleBar(
+                    language: language, isMapFolded: TravelPlanSheetHeight.isMapFolded(planDragHeight ?? tableHeight, size: viewSize),
+                    canResize: !Self.isWide(viewSize),
+                    onLower: { withAnimation(.snappy(duration: 0.25)) { isPlanUp = false } },
+                    onToggleMap: { withAnimation(.snappy(duration: 0.25)) { planHeight = Double(TravelPlanSheetHeight.toggled(tableHeight, size: viewSize)) } },
+                    onDrag: { translation, isDone in
+                        let next = TravelPlanSheetHeight.dragged(from: tableHeight, translation: translation, size: viewSize)
+                        if isDone {
+                            planHeight = Double(next)
+                            planDragHeight = nil
+                        } else if next != planDragHeight { planDragHeight = next }
+                    }
+                )
                 dayChips(entry)
                 TravelPlanTable(
                     table: table(entry), language: language,
@@ -1033,7 +1043,7 @@ struct TravelModeView: View {
                     tightIDs: TravelPlayhead.tightStops(playStops(entry), travelMinutes: routes.minutes)
                 )
                     .id(dayKey(entry))
-                    .frame(height: Self.planTableHeight(viewSize))
+                    .frame(height: planDragHeight ?? tableHeight)
                     .padding(.horizontal, 8)
             }
             if let undo = timeUndo, undo.tripID == entry.id, isPlanUp { undoRow(undo) }
