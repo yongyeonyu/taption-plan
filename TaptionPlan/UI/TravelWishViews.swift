@@ -51,11 +51,17 @@ struct TravelWishFooter: View {
                 .accessibilityIdentifier("travelWishSetDates")
         }
         .foregroundStyle(TravelInk.plan)
-        .padding(12)
-        .background(TravelInk.panel, in: RoundedRectangle(cornerRadius: 18))
-        .overlay { RoundedRectangle(cornerRadius: 18).stroke(TravelInk.border, style: StrokeStyle(lineWidth: 1, dash: [5, 4])) }
-        .padding(.horizontal, 10)
-        .padding(.bottom, 8)
+        .padding(.leading, 20)
+        .padding(.trailing, 6)
+        .frame(minHeight: MapHomeBottomBarMetrics.pillHeight)
+        .background(TravelInk.panel, in: RoundedRectangle(cornerRadius: MapHomeBottomBarMetrics.pillHeight / 2, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: MapHomeBottomBarMetrics.pillHeight / 2, style: .continuous)
+                .stroke(TravelInk.border, style: StrokeStyle(lineWidth: 1, dash: [5, 4]))
+        }
+        .padding(.horizontal, MapHomeBottomBarMetrics.edgeMargin)
+        .padding(.bottom, MapHomeBottomBarMetrics.edgeMargin)
+        .ignoresSafeArea(edges: .bottom)
         .sheet(isPresented: $isPicking) {
             NavigationStack {
                 DatePicker(language.text("첫날", "First day"), selection: $start, displayedComponents: .date)

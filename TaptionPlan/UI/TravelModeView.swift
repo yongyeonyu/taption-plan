@@ -960,15 +960,18 @@ struct TravelModeView: View {
                     }
                 }
             } label: {
-                Image(systemName: "plus").font(.system(size: 20, weight: .semibold)).foregroundStyle(TravelInk.land).frame(width: 46, height: 46)
+                Image(systemName: "plus").font(.system(size: 20, weight: .semibold)).foregroundStyle(TravelInk.land).frame(width: 44, height: 44)
                     .background(TravelInk.plan, in: Circle())
             }
             .accessibilityLabel(language.text("추가", "Add"))
         }
         .foregroundStyle(TravelInk.plan)
-        .padding(.horizontal, 12)
-        .padding(.top, 4)
-        .padding(.bottom, 10)
+        .padding(.leading, 20)
+        .padding(.trailing, 6)
+        .frame(height: MapHomeBottomBarMetrics.pillHeight)
+        .contentShape(Rectangle())
+        .onTapGesture { withAnimation(.snappy(duration: 0.25)) { isPlanUp.toggle() } }
+        .accessibilityIdentifier("travelPlanFooter")
     }
 
     // MARK: 계획표와 시간 막대(같은 날·같은 자료를 본다)
@@ -993,7 +996,10 @@ struct TravelModeView: View {
 
     /// 아래 시트: 내려 있으면 다음 일정 한 줄, 끌어올리면 계획표.
     private func planSheet(_ entry: TravelTripDirectory.Entry) -> some View {
-        VStack(spacing: 0) {
+        // 메인 홈 하단 메뉴와 같은 높이·여백·곡률이고 화면 아래 끝까지 내려간다(TVA1113A01, 대표 지시).
+        let corner = MapHomeBottomBarMetrics.pillHeight / 2
+        return VStack(spacing: 0) {
+            if isPlanUp {
             Capsule().fill(TravelInk.border).frame(width: 44, height: 5).padding(.top, 7).padding(.bottom, 3)
                 .frame(maxWidth: .infinity)
                 .contentShape(Rectangle())
@@ -1001,7 +1007,6 @@ struct TravelModeView: View {
                 .accessibilityAddTraits(.isButton)
                 .accessibilityLabel(isPlanUp ? language.text("계획표 내리기", "Close plan table") : language.text("계획표 올리기", "Open plan table"))
                 .accessibilityIdentifier("travelPlanHandle")
-            if isPlanUp {
                 dayChips(entry)
                 TravelPlanTable(
                     table: table(entry), language: language,
@@ -1020,12 +1025,13 @@ struct TravelModeView: View {
             if let undo = timeUndo, undo.tripID == entry.id, isPlanUp { undoRow(undo) }
             tripFooter(entry)
         }
-        .background(TravelInk.panel, in: RoundedRectangle(cornerRadius: 18))
-        .overlay { RoundedRectangle(cornerRadius: 18).stroke(TravelInk.border, lineWidth: 1) }
+        .background(TravelInk.panel, in: RoundedRectangle(cornerRadius: corner, style: .continuous))
+        .overlay { RoundedRectangle(cornerRadius: corner, style: .continuous).stroke(TravelInk.border, lineWidth: 1) }
         .frame(maxWidth: Self.isWide(viewSize) ? min(460, viewSize.width * 0.5) : .infinity)
-        .padding(.horizontal, 10)
-        .padding(.bottom, 8)
+        .padding(.horizontal, MapHomeBottomBarMetrics.edgeMargin)
+        .padding(.bottom, MapHomeBottomBarMetrics.edgeMargin)
         .frame(maxWidth: .infinity, alignment: .trailing)
+        .ignoresSafeArea(edges: .bottom)
         .gesture(DragGesture(minimumDistance: 12).onEnded { value in
             // 위로 끌면 올리고 아래로 끌면 내린다.
             guard abs(value.translation.height) > 30 else { return }
