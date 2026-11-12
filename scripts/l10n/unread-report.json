@@ -1,5 +1,5 @@
 {
- "ui": 4769,
+ "ui": 4784,
  "catalog": 502,
  "unread": [
   {
@@ -262,7 +262,7 @@
   },
   {
    "file": "TaptionPlan/UI/LedgerReviewBand.swift",
-   "line": 182,
+   "line": 183,
    "ko": "entry.amount",
    "en": "language"
   },

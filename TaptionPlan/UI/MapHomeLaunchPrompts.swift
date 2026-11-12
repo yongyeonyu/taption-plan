@@ -3,7 +3,7 @@ import SwiftUI
 /// 앱을 열 때 사용자 판단이 필요한 것을 한 번에 하나씩 묻는다(ASK1111A01, 대표 결정).
 /// 순서: 위치 「항상 허용」 → 내 차 → 지하철·버스 탑승 확인 → 처음 보는 일정 분류 → 자주 가는 곳 → 미확인 시간.
 /// 한 번 연 동안 같은 질문은 다시 묻지 않는다. 「나중에 확인」을 누르면 그날은 더 묻지 않고
-/// 위쪽 단추 줄의 돋보기 오른쪽에 「확인할 것」 단추를 둔다. 단추를 누르면 다시 차례로 묻는다(LPR1111A01, 대표 결정).
+/// 「확인할 것」 단추는 위쪽 단추 줄의 돋보기 오른쪽에 늘 있고, 누르면 다시 차례로 묻는다(LPR1111A01·LPR1112B01, 대표 결정).
 enum MapHomeLaunchPrompt: Identifiable, Hashable {
     case carAudio(String)
     case boarding(String)
@@ -40,6 +40,36 @@ enum MapHomeLaunchPromptDeferral {
     }
 }
 
+/// 「확인할 것」을 AI에게 넘긴 기록(TDL1112A01, 대표 지시). 넘긴 것은 그날 다시 묻지 않는다.
+/// AI가 지금 명령으로 끝낼 수 있는 것만 넘긴다: 미확인 시간(`classify_unconfirmed`)과 탑승 확인(`set_travel_mode`).
+enum MapHomeLaunchPromptHandoff {
+    static let key = "launchPromptsHandedToAI"
+
+    struct AITask: Equatable { var kind: AITaskQueue.Kind; var text: String }
+
+    static func task(for prompt: MapHomeLaunchPrompt) -> AITask? {
+        switch prompt {
+        case .unconfirmed(let minutes):
+            AITask(kind: .other, text: "오늘 무엇을 했는지 모르는 시간이 \(minutes)분 있습니다. get_activity의 unconfirmed와 앞뒤 기록·장소를 보고 classify_unconfirmed로 정해 주세요. 확신이 없으면 ask_user로 물어 주세요.")
+        case .boarding:
+            AITask(kind: .routeCheck, text: "오늘 지하철·버스 탑승으로 보이는 이동이 있습니다. get_activity의 moves를 보고 이동 수단이 맞는지 판단해 틀리면 set_travel_mode로 고쳐 주세요. 확신이 없으면 ask_user로 물어 주세요.")
+        case .carAudio, .calendarTitle, .frequentPlace:
+            nil
+        }
+    }
+
+    /// 오늘 넘긴 질문 id.
+    static func handed(now: Date = .now, defaults: UserDefaults = .standard) -> Set<String> {
+        let stored = defaults.dictionary(forKey: key) as? [String: [String]] ?? [:]
+        return Set(stored[MapHomeLaunchPromptDeferral.dayKey(now)] ?? [])
+    }
+
+    static func markHanded(_ id: String, now: Date = .now, defaults: UserDefaults = .standard) {
+        let day = MapHomeLaunchPromptDeferral.dayKey(now)
+        defaults.set([day: Array(handed(now: now, defaults: defaults).union([id])).sorted()], forKey: key)
+    }
+}
+
 enum MapHomeLaunchPromptPolicy {
     /// 미확인 시간이 이보다 짧으면 앱을 열 때 묻지 않는다. 사이드바의 「?」로 고칠 수 있다.
     static let minimumUnconfirmedMinutes = 10
@@ -52,13 +82,22 @@ enum MapHomeLaunchPromptPolicy {
         unconfirmedMinutes: Int,
         asked: Set<String>
     ) -> MapHomeLaunchPrompt? {
+        all(carAudio: carAudio, boardingIDs: boardingIDs, calendarTitles: calendarTitles,
+            placeSuggestionID: placeSuggestionID, unconfirmedMinutes: unconfirmedMinutes)
+            .first { !asked.contains($0.id) }
+    }
+
+    /// 지금 확인할 것 전부, 묻는 순서대로(「확인할 것」 목록).
+    static func all(
+        carAudio: String?, boardingIDs: [String], calendarTitles: [String], placeSuggestionID: String?, unconfirmedMinutes: Int
+    ) -> [MapHomeLaunchPrompt] {
         var queue: [MapHomeLaunchPrompt] = []
         if let carAudio { queue.append(.carAudio(carAudio)) }
         queue += boardingIDs.map(MapHomeLaunchPrompt.boarding)
         queue += calendarTitles.map(MapHomeLaunchPrompt.calendarTitle)
         if let placeSuggestionID { queue.append(.frequentPlace(placeSuggestionID)) }
         if unconfirmedMinutes >= minimumUnconfirmedMinutes { queue.append(.unconfirmed(minutes: unconfirmedMinutes)) }
-        return queue.first { !asked.contains($0.id) }
+        return queue
     }
 
     /// 오늘·어제 일정 가운데 분류를 아직 정하지 않은 제목. 종일·취소 일정은 묻지 않는다.
@@ -144,29 +183,39 @@ extension MapHomeView {
                 if Task.isCancelled { return }
             }
             if MapHomeLaunchPromptDeferral.isDeferred() { return }
-            await model.registerConnectedCarPlay()
-            model.refreshFrequentPlaceSuggestion()
-            let isToday = Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate)
-            let unconfirmed = isToday
-                ? MapHomeUnconfirmedReviewPolicy.segments(from: timeRailSegments, for: model.selectedDate)
-                    .reduce(0) { $0 + $1.endMinute - $1.startMinute }
-                : 0
-            guard let next = MapHomeLaunchPromptPolicy.next(
-                carAudio: model.pendingCarAudioSuggestion,
-                boardingIDs: isToday ? transitBoardingCandidates.map(\.id) : [],
-                calendarTitles: MapHomeLaunchPromptPolicy.unansweredCalendarTitles(
-                    model.snapshot.calendarEvents, stored: model.settings.calendarTitleDetails
-                ),
-                placeSuggestionID: model.frequentPlaceSuggestion?.id,
-                unconfirmedMinutes: unconfirmed,
-                asked: launchPromptsAsked
-            ) else { return }
-            launchPromptsAsked.insert(next.id)
-            if case .boarding(let id) = next {
-                selectedTransitBoardingCandidate = transitBoardingCandidates.first { $0.id == id }
-            } else {
-                launchPrompt = next
-            }
+            let skipped = launchPromptsAsked.union(MapHomeLaunchPromptHandoff.handed())
+            guard let next = await launchPromptQueue().first(where: { !skipped.contains($0.id) }) else { return }
+            presentLaunchPrompt(next)
+        }
+    }
+
+    /// 지금 확인할 것 전부(AI에게 넘긴 것 포함). 「확인할 것」 목록과 앱을 열 때의 질문이 같이 쓴다.
+    func launchPromptQueue() async -> [MapHomeLaunchPrompt] {
+        await model.registerConnectedCarPlay()
+        model.refreshFrequentPlaceSuggestion()
+        let isToday = Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate)
+        let unconfirmed = isToday
+            ? MapHomeUnconfirmedReviewPolicy.segments(from: timeRailSegments, for: model.selectedDate)
+                .reduce(0) { $0 + $1.endMinute - $1.startMinute }
+            : 0
+        return MapHomeLaunchPromptPolicy.all(
+            carAudio: model.pendingCarAudioSuggestion,
+            boardingIDs: isToday ? transitBoardingCandidates.map(\.id) : [],
+            calendarTitles: MapHomeLaunchPromptPolicy.unansweredCalendarTitles(
+                model.snapshot.calendarEvents, stored: model.settings.calendarTitleDetails
+            ),
+            placeSuggestionID: model.frequentPlaceSuggestion?.id,
+            unconfirmedMinutes: unconfirmed
+        )
+    }
+
+    /// 질문 하나를 띄운다(탑승 확인은 그 시트로).
+    func presentLaunchPrompt(_ prompt: MapHomeLaunchPrompt) {
+        launchPromptsAsked.insert(prompt.id)
+        if case .boarding(let id) = prompt {
+            selectedTransitBoardingCandidate = transitBoardingCandidates.first { $0.id == id }
+        } else {
+            launchPrompt = prompt
         }
     }
 }
@@ -175,24 +224,109 @@ extension MapHomeView {
 /// 누르면 그날 미룬 질문을 다시 차례로 묻는다.
 struct MapHomeLaunchPromptDeferredButton: View {
     let language: MapHomeLanguage
-    let onResume: () -> Void
+    /// 지금 확인할 것 전부.
+    let items: () async -> [MapHomeLaunchPrompt]
+    /// 「내가 확인」: 그 질문을 띄운다.
+    let onConfirm: (MapHomeLaunchPrompt) -> Void
     @AppStorage(MapHomeLaunchPromptDeferral.key) private var deferredDay = ""
+    @State private var isListPresented = false
+    @State private var list: [MapHomeLaunchPrompt] = []
+    @State private var handed: Set<String> = []
 
     var body: some View {
-        if MapHomeLaunchPromptDeferral.isDeferred(deferredDay) {
-            Button {
-                deferredDay = ""
-                onResume()
-            } label: {
-                Image(systemName: "checklist")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(Color.tpAccent)
-                    .frame(width: 40, height: 40)
-                    .background { TaptionStickerDisc() }
+        // 늘 같은 자리에 둔다(대표 지시 2026-11-12: 생겼다 없어지면 옆 단추가 밀린다). 미뤄 둔 날에만 강조색.
+        Button {
+            Task {
+                list = await items()
+                handed = MapHomeLaunchPromptHandoff.handed()
+                isListPresented = true
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(language.text("확인할 것", "Things to check"))
-            .accessibilityIdentifier("launchPrompts.deferred")
+        } label: {
+            Image(systemName: "checklist")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(MapHomeLaunchPromptDeferral.isDeferred(deferredDay) ? Color.tpAccent : Color.tpSecondary)
+                .frame(width: 40, height: 40)
+                .background { TaptionStickerDisc() }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(language.text("확인할 것", "Things to check"))
+        .accessibilityIdentifier("launchPrompts.deferred")
+        .sheet(isPresented: $isListPresented) {
+            MapHomeTodoSheet(language: language, items: list, handed: handed, canUseAI: MemoPolishQueue.hasConnection()) { prompt in
+                isListPresented = false
+                deferredDay = ""
+                // 시트가 닫힌 뒤에 띄운다(두 표시가 겹치면 뒤의 것이 안 뜬다).
+                Task { try? await Task.sleep(for: .milliseconds(450)); onConfirm(prompt) }
+            } onHandOff: { prompt in
+                guard let task = MapHomeLaunchPromptHandoff.task(for: prompt),
+                      AITaskQueue.enqueue(task.kind, text: task.text, day: .now) else { return }
+                MapHomeLaunchPromptHandoff.markHanded(prompt.id)
+                handed.insert(prompt.id)
+            }
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        }
+    }
+}
+
+/// 「확인할 것」 목록(TDL1112A01). 항목마다 내가 확인하거나, AI가 끝낼 수 있는 것은 AI에게 넘긴다.
+struct MapHomeTodoSheet: View {
+    let language: MapHomeLanguage
+    let items: [MapHomeLaunchPrompt]
+    let handed: Set<String>
+    let canUseAI: Bool
+    let onConfirm: (MapHomeLaunchPrompt) -> Void
+    let onHandOff: (MapHomeLaunchPrompt) -> Void
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if items.isEmpty {
+                    Text(language.text("지금 확인할 것이 없어요.", "Nothing to check right now."))
+                        .font(.taptionStyle(.subheadline))
+                        .foregroundStyle(Color.tpSecondary)
+                }
+                ForEach(items) { item in
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(title(item))
+                            .font(.taptionStyle(.body, weight: .semibold))
+                            .foregroundStyle(Color.tpInk)
+                        HStack(spacing: 8) {
+                            Button(language.text("내가 확인", "I'll check")) { onConfirm(item) }
+                                .buttonStyle(.borderedProminent)
+                                .tint(Color.tpAccent)
+                            if handed.contains(item.id) {
+                                Label(language.text("AI에게 넘김", "Handed to AI"), systemImage: "sparkles")
+                                    .font(.taptionStyle(.caption))
+                                    .foregroundStyle(Color.tpSecondary)
+                            } else if canUseAI, MapHomeLaunchPromptHandoff.task(for: item) != nil {
+                                Button(language.text("AI에게 넘기기", "Hand to AI")) { onHandOff(item) }
+                                    .buttonStyle(.bordered)
+                                    .tint(Color.tpAccent)
+                            }
+                        }
+                        .font(.taptionStyle(.subheadline))
+                    }
+                    .padding(.vertical, 4)
+                }
+                Section {} footer: {
+                    Text(canUseAI
+                        ? language.text("미확인 시간과 탑승 확인은 연결된 AI에게 넘길 수 있어요. 넘긴 것은 「AI」 탭에서 볼 수 있고, AI가 확신이 없으면 앱에서 다시 물어봐요.", "Unconfirmed time and ride checks can be handed to your connected AI. Handed items appear in the AI tab, and the AI asks you in the app when it isn't sure.")
+                        : language.text("AI를 연결하면 미확인 시간과 탑승 확인을 AI에게 넘길 수 있어요.", "Connect an AI to hand off unconfirmed time and ride checks."))
+                }
+            }
+            .navigationTitle(language.text("확인할 것", "Things to check"))
+            .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+
+    private func title(_ item: MapHomeLaunchPrompt) -> String {
+        switch item {
+        case .carAudio(let name): language.text("‘\(name)’ 기기가 내 차인가요?", "Is ‘\(name)’ your car?")
+        case .boarding: language.text("지하철·버스 탑승 확인", "Check a subway or bus ride")
+        case .calendarTitle(let title): language.text("‘\(title)’ 일정 분류", "Classify ‘\(title)’")
+        case .frequentPlace: language.text("자주 머무는 곳 등록", "Register a place you stay often")
+        case .unconfirmed(let minutes): language.text("미확인 시간 \(minutes)분", "\(minutes) min unconfirmed")
         }
     }
 }

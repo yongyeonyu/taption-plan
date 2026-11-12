@@ -463,7 +463,7 @@
    "ko": "3.3% 공제",
    "en": "3.3%",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:168"
+    "MapHomeSalarySettingsSheet.swift:174"
    ],
    "args": [],
    "targets": [
@@ -524,7 +524,7 @@
    "ko": "4대보험",
    "en": "Insurance",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:169"
+    "MapHomeSalarySettingsSheet.swift:175"
    ],
    "args": [],
    "targets": [
@@ -880,6 +880,18 @@
    ]
   },
   {
+   "key": "AI 연동|AI link",
+   "ko": "AI 연동",
+   "en": "AI link",
+   "files": [
+    "MapHomeSalarySettingsSheet.swift:315"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "AI 위치가 지도 검색과 {0} 달라요|AI location is {0} from the map search",
    "ko": "AI 위치가 지도 검색과 {0} 달라요",
    "en": "AI location is {0} from the map search",
@@ -1019,11 +1031,47 @@
    ]
   },
   {
+   "key": "AI를 연결하면 미확인 시간과 탑승 확인을 AI에게 넘길 수 있어요.|Connect an AI to hand off unconfirmed time and ride checks.",
+   "ko": "AI를 연결하면 미확인 시간과 탑승 확인을 AI에게 넘길 수 있어요.",
+   "en": "Connect an AI to hand off unconfirmed time and ride checks.",
+   "files": [
+    "MapHomeLaunchPrompts.swift:315"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "AI에게 규칙 추가 요청|Ask AI to add a rule",
    "ko": "AI에게 규칙 추가 요청",
    "en": "Ask AI to add a rule",
    "files": [
     "LedgerMessageRules.swift:253"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "AI에게 넘기기|Hand to AI",
+   "ko": "AI에게 넘기기",
+   "en": "Hand to AI",
+   "files": [
+    "MapHomeLaunchPrompts.swift:303"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "AI에게 넘김|Handed to AI",
+   "ko": "AI에게 넘김",
+   "en": "Handed to AI",
+   "files": [
+    "MapHomeLaunchPrompts.swift:299"
    ],
    "args": [],
    "targets": [
@@ -3761,7 +3809,7 @@
    "ko": "{0}건 넣기",
    "en": "Add {0}",
    "files": [
-    "LedgerReviewBand.swift:163"
+    "LedgerReviewBand.swift:164"
    ],
    "args": [
     "batch.selected.count"
@@ -3863,7 +3911,7 @@
    "ko": "{0}마다",
    "en": "Every {0}",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:299"
+    "MapHomeSalarySettingsSheet.swift:305"
    ],
    "args": [
     "MapHomeSalaryPolicy.intervalTitle(tickSeconds, language: language)"
@@ -4085,7 +4133,7 @@
    "en": "{0} h",
    "files": [
     "MapHomeCalendarPolicies.swift:485",
-    "MapHomeSalaryPolicy.swift:426"
+    "MapHomeSalaryPolicy.swift:432"
    ],
    "args": [
     "hours"
@@ -4307,7 +4355,7 @@
    "ko": "{0}월",
    "en": "{0}-{1}",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:108"
+    "MapHomeSalarySettingsSheet.swift:109"
    ],
    "args": [
     "parts[0]",
@@ -4481,7 +4529,7 @@
    "files": [
     "HealthAndSensorModels.swift:707",
     "MapHomePlaybackVideoSheet.swift:198",
-    "MapHomeSalaryPolicy.swift:424"
+    "MapHomeSalaryPolicy.swift:430"
    ],
    "args": [
     "rest"
@@ -32994,14 +33042,42 @@
    ]
   },
   {
+   "key": "‘{0}’ 기기가 내 차인가요?|Is ‘{0}’ your car?",
+   "ko": "‘{0}’ 기기가 내 차인가요?",
+   "en": "Is ‘{0}’ your car?",
+   "files": [
+    "MapHomeLaunchPrompts.swift:325"
+   ],
+   "args": [
+    "name"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "‘{0}’ 기기가 탈 때만 연결됐어요. 등록할까요? 등록하면 이 기기가 연결된 이동을 자동차로 기록해요.|‘{0}’ connected only while you rode. Register it? Trips with it connected will be recorded as car.",
    "ko": "‘{0}’ 기기가 탈 때만 연결됐어요. 등록할까요? 등록하면 이 기기가 연결된 이동을 자동차로 기록해요.",
    "en": "‘{0}’ connected only while you rode. Register it? Trips with it connected will be recorded as car.",
    "files": [
-    "MapHomeLaunchPrompts.swift:230"
+    "MapHomeLaunchPrompts.swift:376"
    ],
    "args": [
     "name"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "‘{0}’ 일정 분류|Classify ‘{0}’",
+   "ko": "‘{0}’ 일정 분류",
+   "en": "Classify ‘{0}’",
+   "files": [
+    "MapHomeLaunchPrompts.swift:327"
+   ],
+   "args": [
+    "title"
    ],
    "targets": [
     "TaptionPlan"
@@ -33012,7 +33088,7 @@
    "ko": "‘{0}’ 일정은 무엇인가요?",
    "en": "What is ‘{0}’?",
    "files": [
-    "MapHomeLaunchPrompts.swift:289"
+    "MapHomeLaunchPrompts.swift:435"
    ],
    "args": [
     "calendarTitle ?? \"\""
@@ -33026,7 +33102,7 @@
    "ko": "‘{0}’ 중 무엇인가요?",
    "en": "Which ‘{0}’?",
    "files": [
-    "MapHomeLaunchPrompts.swift:317"
+    "MapHomeLaunchPrompts.swift:463"
    ],
    "args": [
     "category?.localizedTitle(language) ?? \"\""
@@ -33040,7 +33116,7 @@
    "ko": "‘{0}’에 {1}번 머물렀어요. 어떤 곳인가요?",
    "en": "You stayed at ‘{0}’ {1} times. What is it?",
    "files": [
-    "MapHomeLaunchPrompts.swift:345"
+    "MapHomeLaunchPrompts.swift:491"
    ],
    "args": [
     "name",
@@ -35066,7 +35142,7 @@
    "ko": "고른 하나만 카운터에 쓰여요. 적은 금액은 나머지 칸에 환산해 보여 줘요.",
    "en": "Only the selected one runs the counter. Other tabs show the converted amount.",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:144"
+    "MapHomeSalarySettingsSheet.swift:150"
    ],
    "args": [],
    "targets": [
@@ -35126,7 +35202,7 @@
    "ko": "고양이",
    "en": "Cat",
    "files": [
-    "AssistantDataCommands.swift:663"
+    "AssistantDataCommands.swift:669"
    ],
    "args": [],
    "targets": [
@@ -35843,7 +35919,7 @@
    "ko": "근무 {0}시간 기준 계산값 {1}. 실제와 다르면 고쳐 주세요(비우면 계산값).",
    "en": "Computed {0} for {1} h. Edit if different.",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:271"
+    "MapHomeSalarySettingsSheet.swift:277"
    ],
    "args": [
     "won(computed)",
@@ -35858,7 +35934,7 @@
    "ko": "근무 {0}시간",
    "en": "{0} h",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:235"
+    "MapHomeSalarySettingsSheet.swift:241"
    ],
    "args": [
     "String(format: \"%.0f\", hours)"
@@ -35910,7 +35986,7 @@
    "ko": "근무·수면과 상관없이 24시간 내내 쌓여요. 카운터에는 그날 0시부터 번 돈이 보여요.",
    "en": "Grows around the clock. The counter shows what you earned since midnight.",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:454"
+    "MapHomeSalarySettingsSheet.swift:470"
    ],
    "args": [],
    "targets": [
@@ -36020,7 +36096,7 @@
    "ko": "급여 방식",
    "en": "Pay type",
    "files": [
-    "AssistantDataCommands.swift:650"
+    "AssistantDataCommands.swift:656"
    ],
    "args": [],
    "targets": [
@@ -36068,7 +36144,7 @@
    "ko": "급여를 세후로 입력",
    "en": "Pay entered after tax",
    "files": [
-    "AssistantDataCommands.swift:653"
+    "AssistantDataCommands.swift:659"
    ],
    "args": [],
    "targets": [
@@ -36227,7 +36303,7 @@
    "ko": "기록 {0}개월로 맞춤: 고정 {1} + 209시간 초과 1시간당 {2}.",
    "en": "Fitted from {0} months: fixed {1} + {2} per hour over 209.",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:251"
+    "MapHomeSalarySettingsSheet.swift:257"
    ],
    "args": [
     "model.sampleCount",
@@ -36489,7 +36565,7 @@
    "ko": "기록이 없어 법정 기준(통상시급 × 1.5)으로 수당을 봐요. 받은 월급을 넣을수록 정확해져요.",
    "en": "No records: overtime at 1.5× base. Add months to refine.",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:250"
+    "MapHomeSalarySettingsSheet.swift:256"
    ],
    "args": [],
    "targets": [
@@ -36730,7 +36806,7 @@
    "files": [
     "LedgerCore.swift:28",
     "AssistantAIProvider.swift:37",
-    "MapHomeLaunchPrompts.swift:360"
+    "MapHomeLaunchPrompts.swift:506"
    ],
    "args": [],
    "targets": [
@@ -36859,6 +36935,18 @@
    "en": "When off, detail activities stay.",
    "files": [
     "MapHomeNLEOverwriteSheet.swift:175"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "끄면 연결된 AI가 급여 금액과 설정을 읽거나 바꿀 수 없어요.|When off, a connected AI cannot read or change your pay amounts and settings.",
+   "ko": "끄면 연결된 AI가 급여 금액과 설정을 읽거나 바꿀 수 없어요.",
+   "en": "When off, a connected AI cannot read or change your pay amounts and settings.",
+   "files": [
+    "MapHomeSalarySettingsSheet.swift:318"
    ],
    "args": [],
    "targets": [
@@ -37105,7 +37193,7 @@
    "ko": "나중에 확인",
    "en": "Check later",
    "files": [
-    "MapHomeLaunchPrompts.swift:221"
+    "MapHomeLaunchPrompts.swift:367"
    ],
    "args": [],
    "targets": [
@@ -37179,7 +37267,7 @@
    "ko": "날씨 옆 칸",
    "en": "Weather sidebar",
    "files": [
-    "AssistantDataCommands.swift:661"
+    "AssistantDataCommands.swift:667"
    ],
    "args": [],
    "targets": [
@@ -37191,7 +37279,7 @@
    "ko": "날씨",
    "en": "Weather",
    "files": [
-    "AssistantDataCommands.swift:660",
+    "AssistantDataCommands.swift:666",
     "MapHomeView+Menu.swift:542",
     "StickerArtBasics.swift:7"
    ],
@@ -37372,7 +37460,7 @@
    "ko": "내 계좌 이름",
    "en": "My account names",
    "files": [
-    "LedgerReviewBand.swift:126",
+    "LedgerReviewBand.swift:127",
     "LedgerSheet.swift:76"
    ],
    "args": [],
@@ -37497,7 +37585,7 @@
    "ko": "내 차로 등록",
    "en": "Register as my car",
    "files": [
-    "MapHomeLaunchPrompts.swift:226"
+    "MapHomeLaunchPrompts.swift:372"
    ],
    "args": [],
    "targets": [
@@ -37523,6 +37611,18 @@
    "en": "My categories",
    "files": [
     "MapHomeNLEDetailLane.swift:220"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "내가 확인|I'll check",
+   "ko": "내가 확인",
+   "en": "I'll check",
+   "files": [
+    "MapHomeLaunchPrompts.swift:295"
    ],
    "args": [],
    "targets": [
@@ -37607,7 +37707,7 @@
    "ko": "넣을 것만 골라 주세요. 이미 가계부에 있는 것 같은 줄은 꺼 두었어요.",
    "en": "Pick the ones to add. Lines that look already recorded are turned off.",
    "files": [
-    "LedgerReviewBand.swift:154"
+    "LedgerReviewBand.swift:155"
    ],
    "args": [],
    "targets": [
@@ -37741,7 +37841,7 @@
    "ko": "누적 시급({0})",
    "en": "Hourly ({0})",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:280"
+    "MapHomeSalarySettingsSheet.swift:286"
    ],
    "args": [
     "basis"
@@ -38520,7 +38620,7 @@
    "ko": "더하기",
    "en": "Add",
    "files": [
-    "LedgerReviewBand.swift:113"
+    "LedgerReviewBand.swift:114"
    ],
    "args": [],
    "targets": [
@@ -39023,7 +39123,7 @@
    "ko": "뒤로",
    "en": "Back",
    "files": [
-    "MapHomeLaunchPrompts.swift:259",
+    "MapHomeLaunchPrompts.swift:405",
     "MapHomeWideLayoutPolicy.swift:239"
    ],
    "args": [],
@@ -39073,7 +39173,7 @@
    "ko": "등록 안 함",
    "en": "Don't register",
    "files": [
-    "MapHomeLaunchPrompts.swift:271"
+    "MapHomeLaunchPrompts.swift:417"
    ],
    "args": [],
    "targets": [
@@ -39740,7 +39840,7 @@
    "ko": "먼저 대분류를 고르세요. 한 번 정하면 같은 제목의 일정은 다시 묻지 않아요.",
    "en": "Pick a category first. Once set, events with the same title won't be asked again.",
    "files": [
-    "MapHomeLaunchPrompts.swift:252"
+    "MapHomeLaunchPrompts.swift:398"
    ],
    "args": [],
    "targets": [
@@ -40627,6 +40727,20 @@
    ]
   },
   {
+   "key": "미확인 시간 {0}분|{0} min unconfirmed",
+   "ko": "미확인 시간 {0}분",
+   "en": "{0} min unconfirmed",
+   "files": [
+    "MapHomeLaunchPrompts.swift:329"
+   ],
+   "args": [
+    "minutes"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "미확인 시간 검토|Unconfirmed time review",
    "ko": "미확인 시간 검토",
    "en": "Unconfirmed time review",
@@ -40651,11 +40765,23 @@
    ]
   },
   {
+   "key": "미확인 시간과 탑승 확인은 연결된 AI에게 넘길 수 있어요. 넘긴 것은 「AI」 탭에서 볼 수 있고, AI가 확신이 없으면 앱에서 다시 물어봐요.|Unconfirmed time and ride checks can be handed to your connected AI. Handed items appear in the AI tab, and the AI asks you in the app when it isn't sure.",
+   "ko": "미확인 시간과 탑승 확인은 연결된 AI에게 넘길 수 있어요. 넘긴 것은 「AI」 탭에서 볼 수 있고, AI가 확신이 없으면 앱에서 다시 물어봐요.",
+   "en": "Unconfirmed time and ride checks can be handed to your connected AI. Handed items appear in the AI tab, and the AI asks you in the app when it isn't sure.",
+   "files": [
+    "MapHomeLaunchPrompts.swift:314"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "미확인 시간이 있어요|Some time is unconfirmed",
    "ko": "미확인 시간이 있어요",
    "en": "Some time is unconfirmed",
    "files": [
-    "MapHomeLaunchPrompts.swift:276"
+    "MapHomeLaunchPrompts.swift:422"
    ],
    "args": [],
    "targets": [
@@ -40931,7 +41057,7 @@
    "ko": "받은 금액",
    "en": "Received",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:238"
+    "MapHomeSalarySettingsSheet.swift:244"
    ],
    "args": [],
    "targets": [
@@ -40955,7 +41081,7 @@
    "ko": "받은 월급 기록(실수령 세후, 수당 포함)",
    "en": "Pay received (net, incl. overtime)",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:229"
+    "MapHomeSalarySettingsSheet.swift:235"
    ],
    "args": [],
    "targets": [
@@ -42001,7 +42127,7 @@
    "ko": "분급",
    "en": "Per minute",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:302"
+    "MapHomeSalarySettingsSheet.swift:308"
    ],
    "args": [],
    "targets": [
@@ -42049,7 +42175,7 @@
    "ko": "분류 안 함",
    "en": "Don't classify",
    "files": [
-    "MapHomeLaunchPrompts.swift:249"
+    "MapHomeLaunchPrompts.swift:395"
    ],
    "args": [],
    "targets": [
@@ -43884,7 +44010,7 @@
    "ko": "세금 없음",
    "en": "None",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:170"
+    "MapHomeSalarySettingsSheet.swift:176"
    ],
    "args": [],
    "targets": [
@@ -43910,7 +44036,7 @@
    "ko": "세전 시급",
    "en": "Gross hourly",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:153"
+    "MapHomeSalarySettingsSheet.swift:159"
    ],
    "args": [],
    "targets": [
@@ -43922,7 +44048,7 @@
    "ko": "세전 연봉",
    "en": "Gross annual",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:184"
+    "MapHomeSalarySettingsSheet.swift:190"
    ],
    "args": [],
    "targets": [
@@ -43947,8 +44073,8 @@
    "en": "Gross",
    "files": [
     "MapHomeInfoSheets.swift:310",
-    "MapHomeSalarySettingsSheet.swift:214",
-    "MapHomeSalarySettingsSheet.swift:376"
+    "MapHomeSalarySettingsSheet.swift:220",
+    "MapHomeSalarySettingsSheet.swift:392"
    ],
    "args": [],
    "targets": [
@@ -43960,7 +44086,7 @@
    "ko": "세전",
    "en": "gross",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:119"
+    "MapHomeSalarySettingsSheet.swift:120"
    ],
    "args": [],
    "targets": [
@@ -43972,7 +44098,7 @@
    "ko": "세후 금액으로 보기",
    "en": "Show after-tax amounts",
    "files": [
-    "AssistantDataCommands.swift:654"
+    "AssistantDataCommands.swift:660"
    ],
    "args": [],
    "targets": [
@@ -43984,7 +44110,7 @@
    "ko": "세후 시급",
    "en": "Net hourly",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:160"
+    "MapHomeSalarySettingsSheet.swift:166"
    ],
    "args": [],
    "targets": [
@@ -43996,7 +44122,7 @@
    "ko": "세후 연봉",
    "en": "Net annual",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:192"
+    "MapHomeSalarySettingsSheet.swift:198"
    ],
    "args": [],
    "targets": [
@@ -44021,8 +44147,8 @@
    "en": "Net",
    "files": [
     "MapHomeInfoSheets.swift:310",
-    "MapHomeSalarySettingsSheet.swift:215",
-    "MapHomeSalarySettingsSheet.swift:377"
+    "MapHomeSalarySettingsSheet.swift:221",
+    "MapHomeSalarySettingsSheet.swift:393"
    ],
    "args": [],
    "targets": [
@@ -44034,7 +44160,7 @@
    "ko": "세후",
    "en": "net",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:119"
+    "MapHomeSalarySettingsSheet.swift:120"
    ],
    "args": [],
    "targets": [
@@ -44813,7 +44939,7 @@
    "ko": "시간 = 돈. 근무 시간이 늘면 금액도 같이 올라요. 입력하지 않은 쪽은 세금 방식으로 자동 계산해요.",
    "en": "Time = money. Earnings rise with work hours. The other field is computed from the tax method.",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:176"
+    "MapHomeSalarySettingsSheet.swift:182"
    ],
    "args": [],
    "targets": [
@@ -45009,7 +45135,7 @@
    "ko": "시급 세금 방식",
    "en": "Hourly tax method",
    "files": [
-    "AssistantDataCommands.swift:657"
+    "AssistantDataCommands.swift:663"
    ],
    "args": [],
    "targets": [
@@ -45021,8 +45147,8 @@
    "ko": "시급",
    "en": "Hourly",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:140",
-    "MapHomeSalarySettingsSheet.swift:344"
+    "MapHomeSalarySettingsSheet.swift:146",
+    "MapHomeSalarySettingsSheet.swift:360"
    ],
    "args": [],
    "targets": [
@@ -45034,7 +45160,7 @@
    "ko": "시급",
    "en": "Hourly pay",
    "files": [
-    "AssistantDataCommands.swift:655"
+    "AssistantDataCommands.swift:661"
    ],
    "args": [],
    "targets": [
@@ -45059,7 +45185,7 @@
    "ko": "시급",
    "en": "Per hour",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:303"
+    "MapHomeSalarySettingsSheet.swift:309"
    ],
    "args": [],
    "targets": [
@@ -45071,7 +45197,7 @@
    "ko": "시급을 세후로 입력",
    "en": "Hourly pay entered after tax",
    "files": [
-    "AssistantDataCommands.swift:656"
+    "AssistantDataCommands.swift:662"
    ],
    "args": [],
    "targets": [
@@ -45173,7 +45299,7 @@
    "ko": "식당",
    "en": "Restaurant",
    "files": [
-    "MapHomeLaunchPrompts.swift:359"
+    "MapHomeLaunchPrompts.swift:505"
    ],
    "args": [],
    "targets": [
@@ -45401,7 +45527,7 @@
    "ko": "아니요",
    "en": "No",
    "files": [
-    "MapHomeLaunchPrompts.swift:227"
+    "MapHomeLaunchPrompts.swift:373"
    ],
    "args": [],
    "targets": [
@@ -45868,7 +45994,7 @@
    "en": "Notifications",
    "files": [
     "AppShellView.swift:1091",
-    "AssistantDataCommands.swift:664",
+    "AssistantDataCommands.swift:670",
     "PermissionOnboardingSheet.swift:80"
    ],
    "args": [],
@@ -46565,11 +46691,23 @@
    ]
   },
   {
+   "key": "업무 시간에만 번 돈이 쌓여요. AI를 연결했다면 급여 설정을 AI도 읽고 바꿀 수 있어요.|Earnings grow only during work time. If you connected an AI, it can read and change these pay settings.",
+   "ko": "업무 시간에만 번 돈이 쌓여요. AI를 연결했다면 급여 설정을 AI도 읽고 바꿀 수 있어요.",
+   "en": "Earnings grow only during work time. If you connected an AI, it can read and change these pay settings.",
+   "files": [
+    "MapHomeSalarySettingsSheet.swift:127"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "업무 시간에만 번 돈이 쌓여요. 금액은 이 기기에만 저장돼요.|Earnings grow only during work time. Stored only on this device.",
    "ko": "업무 시간에만 번 돈이 쌓여요. 금액은 이 기기에만 저장돼요.",
    "en": "Earnings grow only during work time. Stored only on this device.",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:125"
+    "MapHomeSalarySettingsSheet.swift:131"
    ],
    "args": [],
    "targets": [
@@ -48147,7 +48285,7 @@
    "ko": "연봉 카운터 끄기",
    "en": "Turn off",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:309"
+    "MapHomeSalarySettingsSheet.swift:325"
    ],
    "args": [],
    "targets": [
@@ -48173,7 +48311,7 @@
    "files": [
     "FirstRunTutorialView.swift:791",
     "MapHomeAlarm.swift:25",
-    "MapHomeSalarySettingsSheet.swift:123"
+    "MapHomeSalarySettingsSheet.swift:124"
    ],
    "args": [],
    "targets": [
@@ -48185,8 +48323,8 @@
    "ko": "연봉",
    "en": "Annual",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:139",
-    "MapHomeSalarySettingsSheet.swift:346"
+    "MapHomeSalarySettingsSheet.swift:145",
+    "MapHomeSalarySettingsSheet.swift:362"
    ],
    "args": [],
    "targets": [
@@ -48198,7 +48336,7 @@
    "ko": "연봉",
    "en": "Annual pay",
    "files": [
-    "AssistantDataCommands.swift:651"
+    "AssistantDataCommands.swift:657"
    ],
    "args": [],
    "targets": [
@@ -48223,7 +48361,7 @@
    "ko": "연봉·시급 모두 여기서 고른 기준으로 카운터와 누적 금액을 보여 줘요.",
    "en": "Counter and totals use this basis for annual and hourly pay.",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:218"
+    "MapHomeSalarySettingsSheet.swift:224"
    ],
    "args": [],
    "targets": [
@@ -48247,7 +48385,7 @@
    "ko": "연봉이나 월급 중 하나만 적으면 나머지는 자동 계산돼요(월급제면 월급만).",
    "en": "Enter either annual or monthly; the other is computed.",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:206"
+    "MapHomeSalarySettingsSheet.swift:212"
    ],
    "args": [],
    "targets": [
@@ -48537,7 +48675,7 @@
    "ko": "예: 토스통장, 홍길동",
    "en": "e.g. Toss account, my name",
    "files": [
-    "LedgerReviewBand.swift:110"
+    "LedgerReviewBand.swift:111"
    ],
    "args": [],
    "targets": [
@@ -48810,7 +48948,7 @@
    "ko": "오늘 {0}분이 무엇을 했는지 모르는 시간이에요. 지금 정할까요?",
    "en": "{0} min today are unconfirmed. Review them now?",
    "files": [
-    "MapHomeLaunchPrompts.swift:280"
+    "MapHomeLaunchPrompts.swift:426"
    ],
    "args": [
     "minutes"
@@ -49366,7 +49504,7 @@
    "files": [
     "MapHomeAllowancePolicy.swift:127",
     "MapHomeCounterTable.swift:402",
-    "MapHomeSalarySettingsSheet.swift:141"
+    "MapHomeSalarySettingsSheet.swift:147"
    ],
    "args": [],
    "targets": [
@@ -49433,7 +49571,7 @@
    "en": "Exercise",
    "files": [
     "MapHomeInteractionPolicy.swift:459",
-    "MapHomeLaunchPrompts.swift:358",
+    "MapHomeLaunchPrompts.swift:504",
     "MapHomeLocationPresentation.swift:310"
    ],
    "args": [],
@@ -49535,7 +49673,7 @@
    "ko": "움직임 줄이기",
    "en": "Reduce motion",
    "files": [
-    "AssistantDataCommands.swift:659"
+    "AssistantDataCommands.swift:665"
    ],
    "args": [],
    "targets": [
@@ -49658,7 +49796,7 @@
    "ko": "월급",
    "en": "Monthly",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:345"
+    "MapHomeSalarySettingsSheet.swift:361"
    ],
    "args": [],
    "targets": [
@@ -49670,8 +49808,8 @@
    "ko": "월급",
    "en": "Monthly pay",
    "files": [
-    "AssistantDataCommands.swift:652",
-    "MapHomeSalarySettingsSheet.swift:200"
+    "AssistantDataCommands.swift:658",
+    "MapHomeSalarySettingsSheet.swift:206"
    ],
    "args": [],
    "targets": [
@@ -49821,7 +49959,7 @@
    "ko": "위치 기록 간격(초)",
    "en": "Location logging interval (s)",
    "files": [
-    "AssistantDataCommands.swift:662"
+    "AssistantDataCommands.swift:668"
    ],
    "args": [],
    "targets": [
@@ -50528,7 +50666,7 @@
    "ko": "이 기기가 내 차 같아요",
    "en": "This looks like your car",
    "files": [
-    "MapHomeLaunchPrompts.swift:225"
+    "MapHomeLaunchPrompts.swift:371"
    ],
    "args": [],
    "targets": [
@@ -51051,7 +51189,7 @@
    "ko": "이 자리",
    "en": "This spot",
    "files": [
-    "MapHomeLaunchPrompts.swift:344"
+    "MapHomeLaunchPrompts.swift:490"
    ],
    "args": [],
    "targets": [
@@ -51632,7 +51770,7 @@
    "ko": "이번 달 누적({0})",
    "en": "This month ({0})",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:266"
+    "MapHomeSalarySettingsSheet.swift:272"
    ],
    "args": [
     "basis"
@@ -51646,7 +51784,7 @@
    "ko": "이번 달 예상 월급 ÷ 예상 근무 {0}시간(지금까지 {1}시간 + 최근 8주 요일별 추세). 야근이 늘면 수당도 같이 늘고, 월말엔 그 달 월급과 맞아요. 누적을 고쳤으면 누적 ÷ 근무 시간.",
    "en": "Expected pay ÷ projected {0} h ({1} h so far + 8-week trend). Overtime raises both; exact at month end.",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:281"
+    "MapHomeSalarySettingsSheet.swift:287"
    ],
    "args": [
     "String(format: \"%.0f\", max(projectedMonthWorkSeconds, monthWorkSeconds) / 3_600)",
@@ -51661,7 +51799,7 @@
    "ko": "이번 달 예상 월급({0})",
    "en": "Expected this month ({0})",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:257"
+    "MapHomeSalarySettingsSheet.swift:263"
    ],
    "args": [
     "basis"
@@ -51789,7 +51927,7 @@
    "ko": "이체·출금 문자에 이 이름이 들어 있으면 내 계좌로 옮긴 돈으로 보고 지출에 넣지 않아요. 이름은 이 기기에만 둬요.",
    "en": "If a transfer or withdrawal text contains one of these names, it's treated as moving money to your own account and isn't added as spending. Names stay on this device.",
    "files": [
-    "LedgerReviewBand.swift:117"
+    "LedgerReviewBand.swift:118"
    ],
    "args": [],
    "targets": [
@@ -51849,7 +51987,7 @@
    "ko": "일급(8시간)",
    "en": "Per day (8 h)",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:304"
+    "MapHomeSalarySettingsSheet.swift:310"
    ],
    "args": [],
    "targets": [
@@ -52276,7 +52414,7 @@
    "ko": "입력한 금액을 그대로 써요. 세금은 계산하지 않아요.",
    "en": "The amount is used as entered. Taxes are not calculated.",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:380"
+    "MapHomeSalarySettingsSheet.swift:396"
    ],
    "args": [],
    "targets": [
@@ -52627,11 +52765,23 @@
    ]
   },
   {
+   "key": "자주 머무는 곳 등록|Register a place you stay often",
+   "ko": "자주 머무는 곳 등록",
+   "en": "Register a place you stay often",
+   "files": [
+    "MapHomeLaunchPrompts.swift:328"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "자주 머무는 곳이 있어요|You stay here often",
    "ko": "자주 머무는 곳이 있어요",
    "en": "You stay here often",
    "files": [
-    "MapHomeLaunchPrompts.swift:267"
+    "MapHomeLaunchPrompts.swift:413"
    ],
    "args": [],
    "targets": [
@@ -53589,7 +53739,7 @@
    "ko": "정하지 않음",
    "en": "Not set",
    "files": [
-    "LedgerMessageRules.swift:476",
+    "LedgerMessageRules.swift:477",
     "TravelNewTripSheet.swift:70"
    ],
    "args": [],
@@ -54015,7 +54165,7 @@
    "ko": "주휴수당 포함(주 15시간 이상)",
    "en": "Include weekly holiday pay",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:173"
+    "MapHomeSalarySettingsSheet.swift:179"
    ],
    "args": [],
    "targets": [
@@ -54027,7 +54177,7 @@
    "ko": "주휴수당 포함",
    "en": "Weekly holiday pay",
    "files": [
-    "AssistantDataCommands.swift:658"
+    "AssistantDataCommands.swift:664"
    ],
    "args": [],
    "targets": [
@@ -54248,7 +54398,19 @@
    "ko": "지금 정하기",
    "en": "Review now",
    "files": [
-    "MapHomeLaunchPrompts.swift:277"
+    "MapHomeLaunchPrompts.swift:423"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "지금 확인할 것이 없어요.|Nothing to check right now.",
+   "ko": "지금 확인할 것이 없어요.",
+   "en": "Nothing to check right now.",
+   "files": [
+    "MapHomeLaunchPrompts.swift:285"
    ],
    "args": [],
    "targets": [
@@ -55053,6 +55215,18 @@
    ]
   },
   {
+   "key": "지하철·버스 탑승 확인|Check a subway or bus ride",
+   "ko": "지하철·버스 탑승 확인",
+   "en": "Check a subway or bus ride",
+   "files": [
+    "MapHomeLaunchPrompts.swift:326"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "지하철역 · {0}|Subway station · {0}",
    "ko": "지하철역 · {0}",
    "en": "Subway station · {0}",
@@ -55311,7 +55485,7 @@
    "files": [
     "FirstRunGuideStage.swift:647",
     "FirstRunTutorialGuides.swift:694",
-    "MapHomeLaunchPrompts.swift:353"
+    "MapHomeLaunchPrompts.swift:499"
    ],
    "args": [],
    "targets": [
@@ -55587,7 +55761,7 @@
    "ko": "초급",
    "en": "Per second",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:301"
+    "MapHomeSalarySettingsSheet.swift:307"
    ],
    "args": [],
    "targets": [
@@ -55891,7 +56065,7 @@
    "ko": "추천: {0}",
    "en": "Suggested: {0}",
    "files": [
-    "MapHomeLaunchPrompts.swift:238"
+    "MapHomeLaunchPrompts.swift:384"
    ],
    "args": [
     "rule.label"
@@ -56047,7 +56221,7 @@
    "en": "Hobby",
    "files": [
     "MapHomeInteractionPolicy.swift:458",
-    "MapHomeLaunchPrompts.swift:357",
+    "MapHomeLaunchPrompts.swift:503",
     "MapHomeLocationPresentation.swift:291"
    ],
    "args": [],
@@ -56258,6 +56432,18 @@
    "en": "Paste a card payment text, or pick a receipt photo or a payment screenshot, to fill an entry. Set up \"Add payment texts automatically\" so texts go in as they arrive.",
    "files": [
     "LedgerSheet.swift:199"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "카드 대금 출금으로 보임|Looks like a card bill payment",
+   "ko": "카드 대금 출금으로 보임",
+   "en": "Looks like a card bill payment",
+   "files": [
+    "LedgerReviewBand.swift:89"
    ],
    "args": [],
    "targets": [
@@ -56517,7 +56703,7 @@
    "ko": "캡처에서 읽은 결제",
    "en": "Payments in the capture",
    "files": [
-    "LedgerReviewBand.swift:158"
+    "LedgerReviewBand.swift:159"
    ],
    "args": [],
    "targets": [
@@ -56960,7 +57146,7 @@
    "ko": "통행료 차종",
    "en": "Toll vehicle",
    "files": [
-    "AssistantDataCommands.swift:649"
+    "AssistantDataCommands.swift:655"
    ],
    "args": [],
    "targets": [
@@ -57227,7 +57413,7 @@
    "ko": "표시 간격",
    "en": "Update every",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:289"
+    "MapHomeSalarySettingsSheet.swift:295"
    ],
    "args": [],
    "targets": [
@@ -57681,7 +57867,7 @@
    "files": [
     "LedgerSummary.swift:13",
     "MapHomeAlarm.swift:24",
-    "MapHomeSalarySettingsSheet.swift:435"
+    "MapHomeSalarySettingsSheet.swift:451"
    ],
    "args": [],
    "targets": [
@@ -57754,7 +57940,7 @@
    "ko": "학교",
    "en": "School",
    "files": [
-    "MapHomeLaunchPrompts.swift:354"
+    "MapHomeLaunchPrompts.swift:500"
    ],
    "args": [],
    "targets": [
@@ -57814,7 +58000,7 @@
    "ko": "학원",
    "en": "Academy",
    "files": [
-    "MapHomeLaunchPrompts.swift:355",
+    "MapHomeLaunchPrompts.swift:501",
     "record-classification.json:0"
    ],
    "args": [],
@@ -57854,7 +58040,7 @@
    "ko": "한 달",
    "en": "Month",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:433"
+    "MapHomeSalarySettingsSheet.swift:449"
    ],
    "args": [],
    "targets": [
@@ -57902,7 +58088,7 @@
    "ko": "한 주",
    "en": "Week",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:434"
+    "MapHomeSalarySettingsSheet.swift:450"
    ],
    "args": [],
    "targets": [
@@ -58859,7 +59045,8 @@
    "ko": "확인할 것",
    "en": "Things to check",
    "files": [
-    "MapHomeLaunchPrompts.swift:182"
+    "MapHomeLaunchPrompts.swift:252",
+    "MapHomeLaunchPrompts.swift:318"
    ],
    "args": [],
    "targets": [
@@ -58895,7 +59082,7 @@
    "ko": "환산 시급",
    "en": "Hourly",
    "files": [
-    "MapHomeSalarySettingsSheet.swift:452"
+    "MapHomeSalarySettingsSheet.swift:468"
    ],
    "args": [],
    "targets": [
@@ -59039,7 +59226,7 @@
    "en": "Work",
    "files": [
     "FirstRunTutorialGuides.swift:695",
-    "MapHomeLaunchPrompts.swift:356",
+    "MapHomeLaunchPrompts.swift:502",
     "FirstRunTutorialGuides.swift:695"
    ],
    "args": [],

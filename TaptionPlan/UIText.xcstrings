@@ -5468,6 +5468,83 @@
         }
       }
     },
+    "AI 연동|AI link" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI連携"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI 关联"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI 連動"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "KI-Verknüpfung"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lien avec l’IA"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collegamento IA"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vínculo con la IA"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vínculo com a IA"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Liên kết AI"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tautan AI"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เชื่อมโยง AI"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI लिंक"
+          }
+        }
+      }
+    },
     "AI 위치가 지도 검색과 {0} 달라요|AI location is {0} from the map search" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6315,6 +6392,83 @@
         }
       }
     },
+    "AI를 연결하면 미확인 시간과 탑승 확인을 AI에게 넘길 수 있어요.|Connect an AI to hand off unconfirmed time and ride checks." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AIを連携すると、未確認の時間と乗車確認をAIに任せられます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连接 AI 后，可以把未确认的时间和乘车确认交给 AI。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "連接 AI 後，可以把未確認的時間和搭乘確認交給 AI。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verbinde eine KI, um unbestätigte Zeit und Fahrtprüfungen abzugeben."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connectez une IA pour lui confier le temps non confirmé et les vérifications de trajet."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collega un'IA per affidarle il tempo non confermato e le verifiche dei tragitti."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conecta una IA para encargarle el tiempo sin confirmar y las comprobaciones de trayecto."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conecte uma IA para passar a ela o tempo não confirmado e as verificações de trajeto."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kết nối AI để giao thời gian chưa xác nhận và việc kiểm tra chuyến đi cho AI."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hubungkan AI untuk menyerahkan waktu yang belum dikonfirmasi dan pengecekan perjalanan."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เชื่อมต่อ AI เพื่อมอบเวลาที่ยังไม่ยืนยันและการตรวจการเดินทางให้ AI"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "अपुष्ट समय और यात्रा जाँच AI को सौंपने के लिए AI जोड़ें।"
+          }
+        }
+      }
+    },
     "AI에게 규칙 추가 요청|Ask AI to add a rule" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6388,6 +6542,160 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "AI से नियम जोड़ने को कहें"
+          }
+        }
+      }
+    },
+    "AI에게 넘기기|Hand to AI" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AIに任せる"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "交给 AI"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "交給 AI"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An KI übergeben"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confier à l'IA"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Affida all'IA"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Encargar a la IA"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passar para a IA"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Giao cho AI"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Serahkan ke AI"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "มอบให้ AI"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI को सौंपें"
+          }
+        }
+      }
+    },
+    "AI에게 넘김|Handed to AI" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AIに任せました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已交给 AI"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已交給 AI"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An KI übergeben ✓"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confié à l'IA"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Affidato all'IA"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Encargado a la IA"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passado para a IA"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã giao cho AI"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diserahkan ke AI"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "มอบให้ AI แล้ว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI को सौंपा गया"
           }
         }
       }
@@ -204667,6 +204975,83 @@
         }
       }
     },
+    "‘{0}’ 기기가 내 차인가요?|Is ‘{0}’ your car?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「{0}」は自分の車ですか？"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“{0}”是我的车吗？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「{0}」是我的車嗎？"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ist „{0}“ dein Auto?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "« {0} » est-il votre voiture ?"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«{0}» è la tua auto?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿«{0}» es tu coche?"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“{0}” é o seu carro?"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“{0}” có phải xe của bạn không?"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apakah “{0}” mobil Anda?"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“{0}” เป็นรถของคุณหรือไม่"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "क्या ‘{0}’ आपकी कार है?"
+          }
+        }
+      }
+    },
     "‘{0}’ 기기가 탈 때만 연결됐어요. 등록할까요? 등록하면 이 기기가 연결된 이동을 자동차로 기록해요.|‘{0}’ connected only while you rode. Register it? Trips with it connected will be recorded as car." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -204740,6 +205125,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "‘{0}’ केवल सवारी के दौरान जुड़ा। पंजीकृत करें? इससे जुड़ी यात्राएँ कार के रूप में दर्ज होंगी।"
+          }
+        }
+      }
+    },
+    "‘{0}’ 일정 분류|Classify ‘{0}’" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「{0}」の予定を分類"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "为“{0}”日程分类"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "為「{0}」行程分類"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "„{0}“ einordnen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Classer « {0} »"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Classifica «{0}»"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clasificar «{0}»"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Classificar “{0}”"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phân loại “{0}”"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Klasifikasikan “{0}”"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "จัดประเภท “{0}”"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "‘{0}’ को वर्गीकृत करें"
           }
         }
       }
@@ -227998,6 +228460,83 @@
         }
       }
     },
+    "끄면 연결된 AI가 급여 금액과 설정을 읽거나 바꿀 수 없어요.|When off, a connected AI cannot read or change your pay amounts and settings." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "オフにすると、接続したAIは給与の金額や設定を読んだり変更したりできません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关闭后，已连接的 AI 无法读取或更改你的薪资金额和设置。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "關閉後，已連線的 AI 無法讀取或更改你的薪資金額和設定。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn aus, kann eine verbundene KI deine Gehaltsbeträge und -einstellungen weder lesen noch ändern."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si désactivé, une IA connectée ne peut ni lire ni modifier vos montants et réglages de paie."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se disattivato, un’IA collegata non può leggere né modificare importi e impostazioni della paga."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si está desactivado, una IA conectada no puede leer ni cambiar tus importes y ajustes de pago."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quando desativado, uma IA conectada não pode ler nem alterar seus valores e ajustes de pagamento."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Khi tắt, AI đã kết nối không thể đọc hay thay đổi số tiền và cài đặt lương của bạn."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jika mati, AI yang terhubung tidak dapat membaca atau mengubah jumlah dan pengaturan gaji Anda."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เมื่อปิด AI ที่เชื่อมต่อจะอ่านหรือเปลี่ยนจำนวนเงินและการตั้งค่าค่าจ้างของคุณไม่ได้"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "बंद होने पर जुड़ा हुआ AI आपकी वेतन राशि और सेटिंग न पढ़ सकता है, न बदल सकता है।"
+          }
+        }
+      }
+    },
     "끈 일은 AI가 보내도 반영하지 않고 거절로 알려요.|Actions you turn off are not applied; the AI is told they were rejected." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -232075,6 +232614,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "मेरी श्रेणियाँ"
+          }
+        }
+      }
+    },
+    "내가 확인|I'll check" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自分で確認"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我来确认"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我來確認"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ich prüfe selbst"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Je vérifie"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Controllo io"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lo reviso yo"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eu verifico"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tôi tự kiểm tra"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saya cek sendiri"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ฉันตรวจเอง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "मैं जाँचूँगा"
           }
         }
       }
@@ -250559,6 +251175,83 @@
         }
       }
     },
+    "미확인 시간 {0}분|{0} min unconfirmed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未確認の時間 {0}分"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未确认时间 {0} 分钟"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未確認時間 {0} 分鐘"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} Min. unbestätigt"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} min non confirmées"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} min non confermati"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} min sin confirmar"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} min não confirmados"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} phút chưa xác nhận"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} mnt belum dikonfirmasi"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ยังไม่ยืนยัน {0} นาที"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} मिनट अपुष्ट"
+          }
+        }
+      }
+    },
     "미확인 시간 검토|Unconfirmed time review" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -250709,6 +251402,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "अपुष्ट समय को वर्गीकृत करें"
+          }
+        }
+      }
+    },
+    "미확인 시간과 탑승 확인은 연결된 AI에게 넘길 수 있어요. 넘긴 것은 「AI」 탭에서 볼 수 있고, AI가 확신이 없으면 앱에서 다시 물어봐요.|Unconfirmed time and ride checks can be handed to your connected AI. Handed items appear in the AI tab, and the AI asks you in the app when it isn't sure." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未確認の時間と乗車確認は、連携したAIに任せられます。任せたものは「AI」タブで見られ、AIに確信がないときはアプリで改めて尋ねます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未确认的时间和乘车确认可以交给已连接的 AI。交出的项目可在“AI”标签页查看，AI 没把握时会在应用中再次询问。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未確認的時間和搭乘確認可以交給已連接的 AI。交出的項目可在「AI」分頁查看，AI 沒把握時會在 App 中再次詢問。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unbestätigte Zeit und Fahrtprüfungen kannst du an deine verbundene KI übergeben. Übergebenes erscheint im KI-Tab, und die KI fragt dich in der App, wenn sie unsicher ist."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le temps non confirmé et les vérifications de trajet peuvent être confiés à votre IA connectée. Les éléments confiés apparaissent dans l'onglet IA, et l'IA vous demande dans l'app si elle n'est pas sûre."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il tempo non confermato e le verifiche dei tragitti possono essere affidati all'IA collegata. Gli elementi affidati compaiono nella scheda IA e l'IA ti chiede nell'app quando non è sicura."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El tiempo sin confirmar y las comprobaciones de trayecto se pueden encargar a tu IA conectada. Lo encargado aparece en la pestaña IA, y la IA te pregunta en la app cuando no está segura."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O tempo não confirmado e as verificações de trajeto podem ser passados para a IA conectada. Os itens passados aparecem na aba IA, e a IA pergunta no app quando não tem certeza."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thời gian chưa xác nhận và việc kiểm tra chuyến đi có thể giao cho AI đã kết nối. Mục đã giao hiện trong thẻ AI, và AI sẽ hỏi lại trong ứng dụng khi không chắc."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waktu yang belum dikonfirmasi dan pengecekan perjalanan bisa diserahkan ke AI yang terhubung. Yang diserahkan tampil di tab AI, dan AI bertanya di aplikasi bila tidak yakin."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เวลาที่ยังไม่ยืนยันและการตรวจการเดินทางมอบให้ AI ที่เชื่อมต่อได้ รายการที่มอบจะอยู่ในแท็บ AI และ AI จะถามในแอปเมื่อไม่แน่ใจ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "अपुष्ट समय और यात्रा जाँच जुड़े हुए AI को सौंपी जा सकती है। सौंपी गई चीज़ें AI टैब में दिखती हैं, और AI को भरोसा न हो तो वह ऐप में पूछता है।"
           }
         }
       }
@@ -286206,6 +286976,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "किसी दिन"
+          }
+        }
+      }
+    },
+    "업무 시간에만 번 돈이 쌓여요. AI를 연결했다면 급여 설정을 AI도 읽고 바꿀 수 있어요.|Earnings grow only during work time. If you connected an AI, it can read and change these pay settings." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "稼ぎは勤務時間中だけ増えます。AIを接続している場合、AIもこの給与設定を読んで変更できます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "收入只在工作时间累计。如果已连接 AI，它也能读取并更改这些薪资设置。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "收入只在工作時間累計。如果已連線 AI，它也能讀取並更改這些薪資設定。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Verdienst wächst nur während der Arbeitszeit. Wenn du eine KI verbunden hast, kann sie diese Gehaltseinstellungen lesen und ändern."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les gains n’augmentent que pendant le temps de travail. Si vous avez connecté une IA, elle peut lire et modifier ces réglages de paie."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I guadagni crescono solo durante l’orario di lavoro. Se hai collegato un’IA, può leggere e modificare queste impostazioni della paga."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Las ganancias solo crecen durante el tiempo de trabajo. Si conectaste una IA, puede leer y cambiar estos ajustes de pago."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Os ganhos só crescem durante o tempo de trabalho. Se você conectou uma IA, ela pode ler e alterar estes ajustes de pagamento."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thu nhập chỉ tăng trong giờ làm việc. Nếu bạn đã kết nối AI, nó có thể đọc và thay đổi các cài đặt lương này."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Penghasilan hanya bertambah selama waktu kerja. Jika Anda menghubungkan AI, AI dapat membaca dan mengubah pengaturan gaji ini."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "รายได้จะเพิ่มเฉพาะช่วงเวลาทำงาน หากคุณเชื่อมต่อ AI ไว้ AI จะอ่านและเปลี่ยนการตั้งค่าค่าจ้างนี้ได้"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कमाई केवल काम के समय बढ़ती है। यदि आपने AI जोड़ा है, तो वह ये वेतन सेटिंग पढ़ और बदल सकता है।"
           }
         }
       }
@@ -322554,6 +323401,83 @@
         }
       }
     },
+    "자주 머무는 곳 등록|Register a place you stay often" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "よく滞在する場所を登録"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登记常停留的地点"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登記常停留的地點"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Häufigen Aufenthaltsort registrieren"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistrer un lieu fréquent"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registra un luogo abituale"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registrar un lugar habitual"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registrar um lugar frequente"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đăng ký nơi thường ở lại"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Daftarkan tempat yang sering disinggahi"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลงทะเบียนสถานที่ที่อยู่บ่อย"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "अक्सर रुकने की जगह दर्ज करें"
+          }
+        }
+      }
+    },
     "자주 머무는 곳이 있어요|You stay here often" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -332333,6 +333257,83 @@
         }
       }
     },
+    "지금 확인할 것이 없어요.|Nothing to check right now." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今確認するものはありません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "现在没有需要确认的内容。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "現在沒有需要確認的內容。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Im Moment gibt es nichts zu prüfen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rien à vérifier pour l'instant."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Niente da controllare al momento."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No hay nada que revisar ahora."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nada para verificar agora."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hiện không có gì cần kiểm tra."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak ada yang perlu dicek sekarang."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ตอนนี้ไม่มีอะไรต้องตรวจ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "अभी जाँचने के लिए कुछ नहीं है।"
+          }
+        }
+      }
+    },
     "지금 활동, 오늘 요약, 다음 일정을 보고 활동을 확인·수정합니다. 시계 페이스에도 놓을 수 있습니다.|See your current activity, today's summary, and next plan, confirm or fix activities, and add it to your watch face." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -337180,6 +338181,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "मेट्रो और बस की स्वचालित पहचान"
+          }
+        }
+      }
+    },
+    "지하철·버스 탑승 확인|Check a subway or bus ride" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "地下鉄・バスの乗車確認"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "确认地铁·公交乘车"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "確認地鐵·公車搭乘"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "U-Bahn- oder Busfahrt prüfen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vérifier un trajet en métro ou en bus"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verifica un tragitto in metro o bus"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Comprobar un trayecto en metro o autobús"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verificar um trajeto de metrô ou ônibus"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kiểm tra chuyến tàu điện ngầm hoặc xe buýt"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cek perjalanan kereta bawah tanah atau bus"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ตรวจการเดินทางด้วยรถไฟใต้ดินหรือรถบัส"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "मेट्रो या बस यात्रा जाँचें"
           }
         }
       }
@@ -344033,6 +345111,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "कार्ड भुगतान का संदेश चिपकाएँ, या रसीद की फ़ोटो या भुगतान का स्क्रीनशॉट चुनें, तो प्रविष्टि भर दी जाएगी। “भुगतान संदेश अपने आप जोड़ें” सेट करें ताकि संदेश आते ही दर्ज हो जाएँ।"
+          }
+        }
+      }
+    },
+    "카드 대금 출금으로 보임|Looks like a card bill payment" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カード代金の引き落としのようです"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "看起来是信用卡还款"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "看起來是信用卡繳款"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sieht nach Kartenabrechnung aus"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semble être un paiement de carte"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sembra un addebito della carta"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Parece un pago de tarjeta"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Parece pagamento da fatura do cartão"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Có vẻ là thanh toán hóa đơn thẻ"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sepertinya pembayaran tagihan kartu"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ดูเหมือนการชำระค่าบัตร"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कार्ड बिल भुगतान जैसा लगता है"
           }
         }
       }

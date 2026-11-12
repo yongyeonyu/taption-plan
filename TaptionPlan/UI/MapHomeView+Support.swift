@@ -921,10 +921,7 @@ extension MapHomeView {
                 HStack(spacing: 8) {
                     if passportReturnPage != nil { passportBackButton }
                     searchCircleButton
-                    MapHomeLaunchPromptDeferredButton(language: language) {
-                        launchPromptsAsked = []
-                        Task { await runLaunchPrompts() }
-                    }
+                    MapHomeLaunchPromptDeferredButton(language: language, items: { await launchPromptQueue() }) { presentLaunchPrompt($0) }
                     modeButtons
                     if recordingShows(\.sidebarMemos), memoDisplayMode == .all {
                         memoCircleButton

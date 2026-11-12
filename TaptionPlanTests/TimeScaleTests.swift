@@ -5482,6 +5482,25 @@ final class MapHomeStartupCameraTests: XCTestCase {
         XCTAssertNil(next(["car:Audi", "boarding:b1", "calendar:\(CalendarTitleClassification.key("주간 회의"))", "place:p1"], unconfirmed: 5))
     }
 
+    /// TDL1112A01: 「확인할 것」 목록은 전부를 보이고, AI에게는 AI가 명령으로 끝낼 수 있는 것만 넘기며, 넘긴 것은 그날만 건너뛴다.
+    func testTodoListShowsEverythingAndHandsOnlyWhatTheAICanFinish() {
+        let all = MapHomeLaunchPromptPolicy.all(carAudio: "Audi", boardingIDs: ["b1"], calendarTitles: ["주간 회의"],
+                                                placeSuggestionID: "p1", unconfirmedMinutes: 30)
+        XCTAssertEqual(all.count, 5)
+        XCTAssertEqual(all.filter { MapHomeLaunchPromptHandoff.task(for: $0) != nil }, [.boarding("b1"), .unconfirmed(minutes: 30)])
+        XCTAssertEqual(MapHomeLaunchPromptHandoff.task(for: .unconfirmed(minutes: 30))?.kind, .other)
+        XCTAssertTrue(MapHomeLaunchPromptHandoff.task(for: .unconfirmed(minutes: 30))?.text.contains("classify_unconfirmed") == true)
+        XCTAssertEqual(MapHomeLaunchPromptHandoff.task(for: .boarding("b1"))?.kind, .routeCheck)
+
+        let defaults = UserDefaults(suiteName: "todo-handoff-\(UUID().uuidString)")!
+        let day = Date(timeIntervalSinceReferenceDate: 816_066_000)
+        XCTAssertTrue(MapHomeLaunchPromptHandoff.handed(now: day, defaults: defaults).isEmpty)
+        MapHomeLaunchPromptHandoff.markHanded("unconfirmed", now: day, defaults: defaults)
+        MapHomeLaunchPromptHandoff.markHanded("boarding:b1", now: day, defaults: defaults)
+        XCTAssertEqual(MapHomeLaunchPromptHandoff.handed(now: day, defaults: defaults), ["unconfirmed", "boarding:b1"])
+        XCTAssertTrue(MapHomeLaunchPromptHandoff.handed(now: day.addingTimeInterval(86_400), defaults: defaults).isEmpty, "다음 날에는 다시 묻는다")
+    }
+
     /// 분류를 정하지 않은 오늘·어제 일정 제목만, 같은 제목은 한 번, 종일·취소·아직 안 시작한 일정은 빼고.
     func testUnansweredCalendarTitlesSkipAnsweredAllDayAndFuture() {
         let now = Date(timeIntervalSinceReferenceDate: 816_066_000)
