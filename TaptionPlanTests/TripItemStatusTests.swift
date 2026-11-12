@@ -321,6 +321,68 @@ final class TravelTripUnitTests: XCTestCase {
         XCTAssertEqual(model.settings.travelTrips?.first?.startDay, "2026-12-02", "기간은 늘리기만 한다")
     }
 
+    /// TVQ1112A01: 손으로 넣기·고치기·지우기가 여행 일정과 일상 계획·핀을 함께 바꾼다.
+    @MainActor
+    func testAddingEditingAndDeletingAnItemByHand() async throws {
+        let model = try await importedModel()
+        let trip = try XCTUnwrap(model.settings.travelTrips?.first)
+        let target = TravelQuickEntrySheet.Target.new(trip: trip, dayKey: "2026-12-03", dayLabel: "2일차", startMinute: 720, kind: .meal)
+        let start = TravelQuickEntrySheet.date(dayKey: target.dayKey, minute: target.startMinute, offsetSeconds: 7 * 3_600)
+        XCTAssertEqual(start, try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-12-03T12:00:00+07:00")))
+
+        let added = await model.addTripItem(tripID: "t1", kind: .meal, title: " ", start: start, end: start.addingTimeInterval(3_600), offsetSeconds: 7 * 3_600)
+        let itemID = try XCTUnwrap(added)
+        var item = try XCTUnwrap(model.settings.travelTripItems?.first { $0.itemID == itemID })
+        XCTAssertEqual(item.title, TripImportItem.Kind.meal.planName, "이름을 비우면 분류 이름으로 들어간다")
+        let planID = try XCTUnwrap(item.planID)
+        var plan = try XCTUnwrap(model.snapshot.plans.first { $0.id == planID })
+        XCTAssertEqual(plan.span.start, start)
+        XCTAssertEqual(plan.categoryID, "travel")
+        XCTAssertEqual(model.settings.travelTripItems?.count, 3)
+
+        let edit = TravelQuickEntrySheet.Target.edit(item, dayLabel: "2일차")
+        XCTAssertEqual(edit.dayKey, "2026-12-03")
+        XCTAssertEqual(edit.startMinute, 720)
+        XCTAssertEqual(edit.kind, .meal)
+
+        let late = start.addingTimeInterval(2 * 86_400 + 9 * 3_600)
+        let updated = await model.updateTripItem(tripID: "t1", itemID: itemID, kind: .transfer, title: "공항 가기", start: late, end: late.addingTimeInterval(1_800))
+        XCTAssertTrue(updated)
+        item = try XCTUnwrap(model.settings.travelTripItems?.first { $0.itemID == itemID })
+        XCTAssertEqual(item.title, "공항 가기")
+        XCTAssertEqual(item.kind, "transfer")
+        plan = try XCTUnwrap(model.snapshot.plans.first { $0.id == planID })
+        XCTAssertEqual(plan.title, "공항 가기")
+        XCTAssertEqual(plan.categoryID, "movement")
+        XCTAssertEqual(plan.span.end, late.addingTimeInterval(1_800))
+        XCTAssertEqual(model.settings.travelTrips?.first?.endDay, "2026-12-05", "여행 기간 밖으로 나가면 기간이 늘어난다")
+
+        let renamed = await model.updateTripItem(tripID: "t1", itemID: "a", kind: .sight, title: "새벽 사원", start: item.start, end: item.end)
+        XCTAssertTrue(renamed)
+        XCTAssertEqual(model.settings.travelPlanStops.first { $0.itemID == "a" }?.title, "새벽 사원", "지도 핀 이름도 바뀐다")
+
+        let deleted = await model.deleteTripItem(tripID: "t1", itemID: itemID)
+        XCTAssertTrue(deleted)
+        XCTAssertNil(model.snapshot.plans.first { $0.id == planID })
+        XCTAssertEqual(model.settings.travelTripItems?.count, 2)
+        let gone = await model.deleteTripItem(tripID: "t1", itemID: "a")
+        XCTAssertTrue(gone)
+        XCTAssertNil(model.settings.travelPlanStops.first { $0.itemID == "a" })
+        let missing = await model.deleteTripItem(tripID: "t1", itemID: "none")
+        XCTAssertFalse(missing)
+    }
+
+    func testTappedSpotBecomesColumnAndQuarterHour() throws {
+        // 너비 350: 왼쪽 50은 시간축, 열 하나는 75.
+        let slot = try XCTUnwrap(TravelPlanTable.slot(x: 130, y: 12 * 60 * TravelPlanTable.minuteHeight + 9, width: 350))
+        XCTAssertEqual(slot.column, 1)
+        XCTAssertEqual(slot.minute, 720)
+        XCTAssertEqual(TravelPlanTable.slot(x: 349, y: 0, width: 350)?.column, 3)
+        XCTAssertNil(TravelPlanTable.slot(x: 20, y: 100, width: 350), "시간축을 누르면 넣지 않는다")
+        XCTAssertEqual(TravelQuickEntrySheet.clock(1_470), "00:30")
+        XCTAssertEqual(TravelQuickEntrySheet.durationText(90, language: .korean), "1시간 30분")
+    }
+
     @MainActor
     func testDayTripAndPastDayCanBecomeTripsAndBadRangeIsRejected() async throws {
         let model = AppModel(repository: InMemoryPlanRepository(), cloudSyncService: nil)

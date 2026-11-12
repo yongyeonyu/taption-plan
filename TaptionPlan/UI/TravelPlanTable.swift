@@ -108,10 +108,24 @@ struct TravelPlanTable: View {
     let table: TravelPlanTableModel
     let language: MapHomeLanguage
     let onSelect: (TravelPlanTableModel.Block) -> Void
+    /// 빈 곳을 누름: 열과 15분 단위 시각.
+    var onAdd: (Int, Int) -> Void = { _, _ in }
 
-    private let minuteHeight: CGFloat = 0.9
-    private let axisWidth: CGFloat = 38
+    private let minuteHeight = TravelPlanTable.minuteHeight
+    private let axisWidth = TravelPlanTable.leading - 12
     private let actualWidth: CGFloat = 12
+
+    static let minuteHeight: CGFloat = 0.9
+    /// 시간축과 실제 띠가 차지하는 왼쪽 너비.
+    static let leading: CGFloat = 50
+
+    /// 누른 자리의 열과 시각(15분 단위). 시간축 쪽을 누르면 nil.
+    static func slot(x: CGFloat, y: CGFloat, width: CGFloat) -> (column: Int, minute: Int)? {
+        let columnWidth = (width - leading) / CGFloat(TravelPlanTableModel.columnCount)
+        guard x >= leading, columnWidth > 0, y >= 0 else { return nil }
+        let column = min(TravelPlanTableModel.columnCount - 1, Int((x - leading) / columnWidth))
+        return (column, TravelQuickEntry.snapped(Int(y / minuteHeight)))
+    }
 
     private var titles: [String] {
         [language.text("이동", "Move"), language.text("식사", "Meals"), language.text("관광", "Sights"), language.text("숙소", "Stay")]
@@ -130,7 +144,11 @@ struct TravelPlanTable: View {
             Divider().overlay(TravelInk.border)
             ScrollViewReader { reader in
                 ScrollView { dayBody }
-                    .onAppear { reader.scrollTo(table.focusMinute / 60, anchor: .top) }
+                    // 처음 그린 뒤에 옮겨야 자리가 잡힌다.
+                    .task {
+                        await Task.yield()
+                        reader.scrollTo(table.focusMinute / 60, anchor: .top)
+                    }
             }
         }
     }
@@ -146,10 +164,13 @@ struct TravelPlanTable: View {
                 if let now = table.nowMinute {
                     Rectangle().fill(TravelInk.actual).frame(width: proxy.size.width, height: 1.5).offset(y: CGFloat(now) * minuteHeight)
                 }
-                // 스크롤 자리 표시(한 시간마다).
-                ForEach(0..<24, id: \.self) { hour in
-                    Color.clear.frame(width: 1, height: 1).offset(y: CGFloat(hour * 60) * minuteHeight).id(hour)
+                // 스크롤 자리 표시(한 시간마다). offset은 자리를 옮기지 않아 스크롤이 못 찾으므로 실제 높이로 쌓는다.
+                VStack(spacing: 0) {
+                    ForEach(0..<24, id: \.self) { hour in
+                        Color.clear.frame(width: 1, height: 60 * minuteHeight).id(hour)
+                    }
                 }
+                .allowsHitTesting(false)
             }
         }
         .frame(height: 1_440 * minuteHeight)
@@ -171,6 +192,11 @@ struct TravelPlanTable: View {
             }
         }
         .frame(width: width, height: 1_440 * minuteHeight)
+        .contentShape(Rectangle())
+        .gesture(SpatialTapGesture().onEnded { value in
+            if let slot = Self.slot(x: value.location.x, y: value.location.y, width: width) { onAdd(slot.column, slot.minute) }
+        })
+        .accessibilityIdentifier("travelPlanGrid")
     }
 
     /// 실제 기록: 시간축 바로 옆의 주홍 띠. 계획에 없던 머묾은 이름을 관광 열에 점선 칸으로 보인다.

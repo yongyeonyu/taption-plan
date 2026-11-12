@@ -324,6 +324,7 @@ struct TravelModeView: View {
     @State private var viewSize = CGSize(width: 390, height: 760)
     @State private var newTripDraft: TravelNewTripSheet.Draft?
     @State private var ledgerTripID: String?
+    @State private var entryTarget: TravelQuickEntrySheet.Target?
     @State private var didEnter = false
     /// 계획표 시트가 올라와 있는지. 올라오면 작은 시간 막대는 사라진다(대표 결정).
     @State private var isPlanUp = false
@@ -393,6 +394,7 @@ struct TravelModeView: View {
                 stops: model.settings.travelPlanStops, items: model.settings.travelTripItems ?? [], trips: model.settings.travelTrips ?? []
             ))
         }
+        .sheet(item: $entryTarget) { target in TravelQuickEntrySheet(model: model, language: language, target: target) }
         .preferredColorScheme(openedID == nil && flight == nil ? .dark : .light)
         .accessibilityIdentifier("travelModeScreen")
     }
@@ -753,7 +755,8 @@ struct TravelModeView: View {
             }
             Spacer(minLength: 0)
             Menu {
-                Button(language.text("일정 보기·고치기", "View and edit plans"), systemImage: "calendar") { openPlan(planDay(entry, items: items)) }
+                Button(language.text("일정 넣기", "Add plan"), systemImage: "calendar.badge.plus") { addEntry(entry) }
+                Button(language.text("지도에서 일정 보기", "View plans on the map"), systemImage: "map") { openPlan(planDay(entry, items: items)) }
                 Button(language.text("지출 넣기", "Add expense"), systemImage: "wonsign") { ledgerTripID = entry.id }
             } label: {
                 Image(systemName: "plus").font(.system(size: 20, weight: .semibold)).foregroundStyle(TravelInk.land).frame(width: 46, height: 46)
@@ -798,7 +801,11 @@ struct TravelModeView: View {
                 .accessibilityIdentifier("travelPlanHandle")
             if isPlanUp {
                 dayChips(entry)
-                TravelPlanTable(table: table(entry), language: language) { _ in openPlan(dayDate(dayKey(entry))) }
+                TravelPlanTable(
+                    table: table(entry), language: language,
+                    onSelect: { block in editEntry(entry, itemID: block.id) },
+                    onAdd: { column, minute in addEntry(entry, column: column, minute: minute) }
+                )
                     .id(dayKey(entry))
                     .frame(height: viewSize.height * 0.5)
                     .padding(.horizontal, 8)
@@ -816,13 +823,34 @@ struct TravelModeView: View {
         })
     }
 
+    private func dayLabel(_ entry: TravelTripDirectory.Entry, key: String) -> String {
+        guard !entry.isDayTrip, let number = TravelTripDay.days(from: entry.trip.startDay, to: key) else { return language.text("당일", "Day trip") }
+        return language.runtimeText("\(number + 1)일차", "Day \(number + 1)")
+    }
+
+    /// 일정 넣기. 빈 곳을 눌렀으면 그 열·그 시각, 「+」면 그날 마지막 일정 끝에서 잇는다.
+    private func addEntry(_ entry: TravelTripDirectory.Entry, column: Int? = nil, minute: Int? = nil) {
+        let key = dayKey(entry), table = table(entry)
+        let last = table.blocks.max { $0.endMinute < $1.endMinute }
+        let kind = column.map(TravelQuickEntry.kind(forColumn:)).flatMap(TripImportItem.Kind.init(rawValue:)) ?? .sight
+        entryTarget = .new(
+            trip: entry.trip, dayKey: key, dayLabel: dayLabel(entry, key: key),
+            startMinute: minute ?? TravelQuickEntry.nextStart(lastEndMinute: last?.endMinute, nowMinute: table.nowMinute), kind: kind
+        )
+    }
+
+    private func editEntry(_ entry: TravelTripDirectory.Entry, itemID: String) {
+        guard let item = (model.settings.travelTripItems ?? []).first(where: { $0.tripID == entry.id && $0.itemID == itemID }) else { return }
+        entryTarget = .edit(item, dayLabel: dayLabel(entry, key: TravelTripDay.string(for: item.start, offsetSeconds: item.startOffsetSeconds)))
+    }
+
     private func dayChips(_ entry: TravelTripDirectory.Entry) -> some View {
         let selected = dayKey(entry)
         return ScrollView(.horizontal) {
             HStack(spacing: 6) {
-                ForEach(Array(TravelPlanDays.days(of: entry.trip).enumerated()), id: \.element.key) { index, day in
+                ForEach(TravelPlanDays.days(of: entry.trip), id: \.key) { day in
                     Button { planDayKey = day.key } label: {
-                        Text(entry.isDayTrip ? language.text("당일", "Day trip") : language.runtimeText("\(index + 1)일차", "Day \(index + 1)"))
+                        Text(dayLabel(entry, key: day.key))
                             .font(.caption.weight(.semibold))
                             .padding(.horizontal, 10)
                             .frame(height: 28)

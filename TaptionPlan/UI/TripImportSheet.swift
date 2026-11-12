@@ -98,6 +98,67 @@ extension AppModel {
         return await applyTripItemTimes(items, tripID: tripID, itemID: itemID, calendar: calendar)
     }
 
+    // MARK: 손으로 넣기(TVQ1112A01)
+
+    /// 여행 일정 하나를 손으로 넣는다. 일상 쪽 계획 기록이 함께 생긴다. 넣은 일정 번호를 돌려준다.
+    func addTripItem(tripID: String, kind: TripImportItem.Kind, title: String, start: Date, end: Date, offsetSeconds: Int) async -> String? {
+        guard acceptsDataMutation(), !tripID.isEmpty, end > start else { return nil }
+        let name = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let planID = addPlan(
+            title: name.isEmpty ? kind.planName : name, categoryID: kind.categoryID, middleCategoryName: kind.planName,
+            startAt: start, duration: end.timeIntervalSince(start)
+        ) else { return nil }
+        let itemID = "m-" + UUID().uuidString.prefix(8).lowercased()
+        let items = (snapshot.settings.travelTripItems ?? []) + [TravelTripItem(
+            tripID: tripID, itemID: itemID, kind: kind.rawValue, title: name.isEmpty ? kind.planName : name, start: start, end: end,
+            startOffsetSeconds: offsetSeconds, endOffsetSeconds: offsetSeconds, planID: planID
+        )]
+        snapshot.settings.travelTripItems = items
+        if let trips = snapshot.settings.travelTrips {
+            snapshot.settings.travelTrips = TravelTripDirectory.extended(trips, toCover: items)
+        }
+        return await persist() ? itemID : nil
+    }
+
+    /// 여행 일정의 종류·이름·시각을 고친다. 일상 쪽 계획 기록과 지도 핀 이름이 함께 바뀐다.
+    @discardableResult
+    func updateTripItem(
+        tripID: String, itemID: String, kind: TripImportItem.Kind, title: String, start: Date, end: Date, calendar: Calendar = .autoupdatingCurrent
+    ) async -> Bool {
+        var items = snapshot.settings.travelTripItems ?? []
+        guard end > start, let index = items.firstIndex(where: { $0.tripID == tripID && $0.itemID == itemID }) else { return false }
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let name = trimmed.isEmpty ? kind.planName : trimmed
+        items[index].kind = kind.rawValue
+        items[index].title = name
+        items[index].start = start
+        items[index].end = end
+        if let planID = items[index].planID, let planIndex = snapshot.plans.firstIndex(where: { $0.id == planID }) {
+            guard !snapshot.plans[planIndex].isFixed else { return false }
+            snapshot.plans[planIndex].title = name
+            snapshot.plans[planIndex].categoryID = kind.categoryID
+            snapshot.plans[planIndex].middleCategoryName = kind.planName
+        }
+        if let stopIndex = snapshot.settings.travelPlanStops.firstIndex(where: { $0.tripID == tripID && $0.itemID == itemID }) {
+            snapshot.settings.travelPlanStops[stopIndex].title = name
+        }
+        return await applyTripItemTimes(items, tripID: tripID, itemID: itemID, calendar: calendar)
+    }
+
+    /// 여행 일정 하나를 지운다. 일상 쪽 계획 기록과 지도 핀도 함께 지운다.
+    @discardableResult
+    func deleteTripItem(tripID: String, itemID: String) async -> Bool {
+        var items = snapshot.settings.travelTripItems ?? []
+        guard acceptsDataMutation(), let index = items.firstIndex(where: { $0.tripID == tripID && $0.itemID == itemID }) else { return false }
+        let removed = items.remove(at: index)
+        if let planID = removed.planID { await deletePlans([planID]) }
+        snapshot.settings.travelTripItems = items.isEmpty ? nil : items
+        snapshot.settings.travelPlanStops = TravelPlanSchedule.renumbered(
+            snapshot.settings.travelPlanStops.filter { !($0.tripID == tripID && $0.itemID == itemID) }
+        )
+        return await persist()
+    }
+
     private func applyTripItemTimes(_ items: [TravelTripItem], tripID: String, itemID: String, calendar: Calendar) async -> Bool {
         guard acceptsDataMutation(), let item = items.first(where: { $0.tripID == tripID && $0.itemID == itemID }) else { return false }
         // 일상 쪽 계획 기록을 같은 시각으로 맞춘다. 캘린더 고정 일정이면 여행 일정도 그대로 둔다.
