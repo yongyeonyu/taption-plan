@@ -33,7 +33,8 @@ export const INSTRUCTIONS = "Reads the user's Taption Plan day records and sends
   + "at the start of every conversation. ACTIONS: if a tool named in these instructions is not in your tool list, your client holds an old list: call list_actions and "
   + "send the action with run_action instead of telling the user it is impossible. FRESHNESS: get_activity and get_summary carry sync {appLastSeenAt, lastUploadAt, device, appBuild, "
   + "debugBuild, shareLevel}. Days only change when the app runs on that device, so compare appLastSeenAt with the current time: if it is "
-  + "old, say the records stop there instead of saying nothing happened, and suggest opening the app. Each device has its own connection; "
+  + "old, say the records stop there instead of saying nothing happened, and suggest opening the app. sync.uploadsPaused privacyLock means the "
+  + "app is running but locked, so it is not uploading days: ask the user to open the app and unlock it. Each device has its own connection; "
   + "another phone's records are not in this one. The app picks up edits about every 10 seconds while you are talking with the user, "
   + "otherwise within 5 minutes, and at once when the user opens the app; do not resend an edit just because it has not shown yet.";
 
@@ -69,7 +70,8 @@ const TOOLS = [
     + "visits [{place,start,end,minutes}] and moves [{id,from,to,mode,start,end,minutes}] (fix a wrong mode with set_travel_mode). "
     + "Never coordinates or addresses. summary.categories are the app's broad groups (rest and plain stays count under activity) while "
     + "a record's category is its detailed one, and records may overlap (sleep inside a stay at home), so the two do not add up the same way. "
-    + "sync {appLastSeenAt, lastUploadAt (UTC), device (hardware model id, e.g. iPhone12,3), appBuild, debugBuild, shareLevel} tells which "
+    + "sync {appLastSeenAt, lastUploadAt (UTC), device (hardware model id, e.g. iPhone12,3), appBuild, debugBuild, shareLevel, uploadsPaused "
+    + "(privacyLock: the app is locked and not uploading days until the user opens and unlocks it)} tells which "
     + "device this connection reads and how fresh it is; visits and moves exist only when sync.shareLevel is visits, so their absence at "
     + "summary level does not mean the user stayed in. With no day stored it returns {stored:false, sync}.",
   object({ date: DATE }), async (ctx, a) => orSync(ctx, await readActivity(ctx, a.date ?? null)),
@@ -347,6 +349,7 @@ const RAW_VALUES = {
   timeZone: isTimeZone,
   device: (v) => /^[A-Za-z][A-Za-z0-9,]{0,23}$/.test(v),
   appBuild: (v) => /^\d{1,8}$/.test(v),
+  uploadsPaused: oneOf("privacyLock"),
   status: oneOf("applied", "rejected", ...TRIP_STATUSES, ...TASK_STATUSES, ...ANSWER_STATUSES),
   kind: oneOf(...TASK_KINDS, "expense", "income", "ignore"),
   source: oneOf("auto", "user", "rest", "mcp", "oauth", "legacy", "manual", "assistant", "message", "receipt"),

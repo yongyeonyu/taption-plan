@@ -66,16 +66,17 @@ extension TripRelay {
 
     static let clientHeaderName = "x-bokki-client"
 
-    /// `<기기 종류 식별자>;<빌드>;<공유 수준>[;debug]`. 서버가 AI 응답의 `sync`에 실어 어느 기기의 기록인지 알린다(AIC1112A01).
+    /// `<기기 종류 식별자>;<빌드>;<공유 수준>[;debug][;locked]`. 서버가 AI 응답의 `sync`에 실어 어느 기기의 기록인지 알린다(AIC1112A01).
+    /// `locked`는 사생활 잠금 중이라 하루 기록 올리기를 쉬고 있다는 표시다(AIL1112A01).
     /// 기기 이름·사용자 정보는 넣지 않는다. 모양이 맞지 않으면 보내지 않는다.
     static func clientHeader(
         model: String = hardwareModel, build: String? = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String,
-        level: AssistantShareLevel = .current(), debug: Bool = isDebugBuild
+        level: AssistantShareLevel = .current(), debug: Bool = isDebugBuild, locked: Bool = TaptionExternalPrivacyStore.isLocked
     ) -> String? {
         let device = String(model.unicodeScalars.filter { $0.isASCII && (CharacterSet.alphanumerics.contains($0) || $0 == ",") }.prefix(24))
         guard let build, let first = device.unicodeScalars.first, CharacterSet.letters.contains(first),
               !build.isEmpty, build.count <= 8, build.allSatisfy({ $0.isASCII && $0.isNumber }) else { return nil }
-        return ([device, build, level.rawValue] + (debug ? ["debug"] : [])).joined(separator: ";")
+        return ([device, build, level.rawValue] + (debug ? ["debug"] : []) + (locked ? ["locked"] : [])).joined(separator: ";")
     }
 
     /// `iPhone12,3` 같은 기기 종류 식별자(사용자가 붙인 기기 이름이 아니다).

@@ -95,4 +95,14 @@ test("activity and summary carry sync: device, build, share level, app last seen
   await handle(app("/command", "GET"), env);
   const later = (await (await handle(rpc("get_summary", { range: "week", end: "2026-11-12" }), env)).json()).result.structuredContent.sync;
   assert.deepEqual(later, { ...sync, appLastSeenAt: new Date(clock.now).toISOString() }, "values stay raw (not wrapped as untrusted)");
+
+  // AIL1112A01: 잠금 중이면 올리기를 쉰다는 것을 알린다. 같은 표시를 두 번 보내거나 모르는 표시는 버린다.
+  await handle(app("/command", "GET", undefined, "iPhone19,7;324;visits;debug;locked"), env);
+  const paused = (await (await handle(rpc("get_summary", { range: "week", end: "2026-11-12" }), env)).json()).result.structuredContent.sync;
+  assert.deepEqual([paused.uploadsPaused, paused.debugBuild], ["privacyLock", true]);
+  await handle(app("/command", "GET", undefined, "iPhone19,7;324;visits;locked;locked"), env);
+  await handle(app("/command", "GET", undefined, "iPhone19,7;324;visits;rooted"), env);
+  assert.equal((await (await handle(req("/activity", "GET", undefined, reader), env)).json()).sync.uploadsPaused, "privacyLock", "bad headers change nothing");
+  await handle(app("/command", "GET", undefined, "iPhone19,7;324;visits"), env);
+  assert.equal((await (await handle(req("/activity", "GET", undefined, reader), env)).json()).sync.uploadsPaused, undefined, "unlocked again");
 });

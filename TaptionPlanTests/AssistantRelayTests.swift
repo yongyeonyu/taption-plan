@@ -60,12 +60,15 @@ final class AssistantRelayTests: XCTestCase {
 
     /// AIC1112A01: 서버가 받는 모양(`기기;빌드;공유 수준[;debug]`)만 보내고, 맞지 않으면 보내지 않는다.
     func testClientHeaderCarriesModelBuildShareLevelAndNothingElse() {
-        XCTAssertEqual(TripRelay.clientHeader(model: "iPhone12,3", build: "323", level: .summary, debug: false), "iPhone12,3;323;summary")
-        XCTAssertEqual(TripRelay.clientHeader(model: "iPhone19,7", build: "324", level: .visits, debug: true), "iPhone19,7;324;visits;debug")
-        XCTAssertEqual(TripRelay.clientHeader(model: "민수의 iPhone;x", build: "1", level: .off, debug: false), "iPhonex;1;off")
-        XCTAssertNil(TripRelay.clientHeader(model: "12,3", build: "323", level: .summary, debug: false))
-        XCTAssertNil(TripRelay.clientHeader(model: "iPhone12,3", build: "3.2", level: .summary, debug: false))
-        XCTAssertNil(TripRelay.clientHeader(model: "iPhone12,3", build: nil, level: .summary, debug: false))
+        XCTAssertEqual(TripRelay.clientHeader(model: "iPhone12,3", build: "323", level: .summary, debug: false, locked: false), "iPhone12,3;323;summary")
+        XCTAssertEqual(TripRelay.clientHeader(model: "iPhone19,7", build: "324", level: .visits, debug: true, locked: false), "iPhone19,7;324;visits;debug")
+        XCTAssertEqual(TripRelay.clientHeader(model: "민수의 iPhone;x", build: "1", level: .off, debug: false, locked: false), "iPhonex;1;off")
+        XCTAssertNil(TripRelay.clientHeader(model: "12,3", build: "323", level: .summary, debug: false, locked: false))
+        XCTAssertNil(TripRelay.clientHeader(model: "iPhone12,3", build: "3.2", level: .summary, debug: false, locked: false))
+        XCTAssertNil(TripRelay.clientHeader(model: "iPhone12,3", build: nil, level: .summary, debug: false, locked: false))
+        // AIL1112A01: 사생활 잠금 중이면 올리기를 쉰다는 표시를 붙인다.
+        XCTAssertEqual(TripRelay.clientHeader(model: "iPhone12,3", build: "327", level: .summary, debug: false, locked: true), "iPhone12,3;327;summary;locked")
+        XCTAssertEqual(TripRelay.clientHeader(model: "iPhone12,3", build: "327", level: .visits, debug: true, locked: true), "iPhone12,3;327;visits;debug;locked")
         let request = TripRelay.relayRequest("/command", method: "GET", token: "K", host: "example.com")
         XCTAssertEqual(request?.value(forHTTPHeaderField: TripRelay.clientHeaderName), TripRelay.clientHeader())
         XCTAssertFalse(TripRelay.hardwareModel.isEmpty)

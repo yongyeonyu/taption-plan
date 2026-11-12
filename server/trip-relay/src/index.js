@@ -192,12 +192,14 @@ async function adoptInfo(auth) {
   return { keyId: auth.keyId, info: await sealInfo(ring, auth.master, auth.hash, { scope: auth.scope, expiresAt: auth.expiresAt, source: "rest" }) };
 }
 
-// 앱이 보내는 `x-bokki-client: <기기 종류 식별자>;<빌드>;<공유 수준>[;debug]`(AIC1112A01). 모양이 다르면 버린다.
+// 앱이 보내는 `x-bokki-client: <기기 종류 식별자>;<빌드>;<공유 수준>[;debug][;locked]`(AIC1112A01·AIL1112A01). 모양이 다르면 버린다.
+// locked: 사생활 잠금 중이라 앱이 하루 기록 올리기를 쉬고 있다.
+const CLIENT_FLAGS = ["debug", "locked"];
 export function clientInfo(header) {
-  const [device, appBuild, shareLevel, flag, ...rest] = (header ?? "").split(";");
+  const [device, appBuild, shareLevel, ...flags] = (header ?? "").split(";");
   if (!/^[A-Za-z][A-Za-z0-9,]{0,23}$/.test(device) || !/^\d{1,8}$/.test(appBuild ?? "") || !["off", "summary", "visits"].includes(shareLevel)
-    || rest.length || (flag !== undefined && flag !== "debug")) return undefined;
-  return { device, appBuild, shareLevel, ...(flag ? { debugBuild: true } : {}) };
+    || flags.some((flag) => !CLIENT_FLAGS.includes(flag)) || new Set(flags).size !== flags.length) return undefined;
+  return { device, appBuild, shareLevel, ...(flags.includes("debug") ? { debugBuild: true } : {}), ...(flags.includes("locked") ? { uploadsPaused: "privacyLock" } : {}) };
 }
 
 async function authorized(request, env, url, route, pathKey = null) {
