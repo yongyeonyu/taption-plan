@@ -2,6 +2,61 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## WSN1112A01 · Apple Watch 센서 기록 점검과 행동 구분 고도화 (2026-11-12)
+
+로그·사본: `build/validation/WSN1112A01/`. 커밋 전.
+
+**센서별 수집 현황(코드 확인)**
+
+| 센서 | 평상시(운동 세션 밖) | 운동 세션 중 | iPhone까지 가는 것 | 판정에 쓰는 곳 |
+| --- | --- | --- | --- | --- |
+| Watch 가속도 | `CMSensorRecorder` 50Hz → 12.5Hz, 2.56초 창(1.28초 간격), 10분 요약 | deviceMotion 25Hz, 30초 요약 | 요약 + 보관 표본(평상시 5초에 1개, 운동 5Hz). 50Hz 원본은 안 감 | 집 안 활동·정지 문맥·식사 근거·확인 질문. 평상시 라벨은 `ActivityClassifier` 입력이 아님 |
+| Watch 자이로·중력·자세 | 없음 | 25Hz | 요약의 평균·최댓값·마지막 값 | Watch 창 판정(양치·타이핑·자전거). iPhone은 최댓값만 |
+| Watch 기압·상대고도 | 없음 | 있음(주기는 시스템) | 요약의 마지막 값 | 계단·엘리베이터 |
+| Watch 걸음·거리·층수 | 없음 | `CMPedometer` 누적(케이던스는 안 읽음) | 요약 | 걷기·달리기, 하루 걸음 합 |
+| Watch GPS | 없음 | 5m마다 | 요약 경로점 | 속도 판정·경로 |
+| Watch 심박 | 직접 안 읽음(HealthKit 동기화로만 옴, iPhone이 1시간 묶음으로 받음) | builder 값, 30초 요약 | 최신·평균·최대 | Watch 「운동」 규칙(평균 105 이상)뿐. 최대 심박은 안 씀 |
+| Watch HealthKit 스냅샷(수면 단계·에너지·서 있는 시간) | 1·5·15분(앱이 살아 있을 때만) | 같음 | 스냅샷 | 수면만. 에너지·서 있는 시간은 저장만 |
+| iPhone 위치·Core Motion·deviceMotion·기압·걸음(케이던스)·Wi-Fi·화면·배터리 | 수집함 | — | `readings` 표 | 행동·이동·수면 판정 전반 |
+
+- 빠진 것: 평상시 Watch 자이로·기압·걸음·심박 직접 수집, 소음(dB)·손목 온도·SpO2·HRV·수중 깊이, Watch 걸음 케이던스. 수집만 하고 안 쓰는 것: 중력·자세 마지막 값, 자이로 평균, 최대 심박, 활동 에너지, Watch 기압.
+- 끊길 수 있는 조건: 가속도 기록은 12시간마다 다시 걸어야 하고(앱이 12시간 넘게 안 돌면 끊김), 3일 안에 읽지 못하면 사라짐, 한 번에 3시간 분량만 읽음(이어 읽기는 화면이 켜져 있을 때만), 백그라운드 새로 고침은 30분 요청이지만 보장 없음·25초 예산, 표본 사이 5초 넘는 틈은 묶음을 끊음, 보낼 것 4,096개·64MB.
+- 원본·출처 보존: `raw_events`(`watch-summary`·`watch-acceleration`, `source-device:appleWatch`, `transport:WatchConnectivity`, `derived:downsampled-accelerometer-v1`)로 남음. Watch 창 특징값 자체는 Watch 밖으로 나오지 않음.
+
+**실제 기기 자료**
+
+- 아이폰 11 Pro(읽기만, `iphone11/`): **Watch 자료 없음.** 앱 컨테이너에 `taption-store.sqlite` 없음(시험이 남긴 잠금 파일만), 앱 그룹에도 없음. 진단 묶음 6개는 모두 2026-11-01 것이고 Watch 요약·가속도 수신 0건. 원본 내보내기 폴더 없음.
+- 대신 2026-11-10 아이폰 18 사본(`build/validation/MOV1110A01/device`, 빌드 305·306)을 다시 읽음(`watch-log-stats-iphone18-1110.txt`): 요약 수신 259건(모두 `transferUserInfo`), 요약당 표본 중앙 7,505개(10분 × 12.5Hz = 7,500), 꽉 찬 묶음 88%·절반 미만 8%. 하루를 덮은 비율 11-05 40%·11-06 55%·11-07 60%·11-08 8%·11-09 41%·11-10 26%(22:40까지). 측정 뒤 도착까지 중앙 76시간·최대 85시간(96건) — WCH1106A02(묶음 번호 넘침으로 요약이 멈춤)를 고친 뒤 밀린 것을 한꺼번에 받은 구간이라 평소 값으로 볼 수 없음. 실시간 응답 실패 106건.
+- 같은 사본의 기록에서 확인한 결함: Watch 「집안일」 기록 하나가 103.8시간(11-06~11-10)을 덮고 근거에 「저진동」·「달리기 범위」·「가속도 변동 0.00g」이 함께 있음. 그 기록이 잠긴 채로 HealthKit 수면 기록(4.7시간)의 분류를 「집안일」로 바꿔 놓음.
+
+**고친 것**
+
+1. `AppleWatchSensorActivityEngine`: 평상시 묶음마다 판정(`WatchAmbientChunkInterpreter`: 걸음 창·손동작 창 비율과 가속도 변동 0.04g, 예전 0.018g·저크 기준은 앉아 있어도 넘음). 걷기 위주·조용한 묶음은 기록을 만들지 않음. 같은 행동이 90초 안에 이어질 때만 앞 기록을 늘림. 기록 ID는 묶음마다(세션 ID는 `sensorChunkID`). 예전 세션 통짜 기록은 손으로 고친 것이 아니면 다음 요약 때 지움. 근거에 값(「가속도 변동 0.080g」「걸음 창 20%」「손동작 창 50%」)을 남기고 묶음끼리 합치지 않음.
+2. `ActivityClassificationLockEngine`: HealthKit 수면 기록은 사용자가 고친 것이 아닌 잠긴 분류를 물려받지 않음(이미 「집안일」이 된 수면도 다음 갱신에 돌아옴).
+3. `WatchBehaviorClassifier` watch-har-v3: 창 특징에 주기 세기(`periodicityStrength`, 선택 필드라 옛 기록도 읽힘). 손목 진동만으로 걷기·달리기라 하려면 주기 세기 0.45 이상, 달리기는 몸 가속 0.15g 이상. 주기 없는 손 움직임은 「불규칙 손목 움직임」 근거로 남김(행동은 정하지 않음).
+4. `WatchBehaviorStabilizer`: 「새 점수가 지금 + 0.08보다 낮으면 유지」만 있어 걷기(0.79)가 한 번 나오면 정지(0.55)로 못 돌아가던 것을, 같은 새 행동이 두 창 이어지면 바꾸게 함. 평상시 누적기와 운동 세션 양쪽.
+5. `WatchActivityRawReplayEngine`: 평상시 보관 표본(5초에 1개)으로는 2.56초 창이 서지 않는데도 묶음 통계로 다시 판정해 Watch 결과를 덮던 것을, 창이 없으면 Watch 결과를 그대로 두게 함.
+6. 확인 질문이 걸린 동안 그 세션의 Watch 기록을 모두 지우던 것을 그 묶음과 겹치는 기록만 지우게 함.
+
+**시험**
+
+| 무엇 | 결과 |
+| --- | --- |
+| 패키지 `TaptionWatchSync` `swift test` | 47건 통과·실패 0(새 `WatchBehaviorRulesV3Tests` 14건: 합성 걷기, 불규칙 손동작 200창 중 걷기·달리기 20 이하, 약한 진동은 달리기 아님, 안정화, 묶음 해석, 옛 형식 읽기) |
+| 아이폰 11 Pro(iOS 27.2) `FeatureEngineTests`·`SensorDayStoreTests`·`WatchSensorQueryPlanTests`·`AppleWatchNapPolicyTests` | 822건 중 통과 821·실패 1·건너뜀 0(`iphone11-r4.xcresult`). 실패는 `testImmediateSensorAnalysisKeepsEveryPendingDay`(이 파일에 이미 적힌 아이폰 11 시간 의존 실패, 이번 변경과 무관한 경로). 새 시험 4건 통과: 며칠 세션이 기록 하나가 되지 않음, 예전 통짜 기록 정리·손으로 고친 것 보존, 수면이 잠긴 집안일을 물려받지 않음, 드문 표본 재생이 Watch 판정을 덮지 않음 |
+| 앞선 실행 | r1 시험 코드 컴파일 오류(인자 빠짐), r3 2건 실패(위 1건 + 기록 ID 방식이 바뀌어 낡은 `testOutOfOrderSameSequenceWatchRevisionDoesNotReplaceNewerState`, 시험을 `sensorChunkID`로 찾게 고침) |
+| iPhone 앱 Debug 빌드 | 위 기기 시험 빌드로 확인 |
+| Watch Debug 빌드(`generic/platform=watchOS`, 서명 없음) | BUILD SUCCEEDED(`watch-debug-build.log`, 같은 작업 트리의 WUI1112A01 화면 변경 포함) |
+| 구조 점검 `architecture-metrics.py --check` | 통과 |
+
+**하지 않은 것·한계**
+
+- 실제 Watch 원본으로 새 규칙을 재생해 보지 못함. 임계값(주기 0.45, 달리기 0.15g, 변동 0.04g)은 합성 신호와 11-10 사본의 결과 기록으로만 정함. 새 Watch 빌드가 대표 Watch에 깔린 뒤 실제 기록 확인 필요.
+- Watch는 설치·실행하지 않음(빌드만). TestFlight 올리지 않음.
+- 예전 Watch 빌드가 보낸 묶음은 판정이 한 행동에 붙들린 채라, 걷기로 붙들린 묶음은 집 안 활동 기록이 안 만들어질 수 있음.
+- 평상시 Watch 라벨을 iPhone 행동 엔진(`ActivityClassifier`·공백 추정) 입력으로 잇는 일, Watch 라벨 이름(eating·showering·housework)을 분류표(meal·shower·chores)와 맞추는 일은 하지 않음(제안).
+- 따로 본 것: HealthKit 수면 기록의 근거에 출처 기기 이름이 그대로 들어감(`AppleHealthService.sleepActuals`). 원본 내보내기에 실려 나가므로 가리는 것이 좋음(이번에 고치지 않음).
+
 ## WUI1112A01 · Watch 페이스·위젯 UI 개편, Watch 앱 화면·성능 (2026-11-12)
 
 - 대표 지시: 「애플워치 페이스 및 위젯 등 UI 최대 수정, 앱 기능 개선 및 성능 개선, 우리 앱에 맞게」.
@@ -31,6 +86,8 @@
 - UIR1111A01 2묶음 (2026-11-11 밤): 설정 계열. `MapHomeSettingsSheets.swift`(데이터 보호·분류 더하기·위치 시트): 카드·단추 모서리 13·14 → 12, 카드 제목·작은 머리글 굵게 → 반굵게, 본문·단추 글자 반굵게 → 보통 굵기(시트 제목 다섯 곳만 굵게 유지). 급여 설정 시트·비밀번호 다시 보기·「AI가 한 일」 줄도 같은 규칙. AI 연결 화면은 AIC1111A01에서 이미 정리돼 그대로. 시뮬레이터 전후 `build/validation/UIR1111A01/protection-before.png`·`protection-after.png`(확인용 Debug 인자 `-dataProtectionPreview`), 이 화면에서 GPS 로그 카드가 보이는 것도 확인. 아이폰 11 `DesignTokenValueTests`·`AppLockAndPINTests`·`BackupPasswordVaultTests`·`GPXTrackExportTests` 33건 실패 0(`g2-iphone11.xcresult`). 구조 지표 통과, 새 문구 없음. 급여 설정·비밀번호 다시 보기·「AI가 한 일」 화면은 직접 보지 않음.
 - UIR1111A01 1묶음 (2026-11-11 밤): UI 다듬기, 가계부·메모 패널(대표 결정 「모서리 4단계까지 전 화면」·「가계부·메모 패널부터」). 토큰 추가: `TaptionCorner`(8·12·16·24), `taptionShadow`(지도 위 뜬 것·시트 안 카드·없음). 가계부·여행 장부·확인 필요 목록의 기본 글자를 한 단계 작게(AI 연결 화면과 같은 방식), 기록 줄은 제목 15 보통·보조 12·금액 15 반굵게, 메모 패널 카드·띠·AI 탭 카드 모서리 14→12·패널 바깥 20→16, 굵은 글자를 반굵게·반굵게를 보통 굵기로, 메모 패널 그림자를 토큰으로. 홈 배치·화랑이·사이드바·하단 메뉴는 그대로. 시뮬레이터 BOKKI-Preview 전후 화면 `build/validation/UIR1111A01/ledger-before.png`·`ledger-after.png`(확인용 Debug 인자 `-ledgerPreview` 추가: 시뮬레이터에서 기록이 없으면 보기 3줄을 넣고 가계부를 엶). 아이폰 11 `DesignTokenValueTests`·`LedgerTests`·`LedgerReviewTests`·`AITaskQueueTests`·`TaptionUIThemeMapTests` 41건 실패 0(`iphone11.xcresult`, 다른 세션이 고치던 LedgerCore·LedgerTrips·LedgerTests가 함께 컴파일됨 — 내 커밋에는 넣지 않음). 구조 지표 통과, 새 문구 없음. 메모 패널·AI 탭·여행 장부 화면은 직접 보지 않음(가계부 첫 화면만 확인).
 - OCR1112A01 (2026-11-12): 결제 화면 캡처 읽기(제안 8-10). `LedgerScreenshotReader`(합계 줄→영수증, 날짜·시각 붙은 금액 줄 둘 이상→내역 목록, 아니면 결제 문자 규칙, 끝으로 영수증 규칙)와 여러 건 미리보기(`LedgerCapturePreviewSheet`, 이미 있는 것 같은 줄은 꺼 둠). 아이폰 11 단위 시험 `LedgerMessageAccuracyTests`·`LedgerReviewTests`·`LedgerTests` 47개 통과(`build/validation/OCR1112A01/device-test-3.log`; 첫 실행은 「취소」가 두 줄 위일 때 못 읽어 1건 실패 → 고침). 이 시험 빌드가 앱 Debug 빌드를 겸함(작업 트리에 다른 세션의 TVB1112A01 미커밋 변경 포함). 구조 지표 기준선 통과. 언어: 새 문구 5개를 12개 언어에 넣고 `generate.py` 실행, `check.py`의 남은 누락 348건(29문구×12)은 전부 다른 세션의 여행 화면 문구. 못 한 것: 실제 사진을 Vision으로 읽는 시험(시험은 글자 줄 입력만), 화면에서 미리보기를 눈으로 본 것, 실제 카드 앱 캡처 형식 확인. 단축어 영수증 동작은 그대로.
+- NTF1112A01 (2026-11-12 오전, 미완): 아이폰 11(iOS 27.2) XCUITest로 단축어 앱을 조작해 봄(대표가 UI 자동화 허용). 확인: 자동화 › + → 새 단축어 편집 → 「자동화」 칩 → 트리거 목록 → 「알림」은 「앱에서 알림을 수신할 때」이고 「앱」을 반드시 골라야 활성화됨(앱 목록은 기기에 깔린 앱) → 「결제 알림 넣기」 동작 추가 → 「알림 내용」에 「단축어 입력」 연결까지 됨(`build/validation/NTF1112A01/run-6~12.log`). 못 한 것: 이름 변경·공유(iCloud 링크)·「BOKKI 결제」 스위치 켜기 — XCUITest가 시작할 때마다 폰에서 암호 확인을 받는데 대표 부재로 「automation mode」 시간 초과·「인증 취소」가 반복됨(run-16~19). iPhone 미러링은 연결됐으나 마우스 클릭이 전달되지 않음(키보드만). 탐색 시험 코드는 저장소에 넣지 않음. 탐색 중 만든 「새로운 단축어 N」·「결제 알림 넣기 N」이 아이폰 11 단축어 앱에 남아 있음(지워야 함).
+- ACX1112A01·PRL1112A01 배포 (2026-11-12 오전): 대표 허락·권한 규칙 뒤 `npx wrangler deploy --config wrangler.local.toml`(배포 전 `npm test` 104개 통과) → 버전 ccbbdad6. 실서버 `openapi.json`에 `/app`·`addPaymentRule`·`setBudget`·`openScreen`·`resolveReview`·`payment_rule` 보임, `GET /app`는 키 없이 401. 최신 Debug 빌드를 아이폰 11에 설치·실행(지도 화면 캡처). Claude Code에 연결된 MCP로 넣은 `set_display_option`(id verify-ctl-1112-a)이 `get_command_results`에서 `applied`. 확인 안 한 것: 이 세션의 커넥터 도구 목록이 재연결 뒤에도 35개 그대로라 `get_app_state`·`set_budget`·`open_screen`·`add_payment_rule`을 MCP로 부르지 못함, 「AI에게 규칙 추가 요청」 끝까지 흐름, `openScreen` 눈 확인.
 - ACX1112A01 (2026-11-12): AI 연결 읽기·제어 확장. 읽기: 앱이 `/app`에 설정·가계부(이번 달 합계·예산·최근 100건)·확인 필요·받은 문자함(번호 가린 300자)·결제 규칙을 올리고 MCP `get_app_state`·OpenAPI `getAppState`로 읽음(iOS 자동화 상태는 앱이 알 수 없어 담지 않음). 쓰기 명령 7개: `setBudget`·`addOwnAccount`·`removeOwnAccount`·`deletePaymentRule`·`resolveReview`·`deleteInboxItem`·`openScreen`(결제 자동화 튜토리얼·단축어·AI 연결·가계부·데이터 보호·설정). 서버 `npm test` 104개 통과. 아이폰 11 단위 시험 6개 클래스 110개 통과(`build/validation/ACX1112A01/regression-1.log`), 시뮬레이터 16개(`appcontrol-1.log`). Claude Code에 연결된 MCP로 `get_summary` 읽기 확인(최근 7일), 쓰기 `set_display_option`은 큐에 들어감까지 확인. 확인 안 한 것: 서버 미배포라 `/app`·새 명령은 실서버에서 안 됨, `openScreen` 화면이 실제로 뜨는지 눈 확인, 큐에 넣은 명령의 적용 결과. 빼 둔 것: 여행 모드·급여(모델 API 없음), 분류별 예산, AI가 자기 권한·PIN·백업을 바꾸는 것.
 - KSM1112A01 (2026-11-12): 국내 카드사·은행·간편결제 문자 147건(공개 저장소 실제 수신 94·실제 정규식 구조 31·추정 22, 이름·번호는 가짜, `scripts/ledger-sms/kr-payment-sms.json`)으로 `LedgerMessageParser`를 고침. 떼어 낸 평가 도구 88/147 → 147/147, 기존 기대값 82건 유지. 아이폰 11 단위 시험: `LedgerMessageCorpusTests`(147건) 1개·`LedgerMessageAccuracyTests`·`LedgerReviewTests`·`LedgerMessageParserTests` 포함 28개 모두 통과(`build/validation/KSM1112A01/unit.log`). 한계: 추정 22건(토스뱅크·케이뱅크·지방은행·우체국·신협·수협·SC제일·간편결제)은 실제 문자로 확인 못 함, 날짜만 있는 문자는 받은 때로 넣음, 카카오뱅크 카드대금 출금은 지출로 읽음(이중 가능), 자동화 조건 「원」만으로는 결제 118건 중 102건만 넘어옴(「원·승인·출금·취소」면 116건). 튜토리얼: 추가 단추 → 실제 화면 다섯 장(추가·뒤로·자동화·스위치·켜진 모습), 아이폰 11에서 첫 장 캡처 확인(`build/validation/SCB1112A01/screens/22-tutorial.png`), 2~5장은 눈 확인 전. 자동화 자동 켜기는 불가(내보낸 파일에 켜짐 값 없음, 가져온 자동화는 꺼진 채).
 - PRL1112A01 (2026-11-12): 받은 결제 문자함·AI 규칙·개발자 메일. `PaymentInbox`(최근 30건·7일, 번호 가림)·`LedgerMessageRules`(정규식+이름 묶음, 견본과 맞고 금액을 읽어야 저장, 20개)·`PaymentTextCapture.process`(AI 규칙 먼저)·AI 탭 받은 문자 목록과 상세(「AI에게 규칙 추가 요청」·「개발자에게 추가 요청 메일」)·명령 `addPaymentRule`·일 종류 `payment_rule`. 아이폰 11 단위 시험 `AssistantPaymentRuleTests` 6개 통과(`build/validation/KSM1112A01/unit.log`), 서버 `npm test` 97개 통과. 확인 안 한 것: 서버 미배포(자동 모드에서 실서버 배포가 막힘)라 AI가 규칙을 보내는 끝까지 흐름, 받은 문자 화면 눈 확인, 규칙 뒤 다시 읽기(`PaymentInbox.reprocess`)는 시험 없음.
