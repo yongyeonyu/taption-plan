@@ -445,6 +445,33 @@ final class TravelTripUnitTests: XCTestCase {
         XCTAssertEqual(TravelQuickEntrySheet.durationText(90, language: .korean), "1시간 30분")
     }
 
+    /// TVU1113A01: 빈 셀을 누르면 선택만 되고, 「+」를 눌러야 그 시각으로 입력 시트가 열린다.
+    func testEmptyCellIsSelectedFirstAndPlusOpensEntry() throws {
+        let slot = try XCTUnwrap(TravelPlanTable.slot(x: 130, y: 12 * 60 * TravelPlanTable.minuteHeight + 9, width: 350))
+        let noon = TravelPlanCell(column: slot.column, minute: slot.minute)
+        // 1. 빈 셀 누르기: 선택만, 시트는 열리지 않는다.
+        let first = TravelPlanCell.after(.empty(noon), selected: nil)
+        XCTAssertEqual(first.selected, noon)
+        XCTAssertNil(first.opens)
+        XCTAssertEqual(noon.endMinute, 780)
+        // 2. 다른 셀 누르기: 선택이 옮겨 간다.
+        let evening = TravelPlanCell(column: 3, minute: 23 * 60 + 30)
+        let moved = TravelPlanCell.after(.empty(evening), selected: first.selected)
+        XCTAssertEqual(moved.selected, evening)
+        XCTAssertNil(moved.opens)
+        XCTAssertEqual(evening.endMinute, 1_440, "선택 표시는 하루를 넘지 않는다")
+        // 3. 「+」: 선택한 셀로 열고 선택은 풀린다.
+        let opened = TravelPlanCell.after(.plus, selected: moved.selected)
+        XCTAssertEqual(opened.opens, evening)
+        XCTAssertNil(opened.selected)
+        // 4. 셀 밖(시간축·있는 일정): 선택만 풀리고 열리지 않는다.
+        let cleared = TravelPlanCell.after(.elsewhere, selected: noon)
+        XCTAssertNil(cleared.selected)
+        XCTAssertNil(cleared.opens)
+        // 선택 없이 「+」가 올 수는 없지만, 와도 열지 않는다.
+        XCTAssertNil(TravelPlanCell.after(.plus, selected: nil).opens)
+    }
+
     /// TVZ1112A01: 지출은 그 시각의 일정 칸에 모이고(겹치면 늦게 시작한 일정), 이동 일정은 탈것을 먼저 권한다.
     func testSpendByItemAndVehicleSuggestions() throws {
         let base = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-12-03T10:00:00+09:00"))

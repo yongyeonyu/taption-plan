@@ -107,12 +107,41 @@ enum TravelPlanDays {
     }
 }
 
+/// 계획표에서 고른 빈 셀(TVU1113A01): 빈 곳을 누르면 먼저 셀이 선택되고, 그 셀의 「+」를 눌러야 입력 시트가 열린다(Trip 원본의 셀 선택 → 추가).
+struct TravelPlanCell: Equatable {
+    var column: Int
+    /// 15분 단위 시작.
+    var minute: Int
+
+    /// 선택 표시의 길이(분).
+    static let length = 60
+    var endMinute: Int { min(minute + Self.length, 1_440) }
+
+    enum Tap: Equatable {
+        /// 빈 셀을 누름.
+        case empty(TravelPlanCell)
+        /// 선택된 셀의 「+」를 누름.
+        case plus
+        /// 시간축·있는 일정·칸 들어 올리기처럼 셀 밖.
+        case elsewhere
+    }
+
+    /// 누른 뒤의 선택과, 입력 시트를 열 셀(「+」를 눌렀을 때만).
+    static func after(_ tap: Tap, selected: TravelPlanCell?) -> (selected: TravelPlanCell?, opens: TravelPlanCell?) {
+        switch tap {
+        case .empty(let cell): (cell, nil)
+        case .plus: (nil, selected)
+        case .elsewhere: (nil, nil)
+        }
+    }
+}
+
 /// 계획표: 이동·식사·관광·숙소 열에 계획 칸을 놓고, 시간축 옆에 실제 기록을 나란히 둔다.
 struct TravelPlanTable: View {
     let table: TravelPlanTableModel
     let language: MapHomeLanguage
     let onSelect: (TravelPlanTableModel.Block) -> Void
-    /// 빈 곳을 누름: 열과 15분 단위 시각.
+    /// 선택한 빈 셀의 「+」를 누름: 열과 15분 단위 시각.
     var onAdd: (Int, Int) -> Void = { _, _ in }
     /// 길게 눌러 끌어 옮김: 옮긴 분.
     var onMove: (TravelPlanTableModel.Block, Int) -> Void = { _, _ in }
@@ -131,6 +160,8 @@ struct TravelPlanTable: View {
     /// 끄는 동안의 변화(5분 단위로만 바뀌어 화면 갱신이 드물다).
     @State private var moveMinutes = 0
     @State private var resizeMinutes = 0
+    /// 눌러서 고른 빈 셀. 값이 바뀔 때만 갱신한다.
+    @State private var selectedCell: TravelPlanCell?
 
     /// 계획표 확대 배율(기기에 기억). 1분의 높이는 `0.9 × 배율`.
     @AppStorage("travelPlanZoom") private var zoom = 1.0
@@ -242,6 +273,7 @@ struct TravelPlanTable: View {
             ZStack(alignment: .topLeading) {
                 grid(width: proxy.size.width)
                 ForEach(table.actuals) { record in actualBar(record, columnWidth: columnWidth) }
+                if let selectedCell { cellAddButton(selectedCell, columnWidth: columnWidth) }
                 ForEach(table.blocks) { block in planBlock(block, columnWidth: columnWidth) }
                 if let now = table.nowMinute {
                     Rectangle().fill(TravelInk.actual).frame(width: proxy.size.width, height: 1.5).offset(y: CGFloat(now) * minuteHeight)
@@ -275,11 +307,42 @@ struct TravelPlanTable: View {
             } else if value.location.x < Self.leading {
                 // 시간축을 누르면 그 시각이 가운데(재생 헤드)로 온다.
                 withAnimation(.snappy(duration: 0.25)) { position.scrollTo(y: value.location.y) }
+                tap(.elsewhere)
             } else if let slot = Self.slot(x: value.location.x, y: value.location.y, width: width, scale: zoom) {
-                onAdd(slot.column, slot.minute)
+                tap(.empty(TravelPlanCell(column: slot.column, minute: slot.minute)))
             }
         })
         .accessibilityIdentifier("travelPlanGrid")
+    }
+
+    /// 누른 것에 따라 선택을 옮기거나 풀고, 「+」면 입력 시트를 연다.
+    private func tap(_ tap: TravelPlanCell.Tap) {
+        let next = TravelPlanCell.after(tap, selected: selectedCell)
+        if next.selected != selectedCell {
+            selectedCell = next.selected
+            if next.selected != nil { UISelectionFeedbackGenerator().selectionChanged() }
+        }
+        if let cell = next.opens { onAdd(cell.column, cell.minute) }
+    }
+
+    /// 선택된 셀: 주홍 테두리 칸 안의 「+」와 시작 시각. 누르면 입력 시트가 그 시각으로 열린다.
+    private func cellAddButton(_ cell: TravelPlanCell, columnWidth: CGFloat) -> some View {
+        Button { tap(.plus) } label: {
+            VStack(spacing: 1) {
+                Image(systemName: "plus").font(.system(size: 15, weight: .bold))
+                Text(Self.clock(cell.minute)).font(.system(size: 10, weight: .semibold).monospacedDigit())
+            }
+            .frame(width: columnWidth - 4, height: max(30, CGFloat(cell.endMinute - cell.minute) * minuteHeight))
+            .background(TravelInk.actual.opacity(0.12), in: RoundedRectangle(cornerRadius: 5))
+            .overlay { RoundedRectangle(cornerRadius: 5).stroke(TravelInk.actual, lineWidth: 1.5) }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(TravelInk.actual)
+        .offset(x: axisWidth + actualWidth + columnWidth * CGFloat(cell.column) + 2, y: CGFloat(cell.minute) * minuteHeight)
+        .accessibilityLabel(language.text("일정 넣기", "Add plan"))
+        .accessibilityValue(Self.clock(cell.minute))
+        .accessibilityIdentifier("travelPlanCellAdd")
     }
 
     /// 실제 기록: 시간축 바로 옆의 주홍 띠. 계획에 없던 머묾은 이름을 관광 열에 점선 칸으로 보인다.
@@ -337,7 +400,11 @@ struct TravelPlanTable: View {
         .shadow(color: .black.opacity(isLifted ? 0.25 : 0), radius: 6, y: 3)
         .contentShape(Rectangle())
         // 들린 칸은 눌러도 그대로 둔다(길게 누른 손을 뗄 때 바로 내려놓이지 않게). 내려놓기는 빈 곳을 누른다.
-        .onTapGesture { if !isLifted { onSelect(block) } }
+        .onTapGesture {
+            guard !isLifted else { return }
+            tap(.elsewhere)
+            onSelect(block)
+        }
         .gesture(moveGesture(block))
         .foregroundStyle(TravelInk.plan)
         .offset(x: axisWidth + actualWidth + columnWidth * CGFloat(block.column) + 2, y: CGFloat(start) * minuteHeight)
@@ -375,6 +442,7 @@ struct TravelPlanTable: View {
         LongPressGesture(minimumDuration: 0.3)
             .onEnded { _ in
                 liftedID = block.id
+                tap(.elsewhere)
                 moveMinutes = 0
                 resizeMinutes = 0
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
