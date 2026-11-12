@@ -888,8 +888,8 @@ struct TravelModeView: View {
     // MARK: 여행 화면 뼈대
 
     private func tripHeader(_ entry: TravelTripDirectory.Entry) -> some View {
+        // 여행 이름 줄이 맨 위, 돈 줄은 그 아래에 따로 둔다(대표 지시).
         VStack(spacing: 8) {
-            moneyBar(entry)
             HStack(spacing: 8) {
                 // 뒤로가기: 여행 목록(지구본)으로. 지구본 그림만으로는 뒤로가기인 줄 알기 어려웠다(대표 지적).
                 Button(action: backToGlobe) {
@@ -914,6 +914,7 @@ struct TravelModeView: View {
             .padding(8)
             .background(TravelInk.panel, in: RoundedRectangle(cornerRadius: 14))
             .overlay { RoundedRectangle(cornerRadius: 14).stroke(TravelInk.border, lineWidth: 1) }
+            moneyBar(entry)
         }
         .foregroundStyle(TravelInk.plan)
         // 넓은 화면에서 줄이 끝까지 늘어나지 않게 왼쪽에 묶는다.
