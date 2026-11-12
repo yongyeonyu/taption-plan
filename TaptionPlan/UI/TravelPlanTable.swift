@@ -200,6 +200,8 @@ struct TravelPlanTable: View {
     /// 재생 헤드의 시각. 손잡이를 끌거나 시간축을 누르면 `onScrub`으로 새 시각을 알린다.
     var playMinute: Int?
     var onScrub: (Int) -> Void = { _ in }
+    /// 재생 헤드의 시각 표를 누름(Trip 원본): 그 시각으로 지출을 넣는다.
+    var onExpenseAt: (Int) -> Void = { _ in }
     @State private var position = ScrollPosition()
     /// 처음 자리를 잡았는지.
     @State private var didPlace = false
@@ -224,6 +226,15 @@ struct TravelPlanTable: View {
     /// 계획표 확대 배율(기기에 기억). 1분의 높이는 `0.9 × 배율`.
     @AppStorage("travelPlanZoom") private var zoom = 1.0
     static let zooms: [Double] = [0.6, 1, 1.5, 2.2]
+    /// 두 손가락으로 벌리기 시작했을 때의 배율.
+    @State private var pinchBase: Double?
+
+    /// 두 손가락으로 벌리거나 오므린 배율(Trip 원본의 핀치): 단추와 같은 범위 안에서 0.05 단위로만 바뀌어 화면 갱신이 드물다.
+    static func pinched(from base: Double, magnification: Double) -> Double {
+        guard magnification.isFinite, magnification > 0 else { return base }
+        let raw = (base * magnification / 0.05).rounded() * 0.05
+        return min(max(raw, zooms[0]), zooms[zooms.count - 1])
+    }
     private var minuteHeight: CGFloat { Self.minuteHeight * zoom }
     /// 앞 일정에서 오는 시간이 모자란 일정들.
     var tightIDs: Set<String> = []
@@ -293,6 +304,14 @@ struct TravelPlanTable: View {
                     }
                 }
                 .scrollPosition($position)
+                .simultaneousGesture(MagnifyGesture()
+                    .onChanged { value in
+                        let base = pinchBase ?? zoom
+                        if pinchBase == nil { pinchBase = base }
+                        let next = Self.pinched(from: base, magnification: value.magnification)
+                        if abs(next - zoom) > 0.001 { zoom = next }
+                    }
+                    .onEnded { _ in pinchBase = nil })
                 // 칸을 들어 올린 동안에는 스크롤을 멈춰, 손잡이를 끌 때 표가 대신 밀리지 않게 한다.
                 .scrollDisabled(liftedID != nil || cellDragBase != nil)
                 .onScrollGeometryChange(for: Int.self) { geometry in
@@ -574,20 +593,22 @@ struct TravelPlanTable: View {
         min(max(start + Int((translation / (minuteHeight * scale)).rounded()), 0), 1_439)
     }
 
-    /// 재생 헤드: 가운데에 고정된 남색 선과 왼쪽의 시각 표. 누르는 것은 아래 표가 받는다.
+    /// 재생 헤드: 가운데에 고정된 남색 선과 왼쪽의 시각 표. 선은 누르는 것을 아래 표에 넘기고, 시각 표를 누르면 그 시각으로 지출을 넣는다.
     private func playhead(_ minute: Int, width: CGFloat) -> some View {
         ZStack(alignment: .leading) {
-            Rectangle().fill(TravelInk.plan).frame(width: width, height: 2)
-            Text(Self.clock(minute)).font(.system(size: 11, weight: .bold).monospacedDigit()).foregroundStyle(TravelInk.land)
-                .frame(width: Self.leading - 4, height: 24)
-                .background(TravelInk.plan, in: Capsule())
+            Rectangle().fill(TravelInk.plan).frame(width: width, height: 2).allowsHitTesting(false)
+            Button { onExpenseAt(minute) } label: {
+                Text(Self.clock(minute)).font(.system(size: 11, weight: .bold).monospacedDigit()).foregroundStyle(TravelInk.land)
+                    .frame(width: Self.leading - 4, height: 24)
+                    .background(TravelInk.plan, in: Capsule())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(language.text("재생 헤드", "Playhead"))
+            .accessibilityValue(Self.clock(minute))
+            .accessibilityHint(language.text("지출 넣기", "Add expense"))
+            .accessibilityIdentifier("travelPlayhead")
         }
         .frame(width: width, height: 24, alignment: .leading)
-        .allowsHitTesting(false)
-        .accessibilityElement()
-        .accessibilityLabel(language.text("재생 헤드", "Playhead"))
-        .accessibilityValue(Self.clock(minute))
-        .accessibilityIdentifier("travelPlayhead")
     }
 
     private static func clock(_ minute: Int) -> String { String(format: "%02d:%02d", minute / 60 % 24, minute % 60) }

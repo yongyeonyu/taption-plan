@@ -1046,7 +1046,7 @@ struct TravelModeView: View {
                     onMove: { block, minutes in editTimes(entry, block: block, move: minutes) },
                     onResize: { block, minutes in editTimes(entry, block: block, resize: minutes) },
                     playMinute: currentPlayMinute(entry),
-                    onScrub: { playMinute = $0 }, selection: $planSelectedID,
+                    onScrub: { playMinute = $0 }, onExpenseAt: { addExpense(entry, minute: $0) }, selection: $planSelectedID,
                     tightIDs: TravelPlayhead.tightStops(playStops(entry), travelMinutes: routes.minutes)
                 )
                     .id(dayKey(entry))

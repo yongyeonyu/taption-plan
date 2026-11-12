@@ -1124,6 +1124,16 @@ final class TaptionPlanTravelPlanUITests: XCTestCase {
         unfold.tap()
         XCTAssertTrue(fold.waitForExistence(timeout: 3))
 
+        // 재생 헤드의 시각 표를 누르면 지출 입력(장부가 없으면 장부 시트)이 열린다.
+        let playhead = app.buttons["재생 헤드"]
+        XCTAssertTrue(playhead.waitForExistence(timeout: 3))
+        playhead.tap()
+        sleep(1)
+        shot(app, "6b-playhead-expense")
+        XCTAssertFalse(handle.isHittable, "재생 헤드를 누르면 시트가 떠 계획표를 가린다")
+        app.swipeDown(velocity: .fast)
+        sleep(1)
+
         // 여행 이름을 누르면 여행 속성 시트가 열린다.
         app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "후쿠오카")).firstMatch.tap()
         XCTAssertTrue(app.buttons["취소"].waitForExistence(timeout: 5), "여행 이름을 누르면 여행 고치기 시트가 열린다")

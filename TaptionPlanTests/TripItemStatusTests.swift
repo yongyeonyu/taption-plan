@@ -421,6 +421,11 @@ final class TravelTripUnitTests: XCTestCase {
         XCTAssertEqual(TravelPlanSheetHeight.toggled(437, size: phone), 544, "지도 접기")
         XCTAssertEqual(TravelPlanSheetHeight.toggled(544, size: phone), 437, "지도 펼치기")
         XCTAssertEqual(TravelModeView.mapArea(phone, isPlanUp: true, tableHeight: 544).height, 80, "지도 접기에서도 지도 자리는 80pt 남는다")
+        // TVU1113A01: 핀치 배율은 단추와 같은 범위(0.6~2.2) 안에서 0.05 단위.
+        XCTAssertEqual(TravelPlanTable.pinched(from: 1, magnification: 1.52), 1.5, accuracy: 0.001)
+        XCTAssertEqual(TravelPlanTable.pinched(from: 1, magnification: 9), 2.2, accuracy: 0.001)
+        XCTAssertEqual(TravelPlanTable.pinched(from: 1, magnification: 0.1), 0.6, accuracy: 0.001)
+        XCTAssertEqual(TravelPlanTable.pinched(from: 1.5, magnification: .nan), 1.5)
         XCTAssertEqual(TravelPlanDays.shortDate("2026-11-20"), "11/20")
         XCTAssertEqual(TravelPlanDays.shortDate("2026-01-05"), "1/5")
         XCTAssertEqual(TravelPlanDays.shortDate("잘못"), "")
