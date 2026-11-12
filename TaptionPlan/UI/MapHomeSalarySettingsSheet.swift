@@ -12,6 +12,7 @@ struct MapHomeSalarySettingsSheet: View {
     var showsOnlyPayInput = false
     @Environment(\.dismiss) private var dismiss
     @AppStorage(MapHomeSalaryPolicy.annualKey) private var annualPay = 0.0
+    @AppStorage(MapHomeSalaryPolicy.aiLinkKey) private var isAILinked = true
     @AppStorage(MapHomeSalaryPolicy.isNetInputKey) private var isNetInput = false
     @AppStorage(MapHomeSalaryPolicy.monthlyPayKey) private var monthlyPay = 0.0
     @AppStorage(MapHomeSalaryPolicy.showsNetKey) private var showsNet = true
@@ -122,10 +123,15 @@ struct MapHomeSalarySettingsSheet: View {
                 if !showsOnlyPayInput {
                     Text(language.text("연봉 카운터", "Salary counter"))
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(22)), weight: .bold))
-                    Text(language.text(
-                        "업무 시간에만 번 돈이 쌓여요. 금액은 이 기기에만 저장돼요.",
-                        "Earnings grow only during work time. Stored only on this device."
-                    ))
+                    Text(isAILinked
+                        ? language.text(
+                            "업무 시간에만 번 돈이 쌓여요. AI를 연결했다면 급여 설정을 AI도 읽고 바꿀 수 있어요.",
+                            "Earnings grow only during work time. If you connected an AI, it can read and change these pay settings."
+                        )
+                        : language.text(
+                            "업무 시간에만 번 돈이 쌓여요. 금액은 이 기기에만 저장돼요.",
+                            "Earnings grow only during work time. Stored only on this device."
+                        ))
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
                 }
@@ -304,6 +310,16 @@ struct MapHomeSalarySettingsSheet: View {
                         row(language.text("일급(8시간)", "Per day (8 h)"), won(rate * 8))
                     }
                 }
+
+                // PAY1112A02: 끄면 급여 설정을 AI에게 올리지 않고 AI가 바꾸지도 못한다.
+                Toggle(language.text("AI 연동", "AI link"), isOn: $isAILinked)
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
+                    .tint(Color.tpAccent)
+                Text(language.text(
+                    "끄면 연결된 AI가 급여 금액과 설정을 읽거나 바꿀 수 없어요.",
+                    "When off, a connected AI cannot read or change your pay amounts and settings."
+                ))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium)).foregroundStyle(Color.tpSecondary)
 
                 if settings.isConfigured {
                     Button(language.text("연봉 카운터 끄기", "Turn off"), role: .destructive) {

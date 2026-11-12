@@ -463,6 +463,7 @@ extension AppModel {
             result.appChange = AssistantAppChange(questionID: question.id)
             return result
         case let .setSetting(setting, value):
+            if setting.isSalary, !MapHomeSalaryPolicy.isAILinked(defaults) { return .rejected("salary_link_off") }
             let change = AssistantPreferenceChange(key: setting.key, before: preferences.value(setting.key, model: self), after: value)
             guard change.before != change.after else { return .rejected("no_change") }
             if setting.isModelBacked {

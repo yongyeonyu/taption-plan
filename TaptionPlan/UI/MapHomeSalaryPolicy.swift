@@ -85,6 +85,12 @@ enum MapHomeKoreanNetPay {
 /// 연봉 카운터: 업무 시간에 시급을 곱해 번 돈을 보여 준다(통화는 `AppRegion`).
 enum MapHomeSalaryPolicy {
     static let annualKey = "mapHomeSalaryAnnual"
+    /// 급여 설정을 연결된 AI가 읽고 바꿔도 되는지(PAY1112A02). 값이 없으면 켠 것으로 본다.
+    static let aiLinkKey = "mapHomeSalaryAILink"
+
+    static func isAILinked(_ defaults: UserDefaults = .standard) -> Bool {
+        defaults.object(forKey: aiLinkKey) as? Bool ?? true
+    }
     static let monthlyPayKey = "mapHomeSalaryMonthlyPay"
     static let isNetInputKey = "mapHomeSalaryIsNetInput"
     static let showsNetKey = "mapHomeSalaryShowsNet"

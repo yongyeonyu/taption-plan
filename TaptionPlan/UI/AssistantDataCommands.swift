@@ -534,6 +534,14 @@ enum AssistantSetting: String, CaseIterable, Codable, Sendable {
         case offOnly
     }
 
+    /// 급여 쪽 설정. 연봉 카운터의 「AI 연동」을 끄면 올리지도 바꾸지도 않는다(PAY1112A02).
+    var isSalary: Bool {
+        switch self {
+        case .salaryMode, .annualPay, .monthlyPay, .payIsNet, .showsNetPay, .hourlyPay, .hourlyPayIsNet, .hourlyTax, .weeklyHolidayPay: true
+        default: false
+        }
+    }
+
     /// 앱 자료(`snapshot.settings`)에 있어 모델의 설정 함수로 바꾸는 것.
     var isModelBacked: Bool {
         switch self {

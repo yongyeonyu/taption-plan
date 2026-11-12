@@ -5487,6 +5487,9 @@
 "승인하면 건강·Apple Watch에서 가져온 기록이 앱에서 지워집니다.|Approving removes the records brought from Health and Apple Watch from the app.": "Approvando, i dati importati da Salute e Apple Watch vengono rimossi dall’app.",
 "승인하면 그 화면만 엽니다. 실제 실행과 비밀번호 입력은 직접 하세요.|Approving only opens that screen. You do the action and enter any password yourself.": "L’approvazione apre solo quella schermata. Esegui tu l’azione e inserisci la password.",
 "승인하면 바로 바뀝니다. 덜 보내거나 기간을 줄이면 서버에 올린 기록을 지웁니다.|It changes as soon as you approve. Sharing less or keeping it shorter deletes what the server holds.": "La modifica vale appena approvi. Condividere meno o conservare per meno tempo elimina ciò che è sul server.",
-"승인함|Approved": "Approvato"
+"승인함|Approved": "Approvato",
+"AI 연동|AI link": "Collegamento IA",
+"끄면 연결된 AI가 급여 금액과 설정을 읽거나 바꿀 수 없어요.|When off, a connected AI cannot read or change your pay amounts and settings.": "Se disattivato, un’IA collegata non può leggere né modificare importi e impostazioni della paga.",
+"업무 시간에만 번 돈이 쌓여요. AI를 연결했다면 급여 설정을 AI도 읽고 바꿀 수 있어요.|Earnings grow only during work time. If you connected an AI, it can read and change these pay settings.": "I guadagni crescono solo durante l’orario di lavoro. Se hai collegato un’IA, può leggere e modificare queste impostazioni della paga."
 }
 }

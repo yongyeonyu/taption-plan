@@ -1703,6 +1703,24 @@ final class AssistantAppControlTests: XCTestCase {
         store.set(42_000_000.0, forKey: MapHomeSalaryPolicy.annualKey)
         let withPay = AssistantAppStateSync.make(await AssistantAppStateSync.input(model: model, preferences: preferences, now: at(11, 12, 10), calendar: calendar))
         XCTAssertEqual(withPay.settings.values?["annualPay"], "42000000.0", "정해 둔 연봉은 읽힌다(PAY1112A01)")
+
+        // PAY1112A02: 연봉 카운터의 「AI 연동」을 끄면 급여 설정은 올리지도 바꾸지도 않는다. 다른 설정은 그대로다.
+        XCTAssertTrue(MapHomeSalaryPolicy.isAILinked(store), "기본은 켬")
+        store.set(false, forKey: MapHomeSalaryPolicy.aiLinkKey)
+        store.set(true, forKey: MapHomeSalaryPolicy.isHourlyKey)
+        let unlinked = AssistantAppStateSync.make(await AssistantAppStateSync.input(model: model, preferences: preferences, now: at(11, 12, 10), calendar: calendar))
+        XCTAssertNil(unlinked.settings.values?["annualPay"])
+        XCTAssertNil(unlinked.settings.values?["salaryMode"])
+        XCTAssertNil(unlinked.settings.salaryMode)
+        XCTAssertEqual(unlinked.settings.values?["gpsIntervalSeconds"], "600")
+        let refusedOutcome = await model.applyAssistantCommands(try batch([
+            command("pay", "setSetting", ["setting": "annualPay", "value": 1]),
+            command("tax", "setSetting", ["setting": "hourlyTax", "value": "none"]),
+            command("car", "setSetting", ["setting": "tollVehicle", "value": "compact"]),
+        ]), defaults: store)
+        let refused = try XCTUnwrap(refusedOutcome)
+        XCTAssertEqual(refused.results.map(\.reason), ["salary_link_off", "salary_link_off", nil])
+        XCTAssertEqual(store.double(forKey: MapHomeSalaryPolicy.annualKey), 42_000_000, "금액은 그대로다")
     }
 
     /// ACD1112A01: 승인 요청은 정해진 종류와 값만 읽고, 승인하기 전에는 아무것도 바꾸지 않는다.

@@ -414,8 +414,10 @@ enum AssistantAppStateSync {
             inbox: PaymentInbox.items(defaults, now: now), rules: LedgerMessageRules.rules(defaults),
             places: model.snapshot.settings.frequentPlaces, categories: model.snapshot.categories,
             trips: model.snapshot.settings.travelTrips ?? [],
-            tollVehicle: AssistantSetting.tollVehicle.read(defaults), salaryMode: AssistantSetting.salaryMode.read(defaults),
-            settingValues: Dictionary(uniqueKeysWithValues: AssistantSetting.allCases.compactMap { setting in
+            tollVehicle: AssistantSetting.tollVehicle.read(defaults),
+            salaryMode: MapHomeSalaryPolicy.isAILinked(defaults) ? AssistantSetting.salaryMode.read(defaults) : nil,
+            settingValues: Dictionary(uniqueKeysWithValues: AssistantSetting.allCases
+                .filter { !$0.isSalary || MapHomeSalaryPolicy.isAILinked(defaults) }.compactMap { setting in
                 (setting.isModelBacked ? setting.read(model: model) : setting.read(defaults)).map { (setting.rawValue, $0) }
             })
         )
