@@ -5502,6 +5502,14 @@
 "회사에서 업무|Working at the office": "会社で仕事",
 "회사에서 휴식|Break at the office": "会社で休憩",
 "회의|Meeting": "会議",
-"휴식|Rest": "休憩"
+"휴식|Rest": "休憩",
+"다시 묻지 않음|Won't ask again": "今後は確認しない",
+"내 차 등록·빼기|Register or remove my car": "マイカーの登録・解除",
+"내 차 아님|Not my car": "マイカーではない",
+"내 차로 등록|Registered as my car": "マイカーとして登録",
+"분류 안 함|Not classified": "分類しない",
+"일정 제목 분류 정하기|Classify calendar event titles": "予定タイトルの分類を決める",
+"자주 머무는 곳 제안 등록·거절|Register or dismiss suggested places": "よく滞在する場所の提案を登録・拒否",
+"제안한 곳|Suggested place": "提案された場所"
 }
 }

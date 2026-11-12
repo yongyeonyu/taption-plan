@@ -1,5 +1,5 @@
 {
- "ui": 4784,
+ "ui": 4792,
  "catalog": 502,
  "unread": [
   {
@@ -100,13 +100,13 @@
   },
   {
    "file": "TaptionPlan/Core/LedgerMessageRules.swift",
-   "line": 400,
+   "line": 422,
    "ko": "$0",
    "en": "language"
   },
   {
    "file": "TaptionPlan/Core/LedgerMessageRules.swift",
-   "line": 436,
+   "line": 458,
    "ko": "entry.amount",
    "en": "entry.currency"
   },

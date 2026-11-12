@@ -207,6 +207,22 @@ extension AssistantCommandParser {
         case "setSetting":
             guard let setting = raw.setting.flatMap(AssistantSetting.init(rawValue:)), let value = raw.value.flatMap(setting.canonical) else { return nil }
             return .setSetting(setting, value: value)
+        case "resolvePlaceSuggestion":
+            guard raw.decision == "register" || raw.decision == "dismiss" else { return nil }
+            let register = raw.decision == "register"
+            if raw.name != nil, !register || clean(raw.name, max: AssistantCatalogLimits.placeName) == nil { return nil }
+            if raw.kind != nil, !register || raw.kind.flatMap(FrequentPlaceKind.init(rawValue:)) == nil { return nil }
+            return .resolvePlaceSuggestion(
+                register: register, name: clean(raw.name, max: AssistantCatalogLimits.placeName), kind: raw.kind.flatMap(FrequentPlaceKind.init(rawValue:))
+            )
+        case "setCarAudio":
+            guard let name = clean(raw.name, max: 60), let isMyCar = raw.isMyCar else { return nil }
+            return .setCarAudio(name: name, isMyCar: isMyCar)
+        case "setCalendarTitleDetail":
+            guard let title = clean(raw.title, max: 200), let detail = raw.detailId else { return nil }
+            if detail == "none" { return .setCalendarTitleDetail(title: title, detailID: nil) }
+            let allowed = CalendarTitleClassification.selectableCategories.flatMap(\.details).map(\.id)
+            return allowed.contains(detail) ? .setCalendarTitleDetail(title: title, detailID: detail) : nil
         case "requestApproval":
             guard let id = raw.id, let approval = AssistantApproval.make(request: raw.request, value: raw.value) else { return nil }
             return .requestApproval(approval.question(id: id, now: now))

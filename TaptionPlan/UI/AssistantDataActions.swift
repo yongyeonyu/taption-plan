@@ -486,6 +486,8 @@ extension AppModel {
             return AssistantEditResult(before: describe(current), after: describe(updated))
         case .addTrip, .updateTrip, .deleteTrip:
             return await applyAssistantTripAction(action)
+        case .resolvePlaceSuggestion, .setCarAudio, .setCalendarTitleDetail:
+            return await applyAssistantPromptAction(action)
         default:
             return .rejected("invalid")
         }
@@ -555,6 +557,90 @@ extension AppModel {
             return AssistantEditResult(before: describe(old), after: language.text("지움", "Deleted"))
         default:
             return .rejected("invalid")
+        }
+    }
+}
+
+extension AssistantAppChange.CarAudio.Lists {
+    init(_ settings: AppFeatureSettings) {
+        self.init(registered: settings.registeredCarAudioNames, recent: settings.recentCarAudioNames, dismissed: settings.dismissedCarAudioNames)
+    }
+}
+
+extension AppModel {
+    /// 앱의 「확인할 것」을 AI가 끝낸다(HND1112A01). 화면에서 답할 때와 같은 함수를 쓴다.
+    func applyAssistantPromptAction(_ action: AssistantCommand.Action) async -> AssistantEditResult {
+        let language = MapHomeLanguage.current
+        switch action {
+        case let .resolvePlaceSuggestion(register, name, kind):
+            // 앱이 지금 제안하고 있는 자리(앱 상태에 올린 것)에만 답한다. 여기서 새로 계산하지 않는다.
+            guard let suggestion = frequentPlaceSuggestion else { return .rejected("no_suggestion") }
+            let label = suggestion.suggestedName.flatMap { AssistantActivityBuilder.isAddressLike($0) ? nil : $0 } ?? language.text("제안한 곳", "Suggested place")
+            guard register else {
+                dismissFrequentPlaceSuggestion()
+                await persist()
+                return AssistantEditResult(before: label, after: language.text("다시 묻지 않음", "Won't ask again"))
+            }
+            if let name, snapshot.settings.frequentPlaces.contains(where: { $0.name.localizedCaseInsensitiveCompare(name) == .orderedSame }) {
+                return .rejected("duplicate")
+            }
+            guard let placeID = registerFrequentPlaceSuggestion(as: kind ?? .custom) else { return .rejected("edit_failed") }
+            if let name { renameFrequentPlace(placeID, name: name) }
+            await persist()
+            let saved = snapshot.settings.frequentPlaces.first { $0.id == placeID }
+            return AssistantEditResult(before: label, after: saved?.displayName ?? name ?? label)
+        case let .setCarAudio(name, isMyCar):
+            let before = AssistantAppChange.CarAudio.Lists(settings)
+            // 앱이 본 기기 이름만 받는다(최근 연결·등록·거절한 것).
+            guard (before.registered + before.recent + before.dismissed).contains(name) else { return .rejected("no_device") }
+            await setCarAudio(name, isMyCar: isMyCar)
+            let after = AssistantAppChange.CarAudio.Lists(settings)
+            guard after != before else { return .rejected("no_change") }
+            var result = AssistantEditResult(before: name, after: isMyCar ? language.text("내 차로 등록", "Registered as my car") : language.text("내 차 아님", "Not my car"))
+            result.appChange = AssistantAppChange(carAudio: .init(before: before, after: after))
+            return result
+        case let .setCalendarTitleDetail(title, detailID):
+            let key = CalendarTitleClassification.key(title)
+            let stored = snapshot.settings.calendarTitleDetails[key]
+            guard stored == nil || stored?.detailID != detailID else { return .rejected("no_change") }
+            await setCalendarTitleDetail(detailID, title: title, on: selectedDate)
+            func name(_ id: String?) -> String {
+                guard let id else { return language.text("분류 안 함", "Not classified") }
+                let detail = CalendarTitleClassification.selectableCategories.flatMap(\.details).first { $0.id == id }
+                return detail.map { RecordClassificationCatalog.localizedDetailTitle($0.title, language: language) } ?? id
+            }
+            var result = AssistantEditResult(
+                before: "\(title): " + (stored == nil ? language.text("정하지 않음", "Not set") : name(stored?.detailID)), after: "\(title): \(name(detailID))"
+            )
+            result.appChange = AssistantAppChange(calendarTitle: .init(title: title, hadBefore: stored != nil, before: stored?.detailID, after: detailID))
+            return result
+        default:
+            return .rejected("invalid")
+        }
+    }
+
+    /// 내 차·일정 제목 분류가 명령 뒤에 또 바뀌지 않았는가.
+    func assistantPromptChangeIsCurrent(_ change: AssistantAppChange?) -> Bool {
+        if let car = change?.carAudio, AssistantAppChange.CarAudio.Lists(settings) != car.after { return false }
+        if let title = change?.calendarTitle {
+            let stored = snapshot.settings.calendarTitleDetails[CalendarTitleClassification.key(title.title)]
+            if stored == nil || stored?.detailID != title.after { return false }
+        }
+        return true
+    }
+
+    /// 내 차·일정 제목 분류를 명령 전으로 돌린다.
+    func undoAssistantPromptChange(_ change: AssistantAppChange?) async {
+        if let car = change?.carAudio {
+            snapshot.settings.dismissedCarAudioNames = car.before.dismissed
+            await updateCarAudioNames(registered: car.before.registered, recent: car.before.recent)
+        }
+        if let title = change?.calendarTitle {
+            if title.hadBefore {
+                await setCalendarTitleDetail(title.before, title: title.title, on: selectedDate)
+            } else {
+                await clearCalendarTitleDetail(title: title.title, on: selectedDate)
+            }
         }
     }
 }

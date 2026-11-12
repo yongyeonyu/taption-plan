@@ -68,6 +68,10 @@ struct AssistantCommand: Identifiable, Equatable, Sendable {
         case setSetting(AssistantSetting, value: String)
         /// ACD1112A01: 혼자 할 수 없는 일의 승인 요청. 앱에서 승인해야 실행된다.
         case requestApproval(AssistantQuestion)
+        /// HND1112A01: 앱의 「확인할 것」을 끝낸다 — 자주 머무는 곳 제안, 내 차, 일정 제목 분류(`detailID` nil은 분류 안 함).
+        case resolvePlaceSuggestion(register: Bool, name: String?, kind: FrequentPlaceKind?)
+        case setCarAudio(name: String, isMyCar: Bool)
+        case setCalendarTitleDetail(title: String, detailID: String?)
     }
 
     let id: String
@@ -134,6 +138,8 @@ enum AssistantCommandParser {
         let wishDays: Int?, countryCode: String?, regionName: String?, setting: String?, value: AssistantLooseValue?
         // ACD1112A01: requestApproval.
         let request: String?
+        // HND1112A01: setCarAudio·setCalendarTitleDetail.
+        let isMyCar: Bool?, detailId: String?
     }
 
     /// `{"commands":[...]}`를 읽는다. 서버와 같은 규칙으로 다시 본다.
@@ -363,6 +369,7 @@ struct AssistantCommandOutcome: Equatable, Sendable {
         case .resolveReview: ledger += 1
         case .askUser, .requestApproval: questions += 1
         case .addPlace, .updatePlace, .deletePlace, .addCategory, .updateCategory, .setSetting: settings += 1
+        case .resolvePlaceSuggestion, .setCarAudio, .setCalendarTitleDetail: settings += 1
         case .addTrip, .updateTrip, .deleteTrip: schedules += 1
         case .setBubble: bubbles += 1
         case .addExpense, .updateExpense: ledger += 1

@@ -274,6 +274,20 @@ struct AssistantAppState: Codable, Equatable, Sendable {
     var places: [Place]?
     var categories: [Category]?
     var trips: [Trip]?
+    /// HND1112A01: 앱이 등록을 제안하는 자리(장소 이름 공유 수준에서만, 좌표 없음)와 차 오디오 기기 이름.
+    var placeSuggestion: PlaceSuggestion?
+    var carAudio: CarAudio?
+
+    struct PlaceSuggestion: Codable, Equatable, Sendable {
+        var id: String
+        var name: String?
+        var visits: Int
+    }
+
+    struct CarAudio: Codable, Equatable, Sendable {
+        var registered: [String]
+        var pending: [String]
+    }
 }
 
 /// 앱 상태를 중계 서버에 올린다. 하루 기록을 올린 뒤 함께 돌고, 바뀌었을 때만(또는 20시간마다) 보낸다.
@@ -310,6 +324,9 @@ enum AssistantAppStateSync {
         var places: [FrequentPlace] = []
         var categories: [CategoryDefinition] = []
         var trips: [TravelTrip] = []
+        var placeSuggestion: FrequentPlaceSuggestion?
+        var registeredCarAudio: [String] = []
+        var pendingCarAudio: [String] = []
         var tollVehicle: String?
         var salaryMode: String?
         var settingValues: [String: String] = [:]
@@ -371,7 +388,15 @@ enum AssistantAppStateSync {
                     end: $0.endDay.isEmpty ? nil : $0.endDay, wishDays: $0.isWish ? $0.wishDays : nil, country: $0.countryCode,
                     region: $0.regionName.map { mask($0, 40) }, currency: $0.currencyCode
                 )
-            }
+            },
+            placeSuggestion: input.shareLevel == .visits ? input.placeSuggestion.map {
+                .init(
+                    id: $0.id, name: $0.suggestedName.flatMap { AssistantActivityBuilder.isAddressLike($0) ? nil : mask($0, AssistantCatalogLimits.placeName) },
+                    visits: $0.visitCount
+                )
+            } : nil,
+            carAudio: input.registeredCarAudio.isEmpty && input.pendingCarAudio.isEmpty ? nil
+                : .init(registered: input.registeredCarAudio.prefix(20).map { mask($0, 60) }, pending: input.pendingCarAudio.prefix(20).map { mask($0, 60) })
         )
     }
 
@@ -414,6 +439,11 @@ enum AssistantAppStateSync {
             inbox: PaymentInbox.items(defaults, now: now), rules: LedgerMessageRules.rules(defaults),
             places: model.snapshot.settings.frequentPlaces, categories: model.snapshot.categories,
             trips: model.snapshot.settings.travelTrips ?? [],
+            placeSuggestion: model.frequentPlaceSuggestion,
+            registeredCarAudio: model.settings.registeredCarAudioNames,
+            pendingCarAudio: model.settings.recentCarAudioNames.filter {
+                !model.settings.registeredCarAudioNames.contains($0) && !model.settings.dismissedCarAudioNames.contains($0)
+            },
             tollVehicle: AssistantSetting.tollVehicle.read(defaults),
             salaryMode: MapHomeSalaryPolicy.isAILinked(defaults) ? AssistantSetting.salaryMode.read(defaults) : nil,
             settingValues: Dictionary(uniqueKeysWithValues: AssistantSetting.allCases

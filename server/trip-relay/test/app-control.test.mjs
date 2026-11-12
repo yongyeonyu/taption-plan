@@ -336,3 +336,38 @@ test("trip and setting commands are validated; app state carries trips", async (
     ["2026-12-01", "JP", "JPY", "electric", "salary"]);
   assert.deepEqual(viaMcp.trips[0].title, { untrusted_user_text: "오사카" });
 });
+
+// HND1112A01: 앱의 「확인할 것」을 AI가 끝내는 명령 세 가지.
+test("place suggestion, car audio and calendar title commands are validated; app state carries the suggestion and car audio", async () => {
+  const { handle } = await import("../src/index.js");
+  const { makeEnv } = await import("./fakes.mjs");
+  const { env } = makeEnv();
+  const key = () => Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url");
+  const owner = key(), write = key();
+  const send = (path, method, body, token) => handle(new Request(`https://relay.example.com${path}`, {
+    method, headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body),
+  }), env);
+  assert.equal((await send("/register", "POST", {}, owner)).status, 201);
+  assert.equal((await send("/pin", "POST", { pin: "135790" }, owner)).status, 200);
+  assert.equal((await send("/keys", "POST", { keys: [{ token: write, scope: "write", expiresAt: null }], pin: "135790" }, owner)).status, 201);
+  const post = async (action, fields) => (await send("/command", "POST", { format: "bokki-command", version: 1, id: `c-${crypto.randomUUID()}`, action, ...fields }, write)).status;
+  const good = [
+    ["resolvePlaceSuggestion", { decision: "register", name: "단골 카페", kind: "custom" }], ["resolvePlaceSuggestion", { decision: "register" }],
+    ["resolvePlaceSuggestion", { decision: "dismiss" }], ["setCarAudio", { name: "My Sonata", isMyCar: true }], ["setCarAudio", { name: "렌터카", isMyCar: false }],
+    ["setCalendarTitleDetail", { title: "주간 회의", detailId: "work.meeting" }], ["setCalendarTitleDetail", { title: "생일", detailId: "none" }],
+  ];
+  for (const [action, fields] of good) assert.equal(await post(action, fields), 201, `${action} ${JSON.stringify(fields)}`);
+  const bad = [
+    ["resolvePlaceSuggestion", {}], ["resolvePlaceSuggestion", { decision: "maybe" }], ["resolvePlaceSuggestion", { decision: "dismiss", name: "X" }],
+    ["resolvePlaceSuggestion", { decision: "register", kind: "palace" }], ["setCarAudio", { name: "X" }], ["setCarAudio", { name: "", isMyCar: true }],
+    ["setCarAudio", { name: "X", isMyCar: "yes" }], ["setCalendarTitleDetail", { title: "X" }], ["setCalendarTitleDetail", { title: "X", detailId: "DROP TABLE" }],
+    ["setCalendarTitleDetail", { detailId: "none" }],
+  ];
+  for (const [action, fields] of bad) assert.equal(await post(action, fields), 422, `${action} ${JSON.stringify(fields)}`);
+  const state = { format: "bokki-app", version: 1, retentionDays: 7, settings: { language: "korean" },
+    placeSuggestion: { id: "s1", name: "단골 카페", visits: 4 }, carAudio: { registered: ["My Sonata"], pending: ["렌터카"] } };
+  assert.equal((await send("/app", "POST", state, owner)).status, 201);
+  const read = await (await send("/app", "GET", undefined, write)).json();
+  assert.deepEqual([read.placeSuggestion, read.carAudio], [state.placeSuggestion, state.carAudio]);
+  assert.equal((await send("/app", "POST", { ...state, carAudio: ["x"] }, owner)).status, 422);
+});

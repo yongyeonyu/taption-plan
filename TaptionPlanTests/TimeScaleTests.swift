@@ -5487,7 +5487,14 @@ final class MapHomeStartupCameraTests: XCTestCase {
         let all = MapHomeLaunchPromptPolicy.all(carAudio: "Audi", boardingIDs: ["b1"], calendarTitles: ["주간 회의"],
                                                 placeSuggestionID: "p1", unconfirmedMinutes: 30)
         XCTAssertEqual(all.count, 5)
-        XCTAssertEqual(all.filter { MapHomeLaunchPromptHandoff.task(for: $0) != nil }, [.boarding("b1"), .unconfirmed(minutes: 30)])
+        // HND1112A01: 내 차·일정 제목·자주 머무는 곳도 AI 명령이 생겨 다섯 가지 모두 넘길 수 있다.
+        XCTAssertEqual(all.filter { MapHomeLaunchPromptHandoff.task(for: $0) != nil }.count, 5)
+        XCTAssertTrue(MapHomeLaunchPromptHandoff.task(for: .carAudio("Audi"))?.text.contains("set_car_audio") == true)
+        XCTAssertTrue(MapHomeLaunchPromptHandoff.task(for: .carAudio("Audi"))?.text.contains("「Audi」") == true)
+        let titleTask = MapHomeLaunchPromptHandoff.task(for: .calendarTitle("주간 회의"))
+        XCTAssertTrue(titleTask?.text.contains("set_calendar_title_detail") == true && titleTask?.text.contains("work.") == true, "고를 수 있는 상세활동 id를 함께 준다")
+        XCTAssertLessThan(titleTask?.text.count ?? 0, 2_000, "AI 확인 목록 글 한도 안")
+        XCTAssertEqual(MapHomeLaunchPromptHandoff.task(for: .frequentPlace("p1"))?.kind, .stayPlace)
         XCTAssertEqual(MapHomeLaunchPromptHandoff.task(for: .unconfirmed(minutes: 30))?.kind, .other)
         XCTAssertTrue(MapHomeLaunchPromptHandoff.task(for: .unconfirmed(minutes: 30))?.text.contains("classify_unconfirmed") == true)
         XCTAssertEqual(MapHomeLaunchPromptHandoff.task(for: .boarding("b1"))?.kind, .routeCheck)

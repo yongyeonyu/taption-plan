@@ -291,7 +291,8 @@ extension AppModel {
             }
         }
         let stored = (entry.delta.preferences ?? []).filter { $0.key != AssistantPreferenceChange.mapStyleKey }
-        let appChangeIsCurrent = await entry.delta.appChange?.isCurrent(preferences) ?? true
+        let storeChangeIsCurrent = await entry.delta.appChange?.isCurrent(preferences) ?? true
+        let appChangeIsCurrent = storeChangeIsCurrent && assistantPromptChangeIsCurrent(entry.delta.appChange)
         guard appChangeIsCurrent, stored.allSatisfy({ preferences.value($0.key, model: self) == $0.after }), let restored = entry.delta.undoing(in: snapshot) else {
             userFacingError = AppLanguagePreference.text(
                 korean: "그 뒤에 바뀐 내용이 있어 되돌리지 못했어요. 앱에서 직접 고쳐 주세요.",
@@ -317,6 +318,7 @@ extension AppModel {
             await preferences.ledger.delete(ledgerID)
         }
         await entry.delta.appChange?.undo(preferences)
+        await undoAssistantPromptChange(entry.delta.appChange)
         return true
     }
 }

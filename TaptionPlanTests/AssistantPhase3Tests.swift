@@ -1774,6 +1774,83 @@ final class AssistantAppControlTests: XCTestCase {
         XCTAssertEqual(answers[0]["question"] as? String, "Approval request: shareLevel = visits")
     }
 
+    /// HND1112A01: 「확인할 것」 세 가지를 끝내는 명령 — 읽기, 내 차·일정 제목의 적용과 되돌리기, 장소 제안의 등록·거절.
+    func testPromptCommandsParseApplyAndUndo() async throws {
+        let detail = try XCTUnwrap(CalendarTitleClassification.selectableCategories.flatMap(\.details).first?.id)
+        let parsed = try batch([
+            command("car", "setCarAudio", ["name": "Audi", "isMyCar": true]),
+            command("title", "setCalendarTitleDetail", ["title": "주간 회의", "detailId": detail]),
+            command("none", "setCalendarTitleDetail", ["title": "생일", "detailId": "none"]),
+            command("place", "resolvePlaceSuggestion", ["decision": "register", "name": "단골 카페", "kind": "restaurant"]),
+            command("drop", "resolvePlaceSuggestion", ["decision": "dismiss"]),
+            command("badDetail", "setCalendarTitleDetail", ["title": "X", "detailId": "movement.subway"]),
+            command("noFlag", "setCarAudio", ["name": "Audi"]),
+            command("dismissName", "resolvePlaceSuggestion", ["decision": "dismiss", "name": "X"]),
+            command("badKind", "resolvePlaceSuggestion", ["decision": "register", "kind": "palace"]),
+        ])
+        XCTAssertEqual(parsed.invalidIDs, ["badDetail", "noFlag", "dismissName", "badKind"])
+        XCTAssertEqual(parsed.commands.map(\.action), [
+            .setCarAudio(name: "Audi", isMyCar: true), .setCalendarTitleDetail(title: "주간 회의", detailID: detail),
+            .setCalendarTitleDetail(title: "생일", detailID: nil), .resolvePlaceSuggestion(register: true, name: "단골 카페", kind: .restaurant),
+            .resolvePlaceSuggestion(register: false, name: nil, kind: nil),
+        ])
+
+        let store = defaults()
+        let model = await model()
+        let preferences = AssistantPreferenceStore.test(store)
+        await model.updateCarAudioNames(registered: [], recent: ["Audi"])
+        let firstOutcome = await model.applyAssistantCommands(try batch([
+            command("car", "setCarAudio", ["name": "Audi", "isMyCar": true]),
+            command("unknown", "setCarAudio", ["name": "남의 차", "isMyCar": true]),
+            command("title", "setCalendarTitleDetail", ["title": "주간 회의", "detailId": detail]),
+            command("same", "setCalendarTitleDetail", ["title": " 주간 회의 ", "detailId": detail]),
+        ]), defaults: store)
+        let first = try XCTUnwrap(firstOutcome)
+        XCTAssertEqual(first.results.map(\.reason), [nil, "no_device", nil, "no_change"])
+        // 시험용 앱은 기기의 실제 체류로 제안을 만들 수 있어, 제안이 없는 상태를 직접 만든다.
+        model.frequentPlaceSuggestion = nil
+        let nothingOutcome = await model.applyAssistantCommands(try batch([command("nothing", "resolvePlaceSuggestion", ["decision": "dismiss"])]), defaults: store)
+        XCTAssertEqual(nothingOutcome?.results.map(\.reason), ["no_suggestion"])
+        XCTAssertEqual(model.settings.registeredCarAudioNames, ["Audi"])
+        XCTAssertTrue(model.settings.recentCarAudioNames.isEmpty)
+        XCTAssertEqual(model.snapshot.settings.calendarTitleDetails[CalendarTitleClassification.key("주간 회의")]?.detailID, detail)
+
+        let undoneCar = await model.undoAssistantEntry(try XCTUnwrap(first.entries.first { $0.commandID == "car" }), preferences: preferences)
+        XCTAssertTrue(undoneCar)
+        XCTAssertEqual([model.settings.registeredCarAudioNames, model.settings.recentCarAudioNames], [[], ["Audi"]], "다시 물을 수 있게 돌아간다")
+        let undoneTitle = await model.undoAssistantEntry(try XCTUnwrap(first.entries.first { $0.commandID == "title" }), preferences: preferences)
+        XCTAssertTrue(undoneTitle)
+        XCTAssertNil(model.snapshot.settings.calendarTitleDetails[CalendarTitleClassification.key("주간 회의")], "정하기 전으로 돌아간다")
+
+        let point = GeoPoint(latitude: 37.5, longitude: 127.0, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: 5)
+        model.frequentPlaceSuggestion = FrequentPlaceSuggestion(
+            id: "s1", point: point, suggestedName: "서울특별시 강남구 테헤란로 1", visitCount: 4,
+            firstVisitedAt: at(11, 5, 9), lastVisitedAt: at(11, 12, 9), reason: .weekly
+        )
+        var value = try input()
+        value.shareLevel = .visits
+        value.placeSuggestion = model.frequentPlaceSuggestion
+        value.pendingCarAudio = ["Audi"]
+        let state = AssistantAppStateSync.make(value)
+        XCTAssertEqual(state.placeSuggestion, .init(id: "s1", name: nil, visits: 4), "주소처럼 보이는 이름과 좌표는 올리지 않는다")
+        XCTAssertEqual(state.carAudio, .init(registered: [], pending: ["Audi"]))
+        value.shareLevel = .summary
+        XCTAssertNil(AssistantAppStateSync.make(value).placeSuggestion)
+
+        let placeOutcome = await model.applyAssistantCommands(try batch([
+            command("place", "resolvePlaceSuggestion", ["decision": "register", "name": "단골 카페", "kind": "restaurant"]),
+        ]), defaults: store)
+        let placed = try XCTUnwrap(placeOutcome)
+        XCTAssertEqual(placed.results.map(\.reason), [nil])
+        let cafe = try XCTUnwrap(model.snapshot.settings.frequentPlaces.first { $0.name == "단골 카페" })
+        XCTAssertEqual(cafe.kind, .restaurant)
+        XCTAssertEqual(cafe.point?.latitude, 37.5)
+        XCTAssertNil(model.frequentPlaceSuggestion)
+        let undonePlace = await model.undoAssistantEntry(try XCTUnwrap(placed.entries.first), preferences: preferences)
+        XCTAssertTrue(undonePlace)
+        XCTAssertNil(model.snapshot.settings.frequentPlaces.first { $0.name == "단골 카페" })
+    }
+
     func testOpenScreenWaitsUntilTakenExpiresAndUndoCancelsIt() async throws {
         let store = defaults()
         let model = await model()

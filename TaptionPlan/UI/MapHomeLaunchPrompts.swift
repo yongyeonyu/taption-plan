@@ -53,9 +53,19 @@ enum MapHomeLaunchPromptHandoff {
             AITask(kind: .other, text: "오늘 무엇을 했는지 모르는 시간이 \(minutes)분 있습니다. get_activity의 unconfirmed와 앞뒤 기록·장소를 보고 classify_unconfirmed로 정해 주세요. 확신이 없으면 ask_user로 물어 주세요.")
         case .boarding:
             AITask(kind: .routeCheck, text: "오늘 지하철·버스 탑승으로 보이는 이동이 있습니다. get_activity의 moves를 보고 이동 수단이 맞는지 판단해 틀리면 set_travel_mode로 고쳐 주세요. 확신이 없으면 ask_user로 물어 주세요.")
-        case .carAudio, .calendarTitle, .frequentPlace:
-            nil
+        // HND1112A01: 내 차·일정 제목·자주 머무는 곳도 AI가 명령으로 끝낸다.
+        case .carAudio(let name):
+            AITask(kind: .other, text: "차 오디오 기기 「\(name)」이(가) 연결된 적이 있습니다. 내 차인지 판단해 set_car_audio(name은 이 이름 그대로, isMyCar true|false)로 답해 주세요. 알 수 없으면 ask_user로 물어 주세요.")
+        case .calendarTitle(let title):
+            AITask(kind: .other, text: "캘린더 일정 제목 「\(title)」을(를) 어떤 활동으로 기록할지 정해 set_calendar_title_detail(title은 이 제목 그대로)로 답해 주세요. detailId는 다음 중 하나이거나 none(분류 안 함)입니다: \(Self.calendarDetailChoices). 확신이 없으면 ask_user로 물어 주세요.")
+        case .frequentPlace:
+            AITask(kind: .stayPlace, text: "자주 머무는 곳으로 등록할지 묻는 자리가 있습니다. get_app_state의 placeSuggestion과 get_activity의 visits를 보고, 어떤 곳인지 알면 resolve_place_suggestion(decision register, name, kind)으로 등록하고 등록할 곳이 아니면 decision dismiss로 답해 주세요. 어떤 곳인지 모르면 ask_user로 물어 주세요.")
         }
+    }
+
+    /// 일정 제목으로 고를 수 있는 상세활동을 `id=이름`으로 늘어놓은 글.
+    static var calendarDetailChoices: String {
+        CalendarTitleClassification.selectableCategories.flatMap(\.details).map { "\($0.id)=\($0.title)" }.joined(separator: ", ")
     }
 
     /// 오늘 넘긴 질문 id.

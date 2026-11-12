@@ -6,7 +6,7 @@
 import { json, readBody, writeAllowed } from "./http.js";
 import { allows } from "./keys.js";
 import { claimTasks, endConversation, finishTask, queueCommand, readActivity, readAnswers, readAppState, readPolish, readResults, readSummary, readSync, savePlan } from "./store.js";
-import { ACTIONS, ANSWER_STATUSES, APPROVAL_NAMES, CATEGORY_ICONS, DISPLAY_OPTIONS, EXPENSE_CATEGORIES, LANGUAGES, MAP_STYLES, PAYMENT_RULE_KINDS, REVIEW_DECISIONS, SCREENS, SETTING_NAMES, TASK_KINDS, TASK_STATUSES, THEMES, TRAVEL_MODES, TRIP_STATUSES } from "./validate.js";
+import { ACTIONS, ANSWER_STATUSES, APPROVAL_NAMES, CATEGORY_ICONS, PLACE_KINDS, DISPLAY_OPTIONS, EXPENSE_CATEGORIES, LANGUAGES, MAP_STYLES, PAYMENT_RULE_KINDS, REVIEW_DECISIONS, SCREENS, SETTING_NAMES, TASK_KINDS, TASK_STATUSES, THEMES, TRAVEL_MODES, TRIP_STATUSES } from "./validate.js";
 
 export const PROTOCOL_VERSION = "2025-06-18";
 const SERVER_INFO = { name: "taption-plan", title: "Taption Plan", version: "3.1.0" };
@@ -88,6 +88,8 @@ const TOOLS = [
     + "noMerchant|duplicate|transfer,receivedAt,time,title,category,kind,amount,currency}] (payments the app did not add by itself; settle with "
     + "resolve_review), inbox [{id,receivedAt,outcome added|review|duplicate|skipped|unread|askedAI,message,text}] (payment texts the iOS "
     + "automation handed over; card, account and phone numbers are masked) rules [{id,name,kind,pattern}] (payment text rules), trips [{id,title,start,end,wishDays,country,region,currency}] (every trip; ids work with update_trip, delete_trip and add_trip_stop), "
+    + "placeSuggestion {id,name?,visits} (a place the app suggests registering, at the place-name share level; answer with resolve_place_suggestion), "
+    + "carAudio {registered[],pending[]} (car audio device names; answer pending ones with set_car_audio), "
     + "categories [{id,name,color,icon,hidden,custom}] (every category; ids work with "
     + "update_category and as categoryId elsewhere) and, at the place-name share level, places [{id,name,kind,radius,autoRecord,located}] "
     + "(registered places, never coordinates; ids work with update_place and delete_place). "
@@ -231,6 +233,21 @@ const TOOLS = [
     + "needs an iOS permission prompt the user must answer: use open_screen settings and tell them what to tap). Current values are in "
     + "get_app_state settings.values, pay amounts included (annualPay, monthlyPay, hourlyPay as the user entered them). Undoable.",
     { setting: enumOf("Setting name", SETTING_NAMES), value: { description: "New value: a string, number or boolean as the setting needs" } }, ["setting", "value"]),
+  // HND1112A01
+  commandTool("resolve_place_suggestion", "resolvePlaceSuggestion", "Register or dismiss the suggested frequent place", "The app suggests one place the user "
+    + "keeps visiting (get_app_state placeSuggestion). decision register saves it as a frequent place (give name when you know what it is, and "
+    + "kind when it is the user's home, company, school, academy, hobby, exercise place or a restaurant; default custom); dismiss means never "
+    + "ask about this spot again and cannot be undone. If you do not know what the place is, ask with ask_user first.",
+    { decision: enumOf("register or dismiss", ["register", "dismiss"]), name: str("Place name, 1-40 characters (register only)", { maxLength: 40 }),
+      kind: enumOf("Kind of place (register only, default custom)", PLACE_KINDS) }, ["decision"]),
+  commandTool("set_car_audio", "setCarAudio", "Mark a car audio device as my car or not", "Answer the app's 'is this your car?' for a car audio device "
+    + "(get_app_state carAudio.pending, or a name in carAudio.registered to remove it). isMyCar true registers it so drives with it count as the "
+    + "user's own car; false means it is not their car and the app stops asking. Undoable.",
+    { name: str("Device name exactly as in get_app_state carAudio", { maxLength: 60 }), isMyCar: { type: "boolean", description: "true: my car. false: not my car" } }, ["name", "isMyCar"]),
+  commandTool("set_calendar_title_detail", "setCalendarTitleDetail", "Classify a calendar event title", "Decide which detailed activity a calendar event title "
+    + "stands for (an AI task gives the title and the allowed detail ids), so events with that title are recorded that way from now on. "
+    + "detailId none means do not classify events with this title. Undoable.",
+    { title: str("Event title exactly as given in the AI task", { maxLength: 200 }), detailId: str("A detail id from the AI task, e.g. work.meeting, or none", { maxLength: 70 }) }, ["title", "detailId"]),
   // ACD1112A01
   addTool("request_approval", "requestApproval", "Ask the user to approve a protected action", "Some actions are never done on your word alone. "
     + "This asks the user, inside the app, to approve one; nothing happens until they tap Approve there. request: shareLevel (value off|summary|visits: "

@@ -367,6 +367,28 @@ struct AssistantAppChange: Codable, Equatable, Sendable {
     var screen: AssistantScreen?
     /// 보낸 질문(ASK1112A01). 아직 답하지 않았을 때만 거둔다.
     var questionID: String?
+    /// 내 차 등록·빼기 전·후(HND1112A01). 그 뒤 목록이 바뀌었으면 되돌리지 않는다.
+    var carAudio: CarAudio?
+    /// 일정 제목 분류 전·후(HND1112A01). `had`가 false면 정하기 전이었다.
+    var calendarTitle: CalendarTitle?
+
+    struct CarAudio: Codable, Equatable, Sendable {
+        struct Lists: Codable, Equatable, Sendable {
+            var registered: [String]
+            var recent: [String]
+            var dismissed: [String]
+        }
+
+        var before: Lists
+        var after: Lists
+    }
+
+    struct CalendarTitle: Codable, Equatable, Sendable {
+        var title: String
+        var hadBefore: Bool
+        var before: String?
+        var after: String?
+    }
 
     /// 그 뒤 사용자가 같은 값을 바꿨으면 되돌리지 않는다.
     @MainActor

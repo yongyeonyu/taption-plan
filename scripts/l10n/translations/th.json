@@ -5502,6 +5502,14 @@
 "회사에서 업무|Working at the office": "ทำงานที่ออฟฟิศ",
 "회사에서 휴식|Break at the office": "พักที่ออฟฟิศ",
 "회의|Meeting": "ประชุม",
-"휴식|Rest": "พักผ่อน"
+"휴식|Rest": "พักผ่อน",
+"다시 묻지 않음|Won't ask again": "ไม่ถามอีก",
+"내 차 등록·빼기|Register or remove my car": "ลงทะเบียนหรือนำรถของฉันออก",
+"내 차 아님|Not my car": "ไม่ใช่รถของฉัน",
+"내 차로 등록|Registered as my car": "ลงทะเบียนเป็นรถของฉันแล้ว",
+"분류 안 함|Not classified": "ไม่จัดหมวด",
+"일정 제목 분류 정하기|Classify calendar event titles": "จัดหมวดชื่อกิจกรรมในปฏิทิน",
+"자주 머무는 곳 제안 등록·거절|Register or dismiss suggested places": "ลงทะเบียนหรือปัดสถานที่ที่แนะนำ",
+"제안한 곳|Suggested place": "สถานที่ที่แนะนำ"
 }
 }

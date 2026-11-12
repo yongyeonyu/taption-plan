@@ -206,6 +206,10 @@ export const COMMAND_FIELDS = {
   setSetting: ["setting", "value"],
   // ACD1112A01: 위험한 일은 앱에서 사용자가 승인해야 한다. AI는 요청만 보낸다.
   requestApproval: ["request", "value"],
+  // HND1112A01: 앱의 「확인할 것」을 AI가 끝낸다 — 자주 머무는 곳 제안, 내 차 등록, 일정 제목 분류.
+  resolvePlaceSuggestion: ["decision", "name", "kind"],
+  setCarAudio: ["name", "isMyCar"],
+  setCalendarTitleDetail: ["title", "detailId"],
   setLanguage: ["language"],
   setTheme: ["theme"],
   setMapStyle: ["mapStyle"],
@@ -254,6 +258,7 @@ export const cleanAnswers = (value) => value.answers.map(({ id, question, status
 
 // ACA1112A01: 장소 이름 1~40자·반경 30~500m, 분류 이름 1~20자·색 #RRGGBB·아이콘은 앱의 CategoryIcon 이름.
 export const PLACE_LIMITS = { name: 40, category: 20, minRadius: 30, maxRadius: 500, places: 100, categories: 100 };
+export const PLACE_KINDS = ["home", "school", "academy", "company", "hobby", "exercise", "restaurant", "custom"];
 export const CATEGORY_ICONS = ["briefcase", "building", "book", "graduation", "target", "award", "stroller", "family", "shield", "health", "exercise",
   "sleep", "performance", "music", "travel", "location", "photo", "home", "meal", "cafe", "pet", "shopping", "nature", "calendar", "event", "memo",
   "movement", "activity", "relationship", "work", "community", "student", "exam", "military", "athlete", "pregnancy"];
@@ -445,6 +450,13 @@ export function isCommand(value) {
       return targetID(v.tripId);
     case "setSetting":
       return Object.hasOwn(SETTINGS, v.setting) && SETTINGS[v.setting](v.value);
+    case "resolvePlaceSuggestion":
+      return oneOf(["register", "dismiss"])(v.decision) && optional(v.name, (n) => lengthIn(n, PLACE_LIMITS.name)) && optional(v.kind, oneOf(PLACE_KINDS))
+        && (v.decision === "register" || (!given(v.name) && !given(v.kind)));
+    case "setCarAudio":
+      return lengthIn(v.name, 60) && isBoolean(v.isMyCar);
+    case "setCalendarTitleDetail":
+      return lengthIn(v.title, 200) && typeof v.detailId === "string" && /^(none|[a-z][A-Za-z]{0,29}\.[A-Za-z][A-Za-z0-9.]{0,39})$/.test(v.detailId);
     case "requestApproval":
       return Object.hasOwn(APPROVALS, v.request) && APPROVALS[v.request](v.value);
     case "askUser":
@@ -488,7 +500,7 @@ export function isTaskResult(value) {
 
 // 앱 상태(ACX1112A01). 앱이 통째로 올리고 AI는 읽기만 한다: 설정, 가계부(이 달 합계·예산·최근 기록), 확인 필요,
 // 받은 결제 문자(번호는 앱이 가린다), 결제 문자 규칙. 서버는 모양·개수만 보고 알려진 칸만 잠가 둔다.
-export const APP_STATE_FIELDS = ["updatedAt", "timeZone", "settings", "ledger", "review", "inbox", "rules", "places", "categories", "trips"];
+export const APP_STATE_FIELDS = ["updatedAt", "timeZone", "settings", "ledger", "review", "inbox", "rules", "places", "categories", "trips", "placeSuggestion", "carAudio"];
 export const APP_STATE_LIMITS = { entries: 200, review: 50, inbox: 30, rules: 20 };
 const plainObject = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 const objectList = (v, max) => Array.isArray(v) && v.length <= max && v.every(plainObject);
@@ -501,7 +513,8 @@ export function isAppState(value) {
     && optional(value.inbox, (l) => objectList(l, APP_STATE_LIMITS.inbox))
     && optional(value.rules, (l) => objectList(l, APP_STATE_LIMITS.rules))
     && optional(value.places, (l) => objectList(l, PLACE_LIMITS.places)) && optional(value.categories, (l) => objectList(l, PLACE_LIMITS.categories))
-    && optional(value.trips, (l) => objectList(l, TRIP_LIMITS.trips));
+    && optional(value.trips, (l) => objectList(l, TRIP_LIMITS.trips))
+    && optional(value.placeSuggestion, plainObject) && optional(value.carAudio, plainObject);
 }
 export function cleanAppState(value) {
   const out = { format: "bokki-app", version: 1 };
