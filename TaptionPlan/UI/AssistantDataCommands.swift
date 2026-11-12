@@ -215,6 +215,9 @@ extension AssistantCommandParser {
             return .resolvePlaceSuggestion(
                 register: register, name: clean(raw.name, max: AssistantCatalogLimits.placeName), kind: raw.kind.flatMap(FrequentPlaceKind.init(rawValue:))
             )
+        case "setTripBudget":
+            guard let id = clean(raw.tripId, max: 100), let amount = raw.budgetKRW, amount.isFinite, (0...LedgerBudget.assistantLimitKRW).contains(amount) else { return nil }
+            return .setTripBudget(tripID: id, budgetKRW: amount.rounded())
         case "setCarAudio":
             guard let name = clean(raw.name, max: 60), let isMyCar = raw.isMyCar else { return nil }
             return .setCarAudio(name: name, isMyCar: isMyCar)

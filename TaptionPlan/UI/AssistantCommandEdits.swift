@@ -29,6 +29,8 @@ enum AssistantActionKind: String, CaseIterable, Identifiable, Codable, Sendable 
     case requestApproval
     // HND1112A01
     case resolvePlaceSuggestion, setCarAudio, setCalendarTitleDetail
+    // TBG1112A01
+    case setTripBudget
 
     var id: String { rawValue }
 
@@ -82,6 +84,7 @@ enum AssistantActionKind: String, CaseIterable, Identifiable, Codable, Sendable 
         case .resolvePlaceSuggestion: language.text("자주 머무는 곳 제안 등록·거절", "Register or dismiss suggested places")
         case .setCarAudio: language.text("내 차 등록·빼기", "Register or remove my car")
         case .setCalendarTitleDetail: language.text("일정 제목 분류 정하기", "Classify calendar event titles")
+        case .setTripBudget: language.text("여행 예산 정하기", "Set trip budgets")
         }
     }
 }
@@ -180,6 +183,7 @@ extension AssistantCommand.Action {
         case .resolvePlaceSuggestion: .resolvePlaceSuggestion
         case .setCarAudio: .setCarAudio
         case .setCalendarTitleDetail: .setCalendarTitleDetail
+        case .setTripBudget: .setTripBudget
         }
     }
 

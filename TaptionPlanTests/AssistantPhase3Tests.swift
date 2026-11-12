@@ -1851,6 +1851,54 @@ final class AssistantAppControlTests: XCTestCase {
         XCTAssertNil(model.snapshot.settings.frequentPlaces.first { $0.name == "단골 카페" })
     }
 
+    /// TBG1112A01: 여행 예산을 정하면 장부가 없을 때는 앱 여행에서 만들고, 되돌리면 전 상태로 간다.
+    func testTripBudgetCreatesTheLedgerFromThePlannedTripAndUndoes() async throws {
+        let store = defaults()
+        let model = await model()
+        let preferences = AssistantPreferenceStore.test(store)
+        let parsed = try batch([
+            command("b1", "setTripBudget", ["tripId": "trip-1", "budgetKRW": 800_000]),
+            command("neg", "setTripBudget", ["tripId": "trip-1", "budgetKRW": -1]),
+            command("noAmount", "setTripBudget", ["tripId": "trip-1"]),
+        ])
+        XCTAssertEqual(parsed.invalidIDs, ["neg", "noAmount"])
+        XCTAssertEqual(parsed.commands.map(\.action), [.setTripBudget(tripID: "trip-1", budgetKRW: 800_000)])
+
+        let missing = await model.applyAssistantAction(.setTripBudget(tripID: "trip-1", budgetKRW: 800_000), preferences: preferences)
+        XCTAssertEqual(missing.reason, "no_trip")
+        let saved = await model.saveTravelTrip(TravelTrip(id: "trip-1", title: "오사카", startDay: "2026-12-01", endDay: "2026-12-04"))
+        XCTAssertTrue(saved)
+
+        let created = await model.applyAssistantAction(.setTripBudget(tripID: "trip-1", budgetKRW: 800_000), preferences: preferences)
+        XCTAssertNil(created.reason)
+        let trip = try XCTUnwrap(preferences.ledger.trip("trip-1"))
+        XCTAssertEqual([trip.name, String(trip.budgetKRW ?? 0)], ["오사카", "800000.0"])
+        XCTAssertNil(created.appChange?.ledgerTrip?.before, "이 명령이 장부를 만들었다")
+        XCTAssertEqual(preferences.ledger.entries.filter { $0.transfer?.tripID == "trip-1" }.count, 2, "일상↔여행 예산 이체 짝 기록이 생긴다")
+
+        let same = await model.applyAssistantAction(.setTripBudget(tripID: "trip-1", budgetKRW: 800_000), preferences: preferences)
+        XCTAssertEqual(same.reason, "no_change")
+        let cleared = await model.applyAssistantAction(.setTripBudget(tripID: "trip-1", budgetKRW: 0), preferences: preferences)
+        XCTAssertNil(cleared.reason)
+        XCTAssertNil(preferences.ledger.trip("trip-1")?.budgetKRW)
+        XCTAssertEqual(cleared.appChange?.ledgerTrip?.before?.budgetKRW, 800_000)
+
+        let restored = await model.undoAssistantEntry(logEntry(.setTripBudget, cleared), preferences: preferences)
+        XCTAssertTrue(restored)
+        XCTAssertEqual(preferences.ledger.trip("trip-1")?.budgetKRW, 800_000)
+        let removed = await model.undoAssistantEntry(logEntry(.setTripBudget, created), preferences: preferences)
+        XCTAssertTrue(removed)
+        XCTAssertNil(preferences.ledger.trip("trip-1"), "없던 장부는 되돌리면 지운다")
+
+        var value = try input()
+        value.ledgerTrips = [LedgerTrip(id: "trip-1", name: "오사카", start: at(11, 1, 9), end: at(11, 4, 9), budgetKRW: 800_000, members: ["민수"])]
+        let state = AssistantAppStateSync.make(value)
+        XCTAssertEqual(state.ledger.trips?.map(\.id), ["trip-1"])
+        XCTAssertEqual(state.ledger.trips?.first?.budgetKRW, 800_000)
+        XCTAssertEqual(state.ledger.trips?.first?.ended, true)
+        XCTAssertFalse(String(decoding: try XCTUnwrap(AssistantAppStateSync.body(state)), as: UTF8.self).contains("민수"), "동행 이름은 올리지 않는다")
+    }
+
     func testOpenScreenWaitsUntilTakenExpiresAndUndoCancelsIt() async throws {
         let store = defaults()
         let model = await model()

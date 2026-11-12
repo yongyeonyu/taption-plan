@@ -367,6 +367,14 @@ struct AssistantAppChange: Codable, Equatable, Sendable {
     var screen: AssistantScreen?
     /// 보낸 질문(ASK1112A01). 아직 답하지 않았을 때만 거둔다.
     var questionID: String?
+    /// 여행 장부 전·후(TBG1112A01). `before`가 nil이면 이 명령이 장부를 만들었다.
+    var ledgerTrip: TripChange?
+
+    struct TripChange: Codable, Equatable, Sendable {
+        var before: LedgerTrip?
+        var after: LedgerTrip
+    }
+
     /// 내 차 등록·빼기 전·후(HND1112A01). 그 뒤 목록이 바뀌었으면 되돌리지 않는다.
     var carAudio: CarAudio?
     /// 일정 제목 분류 전·후(HND1112A01). `had`가 false면 정하기 전이었다.
@@ -398,6 +406,10 @@ struct AssistantAppChange: Codable, Equatable, Sendable {
             if preferences.ledger.budget(for: budget.month)?.amountKRW != budget.after { return false }
         }
         if let ownAccounts, LedgerOwnAccounts.names(preferences.defaults) != ownAccounts.after { return false }
+        if let ledgerTrip {
+            await preferences.ledger.load()
+            if preferences.ledger.trip(ledgerTrip.after.id) != ledgerTrip.after { return false }
+        }
         return true
     }
 
@@ -410,6 +422,9 @@ struct AssistantAppChange: Codable, Equatable, Sendable {
         if let review { preferences.review.restore(review) }
         if let screen { preferences.screens.cancel(screen) }
         if let questionID { preferences.questions.withdraw(questionID) }
+        if let ledgerTrip {
+            if let before = ledgerTrip.before { await preferences.ledger.saveTrip(before) } else { await preferences.ledger.deleteTrip(ledgerTrip.after.id) }
+        }
     }
 }
 
@@ -483,6 +498,21 @@ extension AppModel {
             guard preferences.questions.add(question) else { return .rejected("duplicate") }
             var result = AssistantEditResult(after: String((question.approval?.title(language) ?? question.question).prefix(80)))
             result.appChange = AssistantAppChange(questionID: question.id)
+            return result
+        case let .setTripBudget(tripID, budgetKRW):
+            await preferences.ledger.load()
+            let existing = preferences.ledger.trip(tripID)
+            // 장부가 없으면 앱 여행(같은 번호)의 이름과 기간으로 만든다.
+            let planned = LedgerBook.plannedTrips(
+                stops: settings.travelPlanStops, items: settings.travelTripItems ?? [], trips: settings.travelTrips ?? []
+            ).first { $0.id == tripID }
+            guard var trip = existing ?? planned else { return .rejected("no_trip") }
+            let budget: Double? = budgetKRW > 0 ? budgetKRW : nil
+            guard existing == nil || existing?.budgetKRW != budget else { return .rejected("no_change") }
+            trip.budgetKRW = budget
+            await preferences.ledger.saveTrip(trip)
+            var result = AssistantEditResult(before: "\(trip.name) \(money(existing?.budgetKRW))", after: "\(trip.name) \(money(budget))")
+            result.appChange = AssistantAppChange(ledgerTrip: .init(before: existing, after: trip))
             return result
         case let .setSetting(setting, value):
             if setting.isSalary, !MapHomeSalaryPolicy.isAILinked(defaults) { return .rejected("salary_link_off") }

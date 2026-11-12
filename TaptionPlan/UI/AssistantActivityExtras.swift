@@ -200,6 +200,21 @@ struct AssistantAppState: Codable, Equatable, Sendable {
         var incomeKRW: Double
         var ownAccounts: [String]
         var entries: [Entry]
+        /// TBG1112A01: 여행 장부. 동행 이름은 담지 않는다. 없으면 칸째 뺀다.
+        var trips: [TripLedger]?
+    }
+
+    struct TripLedger: Codable, Equatable, Sendable {
+        var id: String
+        var name: String
+        var start: String
+        var end: String
+        var budgetKRW: Double?
+        /// 내 몫(지금까지 든 돈).
+        var myCostKRW: Double
+        /// 정산하면 일상으로 돌아올 돈(−면 더 보낼 돈).
+        var leftoverKRW: Double
+        var ended: Bool
     }
 
     struct Review: Codable, Equatable, Sendable {
@@ -319,6 +334,10 @@ enum AssistantAppStateSync {
         var incomeKRW: Double
         var ownAccounts: [String]
         var review: [LedgerReviewStore.Item]
+        /// 여행 장부(TBG1112A01). `entries`와 함께 정산을 계산한다.
+        var ledgerTrips: [LedgerTrip] = []
+        /// 여행 장부의 정산에 쓰는 기록 전체(이체 짝 기록 포함).
+        var tripEntries: [LedgerEntry] = []
         var inbox: [PaymentInbox.Item]
         var rules: [LedgerMessageRules.Rule]
         var places: [FrequentPlace] = []
@@ -354,6 +373,14 @@ enum AssistantAppStateSync {
                         id: $0.id.uuidString, time: stamp.instant($0.occurredAt), title: mask($0.title, 60), category: $0.category.rawValue,
                         kind: $0.kind.rawValue, amount: $0.amount, currency: $0.currency, amountKRW: $0.amountKRW,
                         canceled: $0.canceledAt != nil, source: $0.source.rawValue
+                    )
+                },
+                trips: input.ledgerTrips.isEmpty ? nil : input.ledgerTrips.prefix(AssistantCatalogLimits.places).map { trip in
+                    let sheet = LedgerTripMath.sheet(trip, entries: input.tripEntries)
+                    return .init(
+                        id: trip.id, name: mask(trip.name, AssistantSetting.tripTitleLimit), start: stamp.date(trip.start), end: stamp.date(trip.end),
+                        budgetKRW: trip.budgetKRW, myCostKRW: sheet.myCost, leftoverKRW: sheet.leftover,
+                        ended: trip.hasEnded(asOf: input.now, calendar: input.calendar)
                     )
                 }
             ),
@@ -436,6 +463,7 @@ enum AssistantAppStateSync {
             entries: book.entries.filter { $0.transfer == nil }, budgetKRW: book.budget(for: month)?.amountKRW,
             spentKRW: LedgerBook.total(daily, .expense), incomeKRW: LedgerBook.total(daily, .income),
             ownAccounts: LedgerOwnAccounts.names(defaults), review: preferences.review.items,
+            ledgerTrips: book.trips, tripEntries: book.entries,
             inbox: PaymentInbox.items(defaults, now: now), rules: LedgerMessageRules.rules(defaults),
             places: model.snapshot.settings.frequentPlaces, categories: model.snapshot.categories,
             trips: model.snapshot.settings.travelTrips ?? [],

@@ -72,6 +72,8 @@ struct AssistantCommand: Identifiable, Equatable, Sendable {
         case resolvePlaceSuggestion(register: Bool, name: String?, kind: FrequentPlaceKind?)
         case setCarAudio(name: String, isMyCar: Bool)
         case setCalendarTitleDetail(title: String, detailID: String?)
+        /// TBG1112A01: 여행 예산(원). 0이면 예산 없음.
+        case setTripBudget(tripID: String, budgetKRW: Double)
     }
 
     let id: String
@@ -140,6 +142,8 @@ enum AssistantCommandParser {
         let request: String?
         // HND1112A01: setCarAudio·setCalendarTitleDetail.
         let isMyCar: Bool?, detailId: String?
+        // TBG1112A01: setTripBudget.
+        let budgetKRW: Double?
     }
 
     /// `{"commands":[...]}`를 읽는다. 서버와 같은 규칙으로 다시 본다.
@@ -366,7 +370,7 @@ struct AssistantCommandOutcome: Equatable, Sendable {
         case .updateActivity, .hideRecord, .mergeRecords, .updateRecordTime, .updateSleep, .classifyUnconfirmed, .setTravelMode: edits += 1
         case .setLanguage, .setMapStyle, .setDisplayOption, .addPaymentRule: settings += 1
         case .setBudget, .addOwnAccount, .removeOwnAccount, .deletePaymentRule, .deleteInboxItem, .openScreen: settings += 1
-        case .resolveReview: ledger += 1
+        case .resolveReview, .setTripBudget: ledger += 1
         case .askUser, .requestApproval: questions += 1
         case .addPlace, .updatePlace, .deletePlace, .addCategory, .updateCategory, .setSetting: settings += 1
         case .resolvePlaceSuggestion, .setCarAudio, .setCalendarTitleDetail: settings += 1

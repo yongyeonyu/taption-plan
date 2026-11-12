@@ -84,7 +84,9 @@ const TOOLS = [
   readTool("get_app_state", "Get app state", "The app's own state, refreshed when the app runs: settings {language, theme, mapStyle, display{mapPhotos,mapRoutes,mapFootprints}, "
     + "shareLevel, retentionDays, aiConnections, actionsOff[] (actions the user turned off), paymentShortcutLink (the app ships a link to its "
     + "BOKKI Payment automation), paymentTexts, lastPaymentTextAt}, ledger {month, budgetKRW, spentKRW, incomeKRW, ownAccounts[], entries[{id,time,title,"
-    + "category,kind,amount,currency,amountKRW,canceled,source}]} (newest first; entry ids work with update_expense), review [{id,reason "
+    + "category,kind,amount,currency,amountKRW,canceled,source}], trips[{id,name,start,end,budgetKRW,myCostKRW,leftoverKRW,ended}] (trip ledgers: "
+    + "myCostKRW is the user's own share so far, leftoverKRW what goes back to the daily ledger (negative: more is owed); set the budget with "
+    + "set_trip_budget)} (entries newest first; entry ids work with update_expense), review [{id,reason "
     + "noMerchant|duplicate|transfer,receivedAt,time,title,category,kind,amount,currency}] (payments the app did not add by itself; settle with "
     + "resolve_review), inbox [{id,receivedAt,outcome added|review|duplicate|skipped|unread|askedAI,message,text}] (payment texts the iOS "
     + "automation handed over; card, account and phone numbers are masked) rules [{id,name,kind,pattern}] (payment text rules), trips [{id,title,start,end,wishDays,country,region,currency}] (every trip; ids work with update_trip, delete_trip and add_trip_stop), "
@@ -240,6 +242,11 @@ const TOOLS = [
     + "ask about this spot again and cannot be undone. If you do not know what the place is, ask with ask_user first.",
     { decision: enumOf("register or dismiss", ["register", "dismiss"]), name: str("Place name, 1-40 characters (register only)", { maxLength: 40 }),
       kind: enumOf("Kind of place (register only, default custom)", PLACE_KINDS) }, ["decision"]),
+  // TBG1112A01
+  commandTool("set_trip_budget", "setTripBudget", "Set a trip's budget", "Set the budget in KRW the user moves from the daily ledger to a trip "
+    + "(tripId from get_app_state trips or ledger.trips). 0 means no budget: the trip is settled after it ends. If the trip has no ledger yet, "
+    + "one is created from the trip's name and dates. The app then keeps the matching daily↔trip transfer entries itself. Undoable.",
+    { tripId: str("Trip id"), budgetKRW: { type: "number", description: "Budget in KRW, 0 for none", minimum: 0, maximum: 1e12 } }, ["tripId", "budgetKRW"]),
   commandTool("set_car_audio", "setCarAudio", "Mark a car audio device as my car or not", "Answer the app's 'is this your car?' for a car audio device "
     + "(get_app_state carAudio.pending, or a name in carAudio.registered to remove it). isMyCar true registers it so drives with it count as the "
     + "user's own car; false means it is not their car and the app stops asking. Undoable.",

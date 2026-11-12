@@ -210,6 +210,8 @@ export const COMMAND_FIELDS = {
   resolvePlaceSuggestion: ["decision", "name", "kind"],
   setCarAudio: ["name", "isMyCar"],
   setCalendarTitleDetail: ["title", "detailId"],
+  // TBG1112A01: 여행 예산(원). 0이면 예산 없이 쓰고 끝난 뒤 정산한다.
+  setTripBudget: ["tripId", "budgetKRW"],
   setLanguage: ["language"],
   setTheme: ["theme"],
   setMapStyle: ["mapStyle"],
@@ -453,6 +455,8 @@ export function isCommand(value) {
     case "resolvePlaceSuggestion":
       return oneOf(["register", "dismiss"])(v.decision) && optional(v.name, (n) => lengthIn(n, PLACE_LIMITS.name)) && optional(v.kind, oneOf(PLACE_KINDS))
         && (v.decision === "register" || (!given(v.name) && !given(v.kind)));
+    case "setTripBudget":
+      return targetID(v.tripId) && typeof v.budgetKRW === "number" && Number.isFinite(v.budgetKRW) && v.budgetKRW >= 0 && v.budgetKRW <= BUDGET_MAX_KRW;
     case "setCarAudio":
       return lengthIn(v.name, 60) && isBoolean(v.isMyCar);
     case "setCalendarTitleDetail":

@@ -355,6 +355,8 @@ test("place suggestion, car audio and calendar title commands are validated; app
     ["resolvePlaceSuggestion", { decision: "register", name: "단골 카페", kind: "custom" }], ["resolvePlaceSuggestion", { decision: "register" }],
     ["resolvePlaceSuggestion", { decision: "dismiss" }], ["setCarAudio", { name: "My Sonata", isMyCar: true }], ["setCarAudio", { name: "렌터카", isMyCar: false }],
     ["setCalendarTitleDetail", { title: "주간 회의", detailId: "work.meeting" }], ["setCalendarTitleDetail", { title: "생일", detailId: "none" }],
+    // TBG1112A01
+    ["setTripBudget", { tripId: "trip-1", budgetKRW: 800000 }], ["setTripBudget", { tripId: "trip-1", budgetKRW: 0 }],
   ];
   for (const [action, fields] of good) assert.equal(await post(action, fields), 201, `${action} ${JSON.stringify(fields)}`);
   const bad = [
@@ -362,6 +364,8 @@ test("place suggestion, car audio and calendar title commands are validated; app
     ["resolvePlaceSuggestion", { decision: "register", kind: "palace" }], ["setCarAudio", { name: "X" }], ["setCarAudio", { name: "", isMyCar: true }],
     ["setCarAudio", { name: "X", isMyCar: "yes" }], ["setCalendarTitleDetail", { title: "X" }], ["setCalendarTitleDetail", { title: "X", detailId: "DROP TABLE" }],
     ["setCalendarTitleDetail", { detailId: "none" }],
+    ["setTripBudget", { tripId: "trip-1" }], ["setTripBudget", { tripId: "trip-1", budgetKRW: -1 }], ["setTripBudget", { budgetKRW: 1000 }],
+    ["setTripBudget", { tripId: "trip-1", budgetKRW: "많이" }],
   ];
   for (const [action, fields] of bad) assert.equal(await post(action, fields), 422, `${action} ${JSON.stringify(fields)}`);
   const state = { format: "bokki-app", version: 1, retentionDays: 7, settings: { language: "korean" },
