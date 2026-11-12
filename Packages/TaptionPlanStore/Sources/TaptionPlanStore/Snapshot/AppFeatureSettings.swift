@@ -573,8 +573,10 @@ public struct TravelTripItem: Codable, Hashable, Sendable {
     public var planID: UUID?
     /// 예약 "booked"·미정 "tentative"만 둔다. 계획은 nil이라 키가 없고 예전 바이트가 그대로다(TRP1110A09).
     public var status: String?
+    /// 일정 메모(TVY1112A01). 없으면 키를 쓰지 않아 예전 바이트가 그대로다.
+    public var note: String?
 
-    public init(tripID: String, itemID: String, kind: String, title: String, start: Date, end: Date, startOffsetSeconds: Int, endOffsetSeconds: Int, planID: UUID?, status: String? = nil) {
+    public init(tripID: String, itemID: String, kind: String, title: String, start: Date, end: Date, startOffsetSeconds: Int, endOffsetSeconds: Int, planID: UUID?, status: String? = nil, note: String? = nil) {
         self.tripID = tripID
         self.itemID = itemID
         self.kind = kind
@@ -585,6 +587,7 @@ public struct TravelTripItem: Codable, Hashable, Sendable {
         self.endOffsetSeconds = endOffsetSeconds
         self.planID = planID
         self.status = status
+        self.note = note
     }
 }
 

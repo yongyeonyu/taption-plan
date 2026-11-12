@@ -79,6 +79,7 @@ struct TravelQuickEntrySheet: View {
     /// 붙인 장소(지도 핀). 넣은 뒤에는 비워 다음 일정에 따라가지 않게 한다.
     @State private var place: TravelItemPlace?
     @State private var isPickingPlace = false
+    @State private var note = ""
 
     private var isEditing: Bool { target.editing != nil }
 
@@ -88,7 +89,7 @@ struct TravelQuickEntrySheet: View {
     private var isShort: Bool { verticalSizeClass == .compact }
 
     static func sheetHeight(hasAdded: Bool, hasSuggestions: Bool) -> CGFloat {
-        276 + (hasAdded ? 40 : 0) + (hasSuggestions ? 38 : 0)
+        320 + (hasAdded ? 40 : 0) + (hasSuggestions ? 38 : 0)
     }
 
     var body: some View {
@@ -144,6 +145,12 @@ struct TravelQuickEntrySheet: View {
             if !suggestions.isEmpty { suggestionChips }
             placeRow
             titleRow
+            TextField(language.text("메모 (선택)", "Note (optional)"), text: $note)
+                .font(.footnote)
+                .padding(.horizontal, 10).frame(height: 34)
+                .background(Color.white.opacity(0.7), in: RoundedRectangle(cornerRadius: 8))
+                .overlay { RoundedRectangle(cornerRadius: 8).stroke(TravelInk.border, lineWidth: 1) }
+                .accessibilityIdentifier("travelEntryNote")
             if didFail {
                 Text(language.text("넣지 못했습니다. 다시 해 주세요.", "Could not save. Try again.")).font(.caption).foregroundStyle(TravelInk.actual)
             }
@@ -318,6 +325,7 @@ struct TravelQuickEntrySheet: View {
         kind = target.kind
         startMinute = target.startMinute
         place = target.place
+        note = target.editing?.note ?? ""
         if let item = target.editing {
             text = item.title == target.kind.planName ? "" : item.title
             duration = max(5, Int(item.end.timeIntervalSince(item.start) / 60))
@@ -355,13 +363,13 @@ struct TravelQuickEntrySheet: View {
         if let item = target.editing {
             didFail = !(await model.updateTripItem(
                 tripID: item.tripID, itemID: item.itemID, kind: kind, title: title, start: start, end: end,
-                place: place, replacesPlace: place != target.place
+                place: place, replacesPlace: place != target.place, note: note
             ))
             if !didFail { dismiss() }
             return
         }
         guard let itemID = await model.addTripItem(
-            tripID: target.tripID, kind: kind, title: title, start: start, end: end, offsetSeconds: target.offsetSeconds, place: place
+            tripID: target.tripID, kind: kind, title: title, start: start, end: end, offsetSeconds: target.offsetSeconds, place: place, note: note
         ) else {
             didFail = true
             return
@@ -371,6 +379,7 @@ struct TravelQuickEntrySheet: View {
         // 다음 일정은 방금 끝에서 잇는다.
         startMinute = TravelQuickEntry.nextStart(lastEndMinute: startMinute + duration, nowMinute: nil)
         text = ""
+        note = ""
         place = nil
         parsed = TravelQuickEntry.Parsed(title: "")
         isDurationChosen = false

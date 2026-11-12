@@ -135,6 +135,17 @@ public enum TravelPlayhead {
         return Position(longitude: last.longitude, latitude: last.latitude, stopID: last.id, facesEast: true)
     }
 
+    /// 앞 일정에서 오는 데 걸리는 시간보다 사이가 짧은 일정들(TVY1112A01). `travelMinutes`의 키는 `legKey`.
+    public static func tightStops(_ stops: [Stop], travelMinutes: [String: Int]) -> Set<String> {
+        let ordered = stops.sorted { ($0.startMinute, $0.endMinute) < ($1.startMinute, $1.endMinute) }
+        var tight: Set<String> = []
+        for (from, to) in zip(ordered, ordered.dropFirst()) {
+            guard let need = travelMinutes[legKey(from.id, to.id)], need > 0 else { continue }
+            if to.startMinute - from.endMinute < need { tight.insert(to.id) }
+        }
+        return tight
+    }
+
     /// 재생 헤드를 처음 둘 시각: 오늘이면 지금, 아니면 첫 일정의 시작(없으면 09:00).
     public static func startMinute(nowMinute: Int?, firstStartMinute: Int?) -> Int {
         min(max(nowMinute ?? firstStartMinute ?? 540, 0), 1_439)

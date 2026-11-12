@@ -329,6 +329,15 @@ struct TravelModeView: View {
         .ignoresSafeArea()
         // 여행에 들어가면 경계 그림 위에 오픈맵을 띄운다(대표 지시).
         .overlay { if let focused, openedID != nil, flight == nil { streetMap(focused, destination).ignoresSafeArea() } }
+        .overlay {
+            if let focused, openedID != nil, flight == nil, focused.state != .someday, pins(destination).isEmpty {
+                Text(language.text("일정에 장소를 붙이면 지도에 나옵니다", "Add a place to a plan to see it on the map"))
+                    .font(.footnote.weight(.semibold)).foregroundStyle(TravelInk.plan)
+                    .padding(.horizontal, 12).frame(height: 32)
+                    .background(TravelInk.panel, in: Capsule())
+                    .allowsHitTesting(false)
+            }
+        }
         .overlay(alignment: .topLeading) {
             if openedID == nil { cardColumn(entries) }
         }
@@ -486,6 +495,12 @@ struct TravelModeView: View {
         }
     }
 
+    /// 재생 헤드가 가리키는 절대 시각(그 여행의 시간대, 없으면 기기 시간대).
+    private func playDate(_ entry: TravelTripDirectory.Entry) -> Date {
+        let zone = entry.trip.timeZoneID.flatMap(TimeZone.init(identifier:)) ?? .autoupdatingCurrent
+        return TravelQuickEntrySheet.date(dayKey: dayKey(entry), minute: currentPlayMinute(entry), offsetSeconds: zone.secondsFromGMT())
+    }
+
     private func currentPlayMinute(_ entry: TravelTripDirectory.Entry) -> Int {
         let table = table(entry)
         return playMinute ?? TravelPlayhead.startMinute(nowMinute: table.nowMinute, firstStartMinute: table.blocks.first?.startMinute)
@@ -497,7 +512,12 @@ struct TravelModeView: View {
         let stops = playStops(entry)
         guard !stops.isEmpty else { return pins(destination) }
         let titles = Dictionary(table(entry).blocks.map { ($0.id, $0.title) }, uniquingKeysWith: { first, _ in first })
-        return stops.enumerated().map { .init(longitude: $1.longitude, latitude: $1.latitude, label: "\($0 + 1)", id: $1.id, title: titles[$1.id] ?? "") }
+        // 핀이 많으면 이름이 겹치니, 재생 시각에 머무는 곳 하나만 이름을 단다.
+        let here = TravelPlayhead.position(at: currentPlayMinute(entry), stops: stops, paths: routes.paths)?.stopID
+        return stops.enumerated().map { index, stop in
+            .init(longitude: stop.longitude, latitude: stop.latitude, label: "\(index + 1)", id: stop.id,
+                  title: stops.count <= 5 || stop.id == here ? titles[stop.id] ?? "" : "")
+        }
     }
 
     /// 자주 가는 곳에 등록한 집 자리.
@@ -784,6 +804,10 @@ struct TravelModeView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title(entry)).font(.subheadline.weight(.semibold)).lineLimit(1)
                     Text(length(entry)).font(.caption).opacity(0.8)
+                    if let money = book.trip(entry.id).map({ LedgerTripMath.sheet($0, entries: book.entries) }) {
+                        Text(language.runtimeText("남은 돈 \(LedgerMoney.text(money.leftover, language: language))", "Left \(LedgerMoney.text(money.leftover, language: language))"))
+                            .font(.caption2.weight(.semibold)).foregroundStyle(money.leftover < 0 ? TravelInk.actual : TravelInk.plan)
+                    }
                 }
                 .padding(.horizontal, 9)
                 .padding(.vertical, 7)
@@ -886,14 +910,18 @@ struct TravelModeView: View {
 
     /// 맨 위 돈 표시줄의 자리. 지금은 예산 대비 남은 돈과 쓴 돈만 보인다(통화별 칸은 지갑 단계에서).
     private func moneyBar(_ entry: TravelTripDirectory.Entry) -> some View {
-        let sheet = book.trip(entry.id).map { LedgerTripMath.sheet($0, entries: book.entries) }
+        // 계획표가 올라와 있으면 재생 헤드의 시각까지 쓴 돈을 보인다(Trip과 같게).
+        let upTo: Date? = isPlanUp && openedID == entry.id ? playDate(entry) : nil
+        let counted = upTo.map { limit in book.entries.filter { $0.occurredAt <= limit } } ?? book.entries
+        let sheet = book.trip(entry.id).map { LedgerTripMath.sheet($0, entries: counted) }
         return Button { ledgerTripID = entry.id } label: {
             HStack(spacing: 8) {
                 if let sheet {
                     Label(LedgerMoney.text(sheet.leftover, language: language), systemImage: "wonsign.circle.fill")
                         .foregroundStyle(sheet.leftover < 0 ? TravelInk.actual : TravelInk.plan)
                     Spacer(minLength: 0)
-                    Text(language.runtimeText("쓴 돈 \(LedgerMoney.text(sheet.myCost, language: language))", "Spent \(LedgerMoney.text(sheet.myCost, language: language))"))
+                    let spent = LedgerMoney.text(sheet.myCost, language: language)
+                    Text(upTo == nil ? language.runtimeText("쓴 돈 \(spent)", "Spent \(spent)") : language.runtimeText("여기까지 \(spent)", "So far \(spent)"))
                         .opacity(0.8)
                 } else {
                     Label(language.text("여행 장부 만들기", "Start trip ledger"), systemImage: "wonsign.circle")
@@ -974,7 +1002,8 @@ struct TravelModeView: View {
                     onMove: { block, minutes in editTimes(entry, block: block, move: minutes) },
                     onResize: { block, minutes in editTimes(entry, block: block, resize: minutes) },
                     playMinute: currentPlayMinute(entry),
-                    onScrub: { playMinute = $0 }
+                    onScrub: { playMinute = $0 },
+                    tightIDs: TravelPlayhead.tightStops(playStops(entry), travelMinutes: routes.minutes)
                 )
                     .id(dayKey(entry))
                     .frame(height: Self.planTableHeight(viewSize))

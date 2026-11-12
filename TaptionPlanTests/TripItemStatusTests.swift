@@ -394,7 +394,7 @@ final class TravelTripUnitTests: XCTestCase {
         XCTAssertEqual(TravelModeView.planTableHeight(phoneLandscape), 122)
         XCTAssertEqual(TravelModeView.planTableHeight(pad), 826)
         XCTAssertEqual(TravelModeView.planTableHeight(padLandscape), 540)
-        XCTAssertEqual(TravelQuickEntrySheet.sheetHeight(hasAdded: true, hasSuggestions: true), 354)
+        XCTAssertEqual(TravelQuickEntrySheet.sheetHeight(hasAdded: true, hasSuggestions: true), 398)
     }
 
     /// 일상 → 여행 바로 전환: 보던 날을 품은 여행, 여행 중, 마지막으로 연 여행 순.
@@ -443,6 +443,29 @@ final class TravelTripUnitTests: XCTestCase {
         XCTAssertNil(TravelPlanTable.slot(x: 20, y: 100, width: 350), "시간축을 누르면 넣지 않는다")
         XCTAssertEqual(TravelQuickEntrySheet.clock(1_470), "00:30")
         XCTAssertEqual(TravelQuickEntrySheet.durationText(90, language: .korean), "1시간 30분")
+    }
+
+    /// TVY1112A01: 일정 메모는 넘겨준 때만 바뀌고, 빈 글이면 지워진다. 계획표 확대 배율에 맞춰 누른 자리를 읽는다.
+    @MainActor
+    func testItemNoteAndZoomedTable() async throws {
+        let model = try await importedModel()
+        let start = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-12-03T12:00:00+07:00"))
+        let added = await model.addTripItem(
+            tripID: "t1", kind: .meal, title: "점심", start: start, end: start.addingTimeInterval(3_600), offsetSeconds: 7 * 3_600, note: "  창가 자리 예약  "
+        )
+        let itemID = try XCTUnwrap(added)
+        XCTAssertEqual(model.settings.travelTripItems?.first { $0.itemID == itemID }?.note, "창가 자리 예약")
+        var done = await model.updateTripItem(tripID: "t1", itemID: itemID, kind: .meal, title: "점심", start: start, end: start.addingTimeInterval(3_600))
+        XCTAssertTrue(done)
+        XCTAssertEqual(model.settings.travelTripItems?.first { $0.itemID == itemID }?.note, "창가 자리 예약", "메모를 안 넘기면 그대로")
+        done = await model.updateTripItem(tripID: "t1", itemID: itemID, kind: .meal, title: "점심", start: start, end: start.addingTimeInterval(3_600), note: " ")
+        XCTAssertTrue(done)
+        XCTAssertNil(model.settings.travelTripItems?.first { $0.itemID == itemID }?.note, "빈 글이면 지운다")
+
+        let h = TravelPlanTable.minuteHeight
+        XCTAssertEqual(TravelPlanTable.slot(x: 130, y: 720 * h * 2.2 + 4, width: 350, scale: 2.2)?.minute, 720)
+        XCTAssertEqual(TravelPlanTable.scrubMinute(start: 0, translation: 600 * h * 0.6, scale: 0.6), 600)
+        XCTAssertEqual(TravelPlanTable.moveDelta(translation: 30 * h * 1.5, start: 600, end: 660, scale: 1.5), 30)
     }
 
     /// TVX1112A01: 여행 날짜를 옮기면 일정 전체가 한 덩어리로 옮겨진다(대표 결정).

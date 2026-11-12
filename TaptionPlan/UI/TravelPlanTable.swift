@@ -16,6 +16,7 @@ struct TravelPlanTableModel: Equatable {
         var title: String
         var tripStatus: TripItemStatus?
         var status: TravelPlanComparison.Status
+        var hasNote = false
     }
 
     struct Actual: Identifiable, Equatable {
@@ -59,7 +60,7 @@ struct TravelPlanTableModel: Equatable {
             let column = column(forKind: item.kind)
             blocks.append(Block(
                 id: item.itemID, column: column, startMinute: segment.startMinute, endMinute: segment.endMinute, title: item.title,
-                tripStatus: segment.tripStatus, status: .pending
+                tripStatus: segment.tripStatus, status: .pending, hasNote: !(item.note ?? "").isEmpty
             ))
             spans.append(.init(id: item.itemID, start: segment.startMinute, end: segment.endMinute, isMove: column == 0))
         }
@@ -128,7 +129,12 @@ struct TravelPlanTable: View {
     @State private var moveMinutes = 0
     @State private var resizeMinutes = 0
 
-    private let minuteHeight = TravelPlanTable.minuteHeight
+    /// 계획표 확대 배율(기기에 기억). 1분의 높이는 `0.9 × 배율`.
+    @AppStorage("travelPlanZoom") private var zoom = 1.0
+    static let zooms: [Double] = [0.6, 1, 1.5, 2.2]
+    private var minuteHeight: CGFloat { Self.minuteHeight * zoom }
+    /// 앞 일정에서 오는 시간이 모자란 일정들.
+    var tightIDs: Set<String> = []
     private let axisWidth = TravelPlanTable.leading - 12
     private let actualWidth: CGFloat = 12
 
@@ -138,23 +144,23 @@ struct TravelPlanTable: View {
     static let dragStep = 5
 
     /// 끈 거리를 5분 단위 분으로. 시작이 0시 앞으로, 끝이 24시 뒤로 나가지 않게 막는다.
-    static func moveDelta(translation: CGFloat, start: Int, end: Int) -> Int {
-        let raw = Int((translation / minuteHeight / CGFloat(dragStep)).rounded()) * dragStep
+    static func moveDelta(translation: CGFloat, start: Int, end: Int, scale: CGFloat = 1) -> Int {
+        let raw = Int((translation / (minuteHeight * scale) / CGFloat(dragStep)).rounded()) * dragStep
         return min(max(raw, -start), 1_440 - end)
     }
 
     /// 끝을 끈 거리를 5분 단위 분으로. 길이가 15분보다 짧아지거나 24시를 넘지 않게 막는다.
-    static func resizeDelta(translation: CGFloat, start: Int, end: Int) -> Int {
-        let raw = Int((translation / minuteHeight / CGFloat(dragStep)).rounded()) * dragStep
+    static func resizeDelta(translation: CGFloat, start: Int, end: Int, scale: CGFloat = 1) -> Int {
+        let raw = Int((translation / (minuteHeight * scale) / CGFloat(dragStep)).rounded()) * dragStep
         return min(max(raw, start + 15 - end), 1_440 - end)
     }
 
     /// 누른 자리의 열과 시각(15분 단위). 시간축 쪽을 누르면 nil.
-    static func slot(x: CGFloat, y: CGFloat, width: CGFloat) -> (column: Int, minute: Int)? {
+    static func slot(x: CGFloat, y: CGFloat, width: CGFloat, scale: CGFloat = 1) -> (column: Int, minute: Int)? {
         let columnWidth = (width - leading) / CGFloat(TravelPlanTableModel.columnCount)
         guard x >= leading, columnWidth > 0, y >= 0 else { return nil }
         let column = min(TravelPlanTableModel.columnCount - 1, Int((x - leading) / columnWidth))
-        return (column, TravelQuickEntry.snapped(Int(y / minuteHeight)))
+        return (column, TravelQuickEntry.snapped(Int(y / (minuteHeight * scale))))
     }
 
     private var titles: [String] {
@@ -164,13 +170,15 @@ struct TravelPlanTable: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
-                Text(language.text("실제", "Actual")).font(.caption2).frame(width: axisWidth + actualWidth, alignment: .trailing)
+                // 「실제」 글자 자리에 확대·축소 단추를 둔다(실제 띠는 시간축 옆 주홍 띠로 알아본다).
+                Color.clear.frame(width: axisWidth + actualWidth, height: 1)
                 ForEach(titles.indices, id: \.self) { index in
                     Text(titles[index]).font(.caption.weight(.semibold)).frame(maxWidth: .infinity)
                 }
             }
             .foregroundStyle(TravelInk.plan.opacity(0.8))
             .padding(.vertical, 6)
+            .overlay(alignment: .leading) { zoomButtons }
             Divider().overlay(TravelInk.border)
             // Trip 원본처럼 재생 헤드는 가운데에 고정하고 표가 그 아래로 흐른다: 가운데에 온 시각이 재생 시각이다.
             GeometryReader { box in
@@ -187,11 +195,13 @@ struct TravelPlanTable: View {
                 // 칸을 들어 올린 동안에는 스크롤을 멈춰, 손잡이를 끌 때 표가 대신 밀리지 않게 한다.
                 .scrollDisabled(liftedID != nil)
                 .onScrollGeometryChange(for: Int.self) { geometry in
-                    Self.scrubMinute(start: 0, translation: geometry.contentOffset.y)
+                    Self.scrubMinute(start: 0, translation: geometry.contentOffset.y, scale: zoom)
                 } action: { _, minute in
                     if didPlace, minute != playMinute { onScrub(minute) }
                 }
                 .overlay(alignment: .leading) { if let playMinute { playhead(playMinute, width: box.size.width) } }
+                // 배율을 바꿔도 보던 시각이 가운데에 남게 한다.
+                .onChange(of: zoom) { _, _ in position.scrollTo(y: CGFloat(playMinute ?? table.focusMinute) * minuteHeight) }
                 .task {
                     // 처음 그린 뒤에 옮겨야 자리가 잡힌다. 그 전의 스크롤 보고(0시)는 재생 시각으로 치지 않는다.
                     await Task.yield()
@@ -200,6 +210,26 @@ struct TravelPlanTable: View {
                 }
             }
         }
+    }
+
+    /// 계획표 확대·축소: 한 단계씩. 끝에서는 흐려진다.
+    private var zoomButtons: some View {
+        let index = Self.zooms.firstIndex { $0 >= zoom - 0.01 } ?? 1
+        return HStack(spacing: 2) {
+            zoomButton("minus.magnifyingglass", language.text("계획표 축소", "Zoom out"), isOn: index > 0) { zoom = Self.zooms[max(0, index - 1)] }
+            zoomButton("plus.magnifyingglass", language.text("계획표 확대", "Zoom in"), isOn: index < Self.zooms.count - 1) { zoom = Self.zooms[min(Self.zooms.count - 1, index + 1)] }
+        }
+        .padding(.leading, 2)
+    }
+
+    private func zoomButton(_ symbol: String, _ label: String, isOn: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol).font(.system(size: 12, weight: .semibold)).frame(width: 22, height: 24)
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(TravelInk.plan.opacity(isOn ? 0.9 : 0.3))
+        .disabled(!isOn)
+        .accessibilityLabel(label)
     }
 
     /// 하루 전체(0~24시)를 그린 본문. 스크롤 없이도 그릴 수 있게 따로 둔다.
@@ -242,7 +272,7 @@ struct TravelPlanTable: View {
             } else if value.location.x < Self.leading {
                 // 시간축을 누르면 그 시각이 가운데(재생 헤드)로 온다.
                 withAnimation(.snappy(duration: 0.25)) { position.scrollTo(y: value.location.y) }
-            } else if let slot = Self.slot(x: value.location.x, y: value.location.y, width: width) {
+            } else if let slot = Self.slot(x: value.location.x, y: value.location.y, width: width, scale: zoom) {
                 onAdd(slot.column, slot.minute)
             }
         })
@@ -278,6 +308,8 @@ struct TravelPlanTable: View {
             HStack(spacing: 2) {
                 if block.status == .done { Image(systemName: "checkmark").font(.system(size: 8, weight: .bold)) }
                 if block.status == .late { Image(systemName: "clock.badge.exclamationmark").font(.system(size: 9)).foregroundStyle(TravelInk.actual) }
+                if tightIDs.contains(block.id) { Image(systemName: "figure.run").font(.system(size: 9, weight: .bold)).foregroundStyle(TravelInk.actual) }
+                if block.hasNote { Image(systemName: "note.text").font(.system(size: 8)).opacity(0.7) }
                 Text(block.title).font(.caption2.weight(.semibold)).lineLimit(height > 30 ? 2 : 1)
             }
             if height > 34 || isLifted {
@@ -308,8 +340,8 @@ struct TravelPlanTable: View {
     }
 
     /// 손잡이를 끈 거리만큼 옮긴 시각(1분 단위, 하루 안).
-    static func scrubMinute(start: Int, translation: CGFloat) -> Int {
-        min(max(start + Int((translation / minuteHeight).rounded()), 0), 1_439)
+    static func scrubMinute(start: Int, translation: CGFloat, scale: CGFloat = 1) -> Int {
+        min(max(start + Int((translation / (minuteHeight * scale)).rounded()), 0), 1_439)
     }
 
     /// 재생 헤드: 가운데에 고정된 남색 선과 왼쪽의 시각 표. 누르는 것은 아래 표가 받는다.
@@ -342,7 +374,7 @@ struct TravelPlanTable: View {
             .sequenced(before: DragGesture(minimumDistance: 0))
             .onChanged { value in
                 guard case .second(true, let drag?) = value else { return }
-                let next = Self.moveDelta(translation: drag.translation.height, start: block.startMinute, end: block.endMinute)
+                let next = Self.moveDelta(translation: drag.translation.height, start: block.startMinute, end: block.endMinute, scale: zoom)
                 if next != moveMinutes {
                     moveMinutes = next
                     UISelectionFeedbackGenerator().selectionChanged()
@@ -363,7 +395,7 @@ struct TravelPlanTable: View {
             .contentShape(Rectangle())
             .highPriorityGesture(DragGesture(minimumDistance: 1)
                 .onChanged { value in
-                    let next = Self.resizeDelta(translation: value.translation.height, start: block.startMinute, end: block.endMinute)
+                    let next = Self.resizeDelta(translation: value.translation.height, start: block.startMinute, end: block.endMinute, scale: zoom)
                     if next != resizeMinutes {
                         resizeMinutes = next
                         UISelectionFeedbackGenerator().selectionChanged()

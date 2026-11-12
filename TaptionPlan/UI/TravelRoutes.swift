@@ -8,6 +8,8 @@ import TaptionPlanStore
 final class TravelRouteStore {
     /// 구간(`TravelPlayhead.legKey`)별 길. 경도, 위도.
     private(set) var paths: [String: [SIMD2<Double>]] = [:]
+    /// 구간별 가는 데 걸리는 분(길찾기가 알려 준 값).
+    private(set) var minutes: [String: Int] = [:]
     private var asked: Set<String> = []
 
     /// 이보다 먼 구간(비행기·배)은 곧은 선 그대로 둔다.
@@ -38,6 +40,7 @@ final class TravelRouteStore {
             let cache = Self.cacheKey(from, to), leg = TravelPlayhead.legKey(from.id, to.id)
             if let known = cached[cache] {
                 if paths[leg] != known { paths[leg] = known }
+                if let time = cachedMinutes[cache], minutes[leg] != time { minutes[leg] = time }
                 continue
             }
             guard asked.insert(cache).inserted else { continue }
@@ -45,15 +48,20 @@ final class TravelRouteStore {
             let end = CLLocationCoordinate2D(latitude: to.latitude, longitude: to.longitude)
             let meters = CLLocation(latitude: start.latitude, longitude: start.longitude)
                 .distance(from: CLLocation(latitude: end.latitude, longitude: end.longitude))
-            guard let path = await Self.route(start: start, end: end, transports: Self.transports(meters: meters)) else { continue }
-            cached[cache] = path
-            paths[leg] = path
+            guard let found = await Self.route(start: start, end: end, transports: Self.transports(meters: meters)) else { continue }
+            cached[cache] = found.path
+            cachedMinutes[cache] = found.minutes
+            paths[leg] = found.path
+            minutes[leg] = found.minutes
         }
     }
 
     private var cached: [String: [SIMD2<Double>]] = [:]
+    private var cachedMinutes: [String: Int] = [:]
 
-    private static func route(start: CLLocationCoordinate2D, end: CLLocationCoordinate2D, transports: [MKDirectionsTransportType]) async -> [SIMD2<Double>]? {
+    private static func route(
+        start: CLLocationCoordinate2D, end: CLLocationCoordinate2D, transports: [MKDirectionsTransportType]
+    ) async -> (path: [SIMD2<Double>], minutes: Int)? {
         for transport in transports {
             if Task.isCancelled { return nil }
             let request = MKDirections.Request()
@@ -63,7 +71,8 @@ final class TravelRouteStore {
             request.requestsAlternateRoutes = false
             guard let route = try? await MKDirections(request: request).calculate().routes.first, route.polyline.pointCount > 1 else { continue }
             let points = route.polyline.points()
-            return (0..<route.polyline.pointCount).map { SIMD2(points[$0].coordinate.longitude, points[$0].coordinate.latitude) }
+            let path = (0..<route.polyline.pointCount).map { SIMD2(points[$0].coordinate.longitude, points[$0].coordinate.latitude) }
+            return (path, Int((route.expectedTravelTime / 60).rounded(.up)))
         }
         return nil
     }

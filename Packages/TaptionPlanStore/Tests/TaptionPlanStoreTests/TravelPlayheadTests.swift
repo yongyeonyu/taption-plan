@@ -72,4 +72,13 @@ final class TravelPlayheadTests: XCTestCase {
         XCTAssertEqual(moving.fromID, "a")
         XCTAssertEqual(moving.toID, "b")
     }
+
+    /// TVY1112A01: 가는 데 걸리는 시간보다 사이가 짧으면 빠듯한 일정.
+    func testTightStopsNeedMoreTravelTimeThanTheGap() {
+        // a 10:00 끝 → b 11:00 시작(사이 60분), b 12:00 끝 → c 13:00 시작(사이 60분).
+        let minutes = [TravelPlayhead.legKey("a", "b"): 75, TravelPlayhead.legKey("b", "c"): 20]
+        XCTAssertEqual(TravelPlayhead.tightStops(stops, travelMinutes: minutes), ["b"])
+        XCTAssertEqual(TravelPlayhead.tightStops(stops, travelMinutes: [:]), [])
+        XCTAssertEqual(TravelPlayhead.tightStops(stops, travelMinutes: [TravelPlayhead.legKey("a", "b"): 60]), [], "꼭 맞으면 빠듯하지 않다")
+    }
 }

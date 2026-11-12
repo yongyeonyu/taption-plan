@@ -32,7 +32,8 @@ extension AppModel {
                 tripID: plan.tripID, itemID: item.id, kind: item.kind.rawValue, title: item.title,
                 start: item.start, end: item.end,
                 startOffsetSeconds: item.timeZone.secondsFromGMT(for: item.start),
-                endOffsetSeconds: item.endTimeZone.secondsFromGMT(for: item.end), planID: planID, status: item.status.stored
+                endOffsetSeconds: item.endTimeZone.secondsFromGMT(for: item.end), planID: planID, status: item.status.stored,
+                note: item.note.isEmpty ? nil : item.note
             ))
             // 잠은 숙소 자리라 지도에 핀을 따로 찍지 않는다.
             guard item.kind != .sleep, let coordinate = item.coordinate else { continue }
@@ -154,7 +155,8 @@ extension AppModel {
 
     /// 여행 일정 하나를 손으로 넣는다. 일상 쪽 계획 기록이 함께 생긴다. 넣은 일정 번호를 돌려준다.
     func addTripItem(
-        tripID: String, kind: TripImportItem.Kind, title: String, start: Date, end: Date, offsetSeconds: Int, place: TravelItemPlace? = nil
+        tripID: String, kind: TripImportItem.Kind, title: String, start: Date, end: Date, offsetSeconds: Int,
+        place: TravelItemPlace? = nil, note: String = ""
     ) async -> String? {
         guard acceptsDataMutation(), !tripID.isEmpty, end > start else { return nil }
         let name = title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -165,7 +167,8 @@ extension AppModel {
         let itemID = "m-" + UUID().uuidString.prefix(8).lowercased()
         let items = (snapshot.settings.travelTripItems ?? []) + [TravelTripItem(
             tripID: tripID, itemID: itemID, kind: kind.rawValue, title: name.isEmpty ? kind.planName : name, start: start, end: end,
-            startOffsetSeconds: offsetSeconds, endOffsetSeconds: offsetSeconds, planID: planID
+            startOffsetSeconds: offsetSeconds, endOffsetSeconds: offsetSeconds, planID: planID,
+            note: Self.cleanTripNote(note)
         )]
         snapshot.settings.travelTripItems = items
         if let place, let item = items.last { setTripItemPlace(place, for: item) }
@@ -173,6 +176,12 @@ extension AppModel {
             snapshot.settings.travelTrips = TravelTripDirectory.extended(trips, toCover: items)
         }
         return await persist() ? itemID : nil
+    }
+
+    /// 메모는 앞뒤 빈칸을 떼고 500자까지. 비면 nil(키를 쓰지 않는다).
+    static func cleanTripNote(_ note: String) -> String? {
+        let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : String(trimmed.prefix(500))
     }
 
     /// 일정의 지도 핀을 그 장소로 놓는다(없으면 만들고, 있으면 옮긴다). nil이면 핀을 뗀다. 저장은 부른 쪽이 한다.
@@ -203,7 +212,7 @@ extension AppModel {
     @discardableResult
     func updateTripItem(
         tripID: String, itemID: String, kind: TripImportItem.Kind, title: String, start: Date, end: Date,
-        place: TravelItemPlace? = nil, replacesPlace: Bool = false, calendar: Calendar = .autoupdatingCurrent
+        place: TravelItemPlace? = nil, replacesPlace: Bool = false, note: String? = nil, calendar: Calendar = .autoupdatingCurrent
     ) async -> Bool {
         var items = snapshot.settings.travelTripItems ?? []
         guard end > start, let index = items.firstIndex(where: { $0.tripID == tripID && $0.itemID == itemID }) else { return false }
@@ -213,6 +222,8 @@ extension AppModel {
         items[index].title = name
         items[index].start = start
         items[index].end = end
+        // 메모는 넘겨준 때만 바꾼다(빈 글이면 지운다).
+        if let note { items[index].note = Self.cleanTripNote(note) }
         if let planID = items[index].planID, let planIndex = snapshot.plans.firstIndex(where: { $0.id == planID }) {
             guard !snapshot.plans[planIndex].isFixed else { return false }
             snapshot.plans[planIndex].title = name
