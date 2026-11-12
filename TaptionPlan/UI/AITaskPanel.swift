@@ -346,6 +346,7 @@ private struct AssistantApprovalCard: View {
 /// 새 질문이 오면 잠깐 알리고, 누르면 답하는 시트를 연다(ASK1112A01). 사생활 잠금 중에는 알리지 않는다.
 struct AssistantQuestionHost: View {
     let language: MapHomeLanguage
+    @Environment(\.scenePhase) private var scenePhase
     @State private var isPresented = false
     private var store: AssistantQuestionStore { .shared }
 
@@ -376,11 +377,11 @@ struct AssistantQuestionHost: View {
                 .padding(.horizontal, 16)
                 .padding(.bottom, 144)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
-                .task(id: question.id) {
-                    try? await Task.sleep(for: .seconds(10))
-                    if store.announced?.id == question.id { store.announced = nil }
-                }
             }
+        }
+        // 띠는 누를 때까지 남는다. 앱이 앞으로 올 때 답하지 않은 질문이 있으면 다시 알린다(ASN1112A01).
+        .task(id: scenePhase == .active) {
+            if scenePhase == .active, !isPresented { store.reannounce() }
         }
         .sheet(isPresented: $isPresented) {
             ScrollView {

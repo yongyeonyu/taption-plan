@@ -1,4 +1,5 @@
 import Foundation
+import UserNotifications
 
 /// AI 확인 목록(AIQ1111A01). 앱이 처리하지 못했거나 불분명한 것을 서버 `/tasks`에 올리면
 /// 연결된 AI가 가져가(처리중) 처리하고 완료·실패를 남긴다. AI 결과는 기존 명령(가계부·메모·기록)으로 바로 반영된다.
@@ -286,6 +287,12 @@ final class AssistantQuestionStore {
         save()
     }
 
+    /// 앱이 앞으로 올 때 부른다: 알리는 중인 것이 없고 답하지 않은 질문이 있으면 가장 오래된 것을 다시 알린다(ASN1112A01).
+    func reannounce() {
+        guard announced == nil, let first = waiting.first else { return }
+        announced = first
+    }
+
     func prune(now: Date = .now) {
         let kept = items.filter { now.timeIntervalSince($0.askedAt) < Self.lifetime }
         guard kept.count != items.count else { return }
@@ -324,6 +331,7 @@ final class AssistantQuestionStore {
     private func finish(_ index: Int, _ status: AssistantQuestion.Status, now: Date) {
         items[index].status = status
         items[index].answeredAt = now
+        if defaults === UserDefaults.standard { AssistantQuestionNotice.clear(items[index].id) }
         if announced?.id == items[index].id { announced = nil }
         save()
     }
@@ -431,5 +439,38 @@ struct AssistantApproval: Codable, Equatable, Sendable {
         if let model, defaults === UserDefaults.standard, request == .shareLevel || request == .retentionDays {
             await AssistantActivitySync.run(model: model)
         }
+    }
+}
+
+/// 앱이 앞에 있지 않을 때 온 AI 질문·승인 요청을 iOS 알림으로 알린다(ASN1112A01).
+/// 알림 권한이 있고 앱의 알림 설정이 켜져 있을 때만 보낸다. 사생활 잠금 중에는 질문 글을 싣지 않는다.
+enum AssistantQuestionNotice {
+    static func identifier(_ id: String) -> String { "assistant-question-\(id)" }
+
+    /// 알림에 실을 제목과 본문. 잠금 중이면 본문은 앱에서 보라는 말뿐이다.
+    static func content(_ question: AssistantQuestion, language: MapHomeLanguage, locked: Bool) -> (title: String, body: String) {
+        let title = question.approval == nil ? language.text("AI 질문", "AI question") : language.text("AI 승인 요청", "AI approval request")
+        let body = locked ? language.text("앱에서 확인해 주세요.", "Open the app to see it.") : (question.approval?.title(language) ?? question.question)
+        return (title, body)
+    }
+
+    @MainActor
+    static func post(_ question: AssistantQuestion, language: MapHomeLanguage, enabled: Bool) {
+        guard enabled else { return }
+        let text = content(question, language: language, locked: TaptionExternalPrivacyStore.isLocked)
+        Task {
+            let center = UNUserNotificationCenter.current()
+            let status = await center.notificationSettings().authorizationStatus
+            guard status == .authorized || status == .provisional else { return }
+            let content = UNMutableNotificationContent()
+            content.title = text.title
+            content.body = text.body
+            content.sound = .default
+            try? await center.add(UNNotificationRequest(identifier: identifier(question.id), content: content, trigger: nil))
+        }
+    }
+
+    static func clear(_ id: String) {
+        UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: [identifier(id)])
     }
 }

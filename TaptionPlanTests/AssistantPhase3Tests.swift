@@ -1899,6 +1899,38 @@ final class AssistantAppControlTests: XCTestCase {
         XCTAssertFalse(String(decoding: try XCTUnwrap(AssistantAppStateSync.body(state)), as: UTF8.self).contains("민수"), "동행 이름은 올리지 않는다")
     }
 
+    /// ASN1112A01: 답하지 않은 질문은 앱이 앞으로 올 때 다시 알리고, iOS 알림 글은 잠금 중이면 질문을 싣지 않는다.
+    func testWaitingQuestionsAreAnnouncedAgainAndTheNoticeHidesTextWhenLocked() throws {
+        let store = defaults()
+        let questions = AssistantQuestionStore(defaults: store)
+        let first = try XCTUnwrap(AssistantQuestion.make(id: "q1", question: "어디였나요?", options: ["회사", "카페"], multiSelect: false, now: at(11, 12, 9)))
+        let approval = try XCTUnwrap(AssistantApproval.make(request: "retentionDays", value: .number(7))).question(id: "a1", now: at(11, 12, 9))
+        questions.add(first, now: at(11, 12, 9))
+        questions.add(approval, now: at(11, 12, 9))
+        XCTAssertEqual(questions.announced?.id, "a1")
+        questions.announced = nil
+        questions.reannounce()
+        XCTAssertEqual(questions.announced?.id, "q1", "가장 오래 기다린 것부터 다시 알린다")
+        questions.reannounce()
+        XCTAssertEqual(questions.announced?.id, "q1", "알리는 중이면 바꾸지 않는다")
+        XCTAssertTrue(questions.answer("q1", choices: ["카페"], text: nil, now: at(11, 12, 10)))
+        XCTAssertNil(questions.announced)
+        questions.reannounce()
+        XCTAssertEqual(questions.announced?.id, "a1")
+        questions.skip("a1", now: at(11, 12, 10))
+        questions.reannounce()
+        XCTAssertNil(questions.announced, "기다리는 것이 없으면 알리지 않는다")
+
+        let open = AssistantQuestionNotice.content(first, language: .korean, locked: false)
+        XCTAssertEqual([open.title, open.body], ["AI 질문", "어디였나요?"])
+        let locked = AssistantQuestionNotice.content(first, language: .korean, locked: true)
+        XCTAssertEqual([locked.title, locked.body], ["AI 질문", "앱에서 확인해 주세요."])
+        let ask = AssistantQuestionNotice.content(approval, language: .korean, locked: false)
+        XCTAssertEqual(ask.title, "AI 승인 요청")
+        XCTAssertTrue(ask.body.contains("보관 기간"))
+        XCTAssertEqual(AssistantQuestionNotice.identifier("q1"), "assistant-question-q1")
+    }
+
     func testOpenScreenWaitsUntilTakenExpiresAndUndoCancelsIt() async throws {
         let store = defaults()
         let model = await model()

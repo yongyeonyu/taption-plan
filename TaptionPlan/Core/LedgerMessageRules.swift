@@ -496,6 +496,10 @@ extension AppModel {
             return result
         case let .askUser(question), let .requestApproval(question):
             guard preferences.questions.add(question) else { return .rejected("duplicate") }
+            // 앱이 앞에 있지 않으면 iOS 알림으로 알린다(ASN1112A01). 시험 저장소는 알리지 않는다.
+            if preferences.isLive, !isSceneActive {
+                AssistantQuestionNotice.post(question, language: language, enabled: settings.notificationsEnabled)
+            }
             var result = AssistantEditResult(after: String((question.approval?.title(language) ?? question.question).prefix(80)))
             result.appChange = AssistantAppChange(questionID: question.id)
             return result
