@@ -525,6 +525,31 @@ final class TravelTripUnitTests: XCTestCase {
         XCTAssertTrue(TravelPlanSelection.canNudge(-5, start: 1_380, end: 1_440))
     }
 
+    /// TVU1113A01: 시각 고치기를 여러 번 되돌리고 다시 한다. 새로 고치면 다시 하기는 비고, 다른 여행이면 앞의 것을 버린다.
+    func testPlanHistoryUndoesAndRedoesTimeEdits() {
+        func step(_ item: String, move: Int = 0, resize: Int = 0, trip: String = "t1") -> TravelPlanHistory.Step {
+            .init(tripID: trip, itemID: item, move: move, resize: resize, summary: item)
+        }
+        var history = TravelPlanHistory()
+        XCTAssertNil(history.undo())
+        history.record(step("a", move: 5))
+        history.record(step("a", move: 5))
+        history.record(step("b", resize: -15))
+        XCTAssertEqual(history.summary, "b")
+        XCTAssertEqual(history.undo(), step("b", resize: 15), "되돌릴 때는 반대 방향")
+        XCTAssertEqual(history.undo(), step("a", move: -5))
+        XCTAssertTrue(history.canUndo && history.canRedo)
+        XCTAssertEqual(history.redo(), step("a", move: 5))
+        history.record(step("c", move: 30))
+        XCTAssertFalse(history.canRedo, "새로 고치면 다시 하기는 빈다")
+        XCTAssertEqual(history.done.map(\.itemID), ["a", "a", "c"])
+        history.record(step("z", move: 10, trip: "t2"))
+        XCTAssertEqual(history.done.map(\.itemID), ["z"], "다른 여행이면 앞의 것을 버린다")
+        XCTAssertEqual(history.tripID, "t2")
+        for index in 0..<60 { history.record(step("n\(index)", move: 5, trip: "t2")) }
+        XCTAssertEqual(history.done.count, TravelPlanHistory.limit)
+    }
+
     /// TVU1113A01: 지도 핀을 누르면 그 일정의 날·시작 시각으로 가고, 길게 누른 자리는 주소가 없으면 좌표가 이름이 된다.
     func testPinFocusAndMapSpotName() throws {
         let start = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-11-21T00:30:00+09:00"))

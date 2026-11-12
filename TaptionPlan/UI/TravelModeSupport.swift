@@ -241,3 +241,90 @@ enum TravelMapSpot {
         return (TravelTripDay.string(for: item.start, offsetSeconds: item.startOffsetSeconds), ((local % 86_400) + 86_400) % 86_400 / 60)
     }
 }
+
+// MARK: - 되돌리기·다시 하기(TVU1113A01, Trip 원본의 ↶ ↷)
+
+/// 계획표에서 시각을 고친 걸음들(끌어 옮기기·길이 바꾸기·±5분)을 쌓아 여러 번 되돌리고 다시 한다. 앱을 닫으면 사라진다.
+struct TravelPlanHistory: Equatable {
+    struct Step: Equatable {
+        var tripID: String
+        var itemID: String
+        /// 옮긴 분과 끝이 바뀐 분(둘 중 하나만 0이 아니다).
+        var move: Int
+        var resize: Int
+        var summary: String
+
+        var inverse: Step {
+            var step = self
+            step.move = -move
+            step.resize = -resize
+            return step
+        }
+    }
+
+    static let limit = 50
+    private(set) var done: [Step] = []
+    private(set) var undone: [Step] = []
+
+    var tripID: String? { (done.last ?? undone.last)?.tripID }
+    var canUndo: Bool { !done.isEmpty }
+    var canRedo: Bool { !undone.isEmpty }
+    /// 막대에 보일 글: 방금 한 것, 다 되돌렸으면 다시 할 것.
+    var summary: String { (done.last ?? undone.last)?.summary ?? "" }
+
+    /// 새로 고친 걸음. 다른 여행이면 앞의 쌓임을 버리고, 다시 하기 쌓임은 늘 비운다.
+    mutating func record(_ step: Step) {
+        if let tripID, tripID != step.tripID { done.removeAll() }
+        undone.removeAll()
+        done.append(step)
+        if done.count > Self.limit { done.removeFirst(done.count - Self.limit) }
+    }
+
+    /// 되돌릴 걸음(저장소에 반영할 반대 방향). 없으면 nil.
+    mutating func undo() -> Step? {
+        guard let step = done.popLast() else { return nil }
+        undone.append(step)
+        return step.inverse
+    }
+
+    mutating func redo() -> Step? {
+        guard let step = undone.popLast() else { return nil }
+        done.append(step)
+        return step
+    }
+}
+
+/// 계획표 아래의 되돌리기 줄: 방금 고친 것과 ↶ ↷.
+struct TravelPlanHistoryBar: View {
+    let history: TravelPlanHistory
+    let language: MapHomeLanguage
+    let onUndo: () -> Void
+    let onRedo: () -> Void
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "arrow.up.and.down")
+            Text(history.summary).lineLimit(1)
+            Spacer()
+            button("arrow.uturn.backward", language.text("되돌리기", "Undo"), isOn: history.canUndo, id: "travelPlanUndo", action: onUndo)
+            button("arrow.uturn.forward", language.text("다시 하기", "Redo"), isOn: history.canRedo, id: "travelPlanRedo", action: onRedo)
+        }
+        .font(.footnote)
+        .foregroundStyle(TravelInk.plan)
+        .padding(.leading, 10)
+        .padding(.trailing, 2)
+        .frame(height: 32)
+        .background(TravelInk.planTint, in: RoundedRectangle(cornerRadius: 8))
+        .padding(.horizontal, 10)
+        .padding(.top, 4)
+    }
+
+    private func button(_ symbol: String, _ label: String, isOn: Bool, id: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) { Image(systemName: symbol).font(.system(size: 14, weight: .semibold)).frame(width: 40, height: 32) }
+            .buttonStyle(.plain)
+            .opacity(isOn ? 1 : 0.3)
+            .disabled(!isOn)
+            .accessibilityLabel(label)
+            .accessibilityIdentifier(id)
+    }
+}

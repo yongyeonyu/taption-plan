@@ -266,7 +266,7 @@ struct TravelModeView: View {
     /// 계획표에서 고른 빈 셀(TVU1113A01).
     @State private var planCell: TravelPlanCell?
     @State private var planSelectedID: String?
-    @State private var timeUndo: TravelTimeUndo?
+    @State private var planHistory = TravelPlanHistory()
     @State private var deleteCandidate: TravelTripDirectory.Entry?
     /// 재생 헤드의 시각(그날 0시부터의 분). nil이면 처음 자리(오늘은 지금, 아니면 첫 일정 시작).
     @State private var playMinute: Int?
@@ -1053,7 +1053,9 @@ struct TravelModeView: View {
                     .frame(height: planDragHeight ?? tableHeight)
                     .padding(.horizontal, 8)
             }
-            if let undo = timeUndo, undo.tripID == entry.id, isPlanUp { undoRow(undo) }
+            if isPlanUp, planHistory.tripID == entry.id, planHistory.canUndo || planHistory.canRedo {
+                TravelPlanHistoryBar(history: planHistory, language: language, onUndo: { applyHistory(planHistory.undo()) }, onRedo: { applyHistory(planHistory.redo()) })
+            }
             tripFooter(entry)
         }
         .background(TravelInk.panel, in: RoundedRectangle(cornerRadius: corner, style: .continuous))
@@ -1100,38 +1102,22 @@ struct TravelModeView: View {
             guard done else { return }
             let start = block.startMinute + move, end = block.endMinute + move + resize
             withAnimation(.snappy(duration: 0.2)) {
-                timeUndo = TravelTimeUndo(
+                planHistory.record(.init(
                     tripID: entry.id, itemID: block.id, move: move, resize: resize,
                     summary: block.title + " " + TravelQuickEntrySheet.clock(start) + "–" + TravelQuickEntrySheet.clock(end)
-                )
+                ))
             }
         }
     }
 
-    private func undoRow(_ undo: TravelTimeUndo) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: "arrow.up.and.down")
-            Text(undo.summary).lineLimit(1)
-            Spacer()
-            Button(language.text("되돌리기", "Undo")) {
-                Task {
-                    if undo.move != 0 {
-                        await model.moveTripItem(tripID: undo.tripID, itemID: undo.itemID, by: TimeInterval(-undo.move * 60))
-                    } else {
-                        await model.resizeTripItem(tripID: undo.tripID, itemID: undo.itemID, endDelta: TimeInterval(-undo.resize * 60))
-                    }
-                    withAnimation(.snappy(duration: 0.2)) { timeUndo = nil }
-                }
-            }
-            .accessibilityIdentifier("travelPlanUndo")
+    /// 되돌리기·다시 하기에서 나온 한 걸음을 저장소에 반영한다.
+    private func applyHistory(_ step: TravelPlanHistory.Step?) {
+        guard let step else { return }
+        Task {
+            _ = step.move != 0
+                ? await model.moveTripItem(tripID: step.tripID, itemID: step.itemID, by: TimeInterval(step.move * 60))
+                : await model.resizeTripItem(tripID: step.tripID, itemID: step.itemID, endDelta: TimeInterval(step.resize * 60))
         }
-        .font(.footnote)
-        .foregroundStyle(TravelInk.plan)
-        .padding(.horizontal, 10)
-        .frame(height: 30)
-        .background(TravelInk.planTint, in: RoundedRectangle(cornerRadius: 8))
-        .padding(.horizontal, 10)
-        .padding(.top, 4)
     }
 
     private func editEntry(_ entry: TravelTripDirectory.Entry, itemID: String) {
@@ -1182,14 +1168,6 @@ struct TravelModeView: View {
 }
 
 /// 계획표에서 방금 끌어 바꾼 시각(되돌리기용).
-struct TravelTimeUndo: Equatable {
-    var tripID: String
-    var itemID: String
-    var move: Int
-    var resize: Int
-    var summary: String
-}
-
 private struct TravelLedgerTarget: Identifiable {
     let id: String
 }
