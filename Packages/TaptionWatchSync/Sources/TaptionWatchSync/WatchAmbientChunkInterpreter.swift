@@ -31,6 +31,9 @@ public enum WatchAmbientChunkInterpreter {
     public static let minimumSampleCount = 40
     /// 묶음 전체 가속도 크기의 표준편차가 이 값을 넘으면 분명히 움직인 것으로 본다.
     public static let movingStandardDeviationG = 0.04
+    /// 변동이 이 값에 못 미치면 창 판정이 걸음·손동작이라 해도 움직이지 않은 것으로 본다.
+    /// 잠든 손목(0.001g)을 예전 규칙이 걸음으로 적어 수면 중 「집안일」이 생겼다(WSN1112A03).
+    public static let stillStandardDeviationG = 0.01
     public static let minimumActiveShare = 0.25
     public static let maximumGaitShare = 0.7
 
@@ -72,8 +75,9 @@ public enum WatchAmbientChunkInterpreter {
         } else {
             evidence.append("창 판정 없음")
         }
-        let isMoving = activeShare >= minimumActiveShare
-            || deviation >= movingStandardDeviationG
+        let isMotionless = standardDeviationG.map { $0 < stillStandardDeviationG } ?? false
+        let isMoving = !isMotionless
+            && (activeShare >= minimumActiveShare || deviation >= movingStandardDeviationG)
         guard isMoving else {
             return WatchAmbientChunkVerdict(
                 outcome: .still, confidenceScore: 0.6,

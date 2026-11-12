@@ -189,6 +189,31 @@ final class WatchBehaviorRulesV3Tests: XCTestCase {
         XCTAssertEqual(verdict.outcome, .still)
     }
 
+    func testMotionlessChunkIsStillEvenWhenWindowsSayGait() {
+        // 아이폰 18 실기(2026-11-11 02:29): 변동 0.001g인데 걸음 창 65%라 수면 중 집안일이 생겼다.
+        let verdict = WatchAmbientChunkInterpreter.interpret(
+            duration: 480, sampleCount: 6_000, standardDeviationG: 0.001,
+            segments: [
+                segment(.walking, from: 0, to: 312),
+                segment(.stationary, from: 312, to: 480),
+            ]
+        )
+        XCTAssertEqual(verdict.outcome, .still)
+        XCTAssertTrue(verdict.evidence.contains("가속도 변동 0.001g"))
+    }
+
+    func testChunkWithoutDeviationStillFollowsWindows() {
+        let verdict = WatchAmbientChunkInterpreter.interpret(
+            duration: 600, sampleCount: 7_500, standardDeviationG: nil,
+            segments: [
+                segment(.walking, from: 0, to: 120),
+                segment(.eating, from: 120, to: 360),
+                segment(.stationary, from: 360, to: 600),
+            ]
+        )
+        XCTAssertEqual(verdict.outcome, .mixedActivity)
+    }
+
     func testWalkingChunkIsLeftToPhone() {
         let verdict = WatchAmbientChunkInterpreter.interpret(
             duration: 600, sampleCount: 7_500, standardDeviationG: 0.15,

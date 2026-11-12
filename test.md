@@ -2,6 +2,17 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## WSN1112A03 · 잠든 손목을 집안일로 보던 묶음 판정 (2026-11-12)
+
+원인: 아이폰 18 실기(2026-11-11 02:29)에서 수면 중 「집안일」 8분. 묶음 해석기가 창 판정의 걸음·손동작 비율이 25% 이상이면 묶음 전체 가속도 변동이 0.001g여도 움직인 것으로 봄. 고친 것: 변동 값이 있고 `stillStandardDeviationG`(0.01g) 미만이면 「움직임 적음」(`WatchAmbientChunkInterpreter.swift`). 변동 값이 없는 묶음은 예전대로. 로그: `build/validation/WSN1112A03/`.
+
+| 검증 | 결과 |
+|---|---|
+| `Packages/TaptionWatchSync` `swift test` | 49건 통과(`pkg-watchsync.log`). 새 2건: 변동 0.001g+걸음 창 65% → still, 변동 값 없으면 창 판정 따름 |
+| 아이폰 11 Pro `FeatureEngineTests`·`SensorDayStoreTests`·`WatchSensorQueryPlanTests`·`AppleWatchNapPolicyTests`(앱 Debug 시험 빌드 포함) | 825건 중 통과 824·실패 1(`iphone11-r1.log`). 실패는 `testImmediateSensorAnalysisKeepsEveryPendingDay`(이 파일에 이미 적힌 아이폰 11 시간 의존 실패, 이번 변경과 무관한 파일) |
+
+한계: 0.01g는 실기 사례 하나(0.001g)와 예전 기준(가만히 앉아도 0.018g 초과)으로 정한 값. Watch 앱 단독 빌드는 따로 돌리지 않음(바뀐 패키지는 iPhone·Watch 공용, iPhone 시험 빌드로만 컴파일 확인). 이미 저장된 02:29 기록이 다시 계산돼 사라지는지는 실기에서 미확인.
+
 ## WSN1112A02 · Watch 판정 보강: HealthKit 심박·걸음, 최근 것부터 읽기, 기기 이름 가리기 (2026-11-12)
 
 대표 결정(객관식): 심박·걸음은 HealthKit 값만 연결, 도착 지연은 최근 것부터 읽기, 수면 근거의 기기 이름은 가림, 평상시 Watch 라벨을 iPhone 행동 엔진에 잇는 것은 실제 기록 확인 뒤(하지 않음). 로그: `build/validation/WSN1112A02/`. TestFlight 322에는 들어가지 않음.
