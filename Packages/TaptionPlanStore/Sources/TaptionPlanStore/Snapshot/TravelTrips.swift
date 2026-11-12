@@ -19,11 +19,16 @@ public struct TravelTrip: Codable, Hashable, Sendable, Identifiable {
     public var timeZoneID: String?
     /// 지구본 깃발 색(`#RRGGBB`). 없으면 여행 순서대로 기본 색을 쓴다(TVE1112A01).
     public var flagColorHex: String?
+    /// 언젠가 갈 여행(버킷리스트)의 날 수(TVW1112A01). 날짜를 아직 정하지 않아 `startDay`·`endDay`가 비어 있다. 날짜를 정하면 nil.
+    public var wishDays: Int?
+
+    /// 날짜를 아직 정하지 않은 여행.
+    public var isWish: Bool { startDay.isEmpty && (wishDays ?? 0) >= 1 }
 
     public init(
         id: String, title: String, startDay: String, endDay: String, countryCode: String? = nil, regionName: String? = nil,
         latitude: Double? = nil, longitude: Double? = nil, currencyCode: String? = nil, timeZoneID: String? = nil,
-        flagColorHex: String? = nil
+        flagColorHex: String? = nil, wishDays: Int? = nil
     ) {
         self.id = id
         self.title = title
@@ -34,6 +39,7 @@ public struct TravelTrip: Codable, Hashable, Sendable, Identifiable {
         self.latitude = latitude
         self.longitude = longitude
         self.currencyCode = currencyCode
+        self.wishDays = wishDays
         self.timeZoneID = timeZoneID
         self.flagColorHex = flagColorHex
     }
@@ -78,6 +84,8 @@ public enum TravelTripDay {
 public enum TravelTripDirectory {
     public enum State: String, Sendable {
         case active, upcoming, past
+        /// 날짜를 정하지 않은 여행(버킷리스트).
+        case someday
     }
 
     public struct Entry: Hashable, Sendable, Identifiable {
@@ -105,16 +113,21 @@ public enum TravelTripDirectory {
         var trips: [String: (trip: TravelTrip, isStored: Bool)] = [:]
         for trip in stored where trips[trip.id] == nil { trips[trip.id] = (trip, true) }
         for trip in legacyTrips(stops: stops, items: items, names: names) where trips[trip.id] == nil { trips[trip.id] = (trip, false) }
-        let rank: [State: Int] = [.active: 0, .upcoming: 1, .past: 2]
+        // 언젠가 갈 여행은 다가오는 여행 뒤, 지난 여행 앞.
+        let rank: [State: Int] = [.active: 0, .upcoming: 1, .someday: 2, .past: 3]
         return trips.values.map { entry($0.trip, isStored: $0.isStored, today: today) }.sorted { left, right in
             if left.state != right.state { return (rank[left.state] ?? 0) < (rank[right.state] ?? 0) }
             if left.state == .past, left.trip.endDay != right.trip.endDay { return left.trip.endDay > right.trip.endDay }
+            if left.state == .someday, left.trip.title != right.trip.title { return left.trip.title < right.trip.title }
             if left.state != .past, left.trip.startDay != right.trip.startDay { return left.trip.startDay < right.trip.startDay }
             return left.id < right.id
         }
     }
 
     public static func entry(_ trip: TravelTrip, isStored: Bool, today: String) -> Entry {
+        if trip.isWish {
+            return Entry(trip: trip, isStored: isStored, state: .someday, dayCount: max(1, trip.wishDays ?? 1), daysUntilStart: nil, dayNumber: nil)
+        }
         let state: State = today < trip.startDay ? .upcoming : (today > trip.endDay ? .past : .active)
         return Entry(
             trip: trip, isStored: isStored, state: state,
@@ -156,11 +169,31 @@ public enum TravelTripDirectory {
         return copy
     }
 
+    /// 언젠가 갈 여행에 첫날을 정한다: 정해 둔 날 수만큼 이어진 기간이 된다. 첫날을 읽지 못하면 그대로.
+    public static func scheduled(_ trip: TravelTrip, startDay: String, calendar: Calendar = Calendar(identifier: .gregorian)) -> TravelTrip {
+        guard trip.isWish, let parts = TravelTripDay.components(startDay) else { return trip }
+        var utc = calendar
+        utc.timeZone = TimeZone(secondsFromGMT: 0) ?? .gmt
+        guard let first = utc.date(from: parts), let last = utc.date(byAdding: .day, value: max(1, trip.wishDays ?? 1) - 1, to: first) else { return trip }
+        var copy = trip
+        copy.startDay = startDay
+        copy.endDay = TravelTripDay.string(for: last, offsetSeconds: 0)
+        copy.wishDays = nil
+        return copy
+    }
+
     /// 일정이 여행 기간 밖에 놓이면 그 여행의 기간을 늘린다(줄이지는 않는다).
     public static func extended(_ trips: [TravelTrip], toCover items: [TravelTripItem]) -> [TravelTrip] {
         trips.map { trip in
             guard let span = days(of: items, tripID: trip.id) else { return trip }
             var copy = trip
+            // 날짜 없던 여행에 일정이 생기면 그 날짜로 정해진다.
+            if trip.isWish {
+                copy.startDay = span.start
+                copy.endDay = span.end
+                copy.wishDays = nil
+                return copy
+            }
             copy.startDay = min(trip.startDay, span.start)
             copy.endDay = max(trip.endDay, span.end)
             return copy

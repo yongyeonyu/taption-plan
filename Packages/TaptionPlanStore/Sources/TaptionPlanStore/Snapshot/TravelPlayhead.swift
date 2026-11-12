@@ -26,6 +26,56 @@ public enum TravelPlayhead {
         public var stopID: String?
         /// 이동 중일 때 향하는 쪽(오른쪽이면 참). 머무는 중이면 마지막 방향을 그대로 쓴다.
         public var facesEast: Bool
+        /// 이동 중일 때 떠난 일정과 향하는 일정.
+        public var fromID: String?
+        public var toID: String?
+
+        public init(longitude: Double, latitude: Double, stopID: String?, facesEast: Bool, fromID: String? = nil, toID: String? = nil) {
+            self.longitude = longitude
+            self.latitude = latitude
+            self.stopID = stopID
+            self.facesEast = facesEast
+            self.fromID = fromID
+            self.toID = toID
+        }
+    }
+
+    /// 고양이 동작(TVW1112A01). 머무는 중이면 일정 종류에, 이동 중이면 수단에 맞춘다.
+    public enum Pose: String, Sendable, CaseIterable {
+        case walk, car, subway, train, bus, airplane, boat, eat, coffee, sleep, rest, shop, sight, activity
+    }
+
+    /// 머무는 일정의 동작. 이동 일정(`transfer`·`flight`) 안에 있으면 그 수단.
+    public static func pose(kind: String, title: String) -> Pose {
+        switch kind {
+        case "meal": .eat
+        case "cafe": .coffee
+        case "lodging", "sleep": .sleep
+        case "rest": .rest
+        case "shopping": .shop
+        case "activity": .activity
+        case "flight": .airplane
+        case "transfer": vehicle(title: title) ?? .car
+        default: .sight
+        }
+    }
+
+    /// 일정 사이를 갈 때의 동작: 앞뒤 일정 이름에 수단이 적혀 있으면 그것, 아니면 가까우면 걷고 멀면 차.
+    public static func movingPose(fromKind: String, fromTitle: String, toKind: String, toTitle: String, meters: Double) -> Pose {
+        if fromKind == "flight" || toKind == "flight" { return .airplane }
+        if toKind == "transfer", let named = vehicle(title: toTitle) { return named }
+        if fromKind == "transfer", let named = vehicle(title: fromTitle) { return named }
+        return meters <= 1_500 ? .walk : .car
+    }
+
+    static func vehicle(title: String) -> Pose? {
+        let text = title.lowercased()
+        let words: [(Pose, [String])] = [
+            (.airplane, ["비행기", "항공", "flight"]), (.boat, ["배", "페리", "선착장", "ferry", "boat"]),
+            (.subway, ["지하철", "전철", "subway", "metro"]), (.train, ["기차", "열차", "신칸센", "ktx", "train"]),
+            (.bus, ["버스", "bus"]), (.car, ["택시", "렌터카", "자동차", "taxi", "drive", "car"]), (.walk, ["도보", "걸어", "산책", "walk"]),
+        ]
+        return words.first { $0.1.contains { text.contains($0) } }?.0
     }
 
     /// 그 시각의 자리. 일정 안이면 그 곳, 일정 사이면 앞 일정의 끝에서 다음 일정의 시작까지 시간에 비례해 곧게 간다.
@@ -72,12 +122,12 @@ public enum TravelPlayhead {
                 let span = stop.startMinute - previous.endMinute
                 let t = span > 0 ? min(1, max(0, Double(minute - previous.endMinute) / Double(span))) : 1
                 if let spot = paths[legKey(previous.id, stop.id)].flatMap({ along($0, t: t) }) {
-                    return Position(longitude: spot.point.x, latitude: spot.point.y, stopID: nil, facesEast: spot.facesEast)
+                    return Position(longitude: spot.point.x, latitude: spot.point.y, stopID: nil, facesEast: spot.facesEast, fromID: previous.id, toID: stop.id)
                 }
                 return Position(
                     longitude: previous.longitude + (stop.longitude - previous.longitude) * t,
                     latitude: previous.latitude + (stop.latitude - previous.latitude) * t,
-                    stopID: nil, facesEast: stop.longitude >= previous.longitude
+                    stopID: nil, facesEast: stop.longitude >= previous.longitude, fromID: previous.id, toID: stop.id
                 )
             }
             if stop.endMinute >= previous.endMinute { previous = stop }

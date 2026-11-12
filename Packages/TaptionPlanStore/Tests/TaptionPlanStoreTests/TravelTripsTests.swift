@@ -155,4 +155,31 @@ struct TravelTripsTests {
         #expect(TravelTripItemEditor.resized(items, tripID: "t", itemID: "a", startDelta: 3_400) == nil, "5분보다 짧아질 수 없다")
         #expect(TravelTripItemEditor.resized(items, tripID: "t", itemID: "a", endDelta: -3_300) != nil, "꼭 5분은 된다")
     }
+
+    /// TVW1112A01: 날짜 없는 여행(버킷리스트).
+    @Test func wishTripsHaveNoDatesUntilScheduled() throws {
+        let wish = TravelTrip(id: "w", title: "도쿄", startDay: "", endDay: "", countryCode: "JP", wishDays: 5)
+        #expect(wish.isWish)
+        let entry = TravelTripDirectory.entry(wish, isStored: true, today: "2026-11-12")
+        #expect(entry.state == .someday)
+        #expect(entry.dayCount == 5)
+        #expect(entry.nights == 4)
+        #expect(entry.daysUntilStart == nil)
+
+        let soon = TravelTrip(id: "s", title: "후쿠오카", startDay: "2026-11-20", endDay: "2026-11-22")
+        let old = TravelTrip(id: "o", title: "부산", startDay: "2026-10-01", endDay: "2026-10-02")
+        let order = TravelTripDirectory.entries(stored: [old, wish, soon], stops: [], items: [], today: "2026-11-12").map(\.id)
+        #expect(order == ["s", "w", "o"], "다가오는 여행 → 언젠가 → 지난 여행")
+
+        let dated = TravelTripDirectory.scheduled(wish, startDay: "2027-03-30")
+        #expect(dated.startDay == "2027-03-30")
+        #expect(dated.endDay == "2027-04-03")
+        #expect(dated.wishDays == nil)
+        #expect(!dated.isWish)
+        #expect(TravelTripDirectory.scheduled(soon, startDay: "2027-01-01") == soon, "날짜 있는 여행은 그대로")
+
+        // 날짜가 없으면 키를 쓰지 않아 예전 여행의 바이트가 그대로다.
+        #expect(!String(decoding: try Self.encoder().encode(soon), as: UTF8.self).contains("wishDays"))
+        #expect(try JSONDecoder().decode(TravelTrip.self, from: Self.encoder().encode(wish)) == wish)
+    }
 }

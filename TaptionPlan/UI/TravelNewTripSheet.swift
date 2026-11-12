@@ -16,6 +16,9 @@ struct TravelNewTripSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var title = ""
     @State private var isDayTrip = false
+    /// 날짜는 나중에 정하는 여행(버킷리스트).
+    @State private var isWish = false
+    @State private var wishNights = 3
     @State private var start = Date.now
     @State private var end = Date.now
     @State private var countryCode = "KR"
@@ -39,13 +42,22 @@ struct TravelNewTripSheet: View {
             Form {
                 Section {
                     TextField(language.text("여행 이름", "Trip name"), text: $title)
-                    Toggle(language.text("당일치기", "Day trip"), isOn: $isDayTrip)
-                    DatePicker(isDayTrip ? language.text("날짜", "Date") : language.text("첫날", "First day"), selection: $start, displayedComponents: .date)
-                    if !isDayTrip {
-                        DatePicker(language.text("마지막 날", "Last day"), selection: $end, in: start..., displayedComponents: .date)
+                    Toggle(language.text("언젠가 갈 여행 (날짜는 나중에)", "Someday trip (dates later)"), isOn: $isWish)
+                    if isWish {
+                        Stepper(value: $wishNights, in: 0...60) {
+                            Text(wishNights == 0 ? language.text("당일", "Day trip") : language.runtimeText("\(wishNights)박 \(wishNights + 1)일", "\(wishNights) nights, \(wishNights + 1) days"))
+                        }
+                    } else {
+                        Toggle(language.text("당일치기", "Day trip"), isOn: $isDayTrip)
+                        DatePicker(isDayTrip ? language.text("날짜", "Date") : language.text("첫날", "First day"), selection: $start, displayedComponents: .date)
+                        if !isDayTrip {
+                            DatePicker(language.text("마지막 날", "Last day"), selection: $end, in: start..., displayedComponents: .date)
+                        }
                     }
                 } footer: {
-                    Text(language.text("지난 날짜로 만들면 그날의 기록이 이 여행의 실제 기록이 됩니다.", "A past date turns that day's records into this trip's actual records."))
+                    Text(isWish
+                         ? language.text("버킷리스트에 담아 둡니다. 날짜를 정하면 일정을 넣을 수 있습니다.", "Saved to your bucket list. Set dates later to add plans.")
+                         : language.text("지난 날짜로 만들면 그날의 기록이 이 여행의 실제 기록이 됩니다.", "A past date turns that day's records into this trip's actual records."))
                 }
                 Section(language.text("여행지", "Destination")) {
                     Picker(language.text("나라", "Country"), selection: $countryCode) {
@@ -90,9 +102,9 @@ struct TravelNewTripSheet: View {
         let trip = TravelTrip(
             id: "trip-\(UUID().uuidString.lowercased())",
             title: trimmed.isEmpty ? (place.map(name) ?? "") : trimmed,
-            startDay: day(start), endDay: day(isDayTrip ? start : max(start, end)),
+            startDay: isWish ? "" : day(start), endDay: isWish ? "" : day(isDayTrip ? start : max(start, end)),
             countryCode: country?.code, regionName: province?.nameKo,
-            latitude: place?.anchor.y, longitude: place?.anchor.x, currencyCode: currency
+            latitude: place?.anchor.y, longitude: place?.anchor.x, currencyCode: currency, wishDays: isWish ? wishNights + 1 : nil
         )
         guard await model.saveTravelTrip(trip) else { return }
         dismiss()

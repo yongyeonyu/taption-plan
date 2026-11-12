@@ -5412,6 +5412,13 @@
 "회사에서 업무|Working at the office": "在公司工作",
 "회사에서 휴식|Break at the office": "在公司休息",
 "회의|Meeting": "會議",
-"휴식|Rest": "休息"
+"휴식|Rest": "休息",
+"날짜 정하기|Set dates": "設定日期",
+"날짜를 정하면 일정을 넣을 수 있습니다|Set dates to start adding plans": "設定日期後即可新增行程",
+"버킷리스트에 담아 둡니다. 날짜를 정하면 일정을 넣을 수 있습니다.|Saved to your bucket list. Set dates later to add plans.": "已放入願望清單。設定日期後即可新增行程。",
+"언젠가 갈 여행 (날짜는 나중에)|Someday trip (dates later)": "將來的旅行（日期稍後）",
+"언젠가 갈 여행|A trip for someday": "將來的旅行",
+"언젠가|Someday": "將來",
+"정하기|Set": "確定"
 }
 }

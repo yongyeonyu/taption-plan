@@ -1,122 +1,6 @@
 import SwiftUI
 import TaptionPlanStore
 
-/// 여행 모드의 색(「여권 잉크」, 대표 결정 2026-11-11). 계획은 남색, 실제는 주홍.
-enum TravelInk {
-    static let space = Color(hex: "#1B2440")
-    static let sea = Color(hex: "#D9E4EC")
-    static let land = Color(hex: "#F6F1E4")
-    static let border = Color(hex: "#C9C2AE")
-    static let grid = Color(hex: "#C3CEDA")
-    static let plan = Color(hex: "#2F3E6B")
-    static let planTint = Color(hex: "#E3E7F2")
-    static let actual = Color(hex: "#C8442E")
-    /// 지도 위에 뜨는 판(머리말·돈 줄). 땅 색과 겹쳐 묻히지 않게 더 밝다.
-    static let panel = Color.white.opacity(0.94)
-    /// 깃발 기본 색. 여행 순서대로 돌려 쓴다(대표 지시: 사용자가 정하되 기본은 테마 색 순서).
-    static let flagHexes = ["#C8442E", "#2F3E6B", "#C58B1B", "#2E7D6B", "#8A4F9E", "#D9722B"]
-
-    static func flagHex(_ trip: TravelTrip, order: Int) -> String {
-        trip.flagColorHex ?? flagHexes[max(0, order) % flagHexes.count]
-    }
-
-    /// 깃발 색 견본(메뉴용): 그 색으로 칠한 동그라미. 고른 색이면 가운데 흰 체크.
-    static func swatch(_ hex: String, isChosen: Bool, side: CGFloat = 22) -> UIImage {
-        let image = UIGraphicsImageRenderer(size: CGSize(width: side, height: side)).image { context in
-            UIColor(Color(hex: hex)).setFill()
-            context.cgContext.fillEllipse(in: CGRect(x: 1, y: 1, width: side - 2, height: side - 2))
-            guard isChosen else { return }
-            UIColor.white.setStroke()
-            let check = UIBezierPath()
-            check.move(to: CGPoint(x: side * 0.30, y: side * 0.52))
-            check.addLine(to: CGPoint(x: side * 0.45, y: side * 0.67))
-            check.addLine(to: CGPoint(x: side * 0.72, y: side * 0.36))
-            check.lineWidth = 2.2
-            check.lineCapStyle = .round
-            check.lineJoinStyle = .round
-            check.stroke()
-        }
-        return image.withRenderingMode(.alwaysOriginal)
-    }
-
-    static func flagName(_ hex: String, language: MapHomeLanguage) -> String {
-        switch hex {
-        case "#C8442E": language.text("주홍 깃발", "Vermilion flag")
-        case "#2F3E6B": language.text("남색 깃발", "Navy flag")
-        case "#C58B1B": language.text("겨자색 깃발", "Mustard flag")
-        case "#2E7D6B": language.text("청록 깃발", "Teal flag")
-        case "#8A4F9E": language.text("자주 깃발", "Purple flag")
-        default: language.text("주황 깃발", "Orange flag")
-        }
-    }
-}
-
-/// 앱에 넣은 나라·시도 경계(`ne-regions.bin`). 처음 쓸 때 한 번 읽는다.
-enum TravelModeRegions {
-    static let bundled: [TravelGlobeRegion] = {
-        guard let url = Bundle.main.url(forResource: "ne-regions", withExtension: "bin"), let data = try? Data(contentsOf: url) else { return [] }
-        return (try? TravelGlobeRegions.decode(data)) ?? []
-    }()
-
-    static let countries = bundled.filter { $0.kind == .country }
-    static let provinces = bundled.filter { $0.kind == .province }
-
-    /// 경계 점을 지구 위 단위 벡터로 미리 바꿔 둔 것(곳 코드 → 고리들). 그릴 때마다 삼각함수를 다시 계산하지 않는다.
-    static let vectors: [String: [[SIMD3<Double>]]] = Dictionary(
-        bundled.map { region in (region.code, region.rings.map { ring in ring.map { unitVector(longitude: $0.x, latitude: $0.y) } }) },
-        uniquingKeysWith: { first, _ in first }
-    )
-
-    /// 고리마다 가로·세로 가운데 큰 쪽의 크기(도). 화면에서 점 하나보다 작은 섬은 그리지 않는 데 쓴다.
-    static let spans: [String: [Double]] = Dictionary(
-        bundled.map { region in
-            (region.code, region.rings.map { ring in
-                let xs = ring.map(\.x), ys = ring.map(\.y)
-                return max((xs.max() ?? 0) - (xs.min() ?? 0), (ys.max() ?? 0) - (ys.min() ?? 0))
-            })
-        },
-        uniquingKeysWith: { first, _ in first }
-    )
-
-    static func unitVector(longitude: Double, latitude: Double) -> SIMD3<Double> {
-        let lambda = longitude * .pi / 180, phi = latitude * .pi / 180
-        return SIMD3(cos(phi) * cos(lambda), cos(phi) * sin(lambda), sin(phi))
-    }
-
-    /// 그 나라의 통화(ISO 4217). 모르면 nil.
-    static func currency(forCountry code: String) -> String? {
-        Locale(identifier: "und_\(code)").currency?.identifier
-    }
-}
-
-/// 여행 하나가 지구본에서 가리키는 곳.
-struct TravelModeDestination {
-    var country: TravelGlobeRegion?
-    var province: TravelGlobeRegion?
-    /// 깃발 자리(경도, 위도).
-    var point: SIMD2<Double>?
-    /// 그 여행의 지도 핀(날짜·순서대로).
-    var stops: [TravelPlanStop]
-
-    init(trip: TravelTrip, stops allStops: [TravelPlanStop]) {
-        stops = allStops.filter { $0.tripID == trip.id }.sorted { ($0.day, $0.order) < ($1.day, $1.order) }
-        var point: SIMD2<Double>?
-        if let latitude = trip.latitude, let longitude = trip.longitude {
-            point = SIMD2(longitude, latitude)
-        } else if !stops.isEmpty {
-            let sum = stops.reduce(SIMD2<Double>(0, 0)) { $0 + SIMD2($1.longitude, $1.latitude) }
-            point = sum / Double(stops.count)
-        }
-        country = trip.countryCode.flatMap { code in TravelModeRegions.countries.first { $0.code == code } }
-            ?? point.flatMap { TravelGlobeRegions.region(in: TravelModeRegions.countries, kind: .country, longitude: $0.x, latitude: $0.y) }
-        if country?.code == "KR" {
-            province = trip.regionName.flatMap { name in TravelModeRegions.provinces.first { $0.nameKo == name || $0.nameEn == name } }
-                ?? point.flatMap { TravelGlobeRegions.region(in: TravelModeRegions.provinces, kind: .province, longitude: $0.x, latitude: $0.y) }
-        }
-        self.point = point ?? province?.anchor ?? country?.anchor
-    }
-}
-
 /// 지구본 그리기. 나라 경계 자료만으로 그려 인터넷 없이도 같은 그림이 나온다.
 enum TravelGlobeRenderer {
     struct Pin {
@@ -381,6 +265,7 @@ struct TravelModeView: View {
     /// 고른 고양이 그림(한 번 만들어 둔다).
     @State private var actorImage: Image?
     @State private var actorUIImage: UIImage?
+    @State private var actorArt = TravelActorArt()
     /// 곳 사이 길(Apple 길찾기). 올 때까지는 곧은 선.
     @State private var routes = TravelRouteStore()
     @State private var didEnter = false
@@ -459,7 +344,15 @@ struct TravelModeView: View {
             }
         }
         .overlay(alignment: .bottom) {
-            if let focused, openedID != nil { planSheet(focused) } else { globeFooter }
+            if let focused, openedID != nil {
+                if focused.state == .someday {
+                    TravelWishFooter(model: model, language: language, entry: focused)
+                } else {
+                    planSheet(focused)
+                }
+            } else {
+                globeFooter
+            }
         }
         .onChange(of: openedID) { _, id in lastTripID = id ?? "" }
         .onChange(of: isPlanUp) { _, _ in applyPlanCamera() }
@@ -608,6 +501,19 @@ struct TravelModeView: View {
         return line
     }
 
+    /// 재생 시각의 동작: 머무는 중이면 일정 종류, 이동 중이면 수단(TVW1112A01).
+    private func pose(_ entry: TravelTripDirectory.Entry) -> TravelPlayhead.Pose? {
+        guard isPlanUp, openedID == entry.id else { return nil }
+        let stops = playStops(entry), items = model.settings.travelTripItems ?? []
+        guard let spot = TravelPlayhead.position(at: currentPlayMinute(entry), stops: stops, paths: routes.paths) else { return nil }
+        func item(_ id: String?) -> TravelTripItem? { items.first { $0.tripID == entry.id && $0.itemID == id } }
+        if let here = item(spot.stopID) { return TravelPlayhead.pose(kind: here.kind, title: here.title) }
+        guard let from = item(spot.fromID), let to = item(spot.toID),
+              let a = stops.first(where: { $0.id == from.itemID }), let b = stops.first(where: { $0.id == to.itemID }) else { return .walk }
+        let meters = TravelRouteStore.meters(a, b)
+        return TravelPlayhead.movingPose(fromKind: from.kind, fromTitle: from.title, toKind: to.kind, toTitle: to.title, meters: meters)
+    }
+
     /// 여행 화면의 오픈맵: 핀·계획 길·고양이를 올리고, 머리말과 계획표가 가리지 않는 자리에 맞춘다.
     private func streetMap(_ entry: TravelTripDirectory.Entry, _ destination: TravelModeDestination?) -> TravelStreetMap {
         let area = isPlanUp ? Self.mapArea(viewSize, isPlanUp: true) : CGRect(x: 0, y: 150, width: viewSize.width, height: max(80, viewSize.height - 270))
@@ -615,7 +521,7 @@ struct TravelModeView: View {
         return TravelStreetMap(
             pins: planPins(entry, destination).map { .init(longitude: $0.longitude, latitude: $0.latitude, label: $0.label) },
             route: dayRoute(entry), actor: spot.map { .init(longitude: $0.longitude, latitude: $0.latitude, facesEast: $0.facesEast) },
-            actorImage: actorUIImage, fallback: destination?.point,
+            actorImage: pose(entry).map { actorArt.image($0, coat: model.settings.catStyle.rawValue) } ?? actorUIImage, fallback: destination?.point,
             insets: UIEdgeInsets(top: area.minY + 24, left: 28, bottom: viewSize.height - area.maxY + 24, right: viewSize.width - area.maxX + 28),
             fitKey: "\(entry.id)|\(dayKey(entry))|\(isPlanUp)|\(Int(viewSize.width))x\(Int(viewSize.height))"
         )
@@ -723,7 +629,7 @@ struct TravelModeView: View {
                 id: entry.id, longitude: point.x, latitude: point.y, text: tag(entry),
                 progress: entry.id == flyingID ? flightProgress : 1,
                 color: Color(hex: TravelInk.flagHex(entry.trip, order: index)),
-                opacity: entry.state == .past && !chosen ? 0.45 : 1, showsLabel: chosen
+                opacity: (entry.state == .past || entry.state == .someday) && !chosen ? 0.45 : 1, showsLabel: chosen
             )
         }
     }
@@ -796,6 +702,7 @@ struct TravelModeView: View {
         case .active: language.text("여행 중", "On trip")
         case .upcoming: "D-\(entry.daysUntilStart ?? 0)"
         case .past: language.text("지난 여행", "Past")
+        case .someday: language.text("언젠가", "Someday")
         }
     }
 
@@ -842,6 +749,9 @@ struct TravelModeView: View {
         let order = entries.firstIndex { $0.id == entry.id } ?? 0
         let flagColor = Color(hex: TravelInk.flagHex(entry.trip, order: order))
         return Button { select(entry) } label: {
+            if entry.state == .someday {
+                TravelWishCard(title: title(entry), length: length(entry), tag: tag(entry), color: flagColor, isChosen: entry.id == (flyingID ?? focusedID))
+            } else {
             VStack(alignment: .leading, spacing: 0) {
                 HStack {
                     Text(tag(entry))
@@ -865,6 +775,7 @@ struct TravelModeView: View {
             .background(Color.white)
             .clipShape(RoundedRectangle(cornerRadius: 10))
             .overlay { RoundedRectangle(cornerRadius: 10).stroke(entry.id == (flyingID ?? focusedID) ? flagColor : .clear, lineWidth: 2.5) }
+            }
         }
         .buttonStyle(.plain)
         .contextMenu {
@@ -947,6 +858,7 @@ struct TravelModeView: View {
         case .active: language.runtimeText("\(entry.dayNumber ?? 1)일차", "Day \(entry.dayNumber ?? 1)")
         case .upcoming: "D-\(entry.daysUntilStart ?? 0)"
         case .past: language.text("지난 여행", "Past")
+        case .someday: language.text("언젠가", "Someday")
         }
         return "\(length(entry)) · \(state)"
     }

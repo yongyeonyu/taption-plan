@@ -134,6 +134,7 @@ struct TravelStreetMap: UIViewRepresentable {
                 actorAnnotation = annotation
                 mapView.addAnnotation(annotation)
             }
+            if let view = actorView, view.image !== map.actorImage { view.image = map.actorImage }
             actorView?.transform = actor.facesEast ? .identity : CGAffineTransform(scaleX: -1, y: 1)
         }
 

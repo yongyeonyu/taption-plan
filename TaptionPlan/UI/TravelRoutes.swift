@@ -20,6 +20,10 @@ final class TravelRouteStore {
         String(format: "%.4f,%.4f>%.4f,%.4f", from.longitude, from.latitude, to.longitude, to.latitude)
     }
 
+    static func meters(_ from: TravelPlayhead.Stop, _ to: TravelPlayhead.Stop) -> Double {
+        CLLocation(latitude: from.latitude, longitude: from.longitude).distance(from: CLLocation(latitude: to.latitude, longitude: to.longitude))
+    }
+
     /// 어떤 길찾기를 차례로 해 볼지. 너무 멀거나 같은 자리면 비어 있다.
     static func transports(meters: Double) -> [MKDirectionsTransportType] {
         guard meters > 30, meters <= farthestMeters else { return [] }

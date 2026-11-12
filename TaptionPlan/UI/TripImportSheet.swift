@@ -67,8 +67,9 @@ extension AppModel {
     /// 당일치기는 첫날과 마지막 날이 같다. 지난 날짜도 된다: 그날의 자동 기록이 그 여행의 「실제」가 된다.
     @discardableResult
     func saveTravelTrip(_ trip: TravelTrip) async -> Bool {
+        // 언젠가 갈 여행은 날짜 없이 날 수만 있다(TVW1112A01).
         guard acceptsDataMutation(), !trip.id.isEmpty,
-              let length = TravelTripDay.days(from: trip.startDay, to: trip.endDay), length >= 0 else { return false }
+              trip.isWish || (TravelTripDay.days(from: trip.startDay, to: trip.endDay) ?? -1) >= 0 else { return false }
         var trips = snapshot.settings.travelTrips ?? []
         if let index = trips.firstIndex(where: { $0.id == trip.id }) {
             guard trips[index] != trip else { return true }

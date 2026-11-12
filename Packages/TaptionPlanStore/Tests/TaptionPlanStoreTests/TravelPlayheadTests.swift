@@ -51,4 +51,25 @@ final class TravelPlayheadTests: XCTestCase {
         let end = try XCTUnwrap(TravelPlayhead.along(path, t: 1))
         XCTAssertEqual(end.point, SIMD2(131.0, 34.0))
     }
+
+    /// TVW1112A01: 일정 종류와 이동 수단에 맞는 동작.
+    func testPosesFollowItemKindAndTransport() throws {
+        XCTAssertEqual(TravelPlayhead.pose(kind: "meal", title: "라멘"), .eat)
+        XCTAssertEqual(TravelPlayhead.pose(kind: "cafe", title: "카페"), .coffee)
+        XCTAssertEqual(TravelPlayhead.pose(kind: "lodging", title: "체크인"), .sleep)
+        XCTAssertEqual(TravelPlayhead.pose(kind: "sight", title: "성"), .sight)
+        XCTAssertEqual(TravelPlayhead.pose(kind: "photo", title: "전망대"), .sight)
+        XCTAssertEqual(TravelPlayhead.pose(kind: "shopping", title: "시장"), .shop)
+        XCTAssertEqual(TravelPlayhead.pose(kind: "transfer", title: "니시테츠 전철 텐진→다자이후"), .subway)
+        XCTAssertEqual(TravelPlayhead.pose(kind: "transfer", title: "노코노시마 페리"), .boat)
+        XCTAssertEqual(TravelPlayhead.pose(kind: "transfer", title: "이동"), .car)
+        XCTAssertEqual(TravelPlayhead.pose(kind: "flight", title: "KE657"), .airplane)
+        XCTAssertEqual(TravelPlayhead.movingPose(fromKind: "sight", fromTitle: "신사", toKind: "meal", toTitle: "점심", meters: 600), .walk)
+        XCTAssertEqual(TravelPlayhead.movingPose(fromKind: "sight", fromTitle: "신사", toKind: "meal", toTitle: "점심", meters: 9_000), .car)
+        XCTAssertEqual(TravelPlayhead.movingPose(fromKind: "sight", fromTitle: "공원", toKind: "transfer", toTitle: "하카타역 버스", meters: 9_000), .bus)
+        XCTAssertEqual(TravelPlayhead.movingPose(fromKind: "flight", fromTitle: "KE657", toKind: "lodging", toTitle: "호텔", meters: 30_000), .airplane)
+        let moving = try XCTUnwrap(TravelPlayhead.position(at: 630, stops: stops))
+        XCTAssertEqual(moving.fromID, "a")
+        XCTAssertEqual(moving.toID, "b")
+    }
 }
