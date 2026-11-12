@@ -261,6 +261,7 @@ struct TravelModeView: View {
     @State private var viewSize = CGSize(width: 390, height: 760)
     @State private var newTripDraft: TravelNewTripSheet.Draft?
     @State private var ledgerTripID: String?
+    @State private var expenseDraft: LedgerEntry?
     @State private var entryTarget: TravelQuickEntrySheet.Target?
     @State private var timeUndo: TravelTimeUndo?
     @State private var deleteCandidate: TravelTripDirectory.Entry?
@@ -403,6 +404,7 @@ struct TravelModeView: View {
             ))
         }
         .sheet(item: $entryTarget) { target in TravelQuickEntrySheet(model: model, language: language, target: target) }
+        .sheet(item: $expenseDraft) { draft in LedgerEntryForm(language: language, entry: draft, members: draft.tripID.flatMap(book.trip)?.members) }
         .preferredColorScheme(openedID == nil && flight == nil ? .dark : .light)
         .accessibilityIdentifier("travelModeScreen")
     }
@@ -951,7 +953,12 @@ struct TravelModeView: View {
             Menu {
                 Button(language.text("일정 넣기", "Add plan"), systemImage: "calendar.badge.plus") { addEntry(entry) }
                 Button(language.text("지도에서 일정 보기", "View plans on the map"), systemImage: "map") { openPlan(planDay(entry, items: items)) }
-                Button(language.text("지출 넣기", "Add expense"), systemImage: "wonsign") { ledgerTripID = entry.id }
+                Button(language.text("지출 넣기", "Add expense"), systemImage: "wonsign") {
+                    // 장부가 있으면 바로 입력 칸을 연다. 계획표가 올라와 있으면 재생 헤드의 시각으로 넣는다.
+                    if book.trip(entry.id) == nil { ledgerTripID = entry.id } else {
+                        expenseDraft = TravelPlanSpend.draft(tripID: entry.id, at: isPlanUp ? playDate(entry) : .now)
+                    }
+                }
             } label: {
                 Image(systemName: "plus").font(.system(size: 20, weight: .semibold)).foregroundStyle(TravelInk.land).frame(width: 46, height: 46)
                     .background(TravelInk.plan, in: Circle())
@@ -979,7 +986,8 @@ struct TravelModeView: View {
         let day = dayDate(dayKey(entry))
         return TravelPlanTableModel.make(
             items: model.settings.travelTripItems ?? [], tripID: entry.id, day: day,
-            actual: MapHomeTimeRailSegmentEngine.segments(from: model.snapshot.actuals, on: day), now: .now
+            actual: MapHomeTimeRailSegmentEngine.segments(from: model.snapshot.actuals, on: day), now: .now,
+            spent: TravelPlanSpend.byItem(items: model.settings.travelTripItems ?? [], tripID: entry.id, entries: book.entries)
         )
     }
 

@@ -445,6 +445,31 @@ final class TravelTripUnitTests: XCTestCase {
         XCTAssertEqual(TravelQuickEntrySheet.durationText(90, language: .korean), "1시간 30분")
     }
 
+    /// TVZ1112A01: 지출은 그 시각의 일정 칸에 모이고(겹치면 늦게 시작한 일정), 이동 일정은 탈것을 먼저 권한다.
+    func testSpendByItemAndVehicleSuggestions() throws {
+        let base = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-12-03T10:00:00+09:00"))
+        func item(_ id: String, _ kind: String, _ title: String, _ from: Double, _ to: Double, trip: String = "t1") -> TravelTripItem {
+            TravelTripItem(tripID: trip, itemID: id, kind: kind, title: title, start: base.addingTimeInterval(from * 3_600), end: base.addingTimeInterval(to * 3_600),
+                           startOffsetSeconds: 32_400, endOffsetSeconds: 32_400, planID: nil)
+        }
+        func spend(_ hours: Double, _ won: Double, trip: String? = "t1", kind: LedgerEntry.Kind = .expense) -> LedgerEntry {
+            LedgerEntry(occurredAt: base.addingTimeInterval(hours * 3_600), amount: won, amountKRW: won, kind: kind, title: "x", tripID: trip)
+        }
+        let items = [item("a", "sight", "성", 0, 2), item("b", "meal", "라멘", 1, 2), item("c", "transfer", "지하철", 2, 3), item("z", "meal", "다른 여행", 0, 5, trip: "t2")]
+        var canceled = spend(0.5, 9_000)
+        canceled.canceledAt = base
+        let spent = TravelPlanSpend.byItem(items: items, tripID: "t1", entries: [
+            spend(0.5, 1_000), spend(1.5, 2_000), spend(1.75, 500), spend(2, 300), spend(3, 700), spend(0.5, 4_000, trip: nil),
+            spend(0.5, 8_000, kind: .income), canceled,
+        ])
+        XCTAssertEqual(spent, ["a": 1_000, "b": 2_500, "c": 300], "끝 시각과 다른 여행·수입·취소는 세지 않는다")
+        XCTAssertEqual(TravelPlanSpend.draft(tripID: "t1", at: base).occurredAt, base)
+
+        let vehicles = ["도보", "지하철", "버스"]
+        XCTAssertEqual(TravelQuickEntrySheet.suggestions(items: items, tripID: "t1", kind: .transfer, typed: "버스", vehicles: vehicles), ["도보", "지하철"])
+        XCTAssertEqual(TravelQuickEntrySheet.suggestions(items: items, tripID: "t1", kind: .meal, typed: "", vehicles: vehicles), ["라멘"])
+    }
+
     /// TVY1112A01: 일정 메모는 넘겨준 때만 바뀌고, 빈 글이면 지워진다. 계획표 확대 배율에 맞춰 누른 자리를 읽는다.
     @MainActor
     func testItemNoteAndZoomedTable() async throws {

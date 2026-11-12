@@ -17,6 +17,8 @@ struct TravelPlanTableModel: Equatable {
         var tripStatus: TripItemStatus?
         var status: TravelPlanComparison.Status
         var hasNote = false
+        /// 그 시간에 쓴 돈(원). 없으면 0.
+        var spent = 0.0
     }
 
     struct Actual: Identifiable, Equatable {
@@ -51,7 +53,8 @@ struct TravelPlanTableModel: Equatable {
 
     /// `day`는 기기 달력의 그날. 일정은 그곳 벽시계 시각에 놓는다(시간 막대와 같은 규칙).
     static func make(
-        items: [TravelTripItem], tripID: String, day: Date, actual: [MapHomeTimeRailSegment], now: Date, calendar: Calendar = .autoupdatingCurrent
+        items: [TravelTripItem], tripID: String, day: Date, actual: [MapHomeTimeRailSegment], now: Date, spent: [String: Double] = [:],
+        calendar: Calendar = .autoupdatingCurrent
     ) -> TravelPlanTableModel {
         var blocks: [Block] = []
         var spans: [TravelPlanComparison.Span] = []
@@ -60,7 +63,7 @@ struct TravelPlanTableModel: Equatable {
             let column = column(forKind: item.kind)
             blocks.append(Block(
                 id: item.itemID, column: column, startMinute: segment.startMinute, endMinute: segment.endMinute, title: item.title,
-                tripStatus: segment.tripStatus, status: .pending, hasNote: !(item.note ?? "").isEmpty
+                tripStatus: segment.tripStatus, status: .pending, hasNote: !(item.note ?? "").isEmpty, spent: spent[item.itemID] ?? 0
             ))
             spans.append(.init(id: item.itemID, start: segment.startMinute, end: segment.endMinute, isMove: column == 0))
         }
@@ -310,10 +313,15 @@ struct TravelPlanTable: View {
                 if block.status == .late { Image(systemName: "clock.badge.exclamationmark").font(.system(size: 9)).foregroundStyle(TravelInk.actual) }
                 if tightIDs.contains(block.id) { Image(systemName: "figure.run").font(.system(size: 9, weight: .bold)).foregroundStyle(TravelInk.actual) }
                 if block.hasNote { Image(systemName: "note.text").font(.system(size: 8)).opacity(0.7) }
+                if block.spent > 0, height <= 46 || isLifted { Image(systemName: "wonsign.circle.fill").font(.system(size: 9)).foregroundStyle(TravelInk.actual) }
                 Text(block.title).font(.caption2.weight(.semibold)).lineLimit(height > 30 ? 2 : 1)
             }
             if height > 34 || isLifted {
                 Text(isLifted ? Self.clock(start) + "–" + Self.clock(end) : Self.clock(start)).font(.system(size: 10).monospacedDigit()).opacity(0.75)
+            }
+            if block.spent > 0, height > 46, !isLifted {
+                Text(LedgerMoney.text(block.spent, language: language)).font(.system(size: 10, weight: .semibold).monospacedDigit())
+                    .foregroundStyle(TravelInk.actual).lineLimit(1).minimumScaleFactor(0.7)
             }
         }
         .padding(3)

@@ -266,18 +266,22 @@ struct TravelQuickEntrySheet: View {
     }
 
     /// 이름 후보: 이 여행에서 같은 분류로 이미 쓴 이름(최근 것부터 6개). 누르면 이름 칸에 들어간다.
-    static func suggestions(items: [TravelTripItem], tripID: String, kind: TripImportItem.Kind, typed: String) -> [String] {
+    /// 이동이면 탈것(`vehicles`)을 앞에 둔다: 누르면 이름이 되고 고양이 동작도 그 탈것이 된다.
+    static func suggestions(items: [TravelTripItem], tripID: String, kind: TripImportItem.Kind, typed: String, vehicles: [String] = []) -> [String] {
         let typed = typed.trimmingCharacters(in: .whitespaces)
-        var seen = Set<String>(), result: [String] = []
+        let first = kind == .transfer ? vehicles.filter { $0 != typed } : []
+        var seen = Set(first), result: [String] = []
         for item in items.reversed() where item.tripID == tripID && item.kind == kind.rawValue && item.title != kind.planName && item.title != typed {
             if seen.insert(item.title).inserted { result.append(item.title) }
             if result.count == 6 { break }
         }
-        return result
+        return first + result
     }
 
     private var suggestions: [String] {
-        isEditing ? [] : Self.suggestions(items: model.settings.travelTripItems ?? [], tripID: target.tripID, kind: kind, typed: text)
+        isEditing ? [] : Self.suggestions(
+            items: model.settings.travelTripItems ?? [], tripID: target.tripID, kind: kind, typed: text, vehicles: TravelPlanSpend.vehicles(language)
+        )
     }
 
     private var suggestionChips: some View {
