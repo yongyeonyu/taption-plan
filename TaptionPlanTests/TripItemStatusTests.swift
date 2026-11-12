@@ -394,7 +394,15 @@ final class TravelTripUnitTests: XCTestCase {
         XCTAssertEqual(TravelModeView.planTableHeight(phoneLandscape), 122)
         XCTAssertEqual(TravelModeView.planTableHeight(pad), 826)
         XCTAssertEqual(TravelModeView.planTableHeight(padLandscape), 540)
-        XCTAssertEqual(TravelQuickEntrySheet.sheetHeight(hasAdded: true, hasSuggestions: true), 398)
+        // TVU1113A01: 편집기의 시작·종료 슬라이더(5분 단위).
+        let moved = TravelQuickEntrySheet.movingStart(to: 607, duration: 90)
+        XCTAssertEqual([moved.start, moved.duration], [605, 90], "시작을 옮기면 길이는 그대로")
+        let late = TravelQuickEntrySheet.movingStart(to: 1_400, duration: 90)
+        XCTAssertEqual([late.start, late.duration], [1_400, 40], "끝이 24시를 넘지 않게 길이를 줄인다")
+        XCTAssertEqual(TravelQuickEntrySheet.movingStart(to: 2_000, duration: 30).start, 1_435)
+        XCTAssertEqual(TravelQuickEntrySheet.duration(endingAt: 722, start: 600), 120)
+        XCTAssertEqual(TravelQuickEntrySheet.duration(endingAt: 500, start: 600), 5, "종료는 시작보다 5분 이상 뒤")
+        XCTAssertEqual(TravelQuickEntrySheet.duration(endingAt: 1_440, start: 1_380), 60)
     }
 
     /// 일상 → 여행 바로 전환: 보던 날을 품은 여행, 여행 중, 마지막으로 연 여행 순.

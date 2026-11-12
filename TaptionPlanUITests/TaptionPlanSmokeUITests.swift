@@ -1088,11 +1088,11 @@ final class TaptionPlanTravelPlanUITests: XCTestCase {
         let plus = app.buttons["일정 넣기"]
         XCTAssertTrue(plus.waitForExistence(timeout: 3), "빈 셀을 누르면 선택 칸과 +가 뜬다")
         XCTAssertTrue(handle.exists, "빈 셀을 눌러도 계획표가 내려가지 않는다")
-        XCTAssertFalse(app.buttons["완료"].exists, "+를 누르기 전에는 입력 시트가 뜨지 않는다")
+        XCTAssertFalse(app.buttons["저장"].exists, "+를 누르기 전에는 편집기가 뜨지 않는다")
         shot(app, "2-cell-selected")
 
         plus.tap()
-        let done = app.buttons.matching(NSPredicate(format: "label == %@", "완료")).firstMatch
+        let done = app.buttons["취소"]
         XCTAssertTrue(done.waitForExistence(timeout: 5), "+를 누르면 입력 시트가 열린다")
         shot(app, "3-entry-sheet")
         done.tap()
@@ -1104,7 +1104,7 @@ final class TaptionPlanTravelPlanUITests: XCTestCase {
         let blockSpot = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: frame.minX + frame.width * 0.24, dy: frame.maxY + 290))
         blockSpot.tap()
         XCTAssertTrue(app.buttons["속성"].waitForExistence(timeout: 3), "일정을 누르면 선택 막대가 뜬다")
-        XCTAssertFalse(app.buttons["지우기"].exists && app.buttons["완료"].exists, "한 번 눌러서는 편집기가 뜨지 않는다")
+        XCTAssertFalse(app.buttons["저장"].exists, "한 번 눌러서는 편집기가 뜨지 않는다")
         shot(app, "4-block-selected")
         blockSpot.tap()
         XCTAssertTrue(app.buttons["더 보기"].waitForExistence(timeout: 5), "선택된 일정을 다시 누르면 편집기가 열린다")

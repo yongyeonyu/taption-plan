@@ -1,7 +1,7 @@
 import SwiftUI
 import TaptionPlanStore
 
-/// 여행 일정을 손으로 빠르게 넣는 시트(TVQ1112A01). 한 화면에서 분류·시각·길이·이름을 정하고, 넣은 뒤에도 열려 다음 일정으로 이어진다.
+/// 여행 일정 편집기(TVQ1112A01 → TVU1113A01에서 Trip 편집기 순서로): 종류·제목 → 미리보기 카드·메모 → 시작/종료 슬라이더 → 장소. 저장하면 닫힌다. 넣기와 고치기가 같은 화면이다.
 struct TravelQuickEntrySheet: View {
     struct Target: Identifiable {
         let id = UUID()
@@ -74,35 +74,39 @@ struct TravelQuickEntrySheet: View {
     /// 길이를 직접 골랐으면 분류를 바꿔도 그대로 둔다.
     @State private var isDurationChosen = false
     @State private var parsed = TravelQuickEntry.Parsed(title: "")
-    @State private var added: (itemID: String, summary: String)?
     @State private var isSaving = false
     @State private var didFail = false
     @State private var isConfirmingDelete = false
-    /// 붙인 장소(지도 핀). 넣은 뒤에는 비워 다음 일정에 따라가지 않게 한다.
+    /// 붙인 장소(지도 핀).
     @State private var place: TravelItemPlace?
     @State private var isPickingPlace = false
     @State private var note = ""
 
     private var isEditing: Bool { target.editing != nil }
 
-    @Environment(\.verticalSizeClass) private var verticalSizeClass
+    /// 슬라이더 단위(분). Trip 원본처럼 5분.
+    static let sliderStep = 5
 
-    /// 가로로 눕힌 폰처럼 높이가 낮으면 시트를 끝까지 올리고 안을 스크롤한다(자판이 올라와도 이름 칸이 보이게).
-    private var isShort: Bool { verticalSizeClass == .compact }
+    /// 시작 슬라이더: 길이는 그대로 두고 옮기되, 끝이 24시를 넘으면 길이를 줄인다.
+    static func movingStart(to minute: Int, duration: Int) -> (start: Int, duration: Int) {
+        let start = min(max(minute / sliderStep * sliderStep, 0), 1_440 - sliderStep)
+        return (start, min(max(duration, sliderStep), 1_440 - start))
+    }
 
-    static func sheetHeight(hasAdded: Bool, hasSuggestions: Bool) -> CGFloat {
-        320 + (hasAdded ? 40 : 0) + (hasSuggestions ? 38 : 0)
+    /// 종료 슬라이더: 시작보다 5분 이상 뒤, 24시까지. 돌려주는 값은 길이(분).
+    static func duration(endingAt minute: Int, start: Int) -> Int {
+        max(sliderStep, min(minute / sliderStep * sliderStep, 1_440) - start)
     }
 
     var body: some View {
-        Group {
-            if isShort { ScrollView { form } } else { form }
+        VStack(spacing: 0) {
+            header
+            Divider().overlay(TravelInk.border)
+            ScrollView { form }.scrollDismissesKeyboard(.interactively)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(TravelInk.land)
-        .presentationDetents(isShort ? [.large] : [.height(Self.sheetHeight(hasAdded: added != nil, hasSuggestions: !suggestions.isEmpty))])
-        // 패드·펼친 듀오에서는 가운데 뜨는 시트를 내용 높이에 맞춘다.
-        .presentationSizing(.form.fitted(horizontal: false, vertical: true))
+        .presentationDetents([.large])
         .presentationDragIndicator(.visible)
         .preferredColorScheme(.light)
         .onAppear(perform: prepare)
@@ -138,73 +142,118 @@ struct TravelQuickEntrySheet: View {
     }
 
     private var form: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            header
-            if let added { addedRow(added) }
+        VStack(alignment: .leading, spacing: 12) {
             kindChips
-            timeRow
-            durationChips
+            titleField
             if !suggestions.isEmpty { suggestionChips }
+            previewCard
+            timeSliders
             placeRow
-            titleRow
-            TextField(language.text("메모 (선택)", "Note (optional)"), text: $note)
-                .font(.footnote)
-                .padding(.horizontal, 10).frame(height: 34)
-                .background(Color.white.opacity(0.7), in: RoundedRectangle(cornerRadius: 8))
-                .overlay { RoundedRectangle(cornerRadius: 8).stroke(TravelInk.border, lineWidth: 1) }
-                .accessibilityIdentifier("travelEntryNote")
+            if isEditing { editActions }
             if didFail {
                 Text(language.text("넣지 못했습니다. 다시 해 주세요.", "Could not save. Try again.")).font(.caption).foregroundStyle(TravelInk.actual)
             }
         }
         .padding(.horizontal, 14)
-        .padding(.top, 14)
-        .padding(.bottom, 12)
+        .padding(.top, 12)
+        .padding(.bottom, 16)
         // 넓은 시트에서도 칩과 이름 칸이 한눈에 들어오게 폭을 묶는다.
         .frame(maxWidth: 560)
         .frame(maxWidth: .infinity)
     }
 
+    /// 위 막대: 취소 · 「일정 넣기」/「속성」 · 저장.
     private var header: some View {
         HStack {
-            Text(target.dayLabel + " · " + (isEditing ? language.text("일정 고치기", "Edit plan") : language.text("일정 넣기", "Add plan")))
-                .font(.headline).foregroundStyle(TravelInk.plan)
+            Button(language.text("취소", "Cancel")) { dismiss() }.accessibilityIdentifier("travelEntryCancel")
             Spacer()
-            if isEditing {
-                // 자주 하는 고치기는 한 번에: 바로 뒤에 복제, 하루 옮기기, 지우기.
-                Menu {
-                    Button(language.text("바로 뒤에 복제", "Duplicate right after"), systemImage: "plus.square.on.square") { Task { await duplicate() } }
-                    Button(language.text("전날로", "Move to previous day"), systemImage: "arrow.left") { Task { await shiftDay(-1) } }
-                    Button(language.text("다음 날로", "Move to next day"), systemImage: "arrow.right") { Task { await shiftDay(1) } }
-                } label: {
-                    Image(systemName: "ellipsis.circle").font(.title3).foregroundStyle(TravelInk.plan).frame(width: 40, height: 32)
+            Text(target.dayLabel + " · " + (isEditing ? language.text("속성", "Details") : language.text("일정 넣기", "Add plan")))
+                .font(.headline).lineLimit(1)
+            Spacer()
+            Button(language.text("저장", "Save")) { Task { await save() } }
+                .fontWeight(.semibold)
+                .disabled(isSaving)
+                .accessibilityIdentifier("travelEntrySave")
+        }
+        .foregroundStyle(TravelInk.plan)
+        .padding(.horizontal, 16)
+        .padding(.top, 18)
+        .padding(.bottom, 10)
+    }
+
+    /// 고칠 때만: 바로 뒤에 복제·하루 옮기기와 지우기(한 번 묻는다).
+    private var editActions: some View {
+        HStack {
+            Menu {
+                Button(language.text("바로 뒤에 복제", "Duplicate right after"), systemImage: "plus.square.on.square") { Task { await duplicate() } }
+                Button(language.text("전날로", "Move to previous day"), systemImage: "arrow.left") { Task { await shiftDay(-1) } }
+                Button(language.text("다음 날로", "Move to next day"), systemImage: "arrow.right") { Task { await shiftDay(1) } }
+            } label: {
+                Image(systemName: "ellipsis.circle").font(.title3).foregroundStyle(TravelInk.plan).frame(width: 40, height: 32)
+            }
+            .accessibilityLabel(language.text("더 보기", "More"))
+            .accessibilityIdentifier("travelEntryMore")
+            Spacer()
+            Button(language.text("지우기", "Delete"), role: .destructive) { isConfirmingDelete = true }
+                .accessibilityIdentifier("travelEntryDelete")
+                .confirmationDialog(language.text("이 일정을 지울까요?", "Delete this plan?"), isPresented: $isConfirmingDelete, titleVisibility: .visible) {
+                    Button(language.text("지우기", "Delete"), role: .destructive) { Task { await remove() } }
                 }
-                .accessibilityLabel(language.text("더 보기", "More"))
-                .accessibilityIdentifier("travelEntryMore")
-                // 바로 지우지 않고 한 번 묻는다(Trip과 같게).
-                Button(language.text("지우기", "Delete"), role: .destructive) { isConfirmingDelete = true }
-                    .accessibilityIdentifier("travelEntryDelete")
-                    .confirmationDialog(language.text("이 일정을 지울까요?", "Delete this plan?"), isPresented: $isConfirmingDelete, titleVisibility: .visible) {
-                        Button(language.text("지우기", "Delete"), role: .destructive) { Task { await remove() } }
-                    }
-            } else {
-                Button(language.text("완료", "Done")) { dismiss() }.accessibilityIdentifier("travelEntryDone")
+        }
+    }
+
+    /// 미리보기 카드: 계획표에 놓일 모습(이름·시각·장소)과 메모.
+    private var previewCard: some View {
+        let title = TravelQuickEntry.parse(text).title
+        return VStack(alignment: .leading, spacing: 4) {
+            Label(title.isEmpty ? kind.planName : title, systemImage: kind.symbol).font(.subheadline.weight(.semibold)).lineLimit(2)
+            Text(Self.clock(startMinute) + " – " + Self.clock(startMinute + duration) + " · " + Self.durationText(duration, language: language))
+                .font(.footnote.monospacedDigit()).opacity(0.8)
+                .accessibilityIdentifier("travelEntryTime")
+            if let place { Label(place.name, systemImage: "mappin.circle.fill").font(.footnote).lineLimit(1).opacity(0.8) }
+            TextField(language.text("메모 (선택)", "Note (optional)"), text: $note, axis: .vertical)
+                .font(.footnote).lineLimit(1...3)
+                .padding(.horizontal, 8).padding(.vertical, 6)
+                .background(Color.white.opacity(0.8), in: RoundedRectangle(cornerRadius: 8))
+                .padding(.top, 4)
+                .accessibilityIdentifier("travelEntryNote")
+        }
+        .foregroundStyle(TravelInk.plan)
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(TravelInk.planTint, in: RoundedRectangle(cornerRadius: 12))
+        .overlay { RoundedRectangle(cornerRadius: 12).stroke(TravelInk.plan, lineWidth: 1) }
+    }
+
+    /// 시작·종료 슬라이더(5분 단위). 시작을 옮기면 길이는 그대로 따라간다.
+    private var timeSliders: some View {
+        VStack(spacing: 6) {
+            timeSlider(language.text("시작", "Start"), minute: startMinute, range: 0...Double(1_440 - Self.sliderStep), id: "Start") { value in
+                let next = Self.movingStart(to: value, duration: duration)
+                if next.start != startMinute { startMinute = next.start }
+                if next.duration != duration { duration = next.duration }
+            }
+            timeSlider(language.text("종료", "End"), minute: startMinute + duration, range: Double(Self.sliderStep)...1_440, id: "End") { value in
+                let next = Self.duration(endingAt: value, start: startMinute)
+                if next != duration {
+                    duration = next
+                    isDurationChosen = true
+                }
             }
         }
     }
 
-    private func addedRow(_ added: (itemID: String, summary: String)) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: "checkmark.circle.fill")
-            Text(added.summary).lineLimit(1)
-            Spacer()
-            Button(language.text("되돌리기", "Undo")) { Task { await undo(added.itemID) } }.accessibilityIdentifier("travelEntryUndo")
+    private func timeSlider(_ label: String, minute: Int, range: ClosedRange<Double>, id: String, set: @escaping (Int) -> Void) -> some View {
+        HStack(spacing: 8) {
+            Text(label).font(.footnote.weight(.semibold)).frame(width: 34, alignment: .leading)
+            Slider(value: Binding(get: { Double(minute) }, set: { set(Int($0.rounded())) }), in: range, step: Double(Self.sliderStep))
+                .tint(TravelInk.plan)
+                .accessibilityLabel(label)
+                .accessibilityValue(Self.clock(minute))
+                .accessibilityIdentifier("travelEntry" + id)
+            Text(minute == 1_440 ? "24:00" : Self.clock(minute)).font(.footnote.weight(.semibold).monospacedDigit()).frame(width: 44, alignment: .trailing)
         }
-        .font(.footnote)
         .foregroundStyle(TravelInk.plan)
-        .padding(.horizontal, 10)
-        .frame(height: 30)
-        .background(TravelInk.planTint, in: RoundedRectangle(cornerRadius: 8))
     }
 
     private var kindChips: some View {
@@ -220,47 +269,6 @@ struct TravelQuickEntrySheet: View {
                     .buttonStyle(.plain)
                     .accessibilityAddTraits(option == kind ? .isSelected : [])
                     .accessibilityIdentifier("travelEntryKind-\(option.rawValue)")
-                }
-            }
-        }
-        .scrollIndicators(.hidden)
-    }
-
-    private var timeRow: some View {
-        HStack(spacing: 10) {
-            stepButton("minus", language.text("15분 앞으로", "15 minutes earlier")) { startMinute = max(0, startMinute - TravelQuickEntry.step) }
-            Text(Self.clock(startMinute) + " – " + Self.clock(startMinute + duration))
-                .font(.title3.weight(.semibold).monospacedDigit()).foregroundStyle(TravelInk.plan)
-                .frame(maxWidth: .infinity)
-                .accessibilityIdentifier("travelEntryTime")
-            stepButton("plus", language.text("15분 뒤로", "15 minutes later")) { startMinute = min(1_440 - TravelQuickEntry.step, startMinute + TravelQuickEntry.step) }
-        }
-    }
-
-    private func stepButton(_ symbol: String, _ label: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol).font(.system(size: 16, weight: .semibold)).frame(width: 44, height: 36)
-                .foregroundStyle(TravelInk.plan).background(TravelInk.planTint, in: RoundedRectangle(cornerRadius: 9))
-        }
-        .buttonStyle(.plain)
-        .buttonRepeatBehavior(.enabled)
-        .accessibilityLabel(label)
-    }
-
-    private var durationChips: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: 6) {
-                ForEach(TravelQuickEntry.durations, id: \.self) { minutes in
-                    Button {
-                        duration = minutes
-                        isDurationChosen = true
-                    } label: {
-                        Text(Self.durationText(minutes, language: language)).font(.footnote.weight(.semibold))
-                            .padding(.horizontal, 10).frame(height: 30)
-                            .foregroundStyle(minutes == duration ? TravelInk.land : TravelInk.plan)
-                            .background(minutes == duration ? TravelInk.plan : TravelInk.planTint, in: Capsule())
-                    }
-                    .buttonStyle(.plain)
                 }
             }
         }
@@ -304,25 +312,16 @@ struct TravelQuickEntrySheet: View {
         .scrollIndicators(.hidden)
     }
 
-    private var titleRow: some View {
-        HStack(spacing: 8) {
-            TextField(language.text("이름 (예: 점심 12시 1시간)", "Name (e.g. lunch 12:30 1h)"), text: $text)
-                .focused($isTitleFocused)
-                .submitLabel(.done)
-                .onSubmit { Task { await save() } }
-                .padding(.horizontal, 10).frame(height: 44)
-                .background(Color.white, in: RoundedRectangle(cornerRadius: 10))
-                .overlay { RoundedRectangle(cornerRadius: 10).stroke(TravelInk.border, lineWidth: 1) }
-                .accessibilityIdentifier("travelEntryTitle")
-            Button { Task { await save() } } label: {
-                Text(isEditing ? language.text("고치기", "Save") : language.text("넣기", "Add")).font(.body.weight(.semibold))
-                    .padding(.horizontal, 16).frame(height: 44)
-                    .foregroundStyle(TravelInk.land).background(TravelInk.plan, in: RoundedRectangle(cornerRadius: 10))
-            }
-            .buttonStyle(.plain)
-            .disabled(isSaving)
-            .accessibilityIdentifier("travelEntrySave")
-        }
+    /// 제목 칸. 「점심 12시 1시간」처럼 쓰면 시각·길이·종류를 읽어 아래에 옮긴다. 리턴으로 저장.
+    private var titleField: some View {
+        TextField(language.text("이름 (예: 점심 12시 1시간)", "Name (e.g. lunch 12:30 1h)"), text: $text)
+            .focused($isTitleFocused)
+            .submitLabel(.done)
+            .onSubmit { Task { await save() } }
+            .padding(.horizontal, 10).frame(height: 44)
+            .background(Color.white, in: RoundedRectangle(cornerRadius: 10))
+            .overlay { RoundedRectangle(cornerRadius: 10).stroke(TravelInk.border, lineWidth: 1) }
+            .accessibilityIdentifier("travelEntryTitle")
     }
 
     // MARK: 움직임
@@ -372,38 +371,13 @@ struct TravelQuickEntrySheet: View {
                 tripID: item.tripID, itemID: item.itemID, kind: kind, title: title, start: start, end: end,
                 place: place, replacesPlace: place != target.place, note: note
             ))
-            if !didFail { dismiss() }
-            return
+        } else {
+            didFail = await model.addTripItem(
+                tripID: target.tripID, kind: kind, title: title, start: start, end: end, offsetSeconds: target.offsetSeconds, place: place, note: note
+            ) == nil
         }
-        guard let itemID = await model.addTripItem(
-            tripID: target.tripID, kind: kind, title: title, start: start, end: end, offsetSeconds: target.offsetSeconds, place: place, note: note
-        ) else {
-            didFail = true
-            return
-        }
-        didFail = false
-        added = (itemID, Self.clock(startMinute) + "–" + Self.clock(startMinute + duration) + " " + (title.isEmpty ? kind.planName : title))
-        // 다음 일정은 방금 끝에서 잇는다.
-        startMinute = TravelQuickEntry.nextStart(lastEndMinute: startMinute + duration, nowMinute: nil)
-        text = ""
-        note = ""
-        place = nil
-        parsed = TravelQuickEntry.Parsed(title: "")
-        isDurationChosen = false
-        duration = TravelQuickEntry.defaultDuration(kind: kind.rawValue)
-        isTitleFocused = true
-    }
-
-    private func undo(_ itemID: String) async {
-        guard let item = (model.settings.travelTripItems ?? []).first(where: { $0.tripID == target.tripID && $0.itemID == itemID }) else {
-            added = nil
-            return
-        }
-        let local = Int(item.start.timeIntervalSince1970) + item.startOffsetSeconds
-        if await model.deleteTripItem(tripID: target.tripID, itemID: itemID) {
-            startMinute = ((local % 86_400) + 86_400) % 86_400 / 60
-            added = nil
-        }
+        // Trip 원본처럼 저장하면 닫힌다.
+        if !didFail { dismiss() }
     }
 
     /// 같은 종류·이름·길이로 바로 뒤에 하나 더 넣는다.
