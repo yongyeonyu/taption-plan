@@ -470,6 +470,35 @@ final class TravelTripUnitTests: XCTestCase {
         XCTAssertNil(cleared.opens)
         // 선택 없이 「+」가 올 수는 없지만, 와도 열지 않는다.
         XCTAssertNil(TravelPlanCell.after(.plus, selected: nil).opens)
+        // 손잡이: 아래는 끝을, 위는 시작을 옮긴다. 안 바꿨으면 분류의 기본 길이를 쓰도록 길이를 넘기지 않는다.
+        XCTAssertNil(noon.chosenDuration)
+        let longer = noon.movingEnd(by: 45)
+        XCTAssertEqual([longer.minute, longer.endMinute, longer.chosenDuration ?? 0], [720, 825, 105])
+        XCTAssertEqual(noon.movingEnd(by: -200).endMinute, 735, "15분보다 짧아지지 않는다")
+        XCTAssertEqual(noon.movingEnd(by: 2_000).endMinute, 1_440, "24시를 넘지 않는다")
+        let earlier = noon.movingStart(by: -30)
+        XCTAssertEqual([earlier.minute, earlier.endMinute, earlier.chosenDuration ?? 0], [690, 780, 90])
+        XCTAssertEqual(noon.movingStart(by: 300).minute, 765, "끝 15분 전까지만")
+        XCTAssertEqual(noon.movingStart(by: -2_000).minute, 0)
+        XCTAssertEqual(TravelPlanCell.after(.plus, selected: longer).opens?.chosenDuration, 105)
+    }
+
+    /// TVU1113A01: 일정을 한 번 누르면 선택만 되고, 선택된 일정을 다시 눌러야 편집기가 열린다(Trip 원본).
+    func testPlanBlockIsSelectedFirstAndSecondTapOpensEditor() {
+        let first = TravelPlanSelection.after(tapped: "a", selected: nil)
+        XCTAssertEqual(first.selected, "a")
+        XCTAssertFalse(first.opensEditor)
+        let other = TravelPlanSelection.after(tapped: "b", selected: first.selected)
+        XCTAssertEqual(other.selected, "b")
+        XCTAssertFalse(other.opensEditor, "다른 일정을 누르면 선택만 옮겨 간다")
+        let again = TravelPlanSelection.after(tapped: "b", selected: other.selected)
+        XCTAssertEqual(again.selected, "b")
+        XCTAssertTrue(again.opensEditor)
+        // 선택 막대의 −5분·+5분은 하루를 벗어나지 않는다.
+        XCTAssertFalse(TravelPlanSelection.canNudge(-5, start: 0, end: 60))
+        XCTAssertTrue(TravelPlanSelection.canNudge(5, start: 0, end: 60))
+        XCTAssertFalse(TravelPlanSelection.canNudge(5, start: 1_380, end: 1_440))
+        XCTAssertTrue(TravelPlanSelection.canNudge(-5, start: 1_380, end: 1_440))
     }
 
     /// TVZ1112A01: 지출은 그 시각의 일정 칸에 모이고(겹치면 늦게 시작한 일정), 이동 일정은 탈것을 먼저 권한다.

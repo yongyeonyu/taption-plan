@@ -130,7 +130,7 @@ Trip이 이미 해결한 문제들이다. 이식 단위를 고르는 근거가 �
 ## 4. 가져오지 않는 것과 이유
 
 - **`.xlsx` 정본, `TripWorkbookCodec`, `TripStore`(2,695줄)**: BOKKI는 SQLite가 정본이다. 돈·Siri·Health가 한 클래스에 섞여 있다.
-- **일정 UI**(`TripPlanningView`·`TimelineCanvasView`·`EditingSheets`, 약 1.1만 줄)
+- **일정 UI**(`TripPlanningView`·`TimelineCanvasView`·`EditingSheets`, 약 1.1만 줄) — 대표 지시(2026-11-13, TVU1113A01)로 바뀜: 코드는 가져오지 않지만 화면 구성·조작은 Trip 그대로 BOKKI 코드로 다시 만든다(스타일과 BOKKI 전용 기능은 유지, 저장 형식이 필요한 것은 마지막). 단위는 `temp.md` TVU1113A01.
   - `TripStore`와 돈 필드에 얽혀 있다.
   - 240Hz 캔버스 계약이 BOKKI 규칙(그리기 120Hz, 레이아웃 60Hz)과 다르다.
   - 플랜 A/B/C(`AlternativeGroup`, 조건: 비·지연·휴무·피곤)는 아이디어로만 남긴다.

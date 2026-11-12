@@ -263,6 +263,8 @@ struct TravelModeView: View {
     @State private var ledgerTripID: String?
     @State private var expenseDraft: LedgerEntry?
     @State private var entryTarget: TravelQuickEntrySheet.Target?
+    /// 계획표에서 고른 빈 셀(TVU1113A01).
+    @State private var planCell: TravelPlanCell?
     @State private var timeUndo: TravelTimeUndo?
     @State private var deleteCandidate: TravelTripDirectory.Entry?
     /// 재생 헤드의 시각(그날 0시부터의 분). nil이면 처음 자리(오늘은 지금, 아니면 첫 일정 시작).
@@ -379,9 +381,13 @@ struct TravelModeView: View {
             }
         }
         .onChange(of: openedID) { _, id in lastTripID = id ?? "" }
-        .onChange(of: isPlanUp) { _, _ in applyPlanCamera() }
+        .onChange(of: isPlanUp) { _, _ in
+            if planCell != nil { planCell = nil }
+            applyPlanCamera()
+        }
         .onChange(of: planDayKey) { _, _ in
             playMinute = nil
+            if planCell != nil { planCell = nil }
             applyPlanCamera()
         }
         .task {
@@ -501,6 +507,14 @@ struct TravelModeView: View {
     private func playDate(_ entry: TravelTripDirectory.Entry) -> Date {
         let zone = entry.trip.timeZoneID.flatMap(TimeZone.init(identifier:)) ?? .autoupdatingCurrent
         return TravelQuickEntrySheet.date(dayKey: dayKey(entry), minute: currentPlayMinute(entry), offsetSeconds: zone.secondsFromGMT())
+    }
+
+    /// 지출 넣기. 장부가 있으면 바로 입력 칸을 연다: 고른 일정의 시작, 없으면 재생 헤드의 시각(계획표가 내려 있으면 지금).
+    private func addExpense(_ entry: TravelTripDirectory.Entry, minute: Int?) {
+        guard book.trip(entry.id) != nil else { return ledgerTripID = entry.id }
+        let zone = entry.trip.timeZoneID.flatMap(TimeZone.init(identifier:)) ?? .autoupdatingCurrent
+        let picked = minute.map { TravelQuickEntrySheet.date(dayKey: dayKey(entry), minute: $0, offsetSeconds: zone.secondsFromGMT()) }
+        expenseDraft = TravelPlanSpend.draft(tripID: entry.id, at: picked ?? (isPlanUp ? playDate(entry) : .now))
     }
 
     private func currentPlayMinute(_ entry: TravelTripDirectory.Entry) -> Int {
@@ -951,13 +965,10 @@ struct TravelModeView: View {
             }
             Spacer(minLength: 0)
             Menu {
-                Button(language.text("일정 넣기", "Add plan"), systemImage: "calendar.badge.plus") { addEntry(entry) }
+                Button(language.text("일정 넣기", "Add plan"), systemImage: "calendar.badge.plus") { addEntry(entry, cell: planCell) }
                 Button(language.text("지도에서 일정 보기", "View plans on the map"), systemImage: "map") { openPlan(planDay(entry, items: items)) }
                 Button(language.text("지출 넣기", "Add expense"), systemImage: "wonsign") {
-                    // 장부가 있으면 바로 입력 칸을 연다. 계획표가 올라와 있으면 재생 헤드의 시각으로 넣는다.
-                    if book.trip(entry.id) == nil { ledgerTripID = entry.id } else {
-                        expenseDraft = TravelPlanSpend.draft(tripID: entry.id, at: isPlanUp ? playDate(entry) : .now)
-                    }
+                    addExpense(entry, minute: nil)
                 }
             } label: {
                 Image(systemName: "plus").font(.system(size: 20, weight: .semibold)).foregroundStyle(TravelInk.land).frame(width: 44, height: 44)
@@ -1011,7 +1022,10 @@ struct TravelModeView: View {
                 TravelPlanTable(
                     table: table(entry), language: language,
                     onSelect: { block in editEntry(entry, itemID: block.id) },
-                    onAdd: { column, minute in addEntry(entry, column: column, minute: minute) },
+                    onExpense: { block in addExpense(entry, minute: block.startMinute) },
+                    onDelete: { block in Task { _ = await model.deleteTripItem(tripID: entry.id, itemID: block.id) } },
+                    onAdd: { cell in addEntry(entry, cell: cell) },
+                    cell: $planCell,
                     onMove: { block, minutes in editTimes(entry, block: block, move: minutes) },
                     onResize: { block, minutes in editTimes(entry, block: block, resize: minutes) },
                     playMinute: currentPlayMinute(entry),
@@ -1044,8 +1058,10 @@ struct TravelModeView: View {
         return language.runtimeText("\(number + 1)일차", "Day \(number + 1)")
     }
 
-    /// 일정 넣기. 빈 곳을 눌렀으면 그 열·그 시각, 「+」면 그날 마지막 일정 끝에서 잇는다.
-    private func addEntry(_ entry: TravelTripDirectory.Entry, column: Int? = nil, minute: Int? = nil) {
+    /// 일정 넣기. 고른 셀이 있으면 그 열·그 시각·그 길이, 없으면 그날 마지막 일정 끝에서 잇는다.
+    private func addEntry(_ entry: TravelTripDirectory.Entry, cell: TravelPlanCell? = nil) {
+        let column = cell?.column, minute = cell?.minute
+        if planCell != nil { planCell = nil }
         let key = dayKey(entry), table = table(entry)
         let last = table.blocks.max { $0.endMinute < $1.endMinute }
         let kind = column.map(TravelQuickEntry.kind(forColumn:)).flatMap(TripImportItem.Kind.init(rawValue:)) ?? .sight
@@ -1054,6 +1070,7 @@ struct TravelModeView: View {
             startMinute: minute ?? TravelQuickEntry.nextStart(lastEndMinute: last?.endMinute, nowMinute: table.nowMinute), kind: kind
         )
         target.anchor = TravelModeDestination(trip: entry.trip, stops: model.settings.travelPlanStops).point
+        target.duration = cell?.chosenDuration
         entryTarget = target
     }
 

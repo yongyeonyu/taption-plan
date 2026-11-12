@@ -17,6 +17,8 @@ struct TravelQuickEntrySheet: View {
         /// 장소를 찾을 때 먼저 볼 여행지 가운데(경도, 위도)와, 고칠 일정에 이미 붙은 장소.
         var anchor: SIMD2<Double>?
         var place: TravelItemPlace?
+        /// 계획표에서 셀 길이를 정하고 열었으면 그 길이(분).
+        var duration: Int?
 
         /// 새 일정: 그 여행의 시간대(없으면 기기 시간대)로 그날에 놓는다.
         static func new(trip: TravelTrip, dayKey: String, dayLabel: String, startMinute: Int, kind: TripImportItem.Kind) -> Target {
@@ -335,7 +337,8 @@ struct TravelQuickEntrySheet: View {
             duration = max(5, Int(item.end.timeIntervalSince(item.start) / 60))
             isDurationChosen = true
         } else {
-            duration = TravelQuickEntry.defaultDuration(kind: kind.rawValue)
+            duration = target.duration ?? TravelQuickEntry.defaultDuration(kind: kind.rawValue)
+            isDurationChosen = target.duration != nil
             isTitleFocused = true
         }
     }
