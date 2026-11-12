@@ -760,13 +760,13 @@
   },
   {
    "file": "TaptionPlan/UI/TravelModeView.swift",
-   "line": 940,
+   "line": 946,
    "ko": "sheet.leftover",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/TravelModeView.swift",
-   "line": 943,
+   "line": 949,
    "ko": "sheet.myCost",
    "en": "language"
   },
@@ -790,7 +790,7 @@
   },
   {
    "file": "TaptionPlan/UI/TravelPlanTable.swift",
-   "line": 506,
+   "line": 512,
    "ko": "block.spent",
    "en": "language"
   },
