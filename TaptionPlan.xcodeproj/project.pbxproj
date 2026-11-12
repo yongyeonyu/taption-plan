@@ -661,6 +661,8 @@
 		B1TV11120000000000000101 /* TravelModeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV11120000000000000001 /* TravelModeView.swift */; };
 		B1TV11120000000000000103 /* TravelPlanTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV11120000000000000003 /* TravelPlanTable.swift */; };
 		B1TV11120000000000000104 /* TravelQuickEntrySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV11120000000000000004 /* TravelQuickEntrySheet.swift */; };
+		B1TV11120000000000000105 /* TravelNewTripSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV11120000000000000005 /* TravelNewTripSheet.swift */; };
+		B1TV11120000000000000106 /* TravelRoutes.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV11120000000000000006 /* TravelRoutes.swift */; };
 		B1080700000000000000010A /* ne-cities.tsv in Resources */ = {isa = PBXBuildFile; fileRef = B1080700000000000000000A /* ne-cities.tsv */; };
 		B1080700000000000000010B /* TravelMapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080700000000000000000B /* TravelMapTests.swift */; };
 		B1080700000000000000010C /* TravelMapVideoRenderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080700000000000000000C /* TravelMapVideoRenderTests.swift */; };
@@ -1391,6 +1393,8 @@
 		B1TV11120000000000000001 /* TravelModeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelModeView.swift; sourceTree = "<group>"; };
 		B1TV11120000000000000003 /* TravelPlanTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelPlanTable.swift; sourceTree = "<group>"; };
 		B1TV11120000000000000004 /* TravelQuickEntrySheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelQuickEntrySheet.swift; sourceTree = "<group>"; };
+		B1TV11120000000000000005 /* TravelNewTripSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelNewTripSheet.swift; sourceTree = "<group>"; };
+		B1TV11120000000000000006 /* TravelRoutes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelRoutes.swift; sourceTree = "<group>"; };
 		B1080700000000000000000A /* ne-cities.tsv */ = {isa = PBXFileReference; lastKnownFileType = text; name = ne-cities.tsv; path = MapData/ne-cities.tsv; sourceTree = "<group>"; };
 		B1080700000000000000000B /* TravelMapTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelMapTests.swift; sourceTree = "<group>"; };
 		B1080700000000000000000C /* TravelMapVideoRenderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelMapVideoRenderTests.swift; sourceTree = "<group>"; };
@@ -1903,6 +1907,8 @@
 				B1TV11120000000000000001 /* TravelModeView.swift */,
 				B1TV11120000000000000003 /* TravelPlanTable.swift */,
 				B1TV11120000000000000004 /* TravelQuickEntrySheet.swift */,
+				B1TV11120000000000000005 /* TravelNewTripSheet.swift */,
+				B1TV11120000000000000006 /* TravelRoutes.swift */,
 				B10807000000000000000002 /* TravelMapCityCatalog.swift */,
 				B10807000000000000000003 /* TravelMapTrip.swift */,
 				B10807000000000000000004 /* TravelMapVideoPlan.swift */,
@@ -2875,6 +2881,8 @@
 				B1TV11120000000000000101 /* TravelModeView.swift in Sources */,
 				B1TV11120000000000000103 /* TravelPlanTable.swift in Sources */,
 				B1TV11120000000000000104 /* TravelQuickEntrySheet.swift in Sources */,
+				B1TV11120000000000000105 /* TravelNewTripSheet.swift in Sources */,
+				B1TV11120000000000000106 /* TravelRoutes.swift in Sources */,
 				B10807000000000000000102 /* TravelMapCityCatalog.swift in Sources */,
 				B10807000000000000000103 /* TravelMapTrip.swift in Sources */,
 				B10807000000000000000104 /* TravelMapVideoPlan.swift in Sources */,

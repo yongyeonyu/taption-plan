@@ -147,11 +147,22 @@ enum TravelGlobeRenderer {
 
     static func center(in size: CGSize) -> CGPoint { CGPoint(x: size.width / 2, y: size.height * 0.54) }
 
+    /// 지도 위 캐릭터(재생 헤드의 시각에 있는 자리).
+    struct Actor {
+        var longitude: Double
+        var latitude: Double
+        var image: Image
+        var facesEast: Bool
+    }
+
+    /// `offset`은 지도 가운데를 옮기는 양: 계획표가 올라오면 시트에 가리지 않는 자리의 가운데로 옮긴다.
     static func draw(
         _ context: inout GraphicsContext, size: CGSize, camera: TravelGlobeCamera, highlight: Set<String>,
-        flags: [Flag], pins: [Pin]
+        flags: [Flag], pins: [Pin], offset: CGSize = .zero, actor: Actor? = nil,
+        home: SIMD2<Double>? = nil, route: [SIMD2<Double>] = []
     ) {
-        let center = center(in: size)
+        let base = center(in: size)
+        let center = CGPoint(x: base.x + offset.width, y: base.y + offset.height)
         let radius = camera.radius
         let covers = radius > hypot(size.width, size.height)
         context.fill(Path(CGRect(origin: .zero, size: size)), with: .color(covers ? TravelInk.sea : TravelInk.space))
@@ -186,7 +197,18 @@ enum TravelGlobeRenderer {
             context.fill(chosen, with: .color(TravelInk.planTint))
             context.stroke(chosen, with: .color(TravelInk.plan), lineWidth: 1.5)
         }
-        drawPins(&context, pins: pins, camera: camera, center: center)
+        if let home { drawHome(&context, home: home, flags: flags, camera: camera, center: center) }
+        drawPins(&context, pins: pins, route: route, camera: camera, center: center)
+        if let actor {
+            let (spot, front) = point(camera, center, actor.longitude, actor.latitude)
+            if front {
+                // 발이 그 자리에 오게 위로 올려 그리고, 서쪽으로 갈 때는 좌우를 뒤집는다.
+                var layer = context
+                layer.translateBy(x: spot.x, y: spot.y - 20)
+                if !actor.facesEast { layer.scaleBy(x: -1, y: 1) }
+                layer.draw(actor.image, in: CGRect(x: -24, y: -24, width: 48, height: 48))
+            }
+        }
         // 이름표를 단 깃발을 맨 위에 그린다.
         for flag in flags.sorted(by: { !$0.showsLabel && $1.showsLabel }) where flag.progress > 0 {
             drawFlag(&context, flag: flag, camera: camera, center: center)
@@ -260,12 +282,40 @@ enum TravelGlobeRenderer {
         return path
     }
 
-    private static func drawPins(_ context: inout GraphicsContext, pins: [Pin], camera: TravelGlobeCamera, center: CGPoint) {
+    /// 집 자리(집 아이콘)와, 집에서 여행지마다 가는 가는 점선(대표 지시: 점선·1pt·80%).
+    private static func drawHome(_ context: inout GraphicsContext, home: SIMD2<Double>, flags: [Flag], camera: TravelGlobeCamera, center: CGPoint) {
+        let (spot, front) = point(camera, center, home.x, home.y)
+        guard front else { return }
+        for flag in flags {
+            let (end, visible) = point(camera, center, flag.longitude, flag.latitude)
+            guard visible else { continue }
+            var line = Path()
+            line.move(to: spot)
+            line.addLine(to: end)
+            context.stroke(line, with: .color(TravelInk.plan.opacity(0.8)), style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
+        }
+        let rect = CGRect(x: spot.x - 11, y: spot.y - 11, width: 22, height: 22)
+        context.fill(Path(ellipseIn: rect), with: .color(TravelInk.land))
+        context.stroke(Path(ellipseIn: rect), with: .color(TravelInk.plan), lineWidth: 1.5)
+        context.draw(Image(systemName: "house.fill").resizable(), in: rect.insetBy(dx: 5, dy: 5.5), style: FillStyle())
+    }
+
+    /// `route`가 있으면(길찾기로 받은 길) 핀을 곧게 잇는 대신 그 길을 그린다.
+    private static func drawPins(_ context: inout GraphicsContext, pins: [Pin], route points: [SIMD2<Double>] = [], camera: TravelGlobeCamera, center: CGPoint) {
         let places = pins.map { (point(camera, center, $0.longitude, $0.latitude), $0.label) }.filter { $0.0.1 }
         guard !places.isEmpty else { return }
         var route = Path()
-        for (index, place) in places.enumerated() {
-            if index == 0 { route.move(to: place.0.0) } else { route.addLine(to: place.0.0) }
+        if points.count > 1 {
+            var isDrawing = false
+            for spot in points {
+                let (projected, front) = point(camera, center, spot.x, spot.y)
+                if front { if isDrawing { route.addLine(to: projected) } else { route.move(to: projected) } }
+                isDrawing = front
+            }
+        } else {
+            for (index, place) in places.enumerated() {
+                if index == 0 { route.move(to: place.0.0) } else { route.addLine(to: place.0.0) }
+            }
         }
         context.stroke(route, with: .color(TravelInk.plan), style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round, dash: [6, 5]))
         for place in places {
@@ -326,7 +376,15 @@ struct TravelModeView: View {
     @State private var ledgerTripID: String?
     @State private var entryTarget: TravelQuickEntrySheet.Target?
     @State private var timeUndo: TravelTimeUndo?
+    /// 재생 헤드의 시각(그날 0시부터의 분). nil이면 처음 자리(오늘은 지금, 아니면 첫 일정 시작).
+    @State private var playMinute: Int?
+    /// 고른 고양이 그림(한 번 만들어 둔다).
+    @State private var actorImage: Image?
+    /// 곳 사이 길(Apple 길찾기). 올 때까지는 곧은 선.
+    @State private var routes = TravelRouteStore()
     @State private var didEnter = false
+    /// 마지막으로 열어 둔 여행. 여행 화면에서 일상으로 나갔다가 돌아오면 그 여행으로 바로 온다(지구본에서 나갔으면 지구본).
+    @AppStorage("travelLastOpenedTripID") private var lastTripID = ""
     /// 계획표 시트가 올라와 있는지. 올라오면 작은 시간 막대는 사라진다(대표 결정).
     @State private var isPlanUp = false
     /// 계획표와 시간 막대가 함께 보는 날(`YYYY-MM-DD`). nil이면 여행 중엔 오늘, 아니면 첫날.
@@ -360,7 +418,9 @@ struct TravelModeView: View {
                     TravelGlobeRenderer.draw(
                         &context, size: size, camera: now, highlight: highlight(destination),
                         flags: flags(entries, flightProgress: flight.map { $0.flagProgress(at: elapsed) } ?? 1),
-                        pins: openedID == nil ? [] : pins(destination)
+                        pins: openedID == nil ? [] : planPins(focused, destination),
+                        offset: focused.map(mapOffset) ?? .zero, actor: focused.flatMap(actor),
+                        home: home, route: focused.map(dayRoute) ?? []
                     )
                 }
             }
@@ -398,6 +458,16 @@ struct TravelModeView: View {
         .overlay(alignment: .bottom) {
             if let focused, openedID != nil { planSheet(focused) } else { globeFooter }
         }
+        .onChange(of: openedID) { _, id in lastTripID = id ?? "" }
+        .onChange(of: isPlanUp) { _, _ in applyPlanCamera() }
+        .onChange(of: planDayKey) { _, _ in
+            playMinute = nil
+            applyPlanCamera()
+        }
+        .task {
+            // 설정에서 고른 고양이(화랑·춘향·윤복…)를 그대로 쓴다.
+            actorImage = Image(uiImage: HwarangDiagnostics.frame(scene: .walkLoop, sec: 0.7, side: 96, small: true, coat: .named(model.settings.catStyle.rawValue)))
+        }
         .task(id: flightStart) { await finishFlight() }
         .task { await book.load() }
         .sheet(item: $newTripDraft) { draft in
@@ -427,11 +497,32 @@ struct TravelModeView: View {
         guard !didEnter else { return }
         didEnter = true
         camera.radius = restRadius
-        guard let active = entries.first(where: { $0.state == .active }) else { return }
-        focusedID = active.id
-        let destination = TravelModeDestination(trip: active.trip, stops: model.settings.travelPlanStops)
+        let dayKey = Self.dayKey(model.selectedDate)
+        guard let target = Self.entryToOpen(entries, selectedDay: dayKey, lastTripID: lastTripID) else { return }
+        focusedID = target.id
+        let destination = TravelModeDestination(trip: target.trip, stops: model.settings.travelPlanStops)
         if let last = cameras(for: destination).last { camera = last }
-        openedID = active.id
+        // 일상에서 보던 날이 그 여행 기간이면 계획표도 그날로 연다.
+        if dayKey >= target.trip.startDay, dayKey <= target.trip.endDay { planDayKey = dayKey }
+        openedID = target.id
+    }
+
+    static func dayKey(_ date: Date, calendar: Calendar = .autoupdatingCurrent) -> String {
+        let parts = calendar.dateComponents([.year, .month, .day], from: date)
+        return TravelTripDay.string(year: parts.year ?? 0, month: parts.month ?? 1, day: parts.day ?? 1)
+    }
+
+    /// 일상에서 넘어올 때 바로 열 여행: 일상에서 보던 날을 품은 여행 → 지금 여행 중인 것 → 마지막으로 열어 둔 것. 없으면 지구본.
+    static func entryToOpen(_ entries: [TravelTripDirectory.Entry], selectedDay: String, lastTripID: String) -> TravelTripDirectory.Entry? {
+        entries.first { $0.trip.startDay <= selectedDay && selectedDay <= $0.trip.endDay }
+            ?? entries.first { $0.state == .active }
+            ?? entries.first { !lastTripID.isEmpty && $0.id == lastTripID }
+    }
+
+    /// 여행 화면에서 일상으로 바로 나간다. 계획표에서 날을 골라 보고 있었으면 일상도 그날로 맞춘다.
+    private func exitToDaily(_ entry: TravelTripDirectory.Entry) {
+        if planDayKey != nil || entry.state == .active { model.selectedDate = dayDate(dayKey(entry)) }
+        dismiss()
     }
 
     /// 화면이 돌거나 크기가 바뀌면 지금 보던 것을 새 크기에 다시 맞춘다(움직이는 중에는 그대로 둔다).
@@ -441,14 +532,98 @@ struct TravelModeView: View {
             camera.radius = restRadius
             return
         }
-        let destination = TravelModeDestination(trip: entry.trip, stops: model.settings.travelPlanStops)
-        if let last = cameras(for: destination).last { camera = last }
+        applyPlanCamera()
     }
 
-    private func fit(_ box: (west: Double, south: Double, east: Double, north: Double)) -> TravelGlobeCamera {
-        TravelGlobeCamera.fitting(
-            west: box.west, south: box.south, east: box.east, north: box.north, width: Double(viewSize.width), height: Double(viewSize.height),
+    private func fit(_ box: (west: Double, south: Double, east: Double, north: Double), in size: CGSize? = nil) -> TravelGlobeCamera {
+        let size = size ?? viewSize
+        return TravelGlobeCamera.fitting(
+            west: box.west, south: box.south, east: box.east, north: box.north, width: Double(size.width), height: Double(size.height),
             padding: 56, minimumRadius: restRadius, maximumRadius: 60_000
+        )
+    }
+
+    // MARK: 재생 헤드와 지도(TVP1112A01)
+
+    /// 계획표가 올라왔을 때 지도에 남는 자리. 세로 폰은 머리말 아래~시트 위, 넓은 화면은 판 왼쪽.
+    static func mapArea(_ size: CGSize, isPlanUp: Bool) -> CGRect {
+        guard isPlanUp else { return CGRect(origin: .zero, size: size) }
+        if isWide(size) {
+            let panel = min(460, size.width * 0.5) + 20
+            return CGRect(x: 0, y: 120, width: size.width - panel, height: max(80, size.height - 120))
+        }
+        let sheet = planTableHeight(size) + 150
+        return CGRect(x: 0, y: 130, width: size.width, height: max(80, size.height - sheet - 130))
+    }
+
+    /// 그 자리의 가운데로 지도 가운데를 옮기는 양.
+    private func mapOffset(_ entry: TravelTripDirectory.Entry) -> CGSize {
+        guard isPlanUp, openedID == entry.id else { return .zero }
+        let area = Self.mapArea(viewSize, isPlanUp: true), base = TravelGlobeRenderer.center(in: viewSize)
+        return CGSize(width: area.midX - base.x, height: area.midY - base.y)
+    }
+
+    /// 그날 일정 가운데 지도 핀이 있는 것(시각 순).
+    private func playStops(_ entry: TravelTripDirectory.Entry) -> [TravelPlayhead.Stop] {
+        let pins = model.settings.travelPlanStops.filter { $0.tripID == entry.id }
+        return table(entry).blocks.compactMap { block in
+            pins.first { $0.itemID == block.id }.map {
+                TravelPlayhead.Stop(id: block.id, startMinute: block.startMinute, endMinute: block.endMinute, longitude: $0.longitude, latitude: $0.latitude)
+            }
+        }
+    }
+
+    private func currentPlayMinute(_ entry: TravelTripDirectory.Entry) -> Int {
+        let table = table(entry)
+        return playMinute ?? TravelPlayhead.startMinute(nowMinute: table.nowMinute, firstStartMinute: table.blocks.first?.startMinute)
+    }
+
+    /// 계획표가 올라와 있으면 그날 핀만(그날 차례 번호), 아니면 여행 전체.
+    private func planPins(_ entry: TravelTripDirectory.Entry?, _ destination: TravelModeDestination?) -> [TravelGlobeRenderer.Pin] {
+        guard let entry, isPlanUp else { return pins(destination) }
+        let stops = playStops(entry)
+        guard !stops.isEmpty else { return pins(destination) }
+        return stops.enumerated().map { .init(longitude: $1.longitude, latitude: $1.latitude, label: "\($0 + 1)") }
+    }
+
+    /// 자주 가는 곳에 등록한 집 자리.
+    private var home: SIMD2<Double>? {
+        model.settings.frequentPlaces.first { $0.kind == .home }?.point.map { SIMD2($0.longitude, $0.latitude) }
+    }
+
+    /// 계획표가 올라와 있을 때 그날의 길: 구간마다 받은 길, 아직 없으면 곧은 선.
+    private func dayRoute(_ entry: TravelTripDirectory.Entry) -> [SIMD2<Double>] {
+        guard isPlanUp, openedID == entry.id else { return [] }
+        let stops = playStops(entry)
+        guard stops.count > 1, !routes.paths.isEmpty else { return [] }
+        var line: [SIMD2<Double>] = [SIMD2(stops[0].longitude, stops[0].latitude)]
+        for (from, to) in zip(stops, stops.dropFirst()) {
+            line += routes.paths[TravelPlayhead.legKey(from.id, to.id)] ?? [SIMD2(to.longitude, to.latitude)]
+        }
+        return line
+    }
+
+    /// 재생 헤드의 시각에 고양이가 설 자리.
+    private func actor(_ entry: TravelTripDirectory.Entry) -> TravelGlobeRenderer.Actor? {
+        guard isPlanUp, openedID == entry.id, let image = actorImage,
+              let spot = TravelPlayhead.position(at: currentPlayMinute(entry), stops: playStops(entry), paths: routes.paths) else { return nil }
+        return .init(longitude: spot.longitude, latitude: spot.latitude, image: image, facesEast: spot.facesEast)
+    }
+
+    /// 계획표를 올리면 그날 핀이 남은 자리에 다 들어오게 지도를 맞추고, 내리면 여행 전체로 돌아간다.
+    private func applyPlanCamera() {
+        guard flight == nil, let id = openedID, let entry = entries.first(where: { $0.id == id }) else { return }
+        let stops = isPlanUp ? playStops(entry) : []
+        guard !stops.isEmpty else {
+            let destination = TravelModeDestination(trip: entry.trip, stops: model.settings.travelPlanStops)
+            if let last = cameras(for: destination).last { camera = last }
+            return
+        }
+        let lons = stops.map(\.longitude), lats = stops.map(\.latitude), pad = 0.02
+        Task { await routes.load(stops) }
+        camera = fit(
+            ((lons.min() ?? 0) - pad, (lats.min() ?? 0) - pad, (lons.max() ?? 0) + pad, (lats.max() ?? 0) + pad),
+            in: Self.mapArea(viewSize, isPlanUp: true).size
         )
     }
 
@@ -668,7 +843,7 @@ struct TravelModeView: View {
                 .padding(.vertical, 7)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(width: 150)
+            .frame(width: 220)
             .background(Color.white)
             .clipShape(RoundedRectangle(cornerRadius: 10))
             .overlay { RoundedRectangle(cornerRadius: 10).stroke(entry.id == (flyingID ?? focusedID) ? flagColor : .clear, lineWidth: 2.5) }
@@ -729,7 +904,7 @@ struct TravelModeView: View {
                 }
                 Spacer(minLength: 0)
                 // 일상 화면으로 바로 나간다.
-                Button { dismiss() } label: {
+                Button { exitToDaily(entry) } label: {
                     Image(systemName: "house.fill").font(.system(size: 16, weight: .semibold)).frame(width: 40, height: 40)
                         .background(TravelInk.land, in: Circle())
                 }
@@ -845,7 +1020,9 @@ struct TravelModeView: View {
                     onSelect: { block in editEntry(entry, itemID: block.id) },
                     onAdd: { column, minute in addEntry(entry, column: column, minute: minute) },
                     onMove: { block, minutes in editTimes(entry, block: block, move: minutes) },
-                    onResize: { block, minutes in editTimes(entry, block: block, resize: minutes) }
+                    onResize: { block, minutes in editTimes(entry, block: block, resize: minutes) },
+                    playMinute: currentPlayMinute(entry),
+                    onScrub: { playMinute = $0 }
                 )
                     .id(dayKey(entry))
                     .frame(height: Self.planTableHeight(viewSize))
@@ -972,105 +1149,6 @@ struct TravelTimeUndo: Equatable {
 
 private struct TravelLedgerTarget: Identifiable {
     let id: String
-}
-
-/// 새 여행 만들기: 이름·기간·여행지. 당일치기와 지난 날짜도 된다.
-struct TravelNewTripSheet: View {
-    struct Draft: Identifiable {
-        let id = UUID()
-        var isDayTrip: Bool
-    }
-
-    @Bindable var model: AppModel
-    let language: MapHomeLanguage
-    let draft: Draft
-    let onCreate: (TravelTrip) -> Void
-
-    @Environment(\.dismiss) private var dismiss
-    @State private var title = ""
-    @State private var isDayTrip = false
-    @State private var start = Date.now
-    @State private var end = Date.now
-    @State private var countryCode = "KR"
-    @State private var provinceCode = ""
-    @State private var isSaving = false
-
-    private var countries: [TravelGlobeRegion] {
-        TravelModeRegions.countries.filter { $0.code.count == 2 }.sorted { name($0) < name($1) }
-    }
-
-    private func name(_ region: TravelGlobeRegion) -> String {
-        language == .korean && !region.nameKo.isEmpty ? region.nameKo : region.nameEn
-    }
-
-    private var currency: String? {
-        countryCode == "KR" ? nil : TravelModeRegions.currency(forCountry: countryCode)
-    }
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    TextField(language.text("여행 이름", "Trip name"), text: $title)
-                    Toggle(language.text("당일치기", "Day trip"), isOn: $isDayTrip)
-                    DatePicker(isDayTrip ? language.text("날짜", "Date") : language.text("첫날", "First day"), selection: $start, displayedComponents: .date)
-                    if !isDayTrip {
-                        DatePicker(language.text("마지막 날", "Last day"), selection: $end, in: start..., displayedComponents: .date)
-                    }
-                } footer: {
-                    Text(language.text("지난 날짜로 만들면 그날의 기록이 이 여행의 실제 기록이 됩니다.", "A past date turns that day's records into this trip's actual records."))
-                }
-                Section(language.text("여행지", "Destination")) {
-                    Picker(language.text("나라", "Country"), selection: $countryCode) {
-                        ForEach(countries) { Text(name($0)).tag($0.code) }
-                    }
-                    if countryCode == "KR" {
-                        Picker(language.text("지역", "Region"), selection: $provinceCode) {
-                            Text(language.text("정하지 않음", "Not set")).tag("")
-                            ForEach(TravelModeRegions.provinces) { Text(name($0)).tag($0.code) }
-                        }
-                    }
-                    LabeledContent(language.text("여행지 통화", "Trip currency"), value: currency ?? language.text("원화만", "Home currency only"))
-                }
-            }
-            .navigationTitle(language.text("새 여행", "New trip"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button(language.text("취소", "Cancel")) { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(language.text("만들기", "Create")) { Task { await create() } }.disabled(isSaving)
-                }
-            }
-            .onAppear { isDayTrip = draft.isDayTrip }
-            .onChange(of: start) { _, value in if end < value { end = value } }
-        }
-        // 지구본 화면이 어두워도 이 시트는 밝게: 어두운 바탕에서 「취소」·「만들기」 글자가 묻혔다.
-        .preferredColorScheme(.light)
-    }
-
-    private func day(_ date: Date) -> String {
-        let parts = Calendar.autoupdatingCurrent.dateComponents([.year, .month, .day], from: date)
-        return TravelTripDay.string(year: parts.year ?? 0, month: parts.month ?? 1, day: parts.day ?? 1)
-    }
-
-    private func create() async {
-        isSaving = true
-        defer { isSaving = false }
-        let country = TravelModeRegions.countries.first { $0.code == countryCode }
-        let province = TravelModeRegions.provinces.first { $0.code == provinceCode && countryCode == "KR" }
-        let place = province ?? country
-        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trip = TravelTrip(
-            id: "trip-\(UUID().uuidString.lowercased())",
-            title: trimmed.isEmpty ? (place.map(name) ?? "") : trimmed,
-            startDay: day(start), endDay: day(isDayTrip ? start : max(start, end)),
-            countryCode: country?.code, regionName: province?.nameKo,
-            latitude: place?.anchor.y, longitude: place?.anchor.x, currencyCode: currency
-        )
-        guard await model.saveTravelTrip(trip) else { return }
-        dismiss()
-        onCreate(trip)
-    }
 }
 
 /// 지구본 손가락 조작의 계산(TVE1112A01).

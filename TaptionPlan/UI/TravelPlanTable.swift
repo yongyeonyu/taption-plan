@@ -115,6 +115,13 @@ struct TravelPlanTable: View {
     /// 들어 올린 칸의 아래 손잡이를 끌어 길이를 바꿈: 끝이 옮겨진 분.
     var onResize: (TravelPlanTableModel.Block, Int) -> Void = { _, _ in }
 
+    /// 재생 헤드의 시각. 손잡이를 끌거나 시간축을 누르면 `onScrub`으로 새 시각을 알린다.
+    var playMinute: Int?
+    var onScrub: (Int) -> Void = { _ in }
+    @State private var position = ScrollPosition()
+    /// 처음 자리를 잡았는지.
+    @State private var didPlace = false
+
     /// 길게 눌러 들어 올린 칸. 들린 칸은 몸통을 끌면 옮겨지고 아래 손잡이를 끌면 길이가 바뀐다.
     @State private var liftedID: String?
     /// 끄는 동안의 변화(5분 단위로만 바뀌어 화면 갱신이 드물다).
@@ -165,15 +172,32 @@ struct TravelPlanTable: View {
             .foregroundStyle(TravelInk.plan.opacity(0.8))
             .padding(.vertical, 6)
             Divider().overlay(TravelInk.border)
-            ScrollViewReader { reader in
-                // 칸을 들어 올린 동안에는 스크롤을 멈춰, 손잡이를 끌 때 표가 대신 밀리지 않게 한다.
-                ScrollView { dayBody }
-                    .scrollDisabled(liftedID != nil)
-                    // 처음 그린 뒤에 옮겨야 자리가 잡힌다.
-                    .task {
-                        await Task.yield()
-                        reader.scrollTo(table.focusMinute / 60, anchor: .top)
+            // Trip 원본처럼 재생 헤드는 가운데에 고정하고 표가 그 아래로 흐른다: 가운데에 온 시각이 재생 시각이다.
+            GeometryReader { box in
+                let half = box.size.height / 2
+                ScrollView {
+                    // 위아래로 반 화면씩 비워 0시와 24시도 가운데까지 온다.
+                    VStack(spacing: 0) {
+                        Color.clear.frame(height: half)
+                        dayBody
+                        Color.clear.frame(height: half)
                     }
+                }
+                .scrollPosition($position)
+                // 칸을 들어 올린 동안에는 스크롤을 멈춰, 손잡이를 끌 때 표가 대신 밀리지 않게 한다.
+                .scrollDisabled(liftedID != nil)
+                .onScrollGeometryChange(for: Int.self) { geometry in
+                    Self.scrubMinute(start: 0, translation: geometry.contentOffset.y)
+                } action: { _, minute in
+                    if didPlace, minute != playMinute { onScrub(minute) }
+                }
+                .overlay(alignment: .leading) { if let playMinute { playhead(playMinute, width: box.size.width) } }
+                .task {
+                    // 처음 그린 뒤에 옮겨야 자리가 잡힌다. 그 전의 스크롤 보고(0시)는 재생 시각으로 치지 않는다.
+                    await Task.yield()
+                    position.scrollTo(y: CGFloat(playMinute ?? table.focusMinute) * minuteHeight)
+                    didPlace = true
+                }
             }
         }
     }
@@ -189,13 +213,6 @@ struct TravelPlanTable: View {
                 if let now = table.nowMinute {
                     Rectangle().fill(TravelInk.actual).frame(width: proxy.size.width, height: 1.5).offset(y: CGFloat(now) * minuteHeight)
                 }
-                // 스크롤 자리 표시(한 시간마다). offset은 자리를 옮기지 않아 스크롤이 못 찾으므로 실제 높이로 쌓는다.
-                VStack(spacing: 0) {
-                    ForEach(0..<24, id: \.self) { hour in
-                        Color.clear.frame(width: 1, height: 60 * minuteHeight).id(hour)
-                    }
-                }
-                .allowsHitTesting(false)
             }
         }
         .frame(height: 1_440 * minuteHeight)
@@ -222,6 +239,9 @@ struct TravelPlanTable: View {
             // 들어 올린 칸이 있으면 먼저 내려놓는다.
             if liftedID != nil {
                 liftedID = nil
+            } else if value.location.x < Self.leading {
+                // 시간축을 누르면 그 시각이 가운데(재생 헤드)로 온다.
+                withAnimation(.snappy(duration: 0.25)) { position.scrollTo(y: value.location.y) }
             } else if let slot = Self.slot(x: value.location.x, y: value.location.y, width: width) {
                 onAdd(slot.column, slot.minute)
             }
@@ -285,6 +305,27 @@ struct TravelPlanTable: View {
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)
         .accessibilityIdentifier("travelPlanBlock-\(block.id)")
+    }
+
+    /// 손잡이를 끈 거리만큼 옮긴 시각(1분 단위, 하루 안).
+    static func scrubMinute(start: Int, translation: CGFloat) -> Int {
+        min(max(start + Int((translation / minuteHeight).rounded()), 0), 1_439)
+    }
+
+    /// 재생 헤드: 가운데에 고정된 남색 선과 왼쪽의 시각 표. 누르는 것은 아래 표가 받는다.
+    private func playhead(_ minute: Int, width: CGFloat) -> some View {
+        ZStack(alignment: .leading) {
+            Rectangle().fill(TravelInk.plan).frame(width: width, height: 2)
+            Text(Self.clock(minute)).font(.system(size: 11, weight: .bold).monospacedDigit()).foregroundStyle(TravelInk.land)
+                .frame(width: Self.leading - 4, height: 24)
+                .background(TravelInk.plan, in: Capsule())
+        }
+        .frame(width: width, height: 24, alignment: .leading)
+        .allowsHitTesting(false)
+        .accessibilityElement()
+        .accessibilityLabel(language.text("재생 헤드", "Playhead"))
+        .accessibilityValue(Self.clock(minute))
+        .accessibilityIdentifier("travelPlayhead")
     }
 
     private static func clock(_ minute: Int) -> String { String(format: "%02d:%02d", minute / 60 % 24, minute % 60) }

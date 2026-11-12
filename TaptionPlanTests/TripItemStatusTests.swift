@@ -397,6 +397,19 @@ final class TravelTripUnitTests: XCTestCase {
         XCTAssertEqual(TravelQuickEntrySheet.sheetHeight(hasAdded: true, hasSuggestions: true), 314)
     }
 
+    /// 일상 → 여행 바로 전환: 보던 날을 품은 여행, 여행 중, 마지막으로 연 여행 순.
+    func testSwitchingFromDailyOpensTheRightTrip() {
+        func entry(_ id: String, _ start: String, _ end: String) -> TravelTripDirectory.Entry {
+            TravelTripDirectory.entry(TravelTrip(id: id, title: id, startDay: start, endDay: end), isStored: true, today: "2026-11-12")
+        }
+        let entries = [entry("now", "2026-11-12", "2026-11-12"), entry("bkk", "2026-12-01", "2026-12-05"), entry("fuk", "2026-11-20", "2026-11-22")]
+        XCTAssertEqual(TravelModeView.entryToOpen(entries, selectedDay: "2026-12-03", lastTripID: "fuk")?.id, "bkk", "일상에서 보던 날의 여행")
+        XCTAssertEqual(TravelModeView.entryToOpen(entries, selectedDay: "2026-11-15", lastTripID: "fuk")?.id, "now", "여행 중인 것")
+        let later = [entry("bkk", "2026-12-01", "2026-12-05"), entry("fuk", "2026-11-20", "2026-11-22")]
+        XCTAssertEqual(TravelModeView.entryToOpen(later, selectedDay: "2026-11-12", lastTripID: "fuk")?.id, "fuk", "마지막으로 열어 둔 것")
+        XCTAssertNil(TravelModeView.entryToOpen(later, selectedDay: "2026-11-12", lastTripID: ""), "없으면 지구본")
+    }
+
     func testTitleSuggestionsAreRecentTitlesOfTheSameKind() {
         func item(_ id: String, _ kind: String, _ title: String, trip: String = "t1") -> TravelTripItem {
             TravelTripItem(tripID: trip, itemID: id, kind: kind, title: title, start: .now, end: .now.addingTimeInterval(60), startOffsetSeconds: 0, endOffsetSeconds: 0, planID: nil)
