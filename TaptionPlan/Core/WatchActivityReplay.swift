@@ -73,6 +73,19 @@ enum WatchActivityRawReplayEngine {
             input(for: summary, duration: rawDuration)
         )
         let segments = segments(from: samples, summary: summary)
+        // 평상시 보관 표본은 5초에 하나라 2.56초 창이 서지 않는다. 그때 묶음 통계만으로 다시
+        // 판정하면 Watch가 12.5Hz 창으로 낸 결과를 더 거친 값으로 덮는다(WSN1112A01).
+        guard !segments.isEmpty || summary.behavior == nil else {
+            var preserved = summary
+            preserved.behaviorEvidence = Array(Set(
+                (summary.behaviorEvidence ?? [])
+                    + [
+                        "Apple Watch raw 보관됨",
+                        "raw 표본 \(samples.count)개 (창 재생성 불가)",
+                    ]
+            )).sorted()
+            return preserved
+        }
         let inference = WatchBehaviorClassifier.aggregate(
             segments,
             fallback: fallback

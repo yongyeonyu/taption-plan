@@ -191,6 +191,8 @@ public struct WatchBehaviorInput: Hashable, Sendable {
     public var gyroscopeRMSG: Double?
     public var posturePitchRadians: Double?
     public var postureRollRadians: Double?
+    /// 주기의 세기(0~1). nil이면 재지 않은 옛 입력이라 주기 조건을 따지지 않는다.
+    public var motionPeriodicity: Double?
 
     public init(
         workoutKind: TaptionWatchWorkoutKind? = nil,
@@ -216,7 +218,8 @@ public struct WatchBehaviorInput: Hashable, Sendable {
         dominantMotionFrequencyHz: Double? = nil,
         gyroscopeRMSG: Double? = nil,
         posturePitchRadians: Double? = nil,
-        postureRollRadians: Double? = nil
+        postureRollRadians: Double? = nil,
+        motionPeriodicity: Double? = nil
     ) {
         self.workoutKind = workoutKind
         self.duration = duration
@@ -242,6 +245,7 @@ public struct WatchBehaviorInput: Hashable, Sendable {
         self.gyroscopeRMSG = gyroscopeRMSG
         self.posturePitchRadians = posturePitchRadians
         self.postureRollRadians = postureRollRadians
+        self.motionPeriodicity = motionPeriodicity
     }
 }
 
@@ -317,6 +321,9 @@ public struct WatchBehaviorWindowFeatures: Codable, Hashable, Sendable {
     public var gyroscopeRMSGPerSecond: Double
     public var posturePitchRadians: Double?
     public var postureRollRadians: Double?
+    /// 가장 센 주기에서의 자기상관(0~1). 걸음처럼 되풀이되면 높고 불규칙한 손동작은 낮다.
+    /// 모델 입력(`featureVector`)에는 넣지 않는다. 옛 기록에는 없다.
+    public var periodicityStrength: Double?
 
     public var duration: TimeInterval { endedAt.timeIntervalSince(startedAt) }
 
@@ -354,7 +361,8 @@ public struct WatchBehaviorWindowFeatures: Codable, Hashable, Sendable {
         dominantFrequencyHz: Double? = nil,
         gyroscopeRMSGPerSecond: Double,
         posturePitchRadians: Double? = nil,
-        postureRollRadians: Double? = nil
+        postureRollRadians: Double? = nil,
+        periodicityStrength: Double? = nil
     ) {
         self.startedAt = startedAt
         self.endedAt = endedAt
@@ -369,6 +377,7 @@ public struct WatchBehaviorWindowFeatures: Codable, Hashable, Sendable {
         self.gyroscopeRMSGPerSecond = gyroscopeRMSGPerSecond
         self.posturePitchRadians = posturePitchRadians
         self.postureRollRadians = postureRollRadians
+        self.periodicityStrength = periodicityStrength
     }
 }
 
@@ -440,6 +449,7 @@ public enum WatchBehaviorWindowAnalyzer {
             guard let gravity = sample.gravity else { return nil }
             return atan2(-gravity.x, sqrt(gravity.y * gravity.y + gravity.z * gravity.z))
         }
+        let period = dominantPeriod(body, sampleRate: sampleRate)
         return WatchBehaviorWindowFeatures(
             startedAt: first.capturedAt,
             endedAt: last.capturedAt,
@@ -450,10 +460,11 @@ public enum WatchBehaviorWindowAnalyzer {
             bodyAccelerationRMSG: bodyRMS,
             jerkRMSGPerSecond: jerkRMS,
             zeroCrossingRateHz: Double(crossings) / duration / 2,
-            dominantFrequencyHz: dominantFrequency(body, sampleRate: sampleRate),
+            dominantFrequencyHz: period?.frequencyHz,
             gyroscopeRMSGPerSecond: sqrt(mean(rotation.map { $0 * $0 })),
             posturePitchRadians: pitch.isEmpty ? nil : mean(pitch),
-            postureRollRadians: roll.isEmpty ? nil : mean(roll)
+            postureRollRadians: roll.isEmpty ? nil : mean(roll),
+            periodicityStrength: period?.strength
         )
     }
 
@@ -471,10 +482,10 @@ public enum WatchBehaviorWindowAnalyzer {
         return sqrt(max(0, variance))
     }
 
-    private static func dominantFrequency(
+    private static func dominantPeriod(
         _ values: [Double],
         sampleRate: Double
-    ) -> Double? {
+    ) -> (frequencyHz: Double, strength: Double)? {
         guard values.count >= 12, sampleRate > 0 else { return nil }
         let centered = values.map { $0 - mean(values) }
         let minimumLag = max(2, Int(sampleRate / 3.5))
@@ -494,7 +505,13 @@ public enum WatchBehaviorWindowAnalyzer {
                 bestLag = lag
             }
         }
-        return sampleRate / Double(bestLag)
+        // 창 전체 에너지로 나눈다. 뒤로 민 만큼 항이 줄어 순수한 주기도 1보다 작게 나오고,
+        // 잡음은 0.3 안팎에 머문다.
+        let energy = centered.reduce(0) { $0 + $1 * $1 }
+        let strength = energy > 1e-12
+            ? min(1, max(0, bestCorrelation / energy))
+            : 0
+        return (sampleRate / Double(bestLag), strength)
     }
 }
 
@@ -503,7 +520,13 @@ public enum WatchBehaviorWindowAnalyzer {
 /// bundled Core ML model can be inserted before this fallback and report its
 /// own modelVersion/evidence.
 public enum WatchBehaviorClassifier {
-    public static let rulesVersion = "watch-har-v2"
+    public static let rulesVersion = "watch-har-v3"
+    /// 걷기·달리기로 보려면 주기가 이만큼은 뚜렷해야 한다(잰 값이 있을 때).
+    public static let minimumGaitPeriodicity = 0.45
+    /// 걸음 수·속도 없이 손목 진동만으로 달리기라 하려면 필요한 몸 가속(g).
+    public static let minimumRunningBodyAccelerationG = 0.15
+    /// 주기 없이 손목이 움직인 창. 행동은 정하지 않고 근거만 남겨 iPhone이 장소와 함께 본다.
+    public static let irregularMotionEvidence = "불규칙 손목 움직임"
 
     public static func classifyWindow(
         _ features: WatchBehaviorWindowFeatures,
@@ -548,7 +571,8 @@ public enum WatchBehaviorClassifier {
                 dominantMotionFrequencyHz: features.dominantFrequencyHz,
                 gyroscopeRMSG: features.gyroscopeRMSGPerSecond,
                 posturePitchRadians: features.posturePitchRadians,
-                postureRollRadians: features.postureRollRadians
+                postureRollRadians: features.postureRollRadians,
+                motionPeriodicity: features.periodicityStrength
             )
         )
         guard let workoutKind = context.workoutKind else { return inference }
@@ -644,6 +668,13 @@ public enum WatchBehaviorClassifier {
             : measuredFrequency
         let zeroCrossing = input.accelerationZeroCrossingRateHz ?? 0
         let gyro = input.gyroscopeRMSG ?? 0
+        // 자기상관은 잡음에서도 가장 큰 값을 하나 내므로, 주기가 뚜렷할 때만 걸음 주기로 믿는다.
+        let isPeriodic = input.motionPeriodicity.map {
+            $0 >= minimumGaitPeriodicity
+        } ?? true
+        let imuRunning = cadenceHz >= 2.2 && isPeriodic
+            && acceleration >= minimumRunningBodyAccelerationG
+        let imuWalking = cadenceHz >= 1.0 && isPeriodic && acceleration >= 0.04
 
         if floorsUp > 0 && hasSteps && altitude >= 1.2
             && (input.workoutKind == .walking || input.workoutKind == nil) {
@@ -701,14 +732,14 @@ public enum WatchBehaviorClassifier {
             )
         }
 
-        if speed >= 2.2 || cadence >= 1.75 || cadenceHz >= 2.2 {
+        if speed >= 2.2 || cadence >= 1.75 || imuRunning {
             return result(
                 .running,
                 score: 0.81,
                 evidence: ["속도·케이던스 달리기 범위", "IMU 주기성"]
             )
         }
-        if speed >= 0.5 || cadence >= 0.15 || (cadenceHz >= 1.0 && acceleration >= 0.04) {
+        if speed >= 0.5 || cadence >= 0.15 || imuWalking {
             return result(
                 .walking,
                 score: 0.79,
@@ -732,7 +763,7 @@ public enum WatchBehaviorClassifier {
             )
         }
         if steps == 0, speed < 0.5, acceleration >= 0.025,
-           acceleration < 0.2, cadenceHz > 0.2, cadenceHz < 1.0 {
+           acceleration < 0.2, cadenceHz > 0.2, cadenceHz < 1.0, isPeriodic {
             return result(
                 .eating,
                 score: 0.45,
@@ -756,6 +787,13 @@ public enum WatchBehaviorClassifier {
                 .stationary,
                 score: 0.55,
                 evidence: ["저진동", "걸음 없음"]
+            )
+        }
+        if steps == 0, speed < 0.5, acceleration >= 0.04 {
+            return result(
+                .unknown,
+                score: 0.4,
+                evidence: [irregularMotionEvidence, "걸음 주기 없음"]
             )
         }
         return result(.unknown, score: 0.25, evidence: ["센서 근거 부족"])

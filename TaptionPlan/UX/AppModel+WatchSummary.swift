@@ -395,11 +395,21 @@ extension AppModel {
         } else {
             // 답변 전에는 후보를 최종 활동으로 보이지 않는다. 원시 센서와
             // 요약 아카이브는 위에서 이미 보존했다.
-            snapshot.actuals.removeAll {
-                $0.source == .appleWatch
-                    && !$0.manuallyCorrected
-                    && ($0.id == summary.sessionID
-                        || $0.sensorChunkID == summary.sessionID)
+            // 평상시 세션은 며칠을 잇는다. 이번 묶음과 겹치는 기록만 내린다(WSN1112A01).
+            let pendingSpan = summary.isAmbient == true
+                ? TimeSpan(start: summary.startedAt, end: max(summary.startedAt, summary.endedAt))
+                : nil
+            snapshot.actuals.removeAll { actual in
+                guard actual.source == .appleWatch, !actual.manuallyCorrected,
+                      actual.id == summary.sessionID
+                        || actual.sensorChunkID == summary.sessionID else {
+                    return false
+                }
+                guard let pendingSpan, actual.id != summary.sessionID else {
+                    return true
+                }
+                return actual.span(asOf: pendingSpan.end)
+                    .intersection(with: pendingSpan) != nil
             }
         }
         snapshot.actuals = ActualRecordSuppressionEngine.visibleRecords(

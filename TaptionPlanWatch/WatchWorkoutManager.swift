@@ -370,8 +370,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     private var lastWindowAltitudeMeters: Double?
     private var lastGyroscopeSample: TaptionWatchSensorVector3?
     private var pendingBehaviorSegments: [WatchBehaviorSegment] = []
-    private var lastBehaviorKind: WatchBehaviorKind?
-    private var lastBehaviorConfidence = 0.0
+    private var behaviorStabilizer = WatchBehaviorStabilizer()
 #if canImport(CoreML)
     private lazy var behaviorModel = WatchBehaviorModel.load()
 #endif
@@ -1648,8 +1647,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         lastWindowAltitudeMeters = nil
         lastGyroscopeSample = nil
         pendingBehaviorSegments = []
-        lastBehaviorKind = nil
-        lastBehaviorConfidence = 0
+        behaviorStabilizer.reset()
         sensorSampleCount = 0
         pendingAccelerationSamples = []
         accelerationArchiveStride = 0
@@ -1969,19 +1967,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         startedAt: Date,
         endedAt: Date
     ) {
-        var stable = inference
-        if let lastBehaviorKind,
-           lastBehaviorKind != inference.kind,
-           inference.confidenceScore < lastBehaviorConfidence + 0.08 {
-            stable = WatchBehaviorInference(
-                kind: lastBehaviorKind,
-                confidenceScore: lastBehaviorConfidence,
-                evidence: inference.evidence + ["시간적 안정화"],
-                modelVersion: inference.modelVersion
-            )
-        }
-        lastBehaviorKind = stable.kind
-        lastBehaviorConfidence = stable.confidenceScore
+        let stable = behaviorStabilizer.stabilize(inference)
         if let index = pendingBehaviorSegments.indices.last,
            pendingBehaviorSegments[index].behavior == stable.kind,
            startedAt.timeIntervalSince(

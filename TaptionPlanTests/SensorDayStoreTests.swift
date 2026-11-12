@@ -1988,8 +1988,9 @@ final class SensorDayStoreTests: XCTestCase {
             if stored.first(where: {
                 $0.sessionID == sessionID && $0.sequence == 1
             })?.ambientRevision == 1 {
+                // 평상시 기록은 묶음마다 따로 만든다(WSN1112A01). 세션 ID는 sensorChunkID에 남는다.
                 retainedEnd = model.snapshot.actuals.first {
-                    $0.id == sessionID && $0.source == .appleWatch
+                    $0.sensorChunkID == sessionID && $0.source == .appleWatch
                 }?.endedAt
                 if retainedEnd == higher.endedAt { break }
             }

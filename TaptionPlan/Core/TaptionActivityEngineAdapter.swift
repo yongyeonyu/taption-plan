@@ -1639,7 +1639,7 @@ enum ActivityClassificationLockEngine {
             guard let previous = bestMatch?.record else {
                 return value
             }
-            guard ![CalendarTitleClassification.freshWins, WorkBreakPattern.freshWins, RestaurantMealActualEngine.freshWins].contains(where: { $0(previous, candidate) }),
+            guard ![CalendarTitleClassification.freshWins, WorkBreakPattern.freshWins, RestaurantMealActualEngine.freshWins, AppleWatchSensorActivityEngine.freshWins].contains(where: { $0(previous, candidate) }),
                   !shouldAdoptFreshDestinationClassification(previous: previous, candidate: candidate) else {
                 return value
             }

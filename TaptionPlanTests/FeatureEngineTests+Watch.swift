@@ -1224,6 +1224,226 @@ extension FeatureEngineTests {
         XCTAssertTrue(outsideHome.isEmpty)
     }
 
+    // MARK: - WSN1112A01 평상시 묶음 → 집 안 활동
+
+    private func ambientSummary(
+        sessionID: UUID,
+        sequence: Int,
+        start: Date,
+        duration: TimeInterval = 600,
+        standardDeviation: Double,
+        segments: [(WatchBehaviorKind, TimeInterval, TimeInterval, [String])] = []
+    ) -> TaptionWatchSensorSummary {
+        TaptionWatchSensorSummary(
+            sessionID: sessionID,
+            sequence: sequence,
+            workoutKind: .walking,
+            linkedPlanID: nil,
+            linkedPlanTitle: nil,
+            linkedCategoryID: nil,
+            startedAt: start,
+            endedAt: start.addingTimeInterval(duration),
+            isFinal: false,
+            accelerometerSampleCount: Int(duration * 12.5),
+            accelerometerAverageG: nil,
+            peakAccelerationG: 1.2,
+            accelerometerStandardDeviationG: standardDeviation,
+            accelerometerMeanJerkGPerSecond: 0.2,
+            gyroscopeSampleCount: 0,
+            gyroscopeAverageRadiansPerSecond: nil,
+            peakRotationRateRadiansPerSecond: nil,
+            gravity: nil,
+            userAccelerationG: nil,
+            rotationRateRadiansPerSecond: nil,
+            attitudeRadians: nil,
+            relativeAltitudeMeters: nil,
+            pressureKilopascals: nil,
+            stepCount: nil,
+            distanceMeters: nil,
+            floorsAscended: nil,
+            floorsDescended: nil,
+            latestHeartRate: nil,
+            averageHeartRate: nil,
+            maximumHeartRate: nil,
+            activeEnergyKilocalories: nil,
+            behavior: .unknown,
+            behaviorConfidenceScore: 0.4,
+            behaviorEvidence: [],
+            behaviorModelVersion: WatchBehaviorClassifier.rulesVersion,
+            behaviorSegments: segments.map { kind, from, to, evidence in
+                WatchBehaviorSegment(
+                    startedAt: start.addingTimeInterval(from),
+                    endedAt: start.addingTimeInterval(to),
+                    behavior: kind,
+                    confidenceScore: 0.6,
+                    evidence: evidence,
+                    modelVersion: WatchBehaviorClassifier.rulesVersion
+                )
+            },
+            isAmbient: true
+        )
+    }
+
+    private func applyingAmbient(
+        _ summaries: [TaptionWatchSensorSummary],
+        to existing: [ActualRecord] = []
+    ) -> [ActualRecord] {
+        summaries.reduce(existing) { actuals, summary in
+            AppleWatchSensorActivityEngine.upserting(
+                summary, into: actuals, linkedPlan: nil, atHome: true
+            )
+        }
+    }
+
+    func testAmbientSessionSpanningDaysDoesNotBecomeOneHouseworkRecord() {
+        // 실제 기록: 세션 하나가 4.3일 동안 「집안일」 기록 하나로 이어졌다.
+        let base = makeDate(2026, 11, 6, 9)
+        let sessionID = UUID()
+        let irregular = [WatchBehaviorClassifier.irregularMotionEvidence]
+        let busy: [(WatchBehaviorKind, TimeInterval, TimeInterval, [String])] = [
+            (.walking, 0, 120, []), (.unknown, 120, 420, irregular), (.stationary, 420, 600, []),
+        ]
+        let quiet: [(WatchBehaviorKind, TimeInterval, TimeInterval, [String])] = [
+            (.stationary, 0, 600, []),
+        ]
+        let walk: [(WatchBehaviorKind, TimeInterval, TimeInterval, [String])] = [
+            (.walking, 0, 560, []), (.stationary, 560, 600, []),
+        ]
+        let hour: TimeInterval = 3_600
+        let summaries = [
+            ambientSummary(sessionID: sessionID, sequence: 1, start: base, standardDeviation: 0.07, segments: busy),
+            ambientSummary(sessionID: sessionID, sequence: 601, start: base.addingTimeInterval(600), standardDeviation: 0.08, segments: busy),
+            // 예전 기준(0.018g)으로는 움직임이었던 조용한 묶음.
+            ambientSummary(sessionID: sessionID, sequence: 1_201, start: base.addingTimeInterval(1_200), standardDeviation: 0.021, segments: quiet),
+            ambientSummary(sessionID: sessionID, sequence: 7_201, start: base.addingTimeInterval(2 * hour), standardDeviation: 0.15, segments: walk),
+            ambientSummary(sessionID: sessionID, sequence: 100_001, start: base.addingTimeInterval(28 * hour), standardDeviation: 0.06, segments: busy),
+        ]
+
+        let actuals = applyingAmbient(summaries)
+
+        XCTAssertEqual(actuals.count, 2)
+        XCTAssertEqual(actuals[0].startedAt, base)
+        XCTAssertEqual(actuals[0].endedAt, base.addingTimeInterval(1_200))
+        XCTAssertEqual(actuals[1].startedAt, base.addingTimeInterval(28 * hour))
+        XCTAssertTrue(actuals.allSatisfy { $0.behavior == WatchBehaviorKind.housework.rawValue })
+        XCTAssertTrue(actuals.allSatisfy { $0.id != sessionID && $0.sensorChunkID == sessionID })
+        XCTAssertTrue(actuals[0].evidence.contains("가속도 변동 0.080g"))
+        XCTAssertTrue(actuals[0].evidence.contains("걸음 창 20%"))
+        XCTAssertTrue(actuals[0].evidence.contains("손동작 창 50%"))
+        XCTAssertFalse(actuals[0].evidence.contains("저진동"))
+
+        // 같은 묶음을 다시 받아도 기록이 늘지 않는다.
+        XCTAssertEqual(applyingAmbient(summaries, to: actuals), actuals)
+    }
+
+    func testAmbientSummaryRemovesLegacySessionWideRecordButKeepsUserEdit() {
+        let base = makeDate(2026, 11, 10, 20)
+        let sessionID = UUID()
+        let legacy = ActualRecord(
+            id: sessionID,
+            planID: nil,
+            title: "집안일",
+            categoryID: "activity",
+            startedAt: base.addingTimeInterval(-4 * 86_400),
+            endedAt: base,
+            source: .appleWatch,
+            confidence: .high,
+            behavior: WatchBehaviorKind.housework.rawValue,
+            evidence: ["저진동", "속도·케이던스 달리기 범위"],
+            sensorChunkID: sessionID,
+            modelVersion: "watch-har-v2",
+            isClassificationLocked: true
+        )
+        let quiet = ambientSummary(
+            sessionID: sessionID, sequence: 9, start: base, standardDeviation: 0.01,
+            segments: [(.stationary, 0, 600, [])]
+        )
+        XCTAssertTrue(applyingAmbient([quiet], to: [legacy]).isEmpty)
+
+        var edited = legacy
+        edited.manuallyCorrected = true
+        XCTAssertEqual(applyingAmbient([quiet], to: [edited]), [edited])
+    }
+
+    func testHealthKitSleepDoesNotInheritLockedHouseworkClassification() {
+        let base = makeDate(2026, 11, 10, 1)
+        let span = TimeSpan(start: base.addingTimeInterval(-3_600), end: base.addingTimeInterval(8 * 3_600))
+        let sleep = ActualRecord(
+            planID: nil,
+            title: "수면",
+            categoryID: "sleep",
+            startedAt: base,
+            endedAt: base.addingTimeInterval(5 * 3_600),
+            source: .appleWatch,
+            confidence: .high,
+            behavior: WatchBehaviorKind.sleep.rawValue,
+            evidence: ["HealthKit 수면 기록"],
+            modelVersion: "healthkit-sleep-v1"
+        )
+        let lockedHousework = ActualRecord(
+            planID: nil,
+            title: "집안일",
+            categoryID: "activity",
+            startedAt: base.addingTimeInterval(-3_600),
+            endedAt: base.addingTimeInterval(8 * 3_600),
+            source: .appleWatch,
+            confidence: .high,
+            behavior: WatchBehaviorKind.housework.rawValue,
+            modelVersion: "watch-har-v2",
+            isClassificationLocked: true
+        )
+        let merged = ActivityClassificationLockEngine.mergingLockedClassifications(
+            existing: [lockedHousework], fresh: [sleep], inside: span
+        )
+        XCTAssertEqual(merged.first { $0.id == sleep.id }?.categoryID, "sleep")
+        XCTAssertEqual(merged.first { $0.id == sleep.id }?.behavior, WatchBehaviorKind.sleep.rawValue)
+
+        // 사용자가 고친 분류는 그대로 물려받는다.
+        var userNap = lockedHousework
+        userNap.title = "독서"
+        userNap.manuallyCorrected = true
+        let kept = ActivityClassificationLockEngine.mergingLockedClassifications(
+            existing: [userNap], fresh: [sleep], inside: span
+        )
+        XCTAssertEqual(kept.first { $0.id == sleep.id }?.title, "독서")
+    }
+
+    func testSparseAmbientArchiveDoesNotOverrideWatchWindowVerdict() {
+        // 평상시 보관 표본은 5초에 하나라 2.56초 창을 다시 만들 수 없다.
+        let base = makeDate(2026, 11, 10, 20)
+        let sessionID = UUID()
+        var summary = ambientSummary(
+            sessionID: sessionID, sequence: 1, start: base, standardDeviation: 0.12,
+            segments: [(.walking, 0, 600, [])]
+        )
+        summary.behavior = .walking
+        summary.behaviorConfidenceScore = 0.79
+        let samples = (0..<120).map { index in
+            TaptionWatchAccelerationSample(
+                capturedAt: base.addingTimeInterval(Double(index) * 5),
+                acceleration: TaptionWatchSensorVector3(x: 0, y: 0, z: 1),
+                sessionID: sessionID,
+                sequence: index * 5 + 1,
+                isAmbient: true
+            )
+        }
+        let chunk = TaptionWatchAccelerationChunk(
+            sessionID: sessionID,
+            sequence: 1,
+            startedAt: base,
+            endedAt: base.addingTimeInterval(600),
+            samples: samples
+        )
+
+        let replayed = WatchActivityRawReplayEngine.replaying(summaries: [summary], chunks: [chunk])
+
+        XCTAssertEqual(replayed.first?.behavior, .walking)
+        XCTAssertEqual(replayed.first?.behaviorConfidenceScore, 0.79)
+        XCTAssertEqual(replayed.first?.behaviorModelVersion, WatchBehaviorClassifier.rulesVersion)
+        XCTAssertEqual(replayed.first?.behaviorSegments, summary.behaviorSegments)
+        XCTAssertTrue(replayed.first?.behaviorEvidence?.contains("raw 표본 120개 (창 재생성 불가)") == true)
+    }
+
     func testWatchAsksAboutShowerFromHomeWaterLockAndMotion() throws {
         let base = makeDate(2026, 8, 9, 7)
         let summary = TaptionWatchSensorSummary(

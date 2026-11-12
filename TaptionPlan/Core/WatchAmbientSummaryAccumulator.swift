@@ -12,8 +12,7 @@ struct WatchAmbientSummaryAccumulator {
     private var samples: [WatchMotionSample] = []
     private var nextWindowEnd: Date?
     private var segments: [WatchBehaviorSegment] = []
-    private var lastSegmentKind: WatchBehaviorKind?
-    private var lastSegmentConfidence = 0.0
+    private var stabilizer = WatchBehaviorStabilizer()
     private var latestSampleDate: Date?
     private var chunkWindowSequence: Int?
     private var chunkSequence: Int?
@@ -104,8 +103,7 @@ struct WatchAmbientSummaryAccumulator {
         samples.removeAll(keepingCapacity: true)
         nextWindowEnd = nil
         latestSampleDate = nil
-        lastSegmentKind = nil
-        lastSegmentConfidence = 0
+        stabilizer.reset()
     }
 
     mutating func finish() -> [TaptionWatchSensorSummary] {
@@ -195,19 +193,7 @@ struct WatchAmbientSummaryAccumulator {
         startedAt: Date,
         endedAt: Date
     ) {
-        var stable = inference
-        if let lastSegmentKind,
-           lastSegmentKind != inference.kind,
-           inference.confidenceScore < lastSegmentConfidence + 0.08 {
-            stable = WatchBehaviorInference(
-                kind: lastSegmentKind,
-                confidenceScore: lastSegmentConfidence,
-                evidence: inference.evidence + ["시간적 안정화"],
-                modelVersion: inference.modelVersion
-            )
-        }
-        lastSegmentKind = stable.kind
-        lastSegmentConfidence = stable.confidenceScore
+        let stable = stabilizer.stabilize(inference)
         if let index = segments.indices.last,
            segments[index].behavior == stable.kind,
            startedAt.timeIntervalSince(segments[index].endedAt)
@@ -337,7 +323,6 @@ struct WatchAmbientSummaryAccumulator {
         previousMagnitude = nil
         previousMagnitudeAt = nil
         segments.removeAll(keepingCapacity: true)
-        lastSegmentKind = nil
-        lastSegmentConfidence = 0
+        stabilizer.reset()
     }
 }
