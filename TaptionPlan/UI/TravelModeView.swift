@@ -7,6 +7,9 @@ enum TravelGlobeRenderer {
         var longitude: Double
         var latitude: Double
         var label: String
+        /// 그 핀의 일정(누르면 그 일정을 연다)과 이름.
+        var id = ""
+        var title = ""
     }
 
     struct Flag {
@@ -260,6 +263,7 @@ struct TravelModeView: View {
     @State private var ledgerTripID: String?
     @State private var entryTarget: TravelQuickEntrySheet.Target?
     @State private var timeUndo: TravelTimeUndo?
+    @State private var deleteCandidate: TravelTripDirectory.Entry?
     /// 재생 헤드의 시각(그날 0시부터의 분). nil이면 처음 자리(오늘은 지금, 아니면 첫 일정 시작).
     @State private var playMinute: Int?
     /// 고른 고양이 그림(한 번 만들어 둔다).
@@ -332,7 +336,7 @@ struct TravelModeView: View {
             if let focused, openedID != nil { tripHeader(focused) }
         }
         .overlay(alignment: .trailing) {
-            if let focused, openedID != nil, !isPlanUp {
+            if let focused, openedID != nil, !isPlanUp, focused.state != .someday {
                 Button { withAnimation(.snappy(duration: 0.25)) { isPlanUp = true } } label: { TravelMiniRail(table: table(focused)) }
                     .buttonStyle(.plain)
                     .padding(.trailing, 10)
@@ -354,6 +358,16 @@ struct TravelModeView: View {
                 globeFooter
             }
         }
+        .confirmationDialog(
+            language.text("이 여행과 그 일정을 모두 지울까요?", "Delete this trip and all its plans?"),
+            isPresented: Binding(get: { deleteCandidate != nil }, set: { if !$0 { deleteCandidate = nil } }), titleVisibility: .visible
+        ) {
+            Button(language.text("여행 지우기", "Delete trip"), role: .destructive) {
+                guard let entry = deleteCandidate else { return }
+                if openedID == entry.id || focusedID == entry.id { backToGlobe() }
+                Task { await model.deleteTravelTrip(entry.id) }
+            }
+        }
         .onChange(of: openedID) { _, id in lastTripID = id ?? "" }
         .onChange(of: isPlanUp) { _, _ in applyPlanCamera() }
         .onChange(of: planDayKey) { _, _ in
@@ -370,6 +384,7 @@ struct TravelModeView: View {
         .task { await book.load() }
         .sheet(item: $newTripDraft) { draft in
             TravelNewTripSheet(model: model, language: language, draft: draft) { trip in
+                guard draft.editing == nil else { return }
                 fly(to: TravelTripDirectory.entry(trip, isStored: true, today: today()))
             }
         }
@@ -481,7 +496,8 @@ struct TravelModeView: View {
         guard let entry, isPlanUp else { return pins(destination) }
         let stops = playStops(entry)
         guard !stops.isEmpty else { return pins(destination) }
-        return stops.enumerated().map { .init(longitude: $1.longitude, latitude: $1.latitude, label: "\($0 + 1)") }
+        let titles = Dictionary(table(entry).blocks.map { ($0.id, $0.title) }, uniquingKeysWith: { first, _ in first })
+        return stops.enumerated().map { .init(longitude: $1.longitude, latitude: $1.latitude, label: "\($0 + 1)", id: $1.id, title: titles[$1.id] ?? "") }
     }
 
     /// 자주 가는 곳에 등록한 집 자리.
@@ -519,11 +535,13 @@ struct TravelModeView: View {
         let area = isPlanUp ? Self.mapArea(viewSize, isPlanUp: true) : CGRect(x: 0, y: 150, width: viewSize.width, height: max(80, viewSize.height - 270))
         let spot = actor(entry)
         return TravelStreetMap(
-            pins: planPins(entry, destination).map { .init(longitude: $0.longitude, latitude: $0.latitude, label: $0.label) },
+            pins: planPins(entry, destination).map { .init(longitude: $0.longitude, latitude: $0.latitude, label: $0.label, id: $0.id, title: $0.title) },
             route: dayRoute(entry), actor: spot.map { .init(longitude: $0.longitude, latitude: $0.latitude, facesEast: $0.facesEast) },
             actorImage: pose(entry).map { actorArt.image($0, coat: model.settings.catStyle.rawValue) } ?? actorUIImage, fallback: destination?.point,
-            insets: UIEdgeInsets(top: area.minY + 24, left: 28, bottom: viewSize.height - area.maxY + 24, right: viewSize.width - area.maxX + 28),
-            fitKey: "\(entry.id)|\(dayKey(entry))|\(isPlanUp)|\(Int(viewSize.width))x\(Int(viewSize.height))"
+            // 위쪽 핀에 선 고양이가 머리말에 가리지 않게 고양이 키만큼 더 띄운다.
+            insets: UIEdgeInsets(top: area.minY + 74, left: 28, bottom: viewSize.height - area.maxY + 24, right: viewSize.width - area.maxX + 28),
+            fitKey: "\(entry.id)|\(dayKey(entry))|\(isPlanUp)|\(Int(viewSize.width))x\(Int(viewSize.height))",
+            onSelect: { editEntry(entry, itemID: $0) }
         )
     }
 
@@ -692,7 +710,7 @@ struct TravelModeView: View {
     }
 
     private func pins(_ destination: TravelModeDestination?) -> [TravelGlobeRenderer.Pin] {
-        (destination?.stops ?? []).enumerated().map { .init(longitude: $1.longitude, latitude: $1.latitude, label: "\($0 + 1)") }
+        (destination?.stops ?? []).enumerated().map { .init(longitude: $1.longitude, latitude: $1.latitude, label: "\($0 + 1)", id: $1.itemID ?? "") }
     }
 
     // MARK: 글
@@ -790,7 +808,10 @@ struct TravelModeView: View {
                     }
                 }
                 Button(language.text("기본 색으로", "Use default color")) { setFlagColor(nil, for: entry) }
+                Divider()
             }
+            Button(language.text("여행 고치기", "Edit trip"), systemImage: "pencil") { newTripDraft = .init(isDayTrip: entry.isDayTrip, editing: entry.trip) }
+            Button(language.text("여행 지우기", "Delete trip"), systemImage: "trash", role: .destructive) { deleteCandidate = entry }
         }
         .accessibilityIdentifier("travelTripCard-\(entry.id)")
     }
@@ -985,10 +1006,12 @@ struct TravelModeView: View {
         let key = dayKey(entry), table = table(entry)
         let last = table.blocks.max { $0.endMinute < $1.endMinute }
         let kind = column.map(TravelQuickEntry.kind(forColumn:)).flatMap(TripImportItem.Kind.init(rawValue:)) ?? .sight
-        entryTarget = .new(
+        var target = TravelQuickEntrySheet.Target.new(
             trip: entry.trip, dayKey: key, dayLabel: dayLabel(entry, key: key),
             startMinute: minute ?? TravelQuickEntry.nextStart(lastEndMinute: last?.endMinute, nowMinute: table.nowMinute), kind: kind
         )
+        target.anchor = TravelModeDestination(trip: entry.trip, stops: model.settings.travelPlanStops).point
+        entryTarget = target
     }
 
     /// 계획표에서 끌어 옮기거나 길이를 바꾼 것을 저장하고, 되돌릴 수 있게 남긴다.
@@ -1036,7 +1059,12 @@ struct TravelModeView: View {
 
     private func editEntry(_ entry: TravelTripDirectory.Entry, itemID: String) {
         guard let item = (model.settings.travelTripItems ?? []).first(where: { $0.tripID == entry.id && $0.itemID == itemID }) else { return }
-        entryTarget = .edit(item, dayLabel: dayLabel(entry, key: TravelTripDay.string(for: item.start, offsetSeconds: item.startOffsetSeconds)))
+        var target = TravelQuickEntrySheet.Target.edit(item, dayLabel: dayLabel(entry, key: TravelTripDay.string(for: item.start, offsetSeconds: item.startOffsetSeconds)))
+        target.anchor = TravelModeDestination(trip: entry.trip, stops: model.settings.travelPlanStops).point
+        if let stop = model.settings.travelPlanStops.first(where: { $0.tripID == entry.id && $0.itemID == itemID }) {
+            target.place = TravelItemPlace(name: stop.title, latitude: stop.latitude, longitude: stop.longitude)
+        }
+        entryTarget = target
     }
 
     private func dayChips(_ entry: TravelTripDirectory.Entry) -> some View {

@@ -81,6 +81,22 @@ extension AppModel {
         return await persist()
     }
 
+    /// 여행을 지운다: 그 여행의 일정과 일상 쪽 계획 기록, 지도 핀까지. 가계부의 여행 장부는 그대로 둔다.
+    @discardableResult
+    func deleteTravelTrip(_ tripID: String) async -> Bool {
+        guard acceptsDataMutation(), !tripID.isEmpty else { return false }
+        let items = snapshot.settings.travelTripItems ?? []
+        let planIDs = Set(items.filter { $0.tripID == tripID }.compactMap(\.planID)
+            + snapshot.settings.travelPlanStops.filter { $0.tripID == tripID }.compactMap(\.planID))
+        await deletePlans(Array(planIDs))
+        let left = items.filter { $0.tripID != tripID }
+        snapshot.settings.travelTripItems = left.isEmpty ? nil : left
+        snapshot.settings.travelPlanStops = TravelPlanSchedule.renumbered(snapshot.settings.travelPlanStops.filter { $0.tripID != tripID })
+        let trips = (snapshot.settings.travelTrips ?? []).filter { $0.id != tripID }
+        snapshot.settings.travelTrips = trips.isEmpty ? nil : trips
+        return await persist()
+    }
+
     /// 여행 일정 하나를 `delta`초 옮긴다. 일상 쪽 계획 기록과 지도 핀 날짜가 함께 바뀐다.
     @discardableResult
     func moveTripItem(tripID: String, itemID: String, by delta: TimeInterval, calendar: Calendar = .autoupdatingCurrent) async -> Bool {
@@ -102,7 +118,9 @@ extension AppModel {
     // MARK: 손으로 넣기(TVQ1112A01)
 
     /// 여행 일정 하나를 손으로 넣는다. 일상 쪽 계획 기록이 함께 생긴다. 넣은 일정 번호를 돌려준다.
-    func addTripItem(tripID: String, kind: TripImportItem.Kind, title: String, start: Date, end: Date, offsetSeconds: Int) async -> String? {
+    func addTripItem(
+        tripID: String, kind: TripImportItem.Kind, title: String, start: Date, end: Date, offsetSeconds: Int, place: TravelItemPlace? = nil
+    ) async -> String? {
         guard acceptsDataMutation(), !tripID.isEmpty, end > start else { return nil }
         let name = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let planID = addPlan(
@@ -115,16 +133,42 @@ extension AppModel {
             startOffsetSeconds: offsetSeconds, endOffsetSeconds: offsetSeconds, planID: planID
         )]
         snapshot.settings.travelTripItems = items
+        if let place, let item = items.last { setTripItemPlace(place, for: item) }
         if let trips = snapshot.settings.travelTrips {
             snapshot.settings.travelTrips = TravelTripDirectory.extended(trips, toCover: items)
         }
         return await persist() ? itemID : nil
     }
 
+    /// 일정의 지도 핀을 그 장소로 놓는다(없으면 만들고, 있으면 옮긴다). nil이면 핀을 뗀다. 저장은 부른 쪽이 한다.
+    private func setTripItemPlace(_ place: TravelItemPlace?, for item: TravelTripItem, calendar: Calendar = .autoupdatingCurrent) {
+        var stops = snapshot.settings.travelPlanStops
+        let index = stops.firstIndex { $0.tripID == item.tripID && $0.itemID == item.itemID }
+        guard let place else {
+            if let index { stops.remove(at: index) }
+            snapshot.settings.travelPlanStops = TravelPlanSchedule.renumbered(stops)
+            return
+        }
+        if let index {
+            stops[index].latitude = place.latitude
+            stops[index].longitude = place.longitude
+            stops[index].title = item.title
+        } else {
+            let wall = TravelTripDay.components(TravelTripDay.string(for: item.start, offsetSeconds: item.startOffsetSeconds))
+            let day = wall.flatMap(calendar.date(from:)).map(calendar.startOfDay(for:)) ?? calendar.startOfDay(for: item.start)
+            stops.append(TravelPlanStop(
+                id: UUID(), title: item.title, latitude: place.latitude, longitude: place.longitude, day: day,
+                order: TravelPlanSchedule.stops(on: day, in: stops).count, planID: item.planID, tripID: item.tripID, itemID: item.itemID
+            ))
+        }
+        snapshot.settings.travelPlanStops = stops
+    }
+
     /// 여행 일정의 종류·이름·시각을 고친다. 일상 쪽 계획 기록과 지도 핀 이름이 함께 바뀐다.
     @discardableResult
     func updateTripItem(
-        tripID: String, itemID: String, kind: TripImportItem.Kind, title: String, start: Date, end: Date, calendar: Calendar = .autoupdatingCurrent
+        tripID: String, itemID: String, kind: TripImportItem.Kind, title: String, start: Date, end: Date,
+        place: TravelItemPlace? = nil, replacesPlace: Bool = false, calendar: Calendar = .autoupdatingCurrent
     ) async -> Bool {
         var items = snapshot.settings.travelTripItems ?? []
         guard end > start, let index = items.firstIndex(where: { $0.tripID == tripID && $0.itemID == itemID }) else { return false }
@@ -143,6 +187,7 @@ extension AppModel {
         if let stopIndex = snapshot.settings.travelPlanStops.firstIndex(where: { $0.tripID == tripID && $0.itemID == itemID }) {
             snapshot.settings.travelPlanStops[stopIndex].title = name
         }
+        if replacesPlace { setTripItemPlace(place, for: items[index], calendar: calendar) }
         return await applyTripItemTimes(items, tripID: tripID, itemID: itemID, calendar: calendar)
     }
 
@@ -193,6 +238,14 @@ extension AppModel {
 }
 
 /// 여행 일정을 시간 막대에 놓는다. 각 일정은 그곳의 벽시계 시각에 놓여, 항공편 도착부터 현지 시각이 된다.
+/// 손으로 넣는 일정에 붙이는 장소(TVX1112A01). 지도 핀이 된다.
+struct TravelItemPlace: Equatable, Identifiable {
+    var name: String
+    var latitude: Double
+    var longitude: Double
+    var id: String { "\(name)|\(latitude)|\(longitude)" }
+}
+
 enum TravelTripRail {
     static func segments(_ items: [TravelTripItem], day: Date, calendar: Calendar = .autoupdatingCurrent) -> [MapHomeTimeRailSegment] {
         let target = calendar.dateComponents([.year, .month, .day], from: day)

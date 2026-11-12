@@ -667,6 +667,7 @@
 		B1TV11120000000000000108 /* TravelGlobeTouch.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV11120000000000000008 /* TravelGlobeTouch.swift */; };
 		B1TV11120000000000000109 /* TravelModeSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV11120000000000000009 /* TravelModeSupport.swift */; };
 		B1TV1112000000000000010A /* TravelWishViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV1112000000000000000A /* TravelWishViews.swift */; };
+		B1TV1112000000000000010B /* TravelPlacePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV1112000000000000000B /* TravelPlacePicker.swift */; };
 		B1080700000000000000010A /* ne-cities.tsv in Resources */ = {isa = PBXBuildFile; fileRef = B1080700000000000000000A /* ne-cities.tsv */; };
 		B1080700000000000000010B /* TravelMapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080700000000000000000B /* TravelMapTests.swift */; };
 		B1080700000000000000010C /* TravelMapVideoRenderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080700000000000000000C /* TravelMapVideoRenderTests.swift */; };
@@ -1403,6 +1404,7 @@
 		B1TV11120000000000000008 /* TravelGlobeTouch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelGlobeTouch.swift; sourceTree = "<group>"; };
 		B1TV11120000000000000009 /* TravelModeSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelModeSupport.swift; sourceTree = "<group>"; };
 		B1TV1112000000000000000A /* TravelWishViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelWishViews.swift; sourceTree = "<group>"; };
+		B1TV1112000000000000000B /* TravelPlacePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelPlacePicker.swift; sourceTree = "<group>"; };
 		B1080700000000000000000A /* ne-cities.tsv */ = {isa = PBXFileReference; lastKnownFileType = text; name = ne-cities.tsv; path = MapData/ne-cities.tsv; sourceTree = "<group>"; };
 		B1080700000000000000000B /* TravelMapTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelMapTests.swift; sourceTree = "<group>"; };
 		B1080700000000000000000C /* TravelMapVideoRenderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelMapVideoRenderTests.swift; sourceTree = "<group>"; };
@@ -1921,6 +1923,7 @@
 				B1TV11120000000000000008 /* TravelGlobeTouch.swift */,
 				B1TV11120000000000000009 /* TravelModeSupport.swift */,
 				B1TV1112000000000000000A /* TravelWishViews.swift */,
+				B1TV1112000000000000000B /* TravelPlacePicker.swift */,
 				B10807000000000000000002 /* TravelMapCityCatalog.swift */,
 				B10807000000000000000003 /* TravelMapTrip.swift */,
 				B10807000000000000000004 /* TravelMapVideoPlan.swift */,
@@ -2899,6 +2902,7 @@
 				B1TV11120000000000000108 /* TravelGlobeTouch.swift in Sources */,
 				B1TV11120000000000000109 /* TravelModeSupport.swift in Sources */,
 				B1TV1112000000000000010A /* TravelWishViews.swift in Sources */,
+				B1TV1112000000000000010B /* TravelPlacePicker.swift in Sources */,
 				B10807000000000000000102 /* TravelMapCityCatalog.swift in Sources */,
 				B10807000000000000000103 /* TravelMapTrip.swift in Sources */,
 				B10807000000000000000104 /* TravelMapVideoPlan.swift in Sources */,

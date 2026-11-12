@@ -5419,6 +5419,14 @@
 "언젠가 갈 여행 (날짜는 나중에)|Someday trip (dates later)": "Perjalanan suatu hari (tanggal nanti)",
 "언젠가 갈 여행|A trip for someday": "Perjalanan suatu hari",
 "언젠가|Someday": "Suatu hari",
-"정하기|Set": "Tetapkan"
+"정하기|Set": "Tetapkan",
+"여행 고치기|Edit trip": "Edit perjalanan",
+"여행 지우기|Delete trip": "Hapus perjalanan",
+"이 여행과 그 일정을 모두 지울까요?|Delete this trip and all its plans?": "Hapus perjalanan ini beserta semua rencananya?",
+"이 일정을 지울까요?|Delete this plan?": "Hapus rencana ini?",
+"장소 떼기|Remove place": "Lepas tempat",
+"장소 붙이기|Add a place": "Tambah tempat",
+"장소 찾기|Find a place": "Cari tempat",
+"찾은 곳이 없습니다. 다른 이름으로 찾아 보세요.|Nothing found. Try another name.": "Tidak ditemukan. Coba nama lain."
 }
 }

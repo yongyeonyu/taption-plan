@@ -6,6 +6,8 @@ struct TravelNewTripSheet: View {
     struct Draft: Identifiable {
         let id = UUID()
         var isDayTrip: Bool
+        /// 고칠 여행. 없으면 새로 만든다.
+        var editing: TravelTrip?
     }
 
     @Bindable var model: AppModel
@@ -72,19 +74,33 @@ struct TravelNewTripSheet: View {
                     LabeledContent(language.text("여행지 통화", "Trip currency"), value: currency ?? language.text("원화만", "Home currency only"))
                 }
             }
-            .navigationTitle(language.text("새 여행", "New trip"))
+            .navigationTitle(draft.editing == nil ? language.text("새 여행", "New trip") : language.text("여행 고치기", "Edit trip"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button(language.text("취소", "Cancel")) { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(language.text("만들기", "Create")) { Task { await create() } }.disabled(isSaving)
+                    Button(draft.editing == nil ? language.text("만들기", "Create") : language.text("저장", "Save")) { Task { await create() } }.disabled(isSaving)
                 }
             }
-            .onAppear { isDayTrip = draft.isDayTrip }
+            .onAppear(perform: prepare)
             .onChange(of: start) { _, value in if end < value { end = value } }
         }
         // 지구본 화면이 어두워도 이 시트는 밝게: 어두운 바탕에서 「취소」·「만들기」 글자가 묻혔다.
         .preferredColorScheme(.light)
+    }
+
+    /// 고칠 때는 그 여행의 값으로 채운다.
+    private func prepare() {
+        isDayTrip = draft.isDayTrip
+        guard let trip = draft.editing else { return }
+        title = trip.title
+        isWish = trip.isWish
+        wishNights = max(0, (trip.wishDays ?? 4) - 1)
+        let calendar = Calendar.autoupdatingCurrent
+        if let first = TravelTripDay.components(trip.startDay).flatMap(calendar.date(from:)) { start = first }
+        if let last = TravelTripDay.components(trip.endDay).flatMap(calendar.date(from:)) { end = last }
+        countryCode = trip.countryCode ?? "KR"
+        provinceCode = TravelModeRegions.provinces.first { $0.nameKo == trip.regionName }?.code ?? ""
     }
 
     private func day(_ date: Date) -> String {
@@ -99,13 +115,25 @@ struct TravelNewTripSheet: View {
         let province = TravelModeRegions.provinces.first { $0.code == provinceCode && countryCode == "KR" }
         let place = province ?? country
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trip = TravelTrip(
-            id: "trip-\(UUID().uuidString.lowercased())",
+        let old = draft.editing
+        // 나라·지역을 바꾸지 않았으면 전에 잡아 둔 자리·통화를 그대로 둔다.
+        let samePlace = old != nil && old?.countryCode == country?.code && old?.regionName == province?.nameKo
+        var trip = TravelTrip(
+            id: old?.id ?? "trip-\(UUID().uuidString.lowercased())",
             title: trimmed.isEmpty ? (place.map(name) ?? "") : trimmed,
             startDay: isWish ? "" : day(start), endDay: isWish ? "" : day(isDayTrip ? start : max(start, end)),
             countryCode: country?.code, regionName: province?.nameKo,
             latitude: place?.anchor.y, longitude: place?.anchor.x, currencyCode: currency, wishDays: isWish ? wishNights + 1 : nil
         )
+        if let old {
+            trip.flagColorHex = old.flagColorHex
+            trip.timeZoneID = old.timeZoneID
+            if samePlace {
+                trip.latitude = old.latitude
+                trip.longitude = old.longitude
+                trip.currencyCode = old.currencyCode
+            }
+        }
         guard await model.saveTravelTrip(trip) else { return }
         dismiss()
         onCreate(trip)

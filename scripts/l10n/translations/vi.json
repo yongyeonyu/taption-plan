@@ -5419,6 +5419,14 @@
 "언젠가 갈 여행 (날짜는 나중에)|Someday trip (dates later)": "Chuyến đi một ngày nào đó (ngày sau)",
 "언젠가 갈 여행|A trip for someday": "Chuyến đi một ngày nào đó",
 "언젠가|Someday": "Một ngày nào đó",
-"정하기|Set": "Đặt"
+"정하기|Set": "Đặt",
+"여행 고치기|Edit trip": "Sửa chuyến đi",
+"여행 지우기|Delete trip": "Xóa chuyến đi",
+"이 여행과 그 일정을 모두 지울까요?|Delete this trip and all its plans?": "Xóa chuyến đi này và mọi kế hoạch của nó?",
+"이 일정을 지울까요?|Delete this plan?": "Xóa kế hoạch này?",
+"장소 떼기|Remove place": "Bỏ địa điểm",
+"장소 붙이기|Add a place": "Thêm địa điểm",
+"장소 찾기|Find a place": "Tìm địa điểm",
+"찾은 곳이 없습니다. 다른 이름으로 찾아 보세요.|Nothing found. Try another name.": "Không tìm thấy. Hãy thử tên khác."
 }
 }

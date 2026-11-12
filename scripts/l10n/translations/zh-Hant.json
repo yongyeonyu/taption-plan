@@ -5419,6 +5419,14 @@
 "언젠가 갈 여행 (날짜는 나중에)|Someday trip (dates later)": "將來的旅行（日期稍後）",
 "언젠가 갈 여행|A trip for someday": "將來的旅行",
 "언젠가|Someday": "將來",
-"정하기|Set": "確定"
+"정하기|Set": "確定",
+"여행 고치기|Edit trip": "編輯旅行",
+"여행 지우기|Delete trip": "刪除旅行",
+"이 여행과 그 일정을 모두 지울까요?|Delete this trip and all its plans?": "要刪除這次旅行及其所有行程嗎？",
+"이 일정을 지울까요?|Delete this plan?": "要刪除這個行程嗎？",
+"장소 떼기|Remove place": "移除地點",
+"장소 붙이기|Add a place": "新增地點",
+"장소 찾기|Find a place": "尋找地點",
+"찾은 곳이 없습니다. 다른 이름으로 찾아 보세요.|Nothing found. Try another name.": "沒有找到。請換個名稱再試。"
 }
 }

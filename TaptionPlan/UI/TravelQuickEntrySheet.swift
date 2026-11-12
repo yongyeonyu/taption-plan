@@ -14,6 +14,9 @@ struct TravelQuickEntrySheet: View {
         var offsetSeconds: Int
         /// 고칠 일정. 없으면 새로 넣는다.
         var editing: TravelTripItem?
+        /// 장소를 찾을 때 먼저 볼 여행지 가운데(경도, 위도)와, 고칠 일정에 이미 붙은 장소.
+        var anchor: SIMD2<Double>?
+        var place: TravelItemPlace?
 
         /// 새 일정: 그 여행의 시간대(없으면 기기 시간대)로 그날에 놓는다.
         static func new(trip: TravelTrip, dayKey: String, dayLabel: String, startMinute: Int, kind: TripImportItem.Kind) -> Target {
@@ -72,6 +75,10 @@ struct TravelQuickEntrySheet: View {
     @State private var added: (itemID: String, summary: String)?
     @State private var isSaving = false
     @State private var didFail = false
+    @State private var isConfirmingDelete = false
+    /// 붙인 장소(지도 핀). 넣은 뒤에는 비워 다음 일정에 따라가지 않게 한다.
+    @State private var place: TravelItemPlace?
+    @State private var isPickingPlace = false
 
     private var isEditing: Bool { target.editing != nil }
 
@@ -81,7 +88,7 @@ struct TravelQuickEntrySheet: View {
     private var isShort: Bool { verticalSizeClass == .compact }
 
     static func sheetHeight(hasAdded: Bool, hasSuggestions: Bool) -> CGFloat {
-        236 + (hasAdded ? 40 : 0) + (hasSuggestions ? 38 : 0)
+        276 + (hasAdded ? 40 : 0) + (hasSuggestions ? 38 : 0)
     }
 
     var body: some View {
@@ -97,6 +104,34 @@ struct TravelQuickEntrySheet: View {
         .preferredColorScheme(.light)
         .onAppear(perform: prepare)
         .onChange(of: text) { _, value in read(value) }
+        .sheet(isPresented: $isPickingPlace) {
+            TravelPlacePicker(language: language, query: TravelQuickEntry.parse(text).title, anchor: target.anchor) { picked in
+                place = picked
+                // 이름을 아직 안 썼으면 고른 곳 이름을 쓴다.
+                if TravelQuickEntry.parse(text).title.isEmpty { text = picked.name }
+            }
+        }
+    }
+
+    /// 장소 줄: 붙이면 지도에 핀이 생긴다.
+    private var placeRow: some View {
+        HStack(spacing: 6) {
+            Button { isPickingPlace = true } label: {
+                Label(place?.name ?? language.text("장소 붙이기", "Add a place"), systemImage: place == nil ? "mappin.and.ellipse" : "mappin.circle.fill")
+                    .font(.footnote.weight(.semibold)).lineLimit(1)
+                    .padding(.horizontal, 10).frame(height: 30)
+                    .foregroundStyle(place == nil ? TravelInk.plan : TravelInk.land)
+                    .background(place == nil ? TravelInk.planTint : TravelInk.plan, in: Capsule())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("travelEntryPlace")
+            if place != nil {
+                Button { place = nil } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(TravelInk.plan.opacity(0.6)) }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(language.text("장소 떼기", "Remove place"))
+            }
+            Spacer(minLength: 0)
+        }
     }
 
     private var form: some View {
@@ -107,6 +142,7 @@ struct TravelQuickEntrySheet: View {
             timeRow
             durationChips
             if !suggestions.isEmpty { suggestionChips }
+            placeRow
             titleRow
             if didFail {
                 Text(language.text("넣지 못했습니다. 다시 해 주세요.", "Could not save. Try again.")).font(.caption).foregroundStyle(TravelInk.actual)
@@ -136,8 +172,12 @@ struct TravelQuickEntrySheet: View {
                 }
                 .accessibilityLabel(language.text("더 보기", "More"))
                 .accessibilityIdentifier("travelEntryMore")
-                Button(language.text("지우기", "Delete"), role: .destructive) { Task { await remove() } }
+                // 바로 지우지 않고 한 번 묻는다(Trip과 같게).
+                Button(language.text("지우기", "Delete"), role: .destructive) { isConfirmingDelete = true }
                     .accessibilityIdentifier("travelEntryDelete")
+                    .confirmationDialog(language.text("이 일정을 지울까요?", "Delete this plan?"), isPresented: $isConfirmingDelete, titleVisibility: .visible) {
+                        Button(language.text("지우기", "Delete"), role: .destructive) { Task { await remove() } }
+                    }
             } else {
                 Button(language.text("완료", "Done")) { dismiss() }.accessibilityIdentifier("travelEntryDone")
             }
@@ -277,6 +317,7 @@ struct TravelQuickEntrySheet: View {
     private func prepare() {
         kind = target.kind
         startMinute = target.startMinute
+        place = target.place
         if let item = target.editing {
             text = item.title == target.kind.planName ? "" : item.title
             duration = max(5, Int(item.end.timeIntervalSince(item.start) / 60))
@@ -312,12 +353,15 @@ struct TravelQuickEntrySheet: View {
         let start = Self.date(dayKey: target.dayKey, minute: startMinute, offsetSeconds: target.offsetSeconds)
         let end = start.addingTimeInterval(TimeInterval(duration * 60))
         if let item = target.editing {
-            didFail = !(await model.updateTripItem(tripID: item.tripID, itemID: item.itemID, kind: kind, title: title, start: start, end: end))
+            didFail = !(await model.updateTripItem(
+                tripID: item.tripID, itemID: item.itemID, kind: kind, title: title, start: start, end: end,
+                place: place, replacesPlace: place != target.place
+            ))
             if !didFail { dismiss() }
             return
         }
         guard let itemID = await model.addTripItem(
-            tripID: target.tripID, kind: kind, title: title, start: start, end: end, offsetSeconds: target.offsetSeconds
+            tripID: target.tripID, kind: kind, title: title, start: start, end: end, offsetSeconds: target.offsetSeconds, place: place
         ) else {
             didFail = true
             return
@@ -327,6 +371,7 @@ struct TravelQuickEntrySheet: View {
         // 다음 일정은 방금 끝에서 잇는다.
         startMinute = TravelQuickEntry.nextStart(lastEndMinute: startMinute + duration, nowMinute: nil)
         text = ""
+        place = nil
         parsed = TravelQuickEntry.Parsed(title: "")
         isDurationChosen = false
         duration = TravelQuickEntry.defaultDuration(kind: kind.rawValue)

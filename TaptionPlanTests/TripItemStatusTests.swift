@@ -394,7 +394,7 @@ final class TravelTripUnitTests: XCTestCase {
         XCTAssertEqual(TravelModeView.planTableHeight(phoneLandscape), 122)
         XCTAssertEqual(TravelModeView.planTableHeight(pad), 826)
         XCTAssertEqual(TravelModeView.planTableHeight(padLandscape), 540)
-        XCTAssertEqual(TravelQuickEntrySheet.sheetHeight(hasAdded: true, hasSuggestions: true), 314)
+        XCTAssertEqual(TravelQuickEntrySheet.sheetHeight(hasAdded: true, hasSuggestions: true), 354)
     }
 
     /// 일상 → 여행 바로 전환: 보던 날을 품은 여행, 여행 중, 마지막으로 연 여행 순.
@@ -443,6 +443,59 @@ final class TravelTripUnitTests: XCTestCase {
         XCTAssertNil(TravelPlanTable.slot(x: 20, y: 100, width: 350), "시간축을 누르면 넣지 않는다")
         XCTAssertEqual(TravelQuickEntrySheet.clock(1_470), "00:30")
         XCTAssertEqual(TravelQuickEntrySheet.durationText(90, language: .korean), "1시간 30분")
+    }
+
+    /// TVX1112A01: 손으로 넣은 일정에 장소를 붙이면 지도 핀이 생기고, 옮기고 뗄 수 있다.
+    @MainActor
+    func testManualItemPlaceBecomesAMapPin() async throws {
+        let model = try await importedModel()
+        let start = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-12-03T12:00:00+07:00"))
+        let place = TravelItemPlace(name: "짜뚜짝 시장", latitude: 13.7999, longitude: 100.5503)
+        let added = await model.addTripItem(
+            tripID: "t1", kind: .shopping, title: "시장", start: start, end: start.addingTimeInterval(3_600), offsetSeconds: 7 * 3_600, place: place
+        )
+        let itemID = try XCTUnwrap(added)
+        var pin = try XCTUnwrap(model.settings.travelPlanStops.first { $0.itemID == itemID })
+        XCTAssertEqual(pin.latitude, 13.7999)
+        XCTAssertEqual(pin.title, "시장")
+        XCTAssertEqual(pin.tripID, "t1")
+
+        let moved = TravelItemPlace(name: "아이콘시암", latitude: 13.7266, longitude: 100.5108)
+        var done = await model.updateTripItem(
+            tripID: "t1", itemID: itemID, kind: .shopping, title: "쇼핑", start: start, end: start.addingTimeInterval(3_600), place: moved, replacesPlace: true
+        )
+        XCTAssertTrue(done)
+        pin = try XCTUnwrap(model.settings.travelPlanStops.first { $0.itemID == itemID })
+        XCTAssertEqual(pin.longitude, 100.5108)
+        XCTAssertEqual(pin.title, "쇼핑")
+
+        done = await model.updateTripItem(tripID: "t1", itemID: itemID, kind: .shopping, title: "쇼핑", start: start, end: start.addingTimeInterval(3_600))
+        XCTAssertTrue(done)
+        XCTAssertNotNil(model.settings.travelPlanStops.first { $0.itemID == itemID }, "장소를 건드리지 않으면 핀은 그대로")
+        done = await model.updateTripItem(
+            tripID: "t1", itemID: itemID, kind: .shopping, title: "쇼핑", start: start, end: start.addingTimeInterval(3_600), place: nil, replacesPlace: true
+        )
+        XCTAssertTrue(done)
+        XCTAssertNil(model.settings.travelPlanStops.first { $0.itemID == itemID }, "장소를 떼면 핀이 없어진다")
+    }
+
+    /// TVX1112A01: 여행 지우기는 일정·일상 계획·핀을 함께 지우고, 날짜 없는 여행도 저장된다.
+    @MainActor
+    func testDeletingATripRemovesItsItemsPlansAndPins() async throws {
+        let model = try await importedModel()
+        let planIDs = try XCTUnwrap(model.settings.travelTripItems).compactMap(\.planID)
+        XCTAssertFalse(planIDs.isEmpty)
+        let wish = TravelTrip(id: "wish", title: "도쿄", startDay: "", endDay: "", wishDays: 5)
+        let saved = await model.saveTravelTrip(wish)
+        XCTAssertTrue(saved, "날짜 없는 여행도 저장된다")
+        let deleted = await model.deleteTravelTrip("t1")
+        XCTAssertTrue(deleted)
+        XCTAssertEqual(model.settings.travelTrips, [wish])
+        XCTAssertNil(model.settings.travelTripItems)
+        XCTAssertTrue(model.settings.travelPlanStops.isEmpty)
+        for id in planIDs { XCTAssertNil(model.snapshot.plans.first { $0.id == id }) }
+        let missing = await model.deleteTravelTrip("")
+        XCTAssertFalse(missing)
     }
 
     @MainActor

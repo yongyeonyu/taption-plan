@@ -5419,6 +5419,14 @@
 "언젠가 갈 여행 (날짜는 나중에)|Someday trip (dates later)": "Viaggio per un giorno (date dopo)",
 "언젠가 갈 여행|A trip for someday": "Un viaggio per un giorno",
 "언젠가|Someday": "Un giorno",
-"정하기|Set": "Imposta"
+"정하기|Set": "Imposta",
+"여행 고치기|Edit trip": "Modifica viaggio",
+"여행 지우기|Delete trip": "Elimina viaggio",
+"이 여행과 그 일정을 모두 지울까요?|Delete this trip and all its plans?": "Eliminare questo viaggio e tutti i suoi piani?",
+"이 일정을 지울까요?|Delete this plan?": "Eliminare questo piano?",
+"장소 떼기|Remove place": "Rimuovi luogo",
+"장소 붙이기|Add a place": "Aggiungi un luogo",
+"장소 찾기|Find a place": "Trova un luogo",
+"찾은 곳이 없습니다. 다른 이름으로 찾아 보세요.|Nothing found. Try another name.": "Nessun risultato. Prova un altro nome."
 }
 }
