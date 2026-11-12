@@ -81,6 +81,12 @@ struct TravelQuickEntrySheet: View {
     @State private var place: TravelItemPlace?
     @State private var isPickingPlace = false
     @State private var note = ""
+    /// 일정 색(nil이면 기본 남색)과 예상 지출(원, 숫자만).
+    @State private var colorHex: String?
+    @State private var plannedSpend = ""
+
+    /// 예상 지출 칸의 글에서 숫자만 남긴다(쉼표·원 표시를 붙여 넣어도 된다).
+    static func spendDigits(_ text: String) -> String { String(text.filter(\.isNumber).prefix(10)) }
 
     private var isEditing: Bool { target.editing != nil }
 
@@ -149,6 +155,7 @@ struct TravelQuickEntrySheet: View {
             previewCard
             timeSliders
             placeRow
+            styleRows
             if isEditing { editActions }
             if didFail {
                 Text(language.text("넣지 못했습니다. 다시 해 주세요.", "Could not save. Try again.")).font(.caption).foregroundStyle(TravelInk.actual)
@@ -202,6 +209,42 @@ struct TravelQuickEntrySheet: View {
         }
     }
 
+    /// Trip 편집기의 색 팔레트와 예상 지출: 색 견본(기본 + 여섯 색)과 금액 칸.
+    private var styleRows: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                colorButton(nil)
+                ForEach(TravelInk.flagHexes, id: \.self) { colorButton($0) }
+            }
+            HStack(spacing: 8) {
+                Label(language.text("예상 지출", "Planned spend"), systemImage: "wonsign.circle").font(.footnote.weight(.semibold)).foregroundStyle(TravelInk.plan)
+                TextField("0", text: $plannedSpend)
+                    .keyboardType(.numberPad)
+                    .multilineTextAlignment(.trailing)
+                    .font(.footnote.monospacedDigit())
+                    .padding(.horizontal, 10).frame(height: 34)
+                    .background(Color.white, in: RoundedRectangle(cornerRadius: 8))
+                    .overlay { RoundedRectangle(cornerRadius: 8).stroke(TravelInk.border, lineWidth: 1) }
+                    .onChange(of: plannedSpend) { _, value in
+                        let digits = Self.spendDigits(value)
+                        if digits != value { plannedSpend = digits }
+                    }
+                    .accessibilityLabel(language.text("예상 지출", "Planned spend"))
+                    .accessibilityIdentifier("travelEntryPlannedSpend")
+            }
+        }
+    }
+
+    private func colorButton(_ hex: String?) -> some View {
+        Button { if colorHex != hex { colorHex = hex } } label: {
+            Image(uiImage: TravelInk.swatch(hex ?? "#2F3E6B", isChosen: colorHex == hex, side: 30))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(hex == nil ? language.text("기본 색으로", "Use default color") : language.runtimeText("색 \(hex ?? "")", "Color \(hex ?? "")"))
+        .accessibilityAddTraits(colorHex == hex ? .isSelected : [])
+        .accessibilityIdentifier("travelEntryColor-" + (hex ?? "default"))
+    }
+
     /// 미리보기 카드: 계획표에 놓일 모습(이름·시각·장소)과 메모.
     private var previewCard: some View {
         let title = TravelQuickEntry.parse(text).title
@@ -221,8 +264,8 @@ struct TravelQuickEntrySheet: View {
         .foregroundStyle(TravelInk.plan)
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(TravelInk.planTint, in: RoundedRectangle(cornerRadius: 12))
-        .overlay { RoundedRectangle(cornerRadius: 12).stroke(TravelInk.plan, lineWidth: 1) }
+        .background(TravelPlanTable.tint(colorHex), in: RoundedRectangle(cornerRadius: 12))
+        .overlay { RoundedRectangle(cornerRadius: 12).stroke(TravelPlanTable.ink(colorHex), lineWidth: 1) }
     }
 
     /// 시작·종료 슬라이더(5분 단위). 시작을 옮기면 길이는 그대로 따라간다.
@@ -331,6 +374,8 @@ struct TravelQuickEntrySheet: View {
         startMinute = target.startMinute
         place = target.place
         note = target.editing?.note ?? ""
+        colorHex = target.editing?.colorHex
+        plannedSpend = target.editing?.plannedSpendKRW.map { String(Int($0)) } ?? ""
         if let item = target.editing {
             text = item.title == target.kind.planName ? "" : item.title
             duration = max(5, Int(item.end.timeIntervalSince(item.start) / 60))
@@ -369,11 +414,12 @@ struct TravelQuickEntrySheet: View {
         if let item = target.editing {
             didFail = !(await model.updateTripItem(
                 tripID: item.tripID, itemID: item.itemID, kind: kind, title: title, start: start, end: end,
-                place: place, replacesPlace: place != target.place, note: note
+                place: place, replacesPlace: place != target.place, note: note, style: (colorHex, Double(plannedSpend))
             ))
         } else {
             didFail = await model.addTripItem(
-                tripID: target.tripID, kind: kind, title: title, start: start, end: end, offsetSeconds: target.offsetSeconds, place: place, note: note
+                tripID: target.tripID, kind: kind, title: title, start: start, end: end, offsetSeconds: target.offsetSeconds, place: place, note: note,
+                colorHex: colorHex, plannedSpendKRW: Double(plannedSpend)
             ) == nil
         }
         // Trip 원본처럼 저장하면 닫힌다.

@@ -19,6 +19,8 @@ extension AppModel {
         await deletePlans(Array(oldPlanIDs))
         let calendar = Calendar.autoupdatingCurrent
         var stops = snapshot.settings.travelPlanStops
+        // 같은 여행을 다시 가져와도 손으로 정한 색·예상 지출은 일정 번호로 이어 준다(TVU1113A01).
+        let kept = Dictionary((snapshot.settings.travelTripItems ?? []).filter { $0.tripID == plan.tripID }.map { ($0.itemID, $0) }) { first, _ in first }
         var tripItems = (snapshot.settings.travelTripItems ?? []).filter { $0.tripID != plan.tripID }
         for item in plan.items {
             let planID = addPlan(
@@ -33,7 +35,8 @@ extension AppModel {
                 start: item.start, end: item.end,
                 startOffsetSeconds: item.timeZone.secondsFromGMT(for: item.start),
                 endOffsetSeconds: item.endTimeZone.secondsFromGMT(for: item.end), planID: planID, status: item.status.stored,
-                note: item.note.isEmpty ? nil : item.note
+                note: item.note.isEmpty ? nil : item.note,
+                colorHex: kept[item.id]?.colorHex, plannedSpendKRW: kept[item.id]?.plannedSpendKRW
             ))
             // 잠은 숙소 자리라 지도에 핀을 따로 찍지 않는다.
             guard item.kind != .sleep, let coordinate = item.coordinate else { continue }
@@ -156,7 +159,7 @@ extension AppModel {
     /// 여행 일정 하나를 손으로 넣는다. 일상 쪽 계획 기록이 함께 생긴다. 넣은 일정 번호를 돌려준다.
     func addTripItem(
         tripID: String, kind: TripImportItem.Kind, title: String, start: Date, end: Date, offsetSeconds: Int,
-        place: TravelItemPlace? = nil, note: String = ""
+        place: TravelItemPlace? = nil, note: String = "", colorHex: String? = nil, plannedSpendKRW: Double? = nil
     ) async -> String? {
         guard acceptsDataMutation(), !tripID.isEmpty, end > start else { return nil }
         let name = title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -168,7 +171,8 @@ extension AppModel {
         let items = (snapshot.settings.travelTripItems ?? []) + [TravelTripItem(
             tripID: tripID, itemID: itemID, kind: kind.rawValue, title: name.isEmpty ? kind.planName : name, start: start, end: end,
             startOffsetSeconds: offsetSeconds, endOffsetSeconds: offsetSeconds, planID: planID,
-            note: Self.cleanTripNote(note)
+            note: Self.cleanTripNote(note),
+            colorHex: TravelTripItem.cleanColorHex(colorHex), plannedSpendKRW: TravelTripItem.cleanPlannedSpend(plannedSpendKRW)
         )]
         snapshot.settings.travelTripItems = items
         if let place, let item = items.last { setTripItemPlace(place, for: item) }
@@ -212,7 +216,8 @@ extension AppModel {
     @discardableResult
     func updateTripItem(
         tripID: String, itemID: String, kind: TripImportItem.Kind, title: String, start: Date, end: Date,
-        place: TravelItemPlace? = nil, replacesPlace: Bool = false, note: String? = nil, calendar: Calendar = .autoupdatingCurrent
+        place: TravelItemPlace? = nil, replacesPlace: Bool = false, note: String? = nil,
+        style: (colorHex: String?, plannedSpendKRW: Double?)? = nil, calendar: Calendar = .autoupdatingCurrent
     ) async -> Bool {
         var items = snapshot.settings.travelTripItems ?? []
         guard end > start, let index = items.firstIndex(where: { $0.tripID == tripID && $0.itemID == itemID }) else { return false }
@@ -224,6 +229,11 @@ extension AppModel {
         items[index].end = end
         // 메모는 넘겨준 때만 바꾼다(빈 글이면 지운다).
         if let note { items[index].note = Self.cleanTripNote(note) }
+        // 색·예상 지출도 넘겨준 때만 바꾼다(nil이면 지운다).
+        if let style {
+            items[index].colorHex = TravelTripItem.cleanColorHex(style.colorHex)
+            items[index].plannedSpendKRW = TravelTripItem.cleanPlannedSpend(style.plannedSpendKRW)
+        }
         if let planID = items[index].planID, let planIndex = snapshot.plans.firstIndex(where: { $0.id == planID }) {
             guard !snapshot.plans[planIndex].isFixed else { return false }
             snapshot.plans[planIndex].title = name

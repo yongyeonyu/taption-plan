@@ -19,6 +19,9 @@ struct TravelPlanTableModel: Equatable {
         var hasNote = false
         /// 그 시간에 쓴 돈(원). 없으면 0.
         var spent = 0.0
+        /// 일정 색(없으면 기본 남색)과 예상 지출(원, 없으면 0)(TVU1113A01).
+        var colorHex: String?
+        var planned = 0.0
     }
 
     struct Actual: Identifiable, Equatable {
@@ -63,7 +66,8 @@ struct TravelPlanTableModel: Equatable {
             let column = column(forKind: item.kind)
             blocks.append(Block(
                 id: item.itemID, column: column, startMinute: segment.startMinute, endMinute: segment.endMinute, title: item.title,
-                tripStatus: segment.tripStatus, status: .pending, hasNote: !(item.note ?? "").isEmpty, spent: spent[item.itemID] ?? 0
+                tripStatus: segment.tripStatus, status: .pending, hasNote: !(item.note ?? "").isEmpty, spent: spent[item.itemID] ?? 0,
+                colorHex: item.colorHex, planned: item.plannedSpendKRW ?? 0
             ))
             spans.append(.init(id: item.itemID, start: segment.startMinute, end: segment.endMinute, isMove: column == 0))
         }
@@ -249,6 +253,15 @@ struct TravelPlanTable: View {
         guard x >= leading, columnWidth > 0, y >= 0 else { return nil }
         let column = min(TravelPlanTableModel.columnCount - 1, Int((x - leading) / columnWidth))
         return (column, TravelQuickEntry.snapped(Int(y / (minuteHeight * scale))))
+    }
+
+    /// 일정 색으로 칠한 칸 바탕과 테두리. 색이 없으면 기본 남색 계열.
+    static func tint(_ hex: String?) -> Color { hex.map { Color(hex: $0).opacity(0.18) } ?? TravelInk.planTint }
+    static func ink(_ hex: String?) -> Color { hex.map { Color(hex: $0) } ?? TravelInk.plan }
+
+    /// 칸에 보일 돈: 쓴 돈이 있으면 그것(주홍), 없고 예상 지출이 있으면 그것(옅게). 둘 다 없으면 nil.
+    static func money(spent: Double, planned: Double) -> (amount: Double, isPlanned: Bool)? {
+        spent > 0 ? (spent, false) : planned > 0 ? (planned, true) : nil
     }
 
     private var titles: [String] {
@@ -522,17 +535,17 @@ struct TravelPlanTable: View {
             if height > 34 || isLifted {
                 Text(isLifted ? Self.clock(start) + "–" + Self.clock(end) : Self.clock(start)).font(.system(size: 10).monospacedDigit()).opacity(0.75)
             }
-            if block.spent > 0, height > 46, !isLifted {
-                Text(LedgerMoney.text(block.spent, language: language)).font(.system(size: 10, weight: .semibold).monospacedDigit())
-                    .foregroundStyle(TravelInk.actual).lineLimit(1).minimumScaleFactor(0.7)
+            if let money = Self.money(spent: block.spent, planned: block.planned), height > 46, !isLifted {
+                Text((money.isPlanned ? "≈ " : "") + LedgerMoney.text(money.amount, language: language)).font(.system(size: 10, weight: .semibold).monospacedDigit())
+                    .foregroundStyle(money.isPlanned ? TravelInk.plan.opacity(0.7) : TravelInk.actual).lineLimit(1).minimumScaleFactor(0.7)
             }
         }
         .padding(3)
         .frame(width: columnWidth - 4, height: height, alignment: .topLeading)
-        .background(isLifted ? Color.white : TravelInk.planTint.opacity(block.tripStatus == .tentative ? 0.5 : 1), in: RoundedRectangle(cornerRadius: 5))
+        .background(isLifted ? Color.white : Self.tint(block.colorHex).opacity(block.tripStatus == .tentative ? 0.5 : 1), in: RoundedRectangle(cornerRadius: 5))
         .overlay {
             RoundedRectangle(cornerRadius: 5).stroke(
-                missed ? TravelInk.actual : TravelInk.plan,
+                missed ? TravelInk.actual : Self.ink(block.colorHex),
                 style: StrokeStyle(lineWidth: isLifted || selectedID == block.id ? 2.5 : block.tripStatus == .booked || missed ? 1.5 : 1, dash: block.tripStatus == .tentative ? [3, 3] : [])
             )
         }

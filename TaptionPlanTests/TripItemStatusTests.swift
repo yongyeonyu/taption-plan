@@ -354,6 +354,20 @@ final class TravelTripUnitTests: XCTestCase {
         plan = try XCTUnwrap(model.snapshot.plans.first { $0.id == planID })
         XCTAssertEqual(plan.title, "공항 가기")
         XCTAssertEqual(plan.categoryID, "movement")
+
+        // TVU1113A01: 색·예상 지출은 넘겨준 때만 바뀌고, 다듬어 저장한다. 넘기지 않으면 그대로, nil을 넘기면 지운다.
+        let styled = await model.updateTripItem(tripID: "t1", itemID: itemID, kind: .transfer, title: "공항 가기", start: late, end: late.addingTimeInterval(1_800), style: (" #c8442e", 12_000.4))
+        XCTAssertTrue(styled)
+        item = try XCTUnwrap(model.settings.travelTripItems?.first { $0.itemID == itemID })
+        XCTAssertEqual(item.colorHex, "#C8442E")
+        XCTAssertEqual(item.plannedSpendKRW, 12_000)
+        _ = await model.updateTripItem(tripID: "t1", itemID: itemID, kind: .transfer, title: "공항", start: late, end: late.addingTimeInterval(1_800))
+        item = try XCTUnwrap(model.settings.travelTripItems?.first { $0.itemID == itemID })
+        XCTAssertEqual(item.colorHex, "#C8442E", "넘기지 않으면 그대로")
+        _ = await model.updateTripItem(tripID: "t1", itemID: itemID, kind: .transfer, title: "공항 가기", start: late, end: late.addingTimeInterval(1_800), style: (nil, 0))
+        item = try XCTUnwrap(model.settings.travelTripItems?.first { $0.itemID == itemID })
+        XCTAssertNil(item.colorHex)
+        XCTAssertNil(item.plannedSpendKRW)
         XCTAssertEqual(plan.span.end, late.addingTimeInterval(1_800))
         XCTAssertEqual(model.settings.travelTrips?.first?.endDay, "2026-12-05", "여행 기간 밖으로 나가면 기간이 늘어난다")
 
@@ -523,6 +537,33 @@ final class TravelTripUnitTests: XCTestCase {
         XCTAssertTrue(TravelPlanSelection.canNudge(5, start: 0, end: 60))
         XCTAssertFalse(TravelPlanSelection.canNudge(5, start: 1_380, end: 1_440))
         XCTAssertTrue(TravelPlanSelection.canNudge(-5, start: 1_380, end: 1_440))
+    }
+
+    /// TVU1113A01: 일정 색·예상 지출이 계획표 칸까지 가고, 쓴 돈이 있으면 예상보다 먼저 보인다.
+    func testItemColorAndPlannedSpendReachThePlanTable() throws {
+        let start = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-12-03T10:00:00+09:00"))
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "Asia/Seoul"))
+        let item = TravelTripItem(tripID: "t1", itemID: "a", kind: "sight", title: "성", start: start, end: start.addingTimeInterval(7_200),
+                                  startOffsetSeconds: 32_400, endOffsetSeconds: 32_400, planID: nil, colorHex: "#C8442E", plannedSpendKRW: 12_000)
+        let plain = TravelTripItem(tripID: "t1", itemID: "b", kind: "meal", title: "라멘", start: start, end: start.addingTimeInterval(3_600),
+                                   startOffsetSeconds: 32_400, endOffsetSeconds: 32_400, planID: nil)
+        let table = TravelPlanTableModel.make(items: [item, plain], tripID: "t1", day: start, actual: [], now: start.addingTimeInterval(-86_400), calendar: calendar)
+        let colored = try XCTUnwrap(table.blocks.first { $0.id == "a" })
+        XCTAssertEqual(colored.colorHex, "#C8442E")
+        XCTAssertEqual(colored.planned, 12_000)
+        let other = try XCTUnwrap(table.blocks.first { $0.id == "b" })
+        XCTAssertNil(other.colorHex)
+        XCTAssertEqual(other.planned, 0)
+        let planned = try XCTUnwrap(TravelPlanTable.money(spent: 0, planned: 12_000))
+        XCTAssertTrue(planned.isPlanned)
+        XCTAssertEqual(planned.amount, 12_000)
+        let spent = try XCTUnwrap(TravelPlanTable.money(spent: 9_000, planned: 12_000))
+        XCTAssertFalse(spent.isPlanned, "쓴 돈이 있으면 그것을 보인다")
+        XCTAssertEqual(spent.amount, 9_000)
+        XCTAssertNil(TravelPlanTable.money(spent: 0, planned: 0))
+        XCTAssertEqual(TravelQuickEntrySheet.spendDigits("12,000원"), "12000")
+        XCTAssertEqual(TravelQuickEntrySheet.spendDigits(""), "")
     }
 
     /// TVU1113A01: 시각 고치기를 여러 번 되돌리고 다시 한다. 새로 고치면 다시 하기는 비고, 다른 여행이면 앞의 것을 버린다.
