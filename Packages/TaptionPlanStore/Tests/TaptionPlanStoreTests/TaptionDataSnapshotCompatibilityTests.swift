@@ -50,6 +50,7 @@ enum SnapshotFixture {
             var place = place
             place.id = id(900 + index)
             place.name = "장소\(index)"
+            place.radiusMeters = 120 // 저장된 바이트는 기본 반경이 120m이던 때의 것(PLR1112A01).
             place.createdAt = start
             place.updatedAt = start
             return place
@@ -101,4 +102,21 @@ enum SnapshotFixture {
         encoder.outputFormatting = [.sortedKeys]
         return String(decoding: try encoder.encode(snapshot), as: UTF8.self)
     }
+}
+
+/// PLR1112A01: 새로 등록하는 장소는 200m, 저장된 반경은 그대로.
+@Test func newPlacesUseTwoHundredMetresAndStoredRadiusStays() throws {
+    #expect(FrequentPlace(kind: .custom, name: "새 곳").radiusMeters == 200)
+    let point = GeoPoint(latitude: 37.5, longitude: 127, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: -1)
+    var unplaced = FrequentPlace(kind: .home, radiusMeters: 120)
+    unplaced.setMapLocation(point)
+    #expect(unplaced.radiusMeters == 200, "위치를 처음 정하는 옛 칸은 지금 기본값으로")
+    var chosen = FrequentPlace(kind: .home, point: point, radiusMeters: 120)
+    chosen.setMapLocation(GeoPoint(latitude: 37.6, longitude: 127, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: -1))
+    #expect(chosen.radiusMeters == 120, "이미 등록한 장소의 반경은 바꾸지 않는다")
+    var custom = FrequentPlace(kind: .home, radiusMeters: 80)
+    custom.setMapLocation(point)
+    #expect(custom.radiusMeters == 80)
+    let old = try JSONDecoder().decode(FrequentPlace.self, from: JSONEncoder().encode(chosen))
+    #expect(old.radiusMeters == 120)
 }

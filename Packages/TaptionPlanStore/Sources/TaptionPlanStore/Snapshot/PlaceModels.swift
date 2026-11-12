@@ -327,6 +327,10 @@ public struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
     public var createdAt: Date
     public var updatedAt: Date
 
+    /// 새로 등록하는 장소의 반경(대표 지시 2026-11-12: 기본 200m). 저장된 장소는 저장된 값을 그대로 쓴다.
+    public static let defaultRadiusMeters = 200.0
+    static let legacyDefaultRadiusMeters = 120.0
+
     public init(
         id: UUID = UUID(),
         kind: FrequentPlaceKind,
@@ -338,7 +342,7 @@ public struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
         referenceAltimeterSessionID: UUID? = nil,
         floorCapturedAt: Date? = nil,
         floorReferencePoints: [FloorCalibrationPoint] = [],
-        radiusMeters: Double = 120,
+        radiusMeters: Double = FrequentPlace.defaultRadiusMeters,
         floorHeightMeters: Double = 3,
         minimumDwellMinutes: Int = 10,
         isAutomaticRecordingEnabled: Bool = true,
@@ -423,7 +427,7 @@ public struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
         radiusMeters = min(
             max(
                 try values.decodeIfPresent(Double.self, forKey: .radiusMeters)
-                    ?? 120,
+                    ?? Self.legacyDefaultRadiusMeters,
                 30
             ),
             500
@@ -524,6 +528,7 @@ public struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
         isManual: Bool = false
     ) {
         guard let point = reading.point else { return }
+        adoptDefaultRadiusIfUnplaced()
         self.point = point
         self.floor = floor
         referenceRelativeAltitudeMeters = reading.relativeAltitudeMeters
@@ -550,7 +555,13 @@ public struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
         updatedAt = .now
     }
 
+    /// 아직 위치를 정하지 않은 칸은 예전 기본값(120m)으로 저장돼 있을 수 있다. 처음 등록할 때 지금 기본값으로 맞춘다.
+    private mutating func adoptDefaultRadiusIfUnplaced() {
+        if point == nil, radiusMeters == Self.legacyDefaultRadiusMeters { radiusMeters = Self.defaultRadiusMeters }
+    }
+
     public mutating func setMapLocation(_ newPoint: GeoPoint) {
+        adoptDefaultRadiusIfUnplaced()
         let previousPoint = point
         let keepsFloorCalibration = previousPoint.map {
             distanceMeters($0, newPoint) <= Self.sameBuildingRadiusMeters

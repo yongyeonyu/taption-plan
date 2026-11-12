@@ -70,7 +70,7 @@ struct MapHomePlaceRangeEditor: View {
     let model: AppModel
     let placeID: UUID
     let language: MapHomeLanguage
-    @State private var radiusMeters: Double = 120
+    @State private var radiusMeters: Double = FrequentPlace.defaultRadiusMeters
     @AppStorage(showsRangeKey) private var showsRanges = true
 
     private var place: FrequentPlace? {

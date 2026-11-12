@@ -1522,7 +1522,7 @@ private struct FrequentPlaceDetailView: View {
     let placeID: UUID
 
     @State private var name = ""
-    @State private var radiusMeters = 120.0
+    @State private var radiusMeters = FrequentPlace.defaultRadiusMeters
     @State private var floorPrompt = FloorCalibrationPrompt()
     @State private var minimumDwellMinutes = 10
     @State private var isAutomaticRecordingEnabled = true

@@ -340,7 +340,7 @@ final class MapHomeGrowthPolicyTests: XCTestCase {
                     XCTFail("Missing bundled illustration: \(name)")
                     return
                 }
-                XCTAssertEqual(image.size, CGSize(width: 72, height: 72), name)
+                XCTAssertEqual(image.size, CGSize(width: 36, height: 36), name)
                 let thumbnail = renderer.image { _ in
                     image.draw(in: CGRect(origin: .zero, size: size))
                 }
