@@ -103,7 +103,7 @@ struct FirstRunWelcomePage: View {
                 }
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
                 Text(language.text("언제든 건너뛸 수 있습니다. 메뉴 > 설정에서 다시 볼 수 있습니다.", "Skip anytime. Watch it again in Menu > Settings."))
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
@@ -187,7 +187,7 @@ struct FirstRunGuidePage: View {
                     FirstRunGuideStage(step: step, cue: cue, date: date, language: language)
                         .frame(maxWidth: .infinity)
                         .padding(14)
-                        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
                         .padding(.bottom, 8)
                         .accessibilityHidden(true)
                 }
@@ -200,7 +200,7 @@ struct FirstRunGuidePage: View {
                             .padding(8)
                             .background(
                                 offset == activeIndex ? Color.tpAccent.opacity(0.14) : .clear,
-                                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
                             )
                             .opacity(offset == activeIndex ? 1 : 0.55)
                             .contentShape(Rectangle())
@@ -258,7 +258,7 @@ struct FirstRunDayCardTimePage: View {
                     .datePickerStyle(.wheel)
                     .labelsHidden()
                     .frame(maxWidth: .infinity)
-                    .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
                     .accessibilityIdentifier("firstRunDayCardTime")
                 if model.permissionState(for: .notifications) == .denied {
                     Button {
@@ -377,7 +377,7 @@ struct FirstRunAppleWatchPage: View {
         HStack(spacing: 10) {
             ProgressView()
             Text(language.text("설치를 기다리는 중입니다", "Waiting for installation"))
-                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold))
                 .foregroundStyle(Color.tpInk)
         }
         FirstRunRowView(
@@ -405,7 +405,7 @@ struct FirstRunAppleWatchPage: View {
                 .foregroundStyle(Color.tpAccent)
                 .accessibilityHidden(true)
             Text(language.text("설치가 확인됐습니다", "Installation confirmed"))
-                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold))
                 .foregroundStyle(Color.tpInk)
         }
         .accessibilityIdentifier("firstRunWatchInstalled")
@@ -426,7 +426,7 @@ struct FirstRunAppleWatchPage: View {
     private func actionButton(_ title: String, identifier: String, isPrimary: Bool = true, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
-                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold))
                 .frame(maxWidth: .infinity, minHeight: 46)
                 .foregroundStyle(isPrimary ? Color.white : Color.tpInk)
                 .background(isPrimary ? Color.tpAccent : Color.tpSurface, in: Capsule())
@@ -500,9 +500,9 @@ struct FirstRunCatPage: View {
                         }
                         .padding(14)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
                         .overlay {
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
                                 .stroke(model.selectedCatCoat == cat.coat ? Color.tpAccent : Color.clear, lineWidth: 2)
                         }
                         .contentShape(Rectangle())
@@ -619,7 +619,7 @@ struct FirstRunCalendarPage: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
     }
 
     private func connectGoogle() {
@@ -743,7 +743,7 @@ struct FirstRunFinishPage: View {
                     }
                 }
                 .padding(14)
-                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
                 FirstRunRowView(
                     badge: .icon("lightbulb"),
                     title: language.text("오늘 할 일은 없습니다", "Nothing else to do today"),
@@ -773,25 +773,25 @@ struct FirstRunPermissionSettingsRow: View {
         Button { isPresented = true } label: {
             HStack(spacing: 10) {
                 Image(systemName: "checkmark.shield.fill")
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .semibold))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .medium))
                     .foregroundStyle(Color.tpAccent)
                     .frame(width: 24)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(language.text("권한 설정", "Permission settings"))
-                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .medium))
                     Text(language.text("위치, 건강, 사진, 캘린더, 알림", "Location, Health, Photos, Calendar, Notifications"))
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10.5)), weight: .medium))
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
                 Image(systemName: "chevron.right")
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold))
                     .foregroundStyle(.secondary)
             }
             .foregroundStyle(Color.primary)
             .padding(.vertical, 8)
             .padding(.horizontal, 8)
-            .background(Color.tpAccent.opacity(0.055), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .background(Color.tpAccent.opacity(0.055), in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("permissionSettingsRow")
@@ -823,25 +823,25 @@ struct FirstRunTutorialReplayRow: View {
         Button { isPresented = true } label: {
             HStack(spacing: 10) {
                 Image(systemName: "graduationcap.fill")
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .semibold))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .medium))
                     .foregroundStyle(Color.tpAccent)
                     .frame(width: 24)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(language.text("튜토리얼 다시 보기", "Replay tutorial"))
-                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .medium))
                     Text(language.text("권한, 설정, 화면 사용법", "Permissions, setup, how to use the screen"))
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10.5)), weight: .medium))
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
                 Image(systemName: "chevron.right")
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold))
                     .foregroundStyle(.secondary)
             }
             .foregroundStyle(Color.primary)
             .padding(.vertical, 8)
             .padding(.horizontal, 8)
-            .background(Color.tpAccent.opacity(0.055), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .background(Color.tpAccent.opacity(0.055), in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("firstRunTutorialReplay")

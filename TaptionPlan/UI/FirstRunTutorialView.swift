@@ -37,8 +37,8 @@ struct FirstRunTutorialView: View {
                 .id(step)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .scrollDismissesKeyboard(.interactively)
-                .background(Color.tpCard, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
-                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionCorner.sheet, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: TaptionCorner.sheet, style: .continuous))
                 .shadow(color: Color.tpInk.opacity(0.08), radius: 18, y: 8)
                 .padding(.horizontal, 22)
                 .padding(.top, 6)
@@ -285,7 +285,7 @@ struct FirstRunTutorialView: View {
                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.bodyStrong), weight: .bold))
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity, minHeight: 56)
-                .background(Color.tpAccent, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+                .background(Color.tpAccent, in: RoundedRectangle(cornerRadius: TaptionCorner.sheet, style: .continuous))
                 .shadow(color: Color.tpAccent.opacity(0.28), radius: 12, y: 6)
             }
             .buttonStyle(.plain)
@@ -510,7 +510,7 @@ private struct FirstRunPlacePicker: View {
             .font(.taptionFixed(size: TaptionType.scaled(TaptionType.body), weight: .medium))
             .padding(.horizontal, 12)
             .frame(minHeight: 44)
-            .background(Color.tpBackground, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+            .background(Color.tpBackground, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
             .onChange(of: query) { _, value in
                 searchFailed = false
                 completer.update(query: value, region: searchRegion)
@@ -586,7 +586,7 @@ private struct FirstRunPlacePicker: View {
                 .foregroundStyle(Color.tpSecondary)
         }
         .padding(14)
-        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
     }
 
     private func select(_ completion: MKLocalSearchCompletion) {
@@ -696,7 +696,7 @@ private struct FirstRunPasswordPage: View {
             .foregroundStyle(Color.tpInk)
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
     }
 
     private func note(_ text: String) -> some View {
@@ -783,7 +783,7 @@ private struct FirstRunCountersPage: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(14)
-                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
 
                 VStack(spacing: 2) {
                     Toggle(isOn: $showsSalary) {
@@ -809,7 +809,7 @@ private struct FirstRunCountersPage: View {
                 .tint(Color.tpAccent)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
-                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
             }
             .padding(18)
         }

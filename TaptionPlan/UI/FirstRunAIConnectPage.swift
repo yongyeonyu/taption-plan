@@ -21,7 +21,7 @@ struct FirstRunAIConnectPage: View {
                         if provider != AssistantAIProvider.featured.last { Divider().padding(.leading, 14) }
                     }
                 }
-                .background(Color.tpCard, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
                 Text(AssistantAIProvider.planFootnote(language))
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.caption), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)

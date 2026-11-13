@@ -47,8 +47,8 @@ struct FirstRunCarPage: View {
                                 .foregroundStyle(isCar ? Color.tpAccent : Color.tpBorder)
                         }
                         .padding(12)
-                        .background(Color.tpCard, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .overlay { RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color.tpBorder, lineWidth: TaptionBorder.width) }
+                        .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
+                        .overlay { RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous).stroke(Color.tpBorder, lineWidth: TaptionBorder.width) }
                     }
                     .buttonStyle(.plain)
                     .accessibilityAddTraits(isCar ? .isSelected : [])

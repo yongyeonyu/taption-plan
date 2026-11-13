@@ -181,7 +181,7 @@ private struct FirstRunMapSketch: View {
             FirstRunCuePhases(cue: cue) { phase in
                 scene(size: proxy.size, phase: phase)
             }
-            .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
         }
         .frame(height: height)
     }
@@ -306,7 +306,7 @@ private struct FirstRunMapSketch: View {
         case .play:
             badge("play.fill", tint: .tpAccent)
         case .record:
-            RoundedRectangle(cornerRadius: 11, style: .continuous)
+            RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
                 .stroke(Color.tpHoliday, lineWidth: 3)
             badge("record.circle", tint: .tpHoliday)
         case .render:
@@ -398,7 +398,7 @@ private struct FirstRunMapSketch: View {
                 .font(.system(size: 30, weight: .semibold))
                 .foregroundStyle(Color.tpAccent)
                 .frame(width: 58, height: 58)
-                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
                 .overlay(alignment: .topTrailing) {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 18))
@@ -409,7 +409,7 @@ private struct FirstRunMapSketch: View {
                         .offset(x: 6, y: -6)
                 }
                 .position(target)
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
+            RoundedRectangle(cornerRadius: TaptionCorner.small, style: .continuous)
                 .fill(Color.tpInk)
                 .frame(width: 92, height: 62)
                 .overlay {
@@ -536,7 +536,7 @@ private struct FirstRunClipSketch: View {
                 ZStack(alignment: .top) {
                     ZStack(alignment: .top) {
                         ForEach(Array(clips(phase).enumerated()), id: \.offset) { _, clip in
-                            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                            RoundedRectangle(cornerRadius: TaptionCorner.small, style: .continuous)
                                 .fill(clip.color)
                                 .frame(width: Self.width, height: clip.height)
                                 .offset(y: clip.top)
@@ -620,10 +620,10 @@ struct FirstRunBottomBarSketch: View {
                 button(item)
                     .background {
                         if highlights.contains(item) {
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
                                 .fill(Color.tpAccent.opacity(0.16))
                                 .overlay {
-                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
                                         .stroke(Color.tpAccent, lineWidth: 2)
                                 }
                         }
