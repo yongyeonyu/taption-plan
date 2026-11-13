@@ -232,6 +232,7 @@ enum BusStopLookupRunner {
         if checked > 0 {
             TaptionPlanDiagnosticsLogger.shared.record("bus_stop_lookup", fields: ["checked": String(checked), "stops": String(found)])
         }
+        await BusRouteLookupRunner.run(travel: data.travel, readings: data.readings, defaults: defaults)
     }
 
     /// 지도와 같은 저장소를 거쳐 타일을 읽는다(본 지역은 기기에서 바로). 못 받으면 nil.
@@ -247,5 +248,155 @@ enum BusStopLookupRunner {
               let loaded = try? await OfflineVectorTileCache.shared.load(URLRequest(url: url)),
               loaded.response.statusCode == 200 else { return nil }
         return BusStopCheck.busStops(inTile: loaded.data, id: id)
+    }
+}
+
+/// 버스 노선 확인(BRT1113A01, 대표 지시 「버스노선 api 추가하자」, 객관식 답: 이름에 번호·요금 종류·버스 판별에도).
+/// 탄 곳·내린 곳 가까운 정류소를 국토교통부 TAGO(서버 중계 `/tago/…`, 키는 서버 비밀값)로 찾고, 두 정류소를 함께 지나는 노선을 기억한다.
+/// 서버에 키가 없거나 응답이 없으면 기억하지 않아 예전처럼 정차 모양·정류장만으로 판단한다.
+enum BusRouteCheck {
+    struct Route: Codable, Hashable, Sendable {
+        var number: String
+        /// TAGO 노선 종류(간선버스·지선버스·광역버스·직행좌석버스·마을버스 …).
+        var kind: String
+    }
+
+    struct Stop: Equatable {
+        var cityCode: String
+        var nodeID: String
+        var point: GeoPoint
+    }
+
+    static let key = "busRouteChecks"
+    static let limit = 200
+    /// 정류소로 인정하는 거리.
+    static let stopRadiusMeters = 50.0
+
+    static func cacheKey(_ segment: TravelSegment) -> String {
+        BusStopCheck.cacheKey(.board, segment: segment) + "~" + BusStopCheck.cacheKey(.alight, segment: segment)
+    }
+
+    /// 찾은 공통 노선. nil이면 아직 모름, 빈 배열이면 두 정류소를 함께 지나는 노선이 없다.
+    static func known(_ segment: TravelSegment, defaults: UserDefaults = .standard) -> [Route]? {
+        guard let data = (defaults.dictionary(forKey: key) as? [String: Data])?[cacheKey(segment)] else { return nil }
+        return try? JSONDecoder().decode([Route].self, from: data)
+    }
+
+    static func remember(_ segment: TravelSegment, routes: [Route], defaults: UserDefaults = .standard) {
+        var all = (defaults.dictionary(forKey: key) as? [String: Data]) ?? [:]
+        all[cacheKey(segment)] = try? JSONEncoder().encode(routes)
+        if all.count > limit { all = Dictionary(uniqueKeysWithValues: all.sorted { $0.key > $1.key }.prefix(limit).map { ($0.key, $0.value) }) }
+        defaults.set(all, forKey: key)
+    }
+
+    /// 두 정류소를 함께 지나는 노선(번호 순).
+    static func common(_ board: [Route], _ alight: [Route]) -> [Route] {
+        let numbers = Set(alight.map(\.number))
+        return Array(Set(board.filter { numbers.contains($0.number) })).sorted { $0.number.localizedStandardCompare($1.number) == .orderedAscending }
+    }
+
+    /// 「버스 · 80번」. 노선이 셋 넘게 겹치면 번호를 적지 않는다.
+    static func title(_ routes: [Route]) -> String {
+        guard !routes.isEmpty, routes.count <= 2 else { return "버스" }
+        return "버스 · " + routes.map { "\($0.number)번" }.joined(separator: "·")
+    }
+
+    /// 요금표 수단. 노선 종류가 여럿이면 가장 싼 쪽(간선·지선)으로 본다.
+    static func fareMode(_ routes: [Route]) -> String {
+        let kinds = Set(routes.map(\.kind))
+        if kinds.isEmpty || kinds.contains(where: { !$0.contains("광역") && !$0.contains("좌석") }) { return "서울_간선지선" }
+        if kinds.allSatisfy({ $0.contains("광역") }) { return "서울_광역" }
+        return "경기_직행좌석"
+    }
+
+    // MARK: TAGO 응답(items.item은 하나면 객체, 여럿이면 배열이고 숫자가 문자열·숫자로 섞여 온다)
+
+    private static func items(_ data: Data) -> [[String: Any]] {
+        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let body = (root["response"] as? [String: Any])?["body"] as? [String: Any],
+              let items = body["items"] as? [String: Any] else { return [] }
+        if let list = items["item"] as? [[String: Any]] { return list }
+        if let one = items["item"] as? [String: Any] { return [one] }
+        return []
+    }
+
+    private static func text(_ value: Any?) -> String? {
+        switch value {
+        case let string as String: string.trimmingCharacters(in: .whitespaces).isEmpty ? nil : string.trimmingCharacters(in: .whitespaces)
+        case let number as NSNumber: number.stringValue
+        default: nil
+        }
+    }
+
+    static func stops(_ data: Data) -> [Stop] {
+        items(data).compactMap { item in
+            guard let city = text(item["citycode"]), let node = text(item["nodeid"]),
+                  let lat = text(item["gpslati"]).flatMap(Double.init), let lng = text(item["gpslong"]).flatMap(Double.init) else { return nil }
+            return Stop(cityCode: city, nodeID: node, point: GeoPoint(latitude: lat, longitude: lng, altitude: 0, horizontalAccuracy: 0, verticalAccuracy: 0))
+        }
+    }
+
+    static func routes(_ data: Data) -> [Route] {
+        items(data).compactMap { item in
+            text(item["routeno"]).map { Route(number: $0, kind: text(item["routetp"]) ?? "") }
+        }
+    }
+
+    /// 점들에서 가장 가까운 정류소(반경 안).
+    static func nearest(_ stops: [Stop], to points: [GeoPoint]) -> Stop? {
+        stops.compactMap { stop -> (Stop, Double)? in
+            let meters = points.map { distanceMeters($0, stop.point) }.min() ?? .infinity
+            return meters <= stopRadiusMeters ? (stop, meters) : nil
+        }.min { $0.1 < $1.1 }?.0
+    }
+}
+
+/// 정류장 확인 뒤에 이어서 부른다. 승하차 둘 다 정류장인 차량·버스 구간만 노선을 찾는다(호출 수를 아끼려고).
+@MainActor
+enum BusRouteLookupRunner {
+    static func run(travel: [TravelSegment], readings: [SensorReading], defaults: UserDefaults = .standard) async {
+        guard let host = TripRelay.host else { return }
+        var token: String?
+        var checked = 0, found = 0
+        for segment in travel where (segment.mode == .car || segment.mode == .bus) && BusRouteCheck.known(segment, defaults: defaults) == nil {
+            guard BusStopCheck.known(.board, segment: segment, defaults: defaults) == true,
+                  BusStopCheck.known(.alight, segment: segment, defaults: defaults) == true else { continue }
+            if token == nil { token = await AssistantRegistration.searchToken() }
+            guard let token else { return }
+            let boardPoints = BusStopCheck.points(.board, segment: segment, readings: readings)
+            let alightPoints = BusStopCheck.points(.alight, segment: segment, readings: readings)
+            guard let boardCenter = boardPoints.last, let alightCenter = alightPoints.first,
+                  let boardStops = await fetch(host: host, path: "/tago/stops", query: ["lat": String(boardCenter.latitude), "lng": String(boardCenter.longitude)], token: token),
+                  let alightStops = await fetch(host: host, path: "/tago/stops", query: ["lat": String(alightCenter.latitude), "lng": String(alightCenter.longitude)], token: token)
+            else { return }
+            guard let board = BusRouteCheck.nearest(BusRouteCheck.stops(boardStops), to: boardPoints),
+                  let alight = BusRouteCheck.nearest(BusRouteCheck.stops(alightStops), to: alightPoints) else {
+                BusRouteCheck.remember(segment, routes: [], defaults: defaults)
+                checked += 1
+                continue
+            }
+            guard let boardRoutes = await fetch(host: host, path: "/tago/routes", query: ["cityCode": board.cityCode, "nodeId": board.nodeID], token: token),
+                  let alightRoutes = await fetch(host: host, path: "/tago/routes", query: ["cityCode": alight.cityCode, "nodeId": alight.nodeID], token: token)
+            else { return }
+            let common = BusRouteCheck.common(BusRouteCheck.routes(boardRoutes), BusRouteCheck.routes(alightRoutes))
+            BusRouteCheck.remember(segment, routes: common, defaults: defaults)
+            checked += 1
+            if !common.isEmpty { found += 1 }
+        }
+        if checked > 0 {
+            TaptionPlanDiagnosticsLogger.shared.record("bus_route_lookup", fields: ["checked": String(checked), "found": String(found)])
+        }
+    }
+
+    /// 서버에 키가 없거나(503) 실패하면 nil — 기억하지 않고 다음에 다시 본다.
+    private static func fetch(host: String, path: String, query: [String: String], token: String) async -> Data? {
+        guard var components = URLComponents(string: "https://\(host)\(path)") else { return nil }
+        components.queryItems = query.map { URLQueryItem(name: $0.key, value: $0.value) }
+        guard let url = components.url else { return nil }
+        var request = URLRequest(url: url, timeoutInterval: 8)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+        return data
     }
 }

@@ -1475,3 +1475,52 @@ final class StayPlaceNamingTests: XCTestCase {
         XCTAssertEqual(StayPlaceNaming.pointsNeedingNames([stay(minutes: 90)], places: [place], known: [:], asOf: base.addingTimeInterval(7_200)).count, 1)
     }
 }
+
+/// 버스 노선 확인(BRT1113A01): TAGO 응답 읽기, 공통 노선, 이름·요금·판별.
+final class BusRouteCheckTests: XCTestCase {
+    func testReadsTagoItemsWhetherOneOrMany() {
+        let many = Data(#"{"response":{"body":{"items":{"item":[{"citycode":23,"nodeid":"ICB164000123","nodenm":"정류소","gpslati":37.53,"gpslong":126.67},{"citycode":"23","nodeid":"ICB164000124","gpslati":"37.5302","gpslong":"126.6701"}]}}}}"#.utf8)
+        XCTAssertEqual(BusRouteCheck.stops(many).map(\.nodeID), ["ICB164000123", "ICB164000124"])
+        let one = Data(#"{"response":{"body":{"items":{"item":{"routeno":80,"routetp":"간선버스"}}}}}"#.utf8)
+        XCTAssertEqual(BusRouteCheck.routes(one), [.init(number: "80", kind: "간선버스")])
+        XCTAssertTrue(BusRouteCheck.routes(Data(#"{"response":{"body":{"items":""}}}"#.utf8)).isEmpty)
+    }
+
+    func testCommonRoutesNameAndFare() {
+        let board: [BusRouteCheck.Route] = [.init(number: "80", kind: "간선버스"), .init(number: "1100", kind: "광역버스")]
+        let alight: [BusRouteCheck.Route] = [.init(number: "80", kind: "간선버스"), .init(number: "42", kind: "지선버스")]
+        let common = BusRouteCheck.common(board, alight)
+        XCTAssertEqual(common.map(\.number), ["80"])
+        XCTAssertEqual(BusRouteCheck.title(common), "버스 · 80번")
+        XCTAssertEqual(BusRouteCheck.title([]), "버스")
+        XCTAssertEqual(BusRouteCheck.fareMode(common), "서울_간선지선")
+        XCTAssertEqual(BusRouteCheck.fareMode([.init(number: "1100", kind: "광역버스")]), "서울_광역")
+        XCTAssertEqual(BusRouteCheck.fareMode([.init(number: "9100", kind: "직행좌석버스")]), "경기_직행좌석")
+    }
+
+    func testNoCommonRouteVetoesABusAndKnownRouteNamesTheRecord() {
+        let base = Date(timeIntervalSince1970: 1_794_000_000)
+        var readings: [SensorReading] = []
+        var meters = 0.0
+        for index in 0..<200 {
+            let moving = (index % 16) < 12
+            let point = GeoPoint(latitude: 37.5 + meters / 111_000, longitude: 126.7, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: 10)
+            readings.append(SensorReading(timestamp: base.addingTimeInterval(TimeInterval(index * 5)), point: point, motion: .automotive, motionConfidence: .high))
+            if moving { meters += 45 }
+        }
+        let ride = TravelSegment(mode: .car, span: TimeSpan(start: readings.first!.timestamp, end: readings.last!.timestamp), distanceMeters: 0, confidence: .high, evidence: [])
+        XCTAssertTrue(BusRideRecognizer.looksLikeBus(BusRideRecognizer.stops(in: readings)))
+        let defaults = UserDefaults(suiteName: "BusRouteCheckTests")!
+        defaults.removePersistentDomain(forName: "BusRouteCheckTests")
+        BusRouteCheck.remember(ride, routes: [], defaults: defaults)
+        XCTAssertEqual(BusRideRecognizer.applying([ride], readings: readings, registered: ["내 차"], corrections: [], stopDefaults: defaults).first?.mode, .car,
+                       "두 정류소를 함께 지나는 노선이 없으면 버스가 아니다")
+        BusRouteCheck.remember(ride, routes: [.init(number: "80", kind: "간선버스")], defaults: defaults)
+        let bus = BusRideRecognizer.applying([ride], readings: readings, registered: ["내 차"], corrections: [], stopDefaults: defaults).first
+        XCTAssertEqual(bus?.mode, .bus)
+        XCTAssertTrue(bus?.evidence.contains("노선 80") == true)
+        let record = ActualRecord(planID: nil, title: "버스", categoryID: "movement", startedAt: ride.span.start, endedAt: ride.span.end, source: .motion,
+                                  behavior: WatchBehaviorKind.publicTransit.rawValue, evidence: ["버스 구간 확정"], modelVersion: "classifier-v1/motion")
+        XCTAssertEqual(BusRideRecognizer.retitling([record], busSpans: [ride.span], titles: ["버스 · 80번"], asOf: ride.span.end).first?.title, "버스 · 80번")
+    }
+}

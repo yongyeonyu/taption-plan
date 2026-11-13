@@ -12,6 +12,8 @@ enum LedgerTransitFare {
         var start: Date
         var end: Date
         var meters: Double
+        /// 버스 노선 종류로 정한 요금표 수단(BRT1113A01). 모르면 nil(간선·지선).
+        var fareMode: String? = nil
     }
 
     struct Addition: Equatable {
@@ -38,7 +40,9 @@ enum LedgerTransitFare {
     static func rides(_ segments: [TravelSegment]) -> [Ride] {
         segments.compactMap { segment -> Ride? in
             guard tableMode(segment.mode) != nil, segment.span.end.timeIntervalSince(segment.span.start) >= minimumSeconds else { return nil }
-            return Ride(mode: segment.mode, start: segment.span.start, end: segment.span.end, meters: max(0, segment.distanceMeters))
+            let routes = segment.mode == .bus ? BusRouteCheck.known(segment).flatMap { $0.isEmpty ? nil : $0 } : nil
+            return Ride(mode: segment.mode, start: segment.span.start, end: segment.span.end, meters: max(0, segment.distanceMeters),
+                        fareMode: routes.map(BusRouteCheck.fareMode))
         }
         .sorted { $0.start < $1.start }
     }
@@ -56,7 +60,7 @@ enum LedgerTransitFare {
 
     static func title(_ legs: [FareLeg], language: MapHomeLanguage) -> String {
         let modes = Set(legs.map(\.mode))
-        if modes == ["서울_간선지선"] { return language.text("버스 요금", "Bus fare") }
+        if modes.isSubset(of: ["서울_간선지선", "서울_광역", "경기_직행좌석"]) { return language.text("버스 요금", "Bus fare") }
         if modes == ["rail"] { return language.text("지하철 요금", "Subway fare") }
         return language.text("대중교통 요금", "Transit fare")
     }
@@ -67,7 +71,7 @@ enum LedgerTransitFare {
         calculator: FareCalculator, language: MapHomeLanguage
     ) -> [Addition] {
         let legs = rides.compactMap { ride in
-            tableMode(ride.mode).map { FareLeg(mode: $0, distanceKm: ride.meters / 1_000, boardedAt: ride.start, alightedAt: ride.end) }
+            (ride.fareMode ?? tableMode(ride.mode)).map { FareLeg(mode: $0, distanceKm: ride.meters / 1_000, boardedAt: ride.start, alightedAt: ride.end) }
         }
         guard !legs.isEmpty, let trips = calculator.trips(region: region, legs: legs, age: .adult) else { return [] }
         return trips.compactMap { trip -> Addition? in

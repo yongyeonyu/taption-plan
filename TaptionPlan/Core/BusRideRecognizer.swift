@@ -76,11 +76,15 @@ enum BusRideRecognizer {
             let atStops = board == true && alight == true
             // 정차 모양은 늘 맞아야 한다. 정류장만으로 버스라 하면 정류장 가까운 집·가게 사이를 차로 간 것이 버스가 됐다
             // (BRF1113A01, 대표 신고: 세컨카 레이로 950m·5분 간 것이 버스). 등록한 차가 없으면 정류장도 맞아야 한다.
+            // 두 정류소를 함께 지나는 노선이 없다고 확인됐으면 버스가 아니다(BRT1113A01). 노선을 모르면 예전처럼 판단한다.
+            let routes = BusRouteCheck.known(segment, defaults: stopDefaults)
+            if routes?.isEmpty == true { return segment }
             let isBus = looksLikeBus(found) && (registered.isEmpty ? atStops : true)
             guard isBus else { return segment }
             var value = segment
             value.mode = .bus
             value.confidence = atStops ? .high : .medium
+            if let routes, !routes.isEmpty { value.evidence.append("노선 " + routes.map(\.number).joined(separator: "·")) }
             if value.distanceMeters <= 0 { value.distanceMeters = found.meters }
             value.evidence.removeAll { $0 == "차량 종류는 사용자 확인 필요" }
             value.evidence.append(atStops ? stopEvidence : "\(evidencePrefix) \(found.short)회")
@@ -94,20 +98,25 @@ enum BusRideRecognizer {
     static func retitling(
         _ actuals: [ActualRecord],
         busSpans: [TimeSpan],
+        titles: [String] = [],
         activityCorrections: [UUID: ActivityCorrection] = [:],
         asOf now: Date
     ) -> [ActualRecord] {
         guard !busSpans.isEmpty else { return actuals }
+        // 노선을 알면 「버스 · 80번」(BRT1113A01). 이미 「버스」로 바꾼 기록도 번호를 붙인다.
+        func title(for index: Int) -> String { titles.indices.contains(index) ? titles[index] : "버스" }
         // 탑승 직전·직후 몇십 초짜리 「자동차」 조각도 같은 버스다(대표 330 원본: 10:14:11~10:14:30 조각, 버스는 10:15:09부터).
         let padded = busSpans.map { TimeSpan(start: $0.start.addingTimeInterval(-edgeSeconds), end: $0.end.addingTimeInterval(edgeSeconds)) }
         return actuals.map { actual in
+            let ours = actual.evidence.contains("버스 구간 확정")
             guard !ActualRecord.userOwned(actual, activityCorrections: activityCorrections),
-                  MovementPresentation.mode(for: actual) == .car,
-                  padded.contains(where: { $0.overlapsMostly(actual.span(asOf: now)) }) else { return actual }
+                  MovementPresentation.mode(for: actual) == .car || ours,
+                  let index = padded.firstIndex(where: { $0.overlapsMostly(actual.span(asOf: now)) }),
+                  actual.title != title(for: index) || !ours else { return actual }
             var value = actual
-            value.title = "버스"
+            value.title = title(for: index)
             value.behavior = WatchBehaviorKind.publicTransit.rawValue
-            value.evidence.append("버스 구간 확정")
+            if !ours { value.evidence.append("버스 구간 확정") }
             return value
         }
     }

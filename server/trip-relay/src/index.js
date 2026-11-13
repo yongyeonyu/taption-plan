@@ -59,6 +59,51 @@ export async function kakaoKeyword(request, env, fetcher = fetch, category = fal
   });
 }
 
+// 버스 노선 중계(BRT1113A01, 대표 지시 「버스노선 api 추가하자」). 국토교통부 TAGO(공공데이터포털) 버스정류소 정보.
+// 키는 Worker 비밀값 TAGO_SERVICE_KEY(공공데이터포털 「일반 인증키 Decoding」 값)이고 앱에 넣지 않는다. 카카오와 같은 검색 한도를 쓴다.
+// /tago/stops?lat&lng: 좌표 근처 정류소(도시 코드·정류소 ID·이름·좌표). /tago/routes?cityCode&nodeId: 그 정류소를 지나는 노선(번호·종류).
+const TAGO_BASE = "https://apis.data.go.kr/1613000/BusSttnInfoInqireService/";
+const CITY_CODE = /^\d{1,6}$/;
+const NODE_ID = /^[A-Z]{3}\d{1,12}$/;
+
+export async function tagoProxy(request, env, fetcher = fetch) {
+  if (request.method !== "GET") return json({ error: "method_not_allowed" }, 405);
+  if (!env.TAGO_SERVICE_KEY) return json({ error: "unavailable" }, 503);
+  const url = new URL(request.url), incoming = url.searchParams;
+  let target;
+  if (url.pathname === "/tago/stops") {
+    const lat = Number(incoming.get("lat") ?? NaN), lng = Number(incoming.get("lng") ?? NaN);
+    if (!(Math.abs(lat) <= 90) || !(Math.abs(lng) <= 180)) return json({ error: "bad_query" }, 400);
+    target = new URL(TAGO_BASE + "getCrdntPrxmtSttnList");
+    target.searchParams.set("gpsLati", String(lat));
+    target.searchParams.set("gpsLong", String(lng));
+    target.searchParams.set("numOfRows", "10");
+  } else {
+    const cityCode = incoming.get("cityCode") ?? "", nodeId = incoming.get("nodeId") ?? "";
+    if (!CITY_CODE.test(cityCode) || !NODE_ID.test(nodeId)) return json({ error: "bad_query" }, 400);
+    target = new URL(TAGO_BASE + "getSttnThrghRouteList");
+    target.searchParams.set("cityCode", cityCode);
+    target.searchParams.set("nodeid", nodeId);
+    target.searchParams.set("numOfRows", "100");
+  }
+  target.searchParams.set("pageNo", "1");
+  target.searchParams.set("_type", "json");
+  target.searchParams.set("serviceKey", env.TAGO_SERVICE_KEY);
+  const upstream = await fetcher(target);
+  return new Response(await upstream.text(), {
+    status: upstream.status,
+    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+  });
+}
+
+async function tagoRoute(request, ctx) {
+  if (request.method === "GET" && ctx.env.TAGO_SERVICE_KEY) {
+    const perIp = await (await ipState(ctx.env, request)).call("countDaily", { name: "kakao", limit: LIMITS.kakaoPerIpDay, now: ctx.now, expire: true });
+    if (!perIp.ok) return tooMany("kakao_daily_limit", perIp.retryAfter);
+  }
+  return tagoProxy(request, ctx.env, ctx.env.FETCH);
+}
+
 // 경로마다 메서드별로 필요한 범위(AIR1110A02). master > write > read. search는 카카오 중계만.
 // read: AI가 읽기만. write: 읽기 + 계획·명령 보내기. 앱 전용(올리기·지우기·큐 가져오기·키·PIN·연결 코드)은 master만.
 // 본문이 있는 쓰기는 IP마다 POST_LIMIT을 더 받는다(withBody). legacy: 이 요청 전에 마칠 예전 자료 옮기기.
@@ -159,6 +204,12 @@ const ROUTES = {
   "/kakao/category": {
     GET: ["search", kakaoRoute],
   },
+  "/tago/stops": {
+    GET: ["search", tagoRoute],
+  },
+  "/tago/routes": {
+    GET: ["search", tagoRoute],
+  },
   "/fx": {
     GET: ["search", fxRoute],
   },
@@ -214,7 +265,7 @@ async function authorized(request, env, url, route, pathKey = null) {
   const [need, run, part] = entry;
   const state = userState(env, auth.master);
   const admission = await state.call("admit", {
-    now, registration: auth.kind === "master", entry: auth.entry, adopt: await adoptInfo(auth), kakao: url.pathname.startsWith("/kakao/"),
+    now, registration: auth.kind === "master", entry: auth.entry, adopt: await adoptInfo(auth), kakao: url.pathname.startsWith("/kakao/") || url.pathname.startsWith("/tago/"),
     client: auth.kind === "master" ? clientInfo(request.headers.get("x-bokki-client")) : undefined,
   });
   if (!admission.ok) {
@@ -248,7 +299,7 @@ async function route(request, env, url) {
   if (publicRoute) return request.method === "GET" ? publicRoute(request, env, url) : json({ error: "method_not_allowed" }, 405);
   if (!env.USER_STATE) return json({ error: "unavailable" }, 503);
   // 인증 전에 IP마다 요청 수를 제한한다(finding 3). 카카오는 자기 제한(KAKAO_LIMIT)을 쓴다(N2: 이것도 인증 전).
-  if (await limited(url.pathname.startsWith("/kakao/") ? env.KAKAO_LIMIT : env.REQUEST_LIMIT, request)) return tooMany();
+  if (await limited(url.pathname.startsWith("/kakao/") || url.pathname.startsWith("/tago/") ? env.KAKAO_LIMIT : env.REQUEST_LIMIT, request)) return tooMany();
   switch (url.pathname) {
     case "/register": return registerRoute(request, env, now);
     case "/oauth/register": return registerClient(request, env, now);
