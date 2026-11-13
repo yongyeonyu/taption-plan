@@ -82,7 +82,7 @@ struct MapHomeCalendarTitleMenu: View {
                 Text(label)
                 Image(systemName: "chevron.up.chevron.down")
             }
-            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
             .foregroundStyle(Color.tpReferenceBlue)
         }
         .accessibilityLabel(Text("\(title) \(language.text("상세활동", "activity")): \(label)"))
@@ -106,7 +106,7 @@ struct MapHomeCalendarButton: View {
                 .overlay(alignment: .topTrailing) {
                     if count > 0 {
                         Text("\(count)")
-                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 5)
                             .padding(.vertical, 2)
@@ -153,7 +153,7 @@ struct MapHomeTodayCalendarList: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
-                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
                 .foregroundStyle(Color.tpSecondary)
             switch state {
             case .loading:
@@ -168,7 +168,7 @@ struct MapHomeTodayCalendarList: View {
                         await load()
                     }
                 }
-                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
             case .failed:
                 Text(language.text("구글 캘린더를 불러오지 못했어요. 설정에서 연결을 확인해 주세요.", "Could not load Google Calendar. Check the connection in Settings."))
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
@@ -186,10 +186,10 @@ struct MapHomeTodayCalendarList: View {
                         VStack(alignment: .leading, spacing: 1) {
                             // 제목 위에 시간을 적어 제목이 길어도 언제인지 바로 보인다.
                             Text(timeText(event))
-                                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
+                                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
                                 .foregroundStyle(Color.tpAccent)
                             Text(event.title)
-                                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
+                                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                                 .foregroundStyle(Color.tpInk)
                                 .fixedSize(horizontal: false, vertical: true)
                             if let notes = event.notes {
@@ -210,7 +210,7 @@ struct MapHomeTodayCalendarList: View {
         }
         .padding(12)
         .frame(width: 280, alignment: .leading)
-        .mapHomeGlass(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .mapHomeGlass(in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
         .task(id: MapHomeDayCalendarLoader.key(day: date)) { await load() }
     }
 
@@ -317,7 +317,7 @@ struct MapHomeCalendarConnectSheet: View {
             )
             if let message {
                 Text(message)
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                     .foregroundStyle(Color.tpAccent)
             }
             Spacer(minLength: 0)
@@ -335,12 +335,12 @@ struct MapHomeCalendarConnectSheet: View {
         } label: {
             HStack(spacing: 12) {
                 logo.frame(width: 22, height: 22)
-                Text(title).font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold)).foregroundStyle(Color.tpInk)
+                Text(title).font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold)).foregroundStyle(Color.tpInk)
                 Spacer()
             }
             .padding(.horizontal, 16)
             .frame(height: 54)
-            .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
         }
         .buttonStyle(.plain)
         .disabled(isWorking)
