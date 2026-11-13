@@ -134,6 +134,12 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertEqual(MapHomePlaybackLocation.ridingMode(.car, at: start.addingTimeInterval(60), travel: [segment]), .subway)
         XCTAssertEqual(MapHomePlaybackLocation.ridingMode(.walking, at: start.addingTimeInterval(60), travel: [segment]), .walking)
         XCTAssertEqual(MapHomePlaybackLocation.ridingMode(.car, at: start.addingTimeInterval(3600), travel: [segment]), .car)
+        // 버스 구간 안의 자동차 모션은 버스로 재생한다(BSV1113A01).
+        var bus = segment
+        bus.mode = .bus
+        XCTAssertEqual(MapHomePlaybackLocation.ridingMode(.car, at: start.addingTimeInterval(60), travel: [bus]), .bus)
+        XCTAssertEqual(MapHomePlaybackLocation.ridingMode(.walking, at: start.addingTimeInterval(60), travel: [bus]), .walking)
+        XCTAssertEqual(MapHomePlaybackLocation.ridingMode(.car, at: start.addingTimeInterval(3600), travel: [bus]), .car)
     }
 
     /// GPS가 끊긴 구간은 앞뒤 표본으로 수단과 위치를 잇는다: 비행기, 지하차도의 차, 제자리는 수단 없음.
