@@ -1,5 +1,5 @@
 {
- "ui": 4807,
+ "ui": 4808,
  "catalog": 502,
  "unread": [
   {
@@ -760,31 +760,31 @@
   },
   {
    "file": "TaptionPlan/UI/TravelModeView.swift",
-   "line": 949,
-   "ko": "sheet.leftover",
+   "line": 831,
+   "ko": "money.amount",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/TravelModeView.swift",
-   "line": 952,
+   "line": 950,
    "ko": "sheet.myCost",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/TravelModeView.swift",
-   "line": 831,
-   "ko": "money.leftover",
+   "line": 954,
+   "ko": "sheet.leftover",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/TravelModeView.swift",
-   "line": 831,
-   "ko": "money.leftover",
+   "line": 985,
+   "ko": "planned",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/TravelPlanSpend.swift",
-   "line": 26,
+   "line": 36,
    "ko": "$0.0",
    "en": "$0.1"
   },
