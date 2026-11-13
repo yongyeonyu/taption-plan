@@ -275,13 +275,23 @@ struct TravelPlanHistory: Equatable {
         var item: TravelTripItem?
         var place: TravelItemPlace?
         var exists: Bool?
+        /// 한 번에 함께 바뀐 걸음들(코스 순서 바꾸기). 되돌릴 때는 거꾸로 하나씩 되돌린다.
+        var group: [Step] = []
 
         var inverse: Step {
             var step = self
             step.move = -move
             step.resize = -resize
             step.exists = exists.map { !$0 }
+            step.group = group.reversed().map(\.inverse)
             return step
+        }
+
+        /// 코스 순서를 바꿔 여러 일정의 시각이 함께 옮겨진 걸음. 옮겨진 것이 없으면 nil.
+        static func reorder(tripID: String, moves: [String: Int], title: String) -> Step? {
+            let steps = moves.filter { $0.value != 0 }.sorted { $0.key < $1.key }
+                .map { Step(tripID: tripID, itemID: $0.key, move: $0.value, resize: 0, summary: "") }
+            return steps.isEmpty ? nil : Step(tripID: tripID, itemID: "", move: 0, resize: 0, summary: "↕ " + title, group: steps)
         }
 
         /// 일정을 넣은 걸음(`exists` true)이나 지운 걸음(false).
@@ -330,7 +340,9 @@ struct TravelPlanHistory: Equatable {
 extension AppModel {
     /// 되돌리기·다시 하기에서 나온 한 걸음을 저장소에 반영한다: 넣기·지우기면 일정을 되살리거나 지우고, 아니면 시각을 옮긴다.
     func applyTravelHistory(_ step: TravelPlanHistory.Step) async {
-        if let exists = step.exists, let item = step.item {
+        if !step.group.isEmpty {
+            for part in step.group { await applyTravelHistory(part) }
+        } else if let exists = step.exists, let item = step.item {
             _ = exists ? await restoreTripItem(item, place: step.place) : await deleteTripItem(tripID: step.tripID, itemID: step.itemID)
         } else if step.move != 0 {
             _ = await moveTripItem(tripID: step.tripID, itemID: step.itemID, by: TimeInterval(step.move * 60))
@@ -416,6 +428,11 @@ struct TravelCourseView: View {
     let onEdit: (TravelPlanTableModel.Block) -> Void
     /// 「곳 더하기」: 장소를 찾아 그날 코스 끝에 붙인다.
     var onAddStop: () -> Void = {}
+    /// 끌어서 순서를 바꿈: 함께 옮겨질 일정들의 걸음. 밀어서 지움.
+    var onReorder: (TravelPlanHistory.Step) -> Void = { _ in }
+    var onDelete: (TravelPlanTableModel.Block) -> Void = { _ in }
+    /// 순서를 바꿀 수 없을 때 잠깐 보이는 안내.
+    @State private var notice = ""
 
     @State private var images: [String: UIImage] = [:]
 
@@ -428,13 +445,33 @@ struct TravelCourseView: View {
             if let current {
                 nowCard(blocks, current)
                 Divider().overlay(TravelInk.border)
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        LazyVStack(spacing: 0) {
-                            ForEach(Array(blocks.enumerated()), id: \.element.id) { index, block in row(block, order: index + 1, isCurrent: index == current) }
-                            addStopButton.padding(.vertical, 8)
+                if !notice.isEmpty {
+                    Text(notice).font(.caption).foregroundStyle(TravelInk.actual).padding(.horizontal, 12).padding(.vertical, 4)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .task(id: notice) {
+                            try? await Task.sleep(for: .seconds(4))
+                            if !Task.isCancelled { notice = "" }
                         }
+                }
+                ScrollViewReader { proxy in
+                    List {
+                        ForEach(Array(blocks.enumerated()), id: \.element.id) { index, block in
+                            row(block, order: index + 1, isCurrent: index == current)
+                                .listRowInsets(EdgeInsets())
+                                .listRowSeparator(.hidden)
+                                .listRowBackground(index == current ? TravelInk.planTint : Color.clear)
+                                .swipeActions(edge: .trailing) {
+                                    Button(language.text("지우기", "Delete"), role: .destructive) { onDelete(block) }
+                                }
+                        }
+                        // 길게 눌러 끌면 순서가 바뀌고, 시각은 그 구간 안에서 순서대로 다시 잡힌다.
+                        .onMove { from, to in reorder(blocks, from: from, to: to) }
+                        addStopButton.frame(maxWidth: .infinity).padding(.vertical, 8)
+                            .listRowInsets(EdgeInsets()).listRowSeparator(.hidden).listRowBackground(Color.clear)
                     }
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
+                    .environment(\.defaultMinListRowHeight, 44)
                     .onChange(of: current) { _, index in withAnimation(.snappy(duration: 0.25)) { proxy.scrollTo(blocks[index].id, anchor: .center) } }
                 }
             } else {
@@ -450,6 +487,15 @@ struct TravelCourseView: View {
         .foregroundStyle(TravelInk.plan)
         .task(id: blocks.map(\.id)) { await loadPhotos(blocks) }
         .accessibilityIdentifier("travelCourse")
+    }
+
+    private func reorder(_ blocks: [TravelPlanTableModel.Block], from: IndexSet, to: Int) {
+        guard let source = from.first, let tripID = items.first?.tripID else { return }
+        guard let moves = TravelCoursePlanner.reorder(blocks, from: source, to: to) else {
+            notice = language.text("예약된 일정이나 잠을 사이에 두고는 순서를 바꿀 수 없습니다.", "You can’t reorder across a booked plan or sleep.")
+            return
+        }
+        if let step = TravelPlanHistory.Step.reorder(tripID: tripID, moves: moves, title: blocks[source].title) { onReorder(step) }
     }
 
     private var addStopButton: some View {
@@ -512,7 +558,6 @@ struct TravelCourseView: View {
         }
         .padding(.horizontal, 12)
         .frame(height: 52)
-        .background(isCurrent ? TravelInk.planTint : .clear)
         .contentShape(Rectangle())
         // 누르면 재생 헤드가 그 일정 시작으로 가고(지도의 고양이도 따라간다) 그 일정이 선택된다.
         .onTapGesture {
@@ -575,6 +620,26 @@ enum TravelCoursePlanner {
     static func nextSlot(blocks: [TravelPlanTableModel.Block], kind: String, nowMinute: Int?) -> (start: Int, duration: Int) {
         let start = TravelQuickEntry.nextStart(lastEndMinute: blocks.filter { $0.kind != "sleep" }.map(\.endMinute).max(), nowMinute: nowMinute)
         return (start, max(TravelQuickEntry.step, min(TravelQuickEntry.defaultDuration(kind: kind), 1_440 - start)))
+    }
+
+    /// 코스 순서 바꾸기(C3): `from`번째를 `to` 자리(옮기기 전 번호)로. 바뀐 구간 안에서만 시각을 다시 잡는다 —
+    /// 구간의 첫 시작과 일정 사이 틈은 자리에 그대로 두고, 길이는 일정을 따라간다. 구간 밖은 건드리지 않는다.
+    /// 구간에 예약된 일정이나 잠이 끼어 있으면 nil(시각이 정해진 것이라 옮기지 않는다). 돌려주는 값은 일정별로 옮길 분.
+    static func reorder(_ blocks: [TravelPlanTableModel.Block], from: Int, to: Int) -> [String: Int]? {
+        guard blocks.indices.contains(from), (0...blocks.count).contains(to) else { return [:] }
+        var order = blocks
+        order.move(fromOffsets: IndexSet(integer: from), toOffset: to)
+        guard let low = order.indices.first(where: { order[$0].id != blocks[$0].id }),
+              let high = order.indices.last(where: { order[$0].id != blocks[$0].id }) else { return [:] }
+        guard !blocks[low...high].contains(where: { $0.tripStatus == .booked || $0.kind == "sleep" }) else { return nil }
+        var moves: [String: Int] = [:], cursor = blocks[low].startMinute
+        for index in low...high {
+            let block = order[index]
+            moves[block.id] = cursor - block.startMinute
+            cursor += block.endMinute - block.startMinute
+            if index < high { cursor += max(0, blocks[index + 1].startMinute - blocks[index].endMinute) }
+        }
+        return moves
     }
 
     /// Apple 지도가 알려 준 장소 분류(`MKPointOfInterestCategory`의 원래 값)로 일정 종류를 짐작한다. 모르면 관광.

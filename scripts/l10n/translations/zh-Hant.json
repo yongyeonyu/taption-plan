@@ -4629,6 +4629,7 @@
 "예상 요금 {0}원|Estimated fare ₩{0}": "預估票價 ₩{0}",
 "예상 지출|Planned spend": "預計支出",
 "예시|Example": "範例",
+"예약된 일정이나 잠을 사이에 두고는 순서를 바꿀 수 없습니다.|You can’t reorder across a booked plan or sleep.": "無法跨過已預訂的行程或睡眠來調整順序。",
 "예약됨|Booked": "已預訂",
 "예전 AI 연결 PIN 6자리|Old 6-digit AI PIN": "舊的 6 位數 AI 連線 PIN",
 "예전 PIN을 잊었어요|I forgot the old PIN": "我忘了舊 PIN",

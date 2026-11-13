@@ -671,6 +671,35 @@ final class TravelTripUnitTests: XCTestCase {
         XCTAssertEqual(TravelCoursePlanner.kind(forCategory: nil), "sight")
     }
 
+    /// TVV1113A01 C3: 코스 순서를 바꾸면 바뀐 구간 안에서만 시각이 다시 잡힌다 — 구간의 첫 시작과 틈은 자리에, 길이는 일정에.
+    func testCourseReorderRetimesOnlyTheChangedRange() throws {
+        func block(_ id: String, _ start: Int, _ end: Int, kind: String = "sight", booked: Bool = false) -> TravelPlanTableModel.Block {
+            .init(id: id, column: 0, startMinute: start, endMinute: end, title: id, tripStatus: booked ? .booked : nil, status: .pending, kind: kind)
+        }
+        // a 09:00–10:00, (틈 30) b 10:30–11:00, (틈 0) c 11:00–13:00, (틈 60) d 14:00–15:00
+        let blocks = [block("a", 540, 600), block("b", 630, 660), block("c", 660, 780), block("d", 840, 900)]
+        // c를 맨 앞으로: 구간은 a·b·c. 새 순서 c, a, b — 첫 시작 09:00, 틈 30·0은 자리에 남는다.
+        let moves = try XCTUnwrap(TravelCoursePlanner.reorder(blocks, from: 2, to: 0))
+        XCTAssertEqual(moves, ["c": -120, "a": 150, "b": 120], "c 09:00–11:00, a 11:30–12:30, b 12:30–13:00")
+        XCTAssertNil(moves["d"], "구간 밖은 건드리지 않는다")
+        // 구간 끝(b의 새 끝 13:00)은 원래 c의 끝과 같아 뒤 일정 d와의 틈이 그대로다.
+        XCTAssertEqual(blocks[1].endMinute + (moves["b"] ?? 0), blocks[2].endMinute)
+        // 제자리로 놓으면 바뀌는 것이 없다.
+        XCTAssertEqual(TravelCoursePlanner.reorder(blocks, from: 1, to: 1), [:])
+        XCTAssertEqual(TravelCoursePlanner.reorder(blocks, from: 1, to: 2), [:])
+        // 예약된 일정이나 잠이 구간에 끼면 옮기지 않는다.
+        let booked = [block("a", 540, 600), block("b", 630, 660, booked: true), block("c", 660, 780)]
+        XCTAssertNil(TravelCoursePlanner.reorder(booked, from: 2, to: 0))
+        let night = [block("a", 540, 600), block("z", 1_380, 1_439, kind: "sleep")]
+        XCTAssertNil(TravelCoursePlanner.reorder(night, from: 0, to: 2))
+
+        // 묶음 걸음: 되돌리면 거꾸로, 반대 방향으로.
+        let step = try XCTUnwrap(TravelPlanHistory.Step.reorder(tripID: "t1", moves: moves, title: "c"))
+        XCTAssertEqual(step.group.map(\.itemID), ["a", "b", "c"])
+        XCTAssertEqual(step.inverse.group.map(\.move), [120, -120, -150])
+        XCTAssertNil(TravelPlanHistory.Step.reorder(tripID: "t1", moves: ["a": 0], title: "a"))
+    }
+
     /// TVU1113A01: 시각 고치기를 여러 번 되돌리고 다시 한다. 새로 고치면 다시 하기는 비고, 다른 여행이면 앞의 것을 버린다.
     func testPlanHistoryUndoesAndRedoesTimeEdits() {
         func step(_ item: String, move: Int = 0, resize: Int = 0, trip: String = "t1") -> TravelPlanHistory.Step {

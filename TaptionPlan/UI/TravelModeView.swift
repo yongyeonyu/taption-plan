@@ -1027,7 +1027,8 @@ struct TravelModeView: View {
                     TravelCourseView(
                         table: table(entry), items: (model.settings.travelTripItems ?? []).filter { $0.tripID == entry.id }, language: language,
                         playMinute: currentPlayMinute(entry), photos: model.photoService, selectedID: $planSelectedID,
-                        onScrub: { playMinute = $0 }, onEdit: { editEntry(entry, itemID: $0.id) }, onAddStop: { courseAdding = entry }
+                        onScrub: { playMinute = $0 }, onEdit: { editEntry(entry, itemID: $0.id) }, onAddStop: { courseAdding = entry },
+                        onReorder: { step in Task { await model.applyTravelHistory(step); planHistory.record(step) } }, onDelete: { deleteEntry(entry, itemID: $0.id) }
                     )
                     .frame(height: planDragHeight ?? tableHeight)
                 } else {
