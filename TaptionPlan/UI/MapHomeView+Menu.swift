@@ -1045,7 +1045,7 @@ extension MapHomeView {
                 // 지도 스타일을 맨 위에 둔다. 드롭다운은 같은 행 모양으로 통일한다.
                 Menu {
                     // 판타지 지도를 맨 위에 두고, 나머지 벡터 스타일, Apple 스타일 순으로 보여 준다(대표 지시, ARC1030A04).
-                    ForEach(MapDisplayStyle.openFreeMapStyles + MapDisplayStyle.appleStyles, id: \.self) { style in
+                    ForEach(MapDisplayStyle.openFreeMapStyles + MapDisplayStyle.appleStyles + (KakaoMapAvailability.isAvailable ? [.kakao] : []), id: \.self) { style in
                         Button {
                             model.setMapDisplayStyle(style)
                         } label: {

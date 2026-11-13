@@ -560,6 +560,7 @@
 		B1080900000000000000A0A3 /* MapHomeIslandOutlines.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000A0F3 /* MapHomeIslandOutlines.swift */; };
 		B10809000000000000000A05 /* MapHomeInkPreviewHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10809000000000000000F05 /* MapHomeInkPreviewHost.swift */; };
 		A50000000000000000000002 /* MapLibre in Frameworks */ = {isa = PBXBuildFile; productRef = X50000000000000000000002 /* MapLibre */; };
+		A50000000000000000000005 /* KakaoMapsSDK_SPM in Frameworks */ = {isa = PBXBuildFile; productRef = X50000000000000000000006 /* KakaoMapsSDK_SPM */; };
 		A60000000000000000000001 /* HealthKitTypeCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F60000000000000000000001 /* HealthKitTypeCatalog.swift */; };
 		A60000000000000000000002 /* HealthKitImportStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F60000000000000000000002 /* HealthKitImportStore.swift */; };
 		A60000000000000000000003 /* HealthKitImportCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F60000000000000000000003 /* HealthKitImportCoordinator.swift */; };
@@ -1477,6 +1478,7 @@
 			files = (
 				C0FFEE000000000000000021 /* TaptionWatchSync in Frameworks */,
 				A50000000000000000000002 /* MapLibre in Frameworks */,
+				A50000000000000000000005 /* KakaoMapsSDK_SPM in Frameworks */,
 				A30000000000000000000001 /* TaptionPlanCore in Frameworks */,
 				A70000000000000000000001 /* TaptionPlanEngine in Frameworks */,
 				C0FFEE000000000000000011 /* TaptionPlanStore in Frameworks */,
@@ -2324,6 +2326,7 @@
 				X70000000000000000000002 /* TaptionPlanEngine */,
 				C0FFEE000000000000000002 /* TaptionPlanStore */,
 				X50000000000000000000002 /* MapLibre */,
+				X50000000000000000000006 /* KakaoMapsSDK_SPM */,
 			);
 			productName = TaptionPlan;
 			productReference = C10000000000000000000001 /* TaptionPlan.app */;
@@ -2530,6 +2533,7 @@
 				C0FFEE000000000000000003 /* XCLocalSwiftPackageReference "TaptionWatchSync" */,
 				X80000000000000000000001 /* XCLocalSwiftPackageReference "TaptionClassifierEngine" */,
 				X50000000000000000000001 /* XCRemoteSwiftPackageReference "maplibre-gl-native-distribution" */,
+				X50000000000000000000005 /* XCRemoteSwiftPackageReference "KakaoMapsSDK-SPM" */,
 			);
 			mainGroup = 810000000000000000000001;
 			productRefGroup = 810000000000000000000002 /* Products */;
@@ -3816,6 +3820,14 @@
 				minimumVersion = 6.29.0;
 			};
 		};
+		X50000000000000000000005 /* XCRemoteSwiftPackageReference "KakaoMapsSDK-SPM" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/kakao-mapsSDK/KakaoMapsSDK-SPM.git";
+			requirement = {
+				kind = exactVersion;
+				version = 2.9.4;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -3843,6 +3855,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = X50000000000000000000001 /* XCRemoteSwiftPackageReference "maplibre-gl-native-distribution" */;
 			productName = MapLibre;
+		};
+		X50000000000000000000006 /* KakaoMapsSDK_SPM */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = X50000000000000000000005 /* XCRemoteSwiftPackageReference "KakaoMapsSDK-SPM" */;
+			productName = KakaoMapsSDK_SPM;
 		};
 		C0FFEE000000000000000002 /* TaptionPlanStore */ = {
 			isa = XCSwiftPackageProductDependency;

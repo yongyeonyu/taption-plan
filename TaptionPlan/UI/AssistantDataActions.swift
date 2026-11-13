@@ -370,6 +370,7 @@ enum AssistantDataText {
         case .mapLibreRPG: language.text("판타지 지도", "Fantasy Map")
         case .mapLibreInk: language.text("수묵", "Ink Wash")
         case .mapLibrePorcelain: language.text("백자", "Porcelain")
+        case .kakao: language.text("카카오 지도", "Kakao Map")
         }
     }
 

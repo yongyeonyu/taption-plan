@@ -115,6 +115,8 @@
 	<string>$(PAYMENT_SHORTCUT_ICLOUD_ID)</string>
 	<key>TRIP_RELAY_HOST</key>
 	<string>$(TRIP_RELAY_HOST)</string>
+	<key>KAKAO_NATIVE_APP_KEY</key>
+	<string>$(KAKAO_NATIVE_APP_KEY)</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>SUIT-Regular.otf</string>

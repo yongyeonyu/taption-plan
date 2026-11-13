@@ -1,6 +1,15 @@
 {
-  "originHash" : "4bcdd1b15fc75bb941d34cf315c6aad10bc364851d9a00af9ccf12516c5b8d99",
+  "originHash" : "9c46f8e3db5e8dfed4464ad7892c3b5a73b60ddf2b4b0ba40ba51c65c17917c1",
   "pins" : [
+    {
+      "identity" : "kakaomapssdk-spm",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/kakao-mapsSDK/KakaoMapsSDK-SPM.git",
+      "state" : {
+        "revision" : "077532fa2893aed53bec946dc8d3e90f05b6387b",
+        "version" : "2.9.4"
+      }
+    },
     {
       "identity" : "maplibre-gl-native-distribution",
       "kind" : "remoteSourceControl",

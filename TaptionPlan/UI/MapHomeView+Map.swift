@@ -93,7 +93,9 @@ extension MapHomeView {
         // 지도 provider가 OpenFreeMap(벡터, RPG 등)이면 무료 벡터 렌더러를 쓰고,
         // Apple 스타일이면 기존 MapKit 경로를 유지한다. 경로 재생·마커는 벡터
         // 렌더러도 지원한다(MapHomeVectorRoute/Marker).
-        if let vectorStyle = model.settings.mapDisplayStyle.runtimeStyle.mapHomeVectorStyle {
+        if model.settings.mapDisplayStyle == .kakao, KakaoMapAvailability.isAvailable {
+            kakaoMap
+        } else if let vectorStyle = model.settings.mapDisplayStyle.runtimeStyle.mapHomeVectorStyle {
             vectorMap(style: vectorStyle)
         } else {
             mapKitMap
@@ -939,6 +941,7 @@ extension MapHomeView {
         case .mapLibreRPG: language.text("판타지 지도", "Fantasy Map")
         case .mapLibreInk: language.text("수묵", "Ink Wash")
         case .mapLibrePorcelain: language.text("백자", "Porcelain")
+        case .kakao: language.text("카카오 지도", "Kakao Map")
         }
     }
 
@@ -952,6 +955,7 @@ extension MapHomeView {
         case .mapLibreRPG: "map.circle.fill"
         case .mapLibreInk: "paintbrush.pointed.fill"
         case .mapLibrePorcelain: "cup.and.saucer.fill"
+        case .kakao: "map.fill"
         }
     }
 

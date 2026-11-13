@@ -489,7 +489,7 @@ extension MapDisplayStyle {
         case .mapLibreRPG: .rpg
         case .mapLibreInk: .ink
         case .mapLibrePorcelain: .porcelain
-        case .standard, .hybrid: nil
+        case .standard, .hybrid, .kakao: nil
         }
     }
 }

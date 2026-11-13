@@ -131,7 +131,7 @@ enum TaptionUITheme: String, CaseIterable, Identifiable, Sendable {
         case .mapLibreCasual: .purple
         case .mapLibreContrast: .brown
         case .mapLibreInk: .ink
-        case .mapLibreRPG, .mapLibrePorcelain, .standard, .hybrid: .classic
+        case .mapLibreRPG, .mapLibrePorcelain, .standard, .hybrid, .kakao: .classic
         }
     }
 

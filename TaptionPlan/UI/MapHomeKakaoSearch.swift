@@ -1,6 +1,8 @@
 import CoreLocation
 import Foundation
+import KakaoMapsSDK
 import MapKit
+import SwiftUI
 
 /// 국내 장소 키워드 검색(KKO1110A01). 카카오 REST 키는 서버용이라 앱에 넣지 않고, 여행 계획 중계 서버
 /// (`server/trip-relay`의 `/kakao/keyword`)가 키를 붙여 대신 부른다(REV1110A03). 중계가 없거나 실패하면 빈 결과라 Apple 검색만 남는다.
@@ -152,6 +154,157 @@ extension MapHomeSearchRunner {
         let origin = CLLocation(latitude: result.coordinate.latitude, longitude: result.coordinate.longitude)
         return items.map(\.placemark.coordinate).first {
             origin.distance(from: CLLocation(latitude: $0.latitude, longitude: $0.longitude)) <= samePlaceMeters
+        }
+    }
+}
+
+// MARK: - 카카오 지도(KMP1113A01)
+
+
+/// 카카오 지도 키(네이티브 앱 키, 로컬 설정 파일 → Info.plist). 비어 있으면 카카오 지도를 쓰지 않는다.
+@MainActor
+enum KakaoMapAvailability {
+    static var appKey: String? {
+        guard let value = Bundle.main.object(forInfoDictionaryKey: "KAKAO_NATIVE_APP_KEY") as? String,
+              !value.isEmpty, !value.hasPrefix("$(") else { return nil }
+        return value
+    }
+
+    static var isAvailable: Bool { appKey != nil }
+    private static var isInitialized = false
+
+    static func initializeIfNeeded() {
+        guard !isInitialized, let appKey else { return }
+        SDKInitializer.InitSDK(appKey: appKey)
+        isInitialized = true
+    }
+}
+
+extension MapHomeView {
+    /// 1단계: 지도·내 위치·오늘 경로선·머문 곳 핀. 재생 캐릭터·말풍선 등은 다른 지도에서만 그린다.
+    var kakaoMap: some View {
+        MapHomeKakaoMap(
+            center: model.latestSensorReading?.point,
+            route: model.liveRouteState.readings.compactMap(\.point),
+            stays: currentDayDataSnapshot?.places.compactMap(\.point) ?? []
+        )
+        .ignoresSafeArea()
+        .accessibilityLabel(language.text("카카오 지도", "Kakao map"))
+    }
+}
+
+struct MapHomeKakaoMap: UIViewRepresentable {
+    let center: GeoPoint?
+    let route: [GeoPoint]
+    let stays: [GeoPoint]
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    func makeUIView(context: Context) -> KMViewContainer {
+        KakaoMapAvailability.initializeIfNeeded()
+        let container = KMViewContainer(frame: .zero)
+        let controller = KMController(viewContainer: container)
+        controller.delegate = context.coordinator
+        context.coordinator.controller = controller
+        context.coordinator.container = container
+        context.coordinator.update(center: center, route: route, stays: stays)
+        controller.initEngine()
+        controller.startEngine()
+        controller.startRendering()
+        return container
+    }
+
+    func updateUIView(_ uiView: KMViewContainer, context: Context) {
+        context.coordinator.update(center: center, route: route, stays: stays)
+    }
+
+    static func dismantleUIView(_ uiView: KMViewContainer, coordinator: Coordinator) {
+        coordinator.controller?.stopRendering()
+        coordinator.controller?.stopEngine()
+    }
+
+    @MainActor
+    final class Coordinator: NSObject, MapControllerDelegate {
+        var controller: KMController?
+        weak var container: KMViewContainer?
+        private var map: KakaoMap?
+        private var center: GeoPoint?
+        private var route: [GeoPoint] = []
+        private var stays: [GeoPoint] = []
+        private var hasCentered = false
+        private static let viewName = "mapview"
+
+        func update(center: GeoPoint?, route: [GeoPoint], stays: [GeoPoint]) {
+            let changed = route != self.route || stays != self.stays || center != self.center
+            self.center = center
+            self.route = route
+            self.stays = stays
+            if changed { draw() }
+        }
+
+        nonisolated func addViews() {
+            MainActor.assumeIsolated {
+                let start = center.map { MapPoint(longitude: $0.longitude, latitude: $0.latitude) }
+                    ?? MapPoint(longitude: 126.978, latitude: 37.5665)
+                controller?.addView(MapviewInfo(viewName: Self.viewName, viewInfoName: "map", defaultPosition: start, defaultLevel: 15))
+            }
+        }
+
+        nonisolated func addViewSucceeded(_ viewName: String, viewInfoName: String) {
+            MainActor.assumeIsolated {
+                map = controller?.getView(Self.viewName) as? KakaoMap
+                if let bounds = container?.bounds, !bounds.isEmpty { map?.viewRect = bounds }
+                prepareLayers()
+                draw()
+            }
+        }
+
+        nonisolated func addViewFailed(_ viewName: String, viewInfoName: String) {}
+
+        nonisolated func containerDidResized(_ size: CGSize) {
+            MainActor.assumeIsolated {
+                map?.viewRect = CGRect(origin: .zero, size: size)
+            }
+        }
+
+        private func prepareLayers() {
+            guard let map else { return }
+            let routes = map.getRouteManager()
+            let line = PerLevelRouteStyle(width: 7, color: UIColor(Color.tpAccent), strokeWidth: 2, strokeColor: .white, level: 0)
+            routes.addRouteStyleSet(RouteStyleSet(styleID: "day", styles: [RouteStyle(styles: [line])]))
+            _ = routes.addRouteLayer(layerID: "day", zOrder: 0)
+            let labels = map.getLabelManager()
+            labels.addPoiStyle(PoiStyle(styleID: "stay", styles: [PerLevelPoiStyle(iconStyle: PoiIconStyle(symbol: Self.symbol("mappin.circle.fill", UIColor(Color.tpInk))), level: 0)]))
+            labels.addPoiStyle(PoiStyle(styleID: "me", styles: [PerLevelPoiStyle(iconStyle: PoiIconStyle(symbol: Self.symbol("location.circle.fill", .systemBlue)), level: 0)]))
+            _ = labels.addLabelLayer(option: LabelLayerOptions(layerID: "marks", competitionType: .none, competitionUnit: .symbolFirst, orderType: .rank, zOrder: 10))
+        }
+
+        private func draw() {
+            guard let map else { return }
+            if let layer = map.getRouteManager().getRouteLayer(layerID: "day") {
+                layer.clearAllRoutes()
+                if route.count >= 2 {
+                    let option = RouteOptions(routeID: "today", styleID: "day", zOrder: 0)
+                    option.segments = [RouteSegment(points: route.map { MapPoint(longitude: $0.longitude, latitude: $0.latitude) }, styleIndex: 0)]
+                    layer.addRoute(option: option)?.show()
+                }
+            }
+            if let layer = map.getLabelManager().getLabelLayer(layerID: "marks") {
+                layer.clearAllItems()
+                layer.addPois(option: PoiOptions(styleID: "stay"), at: stays.map { MapPoint(longitude: $0.longitude, latitude: $0.latitude) })?.forEach { $0.show() }
+                if let center {
+                    layer.addPoi(option: PoiOptions(styleID: "me"), at: MapPoint(longitude: center.longitude, latitude: center.latitude))?.show()
+                }
+            }
+            if !hasCentered, let center {
+                hasCentered = true
+                map.moveCamera(CameraUpdate.make(target: MapPoint(longitude: center.longitude, latitude: center.latitude), zoomLevel: 15, mapView: map))
+            }
+        }
+
+        private static func symbol(_ name: String, _ color: UIColor) -> UIImage? {
+            UIImage(systemName: name, withConfiguration: UIImage.SymbolConfiguration(pointSize: 22, weight: .semibold))?
+                .withTintColor(color, renderingMode: .alwaysOriginal)
         }
     }
 }

@@ -77,6 +77,9 @@ public enum MapDisplayStyle: String, Codable, CaseIterable, Sendable {
     case mapLibreInk
     /// 백자(PLN1111A01): 가라앉힌 땅·길 위에 경로가 뚜렷한 모양. 예전 앱은 모르는 값을 `standard`로 읽는다.
     case mapLibrePorcelain
+    /// 카카오 지도(KMP1113A01, 대표 결정: 고르는 지도 하나로). 앱에 카카오 지도 키가 없으면 고를 수 없고 Apple 지도로 그린다.
+    /// 예전 앱은 모르는 값을 `standard`로 읽는다.
+    case kakao
 
     /// 없앤 스타일(밝게·파스텔, UIX1101A03)로 저장된 값은 가장 비슷한 산책 지도로 읽는다.
     public static let retiredRawValues: Set<String> = ["mapLibreLight", "mapLibrePastel"]
@@ -158,7 +161,8 @@ extension MapDisplayStyle {
 
     public var provider: MapDisplayProvider {
         switch self {
-        case .standard, .hybrid:
+        // 카카오 지도는 따로 공급자를 두지 않고, 키가 없을 때 Apple 지도로 그리므로 Apple 쪽에 둔다(KMP1113A01).
+        case .standard, .hybrid, .kakao:
             .apple
         case .mapLibreNight,
              .mapLibreContrast,
