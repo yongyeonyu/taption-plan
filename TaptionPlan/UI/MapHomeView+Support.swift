@@ -120,6 +120,10 @@ extension MapHomeView {
             if !isScreenRecording, !Self.benchHidden("topleft") {
                 coarseRegion { AnyView(topLeftControls) }
                     .zIndex(MapHomeLayerPriority.loading)
+                if !isMenuOpen {
+                    coarseRegion { AnyView(bottomLeftTodo) }
+                        .zIndex(MapHomeLayerPriority.loading)
+                }
             }
 
             if isDayDataLoading {
@@ -921,8 +925,7 @@ extension MapHomeView {
                 HStack(spacing: 8) {
                     if passportReturnPage != nil { passportBackButton }
                     searchCircleButton
-                    // 메모·일정 단추는 없애고 할 일 목록 하나로 모았다(TDP1113A01).
-                    MapHomeTodoButton(language: language, isOpen: memoStackExpanded, count: todoMemoCount) { toggleTodoPanel() }
+                    // 할 일 목록 단추는 왼쪽 아래로 옮겼다(TDB1114A01, `bottomLeftTodo`).
                     modeButtons
                 }
             }
@@ -963,10 +966,7 @@ extension MapHomeView {
             ForEach(topPanelOrder, id: \.self) { panel in
                 switch panel {
                 case .memo:
-                    if memoStackExpanded {
-                        memoListPanel
-                            .transition(.opacity.combined(with: .move(edge: .top)))
-                    }
+                    EmptyView() // 할 일 목록 패널은 왼쪽 아래 단추 위에 뜬다(TDB1114A01).
                 case .calendar:
                     if todayCalendarExpanded {
                         MapHomeTodayCalendarList(
@@ -995,6 +995,19 @@ extension MapHomeView {
         .padding(.top, duoStatusColumn > 0 ? MapHomeOverlayLayoutMath.sideStatusPillTop : Layout.topRowInset)
         .onChange(of: memoStackExpanded) { _, open in setTopPanel(.memo, open: open) }
         .onChange(of: todayCalendarExpanded) { _, open in setTopPanel(.calendar, open: open) }
+    }
+
+    /// 왼쪽 아래 할 일 목록 단추(TDB1114A01, 대표 지시 2026-11-14 「아이콘 왼쪽 하단으로 이동」). 패널은 단추 위로 펼쳐진다.
+    var bottomLeftTodo: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if memoStackExpanded {
+                memoListPanel.transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
+            MapHomeTodoButton(language: language, isOpen: memoStackExpanded, count: todoMemoCount) { toggleTodoPanel() }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+        .padding(.leading, Layout.horizontalInset)
+        .padding(.bottom, Layout.horizontalInset + layoutStyle.bottomReservedHeight)
     }
 
     enum TopPanel: Hashable { case memo, calendar }
