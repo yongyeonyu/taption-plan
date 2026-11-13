@@ -579,8 +579,10 @@ public struct TravelTripItem: Codable, Hashable, Sendable {
     public var colorHex: String?
     /// 예상 지출(원, 0보다 큰 값만). 없으면 키를 쓰지 않는다.
     public var plannedSpendKRW: Double?
+    /// 세부 계획이 딸린 코스 곳의 일정 번호(TVV1113A01 C4). 없으면 굵은 코스 곳이고 키를 쓰지 않는다.
+    public var parentItemID: String?
 
-    public init(tripID: String, itemID: String, kind: String, title: String, start: Date, end: Date, startOffsetSeconds: Int, endOffsetSeconds: Int, planID: UUID?, status: String? = nil, note: String? = nil, colorHex: String? = nil, plannedSpendKRW: Double? = nil) {
+    public init(tripID: String, itemID: String, kind: String, title: String, start: Date, end: Date, startOffsetSeconds: Int, endOffsetSeconds: Int, planID: UUID?, status: String? = nil, note: String? = nil, colorHex: String? = nil, plannedSpendKRW: Double? = nil, parentItemID: String? = nil) {
         self.tripID = tripID
         self.itemID = itemID
         self.kind = kind
@@ -594,6 +596,12 @@ public struct TravelTripItem: Codable, Hashable, Sendable {
         self.note = note
         self.colorHex = colorHex
         self.plannedSpendKRW = plannedSpendKRW
+        self.parentItemID = parentItemID
+    }
+
+    /// 그 코스 곳에 딸린 세부 일정들(같은 여행, 자기 자신 제외).
+    public static func details(of itemID: String, tripID: String, in items: [TravelTripItem]) -> [TravelTripItem] {
+        items.filter { $0.tripID == tripID && $0.parentItemID == itemID && $0.itemID != itemID }
     }
 
     /// 저장할 색: `#RRGGBB`(대문자)만. 그 밖의 글은 nil(기본 색).

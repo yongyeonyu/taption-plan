@@ -19,6 +19,8 @@ struct TravelQuickEntrySheet: View {
         var place: TravelItemPlace?
         /// 계획표에서 셀 길이를 정하고 열었으면 그 길이(분).
         var duration: Int?
+        /// 코스 곳에 딸린 세부 계획으로 넣을 때 그 곳의 일정 번호.
+        var parentItemID: String?
 
         /// 새 일정: 그 여행의 시간대(없으면 기기 시간대)로 그날에 놓는다.
         static func new(trip: TravelTrip, dayKey: String, dayLabel: String, startMinute: Int, kind: TripImportItem.Kind) -> Target {
@@ -421,7 +423,7 @@ struct TravelQuickEntrySheet: View {
         } else {
             let itemID = await model.addTripItem(
                 tripID: target.tripID, kind: kind, title: title, start: start, end: end, offsetSeconds: target.offsetSeconds, place: place, note: note,
-                colorHex: colorHex, plannedSpendKRW: Double(plannedSpend)
+                colorHex: colorHex, plannedSpendKRW: Double(plannedSpend), parentItemID: target.parentItemID
             )
             didFail = itemID == nil
             if let added = (model.settings.travelTripItems ?? []).first(where: { $0.tripID == target.tripID && $0.itemID == itemID }) {
@@ -452,11 +454,10 @@ struct TravelQuickEntrySheet: View {
 
     private func remove() async {
         guard let item = target.editing else { return }
-        let current = (model.settings.travelTripItems ?? []).first { $0.tripID == item.tripID && $0.itemID == item.itemID } ?? item
-        let place = TravelPlanHistory.place(of: current, stops: model.settings.travelPlanStops)
-        didFail = !(await model.deleteTripItem(tripID: item.tripID, itemID: item.itemID))
-        if !didFail {
-            onHistory(.existence(current, place: place, exists: false))
+        let step = await model.deleteTripItemWithDetails(tripID: item.tripID, itemID: item.itemID)
+        didFail = step == nil
+        if let step {
+            onHistory(step)
             dismiss()
         }
     }

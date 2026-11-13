@@ -221,6 +221,23 @@ struct TravelTripsTests {
         #expect(TravelTripItem.cleanPlannedSpend(.infinity) == nil)
     }
 
+    /// TVV1113A01 C4: 세부 계획의 부모 번호는 없으면 키를 쓰지 않고, 예전 모양으로도 읽힌다.
+    @Test func itemParentKeepsOldBytesAndFindsDetails() throws {
+        let stop = Self.item("t", "a", hour: 1, hours: 3)
+        var detail = Self.item("t", "b", hour: 1.5, hours: 0.5)
+        let old = try Self.encoder().encode(detail)
+        #expect(!String(decoding: old, as: UTF8.self).contains("parentItemID"))
+        detail.parentItemID = "a"
+        let new = try Self.encoder().encode(detail)
+        #expect(try Self.decoder().decode(TravelTripItem.self, from: new) == detail)
+        struct OldItem: Decodable { var tripID: String, itemID: String, start: Date, end: Date }
+        #expect(try Self.decoder().decode(OldItem.self, from: new).itemID == "b")
+        var other = Self.item("u", "c", hour: 2)
+        other.parentItemID = "a"
+        #expect(TravelTripItem.details(of: "a", tripID: "t", in: [stop, detail, other]).map(\.itemID) == ["b"], "같은 여행의 것만")
+        #expect(TravelTripItem.details(of: "b", tripID: "t", in: [stop, detail]).isEmpty)
+    }
+
     @Test func movingKeepsLengthAndOffsets() throws {
         let items = [Self.item("t", "a", hour: 1), Self.item("t", "b", hour: 3)]
         let moved = try #require(TravelTripItemEditor.moved(items, tripID: "t", itemID: "a", by: 1_800))

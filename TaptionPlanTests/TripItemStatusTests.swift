@@ -762,6 +762,58 @@ final class TravelTripUnitTests: XCTestCase {
         XCTAssertEqual(TravelPlacePhotoStore.Place.places(tripID: "t1", stops: stops), [.init(itemID: "a", name: "성", latitude: 1, longitude: 2)])
     }
 
+    /// TVV1113A01 C4: 세부 계획은 코스 번호에서 빠지고 그 곳 아래에 딸린다. 새 세부의 시각은 그 곳 안에서 잡힌다.
+    func testCourseDetailsHangUnderTheirStop() {
+        func block(_ id: String, _ start: Int, _ end: Int, parent: String? = nil) -> TravelPlanTableModel.Block {
+            .init(id: id, column: 0, startMinute: start, endMinute: end, title: id, tripStatus: nil, status: .pending, parentID: parent)
+        }
+        let stop = block("a", 540, 720), blocks = [block("d2", 600, 630, parent: "a"), stop, block("b", 780, 840), block("d1", 540, 570, parent: "a"), block("x", 900, 930, parent: "다른 날의 곳")]
+        XCTAssertEqual(TravelCourse.ordered(blocks).map(\.id), ["a", "b", "x"], "세부는 빠지고, 딸린 곳이 그날에 없으면 굵은 곳")
+        XCTAssertEqual(TravelCourse.details(of: stop, in: blocks).map(\.id), ["d1", "d2"])
+        var slot = TravelCourse.detailSlot(parent: stop, details: TravelCourse.details(of: stop, in: blocks))
+        XCTAssertEqual([slot.start, slot.duration], [630, 30], "마지막 세부 끝에서 30분")
+        slot = TravelCourse.detailSlot(parent: stop, details: [])
+        XCTAssertEqual([slot.start, slot.duration], [540, 30], "세부가 없으면 그 곳 시작부터")
+        slot = TravelCourse.detailSlot(parent: stop, details: [block("d", 600, 715, parent: "a")])
+        XCTAssertEqual([slot.start, slot.duration], [705, 15], "자리가 모자라면 끝 15분")
+        slot = TravelCourse.detailSlot(parent: block("s", 600, 610), details: [])
+        XCTAssertEqual([slot.start, slot.duration], [600, 10], "짧은 곳은 그 길이만큼")
+    }
+
+    /// TVV1113A01 C4: 코스 곳을 옮기면 세부도 같은 만큼 옮겨지고, 지우면 함께 지워지며 한 번에 되돌아온다.
+    @MainActor
+    func testDetailsFollowTheirStopWhenMovedAndDeleted() async throws {
+        let model = try await importedModel()
+        let stop = try XCTUnwrap(model.settings.travelTripItems?.first { $0.tripID == "t1" })
+        let detailStart = stop.start.addingTimeInterval(600)
+        let addedID = await model.addTripItem(
+            tripID: "t1", kind: .other, title: "표 사기", start: detailStart, end: detailStart.addingTimeInterval(900),
+            offsetSeconds: stop.startOffsetSeconds, parentItemID: stop.itemID
+        )
+        let detailID = try XCTUnwrap(addedID)
+        var detail = try XCTUnwrap(model.settings.travelTripItems?.first { $0.itemID == detailID })
+        XCTAssertEqual(detail.parentItemID, stop.itemID)
+        let count = try XCTUnwrap(model.settings.travelTripItems?.count)
+
+        let moved = await model.moveTripItem(tripID: "t1", itemID: stop.itemID, by: 1_800)
+        XCTAssertTrue(moved)
+        detail = try XCTUnwrap(model.settings.travelTripItems?.first { $0.itemID == detailID })
+        XCTAssertEqual(detail.start, detailStart.addingTimeInterval(1_800), "세부도 같은 만큼")
+        let unmoved = await model.moveTripItem(tripID: "t1", itemID: detailID, by: 300)
+        XCTAssertTrue(unmoved)
+        XCTAssertEqual(model.settings.travelTripItems?.first { $0.itemID == stop.itemID }?.start, stop.start.addingTimeInterval(1_800), "세부만 옮기면 곳은 그대로")
+
+        var history = TravelPlanHistory()
+        let deletion = await model.deleteTripItemWithDetails(tripID: "t1", itemID: stop.itemID)
+        let step = try XCTUnwrap(deletion)
+        XCTAssertEqual(step.group.map(\.itemID), [detailID, stop.itemID], "세부 먼저, 곳은 마지막")
+        XCTAssertEqual(model.settings.travelTripItems?.count, count - 2)
+        history.record(step)
+        await model.applyTravelHistory(try XCTUnwrap(history.undo()))
+        XCTAssertEqual(model.settings.travelTripItems?.count, count)
+        XCTAssertEqual(model.settings.travelTripItems?.first { $0.itemID == detailID }?.parentItemID, stop.itemID, "되돌리면 곳과 세부가 다시 이어진다")
+    }
+
     /// TVU1113A01: 시각 고치기를 여러 번 되돌리고 다시 한다. 새로 고치면 다시 하기는 비고, 다른 여행이면 앞의 것을 버린다.
     func testPlanHistoryUndoesAndRedoesTimeEdits() {
         func step(_ item: String, move: Int = 0, resize: Int = 0, trip: String = "t1") -> TravelPlanHistory.Step {

@@ -338,6 +338,19 @@ struct TravelPlanHistory: Equatable {
 }
 
 extension AppModel {
+    /// 일정을 지운다. 코스 곳이면 딸린 세부 계획도 함께 지우고, 한 번에 되돌릴 수 있는 걸음을 돌려준다(C4). 못 지웠으면 nil.
+    func deleteTripItemWithDetails(tripID: String, itemID: String) async -> TravelPlanHistory.Step? {
+        let items = settings.travelTripItems ?? []
+        guard let item = items.first(where: { $0.tripID == tripID && $0.itemID == itemID }) else { return nil }
+        var steps: [TravelPlanHistory.Step] = []
+        for target in TravelTripItem.details(of: itemID, tripID: tripID, in: items) + [item] {
+            let place = TravelPlanHistory.place(of: target, stops: settings.travelPlanStops)
+            if await deleteTripItem(tripID: tripID, itemID: target.itemID) { steps.append(.existence(target, place: place, exists: false)) }
+        }
+        guard let last = steps.last, last.itemID == itemID else { return nil }
+        return steps.count == 1 ? last : TravelPlanHistory.Step(tripID: tripID, itemID: "", move: 0, resize: 0, summary: last.summary, group: steps)
+    }
+
     /// 되돌리기·다시 하기에서 나온 한 걸음을 저장소에 반영한다: 넣기·지우기면 일정을 되살리거나 지우고, 아니면 시각을 옮긴다.
     func applyTravelHistory(_ step: TravelPlanHistory.Step) async {
         if !step.group.isEmpty {
@@ -391,9 +404,24 @@ struct TravelPlanHistoryBar: View {
 
 /// 코스 보기의 계산: 그날 일정을 시간 순서로 놓고, 재생 헤드 기준으로 지금 일정과 진행률을 고른다.
 enum TravelCourse {
-    /// 시간 순서(시작이 같으면 번호 순).
+    /// 코스의 굵은 곳들을 시간 순서로(시작이 같으면 번호 순). 세부 계획은 빠지되, 딸린 곳이 그날에 없으면 굵은 곳으로 친다.
     static func ordered(_ blocks: [TravelPlanTableModel.Block]) -> [TravelPlanTableModel.Block] {
-        blocks.sorted { ($0.startMinute, $0.id) < ($1.startMinute, $1.id) }
+        let ids = Set(blocks.map(\.id))
+        return blocks.filter { block in block.parentID.map { !ids.contains($0) || $0 == block.id } ?? true }
+            .sorted { ($0.startMinute, $0.id) < ($1.startMinute, $1.id) }
+    }
+
+    /// 그 곳에 딸린 세부 계획들(시간 순서).
+    static func details(of parent: TravelPlanTableModel.Block, in blocks: [TravelPlanTableModel.Block]) -> [TravelPlanTableModel.Block] {
+        blocks.filter { $0.parentID == parent.id && $0.id != parent.id }.sorted { ($0.startMinute, $0.id) < ($1.startMinute, $1.id) }
+    }
+
+    /// 새 세부 계획의 시각: 그 곳 안에서 마지막 세부 끝(없으면 그 곳 시작)부터 30분, 그 곳 끝을 넘지 않게. 자리가 없으면 끝 15분.
+    static func detailSlot(parent: TravelPlanTableModel.Block, details: [TravelPlanTableModel.Block]) -> (start: Int, duration: Int) {
+        let length = max(5, parent.endMinute - parent.startMinute)
+        let wanted = max(parent.startMinute, details.map(\.endMinute).max() ?? parent.startMinute)
+        let start = min(wanted, parent.endMinute - min(15, length))
+        return (start, max(5, min(30, parent.endMinute - start)))
     }
 
     /// 지금 일정: 그 시각이 든 일정(겹치면 늦게 시작한 것), 없으면 다음에 올 일정, 그것도 없으면 마지막 일정.
@@ -428,6 +456,8 @@ struct TravelCourseView: View {
     let onEdit: (TravelPlanTableModel.Block) -> Void
     /// 「곳 더하기」: 장소를 찾아 그날 코스 끝에 붙인다.
     var onAddStop: () -> Void = {}
+    /// 그 곳에 세부 계획을 더한다(편집기가 그 곳 안의 시각으로 열린다).
+    var onAddDetail: (TravelPlanTableModel.Block) -> Void = { _ in }
     /// 끌어서 순서를 바꿈: 함께 옮겨질 일정들의 걸음. 밀어서 지움.
     var onReorder: (TravelPlanHistory.Step) -> Void = { _ in }
     var onDelete: (TravelPlanTableModel.Block) -> Void = { _ in }
@@ -458,7 +488,11 @@ struct TravelCourseView: View {
                 ScrollViewReader { proxy in
                     List {
                         ForEach(Array(blocks.enumerated()), id: \.element.id) { index, block in
-                            row(block, order: index + 1, isCurrent: index == current)
+                            VStack(spacing: 0) {
+                                row(block, order: index + 1, isCurrent: index == current)
+                                // 지금 일정이거나 고른 곳은 펼쳐서 세부 계획과 「세부 더하기」를 보인다.
+                                if index == current || selectedID == block.id { detailRows(block) }
+                            }
                                 .listRowInsets(EdgeInsets())
                                 .listRowSeparator(.hidden)
                                 .listRowBackground(index == current ? TravelInk.planTint : Color.clear)
@@ -489,6 +523,34 @@ struct TravelCourseView: View {
         .foregroundStyle(TravelInk.plan)
         .task(id: blocks.map(\.id)) { await loadPhotos(blocks) }
         .accessibilityIdentifier("travelCourse")
+    }
+
+    /// 펼친 곳 아래의 세부 계획 줄들과 「세부 더하기」.
+    private func detailRows(_ parent: TravelPlanTableModel.Block) -> some View {
+        VStack(spacing: 0) {
+            ForEach(TravelCourse.details(of: parent, in: table.blocks)) { detail in
+                Button { onEdit(detail) } label: {
+                    HStack(spacing: 8) {
+                        Text(clock(detail.startMinute)).font(.caption.monospacedDigit()).opacity(0.7).frame(width: 44, alignment: .leading)
+                        Text(detail.title).font(.caption.weight(.semibold)).lineLimit(1)
+                        Spacer(minLength: 0)
+                        Text(TravelQuickEntrySheet.durationText(detail.endMinute - detail.startMinute, language: language)).font(.caption2).opacity(0.6)
+                    }
+                    .frame(height: 30)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+            Button { onAddDetail(parent) } label: {
+                Label(language.text("세부 더하기", "Add detail"), systemImage: "plus").font(.caption.weight(.semibold))
+                    .frame(maxWidth: .infinity, alignment: .leading).frame(height: 30).contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("travelCourseAddDetail")
+        }
+        .padding(.leading, 84)
+        .padding(.trailing, 12)
+        .padding(.bottom, 4)
     }
 
     private func reorder(_ blocks: [TravelPlanTableModel.Block], from: IndexSet, to: Int) {
@@ -565,6 +627,14 @@ struct TravelCourseView: View {
         .padding(.horizontal, 12)
         .frame(height: 52)
         .contentShape(Rectangle())
+        .overlay(alignment: .bottomLeading) {
+            // 세부 계획이 있으면 개수를 작게 알린다(펼친 줄에서는 아래에 다 보인다).
+            let count = TravelCourse.details(of: block, in: table.blocks).count
+            if count > 0, !(isCurrent || selectedID == block.id) {
+                Text("+\(count)").font(.system(size: 9, weight: .bold).monospacedDigit()).foregroundStyle(TravelInk.plan.opacity(0.7))
+                    .padding(.leading, 78).padding(.bottom, 3)
+            }
+        }
         // 누르면 재생 헤드가 그 일정 시작으로 가고(지도의 고양이도 따라간다) 그 일정이 선택된다.
         .onTapGesture {
             if selectedID != block.id { selectedID = block.id }
@@ -654,7 +724,11 @@ enum TravelCoursePlanner {
         let current = TravelCourse.currentIndex(ordered, minute: minute).map { ordered[$0].id }
         return pins.map { pin in
             var mapPin = TravelStreetMap.Pin(longitude: pin.longitude, latitude: pin.latitude, label: pin.label, id: pin.id, title: pin.title)
-            guard let index = ordered.firstIndex(where: { $0.id == pin.id }) else { return mapPin }
+            guard let index = ordered.firstIndex(where: { $0.id == pin.id }) else {
+                // 코스에서 세부 계획의 핀은 번호 없이 둔다(번호는 굵은 곳만 센다).
+                if !ordered.isEmpty { mapPin.label = "" }
+                return mapPin
+            }
             mapPin.label = "\(index + 1)"
             mapPin.symbol = TripImportItem.Kind(rawValue: ordered[index].kind)?.symbol ?? "mappin"
             mapPin.colorHex = ordered[index].colorHex

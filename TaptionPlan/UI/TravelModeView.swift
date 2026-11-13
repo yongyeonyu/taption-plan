@@ -1030,7 +1030,7 @@ struct TravelModeView: View {
                     TravelCourseView(
                         table: table(entry), items: (model.settings.travelTripItems ?? []).filter { $0.tripID == entry.id }, language: language,
                         playMinute: currentPlayMinute(entry), photos: model.photoService, selectedID: $planSelectedID,
-                        onScrub: { playMinute = $0 }, onEdit: { editEntry(entry, itemID: $0.id) }, onAddStop: { courseAdding = entry },
+                        onScrub: { playMinute = $0 }, onEdit: { editEntry(entry, itemID: $0.id) }, onAddStop: { courseAdding = entry }, onAddDetail: { addEntry(entry, detailOf: $0) },
                         onReorder: { step in Task { await model.applyTravelHistory(step); planHistory.record(step) } }, onDelete: { deleteEntry(entry, itemID: $0.id) },
                         placePhotos: wantsWikiPhotos ? placePhotos.photos : [:]
                     )
@@ -1083,18 +1083,22 @@ struct TravelModeView: View {
     }
 
     /// 일정 넣기. 고른 셀이 있으면 그 열·그 시각·그 길이, 없으면 그날 마지막 일정 끝에서 잇는다.
-    private func addEntry(_ entry: TravelTripDirectory.Entry, cell: TravelPlanCell? = nil) {
-        let column = cell?.column, minute = cell?.minute
+    private func addEntry(_ entry: TravelTripDirectory.Entry, cell: TravelPlanCell? = nil, detailOf parent: TravelPlanTableModel.Block? = nil) {
+        let column = cell?.column
+        // 세부 계획이면 그 코스 곳 안의 시각으로 연다.
+        let detail = parent.map { TravelCourse.detailSlot(parent: $0, details: TravelCourse.details(of: $0, in: table(entry).blocks)) }
+        let minute = detail?.start ?? cell?.minute
         if planCell != nil { planCell = nil }
         let key = dayKey(entry), table = table(entry)
         let last = table.blocks.max { $0.endMinute < $1.endMinute }
-        let kind = column.map { TravelPlanColumns.kind(forColumn: $0, in: table.columns) }.flatMap(TripImportItem.Kind.init(rawValue:)) ?? .sight
+        let kind = column.map { TravelPlanColumns.kind(forColumn: $0, in: table.columns) }.flatMap(TripImportItem.Kind.init(rawValue:)) ?? (parent == nil ? .sight : .other)
         var target = TravelQuickEntrySheet.Target.new(
             trip: entry.trip, dayKey: key, dayLabel: dayLabel(entry, key: key),
             startMinute: minute ?? TravelQuickEntry.nextStart(lastEndMinute: last?.endMinute, nowMinute: table.nowMinute), kind: kind
         )
         target.anchor = TravelModeDestination(trip: entry.trip, stops: model.settings.travelPlanStops).point
-        target.duration = cell?.chosenDuration
+        target.duration = detail?.duration ?? cell?.chosenDuration
+        target.parentItemID = parent?.id
         entryTarget = target
     }
 
@@ -1123,9 +1127,7 @@ struct TravelModeView: View {
 
     /// 선택 막대에서 지움: 되돌릴 수 있게 그 일정과 장소를 쌓아 둔다.
     private func deleteEntry(_ entry: TravelTripDirectory.Entry, itemID: String) {
-        guard let item = (model.settings.travelTripItems ?? []).first(where: { $0.tripID == entry.id && $0.itemID == itemID }) else { return }
-        let place = TravelPlanHistory.place(of: item, stops: model.settings.travelPlanStops)
-        Task { if await model.deleteTripItem(tripID: entry.id, itemID: itemID) { planHistory.record(.existence(item, place: place, exists: false)) } }
+        Task { if let step = await model.deleteTripItemWithDetails(tripID: entry.id, itemID: itemID) { planHistory.record(step) } }
     }
 
     private func editEntry(_ entry: TravelTripDirectory.Entry, itemID: String) {

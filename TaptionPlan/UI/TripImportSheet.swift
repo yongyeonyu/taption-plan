@@ -36,7 +36,7 @@ extension AppModel {
                 startOffsetSeconds: item.timeZone.secondsFromGMT(for: item.start),
                 endOffsetSeconds: item.endTimeZone.secondsFromGMT(for: item.end), planID: planID, status: item.status.stored,
                 note: item.note.isEmpty ? nil : item.note,
-                colorHex: kept[item.id]?.colorHex, plannedSpendKRW: kept[item.id]?.plannedSpendKRW
+                colorHex: kept[item.id]?.colorHex, plannedSpendKRW: kept[item.id]?.plannedSpendKRW, parentItemID: kept[item.id]?.parentItemID
             ))
             // 잠은 숙소 자리라 지도에 핀을 따로 찍지 않는다.
             guard item.kind != .sleep, let coordinate = item.coordinate else { continue }
@@ -140,7 +140,11 @@ extension AppModel {
     @discardableResult
     func moveTripItem(tripID: String, itemID: String, by delta: TimeInterval, calendar: Calendar = .autoupdatingCurrent) async -> Bool {
         guard let items = TravelTripItemEditor.moved(snapshot.settings.travelTripItems ?? [], tripID: tripID, itemID: itemID, by: delta) else { return false }
-        return await applyTripItemTimes(items, tripID: tripID, itemID: itemID, calendar: calendar)
+        // 코스 곳을 옮기면 딸린 세부 계획도 같은 만큼 옮긴다(TVV1113A01 C4).
+        let details = TravelTripItem.details(of: itemID, tripID: tripID, in: items).map(\.itemID)
+        guard await applyTripItemTimes(items, tripID: tripID, itemID: itemID, calendar: calendar) else { return false }
+        for detail in details { await moveTripItem(tripID: tripID, itemID: detail, by: delta, calendar: calendar) }
+        return true
     }
 
     /// 여행 일정의 시작·끝을 따로 옮긴다. 5분보다 짧아지면 바꾸지 않는다.
@@ -160,7 +164,7 @@ extension AppModel {
     func addTripItem(
         tripID: String, kind: TripImportItem.Kind, title: String, start: Date, end: Date, offsetSeconds: Int,
         place: TravelItemPlace? = nil, note: String = "", colorHex: String? = nil, plannedSpendKRW: Double? = nil,
-        itemID restoredID: String? = nil
+        itemID restoredID: String? = nil, parentItemID: String? = nil
     ) async -> String? {
         guard acceptsDataMutation(), !tripID.isEmpty, end > start else { return nil }
         let name = title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -175,7 +179,8 @@ extension AppModel {
             tripID: tripID, itemID: itemID, kind: kind.rawValue, title: name.isEmpty ? kind.planName : name, start: start, end: end,
             startOffsetSeconds: offsetSeconds, endOffsetSeconds: offsetSeconds, planID: planID,
             note: Self.cleanTripNote(note),
-            colorHex: TravelTripItem.cleanColorHex(colorHex), plannedSpendKRW: TravelTripItem.cleanPlannedSpend(plannedSpendKRW)
+            colorHex: TravelTripItem.cleanColorHex(colorHex), plannedSpendKRW: TravelTripItem.cleanPlannedSpend(plannedSpendKRW),
+            parentItemID: parentItemID
         )]
         snapshot.settings.travelTripItems = items
         if let place, let item = items.last { setTripItemPlace(place, for: item) }
@@ -255,7 +260,7 @@ extension AppModel {
         guard let itemID = await addTripItem(
             tripID: item.tripID, kind: TripImportItem.Kind(rawValue: item.kind) ?? .other, title: item.title, start: item.start, end: item.end,
             offsetSeconds: item.startOffsetSeconds, place: place, note: item.note ?? "", colorHex: item.colorHex, plannedSpendKRW: item.plannedSpendKRW,
-            itemID: item.itemID
+            itemID: item.itemID, parentItemID: item.parentItemID
         ) else { return false }
         guard item.status != nil || item.endOffsetSeconds != item.startOffsetSeconds, var items = snapshot.settings.travelTripItems,
               let index = items.firstIndex(where: { $0.tripID == item.tripID && $0.itemID == itemID }) else { return true }
