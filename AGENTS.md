@@ -48,6 +48,7 @@
 - `docs/ARCHITECTURE_ROADMAP.md`: 구조 로드맵(Phase 0~5)과 결정 기록(ADR).
 - `docs/PROPOSALS.md`: 구조·DB·AI 연결·UI·지도 색·UX·가계부·리팩토링 제안과 근거, 대표 결정 목록(PLN1111A01). 순서는 `docs/NEXT_PLAN.md`.
 - `docs/TRAVEL_MODE_PLAN.md`: 여행 모드 개편 컨셉·화면·단계 T0~T12(TVM1111A01).
+- `docs/COURSE_FIRST_PLAN.md`: 여행 「코스 먼저」 실행 계획 C1~C8과 사진 출처 판단(TVV1113A01).
 - `docs/TRIP_PORT_ANALYSIS.md`: Taption Trip 여행·정산 기능 이식 분석과 단위 U1~U13(TRP1111A01).
 - `docs/HOME_EVOLUTION_LIST.md`: 집 성장 366일 건축물 목록(생성물).
 - `docs/CLIENT_REPORT.md`·`docs/UX_ARCHITECTURE.md`·`docs/DESIGN_SYSTEM.md`: 2026-10-24 UX 진단·설계 자료.
