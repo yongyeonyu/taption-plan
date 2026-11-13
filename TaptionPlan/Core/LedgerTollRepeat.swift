@@ -324,6 +324,8 @@ struct LedgerTollRepeatObserver: View {
     /// 통행료와 버스·지하철 요금(TRF1113A01)을 차례로 본다.
     private func runAll() async {
         await LedgerTollRepeatRunner.run(model: model)
+        // 승하차 지점이 정류장인지 먼저 물어 두면 다음 분류 갱신에서 버스로 바뀌고, 그 뒤 요금이 들어간다(BST1113A01).
+        await BusStopLookupRunner.run(model: model)
         await LedgerTransitFareRunner.run(model: model)
     }
 }

@@ -1219,7 +1219,7 @@ final class BusRideRecognizerTests: XCTestCase {
         let stops = BusRideRecognizer.stops(in: readings)
         XCTAssertGreaterThanOrEqual(stops.short, 8)
         XCTAssertEqual(stops.long, 0)
-        let result = BusRideRecognizer.applying([segment(readings)], readings: readings, registered: ["내 차"], corrections: [])
+        let result = BusRideRecognizer.applying([segment(readings)], readings: readings, registered: ["내 차"], corrections: [], stopDefaults: UserDefaults(suiteName: "BusRideRecognizerTests")!)
         XCTAssertEqual(result.first?.mode, .bus)
         XCTAssertEqual(result.first?.confidence, .medium)
         XCTAssertGreaterThan(result.first?.distanceMeters ?? 0, 4_000, "거리가 없던 구간은 GPS 거리로 채운다")
@@ -1229,18 +1229,88 @@ final class BusRideRecognizerTests: XCTestCase {
     func testLongTrafficLightStopsStayCar() {
         let readings = track(carLegs)
         XCTAssertFalse(BusRideRecognizer.looksLikeBus(BusRideRecognizer.stops(in: readings)))
-        XCTAssertEqual(BusRideRecognizer.applying([segment(readings)], readings: readings, registered: ["내 차"], corrections: []).first?.mode, .car)
+        XCTAssertEqual(BusRideRecognizer.applying([segment(readings)], readings: readings, registered: ["내 차"], corrections: [], stopDefaults: UserDefaults(suiteName: "BusRideRecognizerTests")!).first?.mode, .car)
     }
 
     func testMyCarConnectionUserChoiceOrNoRegisteredCarKeepsCar() {
         let connected = track(busLegs, car: "내 차")
-        XCTAssertEqual(BusRideRecognizer.applying([segment(connected)], readings: connected, registered: ["내 차"], corrections: []).first?.mode, .car)
+        XCTAssertEqual(BusRideRecognizer.applying([segment(connected)], readings: connected, registered: ["내 차"], corrections: [], stopDefaults: UserDefaults(suiteName: "BusRideRecognizerTests")!).first?.mode, .car)
         let readings = track(busLegs)
-        XCTAssertEqual(BusRideRecognizer.applying([segment(readings)], readings: readings, registered: [], corrections: []).first?.mode, .car,
+        XCTAssertEqual(BusRideRecognizer.applying([segment(readings)], readings: readings, registered: [], corrections: [], stopDefaults: UserDefaults(suiteName: "BusRideRecognizerTests")!).first?.mode, .car,
                        "등록한 차가 없으면 남의 차인지 알 수 없다")
-        XCTAssertEqual(BusRideRecognizer.applying([segment(readings, evidence: ["사용자 확인 · 자동차"])], readings: readings, registered: ["내 차"], corrections: []).first?.mode, .car)
+        XCTAssertEqual(BusRideRecognizer.applying([segment(readings, evidence: ["사용자 확인 · 자동차"])], readings: readings, registered: ["내 차"], corrections: [], stopDefaults: UserDefaults(suiteName: "BusRideRecognizerTests")!).first?.mode, .car)
         let span = segment(readings).span
         let correction = TravelModeCorrection(span: span, mode: .car, inferredMode: .car, inferredConfidence: .high)
-        XCTAssertEqual(BusRideRecognizer.applying([segment(readings)], readings: readings, registered: ["내 차"], corrections: [correction]).first?.mode, .car)
+        XCTAssertEqual(BusRideRecognizer.applying([segment(readings)], readings: readings, registered: ["내 차"], corrections: [correction], stopDefaults: UserDefaults(suiteName: "BusRideRecognizerTests")!).first?.mode, .car)
+    }
+}
+
+/// 승하차 지점 버스정류장 확인(BST1113A01). 카카오 응답은 꾸민 것.
+final class BusStopCheckTests: XCTestCase {
+    private let base = Date(timeIntervalSince1970: 1_794_000_000)
+    private var defaults: UserDefaults!
+
+    override func setUp() {
+        defaults = UserDefaults(suiteName: "BusStopCheckTests")
+        defaults.removePersistentDomain(forName: "BusStopCheckTests")
+    }
+
+    private func point(_ meters: Double) -> GeoPoint {
+        GeoPoint(latitude: 37.5 + meters / 111_000, longitude: 126.7, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: 10)
+    }
+
+    /// 일정한 속도로 서지 않고 달린 길(정차 모양만으로는 버스가 아님).
+    private func straight() -> [SensorReading] {
+        (0..<120).map { index in
+            SensorReading(timestamp: base.addingTimeInterval(TimeInterval(index * 5)), point: point(Double(index) * 60), motion: .automotive, motionConfidence: .high)
+        }
+    }
+
+    private func segment(_ readings: [SensorReading]) -> TravelSegment {
+        TravelSegment(mode: .car, span: TimeSpan(start: readings.first!.timestamp, end: readings.last!.timestamp),
+                      distanceMeters: 0, confidence: .high, evidence: [])
+    }
+
+    func testKakaoAnswerFindsABusStopWithinTheRadius() {
+        let stop = #"{"documents":[{"place_name":"가나다역","category_name":"교통,수송 > 교통시설 > 버스정류장","distance":"40"}]}"#
+        XCTAssertEqual(BusStopCheck.containsBusStop(Data(stop.utf8)), true)
+        let named = #"{"documents":[{"place_name":"가나다사거리 정류장","category_name":null,"distance":"80"}]}"#
+        XCTAssertEqual(BusStopCheck.containsBusStop(Data(named.utf8)), true)
+        let far = #"{"documents":[{"place_name":"가나다 정류장","category_name":"교통,수송 > 교통시설 > 버스정류장","distance":"180"}]}"#
+        XCTAssertEqual(BusStopCheck.containsBusStop(Data(far.utf8)), false)
+        let shop = #"{"documents":[{"place_name":"정류장 카페","category_name":"음식점 > 카페","distance":"10"}]}"#
+        XCTAssertEqual(BusStopCheck.containsBusStop(Data(shop.utf8)), false)
+        XCTAssertNil(BusStopCheck.containsBusStop(Data("nope".utf8)))
+    }
+
+    func testRememberedCellsAreSharedWithinAboutFiftyMeters() {
+        BusStopCheck.remember(point(0), isStop: true, defaults: defaults)
+        XCTAssertEqual(BusStopCheck.known(point(10), defaults: defaults), true)
+        XCTAssertNil(BusStopCheck.known(point(500), defaults: defaults))
+    }
+
+    func testBothEndsAtBusStopsMakeABusEvenWithoutStopAndGo() {
+        let readings = straight()
+        BusStopCheck.remember(readings.first!.point!, isStop: true, defaults: defaults)
+        BusStopCheck.remember(readings.last!.point!, isStop: true, defaults: defaults)
+        let result = BusRideRecognizer.applying([segment(readings)], readings: readings, registered: ["내 차"], corrections: [], stopDefaults: defaults)
+        XCTAssertEqual(result.first?.mode, .bus)
+        XCTAssertEqual(result.first?.confidence, .high)
+        XCTAssertTrue(result.first?.evidence.contains(BusRideRecognizer.stopEvidence) == true)
+    }
+
+    func testNoBusStopAtEitherEndKeepsCar() {
+        let readings = straight()
+        BusStopCheck.remember(readings.first!.point!, isStop: false, defaults: defaults)
+        BusStopCheck.remember(readings.last!.point!, isStop: false, defaults: defaults)
+        XCTAssertEqual(BusRideRecognizer.applying([segment(readings)], readings: readings, registered: ["내 차"], corrections: [], stopDefaults: defaults).first?.mode, .car)
+    }
+
+    func testWithoutARegisteredCarStopsAloneAreNotEnough() {
+        let readings = straight()
+        BusStopCheck.remember(readings.first!.point!, isStop: true, defaults: defaults)
+        BusStopCheck.remember(readings.last!.point!, isStop: true, defaults: defaults)
+        XCTAssertEqual(BusRideRecognizer.applying([segment(readings)], readings: readings, registered: [], corrections: [], stopDefaults: defaults).first?.mode, .car,
+                       "등록한 차가 없으면 정차 모양까지 맞아야 한다")
     }
 }
