@@ -93,6 +93,12 @@ enum MapHomeHomeWeatherBadgePolicy {
     /// 현재 날씨로 볼 수 있는 가장 오래된 관측.
     static let maximumAge: TimeInterval = 90 * 60
 
+    /// 집 날씨를 고를 시각: 재생 중이면 재생 시각, 지난 날이면 사이드바에서 고른 시각, 오늘이면 지금.
+    static func displayDate(playback: Date?, selectedDay: Date, selection: Date, now: Date, calendar: Calendar = .autoupdatingCurrent) -> Date {
+        if let playback { return playback }
+        return calendar.isDate(selectedDay, inSameDayAs: now) ? now : selection
+    }
+
     /// 지금과 가장 가까운 완전한 날씨(관측 우선). 너무 오래됐거나 없으면 nil.
     static func badge(
         from contexts: [WeatherContext],

@@ -1737,3 +1737,19 @@ final class SkipWordAndRideTests: XCTestCase {
         XCTAssertEqual(RideConfirmation.pending([car, segment(.bus)], corrections: [], stopDefaults: defaults).count, 2)
     }
 }
+
+/// 집 날씨는 보고 있는 시각의 것(WTH1114A01).
+final class HomeWeatherDateTests: XCTestCase {
+    func testPastDayAndPlaybackUseTheirOwnTime() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        let now = calendar.date(from: DateComponents(year: 2026, month: 11, day: 14, hour: 9))!
+        let pastDay = calendar.date(from: DateComponents(year: 2026, month: 11, day: 10))!
+        let picked = pastDay.addingTimeInterval(15 * 3600)
+        let playing = pastDay.addingTimeInterval(8 * 3600)
+        typealias Policy = MapHomeHomeWeatherBadgePolicy
+        XCTAssertEqual(Policy.displayDate(playback: nil, selectedDay: now, selection: now.addingTimeInterval(-3600), now: now, calendar: calendar), now)
+        XCTAssertEqual(Policy.displayDate(playback: nil, selectedDay: pastDay, selection: picked, now: now, calendar: calendar), picked)
+        XCTAssertEqual(Policy.displayDate(playback: playing, selectedDay: pastDay, selection: picked, now: now, calendar: calendar), playing)
+    }
+}

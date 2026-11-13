@@ -54,12 +54,16 @@ extension MapHomeView {
     var placeAnnotations: [MapHomePlaceAnnotation] {
         let probe = MapHomePlaybackProbe.begin("placeAnnotations"); defer { MapHomePlaybackProbe.end(probe) }
         // 날씨는 분 단위로만 본다. 매 호출마다 날씨 전체를 훑지 않는다(ARC1030A01).
+        // 지난 날을 보거나 재생할 때는 그 시각에 저장된 날씨를 쓴다(WTH1114A01, 대표 신고: 과거 재생인데 집에 오늘 날씨).
+        // 오늘을 그냥 보고 있을 때만 지금 날씨다. 재생 중 계산이 잦지 않게 10분 칸으로 묶는다.
+        let weatherDate = MapHomeHomeWeatherBadgePolicy.displayDate(
+            playback: displayedPlaybackDate, selectedDay: model.selectedDate, selection: timelineSelectionDate, now: .now)
         let homeWeather = homeWeatherBadgeMemo.value(for: MapHomeHomeWeatherKey(
-            minute: Int(Date.now.timeIntervalSinceReferenceDate / 60),
+            minute: Int(weatherDate.timeIntervalSinceReferenceDate / 600),
             weatherCount: model.snapshot.weather.count,
             lastObservedAt: model.snapshot.weather.last?.observedAt
         )) {
-            MapHomeHomeWeatherBadgePolicy.badge(from: model.snapshot.weather, now: .now)
+            MapHomeHomeWeatherBadgePolicy.badge(from: model.snapshot.weather, now: weatherDate)
         }
         let stampedKeys = placeStampedKeys
         return model.settings.frequentPlaces.compactMap { place in
