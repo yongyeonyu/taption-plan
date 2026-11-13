@@ -222,7 +222,15 @@ enum LedgerMessageParser {
                 break
             }
         }
+        if let local = localCard(text), best.map({ local.index < $0.index }) ?? true { return local.name }
         return best?.name
+    }
+
+    /// 인천 지역화폐 e음 앱 알림의 카드 이름(「서로e음 카드(교통)」, EUM1113A01). 앱 이름 줄(「인천e음」)보다 「카드」가 붙은 것을 먼저 본다.
+    private static func localCard(_ text: String) -> (index: String.Index, name: String)? {
+        let found = text.matches(of: /([가-힣]{1,4}e음)(\s*카드)?/)
+        guard let pick = found.first(where: { $0.output.2 != nil }) ?? found.first else { return nil }
+        return (pick.range.lowerBound, String(pick.output.1))
     }
 
     /// 「원」 뒤에 올 수 있는 말. 그 밖의 한글이 이어지면 금액이 아니라 낱말이다(「원조국밥」·「원효로점」).
@@ -296,6 +304,7 @@ enum LedgerMessageParser {
 
     private static func isFrame(_ token: String) -> Bool {
         if token == "PAY" || token.contains(mark) || token.wholeMatch(of: /[가-힣]{2,4}님[.,]?/) != nil { return true }
+        if token.wholeMatch(of: /[가-힣]{1,4}e음/) != nil { return true }
         // 말로 쓴 알림의 끝말(「출금되었어요.」)은 가게가 아니다.
         if sentenceEnds.contains(where: token.trimmingCharacters(in: .punctuationCharacters).hasSuffix) { return true }
         let left = lettersLeft(token)

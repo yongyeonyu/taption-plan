@@ -23,7 +23,7 @@ const command = {
     + "NSRegularExpression, dot matches newlines, named groups (?<amount>...) required unless kind is ignore, optional merchant, month, day, hour, "
     + "minute, currency (3-letter, default KRW); specific to that issuer's layout, anchored on its fixed words, never a catch-all like .*, without "
     + "the user's name or card digits), sample (1-1000, the message the pattern must match; the app re-checks), kind? (expense default | income | "
-    + "ignore = not a payment, never add). "
+    + "ignore = not a payment, never add; when the task's context.choice is set the user chose it, so use that kind). "
     + "mergeRecords: date, recordIds (2-20), title?, categoryId?. updateRecordTime: date, recordId, start?|end? (HH:mm). "
     + "updateSchedule: planId | (date, startTime), then title?, start?, end?, note?. deleteSchedule: planId | (date, startTime). "
     + "updateMemo: memoId, text. deleteMemo: memoId. addGoal: title, start (YYYY-MM-DD), end?, categoryId?. "

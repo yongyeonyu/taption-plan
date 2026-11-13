@@ -127,6 +127,10 @@ enum PaymentInbox {
         var outcome: Outcome
         var message: String
         var ruleRequested = false
+        /// 알림을 보낸 앱(PAS1113A01). 문자나 예전 단축어로 온 글은 없다.
+        var source: String?
+        /// 사용자가 이 글에 정해 준 종류(PAS1113A01).
+        var choice: LedgerMessageRules.Kind?
     }
 
     static let key = "paymentInbox"
@@ -143,9 +147,9 @@ enum PaymentInbox {
     static func stored(_ text: String) -> String { String(AITaskQueue.mask(text).prefix(1_000)) }
 
     @MainActor
-    static func record(_ text: String, outcome: Outcome, message: String, now: Date = .now, defaults: UserDefaults = .standard) {
+    static func record(_ text: String, outcome: Outcome, message: String, source: String? = nil, now: Date = .now, defaults: UserDefaults = .standard) {
         var list = items(defaults, now: now)
-        list.append(Item(text: stored(text), receivedAt: now, outcome: outcome, message: message))
+        list.append(Item(text: stored(text), receivedAt: now, outcome: outcome, message: message, source: source))
         if list.count > limit { list.removeFirst(list.count - limit) }
         save(list, defaults)
     }
@@ -251,6 +255,7 @@ struct PaymentInboxDetail: View {
                     Text(language.text("번호는 가려서 이 기기에만 7일 동안 둬요.", "Numbers are masked. Kept on this device only, for 7 days."))
                 }
                 Section { Label(item.message, systemImage: Self.symbol(item.outcome)) }
+                PaymentInboxChoiceSection(language: language, item: $item, notice: $notice)
                 Section {
                     Button {
                         Task { await askAI() }

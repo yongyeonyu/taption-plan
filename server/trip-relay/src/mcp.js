@@ -110,6 +110,7 @@ const TOOLS = [
     + "If it is not a payment, complete with status failed and a reason. "
     + "payment_rule: text is a payment message the app could not read. Send add_payment_rule with a pattern for that issuer's layout "
     + "(text as sample) so the app reads this format by itself from now on, or kind ignore if it is not a payment; then complete the task. "
+    + "If context.choice is set (expense, income or ignore) the user already said what this text is: use that kind. context.app is the app that sent the alert. "
     + "memo_polish: polish context.memoId with update_memo (keep facts). "
     + "route_check / merge_review / stay_place: read get_activity for date, then fix with update_activity, merge_records, update_record_time, "
     + "set_travel_mode or classify_unconfirmed as context describes. fare_check: work out the bus, subway or toll fare for the trip in context and record it with add_expense "

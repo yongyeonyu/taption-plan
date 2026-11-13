@@ -69,6 +69,9 @@ struct TaptionPlanApp: App {
                 }
             } else if ProcessInfo.processInfo.arguments.contains("-stampPreview") {
                 MapHomeStampPreviewHost()
+            } else if let index = ProcessInfo.processInfo.arguments.firstIndex(of: "-paymentAlertPreview") {
+                let arguments = ProcessInfo.processInfo.arguments
+                TaptionFontRoot { PaymentAlertPreviewHost(showsInbox: arguments.dropFirst(index + 1).first == "inbox") }
             } else if ProcessInfo.processInfo.arguments.contains("-inkPreview") {
                 MapHomeInkPreviewHost()
             } else if let index = ProcessInfo.processInfo.arguments.firstIndex(of: "-tutorialPreview") {

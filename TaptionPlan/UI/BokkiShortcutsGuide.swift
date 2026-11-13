@@ -14,6 +14,7 @@ struct BokkiShortcutsGuideSections: View {
             Section {
                 BokkiPaymentShortcutButton(language: language)
                 BokkiPaymentAutomationRow(language: language)
+                PaymentAlertSourcesRow(language: language)
             } header: {
                 Text(language.text("결제 문자·알림 자동으로 넣기", "Payments, automatically"))
             } footer: {

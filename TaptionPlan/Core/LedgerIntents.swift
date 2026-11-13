@@ -31,7 +31,9 @@ struct AddPaymentNotificationIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        .result(dialog: IntentDialog(stringLiteral: await PaymentTextCapture.capture(text, requiresTime: false)))
+        // 단축어가 첫 줄에 「[앱: 이름]」을 붙여 넘기면 앱마다 지출·수입을 고를 수 있다(PAS1113A01).
+        let (source, body) = PaymentAlertSources.split(text)
+        return .result(dialog: IntentDialog(stringLiteral: await PaymentTextCapture.capture(body, requiresTime: false, source: source)))
     }
 }
 
@@ -39,12 +41,13 @@ struct AddPaymentNotificationIntent: AppIntent {
 @MainActor
 enum PaymentTextCapture {
     /// 넘어온 글을 처리하고 결과를 받은 문자함에 남긴다(PRL1112A01). 「AI」 탭이 이것을 보여 준다.
-    static func capture(_ text: String, requiresTime: Bool, now: Date = .now) async -> String {
+    static func capture(_ text: String, requiresTime: Bool, source: String? = nil, now: Date = .now) async -> String {
         // 「BOKKI 결제」는 낱말마다 트리거가 있어 한 문자가 여러 번 넘어온다. 같은 글은 한 번만 처리한다(NTF1112A01).
         if let earlier = repeated(text, now: now) { return earlier }
         inFlight[PaymentInbox.stored(text)] = now
-        let (message, outcome) = await process(text, requiresTime: requiresTime, now: now)
-        PaymentInbox.record(text, outcome: outcome, message: message, now: now)
+        PaymentAlertSources.seen(source, now: now)
+        let (message, outcome) = await process(text, requiresTime: requiresTime, source: source, now: now)
+        PaymentInbox.record(text, outcome: outcome, message: message, source: PaymentAlertSources.name(source), now: now)
         return message
     }
 
@@ -61,12 +64,16 @@ enum PaymentTextCapture {
         return inFlight[key] == nil ? nil : ""
     }
 
-    static func process(_ text: String, requiresTime: Bool, now: Date = .now) async -> (String, PaymentInbox.Outcome) {
+    static func process(_ text: String, requiresTime: Bool, source: String? = nil, now: Date = .now) async -> (String, PaymentInbox.Outcome) {
         let language = MapHomeLanguage.current
         // AI가 보탠 규칙이 먼저다. 앱 규칙이 못 읽거나 잘못 읽는 형식을 고치려고 넣은 것이기 때문이다.
         if let match = LedgerMessageRules.match(text, now: now) {
             guard case let .draft(draft, income) = match else {
                 return (language.text("가계부에 넣지 않는 문자예요.", "This kind of text is not added to the ledger."), .skipped)
+            }
+            // 앱마다 꺼 둔 종류는 넣지 않는다(PAS1113A01).
+            guard PaymentAlertSources.allows(source, income: income) else {
+                return (PaymentAlertSources.blockedMessage(source, income: income, language: language), .skipped)
             }
             var entry = LedgerMessageParser.entry(draft, now: now)
             if income { entry.kind = .income }
@@ -80,6 +87,9 @@ enum PaymentTextCapture {
         }
         // 급여 입금은 수입으로 넣는다(LIN1111A01). 그 밖의 입금은 넣지 않는다.
         if let salary = LedgerMessageParser.salaryDeposit(text, now: now) {
+            guard PaymentAlertSources.allows(source, income: true) else {
+                return (PaymentAlertSources.blockedMessage(source, income: true, language: language), .skipped)
+            }
             await LedgerBook.shared.load()
             guard LedgerMessageParser.duplicateVerdict(salary, in: LedgerBook.shared.entries) == .none else {
                 return (language.text("이미 가계부에 넣은 입금이에요.", "That deposit is already in the ledger."), .duplicate)
@@ -103,6 +113,10 @@ enum PaymentTextCapture {
                 return (language.text("결제 문자를 읽지 못해 AI에게 확인을 맡겼어요.", "Couldn't read the payment text, so it was sent to your AI to check."), .askedAI)
             }
             return (language.text("결제 문자를 읽지 못했어요. 가계부에서 직접 넣어 주세요.", "Couldn't read the payment text. Add it in the ledger yourself."), .unread)
+        }
+        // 결제·취소는 지출 쪽이다. 앱마다 꺼 둔 종류는 넣지 않는다(PAS1113A01).
+        guard PaymentAlertSources.allows(source, income: false) else {
+            return (PaymentAlertSources.blockedMessage(source, income: false, language: language), .skipped)
         }
         if draft.occurredAt == nil { draft.occurredAt = now }
         let entry = LedgerMessageParser.entry(draft)
