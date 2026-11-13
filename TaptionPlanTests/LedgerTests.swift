@@ -1753,3 +1753,14 @@ final class HomeWeatherDateTests: XCTestCase {
         XCTAssertEqual(Policy.displayDate(playback: playing, selectedDay: pastDay, selection: picked, now: now, calendar: calendar), playing)
     }
 }
+
+/// 진료과 이름만 있는 가게도 의료·건강(HLT1114A01). 가게 이름은 지어낸 것이다.
+final class LedgerHealthCategoryTests: XCTestCase {
+    func testClinicNamesWithoutHospitalWordAreHealth() {
+        for name in ["가나마취통증의학과", "다라정형외과", "마바내과", "사아피부과", "자차한의원", "카타이비인후과", "파하클리닉"] {
+            XCTAssertEqual(LedgerCategory.guess(name), .health, name)
+        }
+        XCTAssertEqual(LedgerCategory.guess("가나카페"), .cafe)
+        XCTAssertEqual(LedgerCategory.guess("다라식당"), .food)
+    }
+}
