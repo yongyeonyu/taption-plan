@@ -1445,7 +1445,7 @@ final class LedgerDayGroupingTests: XCTestCase {
     }
 }
 
-/// 「머무름」 기록에 찾은 장소 이름(KKP1113A01, 대표 신고: 저녁 식당가 「머무름」·오피스텔로).
+/// 「머무름」 기록에 찾은 장소 이름(KKP1113A01, 대표 신고: 식당이 「머무름」·건물 이름으로).
 @MainActor
 final class StayPlaceNamingTests: XCTestCase {
     private let base = Date(timeIntervalSince1970: 1_794_000_000)
@@ -1535,5 +1535,95 @@ final class BusRouteCheckTests: XCTestCase {
         let record = ActualRecord(planID: nil, title: "버스", categoryID: "movement", startedAt: ride.span.start, endedAt: ride.span.end, source: .motion,
                                   behavior: WatchBehaviorKind.publicTransit.rawValue, evidence: ["버스 구간 확정"], modelVersion: "classifier-v1/motion")
         XCTAssertEqual(BusRideRecognizer.retitling([record], busSpans: [ride.span], titles: ["버스 · 80번"], asOf: ride.span.end).first?.title, "버스 · 80번")
+    }
+}
+
+/// 대중교통 근거 없이 버스로 잠긴 구간 되돌리기(BRV1114A01, 대표 신고: 세컨카 레이로 950m·5분이 333에서도 버스).
+final class BusRevertTests: XCTestCase {
+    private let base = Date(timeIntervalSince1970: 1_794_000_000)
+
+    private func straight(minutes: Int) -> [SensorReading] {
+        (0..<(minutes * 12)).map { index in
+            SensorReading(timestamp: base.addingTimeInterval(TimeInterval(index * 5)),
+                          point: GeoPoint(latitude: 37.5 + Double(index) * 0.0003, longitude: 126.7, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: 10),
+                          motion: .automotive, motionConfidence: .high)
+        }
+    }
+
+    private func bus(_ readings: [SensorReading], evidence: [String]) -> TravelSegment {
+        TravelSegment(mode: .bus, span: TimeSpan(start: readings.first!.timestamp, end: readings.last!.timestamp), distanceMeters: 950, confidence: .high, evidence: evidence)
+    }
+
+    func testOldStopOnlyBusWithoutStopAndGoGoesBackToCar() {
+        let readings = straight(minutes: 6)
+        let defaults = UserDefaults(suiteName: "BusRevertTests")!
+        defaults.removePersistentDomain(forName: "BusRevertTests")
+        let old = bus(readings, evidence: ["차량 가능 속도", BusRideRecognizer.stopEvidence])
+        let result = BusRideRecognizer.applying([old], readings: readings, registered: ["내 차"], corrections: [], stopDefaults: defaults).first
+        XCTAssertEqual(result?.mode, .car)
+        XCTAssertTrue(result?.evidence.contains(BusRideRecognizer.revertedEvidence) == true)
+        XCTAssertFalse(result?.evidence.contains(BusRideRecognizer.stopEvidence) == true)
+        let routed = bus(readings, evidence: ["대중교통 도로 경로 일치"])
+        XCTAssertEqual(BusRideRecognizer.applying([routed], readings: readings, registered: ["내 차"], corrections: [], stopDefaults: defaults).first?.mode, .bus,
+                       "다른 판정의 대중교통 근거가 있으면 그대로")
+        XCTAssertEqual(BusRideRecognizer.applying([old], readings: readings, registered: [], corrections: [], stopDefaults: defaults).first?.mode, .bus,
+                       "등록한 차가 없으면 건드리지 않는다")
+    }
+
+    func testRecordRenamedByTheBusRuleReturnsToCarWhenTheBusIsGone() {
+        let record = ActualRecord(planID: nil, title: "버스", categoryID: "movement", startedAt: base, endedAt: base.addingTimeInterval(300), source: .motion,
+                                  behavior: WatchBehaviorKind.publicTransit.rawValue, evidence: ["iPhone Core Motion", "버스 구간 확정"], modelVersion: "classifier-v1/motion")
+        let back = BusRideRecognizer.retitling([record], busSpans: [], asOf: base.addingTimeInterval(600)).first
+        XCTAssertEqual(back?.title, "자동차")
+        XCTAssertEqual(back?.behavior, WatchBehaviorKind.automotive.rawValue)
+        XCTAssertFalse(back?.evidence.contains("버스 구간 확정") == true)
+    }
+}
+
+/// 머문 곳 후보에서 고르기와 식사(SPC1114A01, 대표 신고: 같은 건물 빵집 이름으로 붙음).
+@MainActor
+final class StayCandidateTests: XCTestCase {
+    func testMealTimeLongStayPicksTheRestaurantOverABakery() {
+        let list = [
+            StayPlaceCandidate(name: "빵집", code: "FD6", category: "음식점 > 간식 > 제과,베이커리", meters: 8),
+            StayPlaceCandidate(name: "뷔페 식당", code: "FD6", category: "음식점 > 뷔페", meters: 21),
+            StayPlaceCandidate(name: "동네 카페", code: "CE7", category: "음식점 > 카페", meters: 15),
+        ]
+        XCTAssertEqual(StayPlaceCandidate.choose(list, mealStay: true)?.name, "뷔페 식당")
+        XCTAssertEqual(StayPlaceCandidate.choose(list, mealStay: false)?.name, "빵집")
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        let dinner = calendar.date(from: DateComponents(year: 2026, month: 11, day: 13, hour: 18, minute: 39))!
+        XCTAssertTrue(StayPlaceNaming.isMealStay(TimeSpan(start: dinner, end: dinner.addingTimeInterval(94 * 60)), calendar: calendar))
+        XCTAssertFalse(StayPlaceNaming.isMealStay(TimeSpan(start: dinner, end: dinner.addingTimeInterval(20 * 60)), calendar: calendar))
+    }
+
+    func testStayRecordBecomesAMealWithCandidatesInEvidence() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        let start = calendar.date(from: DateComponents(year: 2026, month: 11, day: 13, hour: 18, minute: 39))!
+        let point = GeoPoint(latitude: 37.53, longitude: 126.67, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: 10)
+        let stay = ActualRecord(planID: nil, title: StationaryContextKind.unknownStay.title, categoryID: "activity", startedAt: start,
+                                endedAt: start.addingTimeInterval(94 * 60), source: .location, behavior: StationaryContextKind.unknownStay.rawValue,
+                                modelVersion: "classifier-v1/context")
+        let place = PlaceStay(placeKey: "p", displayName: "확인된 위치", span: TimeSpan(start: start, end: start.addingTimeInterval(94 * 60)),
+                              confidence: .medium, point: point, isConfirmed: false)
+        let key = NLEPlaceLane.nameKey(for: point)
+        let candidates = [key: [
+            StayPlaceCandidate(name: "빵집", code: "FD6", category: "음식점 > 간식 > 제과,베이커리", meters: 8),
+            StayPlaceCandidate(name: "뷔페 식당", code: "FD6", category: "음식점 > 뷔페", meters: 21),
+        ]]
+        let named = StayPlaceNaming.retitling([stay], places: [place], names: [key: "빵집"], candidates: candidates,
+                                              calendar: calendar, asOf: start.addingTimeInterval(7_200)).first
+        XCTAssertEqual(named?.title, "식사 · 뷔페 식당")
+        XCTAssertEqual(named?.categoryID, "eating")
+        XCTAssertEqual(named?.behavior, "meal")
+        XCTAssertTrue(named?.evidence.contains("근처 후보: 빵집·뷔페 식당") == true)
+        // 이미 이름을 붙인 기록도 다시 고른다(어제 「빵집」로 붙은 것).
+        var old = stay
+        old.title = "빵집"
+        old.evidence.append(StayPlaceNaming.evidence)
+        XCTAssertEqual(StayPlaceNaming.retitling([old], places: [place], names: [:], candidates: candidates, calendar: calendar,
+                                                 asOf: start.addingTimeInterval(7_200)).first?.title, "식사 · 뷔페 식당")
     }
 }

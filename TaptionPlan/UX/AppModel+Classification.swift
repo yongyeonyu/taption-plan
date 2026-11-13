@@ -1117,6 +1117,7 @@ extension AppModel {
     func applyStayPlaceNames(asOf now: Date) {
         let named = StayPlaceNaming.retitling(
             snapshot.actuals, places: snapshot.places, names: NLENearbyPlaceNames.storedNames,
+            candidates: NLENearbyPlaceNames.storedCandidates,
             activityCorrections: snapshot.settings.activityCorrections, asOf: now
         )
         if named != snapshot.actuals { snapshot.actuals = named }
@@ -1124,7 +1125,7 @@ extension AppModel {
 
     private func scheduleStayPlaceNameLookup(asOf now: Date) {
         let points = StayPlaceNaming.pointsNeedingNames(
-            snapshot.actuals, places: snapshot.places, known: NLENearbyPlaceNames.storedNames, asOf: now
+            snapshot.actuals, places: snapshot.places, known: NLENearbyPlaceNames.storedCandidates.mapValues { $0.first?.name ?? "" }, asOf: now
         )
         guard !points.isEmpty else { return }
         Task { @MainActor [weak self] in

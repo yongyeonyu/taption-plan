@@ -15,6 +15,8 @@ enum MapHomeKakaoSearch {
             let address_name: String?
             let x: String
             let y: String
+            var category_group_code: String?
+            var category_name: String?
         }
 
         let documents: [Place]
@@ -93,19 +95,29 @@ enum MapHomeKakaoSearch {
     static let stayCategories = ["FD6", "CE7", "HP8", "PM9", "MT1", "CT1", "AT4", "SC4", "AC5", "BK9", "PO3", "AD5"]
 
     static func nearestStayName(at center: CLLocationCoordinate2D, radiusMeters: Int = 50) async -> String? {
+        await stayCandidates(at: center, radiusMeters: radiusMeters)?.first?.name
+    }
+
+    /// 그 자리 반경 안의 가게들(가까운 순, 최대 8곳). 머문 곳 이름 고르기와 후보 목록에 쓴다(SPC1114A01). 못 부르면 nil.
+    static func stayCandidates(at center: CLLocationCoordinate2D, radiusMeters: Int = 50) async -> [StayPlaceCandidate]? {
         guard isAvailable(at: center), let token = await AssistantRegistration.searchToken() else { return nil }
-        var best: (name: String, meters: Double)?
+        let origin = CLLocation(latitude: center.latitude, longitude: center.longitude)
+        var found: [StayPlaceCandidate] = []
+        var answered = false
         for code in stayCategories {
             guard let request = categoryRequest(code: code, center: center, radiusMeters: radiusMeters, token: token),
                   let (data, response) = try? await URLSession.shared.data(for: request),
-                  (response as? HTTPURLResponse)?.statusCode == 200 else { continue }
-            let origin = CLLocation(latitude: center.latitude, longitude: center.longitude)
-            for place in decode(data) {
-                let meters = origin.distance(from: CLLocation(latitude: place.coordinate.latitude, longitude: place.coordinate.longitude))
-                if meters <= Double(radiusMeters), meters < (best?.meters ?? .infinity) { best = (place.title, meters) }
+                  (response as? HTTPURLResponse)?.statusCode == 200,
+                  let decoded = try? JSONDecoder().decode(Response.self, from: data) else { continue }
+            answered = true
+            for place in decoded.documents {
+                guard let x = Double(place.x), let y = Double(place.y) else { continue }
+                let meters = origin.distance(from: CLLocation(latitude: y, longitude: x))
+                guard meters <= Double(radiusMeters), !found.contains(where: { $0.name == place.place_name }) else { continue }
+                found.append(StayPlaceCandidate(name: place.place_name, code: place.category_group_code ?? code, category: place.category_name ?? "", meters: meters))
             }
         }
-        return best?.name
+        return answered ? Array(found.sorted { $0.meters < $1.meters }.prefix(8)) : nil
     }
 
     static func categoryRequest(code: String, center: CLLocationCoordinate2D, radiusMeters: Int, token: String) -> URLRequest? {

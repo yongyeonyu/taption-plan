@@ -61,6 +61,7 @@ enum BusRideRecognizer {
         stopDefaults: UserDefaults = .standard
     ) -> [TravelSegment] {
         segments.map { segment in
+            if let car = reverting(segment, readings: readings, registered: registered, corrections: corrections, stopDefaults: stopDefaults) { return car }
             guard segment.mode == .car, !segment.isConfirmed,
                   segment.span.end.timeIntervalSince(segment.span.start) >= minimumDuration,
                   !segment.evidence.contains(where: { $0.hasPrefix("사용자 확인") || $0.hasPrefix(CarAudioTravelConfirmation.matchedEvidencePrefix) }),
@@ -92,6 +93,34 @@ enum BusRideRecognizer {
         }
     }
 
+    /// 대중교통 근거 없이 버스로 잠긴 구간이 정차 모양도 아니면 자동차로 되돌린다(BRV1114A01, 대표 신고: 세컨카 레이가 333에서도 버스).
+    /// 예전 규칙(승하차 정류장만으로 버스)이 만든 구간은 잠겨 있어 새 규칙으로 저절로 바뀌지 않았다.
+    static let revertedEvidence = "버스 판별 되돌림(정차 모양 아님)"
+    static let transitMarkers = ["대중교통", "버스정류장", "정류장형", "노선"]
+
+    /// 다른 판정(대중교통 경로·정류장 반복 정차·워치·노선)이 남긴 버스 근거. 이 규칙이 남긴 근거는 빼고 본다.
+    static func isTransitEvidence(_ evidence: String) -> Bool {
+        evidence != stopEvidence && !evidence.hasPrefix(evidencePrefix) && transitMarkers.contains(where: evidence.contains)
+    }
+
+    static func reverting(
+        _ segment: TravelSegment, readings: [SensorReading], registered: Set<String>,
+        corrections: [TravelModeCorrection], stopDefaults: UserDefaults
+    ) -> TravelSegment? {
+        guard segment.mode == .bus, !segment.isConfirmed, !registered.isEmpty,
+              !segment.evidence.contains(where: { $0.hasPrefix("사용자 확인") || isTransitEvidence($0) }),
+              !corrections.contains(where: { $0.span.overlapsMostly(segment.span) }),
+              BusRouteCheck.known(segment, defaults: stopDefaults)?.isEmpty != false else { return nil }
+        let inside = readings.filter { segment.span.contains($0.timestamp) }
+        guard !inside.isEmpty, !looksLikeBus(stops(in: inside)) else { return nil }
+        var value = segment
+        value.mode = .car
+        value.confidence = .medium
+        value.evidence.removeAll { $0 == stopEvidence || $0.hasPrefix(evidencePrefix) || $0.hasPrefix("노선 ") }
+        value.evidence.append(revertedEvidence)
+        return value
+    }
+
     /// 이동 구간이 버스가 되면 그 시간의 자동 「자동차」 기록도 「버스」로 바꾼다(BST1113A01, 대표 신고: 330에서도 시간표가 자동차).
     /// 시간표 기록은 움직임 센서가 따로 만들고 「안정됨」으로 잠기므로, 지하철(`RailJourneyRecognizer.retitling`)처럼 따로 맞춘다.
     /// 사용자가 고친 기록은 건드리지 않는다.
@@ -102,13 +131,21 @@ enum BusRideRecognizer {
         activityCorrections: [UUID: ActivityCorrection] = [:],
         asOf now: Date
     ) -> [ActualRecord] {
-        guard !busSpans.isEmpty else { return actuals }
         // 노선을 알면 「버스 · 80번」(BRT1113A01). 이미 「버스」로 바꾼 기록도 번호를 붙인다.
         func title(for index: Int) -> String { titles.indices.contains(index) ? titles[index] : "버스" }
         // 탑승 직전·직후 몇십 초짜리 「자동차」 조각도 같은 버스다(대표 330 원본: 10:14:11~10:14:30 조각, 버스는 10:15:09부터).
         let padded = busSpans.map { TimeSpan(start: $0.start.addingTimeInterval(-edgeSeconds), end: $0.end.addingTimeInterval(edgeSeconds)) }
         return actuals.map { actual in
             let ours = actual.evidence.contains("버스 구간 확정")
+            // 버스 구간이 없어졌으면(되돌림) 이 규칙이 「버스」로 바꾼 기록을 「자동차」로 돌린다(BRV1114A01).
+            if ours, !ActualRecord.userOwned(actual, activityCorrections: activityCorrections),
+               !padded.contains(where: { $0.overlapsMostly(actual.span(asOf: now)) }) {
+                var value = actual
+                value.title = "자동차"
+                value.behavior = WatchBehaviorKind.automotive.rawValue
+                value.evidence.removeAll { $0 == "버스 구간 확정" }
+                return value
+            }
             guard !ActualRecord.userOwned(actual, activityCorrections: activityCorrections),
                   MovementPresentation.mode(for: actual) == .car || ours,
                   let index = padded.firstIndex(where: { $0.overlapsMostly(actual.span(asOf: now)) }),

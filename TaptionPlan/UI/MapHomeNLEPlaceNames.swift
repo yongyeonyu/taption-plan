@@ -16,18 +16,31 @@ enum NLENearbyPlaceNames {
     /// 기억한 이름(약 50m 칸 열쇠 → 이름).
     static var storedNames: [String: String] { cache }
 
+    private static let candidateKey = "stayPlaceCandidates"
+    /// 카카오에서 받은 그 자리 가게 후보(SPC1114A01). 기록 이름 고르기·식사 판단·후보 목록에 쓴다.
+    private(set) static var storedCandidates: [String: [StayPlaceCandidate]] = UserDefaults.standard.data(forKey: candidateKey)
+        .flatMap { try? JSONDecoder().decode([String: [StayPlaceCandidate]].self, from: $0) } ?? [:]
+
+    private static func remember(_ candidates: [StayPlaceCandidate], for key: String) {
+        if storedCandidates.count >= cacheLimit { storedCandidates.removeAll(keepingCapacity: true) }
+        storedCandidates[key] = candidates
+        UserDefaults.standard.set(try? JSONEncoder().encode(storedCandidates), forKey: candidateKey)
+    }
+
     static func names(for points: [GeoPoint]) async -> [String: String] {
         var result: [String: String] = [:]
         var lookups = 0
         for point in points {
             let key = NLEPlaceLane.nameKey(for: point)
-            if let cached = cache[key] {
+            // 국내 자리는 카카오 후보까지 있어야 다 찾은 것이다(SPC1114A01: 이름만 기억한 자리도 한 번 더 본다).
+            let korea = MapHomeKakaoSearch.isAvailable(at: CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude))
+            if let cached = cache[key], !korea || storedCandidates[key] != nil {
                 result[key] = cached
                 continue
             }
             guard lookups < maximumLookups, !Task.isCancelled else { continue }
             lookups += 1
-            guard let name = await nearestName(to: point) else { continue }
+            guard let name = await nearestName(to: point, key: key) else { continue }
             if cache.count >= cacheLimit { cache.removeAll(keepingCapacity: true) }
             cache[key] = name
             result[key] = name
@@ -36,12 +49,15 @@ enum NLENearbyPlaceNames {
         return result
     }
 
-    private static func nearestName(to point: GeoPoint) async -> String? {
+    private static func nearestName(to point: GeoPoint, key: String) async -> String? {
         let center = CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude)
         let location = CLLocation(latitude: point.latitude, longitude: point.longitude)
-        // 국내는 카카오 장소를 먼저 본다(대표 결정 2026-11-13: Apple 지도가 가게 대신 「…오피스텔」 같은 건물 이름을 줬음).
+        // 국내는 카카오 장소를 먼저 본다(대표 결정 2026-11-13: Apple 지도가 가게 대신 건물 이름을 줬음).
         // 분류를 넓혀 1층 카페가 병원·학교를 덮지 않게 가장 가까운 곳을 고른다.
-        if MapHomeKakaoSearch.isAvailable(at: center), let name = await MapHomeKakaoSearch.nearestStayName(at: center) { return name }
+        if MapHomeKakaoSearch.isAvailable(at: center), let found = await MapHomeKakaoSearch.stayCandidates(at: center), let first = found.first {
+            remember(found, for: key)
+            return first.name
+        }
         let request = MKLocalPointsOfInterestRequest(center: center, radius: searchRadiusMeters)
         if let response = try? await MKLocalSearch(request: request).start() {
             let nearest = response.mapItems
@@ -67,24 +83,49 @@ enum StayPlaceNaming {
         _ actuals: [ActualRecord],
         places: [PlaceStay],
         names: [String: String],
+        candidates: [String: [StayPlaceCandidate]] = [:],
         activityCorrections: [UUID: ActivityCorrection] = [:],
+        calendar: Calendar = .autoupdatingCurrent,
         asOf now: Date
     ) -> [ActualRecord] {
-        guard !names.isEmpty else { return actuals }
+        guard !names.isEmpty || !candidates.isEmpty else { return actuals }
         let unknown = StationaryContextKind.unknownStay
         return actuals.map { actual in
             let span = actual.span(asOf: now)
-            guard actual.behavior == unknown.rawValue,
-                  actual.title == unknown.title || actual.evidence.contains(evidence),
+            let ours = actual.evidence.contains(evidence)
+            guard actual.behavior == unknown.rawValue && actual.title == unknown.title || ours,
                   span.duration >= minimumMinutes * 60,
                   !ActualRecord.userOwned(actual, activityCorrections: activityCorrections),
-                  let point = places.first(where: { $0.point != nil && $0.span.overlapsMostly(span) })?.point,
-                  let name = names[NLEPlaceLane.nameKey(for: point)], name != actual.title else { return actual }
+                  let point = places.first(where: { $0.point != nil && $0.span.overlapsMostly(span) })?.point else { return actual }
+            let key = NLEPlaceLane.nameKey(for: point)
+            let list = candidates[key] ?? []
+            let mealStay = isMealStay(span, calendar: calendar)
+            let picked = StayPlaceCandidate.choose(list, mealStay: mealStay)
+            guard let name = picked?.name ?? names[key] else { return actual }
             var value = actual
-            value.title = name
-            if !value.evidence.contains(evidence) { value.evidence.append(evidence) }
-            return value
+            value.evidence.removeAll { $0 == evidence || $0.hasPrefix(candidatePrefix) }
+            value.evidence.append(evidence)
+            if list.count > 1 { value.evidence.append(candidatePrefix + list.prefix(5).map(\.name).joined(separator: "·")) }
+            // 식사 시간에 식당에 오래 머물렀으면 식사다(SPC1114A01, 대표 「식당이면 밥 먹었을 거 아니야」).
+            if mealStay, picked?.isMeal == true {
+                value.title = "식사 · " + name
+                value.categoryID = "eating"
+                value.behavior = "meal"
+            } else {
+                value.title = name
+                value.categoryID = unknown.categoryID
+                value.behavior = unknown.rawValue
+            }
+            return value == actual ? actual : value
         }
+    }
+
+    static let candidatePrefix = "근처 후보: "
+
+    /// 점심(11~14시)·저녁(17~21시)에 시작해 30분 넘게 머문 곳.
+    static func isMealStay(_ span: TimeSpan, calendar: Calendar) -> Bool {
+        let hour = calendar.component(.hour, from: span.start)
+        return span.duration >= 30 * 60 && ((11..<14).contains(hour) || (17..<21).contains(hour))
     }
 
     /// 이름이 필요한 「머무름」 자리(오래 머문 곳부터, 이미 기억한 곳은 뺀다).
@@ -92,9 +133,28 @@ enum StayPlaceNaming {
         let unknown = StationaryContextKind.unknownStay.rawValue
         var seen = Set<String>()
         return actuals
-            .filter { $0.behavior == unknown && $0.span(asOf: now).duration >= minimumMinutes * 60 }
+            .filter { ($0.behavior == unknown || $0.evidence.contains(evidence)) && $0.span(asOf: now).duration >= minimumMinutes * 60 }
             .sorted { $0.span(asOf: now).duration > $1.span(asOf: now).duration }
             .compactMap { actual in places.first { $0.point != nil && $0.span.overlapsMostly(actual.span(asOf: now)) }?.point }
             .filter { known[NLEPlaceLane.nameKey(for: $0)] == nil && seen.insert(NLEPlaceLane.nameKey(for: $0)).inserted }
+    }
+}
+/// 카카오가 준 머문 곳 가게 후보(SPC1114A01).
+struct StayPlaceCandidate: Codable, Equatable, Sendable {
+    var name: String
+    /// 카카오 분류 코드(FD6 음식점, CE7 카페 …).
+    var code: String
+    /// 「음식점 > 뷔페」처럼 나눈 분류 이름.
+    var category: String
+    var meters: Double
+
+    /// 끼니가 되는 식당(간식·디저트·제과는 빼고).
+    var isMeal: Bool { code == "FD6" && !category.contains("간식") }
+
+    /// 식사 시간에 오래 머문 곳이면 가까운 식당을, 아니면 가장 가까운 곳.
+    static func choose(_ candidates: [StayPlaceCandidate], mealStay: Bool) -> StayPlaceCandidate? {
+        let byDistance = candidates.sorted { $0.meters < $1.meters }
+        if mealStay, let meal = byDistance.first(where: \.isMeal) { return meal }
+        return byDistance.first
     }
 }
