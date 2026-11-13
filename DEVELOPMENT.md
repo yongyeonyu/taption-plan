@@ -181,6 +181,21 @@ AI·Siri·단축어
 - 결제 문자·결제 앱 알림은 `PaymentTextCapture` 하나로: 앱이 읽으면 넣고 기록 id와 함께 AI 목록에 올려 다듬게, 못 읽으면 AI에게 맡김. 「출금」도 결제로 읽습니다.
 - Siri 동작은 `Core/SiriIntents.swift`, Siri 문구 단축어는 `LedgerIntents.swift`의 `BokkiShortcuts`(앱당 10개 한도라 동작은 묶고 문구를 늘림). 앱이 떠 있으면 `AppModel.live`로 바로, 아니면 `SiriInbox`에 두었다가 부트스트랩이 반영합니다. 화면 열기는 `SiriNavigation` → `MapHomeView+Siri.swift`. Siri가 「보키 플랜」으로도 알아듣게 `Info.plist`의 `INAlternativeAppNames`. 안내 화면은 `BokkiShortcutsGuide`(메뉴 › 연결 「단축어 · Siri」, 가계부, 튜토리얼 공용).
 
+## 2026-11-13에 더한 규칙
+
+가계부 자동 넣기
+- 결제 알림 앱별 선택(PAS1113A01): 단축어 「BOKKI 결제 알림」은 알림 내용을 `[앱: 〈알림.앱〉] 〈알림.제목〉 〈알림.본문〉`으로 넘깁니다. 자동화 조건이 「제목에 원 포함」이라 금액은 대개 제목에 있습니다. `PaymentAlertSources.split`이 첫 줄의 앱 이름을 떼고, 앱마다 지출·수입 스위치(처음 본 앱은 둘 다 켬)를 `PaymentAlertSources`가 기기에 둡니다. 앱 규칙·AI 규칙·급여 입금 모두 꺼 둔 종류는 넣지 않고 받은 문자함에 남깁니다. 넘길 앱 목록 자체는 iOS가 단축어 앱에서만 고르게 하므로 앱은 안내만 합니다. 공유 링크 ID는 git 무시 `AppSecrets.local.xcconfig`에만 둡니다.
+- 받은 글에 종류 정하기: 받은 글 화면의 「지출·수입·넣지 않음」은 그 글을 바로 처리하고 `payment_rule` AI 일을 `context.choice`·`context.app`과 함께 보냅니다(`PaymentInboxChoice`). 문자함 항목의 `source`·`choice`는 선택 칸이라 옛 데이터를 그대로 읽습니다.
+- 인천e음(EUM1113A01): 「○○e음 카드」를 카드 이름으로 읽고(`LedgerMessageParser.localCard`), 「○○e음」 낱말은 가게 이름에서 뺍니다. 잔액은 금액이 아니고 충전은 결제가 아닙니다.
+- 버스·지하철 요금(TRF1113A01): `LedgerTransitFareRunner`가 통행료 관찰자와 함께 오늘·어제의 버스·지하철 이동(3분 이상, 내린 뒤 30분)을 `FareCalculator`(수도권 통합환승·거리 비례, 성인)로 계산해 넣습니다. 앞뒤 30분에 교통비가 이미 있으면 넣지 않고, 버스 한 번이 30km를 넘으면 「확인 필요」(사유 `fare`)입니다. 지역은 탑승 앞 머문 곳 좌표로 정하고 요금표 밖이면 AI 「교통비 확인」이 맡습니다. 버스 종류(간선·지선·광역)와 조조 할인은 위치로 알 수 없어 간선 요금입니다.
+
+판정
+- 버스 판별(TRF1113A01): 등록한 차가 있는데 그 차에 한 번도 연결되지 않은 5분 이상 차량 이동에서 8~75초 정차가 4번 이상·1km에 1번 이상·긴 정차보다 많으면 버스로 봅니다(`BusRideRecognizer`, 분류 끝 단계에서 등록 차 확정 바로 뒤). 근거는 「등록한 차 연결 없음 · 정류장 정차 n회」, 확신은 「보통」입니다. 사용자 확인·직접 고친 구간·차 오디오 일치 구간은 바꾸지 않습니다. 기준값은 2026-11-13 대표 원본(운전: 신호 80~160초 7번, 버스: 15~45초 12번)에서 잡았습니다.
+
+화면
+- UI 다듬기(UIR1111A01): 모서리는 `TaptionCorner` 네 단계(8·12·16·24), 17pt 미만 글자는 굵게 → 반굵게·반굵게 → 보통 굵기입니다. 여행 화면도 같은 규칙입니다(대표 결정 2026-11-13). 17pt 이상 제목·큰 숫자·아이콘 비례 크기와 여권·도장 그림은 예외입니다.
+- 화면 확인용 Debug 인자: `-paymentAlertPreview`(뒤에 `inbox`)는 앱별 알림 화면·받은 글 화면을 바로 엽니다.
+
 ## 구글 캘린더 연결
 
 - 프로젝트 `bokki-plan`, 범위 `calendar.readonly`, iOS 클라이언트 하나입니다. 일정은 기기 안에서만 쓰고, 연결 해제 때 토큰을 취소하고 구글 일정을 지웁니다.
@@ -316,6 +331,6 @@ xcodebuild test -project TaptionPlan.xcodeproj -scheme TaptionPlan \
 ## 문서
 
 - `AGENTS.md`: 작업 규칙. `README.md`: 개요. `temp.md`: 남은 요청과 액션아이템. `test.md`: 2026-11-01 이후와 남은 요청의 검증 근거, 이전 기록은 `test_ARCHIVE.md`.
-- `docs/TESTFLIGHT.md`(배포), `docs/IPAD_UI.md`(넓은 화면), `docs/STRUCTURE_PERFORMANCE.md`(구조 성능), `docs/DATA_PIPELINE.md`(저장소 파이프라인), `docs/ARCHITECTURE_ROADMAP.md`(구조 로드맵·ADR), `docs/HOME_EVOLUTION_LIST.md`(집 성장 366일 목록, 생성물).
+- `docs/TESTFLIGHT.md`(배포), `docs/TRAVEL_MODE_PLAN.md`·`docs/COURSE_FIRST_PLAN.md`(여행 모드·코스 먼저), `docs/IPAD_UI.md`(넓은 화면), `docs/STRUCTURE_PERFORMANCE.md`(구조 성능), `docs/DATA_PIPELINE.md`(저장소 파이프라인), `docs/ARCHITECTURE_ROADMAP.md`(구조 로드맵·ADR), `docs/HOME_EVOLUTION_LIST.md`(집 성장 366일 목록, 생성물).
 - 2026-10-24 진단·설계 자료: `docs/CLIENT_REPORT.md`(요약), `docs/UX_ARCHITECTURE.md`, `docs/DESIGN_SYSTEM.md`(중국어 원문). 당시 기준입니다. 위젯 딥링크(0a)는 DLK1024B12에서 코드로 고쳤고 실기기 확인이 남았습니다.
 - `scripts/l10n/README.md`: 12개 언어 팩 절차.
