@@ -4618,6 +4618,7 @@
 "예산|Budget": "Budget",
 "예산은 일상 가계부에서 「여행 경비」로 나가요.|The budget leaves the daily ledger as a trip expense.": "Le budget sort du budget quotidien comme frais de voyage.",
 "예상 {0} · 타일 {1}개|About {0} · {1} tiles": "Env. {0} · {1} tuiles",
+"예상 {0}|Planned {0}": "Prévu {0}",
 "예상 경로 선택|Select predicted route": "Sélectionner l'itinéraire prévu",
 "예상 경로 위치|Expected route location": "Lieu de l'itinéraire prévu",
 "예상 요금 {0}원|Estimated fare ₩{0}": "Tarif estimé ₩{0}",

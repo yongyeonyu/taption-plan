@@ -244,7 +244,7 @@ enum TravelMapSpot {
 
 // MARK: - 되돌리기·다시 하기(TVU1113A01, Trip 원본의 ↶ ↷)
 
-/// 계획표에서 시각을 고친 걸음들(끌어 옮기기·길이 바꾸기·±5분)을 쌓아 여러 번 되돌리고 다시 한다. 앱을 닫으면 사라진다.
+/// 계획표에서 고친 걸음들(끌어 옮기기·길이 바꾸기·±5분, 일정 넣기·지우기)을 쌓아 여러 번 되돌리고 다시 한다. 앱을 닫으면 사라진다.
 struct TravelPlanHistory: Equatable {
     struct Step: Equatable {
         var tripID: String
@@ -253,13 +253,28 @@ struct TravelPlanHistory: Equatable {
         var move: Int
         var resize: Int
         var summary: String
+        /// 일정을 넣거나 지운 걸음이면 그 일정과 붙어 있던 장소, 그리고 이 걸음 뒤에 일정이 있는지(넣음 = true, 지움 = false).
+        var item: TravelTripItem?
+        var place: TravelItemPlace?
+        var exists: Bool?
 
         var inverse: Step {
             var step = self
             step.move = -move
             step.resize = -resize
+            step.exists = exists.map { !$0 }
             return step
         }
+
+        /// 일정을 넣은 걸음(`exists` true)이나 지운 걸음(false).
+        static func existence(_ item: TravelTripItem, place: TravelItemPlace?, exists: Bool) -> Step {
+            Step(tripID: item.tripID, itemID: item.itemID, move: 0, resize: 0, summary: (exists ? "＋ " : "－ ") + item.title, item: item, place: place, exists: exists)
+        }
+    }
+
+    /// 그 일정에 붙어 있는 장소(지도 핀).
+    static func place(of item: TravelTripItem, stops: [TravelPlanStop]) -> TravelItemPlace? {
+        stops.first { $0.tripID == item.tripID && $0.itemID == item.itemID }.map { TravelItemPlace(name: $0.title, latitude: $0.latitude, longitude: $0.longitude) }
     }
 
     static let limit = 50
@@ -291,6 +306,19 @@ struct TravelPlanHistory: Equatable {
         guard let step = undone.popLast() else { return nil }
         done.append(step)
         return step
+    }
+}
+
+extension AppModel {
+    /// 되돌리기·다시 하기에서 나온 한 걸음을 저장소에 반영한다: 넣기·지우기면 일정을 되살리거나 지우고, 아니면 시각을 옮긴다.
+    func applyTravelHistory(_ step: TravelPlanHistory.Step) async {
+        if let exists = step.exists, let item = step.item {
+            _ = exists ? await restoreTripItem(item, place: step.place) : await deleteTripItem(tripID: step.tripID, itemID: step.itemID)
+        } else if step.move != 0 {
+            _ = await moveTripItem(tripID: step.tripID, itemID: step.itemID, by: TimeInterval(step.move * 60))
+        } else {
+            _ = await resizeTripItem(tripID: step.tripID, itemID: step.itemID, endDelta: TimeInterval(step.resize * 60))
+        }
     }
 }
 

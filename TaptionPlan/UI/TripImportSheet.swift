@@ -159,7 +159,8 @@ extension AppModel {
     /// 여행 일정 하나를 손으로 넣는다. 일상 쪽 계획 기록이 함께 생긴다. 넣은 일정 번호를 돌려준다.
     func addTripItem(
         tripID: String, kind: TripImportItem.Kind, title: String, start: Date, end: Date, offsetSeconds: Int,
-        place: TravelItemPlace? = nil, note: String = "", colorHex: String? = nil, plannedSpendKRW: Double? = nil
+        place: TravelItemPlace? = nil, note: String = "", colorHex: String? = nil, plannedSpendKRW: Double? = nil,
+        itemID restoredID: String? = nil
     ) async -> String? {
         guard acceptsDataMutation(), !tripID.isEmpty, end > start else { return nil }
         let name = title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -167,7 +168,9 @@ extension AppModel {
             title: name.isEmpty ? kind.planName : name, categoryID: kind.categoryID, middleCategoryName: kind.planName,
             startAt: start, duration: end.timeIntervalSince(start)
         ) else { return nil }
-        let itemID = "m-" + UUID().uuidString.prefix(8).lowercased()
+        // 되살릴 때는 지워진 일정의 번호를 그대로 쓴다(같은 번호가 이미 있으면 새 번호).
+        let taken = (snapshot.settings.travelTripItems ?? []).contains { $0.tripID == tripID && $0.itemID == restoredID }
+        let itemID = restoredID.flatMap { taken || $0.isEmpty ? nil : $0 } ?? "m-" + UUID().uuidString.prefix(8).lowercased()
         let items = (snapshot.settings.travelTripItems ?? []) + [TravelTripItem(
             tripID: tripID, itemID: itemID, kind: kind.rawValue, title: name.isEmpty ? kind.planName : name, start: start, end: end,
             startOffsetSeconds: offsetSeconds, endOffsetSeconds: offsetSeconds, planID: planID,
@@ -245,6 +248,21 @@ extension AppModel {
         }
         if replacesPlace { setTripItemPlace(place, for: items[index], calendar: calendar) }
         return await applyTripItemTimes(items, tripID: tripID, itemID: itemID, calendar: calendar)
+    }
+
+    /// 지운 일정을 되살린다(되돌리기, TVU1113A01): 같은 번호·종류·이름·시각·메모·색·예상 지출·상태로 다시 넣고, 장소가 있었으면 핀도 다시 찍는다.
+    func restoreTripItem(_ item: TravelTripItem, place: TravelItemPlace?) async -> Bool {
+        guard let itemID = await addTripItem(
+            tripID: item.tripID, kind: TripImportItem.Kind(rawValue: item.kind) ?? .other, title: item.title, start: item.start, end: item.end,
+            offsetSeconds: item.startOffsetSeconds, place: place, note: item.note ?? "", colorHex: item.colorHex, plannedSpendKRW: item.plannedSpendKRW,
+            itemID: item.itemID
+        ) else { return false }
+        guard item.status != nil || item.endOffsetSeconds != item.startOffsetSeconds, var items = snapshot.settings.travelTripItems,
+              let index = items.firstIndex(where: { $0.tripID == item.tripID && $0.itemID == itemID }) else { return true }
+        items[index].status = item.status
+        items[index].endOffsetSeconds = item.endOffsetSeconds
+        snapshot.settings.travelTripItems = items
+        return await persist()
     }
 
     /// 여행 일정 하나를 지운다. 일상 쪽 계획 기록과 지도 핀도 함께 지운다.

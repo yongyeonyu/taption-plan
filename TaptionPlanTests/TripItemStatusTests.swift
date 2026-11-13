@@ -568,6 +568,18 @@ final class TravelTripUnitTests: XCTestCase {
         XCTAssertEqual(spent.amount, 9_000)
         XCTAssertNil(TravelPlanTable.money(spent: 0, planned: 0))
         XCTAssertEqual(TravelQuickEntrySheet.spendDigits("12,000원"), "12000")
+        XCTAssertEqual(TravelPlanSpend.plannedTotal(items: [item, plain, item], tripID: "t1"), 24_000)
+        XCTAssertEqual(TravelPlanSpend.plannedTotal(items: [item], tripID: "다른 여행"), 0)
+        // 대표 결정: 예산을 정했으면 남은 돈, 안 정했으면 쓴 돈을 앞에 보인다.
+        func sheet(budget: Double, cost: Double) -> LedgerTripSheet {
+            LedgerTripSheet(budget: budget, otherIncome: 0, myPaid: cost, myCost: cost, sharedTotal: 0, balances: [:], transfers: [])
+        }
+        let noBudget = TravelPlanSpend.headline(sheet(budget: 0, cost: 1_200))
+        XCTAssertFalse(noBudget.isLeftover)
+        XCTAssertEqual(noBudget.amount, 1_200)
+        let withBudget = TravelPlanSpend.headline(sheet(budget: 50_000, cost: 1_200))
+        XCTAssertTrue(withBudget.isLeftover)
+        XCTAssertEqual(withBudget.amount, 48_800)
         XCTAssertEqual(TravelQuickEntrySheet.spendDigits(""), "")
     }
 
@@ -626,6 +638,49 @@ final class TravelTripUnitTests: XCTestCase {
         XCTAssertEqual(history.tripID, "t2")
         for index in 0..<60 { history.record(step("n\(index)", move: 5, trip: "t2")) }
         XCTAssertEqual(history.done.count, TravelPlanHistory.limit)
+    }
+
+    /// TVU1113A01: 지운 일정을 되돌리면 같은 번호·시각·메모·색·예상 지출·상태로 돌아오고, 다시 하면 또 지워진다. 넣은 일정도 같다.
+    @MainActor
+    func testDeletingAndAddingItemsCanBeUndone() async throws {
+        let model = try await importedModel()
+        let before = try XCTUnwrap(model.settings.travelTripItems)
+        var victim = try XCTUnwrap(before.first { $0.tripID == "t1" })
+        _ = await model.updateTripItem(tripID: "t1", itemID: victim.itemID, kind: TripImportItem.Kind(rawValue: victim.kind) ?? .other, title: victim.title,
+                                       start: victim.start, end: victim.end, note: "창가 자리", style: ("#2E7D6B", 9_000))
+        victim = try XCTUnwrap(model.settings.travelTripItems?.first { $0.itemID == victim.itemID })
+        let place = TravelPlanHistory.place(of: victim, stops: model.settings.travelPlanStops)
+
+        var history = TravelPlanHistory()
+        let deleted = await model.deleteTripItem(tripID: "t1", itemID: victim.itemID)
+        XCTAssertTrue(deleted)
+        history.record(.existence(victim, place: place, exists: false))
+        XCTAssertEqual(history.summary, "－ " + victim.title)
+        XCTAssertNil(model.settings.travelTripItems?.first { $0.itemID == victim.itemID })
+
+        await model.applyTravelHistory(try XCTUnwrap(history.undo()))
+        var back = try XCTUnwrap(model.settings.travelTripItems?.first { $0.itemID == victim.itemID }, "같은 번호로 돌아온다")
+        XCTAssertEqual([back.kind, back.title, back.note ?? "", back.colorHex ?? "", back.status ?? ""], [victim.kind, victim.title, "창가 자리", "#2E7D6B", victim.status ?? ""])
+        XCTAssertEqual(back.start, victim.start)
+        XCTAssertEqual(back.end, victim.end)
+        XCTAssertEqual(back.plannedSpendKRW, 9_000)
+        XCTAssertEqual(TravelPlanHistory.place(of: back, stops: model.settings.travelPlanStops), place, "장소가 있었으면 핀도 돌아온다")
+        XCTAssertNotNil(back.planID.flatMap { id in model.snapshot.plans.first { $0.id == id } }, "일상 쪽 계획 기록도 다시 생긴다")
+        XCTAssertEqual(model.settings.travelTripItems?.count, before.count)
+
+        await model.applyTravelHistory(try XCTUnwrap(history.redo()))
+        XCTAssertNil(model.settings.travelTripItems?.first { $0.itemID == victim.itemID }, "다시 하면 또 지워진다")
+
+        // 넣은 일정: 되돌리면 지워지고, 다시 하면 같은 번호로 돌아온다.
+        let start = victim.end
+        let addedID = await model.addTripItem(tripID: "t1", kind: .cafe, title: "카페", start: start, end: start.addingTimeInterval(1_800), offsetSeconds: victim.startOffsetSeconds)
+        let added = try XCTUnwrap(model.settings.travelTripItems?.first { $0.itemID == addedID })
+        history.record(.existence(added, place: nil, exists: true))
+        await model.applyTravelHistory(try XCTUnwrap(history.undo()))
+        XCTAssertNil(model.settings.travelTripItems?.first { $0.itemID == added.itemID })
+        await model.applyTravelHistory(try XCTUnwrap(history.redo()))
+        back = try XCTUnwrap(model.settings.travelTripItems?.first { $0.itemID == added.itemID })
+        XCTAssertEqual(back.title, "카페")
     }
 
     /// TVU1113A01: 지도 핀을 누르면 그 일정의 날·시작 시각으로 가고, 길게 누른 자리는 주소가 없으면 좌표가 이름이 된다.

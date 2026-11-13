@@ -3,6 +3,16 @@ import TaptionPlanStore
 
 /// 여행 계획표와 장부를 잇는다(TVZ1112A01): 일정 칸에 그 시간에 쓴 돈을 보이고, 재생 시각으로 지출을 넣는다.
 enum TravelPlanSpend {
+    /// 돈 줄·여행 카드의 앞 금액(대표 결정 2026-11-13): 예산을 정했으면 남은 돈, 안 정했으면 쓴 돈.
+    static func headline(_ sheet: LedgerTripSheet) -> (amount: Double, isLeftover: Bool) {
+        sheet.budget > 0 ? (sheet.leftover, true) : (sheet.myCost, false)
+    }
+
+    /// 그 여행 일정들의 예상 지출 합(원).
+    static func plannedTotal(items: [TravelTripItem], tripID: String) -> Double {
+        items.reduce(0) { $0 + ($1.tripID == tripID ? $1.plannedSpendKRW ?? 0 : 0) }
+    }
+
     /// 일정별 쓴 돈(원). 지출 시각이 일정 시간 안에 들면 그 일정의 것이고, 겹치면 늦게 시작한 일정의 것이다.
     /// 이체·수입·취소된 결제는 세지 않는다.
     static func byItem(items: [TravelTripItem], tripID: String, entries: [LedgerEntry]) -> [String: Double] {

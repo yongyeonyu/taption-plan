@@ -416,7 +416,7 @@ struct TravelModeView: View {
             ))
         }
         .sheet(item: $columnsTrip) { TravelColumnEditorSheet(model: model, language: language, trip: $0) }
-        .sheet(item: $entryTarget) { target in TravelQuickEntrySheet(model: model, language: language, target: target) }
+        .sheet(item: $entryTarget) { target in TravelQuickEntrySheet(model: model, language: language, target: target) { planHistory.record($0) } }
         .sheet(item: $expenseDraft) { draft in LedgerEntryForm(language: language, entry: draft, members: draft.tripID.flatMap(book.trip)?.members) }
         .preferredColorScheme(openedID == nil && flight == nil ? .dark : .light)
         .accessibilityIdentifier("travelModeScreen")
@@ -827,9 +827,10 @@ struct TravelModeView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title(entry)).font(.subheadline.weight(.semibold)).lineLimit(1)
                     Text(length(entry)).font(.caption).opacity(0.8)
-                    if let money = book.trip(entry.id).map({ LedgerTripMath.sheet($0, entries: book.entries) }) {
-                        Text(language.runtimeText("남은 돈 \(LedgerMoney.text(money.leftover, language: language))", "Left \(LedgerMoney.text(money.leftover, language: language))"))
-                            .font(.caption2.weight(.semibold)).foregroundStyle(money.leftover < 0 ? TravelInk.actual : TravelInk.plan)
+                    if let money = book.trip(entry.id).map({ TravelPlanSpend.headline(LedgerTripMath.sheet($0, entries: book.entries)) }) {
+                        let amount = LedgerMoney.text(money.amount, language: language)
+                        Text(money.isLeftover ? language.runtimeText("남은 돈 \(amount)", "Left \(amount)") : language.runtimeText("쓴 돈 \(amount)", "Spent \(amount)"))
+                            .font(.caption2.weight(.semibold)).foregroundStyle(money.isLeftover && money.amount < 0 ? TravelInk.actual : TravelInk.plan)
                     }
                 }
                 .padding(.horizontal, 9)
@@ -946,12 +947,18 @@ struct TravelModeView: View {
         return Button { ledgerTripID = entry.id } label: {
             HStack(spacing: 8) {
                 if let sheet {
-                    Label(LedgerMoney.text(sheet.leftover, language: language), systemImage: "wonsign.circle.fill")
-                        .foregroundStyle(sheet.leftover < 0 ? TravelInk.actual : TravelInk.plan)
-                    Spacer(minLength: 0)
                     let spent = LedgerMoney.text(sheet.myCost, language: language)
-                    Text(upTo == nil ? language.runtimeText("쓴 돈 \(spent)", "Spent \(spent)") : language.runtimeText("여기까지 \(spent)", "So far \(spent)"))
-                        .opacity(0.8)
+                    let spentText = upTo == nil ? language.runtimeText("쓴 돈 \(spent)", "Spent \(spent)") : language.runtimeText("여기까지 \(spent)", "So far \(spent)")
+                    // 예산을 정했으면 남은 돈과 쓴 돈, 안 정했으면 쓴 돈만 보인다.
+                    if TravelPlanSpend.headline(sheet).isLeftover {
+                        Label(LedgerMoney.text(sheet.leftover, language: language), systemImage: "wonsign.circle.fill")
+                            .foregroundStyle(sheet.leftover < 0 ? TravelInk.actual : TravelInk.plan)
+                        Spacer(minLength: 0)
+                        Text(spentText).opacity(0.8)
+                    } else {
+                        Label(spentText, systemImage: "wonsign.circle.fill")
+                        Spacer(minLength: 0)
+                    }
                 } else {
                     Label(language.text("여행 장부 만들기", "Start trip ledger"), systemImage: "wonsign.circle")
                     Spacer(minLength: 0)
@@ -974,7 +981,10 @@ struct TravelModeView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(next.map { language.runtimeText("다음: \($0.title)", "Next: \($0.title)") } ?? language.text("아직 일정이 없습니다", "No plans yet"))
                     .font(.subheadline.weight(.semibold)).lineLimit(1)
-                Text(language.runtimeText("일정 \(items.count)개", "\(items.count) plans")).font(.caption).opacity(0.8)
+                let planned = TravelPlanSpend.plannedTotal(items: items, tripID: entry.id)
+                let plannedText = LedgerMoney.text(planned, language: language)
+                Text(language.runtimeText("일정 \(items.count)개", "\(items.count) plans") + (planned > 0 ? " · " + language.runtimeText("예상 \(plannedText)", "Planned \(plannedText)") : ""))
+                    .font(.caption).opacity(0.8)
             }
             Spacer(minLength: 0)
             Menu {
@@ -1044,7 +1054,7 @@ struct TravelModeView: View {
                     table: table(entry), language: language,
                     onSelect: { block in editEntry(entry, itemID: block.id) },
                     onExpense: { block in addExpense(entry, minute: block.startMinute) },
-                    onDelete: { block in Task { _ = await model.deleteTripItem(tripID: entry.id, itemID: block.id) } },
+                    onDelete: { block in deleteEntry(entry, itemID: block.id) },
                     onAdd: { cell in addEntry(entry, cell: cell) },
                     cell: $planCell,
                     onMove: { block, minutes in editTimes(entry, block: block, move: minutes) },
@@ -1118,11 +1128,14 @@ struct TravelModeView: View {
     /// 되돌리기·다시 하기에서 나온 한 걸음을 저장소에 반영한다.
     private func applyHistory(_ step: TravelPlanHistory.Step?) {
         guard let step else { return }
-        Task {
-            _ = step.move != 0
-                ? await model.moveTripItem(tripID: step.tripID, itemID: step.itemID, by: TimeInterval(step.move * 60))
-                : await model.resizeTripItem(tripID: step.tripID, itemID: step.itemID, endDelta: TimeInterval(step.resize * 60))
-        }
+        Task { await model.applyTravelHistory(step) }
+    }
+
+    /// 선택 막대에서 지움: 되돌릴 수 있게 그 일정과 장소를 쌓아 둔다.
+    private func deleteEntry(_ entry: TravelTripDirectory.Entry, itemID: String) {
+        guard let item = (model.settings.travelTripItems ?? []).first(where: { $0.tripID == entry.id && $0.itemID == itemID }) else { return }
+        let place = TravelPlanHistory.place(of: item, stops: model.settings.travelPlanStops)
+        Task { if await model.deleteTripItem(tripID: entry.id, itemID: itemID) { planHistory.record(.existence(item, place: place, exists: false)) } }
     }
 
     private func editEntry(_ entry: TravelTripDirectory.Entry, itemID: String) {

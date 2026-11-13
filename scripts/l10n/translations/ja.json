@@ -4618,6 +4618,7 @@
 "예산|Budget": "予算",
 "예산은 일상 가계부에서 「여행 경비」로 나가요.|The budget leaves the daily ledger as a trip expense.": "予算は日常の家計簿から「旅行費」として出ます。",
 "예상 {0} · 타일 {1}개|About {0} · {1} tiles": "約{0} · タイル{1}枚",
+"예상 {0}|Planned {0}": "予定 {0}",
 "예상 경로 선택|Select predicted route": "予測ルートを選択",
 "예상 경로 위치|Expected route location": "予想ルートの位置",
 "예상 요금 {0}원|Estimated fare ₩{0}": "予想運賃 ₩{0}",

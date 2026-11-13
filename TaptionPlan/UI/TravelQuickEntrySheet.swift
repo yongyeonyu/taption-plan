@@ -64,6 +64,8 @@ struct TravelQuickEntrySheet: View {
     @Bindable var model: AppModel
     let language: MapHomeLanguage
     let target: Target
+    /// 일정을 넣거나 지웠을 때 되돌릴 수 있게 그 걸음을 알린다.
+    var onHistory: (TravelPlanHistory.Step) -> Void = { _ in }
 
     @Environment(\.dismiss) private var dismiss
     @FocusState private var isTitleFocused: Bool
@@ -417,10 +419,14 @@ struct TravelQuickEntrySheet: View {
                 place: place, replacesPlace: place != target.place, note: note, style: (colorHex, Double(plannedSpend))
             ))
         } else {
-            didFail = await model.addTripItem(
+            let itemID = await model.addTripItem(
                 tripID: target.tripID, kind: kind, title: title, start: start, end: end, offsetSeconds: target.offsetSeconds, place: place, note: note,
                 colorHex: colorHex, plannedSpendKRW: Double(plannedSpend)
-            ) == nil
+            )
+            didFail = itemID == nil
+            if let added = (model.settings.travelTripItems ?? []).first(where: { $0.tripID == target.tripID && $0.itemID == itemID }) {
+                onHistory(.existence(added, place: place, exists: true))
+            }
         }
         // Trip 원본처럼 저장하면 닫힌다.
         if !didFail { dismiss() }
@@ -446,7 +452,12 @@ struct TravelQuickEntrySheet: View {
 
     private func remove() async {
         guard let item = target.editing else { return }
+        let current = (model.settings.travelTripItems ?? []).first { $0.tripID == item.tripID && $0.itemID == item.itemID } ?? item
+        let place = TravelPlanHistory.place(of: current, stops: model.settings.travelPlanStops)
         didFail = !(await model.deleteTripItem(tripID: item.tripID, itemID: item.itemID))
-        if !didFail { dismiss() }
+        if !didFail {
+            onHistory(.existence(current, place: place, exists: false))
+            dismiss()
+        }
     }
 }
