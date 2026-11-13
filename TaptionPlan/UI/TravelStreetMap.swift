@@ -43,7 +43,7 @@ struct TravelStreetMap: UIViewRepresentable {
 
     /// 코스 핀의 크기와 이름표 폭(시험에서 본다).
     static let coursePinSide: CGFloat = 40
-    static func courseLabelWidth(_ text: String, font: UIFont = .systemFont(ofSize: 11, weight: .semibold)) -> CGFloat {
+    static func courseLabelWidth(_ text: String, font: UIFont = .systemFont(ofSize: 11, weight: .medium)) -> CGFloat {
         min(120, ceil((text as NSString).size(withAttributes: [.font: font]).width) + 12)
     }
     /// 빈 지도를 길게 누르면 그 자리(경도, 위도)를 알린다(Trip 원본: 그 자리에 일정 만들기).
@@ -282,7 +282,7 @@ struct TravelStreetMap: UIViewRepresentable {
             let badge = UILabel(frame: CGRect(x: side / 2 - 9, y: side - 16, width: 18, height: 18))
             badge.text = pin.label
             badge.textAlignment = .center
-            badge.font = .systemFont(ofSize: 10, weight: .semibold)
+            badge.font = .systemFont(ofSize: 10, weight: .medium)
             badge.textColor = UIColor(TravelInk.land)
             badge.backgroundColor = ink
             badge.layer.cornerRadius = 9
@@ -291,7 +291,7 @@ struct TravelStreetMap: UIViewRepresentable {
             if !pin.name.isEmpty {
                 let name = UILabel()
                 name.text = pin.name
-                name.font = .systemFont(ofSize: 11, weight: .semibold)
+                name.font = .systemFont(ofSize: 11, weight: .medium)
                 name.textColor = UIColor(TravelInk.plan)
                 name.backgroundColor = UIColor.white.withAlphaComponent(0.92)
                 name.textAlignment = .center
@@ -330,14 +330,14 @@ struct TravelStreetMap: UIViewRepresentable {
             let label = UILabel(frame: view.bounds)
             label.text = pin.label
             label.textAlignment = .center
-            label.font = .systemFont(ofSize: 11, weight: .semibold)
+            label.font = .systemFont(ofSize: 11, weight: .medium)
             label.textColor = UIColor(TravelInk.land)
             view.addSubview(label)
             if !pin.name.isEmpty {
                 // 핀 아래에 일정 이름(흰 판 위 남색 글자).
                 let name = UILabel()
                 name.text = pin.name
-                name.font = .systemFont(ofSize: 10, weight: .semibold)
+                name.font = .systemFont(ofSize: 10, weight: .medium)
                 name.textColor = UIColor(TravelInk.plan)
                 name.backgroundColor = UIColor.white.withAlphaComponent(0.85)
                 name.textAlignment = .center

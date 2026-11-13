@@ -65,7 +65,7 @@ struct TravelMoneyBar: View {
                     Spacer(minLength: 0)
                 }
             }
-            .font(.footnote.weight(.semibold))
+            .font(.footnote.weight(.medium))
             .padding(.horizontal, 12)
             .frame(height: 34)
             .background(TravelInk.panel, in: Capsule())

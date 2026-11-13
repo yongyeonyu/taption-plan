@@ -297,7 +297,7 @@ struct TravelPlanTable: View {
                 // 「실제」 글자 자리에 확대·축소 단추를 둔다(실제 띠는 시간축 옆 주홍 띠로 알아본다).
                 Color.clear.frame(width: axisWidth + actualWidth, height: 1)
                 ForEach(titles.indices, id: \.self) { index in
-                    Text(titles[index]).font(.caption.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.7).frame(maxWidth: .infinity)
+                    Text(titles[index]).font(.caption.weight(.medium)).lineLimit(1).minimumScaleFactor(0.7).frame(maxWidth: .infinity)
                 }
             }
             .contentShape(Rectangle())
@@ -369,7 +369,7 @@ struct TravelPlanTable: View {
 
     private func zoomButton(_ symbol: String, _ label: String, isOn: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Image(systemName: symbol).font(.system(size: 12, weight: .semibold)).frame(width: 22, height: 24)
+            Image(systemName: symbol).font(.system(size: 12, weight: .medium)).frame(width: 22, height: 24)
         }
         .buttonStyle(.plain)
         .foregroundStyle(TravelInk.plan.opacity(isOn ? 0.9 : 0.3))
@@ -443,7 +443,7 @@ struct TravelPlanTable: View {
             VStack(spacing: 1) {
                 Image(systemName: "plus").font(.system(size: 15, weight: .bold))
                 Text(cell.chosenDuration == nil ? Self.clock(cell.minute) : Self.clock(cell.minute) + "–" + Self.clock(cell.endMinute))
-                    .font(.system(size: 10, weight: .semibold).monospacedDigit()).lineLimit(1).minimumScaleFactor(0.7)
+                    .font(.system(size: 10, weight: .medium).monospacedDigit()).lineLimit(1).minimumScaleFactor(0.7)
             }
             .frame(width: columnWidth - 4, height: max(30, CGFloat(cell.endMinute - cell.minute) * minuteHeight))
             .background(TravelInk.actual.opacity(0.12), in: RoundedRectangle(cornerRadius: 5))
@@ -464,7 +464,7 @@ struct TravelPlanTable: View {
     private func selectionBar(_ block: TravelPlanTableModel.Block) -> some View {
         HStack(spacing: 2) {
             VStack(alignment: .leading, spacing: 0) {
-                Text(block.title).font(.caption.weight(.semibold)).lineLimit(1)
+                Text(block.title).font(.caption.weight(.medium)).lineLimit(1)
                 Text(Self.clock(block.startMinute) + "–" + Self.clock(block.endMinute)).font(.system(size: 10).monospacedDigit()).opacity(0.75)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -495,7 +495,7 @@ struct TravelPlanTable: View {
     private func nudgeButton(_ block: TravelPlanTableModel.Block, minutes: Int, label: String) -> some View {
         let isOn = TravelPlanSelection.canNudge(minutes, start: block.startMinute, end: block.endMinute)
         return Button(label) { onMove(block, minutes) }
-            .font(.caption.weight(.semibold).monospacedDigit())
+            .font(.caption.weight(.medium).monospacedDigit())
             .buttonStyle(.plain)
             .padding(.horizontal, 7)
             .frame(height: 30)
@@ -505,7 +505,7 @@ struct TravelPlanTable: View {
     }
 
     private func barIcon(_ symbol: String, _ label: String, id: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) { Image(systemName: symbol).font(.system(size: 16, weight: .semibold)).frame(width: 36, height: 40) }
+        Button(action: action) { Image(systemName: symbol).font(.system(size: 16, weight: .medium)).frame(width: 36, height: 40) }
             .buttonStyle(.plain)
             .accessibilityLabel(label)
             .accessibilityIdentifier("travelPlanSelection" + id)
@@ -563,13 +563,13 @@ struct TravelPlanTable: View {
                 if tightIDs.contains(block.id) { Image(systemName: "figure.run").font(.system(size: 9, weight: .bold)).foregroundStyle(TravelInk.actual) }
                 if block.hasNote { Image(systemName: "note.text").font(.system(size: 8)).opacity(0.7) }
                 if block.spent > 0, height <= 46 || isLifted { Image(systemName: "wonsign.circle.fill").font(.system(size: 9)).foregroundStyle(TravelInk.actual) }
-                Text(block.title).font(.caption2.weight(.semibold)).lineLimit(height > 30 ? 2 : 1)
+                Text(block.title).font(.caption2.weight(.medium)).lineLimit(height > 30 ? 2 : 1)
             }
             if height > 34 || isLifted {
                 Text(isLifted ? Self.clock(start) + "–" + Self.clock(end) : Self.clock(start)).font(.system(size: 10).monospacedDigit()).opacity(0.75)
             }
             if let money = Self.money(spent: block.spent, planned: block.planned), height > 46, !isLifted {
-                Text((money.isPlanned ? "≈ " : "") + LedgerMoney.text(money.amount, language: language)).font(.system(size: 10, weight: .semibold).monospacedDigit())
+                Text((money.isPlanned ? "≈ " : "") + LedgerMoney.text(money.amount, language: language)).font(.system(size: 10, weight: .medium).monospacedDigit())
                     .foregroundStyle(money.isPlanned ? TravelInk.plan.opacity(0.7) : TravelInk.actual).lineLimit(1).minimumScaleFactor(0.7)
             }
         }
@@ -612,7 +612,7 @@ struct TravelPlanTable: View {
         ZStack(alignment: .leading) {
             Rectangle().fill(TravelInk.plan).frame(width: width, height: 2).allowsHitTesting(false)
             Button { onExpenseAt(minute) } label: {
-                Text(Self.clock(minute)).font(.system(size: 11, weight: .semibold).monospacedDigit()).foregroundStyle(TravelInk.land)
+                Text(Self.clock(minute)).font(.system(size: 11, weight: .medium).monospacedDigit()).foregroundStyle(TravelInk.land)
                     .frame(width: Self.leading - 4, height: 24)
                     .background(TravelInk.plan, in: Capsule())
             }

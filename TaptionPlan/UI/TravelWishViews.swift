@@ -11,8 +11,8 @@ struct TravelWishCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Label(tag, systemImage: "star.fill").font(.caption.weight(.semibold)).foregroundStyle(color)
-            Text(title).font(.subheadline.weight(.semibold)).lineLimit(1)
+            Label(tag, systemImage: "star.fill").font(.caption.weight(.medium)).foregroundStyle(color)
+            Text(title).font(.subheadline.weight(.medium)).lineLimit(1)
             Text(length).font(.caption).opacity(0.8)
         }
         .foregroundStyle(TravelInk.plan)
@@ -39,12 +39,12 @@ struct TravelWishFooter: View {
     var body: some View {
         HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
-                Label(language.text("언젠가 갈 여행", "A trip for someday"), systemImage: "star.fill").font(.subheadline.weight(.semibold))
+                Label(language.text("언젠가 갈 여행", "A trip for someday"), systemImage: "star.fill").font(.subheadline.weight(.medium))
                 Text(language.text("날짜를 정하면 일정을 넣을 수 있습니다", "Set dates to start adding plans")).font(.caption).opacity(0.8)
             }
             Spacer(minLength: 0)
             Button(language.text("날짜 정하기", "Set dates")) { isPicking = true }
-                .font(.subheadline.weight(.semibold))
+                .font(.subheadline.weight(.medium))
                 .padding(.horizontal, 14).frame(height: 44)
                 .foregroundStyle(TravelInk.land)
                 .background(TravelInk.plan, in: Capsule())

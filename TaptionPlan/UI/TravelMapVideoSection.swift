@@ -64,7 +64,7 @@ struct TravelMapVideoSection: View {
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold))
                     .foregroundStyle(Color.tpInk)
                 Text(summary(trip))
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold).monospacedDigit())
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium).monospacedDigit())
                     .foregroundStyle(Color.tpSecondary)
             }
             Text(message)
@@ -111,7 +111,7 @@ struct TravelMapVideoSection: View {
         ProgressView(value: value)
             .tint(Color.tpAccent)
         Text("\(Int((value * 100).rounded(.down)))%")
-            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold).monospacedDigit())
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium).monospacedDigit())
             .foregroundStyle(Color.tpSecondary)
     }
 
@@ -160,7 +160,7 @@ struct TravelMapVideoSection: View {
                     isManual ? language.text("경로 편집", "Edit route") : language.text("직접 고치기", "Edit as manual trip"),
                     systemImage: "list.bullet"
                 )
-                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .medium))
                 .frame(maxWidth: .infinity, minHeight: 44)
                 .foregroundStyle(Color.tpInk)
                 .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))

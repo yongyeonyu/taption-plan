@@ -135,7 +135,7 @@ struct TravelQuickEntrySheet: View {
         HStack(spacing: 6) {
             Button { isPickingPlace = true } label: {
                 Label(place?.name ?? language.text("장소 붙이기", "Add a place"), systemImage: place == nil ? "mappin.and.ellipse" : "mappin.circle.fill")
-                    .font(.footnote.weight(.semibold)).lineLimit(1)
+                    .font(.footnote.weight(.medium)).lineLimit(1)
                     .padding(.horizontal, 10).frame(height: 30)
                     .foregroundStyle(place == nil ? TravelInk.plan : TravelInk.land)
                     .background(place == nil ? TravelInk.planTint : TravelInk.plan, in: Capsule())
@@ -221,7 +221,7 @@ struct TravelQuickEntrySheet: View {
                 ForEach(TravelInk.flagHexes, id: \.self) { colorButton($0) }
             }
             HStack(spacing: 8) {
-                Label(language.text("예상 지출", "Planned spend"), systemImage: "wonsign.circle").font(.footnote.weight(.semibold)).foregroundStyle(TravelInk.plan)
+                Label(language.text("예상 지출", "Planned spend"), systemImage: "wonsign.circle").font(.footnote.weight(.medium)).foregroundStyle(TravelInk.plan)
                 TextField("0", text: $plannedSpend)
                     .keyboardType(.numberPad)
                     .multilineTextAlignment(.trailing)
@@ -253,7 +253,7 @@ struct TravelQuickEntrySheet: View {
     private var previewCard: some View {
         let title = TravelQuickEntry.parse(text).title
         return VStack(alignment: .leading, spacing: 4) {
-            Label(title.isEmpty ? kind.planName : title, systemImage: kind.symbol).font(.subheadline.weight(.semibold)).lineLimit(2)
+            Label(title.isEmpty ? kind.planName : title, systemImage: kind.symbol).font(.subheadline.weight(.medium)).lineLimit(2)
             Text(Self.clock(startMinute) + " – " + Self.clock(startMinute + duration) + " · " + Self.durationText(duration, language: language))
                 .font(.footnote.monospacedDigit()).opacity(0.8)
                 .accessibilityIdentifier("travelEntryTime")
@@ -292,13 +292,13 @@ struct TravelQuickEntrySheet: View {
 
     private func timeSlider(_ label: String, minute: Int, range: ClosedRange<Double>, id: String, set: @escaping (Int) -> Void) -> some View {
         HStack(spacing: 8) {
-            Text(label).font(.footnote.weight(.semibold)).frame(width: 34, alignment: .leading)
+            Text(label).font(.footnote.weight(.medium)).frame(width: 34, alignment: .leading)
             Slider(value: Binding(get: { Double(minute) }, set: { set(Int($0.rounded())) }), in: range, step: Double(Self.sliderStep))
                 .tint(TravelInk.plan)
                 .accessibilityLabel(label)
                 .accessibilityValue(Self.clock(minute))
                 .accessibilityIdentifier("travelEntry" + id)
-            Text(minute == 1_440 ? "24:00" : Self.clock(minute)).font(.footnote.weight(.semibold).monospacedDigit()).frame(width: 44, alignment: .trailing)
+            Text(minute == 1_440 ? "24:00" : Self.clock(minute)).font(.footnote.weight(.medium).monospacedDigit()).frame(width: 44, alignment: .trailing)
         }
         .foregroundStyle(TravelInk.plan)
     }
@@ -308,7 +308,7 @@ struct TravelQuickEntrySheet: View {
             HStack(spacing: 6) {
                 ForEach(Self.kinds, id: \.self) { option in
                     Button { choose(option) } label: {
-                        Label(option.planName, systemImage: option.symbol).font(.footnote.weight(.semibold))
+                        Label(option.planName, systemImage: option.symbol).font(.footnote.weight(.medium))
                             .padding(.horizontal, 10).frame(height: 34)
                             .foregroundStyle(option == kind ? TravelInk.land : TravelInk.plan)
                             .background(option == kind ? TravelInk.plan : TravelInk.planTint, in: Capsule())

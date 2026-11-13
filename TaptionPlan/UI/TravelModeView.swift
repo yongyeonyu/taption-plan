@@ -209,7 +209,7 @@ enum TravelGlobeRenderer {
             let rect = CGRect(x: place.0.0.x - 9, y: place.0.0.y - 9, width: 18, height: 18)
             context.fill(Path(ellipseIn: rect), with: .color(TravelInk.plan))
             context.stroke(Path(ellipseIn: rect), with: .color(TravelInk.land), lineWidth: 1.5)
-            context.draw(Text(place.1).font(.system(size: 11, weight: .semibold)).foregroundStyle(TravelInk.land), at: place.0.0)
+            context.draw(Text(place.1).font(.system(size: 11, weight: .medium)).foregroundStyle(TravelInk.land), at: place.0.0)
         }
     }
 
@@ -231,7 +231,7 @@ enum TravelGlobeRenderer {
         layer.fill(cloth, with: .color(flag.color))
         layer.fill(Path(ellipseIn: CGRect(x: foot.x - 3, y: foot.y - 3, width: 6, height: 6)), with: .color(flag.color))
         guard flag.showsLabel, flag.progress >= 1, !flag.text.isEmpty else { return }
-        let label = layer.resolve(Text(flag.text).font(.system(size: 12, weight: .semibold)).foregroundStyle(TravelInk.land))
+        let label = layer.resolve(Text(flag.text).font(.system(size: 12, weight: .medium)).foregroundStyle(TravelInk.land))
         let textSize = label.measure(in: CGSize(width: 200, height: 40))
         let pill = CGRect(x: foot.x + 24, y: foot.y - 36, width: textSize.width + 16, height: textSize.height + 6)
         layer.fill(Path(roundedRect: pill, cornerRadius: pill.height / 2), with: .color(flag.color))
@@ -347,7 +347,7 @@ struct TravelModeView: View {
         .overlay {
             if let focused, openedID != nil, flight == nil, focused.state != .someday, !isPlanUp, pins(destination).isEmpty {
                 Text(language.text("일정에 장소를 붙이면 지도에 나옵니다", "Add a place to a plan to see it on the map"))
-                    .font(.footnote.weight(.semibold)).foregroundStyle(TravelInk.plan)
+                    .font(.footnote.weight(.medium)).foregroundStyle(TravelInk.plan)
                     .padding(.horizontal, 12).frame(height: 32)
                     .background(TravelInk.panel, in: Capsule())
                     .allowsHitTesting(false)
@@ -830,18 +830,18 @@ struct TravelModeView: View {
                     Spacer(minLength: 6)
                     if let currency = entry.trip.currencyCode { Text(currency) }
                 }
-                .font(.caption.weight(.semibold))
+                .font(.caption.weight(.medium))
                 .foregroundStyle(TravelInk.land)
                 .padding(.horizontal, 9)
                 .frame(height: 26)
                 .background(flagColor.opacity(entry.state == .past ? 0.6 : 1))
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title(entry)).font(.subheadline.weight(.semibold)).lineLimit(1)
+                    Text(title(entry)).font(.subheadline.weight(.medium)).lineLimit(1)
                     Text(length(entry)).font(.caption).opacity(0.8)
                     if let money = book.trip(entry.id).map({ TravelPlanSpend.headline(LedgerTripMath.sheet($0, entries: book.entries)) }) {
                         let amount = LedgerMoney.text(money.amount, language: language)
                         Text(money.isLeftover ? language.runtimeText("남은 돈 \(amount)", "Left \(amount)") : language.runtimeText("쓴 돈 \(amount)", "Spent \(amount)"))
-                            .font(.caption2.weight(.semibold)).foregroundStyle(money.isLeftover && money.amount < 0 ? TravelInk.actual : TravelInk.plan)
+                            .font(.caption2.weight(.medium)).foregroundStyle(money.isLeftover && money.amount < 0 ? TravelInk.actual : TravelInk.plan)
                     }
                 }
                 .padding(.horizontal, 9)
@@ -886,7 +886,7 @@ struct TravelModeView: View {
 
     private func footerButton(_ symbol: String, _ label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Label(label, systemImage: symbol).font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity).frame(height: 46)
+            Label(label, systemImage: symbol).font(.subheadline.weight(.medium)).frame(maxWidth: .infinity).frame(height: 46)
                 .background(TravelInk.panel, in: Capsule())
                 .overlay { Capsule().stroke(TravelInk.border, lineWidth: 1) }
         }
@@ -920,7 +920,7 @@ struct TravelModeView: View {
                 .accessibilityHint(language.text("여행 고치기", "Edit trip"))
                 // 일상 화면으로 바로 나간다.
                 Button { exitToDaily(entry) } label: {
-                    Image(systemName: "house.fill").font(.system(size: 16, weight: .semibold)).frame(width: 40, height: 40)
+                    Image(systemName: "house.fill").font(.system(size: 16, weight: .medium)).frame(width: 40, height: 40)
                         .background(TravelInk.land, in: Circle())
                 }
                 .accessibilityLabel(language.text("일상으로 돌아가기", "Back to everyday"))

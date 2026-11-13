@@ -717,7 +717,7 @@ struct MapHomeTripImportSheet: View {
             Image(systemName: item.kind.symbol).frame(width: 22).foregroundStyle(Color.tpInk)
             VStack(alignment: .leading, spacing: 2) {
                 Text("\(localTime(item.start, item.timeZone))–\(localTime(item.end, item.endTimeZone)) \(item.title)")
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .semibold))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .medium))
                 TripItemStatusBadge(status: item.status, language: language)
                 if let minutes = item.travelMinutes, minutes > 0 {
                     caption(language.text("앞에서 이동 \(Int(minutes))분", "\(Int(minutes)) min from previous"))
@@ -727,28 +727,28 @@ struct MapHomeTripImportSheet: View {
                 }
                 if let warning {
                     Text(warningText(warning))
-                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.caption), weight: .semibold))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.caption), weight: .medium))
                         .foregroundStyle(.orange)
                 }
                 if let mismatch = mismatches[item.id] {
                     HStack(spacing: 8) {
                         Text(language.text("AI 위치가 지도 검색과 \(distanceText(mismatch.meters)) 달라요", "AI location is \(distanceText(mismatch.meters)) from the map search"))
-                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.caption), weight: .semibold))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.caption), weight: .medium))
                             .foregroundStyle(.orange)
                         Button(language.text("검색 위치로", "Use search")) { useSearchedCoordinate(item.id) }
-                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.caption), weight: .semibold))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.caption), weight: .medium))
                             .buttonStyle(.bordered)
                             .controlSize(.mini)
                     }
                 }
                 if item.coordinate == nil {
                     Text(language.text("위치를 찾지 못해 지도에는 표시되지 않아요", "Location not found; not shown on the map"))
-                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.caption), weight: .semibold))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.caption), weight: .medium))
                         .foregroundStyle(.orange)
                 }
                 if let url = item.mapsURL {
                     Link(language.text("구글 지도에서 보기", "Open in Google Maps"), destination: url)
-                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.caption), weight: .semibold))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.caption), weight: .medium))
                 }
             }
             Spacer(minLength: 0)
@@ -939,7 +939,7 @@ struct MapHomeTripImportSheet: View {
     private func wideButton(_ title: String, prominent: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
-                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .semibold))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .medium))
                 .foregroundStyle(prominent ? Color.tpBackground : Color.tpInk)
                 .frame(maxWidth: .infinity, minHeight: 46)
                 .background(prominent ? Color.tpInk : Color.tpCard, in: RoundedRectangle(cornerRadius: 12, style: .continuous))

@@ -183,7 +183,7 @@ struct TravelPlanHandleBar: View {
                 if canResize {
                     Button(action: onToggleMap) {
                         Image(systemName: isMapFolded ? "rectangle.split.1x2" : "rectangle.expand.vertical")
-                            .font(.system(size: 13, weight: .semibold)).foregroundStyle(TravelInk.plan).frame(width: 44, height: 22)
+                            .font(.system(size: 13, weight: .medium)).foregroundStyle(TravelInk.plan).frame(width: 44, height: 22)
                     }
                     .buttonStyle(.plain)
                     .padding(.trailing, 8)
@@ -223,7 +223,7 @@ struct TravelDayChips: View {
                 ForEach(days, id: \.key) { day in
                     Button { onPick(day.key) } label: {
                         Text(day.label)
-                            .font(.caption.weight(.semibold))
+                            .font(.caption.weight(.medium))
                             .padding(.horizontal, 10)
                             .frame(height: 28)
                             .foregroundStyle(day.key == selected ? TravelInk.land : TravelInk.plan)
@@ -391,7 +391,7 @@ struct TravelPlanHistoryBar: View {
     }
 
     private func button(_ symbol: String, _ label: String, isOn: Bool, id: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) { Image(systemName: symbol).font(.system(size: 14, weight: .semibold)).frame(width: 40, height: 32) }
+        Button(action: action) { Image(systemName: symbol).font(.system(size: 14, weight: .medium)).frame(width: 40, height: 32) }
             .buttonStyle(.plain)
             .opacity(isOn ? 1 : 0.3)
             .disabled(!isOn)
@@ -532,7 +532,7 @@ struct TravelCourseView: View {
                 Button { onEdit(detail) } label: {
                     HStack(spacing: 8) {
                         Text(clock(detail.startMinute)).font(.caption.monospacedDigit()).opacity(0.7).frame(width: 44, alignment: .leading)
-                        Text(detail.title).font(.caption.weight(.semibold)).lineLimit(1)
+                        Text(detail.title).font(.caption.weight(.medium)).lineLimit(1)
                         Spacer(minLength: 0)
                         Text(TravelQuickEntrySheet.durationText(detail.endMinute - detail.startMinute, language: language)).font(.caption2).opacity(0.6)
                     }
@@ -542,7 +542,7 @@ struct TravelCourseView: View {
                 .buttonStyle(.plain)
             }
             Button { onAddDetail(parent) } label: {
-                Label(language.text("세부 더하기", "Add detail"), systemImage: "plus").font(.caption.weight(.semibold))
+                Label(language.text("세부 더하기", "Add detail"), systemImage: "plus").font(.caption.weight(.medium))
                     .frame(maxWidth: .infinity, alignment: .leading).frame(height: 30).contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -564,7 +564,7 @@ struct TravelCourseView: View {
 
     private var addStopButton: some View {
         Button(action: onAddStop) {
-            Label(language.text("곳 더하기", "Add a stop"), systemImage: "plus").font(.footnote.weight(.semibold))
+            Label(language.text("곳 더하기", "Add a stop"), systemImage: "plus").font(.footnote.weight(.medium))
                 .padding(.horizontal, 14).frame(height: 36)
                 .foregroundStyle(TravelInk.land).background(TravelInk.plan, in: Capsule())
         }
@@ -577,7 +577,7 @@ struct TravelCourseView: View {
         return HStack(spacing: 10) {
             thumbnail(block, side: 64)
             VStack(alignment: .leading, spacing: 4) {
-                Text("\(index + 1). " + block.title).font(.subheadline.weight(.semibold)).lineLimit(1)
+                Text("\(index + 1). " + block.title).font(.subheadline.weight(.medium)).lineLimit(1)
                 Text(clock(block.startMinute) + " – " + clock(block.endMinute) + " · " + TravelQuickEntrySheet.durationText(block.endMinute - block.startMinute, language: language))
                     .font(.caption.monospacedDigit()).opacity(0.8)
                 ProgressView(value: TravelCourse.progress(block, minute: playMinute)).tint(TravelInk.plan)
@@ -600,7 +600,7 @@ struct TravelCourseView: View {
 
     private func step(_ symbol: String, _ label: String, to minute: Int?) -> some View {
         Button { if let minute { onScrub(minute) } } label: {
-            Image(systemName: symbol).font(.system(size: 14, weight: .semibold)).frame(width: 40, height: 28)
+            Image(systemName: symbol).font(.system(size: 14, weight: .medium)).frame(width: 40, height: 28)
                 .background(TravelInk.planTint, in: Capsule())
         }
         .buttonStyle(.plain)
@@ -611,16 +611,16 @@ struct TravelCourseView: View {
 
     private func row(_ block: TravelPlanTableModel.Block, order: Int, isCurrent: Bool) -> some View {
         HStack(spacing: 10) {
-            Text("\(order)").font(.footnote.weight(.semibold).monospacedDigit()).frame(width: 22)
+            Text("\(order)").font(.footnote.weight(.medium).monospacedDigit()).frame(width: 22)
             thumbnail(block, side: 40)
             VStack(alignment: .leading, spacing: 1) {
-                Text(block.title).font(.footnote.weight(.semibold)).lineLimit(1)
+                Text(block.title).font(.footnote.weight(.medium)).lineLimit(1)
                 Text(clock(block.startMinute) + " · " + TravelQuickEntrySheet.durationText(block.endMinute - block.startMinute, language: language))
                     .font(.caption2.monospacedDigit()).opacity(0.7)
             }
             Spacer(minLength: 0)
             if isCurrent { Image(systemName: "chart.bar.fill").font(.system(size: 13)).accessibilityHidden(true) }
-            Button { onEdit(block) } label: { Image(systemName: "slider.horizontal.3").font(.system(size: 14, weight: .semibold)).frame(width: 36, height: 36) }
+            Button { onEdit(block) } label: { Image(systemName: "slider.horizontal.3").font(.system(size: 14, weight: .medium)).frame(width: 36, height: 36) }
                 .buttonStyle(.plain)
                 .accessibilityLabel(language.text("속성", "Details"))
         }
@@ -631,7 +631,7 @@ struct TravelCourseView: View {
             // 세부 계획이 있으면 개수를 작게 알린다(펼친 줄에서는 아래에 다 보인다).
             let count = TravelCourse.details(of: block, in: table.blocks).count
             if count > 0, !(isCurrent || selectedID == block.id) {
-                Text("+\(count)").font(.system(size: 9, weight: .semibold).monospacedDigit()).foregroundStyle(TravelInk.plan.opacity(0.7))
+                Text("+\(count)").font(.system(size: 9, weight: .medium).monospacedDigit()).foregroundStyle(TravelInk.plan.opacity(0.7))
                     .padding(.leading, 78).padding(.bottom, 3)
             }
         }
@@ -778,7 +778,7 @@ struct TravelTripFooter: View {
         HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(next.map { language.runtimeText("다음: \($0.title)", "Next: \($0.title)") } ?? language.text("아직 일정이 없습니다", "No plans yet"))
-                    .font(.subheadline.weight(.semibold)).lineLimit(1)
+                    .font(.subheadline.weight(.medium)).lineLimit(1)
                 let planned = TravelPlanSpend.plannedTotal(items: items, tripID: tripID)
                 let plannedText = LedgerMoney.text(planned, language: language)
                 Text(language.runtimeText("일정 \(items.count)개", "\(items.count) plans") + (planned > 0 ? " · " + language.runtimeText("예상 \(plannedText)", "Planned \(plannedText)") : ""))
