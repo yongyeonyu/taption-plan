@@ -81,8 +81,8 @@ public enum MapDisplayStyle: String, Codable, CaseIterable, Sendable {
     /// 예전 앱은 모르는 값을 `standard`로 읽는다.
     case kakao
 
-    /// 없앤 스타일(밝게·파스텔, UIX1101A03)로 저장된 값은 가장 비슷한 산책 지도로 읽는다.
-    public static let retiredRawValues: Set<String> = ["mapLibreLight", "mapLibrePastel"]
+    /// 없앤 스타일(밝게·파스텔 UIX1101A03, 실외 고대비 MCR1114A01 대표 지시)로 저장된 값은 가장 비슷한 산책 지도로 읽는다.
+    public static let retiredRawValues: Set<String> = ["mapLibreLight", "mapLibrePastel", "mapLibreContrast"]
 
     public init(from decoder: Decoder) throws {
         let value = try decoder.singleValueContainer().decode(String.self)
@@ -154,7 +154,6 @@ extension MapDisplayStyle {
         .mapLibreRPG,
         .mapLibreCasual,
         .mapLibreNight,
-        .mapLibreContrast,
         .mapLibreInk,
         .mapLibrePorcelain,
     ]
@@ -181,7 +180,8 @@ extension MapDisplayStyle {
         }
     }
 
-    public var runtimeStyle: Self { self }
+    /// 없앤 실외(고대비)는 어디서 들어와도(AI 명령·옛 테마) 계절 지도로 그린다(MCR1114A01).
+    public var runtimeStyle: Self { self == .mapLibreContrast ? .mapLibreCasual : self }
 }
 
 public enum MapUserActivityIconCatalog {

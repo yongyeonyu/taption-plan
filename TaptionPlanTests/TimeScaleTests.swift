@@ -4223,8 +4223,11 @@ final class TimeScaleTests: XCTestCase {
                 .mapLibreRPG,
                 .mapLibreInk,
                 .mapLibrePorcelain,
+                .kakao,
             ]
         )
+        XCTAssertEqual(try JSONDecoder().decode(MapDisplayStyle.self, from: Data("\"mapLibreContrast\"".utf8)), .mapLibreCasual, "없앤 고대비는 계절 지도로 읽는다(MCR1114A01)")
+        XCTAssertEqual(MapDisplayStyle.mapLibreContrast.runtimeStyle, .mapLibreCasual)
         // 없앤 밝게·파스텔로 저장된 값은 산책 지도로 읽는다(UIX1101A03).
         for retired in ["mapLibreLight", "mapLibrePastel"] {
             XCTAssertEqual(
@@ -4232,7 +4235,7 @@ final class TimeScaleTests: XCTestCase {
                 .mapLibreCasual
             )
         }
-        for style in MapDisplayStyle.allCases {
+        for style in MapDisplayStyle.allCases where style != .mapLibreContrast {
             XCTAssertEqual(
                 try JSONDecoder().decode(
                     MapDisplayStyle.self,
@@ -5138,7 +5141,6 @@ final class TimeScaleTests: XCTestCase {
                 .mapLibreRPG,
                 .mapLibreCasual,
                 .mapLibreNight,
-                .mapLibreContrast,
                 .mapLibreInk,
                 .mapLibrePorcelain,
             ]
@@ -5161,7 +5163,7 @@ final class TimeScaleTests: XCTestCase {
             .standard
         )
         XCTAssertEqual(MapDisplayStyle.standard.runtimeStyle, .standard)
-        for style in MapDisplayStyle.allCases {
+        for style in MapDisplayStyle.allCases where style != .mapLibreContrast {
             XCTAssertEqual(style.runtimeStyle, style)
         }
     }
@@ -6378,7 +6380,7 @@ final class TaptionUIThemeMapTests: XCTestCase {
         XCTAssertEqual(TaptionUITheme.forMap(.mapLibreRPG), .classic)
         XCTAssertEqual(TaptionUITheme.forMap(.mapLibreNight), .navy)
         XCTAssertEqual(TaptionUITheme.forMap(.mapLibreCasual), .purple)
-        XCTAssertEqual(TaptionUITheme.forMap(.mapLibreContrast), .brown)
+        XCTAssertEqual(TaptionUITheme.forMap(.mapLibreContrast), .purple, "없앤 고대비는 계절 지도의 테마를 따른다(MCR1114A01)")
         XCTAssertEqual(TaptionUITheme.forMap(.mapLibreInk), .ink)
         XCTAssertEqual(TaptionUITheme.forMap(.standard), .classic)
         XCTAssertEqual(TaptionUITheme.forMap(.hybrid), .classic)
