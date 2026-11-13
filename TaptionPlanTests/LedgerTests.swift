@@ -1226,6 +1226,19 @@ final class BusRideRecognizerTests: XCTestCase {
         XCTAssertTrue(result.first?.evidence.contains { $0.hasPrefix(BusRideRecognizer.evidencePrefix) } == true)
     }
 
+    func testStopAndGoBetweenBusStopsIsASureBus() {
+        let readings = track(busLegs)
+        let ride = segment(readings)
+        let defaults = UserDefaults(suiteName: "BusRideRecognizerStops")!
+        defaults.removePersistentDomain(forName: "BusRideRecognizerStops")
+        BusStopCheck.remember(.board, segment: ride, isStop: true, defaults: defaults)
+        BusStopCheck.remember(.alight, segment: ride, isStop: true, defaults: defaults)
+        let result = BusRideRecognizer.applying([ride], readings: readings, registered: ["내 차"], corrections: [], stopDefaults: defaults)
+        XCTAssertEqual(result.first?.mode, .bus)
+        XCTAssertEqual(result.first?.confidence, .high)
+        XCTAssertTrue(result.first?.evidence.contains(BusRideRecognizer.stopEvidence) == true)
+    }
+
     func testLongTrafficLightStopsStayCar() {
         let readings = track(carLegs)
         XCTAssertFalse(BusRideRecognizer.looksLikeBus(BusRideRecognizer.stops(in: readings)))
@@ -1320,15 +1333,14 @@ final class BusStopCheckTests: XCTestCase {
         XCTAssertEqual(BusStopCheck.points(.alight, segment: ride, readings: readings).count, 32, "1분 전~2분 뒤")
     }
 
-    func testBothEndsAtBusStopsMakeABusEvenWithoutStopAndGo() {
+    /// 정류장 가까운 두 곳을 차로 곧장 간 것은 차다(BRF1113A01, 대표 신고: 세컨카 레이로 950m·5분이 버스로).
+    func testBothEndsAtBusStopsWithoutStopAndGoStayCar() {
         let readings = straight()
         let ride = segment(readings)
         BusStopCheck.remember(.board, segment: ride, isStop: true, defaults: defaults)
         BusStopCheck.remember(.alight, segment: ride, isStop: true, defaults: defaults)
         let result = BusRideRecognizer.applying([ride], readings: readings, registered: ["내 차"], corrections: [], stopDefaults: defaults)
-        XCTAssertEqual(result.first?.mode, .bus)
-        XCTAssertEqual(result.first?.confidence, .high)
-        XCTAssertTrue(result.first?.evidence.contains(BusRideRecognizer.stopEvidence) == true)
+        XCTAssertEqual(result.first?.mode, .car)
     }
 
     func testNoBusStopAtEitherEndKeepsCar() {

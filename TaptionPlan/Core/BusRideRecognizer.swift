@@ -74,8 +74,9 @@ enum BusRideRecognizer {
             let alight = BusStopCheck.known(.alight, segment: segment, defaults: stopDefaults)
             if board == false, alight == false { return segment }
             let atStops = board == true && alight == true
-            // 등록한 차가 없으면 남의 차인지 알 수 없어 정류장과 정차 모양이 둘 다 맞아야 한다.
-            let isBus = registered.isEmpty ? atStops && looksLikeBus(found) : atStops || looksLikeBus(found)
+            // 정차 모양은 늘 맞아야 한다. 정류장만으로 버스라 하면 정류장 가까운 집·가게 사이를 차로 간 것이 버스가 됐다
+            // (BRF1113A01, 대표 신고: 세컨카 레이로 950m·5분 간 것이 버스). 등록한 차가 없으면 정류장도 맞아야 한다.
+            let isBus = looksLikeBus(found) && (registered.isEmpty ? atStops : true)
             guard isBus else { return segment }
             var value = segment
             value.mode = .bus
