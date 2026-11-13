@@ -247,7 +247,8 @@ enum PaymentInboxChoice {
             await AITaskQueue.upload()
             notice += " " + language.text("AI에게 같은 모양의 규칙을 부탁했어요.", "Asked your AI for a rule for this layout.")
         }
-        PaymentInbox.update(item)
+        // 「넣지 않음」으로 정한 글은 받은 문자 목록에서 뺀다(INX1114A01, 대표 지시). AI에게 부탁한 규칙 요청은 따로 남아 있다.
+        if kind == .ignore { PaymentInbox.remove(item.id) } else { PaymentInbox.update(item) }
         return (item, notice)
     }
 
@@ -331,6 +332,7 @@ struct PaymentInboxChoiceSection: View {
     let language: MapHomeLanguage
     @Binding var item: PaymentInbox.Item
     @Binding var notice: String?
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         Section {
@@ -376,6 +378,8 @@ struct PaymentInboxChoiceSection: View {
                 let (updated, message) = await PaymentInboxChoice.apply(kind, to: item, language: language)
                 item = updated
                 notice = message
+                // 넣지 않기로 한 글은 목록에서 빠졌으니 화면도 닫는다.
+                if kind == .ignore { dismiss() }
             }
         } label: {
             Label(title, systemImage: symbol)
