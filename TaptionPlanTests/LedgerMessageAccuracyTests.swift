@@ -74,6 +74,23 @@ final class LedgerMessageAccuracyTests: XCTestCase {
         XCTAssertFalse(LedgerMessageParser.isPaymentCandidate("인천e음 충전 완료 50,000원\n총 보유 잔액 62,345원"), "충전은 지출이 아니다")
     }
 
+    /// 충전과 결제 실패 안내는 넣지 않는다(TOP1113A01). 글 모양은 꾸민 것.
+    func testTopUpsAndFailedPaymentNoticesAreSkipped() {
+        for text in ["[KB국민] 출금 50,000원 인천이음카드", "인천e음 충전 완료 50,000원\n총 보유 잔액 62,345원",
+                     "토스 50,000원 충전했어요", "결제를 지원하지 않는 매장이에요\n3,500원", "네이버페이 결제 실패 3,500원 가나다카페"] {
+            XCTAssertFalse(LedgerMessageParser.isPaymentCandidate(text), text)
+            XCTAssertNil(parse(text), text)
+        }
+        // 전국 지역화폐로 옮긴 돈.
+        for text in ["[우리은행] 출금 30,000원 동백전", "신한 이체 100,000원 온통대전", "토스뱅크 출금 20,000원 서울사랑상품권",
+                     "카카오뱅크 출금 50,000원 탐나는전", "농협 출금 10,000원 고양사랑상품권"] {
+            XCTAssertFalse(LedgerMessageParser.isPaymentCandidate(text), text)
+        }
+        XCTAssertTrue(LedgerMessageParser.isPaymentCandidate("동백전 결제 12,000원 가나다식당"), "지역화폐로 낸 결제는 지출")
+        XCTAssertTrue(LedgerMessageParser.isPaymentCandidate("신한카드 승인 12,000원 가나다 전기차 충전소"), "충전소 결제는 지출")
+        XCTAssertTrue(LedgerMessageParser.isPaymentCandidate("결제 완료 5,000원\n씨유(CU) 예시점\n서로e음 카드(교통) 총 보유 잔액 12,345원"), "e음 결제는 그대로")
+    }
+
     func testOnlyPaymentLookingTextGoesToAI() {
         XCTAssertTrue(LedgerMessageParser.looksLikePayment("현대카드 해외승인 12.50 USD 11/10 09:10 AMAZON"))
         XCTAssertTrue(LedgerMessageParser.looksLikePayment("스타벅스\n아메리카노 4,500\n합계 4,500"))

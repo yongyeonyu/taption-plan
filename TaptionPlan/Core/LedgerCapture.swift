@@ -20,13 +20,30 @@ enum LedgerMessageParser {
     /// 결제가 아닌 카드사 안내(청구 예정·한도·쿠폰·광고). 이런 글은 기록 후보로 보지 않는다.
     static let notPayments = ["예정", "한도", "청구", "이용대금", "결제일", "쿠폰", "결제대금", "카드대금"]
     /// 결제가 되지 않았다는 글. 「승인」이 들어 있어도 지출이 아니다(「승인거절」).
-    static let declined = ["거절", "한도초과", "잔액부족", "승인불가", "승인오류"]
+    static let declined = ["거절", "한도초과", "잔액부족", "승인불가", "승인오류", "지원하지 않", "결제 실패", "결제실패", "실패했"]
+    /// 내 선불·지역화폐 지갑으로 옮긴 돈(TOP1113A01, 대표: 인천이음카드 5만 원은 충전). 지출이 아니다.
+    /// 전기차 충전처럼 돈을 쓰는 충전은 남긴다.
+    private static let topUpTargets = ["이음카드", "충전금"]
+    private static let spendingCharges = ["충전소", "전기차", "급속", "완속", "충전요금", "EV"]
+    /// 전국 지역화폐(대표 지시 2026-11-13: 「전국 다 카드 충전한 내용은 지출로 안 잡게」). 은행 출금·이체의 받는 곳이 이것이면 충전이다.
+    /// 같은 이름의 결제 알림(「동백전 결제 …」)은 출금·이체가 아니라 지출로 남는다.
+    static let localCurrencies = [
+        "인천e음", "e음", "이음", "서울사랑상품권", "서울Pay", "서울페이", "경기지역화폐", "지역화폐", "지역사랑상품권", "사랑상품권", "사랑카드",
+        "동백전", "대구로페이", "대구행복페이", "온통대전", "광주상생카드", "울산페이", "여민전", "탐나는전", "누비전", "강원상품권",
+        "전북사랑", "전남사랑", "경북사랑", "경남사랑", "충남사랑", "충북사랑", "고향사랑", "온누리상품권", "제로페이",
+    ]
+    private static let outflows = ["출금", "이체", "송금", "보냈"]
+    static func isTopUp(_ text: String) -> Bool {
+        if topUpTargets.contains(where: text.contains) { return true }
+        if outflows.contains(where: text.contains), localCurrencies.contains(where: text.contains) { return true }
+        return text.contains("충전") && !spendingCharges.contains(where: text.contains)
+    }
     /// 「승인」이 있어도 결제 한 건이 아닌 글: 광고, 인증 번호, 나라 밖에서 온 사칭 문자, 가맹점 매출 집계.
     private static let neverPayments = ["(광고)", "[광고]", "인증번호", "국제발신", "집계"]
 
     /// 광고·거절·집계 문자는 늘 빼고, 안내 낱말은 「승인」이 없을 때만 뺀다(승인 문자 끝의 혜택·청구할인 홍보 줄은 결제다).
     static func isNotice(_ text: String) -> Bool {
-        if neverPayments.contains(where: text.contains) || declined.contains(where: text.contains) { return true }
+        if neverPayments.contains(where: text.contains) || declined.contains(where: text.contains) || isTopUp(text) { return true }
         // 「12건 340,000원」처럼 여러 건을 묶은 글. 「GS25건대점」의 「5건」은 아니다.
         if text.contains(/(?:^|\s)[0-9]+건(?:\s|$)/) { return true }
         return !text.contains("승인") && notPayments.contains(where: text.contains)
