@@ -115,7 +115,35 @@ struct TravelModeDestination {
             province = trip.regionName.flatMap { name in TravelModeRegions.provinces.first { $0.nameKo == name || $0.nameEn == name } }
                 ?? point.flatMap { TravelGlobeRegions.region(in: TravelModeRegions.provinces, kind: .province, longitude: $0.x, latitude: $0.y) }
         }
-        self.point = point ?? province?.anchor ?? country?.anchor
+        self.point = point ?? province.map(TravelModeRegions.landAnchor) ?? country.map(TravelModeRegions.flagPoint)
+    }
+}
+
+extension TravelModeRegions {
+    /// 나라만 정한 여행의 깃발 자리: 그 나라 대표 국제공항(TFP1113A01, 대표 신고 「일본인데 왜 바다에 꽂히냐? 공항에 꽂아야지」).
+    static let countryAirports: [String: String] = [
+        "KR": "ICN", "JP": "NRT", "CN": "PEK", "HK": "HKG", "MO": "MFM", "TW": "TPE",
+        "TH": "BKK", "VN": "HAN", "PH": "MNL", "SG": "SIN", "MY": "KUL", "ID": "CGK",
+        "GU": "GUM", "MP": "SPN", "MN": "UBN", "US": "LAX", "CA": "YVR",
+        "GB": "LHR", "FR": "CDG", "DE": "FRA", "NL": "AMS", "IT": "FCO", "ES": "MAD",
+        "CH": "ZRH", "AT": "VIE", "CZ": "PRG", "TR": "IST", "AE": "DXB", "QA": "DOH",
+        "AU": "SYD", "NZ": "AKL",
+    ]
+
+    static func flagPoint(_ country: TravelGlobeRegion) -> SIMD2<Double> {
+        if let code = countryAirports[country.code], let airport = TravelAirports.coordinate(code) {
+            return SIMD2(airport.longitude, airport.latitude)
+        }
+        return landAnchor(country)
+    }
+
+    /// 가장 큰 땅을 감싼 네모의 가운데. 휜 섬처럼 그 자리가 바다면 그 땅 경계에서 가장 가까운 점으로 옮긴다.
+    static func landAnchor(_ region: TravelGlobeRegion) -> SIMD2<Double> {
+        let center = region.anchor
+        guard !region.contains(longitude: center.x, latitude: center.y),
+              let ring = region.rings.max(by: { $0.count < $1.count }) else { return center }
+        func squared(_ point: SIMD2<Double>) -> Double { let d = point - center; return d.x * d.x + d.y * d.y }
+        return ring.min { squared($0) < squared($1) } ?? center
     }
 }
 

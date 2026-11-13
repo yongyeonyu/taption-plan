@@ -1104,6 +1104,20 @@ final class TravelModeGlobeTests: XCTestCase {
         XCTAssertNil(unknown.point, "어디인지 모르면 깃발을 꽂지 않는다")
     }
 
+    /// 나라만 정한 여행은 대표 공항에, 공항표에 없는 나라는 땅 위에 꽂는다(TFP1113A01: 일본이 동해에 꽂힘).
+    func testCountryOnlyTripFlagsTheMainAirportNotTheSea() throws {
+        let japan = TravelModeDestination(trip: TravelTrip(id: "j", title: "스시", startDay: "2026-12-01", endDay: "2026-12-04", countryCode: "JP"), stops: [])
+        let point = try XCTUnwrap(japan.point)
+        XCTAssertEqual(point.x, 140.39, accuracy: 0.01)
+        XCTAssertEqual(point.y, 35.77, accuracy: 0.01)
+        let region = try XCTUnwrap(japan.country)
+        XCTAssertFalse(region.contains(longitude: region.anchor.x, latitude: region.anchor.y), "네모 가운데는 바다였다")
+        // 공항표에 없는 나라도 깃발이 그 땅 고리 위에 있다.
+        let land = TravelModeRegions.landAnchor(region)
+        let ring = try XCTUnwrap(region.rings.max { $0.count < $1.count })
+        XCTAssertTrue(ring.contains(land) || region.contains(longitude: land.x, latitude: land.y))
+    }
+
     /// 회전·확대 60장을 그리는 데 걸리는 시간. 한 장이 화면 한 번(60Hz 기준 16.7ms) 안에 그려지는지 본다.
     @MainActor
     func testFlightFramesRenderFastEnough() throws {
