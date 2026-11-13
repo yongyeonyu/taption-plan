@@ -9,12 +9,15 @@ struct TravelPlacePicker: View {
     /// 여행지 가운데(경도, 위도). 있으면 그 둘레를 먼저 찾는다.
     let anchor: SIMD2<Double>?
     let onPick: (TravelItemPlace) -> Void
+    /// 코스에서 곳 더하기(TVV1113A01): 이름·장소(없으면 nil)·짐작한 종류. 주어지면 「이름 그대로 더하기」 줄도 보인다.
+    var onAdd: ((String, TravelItemPlace?, String) -> Void)?
 
     @Environment(\.dismiss) private var dismiss
     @FocusState private var isFocused: Bool
     @State private var text = ""
     @State private var results: [TravelItemPlace] = []
     @State private var details: [String: String] = [:]
+    @State private var kinds: [String: String] = [:]
     @State private var isSearching = false
     @State private var didSearch = false
 
@@ -35,6 +38,7 @@ struct TravelPlacePicker: View {
                     ForEach(results) { place in
                         Button {
                             onPick(place)
+                            onAdd?(place.name, place, kinds[place.id] ?? "sight")
                             dismiss()
                         } label: {
                             VStack(alignment: .leading, spacing: 2) {
@@ -44,6 +48,16 @@ struct TravelPlacePicker: View {
                                 }
                             }
                         }
+                    }
+                    let typed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if let onAdd, !typed.isEmpty {
+                        Button {
+                            onAdd(typed, nil, TravelQuickEntry.parse(typed).kind ?? "sight")
+                            dismiss()
+                        } label: {
+                            Label(language.runtimeText("「\(typed)」 그대로 더하기", "Add “\(typed)” as typed"), systemImage: "text.badge.plus").foregroundStyle(TravelInk.plan)
+                        }
+                        .accessibilityIdentifier("travelPlaceAddPlain")
                     }
                     if didSearch, results.isEmpty, !isSearching {
                         Text(language.text("찾은 곳이 없습니다. 다른 이름으로 찾아 보세요.", "Nothing found. Try another name.")).font(.footnote).foregroundStyle(.secondary)
@@ -76,15 +90,17 @@ struct TravelPlacePicker: View {
             request.region = MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: anchor.y, longitude: anchor.x), latitudinalMeters: 200_000, longitudinalMeters: 200_000)
         }
         let items = (try? await MKLocalSearch(request: request).start().mapItems) ?? []
-        var found: [TravelItemPlace] = [], notes: [String: String] = [:]
+        var found: [TravelItemPlace] = [], notes: [String: String] = [:], guessed: [String: String] = [:]
         for item in items.prefix(15) {
             let coordinate = item.placemark.coordinate
             let place = TravelItemPlace(name: item.name ?? wanted, latitude: coordinate.latitude, longitude: coordinate.longitude)
             guard !found.contains(place) else { continue }
             found.append(place)
             notes[place.id] = item.placemark.title ?? ""
+            guessed[place.id] = TravelCoursePlanner.kind(forCategory: item.pointOfInterestCategory?.rawValue)
         }
         results = found
         details = notes
+        kinds = guessed
     }
 }

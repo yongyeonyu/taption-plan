@@ -414,6 +414,8 @@ struct TravelCourseView: View {
     @Binding var selectedID: String?
     let onScrub: (Int) -> Void
     let onEdit: (TravelPlanTableModel.Block) -> Void
+    /// 「곳 더하기」: 장소를 찾아 그날 코스 끝에 붙인다.
+    var onAddStop: () -> Void = {}
 
     @State private var images: [String: UIImage] = [:]
 
@@ -430,18 +432,34 @@ struct TravelCourseView: View {
                     ScrollView {
                         LazyVStack(spacing: 0) {
                             ForEach(Array(blocks.enumerated()), id: \.element.id) { index, block in row(block, order: index + 1, isCurrent: index == current) }
+                            addStopButton.padding(.vertical, 8)
                         }
                     }
                     .onChange(of: current) { _, index in withAnimation(.snappy(duration: 0.25)) { proxy.scrollTo(blocks[index].id, anchor: .center) } }
                 }
             } else {
-                Text(language.text("아직 일정이 없습니다", "No plans yet")).font(.footnote).foregroundStyle(TravelInk.plan.opacity(0.7))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                VStack(spacing: 10) {
+                    Text(language.text("갈 곳을 굵직하게 먼저 더해 보세요. 세부 계획은 나중에 적어도 됩니다.", "Add the main stops first. You can fill in details later."))
+                        .font(.footnote).multilineTextAlignment(.center).foregroundStyle(TravelInk.plan.opacity(0.7))
+                    addStopButton
+                }
+                .padding(.horizontal, 24)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .foregroundStyle(TravelInk.plan)
         .task(id: blocks.map(\.id)) { await loadPhotos(blocks) }
         .accessibilityIdentifier("travelCourse")
+    }
+
+    private var addStopButton: some View {
+        Button(action: onAddStop) {
+            Label(language.text("곳 더하기", "Add a stop"), systemImage: "plus").font(.footnote.weight(.semibold))
+                .padding(.horizontal, 14).frame(height: 36)
+                .foregroundStyle(TravelInk.land).background(TravelInk.plan, in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("travelCourseAddStop")
     }
 
     private func nowCard(_ blocks: [TravelPlanTableModel.Block], _ index: Int) -> some View {
@@ -535,5 +553,87 @@ struct TravelCourseView: View {
                   let image = UIImage(data: data) else { continue }
             images[block.id] = image
         }
+    }
+}
+
+/// 코스를 먼저 짜는 흐름의 계산(TVV1113A01): 어느 탭이 먼저인지, 새 곳의 시각, 찾은 장소의 종류.
+enum TravelCoursePlanner {
+    /// 계획표를 먼저 보기로 고른 여행이 아니면 코스가 먼저 열린다.
+    static func showsCourse(_ tableTrips: String, tripID: String) -> Bool {
+        !tableTrips.split(separator: ",").contains(Substring(tripID))
+    }
+
+    /// 탭을 고른 뒤의 기억 값. 오래된 여행 번호가 끝없이 쌓이지 않게 40개까지만 둔다.
+    static func tableTrips(_ stored: String, tripID: String, showsCourse: Bool) -> String {
+        var ids = stored.split(separator: ",").map(String.init).filter { $0 != tripID }
+        if !showsCourse { ids.append(tripID) }
+        return ids.suffix(40).joined(separator: ",")
+    }
+
+    /// 코스 끝에 붙일 새 곳의 시각: 그날 마지막 일정 끝(없으면 오늘은 지금, 아니면 09:00)에서 종류 기본 길이만큼. 하루를 넘으면 자정까지로 줄인다.
+    /// 밤의 잠(수면)은 하루의 끝이라 건너뛰고 그 앞 일정 뒤에 잇는다.
+    static func nextSlot(blocks: [TravelPlanTableModel.Block], kind: String, nowMinute: Int?) -> (start: Int, duration: Int) {
+        let start = TravelQuickEntry.nextStart(lastEndMinute: blocks.filter { $0.kind != "sleep" }.map(\.endMinute).max(), nowMinute: nowMinute)
+        return (start, max(TravelQuickEntry.step, min(TravelQuickEntry.defaultDuration(kind: kind), 1_440 - start)))
+    }
+
+    /// Apple 지도가 알려 준 장소 분류(`MKPointOfInterestCategory`의 원래 값)로 일정 종류를 짐작한다. 모르면 관광.
+    static func kind(forCategory raw: String?) -> String {
+        guard let raw = raw?.lowercased() else { return "sight" }
+        let table: [(String, [String])] = [
+            ("cafe", ["cafe"]), ("meal", ["restaurant", "bakery", "brewery", "winery", "foodmarket"]),
+            ("lodging", ["hotel", "campground"]), ("flight", ["airport"]),
+            ("transfer", ["publictransport", "carrental", "parking", "gasstation", "evcharger"]), ("shopping", ["store"]),
+        ]
+        return table.first { $0.1.contains { raw.contains($0) } }?.0 ?? "sight"
+    }
+}
+
+/// 여행 화면 하단 막대(메인 홈 하단 메뉴와 같은 높이): 다음 일정과 일정 수·예상 지출, 오른쪽 「+」 메뉴. 막대를 누르면 계획표가 오르내린다.
+struct TravelTripFooter: View {
+    struct Action: Identifiable {
+        let id: String
+        let symbol: String
+        let run: () -> Void
+        init(_ title: String, _ symbol: String, run: @escaping () -> Void) {
+            id = title
+            self.symbol = symbol
+            self.run = run
+        }
+    }
+
+    let items: [TravelTripItem]
+    let tripID: String
+    let language: MapHomeLanguage
+    let actions: [Action]
+    let onTap: () -> Void
+
+    var body: some View {
+        let next = items.first { $0.end > .now } ?? items.first
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(next.map { language.runtimeText("다음: \($0.title)", "Next: \($0.title)") } ?? language.text("아직 일정이 없습니다", "No plans yet"))
+                    .font(.subheadline.weight(.semibold)).lineLimit(1)
+                let planned = TravelPlanSpend.plannedTotal(items: items, tripID: tripID)
+                let plannedText = LedgerMoney.text(planned, language: language)
+                Text(language.runtimeText("일정 \(items.count)개", "\(items.count) plans") + (planned > 0 ? " · " + language.runtimeText("예상 \(plannedText)", "Planned \(plannedText)") : ""))
+                    .font(.caption).opacity(0.8)
+            }
+            Spacer(minLength: 0)
+            Menu {
+                ForEach(actions) { action in Button(action.id, systemImage: action.symbol, action: action.run) }
+            } label: {
+                Image(systemName: "plus").font(.system(size: 20, weight: .semibold)).foregroundStyle(TravelInk.land).frame(width: 44, height: 44)
+                    .background(TravelInk.plan, in: Circle())
+            }
+            .accessibilityLabel(language.text("추가", "Add"))
+        }
+        .foregroundStyle(TravelInk.plan)
+        .padding(.leading, 20)
+        .padding(.trailing, 6)
+        .frame(height: MapHomeBottomBarMetrics.pillHeight)
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onTap)
+        .accessibilityIdentifier("travelPlanFooter")
     }
 }

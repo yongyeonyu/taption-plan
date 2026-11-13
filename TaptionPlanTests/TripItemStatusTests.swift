@@ -637,6 +637,40 @@ final class TravelTripUnitTests: XCTestCase {
         XCTAssertNil(TravelCourse.neighborStart(blocks, current: 0, step: -1))
     }
 
+    /// TVV1113A01 C1·C2: 코스가 먼저 열리고, 코스 끝에 붙는 새 곳의 시각과 찾은 장소의 종류 짐작.
+    func testCourseIsDefaultAndNewStopsGoToTheEnd() {
+        XCTAssertTrue(TravelCoursePlanner.showsCourse("", tripID: "t1"), "고르지 않은 여행은 코스가 먼저")
+        var stored = TravelCoursePlanner.tableTrips("", tripID: "t1", showsCourse: false)
+        XCTAssertEqual(stored, "t1")
+        XCTAssertFalse(TravelCoursePlanner.showsCourse(stored, tripID: "t1"))
+        XCTAssertTrue(TravelCoursePlanner.showsCourse(stored, tripID: "t10"), "번호가 앞부분만 같은 여행과 헷갈리지 않는다")
+        stored = TravelCoursePlanner.tableTrips(stored, tripID: "t2", showsCourse: false)
+        stored = TravelCoursePlanner.tableTrips(stored, tripID: "t1", showsCourse: true)
+        XCTAssertEqual(stored, "t2")
+
+        func block(_ start: Int, _ end: Int, kind: String = "sight") -> TravelPlanTableModel.Block {
+            .init(id: "\(start)", column: 0, startMinute: start, endMinute: end, title: "", tripStatus: nil, status: .pending, kind: kind)
+        }
+        var slot = TravelCoursePlanner.nextSlot(blocks: [block(1_200, 1_230), block(1_380, 1_439, kind: "sleep")], kind: "cafe", nowMinute: nil)
+        XCTAssertEqual([slot.start, slot.duration], [1_230, 45], "밤의 잠은 건너뛰고 그 앞 일정 뒤에 잇는다")
+        slot = TravelCoursePlanner.nextSlot(blocks: [], kind: "sight", nowMinute: nil)
+        XCTAssertEqual([slot.start, slot.duration], [540, 90], "빈 날은 09:00부터 종류 기본 길이")
+        slot = TravelCoursePlanner.nextSlot(blocks: [], kind: "meal", nowMinute: 611)
+        XCTAssertEqual([slot.start, slot.duration], [615, 60], "오늘이면 지금(15분 올림)")
+        slot = TravelCoursePlanner.nextSlot(blocks: [block(540, 630), block(600, 700)], kind: "cafe", nowMinute: nil)
+        XCTAssertEqual([slot.start, slot.duration], [700, 45], "그날 마지막 일정 끝에서 잇는다")
+        slot = TravelCoursePlanner.nextSlot(blocks: [block(1_200, 1_400)], kind: "lodging", nowMinute: nil)
+        XCTAssertEqual([slot.start, slot.duration], [1_400, 40], "하루를 넘지 않게 줄인다")
+
+        XCTAssertEqual(TravelCoursePlanner.kind(forCategory: "MKPOICategoryRestaurant"), "meal")
+        XCTAssertEqual(TravelCoursePlanner.kind(forCategory: "MKPOICategoryCafe"), "cafe")
+        XCTAssertEqual(TravelCoursePlanner.kind(forCategory: "MKPOICategoryHotel"), "lodging")
+        XCTAssertEqual(TravelCoursePlanner.kind(forCategory: "MKPOICategoryAirport"), "flight")
+        XCTAssertEqual(TravelCoursePlanner.kind(forCategory: "MKPOICategoryPublicTransport"), "transfer")
+        XCTAssertEqual(TravelCoursePlanner.kind(forCategory: "MKPOICategoryMuseum"), "sight")
+        XCTAssertEqual(TravelCoursePlanner.kind(forCategory: nil), "sight")
+    }
+
     /// TVU1113A01: 시각 고치기를 여러 번 되돌리고 다시 한다. 새로 고치면 다시 하기는 비고, 다른 여행이면 앞의 것을 버린다.
     func testPlanHistoryUndoesAndRedoesTimeEdits() {
         func step(_ item: String, move: Int = 0, resize: Int = 0, trip: String = "t1") -> TravelPlanHistory.Step {

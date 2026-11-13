@@ -1078,6 +1078,31 @@ final class TaptionPlanTravelPlanUITests: XCTestCase {
         raise.tap()
         let handle = app.descendants(matching: .any)["계획표 내리기"]
         XCTAssertTrue(handle.waitForExistence(timeout: 5), "계획표가 올라온다")
+        // 코스가 먼저 열린다(TVV1113A01 C1). 「곳 더하기」로 이름만 적어 코스 끝에 붙이고, 계획표로 바꿔 나머지를 본다.
+        let addStop = app.buttons["곳 더하기"].firstMatch
+        if addStop.waitForExistence(timeout: 3) {
+            shot(app, "0a-course-first")
+            addStop.tap()
+            let query = app.textFields["장소 이름"]
+            XCTAssertTrue(query.waitForExistence(timeout: 5), "곳 더하기는 장소 찾기를 연다")
+            query.typeText("시험 곳")
+            let plain = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "그대로 더하기")).firstMatch
+            XCTAssertTrue(plain.waitForExistence(timeout: 3))
+            plain.tap()
+            XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "시험 곳")).firstMatch.waitForExistence(timeout: 5), "더한 곳이 코스 목록에 보인다")
+            sleep(1)
+            shot(app, "0b-course-stop-added")
+            // 방금 더한 곳은 되돌리기로 지운다(시험이 자료를 남기지 않게).
+            let undo = app.buttons["되돌리기"]
+            XCTAssertTrue(undo.waitForExistence(timeout: 3), "곳 더하기는 되돌릴 수 있다")
+            undo.tap()
+            sleep(1)
+            app.buttons["계획표"].tap()
+            // 날을 바꿨다 돌아오면 재생 헤드가 그날 첫 일정으로 돌아간다(아래 단계의 누를 자리를 맞추려고).
+            app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "2일차")).firstMatch.tap()
+            sleep(1)
+            app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "1일차")).firstMatch.tap()
+        }
         sleep(1)
         shot(app, "1-table")
 
@@ -1157,6 +1182,9 @@ final class TaptionPlanTravelPlanUITests: XCTestCase {
         shot(app, "6e-course-next")
         app.buttons["계획표"].tap()
         XCTAssertTrue(playhead.waitForExistence(timeout: 3))
+        app.buttons["코스"].tap()   // 다음에도 코스가 먼저 열리게 돌려놓는다.
+        sleep(1)
+        app.buttons["계획표"].tap()
 
         // 여행 이름을 누르면 여행 속성 시트가 열린다.
         app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "후쿠오카")).firstMatch.tap()
