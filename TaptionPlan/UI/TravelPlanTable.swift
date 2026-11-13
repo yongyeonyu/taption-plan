@@ -5,8 +5,8 @@ import TaptionPlanStore
 
 /// 계획표 하루치: 분류 열에 놓인 계획 칸, 그 옆에 나란히 보일 실제 기록, 지금 시각.
 struct TravelPlanTableModel: Equatable {
-    /// 열 순서: 이동 · 식사 · 관광 · 숙소.
-    static let columnCount = 4
+    /// 열 구성(TVU1113A01). 기본은 이동 · 식사 · 관광 · 숙소이고, 여행마다 이름·순서·종류 묶음을 바꿀 수 있다.
+    var columns = TravelPlanColumns.defaults
 
     struct Block: Identifiable, Equatable {
         let id: String
@@ -45,31 +45,25 @@ struct TravelPlanTableModel: Equatable {
         return max(0, (blocks.map(\.startMinute).min() ?? 9 * 60) - 30)
     }
 
-    static func column(forKind kind: String) -> Int {
-        switch kind {
-        case "flight", "transfer": 0
-        case "meal", "cafe": 1
-        case "lodging", "sleep", "rest": 3
-        default: 2
-        }
-    }
+    /// 기본 4열에서의 자리.
+    static func column(forKind kind: String) -> Int { TravelPlanColumns.index(forKind: kind, in: TravelPlanColumns.defaults) }
 
     /// `day`는 기기 달력의 그날. 일정은 그곳 벽시계 시각에 놓는다(시간 막대와 같은 규칙).
     static func make(
         items: [TravelTripItem], tripID: String, day: Date, actual: [MapHomeTimeRailSegment], now: Date, spent: [String: Double] = [:],
-        calendar: Calendar = .autoupdatingCurrent
+        columns: [TravelTripColumn] = TravelPlanColumns.defaults, calendar: Calendar = .autoupdatingCurrent
     ) -> TravelPlanTableModel {
         var blocks: [Block] = []
         var spans: [TravelPlanComparison.Span] = []
         for item in items where item.tripID == tripID {
             guard let segment = TravelTripRail.segments([item], day: day, calendar: calendar).first else { continue }
-            let column = column(forKind: item.kind)
+            let column = TravelPlanColumns.index(forKind: item.kind, in: columns)
             blocks.append(Block(
                 id: item.itemID, column: column, startMinute: segment.startMinute, endMinute: segment.endMinute, title: item.title,
                 tripStatus: segment.tripStatus, status: .pending, hasNote: !(item.note ?? "").isEmpty, spent: spent[item.itemID] ?? 0,
                 colorHex: item.colorHex, planned: item.plannedSpendKRW ?? 0
             ))
-            spans.append(.init(id: item.itemID, start: segment.startMinute, end: segment.endMinute, isMove: column == 0))
+            spans.append(.init(id: item.itemID, start: segment.startMinute, end: segment.endMinute, isMove: item.kind == "transfer" || item.kind == "flight"))
         }
         var nowMinute: Int?
         let limit: Int
@@ -89,6 +83,7 @@ struct TravelPlanTableModel: Equatable {
         for index in blocks.indices { blocks[index].status = result.statuses[blocks[index].id] ?? .pending }
         let unplanned = Set(result.unplanned)
         return TravelPlanTableModel(
+            columns: columns,
             blocks: blocks.sorted { ($0.startMinute, $0.id) < ($1.startMinute, $1.id) },
             actuals: records.map {
                 Actual(id: $0.id, startMinute: $0.startMinute, endMinute: $0.endMinute, title: $0.title, isMove: $0.categoryID == "movement", isUnplanned: unplanned.contains($0.id))
@@ -259,10 +254,10 @@ struct TravelPlanTable: View {
     }
 
     /// 누른 자리의 열과 시각(15분 단위). 시간축 쪽을 누르면 nil.
-    static func slot(x: CGFloat, y: CGFloat, width: CGFloat, scale: CGFloat = 1) -> (column: Int, minute: Int)? {
-        let columnWidth = (width - leading) / CGFloat(TravelPlanTableModel.columnCount)
+    static func slot(x: CGFloat, y: CGFloat, width: CGFloat, scale: CGFloat = 1, columns: Int = 4) -> (column: Int, minute: Int)? {
+        let columnWidth = (width - leading) / CGFloat(max(1, columns))
         guard x >= leading, columnWidth > 0, y >= 0 else { return nil }
-        let column = min(TravelPlanTableModel.columnCount - 1, Int((x - leading) / columnWidth))
+        let column = min(max(1, columns) - 1, Int((x - leading) / columnWidth))
         return (column, TravelQuickEntry.snapped(Int(y / (minuteHeight * scale))))
     }
 
@@ -275,9 +270,22 @@ struct TravelPlanTable: View {
         spent > 0 ? (spent, false) : planned > 0 ? (planned, true) : nil
     }
 
-    private var titles: [String] {
-        [language.text("이동", "Move"), language.text("식사", "Meals"), language.text("관광", "Sights"), language.text("숙소", "Stay")]
+    /// 열 제목: 붙인 이름, 없으면 그 열 첫 종류의 이름(기본 4열은 이동·식사·관광·숙소), 종류도 없으면 「열 n」.
+    static func title(_ column: TravelTripColumn, index: Int, language: MapHomeLanguage) -> String {
+        if !column.name.isEmpty { return column.name }
+        switch column.kinds.first {
+        case "transfer": return language.text("이동", "Move")
+        case "meal": return language.text("식사", "Meals")
+        case "sight": return language.text("관광", "Sights")
+        case "lodging": return language.text("숙소", "Stay")
+        case let kind?: return TripImportItem.Kind(rawValue: kind)?.planName ?? kind
+        case nil: return language.runtimeText("열 \(index + 1)", "Column \(index + 1)")
+        }
     }
+
+    private var titles: [String] { table.columns.enumerated().map { Self.title($0.element, index: $0.offset, language: language) } }
+    /// 열 제목 줄을 길게 누름(Trip 원본): 열 편집을 연다.
+    var onEditColumns: () -> Void = {}
 
     var body: some View {
         VStack(spacing: 0) {
@@ -285,9 +293,11 @@ struct TravelPlanTable: View {
                 // 「실제」 글자 자리에 확대·축소 단추를 둔다(실제 띠는 시간축 옆 주홍 띠로 알아본다).
                 Color.clear.frame(width: axisWidth + actualWidth, height: 1)
                 ForEach(titles.indices, id: \.self) { index in
-                    Text(titles[index]).font(.caption.weight(.semibold)).frame(maxWidth: .infinity)
+                    Text(titles[index]).font(.caption.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.7).frame(maxWidth: .infinity)
                 }
             }
+            .contentShape(Rectangle())
+            .onLongPressGesture(minimumDuration: 0.4, perform: onEditColumns)
             .foregroundStyle(TravelInk.plan.opacity(0.8))
             .padding(.vertical, 6)
             .overlay(alignment: .leading) { zoomButtons }
@@ -366,7 +376,7 @@ struct TravelPlanTable: View {
     /// 하루 전체(0~24시)를 그린 본문. 스크롤 없이도 그릴 수 있게 따로 둔다.
     var dayBody: some View {
         GeometryReader { proxy in
-            let columnWidth = (proxy.size.width - axisWidth - actualWidth) / CGFloat(TravelPlanTableModel.columnCount)
+            let columnWidth = (proxy.size.width - axisWidth - actualWidth) / CGFloat(max(1, table.columns.count))
             ZStack(alignment: .topLeading) {
                 grid(width: proxy.size.width)
                 ForEach(table.actuals) { record in actualBar(record, columnWidth: columnWidth) }
@@ -406,7 +416,7 @@ struct TravelPlanTable: View {
                 // 시간축을 누르면 그 시각이 가운데(재생 헤드)로 온다.
                 withAnimation(.snappy(duration: 0.25)) { position.scrollTo(y: value.location.y) }
                 tap(.elsewhere)
-            } else if let slot = Self.slot(x: value.location.x, y: value.location.y, width: width, scale: zoom) {
+            } else if let slot = Self.slot(x: value.location.x, y: value.location.y, width: width, scale: zoom, columns: table.columns.count) {
                 tap(.empty(TravelPlanCell(column: slot.column, minute: slot.minute)))
             }
         })
@@ -531,7 +541,7 @@ struct TravelPlanTable: View {
                 .padding(3)
                 .frame(width: columnWidth - 4, height: max(18, height), alignment: .topLeading)
                 .overlay { RoundedRectangle(cornerRadius: 5).stroke(TravelInk.actual, style: StrokeStyle(lineWidth: 1, dash: [3, 3])) }
-                .offset(x: axisWidth + actualWidth + columnWidth * 2 + 2, y: CGFloat(record.startMinute) * minuteHeight)
+                .offset(x: axisWidth + actualWidth + columnWidth * CGFloat(TravelPlanColumns.index(forKind: "sight", in: table.columns)) + 2, y: CGFloat(record.startMinute) * minuteHeight)
                 .accessibilityLabel(language.text("계획에 없던 방문", "Unplanned stop"))
         }
     }

@@ -134,6 +134,58 @@ struct TravelTripsTests {
 
     // MARK: 일정 시각 고치기
 
+    /// TVU1113A01: 열 구성은 없으면 키를 쓰지 않고, 예전 빌드의 모양으로도 여행이 읽힌다. 종류는 늘 한 열에만 있다.
+    @Test func tripColumnsKeepOldBytesAndEveryKindHasOneColumn() throws {
+        let json = #"{"endDay":"2026-11-22","id":"t1","startDay":"2026-11-19","title":"오사카"}"#
+        var trip = try Self.decoder().decode(TravelTrip.self, from: Data(json.utf8))
+        #expect(trip.columns == nil)
+        #expect(TravelPlanColumns.resolved(trip.columns) == TravelPlanColumns.defaults)
+        #expect(TravelPlanColumns.stored(TravelPlanColumns.defaults) == nil, "기본 구성은 저장하지 않는다")
+        #expect(String(decoding: try Self.encoder().encode(trip), as: UTF8.self) == json)
+
+        // 기본 구성의 자리는 예전 고정 4열과 같다.
+        let base = TravelPlanColumns.defaults
+        #expect(TravelPlanColumns.index(forKind: "flight", in: base) == 0)
+        #expect(TravelPlanColumns.index(forKind: "cafe", in: base) == 1)
+        #expect(TravelPlanColumns.index(forKind: "sleep", in: base) == 3)
+        #expect(TravelPlanColumns.index(forKind: "모르는 값", in: base) == 2)
+        #expect((0..<4).map { TravelPlanColumns.kind(forColumn: $0, in: base) } == ["transfer", "meal", "sight", "lodging"])
+
+        // 다섯 열: 카페를 따로. 같은 종류가 두 번 나오면 먼저 나온 열, 빠진 종류는 「기타」가 있는 열로.
+        let custom = [
+            TravelTripColumn(name: "  탈것  ", kinds: ["transfer", "flight"]),
+            TravelTripColumn(name: "", kinds: ["meal"]),
+            TravelTripColumn(name: "카페", kinds: ["cafe", "meal", "없는 종류"]),
+            TravelTripColumn(name: "볼거리", kinds: ["sight", "other"]),
+            TravelTripColumn(name: "", kinds: ["lodging"]),
+        ]
+        let clean = try #require(TravelPlanColumns.stored(custom))
+        #expect(clean.map(\.name) == ["탈것", "", "카페", "볼거리", ""])
+        #expect(clean[2].kinds == ["cafe"])
+        #expect(Set(clean.flatMap(\.kinds)) == Set(TravelPlanColumns.allKinds))
+        #expect(clean.flatMap(\.kinds).count == TravelPlanColumns.allKinds.count, "종류는 한 열에만")
+        #expect(clean[3].kinds.contains("sleep") && clean[3].kinds.contains("shopping"))
+        #expect(TravelPlanColumns.index(forKind: "cafe", in: clean) == 2)
+
+        trip.columns = clean
+        let data = try Self.encoder().encode(trip)
+        #expect(try Self.decoder().decode(TravelTrip.self, from: data) == trip)
+        struct OldTrip: Decodable { var id: String, title: String, startDay: String, endDay: String }
+        #expect(try Self.decoder().decode(OldTrip.self, from: data).title == "오사카")
+
+        // 열 수는 2~6. 벗어나면 기본으로 본다.
+        #expect(TravelPlanColumns.resolved([custom[0]]) == base)
+        #expect(TravelPlanColumns.stored(Array(repeating: custom[0], count: 7)) == nil)
+        // 지우면 종류는 왼쪽 열로, 두 열에서는 지우지 않는다.
+        let removed = TravelPlanColumns.removing(2, from: clean)
+        #expect(removed.count == 4 && removed[1].kinds == ["meal", "cafe"])
+        let two = [TravelTripColumn(name: "", kinds: ["transfer"]), TravelTripColumn(name: "", kinds: ["other"])]
+        #expect(TravelPlanColumns.removing(0, from: two) == two)
+        // 종류 옮기기.
+        let moved = TravelPlanColumns.moving(kind: "photo", to: 0, in: base)
+        #expect(moved[0].kinds == ["transfer", "flight", "photo"] && !moved[2].kinds.contains("photo"))
+    }
+
     /// TVU1113A01: 일정 색·예상 지출은 없으면 키를 쓰지 않아 예전 바이트 그대로이고, 예전 빌드는 모르는 키를 건너뛴다.
     @Test func itemColorAndPlannedSpendKeepOldBytesAndOldReaders() throws {
         let plain = Self.item("t", "a", hour: 1)

@@ -21,6 +21,8 @@ public struct TravelTrip: Codable, Hashable, Sendable, Identifiable {
     public var flagColorHex: String?
     /// 언젠가 갈 여행(버킷리스트)의 날 수(TVW1112A01). 날짜를 아직 정하지 않아 `startDay`·`endDay`가 비어 있다. 날짜를 정하면 nil.
     public var wishDays: Int?
+    /// 계획표 열 구성(TVU1113A01). 없으면 기본 4열(이동·식사·관광·숙소)이고 키를 쓰지 않아 예전 바이트가 그대로다.
+    public var columns: [TravelTripColumn]?
 
     /// 날짜를 아직 정하지 않은 여행.
     public var isWish: Bool { startDay.isEmpty && (wishDays ?? 0) >= 1 }
@@ -28,7 +30,7 @@ public struct TravelTrip: Codable, Hashable, Sendable, Identifiable {
     public init(
         id: String, title: String, startDay: String, endDay: String, countryCode: String? = nil, regionName: String? = nil,
         latitude: Double? = nil, longitude: Double? = nil, currencyCode: String? = nil, timeZoneID: String? = nil,
-        flagColorHex: String? = nil, wishDays: Int? = nil
+        flagColorHex: String? = nil, wishDays: Int? = nil, columns: [TravelTripColumn]? = nil
     ) {
         self.id = id
         self.title = title
@@ -42,6 +44,84 @@ public struct TravelTrip: Codable, Hashable, Sendable, Identifiable {
         self.wishDays = wishDays
         self.timeZoneID = timeZoneID
         self.flagColorHex = flagColorHex
+        self.columns = columns
+    }
+}
+
+/// 계획표의 열 하나: 이름과 그 열에 놓을 일정 종류들. 이름이 비면 기본 이름(첫 종류의 이름)을 보인다.
+public struct TravelTripColumn: Codable, Hashable, Sendable {
+    public var name: String
+    public var kinds: [String]
+
+    public init(name: String, kinds: [String]) {
+        self.name = name
+        self.kinds = kinds
+    }
+}
+
+/// 계획표 열 구성의 규칙(TVU1113A01): 종류 12가지는 늘 한 열에만 들어가고, 열은 2~6개.
+public enum TravelPlanColumns {
+    public static let allKinds = ["transfer", "flight", "meal", "cafe", "sight", "shopping", "activity", "photo", "lodging", "sleep", "rest", "other"]
+    public static let countRange = 2...6
+
+    /// 기본 4열: 이동 · 식사 · 관광 · 숙소. 이름은 비워 두어 앱이 그 언어의 기본 이름을 보인다.
+    public static let defaults = [
+        TravelTripColumn(name: "", kinds: ["transfer", "flight"]),
+        TravelTripColumn(name: "", kinds: ["meal", "cafe"]),
+        TravelTripColumn(name: "", kinds: ["sight", "shopping", "activity", "photo", "other"]),
+        TravelTripColumn(name: "", kinds: ["lodging", "sleep", "rest"]),
+    ]
+
+    /// 화면에 쓸 구성: 저장된 것이 없거나 쓸 수 없으면 기본 4열. 종류는 한 열에만(먼저 나온 열), 빠진 종류는 「기타」가 있는 열(없으면 마지막 열)에 넣는다.
+    public static func resolved(_ stored: [TravelTripColumn]?) -> [TravelTripColumn] {
+        guard let stored, countRange.contains(stored.count) else { return defaults }
+        var seen = Set<String>()
+        var columns = stored.map { column in
+            TravelTripColumn(
+                name: String(column.name.trimmingCharacters(in: .whitespacesAndNewlines).prefix(12)),
+                kinds: column.kinds.filter { allKinds.contains($0) && seen.insert($0).inserted }
+            )
+        }
+        let missing = allKinds.filter { !seen.contains($0) }
+        if !missing.isEmpty {
+            let home = columns.firstIndex { $0.kinds.contains("other") } ?? columns.count - 1
+            columns[home].kinds += missing
+        }
+        return columns
+    }
+
+    /// 저장할 값: 다듬은 구성이 기본과 같으면 nil(키를 쓰지 않는다).
+    public static func stored(_ columns: [TravelTripColumn]) -> [TravelTripColumn]? {
+        guard countRange.contains(columns.count) else { return nil }
+        let clean = resolved(columns)
+        return clean == defaults ? nil : clean
+    }
+
+    /// 그 종류가 놓일 열. 모르는 종류는 「기타」와 같은 열.
+    public static func index(forKind kind: String, in columns: [TravelTripColumn]) -> Int {
+        columns.firstIndex { $0.kinds.contains(kind) } ?? columns.firstIndex { $0.kinds.contains("other") } ?? max(0, columns.count - 1)
+    }
+
+    /// 그 열의 빈 곳을 눌러 새로 넣을 때의 종류: 그 열의 첫 종류(비었으면 관광).
+    public static func kind(forColumn index: Int, in columns: [TravelTripColumn]) -> String {
+        columns.indices.contains(index) ? columns[index].kinds.first ?? "sight" : "sight"
+    }
+
+    /// 열을 지운다: 그 열의 종류는 왼쪽 열(첫 열이면 오른쪽 열)로 옮긴다. 2열에서는 지우지 않는다.
+    public static func removing(_ index: Int, from columns: [TravelTripColumn]) -> [TravelTripColumn] {
+        guard columns.count > countRange.lowerBound, columns.indices.contains(index) else { return columns }
+        var next = columns
+        let removed = next.remove(at: index)
+        next[max(0, index - 1)].kinds += removed.kinds
+        return next
+    }
+
+    /// 종류 하나를 다른 열로 옮긴다.
+    public static func moving(kind: String, to index: Int, in columns: [TravelTripColumn]) -> [TravelTripColumn] {
+        guard columns.indices.contains(index), allKinds.contains(kind) else { return columns }
+        var next = columns.map { TravelTripColumn(name: $0.name, kinds: $0.kinds.filter { $0 != kind }) }
+        next[index].kinds.append(kind)
+        return next
     }
 }
 

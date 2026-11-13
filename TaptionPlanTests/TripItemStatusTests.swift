@@ -571,6 +571,38 @@ final class TravelTripUnitTests: XCTestCase {
         XCTAssertEqual(TravelQuickEntrySheet.spendDigits(""), "")
     }
 
+    /// TVU1113A01: 계획표가 여행의 열 구성을 따른다 — 열 수, 칸 자리, 누른 자리의 열, 제목.
+    func testPlanTableFollowsTripColumns() throws {
+        XCTAssertEqual(Set(TravelPlanColumns.allKinds), Set(TravelQuickEntrySheet.kinds.map(\.rawValue)), "종류 12가지가 같다")
+        let start = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-12-03T10:00:00+09:00"))
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "Asia/Seoul"))
+        func item(_ id: String, _ kind: String) -> TravelTripItem {
+            TravelTripItem(tripID: "t1", itemID: id, kind: kind, title: id, start: start, end: start.addingTimeInterval(3_600),
+                           startOffsetSeconds: 32_400, endOffsetSeconds: 32_400, planID: nil)
+        }
+        let items = [item("a", "cafe"), item("b", "meal"), item("c", "flight"), item("d", "photo")]
+        let base = TravelPlanTableModel.make(items: items, tripID: "t1", day: start, actual: [], now: start.addingTimeInterval(-86_400), calendar: calendar)
+        XCTAssertEqual(base.columns.count, 4)
+        XCTAssertEqual(Dictionary(uniqueKeysWithValues: base.blocks.map { ($0.id, $0.column) }), ["a": 1, "b": 1, "c": 0, "d": 2], "기본은 전과 같은 자리")
+
+        let columns = TravelPlanColumns.resolved([
+            TravelTripColumn(name: "", kinds: ["meal"]), TravelTripColumn(name: "카페", kinds: ["cafe"]),
+            TravelTripColumn(name: "", kinds: ["transfer", "flight"]), TravelTripColumn(name: "", kinds: ["sight", "other"]),
+            TravelTripColumn(name: "", kinds: ["lodging"]),
+        ])
+        let custom = TravelPlanTableModel.make(items: items, tripID: "t1", day: start, actual: [], now: start.addingTimeInterval(-86_400), columns: columns, calendar: calendar)
+        XCTAssertEqual(custom.columns.count, 5)
+        XCTAssertEqual(Dictionary(uniqueKeysWithValues: custom.blocks.map { ($0.id, $0.column) }), ["a": 1, "b": 0, "c": 2, "d": 3])
+        // 너비 350에 다섯 열이면 한 열은 60: x 175는 세 번째 열.
+        XCTAssertEqual(TravelPlanTable.slot(x: 175, y: 0, width: 350, columns: 5)?.column, 2)
+        XCTAssertEqual(TravelPlanTable.slot(x: 349, y: 0, width: 350, columns: 5)?.column, 4)
+        XCTAssertEqual(TravelPlanColumns.kind(forColumn: 1, in: columns), "cafe", "그 열의 빈 곳을 누르면 그 열의 첫 종류")
+        XCTAssertEqual(TravelPlanTable.title(columns[1], index: 1, language: .korean), "카페")
+        XCTAssertEqual(TravelPlanTable.title(columns[0], index: 0, language: .korean), "식사")
+        XCTAssertEqual(TravelPlanTable.title(TravelTripColumn(name: "", kinds: []), index: 5, language: .korean), "열 6")
+    }
+
     /// TVU1113A01: 시각 고치기를 여러 번 되돌리고 다시 한다. 새로 고치면 다시 하기는 비고, 다른 여행이면 앞의 것을 버린다.
     func testPlanHistoryUndoesAndRedoesTimeEdits() {
         func step(_ item: String, move: Int = 0, resize: Int = 0, trip: String = "t1") -> TravelPlanHistory.Step {

@@ -1134,6 +1134,16 @@ final class TaptionPlanTravelPlanUITests: XCTestCase {
         app.swipeDown(velocity: .fast)
         sleep(1)
 
+        // 「+」 메뉴의 「열 편집」으로 열 편집 시트가 열린다(저장하지 않고 닫는다).
+        app.buttons["추가"].tap()
+        let editColumns = app.buttons["열 편집"]
+        XCTAssertTrue(editColumns.waitForExistence(timeout: 3))
+        editColumns.tap()
+        XCTAssertTrue(app.buttons["열 더하기"].waitForExistence(timeout: 5), "열 편집 시트가 열린다")
+        shot(app, "6c-column-editor")
+        app.buttons["취소"].tap()
+        XCTAssertTrue(handle.waitForExistence(timeout: 5))
+
         // 여행 이름을 누르면 여행 속성 시트가 열린다.
         app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "후쿠오카")).firstMatch.tap()
         XCTAssertTrue(app.buttons["취소"].waitForExistence(timeout: 5), "여행 이름을 누르면 여행 고치기 시트가 열린다")

@@ -127,6 +127,7 @@ struct TravelNewTripSheet: View {
         )
         if let old {
             trip.flagColorHex = old.flagColorHex
+            trip.columns = old.columns
             trip.timeZoneID = old.timeZoneID
             if samePlace {
                 trip.latitude = old.latitude
@@ -141,5 +142,77 @@ struct TravelNewTripSheet: View {
         }
         dismiss()
         onCreate(trip)
+    }
+}
+
+/// 계획표 열 편집(TVU1113A01, Trip 원본의 분류 관리): 열의 이름·순서·개수(2~6)와, 종류 12가지를 어느 열에 놓을지.
+struct TravelColumnEditorSheet: View {
+    @Bindable var model: AppModel
+    let language: MapHomeLanguage
+    let trip: TravelTrip
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var columns: [TravelTripColumn] = []
+    @State private var isSaving = false
+
+    private func title(_ index: Int) -> String { TravelPlanTable.title(columns[index], index: index, language: language) }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    ForEach(columns.indices, id: \.self) { index in
+                        VStack(alignment: .leading, spacing: 2) {
+                            TextField(title(index), text: Binding(get: { columns[index].name }, set: { columns[index].name = $0 }))
+                                .accessibilityIdentifier("travelColumnName-\(index)")
+                            Text(columns[index].kinds.compactMap { TripImportItem.Kind(rawValue: $0)?.planName }.joined(separator: " · "))
+                                .font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                        }
+                    }
+                    .onMove { columns.move(fromOffsets: $0, toOffset: $1) }
+                    .onDelete { offsets in for index in offsets.sorted(by: >) { columns = TravelPlanColumns.removing(index, from: columns) } }
+                    .deleteDisabled(columns.count <= TravelPlanColumns.countRange.lowerBound)
+                    Button(language.text("열 더하기", "Add column"), systemImage: "plus") { columns.append(TravelTripColumn(name: "", kinds: [])) }
+                        .disabled(columns.count >= TravelPlanColumns.countRange.upperBound)
+                        .accessibilityIdentifier("travelColumnAdd")
+                } header: {
+                    Text(language.text("열", "Columns"))
+                } footer: {
+                    Text(language.text("이름을 비우면 기본 이름을 씁니다. 열을 지우면 그 종류는 옆 열로 옮겨집니다.", "Leave a name empty to use the default. Deleting a column moves its kinds to the next one."))
+                }
+                Section(language.text("종류를 놓을 열", "Column for each kind")) {
+                    ForEach(TravelPlanColumns.allKinds, id: \.self) { kind in
+                        Picker(TripImportItem.Kind(rawValue: kind)?.planName ?? kind, selection: Binding(
+                            get: { TravelPlanColumns.index(forKind: kind, in: columns) },
+                            set: { columns = TravelPlanColumns.moving(kind: kind, to: $0, in: columns) }
+                        )) {
+                            ForEach(columns.indices, id: \.self) { Text(title($0)).tag($0) }
+                        }
+                    }
+                }
+                Section {
+                    Button(language.text("기본 열로", "Reset to default columns")) { columns = TravelPlanColumns.defaults }
+                        .accessibilityIdentifier("travelColumnReset")
+                }
+            }
+            .environment(\.editMode, .constant(.active))
+            .navigationTitle(language.text("열 편집", "Edit columns"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button(language.text("취소", "Cancel")) { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) { Button(language.text("저장", "Save")) { Task { await save() } }.disabled(isSaving) }
+            }
+            .onAppear { if columns.isEmpty { columns = TravelPlanColumns.resolved(trip.columns) } }
+        }
+        .preferredColorScheme(.light)
+    }
+
+    private func save() async {
+        isSaving = true
+        defer { isSaving = false }
+        // 그사이 다른 곳에서 고친 여행 속성을 덮지 않게 지금 저장된 여행에 열만 바꿔 넣는다.
+        var next = model.settings.travelTrips?.first { $0.id == trip.id } ?? trip
+        next.columns = TravelPlanColumns.stored(columns)
+        if await model.saveTravelTrip(next) { dismiss() }
     }
 }

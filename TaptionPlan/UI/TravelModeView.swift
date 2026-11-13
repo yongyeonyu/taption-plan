@@ -266,6 +266,7 @@ struct TravelModeView: View {
     /// 계획표에서 고른 빈 셀(TVU1113A01).
     @State private var planCell: TravelPlanCell?
     @State private var planSelectedID: String?
+    @State private var columnsTrip: TravelTrip?
     @State private var planHistory = TravelPlanHistory()
     @State private var deleteCandidate: TravelTripDirectory.Entry?
     /// 재생 헤드의 시각(그날 0시부터의 분). nil이면 처음 자리(오늘은 지금, 아니면 첫 일정 시작).
@@ -414,6 +415,7 @@ struct TravelModeView: View {
                 stops: model.settings.travelPlanStops, items: model.settings.travelTripItems ?? [], trips: model.settings.travelTrips ?? []
             ))
         }
+        .sheet(item: $columnsTrip) { TravelColumnEditorSheet(model: model, language: language, trip: $0) }
         .sheet(item: $entryTarget) { target in TravelQuickEntrySheet(model: model, language: language, target: target) }
         .sheet(item: $expenseDraft) { draft in LedgerEntryForm(language: language, entry: draft, members: draft.tripID.flatMap(book.trip)?.members) }
         .preferredColorScheme(openedID == nil && flight == nil ? .dark : .light)
@@ -977,6 +979,7 @@ struct TravelModeView: View {
             Spacer(minLength: 0)
             Menu {
                 Button(language.text("일정 넣기", "Add plan"), systemImage: "calendar.badge.plus") { addEntry(entry, cell: planCell) }
+                Button(language.text("열 편집", "Edit columns"), systemImage: "rectangle.split.3x1") { columnsTrip = entry.trip }
                 Button(language.text("지도에서 일정 보기", "View plans on the map"), systemImage: "map") { openPlan(planDay(entry, items: items)) }
                 Button(language.text("지출 넣기", "Add expense"), systemImage: "wonsign") {
                     addExpense(entry, minute: nil)
@@ -1012,7 +1015,8 @@ struct TravelModeView: View {
         return TravelPlanTableModel.make(
             items: model.settings.travelTripItems ?? [], tripID: entry.id, day: day,
             actual: MapHomeTimeRailSegmentEngine.segments(from: model.snapshot.actuals, on: day), now: .now,
-            spent: TravelPlanSpend.byItem(items: model.settings.travelTripItems ?? [], tripID: entry.id, entries: book.entries)
+            spent: TravelPlanSpend.byItem(items: model.settings.travelTripItems ?? [], tripID: entry.id, entries: book.entries),
+            columns: TravelPlanColumns.resolved(entry.trip.columns)
         )
     }
 
@@ -1047,7 +1051,8 @@ struct TravelModeView: View {
                     onResize: { block, minutes in editTimes(entry, block: block, resize: minutes) },
                     playMinute: currentPlayMinute(entry),
                     onScrub: { playMinute = $0 }, onExpenseAt: { addExpense(entry, minute: $0) }, selection: $planSelectedID,
-                    tightIDs: TravelPlayhead.tightStops(playStops(entry), travelMinutes: routes.minutes)
+                    tightIDs: TravelPlayhead.tightStops(playStops(entry), travelMinutes: routes.minutes),
+                    onEditColumns: { columnsTrip = entry.trip }
                 )
                     .id(dayKey(entry))
                     .frame(height: planDragHeight ?? tableHeight)
@@ -1083,7 +1088,7 @@ struct TravelModeView: View {
         if planCell != nil { planCell = nil }
         let key = dayKey(entry), table = table(entry)
         let last = table.blocks.max { $0.endMinute < $1.endMinute }
-        let kind = column.map(TravelQuickEntry.kind(forColumn:)).flatMap(TripImportItem.Kind.init(rawValue:)) ?? .sight
+        let kind = column.map { TravelPlanColumns.kind(forColumn: $0, in: table.columns) }.flatMap(TripImportItem.Kind.init(rawValue:)) ?? .sight
         var target = TravelQuickEntrySheet.Target.new(
             trip: entry.trip, dayKey: key, dayLabel: dayLabel(entry, key: key),
             startMinute: minute ?? TravelQuickEntry.nextStart(lastEndMinute: last?.endMinute, nowMinute: table.nowMinute), kind: kind
