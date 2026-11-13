@@ -6392,6 +6392,83 @@
         }
       }
     },
+    "AI에게 같은 모양의 규칙을 부탁했어요.|Asked your AI for a rule for this layout." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AIに同じ形式のルールを頼みました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已请 AI 为这种格式制定规则。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已請 AI 為這種格式制定規則。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine KI wurde um eine Regel für dieses Format gebeten."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Votre IA a été invitée à créer une règle pour ce format."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "È stata chiesta alla tua IA una regola per questo formato."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se pidió a tu IA una regla para este formato."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sua IA recebeu um pedido de regra para este formato."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã nhờ AI tạo quy tắc cho định dạng này."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI-mu diminta membuat aturan untuk format ini."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ขอให้ AI สร้างกฎสำหรับรูปแบบนี้แล้ว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "आपके AI से इस प्रारूप के लिए नियम माँगा गया।"
+          }
+        }
+      }
+    },
     "AI에게 규칙 추가 요청|Ask AI to add a rule" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -18019,6 +18096,83 @@
         }
       }
     },
+    "{0} {1}을 넣었어요.|Added {0} {1}." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} {1}を追加しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已添加 {0} {1}。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已加入 {0} {1}。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} {1} hinzugefügt."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} {1} ajouté."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} {1} aggiunto."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se añadió {0} {1}."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} {1} adicionado."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã thêm {0} {1}."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} {1} ditambahkan."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เพิ่ม {0} {1} แล้ว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} {1} जोड़ा गया।"
+          }
+        }
+      }
+    },
     "{0} {1}을 수입으로 넣었어요.|Added {0} {1} as income." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -19632,6 +19786,160 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "{0} संपादित करें"
+          }
+        }
+      }
+    },
+    "{0} 알림의 수입은 넣지 않게 해 두었어요.|Income from {0} alerts is turned off." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0}の通知の収入は追加しない設定です。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} 通知中的收入已设为不添加。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} 通知中的收入已設為不加入。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einnahmen aus Mitteilungen von {0} sind ausgeschaltet."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les revenus des alertes de {0} sont désactivés."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le entrate dagli avvisi di {0} sono disattivate."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Los ingresos de los avisos de {0} están desactivados."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "As receitas dos alertas de {0} estão desativadas."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã tắt khoản thu từ thông báo của {0}."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pemasukan dari notifikasi {0} dimatikan."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ปิดการเพิ่มรายรับจากการแจ้งเตือนของ {0} ไว้"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} की सूचनाओं से आय बंद है।"
+          }
+        }
+      }
+    },
+    "{0} 알림의 지출은 넣지 않게 해 두었어요.|Spending from {0} alerts is turned off." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0}の通知の支出は追加しない設定です。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} 通知中的支出已设为不添加。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} 通知中的支出已設為不加入。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ausgaben aus Mitteilungen von {0} sind ausgeschaltet."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les dépenses des alertes de {0} sont désactivées."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le spese dagli avvisi di {0} sono disattivate."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Los gastos de los avisos de {0} están desactivados."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Os gastos dos alertas de {0} estão desativados."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã tắt khoản chi từ thông báo của {0}."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pengeluaran dari notifikasi {0} dimatikan."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ปิดการเพิ่มรายจ่ายจากการแจ้งเตือนของ {0} ไว้"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} की सूचनाओं से खर्च बंद है।"
           }
         }
       }
@@ -205822,6 +206130,83 @@
         }
       }
     },
+    "「BOKKI 결제 알림」 줄을 눌러요|Tap the BOKKI Payment Alerts row" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「BOKKI 決済通知」の行をタップ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "轻点“BOKKI 支付通知”这一行"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "點一下「BOKKI 付款通知」這一列"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tippe auf die Zeile „BOKKI Zahlungsmitteilungen“"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touchez la ligne « BOKKI Alertes de paiement »"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tocca la riga «BOKKI Avvisi di pagamento»"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toca la fila «BOKKI Avisos de pago»"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toque na linha “BOKKI Alertas de pagamento”"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chạm vào dòng “BOKKI Thông báo thanh toán”"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ketuk baris “BOKKI Notifikasi Pembayaran”"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แตะแถว “BOKKI แจ้งเตือนการชำระเงิน”"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“BOKKI भुगतान सूचनाएँ” पंक्ति पर टैप करें"
+          }
+        }
+      }
+    },
     "「BOKKI 결제」라고 적힌 줄의 스위치를 모두 켜요(낱말마다 한 줄). iOS는 가져온 자동화를 꺼진 채로 넣어요.|Turn on every switch labelled BOKKI Payment (one row per word). iOS adds shared automations switched off." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -206049,6 +206434,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "“BOKKI भुगतान” जोड़ें, फिर शॉर्टकट › ऑटोमेशन में “जब मुझे संदेश मिले” स्विच चालू करें। ऐप सिर्फ़ भुगतान रखता है; अन्य संदेश न सहेजे जाते हैं, न AI को भेजे जाते हैं।"
+          }
+        }
+      }
+    },
+    "「{0}」 그대로 더하기|Add “{0}” as typed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「{0}」をそのまま追加"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按输入添加“{0}”"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "照輸入加入「{0}」"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "„{0}“ wie eingegeben hinzufügen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter « {0} » tel quel"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aggiungi “{0}” così com’è"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Añadir “{0}” tal cual"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adicionar “{0}” como digitado"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thêm “{0}” như đã nhập"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tambah “{0}” apa adanya"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เพิ่ม “{0}” ตามที่พิมพ์"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“{0}” जैसा लिखा है वैसा जोड़ें"
           }
         }
       }
@@ -208513,6 +208975,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "परिवार"
+          }
+        }
+      }
+    },
+    "갈 곳을 굵직하게 먼저 더해 보세요. 세부 계획은 나중에 적어도 됩니다.|Add the main stops first. You can fill in details later." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "まず行く場所を大まかに追加しましょう。細かい計画は後からでも書けます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先大致添加要去的地方，细节可以以后再写。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先大致加入要去的地方，細節可以之後再寫。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Füge zuerst die wichtigsten Orte hinzu. Details kannst du später ergänzen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajoutez d’abord les grandes étapes. Les détails peuvent attendre."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aggiungi prima le tappe principali. I dettagli puoi scriverli dopo."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Añade primero las paradas principales. Los detalles pueden esperar."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adicione primeiro as paradas principais. Os detalhes podem ficar para depois."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hãy thêm các điểm chính trước. Chi tiết có thể viết sau."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tambahkan dulu tempat-tempat utama. Detailnya bisa diisi nanti."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เพิ่มจุดหลักที่จะไปก่อน รายละเอียดค่อยเขียนทีหลังได้"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "पहले मुख्य जगहें जोड़ें। ब्योरा बाद में लिख सकते हैं।"
           }
         }
       }
@@ -214600,6 +215139,83 @@
         }
       }
     },
+    "결제 알림 받기|Payment alerts" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "決済通知の受け取り"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接收支付通知"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接收付款通知"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zahlungsmitteilungen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alertes de paiement"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avvisi di pagamento"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avisos de pago"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alertas de pagamento"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thông báo thanh toán"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notifikasi pembayaran"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "การแจ้งเตือนการชำระเงิน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "भुगतान सूचनाएँ"
+          }
+        }
+      }
+    },
     "결제 앱 알림 자동화 따라 하기|Set up payment app alerts" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -217603,6 +218219,83 @@
         }
       }
     },
+    "고르면 이 글은 바로 그렇게 처리하고, 연결된 AI가 같은 모양의 글을 앞으로 그렇게 읽는 규칙을 만들어요.|Your choice applies to this text now, and your AI makes a rule so texts like it are read the same way." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選ぶとこのテキストはすぐその通りに処理され、接続中のAIが同じ形式のテキストを今後そう読むルールを作ります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择后这条文字会立即这样处理，已连接的 AI 会制定规则，以后同样格式的文字也这样读取。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選擇後這則文字會立即這樣處理，已連接的 AI 會制定規則，之後同樣格式的文字也這樣讀取。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Wahl gilt sofort für diesen Text, und deine KI erstellt eine Regel, damit ähnliche Texte genauso gelesen werden."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Votre choix s’applique tout de suite à ce texte, et votre IA crée une règle pour lire de la même façon les textes semblables."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La tua scelta vale subito per questo testo, e la tua IA crea una regola per leggere allo stesso modo i testi simili."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu elección se aplica ahora a este texto y tu IA crea una regla para leer igual los textos parecidos."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sua escolha vale agora para este texto, e sua IA cria uma regra para ler da mesma forma os textos parecidos."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lựa chọn áp dụng ngay cho văn bản này, và AI sẽ tạo quy tắc để đọc các văn bản tương tự theo cách đó."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pilihanmu langsung berlaku untuk teks ini, dan AI-mu membuat aturan agar teks serupa dibaca dengan cara yang sama."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "สิ่งที่เลือกจะใช้กับข้อความนี้ทันที และ AI จะสร้างกฎให้อ่านข้อความที่คล้ายกันแบบเดียวกัน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "आपका चुनाव इस टेक्स्ट पर अभी लागू होता है, और आपका AI एक नियम बनाता है ताकि ऐसे टेक्स्ट इसी तरह पढ़े जाएँ।"
+          }
+        }
+      }
+    },
     "고른 구간 {0}개|{0} picked" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -218677,6 +219370,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "चुनें"
+          }
+        }
+      }
+    },
+    "곳 더하기|Add a stop" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "場所を追加"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加地点"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加入地點"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ort hinzufügen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter une étape"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aggiungi tappa"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Añadir parada"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adicionar parada"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thêm điểm dừng"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tambah tempat"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เพิ่มจุดแวะ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "जगह जोड़ें"
           }
         }
       }
@@ -223605,6 +224375,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "राशि और किस पर खर्च हुआ, बताएँ।"
+          }
+        }
+      }
+    },
+    "금액을 읽지 못해 아직 넣지 않았어요. AI가 규칙을 보내면 다시 읽어 넣어요.|Couldn't read the amount yet. It is read again when your AI sends a rule." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "金額が読めず、まだ追加していません。AIがルールを送ると読み直して追加します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "还无法读出金额，暂未添加。AI 发来规则后会重新读取并添加。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "還無法讀出金額，暫未加入。AI 傳來規則後會重新讀取並加入。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Betrag konnte noch nicht gelesen werden. Sobald deine KI eine Regel schickt, wird er erneut gelesen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le montant n’a pas encore pu être lu. Il sera relu quand votre IA enverra une règle."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Non è stato ancora possibile leggere l’importo. Verrà riletto quando la tua IA invierà una regola."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aún no se pudo leer el importe. Se leerá de nuevo cuando tu IA envíe una regla."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ainda não foi possível ler o valor. Ele será lido de novo quando sua IA enviar uma regra."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chưa đọc được số tiền. Sẽ đọc lại khi AI gửi quy tắc."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jumlahnya belum terbaca. Akan dibaca lagi saat AI-mu mengirim aturan."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ยังอ่านจำนวนเงินไม่ได้ จะอ่านอีกครั้งเมื่อ AI ส่งกฎมา"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "राशि अभी पढ़ी नहीं जा सकी। आपका AI नियम भेजेगा तो फिर से पढ़ी जाएगी।"
           }
         }
       }
@@ -233773,6 +234620,83 @@
         }
       }
     },
+    "넣지 않음|Skip" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "追加しない"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不添加"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不加入"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht hinzufügen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ne pas ajouter"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Non aggiungere"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No añadir"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não adicionar"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không thêm"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jangan tambahkan"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ไม่เพิ่ม"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "न जोड़ें"
+          }
+        }
+      }
+    },
     "노을 지는 귀갓길|Sunset Home" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -236541,6 +237465,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "शॉर्टकट · Siri"
+          }
+        }
+      }
+    },
+    "단축어 앱 › 아래 「자동화」|Shortcuts › Automation at the bottom" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ショートカット › 下の「オートメーション」"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "快捷指令 › 底部的“自动化”"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "捷徑 › 下方的「自動化」"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kurzbefehle › unten „Automation“"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Raccourcis › « Automatisation » en bas"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Comandi Rapidi › «Automazione» in basso"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Atajos › «Automatización» abajo"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Atalhos › “Automação” embaixo"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phím tắt › “Tự động hóa” ở dưới"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pintasan › “Otomatisasi” di bawah"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คำสั่งลัด › “ระบบอัตโนมัติ” ด้านล่าง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "शॉर्टकट › नीचे “ऑटोमेशन”"
           }
         }
       }
@@ -250709,6 +251710,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "सूची रिफ़्रेश करें"
+          }
+        }
+      }
+    },
+    "목록에서 지우기|Remove from list" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一覧から削除"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从列表中移除"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "從列表中移除"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aus der Liste entfernen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retirer de la liste"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rimuovi dall’elenco"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quitar de la lista"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remover da lista"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xóa khỏi danh sách"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hapus dari daftar"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลบออกจากรายการ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सूची से हटाएँ"
           }
         }
       }
@@ -271965,6 +273043,83 @@
         }
       }
     },
+    "세부 더하기|Add detail" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "詳細を追加"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加细节"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加入細節"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Detail hinzufügen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter un détail"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aggiungi dettaglio"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Añadir detalle"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adicionar detalhe"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thêm chi tiết"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tambah detail"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เพิ่มรายละเอียด"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ब्योरा जोड़ें"
+          }
+        }
+      }
+    },
     "세부: {0}|Detail: {0}" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -275657,6 +276812,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "छिपा हुआ"
+          }
+        }
+      }
+    },
+    "스위치가 켜져 있는지 봐요|Check that its switch is on" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スイッチがオンか確認"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "确认开关已打开"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "確認開關已開啟"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prüfe, ob der Schalter an ist"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vérifiez que l’interrupteur est activé"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Controlla che l’interruttore sia attivo"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Comprueba que el interruptor esté activado"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confira se o botão está ativado"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kiểm tra công tắc đã bật"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pastikan sakelarnya menyala"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ตรวจว่าสวิตช์เปิดอยู่"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "देखें कि स्विच चालू है"
           }
         }
       }
@@ -281898,6 +283130,83 @@
         }
       }
     },
+    "아직 받은 앱 알림이 없어요. 결제 알림이 한 번 오면 그 앱이 여기에 생겨요.|No app alerts yet. An app appears here after its first payment alert." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "まだAppの通知がありません。決済通知が一度届くと、そのAppがここに表示されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "还没有收到 App 通知。收到一次支付通知后，该 App 会出现在这里。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "還沒有收到 App 通知。收到一次付款通知後，該 App 會出現在這裡。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch keine App-Mitteilungen. Eine App erscheint hier nach ihrer ersten Zahlungsmitteilung."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucune alerte d’app pour l’instant. Une app apparaît ici après sa première alerte de paiement."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ancora nessun avviso dalle app. Un’app compare qui dopo il suo primo avviso di pagamento."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aún no hay avisos de apps. Una app aparece aquí tras su primer aviso de pago."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ainda não há alertas de apps. Um app aparece aqui após o primeiro alerta de pagamento."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chưa có thông báo ứng dụng. Ứng dụng sẽ xuất hiện ở đây sau thông báo thanh toán đầu tiên."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belum ada notifikasi app. App muncul di sini setelah notifikasi pembayaran pertamanya."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ยังไม่มีการแจ้งเตือนจากแอป แอปจะแสดงที่นี่หลังการแจ้งเตือนการชำระเงินครั้งแรก"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "अभी कोई ऐप सूचना नहीं। पहली भुगतान सूचना आने पर ऐप यहाँ दिखेगा।"
+          }
+        }
+      }
+    },
     "아직 보관된 집이 없어요.|No archived homes yet." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -284054,6 +285363,160 @@
         }
       }
     },
+    "앞으로 이런 알림은 넣지 않게 할게요. 이미 넣은 기록은 가계부에서 지워 주세요.|Alerts like this won't be added from now on. Delete the entry already added from the ledger." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今後この形の通知は追加しません。すでに追加された記録は家計簿で削除してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "以后不再添加这类通知。已添加的记录请在记账本中删除。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "之後不再加入這類通知。已加入的紀錄請在記帳本中刪除。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Solche Mitteilungen werden künftig nicht mehr hinzugefügt. Lösche den bereits hinzugefügten Eintrag im Haushaltsbuch."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ces alertes ne seront plus ajoutées. Supprimez du budget l’entrée déjà ajoutée."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avvisi così non verranno più aggiunti. Elimina dal registro la voce già aggiunta."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A partir de ahora no se añadirán avisos así. Borra del libro de cuentas la entrada ya añadida."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alertas assim não serão mais adicionados. Apague do livro-caixa o lançamento já adicionado."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Từ nay sẽ không thêm thông báo như thế này. Hãy xóa mục đã thêm trong sổ thu chi."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notifikasi seperti ini tidak akan ditambahkan lagi. Hapus entri yang sudah ditambahkan dari buku kas."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ต่อไปจะไม่เพิ่มการแจ้งเตือนแบบนี้ ลบรายการที่เพิ่มไปแล้วในบัญชีรายรับรายจ่าย"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "आगे से ऐसी सूचनाएँ नहीं जोड़ी जाएँगी। पहले से जोड़ी गई प्रविष्टि खाते से हटा दें।"
+          }
+        }
+      }
+    },
+    "앞으로 이런 알림은 넣지 않게 할게요.|Alerts like this won't be added from now on." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今後この形の通知は追加しません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "以后不再添加这类通知。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "之後不再加入這類通知。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Solche Mitteilungen werden künftig nicht mehr hinzugefügt."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ces alertes ne seront plus ajoutées."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avvisi così non verranno più aggiunti."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A partir de ahora no se añadirán avisos así."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alertas assim não serão mais adicionados."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Từ nay sẽ không thêm thông báo như thế này."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notifikasi seperti ini tidak akan ditambahkan lagi."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ต่อไปจะไม่เพิ่มการแจ้งเตือนแบบนี้"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "आगे से ऐसी सूचनाएँ नहीं जोड़ी जाएँगी।"
+          }
+        }
+      }
+    },
     "애플 캘린더 사용|Use Apple Calendar" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -284743,6 +286206,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ऐप रिकॉर्ड"
+          }
+        }
+      }
+    },
+    "앱 더하기|Add an app" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appを追加"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加 App"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加入 App"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App hinzufügen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter une app"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aggiungi un’app"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Añadir una app"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adicionar app"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thêm ứng dụng"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tambah app"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เพิ่มแอป"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ऐप जोड़ें"
           }
         }
       }
@@ -285748,6 +287288,83 @@
         }
       }
     },
+    "앱 이름들 옆 「+」를 눌러 앱을 골라요|Tap + next to the app names and pick the app" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App名の横の「+」をタップしてAppを選ぶ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "轻点 App 名称旁的“+”并选择 App"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "點一下 App 名稱旁的「+」並選擇 App"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tippe neben den App-Namen auf „+“ und wähle die App"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touchez « + » à côté des noms d’apps et choisissez l’app"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tocca «+» accanto ai nomi delle app e scegli l’app"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toca «+» junto a los nombres de las apps y elige la app"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toque em “+” ao lado dos nomes dos apps e escolha o app"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chạm “+” cạnh tên các ứng dụng rồi chọn ứng dụng"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ketuk “+” di samping nama app lalu pilih app-nya"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แตะ “+” ข้างชื่อแอปแล้วเลือกแอป"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ऐप नामों के पास “+” टैप करके ऐप चुनें"
+          }
+        }
+      }
+    },
     "앱 잠금 해제 필요|App unlock required" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -286129,6 +287746,160 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ऐप"
+          }
+        }
+      }
+    },
+    "앱마다 넣을 알림 고르기|Choose alerts per app" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appごとに追加する通知を選ぶ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按 App 选择要添加的通知"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "依 App 選擇要加入的通知"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mitteilungen pro App wählen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisir les alertes par app"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scegli gli avvisi per app"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elegir avisos por app"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escolher alertas por app"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chọn thông báo theo từng ứng dụng"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pilih notifikasi per app"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เลือกการแจ้งเตือนของแต่ละแอป"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "हर ऐप के लिए सूचनाएँ चुनें"
+          }
+        }
+      }
+    },
+    "앱마다 넣을 알림|What to keep from each app" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appごとに追加する通知"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每个 App 要添加的通知"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每個 App 要加入的通知"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was pro App übernommen wird"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce qu’on garde de chaque app"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cosa tenere da ogni app"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Qué guardar de cada app"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O que guardar de cada app"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thông báo giữ lại của từng ứng dụng"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yang disimpan dari tiap app"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "สิ่งที่จะเก็บจากแต่ละแอป"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "हर ऐप से क्या रखना है"
           }
         }
       }
@@ -286822,6 +288593,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "रात"
+          }
+        }
+      }
+    },
+    "어느 앱의 알림을 넘길지는 iOS가 단축어 앱에서만 고르게 해요. 넣은 앱은 첫 결제 알림이 오면 위 목록에 생겨요.|iOS only lets you pick the apps in Shortcuts. A new app shows up above after its first payment alert." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "どのAppの通知を渡すかは、iOSではショートカットでしか選べません。追加したAppは最初の決済通知が届くと上の一覧に表示されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS 只允许在快捷指令中选择转发哪些 App 的通知。新添加的 App 在收到第一条支付通知后会出现在上方列表。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS 只允許在捷徑中選擇轉送哪些 App 的通知。新加入的 App 在收到第一則付款通知後會出現在上方列表。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Welche Apps ihre Mitteilungen weitergeben, lässt iOS nur in Kurzbefehle wählen. Eine neue App erscheint oben nach ihrer ersten Zahlungsmitteilung."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS ne permet de choisir les apps que dans Raccourcis. Une nouvelle app apparaît ci-dessus après sa première alerte de paiement."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS permette di scegliere le app solo in Comandi Rapidi. Una nuova app compare qui sopra dopo il suo primo avviso di pagamento."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS solo permite elegir las apps en Atajos. Una app nueva aparece arriba tras su primer aviso de pago."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O iOS só deixa escolher os apps no Atalhos. Um app novo aparece acima após o primeiro alerta de pagamento."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS chỉ cho chọn ứng dụng trong Phím tắt. Ứng dụng mới sẽ xuất hiện ở trên sau thông báo thanh toán đầu tiên."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS hanya mengizinkan memilih app di Pintasan. App baru muncul di atas setelah notifikasi pembayaran pertamanya."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS ให้เลือกแอปได้เฉพาะในคำสั่งลัด แอปใหม่จะแสดงด้านบนหลังการแจ้งเตือนการชำระเงินครั้งแรก"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS ऐप सिर्फ़ शॉर्टकट में चुनने देता है। नया ऐप पहली भुगतान सूचना के बाद ऊपर दिखेगा।"
           }
         }
       }
@@ -301225,6 +303073,83 @@
         }
       }
     },
+    "예약된 일정이나 잠을 사이에 두고는 순서를 바꿀 수 없습니다.|You can’t reorder across a booked plan or sleep." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "予約済みの予定や睡眠をまたいで順番を変えることはできません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法跨过已预订的行程或睡眠来调整顺序。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法跨過已預訂的行程或睡眠來調整順序。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Über einen gebuchten Plan oder Schlaf hinweg lässt sich die Reihenfolge nicht ändern."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de réordonner par-dessus un plan réservé ou le sommeil."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Non puoi riordinare scavalcando un piano prenotato o il sonno."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No puedes reordenar pasando por encima de un plan reservado o del sueño."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não dá para reordenar passando por um plano reservado ou pelo sono."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không thể đổi thứ tự vượt qua kế hoạch đã đặt chỗ hoặc giấc ngủ."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Urutan tidak bisa diubah melewati rencana yang sudah dipesan atau waktu tidur."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ไม่สามารถสลับลำดับข้ามแผนที่จองแล้วหรือเวลานอนได้"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "बुक की गई योजना या नींद के पार क्रम नहीं बदला जा सकता।"
+          }
+        }
+      }
+    },
     "예약됨|Booked" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -309926,6 +311851,83 @@
         }
       }
     },
+    "위키백과 사진 받기|Get Wikipedia photos" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ウィキペディアの写真を取得"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "获取维基百科照片"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取得維基百科照片"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wikipedia-Fotos laden"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Récupérer les photos Wikipédia"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scarica foto da Wikipedia"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obtener fotos de Wikipedia"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obter fotos da Wikipédia"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lấy ảnh từ Wikipedia"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ambil foto Wikipedia"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "รับรูปจากวิกิพีเดีย"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "विकिपीडिया की तस्वीरें लाएँ"
+          }
+        }
+      }
+    },
     "유료 · API 키 필요|Paid · API key needed" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -311385,6 +313387,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "यह संदेश हटाएँ"
+          }
+        }
+      }
+    },
+    "이 글은|This text is" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このテキストは"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这条文字是"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這則文字是"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieser Text ist"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce texte est"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questo testo è"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este texto es"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este texto é"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Văn bản này là"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Teks ini adalah"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ข้อความนี้คือ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "यह टेक्स्ट है"
           }
         }
       }
@@ -314542,6 +316621,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "इस दायरे के भीतर होने पर यही स्थान माना जाएगा। बाद में स्थान के विवरण में बदल सकते हैं।"
+          }
+        }
+      }
+    },
+    "이 알림은 · {0}|This alert · {0}" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この通知は · {0}"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这条通知 · {0}"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這則通知 · {0}"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Mitteilung · {0}"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cette alerte · {0}"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questo avviso · {0}"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este aviso · {0}"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este alerta · {0}"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thông báo này · {0}"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notifikasi ini · {0}"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "การแจ้งเตือนนี้ · {0}"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "यह सूचना · {0}"
           }
         }
       }
@@ -318469,6 +320625,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "यह जमा पहले से खाते में है।"
+          }
+        }
+      }
+    },
+    "이미 가계부에 들어간 글이에요. 앞으로 같은 모양을 이 종류로 읽게 할게요.|This one is already in the ledger. Alerts like it will be read this way from now on." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "すでに家計簿に入っているテキストです。今後同じ形式をこの種類で読みます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这条文字已在记账本中。以后同样格式会按这个类型读取。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這則文字已在記帳本中。之後同樣格式會依這個類型讀取。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieser Text ist schon im Haushaltsbuch. Ähnliche werden künftig so gelesen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce texte est déjà dans le budget. Les textes semblables seront lus ainsi désormais."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questo testo è già nel registro. D’ora in poi i testi simili verranno letti così."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este texto ya está en el libro de cuentas. Los parecidos se leerán así a partir de ahora."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este texto já está no livro-caixa. Textos parecidos serão lidos assim daqui em diante."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Văn bản này đã có trong sổ thu chi. Từ nay văn bản tương tự sẽ được đọc như vậy."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Teks ini sudah ada di buku kas. Teks serupa akan dibaca seperti ini mulai sekarang."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ข้อความนี้อยู่ในบัญชีแล้ว ต่อไปจะอ่านข้อความแบบเดียวกันเป็นประเภทนี้"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "यह टेक्स्ट पहले से खाते में है। आगे से ऐसे टेक्स्ट इसी तरह पढ़े जाएँगे।"
           }
         }
       }
@@ -341188,6 +343421,83 @@
         }
       }
     },
+    "직접 정해 가계부에 넣었어요.|Added to the ledger as you chose." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選んだ通りに家計簿に追加しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已按你的选择添加到记账本。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已依你的選擇加入記帳本。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wie gewählt ins Haushaltsbuch übernommen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouté au budget selon votre choix."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aggiunto al registro come hai scelto."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Añadido al libro de cuentas según tu elección."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adicionado ao livro-caixa como você escolheu."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã thêm vào sổ thu chi theo lựa chọn của bạn."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ditambahkan ke buku kas sesuai pilihanmu."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เพิ่มลงบัญชีตามที่เลือกแล้ว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "आपके चुनाव के अनुसार खाते में जोड़ा गया।"
+          }
+        }
+      }
+    },
     "직접 추가|Add your own" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -345804,6 +348114,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "आवागमन छूट 50%"
+          }
+        }
+      }
+    },
+    "충전·광고·잔액 안내는 스위치와 상관없이 넣지 않아요. 넣지 않은 알림도 「AI」 탭의 받은 문자에 7일 동안 남아요.|Top-ups, ads and balance notices are never added. Skipped alerts stay in the AI tab's received texts for 7 days." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "チャージ・広告・残高のお知らせはスイッチに関係なく追加しません。追加しなかった通知も「AI」タブの受信テキストに7日間残ります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "充值、广告和余额提醒无论开关如何都不会添加。未添加的通知也会在“AI”标签的已收文字中保留 7 天。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "儲值、廣告和餘額提醒不論開關如何都不會加入。未加入的通知也會在「AI」分頁的已收文字中保留 7 天。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aufladungen, Werbung und Kontostandshinweise werden nie hinzugefügt. Übersprungene Mitteilungen bleiben 7 Tage unter „Empfangene Texte“ im KI-Tab."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les recharges, publicités et avis de solde ne sont jamais ajoutés. Les alertes ignorées restent 7 jours dans les textes reçus de l’onglet IA."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ricariche, pubblicità e avvisi di saldo non vengono mai aggiunti. Gli avvisi saltati restano 7 giorni nei testi ricevuti della scheda IA."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Las recargas, los anuncios y los avisos de saldo nunca se añaden. Los avisos omitidos quedan 7 días en los textos recibidos de la pestaña IA."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recargas, anúncios e avisos de saldo nunca são adicionados. Alertas ignorados ficam 7 dias nos textos recebidos da aba IA."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nạp tiền, quảng cáo và thông báo số dư không bao giờ được thêm. Thông báo bị bỏ qua vẫn ở trong văn bản đã nhận của tab AI 7 ngày."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Isi ulang, iklan, dan info saldo tidak pernah ditambahkan. Notifikasi yang dilewati tetap ada di teks diterima pada tab AI selama 7 hari."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "การเติมเงิน โฆษณา และแจ้งยอดคงเหลือจะไม่ถูกเพิ่ม การแจ้งเตือนที่ข้ามจะอยู่ในข้อความที่ได้รับของแท็บ AI 7 วัน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "रिचार्ज, विज्ञापन और बैलेंस सूचनाएँ कभी नहीं जोड़ी जातीं। छोड़ी गई सूचनाएँ AI टैब के प्राप्त टेक्स्ट में 7 दिन रहती हैं।"
           }
         }
       }
