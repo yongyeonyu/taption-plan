@@ -4760,6 +4760,7 @@
 "위치를 찾지 못했습니다. 다른 이름으로 검색해 주세요.|Couldn't find it. Try another name.": "找不到。请换个名称试试。",
 "위치를 허용하면 현재 위치로도 저장할 수 있습니다.|Allow location to use your current position.": "请允许定位，以使用你的当前位置。",
 "위치와 센서를 얼마나 자주 확인할지 고릅니다.|Choose how often location and sensors are checked.": "选择检查位置和传感器的频率。",
+"위키백과 사진 받기|Get Wikipedia photos": "获取维基百科照片",
 "유료 (Plus 이상)|Paid (Plus or higher)": "付费（Plus 及以上）",
 "유료 · API 키 필요|Paid · API key needed": "付费 · 需要 API 密钥",
 "유료 · 맞춤 GPT는 Plus 이상|Paid · Custom GPT on Plus+": "付费 · 自定义 GPT 需 Plus 及以上",

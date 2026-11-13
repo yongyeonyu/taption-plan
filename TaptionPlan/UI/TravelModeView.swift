@@ -270,6 +270,9 @@ struct TravelModeView: View {
     /// 계획표를 먼저 보기로 고른 여행 번호들(쉼표로 이음, 기기에 기억). 고르지 않은 여행은 코스가 먼저 열린다(TVV1113A01 C1).
     @AppStorage("travelPlanTableTrips") private var tableTrips = ""
     @State private var courseAdding: TravelTripDirectory.Entry?
+    /// 위키백과 장소 사진(C6). 연락처가 설정돼 있고 스위치가 켜져 있을 때만 받는다.
+    @State private var placePhotos = TravelPlacePhotoStore()
+    @AppStorage("travelWikiPhotos") private var wantsWikiPhotos = true
     @State private var planHistory = TravelPlanHistory()
     @State private var deleteCandidate: TravelTripDirectory.Entry?
     /// 재생 헤드의 시각(그날 0시부터의 분). nil이면 처음 자리(오늘은 지금, 아니면 첫 일정 시작).
@@ -586,7 +589,7 @@ struct TravelModeView: View {
         let area = isPlanUp ? Self.mapArea(viewSize, isPlanUp: true, tableHeight: tableHeight) : CGRect(x: 0, y: 150, width: viewSize.width, height: max(80, viewSize.height - 270))
         let spot = actor(entry), isCourse = isPlanUp && showsCourse(entry)
         return TravelStreetMap(
-            pins: TravelCoursePlanner.mapPins(planPins(entry, destination), blocks: isCourse ? table(entry).blocks : [], minute: currentPlayMinute(entry)),
+            pins: TravelCoursePlanner.mapPins(planPins(entry, destination), blocks: isCourse ? table(entry).blocks : [], minute: currentPlayMinute(entry), photos: wantsWikiPhotos ? placePhotos.photos : [:]),
             route: dayRoute(entry), actor: spot.map { .init(longitude: $0.longitude, latitude: $0.latitude, facesEast: $0.facesEast) },
             actorImage: pose(entry).map { actorArt.image($0, coat: model.settings.catStyle.rawValue) } ?? actorUIImage, fallback: destination?.point,
             // 위쪽 핀에 선 고양이가 머리말에 가리지 않게 고양이 키만큼 더 띄운다.
@@ -963,7 +966,7 @@ struct TravelModeView: View {
             .init(language.text("열 편집", "Edit columns"), "rectangle.split.3x1") { columnsTrip = entry.trip },
             .init(language.text("지도에서 일정 보기", "View plans on the map"), "map") { openPlan(planDay(entry, items: items)) },
             .init(language.text("지출 넣기", "Add expense"), "wonsign") { addExpense(entry, minute: nil) },
-        ]) { withAnimation(.snappy(duration: 0.25)) { isPlanUp.toggle() } }
+        ], wikiPhotos: placePhotos.isAvailable ? $wantsWikiPhotos : nil) { withAnimation(.snappy(duration: 0.25)) { isPlanUp.toggle() } }
     }
 
     /// 코스에서 곳 더하기(TVV1113A01 C2): 편집기를 거치지 않고 그날 코스 끝에 붙인다. 시각은 앱이 잡는다.
@@ -1028,8 +1031,12 @@ struct TravelModeView: View {
                         table: table(entry), items: (model.settings.travelTripItems ?? []).filter { $0.tripID == entry.id }, language: language,
                         playMinute: currentPlayMinute(entry), photos: model.photoService, selectedID: $planSelectedID,
                         onScrub: { playMinute = $0 }, onEdit: { editEntry(entry, itemID: $0.id) }, onAddStop: { courseAdding = entry },
-                        onReorder: { step in Task { await model.applyTravelHistory(step); planHistory.record(step) } }, onDelete: { deleteEntry(entry, itemID: $0.id) }
+                        onReorder: { step in Task { await model.applyTravelHistory(step); planHistory.record(step) } }, onDelete: { deleteEntry(entry, itemID: $0.id) },
+                        placePhotos: wantsWikiPhotos ? placePhotos.photos : [:]
                     )
+                    .task(id: "\(wantsWikiPhotos)|\(model.settings.travelPlanStops.count)") {
+                        if wantsWikiPhotos { await placePhotos.load(TravelPlacePhotoStore.Place.places(tripID: entry.id, stops: model.settings.travelPlanStops)) }
+                    }
                     .frame(height: planDragHeight ?? tableHeight)
                 } else {
                 TravelPlanTable(

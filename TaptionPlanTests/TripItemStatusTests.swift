@@ -719,6 +719,49 @@ final class TravelTripUnitTests: XCTestCase {
         XCTAssertEqual(TravelStreetMap.courseLabelWidth("아주 아주 아주 아주 아주 긴 장소 이름입니다 정말로"), 120, "이름표는 120pt까지")
     }
 
+    /// TVV1113A01 C6: 위키백과 사진 — 연락처가 없으면 묻지 않고, 이름의 글자로 언어를 고르고, 좌표가 가깝고 이름이 맞는 항목의 사진만 쓴다.
+    func testWikiPhotoPickingAndCredit() throws {
+        XCTAssertNil(TravelWikiPhoto.userAgent(contact: nil, version: "1.0"))
+        XCTAssertNil(TravelWikiPhoto.userAgent(contact: "  ", version: "1.0"))
+        XCTAssertNil(TravelWikiPhoto.userAgent(contact: "$(WIKIMEDIA_CONTACT)", version: "1.0"), "설정이 풀리지 않은 값")
+        XCTAssertEqual(TravelWikiPhoto.userAgent(contact: "example.org/support", version: "1.2"), "BOKKIPlan/1.2 (example.org/support)")
+        XCTAssertEqual(TravelWikiPhoto.language(for: "다자이후 텐만구"), "ko")
+        XCTAssertEqual(TravelWikiPhoto.language(for: "太宰府天満宮"), "ja")
+        XCTAssertEqual(TravelWikiPhoto.language(for: "Canal City Hakata"), "en")
+        XCTAssertEqual(TravelWikiPhoto.normalized("다자이후 텐만구!"), "다자이후텐만구")
+        XCTAssertEqual(TravelWikiPhoto.searchURL(name: "경복궁", language: "ko")?.host, "ko.wikipedia.org")
+
+        let found = Data(#"""
+        {"query":{"pages":[
+          {"title":"먼 곳의 같은 이름","index":1,"pageimage":"Far.jpg","thumbnail":{"source":"https://upload.wikimedia.org/far.jpg"},"coordinates":[{"lat":35.0,"lon":129.0}]},
+          {"title":"근처 다른 곳","index":2,"pageimage":"Near.jpg","thumbnail":{"source":"https://upload.wikimedia.org/near.jpg"},"coordinates":[{"lat":33.5216,"lon":130.5350}]},
+          {"title":"다자이후텐만구","index":3,"pageimage":"Shrine.jpg","thumbnail":{"source":"https://upload.wikimedia.org/shrine.jpg"},"coordinates":[{"lat":33.5215,"lon":130.5349}]},
+          {"title":"그림 파일","index":0,"pageimage":"Logo.svg","thumbnail":{"source":"https://upload.wikimedia.org/logo.png"},"coordinates":[{"lat":33.5215,"lon":130.5349}]},
+          {"title":"좌표 없는 항목","index":0,"pageimage":"NoSpot.jpg","thumbnail":{"source":"https://upload.wikimedia.org/nospot.jpg"}}
+        ]}}
+        """#.utf8)
+        let pick = try XCTUnwrap(TravelWikiPhoto.pick(found, name: "다자이후 텐만구", latitude: 33.5215, longitude: 130.5349))
+        XCTAssertEqual(pick.file, "Shrine.jpg", "가깝고 이름이 맞는 항목이 먼저")
+        XCTAssertEqual(TravelWikiPhoto.pick(found, name: "이름이 안 맞는 곳", latitude: 33.5215, longitude: 130.5349)?.file, "Near.jpg", "이름이 안 맞으면 가까운 것 가운데 찾은 순서")
+        XCTAssertNil(TravelWikiPhoto.pick(found, name: "다자이후 텐만구", latitude: 37.5, longitude: 127.0), "3km 밖이면 쓰지 않는다")
+        XCTAssertNil(TravelWikiPhoto.pick(Data("깨진 응답".utf8), name: "x", latitude: 0, longitude: 0))
+
+        let meta = Data(#"{"query":{"pages":[{"imageinfo":[{"extmetadata":{"Artist":{"value":"<a href=\"//commons.wikimedia.org/wiki/User:X\">Hong &amp; Kim</a>"},"LicenseShortName":{"value":"CC BY-SA 4.0"}}}]}]}}"#.utf8)
+        XCTAssertEqual(TravelWikiPhoto.credit(meta), "Hong & Kim · CC BY-SA 4.0 · Wikimedia Commons")
+        let noLicense = Data(#"{"query":{"pages":[{"imageinfo":[{"extmetadata":{"Artist":{"value":"누군가"}}}]}]}}"#.utf8)
+        XCTAssertNil(TravelWikiPhoto.credit(noLicense), "라이선스가 없으면 그 사진을 쓰지 않는다")
+
+        XCTAssertEqual(TravelWikiPhoto.cacheKey(name: "다자이후 텐만구", latitude: 33.52151, longitude: 130.53492), TravelWikiPhoto.cacheKey(name: "다자이후텐만구", latitude: 33.52149, longitude: 130.53488))
+        XCTAssertNotEqual(TravelWikiPhoto.cacheKey(name: "다자이후 텐만구", latitude: 33.5215, longitude: 130.5349), TravelWikiPhoto.cacheKey(name: "다자이후 텐만구", latitude: 33.6, longitude: 130.5349))
+        let old = Date(timeIntervalSince1970: 0)
+        XCTAssertEqual(TravelWikiPhoto.evictions([("a", 60, old.addingTimeInterval(30)), ("b", 50, old), ("c", 40, old.addingTimeInterval(10))], limitBytes: 100), ["b"], "오래 안 쓴 것부터 상한 아래까지")
+        XCTAssertEqual(TravelWikiPhoto.evictions([("a", 60, old)], limitBytes: 100), [])
+
+        let stops = [TravelPlanStop(id: UUID(), title: "성", latitude: 1, longitude: 2, day: old, order: 0, planID: nil, tripID: "t1", itemID: "a"),
+                     TravelPlanStop(id: UUID(), title: "다른 여행", latitude: 1, longitude: 2, day: old, order: 0, planID: nil, tripID: "t2", itemID: "b")]
+        XCTAssertEqual(TravelPlacePhotoStore.Place.places(tripID: "t1", stops: stops), [.init(itemID: "a", name: "성", latitude: 1, longitude: 2)])
+    }
+
     /// TVU1113A01: 시각 고치기를 여러 번 되돌리고 다시 한다. 새로 고치면 다시 하기는 비고, 다른 여행이면 앞의 것을 버린다.
     func testPlanHistoryUndoesAndRedoesTimeEdits() {
         func step(_ item: String, move: Int = 0, resize: Int = 0, trip: String = "t1") -> TravelPlanHistory.Step {

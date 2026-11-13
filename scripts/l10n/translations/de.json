@@ -4760,6 +4760,7 @@
 "위치를 찾지 못했습니다. 다른 이름으로 검색해 주세요.|Couldn't find it. Try another name.": "Nicht gefunden. Versuch einen anderen Namen.",
 "위치를 허용하면 현재 위치로도 저장할 수 있습니다.|Allow location to use your current position.": "Erlaube die Ortungsdienste, um deine aktuelle Position zu nutzen.",
 "위치와 센서를 얼마나 자주 확인할지 고릅니다.|Choose how often location and sensors are checked.": "Wähle, wie oft Standort und Sensoren geprüft werden.",
+"위키백과 사진 받기|Get Wikipedia photos": "Wikipedia-Fotos laden",
 "유료 (Plus 이상)|Paid (Plus or higher)": "Kostenpflichtig (Plus oder höher)",
 "유료 · API 키 필요|Paid · API key needed": "Kostenpflichtig · API-Schlüssel nötig",
 "유료 · 맞춤 GPT는 Plus 이상|Paid · Custom GPT on Plus+": "Kostenpflichtig · eigenes GPT ab Plus",

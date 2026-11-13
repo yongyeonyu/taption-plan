@@ -431,6 +431,8 @@ struct TravelCourseView: View {
     /// 끌어서 순서를 바꿈: 함께 옮겨질 일정들의 걸음. 밀어서 지움.
     var onReorder: (TravelPlanHistory.Step) -> Void = { _ in }
     var onDelete: (TravelPlanTableModel.Block) -> Void = { _ in }
+    /// 여행 전에 보일 위키백과 대표 사진(C6). 찍은 사진이 있으면 그것이 먼저다.
+    var placePhotos: [String: TravelPlacePhoto] = [:]
     /// 순서를 바꿀 수 없을 때 잠깐 보이는 안내.
     @State private var notice = ""
 
@@ -517,6 +519,10 @@ struct TravelCourseView: View {
                 Text(clock(block.startMinute) + " – " + clock(block.endMinute) + " · " + TravelQuickEntrySheet.durationText(block.endMinute - block.startMinute, language: language))
                     .font(.caption.monospacedDigit()).opacity(0.8)
                 ProgressView(value: TravelCourse.progress(block, minute: playMinute)).tint(TravelInk.plan)
+                // 위키백과 사진을 보일 때는 작가·라이선스를 함께 적는다.
+                if images[block.id] == nil, let credit = placePhotos[block.id]?.credit {
+                    Text(credit).font(.system(size: 9)).opacity(0.6).lineLimit(1).accessibilityIdentifier("travelCoursePhotoCredit")
+                }
                 HStack {
                     Text(clock(playMinute)).font(.caption2.monospacedDigit()).opacity(0.7)
                     Spacer()
@@ -572,7 +578,7 @@ struct TravelCourseView: View {
     /// 그 일정 시간에 찍은 사진, 없으면 일정 색 바탕에 종류 아이콘.
     private func thumbnail(_ block: TravelPlanTableModel.Block, side: CGFloat) -> some View {
         ZStack {
-            if let image = images[block.id] {
+            if let image = images[block.id] ?? placePhotos[block.id]?.image {
                 Image(uiImage: image).resizable().scaledToFill()
             } else {
                 TravelPlanTable.tint(block.colorHex)
@@ -643,7 +649,7 @@ enum TravelCoursePlanner {
     }
 
     /// 지도에 올릴 핀. 코스일 때(`blocks`가 있을 때)는 번호를 코스 목록의 순서로 맞추고 종류 아이콘·일정 색·지금 일정 표시를 붙인다(C5).
-    static func mapPins(_ pins: [TravelGlobeRenderer.Pin], blocks: [TravelPlanTableModel.Block], minute: Int) -> [TravelStreetMap.Pin] {
+    static func mapPins(_ pins: [TravelGlobeRenderer.Pin], blocks: [TravelPlanTableModel.Block], minute: Int, photos: [String: TravelPlacePhoto] = [:]) -> [TravelStreetMap.Pin] {
         let ordered = TravelCourse.ordered(blocks)
         let current = TravelCourse.currentIndex(ordered, minute: minute).map { ordered[$0].id }
         return pins.map { pin in
@@ -653,6 +659,7 @@ enum TravelCoursePlanner {
             mapPin.symbol = TripImportItem.Kind(rawValue: ordered[index].kind)?.symbol ?? "mappin"
             mapPin.colorHex = ordered[index].colorHex
             mapPin.isCurrent = ordered[index].id == current
+            mapPin.image = photos[pin.id]?.image
             // 이름표는 전처럼 골라 둔 핀에만 두되(겹침 정리), 지금 일정에는 늘 붙인다.
             if mapPin.isCurrent { mapPin.title = ordered[index].title }
             return mapPin
@@ -688,6 +695,8 @@ struct TravelTripFooter: View {
     let tripID: String
     let language: MapHomeLanguage
     let actions: [Action]
+    /// 「위키백과 사진 받기」 스위치. 연락처가 설정돼 있지 않으면 nil(안 보임).
+    var wikiPhotos: Binding<Bool>?
     let onTap: () -> Void
 
     var body: some View {
@@ -704,6 +713,9 @@ struct TravelTripFooter: View {
             Spacer(minLength: 0)
             Menu {
                 ForEach(actions) { action in Button(action.id, systemImage: action.symbol, action: action.run) }
+                if let wikiPhotos {
+                    Toggle(language.text("위키백과 사진 받기", "Get Wikipedia photos"), systemImage: "photo", isOn: wikiPhotos)
+                }
             } label: {
                 Image(systemName: "plus").font(.system(size: 20, weight: .semibold)).foregroundStyle(TravelInk.land).frame(width: 44, height: 44)
                     .background(TravelInk.plan, in: Circle())
@@ -717,5 +729,15 @@ struct TravelTripFooter: View {
         .contentShape(Rectangle())
         .onTapGesture(perform: onTap)
         .accessibilityIdentifier("travelPlanFooter")
+    }
+}
+
+extension TravelPlacePhotoStore.Place {
+    /// 그 여행에서 장소가 붙은 일정들. 이름은 지도 핀의 이름(장소 이름)이다.
+    static func places(tripID: String, stops: [TravelPlanStop]) -> [TravelPlacePhotoStore.Place] {
+        stops.compactMap { stop in
+            guard stop.tripID == tripID, let itemID = stop.itemID, !stop.title.isEmpty else { return nil }
+            return .init(itemID: itemID, name: stop.title, latitude: stop.latitude, longitude: stop.longitude)
+        }
     }
 }

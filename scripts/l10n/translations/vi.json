@@ -4760,6 +4760,7 @@
 "위치를 찾지 못했습니다. 다른 이름으로 검색해 주세요.|Couldn't find it. Try another name.": "Không tìm thấy. Hãy thử tên khác.",
 "위치를 허용하면 현재 위치로도 저장할 수 있습니다.|Allow location to use your current position.": "Hãy cho phép vị trí để dùng vị trí hiện tại của bạn.",
 "위치와 센서를 얼마나 자주 확인할지 고릅니다.|Choose how often location and sensors are checked.": "Chọn tần suất kiểm tra vị trí và cảm biến.",
+"위키백과 사진 받기|Get Wikipedia photos": "Lấy ảnh từ Wikipedia",
 "유료 (Plus 이상)|Paid (Plus or higher)": "Trả phí (Plus trở lên)",
 "유료 · API 키 필요|Paid · API key needed": "Trả phí · cần khóa API",
 "유료 · 맞춤 GPT는 Plus 이상|Paid · Custom GPT on Plus+": "Trả phí · GPT tùy chỉnh từ Plus",

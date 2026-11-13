@@ -15,6 +15,8 @@ struct TravelStreetMap: UIViewRepresentable {
         var symbol = ""
         var colorHex: String?
         var isCurrent = false
+        /// 코스 핀 안에 넣을 사진(없으면 종류 아이콘).
+        var image: UIImage?
     }
 
     struct Actor: Equatable {
@@ -93,6 +95,7 @@ struct TravelStreetMap: UIViewRepresentable {
         var colorHex: String?
         var isCurrent = false
         var isCourse = false
+        var image: UIImage?
     }
 
     final class ActorPin: MLNPointAnnotation {}
@@ -134,6 +137,7 @@ struct TravelStreetMap: UIViewRepresentable {
                     annotation.colorHex = pin.colorHex
                     annotation.isCurrent = pin.isCurrent
                     annotation.isCourse = map.isCourse
+                    annotation.image = pin.image
                     return annotation
                 }
                 mapView.addAnnotations(pinAnnotations)
@@ -260,11 +264,20 @@ struct TravelStreetMap: UIViewRepresentable {
             view.layer.borderWidth = pin.isCurrent ? 4 : 2.5
             view.layer.borderColor = ink.cgColor
             view.layer.zPosition = pin.isCurrent ? 5 : 1
-            let icon = UIImageView(image: UIImage(systemName: pin.symbol.isEmpty ? "mappin" : pin.symbol, withConfiguration: UIImage.SymbolConfiguration(pointSize: 16, weight: .semibold)))
-            icon.tintColor = ink
-            icon.contentMode = .center
-            icon.frame = CGRect(x: 0, y: -4, width: side, height: side)
-            view.addSubview(icon)
+            if let photo = pin.image {
+                let picture = UIImageView(image: photo)
+                picture.contentMode = .scaleAspectFill
+                picture.frame = view.bounds.insetBy(dx: 2.5, dy: 2.5)
+                picture.layer.cornerRadius = picture.frame.width / 2
+                picture.layer.masksToBounds = true
+                view.addSubview(picture)
+            } else {
+                let icon = UIImageView(image: UIImage(systemName: pin.symbol.isEmpty ? "mappin" : pin.symbol, withConfiguration: UIImage.SymbolConfiguration(pointSize: 16, weight: .semibold)))
+                icon.tintColor = ink
+                icon.contentMode = .center
+                icon.frame = CGRect(x: 0, y: -4, width: side, height: side)
+                view.addSubview(icon)
+            }
             // 배지는 동그라미 아래쪽 안에 걸친다(밖으로 많이 나가면 글자가 잘렸다).
             let badge = UILabel(frame: CGRect(x: side / 2 - 9, y: side - 16, width: 18, height: 18))
             badge.text = pin.label

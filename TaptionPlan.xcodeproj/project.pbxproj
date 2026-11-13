@@ -663,6 +663,7 @@
 		B1TV11120000000000000104 /* TravelQuickEntrySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV11120000000000000004 /* TravelQuickEntrySheet.swift */; };
 		B1TV11120000000000000105 /* TravelNewTripSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV11120000000000000005 /* TravelNewTripSheet.swift */; };
 		B1TV11120000000000000106 /* TravelRoutes.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV11120000000000000006 /* TravelRoutes.swift */; };
+		B1TV11130000000000000101 /* TravelPlacePhotos.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV11130000000000000001 /* TravelPlacePhotos.swift */; };
 		B1TV11120000000000000107 /* TravelStreetMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV11120000000000000007 /* TravelStreetMap.swift */; };
 		B1TV11120000000000000108 /* TravelGlobeTouch.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV11120000000000000008 /* TravelGlobeTouch.swift */; };
 		B1TV11120000000000000109 /* TravelModeSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1TV11120000000000000009 /* TravelModeSupport.swift */; };
@@ -1401,6 +1402,7 @@
 		B1TV11120000000000000004 /* TravelQuickEntrySheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelQuickEntrySheet.swift; sourceTree = "<group>"; };
 		B1TV11120000000000000005 /* TravelNewTripSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelNewTripSheet.swift; sourceTree = "<group>"; };
 		B1TV11120000000000000006 /* TravelRoutes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelRoutes.swift; sourceTree = "<group>"; };
+		B1TV11130000000000000001 /* TravelPlacePhotos.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelPlacePhotos.swift; sourceTree = "<group>"; };
 		B1TV11120000000000000007 /* TravelStreetMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelStreetMap.swift; sourceTree = "<group>"; };
 		B1TV11120000000000000008 /* TravelGlobeTouch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelGlobeTouch.swift; sourceTree = "<group>"; };
 		B1TV11120000000000000009 /* TravelModeSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelModeSupport.swift; sourceTree = "<group>"; };
@@ -1921,6 +1923,7 @@
 				B1TV11120000000000000004 /* TravelQuickEntrySheet.swift */,
 				B1TV11120000000000000005 /* TravelNewTripSheet.swift */,
 				B1TV11120000000000000006 /* TravelRoutes.swift */,
+				B1TV11130000000000000001 /* TravelPlacePhotos.swift */,
 				B1TV11120000000000000007 /* TravelStreetMap.swift */,
 				B1TV11120000000000000008 /* TravelGlobeTouch.swift */,
 				B1TV11120000000000000009 /* TravelModeSupport.swift */,
@@ -2901,6 +2904,7 @@
 				B1TV11120000000000000104 /* TravelQuickEntrySheet.swift in Sources */,
 				B1TV11120000000000000105 /* TravelNewTripSheet.swift in Sources */,
 				B1TV11120000000000000106 /* TravelRoutes.swift in Sources */,
+				B1TV11130000000000000101 /* TravelPlacePhotos.swift in Sources */,
 				B1TV11120000000000000107 /* TravelStreetMap.swift in Sources */,
 				B1TV11120000000000000108 /* TravelGlobeTouch.swift in Sources */,
 				B1TV11120000000000000109 /* TravelModeSupport.swift in Sources */,
