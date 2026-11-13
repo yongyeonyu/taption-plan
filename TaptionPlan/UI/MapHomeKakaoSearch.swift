@@ -313,7 +313,7 @@ struct MapHomeKakaoMap: UIViewRepresentable {
             routes.addRouteStyleSet(RouteStyleSet(styleID: "day", styles: [RouteStyle(styles: [line])]))
             _ = routes.addRouteLayer(layerID: "day", zOrder: 0)
             let labels = map.getLabelManager()
-            labels.addPoiStyle(PoiStyle(styleID: "stay", styles: [PerLevelPoiStyle(iconStyle: PoiIconStyle(symbol: Self.symbol("mappin.circle.fill", UIColor(Color.tpInk))), level: 0)]))
+            labels.addPoiStyle(PoiStyle(styleID: "stay", styles: [PerLevelPoiStyle(iconStyle: PoiIconStyle(symbol: Self.symbol("mappin.circle.fill", UIColor(Color.tpAccent))), level: 0)]))
             labels.addPoiStyle(PoiStyle(styleID: "me", styles: [PerLevelPoiStyle(iconStyle: PoiIconStyle(symbol: Self.symbol("location.circle.fill", .systemBlue)), level: 0)]))
             _ = labels.addLabelLayer(option: LabelLayerOptions(layerID: "marks", competitionType: .none, competitionUnit: .symbolFirst, orderType: .rank, zOrder: 10))
         }
@@ -342,7 +342,7 @@ struct MapHomeKakaoMap: UIViewRepresentable {
         }
 
         private static func symbol(_ name: String, _ color: UIColor) -> UIImage? {
-            UIImage(systemName: name, withConfiguration: UIImage.SymbolConfiguration(pointSize: 22, weight: .semibold))?
+            UIImage(systemName: name, withConfiguration: UIImage.SymbolConfiguration(pointSize: 16, weight: .semibold))?
                 .withTintColor(color, renderingMode: .alwaysOriginal)
         }
     }
