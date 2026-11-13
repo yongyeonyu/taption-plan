@@ -642,6 +642,23 @@ enum TravelCoursePlanner {
         return moves
     }
 
+    /// 지도에 올릴 핀. 코스일 때(`blocks`가 있을 때)는 번호를 코스 목록의 순서로 맞추고 종류 아이콘·일정 색·지금 일정 표시를 붙인다(C5).
+    static func mapPins(_ pins: [TravelGlobeRenderer.Pin], blocks: [TravelPlanTableModel.Block], minute: Int) -> [TravelStreetMap.Pin] {
+        let ordered = TravelCourse.ordered(blocks)
+        let current = TravelCourse.currentIndex(ordered, minute: minute).map { ordered[$0].id }
+        return pins.map { pin in
+            var mapPin = TravelStreetMap.Pin(longitude: pin.longitude, latitude: pin.latitude, label: pin.label, id: pin.id, title: pin.title)
+            guard let index = ordered.firstIndex(where: { $0.id == pin.id }) else { return mapPin }
+            mapPin.label = "\(index + 1)"
+            mapPin.symbol = TripImportItem.Kind(rawValue: ordered[index].kind)?.symbol ?? "mappin"
+            mapPin.colorHex = ordered[index].colorHex
+            mapPin.isCurrent = ordered[index].id == current
+            // 이름표는 전처럼 골라 둔 핀에만 두되(겹침 정리), 지금 일정에는 늘 붙인다.
+            if mapPin.isCurrent { mapPin.title = ordered[index].title }
+            return mapPin
+        }
+    }
+
     /// Apple 지도가 알려 준 장소 분류(`MKPointOfInterestCategory`의 원래 값)로 일정 종류를 짐작한다. 모르면 관광.
     static func kind(forCategory raw: String?) -> String {
         guard let raw = raw?.lowercased() else { return "sight" }

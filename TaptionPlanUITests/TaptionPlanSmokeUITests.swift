@@ -1178,7 +1178,7 @@ final class TaptionPlanTravelPlanUITests: XCTestCase {
         sleep(1)
         shot(app, "6d-course")
         nextPlan.tap()
-        sleep(1)
+        sleep(2)
         shot(app, "6e-course-next")
         app.buttons["계획표"].tap()
         XCTAssertTrue(playhead.waitForExistence(timeout: 3))

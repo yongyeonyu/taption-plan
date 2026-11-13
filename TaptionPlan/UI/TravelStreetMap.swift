@@ -11,6 +11,10 @@ struct TravelStreetMap: UIViewRepresentable {
         /// 그 핀의 일정과 이름. 이름이 있으면 핀 아래에 적는다.
         var id = ""
         var title = ""
+        /// 코스 모양일 때: 종류 아이콘(SF Symbol 이름), 일정 색, 지금 일정인지(TVV1113A01 C5).
+        var symbol = ""
+        var colorHex: String?
+        var isCurrent = false
     }
 
     struct Actor: Equatable {
@@ -32,6 +36,14 @@ struct TravelStreetMap: UIViewRepresentable {
     var fitKey: String
     /// 핀을 누르면 그 일정 번호를 알린다.
     var onSelect: (String) -> Void = { _ in }
+    /// 코스 모양: 큰 동그라미(종류 아이콘) + 번호 배지 + 이름표, 길은 실선.
+    var isCourse = false
+
+    /// 코스 핀의 크기와 이름표 폭(시험에서 본다).
+    static let coursePinSide: CGFloat = 40
+    static func courseLabelWidth(_ text: String, font: UIFont = .systemFont(ofSize: 11, weight: .semibold)) -> CGFloat {
+        min(120, ceil((text as NSString).size(withAttributes: [.font: font]).width) + 12)
+    }
     /// 빈 지도를 길게 누르면 그 자리(경도, 위도)를 알린다(Trip 원본: 그 자리에 일정 만들기).
     var onLongPress: (SIMD2<Double>) -> Void = { _ in }
 
@@ -77,6 +89,10 @@ struct TravelStreetMap: UIViewRepresentable {
         var label = ""
         var itemID = ""
         var name = ""
+        var symbol = ""
+        var colorHex: String?
+        var isCurrent = false
+        var isCourse = false
     }
 
     final class ActorPin: MLNPointAnnotation {}
@@ -84,6 +100,11 @@ struct TravelStreetMap: UIViewRepresentable {
     @MainActor
     final class Coordinator: NSObject, @preconcurrency MLNMapViewDelegate {
         private var shown: [Pin] = []
+        private var shownCourse = false
+        /// 길 선의 점선 무늬. 실선은 틈이 0인 무늬로 둔다(무늬를 비우면 선이 그려지지 않았다).
+        private static let dashed: [Double] = [2, 1.6]
+        private static let solid: [Double] = [200, 0.01]
+        private var routeLayer: MLNLineStyleLayer?
         private var pinAnnotations: [NumberPin] = []
         private var actorAnnotation: ActorPin?
         private var actorView: UIImageView?
@@ -97,8 +118,11 @@ struct TravelStreetMap: UIViewRepresentable {
 
         func update(_ mapView: MLNMapView, with map: TravelStreetMap) {
             pending = map
-            if shown != map.pins {
+            if shown != map.pins || shownCourse != map.isCourse {
                 shown = map.pins
+                shownCourse = map.isCourse
+                // 코스에서는 실선, 계획표에서는 점선.
+                routeLayer?.lineDashPattern = NSExpression(forConstantValue: map.isCourse ? Self.solid : Self.dashed)
                 mapView.removeAnnotations(pinAnnotations)
                 pinAnnotations = map.pins.map { pin in
                     let annotation = NumberPin()
@@ -106,6 +130,10 @@ struct TravelStreetMap: UIViewRepresentable {
                     annotation.label = pin.label
                     annotation.itemID = pin.id
                     annotation.name = pin.title
+                    annotation.symbol = pin.symbol
+                    annotation.colorHex = pin.colorHex
+                    annotation.isCurrent = pin.isCurrent
+                    annotation.isCourse = map.isCourse
                     return annotation
                 }
                 mapView.addAnnotations(pinAnnotations)
@@ -198,7 +226,8 @@ struct TravelStreetMap: UIViewRepresentable {
             let layer = MLNLineStyleLayer(identifier: "travel-plan-route-line", source: source)
             layer.lineColor = NSExpression(forConstantValue: UIColor(TravelInk.plan))
             layer.lineWidth = NSExpression(forConstantValue: 3)
-            layer.lineDashPattern = NSExpression(forConstantValue: [2, 1.6])
+            layer.lineDashPattern = NSExpression(forConstantValue: pending?.isCourse == true ? Self.solid : Self.dashed)
+            routeLayer = layer
             layer.lineCap = NSExpression(forConstantValue: "round")
             layer.lineJoin = NSExpression(forConstantValue: "round")
             style.addLayer(layer)
@@ -220,6 +249,48 @@ struct TravelStreetMap: UIViewRepresentable {
             if let pin = annotation as? NumberPin, !pin.itemID.isEmpty { pending?.onSelect(pin.itemID) }
         }
 
+        /// 코스 핀: 일정 색 동그라미에 종류 아이콘, 아래에 번호 배지, 오른쪽에 흰 이름표. 지금 일정은 테두리가 굵다.
+        private func courseView(_ pin: NumberPin) -> MLNAnnotationView {
+            let side = TravelStreetMap.coursePinSide
+            let ink = UIColor(pin.colorHex.map { Color(hex: $0) } ?? TravelInk.plan)
+            let view = MLNAnnotationView(annotation: pin, reuseIdentifier: nil)
+            view.frame = CGRect(x: 0, y: 0, width: side, height: side)
+            view.backgroundColor = UIColor(TravelInk.land)
+            view.layer.cornerRadius = side / 2
+            view.layer.borderWidth = pin.isCurrent ? 4 : 2.5
+            view.layer.borderColor = ink.cgColor
+            view.layer.zPosition = pin.isCurrent ? 5 : 1
+            let icon = UIImageView(image: UIImage(systemName: pin.symbol.isEmpty ? "mappin" : pin.symbol, withConfiguration: UIImage.SymbolConfiguration(pointSize: 16, weight: .semibold)))
+            icon.tintColor = ink
+            icon.contentMode = .center
+            icon.frame = CGRect(x: 0, y: -4, width: side, height: side)
+            view.addSubview(icon)
+            // 배지는 동그라미 아래쪽 안에 걸친다(밖으로 많이 나가면 글자가 잘렸다).
+            let badge = UILabel(frame: CGRect(x: side / 2 - 9, y: side - 16, width: 18, height: 18))
+            badge.text = pin.label
+            badge.textAlignment = .center
+            badge.font = .systemFont(ofSize: 10, weight: .bold)
+            badge.textColor = UIColor(TravelInk.land)
+            badge.backgroundColor = ink
+            badge.layer.cornerRadius = 9
+            badge.layer.masksToBounds = true
+            view.addSubview(badge)
+            if !pin.name.isEmpty {
+                let name = UILabel()
+                name.text = pin.name
+                name.font = .systemFont(ofSize: 11, weight: .semibold)
+                name.textColor = UIColor(TravelInk.plan)
+                name.backgroundColor = UIColor.white.withAlphaComponent(0.92)
+                name.textAlignment = .center
+                name.layer.cornerRadius = 8
+                name.layer.masksToBounds = true
+                name.frame = CGRect(x: side + 4, y: side / 2 - 11, width: TravelStreetMap.courseLabelWidth(pin.name), height: 22)
+                view.addSubview(name)
+            }
+            view.accessibilityLabel = pin.name.isEmpty ? pin.label : pin.label + " " + pin.name
+            return view
+        }
+
         func mapView(_ mapView: MLNMapView, viewFor annotation: MLNAnnotation) -> MLNAnnotationView? {
             if annotation is ActorPin {
                 let view = MLNAnnotationView(annotation: annotation, reuseIdentifier: nil)
@@ -236,6 +307,7 @@ struct TravelStreetMap: UIViewRepresentable {
                 return view
             }
             guard let pin = annotation as? NumberPin else { return nil }
+            if pin.isCourse { return courseView(pin) }
             let view = MLNAnnotationView(annotation: annotation, reuseIdentifier: nil)
             view.frame = CGRect(x: 0, y: 0, width: 22, height: 22)
             view.backgroundColor = UIColor(TravelInk.plan)

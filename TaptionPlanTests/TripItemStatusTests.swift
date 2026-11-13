@@ -700,6 +700,25 @@ final class TravelTripUnitTests: XCTestCase {
         XCTAssertNil(TravelPlanHistory.Step.reorder(tripID: "t1", moves: ["a": 0], title: "a"))
     }
 
+    /// TVV1113A01 C5: 코스일 때 지도 핀은 코스 목록의 번호·종류 아이콘·일정 색을 따르고 지금 일정을 표시한다. 계획표일 때는 전과 같다.
+    func testMapPinsFollowTheCourse() {
+        func block(_ id: String, _ start: Int, _ end: Int, kind: String, color: String? = nil) -> TravelPlanTableModel.Block {
+            .init(id: id, column: 0, startMinute: start, endMinute: end, title: "이름 " + id, tripStatus: nil, status: .pending, colorHex: color, kind: kind)
+        }
+        let pins = [TravelGlobeRenderer.Pin(longitude: 130.4, latitude: 33.6, label: "1", id: "b", title: ""), TravelGlobeRenderer.Pin(longitude: 130.5, latitude: 33.5, label: "2", id: "c", title: "")]
+        let blocks = [block("c", 720, 780, kind: "meal", color: "#C8442E"), block("a", 540, 600, kind: "transfer"), block("b", 600, 700, kind: "sight")]
+        let plain = TravelCoursePlanner.mapPins(pins, blocks: [], minute: 610)
+        XCTAssertEqual(plain.map(\.label), ["1", "2"])
+        XCTAssertEqual(plain.map(\.symbol), ["", ""])
+        let course = TravelCoursePlanner.mapPins(pins, blocks: blocks, minute: 610)
+        XCTAssertEqual(course.map(\.label), ["2", "3"], "장소 없는 일정(a)도 번호를 차지한다")
+        XCTAssertEqual(course.map(\.title), ["이름 b", ""], "이름표는 골라 둔 핀과 지금 일정에만")
+        XCTAssertEqual(course.map(\.isCurrent), [true, false])
+        XCTAssertEqual(course[1].colorHex, "#C8442E")
+        XCTAssertEqual(course.map(\.symbol), [TripImportItem.Kind.sight.symbol, TripImportItem.Kind.meal.symbol])
+        XCTAssertEqual(TravelStreetMap.courseLabelWidth("아주 아주 아주 아주 아주 긴 장소 이름입니다 정말로"), 120, "이름표는 120pt까지")
+    }
+
     /// TVU1113A01: 시각 고치기를 여러 번 되돌리고 다시 한다. 새로 고치면 다시 하기는 비고, 다른 여행이면 앞의 것을 버린다.
     func testPlanHistoryUndoesAndRedoesTimeEdits() {
         func step(_ item: String, move: Int = 0, resize: Int = 0, trip: String = "t1") -> TravelPlanHistory.Step {

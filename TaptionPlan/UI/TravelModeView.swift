@@ -584,15 +584,15 @@ struct TravelModeView: View {
     /// 여행 화면의 오픈맵: 핀·계획 길·고양이를 올리고, 머리말과 계획표가 가리지 않는 자리에 맞춘다.
     private func streetMap(_ entry: TravelTripDirectory.Entry, _ destination: TravelModeDestination?) -> TravelStreetMap {
         let area = isPlanUp ? Self.mapArea(viewSize, isPlanUp: true, tableHeight: tableHeight) : CGRect(x: 0, y: 150, width: viewSize.width, height: max(80, viewSize.height - 270))
-        let spot = actor(entry)
+        let spot = actor(entry), isCourse = isPlanUp && showsCourse(entry)
         return TravelStreetMap(
-            pins: planPins(entry, destination).map { .init(longitude: $0.longitude, latitude: $0.latitude, label: $0.label, id: $0.id, title: $0.title) },
+            pins: TravelCoursePlanner.mapPins(planPins(entry, destination), blocks: isCourse ? table(entry).blocks : [], minute: currentPlayMinute(entry)),
             route: dayRoute(entry), actor: spot.map { .init(longitude: $0.longitude, latitude: $0.latitude, facesEast: $0.facesEast) },
             actorImage: pose(entry).map { actorArt.image($0, coat: model.settings.catStyle.rawValue) } ?? actorUIImage, fallback: destination?.point,
             // 위쪽 핀에 선 고양이가 머리말에 가리지 않게 고양이 키만큼 더 띄운다.
             insets: UIEdgeInsets(top: area.minY + 74, left: 28, bottom: viewSize.height - area.maxY + 24, right: viewSize.width - area.maxX + 28),
             fitKey: "\(entry.id)|\(dayKey(entry))|\(isPlanUp)|\(Int(viewSize.width))x\(Int(viewSize.height))|\(Int(tableHeight))",
-            onSelect: { selectPin(entry, itemID: $0) }, onLongPress: { addEntry(entry, at: $0) }
+            onSelect: { selectPin(entry, itemID: $0) }, isCourse: isCourse, onLongPress: { addEntry(entry, at: $0) }
         )
     }
 
