@@ -7,7 +7,7 @@ import TaptionPlanEngine
 /// 사용자가 고른 수단·직접 고친 구간·차 오디오로 확정된 구간은 건드리지 않는다. 판정은 「보통」 확신으로 두어 확인할 수 있게 한다.
 enum BusRideRecognizer {
     static let evidencePrefix = "등록한 차 연결 없음 · 정류장 정차"
-    static let stopEvidence = "승하차 지점 버스정류장(카카오)"
+    static let stopEvidence = "승하차 지점 버스정류장(오픈스트리트맵)"
     /// 정류장 정차로 보는 머문 시간.
     static let stopSeconds: ClosedRange<TimeInterval> = 8...75
     /// 이 속도(m/s)보다 느리면 서 있는 것으로 본다.
@@ -67,10 +67,9 @@ enum BusRideRecognizer {
             // 등록한 차나 다른 차 오디오에 연결됐으면 차다.
             guard !inside.isEmpty, !inside.contains(where: { $0.carAudioRouteName != nil }) else { return segment }
             let found = stops(in: inside)
-            // 승하차 지점이 버스정류장인지(카카오로 미리 물어 둔 것, BST1113A01). 둘 다 정류장이 아니면 버스가 아니다.
-            let ends = BusStopCheck.ends(of: segment, readings: inside)
-            let board = ends.flatMap { BusStopCheck.known($0.0, defaults: stopDefaults) }
-            let alight = ends.flatMap { BusStopCheck.known($0.1, defaults: stopDefaults) }
+            // 승하차 지점이 버스정류장인지(지도 타일로 미리 확인해 둔 것, BST1113A01). 둘 다 정류장이 아니면 버스가 아니다.
+            let board = BusStopCheck.known(.board, segment: segment, defaults: stopDefaults)
+            let alight = BusStopCheck.known(.alight, segment: segment, defaults: stopDefaults)
             if board == false, alight == false { return segment }
             let atStops = board == true && alight == true
             // 등록한 차가 없으면 남의 차인지 알 수 없어 정류장과 정차 모양이 둘 다 맞아야 한다.

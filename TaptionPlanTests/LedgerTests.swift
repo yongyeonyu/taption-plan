@@ -1245,7 +1245,7 @@ final class BusRideRecognizerTests: XCTestCase {
     }
 }
 
-/// 승하차 지점 버스정류장 확인(BST1113A01). 카카오 응답은 꾸민 것.
+/// 승하차 지점 버스정류장 확인(BST1113A01). 지도 타일은 시험에서 직접 만든 것.
 final class BusStopCheckTests: XCTestCase {
     private let base = Date(timeIntervalSince1970: 1_794_000_000)
     private var defaults: UserDefaults!
@@ -1271,29 +1271,61 @@ final class BusStopCheckTests: XCTestCase {
                       distanceMeters: 0, confidence: .high, evidence: [])
     }
 
-    func testKakaoAnswerFindsABusStopWithinTheRadius() {
-        let stop = #"{"documents":[{"place_name":"가나다역","category_name":"교통,수송 > 교통시설 > 버스정류장","distance":"40"}]}"#
-        XCTAssertEqual(BusStopCheck.containsBusStop(Data(stop.utf8)), true)
-        let named = #"{"documents":[{"place_name":"가나다사거리 정류장","category_name":null,"distance":"80"}]}"#
-        XCTAssertEqual(BusStopCheck.containsBusStop(Data(named.utf8)), true)
-        let far = #"{"documents":[{"place_name":"가나다 정류장","category_name":"교통,수송 > 교통시설 > 버스정류장","distance":"180"}]}"#
-        XCTAssertEqual(BusStopCheck.containsBusStop(Data(far.utf8)), false)
-        let shop = #"{"documents":[{"place_name":"정류장 카페","category_name":"음식점 > 카페","distance":"10"}]}"#
-        XCTAssertEqual(BusStopCheck.containsBusStop(Data(shop.utf8)), false)
-        XCTAssertNil(BusStopCheck.containsBusStop(Data("nope".utf8)))
+    // MARK: 벡터 타일 만들기
+
+    private func varint(_ value: UInt64) -> [UInt8] {
+        var value = value, bytes: [UInt8] = []
+        repeat {
+            var byte = UInt8(value & 0x7f)
+            value >>= 7
+            if value != 0 { byte |= 0x80 }
+            bytes.append(byte)
+        } while value != 0
+        return bytes
+    }
+    private func field(_ number: Int, _ bytes: [UInt8]) -> [UInt8] { varint(UInt64(number << 3 | 2)) + varint(UInt64(bytes.count)) + bytes }
+    private func text(_ number: Int, _ value: String) -> [UInt8] { field(number, Array(value.utf8)) }
+    private func zigzag(_ value: Int64) -> UInt64 { UInt64(bitPattern: (value << 1) ^ (value >> 63)) }
+
+    /// poi 층: 가운데 정류장 하나와 카페 하나.
+    private func tile() -> Data {
+        func feature(subclassValue: UInt64, x: Int64, y: Int64) -> [UInt8] {
+            field(2, ([0, 0, 1, subclassValue] as [UInt64]).flatMap { varint($0) }) + field(4, [9, zigzag(x), zigzag(y)].flatMap { varint($0) })
+        }
+        let layer = text(1, "poi") + field(2, feature(subclassValue: 1, x: 2_048, y: 2_048)) + field(2, feature(subclassValue: 2, x: 100, y: 100))
+            + text(3, "class") + text(3, "subclass") + field(4, text(1, "bus")) + field(4, text(1, "bus_stop")) + field(4, text(1, "cafe"))
+            + varint(UInt64(5 << 3)) + varint(4_096)
+        return Data(field(3, layer))
     }
 
-    func testRememberedCellsAreSharedWithinAboutFiftyMeters() {
-        BusStopCheck.remember(point(0), isStop: true, defaults: defaults)
-        XCTAssertEqual(BusStopCheck.known(point(10), defaults: defaults), true)
-        XCTAssertNil(BusStopCheck.known(point(500), defaults: defaults))
+    func testBusStopsAreReadFromTheVectorTilePoiLayer() {
+        let id = BusStopCheck.TileID(x: 13_960, y: 6_340)
+        let stops = BusStopCheck.busStops(inTile: tile(), id: id)
+        XCTAssertEqual(stops.count, 1, "카페는 정류장이 아니다")
+        let back = BusStopCheck.tile(stops[0])
+        XCTAssertEqual(back, id, "타일 가운데 점은 같은 타일로 돌아온다")
+        XCTAssertTrue(BusStopCheck.busStops(inTile: Data([1, 2, 3]), id: id).isEmpty)
+    }
+
+    func testOnlyPointsWithinThirtyMetersCount() {
+        XCTAssertTrue(BusStopCheck.isNearStop([point(0)], stops: [point(20)]))
+        XCTAssertFalse(BusStopCheck.isNearStop([point(0)], stops: [point(91)]), "집에서 91m인 정류장은 아니다")
+    }
+
+    func testBoardWindowLooksAtTheWaitBeforeTheRide() {
+        let readings = straight()
+        let ride = TravelSegment(mode: .car, span: TimeSpan(start: readings[60].timestamp, end: readings[100].timestamp),
+                                 distanceMeters: 0, confidence: .high, evidence: [])
+        XCTAssertEqual(BusStopCheck.points(.board, segment: ride, readings: readings).count, 49, "3분 전~1분 뒤")
+        XCTAssertEqual(BusStopCheck.points(.alight, segment: ride, readings: readings).count, 32, "1분 전~2분 뒤")
     }
 
     func testBothEndsAtBusStopsMakeABusEvenWithoutStopAndGo() {
         let readings = straight()
-        BusStopCheck.remember(readings.first!.point!, isStop: true, defaults: defaults)
-        BusStopCheck.remember(readings.last!.point!, isStop: true, defaults: defaults)
-        let result = BusRideRecognizer.applying([segment(readings)], readings: readings, registered: ["내 차"], corrections: [], stopDefaults: defaults)
+        let ride = segment(readings)
+        BusStopCheck.remember(.board, segment: ride, isStop: true, defaults: defaults)
+        BusStopCheck.remember(.alight, segment: ride, isStop: true, defaults: defaults)
+        let result = BusRideRecognizer.applying([ride], readings: readings, registered: ["내 차"], corrections: [], stopDefaults: defaults)
         XCTAssertEqual(result.first?.mode, .bus)
         XCTAssertEqual(result.first?.confidence, .high)
         XCTAssertTrue(result.first?.evidence.contains(BusRideRecognizer.stopEvidence) == true)
@@ -1301,16 +1333,18 @@ final class BusStopCheckTests: XCTestCase {
 
     func testNoBusStopAtEitherEndKeepsCar() {
         let readings = straight()
-        BusStopCheck.remember(readings.first!.point!, isStop: false, defaults: defaults)
-        BusStopCheck.remember(readings.last!.point!, isStop: false, defaults: defaults)
-        XCTAssertEqual(BusRideRecognizer.applying([segment(readings)], readings: readings, registered: ["내 차"], corrections: [], stopDefaults: defaults).first?.mode, .car)
+        let ride = segment(readings)
+        BusStopCheck.remember(.board, segment: ride, isStop: false, defaults: defaults)
+        BusStopCheck.remember(.alight, segment: ride, isStop: false, defaults: defaults)
+        XCTAssertEqual(BusRideRecognizer.applying([ride], readings: readings, registered: ["내 차"], corrections: [], stopDefaults: defaults).first?.mode, .car)
     }
 
     func testWithoutARegisteredCarStopsAloneAreNotEnough() {
         let readings = straight()
-        BusStopCheck.remember(readings.first!.point!, isStop: true, defaults: defaults)
-        BusStopCheck.remember(readings.last!.point!, isStop: true, defaults: defaults)
-        XCTAssertEqual(BusRideRecognizer.applying([segment(readings)], readings: readings, registered: [], corrections: [], stopDefaults: defaults).first?.mode, .car,
+        let ride = segment(readings)
+        BusStopCheck.remember(.board, segment: ride, isStop: true, defaults: defaults)
+        BusStopCheck.remember(.alight, segment: ride, isStop: true, defaults: defaults)
+        XCTAssertEqual(BusRideRecognizer.applying([ride], readings: readings, registered: [], corrections: [], stopDefaults: defaults).first?.mode, .car,
                        "등록한 차가 없으면 정차 모양까지 맞아야 한다")
     }
 }
