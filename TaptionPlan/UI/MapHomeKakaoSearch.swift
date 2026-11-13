@@ -208,9 +208,10 @@ struct MapHomeKakaoMap: UIViewRepresentable {
         context.coordinator.controller = controller
         context.coordinator.container = container
         context.coordinator.update(center: center, route: route, stays: stays)
+        // 2.9.4: initEngine(준비, 인증은 뒤에서) → 화면에 붙고 준비가 끝나면 startEngine(→ addViews) → startRendering.
+        // 준비 전이나 크기 0일 때 시작하면 지도가 추가되지 않아, 시작될 때까지 짧게 다시 시도한다.
         controller.initEngine()
-        controller.startEngine()
-        controller.startRendering()
+        context.coordinator.startWhenReady()
         return container
     }
 
@@ -259,7 +260,30 @@ struct MapHomeKakaoMap: UIViewRepresentable {
             }
         }
 
-        nonisolated func addViewFailed(_ viewName: String, viewInfoName: String) {}
+        nonisolated func addViewFailed(_ viewName: String, viewInfoName: String) {
+            MainActor.assumeIsolated { TaptionPlanDiagnosticsLogger.shared.record("kakao_map_view_failed", fields: [:]) }
+        }
+
+        func startWhenReady(attempt: Int = 0) {
+            guard let controller, !controller.engineStarted else { return }
+            if let container, container.window != nil, !container.bounds.isEmpty, controller.startEngine() {
+                controller.startRendering()
+                return
+            }
+            guard attempt < 40 else {
+                TaptionPlanDiagnosticsLogger.shared.record("kakao_map_start_failed", fields: ["state": String(controller.getStateDescMessage().prefix(120))])
+                return
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in self?.startWhenReady(attempt: attempt + 1) }
+        }
+
+        nonisolated func authenticationSucceeded() {}
+
+        nonisolated func authenticationFailed(_ errorCode: Int, desc: String) {
+            MainActor.assumeIsolated {
+                TaptionPlanDiagnosticsLogger.shared.record("kakao_map_auth_failed", fields: ["code": String(errorCode)])
+            }
+        }
 
         nonisolated func containerDidResized(_ size: CGSize) {
             MainActor.assumeIsolated {
