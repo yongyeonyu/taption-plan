@@ -1197,6 +1197,17 @@ final class TaptionPlanTravelPlanUITests: XCTestCase {
 
 /// TDL1112A01: 체크리스트 단추를 누르면 「확인할 것」 목록이 열리고, 「내가 확인」이 그 질문을 띄운다.
 final class TaptionPlanTodoListUITests: XCTestCase {
+    private func shot(_ name: String) {
+        let image = XCUIScreen.main.screenshot()
+        let attachment = XCTAttachment(screenshot: image)
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        if let folder = ProcessInfo.processInfo.environment["TVU_SHOTS"] {
+            try? image.pngRepresentation.write(to: URL(fileURLWithPath: folder).appendingPathComponent("\(name).png"))
+        }
+    }
+
     func testChecklistButtonOpensTodoListAndConfirmAsks() throws {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
         app.launchArguments += ["-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR"]
@@ -1207,16 +1218,16 @@ final class TaptionPlanTodoListUITests: XCTestCase {
         let hadPrompt = later.waitForExistence(timeout: 5)
         if hadPrompt { later.tap() }
         XCTAssertTrue(checklist.exists, "미룬 뒤에도 같은 자리에 있다")
+        // 메모·일정 단추는 없어지고 할 일 목록 하나가 패널을 연다(TDP1113A01).
         checklist.tap()
-        XCTAssertTrue(app.navigationBars["확인할 것"].waitForExistence(timeout: 10), "목록이 열린다")
-        let image = XCUIScreen.main.screenshot()
-        let attachment = XCTAttachment(screenshot: image)
-        attachment.name = "todo-list"
-        attachment.lifetime = .keepAlways
-        add(attachment)
-        if let folder = ProcessInfo.processInfo.environment["TVU_SHOTS"] {
-            try? image.pngRepresentation.write(to: URL(fileURLWithPath: folder).appendingPathComponent("todo-list.png"))
-        }
+        XCTAssertTrue(app.buttons["확인"].waitForExistence(timeout: 10), "확인 탭이 있는 패널이 열린다")
+        XCTAssertTrue(app.buttons["일정"].exists, "일정 탭이 있다")
+        shot("todo-list")
+        app.buttons["일정"].tap()
+        shot("todo-schedule")
+        app.buttons["전체"].tap()
+        shot("todo-all")
+        app.buttons["확인"].tap()
         let confirm = app.buttons["내가 확인"].firstMatch
         // 방금 미룬 질문이 있었다면 목록에 그 항목이 있어야 한다(빈 목록으로 뜨던 것, TDL1113A02).
         if hadPrompt { XCTAssertTrue(confirm.waitForExistence(timeout: 3), "미룬 질문이 목록에 보인다") }

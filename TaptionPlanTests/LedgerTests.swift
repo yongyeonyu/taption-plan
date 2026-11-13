@@ -1381,3 +1381,36 @@ final class BusRecordRetitleTests: XCTestCase {
         XCTAssertEqual(BusRideRecognizer.retitling([record("걷기", behavior: "walking")], busSpans: [span], asOf: base).first?.title, "걷기")
     }
 }
+
+/// 할 일 목록 패널(TDP1113A01): 탭 순서, 「전체」 섞기 순서, 「일정」의 앱 계획.
+final class TodoPanelTests: XCTestCase {
+    private let day = Date(timeIntervalSince1970: 1_794_000_000)
+
+    func testTabsPutCheckAndScheduleRightAfterAll() {
+        XCTAssertEqual(LedgerMemoFilter.allCases, [.all, .check, .schedule, .memos, .expenses, .ai])
+        XCTAssertEqual(LedgerMemoFilter.check.title(.korean), "확인")
+        XCTAssertEqual(LedgerMemoFilter.schedule.title(.korean), "일정")
+    }
+
+    func testAllTabPutsUntimedFirstThenTime() {
+        let timeless = ActionMemo(occurredAt: day.addingTimeInterval(5 * 3600), isTimeless: true, kind: .idea, text: "시각 없음", createdAt: day.addingTimeInterval(5 * 3600))
+        let lateMemo = ActionMemo(occurredAt: day.addingTimeInterval(3 * 3600), kind: .idea, text: "세 시")
+        let allDay = CalendarRecord(id: "a", calendarID: "c", title: "종일", span: TimeSpan(start: day, end: day.addingTimeInterval(86_400)), isAllDay: true, calendarTitle: "c")
+        let event = CalendarRecord(id: "e", calendarID: "c", title: "한 시", span: TimeSpan(start: day.addingTimeInterval(3600), end: day.addingTimeInterval(7200)), isAllDay: false, calendarTitle: "c")
+        let plan = PlanRecord(title: "두 시", span: TimeSpan(start: day.addingTimeInterval(2 * 3600), end: day.addingTimeInterval(3 * 3600)), categoryID: "work")
+        let rows = MapHomeTodoPanelRow.ordered([.memo(lateMemo), .plan(plan), .event(event), .memo(timeless), .event(allDay)])
+        XCTAssertEqual(rows.map(\.id), [
+            "event-a", "memo-\(timeless.id.uuidString)", "event-e", "plan-\(plan.id.uuidString)", "memo-\(lateMemo.id.uuidString)",
+        ])
+    }
+
+    func testScheduleKeepsOnlyThatDaysOwnPlans() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        let start = calendar.startOfDay(for: day)
+        let mine = PlanRecord(title: "운동", span: TimeSpan(start: start.addingTimeInterval(9 * 3600), end: start.addingTimeInterval(10 * 3600)), categoryID: "health")
+        let fromCalendar = PlanRecord(title: "회의", span: mine.span, categoryID: "work", externalEventID: "ev")
+        let otherDay = PlanRecord(title: "내일", span: TimeSpan(start: start.addingTimeInterval(30 * 3600), end: start.addingTimeInterval(31 * 3600)), categoryID: "work")
+        XCTAssertEqual(MapHomeTodoPanelRow.plans([otherDay, fromCalendar, mine], on: day, calendar: calendar).map(\.title), ["운동"])
+    }
+}

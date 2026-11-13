@@ -1,14 +1,16 @@
 import Observation
 import SwiftUI
 
-/// 메모 목록의 거르기(LED1111A03): 전체 · 메모 · 지출.
+/// 할 일 목록 패널의 거르기(LED1111A03, TDP1113A01): 전체 · 확인 · 일정 · 메모 · 지출 · AI.
 enum LedgerMemoFilter: String, CaseIterable, Identifiable {
-    case all, memos, expenses, ai
+    case all, check, schedule, memos, expenses, ai
     var id: String { rawValue }
 
     func title(_ language: MapHomeLanguage) -> String {
         switch self {
         case .all: language.text("전체", "All")
+        case .check: language.text("확인", "Check")
+        case .schedule: language.text("일정", "Events")
         case .memos: language.text("메모", "Memos")
         case .expenses: language.text("지출", "Spending")
         // AI에게 맡긴 일(AIQ1111A01).
@@ -257,5 +259,92 @@ enum LedgerDaySpending {
             caption: language.text("\(list.count)건", "\(list.count) entries"),
             hourly: list.isEmpty ? [] : hourly
         )
+    }
+}
+
+/// 할 일 목록 패널의 한 줄(TDP1113A01). 「전체」는 메모·일정·앱 계획·지출을 한 줄로 섞는다.
+enum MapHomeTodoPanelRow: Identifiable, Equatable {
+    case memo(ActionMemo)
+    case event(CalendarRecord)
+    case plan(PlanRecord)
+    case expense(LedgerEntry)
+
+    var id: String {
+        switch self {
+        case .memo(let memo): "memo-\(memo.id.uuidString)"
+        case .event(let event): "event-\(event.id)"
+        case .plan(let plan): "plan-\(plan.id.uuidString)"
+        case .expense(let entry): "expense-\(entry.id.uuidString)"
+        }
+    }
+
+    /// 시각이 없는 것(시각 없는 메모·종일 일정)은 맨 위에 둔다.
+    var isUntimed: Bool {
+        switch self {
+        case .memo(let memo): memo.isTimeless == true
+        case .event(let event): event.isAllDay
+        case .plan, .expense: false
+        }
+    }
+
+    var date: Date {
+        switch self {
+        case .memo(let memo): memo.isTimeless == true ? memo.createdAt : memo.occurredAt
+        case .event(let event): event.span.start
+        case .plan(let plan): plan.span.start
+        case .expense(let entry): entry.occurredAt
+        }
+    }
+
+    /// 시각 없는 것이 위, 그다음 시각 순. 같은 시각은 들어온 순서를 지킨다.
+    static func ordered(_ rows: [MapHomeTodoPanelRow]) -> [MapHomeTodoPanelRow] {
+        rows.enumerated().sorted { lhs, rhs in
+            if lhs.element.isUntimed != rhs.element.isUntimed { return lhs.element.isUntimed }
+            if lhs.element.date != rhs.element.date { return lhs.element.date < rhs.element.date }
+            return lhs.offset < rhs.offset
+        }.map(\.element)
+    }
+
+    /// 「일정」에 보일 앱 계획. 달력에서 가져온 계획은 달력 일정과 겹치므로 뺀다.
+    static func plans(_ plans: [PlanRecord], on day: Date, calendar: Calendar = .autoupdatingCurrent) -> [PlanRecord] {
+        plans
+            .filter { $0.externalEventID == nil && calendar.isDate($0.span.start, inSameDayAs: day) }
+            .sorted { $0.span.start < $1.span.start }
+    }
+}
+
+/// 앱 계획·달력 일정 한 줄. 메모 카드와 같은 모양이다.
+struct MapHomeTodoScheduleCard: View {
+    let systemImage: String
+    let title: String
+    let time: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: systemImage)
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
+                .foregroundStyle(Color.tpReferenceBlue)
+                .frame(width: 26, height: 26)
+                .background(Color.white.opacity(0.9), in: Circle())
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
+                    .foregroundStyle(Color.tpInk)
+                    .lineLimit(2)
+                Text(time)
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .regular))
+                    .foregroundStyle(Color.tpSecondary)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .mapHomeGlass(in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
+        .accessibilityElement(children: .combine)
+    }
+
+    static func time(_ span: TimeSpan, allDay: Bool, language: MapHomeLanguage) -> String {
+        if allDay { return language.text("종일", "All day") }
+        return "\(span.start.formatted(date: .omitted, time: .shortened)) – \(span.end.formatted(date: .omitted, time: .shortened))"
     }
 }

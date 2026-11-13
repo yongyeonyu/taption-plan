@@ -197,61 +197,70 @@ extension MapHomeView {
         if problem == nil { await model.applyDayCalendarEvents(loaded, on: day, fromGoogle: GoogleCalendarAccount.shared.isConnected) }
     }
 
-    /// 메모 목록 패널. 폭은 일정 패널과 같은 280으로 맞춘다.
+    /// 할 일 목록 패널(TDP1113A01): 확인할 것·일정·메모·지출·AI를 한 판에 모은다. 폭은 280.
     var memoListPanel: some View {
         VStack(alignment: .leading, spacing: 8) {
             LedgerMemoHeader(filter: $memoLedgerFilter, linkedMemoIDs: $memoLedgerLinkedIDs, language: language, day: model.selectedDate)
-            if memoLedgerFilter == .ai {
+            switch memoLedgerFilter {
+            case .ai:
                 AITaskPanel(language: language)
-            } else if memoLedgerFilter == .expenses {
+            case .expenses:
                 LedgerDayCards(language: language, day: model.selectedDate)
-            } else {
-            // 큐는 3개를 항상 보여 주고, 넘치면 펼침 버튼으로 스크롤 목록을 연다.
-            if queueExpanded {
-                ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        ForEach(panelMemos) { memo in
-                            memoCard(memo, showsTime: memo.isTimeless != true)
+            case .check:
+                todoCheckRows(showsEmpty: true)
+            case .schedule:
+                ForEach(dayPlans) { plan in planCard(plan) }
+                MapHomeTodayCalendarList(
+                    language: language,
+                    service: calendarService,
+                    date: model.selectedDate,
+                    titleDetails: model.snapshot.settings.calendarTitleDetails,
+                    onChooseDetail: { title, choice in
+                        Task {
+                            switch choice {
+                            case .automatic: await model.clearCalendarTitleDetail(title: title, on: model.selectedDate)
+                            case .none: await model.setCalendarTitleDetail(nil, title: title, on: model.selectedDate)
+                            case .detail(let id): await model.setCalendarTitleDetail(id, title: title, on: model.selectedDate)
+                            }
+                        }
+                    },
+                    width: 280 - 16
+                )
+            case .memos, .all:
+                if memoLedgerFilter == .all { todoCheckRows(showsEmpty: false) }
+                if let legacy = nearbyScheduleMemo { scheduleMemoPreview(legacy) }
+                let rows = todoPanelRows
+                // 처음에는 4줄, 넘치면 펼침 단추로 스크롤 목록을 연다.
+                if queueExpanded {
+                    ScrollView(showsIndicators: false) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            ForEach(rows) { todoPanelRow($0) }
                         }
                     }
+                    .refreshable { await AssistantCommandRefresh.now(language: language, manual: true) }
+                    .frame(maxHeight: 360)
+                } else {
+                    ForEach(rows.prefix(Self.todoPanelCollapsedRows)) { todoPanelRow($0) }
                 }
-                .refreshable { await AssistantCommandRefresh.now(language: language, manual: true) }
-                .frame(maxHeight: 300)
-            } else {
-                ForEach(panelMemos.prefix(3)) { memo in
-                    memoCard(memo, showsTime: memo.isTimeless != true)
+                if rows.count > Self.todoPanelCollapsedRows {
+                    Button {
+                        withAnimation(.snappy) { queueExpanded.toggle() }
+                    } label: {
+                        Label(
+                            queueExpanded ? language.text("접기", "Collapse") : "+\(rows.count - Self.todoPanelCollapsedRows)",
+                            systemImage: queueExpanded ? "chevron.up" : "chevron.down"
+                        )
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
+                        .foregroundStyle(Color.tpSecondary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .mapHomeGlass(in: Capsule())
+                    }
+                    .buttonStyle(.plain)
                 }
-            }
-            // 위 목록에 이미 있는 메모는 다시 보여 주지 않는다.
-            if let timed = nearbyTimedMemo, !panelMemos.contains(where: { $0.id == timed.id }) {
-                memoCard(timed, showsTime: true)
-            }
-            if let legacy = nearbyScheduleMemo {
-                scheduleMemoPreview(legacy)
-            }
-            // 「전체」에는 메모로 넣지 않은 그날 지출도 보인다(LDT1111A01).
-            if memoLedgerFilter == .all {
-                LedgerDayCards(language: language, day: model.selectedDate, onlyUnlinked: true)
-            }
-            if panelMemos.count > 3 {
-                Button {
-                    withAnimation(.snappy) { queueExpanded.toggle() }
-                } label: {
-                    Label(
-                        queueExpanded ? language.text("접기", "Collapse") : "+\(panelMemos.count - 3)",
-                        systemImage: queueExpanded ? "chevron.up" : "chevron.down"
-                    )
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
-                    .foregroundStyle(Color.tpSecondary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .mapHomeGlass(in: Capsule())
-                }
-                .buttonStyle(.plain)
-            }
             }
         }
-        // 메모 목록 전체를 한 판으로 감싼다(MBG1111A01). 바깥 폭은 일정 패널과 같은 280.
+        // 목록 전체를 한 판으로 감싼다(MBG1111A01). 바깥 폭은 280.
         .frame(width: 280 - 16, alignment: .leading)
         .padding(8)
         .background(Color.tpBackground.opacity(0.92), in: RoundedRectangle(cornerRadius: TaptionCorner.large, style: .continuous))
@@ -259,29 +268,108 @@ extension MapHomeView {
         .taptionShadow(.floating)
     }
 
-    /// 메모를 원형 아이콘 하나로 모은다. 누르면 펼쳐서 목록을 보여 준다.
-    var memoCircleButton: some View {
-        // 지금 시각 근처 메모는 그날 메모 목록에도 들어 있으므로 ID로 합쳐 한 번만 센다.
-        let count = Set(queuedMemos.map(\.id) + [nearbyTimedMemo?.id].compactMap { $0 }).count
-        return Button {
-            withAnimation(.snappy) { memoStackExpanded.toggle() }
-        } label: {
-            TaptionBarIcon(systemImage: memoStackExpanded ? "xmark" : "note.text", size: 25)
-                .frame(width: 40, height: 40)
-                .background { TaptionStickerDisc() }
-                .overlay(alignment: .topTrailing) {
-                    if count > 0, !memoStackExpanded {
-                        Text("\(count)")
-                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .background(Color.tpReferenceBlue, in: Capsule())
-                    }
-                }
+    static let todoPanelCollapsedRows = 4
+
+    /// 메모를 지도에 보이게 한 설정에서만 메모 카드를 패널에 넣는다.
+    var todoPanelShowsMemos: Bool { recordingShows(\.sidebarMemos) && memoDisplayMode == .all }
+
+    var dayPlans: [PlanRecord] { MapHomeTodoPanelRow.plans(model.snapshot.plans, on: model.selectedDate) }
+
+    /// 「전체」·「메모」 줄. 「전체」는 메모·일정·앱 계획·메모로 넣지 않은 지출을 시간순으로 섞는다.
+    var todoPanelRows: [MapHomeTodoPanelRow] {
+        var memos = todoPanelShowsMemos ? panelMemos : []
+        // 지금 시각 근처 메모가 목록에 없으면 함께 보인다.
+        if todoPanelShowsMemos, let timed = nearbyTimedMemo, !memos.contains(where: { $0.id == timed.id }) { memos.append(timed) }
+        var rows = memos.map(MapHomeTodoPanelRow.memo)
+        if memoLedgerFilter == .all {
+            rows += dayCalendarEventsForSelectedDate.map(MapHomeTodoPanelRow.event)
+            rows += dayPlans.map(MapHomeTodoPanelRow.plan)
+            rows += LedgerBook.shared.entries(on: model.selectedDate).filter { $0.memoID == nil }.map(MapHomeTodoPanelRow.expense)
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(language.text("메모", "Memos"))
+        return MapHomeTodoPanelRow.ordered(rows)
+    }
+
+    @ViewBuilder
+    func todoPanelRow(_ row: MapHomeTodoPanelRow) -> some View {
+        switch row {
+        case .memo(let memo):
+            memoCard(memo, showsTime: memo.isTimeless != true)
+        case .event(let event):
+            MapHomeTodoScheduleCard(systemImage: "calendar", title: event.title,
+                                    time: MapHomeTodoScheduleCard.time(event.span, allDay: event.isAllDay, language: language))
+                .contentShape(Rectangle())
+                .onTapGesture { memoLedgerFilter = .schedule }
+                .accessibilityAddTraits(.isButton)
+        case .plan(let plan):
+            planCard(plan)
+        case .expense(let entry):
+            Button { LedgerPresenter.shared.isPresented = true } label: { LedgerMemoCard(entry: entry, language: language) }
+                .buttonStyle(.plain)
+        }
+    }
+
+    func planCard(_ plan: PlanRecord) -> some View {
+        MapHomeTodoScheduleCard(systemImage: "checkmark.circle", title: plan.title,
+                                time: MapHomeTodoScheduleCard.time(plan.span, allDay: false, language: language))
+    }
+
+    @ViewBuilder
+    func todoCheckRows(showsEmpty: Bool) -> some View {
+        if todoItems.isEmpty {
+            if showsEmpty {
+                Text(language.text("지금 확인할 것이 없어요.", "Nothing to check right now."))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .regular))
+                    .foregroundStyle(Color.tpSecondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 9)
+            }
+        } else {
+            let canUseAI = MemoPolishQueue.hasConnection()
+            MapHomeTodoRows(language: language, items: todoItems, canUseAI: canUseAI) { prompt in
+                UserDefaults.standard.set("", forKey: MapHomeLaunchPromptDeferral.key)
+                withAnimation(.snappy) { memoStackExpanded = false }
+                presentLaunchPrompt(prompt)
+            } onHandOff: { prompt in
+                guard let task = MapHomeLaunchPromptHandoff.task(for: prompt),
+                      AITaskQueue.enqueue(task.kind, text: task.text, day: .now) else { return false }
+                MapHomeLaunchPromptHandoff.markHanded(prompt.id)
+                return true
+            }
+            if memoLedgerFilter == .check {
+                Text(MapHomeTodoRows.footer(canUseAI: canUseAI, language: language))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .regular))
+                    .foregroundStyle(Color.tpSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 4)
+            }
+        }
+    }
+
+    /// 할 일 목록 단추: 닫혀 있으면 확인할 것을 읽고 연다(있으면 「확인」 탭, 없으면 「전체」).
+    func toggleTodoPanel() {
+        if memoStackExpanded {
+            withAnimation(.snappy) { memoStackExpanded = false }
+            return
+        }
+        Task {
+            let items = await launchPromptQueue()
+            todoItems = items
+            memoLedgerFilter = items.isEmpty ? .all : .check
+            withAnimation(.snappy) { memoStackExpanded = true }
+        }
+    }
+
+    /// 다른 곳(왼쪽 위 미리보기)에서 정한 탭으로 연다.
+    func openTodoPanel(_ filter: LedgerMemoFilter) {
+        memoLedgerFilter = filter
+        withAnimation(.snappy) { memoStackExpanded = true }
+        Task { todoItems = await launchPromptQueue() }
+    }
+
+    /// 그날 메모 수. 지금 시각 근처 메모는 목록에도 들어 있으므로 ID로 합쳐 한 번만 센다.
+    var todoMemoCount: Int {
+        guard todoPanelShowsMemos else { return 0 }
+        return Set(queuedMemos.map(\.id) + [nearbyTimedMemo?.id].compactMap { $0 }).count
     }
 
     func memoCard(_ memo: ActionMemo, showsTime: Bool) -> some View {

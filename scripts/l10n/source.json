@@ -1025,7 +1025,7 @@
    "ko": "AI를 연결하면 확인할 것을 AI에게 넘길 수 있어요.",
    "en": "Connect an AI to hand these off.",
    "files": [
-    "MapHomeLaunchPrompts.swift:326"
+    "MapHomeLaunchPrompts.swift:320"
    ],
    "args": [],
    "targets": [
@@ -1061,7 +1061,7 @@
    "ko": "AI에게 넘기기",
    "en": "Hand to AI",
    "files": [
-    "MapHomeLaunchPrompts.swift:314"
+    "MapHomeLaunchPrompts.swift:292"
    ],
    "args": [],
    "targets": [
@@ -1073,7 +1073,7 @@
    "ko": "AI에게 넘김",
    "en": "Handed to AI",
    "files": [
-    "MapHomeLaunchPrompts.swift:310"
+    "MapHomeLaunchPrompts.swift:289"
    ],
    "args": [],
    "targets": [
@@ -3591,7 +3591,7 @@
    "ko": "{0} 일정",
    "en": "Events on {0}",
    "files": [
-    "MapHomeTodayCalendar.swift:222"
+    "MapHomeTodayCalendar.swift:224"
    ],
    "args": [
     "day"
@@ -3880,7 +3880,7 @@
    "ko": "{0}건",
    "en": "{0} entries",
    "files": [
-    "LedgerMemoPanel.swift:257"
+    "LedgerMemoPanel.swift:259"
    ],
    "args": [
     "list.count"
@@ -33103,7 +33103,7 @@
    "ko": "‘{0}’ 기기가 내 차인가요?",
    "en": "Is ‘{0}’ your car?",
    "files": [
-    "MapHomeLaunchPrompts.swift:336"
+    "MapHomeLaunchPrompts.swift:309"
    ],
    "args": [
     "name"
@@ -33117,7 +33117,7 @@
    "ko": "‘{0}’ 기기가 탈 때만 연결됐어요. 등록할까요? 등록하면 이 기기가 연결된 이동을 자동차로 기록해요.",
    "en": "‘{0}’ connected only while you rode. Register it? Trips with it connected will be recorded as car.",
    "files": [
-    "MapHomeLaunchPrompts.swift:387"
+    "MapHomeLaunchPrompts.swift:366"
    ],
    "args": [
     "name"
@@ -33131,7 +33131,7 @@
    "ko": "‘{0}’ 일정 분류",
    "en": "Classify ‘{0}’",
    "files": [
-    "MapHomeLaunchPrompts.swift:338"
+    "MapHomeLaunchPrompts.swift:311"
    ],
    "args": [
     "title"
@@ -33145,7 +33145,7 @@
    "ko": "‘{0}’ 일정은 무엇인가요?",
    "en": "What is ‘{0}’?",
    "files": [
-    "MapHomeLaunchPrompts.swift:446"
+    "MapHomeLaunchPrompts.swift:425"
    ],
    "args": [
     "calendarTitle ?? \"\""
@@ -33159,7 +33159,7 @@
    "ko": "‘{0}’ 중 무엇인가요?",
    "en": "Which ‘{0}’?",
    "files": [
-    "MapHomeLaunchPrompts.swift:474"
+    "MapHomeLaunchPrompts.swift:453"
    ],
    "args": [
     "category?.localizedTitle(language) ?? \"\""
@@ -33173,7 +33173,7 @@
    "ko": "‘{0}’에 {1}번 머물렀어요. 어떤 곳인가요?",
    "en": "You stayed at ‘{0}’ {1} times. What is it?",
    "files": [
-    "MapHomeLaunchPrompts.swift:502"
+    "MapHomeLaunchPrompts.swift:481"
    ],
    "args": [
     "name",
@@ -35635,7 +35635,7 @@
    "ko": "구글 계정 일정을 보려면 캘린더 접근을 허용해 주세요.",
    "en": "Allow calendar access to see Google events.",
    "files": [
-    "MapHomeTodayCalendar.swift:162"
+    "MapHomeTodayCalendar.swift:164"
    ],
    "args": [],
    "targets": [
@@ -35686,7 +35686,7 @@
    "ko": "구글 연결을 해제했습니다.",
    "en": "Google disconnected.",
    "files": [
-    "MapHomeTodayCalendar.swift:352"
+    "MapHomeTodayCalendar.swift:354"
    ],
    "args": [],
    "targets": [
@@ -35710,7 +35710,7 @@
    "ko": "구글 캘린더 바로 연결",
    "en": "Connect Google Calendar",
    "files": [
-    "MapHomeTodayCalendar.swift:311"
+    "MapHomeTodayCalendar.swift:313"
    ],
    "args": [],
    "targets": [
@@ -35722,7 +35722,7 @@
    "ko": "구글 캘린더 연결 해제",
    "en": "Disconnect Google",
    "files": [
-    "MapHomeTodayCalendar.swift:311"
+    "MapHomeTodayCalendar.swift:313"
    ],
    "args": [],
    "targets": [
@@ -35734,7 +35734,7 @@
    "ko": "구글 캘린더를 불러오지 못했어요. 설정에서 연결을 확인해 주세요.",
    "en": "Could not load Google Calendar. Check the connection in Settings.",
    "files": [
-    "MapHomeTodayCalendar.swift:173"
+    "MapHomeTodayCalendar.swift:175"
    ],
    "args": [],
    "targets": [
@@ -35746,7 +35746,7 @@
    "ko": "구글 캘린더를 연결했습니다.",
    "en": "Google Calendar connected.",
    "files": [
-    "MapHomeTodayCalendar.swift:357"
+    "MapHomeTodayCalendar.swift:359"
    ],
    "args": [],
    "targets": [
@@ -36059,8 +36059,8 @@
    "ko": "그날 지출이 없어요. 메모에 「커피 4500」처럼 쓰면 들어가요.",
    "en": "No spending that day. Write a memo like \"Coffee 4500\" to add one.",
    "files": [
-    "LedgerMemoPanel.swift:121",
-    "LedgerMemoPanel.swift:256"
+    "LedgerMemoPanel.swift:123",
+    "LedgerMemoPanel.swift:258"
    ],
    "args": [],
    "targets": [
@@ -36999,7 +36999,7 @@
    "files": [
     "LedgerCore.swift:28",
     "AssistantAIProvider.swift:37",
-    "MapHomeLaunchPrompts.swift:517"
+    "MapHomeLaunchPrompts.swift:496"
    ],
    "args": [],
    "targets": [
@@ -37387,7 +37387,7 @@
    "ko": "나중에 확인",
    "en": "Check later",
    "files": [
-    "MapHomeLaunchPrompts.swift:378"
+    "MapHomeLaunchPrompts.swift:357"
    ],
    "args": [],
    "targets": [
@@ -37803,7 +37803,7 @@
    "ko": "내 차로 등록",
    "en": "Register as my car",
    "files": [
-    "MapHomeLaunchPrompts.swift:383"
+    "MapHomeLaunchPrompts.swift:362"
    ],
    "args": [],
    "targets": [
@@ -37852,7 +37852,7 @@
    "ko": "내가 확인",
    "en": "I'll check",
    "files": [
-    "MapHomeLaunchPrompts.swift:306"
+    "MapHomeLaunchPrompts.swift:285"
    ],
    "args": [],
    "targets": [
@@ -39425,7 +39425,7 @@
    "ko": "뒤로",
    "en": "Back",
    "files": [
-    "MapHomeLaunchPrompts.swift:416",
+    "MapHomeLaunchPrompts.swift:395",
     "MapHomeWideLayoutPolicy.swift:239"
    ],
    "args": [],
@@ -39475,7 +39475,7 @@
    "ko": "등록 안 함",
    "en": "Don't register",
    "files": [
-    "MapHomeLaunchPrompts.swift:428"
+    "MapHomeLaunchPrompts.swift:407"
    ],
    "args": [],
    "targets": [
@@ -40142,7 +40142,7 @@
    "ko": "먼저 대분류를 고르세요. 한 번 정하면 같은 제목의 일정은 다시 묻지 않아요.",
    "en": "Pick a category first. Once set, events with the same title won't be asked again.",
    "files": [
-    "MapHomeLaunchPrompts.swift:409"
+    "MapHomeLaunchPrompts.swift:388"
    ],
    "args": [],
    "targets": [
@@ -40381,7 +40381,7 @@
    "ko": "메모 {0}",
    "en": "Memo {0}",
    "files": [
-    "MapHomeView+Memos.swift:315"
+    "MapHomeView+Memos.swift:403"
    ],
    "args": [
     "memo.text"
@@ -40583,7 +40583,7 @@
    "ko": "메모",
    "en": "Memos",
    "files": [
-    "LedgerMemoPanel.swift:12",
+    "LedgerMemoPanel.swift:14",
     "MapHomeAlarm.swift:547",
     "MapHomeInfoSheets.swift:450"
    ],
@@ -41045,7 +41045,7 @@
    "ko": "미확인 시간 {0}분",
    "en": "{0} min unconfirmed",
    "files": [
-    "MapHomeLaunchPrompts.swift:340"
+    "MapHomeLaunchPrompts.swift:313"
    ],
    "args": [
     "minutes"
@@ -41083,7 +41083,7 @@
    "ko": "미확인 시간이 있어요",
    "en": "Some time is unconfirmed",
    "files": [
-    "MapHomeLaunchPrompts.swift:433"
+    "MapHomeLaunchPrompts.swift:412"
    ],
    "args": [],
    "targets": [
@@ -42490,7 +42490,7 @@
    "ko": "분류 안 함",
    "en": "Don't classify",
    "files": [
-    "MapHomeLaunchPrompts.swift:406"
+    "MapHomeLaunchPrompts.swift:385"
    ],
    "args": [],
    "targets": [
@@ -42564,7 +42564,7 @@
    "ko": "분류별",
    "en": "By category",
    "files": [
-    "LedgerMemoPanel.swift:253"
+    "LedgerMemoPanel.swift:255"
    ],
    "args": [],
    "targets": [
@@ -43563,7 +43563,7 @@
    "en": "New memo",
    "files": [
     "MapHomeStickerEditor.swift:569",
-    "MapHomeView+Memos.swift:328"
+    "MapHomeView+Memos.swift:416"
    ],
    "args": [],
    "targets": [
@@ -43636,7 +43636,7 @@
    "ko": "새 지도 메모",
    "en": "New map memo",
    "files": [
-    "MapHomeView+Memos.swift:451"
+    "MapHomeView+Memos.swift:539"
    ],
    "args": [],
    "targets": [
@@ -44149,7 +44149,7 @@
    "ko": "설정 앱에서 캘린더 권한을 켜 주세요.",
    "en": "Turn on calendar access in Settings.",
    "files": [
-    "MapHomeTodayCalendar.swift:368"
+    "MapHomeTodayCalendar.swift:370"
    ],
    "args": [],
    "targets": [
@@ -45427,7 +45427,7 @@
    "ko": "시간순",
    "en": "By time",
    "files": [
-    "LedgerMemoPanel.swift:254"
+    "LedgerMemoPanel.swift:256"
    ],
    "args": [],
    "targets": [
@@ -45665,7 +45665,7 @@
    "ko": "식당",
    "en": "Restaurant",
    "files": [
-    "MapHomeLaunchPrompts.swift:516"
+    "MapHomeLaunchPrompts.swift:495"
    ],
    "args": [],
    "targets": [
@@ -45894,7 +45894,7 @@
    "ko": "아니요",
    "en": "No",
    "files": [
-    "MapHomeLaunchPrompts.swift:384"
+    "MapHomeLaunchPrompts.swift:363"
    ],
    "args": [],
    "targets": [
@@ -46486,7 +46486,7 @@
    "ko": "애플 캘린더 사용",
    "en": "Use Apple Calendar",
    "files": [
-    "MapHomeTodayCalendar.swift:315"
+    "MapHomeTodayCalendar.swift:317"
    ],
    "args": [],
    "targets": [
@@ -46498,7 +46498,7 @@
    "ko": "애플 캘린더를 연결했습니다.",
    "en": "Apple Calendar connected.",
    "files": [
-    "MapHomeTodayCalendar.swift:367"
+    "MapHomeTodayCalendar.swift:369"
    ],
    "args": [],
    "targets": [
@@ -47398,7 +47398,7 @@
    "ko": "여기에 메모",
    "en": "Memo here",
    "files": [
-    "MapHomeView+Memos.swift:412"
+    "MapHomeView+Memos.swift:500"
    ],
    "args": [],
    "targets": [
@@ -49526,7 +49526,7 @@
    "ko": "오늘 {0}분이 무엇을 했는지 모르는 시간이에요. 지금 정할까요?",
    "en": "{0} min today are unconfirmed. Review them now?",
    "files": [
-    "MapHomeLaunchPrompts.swift:437"
+    "MapHomeLaunchPrompts.swift:416"
    ],
    "args": [
     "minutes"
@@ -49674,7 +49674,7 @@
    "ko": "오늘 일정",
    "en": "Today",
    "files": [
-    "MapHomeTodayCalendar.swift:220"
+    "MapHomeTodayCalendar.swift:222"
    ],
    "args": [],
    "targets": [
@@ -49686,7 +49686,7 @@
    "ko": "오늘 일정이 없어요.",
    "en": "No events today.",
    "files": [
-    "MapHomeTodayCalendar.swift:228"
+    "MapHomeTodayCalendar.swift:230"
    ],
    "args": [],
    "targets": [
@@ -49752,7 +49752,7 @@
    "en": "Today",
    "files": [
     "GPXExportCard.swift:15",
-    "LedgerMemoPanel.swift:99",
+    "LedgerMemoPanel.swift:101",
     "WatchTodayCards.swift:117"
    ],
    "args": [],
@@ -50163,7 +50163,7 @@
    "en": "Exercise",
    "files": [
     "MapHomeInteractionPolicy.swift:459",
-    "MapHomeLaunchPrompts.swift:515",
+    "MapHomeLaunchPrompts.swift:494",
     "MapHomeLocationPresentation.swift:310"
    ],
    "args": [],
@@ -51282,7 +51282,7 @@
    "ko": "이 기기가 내 차 같아요",
    "en": "This looks like your car",
    "files": [
-    "MapHomeLaunchPrompts.swift:382"
+    "MapHomeLaunchPrompts.swift:361"
    ],
    "args": [],
    "targets": [
@@ -51525,7 +51525,7 @@
    "ko": "이 날 일정이 없어요.",
    "en": "No events on this day.",
    "files": [
-    "MapHomeTodayCalendar.swift:230"
+    "MapHomeTodayCalendar.swift:232"
    ],
    "args": [],
    "targets": [
@@ -51782,7 +51782,7 @@
    "ko": "이 위치로",
    "en": "Use this spot",
    "files": [
-    "MapHomeView+Memos.swift:411"
+    "MapHomeView+Memos.swift:499"
    ],
    "args": [],
    "targets": [
@@ -51820,7 +51820,7 @@
    "ko": "이 자리",
    "en": "This spot",
    "files": [
-    "MapHomeLaunchPrompts.swift:501"
+    "MapHomeLaunchPrompts.swift:480"
    ],
    "args": [],
    "targets": [
@@ -52504,7 +52504,7 @@
    "ko": "이번 달",
    "en": "This month",
    "files": [
-    "LedgerMemoPanel.swift:102"
+    "LedgerMemoPanel.swift:104"
    ],
    "args": [],
    "targets": [
@@ -52929,6 +52929,18 @@
    ]
   },
   {
+   "key": "일정|Events",
+   "ko": "일정",
+   "en": "Events",
+   "files": [
+    "LedgerMemoPanel.swift:13"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "일정|Schedule",
    "ko": "일정",
    "en": "Schedule",
@@ -52997,7 +53009,7 @@
    "ko": "일정을 읽어 지도와 활동 판정에 씁니다. 일정은 기기에만 저장합니다.",
    "en": "Events are read for the map and activity detection and stay on this device.",
    "files": [
-    "MapHomeTodayCalendar.swift:307"
+    "MapHomeTodayCalendar.swift:309"
    ],
    "args": [],
    "targets": [
@@ -53449,7 +53461,7 @@
    "ko": "자주 머무는 곳 등록",
    "en": "Register a place you stay often",
    "files": [
-    "MapHomeLaunchPrompts.swift:339"
+    "MapHomeLaunchPrompts.swift:312"
    ],
    "args": [],
    "targets": [
@@ -53473,7 +53485,7 @@
    "ko": "자주 머무는 곳이 있어요",
    "en": "You stay here often",
    "files": [
-    "MapHomeLaunchPrompts.swift:424"
+    "MapHomeLaunchPrompts.swift:403"
    ],
    "args": [],
    "targets": [
@@ -54333,7 +54345,7 @@
    "ko": "접기",
    "en": "Collapse",
    "files": [
-    "MapHomeView+Memos.swift:241"
+    "MapHomeView+Memos.swift:250"
    ],
    "args": [],
    "targets": [
@@ -54668,7 +54680,8 @@
    "ko": "종일",
    "en": "All day",
    "files": [
-    "MapHomeTodayCalendar.swift:234"
+    "LedgerMemoPanel.swift:347",
+    "MapHomeTodayCalendar.swift:236"
    ],
    "args": [],
    "targets": [
@@ -55117,7 +55130,7 @@
    "ko": "지금 정하기",
    "en": "Review now",
    "files": [
-    "MapHomeLaunchPrompts.swift:434"
+    "MapHomeLaunchPrompts.swift:413"
    ],
    "args": [],
    "targets": [
@@ -55129,7 +55142,7 @@
    "ko": "지금 확인할 것이 없어요.",
    "en": "Nothing to check right now.",
    "files": [
-    "MapHomeLaunchPrompts.swift:296"
+    "MapHomeView+Memos.swift:320"
    ],
    "args": [],
    "targets": [
@@ -55563,7 +55576,7 @@
    "ko": "지도를 움직여 핀 위치를 맞추세요",
    "en": "Move the map to place the pin",
    "files": [
-    "MapHomeView+Memos.swift:374"
+    "MapHomeView+Memos.swift:462"
    ],
    "args": [],
    "targets": [
@@ -55976,7 +55989,7 @@
    "ko": "지하철·버스 탑승 확인",
    "en": "Check a subway or bus ride",
    "files": [
-    "MapHomeLaunchPrompts.swift:337"
+    "MapHomeLaunchPrompts.swift:310"
    ],
    "args": [],
    "targets": [
@@ -56254,7 +56267,7 @@
    "files": [
     "FirstRunGuideStage.swift:647",
     "FirstRunTutorialGuides.swift:694",
-    "MapHomeLaunchPrompts.swift:510"
+    "MapHomeLaunchPrompts.swift:489"
    ],
    "args": [],
    "targets": [
@@ -56835,7 +56848,7 @@
    "ko": "추천: {0}",
    "en": "Suggested: {0}",
    "files": [
-    "MapHomeLaunchPrompts.swift:395"
+    "MapHomeLaunchPrompts.swift:374"
    ],
    "args": [
     "rule.label"
@@ -57003,7 +57016,7 @@
    "en": "Hobby",
    "files": [
     "MapHomeInteractionPolicy.swift:458",
-    "MapHomeLaunchPrompts.swift:514",
+    "MapHomeLaunchPrompts.swift:493",
     "MapHomeLocationPresentation.swift:291"
    ],
    "args": [],
@@ -57057,7 +57070,7 @@
    "ko": "취소됨",
    "en": "Canceled",
    "files": [
-    "LedgerMemoPanel.swift:158",
+    "LedgerMemoPanel.swift:160",
     "LedgerSheet.swift:299"
    ],
    "args": [],
@@ -57360,7 +57373,7 @@
    "ko": "캘린더 연결",
    "en": "Connect calendar",
    "files": [
-    "MapHomeTodayCalendar.swift:302"
+    "MapHomeTodayCalendar.swift:304"
    ],
    "args": [],
    "targets": [
@@ -57396,7 +57409,7 @@
    "ko": "캘린더 접근 허용",
    "en": "Allow calendar access",
    "files": [
-    "MapHomeTodayCalendar.swift:165"
+    "MapHomeTodayCalendar.swift:167"
    ],
    "args": [],
    "targets": [
@@ -57408,7 +57421,7 @@
    "ko": "캘린더 접근이 꺼져 있어요. 설정 > 개인정보 보호에서 허용해 주세요.",
    "en": "Calendar access is off. Enable it in Settings > Privacy.",
    "files": [
-    "MapHomeTodayCalendar.swift:177"
+    "MapHomeTodayCalendar.swift:179"
    ],
    "args": [],
    "targets": [
@@ -58595,7 +58608,7 @@
    "ko": "하루 지출",
    "en": "Daily spending",
    "files": [
-    "LedgerMemoPanel.swift:250"
+    "LedgerMemoPanel.swift:252"
    ],
    "args": [],
    "targets": [
@@ -58734,7 +58747,7 @@
    "ko": "학교",
    "en": "School",
    "files": [
-    "MapHomeLaunchPrompts.swift:511"
+    "MapHomeLaunchPrompts.swift:490"
    ],
    "args": [],
    "targets": [
@@ -58794,7 +58807,7 @@
    "ko": "학원",
    "en": "Academy",
    "files": [
-    "MapHomeLaunchPrompts.swift:512",
+    "MapHomeLaunchPrompts.swift:491",
     "record-classification.json:0"
    ],
    "args": [],
@@ -58907,6 +58920,18 @@
    "en": "Month avg",
    "files": [
     "MapHomeCalendarSheet.swift:304"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "할 일 목록|To-do list",
+   "ko": "할 일 목록",
+   "en": "To-do list",
+   "files": [
+    "MapHomeLaunchPrompts.swift:262"
    ],
    "args": [],
    "targets": [
@@ -59776,6 +59801,7 @@
    "ko": "확인",
    "en": "Check",
    "files": [
+    "LedgerMemoPanel.swift:12",
     "TripImportSheet.swift:664"
    ],
    "args": [],
@@ -59835,24 +59861,11 @@
    ]
   },
   {
-   "key": "확인할 것|Things to check",
-   "ko": "확인할 것",
-   "en": "Things to check",
-   "files": [
-    "MapHomeLaunchPrompts.swift:262",
-    "MapHomeLaunchPrompts.swift:329"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "확인할 것은 연결된 AI에게 넘길 수 있어요. 넘긴 것은 「AI」 탭에서 볼 수 있고, AI가 확신이 없으면 앱에서 다시 물어봐요.|You can hand these to your connected AI. Handed items appear in the AI tab, and the AI asks you in the app when it isn't sure.",
    "ko": "확인할 것은 연결된 AI에게 넘길 수 있어요. 넘긴 것은 「AI」 탭에서 볼 수 있고, AI가 확신이 없으면 앱에서 다시 물어봐요.",
    "en": "You can hand these to your connected AI. Handed items appear in the AI tab, and the AI asks you in the app when it isn't sure.",
    "files": [
-    "MapHomeLaunchPrompts.swift:325"
+    "MapHomeLaunchPrompts.swift:319"
    ],
    "args": [],
    "targets": [
@@ -60032,7 +60045,7 @@
    "en": "Work",
    "files": [
     "FirstRunTutorialGuides.swift:695",
-    "MapHomeLaunchPrompts.swift:513",
+    "MapHomeLaunchPrompts.swift:492",
     "FirstRunTutorialGuides.swift:695"
    ],
    "args": [],

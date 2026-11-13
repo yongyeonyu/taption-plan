@@ -230,57 +230,42 @@ extension MapHomeView {
     }
 }
 
-/// 「나중에 확인」을 누른 날에만 보이는 「확인할 것」 단추. 위쪽 단추 줄에서 돋보기 바로 오른쪽에 놓인다(대표 지시: 한 줄로).
-/// 누르면 그날 미룬 질문을 다시 차례로 묻는다.
-struct MapHomeLaunchPromptDeferredButton: View {
+/// 왼쪽 위 할 일 목록 단추(TDP1113A01). 누르면 확인할 것·일정·메모·지출·AI를 모은 패널을 열고 닫는다.
+/// 늘 같은 자리에 둔다(대표 지시 2026-11-12). 「나중에 확인」을 누른 날에는 강조색.
+struct MapHomeTodoButton: View {
     let language: MapHomeLanguage
-    /// 지금 확인할 것 전부.
-    let items: () async -> [MapHomeLaunchPrompt]
-    /// 「내가 확인」: 그 질문을 띄운다.
-    let onConfirm: (MapHomeLaunchPrompt) -> Void
+    let isOpen: Bool
+    /// 그날 메모 수. 닫혀 있을 때 작은 숫자로 보인다(없앤 메모 단추의 표시).
+    let count: Int
+    let action: () -> Void
     @AppStorage(MapHomeLaunchPromptDeferral.key) private var deferredDay = ""
-    /// 목록 내용을 시트와 함께 넘긴다. 따로 둔 상태는 시트가 뜰 때 예전 값(빈 목록)으로 읽혔다(TDL1113A02).
-    @State private var presented: Listing?
-
-    struct Listing: Identifiable {
-        let id = UUID()
-        let items: [MapHomeLaunchPrompt]
-    }
 
     var body: some View {
-        // 늘 같은 자리에 둔다(대표 지시 2026-11-12: 생겼다 없어지면 옆 단추가 밀린다). 미뤄 둔 날에만 강조색.
-        Button {
-            Task { presented = Listing(items: await items()) }
-        } label: {
-            Image(systemName: "checklist")
+        Button(action: action) {
+            Image(systemName: isOpen ? "xmark" : "checklist")
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(MapHomeLaunchPromptDeferral.isDeferred(deferredDay) ? Color.tpAccent : Color.tpSecondary)
                 .frame(width: 40, height: 40)
                 .background { TaptionStickerDisc() }
+                .overlay(alignment: .topTrailing) {
+                    if count > 0, !isOpen {
+                        Text("\(count)")
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(Color.tpReferenceBlue, in: Capsule())
+                    }
+                }
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(language.text("확인할 것", "Things to check"))
+        .accessibilityLabel(language.text("할 일 목록", "To-do list"))
         .accessibilityIdentifier("launchPrompts.deferred")
-        .sheet(item: $presented) { listing in
-            MapHomeTodoSheet(language: language, items: listing.items, canUseAI: MemoPolishQueue.hasConnection()) { prompt in
-                presented = nil
-                deferredDay = ""
-                // 시트가 닫힌 뒤에 띄운다(두 표시가 겹치면 뒤의 것이 안 뜬다).
-                Task { try? await Task.sleep(for: .milliseconds(450)); onConfirm(prompt) }
-            } onHandOff: { prompt in
-                guard let task = MapHomeLaunchPromptHandoff.task(for: prompt),
-                      AITaskQueue.enqueue(task.kind, text: task.text, day: .now) else { return false }
-                MapHomeLaunchPromptHandoff.markHanded(prompt.id)
-                return true
-            }
-            .presentationDetents([.medium, .large])
-            .presentationDragIndicator(.visible)
-        }
     }
 }
 
-/// 「확인할 것」 목록(TDL1112A01). 항목마다 내가 확인하거나, AI가 끝낼 수 있는 것은 AI에게 넘긴다.
-struct MapHomeTodoSheet: View {
+/// 「확인할 것」 줄들(TDL1112A01). 항목마다 내가 확인하거나, AI가 끝낼 수 있는 것은 AI에게 넘긴다.
+struct MapHomeTodoRows: View {
     let language: MapHomeLanguage
     let items: [MapHomeLaunchPrompt]
     let canUseAI: Bool
@@ -290,48 +275,36 @@ struct MapHomeTodoSheet: View {
     @State private var handed = MapHomeLaunchPromptHandoff.handed()
 
     var body: some View {
-        NavigationStack {
-            List {
-                if items.isEmpty {
-                    Text(language.text("지금 확인할 것이 없어요.", "Nothing to check right now."))
-                        .font(.taptionStyle(.subheadline))
-                        .foregroundStyle(Color.tpSecondary)
-                }
-                ForEach(items) { item in
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(title(item))
-                            .font(.taptionStyle(.body, weight: .semibold))
-                            .foregroundStyle(Color.tpInk)
-                        HStack(spacing: 8) {
-                            Button(language.text("내가 확인", "I'll check")) { onConfirm(item) }
-                                .buttonStyle(.borderedProminent)
-                                .tint(Color.tpAccent)
-                            if handed.contains(item.id) {
-                                Label(language.text("AI에게 넘김", "Handed to AI"), systemImage: "sparkles")
-                                    .font(.taptionStyle(.caption))
-                                    .foregroundStyle(Color.tpSecondary)
-                            } else if canUseAI, MapHomeLaunchPromptHandoff.task(for: item) != nil {
-                                Button(language.text("AI에게 넘기기", "Hand to AI")) { if onHandOff(item) { handed.insert(item.id) } }
-                                    .buttonStyle(.bordered)
-                                    .tint(Color.tpAccent)
-                            }
-                        }
-                        .font(.taptionStyle(.subheadline))
+        ForEach(items) { item in
+            VStack(alignment: .leading, spacing: 8) {
+                Text(MapHomeTodoRows.title(item, language: language))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
+                    .foregroundStyle(Color.tpInk)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 8) {
+                    Button(language.text("내가 확인", "I'll check")) { onConfirm(item) }
+                        .buttonStyle(.borderedProminent)
+                        .tint(Color.tpAccent)
+                    if handed.contains(item.id) {
+                        Label(language.text("AI에게 넘김", "Handed to AI"), systemImage: "sparkles")
+                            .foregroundStyle(Color.tpSecondary)
+                    } else if canUseAI, MapHomeLaunchPromptHandoff.task(for: item) != nil {
+                        Button(language.text("AI에게 넘기기", "Hand to AI")) { if onHandOff(item) { handed.insert(item.id) } }
+                            .buttonStyle(.bordered)
+                            .tint(Color.tpAccent)
                     }
-                    .padding(.vertical, 4)
                 }
-                Section {} footer: {
-                    Text(canUseAI
-                        ? language.text("확인할 것은 연결된 AI에게 넘길 수 있어요. 넘긴 것은 「AI」 탭에서 볼 수 있고, AI가 확신이 없으면 앱에서 다시 물어봐요.", "You can hand these to your connected AI. Handed items appear in the AI tab, and the AI asks you in the app when it isn't sure.")
-                        : language.text("AI를 연결하면 확인할 것을 AI에게 넘길 수 있어요.", "Connect an AI to hand these off."))
-                }
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
+                .controlSize(.small)
             }
-            .navigationTitle(language.text("확인할 것", "Things to check"))
-            .navigationBarTitleDisplayMode(.inline)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 9)
+            .mapHomeGlass(in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
         }
     }
 
-    private func title(_ item: MapHomeLaunchPrompt) -> String {
+    static func title(_ item: MapHomeLaunchPrompt, language: MapHomeLanguage) -> String {
         switch item {
         case .carAudio(let name): language.text("‘\(name)’ 기기가 내 차인가요?", "Is ‘\(name)’ your car?")
         case .boarding: language.text("지하철·버스 탑승 확인", "Check a subway or bus ride")
@@ -339,6 +312,12 @@ struct MapHomeTodoSheet: View {
         case .frequentPlace: language.text("자주 머무는 곳 등록", "Register a place you stay often")
         case .unconfirmed(let minutes): language.text("미확인 시간 \(minutes)분", "\(minutes) min unconfirmed")
         }
+    }
+
+    static func footer(canUseAI: Bool, language: MapHomeLanguage) -> String {
+        canUseAI
+            ? language.text("확인할 것은 연결된 AI에게 넘길 수 있어요. 넘긴 것은 「AI」 탭에서 볼 수 있고, AI가 확신이 없으면 앱에서 다시 물어봐요.", "You can hand these to your connected AI. Handed items appear in the AI tab, and the AI asks you in the app when it isn't sure.")
+            : language.text("AI를 연결하면 확인할 것을 AI에게 넘길 수 있어요.", "Connect an AI to hand these off.")
     }
 }
 

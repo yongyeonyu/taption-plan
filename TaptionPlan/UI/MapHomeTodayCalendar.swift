@@ -137,6 +137,8 @@ struct MapHomeTodayCalendarList: View {
     /// 일정 제목별로 저장한 상세활동과, 사용자가 고쳤을 때 알리는 곳(CAL1103A01).
     var titleDetails: [String: CalendarTitleDetail] = [:]
     var onChooseDetail: (String, MapHomeCalendarTitleChoice) -> Void = { _, _ in }
+    /// 할 일 목록 패널 안에 넣을 때는 판 안쪽 폭(TDP1113A01).
+    var width: CGFloat = 280
 
     @State private var state: LoadState = .loading
     /// 지금 화면에 올라와 있는 목록이 어느 날짜 것인지. 날짜가 바뀌면 곧바로 로딩으로 돌린다.
@@ -209,7 +211,7 @@ struct MapHomeTodayCalendarList: View {
             }
         }
         .padding(12)
-        .frame(width: 280, alignment: .leading)
+        .frame(width: width, alignment: .leading)
         .mapHomeGlass(in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
         .task(id: MapHomeDayCalendarLoader.key(day: date)) { await load() }
     }

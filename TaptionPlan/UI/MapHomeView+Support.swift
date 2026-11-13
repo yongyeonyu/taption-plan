@@ -912,7 +912,7 @@ extension MapHomeView {
         !memo.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    /// 왼쪽 상단: 메모 원형 버튼과 구글 일정 버튼. 일정을 누르면 오늘 일정 목록이 펼쳐진다.
+    /// 왼쪽 상단: 돋보기·할 일 목록·집. 할 일 목록을 누르면 확인할 것·일정·메모·지출·AI를 모은 패널이 펼쳐진다(TDP1113A01).
     /// 메뉴 단추는 하단 맨 왼쪽으로 내렸다(대표 요청, 2026-10-26).
     var topLeftControls: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -921,21 +921,9 @@ extension MapHomeView {
                 HStack(spacing: 8) {
                     if passportReturnPage != nil { passportBackButton }
                     searchCircleButton
-                    MapHomeLaunchPromptDeferredButton(language: language, items: { await launchPromptQueue() }) { presentLaunchPrompt($0) }
+                    // 메모·일정 단추는 없애고 할 일 목록 하나로 모았다(TDP1113A01).
+                    MapHomeTodoButton(language: language, isOpen: memoStackExpanded, count: todoMemoCount) { toggleTodoPanel() }
                     modeButtons
-                    if recordingShows(\.sidebarMemos), memoDisplayMode == .all {
-                        memoCircleButton
-                    }
-                    MapHomeCalendarButton(isExpanded: todayCalendarExpanded, count: dayCalendarEventsForSelectedDate.count) {
-                        switch calendarAccessProblem {
-                        case .googleFailed:
-                            model.selectTab(.settings)
-                        case .permissionDenied:
-                            if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
-                        case nil:
-                            withAnimation(.snappy) { todayCalendarExpanded.toggle() }
-                        }
-                    }
                 }
             }
             // 현재 시간 ±15분 안의 메모·일정은 목록을 펼치지 않아도 왼쪽 상단에 보인다.
@@ -961,7 +949,7 @@ extension MapHomeView {
                             if let id = row.memoID {
                                 selectedMapStickerEditor = .memo(id)
                             } else {
-                                withAnimation(.snappy) { todayCalendarExpanded = true }
+                                openTodoPanel(.schedule)
                             }
                         }
                         .accessibilityAddTraits(.isButton)
@@ -975,7 +963,7 @@ extension MapHomeView {
             ForEach(topPanelOrder, id: \.self) { panel in
                 switch panel {
                 case .memo:
-                    if memoStackExpanded, recordingShows(\.sidebarMemos), memoDisplayMode == .all {
+                    if memoStackExpanded {
                         memoListPanel
                             .transition(.opacity.combined(with: .move(edge: .top)))
                     }

@@ -494,6 +494,8 @@ struct MapHomeView: View {
     @State var isPassportPresented = false
     @State var isTravelAddChoicePresented = false
     @State var memoLedgerFilter = LedgerMemoFilter.all
+    /// 할 일 목록 패널의 「확인할 것」. 패널을 열 때 읽는다(TDP1113A01).
+    @State var todoItems: [MapHomeLaunchPrompt] = []
     @State var memoLedgerLinkedIDs: Set<UUID> = []
     @State var isTripImportPresented = false
     @State var isLocationAlwaysPromptPresented = false
