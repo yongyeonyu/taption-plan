@@ -6238,6 +6238,83 @@
         }
       }
     },
+    "AI를 먼저 연결해 주세요. 영수증 글자는 연결된 AI가 읽어요.|Connect an AI first. Your AI reads the receipt text." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先にAIを接続してください。レシートの文字は接続したAIが読みます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请先连接 AI。小票文字由已连接的 AI 读取。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請先連接 AI。收據文字由已連接的 AI 讀取。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verbinde zuerst eine KI. Deine KI liest den Belegtext."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connectez d’abord une IA. Votre IA lit le texte du reçu."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collega prima un’IA. La tua IA legge il testo dello scontrino."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conecta primero una IA. Tu IA lee el texto del recibo."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conecte uma IA primeiro. Sua IA lê o texto do recibo."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hãy kết nối AI trước. AI của bạn sẽ đọc chữ trên hóa đơn."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hubungkan AI terlebih dahulu. AI Anda membaca teks struk."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "โปรดเชื่อมต่อ AI ก่อน AI ของคุณจะอ่านข้อความในใบเสร็จ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "पहले AI कनेक्ट करें। रसीद का टेक्स्ट आपका AI पढ़ता है।"
+          }
+        }
+      }
+    },
     "AI를 연결하면 확인할 것을 AI에게 넘길 수 있어요.|Connect an AI to hand these off." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6700,79 +6777,79 @@
         }
       }
     },
-    "AI에게 맡긴 일이 없어요.|Nothing is waiting for your AI." : {
+    "AI에게 요청하기|Ask your AI now" : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "AIに任せたことはありません。"
+            "value" : "AIに依頼する"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "没有交给AI的事。"
+            "value" : "立即请求 AI"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "沒有交給AI的事。"
+            "value" : "立即請求 AI"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nichts wartet auf deine KI."
+            "value" : "KI jetzt bitten"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Rien n’attend votre IA."
+            "value" : "Demander à votre IA"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Niente in attesa per la tua IA."
+            "value" : "Chiedi ora alla tua IA"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No hay nada pendiente para tu IA."
+            "value" : "Pedir a tu IA ahora"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nada aguardando sua IA."
+            "value" : "Pedir à sua IA agora"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Không có việc nào chờ AI."
+            "value" : "Yêu cầu AI ngay"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tidak ada yang menunggu AI Anda."
+            "value" : "Minta AI sekarang"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ไม่มีงานที่รอ AI"
+            "value" : "ขอให้ AI ทำตอนนี้"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "आपके AI के लिए कुछ भी प्रतीक्षा में नहीं है।"
+            "value" : "AI से अभी कहें"
           }
         }
       }
@@ -223609,6 +223686,160 @@
         }
       }
     },
+    "그날 AI에게 맡긴 일이 없어요.|Nothing was handed to your AI that day." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "その日AIに任せたことはありません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当天没有交给 AI 的事项。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "當天沒有交給 AI 的事項。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An diesem Tag wurde nichts an deine KI übergeben."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rien n’a été confié à votre IA ce jour-là."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quel giorno non è stato affidato nulla alla tua IA."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ese día no se encargó nada a tu IA."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nada foi entregue à sua IA nesse dia."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ngày đó không có việc nào giao cho AI."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak ada yang diserahkan ke AI pada hari itu."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "วันนั้นไม่มีงานที่มอบให้ AI"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "उस दिन AI को कोई काम नहीं सौंपा गया।"
+          }
+        }
+      }
+    },
+    "그날 받은 결제 문자·알림이 없어요.|No payment texts or alerts that day." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "その日に受け取った決済メッセージ・通知はありません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当天没有收到付款短信或通知。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "當天沒有收到付款簡訊或通知。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Zahlungs-SMS oder Mitteilungen an diesem Tag."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucun SMS ni alerte de paiement ce jour-là."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nessun SMS o avviso di pagamento quel giorno."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No hubo SMS ni avisos de pago ese día."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nenhum SMS ou alerta de pagamento nesse dia."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ngày đó không có tin nhắn hay thông báo thanh toán."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak ada SMS atau notifikasi pembayaran hari itu."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "วันนั้นไม่มีข้อความหรือการแจ้งเตือนการชำระเงิน"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "उस दिन कोई भुगतान संदेश या सूचना नहीं मिली।"
+          }
+        }
+      }
+    },
     "그날 지출이 없어요. 메모에 「커피 4500」처럼 쓰면 들어가요.|No spending that day. Write a memo like \"Coffee 4500\" to add one." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -235001,6 +235232,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "आंतरिक"
+          }
+        }
+      }
+    },
+    "내역|Inbox" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "受信"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "收件"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "收件"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eingang"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reçus"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ricevuti"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recibidos"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recebidos"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã nhận"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Masuk"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ที่ได้รับ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "प्राप्त"
           }
         }
       }
@@ -274352,6 +274660,83 @@
         }
       }
     },
+    "설정에서 사진 접근을 허용해 주세요.|Allow photo access in Settings." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定で写真へのアクセスを許可してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请在设置中允许访问照片。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請在設定中允許取用照片。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erlaube den Fotozugriff in den Einstellungen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Autorisez l’accès aux photos dans Réglages."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Consenti l’accesso alle foto in Impostazioni."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permite el acceso a las fotos en Ajustes."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permita o acesso às fotos em Ajustes."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hãy cho phép truy cập ảnh trong Cài đặt."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Izinkan akses foto di Pengaturan."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "โปรดอนุญาตการเข้าถึงรูปภาพในการตั้งค่า"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सेटिंग्स में फ़ोटो एक्सेस की अनुमति दें।"
+          }
+        }
+      }
+    },
     "설정을 기본값으로 초기화할까요?|Reset settings to defaults?" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -288054,6 +288439,160 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "एक्शन आइटम का समय रूटीन की अवधि के भीतर होना चाहिए।"
+          }
+        }
+      }
+    },
+    "앨범 영수증 자동 확인|Check album receipts automatically" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アルバムのレシートを自動確認"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动检查相册小票"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動檢查相簿收據"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belege im Album automatisch prüfen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vérifier les reçus de l’album automatiquement"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Controlla automaticamente gli scontrini dell’album"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Revisar recibos del álbum automáticamente"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verificar recibos do álbum automaticamente"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tự động kiểm tra hóa đơn trong album"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Periksa struk di album secara otomatis"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ตรวจใบเสร็จในอัลบั้มอัตโนมัติ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "एल्बम की रसीदें अपने-आप जाँचें"
+          }
+        }
+      }
+    },
+    "앨범에서 영수증 {0}장을 찾아 AI에게 맡겼어요.|Found {0} receipts in your album and sent them to your AI." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アルバムでレシートを{0}枚見つけ、AIに任せました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在相册中找到 {0} 张小票并已交给 AI。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在相簿中找到 {0} 張收據並已交給 AI。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} Belege im Album gefunden und an deine KI gesendet."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} reçus trouvés dans l’album et envoyés à votre IA."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trovati {0} scontrini nell’album e inviati alla tua IA."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se encontraron {0} recibos en tu álbum y se enviaron a tu IA."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} recibos encontrados no álbum e enviados à sua IA."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã tìm thấy {0} hóa đơn trong album và gửi cho AI của bạn."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menemukan {0} struk di album dan mengirimkannya ke AI Anda."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "พบใบเสร็จ {0} ใบในอัลบั้มและส่งให้ AI ของคุณแล้ว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "एल्बम में {0} रसीदें मिलीं और आपके AI को भेज दी गईं।"
           }
         }
       }
@@ -308540,6 +309079,83 @@
         }
       }
     },
+    "요청 글을 복사했어요. {0}에 붙여 넣고 보내 주세요.|Request copied. Paste it into {0} and send." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "依頼文をコピーしました。{0}に貼り付けて送信してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已复制请求内容。请粘贴到 {0} 并发送。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已複製請求內容。請貼到 {0} 並傳送。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anfrage kopiert. In {0} einfügen und senden."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Demande copiée. Collez-la dans {0} et envoyez."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Richiesta copiata. Incollala in {0} e invia."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Solicitud copiada. Pégala en {0} y envíala."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pedido copiado. Cole no {0} e envie."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã sao chép yêu cầu. Dán vào {0} rồi gửi."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permintaan disalin. Tempel di {0} lalu kirim."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คัดลอกคำขอแล้ว วางใน {0} แล้วส่ง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "अनुरोध कॉपी हो गया। इसे {0} में पेस्ट करके भेजें।"
+          }
+        }
+      }
+    },
     "요청 형식이 맞지 않아요. 앱을 업데이트해 주세요.|The request wasn't accepted. Please update the app." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -324017,6 +324633,83 @@
         }
       }
     },
+    "이제 앨범에 영수증 사진이 들어오면 AI에게 맡겨요. 사진은 기기를 떠나지 않고 글자만 가요.|New receipt photos in your album now go to your AI. Photos stay on the device; only the text is sent." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今後、アルバムにレシートの写真が入るとAIに任せます。写真は端末から出ず、文字だけが送られます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今后相册中出现小票照片时会交给 AI。照片不会离开设备，只发送文字。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今後相簿中出現收據照片時會交給 AI。照片不會離開裝置，只傳送文字。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neue Belegfotos im Album gehen jetzt an deine KI. Fotos bleiben auf dem Gerät; nur der Text wird gesendet."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les nouvelles photos de reçus de l’album sont désormais envoyées à votre IA. Les photos restent sur l’appareil ; seul le texte est envoyé."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le nuove foto di scontrini nell’album ora vanno alla tua IA. Le foto restano sul dispositivo; viene inviato solo il testo."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Las nuevas fotos de recibos del álbum ahora van a tu IA. Las fotos no salen del dispositivo; solo se envía el texto."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Novas fotos de recibos no álbum agora vão para sua IA. As fotos ficam no aparelho; só o texto é enviado."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Từ giờ ảnh hóa đơn mới trong album sẽ được gửi cho AI. Ảnh không rời khỏi thiết bị; chỉ gửi phần chữ."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Foto struk baru di album kini dikirim ke AI Anda. Foto tetap di perangkat; hanya teks yang dikirim."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "จากนี้รูปใบเสร็จใหม่ในอัลบั้มจะถูกส่งให้ AI รูปภาพไม่ออกจากอุปกรณ์ ส่งเฉพาะข้อความเท่านั้น"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "अब एल्बम में नई रसीद की फ़ोटो आपके AI को जाएगी। फ़ोटो डिवाइस पर ही रहती हैं; केवल टेक्स्ट भेजा जाता है।"
+          }
+        }
+      }
+    },
     "이체·출금 문자에 이 이름이 들어 있으면 내 계좌로 옮긴 돈으로 보고 지출에 넣지 않아요. 이름은 이 기기에만 둬요.|If a transfer or withdrawal text contains one of these names, it's treated as moving money to your own account and isn't added as spending. Names stay on this device." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -334485,83 +335178,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "सब कुछ तालिका में निकालें"
-          }
-        }
-      }
-    },
-    "전체|All" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "すべて"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "全部"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "全部"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Alle"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tout"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tutto"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Todo"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tudo"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tất cả"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Semua"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ทั้งหมด"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "सब"
           }
         }
       }

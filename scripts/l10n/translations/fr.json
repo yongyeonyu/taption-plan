@@ -5617,6 +5617,11 @@
 "설정에서 사진 접근을 허용해 주세요.|Allow photo access in Settings.": "Autorisez l’accès aux photos dans Réglages.",
 "앨범 영수증 자동 확인|Check album receipts automatically": "Vérifier les reçus de l’album automatiquement",
 "앨범에서 영수증 {0}장을 찾아 AI에게 맡겼어요.|Found {0} receipts in your album and sent them to your AI.": "{0} reçus trouvés dans l’album et envoyés à votre IA.",
-"이제 앨범에 영수증 사진이 들어오면 AI에게 맡겨요. 사진은 기기를 떠나지 않고 글자만 가요.|New receipt photos in your album now go to your AI. Photos stay on the device; only the text is sent.": "Les nouvelles photos de reçus de l’album sont désormais envoyées à votre IA. Les photos restent sur l’appareil ; seul le texte est envoyé."
+"이제 앨범에 영수증 사진이 들어오면 AI에게 맡겨요. 사진은 기기를 떠나지 않고 글자만 가요.|New receipt photos in your album now go to your AI. Photos stay on the device; only the text is sent.": "Les nouvelles photos de reçus de l’album sont désormais envoyées à votre IA. Les photos restent sur l’appareil ; seul le texte est envoyé.",
+"AI에게 요청하기|Ask your AI now": "Demander à votre IA",
+"요청 글을 복사했어요. {0}에 붙여 넣고 보내 주세요.|Request copied. Paste it into {0} and send.": "Demande copiée. Collez-la dans {0} et envoyez.",
+"그날 AI에게 맡긴 일이 없어요.|Nothing was handed to your AI that day.": "Rien n’a été confié à votre IA ce jour-là.",
+"그날 받은 결제 문자·알림이 없어요.|No payment texts or alerts that day.": "Aucun SMS ni alerte de paiement ce jour-là.",
+"내역|Inbox": "Reçus"
 }
 }

@@ -4,7 +4,7 @@ import SwiftUI
 /// 할 일 목록 패널의 거르기(LED1111A03, TDP1113A01): 전체 · 확인 · 일정 · 메모 · 지출 · AI.
 enum LedgerMemoFilter: String, CaseIterable, Identifiable {
     /// 맨 앞 「지출」: 지출 합계 한 줄만 보이는 접힌 모양(TDW1114A01). 예전 「전체」·「지출」 탭은 없앴다.
-    case today, check, schedule, memos, ai
+    case today, check, schedule, memos, inbox, ai
     var id: String { rawValue }
 
     func title(_ language: MapHomeLanguage) -> String {
@@ -13,6 +13,8 @@ enum LedgerMemoFilter: String, CaseIterable, Identifiable {
         case .check: language.text("확인", "Check")
         case .schedule: language.text("일정", "Events")
         case .memos: language.text("메모", "Memos")
+        // 받은 결제 문자·알림(INB1114A01).
+        case .inbox: language.text("내역", "Inbox")
         // AI에게 맡긴 일(AIQ1111A01).
         case .ai: "AI"
         }

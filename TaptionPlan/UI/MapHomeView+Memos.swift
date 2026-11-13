@@ -204,8 +204,10 @@ extension MapHomeView {
             switch memoLedgerFilter {
             case .today:
                 EmptyView()
+            case .inbox:
+                AITaskPanel(language: language, day: model.selectedDate, section: .inbox)
             case .ai:
-                AITaskPanel(language: language)
+                AITaskPanel(language: language, day: model.selectedDate, section: .ai)
             case .check:
                 todoCheckRows(showsEmpty: true)
             case .schedule:

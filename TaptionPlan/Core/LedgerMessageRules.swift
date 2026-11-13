@@ -196,7 +196,7 @@ struct PaymentInboxList: View {
                 Text(language.text("받은 결제 문자·알림", "Payment texts received"))
                     .font(.taptionStyle(.caption, weight: .semibold))
                     .foregroundStyle(Color.tpSecondary)
-                ForEach(items.prefix(6)) { item in
+                ForEach(items.prefix(40)) { item in
                     Button { open(item) } label: {
                         HStack(alignment: .top, spacing: 8) {
                             Image(systemName: PaymentInboxDetail.symbol(item.outcome))

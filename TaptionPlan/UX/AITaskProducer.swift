@@ -234,6 +234,39 @@ enum ReceiptPhotoScanner {
         return taken
     }
 
+    /// 영수증에 찍힌 시각(시:분)을 그날에 얹는다. 없으면 nil.
+    nonisolated static func receiptMoment(_ lines: [String], day: Date, calendar: Calendar = .autoupdatingCurrent) -> Date? {
+        let regex = try? NSRegularExpression(pattern: #"(?<![0-9:])([01]?[0-9]|2[0-3]):([0-5][0-9])(?![0-9])"#)
+        for line in lines {
+            let text = line as NSString
+            guard let match = regex?.firstMatch(in: line, range: NSRange(location: 0, length: text.length)),
+                  let hour = Int(text.substring(with: match.range(at: 1))), let minute = Int(text.substring(with: match.range(at: 2)))
+            else { continue }
+            return calendar.date(bySettingHour: hour, minute: minute, second: 0, of: day)
+        }
+        return nil
+    }
+
+    /// 같은 결제로 볼 가계부 기록(대표 지시 2026-11-14: 결제 시간·금액·장소가 같으면 한 건만).
+    /// 금액이 같고, 시각이 앞뒤 10분 안(영수증에 시각이 없으면 같은 날)이며, 가게 이름이 겹친다(영수증에서 이름을 못 읽었으면 이름은 보지 않는다).
+    nonisolated static func sameSpending(amount: Double, merchant: String?, day: Date, moment: Date?, in entries: [LedgerEntry],
+                                         calendar: Calendar = .autoupdatingCurrent) -> LedgerEntry? {
+        entries.first { entry in
+            guard entry.kind == .expense, abs(entry.amount - amount) < 0.5 else { return false }
+            if let moment { guard abs(entry.occurredAt.timeIntervalSince(moment)) <= 600 else { return false } }
+            else { guard calendar.isDate(entry.occurredAt, inSameDayAs: day) else { return false } }
+            guard let merchant, !merchant.isEmpty else { return moment != nil }
+            return namesOverlap(merchant, entry.title) || (entry.place.map { namesOverlap(merchant, $0) } ?? false)
+        }
+    }
+
+    /// 띄어쓰기·기호를 뺀 이름이 서로를 품거나 앞 두 글자가 같다.
+    nonisolated static func namesOverlap(_ a: String, _ b: String) -> Bool {
+        let x = a.lowercased().filter { $0.isLetter || $0.isNumber }, y = b.lowercased().filter { $0.isLetter || $0.isNumber }
+        guard x.count >= 2, y.count >= 2 else { return false }
+        return x.contains(y) || y.contains(x) || x.prefix(2) == y.prefix(2)
+    }
+
     /// 읽지 못한 사진을 건너뛸지. 방금 찍은 것은 기기 잠금·저장 중일 수 있어 다음에 다시 본다.
     nonisolated static func skipsUnreadable(created: Date, now: Date) -> Bool { now.timeIntervalSince(created) > 3_600 }
 
@@ -263,8 +296,18 @@ enum ReceiptPhotoScanner {
             }
             let lines = await LedgerReceiptReader.recognize(image)
             seen += 1
-            if isReceipt(lines), AITaskQueue.enqueue(.receiptText, text: lines.joined(separator: "\n"), day: receiptDay(lines, taken: created),
-                                                    context: ["from": "photo_album"], defaults: defaults) { sent += 1 }
+            if isReceipt(lines) {
+                let day = receiptDay(lines, taken: created)
+                var context = ["from": "photo_album"]
+                // 결제 문자로 이미 들어간 같은 결제가 있으면 새로 넣지 않고 그 기록을 확인만 하게 한다.
+                if let draft = LedgerReceiptReader.draft(lines) {
+                    await LedgerBook.shared.load()
+                    let match = sameSpending(amount: draft.amount, merchant: draft.merchant, day: day,
+                                             moment: receiptMoment(lines, day: day), in: LedgerBook.shared.entries)
+                    if let match { context["entryId"] = match.id.uuidString }
+                }
+                if AITaskQueue.enqueue(.receiptText, text: lines.joined(separator: "\n"), day: day, context: context, defaults: defaults) { sent += 1 }
+            }
             defaults.set(created.timeIntervalSince1970, forKey: cursorKey)
         }
         if seen > 0 { TaptionPlanDiagnosticsLogger.shared.record("receipt_photo_scan", fields: ["seen": String(seen), "sent": String(sent)]) }

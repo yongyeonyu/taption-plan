@@ -5617,6 +5617,11 @@
 "설정에서 사진 접근을 허용해 주세요.|Allow photo access in Settings.": "सेटिंग्स में फ़ोटो एक्सेस की अनुमति दें।",
 "앨범 영수증 자동 확인|Check album receipts automatically": "एल्बम की रसीदें अपने-आप जाँचें",
 "앨범에서 영수증 {0}장을 찾아 AI에게 맡겼어요.|Found {0} receipts in your album and sent them to your AI.": "एल्बम में {0} रसीदें मिलीं और आपके AI को भेज दी गईं।",
-"이제 앨범에 영수증 사진이 들어오면 AI에게 맡겨요. 사진은 기기를 떠나지 않고 글자만 가요.|New receipt photos in your album now go to your AI. Photos stay on the device; only the text is sent.": "अब एल्बम में नई रसीद की फ़ोटो आपके AI को जाएगी। फ़ोटो डिवाइस पर ही रहती हैं; केवल टेक्स्ट भेजा जाता है।"
+"이제 앨범에 영수증 사진이 들어오면 AI에게 맡겨요. 사진은 기기를 떠나지 않고 글자만 가요.|New receipt photos in your album now go to your AI. Photos stay on the device; only the text is sent.": "अब एल्बम में नई रसीद की फ़ोटो आपके AI को जाएगी। फ़ोटो डिवाइस पर ही रहती हैं; केवल टेक्स्ट भेजा जाता है।",
+"AI에게 요청하기|Ask your AI now": "AI से अभी कहें",
+"요청 글을 복사했어요. {0}에 붙여 넣고 보내 주세요.|Request copied. Paste it into {0} and send.": "अनुरोध कॉपी हो गया। इसे {0} में पेस्ट करके भेजें।",
+"그날 AI에게 맡긴 일이 없어요.|Nothing was handed to your AI that day.": "उस दिन AI को कोई काम नहीं सौंपा गया।",
+"그날 받은 결제 문자·알림이 없어요.|No payment texts or alerts that day.": "उस दिन कोई भुगतान संदेश या सूचना नहीं मिली।",
+"내역|Inbox": "प्राप्त"
 }
 }

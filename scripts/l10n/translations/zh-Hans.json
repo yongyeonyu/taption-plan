@@ -5617,6 +5617,11 @@
 "설정에서 사진 접근을 허용해 주세요.|Allow photo access in Settings.": "请在设置中允许访问照片。",
 "앨범 영수증 자동 확인|Check album receipts automatically": "自动检查相册小票",
 "앨범에서 영수증 {0}장을 찾아 AI에게 맡겼어요.|Found {0} receipts in your album and sent them to your AI.": "在相册中找到 {0} 张小票并已交给 AI。",
-"이제 앨범에 영수증 사진이 들어오면 AI에게 맡겨요. 사진은 기기를 떠나지 않고 글자만 가요.|New receipt photos in your album now go to your AI. Photos stay on the device; only the text is sent.": "今后相册中出现小票照片时会交给 AI。照片不会离开设备，只发送文字。"
+"이제 앨범에 영수증 사진이 들어오면 AI에게 맡겨요. 사진은 기기를 떠나지 않고 글자만 가요.|New receipt photos in your album now go to your AI. Photos stay on the device; only the text is sent.": "今后相册中出现小票照片时会交给 AI。照片不会离开设备，只发送文字。",
+"AI에게 요청하기|Ask your AI now": "立即请求 AI",
+"요청 글을 복사했어요. {0}에 붙여 넣고 보내 주세요.|Request copied. Paste it into {0} and send.": "已复制请求内容。请粘贴到 {0} 并发送。",
+"그날 AI에게 맡긴 일이 없어요.|Nothing was handed to your AI that day.": "当天没有交给 AI 的事项。",
+"그날 받은 결제 문자·알림이 없어요.|No payment texts or alerts that day.": "当天没有收到付款短信或通知。",
+"내역|Inbox": "收件"
 }
 }

@@ -3,51 +3,136 @@ import SwiftUI
 /// 메모 패널 「AI」 탭(AIQ1111A01): AI에게 맡긴 일과 상태(대기·처리중·완료·실패), 끝난 것 지우기.
 /// 앱이 못 읽은 결제 문자·영수증, 메모 다듬기처럼 AI가 처리할 것이 여기 쌓이고, 처리됐는지 이 목록으로 본다.
 struct AITaskPanel: View {
+    /// 「내역」 탭은 받은 문자·알림, 「AI」 탭은 맡긴 일과 AI가 한 일(INB1114A01). 둘 다 고른 날 것만.
+    enum Section { case inbox, ai }
+
     let language: MapHomeLanguage
+    let day: Date
+    var section: Section = .ai
+    @State private var log: [AssistantLogEntry] = []
 
     @State private var tasks: [AITaskQueue.Task] = []
     @State private var isLoading = false
     @State private var inbox: [PaymentInbox.Item] = []
     @State private var opened: PaymentInbox.Item?
+    @State private var requestNote: String?
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            AssistantQuestionList(language: language)
-            PaymentInboxList(language: language, items: inbox) { opened = $0 }
-            if !MemoPolishQueue.hasConnection() {
-                note(language.text("AI 연결이 없어요. 메뉴 › AI 연결에서 연결하면 앱이 못한 일을 AI가 처리해요.",
-                                   "No AI is connected. Connect one in Menu › AI connection to let it handle what the app couldn't."))
-            } else if tasks.isEmpty, AssistantQuestionStore.shared.items.isEmpty {
-                note(isLoading ? language.text("불러오는 중…", "Loading…") : language.text("AI에게 맡긴 일이 없어요.", "Nothing is waiting for your AI."))
-            }
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(tasks) { row($0) }
-                }
-            }
-            .frame(maxHeight: 320)
-            .refreshable { await reload() }
-            if tasks.contains(where: { $0.status == .done || $0.status == .failed }) {
-                Button {
-                    Task {
-                        if await AITaskQueue.deleteFinished() { tasks = Self.merged() }
-                    }
-                } label: {
-                    Label(language.text("끝난 일 지우기", "Clear finished"), systemImage: "trash")
-                        .font(.taptionStyle(.caption, weight: .semibold))
-                        .foregroundStyle(Color.tpSecondary)
-                }
-                .buttonStyle(.plain)
+            switch section {
+            case .inbox: inboxSection
+            case .ai: aiSection
             }
         }
         .task {
             tasks = Self.merged()
             inbox = PaymentInbox.items().reversed()
+            log = AssistantActionLog.load()
             await reload()
         }
         .sheet(item: $opened, onDismiss: { inbox = PaymentInbox.items().reversed(); tasks = Self.merged() }) {
             PaymentInboxDetail(language: language, item: $0)
         }
+    }
+
+    @ViewBuilder
+    private var inboxSection: some View {
+        let items = inbox.filter { Self.isOn(day, $0.receivedAt) }
+        if items.isEmpty {
+            note(language.text("그날 받은 결제 문자·알림이 없어요.", "No payment texts or alerts that day."))
+        } else {
+            ScrollView(showsIndicators: false) {
+                PaymentInboxList(language: language, items: items) { opened = $0 }
+            }
+            .frame(maxHeight: 360)
+        }
+    }
+
+    @ViewBuilder
+    private var aiSection: some View {
+        let shown = Self.tasks(tasks, on: day)
+        let done = log.filter { Self.isOn(day, $0.appliedAt) }
+        AssistantQuestionList(language: language)
+        if !MemoPolishQueue.hasConnection() {
+            note(language.text("AI 연결이 없어요. 메뉴 › AI 연결에서 연결하면 앱이 못한 일을 AI가 처리해요.",
+                               "No AI is connected. Connect one in Menu › AI connection to let it handle what the app couldn't."))
+        } else if shown.isEmpty, done.isEmpty, AssistantQuestionStore.shared.items.isEmpty {
+            note(isLoading ? language.text("불러오는 중…", "Loading…") : language.text("그날 AI에게 맡긴 일이 없어요.", "Nothing was handed to your AI that day."))
+        }
+        // 서버는 AI를 깨울 수 없다. 기다리는 일이 있으면 눌러서 연결된 AI 앱을 열고 요청 글을 붙여 넣게 한다(AIG1114A01).
+        if tasks.contains(where: { $0.status == .waiting || $0.status == .processing }) {
+            Button { requestAI() } label: {
+                Label(language.text("AI에게 요청하기", "Ask your AI now"), systemImage: "paperplane.fill")
+                    .font(.taptionStyle(.caption, weight: .semibold))
+                    .foregroundStyle(Color.tpAccent)
+            }
+            .buttonStyle(.plain)
+            if let requestNote { note(requestNote) }
+        }
+        if !shown.isEmpty || !done.isEmpty {
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(shown) { row($0) }
+                    if !done.isEmpty {
+                        Text(language.text("AI가 한 일", "What the AI did"))
+                            .font(.taptionStyle(.caption, weight: .semibold))
+                            .foregroundStyle(Color.tpSecondary)
+                        ForEach(done) { logRow($0) }
+                    }
+                }
+            }
+            .frame(maxHeight: 320)
+            .refreshable { await reload() }
+        }
+        if tasks.contains(where: { $0.status == .done || $0.status == .failed }) {
+            Button {
+                Task {
+                    if await AITaskQueue.deleteFinished() { tasks = Self.merged() }
+                }
+            } label: {
+                Label(language.text("끝난 일 지우기", "Clear finished"), systemImage: "trash")
+                    .font(.taptionStyle(.caption, weight: .semibold))
+                    .foregroundStyle(Color.tpSecondary)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    /// 「AI가 한 일」 한 줄: 무엇을, 전 → 후, 어느 AI가, 언제. 되돌리기는 메뉴 › AI가 한 일에서 한다.
+    private func logRow(_ entry: AssistantLogEntry) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack {
+                Text(entry.kind.title(language)).font(.taptionStyle(.caption, weight: .semibold)).foregroundStyle(Color.tpInk)
+                Spacer(minLength: 0)
+                Text(entry.appliedAt.formatted(date: .omitted, time: .shortened)).font(.taptionStyle(.caption2)).foregroundStyle(Color.tpSecondary)
+            }
+            Text("\(entry.before.isEmpty ? language.text("새로", "New") : entry.before) → \(entry.after)")
+                .font(.taptionStyle(.caption)).foregroundStyle(Color.tpInk).lineLimit(2)
+            if let connection = AssistantConnectionName.shown(entry) {
+                Text(connection + (entry.undoneAt == nil ? "" : " · " + language.text("되돌렸어요", "Undone")))
+                    .font(.taptionStyle(.caption2)).foregroundStyle(Color.tpSecondary)
+            }
+        }
+        .padding(8)
+        .background(Color.tpCard.opacity(0.9), in: RoundedRectangle(cornerRadius: TaptionCorner.small, style: .continuous))
+    }
+
+    nonisolated static func isOn(_ day: Date, _ date: Date, calendar: Calendar = .autoupdatingCurrent) -> Bool {
+        calendar.isDate(date, inSameDayAs: day)
+    }
+
+    /// 그날 맡긴 일. 맡긴 때를 모르는 것(아직 못 올린 것)은 오늘로 본다.
+    nonisolated static func tasks(_ tasks: [AITaskQueue.Task], on day: Date, now: Date = .now, calendar: Calendar = .autoupdatingCurrent) -> [AITaskQueue.Task] {
+        tasks.filter { isOn(day, $0.createdAt ?? now, calendar: calendar) }
+    }
+
+
+    private func requestAI() {
+        AssistantClipboard.copy(AITaskRequest.prompt)
+        let provider = AITaskRequest.provider()
+        requestNote = language.text("요청 글을 복사했어요. \(provider.title(language))에 붙여 넣고 보내 주세요.", "Request copied. Paste it into \(provider.title(language)) and send.")
+        if let url = provider.destination(installed: provider.isInstalled) { openURL(url) }
     }
 
     private func reload() async {
@@ -397,5 +482,19 @@ struct AssistantQuestionHost: View {
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
         }
+    }
+}
+
+/// 「AI에게 요청하기」(AIG1114A01): 붙여 넣을 글과 열 AI 앱.
+enum AITaskRequest {
+    /// AI가 읽는 글이라 영어로 둔다. 개인 정보는 없다.
+    static let prompt = "Check BOKKI Plan now: call get_ai_tasks, handle every task as its kind says, then call complete_ai_task for each one, one at a time. Also check get_polish_requests and get_command_results. Reply in Korean with a short list of what you did."
+
+    /// 연결된 AI 가운데 앱이 있는 것. 고른 AI → OAuth 앱 이름 순으로 찾고, 없으면 Claude.
+    static func provider(defaults: UserDefaults = .standard) -> AssistantAIProvider {
+        let chosen = (defaults.dictionary(forKey: AssistantKeyProviders.defaultsKey) as? [String: String] ?? [:]).values.compactMap(AssistantAIProvider.init(rawValue:))
+        let clients = (defaults.dictionary(forKey: AssistantKeyLabels.clientsKey) as? [String: String] ?? [:]).values
+        let named = AssistantAIProvider.featured.filter { provider in clients.contains(where: provider.matchesClient) }
+        return (chosen + named).first { $0.scheme != nil } ?? .claude
     }
 }

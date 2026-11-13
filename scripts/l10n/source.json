@@ -748,8 +748,8 @@
    "ko": "AI 승인 요청",
    "en": "AI approval request",
    "files": [
-    "AITaskPanel.swift:310",
-    "AITaskPanel.swift:365",
+    "AITaskPanel.swift:395",
+    "AITaskPanel.swift:450",
     "AITaskQueue.swift:452"
    ],
    "args": [],
@@ -849,7 +849,7 @@
    "ko": "AI 연결이 없어요. 메뉴 › AI 연결에서 연결하면 앱이 못한 일을 AI가 처리해요.",
    "en": "No AI is connected. Connect one in Menu › AI connection to let it handle what the app couldn't.",
    "files": [
-    "AITaskPanel.swift:18"
+    "AITaskPanel.swift:58"
    ],
    "args": [],
    "targets": [
@@ -899,8 +899,8 @@
    "ko": "AI 질문",
    "en": "AI question",
    "files": [
-    "AITaskPanel.swift:225",
-    "AITaskPanel.swift:366",
+    "AITaskPanel.swift:310",
+    "AITaskPanel.swift:451",
     "AITaskQueue.swift:452"
    ],
    "args": [],
@@ -951,6 +951,7 @@
    "ko": "AI가 한 일",
    "en": "What the AI did",
    "files": [
+    "AITaskPanel.swift:78",
     "AssistantSafetyViews.swift:334",
     "AssistantSettingsView.swift:32"
    ],
@@ -1094,11 +1095,11 @@
    ]
   },
   {
-   "key": "AI에게 맡긴 일이 없어요.|Nothing is waiting for your AI.",
-   "ko": "AI에게 맡긴 일이 없어요.",
-   "en": "Nothing is waiting for your AI.",
+   "key": "AI에게 요청하기|Ask your AI now",
+   "ko": "AI에게 요청하기",
+   "en": "Ask your AI now",
    "files": [
-    "AITaskPanel.swift:21"
+    "AITaskPanel.swift:66"
    ],
    "args": [],
    "targets": [
@@ -3895,7 +3896,7 @@
    "ko": "{0}건",
    "en": "{0} entries",
    "files": [
-    "LedgerMemoPanel.swift:262"
+    "LedgerMemoPanel.swift:264"
    ],
    "args": [
     "list.count"
@@ -34051,7 +34052,7 @@
    "ko": "거절",
    "en": "Decline",
    "files": [
-    "AITaskPanel.swift:325"
+    "AITaskPanel.swift:410"
    ],
    "args": [],
    "targets": [
@@ -34063,7 +34064,7 @@
    "ko": "거절함",
    "en": "Declined",
    "files": [
-    "AITaskPanel.swift:203"
+    "AITaskPanel.swift:288"
    ],
    "args": [],
    "targets": [
@@ -34316,7 +34317,7 @@
    "ko": "건너뛰기",
    "en": "Skip",
    "files": [
-    "AITaskPanel.swift:249",
+    "AITaskPanel.swift:334",
     "FirstRunTutorialView.swift:82",
     "PermissionOnboardingSheet.swift:280"
    ],
@@ -34330,7 +34331,7 @@
    "ko": "건너뜀",
    "en": "Skipped",
    "files": [
-    "AITaskPanel.swift:201"
+    "AITaskPanel.swift:286"
    ],
    "args": [],
    "targets": [
@@ -34672,7 +34673,7 @@
    "ko": "결제 문자 규칙 요청",
    "en": "Payment rule request",
    "files": [
-    "AITaskPanel.swift:140"
+    "AITaskPanel.swift:225"
    ],
    "args": [],
    "targets": [
@@ -34721,7 +34722,7 @@
    "ko": "결제 문자 확인",
    "en": "Payment text",
    "files": [
-    "AITaskPanel.swift:133"
+    "AITaskPanel.swift:218"
    ],
    "args": [],
    "targets": [
@@ -34879,7 +34880,7 @@
    "ko": "경로 확인",
    "en": "Route check",
    "files": [
-    "AITaskPanel.swift:136"
+    "AITaskPanel.swift:221"
    ],
    "args": [],
    "targets": [
@@ -35702,7 +35703,7 @@
    "ko": "교통비 확인",
    "en": "Fare check",
    "files": [
-    "AITaskPanel.swift:137"
+    "AITaskPanel.swift:222"
    ],
    "args": [],
    "targets": [
@@ -36134,12 +36135,36 @@
    ]
   },
   {
+   "key": "그날 AI에게 맡긴 일이 없어요.|Nothing was handed to your AI that day.",
+   "ko": "그날 AI에게 맡긴 일이 없어요.",
+   "en": "Nothing was handed to your AI that day.",
+   "files": [
+    "AITaskPanel.swift:61"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "그날 받은 결제 문자·알림이 없어요.|No payment texts or alerts that day.",
+   "ko": "그날 받은 결제 문자·알림이 없어요.",
+   "en": "No payment texts or alerts that day.",
+   "files": [
+    "AITaskPanel.swift:43"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "그날 지출이 없어요. 메모에 「커피 4500」처럼 쓰면 들어가요.|No spending that day. Write a memo like \"Coffee 4500\" to add one.",
    "ko": "그날 지출이 없어요. 메모에 「커피 4500」처럼 쓰면 들어가요.",
    "en": "No spending that day. Write a memo like \"Coffee 4500\" to add one.",
    "files": [
-    "LedgerMemoPanel.swift:126",
-    "LedgerMemoPanel.swift:261"
+    "LedgerMemoPanel.swift:128",
+    "LedgerMemoPanel.swift:263"
    ],
    "args": [],
    "targets": [
@@ -37088,7 +37113,7 @@
    "ko": "기타 확인",
    "en": "Other",
    "files": [
-    "AITaskPanel.swift:141"
+    "AITaskPanel.swift:226"
    ],
    "args": [],
    "targets": [
@@ -37329,7 +37354,7 @@
    "ko": "끝난 일 지우기",
    "en": "Clear finished",
    "files": [
-    "AITaskPanel.swift:36"
+    "AITaskPanel.swift:94"
    ],
    "args": [],
    "targets": [
@@ -37341,7 +37366,7 @@
    "ko": "끝난 질문 지우기",
    "en": "Clear answered questions",
    "files": [
-    "AITaskPanel.swift:184"
+    "AITaskPanel.swift:269"
    ],
    "args": [],
    "targets": [
@@ -38016,6 +38041,18 @@
    "en": "Internal",
    "files": [
     "PaymentAlertSources.swift:363"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "내역|Inbox",
+   "ko": "내역",
+   "en": "Inbox",
+   "files": [
+    "LedgerMemoPanel.swift:17"
    ],
    "args": [],
    "targets": [
@@ -38806,7 +38843,7 @@
    "ko": "답하기",
    "en": "Answer",
    "files": [
-    "AITaskPanel.swift:244"
+    "AITaskPanel.swift:329"
    ],
    "args": [],
    "targets": [
@@ -38818,7 +38855,7 @@
    "ko": "답할 질문이 없어요.",
    "en": "No questions to answer.",
    "files": [
-    "AITaskPanel.swift:391"
+    "AITaskPanel.swift:476"
    ],
    "args": [],
    "targets": [
@@ -38856,7 +38893,7 @@
    "ko": "대기",
    "en": "Waiting",
    "files": [
-    "AITaskPanel.swift:111",
+    "AITaskPanel.swift:196",
     "MapHomeView+Support2.swift:910",
     "SensorCollectionLiveActivity.swift:265"
    ],
@@ -39577,6 +39614,7 @@
    "ko": "되돌렸어요",
    "en": "Undone",
    "files": [
+    "AITaskPanel.swift:113",
     "AssistantSafetyViews.swift:351"
    ],
    "args": [],
@@ -40308,7 +40346,7 @@
    "ko": "머문 장소 확인",
    "en": "Stay place",
    "files": [
-    "AITaskPanel.swift:139"
+    "AITaskPanel.swift:224"
    ],
    "args": [],
    "targets": [
@@ -40583,7 +40621,7 @@
    "ko": "메모 {0}",
    "en": "Memo {0}",
    "files": [
-    "MapHomeView+Memos.swift:402"
+    "MapHomeView+Memos.swift:404"
    ],
    "args": [
     "memo.text"
@@ -40663,7 +40701,7 @@
    "ko": "메모 다듬기",
    "en": "Polish memo",
    "files": [
-    "AITaskPanel.swift:135"
+    "AITaskPanel.swift:220"
    ],
    "args": [],
    "targets": [
@@ -42828,7 +42866,7 @@
    "ko": "분류별",
    "en": "By category",
    "files": [
-    "LedgerMemoPanel.swift:258"
+    "LedgerMemoPanel.swift:260"
    ],
    "args": [],
    "targets": [
@@ -42853,7 +42891,7 @@
    "ko": "불러오는 중…",
    "en": "Loading…",
    "files": [
-    "AITaskPanel.swift:21"
+    "AITaskPanel.swift:61"
    ],
    "args": [],
    "targets": [
@@ -43851,7 +43889,7 @@
    "en": "New memo",
    "files": [
     "MapHomeStickerEditor.swift:569",
-    "MapHomeView+Memos.swift:415"
+    "MapHomeView+Memos.swift:417"
    ],
    "args": [],
    "targets": [
@@ -43924,7 +43962,7 @@
    "ko": "새 지도 메모",
    "en": "New map memo",
    "files": [
-    "MapHomeView+Memos.swift:538"
+    "MapHomeView+Memos.swift:540"
    ],
    "args": [],
    "targets": [
@@ -43973,6 +44011,7 @@
    "ko": "새로",
    "en": "New",
    "files": [
+    "AITaskPanel.swift:110",
     "AssistantSafetyViews.swift:345"
    ],
    "args": [],
@@ -45533,7 +45572,7 @@
    "ko": "승인",
    "en": "Approve",
    "files": [
-    "AITaskPanel.swift:322"
+    "AITaskPanel.swift:407"
    ],
    "args": [],
    "targets": [
@@ -45581,7 +45620,7 @@
    "ko": "승인함",
    "en": "Approved",
    "files": [
-    "AITaskPanel.swift:203"
+    "AITaskPanel.swift:288"
    ],
    "args": [],
    "targets": [
@@ -45727,7 +45766,7 @@
    "ko": "시간순",
    "en": "By time",
    "files": [
-    "LedgerMemoPanel.swift:259"
+    "LedgerMemoPanel.swift:261"
    ],
    "args": [],
    "targets": [
@@ -46118,7 +46157,7 @@
    "ko": "실패",
    "en": "Failed",
    "files": [
-    "AITaskPanel.swift:114",
+    "AITaskPanel.swift:199",
     "AppModel+Export.swift:30"
    ],
    "args": [],
@@ -47724,7 +47763,7 @@
    "ko": "여기에 메모",
    "en": "Memo here",
    "files": [
-    "MapHomeView+Memos.swift:499"
+    "MapHomeView+Memos.swift:501"
    ],
    "args": [],
    "targets": [
@@ -47748,7 +47787,7 @@
    "ko": "여러 개 고를 수 있어요.",
    "en": "You can pick more than one.",
    "files": [
-    "AITaskPanel.swift:233"
+    "AITaskPanel.swift:318"
    ],
    "args": [],
    "targets": [
@@ -49441,7 +49480,7 @@
    "ko": "영수증 확인",
    "en": "Receipt",
    "files": [
-    "AITaskPanel.swift:134"
+    "AITaskPanel.swift:219"
    ],
    "args": [],
    "targets": [
@@ -50052,7 +50091,7 @@
    "en": "Today",
    "files": [
     "GPXExportCard.swift:15",
-    "LedgerMemoPanel.swift:104",
+    "LedgerMemoPanel.swift:106",
     "WatchTodayCards.swift:117"
    ],
    "args": [],
@@ -50229,7 +50268,7 @@
    "files": [
     "LedgerMessageRules.swift:288",
     "PaymentAlertSources.swift:324",
-    "AITaskPanel.swift:113"
+    "AITaskPanel.swift:198"
    ],
    "args": [],
    "targets": [
@@ -50336,6 +50375,20 @@
     "TaptionPlanWidget",
     "TaptionPlanWatch",
     "TaptionPlanWatchWidget"
+   ]
+  },
+  {
+   "key": "요청 글을 복사했어요. {0}에 붙여 넣고 보내 주세요.|Request copied. Paste it into {0} and send.",
+   "ko": "요청 글을 복사했어요. {0}에 붙여 넣고 보내 주세요.",
+   "en": "Request copied. Paste it into {0} and send.",
+   "files": [
+    "AITaskPanel.swift:134"
+   ],
+   "args": [
+    "provider.title(language)"
+   ],
+   "targets": [
+    "TaptionPlan"
    ]
   },
   {
@@ -52070,7 +52123,7 @@
    "ko": "이 위치로",
    "en": "Use this spot",
    "files": [
-    "MapHomeView+Memos.swift:498"
+    "MapHomeView+Memos.swift:500"
    ],
    "args": [],
    "targets": [
@@ -52804,7 +52857,7 @@
    "ko": "이번 달",
    "en": "This month",
    "files": [
-    "LedgerMemoPanel.swift:107"
+    "LedgerMemoPanel.swift:109"
    ],
    "args": [],
    "targets": [
@@ -54669,7 +54722,7 @@
    "ko": "접기",
    "en": "Collapse",
    "files": [
-    "MapHomeView+Memos.swift:249"
+    "MapHomeView+Memos.swift:251"
    ],
    "args": [],
    "targets": [
@@ -54877,7 +54930,7 @@
    "ko": "조각 합침 검토",
    "en": "Merge review",
    "files": [
-    "AITaskPanel.swift:138"
+    "AITaskPanel.swift:223"
    ],
    "args": [],
    "targets": [
@@ -55004,7 +55057,7 @@
    "ko": "종일",
    "en": "All day",
    "files": [
-    "LedgerMemoPanel.swift:350",
+    "LedgerMemoPanel.swift:352",
     "MapHomeTodayCalendar.swift:236"
    ],
    "args": [],
@@ -55466,7 +55519,7 @@
    "ko": "지금 확인할 것이 없어요.",
    "en": "Nothing to check right now.",
    "files": [
-    "MapHomeView+Memos.swift:320"
+    "MapHomeView+Memos.swift:322"
    ],
    "args": [],
    "targets": [
@@ -55900,7 +55953,7 @@
    "ko": "지도를 움직여 핀 위치를 맞추세요",
    "en": "Move the map to place the pin",
    "files": [
-    "MapHomeView+Memos.swift:461"
+    "MapHomeView+Memos.swift:463"
    ],
    "args": [],
    "targets": [
@@ -56429,7 +56482,7 @@
    "ko": "직접 입력",
    "en": "Type your own answer",
    "files": [
-    "AITaskPanel.swift:239"
+    "AITaskPanel.swift:324"
    ],
    "args": [],
    "targets": [
@@ -56806,7 +56859,7 @@
    "ko": "처리중",
    "en": "Working",
    "files": [
-    "AITaskPanel.swift:112"
+    "AITaskPanel.swift:197"
    ],
    "args": [],
    "targets": [
@@ -57394,7 +57447,7 @@
    "ko": "취소됨",
    "en": "Canceled",
    "files": [
-    "LedgerMemoPanel.swift:163",
+    "LedgerMemoPanel.swift:165",
     "LedgerSheet.swift:305"
    ],
    "args": [],
@@ -58981,7 +59034,7 @@
    "ko": "하루 지출",
    "en": "Daily spending",
    "files": [
-    "LedgerMemoPanel.swift:255"
+    "LedgerMemoPanel.swift:257"
    ],
    "args": [],
    "targets": [

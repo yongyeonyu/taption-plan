@@ -5,6 +5,19 @@ import TaptionPlanEngine
 /// 가계부(LED1110A01): AI 명령 읽기, 환율, 단체 정산, 오늘 손익, 메모리 장부.
 @MainActor
 final class LedgerTests: XCTestCase {
+    /// 「AI에게 요청하기」가 여는 AI(AIG1114A01): 고른 AI → OAuth 앱 이름 → Claude.
+    func testAITaskRequestPicksConnectedProvider() {
+        let name = "ai-request-\(UUID().uuidString)"
+        let store = UserDefaults(suiteName: name)!
+        defer { store.removePersistentDomain(forName: name) }
+        XCTAssertEqual(AITaskRequest.provider(defaults: store), .claude)
+        AssistantKeyLabels.saveClients([AssistantScopedKey(id: "k1", scope: .write, expiresAt: nil, source: "oauth", client: "ChatGPT")], defaults: store)
+        XCTAssertEqual(AITaskRequest.provider(defaults: store), .chatGPT)
+        AssistantKeyProviders.save("k2", provider: .pickle, defaults: store)
+        XCTAssertEqual(AITaskRequest.provider(defaults: store), .pickle)
+        XCTAssertTrue(AITaskRequest.prompt.contains("get_ai_tasks"))
+    }
+
     /// 앨범 영수증 자동 확인(RPA1114A01): 영수증만 고르고, 켜면 하루 전부터 본다.
     @MainActor
     func testReceiptPhotoJudgementAndEnabling() {
@@ -26,6 +39,23 @@ final class LedgerTests: XCTestCase {
         XCTAssertEqual(ReceiptPhotoScanner.receiptDay(["2026/11/14 00:50"], taken: taken, calendar: calendar), taken, "same day keeps the photo time")
         XCTAssertEqual(ReceiptPhotoScanner.receiptDay(["2027-01-01"], taken: taken, calendar: calendar), taken, "a future date is not trusted")
         XCTAssertEqual(ReceiptPhotoScanner.receiptDay(["사업자 123-45-67890"], taken: taken, calendar: calendar), taken)
+        // 결제 문자로 이미 들어간 같은 결제는 한 건으로(금액·시각 10분·가게 이름).
+        let paidAt = calendar.date(from: DateComponents(year: 2026, month: 11, day: 13, hour: 18, minute: 44))!
+        let fromText = LedgerEntry(occurredAt: paidAt, amount: 10_000, title: "맛있는식당 본점", source: .message)
+        let other = LedgerEntry(occurredAt: paidAt, amount: 10_000, title: "동네약국", source: .message)
+        let moment = ReceiptPhotoScanner.receiptMoment(["거래일시 2026-11-13 18:42:10"], day: yesterday, calendar: calendar)
+        XCTAssertEqual(moment.map { calendar.component(.minute, from: $0) }, 42)
+        XCTAssertEqual(ReceiptPhotoScanner.sameSpending(amount: 10_000, merchant: "맛있는식당", day: yesterday, moment: moment, in: [other, fromText], calendar: calendar)?.id, fromText.id)
+        XCTAssertNil(ReceiptPhotoScanner.sameSpending(amount: 9_000, merchant: "맛있는식당", day: yesterday, moment: moment, in: [fromText], calendar: calendar), "different amount")
+        XCTAssertNil(ReceiptPhotoScanner.sameSpending(amount: 10_000, merchant: "맛있는식당", day: yesterday, moment: moment?.addingTimeInterval(3_600), in: [fromText], calendar: calendar), "an hour apart")
+        XCTAssertNil(ReceiptPhotoScanner.sameSpending(amount: 10_000, merchant: "다른가게", day: yesterday, moment: moment, in: [fromText], calendar: calendar), "different shop")
+        XCTAssertNotNil(ReceiptPhotoScanner.sameSpending(amount: 10_000, merchant: "맛있는식당", day: yesterday, moment: nil, in: [fromText], calendar: calendar), "no time on the receipt: same day")
+        // 「AI」·「내역」 탭은 고른 날 것만.
+        let today = AITaskQueue.Task(id: "t", kind: .receiptText, status: .waiting, createdAt: taken)
+        let old = AITaskQueue.Task(id: "o", kind: .receiptText, status: .done, createdAt: paidAt)
+        let pending = AITaskQueue.Task(id: "p", kind: .other, status: .waiting)
+        XCTAssertEqual(AITaskPanel.tasks([today, old, pending], on: taken, now: taken, calendar: calendar).map(\.id), ["t", "p"])
+        XCTAssertEqual(AITaskPanel.tasks([today, old, pending], on: paidAt, now: taken, calendar: calendar).map(\.id), ["o"])
         let name = "receipt-scan-\(UUID().uuidString)"
         let store = UserDefaults(suiteName: name)!
         defer { store.removePersistentDomain(forName: name) }
@@ -1429,7 +1459,8 @@ final class TodoPanelTests: XCTestCase {
     private let day = Date(timeIntervalSince1970: 1_794_000_000)
 
     func testTabsPutCheckAndScheduleRightAfterAll() {
-        XCTAssertEqual(LedgerMemoFilter.allCases, [.today, .check, .schedule, .memos, .ai])
+        XCTAssertEqual(LedgerMemoFilter.allCases, [.today, .check, .schedule, .memos, .inbox, .ai])
+        XCTAssertEqual(LedgerMemoFilter.inbox.title(.korean), "내역")
         XCTAssertEqual(LedgerMemoFilter.today.title(.korean), "지출")
         XCTAssertEqual(LedgerMemoFilter.check.title(.korean), "확인")
         XCTAssertEqual(LedgerMemoFilter.schedule.title(.korean), "일정")
