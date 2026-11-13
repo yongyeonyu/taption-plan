@@ -256,26 +256,44 @@ struct PaymentInboxDetail: View {
                 }
                 Section { Label(item.message, systemImage: Self.symbol(item.outcome)) }
                 PaymentInboxChoiceSection(language: language, item: $item, notice: $notice)
+                // 학습·삭제는 고르기 줄 바로 아래에 둔다(PIX1114A01, 대표 지시: 아래 메뉴를 위로).
                 Section {
-                    Button {
-                        Task { await askAI() }
-                    } label: { Label(language.text("AI에게 규칙 추가 요청", "Ask AI to add a rule"), systemImage: "text.badge.plus") }
-                        .disabled(item.ruleRequested)
-                    Button { mailDeveloper() } label: {
-                        Label(language.text("개발자에게 추가 요청 메일", "Email the developer"), systemImage: "envelope")
+                    HStack(spacing: 8) {
+                        actionButton(language.text("학습", "Teach"), "text.badge.plus", tint: Color.tpAccent) { Task { await askAI() } }
+                            .disabled(item.ruleRequested)
+                            .opacity(item.ruleRequested ? 0.45 : 1)
+                            .accessibilityHint(language.text("AI에게 이 형식을 읽는 규칙을 부탁해요", "Asks your AI for a rule that reads this format"))
+                        actionButton(language.text("삭제", "Delete"), "trash", tint: Color.red) {
+                            PaymentInbox.remove(item.id)
+                            dismiss()
+                        }
                     }
-                    Button(role: .destructive) {
-                        PaymentInbox.remove(item.id)
-                        dismiss()
-                    } label: { Label(language.text("이 글 지우기", "Delete this text"), systemImage: "trash") }
+                    .buttonStyle(.plain)
                 } footer: {
-                    Text(notice ?? language.text("AI가 이 형식을 읽는 규칙을 보내면 앱이 저장하고, 그 뒤 같은 문자는 앱이 스스로 넣어요. 개발자에게 보내면 다음 버전에 모두에게 반영돼요.", "When your AI sends a rule for this format the app saves it and reads the same kind of text by itself. Mail the developer to get it built in for everyone."))
+                    Text(notice ?? language.text("「학습」을 누르면 AI가 이 형식을 읽는 규칙을 보내고, 그 뒤 같은 글은 앱이 스스로 넣어요.", "Teach asks your AI for a rule for this format; after that the app reads the same kind of text by itself."))
+                }
+                Section {
+                    Button { mailDeveloper() } label: {
+                        Label(language.text("개발자에게 반영 요청", "Ask the developer to add it"), systemImage: "envelope")
+                    }
+                } footer: {
+                    Text(language.text("개발자에게 보내면 다음 버전에 모두에게 반영돼요.", "Mail the developer to get it built in for everyone."))
                 }
             }
             .tpListStyle()
             .navigationTitle(language.text("받은 문자", "Received text"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button(language.text("완료", "Done")) { dismiss() } } }
+        }
+    }
+
+    private func actionButton(_ title: String, _ symbol: String, tint: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: symbol)
+                .font(.taptionStyle(.subheadline, weight: .medium))
+                .frame(maxWidth: .infinity, minHeight: 40)
+                .foregroundStyle(tint)
+                .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionCorner.small, style: .continuous))
         }
     }
 

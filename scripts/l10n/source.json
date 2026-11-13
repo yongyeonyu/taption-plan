@@ -935,18 +935,6 @@
    ]
   },
   {
-   "key": "AI가 이 형식을 읽는 규칙을 보내면 앱이 저장하고, 그 뒤 같은 문자는 앱이 스스로 넣어요. 개발자에게 보내면 다음 버전에 모두에게 반영돼요.|When your AI sends a rule for this format the app saves it and reads the same kind of text by itself. Mail the developer to get it built in for everyone.",
-   "ko": "AI가 이 형식을 읽는 규칙을 보내면 앱이 저장하고, 그 뒤 같은 문자는 앱이 스스로 넣어요. 개발자에게 보내면 다음 버전에 모두에게 반영돼요.",
-   "en": "When your AI sends a rule for this format the app saves it and reads the same kind of text by itself. Mail the developer to get it built in for everyone.",
-   "files": [
-    "LedgerMessageRules.swift:272"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "AI가 하루 기록을 읽고 일정·메모를 대신 정리합니다. 나중에 메뉴 > 연결에서도 할 수 있습니다.|Let an AI read your day and tidy plans and memos for you. You can also do this later in Menu > Connections.",
    "ko": "AI가 하루 기록을 읽고 일정·메모를 대신 정리합니다. 나중에 메뉴 > 연결에서도 할 수 있습니다.",
    "en": "Let an AI read your day and tidy plans and memos for you. You can also do this later in Menu > Connections.",
@@ -1045,18 +1033,6 @@
    ]
   },
   {
-   "key": "AI에게 규칙 추가 요청|Ask AI to add a rule",
-   "ko": "AI에게 규칙 추가 요청",
-   "en": "Ask AI to add a rule",
-   "files": [
-    "LedgerMessageRules.swift:262"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "AI에게 넘기기|Hand to AI",
    "ko": "AI에게 넘기기",
    "en": "Hand to AI",
@@ -1085,7 +1061,7 @@
    "ko": "AI에게 맡겼어요. 규칙이 오면 이 문자도 다시 읽어 넣어요.",
    "en": "Sent to your AI. When the rule arrives this text is read again.",
    "files": [
-    "LedgerMessageRules.swift:291"
+    "LedgerMessageRules.swift:309"
    ],
    "args": [],
    "targets": [
@@ -1110,6 +1086,18 @@
    "en": "Nothing is waiting for your AI.",
    "files": [
     "AITaskPanel.swift:21"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "AI에게 이 형식을 읽는 규칙을 부탁해요|Asks your AI for a rule that reads this format",
+   "ko": "AI에게 이 형식을 읽는 규칙을 부탁해요",
+   "en": "Asks your AI for a rule that reads this format",
+   "files": [
+    "LedgerMessageRules.swift:265"
    ],
    "args": [],
    "targets": [
@@ -33461,6 +33449,18 @@
    ]
   },
   {
+   "key": "「학습」을 누르면 AI가 이 형식을 읽는 규칙을 보내고, 그 뒤 같은 글은 앱이 스스로 넣어요.|Teach asks your AI for a rule for this format; after that the app reads the same kind of text by itself.",
+   "ko": "「학습」을 누르면 AI가 이 형식을 읽는 규칙을 보내고, 그 뒤 같은 글은 앱이 스스로 넣어요.",
+   "en": "Teach asks your AI for a rule for this format; after that the app reads the same kind of text by itself.",
+   "files": [
+    "LedgerMessageRules.swift:273"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "가게 이름 없음|No shop name",
    "ko": "가게 이름 없음",
    "en": "No shop name",
@@ -33638,7 +33638,7 @@
    "ko": "가계부에 넣음",
    "en": "Added to the ledger",
    "files": [
-    "LedgerMessageRules.swift:493"
+    "LedgerMessageRules.swift:511"
    ],
    "args": [],
    "targets": [
@@ -33933,6 +33933,18 @@
    ]
   },
   {
+   "key": "개발자에게 반영 요청|Ask the developer to add it",
+   "ko": "개발자에게 반영 요청",
+   "en": "Ask the developer to add it",
+   "files": [
+    "LedgerMessageRules.swift:277"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "개발자에게 보내기|Send to developer",
    "ko": "개발자에게 보내기",
    "en": "Send to developer",
@@ -33945,11 +33957,11 @@
    ]
   },
   {
-   "key": "개발자에게 추가 요청 메일|Email the developer",
-   "ko": "개발자에게 추가 요청 메일",
-   "en": "Email the developer",
+   "key": "개발자에게 보내면 다음 버전에 모두에게 반영돼요.|Mail the developer to get it built in for everyone.",
+   "ko": "개발자에게 보내면 다음 버전에 모두에게 반영돼요.",
+   "en": "Mail the developer to get it built in for everyone.",
    "files": [
-    "LedgerMessageRules.swift:265"
+    "LedgerMessageRules.swift:280"
    ],
    "args": [],
    "targets": [
@@ -41500,7 +41512,7 @@
    "ko": "받은 문자",
    "en": "Received text",
    "files": [
-    "LedgerMessageRules.swift:276"
+    "LedgerMessageRules.swift:284"
    ],
    "args": [],
    "targets": [
@@ -41969,7 +41981,7 @@
    "ko": "버림",
    "en": "Discarded",
    "files": [
-    "LedgerMessageRules.swift:486"
+    "LedgerMessageRules.swift:504"
    ],
    "args": [],
    "targets": [
@@ -43546,9 +43558,9 @@
    "ko": "삭제",
    "en": "Delete",
    "files": [
+    "LedgerMessageRules.swift:266",
     "MapHomePlaceBookTools.swift:843",
-    "MapHomeSettingsSheets.swift:111",
-    "MapHomeSettingsSheets.swift:144"
+    "MapHomeSettingsSheets.swift:111"
    ],
    "args": [],
    "targets": [
@@ -48569,7 +48581,7 @@
    "ko": "연결된 AI가 없어요. 메뉴 › AI 연결에서 먼저 연결해 주세요.",
    "en": "No AI is connected. Connect one in Menu › AI connection first.",
    "files": [
-    "LedgerMessageRules.swift:285"
+    "LedgerMessageRules.swift:303"
    ],
    "args": [],
    "targets": [
@@ -49431,7 +49443,7 @@
    "ko": "예산 없음",
    "en": "No budget",
    "files": [
-    "LedgerMessageRules.swift:446"
+    "LedgerMessageRules.swift:464"
    ],
    "args": [],
    "targets": [
@@ -50104,7 +50116,7 @@
    "ko": "완료",
    "en": "Done",
    "files": [
-    "LedgerMessageRules.swift:278",
+    "LedgerMessageRules.swift:286",
     "PaymentAlertSources.swift:284",
     "AITaskPanel.swift:113"
    ],
@@ -51340,18 +51352,6 @@
    "en": "You left a memo near here.",
    "files": [
     "NearbyMemoNotifications.swift:171"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "이 글 지우기|Delete this text",
-   "ko": "이 글 지우기",
-   "en": "Delete this text",
-   "files": [
-    "LedgerMessageRules.swift:270"
    ],
    "args": [],
    "targets": [
@@ -54644,7 +54644,7 @@
    "ko": "정하지 않음",
    "en": "Not set",
    "files": [
-    "LedgerMessageRules.swift:542",
+    "LedgerMessageRules.swift:560",
     "AssistantDataActions.swift:614",
     "TravelNewTripSheet.swift:70"
    ],
@@ -56009,9 +56009,9 @@
    "ko": "지움",
    "en": "Deleted",
    "files": [
-    "LedgerMessageRules.swift:470",
-    "LedgerMessageRules.swift:476",
-    "LedgerMessageRules.swift:498"
+    "LedgerMessageRules.swift:488",
+    "LedgerMessageRules.swift:494",
+    "LedgerMessageRules.swift:516"
    ],
    "args": [],
    "targets": [
@@ -59034,6 +59034,18 @@
    "en": "Study",
    "files": [
     "MapHomeInteractionPolicy.swift:457"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "학습|Teach",
+   "ko": "학습",
+   "en": "Teach",
+   "files": [
+    "LedgerMessageRules.swift:262"
    ],
    "args": [],
    "targets": [
