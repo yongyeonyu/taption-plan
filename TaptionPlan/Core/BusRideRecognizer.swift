@@ -8,6 +8,8 @@ import TaptionPlanEngine
 enum BusRideRecognizer {
     static let evidencePrefix = "등록한 차 연결 없음 · 정류장 정차"
     static let stopEvidence = "승하차 지점 버스정류장(오픈스트리트맵)"
+    /// 버스 구간 앞뒤로 이만큼 붙은 자동차 기록 조각도 버스로 본다.
+    static let edgeSeconds: TimeInterval = 90
     /// 정류장 정차로 보는 머문 시간.
     static let stopSeconds: ClosedRange<TimeInterval> = 8...75
     /// 이 속도(m/s)보다 느리면 서 있는 것으로 본다.
@@ -95,10 +97,12 @@ enum BusRideRecognizer {
         asOf now: Date
     ) -> [ActualRecord] {
         guard !busSpans.isEmpty else { return actuals }
+        // 탑승 직전·직후 몇십 초짜리 「자동차」 조각도 같은 버스다(대표 330 원본: 10:14:11~10:14:30 조각, 버스는 10:15:09부터).
+        let padded = busSpans.map { TimeSpan(start: $0.start.addingTimeInterval(-edgeSeconds), end: $0.end.addingTimeInterval(edgeSeconds)) }
         return actuals.map { actual in
             guard !ActualRecord.userOwned(actual, activityCorrections: activityCorrections),
                   MovementPresentation.mode(for: actual) == .car,
-                  busSpans.contains(where: { $0.overlapsMostly(actual.span(asOf: now)) }) else { return actual }
+                  padded.contains(where: { $0.overlapsMostly(actual.span(asOf: now)) }) else { return actual }
             var value = actual
             value.title = "버스"
             value.behavior = WatchBehaviorKind.publicTransit.rawValue

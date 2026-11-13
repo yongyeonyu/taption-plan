@@ -1366,6 +1366,13 @@ final class BusRecordRetitleTests: XCTestCase {
         XCTAssertEqual(MovementPresentation.mode(for: result[0]), .bus)
     }
 
+    func testShortCarSliverJustBeforeTheBusAlsoBecomesBus() {
+        let bus = TimeSpan(start: base.addingTimeInterval(60), end: base.addingTimeInterval(16 * 60))
+        let sliver = ActualRecord(planID: nil, title: "자동차", categoryID: "movement", startedAt: base, endedAt: base.addingTimeInterval(19),
+                                  source: .motion, behavior: "automotive", modelVersion: "classifier-v1/gap", isClassificationLocked: true, lockReason: .stability)
+        XCTAssertEqual(BusRideRecognizer.retitling([sliver], busSpans: [bus], asOf: base.addingTimeInterval(3_600)).first?.title, "버스")
+    }
+
     func testUserFixedRecordsAndOtherTimesStay() {
         let span = TimeSpan(start: base, end: base.addingTimeInterval(15 * 60))
         XCTAssertEqual(BusRideRecognizer.retitling([record("자동차", behavior: "automotive", manual: true)], busSpans: [span], asOf: base).first?.title, "자동차")
