@@ -607,7 +607,7 @@ struct MapHomePlaceRequestSheet: View {
                 }
                 Map(position: $position)
                     .frame(height: 280)
-                    .clipShape(RoundedRectangle(cornerRadius: TaptionRadius.card, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
                     .overlay {
                         Image(systemName: "mappin")
                             .font(.system(size: 30, weight: .bold))
@@ -627,7 +627,7 @@ struct MapHomePlaceRequestSheet: View {
                     .foregroundStyle(Color.tpSecondary)
                 Button(action: send) {
                     Text(language.text("메일 보내기", "Send email"))
-                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .bold))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .semibold))
                         .foregroundStyle(Color.tpBackground)
                         .frame(maxWidth: .infinity, minHeight: 44)
                         .background(canSend ? Color.tpInk : Color.tpSecondary, in: Capsule())
@@ -819,7 +819,7 @@ struct MapHomeTripPlanSheet: View {
     private func daySection(_ date: Date, _ dayStops: [TravelPlanStop]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(date, format: .dateTime.month().day().weekday())
-                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.bodyStrong), weight: .bold))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.bodyStrong), weight: .semibold))
             Map(initialPosition: dayPosition(dayStops)) {
                 ForEach(Array(TravelGreatCircleAdapter.paths(dayStops.map(\.coordinate)).enumerated()), id: \.offset) { _, path in
                     MapPolyline(coordinates: path).stroke(Color(hex: MapHomeInkWash.sealHex), lineWidth: 3)
@@ -829,7 +829,7 @@ struct MapHomeTripPlanSheet: View {
                 }
             }
             .frame(height: 220)
-            .clipShape(RoundedRectangle(cornerRadius: TaptionRadius.card, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
             .id(dayStops.map(\.id))
             ForEach(Array(dayStops.enumerated()), id: \.element.id) { index, stop in
                 HStack {

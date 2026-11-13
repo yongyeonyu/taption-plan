@@ -544,7 +544,7 @@ struct MapHomePlaceBookSheet: View {
                     let isSelected = item.id == selectedID
                     Button { action(item.id) } label: {
                         Text(item.title(language))
-                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .semibold))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .medium))
                             .foregroundStyle(isSelected ? Color.tpBackground : Color.tpInk)
                             .padding(.horizontal, 14)
                             .frame(minHeight: 44)
@@ -576,7 +576,7 @@ struct MapHomePlaceBookSheet: View {
             .foregroundStyle(Color.tpInk)
             if isTestMode {
                 Text(language.runtimeText("테스트 모드 · 기록에 저장되지 않음", "Test mode · not saved"))
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.caption), weight: .bold))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.caption), weight: .semibold))
                     .foregroundStyle(Color(hex: MapHomeInkWash.sealHex))
             }
             if let state {
@@ -584,7 +584,7 @@ struct MapHomePlaceBookSheet: View {
                     "찍은 도장 \(state.stampedCount) · 남은 곳 \(state.remainingCount)",
                     "Stamps \(state.stampedCount) · To go \(state.remainingCount)"
                 ))
-                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.body), weight: .semibold))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.body), weight: .medium))
                 .foregroundStyle(Color.tpSecondary)
             }
         }
@@ -593,7 +593,7 @@ struct MapHomePlaceBookSheet: View {
     private func section(_ title: String, entries: [MapHomePlaceBookEntry], proxy: ScrollViewProxy) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
-                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.bodyStrong), weight: .bold))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.bodyStrong), weight: .semibold))
                 .foregroundStyle(Color.tpInk)
             LazyVStack(spacing: 10) {
                 ForEach(Array(stride(from: 0, to: entries.count, by: Self.columnCount)), id: \.self) { start in
@@ -641,7 +641,7 @@ struct MapHomePlaceBookSheet: View {
                 }
             }
             .frame(height: 260)
-            .clipShape(RoundedRectangle(cornerRadius: TaptionRadius.card, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
             if !entry.summary.isEmpty {
                 Text(entry.summary)
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.body), weight: .regular))
@@ -655,10 +655,10 @@ struct MapHomePlaceBookSheet: View {
                 if entry.pins.count > 1 { airportChoice = entry } else if let pin = entry.pins.first { onSelect(pin) }
             } label: {
                 Text(language.text("큰 지도에서 보기", "Open in full map"))
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .semibold))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .medium))
                     .foregroundStyle(Color.tpInk)
                     .frame(maxWidth: .infinity, minHeight: 44)
-                    .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionRadius.card, style: .continuous))
+                    .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
             }
             .buttonStyle(.plain)
             if isTestMode {
@@ -677,10 +677,10 @@ struct MapHomePlaceBookSheet: View {
     private func toolButton(_ title: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
-                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .semibold))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .medium))
                 .foregroundStyle(Color.tpInk)
                 .frame(maxWidth: .infinity, minHeight: 44)
-                .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionRadius.card, style: .continuous))
+                .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
         }
         .buttonStyle(.plain)
     }
@@ -728,7 +728,7 @@ struct MapHomePlaceBookSheet: View {
                     stampStack(entry)
                 }
             Text(entry.title)
-                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .semibold))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .medium))
                 .foregroundStyle(entry.isVisited ? Color.tpInk : Color.tpSecondary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
@@ -739,9 +739,9 @@ struct MapHomePlaceBookSheet: View {
         }
         .padding(10)
         .frame(maxWidth: .infinity)
-        .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionRadius.card, style: .continuous))
+        .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: TaptionRadius.card, style: .continuous)
+            RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous)
                 .stroke(
                     entry.id == expandedID
                         ? Color(hex: MapHomeInkWash.sealHex)
