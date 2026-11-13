@@ -46,7 +46,7 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>332</string>
+	<string>333</string>
 	<key>INAlternativeAppNames</key>
 	<array>
 		<dict>
@@ -64,6 +64,8 @@
 	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>KAKAO_NATIVE_APP_KEY</key>
+	<string>$(KAKAO_NATIVE_APP_KEY)</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>pickle</string>
@@ -115,8 +117,6 @@
 	<string>$(PAYMENT_SHORTCUT_ICLOUD_ID)</string>
 	<key>TRIP_RELAY_HOST</key>
 	<string>$(TRIP_RELAY_HOST)</string>
-	<key>KAKAO_NATIVE_APP_KEY</key>
-	<string>$(KAKAO_NATIVE_APP_KEY)</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>SUIT-Regular.otf</string>
