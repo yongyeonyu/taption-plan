@@ -282,7 +282,7 @@ struct TravelStreetMap: UIViewRepresentable {
             let badge = UILabel(frame: CGRect(x: side / 2 - 9, y: side - 16, width: 18, height: 18))
             badge.text = pin.label
             badge.textAlignment = .center
-            badge.font = .systemFont(ofSize: 10, weight: .bold)
+            badge.font = .systemFont(ofSize: 10, weight: .semibold)
             badge.textColor = UIColor(TravelInk.land)
             badge.backgroundColor = ink
             badge.layer.cornerRadius = 9

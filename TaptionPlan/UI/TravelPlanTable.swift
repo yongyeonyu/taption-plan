@@ -612,7 +612,7 @@ struct TravelPlanTable: View {
         ZStack(alignment: .leading) {
             Rectangle().fill(TravelInk.plan).frame(width: width, height: 2).allowsHitTesting(false)
             Button { onExpenseAt(minute) } label: {
-                Text(Self.clock(minute)).font(.system(size: 11, weight: .bold).monospacedDigit()).foregroundStyle(TravelInk.land)
+                Text(Self.clock(minute)).font(.system(size: 11, weight: .semibold).monospacedDigit()).foregroundStyle(TravelInk.land)
                     .frame(width: Self.leading - 4, height: 24)
                     .background(TravelInk.plan, in: Capsule())
             }
@@ -703,7 +703,7 @@ struct TravelMiniRail: View {
             }
         }
         .frame(width: 40)
-        .background(TravelInk.panel, in: RoundedRectangle(cornerRadius: 14))
-        .overlay { RoundedRectangle(cornerRadius: 14).stroke(TravelInk.border, lineWidth: 1) }
+        .background(TravelInk.panel, in: RoundedRectangle(cornerRadius: TaptionCorner.large))
+        .overlay { RoundedRectangle(cornerRadius: TaptionCorner.large).stroke(TravelInk.border, lineWidth: 1) }
     }
 }

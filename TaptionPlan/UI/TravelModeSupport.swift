@@ -631,7 +631,7 @@ struct TravelCourseView: View {
             // 세부 계획이 있으면 개수를 작게 알린다(펼친 줄에서는 아래에 다 보인다).
             let count = TravelCourse.details(of: block, in: table.blocks).count
             if count > 0, !(isCurrent || selectedID == block.id) {
-                Text("+\(count)").font(.system(size: 9, weight: .bold).monospacedDigit()).foregroundStyle(TravelInk.plan.opacity(0.7))
+                Text("+\(count)").font(.system(size: 9, weight: .semibold).monospacedDigit()).foregroundStyle(TravelInk.plan.opacity(0.7))
                     .padding(.leading, 78).padding(.bottom, 3)
             }
         }

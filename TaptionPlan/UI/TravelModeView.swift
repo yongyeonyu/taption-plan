@@ -850,8 +850,8 @@ struct TravelModeView: View {
             }
             .frame(width: 220)
             .background(Color.white)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-            .overlay { RoundedRectangle(cornerRadius: 10).stroke(entry.id == (flyingID ?? focusedID) ? flagColor : .clear, lineWidth: 2.5) }
+            .clipShape(RoundedRectangle(cornerRadius: TaptionCorner.medium))
+            .overlay { RoundedRectangle(cornerRadius: TaptionCorner.medium).stroke(entry.id == (flyingID ?? focusedID) ? flagColor : .clear, lineWidth: 2.5) }
             }
         }
         .buttonStyle(.plain)
@@ -927,8 +927,8 @@ struct TravelModeView: View {
                 .accessibilityIdentifier("travelTripHome")
             }
             .padding(8)
-            .background(TravelInk.panel, in: RoundedRectangle(cornerRadius: 14))
-            .overlay { RoundedRectangle(cornerRadius: 14).stroke(TravelInk.border, lineWidth: 1) }
+            .background(TravelInk.panel, in: RoundedRectangle(cornerRadius: TaptionCorner.large))
+            .overlay { RoundedRectangle(cornerRadius: TaptionCorner.large).stroke(TravelInk.border, lineWidth: 1) }
             moneyBar(entry)
         }
         .foregroundStyle(TravelInk.plan)

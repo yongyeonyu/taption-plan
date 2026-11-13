@@ -19,9 +19,9 @@ struct TravelWishCard: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         .frame(width: 220, alignment: .leading)
-        .background(TravelInk.land, in: RoundedRectangle(cornerRadius: 10))
+        .background(TravelInk.land, in: RoundedRectangle(cornerRadius: TaptionCorner.medium))
         .overlay {
-            RoundedRectangle(cornerRadius: 10)
+            RoundedRectangle(cornerRadius: TaptionCorner.medium)
                 .stroke(isChosen ? color : TravelInk.plan.opacity(0.55), style: StrokeStyle(lineWidth: isChosen ? 2.5 : 1.2, dash: [5, 4]))
         }
     }

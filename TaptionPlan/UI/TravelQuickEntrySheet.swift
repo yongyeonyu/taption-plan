@@ -366,8 +366,8 @@ struct TravelQuickEntrySheet: View {
             .submitLabel(.done)
             .onSubmit { Task { await save() } }
             .padding(.horizontal, 10).frame(height: 44)
-            .background(Color.white, in: RoundedRectangle(cornerRadius: 10))
-            .overlay { RoundedRectangle(cornerRadius: 10).stroke(TravelInk.border, lineWidth: 1) }
+            .background(Color.white, in: RoundedRectangle(cornerRadius: TaptionCorner.medium))
+            .overlay { RoundedRectangle(cornerRadius: TaptionCorner.medium).stroke(TravelInk.border, lineWidth: 1) }
             .accessibilityIdentifier("travelEntryTitle")
     }
 
