@@ -1414,3 +1414,21 @@ final class TodoPanelTests: XCTestCase {
         XCTAssertEqual(MapHomeTodoPanelRow.plans([otherDay, fromCalendar, mine], on: day, calendar: calendar).map(\.title), ["운동"])
     }
 }
+
+/// 같은 날 기록 묶기(LGP1113A01: 한 번에 묶도록 바꾼 뒤에도 순서·묶음이 같다).
+final class LedgerDayGroupingTests: XCTestCase {
+    func testGroupsKeepDaysAndTimeOrder() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        let day = calendar.date(from: DateComponents(year: 2026, month: 11, day: 13, hour: 9))!
+        let entries = [
+            LedgerEntry(occurredAt: day.addingTimeInterval(86_400), amount: 3, title: "내일"),
+            LedgerEntry(occurredAt: day.addingTimeInterval(3600), amount: 2, title: "열 시"),
+            LedgerEntry(occurredAt: day, amount: 1, title: "아홉 시"),
+        ]
+        let groups = LedgerDayGroup.groups(entries, calendar: calendar)
+        XCTAssertEqual(groups.map { $0.entries.map(\.title) }, [["아홉 시", "열 시"], ["내일"]])
+        XCTAssertEqual(groups.first?.day, calendar.startOfDay(for: day))
+        XCTAssertTrue(LedgerDayGroup.groups([], calendar: calendar).isEmpty)
+    }
+}

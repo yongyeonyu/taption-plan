@@ -244,7 +244,11 @@ enum LedgerSplit {
 
 extension LedgerBook {
     /// 일상 장부: 여행 안 기록은 빼고 여행과 오간 짝 기록만 남는다.
-    var dailyEntries: [LedgerEntry] { entries.filter(isDaily) }
+    var dailyEntries: [LedgerEntry] {
+        // 여행 번호는 한 번만 모아 둔다. 기록마다 여행 목록을 훑으면 기록 수 × 여행 수가 된다(LGP1113A01).
+        let tripIDs = Set(trips.map(\.id))
+        return entries.filter { $0.tripID.map { !tripIDs.contains($0) } ?? true }
+    }
 
     /// 일상 장부 기록인가. 여행 번호가 있어도 그 여행 장부가 없으면(예전 여행 모드 기록·지운 장부) 일상으로 본다(리뷰).
     func isDaily(_ entry: LedgerEntry) -> Bool {

@@ -33,11 +33,14 @@ struct LedgerSheetHost: View {
     /// 앱 여행 계획에서 가져온 여행. 창을 열 때만 계산한다.
     var plannedTrips: () -> [LedgerTrip] = { [] }
     @Bindable private var presenter = LedgerPresenter.shared
+    /// 열 때 한 번만 만든다. 지도 화면이 다시 그려질 때마다 만들어 넘기면 가계부도 매번 다시 그려졌다(LGP1113A01).
+    @State private var trips: [LedgerTrip] = []
 
     var body: some View {
         Color.clear
             .allowsHitTesting(false)
-            .sheet(isPresented: $presenter.isPresented) { LedgerSheet(language: language, tripID: tripID, plannedTrips: plannedTrips()) }
+            .onChange(of: presenter.isPresented) { _, open in if open { trips = plannedTrips() } }
+            .sheet(isPresented: $presenter.isPresented) { LedgerSheet(language: language, tripID: tripID, plannedTrips: trips) }
     }
 }
 

@@ -24,11 +24,12 @@ struct LedgerSheet: View {
     @State private var captureBatch: LedgerCaptureBatch?
     @State private var path: [String] = []
     @State private var isAddingTrip = false
+    /// 이 달 숫자. 장부·달·여행이 바뀔 때만 다시 센다. 화면을 그릴 때마다 장부 전체를 열 번 넘게 거르면 스크롤이 끊겼다(LGP1113A01).
+    @State private var summary = LedgerMonthSummary()
     private var book: LedgerBook { .shared }
 
     var body: some View {
-        // 이 달 기록을 한 번만 걸러 시간순으로 날짜별로 묶는다. 묶음마다 다시 거르면 스크롤이 끊겼다(LDU1111A01).
-        let groups = LedgerDayGroup.groups(monthEntries)
+        let groups = summary.groups
         return NavigationStack(path: $path) {
             List {
                 Group {
@@ -75,8 +76,8 @@ struct LedgerSheet: View {
                         Button { isShowingOwnAccounts = true } label: {
                             Label(language.text("내 계좌 이름", "My account names"), systemImage: "building.columns")
                         }
-                        ShareLink(item: LedgerTableFile(name: "BOKKI-\(month).csv") { [monthEntries, monthCarryOver, monthTitle, language] in
-                            LedgerTable.csv(monthEntries, carryOver: monthCarryOver, title: language.text("BOKKI 가계부 \(monthTitle)", "BOKKI ledger \(monthTitle)"), language: language)
+                        ShareLink(item: LedgerTableFile(name: "BOKKI-\(month).csv") { [summary, monthTitle, language] in
+                            LedgerTable.csv(summary.entries, carryOver: summary.carryOver, title: language.text("BOKKI 가계부 \(monthTitle)", "BOKKI ledger \(monthTitle)"), language: language)
                         },
                                   preview: SharePreview(language.text("가계부 \(monthTitle) 표", "Ledger \(monthTitle) table"))) {
                             Label(language.text("이 달 표로 내보내기", "Export this month as a table"), systemImage: "tablecells")
@@ -91,6 +92,9 @@ struct LedgerSheet: View {
                     Button { isAdding = true } label: { Image(systemName: "plus") }
                         .accessibilityLabel(language.text("기록 더하기", "Add entry"))
                 }
+            }
+            .task(id: LedgerMonthSummary.Key(revision: book.revision, tripIDs: book.trips.map(\.id), month: month)) {
+                summary = LedgerMonthSummary(book: book, month: month)
             }
             .task {
                 await book.load()
@@ -119,29 +123,9 @@ struct LedgerSheet: View {
             .sheet(isPresented: $isShowingShortcutGuide) { BokkiShortcutsGuide(language: language) }
             .sheet(isPresented: $isShowingOwnAccounts) { LedgerOwnAccountsSheet(language: language) }
             .sheet(isPresented: $isSettling) {
-                LedgerSettleView(language: language, entries: monthEntries.filter { $0.transfer == nil })
+                LedgerSettleView(language: language, entries: summary.entries.filter { $0.transfer == nil })
             }
         }
-    }
-
-    /// 일상 장부의 이 달: 여행 안 기록은 빼고 여행과 오간 짝 기록(경비·정산)만 담는다(LED1111A05).
-    private var monthEntries: [LedgerEntry] {
-        guard let interval = monthInterval else { return [] }
-        return book.dailyEntries.filter { interval.contains($0.occurredAt) && $0.occurredAt != interval.end }
-    }
-
-    private var monthInterval: DateInterval? {
-        let parts = month.split(separator: "-").compactMap { Int($0) }
-        let calendar = Calendar.autoupdatingCurrent
-        guard parts.count == 2, let start = calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: 1)) else { return nil }
-        return calendar.dateInterval(of: .month, for: start)
-    }
-
-    /// 이 달 첫날까지의 이월잔액.
-    private var monthCarryOver: Double {
-        let first = month.split(separator: "-").compactMap { Int($0) }
-        guard first.count == 2, let start = Calendar.autoupdatingCurrent.date(from: DateComponents(year: first[0], month: first[1], day: 1)) else { return 0 }
-        return book.carryOver(before: start)
     }
 
     /// 여행 장부 목록. 장부가 있는 여행과, 앱 여행 계획 중 아직 장부가 없는 여행(누르면 만든다).
@@ -151,7 +135,7 @@ struct LedgerSheet: View {
         Section {
                 ForEach(book.trips) { trip in
                     NavigationLink(value: trip.id) {
-                        LabeledContent(trip.name, value: LedgerMoney.text(LedgerTripMath.sheet(trip, entries: book.entries).myCost, language: language))
+                        LabeledContent(trip.name, value: LedgerMoney.text(summary.tripCosts[trip.id] ?? 0, language: language))
                     }
                 }
                 ForEach(missing) { trip in
@@ -235,10 +219,8 @@ struct LedgerSheet: View {
     }
 
     private var summarySection: some View {
-        let spent = LedgerBook.total(monthEntries, .expense)
-        let earned = LedgerBook.total(monthEntries, .income)
+        let spent = summary.spent, earned = summary.earned, monthCarryOver = summary.carryOver
         let budget = book.budget(for: month)
-        let monthlyNet = MapHomeSalaryPolicy.monthlyNet(MapHomeSalaryPolicy.loadSettings())
         return Section {
             HStack {
                 Button { shiftMonth(-1) } label: { Image(systemName: "chevron.left") }
@@ -260,8 +242,7 @@ struct LedgerSheet: View {
                     .foregroundStyle(left < 0 ? Color.red : Color.primary)
                 ProgressView(value: min(1, max(0, spent / max(1, budget.amountKRW))))
             }
-            if month == LedgerBook.monthKey(.now), monthlyNet > 0 {
-                let net = book.todayNet(monthlyNet: monthlyNet)
+            if month == LedgerBook.monthKey(.now), let net = summary.todayNet {
                 LabeledContent(language.text("오늘 손익(세후 월급 기준)", "Today's net (after-tax pay)"), value: LedgerMoney.text(net, language: language))
                     .foregroundStyle(net < 0 ? Color.red : Color.green)
             }
@@ -613,14 +594,59 @@ struct LedgerDayGroup: Identifiable, Equatable {
     static func groups(_ entries: [LedgerEntry], calendar: Calendar = .autoupdatingCurrent) -> [LedgerDayGroup] {
         let sorted = entries.sorted { $0.occurredAt == $1.occurredAt ? $0.createdAt < $1.createdAt : $0.occurredAt < $1.occurredAt }
         var result: [LedgerDayGroup] = []
+        var day: Date?, current: [LedgerEntry] = []
         for entry in sorted {
-            let day = calendar.startOfDay(for: entry.occurredAt)
-            if let last = result.last, last.day == day {
-                result[result.count - 1] = LedgerDayGroup(day: day, entries: last.entries + [entry])
-            } else {
-                result.append(LedgerDayGroup(day: day, entries: [entry]))
+            let entryDay = calendar.startOfDay(for: entry.occurredAt)
+            if entryDay != day, let day {
+                result.append(LedgerDayGroup(day: day, entries: current))
+                current = []
             }
+            day = entryDay
+            current.append(entry)
         }
+        if let day { result.append(LedgerDayGroup(day: day, entries: current)) }
         return result
+    }
+}
+
+/// 가계부 화면 한 달의 숫자(LGP1113A01). 장부·달·여행이 바뀔 때 한 번만 센다.
+struct LedgerMonthSummary {
+    struct Key: Equatable {
+        let revision: Int
+        let tripIDs: [String]
+        let month: String
+    }
+
+    var entries: [LedgerEntry] = []
+    var groups: [LedgerDayGroup] = []
+    var spent = 0.0
+    var earned = 0.0
+    var carryOver = 0.0
+    var tripCosts: [String: Double] = [:]
+    /// 이번 달이고 세후 월급이 있을 때의 오늘 손익.
+    var todayNet: Double?
+
+    init() {}
+
+    @MainActor
+    init(book: LedgerBook, month: String, now: Date = .now, calendar: Calendar = .autoupdatingCurrent) {
+        let daily = book.dailyEntries
+        let parts = month.split(separator: "-").compactMap { Int($0) }
+        if parts.count == 2, let start = calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: 1)),
+           let interval = calendar.dateInterval(of: .month, for: start) {
+            entries = daily.filter { interval.contains($0.occurredAt) && $0.occurredAt != interval.end }
+            carryOver = daily.reduce(0) { $1.occurredAt < start ? $0 + $1.signedKRW : $0 }
+        }
+        groups = LedgerDayGroup.groups(entries, calendar: calendar)
+        spent = LedgerBook.total(entries, .expense)
+        earned = LedgerBook.total(entries, .income)
+        let byTrip = Dictionary(grouping: book.entries.filter { $0.tripID != nil }) { $0.tripID ?? "" }
+        for trip in book.trips {
+            tripCosts[trip.id] = LedgerTripMath.sheet(trip, entries: byTrip[trip.id] ?? []).myCost
+        }
+        if month == LedgerBook.monthKey(now) {
+            let monthlyNet = MapHomeSalaryPolicy.monthlyNet(MapHomeSalaryPolicy.loadSettings())
+            if monthlyNet > 0 { todayNet = book.todayNet(now: now, calendar: calendar, monthlyNet: monthlyNet) }
+        }
     }
 }
