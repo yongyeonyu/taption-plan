@@ -1,5 +1,5 @@
 {
- "ui": 4849,
+ "ui": 4850,
  "catalog": 502,
  "unread": [
   {
@@ -484,7 +484,7 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeGrowthPolicy.swift",
-   "line": 387,
+   "line": 401,
    "ko": "name.korean",
    "en": "name.english"
   },
@@ -772,7 +772,7 @@
   },
   {
    "file": "TaptionPlan/UI/TravelModeSupport.swift",
-   "line": 783,
+   "line": 811,
    "ko": "planned",
    "en": "language"
   },

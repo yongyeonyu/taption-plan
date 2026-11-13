@@ -231,7 +231,8 @@ struct MapHomePlacePin: View {
     /// 여는 동작이 없는 곳(Apple 지도의 주석 뷰)에서는 버튼으로 감싸지 않아 지도의 주석 선택이 그대로 일어난다.
     @ViewBuilder
     private func homeLevelLabel(level: Int) -> some View {
-        let label = Text("Lv.\(level)")
+        // 오늘이 그해 며칠째인지 함께 보인다(HLV1113A01).
+        let label = Text("Lv.\(level) · " + MapHomeGrowthPolicy.dayLabel(level: level, language: .current))
             .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
             .monospacedDigit()
             .foregroundStyle(Color.tpInk)

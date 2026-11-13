@@ -257,14 +257,16 @@ final class MapHomeGrowthPolicyTests: XCTestCase {
         XCTAssertEqual(history.season.streak, 0)
     }
 
-    func testSevenConsecutiveCompletedDaysCreateOneWeeklyReward() {
+    /// 미확인을 채우지 않은 날만 있어도 7일째에 보상 하나(HLV1113A01: 예전에는 연속 달성 7일).
+    func testSevenDaysCreateOneWeeklyRewardWithoutCompletedDays() {
         var history = MapHomeGrowthHistory.initial(for: date(2026, 1, 1), calendar: calendar)
         for offset in 0..<7 {
             let day = calendar.date(byAdding: .day, value: offset, to: date(2026, 1, 1))!
+            MapHomeGrowthPolicy.refreshDailyLevel(in: &history, now: day, calendar: calendar)
             MapHomeGrowthPolicy.observeCurrentDay(
                 in: &history,
                 date: day,
-                qualified: true,
+                qualified: false,
                 calendar: calendar
             )
             let nextDay = calendar.date(byAdding: .day, value: 1, to: day)!
@@ -276,7 +278,7 @@ final class MapHomeGrowthPolicyTests: XCTestCase {
         }
 
         XCTAssertEqual(history.season.level, 7, "1월 7일은 7레벨")
-        XCTAssertEqual(history.season.streak, 7)
+        XCTAssertEqual(history.season.streak, 0)
         XCTAssertEqual(history.season.pendingWeeklyRewards, 1)
     }
 
@@ -726,5 +728,30 @@ final class MapHomeGrowthPolicyTests: XCTestCase {
         XCTAssertEqual(other.day, 5)
         XCTAssertEqual(other.weekdayText, "Tue")
         XCTAssertFalse(other.isHoliday)
+    }
+}
+
+/// 주간 보상은 날짜로 7일마다(HLV1113A01): 미확인을 채우지 않아도, 앱을 안 연 주도 쌓인다.
+final class MapHomeWeeklyRewardByDateTests: XCTestCase {
+    func testRewardsFollowTheDayOfYearNotCompletedDays() {
+        var season = MapHomeGrowthSeason(year: 2026)
+        season.level = 6
+        MapHomeGrowthPolicy.grantWeeklyRewards(in: &season)
+        XCTAssertEqual(season.pendingWeeklyRewards, 0)
+        season.level = 7
+        MapHomeGrowthPolicy.grantWeeklyRewards(in: &season)
+        XCTAssertEqual(season.pendingWeeklyRewards, 1, "7일째 날에 하나")
+        season.level = 30
+        MapHomeGrowthPolicy.grantWeeklyRewards(in: &season)
+        XCTAssertEqual(season.pendingWeeklyRewards, 4, "앱을 안 연 주도 쌓인다")
+        season.chosenEvolutions = ["a", "b"]
+        season.pendingWeeklyRewards = 2
+        MapHomeGrowthPolicy.grantWeeklyRewards(in: &season)
+        XCTAssertEqual(season.pendingWeeklyRewards, 2, "고른 것과 남은 것을 합쳐 4개 그대로")
+        season.pendingWeeklyRewards = 5
+        MapHomeGrowthPolicy.grantWeeklyRewards(in: &season)
+        XCTAssertEqual(season.pendingWeeklyRewards, 5, "예전 방식으로 더 받은 보상은 줄이지 않는다")
+        XCTAssertEqual(MapHomeGrowthPolicy.dayLabel(level: 317, language: .korean), "317일째")
+        XCTAssertEqual(MapHomeGrowthPolicy.daysUntilNextWeeklyReward(level: 317), 5)
     }
 }

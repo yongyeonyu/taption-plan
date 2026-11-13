@@ -312,9 +312,22 @@ enum MapHomeGrowthPolicy {
         return calendar
     }
 
-    /// 주간 보상은 연속 달성 7일마다 한 번. 7일 단위로 남은 일수(1~7)를 돌려준다.
-    static func daysUntilNextWeeklyReward(streak: Int) -> Int {
-        7 - max(0, streak) % 7
+    /// 주간 보상은 날짜로 7일마다 하나(그해 7·14·21…째 날, HLV1113A01 대표 결정 2026-11-13: 미확인을 다 채워야 받던 조건을 없앰).
+    /// 다음 보상까지 남은 일수(1~7)를 돌려준다.
+    static func daysUntilNextWeeklyReward(level: Int) -> Int {
+        7 - max(0, level) % 7
+    }
+
+    /// 「317일째」. 그해 몇째 날인지(= 집 레벨).
+    static func dayLabel(level: Int, language: MapHomeLanguage) -> String {
+        language.text("\(level)일째", "Day \(level)")
+    }
+
+    /// 지금 레벨까지 받을 주간 보상을 채운다. 앱을 열지 않은 주도 쌓이고(대표 결정), 이미 고른 것과 남은 것은 줄이지 않는다.
+    static func grantWeeklyRewards(in season: inout MapHomeGrowthSeason) {
+        guard !MapHomeLandmarkCatalog.isCollectionComplete(season) else { return }
+        let earned = min(season.level / 7, MapHomeLandmarkCatalog.candidates.count)
+        season.pendingWeeklyRewards = max(season.pendingWeeklyRewards, earned - season.chosenEvolutions.count)
     }
 
     static func qualifies(actualCount: Int, unconfirmedCount: Int) -> Bool {
@@ -357,6 +370,7 @@ enum MapHomeGrowthPolicy {
         advanceSeason(in: &history, to: calendar.component(.year, from: now))
         if history.season.year == calendar.component(.year, from: now) {
             history.season.level = dailyLevel(for: now, calendar: calendar)
+            grantWeeklyRewards(in: &history.season)
         }
     }
 
@@ -628,9 +642,6 @@ enum MapHomeGrowthPolicy {
         }
         if qualified {
             history.season.streak += 1
-            if history.season.streak.isMultiple(of: 7), !MapHomeLandmarkCatalog.isCollectionComplete(history.season) {
-                history.season.pendingWeeklyRewards += 1
-            }
             var rewardedDays = history.season.recentCompletionRewardedDays ?? []
             if !rewardedDays.contains(key) {
                 rewardedDays.append(key)

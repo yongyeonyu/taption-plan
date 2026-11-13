@@ -557,18 +557,6 @@
    ]
   },
   {
-   "key": "7일 연속 달성 보상 · 하나를 골라요|7-day streak reward · choose one",
-   "ko": "7일 연속 달성 보상 · 하나를 골라요",
-   "en": "7-day streak reward · choose one",
-   "files": [
-    "MapHomeGrowthSheet.swift:120"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "7일 연속이면 진화를 하나 고르고, 모자·목도리·리본을 모읍니다.|Every 7 days in a row, choose an evolution and collect hats, scarves, and ribbons.",
    "ko": "7일 연속이면 진화를 하나 고르고, 모자·목도리·리본을 모읍니다.",
    "en": "Every 7 days in a row, choose an evolution and collect hats, scarves, and ribbons.",
@@ -586,6 +574,18 @@
    "en": "7 days",
    "files": [
     "AssistantRelay.swift:49"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "7일마다 받는 보상 · 하나를 골라요|A reward every 7 days · choose one",
+   "ko": "7일마다 받는 보상 · 하나를 골라요",
+   "en": "A reward every 7 days · choose one",
+   "files": [
+    "MapHomeGrowthSheet.swift:120"
    ],
    "args": [],
    "targets": [
@@ -4455,7 +4455,7 @@
    "ko": "{0}일 달력",
    "en": "Calendar, day {0}",
    "files": [
-    "MapHomeMapAnnotations.swift:1048"
+    "MapHomeMapAnnotations.swift:1049"
    ],
    "args": [
     "day"
@@ -4503,6 +4503,20 @@
    ],
    "args": [
     "season.streak"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "{0}일째|Day {0}",
+   "ko": "{0}일째",
+   "en": "Day {0}",
+   "files": [
+    "MapHomeGrowthPolicy.swift:323"
+   ],
+   "args": [
+    "level"
    ],
    "targets": [
     "TaptionPlan"
@@ -16151,7 +16165,7 @@
    "ko": "현재 날씨 {0}, {1}",
    "en": "Current weather {0}, {1}",
    "files": [
-    "MapHomeMapAnnotations.swift:266"
+    "MapHomeMapAnnotations.swift:267"
    ],
    "args": [
     "badge.condition",
@@ -33722,7 +33736,7 @@
    "ko": "갈 곳을 굵직하게 먼저 더해 보세요. 세부 계획은 나중에 적어도 됩니다.",
    "en": "Add the main stops first. You can fill in details later.",
    "files": [
-    "TravelModeSupport.swift:515"
+    "TravelModeSupport.swift:543"
    ],
    "args": [],
    "targets": [
@@ -35123,7 +35137,7 @@
    "ko": "계획표 내리기",
    "en": "Close plan table",
    "files": [
-    "TravelModeSupport.swift:180"
+    "TravelModeSupport.swift:208"
    ],
    "args": [],
    "targets": [
@@ -35171,7 +35185,7 @@
    "ko": "계획표",
    "en": "Plan table",
    "files": [
-    "TravelModeSupport.swift:210"
+    "TravelModeSupport.swift:238"
    ],
    "args": [],
    "targets": [
@@ -35429,7 +35443,7 @@
    "ko": "곳 더하기",
    "en": "Add a stop",
    "files": [
-    "TravelModeSupport.swift:567",
+    "TravelModeSupport.swift:595",
     "TravelModeView.swift:965"
    ],
    "args": [],
@@ -36080,6 +36094,18 @@
     "TaptionPlanWidget",
     "TaptionPlanWatch",
     "TaptionPlanWatchWidget"
+   ]
+  },
+  {
+   "key": "그해 7일째 날마다 주간 보상이 하나씩 생겨요.|A weekly reward arrives every 7th day of the year.",
+   "ko": "그해 7일째 날마다 주간 보상이 하나씩 생겨요.",
+   "en": "A weekly reward arrives every 7th day of the year.",
+   "files": [
+    "MapHomeGrowthSheet.swift:428"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
    ]
   },
   {
@@ -38284,7 +38310,7 @@
    "ko": "다시 하기",
    "en": "Redo",
    "files": [
-    "TravelModeSupport.swift:381"
+    "TravelModeSupport.swift:409"
    ],
    "args": [],
    "targets": [
@@ -38340,14 +38366,28 @@
    ]
   },
   {
-   "key": "다음 보상까지 연속 {0}일 남았어요.|{0} consecutive days until your next reward.",
-   "ko": "다음 보상까지 연속 {0}일 남았어요.",
-   "en": "{0} consecutive days until your next reward.",
+   "key": "다음 보상까지 {0}일 남았어요.|{0} days until your next reward.",
+   "ko": "다음 보상까지 {0}일 남았어요.",
+   "en": "{0} days until your next reward.",
    "files": [
     "MapHomeGrowthSheet.swift:166"
    ],
    "args": [
     "remaining"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "다음 보상까지 {0}일|{0} days to next reward",
+   "ko": "다음 보상까지 {0}일",
+   "en": "{0} days to next reward",
+   "files": [
+    "MapHomeGrowthSheet.swift:106"
+   ],
+   "args": [
+    "MapHomeGrowthPolicy.daysUntilNextWeeklyReward(level: season.level)"
    ],
    "targets": [
     "TaptionPlan"
@@ -38384,7 +38424,7 @@
    "ko": "다음 일정",
    "en": "Next plan",
    "files": [
-    "TravelModeSupport.swift:592"
+    "TravelModeSupport.swift:620"
    ],
    "args": [],
    "targets": [
@@ -38408,7 +38448,7 @@
    "ko": "다음: {0}",
    "en": "Next: {0}",
    "files": [
-    "TravelModeSupport.swift:780"
+    "TravelModeSupport.swift:808"
    ],
    "args": [
     "$0.title"
@@ -44350,7 +44390,7 @@
    "ko": "세부 더하기",
    "en": "Add detail",
    "files": [
-    "TravelModeSupport.swift:545"
+    "TravelModeSupport.swift:573"
    ],
    "args": [],
    "targets": [
@@ -44636,7 +44676,7 @@
    "ko": "속성",
    "en": "Details",
    "files": [
-    "TravelModeSupport.swift:625",
+    "TravelModeSupport.swift:653",
     "TravelPlanTable.swift:474",
     "TravelQuickEntrySheet.swift:181"
    ],
@@ -46188,7 +46228,7 @@
    "ko": "아직 일정이 없습니다",
    "en": "No plans yet",
    "files": [
-    "TravelModeSupport.swift:780"
+    "TravelModeSupport.swift:808"
    ],
    "args": [],
    "targets": [
@@ -48907,20 +48947,6 @@
    ]
   },
   {
-   "key": "연속 달성 {0}일|{0}-day streak",
-   "ko": "연속 달성 {0}일",
-   "en": "{0}-day streak",
-   "files": [
-    "MapHomeGrowthSheet.swift:106"
-   ],
-   "args": [
-    "season.streak"
-   ],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
    "key": "연속 달성|Streak",
    "ko": "연속 달성",
    "en": "Streak",
@@ -48938,18 +48964,6 @@
    "en": "Streak days",
    "files": [
     "MapHomeGrowthSheet.swift:418"
-   ],
-   "args": [],
-   "targets": [
-    "TaptionPlan"
-   ]
-  },
-  {
-   "key": "연속 일수가 7의 배수를 넘으면 주간 보상이 하나씩 생겨요.|Each multiple of 7 streak days adds a weekly reward.",
-   "ko": "연속 일수가 7의 배수를 넘으면 주간 보상이 하나씩 생겨요.",
-   "en": "Each multiple of 7 streak days adds a weekly reward.",
-   "files": [
-    "MapHomeGrowthSheet.swift:428"
    ],
    "args": [],
    "targets": [
@@ -49316,7 +49330,7 @@
    "ko": "예상 {0}",
    "en": "Planned {0}",
    "files": [
-    "TravelModeSupport.swift:784"
+    "TravelModeSupport.swift:812"
    ],
    "args": [
     "plannedText"
@@ -49394,7 +49408,7 @@
    "ko": "예약된 일정이나 잠을 사이에 두고는 순서를 바꿀 수 없습니다.",
    "en": "You can’t reorder across a booked plan or sleep.",
    "files": [
-    "TravelModeSupport.swift:559"
+    "TravelModeSupport.swift:587"
    ],
    "args": [],
    "targets": [
@@ -50120,7 +50134,7 @@
    "ko": "우리집 ({0})",
    "en": "Our home ({0})",
    "files": [
-    "MapHomeGrowthPolicy.swift:382"
+    "MapHomeGrowthPolicy.swift:396"
    ],
    "args": [
     "name"
@@ -50935,7 +50949,7 @@
    "ko": "위키백과 사진 받기",
    "en": "Get Wikipedia photos",
    "files": [
-    "TravelModeSupport.swift:791"
+    "TravelModeSupport.swift:819"
    ],
    "args": [],
    "targets": [
@@ -52568,7 +52582,7 @@
    "ko": "이전 일정",
    "en": "Previous plan",
    "files": [
-    "TravelModeSupport.swift:591"
+    "TravelModeSupport.swift:619"
    ],
    "args": [],
    "targets": [
@@ -52804,7 +52818,7 @@
    "ko": "일정 {0}개",
    "en": "{0} plans",
    "files": [
-    "TravelModeSupport.swift:784"
+    "TravelModeSupport.swift:812"
    ],
    "args": [
     "items.count"
@@ -55401,7 +55415,7 @@
    "ko": "지도 접기",
    "en": "Collapse map",
    "files": [
-    "TravelModeSupport.swift:190"
+    "TravelModeSupport.swift:218"
    ],
    "args": [],
    "targets": [
@@ -55453,7 +55467,7 @@
    "ko": "지도 펼치기",
    "en": "Expand map",
    "files": [
-    "TravelModeSupport.swift:190"
+    "TravelModeSupport.swift:218"
    ],
    "args": [],
    "targets": [
@@ -57664,7 +57678,7 @@
    "ko": "코스",
    "en": "Course",
    "files": [
-    "TravelModeSupport.swift:209"
+    "TravelModeSupport.swift:237"
    ],
    "args": [],
    "targets": [
@@ -59333,7 +59347,7 @@
    "ko": "현재 날씨 {0}, {1}",
    "en": "Current weather {0}, {1}",
    "files": [
-    "MapHomeMapAnnotations.swift:265"
+    "MapHomeMapAnnotations.swift:266"
    ],
    "args": [
     "badge.condition",

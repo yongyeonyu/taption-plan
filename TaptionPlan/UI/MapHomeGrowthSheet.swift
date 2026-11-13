@@ -103,7 +103,7 @@ struct MapHomeGrowthSheet: View {
                     .foregroundStyle(Color.tpSecondary)
                 ProgressView(value: Double(season.level), total: Double(MapHomeGrowthPolicy.maximumLevel(year: season.year)))
                     .tint(Color.tpPastelMint)
-                Text(language.text("연속 달성 \(season.streak)일", "\(season.streak)-day streak"))
+                Text(MapHomeGrowthPolicy.dayLabel(level: season.level, language: language) + " · " + language.text("다음 보상까지 \(MapHomeGrowthPolicy.daysUntilNextWeeklyReward(level: season.level))일", "\(MapHomeGrowthPolicy.daysUntilNextWeeklyReward(level: season.level)) days to next reward"))
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
                     .foregroundStyle(Color.tpSecondary)
             }
@@ -117,7 +117,7 @@ struct MapHomeGrowthSheet: View {
         VStack(alignment: .leading, spacing: 11) {
             sectionTitle(
                 language.text("주간 진화 선택", "Weekly evolution"),
-                subtitle: language.text("7일 연속 달성 보상 · 하나를 골라요", "7-day streak reward · choose one")
+                subtitle: language.text("7일마다 받는 보상 · 하나를 골라요", "A reward every 7 days · choose one")
             )
             if MapHomeLandmarkCatalog.isCollectionComplete(season) {
                 Text(language.text("액세서리 52개를 모두 모았어요.", "You collected all 52 accessories."))
@@ -162,8 +162,8 @@ struct MapHomeGrowthSheet: View {
                     .buttonStyle(.plain)
                 }
             } else {
-                let remaining = MapHomeGrowthPolicy.daysUntilNextWeeklyReward(streak: season.streak)
-                Text(language.text("다음 보상까지 연속 \(remaining)일 남았어요.", "\(remaining) consecutive days until your next reward."))
+                let remaining = MapHomeGrowthPolicy.daysUntilNextWeeklyReward(level: season.level)
+                Text(language.text("다음 보상까지 \(remaining)일 남았어요.", "\(remaining) days until your next reward."))
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
                     .padding(14)
@@ -425,7 +425,7 @@ struct MapHomeGrowthSheet: View {
                 large: { adjustTestStreak(-7) },
                 largeUp: { adjustTestStreak(7) }
             )
-            Text(language.text("연속 일수가 7의 배수를 넘으면 주간 보상이 하나씩 생겨요.", "Each multiple of 7 streak days adds a weekly reward."))
+            Text(language.text("그해 7일째 날마다 주간 보상이 하나씩 생겨요.", "A weekly reward arrives every 7th day of the year."))
                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                 .foregroundStyle(Color.tpSecondary)
             Text(language.text("레벨 바로 가기", "Level presets"))

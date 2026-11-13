@@ -3466,83 +3466,6 @@
         }
       }
     },
-    "7일 연속 달성 보상 · 하나를 골라요|7-day streak reward · choose one" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "7日連続の報酬 · 1つ選択"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "连续7天奖励 · 任选其一"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "連續 7 天獎勵 · 擇一"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Belohnung für 7 Tage in Folge · wähle eine"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Récompense de série de 7 jours · choisissez-en une"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Premio serie di 7 giorni · scegline uno"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Premio de racha de 7 días · elige uno"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Recompensa da sequência de 7 dias · escolha uma"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Quà chuỗi 7 ngày · chọn một"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hadiah beruntun 7 hari · pilih satu"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "รางวัลต่อเนื่อง 7 วัน · เลือกหนึ่งอย่าง"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "7 दिन की स्ट्रीक का इनाम · एक चुनें"
-          }
-        }
-      }
-    },
     "7일 연속이면 진화를 하나 고르고, 모자·목도리·리본을 모읍니다.|Every 7 days in a row, choose an evolution and collect hats, scarves, and ribbons." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3693,6 +3616,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "7 दिन"
+          }
+        }
+      }
+    },
+    "7일마다 받는 보상 · 하나를 골라요|A reward every 7 days · choose one" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7日ごとのごほうび・1つ選びましょう"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每7天一次奖励 · 选一个"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每7天一次獎勵 · 選一個"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle 7 Tage eine Belohnung · eine wählen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une récompense tous les 7 jours · choisissez-en une"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un premio ogni 7 giorni · scegline uno"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Una recompensa cada 7 días · elige una"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uma recompensa a cada 7 dias · escolha uma"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phần thưởng mỗi 7 ngày · chọn một"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hadiah setiap 7 hari · pilih satu"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "รางวัลทุก 7 วัน · เลือกหนึ่งอย่าง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "हर 7 दिन में इनाम · एक चुनें"
           }
         }
       }
@@ -25484,6 +25484,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "{0} दिन"
+          }
+        }
+      }
+    },
+    "{0}일째|Day {0}" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0}日目"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第{0}天"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第{0}天"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tag {0}"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jour {0}"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Giorno {0}"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Día {0}"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dia {0}"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ngày {0}"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hari ke-{0}"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "วันที่ {0}"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "दिन {0}"
           }
         }
       }
@@ -223378,6 +223455,83 @@
         }
       }
     },
+    "그해 7일째 날마다 주간 보상이 하나씩 생겨요.|A weekly reward arrives every 7th day of the year." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "その年の7日目ごとに週のごほうびが1つ届きます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每年每逢第7天会获得一个每周奖励。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每年每逢第7天會獲得一個每週獎勵。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An jedem 7. Tag des Jahres gibt es eine Wochenbelohnung."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une récompense hebdomadaire arrive chaque 7e jour de l’année."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un premio settimanale arriva ogni 7° giorno dell’anno."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cada 7.º día del año llega una recompensa semanal."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uma recompensa semanal chega a cada 7º dia do ano."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cứ mỗi ngày thứ 7 trong năm sẽ có một phần thưởng tuần."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hadiah mingguan datang setiap hari ke-7 dalam setahun."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ทุกวันที่ 7 ของปีจะได้รับรางวัลประจำสัปดาห์หนึ่งอย่าง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "साल के हर 7वें दिन एक साप्ताहिक इनाम मिलता है।"
+          }
+        }
+      }
+    },
     "근무 {0}시간 기준 계산값 {1}. 실제와 다르면 고쳐 주세요(비우면 계산값).|Computed {0} for {1} h. Edit if different." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -237007,79 +237161,156 @@
         }
       }
     },
-    "다음 보상까지 연속 {0}일 남았어요.|{0} consecutive days until your next reward." : {
+    "다음 보상까지 {0}일 남았어요.|{0} days until your next reward." : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "次の報酬まであと{0}日連続です。"
+            "value" : "次のごほうびまであと{0}日です。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "再连续{0}天即可获得下一份奖励。"
+            "value" : "距离下一个奖励还有{0}天。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "再連續 {0} 天即可獲得下一個獎勵。"
+            "value" : "距離下一個獎勵還有{0}天。"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Noch {0} Tage in Folge bis zur nächsten Belohnung."
+            "value" : "Noch {0} Tage bis zur nächsten Belohnung."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "{0} jours consécutifs avant votre prochaine récompense."
+            "value" : "Encore {0} jours avant la prochaine récompense."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "{0} giorni consecutivi al prossimo premio."
+            "value" : "Mancano {0} giorni al prossimo premio."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "{0} días seguidos hasta tu próximo premio."
+            "value" : "Faltan {0} días para la próxima recompensa."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "{0} dias seguidos até a próxima recompensa."
+            "value" : "Faltam {0} dias para a próxima recompensa."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "{0} ngày liên tiếp nữa đến phần thưởng kế tiếp."
+            "value" : "Còn {0} ngày đến phần thưởng tiếp theo."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "{0} hari berturut-turut hingga hadiah berikutnya."
+            "value" : "{0} hari lagi menuju hadiah berikutnya."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "อีก {0} วันติดต่อกันจะได้รางวัลถัดไป"
+            "value" : "อีก {0} วันถึงรางวัลถัดไป"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "अगले इनाम तक लगातार {0} दिन।"
+            "value" : "अगले इनाम में {0} दिन बाकी हैं।"
+          }
+        }
+      }
+    },
+    "다음 보상까지 {0}일|{0} days to next reward" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次のごほうびまで{0}日"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "距下个奖励{0}天"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "距下個獎勵{0}天"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} Tage bis zur Belohnung"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} j avant la récompense"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} giorni al premio"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} días para la recompensa"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} dias para a recompensa"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Còn {0} ngày đến thưởng"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{0} hari lagi ke hadiah"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "อีก {0} วันถึงรางวัล"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "इनाम में {0} दिन"
           }
         }
       }
@@ -300378,83 +300609,6 @@
         }
       }
     },
-    "연속 달성 {0}일|{0}-day streak" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "{0}日連続"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "连续{0}天"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "連續 {0} 天"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "{0}-Tage-Serie"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Série de {0} jours"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Serie di {0} giorni"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Racha de {0} días"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sequência de {0} dias"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chuỗi {0} ngày"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Beruntun {0} hari"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ต่อเนื่อง {0} วัน"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "{0} दिन की स्ट्रीक"
-          }
-        }
-      }
-    },
     "연속 달성|Streak" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -300605,83 +300759,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "स्ट्रीक के दिन"
-          }
-        }
-      }
-    },
-    "연속 일수가 7의 배수를 넘으면 주간 보상이 하나씩 생겨요.|Each multiple of 7 streak days adds a weekly reward." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "連続日数が7の倍数になるたびに、週間報酬が加わります。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "每连续7天的整数倍，会增加一份每周奖励。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "每連續 7 天的倍數，就會增加一個每週獎勵。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jedes Vielfache von 7 Serientagen bringt eine wöchentliche Belohnung."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chaque multiple de 7 jours de série ajoute une récompense hebdomadaire."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ogni multiplo di 7 giorni di serie aggiunge un premio settimanale."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cada múltiplo de 7 días de racha añade un premio semanal."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cada múltiplo de 7 dias de sequência adiciona uma recompensa semanal."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mỗi bội số 7 ngày của chuỗi sẽ thêm một phần thưởng hằng tuần."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Setiap kelipatan 7 hari beruntun menambah hadiah mingguan."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ทุก 7 วันที่ต่อเนื่องจะได้รางวัลรายสัปดาห์เพิ่ม"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "7 दिन की स्ट्रीक के हर गुणज पर साप्ताहिक इनाम जुड़ता है।"
           }
         }
       }

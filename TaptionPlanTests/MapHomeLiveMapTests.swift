@@ -1148,14 +1148,14 @@ extension MapHomeLiveMapTests {
 
     func testDaysUntilNextWeeklyRewardCountsInSevenDayCycles() {
         typealias Policy = MapHomeGrowthPolicy
-        XCTAssertEqual(Policy.daysUntilNextWeeklyReward(streak: 0), 7)
-        XCTAssertEqual(Policy.daysUntilNextWeeklyReward(streak: 1), 6)
-        XCTAssertEqual(Policy.daysUntilNextWeeklyReward(streak: 6), 1)
-        XCTAssertEqual(Policy.daysUntilNextWeeklyReward(streak: 7), 7, "7일째에 보상을 받은 직후에는 다음 7일")
-        XCTAssertEqual(Policy.daysUntilNextWeeklyReward(streak: 8), 6, "8일째부터 0으로 떨어지지 않는다")
-        XCTAssertEqual(Policy.daysUntilNextWeeklyReward(streak: 13), 1)
-        XCTAssertEqual(Policy.daysUntilNextWeeklyReward(streak: 14), 7)
-        XCTAssertEqual(Policy.daysUntilNextWeeklyReward(streak: -3), 7)
+        XCTAssertEqual(Policy.daysUntilNextWeeklyReward(level: 0), 7)
+        XCTAssertEqual(Policy.daysUntilNextWeeklyReward(level: 1), 6)
+        XCTAssertEqual(Policy.daysUntilNextWeeklyReward(level: 6), 1)
+        XCTAssertEqual(Policy.daysUntilNextWeeklyReward(level: 7), 7, "7일째에 보상을 받은 직후에는 다음 7일")
+        XCTAssertEqual(Policy.daysUntilNextWeeklyReward(level: 8), 6, "8일째부터 0으로 떨어지지 않는다")
+        XCTAssertEqual(Policy.daysUntilNextWeeklyReward(level: 13), 1)
+        XCTAssertEqual(Policy.daysUntilNextWeeklyReward(level: 14), 7)
+        XCTAssertEqual(Policy.daysUntilNextWeeklyReward(level: -3), 7)
     }
 
     func testCalendarCountMetricsFormatCellsAndPanel() {

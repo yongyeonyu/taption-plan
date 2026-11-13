@@ -274,7 +274,7 @@ struct MapHomeDailyCardView: View {
                 .resizable()
                 .scaledToFit()
                 .frame(width: 78, height: 78)
-            Text("Lv.\(level)")
+            Text("Lv.\(level) · " + MapHomeGrowthPolicy.dayLabel(level: level, language: language))
                 .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
                 .foregroundStyle(Color.tpInk)
             Text(MapHomeGrowthPolicy.homeName(level: level, language: language))
