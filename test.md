@@ -2,7 +2,14 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
-## INB1114A01 · 334 뒤에 넣은 것 (2026-11-14 새벽, 아직 빌드에 없음)
+## TFB1114A335 · TestFlight 335 (2026-11-14 아침)
+
+- `bash scripts/testflight/release.sh --yes --request-id TFB1114A335` 종료 코드 0. 기준 커밋 `808995f5`.
+- 보고서 `build/validation/TFB1114A335/testflight-report.json`: 빌드 335 처리 상태 `VALID`, `TP Taption Plan 내부 테스트` 그룹 연결 확인, 테스터 1명 노출.
+- 334 뒤 변경(INB1114A01·DUP1114A01·AIG1114A01, 12개 언어 팩 재생성)이 들어간 첫 빌드다.
+- 업로드·처리·그룹 연결만 확인했다. 설치와 실기기 기능 확인은 하지 않았다.
+
+## INB1114A01 · 334 뒤에 넣은 것 (2026-11-14 새벽, 335에 들어감)
 
 로그는 `build/validation/TFB1114A334/sim-next-*.log`. 시뮬레이터(BOKKI-STL) 결과이고 실기기 확인은 없다.
 
