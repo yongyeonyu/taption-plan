@@ -1286,3 +1286,120 @@ final class TaptionPlanTravelScreensUITests: XCTestCase {
         note(app, "f-trip-list")
     }
 }
+
+/// UI 다듬기 뒤 직접 보지 못한 화면(달력·하루 요약·하루 카드·장소 도감·언젠가 갈 여행)을 열어 남긴다(UIR1111A01).
+/// `TVU_SHOTS` 폴더가 있으면 화면과 글자 목록을 거기에 쓴다. 「언젠가 갈 여행」 시험은 여행 하나를 만든다.
+final class TaptionPlanPolishScreensUITests: XCTestCase {
+    private func note(_ app: XCUIApplication, _ name: String) {
+        let image = XCUIScreen.main.screenshot()
+        let attachment = XCTAttachment(screenshot: image)
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        guard let folder = ProcessInfo.processInfo.environment["TVU_SHOTS"] else { return }
+        let base = URL(fileURLWithPath: folder)
+        try? image.pngRepresentation.write(to: base.appendingPathComponent(name + ".png"))
+        let labels = (app.buttons.allElementsBoundByIndex + app.staticTexts.allElementsBoundByIndex)
+            .map { "\($0.elementType == .button ? "B" : "T") \($0.label)" }.joined(separator: "\n")
+        try? labels.write(to: base.appendingPathComponent(name + ".txt"), atomically: true, encoding: .utf8)
+    }
+
+    private func launch() -> XCUIApplication {
+        let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
+        app.launchArguments += ["-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR"]
+        app.launch()
+        XCTAssertTrue(app.buttons["메뉴"].waitForExistence(timeout: 40))
+        let later = app.buttons["나중에 확인"]
+        if later.waitForExistence(timeout: 3) { later.tap() }
+        return app
+    }
+
+    private func openFromMenu(_ app: XCUIApplication, _ title: String) throws {
+        app.buttons["메뉴"].tap()
+        let row = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", title)).firstMatch
+        var tries = 0
+        while !(row.exists && row.isHittable) && tries < 10 { app.swipeUp(); tries += 1 }
+        try XCTSkipUnless(row.waitForExistence(timeout: 5), "메뉴에 \(title) 없음")
+        row.tap()
+        sleep(4)
+    }
+
+    func testCalendarSheetForTheRecord() throws {
+        let app = launch()
+        app.buttons["달력"].tap()
+        sleep(6)
+        note(app, "p1-calendar")
+        app.swipeUp()
+        sleep(1)
+        note(app, "p1-calendar-lower")
+    }
+
+    func testDaySummaryForTheRecord() throws {
+        let app = launch()
+        app.buttons["집"].tap()
+        sleep(4)
+        note(app, "p2-day-summary")
+    }
+
+    func testDayCardForTheRecord() throws {
+        let app = launch()
+        try openFromMenu(app, "하루 카드")
+        sleep(4)
+        note(app, "p3-day-card")
+    }
+
+    func testPlaceBookForTheRecord() throws {
+        let app = launch()
+        try openFromMenu(app, "장소 도감")
+        note(app, "p4-place-book")
+        app.swipeUp()
+        sleep(1)
+        note(app, "p4-place-book-lower")
+    }
+
+    /// 「언젠가 갈 여행」을 하나 만들어 아래 판을 남기고, 끝나면 만든 여행을 지운다.
+    func testWishTripFooterForTheRecord() throws {
+        let app = launch()
+        app.buttons["여행 계획"].tap()
+        let list = app.buttons["여행 목록으로"]
+        if list.waitForExistence(timeout: 20) { list.tap() }
+        let new = app.buttons["새 여행"]
+        try XCTSkipUnless(new.waitForExistence(timeout: 10), "여행 목록이 열리지 않음")
+        removeTrips(app)
+        new.tap()
+        let name = app.textFields.firstMatch
+        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        name.tap()
+        name.typeText("화면 확인용")
+        // 스위치는 줄 가운데가 아니라 오른쪽 손잡이를 눌러야 바뀐다.
+        let toggle = app.switches.firstMatch
+        toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.5)).tap()
+        sleep(1)
+        note(app, "p5-wish-new")
+        app.buttons["만들기"].tap()
+        sleep(3)
+        note(app, "p5-wish-list")
+        let card = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "화면 확인용")).firstMatch
+        if card.waitForExistence(timeout: 5) { card.tap() }
+        sleep(3)
+        note(app, "p5-wish-open")
+        if list.waitForExistence(timeout: 5) { list.tap() }
+        sleep(1)
+        removeTrips(app)
+        note(app, "p5-wish-removed")
+    }
+
+    private func removeTrips(_ app: XCUIApplication) {
+        for _ in 0..<3 {
+            let card = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "화면 확인용")).firstMatch
+            guard card.waitForExistence(timeout: 2) else { return }
+            card.press(forDuration: 1.2)
+            let delete = app.buttons["여행 지우기"]
+            guard delete.waitForExistence(timeout: 3) else { return }
+            delete.tap()
+            let confirm = app.buttons.matching(NSPredicate(format: "label == %@", "여행 지우기")).firstMatch
+            if confirm.waitForExistence(timeout: 3) { confirm.tap() }
+            sleep(2)
+        }
+    }
+}
