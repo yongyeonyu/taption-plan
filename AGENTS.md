@@ -54,4 +54,5 @@
 - `docs/CLIENT_REPORT.md`·`docs/UX_ARCHITECTURE.md`·`docs/DESIGN_SYSTEM.md`: 2026-10-24 UX 진단·설계 자료.
 - `scripts/l10n/README.md`: 12개 언어 팩의 추출·번역·점검·생성 절차.
 - `temp.md` / `test.md`: 미완료 요청(맨 위 `남은 액션아이템`) / 실제 검증 근거(2026-11-01 이후와 남은 요청). 요청한 부분만 읽습니다.
-- `test_ARCHIVE.md`·`docs/HANDOFF_*.md` 같은 보관본과 날짜가 붙은 인계문: 지난 시점의 기록으로, 현재 작업 시작 시 읽지 않습니다.
+- `docs/HANDOFF_PROTOCOL.md`: 세션을 넘기고 받는 절차(점검표·인계문 형식·같은 폴더 세션 규칙). 넘길 때 따릅니다.
+- `test_ARCHIVE.md`·`docs/HANDOFF_<날짜>.md` 같은 보관본과 날짜가 붙은 인계문: 지난 시점의 기록으로, 현재 작업 시작 시 읽지 않습니다.

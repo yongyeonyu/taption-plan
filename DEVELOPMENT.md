@@ -332,7 +332,7 @@ xcodebuild test -project TaptionPlan.xcodeproj -scheme TaptionPlan \
 
 ## 문서
 
-- `AGENTS.md`: 작업 규칙. `README.md`: 개요. `temp.md`: 남은 요청과 액션아이템. `test.md`: 2026-11-01 이후와 남은 요청의 검증 근거, 이전 기록은 `test_ARCHIVE.md`.
+- `AGENTS.md`: 작업 규칙. `docs/HANDOFF_PROTOCOL.md`: 세션 인수인계 절차. `README.md`: 개요. `temp.md`: 남은 요청과 액션아이템. `test.md`: 2026-11-01 이후와 남은 요청의 검증 근거, 이전 기록은 `test_ARCHIVE.md`.
 - `docs/TESTFLIGHT.md`(배포), `docs/TRAVEL_MODE_PLAN.md`·`docs/COURSE_FIRST_PLAN.md`(여행 모드·코스 먼저), `docs/IPAD_UI.md`(넓은 화면), `docs/STRUCTURE_PERFORMANCE.md`(구조 성능), `docs/DATA_PIPELINE.md`(저장소 파이프라인), `docs/ARCHITECTURE_ROADMAP.md`(구조 로드맵·ADR), `docs/HOME_EVOLUTION_LIST.md`(집 성장 366일 목록, 생성물).
 - 2026-10-24 진단·설계 자료: `docs/CLIENT_REPORT.md`(요약), `docs/UX_ARCHITECTURE.md`, `docs/DESIGN_SYSTEM.md`(중국어 원문). 당시 기준입니다. 위젯 딥링크(0a)는 DLK1024B12에서 코드로 고쳤고 실기기 확인이 남았습니다.
 - `scripts/l10n/README.md`: 12개 언어 팩 절차.
