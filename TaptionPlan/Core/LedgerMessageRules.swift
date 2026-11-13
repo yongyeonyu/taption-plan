@@ -131,6 +131,8 @@ enum PaymentInbox {
         var source: String?
         /// 사용자가 이 글에 정해 준 종류(PAS1113A01).
         var choice: LedgerMessageRules.Kind?
+        /// 「내부」로 정한 글(INT1114A01): 내 계좌 사이 이체·지역카드·교통카드 충전. 지출·수입이 아니다.
+        var isInternal: Bool?
     }
 
     static let key = "paymentInbox"

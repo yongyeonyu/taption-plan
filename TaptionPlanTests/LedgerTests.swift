@@ -1764,3 +1764,24 @@ final class LedgerHealthCategoryTests: XCTestCase {
         XCTAssertEqual(LedgerCategory.guess("다라식당"), .food)
     }
 }
+
+/// 「내부」로 정한 글이 넣은 기록 찾기(INT1114A01).
+final class InternalTransferChoiceTests: XCTestCase {
+    func testFindsTheEntryThisTextAdded() {
+        let received = Date(timeIntervalSince1970: 1_794_000_000)
+        let item = PaymentInbox.Item(text: "출금 50,000원 입출금통장 → 지역카드", receivedAt: received, outcome: .added, message: "")
+        var added = LedgerEntry(occurredAt: received, amount: 50_000, title: "지역카드")
+        added.source = .message
+        added.createdAt = received.addingTimeInterval(2)
+        var manual = LedgerEntry(occurredAt: received, amount: 50_000, title: "직접 넣음")
+        manual.createdAt = received
+        var other = LedgerEntry(occurredAt: received, amount: 3_500, title: "카페")
+        other.source = .message
+        other.createdAt = received
+        var old = LedgerEntry(occurredAt: received, amount: 50_000, title: "지난 충전")
+        old.source = .message
+        old.createdAt = received.addingTimeInterval(-3_600)
+        XCTAssertEqual(PaymentInboxChoice.addedEntry(for: item, in: [manual, other, old, added])?.id, added.id)
+        XCTAssertNil(PaymentInboxChoice.addedEntry(for: item, in: [manual, other, old]), "직접 넣은 것·다른 금액·오래된 것은 지우지 않는다")
+    }
+}

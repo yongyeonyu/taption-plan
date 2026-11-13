@@ -1025,7 +1025,8 @@
    "ko": "AI에게 같은 모양의 규칙을 부탁했어요.",
    "en": "Asked your AI for a rule for this layout.",
    "files": [
-    "PaymentAlertSources.swift:247"
+    "PaymentAlertSources.swift:248",
+    "PaymentAlertSources.swift:278"
    ],
    "args": [],
    "targets": [
@@ -1061,7 +1062,7 @@
    "ko": "AI에게 맡겼어요. 규칙이 오면 이 문자도 다시 읽어 넣어요.",
    "en": "Sent to your AI. When the rule arrives this text is read again.",
    "files": [
-    "LedgerMessageRules.swift:309"
+    "LedgerMessageRules.swift:311"
    ],
    "args": [],
    "targets": [
@@ -1097,7 +1098,7 @@
    "ko": "AI에게 이 형식을 읽는 규칙을 부탁해요",
    "en": "Asks your AI for a rule that reads this format",
    "files": [
-    "LedgerMessageRules.swift:265"
+    "LedgerMessageRules.swift:267"
    ],
    "args": [],
    "targets": [
@@ -3028,7 +3029,7 @@
    "ko": "{0} {1}을 넣었어요.",
    "en": "Added {0} {1}.",
    "files": [
-    "PaymentAlertSources.swift:238"
+    "PaymentAlertSources.swift:239"
    ],
    "args": [
     "saved.title",
@@ -33453,7 +33454,7 @@
    "ko": "「학습」을 누르면 AI가 이 형식을 읽는 규칙을 보내고, 그 뒤 같은 글은 앱이 스스로 넣어요.",
    "en": "Teach asks your AI for a rule for this format; after that the app reads the same kind of text by itself.",
    "files": [
-    "LedgerMessageRules.swift:273"
+    "LedgerMessageRules.swift:275"
    ],
    "args": [],
    "targets": [
@@ -33638,7 +33639,7 @@
    "ko": "가계부에 넣음",
    "en": "Added to the ledger",
    "files": [
-    "LedgerMessageRules.swift:511"
+    "LedgerMessageRules.swift:513"
    ],
    "args": [],
    "targets": [
@@ -33651,6 +33652,18 @@
    "en": "This kind of text is not added to the ledger.",
    "files": [
     "LedgerIntents.swift:78"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "가계부에 들어갔던 기록은 지웠어요.|The entry already added was removed.",
+   "ko": "가계부에 들어갔던 기록은 지웠어요.",
+   "en": "The entry already added was removed.",
+   "files": [
+    "PaymentAlertSources.swift:266"
    ],
    "args": [],
    "targets": [
@@ -33937,7 +33950,7 @@
    "ko": "개발자에게 반영 요청",
    "en": "Ask the developer to add it",
    "files": [
-    "LedgerMessageRules.swift:277"
+    "LedgerMessageRules.swift:279"
    ],
    "args": [],
    "targets": [
@@ -33961,7 +33974,7 @@
    "ko": "개발자에게 보내면 다음 버전에 모두에게 반영돼요.",
    "en": "Mail the developer to get it built in for everyone.",
    "files": [
-    "LedgerMessageRules.swift:280"
+    "LedgerMessageRules.swift:282"
    ],
    "args": [],
    "targets": [
@@ -35287,7 +35300,7 @@
    "ko": "고르면 이 글은 바로 그렇게 처리하고, 연결된 AI가 같은 모양의 글을 앞으로 그렇게 읽는 규칙을 만들어요.",
    "en": "Your choice applies to this text now, and your AI makes a rule so texts like it are read the same way.",
    "files": [
-    "PaymentAlertSources.swift:307"
+    "PaymentAlertSources.swift:347"
    ],
    "args": [],
    "targets": [
@@ -36330,7 +36343,7 @@
    "ko": "금액을 읽지 못해 아직 넣지 않았어요. AI가 규칙을 보내면 다시 읽어 넣어요.",
    "en": "Couldn't read the amount yet. It is read again when your AI sends a rule.",
    "files": [
-    "PaymentAlertSources.swift:240"
+    "PaymentAlertSources.swift:241"
    ],
    "args": [],
    "targets": [
@@ -37716,6 +37729,18 @@
    ]
   },
   {
+   "key": "내 계좌 사이 이체나 카드 충전|A transfer between your own accounts or a card top-up",
+   "ko": "내 계좌 사이 이체나 카드 충전",
+   "en": "A transfer between your own accounts or a card top-up",
+   "files": [
+    "PaymentAlertSources.swift:369"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "내 계좌 이름 더하기|Add own account names",
    "ko": "내 계좌 이름 더하기",
    "en": "Add own account names",
@@ -37950,6 +37975,42 @@
    ]
   },
   {
+   "key": "내부 이체라 가계부에 넣지 않았어요.|Internal transfer: not added to the ledger.",
+   "ko": "내부 이체라 가계부에 넣지 않았어요.",
+   "en": "Internal transfer: not added to the ledger.",
+   "files": [
+    "PaymentAlertSources.swift:272"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "내부 이체로 정했어요. 지출·수입에 넣지 않아요.|Marked as an internal transfer. It isn't counted as spending or income.",
+   "ko": "내부 이체로 정했어요. 지출·수입에 넣지 않아요.",
+   "en": "Marked as an internal transfer. It isn't counted as spending or income.",
+   "files": [
+    "PaymentAlertSources.swift:261"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "내부|Internal",
+   "ko": "내부",
+   "en": "Internal",
+   "files": [
+    "PaymentAlertSources.swift:361"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "내용 (예: 커피)|What (e.g. Coffee)",
    "ko": "내용 (예: 커피)",
    "en": "What (e.g. Coffee)",
@@ -38062,7 +38123,7 @@
    "ko": "넣지 않음",
    "en": "Skip",
    "files": [
-    "PaymentAlertSources.swift:301"
+    "PaymentAlertSources.swift:341"
    ],
    "args": [],
    "targets": [
@@ -41488,7 +41549,7 @@
    "ko": "받은 결제 문자·알림",
    "en": "Payment texts received",
    "files": [
-    "LedgerMessageRules.swift:194"
+    "LedgerMessageRules.swift:196"
    ],
    "args": [],
    "targets": [
@@ -41512,7 +41573,7 @@
    "ko": "받은 문자",
    "en": "Received text",
    "files": [
-    "LedgerMessageRules.swift:284"
+    "LedgerMessageRules.swift:286"
    ],
    "args": [],
    "targets": [
@@ -41981,7 +42042,7 @@
    "ko": "버림",
    "en": "Discarded",
    "files": [
-    "LedgerMessageRules.swift:504"
+    "LedgerMessageRules.swift:506"
    ],
    "args": [],
    "targets": [
@@ -42135,7 +42196,7 @@
    "ko": "번호는 가려서 이 기기에만 7일 동안 둬요.",
    "en": "Numbers are masked. Kept on this device only, for 7 days.",
    "files": [
-    "LedgerMessageRules.swift:255"
+    "LedgerMessageRules.swift:257"
    ],
    "args": [],
    "targets": [
@@ -43558,7 +43619,7 @@
    "ko": "삭제",
    "en": "Delete",
    "files": [
-    "LedgerMessageRules.swift:266",
+    "LedgerMessageRules.swift:268",
     "MapHomePlaceBookTools.swift:843",
     "MapHomeSettingsSheets.swift:111"
    ],
@@ -45151,7 +45212,7 @@
    "en": "Income",
    "files": [
     "PaymentAlertSources.swift:144",
-    "PaymentAlertSources.swift:300",
+    "PaymentAlertSources.swift:339",
     "LedgerExport.swift:22"
    ],
    "args": [],
@@ -46677,7 +46738,7 @@
    "ko": "앞으로 이런 알림은 넣지 않게 할게요. 이미 넣은 기록은 가계부에서 지워 주세요.",
    "en": "Alerts like this won't be added from now on. Delete the entry already added from the ledger.",
    "files": [
-    "PaymentAlertSources.swift:229"
+    "PaymentAlertSources.swift:230"
    ],
    "args": [],
    "targets": [
@@ -46689,7 +46750,7 @@
    "ko": "앞으로 이런 알림은 넣지 않게 할게요.",
    "en": "Alerts like this won't be added from now on.",
    "files": [
-    "PaymentAlertSources.swift:230"
+    "PaymentAlertSources.swift:231"
    ],
    "args": [],
    "targets": [
@@ -47056,7 +47117,7 @@
    "ko": "앱마다 넣을 알림 고르기",
    "en": "Choose alerts per app",
    "files": [
-    "PaymentAlertSources.swift:279"
+    "PaymentAlertSources.swift:318"
    ],
    "args": [],
    "targets": [
@@ -48581,7 +48642,7 @@
    "ko": "연결된 AI가 없어요. 메뉴 › AI 연결에서 먼저 연결해 주세요.",
    "en": "No AI is connected. Connect one in Menu › AI connection first.",
    "files": [
-    "LedgerMessageRules.swift:303"
+    "LedgerMessageRules.swift:305"
    ],
    "args": [],
    "targets": [
@@ -49443,7 +49504,7 @@
    "ko": "예산 없음",
    "en": "No budget",
    "files": [
-    "LedgerMessageRules.swift:464"
+    "LedgerMessageRules.swift:466"
    ],
    "args": [],
    "targets": [
@@ -50116,8 +50177,8 @@
    "ko": "완료",
    "en": "Done",
    "files": [
-    "LedgerMessageRules.swift:286",
-    "PaymentAlertSources.swift:284",
+    "LedgerMessageRules.swift:288",
+    "PaymentAlertSources.swift:323",
     "AITaskPanel.swift:113"
    ],
    "args": [],
@@ -51363,7 +51424,7 @@
    "ko": "이 글은",
    "en": "This text is",
    "files": [
-    "PaymentAlertSources.swift:305"
+    "PaymentAlertSources.swift:345"
    ],
    "args": [],
    "targets": [
@@ -51885,7 +51946,7 @@
    "ko": "이 알림은 · {0}",
    "en": "This alert · {0}",
    "files": [
-    "PaymentAlertSources.swift:305"
+    "PaymentAlertSources.swift:345"
    ],
    "args": [
     "$0"
@@ -52526,7 +52587,7 @@
    "ko": "이미 가계부에 들어간 글이에요. 앞으로 같은 모양을 이 종류로 읽게 할게요.",
    "en": "This one is already in the ledger. Alerts like it will be read this way from now on.",
    "files": [
-    "PaymentAlertSources.swift:232"
+    "PaymentAlertSources.swift:233"
    ],
    "args": [],
    "targets": [
@@ -52539,6 +52600,18 @@
    "en": "Existing records keep this name.",
    "files": [
     "MapHomeSettingsSheets.swift:149"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "이미 들어간 기록은 가계부에서 지워 주세요.|Delete the entry already added from the ledger.",
+   "ko": "이미 들어간 기록은 가계부에서 지워 주세요.",
+   "en": "Delete the entry already added from the ledger.",
+   "files": [
+    "PaymentAlertSources.swift:268"
    ],
    "args": [],
    "targets": [
@@ -54644,7 +54717,7 @@
    "ko": "정하지 않음",
    "en": "Not set",
    "files": [
-    "LedgerMessageRules.swift:560",
+    "LedgerMessageRules.swift:562",
     "AssistantDataActions.swift:614",
     "TravelNewTripSheet.swift:70"
    ],
@@ -56009,9 +56082,9 @@
    "ko": "지움",
    "en": "Deleted",
    "files": [
-    "LedgerMessageRules.swift:488",
-    "LedgerMessageRules.swift:494",
-    "LedgerMessageRules.swift:516"
+    "LedgerMessageRules.swift:490",
+    "LedgerMessageRules.swift:496",
+    "LedgerMessageRules.swift:518"
    ],
    "args": [],
    "targets": [
@@ -56064,7 +56137,7 @@
    "en": "Spending",
    "files": [
     "PaymentAlertSources.swift:143",
-    "PaymentAlertSources.swift:299",
+    "PaymentAlertSources.swift:338",
     "LedgerExport.swift:147"
    ],
    "args": [],
@@ -56344,7 +56417,7 @@
    "ko": "직접 정해 가계부에 넣었어요.",
    "en": "Added to the ledger as you chose.",
    "files": [
-    "PaymentAlertSources.swift:237"
+    "PaymentAlertSources.swift:238"
    ],
    "args": [],
    "targets": [
@@ -59045,7 +59118,7 @@
    "ko": "학습",
    "en": "Teach",
    "files": [
-    "LedgerMessageRules.swift:262"
+    "LedgerMessageRules.swift:264"
    ],
    "args": [],
    "targets": [

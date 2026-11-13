@@ -223,6 +223,7 @@ enum PaymentInboxChoice {
     static func apply(_ kind: LedgerMessageRules.Kind, to item: PaymentInbox.Item, language: MapHomeLanguage) async -> (PaymentInbox.Item, String) {
         var item = item
         item.choice = kind
+        item.isInternal = nil
         var notice: String
         if kind == .ignore {
             notice = item.outcome == .added
@@ -248,6 +249,44 @@ enum PaymentInboxChoice {
         }
         PaymentInbox.update(item)
         return (item, notice)
+    }
+
+    /// 「내부」(INT1114A01, 대표 지시): 내 계좌 사이 거래·지역카드 충전·교통카드 충전 같은 내부 이체. 지출도 수입도 아니므로
+    /// 가계부에 넣지 않고, 이 글로 이미 들어간 기록이 있으면 지운다. AI에게는 같은 모양을 넣지 않는 규칙을 부탁한다.
+    @MainActor
+    static func applyInternal(to item: PaymentInbox.Item, language: MapHomeLanguage) async -> (PaymentInbox.Item, String) {
+        var item = item
+        item.choice = .ignore
+        item.isInternal = true
+        var notice = language.text("내부 이체로 정했어요. 지출·수입에 넣지 않아요.", "Marked as an internal transfer. It isn't counted as spending or income.")
+        if item.outcome == .added {
+            await LedgerBook.shared.load()
+            if let entry = addedEntry(for: item, in: LedgerBook.shared.entries) {
+                await LedgerBook.shared.remove(entry)
+                notice += " " + language.text("가계부에 들어갔던 기록은 지웠어요.", "The entry already added was removed.")
+            } else {
+                notice += " " + language.text("이미 들어간 기록은 가계부에서 지워 주세요.", "Delete the entry already added from the ledger.")
+            }
+        }
+        item.outcome = .skipped
+        item.message = language.text("내부 이체라 가계부에 넣지 않았어요.", "Internal transfer: not added to the ledger.")
+        var context = ["choice": LedgerMessageRules.Kind.ignore.rawValue, "reason": "internal transfer between the user's own accounts or a prepaid/local-currency/transit card top-up"]
+        if let source = item.source { context["app"] = source }
+        if !item.ruleRequested, AITaskQueue.enqueue(.paymentRule, text: item.text, day: item.receivedAt, context: context) {
+            item.ruleRequested = true
+            await AITaskQueue.upload()
+            notice += " " + language.text("AI에게 같은 모양의 규칙을 부탁했어요.", "Asked your AI for a rule for this layout.")
+        }
+        PaymentInbox.update(item)
+        return (item, notice)
+    }
+
+    /// 이 글로 들어간 가계부 기록: 결제 문자·AI로 들어온 같은 금액의 기록 가운데 받은 때 앞뒤 10분 안에 만들어진 것.
+    static func addedEntry(for item: PaymentInbox.Item, in entries: [LedgerEntry]) -> LedgerEntry? {
+        guard let amount = LedgerMessageParser.amount(item.text)?.value else { return nil }
+        return entries
+            .filter { $0.source != .manual && $0.amount == amount && abs($0.createdAt.timeIntervalSince(item.receivedAt)) <= 600 }
+            .min { abs($0.createdAt.timeIntervalSince(item.receivedAt)) < abs($1.createdAt.timeIntervalSince(item.receivedAt)) }
     }
 
     /// 앱 규칙으로 읽은 금액·가게로 기록을 만든다. 시각은 받은 때다.
@@ -295,9 +334,10 @@ struct PaymentInboxChoiceSection: View {
 
     var body: some View {
         Section {
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 choice(.expense, language.text("지출", "Spending"), "arrow.up.right")
                 choice(.income, language.text("수입", "Income"), "arrow.down.left")
+                internalChoice
                 choice(.ignore, language.text("넣지 않음", "Skip"), "nosign")
             }
             .buttonStyle(.plain)
@@ -308,8 +348,29 @@ struct PaymentInboxChoiceSection: View {
         }
     }
 
+    /// 「내부」: 내 계좌 사이 이체·지역카드·교통카드 충전(INT1114A01).
+    private var internalChoice: some View {
+        let isOn = item.isInternal == true
+        return Button {
+            Task {
+                let (updated, message) = await PaymentInboxChoice.applyInternal(to: item, language: language)
+                item = updated
+                notice = message
+            }
+        } label: {
+            Label(language.text("내부", "Internal"), systemImage: "arrow.left.arrow.right")
+                .font(.taptionStyle(.subheadline, weight: .medium))
+                .lineLimit(1).minimumScaleFactor(0.7)
+                .frame(maxWidth: .infinity, minHeight: 40)
+                .foregroundStyle(isOn ? Color.white : Color.tpInk)
+                .background(isOn ? Color.tpAccent : Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionCorner.small, style: .continuous))
+        }
+        .accessibilityIdentifier("paymentInboxChoice-internal")
+        .accessibilityHint(language.text("내 계좌 사이 이체나 카드 충전", "A transfer between your own accounts or a card top-up"))
+    }
+
     private func choice(_ kind: LedgerMessageRules.Kind, _ title: String, _ symbol: String) -> some View {
-        let isOn = item.choice == kind
+        let isOn = item.choice == kind && (kind != .ignore || item.isInternal != true)
         return Button {
             Task {
                 let (updated, message) = await PaymentInboxChoice.apply(kind, to: item, language: language)
@@ -319,6 +380,7 @@ struct PaymentInboxChoiceSection: View {
         } label: {
             Label(title, systemImage: symbol)
                 .font(.taptionStyle(.subheadline, weight: .medium))
+                .lineLimit(1).minimumScaleFactor(0.7)
                 .frame(maxWidth: .infinity, minHeight: 40)
                 .foregroundStyle(isOn ? Color.white : Color.tpInk)
                 .background(isOn ? Color.tpAccent : Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionCorner.small, style: .continuous))
