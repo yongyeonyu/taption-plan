@@ -173,7 +173,11 @@ enum SensorTravelDerivation {
             registered: input.registeredCarAudioNames,
             corrections: input.corrections
         ))
-        return WalkingDistanceBreakdown.make(travel: recognizedTravel, readings: input.readings)
-            .annotating(recognizedTravel)
+        // 내 차에 연결되지 않은 차량 이동이 정류장처럼 자주 섰으면 버스다(TRF1113A01).
+        let busAware = BusRideRecognizer.applying(
+            recognizedTravel, readings: input.readings, registered: input.registeredCarAudioNames, corrections: input.corrections
+        )
+        return WalkingDistanceBreakdown.make(travel: busAware, readings: input.readings)
+            .annotating(busAware)
     }
 }

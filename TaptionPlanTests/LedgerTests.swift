@@ -1178,3 +1178,69 @@ final class LedgerTransitFareTests: XCTestCase {
         XCTAssertEqual(rides.map(\.mode), [.subway])
     }
 }
+
+/// 내 차가 아닌 차량 이동을 버스로 보기(TRF1113A01). 좌표는 꾸민 것(위도 1도 ≈ 111km 직선 길).
+final class BusRideRecognizerTests: XCTestCase {
+    private let base = Date(timeIntervalSince1970: 1_794_000_000)
+
+    /// 초 단위 (움직임 m/s, 걸린 초) 조각으로 GPS 점을 만든다.
+    private func track(_ legs: [(speed: Double, seconds: Int)], car: String? = nil) -> [SensorReading] {
+        var readings: [SensorReading] = []
+        var meters = 0.0, t = 0
+        for leg in legs {
+            for _ in stride(from: 0, to: leg.seconds, by: 5) {
+                let point = GeoPoint(latitude: 37.5 + meters / 111_000, longitude: 126.7, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: 10)
+                readings.append(SensorReading(timestamp: base.addingTimeInterval(TimeInterval(t)), point: point, motion: .automotive,
+                                              motionConfidence: .high, carAudioRouteName: car))
+                meters += leg.speed * 5
+                t += 5
+            }
+        }
+        return readings
+    }
+
+    /// 버스: 1분 남짓 달리고 20~40초씩 서기를 열 번.
+    private var busLegs: [(speed: Double, seconds: Int)] {
+        (0..<10).flatMap { index in [(speed: 9.0, seconds: 60), (speed: 0.0, seconds: index % 2 == 0 ? 20 : 40)] }
+    }
+
+    /// 자가용: 길게 달리고 신호에서 90~150초씩 서기를 세 번.
+    private var carLegs: [(speed: Double, seconds: Int)] {
+        [(14, 300), (0, 120), (14, 300), (0, 90), (14, 240), (0, 150), (14, 120)]
+    }
+
+    private func segment(_ readings: [SensorReading], evidence: [String] = []) -> TravelSegment {
+        TravelSegment(mode: .car, span: TimeSpan(start: readings.first!.timestamp, end: readings.last!.timestamp),
+                      distanceMeters: 0, confidence: .high, evidence: evidence)
+    }
+
+    func testStopAndGoWithoutMyCarBecomesBus() {
+        let readings = track(busLegs)
+        let stops = BusRideRecognizer.stops(in: readings)
+        XCTAssertGreaterThanOrEqual(stops.short, 8)
+        XCTAssertEqual(stops.long, 0)
+        let result = BusRideRecognizer.applying([segment(readings)], readings: readings, registered: ["내 차"], corrections: [])
+        XCTAssertEqual(result.first?.mode, .bus)
+        XCTAssertEqual(result.first?.confidence, .medium)
+        XCTAssertGreaterThan(result.first?.distanceMeters ?? 0, 4_000, "거리가 없던 구간은 GPS 거리로 채운다")
+        XCTAssertTrue(result.first?.evidence.contains { $0.hasPrefix(BusRideRecognizer.evidencePrefix) } == true)
+    }
+
+    func testLongTrafficLightStopsStayCar() {
+        let readings = track(carLegs)
+        XCTAssertFalse(BusRideRecognizer.looksLikeBus(BusRideRecognizer.stops(in: readings)))
+        XCTAssertEqual(BusRideRecognizer.applying([segment(readings)], readings: readings, registered: ["내 차"], corrections: []).first?.mode, .car)
+    }
+
+    func testMyCarConnectionUserChoiceOrNoRegisteredCarKeepsCar() {
+        let connected = track(busLegs, car: "내 차")
+        XCTAssertEqual(BusRideRecognizer.applying([segment(connected)], readings: connected, registered: ["내 차"], corrections: []).first?.mode, .car)
+        let readings = track(busLegs)
+        XCTAssertEqual(BusRideRecognizer.applying([segment(readings)], readings: readings, registered: [], corrections: []).first?.mode, .car,
+                       "등록한 차가 없으면 남의 차인지 알 수 없다")
+        XCTAssertEqual(BusRideRecognizer.applying([segment(readings, evidence: ["사용자 확인 · 자동차"])], readings: readings, registered: ["내 차"], corrections: []).first?.mode, .car)
+        let span = segment(readings).span
+        let correction = TravelModeCorrection(span: span, mode: .car, inferredMode: .car, inferredConfidence: .high)
+        XCTAssertEqual(BusRideRecognizer.applying([segment(readings)], readings: readings, registered: ["내 차"], corrections: [correction]).first?.mode, .car)
+    }
+}
