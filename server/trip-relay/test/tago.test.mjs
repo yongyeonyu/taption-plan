@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { tagoProxy } from "../src/index.js";
+import { seoulBusProxy, tagoProxy } from "../src/index.js";
 
 // BRT1113A01: 버스 노선 중계. 키는 서버에서만 붙이고, 허용한 값만 넘긴다.
 test("tago proxy looks up nearby stops with the server key", async () => {
@@ -25,4 +25,19 @@ test("tago proxy lists routes through a stop and rejects bad input", async () =>
   assert.equal((await tagoProxy(new Request("https://relay.example.com/tago/routes?cityCode=23&nodeId=x;drop"), env, fetcher)).status, 400);
   assert.equal((await tagoProxy(new Request("https://relay.example.com/tago/stops?lat=200&lng=1"), env, fetcher)).status, 400);
   assert.equal((await tagoProxy(new Request("https://relay.example.com/tago/stops?lat=37&lng=127"), {}, fetcher)).status, 503, "키가 없으면 쓸 수 없음");
+});
+
+test("seoul bus proxy finds stops by position and routes by stop number", async () => {
+  let seen;
+  const fetcher = async (url) => { seen = new URL(url); return new Response("{}", { status: 200 }); };
+  const env = { TAGO_SERVICE_KEY: "secret" };
+  assert.equal((await seoulBusProxy(new Request("https://relay.example.com/seoul/stops?lat=37.56&lng=126.97"), env, fetcher)).status, 200);
+  assert.equal(seen.pathname.endsWith("/getStationByPos"), true);
+  assert.equal(seen.searchParams.get("tmX"), "126.97");
+  assert.equal(seen.searchParams.get("resultType"), "json");
+  assert.equal(seen.searchParams.get("serviceKey"), "secret");
+  assert.equal((await seoulBusProxy(new Request("https://relay.example.com/seoul/routes?arsId=01234"), env, fetcher)).status, 200);
+  assert.equal(seen.searchParams.get("arsId"), "01234");
+  assert.equal((await seoulBusProxy(new Request("https://relay.example.com/seoul/routes?arsId=12"), env, fetcher)).status, 400);
+  assert.equal((await seoulBusProxy(new Request("https://relay.example.com/seoul/stops?lat=37&lng=127"), {}, fetcher)).status, 503);
 });

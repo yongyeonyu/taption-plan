@@ -311,6 +311,16 @@ enum BusRouteCheck {
 
     // MARK: TAGO 응답(items.item은 하나면 객체, 여럿이면 배열이고 숫자가 문자열·숫자로 섞여 온다)
 
+    /// 정상 응답인가. 키가 그 서비스에 등록되지 않은 오류도 200으로 올 수 있어, 결과 코드를 봐야 「없음」을 믿는다.
+    /// TAGO는 header.resultCode "00", 서울은 msgHeader.headerCd "0"(정상)·"4"(결과 없음).
+    static func isValid(_ data: Data, seoul: Bool) -> Bool {
+        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return false }
+        if seoul {
+            return ["0", "4"].contains(text((root["msgHeader"] as? [String: Any])?["headerCd"]) ?? "")
+        }
+        return text(((root["response"] as? [String: Any])?["header"] as? [String: Any])?["resultCode"]) == "00"
+    }
+
     private static func items(_ data: Data) -> [[String: Any]] {
         guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let body = (root["response"] as? [String: Any])?["body"] as? [String: Any],
@@ -342,6 +352,48 @@ enum BusRouteCheck {
         }
     }
 
+    // MARK: 서울특별시 정류소정보(BRT1113B01). msgBody.itemList는 하나면 객체, 없으면 null로 온다.
+
+    /// 서울 정류소의 도시 코드 자리. 노선은 정류소 고유번호(arsId)로 찾는다.
+    static let seoulCity = "seoul"
+
+    private static func seoulItems(_ data: Data) -> [[String: Any]] {
+        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let body = root["msgBody"] as? [String: Any] else { return [] }
+        if let list = body["itemList"] as? [[String: Any]] { return list }
+        if let one = body["itemList"] as? [String: Any] { return [one] }
+        return []
+    }
+
+    static func seoulStops(_ data: Data) -> [Stop] {
+        seoulItems(data).compactMap { item in
+            guard let ars = text(item["arsId"]), ars.count == 5, ars != "00000",
+                  let lng = text(item["gpsX"]).flatMap(Double.init), let lat = text(item["gpsY"]).flatMap(Double.init) else { return nil }
+            return Stop(cityCode: seoulCity, nodeID: ars, point: GeoPoint(latitude: lat, longitude: lng, altitude: 0, horizontalAccuracy: 0, verticalAccuracy: 0))
+        }
+    }
+
+    /// 서울 노선 유형 번호 → 이름(1 공항, 2 마을, 3 간선, 4 지선, 5 순환, 6 광역, 7 인천, 8 경기).
+    static func seoulKind(_ code: String?) -> String {
+        switch code {
+        case "1": "공항버스"
+        case "2": "마을버스"
+        case "3": "간선버스"
+        case "4": "지선버스"
+        case "5": "순환버스"
+        case "6": "광역버스"
+        case "7": "인천버스"
+        case "8": "경기버스"
+        default: ""
+        }
+    }
+
+    static func seoulRoutes(_ data: Data) -> [Route] {
+        seoulItems(data).compactMap { item in
+            text(item["busRouteNm"]).map { Route(number: $0, kind: seoulKind(text(item["busRouteType"]))) }
+        }
+    }
+
     /// 점들에서 가장 가까운 정류소(반경 안).
     static func nearest(_ stops: [Stop], to points: [GeoPoint]) -> Stop? {
         stops.compactMap { stop -> (Stop, Double)? in
@@ -365,20 +417,17 @@ enum BusRouteLookupRunner {
             guard let token else { return }
             let boardPoints = BusStopCheck.points(.board, segment: segment, readings: readings)
             let alightPoints = BusStopCheck.points(.alight, segment: segment, readings: readings)
-            guard let boardCenter = boardPoints.last, let alightCenter = alightPoints.first,
-                  let boardStops = await fetch(host: host, path: "/tago/stops", query: ["lat": String(boardCenter.latitude), "lng": String(boardCenter.longitude)], token: token),
-                  let alightStops = await fetch(host: host, path: "/tago/stops", query: ["lat": String(alightCenter.latitude), "lng": String(alightCenter.longitude)], token: token)
-            else { return }
-            guard let board = BusRouteCheck.nearest(BusRouteCheck.stops(boardStops), to: boardPoints),
-                  let alight = BusRouteCheck.nearest(BusRouteCheck.stops(alightStops), to: alightPoints) else {
+            guard let boardCenter = boardPoints.last, let alightCenter = alightPoints.first else { continue }
+            guard let boardFound = await nearestStop(host: host, center: boardCenter, points: boardPoints, token: token),
+                  let alightFound = await nearestStop(host: host, center: alightCenter, points: alightPoints, token: token) else { return }
+            guard let board = boardFound, let alight = alightFound else {
                 BusRouteCheck.remember(segment, routes: [], defaults: defaults)
                 checked += 1
                 continue
             }
-            guard let boardRoutes = await fetch(host: host, path: "/tago/routes", query: ["cityCode": board.cityCode, "nodeId": board.nodeID], token: token),
-                  let alightRoutes = await fetch(host: host, path: "/tago/routes", query: ["cityCode": alight.cityCode, "nodeId": alight.nodeID], token: token)
-            else { return }
-            let common = BusRouteCheck.common(BusRouteCheck.routes(boardRoutes), BusRouteCheck.routes(alightRoutes))
+            guard let boardRoutes = await routes(host: host, stop: board, token: token),
+                  let alightRoutes = await routes(host: host, stop: alight, token: token) else { return }
+            let common = BusRouteCheck.common(boardRoutes, alightRoutes)
             BusRouteCheck.remember(segment, routes: common, defaults: defaults)
             checked += 1
             if !common.isEmpty { found += 1 }
@@ -386,6 +435,25 @@ enum BusRouteLookupRunner {
         if checked > 0 {
             TaptionPlanDiagnosticsLogger.shared.record("bus_route_lookup", fields: ["checked": String(checked), "found": String(found)])
         }
+    }
+
+    /// 가장 가까운 정류소. 전국(TAGO)에서 못 찾으면 서울시 정류소정보로 본다. 응답이 없으면 nil, 정류소가 없으면 .some(nil).
+    private static func nearestStop(host: String, center: GeoPoint, points: [GeoPoint], token: String) async -> BusRouteCheck.Stop?? {
+        let query = ["lat": String(center.latitude), "lng": String(center.longitude)]
+        let national = await fetch(host: host, path: "/tago/stops", query: query, token: token).flatMap { BusRouteCheck.isValid($0, seoul: false) ? $0 : nil }
+        if let national, let stop = BusRouteCheck.nearest(BusRouteCheck.stops(national), to: points) { return .some(stop) }
+        let seoul = await fetch(host: host, path: "/seoul/stops", query: query, token: token).flatMap { BusRouteCheck.isValid($0, seoul: true) ? $0 : nil }
+        if let seoul, let stop = BusRouteCheck.nearest(BusRouteCheck.seoulStops(seoul), to: points) { return .some(stop) }
+        return national == nil && seoul == nil ? nil : .some(nil)
+    }
+
+    private static func routes(host: String, stop: BusRouteCheck.Stop, token: String) async -> [BusRouteCheck.Route]? {
+        if stop.cityCode == BusRouteCheck.seoulCity {
+            return await fetch(host: host, path: "/seoul/routes", query: ["arsId": stop.nodeID], token: token)
+                .flatMap { BusRouteCheck.isValid($0, seoul: true) ? BusRouteCheck.seoulRoutes($0) : nil }
+        }
+        return await fetch(host: host, path: "/tago/routes", query: ["cityCode": stop.cityCode, "nodeId": stop.nodeID], token: token)
+            .flatMap { BusRouteCheck.isValid($0, seoul: false) ? BusRouteCheck.routes($0) : nil }
     }
 
     /// 서버에 키가 없거나(503) 실패하면 nil — 기억하지 않고 다음에 다시 본다.

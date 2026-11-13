@@ -1486,6 +1486,19 @@ final class BusRouteCheckTests: XCTestCase {
         XCTAssertTrue(BusRouteCheck.routes(Data(#"{"response":{"body":{"items":""}}}"#.utf8)).isEmpty)
     }
 
+    func testSeoulStationsAndErrorResponses() {
+        let stops = Data(#"{"msgHeader":{"headerCd":"0"},"msgBody":{"itemList":[{"arsId":"01234","stationNm":"시청","gpsX":"126.97","gpsY":"37.56"},{"arsId":"0","gpsX":"126.9","gpsY":"37.5"}]}}"#.utf8)
+        XCTAssertTrue(BusRouteCheck.isValid(stops, seoul: true))
+        XCTAssertEqual(BusRouteCheck.seoulStops(stops).map(\.nodeID), ["01234"])
+        let routes = Data(#"{"msgHeader":{"headerCd":"0"},"msgBody":{"itemList":{"busRouteNm":"9401","busRouteType":"6"}}}"#.utf8)
+        XCTAssertEqual(BusRouteCheck.seoulRoutes(routes), [.init(number: "9401", kind: "광역버스")])
+        XCTAssertTrue(BusRouteCheck.isValid(Data(#"{"msgHeader":{"headerCd":"4"},"msgBody":{"itemList":null}}"#.utf8), seoul: true), "결과 없음은 정상")
+        XCTAssertFalse(BusRouteCheck.isValid(Data(#"{"msgHeader":{"headerCd":"7","headerMsg":"인증 실패"}}"#.utf8), seoul: true))
+        XCTAssertTrue(BusRouteCheck.isValid(Data(#"{"response":{"header":{"resultCode":"00"},"body":{"items":""}}}"#.utf8), seoul: false))
+        XCTAssertFalse(BusRouteCheck.isValid(Data("<OpenAPI_ServiceResponse>SERVICE_KEY_IS_NOT_REGISTERED_ERROR</OpenAPI_ServiceResponse>".utf8), seoul: false),
+                       "등록 안 된 키 오류를 「정류장 없음」으로 믿지 않는다")
+    }
+
     func testCommonRoutesNameAndFare() {
         let board: [BusRouteCheck.Route] = [.init(number: "80", kind: "간선버스"), .init(number: "1100", kind: "광역버스")]
         let alight: [BusRouteCheck.Route] = [.init(number: "80", kind: "간선버스"), .init(number: "42", kind: "지선버스")]

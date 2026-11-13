@@ -96,12 +96,46 @@ export async function tagoProxy(request, env, fetcher = fetch) {
   });
 }
 
+// 서울 시내버스(BRT1113B01): TAGO에서 빠지는 서울은 서울특별시_정류소정보조회로 찾는다. 공공데이터포털 공통 키라 같은 비밀값을 쓴다.
+// /seoul/stops?lat&lng: 좌표 근처 정류소(getStationByPos, 반경 100m). /seoul/routes?arsId: 정류소별 경유노선(getRouteByStation).
+const SEOUL_BASE = "http://ws.bus.go.kr/api/rest/stationinfo/";
+const ARS_ID = /^\d{5}$/;
+
+export async function seoulBusProxy(request, env, fetcher = fetch) {
+  if (request.method !== "GET") return json({ error: "method_not_allowed" }, 405);
+  if (!env.TAGO_SERVICE_KEY) return json({ error: "unavailable" }, 503);
+  const url = new URL(request.url), incoming = url.searchParams;
+  let target;
+  if (url.pathname === "/seoul/stops") {
+    const lat = Number(incoming.get("lat") ?? NaN), lng = Number(incoming.get("lng") ?? NaN);
+    if (!(Math.abs(lat) <= 90) || !(Math.abs(lng) <= 180)) return json({ error: "bad_query" }, 400);
+    target = new URL(SEOUL_BASE + "getStationByPos");
+    target.searchParams.set("tmX", String(lng));
+    target.searchParams.set("tmY", String(lat));
+    target.searchParams.set("radius", "100");
+  } else {
+    const arsId = incoming.get("arsId") ?? "";
+    if (!ARS_ID.test(arsId)) return json({ error: "bad_query" }, 400);
+    target = new URL(SEOUL_BASE + "getRouteByStation");
+    target.searchParams.set("arsId", arsId);
+  }
+  target.searchParams.set("resultType", "json");
+  target.searchParams.set("serviceKey", env.TAGO_SERVICE_KEY);
+  const upstream = await fetcher(target);
+  return new Response(await upstream.text(), {
+    status: upstream.status,
+    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+  });
+}
+
 async function tagoRoute(request, ctx) {
   if (request.method === "GET" && ctx.env.TAGO_SERVICE_KEY) {
     const perIp = await (await ipState(ctx.env, request)).call("countDaily", { name: "kakao", limit: LIMITS.kakaoPerIpDay, now: ctx.now, expire: true });
     if (!perIp.ok) return tooMany("kakao_daily_limit", perIp.retryAfter);
   }
-  return tagoProxy(request, ctx.env, ctx.env.FETCH);
+  return new URL(request.url).pathname.startsWith("/seoul/")
+    ? seoulBusProxy(request, ctx.env, ctx.env.FETCH)
+    : tagoProxy(request, ctx.env, ctx.env.FETCH);
 }
 
 // 경로마다 메서드별로 필요한 범위(AIR1110A02). master > write > read. search는 카카오 중계만.
@@ -210,6 +244,12 @@ const ROUTES = {
   "/tago/routes": {
     GET: ["search", tagoRoute],
   },
+  "/seoul/stops": {
+    GET: ["search", tagoRoute],
+  },
+  "/seoul/routes": {
+    GET: ["search", tagoRoute],
+  },
   "/fx": {
     GET: ["search", fxRoute],
   },
@@ -265,7 +305,7 @@ async function authorized(request, env, url, route, pathKey = null) {
   const [need, run, part] = entry;
   const state = userState(env, auth.master);
   const admission = await state.call("admit", {
-    now, registration: auth.kind === "master", entry: auth.entry, adopt: await adoptInfo(auth), kakao: url.pathname.startsWith("/kakao/") || url.pathname.startsWith("/tago/"),
+    now, registration: auth.kind === "master", entry: auth.entry, adopt: await adoptInfo(auth), kakao: url.pathname.startsWith("/kakao/") || url.pathname.startsWith("/tago/") || url.pathname.startsWith("/seoul/"),
     client: auth.kind === "master" ? clientInfo(request.headers.get("x-bokki-client")) : undefined,
   });
   if (!admission.ok) {
@@ -299,7 +339,7 @@ async function route(request, env, url) {
   if (publicRoute) return request.method === "GET" ? publicRoute(request, env, url) : json({ error: "method_not_allowed" }, 405);
   if (!env.USER_STATE) return json({ error: "unavailable" }, 503);
   // 인증 전에 IP마다 요청 수를 제한한다(finding 3). 카카오는 자기 제한(KAKAO_LIMIT)을 쓴다(N2: 이것도 인증 전).
-  if (await limited(url.pathname.startsWith("/kakao/") || url.pathname.startsWith("/tago/") ? env.KAKAO_LIMIT : env.REQUEST_LIMIT, request)) return tooMany();
+  if (await limited(url.pathname.startsWith("/kakao/") || url.pathname.startsWith("/tago/") || url.pathname.startsWith("/seoul/") ? env.KAKAO_LIMIT : env.REQUEST_LIMIT, request)) return tooMany();
   switch (url.pathname) {
     case "/register": return registerRoute(request, env, now);
     case "/oauth/register": return registerClient(request, env, now);
