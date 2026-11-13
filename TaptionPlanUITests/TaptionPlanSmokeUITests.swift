@@ -1179,6 +1179,8 @@ final class TaptionPlanTravelPlanUITests: XCTestCase {
         shot(app, "6d-course")
         nextPlan.tap()
         sleep(2)
+        // 위키백과 사진이 켜진 빌드에서 사진이 받아질 때까지 기다려 볼 때만 쓴다(TVU_WAIT_PHOTOS).
+        if ProcessInfo.processInfo.environment["TVU_WAIT_PHOTOS"] != nil { sleep(25) }
         shot(app, "6e-course-next")
         app.buttons["계획표"].tap()
         XCTAssertTrue(playhead.waitForExistence(timeout: 3))
