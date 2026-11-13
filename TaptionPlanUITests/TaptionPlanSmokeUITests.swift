@@ -1144,6 +1144,20 @@ final class TaptionPlanTravelPlanUITests: XCTestCase {
         app.buttons["취소"].tap()
         XCTAssertTrue(handle.waitForExistence(timeout: 5))
 
+        // 「코스」로 바꾸면 지금 일정 카드와 순서 목록이 보이고, 「다음 일정」을 누르면 넘어간다. 끝나면 계획표로 돌려놓는다.
+        let courseTab = app.buttons["코스"]
+        XCTAssertTrue(courseTab.waitForExistence(timeout: 3))
+        courseTab.tap()
+        let nextPlan = app.buttons["다음 일정"]
+        XCTAssertTrue(nextPlan.waitForExistence(timeout: 3), "코스 보기에 지금 일정 카드가 뜬다")
+        sleep(1)
+        shot(app, "6d-course")
+        nextPlan.tap()
+        sleep(1)
+        shot(app, "6e-course-next")
+        app.buttons["계획표"].tap()
+        XCTAssertTrue(playhead.waitForExistence(timeout: 3))
+
         // 여행 이름을 누르면 여행 속성 시트가 열린다.
         app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "후쿠오카")).firstMatch.tap()
         XCTAssertTrue(app.buttons["취소"].waitForExistence(timeout: 5), "여행 이름을 누르면 여행 고치기 시트가 열린다")

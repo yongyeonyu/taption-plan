@@ -52,6 +52,11 @@ final class ApplePhotoLibraryService: @unchecked Sendable {
         moments(in: span).count
     }
 
+    /// 기간 안에 찍은 첫 사진의 번호(화면 캡처 제외). 격리되지 않은 async라 메인 스레드 밖에서 읽는다(여행 코스 보기의 그림).
+    func firstPhotoID(in span: TimeSpan) async -> String? {
+        moments(in: span).first { $0.isScreenshot != true }?.id
+    }
+
     /// `includingVideos`는 지도·하단 링처럼 영상도 함께 보여 주는 화면만 켠다(사진 수 집계는 그대로).
     func moments(in span: TimeSpan, includingVideos: Bool = false) -> [PhotoMoment] {
         // 권한이 정해지기 전의 조회는 시스템 팝업을 띄운다.

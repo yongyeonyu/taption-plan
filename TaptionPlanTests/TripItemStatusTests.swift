@@ -615,6 +615,28 @@ final class TravelTripUnitTests: XCTestCase {
         XCTAssertEqual(TravelPlanTable.title(TravelTripColumn(name: "", kinds: []), index: 5, language: .korean), "열 6")
     }
 
+    /// TVV1113A01: 코스 보기 — 시간 순서, 재생 헤드 기준 지금 일정, 진행률, 이전·다음.
+    func testCourseOrderCurrentAndProgress() {
+        func block(_ id: String, _ start: Int, _ end: Int) -> TravelPlanTableModel.Block {
+            .init(id: id, column: 0, startMinute: start, endMinute: end, title: id, tripStatus: nil, status: .pending)
+        }
+        let blocks = TravelCourse.ordered([block("c", 720, 780), block("a", 540, 600), block("b", 570, 660)])
+        XCTAssertEqual(blocks.map(\.id), ["a", "b", "c"])
+        XCTAssertEqual(TravelCourse.currentIndex(blocks, minute: 545), 0)
+        XCTAssertEqual(TravelCourse.currentIndex(blocks, minute: 580), 1, "겹치면 늦게 시작한 일정")
+        XCTAssertEqual(TravelCourse.currentIndex(blocks, minute: 700), 2, "사이 시간이면 다음에 올 일정")
+        XCTAssertEqual(TravelCourse.currentIndex(blocks, minute: 60), 0)
+        XCTAssertEqual(TravelCourse.currentIndex(blocks, minute: 1_400), 2, "다 지났으면 마지막 일정")
+        XCTAssertNil(TravelCourse.currentIndex([], minute: 600))
+        XCTAssertEqual(TravelCourse.progress(blocks[0], minute: 555), 0.25, accuracy: 0.001)
+        XCTAssertEqual(TravelCourse.progress(blocks[0], minute: 100), 0)
+        XCTAssertEqual(TravelCourse.progress(blocks[0], minute: 900), 1)
+        XCTAssertEqual(TravelCourse.neighborStart(blocks, current: 1, step: 1), 720)
+        XCTAssertEqual(TravelCourse.neighborStart(blocks, current: 1, step: -1), 540)
+        XCTAssertNil(TravelCourse.neighborStart(blocks, current: 2, step: 1))
+        XCTAssertNil(TravelCourse.neighborStart(blocks, current: 0, step: -1))
+    }
+
     /// TVU1113A01: 시각 고치기를 여러 번 되돌리고 다시 한다. 새로 고치면 다시 하기는 비고, 다른 여행이면 앞의 것을 버린다.
     func testPlanHistoryUndoesAndRedoesTimeEdits() {
         func step(_ item: String, move: Int = 0, resize: Int = 0, trip: String = "t1") -> TravelPlanHistory.Step {

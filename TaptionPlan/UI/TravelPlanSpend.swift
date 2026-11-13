@@ -1,4 +1,4 @@
-import Foundation
+import SwiftUI
 import TaptionPlanStore
 
 /// 여행 계획표와 장부를 잇는다(TVZ1112A01): 일정 칸에 그 시간에 쓴 돈을 보이고, 재생 시각으로 지출을 넣는다.
@@ -34,5 +34,44 @@ enum TravelPlanSpend {
     static func vehicles(_ language: MapHomeLanguage) -> [String] {
         [("도보", "Walk"), ("지하철", "Subway"), ("버스", "Bus"), ("택시", "Taxi"), ("기차", "Train"), ("비행기", "Flight"), ("배", "Ferry")]
             .map { language.runtimeText($0.0, $0.1) }
+    }
+}
+
+/// 여행 머리말 아래의 돈 줄: 예산을 정했으면 남은 돈과 쓴 돈, 안 정했으면 쓴 돈만. 장부가 없으면 만들기. 누르면 장부를 연다.
+struct TravelMoneyBar: View {
+    let sheet: LedgerTripSheet?
+    /// 계획표가 올라와 있어 재생 헤드 시각까지만 센 금액인지.
+    let isUpTo: Bool
+    let language: MapHomeLanguage
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                if let sheet {
+                    let spent = LedgerMoney.text(sheet.myCost, language: language)
+                    let spentText = isUpTo ? language.runtimeText("여기까지 \(spent)", "So far \(spent)") : language.runtimeText("쓴 돈 \(spent)", "Spent \(spent)")
+                    if TravelPlanSpend.headline(sheet).isLeftover {
+                        Label(LedgerMoney.text(sheet.leftover, language: language), systemImage: "wonsign.circle.fill")
+                            .foregroundStyle(sheet.leftover < 0 ? TravelInk.actual : TravelInk.plan)
+                        Spacer(minLength: 0)
+                        Text(spentText).opacity(0.8)
+                    } else {
+                        Label(spentText, systemImage: "wonsign.circle.fill")
+                        Spacer(minLength: 0)
+                    }
+                } else {
+                    Label(language.text("여행 장부 만들기", "Start trip ledger"), systemImage: "wonsign.circle")
+                    Spacer(minLength: 0)
+                }
+            }
+            .font(.footnote.weight(.semibold))
+            .padding(.horizontal, 12)
+            .frame(height: 34)
+            .background(TravelInk.panel, in: Capsule())
+            .overlay { Capsule().stroke(TravelInk.border, lineWidth: 1) }
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("travelMoneyBar")
     }
 }

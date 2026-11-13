@@ -1,4 +1,5 @@
 import CoreLocation
+import TaptionPlanCore
 import SwiftUI
 import TaptionPlanStore
 
@@ -197,9 +198,26 @@ struct TravelPlanHandleBar: View {
 struct TravelDayChips: View {
     let days: [(key: String, label: String)]
     let selected: String
+    /// 오른쪽의 「코스 | 계획표」 전환(TVV1113A01).
+    var showsCourse: Binding<Bool> = .constant(false)
     let onPick: (String) -> Void
 
     var body: some View {
+        HStack(spacing: 6) {
+            chips
+            Picker("", selection: showsCourse) {
+                Image(systemName: "list.number").tag(true).accessibilityLabel(MapHomeLanguage.current.text("코스", "Course"))
+                Image(systemName: "tablecells").tag(false).accessibilityLabel(MapHomeLanguage.current.text("계획표", "Plan table"))
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 88)
+            .padding(.trailing, 10)
+            .padding(.bottom, 4)
+            .accessibilityIdentifier("travelPlanTabs")
+        }
+    }
+
+    private var chips: some View {
         ScrollView(.horizontal) {
             HStack(spacing: 6) {
                 ForEach(days, id: \.key) { day in
@@ -354,5 +372,168 @@ struct TravelPlanHistoryBar: View {
             .disabled(!isOn)
             .accessibilityLabel(label)
             .accessibilityIdentifier(id)
+    }
+}
+
+// MARK: - 코스 보기(TVV1113A01)
+
+/// 코스 보기의 계산: 그날 일정을 시간 순서로 놓고, 재생 헤드 기준으로 지금 일정과 진행률을 고른다.
+enum TravelCourse {
+    /// 시간 순서(시작이 같으면 번호 순).
+    static func ordered(_ blocks: [TravelPlanTableModel.Block]) -> [TravelPlanTableModel.Block] {
+        blocks.sorted { ($0.startMinute, $0.id) < ($1.startMinute, $1.id) }
+    }
+
+    /// 지금 일정: 그 시각이 든 일정(겹치면 늦게 시작한 것), 없으면 다음에 올 일정, 그것도 없으면 마지막 일정.
+    static func currentIndex(_ blocks: [TravelPlanTableModel.Block], minute: Int) -> Int? {
+        guard !blocks.isEmpty else { return nil }
+        if let inside = blocks.lastIndex(where: { $0.startMinute <= minute && minute < $0.endMinute }) { return inside }
+        return blocks.firstIndex { $0.startMinute > minute } ?? blocks.count - 1
+    }
+
+    /// 그 일정 안에서의 진행률(0~1). 시작 전이면 0, 끝난 뒤면 1.
+    static func progress(_ block: TravelPlanTableModel.Block, minute: Int) -> Double {
+        let length = max(1, block.endMinute - block.startMinute)
+        return min(max(Double(minute - block.startMinute) / Double(length), 0), 1)
+    }
+
+    /// 이전·다음 단추가 옮겨 갈 시각. 끝이면 nil.
+    static func neighborStart(_ blocks: [TravelPlanTableModel.Block], current: Int, step: Int) -> Int? {
+        blocks.indices.contains(current + step) ? blocks[current + step].startMinute : nil
+    }
+}
+
+/// 코스 보기: 위에 지금 일정 카드(그림·이름·진행 막대·이전/다음), 아래에 시간 순서 목록. 그림은 그 일정 시간에 찍은 사진, 없으면 일정 색에 종류 아이콘.
+struct TravelCourseView: View {
+    let table: TravelPlanTableModel
+    /// 그날 일정의 실제 시각(사진을 찾을 때 쓴다).
+    let items: [TravelTripItem]
+    let language: MapHomeLanguage
+    let playMinute: Int
+    let photos: ApplePhotoLibraryService
+    @Binding var selectedID: String?
+    let onScrub: (Int) -> Void
+    let onEdit: (TravelPlanTableModel.Block) -> Void
+
+    @State private var images: [String: UIImage] = [:]
+
+    private var blocks: [TravelPlanTableModel.Block] { TravelCourse.ordered(table.blocks) }
+
+    var body: some View {
+        let blocks = self.blocks
+        let current = TravelCourse.currentIndex(blocks, minute: playMinute)
+        VStack(spacing: 0) {
+            if let current {
+                nowCard(blocks, current)
+                Divider().overlay(TravelInk.border)
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(spacing: 0) {
+                            ForEach(Array(blocks.enumerated()), id: \.element.id) { index, block in row(block, order: index + 1, isCurrent: index == current) }
+                        }
+                    }
+                    .onChange(of: current) { _, index in withAnimation(.snappy(duration: 0.25)) { proxy.scrollTo(blocks[index].id, anchor: .center) } }
+                }
+            } else {
+                Text(language.text("아직 일정이 없습니다", "No plans yet")).font(.footnote).foregroundStyle(TravelInk.plan.opacity(0.7))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .foregroundStyle(TravelInk.plan)
+        .task(id: blocks.map(\.id)) { await loadPhotos(blocks) }
+        .accessibilityIdentifier("travelCourse")
+    }
+
+    private func nowCard(_ blocks: [TravelPlanTableModel.Block], _ index: Int) -> some View {
+        let block = blocks[index]
+        return HStack(spacing: 10) {
+            thumbnail(block, side: 64)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("\(index + 1). " + block.title).font(.subheadline.weight(.semibold)).lineLimit(1)
+                Text(clock(block.startMinute) + " – " + clock(block.endMinute) + " · " + TravelQuickEntrySheet.durationText(block.endMinute - block.startMinute, language: language))
+                    .font(.caption.monospacedDigit()).opacity(0.8)
+                ProgressView(value: TravelCourse.progress(block, minute: playMinute)).tint(TravelInk.plan)
+                HStack {
+                    Text(clock(playMinute)).font(.caption2.monospacedDigit()).opacity(0.7)
+                    Spacer()
+                    step("backward.end.fill", language.text("이전 일정", "Previous plan"), to: TravelCourse.neighborStart(blocks, current: index, step: -1))
+                    step("forward.end.fill", language.text("다음 일정", "Next plan"), to: TravelCourse.neighborStart(blocks, current: index, step: 1))
+                }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .accessibilityIdentifier("travelCourseNow")
+    }
+
+    private func step(_ symbol: String, _ label: String, to minute: Int?) -> some View {
+        Button { if let minute { onScrub(minute) } } label: {
+            Image(systemName: symbol).font(.system(size: 14, weight: .semibold)).frame(width: 40, height: 28)
+                .background(TravelInk.planTint, in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .opacity(minute == nil ? 0.3 : 1)
+        .disabled(minute == nil)
+        .accessibilityLabel(label)
+    }
+
+    private func row(_ block: TravelPlanTableModel.Block, order: Int, isCurrent: Bool) -> some View {
+        HStack(spacing: 10) {
+            Text("\(order)").font(.footnote.weight(.semibold).monospacedDigit()).frame(width: 22)
+            thumbnail(block, side: 40)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(block.title).font(.footnote.weight(.semibold)).lineLimit(1)
+                Text(clock(block.startMinute) + " · " + TravelQuickEntrySheet.durationText(block.endMinute - block.startMinute, language: language))
+                    .font(.caption2.monospacedDigit()).opacity(0.7)
+            }
+            Spacer(minLength: 0)
+            if isCurrent { Image(systemName: "chart.bar.fill").font(.system(size: 13)).accessibilityHidden(true) }
+            Button { onEdit(block) } label: { Image(systemName: "slider.horizontal.3").font(.system(size: 14, weight: .semibold)).frame(width: 36, height: 36) }
+                .buttonStyle(.plain)
+                .accessibilityLabel(language.text("속성", "Details"))
+        }
+        .padding(.horizontal, 12)
+        .frame(height: 52)
+        .background(isCurrent ? TravelInk.planTint : .clear)
+        .contentShape(Rectangle())
+        // 누르면 재생 헤드가 그 일정 시작으로 가고(지도의 고양이도 따라간다) 그 일정이 선택된다.
+        .onTapGesture {
+            if selectedID != block.id { selectedID = block.id }
+            onScrub(block.startMinute)
+        }
+        .id(block.id)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(isCurrent ? [.isButton, .isSelected] : .isButton)
+    }
+
+    /// 그 일정 시간에 찍은 사진, 없으면 일정 색 바탕에 종류 아이콘.
+    private func thumbnail(_ block: TravelPlanTableModel.Block, side: CGFloat) -> some View {
+        ZStack {
+            if let image = images[block.id] {
+                Image(uiImage: image).resizable().scaledToFill()
+            } else {
+                TravelPlanTable.tint(block.colorHex)
+                Image(systemName: TripImportItem.Kind(rawValue: block.kind)?.symbol ?? "mappin").font(.system(size: side * 0.4, weight: .semibold))
+                    .foregroundStyle(TravelPlanTable.ink(block.colorHex))
+            }
+        }
+        .frame(width: side, height: side)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay { RoundedRectangle(cornerRadius: 8).stroke(TravelInk.border, lineWidth: 1) }
+    }
+
+    private func clock(_ minute: Int) -> String { TravelQuickEntrySheet.clock(minute) }
+
+    /// 사진 접근이 이미 허용돼 있을 때만, 일정마다 그 시간에 찍은 첫 사진(화면 캡처 제외)을 작게 읽는다. 여기서 권한을 묻지 않는다.
+    private func loadPhotos(_ blocks: [TravelPlanTableModel.Block]) async {
+        guard photos.permissionState().isGranted else { return }
+        let spans = Dictionary(items.map { ($0.itemID, TimeSpan(start: $0.start, end: $0.end)) }) { first, _ in first }
+        let service = photos
+        for block in blocks where images[block.id] == nil {
+            guard let span = spans[block.id], !Task.isCancelled else { continue }
+            guard let found = await service.firstPhotoID(in: span), let data = try? await service.thumbnailJPEG(localIdentifier: found, size: CGSize(width: 192, height: 192)),
+                  let image = UIImage(data: data) else { continue }
+            images[block.id] = image
+        }
     }
 }

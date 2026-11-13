@@ -267,6 +267,8 @@ struct TravelModeView: View {
     @State private var planCell: TravelPlanCell?
     @State private var planSelectedID: String?
     @State private var columnsTrip: TravelTrip?
+    /// 코스 보기를 고른 여행들(TVV1113A01). 고르지 않았으면 여행 중인 여행만 코스가 먼저.
+    @State private var courseChoice: [String: Bool] = [:]
     @State private var planHistory = TravelPlanHistory()
     @State private var deleteCandidate: TravelTripDirectory.Entry?
     /// 재생 헤드의 시각(그날 0시부터의 분). nil이면 처음 자리(오늘은 지금, 아니면 첫 일정 시작).
@@ -944,34 +946,7 @@ struct TravelModeView: View {
         let upTo: Date? = isPlanUp && openedID == entry.id ? playDate(entry) : nil
         let counted = upTo.map { limit in book.entries.filter { $0.occurredAt <= limit } } ?? book.entries
         let sheet = book.trip(entry.id).map { LedgerTripMath.sheet($0, entries: counted) }
-        return Button { ledgerTripID = entry.id } label: {
-            HStack(spacing: 8) {
-                if let sheet {
-                    let spent = LedgerMoney.text(sheet.myCost, language: language)
-                    let spentText = upTo == nil ? language.runtimeText("쓴 돈 \(spent)", "Spent \(spent)") : language.runtimeText("여기까지 \(spent)", "So far \(spent)")
-                    // 예산을 정했으면 남은 돈과 쓴 돈, 안 정했으면 쓴 돈만 보인다.
-                    if TravelPlanSpend.headline(sheet).isLeftover {
-                        Label(LedgerMoney.text(sheet.leftover, language: language), systemImage: "wonsign.circle.fill")
-                            .foregroundStyle(sheet.leftover < 0 ? TravelInk.actual : TravelInk.plan)
-                        Spacer(minLength: 0)
-                        Text(spentText).opacity(0.8)
-                    } else {
-                        Label(spentText, systemImage: "wonsign.circle.fill")
-                        Spacer(minLength: 0)
-                    }
-                } else {
-                    Label(language.text("여행 장부 만들기", "Start trip ledger"), systemImage: "wonsign.circle")
-                    Spacer(minLength: 0)
-                }
-            }
-            .font(.footnote.weight(.semibold))
-            .padding(.horizontal, 12)
-            .frame(height: 34)
-            .background(TravelInk.panel, in: Capsule())
-            .overlay { Capsule().stroke(TravelInk.border, lineWidth: 1) }
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("travelMoneyBar")
+        return TravelMoneyBar(sheet: sheet, isUpTo: upTo != nil, language: language) { ledgerTripID = entry.id }
     }
 
     private func tripFooter(_ entry: TravelTripDirectory.Entry) -> some View {
@@ -1050,6 +1025,14 @@ struct TravelModeView: View {
                     }
                 )
                 dayChips(entry)
+                if showsCourse(entry) {
+                    TravelCourseView(
+                        table: table(entry), items: (model.settings.travelTripItems ?? []).filter { $0.tripID == entry.id }, language: language,
+                        playMinute: currentPlayMinute(entry), photos: model.photoService, selectedID: $planSelectedID,
+                        onScrub: { playMinute = $0 }, onEdit: { editEntry(entry, itemID: $0.id) }
+                    )
+                    .frame(height: planDragHeight ?? tableHeight)
+                } else {
                 TravelPlanTable(
                     table: table(entry), language: language,
                     onSelect: { block in editEntry(entry, itemID: block.id) },
@@ -1067,6 +1050,7 @@ struct TravelModeView: View {
                     .id(dayKey(entry))
                     .frame(height: planDragHeight ?? tableHeight)
                     .padding(.horizontal, 8)
+                }
             }
             if isPlanUp, planHistory.tripID == entry.id, planHistory.canUndo || planHistory.canRedo {
                 TravelPlanHistoryBar(history: planHistory, language: language, onUndo: { applyHistory(planHistory.undo()) }, onRedo: { applyHistory(planHistory.redo()) })
@@ -1152,8 +1136,10 @@ struct TravelModeView: View {
         TravelDayChips(days: TravelPlanDays.days(of: entry.trip).map { day in
             let label = dayLabel(entry, key: day.key)
             return (day.key, entry.isDayTrip ? label : label + " " + TravelPlanDays.shortDate(day.key))
-        }, selected: dayKey(entry)) { planDayKey = $0 }
+        }, selected: dayKey(entry), showsCourse: Binding(get: { showsCourse(entry) }, set: { courseChoice[entry.id] = $0 })) { planDayKey = $0 }
     }
+
+    private func showsCourse(_ entry: TravelTripDirectory.Entry) -> Bool { courseChoice[entry.id] ?? (entry.state == .active) }
 
     /// 지도 핀을 누름(Trip 원본): 편집기를 열지 않고 그 일정을 고르고, 계획표를 그날·그 시각으로 옮긴다.
     private func selectPin(_ entry: TravelTripDirectory.Entry, itemID: String) {

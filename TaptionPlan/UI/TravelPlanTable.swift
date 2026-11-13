@@ -22,6 +22,8 @@ struct TravelPlanTableModel: Equatable {
         /// 일정 색(없으면 기본 남색)과 예상 지출(원, 없으면 0)(TVU1113A01).
         var colorHex: String?
         var planned = 0.0
+        /// 일정 종류(코스 보기의 아이콘, TVV1113A01).
+        var kind = ""
     }
 
     struct Actual: Identifiable, Equatable {
@@ -61,7 +63,7 @@ struct TravelPlanTableModel: Equatable {
             blocks.append(Block(
                 id: item.itemID, column: column, startMinute: segment.startMinute, endMinute: segment.endMinute, title: item.title,
                 tripStatus: segment.tripStatus, status: .pending, hasNote: !(item.note ?? "").isEmpty, spent: spent[item.itemID] ?? 0,
-                colorHex: item.colorHex, planned: item.plannedSpendKRW ?? 0
+                colorHex: item.colorHex, planned: item.plannedSpendKRW ?? 0, kind: item.kind
             ))
             spans.append(.init(id: item.itemID, start: segment.startMinute, end: segment.endMinute, isMove: item.kind == "transfer" || item.kind == "flight"))
         }
