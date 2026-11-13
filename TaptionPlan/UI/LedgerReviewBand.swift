@@ -87,6 +87,7 @@ struct LedgerReviewSheet: View {
         case .transfer: language.text("이체로 보임", "Looks like a transfer")
         case .toll: language.text("통행료 할인 시간에 걸침", "Toll near a discount time")
         case .cardBill: language.text("카드 대금 출금으로 보임", "Looks like a card bill payment")
+        case .fare: language.text("광역·좌석 버스일 수 있음", "May be an express or seated bus")
         }
     }
 }

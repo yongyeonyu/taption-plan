@@ -329,6 +329,7 @@
 		A1L1111T0100000000000001 /* LedgerTollRepeat.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111T0100000000000001 /* LedgerTollRepeat.swift */; };
 		A1PRL1112A01000000000001 /* LedgerMessageRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1PRL1112A01000000000001 /* LedgerMessageRules.swift */; };
 		A1PAS1113A01000000000001 /* PaymentAlertSources.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1PAS1113A01000000000001 /* PaymentAlertSources.swift */; };
+		A1TRF1113A01000000000001 /* LedgerTransitFare.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1TRF1113A01000000000001 /* LedgerTransitFare.swift */; };
 		A1R1111A0200000000000001 /* MapHomeTripPlayback.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1R1111A0200000000000001 /* MapHomeTripPlayback.swift */; };
 		A1T1111B0100000000000001 /* TravelAirportsAndFares.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1T1111B0100000000000001 /* TravelAirportsAndFares.swift */; };
 		A1L1111A0100000000000004 /* LedgerCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111A0100000000000004 /* LedgerCapture.swift */; };
@@ -1089,6 +1090,7 @@
 		F1L1111T0100000000000001 /* LedgerTollRepeat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerTollRepeat.swift; sourceTree = "<group>"; };
 		F1PRL1112A01000000000001 /* LedgerMessageRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerMessageRules.swift; sourceTree = "<group>"; };
 		F1PAS1113A01000000000001 /* PaymentAlertSources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaymentAlertSources.swift; sourceTree = "<group>"; };
+		F1TRF1113A01000000000001 /* LedgerTransitFare.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerTransitFare.swift; sourceTree = "<group>"; };
 		F1R1111A0200000000000001 /* MapHomeTripPlayback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeTripPlayback.swift; sourceTree = "<group>"; };
 		F1T1111B0100000000000001 /* TravelAirportsAndFares.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelAirportsAndFares.swift; sourceTree = "<group>"; };
 		F1L1111A0100000000000004 /* LedgerCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerCapture.swift; sourceTree = "<group>"; };
@@ -2159,6 +2161,7 @@
 				F1L1111T0100000000000001 /* LedgerTollRepeat.swift */,
 				F1PRL1112A01000000000001 /* LedgerMessageRules.swift */,
 				F1PAS1113A01000000000001 /* PaymentAlertSources.swift */,
+				F1TRF1113A01000000000001 /* LedgerTransitFare.swift */,
 				F1T1111B0100000000000001 /* TravelAirportsAndFares.swift */,
 				F1L1111A0100000000000004 /* LedgerCapture.swift */,
 				F1L1111A0100000000000005 /* LedgerIntents.swift */,
@@ -3071,6 +3074,7 @@
 				A1L1111T0100000000000001 /* LedgerTollRepeat.swift in Sources */,
 				A1PRL1112A01000000000001 /* LedgerMessageRules.swift in Sources */,
 				A1PAS1113A01000000000001 /* PaymentAlertSources.swift in Sources */,
+				A1TRF1113A01000000000001 /* LedgerTransitFare.swift in Sources */,
 				A1R1111A0200000000000001 /* MapHomeTripPlayback.swift in Sources */,
 				A1T1111B0100000000000001 /* TravelAirportsAndFares.swift in Sources */,
 				A1L1111A0100000000000004 /* LedgerCapture.swift in Sources */,

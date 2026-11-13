@@ -314,10 +314,16 @@ struct LedgerTollRepeatObserver: View {
             .frame(width: 0, height: 0)
             .allowsHitTesting(false)
             .accessibilityHidden(true)
-            .task { await LedgerTollRepeatRunner.run(model: model) }
+            .task { await runAll() }
             .onChange(of: scenePhase) { _, phase in
-                if phase == .active { Task { await LedgerTollRepeatRunner.run(model: model) } }
+                if phase == .active { Task { await runAll() } }
             }
-            .onChange(of: model.rawDayRevisionSignal) { _, _ in Task { await LedgerTollRepeatRunner.run(model: model) } }
+            .onChange(of: model.rawDayRevisionSignal) { _, _ in Task { await runAll() } }
+    }
+
+    /// 통행료와 버스·지하철 요금(TRF1113A01)을 차례로 본다.
+    private func runAll() async {
+        await LedgerTollRepeatRunner.run(model: model)
+        await LedgerTransitFareRunner.run(model: model)
     }
 }

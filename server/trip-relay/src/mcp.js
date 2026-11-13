@@ -87,7 +87,7 @@ const TOOLS = [
     + "category,kind,amount,currency,amountKRW,canceled,source}], trips[{id,name,start,end,budgetKRW,myCostKRW,leftoverKRW,ended}] (trip ledgers: "
     + "myCostKRW is the user's own share so far, leftoverKRW what goes back to the daily ledger (negative: more is owed); set the budget with "
     + "set_trip_budget)} (entries newest first; entry ids work with update_expense), review [{id,reason "
-    + "noMerchant|duplicate|transfer|toll|cardBill,receivedAt,time,title,category,kind,amount,currency}] (payments the app did not add by itself; settle with "
+    + "noMerchant|duplicate|transfer|toll|cardBill|fare,receivedAt,time,title,category,kind,amount,currency}] (payments the app did not add by itself; settle with "
     + "resolve_review), inbox [{id,receivedAt,outcome added|review|duplicate|skipped|unread|askedAI,message,text}] (payment texts the iOS "
     + "automation handed over; card, account and phone numbers are masked; for outcome unread, askedAI or review the app could not read the text by itself: when the user asks, work out the layout and send add_payment_rule so the app reads it from then on), rules [{id,name,kind,pattern}] (payment text rules), trips [{id,title,start,end,wishDays,country,region,currency}] (every trip; ids work with update_trip, delete_trip and add_trip_stop), "
     + "placeSuggestion {id,name?,visits} (a place the app suggests registering, at the place-name share level; answer with resolve_place_suggestion), "
@@ -407,7 +407,7 @@ const RAW_VALUES = {
   scope: oneOf("read", "write"),
   type: oneOf("flight", "lodging", "meal", "cafe", "sight", "photo", "shopping", "activity", "rest", "sleep", "transfer", "other"),
   error: (v) => /^[a-z][a-z_]{0,39}$/.test(v) && SERVER_ERRORS.has(v),
-  reason: oneOf("invalid", "no_record", "unknown_category", "memo_failed", "schedule_failed", "noMerchant", "duplicate", "transfer", "toll", "cardBill"),
+  reason: oneOf("invalid", "no_record", "unknown_category", "memo_failed", "schedule_failed", "noMerchant", "duplicate", "transfer", "toll", "cardBill", "fare"),
   // NTF1112A01: 문자 자동화의 트리거 낱말(앱이 정한 값).
   paymentTriggerWords: oneOf("원", "승인", "출금", "취소", "입금", "결제", "일시불", "할부"),
 };

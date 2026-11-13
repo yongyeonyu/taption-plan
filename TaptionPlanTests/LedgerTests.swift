@@ -1,5 +1,6 @@
 import XCTest
 @testable import TaptionPlan
+import TaptionPlanEngine
 
 /// 가계부(LED1110A01): AI 명령 읽기, 환율, 단체 정산, 오늘 손익, 메모리 장부.
 @MainActor
@@ -1117,5 +1118,63 @@ final class LedgerDecodeSafetyTests: XCTestCase {
         let result = LedgerBook.decodeRows([good, "{broken", unknownKind], as: LedgerEntry.self)
         XCTAssertEqual(result.values.map(\.id.uuidString), [id])
         XCTAssertEqual(result.failed, 2)
+    }
+}
+
+/// 버스·지하철 요금 자동 넣기(TRF1113A01). 요금은 앱에 든 요금표(수도권 2026) 기준이다.
+@MainActor
+final class LedgerTransitFareTests: XCTestCase {
+    private let base = Date(timeIntervalSince1970: 1_794_000_000)
+    private var calculator: FareCalculator { FareCalculator.bundled! }
+
+    private func ride(_ mode: TravelMode, _ startMinute: Double, _ minutes: Double, km: Double) -> LedgerTransitFare.Ride {
+        let start = base.addingTimeInterval(startMinute * 60)
+        return .init(mode: mode, start: start, end: start.addingTimeInterval(minutes * 60), meters: km * 1_000)
+    }
+
+    private func additions(_ rides: [LedgerTransitFare.Ride], existing: [LedgerEntry] = [], handled: Set<String> = []) -> [LedgerTransitFare.Addition] {
+        LedgerTransitFare.additions(rides: rides, region: "수도권", existing: existing, handled: handled, calculator: calculator, language: .korean)
+    }
+
+    func testOneBusRideIsTheAdultBusFare() {
+        let result = additions([ride(.bus, 0, 25, km: 8)])
+        XCTAssertEqual(result.count, 1)
+        XCTAssertEqual(result.first?.entry.amount, 1_500)
+        XCTAssertEqual(result.first?.entry.title, "버스 요금")
+        XCTAssertEqual(result.first?.entry.category, .transport)
+        XCTAssertEqual(result.first?.entry.occurredAt, base)
+        XCTAssertEqual(result.first?.suspicious, false)
+    }
+
+    func testBusThenSubwayWithinTransferTimeIsOneTripWithDistanceFare() {
+        let result = additions([ride(.bus, 0, 15, km: 6), ride(.subway, 20, 25, km: 14)])
+        XCTAssertEqual(result.count, 1, "환승은 한 건")
+        XCTAssertEqual(result.first?.entry.title, "대중교통 요금")
+        // 지하철 기본 1,550원 + 20km는 10km 넘는 10km에 5km마다 100원 = 1,750원.
+        XCTAssertEqual(result.first?.entry.amount, 1_750)
+    }
+
+    func testAlreadyPaidOrHandledTripIsNotAddedAgain() {
+        var paid = LedgerEntry(occurredAt: base.addingTimeInterval(10 * 60), amount: 1_500, title: "인천e음 교통")
+        paid.category = .transport
+        XCTAssertTrue(additions([ride(.bus, 0, 25, km: 8)], existing: [paid]).isEmpty)
+        XCTAssertTrue(additions([ride(.bus, 0, 25, km: 8)], handled: [LedgerTransitFare.key(base)]).isEmpty)
+        var food = paid
+        food.category = .food
+        XCTAssertEqual(additions([ride(.bus, 0, 25, km: 8)], existing: [food]).count, 1, "교통비가 아닌 지출은 상관없다")
+    }
+
+    func testLongBusRideAsksForReview() {
+        XCTAssertEqual(additions([ride(.bus, 0, 70, km: 45)]).first?.suspicious, true)
+    }
+
+    func testShortRidesAndOtherModesAreIgnored() {
+        func segment(_ mode: TravelMode, minutes: Double) -> TravelSegment {
+            TravelSegment(id: UUID(), fromPlaceID: nil, toPlaceID: nil, mode: mode,
+                          span: TimeSpan(start: base, end: base.addingTimeInterval(minutes * 60)), distanceMeters: 3_000,
+                          confidence: .high, evidence: [], isConfirmed: false)
+        }
+        let rides = LedgerTransitFare.rides([segment(.bus, minutes: 2), segment(.car, minutes: 30), segment(.subway, minutes: 12)])
+        XCTAssertEqual(rides.map(\.mode), [.subway])
     }
 }
