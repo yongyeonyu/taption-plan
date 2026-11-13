@@ -3,16 +3,16 @@ import SwiftUI
 
 /// 할 일 목록 패널의 거르기(LED1111A03, TDP1113A01): 전체 · 확인 · 일정 · 메모 · 지출 · AI.
 enum LedgerMemoFilter: String, CaseIterable, Identifiable {
-    case all, check, schedule, memos, expenses, ai
+    /// 맨 앞 「지출」: 지출 합계 한 줄만 보이는 접힌 모양(TDW1114A01). 예전 「전체」·「지출」 탭은 없앴다.
+    case today, check, schedule, memos, ai
     var id: String { rawValue }
 
     func title(_ language: MapHomeLanguage) -> String {
         switch self {
-        case .all: language.text("전체", "All")
+        case .today: language.text("지출", "Spending")
         case .check: language.text("확인", "Check")
         case .schedule: language.text("일정", "Events")
         case .memos: language.text("메모", "Memos")
-        case .expenses: language.text("지출", "Spending")
         // AI에게 맡긴 일(AIQ1111A01).
         case .ai: "AI"
         }
@@ -75,8 +75,8 @@ struct LedgerMemoHeader: View {
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("memo-ledger-open")
-            // 조용히 넣지 않은 결제는 「지출」·「전체」 위에 띠로 모아 보인다(LRV1111A01).
-            if filter == .expenses || filter == .all { LedgerReviewBand(language: language) }
+            // 조용히 넣지 않은 결제는 「확인」 위에 띠로 모아 보인다(LRV1111A01, TDW1114A01).
+            if filter == .check { LedgerReviewBand(language: language) }
         }
         .task {
             await book.load()

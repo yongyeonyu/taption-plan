@@ -344,7 +344,7 @@ struct AssistantActionLogView: View {
             }
             Text("\(entry.before.isEmpty ? language.text("새로", "New") : entry.before) → \(entry.after)")
                 .font(.taptionStyle(.footnote))
-            if let connection = entry.connection {
+            if let connection = AssistantConnectionName.shown(entry) {
                 Text(language.text("보낸 연결: \(connection)", "From: \(connection)")).font(.taptionStyle(.caption)).foregroundStyle(.secondary)
             }
             if entry.undoneAt != nil {

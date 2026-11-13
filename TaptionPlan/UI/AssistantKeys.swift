@@ -66,6 +66,20 @@ enum AssistantKeyLabels {
     static func connectionCount(_ defaults: UserDefaults = .standard) -> Int {
         max((defaults.dictionary(forKey: labelsKey) ?? [:]).count, defaults.integer(forKey: serverCountKey))
     }
+    /// OAuth로 붙은 AI가 적어 낸 앱 이름(연결 id → 이름). 「AI가 한 일」에 어느 AI인지 보이는 데 쓴다(AIN1114A01).
+    static let clientsKey = "assistantKeyClients"
+
+    static func saveClients(_ keys: [AssistantScopedKey], defaults: UserDefaults = .standard) {
+        var values = defaults.dictionary(forKey: clientsKey) as? [String: String] ?? [:]
+        let before = values
+        for key in keys { if let client = key.client.flatMap({ clean(String($0.prefix(maxLength))) }) { values[key.id] = client } }
+        if values != before { defaults.set(values, forKey: clientsKey) }
+    }
+
+    static func client(_ id: String, defaults: UserDefaults = .standard) -> String? {
+        (defaults.dictionary(forKey: clientsKey) as? [String: String])?[id]
+    }
+
     static let maxLength = 20
 
     static func clean(_ text: String) -> String? {
@@ -233,7 +247,10 @@ extension TripRelay {
               let reply = await send(relayRequest("/keys", method: "GET", token: master, host: env.host), session: env.session) else { return nil }
         let keys: [AssistantScopedKey]? = reply.status == 204 ? [] : (reply.status == 200 ? parseKeys(reply.data) : nil)
         // 서버가 아는 연결 수를 적어 둔다. Claude처럼 OAuth로 붙은 연결은 기기에 이름표가 없다(OAC1113A01).
-        if let keys { env.defaults.set(keys.count, forKey: AssistantKeyLabels.serverCountKey) }
+        if let keys {
+            env.defaults.set(keys.count, forKey: AssistantKeyLabels.serverCountKey)
+            AssistantKeyLabels.saveClients(keys, defaults: env.defaults)
+        }
         return keys
     }
 

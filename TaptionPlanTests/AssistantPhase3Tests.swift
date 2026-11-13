@@ -310,6 +310,11 @@ final class AssistantPhase3Tests: XCTestCase {
         AssistantKeyLabels.save("aaaa1111", label: "피클", period: .quarter, defaults: store)
         XCTAssertEqual(AssistantConnectionName.name(keyID: "aaaa1111", source: "rest", defaults: store), "피클")
         XCTAssertEqual(AssistantConnectionName.name(keyID: "zzzz9999", source: "oauth", defaults: store), "OAuth")
+        // OAuth로 붙은 AI는 서버가 알려 준 앱 이름으로 보인다. 예전 기록(「OAuth」)도 같다(AIN1114A01).
+        AssistantKeyLabels.saveClients([AssistantScopedKey(id: "zzzz9999", scope: .write, expiresAt: nil, source: "oauth", client: "Claude")], defaults: store)
+        XCTAssertEqual(AssistantConnectionName.name(keyID: "zzzz9999", source: "oauth", defaults: store), "Claude")
+        let old = AssistantLogEntry(commandID: "c", kind: .updateExpense, appliedAt: at(1), before: "", after: "", delta: .init(), keyID: "zzzz9999", connection: "OAuth")
+        XCTAssertEqual(AssistantConnectionName.shown(old, defaults: store), "Claude")
     }
 
     // MARK: - App Store

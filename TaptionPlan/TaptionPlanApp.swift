@@ -303,6 +303,7 @@ final class TaptionPlanAppDelegate:
                 await AssistantCommandRunner.runInBackground(model: model)
             }
         }
+        ReceiptPhotoWatcher.shared.startIfNeeded()
         AppleHealthService.shared.startObservingChanges {
             guard await TaptionProAccessController.currentAccessGranted() else {
                 return

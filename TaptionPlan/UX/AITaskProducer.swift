@@ -182,3 +182,124 @@ enum AITaskProducer {
         return formatter
     }()
 }
+
+// MARK: - 앨범 영수증 자동 확인 (RPA1114A01)
+
+import Photos
+import UIKit
+
+/// 앨범에 새로 들어온 사진의 글자를 기기 안에서 읽어, 영수증으로 보이는 것만 글자를 AI 목록에 올린다.
+/// 사진은 기기를 떠나지 않고, 영수증이 아닌 사진의 글자는 올리지 않는다. 켠 사람만 돈다.
+@MainActor
+enum ReceiptPhotoScanner {
+    static let enabledKey = "receiptPhotoScanEnabled"
+    static let cursorKey = "receiptPhotoScanCursor"
+    /// 켤 때 하루 전 사진부터 본다(방금 찍어 둔 영수증).
+    static let lookback: TimeInterval = 86_400
+    static let batchLimit = 6
+    nonisolated static let receiptWords = ["영수증", "합계", "결제금액", "결제 금액", "받을금액", "승인번호", "승인 번호", "카드번호", "사업자", "부가세", "과세",
+                               "거래일시", "가맹점", "RECEIPT", "TOTAL", "SUBTOTAL", "VAT", "CARD NO", "領収", "合計", "小計", "合计", "发票"]
+    private static var isRunning = false
+
+    static func isEnabled(_ defaults: UserDefaults = .standard) -> Bool { defaults.bool(forKey: enabledKey) }
+
+    static func setEnabled(_ on: Bool, now: Date = .now, defaults: UserDefaults = .standard) {
+        defaults.set(on, forKey: enabledKey)
+        if on { defaults.set(now.addingTimeInterval(-lookback).timeIntervalSince1970, forKey: cursorKey) }
+    }
+
+    /// 영수증으로 볼 글: 결제 글 모양이고, 줄이 넉넉하며, 영수증 낱말이 둘 이상.
+    nonisolated static func isReceipt(_ lines: [String]) -> Bool {
+        let text = lines.joined(separator: "\n")
+        guard lines.count >= 4, LedgerMessageParser.looksLikePayment(text) else { return false }
+        let upper = text.uppercased()
+        return receiptWords.filter { upper.contains($0.uppercased()) }.count >= 2
+    }
+
+    /// 영수증에 찍힌 날(연-월-일, 두 자리 연도 포함). 찍은 날보다 뒤이거나 60일 넘게 앞이면 믿지 않고 찍은 날을 쓴다.
+    /// 어제 결제한 영수증을 오늘 찍어도 지출은 결제한 날로 들어가게 한다(대표 지시 2026-11-14).
+    nonisolated static func receiptDay(_ lines: [String], taken: Date, calendar: Calendar = .autoupdatingCurrent) -> Date {
+        let regex = try? NSRegularExpression(pattern: #"(?<![0-9])(20[0-9]{2}|[0-9]{2})\s*[-./년]\s*([0-9]{1,2})\s*[-./월]\s*([0-9]{1,2})(?![0-9])"#)
+        for line in lines {
+            let text = line as NSString
+            guard let match = regex?.firstMatch(in: line, range: NSRange(location: 0, length: text.length)),
+                  let rawYear = Int(text.substring(with: match.range(at: 1))), let month = Int(text.substring(with: match.range(at: 2))),
+                  let day = Int(text.substring(with: match.range(at: 3))), (1...12).contains(month), (1...31).contains(day)
+            else { continue }
+            let year = rawYear < 100 ? 2000 + rawYear : rawYear
+            guard let noon = calendar.date(from: DateComponents(year: year, month: month, day: day, hour: 12)) else { continue }
+            let gap = calendar.startOfDay(for: taken).timeIntervalSince(calendar.startOfDay(for: noon))
+            if gap >= 0, gap <= 60 * 86_400 { return gap == 0 ? taken : noon }
+        }
+        return taken
+    }
+
+    /// 읽지 못한 사진을 건너뛸지. 방금 찍은 것은 기기 잠금·저장 중일 수 있어 다음에 다시 본다.
+    nonisolated static func skipsUnreadable(created: Date, now: Date) -> Bool { now.timeIntervalSince(created) > 3_600 }
+
+    /// 새 사진을 오래된 것부터 `batchLimit`장까지 본다. AI에게 맡긴 수를 돌려준다.
+    @discardableResult
+    static func scan(now: Date = .now, deadline: Date? = nil, defaults: UserDefaults = .standard) async -> Int {
+        guard isEnabled(defaults), !isRunning, MemoPolishQueue.hasConnection(defaults) else { return 0 }
+        let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        guard status == .authorized || status == .limited else { return 0 }
+        isRunning = true
+        defer { isRunning = false }
+        let cursor = Date(timeIntervalSince1970: defaults.double(forKey: cursorKey))
+        let options = PHFetchOptions()
+        options.predicate = NSPredicate(format: "creationDate > %@ AND mediaType == %d", cursor as NSDate, PHAssetMediaType.image.rawValue)
+        options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: true)]
+        options.fetchLimit = batchLimit
+        let found = PHAsset.fetchAssets(with: options)
+        var assets: [PHAsset] = []
+        found.enumerateObjects { asset, _, _ in assets.append(asset) }
+        var sent = 0, seen = 0
+        for asset in assets {
+            if let deadline, Date.now >= deadline { break }
+            guard let created = asset.creationDate else { continue }
+            guard let image = await image(asset) else {
+                if skipsUnreadable(created: created, now: now) { defaults.set(created.timeIntervalSince1970, forKey: cursorKey); continue }
+                break
+            }
+            let lines = await LedgerReceiptReader.recognize(image)
+            seen += 1
+            if isReceipt(lines), AITaskQueue.enqueue(.receiptText, text: lines.joined(separator: "\n"), day: receiptDay(lines, taken: created),
+                                                    context: ["from": "photo_album"], defaults: defaults) { sent += 1 }
+            defaults.set(created.timeIntervalSince1970, forKey: cursorKey)
+        }
+        if seen > 0 { TaptionPlanDiagnosticsLogger.shared.record("receipt_photo_scan", fields: ["seen": String(seen), "sent": String(sent)]) }
+        return sent
+    }
+
+    /// 기기에 있는 그림만(아이클라우드에서 받지 않는다). 긴 쪽 1,800점.
+    private static func image(_ asset: PHAsset) async -> CGImage? {
+        let options = PHImageRequestOptions()
+        options.deliveryMode = .highQualityFormat
+        options.isNetworkAccessAllowed = false
+        options.resizeMode = .fast
+        return await withCheckedContinuation { continuation in
+            PHImageManager.default().requestImage(for: asset, targetSize: CGSize(width: 1_800, height: 1_800), contentMode: .aspectFit, options: options) { image, _ in
+                continuation.resume(returning: image?.cgImage)
+            }
+        }
+    }
+}
+
+/// 앱이 살아 있는 동안(뒤에서 위치를 받는 동안 포함) 앨범이 바뀌면 바로 본다.
+@MainActor
+final class ReceiptPhotoWatcher: NSObject, PHPhotoLibraryChangeObserver {
+    static let shared = ReceiptPhotoWatcher()
+    private var isRegistered = false
+
+    /// 켜져 있고 사진 접근이 허락됐을 때만 지켜본다. 여러 번 불러도 한 번만 건다.
+    func startIfNeeded() {
+        let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        guard !isRegistered, ReceiptPhotoScanner.isEnabled(), status == .authorized || status == .limited else { return }
+        isRegistered = true
+        PHPhotoLibrary.shared().register(self)
+    }
+
+    nonisolated func photoLibraryDidChange(_ changeInstance: PHChange) {
+        _Concurrency.Task { @MainActor in await ReceiptPhotoScanner.scan() }
+    }
+}

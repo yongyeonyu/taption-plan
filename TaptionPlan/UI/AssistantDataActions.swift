@@ -28,7 +28,19 @@ enum AssistantConnectionName {
         if let keyID {
             if let label = AssistantKeyLabels.label(keyID, defaults: defaults) { return label }
             if let provider = AssistantKeyProviders.provider(keyID, defaults: defaults) { return provider.title(.current) }
+            if let client = AssistantKeyLabels.client(keyID, defaults: defaults) { return client }
         }
+        return fallback(source)
+    }
+
+    /// 예전 기록은 방식 이름(「OAuth」)만 적혀 있다. 그 연결의 AI 이름을 이제 알면 그것으로 보인다(AIN1114A01).
+    static func shown(_ entry: AssistantLogEntry, defaults: UserDefaults = .standard) -> String? {
+        guard let stored = entry.connection else { return nil }
+        guard ["OAuth", "MCP", "REST"].contains(stored) else { return stored }
+        return name(keyID: entry.keyID, source: nil, defaults: defaults) ?? stored
+    }
+
+    private static func fallback(_ source: String?) -> String? {
         switch source {
         case "oauth": return "OAuth"
         case "mcp": return "MCP"

@@ -5,6 +5,36 @@ import TaptionPlanEngine
 /// 가계부(LED1110A01): AI 명령 읽기, 환율, 단체 정산, 오늘 손익, 메모리 장부.
 @MainActor
 final class LedgerTests: XCTestCase {
+    /// 앨범 영수증 자동 확인(RPA1114A01): 영수증만 고르고, 켜면 하루 전부터 본다.
+    @MainActor
+    func testReceiptPhotoJudgementAndEnabling() {
+        let receipt = ["맛있는식당", "사업자 123-45-67890", "김치찌개 9,000", "공기밥 1,000", "부가세 909", "합계 10,000원", "승인번호 12345678"]
+        XCTAssertTrue(ReceiptPhotoScanner.isReceipt(receipt))
+        XCTAssertFalse(ReceiptPhotoScanner.isReceipt(["오늘의 메뉴", "아메리카노 4,500원", "라떼 5,000원", "영업 09:00"]), "menu board is not a receipt")
+        XCTAssertFalse(ReceiptPhotoScanner.isReceipt(["합계 10,000원", "영수증"]), "too few lines")
+        XCTAssertFalse(ReceiptPhotoScanner.isReceipt([]))
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        XCTAssertFalse(ReceiptPhotoScanner.skipsUnreadable(created: now.addingTimeInterval(-600), now: now))
+        XCTAssertTrue(ReceiptPhotoScanner.skipsUnreadable(created: now.addingTimeInterval(-7_200), now: now))
+        // 영수증에 찍힌 날이 찍은 날보다 앞이면 그날로(어제 결제, 오늘 촬영).
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        let taken = calendar.date(from: DateComponents(year: 2026, month: 11, day: 14, hour: 1, minute: 20))!
+        let yesterday = ReceiptPhotoScanner.receiptDay(["거래일시 2026-11-13 18:42:10", "합계 10,000원"], taken: taken, calendar: calendar)
+        XCTAssertEqual(calendar.dateComponents([.month, .day], from: yesterday), DateComponents(month: 11, day: 13))
+        XCTAssertEqual(calendar.component(.day, from: ReceiptPhotoScanner.receiptDay(["26.11.12 12:00"], taken: taken, calendar: calendar)), 12)
+        XCTAssertEqual(ReceiptPhotoScanner.receiptDay(["2026/11/14 00:50"], taken: taken, calendar: calendar), taken, "same day keeps the photo time")
+        XCTAssertEqual(ReceiptPhotoScanner.receiptDay(["2027-01-01"], taken: taken, calendar: calendar), taken, "a future date is not trusted")
+        XCTAssertEqual(ReceiptPhotoScanner.receiptDay(["사업자 123-45-67890"], taken: taken, calendar: calendar), taken)
+        let name = "receipt-scan-\(UUID().uuidString)"
+        let store = UserDefaults(suiteName: name)!
+        defer { store.removePersistentDomain(forName: name) }
+        XCTAssertFalse(ReceiptPhotoScanner.isEnabled(store))
+        ReceiptPhotoScanner.setEnabled(true, now: now, defaults: store)
+        XCTAssertTrue(ReceiptPhotoScanner.isEnabled(store))
+        XCTAssertEqual(store.double(forKey: ReceiptPhotoScanner.cursorKey), now.timeIntervalSince1970 - 86_400)
+    }
+
     private var calendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
@@ -1399,7 +1429,8 @@ final class TodoPanelTests: XCTestCase {
     private let day = Date(timeIntervalSince1970: 1_794_000_000)
 
     func testTabsPutCheckAndScheduleRightAfterAll() {
-        XCTAssertEqual(LedgerMemoFilter.allCases, [.all, .check, .schedule, .memos, .expenses, .ai])
+        XCTAssertEqual(LedgerMemoFilter.allCases, [.today, .check, .schedule, .memos, .ai])
+        XCTAssertEqual(LedgerMemoFilter.today.title(.korean), "지출")
         XCTAssertEqual(LedgerMemoFilter.check.title(.korean), "확인")
         XCTAssertEqual(LedgerMemoFilter.schedule.title(.korean), "일정")
     }

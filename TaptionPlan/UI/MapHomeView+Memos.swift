@@ -202,10 +202,10 @@ extension MapHomeView {
         VStack(alignment: .leading, spacing: 8) {
             LedgerMemoHeader(filter: $memoLedgerFilter, linkedMemoIDs: $memoLedgerLinkedIDs, language: language, day: model.selectedDate)
             switch memoLedgerFilter {
+            case .today:
+                EmptyView()
             case .ai:
                 AITaskPanel(language: language)
-            case .expenses:
-                LedgerDayCards(language: language, day: model.selectedDate)
             case .check:
                 todoCheckRows(showsEmpty: true)
             case .schedule:
@@ -224,10 +224,9 @@ extension MapHomeView {
                             }
                         }
                     },
-                    width: 280 - 16
+                    width: todoPanelWidth - 16
                 )
-            case .memos, .all:
-                if memoLedgerFilter == .all { todoCheckRows(showsEmpty: false) }
+            case .memos:
                 if let legacy = nearbyScheduleMemo { scheduleMemoPreview(legacy) }
                 let rows = todoPanelRows
                 // 처음에는 4줄, 넘치면 펼침 단추로 스크롤 목록을 연다.
@@ -261,7 +260,7 @@ extension MapHomeView {
             }
         }
         // 목록 전체를 한 판으로 감싼다(MBG1111A01). 바깥 폭은 280.
-        .frame(width: 280 - 16, alignment: .leading)
+        .frame(width: todoPanelWidth - 16, alignment: .leading)
         .padding(8)
         .background(Color.tpBackground.opacity(0.92), in: RoundedRectangle(cornerRadius: TaptionCorner.large, style: .continuous))
         .overlay { RoundedRectangle(cornerRadius: TaptionCorner.large, style: .continuous).stroke(Color.tpBorder, lineWidth: TaptionBorder.width) }
@@ -269,6 +268,12 @@ extension MapHomeView {
     }
 
     static let todoPanelCollapsedRows = 4
+
+    /// 늘 왼쪽 위에 떠 있는 판의 폭(TDW1114A01): 오른쪽에 단추 한 줄과 날짜 배지가 들어갈 자리를 남긴다. 넓은 화면은 280.
+    var todoPanelWidth: CGFloat {
+        guard mapViewportSize.width > 0 else { return 280 }
+        return min(280, max(220, mapViewportSize.width - Layout.horizontalInset - 8 - 44 - 8 - 64))
+    }
 
     /// 메모를 지도에 보이게 한 설정에서만 메모 카드를 패널에 넣는다.
     var todoPanelShowsMemos: Bool { recordingShows(\.sidebarMemos) && memoDisplayMode == .all }
@@ -280,12 +285,7 @@ extension MapHomeView {
         var memos = todoPanelShowsMemos ? panelMemos : []
         // 지금 시각 근처 메모가 목록에 없으면 함께 보인다.
         if todoPanelShowsMemos, let timed = nearbyTimedMemo, !memos.contains(where: { $0.id == timed.id }) { memos.append(timed) }
-        var rows = memos.map(MapHomeTodoPanelRow.memo)
-        if memoLedgerFilter == .all {
-            rows += dayCalendarEventsForSelectedDate.map(MapHomeTodoPanelRow.event)
-            rows += dayPlans.map(MapHomeTodoPanelRow.plan)
-            rows += LedgerBook.shared.entries(on: model.selectedDate).filter { $0.memoID == nil }.map(MapHomeTodoPanelRow.expense)
-        }
+        let rows = memos.map(MapHomeTodoPanelRow.memo)
         return MapHomeTodoPanelRow.ordered(rows)
     }
 
@@ -348,14 +348,13 @@ extension MapHomeView {
     /// 할 일 목록 단추: 닫혀 있으면 확인할 것을 읽고 연다(있으면 「확인」 탭, 없으면 「전체」).
     func toggleTodoPanel() {
         if memoStackExpanded {
-            withAnimation(.snappy) { memoStackExpanded = false }
+            withAnimation(.snappy) { memoLedgerFilter = .today }
             return
         }
         Task {
             let items = await launchPromptQueue()
             todoItems = items
-            memoLedgerFilter = items.isEmpty ? .all : .check
-            withAnimation(.snappy) { memoStackExpanded = true }
+            withAnimation(.snappy) { memoLedgerFilter = items.isEmpty ? .memos : .check }
         }
     }
 

@@ -2,6 +2,25 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## TFB1114A334 · 334에 넣은 것 (2026-11-14 새벽)
+
+로그·결과는 `build/validation/TFB1114A334/`. 모두 시뮬레이터(BOKKI-STL) 결과이고 실기기 확인은 없다(아이폰 11 Pro 잠금은 다른 세션이 쥐고 있음).
+
+| 검증 | 결과 |
+|---|---|
+| 전체 단위 시험(`sim-all.xcresult`, 아래 변경 전 코드) | 2,788건: 통과 2,761·건너뜀 25·**실패 2**(`TaptionStoreV2Tests`의 `testRawEventsAreImmutable…`·`testRawEventTableIsPlainSQLAndSurvivesReopen`, 실행 중 죽음) |
+| 변경 뒤 `LedgerTests`·`TodoPanelTests`·`AssistantPhase3Tests`·`TaptionStoreV2Tests`(병렬 끔, `sim-fix-3.xcresult`, 앱 Debug 시험 빌드 포함) | 새 시험 포함 통과, **실패 1**: `testRawEventTableIsPlainSQLAndSurvivesReopen`이 세 번 모두 `SQLitePlanRepositoryTests.swift:176`에서 nil로 죽음(읽기 전용으로 다시 연 연결에서 행을 못 읽음). 저장소 코드는 11/11 뒤로 바뀌지 않았고 오늘 변경과 겹치는 파일 없음. 원인 미확인, 고치지 않음 |
+| `python3 scripts/l10n/check.py` | 실패 0(긴 문구 3) |
+| 구조 지표 기준선 | 통과 |
+| 시뮬레이터 화면(`widget-1.png`) | 할 일 판이 왼쪽 맨 위, 탭 「지출·확인·일정·메모·AI」, 첫 탭은 지출 한 줄, 찾기·여행 단추는 오른쪽 세로, 날짜 배지와 겹치지 않음 |
+
+- TDW1114A01·TDC1114A01: 판을 늘 위에, 첫 탭 「지출」(한 줄), 예전 「전체」·「지출」 탭과 왼쪽 아래 단추 없앰, 판 밖을 누르면 「지출」로 접힘. 밖 누르기·탭 바꾸기는 손으로 눌러 보지 않음.
+- AIN1114A01: 「보낸 연결」에 OAuth 대신 AI 앱 이름. 단위 시험 통과, 화면은 보지 않음(시뮬레이터에 연결 없음).
+- RPA1114A01: 앨범 영수증 자동 확인. 판정·켜기·영수증 날짜(어제 결제·오늘 촬영 → 어제) 단위 시험 통과. 사진 접근·글자 읽기·AI 목록 도착은 기기에서만 확인 가능, 하지 않음.
+- SGI1114A01: 자동화 안내 그림 2장을 낱말 8줄이 보이게 합성(실제 캡처 아님). 안내 화면에서 보지 않음.
+- AIT1114A01: 서버 안내문에 10분 규칙이 이미 있어 바꾸지 않음. AIR1114A01(동시 완료 보고가 덮어씀)은 원인만 확인, 서버는 그대로.
+- AI 일 10건 처리: 의원 2건 분류 고침, 약국 1건 그대로, 지역카드 충전 삭제 명령은 `no_record`(이미 지워짐), 결제 실패 3,500원 삭제 명령은 권한 검사에 막혀 못 보냄, 규칙 요청 5건은 판단만 남김.
+
 ## WSN1112A03 · 잠든 손목을 집안일로 보던 묶음 판정 (2026-11-12)
 
 원인: 아이폰 18 실기(2026-11-11 02:29)에서 수면 중 「집안일」 8분. 묶음 해석기가 창 판정의 걸음·손동작 비율이 25% 이상이면 묶음 전체 가속도 변동이 0.001g여도 움직인 것으로 봄. 고친 것: 변동 값이 있고 `stillStandardDeviationG`(0.01g) 미만이면 「움직임 적음」(`WatchAmbientChunkInterpreter.swift`). 변동 값이 없는 묶음은 예전대로. 로그: `build/validation/WSN1112A03/`.

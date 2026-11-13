@@ -21,6 +21,7 @@ struct LedgerSheet: View {
     @State private var draft: LedgerEntry?
     @State private var receiptItem: PhotosPickerItem?
     @State private var captureNote: String?
+    @State private var scansReceiptPhotos = ReceiptPhotoScanner.isEnabled()
     @State private var captureBatch: LedgerCaptureBatch?
     @State private var path: [String] = []
     @State private var isAddingTrip = false
@@ -72,6 +73,9 @@ struct LedgerSheet: View {
                         Button(language.text("정산하기", "Settle up")) { isSettling = true }
                         Button { isShowingShortcutGuide = true } label: {
                             Label(language.text("결제 문자 자동으로 넣기", "Add payment texts automatically"), systemImage: "message.badge")
+                        }
+                        Toggle(isOn: Binding(get: { scansReceiptPhotos }, set: { on in Task { await setReceiptPhotoScan(on) } })) {
+                            Label(language.text("앨범 영수증 자동 확인", "Check album receipts automatically"), systemImage: "photo.badge.checkmark")
                         }
                         Button { isShowingOwnAccounts = true } label: {
                             Label(language.text("내 계좌 이름", "My account names"), systemImage: "building.columns")
@@ -182,6 +186,27 @@ struct LedgerSheet: View {
         } footer: {
             Text(captureNote ?? language.text("카드 결제 문자를 복사해 붙여 넣거나 영수증 사진·결제 화면 캡처를 고르면 채워 드려요. 「결제 문자 자동으로 넣기」로 단축어를 걸면 문자가 오자마자 들어가요.", "Paste a card payment text, or pick a receipt photo or a payment screenshot, to fill an entry. Set up \"Add payment texts automatically\" so texts go in as they arrive."))
         }
+    }
+
+    /// 켜면 사진 접근을 묻고 하루 전 사진부터 본다. 영수증으로 보이는 사진의 글자만 연결된 AI에게 간다(RPA1114A01).
+    private func setReceiptPhotoScan(_ on: Bool) async {
+        guard on else { scansReceiptPhotos = false; return ReceiptPhotoScanner.setEnabled(false) }
+        guard MemoPolishQueue.hasConnection() else {
+            captureNote = language.text("AI를 먼저 연결해 주세요. 영수증 글자는 연결된 AI가 읽어요.", "Connect an AI first. Your AI reads the receipt text.")
+            return
+        }
+        let status = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
+        guard status == .authorized || status == .limited else {
+            captureNote = language.text("설정에서 사진 접근을 허용해 주세요.", "Allow photo access in Settings.")
+            return
+        }
+        ReceiptPhotoScanner.setEnabled(true)
+        scansReceiptPhotos = true
+        ReceiptPhotoWatcher.shared.startIfNeeded()
+        let sent = await ReceiptPhotoScanner.scan()
+        captureNote = sent > 0
+            ? language.text("앨범에서 영수증 \(sent)장을 찾아 AI에게 맡겼어요.", "Found \(sent) receipts in your album and sent them to your AI.")
+            : language.text("이제 앨범에 영수증 사진이 들어오면 AI에게 맡겨요. 사진은 기기를 떠나지 않고 글자만 가요.", "New receipt photos in your album now go to your AI. Photos stay on the device; only the text is sent.")
     }
 
     private func fill(_ parsed: LedgerMessageParser.Draft?, source: LedgerEntry.Source, raw: String? = nil) {

@@ -5612,6 +5612,11 @@
 "회사에서 업무|Working at the office": "Làm việc ở công ty",
 "회사에서 휴식|Break at the office": "Nghỉ ở công ty",
 "회의|Meeting": "Họp",
-"휴식|Rest": "Nghỉ ngơi"
+"휴식|Rest": "Nghỉ ngơi",
+"AI를 먼저 연결해 주세요. 영수증 글자는 연결된 AI가 읽어요.|Connect an AI first. Your AI reads the receipt text.": "Hãy kết nối AI trước. AI của bạn sẽ đọc chữ trên hóa đơn.",
+"설정에서 사진 접근을 허용해 주세요.|Allow photo access in Settings.": "Hãy cho phép truy cập ảnh trong Cài đặt.",
+"앨범 영수증 자동 확인|Check album receipts automatically": "Tự động kiểm tra hóa đơn trong album",
+"앨범에서 영수증 {0}장을 찾아 AI에게 맡겼어요.|Found {0} receipts in your album and sent them to your AI.": "Đã tìm thấy {0} hóa đơn trong album và gửi cho AI của bạn.",
+"이제 앨범에 영수증 사진이 들어오면 AI에게 맡겨요. 사진은 기기를 떠나지 않고 글자만 가요.|New receipt photos in your album now go to your AI. Photos stay on the device; only the text is sent.": "Từ giờ ảnh hóa đơn mới trong album sẽ được gửi cho AI. Ảnh không rời khỏi thiết bị; chỉ gửi phần chữ."
 }
 }

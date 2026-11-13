@@ -118,12 +118,17 @@ extension MapHomeView {
             }
 
             if !isScreenRecording, !Self.benchHidden("topleft") {
-                coarseRegion { AnyView(topLeftControls) }
-                    .zIndex(MapHomeLayerPriority.loading)
-                if !isMenuOpen {
-                    coarseRegion { AnyView(bottomLeftTodo) }
+                // 할 일 목록이 열려 있으면 목록 밖을 눌러 닫는다(TDC1114A01).
+                if memoStackExpanded, !isMenuOpen {
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .onTapGesture { withAnimation(.snappy) { memoStackExpanded = false } }
+                        .ignoresSafeArea()
+                        .accessibilityHidden(true)
                         .zIndex(MapHomeLayerPriority.loading)
                 }
+                coarseRegion { AnyView(topLeftControls) }
+                    .zIndex(MapHomeLayerPriority.loading)
             }
 
             if isDayDataLoading {
@@ -922,11 +927,14 @@ extension MapHomeView {
         VStack(alignment: .leading, spacing: 8) {
             // 날짜 줄이 이 자리를 덮을 때만(아이폰 폭) 숨긴다.
             if !isDateWeekExpanded || !MapHomeWideLayoutPolicy.dateStripOverlapsTopLeftControls(viewportWidth: mapViewportSize.width) {
-                HStack(spacing: 8) {
-                    if passportReturnPage != nil { passportBackButton }
-                    searchCircleButton
-                    // 할 일 목록 단추는 왼쪽 아래로 옮겼다(TDB1114A01, `bottomLeftTodo`).
-                    modeButtons
+                // 할 일 목록 판이 늘 맨 위에 있고 단추는 그 오른쪽에 세로로 선다(TDW1114A01). 첫 탭 「오늘」은 지출 한 줄만.
+                HStack(alignment: .top, spacing: 8) {
+                    memoListPanel
+                    VStack(spacing: 8) {
+                        if passportReturnPage != nil { passportBackButton }
+                        searchCircleButton
+                        modeButtons
+                    }
                 }
             }
             // 현재 시간 ±15분 안의 메모·일정은 목록을 펼치지 않아도 왼쪽 상단에 보인다.
@@ -993,22 +1001,21 @@ extension MapHomeView {
         .padding(.leading, Layout.horizontalInset)
         // 듀오 바깥 화면은 단추 윗줄을 상태 줄 알약 위쪽에 맞춘다(DUO1111A03).
         .padding(.top, duoStatusColumn > 0 ? MapHomeOverlayLayoutMath.sideStatusPillTop : Layout.topRowInset)
-        .onChange(of: memoStackExpanded) { _, open in setTopPanel(.memo, open: open) }
+        .onChange(of: memoStackExpanded) { _, open in
+            setTopPanel(.memo, open: open)
+            // 닫으면 「오늘」로 접고, 다른 곳에서 열면 「전체」로 편다.
+            if !open, memoLedgerFilter != .today { memoLedgerFilter = .today }
+            if open, memoLedgerFilter == .today { memoLedgerFilter = .memos }
+        }
+        .onChange(of: memoLedgerFilter) { _, filter in
+            let open = filter != .today
+            if memoStackExpanded != open { withAnimation(.snappy) { memoStackExpanded = open } }
+            // 펼칠 때 확인할 것을 다시 읽는다.
+            if open { Task { todoItems = await launchPromptQueue() } }
+        }
         .onChange(of: todayCalendarExpanded) { _, open in setTopPanel(.calendar, open: open) }
     }
 
-    /// 왼쪽 아래 할 일 목록 단추(TDB1114A01, 대표 지시 2026-11-14 「아이콘 왼쪽 하단으로 이동」). 패널은 단추 위로 펼쳐진다.
-    var bottomLeftTodo: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if memoStackExpanded {
-                memoListPanel.transition(.opacity.combined(with: .move(edge: .bottom)))
-            }
-            MapHomeTodoButton(language: language, isOpen: memoStackExpanded, count: todoMemoCount) { toggleTodoPanel() }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-        .padding(.leading, Layout.horizontalInset)
-        .padding(.bottom, Layout.horizontalInset + layoutStyle.bottomReservedHeight)
-    }
 
     enum TopPanel: Hashable { case memo, calendar }
 
