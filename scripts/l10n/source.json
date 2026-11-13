@@ -1319,7 +1319,7 @@
    "ko": "Apple 날씨(WeatherKit) 인증 실패",
    "en": "Apple Weather (WeatherKit) authentication failed",
    "files": [
-    "MapHomeLiveMapPolicies.swift:764"
+    "MapHomeLiveMapPolicies.swift:770"
    ],
    "args": [],
    "targets": [
@@ -4399,7 +4399,7 @@
    "ko": "{0}원",
    "en": "₩{0}",
    "files": [
-    "LedgerCore.swift:401",
+    "LedgerCore.swift:402",
     "MapHomeCalendarPolicies.swift:433"
    ],
    "args": [
@@ -37503,7 +37503,7 @@
    "ko": "날씨 서비스에 연결하지 못했습니다",
    "en": "Couldn't reach the weather service",
    "files": [
-    "MapHomeLiveMapPolicies.swift:755"
+    "MapHomeLiveMapPolicies.swift:761"
    ],
    "args": [],
    "targets": [
@@ -58340,9 +58340,9 @@
    ]
   },
   {
-   "key": "판타지 지도|Fantasy Map",
-   "ko": "판타지 지도",
-   "en": "Fantasy Map",
+   "key": "판타지|Fantasy",
+   "ko": "판타지",
+   "en": "Fantasy",
    "files": [
     "AssistantDataActions.swift:370",
     "MapHomeView+Map.swift:941"

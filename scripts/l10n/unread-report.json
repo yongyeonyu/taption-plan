@@ -76,7 +76,7 @@
   },
   {
    "file": "TaptionPlan/Core/LedgerCore.swift",
-   "line": 398,
+   "line": 399,
    "ko": "_ amount: Double",
    "en": "String = \"KRW\""
   },

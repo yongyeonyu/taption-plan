@@ -356819,79 +356819,79 @@
         }
       }
     },
-    "판타지 지도|Fantasy Map" : {
+    "판타지|Fantasy" : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ファンタジーマップ"
+            "value" : "ファンタジー"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "奇幻地图"
+            "value" : "奇幻"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "奇幻地圖"
+            "value" : "奇幻"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Fantasy-Karte"
+            "value" : "Fantasy"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Carte fantasy"
+            "value" : "Fantaisie"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mappa fantasy"
+            "value" : "Fantasy"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mapa de fantasía"
+            "value" : "Fantasía"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mapa de fantasia"
+            "value" : "Fantasia"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bản đồ giả tưởng"
+            "value" : "Giả tưởng"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Peta Fantasi"
+            "value" : "Fantasi"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "แผนที่แฟนตาซี"
+            "value" : "แฟนตาซี"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "फ़ैंटेसी मैप"
+            "value" : "फ़ैंटेसी"
           }
         }
       }

@@ -151,8 +151,9 @@ extension MapDisplayStyle {
     ]
 
     public static let openFreeMapStyles: [Self] = [
-        .mapLibreRPG,
+        // 계절이 기본이고 목록 맨 위다(MDF1114A01, 대표 지시 2026-11-14).
         .mapLibreCasual,
+        .mapLibreRPG,
         .mapLibreNight,
         .mapLibreInk,
         .mapLibrePorcelain,
@@ -176,7 +177,7 @@ extension MapDisplayStyle {
     public static func defaultStyle(for provider: MapDisplayProvider) -> Self {
         switch provider {
         case .apple: .standard
-        case .openFreeMap: .mapLibreRPG
+        case .openFreeMap: .mapLibreCasual
         }
     }
 

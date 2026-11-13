@@ -4174,7 +4174,7 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(mapView.camera.pitch, pitch, accuracy: 0.000_001)
     }
 
-    func testMapDisplayStylePreservesPersistedSelectionAndDefaultsToRPGMap() throws {
+    func testMapDisplayStylePreservesPersistedSelectionAndDefaultsToSeasonsMap() throws {
         var settings = AppFeatureSettings.defaults
         settings.mapDisplayStyle = .hybrid
         XCTAssertEqual(settings.mapDisplayStyle, .hybrid)
@@ -4197,7 +4197,7 @@ final class TimeScaleTests: XCTestCase {
                 AppFeatureSettings.self,
                 from: JSONSerialization.data(withJSONObject: object)
             ).mapDisplayStyle,
-            .mapLibreRPG
+            .mapLibreCasual
         )
 
         settings.mapDisplayStyle = .mapLibreCasual
@@ -5138,8 +5138,8 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(
             MapDisplayStyle.openFreeMapStyles,
             [
-                .mapLibreRPG,
                 .mapLibreCasual,
+                .mapLibreRPG,
                 .mapLibreNight,
                 .mapLibreInk,
                 .mapLibrePorcelain,
@@ -5151,12 +5151,12 @@ final class TimeScaleTests: XCTestCase {
         for style in MapDisplayStyle.allCases {
             XCTAssertEqual(MapHomeWBSTripStyle.actualRouteHex(for: style), style == .mapLibrePorcelain ? "#A8442F" : "#458B88", style.rawValue)
         }
-        XCTAssertEqual(MapDisplayStyle.defaultStyle(for: .openFreeMap), .mapLibreRPG, "새 모양을 더해도 기본 지도는 그대로다")
+        XCTAssertEqual(MapDisplayStyle.defaultStyle(for: .openFreeMap), .mapLibreCasual, "기본 지도는 계절이다(MDF1114A01)")
         XCTAssertNotNil(try? JSONSerialization.jsonObject(with: Data(MapHomeVectorStyle.porcelain.json.utf8)), "백자 지도 스타일 JSON이 깨지지 않는다")
         XCTAssertEqual(MapDisplayStyle.mapLibreCasual.provider, .openFreeMap)
         XCTAssertEqual(
             MapDisplayStyle.defaultStyle(for: .openFreeMap),
-            .mapLibreRPG
+            .mapLibreCasual
         )
         XCTAssertEqual(
             MapDisplayStyle.defaultStyle(for: .apple),

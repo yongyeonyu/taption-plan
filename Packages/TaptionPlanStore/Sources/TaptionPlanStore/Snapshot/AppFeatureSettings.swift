@@ -86,7 +86,7 @@ public struct AppFeatureSettings: Codable, Hashable, Sendable {
         gpsLoggingPreferences: .standard,
         mapCategoryColors: [:],
         mapUserActivityCategories: [],
-        mapDisplayStyle: .mapLibreRPG,
+        mapDisplayStyle: .mapLibreCasual,
         mapMemoDisplayFilter: .all,
         watchAccelerationProfile: .off,
         watchDataSyncProfile: .off,

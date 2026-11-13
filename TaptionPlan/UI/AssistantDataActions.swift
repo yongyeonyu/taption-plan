@@ -367,7 +367,7 @@ enum AssistantDataText {
         case .mapLibreNight: language.text("야간", "Night")
         case .mapLibreContrast: language.text("실외(고대비)", "Outdoor (high contrast)")
         case .mapLibreCasual: language.text("계절", "Seasons")
-        case .mapLibreRPG: language.text("판타지 지도", "Fantasy Map")
+        case .mapLibreRPG: language.text("판타지", "Fantasy")
         case .mapLibreInk: language.text("수묵", "Ink Wash")
         case .mapLibrePorcelain: language.text("백자", "Porcelain")
         case .kakao: language.text("카카오 지도", "Kakao Map")
