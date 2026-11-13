@@ -7,6 +7,8 @@ import SwiftUI
 enum MapHomeLaunchPrompt: Identifiable, Hashable {
     case carAudio(String)
     case boarding(String)
+    /// 탈것 구간 확인(버스·기차·배·비행기·자전거, BCF1114A01). 값은 이동 구간 번호.
+    case ride(String)
     case calendarTitle(String)
     case frequentPlace(String)
     case unconfirmed(minutes: Int)
@@ -15,6 +17,7 @@ enum MapHomeLaunchPrompt: Identifiable, Hashable {
         switch self {
         case .carAudio(let name): "car:\(name)"
         case .boarding(let id): "boarding:\(id)"
+        case .ride(let id): "ride:\(id)"
         case .calendarTitle(let title): "calendar:\(CalendarTitleClassification.key(title))"
         case .frequentPlace(let id): "place:\(id)"
         case .unconfirmed: "unconfirmed"
@@ -51,7 +54,7 @@ enum MapHomeLaunchPromptHandoff {
         switch prompt {
         case .unconfirmed(let minutes):
             AITask(kind: .other, text: "오늘 무엇을 했는지 모르는 시간이 \(minutes)분 있습니다. get_activity의 unconfirmed와 앞뒤 기록·장소를 보고 classify_unconfirmed로 정해 주세요. 확신이 없으면 ask_user로 물어 주세요.")
-        case .boarding:
+        case .boarding, .ride:
             AITask(kind: .routeCheck, text: "오늘 지하철·버스 탑승으로 보이는 이동이 있습니다. get_activity의 moves를 보고 이동 수단이 맞는지 판단해 틀리면 set_travel_mode로 고쳐 주세요. 확신이 없으면 ask_user로 물어 주세요.")
         // HND1112A01: 내 차·일정 제목·자주 머무는 곳도 AI가 명령으로 끝낸다.
         case .carAudio(let name):
@@ -87,23 +90,25 @@ enum MapHomeLaunchPromptPolicy {
     static func next(
         carAudio: String?,
         boardingIDs: [String],
+        rideIDs: [String] = [],
         calendarTitles: [String],
         placeSuggestionID: String?,
         unconfirmedMinutes: Int,
         asked: Set<String>
     ) -> MapHomeLaunchPrompt? {
-        all(carAudio: carAudio, boardingIDs: boardingIDs, calendarTitles: calendarTitles,
+        all(carAudio: carAudio, boardingIDs: boardingIDs, rideIDs: rideIDs, calendarTitles: calendarTitles,
             placeSuggestionID: placeSuggestionID, unconfirmedMinutes: unconfirmedMinutes)
             .first { !asked.contains($0.id) }
     }
 
     /// 지금 확인할 것 전부, 묻는 순서대로(「확인할 것」 목록).
     static func all(
-        carAudio: String?, boardingIDs: [String], calendarTitles: [String], placeSuggestionID: String?, unconfirmedMinutes: Int
+        carAudio: String?, boardingIDs: [String], rideIDs: [String] = [], calendarTitles: [String], placeSuggestionID: String?, unconfirmedMinutes: Int
     ) -> [MapHomeLaunchPrompt] {
         var queue: [MapHomeLaunchPrompt] = []
         if let carAudio { queue.append(.carAudio(carAudio)) }
         queue += boardingIDs.map(MapHomeLaunchPrompt.boarding)
+        queue += rideIDs.map(MapHomeLaunchPrompt.ride)
         queue += calendarTitles.map(MapHomeLaunchPrompt.calendarTitle)
         if let placeSuggestionID { queue.append(.frequentPlace(placeSuggestionID)) }
         if unconfirmedMinutes >= minimumUnconfirmedMinutes { queue.append(.unconfirmed(minutes: unconfirmedMinutes)) }
@@ -211,6 +216,8 @@ extension MapHomeView {
         return MapHomeLaunchPromptPolicy.all(
             carAudio: model.pendingCarAudioSuggestion,
             boardingIDs: isToday ? transitBoardingCandidates.map(\.id) : [],
+            // 탈것 구간은 보고 있는 날 것을 묻는다(지난 날도 그날을 열면 묻는다).
+            rideIDs: RideConfirmation.pending(currentDayDataSnapshot?.travel ?? [], corrections: model.settings.movementCorrections),
             calendarTitles: MapHomeLaunchPromptPolicy.unansweredCalendarTitles(
                 model.snapshot.calendarEvents, stored: model.settings.calendarTitleDetails
             ),
@@ -308,6 +315,7 @@ struct MapHomeTodoRows: View {
         switch item {
         case .carAudio(let name): language.text("‘\(name)’ 기기가 내 차인가요?", "Is ‘\(name)’ your car?")
         case .boarding: language.text("지하철·버스 탑승 확인", "Check a subway or bus ride")
+        case .ride: language.text("탈것 탑승 확인", "Check a ride")
         case .calendarTitle(let title): language.text("‘\(title)’ 일정 분류", "Classify ‘\(title)’")
         case .frequentPlace: language.text("자주 머무는 곳 등록", "Register a place you stay often")
         case .unconfirmed(let minutes): language.text("미확인 시간 \(minutes)분", "\(minutes) min unconfirmed")
@@ -400,6 +408,22 @@ private struct MapHomeLaunchPromptAlerts: ViewModifier {
             } message: { title in
                 Text(language.text("‘\(title)’", "‘\(title)’"))
             }
+            // 탈것 구간 확인(BCF1114A01): 버스면 노선을 고르고, 아니면 내 차·다른 차로 확정한다.
+            .confirmationDialog(rideTitle, isPresented: isShowing { if case .ride = $0 { true } else { false } }, titleVisibility: .visible, presenting: rideSegment) { segment in
+                if segment.mode == .bus || segment.mode == .car {
+                    ForEach(RideConfirmation.routeChoices(segment), id: \.self) { route in
+                        Button(language.text("버스 · \(route.number)번", "Bus \(route.number)")) { model.confirmRide(segment.id, mode: .bus, busRoute: route) }
+                    }
+                    Button(language.text("버스(노선 모름)", "Bus (route unknown)")) { model.confirmRide(segment.id, mode: .bus, busRoute: nil) }
+                } else {
+                    Button(language.text("맞아요", "Yes")) { model.confirmRide(segment.id, mode: segment.mode, busRoute: nil) }
+                }
+                Button(language.text("자동차(내 차·택시)", "Car (mine or a taxi)")) { model.confirmRide(segment.id, mode: .car, busRoute: nil) }
+                if segment.mode == .cycling { Button(language.text("걷기", "Walking")) { model.confirmRide(segment.id, mode: .walking, busRoute: nil) } }
+                Button(laterTitle, role: .cancel) { confirmLater() }
+            } message: { segment in
+                Text(rideMessage(segment))
+            }
             .confirmationDialog(language.text("자주 머무는 곳이 있어요", "You stay here often"), isPresented: isShowing { if case .frequentPlace = $0 { true } else { false } }, titleVisibility: .visible) {
                 ForEach(FrequentPlaceKind.allCases, id: \.self) { kind in
                     Button(placeKindTitle(kind)) { model.registerFrequentPlaceSuggestion(as: kind) }
@@ -418,6 +442,28 @@ private struct MapHomeLaunchPromptAlerts: ViewModifier {
     }
 
     private var carName: String? { if case .carAudio(let name) = prompt { name } else { nil } }
+
+    private var rideSegment: TravelSegment? {
+        guard case .ride(let id) = prompt else { return nil }
+        return model.snapshot.travel.first { $0.id.uuidString == id }
+    }
+
+    private var rideTitle: String {
+        switch rideSegment?.mode {
+        case .train: language.text("기차를 탔나요?", "Did you take a train?")
+        case .ship: language.text("배를 탔나요?", "Did you take a boat?")
+        case .airplane: language.text("비행기를 탔나요?", "Did you take a flight?")
+        case .cycling: language.text("자전거를 탔나요?", "Did you ride a bicycle?")
+        default: language.text("버스를 탔나요?", "Did you take a bus?")
+        }
+    }
+
+    /// 「10:15–10:30 · ○○ 정류소 → △△ 정류소」. 정류소 이름은 노선 조회에서 받았을 때만 붙는다.
+    private func rideMessage(_ segment: TravelSegment) -> String {
+        let time = "\(segment.span.start.formatted(date: .omitted, time: .shortened))–\(segment.span.end.formatted(date: .omitted, time: .shortened))"
+        guard segment.mode == .bus || segment.mode == .car, let names = BusRouteCheck.stopNames(segment) else { return time }
+        return "\(time) · \(names.board) → \(names.alight)"
+    }
     private var calendarTitle: String? { if case .calendarTitle(let title) = prompt { title } else { nil } }
     private var unconfirmedMinutes: Int? { if case .unconfirmed(let minutes) = prompt { minutes } else { nil } }
 

@@ -227,6 +227,18 @@ extension AppModel {
         Task { await persist() }
     }
 
+    /// 탈것 탑승 질문의 답(BCF1114A01). 수단을 사용자 확인으로 굳히고, 버스 노선을 골랐으면 근거와 기록 이름에 남긴다.
+    func confirmRide(_ travelID: UUID, mode: TravelMode, busRoute: BusRouteCheck.Route?) {
+        guard let segment = snapshot.travel.first(where: { $0.id == travelID }) else { return }
+        if mode == .bus, let busRoute { BusRouteCheck.remember(segment, routes: [busRoute]) }
+        confirmTravel(travelID, mode: mode)
+        if let index = snapshot.travel.firstIndex(where: { $0.id == travelID }) {
+            snapshot.travel[index].evidence.removeAll { $0.hasPrefix("노선 ") }
+            if mode == .bus, let busRoute { snapshot.travel[index].evidence.append("노선 " + busRoute.number) }
+        }
+        applyBusRecordTitles(in: segment.span, asOf: max(segment.span.end, .now))
+    }
+
     @discardableResult
     func confirmTransitBoarding(_ candidate: TransitBoardingCandidate) async -> Bool {
         await saveTransitBoardingDecision(for: candidate, mode: candidate.mode)

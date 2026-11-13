@@ -385,6 +385,7 @@ extension AppModel {
                 sleepMotionActivities: sleepMotionActivities
             )) else { return false }
             // 입력이 같아도 장소 이름·결제 확정은 다시 붙인다(늦게 온 카카오 후보·새 결제, 다시 만들어진 집 기록 — PAY1114A01).
+            applyBusRecordTitles(in: span, asOf: span.end)
             applyStayPlaceNames(asOf: span.end)
             applyPaymentAnchors(in: span)
             await classificationRecompute?.complete(recomputeOutcome, day: span.start)
@@ -685,14 +686,7 @@ extension AppModel {
             asOf: span.end
         )
         // 이동 구간이 버스면 그 시간의 자동 「자동차」 기록도 「버스」로(BST1113A01).
-        let busSegments = snapshot.travel.filter { $0.mode == .bus && $0.span.intersection(with: span) != nil }
-        snapshot.actuals = BusRideRecognizer.retitling(
-            snapshot.actuals,
-            busSpans: busSegments.map(\.span),
-            titles: busSegments.map { BusRouteCheck.title(BusRouteCheck.known($0) ?? []) },
-            activityCorrections: snapshot.settings.activityCorrections,
-            asOf: span.end
-        )
+        applyBusRecordTitles(in: span, asOf: span.end)
         // 「머무름」 기록에 기억해 둔 장소 이름을 붙이고, 모르는 곳은 뒤에서 찾아 다시 붙인다(KKP1113A01).
         applyStayPlaceNames(asOf: span.end)
         scheduleStayPlaceNameLookup(asOf: span.end)
@@ -1126,6 +1120,19 @@ extension AppModel {
             activityCorrections: snapshot.settings.activityCorrections, asOf: now
         )
         if named != snapshot.actuals { snapshot.actuals = named }
+    }
+
+    /// 버스 구간의 기록 이름을 맞춘다(「버스 · 80번」). 버스가 아니게 된 구간의 기록은 「자동차」로 돌아간다.
+    func applyBusRecordTitles(in span: TimeSpan, asOf now: Date) {
+        let busSegments = snapshot.travel.filter { $0.mode == .bus && $0.span.intersection(with: span) != nil }
+        let titled = BusRideRecognizer.retitling(
+            snapshot.actuals,
+            busSpans: busSegments.map(\.span),
+            titles: busSegments.map { BusRouteCheck.title(BusRouteCheck.known($0) ?? []) },
+            activityCorrections: snapshot.settings.activityCorrections,
+            asOf: now
+        )
+        if titled != snapshot.actuals { snapshot.actuals = titled }
     }
 
     func applyPaymentAnchors(in span: TimeSpan) {

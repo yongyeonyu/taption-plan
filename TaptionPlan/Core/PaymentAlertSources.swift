@@ -14,6 +14,38 @@ enum PaymentAlertSources {
 
     static let key = "paymentAlertSources"
     static let limit = 40
+    /// 문자 자동화(「BOKKI 결제」)로 넘어온 글의 출처 이름. 앱 이름이 없는 글은 문자로 본다(SMS1114A01).
+    static let smsName = "문자"
+
+    // MARK: 넣지 않을 낱말 (SMS1114A01)
+    // 단축어 자동화는 앱이 고칠 수 없어(iOS 제한) 자동화는 넓게 받게 두고, 무엇을 넣을지는 앱의 이 설정으로 정한다.
+
+    static let skipWordsKey = "paymentSkipWords"
+    static let skipWordLimit = 30
+
+    static func skipWords(_ defaults: UserDefaults = .standard) -> [String] {
+        defaults.stringArray(forKey: skipWordsKey) ?? []
+    }
+
+    /// 낱말을 다듬어 더한다(1~20자, 중복 없음). 더했으면 true.
+    @discardableResult
+    static func addSkipWord(_ raw: String, defaults: UserDefaults = .standard) -> Bool {
+        let word = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        var words = skipWords(defaults)
+        guard (1...20).contains(word.count), !words.contains(word), words.count < skipWordLimit else { return false }
+        words.append(word)
+        defaults.set(words, forKey: skipWordsKey)
+        return true
+    }
+
+    static func removeSkipWord(_ word: String, defaults: UserDefaults = .standard) {
+        defaults.set(skipWords(defaults).filter { $0 != word }, forKey: skipWordsKey)
+    }
+
+    /// 글에 든 「넣지 않을 낱말」(없으면 nil).
+    static func skipWord(in text: String, defaults: UserDefaults = .standard) -> String? {
+        skipWords(defaults).first { text.localizedCaseInsensitiveContains($0) }
+    }
 
     static func all(_ defaults: UserDefaults = .standard) -> [Source] {
         defaults.data(forKey: key).flatMap { try? JSONDecoder().decode([Source].self, from: $0) } ?? []
@@ -86,11 +118,18 @@ import SwiftUI
 struct PaymentAlertSourcesView: View {
     let language: MapHomeLanguage
     @Environment(\.openURL) private var openURL
-    @State private var sources: [PaymentAlertSources.Source] = PaymentAlertSources.all().sorted { $0.lastSeen > $1.lastSeen }
+    /// 문자는 늘 맨 위에 둔다(아직 받은 문자가 없어도 스위치를 미리 정할 수 있게).
+    @State private var sources: [PaymentAlertSources.Source] = {
+        let all = PaymentAlertSources.all().sorted { $0.lastSeen > $1.lastSeen }
+        let sms = all.first { $0.name == PaymentAlertSources.smsName } ?? .init(name: PaymentAlertSources.smsName, lastSeen: .distantPast)
+        return [sms] + all.filter { $0.name != PaymentAlertSources.smsName }
+    }()
+    @State private var skipWords = PaymentAlertSources.skipWords()
+    @State private var newWord = ""
 
     var body: some View {
         List {
-            if sources.isEmpty {
+            if sources.count <= 1 {
                 Section {
                     Text(language.text("아직 받은 앱 알림이 없어요. 결제 알림이 한 번 오면 그 앱이 여기에 생겨요.", "No app alerts yet. An app appears here after its first payment alert."))
                         .font(.taptionStyle(.subheadline))
@@ -103,12 +142,14 @@ struct PaymentAlertSourcesView: View {
                 Section {
                     Toggle(language.text("지출", "Spending"), isOn: $source.expense)
                     Toggle(language.text("수입", "Income"), isOn: $source.income)
-                    Button(role: .destructive) {
-                        PaymentAlertSources.remove(source.name)
-                        sources.removeAll { $0.name == source.name }
-                    } label: { Text(language.text("목록에서 지우기", "Remove from list")) }
+                    if source.name != PaymentAlertSources.smsName {
+                        Button(role: .destructive) {
+                            PaymentAlertSources.remove(source.name)
+                            sources.removeAll { $0.name == source.name }
+                        } label: { Text(language.text("목록에서 지우기", "Remove from list")) }
+                    }
                 } header: {
-                    Text(source.name)
+                    Text(source.name == PaymentAlertSources.smsName ? language.text("문자 (「BOKKI 결제」 자동화)", "Texts (BOKKI Payment automation)") : source.name)
                 } footer: {
                     if source.id == sources.last?.id {
                         Text(language.text("충전·광고·잔액 안내는 스위치와 상관없이 넣지 않아요. 넣지 않은 알림도 「AI」 탭의 받은 문자에 7일 동안 남아요.", "Top-ups, ads and balance notices are never added. Skipped alerts stay in the AI tab's received texts for 7 days."))
@@ -117,6 +158,32 @@ struct PaymentAlertSourcesView: View {
                 .font(.taptionStyle(.subheadline))
                 .onChange(of: source) { _, value in PaymentAlertSources.set(value) }
             }
+            Section {
+                ForEach(skipWords, id: \.self) { word in
+                    HStack {
+                        Text(word)
+                        Spacer()
+                        Button {
+                            PaymentAlertSources.removeSkipWord(word)
+                            skipWords = PaymentAlertSources.skipWords()
+                        } label: { Image(systemName: "minus.circle.fill").foregroundStyle(Color.red) }
+                        .buttonStyle(.borderless)
+                        .accessibilityLabel(language.text("\(word) 지우기", "Remove \(word)"))
+                    }
+                }
+                HStack {
+                    TextField(language.text("낱말 (예: 광고, 자동이체)", "Word (e.g. ad, autopay)"), text: $newWord)
+                        .submitLabel(.done)
+                        .onSubmit(addWord)
+                    Button(language.text("더하기", "Add"), action: addWord)
+                        .disabled(newWord.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            } header: {
+                Text(language.text("넣지 않을 낱말", "Words to skip"))
+            } footer: {
+                Text(language.text("이 낱말이 든 문자·알림은 가계부에 넣지 않아요. 단축어 자동화는 고치지 않아도 돼요 — 자동화는 그대로 받고, 무엇을 넣을지는 여기서 정해요.", "Texts and alerts containing these words are not added. You don't need to edit the Shortcuts automation: it keeps receiving, and this decides what gets added."))
+            }
+            .font(.taptionStyle(.subheadline))
             Section {
                 ForEach(Array(Self.addSteps(language).enumerated()), id: \.offset) { index, step in
                     Label(step, systemImage: "\(index + 1).circle")
@@ -133,6 +200,11 @@ struct PaymentAlertSourcesView: View {
         .tpListStyle()
         .navigationTitle(language.text("결제 알림 받기", "Payment alerts"))
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func addWord() {
+        if PaymentAlertSources.addSkipWord(newWord) { skipWords = PaymentAlertSources.skipWords() }
+        newWord = ""
     }
 
     static func addSteps(_ language: MapHomeLanguage) -> [String] {

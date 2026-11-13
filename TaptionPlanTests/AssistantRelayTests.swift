@@ -116,7 +116,10 @@ final class AssistantRelayTests: XCTestCase {
     func testSummaryLevelHasRecordsAndMemosButNoPlaces() throws {
         let day = try XCTUnwrap(AssistantActivityBuilder.make(input(), level: .summary))
         XCTAssertNil(day.visits)
-        XCTAssertNil(day.moves)
+        // 요약 단계의 이동은 번호·수단·시각만이고 장소 이름은 없다(BCF1114A01).
+        let moves = try XCTUnwrap(day.moves)
+        XCTAssertFalse(moves.isEmpty)
+        XCTAssertTrue(moves.allSatisfy { $0.from == nil && $0.to == nil && $0.id != nil })
         XCTAssertEqual(day.date, "2026-11-10")
         XCTAssertEqual(day.timeZone, "Asia/Seoul")
         XCTAssertEqual(day.summary.recordedMinutes, 570)

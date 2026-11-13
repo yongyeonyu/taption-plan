@@ -162,6 +162,9 @@ enum AssistantActivityBuilder {
                 )
             }
             result.moves = moves(input, stays: stays, day: day, stamp: stamp)
+        } else {
+            // 요약 단계에도 이동 구간은 번호·수단·시각만 준다(장소 이름 없이). 없으면 AI가 이동 수단을 고칠 수 없었다(BCF1114A01).
+            result.moves = moves(input, stays: [], day: day, stamp: stamp)
         }
         return result
     }

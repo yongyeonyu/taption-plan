@@ -1688,3 +1688,52 @@ final class PaymentStayAnchorTests: XCTestCase {
         XCTAssertEqual(PaymentStayAnchor.label(pay(0, "가나정형외과의원", .other)).categoryID, "health")
     }
 }
+
+/// 문자 출처와 넣지 않을 낱말(SMS1114A01), 탈것 탑승 질문(BCF1114A01).
+final class SkipWordAndRideTests: XCTestCase {
+    func testSkipWordsAreTrimmedDeduplicatedAndMatched() {
+        let defaults = UserDefaults(suiteName: "SkipWordAndRideTests")!
+        defaults.removePersistentDomain(forName: "SkipWordAndRideTests")
+        XCTAssertTrue(PaymentAlertSources.addSkipWord("  자동이체 ", defaults: defaults))
+        XCTAssertFalse(PaymentAlertSources.addSkipWord("자동이체", defaults: defaults))
+        XCTAssertFalse(PaymentAlertSources.addSkipWord("   ", defaults: defaults))
+        XCTAssertEqual(PaymentAlertSources.skipWord(in: "[Web발신] 자동이체 출금 10,000원", defaults: defaults), "자동이체")
+        XCTAssertNil(PaymentAlertSources.skipWord(in: "승인 4,500원 카페", defaults: defaults))
+        PaymentAlertSources.removeSkipWord("자동이체", defaults: defaults)
+        XCTAssertTrue(PaymentAlertSources.skipWords(defaults).isEmpty)
+        // 문자도 한 출처로 스위치를 따른다.
+        PaymentAlertSources.set(.init(name: PaymentAlertSources.smsName, expense: true, income: false, lastSeen: .now), defaults: defaults)
+        XCTAssertFalse(PaymentAlertSources.allows(PaymentAlertSources.smsName, income: true, defaults: defaults))
+        XCTAssertTrue(PaymentAlertSources.allows(PaymentAlertSources.smsName, income: false, defaults: defaults))
+    }
+
+    func testRideQuestionIsAskedForUnconfirmedVehicleRides() {
+        let base = Date(timeIntervalSince1970: 1_794_000_000)
+        let defaults = UserDefaults(suiteName: "SkipWordAndRideTests.ride")!
+        defaults.removePersistentDomain(forName: "SkipWordAndRideTests.ride")
+        func segment(_ mode: TravelMode, minutes: Double = 15, confirmed: Bool = false, evidence: [String] = [], offset: Double = 0) -> TravelSegment {
+            var value = TravelSegment(mode: mode, span: TimeSpan(start: base.addingTimeInterval(offset), end: base.addingTimeInterval(offset + minutes * 60)),
+                                      distanceMeters: 3_000, confidence: .high, evidence: evidence)
+            value.isConfirmed = confirmed
+            return value
+        }
+        XCTAssertTrue(RideConfirmation.needsAnswer(segment(.bus), corrections: [], stopDefaults: defaults))
+        XCTAssertTrue(RideConfirmation.needsAnswer(segment(.cycling), corrections: [], stopDefaults: defaults))
+        XCTAssertTrue(RideConfirmation.needsAnswer(segment(.train), corrections: [], stopDefaults: defaults))
+        XCTAssertFalse(RideConfirmation.needsAnswer(segment(.bus, confirmed: true), corrections: [], stopDefaults: defaults))
+        XCTAssertFalse(RideConfirmation.needsAnswer(segment(.bus, evidence: ["사용자 확인 · 수단 수정"]), corrections: [], stopDefaults: defaults))
+        XCTAssertFalse(RideConfirmation.needsAnswer(segment(.bus, minutes: 2), corrections: [], stopDefaults: defaults), "3분 안 되는 구간은 묻지 않는다")
+        XCTAssertFalse(RideConfirmation.needsAnswer(segment(.walking), corrections: [], stopDefaults: defaults))
+        // 차량인데 탄 곳·내린 곳이 둘 다 정류소면 묻는다.
+        let car = segment(.car, offset: 7_200)
+        XCTAssertFalse(RideConfirmation.needsAnswer(car, corrections: [], stopDefaults: defaults))
+        BusStopCheck.remember(.board, segment: car, isStop: true, defaults: defaults)
+        BusStopCheck.remember(.alight, segment: car, isStop: true, defaults: defaults)
+        XCTAssertTrue(RideConfirmation.needsAnswer(car, corrections: [], stopDefaults: defaults))
+        BusRouteCheck.remember(car, routes: [.init(number: "80", kind: "간선버스")], defaults: defaults)
+        BusRouteCheck.remember(car, names: .init(board: "가 정류소", alight: "나 정류소"), defaults: defaults)
+        XCTAssertEqual(RideConfirmation.routeChoices(car, stopDefaults: defaults).map(\.number), ["80"])
+        XCTAssertEqual(BusRouteCheck.stopNames(car, defaults: defaults)?.alight, "나 정류소")
+        XCTAssertEqual(RideConfirmation.pending([car, segment(.bus)], corrections: [], stopDefaults: defaults).count, 2)
+    }
+}

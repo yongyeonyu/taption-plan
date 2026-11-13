@@ -45,6 +45,8 @@ enum PaymentTextCapture {
         // 「BOKKI 결제」는 낱말마다 트리거가 있어 한 문자가 여러 번 넘어온다. 같은 글은 한 번만 처리한다(NTF1112A01).
         if let earlier = repeated(text, now: now) { return earlier }
         inFlight[PaymentInbox.stored(text)] = now
+        // 앱 이름이 없는 글은 문자 자동화가 넘긴 것이다. 문자도 한 출처로 보아 지출·수입 스위치를 따른다(SMS1114A01).
+        let source = PaymentAlertSources.name(source) ?? PaymentAlertSources.smsName
         PaymentAlertSources.seen(source, now: now)
         let (message, outcome) = await process(text, requiresTime: requiresTime, source: source, now: now)
         PaymentInbox.record(text, outcome: outcome, message: message, source: PaymentAlertSources.name(source), now: now)
@@ -66,6 +68,10 @@ enum PaymentTextCapture {
 
     static func process(_ text: String, requiresTime: Bool, source: String? = nil, now: Date = .now) async -> (String, PaymentInbox.Outcome) {
         let language = MapHomeLanguage.current
+        // 사용자가 정한 「넣지 않을 낱말」이 든 글은 넣지 않는다(SMS1114A01).
+        if let word = PaymentAlertSources.skipWord(in: text) {
+            return (language.text("「\(word)」이(가) 든 글은 넣지 않게 해 두었어요.", "Texts containing “\(word)” are set to be skipped."), .skipped)
+        }
         // AI가 보탠 규칙이 먼저다. 앱 규칙이 못 읽거나 잘못 읽는 형식을 고치려고 넣은 것이기 때문이다.
         if let match = LedgerMessageRules.match(text, now: now) {
             guard case let .draft(draft, income) = match else {

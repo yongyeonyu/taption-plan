@@ -1,5 +1,5 @@
 {
- "ui": 4853,
+ "ui": 4869,
  "catalog": 502,
  "unread": [
   {
@@ -82,19 +82,19 @@
   },
   {
    "file": "TaptionPlan/Core/LedgerIntents.swift",
-   "line": 85,
+   "line": 91,
    "ko": "saved.amount",
    "en": "saved.currency"
   },
   {
    "file": "TaptionPlan/Core/LedgerIntents.swift",
-   "line": 98,
+   "line": 104,
    "ko": "saved.amount",
    "en": "saved.currency"
   },
   {
    "file": "TaptionPlan/Core/LedgerIntents.swift",
-   "line": 124,
+   "line": 130,
    "ko": "entry.amount",
    "en": "entry.currency"
   },
@@ -118,13 +118,13 @@
   },
   {
    "file": "TaptionPlan/Core/PaymentAlertSources.swift",
-   "line": 166,
+   "line": 238,
    "ko": "saved.amount",
    "en": "saved.currency"
   },
   {
    "file": "TaptionPlan/Core/PaymentAlertSources.swift",
-   "line": 166,
+   "line": 238,
    "ko": "saved.amount",
    "en": "saved.currency"
   },
@@ -772,13 +772,13 @@
   },
   {
    "file": "TaptionPlan/UI/TravelModeSupport.swift",
-   "line": 809,
+   "line": 812,
    "ko": "planned",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/TravelModeView.swift",
-   "line": 844,
+   "line": 837,
    "ko": "money.amount",
    "en": "language"
   },

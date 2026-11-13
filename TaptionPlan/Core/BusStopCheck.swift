@@ -265,6 +265,23 @@ enum BusRouteCheck {
         var cityCode: String
         var nodeID: String
         var point: GeoPoint
+        var name: String = ""
+    }
+
+    /// 탄 정류소·내린 정류소 이름(탑승 질문에 보인다, BCF1114A01).
+    struct StopNames: Codable, Equatable { var board: String; var alight: String }
+    static let namesKey = "busRouteStopNames"
+
+    static func stopNames(_ segment: TravelSegment, defaults: UserDefaults = .standard) -> StopNames? {
+        guard let data = (defaults.dictionary(forKey: namesKey) as? [String: Data])?[cacheKey(segment)] else { return nil }
+        return try? JSONDecoder().decode(StopNames.self, from: data)
+    }
+
+    static func remember(_ segment: TravelSegment, names: StopNames, defaults: UserDefaults = .standard) {
+        var all = (defaults.dictionary(forKey: namesKey) as? [String: Data]) ?? [:]
+        all[cacheKey(segment)] = try? JSONEncoder().encode(names)
+        if all.count > limit { all = Dictionary(uniqueKeysWithValues: all.sorted { $0.key > $1.key }.prefix(limit).map { ($0.key, $0.value) }) }
+        defaults.set(all, forKey: namesKey)
     }
 
     static let key = "busRouteChecks"
@@ -342,7 +359,8 @@ enum BusRouteCheck {
         items(data).compactMap { item in
             guard let city = text(item["citycode"]), let node = text(item["nodeid"]),
                   let lat = text(item["gpslati"]).flatMap(Double.init), let lng = text(item["gpslong"]).flatMap(Double.init) else { return nil }
-            return Stop(cityCode: city, nodeID: node, point: GeoPoint(latitude: lat, longitude: lng, altitude: 0, horizontalAccuracy: 0, verticalAccuracy: 0))
+            return Stop(cityCode: city, nodeID: node, point: GeoPoint(latitude: lat, longitude: lng, altitude: 0, horizontalAccuracy: 0, verticalAccuracy: 0),
+                        name: text(item["nodenm"]) ?? "")
         }
     }
 
@@ -369,7 +387,8 @@ enum BusRouteCheck {
         seoulItems(data).compactMap { item in
             guard let ars = text(item["arsId"]), ars.count == 5, ars != "00000",
                   let lng = text(item["gpsX"]).flatMap(Double.init), let lat = text(item["gpsY"]).flatMap(Double.init) else { return nil }
-            return Stop(cityCode: seoulCity, nodeID: ars, point: GeoPoint(latitude: lat, longitude: lng, altitude: 0, horizontalAccuracy: 0, verticalAccuracy: 0))
+            return Stop(cityCode: seoulCity, nodeID: ars, point: GeoPoint(latitude: lat, longitude: lng, altitude: 0, horizontalAccuracy: 0, verticalAccuracy: 0),
+                        name: text(item["stationNm"]) ?? "")
         }
     }
 
@@ -429,6 +448,9 @@ enum BusRouteLookupRunner {
                   let alightRoutes = await routes(host: host, stop: alight, token: token) else { return }
             let common = BusRouteCheck.common(boardRoutes, alightRoutes)
             BusRouteCheck.remember(segment, routes: common, defaults: defaults)
+            if !board.name.isEmpty, !alight.name.isEmpty {
+                BusRouteCheck.remember(segment, names: .init(board: board.name, alight: alight.name), defaults: defaults)
+            }
             checked += 1
             if !common.isEmpty { found += 1 }
         }
@@ -466,5 +488,36 @@ enum BusRouteLookupRunner {
         guard let (data, response) = try? await URLSession.shared.data(for: request),
               (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
         return data
+    }
+}
+
+/// 탈것 탑승 질문(BCF1114A01, 대표 지시 「버스를 탄 경우 지하철과 동일하게 정류소 물어보고 확정… 자전거·기차·배·비행기 동일」).
+/// 지하철은 역 탑승 확인(`TransitBoardingCandidate`)이 따로 있어, 여기서는 그 밖의 탈것 구간을 사용자가 확정하지 않았을 때 묻는다.
+/// 버스: 버스로 판정됐거나, 차량인데 승하차가 둘 다 정류소인 구간. 기차·배·비행기·자전거: 그렇게 판정된 구간.
+enum RideConfirmation {
+    static let minimumDuration: TimeInterval = 3 * 60
+    static let askable: Set<TravelMode> = [.bus, .train, .ship, .airplane, .cycling]
+
+    static func needsAnswer(_ segment: TravelSegment, corrections: [TravelModeCorrection], stopDefaults: UserDefaults = .standard) -> Bool {
+        guard !segment.isConfirmed, segment.span.duration >= minimumDuration,
+              !segment.evidence.contains(where: { $0.hasPrefix("사용자 확인") || $0.hasPrefix(CarAudioTravelConfirmation.matchedEvidencePrefix) }),
+              !corrections.contains(where: { $0.span.overlapsMostly(segment.span) }) else { return false }
+        if askable.contains(segment.mode) { return true }
+        // 차량으로 남았지만 탄 곳·내린 곳이 둘 다 정류소면 버스였을 수 있다.
+        return segment.mode == .car
+            && BusStopCheck.known(.board, segment: segment, defaults: stopDefaults) == true
+            && BusStopCheck.known(.alight, segment: segment, defaults: stopDefaults) == true
+    }
+
+    /// 물어볼 구간 번호(시각순).
+    static func pending(_ travel: [TravelSegment], corrections: [TravelModeCorrection], stopDefaults: UserDefaults = .standard) -> [String] {
+        travel.filter { needsAnswer($0, corrections: corrections, stopDefaults: stopDefaults) }
+            .sorted { $0.span.start < $1.span.start }
+            .map(\.id.uuidString)
+    }
+
+    /// 질문에서 고를 버스 노선(최대 6개, 번호순). 두 정류소를 함께 지나는 노선.
+    static func routeChoices(_ segment: TravelSegment, stopDefaults: UserDefaults = .standard) -> [BusRouteCheck.Route] {
+        Array((BusRouteCheck.known(segment, defaults: stopDefaults) ?? []).prefix(6))
     }
 }
