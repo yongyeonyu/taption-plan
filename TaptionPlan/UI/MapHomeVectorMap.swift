@@ -170,9 +170,8 @@ struct MapHomeVectorMap: UIViewRepresentable {
         mapView.allowsTilting = true
         mapView.showsCompassView = false
         mapView.showsLogoView = false
-        // 지도 출처 (i) 버튼은 숨기지 않는다(출처 표기 의무). 하단 메뉴 바로 위 왼쪽에 둔다(INF1108A01).
-        mapView.showsAttributionButton = true
-        mapView.attributionButtonPosition = .bottomLeft
+        // 지도 출처 (i) 단추는 보이지 않게 한다(대표 지시 2026-11-14: 그 자리에 할 일 목록 단추, 출처는 메뉴 › 「지도 출처」에 있음).
+        mapView.showsAttributionButton = false
         mapView.minimumZoomLevel = 2
         mapView.maximumZoomLevel = 20
         mapView.tintColor = UIColor(red: 0.21, green: 0.78, blue: 0.69, alpha: 1)
@@ -182,7 +181,6 @@ struct MapHomeVectorMap: UIViewRepresentable {
 
     func updateUIView(_ mapView: MLNMapView, context: Context) {
         let probe = MapHomePlaybackProbe.begin("updateUIView"); defer { MapHomePlaybackProbe.end(probe) }
-        if case let m = MapHomeLayoutStyle.attributionMargins(safeAreaBottom: mapView.safeAreaInsets.bottom), mapView.attributionButtonMargins != m { mapView.attributionButtonMargins = m } // 출처 (i)는 안전 영역이 정해진 뒤 맞춘다.
         context.coordinator.parent = self
         if mapView.contentInset != contentInsets {
             mapView.contentInset = contentInsets

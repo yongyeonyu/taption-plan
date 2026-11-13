@@ -384,6 +384,9 @@ extension AppModel {
                 classifiedReadings: sensorQuality.routeReadings, gapReadings: sensorQuality.readings,
                 sleepMotionActivities: sleepMotionActivities
             )) else { return false }
+            // 입력이 같아도 장소 이름·결제 확정은 다시 붙인다(늦게 온 카카오 후보·새 결제, 다시 만들어진 집 기록 — PAY1114A01).
+            applyStayPlaceNames(asOf: span.end)
+            applyPaymentAnchors(in: span)
             await classificationRecompute?.complete(recomputeOutcome, day: span.start)
             guard (settings.locationEnabled || settings.weatherEnabled),
                   weatherNeedsRefresh(for: latestReadingWithPoint) else {
