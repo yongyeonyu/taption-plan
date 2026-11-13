@@ -693,6 +693,8 @@ extension AppModel {
         // 「머무름」 기록에 기억해 둔 장소 이름을 붙이고, 모르는 곳은 뒤에서 찾아 다시 붙인다(KKP1113A01).
         applyStayPlaceNames(asOf: span.end)
         scheduleStayPlaceNameLookup(asOf: span.end)
+        // 결제 시각으로 머문 곳·활동을 확정한다(PAY1114A01).
+        applyPaymentAnchors(in: span)
 
         if snapshot.settings.locationEnabled || snapshot.settings.weatherEnabled {
             await refreshWeather(
@@ -1121,6 +1123,14 @@ extension AppModel {
             activityCorrections: snapshot.settings.activityCorrections, asOf: now
         )
         if named != snapshot.actuals { snapshot.actuals = named }
+    }
+
+    func applyPaymentAnchors(in span: TimeSpan) {
+        let anchored = PaymentStayAnchor.applying(
+            snapshot.actuals, payments: PaymentStayAnchor.payments(LedgerBook.shared.entries, in: span), places: snapshot.places,
+            candidates: NLENearbyPlaceNames.storedCandidates, activityCorrections: snapshot.settings.activityCorrections, asOf: span.end
+        )
+        if anchored != snapshot.actuals { snapshot.actuals = anchored }
     }
 
     private func scheduleStayPlaceNameLookup(asOf now: Date) {

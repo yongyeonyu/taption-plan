@@ -1627,3 +1627,64 @@ final class StayCandidateTests: XCTestCase {
                                                  asOf: start.addingTimeInterval(7_200)).first?.title, "식사 · 뷔페 식당")
     }
 }
+
+/// 결제 시각으로 머문 곳·활동 확정(PAY1114A01). 가게 이름은 지어낸 것이다.
+@MainActor
+final class PaymentStayAnchorTests: XCTestCase {
+    private let base = Date(timeIntervalSince1970: 1_794_000_000)
+    private func at(_ minutes: Double) -> Date { base.addingTimeInterval(minutes * 60) }
+
+    private func record(_ title: String, _ behavior: String, _ from: Double, _ to: Double, source: ActualSource = .location, manual: Bool = false) -> ActualRecord {
+        ActualRecord(planID: nil, title: title, categoryID: "rest", startedAt: at(from), endedAt: at(to), source: source,
+                     behavior: behavior, modelVersion: "classifier-v1/context", manuallyCorrected: manual)
+    }
+
+    private func pay(_ minute: Double, _ merchant: String, _ category: LedgerCategory) -> PaymentStayAnchor.Payment {
+        .init(id: UUID(), time: at(minute), merchant: merchant, category: category)
+    }
+
+    func testOutingInsideHomeRadiusIsCarvedOutOfHomeRest() {
+        let home = record("집에서 휴식", StationaryContextKind.homeRest.rawValue, 0, 480)
+        let walk = record("걷기", "walking", 372, 374, source: .motion)
+        let payments = [pay(370, "가나의원", .other), pay(371, "가나의원", .other), pay(376, "다라약국", .health), pay(381, "마바카페", .cafe)]
+        let result = PaymentStayAnchor.applying([home, walk], payments: payments, places: [], candidates: [:], asOf: at(600))
+        let outings = result.filter { $0.modelVersion == PaymentStayAnchor.modelVersion }
+        XCTAssertEqual(outings.map(\.title), ["병원·약국 · 가나의원", "병원·약국 · 다라약국", "카페 · 마바카페"])
+        XCTAssertEqual(outings.map(\.categoryID), ["health", "health", "rest"])
+        XCTAssertEqual(outings.first?.startedAt, at(355), "첫 결제 15분 전부터")
+        XCTAssertEqual(outings.first?.endedAt, at(373), "같은 가게 두 번째 결제 2분 뒤까지 한 방문")
+        let homes = result.filter { $0.behavior == StationaryContextKind.homeRest.rawValue }
+        XCTAssertEqual(homes.count, 2)
+        XCTAssertEqual(homes.first?.endedAt, at(355))
+        XCTAssertEqual(homes.last?.startedAt, at(383))
+        // 다시 돌려도 같다.
+        XCTAssertEqual(PaymentStayAnchor.applying(result, payments: payments, places: [], candidates: [:], asOf: at(600)).count, result.count)
+    }
+
+    func testOnlinePaymentAtHomeWithoutWalkingChangesNothing() {
+        let home = record("집에서 휴식", StationaryContextKind.homeRest.rawValue, 0, 480)
+        let result = PaymentStayAnchor.applying([home], payments: [pay(200, "온라인몰", .shopping)], places: [], candidates: [:], asOf: at(600))
+        XCTAssertEqual(result, [home])
+        let edited = record("집에서 휴식", StationaryContextKind.homeRest.rawValue, 0, 480, manual: true)
+        let walk = record("걷기", "walking", 201, 203, source: .motion)
+        XCTAssertEqual(PaymentStayAnchor.applying([edited, walk], payments: [pay(200, "가나의원", .other)], places: [], candidates: [:], asOf: at(600)).count, 2,
+                       "사용자가 고친 기록은 자르지 않는다")
+    }
+
+    func testPaymentConfirmsAnUnnamedStayOnlyWhenTheMerchantIsNearby() {
+        let point = GeoPoint(latitude: 37.5, longitude: 126.7, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: 10)
+        let stay = record("빵집", StationaryContextKind.unknownStay.rawValue, 0, 94)
+        let place = PlaceStay(placeKey: "p", displayName: "확인된 위치", span: TimeSpan(start: at(0), end: at(94)), confidence: .medium, point: point, isConfirmed: false)
+        let candidates = [NLEPlaceLane.nameKey(for: point): [
+            StayPlaceCandidate(name: "빵집", code: "FD6", category: "음식점 > 간식", meters: 8),
+            StayPlaceCandidate(name: "뷔페 식당 본점", code: "FD6", category: "음식점 > 뷔페", meters: 21),
+        ]]
+        let named = PaymentStayAnchor.applying([stay], payments: [pay(90, "뷔페 식당", .food)], places: [place], candidates: candidates, asOf: at(200)).first
+        XCTAssertEqual(named?.title, "식사 · 뷔페 식당")
+        XCTAssertEqual(named?.categoryID, "eating")
+        XCTAssertTrue(named?.evidence.contains("결제 확인: 뷔페 식당") == true)
+        XCTAssertEqual(PaymentStayAnchor.applying([stay], payments: [pay(90, "온라인몰", .shopping)], places: [place], candidates: candidates, asOf: at(200)).first?.title, "빵집",
+                       "근처 후보에 없는 가게 결제는 쓰지 않는다")
+        XCTAssertEqual(PaymentStayAnchor.label(pay(0, "가나정형외과의원", .other)).categoryID, "health")
+    }
+}

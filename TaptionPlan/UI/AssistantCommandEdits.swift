@@ -359,8 +359,12 @@ extension AppModel {
         }
     }
 
+    /// 앱이 자동 기록에 직접 쓰는 분류(식사·집안일·샤워)는 분류 목록에 없어도 받는다. AI가 읽은 값을 그대로 돌려보내면
+    /// `unknown_category`로 거절됐다(PAY1114A01 조사).
+    static let builtInRecordCategories: Set<String> = ["eating", "housework", "shower"]
+
     func isAssistantCategory(_ id: String) -> Bool {
-        id != "unconfirmed" && snapshot.categories.contains { $0.id == id }
+        id != "unconfirmed" && (Self.builtInRecordCategories.contains(id) || snapshot.categories.contains { $0.id == id })
     }
 
     private func recordResult(before actual: ActualRecord) -> AssistantEditResult {
