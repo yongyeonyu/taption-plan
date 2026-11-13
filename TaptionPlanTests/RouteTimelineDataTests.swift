@@ -140,6 +140,18 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertEqual(MapHomePlaybackLocation.ridingMode(.car, at: start.addingTimeInterval(60), travel: [bus]), .bus)
         XCTAssertEqual(MapHomePlaybackLocation.ridingMode(.walking, at: start.addingTimeInterval(60), travel: [bus]), .walking)
         XCTAssertEqual(MapHomePlaybackLocation.ridingMode(.car, at: start.addingTimeInterval(3600), travel: [bus]), .car)
+        // 기차·배·비행기 구간도 그 수단으로, 자전거 구간은 걷기·자동차 모션도 자전거로.
+        for mode in [TravelMode.train, .ship, .airplane] {
+            var ride = segment
+            ride.mode = mode
+            XCTAssertEqual(MapHomePlaybackLocation.ridingMode(.car, at: start.addingTimeInterval(60), travel: [ride]), mode)
+            XCTAssertEqual(MapHomePlaybackLocation.ridingMode(.walking, at: start.addingTimeInterval(60), travel: [ride]), .walking)
+        }
+        var bike = segment
+        bike.mode = .cycling
+        XCTAssertEqual(MapHomePlaybackLocation.ridingMode(.car, at: start.addingTimeInterval(60), travel: [bike]), .cycling)
+        XCTAssertEqual(MapHomePlaybackLocation.ridingMode(.walking, at: start.addingTimeInterval(60), travel: [bike]), .cycling)
+        XCTAssertEqual(MapHomePlaybackLocation.ridingMode(nil, at: start.addingTimeInterval(60), travel: [bike]), .cycling)
     }
 
     /// GPS가 끊긴 구간은 앞뒤 표본으로 수단과 위치를 잇는다: 비행기, 지하차도의 차, 제자리는 수단 없음.

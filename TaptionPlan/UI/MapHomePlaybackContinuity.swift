@@ -304,13 +304,16 @@ extension MapHomePlaybackLocation {
 
     private static let trustedAccuracyMeters = 150.0
 
-    /// 지하철·버스 구간 안에서 모션이 자동차라고 해도 그 구간의 수단이다(버스는 BSV1113A01). 환승 걷기는 그대로 둔다.
+    /// 탈것 구간(지하철·버스·기차·배·비행기·택시) 안에서 모션이 자동차라고 해도 그 구간의 수단이다(버스 BSV1113A01, 나머지 대표 지시 「기차 배 비행기 자전거도」).
+    /// 환승 걷기는 그대로 둔다. 자전거 구간은 모션이 걷기·자동차로 흔들려도 자전거다(달리기는 그대로).
     static func ridingMode(_ mode: TravelMode?, at date: Date, travel: [TravelSegment]) -> TravelMode? {
-        guard mode != .walking, mode != .running, mode != .cycling,
-              let ride = travel.first(where: { ($0.mode == .subway || $0.mode == .bus) && $0.span.contains(date) })
-        else { return mode }
-        return ride.mode
+        guard let segment = travel.first(where: { ridden.contains($0.mode) && $0.span.contains(date) }) else { return mode }
+        if segment.mode == .cycling { return mode == .running ? mode : .cycling }
+        guard mode != .walking, mode != .running, mode != .cycling else { return mode }
+        return segment.mode
     }
+
+    private static let ridden: Set<TravelMode> = [.subway, .bus, .train, .ship, .airplane, .taxi, .cycling]
 
     private static let minimumDrawnGap: TimeInterval = 120
 
