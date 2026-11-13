@@ -226612,6 +226612,83 @@
         }
       }
     },
+    "기본 열로|Reset to default columns" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "既定の列に戻す"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "恢复默认列"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "還原預設欄"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Standardspalten wiederherstellen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rétablir les colonnes par défaut"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ripristina colonne predefinite"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restablecer columnas predeterminadas"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restaurar colunas padrão"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đặt lại cột mặc định"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kembalikan kolom bawaan"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "รีเซ็ตเป็นคอลัมน์เริ่มต้น"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "डिफ़ॉल्ट कॉलम पर रीसेट करें"
+          }
+        }
+      }
+    },
     "기본|Basic" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -298453,6 +298530,314 @@
         }
       }
     },
+    "열 {0}|Column {0}" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "列 {0}"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第 {0} 列"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第 {0} 欄"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spalte {0}"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Colonne {0}"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Colonna {0}"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Columna {0}"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coluna {0}"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cột {0}"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kolom {0}"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คอลัมน์ {0}"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कॉलम {0}"
+          }
+        }
+      }
+    },
+    "열 더하기|Add column" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "列を追加"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加列"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加入欄"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spalte hinzufügen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter une colonne"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aggiungi colonna"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Añadir columna"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adicionar coluna"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thêm cột"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tambah kolom"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เพิ่มคอลัมน์"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कॉलम जोड़ें"
+          }
+        }
+      }
+    },
+    "열 편집|Edit columns" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "列を編集"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "编辑列"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "編輯欄"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spalten bearbeiten"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modifier les colonnes"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modifica colonne"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Editar columnas"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Editar colunas"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sửa cột"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit kolom"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แก้ไขคอลัมน์"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कॉलम संपादित करें"
+          }
+        }
+      }
+    },
+    "열|Columns" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "列"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "列"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "欄"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spalten"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Colonnes"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Colonne"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Columnas"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Colunas"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cột"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kolom"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คอลัมน์"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कॉलम"
+          }
+        }
+      }
+    },
     "열기|Open" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -317626,6 +318011,83 @@
         }
       }
     },
+    "이름을 비우면 기본 이름을 씁니다. 열을 지우면 그 종류는 옆 열로 옮겨집니다.|Leave a name empty to use the default. Deleting a column moves its kinds to the next one." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "名前を空にすると既定の名前を使います。列を削除すると、その種類は隣の列に移ります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "名称留空则使用默认名称。删除列后，其中的类型会移到相邻的列。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "名稱留空則使用預設名稱。刪除欄後，其中的類型會移到相鄰的欄。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ohne Namen wird der Standardname verwendet. Beim Löschen einer Spalte wandern ihre Arten in die Nachbarspalte."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sans nom, le nom par défaut est utilisé. Supprimer une colonne déplace ses types vers la colonne voisine."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Senza nome viene usato quello predefinito. Eliminando una colonna, i suoi tipi passano a quella accanto."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si dejas el nombre vacío se usa el predeterminado. Al eliminar una columna, sus tipos pasan a la de al lado."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sem nome, usa-se o padrão. Ao excluir uma coluna, seus tipos vão para a coluna ao lado."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Để trống tên sẽ dùng tên mặc định. Khi xóa một cột, các loại của cột đó chuyển sang cột bên cạnh."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kosongkan nama untuk memakai nama bawaan. Menghapus kolom memindahkan jenisnya ke kolom di sebelahnya."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เว้นชื่อว่างไว้เพื่อใช้ชื่อเริ่มต้น เมื่อลบคอลัมน์ ประเภทในคอลัมน์นั้นจะย้ายไปคอลัมน์ข้างเคียง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "नाम खाली छोड़ने पर डिफ़ॉल्ट नाम इस्तेमाल होगा। कॉलम हटाने पर उसके प्रकार बगल के कॉलम में चले जाते हैं।"
+          }
+        }
+      }
+    },
     "이미 가계부에 넣은 결제예요.|That payment is already in the ledger." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -331559,6 +332021,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "प्रकार"
+          }
+        }
+      }
+    },
+    "종류를 놓을 열|Column for each kind" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "種類ごとの列"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "各类型所在的列"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "各類型所在的欄"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spalte je Art"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Colonne de chaque type"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Colonna per ogni tipo"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Columna de cada tipo"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coluna de cada tipo"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cột cho từng loại"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kolom untuk tiap jenis"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คอลัมน์ของแต่ละประเภท"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "हर प्रकार का कॉलम"
           }
         }
       }
