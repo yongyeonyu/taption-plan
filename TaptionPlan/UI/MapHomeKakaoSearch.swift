@@ -193,12 +193,22 @@ enum KakaoMapAvailability {
 }
 
 extension MapHomeView {
-    /// 1단계: 지도·내 위치·오늘 경로선·머문 곳 핀. 재생 캐릭터·말풍선 등은 다른 지도에서만 그린다.
+    /// 2단계(KMP1114A02, 대표 신고: 화랑이도 없고 검은 표시만): 그날 경로선 전체·10분 넘게 머문 곳·보고 있는 시각의 화랑이.
+    /// 재생하면 화랑이가 그 시각 자리로 움직이고 지도가 따라간다. 말풍선·발자국·날씨·사진은 아직 다른 지도에서만 그린다.
     var kakaoMap: some View {
-        MapHomeKakaoMap(
-            center: model.latestSensorReading?.point,
-            route: model.liveRouteState.readings.compactMap(\.point),
-            stays: currentDayDataSnapshot?.places.compactMap(\.point) ?? []
+        let routes = recordingShows(\.routes)
+            ? (vectorHistoricalRoutes + (vectorActiveRoute.map { [$0] } ?? [])).map { $0.coordinates }.filter { $0.count >= 2 }
+            : []
+        let stays = (currentDayDataSnapshot?.places ?? [])
+            .filter { $0.span.duration >= StayPlaceNaming.minimumMinutes * 60 }
+            .compactMap { $0.point.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) } }
+        return MapHomeKakaoMap(
+            routes: routes,
+            routeColor: UIColor(Color(hex: actualRouteHex)),
+            stays: stays,
+            cat: displayedLocationCoordinate,
+            action: displayedStickmanAction,
+            follows: isDayPlaybackRunning || userTrackingMode.keepsCameraLocked
         )
         .ignoresSafeArea()
         .accessibilityLabel(language.text("카카오 지도", "Kakao map"))
@@ -206,9 +216,12 @@ extension MapHomeView {
 }
 
 struct MapHomeKakaoMap: UIViewRepresentable {
-    let center: GeoPoint?
-    let route: [GeoPoint]
-    let stays: [GeoPoint]
+    let routes: [[CLLocationCoordinate2D]]
+    let routeColor: UIColor
+    let stays: [CLLocationCoordinate2D]
+    let cat: CLLocationCoordinate2D?
+    let action: MapHomeStickmanAction
+    let follows: Bool
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
@@ -219,7 +232,7 @@ struct MapHomeKakaoMap: UIViewRepresentable {
         controller.delegate = context.coordinator
         context.coordinator.controller = controller
         context.coordinator.container = container
-        context.coordinator.update(center: center, route: route, stays: stays)
+        context.coordinator.update(self)
         // 2.9.4: initEngine(준비, 인증은 뒤에서) → 화면에 붙고 준비가 끝나면 startEngine(→ addViews) → startRendering.
         // 준비 전이나 크기 0일 때 시작하면 지도가 추가되지 않아, 시작될 때까지 짧게 다시 시도한다.
         controller.initEngine()
@@ -228,7 +241,7 @@ struct MapHomeKakaoMap: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: KMViewContainer, context: Context) {
-        context.coordinator.update(center: center, route: route, stays: stays)
+        context.coordinator.update(self)
     }
 
     static func dismantleUIView(_ uiView: KMViewContainer, coordinator: Coordinator) {
@@ -241,23 +254,31 @@ struct MapHomeKakaoMap: UIViewRepresentable {
         var controller: KMController?
         weak var container: KMViewContainer?
         private var map: KakaoMap?
-        private var center: GeoPoint?
-        private var route: [GeoPoint] = []
-        private var stays: [GeoPoint] = []
+        private var routes: [[CLLocationCoordinate2D]] = []
+        private var stays: [CLLocationCoordinate2D] = []
+        private var cat: CLLocationCoordinate2D?
+        private var action: MapHomeStickmanAction?
+        private var follows = false
+        private var routeColor = UIColor.systemOrange
+        private var drawnRouteKey = 0, drawnStayKey = 0
+        private var drawnAction: MapHomeStickmanAction?
+        private var catPoi: Poi?
         private var hasCentered = false
         private static let viewName = "mapview"
 
-        func update(center: GeoPoint?, route: [GeoPoint], stays: [GeoPoint]) {
-            let changed = route != self.route || stays != self.stays || center != self.center
-            self.center = center
-            self.route = route
-            self.stays = stays
-            if changed { draw() }
+        func update(_ view: MapHomeKakaoMap) {
+            routes = view.routes
+            stays = view.stays
+            cat = view.cat
+            action = view.action
+            follows = view.follows
+            routeColor = view.routeColor
+            draw()
         }
 
         nonisolated func addViews() {
             MainActor.assumeIsolated {
-                let start = center.map { MapPoint(longitude: $0.longitude, latitude: $0.latitude) }
+                let start = (cat ?? stays.first).map { MapPoint(longitude: $0.longitude, latitude: $0.latitude) }
                     ?? MapPoint(longitude: 126.978, latitude: 37.5665)
                 controller?.addView(MapviewInfo(viewName: Self.viewName, viewInfoName: "map", defaultPosition: start, defaultLevel: 15))
             }
@@ -309,41 +330,91 @@ struct MapHomeKakaoMap: UIViewRepresentable {
         private func prepareLayers() {
             guard let map else { return }
             let routes = map.getRouteManager()
-            let line = PerLevelRouteStyle(width: 7, color: UIColor(Color.tpAccent), strokeWidth: 2, strokeColor: .white, level: 0)
+            let line = PerLevelRouteStyle(width: 6, color: routeColor, strokeWidth: 2, strokeColor: .white, level: 0)
             routes.addRouteStyleSet(RouteStyleSet(styleID: "day", styles: [RouteStyle(styles: [line])]))
             _ = routes.addRouteLayer(layerID: "day", zOrder: 0)
             let labels = map.getLabelManager()
-            labels.addPoiStyle(PoiStyle(styleID: "stay", styles: [PerLevelPoiStyle(iconStyle: PoiIconStyle(symbol: Self.symbol("mappin.circle.fill", UIColor(Color.tpAccent))), level: 0)]))
-            labels.addPoiStyle(PoiStyle(styleID: "me", styles: [PerLevelPoiStyle(iconStyle: PoiIconStyle(symbol: Self.symbol("location.circle.fill", .systemBlue)), level: 0)]))
-            _ = labels.addLabelLayer(option: LabelLayerOptions(layerID: "marks", competitionType: .none, competitionUnit: .symbolFirst, orderType: .rank, zOrder: 10))
+            // 기호 그림은 카카오가 검게 그려서(대표 캡처) 색을 넣은 비트맵을 직접 그린다.
+            labels.addPoiStyle(PoiStyle(styleID: "stay", styles: [PerLevelPoiStyle(iconStyle: PoiIconStyle(symbol: Self.dot(routeColor)), level: 0)]))
+            _ = labels.addLabelLayer(option: LabelLayerOptions(layerID: "stays", competitionType: .none, competitionUnit: .symbolFirst, orderType: .rank, zOrder: 10))
+            _ = labels.addLabelLayer(option: LabelLayerOptions(layerID: "cat", competitionType: .none, competitionUnit: .symbolFirst, orderType: .rank, zOrder: 20))
         }
 
+        private static func key(_ lines: [[CLLocationCoordinate2D]]) -> Int {
+            var hasher = Hasher()
+            for line in lines {
+                hasher.combine(line.count)
+                if let first = line.first, let last = line.last {
+                    hasher.combine(first.latitude); hasher.combine(first.longitude)
+                    hasher.combine(last.latitude); hasher.combine(last.longitude)
+                }
+            }
+            return hasher.finalize()
+        }
+
+        private func point(_ coordinate: CLLocationCoordinate2D) -> MapPoint {
+            MapPoint(longitude: coordinate.longitude, latitude: coordinate.latitude)
+        }
+
+        /// 바뀐 것만 다시 그린다(재생 중에는 화랑이 자리만 바뀐다).
         private func draw() {
             guard let map else { return }
-            if let layer = map.getRouteManager().getRouteLayer(layerID: "day") {
+            let routeKey = Self.key(routes)
+            if routeKey != drawnRouteKey, let layer = map.getRouteManager().getRouteLayer(layerID: "day") {
+                drawnRouteKey = routeKey
                 layer.clearAllRoutes()
-                if route.count >= 2 {
-                    let option = RouteOptions(routeID: "today", styleID: "day", zOrder: 0)
-                    option.segments = [RouteSegment(points: route.map { MapPoint(longitude: $0.longitude, latitude: $0.latitude) }, styleIndex: 0)]
+                if !routes.isEmpty {
+                    let option = RouteOptions(routeID: "day", styleID: "day", zOrder: 0)
+                    option.segments = routes.map { RouteSegment(points: $0.map(point), styleIndex: 0) }
                     layer.addRoute(option: option)?.show()
                 }
             }
-            if let layer = map.getLabelManager().getLabelLayer(layerID: "marks") {
+            let stayKey = Self.key([stays])
+            if stayKey != drawnStayKey, let layer = map.getLabelManager().getLabelLayer(layerID: "stays") {
+                drawnStayKey = stayKey
                 layer.clearAllItems()
-                layer.addPois(option: PoiOptions(styleID: "stay"), at: stays.map { MapPoint(longitude: $0.longitude, latitude: $0.latitude) })?.forEach { $0.show() }
-                if let center {
-                    layer.addPoi(option: PoiOptions(styleID: "me"), at: MapPoint(longitude: center.longitude, latitude: center.latitude))?.show()
-                }
+                layer.addPois(option: PoiOptions(styleID: "stay"), at: stays.map(point))?.forEach { $0.show() }
             }
-            if !hasCentered, let center {
+            drawCat(on: map)
+            if let cat, follows || !hasCentered {
                 hasCentered = true
-                map.moveCamera(CameraUpdate.make(target: MapPoint(longitude: center.longitude, latitude: center.latitude), zoomLevel: 15, mapView: map))
+                map.moveCamera(CameraUpdate.make(target: point(cat), mapView: map))
             }
         }
 
-        private static func symbol(_ name: String, _ color: UIColor) -> UIImage? {
-            UIImage(systemName: name, withConfiguration: UIImage.SymbolConfiguration(pointSize: 16, weight: .semibold))?
-                .withTintColor(color, renderingMode: .alwaysOriginal)
+        private func drawCat(on map: KakaoMap) {
+            let labels = map.getLabelManager()
+            guard let cat, let action, let layer = labels.getLabelLayer(layerID: "cat") else { return }
+            if action != drawnAction || catPoi == nil {
+                // 동작이 바뀌면(걷기·버스·식사…) 그 동작의 화랑이 그림으로 바꾼다. 움직이는 그림은 아니고 한 장이다.
+                drawnAction = action
+                let styleID = "cat-\(action)"
+                if let image = Self.catImage(action) {
+                    labels.addPoiStyle(PoiStyle(styleID: styleID, styles: [PerLevelPoiStyle(iconStyle: PoiIconStyle(symbol: image, anchorPoint: CGPoint(x: 0.5, y: 0.7)), level: 0)]))
+                }
+                layer.clearAllItems()
+                catPoi = layer.addPoi(option: PoiOptions(styleID: styleID), at: point(cat))
+                catPoi?.show()
+            } else {
+                catPoi?.moveAt(point(cat), duration: 150)
+            }
+        }
+
+        private static func dot(_ color: UIColor) -> UIImage {
+            UIGraphicsImageRenderer(size: CGSize(width: 14, height: 14)).image { context in
+                UIColor.white.setFill()
+                context.cgContext.fillEllipse(in: CGRect(x: 0, y: 0, width: 14, height: 14))
+                color.setFill()
+                context.cgContext.fillEllipse(in: CGRect(x: 2.5, y: 2.5, width: 9, height: 9))
+            }
+        }
+
+        private static func catImage(_ action: MapHomeStickmanAction) -> UIImage? {
+            let renderer = ImageRenderer(content: MapHomeStickmanGlyph(action: action, size: 44)
+                .frame(width: 84, height: 96, alignment: .top) // 몸이 기준 높이 아래로 내려와 틀을 넉넉히 둔다(아래가 잘렸음).
+                .environment(\.isLuminanceReduced, true))
+            renderer.scale = UIScreen.main.scale
+            return renderer.uiImage
         }
     }
 }
