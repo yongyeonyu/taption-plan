@@ -373,11 +373,8 @@ struct TravelModeView: View {
         .overlay(alignment: .bottom) {
             if let focused, openedID != nil {
                 planSheet(focused)
-            } else if let focused, flight == nil {
-                // 위에서 여행을 고르면 아래 두 단추로 바로 들어간다(TPB1114A01, 대표 지시): 왼쪽 카드(코스), 오른쪽 상세(계획표).
-                planEntryFooter(focused)
             } else {
-                globeFooter
+                globeFooter(flight == nil ? focused : nil)
             }
         }
         .confirmationDialog(
@@ -873,21 +870,16 @@ struct TravelModeView: View {
         .accessibilityIdentifier("travelTripCard-\(entry.id)")
     }
 
-    private var globeFooter: some View {
+    /// 여행을 고르면 두 단추로 바로 들어간다(TPB1114A01): 왼쪽 카드(코스), 오른쪽 상세(계획표). 아니면 새 여행·당일치기.
+    private func globeFooter(_ entry: TravelTripDirectory.Entry?) -> some View {
         HStack(spacing: 10) {
-            footerButton("plus", language.text("새 여행", "New trip")) { newTripDraft = .init(isDayTrip: false) }
-            footerButton("sun.max", language.text("오늘 당일치기", "Day trip today")) { newTripDraft = .init(isDayTrip: true) }
-        }
-        .padding(.horizontal, 14)
-        .padding(.bottom, 10)
-    }
-
-    private func planEntryFooter(_ entry: TravelTripDirectory.Entry) -> some View {
-        HStack(spacing: 10) {
-            footerButton("rectangle.stack", language.text("카드로 짜기", "Plan with cards")) { enterPlan(entry, course: true) }
-                .accessibilityIdentifier("travelOpenCourse")
-            footerButton("tablecells", language.text("상세로 짜기", "Plan in detail")) { enterPlan(entry, course: false) }
-                .accessibilityIdentifier("travelOpenTable")
+            if let entry {
+                footerButton("rectangle.stack", language.text("카드로 짜기", "Plan with cards")) { enterPlan(entry, course: true) }
+                footerButton("tablecells", language.text("상세로 짜기", "Plan in detail")) { enterPlan(entry, course: false) }
+            } else {
+                footerButton("plus", language.text("새 여행", "New trip")) { newTripDraft = .init(isDayTrip: false) }
+                footerButton("sun.max", language.text("오늘 당일치기", "Day trip today")) { newTripDraft = .init(isDayTrip: true) }
+            }
         }
         .padding(.horizontal, 14)
         .padding(.bottom, 10)

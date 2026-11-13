@@ -274,7 +274,10 @@ struct MapHomeKakaoMap: UIViewRepresentable {
                 TaptionPlanDiagnosticsLogger.shared.record("kakao_map_start_failed", fields: ["state": String(controller.getStateDescMessage().prefix(120))])
                 return
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in self?.startWhenReady(attempt: attempt + 1) }
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .milliseconds(250))
+                self?.startWhenReady(attempt: attempt + 1)
+            }
         }
 
         nonisolated func authenticationSucceeded() {}
