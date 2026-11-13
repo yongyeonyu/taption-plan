@@ -46,7 +46,7 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>329</string>
+	<string>330</string>
 	<key>INAlternativeAppNames</key>
 	<array>
 		<dict>
@@ -115,8 +115,6 @@
 	<string>$(PAYMENT_SHORTCUT_ICLOUD_ID)</string>
 	<key>TRIP_RELAY_HOST</key>
 	<string>$(TRIP_RELAY_HOST)</string>
-	<key>WIKIMEDIA_CONTACT</key>
-	<string>$(WIKIMEDIA_CONTACT)</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>SUIT-Regular.otf</string>
@@ -158,5 +156,7 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>WIKIMEDIA_CONTACT</key>
+	<string>$(WIKIMEDIA_CONTACT)</string>
 </dict>
 </plist>
