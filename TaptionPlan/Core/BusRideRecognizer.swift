@@ -84,4 +84,26 @@ enum BusRideRecognizer {
             return value
         }
     }
+
+    /// 이동 구간이 버스가 되면 그 시간의 자동 「자동차」 기록도 「버스」로 바꾼다(BST1113A01, 대표 신고: 330에서도 시간표가 자동차).
+    /// 시간표 기록은 움직임 센서가 따로 만들고 「안정됨」으로 잠기므로, 지하철(`RailJourneyRecognizer.retitling`)처럼 따로 맞춘다.
+    /// 사용자가 고친 기록은 건드리지 않는다.
+    static func retitling(
+        _ actuals: [ActualRecord],
+        busSpans: [TimeSpan],
+        activityCorrections: [UUID: ActivityCorrection] = [:],
+        asOf now: Date
+    ) -> [ActualRecord] {
+        guard !busSpans.isEmpty else { return actuals }
+        return actuals.map { actual in
+            guard !ActualRecord.userOwned(actual, activityCorrections: activityCorrections),
+                  MovementPresentation.mode(for: actual) == .car,
+                  busSpans.contains(where: { $0.overlapsMostly(actual.span(asOf: now)) }) else { return actual }
+            var value = actual
+            value.title = "버스"
+            value.behavior = WatchBehaviorKind.publicTransit.rawValue
+            value.evidence.append("버스 구간 확정")
+            return value
+        }
+    }
 }

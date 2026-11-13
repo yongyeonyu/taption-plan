@@ -681,6 +681,13 @@ extension AppModel {
             activityCorrections: snapshot.settings.activityCorrections,
             asOf: span.end
         )
+        // 이동 구간이 버스면 그 시간의 자동 「자동차」 기록도 「버스」로(BST1113A01).
+        snapshot.actuals = BusRideRecognizer.retitling(
+            snapshot.actuals,
+            busSpans: snapshot.travel.filter { $0.mode == .bus && $0.span.intersection(with: span) != nil }.map(\.span),
+            activityCorrections: snapshot.settings.activityCorrections,
+            asOf: span.end
+        )
 
         if snapshot.settings.locationEnabled || snapshot.settings.weatherEnabled {
             await refreshWeather(

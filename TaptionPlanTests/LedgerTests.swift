@@ -1348,3 +1348,29 @@ final class BusStopCheckTests: XCTestCase {
                        "등록한 차가 없으면 정차 모양까지 맞아야 한다")
     }
 }
+
+/// 버스 구간의 잠긴 「자동차」 기록 이름 맞추기(BST1113A01, 330 대표 신고).
+final class BusRecordRetitleTests: XCTestCase {
+    private let base = Date(timeIntervalSince1970: 1_794_000_000)
+
+    private func record(_ title: String, behavior: String?, manual: Bool = false, minutes: Double = 15) -> ActualRecord {
+        ActualRecord(planID: nil, title: title, categoryID: "movement", startedAt: base, endedAt: base.addingTimeInterval(minutes * 60),
+                     source: .motion, behavior: behavior, modelVersion: "classifier-v1/motion", manuallyCorrected: manual,
+                     isClassificationLocked: true, lockReason: .stability)
+    }
+
+    func testLockedCarRecordOverABusRideBecomesBus() {
+        let span = TimeSpan(start: base, end: base.addingTimeInterval(15 * 60))
+        let result = BusRideRecognizer.retitling([record("자동차", behavior: "automotive")], busSpans: [span], asOf: base.addingTimeInterval(3_600))
+        XCTAssertEqual(result.first?.title, "버스")
+        XCTAssertEqual(MovementPresentation.mode(for: result[0]), .bus)
+    }
+
+    func testUserFixedRecordsAndOtherTimesStay() {
+        let span = TimeSpan(start: base, end: base.addingTimeInterval(15 * 60))
+        XCTAssertEqual(BusRideRecognizer.retitling([record("자동차", behavior: "automotive", manual: true)], busSpans: [span], asOf: base).first?.title, "자동차")
+        let later = TimeSpan(start: base.addingTimeInterval(7_200), end: base.addingTimeInterval(8_000))
+        XCTAssertEqual(BusRideRecognizer.retitling([record("자동차", behavior: "automotive")], busSpans: [later], asOf: base).first?.title, "자동차")
+        XCTAssertEqual(BusRideRecognizer.retitling([record("걷기", behavior: "walking")], busSpans: [span], asOf: base).first?.title, "걷기")
+    }
+}
