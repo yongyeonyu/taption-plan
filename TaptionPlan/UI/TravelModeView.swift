@@ -272,7 +272,6 @@ struct TravelModeView: View {
     @State private var courseAdding: TravelTripDirectory.Entry?
     /// 위키백과 장소 사진(C6). 연락처가 설정돼 있고 스위치가 켜져 있을 때만 받는다.
     @State private var placePhotos = TravelPlacePhotoStore()
-    @AppStorage("travelWikiPhotos") private var wantsWikiPhotos = true
     @State private var planHistory = TravelPlanHistory()
     @State private var deleteCandidate: TravelTripDirectory.Entry?
     /// 재생 헤드의 시각(그날 0시부터의 분). nil이면 처음 자리(오늘은 지금, 아니면 첫 일정 시작).
@@ -345,7 +344,7 @@ struct TravelModeView: View {
         // 여행에 들어가면 경계 그림 위에 오픈맵을 띄운다(대표 지시).
         .overlay { if let focused, openedID != nil, flight == nil { streetMap(focused, destination).ignoresSafeArea() } }
         .overlay {
-            if let focused, openedID != nil, flight == nil, focused.state != .someday, !isPlanUp, pins(destination).isEmpty {
+            if let focused, openedID != nil, flight == nil, !isPlanUp, pins(destination).isEmpty {
                 Text(language.text("일정에 장소를 붙이면 지도에 나옵니다", "Add a place to a plan to see it on the map"))
                     .font(.footnote.weight(.medium)).foregroundStyle(TravelInk.plan)
                     .padding(.horizontal, 12).frame(height: 32)
@@ -360,7 +359,7 @@ struct TravelModeView: View {
             if let focused, openedID != nil { tripHeader(focused) }
         }
         .overlay(alignment: .trailing) {
-            if let focused, openedID != nil, !isPlanUp, focused.state != .someday {
+            if let focused, openedID != nil, !isPlanUp {
                 Button { withAnimation(.snappy(duration: 0.25)) { isPlanUp = true } } label: { TravelMiniRail(table: table(focused)) }
                     .buttonStyle(.plain)
                     .padding(.trailing, 10)
@@ -373,11 +372,10 @@ struct TravelModeView: View {
         }
         .overlay(alignment: .bottom) {
             if let focused, openedID != nil {
-                if focused.state == .someday {
-                    TravelWishFooter(model: model, language: language, entry: focused)
-                } else {
-                    planSheet(focused)
-                }
+                planSheet(focused)
+            } else if let focused, flight == nil {
+                // 위에서 여행을 고르면 아래 두 단추로 바로 들어간다(TPB1114A01, 대표 지시): 왼쪽 카드(코스), 오른쪽 상세(계획표).
+                planEntryFooter(focused)
             } else {
                 globeFooter
             }
@@ -589,7 +587,7 @@ struct TravelModeView: View {
         let area = isPlanUp ? Self.mapArea(viewSize, isPlanUp: true, tableHeight: tableHeight) : CGRect(x: 0, y: 150, width: viewSize.width, height: max(80, viewSize.height - 270))
         let spot = actor(entry), isCourse = isPlanUp && showsCourse(entry)
         return TravelStreetMap(
-            pins: TravelCoursePlanner.mapPins(planPins(entry, destination), blocks: isCourse ? table(entry).blocks : [], minute: currentPlayMinute(entry), photos: wantsWikiPhotos ? placePhotos.photos : [:]),
+            pins: TravelCoursePlanner.mapPins(planPins(entry, destination), blocks: isCourse ? table(entry).blocks : [], minute: currentPlayMinute(entry), photos: placePhotos.photos),
             route: dayRoute(entry), actor: spot.map { .init(longitude: $0.longitude, latitude: $0.latitude, facesEast: $0.facesEast) },
             actorImage: pose(entry).map { actorArt.image($0, coat: model.settings.catStyle.rawValue) } ?? actorUIImage, fallback: destination?.point,
             // 위쪽 핀에 선 고양이가 머리말에 가리지 않게 고양이 키만큼 더 띄운다.
@@ -884,6 +882,27 @@ struct TravelModeView: View {
         .padding(.bottom, 10)
     }
 
+    private func planEntryFooter(_ entry: TravelTripDirectory.Entry) -> some View {
+        HStack(spacing: 10) {
+            footerButton("rectangle.stack", language.text("카드로 짜기", "Plan with cards")) { enterPlan(entry, course: true) }
+                .accessibilityIdentifier("travelOpenCourse")
+            footerButton("tablecells", language.text("상세로 짜기", "Plan in detail")) { enterPlan(entry, course: false) }
+                .accessibilityIdentifier("travelOpenTable")
+        }
+        .padding(.horizontal, 14)
+        .padding(.bottom, 10)
+    }
+
+    /// 고른 여행에 들어가 계획 판을 올린다. 카드(코스)와 상세(계획표) 중 고른 쪽을 그 여행에 기억한다.
+    private func enterPlan(_ entry: TravelTripDirectory.Entry, course: Bool) {
+        tableTrips = TravelCoursePlanner.tableTrips(tableTrips, tripID: entry.id, showsCourse: course)
+        let destination = TravelModeDestination(trip: entry.trip, stops: model.settings.travelPlanStops)
+        if let last = cameras(for: destination).last { camera = last }
+        focusedID = entry.id
+        openedID = entry.id
+        withAnimation(.snappy(duration: 0.25)) { isPlanUp = true }
+    }
+
     private func footerButton(_ symbol: String, _ label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Label(label, systemImage: symbol).font(.subheadline.weight(.medium)).frame(maxWidth: .infinity).frame(height: 46)
@@ -966,7 +985,7 @@ struct TravelModeView: View {
             .init(language.text("열 편집", "Edit columns"), "rectangle.split.3x1") { columnsTrip = entry.trip },
             .init(language.text("지도에서 일정 보기", "View plans on the map"), "map") { openPlan(planDay(entry, items: items)) },
             .init(language.text("지출 넣기", "Add expense"), "wonsign") { addExpense(entry, minute: nil) },
-        ], wikiPhotos: placePhotos.isAvailable ? $wantsWikiPhotos : nil) { withAnimation(.snappy(duration: 0.25)) { isPlanUp.toggle() } }
+        ]) { withAnimation(.snappy(duration: 0.25)) { isPlanUp.toggle() } }
     }
 
     /// 코스에서 곳 더하기(TVV1113A01 C2): 편집기를 거치지 않고 그날 코스 끝에 붙인다. 시각은 앱이 잡는다.
@@ -988,8 +1007,8 @@ struct TravelModeView: View {
     // MARK: 계획표와 시간 막대(같은 날·같은 자료를 본다)
 
     private func dayKey(_ entry: TravelTripDirectory.Entry) -> String {
-        if let planDayKey, planDayKey >= entry.trip.startDay, planDayKey <= entry.trip.endDay { return planDayKey }
-        return entry.state == .active ? today() : entry.trip.startDay
+        if let planDayKey, planDayKey >= entry.trip.planStartDay, planDayKey <= entry.trip.planEndDay { return planDayKey }
+        return entry.state == .active ? today() : entry.trip.planStartDay
     }
 
     private func dayDate(_ key: String) -> Date {
@@ -1032,10 +1051,11 @@ struct TravelModeView: View {
                         playMinute: currentPlayMinute(entry), photos: model.photoService, selectedID: $planSelectedID,
                         onScrub: { playMinute = $0 }, onEdit: { editEntry(entry, itemID: $0.id) }, onAddStop: { courseAdding = entry }, onAddDetail: { addEntry(entry, detailOf: $0) },
                         onReorder: { step in Task { await model.applyTravelHistory(step); planHistory.record(step) } }, onDelete: { deleteEntry(entry, itemID: $0.id) },
-                        placePhotos: wantsWikiPhotos ? placePhotos.photos : [:]
+                        placePhotos: placePhotos.photos
                     )
-                    .task(id: "\(wantsWikiPhotos)|\(model.settings.travelPlanStops.count)") {
-                        if wantsWikiPhotos { await placePhotos.load(TravelPlacePhotoStore.Place.places(tripID: entry.id, stops: model.settings.travelPlanStops)) }
+                    .task(id: model.settings.travelPlanStops.count) {
+                        // 위키백과 사진은 늘 받는다(WPA1114A01, 대표 지시: 메뉴 스위치 없앰). 연락처가 없으면 가게 안에서 받지 않는다.
+                        await placePhotos.load(TravelPlacePhotoStore.Place.places(tripID: entry.id, stops: model.settings.travelPlanStops))
                     }
                     .frame(height: planDragHeight ?? tableHeight)
                 } else {
@@ -1078,7 +1098,7 @@ struct TravelModeView: View {
     }
 
     private func dayLabel(_ entry: TravelTripDirectory.Entry, key: String) -> String {
-        guard !entry.isDayTrip, let number = TravelTripDay.days(from: entry.trip.startDay, to: key) else { return language.text("당일", "Day trip") }
+        guard !entry.isDayTrip, let number = TravelTripDay.days(from: entry.trip.planStartDay, to: key) else { return language.text("당일", "Day trip") }
         return language.runtimeText("\(number + 1)일차", "Day \(number + 1)")
     }
 
@@ -1143,7 +1163,7 @@ struct TravelModeView: View {
     private func dayChips(_ entry: TravelTripDirectory.Entry) -> TravelDayChips {
         TravelDayChips(days: TravelPlanDays.days(of: entry.trip).map { day in
             let label = dayLabel(entry, key: day.key)
-            return (day.key, entry.isDayTrip ? label : label + " " + TravelPlanDays.shortDate(day.key))
+            return (day.key, entry.isDayTrip || entry.trip.isWish ? label : label + " " + TravelPlanDays.shortDate(day.key))
         }, selected: dayKey(entry), showsCourse: Binding(get: { showsCourse(entry) }, set: { tableTrips = TravelCoursePlanner.tableTrips(tableTrips, tripID: entry.id, showsCourse: $0) })) { planDayKey = $0 }
     }
 
@@ -1175,7 +1195,7 @@ struct TravelModeView: View {
     private func planDay(_ entry: TravelTripDirectory.Entry, items: [TravelTripItem]) -> Date {
         if entry.state == .active { return .now }
         let calendar = Calendar.autoupdatingCurrent
-        return TravelTripDay.components(entry.trip.startDay).flatMap(calendar.date(from:)) ?? items.first?.start ?? .now
+        return TravelTripDay.components(entry.trip.planStartDay).flatMap(calendar.date(from:)) ?? items.first?.start ?? .now
     }
 }
 

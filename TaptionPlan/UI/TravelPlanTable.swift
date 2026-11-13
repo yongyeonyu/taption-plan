@@ -106,8 +106,8 @@ enum TravelPlanDays {
     }
 
     static func days(of trip: TravelTrip, calendar: Calendar = .autoupdatingCurrent) -> [(key: String, date: Date)] {
-        guard let first = TravelTripDay.components(trip.startDay).flatMap(calendar.date(from:)),
-              let count = TravelTripDay.days(from: trip.startDay, to: trip.endDay), count >= 0 else { return [] }
+        guard let first = TravelTripDay.components(trip.planStartDay).flatMap(calendar.date(from:)),
+              let count = TravelTripDay.days(from: trip.planStartDay, to: trip.planEndDay), count >= 0 else { return [] }
         return (0...min(count, 60)).compactMap { offset in
             guard let date = calendar.date(byAdding: .day, value: offset, to: first) else { return nil }
             let parts = calendar.dateComponents([.year, .month, .day], from: date)
@@ -705,5 +705,23 @@ struct TravelMiniRail: View {
         .frame(width: 40)
         .background(TravelInk.panel, in: RoundedRectangle(cornerRadius: TaptionCorner.large))
         .overlay { RoundedRectangle(cornerRadius: TaptionCorner.large).stroke(TravelInk.border, lineWidth: 1) }
+    }
+}
+
+/// 날짜 없는 「언젠가」 여행도 1일차·2일차로 일정을 짠다(WPS1114A01, 대표 지시 「날짜는 없지만 1일차, 2일차, 3일차」).
+/// 일정 칸은 날짜 열쇠로 묶이므로 1일차를 쓰지 않을 먼 날에 두고, 화면에는 날짜를 보이지 않는다. 날짜를 정하면 일정 전체를 그날로 옮긴다.
+extension TravelTrip {
+    static let wishAnchorDay = "2100-01-01"
+
+    var planStartDay: String { isWish ? Self.wishAnchorDay : startDay }
+
+    var planEndDay: String {
+        guard isWish else { return endDay }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .gmt
+        guard let first = TravelTripDay.components(Self.wishAnchorDay).flatMap(calendar.date(from:)),
+              let last = calendar.date(byAdding: .day, value: max(0, (wishDays ?? 1) - 1), to: first) else { return Self.wishAnchorDay }
+        let parts = calendar.dateComponents([.year, .month, .day], from: last)
+        return TravelTripDay.string(year: parts.year ?? 2100, month: parts.month ?? 1, day: parts.day ?? 1)
     }
 }

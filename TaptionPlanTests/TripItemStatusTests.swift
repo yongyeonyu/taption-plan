@@ -1116,6 +1116,13 @@ final class TravelModeGlobeTests: XCTestCase {
         let land = TravelModeRegions.landAnchor(region)
         let ring = try XCTUnwrap(region.rings.max { $0.count < $1.count })
         XCTAssertTrue(ring.contains(land) || region.contains(longitude: land.x, latitude: land.y))
+        // 예전에 만든 여행은 네모 가운데를 좌표로 저장했다. 그 값이면 공항으로 꽂는다(TFP1114A01).
+        let old = TravelModeDestination(trip: TravelTrip(id: "o", title: "스시", startDay: "", endDay: "", countryCode: "JP",
+                                                         latitude: region.anchor.y, longitude: region.anchor.x, wishDays: 4), stops: [])
+        XCTAssertEqual(try XCTUnwrap(old.point).x, 140.39, accuracy: 0.01)
+        let chosen = TravelModeDestination(trip: TravelTrip(id: "c", title: "도쿄", startDay: "", endDay: "", countryCode: "JP",
+                                                            latitude: 35.68, longitude: 139.77, wishDays: 2), stops: [])
+        XCTAssertEqual(try XCTUnwrap(chosen.point).x, 139.77, accuracy: 0.001, "직접 정한 좌표는 그대로")
     }
 
     /// 회전·확대 60장을 그리는 데 걸리는 시간. 한 장이 화면 한 번(60Hz 기준 16.7ms) 안에 그려지는지 본다.
@@ -1415,5 +1422,20 @@ final class TravelGlobeTouchTests: XCTestCase {
         var chosen = trip
         chosen.flagColorHex = "#2E7D6B"
         XCTAssertEqual(TravelInk.flagHex(chosen, order: 0), "#2E7D6B")
+    }
+}
+
+/// 언젠가 여행도 1일차·2일차로 짠다(WPS1114A01).
+final class WishTripPlanDaysTests: XCTestCase {
+    func testWishTripGetsDayColumnsWithoutRealDates() {
+        let wish = TravelTrip(id: "w", title: "스시", startDay: "", endDay: "", countryCode: "JP", wishDays: 4)
+        XCTAssertTrue(wish.isWish)
+        XCTAssertEqual(wish.planStartDay, TravelTrip.wishAnchorDay)
+        XCTAssertEqual(wish.planEndDay, "2100-01-04")
+        XCTAssertEqual(TravelPlanDays.days(of: wish).map(\.key), ["2100-01-01", "2100-01-02", "2100-01-03", "2100-01-04"])
+        let dated = TravelTrip(id: "d", title: "방콕", startDay: "2026-12-01", endDay: "2026-12-05")
+        XCTAssertEqual(dated.planStartDay, "2026-12-01")
+        XCTAssertEqual(TravelPlanDays.days(of: dated).count, 5)
+        XCTAssertEqual(TravelTripDay.days(from: wish.planStartDay, to: "2026-12-01").map { $0 < 0 }, true, "날짜를 정하면 기준일에서 그날로 옮길 날 수가 나온다")
     }
 }

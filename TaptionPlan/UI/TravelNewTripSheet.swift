@@ -114,6 +114,8 @@ struct TravelNewTripSheet: View {
         let country = TravelModeRegions.countries.first { $0.code == countryCode }
         let province = TravelModeRegions.provinces.first { $0.code == provinceCode && countryCode == "KR" }
         let place = province ?? country
+        // 깃발 자리: 나라만 고르면 대표 공항, 시·도면 그 땅 위(TFP1114A01: 네모 가운데를 저장해 바다에 꽂혔음).
+        let flagPoint = province.map(TravelModeRegions.landAnchor) ?? country.map(TravelModeRegions.flagPoint)
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         let old = draft.editing
         // 나라·지역을 바꾸지 않았으면 전에 잡아 둔 자리·통화를 그대로 둔다.
@@ -123,7 +125,7 @@ struct TravelNewTripSheet: View {
             title: trimmed.isEmpty ? (place.map(name) ?? "") : trimmed,
             startDay: isWish ? "" : day(start), endDay: isWish ? "" : day(isDayTrip ? start : max(start, end)),
             countryCode: country?.code, regionName: province?.nameKo,
-            latitude: place?.anchor.y, longitude: place?.anchor.x, currencyCode: currency, wishDays: isWish ? wishNights + 1 : nil
+            latitude: flagPoint?.y, longitude: flagPoint?.x, currencyCode: currency, wishDays: isWish ? wishNights + 1 : nil
         )
         if let old {
             trip.flagColorHex = old.flagColorHex
@@ -136,8 +138,8 @@ struct TravelNewTripSheet: View {
             }
         }
         guard await model.saveTravelTrip(trip) else { return }
-        // 첫날을 옮겼으면 넣어 둔 일정 전체를 같은 날 수만큼 함께 옮긴다.
-        if let old, !old.isWish, !trip.isWish, let moved = TravelTripDay.days(from: old.startDay, to: trip.startDay), moved != 0 {
+        // 첫날을 옮겼으면 넣어 둔 일정 전체를 같은 날 수만큼 함께 옮긴다. 언젠가 여행은 1일차 기준일에서 옮긴다(WPS1114A01).
+        if let old, let moved = TravelTripDay.days(from: old.planStartDay, to: trip.planStartDay), moved != 0 {
             await model.shiftTravelTrip(trip.id, byDays: moved)
         }
         dismiss()

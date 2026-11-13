@@ -103,7 +103,10 @@ struct TravelModeDestination {
     init(trip: TravelTrip, stops allStops: [TravelPlanStop]) {
         stops = allStops.filter { $0.tripID == trip.id }.sorted { ($0.day, $0.order) < ($1.day, $1.order) }
         var point: SIMD2<Double>?
-        if let latitude = trip.latitude, let longitude = trip.longitude {
+        // 예전에 만든 여행은 나라 네모 가운데(바다일 수 있음)를 좌표로 저장했다. 나라만 정한 여행이 그 값이면 쓰지 않는다(TFP1114A01).
+        let storedCountry = trip.regionName == nil ? trip.countryCode.flatMap { code in TravelModeRegions.countries.first { $0.code == code } } : nil
+        if let latitude = trip.latitude, let longitude = trip.longitude,
+           !(storedCountry.map { abs($0.anchor.x - longitude) < 1e-6 && abs($0.anchor.y - latitude) < 1e-6 } ?? false) {
             point = SIMD2(longitude, latitude)
         } else if !stops.isEmpty {
             let sum = stops.reduce(SIMD2<Double>(0, 0)) { $0 + SIMD2($1.longitude, $1.latitude) }
@@ -797,8 +800,6 @@ struct TravelTripFooter: View {
     let tripID: String
     let language: MapHomeLanguage
     let actions: [Action]
-    /// 「위키백과 사진 받기」 스위치. 연락처가 설정돼 있지 않으면 nil(안 보임).
-    var wikiPhotos: Binding<Bool>?
     let onTap: () -> Void
 
     var body: some View {
@@ -815,9 +816,6 @@ struct TravelTripFooter: View {
             Spacer(minLength: 0)
             Menu {
                 ForEach(actions) { action in Button(action.id, systemImage: action.symbol, action: action.run) }
-                if let wikiPhotos {
-                    Toggle(language.text("위키백과 사진 받기", "Get Wikipedia photos"), systemImage: "photo", isOn: wikiPhotos)
-                }
             } label: {
                 Image(systemName: "plus").font(.system(size: 20, weight: .semibold)).foregroundStyle(TravelInk.land).frame(width: 44, height: 44)
                     .background(TravelInk.plan, in: Circle())
