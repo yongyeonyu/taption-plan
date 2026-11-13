@@ -3866,7 +3866,7 @@
    "ko": "{0}건 넣기",
    "en": "Add {0}",
    "files": [
-    "LedgerReviewBand.swift:164"
+    "LedgerReviewBand.swift:165"
    ],
    "args": [
     "batch.selected.count"
@@ -35583,6 +35583,18 @@
    ]
   },
   {
+   "key": "광역·좌석 버스일 수 있음|May be an express or seated bus",
+   "ko": "광역·좌석 버스일 수 있음",
+   "en": "May be an express or seated bus",
+   "files": [
+    "LedgerReviewBand.swift:90"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "교육|Education",
    "ko": "교육",
    "en": "Education",
@@ -37642,7 +37654,7 @@
    "ko": "내 계좌 이름",
    "en": "My account names",
    "files": [
-    "LedgerReviewBand.swift:127",
+    "LedgerReviewBand.swift:128",
     "LedgerSheet.swift:76"
    ],
    "args": [],
@@ -37924,7 +37936,7 @@
    "ko": "넣을 것만 골라 주세요. 이미 가계부에 있는 것 같은 줄은 꺼 두었어요.",
    "en": "Pick the ones to add. Lines that look already recorded are turned off.",
    "files": [
-    "LedgerReviewBand.swift:155"
+    "LedgerReviewBand.swift:156"
    ],
    "args": [],
    "targets": [
@@ -38821,6 +38833,18 @@
    ]
   },
   {
+   "key": "대중교통 요금|Transit fare",
+   "ko": "대중교통 요금",
+   "en": "Transit fare",
+   "files": [
+    "LedgerTransitFare.swift:61"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "대중교통 위치|Transit location",
    "ko": "대중교통 위치",
    "en": "Transit location",
@@ -38898,7 +38922,7 @@
    "ko": "더하기",
    "en": "Add",
    "files": [
-    "LedgerReviewBand.swift:114"
+    "LedgerReviewBand.swift:115"
    ],
    "args": [],
    "targets": [
@@ -41805,6 +41829,18 @@
    "en": "Discarded",
    "files": [
     "LedgerMessageRules.swift:486"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "버스 요금|Bus fare",
+   "ko": "버스 요금",
+   "en": "Bus fare",
+   "files": [
+    "LedgerTransitFare.swift:59"
    ],
    "args": [],
    "targets": [
@@ -49178,7 +49214,7 @@
    "ko": "예: 토스통장, 홍길동",
    "en": "e.g. Toss account, my name",
    "files": [
-    "LedgerReviewBand.swift:111"
+    "LedgerReviewBand.swift:112"
    ],
    "args": [],
    "targets": [
@@ -49891,8 +49927,8 @@
    "ko": "완료",
    "en": "Done",
    "files": [
-    "PaymentAlertSources.swift:212",
     "LedgerMessageRules.swift:278",
+    "PaymentAlertSources.swift:212",
     "AITaskPanel.swift:113"
    ],
    "args": [],
@@ -49968,6 +50004,20 @@
     "AssistantConnectView.swift:141"
    ],
    "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "요금표로 자동 계산 · 성인 · {0}km|Calculated from the fare table · adult · {0} km",
+   "ko": "요금표로 자동 계산 · 성인 · {0}km",
+   "en": "Calculated from the fare table · adult · {0} km",
+   "files": [
+    "LedgerTransitFare.swift:85"
+   ],
+   "args": [
+    "km"
+   ],
    "targets": [
     "TaptionPlan"
    ]
@@ -52556,7 +52606,7 @@
    "ko": "이체·출금 문자에 이 이름이 들어 있으면 내 계좌로 옮긴 돈으로 보고 지출에 넣지 않아요. 이름은 이 기기에만 둬요.",
    "en": "If a transfer or withdrawal text contains one of these names, it's treated as moving money to your own account and isn't added as spending. Names stay on this device.",
    "files": [
-    "LedgerReviewBand.swift:118"
+    "LedgerReviewBand.swift:119"
    ],
    "args": [],
    "targets": [
@@ -55858,6 +55908,18 @@
    ]
   },
   {
+   "key": "지하철 요금|Subway fare",
+   "ko": "지하철 요금",
+   "en": "Subway fare",
+   "files": [
+    "LedgerTransitFare.swift:60"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "지하철 탑승|Board Subway",
    "ko": "지하철 탑승",
    "en": "Board Subway",
@@ -57423,7 +57485,7 @@
    "ko": "캡처에서 읽은 결제",
    "en": "Payments in the capture",
    "files": [
-    "LedgerReviewBand.swift:159"
+    "LedgerReviewBand.swift:160"
    ],
    "args": [],
    "targets": [

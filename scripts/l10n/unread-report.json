@@ -1,19 +1,7 @@
 {
- "ui": 4843,
+ "ui": 4848,
  "catalog": 502,
  "unread": [
-  {
-   "file": "TaptionPlan/Core/PaymentAlertSources.swift",
-   "line": 166,
-   "ko": "saved.amount",
-   "en": "saved.currency"
-  },
-  {
-   "file": "TaptionPlan/Core/PaymentAlertSources.swift",
-   "line": 166,
-   "ko": "saved.amount",
-   "en": "saved.currency"
-  },
   {
    "file": "Packages/TaptionWatchSync/Sources/TaptionWatchSync/AppLanguagePreference.swift",
    "line": 41,
@@ -127,6 +115,18 @@
    "line": 35,
    "ko": "Bool?",
    "en": "Double?"
+  },
+  {
+   "file": "TaptionPlan/Core/PaymentAlertSources.swift",
+   "line": 166,
+   "ko": "saved.amount",
+   "en": "saved.currency"
+  },
+  {
+   "file": "TaptionPlan/Core/PaymentAlertSources.swift",
+   "line": 166,
+   "ko": "saved.amount",
+   "en": "saved.currency"
   },
   {
    "file": "TaptionPlan/Core/SiriIntents.swift",
@@ -274,7 +274,7 @@
   },
   {
    "file": "TaptionPlan/UI/LedgerReviewBand.swift",
-   "line": 183,
+   "line": 184,
    "ko": "entry.amount",
    "en": "language"
   },
