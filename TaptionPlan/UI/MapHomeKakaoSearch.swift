@@ -86,9 +86,11 @@ enum MapHomeKakaoSearch {
     }
 
     /// 머문 곳 이름 후보(TAU1110A01). 식당·카페 가운데 반경 안 가장 가까운 곳. 국내가 아니거나 못 찾으면 nil이라 Apple 지도로 넘어간다.
-    static let stayCategories = ["FD6", "CE7"]
+    /// 머문 곳 이름을 찾을 카카오 분류(KKP1113A01: 식당·카페만 보던 것을 넓힘). 주차장·주유소·지하철역·중개업소·편의점은 뺀다.
+    /// 음식점·카페·병원·약국·대형마트·문화시설·관광명소·학교·학원·은행·공공기관·숙박.
+    static let stayCategories = ["FD6", "CE7", "HP8", "PM9", "MT1", "CT1", "AT4", "SC4", "AC5", "BK9", "PO3", "AD5"]
 
-    static func nearestStayName(at center: CLLocationCoordinate2D, radiusMeters: Int = 60) async -> String? {
+    static func nearestStayName(at center: CLLocationCoordinate2D, radiusMeters: Int = 50) async -> String? {
         guard isAvailable(at: center), let token = await AssistantRegistration.searchToken() else { return nil }
         var best: (name: String, meters: Double)?
         for code in stayCategories {

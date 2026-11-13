@@ -1444,3 +1444,34 @@ final class LedgerDayGroupingTests: XCTestCase {
         XCTAssertTrue(LedgerDayGroup.groups([], calendar: calendar).isEmpty)
     }
 }
+
+/// 「머무름」 기록에 찾은 장소 이름(KKP1113A01, 대표 신고: 저녁 식당가 「머무름」·오피스텔로).
+@MainActor
+final class StayPlaceNamingTests: XCTestCase {
+    private let base = Date(timeIntervalSince1970: 1_794_000_000)
+    private let point = GeoPoint(latitude: 37.5, longitude: 126.67, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: 10)
+
+    private func stay(minutes: Double, manual: Bool = false) -> ActualRecord {
+        ActualRecord(planID: nil, title: StationaryContextKind.unknownStay.title, categoryID: "activity", startedAt: base,
+                     endedAt: base.addingTimeInterval(minutes * 60), source: .location, behavior: StationaryContextKind.unknownStay.rawValue,
+                     modelVersion: "classifier-v1/context", manuallyCorrected: manual)
+    }
+
+    private var place: PlaceStay {
+        PlaceStay(placeKey: "p", displayName: "확인된 위치", span: TimeSpan(start: base, end: base.addingTimeInterval(90 * 60)),
+                  confidence: .medium, point: point, isConfirmed: false)
+    }
+
+    func testUnknownStayTakesTheFoundNameAndUserEditsStay() {
+        let names = [NLEPlaceLane.nameKey(for: point): "뷔페 식당"]
+        let named = StayPlaceNaming.retitling([stay(minutes: 90)], places: [place], names: names, asOf: base.addingTimeInterval(7_200))
+        XCTAssertEqual(named.first?.title, "뷔페 식당")
+        XCTAssertTrue(named.first?.evidence.contains(StayPlaceNaming.evidence) == true)
+        XCTAssertEqual(StayPlaceNaming.retitling([stay(minutes: 90, manual: true)], places: [place], names: names, asOf: base.addingTimeInterval(7_200)).first?.title,
+                       StationaryContextKind.unknownStay.title, "사용자가 고친 기록은 그대로")
+        XCTAssertEqual(StayPlaceNaming.retitling([stay(minutes: 5)], places: [place], names: names, asOf: base.addingTimeInterval(7_200)).first?.title,
+                       StationaryContextKind.unknownStay.title, "잠깐 선 곳은 이름을 붙이지 않는다")
+        XCTAssertTrue(StayPlaceNaming.pointsNeedingNames([stay(minutes: 90)], places: [place], known: names, asOf: base.addingTimeInterval(7_200)).isEmpty)
+        XCTAssertEqual(StayPlaceNaming.pointsNeedingNames([stay(minutes: 90)], places: [place], known: [:], asOf: base.addingTimeInterval(7_200)).count, 1)
+    }
+}

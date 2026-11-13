@@ -8,8 +8,13 @@ enum NLENearbyPlaceNames {
     /// 한 번에 찾는 곳 수. MapKit 호출 제한을 넘지 않게 오래 머문 곳부터 찾는다.
     static let maximumLookups = 12
     private static let searchRadiusMeters: CLLocationDistance = 200
-    private static let cacheLimit = 200
-    private static var cache: [String: String] = [:]
+    private static let cacheLimit = 300
+    private static let storageKey = "stayPlaceNames"
+    /// 찾은 이름은 기기에 기억한다(KKP1113A01). 카카오는 하루 호출 수가 정해져 있어 같은 곳을 다시 묻지 않는다.
+    private static var cache: [String: String] = UserDefaults.standard.dictionary(forKey: storageKey) as? [String: String] ?? [:]
+
+    /// 기억한 이름(약 50m 칸 열쇠 → 이름).
+    static var storedNames: [String: String] { cache }
 
     static func names(for points: [GeoPoint]) async -> [String: String] {
         var result: [String: String] = [:]
@@ -27,12 +32,16 @@ enum NLENearbyPlaceNames {
             cache[key] = name
             result[key] = name
         }
+        if lookups > 0 { UserDefaults.standard.set(cache, forKey: storageKey) }
         return result
     }
 
     private static func nearestName(to point: GeoPoint) async -> String? {
         let center = CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude)
         let location = CLLocation(latitude: point.latitude, longitude: point.longitude)
+        // 국내는 카카오 장소를 먼저 본다(대표 결정 2026-11-13: Apple 지도가 가게 대신 「…오피스텔」 같은 건물 이름을 줬음).
+        // 분류를 넓혀 1층 카페가 병원·학교를 덮지 않게 가장 가까운 곳을 고른다.
+        if MapHomeKakaoSearch.isAvailable(at: center), let name = await MapHomeKakaoSearch.nearestStayName(at: center) { return name }
         let request = MKLocalPointsOfInterestRequest(center: center, radius: searchRadiusMeters)
         if let response = try? await MKLocalSearch(request: request).start() {
             let nearest = response.mapItems
@@ -43,10 +52,49 @@ enum NLENearbyPlaceNames {
                 }
             if let name = nearest?.name { return name }
         }
-        // Apple 지도에 가까운 장소가 없을 때만 국내 카카오 식당·카페를 본다(TAU1110A01). 먼저 보면 1층 카페가
-        // 사무실·병원 이름을 덮는다(리뷰 지적). 이름은 화면에만 쓰고 기록에는 쓰지 않는다.
-        if let name = await MapHomeKakaoSearch.nearestStayName(at: center) { return name }
         let placemark = try? await CLGeocoder().reverseGeocodeLocation(location).first
         return placemark?.name ?? placemark?.subLocality ?? placemark?.locality
+    }
+}
+
+/// 이름 없는 「머무름」 기록에 찾은 장소 이름을 붙인다(KKP1113A01, 대표 결정: 기록 이름에도).
+/// 자동 기록만 바꾸고, 사용자가 고친 기록은 그대로 둔다. 이름을 못 찾으면 「머무름」으로 남는다.
+enum StayPlaceNaming {
+    static let evidence = "장소 이름(지도 검색)"
+    static let minimumMinutes = 10.0
+
+    static func retitling(
+        _ actuals: [ActualRecord],
+        places: [PlaceStay],
+        names: [String: String],
+        activityCorrections: [UUID: ActivityCorrection] = [:],
+        asOf now: Date
+    ) -> [ActualRecord] {
+        guard !names.isEmpty else { return actuals }
+        let unknown = StationaryContextKind.unknownStay
+        return actuals.map { actual in
+            let span = actual.span(asOf: now)
+            guard actual.behavior == unknown.rawValue,
+                  actual.title == unknown.title || actual.evidence.contains(evidence),
+                  span.duration >= minimumMinutes * 60,
+                  !ActualRecord.userOwned(actual, activityCorrections: activityCorrections),
+                  let point = places.first(where: { $0.point != nil && $0.span.overlapsMostly(span) })?.point,
+                  let name = names[NLEPlaceLane.nameKey(for: point)], name != actual.title else { return actual }
+            var value = actual
+            value.title = name
+            if !value.evidence.contains(evidence) { value.evidence.append(evidence) }
+            return value
+        }
+    }
+
+    /// 이름이 필요한 「머무름」 자리(오래 머문 곳부터, 이미 기억한 곳은 뺀다).
+    static func pointsNeedingNames(_ actuals: [ActualRecord], places: [PlaceStay], known: [String: String], asOf now: Date) -> [GeoPoint] {
+        let unknown = StationaryContextKind.unknownStay.rawValue
+        var seen = Set<String>()
+        return actuals
+            .filter { $0.behavior == unknown && $0.span(asOf: now).duration >= minimumMinutes * 60 }
+            .sorted { $0.span(asOf: now).duration > $1.span(asOf: now).duration }
+            .compactMap { actual in places.first { $0.point != nil && $0.span.overlapsMostly(actual.span(asOf: now)) }?.point }
+            .filter { known[NLEPlaceLane.nameKey(for: $0)] == nil && seen.insert(NLEPlaceLane.nameKey(for: $0)).inserted }
     }
 }

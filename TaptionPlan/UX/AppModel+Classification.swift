@@ -688,6 +688,9 @@ extension AppModel {
             activityCorrections: snapshot.settings.activityCorrections,
             asOf: span.end
         )
+        // 「머무름」 기록에 기억해 둔 장소 이름을 붙이고, 모르는 곳은 뒤에서 찾아 다시 붙인다(KKP1113A01).
+        applyStayPlaceNames(asOf: span.end)
+        scheduleStayPlaceNameLookup(asOf: span.end)
 
         if snapshot.settings.locationEnabled || snapshot.settings.weatherEnabled {
             await refreshWeather(
@@ -1108,4 +1111,25 @@ extension AppModel {
         snapshot.actuals.append(contentsOf: records)
         snapshot.actuals.sort { $0.startedAt < $1.startedAt }
     }
+
+    func applyStayPlaceNames(asOf now: Date) {
+        let named = StayPlaceNaming.retitling(
+            snapshot.actuals, places: snapshot.places, names: NLENearbyPlaceNames.storedNames,
+            activityCorrections: snapshot.settings.activityCorrections, asOf: now
+        )
+        if named != snapshot.actuals { snapshot.actuals = named }
+    }
+
+    private func scheduleStayPlaceNameLookup(asOf now: Date) {
+        let points = StayPlaceNaming.pointsNeedingNames(
+            snapshot.actuals, places: snapshot.places, known: NLENearbyPlaceNames.storedNames, asOf: now
+        )
+        guard !points.isEmpty else { return }
+        Task { @MainActor [weak self] in
+            let found = await NLENearbyPlaceNames.names(for: points)
+            guard let self, !found.isEmpty, !Task.isCancelled, self.acceptsDataMutation() else { return }
+            self.applyStayPlaceNames(asOf: now)
+        }
+    }
+
 }
