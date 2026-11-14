@@ -1,5 +1,5 @@
 {
- "ui": 4958,
+ "ui": 4982,
  "catalog": 504,
  "unread": [
   {
@@ -165,6 +165,12 @@
    "en": "englishTitle"
   },
   {
+   "file": "TaptionPlan/UI/ArrivalCardView.swift",
+   "line": 113,
+   "ko": "amount",
+   "en": "language"
+  },
+  {
    "file": "TaptionPlan/UI/AssistantDataActions.swift",
    "line": 1020,
    "ko": "$0.name",
@@ -178,21 +184,15 @@
   },
   {
    "file": "TaptionPlan/UI/AssistantDataActions.swift",
-   "line": 189,
-   "ko": "saved.amount",
-   "en": "saved.currency"
-  },
-  {
-   "file": "TaptionPlan/UI/AssistantDataActions.swift",
    "line": 175,
    "ko": "before.amount",
    "en": "before.currency"
   },
   {
-   "file": "TaptionPlan/UI/AssistantDataActions.swift",
-   "line": 128,
-   "ko": "value.amount",
-   "en": "value.currency"
+   "file": "TaptionPlan/UI/AssistantDigest.swift",
+   "line": 61,
+   "ko": "entry.amount",
+   "en": "entry.currency"
   },
   {
    "file": "TaptionPlan/UI/FirstRunGuideStage.swift",

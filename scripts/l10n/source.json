@@ -301,6 +301,20 @@
    ]
   },
   {
+   "key": "1건으로 합침 · {0}|Merged into one · {0}",
+   "ko": "1건으로 합침 · {0}",
+   "en": "Merged into one · {0}",
+   "files": [
+    "AssistantDigest.swift:22"
+   ],
+   "args": [
+    "record"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "1년|1 year",
    "ko": "1년",
    "en": "1 year",
@@ -774,8 +788,8 @@
    "ko": "AI 승인 요청",
    "en": "AI approval request",
    "files": [
-    "AITaskPanel.swift:475",
-    "AITaskPanel.swift:530",
+    "AITaskPanel.swift:477",
+    "AITaskPanel.swift:532",
     "AITaskQueue.swift:460"
    ],
    "args": [],
@@ -875,7 +889,7 @@
    "ko": "AI 연결이 없어요. 메뉴 › AI 연결에서 연결하면 앱이 못한 일을 AI가 처리해요.",
    "en": "No AI is connected. Connect one in Menu › AI connection to let it handle what the app couldn't.",
    "files": [
-    "AITaskPanel.swift:61"
+    "AITaskPanel.swift:63"
    ],
    "args": [],
    "targets": [
@@ -925,8 +939,8 @@
    "ko": "AI 질문",
    "en": "AI question",
    "files": [
-    "AITaskPanel.swift:390",
-    "AITaskPanel.swift:531",
+    "AITaskPanel.swift:392",
+    "AITaskPanel.swift:533",
     "AITaskQueue.swift:460"
    ],
    "args": [],
@@ -1017,9 +1031,23 @@
    "ko": "AI가 시간 안에 끝내지 못했어요",
    "en": "The AI didn't finish in time",
    "files": [
-    "AITaskPanel.swift:187"
+    "AITaskPanel.swift:189"
    ],
    "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "AI가 정리한 {0}건|{0} tidied by AI",
+   "ko": "AI가 정리한 {0}건",
+   "en": "{0} tidied by AI",
+   "files": [
+    "AssistantDigest.swift:167"
+   ],
+   "args": [
+    "count"
+   ],
    "targets": [
     "TaptionPlan"
    ]
@@ -1041,7 +1069,7 @@
    "ko": "AI가 한 일",
    "en": "What the AI did",
    "files": [
-    "AITaskPanel.swift:81",
+    "AITaskPanel.swift:83",
     "AssistantSafetyViews.swift:352",
     "AssistantSettingsView.swift:32"
    ],
@@ -1064,11 +1092,23 @@
    ]
   },
   {
+   "key": "AI는 표시와 교정만 바꿔요. 센서가 남긴 원본 기록은 그대로 있어요.|The AI only changes labels and corrections. Original sensor records stay as they were.",
+   "ko": "AI는 표시와 교정만 바꿔요. 센서가 남긴 원본 기록은 그대로 있어요.",
+   "en": "The AI only changes labels and corrections. Original sensor records stay as they were.",
+   "files": [
+    "AssistantBeforeAfterView.swift:64"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "AI로 만들기|Plan with AI",
    "ko": "AI로 만들기",
    "en": "Plan with AI",
    "files": [
-    "MapHomeView+Support.swift:707"
+    "MapHomeView+Support.swift:708"
    ],
    "args": [],
    "targets": [
@@ -1177,7 +1217,7 @@
    "ko": "AI에게 요청하기",
    "en": "Ask your AI now",
    "files": [
-    "AITaskPanel.swift:69"
+    "AITaskPanel.swift:71"
    ],
    "args": [],
    "targets": [
@@ -3135,6 +3175,22 @@
    ]
   },
   {
+   "key": "{0} {1}건 ({2})|{0} ×{1} ({2})",
+   "ko": "{0} {1}건 ({2})",
+   "en": "{0} ×{1} ({2})",
+   "files": [
+    "AssistantDigest.swift:17"
+   ],
+   "args": [
+    "names",
+    "count",
+    "range"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "{0} {1}을 가계부에 넣었어요.|Added {0} {1} to the ledger.",
    "ko": "{0} {1}을 가계부에 넣었어요.",
    "en": "Added {0} {1} to the ledger.",
@@ -4011,7 +4067,7 @@
    "ko": "{0}개는 그 뒤에 바뀌어 되돌리지 못했어요",
    "en": "{0} changed afterwards and couldn't be undone",
    "files": [
-    "AITaskPanel.swift:172"
+    "AITaskPanel.swift:174"
    ],
    "args": [
     "failed"
@@ -4025,7 +4081,7 @@
    "ko": "{0}개를 되돌렸어요",
    "en": "Undid {0} change(s)",
    "files": [
-    "AITaskPanel.swift:171"
+    "AITaskPanel.swift:173"
    ],
    "args": [
     "undone"
@@ -4171,7 +4227,7 @@
    "ko": "{0}번째 시도",
    "en": "Attempt {0}",
    "files": [
-    "AITaskPanel.swift:179"
+    "AITaskPanel.swift:181"
    ],
    "args": [
     "attempts"
@@ -32817,6 +32873,18 @@
    ]
   },
   {
+   "key": "|You arrived at a planned place",
+   "ko": "일정 장소에 도착했어요",
+   "en": "You arrived at a planned place",
+   "files": [
+    "ArrivalCardManager.swift:114"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "|You can save after all records finish loading.",
    "ko": "기록을 모두 불러온 뒤에 저장할 수 있습니다.",
    "en": "You can save after all records finish loading.",
@@ -32858,6 +32926,18 @@
    "en": "You left a memo near here.",
    "files": [
     "NearbyMemoNotifications.swift:171"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "|You're here. Tap to see your notes and checklist.",
+   "ko": "도착했어요. 눌러서 메모와 체크리스트를 보세요.",
+   "en": "You're here. Tap to see your notes and checklist.",
+   "files": [
+    "ArrivalCardManager.swift:117"
    ],
    "args": [],
    "targets": [
@@ -33813,6 +33893,7 @@
    "en": "Ledger",
    "files": [
     "AssistantDataCommands.swift:534",
+    "AssistantDigest.swift:80",
     "LedgerSheet.swift:65"
    ],
    "args": [],
@@ -34250,7 +34331,7 @@
    "ko": "거절",
    "en": "Decline",
    "files": [
-    "AITaskPanel.swift:490"
+    "AITaskPanel.swift:492"
    ],
    "args": [],
    "targets": [
@@ -34262,7 +34343,7 @@
    "ko": "거절함",
    "en": "Declined",
    "files": [
-    "AITaskPanel.swift:368"
+    "AITaskPanel.swift:370"
    ],
    "args": [],
    "targets": [
@@ -34515,7 +34596,7 @@
    "ko": "건너뛰기",
    "en": "Skip",
    "files": [
-    "AITaskPanel.swift:414",
+    "AITaskPanel.swift:416",
     "FirstRunTutorialView.swift:82",
     "PermissionOnboardingSheet.swift:280"
    ],
@@ -34529,7 +34610,7 @@
    "ko": "건너뜀",
    "en": "Skipped",
    "files": [
-    "AITaskPanel.swift:366"
+    "AITaskPanel.swift:368"
    ],
    "args": [],
    "targets": [
@@ -34883,7 +34964,7 @@
    "ko": "결제 문자 규칙 요청",
    "en": "Payment rule request",
    "files": [
-    "AITaskPanel.swift:305"
+    "AITaskPanel.swift:307"
    ],
    "args": [],
    "targets": [
@@ -34944,7 +35025,7 @@
    "ko": "결제 문자 확인",
    "en": "Payment text",
    "files": [
-    "AITaskPanel.swift:298"
+    "AITaskPanel.swift:300"
    ],
    "args": [],
    "targets": [
@@ -35127,7 +35208,7 @@
    "ko": "경로 확인",
    "en": "Route check",
    "files": [
-    "AITaskPanel.swift:301"
+    "AITaskPanel.swift:303"
    ],
    "args": [],
    "targets": [
@@ -35373,7 +35454,7 @@
    "ko": "계획과 기록은 삭제되지 않습니다.",
    "en": "Your plans and records will not be deleted.",
    "files": [
-    "MapHomeView+Support.swift:786"
+    "MapHomeView+Support.swift:787"
    ],
    "args": [],
    "targets": [
@@ -35974,7 +36055,7 @@
    "ko": "교통비 확인",
    "en": "Fare check",
    "files": [
-    "AITaskPanel.swift:302"
+    "AITaskPanel.swift:304"
    ],
    "args": [],
    "targets": [
@@ -36397,6 +36478,7 @@
    "ko": "그 뒤에 바뀐 내용이 있어 되돌리지 못했어요.",
    "en": "It changed afterwards, so it couldn't be undone.",
    "files": [
+    "AssistantBeforeAfterView.swift:178",
     "AssistantSafetyViews.swift:381"
    ],
    "args": [],
@@ -36434,7 +36516,7 @@
    "ko": "그날 AI에게 맡긴 일이 없어요.",
    "en": "Nothing was handed to your AI that day.",
    "files": [
-    "AITaskPanel.swift:64"
+    "AITaskPanel.swift:66"
    ],
    "args": [],
    "targets": [
@@ -36577,7 +36659,7 @@
    "ko": "근처에 남긴 메모",
    "en": "Memos left nearby",
    "files": [
-    "MapHomeAlarm.swift:559"
+    "MapHomeAlarm.swift:560"
    ],
    "args": [],
    "targets": [
@@ -37096,6 +37178,7 @@
    "ko": "기록",
    "en": "Records",
    "files": [
+    "AssistantDigest.swift:77",
     "MapHomeCounterDetailSheet.swift:202"
    ],
    "args": [],
@@ -37420,7 +37503,7 @@
    "ko": "기타 확인",
    "en": "Other",
    "files": [
-    "AITaskPanel.swift:306"
+    "AITaskPanel.swift:308"
    ],
    "args": [],
    "targets": [
@@ -37446,7 +37529,7 @@
    "ko": "기한 지남",
    "en": "Expired",
    "files": [
-    "AITaskPanel.swift:277"
+    "AITaskPanel.swift:279"
    ],
    "args": [],
    "targets": [
@@ -37687,7 +37770,7 @@
    "ko": "끝난 일 지우기",
    "en": "Clear finished",
    "files": [
-    "AITaskPanel.swift:97"
+    "AITaskPanel.swift:99"
    ],
    "args": [],
    "targets": [
@@ -37699,7 +37782,7 @@
    "ko": "끝난 질문 지우기",
    "en": "Clear answered questions",
    "files": [
-    "AITaskPanel.swift:349"
+    "AITaskPanel.swift:351"
    ],
    "args": [],
    "targets": [
@@ -37862,7 +37945,7 @@
    "files": [
     "FirstRunTutorialGuides.swift:372",
     "FirstRunTutorialGuides.swift:419",
-    "MapHomeView+Support.swift:701"
+    "MapHomeView+Support.swift:702"
    ],
    "args": [],
    "targets": [
@@ -37874,7 +37957,7 @@
    "ko": "나중에",
    "en": "Not now",
    "files": [
-    "MapHomeView+Support.swift:452"
+    "MapHomeView+Support.swift:453"
    ],
    "args": [],
    "targets": [
@@ -39195,8 +39278,8 @@
    "en": "Close",
    "files": [
     "AppShellView.swift:1131",
-    "BokkiShortcutsGuide.swift:188",
-    "BokkiShortcutsGuide.swift:315"
+    "ArrivalCardView.swift:50",
+    "AssistantBeforeAfterView.swift:84"
    ],
    "args": [],
    "targets": [
@@ -39233,7 +39316,7 @@
    "en": "Calendar",
    "files": [
     "FirstRunGuideStage.swift:643",
-    "MapHomeView+Support.swift:467",
+    "MapHomeView+Support.swift:468",
     "MapHomeView+Support2.swift:393"
    ],
    "args": [],
@@ -39274,7 +39357,7 @@
    "ko": "답 기다림",
    "en": "Waiting for your answer",
    "files": [
-    "AITaskPanel.swift:276"
+    "AITaskPanel.swift:278"
    ],
    "args": [],
    "targets": [
@@ -39286,7 +39369,7 @@
    "ko": "답하기",
    "en": "Answer",
    "files": [
-    "AITaskPanel.swift:409"
+    "AITaskPanel.swift:411"
    ],
    "args": [],
    "targets": [
@@ -39298,7 +39381,7 @@
    "ko": "답할 질문이 없어요.",
    "en": "No questions to answer.",
    "files": [
-    "AITaskPanel.swift:556"
+    "AITaskPanel.swift:558"
    ],
    "args": [],
    "targets": [
@@ -39336,7 +39419,7 @@
    "ko": "대기",
    "en": "Waiting",
    "files": [
-    "AITaskPanel.swift:274",
+    "AITaskPanel.swift:276",
     "MapHomeView+Support2.swift:911",
     "SensorCollectionLiveActivity.swift:265"
    ],
@@ -39904,6 +39987,18 @@
    ]
   },
   {
+   "key": "도착했어요. 눌러서 메모와 체크리스트를 보세요.|You're here. Tap to see your notes and checklist.",
+   "ko": "도착했어요. 눌러서 메모와 체크리스트를 보세요.",
+   "en": "You're here. Tap to see your notes and checklist.",
+   "files": [
+    "ArrivalCardManager.swift:116"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "독서|Reading",
    "ko": "독서",
    "en": "Reading",
@@ -40057,9 +40152,9 @@
    "ko": "되돌렸어요",
    "en": "Undone",
    "files": [
-    "AITaskPanel.swift:118",
-    "AITaskPanel.swift:140",
-    "AssistantSafetyViews.swift:372"
+    "AITaskPanel.swift:120",
+    "AITaskPanel.swift:142",
+    "AssistantBeforeAfterView.swift:166"
    ],
    "args": [],
    "targets": [
@@ -40081,13 +40176,56 @@
    ]
   },
   {
+   "key": "되돌린 것 {0}건|{0} undone",
+   "ko": "되돌린 것 {0}건",
+   "en": "{0} undone",
+   "files": [
+    "AssistantDigest.swift:180"
+   ],
+   "args": [
+    "undone"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "되돌릴 수 없는 것 {0}건|{0} can't be undone",
+   "ko": "되돌릴 수 없는 것 {0}건",
+   "en": "{0} can't be undone",
+   "files": [
+    "AssistantDigest.swift:181"
+   ],
+   "args": [
+    "fixed"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "되돌릴 수 없는 일이에요|This can't be undone",
    "ko": "되돌릴 수 없는 일이에요",
    "en": "This can't be undone",
    "files": [
+    "AssistantBeforeAfterView.swift:168",
     "AssistantSafetyViews.swift:374"
    ],
    "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "되돌릴 수 있는 것 {0}건|{0} can be undone",
+   "ko": "되돌릴 수 있는 것 {0}건",
+   "en": "{0} can be undone",
+   "files": [
+    "AssistantDigest.swift:179"
+   ],
+   "args": [
+    "open"
+   ],
    "targets": [
     "TaptionPlan"
    ]
@@ -40652,6 +40790,18 @@
    ]
   },
   {
+   "key": "말풍선|Bubbles",
+   "ko": "말풍선",
+   "en": "Bubbles",
+   "files": [
+    "AssistantDigest.swift:82"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "말풍선·글귀|Phrases",
    "ko": "말풍선·글귀",
    "en": "Phrases",
@@ -40802,7 +40952,7 @@
    "ko": "머문 장소 확인",
    "en": "Stay place",
    "files": [
-    "AITaskPanel.swift:304"
+    "AITaskPanel.swift:306"
    ],
    "args": [],
    "targets": [
@@ -40978,7 +41128,7 @@
    "ko": "메뉴 > 위치에서 집을 먼저 등록해 주세요.",
    "en": "Add your home in Menu > Location first.",
    "files": [
-    "MapHomeView+Support.swift:455"
+    "MapHomeView+Support.swift:456"
    ],
    "args": [],
    "targets": [
@@ -41157,7 +41307,7 @@
    "ko": "메모 다듬기",
    "en": "Polish memo",
    "files": [
-    "AITaskPanel.swift:300"
+    "AITaskPanel.swift:302"
    ],
    "args": [],
    "targets": [
@@ -41280,9 +41430,9 @@
    "ko": "메모",
    "en": "Memos",
    "files": [
+    "AssistantDigest.swift:78",
     "LedgerMemoPanel.swift:15",
-    "MapHomeAlarm.swift:550",
-    "MapHomeInfoSheets.swift:450"
+    "MapHomeAlarm.swift:551"
    ],
    "args": [],
    "targets": [
@@ -41669,6 +41819,18 @@
    ]
   },
   {
+   "key": "미완료|Not done",
+   "ko": "미완료",
+   "en": "Not done",
+   "files": [
+    "ArrivalCardView.swift:105"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "미용실|Hair salon",
    "ko": "미용실",
    "en": "Hair salon",
@@ -41995,7 +42157,7 @@
    "ko": "반영 안 됨",
    "en": "Not applied",
    "files": [
-    "AITaskPanel.swift:130"
+    "AITaskPanel.swift:132"
    ],
    "args": [],
    "targets": [
@@ -42967,6 +43129,7 @@
    "ko": "보낸 연결: {0}",
    "en": "From: {0}",
    "files": [
+    "AssistantBeforeAfterView.swift:136",
     "AssistantSafetyViews.swift:369"
    ],
    "args": [
@@ -43447,7 +43610,7 @@
    "ko": "불러오는 중…",
    "en": "Loading…",
    "files": [
-    "AITaskPanel.swift:64"
+    "AITaskPanel.swift:66"
    ],
    "args": [],
    "targets": [
@@ -44579,7 +44742,8 @@
    "ko": "새로",
    "en": "New",
    "files": [
-    "AITaskPanel.swift:132"
+    "AITaskPanel.swift:134",
+    "AssistantBeforeAfterView.swift:133"
    ],
    "args": [],
    "targets": [
@@ -45083,7 +45247,7 @@
    "files": [
     "MapHomeView+Menu2.swift:210",
     "MapHomeView+Menu2.swift:227",
-    "MapHomeView+Support.swift:780"
+    "MapHomeView+Support.swift:781"
    ],
    "args": [],
    "targets": [
@@ -45108,8 +45272,8 @@
    "en": "Settings",
    "files": [
     "AssistantDataCommands.swift:536",
-    "MapHomeSettingsSheets.swift:745",
-    "MapHomeSettingsSheets.swift:646"
+    "AssistantDigest.swift:81",
+    "MapHomeSettingsSheets.swift:745"
    ],
    "args": [],
    "targets": [
@@ -45157,7 +45321,7 @@
    "ko": "설정을 기본값으로 초기화할까요?",
    "en": "Reset settings to defaults?",
    "files": [
-    "MapHomeView+Support.swift:776"
+    "MapHomeView+Support.swift:777"
    ],
    "args": [],
    "targets": [
@@ -45708,7 +45872,7 @@
    "files": [
     "HealthAndSensorModels.swift:37",
     "WidgetShared.swift:607",
-    "MapHomeAlarm.swift:676"
+    "MapHomeAlarm.swift:677"
    ],
    "args": [],
    "targets": [
@@ -45788,8 +45952,8 @@
    "ko": "수업",
    "en": "Class",
    "files": [
-    "MapHomeAlarm.swift:674",
     "MapHomeAlarm.swift:675",
+    "MapHomeAlarm.swift:676",
     "MapHomeLocationPresentation.swift:290"
    ],
    "args": [],
@@ -46139,7 +46303,7 @@
    "ko": "승인",
    "en": "Approve",
    "files": [
-    "AITaskPanel.swift:487"
+    "AITaskPanel.swift:489"
    ],
    "args": [],
    "targets": [
@@ -46187,7 +46351,7 @@
    "ko": "승인함",
    "en": "Approved",
    "files": [
-    "AITaskPanel.swift:368"
+    "AITaskPanel.swift:370"
    ],
    "args": [],
    "targets": [
@@ -46394,7 +46558,7 @@
    "ko": "시간을 확인하고 고쳐 주세요. 확인을 누르면 그 시각부터 기록돼요.",
    "en": "Check the time and edit if needed. Recording starts from this time.",
    "files": [
-    "MapHomeAlarm.swift:645"
+    "MapHomeAlarm.swift:646"
    ],
    "args": [],
    "targets": [
@@ -46776,7 +46940,7 @@
    "ko": "실패",
    "en": "Failed",
    "files": [
-    "AITaskPanel.swift:279",
+    "AITaskPanel.swift:281",
     "AppModel+Export.swift:30"
    ],
    "args": [],
@@ -46960,7 +47124,7 @@
    "ko": "아이콘을 고른 지난 위치 메모의 근처에 가면 iOS가 알려요. 메모 글이 잠금 화면에 보여요.",
    "en": "iOS alerts you near past location memos with a chosen icon. Memo text shows on the Lock Screen.",
    "files": [
-    "MapHomeAlarm.swift:584"
+    "MapHomeAlarm.swift:585"
    ],
    "args": [],
    "targets": [
@@ -47279,7 +47443,7 @@
    "ko": "알림 권한이 꺼져 있어 보내지 않아요.",
    "en": "Off because notifications aren't allowed.",
    "files": [
-    "MapHomeAlarm.swift:578"
+    "MapHomeAlarm.swift:579"
    ],
    "args": [],
    "targets": [
@@ -48237,8 +48401,8 @@
    "ko": "업무",
    "en": "Work",
    "files": [
-    "MapHomeAlarm.swift:672",
     "MapHomeAlarm.swift:673",
+    "MapHomeAlarm.swift:674",
     "MapHomeInteractionPolicy.swift:456"
    ],
    "args": [],
@@ -48465,7 +48629,7 @@
    "ko": "여러 개 고를 수 있어요.",
    "en": "You can pick more than one.",
    "files": [
-    "AITaskPanel.swift:398"
+    "AITaskPanel.swift:400"
    ],
    "args": [],
    "targets": [
@@ -48575,7 +48739,7 @@
    "ko": "여행 계획 추가",
    "en": "Add to trip",
    "files": [
-    "MapHomeView+Support.swift:705"
+    "MapHomeView+Support.swift:706"
    ],
    "args": [],
    "targets": [
@@ -48694,6 +48858,18 @@
    ]
   },
   {
+   "key": "여행 예산|Trip budget",
+   "ko": "여행 예산",
+   "en": "Trip budget",
+   "files": [
+    "ArrivalCardView.swift:65"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "여행 예산은 일상에서 「여행 경비」로 나가고, 여행이 끝나면 남은 돈이 「여행 정산」으로 돌아와요.|A trip budget leaves daily as a trip expense; leftovers come back as a trip refund when it ends.",
    "ko": "여행 예산은 일상에서 「여행 경비」로 나가고, 여행이 끝나면 남은 돈이 「여행 정산」으로 돌아와요.",
    "en": "A trip budget leaves daily as a trip expense; leftovers come back as a trip refund when it ends.",
@@ -48796,6 +48972,18 @@
    "en": "Delete trip stops",
    "files": [
     "AssistantCommandEdits.swift:94"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "여행 일정에 넣은 곳에 도착하면 메모·세부 계획·예상 지출을 보여요. 앱이 위치를 받는 동안에만 알 수 있고, 일정마다 한 번만 떠요.|Shows notes, sub-plans and planned spend when you reach a place in your trip plan. Works only while the app receives location, once per plan.",
+   "ko": "여행 일정에 넣은 곳에 도착하면 메모·세부 계획·예상 지출을 보여요. 앱이 위치를 받는 동안에만 알 수 있고, 일정마다 한 번만 떠요.",
+   "en": "Shows notes, sub-plans and planned spend when you reach a place in your trip plan. Works only while the app receives location, once per plan.",
+   "files": [
+    "ArrivalCardView.swift:137"
    ],
    "args": [],
    "targets": [
@@ -48918,6 +49106,18 @@
    "en": "Delete trips",
    "files": [
     "AssistantCommandEdits.swift:121"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "여행 지출|Trip spending",
+   "ko": "여행 지출",
+   "en": "Trip spending",
+   "files": [
+    "AssistantDigest.swift:65"
    ],
    "args": [],
    "targets": [
@@ -50231,7 +50431,7 @@
    "ko": "영수증 확인",
    "en": "Receipt",
    "files": [
-    "AITaskPanel.swift:299"
+    "AITaskPanel.swift:301"
    ],
    "args": [],
    "targets": [
@@ -51018,7 +51218,7 @@
    "files": [
     "LedgerMessageRules.swift:291",
     "PaymentAlertSources.swift:333",
-    "AITaskPanel.swift:278"
+    "AITaskPanel.swift:280"
    ],
    "args": [],
    "targets": [
@@ -51132,7 +51332,7 @@
    "ko": "요청 글을 복사했어요. {0}에 붙여 넣고 보내 주세요.",
    "en": "Request copied. Paste it into {0} and send.",
    "files": [
-    "AITaskPanel.swift:206"
+    "AITaskPanel.swift:208"
    ],
    "args": [
     "provider.title(language)"
@@ -51460,6 +51660,18 @@
    ]
   },
   {
+   "key": "원래대로 되돌리기|Restore original",
+   "ko": "원래대로 되돌리기",
+   "en": "Restore original",
+   "files": [
+    "AssistantBeforeAfterView.swift:171"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "원본 {0}건 · 일과 {1}건|{0} source samples · {1} daily records",
    "ko": "원본 {0}건 · 일과 {1}건",
    "en": "{0} source samples · {1} daily records",
@@ -51654,7 +51866,7 @@
    "ko": "위치 권한이 없어 보내지 않아요.",
    "en": "Off because location isn't allowed.",
    "files": [
-    "MapHomeAlarm.swift:580"
+    "MapHomeAlarm.swift:581"
    ],
    "args": [],
    "targets": [
@@ -51790,7 +52002,7 @@
    "ko": "위치 설정 열기",
    "en": "Open location settings",
    "files": [
-    "MapHomeView+Support.swift:453"
+    "MapHomeView+Support.swift:454"
    ],
    "args": [],
    "targets": [
@@ -52014,7 +52226,7 @@
    "ko": "위치를 '항상 허용'으로 바꿔 주세요",
    "en": "Set location to Always",
    "files": [
-    "MapHomeView+Support.swift:699"
+    "MapHomeView+Support.swift:700"
    ],
    "args": [],
    "targets": [
@@ -52934,7 +53146,7 @@
    "ko": "이 일로 바뀐 것 되돌리기",
    "en": "Undo this task's changes",
    "files": [
-    "AITaskPanel.swift:147"
+    "AITaskPanel.swift:149"
    ],
    "args": [],
    "targets": [
@@ -53020,6 +53232,18 @@
    "en": "Delete this candidate",
    "files": [
     "MapHomeTransitSheets.swift:144"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "이곳 예상 지출|Planned spend here",
+   "ko": "이곳 예상 지출",
+   "en": "Planned spend here",
+   "files": [
+    "ArrivalCardView.swift:62"
    ],
    "args": [],
    "targets": [
@@ -53899,6 +54123,18 @@
    ]
   },
   {
+   "key": "일상 지출|Everyday spending",
+   "ko": "일상 지출",
+   "en": "Everyday spending",
+   "files": [
+    "AssistantDigest.swift:65"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "일상에서 더 보낼 돈|More from daily",
    "ko": "일상에서 더 보낼 돈",
    "en": "More from daily",
@@ -54080,6 +54316,30 @@
    ]
   },
   {
+   "key": "일정 장소 도착 카드|Arrival card for planned places",
+   "ko": "일정 장소 도착 카드",
+   "en": "Arrival card for planned places",
+   "files": [
+    "ArrivalCardView.swift:135"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "일정 장소에 도착했어요|You arrived at a planned place",
+   "ko": "일정 장소에 도착했어요",
+   "en": "You arrived at a planned place",
+   "files": [
+    "ArrivalCardManager.swift:114"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "일정 제목 분류 정하기|Classify calendar event titles",
    "ko": "일정 제목 분류 정하기",
    "en": "Classify calendar event titles",
@@ -54133,8 +54393,8 @@
    "en": "Schedule",
    "files": [
     "WidgetShared.swift:601",
-    "MapHomeStickerEditor.swift:669",
-    "WatchTodayCards.swift:184"
+    "AssistantDigest.swift:79",
+    "MapHomeStickerEditor.swift:669"
    ],
    "args": [],
    "targets": [
@@ -55368,6 +55628,30 @@
    ]
   },
   {
+   "key": "전|Before",
+   "ko": "전",
+   "en": "Before",
+   "files": [
+    "AssistantBeforeAfterView.swift:133"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "전·후 비교 보기|Show before and after",
+   "ko": "전·후 비교 보기",
+   "en": "Show before and after",
+   "files": [
+    "AssistantBeforeAfterView.swift:38"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "전기·수소차 할인|EV discount",
    "ko": "전기·수소차 할인",
    "en": "EV discount",
@@ -55696,7 +55980,7 @@
    "ko": "정확한 위치가 꺼져 있어 보내지 않아요.",
    "en": "Off because Precise Location is off.",
    "files": [
-    "MapHomeAlarm.swift:582"
+    "MapHomeAlarm.swift:583"
    ],
    "args": [],
    "targets": [
@@ -55764,7 +56048,7 @@
    "ko": "조각 합침 검토",
    "en": "Merge review",
    "files": [
-    "AITaskPanel.swift:303"
+    "AITaskPanel.swift:305"
    ],
    "args": [],
    "targets": [
@@ -56258,6 +56542,18 @@
    "files": [
     "LedgerSummary.swift:163",
     "LedgerTripView.swift:124"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "지금 도착한 곳|You've arrived",
+   "ko": "지금 도착한 곳",
+   "en": "You've arrived",
+   "files": [
+    "ArrivalCardView.swift:39"
    ],
    "args": [],
    "targets": [
@@ -56847,7 +57143,7 @@
    "ko": "지도에 메모 추가",
    "en": "Add map memo",
    "files": [
-    "MapHomeView+Support.swift:683"
+    "MapHomeView+Support.swift:684"
    ],
    "args": [],
    "targets": [
@@ -57315,7 +57611,7 @@
    "ko": "직접 입력",
    "en": "Enter manually",
    "files": [
-    "MapHomeView+Support.swift:706",
+    "MapHomeView+Support.swift:707",
     "TravelMapVideoSection.swift:38"
    ],
    "args": [],
@@ -57340,7 +57636,7 @@
    "ko": "직접 입력",
    "en": "Type your own answer",
    "files": [
-    "AITaskPanel.swift:404"
+    "AITaskPanel.swift:406"
    ],
    "args": [],
    "targets": [
@@ -57594,7 +57890,7 @@
    "ko": "집이 등록돼 있지 않아요",
    "en": "No home place yet",
    "files": [
-    "MapHomeView+Support.swift:449"
+    "MapHomeView+Support.swift:450"
    ],
    "args": [],
    "targets": [
@@ -57717,7 +58013,7 @@
    "ko": "처리중",
    "en": "Working",
    "files": [
-    "AITaskPanel.swift:275"
+    "AITaskPanel.swift:277"
    ],
    "args": [],
    "targets": [
@@ -61008,7 +61304,7 @@
    "ko": "화면 녹화",
    "en": "Screen recording",
    "files": [
-    "MapHomeView+Support.swift:304"
+    "MapHomeView+Support.swift:305"
    ],
    "args": [],
    "targets": [
@@ -61162,7 +61458,7 @@
    "ko": "확인",
    "en": "Confirm",
    "files": [
-    "MapHomeAlarm.swift:655"
+    "MapHomeAlarm.swift:656"
    ],
    "args": [],
    "targets": [
@@ -61463,6 +61759,18 @@
     "TaptionPlanWidget",
     "TaptionPlanWatch",
     "TaptionPlanWatchWidget"
+   ]
+  },
+  {
+   "key": "후|After",
+   "ko": "후",
+   "en": "After",
+   "files": [
+    "AssistantBeforeAfterView.swift:134"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
    ]
   },
   {

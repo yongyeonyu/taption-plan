@@ -424,6 +424,7 @@ extension MapHomeView {
             MapHomeCarAudioSheet(model: model, language: language)
         }
         .sheet(isPresented: $isShortcutsGuidePresented) { BokkiShortcutsGuide(language: language) }
+        .sheet(isPresented: $isPlanRealityPresented) { PlanRealityView(model: model, language: language) }
         .sheet(isPresented: $isSalarySettingsPresented) {
             MapHomeSalarySettingsSheet(
                 language: language,

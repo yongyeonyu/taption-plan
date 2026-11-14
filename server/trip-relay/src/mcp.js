@@ -140,7 +140,10 @@ const TOOLS = [
     + "unknown: context.mode is bus or subway, context.candidates (comma separated) are the routes that fit, context.from and context.to are the stops. Decide from the "
     + "day's places and stops only if one candidate clearly fits; otherwise ask_user which bus or line it was, with the candidates as options (at most 4, the user can "
     + "also type their own), complete the task as done saying you asked, and when get_answers has the answer call set_travel_mode with moveId, the same mode and line. fare_check: work out the bus, subway or toll fare for the trip in context and record it with add_expense "
-    + "(category transport). Always finish each task with complete_ai_task.",
+    + "(category transport). replan (PVR1114A13): the user's day is running late or over budget and they asked you to rearrange what is left. text is the gap summary "
+    + "(planned time → actual time, with the differences), context.delayMinutes is how late they are now, context.overKRW how far over budget, context.remaining how many "
+    + "items are still ahead and context.from the time it was sent. Read that day's schedule, work out new times for the remaining items only (shorten, move or drop), "
+    + "show the proposal with ask_user before changing anything, then apply what they accept with update_schedule or update_trip_stop. Always finish each task with complete_ai_task.",
     object({ limit: integer("How many to take at most, 1-20 (default 20). Urgent kinds (payment and receipt texts) come first.", 1, 20) }),
     (ctx, a) => claimTasks(ctx, a.limit, allows(ctx.auth.scope, "write")), { empty: "No AI tasks waiting." }),
   // 끝내기는 쓰기 연결만 한다(AIP1114A05).

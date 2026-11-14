@@ -481,6 +481,8 @@ extension MapHomeView {
                 menuGroupDivider
                 menuRowButton("photo.on.rectangle.angled", language.text("하루 카드", "Day card"), tint: .tpMenuChip("#D9627F")) { isDailyCardPresented = true }
                 menuGroupDivider
+                menuRowButton("chart.bar.xaxis", language.text("계획과 실제", "Plan vs actual"), tint: .tpMenuChip("#2F3E6B")) { isPlanRealityPresented = true }
+                menuGroupDivider
                 menuRowButton("info.circle", language.text("지도 출처", "Map attribution"), tint: .tpMenuChip("#8C8574")) { isMapAttributionPresented = true }
             }
 

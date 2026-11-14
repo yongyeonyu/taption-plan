@@ -523,7 +523,7 @@ export function isCommandResults(value) {
 }
 
 // AI 확인 목록(AIQ1111A01). 앱이 처리하지 못했거나 불분명한 것을 올리고, AI가 가져가 처리한 뒤 완료·실패를 남긴다.
-export const TASK_KINDS = ["payment_text", "receipt_text", "payment_rule", "memo_polish", "route_check", "fare_check", "merge_review", "stay_place", "other"];
+export const TASK_KINDS = ["payment_text", "receipt_text", "payment_rule", "memo_polish", "route_check", "fare_check", "merge_review", "stay_place", "replan", "other"];
 export const TASK_STATUSES = ["waiting", "processing", "asked", "done", "failed", "expired"];
 export const TASK_LIMIT = 100;
 const contextOK = (v) => !given(v) || (typeof v === "object" && !Array.isArray(v) && JSON.stringify(v).length <= 2000);

@@ -274,3 +274,30 @@ test("tasks: a read connection sees open tasks but cannot take or complete them 
   assert.equal((await send(env, "/tasks/claim", "POST", undefined, reader)).status, 403);
   assert.equal((await mcp(env, reader, "get_ai_tasks")).status, 200);
 });
+
+// PVR1114A13: 「남은 일정 AI로 재조정」. 새 종류는 덧붙이기만 한다(옛 종류는 그대로 받는다).
+test("tasks: replan carries the gap summary and its numbers to the AI", async () => {
+  const { env, master, ai } = await setup();
+  const context = { delayMinutes: "40", overKRW: "5000", remaining: "2", from: "11:45", level: "summary" };
+  const saved = await send(env, "/tasks", "POST", upload([
+    { id: A, kind: "replan", text: "지연 +40분 · 남은 일정 2개\n10:00–11:00 #1 → 10:25–11:40 (+25분)", date: "2026-11-14", context },
+    { id: B, kind: "stay_place", text: "09:00–10:00 · 머문 곳" },
+  ]), master);
+  assert.equal(saved.status, 201);
+  assert.equal((await saved.json()).added, 2);
+  const claimed = await (await send(env, "/tasks/claim", "POST", undefined, ai)).json();
+  const task = claimed.tasks.find((t) => t.id === A);
+  assert.equal(task.kind, "replan");
+  assert.deepEqual(task.context, context);
+  assert.equal(task.date, "2026-11-14");
+  assert.equal((await send(env, "/tasks", "POST", upload([{ id: A, kind: "replan_all", text: "x" }]), master)).status, 422, "unknown kinds are still refused");
+  assert.equal((await send(env, "/tasks/result", "POST", { id: A, status: "done", result: "남은 일정 2개를 30분씩 미룸" }, ai)).status, 200);
+});
+
+test("tasks: get_ai_tasks tells the AI what a replan task is", async () => {
+  const { env, ai } = await setup();
+  const tools = await (await send(env, "/mcp", "POST", { jsonrpc: "2.0", id: 1, method: "tools/list" }, ai)).json();
+  const tool = tools.result.tools.find((t) => t.name === "get_ai_tasks");
+  assert.match(tool.description, /replan \(PVR1114A13\)/);
+  assert.match(tool.description, /ask_user before changing anything/);
+});

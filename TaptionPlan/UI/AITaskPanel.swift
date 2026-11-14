@@ -305,6 +305,7 @@ struct AITaskPanel: View {
         case .mergeReview: language.text("조각 합침 검토", "Merge review")
         case .stayPlace: language.text("머문 장소 확인", "Stay place")
         case .paymentRule: language.text("결제 문자 규칙 요청", "Payment rule request")
+        case .replan: language.text("남은 일정 재조정", "Replan the rest")
         case .other: language.text("기타 확인", "Other")
         }
     }
@@ -319,6 +320,7 @@ struct AITaskPanel: View {
         case .mergeReview: "rectangle.compress.vertical"
         case .stayPlace: "mappin.and.ellipse"
         case .paymentRule: "text.badge.plus"
+        case .replan: "calendar.badge.clock"
         case .other: "questionmark.bubble"
         }
     }
