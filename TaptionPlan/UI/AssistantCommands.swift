@@ -5,7 +5,7 @@ import TaptionPlanCore
 struct AssistantCommand: Identifiable, Equatable, Sendable {
     enum Action: Equatable, Sendable {
         case addMemo(text: String, at: Date)
-        case addSchedule(title: String, start: Date, end: Date?, note: String?)
+        case addSchedule(title: String, start: Date, end: Date?, note: String?, extras: AssistantScheduleExtras = .init())
         /// 하루 안의 기록 하나를 고친다. id가 없으면 `startTime`을 덮는 기록을 찾는다.
         case updateActivity(day: Date, recordID: String?, startTime: Date?, title: String?, categoryID: String?)
         /// 자동 기록을 미확인(유령)으로 교정해 가린다. 원본 행은 남는다(CLN1110A01).
@@ -14,9 +14,13 @@ struct AssistantCommand: Identifiable, Equatable, Sendable {
         case mergeRecords(day: Date, recordIDs: [String], title: String?, categoryID: String?)
         /// 표시 시간만 교정표로 바꾼다. 시각은 그날의 HH:mm(CLN1110A01).
         case updateRecordTime(day: Date, recordID: String, start: Date?, end: Date?)
-        case updateSchedule(target: AssistantPlanTarget, title: String?, start: AssistantScheduleTime?, end: AssistantScheduleTime?, note: String?)
+        case updateSchedule(
+            target: AssistantPlanTarget, title: String?, start: AssistantScheduleTime?, end: AssistantScheduleTime?, note: String?,
+            extras: AssistantScheduleExtras = .init()
+        )
         case deleteSchedule(target: AssistantPlanTarget)
-        case updateMemo(memoID: String, text: String)
+        /// ACT1114A07: `text`가 nil이면 글은 그대로 두고 때만 옮긴다.
+        case updateMemo(memoID: String, text: String?, when: AssistantWhenChange = .init())
         case deleteMemo(memoID: String)
         /// 루틴(상위 계획)·여행 일정·수면·안전한 표시 설정(AIR1110A03). 모두 되돌릴 수 있는 사용자 편집이다.
         case addGoal(title: String, start: Date, end: Date, categoryID: String?)
@@ -75,6 +79,8 @@ struct AssistantCommand: Identifiable, Equatable, Sendable {
         case setCalendarTitleDetail(title: String, detailID: String?)
         /// TBG1112A01: 여행 예산(원). 0이면 예산 없음.
         case setTripBudget(tripID: String, budgetKRW: Double)
+        /// ACT1114A07: 등록부(`AssistantOperations`)의 동작. 새 동작은 이 한 줄로 다 받는다.
+        case operation(AssistantParsedOperation)
     }
 
     let id: String
@@ -114,8 +120,11 @@ enum AssistantCommandParser {
         private enum Key: String, CodingKey { case id }
         let raw: Raw?
         let id: String?
+        /// 칸을 이름으로 읽는 꼴(ACT1114A07). 등록부 동작은 이것만 본다.
+        let values: [String: AssistantJSON]?
 
         init(from decoder: Decoder) throws {
+            values = try? decoder.singleValueContainer().decode([String: AssistantJSON].self)
             raw = try? Raw(from: decoder)
             id = raw?.id ?? (try? decoder.container(keyedBy: Key.self).decodeIfPresent(String.self, forKey: .id)) ?? nil
         }
@@ -158,6 +167,10 @@ enum AssistantCommandParser {
         let budgetKRW: Double?
         // AIP1114A05: 이 명령이 딸린 맡긴 일.
         let taskId: String?
+        // ACT1114A07: addExpense·updateExpense의 몫을 나누는 사람.
+        let shareNames: [String]?
+        // ACT1114A07: addSchedule·updateSchedule의 중요·상위 루틴.
+        let important: Bool?, parentGoalId: String?
     }
 
     /// `{"commands":[...]}`를 읽는다. 서버와 같은 규칙으로 다시 본다.
@@ -166,6 +179,17 @@ enum AssistantCommandParser {
         var batch = AssistantCommandBatch(commands: [], invalidIDs: [])
         for item in envelope.commands {
             guard let id = item.id, !id.isEmpty, !id.contains(",") else { continue }
+            if let fields = item.values.map({ AssistantFields(values: $0, now: now, calendar: calendar) }),
+               let name = fields.name, AssistantOperations.spec(name) != nil {
+                let keyID = fields.string("keyId", max: 64), source = fields.string("source", max: 16), taskID = fields.string("taskId", max: 100)
+                if let parsed = AssistantOperations.parse(fields) {
+                    batch.commands.append(AssistantCommand(id: id, action: .operation(parsed), keyID: keyID, source: source, taskID: taskID))
+                } else {
+                    batch.invalidIDs.append(id)
+                    batch.invalidInfo[id] = .init(kind: .operation(name), keyID: keyID, source: source, taskID: taskID)
+                }
+                continue
+            }
             if let raw = item.raw, raw.format == "bokki-command", raw.version == 1, let action = action(raw, now: now, calendar: calendar) {
                 batch.commands.append(AssistantCommand(
                     id: id, action: action, keyID: clean(raw.keyId, max: 64), source: clean(raw.source, max: 16), taskID: clean(raw.taskId, max: 100)
@@ -191,7 +215,8 @@ enum AssistantCommandParser {
             let end = raw.end.flatMap(instant)
             if raw.end != nil, end.map({ $0 > start }) != true { return nil }
             if let note = raw.note, note.count > 2_000 { return nil }
-            return .addSchedule(title: title, start: start, end: end, note: clean(raw.note, max: 2_000))
+            guard let extras = scheduleExtras(raw, allowsDetach: false) else { return nil }
+            return .addSchedule(title: title, start: start, end: end, note: clean(raw.note, max: 2_000), extras: extras)
         case "updateActivity":
             guard let date = raw.date, let day = self.day(date, calendar: calendar) else { return nil }
             let title = clean(raw.title, max: 100), categoryID = clean(raw.categoryId, max: 100)
@@ -242,18 +267,31 @@ enum AssistantCommandParser {
             if raw.title != nil, clean(raw.title, max: 200) == nil { return nil }
             if let note = raw.note, note.count > 2_000 { return nil }
             let title = clean(raw.title, max: 200), note = clean(raw.note, max: 2_000)
-            guard title != nil || start != nil || end != nil || note != nil else { return nil }
-            return .updateSchedule(target: target, title: title, start: start ?? nil, end: end ?? nil, note: note)
+            guard let extras = scheduleExtras(raw, allowsDetach: true) else { return nil }
+            guard title != nil || start != nil || end != nil || note != nil || !extras.isEmpty else { return nil }
+            return .updateSchedule(target: target, title: title, start: start ?? nil, end: end ?? nil, note: note, extras: extras)
         case "deleteSchedule":
             return planTarget(raw, day: day, calendar: calendar).map { .deleteSchedule(target: $0) }
         case "updateMemo":
-            guard let memoID = clean(raw.memoId, max: 100), let text = clean(raw.text, max: 2_000) else { return nil }
-            return .updateMemo(memoID: memoID, text: text)
+            guard let memoID = clean(raw.memoId, max: 100), let when = AssistantWhenChange(date: raw.date, time: raw.time, calendar: calendar) else { return nil }
+            if raw.text != nil, clean(raw.text, max: 2_000) == nil { return nil }
+            guard raw.text != nil || !when.isEmpty else { return nil }
+            return .updateMemo(memoID: memoID, text: clean(raw.text, max: 2_000), when: when)
         case "deleteMemo":
             return clean(raw.memoId, max: 100).map { .deleteMemo(memoID: $0) }
         default:
             return dataAction(raw, day: day, calendar: calendar)
         }
+    }
+
+    /// 일정의 분류·중요·상위 루틴(ACT1114A07). 틀린 칸이 있으면 nil. `parentGoalId` "none"은 고칠 때만 받는다.
+    private static func scheduleExtras(_ raw: Raw, allowsDetach: Bool) -> AssistantScheduleExtras? {
+        if raw.categoryId != nil, clean(raw.categoryId, max: 100) == nil { return nil }
+        var parent: String?
+        if let text = raw.parentGoalId {
+            if allowsDetach, text == "none" { parent = "" } else if UUID(uuidString: text) != nil { parent = text } else { return nil }
+        }
+        return AssistantScheduleExtras(categoryID: clean(raw.categoryId, max: 100), important: raw.important, parentGoalID: parent)
     }
 
     /// `planId`, 없으면 `date`+`startTime`으로 일정을 고른다.
@@ -396,6 +434,14 @@ struct AssistantCommandOutcome: Equatable, Sendable {
         case .addTrip, .updateTrip, .deleteTrip: schedules += 1
         case .setBubble: bubbles += 1
         case .addExpense, .updateExpense: ledger += 1
+        case let .operation(name):
+            switch AssistantOperations.spec(name)?.counter ?? .settings {
+            case .memos: memos += 1
+            case .schedules: schedules += 1
+            case .edits: edits += 1
+            case .settings: settings += 1
+            case .ledger: ledger += 1
+            }
         }
     }
 
@@ -495,7 +541,7 @@ extension AppModel {
                 outcome.count(kind)
                 outcome.entries.append(entry)
                 // AI가 고친 메모는 「AI가 수정함」을 붙이고, 맡긴 다듬기 목록에서 뺀다(MEM1110A02).
-                if case let .updateMemo(memoID, _) = command.action, let memo = assistantMemo(memoID) {
+                if case let .updateMemo(memoID, text, _) = command.action, text != nil, let memo = assistantMemo(memoID) {
                     noteAssistantMemoEdit(memo.id, by: entry.connection)
                 }
             }
@@ -515,6 +561,7 @@ extension AppModel {
         delta.ledgerEntryID = result.ledgerEntryID
         delta.ledgerEntry = result.ledgerEntry
         delta.ledgerBefore = result.ledgerBefore
+        if !result.suppressedActualIDs.isEmpty { delta.suppressedActualIDs = result.suppressedActualIDs.sorted { $0.uuidString < $1.uuidString } }
         delta.movement = result.movementBefore.map {
             AssistantMovementChange(before: $0, after: .init(snapshot, ids: Set($0.segments.map(\.id))))
         }

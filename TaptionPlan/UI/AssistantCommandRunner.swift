@@ -404,3 +404,177 @@ enum AssistantPush {
         return ran ? .newData : .noData
     }
 }
+
+// MARK: 동작 등록부 (ACT1114A07) — 새 파일을 늘리지 않으려고 여기 둔다.
+// 새 동작은 (1) 서버 `server/trip-relay/src/actions.js`에 `.add(...)`, (2) 앱에 `AssistantOperation` 형 하나,
+// (3) 아래 `AssistantOperations.all`에 한 줄. 토글·알림 수·안내문·로그 이름은 `spec`에서 만들어진다.
+// 서버와 이름·칸이 같은지는 `server/trip-relay/test/fixtures/actions.json`으로 시험한다.
+
+/// 명령에 실려 온 값 하나.
+enum AssistantJSON: Decodable, Equatable, Sendable {
+    case text(String), number(Double), flag(Bool), list([AssistantJSON]), object([String: AssistantJSON]), null
+
+    init(from decoder: Decoder) throws {
+        let value = try decoder.singleValueContainer()
+        if value.decodeNil() { self = .null }
+        else if let flag = try? value.decode(Bool.self) { self = .flag(flag) }
+        else if let number = try? value.decode(Double.self) { self = .number(number) }
+        else if let text = try? value.decode(String.self) { self = .text(text) }
+        else if let list = try? value.decode([AssistantJSON].self) { self = .list(list) }
+        else { self = .object(try value.decode([String: AssistantJSON].self)) }
+    }
+}
+
+/// 명령의 칸을 이름으로 읽는다. 형이 틀리면 nil이고, `ok`로 「준 칸은 다 읽혔는가」를 본다.
+struct AssistantFields: Sendable {
+    var values: [String: AssistantJSON]
+    var now: Date = .now
+    var calendar: Calendar = .autoupdatingCurrent
+
+    var name: String? { raw("action") }
+
+    /// 칸이 있는가. null은 없는 것으로 본다(서버와 같다).
+    func has(_ name: String) -> Bool { values[name].map { $0 != .null } ?? false }
+
+    /// 주지 않았거나, 주었고 읽혔다.
+    func ok(_ name: String, _ value: (some Any)?) -> Bool { !has(name) || value != nil }
+
+    func raw(_ name: String) -> String? {
+        if case let .text(text)? = values[name] { return text }
+        return nil
+    }
+
+    /// 앞뒤 공백을 뗀 1~max자.
+    func string(_ name: String, max: Int) -> String? { AssistantCommandParser.clean(raw(name), max: max) }
+
+    func number(_ name: String) -> Double? {
+        if case let .number(number)? = values[name], number.isFinite { return number }
+        return nil
+    }
+
+    func integer(_ name: String, in range: ClosedRange<Int>) -> Int? {
+        guard let number = number(name), number == number.rounded(), abs(number) < 1e12, range.contains(Int(number)) else { return nil }
+        return Int(number)
+    }
+
+    func flag(_ name: String) -> Bool? {
+        if case let .flag(flag)? = values[name] { return flag }
+        return nil
+    }
+
+    /// 서로 다른 글 목록. 하나라도 비었거나 길면 nil.
+    func texts(_ name: String, max: Int, count: ClosedRange<Int>) -> [String]? {
+        guard case let .list(items)? = values[name], count.contains(items.count) else { return nil }
+        let cleaned = items.compactMap { item -> String? in
+            if case let .text(text) = item { return AssistantCommandParser.clean(text, max: max) }
+            return nil
+        }
+        return cleaned.count == items.count && Set(cleaned).count == cleaned.count ? cleaned : nil
+    }
+
+    func uuid(_ name: String) -> UUID? { raw(name).flatMap(UUID.init(uuidString:)) }
+
+    /// `YYYY-MM-DD` → 그날 0시.
+    func day(_ name: String) -> Date? { raw(name).flatMap { AssistantCommandParser.day($0, calendar: calendar) } }
+
+    /// `HH:mm` → 자정부터의 분.
+    func minutes(_ name: String) -> Int? { raw(name).flatMap(AssistantCommandParser.minutes) }
+
+    /// 오프셋이 붙은 ISO 시각.
+    func instant(_ name: String) -> Date? { raw(name).flatMap(AssistantCommandParser.instant) }
+
+    func choice<Value: RawRepresentable>(_ name: String, _ type: Value.Type = Value.self) -> Value? where Value.RawValue == String {
+        raw(name).flatMap(Value.init(rawValue:))
+    }
+}
+
+extension AssistantCommandParser {
+    /// `HH:mm` → 자정부터의 분.
+    static func minutes(_ text: String) -> Int? {
+        let parts = text.split(separator: ":", omittingEmptySubsequences: false).map { Int($0) }
+        guard parts.count == 2, let hour = parts[0], let minute = parts[1], (0..<24).contains(hour), (0..<60).contains(minute) else { return nil }
+        return hour * 60 + minute
+    }
+}
+
+/// 동작 하나의 이름표. 서버 등록부와 `name`·`fields`가 같아야 한다.
+struct AssistantOperationSpec: Sendable {
+    /// 「AI 비서 요청을 반영했어요」 알림에서 어느 수에 더할지.
+    enum Counter: Sendable { case memos, schedules, edits, settings, ledger }
+
+    var name: String
+    var fields: [String]
+    var counter: Counter
+    /// 지우는 동작. 「AI가 할 수 있는 일」의 「지우는 일」 묶음에 보인다.
+    var deletes = false
+    /// 바꾸는 기존 항목 수(20개 확인 규칙). 새로 더하기만 하면 0.
+    var changes = 1
+    var title: @Sendable (MapHomeLanguage) -> String
+    /// 연결 안내의 한 줄: 동작 이름 뒤에 오는 칸 보기와 설명.
+    var guide: String
+}
+
+/// 등록부 동작 하나. 읽기(`init?`)에서 서버와 같은 규칙으로 다시 보고, `apply`는 화면이 쓰는 함수를 부른다.
+protocol AssistantOperation: Sendable {
+    static var spec: AssistantOperationSpec { get }
+    init?(fields: AssistantFields)
+    @MainActor func apply(host: AssistantOperationHost) async -> AssistantEditResult
+    var changeCount: Int { get }
+}
+
+extension AssistantOperation {
+    var changeCount: Int { Self.spec.changes }
+}
+
+/// 동작이 쓰는 것들: 앱 모델과 기기 저장소(시험은 따로 만든 것).
+@MainActor
+struct AssistantOperationHost {
+    let model: AppModel
+    let preferences: AssistantPreferenceStore
+
+    var language: MapHomeLanguage { .current }
+    var defaults: UserDefaults { preferences.defaults }
+    var book: LedgerBook { preferences.ledger }
+    var deleted: String { language.text("지움", "Deleted") }
+
+    /// UserDefaults 값 하나를 바꾸고 전·후를 담는다. 바뀌지 않았으면 nil.
+    func changing(_ key: String, _ body: () -> Void) -> AssistantAppChange.Stored? {
+        let before = defaults.object(forKey: key)
+        body()
+        let after = defaults.object(forKey: key)
+        guard !AssistantAppChange.Stored.same(before, after) else { return nil }
+        return .init(key: key, before: AssistantAppChange.Stored.pack(before), after: AssistantAppChange.Stored.pack(after))
+    }
+}
+
+/// 읽어 낸 동작. 같은 이름·같은 칸이면 같은 명령이다.
+struct AssistantParsedOperation: Equatable, Sendable {
+    let name: String
+    let values: [String: AssistantJSON]
+    let operation: any AssistantOperation
+
+    static func == (lhs: Self, rhs: Self) -> Bool { lhs.name == rhs.name && lhs.values == rhs.values }
+}
+
+enum AssistantOperations {
+    /// 앱이 아는 등록부 동작 전부. 여기 차례가 「AI가 할 수 있는 일」과 안내문의 차례다.
+    static let all: [any AssistantOperation.Type] = ledger + plans + records
+
+    private static let byName = Dictionary(all.map { ($0.spec.name, $0) }, uniquingKeysWith: { first, _ in first })
+
+    static func spec(_ name: String) -> AssistantOperationSpec? { byName[name]?.spec }
+
+    /// 형식·버전을 보고, 그 동작의 칸만 남겨 읽는다.
+    static func parse(_ fields: AssistantFields) -> AssistantParsedOperation? {
+        guard fields.raw("format") == "bokki-command", fields.values["version"] == .number(1),
+              let name = fields.name, let type = byName[name] else { return nil }
+        var kept = fields
+        kept.values = fields.values.filter { type.spec.fields.contains($0.key) && $0.value != .null }
+        return type.init(fields: kept).map { AssistantParsedOperation(name: name, values: kept.values, operation: $0) }
+    }
+
+    /// 연결 안내에 붙는 줄들.
+    static func guide(command: String) -> String {
+        all.map { "  \(command)\"\($0.spec.name)\",\($0.spec.guide)" }.joined(separator: "\n")
+    }
+}

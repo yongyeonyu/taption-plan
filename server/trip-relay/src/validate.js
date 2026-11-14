@@ -57,6 +57,10 @@ const recordTarget = (v) => isDate(v.date) && optional(v.recordId, targetID) && 
   && (given(v.recordId) || given(v.startTime));
 const planTarget = (v) => (given(v.planId) && targetID(v.planId) && optional(v.date, isDate) && optional(v.startTime, isTime))
   || (!given(v.planId) && isDate(v.date) && isTime(v.startTime));
+// 가계부 몫을 나누는 사람 이름(ACT1114A07): 1~30자, 20명까지, 서로 다름.
+const shareNames = (min) => (v) => Array.isArray(v) && v.length >= min && v.length <= 20 && v.every((n) => nonEmpty(n, 30))
+  && new Set(v.map((n) => n.trim())).size === v.length;
+const EXPENSE_CHANGES = ["amount", "currency", "title", "category", "kind", "tripId", "shareNames", "note", "date", "time"];
 const distinctIDs = (ids, min, max) => Array.isArray(ids) && ids.length >= min && ids.length <= max
   && ids.every(targetID) && new Set(ids).size === ids.length;
 
@@ -64,8 +68,11 @@ const distinctIDs = (ids, min, max) => Array.isArray(ids) && ids.length >= min &
 // 설정은 안전한 것만: 언어·테마·지도 모양·표시 켜고 끄기. 값은 앱의 저장값 그대로다.
 export const LANGUAGES = ["automatic", "korean", "english", "ja", "zh-Hans", "zh-Hant", "de", "fr", "it", "es", "pt-BR", "vi", "id", "th", "hi"];
 export const THEMES = ["classic", "navy", "purple", "brown", "ink"];
-export const MAP_STYLES = ["standard", "hybrid", "mapLibreNight", "mapLibreContrast", "mapLibreCasual", "mapLibreRPG", "mapLibreInk", "mapLibrePorcelain"];
-export const DISPLAY_OPTIONS = ["mapPhotos", "mapRoutes", "mapFootprints"];
+export const MAP_STYLES = ["standard", "hybrid", "mapLibreNight", "mapLibreContrast", "mapLibreCasual", "mapLibreRPG", "mapLibreInk", "mapLibrePorcelain",
+  // ACT1114A07: 카카오 지도(앱에 카카오 키가 없으면 앱이 not_available로 거절한다).
+  "kakao"];
+// ACT1114A07: sidebar(시간 사이드바)·vehicles(탈것 모습).
+export const DISPLAY_OPTIONS = ["mapPhotos", "mapRoutes", "mapFootprints", "sidebar", "vehicles"];
 export const TRIP_STATUSES = ["booked", "planned", "tentative"];
 
 const oneOf = (list) => (v) => list.includes(v);
@@ -157,14 +164,16 @@ export function bubbleText(value) {
 // 동작마다 받는 칸. 다른 칸은 큐에 넣기 전에 버린다(finding 14).
 export const COMMAND_FIELDS = {
   addMemo: ["text", "date", "time"],
-  addSchedule: ["title", "start", "end", "note"],
+  // ACT1114A07: categoryId(분류)·important(중요)·parentGoalId(루틴 아래에 두기).
+  addSchedule: ["title", "start", "end", "note", "categoryId", "important", "parentGoalId"],
   updateActivity: ["date", "recordId", "startTime", "title", "categoryId"],
   hideRecord: ["date", "recordId", "startTime"],
   mergeRecords: ["date", "recordIds", "title", "categoryId"],
   updateRecordTime: ["date", "recordId", "start", "end"],
-  updateSchedule: ["planId", "date", "startTime", "title", "start", "end", "note"],
+  updateSchedule: ["planId", "date", "startTime", "title", "start", "end", "note", "categoryId", "important", "parentGoalId"],
   deleteSchedule: ["planId", "date", "startTime"],
-  updateMemo: ["memoId", "text"],
+  // ACT1114A07: date·time으로 메모의 때를 옮긴다(글 없이 때만 옮겨도 된다).
+  updateMemo: ["memoId", "text", "date", "time"],
   deleteMemo: ["memoId"],
   addGoal: ["title", "start", "end", "categoryId"],
   updateGoal: ["goalId", "planId", "title", "start", "end", "categoryId"],
@@ -179,9 +188,10 @@ export const COMMAND_FIELDS = {
   setTravelMode: ["date", "moveId", "mode", "line"],
   setBubble: ["date", "start", "end", "text", "kind"],
   // LED1110A01: 가계부 지출·수입. amount는 그 통화의 금액(양수), kind는 expense 기본 | income.
-  addExpense: ["amount", "currency", "title", "category", "date", "time", "kind", "payer"],
+  // ACT1114A07: tripId(여행 가계부)·shareNames(몫을 나누는 사람, "@me"는 나)·note. 옛 앱은 모르는 칸을 그냥 넘긴다.
+  addExpense: ["amount", "currency", "title", "category", "date", "time", "kind", "payer", "tripId", "shareNames", "note"],
   // AIQ1111A01: 앱이 넣은 가계부 기록 고치기·지우기. 고칠 칸이 하나 이상이거나 delete.
-  updateExpense: ["entryId", "amount", "currency", "title", "category", "kind", "delete"],
+  updateExpense: ["entryId", "amount", "currency", "title", "category", "kind", "delete", "tripId", "shareNames", "note", "date", "time"],
   // PRL1112A01: 앱이 읽지 못한 결제 문자 형식을 읽는 규칙. pattern은 ICU 정규식, 앱이 sample로 다시 확인한다.
   addPaymentRule: ["name", "pattern", "sample", "kind"],
   // ACX1112A01: 가계부 설정(이 달 예산·내 계좌 이름), 규칙·확인 필요·받은 문자 정리, 화면 열기.
@@ -224,12 +234,15 @@ for (const name of registry.names()) {
   COMMAND_FIELDS[name] = registry.fields(name);
 }
 export const ACTIONS = Object.keys(COMMAND_FIELDS);
-export const TRAVEL_MODES = ["walk", "subway", "bus", "car", "train", "flight"];
+// ACT1114A07: 화면에서 고를 수 있는 나머지 수단(달리기·자전거·택시·배)도 받는다.
+export const TRAVEL_MODES = ["walk", "subway", "bus", "car", "train", "flight", "run", "cycling", "taxi", "ship"];
 export const PAYMENT_RULE_KINDS = ["expense", "income", "ignore"];
 // ACX1112A01
 export const SCREENS = ["paymentAutomation", "shortcuts", "aiConnection", "ledger", "dataProtection", "settings",
   // ACC1112A01
-  "salary", "carAudio", "alarm", "placeBook", "passport", "unconfirmedReview", "travel"];
+  "salary", "carAudio", "alarm", "placeBook", "passport", "unconfirmedReview", "travel",
+  // ACT1114A07
+  "dayCard", "calendarConnect", "categoryAdd", "paymentAlerts", "aiRules"];
 export const REVIEW_DECISIONS = ["add", "discard"];
 export const BUDGET_MAX_KRW = 1e12;
 const UUID = /^[0-9A-Fa-f]{8}(?:-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12}$/;
@@ -299,6 +312,8 @@ export const SETTINGS = {
   gpsIntervalSeconds: (v) => Number.isInteger(v) && v >= 30 && v <= 1800 && v % 30 === 0,
   cat: oneOf(CATS),
   notifications: (v) => v === false,
+  // ACT1114A07: 지도에 보일 메모.
+  memoDisplay: oneOf(["all", "located", "hidden"]),
 };
 export const SETTING_NAMES = Object.keys(SETTINGS);
 // ACD1112A01: 승인 요청 종류. 값이 있는 것은 그 값만, 없는 것은 값을 받지 않는다.
@@ -346,16 +361,21 @@ export function isCommand(value) {
       return typeof v.amount === "number" && Number.isFinite(v.amount) && v.amount > 0 && v.amount <= 1e10
         && optional(v.currency, (c) => /^[A-Z]{3}$/.test(c)) && nonEmpty(v.title, 60)
         && optional(v.category, (c) => EXPENSE_CATEGORIES.includes(c)) && optional(v.kind, (k) => k === "expense" || k === "income")
-        && optional(v.payer, (p) => nonEmpty(p, 30)) && optional(v.date, isDate) && optional(v.time, isTime);
+        && optional(v.payer, (p) => nonEmpty(p, 30)) && optional(v.date, isDate) && optional(v.time, isTime)
+        && optional(v.tripId, targetID) && optional(v.shareNames, shareNames(1)) && optional(v.note, (n) => nonEmpty(n, 200));
     case "updateExpense":
       return targetID(v.entryId) && optional(v.amount, (a) => typeof a === "number" && Number.isFinite(a) && a > 0 && a <= 1e10)
         && optional(v.currency, (c) => /^[A-Z]{3}$/.test(c)) && optional(v.title, (t) => nonEmpty(t, 60))
         && optional(v.category, (c) => EXPENSE_CATEGORIES.includes(c)) && optional(v.kind, (k) => k === "expense" || k === "income")
         && optional(v.delete, (d) => d === true)
-        && (v.delete === true || ["amount", "currency", "title", "category", "kind"].some((k) => given(v[k])));
+        // tripId "none"은 일상 가계부로 돌리고, shareNames []는 「다 같이」로 돌린다.
+        && optional(v.tripId, targetID) && optional(v.shareNames, shareNames(0)) && optional(v.note, (n) => nonEmpty(n, 200))
+        && optional(v.date, isDate) && optional(v.time, isTime)
+        && (v.delete === true || EXPENSE_CHANGES.some((k) => given(v[k])));
     case "addSchedule":
       return nonEmpty(v.title, 200) && isInstant(v.start)
-        && optional(v.end, (e) => isInstant(e) && Date.parse(e) > Date.parse(v.start)) && optional(v.note, note);
+        && optional(v.end, (e) => isInstant(e) && Date.parse(e) > Date.parse(v.start)) && optional(v.note, note)
+        && optional(v.categoryId, targetID) && optional(v.important, isBoolean) && optional(v.parentGoalId, uuid);
     case "updateActivity":
       return recordTarget(v) && optional(v.title, title(100)) && optional(v.categoryId, targetID)
         && (given(v.title) || given(v.categoryId));
@@ -368,12 +388,15 @@ export function isCommand(value) {
         && (given(v.start) || given(v.end)) && !(given(v.start) && v.start === v.end);
     case "updateSchedule":
       return planTarget(v) && optional(v.title, title(200)) && optional(v.start, isClock) && optional(v.end, isClock)
-        && optional(v.note, note) && [v.title, v.start, v.end, v.note].some(given)
+        && optional(v.note, note) && [v.title, v.start, v.end, v.note, v.categoryId, v.important, v.parentGoalId].some(given)
+        // parentGoalId "none"은 루틴에서 떼어 낸다.
+        && optional(v.categoryId, targetID) && optional(v.important, isBoolean) && optional(v.parentGoalId, (p) => p === "none" || uuid(p))
         && !(isInstant(v.start) && isInstant(v.end) && Date.parse(v.end) <= Date.parse(v.start));
     case "deleteSchedule":
       return planTarget(v);
     case "updateMemo":
-      return targetID(v.memoId) && nonEmpty(v.text, 1000);
+      return targetID(v.memoId) && optional(v.text, (t) => nonEmpty(t, 1000)) && optional(v.date, isDate) && optional(v.time, isTime)
+        && [v.text, v.date, v.time].some(given);
     case "deleteMemo":
       return targetID(v.memoId);
     // 목표 = 상위 계획(AIR1110A03). 날짜는 YYYY-MM-DD, end는 선택.
@@ -528,7 +551,9 @@ export function cleanTaskOutcome(value) {
 
 // 앱 상태(ACX1112A01). 앱이 통째로 올리고 AI는 읽기만 한다: 설정, 가계부(이 달 합계·예산·최근 기록), 확인 필요,
 // 받은 결제 문자(번호는 앱이 가린다), 결제 문자 규칙. 서버는 모양·개수만 보고 알려진 칸만 잠가 둔다.
-export const APP_STATE_FIELDS = ["updatedAt", "timeZone", "settings", "ledger", "review", "inbox", "rules", "places", "categories", "trips", "placeSuggestion", "carAudio"];
+export const APP_STATE_FIELDS = ["updatedAt", "timeZone", "settings", "ledger", "review", "inbox", "rules", "places", "categories", "trips", "placeSuggestion", "carAudio",
+  // ACT1114A07: 답을 기다리는 탑승 후보(역·정류장 이름과 시각, 좌표 없음).
+  "boarding"];
 export const APP_STATE_LIMITS = { entries: 200, review: 50, inbox: 30, rules: 20 };
 const plainObject = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 const objectList = (v, max) => Array.isArray(v) && v.length <= max && v.every(plainObject);
@@ -542,7 +567,8 @@ export function isAppState(value) {
     && optional(value.rules, (l) => objectList(l, APP_STATE_LIMITS.rules))
     && optional(value.places, (l) => objectList(l, PLACE_LIMITS.places)) && optional(value.categories, (l) => objectList(l, PLACE_LIMITS.categories))
     && optional(value.trips, (l) => objectList(l, TRIP_LIMITS.trips))
-    && optional(value.placeSuggestion, plainObject) && optional(value.carAudio, plainObject);
+    && optional(value.placeSuggestion, plainObject) && optional(value.carAudio, plainObject)
+    && optional(value.boarding, (l) => objectList(l, 20));
 }
 export function cleanAppState(value) {
   const out = { format: "bokki-app", version: 1 };

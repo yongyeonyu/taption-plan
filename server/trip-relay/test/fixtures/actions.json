@@ -1,0 +1,215 @@
+{
+  "format": "bokki-actions",
+  "version": 1,
+  "actions": [
+    {
+      "action": "classifyInboxItem",
+      "tool": "classify_inbox_item",
+      "destructive": true,
+      "since": 341,
+      "fields": [
+        "inboxId",
+        "choice"
+      ],
+      "required": [
+        "inboxId",
+        "choice"
+      ]
+    },
+    {
+      "action": "setFxRate",
+      "tool": "set_fx_rate",
+      "destructive": true,
+      "since": 341,
+      "fields": [
+        "currency",
+        "krwPerUnit"
+      ],
+      "required": [
+        "currency",
+        "krwPerUnit"
+      ]
+    },
+    {
+      "action": "setPaymentSource",
+      "tool": "set_payment_source",
+      "destructive": true,
+      "since": 341,
+      "fields": [
+        "name",
+        "expense",
+        "income",
+        "remove"
+      ],
+      "required": [
+        "name"
+      ]
+    },
+    {
+      "action": "setSkipWords",
+      "tool": "set_skip_words",
+      "destructive": true,
+      "since": 341,
+      "fields": [
+        "add",
+        "remove"
+      ],
+      "required": []
+    },
+    {
+      "action": "addLedgerTrip",
+      "tool": "add_ledger_trip",
+      "destructive": false,
+      "since": 341,
+      "fields": [
+        "name",
+        "start",
+        "end",
+        "members"
+      ],
+      "required": [
+        "name",
+        "start"
+      ]
+    },
+    {
+      "action": "updateLedgerTrip",
+      "tool": "update_ledger_trip",
+      "destructive": true,
+      "since": 341,
+      "fields": [
+        "tripId",
+        "name",
+        "start",
+        "end",
+        "members",
+        "settlementKRW",
+        "autoSettlement",
+        "fundingDate",
+        "settlementDate"
+      ],
+      "required": [
+        "tripId"
+      ]
+    },
+    {
+      "action": "deleteLedgerTrip",
+      "tool": "delete_ledger_trip",
+      "destructive": true,
+      "since": 341,
+      "fields": [
+        "tripId"
+      ],
+      "required": [
+        "tripId"
+      ]
+    },
+    {
+      "action": "planQuickAction",
+      "tool": "plan_quick_action",
+      "destructive": true,
+      "since": 341,
+      "fields": [
+        "planId",
+        "quickAction"
+      ],
+      "required": [
+        "planId",
+        "quickAction"
+      ]
+    },
+    {
+      "action": "addTripItem",
+      "tool": "add_trip_item",
+      "destructive": false,
+      "since": 341,
+      "fields": [
+        "tripId",
+        "title",
+        "start",
+        "end",
+        "kind",
+        "note"
+      ],
+      "required": [
+        "tripId",
+        "title",
+        "start",
+        "end"
+      ]
+    },
+    {
+      "action": "updateTripItem",
+      "tool": "update_trip_item",
+      "destructive": true,
+      "since": 341,
+      "fields": [
+        "tripId",
+        "itemId",
+        "title",
+        "start",
+        "end",
+        "kind",
+        "note"
+      ],
+      "required": [
+        "tripId",
+        "itemId"
+      ]
+    },
+    {
+      "action": "deleteTripItem",
+      "tool": "delete_trip_item",
+      "destructive": true,
+      "since": 341,
+      "fields": [
+        "tripId",
+        "itemId"
+      ],
+      "required": [
+        "tripId",
+        "itemId"
+      ]
+    },
+    {
+      "action": "deleteManualRecord",
+      "tool": "delete_manual_record",
+      "destructive": true,
+      "since": 341,
+      "fields": [
+        "recordId"
+      ],
+      "required": [
+        "recordId"
+      ]
+    },
+    {
+      "action": "linkRecordToPlan",
+      "tool": "link_record_to_plan",
+      "destructive": true,
+      "since": 341,
+      "fields": [
+        "recordId",
+        "planId"
+      ],
+      "required": [
+        "recordId",
+        "planId"
+      ]
+    },
+    {
+      "action": "resolveBoarding",
+      "tool": "resolve_boarding",
+      "destructive": true,
+      "since": 341,
+      "fields": [
+        "candidateId",
+        "decision"
+      ],
+      "required": [
+        "candidateId",
+        "decision"
+      ]
+    }
+  ]
+}

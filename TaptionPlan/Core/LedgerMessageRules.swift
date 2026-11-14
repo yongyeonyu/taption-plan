@@ -430,6 +430,17 @@ struct AssistantAppChange: Codable, Equatable, Sendable {
         var after: String?
     }
 
+    /// ACT1114A07: UserDefaults에 둔 값의 전·후(환율·알림 앱 스위치·넣지 않을 낱말). 속성 목록으로 담는다.
+    var stored: [Stored]?
+    /// 지운 여행 장부. 되돌리면 다시 만든다.
+    var deletedLedgerTrip: LedgerTrip?
+
+    struct Stored: Codable, Equatable, Sendable {
+        var key: String
+        var before: Data?
+        var after: Data?
+    }
+
     /// 그 뒤 사용자가 같은 값을 바꿨으면 되돌리지 않는다.
     @MainActor
     func isCurrent(_ preferences: AssistantPreferenceStore) async -> Bool {
@@ -441,6 +452,11 @@ struct AssistantAppChange: Codable, Equatable, Sendable {
         if let ledgerTrip {
             await preferences.ledger.load()
             if preferences.ledger.trip(ledgerTrip.after.id) != ledgerTrip.after { return false }
+        }
+        if let stored, !stored.allSatisfy({ $0.isCurrent(preferences.defaults) }) { return false }
+        if let deletedLedgerTrip {
+            await preferences.ledger.load()
+            if preferences.ledger.trip(deletedLedgerTrip.id) != nil { return false }
         }
         return true
     }
@@ -457,6 +473,8 @@ struct AssistantAppChange: Codable, Equatable, Sendable {
         if let ledgerTrip {
             if let before = ledgerTrip.before { await preferences.ledger.saveTrip(before) } else { await preferences.ledger.deleteTrip(ledgerTrip.after.id) }
         }
+        for value in stored ?? [] { value.undo(preferences.defaults) }
+        if let deletedLedgerTrip { await preferences.ledger.saveTrip(deletedLedgerTrip) }
     }
 }
 
@@ -566,6 +584,344 @@ extension AppModel {
             )
         default:
             return await applyAssistantCatalogAction(action)
+        }
+    }
+}
+
+// MARK: 등록부 동작 1묶음 — 가계부 (ACT1114A07). 새 파일을 늘리지 않으려고 여기 둔다.
+
+extension AssistantAppChange.Stored {
+    static func pack(_ value: Any?) -> Data? {
+        value.flatMap { try? PropertyListSerialization.data(fromPropertyList: $0, format: .binary, options: 0) }
+    }
+
+    static func unpack(_ data: Data?) -> Any? {
+        data.flatMap { try? PropertyListSerialization.propertyList(from: $0, format: nil) }
+    }
+
+    /// JSON으로 담은 값(알림 앱 목록)은 풀어서 견준다. 같은 값도 담을 때마다 바이트가 다를 수 있다.
+    private static func plain(_ value: Any?) -> Any? {
+        (value as? Data).flatMap { try? JSONSerialization.jsonObject(with: $0) } ?? value
+    }
+
+    static func same(_ left: Any?, _ right: Any?) -> Bool {
+        switch (plain(left), plain(right)) {
+        case (nil, nil): true
+        case let (left?, right?): (left as? NSObject)?.isEqual(right) ?? false
+        default: false
+        }
+    }
+
+    func isCurrent(_ defaults: UserDefaults) -> Bool { Self.same(defaults.object(forKey: key), Self.unpack(after)) }
+
+    func undo(_ defaults: UserDefaults) {
+        if let value = Self.unpack(before) { defaults.set(value, forKey: key) } else { defaults.removeObject(forKey: key) }
+    }
+}
+
+extension AssistantOperations {
+    static let ledger: [any AssistantOperation.Type] = [
+        ClassifyInboxItem.self, SetFxRate.self, SetPaymentSource.self, SetSkipWords.self,
+        AddLedgerTrip.self, UpdateLedgerTrip.self, DeleteLedgerTrip.self,
+    ]
+
+    /// 받은 결제 문자 하나의 종류를 정한다. 화면의 「이 알림은」 칸과 같은 함수를 쓴다.
+    struct ClassifyInboxItem: AssistantOperation {
+        static let spec = AssistantOperationSpec(
+            name: "classifyInboxItem", fields: ["inboxId", "choice"], counter: .ledger,
+            title: { $0.text("받은 결제 문자 종류 정하기", "Classify received payment texts") },
+            guide: #""inboxId":"<inbox[].id>","choice":"expense|income|ignore|internal"} (settles one received payment text like my own tap: expense or income adds it to the ledger when the amount can be read, ignore drops it from the inbox, internal is a transfer between my own accounts or a card top-up and removes the entry the app added for it)"#
+        )
+
+        let inboxID: UUID
+        let choice: String
+
+        init?(fields: AssistantFields) {
+            guard let inboxID = fields.uuid("inboxId"), let choice = fields.raw("choice"),
+                  choice == "internal" || LedgerMessageRules.Kind(rawValue: choice) != nil else { return nil }
+            self.inboxID = inboxID
+            self.choice = choice
+        }
+
+        func apply(host: AssistantOperationHost) async -> AssistantEditResult {
+            guard let item = PaymentInbox.items(host.defaults).first(where: { $0.id == inboxID }) else { return .rejected("no_inbox_item") }
+            await host.book.load()
+            let entries = host.book.entries
+            // 시험 저장소로는 AI에게 규칙을 부탁하지 않는다(실제 일 목록을 건드리지 않게).
+            let asksAI = host.preferences.isLive
+            let updated: PaymentInbox.Item, notice: String
+            if let kind = LedgerMessageRules.Kind(rawValue: choice) {
+                (updated, notice) = await PaymentInboxChoice.apply(kind, to: item, language: host.language, book: host.book, defaults: host.defaults, asksAI: asksAI)
+            } else {
+                (updated, notice) = await PaymentInboxChoice.applyInternal(to: item, language: host.language, book: host.book, defaults: host.defaults, asksAI: asksAI)
+            }
+            guard updated != item else { return .rejected("no_change") }
+            var result = AssistantEditResult(before: String(item.text.replacingOccurrences(of: "\n", with: " ").prefix(40)), after: notice)
+            result.appChange = AssistantAppChange(removedInbox: item)
+            // 넣은 기록은 되돌리면 지우고, 「내부」로 지운 기록은 되돌리면 다시 넣는다.
+            if let added = host.book.entries.first(where: { entry in !entries.contains { $0.id == entry.id } }) {
+                result.ledgerEntryID = added.id
+                result.ledgerEntry = added
+            } else if let removed = entries.first(where: { entry in !host.book.entries.contains { $0.id == entry.id } }) {
+                result.ledgerBefore = removed
+            }
+            return result
+        }
+    }
+
+    /// 직접 넣는 환율(가계부 기록 편집의 「직접 넣는 환율」과 같은 값).
+    struct SetFxRate: AssistantOperation {
+        static let spec = AssistantOperationSpec(
+            name: "setFxRate", fields: ["currency", "krwPerUnit"], counter: .ledger,
+            title: { $0.text("환율 직접 정하기", "Set exchange rates") },
+            guide: #""currency":"USD","krwPerUnit":1400} (my own exchange rate for one currency, KRW per unit; the ledger uses it for new entries instead of the fetched rate; current ones are in GET /app settings.fxRates)"#
+        )
+
+        let currency: String
+        let rate: Double
+
+        init?(fields: AssistantFields) {
+            guard let currency = fields.raw("currency"), currency.count == 3, currency.allSatisfy({ $0.isASCII && $0.isUppercase }), currency != "KRW",
+                  let rate = fields.number("krwPerUnit"), rate > 0, rate <= 1e7 else { return nil }
+            self.currency = currency
+            self.rate = rate
+        }
+
+        func apply(host: AssistantOperationHost) async -> AssistantEditResult {
+            // `LedgerBook.manualRates`와 같은 키다. 시험은 따로 만든 저장소에 쓴다.
+            let key = LedgerBook.manualRatesKey
+            let rates = (host.defaults.dictionary(forKey: key) as? [String: Double]) ?? [:]
+            guard let change = host.changing(key, { host.defaults.set(rates.merging([currency: rate]) { $1 }, forKey: key) }) else { return .rejected("no_change") }
+            func describe(_ value: Double) -> String { "1 \(currency) = \(LedgerMoney.text(value, language: host.language))" }
+            var result = AssistantEditResult(before: rates[currency].map(describe) ?? "", after: describe(rate))
+            result.appChange = AssistantAppChange(stored: [change])
+            return result
+        }
+    }
+
+    /// 결제 알림을 보낸 앱마다의 지출·수입 스위치(「결제 알림 받기」 화면과 같은 함수).
+    struct SetPaymentSource: AssistantOperation {
+        static let spec = AssistantOperationSpec(
+            name: "setPaymentSource", fields: ["name", "expense", "income", "remove"], counter: .settings,
+            title: { $0.text("결제 알림 앱 스위치 바꾸기", "Change payment alert app switches") },
+            guide: #""name":"<settings.paymentSources[].name>","expense":true,"income":false} (what the ledger keeps from one app's payment alerts; give expense, income or both, or "remove":true alone to take the app off the list; the name "문자" stands for text messages)"#
+        )
+
+        let name: String
+        let expense: Bool?
+        let income: Bool?
+        let removes: Bool
+
+        init?(fields: AssistantFields) {
+            let expense = fields.flag("expense"), income = fields.flag("income"), remove = fields.flag("remove")
+            guard let name = PaymentAlertSources.name(fields.raw("name")), fields.ok("expense", expense), fields.ok("income", income), fields.ok("remove", remove),
+                  remove == true ? expense == nil && income == nil : expense != nil || income != nil else { return nil }
+            self.name = name
+            self.expense = expense
+            self.income = income
+            removes = remove == true
+        }
+
+        func apply(host: AssistantOperationHost) async -> AssistantEditResult {
+            let language = host.language
+            let isTexts = name == PaymentAlertSources.smsName
+            let current = PaymentAlertSources.all(host.defaults).first { $0.name == name }
+            func describe(_ source: PaymentAlertSources.Source?) -> String {
+                guard let source else { return "" }
+                func state(_ isOn: Bool) -> String { isOn ? language.text("켬", "On") : language.text("끔", "Off") }
+                return "\(source.name) · \(language.text("지출", "Spending")) \(state(source.expense)) · \(language.text("수입", "Income")) \(state(source.income))"
+            }
+            var result = AssistantEditResult(before: describe(current))
+            let change: AssistantAppChange.Stored?
+            if removes {
+                // 문자 줄은 화면에서도 지울 수 없다.
+                guard current != nil, !isTexts else { return .rejected(isTexts ? "not_editable" : "no_source") }
+                change = host.changing(PaymentAlertSources.key) { PaymentAlertSources.remove(name, defaults: host.defaults) }
+                result.after = host.deleted
+            } else {
+                guard current != nil || PaymentAlertSources.all(host.defaults).count < PaymentAlertSources.limit else { return .rejected("source_limit") }
+                var source = current ?? .init(name: name, lastSeen: isTexts ? .distantPast : .now)
+                if let expense { source.expense = expense }
+                if let income { source.income = income }
+                change = host.changing(PaymentAlertSources.key) { PaymentAlertSources.set(source, defaults: host.defaults) }
+                result.after = describe(source)
+            }
+            guard let change else { return .rejected("no_change") }
+            result.appChange = AssistantAppChange(stored: [change])
+            return result
+        }
+    }
+
+    /// 넣지 않을 낱말(「결제 알림 받기」 화면 아래 칸과 같은 함수).
+    struct SetSkipWords: AssistantOperation {
+        static let spec = AssistantOperationSpec(
+            name: "setSkipWords", fields: ["add", "remove"], counter: .settings,
+            title: { $0.text("넣지 않을 낱말 고치기", "Edit words to skip") },
+            guide: #""add":["광고"],"remove":["자동이체"]} (words in settings.skipWords: a payment text or alert containing one is not added to the ledger; add, remove or both, each word 1 to 20 characters)"#
+        )
+
+        let adds: [String]
+        let removes: [String]
+
+        init?(fields: AssistantFields) {
+            let adds = fields.texts("add", max: 20, count: 1...10), removes = fields.texts("remove", max: 20, count: 1...10)
+            guard fields.ok("add", adds), fields.ok("remove", removes), adds != nil || removes != nil else { return nil }
+            self.adds = adds ?? []
+            self.removes = removes ?? []
+        }
+
+        func apply(host: AssistantOperationHost) async -> AssistantEditResult {
+            let before = PaymentAlertSources.skipWords(host.defaults)
+            guard let change = host.changing(PaymentAlertSources.skipWordsKey, {
+                for word in removes { PaymentAlertSources.removeSkipWord(word, defaults: host.defaults) }
+                for word in adds { PaymentAlertSources.addSkipWord(word, defaults: host.defaults) }
+            }) else { return .rejected("no_change") }
+            var result = AssistantEditResult(before: before.joined(separator: ", "), after: PaymentAlertSources.skipWords(host.defaults).joined(separator: ", "))
+            result.appChange = AssistantAppChange(stored: [change])
+            return result
+        }
+    }
+
+    /// 함께 간 사람 이름: 1~30자, 20명까지, 「나」를 가리키는 이름은 받지 않는다.
+    static func members(_ fields: AssistantFields, count: ClosedRange<Int>) -> [String]? {
+        fields.texts("members", max: 30, count: count).flatMap { $0.contains(LedgerTrip.me) ? nil : $0 }
+    }
+
+    /// 계획 없는 여행 장부를 만든다(가계부의 「여행 더하기」와 같은 `saveTrip`).
+    struct AddLedgerTrip: AssistantOperation {
+        static let spec = AssistantOperationSpec(
+            name: "addLedgerTrip", fields: ["name", "start", "end", "members"], counter: .ledger, changes: 0,
+            title: { $0.text("여행 가계부 만들기", "Create trip ledgers") },
+            guide: #""name":"Jeju","start":"YYYY-MM-DD","end":"YYYY-MM-DD","members":["Mina"]} (creates a trip ledger that has no planned trip; end and members optional, members are my companions without me; for a planned trip use setTripBudget instead; the new id appears in GET /app ledger.trips)"#
+        )
+
+        let name: String
+        let start: Date
+        let end: Date
+        let members: [String]
+
+        init?(fields: AssistantFields) {
+            let end = fields.day("end"), members = AssistantOperations.members(fields, count: 1...20)
+            guard let name = fields.string("name", max: 40), let start = fields.day("start"), fields.ok("end", end), fields.ok("members", members),
+                  (end ?? start) >= start else { return nil }
+            self.name = name
+            self.start = start
+            self.end = end ?? start
+            self.members = members ?? []
+        }
+
+        func apply(host: AssistantOperationHost) async -> AssistantEditResult {
+            await host.book.load()
+            guard host.book.trips.count < AssistantCatalogLimits.places else { return .rejected("trip_limit") }
+            let trip = LedgerTrip(id: "ledger-" + UUID().uuidString, name: name, start: start, end: end, members: members)
+            await host.book.saveTrip(trip)
+            guard let saved = host.book.trip(trip.id) else { return .rejected("edit_failed") }
+            var result = AssistantEditResult(after: AssistantOperations.describe(saved))
+            result.appChange = AssistantAppChange(ledgerTrip: .init(before: nil, after: saved))
+            return result
+        }
+    }
+
+    static func describe(_ trip: LedgerTrip) -> String {
+        let days = "\(AssistantDataText.day(trip.start))–\(AssistantDataText.day(trip.end))"
+        return trip.members.isEmpty ? "\(trip.name) · \(days)" : "\(trip.name) · \(days) · \(trip.members.count + 1)"
+    }
+
+    /// 여행 장부의 이름·기간·동행·정산을 고친다(여행 장부 편집·정산 짝 기록 편집과 같은 `saveTrip`·`resetSettlement`).
+    struct UpdateLedgerTrip: AssistantOperation {
+        static let spec = AssistantOperationSpec(
+            name: "updateLedgerTrip",
+            fields: ["tripId", "name", "start", "end", "members", "settlementKRW", "autoSettlement", "fundingDate", "settlementDate"], counter: .ledger,
+            title: { $0.text("여행 가계부 고치기", "Edit trip ledgers") },
+            guide: #""tripId":"<ledger.trips[].id>","members":["Mina","Jun"],"settlementKRW":-30000,"settlementDate":"YYYY-MM-DD"} (give at least one of name, start, end, members (the whole companion list, [] for none), fundingDate (the day the budget moves), settlementKRW (fixes the settlement by hand: + returned to my daily ledger, - extra cost, 0 none), settlementDate, or "autoSettlement":true to go back to the automatic settlement)"#
+        )
+
+        let tripID: String
+        let name: String?
+        let start: Date?
+        let end: Date?
+        let members: [String]?
+        let settlementKRW: Double?
+        let autoSettlement: Bool
+        let fundingDate: Date?
+        let settlementDate: Date?
+
+        init?(fields: AssistantFields) {
+            let name = fields.string("name", max: 40), start = fields.day("start"), end = fields.day("end")
+            let members = AssistantOperations.members(fields, count: 0...20), settlement = fields.number("settlementKRW"), auto = fields.flag("autoSettlement")
+            let funding = fields.day("fundingDate"), settled = fields.day("settlementDate")
+            guard let tripID = fields.string("tripId", max: 100), fields.ok("name", name), fields.ok("start", start), fields.ok("end", end),
+                  fields.ok("members", members), fields.ok("settlementKRW", settlement), fields.ok("fundingDate", funding), fields.ok("settlementDate", settled),
+                  !fields.has("autoSettlement") || (auto == true && settlement == nil), settlement.map({ abs($0) <= 1e12 }) ?? true,
+                  fields.values.count > 1 else { return nil }
+            if let start, let end, end < start { return nil }
+            self.tripID = tripID
+            self.name = name
+            self.start = start
+            self.end = end
+            self.members = members
+            settlementKRW = settlement?.rounded()
+            autoSettlement = auto == true
+            fundingDate = funding
+            // 자동 정산과 같은 때(그날 아침 9시)에 둔다.
+            settlementDate = settled.map { $0.addingTimeInterval(9 * 3_600) }
+        }
+
+        func apply(host: AssistantOperationHost) async -> AssistantEditResult {
+            await host.book.load()
+            guard let old = host.book.trip(tripID) else { return .rejected("no_trip") }
+            var trip = old
+            if let name { trip.name = name }
+            if let start { trip.start = start }
+            if let end { trip.end = end }
+            guard trip.end >= trip.start else { return .rejected("end_before_start") }
+            if let members { trip.members = members }
+            if let fundingDate { trip.fundingDate = fundingDate }
+            if let settlementKRW { trip.settlementKRW = settlementKRW }
+            if let settlementDate { trip.settlementDate = settlementDate }
+            if autoSettlement {
+                trip.settlementKRW = nil
+                trip.settlementDate = nil
+            }
+            guard trip != old else { return .rejected("no_change") }
+            // 정산만 자동으로 돌릴 때는 화면의 「자동 정산으로 되돌리기」와 같은 함수를 쓴다.
+            var automatic = old
+            automatic.settlementKRW = nil
+            automatic.settlementDate = nil
+            if autoSettlement, trip == automatic { await host.book.resetSettlement(tripID) } else { await host.book.saveTrip(trip) }
+            guard let saved = host.book.trip(tripID) else { return .rejected("edit_failed") }
+            func describe(_ value: LedgerTrip) -> String {
+                AssistantOperations.describe(value) + (value.settlementKRW.map { " · " + LedgerMoney.text($0, language: host.language) } ?? "")
+            }
+            var result = AssistantEditResult(before: describe(old), after: describe(saved))
+            result.appChange = AssistantAppChange(ledgerTrip: .init(before: old, after: saved))
+            return result
+        }
+    }
+
+    /// 여행 장부를 지운다(여행 장부 화면의 지우기와 같은 `deleteTrip`). 안의 기록은 일상 장부로 돌아간다.
+    struct DeleteLedgerTrip: AssistantOperation {
+        static let spec = AssistantOperationSpec(
+            name: "deleteLedgerTrip", fields: ["tripId"], counter: .ledger, deletes: true,
+            title: { $0.text("여행 가계부 지우기", "Delete trip ledgers") },
+            guide: #""tripId":"<ledger.trips[].id>"} (deletes a trip ledger: its budget and settlement transfers go, the entries inside stay and return to my daily ledger; only when I asked)"#
+        )
+
+        let tripID: String
+
+        init?(fields: AssistantFields) {
+            guard let tripID = fields.string("tripId", max: 100) else { return nil }
+            self.tripID = tripID
+        }
+
+        func apply(host: AssistantOperationHost) async -> AssistantEditResult {
+            await host.book.load()
+            guard let old = host.book.trip(tripID) else { return .rejected("no_trip") }
+            await host.book.deleteTrip(tripID)
+            guard host.book.trip(tripID) == nil else { return .rejected("edit_failed") }
+            var result = AssistantEditResult(before: AssistantOperations.describe(old), after: host.deleted)
+            result.appChange = AssistantAppChange(deletedLedgerTrip: old)
+            return result
         }
     }
 }

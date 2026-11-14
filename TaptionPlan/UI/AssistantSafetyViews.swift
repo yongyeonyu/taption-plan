@@ -288,24 +288,39 @@ struct AssistantActionTogglesView: View {
         uniqueKeysWithValues: AssistantActionKind.allCases.map { ($0, AssistantActionToggles.isEnabled($0)) }
     )
 
+    /// 지우는 동작은 아래 묶음에 따로 보인다(ACT1114A07). 둘 다 기본은 켬이다.
+    static func kinds(deleting: Bool) -> [AssistantActionKind] {
+        AssistantActionKind.allCases.filter { kind in
+            guard case let .operation(name) = kind else { return !deleting }
+            return (AssistantOperations.spec(name)?.deletes ?? false) == deleting
+        }
+    }
+
+    private func toggles(_ kinds: [AssistantActionKind]) -> some View {
+        ForEach(kinds) { kind in
+            Toggle(kind.title(language), isOn: Binding(
+                get: { enabled[kind] ?? true },
+                set: { value in
+                    enabled[kind] = value
+                    AssistantActionToggles.set(kind, enabled: value)
+                }
+            ))
+        }
+    }
+
     var body: some View {
         Form {
             Group {
             Section {
-                ForEach(AssistantActionKind.allCases) { kind in
-                    Toggle(kind.title(language), isOn: Binding(
-                        get: { enabled[kind] ?? true },
-                        set: { value in
-                            enabled[kind] = value
-                            AssistantActionToggles.set(kind, enabled: value)
-                        }
-                    ))
-                }
+                toggles(Self.kinds(deleting: false))
             } footer: {
                 Text(language.text(
                     "끈 일은 AI가 보내도 반영하지 않고 거절로 알려요.",
                     "Actions you turn off are not applied; the AI is told they were rejected."
                 ))
+            }
+            if !Self.kinds(deleting: true).isEmpty {
+                Section(language.text("지우는 일", "Deleting things")) { toggles(Self.kinds(deleting: true)) }
             }
         }
             .listRowBackground(Color.tpSurface)

@@ -39,6 +39,9 @@ struct AssistantEditDelta: Codable, Equatable, Sendable {
     var categories: ListChange<CategoryDefinition>?
     /// 여행 목록 전·후(ACB1112A01). 일정·핀은 `travel`이, 일상 쪽 계획은 `plans`가 담는다.
     var trips: ListChange<TravelTrip>?
+    /// 탑승 확인·거절 목록 전·후와, 지우면서 「다시 만들지 않기」로 적은 기록(ACT1114A07). 예전 기록에는 없다.
+    var boardingDecisions: ListChange<TransitBoardingDecision>?
+    var suppressedActualIDs: [UUID]?
 
     struct ListChange<Value: Codable & Equatable & Sendable>: Codable, Equatable, Sendable {
         var before: [Value]
@@ -48,7 +51,7 @@ struct AssistantEditDelta: Codable, Equatable, Sendable {
     var isEmpty: Bool {
         plans.isEmpty && memos.isEmpty && actuals.isEmpty && corrections.isEmpty
             && addedSleepSpans.isEmpty && removedSleepSpans.isEmpty && travel == nil && (preferences ?? []).isEmpty && movement == nil
-            && places == nil && categories == nil && trips == nil
+            && places == nil && categories == nil && trips == nil && boardingDecisions == nil
     }
 
     /// 기록은 명령이 고른 id와 새로 생기거나 사라진 수동 기록만 본다. 그 사이 센서 갱신이 바꾼 자동 기록은 담지 않는다.
@@ -84,7 +87,9 @@ struct AssistantEditDelta: Codable, Equatable, Sendable {
                 ? nil : ListChange(before: before.settings.frequentPlaces, after: after.settings.frequentPlaces),
             categories: before.categories == after.categories ? nil : ListChange(before: before.categories, after: after.categories),
             trips: before.settings.travelTrips == after.settings.travelTrips
-                ? nil : ListChange(before: before.settings.travelTrips ?? [], after: after.settings.travelTrips ?? [])
+                ? nil : ListChange(before: before.settings.travelTrips ?? [], after: after.settings.travelTrips ?? []),
+            boardingDecisions: before.settings.transitBoardingDecisions == after.settings.transitBoardingDecisions
+                ? nil : ListChange(before: before.settings.transitBoardingDecisions, after: after.settings.transitBoardingDecisions)
         )
     }
 
@@ -119,6 +124,11 @@ struct AssistantEditDelta: Codable, Equatable, Sendable {
         if let places, result.settings.frequentPlaces != places.after { return nil }
         if let categories, result.categories != categories.after { return nil }
         if let trips, (result.settings.travelTrips ?? []) != trips.after { return nil }
+        if let boardingDecisions {
+            guard result.settings.transitBoardingDecisions == boardingDecisions.after else { return nil }
+            result.settings.transitBoardingDecisions = boardingDecisions.before
+        }
+        if let suppressedActualIDs { result.settings.suppressedActualIDs.subtract(suppressedActualIDs) }
         if let trips { result.settings.travelTrips = trips.before.isEmpty ? nil : trips.before }
         if let places { result.settings.frequentPlaces = places.before }
         if let categories { result.categories = categories.before }
@@ -387,6 +397,8 @@ extension AppModel {
         } else if let ledgerID = entry.delta.ledgerEntryID {
             await preferences.ledger.delete(ledgerID)
         }
+        // 여행 기록이 돌아갔으면 그 여행의 정산 짝 기록도 다시 맞춘다(ACT1114A07).
+        for tripID in Set([entry.delta.ledgerBefore?.tripID, entry.delta.ledgerEntry?.tripID].compactMap { $0 }) { await preferences.ledger.syncTrip(tripID) }
         await entry.delta.appChange?.undo(preferences)
         await undoAssistantPromptChange(entry.delta.appChange)
         return true

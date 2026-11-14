@@ -269,3 +269,304 @@ extension AppModel {
         return snapshot.categories.first { $0.id == id }?.name ?? id
     }
 }
+
+// MARK: 등록부 동작 2묶음 — 일정 (ACT1114A07). 새 파일을 늘리지 않으려고 여기 둔다.
+
+extension AssistantOperations {
+    static let plans: [any AssistantOperation.Type] = [PlanQuickAction.self, AddTripItem.self, UpdateTripItem.self, DeleteTripItem.self]
+
+    /// 위젯·잠금 화면의 빠른 동작과 같은 `performQuickAction`.
+    struct PlanQuickAction: AssistantOperation {
+        static let spec = AssistantOperationSpec(
+            name: "planQuickAction", fields: ["planId", "quickAction"], counter: .schedules,
+            title: { $0.text("일정 완료·미루기·옮기기", "Complete, postpone or move plans") },
+            guide: #""planId":"<plans[].id>","quickAction":"complete|postpone30|moveToNextFree|stop"} (the widget's quick actions on one plan: complete marks it done, postpone30 moves it 30 minutes later, moveToNextFree moves it to my next free time, stop ends it while it is running)"#
+        )
+        static let actions: [String: WidgetAction] = [
+            "complete": .complete, "postpone30": .postponeThirtyMinutes, "moveToNextFree": .moveToNextFreeTime, "stop": .stopCurrentActivity,
+        ]
+
+        let planID: UUID
+        let action: WidgetAction
+
+        init?(fields: AssistantFields) {
+            guard let planID = fields.uuid("planId"), let action = fields.raw("quickAction").flatMap({ Self.actions[$0] }) else { return nil }
+            self.planID = planID
+            self.action = action
+        }
+
+        func apply(host: AssistantOperationHost) async -> AssistantEditResult {
+            let model = host.model
+            guard let plan = model.snapshot.plans.first(where: { $0.id == planID }) else { return .rejected("no_plan") }
+            switch action {
+            case .postponeThirtyMinutes, .moveToNextFreeTime:
+                // 시각을 옮기는 것은 사용자가 만든 일정만(캘린더·루틴은 그쪽에서).
+                guard AssistantPlanLookup.isEditable(plan), !GoalRecordPolicy.isGoal(plan) else { return .rejected("not_editable") }
+            case .stopCurrentActivity:
+                guard plan.status == .running else { return .rejected("not_running") }
+            case .complete:
+                guard plan.status != .completed else { return .rejected("no_change") }
+            }
+            let actuals = Dictionary(model.snapshot.actuals.map { ($0.id, $0) }, uniquingKeysWith: { _, last in last })
+            let errorBefore = model.userFacingError
+            await model.performQuickAction(action, planID: planID)
+            guard let updated = model.snapshot.plans.first(where: { $0.id == planID }), updated != plan else {
+                // 옮길 자리가 없는 것 같은 실패는 AI 결과로만 알린다.
+                model.userFacingError = errorBefore
+                return .rejected("schedule_failed")
+            }
+            let changed = model.snapshot.actuals.filter { actuals[$0.id] != $0 }.map(\.id)
+            let done = updated.status == .completed ? " · " + host.language.text("완료", "Done") : ""
+            return AssistantEditResult(before: AssistantEditText.plan(plan), after: AssistantEditText.plan(updated) + done, actualIDs: Set(changed))
+        }
+    }
+
+    /// ISO 시각 글의 오프셋(초). `Z`는 0.
+    static func offsetSeconds(_ text: String?) -> Int? {
+        guard let text, text.count >= 6 else { return nil }
+        if text.hasSuffix("Z") { return 0 }
+        let tail = text.suffix(6), parts = tail.dropFirst().split(separator: ":").map { Int($0) }
+        guard let sign = tail.first, sign == "+" || sign == "-", parts.count == 2, let hours = parts[0], let minutes = parts[1] else { return nil }
+        return (sign == "-" ? -1 : 1) * (hours * 3_600 + minutes * 60)
+    }
+
+    static func describe(_ item: TravelTripItem) -> String {
+        "\(AssistantDataText.day(item.start)) \(AssistantEditText.clock(item.start))–\(AssistantEditText.clock(item.end)) \(item.title)"
+    }
+
+    /// 시간 있는 여행 일정 하나를 넣는다(여행 계획표의 손으로 넣기와 같은 `addTripItem`). 일상 쪽 계획도 함께 생긴다.
+    struct AddTripItem: AssistantOperation {
+        static let spec = AssistantOperationSpec(
+            name: "addTripItem", fields: ["tripId", "title", "start", "end", "kind", "note"], counter: .schedules, changes: 0,
+            title: { $0.text("시간 있는 여행 일정 더하기", "Add timed trip items") },
+            guide: #""tripId":"<trips[].id>","title":"Dinner","start":"YYYY-MM-DDTHH:MM+09:00","end":"YYYY-MM-DDTHH:MM+09:00","kind":"meal","note":"..."} (adds one timed item to a trip's plan; start and end carry the local offset of the place; kind optional: flight|lodging|meal|cafe|sight|photo|shopping|activity|rest|sleep|transfer|other, default activity; note optional; the new itemId appears in GET /activity trips[].items[])"#
+        )
+
+        let tripID: String
+        let title: String
+        let start: Date
+        let end: Date
+        let offset: Int
+        let kind: TripImportItem.Kind
+        let note: String
+
+        init?(fields: AssistantFields) {
+            let kind: TripImportItem.Kind? = fields.choice("kind"), note = fields.string("note", max: 500)
+            guard let tripID = fields.string("tripId", max: 100), let title = fields.string("title", max: 200),
+                  let start = fields.instant("start"), let end = fields.instant("end"), end > start,
+                  let offset = AssistantOperations.offsetSeconds(fields.raw("start")), fields.ok("kind", kind), fields.ok("note", note) else { return nil }
+            self.tripID = tripID
+            self.title = title
+            self.start = start
+            self.end = end
+            self.offset = offset
+            self.kind = kind ?? .activity
+            self.note = note ?? ""
+        }
+
+        func apply(host: AssistantOperationHost) async -> AssistantEditResult {
+            let model = host.model, settings = model.snapshot.settings
+            let known = (settings.travelTrips ?? []).contains { $0.id == tripID } || (settings.travelTripItems ?? []).contains { $0.tripID == tripID }
+                || settings.travelPlanStops.contains { $0.tripID == tripID }
+            guard known else { return .rejected("no_trip") }
+            guard let itemID = await model.addTripItem(tripID: tripID, kind: kind, title: title, start: start, end: end, offsetSeconds: offset, note: note),
+                  let item = model.snapshot.settings.travelTripItems?.first(where: { $0.tripID == tripID && $0.itemID == itemID })
+            else { return .rejected("trip_failed") }
+            return AssistantEditResult(after: AssistantOperations.describe(item))
+        }
+    }
+
+    /// 여행 일정의 이름·종류·시각·메모를 고친다(일정 편집 시트와 같은 `updateTripItem`). 시작만 주면 길이를 지킨다.
+    struct UpdateTripItem: AssistantOperation {
+        static let spec = AssistantOperationSpec(
+            name: "updateTripItem", fields: ["tripId", "itemId", "title", "start", "end", "kind", "note"], counter: .schedules,
+            title: { $0.text("시간 있는 여행 일정 고치기", "Edit timed trip items") },
+            guide: #""tripId":"<trips[].tripId>","itemId":"<items[].itemId>","start":"YYYY-MM-DDTHH:MM+09:00"} (give at least one of title, start, end, kind, note; moving start alone keeps the length; the linked plan and map pin follow)"#
+        )
+
+        let tripID: String
+        let itemID: String
+        let title: String?
+        let start: Date?
+        let end: Date?
+        let kind: TripImportItem.Kind?
+        let note: String?
+
+        init?(fields: AssistantFields) {
+            let title = fields.string("title", max: 200), start = fields.instant("start"), end = fields.instant("end")
+            let kind: TripImportItem.Kind? = fields.choice("kind"), note = fields.string("note", max: 500)
+            guard let tripID = fields.string("tripId", max: 100), let itemID = fields.string("itemId", max: 100),
+                  fields.ok("title", title), fields.ok("start", start), fields.ok("end", end), fields.ok("kind", kind), fields.ok("note", note),
+                  title != nil || start != nil || end != nil || kind != nil || note != nil else { return nil }
+            if let start, let end, end <= start { return nil }
+            self.tripID = tripID
+            self.itemID = itemID
+            self.title = title
+            self.start = start
+            self.end = end
+            self.kind = kind
+            self.note = note
+        }
+
+        func apply(host: AssistantOperationHost) async -> AssistantEditResult {
+            let model = host.model
+            func current() -> TravelTripItem? { model.snapshot.settings.travelTripItems?.first { $0.tripID == tripID && $0.itemID == itemID } }
+            guard let item = current() else { return .rejected("no_trip_item") }
+            let newStart = start ?? item.start
+            let newEnd = end ?? (start == nil ? item.end : newStart.addingTimeInterval(item.end.timeIntervalSince(item.start)))
+            guard newEnd > newStart else { return .rejected("invalid_time") }
+            let newKind = kind ?? TripImportItem.Kind(rawValue: item.kind) ?? .other
+            let same = (title ?? item.title) == item.title && newStart == item.start && newEnd == item.end && newKind.rawValue == item.kind
+                && (note ?? item.note) == item.note
+            guard !same else { return .rejected("no_change") }
+            guard await model.updateTripItem(tripID: tripID, itemID: itemID, kind: newKind, title: title ?? item.title, start: newStart, end: newEnd, note: note),
+                  let updated = current() else { return .rejected("trip_failed") }
+            return AssistantEditResult(before: AssistantOperations.describe(item), after: AssistantOperations.describe(updated))
+        }
+    }
+
+    /// 여행 일정을 딸린 세부 계획·일상 쪽 계획·지도 핀과 함께 지운다(계획표의 지우기와 같은 `deleteTripItemWithDetails`).
+    struct DeleteTripItem: AssistantOperation {
+        static let spec = AssistantOperationSpec(
+            name: "deleteTripItem", fields: ["tripId", "itemId"], counter: .schedules, deletes: true,
+            title: { $0.text("시간 있는 여행 일정 지우기", "Delete timed trip items") },
+            guide: #""tripId":"<trips[].tripId>","itemId":"<items[].itemId>"} (deletes a timed trip item with its detail items, linked plan and map pin; only when I asked)"#
+        )
+
+        let tripID: String
+        let itemID: String
+
+        init?(fields: AssistantFields) {
+            guard let tripID = fields.string("tripId", max: 100), let itemID = fields.string("itemId", max: 100) else { return nil }
+            self.tripID = tripID
+            self.itemID = itemID
+        }
+
+        func apply(host: AssistantOperationHost) async -> AssistantEditResult {
+            let model = host.model
+            guard let item = model.snapshot.settings.travelTripItems?.first(where: { $0.tripID == tripID && $0.itemID == itemID }) else { return .rejected("no_trip_item") }
+            guard await model.deleteTripItemWithDetails(tripID: tripID, itemID: itemID) != nil else { return .rejected("trip_failed") }
+            return AssistantEditResult(before: AssistantOperations.describe(item), after: host.deleted)
+        }
+    }
+}
+
+// MARK: 등록부 동작 3묶음 — 기록 (ACT1114A07)
+
+/// 지도 화면이 찾아 둔 탑승 후보. 화면이 새로 계산할 때마다 바꿔 둔다. 기기 밖으로는 이름·종류·시각만 나간다.
+@MainActor
+enum AssistantBoardingCandidates {
+    static var current: [TransitBoardingCandidate] = []
+    static let limit = 20
+
+    /// 밖에 보이는 id. 후보 열쇠에는 장소 id가 들어 있어 그대로 내보내지 않는다.
+    static func publicID(_ candidate: TransitBoardingCandidate) -> String {
+        SHA256.hash(data: Data(candidate.id.utf8)).prefix(8).map { String(format: "%02x", $0) }.joined()
+    }
+}
+
+extension AssistantOperations {
+    static let records: [any AssistantOperation.Type] = [DeleteManualRecord.self, LinkRecordToPlan.self, ResolveBoarding.self]
+
+    /// 사용자가 직접 넣은 기록만 지운다(기록 상세의 지우기와 같은 `deleteActual`). 자동 기록은 가리기로만 고친다.
+    struct DeleteManualRecord: AssistantOperation {
+        static let spec = AssistantOperationSpec(
+            name: "deleteManualRecord", fields: ["recordId"], counter: .edits, deletes: true,
+            title: { $0.text("직접 넣은 기록 지우기", "Delete records I added") },
+            guide: #""recordId":"<records[].id>"} (deletes one record I added by hand; automatic records cannot be deleted, use hideRecord for those; only when I asked)"#
+        )
+
+        let recordID: UUID
+
+        init?(fields: AssistantFields) {
+            guard let recordID = fields.uuid("recordId") else { return nil }
+            self.recordID = recordID
+        }
+
+        func apply(host: AssistantOperationHost) async -> AssistantEditResult {
+            let model = host.model
+            guard let actual = model.snapshot.actuals.first(where: { $0.id == recordID }) else { return .rejected("no_record") }
+            guard actual.source == .manual else { return .rejected("not_editable") }
+            let errorBefore = model.userFacingError
+            await model.deleteActual(recordID)
+            guard !model.snapshot.actuals.contains(where: { $0.id == recordID }) else {
+                model.userFacingError = errorBefore
+                return .rejected("edit_failed")
+            }
+            var result = AssistantEditResult(before: AssistantEditText.record(actual), after: host.deleted, actualIDs: [recordID])
+            result.suppressedActualIDs = [recordID]
+            return result
+        }
+    }
+
+    /// 기록을 일정이나 루틴에 잇는다(기록 연결 화면과 같은 `connectActualRecord`).
+    struct LinkRecordToPlan: AssistantOperation {
+        static let spec = AssistantOperationSpec(
+            name: "linkRecordToPlan", fields: ["recordId", "planId"], counter: .edits,
+            title: { $0.text("기록을 일정·루틴에 잇기", "Link records to plans or routines") },
+            guide: #""recordId":"<records[].id>","planId":"<plans[].id or goals[].id>"} (counts one record as time spent on a plan or goal; the record must overlap the plan's time, and repeating segments or calendar events cannot be targets)"#
+        )
+
+        let recordID: UUID
+        let planID: UUID
+
+        init?(fields: AssistantFields) {
+            guard let recordID = fields.uuid("recordId"), let planID = fields.uuid("planId") else { return nil }
+            self.recordID = recordID
+            self.planID = planID
+        }
+
+        func apply(host: AssistantOperationHost) async -> AssistantEditResult {
+            let model = host.model
+            guard let actual = model.snapshot.actuals.first(where: { $0.id == recordID }) else { return .rejected("no_record") }
+            guard let plan = model.snapshot.plans.first(where: { $0.id == planID }) else { return .rejected("no_plan") }
+            guard actual.planID != planID, actual.routineID != planID else { return .rejected("no_change") }
+            let errorBefore = model.userFacingError
+            await model.connectActualRecord(recordID, toGoal: planID)
+            guard let linked = model.snapshot.actuals.first(where: { $0.id == recordID }), linked.planID == planID || linked.routineID == planID else {
+                // 시간이 겹치지 않는 것 같은 실패는 AI 결과로만 알린다.
+                model.userFacingError = errorBefore
+                return .rejected("not_linkable")
+            }
+            return AssistantEditResult(before: AssistantEditText.record(actual), after: "\(AssistantEditText.record(linked)) → \(plan.title)", actualIDs: [recordID])
+        }
+    }
+
+    /// 앱이 찾은 탑승 후보에 답한다(지도의 탑승 확인 카드와 같은 `confirmTransitBoarding`·`deleteTransitBoardingCandidate`).
+    struct ResolveBoarding: AssistantOperation {
+        static let spec = AssistantOperationSpec(
+            name: "resolveBoarding", fields: ["candidateId", "decision"], counter: .edits,
+            title: { $0.text("탑승 확인·거절", "Confirm or reject boardings") },
+            guide: #""candidateId":"<boarding[].id>","decision":"confirm|reject"} (answers a boarding the app detected and is waiting to have confirmed, boarding in GET /app: confirm sets that ride's mode, reject drops the candidate; only when I told you)"#
+        )
+
+        let candidateID: String
+        let confirms: Bool
+
+        init?(fields: AssistantFields) {
+            guard let candidateID = fields.raw("candidateId"), candidateID.count == 16, candidateID.allSatisfy(\.isHexDigit),
+                  let decision = fields.raw("decision"), decision == "confirm" || decision == "reject" else { return nil }
+            self.candidateID = candidateID
+            confirms = decision == "confirm"
+        }
+
+        func apply(host: AssistantOperationHost) async -> AssistantEditResult {
+            let model = host.model, language = host.language
+            // 지도 화면이 지금 묻고 있는 후보에만 답한다. 여기서 새로 찾지 않는다.
+            guard let candidate = AssistantBoardingCandidates.current.first(where: { AssistantBoardingCandidates.publicID($0) == candidateID })
+            else { return .rejected("no_candidate") }
+            var result = AssistantEditResult(before: "\(AssistantEditText.clock(candidate.span.start)) \(candidate.name)")
+            result.movementBefore = .init(model.snapshot, ids: Set(candidate.travelSegmentIDs))
+            let errorBefore = model.userFacingError
+            let saved: Bool
+            if confirms { saved = await model.confirmTransitBoarding(candidate) } else { saved = await model.deleteTransitBoardingCandidate(candidate) }
+            guard saved else {
+                model.userFacingError = errorBefore
+                return .rejected("edit_failed")
+            }
+            AssistantBoardingCandidates.current.removeAll { $0.id == candidate.id }
+            result.after = confirms ? TravelMapMode(candidate.mode).title(language) : host.deleted
+            return result
+        }
+    }
+}

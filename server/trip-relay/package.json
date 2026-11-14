@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "test": "node --test test/*.test.mjs",
+    "actions": "node -e \"import('./src/actions.js').then(async (m) => (await import('node:fs')).writeFileSync('test/fixtures/actions.json', JSON.stringify(m.registry.manifest(), null, 2) + '\\n'))\"",
     "deploy": "wrangler deploy"
   }
 }

@@ -60,6 +60,9 @@ const INSTANT = (what) => str(`${what}, ISO 8601 with offset, e.g. 2026-11-12T15
 const ID = str("Optional unique command id: 1-100 of letters, digits, _ . : -; generated when omitted", { pattern: "^[\\w.:-]{1,100}$" });
 const enumOf = (description, values) => str(description, { enum: values });
 const integer = (description, minimum, maximum) => ({ type: "integer", description, minimum, maximum });
+// ACT1114A07: 여행 지출의 몫을 나누는 사람.
+const SHARE_NAMES = (min) => ({ type: "array", items: { type: "string", maxLength: 30 }, minItems: min, maxItems: 20,
+  description: "Who shares a trip expense: companion names, \"@me\" for the user" + (min ? "" : "; [] means everyone") + ". Left out: everyone" });
 const object = (properties, required = []) => ({ type: "object", properties, required, additionalProperties: false });
 
 // empty: 저장된 것이 없을 때 돌려줄 글. changes: 읽기 키로 부르지만 서버 상태를 바꾸는 도구(AIC1112A01).
@@ -101,8 +104,8 @@ const TOOLS = [
   // ACX1112A01
   readTool("get_app_state", "Get app state", "The app's own state, refreshed when the app runs: settings {language, theme, mapStyle, display{mapPhotos,mapRoutes,mapFootprints}, "
     + "shareLevel, retentionDays, aiConnections, actionsOff[] (actions the user turned off), paymentShortcutLink (the app ships a link to its "
-    + "BOKKI Payment automation), paymentTriggerWords[] (words the message automation fires on, any one), paymentAlertLink (the app also ships a bank and card app alert automation), paymentTexts, lastPaymentTextAt}, ledger {month, budgetKRW, spentKRW, incomeKRW, ownAccounts[], entries[{id,time,title,"
-    + "category,kind,amount,currency,amountKRW,canceled,source}], trips[{id,name,start,end,budgetKRW,myCostKRW,leftoverKRW,ended}] (trip ledgers: "
+    + "BOKKI Payment automation), paymentTriggerWords[] (words the message automation fires on, any one), paymentAlertLink (the app also ships a bank and card app alert automation), paymentTexts, lastPaymentTextAt, paymentSources[{name,expense,income}] (per-app payment alert switches; change with set_payment_source), skipWords[] (set_skip_words), fxRates {CUR: KRW per unit} (set_fx_rate)}, ledger {month, budgetKRW, spentKRW, incomeKRW, ownAccounts[], entries[{id,time,title,"
+    + "category,kind,amount,currency,amountKRW,canceled,source,tripId?}], trips[{id,name,start,end,budgetKRW,myCostKRW,leftoverKRW,ended}] (trip ledgers: "
     + "myCostKRW is the user's own share so far, leftoverKRW what goes back to the daily ledger (negative: more is owed); set the budget with "
     + "set_trip_budget)} (entries newest first; entry ids work with update_expense), review [{id,reason "
     + "noMerchant|duplicate|transfer|toll|cardBill|fare,receivedAt,time,title,category,kind,amount,currency}] (payments the app did not add by itself; settle with "
@@ -110,6 +113,7 @@ const TOOLS = [
     + "automation handed over; card, account and phone numbers are masked; for outcome unread, askedAI or review the app could not read the text by itself: when the user asks, work out the layout and send add_payment_rule so the app reads it from then on), rules [{id,name,kind,pattern}] (payment text rules), trips [{id,title,start,end,wishDays,country,region,currency}] (every trip; ids work with update_trip, delete_trip and add_trip_stop), "
     + "placeSuggestion {id,name?,visits} (a place the app suggests registering, at the place-name share level; answer with resolve_place_suggestion), "
     + "carAudio {registered[],pending[]} (car audio device names; answer pending ones with set_car_audio), "
+    + "boarding [{id,name,kind,mode,start,end}] (boardings the app detected and is waiting to have confirmed, at the place-name share level; answer with resolve_boarding), "
     + "categories [{id,name,color,icon,hidden,custom}] (every category; ids work with "
     + "update_category and as categoryId elsewhere) and, at the place-name share level, places [{id,name,kind,radius,autoRecord,located}] "
     + "(registered places, never coordinates; ids work with update_place and delete_place). "
@@ -168,12 +172,15 @@ const TOOLS = [
   addTool("add_expense", "addExpense", "Add expense", "Add a ledger entry the user told you about, e.g. \"coffee 4,500 won\". amount is in currency (default KRW); kind expense (default) or income.",
     { amount: { type: "number", description: "Positive amount in the currency", exclusiveMinimum: 0, maximum: 1e10 }, currency: str("ISO 4217, e.g. KRW, JPY, USD", { pattern: "^[A-Z]{3}$" }),
       title: str("1-60 characters, e.g. Coffee", { maxLength: 60 }), category: enumOf("Category", EXPENSE_CATEGORIES), kind: enumOf("expense or income", ["expense", "income"]),
-      payer: str("Who paid, 1-30 characters (for group trips)", { maxLength: 30 }), date: DATE, time: HHMM("Time") }, ["amount", "title"]),
+      payer: str("Who paid, 1-30 characters (for group trips)", { maxLength: 30 }), date: DATE, time: HHMM("Time"),
+      tripId: str("Trip ledger id (get_app_state ledger.trips) to put the entry in that trip's ledger"), shareNames: SHARE_NAMES(1), note: str("Note, up to 200 characters", { maxLength: 200 }) }, ["amount", "title"]),
   commandTool("update_expense", "updateExpense", "Edit expense", "Fix or delete a ledger entry the app added (entryId from an AI task's context), "
     + "e.g. the merchant name, category or amount from a payment text. Only the given fields change; delete:true removes it (undoable).",
     { entryId: str("Ledger entry id"), amount: { type: "number", description: "Positive amount in the currency", exclusiveMinimum: 0, maximum: 1e10 },
       currency: str("ISO 4217", { pattern: "^[A-Z]{3}$" }), title: str("1-60 characters", { maxLength: 60 }), category: enumOf("Category", EXPENSE_CATEGORIES),
-      kind: enumOf("expense or income", ["expense", "income"]), delete: { type: "boolean", description: "true to delete the entry" } }, ["entryId"]),
+      kind: enumOf("expense or income", ["expense", "income"]), delete: { type: "boolean", description: "true to delete the entry" },
+      tripId: str("Trip ledger id to move the entry into, or \"none\" for the daily ledger"), shareNames: SHARE_NAMES(0), note: str("New note, up to 200 characters", { maxLength: 200 }),
+      date: DATE, time: HHMM("New time") }, ["entryId"]),
   addTool("add_payment_rule", "addPaymentRule", "Add payment message rule", "Teach the app to read one issuer's payment message layout by itself "
     + "(answer to an AI task of kind payment_rule). pattern is an ICU regular expression (iOS NSRegularExpression; the dot also matches newlines) "
     + "with named groups: (?<amount>...) required unless kind is ignore, digits with optional commas or a decimal point; optional (?<merchant>...), "
@@ -264,7 +271,7 @@ const TOOLS = [
     + "currency, 0 clears); payIsNet, hourlyPayIsNet (the amount entered is after tax), showsNetPay (show after-tax amounts), "
     + "hourlyTax threePointThree|fourInsurance|none, weeklyHolidayPay true|false; reduceMotion, weather (weather on the timeline), "
     + "weatherSidebar true|false; gpsIntervalSeconds 30-1800 in steps of 30 (how often location is logged; longer saves battery); "
-    + "cat white|calico|mackerel (the map cat); notifications false only (turning notifications, Health, Photos, Calendar or location ON "
+    + "cat white|calico|mackerel (the map cat); memoDisplay all|located|hidden (which memos show on the map); notifications false only (turning notifications, Health, Photos, Calendar or location ON "
     + "needs an iOS permission prompt the user must answer: use open_screen settings and tell them what to tap). Current values are in "
     + "get_app_state settings.values, pay amounts included (annualPay, monthlyPay, hourlyPay as the user entered them). Undoable.",
     { setting: enumOf("Setting name", SETTING_NAMES), value: { description: "New value: a string, number or boolean as the setting needs" } }, ["setting", "value"]),
@@ -297,7 +304,9 @@ const TOOLS = [
     + "with choices approved or declined. Send it only when the user asked for that action, and never ask again after declined.",
     { request: enumOf("What to approve", APPROVAL_NAMES), value: { description: "shareLevel: off|summary|visits. retentionDays: 1, 7 or 30. Omit for the others" } }, ["request"]),
   addTool("add_schedule", "addSchedule", "Add schedule", "Add a planned activity. Without end it lasts one hour.",
-    { title: str("1-200 characters"), start: INSTANT("Start"), end: INSTANT("End, after start"), note: str("Up to 1000 characters") }, ["title", "start"]),
+    { title: str("1-200 characters"), start: INSTANT("Start"), end: INSTANT("End, after start"), note: str("Up to 1000 characters"),
+      categoryId: str("Category id from get_app_state categories (default: activity)"), important: { type: "boolean", description: "Mark as important" },
+      parentGoalId: str("Goal id from get_activity goals to put the plan under; its time must fall inside the goal") }, ["title", "start"]),
   commandTool("update_activity", "updateActivity", "Rename or recategorize a record", "Correct a record's title and/or category. Target by recordId or the startTime it covers.",
     { date: DATE, recordId: str("Record id from get_activity"), startTime: HHMM("A time the record covers"), title: str("New title"), categoryId: str("Category id from get_activity") }, ["date"]),
   commandTool("classify_unconfirmed", "classifyUnconfirmed", "Classify unconfirmed time", "Fill time the app could not classify (get_activity unconfirmed) with a category. "
@@ -314,10 +323,13 @@ const TOOLS = [
   commandTool("update_record_time", "updateRecordTime", "Change record time", "Correct a record's start and/or end time.",
     { date: DATE, recordId: str("Record id from get_activity"), start: HHMM("New start"), end: HHMM("New end") }, ["date", "recordId"]),
   commandTool("update_schedule", "updateSchedule", "Update schedule", "Change a planned activity. Target by planId or by date + startTime.",
-    { planId: str("Plan id from get_activity plans"), date: DATE, startTime: HHMM("Current start"), title: str("New title"), start: str("New start: ISO 8601 with offset or HH:mm"), end: str("New end: ISO 8601 with offset or HH:mm"), note: str("New note") }),
+    { planId: str("Plan id from get_activity plans"), date: DATE, startTime: HHMM("Current start"), title: str("New title"), start: str("New start: ISO 8601 with offset or HH:mm"), end: str("New end: ISO 8601 with offset or HH:mm"), note: str("New note"),
+      categoryId: str("New category id"), important: { type: "boolean", description: "Important or not" },
+      parentGoalId: str("Goal id to move the plan under, or \"none\" to take it out of its goal") }),
   commandTool("delete_schedule", "deleteSchedule", "Delete schedule", "Delete a planned activity (undoable). Target by planId or by date + startTime.",
     { planId: str("Plan id from get_activity plans"), date: DATE, startTime: HHMM("Its start") }),
-  commandTool("update_memo", "updateMemo", "Edit memo", "Replace a memo's text.", { memoId: str("Memo id from get_activity"), text: str("1-1000 characters") }, ["memoId", "text"]),
+  commandTool("update_memo", "updateMemo", "Edit memo", "Replace a memo's text and/or move it to another day or time (give text, date, time or any mix).",
+    { memoId: str("Memo id from get_activity"), text: str("1-1000 characters"), date: DATE, time: HHMM("New time") }, ["memoId"]),
   commandTool("delete_memo", "deleteMemo", "Delete memo", "Delete a memo (undoable).", { memoId: str("Memo id from get_activity") }, ["memoId"]),
   // AIR1110A03
   addTool("add_goal", "addGoal", "Add goal", "Add a goal (a parent plan that groups plans) from start to end.",
@@ -345,7 +357,7 @@ const TOOLS = [
   commandTool("set_language", "setLanguage", "Set app language", "Change the app language.", { language: enumOf("App language", LANGUAGES) }, ["language"]),
   commandTool("set_theme", "setTheme", "Set theme", "Change the app color theme.", { theme: enumOf("Theme", THEMES) }, ["theme"]),
   commandTool("set_map_style", "setMapStyle", "Set map style", "Change the map style.", { mapStyle: enumOf("Map style", MAP_STYLES) }, ["mapStyle"]),
-  commandTool("set_display_option", "setDisplayOption", "Toggle display option", "Turn a map display option on or off: mapPhotos (photos on the map), mapRoutes (route lines), mapFootprints (footprints).",
+  commandTool("set_display_option", "setDisplayOption", "Toggle display option", "Turn a display option on or off: mapPhotos (photos on the map), mapRoutes (route lines), mapFootprints (footprints), sidebar (the time sidebar), vehicles (the cat riding vehicles).",
     { option: enumOf("Display option", DISPLAY_OPTIONS), enabled: { type: "boolean", description: "On or off" } }, ["option", "enabled"]),
   // 규칙 저장소(AIX1114A01 P3).
   readTool("get_rules", "Get rules", "The rules the app applies by itself before asking you: {version, engine, rules:[{id,type,appliesTo,enabled,match,result,source,note}], "
@@ -446,8 +458,9 @@ const RAW_VALUES = {
     .map((k) => [k, oneOf("true", "false")])),
   ...Object.fromEntries(["annualPay", "monthlyPay", "hourlyPay", "gpsIntervalSeconds"].map((k) => [k, (v) => /^\d{1,12}(\.\d{1,2})?$/.test(v)])),
   cat: oneOf("white", "calico", "mackerel"),
+  memoDisplay: oneOf("all", "located", "hidden"),
   hourlyTax: oneOf("threePointThree", "fourInsurance", "none"),
-  status: oneOf("applied", "rejected", ...TRIP_STATUSES, ...TASK_STATUSES, ...ANSWER_STATUSES),
+  status: oneOf("applied", "rejected", "running", "completed", ...TRIP_STATUSES, ...TASK_STATUSES, ...ANSWER_STATUSES),
   kind: oneOf(...TASK_KINDS, "expense", "income", "ignore"),
   source: oneOf("auto", "user", "rest", "mcp", "oauth", "legacy", "manual", "assistant", "message", "receipt"),
   // ACX1112A01: 앱 상태의 정해진 값.
@@ -465,7 +478,7 @@ const RAW_VALUES = {
   mapStyle: oneOf(...MAP_STYLES),
   shareLevel: oneOf("off", "summary", "visits"),
   actionsOff: oneOf(...ACTIONS),
-  mode: oneOf("walk", "subway", "bus", "car", "train", "flight", "other"),
+  mode: oneOf("walk", "subway", "bus", "car", "train", "flight", "other", "run", "cycling", "taxi", "ship"),
   format: oneOf("bokki-activity", "bokki-command", "bokki-trip", "bokki-polish", "bokki-tasks", "bokki-app", "bokki-answers"),
   action: oneOf(...ACTIONS),
   range: oneOf("week", "month"),

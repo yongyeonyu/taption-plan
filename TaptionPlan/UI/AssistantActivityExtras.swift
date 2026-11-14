@@ -181,6 +181,16 @@ struct AssistantAppState: Codable, Equatable, Sendable {
         var salaryMode: String?
         /// ACC1112A01: `setSetting`으로 바꿀 수 있는 설정의 지금 값. 급여 금액도 담는다(PAY1112A01).
         var values: [String: String]?
+        /// ACT1114A07: 결제 알림을 보낸 앱마다의 스위치, 넣지 않을 낱말, 직접 넣은 환율(1단위 = 원). 없으면 칸째 뺀다.
+        var paymentSources: [PaymentSource]?
+        var skipWords: [String]?
+        var fxRates: [String: Double]?
+    }
+
+    struct PaymentSource: Codable, Equatable, Sendable {
+        var name: String
+        var expense: Bool
+        var income: Bool
     }
 
     struct Entry: Codable, Equatable, Sendable {
@@ -194,6 +204,8 @@ struct AssistantAppState: Codable, Equatable, Sendable {
         var amountKRW: Double?
         var canceled: Bool
         var source: String
+        /// 여행 장부에 든 기록이면 그 장부 id(ACT1114A07).
+        var tripId: String?
     }
 
     struct Ledger: Codable, Equatable, Sendable {
@@ -306,6 +318,18 @@ struct AssistantAppState: Codable, Equatable, Sendable {
         var registered: [String]
         var pending: [String]
     }
+
+    /// ACT1114A07: 답을 기다리는 탑승 후보(장소 이름 공유 수준에서만). 역·정류장 이름과 시각만, 좌표는 담지 않는다.
+    var boarding: [Boarding]?
+
+    struct Boarding: Codable, Equatable, Sendable {
+        var id: String
+        var name: String
+        var kind: String
+        var mode: String
+        var start: String
+        var end: String
+    }
 }
 
 /// 앱 상태를 중계 서버에 올린다. 하루 기록을 올린 뒤 함께 돌고, 바뀌었을 때만(또는 20시간마다) 보낸다.
@@ -353,6 +377,10 @@ enum AssistantAppStateSync {
         var tollVehicle: String?
         var salaryMode: String?
         var settingValues: [String: String] = [:]
+        var paymentSources: [PaymentAlertSources.Source] = []
+        var skipWords: [String] = []
+        var fxRates: [String: Double] = [:]
+        var boarding: [TransitBoardingCandidate] = []
     }
 
     static func make(_ input: Input) -> AssistantAppState {
@@ -368,7 +396,12 @@ enum AssistantAppStateSync {
                 lastPaymentTextAt: input.inbox.map(\.receivedAt).max().map(stamp.instant),
                 paymentAlertLink: input.paymentAlertLink, paymentTriggerWords: input.paymentShortcutLink ? BokkiPaymentShortcut.triggerWords : nil,
                 tollVehicle: input.tollVehicle, salaryMode: input.salaryMode,
-                values: input.settingValues.isEmpty ? nil : input.settingValues
+                values: input.settingValues.isEmpty ? nil : input.settingValues,
+                paymentSources: input.paymentSources.isEmpty ? nil : input.paymentSources.prefix(PaymentAlertSources.limit).map {
+                    .init(name: mask($0.name, 40), expense: $0.expense, income: $0.income)
+                },
+                skipWords: input.skipWords.isEmpty ? nil : input.skipWords.prefix(PaymentAlertSources.skipWordLimit).map { mask($0, 20) },
+                fxRates: input.fxRates.isEmpty ? nil : input.fxRates
             ),
             ledger: .init(
                 month: LedgerBook.monthKey(input.now, calendar: input.calendar), budgetKRW: input.budgetKRW,
@@ -377,7 +410,7 @@ enum AssistantAppStateSync {
                     .init(
                         id: $0.id.uuidString, time: stamp.instant($0.occurredAt), title: mask($0.title, 60), category: $0.category.rawValue,
                         kind: $0.kind.rawValue, amount: $0.amount, currency: $0.currency, amountKRW: $0.amountKRW,
-                        canceled: $0.canceledAt != nil, source: $0.source.rawValue
+                        canceled: $0.canceledAt != nil, source: $0.source.rawValue, tripId: $0.tripID
                     )
                 },
                 trips: input.ledgerTrips.isEmpty ? nil : input.ledgerTrips.prefix(AssistantCatalogLimits.places).map { trip in
@@ -428,7 +461,13 @@ enum AssistantAppStateSync {
                 )
             } : nil,
             carAudio: input.registeredCarAudio.isEmpty && input.pendingCarAudio.isEmpty ? nil
-                : .init(registered: input.registeredCarAudio.prefix(20).map { mask($0, 60) }, pending: input.pendingCarAudio.prefix(20).map { mask($0, 60) })
+                : .init(registered: input.registeredCarAudio.prefix(20).map { mask($0, 60) }, pending: input.pendingCarAudio.prefix(20).map { mask($0, 60) }),
+            boarding: input.shareLevel == .visits && !input.boarding.isEmpty ? input.boarding.prefix(AssistantBoardingCandidates.limit).map {
+                .init(
+                    id: AssistantBoardingCandidates.publicID($0), name: mask($0.name, 40), kind: $0.kind.rawValue,
+                    mode: AssistantActivityBuilder.mode($0.mode), start: stamp.instant($0.span.start), end: stamp.instant($0.span.end)
+                )
+            } : nil
         )
     }
 
@@ -482,7 +521,10 @@ enum AssistantAppStateSync {
             settingValues: Dictionary(uniqueKeysWithValues: AssistantSetting.allCases
                 .filter { !$0.isSalary || MapHomeSalaryPolicy.isAILinked(defaults) }.compactMap { setting in
                 (setting.isModelBacked ? setting.read(model: model) : setting.read(defaults)).map { (setting.rawValue, $0) }
-            })
+            }),
+            paymentSources: PaymentAlertSources.all(defaults), skipWords: PaymentAlertSources.skipWords(defaults),
+            fxRates: (defaults.dictionary(forKey: LedgerBook.manualRatesKey) as? [String: Double]) ?? [:],
+            boarding: AssistantBoardingCandidates.current
         )
     }
 

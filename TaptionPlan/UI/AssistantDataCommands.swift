@@ -7,6 +7,9 @@ enum AssistantDisplayOption: String, CaseIterable, Codable, Sendable {
     case mapPhotos
     case mapRoutes
     case mapFootprints
+    /// ACT1114A07: 시간 사이드바, 탈것 모습.
+    case sidebar
+    case vehicles
 
     /// 지도 화면 `@AppStorage`와 같은 키.
     var defaultsKey: String {
@@ -14,6 +17,8 @@ enum AssistantDisplayOption: String, CaseIterable, Codable, Sendable {
         case .mapPhotos: "mapHomeShowsPhotos"
         case .mapRoutes: "mapHomeShowsRoutes"
         case .mapFootprints: "mapHomeShowsFootprints"
+        case .sidebar: "mapHomeSidebarVisible"
+        case .vehicles: MapHomeStickmanAction.vehicleDisplayKey
         }
     }
 }
@@ -84,7 +89,7 @@ extension AssistantCommandParser {
         case "addExpense":
             return expense(raw, calendar: calendar)
         case "updateExpense":
-            return expenseChange(raw)
+            return expenseChange(raw, calendar: calendar)
         case "addPaymentRule":
             return LedgerMessageRules.rule(name: raw.name, pattern: raw.pattern, sample: raw.sample, kind: raw.kind).map { .addPaymentRule($0) }
         case "classifyUnconfirmed":
@@ -111,6 +116,11 @@ extension AssistantCommandParser {
         case "car": .car
         case "train": .train
         case "flight": .airplane
+        // ACT1114A07: 화면에서 고를 수 있는 나머지 수단.
+        case "run": .running
+        case "cycling": .cycling
+        case "taxi": .taxi
+        case "ship": .ship
         default: nil
         }
     }
@@ -297,14 +307,20 @@ extension AssistantCommandParser {
             kind = value
         }
         if raw.payer != nil, clean(raw.payer, max: 30) == nil { return nil }
+        // ACT1114A07: 여행 가계부·몫을 나누는 사람·메모.
+        if raw.tripId != nil, clean(raw.tripId, max: 100) == nil { return nil }
+        if raw.note != nil, clean(raw.note, max: 200) == nil { return nil }
+        let sharers = raw.shareNames.map { AssistantExpenseChange.sharers($0, minimum: 1) }
+        if let sharers, sharers == nil { return nil }
         return .addExpense(LedgerEntry(
             occurredAt: at, amount: amount, currency: currency, kind: kind, category: category,
-            title: title, payer: clean(raw.payer, max: 30), note: clean(raw.note, max: 200), source: .assistant
+            title: title, payer: clean(raw.payer, max: 30), tripID: clean(raw.tripId, max: 100), note: clean(raw.note, max: 200), source: .assistant,
+            shareNames: sharers ?? nil
         ))
     }
 
     /// updateExpense(AIQ1111A01): 고칠 칸이 하나라도 있거나 지우기여야 한다. 서버와 같은 규칙.
-    static func expenseChange(_ raw: Raw) -> AssistantCommand.Action? {
+    static func expenseChange(_ raw: Raw, calendar: Calendar = .autoupdatingCurrent) -> AssistantCommand.Action? {
         guard let id = raw.entryId.flatMap(UUID.init(uuidString:)) else { return nil }
         var change = AssistantExpenseChange(delete: raw.delete == true)
         if let amount = raw.amount {
@@ -327,8 +343,57 @@ extension AssistantCommandParser {
             guard let value = LedgerEntry.Kind(rawValue: name) else { return nil }
             change.kind = value
         }
+        // ACT1114A07: tripId "none"은 일상 가계부로, shareNames []는 「다 같이」로 돌린다.
+        if raw.tripId != nil {
+            guard let tripID = clean(raw.tripId, max: 100) else { return nil }
+            change.tripID = tripID == "none" ? "" : tripID
+        }
+        if let names = raw.shareNames {
+            guard let sharers = AssistantExpenseChange.sharers(names, minimum: 0) else { return nil }
+            change.shareNames = sharers
+        }
+        if raw.note != nil {
+            guard let note = clean(raw.note, max: 200) else { return nil }
+            change.note = note
+        }
+        if let date = raw.date {
+            guard day(date, calendar: calendar) != nil else { return nil }
+            change.date = date
+        }
+        if let time = raw.time {
+            guard let minutes = minutes(time) else { return nil }
+            change.minutes = minutes
+        }
         guard change.delete || change != AssistantExpenseChange() else { return nil }
         return .updateExpense(entryID: id, change: change)
+    }
+}
+
+/// 날짜(`YYYY-MM-DD`)·시각(자정부터의 분)을 따로 옮긴다(ACT1114A07). 날짜만 주면 시각을, 시각만 주면 날짜를 그대로 둔다.
+struct AssistantWhenChange: Equatable, Sendable {
+    var date: String?
+    var minutes: Int?
+
+    var isEmpty: Bool { date == nil && minutes == nil }
+
+    init(date: String? = nil, minutes: Int? = nil) {
+        self.date = date
+        self.minutes = minutes
+    }
+
+    /// 명령의 `date`·`time`에서. 준 칸이 틀리면 nil.
+    init?(date: String?, time: String?, calendar: Calendar) {
+        if let date, AssistantCommandParser.day(date, calendar: calendar) == nil { return nil }
+        let minutes = time.flatMap(AssistantCommandParser.minutes)
+        if time != nil, minutes == nil { return nil }
+        self.init(date: date, minutes: minutes)
+    }
+
+    func applied(to instant: Date, calendar: Calendar = .autoupdatingCurrent) -> Date {
+        guard !isEmpty else { return instant }
+        let day = date.flatMap { AssistantCommandParser.day($0, calendar: calendar) } ?? calendar.startOfDay(for: instant)
+        let clock = minutes ?? calendar.component(.hour, from: instant) * 60 + calendar.component(.minute, from: instant)
+        return calendar.date(bySettingHour: clock / 60, minute: clock % 60, second: 0, of: day) ?? instant
     }
 }
 
@@ -340,15 +405,44 @@ struct AssistantExpenseChange: Equatable, Sendable {
     var title: String?
     var category: LedgerCategory?
     var kind: LedgerEntry.Kind?
+    /// ACT1114A07: 여행 장부(빈 글이면 일상으로), 몫을 나누는 사람(비면 다 같이), 메모, 새 날짜(`YYYY-MM-DD`)와 시각(자정부터의 분).
+    var tripID: String?
+    var shareNames: [String]?
+    var note: String?
+    var date: String?
+    var minutes: Int?
 
-    func applied(to entry: LedgerEntry) -> LedgerEntry {
+    var touchesTrip: Bool { tripID != nil || shareNames != nil }
+
+    func applied(to entry: LedgerEntry, calendar: Calendar = .autoupdatingCurrent) -> LedgerEntry {
         var value = entry
         if let amount { value.amount = amount }
         if let currency { value.currency = currency }
         if let title { value.title = title }
         if let category { value.category = category }
         if let kind { value.kind = kind }
+        if let tripID {
+            value.tripID = tripID.isEmpty ? nil : tripID
+            if tripID.isEmpty { value.shareNames = nil }
+        }
+        if let shareNames { value.shareNames = shareNames.isEmpty ? nil : shareNames }
+        if let note { value.note = note }
+        value.occurredAt = AssistantWhenChange(date: date, minutes: minutes).applied(to: entry.occurredAt, calendar: calendar)
         return value
+    }
+
+    /// 몫을 나누는 사람 이름: 1~30자, 20명까지, 서로 다름. 틀리면 nil.
+    static func sharers(_ names: [String], minimum: Int) -> [String]? {
+        let cleaned = names.compactMap { AssistantCommandParser.clean($0, max: 30) }
+        return cleaned.count == names.count && (minimum...20).contains(names.count) && Set(cleaned).count == cleaned.count ? cleaned : nil
+    }
+
+    /// 여행 기록으로 둘 수 없는 까닭: 그 여행 장부가 없거나(`no_trip`), 동행이 아닌 이름으로 나눴다(`no_member`).
+    @MainActor
+    static func tripProblem(_ entry: LedgerEntry, book: LedgerBook) -> String? {
+        guard let tripID = entry.tripID else { return entry.shareNames == nil ? nil : "no_trip" }
+        guard let trip = book.trip(tripID) else { return "no_trip" }
+        return (entry.shareNames ?? []).allSatisfy(trip.everyone.contains) ? nil : "no_member"
     }
 }
 
@@ -457,6 +551,8 @@ enum AssistantScreen: String, CaseIterable, Codable, Sendable {
     case paymentAutomation, shortcuts, aiConnection, ledger, dataProtection, settings
     // ACC1112A01
     case salary, carAudio, alarm, placeBook, passport, unconfirmedReview, travel
+    // ACT1114A07
+    case dayCard, calendarConnect, categoryAdd, paymentAlerts, aiRules
 
     func title(_ language: MapHomeLanguage) -> String {
         switch self {
@@ -473,6 +569,11 @@ enum AssistantScreen: String, CaseIterable, Codable, Sendable {
         case .passport: language.text("여권", "Passport")
         case .unconfirmedReview: language.text("미확인 시간 검토", "Unconfirmed time review")
         case .travel: language.text("여행 모드", "Travel mode")
+        case .dayCard: language.text("하루 카드", "Day card")
+        case .calendarConnect: language.text("캘린더 연결", "Connect calendar")
+        case .categoryAdd: language.text("분류 더하기", "Add categories")
+        case .paymentAlerts: language.text("결제 알림 받기", "Payment alerts")
+        case .aiRules: language.text("AI 규칙", "AI rules")
         }
     }
 }
@@ -541,6 +642,8 @@ enum AssistantSetting: String, CaseIterable, Codable, Sendable {
     case tollVehicle, salaryMode, annualPay, monthlyPay, payIsNet, showsNetPay, hourlyPay, hourlyPayIsNet, hourlyTax, weeklyHolidayPay
     /// ACC1112A01: 앱 자료에 있는 설정. 화면의 설정 함수로 바꾼다. 알림은 끄기만 받는다(켜기는 iOS 권한 창이 필요하다).
     case reduceMotion, weather, weatherSidebar, gpsIntervalSeconds, cat, notifications
+    /// ACT1114A07: 지도에 보일 메모(지도 화면 `@AppStorage`와 같은 키).
+    case memoDisplay
 
     static let tripTitleLimit = 60
 
@@ -584,6 +687,7 @@ enum AssistantSetting: String, CaseIterable, Codable, Sendable {
         case .hourlyTax: MapHomeSalaryPolicy.hourlyTaxKey
         case .weeklyHolidayPay: MapHomeSalaryPolicy.weeklyHolidayKey
         case .reduceMotion, .weather, .weatherSidebar, .gpsIntervalSeconds, .cat, .notifications: "appSetting.\(rawValue)"
+        case .memoDisplay: "mapHomeMemoDisplay"
         }
     }
 
@@ -600,6 +704,7 @@ enum AssistantSetting: String, CaseIterable, Codable, Sendable {
         case .gpsIntervalSeconds: .count(GPSLoggingPreferences.intervalStepSeconds...1_800, step: GPSLoggingPreferences.intervalStepSeconds)
         case .cat: .choice(CatCoat.characters.map(\.catStyle.rawValue))
         case .notifications: .offOnly
+        case .memoDisplay: .choice(MapHomeMemoDisplayMode.allCases.map(\.rawValue))
         }
     }
 
@@ -688,6 +793,7 @@ enum AssistantSetting: String, CaseIterable, Codable, Sendable {
         case .gpsIntervalSeconds: language.text("위치 기록 간격(초)", "Location logging interval (s)")
         case .cat: language.text("고양이", "Cat")
         case .notifications: language.text("알림", "Notifications")
+        case .memoDisplay: language.text("메모 표시", "Show memos")
         }
     }
 }

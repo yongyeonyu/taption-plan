@@ -97,6 +97,8 @@ extension AppModel {
             let old = change.before.flatMap(AppLanguagePreference.init(rawValue:))?.displayName ?? ""
             return AssistantEditResult(before: old, after: preference.displayName, preferences: change.before == change.after ? [] : [change])
         case let .setMapStyle(style):
+            // 카카오 지도는 키가 든 빌드에서만 고를 수 있다(화면의 지도 고르기와 같다).
+            if style == .kakao, !KakaoMapAvailability.isAvailable { return .rejected("not_available") }
             let before = snapshot.settings.mapDisplayStyle
             setMapDisplayStyle(style)
             return AssistantEditResult(
@@ -118,8 +120,11 @@ extension AppModel {
         case let .addExpense(entry):
             var value = entry
             await preferences.ledger.load()
+            if let problem = AssistantExpenseChange.tripProblem(value, book: preferences.ledger) { return .rejected(problem) }
             value.amountKRW = preferences.ledger.krw(value.amount, currency: value.currency)
             let saved = await preferences.ledger.save(value)
+            // 여행 기록이 바뀌면 끝난 여행의 정산 짝 기록도 다시 맞춘다(가계부 화면과 같다).
+            if let tripID = saved.tripID { await preferences.ledger.syncTrip(tripID) }
             var result = AssistantEditResult(after: "\(value.title) \(LedgerMoney.text(value.amount, currency: value.currency, language: language))")
             result.ledgerEntryID = saved.id
             result.ledgerEntry = saved
@@ -175,10 +180,12 @@ extension AppModel {
                 return result
             }
             var value = change.applied(to: before)
+            if change.touchesTrip, let problem = AssistantExpenseChange.tripProblem(value, book: preferences.ledger) { return .rejected(problem) }
             if value.amount != before.amount || value.currency != before.currency {
                 value.amountKRW = preferences.ledger.krw(value.amount, currency: value.currency)
             }
             let saved = await preferences.ledger.save(value)
+            for tripID in Set([before.tripID, saved.tripID].compactMap { $0 }) { await preferences.ledger.syncTrip(tripID) }
             result.after = "\(saved.title) \(LedgerMoney.text(saved.amount, currency: saved.currency, language: language))"
             result.ledgerEntryID = saved.id
             result.ledgerEntry = saved
@@ -368,7 +375,7 @@ enum AssistantDataText {
 
     static func stop(_ stop: TravelPlanStop) -> String { "\(day(TravelPlanSchedule.localDay(stored: stop.day))) #\(stop.order + 1) \(stop.title)" }
 
-    private static func day(_ date: Date) -> String {
+    static func day(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "M/d"
@@ -395,6 +402,8 @@ enum AssistantDataText {
         case .mapPhotos: language.text("지도에 사진", "Photos on map")
         case .mapRoutes: language.text("지도에 경로 선", "Route lines on map")
         case .mapFootprints: language.text("지도에 발자국", "Footprints on map")
+        case .sidebar: language.text("시간 사이드바", "Time sidebar")
+        case .vehicles: language.text("탈것 표시", "Show vehicles")
         }
         return "\(name) \(isOn ? language.text("켬", "On") : language.text("끔", "Off"))"
     }

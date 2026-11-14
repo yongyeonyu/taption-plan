@@ -65,6 +65,8 @@ extension MapHomeView {
         // 진단 기록은 재생 중이 아닐 때 그 자리 계산분에만 남긴다(기록용 계산도 하루 기록을 여러 번 훑는다).
         let isPlaying = isDayPlaybackRunning
         transitBoardingDerived.onFresh = { candidates in
+            // AI가 답할 수 있게 지금 묻는 후보를 알려 둔다(ACT1114A07).
+            AssistantBoardingCandidates.current = candidates
             guard !isPlaying else { return }
             var fields = transitBoardingDiagnostics(
                 readings: readings,
