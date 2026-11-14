@@ -128,4 +128,10 @@ curl -s -o /dev/null -w '%{http_code}\n' https://trip.bokkiyaw.com/plan -H "Auth
 
 `wrangler.toml`(공개용, KV id 자리표시)과 `wrangler.local.toml`(실제 KV id·도메인) 모두에 `USER_STATE` 바인딩과 migration, `REQUEST_LIMIT`이 들어 있습니다. 비밀값: `KAKAO_REST_API_KEY`(그대로), `PIN_PEPPER`(새로).
 
+## 여행 공유 방(TSH1114A26)
+
+`/share/rooms`(방 만들기, 앱 등록 키)와 `/share/rooms/<방 id>/…`(입장·따라잡기·쓰기·잠금·공지 확인·WebSocket, 방의 참여 토큰). 방마다 Durable Object `ShareRoom` 하나이고 기기가 암호화한 덩어리만 둡니다. 규약 전체는 [docs/TRIP_SHARE_PROTOCOL.md](../../docs/TRIP_SHARE_PROTOCOL.md).
+
+배포하려면 `wrangler.local.toml`에도 `wrangler.toml` 끝의 `SHARE_ROOM` 바인딩과 migration `v2-share-room`을 더합니다. 없으면 `/share/…`만 503이고 나머지는 그대로입니다. 새 비밀값은 없습니다.
+
 배포 뒤 확인: 앱 새 빌드로 실행 → 「AI 연결」에서 PIN 설정 → 연결 키 만들기 → claude.ai 사용자 지정 커넥터에 `https://trip.bokkiyaw.com/mcp` 추가 → 앱의 연결 코드와 PIN으로 승인 → 「AI 연결」에 Claude가 연결됨으로 보이는지.

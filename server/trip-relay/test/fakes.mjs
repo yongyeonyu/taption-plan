@@ -1,5 +1,5 @@
 // 시험용 KV·Durable Object 가짜(SEC1110A02). DO는 진짜 `UserState`를 메모리 저장소 위에서 돌린다.
-import { UserState } from "../src/index.js";
+import { ShareRoom, UserState } from "../src/index.js";
 
 export class MemoryKV {
   constructor() { this.map = new Map(); this.options = new Map(); this.writes = 0; this.lists = 0; }
@@ -50,4 +50,77 @@ export function makeEnv(extra = {}) {
   // PIN_PEPPER: 시험용 Worker 비밀(SEC1110A03).
   const env = { PLANS: new MemoryKV(), USER_STATE: new FakeDurableObjects(), NOW: () => clock.now, PIN_PEPPER: "test-pepper-0123456789abcdef0123456789", ...extra };
   return { env, clock };
+}
+
+// MARK: 여행 공유 방(TSH1114A26). 진짜 `ShareRoom`을 메모리 저장소와 가짜 소켓 위에서 돌린다.
+
+// DO 저장소의 KV API 가운데 방이 쓰는 모양: 여러 키 get/put/delete(128개까지), list의 prefix·start·limit, 알람.
+export class RoomStorage extends MemoryStorage {
+  async get(key) {
+    if (!Array.isArray(key)) return super.get(key);
+    if (key.length > 128) throw new Error("get: more than 128 keys");
+    await tick();
+    return new Map(key.filter((k) => this.map.has(k)).map((k) => [k, structuredClone(this.map.get(k))]));
+  }
+  async put(key, value) {
+    if (typeof key === "string") return super.put(key, value);
+    if (Object.keys(key).length > 128) throw new Error("put: more than 128 keys");
+    await tick();
+    for (const [k, v] of Object.entries(key)) this.map.set(k, structuredClone(v));
+  }
+  async delete(key) {
+    if (!Array.isArray(key)) return super.delete(key);
+    if (key.length > 128) throw new Error("delete: more than 128 keys");
+    await tick();
+    for (const k of key) this.map.delete(k);
+  }
+  async list({ prefix = "", start, limit } = {}) {
+    const all = [...(await super.list({ prefix })).entries()].filter(([k]) => start === undefined || k >= start);
+    return new Map(limit === undefined ? all : all.slice(0, limit));
+  }
+  async getAlarm() { return this.alarm; }
+  async deleteAlarm() { this.alarm = null; }
+}
+
+export class FakeSocket {
+  constructor() { this.sent = []; this.closed = null; this.attachment = null; this.tags = []; }
+  send(text) { if (this.closed) throw new Error("closed"); this.sent.push(JSON.parse(text)); }
+  close(code, reason) { this.closed ??= { code, reason }; }
+  serializeAttachment(value) { this.attachment = structuredClone(value); }
+  deserializeAttachment() { return structuredClone(this.attachment); }
+  /** 받은 것을 꺼내고 비운다. type을 주면 그 종류만 돌려준다. */
+  take(type) { const out = this.sent.filter((m) => !type || m.t === type); this.sent = []; return out; }
+}
+
+export class FakeRooms {
+  constructor(env) { this.env = env; this.instances = new Map(); this.requests = 0; this.pairs = []; }
+  idFromName(name) { return { name, toString: () => name }; }
+  instance(name) {
+    if (!this.instances.has(name)) {
+      const sockets = [];
+      const ctx = {
+        storage: new RoomStorage(), sockets,
+        acceptWebSocket(ws, tags = []) { ws.tags = tags; sockets.push(ws); },
+        getWebSockets(tag) { return sockets.filter((ws) => !ws.closed && (!tag || ws.tags.includes(tag))); },
+        setWebSocketAutoResponse() {},
+      };
+      this.instances.set(name, { room: new ShareRoom(ctx, this.env), ctx });
+    }
+    return this.instances.get(name);
+  }
+  get(id) {
+    return { fetch: (input, init) => { this.requests++; return this.instance(id.name).room.fetch(input instanceof Request ? input : new Request(input, init)); } };
+  }
+}
+
+/** 방 DO와 가짜 소켓 짝을 더한 env. Node의 Response는 101을 만들지 못해 200과 표시 헤더로 대신한다. */
+export function makeShareEnv(extra = {}) {
+  const made = makeEnv(extra);
+  const rooms = new FakeRooms(made.env);
+  made.env.SHARE_ROOM = rooms;
+  made.env.SOCKETS = {
+    pair: () => { const pair = [new FakeSocket(), new FakeSocket()]; rooms.pairs.push(pair); return pair; },
+    response: () => new Response(null, { status: 200, headers: { "x-test-upgrade": "websocket" } }),
+  };
+  return { ...made, rooms };
 }

@@ -54,3 +54,13 @@ class_name = "UserState"
 [[migrations]]
 tag = "v1-user-state"
 new_sqlite_classes = ["UserState"]
+
+# 여행 공유 방(TSH1114A26): 방마다 하나인 Durable Object. 암호화된 항목·잠금·참여자 검증값을 두고 WebSocket(Hibernation)을 받는다.
+# 새 클래스라 migration 태그를 하나 더한다. 처음 배포할 때 한 번 적용되고 되돌릴 수 없다.
+[[durable_objects.bindings]]
+name = "SHARE_ROOM"
+class_name = "ShareRoom"
+
+[[migrations]]
+tag = "v2-share-room"
+new_sqlite_classes = ["ShareRoom"]
