@@ -1,0 +1,108 @@
+{
+  "format": "bokki-actions",
+  "version": 1,
+  "actions": [
+    {
+      "action": "classifyInboxItem",
+      "tool": "classify_inbox_item",
+      "destructive": true,
+      "since": 341,
+      "fields": [
+        "inboxId",
+        "choice"
+      ],
+      "required": [
+        "inboxId",
+        "choice"
+      ]
+    },
+    {
+      "action": "setFxRate",
+      "tool": "set_fx_rate",
+      "destructive": true,
+      "since": 341,
+      "fields": [
+        "currency",
+        "krwPerUnit"
+      ],
+      "required": [
+        "currency",
+        "krwPerUnit"
+      ]
+    },
+    {
+      "action": "setPaymentSource",
+      "tool": "set_payment_source",
+      "destructive": true,
+      "since": 341,
+      "fields": [
+        "name",
+        "expense",
+        "income",
+        "remove"
+      ],
+      "required": [
+        "name"
+      ]
+    },
+    {
+      "action": "setSkipWords",
+      "tool": "set_skip_words",
+      "destructive": true,
+      "since": 341,
+      "fields": [
+        "add",
+        "remove"
+      ],
+      "required": []
+    },
+    {
+      "action": "addLedgerTrip",
+      "tool": "add_ledger_trip",
+      "destructive": false,
+      "since": 341,
+      "fields": [
+        "name",
+        "start",
+        "end",
+        "members"
+      ],
+      "required": [
+        "name",
+        "start"
+      ]
+    },
+    {
+      "action": "updateLedgerTrip",
+      "tool": "update_ledger_trip",
+      "destructive": true,
+      "since": 341,
+      "fields": [
+        "tripId",
+        "name",
+        "start",
+        "end",
+        "members",
+        "settlementKRW",
+        "autoSettlement",
+        "fundingDate",
+        "settlementDate"
+      ],
+      "required": [
+        "tripId"
+      ]
+    },
+    {
+      "action": "deleteLedgerTrip",
+      "tool": "delete_ledger_trip",
+      "destructive": true,
+      "since": 341,
+      "fields": [
+        "tripId"
+      ],
+      "required": [
+        "tripId"
+      ]
+    }
+  ]
+}

@@ -387,6 +387,8 @@ extension AppModel {
         } else if let ledgerID = entry.delta.ledgerEntryID {
             await preferences.ledger.delete(ledgerID)
         }
+        // 여행 기록이 돌아갔으면 그 여행의 정산 짝 기록도 다시 맞춘다(ACT1114A07).
+        for tripID in Set([entry.delta.ledgerBefore?.tripID, entry.delta.ledgerEntry?.tripID].compactMap { $0 }) { await preferences.ledger.syncTrip(tripID) }
         await entry.delta.appChange?.undo(preferences)
         await undoAssistantPromptChange(entry.delta.appChange)
         return true

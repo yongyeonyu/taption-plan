@@ -118,8 +118,11 @@ extension AppModel {
         case let .addExpense(entry):
             var value = entry
             await preferences.ledger.load()
+            if let problem = AssistantExpenseChange.tripProblem(value, book: preferences.ledger) { return .rejected(problem) }
             value.amountKRW = preferences.ledger.krw(value.amount, currency: value.currency)
             let saved = await preferences.ledger.save(value)
+            // 여행 기록이 바뀌면 끝난 여행의 정산 짝 기록도 다시 맞춘다(가계부 화면과 같다).
+            if let tripID = saved.tripID { await preferences.ledger.syncTrip(tripID) }
             var result = AssistantEditResult(after: "\(value.title) \(LedgerMoney.text(value.amount, currency: value.currency, language: language))")
             result.ledgerEntryID = saved.id
             result.ledgerEntry = saved
@@ -175,10 +178,12 @@ extension AppModel {
                 return result
             }
             var value = change.applied(to: before)
+            if change.touchesTrip, let problem = AssistantExpenseChange.tripProblem(value, book: preferences.ledger) { return .rejected(problem) }
             if value.amount != before.amount || value.currency != before.currency {
                 value.amountKRW = preferences.ledger.krw(value.amount, currency: value.currency)
             }
             let saved = await preferences.ledger.save(value)
+            for tripID in Set([before.tripID, saved.tripID].compactMap { $0 }) { await preferences.ledger.syncTrip(tripID) }
             result.after = "\(saved.title) \(LedgerMoney.text(saved.amount, currency: saved.currency, language: language))"
             result.ledgerEntryID = saved.id
             result.ledgerEntry = saved
@@ -368,7 +373,7 @@ enum AssistantDataText {
 
     static func stop(_ stop: TravelPlanStop) -> String { "\(day(TravelPlanSchedule.localDay(stored: stop.day))) #\(stop.order + 1) \(stop.title)" }
 
-    private static func day(_ date: Date) -> String {
+    static func day(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "M/d"

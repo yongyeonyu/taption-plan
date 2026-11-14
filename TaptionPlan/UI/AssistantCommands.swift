@@ -75,6 +75,8 @@ struct AssistantCommand: Identifiable, Equatable, Sendable {
         case setCalendarTitleDetail(title: String, detailID: String?)
         /// TBG1112A01: 여행 예산(원). 0이면 예산 없음.
         case setTripBudget(tripID: String, budgetKRW: Double)
+        /// ACT1114A07: 등록부(`AssistantOperations`)의 동작. 새 동작은 이 한 줄로 다 받는다.
+        case operation(AssistantParsedOperation)
     }
 
     let id: String
@@ -114,8 +116,11 @@ enum AssistantCommandParser {
         private enum Key: String, CodingKey { case id }
         let raw: Raw?
         let id: String?
+        /// 칸을 이름으로 읽는 꼴(ACT1114A07). 등록부 동작은 이것만 본다.
+        let values: [String: AssistantJSON]?
 
         init(from decoder: Decoder) throws {
+            values = try? decoder.singleValueContainer().decode([String: AssistantJSON].self)
             raw = try? Raw(from: decoder)
             id = raw?.id ?? (try? decoder.container(keyedBy: Key.self).decodeIfPresent(String.self, forKey: .id)) ?? nil
         }
@@ -158,6 +163,8 @@ enum AssistantCommandParser {
         let budgetKRW: Double?
         // AIP1114A05: 이 명령이 딸린 맡긴 일.
         let taskId: String?
+        // ACT1114A07: addExpense·updateExpense의 몫을 나누는 사람.
+        let shareNames: [String]?
     }
 
     /// `{"commands":[...]}`를 읽는다. 서버와 같은 규칙으로 다시 본다.
@@ -166,6 +173,17 @@ enum AssistantCommandParser {
         var batch = AssistantCommandBatch(commands: [], invalidIDs: [])
         for item in envelope.commands {
             guard let id = item.id, !id.isEmpty, !id.contains(",") else { continue }
+            if let fields = item.values.map({ AssistantFields(values: $0, now: now, calendar: calendar) }),
+               let name = fields.name, AssistantOperations.spec(name) != nil {
+                let keyID = fields.text("keyId", max: 64), source = fields.text("source", max: 16), taskID = fields.text("taskId", max: 100)
+                if let parsed = AssistantOperations.parse(fields) {
+                    batch.commands.append(AssistantCommand(id: id, action: .operation(parsed), keyID: keyID, source: source, taskID: taskID))
+                } else {
+                    batch.invalidIDs.append(id)
+                    batch.invalidInfo[id] = .init(kind: .operation(name), keyID: keyID, source: source, taskID: taskID)
+                }
+                continue
+            }
             if let raw = item.raw, raw.format == "bokki-command", raw.version == 1, let action = action(raw, now: now, calendar: calendar) {
                 batch.commands.append(AssistantCommand(
                     id: id, action: action, keyID: clean(raw.keyId, max: 64), source: clean(raw.source, max: 16), taskID: clean(raw.taskId, max: 100)
@@ -396,6 +414,14 @@ struct AssistantCommandOutcome: Equatable, Sendable {
         case .addTrip, .updateTrip, .deleteTrip: schedules += 1
         case .setBubble: bubbles += 1
         case .addExpense, .updateExpense: ledger += 1
+        case let .operation(name):
+            switch AssistantOperations.spec(name)?.counter ?? .settings {
+            case .memos: memos += 1
+            case .schedules: schedules += 1
+            case .edits: edits += 1
+            case .settings: settings += 1
+            case .ledger: ledger += 1
+            }
         }
     }
 

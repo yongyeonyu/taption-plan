@@ -2,7 +2,8 @@ import Foundation
 import TaptionPlanCore
 
 /// AI 비서 명령 종류. 「AI 비서」 메뉴에서 하나씩 끌 수 있고 기본은 모두 켠다(AIR1110A02).
-enum AssistantActionKind: String, CaseIterable, Identifiable, Codable, Sendable {
+/// 등록부 동작(ACT1114A07)은 `.operation(이름)` 하나로 받는다. 저장 값(토글 키·로그·올리는 목록)은 예전처럼 동작 이름 글자다.
+enum AssistantActionKind: Hashable, CaseIterable, Identifiable, Codable, Sendable, RawRepresentable {
     case addMemo, addSchedule, updateActivity
     case hideRecord, mergeRecords, updateRecordTime
     case updateSchedule, deleteSchedule, updateMemo, deleteMemo
@@ -31,6 +32,45 @@ enum AssistantActionKind: String, CaseIterable, Identifiable, Codable, Sendable 
     case resolvePlaceSuggestion, setCarAudio, setCalendarTitleDetail
     // TBG1112A01
     case setTripBudget
+    /// ACT1114A07: `AssistantOperations`에 등록한 동작. 이름이 토글 id다.
+    case operation(String)
+
+    /// 등록부 이전의 50개. 새 동작은 여기가 아니라 `AssistantOperations.all`에 더한다.
+    static let builtIn: [Self] = [
+        .addMemo, .addSchedule, .updateActivity, .hideRecord, .mergeRecords, .updateRecordTime, .updateSchedule, .deleteSchedule, .updateMemo, .deleteMemo,
+        .addGoal, .updateGoal, .deleteGoal, .addTripStop, .updateTripStop, .deleteTripStop, .setTripItemStatus,
+        .updateSleep, .setLanguage, .setMapStyle, .setDisplayOption, .setBubble, .addExpense, .updateExpense, .classifyUnconfirmed, .setTravelMode,
+        .addPaymentRule, .setBudget, .addOwnAccount, .removeOwnAccount, .deletePaymentRule, .resolveReview, .deleteInboxItem, .openScreen, .askUser,
+        .addPlace, .updatePlace, .deletePlace, .addCategory, .updateCategory, .addTrip, .updateTrip, .deleteTrip, .setSetting, .requestApproval,
+        .resolvePlaceSuggestion, .setCarAudio, .setCalendarTitleDetail, .setTripBudget,
+    ]
+    private static let builtInByName = Dictionary(builtIn.map { ($0.rawValue, $0) }, uniquingKeysWith: { first, _ in first })
+
+    static var allCases: [Self] { builtIn + AssistantOperations.all.map { .operation($0.spec.name) } }
+
+    /// 예전 50개는 case 이름, 등록부 동작은 그 이름.
+    var rawValue: String {
+        if case let .operation(name) = self { return name }
+        return String(describing: self)
+    }
+
+    /// 아는 동작만 받는다(명령 읽기용).
+    init?(rawValue: String) {
+        if let known = Self.builtInByName[rawValue] { self = known }
+        else if AssistantOperations.spec(rawValue) != nil { self = .operation(rawValue) }
+        else { return nil }
+    }
+
+    /// 로그는 모르는 이름도 읽는다(동작이 빠진 빌드에서도 「AI가 한 일」 파일을 잃지 않게).
+    init(from decoder: Decoder) throws {
+        let name = try decoder.singleValueContainer().decode(String.self)
+        self = Self.builtInByName[name] ?? .operation(name)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var value = encoder.singleValueContainer()
+        try value.encode(rawValue)
+    }
 
     var id: String { rawValue }
 
@@ -79,12 +119,13 @@ enum AssistantActionKind: String, CaseIterable, Identifiable, Codable, Sendable 
         case .addTrip: language.text("여행 만들기", "Create trips")
         case .updateTrip: language.text("여행 고치기", "Edit trips")
         case .deleteTrip: language.text("여행 지우기", "Delete trips")
-        case .setSetting: language.text("급여·통행료 차종 설정 바꾸기", "Change pay and toll vehicle settings")
+        case .setSetting: language.text("앱 설정 바꾸기(급여·통행료·날씨·알림 등)", "Change app settings (pay, tolls, weather, alerts…)")
         case .requestApproval: language.text("승인 요청 받기(공유 수준·삭제·백업 등)", "Receive approval requests (sharing, erase, backup…)")
         case .resolvePlaceSuggestion: language.text("자주 머무는 곳 제안 등록·거절", "Register or dismiss suggested places")
         case .setCarAudio: language.text("내 차 등록·빼기", "Register or remove my car")
         case .setCalendarTitleDetail: language.text("일정 제목 분류 정하기", "Classify calendar event titles")
         case .setTripBudget: language.text("여행 예산 정하기", "Set trip budgets")
+        case let .operation(name): AssistantOperations.spec(name)?.title(language) ?? name
         }
     }
 }
@@ -184,6 +225,7 @@ extension AssistantCommand.Action {
         case .setCarAudio: .setCarAudio
         case .setCalendarTitleDetail: .setCalendarTitleDetail
         case .setTripBudget: .setTripBudget
+        case let .operation(parsed): .operation(parsed.name)
         }
     }
 
@@ -193,6 +235,7 @@ extension AssistantCommand.Action {
         switch self {
         case .addMemo, .addSchedule, .addGoal, .addTripStop, .setBubble, .addExpense, .classifyUnconfirmed, .addPaymentRule, .addOwnAccount, .openScreen, .askUser, .addPlace, .addCategory, .addTrip, .requestApproval: 0
         case let .mergeRecords(_, ids, _, _): ids.count
+        case let .operation(parsed): parsed.operation.changeCount
         case let .deleteGoal(goalID):
             1 + (UUID(uuidString: goalID).flatMap { try? PlanHierarchy.descendants(of: $0, in: plans) }?.count ?? 0)
         default: 1
@@ -289,6 +332,8 @@ extension AppModel {
     func applyAssistantAction(_ action: AssistantCommand.Action, preferences: AssistantPreferenceStore = .live) async -> AssistantEditResult {
         let language = MapHomeLanguage.current
         switch action {
+        case let .operation(parsed):
+            return await parsed.operation.apply(host: AssistantOperationHost(model: self, preferences: preferences))
         case let .addMemo(text, at):
             // 서버도 1,000자(메모 저장 한도)로 막는다. 예전 서버 큐에 남은 더 긴 글은 화면 오류 없이 거절로만 알린다.
             guard text.count <= TaptionPlanMemoRecord.maximumTextLength else { return .rejected("memo_too_long") }

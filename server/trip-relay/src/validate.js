@@ -57,6 +57,10 @@ const recordTarget = (v) => isDate(v.date) && optional(v.recordId, targetID) && 
   && (given(v.recordId) || given(v.startTime));
 const planTarget = (v) => (given(v.planId) && targetID(v.planId) && optional(v.date, isDate) && optional(v.startTime, isTime))
   || (!given(v.planId) && isDate(v.date) && isTime(v.startTime));
+// 가계부 몫을 나누는 사람 이름(ACT1114A07): 1~30자, 20명까지, 서로 다름.
+const shareNames = (min) => (v) => Array.isArray(v) && v.length >= min && v.length <= 20 && v.every((n) => nonEmpty(n, 30))
+  && new Set(v.map((n) => n.trim())).size === v.length;
+const EXPENSE_CHANGES = ["amount", "currency", "title", "category", "kind", "tripId", "shareNames", "note", "date", "time"];
 const distinctIDs = (ids, min, max) => Array.isArray(ids) && ids.length >= min && ids.length <= max
   && ids.every(targetID) && new Set(ids).size === ids.length;
 
@@ -179,9 +183,10 @@ export const COMMAND_FIELDS = {
   setTravelMode: ["date", "moveId", "mode", "line"],
   setBubble: ["date", "start", "end", "text", "kind"],
   // LED1110A01: 가계부 지출·수입. amount는 그 통화의 금액(양수), kind는 expense 기본 | income.
-  addExpense: ["amount", "currency", "title", "category", "date", "time", "kind", "payer"],
+  // ACT1114A07: tripId(여행 가계부)·shareNames(몫을 나누는 사람, "@me"는 나)·note. 옛 앱은 모르는 칸을 그냥 넘긴다.
+  addExpense: ["amount", "currency", "title", "category", "date", "time", "kind", "payer", "tripId", "shareNames", "note"],
   // AIQ1111A01: 앱이 넣은 가계부 기록 고치기·지우기. 고칠 칸이 하나 이상이거나 delete.
-  updateExpense: ["entryId", "amount", "currency", "title", "category", "kind", "delete"],
+  updateExpense: ["entryId", "amount", "currency", "title", "category", "kind", "delete", "tripId", "shareNames", "note", "date", "time"],
   // PRL1112A01: 앱이 읽지 못한 결제 문자 형식을 읽는 규칙. pattern은 ICU 정규식, 앱이 sample로 다시 확인한다.
   addPaymentRule: ["name", "pattern", "sample", "kind"],
   // ACX1112A01: 가계부 설정(이 달 예산·내 계좌 이름), 규칙·확인 필요·받은 문자 정리, 화면 열기.
@@ -346,13 +351,17 @@ export function isCommand(value) {
       return typeof v.amount === "number" && Number.isFinite(v.amount) && v.amount > 0 && v.amount <= 1e10
         && optional(v.currency, (c) => /^[A-Z]{3}$/.test(c)) && nonEmpty(v.title, 60)
         && optional(v.category, (c) => EXPENSE_CATEGORIES.includes(c)) && optional(v.kind, (k) => k === "expense" || k === "income")
-        && optional(v.payer, (p) => nonEmpty(p, 30)) && optional(v.date, isDate) && optional(v.time, isTime);
+        && optional(v.payer, (p) => nonEmpty(p, 30)) && optional(v.date, isDate) && optional(v.time, isTime)
+        && optional(v.tripId, targetID) && optional(v.shareNames, shareNames(1)) && optional(v.note, (n) => nonEmpty(n, 200));
     case "updateExpense":
       return targetID(v.entryId) && optional(v.amount, (a) => typeof a === "number" && Number.isFinite(a) && a > 0 && a <= 1e10)
         && optional(v.currency, (c) => /^[A-Z]{3}$/.test(c)) && optional(v.title, (t) => nonEmpty(t, 60))
         && optional(v.category, (c) => EXPENSE_CATEGORIES.includes(c)) && optional(v.kind, (k) => k === "expense" || k === "income")
         && optional(v.delete, (d) => d === true)
-        && (v.delete === true || ["amount", "currency", "title", "category", "kind"].some((k) => given(v[k])));
+        // tripId "none"은 일상 가계부로 돌리고, shareNames []는 「다 같이」로 돌린다.
+        && optional(v.tripId, targetID) && optional(v.shareNames, shareNames(0)) && optional(v.note, (n) => nonEmpty(n, 200))
+        && optional(v.date, isDate) && optional(v.time, isTime)
+        && (v.delete === true || EXPENSE_CHANGES.some((k) => given(v[k])));
     case "addSchedule":
       return nonEmpty(v.title, 200) && isInstant(v.start)
         && optional(v.end, (e) => isInstant(e) && Date.parse(e) > Date.parse(v.start)) && optional(v.note, note);

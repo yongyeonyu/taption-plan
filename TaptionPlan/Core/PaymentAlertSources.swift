@@ -223,7 +223,11 @@ struct PaymentAlertSourcesView: View {
 /// 받은 알림 하나에 종류를 정해 준다(PAS1113A01): 이 글은 바로 그렇게 처리하고, 연결된 AI에게 같은 모양의 규칙을 부탁한다.
 enum PaymentInboxChoice {
     @MainActor
-    static func apply(_ kind: LedgerMessageRules.Kind, to item: PaymentInbox.Item, language: MapHomeLanguage) async -> (PaymentInbox.Item, String) {
+    /// `book`·`defaults`·`asksAI`는 AI 명령과 시험이 바꿔 준다(ACT1114A07). 화면은 기본값을 쓴다.
+    static func apply(
+        _ kind: LedgerMessageRules.Kind, to item: PaymentInbox.Item, language: MapHomeLanguage,
+        book: LedgerBook = .shared, defaults: UserDefaults = .standard, asksAI: Bool = true
+    ) async -> (PaymentInbox.Item, String) {
         var item = item
         item.choice = kind
         item.isInternal = nil
@@ -234,9 +238,9 @@ enum PaymentInboxChoice {
                 : language.text("앞으로 이런 알림은 넣지 않게 할게요.", "Alerts like this won't be added from now on.")
         } else if item.outcome == .added {
             notice = language.text("이미 가계부에 들어간 글이에요. 앞으로 같은 모양을 이 종류로 읽게 할게요.", "This one is already in the ledger. Alerts like it will be read this way from now on.")
-        } else if let entry = entry(for: item, income: kind == .income) {
-            await LedgerBook.shared.load()
-            let saved = await LedgerBook.shared.save(entry)
+        } else if let entry = entry(for: item, income: kind == .income, defaults: defaults) {
+            await book.load()
+            let saved = await book.save(entry)
             item.outcome = .added
             item.message = language.text("직접 정해 가계부에 넣었어요.", "Added to the ledger as you chose.")
             notice = language.text("\(saved.title) \(LedgerMoney.text(saved.amount, currency: saved.currency, language: language))을 넣었어요.", "Added \(saved.title) \(LedgerMoney.text(saved.amount, currency: saved.currency, language: language)).")
@@ -245,28 +249,30 @@ enum PaymentInboxChoice {
         }
         var context = ["choice": kind.rawValue]
         if let source = item.source { context["app"] = source }
-        if !item.ruleRequested, AITaskQueue.enqueue(.paymentRule, text: item.text, day: item.receivedAt, context: context) {
+        if asksAI, !item.ruleRequested, AITaskQueue.enqueue(.paymentRule, text: item.text, day: item.receivedAt, context: context) {
             item.ruleRequested = true
             await AITaskQueue.upload()
             notice += " " + language.text("AI에게 같은 모양의 규칙을 부탁했어요.", "Asked your AI for a rule for this layout.")
         }
         // 「넣지 않음」으로 정한 글은 받은 문자 목록에서 뺀다(INX1114A01, 대표 지시). AI에게 부탁한 규칙 요청은 따로 남아 있다.
-        if kind == .ignore { PaymentInbox.remove(item.id) } else { PaymentInbox.update(item) }
+        if kind == .ignore { PaymentInbox.remove(item.id, defaults: defaults) } else { PaymentInbox.update(item, defaults: defaults) }
         return (item, notice)
     }
 
     /// 「내부」(INT1114A01, 대표 지시): 내 계좌 사이 거래·지역카드 충전·교통카드 충전 같은 내부 이체. 지출도 수입도 아니므로
     /// 가계부에 넣지 않고, 이 글로 이미 들어간 기록이 있으면 지운다. AI에게는 같은 모양을 넣지 않는 규칙을 부탁한다.
     @MainActor
-    static func applyInternal(to item: PaymentInbox.Item, language: MapHomeLanguage) async -> (PaymentInbox.Item, String) {
+    static func applyInternal(
+        to item: PaymentInbox.Item, language: MapHomeLanguage, book: LedgerBook = .shared, defaults: UserDefaults = .standard, asksAI: Bool = true
+    ) async -> (PaymentInbox.Item, String) {
         var item = item
         item.choice = .ignore
         item.isInternal = true
         var notice = language.text("내부 이체로 정했어요. 지출·수입에 넣지 않아요.", "Marked as an internal transfer. It isn't counted as spending or income.")
         if item.outcome == .added {
-            await LedgerBook.shared.load()
-            if let entry = addedEntry(for: item, in: LedgerBook.shared.entries) {
-                await LedgerBook.shared.remove(entry)
+            await book.load()
+            if let entry = addedEntry(for: item, in: book.entries) {
+                await book.remove(entry)
                 notice += " " + language.text("가계부에 들어갔던 기록은 지웠어요.", "The entry already added was removed.")
             } else {
                 notice += " " + language.text("이미 들어간 기록은 가계부에서 지워 주세요.", "Delete the entry already added from the ledger.")
@@ -276,12 +282,12 @@ enum PaymentInboxChoice {
         item.message = language.text("내부 이체라 가계부에 넣지 않았어요.", "Internal transfer: not added to the ledger.")
         var context = ["choice": LedgerMessageRules.Kind.ignore.rawValue, "reason": "internal transfer between the user's own accounts or a prepaid/local-currency/transit card top-up"]
         if let source = item.source { context["app"] = source }
-        if !item.ruleRequested, AITaskQueue.enqueue(.paymentRule, text: item.text, day: item.receivedAt, context: context) {
+        if asksAI, !item.ruleRequested, AITaskQueue.enqueue(.paymentRule, text: item.text, day: item.receivedAt, context: context) {
             item.ruleRequested = true
             await AITaskQueue.upload()
             notice += " " + language.text("AI에게 같은 모양의 규칙을 부탁했어요.", "Asked your AI for a rule for this layout.")
         }
-        PaymentInbox.update(item)
+        PaymentInbox.update(item, defaults: defaults)
         return (item, notice)
     }
 
@@ -294,9 +300,9 @@ enum PaymentInboxChoice {
     }
 
     /// 앱 규칙으로 읽은 금액·가게로 기록을 만든다. 시각은 받은 때다.
-    static func entry(for item: PaymentInbox.Item, income: Bool) -> LedgerEntry? {
+    static func entry(for item: PaymentInbox.Item, income: Bool, defaults: UserDefaults = .standard) -> LedgerEntry? {
         let draft: LedgerMessageParser.Draft?
-        if case let .draft(found, _) = LedgerMessageRules.match(item.text, now: item.receivedAt) {
+        if case let .draft(found, _) = LedgerMessageRules.match(item.text, now: item.receivedAt, defaults: defaults) {
             draft = found
         } else {
             draft = LedgerMessageParser.parse(item.text, now: item.receivedAt)

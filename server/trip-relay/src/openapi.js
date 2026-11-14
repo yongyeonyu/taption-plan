@@ -118,12 +118,17 @@ const command = {
     payer: { type: "string", maxLength: 30, description: "addExpense: who paid, when not me" },
     entryId: { type: "string", maxLength: 100, description: "updateExpense: ledger entry id" },
     delete: { type: "boolean", description: "updateExpense: true deletes the entry" },
+    shareNames: { type: "array", items: { type: "string", maxLength: 30 }, maxItems: 20, description: "addExpense, updateExpense: who shares a trip expense (\"@me\" is the user; [] or left out: everyone)" },
   },
 };
 // 등록부(actions.js)의 동작이 받는 칸을 더한다. 이미 있는 이름은 그대로 둔다(AIX1114A01).
 for (const tool of registry.tools()) {
   for (const [name, schema] of Object.entries(tool.properties)) {
-    if (!(name in command.properties)) command.properties[name] = { ...schema, description: `${tool.action}: ${schema.description ?? name}` };
+    const known = command.properties[name];
+    if (!known) command.properties[name] = { ...schema, description: `${tool.action}: ${schema.description ?? name}` };
+    // 같은 이름을 여러 동작이 쓰면 고를 수 있는 값을 합치고 길이는 긴 쪽에 맞춘다(ACT1114A07).
+    else if (known.enum && schema.enum) known.enum = [...new Set([...known.enum, ...schema.enum])];
+    else if (known.type === "string" && schema.type === "string" && schema.maxLength > (known.maxLength ?? Infinity)) known.maxLength = schema.maxLength;
   }
 }
 

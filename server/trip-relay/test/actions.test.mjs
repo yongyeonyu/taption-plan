@@ -2,7 +2,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { f, makeRegistry, registry } from "../src/actions.js";
-import { ACTIONS, COMMAND_FIELDS } from "../src/validate.js";
+import { readFileSync } from "node:fs";
+import { ACTIONS, COMMAND_FIELDS, cleanCommand, isCommand } from "../src/validate.js";
 
 const sample = () => makeRegistry().add("setFxRate", {
   tool: "set_fx_rate", title: "Set an exchange rate", description: "KRW per one unit of a currency.", destructive: false, since: 340,
@@ -38,6 +39,12 @@ test("registry: field kinds", () => {
   assert.equal(f.list(f.text(5), 2).check(["a", "b", "c"]), false);
   assert.equal(f.list(f.text(5), 2).check(["toolong"]), false);
   assert.equal(f.text(3).check("​​"), false, "invisible characters alone are empty");
+  assert.equal(f.match(/^[A-Z]{3}$/).check("USD"), true);
+  assert.equal(f.match(/^[A-Z]{3}$/).check("usd"), false);
+  assert.equal(f.number(-5, 5).check(-5), true);
+  assert.equal(f.number(-5, 5).check(-6), false);
+  assert.equal(f.number(-5, 5).check("1"), false);
+  assert.equal(f.list(f.text(5), 2, "", 0).check([]), true, "a list may be allowed to be empty");
 });
 
 test("registry: tools, manifest and the minimum app build", () => {
@@ -65,4 +72,70 @@ test("registry: every registered action is a command action with its fields", ()
     assert.ok(ACTIONS.includes(name), name);
     assert.deepEqual(COMMAND_FIELDS[name], registry.fields(name));
   }
+});
+
+// MARK: ACT1114A07 — 등록부로 더한 동작.
+
+const UUID = "A1B2C3D4-E5F6-4789-9ABC-DEF012345678";
+const cmd = (action, extra = {}) => ({ format: "bokki-command", version: 1, id: "c1", action, ...extra });
+const accepts = (action, extra) => assert.equal(isCommand(cmd(action, extra)), true, `${action} ${JSON.stringify(extra)}`);
+const refuses = (action, extra) => assert.equal(isCommand(cmd(action, extra)), false, `${action} ${JSON.stringify(extra)}`);
+
+test("actions: the fixture the app checks against is the registry's manifest", () => {
+  const fixture = JSON.parse(readFileSync(new URL("./fixtures/actions.json", import.meta.url), "utf8"));
+  assert.deepEqual(fixture, registry.manifest(), "run `npm run actions` after changing src/actions.js");
+  for (const action of fixture.actions) assert.equal(action.since, 341, action.action);
+  assert.equal(registry.needsBuild("setFxRate", "340"), 341);
+  assert.equal(registry.needsBuild("setFxRate", "341"), null);
+});
+
+test("actions batch 1: ledger", () => {
+  accepts("classifyInboxItem", { inboxId: UUID, choice: "internal" });
+  refuses("classifyInboxItem", { inboxId: UUID, choice: "maybe" });
+  refuses("classifyInboxItem", { inboxId: "x", choice: "expense" });
+  accepts("setFxRate", { currency: "USD", krwPerUnit: 1400.5 });
+  refuses("setFxRate", { currency: "KRW", krwPerUnit: 1 });
+  refuses("setFxRate", { currency: "USD", krwPerUnit: 0 });
+  refuses("setFxRate", { currency: "usd", krwPerUnit: 1400 });
+  accepts("setPaymentSource", { name: "문자", income: false });
+  accepts("setPaymentSource", { name: "Bank app", remove: true });
+  refuses("setPaymentSource", { name: "Bank app" });
+  refuses("setPaymentSource", { name: "Bank app", remove: true, expense: true });
+  refuses("setPaymentSource", { name: "x".repeat(41), expense: true });
+  accepts("setSkipWords", { add: ["광고"], remove: ["자동이체"] });
+  refuses("setSkipWords", {});
+  refuses("setSkipWords", { add: [] });
+  refuses("setSkipWords", { add: ["a", "a"] });
+  refuses("setSkipWords", { add: ["x".repeat(21)] });
+  accepts("addLedgerTrip", { name: "Jeju", start: "2026-12-01", end: "2026-12-03", members: ["Mina", "Jun"] });
+  accepts("addLedgerTrip", { name: "Jeju", start: "2026-12-01" });
+  refuses("addLedgerTrip", { name: "Jeju", start: "2026-12-03", end: "2026-12-01" });
+  refuses("addLedgerTrip", { name: "Jeju" });
+  refuses("addLedgerTrip", { name: "Jeju", start: "2026-12-01", members: ["Mina", "Mina"] });
+  accepts("updateLedgerTrip", { tripId: "ledger-1", members: [] });
+  accepts("updateLedgerTrip", { tripId: "ledger-1", settlementKRW: -30000, settlementDate: "2026-12-05" });
+  accepts("updateLedgerTrip", { tripId: "ledger-1", autoSettlement: true });
+  refuses("updateLedgerTrip", { tripId: "ledger-1" });
+  refuses("updateLedgerTrip", { tripId: "ledger-1", autoSettlement: true, settlementKRW: 0 });
+  refuses("updateLedgerTrip", { tripId: "ledger-1", settlementKRW: 1e13 });
+  refuses("updateLedgerTrip", { members: [] });
+  accepts("deleteLedgerTrip", { tripId: "ledger-1" });
+  refuses("deleteLedgerTrip", {});
+  assert.deepEqual(cleanCommand(cmd("setFxRate", { currency: "USD", krwPerUnit: 1400, extra: 1 })), cmd("setFxRate", { currency: "USD", krwPerUnit: 1400 }));
+});
+
+test("actions batch 1: expenses take a trip, sharers, a note and (when edited) a new day and time", () => {
+  const base = { amount: 12000, title: "Dinner" };
+  accepts("addExpense", { ...base, tripId: "ledger-1", shareNames: ["@me", "Mina"], note: "half each" });
+  refuses("addExpense", { ...base, shareNames: [] });
+  refuses("addExpense", { ...base, shareNames: ["Mina", "Mina"] });
+  refuses("addExpense", { ...base, note: "x".repeat(201) });
+  accepts("updateExpense", { entryId: "e1", date: "2026-11-13" });
+  accepts("updateExpense", { entryId: "e1", time: "09:30" });
+  accepts("updateExpense", { entryId: "e1", tripId: "none" });
+  accepts("updateExpense", { entryId: "e1", shareNames: [] });
+  accepts("updateExpense", { entryId: "e1", note: "memo" });
+  refuses("updateExpense", { entryId: "e1", time: "9:30" });
+  refuses("updateExpense", { entryId: "e1" });
+  assert.deepEqual(cleanCommand(cmd("updateExpense", { entryId: "e1", shareNames: ["@me"], date: "2026-11-13" })).shareNames, ["@me"]);
 });

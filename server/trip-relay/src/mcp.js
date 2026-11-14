@@ -60,6 +60,9 @@ const INSTANT = (what) => str(`${what}, ISO 8601 with offset, e.g. 2026-11-12T15
 const ID = str("Optional unique command id: 1-100 of letters, digits, _ . : -; generated when omitted", { pattern: "^[\\w.:-]{1,100}$" });
 const enumOf = (description, values) => str(description, { enum: values });
 const integer = (description, minimum, maximum) => ({ type: "integer", description, minimum, maximum });
+// ACT1114A07: 여행 지출의 몫을 나누는 사람.
+const SHARE_NAMES = (min) => ({ type: "array", items: { type: "string", maxLength: 30 }, minItems: min, maxItems: 20,
+  description: "Who shares a trip expense: companion names, \"@me\" for the user" + (min ? "" : "; [] means everyone") + ". Left out: everyone" });
 const object = (properties, required = []) => ({ type: "object", properties, required, additionalProperties: false });
 
 // empty: 저장된 것이 없을 때 돌려줄 글. changes: 읽기 키로 부르지만 서버 상태를 바꾸는 도구(AIC1112A01).
@@ -101,8 +104,8 @@ const TOOLS = [
   // ACX1112A01
   readTool("get_app_state", "Get app state", "The app's own state, refreshed when the app runs: settings {language, theme, mapStyle, display{mapPhotos,mapRoutes,mapFootprints}, "
     + "shareLevel, retentionDays, aiConnections, actionsOff[] (actions the user turned off), paymentShortcutLink (the app ships a link to its "
-    + "BOKKI Payment automation), paymentTriggerWords[] (words the message automation fires on, any one), paymentAlertLink (the app also ships a bank and card app alert automation), paymentTexts, lastPaymentTextAt}, ledger {month, budgetKRW, spentKRW, incomeKRW, ownAccounts[], entries[{id,time,title,"
-    + "category,kind,amount,currency,amountKRW,canceled,source}], trips[{id,name,start,end,budgetKRW,myCostKRW,leftoverKRW,ended}] (trip ledgers: "
+    + "BOKKI Payment automation), paymentTriggerWords[] (words the message automation fires on, any one), paymentAlertLink (the app also ships a bank and card app alert automation), paymentTexts, lastPaymentTextAt, paymentSources[{name,expense,income}] (per-app payment alert switches; change with set_payment_source), skipWords[] (set_skip_words), fxRates {CUR: KRW per unit} (set_fx_rate)}, ledger {month, budgetKRW, spentKRW, incomeKRW, ownAccounts[], entries[{id,time,title,"
+    + "category,kind,amount,currency,amountKRW,canceled,source,tripId?}], trips[{id,name,start,end,budgetKRW,myCostKRW,leftoverKRW,ended}] (trip ledgers: "
     + "myCostKRW is the user's own share so far, leftoverKRW what goes back to the daily ledger (negative: more is owed); set the budget with "
     + "set_trip_budget)} (entries newest first; entry ids work with update_expense), review [{id,reason "
     + "noMerchant|duplicate|transfer|toll|cardBill|fare,receivedAt,time,title,category,kind,amount,currency}] (payments the app did not add by itself; settle with "
@@ -168,12 +171,15 @@ const TOOLS = [
   addTool("add_expense", "addExpense", "Add expense", "Add a ledger entry the user told you about, e.g. \"coffee 4,500 won\". amount is in currency (default KRW); kind expense (default) or income.",
     { amount: { type: "number", description: "Positive amount in the currency", exclusiveMinimum: 0, maximum: 1e10 }, currency: str("ISO 4217, e.g. KRW, JPY, USD", { pattern: "^[A-Z]{3}$" }),
       title: str("1-60 characters, e.g. Coffee", { maxLength: 60 }), category: enumOf("Category", EXPENSE_CATEGORIES), kind: enumOf("expense or income", ["expense", "income"]),
-      payer: str("Who paid, 1-30 characters (for group trips)", { maxLength: 30 }), date: DATE, time: HHMM("Time") }, ["amount", "title"]),
+      payer: str("Who paid, 1-30 characters (for group trips)", { maxLength: 30 }), date: DATE, time: HHMM("Time"),
+      tripId: str("Trip ledger id (get_app_state ledger.trips) to put the entry in that trip's ledger"), shareNames: SHARE_NAMES(1), note: str("Note, up to 200 characters", { maxLength: 200 }) }, ["amount", "title"]),
   commandTool("update_expense", "updateExpense", "Edit expense", "Fix or delete a ledger entry the app added (entryId from an AI task's context), "
     + "e.g. the merchant name, category or amount from a payment text. Only the given fields change; delete:true removes it (undoable).",
     { entryId: str("Ledger entry id"), amount: { type: "number", description: "Positive amount in the currency", exclusiveMinimum: 0, maximum: 1e10 },
       currency: str("ISO 4217", { pattern: "^[A-Z]{3}$" }), title: str("1-60 characters", { maxLength: 60 }), category: enumOf("Category", EXPENSE_CATEGORIES),
-      kind: enumOf("expense or income", ["expense", "income"]), delete: { type: "boolean", description: "true to delete the entry" } }, ["entryId"]),
+      kind: enumOf("expense or income", ["expense", "income"]), delete: { type: "boolean", description: "true to delete the entry" },
+      tripId: str("Trip ledger id to move the entry into, or \"none\" for the daily ledger"), shareNames: SHARE_NAMES(0), note: str("New note, up to 200 characters", { maxLength: 200 }),
+      date: DATE, time: HHMM("New time") }, ["entryId"]),
   addTool("add_payment_rule", "addPaymentRule", "Add payment message rule", "Teach the app to read one issuer's payment message layout by itself "
     + "(answer to an AI task of kind payment_rule). pattern is an ICU regular expression (iOS NSRegularExpression; the dot also matches newlines) "
     + "with named groups: (?<amount>...) required unless kind is ignore, digits with optional commas or a decimal point; optional (?<merchant>...), "

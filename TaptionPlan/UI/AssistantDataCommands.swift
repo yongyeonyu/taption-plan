@@ -84,7 +84,7 @@ extension AssistantCommandParser {
         case "addExpense":
             return expense(raw, calendar: calendar)
         case "updateExpense":
-            return expenseChange(raw)
+            return expenseChange(raw, calendar: calendar)
         case "addPaymentRule":
             return LedgerMessageRules.rule(name: raw.name, pattern: raw.pattern, sample: raw.sample, kind: raw.kind).map { .addPaymentRule($0) }
         case "classifyUnconfirmed":
@@ -297,14 +297,20 @@ extension AssistantCommandParser {
             kind = value
         }
         if raw.payer != nil, clean(raw.payer, max: 30) == nil { return nil }
+        // ACT1114A07: 여행 가계부·몫을 나누는 사람·메모.
+        if raw.tripId != nil, clean(raw.tripId, max: 100) == nil { return nil }
+        if raw.note != nil, clean(raw.note, max: 200) == nil { return nil }
+        let sharers = raw.shareNames.map { AssistantExpenseChange.sharers($0, minimum: 1) }
+        if let sharers, sharers == nil { return nil }
         return .addExpense(LedgerEntry(
             occurredAt: at, amount: amount, currency: currency, kind: kind, category: category,
-            title: title, payer: clean(raw.payer, max: 30), note: clean(raw.note, max: 200), source: .assistant
+            title: title, payer: clean(raw.payer, max: 30), tripID: clean(raw.tripId, max: 100), note: clean(raw.note, max: 200), source: .assistant,
+            shareNames: sharers ?? nil
         ))
     }
 
     /// updateExpense(AIQ1111A01): 고칠 칸이 하나라도 있거나 지우기여야 한다. 서버와 같은 규칙.
-    static func expenseChange(_ raw: Raw) -> AssistantCommand.Action? {
+    static func expenseChange(_ raw: Raw, calendar: Calendar = .autoupdatingCurrent) -> AssistantCommand.Action? {
         guard let id = raw.entryId.flatMap(UUID.init(uuidString:)) else { return nil }
         var change = AssistantExpenseChange(delete: raw.delete == true)
         if let amount = raw.amount {
@@ -327,6 +333,27 @@ extension AssistantCommandParser {
             guard let value = LedgerEntry.Kind(rawValue: name) else { return nil }
             change.kind = value
         }
+        // ACT1114A07: tripId "none"은 일상 가계부로, shareNames []는 「다 같이」로 돌린다.
+        if raw.tripId != nil {
+            guard let tripID = clean(raw.tripId, max: 100) else { return nil }
+            change.tripID = tripID == "none" ? "" : tripID
+        }
+        if let names = raw.shareNames {
+            guard let sharers = AssistantExpenseChange.sharers(names, minimum: 0) else { return nil }
+            change.shareNames = sharers
+        }
+        if raw.note != nil {
+            guard let note = clean(raw.note, max: 200) else { return nil }
+            change.note = note
+        }
+        if let date = raw.date {
+            guard day(date, calendar: calendar) != nil else { return nil }
+            change.date = date
+        }
+        if let time = raw.time {
+            guard let minutes = minutes(time) else { return nil }
+            change.minutes = minutes
+        }
         guard change.delete || change != AssistantExpenseChange() else { return nil }
         return .updateExpense(entryID: id, change: change)
     }
@@ -340,15 +367,49 @@ struct AssistantExpenseChange: Equatable, Sendable {
     var title: String?
     var category: LedgerCategory?
     var kind: LedgerEntry.Kind?
+    /// ACT1114A07: 여행 장부(빈 글이면 일상으로), 몫을 나누는 사람(비면 다 같이), 메모, 새 날짜(`YYYY-MM-DD`)와 시각(자정부터의 분).
+    var tripID: String?
+    var shareNames: [String]?
+    var note: String?
+    var date: String?
+    var minutes: Int?
 
-    func applied(to entry: LedgerEntry) -> LedgerEntry {
+    var touchesTrip: Bool { tripID != nil || shareNames != nil }
+
+    func applied(to entry: LedgerEntry, calendar: Calendar = .autoupdatingCurrent) -> LedgerEntry {
         var value = entry
         if let amount { value.amount = amount }
         if let currency { value.currency = currency }
         if let title { value.title = title }
         if let category { value.category = category }
         if let kind { value.kind = kind }
+        if let tripID {
+            value.tripID = tripID.isEmpty ? nil : tripID
+            if tripID.isEmpty { value.shareNames = nil }
+        }
+        if let shareNames { value.shareNames = shareNames.isEmpty ? nil : shareNames }
+        if let note { value.note = note }
+        if date != nil || minutes != nil {
+            // 날짜만 주면 시각을, 시각만 주면 날짜를 그대로 둔다.
+            let day = date.flatMap { AssistantCommandParser.day($0, calendar: calendar) } ?? calendar.startOfDay(for: entry.occurredAt)
+            let clock = minutes ?? calendar.component(.hour, from: entry.occurredAt) * 60 + calendar.component(.minute, from: entry.occurredAt)
+            value.occurredAt = calendar.date(bySettingHour: clock / 60, minute: clock % 60, second: 0, of: day) ?? entry.occurredAt
+        }
         return value
+    }
+
+    /// 몫을 나누는 사람 이름: 1~30자, 20명까지, 서로 다름. 틀리면 nil.
+    static func sharers(_ names: [String], minimum: Int) -> [String]? {
+        let cleaned = names.compactMap { AssistantCommandParser.clean($0, max: 30) }
+        return cleaned.count == names.count && (minimum...20).contains(names.count) && Set(cleaned).count == cleaned.count ? cleaned : nil
+    }
+
+    /// 여행 기록으로 둘 수 없는 까닭: 그 여행 장부가 없거나(`no_trip`), 동행이 아닌 이름으로 나눴다(`no_member`).
+    @MainActor
+    static func tripProblem(_ entry: LedgerEntry, book: LedgerBook) -> String? {
+        guard let tripID = entry.tripID else { return entry.shareNames == nil ? nil : "no_trip" }
+        guard let trip = book.trip(tripID) else { return "no_trip" }
+        return (entry.shareNames ?? []).allSatisfy(trip.everyone.contains) ? nil : "no_member"
     }
 }
 
