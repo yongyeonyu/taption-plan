@@ -421,6 +421,17 @@ V2의 쓰기 API에 `@available(*, deprecated)`를 붙이고, 새 호출이 생�
 
 ---
 
+
+### ADR-005: AI 기능은 패키지로 옮긴다 (2026-11-14, 대표 결정)
+
+**배경.** AI 연결(명령·일 목록·동기화·규칙·화면)이 `extension AppModel`·`extension MapHomeView`로 앱에 직접 붙어 있어, 동작 하나를 더하려면 11곳을 고치고 시험은 시뮬레이터에서만 돈다. 새 앱 파일은 `project.pbxproj`에 손으로 등록해야 한다.
+
+**결정.** `Packages/TaptionAssistant`에 차례로 옮긴다: `TaptionRules`(규칙 모델·평가기, Foundation만) → `TaptionAssistantProtocol`(명령·일 DTO) → `TaptionAssistantKit`(중계·실행·동기화·기록, 호스트 프로토콜) → `TaptionAssistantUI`(화면). 가계부 값 타입은 `Packages/TaptionLedgerCore`로 뺀다. 패키지는 `AppModel`·`MapHomeView`·`LedgerBook`·엔진 패키지를 모르고, 앱이 호스트 프로토콜을 구현해 이어 준다. Photos·Vision·AppIntents를 쓰는 것과 호스트 어댑터는 앱에 남는다.
+
+**이 결정이 바꾸는 것.** 「앱 전용 코드와 화면은 패키지로 옮기지 않는다」는 방침에 AI 기능이라는 예외가 생긴다. §8의 「모듈을 20개 넘게 쪼개지 않는다」는 그대로다(패키지 둘, 타깃 다섯).
+
+**순서와 상태.** `docs/AI_RELAY_PLAN.md`의 P0~P13. 지금은 `TaptionRules`만 있다.
+
 ## 6. 단계별 계획
 
 각 단계는 **따로 배포 가능**해야 한다. 단계 하나가 실패하면 그 단계만 되돌린다.

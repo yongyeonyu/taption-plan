@@ -30,6 +30,7 @@ struct AssistantSettingsView: View {
                 Section {
                     NavigationLink(language.text("AI가 할 수 있는 일", "What the AI can do")) { AssistantActionTogglesView(language: language) }
                     NavigationLink(language.text("AI가 한 일", "What the AI did")) { AssistantActionLogView(model: model, language: language) }
+                    NavigationLink(language.text("AI 규칙", "AI rules")) { AssistantRuleListView(language: language) }
                 }
                 Section {
                     Picker(language.text("기록 공유", "Share records"), selection: $levelRaw) {

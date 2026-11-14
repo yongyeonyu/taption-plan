@@ -67,6 +67,8 @@ enum CalendarTitleClassification {
 
     static func verdict(for title: String, stored: [String: CalendarTitleDetail]) -> Verdict? {
         if let value = stored[key(title)] { return Verdict(detailID: value.detailID, origin: .user) }
+        // 서버 규칙(AIX1114A01 P3): 사용자가 기기에서 정한 것 다음, 앱의 낱말 표보다 먼저.
+        if let learned = RuleEngine.calendarTitle(title, rules: AssistantRuleSnapshot.rules) { return Verdict(detailID: learned.detailID, origin: .user) }
         return ruleDetailID(for: title).map { Verdict(detailID: $0, origin: .rule) }
     }
 

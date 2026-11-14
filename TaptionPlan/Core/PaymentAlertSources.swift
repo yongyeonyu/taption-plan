@@ -93,8 +93,11 @@ enum PaymentAlertSources {
 
     /// 그 앱의 이 종류 알림을 넣어도 되는가. 모르는 앱은 넣는다.
     static func allows(_ raw: String?, income: Bool, defaults: UserDefaults = .standard) -> Bool {
-        guard let name = name(raw), let source = all(defaults).first(where: { $0.name == name }) else { return true }
-        return income ? source.income : source.expense
+        guard let name = name(raw) else { return true }
+        // 기기에서 정한 스위치가 먼저, 없으면 서버 규칙(AIX1114A01 P3).
+        if let source = all(defaults).first(where: { $0.name == name }) { return income ? source.income : source.expense }
+        guard defaults === UserDefaults.standard, let lane = RuleEngine.sourceSwitch(app: name, rules: AssistantRuleSnapshot.rules) else { return true }
+        return income ? lane.income : lane.expense
     }
 
     /// 꺼 둔 종류라 넣지 않았다고 알리는 글.

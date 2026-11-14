@@ -304,6 +304,8 @@ final class TaptionPlanAppDelegate:
             }
         }
         ReceiptPhotoWatcher.shared.startIfNeeded()
+        // 지난번에 받아 둔 규칙을 바로 쓴다. 서버와 맞추는 것은 명령 확인 때 한다(AIX1114A01 P3).
+        AssistantRuleStore.refreshSnapshot()
         AppleHealthService.shared.startObservingChanges {
             guard await TaptionProAccessController.currentAccessGranted() else {
                 return

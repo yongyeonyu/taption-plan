@@ -67,7 +67,12 @@ enum LedgerOwnAccounts {
     static let key = "ledgerOwnAccountNames"
     static let transferWords = ["이체", "송금", "출금", "충전", "적금"]
 
-    static func names(_ defaults: UserDefaults = .standard) -> [String] { defaults.stringArray(forKey: key) ?? [] }
+    static func names(_ defaults: UserDefaults = .standard) -> [String] {
+        let own = defaults.stringArray(forKey: key) ?? []
+        // 서버 규칙으로 온 이름을 더한다(AIX1114A01 P3). 시험용 저장소에는 섞지 않는다.
+        guard defaults === UserDefaults.standard else { return own }
+        return own + RuleEngine.ownAccountNames(rules: AssistantRuleSnapshot.rules).filter { !own.contains($0) }
+    }
 
     static func set(_ names: [String], defaults: UserDefaults = .standard) {
         var seen = Set<String>()

@@ -425,6 +425,11 @@ enum MapHomeRideLabel {
 
     /// 버스는 「80」(둘이면 「80·81」), 지하철은 「1호선」(갈아탔으면 「1호선→2호선」), 못 정했으면 「?」.
     nonisolated static func text(for segment: TravelSegment, defaults: UserDefaults = .standard) -> String {
+        // 서버 규칙(AIX1114A01 P3): 이 승하차 쌍의 번호·노선을 배워 둔 것이 있으면 그것.
+        if let names = BusRouteCheck.stopNames(segment, defaults: defaults), segment.mode == .bus || segment.mode == .subway,
+           let learned = RuleEngine.rideLine(board: names.board, alight: names.alight, mode: segment.mode == .bus ? "bus" : "subway", rules: AssistantRuleSnapshot.rules) {
+            return learned.line
+        }
         switch segment.mode {
         case .bus:
             if let routes = BusRouteCheck.known(segment, defaults: defaults), (1...2).contains(routes.count) { return routes.map(\.number).joined(separator: "·") }

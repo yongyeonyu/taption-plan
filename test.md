@@ -7,6 +7,19 @@
 - CLM1114A01(하루 편집 한도 30 → 100): 서버 `npm test` 116건 통과(옛 숫자에 기대던 시험 5건을 새 한도에 맞게 고침), `wrangler deploy` 완료. 대기열 상한은 50 그대로다(100으로 올리면 다른 시험·읽기 상한까지 바뀌어 이번에는 두었다).
 - OCF1114A01(큰 사진에도 「OCR」 표시)·안내문 숫자: `AssistantCommandEditTests`·`AssistantRelayTests`·`LedgerTests` 62건 통과·실패 0(`build/validation/OCB1114A01/sim-16.xcresult`), 구조 점검 통과. 아직 빌드에 없고 화면 확인도 없다.
 
+## AIX1114A01 · P0 일부·P3 앱 (2026-11-14 오후, 아직 빌드에 없음)
+
+로그는 `build/validation/AIX1114A01/`. 시뮬레이터(BOKKI-STL) 결과이고 실기기 확인은 없다.
+
+| 검증 | 결과 |
+|---|---|
+| `swift test`(`Packages/TaptionAssistant`) | 5건 통과. 서버와 같은 견본(`server/trip-relay/test/fixtures/rules.json`)으로 규칙 모양 검사가 서버와 일치함을 확인 |
+| 앱 Debug 시험 빌드 | `sim-1`은 격리 선언 누락으로 실패 → 고쳐 `sim-2` 성공 |
+| `LedgerTests`·`AITaskQueueTests`·`LedgerMessageAccuracyTests`·`LedgerReviewTests`·`AssistantPhase3Tests`·`AssistantRelayTests`·`AssistantReviewFixTests`·`AlgorithmUpgradeTests`(병렬 끔, `sim-3.xcresult`) | 173건 통과·실패 0 |
+| 구조 점검·경계 검사·`extract.py`·`check.py`·`generate.py` | 기준선 통과, 경계 통과, 번역 실패 0(새 문구 18개를 12개 언어에 넣음) |
+
+하지 않은 것: 「AI 규칙」 화면을 눈으로 보기, 서버와의 실제 동기화 왕복(기기에서만 됨: 주인 키가 기기 키체인에 있음), AI가 넣은 규칙이 실제 결제 문자·영수증에 적용되는지.
+
 ## TFB1114A338 · TestFlight 338 (2026-11-14 오후)
 
 - `bash scripts/testflight/release.sh --yes --request-id TFB1114A338` 종료 코드 0. 기준 커밋 `f932eaee`(계획서 커밋) 직후.

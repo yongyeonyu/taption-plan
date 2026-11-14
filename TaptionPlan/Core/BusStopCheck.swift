@@ -562,6 +562,9 @@ enum RideLineTasks {
 
     /// AI에게 맡길 구간인지와 후보. 버스는 노선을 모르거나 후보가 셋 이상, 지하철은 노선 경로도 정해 준 노선도 없을 때.
     nonisolated static func candidates(_ segment: TravelSegment, defaults: UserDefaults = .standard) -> [String]? {
+        // 배워 둔 규칙으로 정해지는 구간은 맡기지 않는다(AIX1114A01 P3).
+        if let names = BusRouteCheck.stopNames(segment, defaults: defaults), segment.mode == .bus || segment.mode == .subway,
+           RuleEngine.rideLine(board: names.board, alight: names.alight, mode: segment.mode == .bus ? "bus" : "subway", rules: AssistantRuleSnapshot.rules) != nil { return nil }
         switch segment.mode {
         case .bus:
             let routes = BusRouteCheck.known(segment, defaults: defaults)

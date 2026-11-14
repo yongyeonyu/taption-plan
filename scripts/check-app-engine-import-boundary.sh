@@ -22,6 +22,16 @@ if rg -n --glob '*.swift' "$forbidden_in_ui" \
     failed=1
 fi
 
+# 3) AI 패키지(ADR-005)는 엔진·앱 전용 프레임워크를 모른다. 화면 타깃(TaptionAssistantUI)만 SwiftUI를 쓴다.
+assistant_root="${repository_root}/Packages/TaptionAssistant/Sources"
+if [ -d "$assistant_root" ]; then
+    forbidden_in_assistant='^[[:space:]]*(@_exported[[:space:]]+)?import[[:space:]]+(TaptionPlanEngine|TaptionRouteEngine|TaptionActivityEngine|TaptionClassifierEngine|UIKit|MapKit|Photos|AppIntents|Vision)([.[:space:]]|$)'
+    if rg -n --glob '*.swift' --glob '!**/TaptionAssistantUI/**' "$forbidden_in_assistant" "$assistant_root"; then
+        printf '%s\n' 'TaptionAssistant sources must not import engines or app-only frameworks.' >&2
+        failed=1
+    fi
+fi
+
 if [ "$failed" -ne 0 ]; then
     exit 1
 fi

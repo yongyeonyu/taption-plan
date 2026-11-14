@@ -209,6 +209,8 @@ enum ReceiptPhotoScanner {
 
     /// 영수증으로 볼 글: 결제 글 모양이고, 줄이 넉넉하며, 영수증 낱말이 둘 이상.
     nonisolated static func isReceipt(_ lines: [String]) -> Bool {
+        // 서버 규칙이 영수증인지 아닌지를 정해 두었으면 그대로 따른다(AIX1114A01 P3).
+        if let hint = RuleEngine.receiptHint(lines.joined(separator: "\n"), rules: AssistantRuleSnapshot.rules) { return hint.isReceipt }
         let text = lines.joined(separator: "\n")
         guard lines.count >= 4, LedgerMessageParser.looksLikePayment(text) else { return false }
         let upper = text.uppercased()

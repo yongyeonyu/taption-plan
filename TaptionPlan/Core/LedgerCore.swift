@@ -49,6 +49,9 @@ enum LedgerCategory: String, Codable, CaseIterable, Identifiable, Sendable {
 
     /// 글에서 분류를 짐작한다(결제 문자·영수증·AI). 모르면 기타.
     static func guess(_ text: String) -> LedgerCategory {
+        // 서버 규칙이 먼저다(AIX1114A01 P3): 사용자가 정한 것, 그다음 AI가 배운 것, 그다음 아래 표.
+        if let learned = RuleEngine.merchantCategory(merchant: text, text: text, rules: AssistantRuleSnapshot.rules),
+           let category = LedgerCategory(rawValue: learned.category) { return category }
         let lower = text.lowercased() + " "
         let table: [(LedgerCategory, [String])] = [
             (.culture, ["cgv", "메가박스", "롯데시네마", "영화", "넷플릭스", "공연", "netflix"]),

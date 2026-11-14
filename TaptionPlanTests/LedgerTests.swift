@@ -80,6 +80,34 @@ final class LedgerTests: XCTestCase {
         XCTAssertTrue(RideLineTasks.pending([ride], now: span.end.addingTimeInterval(40 * 3_600)).isEmpty)
     }
 
+    @MainActor
+    func testRuleStoreAppliesUserEditsAndFeedsTheLedgerPipeline() {
+        // 서버 사본에 사용자가 끄고 지운 것을 얹는다.
+        let cafe = Rule(id: "r1", type: "merchant_category", match: ["contains": .list(["빵집"])], result: ["category": .text("cafe")], source: .init(by: "ai"))
+        let later = Rule(id: "r2", type: "place_pair_mode", match: ["from": .text("집"), "to": .text("회사")], result: ["mode": .text("bus")], source: .init(by: "ai"))
+        let gone = Rule(id: "r3", type: "skip_word", match: ["word": .text("광고")], source: .init(by: "user"))
+        let set = RuleSet(version: 4, rules: [cafe, later, gone])
+        let edited = AssistantRuleStore.applying([.init(op: "disable", id: "r1"), .init(op: "delete", id: "r3"), .init(op: "enable", id: "r1")], to: set)
+        XCTAssertEqual(edited.rules.map(\.id), ["r1", "r2"])
+        XCTAssertEqual(edited.rules.first?.enabled, true)
+        // 읽을 수는 있어도 이 빌드가 판단에 쓰지 않는 종류는 「건너뜀」으로 알린다.
+        let parts = AssistantRuleStore.split(edited)
+        XCTAssertEqual(parts.rules.map(\.id), ["r1"])
+        XCTAssertEqual(parts.skipped, ["r2"])
+        XCTAssertEqual(AssistantRuleStore.stableID("광고"), AssistantRuleStore.stableID("광고"))
+        XCTAssertNotEqual(AssistantRuleStore.stableID("광고"), AssistantRuleStore.stableID("이벤트"))
+
+        // 판단에 쓰는 사본을 바꾸면 가게 분류와 영수증 판정이 따라간다.
+        defer { AssistantRuleSnapshot.set([]) }
+        XCTAssertEqual(LedgerCategory.guess("동네 빵집"), .other)
+        AssistantRuleSnapshot.set([cafe, Rule(id: "r4", type: "receipt_hint", match: ["contains": .list(["필터 추가"])], result: ["isReceipt": .flag(false)])])
+        XCTAssertEqual(LedgerCategory.guess("동네 빵집"), .cafe)
+        XCTAssertEqual(LedgerCategory.guess("스타벅스"), .cafe, "the built-in table still answers what no rule covers")
+        let screenshot = ["합계 12,000원", "카드 승인", "영수증", "필터 추가"]
+        XCTAssertFalse(ReceiptPhotoScanner.isReceipt(screenshot), "a rule says this layout is not a receipt")
+        XCTAssertEqual(AssistantRuleListView.summary(cafe), "빵집 → cafe")
+    }
+
     func testReceiptPhotoMarksKeepLatestWithinLimit() {
         let name = "ReceiptPhotoMarks-\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: name)!

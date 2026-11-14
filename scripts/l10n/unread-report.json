@@ -1,5 +1,5 @@
 {
- "ui": 4877,
+ "ui": 4893,
  "catalog": 502,
  "unread": [
   {
@@ -76,25 +76,25 @@
   },
   {
    "file": "TaptionPlan/Core/LedgerCore.swift",
-   "line": 399,
+   "line": 402,
    "ko": "_ amount: Double",
    "en": "String = \"KRW\""
   },
   {
    "file": "TaptionPlan/Core/LedgerIntents.swift",
-   "line": 91,
+   "line": 99,
    "ko": "saved.amount",
    "en": "saved.currency"
   },
   {
    "file": "TaptionPlan/Core/LedgerIntents.swift",
-   "line": 104,
+   "line": 112,
    "ko": "saved.amount",
    "en": "saved.currency"
   },
   {
    "file": "TaptionPlan/Core/LedgerIntents.swift",
-   "line": 130,
+   "line": 138,
    "ko": "entry.amount",
    "en": "entry.currency"
   },
@@ -118,13 +118,13 @@
   },
   {
    "file": "TaptionPlan/Core/PaymentAlertSources.swift",
-   "line": 239,
+   "line": 242,
    "ko": "saved.amount",
    "en": "saved.currency"
   },
   {
    "file": "TaptionPlan/Core/PaymentAlertSources.swift",
-   "line": 239,
+   "line": 242,
    "ko": "saved.amount",
    "en": "saved.currency"
   },

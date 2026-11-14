@@ -72,6 +72,14 @@ enum PaymentTextCapture {
         if let word = PaymentAlertSources.skipWord(in: text) {
             return (language.text("「\(word)」이(가) 든 글은 넣지 않게 해 두었어요.", "Texts containing “\(word)” are set to be skipped."), .skipped)
         }
+        // 서버 규칙(AIX1114A01 P3): 넣지 않을 낱말·결제가 아닌 글·내 계좌 사이 이체는 여기서 끝낸다.
+        let rules = AssistantRuleSnapshot.rules
+        if RuleEngine.skipWord(in: text, rules: rules) != nil || RuleEngine.textIgnore(text, source: PaymentAlertSources.name(source), rules: rules) != nil {
+            return (language.text("가계부에 넣지 않는 문자예요.", "This kind of text is not added to the ledger."), .skipped)
+        }
+        if RuleEngine.internalTransfer(text, rules: rules) != nil {
+            return (language.text("내 계좌 사이에서 옮긴 돈이라 넣지 않았어요.", "A transfer between your own accounts, so nothing was added."), .skipped)
+        }
         // AI가 보탠 규칙이 먼저다. 앱 규칙이 못 읽거나 잘못 읽는 형식을 고치려고 넣은 것이기 때문이다.
         if let match = LedgerMessageRules.match(text, now: now) {
             guard case let .draft(draft, income) = match else {

@@ -631,6 +631,19 @@
    ]
   },
   {
+   "key": "AI 규칙|AI rules",
+   "ko": "AI 규칙",
+   "en": "AI rules",
+   "files": [
+    "AssistantSafetyViews.swift:463",
+    "AssistantSettingsView.swift:33"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "AI 다듬기|AI polish",
    "ko": "AI 다듬기",
    "en": "AI polish",
@@ -812,7 +825,7 @@
    "en": "AI connections",
    "files": [
     "AssistantDataCommands.swift:465",
-    "AssistantSettingsView.swift:54",
+    "AssistantSettingsView.swift:55",
     "MapHomeView+Menu.swift:471"
    ],
    "args": [],
@@ -914,6 +927,30 @@
    "en": "Added by AI",
    "files": [
     "LedgerSheet.swift:304"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "AI가 만듦|Made by AI",
+   "ko": "AI가 만듦",
+   "en": "Made by AI",
+   "files": [
+    "AssistantSafetyViews.swift:486"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "AI가 배운 것을 앱이 먼저 스스로 판단해요. 끄거나 밀어서 지울 수 있어요.|The app decides these by itself first, using what your AI learned. Switch one off or swipe to delete it.",
+   "ko": "AI가 배운 것을 앱이 먼저 스스로 판단해요. 끄거나 밀어서 지울 수 있어요.",
+   "en": "The app decides these by itself first, using what your AI learned. Switch one off or swipe to delete it.",
+   "files": [
+    "AssistantSafetyViews.swift:459"
    ],
    "args": [],
    "targets": [
@@ -1026,8 +1063,8 @@
    "ko": "AI에게 같은 모양의 규칙을 부탁했어요.",
    "en": "Asked your AI for a rule for this layout.",
    "files": [
-    "PaymentAlertSources.swift:248",
-    "PaymentAlertSources.swift:279"
+    "PaymentAlertSources.swift:251",
+    "PaymentAlertSources.swift:282"
    ],
    "args": [],
    "targets": [
@@ -2952,7 +2989,7 @@
    "ko": "{0} {1} 결제를 취소됨으로 표시했어요.",
    "en": "Marked {0} {1} as canceled.",
    "files": [
-    "LedgerIntents.swift:135"
+    "LedgerIntents.swift:143"
    ],
    "args": [
     "original.title",
@@ -3013,8 +3050,8 @@
    "ko": "{0} {1}을 가계부에 넣었어요.",
    "en": "Added {0} {1} to the ledger.",
    "files": [
-    "LedgerIntents.swift:92",
-    "LedgerIntents.swift:158",
+    "LedgerIntents.swift:100",
+    "LedgerIntents.swift:166",
     "SiriIntents.swift:96"
    ],
    "args": [
@@ -3030,7 +3067,7 @@
    "ko": "{0} {1}을 넣었어요.",
    "en": "Added {0} {1}.",
    "files": [
-    "PaymentAlertSources.swift:239"
+    "PaymentAlertSources.swift:242"
    ],
    "args": [
     "saved.title",
@@ -3045,7 +3082,7 @@
    "ko": "{0} {1}을 수입으로 넣었어요.",
    "en": "Added {0} {1} as income.",
    "files": [
-    "LedgerIntents.swift:105"
+    "LedgerIntents.swift:113"
    ],
    "args": [
     "saved.title",
@@ -3163,7 +3200,7 @@
    "ko": "{0} 결제를 「확인 필요」에 두었어요. 메모 › 지출에서 넣거나 버릴 수 있어요.",
    "en": "{0} is waiting in Needs review. Add or discard it in Memo › Spending.",
    "files": [
-    "LedgerIntents.swift:151"
+    "LedgerIntents.swift:159"
    ],
    "args": [
     "money"
@@ -3366,7 +3403,7 @@
    "ko": "{0} 알림의 수입은 넣지 않게 해 두었어요.",
    "en": "Income from {0} alerts is turned off.",
    "files": [
-    "PaymentAlertSources.swift:104"
+    "PaymentAlertSources.swift:107"
    ],
    "args": [
     "app"
@@ -3380,7 +3417,7 @@
    "ko": "{0} 알림의 지출은 넣지 않게 해 두었어요.",
    "en": "Spending from {0} alerts is turned off.",
    "files": [
-    "PaymentAlertSources.swift:105"
+    "PaymentAlertSources.swift:108"
    ],
    "args": [
     "app"
@@ -3639,7 +3676,7 @@
    "ko": "{0} 지우기",
    "en": "Remove {0}",
    "files": [
-    "PaymentAlertSources.swift:171"
+    "PaymentAlertSources.swift:174"
    ],
    "args": [
     "word"
@@ -4389,7 +4426,7 @@
    "ko": "{0}원",
    "en": "₩{0}",
    "files": [
-    "LedgerCore.swift:402",
+    "LedgerCore.swift:405",
     "MapHomeCalendarPolicies.swift:433"
    ],
    "args": [
@@ -33278,7 +33315,7 @@
    "ko": "「BOKKI 결제 알림」 줄을 눌러요",
    "en": "Tap the BOKKI Payment Alerts row",
    "files": [
-    "PaymentAlertSources.swift:213"
+    "PaymentAlertSources.swift:216"
    ],
    "args": [],
    "targets": [
@@ -33463,6 +33500,18 @@
    ]
   },
   {
+   "key": "가게 분류|Shop category",
+   "ko": "가게 분류",
+   "en": "Shop category",
+   "files": [
+    "AssistantSafetyViews.swift:504"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "가게 이름 없음|No shop name",
    "ko": "가게 이름 없음",
    "en": "No shop name",
@@ -33628,7 +33677,7 @@
    "ko": "가계부에 넣을 결제 문자가 아니에요.",
    "en": "Not a payment message, so nothing was added.",
    "files": [
-    "LedgerIntents.swift:109"
+    "LedgerIntents.swift:117"
    ],
    "args": [],
    "targets": [
@@ -33652,7 +33701,8 @@
    "ko": "가계부에 넣지 않는 문자예요.",
    "en": "This kind of text is not added to the ledger.",
    "files": [
-    "LedgerIntents.swift:78"
+    "LedgerIntents.swift:78",
+    "LedgerIntents.swift:86"
    ],
    "args": [],
    "targets": [
@@ -33664,7 +33714,7 @@
    "ko": "가계부에 들어갔던 기록은 지웠어요.",
    "en": "The entry already added was removed.",
    "files": [
-    "PaymentAlertSources.swift:267"
+    "PaymentAlertSources.swift:270"
    ],
    "args": [],
    "targets": [
@@ -34693,6 +34743,18 @@
    ]
   },
   {
+   "key": "결제 문자 읽기|Reading payment texts",
+   "ko": "결제 문자 읽기",
+   "en": "Reading payment texts",
+   "files": [
+    "AssistantSafetyViews.swift:498"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "결제 문자 자동으로 넣기|Add payment texts automatically",
    "ko": "결제 문자 자동으로 넣기",
    "en": "Add payment texts automatically",
@@ -34759,7 +34821,7 @@
    "ko": "결제 문자를 읽지 못해 AI에게 확인을 맡겼어요.",
    "en": "Couldn't read the payment text, so it was sent to your AI to check.",
    "files": [
-    "LedgerIntents.swift:119"
+    "LedgerIntents.swift:127"
    ],
    "args": [],
    "targets": [
@@ -34771,7 +34833,7 @@
    "ko": "결제 문자를 읽지 못했어요. 가계부에서 직접 넣어 주세요.",
    "en": "Couldn't read the payment text. Add it in the ledger yourself.",
    "files": [
-    "LedgerIntents.swift:121"
+    "LedgerIntents.swift:129"
    ],
    "args": [],
    "targets": [
@@ -34796,7 +34858,7 @@
    "ko": "결제 알림 받기",
    "en": "Payment alerts",
    "files": [
-    "PaymentAlertSources.swift:201"
+    "PaymentAlertSources.swift:204"
    ],
    "args": [],
    "targets": [
@@ -34821,6 +34883,18 @@
    "en": "Payment alert automation",
    "files": [
     "BokkiShortcutsGuide.swift:313"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "결제가 아닌 글|Not a payment",
+   "ko": "결제가 아닌 글",
+   "en": "Not a payment",
+   "files": [
+    "AssistantSafetyViews.swift:500"
    ],
    "args": [],
    "targets": [
@@ -35301,7 +35375,7 @@
    "ko": "고르면 이 글은 바로 그렇게 처리하고, 연결된 AI가 같은 모양의 글을 앞으로 그렇게 읽는 규칙을 만들어요.",
    "en": "Your choice applies to this text now, and your AI makes a rule so texts like it are read the same way.",
    "files": [
-    "PaymentAlertSources.swift:349"
+    "PaymentAlertSources.swift:352"
    ],
    "args": [],
    "targets": [
@@ -35692,6 +35766,18 @@
    "en": "Fare check",
    "files": [
     "AITaskPanel.swift:222"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "구간 이동 수단|Travel mode for a route",
+   "ko": "구간 이동 수단",
+   "en": "Travel mode for a route",
+   "files": [
+    "AssistantSafetyViews.swift:507"
    ],
    "args": [],
    "targets": [
@@ -36368,7 +36454,7 @@
    "ko": "금액을 읽지 못해 아직 넣지 않았어요. AI가 규칙을 보내면 다시 읽어 넣어요.",
    "en": "Couldn't read the amount yet. It is read again when your AI sends a rule.",
    "files": [
-    "PaymentAlertSources.swift:241"
+    "PaymentAlertSources.swift:244"
    ],
    "args": [],
    "targets": [
@@ -36615,7 +36701,7 @@
    "ko": "기록 공유",
    "en": "Share records",
    "files": [
-    "AssistantSettingsView.swift:35"
+    "AssistantSettingsView.swift:36"
    ],
    "args": [],
    "targets": [
@@ -37735,7 +37821,19 @@
    "ko": "낱말 (예: 광고, 자동이체)",
    "en": "Word (e.g. ad, autopay)",
    "files": [
-    "PaymentAlertSources.swift:175"
+    "PaymentAlertSources.swift:178"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "내 계좌 사이 이체|Transfers between my accounts",
+   "ko": "내 계좌 사이 이체",
+   "en": "Transfers between my accounts",
+   "files": [
+    "AssistantSafetyViews.swift:501"
    ],
    "args": [],
    "targets": [
@@ -37747,7 +37845,19 @@
    "ko": "내 계좌 사이 이체나 카드 충전",
    "en": "A transfer between your own accounts or a card top-up",
    "files": [
-    "PaymentAlertSources.swift:371"
+    "PaymentAlertSources.swift:374"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "내 계좌 사이에서 옮긴 돈이라 넣지 않았어요.|A transfer between your own accounts, so nothing was added.",
+   "ko": "내 계좌 사이에서 옮긴 돈이라 넣지 않았어요.",
+   "en": "A transfer between your own accounts, so nothing was added.",
+   "files": [
+    "LedgerIntents.swift:81"
    ],
    "args": [],
    "targets": [
@@ -37783,6 +37893,7 @@
    "ko": "내 계좌 이름",
    "en": "My account names",
    "files": [
+    "AssistantSafetyViews.swift:502",
     "LedgerReviewBand.swift:128",
     "LedgerSheet.swift:77"
    ],
@@ -37796,7 +37907,7 @@
    "ko": "내 계좌로 옮긴 돈이라 가계부에 넣지 않았어요.",
    "en": "That was a transfer to your own account, so nothing was added.",
    "files": [
-    "LedgerIntents.swift:113"
+    "LedgerIntents.swift:121"
    ],
    "args": [],
    "targets": [
@@ -37977,6 +38088,18 @@
    ]
   },
   {
+   "key": "내가 정함|Set by me",
+   "ko": "내가 정함",
+   "en": "Set by me",
+   "files": [
+    "AssistantSafetyViews.swift:486"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "내가 확인|I'll check",
    "ko": "내가 확인",
    "en": "I'll check",
@@ -37993,7 +38116,7 @@
    "ko": "내부 이체라 가계부에 넣지 않았어요.",
    "en": "Internal transfer: not added to the ledger.",
    "files": [
-    "PaymentAlertSources.swift:273"
+    "PaymentAlertSources.swift:276"
    ],
    "args": [],
    "targets": [
@@ -38005,7 +38128,7 @@
    "ko": "내부 이체로 정했어요. 지출·수입에 넣지 않아요.",
    "en": "Marked as an internal transfer. It isn't counted as spending or income.",
    "files": [
-    "PaymentAlertSources.swift:262"
+    "PaymentAlertSources.swift:265"
    ],
    "args": [],
    "targets": [
@@ -38017,7 +38140,7 @@
    "ko": "내부",
    "en": "Internal",
    "files": [
-    "PaymentAlertSources.swift:363"
+    "PaymentAlertSources.swift:366"
    ],
    "args": [],
    "targets": [
@@ -38137,7 +38260,8 @@
    "ko": "넣지 않을 낱말",
    "en": "Words to skip",
    "files": [
-    "PaymentAlertSources.swift:182"
+    "PaymentAlertSources.swift:185",
+    "AssistantSafetyViews.swift:499"
    ],
    "args": [],
    "targets": [
@@ -38149,7 +38273,7 @@
    "ko": "넣지 않음",
    "en": "Skip",
    "files": [
-    "PaymentAlertSources.swift:343"
+    "PaymentAlertSources.swift:346"
    ],
    "args": [],
    "targets": [
@@ -38677,7 +38801,7 @@
    "ko": "단축어 앱 › 아래 「자동화」",
    "en": "Shortcuts › Automation at the bottom",
    "files": [
-    "PaymentAlertSources.swift:212"
+    "PaymentAlertSources.swift:215"
    ],
    "args": [],
    "targets": [
@@ -38701,7 +38825,7 @@
    "ko": "단축어 앱 열기",
    "en": "Open Shortcuts",
    "files": [
-    "PaymentAlertSources.swift:193",
+    "PaymentAlertSources.swift:196",
     "BokkiShortcutsGuide.swift:37",
     "BokkiShortcutsGuide.swift:204"
    ],
@@ -39125,7 +39249,7 @@
    "ko": "더하기",
    "en": "Add",
    "files": [
-    "PaymentAlertSources.swift:178",
+    "PaymentAlertSources.swift:181",
     "LedgerReviewBand.swift:115"
    ],
    "args": [],
@@ -41058,7 +41182,7 @@
    "ko": "목록에서 지우기",
    "en": "Remove from list",
    "files": [
-    "PaymentAlertSources.swift:149"
+    "PaymentAlertSources.swift:152"
    ],
    "args": [],
    "targets": [
@@ -41121,7 +41245,7 @@
    "ko": "문자 (「BOKKI 결제」 자동화)",
    "en": "Texts (BOKKI Payment automation)",
    "files": [
-    "PaymentAlertSources.swift:152"
+    "PaymentAlertSources.swift:155"
    ],
    "args": [],
    "targets": [
@@ -41353,7 +41477,7 @@
    "ko": "바꾸고 모두 지우기",
    "en": "Replace and delete everything",
    "files": [
-    "AssistantSettingsView.swift:106"
+    "AssistantSettingsView.swift:107"
    ],
    "args": [],
    "targets": [
@@ -41661,7 +41785,7 @@
    "ko": "방금 같은 금액의 결제가 있어 「확인 필요」에 두었어요.",
    "en": "A payment of the same amount was just added, so this one is waiting in Needs review.",
    "files": [
-    "LedgerIntents.swift:143"
+    "LedgerIntents.swift:151"
    ],
    "args": [],
    "targets": [
@@ -42155,6 +42279,18 @@
    ]
   },
   {
+   "key": "버스·지하철 노선|Bus and subway lines",
+   "ko": "버스·지하철 노선",
+   "en": "Bus and subway lines",
+   "files": [
+    "AssistantSafetyViews.swift:508"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "버스를 탔나요?|Did you take a bus?",
    "ko": "버스를 탔나요?",
    "en": "Did you take a bus?",
@@ -42502,7 +42638,7 @@
    "ko": "보안 업데이트로 예전 AI 연결을 모두 끊었어요. 쓰던 AI를 아래에서 다시 연결해 주세요.",
    "en": "A security update disconnected your previous AI connections. Reconnect the AIs you use below.",
    "files": [
-    "AssistantSettingsView.swift:87"
+    "AssistantSettingsView.swift:88"
    ],
    "args": [],
    "targets": [
@@ -43964,7 +44100,7 @@
    "ko": "새 키로 바꾸기",
    "en": "Replace with a new key",
    "files": [
-    "AssistantSettingsView.swift:101"
+    "AssistantSettingsView.swift:102"
    ],
    "args": [],
    "targets": [
@@ -43976,7 +44112,7 @@
    "ko": "새 키로 바꿀까요?",
    "en": "Replace the link key?",
    "files": [
-    "AssistantSettingsView.swift:104"
+    "AssistantSettingsView.swift:105"
    ],
    "args": [],
    "targets": [
@@ -44164,7 +44300,7 @@
    "ko": "서버 보관 기간",
    "en": "Keep on server",
    "files": [
-    "AssistantSettingsView.swift:38"
+    "AssistantSettingsView.swift:39"
    ],
    "args": [],
    "targets": [
@@ -44251,7 +44387,7 @@
    "ko": "서버에 올린 기록과 모든 AI 연결, PIN이 지워져요. 쓰던 AI는 다시 연결해야 해요.",
    "en": "The records on the server, every AI connection and the PIN are deleted. You'll need to reconnect the AIs you use.",
    "files": [
-    "AssistantSettingsView.swift:109"
+    "AssistantSettingsView.swift:110"
    ],
    "args": [],
    "targets": [
@@ -45239,8 +45375,8 @@
    "ko": "수입",
    "en": "Income",
    "files": [
-    "PaymentAlertSources.swift:144",
-    "PaymentAlertSources.swift:341",
+    "PaymentAlertSources.swift:147",
+    "PaymentAlertSources.swift:344",
     "LedgerExport.swift:22"
    ],
    "args": [],
@@ -45351,7 +45487,7 @@
    "ko": "스위치가 켜져 있는지 봐요",
    "en": "Check that its switch is on",
    "files": [
-    "PaymentAlertSources.swift:215"
+    "PaymentAlertSources.swift:218"
    ],
    "args": [],
    "targets": [
@@ -46355,6 +46491,18 @@
    ]
   },
   {
+   "key": "아직 규칙이 없어요.|No rules yet.",
+   "ko": "아직 규칙이 없어요.",
+   "en": "No rules yet.",
+   "files": [
+    "AssistantSafetyViews.swift:451"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "아직 담은 곳이 없습니다.|No stops yet.",
    "ko": "아직 담은 곳이 없습니다.",
    "en": "No stops yet.",
@@ -46407,7 +46555,7 @@
    "ko": "아직 받은 앱 알림이 없어요. 결제 알림이 한 번 오면 그 앱이 여기에 생겨요.",
    "en": "No app alerts yet. An app appears here after its first payment alert.",
    "files": [
-    "PaymentAlertSources.swift:134"
+    "PaymentAlertSources.swift:137"
    ],
    "args": [],
    "targets": [
@@ -46590,7 +46738,7 @@
    "ko": "알겠어요",
    "en": "Got it",
    "files": [
-    "AssistantSettingsView.swift:91"
+    "AssistantSettingsView.swift:92"
    ],
    "args": [],
    "targets": [
@@ -46641,6 +46789,18 @@
    "en": "Alert text: Input",
    "files": [
     "BokkiShortcutsGuide.swift:270"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "알림 앱별 받기|Alerts by app",
+   "ko": "알림 앱별 받기",
+   "en": "Alerts by app",
+   "files": [
+    "AssistantSafetyViews.swift:503"
    ],
    "args": [],
    "targets": [
@@ -46767,7 +46927,7 @@
    "ko": "앞으로 이런 알림은 넣지 않게 할게요. 이미 넣은 기록은 가계부에서 지워 주세요.",
    "en": "Alerts like this won't be added from now on. Delete the entry already added from the ledger.",
    "files": [
-    "PaymentAlertSources.swift:230"
+    "PaymentAlertSources.swift:233"
    ],
    "args": [],
    "targets": [
@@ -46779,7 +46939,7 @@
    "ko": "앞으로 이런 알림은 넣지 않게 할게요.",
    "en": "Alerts like this won't be added from now on.",
    "files": [
-    "PaymentAlertSources.swift:231"
+    "PaymentAlertSources.swift:234"
    ],
    "args": [],
    "targets": [
@@ -46904,7 +47064,7 @@
    "ko": "앱 더하기",
    "en": "Add an app",
    "files": [
-    "PaymentAlertSources.swift:195"
+    "PaymentAlertSources.swift:198"
    ],
    "args": [],
    "targets": [
@@ -47074,7 +47234,7 @@
    "ko": "앱 이름들 옆 「+」를 눌러 앱을 골라요",
    "en": "Tap + next to the app names and pick the app",
    "files": [
-    "PaymentAlertSources.swift:214"
+    "PaymentAlertSources.swift:217"
    ],
    "args": [],
    "targets": [
@@ -47146,7 +47306,7 @@
    "ko": "앱마다 넣을 알림 고르기",
    "en": "Choose alerts per app",
    "files": [
-    "PaymentAlertSources.swift:319"
+    "PaymentAlertSources.swift:322"
    ],
    "args": [],
    "targets": [
@@ -47158,7 +47318,7 @@
    "ko": "앱마다 넣을 알림",
    "en": "What to keep from each app",
    "files": [
-    "PaymentAlertSources.swift:138"
+    "PaymentAlertSources.swift:141"
    ],
    "args": [],
    "targets": [
@@ -47316,7 +47476,7 @@
    "ko": "어느 앱의 알림을 넘길지는 iOS가 단축어 앱에서만 고르게 해요. 넣은 앱은 첫 결제 알림이 오면 위 목록에 생겨요.",
    "en": "iOS only lets you pick the apps in Shortcuts. A new app shows up above after its first payment alert.",
    "files": [
-    "PaymentAlertSources.swift:197"
+    "PaymentAlertSources.swift:200"
    ],
    "args": [],
    "targets": [
@@ -48992,7 +49152,7 @@
    "ko": "연동 키가 없어요",
    "en": "No link key",
    "files": [
-    "AssistantSettingsView.swift:98"
+    "AssistantSettingsView.swift:99"
    ],
    "args": [],
    "targets": [
@@ -49004,7 +49164,7 @@
    "ko": "연동 키가 있어요",
    "en": "Link key is set",
    "files": [
-    "AssistantSettingsView.swift:98"
+    "AssistantSettingsView.swift:99"
    ],
    "args": [],
    "targets": [
@@ -49016,7 +49176,7 @@
    "ko": "연동 키는 이 기기에만 있고 AI에게 주지 않아요. 키를 바꾸면 서버의 기록과 AI 연결을 모두 지워요.",
    "en": "The link key stays on this device and is never given to the AI. Replacing it deletes the server records and all AI connections.",
    "files": [
-    "AssistantSettingsView.swift:116"
+    "AssistantSettingsView.swift:117"
    ],
    "args": [],
    "targets": [
@@ -49421,6 +49581,18 @@
    "files": [
     "MapHomePlaybackVideoSheet.swift:358",
     "TravelMapVideoSection.swift:249"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "영수증 판정|Receipt check",
+   "ko": "영수증 판정",
+   "en": "Receipt check",
+   "files": [
+    "AssistantSafetyViews.swift:505"
    ],
    "args": [],
    "targets": [
@@ -50218,7 +50390,7 @@
    "en": "Done",
    "files": [
     "LedgerMessageRules.swift:291",
-    "PaymentAlertSources.swift:324",
+    "PaymentAlertSources.swift:327",
     "AITaskPanel.swift:198"
    ],
    "args": [],
@@ -51478,7 +51650,7 @@
    "ko": "이 글은",
    "en": "This text is",
    "files": [
-    "PaymentAlertSources.swift:347"
+    "PaymentAlertSources.swift:350"
    ],
    "args": [],
    "targets": [
@@ -51841,7 +52013,7 @@
    "ko": "이 낱말이 든 문자·알림은 가계부에 넣지 않아요. 단축어 자동화는 고치지 않아도 돼요 — 자동화는 그대로 받고, 무엇을 넣을지는 여기서 정해요.",
    "en": "Texts and alerts containing these words are not added. You don't need to edit the Shortcuts automation: it keeps receiving, and this decides what gets added.",
    "files": [
-    "PaymentAlertSources.swift:184"
+    "PaymentAlertSources.swift:187"
    ],
    "args": [],
    "targets": [
@@ -51946,6 +52118,18 @@
    ]
   },
   {
+   "key": "이 버전의 앱은 아직 쓰지 못해요.|This app version can't use it yet.",
+   "ko": "이 버전의 앱은 아직 쓰지 못해요.",
+   "en": "This app version can't use it yet.",
+   "files": [
+    "AssistantSafetyViews.swift:489"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "이 비밀번호를 잊으면 백업을 열 수 없어요. 꼭 기억해 두세요.|If you forget this password, your backups can't be opened. Keep it safe.",
    "ko": "이 비밀번호를 잊으면 백업을 열 수 없어요. 꼭 기억해 두세요.",
    "en": "If you forget this password, your backups can't be opened. Keep it safe.",
@@ -52000,7 +52184,7 @@
    "ko": "이 알림은 · {0}",
    "en": "This alert · {0}",
    "files": [
-    "PaymentAlertSources.swift:347"
+    "PaymentAlertSources.swift:350"
    ],
    "args": [
     "$0"
@@ -52616,8 +52800,8 @@
    "ko": "이미 가계부에 넣은 결제예요.",
    "en": "That payment is already in the ledger.",
    "files": [
-    "LedgerIntents.swift:88",
-    "LedgerIntents.swift:139"
+    "LedgerIntents.swift:96",
+    "LedgerIntents.swift:147"
    ],
    "args": [],
    "targets": [
@@ -52629,7 +52813,7 @@
    "ko": "이미 가계부에 넣은 입금이에요.",
    "en": "That deposit is already in the ledger.",
    "files": [
-    "LedgerIntents.swift:101"
+    "LedgerIntents.swift:109"
    ],
    "args": [],
    "targets": [
@@ -52641,7 +52825,7 @@
    "ko": "이미 가계부에 들어간 글이에요. 앞으로 같은 모양을 이 종류로 읽게 할게요.",
    "en": "This one is already in the ledger. Alerts like it will be read this way from now on.",
    "files": [
-    "PaymentAlertSources.swift:233"
+    "PaymentAlertSources.swift:236"
    ],
    "args": [],
    "targets": [
@@ -52665,7 +52849,7 @@
    "ko": "이미 들어간 기록은 가계부에서 지워 주세요.",
    "en": "Delete the entry already added from the ledger.",
    "files": [
-    "PaymentAlertSources.swift:269"
+    "PaymentAlertSources.swift:272"
    ],
    "args": [],
    "targets": [
@@ -53214,6 +53398,18 @@
    "en": "Classify calendar event titles",
    "files": [
     "AssistantCommandEdits.swift:86"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "일정 제목 분류|Calendar title category",
+   "ko": "일정 제목 분류",
+   "en": "Calendar title category",
+   "files": [
+    "AssistantSafetyViews.swift:506"
    ],
    "args": [],
    "targets": [
@@ -55021,7 +55217,7 @@
    "ko": "좌표와 경로는 보내지 않아요. 기록은 고른 기간이 지나면 서버에서 지워져요. AI 비서가 보낸 메모·일정·기록 수정은 앱을 열 때나 백그라운드 새로 고침 때 바로 반영돼요.",
    "en": "Coordinates and routes are never sent. Records are deleted from the server after the chosen period. Memos, schedules and record edits from the AI assistant are applied when you open the app or during background refresh.",
    "files": [
-    "AssistantSettingsView.swift:42"
+    "AssistantSettingsView.swift:43"
    ],
    "args": [],
    "targets": [
@@ -56178,8 +56374,8 @@
    "ko": "지출",
    "en": "Spending",
    "files": [
-    "PaymentAlertSources.swift:143",
-    "PaymentAlertSources.swift:340",
+    "PaymentAlertSources.swift:146",
+    "PaymentAlertSources.swift:343",
     "LedgerExport.swift:147"
    ],
    "args": [],
@@ -56459,7 +56655,7 @@
    "ko": "직접 정해 가계부에 넣었어요.",
    "en": "Added to the ledger as you chose.",
    "files": [
-    "PaymentAlertSources.swift:238"
+    "PaymentAlertSources.swift:241"
    ],
    "args": [],
    "targets": [
@@ -57256,7 +57452,7 @@
    "ko": "충전·광고·잔액 안내는 스위치와 상관없이 넣지 않아요. 넣지 않은 알림도 「AI」 탭의 받은 문자에 7일 동안 남아요.",
    "en": "Top-ups, ads and balance notices are never added. Skipped alerts stay in the AI tab's received texts for 7 days.",
    "files": [
-    "PaymentAlertSources.swift:155"
+    "PaymentAlertSources.swift:158"
    ],
    "args": [],
    "targets": [

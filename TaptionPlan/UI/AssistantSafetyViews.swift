@@ -438,3 +438,92 @@ struct AssistantConfirmHost: View {
         }
     }
 }
+
+/// 「AI 규칙」(AIX1114A01 P3): AI가 배워 서버에 둔 규칙과 내가 정한 규칙. 앱이 이것으로 먼저 판단한다. 끄거나 지울 수 있다.
+struct AssistantRuleListView: View {
+    let language: MapHomeLanguage
+    @State private var rules: [Rule] = []
+    @State private var skipped: Set<String> = []
+
+    var body: some View {
+        List {
+            Section {
+                if rules.isEmpty { Text(language.text("아직 규칙이 없어요.", "No rules yet.")).foregroundStyle(.secondary) }
+                ForEach(rules) { rule in row(rule) }
+                    .onDelete { offsets in
+                        for index in offsets { AssistantRuleStore.delete(rules[index].id) }
+                        reload()
+                        Task { await AssistantRuleStore.sync(); reload() }
+                    }
+            } footer: {
+                Text(language.text("AI가 배운 것을 앱이 먼저 스스로 판단해요. 끄거나 밀어서 지울 수 있어요.",
+                                   "The app decides these by itself first, using what your AI learned. Switch one off or swipe to delete it."))
+            }
+        }
+        .navigationTitle(language.text("AI 규칙", "AI rules"))
+        .task {
+            reload()
+            await AssistantRuleStore.sync()
+            reload()
+        }
+    }
+
+    private func reload() {
+        let set = AssistantRuleStore.effective()
+        rules = set.rules
+        skipped = Set(AssistantRuleStore.split(set).skipped)
+    }
+
+    private func row(_ rule: Rule) -> some View {
+        Toggle(isOn: Binding(get: { rule.enabled }, set: { on in
+            AssistantRuleStore.setEnabled(rule.id, on)
+            reload()
+            Task { await AssistantRuleStore.sync(); reload() }
+        })) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(Self.title(rule.type, language)).font(.taptionStyle(.subheadline, weight: .semibold))
+                Text(verbatim: Self.summary(rule)).font(.taptionStyle(.footnote)).foregroundStyle(.secondary).lineLimit(3)
+                Text(rule.isUserMade ? language.text("내가 정함", "Set by me") : language.text("AI가 만듦", "Made by AI"))
+                    .font(.taptionStyle(.caption2)).foregroundStyle(.secondary)
+                if rule.enabled, skipped.contains(rule.id) {
+                    Text(language.text("이 버전의 앱은 아직 쓰지 못해요.", "This app version can't use it yet."))
+                        .font(.taptionStyle(.caption2)).foregroundStyle(.orange)
+                }
+            }
+        }
+    }
+
+    static func title(_ type: String, _ language: MapHomeLanguage) -> String {
+        switch RuleType(rawValue: type) {
+        case .paymentText: language.text("결제 문자 읽기", "Reading payment texts")
+        case .skipWord: language.text("넣지 않을 낱말", "Words to skip")
+        case .textIgnore: language.text("결제가 아닌 글", "Not a payment")
+        case .internalTransfer: language.text("내 계좌 사이 이체", "Transfers between my accounts")
+        case .ownAccount: language.text("내 계좌 이름", "My account names")
+        case .sourceSwitch: language.text("알림 앱별 받기", "Alerts by app")
+        case .merchantCategory: language.text("가게 분류", "Shop category")
+        case .receiptHint: language.text("영수증 판정", "Receipt check")
+        case .calendarTitle: language.text("일정 제목 분류", "Calendar title category")
+        case .placePairMode: language.text("구간 이동 수단", "Travel mode for a route")
+        case .rideLine: language.text("버스·지하철 노선", "Bus and subway lines")
+        case nil: type
+        }
+    }
+
+    /// 「빵집, 베이커리 → cafe」처럼 조건과 결과를 그대로 보인다. 규칙의 값은 번역하지 않는다.
+    nonisolated static func summary(_ rule: Rule) -> String {
+        func text(_ value: RuleValue) -> String {
+            switch value {
+            case .text(let text): text
+            case .flag(let flag): flag ? "✓" : "✕"
+            case .number(let number): String(number)
+            case .list(let items): items.joined(separator: ", ")
+            }
+        }
+        let order = ["equals", "contains", "word", "name", "app", "title", "from", "to", "board", "alight", "mode", "sample"]
+        let left = order.compactMap { rule.match[$0].map(text) }.joined(separator: " · ")
+        let right = ["kind", "category", "title", "detailId", "mode", "line", "isReceipt", "expense", "income", "reason"].compactMap { rule.result[$0].map(text) }.joined(separator: " · ")
+        return right.isEmpty ? left : "\(left) → \(right)"
+    }
+}
+

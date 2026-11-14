@@ -171,6 +171,11 @@ enum AssistantCommandRunner {
             }
             guard Date.now < deadline, !Task.isCancelled else { return }
             await AssistantActivitySync.run(model: model)
+            // 규칙 묶음과 맡긴 일의 상태도 함께 맞춘다(AIX1114A01 P3·P5).
+            guard Date.now < deadline, !Task.isCancelled else { return }
+            await AssistantRuleStore.sync()
+            guard Date.now < deadline, !Task.isCancelled else { return }
+            await AITaskQueue.refresh()
         }
         // 남은 시간에 앨범의 새 영수증을 본다(RPA1114A01).
         if Date.now < deadline, !Task.isCancelled { await ReceiptPhotoScanner.scan(deadline: deadline) }
@@ -269,6 +274,9 @@ enum AssistantCommandRefresh {
         let result = await TripRelay.$singleAttempt.withValue(true) { await AssistantCommandRunner.run(model: model) }
         // 새 질문(답 기다림)과 아직 못 올린 답을 올린다(ASK1112A01).
         await AssistantQuestionStore.shared.uploadIfNeeded()
+        // 규칙 묶음을 서버와 맞추고, 맡긴 일의 상태도 「AI」 탭을 열지 않아도 갱신한다(AIX1114A01 P3·P5).
+        await AssistantRuleStore.sync()
+        await AITaskQueue.refresh()
         ReceiptPhotoWatcher.shared.startIfNeeded()
         await ReceiptPhotoScanner.scan()
         switch result {

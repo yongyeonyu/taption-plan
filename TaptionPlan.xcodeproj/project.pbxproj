@@ -328,6 +328,7 @@
 		A1G1111X0100000000000001 /* GPXTrackExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1G1111X0100000000000001 /* GPXTrackExport.swift */; };
 		A1L1111T0100000000000001 /* LedgerTollRepeat.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L1111T0100000000000001 /* LedgerTollRepeat.swift */; };
 		A1PRL1112A01000000000001 /* LedgerMessageRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1PRL1112A01000000000001 /* LedgerMessageRules.swift */; };
+		A1AIX1114A01000000000001 /* AssistantRuleStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1AIX1114A01000000000001 /* AssistantRuleStore.swift */; };
 		A1PAS1113A01000000000001 /* PaymentAlertSources.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1PAS1113A01000000000001 /* PaymentAlertSources.swift */; };
 		A1TRF1113A01000000000001 /* LedgerTransitFare.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1TRF1113A01000000000001 /* LedgerTransitFare.swift */; };
 		A1TRF1113A01000000000002 /* BusRideRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1TRF1113A01000000000002 /* BusRideRecognizer.swift */; };
@@ -568,6 +569,7 @@
 		A60000000000000000000005 /* HealthKitIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F60000000000000000000005 /* HealthKitIntegrationTests.swift */; };
 		A70000000000000000000001 /* TaptionPlanEngine in Frameworks */ = {isa = PBXBuildFile; productRef = X70000000000000000000002 /* TaptionPlanEngine */; };
 		C0FFEE000000000000000011 /* TaptionPlanStore in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000002 /* TaptionPlanStore */; };
+		C0FFEE0000000000000000A3 /* TaptionRules in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE0000000000000000A2 /* TaptionRules */; };
 		C0FFEE000000000000000013 /* TaptionPlanStore in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000002 /* TaptionPlanStore */; };
 		C0FFEE000000000000000021 /* TaptionWatchSync in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000004 /* TaptionWatchSync */; };
 		C0FFEE000000000000000023 /* TaptionWatchSync in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000004 /* TaptionWatchSync */; };
@@ -1092,6 +1094,7 @@
 		F1G1111X0100000000000001 /* GPXTrackExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GPXTrackExport.swift; sourceTree = "<group>"; };
 		F1L1111T0100000000000001 /* LedgerTollRepeat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerTollRepeat.swift; sourceTree = "<group>"; };
 		F1PRL1112A01000000000001 /* LedgerMessageRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerMessageRules.swift; sourceTree = "<group>"; };
+		F1AIX1114A01000000000001 /* AssistantRuleStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantRuleStore.swift; sourceTree = "<group>"; };
 		F1PAS1113A01000000000001 /* PaymentAlertSources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaymentAlertSources.swift; sourceTree = "<group>"; };
 		F1TRF1113A01000000000001 /* LedgerTransitFare.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerTransitFare.swift; sourceTree = "<group>"; };
 		F1TRF1113A01000000000002 /* BusRideRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusRideRecognizer.swift; sourceTree = "<group>"; };
@@ -1482,6 +1485,7 @@
 				A30000000000000000000001 /* TaptionPlanCore in Frameworks */,
 				A70000000000000000000001 /* TaptionPlanEngine in Frameworks */,
 				C0FFEE000000000000000011 /* TaptionPlanStore in Frameworks */,
+				C0FFEE0000000000000000A3 /* TaptionRules in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2166,6 +2170,7 @@
 				F1G1111X0100000000000001 /* GPXTrackExport.swift */,
 				F1L1111T0100000000000001 /* LedgerTollRepeat.swift */,
 				F1PRL1112A01000000000001 /* LedgerMessageRules.swift */,
+				F1AIX1114A01000000000001 /* AssistantRuleStore.swift */,
 				F1PAS1113A01000000000001 /* PaymentAlertSources.swift */,
 				F1TRF1113A01000000000001 /* LedgerTransitFare.swift */,
 				F1TRF1113A01000000000002 /* BusRideRecognizer.swift */,
@@ -2325,6 +2330,7 @@
 				X30000000000000000000002 /* TaptionPlanCore */,
 				X70000000000000000000002 /* TaptionPlanEngine */,
 				C0FFEE000000000000000002 /* TaptionPlanStore */,
+				C0FFEE0000000000000000A2 /* TaptionRules */,
 				X50000000000000000000002 /* MapLibre */,
 				X50000000000000000000006 /* KakaoMapsSDK_SPM */,
 			);
@@ -2530,6 +2536,7 @@
 				X40000000000000000000003 /* XCLocalSwiftPackageReference "TaptionRouteEngine" */,
 				X70000000000000000000001 /* XCLocalSwiftPackageReference "TaptionPlanEngine" */,
 				C0FFEE000000000000000001 /* XCLocalSwiftPackageReference "TaptionPlanStore" */,
+				C0FFEE0000000000000000A1 /* XCLocalSwiftPackageReference "TaptionAssistant" */,
 				C0FFEE000000000000000003 /* XCLocalSwiftPackageReference "TaptionWatchSync" */,
 				X80000000000000000000001 /* XCLocalSwiftPackageReference "TaptionClassifierEngine" */,
 				X50000000000000000000001 /* XCRemoteSwiftPackageReference "maplibre-gl-native-distribution" */,
@@ -3083,6 +3090,7 @@
 				A1G1111X0100000000000001 /* GPXTrackExport.swift in Sources */,
 				A1L1111T0100000000000001 /* LedgerTollRepeat.swift in Sources */,
 				A1PRL1112A01000000000001 /* LedgerMessageRules.swift in Sources */,
+				A1AIX1114A01000000000001 /* AssistantRuleStore.swift in Sources */,
 				A1PAS1113A01000000000001 /* PaymentAlertSources.swift in Sources */,
 				A1TRF1113A01000000000001 /* LedgerTransitFare.swift in Sources */,
 				A1TRF1113A01000000000002 /* BusRideRecognizer.swift in Sources */,
@@ -3801,6 +3809,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/TaptionPlanStore;
 		};
+		C0FFEE0000000000000000A1 /* XCLocalSwiftPackageReference "TaptionAssistant" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/TaptionAssistant;
+		};
 		C0FFEE000000000000000003 /* XCLocalSwiftPackageReference "TaptionWatchSync" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/TaptionWatchSync;
@@ -3865,6 +3877,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = C0FFEE000000000000000001 /* XCLocalSwiftPackageReference "TaptionPlanStore" */;
 			productName = TaptionPlanStore;
+		};
+		C0FFEE0000000000000000A2 /* TaptionRules */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C0FFEE0000000000000000A1 /* XCLocalSwiftPackageReference "TaptionAssistant" */;
+			productName = TaptionRules;
 		};
 		C0FFEE000000000000000004 /* TaptionWatchSync */ = {
 			isa = XCSwiftPackageProductDependency;
