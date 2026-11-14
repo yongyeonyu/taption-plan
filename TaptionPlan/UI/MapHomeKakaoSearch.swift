@@ -194,7 +194,9 @@ enum KakaoMapAvailability {
 
 extension MapHomeView {
     /// 2단계(KMP1114A02, 대표 신고: 화랑이도 없고 검은 표시만): 그날 경로선 전체·10분 넘게 머문 곳·보고 있는 시각의 화랑이.
-    /// 재생하면 화랑이가 그 시각 자리로 움직이고 지도가 따라간다. 말풍선·발자국·날씨·사진은 아직 다른 지도에서만 그린다.
+    /// 재생하면 화랑이가 그 시각 자리로 움직이고 지도가 따라간다.
+    /// 3단계(KMP1114A03, 대표 신고: 캐릭터 그림이 다르고 집·말풍선이 없음): 화랑이는 다른 지도와 같은 그림(꾸미기·노선 이름표 포함)에
+    /// 말풍선을 붙이고, 집은 다른 지도의 집 그림과 「○일째」를 놓는다. 모두 한 장 그림이라 움직이지는 않는다. 발자국·날씨·사진은 아직 없다.
     var kakaoMap: some View {
         let routes = recordingShows(\.routes)
             ? (vectorHistoricalRoutes + (vectorActiveRoute.map { [$0] } ?? [])).map { $0.coordinates }.filter { $0.count >= 2 }
@@ -208,7 +210,15 @@ extension MapHomeView {
             stays: stays,
             cat: displayedLocationCoordinate,
             action: displayedStickmanAction,
-            follows: isDayPlaybackRunning || userTrackingMode.keepsCameraLocked
+            follows: isDayPlaybackRunning || userTrackingMode.keepsCameraLocked,
+            accessoryID: homeGrowthHistory.season.equippedAccessory,
+            rideLabel: [.bus, .subway].contains(displayedStickmanAction)
+                ? MapHomeRideLabel.text(at: displayedLocationDate, travel: currentDayDataSnapshot?.travel ?? []) : nil,
+            bubble: recordingShows(\.cat) ? MapHomeCatSpeechBubble.displayText(action: displayedStickmanAction, fallback: displayedStickmanAction.title).text : nil,
+            home: homeCoordinate,
+            homeKey: "\(MapHomeGrowthPolicy.dailyLevel(for: model.selectedDate))|\(language.rawValue)",
+            homeLabel: MapHomeGrowthPolicy.dayLabel(level: MapHomeGrowthPolicy.dailyLevel(for: model.selectedDate), language: language),
+            homeArtwork: AnyView(daySummaryHomeArtwork)
         )
         .ignoresSafeArea()
         .accessibilityLabel(language.text("카카오 지도", "Kakao map"))
@@ -222,6 +232,15 @@ struct MapHomeKakaoMap: UIViewRepresentable {
     let cat: CLLocationCoordinate2D?
     let action: MapHomeStickmanAction
     let follows: Bool
+    var accessoryID: String? = nil
+    var rideLabel: String? = nil
+    /// 화랑이 옆 말풍선 글. nil이면 붙이지 않는다.
+    var bubble: String? = nil
+    var home: CLLocationCoordinate2D? = nil
+    /// 집 그림을 다시 그릴지 가르는 값(성장 단계·언어).
+    var homeKey = ""
+    var homeLabel = ""
+    var homeArtwork: AnyView? = nil
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
@@ -261,8 +280,15 @@ struct MapHomeKakaoMap: UIViewRepresentable {
         private var follows = false
         private var routeColor = UIColor.systemOrange
         private var drawnRouteKey = 0, drawnStayKey = 0
-        private var drawnAction: MapHomeStickmanAction?
+        private var drawnCatKey: String?
         private var catPoi: Poi?
+        private var accessoryID: String?
+        private var rideLabel: String?
+        private var bubble: String?
+        private var home: CLLocationCoordinate2D?
+        private var homeKey = "", homeLabel = ""
+        private var homeArtwork: AnyView?
+        private var drawnHomeKey: String?
         private var hasCentered = false
         private static let viewName = "mapview"
 
@@ -273,6 +299,13 @@ struct MapHomeKakaoMap: UIViewRepresentable {
             action = view.action
             follows = view.follows
             routeColor = view.routeColor
+            accessoryID = view.accessoryID
+            rideLabel = view.rideLabel
+            bubble = view.bubble
+            home = view.home
+            homeKey = view.homeKey
+            homeLabel = view.homeLabel
+            homeArtwork = view.homeArtwork
             draw()
         }
 
@@ -337,6 +370,7 @@ struct MapHomeKakaoMap: UIViewRepresentable {
             // 기호 그림은 카카오가 검게 그려서(대표 캡처) 색을 넣은 비트맵을 직접 그린다.
             labels.addPoiStyle(PoiStyle(styleID: "stay", styles: [PerLevelPoiStyle(iconStyle: PoiIconStyle(symbol: Self.dot(routeColor)), level: 0)]))
             _ = labels.addLabelLayer(option: LabelLayerOptions(layerID: "stays", competitionType: .none, competitionUnit: .symbolFirst, orderType: .rank, zOrder: 10))
+            _ = labels.addLabelLayer(option: LabelLayerOptions(layerID: "home", competitionType: .none, competitionUnit: .symbolFirst, orderType: .rank, zOrder: 15))
             _ = labels.addLabelLayer(option: LabelLayerOptions(layerID: "cat", competitionType: .none, competitionUnit: .symbolFirst, orderType: .rank, zOrder: 20))
         }
 
@@ -375,6 +409,7 @@ struct MapHomeKakaoMap: UIViewRepresentable {
                 layer.clearAllItems()
                 layer.addPois(option: PoiOptions(styleID: "stay"), at: stays.map(point))?.forEach { $0.show() }
             }
+            drawHome(on: map)
             drawCat(on: map)
             if let cat, follows || !hasCentered {
                 hasCentered = true
@@ -382,15 +417,32 @@ struct MapHomeKakaoMap: UIViewRepresentable {
             }
         }
 
+        /// 집: 다른 지도와 같은 집 그림 아래에 「○일째」. 성장 단계나 집 자리가 바뀔 때만 다시 그린다.
+        private func drawHome(on map: KakaoMap) {
+            let labels = map.getLabelManager()
+            guard let layer = labels.getLabelLayer(layerID: "home") else { return }
+            let key = home.map { "\(homeKey)|\($0.latitude)|\($0.longitude)" }
+            guard key != drawnHomeKey else { return }
+            drawnHomeKey = key
+            layer.clearAllItems()
+            guard let home, let key, let artwork = homeArtwork, let image = Self.homeImage(artwork, label: homeLabel) else { return }
+            let styleID = "home-\(key.hashValue)"
+            // 집 그림의 아래쪽 가운데가 집 자리다(그 아래는 이름표).
+            let anchor = CGPoint(x: 0.5, y: Self.homeArtworkHeight / max(image.size.height, 1))
+            labels.addPoiStyle(PoiStyle(styleID: styleID, styles: [PerLevelPoiStyle(iconStyle: PoiIconStyle(symbol: image, anchorPoint: anchor), level: 0)]))
+            layer.addPoi(option: PoiOptions(styleID: styleID), at: point(home))?.show()
+        }
+
         private func drawCat(on map: KakaoMap) {
             let labels = map.getLabelManager()
             guard let cat, let action, let layer = labels.getLabelLayer(layerID: "cat") else { return }
-            if action != drawnAction || catPoi == nil {
-                // 동작이 바뀌면(걷기·버스·식사…) 그 동작의 화랑이 그림으로 바꾼다. 움직이는 그림은 아니고 한 장이다.
-                drawnAction = action
-                let styleID = "cat-\(action)"
-                if let image = Self.catImage(action) {
-                    labels.addPoiStyle(PoiStyle(styleID: styleID, styles: [PerLevelPoiStyle(iconStyle: PoiIconStyle(symbol: image, anchorPoint: CGPoint(x: 0.5, y: 0.7)), level: 0)]))
+            // 동작·꾸미기·노선 이름표·말풍선 글이 바뀌면 그림을 새로 만든다. 움직이는 그림은 아니고 한 장이다.
+            let key = "\(action)|\(accessoryID ?? "")|\(rideLabel ?? "")|\(bubble ?? "")"
+            if key != drawnCatKey || catPoi == nil {
+                drawnCatKey = key
+                let styleID = "cat-\(key.hashValue)"
+                if let made = Self.catImage(action, accessoryID: accessoryID, rideLabel: rideLabel, bubble: bubble) {
+                    labels.addPoiStyle(PoiStyle(styleID: styleID, styles: [PerLevelPoiStyle(iconStyle: PoiIconStyle(symbol: made.image, anchorPoint: made.anchor), level: 0)]))
                 }
                 layer.clearAllItems()
                 catPoi = layer.addPoi(option: PoiOptions(styleID: styleID), at: point(cat))
@@ -409,10 +461,44 @@ struct MapHomeKakaoMap: UIViewRepresentable {
             }
         }
 
-        private static func catImage(_ action: MapHomeStickmanAction) -> UIImage? {
-            let renderer = ImageRenderer(content: MapHomeStickmanGlyph(action: action, size: 44)
-                .frame(width: 84, height: 96, alignment: .top) // 몸이 기준 높이 아래로 내려와 틀을 넉넉히 둔다(아래가 잘렸음).
-                .environment(\.isLuminanceReduced, true))
+        private static let catInset = (leading: CGFloat(34), top: CGFloat(26), bottom: CGFloat(12))
+        static let homeArtworkHeight: CGFloat = 112
+
+        /// 다른 지도와 같은 화랑이(탈것·꾸미기·노선 이름표) 한 장. 말풍선이 있으면 오른쪽에 붙인다.
+        /// anchor는 그림 안에서 화랑이 발이 놓이는 자리다.
+        private static func catImage(_ action: MapHomeStickmanAction, accessoryID: String?, rideLabel: String?, bubble: String?) -> (image: UIImage, anchor: CGPoint)? {
+            let side = MapHomeStickmanMarker.size
+            let content = HStack(alignment: .center, spacing: 6) {
+                MapHomeStickmanMarker(action: action, animationPhase: 0, equippedAccessoryID: accessoryID, rideLabel: rideLabel)
+                    .padding(.leading, catInset.leading)
+                    .padding(.trailing, bubble == nil ? catInset.leading : 10)
+                if let bubble { MapHomeCatSpeechBubble(text: bubble, side: .right, action: action) }
+            }
+            .padding(.top, catInset.top)
+            .padding(.bottom, catInset.bottom)
+            .padding(.trailing, bubble == nil ? 0 : 6)
+            .environment(\.isLuminanceReduced, true)
+            let renderer = ImageRenderer(content: content)
+            renderer.scale = UIScreen.main.scale
+            guard let image = renderer.uiImage, image.size.width > 0, image.size.height > 0 else { return nil }
+            let anchor = CGPoint(x: (catInset.leading + side.width / 2) / image.size.width, y: (image.size.height - catInset.bottom) / image.size.height)
+            return (image, anchor)
+        }
+
+        private static func homeImage(_ artwork: AnyView, label: String) -> UIImage? {
+            let content = VStack(spacing: 2) {
+                artwork
+                Text(verbatim: label)
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
+                    .monospacedDigit()
+                    .foregroundStyle(Color.tpInk)
+                    .padding(.horizontal, 12)
+                    .frame(height: 22)
+                    .background(Color.tpSurface.opacity(0.98), in: Capsule())
+                    .overlay { Capsule().stroke(Color.tpBorder, lineWidth: TaptionBorder.width) }
+            }
+            .padding(6)
+            let renderer = ImageRenderer(content: content)
             renderer.scale = UIScreen.main.scale
             return renderer.uiImage
         }
