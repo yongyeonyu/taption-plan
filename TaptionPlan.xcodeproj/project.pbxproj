@@ -22,8 +22,11 @@
 		C1F111100000000000000002 /* MapHomeNLEClipEditor+Merge.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1F111100000000000000001 /* MapHomeNLEClipEditor+Merge.swift */; };
 		B10806000000000000000002 /* MapHomeNLEOverwritePolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10806000000000000000001 /* MapHomeNLEOverwritePolicy.swift */; };
 		A1000000000000000D1104A3 /* NearbyMemoNotificationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000D1104A3 /* NearbyMemoNotificationTests.swift */; };
+		A1D14A140000000000000004 /* ArrivalDetectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1D14A140000000000000004 /* ArrivalDetectorTests.swift */; };
 		A1000000000000000D1104A2 /* AppModel+NearbyMemos.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000D1104A2 /* AppModel+NearbyMemos.swift */; };
+		A1D14A140000000000000002 /* ArrivalCardManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1D14A140000000000000002 /* ArrivalCardManager.swift */; };
 		A1000000000000000D1104A1 /* NearbyMemoNotifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000D1104A1 /* NearbyMemoNotifications.swift */; };
+		A1D14A140000000000000001 /* ArrivalDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1D14A140000000000000001 /* ArrivalDetector.swift */; };
 		A10000000000000000CA1003 /* AppModel+CalendarTitles.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000CA1003 /* AppModel+CalendarTitles.swift */; };
 		A10000000000000000CA1001 /* CalendarTitleClassification.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000CA1001 /* CalendarTitleClassification.swift */; };
 		A10000000000000000BB1106 /* WorkBreakPattern.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000BB1106 /* WorkBreakPattern.swift */; };
@@ -519,6 +522,7 @@
 		B1080900000000000000A0A7 /* TripImportPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000F0A7 /* TripImportPrompt.swift */; };
 		B1080900000000000000A0A8 /* TripImportSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000F0A8 /* TripImportSheet.swift */; };
 		A1C1110A0900000000000001 /* TripItemStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1C1110A0900000000000001 /* TripItemStatus.swift */; };
+		A1D14A140000000000000003 /* ArrivalCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1D14A140000000000000003 /* ArrivalCardView.swift */; };
 		B1080900000000000000A0AC /* TripRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000F0AC /* TripRelay.swift */; };
 		A1A1110A0100000000000005 /* AssistantSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0100000000000005 /* AssistantSettingsView.swift */; };
 		A1A1110A0100000000000004 /* AssistantCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0100000000000004 /* AssistantCommands.swift */; };
@@ -809,8 +813,11 @@
 		B10806000000000000000001 /* MapHomeNLEOverwritePolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeNLEOverwritePolicy.swift; sourceTree = "<group>"; };
 		F1000000000000000B1104A3 /* AppSecrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = AppSecrets.xcconfig; sourceTree = "<group>"; };
 		F1000000000000000D1104A3 /* NearbyMemoNotificationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NearbyMemoNotificationTests.swift"; sourceTree = "<group>"; };
+		F1D14A140000000000000004 /* ArrivalDetectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArrivalDetectorTests.swift; sourceTree = "<group>"; };
 		F1000000000000000D1104A2 /* AppModel+NearbyMemos.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+NearbyMemos.swift"; sourceTree = "<group>"; };
+		F1D14A140000000000000002 /* ArrivalCardManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArrivalCardManager.swift; sourceTree = "<group>"; };
 		F1000000000000000D1104A1 /* NearbyMemoNotifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NearbyMemoNotifications.swift"; sourceTree = "<group>"; };
+		F1D14A140000000000000001 /* ArrivalDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArrivalDetector.swift; sourceTree = "<group>"; };
 		F10000000000000000CA1003 /* AppModel+CalendarTitles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+CalendarTitles.swift"; sourceTree = "<group>"; };
 		F10000000000000000CA1001 /* CalendarTitleClassification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CalendarTitleClassification.swift"; sourceTree = "<group>"; };
 		F10000000000000000BB1106 /* WorkBreakPattern.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WorkBreakPattern.swift"; sourceTree = "<group>"; };
@@ -1278,6 +1285,7 @@
 		B1080900000000000000F0A7 /* TripImportPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripImportPrompt.swift; sourceTree = "<group>"; };
 		B1080900000000000000F0A8 /* TripImportSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripImportSheet.swift; sourceTree = "<group>"; };
 		F1C1110A0900000000000001 /* TripItemStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripItemStatus.swift; sourceTree = "<group>"; };
+		F1D14A140000000000000003 /* ArrivalCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArrivalCardView.swift; sourceTree = "<group>"; };
 		B1080900000000000000F0AC /* TripRelay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripRelay.swift; sourceTree = "<group>"; };
 		F1A1110A0100000000000005 /* AssistantSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantSettingsView.swift; sourceTree = "<group>"; };
 		F1A1110A0100000000000004 /* AssistantCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantCommands.swift; sourceTree = "<group>"; };
@@ -1629,6 +1637,7 @@
 				F5C1103A010000000000000A /* StructurePerformanceProbeTests.swift */,
 				F1000000000000000B1103D3 /* MapHomeHomeSkyTests.swift */,
 				F1000000000000000D1104A3 /* NearbyMemoNotificationTests.swift */,
+				F1D14A140000000000000004 /* ArrivalDetectorTests.swift */,
 				F1000000000000000B1104B1 /* StickerCatalogTests.swift */,
 				F5B1102A0200000000000059 /* MapHomeStickmanTests.swift */,
 				B10810000000000000A11040 /* WidgetPoseAtlasTests.swift */,
@@ -1818,6 +1827,7 @@
 				B1080900000000000000F0A7 /* TripImportPrompt.swift */,
 				B1080900000000000000F0A8 /* TripImportSheet.swift */,
 				F1C1110A0900000000000001 /* TripItemStatus.swift */,
+				F1D14A140000000000000003 /* ArrivalCardView.swift */,
 				B1080900000000000000F0AC /* TripRelay.swift */,
 				F1A1110A0100000000000005 /* AssistantSettingsView.swift */,
 				F1A1110A0100000000000004 /* AssistantCommands.swift */,
@@ -2056,6 +2066,7 @@
 				F5B1102A020000000000001A /* AppModel+LocationCollection.swift */,
 				F5B1102A0200000000000018 /* AppModel+MapEditing.swift */,
 				F1000000000000000D1104A2 /* AppModel+NearbyMemos.swift */,
+				F1D14A140000000000000002 /* ArrivalCardManager.swift */,
 				F5B1102A0200000000000016 /* AppModel+Memos.swift */,
 				F5B1102A0200000000000014 /* AppModel+Navigation.swift */,
 				F5B1102A0200000000000012 /* AppModel+Permissions.swift */,
@@ -2132,6 +2143,7 @@
 				F5B1102A0200000000000005 /* AppleTransportContextService.swift */,
 				F5B1102A0200000000000003 /* VoiceMemoServices.swift */,
 				F1000000000000000D1104A1 /* NearbyMemoNotifications.swift */,
+				F1D14A140000000000000001 /* ArrivalDetector.swift */,
 				F5B1102A0200000000000001 /* PlanNotificationScheduler.swift */,
 				F1000000000000000B1101A3 /* SensorEfficiencyPolicies.swift */,
 				F1000000000000000000F0C1 /* GoogleCalendarAccount.swift */,
@@ -2692,6 +2704,7 @@
 				A5B1102A020000000000001B /* AppModel+LocationCollection.swift in Sources */,
 				A5B1102A0200000000000019 /* AppModel+MapEditing.swift in Sources */,
 				A1000000000000000D1104A2 /* AppModel+NearbyMemos.swift in Sources */,
+				A1D14A140000000000000002 /* ArrivalCardManager.swift in Sources */,
 				A5B1102A0200000000000017 /* AppModel+Memos.swift in Sources */,
 				A5B1102A0200000000000015 /* AppModel+Navigation.swift in Sources */,
 				A5B1102A0200000000000013 /* AppModel+Permissions.swift in Sources */,
@@ -2815,6 +2828,7 @@
 				B1080900000000000000A0A7 /* TripImportPrompt.swift in Sources */,
 				B1080900000000000000A0A8 /* TripImportSheet.swift in Sources */,
 				A1C1110A0900000000000001 /* TripItemStatus.swift in Sources */,
+				A1D14A140000000000000003 /* ArrivalCardView.swift in Sources */,
 				B1080900000000000000A0AC /* TripRelay.swift in Sources */,
 				A1A1110A0100000000000005 /* AssistantSettingsView.swift in Sources */,
 				A1A1110A0100000000000004 /* AssistantCommands.swift in Sources */,
@@ -3046,6 +3060,7 @@
 				A5B1102A0200000000000006 /* AppleTransportContextService.swift in Sources */,
 				A5B1102A0200000000000004 /* VoiceMemoServices.swift in Sources */,
 				A1000000000000000D1104A1 /* NearbyMemoNotifications.swift in Sources */,
+				A1D14A140000000000000001 /* ArrivalDetector.swift in Sources */,
 				A5B1102A0200000000000002 /* PlanNotificationScheduler.swift in Sources */,
 				A1000000000000000B1101A3 /* SensorEfficiencyPolicies.swift in Sources */,
 				A1000000000000000000F0C1 /* GoogleCalendarAccount.swift in Sources */,
@@ -3168,6 +3183,7 @@
 				A5C1103A010000000000000A /* StructurePerformanceProbeTests.swift in Sources */,
 				A1000000000000000B1103D3 /* MapHomeHomeSkyTests.swift in Sources */,
 				A1000000000000000D1104A3 /* NearbyMemoNotificationTests.swift in Sources */,
+				A1D14A140000000000000004 /* ArrivalDetectorTests.swift in Sources */,
 				A1000000000000000B1104B1 /* StickerCatalogTests.swift in Sources */,
 				A5B1102A020000000000005A /* MapHomeStickmanTests.swift in Sources */,
 				B10810000000000000A11041 /* WidgetPoseAtlasTests.swift in Sources */,

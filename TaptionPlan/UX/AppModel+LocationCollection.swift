@@ -698,6 +698,9 @@ extension AppModel {
         guard let latest = validReadings.max(by: {
             $0.timestamp < $1.timestamp
         }) else { return }
+        if let located = validReadings.filter({ $0.point != nil }).max(by: { $0.timestamp < $1.timestamp }) {
+            ArrivalCardManager.shared.observe(located, model: self)
+        }
         if let sensorService {
             _ = sensorBackgroundCoordinator.markSaved(
                 at: latest.timestamp,
@@ -733,6 +736,7 @@ extension AppModel {
         if latestSensorReading?.id != reading.id {
             latestSensorReading = reading
         }
+        ArrivalCardManager.shared.observe(reading, model: self)
         guard TrackingSessionPolicy.isPreciseRouteReading(reading),
               !liveRouteState.readings.suffix(3).contains(where: { $0.id == reading.id })
         else { return }

@@ -411,6 +411,11 @@ final class TaptionPlanAppDelegate:
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse
     ) async {
+        if let raw = response.notification.request.content.userInfo[ArrivalCardManager.userInfoStopID] as? String,
+           let stopID = UUID(uuidString: raw) {
+            await ArrivalCardManager.shared.open(stopID: stopID)
+            return
+        }
         if let kind = response.notification.request.content.userInfo[MapHomeAlarmCenter.userInfoKind] as? String {
             MapHomeAlarmDiagnostics.log(MapHomeAlarmDiagnostics.tapped(
                 kind: kind,

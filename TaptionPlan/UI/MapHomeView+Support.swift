@@ -232,6 +232,7 @@ extension MapHomeView {
             }
         }
         .overlay(alignment: .top) { tripClipboardBanner }
+        .overlay(alignment: .top) { ArrivalCardHost(model: model, language: language) }
         .mapHomeAssistant(self)
         .task(id: model.selectedDate) { await loadPhotoMoments(asksPermission: showsPhotosOnMap && FirstRunTutorialStore().allowsUnaskedPermissionPrompts) }
         .task(id: MapHomeDayCalendarLoader.key(day: model.selectedDate)) { await loadDayCalendarEvents() }
