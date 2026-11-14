@@ -332,7 +332,7 @@ test("MCP initialize, tools/list per scope, notifications and JSON-RPC errors", 
     "set_map_style", "set_rule_enabled", "set_setting", "set_theme", "set_travel_mode", "set_trip_budget", "set_trip_item_status", "update_activity", "update_category", "update_expense", "update_goal", "update_memo", "update_place", "update_record_time", "update_schedule",
     "update_sleep", "update_trip", "update_trip_stop"]);
   const read = (await mcp(env, rpc("tools/list"), reader)).body.result.tools;
-  assert.deepEqual(read.map((t) => t.name).sort(), ["complete_ai_task", "end_conversation", "get_activity", "get_ai_tasks", "get_answers", "get_app_state", "get_command_results", "get_polish_requests", "get_rules", "get_summary", "list_actions"]);
+  assert.deepEqual(read.map((t) => t.name).sort(), ["end_conversation", "get_activity", "get_ai_tasks", "get_answers", "get_app_state", "get_command_results", "get_polish_requests", "get_rules", "get_summary", "list_actions"]);
   // AIC1112A01: 상태를 바꾸는 둘은 읽기 전용으로 표시하지 않는다.
   assert.ok(read.every((t) => t.inputSchema.type === "object" && t.annotations.readOnlyHint === !["complete_ai_task", "end_conversation"].includes(t.name)));
   assert.equal((await mcp(env, rpc("resources/list"), reader)).body.error.code, -32601);

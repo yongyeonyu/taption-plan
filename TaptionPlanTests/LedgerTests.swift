@@ -778,6 +778,131 @@ final class AITaskQueueTests: XCTestCase {
         XCTAssertEqual(tasks.first?.result, "스타벅스 12,000원")
         XCTAssertNotNil(tasks.first?.createdAt)
     }
+
+    // MARK: AIP1114A05
+
+    func testModernTaskListDecodesNewFieldsAndSurvivesUnknownValues() {
+        let json = #"""
+        {"format":"bokki-tasks","version":1,"tasks":[
+        {"id":"a","kind":"payment_text","status":"done","result":"넣음","createdAt":"2026-11-14T05:00:00.123Z","updatedAt":"2026-11-14T05:01:00.000Z",
+         "claimedBy":"abcd1234","attempts":2,"outcome":{"commandIds":["c1","c2"],"entryIds":["e1"],"ruleIds":[],"askedQuestionId":"q1","needsUser":true}},
+        {"id":"b","kind":"fare_check","status":"asked","outcome":{}},
+        {"id":"c","kind":"route_check","status":"expired","reason":"expired"},
+        {"id":"d","kind":"some_new_kind","status":"some_new_status"},
+        {"id":"e","kind":"other","status":"waiting","createdAt":"not a date"},
+        {"id":"f","kind":"other","status":"failed","reason":"timeout","attempts":3}
+        ]}
+        """#
+        let tasks = AITaskQueue.decodeList(Data(json.utf8))
+        XCTAssertEqual(tasks.map(\.id), ["a", "b", "c", "d", "f"], "one unreadable item does not drop the rest")
+        XCTAssertEqual(tasks.map(\.status), [.done, .asked, .expired, .unknown, .failed])
+        XCTAssertEqual(tasks[3].kind, .other)
+        XCTAssertEqual(tasks[0].claimedBy, "abcd1234")
+        XCTAssertEqual(tasks[0].attempts, 2)
+        XCTAssertEqual(tasks[0].outcome, .init(commandIds: ["c1", "c2"], entryIds: ["e1"], ruleIds: [], askedQuestionId: "q1", needsUser: true))
+        XCTAssertEqual(tasks[1].outcome, .init())
+        XCTAssertNil(tasks[2].outcome)
+        XCTAssertNil(tasks[2].claimedBy)
+        XCTAssertEqual(tasks.filter(\.status.isFinished).map(\.id), ["a", "c", "f"])
+        XCTAssertTrue(AITaskQueue.decodeList(Data("{}".utf8)).isEmpty)
+    }
+
+    func testTaskRowTextsForHolderAttemptAndReason() throws {
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: "AITaskQueueTests-\(UUID())"))
+        defaults.set(["abcd1234": "피클"], forKey: AssistantKeyLabels.labelsKey)
+        var task = AITaskQueue.Task(id: "a", kind: .other, text: "원문", status: .processing, claimedBy: "abcd1234", attempts: 2)
+        XCTAssertEqual(AITaskPanel.holder(task, language: .english, defaults: defaults), "피클 · Attempt 2")
+        task.attempts = 1
+        XCTAssertEqual(AITaskPanel.holder(task, language: .english, defaults: defaults), "피클")
+        task.claimedBy = "zzzz0000"
+        XCTAssertNil(AITaskPanel.holder(task, language: .english, defaults: defaults), "an unknown connection shows nothing")
+        XCTAssertEqual(AITaskPanel.detail(task, language: .english), "원문")
+        task.reason = "expired"
+        XCTAssertEqual(AITaskPanel.detail(task, language: .english), "원문")
+        task.reason = "timeout"
+        XCTAssertEqual(AITaskPanel.detail(task, language: .english), "The AI didn't finish in time")
+        task.reason = "결제 아님"
+        XCTAssertEqual(AITaskPanel.detail(task, language: .english), "결제 아님")
+        task.result = "넣음"
+        XCTAssertEqual(AITaskPanel.detail(task, language: .english), "넣음")
+    }
+
+    func testNewlyFinishedTasksAreCountedOnceAndNotOnTheFirstRun() throws {
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: "AITaskQueueTests-\(UUID())"))
+        func task(_ id: String, _ status: AITaskQueue.Status) -> AITaskQueue.Task { .init(id: id, kind: .other, status: status) }
+        // 처음: 이미 끝나 있던 것은 알리지 않고 적기만 한다.
+        XCTAssertEqual(AITaskQueue.noteFinished([task("a", .done), task("b", .waiting)], defaults: defaults), .init())
+        XCTAssertEqual(defaults.stringArray(forKey: AITaskQueue.finishedSeenKey), ["a"])
+        XCTAssertEqual(AITaskQueue.noteFinished([task("a", .done), task("b", .processing)], defaults: defaults), .init())
+        let news = AITaskQueue.noteFinished([task("a", .done), task("b", .done), task("c", .failed), task("d", .expired), task("e", .asked)], defaults: defaults)
+        XCTAssertEqual(news, .init(done: 1, failed: 1), "expired ones are remembered but not announced")
+        XCTAssertEqual(AITaskQueue.noteFinished([task("b", .done), task("c", .failed), task("d", .expired)], defaults: defaults), .init())
+        XCTAssertEqual(defaults.stringArray(forKey: AITaskQueue.finishedSeenKey), ["a", "b", "c", "d"])
+        // 빈 목록으로 시작해도 「처음」은 한 번뿐이다.
+        let empty = try XCTUnwrap(UserDefaults(suiteName: "AITaskQueueTests-\(UUID())"))
+        XCTAssertEqual(AITaskQueue.noteFinished([], defaults: empty), .init())
+        XCTAssertEqual(AITaskQueue.noteFinished([task("x", .failed)], defaults: empty), .init(done: 0, failed: 1))
+        // 적어 두는 수에는 끝이 있다.
+        _ = AITaskQueue.noteFinished((0..<400).map { task("n\($0)", .done) }, defaults: empty)
+        XCTAssertEqual(defaults.stringArray(forKey: AITaskQueue.finishedSeenKey)?.count, 4)
+        XCTAssertEqual(empty.stringArray(forKey: AITaskQueue.finishedSeenKey)?.count, AITaskQueue.finishedSeenLimit)
+    }
+
+    func testFinishedNoticeCountsDoneAndFailedSeparately() throws {
+        XCTAssertNil(AITaskNotice.content(.init(), language: .english))
+        let both = try XCTUnwrap(AITaskNotice.content(.init(done: 3, failed: 2), language: .english))
+        XCTAssertEqual(both.title, "Your AI handled 3 task(s)")
+        XCTAssertEqual(both.body, "2 failed")
+        let done = try XCTUnwrap(AITaskNotice.content(.init(done: 1, failed: 0), language: .english))
+        XCTAssertEqual(done.title, "Your AI handled 1 task(s)")
+        XCTAssertEqual(done.body, "Open the app to see it.")
+        let failed = try XCTUnwrap(AITaskNotice.content(.init(done: 0, failed: 4), language: .english))
+        XCTAssertEqual(failed.title, "Your AI couldn't finish 4 task(s)")
+    }
+
+    func testLogEntriesWrittenBeforeTaskLinksStillDecode() throws {
+        let delta = String(decoding: try JSONEncoder().encode(AssistantEditDelta()), as: UTF8.self)
+        let old = #"[{"id":"A1B2C3D4-E5F6-4789-9ABC-DEF012345678","commandID":"c1","kind":"addMemo","appliedAt":800000000,"before":"","after":"메모","delta":"# + delta + #","keyID":"abcd1234","connection":"피클"}]"#
+        let entries = try JSONDecoder().decode([AssistantLogEntry].self, from: Data(old.utf8))
+        XCTAssertEqual(entries.map(\.commandID), ["c1"])
+        XCTAssertNil(entries[0].taskID)
+        XCTAssertNil(entries[0].rejectedReason)
+        XCTAssertTrue(entries[0].canUndo)
+        // 새 칸은 다시 읽어도 남는다.
+        let rejected = AssistantLogEntry(commandID: "c2", kind: .updateMemo, appliedAt: .now, before: "", after: "", delta: .init(), taskID: "t1", rejectedReason: "no_memo")
+        let again = try JSONDecoder().decode(AssistantLogEntry.self, from: JSONEncoder().encode(rejected))
+        XCTAssertEqual(again, rejected)
+        XCTAssertTrue(again.isRejected)
+        XCTAssertFalse(again.canUndo)
+    }
+
+    func testTaskEditsMatchByTaskIDOrOutcomeCommandIDs() {
+        func entry(_ command: String, task: String? = nil, rejected: String? = nil) -> AssistantLogEntry {
+            AssistantLogEntry(commandID: command, kind: .addExpense, appliedAt: .now, before: "", after: "x", delta: .init(), taskID: task, rejectedReason: rejected)
+        }
+        let log = [entry("c1", task: "t1"), entry("c2"), entry("c3", task: "t2"), entry("c4"), entry("c5", task: "t1", rejected: "duplicate")]
+        var task = AITaskQueue.Task(id: "t1", kind: .paymentText, status: .done)
+        XCTAssertEqual(AssistantTaskEdits.entries(for: task, in: log).map(\.commandID), ["c1", "c5"])
+        task.outcome = .init(commandIds: ["c2", "c1", "missing"])
+        XCTAssertEqual(AssistantTaskEdits.entries(for: task, in: log).map(\.commandID), ["c1", "c2", "c5"])
+        XCTAssertEqual(AssistantTaskEdits.entries(for: task, in: log).filter(\.canUndo).map(\.commandID), ["c1", "c2"])
+        XCTAssertTrue(AssistantTaskEdits.entries(for: .init(id: "t9", kind: .other, status: .done), in: log).isEmpty)
+    }
+
+    func testRejectedReasonsReadAsShortText() {
+        let text = { AssistantRejection.message($0, language: .english) }
+        XCTAssertEqual(text("no_record"), "Couldn't find the item to change")
+        XCTAssertEqual(text("no_memo"), text("no_record"))
+        XCTAssertEqual(text("edit_failed"), "The app couldn't save it")
+        XCTAssertEqual(text("disabled"), "This kind of edit is switched off")
+        XCTAssertEqual(text("invalid"), "The request wasn't valid")
+        XCTAssertEqual(text("no_change"), "There was nothing to change")
+        XCTAssertEqual(text("some_future_reason"), "Not applied (some_future_reason)")
+        let rejected = AssistantLogEntry(commandID: "c", kind: .updateMemo, appliedAt: .now, before: "", after: "", delta: .init(), rejectedReason: "no_memo")
+        XCTAssertEqual(AITaskPanel.change(rejected, language: .english), "Not applied · Couldn't find the item to change")
+        XCTAssertEqual(AITaskPanel.undoNote(undone: 2, failed: 0, language: .english), "Undid 2 change(s)")
+        XCTAssertEqual(AITaskPanel.undoNote(undone: 1, failed: 1, language: .english), "Undid 1 change(s) · 1 changed afterwards and couldn't be undone")
+    }
 }
 
 /// AI 확인 목록 2단계(AIQ1111A02): 하루 기록에서 머문 곳·교통비·조각 합침·경로 확인 거리를 고르고 한 번만 올린다.

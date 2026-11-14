@@ -42,7 +42,7 @@ export const LIMITS = {
   taskLifeMs: 7 * DAY_MS,
   taskClaimBatch: 20,
   commandsPerDay: 100,
-  queue: 50,
+  queue: 100,
   bubblesPerDay: 48,
   bubbleQueue: 48,
   activeKeys: 20,
@@ -574,6 +574,8 @@ const OPS = {
     let items = await values(s, "cmd:");
     // 같은 id는 같은 연결이 보낸 것만 새 값으로 바꾼다(N10). 다른 연결의 id는 덮지 못한다.
     if (items.some(([, c]) => c.tag === tag && c.keyId !== keyId)) return { ok: false, error: "id_conflict" };
+    // 일반 명령은 꽉 차면 오래된 것을 버리지 않고 새 것을 거절한다(AIP1114A05). 같은 id를 바꾸는 것은 받는다.
+    if (!bubble && items.filter(([, c]) => c.tag !== tag && !c.bubble).length >= keep) return { ok: false, error: "queue_full" };
     for (const [name, c] of items) if (c.tag === tag) await s.delete(name);
     items = items.filter(([, c]) => c.tag !== tag && !!c.bubble === bubble);
     const seq = meta.seq + 1;
@@ -605,7 +607,7 @@ const OPS = {
     return { removed };
   },
 
-  // 예전 KV 큐(`cmd:<주인>`)를 합친다. 받은 시각 순, 최근 50개.
+  // 예전 KV 큐(`cmd:<주인>`)를 합친다. 받은 시각 순, 최근 100개.
   async importQueue(s, { items, sent }) {
     const meta = (await s.get("queueMeta")) ?? { sent: [], seq: 0 };
     const existing = await values(s, "cmd:");

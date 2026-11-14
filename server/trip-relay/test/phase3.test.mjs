@@ -706,7 +706,7 @@ test("setBubble: its own 48 per 24 h cap, separate from the 100-edit cap; MCP se
   assert.deepEqual([(await capped.json()).error, Number(capped.headers.get("retry-after")) > 0], ["daily_bubble_limit", true]);
   const { commands } = await (await send(env, "/command", "GET", undefined, master)).json();
   assert.equal(commands.filter((c) => c.action === "setBubble").length, 48);
-  assert.equal(commands.filter((c) => c.action === "addMemo").length, 50, "bubbles never push edits out of the queue (it keeps the newest 50 edits)");
+  assert.equal(commands.filter((c) => c.action === "addMemo").length, 100, "bubbles never push edits out of the queue (it holds 100 edits)");
   clock.now += DAY_MS;
   const tool = (await mcp(env, writer.token, rpc("tools/list"))).result.tools.find((t) => t.name === "set_bubble");
   assert.equal(tool.annotations.destructiveHint, false);

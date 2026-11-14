@@ -39,14 +39,14 @@ async function setup() {
 }
 
 test("payment_rule task: the app uploads it and the AI claims it", async () => {
-  const { env, master, reader } = await setup();
+  const { env, master, writer } = await setup();
   assert.ok(TASK_KINDS.includes("payment_rule"));
   const saved = await send(env, "/tasks", "POST", { format: "bokki-tasks", version: 1, tasks: [{ id: A, kind: "payment_rule", text: SAMPLE, date: "2026-11-12" }] }, master);
   assert.equal(saved.status, 201);
   assert.equal((await saved.json()).added, 1);
-  const claimed = await (await send(env, "/tasks/claim", "POST", undefined, reader)).json();
+  const claimed = await (await send(env, "/tasks/claim", "POST", undefined, writer)).json();
   assert.deepEqual(claimed.tasks.map((t) => [t.id, t.kind, t.status]), [[A, "payment_rule", "processing"]]);
-  const reply = JSON.stringify(await (await mcp(env, reader, "get_ai_tasks")).json());
+  const reply = JSON.stringify(await (await mcp(env, writer, "get_ai_tasks")).json());
   assert.doesNotMatch(reply, /untrusted_user_text\\":\\"payment_rule/, "the kind is not wrapped");
 });
 

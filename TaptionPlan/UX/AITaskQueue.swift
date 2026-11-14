@@ -17,10 +17,33 @@ enum AITaskQueue {
         /// 앱이 못 읽은 결제 문자: AI가 읽는 규칙(addPaymentRule)을 보내 달라는 부탁(PRL1112A01).
         case paymentRule = "payment_rule"
         case other
+
+        /// 서버가 새 종류를 더해도 목록이 깨지지 않게 모르는 값은 `other`로 읽는다(AIP1114A05).
+        init(from decoder: Decoder) throws {
+            self = Self(rawValue: try decoder.singleValueContainer().decode(String.self)) ?? .other
+        }
     }
 
+    /// `asked`는 AI가 사용자에게 묻고 답을 기다리는 중, `expired`는 아무도 맡지 않고 기한(7일)이 지난 것(AIP1114A05).
     enum Status: String, Codable, Sendable {
-        case waiting, processing, done, failed
+        case waiting, processing, asked, done, failed, expired
+        /// 이 앱이 모르는 새 상태.
+        case unknown
+
+        init(from decoder: Decoder) throws {
+            self = Self(rawValue: try decoder.singleValueContainer().decode(String.self)) ?? .unknown
+        }
+
+        var isFinished: Bool { self == .done || self == .failed || self == .expired }
+    }
+
+    /// AI가 일을 끝내며 남긴 것: 보낸 명령·가계부 기록·규칙의 id, 기다리는 질문, 사용자가 봐야 하는지.
+    struct Outcome: Codable, Equatable, Sendable {
+        var commandIds: [String]?
+        var entryIds: [String]?
+        var ruleIds: [String]?
+        var askedQuestionId: String?
+        var needsUser: Bool?
     }
 
     struct Task: Codable, Equatable, Identifiable, Sendable {
@@ -33,6 +56,10 @@ enum AITaskQueue {
         var reason: String?
         var createdAt: Date?
         var updatedAt: Date?
+        /// 맡은 연결 키 id, 맡은 횟수, 끝낸 결과(`GET /tasks?v=2`). 예전 캐시에는 없다.
+        var claimedBy: String?
+        var attempts: Int?
+        var outcome: Outcome?
     }
 
     /// 아직 서버에 못 올린 항목.
@@ -117,19 +144,51 @@ enum AITaskQueue {
     static func refresh(env: AssistantRegistration.Environment = .live) async -> [Task]? {
         await upload(env: env)
         guard let master = env.secrets.read(.master),
-              let reply = await TripRelay.send(TripRelay.relayRequest("/tasks", method: "GET", token: master, host: env.host), session: env.session)
+              let reply = await TripRelay.send(TripRelay.relayRequest("/tasks", method: "GET", query: [URLQueryItem(name: "v", value: "2")], token: master, host: env.host), session: env.session)
         else { return nil }
         let tasks: [Task]
         switch reply.status {
         case 204: tasks = []
-        case 200..<300: tasks = (try? decoder.decode(Envelope.self, from: reply.data))?.tasks ?? []
+        case 200..<300: tasks = decodeList(reply.data)
         default: return nil
         }
         if let data = try? encoder.encode(tasks) { env.defaults.set(data, forKey: cacheKey) }
         // 서버 목록에 있는 일은 상태와 상관없이 이미 받은 것이다. 큐에 남아 있으면 지운다.
         acknowledge(tasks.map(\.id), defaults: env.defaults)
         ReceiptPhotoMarks.noteReviewed(tasks.filter { $0.status == .done }.map(\.id), defaults: env.defaults)
+        // 지난번 뒤로 끝난 일을 한 번에 묶어 알린다. 시험 저장소는 알리지 않는다.
+        let news = noteFinished(tasks, defaults: env.defaults)
+        if env.defaults === UserDefaults.standard { AITaskNotice.announce(news) }
         return tasks
+    }
+
+    /// 서버 목록을 읽는다. 읽지 못한 항목 하나 때문에 나머지를 버리지 않는다.
+    static func decodeList(_ data: Data) -> [Task] {
+        (try? decoder.decode(Envelope.self, from: data))?.tasks ?? []
+    }
+
+    // MARK: 끝난 일 알림 (AIP1114A05)
+
+    struct FinishedNews: Equatable, Sendable {
+        var done = 0
+        var failed = 0
+        var isEmpty: Bool { done + failed == 0 }
+    }
+
+    static let finishedSeenKey = "aiTaskFinishedSeen"
+    static let finishedSeenLimit = 300
+
+    /// 지난번 뒤로 완료·실패가 된 일을 세고, 끝난 일의 id를 적어 둔다.
+    /// 처음 돌 때(적어 둔 것이 없을 때)는 이미 끝나 있던 일을 세지 않는다. 기한이 지난 것은 적기만 한다.
+    static func noteFinished(_ tasks: [Task], defaults: UserDefaults) -> FinishedNews {
+        let stored = defaults.stringArray(forKey: finishedSeenKey)
+        let seen = Set(stored ?? [])
+        let fresh = tasks.filter { $0.status.isFinished && !seen.contains($0.id) }
+        if stored == nil || !fresh.isEmpty {
+            defaults.set(Array(((stored ?? []) + fresh.map(\.id)).suffix(finishedSeenLimit)), forKey: finishedSeenKey)
+        }
+        guard stored != nil else { return FinishedNews() }
+        return FinishedNews(done: fresh.filter { $0.status == .done }.count, failed: fresh.filter { $0.status == .failed }.count)
     }
 
     /// 끝난 항목(완료·실패)을 서버에서 지운다.
@@ -137,7 +196,7 @@ enum AITaskQueue {
         guard let master = env.secrets.read(.master),
               let reply = await TripRelay.send(TripRelay.relayRequest("/tasks", method: "DELETE", token: master, host: env.host), session: env.session),
               (200..<300).contains(reply.status) else { return false }
-        let open = cached(env.defaults).filter { $0.status == .waiting || $0.status == .processing }
+        let open = cached(env.defaults).filter { !$0.status.isFinished }
         if let data = try? encoder.encode(open) { env.defaults.set(data, forKey: cacheKey) }
         return true
     }
@@ -168,7 +227,19 @@ enum AITaskQueue {
 
     // MARK: 저장
 
-    private struct Envelope: Decodable { var tasks: [Task] }
+    private struct Envelope: Decodable {
+        private enum Key: String, CodingKey { case tasks }
+        private struct Item: Decodable {
+            let task: Task?
+            init(from decoder: Decoder) throws { task = try? Task(from: decoder) }
+        }
+
+        var tasks: [Task]
+
+        init(from decoder: Decoder) throws {
+            tasks = try decoder.container(keyedBy: Key.self).decode([Item].self, forKey: .tasks).compactMap(\.task)
+        }
+    }
 
     private static let decoder: JSONDecoder = {
         let value = JSONDecoder()
@@ -498,5 +569,53 @@ enum AssistantQuestionNotice {
 
     static func clear(_ id: String) {
         UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: [identifier(id)])
+    }
+}
+
+/// 맡긴 일이 끝나면 한 번에 묶어 알린다(AIP1114A05). 앱이 앞에 있으면 화면 띠로, 아니면 iOS 알림 하나로.
+/// 알림에는 건수만 싣고 일의 내용은 싣지 않는다.
+@MainActor
+enum AITaskNotice {
+    static let identifier = "ai-task-finished"
+    /// 화면 띠에 띄운 글. 같은 확인에서 명령 반영 알림이 덮지 않게 `AssistantCommandRefresh`가 가져가 함께 보인다.
+    private static var banner: String?
+
+    static func takeBanner() -> String? {
+        defer { banner = nil }
+        return banner
+    }
+
+    /// 완료가 있으면 그 수를 제목에, 실패는 본문에 따로 센다. 실패뿐이면 제목이 실패 수다.
+    static func content(_ news: AITaskQueue.FinishedNews, language: MapHomeLanguage) -> (title: String, body: String)? {
+        guard !news.isEmpty else { return nil }
+        let done = news.done, failed = news.failed
+        let open = language.text("앱에서 확인해 주세요.", "Open the app to see it.")
+        guard done > 0 else { return (language.text("AI가 끝내지 못한 일이 \(failed)건 있어요", "Your AI couldn't finish \(failed) task(s)"), open) }
+        return (language.text("AI가 \(done)건을 처리했어요", "Your AI handled \(done) task(s)"), failed > 0 ? language.text("실패 \(failed)건", "\(failed) failed") : open)
+    }
+
+    static func announce(_ news: AITaskQueue.FinishedNews, language: MapHomeLanguage = .current) {
+        guard let text = content(news, language: language), let model = AssistantCommandRefresh.model else { return }
+        if model.isSceneActive {
+            let line = news.done > 0 && news.failed > 0 ? text.title + " · " + text.body : text.title
+            banner = line
+            AssistantInbox.current.show(line)
+        } else if model.settings.notificationsEnabled {
+            post(text)
+        }
+    }
+
+    /// 같은 식별자로 보내 알림이 쌓이지 않고 하나만 남는다.
+    private static func post(_ text: (title: String, body: String)) {
+        Task {
+            let center = UNUserNotificationCenter.current()
+            let status = await center.notificationSettings().authorizationStatus
+            guard status == .authorized || status == .provisional else { return }
+            let content = UNMutableNotificationContent()
+            content.title = text.title
+            content.body = text.body
+            content.sound = .default
+            try? await center.add(UNNotificationRequest(identifier: identifier, content: content, trigger: nil))
+        }
     }
 }

@@ -5,7 +5,7 @@
 import { registry } from "./actions.js";
 import { nameKey, openJson, sealJson, tagOf } from "./crypto.js";
 import { json, stored, tooMany } from "./http.js";
-import { chargeWrites } from "./state.js";
+import { LIMITS, chargeWrites } from "./state.js";
 import { ACTIVITY_EXTRAS, QUEUE_LIMIT, cleanCommand, commandReason, isActivityUpload, isAnswerList, cleanAnswers, isAppState, cleanAppState, isCommand, isCommandResults, isDate, isPolishList, isTaskResult, isTaskUpload, isTripPlan, cleanTaskOutcome } from "./validate.js";
 
 const DAY = 24 * 60 * 60;
@@ -221,14 +221,18 @@ export async function readTasks(ctx, request) {
 }
 
 // AI가 가져간다. 대기 중인 것을 처리중으로 바꾸고 이 연결이 맡은 것만 돌려준다(AIM1114A01). 한 번에 `limit`개까지.
-export async function claimTasks(ctx, limit) {
+// 읽기 연결은 맡지 못한다: `claim`이 false면 열린 일을 보기만 하고 `claimable: false`를 붙인다(AIP1114A05).
+export const TASK_READ_ONLY_HINT = "This connection is read-only, so these tasks were not taken. The user must connect with record edits allowed (a write connection) for you to handle and complete them.";
+
+export async function claimTasks(ctx, limit, claim = true) {
   await ensureTasks(ctx);
-  const { tasks } = await ctx.state.call("taskClaim", { keyId: ctx.auth?.keyId ?? null, now: ctx.now, ...(Number.isInteger(limit) ? { limit } : {}) });
+  const { tasks } = await ctx.state.call("taskClaim", { keyId: ctx.auth?.keyId ?? null, now: ctx.now, claim, ...(Number.isInteger(limit) ? { limit } : {}) });
   const out = [];
   for (const row of tasks) {
     const { id, kind, text, date, context, status, attempts } = await openTask(ctx, row);
     out.push({ id, kind, text, ...(date ? { date } : {}), ...(context ? { context } : {}), status, ...(attempts > 1 ? { attempts } : {}) });
   }
+  if (!claim && out.length) return json({ format: "bokki-tasks", version: 1, tasks: out, claimable: false, hint: TASK_READ_ONLY_HINT });
   return tasksReply(out);
 }
 
@@ -503,6 +507,8 @@ export async function queueCommand(ctx, value, source = "rest") {
   const bubble = command.action === "setBubble";
   const result = await ctx.state.call("enqueue", { tag, keyId: ctx.auth.keyId, source, sealed: await sealCommand(ctx, tag, entry), now: ctx.now, bubble });
   if (result.error === "id_conflict") return json({ error: "id_conflict" }, 409);
+  // 앱이 가져가지 않아 큐가 꽉 찼다. 오래된 명령을 지우지 않고 새 것을 받지 않는다(AIP1114A05).
+  if (result.error === "queue_full") return json({ error: "queue_full", limit: LIMITS.queue }, 429);
   if (!result.ok) {
     const retry = result.retryAfter;
     const limit = bubble ? DAILY_BUBBLE_LIMIT : DAILY_COMMAND_LIMIT;

@@ -181,18 +181,25 @@ test("commands are validated per action", () => {
   assert.ok(!isCommand({ ...memoCommand("v1"), version: 2 }));
 });
 
-test("command queue keeps the newest 50, replaces the same id and refreshes a 7-day TTL", async () => {
+test("command queue holds 100, refuses more with queue_full, replaces the same id and refreshes a 7-day TTL", async () => {
   // 한 시간에 하나씩 보내 24시간 30개 한도에 걸리지 않게 한다(CLN1110A01).
   let clock = Date.parse("2026-11-10T00:00:00Z");
   const env = await fresh({ NOW: () => clock });
   assert.equal((await handle(at("/command", "GET"), env)).status, 204);
   assert.equal((await handle(at("/command", "POST", { format: "other" }), env)).status, 422);
-  for (let i = 0; i < 55; i++, clock += 3600_000) assert.equal((await handle(at("/command", "POST", memoCommand(`m${i}`)), env)).status, 201);
-  await handle(at("/command", "POST", memoCommand("m54", { text: "두유 사기" })), env);
+  for (let i = 0; i < 100; i++, clock += 3600_000) assert.equal((await handle(at("/command", "POST", memoCommand(`m${i}`)), env)).status, 201);
+  // 꽉 차면 오래된 것을 지우지 않고 새 것을 거절한다(AIP1114A05). 같은 id를 바꾸는 것과 말풍선은 받는다.
+  const full = await handle(at("/command", "POST", memoCommand("m100")), env);
+  assert.equal(full.status, 429);
+  assert.deepEqual(await full.json(), { error: "queue_full", limit: 100 });
+  assert.equal((await handle(at("/command", "POST", memoCommand("m99", { text: "두유 사기" })), env)).status, 201);
   const { commands } = await (await handle(at("/command", "GET"), env)).json();
-  assert.equal(commands.length, 50);
-  assert.equal(commands[0].id, "m5");
+  assert.equal(commands.length, 100);
+  assert.equal(commands[0].id, "m0", "the oldest command is kept");
   assert.equal(commands.at(-1).text, "두유 사기");
+  // 앱이 가져가 지우면 다시 받는다.
+  assert.equal((await handle(at("/command?ids=m0", "DELETE"), env)).status, 204);
+  assert.equal((await handle(at("/command", "POST", memoCommand("m100")), env)).status, 201);
   assert.ok(!Number.isNaN(Date.parse(commands[0].receivedAt)));
   assert.deepEqual([commands[0].keyId, commands[0].source], ["master", "rest"], "SEC1110A02 attribution");
   assert.ok(!dataNames(env).some((n) => n.startsWith("cmd:")), "the queue lives in the Durable Object");

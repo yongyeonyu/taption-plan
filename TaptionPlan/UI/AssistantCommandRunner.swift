@@ -35,6 +35,9 @@ struct AssistantCommandJournal {
         defaults.removeObject(forKey: Self.inProgressKey)
     }
 
+    /// 결과와 따로 「AI가 한 일」에만 적는다(거절한 명령).
+    func log(_ entries: [AssistantLogEntry]) { AssistantActionLog.append(entries, to: logFile) }
+
     func record(_ results: [AssistantCommandOutcome.Result]) {
         guard !results.isEmpty else { return }
         let ids = Set(results.map(\.id))
@@ -53,7 +56,7 @@ struct AssistantCommandJournal {
     /// 반영하다 앱이 꺼진 명령. 「AI가 한 일」에 남았으면 반영된 것이고, 아니면 알 수 없어 `interrupted`로 알린다.
     func resolveInterrupted() {
         guard let id = defaults.string(forKey: Self.inProgressKey) else { return }
-        let applied = AssistantActionLog.load(from: logFile).contains { $0.commandID == id }
+        let applied = AssistantActionLog.load(from: logFile).contains { $0.commandID == id && $0.rejectedReason == nil }
         record([.init(id: id, applied: applied, reason: applied ? nil : "interrupted")])
         defaults.removeObject(forKey: Self.inProgressKey)
     }
@@ -163,6 +166,8 @@ enum AssistantCommandRunner {
     /// 위치 이벤트로 다시 켜졌을 때도 부른다(AIC1112A01). 그런 깨어남은 잦을 수 있어 5분에 한 번만 돌고, 프로세스가 새로 떠도 지키도록 기기에 적어 둔다.
     static func runInBackground(model: AppModel, budget: TimeInterval = 12) async {
         guard TripRelay.isAvailable, AssistantRegistration.isReady(), !model.isSceneActive, takeBackgroundTurn() else { return }
+        // 지도 화면이 뜨지 않은 깨어남에서도 끝난 일 알림이 설정을 읽을 수 있게 한다(AIP1114A05).
+        if AssistantCommandRefresh.model == nil { AssistantCommandRefresh.model = model }
         let deadline = Date.now.addingTimeInterval(budget)
         // 시간이 짧아 429는 기다리지 않는다.
         await TripRelay.$singleAttempt.withValue(true) {
@@ -199,7 +204,7 @@ extension AssistantCommandRunner {
 
 extension AssistantCommandBatch {
     func excluding(_ ids: Set<String>) -> Self {
-        Self(commands: commands.filter { !ids.contains($0.id) }, invalidIDs: invalidIDs.filter { !ids.contains($0) })
+        Self(commands: commands.filter { !ids.contains($0.id) }, invalidIDs: invalidIDs.filter { !ids.contains($0) }, invalidInfo: invalidInfo)
     }
 }
 
@@ -270,7 +275,11 @@ enum AssistantCommandRefresh {
     @discardableResult
     static func now(language: MapHomeLanguage = .current, manual: Bool = false) async -> Bool {
         if manual { AssistantCommandPolling.manualAt = .now }
-        guard let model else { return false }
+        guard let model else {
+            // 모델이 아직 없어도 못 올린 일은 다시 올린다(AIP1114A05).
+            await AITaskQueue.upload()
+            return false
+        }
         let result = await TripRelay.$singleAttempt.withValue(true) { await AssistantCommandRunner.run(model: model) }
         // 새 질문(답 기다림)과 아직 못 올린 답을 올린다(ASK1112A01).
         await AssistantQuestionStore.shared.uploadIfNeeded()
@@ -279,9 +288,11 @@ enum AssistantCommandRefresh {
         await AITaskQueue.refresh()
         ReceiptPhotoWatcher.shared.startIfNeeded()
         await ReceiptPhotoScanner.scan()
+        // 끝난 일 알림이 이번 확인에서 떴으면 명령 반영 알림과 한 줄로 보인다(AIP1114A05).
+        let taskNotice = AITaskNotice.takeBanner()
         switch result {
         case let .applied(outcome):
-            AssistantInbox.current.show(outcome.notice(language))
+            AssistantInbox.current.show([outcome.notice(language), taskNotice].compactMap { $0 }.joined(separator: " · "))
             return true
         case let .needsConfirmation(batch):
             AssistantInbox.current.pending = batch

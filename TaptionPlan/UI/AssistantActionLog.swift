@@ -219,6 +219,76 @@ struct AssistantLogEntry: Codable, Equatable, Identifiable, Sendable {
     /// 명령을 보낸 연결 키 id와 그때의 연결 이름(SEC1110A02). 예전 기록에는 없다.
     var keyID: String?
     var connection: String?
+    /// 이 명령이 딸린 맡긴 일의 id(AIP1114A05). 예전 기록에는 없다.
+    var taskID: String?
+    /// 반영하지 못한 명령이면 그 사유. 바뀐 것이 없어 되돌릴 수 없다. 예전 기록에는 없다.
+    var rejectedReason: String?
+
+    var isRejected: Bool { rejectedReason != nil }
+    /// 되돌리기를 눌러 볼 수 있는 항목.
+    var canUndo: Bool { rejectedReason == nil && undoneAt == nil }
+}
+
+extension AssistantLogEntry {
+    /// 거절한 명령의 기록. 바뀐 값이 없다.
+    @MainActor
+    static func rejected(
+        commandID: String, kind: AssistantActionKind, reason: String, keyID: String?, source: String?, taskID: String?,
+        at date: Date = .now, defaults: UserDefaults
+    ) -> Self {
+        Self(
+            commandID: commandID, kind: kind, appliedAt: date, before: "", after: "", delta: .init(),
+            keyID: keyID, connection: AssistantConnectionName.name(keyID: keyID, source: source, defaults: defaults),
+            taskID: taskID, rejectedReason: reason
+        )
+    }
+
+    @MainActor
+    static func rejected(_ command: AssistantCommand, reason: String, defaults: UserDefaults) -> Self {
+        rejected(commandID: command.id, kind: command.action.kind, reason: reason, keyID: command.keyID, source: command.source, taskID: command.taskID, defaults: defaults)
+    }
+}
+
+/// 거절 사유를 사람이 읽는 짧은 글로(AIP1114A05). 사유 낱말은 앱이 명령 결과에 쓰는 그대로다.
+enum AssistantRejection {
+    static func message(_ reason: String, language: MapHomeLanguage) -> String {
+        switch reason {
+        case "disabled": language.text("꺼 둔 종류라 하지 않았어요", "This kind of edit is switched off")
+        case "invalid", "invalid_time", "invalid_category", "end_before_start", "no_dates":
+            language.text("요청 형식이 맞지 않았어요", "The request wasn't valid")
+        case "edit_failed", "memo_failed", "schedule_failed", "goal_failed", "trip_failed":
+            language.text("앱에서 저장하지 못했어요", "The app couldn't save it")
+        case "no_change": language.text("바꿀 것이 없었어요", "There was nothing to change")
+        case "duplicate": language.text("이미 있는 내용이에요", "It was already there")
+        case "unknown_category": language.text("없는 분류예요", "That category doesn't exist")
+        case _ where reason.hasPrefix("no_"): language.text("고칠 대상을 찾지 못했어요", "Couldn't find the item to change")
+        default: language.text("반영하지 못했어요 (\(reason))", "Not applied (\(reason))")
+        }
+    }
+}
+
+/// 맡긴 일 하나에 딸린 「AI가 한 일」 찾기와 한꺼번에 되돌리기(AIP1114A05).
+enum AssistantTaskEdits {
+    /// 명령에 붙은 일 id가 같거나, AI가 일을 끝내며 적은 명령 id에 드는 항목.
+    static func entries(for task: AITaskQueue.Task, in log: [AssistantLogEntry]) -> [AssistantLogEntry] {
+        let commandIDs = Set(task.outcome?.commandIds ?? [])
+        return log.filter { $0.taskID == task.id || commandIDs.contains($0.commandID) }
+    }
+
+    /// 되돌릴 수 있는 것을 최근 것부터 되돌린다. 되돌린 수와 못 되돌린 수를 준다.
+    @MainActor
+    static func undo(_ entries: [AssistantLogEntry], model: AppModel) async -> (undone: Int, failed: Int) {
+        var undone = 0, failed = 0
+        for entry in entries.filter(\.canUndo).sorted(by: { $0.appliedAt > $1.appliedAt }) {
+            if await model.undoAssistantEntry(entry) {
+                AssistantActionLog.markUndone(entry.id)
+                undone += 1
+            } else {
+                failed += 1
+            }
+        }
+        return (undone, failed)
+    }
 }
 
 /// AI가 고친 이동 구간과 수단 교정표의 전·후(ACT1111A01). 구간은 명령이 고른 것만 담는다.
@@ -279,7 +349,7 @@ enum AssistantActionLog {
 extension AppModel {
     /// 「AI가 한 일」의 되돌리기. 거꾸로 적용한 값을 저장하고, 실패하면 편집 전으로 돌린다.
     func undoAssistantEntry(_ entry: AssistantLogEntry, preferences: AssistantPreferenceStore = .live) async -> Bool {
-        guard acceptsDataMutation(), entry.undoneAt == nil else { return false }
+        guard acceptsDataMutation(), entry.canUndo else { return false }
         if let added = entry.delta.ledgerEntry {
             await preferences.ledger.load()
             if let current = preferences.ledger.entries.first(where: { $0.id == added.id }), current != added {

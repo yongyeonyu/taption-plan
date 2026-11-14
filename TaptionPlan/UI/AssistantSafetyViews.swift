@@ -342,17 +342,20 @@ struct AssistantActionLogView: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Text(entry.kind.title(language)).font(.taptionStyle(.subheadline, weight: .medium))
+                    .foregroundStyle(entry.isRejected ? .secondary : .primary)
                 Spacer()
                 Text(entry.appliedAt.formatted(date: .abbreviated, time: .shortened)).font(.taptionStyle(.caption)).foregroundStyle(.secondary)
             }
-            Text("\(entry.before.isEmpty ? language.text("새로", "New") : entry.before) → \(entry.after)")
+            // 반영하지 못한 명령은 흐리게, 사유와 함께 보인다. 되돌릴 것이 없다(AIP1114A05).
+            Text(AITaskPanel.change(entry, language: language))
                 .font(.taptionStyle(.footnote))
+                .foregroundStyle(entry.isRejected ? .secondary : .primary)
             if let connection = AssistantConnectionName.shown(entry) {
                 Text(language.text("보낸 연결: \(connection)", "From: \(connection)")).font(.taptionStyle(.caption)).foregroundStyle(.secondary)
             }
             if entry.undoneAt != nil {
                 Text(language.text("되돌렸어요", "Undone")).font(.taptionStyle(.caption)).foregroundStyle(.secondary)
-            } else {
+            } else if !entry.isRejected {
                 Button(language.text("되돌리기", "Undo")) { undo(entry) }
                     .buttonStyle(.borderless)
                     .disabled(workingID != nil)
