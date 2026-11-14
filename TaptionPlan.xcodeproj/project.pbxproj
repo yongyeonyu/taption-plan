@@ -409,6 +409,7 @@
 		A20000000000000000000005 /* SensorBackgroundCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000002 /* SensorBackgroundCoordinator.swift */; };
 		A20000000000000000000007 /* SensorBackgroundCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000004 /* SensorBackgroundCoordinatorTests.swift */; };
 		A20000000000000000000008 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000005 /* Localizable.xcstrings */; };
+		D24A00000000000000000004 /* AppShortcuts.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = D24F00000000000000000004 /* AppShortcuts.xcstrings */; };
 		A2000000000000000C110400 /* UIText.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = F2000000000000000C110400 /* UIText.xcstrings */; };
 		A20000000000000000000009 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000006 /* Localizable.xcstrings */; };
 		A2000000000000000C110401 /* UIText.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = F2000000000000000C110401 /* UIText.xcstrings */; };
@@ -1195,6 +1196,7 @@
 		F20000000000000000000002 /* SensorBackgroundCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorBackgroundCoordinator.swift; sourceTree = "<group>"; };
 		F20000000000000000000004 /* SensorBackgroundCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorBackgroundCoordinatorTests.swift; sourceTree = "<group>"; };
 		F20000000000000000000005 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		D24F00000000000000000004 /* AppShortcuts.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = AppShortcuts.xcstrings; sourceTree = "<group>"; };
 		F2000000000000000C110400 /* UIText.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = UIText.xcstrings; sourceTree = "<group>"; };
 		F20000000000000000000006 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		F2000000000000000C110401 /* UIText.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = UIText.xcstrings; sourceTree = "<group>"; };
@@ -1646,6 +1648,7 @@
 				F1000000000000000B1102FE /* SUIT-ExtraBold.otf */,
 				F1000000000000000B1102FF /* Fonts-OFL.txt */,
 				F20000000000000000000005 /* Localizable.xcstrings */,
+				D24F00000000000000000004 /* AppShortcuts.xcstrings */,
 				F2000000000000000C110400 /* UIText.xcstrings */,
 				F20000000000000000000009 /* InfoPlist.xcstrings */,
 			);
@@ -2654,6 +2657,7 @@
 				A1000000000000000B1102FE /* SUIT-ExtraBold.otf in Resources */,
 				A1000000000000000B1102FF /* Fonts-OFL.txt in Resources */,
 				A20000000000000000000008 /* Localizable.xcstrings in Resources */,
+				D24A00000000000000000004 /* AppShortcuts.xcstrings in Resources */,
 				A2000000000000000C110400 /* UIText.xcstrings in Resources */,
 				A2000000000000000000000C /* InfoPlist.xcstrings in Resources */,
 				A90000000000000000000001 /* PrivacyInfo.xcprivacy in Resources */,

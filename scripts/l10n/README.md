@@ -6,6 +6,7 @@
   커밋 전 새 파일도 읽습니다. 행동 분류 이름은 값으로 넘어가므로 `record-classification.json`의 `title|englishTitle`을 직접 모읍니다.
 - `translations/<언어>.json`: 번역 원본. 키는 `ko|en`(변수 자리는 `{0}`), 영어만 있는 표는 `|en`, 기존 카탈로그는 `Localizable:키`·`InfoPlist:키`입니다.
 - `generate.py`: 네 제품의 `UIText.xcstrings`와 `Localizable`·`InfoPlist`를 다시 씁니다. 카탈로그를 손으로 고치지 않습니다. 충돌을 피하려고 메인 세션만 실행합니다.
+- `app_shortcuts.py`: Siri 호출 문장 카탈로그 `TaptionPlan/AppShortcuts.xcstrings`를 만듭니다. 한국어·영어 문장은 코드(`BokkiShortcuts`)가 정본이고 12개 언어는 `app-shortcuts.json`에 둡니다(묶음의 열쇠는 코드의 첫 문장). 문장마다 `${applicationName}`이 한 번 들어가고 `${moment}` 같은 자리 표시는 그대로 둡니다. 문장을 바꾸면 다시 돌리고, `--check`는 규칙과 최신 여부만 봅니다.
 - `check.py`: 누락·남은 한글·자리 표시자·고유 이름을 점검합니다. 실패하면 출시하지 않습니다(사람 검수가 없는 대신의 조건, 대표 결정).
 - `screens.sh`: 언어별 화면 스크린샷과 화면 글자를 남깁니다.
 

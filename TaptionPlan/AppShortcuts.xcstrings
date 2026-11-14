@@ -1,0 +1,1347 @@
+{
+  "sourceLanguage" : "ko",
+  "strings" : {
+    "${applicationName} 결제 문자 넣기" : {
+      "localizations" : {
+        "de" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Zahlungs-SMS zu ${applicationName} hinzufügen",
+              "Zahlungs-SMS in ${applicationName} speichern"
+            ]
+          }
+        },
+        "en" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Add payment text to ${applicationName}"
+            ]
+          }
+        },
+        "es" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Añadir SMS de pago a ${applicationName}",
+              "Guardar SMS de pago en ${applicationName}"
+            ]
+          }
+        },
+        "fr" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Ajouter un SMS de paiement à ${applicationName}",
+              "Enregistrer un SMS de paiement dans ${applicationName}"
+            ]
+          }
+        },
+        "hi" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName} में भुगतान SMS जोड़ें",
+              "${applicationName} में भुगतान SMS सहेजें"
+            ]
+          }
+        },
+        "id" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Tambahkan SMS pembayaran ke ${applicationName}",
+              "Simpan SMS pembayaran di ${applicationName}"
+            ]
+          }
+        },
+        "it" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Aggiungi SMS di pagamento a ${applicationName}",
+              "Salva SMS di pagamento in ${applicationName}"
+            ]
+          }
+        },
+        "ja" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName}に決済メッセージを追加",
+              "${applicationName}で決済メッセージを保存"
+            ]
+          }
+        },
+        "ko" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName} 결제 문자 넣기",
+              "${applicationName} 결제 문자 저장",
+              "Add payment text to ${applicationName}"
+            ]
+          }
+        },
+        "pt-BR" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Adicionar SMS de pagamento ao ${applicationName}",
+              "Salvar SMS de pagamento no ${applicationName}"
+            ]
+          }
+        },
+        "th" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "เพิ่มข้อความชำระเงินใน ${applicationName}",
+              "บันทึกข้อความชำระเงินใน ${applicationName}"
+            ]
+          }
+        },
+        "vi" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Thêm tin nhắn thanh toán vào ${applicationName}",
+              "Lưu tin nhắn thanh toán vào ${applicationName}"
+            ]
+          }
+        },
+        "zh-Hans" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "在${applicationName}添加支付短信",
+              "${applicationName}保存支付短信"
+            ]
+          }
+        },
+        "zh-Hant" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "在${applicationName}加入付款簡訊",
+              "${applicationName}儲存付款簡訊"
+            ]
+          }
+        }
+      }
+    },
+    "${applicationName}에 저장" : {
+      "localizations" : {
+        "de" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "In ${applicationName} speichern",
+              "Notiz in ${applicationName} hinzufügen",
+              "${applicationName} Notiz"
+            ]
+          }
+        },
+        "en" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Save to ${applicationName}",
+              "Add a memo in ${applicationName}",
+              "Note in ${applicationName}"
+            ]
+          }
+        },
+        "es" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Guardar en ${applicationName}",
+              "Añadir una nota en ${applicationName}",
+              "Nota en ${applicationName}"
+            ]
+          }
+        },
+        "fr" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Enregistrer dans ${applicationName}",
+              "Ajouter une note dans ${applicationName}",
+              "Note ${applicationName}"
+            ]
+          }
+        },
+        "hi" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName} में सहेजें",
+              "${applicationName} में नोट जोड़ें",
+              "${applicationName} नोट"
+            ]
+          }
+        },
+        "id" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Simpan ke ${applicationName}",
+              "Tambahkan catatan di ${applicationName}",
+              "Catatan ${applicationName}"
+            ]
+          }
+        },
+        "it" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Salva in ${applicationName}",
+              "Aggiungi una nota in ${applicationName}",
+              "Nota ${applicationName}"
+            ]
+          }
+        },
+        "ja" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName}に保存",
+              "${applicationName}にメモして",
+              "${applicationName}でメモ"
+            ]
+          }
+        },
+        "ko" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName}에 저장",
+              "${applicationName}에 저장해 줘",
+              "${applicationName}에 기록해",
+              "${applicationName}에 적어 줘",
+              "${applicationName}에 메모 남겨",
+              "${applicationName}에 메모해 줘",
+              "${applicationName} 메모",
+              "Save to ${applicationName}",
+              "Add a memo in ${applicationName}",
+              "Note in ${applicationName}"
+            ]
+          }
+        },
+        "pt-BR" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Salvar no ${applicationName}",
+              "Adicionar uma nota no ${applicationName}",
+              "Nota no ${applicationName}"
+            ]
+          }
+        },
+        "th" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "บันทึกลงใน ${applicationName}",
+              "เพิ่มโน้ตใน ${applicationName}",
+              "โน้ต ${applicationName}"
+            ]
+          }
+        },
+        "vi" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Lưu vào ${applicationName}",
+              "Thêm ghi chú vào ${applicationName}",
+              "Ghi chú ${applicationName}"
+            ]
+          }
+        },
+        "zh-Hans" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "保存到${applicationName}",
+              "在${applicationName}记个备忘",
+              "${applicationName}备忘"
+            ]
+          }
+        },
+        "zh-Hant" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "儲存到${applicationName}",
+              "在${applicationName}記個備忘",
+              "${applicationName}備忘"
+            ]
+          }
+        }
+      }
+    },
+    "${applicationName} ${moment} 기록" : {
+      "localizations" : {
+        "de" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${moment} in ${applicationName} erfassen",
+              "${applicationName} ${moment}"
+            ]
+          }
+        },
+        "en" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName} ${moment}",
+              "Log ${moment} in ${applicationName}",
+              "${applicationName} ${moment} now"
+            ]
+          }
+        },
+        "es" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Registrar ${moment} en ${applicationName}",
+              "${applicationName} ${moment}"
+            ]
+          }
+        },
+        "fr" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Noter ${moment} dans ${applicationName}",
+              "${applicationName} ${moment}"
+            ]
+          }
+        },
+        "hi" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName} में ${moment} दर्ज करें",
+              "${applicationName} ${moment}"
+            ]
+          }
+        },
+        "id" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Catat ${moment} di ${applicationName}",
+              "${applicationName} ${moment}"
+            ]
+          }
+        },
+        "it" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Registra ${moment} in ${applicationName}",
+              "${applicationName} ${moment}"
+            ]
+          }
+        },
+        "ja" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName}で${moment}を記録",
+              "${applicationName} ${moment}"
+            ]
+          }
+        },
+        "ko" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName} ${moment} 기록",
+              "${applicationName}에 ${moment} 남겨",
+              "${applicationName} ${moment}",
+              "${applicationName}에 ${moment} 적어 줘",
+              "Log ${moment} in ${applicationName}",
+              "${applicationName} ${moment} now"
+            ]
+          }
+        },
+        "pt-BR" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Registrar ${moment} no ${applicationName}",
+              "${applicationName} ${moment}"
+            ]
+          }
+        },
+        "th" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "บันทึก ${moment} ใน ${applicationName}",
+              "${applicationName} ${moment}"
+            ]
+          }
+        },
+        "vi" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Ghi ${moment} vào ${applicationName}",
+              "${applicationName} ${moment}"
+            ]
+          }
+        },
+        "zh-Hans" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "在${applicationName}记录${moment}",
+              "${applicationName} ${moment}"
+            ]
+          }
+        },
+        "zh-Hant" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "在${applicationName}記錄${moment}",
+              "${applicationName} ${moment}"
+            ]
+          }
+        }
+      }
+    },
+    "${applicationName} 지출 기록" : {
+      "localizations" : {
+        "de" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Ausgabe in ${applicationName} hinzufügen",
+              "Ausgabe in ${applicationName} erfassen"
+            ]
+          }
+        },
+        "en" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Add an expense in ${applicationName}",
+              "Log spending in ${applicationName}"
+            ]
+          }
+        },
+        "es" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Añadir un gasto en ${applicationName}",
+              "Registrar un gasto en ${applicationName}"
+            ]
+          }
+        },
+        "fr" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Ajouter une dépense dans ${applicationName}",
+              "Noter une dépense dans ${applicationName}"
+            ]
+          }
+        },
+        "hi" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName} में खर्च जोड़ें",
+              "${applicationName} में खर्च दर्ज करें"
+            ]
+          }
+        },
+        "id" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Tambahkan pengeluaran di ${applicationName}",
+              "Catat pengeluaran di ${applicationName}"
+            ]
+          }
+        },
+        "it" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Aggiungi una spesa in ${applicationName}",
+              "Registra una spesa in ${applicationName}"
+            ]
+          }
+        },
+        "ja" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName}で支出を記録",
+              "${applicationName}の家計簿に書いて"
+            ]
+          }
+        },
+        "ko" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName} 지출 기록",
+              "${applicationName}에 지출 넣어",
+              "${applicationName} 가계부에 적어",
+              "${applicationName}에 쓴 돈 기록해",
+              "${applicationName} 결제 기록",
+              "Add an expense in ${applicationName}",
+              "Log spending in ${applicationName}"
+            ]
+          }
+        },
+        "pt-BR" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Adicionar uma despesa no ${applicationName}",
+              "Registrar um gasto no ${applicationName}"
+            ]
+          }
+        },
+        "th" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "เพิ่มรายจ่ายใน ${applicationName}",
+              "บันทึกรายจ่ายใน ${applicationName}"
+            ]
+          }
+        },
+        "vi" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Thêm khoản chi vào ${applicationName}",
+              "Ghi chi tiêu vào ${applicationName}"
+            ]
+          }
+        },
+        "zh-Hans" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "在${applicationName}记一笔支出",
+              "${applicationName}记账"
+            ]
+          }
+        },
+        "zh-Hant" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "在${applicationName}記一筆支出",
+              "${applicationName}記帳"
+            ]
+          }
+        }
+      }
+    },
+    "${applicationName} 영수증 넣기" : {
+      "localizations" : {
+        "de" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Beleg zu ${applicationName} hinzufügen",
+              "Beleg in ${applicationName} speichern"
+            ]
+          }
+        },
+        "en" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Add a receipt to ${applicationName}"
+            ]
+          }
+        },
+        "es" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Añadir un recibo a ${applicationName}",
+              "Guardar un recibo en ${applicationName}"
+            ]
+          }
+        },
+        "fr" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Ajouter un reçu à ${applicationName}",
+              "Enregistrer un reçu dans ${applicationName}"
+            ]
+          }
+        },
+        "hi" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName} में रसीद जोड़ें",
+              "${applicationName} में रसीद सहेजें"
+            ]
+          }
+        },
+        "id" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Tambahkan struk ke ${applicationName}",
+              "Simpan struk di ${applicationName}"
+            ]
+          }
+        },
+        "it" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Aggiungi una ricevuta a ${applicationName}",
+              "Salva una ricevuta in ${applicationName}"
+            ]
+          }
+        },
+        "ja" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName}にレシートを追加",
+              "${applicationName}でレシートを保存"
+            ]
+          }
+        },
+        "ko" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName} 영수증 넣기",
+              "${applicationName} 영수증 저장",
+              "${applicationName}에 영수증 올려",
+              "Add a receipt to ${applicationName}"
+            ]
+          }
+        },
+        "pt-BR" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Adicionar um recibo ao ${applicationName}",
+              "Salvar um recibo no ${applicationName}"
+            ]
+          }
+        },
+        "th" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "เพิ่มใบเสร็จใน ${applicationName}",
+              "บันทึกใบเสร็จใน ${applicationName}"
+            ]
+          }
+        },
+        "vi" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Thêm hóa đơn vào ${applicationName}",
+              "Lưu hóa đơn vào ${applicationName}"
+            ]
+          }
+        },
+        "zh-Hans" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "在${applicationName}添加收据",
+              "${applicationName}保存收据"
+            ]
+          }
+        },
+        "zh-Hant" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "在${applicationName}加入收據",
+              "${applicationName}儲存收據"
+            ]
+          }
+        }
+      }
+    },
+    "${applicationName} AI에게 맡겨" : {
+      "localizations" : {
+        "de" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Frag die ${applicationName} KI",
+              "Der ${applicationName} KI übergeben"
+            ]
+          }
+        },
+        "en" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Ask ${applicationName} AI"
+            ]
+          }
+        },
+        "es" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Preguntar a la IA de ${applicationName}",
+              "Encargar a la IA de ${applicationName}"
+            ]
+          }
+        },
+        "fr" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Demander à l’IA de ${applicationName}",
+              "Confier à l’IA de ${applicationName}"
+            ]
+          }
+        },
+        "hi" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName} AI से पूछें",
+              "${applicationName} AI को सौंपें"
+            ]
+          }
+        },
+        "id" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Tanya AI ${applicationName}",
+              "Serahkan ke AI ${applicationName}"
+            ]
+          }
+        },
+        "it" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Chiedi all’IA di ${applicationName}",
+              "Affida all’IA di ${applicationName}"
+            ]
+          }
+        },
+        "ja" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName}のAIに頼んで",
+              "${applicationName}のAIに聞いて"
+            ]
+          }
+        },
+        "ko" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName} AI에게 맡겨",
+              "${applicationName} AI한테 물어봐",
+              "${applicationName} AI에게 확인 부탁해",
+              "Ask ${applicationName} AI"
+            ]
+          }
+        },
+        "pt-BR" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Perguntar à IA do ${applicationName}",
+              "Deixar com a IA do ${applicationName}"
+            ]
+          }
+        },
+        "th" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "ถาม AI ของ ${applicationName}",
+              "ฝาก AI ของ ${applicationName}"
+            ]
+          }
+        },
+        "vi" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Hỏi AI của ${applicationName}",
+              "Giao cho AI của ${applicationName}"
+            ]
+          }
+        },
+        "zh-Hans" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "交给${applicationName}的AI",
+              "问问${applicationName}的AI"
+            ]
+          }
+        },
+        "zh-Hant" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "交給${applicationName}的AI",
+              "問問${applicationName}的AI"
+            ]
+          }
+        }
+      }
+    },
+    "${applicationName} 오늘 얼마 썼어" : {
+      "localizations" : {
+        "de" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Wie viel habe ich heute in ${applicationName} ausgegeben",
+              "${applicationName} Ausgaben heute"
+            ]
+          }
+        },
+        "en" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "How much did I spend today in ${applicationName}"
+            ]
+          }
+        },
+        "es" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Cuánto he gastado hoy en ${applicationName}",
+              "Gastos de hoy en ${applicationName}"
+            ]
+          }
+        },
+        "fr" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Combien ai-je dépensé aujourd’hui dans ${applicationName}",
+              "Dépenses du jour dans ${applicationName}"
+            ]
+          }
+        },
+        "hi" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName} में आज कितना खर्च हुआ",
+              "${applicationName} में आज का खर्च"
+            ]
+          }
+        },
+        "id" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Berapa pengeluaran saya hari ini di ${applicationName}",
+              "Pengeluaran hari ini di ${applicationName}"
+            ]
+          }
+        },
+        "it" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Quanto ho speso oggi in ${applicationName}",
+              "Spese di oggi in ${applicationName}"
+            ]
+          }
+        },
+        "ja" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName}で今日いくら使った",
+              "${applicationName}の今日の支出"
+            ]
+          }
+        },
+        "ko" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName} 오늘 얼마 썼어",
+              "${applicationName} 오늘 지출",
+              "${applicationName} 오늘 지출 얼마야",
+              "${applicationName} 오늘 쓴 돈",
+              "How much did I spend today in ${applicationName}"
+            ]
+          }
+        },
+        "pt-BR" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Quanto gastei hoje no ${applicationName}",
+              "Gastos de hoje no ${applicationName}"
+            ]
+          }
+        },
+        "th" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "วันนี้ใช้เงินไปเท่าไหร่ใน ${applicationName}",
+              "รายจ่ายวันนี้ใน ${applicationName}"
+            ]
+          }
+        },
+        "vi" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Hôm nay tôi đã tiêu bao nhiêu trong ${applicationName}",
+              "Chi tiêu hôm nay trong ${applicationName}"
+            ]
+          }
+        },
+        "zh-Hans" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName}今天花了多少",
+              "${applicationName}今天的支出"
+            ]
+          }
+        },
+        "zh-Hant" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName}今天花了多少",
+              "${applicationName}今天的支出"
+            ]
+          }
+        }
+      }
+    },
+    "${applicationName} 오늘 몇 걸음" : {
+      "localizations" : {
+        "de" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Schritte heute in ${applicationName}",
+              "Wie viele Schritte heute in ${applicationName}"
+            ]
+          }
+        },
+        "en" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Steps today in ${applicationName}"
+            ]
+          }
+        },
+        "es" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Pasos de hoy en ${applicationName}",
+              "Cuántos pasos hoy en ${applicationName}"
+            ]
+          }
+        },
+        "fr" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Pas du jour dans ${applicationName}",
+              "Combien de pas aujourd’hui dans ${applicationName}"
+            ]
+          }
+        },
+        "hi" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName} में आज के कदम",
+              "${applicationName} में आज कितने कदम"
+            ]
+          }
+        },
+        "id" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Langkah hari ini di ${applicationName}",
+              "Berapa langkah hari ini di ${applicationName}"
+            ]
+          }
+        },
+        "it" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Passi di oggi in ${applicationName}",
+              "Quanti passi oggi in ${applicationName}"
+            ]
+          }
+        },
+        "ja" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName}で今日の歩数",
+              "${applicationName}で今日何歩歩いた"
+            ]
+          }
+        },
+        "ko" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName} 오늘 몇 걸음",
+              "${applicationName} 걸음 수",
+              "${applicationName} 오늘 얼마나 걸었어",
+              "Steps today in ${applicationName}"
+            ]
+          }
+        },
+        "pt-BR" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Passos de hoje no ${applicationName}",
+              "Quantos passos hoje no ${applicationName}"
+            ]
+          }
+        },
+        "th" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "จำนวนก้าววันนี้ใน ${applicationName}",
+              "วันนี้เดินกี่ก้าวใน ${applicationName}"
+            ]
+          }
+        },
+        "vi" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Số bước hôm nay trong ${applicationName}",
+              "Hôm nay đi bao nhiêu bước trong ${applicationName}"
+            ]
+          }
+        },
+        "zh-Hans" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName}今天走了多少步",
+              "${applicationName}今天的步数"
+            ]
+          }
+        },
+        "zh-Hant" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName}今天走了多少步",
+              "${applicationName}今天的步數"
+            ]
+          }
+        }
+      }
+    },
+    "${applicationName} 지금 뭐로 기록돼" : {
+      "localizations" : {
+        "de" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Was zeichnet ${applicationName} gerade auf",
+              "${applicationName} aktueller Eintrag"
+            ]
+          }
+        },
+        "en" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "What is ${applicationName} recording now"
+            ]
+          }
+        },
+        "es" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Qué está registrando ${applicationName} ahora",
+              "Registro actual en ${applicationName}"
+            ]
+          }
+        },
+        "fr" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Qu’enregistre ${applicationName} en ce moment",
+              "Enregistrement en cours dans ${applicationName}"
+            ]
+          }
+        },
+        "hi" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName} अभी क्या दर्ज कर रहा है",
+              "${applicationName} में अभी का रिकॉर्ड"
+            ]
+          }
+        },
+        "id" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Apa yang sedang dicatat ${applicationName}",
+              "Catatan saat ini di ${applicationName}"
+            ]
+          }
+        },
+        "it" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Cosa sta registrando ${applicationName} adesso",
+              "Registrazione attuale in ${applicationName}"
+            ]
+          }
+        },
+        "ja" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName}は今何を記録してる",
+              "${applicationName}の今の記録"
+            ]
+          }
+        },
+        "ko" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName} 지금 뭐로 기록돼",
+              "${applicationName} 지금 기록",
+              "${applicationName} 지금 뭐 하는 중이야",
+              "${applicationName} 지금 상태",
+              "What is ${applicationName} recording now"
+            ]
+          }
+        },
+        "pt-BR" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "O que o ${applicationName} está registrando agora",
+              "Registro atual no ${applicationName}"
+            ]
+          }
+        },
+        "th" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "ตอนนี้ ${applicationName} กำลังบันทึกอะไร",
+              "บันทึกตอนนี้ใน ${applicationName}"
+            ]
+          }
+        },
+        "vi" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName} đang ghi gì",
+              "Bản ghi hiện tại trong ${applicationName}"
+            ]
+          }
+        },
+        "zh-Hans" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName}现在在记录什么",
+              "${applicationName}现在的记录"
+            ]
+          }
+        },
+        "zh-Hant" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName}現在在記錄什麼",
+              "${applicationName}現在的記錄"
+            ]
+          }
+        }
+      }
+    },
+    "${applicationName} ${screen} 열어" : {
+      "localizations" : {
+        "de" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${screen} in ${applicationName} öffnen",
+              "${screen} in ${applicationName} zeigen"
+            ]
+          }
+        },
+        "en" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Open ${screen} in ${applicationName}",
+              "Show ${screen} in ${applicationName}"
+            ]
+          }
+        },
+        "es" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Abrir ${screen} en ${applicationName}",
+              "Mostrar ${screen} en ${applicationName}"
+            ]
+          }
+        },
+        "fr" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Ouvrir ${screen} dans ${applicationName}",
+              "Afficher ${screen} dans ${applicationName}"
+            ]
+          }
+        },
+        "hi" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName} में ${screen} खोलें",
+              "${applicationName} में ${screen} दिखाएँ"
+            ]
+          }
+        },
+        "id" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Buka ${screen} di ${applicationName}",
+              "Tampilkan ${screen} di ${applicationName}"
+            ]
+          }
+        },
+        "it" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Apri ${screen} in ${applicationName}",
+              "Mostra ${screen} in ${applicationName}"
+            ]
+          }
+        },
+        "ja" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName}で${screen}を開いて",
+              "${applicationName}の${screen}を見せて"
+            ]
+          }
+        },
+        "ko" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName} ${screen} 열어",
+              "${applicationName} ${screen} 보여 줘",
+              "${applicationName}에서 ${screen} 열어",
+              "Open ${screen} in ${applicationName}",
+              "Show ${screen} in ${applicationName}"
+            ]
+          }
+        },
+        "pt-BR" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Abrir ${screen} no ${applicationName}",
+              "Mostrar ${screen} no ${applicationName}"
+            ]
+          }
+        },
+        "th" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "เปิด ${screen} ใน ${applicationName}",
+              "แสดง ${screen} ใน ${applicationName}"
+            ]
+          }
+        },
+        "vi" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Mở ${screen} trong ${applicationName}",
+              "Hiển thị ${screen} trong ${applicationName}"
+            ]
+          }
+        },
+        "zh-Hans" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "在${applicationName}打开${screen}",
+              "在${applicationName}显示${screen}"
+            ]
+          }
+        },
+        "zh-Hant" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "在${applicationName}打開${screen}",
+              "在${applicationName}顯示${screen}"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}
