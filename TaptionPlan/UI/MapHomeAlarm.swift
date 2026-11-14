@@ -537,6 +537,7 @@ struct MapHomeAlarmSettingsSheet: View {
                     }
                 }
                 nearbyMemoRow
+                ArrivalCardSettingRow(language: language)
             }
             .padding(22)
         }

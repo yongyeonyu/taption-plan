@@ -5707,6 +5707,16 @@
 "회사에서 업무|Working at the office": "Lavoro in ufficio",
 "회사에서 휴식|Break at the office": "Pausa in ufficio",
 "회의|Meeting": "Riunione",
-"휴식|Rest": "Riposo"
+"휴식|Rest": "Riposo",
+"지금 도착한 곳|You've arrived": "Sei arrivato",
+"이곳 예상 지출|Planned spend here": "Spesa prevista qui",
+"여행 예산|Trip budget": "Budget del viaggio",
+"미완료|Not done": "Non completato",
+"일정 장소 도착 카드|Arrival card for planned places": "Scheda di arrivo per i luoghi pianificati",
+"일정 장소에 도착했어요|You arrived at a planned place": "Sei arrivato in un luogo pianificato",
+"|You arrived at a planned place": "Sei arrivato in un luogo pianificato",
+"도착했어요. 눌러서 메모와 체크리스트를 보세요.|You're here. Tap to see your notes and checklist.": "Sei arrivato. Tocca per vedere note e checklist.",
+"|You're here. Tap to see your notes and checklist.": "Sei arrivato. Tocca per vedere note e checklist.",
+"여행 일정에 넣은 곳에 도착하면 메모·세부 계획·예상 지출을 보여요. 앱이 위치를 받는 동안에만 알 수 있고, 일정마다 한 번만 떠요.|Shows notes, sub-plans and planned spend when you reach a place in your trip plan. Works only while the app receives location, once per plan.": "Mostra note, piani dettagliati e spesa prevista quando raggiungi un luogo del tuo piano di viaggio. Funziona solo mentre l’app riceve la posizione, una volta per piano."
 }
 }

@@ -5707,6 +5707,16 @@
 "회사에서 업무|Working at the office": "Làm việc ở công ty",
 "회사에서 휴식|Break at the office": "Nghỉ ở công ty",
 "회의|Meeting": "Họp",
-"휴식|Rest": "Nghỉ ngơi"
+"휴식|Rest": "Nghỉ ngơi",
+"지금 도착한 곳|You've arrived": "Bạn vừa đến nơi",
+"이곳 예상 지출|Planned spend here": "Chi tiêu dự kiến tại đây",
+"여행 예산|Trip budget": "Ngân sách chuyến đi",
+"미완료|Not done": "Chưa xong",
+"일정 장소 도착 카드|Arrival card for planned places": "Thẻ đến nơi cho địa điểm đã lên kế hoạch",
+"일정 장소에 도착했어요|You arrived at a planned place": "Bạn đã đến một địa điểm đã lên kế hoạch",
+"|You arrived at a planned place": "Bạn đã đến một địa điểm đã lên kế hoạch",
+"도착했어요. 눌러서 메모와 체크리스트를 보세요.|You're here. Tap to see your notes and checklist.": "Bạn đã đến nơi. Chạm để xem ghi chú và danh sách việc cần làm.",
+"|You're here. Tap to see your notes and checklist.": "Bạn đã đến nơi. Chạm để xem ghi chú và danh sách việc cần làm.",
+"여행 일정에 넣은 곳에 도착하면 메모·세부 계획·예상 지출을 보여요. 앱이 위치를 받는 동안에만 알 수 있고, 일정마다 한 번만 떠요.|Shows notes, sub-plans and planned spend when you reach a place in your trip plan. Works only while the app receives location, once per plan.": "Hiển thị ghi chú, kế hoạch chi tiết và chi tiêu dự kiến khi bạn đến một địa điểm trong kế hoạch chuyến đi. Chỉ hoạt động khi ứng dụng nhận được vị trí, mỗi kế hoạch một lần."
 }
 }
