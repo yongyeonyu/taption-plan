@@ -42,7 +42,7 @@
 
 센서 갱신의 체류·층·이동 계산은 `UX/SensorTimelineDerivation.swift`에서 주 스레드 밖으로 돕니다. 잠근 이동 합치기와 저장은 주 스레드의 최신 `snapshot`에서 하고, 계산 중 `snapshotRevision`이 바뀌면 마지막 단계를 다시 합니다.
 
-앱 전용 프레임워크와 화면은 Swift Package로 옮기지 않습니다. 예외는 AI 기능입니다(ADR-005, 대표 결정 2026-11-14): `Packages/TaptionAssistant`로 차례로 옮기고, 패키지는 앱 모델·화면·엔진을 직접 모르며 앱이 호스트 프로토콜로 이어 줍니다. 지금은 규칙 모델·평가기(`TaptionRules`)만 있고 순서는 `docs/AI_RELAY_PLAN.md`에 있습니다. package import 경계 검사는 `bash scripts/check-app-engine-import-boundary.sh`로 확인합니다.
+앱 전용 프레임워크와 화면은 Swift Package로 옮기지 않습니다. 예외는 AI 기능입니다(ADR-005, 대표 결정 2026-11-14): `Packages/TaptionAssistant`로 차례로 옮기고, 패키지는 앱 모델·화면·엔진을 직접 모르며 앱이 호스트 프로토콜로 이어 줍니다. 지금 옮겨진 것(PKG1114A10): 규칙 모델·평가기(`TaptionRules`), 명령에 실려 오는 값·질문·승인 값과 글·날짜 읽기·번호 가리기(`TaptionAssistantProtocol`), 중계 키 보관·주소·보내기·주 키 바꾸기 문(`TaptionAssistantKit`의 `TripRelay`·`AssistantKeychainSecrets`·`AssistantRelayGate`), 가계부 값 타입과 정산 계산(`Packages/TaptionLedgerCore`). 앱은 `@_exported import`로 보고, 문구(`MapHomeLanguage`)·앱 모델을 쓰는 부분은 앱의 extension으로 남아 있습니다. 명령(`AssistantCommand`)·등록·실행·화면은 호스트 프로토콜이 생긴 뒤에 옮기며 순서는 `docs/AI_RELAY_PLAN.md`에 있습니다. package import 경계 검사는 `bash scripts/check-app-engine-import-boundary.sh`로 확인합니다.
 
 `MapHomeView`·`TimelineBoard`·`TimelineDetailPanel`은 저장 속성·init·body만 본 파일에 두고 나머지는 `타입+기능.swift` extension에 둡니다. 동결 예산(`docs/architecture-baseline.json`의 `frozen_files`)에 붙은 파일에는 기능을 더하지 않습니다. 계산만 하고 그 파일의 사설 상태에 닿지 않는 타입은 새 파일로 떼어 내고(예: `AppShellLaunchGate.swift`, `PlanBackupRouteFallbackEngine.swift`, `MapHomeSectionDetailEngine.swift`), 뺀 만큼 예산을 낮춰 다시 잠급니다 — 남겨 둔 여유는 다음 기능이 조용히 들어오는 자리가 됩니다. 확인은 `python3 scripts/architecture-metrics.py --check docs/architecture-baseline.json`.
 

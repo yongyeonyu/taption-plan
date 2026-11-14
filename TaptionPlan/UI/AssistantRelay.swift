@@ -54,16 +54,6 @@ enum AssistantRetention: Int, CaseIterable, Identifiable, Sendable {
 
 /// 중계 서버의 다른 경로(하루 기록·명령)를 부른다(AIR1110A01·TRP1110A07).
 extension TripRelay {
-    static func url(_ path: String, query: [URLQueryItem] = [], host: String? = TripRelay.host) -> URL? {
-        guard let host else { return nil }
-        var parts = URLComponents()
-        parts.scheme = "https"
-        parts.host = host
-        parts.path = path
-        parts.queryItems = query.isEmpty ? nil : query
-        return parts.url
-    }
-
     static let clientHeaderName = "x-bokki-client"
 
     /// `<기기 종류 식별자>;<빌드>;<공유 수준>[;debug][;locked]`. 서버가 AI 응답의 `sync`에 실어 어느 기기의 기록인지 알린다(AIC1112A01).
@@ -110,46 +100,6 @@ extension TripRelay {
             request.httpBody = body
         }
         return request
-    }
-
-    /// 상태 코드만 돌려준다. 실패하면 nil.
-    static func send(_ request: URLRequest?, session: URLSession = .shared) async -> (status: Int, data: Data)? {
-        await sendResponse(request, session: session).map { ($0.response.statusCode, $0.data) }
-    }
-
-    /// 백그라운드 새로 고침처럼 시간이 없을 때는 429를 기다리지 않는다.
-    @TaskLocal static var singleAttempt = false
-    /// 이보다 오래 기다리라는 429(하루 한도 등)는 다시 보내지 않고 그대로 돌려준다.
-    static let maximumRetryWait: Double = 5
-    static let retryLimit = 2
-
-    /// 429면 `Retry-After`(없으면 몸통 `retryAfter`)만큼 기다려 두 번까지 다시 보낸다(SEC1110A03).
-    /// 기다림이 길거나 하루 한도이거나 작업이 취소되면 받은 429를 그대로 돌려준다(REV1110A06).
-    static func sendResponse(_ request: URLRequest?, session: URLSession = .shared) async -> (response: HTTPURLResponse, data: Data)? {
-        guard let request else { return nil }
-        for attempt in 0...retryLimit {
-            guard let (data, response) = try? await session.data(for: request), let http = response as? HTTPURLResponse else { return nil }
-            guard http.statusCode == 429, attempt < retryLimit, !singleAttempt,
-                  let wait = retryWait(header: http.value(forHTTPHeaderField: "Retry-After"), body: data) else { return (http, data) }
-            do { try await Task.sleep(for: .seconds(wait)) } catch { return (http, data) }
-        }
-        return nil
-    }
-
-    /// 다시 보낼 만하면 기다릴 초, 아니면 nil.
-    static func retryWait(header: String?, body: Data) -> Double? {
-        let error = ((try? JSONSerialization.jsonObject(with: body)) as? [String: Any])?["error"] as? String ?? ""
-        let delay = retryDelay(header: header, body: body)
-        return error.hasPrefix("daily_") || error == "write_budget_exhausted" || delay > maximumRetryWait ? nil : delay
-    }
-
-    static func retryDelay(header: String?, body: Data) -> Double {
-        let fromBody = ((try? JSONSerialization.jsonObject(with: body)) as? [String: Any])?["retryAfter"] as? Double
-        return min(60, max(0, header.flatMap(Double.init) ?? fromBody ?? 15))
-    }
-
-    static func headerLines(key: String) -> String {
-        "Authorization: Bearer \(key) and Content-Type: application/json"
     }
 
     /// 도구 호출이 되는 AI에 붙여 넣는 연결 안내(TRP1110A07). 여행 프롬프트의 전달 안내와 같은 헤더 문구를 쓴다.

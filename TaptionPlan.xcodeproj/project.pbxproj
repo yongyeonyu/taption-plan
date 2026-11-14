@@ -570,6 +570,7 @@
 		A70000000000000000000001 /* TaptionPlanEngine in Frameworks */ = {isa = PBXBuildFile; productRef = X70000000000000000000002 /* TaptionPlanEngine */; };
 		C0FFEE000000000000000011 /* TaptionPlanStore in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000002 /* TaptionPlanStore */; };
 		C0FFEE0000000000000000A3 /* TaptionRules in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE0000000000000000A2 /* TaptionRules */; };
+		C0FFEE0000000000000000A7 /* TaptionAssistantKit in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE0000000000000000A6 /* TaptionAssistantKit */; };
 		C0FFEE0000000000000000B3 /* TaptionLedgerCore in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE0000000000000000B2 /* TaptionLedgerCore */; };
 		C0FFEE0000000000000000A5 /* TaptionAssistantProtocol in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE0000000000000000A4 /* TaptionAssistantProtocol */; };
 		C0FFEE000000000000000013 /* TaptionPlanStore in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000002 /* TaptionPlanStore */; };
@@ -1488,6 +1489,7 @@
 				A70000000000000000000001 /* TaptionPlanEngine in Frameworks */,
 				C0FFEE000000000000000011 /* TaptionPlanStore in Frameworks */,
 				C0FFEE0000000000000000A3 /* TaptionRules in Frameworks */,
+				C0FFEE0000000000000000A7 /* TaptionAssistantKit in Frameworks */,
 				C0FFEE0000000000000000B3 /* TaptionLedgerCore in Frameworks */,
 				C0FFEE0000000000000000A5 /* TaptionAssistantProtocol in Frameworks */,
 			);
@@ -2335,6 +2337,7 @@
 				X70000000000000000000002 /* TaptionPlanEngine */,
 				C0FFEE000000000000000002 /* TaptionPlanStore */,
 				C0FFEE0000000000000000A2 /* TaptionRules */,
+				C0FFEE0000000000000000A6 /* TaptionAssistantKit */,
 				C0FFEE0000000000000000B2 /* TaptionLedgerCore */,
 				C0FFEE0000000000000000A4 /* TaptionAssistantProtocol */,
 				X50000000000000000000002 /* MapLibre */,
@@ -3893,6 +3896,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = C0FFEE0000000000000000A1 /* XCLocalSwiftPackageReference "TaptionAssistant" */;
 			productName = TaptionRules;
+		};
+		C0FFEE0000000000000000A6 /* TaptionAssistantKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C0FFEE0000000000000000A1 /* XCLocalSwiftPackageReference "TaptionAssistant" */;
+			productName = TaptionAssistantKit;
 		};
 		C0FFEE0000000000000000B2 /* TaptionLedgerCore */ = {
 			isa = XCSwiftPackageProductDependency;
