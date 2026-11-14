@@ -240,11 +240,12 @@ const ROUTES = {
   "/rules/ack": {
     POST: ["master", withBody(rules.ackRules)],
   },
+  // 맡기·끝내기는 쓰기 연결만(AIP1114A05). 읽기 연결은 `GET /tasks`로 보기만 한다.
   "/tasks/claim": {
-    POST: ["read", (request, ctx) => store.claimTasks(ctx)],
+    POST: ["write", (request, ctx) => store.claimTasks(ctx)],
   },
   "/tasks/result": {
-    POST: ["read", withBody(store.finishTask)],
+    POST: ["write", withBody(store.finishTask)],
   },
   "/command/result": {
     POST: ["master", withBody(store.saveResults)],

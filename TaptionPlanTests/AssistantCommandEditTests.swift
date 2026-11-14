@@ -129,6 +129,50 @@ final class AssistantCommandEditTests: XCTestCase {
         XCTAssertTrue(outcome.entries.isEmpty)
     }
 
+    /// AIP1114A05: 거절한 명령도 사유·맡긴 일 id와 함께 「AI가 한 일」에 남고, 되돌릴 수는 없다.
+    func testRejectedCommandsAreLoggedWithReasonAndTaskID() async throws {
+        let store = defaults()
+        let journal = AssistantCommandJournal(defaults: store)
+        addTeardownBlock { try? FileManager.default.removeItem(at: journal.logFile) }
+        AssistantActionToggles.set(.deleteMemo, enabled: false, defaults: store)
+        let parsed = try batch([
+            command("off", "deleteMemo", ["memoId": memoID, "taskId": "task-1"]),
+            command("gone", "updateMemo", ["memoId": memoID, "text": "글", "taskId": "task-1"]),
+            command("bad", "updateMemo", ["memoId": memoID, "taskId": "task-1"]),
+            command("ok", "addMemo", ["text": "새 메모", "taskId": "task-1"]),
+            command("free", "addMemo", ["text": "다른 메모"]),
+        ])
+        XCTAssertEqual(parsed.commands.map(\.taskID), ["task-1", "task-1", "task-1", nil])
+        XCTAssertEqual(parsed.invalidInfo["bad"], .init(kind: .updateMemo, keyID: nil, source: nil, taskID: "task-1"))
+
+        let model = try await makeModel(actuals: [])
+        let applied = await model.applyAssistantCommands(parsed, defaults: store, journal: journal)
+        let outcome = try XCTUnwrap(applied)
+        XCTAssertEqual(outcome.entries.map(\.commandID), ["ok", "free"], "only applied commands count as edits")
+        let log = AssistantActionLog.load(from: journal.logFile)
+        let reasons = Dictionary(uniqueKeysWithValues: log.map { ($0.commandID, $0.rejectedReason ?? "applied") })
+        XCTAssertEqual(reasons["off"], "disabled")
+        XCTAssertEqual(reasons["bad"], "invalid")
+        XCTAssertEqual(reasons["ok"], "applied")
+        XCTAssertEqual(reasons["free"], "applied")
+        XCTAssertNotEqual(reasons["gone"], "applied")
+        XCTAssertNotNil(reasons["gone"])
+
+        let task = AITaskQueue.Task(id: "task-1", kind: .other, status: .done)
+        let linked = AssistantTaskEdits.entries(for: task, in: log)
+        XCTAssertEqual(Set(linked.map(\.commandID)), ["off", "gone", "bad", "ok"])
+        XCTAssertEqual(linked.filter(\.canUndo).map(\.commandID), ["ok"])
+        let rejected = try XCTUnwrap(linked.first { $0.commandID == "gone" })
+        XCTAssertTrue(rejected.delta.isEmpty)
+        let undone = await model.undoAssistantEntry(rejected, preferences: .test(store))
+        XCTAssertFalse(undone, "a rejected command has nothing to undo")
+
+        // 반영 도중 꺼진 명령은 거절 기록만 있으면 반영된 것으로 치지 않는다.
+        journal.begin("gone")
+        journal.resolveInterrupted()
+        XCTAssertEqual(journal.pending.last, .init(id: "gone", applied: false, reason: "interrupted"))
+    }
+
     // MARK: - 기록 교정과 되돌리기
 
     private lazy var walk = ActualRecord(planID: nil, title: "걷기", categoryID: "movement", startedAt: at(8, 30), endedAt: at(9), source: .motion, evidence: ["걸음"])

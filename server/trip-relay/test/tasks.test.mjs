@@ -24,7 +24,7 @@ async function setup() {
   const master = randomKey(), ai = randomKey();
   assert.equal((await send(env, "/register", "POST", {}, master)).status, 201);
   assert.equal((await send(env, "/pin", "POST", { pin: PIN }, master)).status, 200);
-  assert.equal((await send(env, "/keys", "POST", { keys: [{ token: ai, scope: "read", expiresAt: null }], pin: PIN }, master)).status, 201);
+  assert.equal((await send(env, "/keys", "POST", { keys: [{ token: ai, scope: "write", expiresAt: null }], pin: PIN }, master)).status, 201);
   return { env, master, ai };
 }
 
@@ -120,7 +120,7 @@ test("classifyUnconfirmed and setTravelMode: required fields and allowed modes (
 test("tasks: a task claimed by one connection is not handed to another until it goes stale (AIM1114A01)", async () => {
   const { env, master, ai } = await setup();
   const other = randomKey();
-  assert.equal((await send(env, "/keys", "POST", { keys: [{ token: other, scope: "read", expiresAt: null }], pin: PIN }, master)).status, 201);
+  assert.equal((await send(env, "/keys", "POST", { keys: [{ token: other, scope: "write", expiresAt: null }], pin: PIN }, master)).status, 201);
   assert.equal((await send(env, "/tasks", "POST", upload([{ id: A, kind: "payment_text", text: "shop 1,000" }]), master)).status, 201);
   assert.deepEqual((await (await send(env, "/tasks/claim", "POST", undefined, ai)).json()).tasks.map((t) => t.id), [A]);
   assert.equal((await send(env, "/tasks/claim", "POST", undefined, other)).status, 204, "the other connection gets nothing");
@@ -251,4 +251,26 @@ test("commands keep a taskId so the app can tie edits to the task", async () => 
   assert.equal((await send(env, "/command", "POST", { ...body, id: "c-2", taskId: "bad id" }, writer)).status, 201);
   const { commands } = await (await send(env, "/command", "GET", undefined, master)).json();
   assert.deepEqual(commands.map((c) => c.taskId), [A, undefined]);
+});
+
+test("tasks: a read connection sees open tasks but cannot take or complete them (AIP1114A05)", async () => {
+  const { env, master, ai } = await setup();
+  const reader = randomKey();
+  assert.equal((await send(env, "/keys", "POST", { keys: [{ token: reader, scope: "read", expiresAt: null }], pin: PIN }, master)).status, 201);
+  assert.equal((await send(env, "/tasks", "POST", upload([{ id: A, kind: "payment_text", text: "shop 1,000" }]), master)).status, 201);
+  assert.equal((await send(env, "/tasks/claim", "POST", undefined, reader)).status, 403);
+  assert.equal((await send(env, "/tasks/result", "POST", { id: A, status: "done" }, reader)).status, 403);
+  const seen = (await (await mcp(env, reader, "get_ai_tasks")).json()).result.structuredContent;
+  assert.deepEqual(seen.tasks.map((t) => [t.id, t.status]), [[A, "waiting"]]);
+  assert.equal(seen.claimable, false);
+  assert.match(seen.hint, /write connection/);
+  assert.equal(typeof seen.hint, "string", "the server's own hint is not wrapped as user text");
+  const refused = await (await mcp(env, reader, "complete_ai_task", { id: A, status: "done" })).json();
+  assert.match(refused.error.message, /read-only/);
+  const listed = await (await send(env, "/tasks?v=2", "GET", undefined, reader)).json();
+  assert.deepEqual(listed.tasks.map((t) => [t.id, t.status, t.claimedBy]), [[A, "waiting", undefined]], "nothing was claimed");
+  // 쓰기 연결은 그대로 맡는다.
+  assert.deepEqual((await (await send(env, "/tasks/claim", "POST", undefined, ai)).json()).tasks.map((t) => [t.id, t.status]), [[A, "processing"]]);
+  assert.equal((await send(env, "/tasks/claim", "POST", undefined, reader)).status, 403);
+  assert.equal((await mcp(env, reader, "get_ai_tasks")).status, 200);
 });

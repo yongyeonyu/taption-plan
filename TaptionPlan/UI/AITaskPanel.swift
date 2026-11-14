@@ -16,6 +16,9 @@ struct AITaskPanel: View {
     @State private var inbox: [PaymentInbox.Item] = []
     @State private var opened: PaymentInbox.Item?
     @State private var requestNote: String?
+    /// 일마다 한꺼번에 되돌린 결과 글과, 지금 되돌리는 중인 일(AIP1114A05).
+    @State private var undoNotes: [String: String] = [:]
+    @State private var undoingTaskID: String?
     @Environment(\.openURL) private var openURL
 
     var body: some View {
@@ -85,7 +88,7 @@ struct AITaskPanel: View {
             .frame(maxHeight: 320)
             .refreshable { await reload() }
         }
-        if shown.contains(where: { $0.status == .done || $0.status == .failed }) {
+        if shown.contains(where: \.status.isFinished) {
             Button {
                 Task {
                     if await AITaskQueue.deleteFinished() { tasks = Self.merged() }
@@ -100,15 +103,17 @@ struct AITaskPanel: View {
     }
 
     /// 「AI가 한 일」 한 줄: 무엇을, 전 → 후, 어느 AI가, 언제. 되돌리기는 메뉴 › AI가 한 일에서 한다.
+    /// 반영하지 못한 명령은 흐리게, 사유와 함께 보인다(AIP1114A05).
     private func logRow(_ entry: AssistantLogEntry) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack {
-                Text(entry.kind.title(language)).font(.taptionStyle(.caption, weight: .semibold)).foregroundStyle(Color.tpInk)
+                Text(entry.kind.title(language)).font(.taptionStyle(.caption, weight: .semibold))
+                    .foregroundStyle(entry.isRejected ? Color.tpSecondary : Color.tpInk)
                 Spacer(minLength: 0)
                 Text(entry.appliedAt.formatted(date: .omitted, time: .shortened)).font(.taptionStyle(.caption2)).foregroundStyle(Color.tpSecondary)
             }
-            Text("\(entry.before.isEmpty ? language.text("새로", "New") : entry.before) → \(entry.after)")
-                .font(.taptionStyle(.caption)).foregroundStyle(Color.tpInk).lineLimit(2)
+            Text(Self.change(entry, language: language))
+                .font(.taptionStyle(.caption)).foregroundStyle(entry.isRejected ? Color.tpSecondary : Color.tpInk).lineLimit(2)
             if let connection = AssistantConnectionName.shown(entry) {
                 Text(connection + (entry.undoneAt == nil ? "" : " · " + language.text("되돌렸어요", "Undone")))
                     .font(.taptionStyle(.caption2)).foregroundStyle(Color.tpSecondary)
@@ -116,6 +121,73 @@ struct AITaskPanel: View {
         }
         .padding(8)
         .background(Color.tpCard.opacity(0.9), in: RoundedRectangle(cornerRadius: TaptionCorner.small, style: .continuous))
+        .opacity(entry.isRejected ? 0.7 : 1)
+    }
+
+    /// 한 줄 요약: 반영한 것은 전 → 후, 못 한 것은 사유.
+    static func change(_ entry: AssistantLogEntry, language: MapHomeLanguage) -> String {
+        if let reason = entry.rejectedReason {
+            return language.text("반영 안 됨", "Not applied") + " · " + AssistantRejection.message(reason, language: language)
+        }
+        return "\(entry.before.isEmpty ? language.text("새로", "New") : entry.before) → \(entry.after)"
+    }
+
+    /// 이 일로 바뀐 것(AIP1114A05): 딸린 「AI가 한 일」과 한꺼번에 되돌리기.
+    @ViewBuilder
+    private func taskEdits(_ task: AITaskQueue.Task) -> some View {
+        let linked = AssistantTaskEdits.entries(for: task, in: log)
+        ForEach(linked) { entry in
+            Text(entry.kind.title(language) + ": " + Self.change(entry, language: language) + (entry.undoneAt == nil ? "" : " · " + language.text("되돌렸어요", "Undone")))
+                .font(.taptionStyle(.caption2))
+                .foregroundStyle(entry.canUndo ? Color.tpInk : Color.tpSecondary)
+                .lineLimit(2)
+        }
+        if linked.contains(where: \.canUndo), AssistantCommandRefresh.model != nil {
+            Button { undoEdits(of: task) } label: {
+                Label(language.text("이 일로 바뀐 것 되돌리기", "Undo this task's changes"), systemImage: "arrow.uturn.backward")
+                    .font(.taptionStyle(.caption2, weight: .semibold))
+                    .foregroundStyle(Color.tpAccent)
+            }
+            .buttonStyle(.plain)
+            .disabled(undoingTaskID != nil)
+        }
+        if let note = undoNotes[task.id] {
+            Text(note).font(.taptionStyle(.caption2)).foregroundStyle(Color.tpSecondary)
+        }
+    }
+
+    private func undoEdits(of task: AITaskQueue.Task) {
+        guard undoingTaskID == nil, let model = AssistantCommandRefresh.model else { return }
+        undoingTaskID = task.id
+        Task { @MainActor in
+            defer { undoingTaskID = nil }
+            let result = await AssistantTaskEdits.undo(AssistantTaskEdits.entries(for: task, in: AssistantActionLog.load()), model: model)
+            log = AssistantActionLog.load()
+            undoNotes[task.id] = Self.undoNote(undone: result.undone, failed: result.failed, language: language)
+        }
+    }
+
+    static func undoNote(undone: Int, failed: Int, language: MapHomeLanguage) -> String {
+        let done = language.text("\(undone)개를 되돌렸어요", "Undid \(undone) change(s)")
+        return failed == 0 ? done : done + " · " + language.text("\(failed)개는 그 뒤에 바뀌어 되돌리지 못했어요", "\(failed) changed afterwards and couldn't be undone")
+    }
+
+    /// 맡은 AI 이름과 몇 번째 시도인지. 둘 다 없으면 nil.
+    static func holder(_ task: AITaskQueue.Task, language: MapHomeLanguage, defaults: UserDefaults = .standard) -> String? {
+        var parts: [String] = []
+        if let name = task.claimedBy.flatMap({ AssistantConnectionName.name(keyID: $0, source: nil, defaults: defaults) }) { parts.append(name) }
+        if let attempts = task.attempts, attempts > 1 { parts.append(language.text("\(attempts)번째 시도", "Attempt \(attempts)")) }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    /// 일 줄에 보일 글: 결과 → 사유 → 원문. 서버가 붙인 사유 낱말은 풀어 쓰고, 칩과 겹치는 「기한 지남」은 원문을 보인다.
+    static func detail(_ task: AITaskQueue.Task, language: MapHomeLanguage) -> String? {
+        if let result = task.result { return result }
+        switch task.reason {
+        case "timeout": return language.text("AI가 시간 안에 끝내지 못했어요", "The AI didn't finish in time")
+        case "expired", nil: return task.text
+        case let reason?: return reason
+        }
     }
 
     nonisolated static func isOn(_ day: Date, _ date: Date, calendar: Calendar = .autoupdatingCurrent) -> Bool {
@@ -151,7 +223,7 @@ struct AITaskPanel: View {
         let polish = MemoPolishQueue.items().map {
             AITaskQueue.Task(id: "polish-" + $0.memoID.uuidString, kind: .memoPolish, text: $0.text, date: $0.date, status: .waiting)
         }
-        let order: [AITaskQueue.Status: Int] = [.processing: 0, .waiting: 1, .failed: 2, .done: 3]
+        let order: [AITaskQueue.Status: Int] = [.processing: 0, .asked: 1, .unknown: 2, .waiting: 3, .failed: 4, .expired: 5, .done: 6]
         return (pending + polish + AITaskQueue.cached()).sorted {
             (order[$0.status] ?? 9, -($0.createdAt?.timeIntervalSince1970 ?? .infinity))
                 < (order[$1.status] ?? 9, -($1.createdAt?.timeIntervalSince1970 ?? .infinity))
@@ -173,7 +245,7 @@ struct AITaskPanel: View {
                     Spacer(minLength: 0)
                     statusChip(task.status)
                 }
-                if let detail = task.result ?? task.reason ?? task.text {
+                if let detail = Self.detail(task, language: language) {
                     Text(detail)
                         .font(.taptionStyle(.caption))
                         .foregroundStyle(task.status == .failed ? Color.tpHoliday : Color.tpSecondary)
@@ -184,6 +256,12 @@ struct AITaskPanel: View {
                         .font(.taptionStyle(.caption2))
                         .foregroundStyle(Color.tpSecondary)
                 }
+                if let holder = Self.holder(task, language: language) {
+                    Label(holder, systemImage: "sparkles")
+                        .font(.taptionStyle(.caption2))
+                        .foregroundStyle(Color.tpSecondary)
+                }
+                taskEdits(task)
             }
         }
         .padding(10)
@@ -194,7 +272,9 @@ struct AITaskPanel: View {
     private func statusChip(_ status: AITaskQueue.Status) -> some View {
         let (text, color): (String, Color) = switch status {
         case .waiting: (language.text("대기", "Waiting"), Color.tpSecondary)
-        case .processing: (language.text("처리중", "Working"), Color.tpReferenceBlue)
+        case .processing, .unknown: (language.text("처리중", "Working"), Color.tpReferenceBlue)
+        case .asked: (language.text("답 기다림", "Waiting for your answer"), Color.tpAccent)
+        case .expired: (language.text("기한 지남", "Expired"), Color.tpSecondary)
         case .done: (language.text("완료", "Done"), Color.tpReferenceMint)
         case .failed: (language.text("실패", "Failed"), Color.tpHoliday)
         }

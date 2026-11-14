@@ -82,6 +82,8 @@ struct AssistantCommand: Identifiable, Equatable, Sendable {
     /// 보낸 연결 키 id(키 해시 앞 8글자)와 방식 "rest"·"mcp"·"oauth"(SEC1110A02).
     var keyID: String? = nil
     var source: String? = nil
+    /// 이 명령이 어느 맡긴 일 때문에 온 것인지(AIP1114A05). AI가 붙여 보낸 일 id.
+    var taskID: String? = nil
 }
 
 struct AssistantCoordinate: Equatable, Sendable {
@@ -93,6 +95,15 @@ struct AssistantCommandBatch: Equatable, Sendable {
     var commands: [AssistantCommand]
     /// 형식이 틀린 명령. 반영하지 않고 거절로 알린다.
     var invalidIDs: [String]
+    /// 형식이 틀린 명령 가운데 종류를 아는 것(AIP1114A05). 「AI가 한 일」에 거절로 남길 때 쓴다.
+    var invalidInfo: [String: Invalid] = [:]
+
+    struct Invalid: Equatable, Sendable {
+        var kind: AssistantActionKind
+        var keyID: String?
+        var source: String?
+        var taskID: String?
+    }
 }
 
 enum AssistantCommandParser {
@@ -145,6 +156,8 @@ enum AssistantCommandParser {
         let isMyCar: Bool?, detailId: String?
         // TBG1112A01: setTripBudget.
         let budgetKRW: Double?
+        // AIP1114A05: 이 명령이 딸린 맡긴 일.
+        let taskId: String?
     }
 
     /// `{"commands":[...]}`를 읽는다. 서버와 같은 규칙으로 다시 본다.
@@ -154,9 +167,14 @@ enum AssistantCommandParser {
         for item in envelope.commands {
             guard let id = item.id, !id.isEmpty, !id.contains(",") else { continue }
             if let raw = item.raw, raw.format == "bokki-command", raw.version == 1, let action = action(raw, now: now, calendar: calendar) {
-                batch.commands.append(AssistantCommand(id: id, action: action, keyID: clean(raw.keyId, max: 64), source: clean(raw.source, max: 16)))
+                batch.commands.append(AssistantCommand(
+                    id: id, action: action, keyID: clean(raw.keyId, max: 64), source: clean(raw.source, max: 16), taskID: clean(raw.taskId, max: 100)
+                ))
             } else {
                 batch.invalidIDs.append(id)
+                if let raw = item.raw, let kind = raw.action.flatMap(AssistantActionKind.init(rawValue:)) {
+                    batch.invalidInfo[id] = .init(kind: kind, keyID: clean(raw.keyId, max: 64), source: clean(raw.source, max: 16), taskID: clean(raw.taskId, max: 100))
+                }
             }
         }
         return batch
@@ -310,7 +328,7 @@ enum AssistantCommandLedger {
         let seen = Set(handled(defaults))
         return AssistantCommandBatch(
             commands: batch.commands.filter { !seen.contains($0.id) },
-            invalidIDs: batch.invalidIDs.filter { !seen.contains($0) }
+            invalidIDs: batch.invalidIDs.filter { !seen.contains($0) }, invalidInfo: batch.invalidInfo
         )
     }
 }
@@ -452,12 +470,19 @@ extension AppModel {
         var outcome = AssistantCommandOutcome()
         outcome.results = batch.invalidIDs.map { .init(id: $0, applied: false, reason: "invalid") }
         journal?.record(outcome.results)
+        // 거절한 명령도 사유와 함께 「AI가 한 일」에 남긴다(AIP1114A05). 종류를 모르는 것은 남길 수 없다.
+        journal?.log(batch.invalidIDs.compactMap { id in
+            batch.invalidInfo[id].map {
+                AssistantLogEntry.rejected(commandID: id, kind: $0.kind, reason: "invalid", keyID: $0.keyID, source: $0.source, taskID: $0.taskID, defaults: defaults)
+            }
+        })
         for command in batch.commands {
             let kind = command.action.kind
             guard AssistantActionToggles.isEnabled(kind, defaults: defaults) else {
                 let refused = AssistantCommandOutcome.Result(id: command.id, applied: false, reason: "disabled")
                 outcome.results.append(refused)
                 journal?.record([refused])
+                journal?.log([AssistantLogEntry.rejected(command, reason: "disabled", defaults: defaults)])
                 continue
             }
             journal?.begin(command.id)
@@ -474,7 +499,7 @@ extension AppModel {
                     noteAssistantMemoEdit(memo.id, by: entry.connection)
                 }
             }
-            journal?.finish(item, entry: entry)
+            journal?.finish(item, entry: entry ?? result.reason.map { AssistantLogEntry.rejected(command, reason: $0, defaults: defaults) })
         }
         return outcome
     }
@@ -496,7 +521,8 @@ extension AppModel {
         return AssistantLogEntry(
             commandID: command.id, kind: command.action.kind, appliedAt: .now,
             before: result.before, after: result.after, delta: delta,
-            keyID: command.keyID, connection: AssistantConnectionName.name(keyID: command.keyID, source: command.source, defaults: defaults)
+            keyID: command.keyID, connection: AssistantConnectionName.name(keyID: command.keyID, source: command.source, defaults: defaults),
+            taskID: command.taskID
         )
     }
 }

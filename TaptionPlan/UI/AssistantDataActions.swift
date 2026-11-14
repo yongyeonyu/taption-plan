@@ -7,7 +7,7 @@ enum AssistantKeyFilter {
     static func split(_ batch: AssistantCommandBatch, active: Set<String>) -> (kept: AssistantCommandBatch, inactiveIDs: [String]) {
         let kept = batch.commands.filter { isAllowed($0, active: active) }
         let inactive = batch.commands.filter { !isAllowed($0, active: active) }.map(\.id)
-        return (AssistantCommandBatch(commands: kept, invalidIDs: batch.invalidIDs), inactive)
+        return (AssistantCommandBatch(commands: kept, invalidIDs: batch.invalidIDs, invalidInfo: batch.invalidInfo), inactive)
     }
 
     /// 살아 있는 연결이 보낸 것, 그리고 서버가 예전 큐에서 옮긴 것(`legacy`, 연결 id 없음)만 받는다.
