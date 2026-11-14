@@ -1721,7 +1721,8 @@ extension FeatureEngineTests {
                 placeKind: .home,
                 readings: readings,
                 watchSummaries: [typing],
-                watchAccelerationSamples: rawSamples,
+                // 집안일은 손목 움직임이 5분 넘게 이어져야 한다(HSW1114A01).
+                watchAccelerationSamples: makeWatchRawSamples(start: start, values: (0..<40).map { $0.isMultiple(of: 2) ? 0 : 0.08 }),
                 calendar: utcCalendar,
                 now: end.addingTimeInterval(hour)
             )
@@ -1835,6 +1836,19 @@ extension FeatureEngineTests {
     func testStationaryContextUsesWatchRawMotionForHomeHousework() {
         let start = makeDate(2026, 8, 8, 14, 0)
         let end = start.addingTimeInterval(hour)
+        // 표본 네 개(40초)의 손목 움직임만으로는 집안일이 아니다(HSW1114A01).
+        let brief = StationaryContextClassifier().classify(
+            StationaryContextInput(
+                stay: makeContextStay(start: start, end: end),
+                placeKind: .home,
+                readings: [makeContextReading(at: start, flat: true), makeContextReading(at: start.addingTimeInterval(20 * 60), flat: true),
+                           makeContextReading(at: start.addingTimeInterval(40 * 60), flat: true)],
+                watchAccelerationSamples: makeWatchRawSamples(start: start, values: [0, 0.08, 0, 0.08]),
+                calendar: utcCalendar,
+                now: end
+            )
+        )
+        XCTAssertNotEqual(brief.kind, .housework)
         let inference = StationaryContextClassifier().classify(
             StationaryContextInput(
                 stay: makeContextStay(start: start, end: end),
@@ -1852,7 +1866,7 @@ extension FeatureEngineTests {
                 ],
                 watchAccelerationSamples: makeWatchRawSamples(
                     start: start,
-                    values: [0, 0.08, 0, 0.08]
+                    values: (0..<40).map { $0.isMultiple(of: 2) ? 0 : 0.08 }
                 ),
                 calendar: utcCalendar,
                 now: end

@@ -268,7 +268,8 @@ struct StationaryContextClassifier: Sendable {
             switch input.placeKind {
             case .home:
                 let chores = HomeChorePattern.assess(input.readings, in: stay, calendar: input.calendar)
-                if watchContextSignals.hasSustainedMotion {
+                // 표본 서너 개의 손목 움직임만으로는 집안일로 보지 않는다(HSW1114A01).
+                if watchContextSignals.hasSustainedMotion, hasChoreMotion(input.watchAccelerationSamples, overlapping: stay) {
                     add(.housework, 0.55, "집에서 Apple Watch 가속도·손목 움직임")
                 } else if let chores {
                     add(.housework, chores.score, chores.evidence)
@@ -509,6 +510,21 @@ struct StationaryContextClassifier: Sendable {
             }
         }
         return result
+    }
+
+    /// 집안일로 볼 만큼의 손목 움직임: 표본 20개 이상이 5분 넘게 걸쳐 있고, 흔들림이 일반 기준(0.018)보다 큰 0.03 이상.
+    private func hasChoreMotion(
+        _ samples: [TaptionWatchAccelerationSample],
+        overlapping stay: TimeSpan
+    ) -> Bool {
+        let inside = samples.filter { stay.contains($0.capturedAt) }.sorted { $0.capturedAt < $1.capturedAt }
+        guard inside.count >= 20, let first = inside.first, let last = inside.last,
+              last.capturedAt.timeIntervalSince(first.capturedAt) >= 5 * 60, stay.duration >= 15 * 60 else { return false }
+        let magnitudes = inside.map { $0.acceleration.magnitude }
+        let mean = magnitudes.reduce(0, +) / Double(magnitudes.count)
+        let variance = magnitudes.reduce(0) { $0 + ($1 - mean) * ($1 - mean) } / Double(magnitudes.count - 1)
+        let changes = zip(magnitudes.dropFirst(), magnitudes).map { abs($0 - $1) }
+        return sqrt(max(0, variance)) >= 0.03 || changes.reduce(0, +) / Double(changes.count) >= 0.03
     }
 
     private func hasRawMotion(

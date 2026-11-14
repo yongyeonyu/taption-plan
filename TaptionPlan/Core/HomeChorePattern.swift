@@ -10,23 +10,25 @@ enum HomeChorePattern {
 
     private static let maximumSampleGap: TimeInterval = 90
     private static let minimumBout: TimeInterval = 20
-    private static let minimumBouts = 3
-    private static let minimumActive: TimeInterval = 5 * 60
-    private static let minimumShare = 0.15
-    private static let longestBoutShare = 0.7
-    private static let maximumScreenShare = 0.5
+    // 기준을 높였다(HSW1114A01, 대표 지시): 잠깐씩 움직인 것까지 집안일이 되지 않게.
+    private static let minimumBouts = 4
+    private static let minimumActive: TimeInterval = 8 * 60
+    private static let minimumShare = 0.2
+    private static let longestBoutShare = 0.6
+    private static let maximumScreenShare = 0.35
+    private static let minimumStay: TimeInterval = 15 * 60
 
     private static func isActive(_ reading: SensorReading) -> Bool {
         if reading.motion == .walking || reading.motion == .running || reading.motion == .cycling { return true }
         guard let summary = reading.deviceMotionSummary else { return false }
-        return summary.userAccelerationStandardDeviationG >= 0.015 || summary.peakUserAccelerationG >= 0.12
+        return summary.userAccelerationStandardDeviationG >= 0.02 || summary.peakUserAccelerationG >= 0.15
     }
 
     static func assess(_ readings: [SensorReading], in stay: TimeSpan, calendar: Calendar) -> Assessment? {
         let hour = calendar.component(.hour, from: stay.start)
         let endHour = calendar.component(.hour, from: stay.end)
         // 밤을 넘기는 체류나 심야 체류는 잠자리 뒤척임과 가를 수 없다.
-        guard (6..<24).contains(hour), (6..<24).contains(endHour), stay.duration > 0 else { return nil }
+        guard (6..<24).contains(hour), (6..<24).contains(endHour), stay.duration >= minimumStay else { return nil }
         let inside = readings.filter { stay.contains($0.timestamp) }.sorted { $0.timestamp < $1.timestamp }
         var bouts: [TimeInterval] = []
         var boutStart: Date?

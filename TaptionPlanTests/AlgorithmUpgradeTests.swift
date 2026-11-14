@@ -186,6 +186,10 @@ final class AlgorithmUpgradeTests: XCTestCase {
         XCTAssertNil(HomeChorePattern.assess(bouts(1, seconds: 900), in: stay, calendar: calendar), "한 번의 긴 걷기")
         XCTAssertNil(HomeChorePattern.assess(bouts(5, seconds: 180, screen: true), in: stay, calendar: calendar), "화면을 보며 움직였다")
         XCTAssertNil(HomeChorePattern.assess(bouts(5, seconds: 30), in: stay, calendar: calendar), "움직인 시간이 짧다")
+        // 높인 기준(HSW1114A01): 세 번만 움직였거나, 움직인 시간이 8분에 못 미치거나, 머문 시간이 15분이 안 되면 아니다.
+        XCTAssertNil(HomeChorePattern.assess(bouts(3, seconds: 240), in: stay, calendar: calendar), "세 번뿐")
+        XCTAssertNil(HomeChorePattern.assess(bouts(5, seconds: 90), in: stay, calendar: calendar), "모두 합쳐 7분 30초")
+        XCTAssertNil(HomeChorePattern.assess(bouts(5, seconds: 180), in: TimeSpan(start: start, end: start.addingTimeInterval(600)), calendar: calendar), "머문 시간이 짧다")
         let night = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 11, day: 3, hour: 2)))
         XCTAssertNil(HomeChorePattern.assess(bouts(5, seconds: 180), in: TimeSpan(start: night, end: night.addingTimeInterval(3600)), calendar: calendar), "심야")
     }
