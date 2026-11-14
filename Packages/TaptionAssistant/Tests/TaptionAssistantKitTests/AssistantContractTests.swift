@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import TaptionAssistantKit
+import TaptionAssistantProtocol
 
 /// 기존 설치와의 약속(PKG1114A19). 기기 설정 키·요청 모양·서버 회신 읽기는 코드를 옮겨도 그대로여야 한다.
 /// 키체인 자리는 앱 시험(`AssistantRelayTests`)이 시뮬레이터에서 본다.
@@ -110,5 +111,11 @@ final class AssistantContractTests: XCTestCase {
         XCTAssertEqual(list.map(\.id), ["a", "b"])
         XCTAssertEqual(list.map(\.kind), [.paymentText, .other])
         XCTAssertEqual(list.map(\.status), [.done, .unknown])
+    }
+
+    /// 알림 조각의 한국어 문구. 번역 팩 조회는 앱 번들이 있어야 해서 앱 시험(`PackageTextLookupTests`)이 본다.
+    func testNoticePartKeepsKoreanWording() {
+        let counters: [AssistantOperationSpec.Counter] = [.memos, .schedules, .edits, .settings, .ledger]
+        XCTAssertEqual(counters.map { $0.noticePart(2, .korean) }, ["메모 2개", "일정 2개", "기록 수정 2개", "설정 2개", "가계부 2개"])
     }
 }

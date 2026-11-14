@@ -140,6 +140,7 @@ extension MapHomeView {
         expectedRouteRefreshTask?.cancel()
         expectedRouteRefreshTask = nil
         expectedRouteRefreshGeneration &+= 1
+        work.expectedRouteRefreshGate.invalidate()
         wbsExpectedRouteRequests = []
         wbsExpectedRouteRequestsInputKey = nil
         liveRouteProjectionRefreshTask?.cancel()

@@ -244,6 +244,9 @@
 		A1A1110A0200000000000009 /* AssistantCommandEditTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0200000000000009 /* AssistantCommandEditTests.swift */; };
 		D15ABA1114A1500000000005 /* AssistantDigestTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D15ABA1114A1500000000006 /* AssistantDigestTests.swift */; };
 		A1A1110A0300000000000010 /* AssistantPhase3Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000010 /* AssistantPhase3Tests.swift */; };
+		D24A00000000000000000001 /* MapHomeLastKnownLocationPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24F00000000000000000001 /* MapHomeLastKnownLocationPolicyTests.swift */; };
+		D24A00000000000000000002 /* MapHomeExpectedRouteRefreshGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24F00000000000000000002 /* MapHomeExpectedRouteRefreshGateTests.swift */; };
+		D24A00000000000000000003 /* PackageTextLookupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24F00000000000000000003 /* PackageTextLookupTests.swift */; };
 		A1A1110A0600000000000002 /* AssistantReviewFixTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0600000000000002 /* AssistantReviewFixTests.swift */; };
 		D16A1114A160000000000001 /* AssistantDirectActionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D16F1114A160000000000001 /* AssistantDirectActionTests.swift */; };
 		A1C1110A0900000000000002 /* TripItemStatusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1C1110A0900000000000002 /* TripItemStatusTests.swift */; };
@@ -407,6 +410,7 @@
 		A20000000000000000000005 /* SensorBackgroundCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000002 /* SensorBackgroundCoordinator.swift */; };
 		A20000000000000000000007 /* SensorBackgroundCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000004 /* SensorBackgroundCoordinatorTests.swift */; };
 		A20000000000000000000008 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000005 /* Localizable.xcstrings */; };
+		D24A00000000000000000004 /* AppShortcuts.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = D24F00000000000000000004 /* AppShortcuts.xcstrings */; };
 		A2000000000000000C110400 /* UIText.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = F2000000000000000C110400 /* UIText.xcstrings */; };
 		A20000000000000000000009 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000006 /* Localizable.xcstrings */; };
 		A2000000000000000C110401 /* UIText.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = F2000000000000000C110401 /* UIText.xcstrings */; };
@@ -1030,6 +1034,9 @@
 		F1A1110A0200000000000009 /* AssistantCommandEditTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantCommandEditTests.swift; sourceTree = "<group>"; };
 		D15ABA1114A1500000000006 /* AssistantDigestTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantDigestTests.swift; sourceTree = "<group>"; };
 		F1A1110A0300000000000010 /* AssistantPhase3Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantPhase3Tests.swift; sourceTree = "<group>"; };
+		D24F00000000000000000001 /* MapHomeLastKnownLocationPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLastKnownLocationPolicyTests.swift; sourceTree = "<group>"; };
+		D24F00000000000000000002 /* MapHomeExpectedRouteRefreshGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeExpectedRouteRefreshGateTests.swift; sourceTree = "<group>"; };
+		D24F00000000000000000003 /* PackageTextLookupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PackageTextLookupTests.swift; sourceTree = "<group>"; };
 		F1A1110A0600000000000002 /* AssistantReviewFixTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantReviewFixTests.swift; sourceTree = "<group>"; };
 		D16F1114A160000000000001 /* AssistantDirectActionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantDirectActionTests.swift; sourceTree = "<group>"; };
 		F1C1110A0900000000000002 /* TripItemStatusTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripItemStatusTests.swift; sourceTree = "<group>"; };
@@ -1191,6 +1198,7 @@
 		F20000000000000000000002 /* SensorBackgroundCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorBackgroundCoordinator.swift; sourceTree = "<group>"; };
 		F20000000000000000000004 /* SensorBackgroundCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorBackgroundCoordinatorTests.swift; sourceTree = "<group>"; };
 		F20000000000000000000005 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		D24F00000000000000000004 /* AppShortcuts.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = AppShortcuts.xcstrings; sourceTree = "<group>"; };
 		F2000000000000000C110400 /* UIText.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = UIText.xcstrings; sourceTree = "<group>"; };
 		F20000000000000000000006 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		F2000000000000000C110401 /* UIText.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = UIText.xcstrings; sourceTree = "<group>"; };
@@ -1642,6 +1650,7 @@
 				F1000000000000000B1102FE /* SUIT-ExtraBold.otf */,
 				F1000000000000000B1102FF /* Fonts-OFL.txt */,
 				F20000000000000000000005 /* Localizable.xcstrings */,
+				D24F00000000000000000004 /* AppShortcuts.xcstrings */,
 				F2000000000000000C110400 /* UIText.xcstrings */,
 				F20000000000000000000009 /* InfoPlist.xcstrings */,
 			);
@@ -1697,6 +1706,9 @@
 				F1A1110A0200000000000009 /* AssistantCommandEditTests.swift */,
 				D15ABA1114A1500000000006 /* AssistantDigestTests.swift */,
 				F1A1110A0300000000000010 /* AssistantPhase3Tests.swift */,
+				D24F00000000000000000001 /* MapHomeLastKnownLocationPolicyTests.swift */,
+				D24F00000000000000000002 /* MapHomeExpectedRouteRefreshGateTests.swift */,
+				D24F00000000000000000003 /* PackageTextLookupTests.swift */,
 				F1A1110A0600000000000002 /* AssistantReviewFixTests.swift */,
 				D16F1114A160000000000001 /* AssistantDirectActionTests.swift */,
 				F1C1110A0900000000000002 /* TripItemStatusTests.swift */,
@@ -2648,6 +2660,7 @@
 				A1000000000000000B1102FE /* SUIT-ExtraBold.otf in Resources */,
 				A1000000000000000B1102FF /* Fonts-OFL.txt in Resources */,
 				A20000000000000000000008 /* Localizable.xcstrings in Resources */,
+				D24A00000000000000000004 /* AppShortcuts.xcstrings in Resources */,
 				A2000000000000000C110400 /* UIText.xcstrings in Resources */,
 				A2000000000000000000000C /* InfoPlist.xcstrings in Resources */,
 				A90000000000000000000001 /* PrivacyInfo.xcprivacy in Resources */,
@@ -3261,6 +3274,9 @@
 				A1A1110A0200000000000009 /* AssistantCommandEditTests.swift in Sources */,
 				D15ABA1114A1500000000005 /* AssistantDigestTests.swift in Sources */,
 				A1A1110A0300000000000010 /* AssistantPhase3Tests.swift in Sources */,
+				D24A00000000000000000001 /* MapHomeLastKnownLocationPolicyTests.swift in Sources */,
+				D24A00000000000000000002 /* MapHomeExpectedRouteRefreshGateTests.swift in Sources */,
+				D24A00000000000000000003 /* PackageTextLookupTests.swift in Sources */,
 				A1A1110A0600000000000002 /* AssistantReviewFixTests.swift in Sources */,
 				D16A1114A160000000000001 /* AssistantDirectActionTests.swift in Sources */,
 				A1C1110A0900000000000002 /* TripItemStatusTests.swift in Sources */,

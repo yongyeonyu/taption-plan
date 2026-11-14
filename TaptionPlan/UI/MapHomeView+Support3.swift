@@ -99,8 +99,6 @@ extension MapHomeView {
     }
 
     func isValid(_ point: GeoPoint) -> Bool {
-        (-90...90).contains(point.latitude)
-            && (-180...180).contains(point.longitude)
-            && point.horizontalAccuracy >= 0
+        MapHomeLastKnownLocationPolicy.isValid(point)
     }
 }
