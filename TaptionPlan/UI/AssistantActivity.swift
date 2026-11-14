@@ -48,6 +48,9 @@ struct AssistantActivityDay: Codable, Equatable, Sendable {
         var status: String?
         var important: Bool?
         var goalId: String?
+        /// RMN1114A22: 일정의 장소 이름(장소 이름 공유 수준에서만, 주소·좌표처럼 보이면 뺌)과 예상 지출(원). 좌표는 싣지 않는다.
+        var placeName: String?
+        var plannedSpend: Double?
     }
 
     struct Visit: Codable, Equatable, Sendable {
@@ -154,7 +157,7 @@ enum AssistantActivityBuilder {
             ),
             records: records(input, day: day, stamp: stamp),
             memos: memos(input.memos, day: day, stamp: stamp),
-            plans: plans(input.plans, day: day, stamp: stamp)
+            plans: plans(input.plans, day: day, stamp: stamp, sharesPlaces: level == .visits)
         )
         addExtras(to: &result, input, day: day, stamp: stamp)
         if level == .visits {
@@ -223,7 +226,7 @@ enum AssistantActivityBuilder {
             }
     }
 
-    private static func plans(_ plans: [PlanRecord], day: TimeSpan, stamp: Stamp) -> [AssistantActivityDay.Plan] {
+    private static func plans(_ plans: [PlanRecord], day: TimeSpan, stamp: Stamp, sharesPlaces: Bool) -> [AssistantActivityDay.Plan] {
         plans
             .filter { $0.span.end > day.start && $0.span.start < day.end }
             .sorted { $0.span.start < $1.span.start }
@@ -232,7 +235,9 @@ enum AssistantActivityBuilder {
                 AssistantActivityDay.Plan(
                     id: plan.id.uuidString, title: String(plan.title.prefix(200)),
                     start: stamp.instant(plan.span.start), end: stamp.instant(plan.span.end),
-                    categoryId: plan.categoryID, status: plan.status.rawValue, important: plan.isImportant ? true : nil, goalId: plan.parentID?.uuidString
+                    categoryId: plan.categoryID, status: plan.status.rawValue, important: plan.isImportant ? true : nil, goalId: plan.parentID?.uuidString,
+                    placeName: sharesPlaces ? plan.place.flatMap { planPlaceName($0.name) } : nil,
+                    plannedSpend: plan.plannedSpendKRW
                 )
             }
     }
@@ -292,6 +297,12 @@ enum AssistantActivityBuilder {
             if !trimmed.isEmpty, !isAddressLike(trimmed) { return trimmed }
         }
         return language.text("머문 곳", "Place")
+    }
+
+    /// 일정의 장소 이름. 주소·좌표처럼 보이면 보내지 않는다(머문 곳과 같은 규칙).
+    static func planPlaceName(_ name: String) -> String? {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty || isAddressLike(trimmed) ? nil : String(trimmed.prefix(AssistantSchedulePlace.maximumNameLength))
     }
 
     /// 도로명·지번·좌표·구·丁目처럼 보이면 보내지 않는다(SEC1110A02에서 구·군·区·丁目·길 이름·거리 접미어를 더함).

@@ -78,6 +78,28 @@ extension AppModel {
         scheduleFrequentPlaceDerivedRefresh()
     }
 
+    /// 장소의 종류를 바꾼다(RMN1114A22). 식당·사용자 추가는 여러 곳을 둘 수 있고, 나머지 종류는 한 곳만 둔다:
+    /// 이미 위치가 정해진 그 종류의 장소가 있으면 바꾸지 않고, 비어 있는 기본 칸만 있으면 그 칸을 이 장소가 대신한다.
+    /// 떠난 종류의 빈 기본 칸은 `mergedFrequentPlaces`가 다시 채운다.
+    @discardableResult
+    func setFrequentPlaceKind(_ placeID: UUID, kind: FrequentPlaceKind) -> FrequentPlaceKindChange {
+        guard acceptsDataMutation(), let current = snapshot.settings.frequentPlaces.first(where: { $0.id == placeID }) else { return .missing }
+        guard current.kind != kind else { return .same }
+        // 위치가 없는 기본 칸은 종류가 곧 그 칸이라 바꿀 것이 없다.
+        guard current.point != nil || current.kind.holdsManyPlaces else { return .empty }
+        var places = snapshot.settings.frequentPlaces
+        if !kind.holdsManyPlaces {
+            guard !places.contains(where: { $0.kind == kind && $0.point != nil }) else { return .taken }
+            places.removeAll { $0.kind == kind && $0.id != placeID }
+        }
+        guard let index = places.firstIndex(where: { $0.id == placeID }) else { return .missing }
+        places[index].kind = kind
+        places[index].updatedAt = .now
+        snapshot.settings.frequentPlaces = AppFeatureSettings.mergedFrequentPlaces(places)
+        scheduleFrequentPlaceDerivedRefresh()
+        return .changed
+    }
+
     /// 층을 저장하고, 지금 그 지점 안이면 높이를 20번 읽어 기준으로 남긴다(HGT1103A01). 멀리서 고치면 층만 저장한다.
     func saveFrequentPlaceFloorAndHeight(_ placeID: UUID, floor: Int) {
         setFrequentPlaceFloor(placeID, floor: floor)
@@ -871,4 +893,14 @@ extension AppModel {
         snapshot.settings.frequentPlaces[index].updatedAt =
             calibration.capturedAt ?? .now
     }
+}
+
+/// `setFrequentPlaceKind`의 결과.
+enum FrequentPlaceKindChange: Equatable {
+    case changed, missing, same, taken, empty
+}
+
+extension FrequentPlaceKind {
+    /// 식당·사용자 추가만 여러 곳을 둔다. 나머지는 기본 칸 하나를 채우는 종류다.
+    var holdsManyPlaces: Bool { self == .custom || self == .restaurant }
 }

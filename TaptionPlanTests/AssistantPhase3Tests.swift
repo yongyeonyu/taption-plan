@@ -2125,6 +2125,8 @@ extension AssistantPhase3Tests {
             ("setDayCardTime", ["time": "07:30"]),
             ("setAlert", ["alert": "wakeUp", "enabled": false]),
             ("setCatOutfit", ["accessoryId": "cat.accessory.sample"]),
+            ("setPlaceKind", ["placeId": id, "kind": "company"]),
+            ("setMapActivityColor", ["categoryId": "work", "color": "#12ABEF"]),
             ("refreshNow", ["target": "cloud"]),
             ("stopTracking", [:]),
             ("disconnectCalendar", ["calendar": "device"]),
@@ -2155,7 +2157,7 @@ extension AssistantPhase3Tests {
             ("setDayCardItems", ["items": ["sleep", "steps", "memos", "work", "study"]]),
             ("setDayCardItems", ["items": ["mood"]]),
             ("setDayCardTime", ["time": "24:00"]),
-            ("setAlert", ["alert": "nearbyMemo", "enabled": true]),
+            ("setAlert", ["alert": "everything", "enabled": true]),
             ("setAlert", ["alert": "wakeUp"]),
             ("setCatOutfit", ["accessoryId": "hat"]),
             ("refreshNow", ["target": "all"]),
@@ -2171,7 +2173,7 @@ extension AssistantPhase3Tests {
         ]
         for (action, extra) in bad { XCTAssertTrue(try invalid(action, extra), "\(action) \(extra)") }
 
-        let kinds = try batch(good.prefix(17).enumerated().map { command("k\($0.offset)", $0.element.0, $0.element.1) }).commands.map(\.action.kind.rawValue)
+        let kinds = try batch(good.prefix(19).enumerated().map { command("k\($0.offset)", $0.element.0, $0.element.1) }).commands.map(\.action.kind.rawValue)
         XCTAssertEqual(Set(kinds), Set((AssistantOperations.catalog + AssistantOperations.system).map { $0.spec.name }))
         XCTAssertEqual(Set(AssistantActionTogglesView.kinds(deleting: true).map(\.rawValue)).intersection(kinds), ["deleteCategory", "deleteMyStop", "disconnectCalendar", "restoreFromBackup"])
         // 값 목록이 화면의 것과 같다.
@@ -2339,7 +2341,7 @@ extension AssistantPhase3Tests {
         let settings = AssistantAppStateSync.make(input).settings
         XCTAssertEqual(settings.outfit, .init(owned: [landmark.accessoryID], worn: [landmark.accessoryID]))
         XCTAssertEqual(settings.dayCard, .init(items: [], time: "08:00"))
-        XCTAssertEqual(settings.alertsOn, MapHomeAlarmSettings.defaultEnabled.map(\.rawValue).sorted())
+        XCTAssertEqual(settings.alertsOn, (MapHomeAlarmSettings.defaultEnabled.map(\.rawValue) + ["nearbyMemo"]).sorted())
         await undo(model, try XCTUnwrap(worn.entry), store: store)
         XCTAssertEqual(AssistantOperations.growthHistory(store)?.season.isEquipped(landmark.accessoryID), false)
 

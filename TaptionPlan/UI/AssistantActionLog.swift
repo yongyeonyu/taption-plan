@@ -347,7 +347,11 @@ enum AssistantActionLog {
     static func append(_ entries: [AssistantLogEntry], to file: URL = url) {
         guard !entries.isEmpty else { return }
         save(Array((entries.reversed() + load(from: file)).prefix(limit)), to: file)
+        NotificationCenter.default.post(name: didChange, object: nil)
     }
+
+    /// 기록이 늘거나 되돌림 표시가 붙었을 때 메인에서 보낸다(RMN1114A22). 열려 있는 「AI가 정리한 N건」이 다시 읽는다.
+    static let didChange = Notification.Name("AssistantActionLog.didChange")
 
     static func save(_ entries: [AssistantLogEntry], to file: URL = url) {
         guard let data = try? JSONEncoder().encode(entries) else { return }
@@ -361,6 +365,7 @@ enum AssistantActionLog {
         guard let index = entries.firstIndex(where: { $0.id == id }) else { return }
         entries[index].undoneAt = date
         save(entries, to: file)
+        NotificationCenter.default.post(name: didChange, object: nil)
     }
 
     static func clear(file: URL = url) { try? FileManager.default.removeItem(at: file) }
@@ -410,6 +415,8 @@ extension AppModel {
         // 여행 기록이 돌아갔으면 그 여행의 정산 짝 기록도 다시 맞춘다(ACT1114A07).
         for tripID in Set([entry.delta.ledgerBefore?.tripID, entry.delta.ledgerEntry?.tripID].compactMap { $0 }) { await preferences.ledger.syncTrip(tripID) }
         await entry.delta.appChange?.undo(preferences)
+        // 근처 메모 알림 스위치가 돌아갔으면 감시 지역도 다시 맞춘다(RMN1114A22).
+        if preferences.isLive, (entry.delta.appChange?.stored ?? []).contains(where: { $0.key == NearbyMemoPolicy.enabledKey }) { scheduleNearbyMemoSync() }
         await undoAssistantPromptChange(entry.delta.appChange)
         return true
     }

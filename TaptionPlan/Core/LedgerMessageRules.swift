@@ -437,6 +437,15 @@ struct AssistantAppChange: Codable, Equatable, Sendable {
     /// 서버에서 새로 받은 AI 규칙(ACT1114A09). 되돌리면 그 규칙을 끈다.
     var ruleID: String?
 
+    /// 지도 활동 색 전·후(RMN1114A22). `before`가 nil이면 기본 색이었다(사용자 분류는 늘 값이 있다).
+    var mapColor: MapColor?
+
+    struct MapColor: Codable, Equatable, Sendable {
+        var categoryID: String
+        var before: String?
+        var after: String
+    }
+
     struct Stored: Codable, Equatable, Sendable {
         var key: String
         var before: Data?

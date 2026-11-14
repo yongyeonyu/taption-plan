@@ -535,6 +535,8 @@
 "{0} · {1}번째|{0} · #{1}": "{0} · Nr. {1}",
 "내가 만든 분류 지우기|Delete my categories": "Meine Kategorien löschen",
 "자주 가는 장소의 층 정하기|Set floors of frequent places": "Etagen häufiger Orte festlegen",
+"자주 가는 장소의 종류 바꾸기|Change kinds of frequent places": "Art häufiger Orte ändern",
+"지도 활동 색 바꾸기|Change map activity colours": "Farben der Aktivitäten auf der Karte ändern",
 "내 정류장 더하기|Add my stations and stops": "Meine Haltestellen hinzufügen",
 "내 정류장 고치기|Edit my stations and stops": "Meine Haltestellen bearbeiten",
 "내 정류장 지우기|Delete my stations and stops": "Meine Haltestellen löschen",

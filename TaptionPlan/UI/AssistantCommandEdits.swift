@@ -287,7 +287,9 @@ enum AssistantEditText {
     }
 
     static func plan(_ plan: PlanRecord) -> String {
-        "\(format(plan.span.start, "M/d HH:mm"))–\(clock(plan.span.end)) \(plan.title)"
+        // RMN1114A22: 장소 이름·예상 지출이 있으면 뒤에 붙여, 그 칸만 바뀌어도 전·후가 달라 보이게 한다.
+        let spot = [plan.place?.name, plan.plannedSpendKRW.map { "₩" + $0.formatted(.number.precision(.fractionLength(0))) }].compactMap { $0 }
+        return (["\(format(plan.span.start, "M/d HH:mm"))–\(clock(plan.span.end)) \(plan.title)"] + spot).joined(separator: " · ")
     }
 
     static func memo(_ text: String) -> String { String(text.prefix(80)) }
@@ -334,7 +336,11 @@ extension AppModel {
                 parentID = goal.id
             }
             let errorBefore = userFacingError
-            guard let planID = addPlan(title: title, categoryID: extras.categoryID ?? "activity", startAt: start, duration: duration, parentID: parentID) else {
+            // RMN1114A22: 장소·예상 지출. 없으면 nil을 넘겨 칸을 만들지 않는다.
+            let spot = extras.place == nil && extras.plannedSpend == nil ? nil : Self.assistantSpot(extras, current: nil)
+            guard let planID = addPlan(
+                title: title, categoryID: extras.categoryID ?? "activity", startAt: start, duration: duration, parentID: parentID, spot: spot
+            ) else {
                 userFacingError = errorBefore
                 return .rejected("schedule_failed")
             }
@@ -479,6 +485,15 @@ extension AppModel {
         return recordResult(before: actual)
     }
 
+    /// 명령의 장소·예상 지출을 일정의 값으로 만든다. 보내지 않은 칸은 `current`의 값이다. 1원이 안 되는 금액은 1원으로 올린다.
+    static func assistantSpot(_ extras: AssistantScheduleExtras, current: PlanRecord?) -> PlanSpot {
+        let place = extras.place.map { PlanPlace(name: $0.name, latitude: $0.coordinate.latitude, longitude: $0.coordinate.longitude) }
+        return PlanSpot(
+            place: extras.clearPlace ? nil : place ?? current?.place,
+            plannedSpendKRW: extras.plannedSpend.map { max(1, $0.rounded()) } ?? current?.plannedSpendKRW
+        )
+    }
+
     private func updateAssistantSchedule(
         _ target: AssistantPlanTarget, title: String?, start: AssistantScheduleTime?, end: AssistantScheduleTime?, note: String?,
         extras: AssistantScheduleExtras = .init()
@@ -506,15 +521,21 @@ extension AppModel {
             }
         }
         let keepsNames = newCategory == plan.categoryID
-        if newTitle != plan.title || span != plan.span || newCategory != plan.categoryID || important != plan.isImportant || parentID != plan.parentID {
+        // RMN1114A22: 장소·예상 지출. 보내지 않은 쪽은 지금 값을 둔다.
+        let spot = Self.assistantSpot(extras, current: plan)
+        let spotChanged = spot.place != plan.place || spot.plannedSpendKRW != plan.plannedSpendKRW
+        if extras.clearPlace, plan.place == nil { return .rejected("no_place") }
+        if newTitle != plan.title || span != plan.span || newCategory != plan.categoryID || important != plan.isImportant || parentID != plan.parentID
+            || spotChanged {
             let errorBefore = userFacingError
             updatePlan(
                 plan.id, title: newTitle, categoryID: newCategory,
                 middleCategoryName: keepsNames ? plan.middleCategoryName : nil, subCategoryName: keepsNames ? plan.subCategoryName : nil,
-                span: span, parentID: parentID, isImportant: important, repeatRules: plan.repeatRules
+                span: span, parentID: parentID, isImportant: important, repeatRules: plan.repeatRules, spot: spotChanged ? spot : nil
             )
             guard let updated = snapshot.plans.first(where: { $0.id == plan.id }), updated.title == newTitle, updated.span == span,
-                  updated.categoryID == newCategory, updated.isImportant == important, updated.parentID == parentID else {
+                  updated.categoryID == newCategory, updated.isImportant == important, updated.parentID == parentID,
+                  updated.place == spot.place, updated.plannedSpendKRW == spot.plannedSpendKRW else {
                 // 상위 일정 범위 밖 같은 실패는 AI 결과로만 알린다.
                 userFacingError = errorBefore
                 return .rejected("schedule_failed")

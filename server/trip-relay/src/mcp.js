@@ -84,7 +84,7 @@ const commandTool = (name, action, title, description, properties, required = []
 const addTool = (...args) => commandTool(...args, false);
 
 const TOOLS = [
-  readTool("get_activity", "Get day records", "Get one day (date) or the newest 7 stored days: summary, records, memos, plans, and when the user shares them "
+  readTool("get_activity", "Get day records", "Get one day (date) or the newest 7 stored days: summary, records, memos, plans (a plan may carry plannedSpend in KRW and, at the place-name share level, placeName), and when the user shares them "
     + "goals [{id,title,start,end}], trips [{tripId, items:[{stopId,itemId,title,order,start,end,status}]}], sleep [{recordId,start,end,minutes,source}], "
     + "expenses [{id,time,title,category,kind,amount,currency,amountKRW}], unconfirmed [{start,end,minutes}] (time the app could not classify; "
     + "settle it with classify_unconfirmed), on today's day budget {month,amountKRW,spentKRW}, and at the place-name share level "
@@ -104,7 +104,7 @@ const TOOLS = [
   // ACX1112A01
   readTool("get_app_state", "Get app state", "The app's own state, refreshed when the app runs: settings {language, theme, mapStyle, display{mapPhotos,mapRoutes,mapFootprints}, "
     + "shareLevel, retentionDays, aiConnections, actionsOff[] (actions the user turned off), paymentShortcutLink (the app ships a link to its "
-    + "BOKKI Payment automation), paymentTriggerWords[] (words the message automation fires on, any one), paymentAlertLink (the app also ships a bank and card app alert automation), paymentTexts, lastPaymentTextAt, paymentSources[{name,expense,income}] (per-app payment alert switches; change with set_payment_source), skipWords[] (set_skip_words), fxRates {CUR: KRW per unit} (set_fx_rate)}, ledger {month, budgetKRW, spentKRW, incomeKRW, ownAccounts[], entries[{id,time,title,"
+    + "BOKKI Payment automation), paymentTriggerWords[] (words the message automation fires on, any one), paymentAlertLink (the app also ships a bank and card app alert automation), paymentTexts, lastPaymentTextAt, paymentSources[{name,expense,income}] (per-app payment alert switches; change with set_payment_source), skipWords[] (set_skip_words), fxRates {CUR: KRW per unit} (set_fx_rate), mapColors[{id,name,color,custom}] (the colour of each activity on the map; change with set_map_activity_color)}, ledger {month, budgetKRW, spentKRW, incomeKRW, ownAccounts[], entries[{id,time,title,"
     + "category,kind,amount,currency,amountKRW,canceled,source,tripId?}], trips[{id,name,start,end,budgetKRW,myCostKRW,leftoverKRW,ended}] (trip ledgers: "
     + "myCostKRW is the user's own share so far, leftoverKRW what goes back to the daily ledger (negative: more is owed); set the budget with "
     + "set_trip_budget)} (entries newest first; entry ids work with update_expense), review [{id,reason "
@@ -311,10 +311,15 @@ const TOOLS = [
     + "shorten_retention, extend_retention, turn_off_health, open_backup, restore_from_backup. Try those first; when one is rejected with reason "
     + "disabled or app_too_old, use this tool. eraseAllData and changePin are only ever done through this tool.",
     { request: enumOf("What to approve", APPROVAL_NAMES), value: { description: "shareLevel: off|summary|visits. retentionDays: 1, 7 or 30. Omit for the others" } }, ["request"]),
-  addTool("add_schedule", "addSchedule", "Add schedule", "Add a planned activity. Without end it lasts one hour.",
+  addTool("add_schedule", "addSchedule", "Add schedule", "Add a planned activity. Without end it lasts one hour. "
+    + "It can carry a place (placeName, latitude and longitude always together; the app never sends coordinates back) and the money the user expects to spend there (plannedSpend, KRW).",
     { title: str("1-200 characters"), start: INSTANT("Start"), end: INSTANT("End, after start"), note: str("Up to 1000 characters"),
       categoryId: str("Category id from get_app_state categories (default: activity)"), important: { type: "boolean", description: "Mark as important" },
-      parentGoalId: str("Goal id from get_activity goals to put the plan under; its time must fall inside the goal") }, ["title", "start"]),
+      parentGoalId: str("Goal id from get_activity goals to put the plan under; its time must fall inside the goal"),
+      placeName: str("Name of the place, 1-100 characters; give latitude and longitude with it", { maxLength: 100 }),
+      latitude: { type: "number", minimum: -90, maximum: 90, description: "Latitude of the place (with placeName and longitude)" },
+      longitude: { type: "number", minimum: -180, maximum: 180, description: "Longitude of the place (with placeName and latitude)" },
+      plannedSpend: { type: "number", exclusiveMinimum: 0, maximum: 1e10, description: "Money the user expects to spend, in KRW" } }, ["title", "start"]),
   commandTool("update_activity", "updateActivity", "Rename or recategorize a record", "Correct a record's title and/or category. Target by recordId or the startTime it covers.",
     { date: DATE, recordId: str("Record id from get_activity"), startTime: HHMM("A time the record covers"), title: str("New title"), categoryId: str("Category id from get_activity") }, ["date"]),
   commandTool("classify_unconfirmed", "classifyUnconfirmed", "Classify unconfirmed time", "Fill time the app could not classify (get_activity unconfirmed) with a category. "
@@ -330,10 +335,16 @@ const TOOLS = [
     { date: DATE, recordIds: { type: "array", items: { type: "string" }, minItems: 2, maxItems: 20, description: "Record ids from get_activity" }, title: str("Title of the merged block"), categoryId: str("Category id") }, ["date", "recordIds"]),
   commandTool("update_record_time", "updateRecordTime", "Change record time", "Correct a record's start and/or end time.",
     { date: DATE, recordId: str("Record id from get_activity"), start: HHMM("New start"), end: HHMM("New end") }, ["date", "recordId"]),
-  commandTool("update_schedule", "updateSchedule", "Update schedule", "Change a planned activity. Target by planId or by date + startTime.",
+  commandTool("update_schedule", "updateSchedule", "Update schedule", "Change a planned activity. Target by planId or by date + startTime. "
+    + "placeName with latitude and longitude (always the three together) sets its place, clearPlace:true removes the place, plannedSpend sets the expected spending in KRW.",
     { planId: str("Plan id from get_activity plans"), date: DATE, startTime: HHMM("Current start"), title: str("New title"), start: str("New start: ISO 8601 with offset or HH:mm"), end: str("New end: ISO 8601 with offset or HH:mm"), note: str("New note"),
       categoryId: str("New category id"), important: { type: "boolean", description: "Important or not" },
-      parentGoalId: str("Goal id to move the plan under, or \"none\" to take it out of its goal") }),
+      parentGoalId: str("Goal id to move the plan under, or \"none\" to take it out of its goal"),
+      placeName: str("New place name, 1-100 characters; give latitude and longitude with it", { maxLength: 100 }),
+      latitude: { type: "number", minimum: -90, maximum: 90, description: "Latitude of the place (with placeName and longitude)" },
+      longitude: { type: "number", minimum: -180, maximum: 180, description: "Longitude of the place (with placeName and latitude)" },
+      plannedSpend: { type: "number", exclusiveMinimum: 0, maximum: 1e10, description: "Money the user expects to spend, in KRW" },
+      clearPlace: { type: "boolean", description: "true removes the place (not together with placeName)" } }),
   commandTool("delete_schedule", "deleteSchedule", "Delete schedule", "Delete a planned activity (undoable). Target by planId or by date + startTime.",
     { planId: str("Plan id from get_activity plans"), date: DATE, startTime: HHMM("Its start") }),
   commandTool("update_memo", "updateMemo", "Edit memo", "Replace a memo's text and/or move it to another day or time (give text, date, time or any mix).",

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { f, makeRegistry, registry } from "../src/actions.js";
 import { readFileSync } from "node:fs";
+import { toolList } from "../src/mcp.js";
 import { ACTIONS, COMMAND_FIELDS, cleanAppState, cleanCommand, isAppState, isCommand } from "../src/validate.js";
 
 const sample = () => makeRegistry().add("setFxRate", {
@@ -85,7 +86,9 @@ test("actions: the fixture the app checks against is the registry's manifest", (
   const fixture = JSON.parse(readFileSync(new URL("./fixtures/actions.json", import.meta.url), "utf8"));
   assert.deepEqual(fixture, registry.manifest(), "run `npm run actions` after changing src/actions.js");
   const direct = ["lowerShareLevel", "raiseShareLevel", "shortenRetention", "extendRetention", "turnOffHealth", "openBackup"];
-  for (const action of fixture.actions) assert.equal(action.since, direct.includes(action.action) ? 343 : 341, action.action);
+  const next = ["setPlaceKind", "setMapActivityColor"];
+  for (const action of fixture.actions) assert.equal(action.since, direct.includes(action.action) ? 343 : next.includes(action.action) ? 344 : 341, action.action);
+  assert.deepEqual(fixture.actions.filter((a) => a.since === 344).map((a) => a.action), next);
   assert.deepEqual(fixture.actions.filter((a) => a.since === 343).map((a) => a.action), direct);
   assert.equal(registry.needsBuild("setFxRate", "340"), 341);
   assert.equal(registry.needsBuild("setFxRate", "341"), null);
@@ -259,7 +262,7 @@ test("actions batch 5: categories, place floors, my stops, the day card, alerts,
   refuses("setDayCardTime", { time: "24:00" });
   refuses("setDayCardTime", { time: "7:30" });
   accepts("setAlert", { alert: "wakeUp", enabled: false });
-  refuses("setAlert", { alert: "nearbyMemo", enabled: true });
+  refuses("setAlert", { alert: "everything", enabled: true });
   refuses("setAlert", { alert: "wakeUp" });
   accepts("setCatOutfit", { accessoryId: "cat.accessory.sample-1" });
   refuses("setCatOutfit", { accessoryId: "hat" });
@@ -329,4 +332,61 @@ test("direct actions for the approval kinds (APV1114A16): shapes, build 343, and
   for (const request of ["shareLevel", "retentionDays"]) accepts("requestApproval", { request, value: request === "shareLevel" ? "visits" : 30 });
   for (const request of ["healthOff", "eraseAllData", "backup", "restore", "changePin"]) accepts("requestApproval", { request });
   for (const action of ["eraseAllData", "changePin", "setAppLock", "setShareLevel", "setRetention"]) assert.equal(registry.spec(action), undefined, action);
+});
+
+// MARK: RMN1114A22 — 일정의 장소·예상 지출, 장소 종류, 지도 활동 색, 근처 메모 알림, 장식 벗기.
+
+test("schedules carry a place and planned spending (RMN1114A22)", () => {
+  const base = { title: "Dinner", start: "2026-11-12T19:00+09:00" };
+  const place = { placeName: "Sample diner", latitude: 0.5, longitude: 0.25 };
+  accepts("addSchedule", { ...base, ...place, plannedSpend: 30000 });
+  accepts("addSchedule", { ...base, plannedSpend: 1 });
+  refuses("addSchedule", { ...base, placeName: "Sample diner" });
+  refuses("addSchedule", { ...base, latitude: 0.5, longitude: 0.25 });
+  refuses("addSchedule", { ...base, placeName: "Sample diner", latitude: 0.5 });
+  refuses("addSchedule", { ...base, ...place, latitude: 91 });
+  refuses("addSchedule", { ...base, ...place, placeName: " " });
+  refuses("addSchedule", { ...base, ...place, placeName: "x".repeat(101) });
+  for (const plannedSpend of [0, -1, 1e10 + 1, "3000", Infinity]) refuses("addSchedule", { ...base, plannedSpend });
+  assert.equal(cleanCommand(cmd("addSchedule", { ...base, clearPlace: true })).clearPlace, undefined, "clearPlace is for updates only");
+
+  const target = { planId: UUID };
+  accepts("updateSchedule", { ...target, ...place });
+  accepts("updateSchedule", { ...target, plannedSpend: 12000 });
+  accepts("updateSchedule", { ...target, clearPlace: true });
+  accepts("updateSchedule", { ...target, clearPlace: true, plannedSpend: 5000 });
+  refuses("updateSchedule", { ...target, clearPlace: false });
+  refuses("updateSchedule", { ...target, clearPlace: true, ...place });
+  refuses("updateSchedule", { ...target, latitude: 0.5, longitude: 0.25 });
+  refuses("updateSchedule", { ...target, plannedSpend: 0 });
+  const kept = cleanCommand(cmd("updateSchedule", { ...target, ...place, plannedSpend: 9000, junk: 1 }));
+  assert.deepEqual([kept.placeName, kept.latitude, kept.longitude, kept.plannedSpend, kept.junk], ["Sample diner", 0.5, 0.25, 9000, undefined]);
+  const tools = Object.fromEntries(toolList().map((tool) => [tool.name, tool]));
+  for (const name of ["add_schedule", "update_schedule"]) {
+    for (const key of ["placeName", "latitude", "longitude", "plannedSpend"]) assert.ok(tools[name].inputSchema.properties[key], `${name} ${key}`);
+  }
+  assert.ok(tools.update_schedule.inputSchema.properties.clearPlace);
+  assert.equal(tools.add_schedule.inputSchema.properties.clearPlace, undefined);
+});
+
+test("place kinds, map activity colours, the nearby memo alert and taking an accessory off (RMN1114A22)", () => {
+  for (const kind of ["home", "school", "academy", "company", "hobby", "exercise", "restaurant", "custom"]) accepts("setPlaceKind", { placeId: UUID, kind });
+  refuses("setPlaceKind", { placeId: UUID, kind: "office" });
+  refuses("setPlaceKind", { placeId: UUID });
+  refuses("setPlaceKind", { placeId: "p1", kind: "home" });
+  accepts("setMapActivityColor", { categoryId: "work", color: "#12abEF" });
+  accepts("setMapActivityColor", { categoryId: UUID, color: "#000000" });
+  refuses("setMapActivityColor", { categoryId: "work", color: "red" });
+  refuses("setMapActivityColor", { categoryId: "work", color: "#12abE" });
+  refuses("setMapActivityColor", { color: "#000000" });
+  accepts("setAlert", { alert: "nearbyMemo", enabled: false });
+  for (const remove of ["hat", "scarf", "ribbon"]) accepts("setCatOutfit", { remove });
+  refuses("setCatOutfit", { remove: "shoes" });
+  refuses("setCatOutfit", { remove: "hat", accessoryId: "cat.accessory.sample-1" });
+  for (const action of ["setPlaceKind", "setMapActivityColor"]) {
+    assert.equal(registry.needsBuild(action, "343"), 344, action);
+    assert.equal(registry.needsBuild(action, "344"), null, action);
+  }
+  assert.equal(registry.needsBuild("setCatOutfit", "343"), null, "a value added to an old action has no build check");
+  assert.equal(isAppState({ format: "bokki-app", version: 1, retentionDays: 7, settings: { mapColors: [{ id: "work", name: "Work", color: "#112233", custom: false }] } }), true);
 });

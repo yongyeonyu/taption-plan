@@ -16,7 +16,7 @@ const empty = { 204: { description: "Nothing stored" } };
 const command = {
   type: "object",
   required: ["format", "version", "id", "action"],
-  description: "One edit. Fields by action — addMemo: text, date?, time?. addExpense: amount (>0), currency? (ISO, default KRW), title, category?, kind? (expense|income), payer?, date?, time?. updateExpense: entryId (from an AI task context), amount?|currency?|title?|category?|kind?|delete:true. addSchedule: title, start, end?, note?. "
+  description: "One edit. Fields by action — addMemo: text, date?, time?. addExpense: amount (>0), currency? (ISO, default KRW), title, category?, kind? (expense|income), payer?, date?, time?. updateExpense: entryId (from an AI task context), amount?|currency?|title?|category?|kind?|delete:true. addSchedule: title, start, end?, note?, placeName?+latitude?+longitude? (the three together), plannedSpend? (KRW, >0). "
     + "updateActivity: date, recordId|startTime, title?|categoryId?. hideRecord: date, recordId|startTime. "
     + "classifyUnconfirmed: date, start, end (HH:mm, a span from the day's unconfirmed list), categoryId, title?. "
     + "setTravelMode: date, moveId (from the day's moves), mode, line? (bus number or subway line of that ride, up to 20). "
@@ -26,7 +26,7 @@ const command = {
     + "the user's name or card digits), sample (1-1000, the message the pattern must match; the app re-checks), kind? (expense default | income | "
     + "ignore = not a payment, never add; when the task's context.choice is set the user chose it, so use that kind). "
     + "mergeRecords: date, recordIds (2-20), title?, categoryId?. updateRecordTime: date, recordId, start?|end? (HH:mm). "
-    + "updateSchedule: planId | (date, startTime), then title?, start?, end?, note?. deleteSchedule: planId | (date, startTime). "
+    + "updateSchedule: planId | (date, startTime), then title?, start?, end?, note?, placeName?+latitude?+longitude?, plannedSpend?, clearPlace:true?. deleteSchedule: planId | (date, startTime). "
     + "updateMemo: memoId, text. deleteMemo: memoId. addGoal: title, start (YYYY-MM-DD), end?, categoryId?. "
     + "updateGoal: goalId|planId, then title?, start?, end?, categoryId?. deleteGoal: goalId|planId. "
     + "addTripStop: title, date, latitude?+longitude? (or lat/lng), status?, tripId?. updateTripStop: stopId, then title?, date?, order?, status?. "
@@ -120,6 +120,9 @@ const command = {
     delete: { type: "boolean", description: "updateExpense: true deletes the entry" },
     important: { type: "boolean", description: "addSchedule, updateSchedule: mark the plan as important" },
     parentGoalId: { type: "string", description: "addSchedule, updateSchedule: goal id to put the plan under (updateSchedule: \"none\" takes it out)" },
+    placeName: { type: "string", maxLength: 100, description: "addSchedule, updateSchedule: name of the plan's place; always with latitude and longitude" },
+    plannedSpend: { type: "number", exclusiveMinimum: 0, maximum: 1e10, description: "addSchedule, updateSchedule: money the user expects to spend, in KRW" },
+    clearPlace: { type: "boolean", description: "updateSchedule: true removes the plan's place" },
     shareNames: { type: "array", items: { type: "string", maxLength: 30 }, maxItems: 20, description: "addExpense, updateExpense: who shares a trip expense (\"@me\" is the user; [] or left out: everyone)" },
   },
 };
