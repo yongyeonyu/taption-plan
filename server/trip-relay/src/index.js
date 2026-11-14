@@ -7,6 +7,7 @@
 // per-route limits and encrypted metadata. AIR1110A03 adds OAuth 2.1 for MCP connectors and more AI actions.
 import * as apns from "./apns.js";
 import * as rules from "./rules.js";
+import * as share from "./share.js";
 import { createSetup, readSetup } from "./setup.js";
 import { fxRoute } from "./fx.js";
 import { open, seal, sha256Hex, storageCryptoKey, vault } from "./crypto.js";
@@ -20,6 +21,7 @@ import * as store from "./store.js";
 
 export { open, seal, storageCryptoKey, vault };
 export { UserState } from "./state.js";
+export { ShareRoom } from "./share.js";
 export { isActivityUpload, isCommand, isCommandResults, isTripPlan } from "./validate.js";
 
 export async function storageKey(token) {
@@ -414,6 +416,10 @@ const ROUTES = {
   "/fx": {
     GET: ["search", fxRoute],
   },
+  // 여행 공유(TSH1114A26): 방 만들기만 앱 등록 키로. 방 안의 요청은 방의 참여 토큰으로 `share.roomRoute`가 받는다.
+  "/share/rooms": {
+    POST: ["master", withBody(share.createRoom)],
+  },
 };
 
 // 인증 없이 받는 경로. OAuth 메타데이터·등록·토큰은 브라우저 클라이언트도 부를 수 있게 CORS를 연다.
@@ -515,6 +521,8 @@ async function route(request, env, url, exec) {
       // Claude 맞춤 커넥터 「로그인 없음」용: `/mcp/<연결 키>`(CLD1110A01). 모바일에서 주소 하나만 붙여 넣는다.
       const setup = SETUP_PATH.exec(url.pathname);
       if (setup) return request.method === "GET" ? readSetup(env, setup[1], now) : json({ error: "method_not_allowed" }, 405);
+      const room = share.ROOM_PATH.exec(url.pathname);
+      if (room) return share.roomRoute(request, env, room, now);
       const keyed = MCP_KEY_PATH.exec(url.pathname);
       if (keyed) return authorized(request, env, url, ROUTES["/mcp"], exec, keyed[1]);
       const entry = ROUTES[url.pathname];
