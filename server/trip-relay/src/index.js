@@ -87,8 +87,8 @@ export async function kakaoImage(request, env, fetcher = fetch) {
 
 // 장소 사진의 다른 출처(PHS1114A01, 대표 선택: Mapillary 거리 사진·관광공사 TourAPI·Unsplash·Pexels). 키는 모두 Worker 비밀값이고
 // 없는 출처는 503으로 꺼져 있다. 앱에는 사진 주소·출처 표시·출처 주소만 돌려준다(3건). 사진은 서버를 거치지 않고 서버에 남기지 않는다.
-// /photo/search?source=mapillary&lat&lng · source=tour&query&lat&lng · source=unsplash|pexels&query
-const PHOTO_SOURCES = ["mapillary", "tour", "unsplash", "pexels"];
+// /photo/search?source=google&query&lat&lng · source=mapillary&lat&lng · source=tour&query&lat&lng · source=unsplash|pexels&query
+const PHOTO_SOURCES = ["google", "mapillary", "tour", "unsplash", "pexels"];
 const httpsLink = (v) => typeof v === "string" && v.startsWith("https://") && v.length <= 900;
 export async function photoSearch(request, env, fetcher = fetch) {
   if (request.method !== "GET") return json({ error: "method_not_allowed" }, 405);
@@ -97,6 +97,7 @@ export async function photoSearch(request, env, fetcher = fetch) {
   const lat = Number(incoming.get("lat") ?? NaN), lng = Number(incoming.get("lng") ?? NaN);
   const located = Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
   if (!PHOTO_SOURCES.includes(source) || query.length > 100) return json({ error: "bad_query" }, 400);
+  if (source === "google") return googlePhoto(env, fetcher, query, located ? { lat, lng } : null);
   let target, headers = {}, read;
   if (source === "mapillary") {
     if (!env.MAPILLARY_TOKEN) return json({ error: "unavailable" }, 503);
@@ -155,6 +156,34 @@ export async function photoSearch(request, env, fetcher = fetch) {
   try { body = await upstream.json(); } catch { return json({ error: "upstream" }, 502); }
   const documents = read(body).filter((d) => httpsLink(d.image)).slice(0, 3).map((d) => ({ image: d.image, site: d.site, ...(httpsLink(d.page) ? { page: d.page } : {}) }));
   return json({ documents }, 200);
+}
+
+// 구글 Places(New) 공식 API(GPH1114A11, 대표가 콘솔에서 하루 30건 상한을 걸어 둠). 이름(+좌표 둘레 2km)으로 장소 하나를 찾고
+// 그 첫 사진의 주소를 받는다: 장소 하나에 호출 두 번(SearchText, GetPhotoMedia). 상한을 넘으면 구글이 거절하고 앱은 다음 출처로 넘어간다.
+async function googlePhoto(env, fetcher, query, spot) {
+  const key = env.GOOGLE_PLACES_KEY;
+  if (!key) return json({ error: "unavailable" }, 503);
+  if (!query) return json({ error: "bad_query" }, 400);
+  const search = await fetcher("https://places.googleapis.com/v1/places:searchText", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-goog-api-key": key, "x-goog-fieldmask": "places.photos" },
+    body: JSON.stringify({
+      textQuery: query, pageSize: 1,
+      ...(spot ? { locationBias: { circle: { center: { latitude: spot.lat, longitude: spot.lng }, radius: 2000 } } } : {}),
+    }),
+  });
+  if (!search.ok) return json({ error: "upstream", status: search.status }, 502);
+  let found;
+  try { found = await search.json(); } catch { return json({ error: "upstream" }, 502); }
+  const photo = found?.places?.[0]?.photos?.[0];
+  if (typeof photo?.name !== "string" || !/^places\/[\w-]+\/photos\/[\w-]+$/.test(photo.name)) return json({ documents: [] }, 200);
+  const media = await fetcher(`https://places.googleapis.com/v1/${photo.name}/media?maxWidthPx=640&skipHttpRedirect=true`, { headers: { "x-goog-api-key": key } });
+  if (!media.ok) return json({ error: "upstream", status: media.status }, 502);
+  let picture;
+  try { picture = await media.json(); } catch { return json({ error: "upstream" }, 502); }
+  if (!httpsLink(picture?.photoUri)) return json({ documents: [] }, 200);
+  const author = photo.authorAttributions?.[0]?.displayName;
+  return json({ documents: [{ image: picture.photoUri, site: (typeof author === "string" && author.trim() ? author.trim().slice(0, 40) + " · " : "") + "Google" }] }, 200);
 }
 
 async function photoRoute(request, ctx) {

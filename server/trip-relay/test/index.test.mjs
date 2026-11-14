@@ -352,6 +352,28 @@ test("photo search relays each source with its own key and returns only https li
   const stock = await ask("source=pexels&query=Bangkok", { PEXELS_API_KEY: "p" }, { photos: [{ src: { medium: "https://images.example.com/d.jpg" }, photographer: "B Person", url: "https://pexels.example.com/photo/2" }] });
   assert.deepEqual((await stock.json()).documents, [{ image: "https://images.example.com/d.jpg", site: "B Person · Pexels", page: "https://pexels.example.com/photo/2" }]);
 
-  for (const source of ["mapillary", "tour", "unsplash", "pexels"]) assert.equal((await ask(`source=${source}&query=a&lat=1&lng=1`, {}, {})).status, 503, source + " is off without its key");
-  assert.equal((await ask("source=google&query=a", {}, {})).status, 400);
+  for (const source of ["google", "mapillary", "tour", "unsplash", "pexels"]) assert.equal((await ask(`source=${source}&query=a&lat=1&lng=1`, {}, {})).status, 503, source + " is off without its key");
+  assert.equal((await ask("source=nowhere&query=a", {}, {})).status, 400);
+});
+
+test("google place photos: one text search, one photo lookup, the key only in a header (GPH1114A11)", async () => {
+  const seen = [];
+  const replies = (list) => async (url, init = {}) => { seen.push({ url: String(url), init }); const next = list.shift(); return new Response(JSON.stringify(next.body), { status: next.status ?? 200 }); };
+  const ask = (query, env, list) => photoSearch(new Request("https://relay.example.com/photo/search?" + query), env, replies(list));
+  const place = { places: [{ photos: [{ name: "places/abc-1/photos/xyz_2", authorAttributions: [{ displayName: "A Person" }] }] }] };
+
+  const ok = await ask("source=google&query=Tower&lat=1.5&lng=2.5", { GOOGLE_PLACES_KEY: "g" }, [{ body: place }, { body: { photoUri: "https://photos.example.com/p.jpg" } }]);
+  assert.deepEqual((await ok.json()).documents, [{ image: "https://photos.example.com/p.jpg", site: "A Person · Google" }]);
+  assert.equal(seen[0].init.method, "POST");
+  assert.equal(seen[0].init.headers["x-goog-fieldmask"], "places.photos");
+  assert.deepEqual(JSON.parse(seen[0].init.body), { textQuery: "Tower", pageSize: 1, locationBias: { circle: { center: { latitude: 1.5, longitude: 2.5 }, radius: 2000 } } });
+  assert.equal(seen[1].url, "https://places.googleapis.com/v1/places/abc-1/photos/xyz_2/media?maxWidthPx=640&skipHttpRedirect=true");
+  assert.ok(seen.every((call) => !call.url.includes("key=") && call.init.headers["x-goog-api-key"] === "g"));
+
+  assert.equal((await ask("source=google&query=Tower", {}, [])).status, 503, "off without the key");
+  assert.equal((await ask("source=google&lat=1&lng=1", { GOOGLE_PLACES_KEY: "g" }, [])).status, 400, "needs a name");
+  assert.deepEqual((await (await ask("source=google&query=Tower", { GOOGLE_PLACES_KEY: "g" }, [{ body: { places: [{}] } }])).json()).documents, [], "a place with no photo");
+  assert.deepEqual((await (await ask("source=google&query=Tower", { GOOGLE_PLACES_KEY: "g" }, [{ body: { places: [{ photos: [{ name: "places/a/../../x" }] }] } }])).json()).documents, [], "an odd photo name is not followed");
+  assert.equal((await ask("source=google&query=Tower", { GOOGLE_PLACES_KEY: "g" }, [{ status: 429, body: {} }])).status, 502, "over the daily cap");
+  assert.deepEqual((await (await ask("source=google&query=Tower", { GOOGLE_PLACES_KEY: "g" }, [{ body: place }, { body: { photoUri: "http://x/y.jpg" } }])).json()).documents, []);
 });

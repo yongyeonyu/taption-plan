@@ -305,13 +305,15 @@ final class TravelPlacePhotoStore {
         return data
     }
 
-    /// 차례로 찾는다(PHX1114A01·PHS1114A01): 위키백과 대표 사진 → 위키미디어 공용의 주변 사진 → (국내) 관광공사 → 웹 이미지 검색
+    /// 차례로 찾는다(PHX1114A01·PHS1114A01): 위키백과 대표 사진 → 구글 장소 사진 → 위키미디어 공용의 주변 사진 → (국내) 관광공사 → 웹 이미지 검색
     /// → Mapillary 거리 사진 → Unsplash·Pexels. 키가 없는 출처는 서버가 꺼 두어 그냥 지나간다. 그래도 없으면 `load`가 주변 보기·지도 그림으로 채운다.
     private func fetch(_ place: Place) async -> TravelPlacePhoto? {
         if let photo = await wikiPhoto(place) { return photo }
-        if let photo = await commonsPhoto(place) { return photo }
         let spot = [URLQueryItem(name: "lat", value: String(format: "%.5f", place.latitude)), URLQueryItem(name: "lng", value: String(format: "%.5f", place.longitude))]
         let name = URLQueryItem(name: "query", value: String(place.name.prefix(100)))
+        // 구글 장소 사진(GPH1114A11): 하루 상한이 작아 위키백과에 없을 때만 묻는다. 상한을 넘거나 키가 없으면 그냥 지나간다.
+        if let photo = await relayPhoto([.init(name: "source", value: "google"), name] + spot) { return photo }
+        if let photo = await commonsPhoto(place) { return photo }
         if MapHomeKakaoSearch.isInKorea(CLLocationCoordinate2D(latitude: place.latitude, longitude: place.longitude)),
            let photo = await relayPhoto([.init(name: "source", value: "tour"), name] + spot) { return photo }
         if let photo = await webPhoto(place) { return photo }
