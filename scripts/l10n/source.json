@@ -631,6 +631,30 @@
    ]
   },
   {
+   "key": "AI 공유 수준 낮추기|Lower AI sharing",
+   "ko": "AI 공유 수준 낮추기",
+   "en": "Lower AI sharing",
+   "files": [
+    "AssistantCommandRunner.swift:655"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "AI 공유 수준 높이기|Raise AI sharing",
+   "ko": "AI 공유 수준 높이기",
+   "en": "Raise AI sharing",
+   "files": [
+    "AssistantCommandRunner.swift:673"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "AI 공유 수준을 「{0}」(으)로 바꿀까요?|Change AI sharing to “{0}”?",
    "ko": "AI 공유 수준을 「{0}」(으)로 바꿀까요?",
    "en": "Change AI sharing to “{0}”?",
@@ -649,7 +673,7 @@
    "ko": "AI 공유가 꺼져 있어 보낼 수 없습니다. AI 연결에서 공유 수준을 바꿔 주세요.",
    "en": "AI sharing is off. Change the share level in AI connections.",
    "files": [
-    "PlanRealityView.swift:93"
+    "PlanRealityView.swift:100"
    ],
    "args": [],
    "targets": [
@@ -965,7 +989,7 @@
    "ko": "AI 할 일에 올렸습니다. AI가 바꾸기 전에 먼저 물어봅니다.",
    "en": "Sent to AI tasks. The AI asks you before changing anything.",
    "files": [
-    "PlanRealityView.swift:106"
+    "PlanRealityView.swift:113"
    ],
    "args": [],
    "targets": [
@@ -2494,7 +2518,7 @@
    "ko": "Watch 본체 확인",
    "en": "Watch device check",
    "files": [
-    "AppModel+Backup.swift:455"
+    "AppModel+Backup.swift:456"
    ],
    "args": [],
    "targets": [
@@ -2717,7 +2741,7 @@
    "ko": "iCloud 계정 상태를 확인하지 못했습니다. 네트워크를 확인한 뒤 이 줄을 눌러주세요.",
    "en": "Could not check your iCloud account status. Check your network, then tap this row.",
    "files": [
-    "PlanRepository.swift:505"
+    "PlanRepository.swift:511"
    ],
    "args": [],
    "targets": [
@@ -2730,7 +2754,7 @@
    "ko": "iCloud 계정을 확인하는 중입니다. 잠시 뒤 이 줄을 눌러 다시 시도해주세요.",
    "en": "Checking your iCloud account. Tap this row again shortly to retry.",
    "files": [
-    "PlanRepository.swift:499"
+    "PlanRepository.swift:505"
    ],
    "args": [],
    "targets": [
@@ -2743,8 +2767,8 @@
    "ko": "iCloud 동기화 기록",
    "en": "iCloud sync records",
    "files": [
-    "AppModel+Backup.swift:402",
-    "AppModel+Backup.swift:407"
+    "AppModel+Backup.swift:403",
+    "AppModel+Backup.swift:408"
    ],
    "args": [],
    "targets": [
@@ -2780,7 +2804,7 @@
    "ko": "iCloud 로그인 필요",
    "en": "iCloud sign-in required",
    "files": [
-    "PlanRepository.swift:446"
+    "PlanRepository.swift:452"
    ],
    "args": [],
    "targets": [
@@ -2805,7 +2829,7 @@
    "ko": "iCloud 백업",
    "en": "iCloud backup",
    "files": [
-    "AppModel+Backup.swift:487"
+    "AppModel+Backup.swift:488"
    ],
    "args": [],
    "targets": [
@@ -2853,7 +2877,7 @@
    "ko": "iCloud 진단 로그",
    "en": "iCloud diagnostics log",
    "files": [
-    "AppModel+Backup.swift:520"
+    "AppModel+Backup.swift:521"
    ],
    "args": [],
    "targets": [
@@ -2865,7 +2889,7 @@
    "ko": "iCloud 컨테이너의 TaptionSnapshot 스키마가 Production에 배포되지 않았습니다. 배포 전까지 기록은 이 기기에 안전하게 저장되며, 배포 후 이 줄을 눌러 다시 시도할 수 있습니다.",
    "en": "The iCloud container's TaptionSnapshot schema has not been deployed to Production. Until it is deployed, records are stored safely on this device; after deployment, tap this row to try again.",
    "files": [
-    "PlanRepository.swift:511"
+    "PlanRepository.swift:517"
    ],
    "args": [],
    "targets": [
@@ -3015,7 +3039,7 @@
    "ko": "iPhone 센서 원본",
    "en": "iPhone sensor source data",
    "files": [
-    "AppModel+Backup.swift:424"
+    "AppModel+Backup.swift:425"
    ],
    "args": [],
    "targets": [
@@ -4378,7 +4402,7 @@
    "en": "{0} h {1} min",
    "files": [
     "MapHomeCalendarPolicies.swift:486",
-    "PlanRealityGap.swift:228"
+    "PlanRealityGap.swift:258"
    ],
    "args": [
     "hours",
@@ -7840,7 +7864,7 @@
    "ko": "같은 이름의 대분류가 이미 있습니다.",
    "en": "A major category with the same name already exists.",
    "files": [
-    "AppModel+Plans.swift:933"
+    "AppModel+Plans.swift:944"
    ],
    "args": [],
    "targets": [
@@ -9220,7 +9244,7 @@
    "ko": "계획을 자기 하위 루틴 안으로 옮길 수 없습니다.",
    "en": "A plan cannot be moved inside its own sub-routine.",
    "files": [
-    "AppModel+Plans.swift:177"
+    "AppModel+Plans.swift:188"
    ],
    "args": [],
    "targets": [
@@ -9856,7 +9880,7 @@
    "ko": "루틴의 하위 항목을 다시 연결할 수 없습니다.",
    "en": "A routine's sub-items cannot be relinked.",
    "files": [
-    "AppModel+Plans.swift:247"
+    "AppModel+Plans.swift:258"
    ],
    "args": [],
    "targets": [
@@ -10360,7 +10384,7 @@
    "ko": "하위 계획은 상위 루틴 기간 안에서만 옮길 수 있습니다.",
    "en": "A sub-plan can only be moved within its parent routine's period.",
    "files": [
-    "AppModel+Plans.swift:819"
+    "AppModel+Plans.swift:830"
    ],
    "args": [],
    "targets": [
@@ -11440,7 +11464,7 @@
    "ko": "계정 확인 실패",
    "en": "Account check failed",
    "files": [
-    "PlanRepository.swift:465"
+    "PlanRepository.swift:471"
    ],
    "args": [],
    "targets": [
@@ -11534,7 +11558,7 @@
    "ko": "상위·하위 계획의 기간을 벗어나지 않도록 길이를 조절해 주세요.",
    "en": "Adjust the length so it stays within the period of the parent and child plans.",
    "files": [
-    "AppModel+Plans.swift:874"
+    "AppModel+Plans.swift:885"
    ],
    "args": [],
    "targets": [
@@ -12478,7 +12502,7 @@
    "ko": "같은 항목에는 연결할 수 없습니다.",
    "en": "An item cannot be linked to itself.",
    "files": [
-    "AppModel+Plans.swift:351"
+    "AppModel+Plans.swift:362"
    ],
    "args": [],
    "targets": [
@@ -12862,7 +12886,7 @@
    "ko": "앱 기록",
    "en": "App records",
    "files": [
-    "AppModel+Backup.swift:414"
+    "AppModel+Backup.swift:415"
    ],
    "args": [],
    "targets": [
@@ -14973,7 +14997,7 @@
    "ko": "계획 이름과 시간을 확인해 주세요.",
    "en": "Check the plan name and time.",
    "files": [
-    "AppModel+Plans.swift:118"
+    "AppModel+Plans.swift:124"
    ],
    "args": [],
    "targets": [
@@ -15035,7 +15059,7 @@
    "ko": "iCloud 계정을 확인하는 중입니다. 잠시 뒤 이 줄을 눌러 다시 시도해주세요.",
    "en": "Checking your iCloud account. Tap this row again shortly to retry.",
    "files": [
-    "PlanRepository.swift:500"
+    "PlanRepository.swift:506"
    ],
    "args": [],
    "targets": [
@@ -15457,7 +15481,7 @@
    "ko": "상위·하위 계획의 기간 안에서 시간을 정해 주세요.",
    "en": "Choose a time within the period of the parent and child plans.",
    "files": [
-    "AppModel+Plans.swift:182"
+    "AppModel+Plans.swift:193"
    ],
    "args": [],
    "targets": [
@@ -15839,7 +15863,7 @@
    "ko": "대분류를 추가하지 못했습니다. {0}",
    "en": "Could not add the major category. {0}",
    "files": [
-    "AppModel+Plans.swift:905"
+    "AppModel+Plans.swift:916"
    ],
    "args": [
     "error.localizedDescription"
@@ -15853,7 +15877,7 @@
    "ko": "계획을 캘린더에 추가하지 못했습니다. {0}",
    "en": "Could not add the plan to Calendar. {0}",
    "files": [
-    "AppModel+Plans.swift:761"
+    "AppModel+Plans.swift:772"
    ],
    "args": [
     "error.localizedDescription"
@@ -15867,7 +15891,7 @@
    "ko": "계획 길이를 조절하지 못했습니다.",
    "en": "Could not adjust the plan length.",
    "files": [
-    "AppModel+Plans.swift:879"
+    "AppModel+Plans.swift:890"
    ],
    "args": [],
    "targets": [
@@ -15893,7 +15917,7 @@
    "ko": "iCloud 계정 상태를 확인하지 못했습니다. 네트워크를 확인한 뒤 이 줄을 눌러주세요.",
    "en": "Could not check your iCloud account status. Check your network, then tap this row.",
    "files": [
-    "PlanRepository.swift:506"
+    "PlanRepository.swift:512"
    ],
    "args": [],
    "targets": [
@@ -15934,7 +15958,7 @@
    "ko": "대분류를 삭제하지 못했습니다. {0}",
    "en": "Could not delete the major category. {0}",
    "files": [
-    "AppModel+Plans.swift:1020"
+    "AppModel+Plans.swift:1031"
    ],
    "args": [
     "error.localizedDescription"
@@ -15948,7 +15972,7 @@
    "ko": "대분류를 수정하지 못했습니다. {0}",
    "en": "Could not edit the major category. {0}",
    "files": [
-    "AppModel+Plans.swift:949"
+    "AppModel+Plans.swift:960"
    ],
    "args": [
     "error.localizedDescription"
@@ -15962,7 +15986,7 @@
    "ko": "연결할 실제 기록 또는 루틴을 찾지 못했습니다.",
    "en": "Could not find the actual record or routine to link.",
    "files": [
-    "AppModel+Plans.swift:271"
+    "AppModel+Plans.swift:282"
    ],
    "args": [],
    "targets": [
@@ -15986,7 +16010,7 @@
    "ko": "수정할 계획을 찾지 못했습니다.",
    "en": "Could not find the plan to edit.",
    "files": [
-    "AppModel+Plans.swift:101"
+    "AppModel+Plans.swift:107"
    ],
    "args": [],
    "targets": [
@@ -15998,7 +16022,7 @@
    "ko": "캘린더로 보낼 계획을 찾지 못했습니다.",
    "en": "Could not find the plan to send to Calendar.",
    "files": [
-    "AppModel+Plans.swift:730"
+    "AppModel+Plans.swift:741"
    ],
    "args": [],
    "targets": [
@@ -16010,8 +16034,8 @@
    "ko": "연결할 루틴 또는 액션아이템을 찾지 못했습니다.",
    "en": "Could not find the routine or action item to link.",
    "files": [
-    "AppModel+Plans.swift:201",
-    "AppModel+Plans.swift:335"
+    "AppModel+Plans.swift:212",
+    "AppModel+Plans.swift:346"
    ],
    "args": [],
    "targets": [
@@ -16023,7 +16047,7 @@
    "ko": "루틴을 찾지 못했습니다.",
    "en": "Could not find the routine.",
    "files": [
-    "AppModel+Plans.swift:408"
+    "AppModel+Plans.swift:419"
    ],
    "args": [],
    "targets": [
@@ -16063,7 +16087,7 @@
    "ko": "액션아이템을 루틴에 연결하지 못했습니다.",
    "en": "Could not link the action item to the routine.",
    "files": [
-    "AppModel+Plans.swift:252"
+    "AppModel+Plans.swift:263"
    ],
    "args": [],
    "targets": [
@@ -16075,7 +16099,7 @@
    "ko": "계획을 옮기지 못했습니다.",
    "en": "Could not move the plan.",
    "files": [
-    "AppModel+Plans.swift:824"
+    "AppModel+Plans.swift:835"
    ],
    "args": [],
    "targets": [
@@ -16087,7 +16111,7 @@
    "ko": "상위 루틴 안에 계획을 배치하지 못했습니다.",
    "en": "Could not place the plan inside the parent routine.",
    "files": [
-    "AppModel+Plans.swift:48"
+    "AppModel+Plans.swift:49"
    ],
    "args": [],
    "targets": [
@@ -16779,7 +16803,7 @@
    "ko": "매일",
    "en": "Daily",
    "files": [
-    "AppModel+Plans.swift:611"
+    "AppModel+Plans.swift:622"
    ],
    "args": [],
    "targets": [
@@ -17120,7 +17144,7 @@
    "ko": "기기 원본",
    "en": "Device source data",
    "files": [
-    "AppModel+Backup.swift:446"
+    "AppModel+Backup.swift:447"
    ],
    "args": [],
    "targets": [
@@ -17156,7 +17180,7 @@
    "ko": "진단 로그",
    "en": "Diagnostics log",
    "files": [
-    "AppModel+Backup.swift:513"
+    "AppModel+Backup.swift:514"
    ],
    "args": [],
    "targets": [
@@ -17636,7 +17660,7 @@
    "ko": "캘린더 고정 일정은 캘린더에서 수정해 주세요.",
    "en": "Edit fixed calendar events in the Calendar app.",
    "files": [
-    "AppModel+Plans.swift:108"
+    "AppModel+Plans.swift:114"
    ],
    "args": [],
    "targets": [
@@ -17748,7 +17772,7 @@
    "ko": "빈 저장본",
    "en": "Empty snapshot",
    "files": [
-    "AppModel+Backup.swift:558"
+    "AppModel+Backup.swift:559"
    ],
    "args": [],
    "targets": [
@@ -18064,7 +18088,7 @@
    "ko": "캘린더의 고정 일정은 이곳에서 옮길 수 없습니다.",
    "en": "Fixed calendar events cannot be moved here.",
    "files": [
-    "AppModel+Plans.swift:814"
+    "AppModel+Plans.swift:825"
    ],
    "args": [],
    "targets": [
@@ -20236,7 +20260,7 @@
    "ko": "건강 데이터 원본",
    "en": "Health source data",
    "files": [
-    "AppModel+Backup.swift:434"
+    "AppModel+Backup.swift:435"
    ],
    "args": [],
    "targets": [
@@ -25617,7 +25641,7 @@
    "ko": "날짜별 원본",
    "en": "Per-day source data",
    "files": [
-    "AppModel+Backup.swift:465"
+    "AppModel+Backup.swift:466"
    ],
    "args": [],
    "targets": [
@@ -25875,7 +25899,7 @@
    "ko": "캘린더 권한을 허용해 주세요.",
    "en": "Please allow Calendar access.",
    "files": [
-    "AppModel+Plans.swift:743"
+    "AppModel+Plans.swift:754"
    ],
    "args": [],
    "targets": [
@@ -26031,7 +26055,7 @@
    "ko": "보호된 스냅샷",
    "en": "Protected snapshot",
    "files": [
-    "AppModel+Backup.swift:474"
+    "AppModel+Backup.swift:475"
    ],
    "args": [],
    "targets": [
@@ -26381,8 +26405,8 @@
    "ko": "반복 세그먼트와 일정은 연결 대상으로 사용할 수 없습니다.",
    "en": "Repeating segments and events cannot be used as link targets.",
    "files": [
-    "AppModel+Plans.swift:289",
-    "AppModel+Plans.swift:343"
+    "AppModel+Plans.swift:300",
+    "AppModel+Plans.swift:354"
    ],
    "args": [],
    "targets": [
@@ -26394,7 +26418,7 @@
    "ko": "반복 세그먼트와 루틴은 액션아이템으로 연결할 수 없습니다.",
    "en": "Repeating segments and routines cannot be linked as action items.",
    "files": [
-    "AppModel+Plans.swift:213"
+    "AppModel+Plans.swift:224"
    ],
    "args": [],
    "targets": [
@@ -26471,7 +26495,7 @@
    "ko": "기기에서 제한됨",
    "en": "Restricted on this device",
    "files": [
-    "PlanRepository.swift:453"
+    "PlanRepository.swift:459"
    ],
    "args": [],
    "targets": [
@@ -27080,7 +27104,7 @@
    "ko": "스크린타임이나 기기 관리 정책이 iCloud를 막고 있습니다. 제한을 푼 뒤 다시 시도해주세요.",
    "en": "Screen Time or a device management policy is blocking iCloud. Remove the restriction and try again.",
    "files": [
-    "PlanRepository.swift:494"
+    "PlanRepository.swift:500"
    ],
    "args": [],
    "targets": [
@@ -27695,7 +27719,7 @@
    "ko": "서버 설정 필요",
    "en": "Server setup required",
    "files": [
-    "PlanRepository.swift:471"
+    "PlanRepository.swift:477"
    ],
    "args": [],
    "targets": [
@@ -28051,7 +28075,7 @@
    "ko": "설정 앱 → 맨 위 이름 → iCloud에서 로그인하고 iCloud Drive를 켠 뒤 이 줄을 눌러주세요.",
    "en": "Sign in under Settings → your name at the top → iCloud, turn on iCloud Drive, then tap this row.",
    "files": [
-    "PlanRepository.swift:488"
+    "PlanRepository.swift:494"
    ],
    "args": [],
    "targets": [
@@ -28228,8 +28252,8 @@
    "ko": "수면·활동 기록은 루틴에만 연결할 수 있습니다.",
    "en": "Sleep and activity records can only be linked to routines.",
    "files": [
-    "AppModel+Plans.swift:298",
-    "AppModel+Plans.swift:367"
+    "AppModel+Plans.swift:309",
+    "AppModel+Plans.swift:378"
    ],
    "args": [],
    "targets": [
@@ -28318,7 +28342,7 @@
    "ko": "일부 데이터를 삭제하지 못했습니다: ",
    "en": "Some data could not be deleted: ",
    "files": [
-    "AppModel+Backup.swift:564"
+    "AppModel+Backup.swift:565"
    ],
    "args": [],
    "targets": [
@@ -28922,7 +28946,7 @@
    "ko": "일,월,화,수,목,금,토",
    "en": "Sun,Mon,Tue,Wed,Thu,Fri,Sat",
    "files": [
-    "AppModel+Plans.swift:621"
+    "AppModel+Plans.swift:632"
    ],
    "args": [],
    "targets": [
@@ -29579,7 +29603,7 @@
    "ko": "액션아이템의 시간이 루틴 기간 안에 있어야 합니다.",
    "en": "The action item's time must fall within the routine's period.",
    "files": [
-    "AppModel+Plans.swift:242"
+    "AppModel+Plans.swift:253"
    ],
    "args": [],
    "targets": [
@@ -29591,7 +29615,7 @@
    "ko": "실제 기록 시간이 루틴 기간 안에 있어야 합니다.",
    "en": "The actual record's time must fall within the routine's period.",
    "files": [
-    "AppModel+Plans.swift:280"
+    "AppModel+Plans.swift:291"
    ],
    "args": [],
    "targets": [
@@ -29964,7 +29988,7 @@
    "ko": "iCloud 컨테이너의 TaptionSnapshot 스키마가 Production에 배포되지 않았습니다. 배포 전까지 기록은 이 기기에 안전하게 저장되며, 배포 후 이 줄을 눌러 다시 시도할 수 있습니다.",
    "en": "The iCloud container's TaptionSnapshot schema has not been deployed to Production. Until it is deployed, records are stored safely on this device; after deployment, tap this row to try again.",
    "files": [
-    "PlanRepository.swift:512"
+    "PlanRepository.swift:518"
    ],
    "args": [],
    "targets": [
@@ -30530,7 +30554,7 @@
    "ko": "이 빌드에는 iCloud 컨테이너가 없습니다. 기록은 이 기기에만 저장됩니다.",
    "en": "This build has no iCloud container. Records are saved on this device only.",
    "files": [
-    "PlanRepository.swift:482"
+    "PlanRepository.swift:488"
    ],
    "args": [],
    "targets": [
@@ -30951,7 +30975,7 @@
    "ko": "잠시 후 다시",
    "en": "Try again shortly",
    "files": [
-    "PlanRepository.swift:459"
+    "PlanRepository.swift:465"
    ],
    "args": [],
    "targets": [
@@ -31415,7 +31439,7 @@
    "ko": "이 빌드 미지원",
    "en": "Unsupported in this build",
    "files": [
-    "PlanRepository.swift:441"
+    "PlanRepository.swift:447"
    ],
    "args": [],
    "targets": [
@@ -31476,7 +31500,7 @@
    "ko": "추천 입력 {0}",
    "en": "Use suggestion {0}",
    "files": [
-    "AddPlanSheet.swift:189"
+    "AddPlanSheet.swift:191"
    ],
    "args": [
     "candidate"
@@ -31898,7 +31922,7 @@
    "ko": "Watch 본체 확인",
    "en": "Watch device check",
    "files": [
-    "AppModel+Backup.swift:455"
+    "AppModel+Backup.swift:456"
    ],
    "args": [],
    "targets": [
@@ -31922,7 +31946,7 @@
    "ko": "주중",
    "en": "Weekdays",
    "files": [
-    "AppModel+Plans.swift:614"
+    "AppModel+Plans.swift:625"
    ],
    "args": [],
    "targets": [
@@ -31934,7 +31958,7 @@
    "ko": "주말",
    "en": "Weekends",
    "files": [
-    "AppModel+Plans.swift:617"
+    "AppModel+Plans.swift:628"
    ],
    "args": [],
    "targets": [
@@ -32030,7 +32054,7 @@
    "ko": "위젯 공유 기록",
    "en": "Widget shared records",
    "files": [
-    "AppModel+Backup.swift:505"
+    "AppModel+Backup.swift:506"
    ],
    "args": [],
    "targets": [
@@ -32902,7 +32926,7 @@
    "ko": "일정 장소에 도착했어요",
    "en": "You arrived at a planned place",
    "files": [
-    "ArrivalCardManager.swift:114"
+    "ArrivalCardManager.swift:154"
    ],
    "args": [],
    "targets": [
@@ -32962,7 +32986,7 @@
    "ko": "도착했어요. 눌러서 메모와 체크리스트를 보세요.",
    "en": "You're here. Tap to see your notes and checklist.",
    "files": [
-    "ArrivalCardManager.swift:117"
+    "ArrivalCardManager.swift:157"
    ],
    "args": [],
    "targets": [
@@ -33168,7 +33192,7 @@
    "ko": "iCloud 백업",
    "en": "iCloud backup",
    "files": [
-    "AppModel+Backup.swift:487"
+    "AppModel+Backup.swift:488"
    ],
    "args": [],
    "targets": [
@@ -33180,7 +33204,7 @@
    "ko": "iCloud 진단 로그",
    "en": "iCloud diagnostics log",
    "files": [
-    "AppModel+Backup.swift:520"
+    "AppModel+Backup.swift:521"
    ],
    "args": [],
    "targets": [
@@ -33192,7 +33216,7 @@
    "ko": "iCloud 로그인 필요",
    "en": "iCloud sign-in required",
    "files": [
-    "PlanRepository.swift:447"
+    "PlanRepository.swift:453"
    ],
    "args": [],
    "targets": [
@@ -33205,8 +33229,8 @@
    "ko": "iCloud 동기화 기록",
    "en": "iCloud sync records",
    "files": [
-    "AppModel+Backup.swift:402",
-    "AppModel+Backup.swift:407"
+    "AppModel+Backup.swift:403",
+    "AppModel+Backup.swift:408"
    ],
    "args": [],
    "targets": [
@@ -33233,7 +33257,7 @@
    "ko": "iPhone 센서 원본",
    "en": "iPhone sensor source data",
    "files": [
-    "AppModel+Backup.swift:424"
+    "AppModel+Backup.swift:425"
    ],
    "args": [],
    "targets": [
@@ -33396,7 +33420,7 @@
    "ko": "·",
    "en": ", ",
    "files": [
-    "AppModel+Plans.swift:627"
+    "AppModel+Plans.swift:638"
    ],
    "args": [],
    "targets": [
@@ -33955,7 +33979,7 @@
    "ko": "가계부에 넣음",
    "en": "Added to the ledger",
    "files": [
-    "LedgerMessageRules.swift:545"
+    "LedgerMessageRules.swift:549"
    ],
    "args": [],
    "targets": [
@@ -34142,7 +34166,7 @@
    "ko": "같은 내용을 이미 보냈습니다.",
    "en": "This was already sent.",
    "files": [
-    "PlanRealityView.swift:98"
+    "PlanRealityView.swift:105"
    ],
    "args": [],
    "targets": [
@@ -34206,7 +34230,7 @@
    "ko": "같은 이름의 대분류가 이미 있습니다.",
    "en": "A major category with the same name already exists.",
    "files": [
-    "AppModel+Plans.swift:932"
+    "AppModel+Plans.swift:943"
    ],
    "args": [],
    "targets": [
@@ -34243,7 +34267,7 @@
    "ko": "같은 항목에는 연결할 수 없습니다.",
    "en": "An item cannot be linked to itself.",
    "files": [
-    "AppModel+Plans.swift:350"
+    "AppModel+Plans.swift:361"
    ],
    "args": [],
    "targets": [
@@ -34404,7 +34428,7 @@
    "ko": "건강 데이터 원본",
    "en": "Health source data",
    "files": [
-    "AppModel+Backup.swift:434"
+    "AppModel+Backup.swift:435"
    ],
    "args": [],
    "targets": [
@@ -34567,6 +34591,30 @@
    "en": "Health connected",
    "files": [
     "AppModel+WatchHealth.swift:148"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "건강 연동 끄기(가져온 기록 삭제)|Turn off Health sync (removes imported records)",
+   "ko": "건강 연동 끄기(가져온 기록 삭제)",
+   "en": "Turn off Health sync (removes imported records)",
+   "files": [
+    "AssistantCommandRunner.swift:726"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "건강 연동 끔|Health sync off",
+   "ko": "건강 연동 끔",
+   "en": "Health sync off",
+   "files": [
+    "AssistantCommandRunner.swift:736"
    ],
    "args": [],
    "targets": [
@@ -35161,7 +35209,7 @@
    "ko": "결제 알림 앱 스위치 바꾸기",
    "en": "Change payment alert app switches",
    "files": [
-    "LedgerMessageRules.swift:717"
+    "LedgerMessageRules.swift:721"
    ],
    "args": [],
    "targets": [
@@ -35209,7 +35257,7 @@
    "ko": "겹쳐 보기",
    "en": "Overlay",
    "files": [
-    "PlanRealityView.swift:134"
+    "PlanRealityView.swift:141"
    ],
    "args": [],
    "targets": [
@@ -35414,7 +35462,7 @@
    "ko": "계정 확인 실패",
    "en": "Account check failed",
    "files": [
-    "PlanRepository.swift:464"
+    "PlanRepository.swift:470"
    ],
    "args": [],
    "targets": [
@@ -35427,7 +35475,7 @@
    "ko": "계획 {0}",
    "en": "Plan {0}",
    "files": [
-    "PlanRealityView.swift:296"
+    "PlanRealityView.swift:305"
    ],
    "args": [
     "plan"
@@ -35441,7 +35489,7 @@
    "ko": "계획 길이를 조절하지 못했습니다.",
    "en": "Could not adjust the plan length.",
    "files": [
-    "AppModel+Plans.swift:878"
+    "AppModel+Plans.swift:889"
    ],
    "args": [],
    "targets": [
@@ -35493,7 +35541,7 @@
    "ko": "계획 이름과 시간을 확인해 주세요.",
    "en": "Check the plan name and time.",
    "files": [
-    "AppModel+Plans.swift:117"
+    "AppModel+Plans.swift:123"
    ],
    "args": [],
    "targets": [
@@ -35505,8 +35553,8 @@
    "ko": "계획",
    "en": "Plan",
    "files": [
-    "PlanRealityView.swift:215",
-    "PlanRealityView.swift:331"
+    "PlanRealityView.swift:222",
+    "PlanRealityView.swift:340"
    ],
    "args": [],
    "targets": [
@@ -35543,7 +35591,7 @@
    "en": "Plan vs actual",
    "files": [
     "MapHomeView+Menu.swift:484",
-    "PlanRealityView.swift:47"
+    "PlanRealityView.swift:54"
    ],
    "args": [],
    "targets": [
@@ -35555,7 +35603,7 @@
    "ko": "계획대로",
    "en": "On plan",
    "files": [
-    "PlanRealityView.swift:168"
+    "PlanRealityView.swift:175"
    ],
    "args": [],
    "targets": [
@@ -35580,7 +35628,7 @@
    "ko": "계획을 옮기지 못했습니다.",
    "en": "Could not move the plan.",
    "files": [
-    "AppModel+Plans.swift:823"
+    "AppModel+Plans.swift:834"
    ],
    "args": [],
    "targets": [
@@ -35592,7 +35640,7 @@
    "ko": "계획을 자기 하위 루틴 안으로 옮길 수 없습니다.",
    "en": "A plan cannot be moved inside its own sub-routine.",
    "files": [
-    "AppModel+Plans.swift:176"
+    "AppModel+Plans.swift:187"
    ],
    "args": [],
    "targets": [
@@ -35618,7 +35666,7 @@
    "ko": "계획을 캘린더에 추가하지 못했습니다. {0}",
    "en": "Could not add the plan to Calendar. {0}",
    "files": [
-    "AppModel+Plans.swift:760"
+    "AppModel+Plans.swift:771"
    ],
    "args": [
     "error.localizedDescription"
@@ -36613,6 +36661,20 @@
    ]
   },
   {
+   "key": "그 시간에 쓴 돈 {0}|Spent in that time {0}",
+   "ko": "그 시간에 쓴 돈 {0}",
+   "en": "Spent in that time {0}",
+   "files": [
+    "PlanRealityView.swift:318"
+   ],
+   "args": [
+    "amount"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "그날 AI에게 맡긴 일이 없어요.|Nothing was handed to your AI that day.",
    "ko": "그날 AI에게 맡긴 일이 없어요.",
    "en": "Nothing was handed to your AI that day.",
@@ -37003,7 +37065,7 @@
    "ko": "기기 원본",
    "en": "Device source data",
    "files": [
-    "AppModel+Backup.swift:446"
+    "AppModel+Backup.swift:447"
    ],
    "args": [],
    "targets": [
@@ -37052,7 +37114,7 @@
    "ko": "기기에서 제한됨",
    "en": "Restricted on this device",
    "files": [
-    "PlanRepository.swift:452"
+    "PlanRepository.swift:458"
    ],
    "args": [],
    "targets": [
@@ -37207,7 +37269,7 @@
    "ko": "기록 없음",
    "en": "No record",
    "files": [
-    "PlanRealityView.swift:301"
+    "PlanRealityView.swift:310"
    ],
    "args": [],
    "targets": [
@@ -37831,7 +37893,7 @@
    "ko": "끔",
    "en": "Off",
    "files": [
-    "LedgerMessageRules.swift:742",
+    "LedgerMessageRules.swift:746",
     "AssistantDataActions.swift:702",
     "AssistantDataActions.swift:408"
    ],
@@ -38004,7 +38066,7 @@
    "ko": "나란히 보기",
    "en": "Side by side",
    "files": [
-    "PlanRealityView.swift:135"
+    "PlanRealityView.swift:142"
    ],
    "args": [],
    "targets": [
@@ -38233,7 +38295,7 @@
    "ko": "날짜별 원본",
    "en": "Per-day source data",
    "files": [
-    "AppModel+Backup.swift:465"
+    "AppModel+Backup.swift:466"
    ],
    "args": [],
    "targets": [
@@ -38283,7 +38345,7 @@
    "ko": "남은 일정 AI로 재조정",
    "en": "Replan the rest with AI",
    "files": [
-    "PlanRealityView.swift:178"
+    "PlanRealityView.swift:185"
    ],
    "args": [],
    "targets": [
@@ -38295,7 +38357,7 @@
    "ko": "남은 일정 {0}개",
    "en": "{0} left",
    "files": [
-    "PlanRealityGap.swift:254"
+    "PlanRealityGap.swift:284"
    ],
    "args": [
     "remaining"
@@ -38321,7 +38383,7 @@
    "ko": "남음",
    "en": "left",
    "files": [
-    "PlanRealityGap.swift:264"
+    "PlanRealityGap.swift:294"
    ],
    "args": [],
    "targets": [
@@ -38836,7 +38898,7 @@
    "ko": "넣지 않을 낱말 고치기",
    "en": "Edit words to skip",
    "files": [
-    "LedgerMessageRules.swift:770"
+    "LedgerMessageRules.swift:774"
    ],
    "args": [],
    "targets": [
@@ -39686,7 +39748,7 @@
    "ko": "대분류를 삭제하지 못했습니다. {0}",
    "en": "Could not delete the major category. {0}",
    "files": [
-    "AppModel+Plans.swift:1019"
+    "AppModel+Plans.swift:1030"
    ],
    "args": [
     "error.localizedDescription"
@@ -39700,7 +39762,7 @@
    "ko": "대분류를 수정하지 못했습니다. {0}",
    "en": "Could not edit the major category. {0}",
    "files": [
-    "AppModel+Plans.swift:948"
+    "AppModel+Plans.swift:959"
    ],
    "args": [
     "error.localizedDescription"
@@ -39714,7 +39776,7 @@
    "ko": "대분류를 추가하지 못했습니다. {0}",
    "en": "Could not add the major category. {0}",
    "files": [
-    "AppModel+Plans.swift:904"
+    "AppModel+Plans.swift:915"
    ],
    "args": [
     "error.localizedDescription"
@@ -40166,7 +40228,7 @@
    "ko": "도착했어요. 눌러서 메모와 체크리스트를 보세요.",
    "en": "You're here. Tap to see your notes and checklist.",
    "files": [
-    "ArrivalCardManager.swift:116"
+    "ArrivalCardManager.swift:156"
    ],
    "args": [],
    "targets": [
@@ -40595,7 +40657,8 @@
    "ko": "등록한 장소",
    "en": "Saved place",
    "files": [
-    "MapHomeSearchPolicy.swift:45"
+    "MapHomeSearchPolicy.swift:45",
+    "PlanSpotFields.swift:139"
    ],
    "args": [],
    "targets": [
@@ -40793,7 +40856,7 @@
    "ko": "루틴을 찾지 못했습니다.",
    "en": "Could not find the routine.",
    "files": [
-    "AppModel+Plans.swift:407"
+    "AppModel+Plans.swift:418"
    ],
    "args": [],
    "targets": [
@@ -40805,7 +40868,7 @@
    "ko": "루틴의 하위 항목을 다시 연결할 수 없습니다.",
    "en": "A routine's sub-items cannot be relinked.",
    "files": [
-    "AppModel+Plans.swift:246"
+    "AppModel+Plans.swift:257"
    ],
    "args": [],
    "targets": [
@@ -41089,7 +41152,7 @@
    "ko": "매일",
    "en": "Daily",
    "files": [
-    "AppModel+Plans.swift:611"
+    "AppModel+Plans.swift:622"
    ],
    "args": [],
    "targets": [
@@ -42307,7 +42370,7 @@
    "ko": "반복 세그먼트와 루틴은 액션아이템으로 연결할 수 없습니다.",
    "en": "Repeating segments and routines cannot be linked as action items.",
    "files": [
-    "AppModel+Plans.swift:212"
+    "AppModel+Plans.swift:223"
    ],
    "args": [],
    "targets": [
@@ -42319,8 +42382,8 @@
    "ko": "반복 세그먼트와 일정은 연결 대상으로 사용할 수 없습니다.",
    "en": "Repeating segments and events cannot be used as link targets.",
    "files": [
-    "AppModel+Plans.swift:288",
-    "AppModel+Plans.swift:342"
+    "AppModel+Plans.swift:299",
+    "AppModel+Plans.swift:353"
    ],
    "args": [],
    "targets": [
@@ -42419,7 +42482,7 @@
    "ko": "받은 결제 문자 종류 정하기",
    "en": "Classify received payment texts",
    "files": [
-    "LedgerMessageRules.swift:643"
+    "LedgerMessageRules.swift:647"
    ],
    "args": [],
    "targets": [
@@ -42820,6 +42883,18 @@
    ]
   },
   {
+   "key": "백업 화면 열기|Open the backup screen",
+   "ko": "백업 화면 열기",
+   "en": "Open the backup screen",
+   "files": [
+    "AssistantCommandRunner.swift:746"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "백업 화면을 열까요?|Open the backup screen?",
    "ko": "백업 화면을 열까요?",
    "en": "Open the backup screen?",
@@ -42948,7 +43023,7 @@
    "ko": "버림",
    "en": "Discarded",
    "files": [
-    "LedgerMessageRules.swift:538"
+    "LedgerMessageRules.swift:542"
    ],
    "args": [],
    "targets": [
@@ -43541,7 +43616,7 @@
    "ko": "보호된 스냅샷",
    "en": "Protected snapshot",
    "files": [
-    "AppModel+Backup.swift:474"
+    "AppModel+Backup.swift:475"
    ],
    "args": [],
    "targets": [
@@ -44063,7 +44138,7 @@
    "ko": "빈 저장본",
    "en": "Empty snapshot",
    "files": [
-    "AppModel+Backup.swift:557"
+    "AppModel+Backup.swift:558"
    ],
    "args": [],
    "targets": [
@@ -44745,7 +44820,7 @@
    "ko": "상위 루틴 안에 계획을 배치하지 못했습니다.",
    "en": "Could not place the plan inside the parent routine.",
    "files": [
-    "AppModel+Plans.swift:47"
+    "AppModel+Plans.swift:48"
    ],
    "args": [],
    "targets": [
@@ -44757,7 +44832,7 @@
    "ko": "상위·하위 계획의 기간 안에서 시간을 정해 주세요.",
    "en": "Choose a time within the period of the parent and child plans.",
    "files": [
-    "AppModel+Plans.swift:181"
+    "AppModel+Plans.swift:192"
    ],
    "args": [],
    "targets": [
@@ -44769,7 +44844,7 @@
    "ko": "상위·하위 계획의 기간을 벗어나지 않도록 길이를 조절해 주세요.",
    "en": "Adjust the length so it stays within the period of the parent and child plans.",
    "files": [
-    "AppModel+Plans.swift:873"
+    "AppModel+Plans.swift:884"
    ],
    "args": [],
    "targets": [
@@ -45101,6 +45176,30 @@
    ]
   },
   {
+   "key": "서버 보관 기간 늘리기|Extend server retention",
+   "ko": "서버 보관 기간 늘리기",
+   "en": "Extend server retention",
+   "files": [
+    "AssistantCommandRunner.swift:708"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "서버 보관 기간 줄이기|Shorten server retention",
+   "ko": "서버 보관 기간 줄이기",
+   "en": "Shorten server retention",
+   "files": [
+    "AssistantCommandRunner.swift:690"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "서버 보관 기간|Keep on server",
    "ko": "서버 보관 기간",
    "en": "Keep on server",
@@ -45131,7 +45230,7 @@
    "ko": "서버 설정 필요",
    "en": "Server setup required",
    "files": [
-    "PlanRepository.swift:470"
+    "PlanRepository.swift:476"
    ],
    "args": [],
    "targets": [
@@ -45381,7 +45480,7 @@
    "ko": "설정 앱 → 맨 위 이름 → iCloud에서 로그인하고 iCloud Drive를 켠 뒤 이 줄을 눌러주세요.",
    "en": "Sign in under Settings → your name at the top → iCloud, turn on iCloud Drive, then tap this row.",
    "files": [
-    "PlanRepository.swift:487"
+    "PlanRepository.swift:493"
    ],
    "args": [],
    "targets": [
@@ -46062,8 +46161,8 @@
    "ko": "수면·활동 기록은 루틴에만 연결할 수 있습니다.",
    "en": "Sleep and activity records can only be linked to routines.",
    "files": [
-    "AppModel+Plans.swift:297",
-    "AppModel+Plans.swift:366"
+    "AppModel+Plans.swift:308",
+    "AppModel+Plans.swift:377"
    ],
    "args": [],
    "targets": [
@@ -46180,7 +46279,7 @@
    "ko": "수입",
    "en": "Income",
    "files": [
-    "LedgerMessageRules.swift:743",
+    "LedgerMessageRules.swift:747",
     "PaymentAlertSources.swift:147",
     "PaymentAlertSources.swift:350"
    ],
@@ -46206,7 +46305,7 @@
    "ko": "수정할 계획을 찾지 못했습니다.",
    "en": "Could not find the plan to edit.",
    "files": [
-    "AppModel+Plans.swift:100"
+    "AppModel+Plans.swift:106"
    ],
    "args": [],
    "targets": [
@@ -46340,7 +46439,7 @@
    "ko": "스크린타임이나 기기 관리 정책이 iCloud를 막고 있습니다. 제한을 푼 뒤 다시 시도해주세요.",
    "en": "Screen Time or a device management policy is blocking iCloud. Remove the restriction and try again.",
    "files": [
-    "PlanRepository.swift:493"
+    "PlanRepository.swift:499"
    ],
    "args": [],
    "targets": [
@@ -47062,7 +47161,7 @@
    "ko": "실제 {0} · 진행 중",
    "en": "Actual {0} · ongoing",
    "files": [
-    "PlanRealityView.swift:299"
+    "PlanRealityView.swift:308"
    ],
    "args": [
     "actual"
@@ -47076,7 +47175,7 @@
    "ko": "실제 {0}",
    "en": "Actual {0}",
    "files": [
-    "PlanRealityView.swift:299"
+    "PlanRealityView.swift:308"
    ],
    "args": [
     "actual"
@@ -47102,7 +47201,7 @@
    "ko": "실제 기록 시간이 루틴 기간 안에 있어야 합니다.",
    "en": "The actual record's time must fall within the routine's period.",
    "files": [
-    "AppModel+Plans.swift:279"
+    "AppModel+Plans.swift:290"
    ],
    "args": [],
    "targets": [
@@ -47114,8 +47213,8 @@
    "ko": "실제",
    "en": "Actual",
    "files": [
-    "PlanRealityView.swift:219",
-    "PlanRealityView.swift:332"
+    "PlanRealityView.swift:226",
+    "PlanRealityView.swift:341"
    ],
    "args": [],
    "targets": [
@@ -47229,7 +47328,7 @@
    "ko": "쓴 돈 {0}",
    "en": "Spent {0}",
    "files": [
-    "PlanRealityView.swift:309",
+    "PlanRealityView.swift:318",
     "TravelModeView.swift:838",
     "TravelPlanSpend.swift:53"
    ],
@@ -47575,7 +47674,7 @@
    "ko": "아직 전",
    "en": "Not yet",
    "files": [
-    "PlanRealityView.swift:301"
+    "PlanRealityView.swift:310"
    ],
    "args": [],
    "targets": [
@@ -47962,7 +48061,7 @@
    "ko": "액션아이템을 루틴에 연결하지 못했습니다.",
    "en": "Could not link the action item to the routine.",
    "files": [
-    "AppModel+Plans.swift:251"
+    "AppModel+Plans.swift:262"
    ],
    "args": [],
    "targets": [
@@ -47974,7 +48073,7 @@
    "ko": "액션아이템의 시간이 루틴 기간 안에 있어야 합니다.",
    "en": "The action item's time must fall within the routine's period.",
    "files": [
-    "AppModel+Plans.swift:241"
+    "AppModel+Plans.swift:252"
    ],
    "args": [],
    "targets": [
@@ -47986,7 +48085,7 @@
    "ko": "앱 기록",
    "en": "App records",
    "files": [
-    "AppModel+Backup.swift:414"
+    "AppModel+Backup.swift:415"
    ],
    "args": [],
    "targets": [
@@ -48908,7 +49007,7 @@
    "ko": "여행 가계부 고치기",
    "en": "Edit trip ledgers",
    "files": [
-    "LedgerMessageRules.swift:846"
+    "LedgerMessageRules.swift:850"
    ],
    "args": [],
    "targets": [
@@ -48920,7 +49019,7 @@
    "ko": "여행 가계부 만들기",
    "en": "Create trip ledgers",
    "files": [
-    "LedgerMessageRules.swift:805"
+    "LedgerMessageRules.swift:809"
    ],
    "args": [],
    "targets": [
@@ -48932,7 +49031,7 @@
    "ko": "여행 가계부 지우기",
    "en": "Delete trip ledgers",
    "files": [
-    "LedgerMessageRules.swift:917"
+    "LedgerMessageRules.swift:921"
    ],
    "args": [],
    "targets": [
@@ -49220,9 +49319,9 @@
    ]
   },
   {
-   "key": "여행 일정에 넣은 곳에 도착하면 메모·세부 계획·예상 지출을 보여요. 앱이 위치를 받는 동안에만 알 수 있고, 일정마다 한 번만 떠요.|Shows notes, sub-plans and planned spend when you reach a place in your trip plan. Works only while the app receives location, once per plan.",
-   "ko": "여행 일정에 넣은 곳에 도착하면 메모·세부 계획·예상 지출을 보여요. 앱이 위치를 받는 동안에만 알 수 있고, 일정마다 한 번만 떠요.",
-   "en": "Shows notes, sub-plans and planned spend when you reach a place in your trip plan. Works only while the app receives location, once per plan.",
+   "key": "여행 일정에 넣은 곳에 도착하면 메모·세부 계획·예상 지출을 보여요. 알림과 위치를 허용했으면 앱을 닫아 두어도 그날 일정 장소에서 알림이 올 수 있고, 일정마다 한 번만 떠요.|Shows notes, sub-plans and planned spend when you reach a place in your trip plan. With notifications and location allowed, today's planned places can alert you even when the app is closed, once per plan.",
+   "ko": "여행 일정에 넣은 곳에 도착하면 메모·세부 계획·예상 지출을 보여요. 알림과 위치를 허용했으면 앱을 닫아 두어도 그날 일정 장소에서 알림이 올 수 있고, 일정마다 한 번만 떠요.",
+   "en": "Shows notes, sub-plans and planned spend when you reach a place in your trip plan. With notifications and location allowed, today's planned places can alert you even when the app is closed, once per plan.",
    "files": [
     "ArrivalCardView.swift:137"
    ],
@@ -49911,7 +50010,7 @@
    "ko": "연결된 AI가 없습니다. 메뉴의 AI 연결에서 먼저 연결해 주세요.",
    "en": "No AI is connected. Connect one in AI connections first.",
    "files": [
-    "PlanRealityView.swift:102"
+    "PlanRealityView.swift:109"
    ],
    "args": [],
    "targets": [
@@ -50181,8 +50280,8 @@
    "ko": "연결할 루틴 또는 액션아이템을 찾지 못했습니다.",
    "en": "Could not find the routine or action item to link.",
    "files": [
-    "AppModel+Plans.swift:200",
-    "AppModel+Plans.swift:334"
+    "AppModel+Plans.swift:211",
+    "AppModel+Plans.swift:345"
    ],
    "args": [],
    "targets": [
@@ -50194,7 +50293,7 @@
    "ko": "연결할 실제 기록 또는 루틴을 찾지 못했습니다.",
    "en": "Could not find the actual record or routine to link.",
    "files": [
-    "AppModel+Plans.swift:270"
+    "AppModel+Plans.swift:281"
    ],
    "args": [],
    "targets": [
@@ -50784,9 +50883,9 @@
    "ko": "예산 {0}",
    "en": "Budget {0}",
    "files": [
-    "PlanRealityGap.swift:253",
-    "PlanRealityView.swift:165",
-    "PlanRealityView.swift:305"
+    "PlanRealityGap.swift:283",
+    "PlanRealityView.swift:172",
+    "PlanRealityView.swift:314"
    ],
    "args": [
     "over"
@@ -50813,7 +50912,7 @@
    "ko": "예산 없음",
    "en": "No budget",
    "files": [
-    "LedgerMessageRules.swift:498"
+    "LedgerMessageRules.swift:502"
    ],
    "args": [],
    "targets": [
@@ -50928,8 +51027,9 @@
    "ko": "예상 지출",
    "en": "Planned spend",
    "files": [
-    "TravelQuickEntrySheet.swift:224",
-    "TravelQuickEntrySheet.swift:236"
+    "PlanSpotFields.swift:72",
+    "PlanSpotFields.swift:83",
+    "TravelQuickEntrySheet.swift:224"
    ],
    "args": [],
    "targets": [
@@ -52058,7 +52158,7 @@
    "ko": "위젯 공유 기록",
    "en": "Widget shared records",
    "files": [
-    "AppModel+Backup.swift:505"
+    "AppModel+Backup.swift:506"
    ],
    "args": [],
    "targets": [
@@ -53145,7 +53245,7 @@
    "ko": "이 날은 비교할 계획이 없습니다.",
    "en": "No plans to compare on this day.",
    "files": [
-    "PlanRealityView.swift:129"
+    "PlanRealityView.swift:136"
    ],
    "args": [],
    "targets": [
@@ -53302,7 +53402,7 @@
    "ko": "이 빌드 미지원",
    "en": "Unsupported in this build",
    "files": [
-    "PlanRepository.swift:440"
+    "PlanRepository.swift:446"
    ],
    "args": [],
    "targets": [
@@ -53315,7 +53415,7 @@
    "ko": "이 빌드에는 iCloud 컨테이너가 없습니다. 기록은 이 기기에만 저장됩니다.",
    "en": "This build has no iCloud container. Records are saved on this device only.",
    "files": [
-    "PlanRepository.swift:481"
+    "PlanRepository.swift:487"
    ],
    "args": [],
    "targets": [
@@ -53561,6 +53661,18 @@
    "en": "You left a memo here.",
    "files": [
     "NearbyMemoNotifications.swift:161"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "이곳의 좌표를 Apple 지도에서 찾지 못했습니다. 다른 결과를 골라 주세요.|Couldn't find this place's coordinates in Apple Maps. Pick another result.",
+   "ko": "이곳의 좌표를 Apple 지도에서 찾지 못했습니다. 다른 결과를 골라 주세요.",
+   "en": "Couldn't find this place's coordinates in Apple Maps. Pick another result.",
+   "files": [
+    "PlanSpotFields.swift:213"
    ],
    "args": [],
    "targets": [
@@ -54334,7 +54446,7 @@
    "ko": "일,월,화,수,목,금,토",
    "en": "Sun,Mon,Tue,Wed,Thu,Fri,Sat",
    "files": [
-    "AppModel+Plans.swift:620"
+    "AppModel+Plans.swift:631"
    ],
    "args": [],
    "targets": [
@@ -54384,7 +54496,7 @@
    "ko": "일부 데이터를 삭제하지 못했습니다: ",
    "en": "Some data could not be deleted: ",
    "files": [
-    "AppModel+Backup.swift:563"
+    "AppModel+Backup.swift:564"
    ],
    "args": [],
    "targets": [
@@ -54601,7 +54713,7 @@
    "ko": "일정 시각과 차이, 예산 차이만 AI 할 일로 보냅니다. 좌표와 결제 정보는 보내지 않습니다.",
    "en": "Only schedule times, gaps and the budget gap are sent as an AI task. No coordinates or payment details.",
    "files": [
-    "PlanRealityView.swift:185"
+    "PlanRealityView.swift:192"
    ],
    "args": [],
    "targets": [
@@ -54637,7 +54749,7 @@
    "ko": "일정 장소에 도착했어요",
    "en": "You arrived at a planned place",
    "files": [
-    "ArrivalCardManager.swift:114"
+    "ArrivalCardManager.swift:154"
    ],
    "args": [],
    "targets": [
@@ -55359,7 +55471,7 @@
    "ko": "잠시 후 다시",
    "en": "Try again shortly",
    "files": [
-    "PlanRepository.swift:458"
+    "PlanRepository.swift:464"
    ],
    "args": [],
    "targets": [
@@ -55391,6 +55503,19 @@
     "MapHomePlaceBookTools.swift:597",
     "MapHomePlaceBookTools.swift:781",
     "MapHomeView+Map.swift:157"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "장소 고르기|Choose a place",
+   "ko": "장소 고르기",
+   "en": "Choose a place",
+   "files": [
+    "PlanSpotFields.swift:55",
+    "PlanSpotFields.swift:164"
    ],
    "args": [],
    "targets": [
@@ -55502,7 +55627,7 @@
    "files": [
     "MapHomeInfoSheets.swift:46",
     "MapHomePlaceBookTools.swift:591",
-    "TravelPlacePicker.swift:29"
+    "PlanSpotFields.swift:130"
    ],
    "args": [],
    "targets": [
@@ -55515,6 +55640,18 @@
    "en": "Enter a place name.",
    "files": [
     "AppModel+FrequentPlaces.swift:514"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "장소 지우기|Remove place",
+   "ko": "장소 지우기",
+   "en": "Remove place",
+   "files": [
+    "PlanSpotFields.swift:68"
    ],
    "args": [],
    "targets": [
@@ -55551,7 +55688,8 @@
    "en": "Place",
    "files": [
     "LedgerSheet.swift:351",
-    "MapHomeNLEClipEditor.swift:254"
+    "MapHomeNLEClipEditor.swift:254",
+    "PlanSpotFields.swift:50"
    ],
    "args": [],
    "targets": [
@@ -55588,6 +55726,18 @@
    "en": "Three minutes after leaving the place.",
    "files": [
     "MapHomeAlarm.swift:60"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "장소에 도착하면 메모와 예상 지출을 보여 주고, 「계획과 실제」에서 견줍니다.|Shows your note and planned spend on arrival, and compares them in Plan vs actual.",
+   "ko": "장소에 도착하면 메모와 예상 지출을 보여 주고, 「계획과 실제」에서 견줍니다.",
+   "en": "Shows your note and planned spend on arrival, and compares them in Plan vs actual.",
+   "files": [
+    "PlanSpotFields.swift:86"
    ],
    "args": [],
    "targets": [
@@ -56243,7 +56393,7 @@
    "ko": "정하지 않음",
    "en": "Not set",
    "files": [
-    "LedgerMessageRules.swift:594",
+    "LedgerMessageRules.swift:598",
     "AssistantDataActions.swift:639",
     "TravelNewTripSheet.swift:70"
    ],
@@ -56601,7 +56751,7 @@
    "ko": "주말",
    "en": "Weekends",
    "files": [
-    "AppModel+Plans.swift:617"
+    "AppModel+Plans.swift:628"
    ],
    "args": [],
    "targets": [
@@ -56661,7 +56811,7 @@
    "ko": "주중",
    "en": "Weekdays",
    "files": [
-    "AppModel+Plans.swift:614"
+    "AppModel+Plans.swift:625"
    ],
    "args": [],
    "targets": [
@@ -57003,7 +57153,7 @@
    "ko": "지금까지 시작한 일정의 계획 {0} 기준",
    "en": "Against {0} planned so far",
    "files": [
-    "PlanRealityView.swift:336"
+    "PlanRealityView.swift:345"
    ],
    "args": [
     "soFar"
@@ -57595,8 +57745,8 @@
    "ko": "지연 {0}",
    "en": "Late {0}",
    "files": [
-    "PlanRealityGap.swift:252",
-    "PlanRealityView.swift:161"
+    "PlanRealityGap.swift:282",
+    "PlanRealityView.swift:168"
    ],
    "args": [
     "late"
@@ -57661,9 +57811,9 @@
    "ko": "지움",
    "en": "Deleted",
    "files": [
-    "LedgerMessageRules.swift:522",
-    "LedgerMessageRules.swift:528",
-    "LedgerMessageRules.swift:550"
+    "LedgerMessageRules.swift:526",
+    "LedgerMessageRules.swift:532",
+    "LedgerMessageRules.swift:554"
    ],
    "args": [],
    "targets": [
@@ -57715,7 +57865,7 @@
    "ko": "지출",
    "en": "Spending",
    "files": [
-    "LedgerMessageRules.swift:743",
+    "LedgerMessageRules.swift:747",
     "PaymentAlertSources.swift:146",
     "PaymentAlertSources.swift:349"
    ],
@@ -58044,7 +58194,7 @@
    "ko": "진단 로그",
    "en": "Diagnostics log",
    "files": [
-    "AppModel+Backup.swift:513"
+    "AppModel+Backup.swift:514"
    ],
    "args": [],
    "targets": [
@@ -58080,7 +58230,7 @@
    "ko": "진행 중",
    "en": "ongoing",
    "files": [
-    "PlanRealityGap.swift:261"
+    "PlanRealityGap.swift:291"
    ],
    "args": [],
    "targets": [
@@ -58335,6 +58485,7 @@
    "ko": "찾은 곳이 없습니다. 다른 이름으로 찾아 보세요.",
    "en": "Nothing found. Try another name.",
    "files": [
+    "PlanSpotFields.swift:159",
     "TravelPlacePicker.swift:63"
    ],
    "args": [],
@@ -58699,7 +58850,7 @@
    "ko": "추천 입력 {0}",
    "en": "Use suggestion {0}",
    "files": [
-    "AddPlanSheet.swift:189"
+    "AddPlanSheet.swift:191"
    ],
    "args": [
     "candidate"
@@ -59238,7 +59389,7 @@
    "ko": "캘린더 고정 일정은 캘린더에서 수정해 주세요.",
    "en": "Edit fixed calendar events in the Calendar app.",
    "files": [
-    "AppModel+Plans.swift:107"
+    "AppModel+Plans.swift:113"
    ],
    "args": [],
    "targets": [
@@ -59250,7 +59401,7 @@
    "ko": "캘린더 권한을 허용해 주세요.",
    "en": "Please allow Calendar access.",
    "files": [
-    "AppModel+Plans.swift:742"
+    "AppModel+Plans.swift:753"
    ],
    "args": [],
    "targets": [
@@ -59387,7 +59538,7 @@
    "ko": "캘린더로 보낼 계획을 찾지 못했습니다.",
    "en": "Could not find the plan to send to Calendar.",
    "files": [
-    "AppModel+Plans.swift:729"
+    "AppModel+Plans.swift:740"
    ],
    "args": [],
    "targets": [
@@ -59413,7 +59564,7 @@
    "ko": "캘린더의 고정 일정은 이곳에서 옮길 수 없습니다.",
    "en": "Fixed calendar events cannot be moved here.",
    "files": [
-    "AppModel+Plans.swift:813"
+    "AppModel+Plans.swift:824"
    ],
    "args": [],
    "targets": [
@@ -59516,7 +59667,7 @@
    "ko": "켬",
    "en": "On",
    "files": [
-    "LedgerMessageRules.swift:742",
+    "LedgerMessageRules.swift:746",
     "AssistantDataActions.swift:702",
     "AssistantDataActions.swift:408"
    ],
@@ -60713,7 +60864,7 @@
    "ko": "하위 계획은 상위 루틴 기간 안에서만 옮길 수 있습니다.",
    "en": "A sub-plan can only be moved within its parent routine's period.",
    "files": [
-    "AppModel+Plans.swift:818"
+    "AppModel+Plans.swift:829"
    ],
    "args": [],
    "targets": [
@@ -61903,7 +62054,7 @@
    "ko": "환율 직접 정하기",
    "en": "Set exchange rates",
    "files": [
-    "LedgerMessageRules.swift:687"
+    "LedgerMessageRules.swift:691"
    ],
    "args": [],
    "targets": [

@@ -1,5 +1,5 @@
 {
- "ui": 5009,
+ "ui": 5021,
  "catalog": 504,
  "unread": [
   {
@@ -100,25 +100,25 @@
   },
   {
    "file": "TaptionPlan/Core/LedgerMessageRules.swift",
-   "line": 498,
+   "line": 502,
    "ko": "$0",
    "en": "language"
   },
   {
    "file": "TaptionPlan/Core/LedgerMessageRules.swift",
-   "line": 905,
+   "line": 909,
    "ko": "$0",
    "en": "host.language"
   },
   {
    "file": "TaptionPlan/Core/LedgerMessageRules.swift",
-   "line": 706,
+   "line": 710,
    "ko": "value",
    "en": "host.language"
   },
   {
    "file": "TaptionPlan/Core/LedgerMessageRules.swift",
-   "line": 534,
+   "line": 538,
    "ko": "entry.amount",
    "en": "entry.currency"
   },
@@ -814,31 +814,31 @@
   },
   {
    "file": "TaptionPlan/UI/PlanRealityGap.swift",
-   "line": 234,
+   "line": 264,
    "ko": "abs(delta)",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/PlanRealityView.swift",
-   "line": 304,
+   "line": 313,
    "ko": "planned",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/PlanRealityView.swift",
-   "line": 308,
+   "line": 317,
    "ko": "spent",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/PlanRealityView.swift",
-   "line": 335,
+   "line": 344,
    "ko": "gap.plannedSoFarKRW",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/PlanRealityView.swift",
-   "line": 352,
+   "line": 361,
    "ko": "amount",
    "en": "language"
   },

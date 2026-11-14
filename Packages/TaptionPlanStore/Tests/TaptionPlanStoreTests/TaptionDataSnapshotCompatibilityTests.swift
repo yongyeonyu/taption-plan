@@ -46,6 +46,8 @@ enum SnapshotFixture {
         let point = GeoPoint(latitude: 37.5, longitude: 127.25, altitude: 12.5, horizontalAccuracy: 5, verticalAccuracy: -1)
         // 기본 설정 전체를 담되, 실행 시각·언어·사전 순서에 따라 바뀌는 값은 고정한다.
         var settings = AppFeatureSettings.defaults
+        // 기대 JSON을 만들 때의 기본 지도다. 뒤에 기본값이 바뀌어도(MDF1114A01) 저장 바이트 계약은 그대로여야 한다.
+        settings.mapDisplayStyle = .mapLibreRPG
         settings.frequentPlaces = settings.frequentPlaces.enumerated().map { index, place in
             var place = place
             place.id = id(900 + index)

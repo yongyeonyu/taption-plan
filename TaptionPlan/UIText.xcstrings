@@ -3928,6 +3928,160 @@
         }
       }
     },
+    "AI 공유 수준 낮추기|Lower AI sharing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AIとの共有レベルを下げる"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "降低 AI 共享级别"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "降低 AI 分享層級"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "KI-Freigabe verringern"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réduire le partage avec l’IA"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Riduci la condivisione con l’IA"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reducir el uso compartido con la IA"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reduzir o compartilhamento com a IA"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Giảm mức chia sẻ với AI"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kurangi berbagi dengan AI"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลดระดับการแชร์กับ AI"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI साझाकरण कम करें"
+          }
+        }
+      }
+    },
+    "AI 공유 수준 높이기|Raise AI sharing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AIとの共有レベルを上げる"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "提高 AI 共享级别"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "提高 AI 分享層級"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "KI-Freigabe erhöhen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Augmenter le partage avec l’IA"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aumenta la condivisione con l’IA"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aumentar el uso compartido con la IA"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aumentar o compartilhamento com a IA"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tăng mức chia sẻ với AI"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tambah berbagi dengan AI"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เพิ่มระดับการแชร์กับ AI"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI साझाकरण बढ़ाएँ"
+          }
+        }
+      }
+    },
     "AI 공유 수준을 「{0}」(으)로 바꿀까요?|Change AI sharing to “{0}”?" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -214138,6 +214292,160 @@
         }
       }
     },
+    "건강 연동 끄기(가져온 기록 삭제)|Turn off Health sync (removes imported records)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ヘルスケア連携をオフにする(取り込んだ記録を削除)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关闭健康同步(删除已导入的记录)"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "關閉健康同步(刪除已匯入的紀錄)"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health-Synchronisierung ausschalten (entfernt importierte Einträge)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Désactiver la synchronisation Santé (supprime les enregistrements importés)"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Disattiva la sincronizzazione con Salute (rimuove i dati importati)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Desactivar la sincronización con Salud (elimina los registros importados)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Desativar a sincronização com o Saúde (remove os registros importados)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tắt đồng bộ Sức khỏe (xóa các bản ghi đã nhập)"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Matikan sinkronisasi Kesehatan (menghapus catatan yang diimpor)"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ปิดการซิงค์สุขภาพ (ลบบันทึกที่นำเข้า)"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "स्वास्थ्य सिंक बंद करें (आयात किए गए रिकॉर्ड हटते हैं)"
+          }
+        }
+      }
+    },
+    "건강 연동 끔|Health sync off" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ヘルスケア連携オフ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "健康同步已关闭"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "健康同步已關閉"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health-Synchronisierung aus"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Synchronisation Santé désactivée"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sincronizzazione Salute off"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sincronización con Salud desactivada"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sincronização com o Saúde desativada"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã tắt đồng bộ Sức khỏe"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sinkronisasi Kesehatan mati"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ปิดการซิงค์สุขภาพแล้ว"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "स्वास्थ्य सिंक बंद"
+          }
+        }
+      }
+    },
     "건강 연동을 끌까요?|Turn off Health sync?" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -226531,6 +226839,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "अन्य स्वचालित समय"
+          }
+        }
+      }
+    },
+    "그 시간에 쓴 돈 {0}|Spent in that time {0}" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "その時間の支出 {0}"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "该时段花费 {0}"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "該時段花費 {0}"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In dieser Zeit ausgegeben {0}"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dépensé pendant ce temps {0}"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Speso in quel periodo {0}"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gastado en ese tiempo {0}"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gasto nesse período {0}"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã chi trong thời gian đó {0}"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terpakai pada waktu itu {0}"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ใช้ไปในช่วงเวลานั้น {0}"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "उस समय में ख़र्च {0}"
           }
         }
       }
@@ -263726,6 +264111,83 @@
         }
       }
     },
+    "백업 화면 열기|Open the backup screen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "バックアップ画面を開く"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开备份界面"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開啟備份畫面"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Backup-Bildschirm öffnen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrir l’écran de sauvegarde"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apri la schermata di backup"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abrir la pantalla de copia de seguridad"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abrir a tela de backup"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mở màn hình sao lưu"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka layar cadangan"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เปิดหน้าสำรองข้อมูล"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "बैकअप स्क्रीन खोलें"
+          }
+        }
+      }
+    },
     "백업 화면을 열까요?|Open the backup screen?" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -277813,6 +278275,160 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "शावर"
+          }
+        }
+      }
+    },
+    "서버 보관 기간 늘리기|Extend server retention" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サーバーの保管期間を長くする"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "延长服务器保留期"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "延長伺服器保留期"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aufbewahrung auf dem Server verlängern"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prolonger la conservation sur le serveur"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prolunga la conservazione sul server"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ampliar la retención en el servidor"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estender a retenção no servidor"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kéo dài thời gian lưu trên máy chủ"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perpanjang retensi server"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เพิ่มระยะเก็บบนเซิร์ฟเวอร์"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सर्वर पर रखने की अवधि बढ़ाएँ"
+          }
+        }
+      }
+    },
+    "서버 보관 기간 줄이기|Shorten server retention" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サーバーの保管期間を短くする"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "缩短服务器保留期"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "縮短伺服器保留期"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aufbewahrung auf dem Server verkürzen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Raccourcir la conservation sur le serveur"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accorcia la conservazione sul server"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Acortar la retención en el servidor"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Encurtar a retenção no servidor"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rút ngắn thời gian lưu trên máy chủ"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Persingkat retensi server"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลดระยะเก็บบนเซิร์ฟเวอร์"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सर्वर पर रखने की अवधि घटाएँ"
           }
         }
       }
@@ -302457,79 +303073,79 @@
         }
       }
     },
-    "여행 일정에 넣은 곳에 도착하면 메모·세부 계획·예상 지출을 보여요. 앱이 위치를 받는 동안에만 알 수 있고, 일정마다 한 번만 떠요.|Shows notes, sub-plans and planned spend when you reach a place in your trip plan. Works only while the app receives location, once per plan." : {
+    "여행 일정에 넣은 곳에 도착하면 메모·세부 계획·예상 지출을 보여요. 알림과 위치를 허용했으면 앱을 닫아 두어도 그날 일정 장소에서 알림이 올 수 있고, 일정마다 한 번만 떠요.|Shows notes, sub-plans and planned spend when you reach a place in your trip plan. With notifications and location allowed, today's planned places can alert you even when the app is closed, once per plan." : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "旅行の予定に入れた場所に到着すると、メモ・詳細プラン・予想支出を表示します。アプリが位置情報を受け取っている間だけ検知でき、予定ごとに1回だけ表示されます。"
+            "value" : "旅行の予定に入れた場所に到着すると、メモ・詳細プラン・予想支出を表示します。通知と位置情報を許可していれば、アプリを閉じていてもその日の予定の場所で通知が届くことがあり、予定ごとに1回だけ表示されます。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "到达旅行行程中的地点时，显示备注、详细计划和预计支出。仅在 App 接收位置期间可检测，每个行程只显示一次。"
+            "value" : "到达旅行行程中的地点时，显示备注、详细计划和预计支出。如果已允许通知和位置，即使关闭 App，也可能在当天的行程地点收到通知，每个行程只显示一次。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "抵達旅行行程中的地點時，顯示備註、詳細計畫和預計支出。僅在 App 接收位置期間可偵測，每個行程只顯示一次。"
+            "value" : "抵達旅行行程中的地點時，顯示備註、詳細計畫和預計支出。如果已允許通知和位置，即使關閉 App，也可能在當天的行程地點收到通知，每個行程只顯示一次。"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zeigt Notizen, Detailpläne und geplante Ausgaben, wenn du einen Ort aus deinem Reiseplan erreichst. Funktioniert nur, solange die App Standortdaten erhält, einmal pro Plan."
+            "value" : "Zeigt Notizen, Detailpläne und geplante Ausgaben, wenn du einen Ort aus deinem Reiseplan erreichst. Sind Mitteilungen und Standort erlaubt, können dich die heutigen Orte auch bei geschlossener App benachrichtigen, einmal pro Plan."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Affiche les notes, les sous-plans et les dépenses prévues quand vous atteignez un lieu de votre plan de voyage. Fonctionne seulement quand l’app reçoit la position, une fois par plan."
+            "value" : "Affiche les notes, les sous-plans et les dépenses prévues quand vous atteignez un lieu de votre plan de voyage. Si les notifications et la position sont autorisées, les lieux prévus du jour peuvent vous alerter même quand l’app est fermée, une fois par plan."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mostra note, piani dettagliati e spesa prevista quando raggiungi un luogo del tuo piano di viaggio. Funziona solo mentre l’app riceve la posizione, una volta per piano."
+            "value" : "Mostra note, piani dettagliati e spesa prevista quando raggiungi un luogo del tuo piano di viaggio. Con notifiche e posizione consentite, i luoghi previsti per oggi possono avvisarti anche ad app chiusa, una volta per piano."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Muestra notas, planes detallados y gasto previsto cuando llegas a un lugar de tu plan de viaje. Solo funciona mientras la app recibe la ubicación, una vez por plan."
+            "value" : "Muestra notas, planes detallados y gasto previsto cuando llegas a un lugar de tu plan de viaje. Con las notificaciones y la ubicación permitidas, los lugares previstos para hoy pueden avisarte aunque la app esté cerrada, una vez por plan."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mostra notas, planos detalhados e gasto previsto quando você chega a um lugar do seu plano de viagem. Só funciona enquanto o app recebe a localização, uma vez por plano."
+            "value" : "Mostra notas, planos detalhados e gasto previsto quando você chega a um lugar do seu plano de viagem. Com notificações e localização permitidas, os lugares previstos para hoje podem avisar você mesmo com o app fechado, uma vez por plano."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hiển thị ghi chú, kế hoạch chi tiết và chi tiêu dự kiến khi bạn đến một địa điểm trong kế hoạch chuyến đi. Chỉ hoạt động khi ứng dụng nhận được vị trí, mỗi kế hoạch một lần."
+            "value" : "Hiển thị ghi chú, kế hoạch chi tiết và chi tiêu dự kiến khi bạn đến một địa điểm trong kế hoạch chuyến đi. Nếu đã cho phép thông báo và vị trí, các địa điểm trong kế hoạch hôm nay có thể báo cho bạn ngay cả khi ứng dụng đã đóng, mỗi kế hoạch một lần."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Menampilkan catatan, rencana rinci, dan perkiraan pengeluaran saat Anda tiba di tempat dalam rencana perjalanan. Hanya berfungsi saat aplikasi menerima lokasi, sekali per rencana."
+            "value" : "Menampilkan catatan, rencana rinci, dan perkiraan pengeluaran saat Anda tiba di tempat dalam rencana perjalanan. Jika notifikasi dan lokasi diizinkan, tempat yang direncanakan hari ini dapat memberi tahu Anda meski aplikasi ditutup, sekali per rencana."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "แสดงโน้ต แผนย่อย และค่าใช้จ่ายที่คาดไว้เมื่อคุณไปถึงสถานที่ในแผนการเดินทาง ใช้ได้เฉพาะขณะที่แอปได้รับตำแหน่ง และแสดงครั้งเดียวต่อแผน"
+            "value" : "แสดงโน้ต แผนย่อย และค่าใช้จ่ายที่คาดไว้เมื่อคุณไปถึงสถานที่ในแผนการเดินทาง หากอนุญาตการแจ้งเตือนและตำแหน่งไว้ สถานที่ในแผนของวันนี้อาจแจ้งเตือนคุณได้แม้ปิดแอปอยู่ และแสดงครั้งเดียวต่อแผน"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "जब आप अपनी यात्रा योजना के किसी स्थान पर पहुँचते हैं, तो नोट, विस्तृत योजनाएँ और अनुमानित खर्च दिखाता है। केवल तब काम करता है जब ऐप को स्थान मिल रहा हो, हर योजना के लिए एक बार।"
+            "value" : "जब आप अपनी यात्रा योजना के किसी स्थान पर पहुँचते हैं, तो नोट, विस्तृत योजनाएँ और अनुमानित खर्च दिखाता है। सूचनाएँ और स्थान की अनुमति होने पर, ऐप बंद होने पर भी आज की योजना के स्थानों पर सूचना मिल सकती है, हर योजना के लिए एक बार।"
           }
         }
       }
@@ -328329,6 +328945,83 @@
         }
       }
     },
+    "이곳의 좌표를 Apple 지도에서 찾지 못했습니다. 다른 결과를 골라 주세요.|Couldn't find this place's coordinates in Apple Maps. Pick another result." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この場所の座標をAppleマップで見つけられませんでした。別の結果を選んでください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未能在 Apple 地图中找到此地点的坐标。请选择其他结果。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法在 Apple 地圖中找到此地點的座標。請選擇其他結果。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Koordinaten dieses Ortes wurden in Apple Karten nicht gefunden. Wähle ein anderes Ergebnis."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de trouver les coordonnées de ce lieu dans Apple Plans. Choisissez un autre résultat."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossibile trovare le coordinate di questo luogo in Mappe di Apple. Scegli un altro risultato."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se encontraron las coordenadas de este lugar en Mapas de Apple. Elige otro resultado."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível encontrar as coordenadas deste local no Mapas da Apple. Escolha outro resultado."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không tìm thấy tọa độ của địa điểm này trong Apple Maps. Hãy chọn kết quả khác."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Koordinat tempat ini tidak ditemukan di Apple Maps. Pilih hasil lain."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ไม่พบพิกัดของสถานที่นี้ใน Apple Maps โปรดเลือกผลลัพธ์อื่น"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Maps में इस स्थान के निर्देशांक नहीं मिले। कोई दूसरा परिणाम चुनें।"
+          }
+        }
+      }
+    },
     "이날의 활동이 모두 확인되었습니다.|All activity for this day is confirmed." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -339494,6 +340187,83 @@
         }
       }
     },
+    "장소 고르기|Choose a place" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "場所を選ぶ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择地点"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選擇地點"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ort auswählen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisir un lieu"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scegli un luogo"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elegir un lugar"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escolher um local"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chọn địa điểm"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pilih tempat"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เลือกสถานที่"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "स्थान चुनें"
+          }
+        }
+      }
+    },
     "장소 기록|Places" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -340264,6 +341034,83 @@
         }
       }
     },
+    "장소 지우기|Remove place" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "場所を削除"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移除地点"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移除地點"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ort entfernen"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retirer le lieu"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rimuovi luogo"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quitar lugar"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remover local"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xóa địa điểm"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hapus tempat"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลบสถานที่"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "स्थान हटाएँ"
+          }
+        }
+      }
+    },
     "장소 찾기|Find a place" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -340722,6 +341569,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "जगह छोड़ने के तीन मिनट बाद।"
+          }
+        }
+      }
+    },
+    "장소에 도착하면 메모와 예상 지출을 보여 주고, 「계획과 실제」에서 견줍니다.|Shows your note and planned spend on arrival, and compares them in Plan vs actual." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "場所に到着するとメモと予定の支出を表示し、「予定と実際」で比べます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "到达地点时显示备注和预计支出，并在“计划与实际”中进行对比。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "抵達地點時顯示備註和預計支出，並在「計畫與實際」中進行比較。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zeigt bei der Ankunft deine Notiz und die geplante Ausgabe und vergleicht sie in „Plan und Realität“."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Affiche votre note et la dépense prévue à l’arrivée, et les compare dans « Prévu et réel »."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All’arrivo mostra la nota e la spesa prevista, e le confronta in «Piano e realtà»."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al llegar muestra tu nota y el gasto previsto, y los compara en «Plan y realidad»."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ao chegar, mostra sua nota e o gasto previsto, e os compara em “Plano e realidade”."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Khi đến nơi sẽ hiện ghi chú và chi tiêu dự kiến, rồi so sánh trong “Kế hoạch và thực tế”."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menampilkan catatan dan rencana pengeluaran saat tiba, lalu membandingkannya di “Rencana dan kenyataan”."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เมื่อถึงสถานที่จะแสดงโน้ตและค่าใช้จ่ายที่วางแผนไว้ และเปรียบเทียบใน “แผนกับความจริง”"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "पहुँचने पर आपका नोट और अनुमानित खर्च दिखाता है, और “योजना बनाम वास्तविक” में उनकी तुलना करता है।"
           }
         }
       }

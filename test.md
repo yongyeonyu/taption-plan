@@ -7,6 +7,15 @@
 - CLM1114A01(하루 편집 한도 30 → 100): 서버 `npm test` 116건 통과(옛 숫자에 기대던 시험 5건을 새 한도에 맞게 고침), `wrangler deploy` 완료. 대기열 상한은 50 그대로다(100으로 올리면 다른 시험·읽기 상한까지 바뀌어 이번에는 두었다).
 - OCF1114A01(큰 사진에도 「OCR」 표시)·안내문 숫자: `AssistantCommandEditTests`·`AssistantRelayTests`·`LedgerTests` 62건 통과·실패 0(`build/validation/OCB1114A01/sim-16.xcresult`), 구조 점검 통과. 아직 빌드에 없고 화면 확인도 없다.
 
+## APV1114A16·ARN1114A17·PLB1114A18·LDN1114A20 · 승인 바로 실행, 꺼진 앱 도착 알림, 일반 일정 장소·예상 지출, 가계부 최신순 (2026-11-14 밤, 아직 빌드·서버에 없음)
+
+- 세 작업은 따로 만든 작업 공간에서 구현해 메인에 합침(충돌: PLB의 `project.pbxproj` 2곳 → 양쪽 다 살림). 가계부 최신순은 메인에서 고침. 번역 다시 생성(실패 0), 구조 점검·import 경계 통과.
+- 합친 뒤 메인에서(시뮬레이터 BOKKI-STL, 병렬 끔, 실기기 확인 없음): `PlanSpotTests`·`ArrivalAlertPlanTests`·`AssistantDirectActionTests`·`PlanRealityGapTests`·`ArrivalDetectorTests`·`AssistantDigestTests`·`AITaskQueueTests`·`LedgerTests`·`LedgerDayGroupingTests`·AI 시험 4묶음·`LedgerMessageAccuracyTests`·`LedgerReviewTests`·`MapHomeKakaoProjectionTests`·`TripItemStatusTests`·`TravelMapTests`·저장소/백업 시험 7묶음(`TaptionStoreV2Tests`·`TaptionStoreRepositoryTests`·`TaptionBackupV2Tests`·`StorageReviewFixTests`·`AppModelBackupConnectionTests`·`UserEditRollbackTests`·`CloudKitSnapshotAssetTests`) 408건 통과·실패 0(`build/validation/APV1114A16/sim-main-1.xcresult`, 첫 실행).
+- 서버 `npm test` 161건 통과(세 번 연속). `Packages/TaptionPlanCore` `swift test` 통과(XCTest 89건 + Swift Testing 11건).
+- `Packages/TaptionPlanStore` `swift test`: `TaptionDataSnapshotCompatibilityTests` 2건이 이번 작업 전부터 실패하고 있었음. 원인: 지도 기본값을 계절 지도로 바꾼 뒤(MDF1114A01) 시험 견본이 기본값을 그대로 써서 기대 JSON(`mapLibreRPG`)과 어긋남 — 차이는 `settings.mapDisplayStyle` 한 칸뿐. 견본에 그 값을 고정해 32건 통과. 저장 형식 문제 아님.
+- PLB 호환 입증(작업 공간·메인 시험): 옛 payload 디코딩·재인코딩 바이트 동일, 예전 행이 든 DB 다시 열기·저장 뒤 바이트 동일, TAPTBK02·03 백업 왕복, iCloud 병합에서 같은 시각 사본의 값 유지. 옛 빌드(342 이하)가 일정을 고치면 그 일정의 새 칸이 사라지는 것은 코드 읽기로 판단했고 실제 옛 빌드로 시험하지 않음.
+- 하지 않은 것: 서버 배포, TestFlight, 실기기 전부(위치 알림 실제 전달, 일정 편집 화면 모양, 승인 동작의 서버 왕복 포함).
+
 ## TFB1114A342 · 서버 배포와 TestFlight 342 (2026-11-14 밤)
 
 - 대표 객관식 답 「배포하고 342 올리기」. 서버를 먼저 배포(새 AI 일 종류 `replan` 수용)한 뒤 342 실행.
