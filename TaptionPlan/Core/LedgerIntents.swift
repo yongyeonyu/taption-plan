@@ -133,6 +133,8 @@ enum PaymentTextCapture {
             return (PaymentAlertSources.blockedMessage(source, income: false, language: language), .skipped)
         }
         if draft.occurredAt == nil { draft.occurredAt = now }
+        // 읽은 가게 이름이 규칙에 맞았는지(규칙이 이름을 바꾸면 저장된 이름으로는 다시 못 찾는다).
+        let parsedMerchantRule = draft.merchant.map { LedgerMessageParser.learnedMerchant($0) != nil } ?? false
         let entry = LedgerMessageParser.entry(draft)
         await LedgerBook.shared.load()
         let money = LedgerMoney.text(entry.amount, currency: entry.currency, language: language)
@@ -160,7 +162,9 @@ enum PaymentTextCapture {
         }
         let saved = await LedgerBook.shared.save(entry)
         // 앱이 먼저 넣고, 연결된 AI가 가게 이름·분류를 다듬는다(대표 결정).
-        if AITaskQueue.enqueue(.paymentText, text: text, day: saved.occurredAt, context: ["entryId": saved.id.uuidString]) {
+        // 가게 규칙으로 이미 정해진 결제는 맡기지 않는다(AIX1114A01 P3: 같은 판단을 AI에게 다시 묻지 않는다).
+        let settledByRule = LedgerMessageParser.learnedMerchant(saved.title) != nil || parsedMerchantRule
+        if !settledByRule, AITaskQueue.enqueue(.paymentText, text: text, day: saved.occurredAt, context: ["entryId": saved.id.uuidString, "ruleHint": "merchant_category"]) {
             await AITaskQueue.upload()
         }
         return (language.text("\(saved.title) \(money)을 가계부에 넣었어요.", "Added \(saved.title) \(money) to the ledger."), .added)

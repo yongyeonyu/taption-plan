@@ -106,6 +106,12 @@ final class LedgerTests: XCTestCase {
         let screenshot = ["합계 12,000원", "카드 승인", "영수증", "필터 추가"]
         XCTAssertFalse(ReceiptPhotoScanner.isReceipt(screenshot), "a rule says this layout is not a receipt")
         XCTAssertEqual(AssistantRuleListView.summary(cafe), "빵집 → cafe")
+        // 가게 규칙에 이름이 있으면 그 이름과 분류로 넣는다.
+        AssistantRuleSnapshot.set([Rule(id: "r5", type: "merchant_category", match: ["contains": .list(["빵집"])], result: ["category": .text("cafe"), "title": .text("동네빵집")])])
+        let made = LedgerMessageParser.entry(.init(amount: 4_500, currency: "KRW", merchant: "빵집 본점 12호", card: "카드", occurredAt: nil, isCancel: false))
+        XCTAssertEqual([made.title, made.category.rawValue], ["동네빵집", "cafe"])
+        XCTAssertNotNil(LedgerMessageParser.learnedMerchant("빵집 본점 12호"))
+        XCTAssertNil(LedgerMessageParser.learnedMerchant("국수집"))
     }
 
     func testReceiptPhotoMarksKeepLatestWithinLimit() {

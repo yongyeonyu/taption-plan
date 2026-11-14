@@ -419,12 +419,21 @@ enum LedgerMessageParser {
 
     /// 기록 후보. 취소 문자는 수입(환불)으로 둔다.
     static func entry(_ draft: Draft, now: Date = .now, source: LedgerEntry.Source = .message) -> LedgerEntry {
-        let title = draft.merchant ?? draft.card ?? "결제"
+        let read = draft.merchant ?? draft.card ?? "결제"
+        // 가게 규칙에 이름이 정해져 있으면 그 이름으로 넣는다(AIX1114A01 P3: 「○○점 12호」 → 「○○」).
+        let learned = draft.isCancel ? nil : learnedMerchant(read)
+        let title = learned?.title ?? read
         return LedgerEntry(
             occurredAt: draft.occurredAt ?? now, amount: draft.amount, currency: draft.currency,
-            kind: draft.isCancel ? .income : .expense, category: draft.isCancel ? .other : LedgerCategory.guess(title),
+            kind: draft.isCancel ? .income : .expense,
+            category: draft.isCancel ? .other : learned.flatMap { LedgerCategory(rawValue: $0.category) } ?? LedgerCategory.guess(title),
             title: title, note: draft.card, source: source
         )
+    }
+
+    /// 이 가게 이름에 맞는 서버 규칙. 맞으면 앱이 스스로 분류한 것이라 AI에게 다듬기를 맡기지 않는다.
+    static func learnedMerchant(_ name: String) -> (category: String, title: String?)? {
+        RuleEngine.merchantCategory(merchant: name, text: name, rules: AssistantRuleSnapshot.rules).map { ($0.category, $0.title) }
     }
 }
 
