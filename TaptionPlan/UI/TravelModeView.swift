@@ -1030,11 +1030,9 @@ struct TravelModeView: View {
                     onLower: { withAnimation(.snappy(duration: 0.25)) { isPlanUp = false } },
                     onToggleMap: { withAnimation(.snappy(duration: 0.25)) { planHeight = Double(TravelPlanSheetHeight.toggled(tableHeight, size: viewSize)) } },
                     onDrag: { translation, isDone in
-                        let next = TravelPlanSheetHeight.dragged(from: tableHeight, translation: translation, size: viewSize)
-                        if isDone {
-                            planHeight = Double(next)
-                            planDragHeight = nil
-                        } else if next != planDragHeight { planDragHeight = next }
+                        // 끄는 동안 높이를 따라 바꾸면 계획표가 계속 다시 그려져 떨린다(대표 신고). 손을 떼면 한 번에 끝으로 간다(PSN1114A01).
+                        guard isDone, let next = TravelPlanSheetHeight.snapped(from: tableHeight, translation: translation, size: viewSize) else { return }
+                        withAnimation(.snappy(duration: 0.25)) { planHeight = Double(next) }
                     }
                 )
                 dayChips(entry)

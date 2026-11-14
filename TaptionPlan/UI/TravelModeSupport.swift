@@ -176,6 +176,14 @@ enum TravelPlanSheetHeight {
         return min(max(((height - translation) / 4).rounded() * 4, range.lowerBound), range.upperBound)
     }
 
+    /// 손잡이를 끌었다 놓으면 가는 높이(PSN1114A01): 위로 끌면 가장 넓게, 아래로 끌면 반반으로. 조금만 움직였으면 nil(그대로).
+    static func snapped(from height: CGFloat, translation: CGFloat, size: CGSize) -> CGFloat? {
+        guard abs(translation) >= 16 else { return nil }
+        let range = range(size)
+        let next = translation < 0 ? range.upperBound : min(TravelModeView.planTableHeight(size), range.upperBound)
+        return next == height ? nil : next
+    }
+
     /// 지도가 접힌(일정이 넓은) 높이인지: 반반과 끝의 가운데보다 크면.
     static func isMapFolded(_ height: CGFloat, size: CGSize) -> Bool {
         let range = range(size)

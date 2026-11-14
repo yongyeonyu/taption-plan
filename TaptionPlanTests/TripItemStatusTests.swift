@@ -412,6 +412,11 @@ final class TravelTripUnitTests: XCTestCase {
         XCTAssertEqual(TravelPlanSheetHeight.height(phone, stored: 0), 437)
         XCTAssertEqual(TravelPlanSheetHeight.range(phone), 220...544)
         XCTAssertEqual(TravelPlanSheetHeight.height(phone, stored: 900), 544)
+        // 손잡이를 놓으면 한 번에 끝으로 간다(PSN1114A01): 위로는 가장 넓게, 아래로는 반반으로.
+        XCTAssertEqual(TravelPlanSheetHeight.snapped(from: 437, translation: -40, size: phone), 544)
+        XCTAssertEqual(TravelPlanSheetHeight.snapped(from: 544, translation: 60, size: phone), 437)
+        XCTAssertNil(TravelPlanSheetHeight.snapped(from: 437, translation: -8, size: phone), "a small nudge does nothing")
+        XCTAssertNil(TravelPlanSheetHeight.snapped(from: 544, translation: -80, size: phone), "already at the top")
         XCTAssertEqual(TravelPlanSheetHeight.height(phone, stored: 100), 220)
         XCTAssertEqual(TravelPlanSheetHeight.height(pad, stored: 300), 826, "넓은 화면은 높이를 바꾸지 않는다")
         XCTAssertEqual(TravelPlanSheetHeight.dragged(from: 437, translation: -50, size: phone), 488, "위로 끌면 커지고 4pt 단위")
