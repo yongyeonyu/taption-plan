@@ -9,6 +9,8 @@ struct AddPlanSheet: View {
     @State private var middleCategoryName = ""
     @State private var subCategoryName = ""
     @State private var memoText = ""
+    @State private var place: PlanPlace?
+    @State private var spendText = ""
     @State private var durationMinutes = 30
     @State private var goalDurationMonths = 12
     @State private var usesCustomGoalRange = false
@@ -257,6 +259,7 @@ struct AddPlanSheet: View {
                 .padding(.top, -8)
 
             datePickerRow
+            PlanSpotFields(model: model, place: $place, spendText: $spendText)
 
             MiniTimeSliceEditor(
                 startAt: $startAt,
@@ -538,16 +541,10 @@ struct AddPlanSheet: View {
             startAt: startAt,
             duration: selectedDuration,
             parentID: model.addPlanContext.isGoal ? nil : parentID,
-            repeatRules: model.addPlanContext.isGoal ? goalRepeatRules : nil
+            repeatRules: model.addPlanContext.isGoal ? goalRepeatRules : nil,
+            spot: model.addPlanContext.isGoal ? nil : PlanSpot(place: place, spendText: spendText)
         )
-        if !model.addPlanContext.isGoal,
-           let planID {
-            model.addMemo(
-                text: memoText,
-                kind: .idea,
-                to: planID
-            )
-        }
+        if !model.addPlanContext.isGoal, let planID { model.addMemo(text: memoText, kind: .idea, to: planID) }
         dismiss()
     }
 

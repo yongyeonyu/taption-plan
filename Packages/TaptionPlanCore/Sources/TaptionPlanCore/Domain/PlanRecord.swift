@@ -17,6 +17,19 @@ public enum PlanOrigin: String, Codable, CaseIterable, Sendable {
     case motion
 }
 
+/// 일정의 장소(PLB1114A18): 이름과 좌표.
+public struct PlanPlace: Codable, Hashable, Sendable {
+    public var name: String
+    public var latitude: Double
+    public var longitude: Double
+
+    public init(name: String, latitude: Double, longitude: Double) {
+        self.name = name
+        self.latitude = latitude
+        self.longitude = longitude
+    }
+}
+
 public struct PlanRecord: Identifiable, Codable, Hashable, Sendable {
     public var id: UUID
     public var title: String
@@ -34,6 +47,9 @@ public struct PlanRecord: Identifiable, Codable, Hashable, Sendable {
     public var externalEventID: String?
     public var createdAt: Date
     public var updatedAt: Date
+    /// 일정의 장소와 예상 지출(원, 0보다 큰 값만)(PLB1114A18). 없으면 키를 쓰지 않아 예전 저장 바이트가 그대로다.
+    public var place: PlanPlace?
+    public var plannedSpendKRW: Double?
 
     public init(
         id: UUID = UUID(),
@@ -51,7 +67,9 @@ public struct PlanRecord: Identifiable, Codable, Hashable, Sendable {
         externalCalendarID: String? = nil,
         externalEventID: String? = nil,
         createdAt: Date = .now,
-        updatedAt: Date = .now
+        updatedAt: Date = .now,
+        place: PlanPlace? = nil,
+        plannedSpendKRW: Double? = nil
     ) {
         self.id = id
         self.title = title
@@ -69,6 +87,8 @@ public struct PlanRecord: Identifiable, Codable, Hashable, Sendable {
         self.externalEventID = externalEventID
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+        self.place = place
+        self.plannedSpendKRW = plannedSpendKRW
     }
 }
 

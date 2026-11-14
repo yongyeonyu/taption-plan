@@ -37,7 +37,7 @@ final class ArrivalCardManager {
     /// 앱이 받은 위치 기록 하나를 본다. 10초에 한 번만 판정한다.
     func observe(_ reading: SensorReading, model: AppModel, now: Date = .now) {
         guard let point = reading.point, isEnabled, model.isBootstrapped,
-              !model.settings.travelPlanStops.isEmpty,
+              !model.settings.travelPlanStops.isEmpty || model.snapshot.plans.contains(where: { $0.place != nil }),
               lastEvaluatedAt.map({ now.timeIntervalSince($0) >= Self.evaluationInterval }) ?? true else { return }
         lastEvaluatedAt = now
         var shown = ArrivalDetector.pruned(Self.loadDates(Self.shownKey, defaults: defaults), now: now)
@@ -117,7 +117,8 @@ final class ArrivalCardManager {
         ArrivalDetector.candidates(
             stops: model.settings.travelPlanStops,
             items: model.settings.travelTripItems ?? [],
-            plans: model.snapshot.plans
+            plans: model.snapshot.plans,
+            memos: model.snapshot.memos
         )
     }
 

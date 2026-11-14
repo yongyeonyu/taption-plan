@@ -2,7 +2,7 @@ import CoreLocation
 import Foundation
 import TaptionPlanCore
 
-/// 도착을 볼 일정 장소 하나(ARC1114A14). 좌표는 여행 일정 핀에서만 온다.
+/// 도착을 볼 일정 장소 하나(ARC1114A14). 좌표는 여행 일정 핀이나 일반 일정의 장소(PLB1114A18)에서 온다.
 struct ArrivalCandidate: Equatable, Sendable {
     var stopID: UUID
     var title: String
@@ -14,6 +14,10 @@ struct ArrivalCandidate: Equatable, Sendable {
     var closesAt: Date
     var tripID: String?
     var itemID: String?
+    /// 일반 일정의 장소에서 만든 후보만 채운다: 일정 시간·메모·예상 지출. 이때 `stopID`는 일정 번호다.
+    var planSpan: TimeSpan?
+    var note: String?
+    var plannedSpendKRW: Double?
 }
 
 /// 앱이 실제로 받은 위치 하나.
@@ -37,9 +41,10 @@ enum ArrivalDetector {
         stops: [TravelPlanStop],
         items: [TravelTripItem],
         plans: [PlanRecord],
+        memos: [ActionMemo] = [],
         calendar: Calendar = .autoupdatingCurrent
     ) -> [ArrivalCandidate] {
-        stops.compactMap { stop in
+        planCandidates(plans: plans, memos: memos, pinned: Set(stops.compactMap(\.planID))) + stops.compactMap { stop in
             guard CLLocationCoordinate2DIsValid(CLLocationCoordinate2D(latitude: stop.latitude, longitude: stop.longitude)) else { return nil }
             let item = stop.tripID.flatMap { trip in items.first { $0.tripID == trip && $0.itemID == stop.itemID } }
             let plan = stop.planID.flatMap { id in plans.first { $0.id == id } }
@@ -58,6 +63,22 @@ enum ArrivalDetector {
             return ArrivalCandidate(
                 stopID: stop.id, title: item?.title ?? stop.title, latitude: stop.latitude, longitude: stop.longitude,
                 opensAt: opensAt, closesAt: closesAt, tripID: stop.tripID, itemID: stop.itemID
+            )
+        }
+    }
+
+    /// 장소를 넣은 일반 일정(PLB1114A18). 루틴·건너뛴 일정과, 이미 여행 핀이 이어진 일정은 뺀다. 시각 창은 그 일정의 시간이다.
+    static func planCandidates(plans: [PlanRecord], memos: [ActionMemo], pinned: Set<UUID>) -> [ArrivalCandidate] {
+        plans.compactMap { plan in
+            guard let place = plan.place, plan.status != .skipped, !pinned.contains(plan.id), !GoalRecordPolicy.isGoal(plan),
+                  CLLocationCoordinate2DIsValid(CLLocationCoordinate2D(latitude: place.latitude, longitude: place.longitude)) else { return nil }
+            let notes = memos.filter { $0.planID == plan.id }.sorted { $0.createdAt < $1.createdAt }
+                .map { $0.text.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+            return ArrivalCandidate(
+                stopID: plan.id, title: place.name, latitude: place.latitude, longitude: place.longitude,
+                opensAt: plan.span.start.addingTimeInterval(-leadTime), closesAt: max(plan.span.end, plan.span.start),
+                planSpan: plan.span, note: notes.isEmpty ? nil : notes.joined(separator: "\n"),
+                plannedSpendKRW: plan.plannedSpendKRW
             )
         }
     }
@@ -111,14 +132,14 @@ struct ArrivalCard: Equatable, Identifiable {
     static func make(candidate: ArrivalCandidate, items: [TravelTripItem], tripBudgetKRW: Double?) -> ArrivalCard {
         let item = candidate.tripID.flatMap { trip in items.first { $0.tripID == trip && $0.itemID == candidate.itemID } }
         let details = item.map { TravelTripItem.details(of: $0.itemID, tripID: $0.tripID, in: items).sorted { $0.start < $1.start } } ?? []
-        let spend = ([item].compactMap { $0 } + details).compactMap(\.plannedSpendKRW).reduce(0, +)
+        let spend = ([item].compactMap { $0 } + details).compactMap(\.plannedSpendKRW).reduce(0, +) + (item == nil ? candidate.plannedSpendKRW ?? 0 : 0)
         return ArrivalCard(
             id: candidate.stopID,
             title: candidate.title,
-            start: item?.start,
-            end: item?.end,
+            start: item?.start ?? candidate.planSpan?.start,
+            end: item?.end ?? candidate.planSpan?.end,
             offsetSeconds: item?.startOffsetSeconds,
-            note: clean(item?.note),
+            note: clean(item?.note ?? candidate.note),
             checklist: details.map { CheckItem(id: "\($0.tripID)|\($0.itemID)", title: $0.title, note: clean($0.note)) },
             plannedSpendKRW: spend > 0 ? spend : nil,
             tripBudgetKRW: tripBudgetKRW.flatMap { $0 > 0 ? $0 : nil }

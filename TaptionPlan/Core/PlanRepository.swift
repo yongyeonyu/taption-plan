@@ -352,7 +352,13 @@ enum CloudSnapshotRecoveryEngine {
         _ backup: [PlanRecord]
     ) -> [PlanRecord] {
         merged(primary, backup, id: \.id) { current, candidate in
-            candidate.updatedAt > current.updatedAt ? candidate : current
+            if candidate.updatedAt > current.updatedAt { return candidate }
+            guard candidate.updatedAt == current.updatedAt else { return current }
+            // 같은 시각의 사본인데 한쪽에만 장소·예상 지출이 있으면 그 칸을 모르는 옛 빌드가 다시 저장한 것이다. 값을 지킨다(PLB1114A18).
+            var kept = current
+            kept.place = current.place ?? candidate.place
+            kept.plannedSpendKRW = current.plannedSpendKRW ?? candidate.plannedSpendKRW
+            return kept
         }
     }
 
