@@ -442,7 +442,7 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeApplePlaybackMath.swift",
-   "line": 410,
+   "line": 427,
    "ko": "for segment: TravelSegment",
    "en": "UserDefaults = .standard"
   },

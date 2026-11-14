@@ -621,7 +621,7 @@
    "ko": "AI 공유 수준을 「{0}」(으)로 바꿀까요?",
    "en": "Change AI sharing to “{0}”?",
    "files": [
-    "AITaskQueue.swift:418"
+    "AITaskQueue.swift:419"
    ],
    "args": [
     "level.title(language)"
@@ -750,7 +750,7 @@
    "files": [
     "AITaskPanel.swift:395",
     "AITaskPanel.swift:450",
-    "AITaskQueue.swift:477"
+    "AITaskQueue.swift:478"
    ],
    "args": [],
    "targets": [
@@ -799,7 +799,7 @@
    "ko": "AI 연결 화면에서 PIN을 바꿀까요?",
    "en": "Change the PIN in AI connections?",
    "files": [
-    "AITaskQueue.swift:426"
+    "AITaskQueue.swift:427"
    ],
    "args": [],
    "targets": [
@@ -901,7 +901,7 @@
    "files": [
     "AITaskPanel.swift:310",
     "AITaskPanel.swift:451",
-    "AITaskQueue.swift:477"
+    "AITaskQueue.swift:478"
    ],
    "args": [],
    "targets": [
@@ -34250,7 +34250,7 @@
    "ko": "건강 연동을 끌까요?",
    "en": "Turn off Health sync?",
    "files": [
-    "AITaskQueue.swift:422"
+    "AITaskQueue.swift:423"
    ],
    "args": [],
    "targets": [
@@ -40998,7 +40998,7 @@
    "ko": "모든 데이터 삭제 화면을 열까요?",
    "en": "Open the screen to erase all data?",
    "files": [
-    "AITaskQueue.swift:423"
+    "AITaskQueue.swift:424"
    ],
    "args": [],
    "targets": [
@@ -41957,7 +41957,7 @@
    "ko": "백업 화면을 열까요?",
    "en": "Open the backup screen?",
    "files": [
-    "AITaskQueue.swift:424"
+    "AITaskQueue.swift:425"
    ],
    "args": [],
    "targets": [
@@ -42685,7 +42685,7 @@
    "ko": "복원 화면을 열까요?",
    "en": "Open the restore screen?",
    "files": [
-    "AITaskQueue.swift:425"
+    "AITaskQueue.swift:426"
    ],
    "args": [],
    "targets": [
@@ -43408,7 +43408,7 @@
    "ko": "사진 {0}/{1}, {2}",
    "en": "Photo {0} of {1}, {2}",
    "files": [
-    "MapHomePhotoLayer.swift:679"
+    "MapHomePhotoLayer.swift:693"
    ],
    "args": [
     "index + 1",
@@ -43548,7 +43548,7 @@
    "ko": "사진 접기",
    "en": "Hide photos",
    "files": [
-    "MapHomePhotoLayer.swift:692"
+    "MapHomePhotoLayer.swift:706"
    ],
    "args": [],
    "targets": [
@@ -43560,7 +43560,7 @@
    "ko": "사진 펼치기",
    "en": "Show photos",
    "files": [
-    "MapHomePhotoLayer.swift:737"
+    "MapHomePhotoLayer.swift:751"
    ],
    "args": [],
    "targets": [
@@ -44176,7 +44176,7 @@
    "ko": "서버 보관 기간을 {0}로 바꿀까요?",
    "en": "Change server retention to {0}?",
    "files": [
-    "AITaskQueue.swift:421"
+    "AITaskQueue.swift:422"
    ],
    "args": [
     "days.title(language)"
@@ -45549,7 +45549,7 @@
    "ko": "승인하면 건강·Apple Watch에서 가져온 기록이 앱에서 지워집니다.",
    "en": "Approving removes the records brought from Health and Apple Watch from the app.",
    "files": [
-    "AITaskQueue.swift:437"
+    "AITaskQueue.swift:438"
    ],
    "args": [],
    "targets": [
@@ -45561,7 +45561,7 @@
    "ko": "승인하면 그 화면만 엽니다. 실제 실행과 비밀번호 입력은 직접 하세요.",
    "en": "Approving only opens that screen. You do the action and enter any password yourself.",
    "files": [
-    "AITaskQueue.swift:440"
+    "AITaskQueue.swift:441"
    ],
    "args": [],
    "targets": [
@@ -45573,7 +45573,7 @@
    "ko": "승인하면 바로 바뀝니다. 덜 보내거나 기간을 줄이면 서버에 올린 기록을 지웁니다.",
    "en": "It changes as soon as you approve. Sharing less or keeping it shorter deletes what the server holds.",
    "files": [
-    "AITaskQueue.swift:434"
+    "AITaskQueue.swift:435"
    ],
    "args": [],
    "targets": [
@@ -47194,7 +47194,7 @@
    "ko": "앱에서 확인해 주세요.",
    "en": "Open the app to see it.",
    "files": [
-    "AITaskQueue.swift:478"
+    "AITaskQueue.swift:479"
    ],
    "args": [],
    "targets": [
@@ -49382,7 +49382,7 @@
    "ko": "영상 재생",
    "en": "Play video",
    "files": [
-    "MapHomePhotoLayer.swift:390"
+    "MapHomePhotoLayer.swift:404"
    ],
    "args": [],
    "targets": [
@@ -50754,7 +50754,7 @@
    "ko": "위아래로 쓸어 넘기고, 두 번 눌러 크게 봅니다",
    "en": "Swipe up or down to change, double-tap to enlarge",
    "files": [
-    "MapHomePhotoLayer.swift:683"
+    "MapHomePhotoLayer.swift:697"
    ],
    "args": [],
    "targets": [
