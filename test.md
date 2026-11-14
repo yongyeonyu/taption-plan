@@ -7,7 +7,14 @@
 - CLM1114A01(하루 편집 한도 30 → 100): 서버 `npm test` 116건 통과(옛 숫자에 기대던 시험 5건을 새 한도에 맞게 고침), `wrangler deploy` 완료. 대기열 상한은 50 그대로다(100으로 올리면 다른 시험·읽기 상한까지 바뀌어 이번에는 두었다).
 - OCF1114A01(큰 사진에도 「OCR」 표시)·안내문 숫자: `AssistantCommandEditTests`·`AssistantRelayTests`·`LedgerTests` 62건 통과·실패 0(`build/validation/OCB1114A01/sim-16.xcresult`), 구조 점검 통과. 아직 빌드에 없고 화면 확인도 없다.
 
-## AIX1114A01 · P0 일부·P3 앱 (2026-11-14 오후, 아직 빌드에 없음)
+## TFB1114A339 · TestFlight 339 (2026-11-14 오후)
+
+- `bash scripts/testflight/release.sh --yes --request-id TFB1114A339` 종료 코드 0. 기준 커밋 `07248431`.
+- 보고서 `build/validation/TFB1114A339/testflight-report.json`: 빌드 339 처리 상태 `VALID`, `TP Taption Plan 내부 테스트` 그룹 연결 확인, 테스터 노출.
+- 처음 들어간 것: AIX1114A01 P0 일부·P3 앱(규칙 받아 1차 적용, 「AI 규칙」 화면, 맡긴 일 상태 갱신). 새 패키지 `TaptionAssistant`가 든 첫 아카이브다.
+- 업로드·처리·그룹 연결만 확인했다. 설치와 실기기 기능 확인은 하지 않았다.
+
+## AIX1114A01 · P0 일부·P3 앱 (2026-11-14 오후, 339에 들어감)
 
 로그는 `build/validation/AIX1114A01/`. 시뮬레이터(BOKKI-STL) 결과이고 실기기 확인은 없다.
 
