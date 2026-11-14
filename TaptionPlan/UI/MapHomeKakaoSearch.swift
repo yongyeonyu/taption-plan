@@ -192,57 +192,152 @@ enum KakaoMapAvailability {
     }
 }
 
-extension MapHomeView {
-    /// 2단계(KMP1114A02, 대표 신고: 화랑이도 없고 검은 표시만): 그날 경로선 전체·10분 넘게 머문 곳·보고 있는 시각의 화랑이.
-    /// 재생하면 화랑이가 그 시각 자리로 움직이고 지도가 따라간다.
-    /// 3단계(KMP1114A03, 대표 신고: 캐릭터 그림이 다르고 집·말풍선이 없음): 화랑이는 다른 지도와 같은 그림(꾸미기·노선 이름표 포함)에
-    /// 말풍선을 붙이고, 집은 다른 지도의 집 그림과 「○일째」를 놓는다. 모두 한 장 그림이라 움직이지는 않는다. 발자국·날씨·사진은 아직 없다.
-    var kakaoMap: some View {
-        let routes = recordingShows(\.routes)
-            ? (vectorHistoricalRoutes + (vectorActiveRoute.map { [$0] } ?? [])).map { $0.coordinates }.filter { $0.count >= 2 }
-            : []
-        let stays = (currentDayDataSnapshot?.places ?? [])
-            .filter { $0.span.duration >= StayPlaceNaming.minimumMinutes * 60 }
-            .compactMap { $0.point.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) } }
-        return MapHomeKakaoMap(
-            routes: routes,
-            routeColor: UIColor(Color(hex: actualRouteHex)),
-            stays: stays,
-            cat: displayedLocationCoordinate,
-            action: displayedStickmanAction,
-            follows: isDayPlaybackRunning || userTrackingMode.keepsCameraLocked,
-            accessoryID: homeGrowthHistory.season.equippedAccessory,
-            rideLabel: [.bus, .subway].contains(displayedStickmanAction)
-                ? MapHomeRideLabel.text(at: displayedLocationDate, travel: currentDayDataSnapshot?.travel ?? []) : nil,
-            bubble: recordingShows(\.cat) ? MapHomeCatSpeechBubble.displayText(action: displayedStickmanAction, fallback: displayedStickmanAction.title).text : nil,
-            home: homeCoordinate,
-            homeKey: "\(MapHomeGrowthPolicy.dailyLevel(for: model.selectedDate))|\(language.rawValue)",
-            homeLabel: MapHomeGrowthPolicy.dayLabel(level: MapHomeGrowthPolicy.dailyLevel(for: model.selectedDate), language: language),
-            homeArtwork: AnyView(daySummaryHomeArtwork)
-        )
-        .ignoresSafeArea()
-        .accessibilityLabel(language.text("카카오 지도", "Kakao map"))
+/// 카카오 지도의 화면 점 ↔ 좌표 변환(KMP1114A04). 카카오 SDK에는 좌표 → 화면 변환이 없어,
+/// 화면 세 점의 좌표(`getPosition`)로 「화면 → 웹 메르카토르」 아핀 변환을 풀고 그 역으로 투영한다. 기울기는 꺼 둔다.
+struct MapHomeKakaoProjection: Equatable, Sendable {
+    /// 세계 좌표(웹 메르카토르 0...1, y는 남쪽이 큼) = origin + m·(x, y).
+    let originX: Double, originY: Double
+    let m11: Double, m12: Double, m21: Double, m22: Double
+    let size: CGSize
+
+    static let earthCircumference = 40_075_016.686
+    /// 벡터 지도(MapLibre) 카메라 고도와 같은 눈금: 고도 = 화면 세로에 보이는 거리 ÷ (2·tan 15°).
+    static let distancePerVisibleMeter = 1 / (2 * tan(15 * Double.pi / 180))
+
+    static func world(_ coordinate: CLLocationCoordinate2D) -> (x: Double, y: Double) {
+        let latitude = min(max(coordinate.latitude, -85.051_128), 85.051_128) * .pi / 180
+        return ((coordinate.longitude + 180) / 360, (1 - log(tan(.pi / 4 + latitude / 2)) / .pi) / 2)
+    }
+
+    static func coordinate(worldX x: Double, worldY y: Double) -> CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: atan(sinh(.pi * (1 - 2 * y))) * 180 / .pi, longitude: x * 360 - 180)
+    }
+
+    private static func wrapped(_ delta: Double) -> Double {
+        delta > 0.5 ? delta - 1 : (delta < -0.5 ? delta + 1 : delta)
+    }
+
+    /// 카메라 값으로 만든 변환(명령을 보낸 직후·재생 중, 엔진이 그리기 전에도 쓸 수 있다). heading은 시계 방향 도.
+    init(center: CLLocationCoordinate2D, cameraDistance: Double, heading: Double, size: CGSize) {
+        let metersPerPoint = cameraDistance / Self.distancePerVisibleMeter / max(Double(size.height), 1)
+        let scale = metersPerPoint / (Self.earthCircumference * max(cos(center.latitude * .pi / 180), 0.01))
+        let radians = heading * .pi / 180
+        m11 = scale * cos(radians)
+        m12 = -scale * sin(radians)
+        m21 = scale * sin(radians)
+        m22 = scale * cos(radians)
+        let world = Self.world(center), midX = Double(size.width) / 2, midY = Double(size.height) / 2
+        originX = world.x - m11 * midX - m12 * midY
+        originY = world.y - m21 * midX - m22 * midY
+        self.size = size
+    }
+
+    /// 화면 세 점과 그 자리의 좌표로 푼 변환. 세 점이 한 줄이거나 좌표가 이상하면 nil.
+    init?(screen: [CGPoint], coordinates: [CLLocationCoordinate2D], size: CGSize) {
+        guard screen.count == 3, coordinates.count == 3, size.width > 0, size.height > 0,
+              coordinates.allSatisfy({ CLLocationCoordinate2DIsValid($0) && abs($0.latitude) < 85 }) else { return nil }
+        let worlds = coordinates.map(Self.world)
+        let e1x = Double(screen[1].x - screen[0].x), e1y = Double(screen[1].y - screen[0].y)
+        let e2x = Double(screen[2].x - screen[0].x), e2y = Double(screen[2].y - screen[0].y)
+        let determinant = e1x * e2y - e2x * e1y
+        guard abs(determinant) > 1e-9 else { return nil }
+        let w1x = Self.wrapped(worlds[1].x - worlds[0].x), w1y = worlds[1].y - worlds[0].y
+        let w2x = Self.wrapped(worlds[2].x - worlds[0].x), w2y = worlds[2].y - worlds[0].y
+        let a = (w1x * e2y - w2x * e1y) / determinant, b = (w2x * e1x - w1x * e2x) / determinant
+        let c = (w1y * e2y - w2y * e1y) / determinant, d = (w2y * e1x - w1y * e2x) / determinant
+        let x = worlds[0].x - a * Double(screen[0].x) - b * Double(screen[0].y)
+        let y = worlds[0].y - c * Double(screen[0].x) - d * Double(screen[0].y)
+        // 뒤집히거나 찌그러진 값은 엔진이 아직 준비되지 않은 것이다.
+        guard [a, b, c, d, x, y].allSatisfy(\.isFinite), a * d - b * c > 1e-24 else { return nil }
+        (m11, m12, m21, m22, originX, originY) = (a, b, c, d, x, y)
+        self.size = size
+    }
+
+    /// 화면 안에서 고르는 세 표본 점(가장자리는 피한다).
+    static func samplePoints(in size: CGSize) -> [CGPoint] {
+        [CGPoint(x: size.width * 0.25, y: size.height * 0.25), CGPoint(x: size.width * 0.75, y: size.height * 0.25),
+         CGPoint(x: size.width * 0.25, y: size.height * 0.75)]
+    }
+
+    private var scale: Double { hypot(m11, m21) }
+
+    /// 화면 위쪽이 가리키는 방위(북 0, 시계 방향 도). MapLibre의 heading과 같은 뜻이다.
+    var heading: Double {
+        let degrees = atan2(m21, m11) * 180 / .pi
+        return degrees < 0 ? degrees + 360 : degrees
+    }
+
+    func coordinate(at point: CGPoint) -> CLLocationCoordinate2D {
+        let x = Double(point.x), y = Double(point.y)
+        return Self.coordinate(worldX: originX + m11 * x + m12 * y, worldY: originY + m21 * x + m22 * y)
+    }
+
+    func point(for coordinate: CLLocationCoordinate2D) -> CGPoint {
+        let world = Self.world(coordinate)
+        let centerX = originX + m11 * Double(size.width) / 2 + m12 * Double(size.height) / 2
+        // 날짜 변경선 너머는 화면 가운데에서 가까운 쪽으로 편다.
+        let dx = centerX + Self.wrapped(world.x - centerX) - originX, dy = world.y - originY
+        let determinant = m11 * m22 - m12 * m21
+        return CGPoint(x: (m22 * dx - m12 * dy) / determinant, y: (m11 * dy - m21 * dx) / determinant)
+    }
+
+    var center: CLLocationCoordinate2D { coordinate(at: CGPoint(x: size.width / 2, y: size.height / 2)) }
+
+    /// 화면 가운데 위도에서 1pt가 덮는 땅 위 거리(m).
+    var metersPerPoint: Double { scale * Self.earthCircumference * cos(center.latitude * .pi / 180) }
+
+    var cameraDistance: Double { max(metersPerPoint * Double(size.height) * Self.distancePerVisibleMeter, 1) }
+
+    /// 화면 네 귀퉁이를 감싸는 위·경도 폭.
+    var span: MKCoordinateSpan {
+        let corners = [CGPoint.zero, CGPoint(x: size.width, y: 0), CGPoint(x: 0, y: size.height), CGPoint(x: size.width, y: size.height)]
+            .map(coordinate(at:))
+        let latitudes = corners.map(\.latitude), longitudes = corners.map(\.longitude)
+        return MKCoordinateSpan(latitudeDelta: (latitudes.max() ?? 0) - (latitudes.min() ?? 0),
+                                longitudeDelta: (longitudes.max() ?? 0) - (longitudes.min() ?? 0))
+    }
+
+    /// 화면에서 `tolerance`pt 넘게 어긋나면 다른 화면으로 본다(멈춘 지도의 계산 잔떨림은 거른다).
+    func differs(from other: Self, tolerance: Double = 0.05) -> Bool {
+        guard size == other.size, scale > 0 else { return true }
+        let reach = Double(max(size.width, size.height))
+        let shift = max(abs(originX - other.originX), abs(originY - other.originY)) / scale
+        let turn = max(abs(m11 - other.m11), abs(m12 - other.m12), abs(m21 - other.m21), abs(m22 - other.m22)) * reach / scale
+        return shift > tolerance || turn > tolerance
+    }
+
+    /// 영역이 화면에 다 들어오는 카메라 거리(북쪽이 위일 때).
+    static func cameraDistance(fitting region: MKCoordinateRegion, size: CGSize) -> Double {
+        let metersPerDegree = earthCircumference / 360
+        let tall = region.span.latitudeDelta * metersPerDegree
+        let wide = region.span.longitudeDelta * metersPerDegree * cos(region.center.latitude * .pi / 180)
+        let visible = max(tall, wide * Double(size.height) / max(Double(size.width), 1))
+        return max(visible * distancePerVisibleMeter, 1)
     }
 }
 
-struct MapHomeKakaoMap: UIViewRepresentable {
-    let routes: [[CLLocationCoordinate2D]]
-    let routeColor: UIColor
-    let stays: [CLLocationCoordinate2D]
-    let cat: CLLocationCoordinate2D?
-    let action: MapHomeStickmanAction
-    let follows: Bool
-    var accessoryID: String? = nil
-    var rideLabel: String? = nil
-    /// 화랑이 옆 말풍선 글. nil이면 붙이지 않는다.
-    var bubble: String? = nil
-    var home: CLLocationCoordinate2D? = nil
-    /// 집 그림을 다시 그릴지 가르는 값(성장 단계·언어).
-    var homeKey = ""
-    var homeLabel = ""
-    var homeArtwork: AnyView? = nil
+/// 같은 입력으로 벡터 지도나 카카오 지도를 그린다. 위에 얹는 화면 층은 둘이 같다.
+struct MapHomeViewportEngineMap: View {
+    let usesKakao: Bool
+    let kakaoLabel: String
+    let inputs: MapHomeVectorMap
 
-    func makeCoordinator() -> Coordinator { Coordinator() }
+    var body: some View {
+        if usesKakao {
+            MapHomeKakaoMap(inputs: inputs).accessibilityLabel(kakaoLabel)
+        } else {
+            inputs.id(inputs.style.rawValue)
+        }
+    }
+}
+
+/// 카카오 지도(KMP1114A04): 타일과 경로선만 그린다. 핀·사진·발자국·날씨·화랑이·말풍선은 벡터 지도와 같은
+/// SwiftUI 층(`MapHomeVectorViewportOverlay`)이 그리고, 이 코디네이터는 그 층에 화면 좌표를 대 준다.
+struct MapHomeKakaoMap: UIViewRepresentable {
+    /// 벡터 지도와 같은 입력·콜백. 스타일·언어는 쓰지 않는다.
+    let inputs: MapHomeVectorMap
+
+    func makeCoordinator() -> Coordinator { Coordinator(parent: inputs) }
 
     func makeUIView(context: Context) -> KMViewContainer {
         KakaoMapAvailability.initializeIfNeeded()
@@ -250,8 +345,7 @@ struct MapHomeKakaoMap: UIViewRepresentable {
         let controller = KMController(viewContainer: container)
         controller.delegate = context.coordinator
         context.coordinator.controller = controller
-        context.coordinator.container = container
-        context.coordinator.update(self)
+        context.coordinator.attach(to: container)
         // 2.9.4: initEngine(준비, 인증은 뒤에서) → 화면에 붙고 준비가 끝나면 startEngine(→ addViews) → startRendering.
         // 준비 전이나 크기 0일 때 시작하면 지도가 추가되지 않아, 시작될 때까지 짧게 다시 시도한다.
         controller.initEngine()
@@ -260,60 +354,89 @@ struct MapHomeKakaoMap: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: KMViewContainer, context: Context) {
-        context.coordinator.update(self)
+        context.coordinator.parent = inputs
+        context.coordinator.refresh()
+        inputs.playbackDriver?.sink = context.coordinator
     }
 
     static func dismantleUIView(_ uiView: KMViewContainer, coordinator: Coordinator) {
+        coordinator.detach()
         coordinator.controller?.stopRendering()
         coordinator.controller?.stopEngine()
     }
 
     @MainActor
-    final class Coordinator: NSObject, MapControllerDelegate {
+    final class Coordinator: NSObject, MapControllerDelegate, KakaoMapEventDelegate, UIGestureRecognizerDelegate,
+        MapHomePlaybackSink {
+        struct Target {
+            var center: CLLocationCoordinate2D
+            var distance: Double
+            var heading: Double
+        }
+
+        var parent: MapHomeVectorMap
         var controller: KMController?
-        weak var container: KMViewContainer?
+        private weak var container: KMViewContainer?
         private var map: KakaoMap?
-        private var routes: [[CLLocationCoordinate2D]] = []
-        private var stays: [CLLocationCoordinate2D] = []
-        private var cat: CLLocationCoordinate2D?
-        private var action: MapHomeStickmanAction?
-        private var follows = false
-        private var routeColor = UIColor.systemOrange
-        private var drawnRouteKey = 0, drawnStayKey = 0
-        private var drawnCatKey: String?
-        private var catPoi: Poi?
-        private var accessoryID: String?
-        private var rideLabel: String?
-        private var bubble: String?
-        private var home: CLLocationCoordinate2D?
-        private var homeKey = "", homeLabel = ""
-        private var homeArtwork: AnyView?
-        private var drawnHomeKey: String?
-        private var hasCentered = false
         private static let viewName = "mapview"
 
-        func update(_ view: MapHomeKakaoMap) {
-            routes = view.routes
-            stays = view.stays
-            cat = view.cat
-            action = view.action
-            follows = view.follows
-            routeColor = view.routeColor
-            accessoryID = view.accessoryID
-            rideLabel = view.rideLabel
-            bubble = view.bubble
-            home = view.home
-            homeKey = view.homeKey
-            homeLabel = view.homeLabel
-            homeArtwork = view.homeArtwork
-            draw()
+        /// 지금 화면의 변환. 엔진에서 읽었거나, 방금 보낸 카메라 명령으로 미리 계산한 값이다.
+        private var projection: MapHomeKakaoProjection?
+        /// 카카오 카메라 높이 ÷ 화면 세로에 보이는 거리. 화면을 읽을 때마다 맞춘다(처음에는 MapLibre와 같은 화각으로 가정).
+        private var heightPerVisibleMeter = MapHomeKakaoProjection.distancePerVisibleMeter
+        /// 회전각 부호. 문서는 시계 방향이지만 읽은 화면이 반대로 돌면 뒤집는다.
+        private var rotationSign = 1.0
+        /// 방금 보낸 명령. 화면이 멈춘 뒤 읽은 값과 다르면 한 번 고쳐 보낸다.
+        private var unverifiedTarget: Target?
+        private var settleRetries = 0
+        private var hadPlaybackDriver = false
+        private var lastCameraRevision = Int.min
+        private var lastHeading: CLLocationDirection?
+        private var lastHeadingCoordinate: CLLocationCoordinate2D?
+
+        private var link: CADisplayLink?
+        private var isCameraMoving = false
+        private var settleUptime: TimeInterval = 0
+        private var sampleHoldUptime: TimeInterval = 0
+        private var lastChangeUptime: TimeInterval = 0
+
+        private var markerProjector = MapHomeMarkerProjector()
+        private var lastProjectedMarkers: [MapHomeVectorMarker] = []
+        private var lastViewportPublishUptime: TimeInterval = 0
+        private var pendingViewport: (viewport: MapHomeVectorViewport, force: Bool, cameraRevision: Int)?
+        private var isViewportDeliveryScheduled = false
+        private static let playbackViewportInterval: TimeInterval = 1.0 / 60.0 - 0.002
+        private var lastPlaybackViewportUptime: TimeInterval = 0
+        private let markerLayer = MapHomeCoordinatorMarkerLayer()
+
+        private var motionGestures: [UIGestureRecognizer] = []
+        private var longPressGesture: UILongPressGestureRecognizer?
+        private var singleTapGesture: UITapGestureRecognizer?
+        private var doubleTapGesture: UITapGestureRecognizer?
+
+        private var drawnRouteKeys: [String: [MapHomeVectorRouteContentKey]] = [:]
+        private var routeStyleIDs: Set<String> = []
+        private var lastTap: (point: CGPoint, uptime: TimeInterval)?
+        private var lastTerrainTap: (coordinate: CLLocationCoordinate2D, uptime: TimeInterval)?
+        private var hasLoggedProjectionCheck = false
+
+        init(parent: MapHomeVectorMap) { self.parent = parent }
+
+        private var uptime: TimeInterval { ProcessInfo.processInfo.systemUptime }
+
+        private var viewSize: CGSize? {
+            guard let size = container?.bounds.size, size.width > 0, size.height > 0 else { return nil }
+            return size
         }
+
+        // MARK: 엔진 준비
 
         nonisolated func addViews() {
             MainActor.assumeIsolated {
-                let start = (cat ?? stays.first).map { MapPoint(longitude: $0.longitude, latitude: $0.latitude) }
-                    ?? MapPoint(longitude: 126.978, latitude: 37.5665)
-                controller?.addView(MapviewInfo(viewName: Self.viewName, viewInfoName: "map", defaultPosition: start, defaultLevel: 15))
+                let start = parent.displayedCoordinate ?? firstRouteCoordinate ?? parent.homeCoordinate
+                    ?? MapHomeStartupCameraPolicy.fallbackCenter
+                controller?.addView(MapviewInfo(viewName: Self.viewName, viewInfoName: "map",
+                    defaultPosition: MapPoint(longitude: start.longitude, latitude: start.latitude), defaultLevel: 15))
             }
         }
 
@@ -321,8 +444,12 @@ struct MapHomeKakaoMap: UIViewRepresentable {
             MainActor.assumeIsolated {
                 map = controller?.getView(Self.viewName) as? KakaoMap
                 if let bounds = container?.bounds, !bounds.isEmpty { map?.viewRect = bounds }
-                prepareLayers()
-                draw()
+                // 화면 층은 기울기 없는 지도만 맞출 수 있다.
+                map?.setGestureEnable(type: .tilt, enable: false)
+                map?.eventDelegate = self
+                drawnRouteKeys = [:]
+                refresh()
+                startLink(settlingFor: 0.5)
             }
         }
 
@@ -357,150 +484,495 @@ struct MapHomeKakaoMap: UIViewRepresentable {
         nonisolated func containerDidResized(_ size: CGSize) {
             MainActor.assumeIsolated {
                 map?.viewRect = CGRect(origin: .zero, size: size)
+                // 크기가 바뀌면 미리 계산한 변환은 못 쓴다. 엔진이 다시 그린 뒤 읽는다.
+                sampleHoldUptime = uptime + 0.05
+                startLink(settlingFor: 0.2)
             }
         }
 
-        private func prepareLayers() {
-            guard let map else { return }
-            let routes = map.getRouteManager()
-            let line = PerLevelRouteStyle(width: 6, color: routeColor, strokeWidth: 2, strokeColor: .white, level: 0)
-            routes.addRouteStyleSet(RouteStyleSet(styleID: "day", styles: [RouteStyle(styles: [line])]))
-            _ = routes.addRouteLayer(layerID: "day", zOrder: 0)
-            let labels = map.getLabelManager()
-            // 기호 그림은 카카오가 검게 그려서(대표 캡처) 색을 넣은 비트맵을 직접 그린다.
-            labels.addPoiStyle(PoiStyle(styleID: "stay", styles: [PerLevelPoiStyle(iconStyle: PoiIconStyle(symbol: Self.dot(routeColor)), level: 0)]))
-            _ = labels.addLabelLayer(option: LabelLayerOptions(layerID: "stays", competitionType: .none, competitionUnit: .symbolFirst, orderType: .rank, zOrder: 10))
-            _ = labels.addLabelLayer(option: LabelLayerOptions(layerID: "home", competitionType: .none, competitionUnit: .symbolFirst, orderType: .rank, zOrder: 15))
-            _ = labels.addLabelLayer(option: LabelLayerOptions(layerID: "cat", competitionType: .none, competitionUnit: .symbolFirst, orderType: .rank, zOrder: 20))
+        func attach(to container: KMViewContainer) {
+            self.container = container
+            // 카카오 지도는 터치를 직접 받아 움직인다. 아래 인식기는 지켜보기만 하고 터치를 가로채지 않는다.
+            let motion: [UIGestureRecognizer] = [UIPanGestureRecognizer(), UIPinchGestureRecognizer(), UIRotationGestureRecognizer()]
+            for gesture in motion { gesture.addTarget(self, action: #selector(handleMotionGesture(_:))) }
+            let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
+            longPress.minimumPressDuration = 0.55
+            longPress.allowableMovement = 12
+            let doubleTap = UITapGestureRecognizer()
+            doubleTap.numberOfTapsRequired = 2
+            let singleTap = UITapGestureRecognizer(target: self, action: #selector(handleSingleTap(_:)))
+            singleTap.require(toFail: longPress)
+            // 두 번 누르기(카카오의 확대)의 첫 번째를 한 번 누르기로 읽지 않는다.
+            singleTap.require(toFail: doubleTap)
+            for gesture in motion + [longPress, doubleTap, singleTap] {
+                gesture.cancelsTouchesInView = false
+                gesture.delaysTouchesEnded = false
+                gesture.delegate = self
+                container.addGestureRecognizer(gesture)
+            }
+            motionGestures = motion
+            longPressGesture = longPress
+            singleTapGesture = singleTap
+            doubleTapGesture = doubleTap
         }
 
-        private static func key(_ lines: [[CLLocationCoordinate2D]]) -> Int {
-            var hasher = Hasher()
-            for line in lines {
-                hasher.combine(line.count)
-                if let first = line.first, let last = line.last {
-                    hasher.combine(first.latitude); hasher.combine(first.longitude)
-                    hasher.combine(last.latitude); hasher.combine(last.longitude)
+        func detach() {
+            stopLink()
+            let presses: [UIGestureRecognizer?] = [longPressGesture, singleTapGesture, doubleTapGesture]
+            for gesture in motionGestures + presses.compactMap({ $0 }) {
+                gesture.view?.removeGestureRecognizer(gesture)
+            }
+            motionGestures = []
+            longPressGesture = nil
+            singleTapGesture = nil
+            doubleTapGesture = nil
+            markerLayer.host.removeFromSuperlayer()
+            map?.eventDelegate = nil
+            pendingViewport = nil
+        }
+
+        /// SwiftUI가 새 입력을 줄 때마다: 바뀐 경로·마커만 다시 반영하고 카메라 명령을 적용한다.
+        func refresh() {
+            updateRoutes()
+            updateMarkerLayer()
+            if let projection, projection.size == viewSize, lastProjectedMarkers != parent.markers {
+                publishViewport(projection, force: true)
+            }
+            applyCameraCommandIfNeeded()
+            applyHeadingIfNeeded()
+            // 재생이 끝나면 엔진 값을 다시 읽어 최종 화면으로 넘긴다.
+            if hadPlaybackDriver, parent.playbackDriver == nil { startLink(settlingFor: 0.1) }
+            hadPlaybackDriver = parent.playbackDriver != nil
+        }
+
+        // MARK: 화면 읽기
+
+        /// 엔진이 지금 그리는 화면의 변환. 준비 전이거나 값이 이상하면 nil.
+        private func sampleProjection() -> MapHomeKakaoProjection? {
+            guard let map, let size = viewSize else { return nil }
+            let screen = MapHomeKakaoProjection.samplePoints(in: size)
+            let coordinates = screen.map { point -> CLLocationCoordinate2D in
+                let position = map.getPosition(point).wgsCoord
+                return CLLocationCoordinate2D(latitude: position.latitude, longitude: position.longitude)
+            }
+            return MapHomeKakaoProjection(screen: screen, coordinates: coordinates, size: size)
+        }
+
+        private func calibrate(with sampled: MapHomeKakaoProjection) {
+            guard let map else { return }
+            let ratio = map.cameraHeight / (sampled.metersPerPoint * Double(sampled.size.height))
+            if ratio.isFinite, (0.05...50).contains(ratio) { heightPerVisibleMeter = ratio }
+        }
+
+        private func markerPoints(in projection: MapHomeKakaoProjection) -> [String: CGPoint] {
+            let center = projection.center, span = projection.span
+            return markerProjector.points(
+                markers: parent.markers,
+                camera: .init(latitude: center.latitude, longitude: center.longitude, altitude: projection.cameraDistance,
+                              heading: projection.heading, pitch: 0, size: projection.size),
+                visible: .init(south: center.latitude - span.latitudeDelta / 2, west: center.longitude - span.longitudeDelta / 2,
+                               north: center.latitude + span.latitudeDelta / 2, east: center.longitude + span.longitudeDelta / 2),
+                project: { projection.point(for: $0) }
+            )
+        }
+
+        private func viewport(of projection: MapHomeKakaoProjection, markerPoints: [String: CGPoint]) -> MapHomeVectorViewport {
+            MapHomeVectorViewport(center: projection.center, span: projection.span, cameraDistance: projection.cameraDistance,
+                                  heading: projection.heading, pitch: 0, markerPoints: markerPoints)
+        }
+
+        /// 벡터 지도와 같은 규칙: 움직이는 동안은 최대 60Hz, 한 런루프에 한 번만 넘기고, 그 사이 카메라 명령이 바뀌면 버린다.
+        private func publishViewport(_ projection: MapHomeKakaoProjection, force: Bool) {
+            let now = uptime
+            guard force || now - lastViewportPublishUptime >= 1.0 / 60.0 else { return }
+            lastViewportPublishUptime = now
+            lastProjectedMarkers = parent.markers
+            let next = viewport(of: projection, markerPoints: markerPoints(in: projection))
+            pendingViewport = (next, (pendingViewport?.force ?? false) || force, lastCameraRevision)
+            guard !isViewportDeliveryScheduled else { return }
+            isViewportDeliveryScheduled = true
+            Task { @MainActor [self] in
+                isViewportDeliveryScheduled = false
+                guard let pending = pendingViewport else { return }
+                pendingViewport = nil
+                guard pending.cameraRevision == parent.cameraRevision else { return }
+                parent.onViewportChange(pending.viewport, pending.force)
+            }
+        }
+
+        // MARK: 움직이는 동안의 표시 링크
+
+        /// 카카오 SDK는 움직이는 동안의 알림이 없어(시작·끝만 있다) 그 사이는 표시 링크로 화면을 읽는다.
+        private func startLink(settlingFor seconds: TimeInterval) {
+            let now = uptime
+            settleUptime = max(settleUptime, now + seconds)
+            guard link == nil else { return }
+            lastChangeUptime = now
+            let link = CADisplayLink(target: self, selector: #selector(tick))
+            link.preferredFrameRateRange = CAFrameRateRange(minimum: 60, maximum: 120, preferred: 120)
+            link.add(to: .main, forMode: .common)
+            self.link = link
+        }
+
+        private func stopLink() {
+            link?.invalidate()
+            link = nil
+        }
+
+        private var hasActiveGesture: Bool {
+            motionGestures.contains { $0.state == .began || $0.state == .changed }
+        }
+
+        @objc private func tick() {
+            let now = uptime
+            if parent.playbackDriver == nil, now >= sampleHoldUptime, let sampled = sampleProjection() {
+                calibrate(with: sampled)
+                if projection.map({ sampled.differs(from: $0) }) ?? true {
+                    projection = sampled
+                    lastChangeUptime = now
+                    settleUptime = max(settleUptime, now + 0.12)
+                    publishViewport(sampled, force: false)
                 }
             }
-            return hasher.finalize()
+            // 멈춤 알림이 오지 않아도 1초 동안 그대로면 멈춘 것으로 본다.
+            if isCameraMoving, now - lastChangeUptime > 1 { isCameraMoving = false }
+            guard !isCameraMoving, !hasActiveGesture, now >= settleUptime else { return }
+            stopLink()
+            finishSettling()
         }
 
-        private func point(_ coordinate: CLLocationCoordinate2D) -> MapPoint {
-            MapPoint(longitude: coordinate.longitude, latitude: coordinate.latitude)
+        /// 화면이 멈췄다: 엔진 값을 다시 읽어 최종 화면으로 넘긴다. 명령과 다르게 놓였으면 한 번 고쳐 보낸다.
+        private func finishSettling() {
+            guard parent.playbackDriver == nil else { return }
+            let target = unverifiedTarget
+            unverifiedTarget = nil
+            if let sampled = sampleProjection() {
+                settleRetries = 0
+                calibrate(with: sampled)
+                if let target, correctsCommand(target, sampled: sampled) {
+                    move(to: target)
+                    sampleHoldUptime = uptime + 0.05
+                    startLink(settlingFor: 0.25)
+                    return
+                }
+                projection = sampled
+            } else if target != nil, settleRetries < 20 {
+                // 엔진이 아직 그리지 않아 읽을 수 없다. 보낸 명령을 확인할 수 있을 때까지 조금 더 기다린다.
+                settleRetries += 1
+                unverifiedTarget = target
+                startLink(settlingFor: 0.25)
+                return
+            }
+            if let projection { publishViewport(projection, force: true) }
         }
 
-        /// 바뀐 것만 다시 그린다(재생 중에는 화랑이 자리만 바뀐다).
-        private func draw() {
+        /// 높이 눈금(위 `calibrate`)이나 회전 방향이 가정과 달랐는지 본다.
+        private func correctsCommand(_ target: Target, sampled: MapHomeKakaoProjection) -> Bool {
+            if abs(sin(target.heading * .pi / 180)) > 0.1,
+               angularDistance(sampled.heading, target.heading) > 5, angularDistance(sampled.heading, -target.heading) < 5 {
+                rotationSign = -rotationSign
+                return true
+            }
+            return abs(sampled.cameraDistance / max(target.distance, 1) - 1) > 0.03
+        }
+
+        // MARK: 카메라 명령
+
+        private func move(to target: Target) {
             guard let map else { return }
-            let routeKey = Self.key(routes)
-            if routeKey != drawnRouteKey, let layer = map.getRouteManager().getRouteLayer(layerID: "day") {
-                drawnRouteKey = routeKey
+            let visible = target.distance / MapHomeKakaoProjection.distancePerVisibleMeter
+            map.moveCamera(CameraUpdate.make(cameraPosition: CameraPosition(
+                target: MapPoint(longitude: target.center.longitude, latitude: target.center.latitude),
+                height: visible * heightPerVisibleMeter,
+                rotation: rotationSign * target.heading * .pi / 180,
+                tilt: 0
+            )))
+        }
+
+        /// 카메라를 놓고, 엔진이 그리기를 기다리지 않고 계산한 화면을 바로 넘긴다(벡터 지도는 놓자마자 읽을 수 있다).
+        private func apply(_ target: Target, verifies: Bool) {
+            guard map != nil, let size = viewSize else { return }
+            move(to: target)
+            if verifies { unverifiedTarget = target }
+            let predicted = MapHomeKakaoProjection(center: target.center, cameraDistance: target.distance, heading: target.heading, size: size)
+            projection = predicted
+            publishViewport(predicted, force: true)
+            // 엔진이 새 카메라로 그리기 전의 옛 화면을 읽지 않게 잠깐 기다린다.
+            sampleHoldUptime = uptime + 0.05
+            startLink(settlingFor: 0.25)
+        }
+
+        func applyCameraCommandIfNeeded() {
+            guard map != nil, let size = viewSize, lastCameraRevision != parent.cameraRevision else { return }
+            lastCameraRevision = parent.cameraRevision
+            // 재생 구동기가 카메라를 맡는 동안 SwiftUI 카메라 명령은 버린다(PLY1029A08).
+            if parent.playbackDriver != nil {
+                MapHomePlaybackFrameStats.blockedCameraCommands &+= 1
+                return
+            }
+            if let region = parent.cameraPosition.region {
+                apply(Target(center: region.center, distance: MapHomeKakaoProjection.cameraDistance(fitting: region, size: size),
+                             heading: projection?.heading ?? 0), verifies: true)
+            } else if let camera = parent.cameraPosition.camera {
+                apply(Target(center: camera.centerCoordinate, distance: camera.distance, heading: camera.heading), verifies: true)
+            } else {
+                apply(Target(center: parent.displayedCoordinate ?? firstRouteCoordinate ?? parent.homeCoordinate
+                                 ?? MapHomeStartupCameraPolicy.fallbackCenter,
+                             distance: MapHomeStartupCameraPolicy.distance, heading: 0), verifies: true)
+            }
+        }
+
+        func applyHeadingIfNeeded() {
+            guard map != nil, viewSize != nil, parent.playbackDriver == nil else { return }
+            guard parent.followsHeading, let coordinate = parent.displayedCoordinate else {
+                lastHeading = nil
+                lastHeadingCoordinate = nil
+                return
+            }
+            let heading = normalizedHeading(parent.headingDegrees)
+            let coordinateChanged = lastHeadingCoordinate.map {
+                abs($0.latitude - coordinate.latitude) > 0.000_001 || abs($0.longitude - coordinate.longitude) > 0.000_001
+            } ?? true
+            let headingChanged = lastHeading.map { angularDistance($0, heading) >= 0.5 } ?? true
+            guard coordinateChanged || headingChanged else { return }
+            lastHeading = heading
+            lastHeadingCoordinate = coordinate
+            apply(Target(center: coordinate, distance: projection?.cameraDistance ?? MapHomeStartupCameraPolicy.distance,
+                         heading: heading), verifies: false)
+        }
+
+        private var firstRouteCoordinate: CLLocationCoordinate2D? {
+            parent.activeRoute?.coordinates.first
+                ?? parent.activeRouteSegments.first?.coordinates.first
+                ?? parent.historicalRoutes.first?.coordinates.first
+                ?? parent.expectedRoutes.first?.coordinates.first
+                ?? parent.subwayRoutes.first?.coordinates.first
+        }
+
+        private func normalizedHeading(_ value: CLLocationDirection) -> CLLocationDirection {
+            let normalized = value.truncatingRemainder(dividingBy: 360)
+            return normalized < 0 ? normalized + 360 : normalized
+        }
+
+        private func angularDistance(_ lhs: CLLocationDirection, _ rhs: CLLocationDirection) -> CLLocationDirection {
+            let delta = abs(normalizedHeading(lhs) - normalizedHeading(rhs))
+            return min(delta, 360 - delta)
+        }
+
+        // MARK: 재생
+
+        var playbackCameraDistance: Double? {
+            (sampleProjection() ?? projection)?.cameraDistance
+        }
+
+        /// 재생 한 프레임: 카메라를 그 자리에 바로 놓는다. 카카오는 놓은 카메라를 다음 그리기에야 돌려줄 수 있어,
+        /// 화면 좌표는 엔진에서 읽지 않고 놓은 값으로 계산한다(읽으면 한 프레임 늦어 화랑이가 튄다, PLY1029A06).
+        func applyPlaybackFrame(_ frame: MapHomePlaybackDriverFrame) {
+            guard map != nil, let size = viewSize, let coordinate = frame.coordinate else { return }
+            // 재생 중 손으로 돌린 방향은 엔진에서 읽어 이어 간다.
+            let heading = (sampleProjection() ?? projection)?.heading ?? 0
+            move(to: Target(center: coordinate, distance: frame.cameraDistance, heading: heading))
+            let predicted = MapHomeKakaoProjection(center: coordinate, cameraDistance: frame.cameraDistance, heading: heading, size: size)
+            projection = predicted
+            parent.onPlaybackStickmanPoint(predicted.point(for: coordinate))
+            let now = uptime
+            let publishes = now - lastPlaybackViewportUptime >= Self.playbackViewportInterval
+            // 발자국 레이어는 지도와 같은 틱에 옮기고, SwiftUI로 가는 뷰포트만 60Hz로 묶는다.
+            guard publishes || !markerLayer.isEmpty else { return }
+            let points = markerPoints(in: predicted)
+            markerLayer.apply(points: points, at: parent.playbackDriver.map {
+                $0.inputs.dayStart.addingTimeInterval(frame.minute * 60)
+            } ?? .distantFuture)
+            guard publishes else { return }
+            lastPlaybackViewportUptime = now
+            parent.onPlaybackViewport(viewport(of: predicted, markerPoints: points))
+        }
+
+        private func updateMarkerLayer() {
+            guard let container else { return }
+            let host = markerLayer.host
+            if host.superlayer == nil, !parent.layerPawprints.isEmpty {
+                host.contentsScale = container.traitCollection.displayScale
+                container.layer.addSublayer(host)
+            }
+            if host.frame != container.bounds { host.frame = container.bounds }
+            markerLayer.update(parent.layerPawprints)
+            if markerLayer.isEmpty { host.removeFromSuperlayer() }
+        }
+
+        // MARK: 카카오 지도 알림
+
+        /// 알림이 어느 스레드로 오는지 문서에 없어 메인으로 옮겨 받는다.
+        private nonisolated func onMain(_ work: @escaping @MainActor @Sendable () -> Void) {
+            if Thread.isMainThread {
+                MainActor.assumeIsolated(work)
+            } else {
+                Task { @MainActor in work() }
+            }
+        }
+
+        nonisolated func cameraWillMove(kakaoMap: KakaoMap, by: MoveBy) {
+            onMain { self.cameraMoved(isMoving: true, by: by) }
+        }
+
+        nonisolated func cameraDidStopped(kakaoMap: KakaoMap, by: MoveBy) {
+            onMain { self.cameraMoved(isMoving: false, by: by) }
+        }
+
+        private func cameraMoved(isMoving: Bool, by: MoveBy) {
+            guard parent.playbackDriver == nil else { return }
+            isCameraMoving = isMoving
+            if isMoving, by != .notUserAction { unverifiedTarget = nil }
+            // 두 번 누르기·두 손가락 누르기·한 손가락 확대는 우리 인식기가 보지 못한다.
+            let tapZooms: [MoveBy] = [.doubleTapZoomIn, .twoFingerTapZoomOut, .oneFingerZoom]
+            if isMoving, tapZooms.contains(by) { parent.onUserCameraGesture() }
+            startLink(settlingFor: 0.1)
+        }
+
+        /// 변환 점검(기기 로그): 카카오가 알려 준 누른 자리와 우리 계산이 몇 pt 어긋나는지 한 번 남긴다.
+        nonisolated func terrainDidTapped(kakaoMap: KakaoMap, position: MapPoint) {
+            let tapped = position.wgsCoord
+            let latitude = tapped.latitude, longitude = tapped.longitude
+            onMain {
+                self.lastTerrainTap = (CLLocationCoordinate2D(latitude: latitude, longitude: longitude), self.uptime)
+                self.logProjectionCheckIfReady()
+            }
+        }
+
+        private func logProjectionCheckIfReady() {
+            guard !hasLoggedProjectionCheck, let projection, let tap = lastTap, let terrain = lastTerrainTap,
+                  abs(tap.uptime - terrain.uptime) < 1 else { return }
+            hasLoggedProjectionCheck = true
+            let point = projection.point(for: terrain.coordinate)
+            TaptionPlanDiagnosticsLogger.shared.record("kakao_map_projection_check", fields: [
+                "error_pt": String(format: "%.1f", hypot(point.x - tap.point.x, point.y - tap.point.y)),
+                "height_ratio": String(format: "%.3f", heightPerVisibleMeter),
+                "rotation_sign": String(format: "%.0f", rotationSign),
+            ])
+        }
+
+        // MARK: 손가락
+
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+                               shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+            // 누르기·길게 누르기끼리만 순서를 지키고, 나머지는 함께 인식한다.
+            !(isPressGesture(gestureRecognizer) && isPressGesture(otherGestureRecognizer))
+        }
+
+        private func isPressGesture(_ gesture: UIGestureRecognizer) -> Bool {
+            gesture === longPressGesture || gesture === singleTapGesture || gesture === doubleTapGesture
+        }
+
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+            guard gestureRecognizer === longPressGesture || gestureRecognizer === singleTapGesture,
+                  let view = gestureRecognizer.view else { return true }
+            return MapHomeLongPressRoutingMath.shouldPresentLocation(
+                at: touch.location(in: view), excluding: parent.longPressExclusionFrame)
+        }
+
+        @objc private func handleMotionGesture(_ gesture: UIGestureRecognizer) {
+            let ended = gesture.state == .ended || gesture.state == .cancelled || gesture.state == .failed
+            if gesture.state == .began { unverifiedTarget = nil }
+            // 시작할 때와 손을 뗀 뒤의 미끄러짐까지 화면을 읽는다.
+            if gesture.state == .began || ended { startLink(settlingFor: 0.3) }
+            if gesture is UIPanGestureRecognizer {
+                if gesture.state == .began, gesture.numberOfTouches == 1 {
+                    parent.onSingleFingerPanBegan()
+                } else if ended {
+                    parent.onSingleFingerPanEnded()
+                }
+            } else if gesture.state == .began {
+                parent.onUserCameraGesture()
+            }
+        }
+
+        @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
+            guard let map, let container, let point = MapHomeMapGestures.longPressPoint(gesture, in: container) else { return }
+            let position = map.getPosition(point).wgsCoord
+            let coordinate = CLLocationCoordinate2D(latitude: position.latitude, longitude: position.longitude)
+            guard CLLocationCoordinate2DIsValid(coordinate) else { return }
+            parent.onLongPress(coordinate)
+        }
+
+        @objc private func handleSingleTap(_ gesture: UITapGestureRecognizer) {
+            guard gesture.state == .ended, let container else { return }
+            let point = gesture.location(in: container)
+            var points: [String: CGPoint] = [:]
+            if let current = sampleProjection() ?? projection {
+                for marker in parent.markers { points[marker.id] = current.point(for: marker.coordinate) }
+            }
+            lastTap = (point, uptime)
+            logProjectionCheckIfReady()
+            parent.onSingleTap(point, points)
+        }
+
+        // MARK: 경로선
+
+        /// 벡터 지도와 같은 네 묶음(지난 경로·지하철·실제·예상)을 같은 순서로 쌓는다. 바뀐 묶음만 다시 그린다.
+        private func updateRoutes() {
+            guard let map else { return }
+            let manager = map.getRouteManager()
+            let actual = MapHomeWBSTripStyle.actualRouteLineWidth
+            let transit = (hex: MapHomeWBSTripStyle.transitRouteHex, opacity: MapHomeWBSTripStyle.actualRouteOpacity)
+            let groups: [(id: String, routes: [MapHomeVectorRoute], width: CGFloat, dotted: Bool, fixed: (hex: String, opacity: Double)?)] = [
+                (id: "historical", routes: parent.historicalRoutes, width: actual, dotted: false, fixed: nil),
+                (id: "subway", routes: parent.subwayRoutes, width: actual, dotted: false, fixed: transit),
+                (id: "active", routes: (parent.activeRoute.map { [$0] } ?? []) + parent.activeRouteSegments, width: actual, dotted: false, fixed: nil),
+                (id: "expected", routes: parent.expectedRoutes, width: MapHomeWBSTripStyle.forecastRouteLineWidth, dotted: true, fixed: nil),
+            ]
+            for (order, group) in groups.enumerated() {
+                let key = group.routes.map(\.contentKey)
+                guard drawnRouteKeys[group.id] != key,
+                      let layer = manager.getRouteLayer(layerID: group.id) ?? manager.addRouteLayer(layerID: group.id, zOrder: order)
+                else { continue }
+                drawnRouteKeys[group.id] = key
                 layer.clearAllRoutes()
-                if !routes.isEmpty {
-                    let option = RouteOptions(routeID: "day", styleID: "day", zOrder: 0)
-                    option.segments = routes.map { RouteSegment(points: $0.map(point), styleIndex: 0) }
+                // 색 하나에 스타일 하나. 같은 색 구간은 한 경로로 묶는다.
+                var segments: [String: [RouteSegment]] = [:], styleOrder: [String] = []
+                for route in group.routes where route.coordinates.count >= 2 {
+                    let styleID = routeStyleID(hex: group.fixed?.hex ?? route.colorHex, opacity: group.fixed?.opacity ?? route.opacity,
+                                               width: group.width, dotted: group.dotted, manager: manager)
+                    if segments[styleID] == nil { styleOrder.append(styleID) }
+                    let points = route.coordinates.map { MapPoint(longitude: $0.longitude, latitude: $0.latitude) }
+                    segments[styleID, default: []].append(RouteSegment(points: points, styleIndex: 0))
+                }
+                for (index, styleID) in styleOrder.enumerated() {
+                    let option = RouteOptions(routeID: "\(group.id)-\(index)", styleID: styleID, zOrder: index)
+                    option.segments = segments[styleID] ?? []
                     layer.addRoute(option: option)?.show()
                 }
             }
-            let stayKey = Self.key([stays])
-            if stayKey != drawnStayKey, let layer = map.getLabelManager().getLabelLayer(layerID: "stays") {
-                drawnStayKey = stayKey
-                layer.clearAllItems()
-                layer.addPois(option: PoiOptions(styleID: "stay"), at: stays.map(point))?.forEach { $0.show() }
-            }
-            drawHome(on: map)
-            drawCat(on: map)
-            if let cat, follows || !hasCentered {
-                hasCentered = true
-                map.moveCamera(CameraUpdate.make(target: point(cat), mapView: map))
-            }
         }
 
-        /// 집: 다른 지도와 같은 집 그림 아래에 「○일째」. 성장 단계나 집 자리가 바뀔 때만 다시 그린다.
-        private func drawHome(on map: KakaoMap) {
-            let labels = map.getLabelManager()
-            guard let layer = labels.getLabelLayer(layerID: "home") else { return }
-            let key = home.map { "\(homeKey)|\($0.latitude)|\($0.longitude)" }
-            guard key != drawnHomeKey else { return }
-            drawnHomeKey = key
-            layer.clearAllItems()
-            guard let home, let key, let artwork = homeArtwork, let image = Self.homeImage(artwork, label: homeLabel) else { return }
-            let styleID = "home-\(key.hashValue)"
-            // 집 그림의 아래쪽 가운데가 집 자리다(그 아래는 이름표).
-            let anchor = CGPoint(x: 0.5, y: Self.homeArtworkHeight / max(image.size.height, 1))
-            labels.addPoiStyle(PoiStyle(styleID: styleID, styles: [PerLevelPoiStyle(iconStyle: PoiIconStyle(symbol: image, anchorPoint: anchor), level: 0)]))
-            layer.addPoi(option: PoiOptions(styleID: styleID), at: point(home))?.show()
-        }
-
-        private func drawCat(on map: KakaoMap) {
-            let labels = map.getLabelManager()
-            guard let cat, let action, let layer = labels.getLabelLayer(layerID: "cat") else { return }
-            // 동작·꾸미기·노선 이름표·말풍선 글이 바뀌면 그림을 새로 만든다. 움직이는 그림은 아니고 한 장이다.
-            let key = "\(action)|\(accessoryID ?? "")|\(rideLabel ?? "")|\(bubble ?? "")"
-            if key != drawnCatKey || catPoi == nil {
-                drawnCatKey = key
-                let styleID = "cat-\(key.hashValue)"
-                if let made = Self.catImage(action, accessoryID: accessoryID, rideLabel: rideLabel, bubble: bubble) {
-                    labels.addPoiStyle(PoiStyle(styleID: styleID, styles: [PerLevelPoiStyle(iconStyle: PoiIconStyle(symbol: made.image, anchorPoint: made.anchor), level: 0)]))
-                }
-                layer.clearAllItems()
-                catPoi = layer.addPoi(option: PoiOptions(styleID: styleID), at: point(cat))
-                catPoi?.show()
-            } else {
-                catPoi?.moveAt(point(cat), duration: 150)
+        /// 카카오 경로선 굵기는 화소로 본다(문서에 단위가 없다). 예상 경로는 점선 대신 옅은 선 위에 점 무늬를 놓는다.
+        private func routeStyleID(hex: String, opacity: Double, width: CGFloat, dotted: Bool, manager: RouteManager) -> String {
+            let alpha = min(max(opacity, 0), 1)
+            let id = "\(hex)|\(Int((alpha * 100).rounded()))|\(dotted ? "dot" : "line")"
+            guard routeStyleIDs.insert(id).inserted else { return id }
+            let scale = container?.traitCollection.displayScale ?? 3
+            let color = UIColor(Color(hex: hex))
+            let styleSet = RouteStyleSet(styleID: id)
+            if dotted {
+                let period = MapHomeWBSTripStyle.routeDash.reduce(0) { $0 + CGFloat(truncating: $1) } * width
+                styleSet.addPattern(RoutePattern(pattern: Self.dot(color.withAlphaComponent(alpha), diameter: width * 2),
+                                                 distance: Float(period * scale), symbol: nil, pinStart: false, pinEnd: false))
             }
+            styleSet.addStyle(RouteStyle(styles: [PerLevelRouteStyle(
+                width: UInt(max(1, (width * scale).rounded())),
+                color: color.withAlphaComponent(dotted ? alpha * 0.35 : alpha),
+                level: 0,
+                patternIndex: dotted ? 0 : -1
+            )]))
+            manager.addRouteStyleSet(styleSet)
+            return id
         }
 
-        private static func dot(_ color: UIColor) -> UIImage {
-            UIGraphicsImageRenderer(size: CGSize(width: 14, height: 14)).image { context in
-                UIColor.white.setFill()
-                context.cgContext.fillEllipse(in: CGRect(x: 0, y: 0, width: 14, height: 14))
+        private static func dot(_ color: UIColor, diameter: CGFloat) -> UIImage {
+            let size = CGSize(width: diameter, height: diameter)
+            return UIGraphicsImageRenderer(size: size).image { context in
                 color.setFill()
-                context.cgContext.fillEllipse(in: CGRect(x: 2.5, y: 2.5, width: 9, height: 9))
+                context.cgContext.fillEllipse(in: CGRect(origin: .zero, size: size))
             }
-        }
-
-        private static let catInset = (leading: CGFloat(34), top: CGFloat(26), bottom: CGFloat(12))
-        static let homeArtworkHeight: CGFloat = 112
-
-        /// 다른 지도와 같은 화랑이(탈것·꾸미기·노선 이름표) 한 장. 말풍선이 있으면 오른쪽에 붙인다.
-        /// anchor는 그림 안에서 화랑이 발이 놓이는 자리다.
-        private static func catImage(_ action: MapHomeStickmanAction, accessoryID: String?, rideLabel: String?, bubble: String?) -> (image: UIImage, anchor: CGPoint)? {
-            let side = MapHomeStickmanMarker.size
-            let content = HStack(alignment: .center, spacing: 6) {
-                MapHomeStickmanMarker(action: action, animationPhase: 0, equippedAccessoryID: accessoryID, rideLabel: rideLabel)
-                    .padding(.leading, catInset.leading)
-                    .padding(.trailing, bubble == nil ? catInset.leading : 10)
-                if let bubble { MapHomeCatSpeechBubble(text: bubble, side: .right, action: action) }
-            }
-            .padding(.top, catInset.top)
-            .padding(.bottom, catInset.bottom)
-            .padding(.trailing, bubble == nil ? 0 : 6)
-            .environment(\.isLuminanceReduced, true)
-            let renderer = ImageRenderer(content: content)
-            renderer.scale = UIScreen.main.scale
-            guard let image = renderer.uiImage, image.size.width > 0, image.size.height > 0 else { return nil }
-            let anchor = CGPoint(x: (catInset.leading + side.width / 2) / image.size.width, y: (image.size.height - catInset.bottom) / image.size.height)
-            return (image, anchor)
-        }
-
-        private static func homeImage(_ artwork: AnyView, label: String) -> UIImage? {
-            let content = VStack(spacing: 2) {
-                artwork
-                Text(verbatim: label)
-                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
-                    .monospacedDigit()
-                    .foregroundStyle(Color.tpInk)
-                    .padding(.horizontal, 12)
-                    .frame(height: 22)
-                    .background(Color.tpSurface.opacity(0.98), in: Capsule())
-                    .overlay { Capsule().stroke(Color.tpBorder, lineWidth: TaptionBorder.width) }
-            }
-            .padding(6)
-            let renderer = ImageRenderer(content: content)
-            renderer.scale = UIScreen.main.scale
-            return renderer.uiImage
         }
     }
 }

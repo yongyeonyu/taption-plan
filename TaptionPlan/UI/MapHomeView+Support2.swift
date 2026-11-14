@@ -188,7 +188,8 @@ extension MapHomeView {
     func applyAutoLandStyle(near: Bool) {
         let current = model.settings.mapDisplayStyle.runtimeStyle
         if near {
-            guard autoLandStyleState.isEmpty, current.mapHomeVectorStyle == nil else { return }
+            // 카카오 지도도 집 땅을 화면 층으로 그리므로 바꾸지 않는다(KMP1114A04).
+            guard autoLandStyleState.isEmpty, !rendersVectorMap else { return }
             let target = MapDisplayStyle.mapLibreCasual
             autoLandStyleState = "\(current.rawValue)|\(target.rawValue)"
             model.setMapDisplayStyle(target)
