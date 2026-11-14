@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { googlePlacePhoto, handle, isActivityUpload, isCommand, isTripPlan, kakaoImage, kakaoKeyword, seal, storageCryptoKey, storageKey } from "../src/index.js";
+import { handle, isActivityUpload, isCommand, isTripPlan, kakaoImage, kakaoKeyword, seal, storageCryptoKey, storageKey } from "../src/index.js";
 
 import { MemoryKV, makeEnv } from "./fakes.mjs";
 
@@ -318,26 +318,4 @@ test("kakao image proxy returns only https photo links and their source (PHX1114
   assert.deepEqual((await response.json()).documents, [{ image: "https://img.example.com/a.jpg", thumbnail: "https://thumb.example.com/a", width: 800, height: 600, site: "어느 블로그", page: "https://blog.example.com/1" }]);
   assert.equal((await kakaoImage(new Request("https://relay.example.com/kakao/image?query="), { KAKAO_REST_API_KEY: "secret" }, fetcher)).status, 400);
   assert.equal((await kakaoImage(new Request("https://relay.example.com/kakao/image?query=a"), {}, fetcher)).status, 503);
-});
-
-test("google place photo: finds the place near the pin and returns one photo link with its authors (PHG1114A01)", async () => {
-  const calls = [];
-  const fetcher = (places) => async (url, init = {}) => {
-    calls.push({ url: String(url), key: init.headers?.["x-goog-api-key"], body: init.body });
-    if (String(url).endsWith(":searchText")) return new Response(JSON.stringify({ places }), { status: 200 });
-    return new Response(JSON.stringify({ photoUri: "https://lh3.example.com/p/abc=w640" }), { status: 200 });
-  };
-  const near = [{ id: "P1", location: { latitude: 37.5001, longitude: 127.0001 }, photos: [{ name: "places/P1/photos/PH1", authorAttributions: [{ displayName: "A Photographer", uri: "https://x" }] }] }];
-  const request = new Request("https://relay.example.com/places/photo?query=%EB%B9%B5%EC%A7%91&lat=37.5&lng=127");
-  const ok = await googlePlacePhoto(request, { GOOGLE_PLACES_API_KEY: "secret" }, fetcher(near));
-  assert.equal(ok.status, 200);
-  assert.deepEqual(await ok.json(), { photo: "https://lh3.example.com/p/abc=w640", authors: ["A Photographer"] });
-  assert.equal(calls[0].key, "secret");
-  assert.match(calls[0].body, /"textQuery":"빵집"/);
-  assert.match(calls[1].url, /places\/P1\/photos\/PH1\/media\?maxWidthPx=640&skipHttpRedirect=true$/);
-  const far = [{ id: "P2", location: { latitude: 35.1, longitude: 129.0 }, photos: [{ name: "places/P2/photos/PH2" }] }];
-  assert.equal((await googlePlacePhoto(request, { GOOGLE_PLACES_API_KEY: "secret" }, fetcher(far))).status, 204, "a same-named place far away is not used");
-  assert.equal((await googlePlacePhoto(request, { GOOGLE_PLACES_API_KEY: "secret" }, fetcher([{ id: "P3", location: near[0].location }]))).status, 204, "no photo");
-  assert.equal((await googlePlacePhoto(request, {}, fetcher(near))).status, 503, "no key: switched off");
-  assert.equal((await googlePlacePhoto(new Request("https://relay.example.com/places/photo?query=a"), { GOOGLE_PLACES_API_KEY: "secret" }, fetcher(near))).status, 400);
 });

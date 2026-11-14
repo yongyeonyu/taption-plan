@@ -84,49 +84,6 @@ export async function kakaoImage(request, env, fetcher = fetch) {
   return json({ documents }, 200);
 }
 
-// 구글 장소 사진(PHG1114A01, 대표 결정: 웹 검색 대신 구글 지도의 공식 API). 이름과 좌표로 장소를 찾아 대표 사진 한 장의 주소와
-// 촬영자 표시를 돌려준다. 키는 Worker 비밀값 GOOGLE_PLACES_API_KEY이고 앱에 넣지 않는다. 사진은 서버를 거치지 않고 서버에 남기지 않는다.
-// 요금이 붙는 API라 서버 전체 하루 수를 센다(GOOGLE_PLACES_DAILY, 기본 30). 넘으면 429.
-const GOOGLE_SEARCH_URL = "https://places.googleapis.com/v1/places:searchText";
-export async function googlePlacePhoto(request, env, fetcher = fetch) {
-  if (request.method !== "GET") return json({ error: "method_not_allowed" }, 405);
-  if (!env.GOOGLE_PLACES_API_KEY) return json({ error: "unavailable" }, 503);
-  const incoming = new URL(request.url).searchParams;
-  const query = incoming.get("query") ?? "", lat = Number(incoming.get("lat") ?? NaN), lng = Number(incoming.get("lng") ?? NaN);
-  if (!query.trim() || query.length > 100 || !(Math.abs(lat) <= 90) || !(Math.abs(lng) <= 180)) return json({ error: "bad_query" }, 400);
-  const found = await fetcher(GOOGLE_SEARCH_URL, {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-goog-api-key": env.GOOGLE_PLACES_API_KEY, "x-goog-fieldmask": "places.id,places.location,places.photos" },
-    body: JSON.stringify({ textQuery: query, maxResultCount: 1, locationBias: { circle: { center: { latitude: lat, longitude: lng }, radius: 1000 } } }),
-  });
-  if (!found.ok) return json({ error: "upstream", status: found.status }, 502);
-  let body;
-  try { body = await found.json(); } catch { return json({ error: "upstream" }, 502); }
-  const place = Array.isArray(body?.places) ? body.places[0] : null;
-  const photo = Array.isArray(place?.photos) ? place.photos[0] : null;
-  // 이름이 같은 먼 곳의 사진이 잡히지 않게, 찾은 장소가 3km 안일 때만 쓴다.
-  const far = (a, b) => Math.abs(a.latitude - lat) > 0.03 || Math.abs(b.longitude - lng) > 0.04;
-  if (!photo || typeof photo.name !== "string" || !/^places\/[\w-]+\/photos\/[\w-]+$/.test(photo.name) || !place.location || far(place.location, place.location)) return json(null, 204);
-  const media = await fetcher(`https://places.googleapis.com/v1/${photo.name}/media?maxWidthPx=640&skipHttpRedirect=true`, { headers: { "x-goog-api-key": env.GOOGLE_PLACES_API_KEY } });
-  if (!media.ok) return json({ error: "upstream", status: media.status }, 502);
-  let picture;
-  try { picture = await media.json(); } catch { return json({ error: "upstream" }, 502); }
-  if (typeof picture?.photoUri !== "string" || !picture.photoUri.startsWith("https://")) return json(null, 204);
-  const authors = (Array.isArray(photo.authorAttributions) ? photo.authorAttributions : []).map((a) => (typeof a?.displayName === "string" ? a.displayName.slice(0, 60) : "")).filter(Boolean).slice(0, 2);
-  return json({ photo: picture.photoUri, authors }, 200);
-}
-
-async function googleRoute(request, ctx) {
-  if (request.method === "GET" && ctx.env.GOOGLE_PLACES_API_KEY) {
-    const perIp = await (await ipState(ctx.env, request)).call("countDaily", { name: "kakao", limit: LIMITS.kakaoPerIpDay, now: ctx.now, expire: true });
-    if (!perIp.ok) return tooMany("kakao_daily_limit", perIp.retryAfter);
-    const limit = Number(ctx.env.GOOGLE_PLACES_DAILY) || 30;
-    const all = await userState(ctx.env, "global:places").call("countDaily", { name: "places", limit, now: ctx.now });
-    if (!all.ok) return tooMany("places_daily_limit", all.retryAfter);
-  }
-  return googlePlacePhoto(request, ctx.env, ctx.env.FETCH);
-}
-
 // 버스 노선 중계(BRT1113A01, 대표 지시 「버스노선 api 추가하자」). 국토교통부 TAGO(공공데이터포털) 버스정류소 정보.
 // 키는 Worker 비밀값 TAGO_SERVICE_KEY(공공데이터포털 「일반 인증키 Decoding」 값)이고 앱에 넣지 않는다. 카카오와 같은 검색 한도를 쓴다.
 // /tago/stops?lat&lng: 좌표 근처 정류소(도시 코드·정류소 ID·이름·좌표). /tago/routes?cityCode&nodeId: 그 정류소를 지나는 노선(번호·종류).
@@ -322,9 +279,6 @@ const ROUTES = {
   },
   "/kakao/image": {
     GET: ["search", kakaoRoute],
-  },
-  "/places/photo": {
-    GET: ["search", googleRoute],
   },
   "/tago/stops": {
     GET: ["search", tagoRoute],
