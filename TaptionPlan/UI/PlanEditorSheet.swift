@@ -14,6 +14,8 @@ struct PlanEditorSheet: View {
     @State private var parentID: UUID?
     @State private var isImportant: Bool
     @State private var repeatRules: [GoalRepeatRule]
+    @State private var place: PlanPlace?
+    @State private var spendText: String
     @State private var showsDeleteConfirmation = false
 
     init(model: AppModel, planID: UUID) {
@@ -39,6 +41,8 @@ struct PlanEditorSheet: View {
         _parentID = State(initialValue: plan?.parentID)
         _isImportant = State(initialValue: plan?.isImportant ?? false)
         _repeatRules = State(initialValue: plan?.repeatRules ?? [])
+        _place = State(initialValue: plan?.place)
+        _spendText = State(initialValue: plan?.plannedSpendKRW.map { String(Int($0)) } ?? "")
     }
 
     var body: some View {
@@ -53,6 +57,9 @@ struct PlanEditorSheet: View {
                         GoalRepeatRulesEditor(rules: $repeatRules)
                     }
                     hierarchyCard
+                    if !showsGoalRepeatEditor {
+                        PlanSpotFields(model: model, place: $place, spendText: $spendText)
+                    }
                     Toggle("중요 계획", isOn: $isImportant)
                         .font(.taption(size: 10.5, weight: .bold))
                         .tint(Color.tpPrimaryFill)
@@ -304,7 +311,8 @@ struct PlanEditorSheet: View {
             span: TimeSpan(start: startAt, end: endAt),
             parentID: parentID,
             isImportant: isImportant,
-            repeatRules: showsGoalRepeatEditor ? repeatRules : nil
+            repeatRules: showsGoalRepeatEditor ? repeatRules : nil,
+            spot: showsGoalRepeatEditor ? nil : PlanSpot(place: place, spendText: spendText)
         )
         dismiss()
     }

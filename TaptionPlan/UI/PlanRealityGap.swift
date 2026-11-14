@@ -34,6 +34,8 @@ enum PlanRealityGap {
         var isOngoing = false
         var plannedKRW: Double?
         var spentKRW: Double?
+        /// 쓴 돈이 시간으로만 묶은 값이라 상관없는 지출이 섞였을 수 있다(일반 일정, PLB1114A18).
+        var isSpendEstimated = false
 
         var startDelta: TimeInterval? { actual.map { $0.start.timeIntervalSince(plan.start) } }
         var endDelta: TimeInterval? { isOngoing ? nil : actual.map { $0.end.timeIntervalSince(plan.end) } }
@@ -115,6 +117,7 @@ enum PlanRealityGap {
             }
             return item
         }
+        addPlanSpending(to: &day.items, rows: rows, input)
         day.plannedKRW = day.items.reduce(0) { $0 + ($1.plannedKRW ?? 0) }
         day.plannedSoFarKRW = day.items.reduce(0) { $0 + ($1.plan.start <= input.now ? $1.plannedKRW ?? 0 : 0) }
         day.spentKRW = day.items.reduce(0) { $0 + ($1.spentKRW ?? 0) }
@@ -135,6 +138,32 @@ enum PlanRealityGap {
             return max(0, last.startDelta ?? 0, now.timeIntervalSince(last.plan.end))
         }
         return max(0, last.endDelta ?? 0)
+    }
+
+    /// 일반 일정의 예상 지출과 쓴 돈(PLB1114A18, 대표 결정 2026-11-14): 그 일정을 실제로 한 시간 안에 찍힌 지출 전부.
+    /// 실제 기록이 없으면 쓴 돈을 세지 않는다. 여행 일정이 이미 가져간 지출은 빼고, 시간이 겹치면 늦게 시작한 쪽의 것이다.
+    private static func addPlanSpending(to items: inout [Item], rows: [Row], _ input: Input) {
+        var windows: [(index: Int, span: TimeSpan)] = []
+        for (index, row) in rows.enumerated() where row.item == nil {
+            guard let planned = row.plan?.plannedSpendKRW, planned > 0 else { continue }
+            items[index].plannedKRW = planned
+            if let actual = items[index].actual { windows.append((index, actual)) }
+        }
+        guard !windows.isEmpty else { return }
+        windows.sort { $0.span.start > $1.span.start }
+        var used: [Int: Double] = [:]
+        for entry in input.entries where entry.kind == .expense && entry.transfer == nil && entry.countedKRW > 0 {
+            let isTripItems = input.tripItems.contains { $0.tripID == entry.tripID && $0.start <= entry.occurredAt && entry.occurredAt < $0.end }
+            guard !isTripItems, let window = windows.first(where: { $0.span.start <= entry.occurredAt && entry.occurredAt <= $0.span.end }) else { continue }
+            used[window.index, default: 0] += entry.countedKRW
+        }
+        for window in windows {
+            let amount = used[window.index] ?? 0
+            // 아직 하는 중이고 쓴 돈도 없으면 차이를 내지 않는다.
+            guard amount > 0 || !items[window.index].isOngoing else { continue }
+            items[window.index].spentKRW = amount
+            items[window.index].isSpendEstimated = true
+        }
     }
 
     // MARK: 일정 줄
@@ -182,13 +211,14 @@ enum PlanRealityGap {
         return Found(span: TimeSpan(start: start, end: end), match: .linked, isOngoing: mine.contains { $0.endedAt == nil })
     }
 
-    /// 여행 일정의 곳 가까이에 머문 기록 가운데 계획 시각에 가장 가까운 것.
+    /// 여행 일정의 곳(없으면 일반 일정에 넣은 장소) 가까이에 머문 기록 가운데 계획 시각에 가장 가까운 것.
     private static func stayed(_ row: Row, _ input: Input, radius: Double) -> Found? {
-        let stop = input.stops.first { stop in
+        let pin = input.stops.first { stop in
             (row.plan != nil && stop.planID == row.plan?.id)
                 || (row.item != nil && stop.tripID == row.item?.tripID && stop.itemID == row.item?.itemID)
         }
-        guard let stop else { return nil }
+        guard let stop = pin.map({ (latitude: $0.latitude, longitude: $0.longitude) })
+            ?? row.plan?.place.map({ (latitude: $0.latitude, longitude: $0.longitude) }) else { return nil }
         let near = input.places.filter { stay in
             guard let point = stay.point, stay.span.start < input.now, stay.span.intersection(with: input.day) != nil else { return false }
             return meters(point.latitude, point.longitude, stop.latitude, stop.longitude) <= radius

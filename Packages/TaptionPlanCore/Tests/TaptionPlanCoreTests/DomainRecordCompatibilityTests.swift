@@ -130,6 +130,25 @@ struct DomainRecordCompatibilityTests {
         )
     }
 
+    /// PLB1114A18: 장소·예상 지출은 있을 때만 키를 쓰고, 그 키가 없는 예전 기록은 그대로 읽히고 다시 써도 바이트가 같다.
+    @Test func planRecordPlaceAndPlannedSpendAreOptionalKeys() throws {
+        let placed = PlanRecord(
+            id: Self.id(5), title: "저녁", span: TimeSpan(start: Self.start, end: Self.start.addingTimeInterval(3_600)),
+            categoryID: "activity", createdAt: Self.start, updatedAt: Self.start,
+            place: PlanPlace(name: "식당", latitude: 0.5, longitude: 0.25), plannedSpendKRW: 30_000
+        )
+        try Self.roundTrip(
+            PlanRecord.self,
+            stored: #"{"categoryID":"activity","createdAt":1762560000,"id":"00000000-0000-0000-0000-000000000005","isFixed":false,"isImportant":false,"origin":"user","place":{"latitude":0.5,"longitude":0.25,"name":"식당"},"plannedSpendKRW":30000,"span":{"end":1762563600,"start":1762560000},"status":"planned","title":"저녁","updatedAt":1762560000}"#,
+            expected: placed
+        )
+        let legacy = #"{"categoryID":"work","createdAt":1762560000,"id":"00000000-0000-0000-0000-000000000003","isFixed":false,"isImportant":false,"origin":"user","span":{"end":1762560000,"start":1762560000},"status":"planned","title":"회의","updatedAt":1762560000}"#
+        let decoded = try Self.storeDecoder.decode(PlanRecord.self, from: Data(legacy.utf8))
+        #expect(decoded.place == nil)
+        #expect(decoded.plannedSpendKRW == nil)
+        #expect(String(decoding: try Self.storeEncoder.encode(decoded), as: UTF8.self) == legacy)
+    }
+
     @Test func geoPointStoredBytesAreUnchanged() throws {
         try Self.roundTrip(
             GeoPoint.self,

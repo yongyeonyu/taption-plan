@@ -11,7 +11,8 @@ extension AppModel {
         startAt: Date,
         duration: TimeInterval,
         parentID: UUID? = nil,
-        repeatRules: [GoalRepeatRule]? = nil
+        repeatRules: [GoalRepeatRule]? = nil,
+        spot: PlanSpot? = nil
     ) -> UUID? {
         guard acceptsDataMutation() else { return nil }
         let cleanTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -65,6 +66,10 @@ extension AppModel {
                 repeatRules: cleanedRepeatRules
             )
         }
+        if let spot {
+            plan.place = spot.place
+            plan.plannedSpendKRW = spot.plannedSpendKRW
+        }
         let previous = snapshot
         snapshot.plans.append(plan)
         if plan.parentID == nil,
@@ -92,7 +97,8 @@ extension AppModel {
         span: TimeSpan,
         parentID: UUID?,
         isImportant: Bool,
-        repeatRules: [GoalRepeatRule]? = nil
+        repeatRules: [GoalRepeatRule]? = nil,
+        spot: PlanSpot? = nil
     ) {
         guard let index = snapshot.plans.firstIndex(where: {
             $0.id == planID
@@ -133,6 +139,11 @@ extension AppModel {
         updated.parentID = parentID
         updated.isImportant = isImportant
         updated.repeatRules = cleanedRepeatRules
+        // nil이면 장소·예상 지출을 그대로 둔다(이 칸을 모르는 호출이 지우지 않게).
+        if let spot {
+            updated.place = spot.place
+            updated.plannedSpendKRW = spot.plannedSpendKRW
+        }
         updated.updatedAt = .now
 
         var candidate = snapshot.plans

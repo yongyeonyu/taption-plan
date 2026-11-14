@@ -25,7 +25,14 @@ struct PlanRealityView: View {
         return TimeSpan(start: start, end: calendar.date(byAdding: .day, value: 1, to: start) ?? start.addingTimeInterval(86_400))
     }
 
-    private var stops: [TravelPlanStop] { TravelPlanSchedule.stops(on: day.start, in: model.settings.travelPlanStops) }
+    /// 그날의 여행 핀과, 장소를 넣은 일반 일정(PLB1114A18, 지도에만 쓰는 값이고 저장하지 않는다).
+    private var stops: [TravelPlanStop] {
+        let pins = TravelPlanSchedule.stops(on: day.start, in: model.settings.travelPlanStops)
+        return pins + PlanSpot.mapStops(plans: model.snapshot.plans, day: day, pinned: Set(pins.compactMap(\.planID)), after: pins.count)
+    }
+
+    /// 머문 곳 짝짓기에는 저장된 여행 핀만 넘긴다(일반 일정의 장소는 계획에 실려 있다).
+    private var pins: [TravelPlanStop] { TravelPlanSchedule.stops(on: day.start, in: model.settings.travelPlanStops) }
 
     /// 다시 셀 때: 날짜가 바뀌거나, 기록·장부가 저장됐을 때.
     private struct RefreshKey: Hashable {
@@ -75,9 +82,9 @@ struct PlanRealityView: View {
             plans: snapshot.plans.filter { $0.span.intersection(with: span) != nil },
             actuals: snapshot.actuals.filter { $0.startedAt < span.end && ($0.endedAt ?? now) >= span.start },
             places: snapshot.places.filter { $0.span.intersection(with: span) != nil },
-            stops: stops,
+            stops: pins,
             tripItems: (snapshot.settings.travelTripItems ?? []).filter { $0.start < span.end && $0.end > span.start },
-            entries: book.entries.filter { $0.tripID != nil && span.contains($0.occurredAt) },
+            entries: book.entries.filter { span.contains($0.occurredAt) },
             day: span, now: now
         ))
         if next != gap {
@@ -258,7 +265,9 @@ private struct PlanRealityRow: View {
                     PlanRealityBadge(text: PlanRealityText.time(delta, language), tint: delta > 0 ? TravelInk.actual : TravelInk.plan)
                 }
                 if let delta = item.costBadge() {
+                    // 시간으로만 묶은 쓴 돈은 흐리게 보인다.
                     PlanRealityBadge(text: PlanRealityText.money(delta, language), tint: delta > 0 ? TravelInk.actual : TravelInk.plan)
+                        .opacity(item.isSpendEstimated ? 0.55 : 1)
                 }
             }
             GeometryReader { proxy in
@@ -306,7 +315,7 @@ private struct PlanRealityRow: View {
         }
         if let spent = item.spentKRW, spent > 0 {
             let amount = LedgerMoney.text(spent, language: language)
-            parts.append(language.text("쓴 돈 \(amount)", "Spent \(amount)"))
+            parts.append(item.isSpendEstimated ? language.text("그 시간에 쓴 돈 \(amount)", "Spent in that time \(amount)") : language.text("쓴 돈 \(amount)", "Spent \(amount)"))
         }
         return parts.joined(separator: " · ")
     }
