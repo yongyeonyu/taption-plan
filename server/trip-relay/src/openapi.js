@@ -1,6 +1,7 @@
 // GPT Actions용 OpenAPI 3.1 문서(AIR1110A02). 인증 없이 받는다. AI가 부르는 경로만 담는다(앱 전용 경로 제외).
 
 // AIR1110A03: 목표·여행·수면·안전한 설정 동작을 더한다. 동작 목록은 validate.js 하나에서 온다.
+import { registry } from "./actions.js";
 import { ACTIONS, DISPLAY_OPTIONS, EXPENSE_CATEGORIES, LANGUAGES, MAP_STYLES, PAYMENT_RULE_KINDS, REVIEW_DECISIONS, SCREENS, THEMES, TRAVEL_MODES, TRIP_STATUSES } from "./validate.js";
 
 const date = { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$", description: "YYYY-MM-DD in the user's time zone" };
@@ -119,6 +120,12 @@ const command = {
     delete: { type: "boolean", description: "updateExpense: true deletes the entry" },
   },
 };
+// 등록부(actions.js)의 동작이 받는 칸을 더한다. 이미 있는 이름은 그대로 둔다(AIX1114A01).
+for (const tool of registry.tools()) {
+  for (const [name, schema] of Object.entries(tool.properties)) {
+    if (!(name in command.properties)) command.properties[name] = { ...schema, description: `${tool.action}: ${schema.description ?? name}` };
+  }
+}
 
 export function openapi(origin) {
   return {

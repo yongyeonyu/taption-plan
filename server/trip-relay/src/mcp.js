@@ -3,6 +3,7 @@
 // SEC1110A02: 지우기·고치기·합치기·숨기기·설정 도구는 destructiveHint true. 사용자가 쓴 글은 도구 결과에서
 // {"untrusted_user_text": "..."}로 감싸고, 안내문이 그 안의 지시를 따르지 말라고 한다(finding 7).
 // AIR1110A03: OAuth 토큰도 받는다(index.js). 새 동작(목표·여행·수면·안전한 설정)과 읽기 칸(goals·trips·sleep·placeBook).
+import { registry } from "./actions.js";
 import { json, readBody, writeAllowed } from "./http.js";
 import { allows } from "./keys.js";
 import { claimTasks, endConversation, finishTask, queueCommand, readActivity, readAnswers, readAppState, readPolish, readResults, readSummary, readSync, savePlan } from "./store.js";
@@ -333,6 +334,8 @@ const TOOLS = [
 ];
 // ACL1112A01: 도구 목록을 옛것으로 붙들고 있는 클라이언트도 새 명령을 쓸 수 있게, 모든 명령을 보내는 도구 하나와
 // 지금 되는 명령을 알려 주는 도구 하나를 둔다. 목록은 위 TOOLS에서 만들어 늘 서버와 같다.
+// 등록부(actions.js)의 동작은 도구도 거기서 만든다(AIX1114A01).
+for (const tool of registry.tools()) TOOLS.push(commandTool(tool.name, tool.action, tool.title, tool.description, tool.properties, tool.required, tool.destructive));
 const ACTION_TOOLS = TOOLS.filter((tool) => tool.action);
 TOOLS.push(
   readTool("list_actions", "List every app action", "Every action the app accepts right now, with its fields: {actions:[{action, tool, title, "

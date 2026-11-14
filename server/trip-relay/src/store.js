@@ -2,6 +2,7 @@
 // ctx = { kv, store: 암호화 KV, state: 주인 DO, ring, auth, master: 주인 해시, now: 밀리초, legacy: DO의 이전 표시 }
 // SEC1110A02: 하루 기록 이름은 `act:<주인>:<HMAC(날짜)>`이고 날짜 목록은 DO가 잠근 채 가진다(KV list를 쓰지 않는다).
 // 명령 큐와 24시간 한도는 DO가 가진다. 여행 계획·명령 결과·추가 칸(goals·trips·placeBook)은 KV에 잠가 둔다.
+import { registry } from "./actions.js";
 import { nameKey, openJson, sealJson, tagOf } from "./crypto.js";
 import { json, stored, tooMany } from "./http.js";
 import { chargeWrites } from "./state.js";
@@ -475,6 +476,11 @@ export async function queueCommand(ctx, value, source = "rest") {
   if (!command) {
     const reason = commandReason(value);
     return json({ error: "not_command", ...(reason ? { reason } : {}) }, 422);
+  }
+  // 앱 빌드가 낮아 아직 못 하는 동작은 큐에 넣지 않고 알려 준다(AIX1114A01).
+  if (registry.spec(command.action)?.since) {
+    const needsBuild = registry.needsBuild(command.action, (await readSync(ctx))?.appBuild);
+    if (needsBuild) return json({ error: "app_too_old", needsBuild }, 422);
   }
   await ensureQueue(ctx);
   const tag = await commandTag(ctx, command.id);

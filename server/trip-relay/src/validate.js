@@ -1,5 +1,6 @@
 // Body contracts the app reads (TRP1110A04, TRP1110A07, CLN1110A01).
 
+import { registry } from "./actions.js";
 export const QUEUE_LIMIT = 50;
 const RETENTION_DAYS = new Set([1, 7, 30]);
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -217,6 +218,11 @@ export const COMMAND_FIELDS = {
   setMapStyle: ["mapStyle"],
   setDisplayOption: ["option", "enabled"],
 };
+// 등록부(actions.js)의 동작을 더한다(AIX1114A01).
+for (const name of registry.names()) {
+  if (name in COMMAND_FIELDS) throw new Error("action defined twice: " + name);
+  COMMAND_FIELDS[name] = registry.fields(name);
+}
 export const ACTIONS = Object.keys(COMMAND_FIELDS);
 export const TRAVEL_MODES = ["walk", "subway", "bus", "car", "train", "flight"];
 export const PAYMENT_RULE_KINDS = ["expense", "income", "ignore"];
@@ -474,7 +480,7 @@ export function isCommand(value) {
     case "setDisplayOption":
       return oneOf(DISPLAY_OPTIONS)(v.option) && typeof v.enabled === "boolean";
     default:
-      return false;
+      return registry.validate(v) === true;
   }
 }
 
