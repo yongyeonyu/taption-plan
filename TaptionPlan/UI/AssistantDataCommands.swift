@@ -95,7 +95,8 @@ extension AssistantCommandParser {
             return .classifyUnconfirmed(start: start, end: end, title: clean(raw.title, max: 100), categoryID: categoryID)
         case "setTravelMode":
             guard day != nil, let moveID = raw.moveId.flatMap(UUID.init(uuidString:)), let mode = raw.mode.flatMap(travelMode) else { return nil }
-            return .setTravelMode(moveID: moveID, mode: mode)
+            if raw.line != nil, clean(raw.line, max: 20) == nil { return nil }
+            return .setTravelMode(moveID: moveID, mode: mode, line: clean(raw.line, max: 20))
         default:
             return settingAction(raw) ?? appAction(raw, calendar: calendar)
         }

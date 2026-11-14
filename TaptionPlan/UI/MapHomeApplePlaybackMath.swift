@@ -387,32 +387,37 @@ enum MapHomeApplePlaybackMath {
     }
 }
 
-/// 화랑이가 탄 버스 번호·지하철 노선 글(RDL1114A01). 모르면 nil이라 아무것도 붙지 않는다.
+/// 화랑이가 탄 버스 번호·지하철 노선 글(RDL1114A01). 모르면 「?」이고, 누르면 후보를 고른다(RDQ1114A01).
 @MainActor
 enum MapHomeRideLabel {
-    private static var cached: (id: UUID, text: String?)?
+    nonisolated static let unknown = "?"
+    private static var cached: (id: UUID, text: String, at: Date)?
 
-    static func text(at date: Date, travel: [TravelSegment]) -> String? {
-        let riding = travel.filter { ($0.mode == .bus || $0.mode == .subway) && $0.span.contains(date) }
-        guard let segment = riding.max(by: { $0.span.start < $1.span.start }) else { return nil }
-        if let cached, cached.id == segment.id { return cached.text }
+    static func segment(at date: Date, travel: [TravelSegment]) -> TravelSegment? {
+        travel.filter { ($0.mode == .bus || $0.mode == .subway) && $0.span.contains(date) }.max(by: { $0.span.start < $1.span.start })
+    }
+
+    static func text(at date: Date, travel: [TravelSegment], now: Date = .now) -> String? {
+        guard let segment = segment(at: date, travel: travel) else { return nil }
+        // 고르거나 AI가 정하면 곧 바뀌어야 하니 잠깐만 적어 둔다.
+        if let cached, cached.id == segment.id, now.timeIntervalSince(cached.at) < 3 { return cached.text }
         let text = text(for: segment)
-        // 노선을 아직 못 찾은 버스는 적어 두지 않는다(찾으면 바로 보이게).
-        if text != nil || segment.mode == .subway { cached = (segment.id, text) }
+        cached = (segment.id, text, now)
         return text
     }
 
-    /// 버스는 「80」(둘이면 「80·81」), 지하철은 「1호선」(갈아탔으면 「1호선→2호선」).
-    nonisolated static func text(for segment: TravelSegment, defaults: UserDefaults = .standard) -> String? {
+    /// 버스는 「80」(둘이면 「80·81」), 지하철은 「1호선」(갈아탔으면 「1호선→2호선」), 못 정했으면 「?」.
+    nonisolated static func text(for segment: TravelSegment, defaults: UserDefaults = .standard) -> String {
         switch segment.mode {
         case .bus:
-            guard let routes = BusRouteCheck.known(segment, defaults: defaults), (1...2).contains(routes.count) else { return nil }
+            guard let routes = BusRouteCheck.known(segment, defaults: defaults), (1...2).contains(routes.count) else { return unknown }
             return routes.map(\.number).joined(separator: "·")
         case .subway:
             let lines = segment.subwayRoute?.lineNames ?? []
-            return lines.isEmpty ? nil : lines.prefix(3).joined(separator: "→")
+            if !lines.isEmpty { return lines.prefix(3).joined(separator: "→") }
+            return SubwayLineChoice.known(segment, defaults: defaults) ?? unknown
         default:
-            return nil
+            return unknown
         }
     }
 }

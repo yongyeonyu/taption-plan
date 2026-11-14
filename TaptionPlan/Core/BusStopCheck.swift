@@ -521,3 +521,78 @@ enum RideConfirmation {
         Array((BusRouteCheck.known(segment, defaults: stopDefaults) ?? []).prefix(6))
     }
 }
+
+/// 사용자나 AI가 정해 준 지하철 노선(RDQ1114A01). 구간에 노선 경로가 없을 때 이름표에 쓴다. 기기에만 둔다.
+enum SubwayLineChoice {
+    static let key = "subwayLineChoices"
+    static let limit = 200
+
+    static func known(_ segment: TravelSegment, defaults: UserDefaults = .standard) -> String? {
+        (defaults.dictionary(forKey: key) as? [String: String])?[BusRouteCheck.cacheKey(segment)]
+    }
+
+    static func remember(_ segment: TravelSegment, line: String, defaults: UserDefaults = .standard) {
+        var all = (defaults.dictionary(forKey: key) as? [String: String]) ?? [:]
+        all[BusRouteCheck.cacheKey(segment)] = line
+        if all.count > limit { all = Dictionary(uniqueKeysWithValues: all.sorted { $0.key > $1.key }.prefix(limit).map { ($0.key, $0.value) }) }
+        defaults.set(all, forKey: key)
+    }
+
+    /// 고를 노선. 근거에 역 이름이 있으면 그 역을 지나는 노선, 없으면 노선 목록 앞쪽(최대 12개).
+    static func candidates(_ segment: TravelSegment) -> [String] {
+        let evidence = segment.evidence.joined(separator: " ")
+        var lines: [String] = []
+        for station in SubwayStationCatalog.stations where evidence.contains(station.stationName) && !lines.contains(station.lineName) { lines.append(station.lineName) }
+        if lines.isEmpty {
+            for station in SubwayStationCatalog.stations where !lines.contains(station.lineName) { lines.append(station.lineName) }
+        }
+        return Array(lines.prefix(12))
+    }
+}
+
+/// 번호·노선을 못 정한 버스·지하철 구간을 연결된 AI에게 먼저 맡긴다(RDQ1114A01). 구간마다 한 번만.
+@MainActor
+enum RideLineTasks {
+    static let producedKey = "rideLineTaskKeys"
+    static let settleSeconds: TimeInterval = 10 * 60
+
+    /// AI에게 맡길 구간인지와 후보. 버스는 노선을 모르거나 후보가 셋 이상, 지하철은 노선 경로도 정해 준 노선도 없을 때.
+    nonisolated static func candidates(_ segment: TravelSegment, defaults: UserDefaults = .standard) -> [String]? {
+        switch segment.mode {
+        case .bus:
+            let routes = BusRouteCheck.known(segment, defaults: defaults)
+            if let routes, (1...2).contains(routes.count) { return nil }
+            return (routes ?? []).prefix(8).map(\.number)
+        case .subway:
+            guard (segment.subwayRoute?.lineNames ?? []).isEmpty, SubwayLineChoice.known(segment, defaults: defaults) == nil else { return nil }
+            return SubwayLineChoice.candidates(segment)
+        default:
+            return nil
+        }
+    }
+
+    static func enqueue(_ travel: [TravelSegment], now: Date = .now, defaults: UserDefaults = .standard) {
+        var produced = defaults.stringArray(forKey: producedKey) ?? []
+        for segment in travel where now.timeIntervalSince(segment.span.end) >= settleSeconds && segment.span.duration >= RideConfirmation.minimumDuration {
+            let key = BusRouteCheck.cacheKey(segment)
+            guard !produced.contains(key), let candidates = candidates(segment, defaults: defaults) else { continue }
+            let time = "\(clock(segment.span.start))–\(clock(segment.span.end))"
+            var context = ["moveId": segment.id.uuidString, "mode": segment.mode == .bus ? "bus" : "subway", "start": clock(segment.span.start), "end": clock(segment.span.end)]
+            if !candidates.isEmpty { context["candidates"] = candidates.joined(separator: ",") }
+            var text = segment.mode == .bus ? "\(time) bus ride, route number unknown" : "\(time) subway ride, line unknown"
+            if segment.mode == .bus, let names = BusRouteCheck.stopNames(segment, defaults: defaults) {
+                context["from"] = names.board
+                context["to"] = names.alight
+                text += " · \(names.board) → \(names.alight)"
+            }
+            guard AITaskQueue.enqueue(.routeCheck, text: text, day: segment.span.start, context: context, defaults: defaults) else { return }
+            produced.append(key)
+        }
+        defaults.set(Array(produced.suffix(200)), forKey: producedKey)
+    }
+
+    private static func clock(_ date: Date) -> String {
+        let parts = Calendar.autoupdatingCurrent.dateComponents([.hour, .minute], from: date)
+        return String(format: "%02d:%02d", parts.hour ?? 0, parts.minute ?? 0)
+    }
+}

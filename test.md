@@ -2,6 +2,19 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## RDQ1114A01 · 336 뒤에 넣은 것 (2026-11-14 낮, 아직 빌드에 없음)
+
+RDQ1114A01(노선 「?」·고르기·AI 검토)·RPO1114A01(앨범 영수증 자동 확인 스위치 없앰). 로그는 `build/validation/OCB1114A01/sim-15.*`. 시뮬레이터(BOKKI-STL) 결과이고 실기기 확인은 없다.
+
+| 검증 | 결과 |
+|---|---|
+| `LedgerTests`·`AssistantPhase3Tests`·`AssistantCommandEditTests`·`AssistantRelayTests`·`TodoPanelTests`(병렬 끔, `sim-15.xcresult`, 앱 Debug 시험 빌드 포함) | 101건 통과·실패 0. 앞선 `sim-14`는 타입 이름 오타로 빌드 실패 → 고쳐 통과 |
+| 구조 점검·`extract.py`·`check.py`·`generate.py` | 기준선 통과, 번역 실패 0(새 문구 1개를 12개 언어에 넣음) |
+| 서버 `npm test` | 116건 통과(`setTravelMode`의 `line` 받기·21자 거절 포함) |
+| 서버 배포 | 하지 않음(권한 검사에 막힘). 배포 전에는 AI가 `line`을 보내면 서버가 거절(422) |
+
+하지 않은 것: 「?」 이름표와 고르기 창의 화면 확인, AI가 실제로 물어보는지, 스위치 없이 영수증 사진이 올라오는지(기기).
+
 ## TFB1114A336 · TestFlight 336 (2026-11-14 오전)
 
 - `bash scripts/testflight/release.sh --yes --request-id TFB1114A336` 종료 코드 0. 기준 커밋은 언어 팩 재생성 커밋(5f0f4c63 다음).

@@ -123,6 +123,12 @@ extension MapHomeView {
 
     /// 화랑이를 누르면 카운터 창을 보이거나 숨긴다(CTR1107A01, 대표 지시). 하루 요약은 집 아이콘에서 연다.
     func toggleCounterFromCat() {
+        // 번호·노선을 모르는 탈것(「?」)이면 후보를 고르는 창을 먼저 연다(RDQ1114A01).
+        if let ride = MapHomeRideLabel.segment(at: displayedLocationDate, travel: currentDayDataSnapshot?.travel ?? []),
+           [.bus, .subway].contains(displayedStickmanAction), MapHomeRideLabel.text(for: ride) == MapHomeRideLabel.unknown,
+           model.snapshot.travel.contains(where: { $0.id == ride.id }) {
+            return presentLaunchPrompt(.ride(ride.id.uuidString))
+        }
         withAnimation(.snappy(duration: 0.22)) { isCounterCollapsed.toggle() }
     }
 

@@ -175,7 +175,7 @@ export const COMMAND_FIELDS = {
   updateSleep: ["recordId", "start", "end"],
   // ACT1111A01: 앱이 분류하지 못한 시간(하루 기록의 unconfirmed)을 분류로 채우기, 이동 구간(moves의 id)의 수단 고치기.
   classifyUnconfirmed: ["date", "start", "end", "title", "categoryId"],
-  setTravelMode: ["date", "moveId", "mode"],
+  setTravelMode: ["date", "moveId", "mode", "line"],
   setBubble: ["date", "start", "end", "text", "kind"],
   // LED1110A01: 가계부 지출·수입. amount는 그 통화의 금액(양수), kind는 expense 기본 | income.
   addExpense: ["amount", "currency", "title", "category", "date", "time", "kind", "payer"],
@@ -396,7 +396,7 @@ export function isCommand(value) {
       return isDate(v.date) && isTime(v.start) && isTime(v.end) && v.end > v.start && targetID(v.categoryId)
         && optional(v.title, title(100));
     case "setTravelMode":
-      return isDate(v.date) && targetID(v.moveId) && oneOf(TRAVEL_MODES)(v.mode);
+      return isDate(v.date) && targetID(v.moveId) && oneOf(TRAVEL_MODES)(v.mode) && optional(v.line, title(20));
     // 같은 날 start < end(HH:mm).
     case "setBubble": {
       // BUB1110A02: kind "routine"(기본, 시간대 필수) | "event"(그날 하루 내내 맨 앞, 날이 지나면 앱이 지움, 시간대는 없어도 됨).

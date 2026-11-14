@@ -119,7 +119,10 @@ const TOOLS = [
     + "If context.choice is set (expense, income or ignore) the user already said what this text is: use that kind. context.app is the app that sent the alert. "
     + "memo_polish: polish context.memoId with update_memo (keep facts). "
     + "route_check / merge_review / stay_place: read get_activity for date, then fix with update_activity, merge_records, update_record_time, "
-    + "set_travel_mode or classify_unconfirmed as context describes. fare_check: work out the bus, subway or toll fare for the trip in context and record it with add_expense "
+    + "set_travel_mode or classify_unconfirmed as context describes. A route_check with context.moveId means the bus number or subway line of that ride is "
+    + "unknown: context.mode is bus or subway, context.candidates (comma separated) are the routes that fit, context.from and context.to are the stops. Decide from the "
+    + "day's places and stops only if one candidate clearly fits; otherwise ask_user which bus or line it was, with the candidates as options (at most 4, the user can "
+    + "also type their own), complete the task as done saying you asked, and when get_answers has the answer call set_travel_mode with moveId, the same mode and line. fare_check: work out the bus, subway or toll fare for the trip in context and record it with add_expense "
     + "(category transport). Always finish each task with complete_ai_task.",
     object({}), (ctx) => claimTasks(ctx), { empty: "No AI tasks waiting." }),
   readTool("complete_ai_task", "Complete AI task", "Report one AI task as done (with a short result the user sees) or failed (with a reason).",
@@ -279,7 +282,8 @@ const TOOLS = [
     { date: DATE, start: HHMM("Start of the unconfirmed time"), end: HHMM("End, after start"), categoryId: str("Category id from get_activity"), title: str("Optional title, up to 100 characters") },
     ["date", "start", "end", "categoryId"]),
   commandTool("set_travel_mode", "setTravelMode", "Correct a travel mode", "Set the transport mode of one move from get_activity moves (user correction, undoable).",
-    { date: DATE, moveId: str("Move id from get_activity moves"), mode: enumOf("Transport mode", TRAVEL_MODES) }, ["date", "moveId", "mode"]),
+    { date: DATE, moveId: str("Move id from get_activity moves"), mode: enumOf("Transport mode", TRAVEL_MODES),
+      line: str("Optional: the bus route number (\"80\") or subway line (\"1호선\") of that ride, up to 20 characters") }, ["date", "moveId", "mode"]),
   commandTool("hide_record", "hideRecord", "Hide a record", "Hide an automatic record as a user correction (undoable; raw data is kept).",
     { date: DATE, recordId: str("Record id from get_activity"), startTime: HHMM("A time the record covers") }, ["date"]),
   commandTool("merge_records", "mergeRecords", "Merge records", "Merge 2-20 consecutive records of one day into one corrected block.",

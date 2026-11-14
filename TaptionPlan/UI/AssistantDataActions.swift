@@ -152,13 +152,17 @@ extension AppModel {
                 before: "\(language.text("미확인", "Unconfirmed")) \(AssistantEditText.clock(start))–\(AssistantEditText.clock(limit))",
                 after: name, actualIDs: Set(added.map(\.id))
             )
-        case let .setTravelMode(moveID, mode):
+        case let .setTravelMode(moveID, mode, line):
             guard let segment = snapshot.travel.first(where: { $0.id == moveID }) else { return .rejected("no_record") }
             var result = AssistantEditResult(before: TravelMapMode(segment.mode).title(language))
             result.movementBefore = .init(snapshot, ids: [moveID])
             confirmTravel(moveID, mode: mode)
             guard snapshot.travel.first(where: { $0.id == moveID })?.mode == mode else { return .rejected("edit_failed") }
             result.after = TravelMapMode(mode).title(language)
+            if let line, mode == .bus || mode == .subway {
+                confirmRideLine(moveID, line: line)
+                result.after += " · " + line
+            }
             return result
         case let .updateExpense(entryID, change):
             await preferences.ledger.load()

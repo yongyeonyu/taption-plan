@@ -189,23 +189,22 @@ import Photos
 import UIKit
 
 /// 앨범에 새로 들어온 사진의 글자를 기기 안에서 읽어, 영수증으로 보이는 것만 글자를 AI 목록에 올린다.
-/// 사진은 기기를 떠나지 않고, 영수증이 아닌 사진의 글자는 올리지 않는다. 켠 사람만 돈다.
+/// 사진은 기기를 떠나지 않고, 영수증이 아닌 사진의 글자는 올리지 않는다.
+/// 스위치는 없다(대표 지시, RPO1114A01): AI가 연결돼 있고 사진 접근이 허락돼 있으면 늘 돈다.
 @MainActor
 enum ReceiptPhotoScanner {
-    static let enabledKey = "receiptPhotoScanEnabled"
     static let cursorKey = "receiptPhotoScanCursor"
-    /// 켤 때 하루 전 사진부터 본다(방금 찍어 둔 영수증).
+    /// 처음 돌 때 하루 전 사진부터 본다(방금 찍어 둔 영수증).
     static let lookback: TimeInterval = 86_400
     static let batchLimit = 6
     nonisolated static let receiptWords = ["영수증", "합계", "결제금액", "결제 금액", "받을금액", "승인번호", "승인 번호", "카드번호", "사업자", "부가세", "과세",
                                "거래일시", "가맹점", "RECEIPT", "TOTAL", "SUBTOTAL", "VAT", "CARD NO", "領収", "合計", "小計", "合计", "发票"]
     private static var isRunning = false
 
-    static func isEnabled(_ defaults: UserDefaults = .standard) -> Bool { defaults.bool(forKey: enabledKey) }
-
-    static func setEnabled(_ on: Bool, now: Date = .now, defaults: UserDefaults = .standard) {
-        defaults.set(on, forKey: enabledKey)
-        if on { defaults.set(now.addingTimeInterval(-lookback).timeIntervalSince1970, forKey: cursorKey) }
+    /// 어디부터 볼지. 처음이면 하루 전으로 잡아 적어 둔다.
+    static func startCursor(now: Date, defaults: UserDefaults = .standard) -> Date {
+        if defaults.object(forKey: cursorKey) == nil { defaults.set(now.addingTimeInterval(-lookback).timeIntervalSince1970, forKey: cursorKey) }
+        return Date(timeIntervalSince1970: defaults.double(forKey: cursorKey))
     }
 
     /// 영수증으로 볼 글: 결제 글 모양이고, 줄이 넉넉하며, 영수증 낱말이 둘 이상.
@@ -273,12 +272,12 @@ enum ReceiptPhotoScanner {
     /// 새 사진을 오래된 것부터 `batchLimit`장까지 본다. AI에게 맡긴 수를 돌려준다.
     @discardableResult
     static func scan(now: Date = .now, deadline: Date? = nil, defaults: UserDefaults = .standard) async -> Int {
-        guard isEnabled(defaults), !isRunning, MemoPolishQueue.hasConnection(defaults) else { return 0 }
+        guard !isRunning, MemoPolishQueue.hasConnection(defaults) else { return 0 }
         let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
         guard status == .authorized || status == .limited else { return 0 }
         isRunning = true
         defer { isRunning = false }
-        let cursor = Date(timeIntervalSince1970: defaults.double(forKey: cursorKey))
+        let cursor = startCursor(now: now, defaults: defaults)
         let options = PHFetchOptions()
         options.predicate = NSPredicate(format: "creationDate > %@ AND mediaType == %d", cursor as NSDate, PHAssetMediaType.image.rawValue)
         options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: true)]
@@ -354,10 +353,23 @@ final class ReceiptPhotoWatcher: NSObject, PHPhotoLibraryChangeObserver {
     static let shared = ReceiptPhotoWatcher()
     private var isRegistered = false
 
-    /// 켜져 있고 사진 접근이 허락됐을 때만 지켜본다. 여러 번 불러도 한 번만 건다.
+    private var didAsk = false
+
+    /// 사진 접근이 허락됐을 때만 지켜본다. 여러 번 불러도 한 번만 건다.
+    /// 아직 묻지 않은 기기는 AI가 연결돼 있을 때 한 번 묻는다.
     func startIfNeeded() {
+        guard !isRegistered else { return }
         let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
-        guard !isRegistered, ReceiptPhotoScanner.isEnabled(), status == .authorized || status == .limited else { return }
+        if status == .notDetermined, !didAsk, MemoPolishQueue.hasConnection() {
+            didAsk = true
+            _Concurrency.Task { @MainActor in
+                _ = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
+                self.startIfNeeded()
+                await ReceiptPhotoScanner.scan()
+            }
+            return
+        }
+        guard status == .authorized || status == .limited else { return }
         isRegistered = true
         PHPhotoLibrary.shared().register(self)
     }

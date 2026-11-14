@@ -6238,83 +6238,6 @@
         }
       }
     },
-    "AI를 먼저 연결해 주세요. 영수증 글자는 연결된 AI가 읽어요.|Connect an AI first. Your AI reads the receipt text." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "先にAIを接続してください。レシートの文字は接続したAIが読みます。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请先连接 AI。小票文字由已连接的 AI 读取。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "請先連接 AI。收據文字由已連接的 AI 讀取。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Verbinde zuerst eine KI. Deine KI liest den Belegtext."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Connectez d’abord une IA. Votre IA lit le texte du reçu."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Collega prima un’IA. La tua IA legge il testo dello scontrino."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Conecta primero una IA. Tu IA lee el texto del recibo."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Conecte uma IA primeiro. Sua IA lê o texto do recibo."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hãy kết nối AI trước. AI của bạn sẽ đọc chữ trên hóa đơn."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hubungkan AI terlebih dahulu. AI Anda membaca teks struk."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "โปรดเชื่อมต่อ AI ก่อน AI ของคุณจะอ่านข้อความในใบเสร็จ"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "पहले AI कनेक्ट करें। रसीद का टेक्स्ट आपका AI पढ़ता है।"
-          }
-        }
-      }
-    },
     "AI를 연결하면 확인할 것을 AI에게 넘길 수 있어요.|Connect an AI to hand these off." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -274583,83 +274506,6 @@
         }
       }
     },
-    "설정에서 사진 접근을 허용해 주세요.|Allow photo access in Settings." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "設定で写真へのアクセスを許可してください。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请在设置中允许访问照片。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "請在設定中允許取用照片。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Erlaube den Fotozugriff in den Einstellungen."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Autorisez l’accès aux photos dans Réglages."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Consenti l’accesso alle foto in Impostazioni."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Permite el acceso a las fotos en Ajustes."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Permita o acesso às fotos em Ajustes."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hãy cho phép truy cập ảnh trong Cài đặt."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Izinkan akses foto di Pengaturan."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "โปรดอนุญาตการเข้าถึงรูปภาพในการตั้งค่า"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "सेटिंग्स में फ़ोटो एक्सेस की अनुमति दें।"
-          }
-        }
-      }
-    },
     "설정을 기본값으로 초기화할까요?|Reset settings to defaults?" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -288366,160 +288212,6 @@
         }
       }
     },
-    "앨범 영수증 자동 확인|Check album receipts automatically" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "アルバムのレシートを自動確認"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "自动检查相册小票"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "自動檢查相簿收據"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Belege im Album automatisch prüfen"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vérifier les reçus de l’album automatiquement"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Controlla automaticamente gli scontrini dell’album"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Revisar recibos del álbum automáticamente"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Verificar recibos do álbum automaticamente"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tự động kiểm tra hóa đơn trong album"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Periksa struk di album secara otomatis"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ตรวจใบเสร็จในอัลบั้มอัตโนมัติ"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "एल्बम की रसीदें अपने-आप जाँचें"
-          }
-        }
-      }
-    },
-    "앨범에서 영수증 {0}장을 찾아 AI에게 맡겼어요.|Found {0} receipts in your album and sent them to your AI." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "アルバムでレシートを{0}枚見つけ、AIに任せました。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在相册中找到 {0} 张小票并已交给 AI。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在相簿中找到 {0} 張收據並已交給 AI。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "{0} Belege im Album gefunden und an deine KI gesendet."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "{0} reçus trouvés dans l’album et envoyés à votre IA."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Trovati {0} scontrini nell’album e inviati alla tua IA."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Se encontraron {0} recibos en tu álbum y se enviaron a tu IA."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "{0} recibos encontrados no álbum e enviados à sua IA."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Đã tìm thấy {0} hóa đơn trong album và gửi cho AI của bạn."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Menemukan {0} struk di album dan mengirimkannya ke AI Anda."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "พบใบเสร็จ {0} ใบในอัลบั้มและส่งให้ AI ของคุณแล้ว"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "एल्बम में {0} रसीदें मिलीं और आपके AI को भेज दी गईं।"
-          }
-        }
-      }
-    },
     "앱 기록|App records" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -290980,6 +290672,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "रात"
+          }
+        }
+      }
+    },
+    "어느 노선인가요?|Which line?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "どの路線ですか？"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "哪条线路？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "哪條路線？"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Welche Linie?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quelle ligne ?"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quale linea?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Qué línea?"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Qual linha?"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tuyến nào?"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jalur yang mana?"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "สายไหน?"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कौन सी लाइन?"
           }
         }
       }
@@ -324552,83 +324321,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "वापस"
-          }
-        }
-      }
-    },
-    "이제 앨범에 영수증 사진이 들어오면 AI에게 맡겨요. 사진은 기기를 떠나지 않고 글자만 가요.|New receipt photos in your album now go to your AI. Photos stay on the device; only the text is sent." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "今後、アルバムにレシートの写真が入るとAIに任せます。写真は端末から出ず、文字だけが送られます。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "今后相册中出现小票照片时会交给 AI。照片不会离开设备，只发送文字。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "今後相簿中出現收據照片時會交給 AI。照片不會離開裝置，只傳送文字。"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Neue Belegfotos im Album gehen jetzt an deine KI. Fotos bleiben auf dem Gerät; nur der Text wird gesendet."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Les nouvelles photos de reçus de l’album sont désormais envoyées à votre IA. Les photos restent sur l’appareil ; seul le texte est envoyé."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Le nuove foto di scontrini nell’album ora vanno alla tua IA. Le foto restano sul dispositivo; viene inviato solo il testo."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Las nuevas fotos de recibos del álbum ahora van a tu IA. Las fotos no salen del dispositivo; solo se envía el texto."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Novas fotos de recibos no álbum agora vão para sua IA. As fotos ficam no aparelho; só o texto é enviado."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Từ giờ ảnh hóa đơn mới trong album sẽ được gửi cho AI. Ảnh không rời khỏi thiết bị; chỉ gửi phần chữ."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Foto struk baru di album kini dikirim ke AI Anda. Foto tetap di perangkat; hanya teks yang dikirim."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "จากนี้รูปใบเสร็จใหม่ในอัลบั้มจะถูกส่งให้ AI รูปภาพไม่ออกจากอุปกรณ์ ส่งเฉพาะข้อความเท่านั้น"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "अब एल्बम में नई रसीद की फ़ोटो आपके AI को जाएगी। फ़ोटो डिवाइस पर ही रहती हैं; केवल टेक्स्ट भेजा जाता है।"
           }
         }
       }

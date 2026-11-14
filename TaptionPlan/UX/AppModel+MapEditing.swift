@@ -239,6 +239,17 @@ extension AppModel {
         applyBusRecordTitles(in: segment.span, asOf: max(segment.span.end, .now))
     }
 
+    /// 번호·노선을 정해 준다(RDQ1114A01). 버스는 그 번호 하나로, 지하철은 정해 준 노선으로 이름표에 남긴다.
+    func confirmRideLine(_ travelID: UUID, line: String) {
+        guard let segment = snapshot.travel.first(where: { $0.id == travelID }) else { return }
+        if segment.mode == .subway {
+            SubwayLineChoice.remember(segment, line: line)
+            confirmTravel(travelID, mode: .subway)
+        } else {
+            confirmRide(travelID, mode: .bus, busRoute: BusRouteCheck.Route(number: line, kind: ""))
+        }
+    }
+
     @discardableResult
     func confirmTransitBoarding(_ candidate: TransitBoardingCandidate) async -> Bool {
         await saveTransitBoardingDecision(for: candidate, mode: candidate.mode)

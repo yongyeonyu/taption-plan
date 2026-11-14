@@ -410,7 +410,11 @@ private struct MapHomeLaunchPromptAlerts: ViewModifier {
             }
             // 탈것 구간 확인(BCF1114A01): 버스면 노선을 고르고, 아니면 내 차·다른 차로 확정한다.
             .confirmationDialog(rideTitle, isPresented: isShowing { if case .ride = $0 { true } else { false } }, titleVisibility: .visible, presenting: rideSegment) { segment in
-                if segment.mode == .bus || segment.mode == .car {
+                if segment.mode == .subway {
+                    ForEach(SubwayLineChoice.candidates(segment), id: \.self) { line in
+                        Button(line) { model.confirmRideLine(segment.id, line: line) }
+                    }
+                } else if segment.mode == .bus || segment.mode == .car {
                     ForEach(RideConfirmation.routeChoices(segment), id: \.self) { route in
                         Button(language.text("버스 · \(route.number)번", "Bus \(route.number)")) { model.confirmRide(segment.id, mode: .bus, busRoute: route) }
                     }
@@ -450,6 +454,7 @@ private struct MapHomeLaunchPromptAlerts: ViewModifier {
 
     private var rideTitle: String {
         switch rideSegment?.mode {
+        case .subway: language.text("어느 노선인가요?", "Which line?")
         case .train: language.text("기차를 탔나요?", "Did you take a train?")
         case .ship: language.text("배를 탔나요?", "Did you take a boat?")
         case .airplane: language.text("비행기를 탔나요?", "Did you take a flight?")

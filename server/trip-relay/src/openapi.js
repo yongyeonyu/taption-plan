@@ -18,7 +18,7 @@ const command = {
   description: "One edit. Fields by action — addMemo: text, date?, time?. addExpense: amount (>0), currency? (ISO, default KRW), title, category?, kind? (expense|income), payer?, date?, time?. updateExpense: entryId (from an AI task context), amount?|currency?|title?|category?|kind?|delete:true. addSchedule: title, start, end?, note?. "
     + "updateActivity: date, recordId|startTime, title?|categoryId?. hideRecord: date, recordId|startTime. "
     + "classifyUnconfirmed: date, start, end (HH:mm, a span from the day's unconfirmed list), categoryId, title?. "
-    + "setTravelMode: date, moveId (from the day's moves), mode. "
+    + "setTravelMode: date, moveId (from the day's moves), mode, line? (bus number or subway line of that ride, up to 20). "
     + "addPaymentRule (answer to an AI task of kind payment_rule): name (issuer label, 1-40), pattern (1-300, ICU regular expression as in iOS "
     + "NSRegularExpression, dot matches newlines, named groups (?<amount>...) required unless kind is ignore, optional merchant, month, day, hour, "
     + "minute, currency (3-letter, default KRW); specific to that issuer's layout, anchored on its fixed words, never a catch-all like .*, without "

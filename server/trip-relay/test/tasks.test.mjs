@@ -109,6 +109,8 @@ test("classifyUnconfirmed and setTravelMode: required fields and allowed modes (
   assert.equal(await post("classifyUnconfirmed", { date: "2026-11-11", start: "19:30", end: "20:15" }), 422, "category required");
   assert.equal(await post("setTravelMode", { date: "2026-11-11", moveId: A, mode: "subway" }), 201);
   assert.equal(await post("setTravelMode", { date: "2026-11-11", moveId: A, mode: "rocket" }), 422);
+  assert.equal(await post("setTravelMode", { date: "2026-11-11", moveId: A, mode: "bus", line: "80" }), 201);
+  assert.equal(await post("setTravelMode", { date: "2026-11-11", moveId: A, mode: "bus", line: "x".repeat(21) }), 422);
   assert.equal(await post("setTravelMode", { date: "2026-11-11", mode: "bus" }), 422, "move id required");
   const reply = JSON.stringify(await (await mcp(env, writer, "set_travel_mode", { date: "2026-11-11", moveId: A, mode: "car" })).json());
   assert.doesNotMatch(reply, /isError":true/);

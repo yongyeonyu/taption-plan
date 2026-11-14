@@ -48,14 +48,23 @@ final class LedgerTests: XCTestCase {
             TravelSegment(mode: mode, span: span, distanceMeters: 3_000, confidence: .high, evidence: [])
         }
         var subway = segment(.subway)
-        XCTAssertNil(MapHomeRideLabel.text(for: subway))
+        XCTAssertEqual(MapHomeRideLabel.text(for: subway), "?")
         subway.subwayRoute = SubwayRoutePath(stops: [], lineNames: ["1호선", "2호선"], transferStationNames: [])
         XCTAssertEqual(MapHomeRideLabel.text(for: subway), "1호선→2호선")
         let name = "RideLabel-\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: name)!
         defer { defaults.removePersistentDomain(forName: name) }
-        XCTAssertNil(MapHomeRideLabel.text(for: segment(.bus), defaults: defaults))
-        XCTAssertNil(MapHomeRideLabel.text(for: segment(.car), defaults: defaults))
+        XCTAssertEqual(MapHomeRideLabel.text(for: segment(.bus), defaults: defaults), "?")
+        // 정해 준 노선은 이름표에 나오고, 더는 AI에게 맡길 구간이 아니다.
+        let unknownSubway = segment(.subway)
+        XCTAssertNotNil(RideLineTasks.candidates(unknownSubway, defaults: defaults))
+        SubwayLineChoice.remember(unknownSubway, line: "9호선", defaults: defaults)
+        XCTAssertEqual(MapHomeRideLabel.text(for: unknownSubway, defaults: defaults), "9호선")
+        XCTAssertNil(RideLineTasks.candidates(unknownSubway, defaults: defaults))
+        XCTAssertEqual(RideLineTasks.candidates(segment(.bus), defaults: defaults), [], "an unknown bus goes to the AI without candidates")
+        BusRouteCheck.remember(segment(.bus), routes: [.init(number: "80", kind: "")], defaults: defaults)
+        XCTAssertNil(RideLineTasks.candidates(segment(.bus), defaults: defaults))
+        XCTAssertNil(RideLineTasks.candidates(segment(.car), defaults: defaults))
     }
 
     func testReceiptPhotoMarksKeepLatestWithinLimit() {
@@ -111,10 +120,9 @@ final class LedgerTests: XCTestCase {
         let name = "receipt-scan-\(UUID().uuidString)"
         let store = UserDefaults(suiteName: name)!
         defer { store.removePersistentDomain(forName: name) }
-        XCTAssertFalse(ReceiptPhotoScanner.isEnabled(store))
-        ReceiptPhotoScanner.setEnabled(true, now: now, defaults: store)
-        XCTAssertTrue(ReceiptPhotoScanner.isEnabled(store))
-        XCTAssertEqual(store.double(forKey: ReceiptPhotoScanner.cursorKey), now.timeIntervalSince1970 - 86_400)
+        // 스위치 없이 늘 돈다. 처음에는 하루 전부터 보고, 그 뒤로는 적어 둔 자리부터.
+        XCTAssertEqual(ReceiptPhotoScanner.startCursor(now: now, defaults: store), now.addingTimeInterval(-86_400))
+        XCTAssertEqual(ReceiptPhotoScanner.startCursor(now: now.addingTimeInterval(3_600), defaults: store), now.addingTimeInterval(-86_400))
     }
 
     private var calendar: Calendar {

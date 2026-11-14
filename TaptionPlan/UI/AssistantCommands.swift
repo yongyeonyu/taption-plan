@@ -40,7 +40,8 @@ struct AssistantCommand: Identifiable, Equatable, Sendable {
         /// ACT1111A01: 앱이 분류하지 못한 시간을 분류로 채운다. 아직 미확인인 부분만 사용자 기록으로 남는다.
         case classifyUnconfirmed(start: Date, end: Date, title: String?, categoryID: String)
         /// ACT1111A01: 이동 구간 하나의 수단을 사용자 교정으로 바꾼다.
-        case setTravelMode(moveID: UUID, mode: TravelMode)
+        /// RDQ1114A01: `line`은 버스 번호나 지하철 노선(없어도 됨).
+        case setTravelMode(moveID: UUID, mode: TravelMode, line: String? = nil)
         /// PRL1112A01: 결제 문자 읽기 규칙. 견본과 맞는지 본 것만 담는다.
         case addPaymentRule(LedgerMessageRules.Rule)
         /// ACX1112A01: 가계부 설정과 정리, 화면 열기. 0원은 그 달 예산을 없앤다.
@@ -127,7 +128,7 @@ enum AssistantCommandParser {
         // AIQ1111A01: updateExpense.
         let entryId: String?, delete: Bool?
         // ACT1111A01: setTravelMode.
-        let moveId: String?, mode: String?
+        let moveId: String?, mode: String?, line: String?
         // PRL1112A01: addPaymentRule.
         let name: String?, pattern: String?, sample: String?
         // ACX1112A01: setBudget·deletePaymentRule·resolveReview·deleteInboxItem·openScreen.
