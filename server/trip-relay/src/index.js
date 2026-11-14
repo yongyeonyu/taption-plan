@@ -84,6 +84,86 @@ export async function kakaoImage(request, env, fetcher = fetch) {
   return json({ documents }, 200);
 }
 
+// 장소 사진의 다른 출처(PHS1114A01, 대표 선택: Mapillary 거리 사진·관광공사 TourAPI·Unsplash·Pexels). 키는 모두 Worker 비밀값이고
+// 없는 출처는 503으로 꺼져 있다. 앱에는 사진 주소·출처 표시·출처 주소만 돌려준다(3건). 사진은 서버를 거치지 않고 서버에 남기지 않는다.
+// /photo/search?source=mapillary&lat&lng · source=tour&query&lat&lng · source=unsplash|pexels&query
+const PHOTO_SOURCES = ["mapillary", "tour", "unsplash", "pexels"];
+const httpsLink = (v) => typeof v === "string" && v.startsWith("https://") && v.length <= 900;
+export async function photoSearch(request, env, fetcher = fetch) {
+  if (request.method !== "GET") return json({ error: "method_not_allowed" }, 405);
+  const incoming = new URL(request.url).searchParams;
+  const source = incoming.get("source") ?? "", query = (incoming.get("query") ?? "").trim();
+  const lat = Number(incoming.get("lat") ?? NaN), lng = Number(incoming.get("lng") ?? NaN);
+  const located = Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+  if (!PHOTO_SOURCES.includes(source) || query.length > 100) return json({ error: "bad_query" }, 400);
+  let target, headers = {}, read;
+  if (source === "mapillary") {
+    if (!env.MAPILLARY_TOKEN) return json({ error: "unavailable" }, 503);
+    if (!located) return json({ error: "bad_query" }, 400);
+    // 좌표 둘레 약 60m 상자 안의 거리 사진.
+    const d = 0.0006;
+    target = new URL("https://graph.mapillary.com/images");
+    target.searchParams.set("fields", "id,thumb_1024_url,creator");
+    target.searchParams.set("bbox", [lng - d, lat - d, lng + d, lat + d].map((v) => v.toFixed(6)).join(","));
+    target.searchParams.set("limit", "5");
+    headers = { authorization: `OAuth ${env.MAPILLARY_TOKEN}` };
+    read = (body) => (Array.isArray(body?.data) ? body.data : []).map((item) => ({
+      image: item?.thumb_1024_url, site: "Mapillary" + (typeof item?.creator?.username === "string" ? " · " + item.creator.username.slice(0, 40) : ""),
+      ...(typeof item?.id === "string" ? { page: "https://www.mapillary.com/app/?pKey=" + encodeURIComponent(item.id) } : {}),
+    }));
+  } else if (source === "tour") {
+    const key = env.TOUR_API_KEY ?? env.TAGO_SERVICE_KEY;
+    if (!key) return json({ error: "unavailable" }, 503);
+    if (!query) return json({ error: "bad_query" }, 400);
+    target = new URL("https://apis.data.go.kr/B551011/KorService2/searchKeyword2");
+    for (const [name, value] of [["serviceKey", key], ["MobileOS", "IOS"], ["MobileApp", "BOKKIPlan"], ["_type", "json"], ["numOfRows", "5"], ["pageNo", "1"], ["keyword", query]]) target.searchParams.set(name, value);
+    read = (body) => {
+      const items = body?.response?.body?.items?.item;
+      return (Array.isArray(items) ? items : []).filter((item) => {
+        // 이름이 같은 먼 곳을 피하려고 좌표가 있으면 약 3km 안만 쓴다.
+        const x = Number(item?.mapx), y = Number(item?.mapy);
+        return !located || !(Math.abs(x) <= 180) || (Math.abs(y - lat) <= 0.03 && Math.abs(x - lng) <= 0.04);
+      }).map((item) => ({ image: typeof item?.firstimage === "string" ? item.firstimage.replace(/^http:/, "https:") : undefined, site: "한국관광공사" }));
+    };
+  } else if (source === "unsplash") {
+    if (!env.UNSPLASH_ACCESS_KEY) return json({ error: "unavailable" }, 503);
+    if (!query) return json({ error: "bad_query" }, 400);
+    target = new URL("https://api.unsplash.com/search/photos");
+    target.searchParams.set("query", query);
+    target.searchParams.set("per_page", "3");
+    target.searchParams.set("orientation", "landscape");
+    headers = { authorization: `Client-ID ${env.UNSPLASH_ACCESS_KEY}`, "accept-version": "v1" };
+    read = (body) => (Array.isArray(body?.results) ? body.results : []).map((item) => ({
+      image: item?.urls?.small, site: (typeof item?.user?.name === "string" ? item.user.name.slice(0, 40) + " · " : "") + "Unsplash", page: item?.links?.html,
+    }));
+  } else {
+    if (!env.PEXELS_API_KEY) return json({ error: "unavailable" }, 503);
+    if (!query) return json({ error: "bad_query" }, 400);
+    target = new URL("https://api.pexels.com/v1/search");
+    target.searchParams.set("query", query);
+    target.searchParams.set("per_page", "3");
+    target.searchParams.set("orientation", "landscape");
+    headers = { authorization: env.PEXELS_API_KEY };
+    read = (body) => (Array.isArray(body?.photos) ? body.photos : []).map((item) => ({
+      image: item?.src?.medium, site: (typeof item?.photographer === "string" ? item.photographer.slice(0, 40) + " · " : "") + "Pexels", page: item?.url,
+    }));
+  }
+  const upstream = await fetcher(target, { headers });
+  if (!upstream.ok) return json({ error: "upstream", status: upstream.status }, 502);
+  let body;
+  try { body = await upstream.json(); } catch { return json({ error: "upstream" }, 502); }
+  const documents = read(body).filter((d) => httpsLink(d.image)).slice(0, 3).map((d) => ({ image: d.image, site: d.site, ...(httpsLink(d.page) ? { page: d.page } : {}) }));
+  return json({ documents }, 200);
+}
+
+async function photoRoute(request, ctx) {
+  if (request.method === "GET") {
+    const perIp = await (await ipState(ctx.env, request)).call("countDaily", { name: "kakao", limit: LIMITS.kakaoPerIpDay, now: ctx.now, expire: true });
+    if (!perIp.ok) return tooMany("kakao_daily_limit", perIp.retryAfter);
+  }
+  return photoSearch(request, ctx.env, ctx.env.FETCH);
+}
+
 // 버스 노선 중계(BRT1113A01, 대표 지시 「버스노선 api 추가하자」). 국토교통부 TAGO(공공데이터포털) 버스정류소 정보.
 // 키는 Worker 비밀값 TAGO_SERVICE_KEY(공공데이터포털 「일반 인증키 Decoding」 값)이고 앱에 넣지 않는다. 카카오와 같은 검색 한도를 쓴다.
 // /tago/stops?lat&lng: 좌표 근처 정류소(도시 코드·정류소 ID·이름·좌표). /tago/routes?cityCode&nodeId: 그 정류소를 지나는 노선(번호·종류).
@@ -280,6 +360,9 @@ const ROUTES = {
   },
   "/kakao/image": {
     GET: ["search", kakaoRoute],
+  },
+  "/photo/search": {
+    GET: ["search", photoRoute],
   },
   "/tago/stops": {
     GET: ["search", tagoRoute],

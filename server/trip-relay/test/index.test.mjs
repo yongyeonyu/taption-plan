@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { handle, isActivityUpload, isCommand, isTripPlan, kakaoImage, kakaoKeyword, seal, storageCryptoKey, storageKey } from "../src/index.js";
+import { handle, isActivityUpload, isCommand, isTripPlan, kakaoImage, kakaoKeyword, photoSearch, seal, storageCryptoKey, storageKey } from "../src/index.js";
 
 import { MemoryKV, makeEnv } from "./fakes.mjs";
 
@@ -325,4 +325,33 @@ test("kakao image proxy returns only https photo links and their source (PHX1114
   assert.deepEqual((await response.json()).documents, [{ image: "https://img.example.com/a.jpg", thumbnail: "https://thumb.example.com/a", width: 800, height: 600, site: "어느 블로그", page: "https://blog.example.com/1" }]);
   assert.equal((await kakaoImage(new Request("https://relay.example.com/kakao/image?query="), { KAKAO_REST_API_KEY: "secret" }, fetcher)).status, 400);
   assert.equal((await kakaoImage(new Request("https://relay.example.com/kakao/image?query=a"), {}, fetcher)).status, 503);
+});
+
+test("photo search relays each source with its own key and returns only https links with a credit (PHS1114A01)", async () => {
+  const seen = [];
+  const answer = (body) => async (url, init = {}) => { seen.push({ url: String(url), headers: init.headers ?? {} }); return new Response(JSON.stringify(body), { status: 200 }); };
+  const ask = (query, env, body) => photoSearch(new Request("https://relay.example.com/photo/search?" + query), env, answer(body));
+
+  const street = await ask("source=mapillary&lat=37.5&lng=127", { MAPILLARY_TOKEN: "m" }, { data: [{ id: "123", thumb_1024_url: "https://img.example.com/s.jpg", creator: { username: "walker" } }, { id: "9", thumb_1024_url: "http://x/y.jpg" }] });
+  assert.deepEqual((await street.json()).documents, [{ image: "https://img.example.com/s.jpg", site: "Mapillary · walker", page: "https://www.mapillary.com/app/?pKey=123" }]);
+  assert.match(seen[0].url, /bbox=126\.999400%2C37\.499400%2C127\.000600%2C37\.500600/);
+  assert.equal(seen[0].headers.authorization, "OAuth m");
+  assert.equal((await ask("source=mapillary&query=x", { MAPILLARY_TOKEN: "m" }, {})).status, 400, "street photos need a coordinate");
+
+  const tour = await ask("source=tour&query=%EA%B6%81&lat=37.5&lng=127", { TAGO_SERVICE_KEY: "t" }, { response: { body: { items: { item: [
+    { title: "가까운 곳", firstimage: "http://tong.example.com/a.jpg", mapx: "127.001", mapy: "37.501" },
+    { title: "먼 곳", firstimage: "http://tong.example.com/b.jpg", mapx: "129.0", mapy: "35.1" },
+  ] } } } });
+  assert.deepEqual((await tour.json()).documents, [{ image: "https://tong.example.com/a.jpg", site: "한국관광공사" }]);
+  assert.match(seen.at(-1).url, /serviceKey=t&/);
+
+  const city = await ask("source=unsplash&query=Bangkok", { UNSPLASH_ACCESS_KEY: "u" }, { results: [{ urls: { small: "https://images.example.com/c.jpg" }, user: { name: "A Person" }, links: { html: "https://unsplash.example.com/p/1" } }] });
+  assert.deepEqual((await city.json()).documents, [{ image: "https://images.example.com/c.jpg", site: "A Person · Unsplash", page: "https://unsplash.example.com/p/1" }]);
+  assert.equal(seen.at(-1).headers.authorization, "Client-ID u");
+
+  const stock = await ask("source=pexels&query=Bangkok", { PEXELS_API_KEY: "p" }, { photos: [{ src: { medium: "https://images.example.com/d.jpg" }, photographer: "B Person", url: "https://pexels.example.com/photo/2" }] });
+  assert.deepEqual((await stock.json()).documents, [{ image: "https://images.example.com/d.jpg", site: "B Person · Pexels", page: "https://pexels.example.com/photo/2" }]);
+
+  for (const source of ["mapillary", "tour", "unsplash", "pexels"]) assert.equal((await ask(`source=${source}&query=a&lat=1&lng=1`, {}, {})).status, 503, source + " is off without its key");
+  assert.equal((await ask("source=google&query=a", {}, {})).status, 400);
 });
