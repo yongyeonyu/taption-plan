@@ -172,6 +172,21 @@
       ]
     },
     {
+      "action": "setTripItemPhoto",
+      "tool": "set_trip_item_photo",
+      "destructive": true,
+      "since": 341,
+      "fields": [
+        "itemId",
+        "photoUrl",
+        "credit",
+        "remove"
+      ],
+      "required": [
+        "itemId"
+      ]
+    },
+    {
       "action": "deleteManualRecord",
       "tool": "delete_manual_record",
       "destructive": true,

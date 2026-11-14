@@ -238,9 +238,12 @@ final class TravelPlacePhotoStore {
     func load(_ places: [Place]) async {
         guard let folder else { return }
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        for place in places where photos[place.itemID] == nil {
+        for place in places {
             if Task.isCancelled { return }
-            let key = TravelWikiPhoto.cacheKey(name: place.name, latitude: place.latitude, longitude: place.longitude)
+            // AI가 준 사진 주소가 있으면 그 주소가 이름표다. 주소가 바뀌면 다시 받는다(AIP1114A08).
+            let link = TravelPhotoLink.link(place.itemID)
+            let key = link.map { TravelWikiPhoto.cacheKey(name: $0.url.absoluteString, latitude: 0, longitude: 0) }
+                ?? TravelWikiPhoto.cacheKey(name: place.name, latitude: place.latitude, longitude: place.longitude)
             guard asked.insert(place.itemID + key).inserted else { continue }
             if let cached = readCache(key, in: folder) {
                 photos[place.itemID] = cached
@@ -251,7 +254,9 @@ final class TravelPlacePhotoStore {
                 if let picture = await fallbackPicture(place) { photos[place.itemID] = picture }
                 continue
             }
-            let fetched = await fetch(place)
+            var fetched: TravelPlacePhoto?
+            if let link { fetched = await linkedPhoto(link) }
+            if fetched == nil, link == nil || photos[place.itemID] == nil { fetched = await fetch(place) }
             if let fetched, let data = fetched.image.jpegData(compressionQuality: 0.85) {
                 try? data.write(to: folder.appendingPathComponent(key + ".jpg"))
                 try? Data((fetched.source.rawValue + "\n" + fetched.credit).utf8).write(to: folder.appendingPathComponent(key + ".txt"))
@@ -315,6 +320,16 @@ final class TravelPlacePhotoStore {
             if let photo = await relayPhoto([.init(name: "source", value: source), name]) { return photo }
         }
         return nil
+    }
+
+    /// AI가 준 주소의 사진. 허용한 사진 서버에서만 받고, 웹 사진처럼 하루만 둔다.
+    private func linkedPhoto(_ link: TravelPhotoLink.Link) async -> TravelPlacePhoto? {
+        var request = URLRequest(url: link.url, timeoutInterval: 10)
+        request.setValue("image/*", forHTTPHeaderField: "Accept")
+        if let agent { request.setValue(agent, forHTTPHeaderField: "User-Agent") }
+        guard let (bytes, reply) = try? await session.data(for: request), (reply as? HTTPURLResponse)?.statusCode == 200,
+              bytes.count <= 4_000_000, let image = UIImage(data: bytes), let small = image.preparingThumbnail(of: Self.fitted(image.size, longSide: 640)) else { return nil }
+        return TravelPlacePhoto(image: small, credit: link.credit.isEmpty ? (link.url.host ?? "web") : link.credit, source: .web)
     }
 
     /// 우리 서버의 사진 중계에서 받은 첫 장. 사진은 그 출처에서 바로 받는다.
@@ -407,6 +422,69 @@ final class TravelPlacePhotoStore {
         }
         for name in TravelWikiPhoto.evictions(sized, limitBytes: Self.limitBytes) {
             try? FileManager.default.removeItem(at: folder.appendingPathComponent(name))
+        }
+    }
+}
+
+/// AI가 여행 일정에 붙여 준 사진 주소(AIP1114A08). 주소와 출처 표시만 기기 설정에 두고, 사진은 카드가 보일 때 받는다.
+enum TravelPhotoLink {
+    struct Link: Equatable {
+        var url: URL
+        var credit: String
+    }
+
+    static let key = "travelItemPhotoLinks"
+    /// 사진을 받아도 되는 서버: 자유 이용 사진을 두는 곳만. 서버 `actions.js`의 `PHOTO_HOSTS`와 같다.
+    static let hosts: Set<String> = ["upload.wikimedia.org", "images.unsplash.com", "images.pexels.com"]
+
+    static func allowed(_ text: String) -> URL? {
+        guard text.count <= 500, let url = URL(string: text), url.scheme == "https", url.user == nil, url.port == nil,
+              let host = url.host?.lowercased(), hosts.contains(host) else { return nil }
+        return url
+    }
+
+    static func link(_ itemID: String, defaults: UserDefaults = .standard) -> Link? {
+        guard let saved = (defaults.dictionary(forKey: key) as? [String: [String: String]])?[itemID], let url = saved["url"].flatMap(allowed) else { return nil }
+        return Link(url: url, credit: saved["credit"] ?? "")
+    }
+}
+
+extension AssistantOperations {
+    static let photos: [any AssistantOperation.Type] = [SetTripItemPhoto.self]
+
+    /// 여행 일정 카드에 보일 사진 주소를 정하거나 뗀다. 사진 자체는 서버를 거치지 않는다.
+    struct SetTripItemPhoto: AssistantOperation {
+        static let spec = AssistantOperationSpec(
+            name: "setTripItemPhoto", fields: ["itemId", "photoUrl", "credit", "remove"], counter: .schedules,
+            title: { $0.text("여행 일정 사진 정하기", "Set trip item photos") },
+            guide: #""itemId":"<trips[].items[].itemId>","photoUrl":"https://upload.wikimedia.org/...","credit":"Author, CC BY-SA 4.0"} (the photo shown on one trip card; only a direct https image link on upload.wikimedia.org, images.unsplash.com or images.pexels.com that you actually found, never a guessed one; credit names the author and licence; "remove":true goes back to the app's own search)"#
+        )
+
+        let itemID: String
+        let url: URL?
+        let credit: String
+
+        init?(fields: AssistantFields) {
+            let url = fields.raw("photoUrl").flatMap(TravelPhotoLink.allowed), credit = fields.string("credit", max: 120), remove = fields.flag("remove")
+            guard let itemID = fields.string("itemId", max: 100), fields.ok("photoUrl", url), fields.ok("credit", credit), fields.ok("remove", remove),
+                  (remove == true) != (url != nil), remove != false, remove == nil || credit == nil else { return nil }
+            self.itemID = itemID
+            self.url = url
+            self.credit = credit ?? ""
+        }
+
+        func apply(host: AssistantOperationHost) async -> AssistantEditResult {
+            let known = host.model.snapshot.settings.travelPlanStops.contains { $0.itemID == itemID }
+                || (host.model.snapshot.settings.travelTripItems ?? []).contains { $0.itemID == itemID }
+            guard known else { return .rejected("no_trip_item") }
+            let key = TravelPhotoLink.key
+            var links = (host.defaults.dictionary(forKey: key) as? [String: [String: String]]) ?? [:]
+            let before = links[itemID]?["url"] ?? ""
+            links[itemID] = url.map { ["url": $0.absoluteString, "credit": credit] }
+            guard let change = host.changing(key, { host.defaults.set(links, forKey: key) }) else { return .rejected("no_change") }
+            var result = AssistantEditResult(before: before, after: url?.absoluteString ?? host.deleted)
+            result.appChange = AssistantAppChange(stored: [change])
+            return result
         }
     }
 }

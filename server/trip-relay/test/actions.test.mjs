@@ -157,6 +157,15 @@ test("actions batch 2: plans and timed trip items", () => {
   refuses("updateTripItem", { tripId: "trip-1", itemId: "m-1a2b3c4d", start: "2026-12-01T19:00+09:00", end: "2026-12-01T18:00+09:00" });
   accepts("deleteTripItem", { tripId: "trip-1", itemId: "m-1a2b3c4d" });
   refuses("deleteTripItem", { tripId: "trip-1" });
+  const photo = "https://upload.wikimedia.org/wikipedia/commons/a/ab/Sample.jpg";
+  accepts("setTripItemPhoto", { itemId: "m-1a2b3c4d", photoUrl: photo, credit: "Author, CC BY-SA 4.0" });
+  accepts("setTripItemPhoto", { itemId: "m-1a2b3c4d", remove: true });
+  refuses("setTripItemPhoto", { itemId: "m-1a2b3c4d" });
+  refuses("setTripItemPhoto", { itemId: "m-1a2b3c4d", photoUrl: photo, remove: true });
+  refuses("setTripItemPhoto", { itemId: "m-1a2b3c4d", remove: false });
+  for (const bad of ["http://upload.wikimedia.org/a.jpg", "https://example.com/a.jpg", "https://user@upload.wikimedia.org/a.jpg", "https://upload.wikimedia.org:8443/a.jpg", "https://upload.wikimedia.org.example.com/a.jpg"]) {
+    refuses("setTripItemPhoto", { itemId: "m-1a2b3c4d", photoUrl: bad });
+  }
   assert.equal(f.instant().check("2026-12-01T18:00:30Z"), true);
   assert.equal(f.instant().check("2026-12-01T18:00"), false);
 });

@@ -98,6 +98,15 @@ export const registry = makeRegistry();
 // 고친 뒤 `npm run actions`로 견본을 다시 뽑는다.
 
 const SINCE = 341;
+/** 여행 카드 사진을 받아도 되는 서버(앱 `TravelPhotoLink.hosts`와 같다). */
+export const PHOTO_HOSTS = ["upload.wikimedia.org", "images.unsplash.com", "images.pexels.com"];
+const photoLink = (v) => {
+  if (typeof v !== "string" || v.length > 500) return false;
+  try {
+    const url = new URL(v);
+    return url.protocol === "https:" && !url.username && !url.password && !url.port && PHOTO_HOSTS.includes(url.hostname.toLowerCase());
+  } catch { return false; }
+};
 const UUID = /^[0-9A-Fa-f]{8}(?:-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12}$/;
 const given = (v) => v !== undefined && v !== null;
 const anyOf = (v, names) => names.some((name) => given(v[name]));
@@ -230,6 +239,19 @@ registry
     tool: "delete_trip_item", title: "Delete a timed trip item", since: SINCE,
     description: "Delete a timed trip item with its detail items, linked plan and map pin. Only when the user asked. Undoable.",
     fields: { tripId: f.id("Trip id").required_(), itemId: f.id("Item id").required_() },
+  })
+  .add("setTripItemPhoto", {
+    tool: "set_trip_item_photo", title: "Set the photo of a trip card", since: SINCE,
+    description: "Choose the photo shown on one trip card (itemId from get_activity trips[].items[]). Only a direct https image link on "
+      + PHOTO_HOSTS.join(", ") + " that you actually found; never guess a link. credit names the author and licence. "
+      + "remove:true goes back to the app's own search. The app downloads the picture itself; nothing but the link passes through here. Undoable.",
+    fields: {
+      itemId: f.id("Item id").required_(),
+      photoUrl: field((v) => photoLink(v), { type: "string", maxLength: 500, description: "Direct https image link on an allowed host" }),
+      credit: f.text(120, "Author and licence, shown under the photo"),
+      remove: f.flag("true removes the chosen photo"),
+    },
+    check: (v) => (v.remove === true ? !anyOf(v, ["photoUrl", "credit"]) : !given(v.remove) && given(v.photoUrl)),
   });
 
 // 3묶음: 기록.

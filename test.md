@@ -7,6 +7,14 @@
 - CLM1114A01(하루 편집 한도 30 → 100): 서버 `npm test` 116건 통과(옛 숫자에 기대던 시험 5건을 새 한도에 맞게 고침), `wrangler deploy` 완료. 대기열 상한은 50 그대로다(100으로 올리면 다른 시험·읽기 상한까지 바뀌어 이번에는 두었다).
 - OCF1114A01(큰 사진에도 「OCR」 표시)·안내문 숫자: `AssistantCommandEditTests`·`AssistantRelayTests`·`LedgerTests` 62건 통과·실패 0(`build/validation/OCB1114A01/sim-16.xcresult`), 구조 점검 통과. 아직 빌드에 없고 화면 확인도 없다.
 
+## ACT1114A07·AIP1114A08 · AI 동작 등록부·묶음 1~4와 사진 주소 넣기 (2026-11-14 저녁, 아직 빌드에 없음)
+
+- 동작 묶음은 따로 만든 작업 공간에서 구현해 메인에 합침. `AssistantCommandRunner.swift` 끝에서 충돌 1곳(푸시 코드와 등록부가 같은 자리에 덧붙음) → 양쪽 다 살림. 사진 주소 동작(`setTripItemPhoto`)은 메인에서 더함.
+- 합친 뒤 메인에서(시뮬레이터 BOKKI-STL, 실기기 확인 없음): `AITaskQueueTests`·`LedgerTests`·`AssistantPhase3Tests`·`AssistantReviewFixTests`·`AssistantRelayTests`·`AssistantCommandEditTests`·`LedgerMessageAccuracyTests`·`LedgerReviewTests`·`MapHomeKakaoProjectionTests`·`TripItemStatusTests`·`TravelMapTests` 215건 통과·실패 0(`build/validation/ACT1114A07/sim-main-1.xcresult`, 첫 실행에 통과).
+- 서버 `npm test` 155건 통과(세 번 연속). 구조 점검·import 경계 통과, 번역 점검 실패 0(긴 문구 3은 기존 것).
+- 작업 공간에서의 묶음별 로그는 그 작업 공간의 `build/validation/ACT1114A07/sim-1`~`sim-11.log`(마지막 155건 통과). 디스크가 차서 서명 오류 2회·로그 쓰기 실패 1회가 있었고 재실행으로 통과. 끝난 작업 공간 4곳의 빌드 캐시(`dd`)를 지워 9GB 확보.
+- 하지 않은 것: 서버 배포, 실기기에서의 모든 동작(화면 열기 새 대상, 표시 옵션 즉시 반영, 카카오 전환, 탑승 후보, 사진 주소로 받은 사진이 카드에 보이는지).
+
 ## PSH1114A06 · 푸시 알림 합침 (2026-11-14 오후, 아직 빌드에 없음)
 
 - 따로 만든 작업 공간에서 구현해 메인에 합침(충돌 없음). 합친 뒤 메인에서: 서버 `npm test` 148건 통과(세 번 연속), 앱 `AssistantRelayTests`·`AssistantPhase3Tests`·`AITaskQueueTests`·`LedgerTests`·`MapHomeKakaoProjectionTests`·`TripItemStatusTests` 116건 통과·실패 0(`build/validation/AIX1114A01/sim-merge-5.xcresult`). 앞선 `sim-merge-4`는 서명 단계의 일시 오류(internal error in Code Signing subsystem)로 빌드 실패 → 같은 명령 재실행으로 통과. 구조 점검 통과, 번역 실패 0.

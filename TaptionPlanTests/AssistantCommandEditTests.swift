@@ -889,6 +889,24 @@ extension AssistantCommandEditTests {
         XCTAssertEqual([again.itemID, again.title], [item.itemID, "저녁"])
         XCTAssertEqual(again.planID.flatMap { id in model.snapshot.plans.first { $0.id == id } }?.title, "저녁", "되살린 계획에 다시 이어진다")
 
+        // 사진 주소(AIP1114A08): 허용한 사진 서버의 https 주소만, 되돌리면 뗀다.
+        let photo = "https://upload.wikimedia.org/wikipedia/commons/a/ab/Sample.jpg"
+        for bad in ["http://upload.wikimedia.org/a.jpg", "https://example.com/a.jpg", "https://user@upload.wikimedia.org/a.jpg", "https://upload.wikimedia.org:8443/a.jpg"] {
+            XCTAssertTrue(try batch([command("x", "setTripItemPhoto", ["itemId": again.itemID, "photoUrl": bad])]).invalidIDs == ["x"], bad)
+        }
+        XCTAssertTrue(try batch([command("x", "setTripItemPhoto", ["itemId": again.itemID])]).invalidIDs == ["x"])
+        XCTAssertTrue(try batch([command("x", "setTripItemPhoto", ["itemId": again.itemID, "photoUrl": photo, "remove": true])]).invalidIDs == ["x"])
+        let unknown = try await run(model, "setTripItemPhoto", ["itemId": "nope", "photoUrl": photo], store: store)
+        XCTAssertEqual(unknown.reason, "no_trip_item")
+        let pictured = try await run(model, "setTripItemPhoto", ["itemId": again.itemID, "photoUrl": photo, "credit": "Author, CC BY-SA 4.0"], store: store)
+        XCTAssertNil(pictured.reason)
+        XCTAssertEqual(TravelPhotoLink.link(again.itemID, defaults: store), .init(url: try XCTUnwrap(URL(string: photo)), credit: "Author, CC BY-SA 4.0"))
+        let samePhoto = try await run(model, "setTripItemPhoto", ["itemId": again.itemID, "photoUrl": photo, "credit": "Author, CC BY-SA 4.0"], store: store)
+        XCTAssertEqual(samePhoto.reason, "no_change")
+        let unpictured = await model.undoAssistantEntry(try XCTUnwrap(pictured.entry), preferences: .test(store))
+        XCTAssertTrue(unpictured)
+        XCTAssertNil(TravelPhotoLink.link(again.itemID, defaults: store))
+
         AssistantActionToggles.set(.operation("deleteTripItem"), enabled: false, defaults: store)
         let off = try await run(model, "deleteTripItem", ["tripId": "trip-1", "itemId": item.itemID], store: store)
         XCTAssertEqual(off.reason, "disabled")
