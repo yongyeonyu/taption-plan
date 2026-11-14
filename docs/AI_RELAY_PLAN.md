@@ -27,7 +27,7 @@
 |---|---|---|
 | `TaptionRules` | 규칙 모델·코덱·평가기·엔진 버전 | Foundation |
 | `TaptionLedgerCore` | `LedgerEntry`·`LedgerCategory`·`LedgerTrip`·`LedgerMessageParser`(Vision 제외)·`PaymentInbox.Item` 등 값 타입 | PlanStore, WatchSync |
-| `TaptionAssistantProtocol` | 명령·일·질문·앱 상태 DTO, `AssistantFields`, `actions.json`, 가리기 | PlanCore, Rules |
+| `TaptionAssistantProtocol` | 명령·일·질문·앱 상태 DTO, `AssistantFields`, `actions.json`, 가리기 | PlanCore, Rules, WatchSync(동작 이름표의 언어 값, PKG1114A19) |
 | `TaptionAssistantKit` | 중계 클라이언트, 등록·키, 명령 실행기·저널, 폴링, 일 큐, 규칙 동기화, 동작 등록부, 로그·되돌리기, 푸시 처리, **호스트 프로토콜** | Protocol, Store, LedgerCore |
 | `TaptionAssistantUI` | AI 화면(SwiftUI) | Kit |
 
