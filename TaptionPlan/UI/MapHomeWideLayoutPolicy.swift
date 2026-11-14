@@ -344,7 +344,12 @@ extension View {
         if width > 0 {
             let height = UserDefaults.standard.double(forKey: "debugViewportHeight")
             if height > 0 {
+                // 화면보다 큰 폭·높이(듀오 안쪽, 아이패드)는 `-debugViewportScale 0.4`처럼 줄여서 한 화면에 담아 본다.
+                let scale = UserDefaults.standard.double(forKey: "debugViewportScale")
+                let factor = scale > 0 ? scale : 1
                 frame(width: width, height: height)
+                    .scaleEffect(factor, anchor: .topLeading)
+                    .frame(width: width * factor, height: height * factor, alignment: .topLeading)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                     .background(Color.black)
             } else {
