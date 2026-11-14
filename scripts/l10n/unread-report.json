@@ -1,5 +1,5 @@
 {
- "ui": 4928,
+ "ui": 4958,
  "catalog": 504,
  "unread": [
   {
@@ -100,25 +100,25 @@
   },
   {
    "file": "TaptionPlan/Core/LedgerMessageRules.swift",
-   "line": 487,
+   "line": 498,
    "ko": "$0",
    "en": "language"
   },
   {
    "file": "TaptionPlan/Core/LedgerMessageRules.swift",
-   "line": 894,
+   "line": 905,
    "ko": "$0",
    "en": "host.language"
   },
   {
    "file": "TaptionPlan/Core/LedgerMessageRules.swift",
-   "line": 695,
+   "line": 706,
    "ko": "value",
    "en": "host.language"
   },
   {
    "file": "TaptionPlan/Core/LedgerMessageRules.swift",
-   "line": 523,
+   "line": 534,
    "ko": "entry.amount",
    "en": "entry.currency"
   },
@@ -163,6 +163,18 @@
    "line": 203,
    "ko": "koreanTitle",
    "en": "englishTitle"
+  },
+  {
+   "file": "TaptionPlan/UI/AssistantDataActions.swift",
+   "line": 1020,
+   "ko": "$0.name",
+   "en": "$0.englishName"
+  },
+  {
+   "file": "TaptionPlan/UI/AssistantDataActions.swift",
+   "line": 801,
+   "ko": "stop.kind.title",
+   "en": "stop.kind.englishTitle"
   },
   {
    "file": "TaptionPlan/UI/AssistantDataActions.swift",

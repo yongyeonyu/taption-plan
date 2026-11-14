@@ -7,6 +7,14 @@
 - CLM1114A01(하루 편집 한도 30 → 100): 서버 `npm test` 116건 통과(옛 숫자에 기대던 시험 5건을 새 한도에 맞게 고침), `wrangler deploy` 완료. 대기열 상한은 50 그대로다(100으로 올리면 다른 시험·읽기 상한까지 바뀌어 이번에는 두었다).
 - OCF1114A01(큰 사진에도 「OCR」 표시)·안내문 숫자: `AssistantCommandEditTests`·`AssistantRelayTests`·`LedgerTests` 62건 통과·실패 0(`build/validation/OCB1114A01/sim-16.xcresult`), 구조 점검 통과. 아직 빌드에 없고 화면 확인도 없다.
 
+## ACT1114A09 · AI 동작 묶음 5·6, 장소 쌍 규칙, 규칙 기록 (2026-11-14 밤, 아직 빌드에 없음)
+
+- 따로 만든 작업 공간에서 구현해 메인에 합침(충돌 없음). 번역 다시 생성(실패 0), 구조 점검·import 경계 통과.
+- 합친 뒤 메인에서(시뮬레이터 BOKKI-STL, 실기기 확인 없음): `AITaskQueueTests`·`LedgerTests`·`AssistantPhase3Tests`·`AssistantReviewFixTests`·`AssistantRelayTests`·`AssistantCommandEditTests`·`LedgerMessageAccuracyTests`·`LedgerReviewTests`·`MapHomeKakaoProjectionTests`·`TripItemStatusTests`·`TravelMapTests`·`FeatureEngineTests` 929건 통과·실패 0(`build/validation/ACT1114A09/sim-main-1.xcresult`). 로그 끝에 시뮬레이터 종료 경고(Invalid device state) 한 줄이 있으나 시험 결과와 무관.
+- 서버 `npm test` 157건 통과(세 번 연속).
+- 작업 공간에서: 지정 5개 클래스 134건 통과(첫 실행은 4건 실패 → 단언·예약 칸 고친 뒤 통과).
+- 시험하지 못한 경로: 위치·사진·Watch 수집의 되돌리기(켜는 쪽), Watch 보내기 설정 적용, 구글 캘린더 끊기, 새로고침의 실제 실행. 하지 않은 것: 서버 배포, 실기기 전부.
+
 ## ACT1114A07·AIP1114A08 · AI 동작 등록부·묶음 1~4와 사진 주소 넣기 (2026-11-14 저녁, 아직 빌드에 없음)
 
 - 동작 묶음은 따로 만든 작업 공간에서 구현해 메인에 합침. `AssistantCommandRunner.swift` 끝에서 충돌 1곳(푸시 코드와 등록부가 같은 자리에 덧붙음) → 양쪽 다 살림. 사진 주소 동작(`setTripItemPhoto`)은 메인에서 더함.

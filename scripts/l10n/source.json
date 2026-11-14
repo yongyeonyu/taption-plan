@@ -631,12 +631,24 @@
    ]
   },
   {
+   "key": "AI 규칙 받음|AI rule received",
+   "ko": "AI 규칙 받음",
+   "en": "AI rule received",
+   "files": [
+    "AssistantRuleStore.swift:213"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "AI 규칙|AI rules",
    "ko": "AI 규칙",
    "en": "AI rules",
    "files": [
     "AssistantDataCommands.swift:576",
-    "AssistantSafetyViews.swift:481",
+    "AssistantSafetyViews.swift:483",
     "AssistantSettingsView.swift:33"
    ],
    "args": [],
@@ -688,7 +700,7 @@
    "ko": "AI 비서 요청 확인",
    "en": "Review AI assistant requests",
    "files": [
-    "AssistantSafetyViews.swift:442"
+    "AssistantSafetyViews.swift:444"
    ],
    "args": [],
    "targets": [
@@ -712,7 +724,7 @@
    "ko": "AI 비서가 기존 항목 {0}개를 한꺼번에 바꾸려고 해요. 반영할까요?",
    "en": "The AI assistant wants to change {0} existing items at once. Apply?",
    "files": [
-    "AssistantSafetyViews.swift:423"
+    "AssistantSafetyViews.swift:425"
    ],
    "args": [
     "total"
@@ -967,7 +979,7 @@
    "ko": "AI가 만듦",
    "en": "Made by AI",
    "files": [
-    "AssistantSafetyViews.swift:504"
+    "AssistantSafetyViews.swift:506"
    ],
    "args": [],
    "targets": [
@@ -979,7 +991,7 @@
    "ko": "AI가 배운 것을 앱이 먼저 스스로 판단해요. 끄거나 밀어서 지울 수 있어요.",
    "en": "The app decides these by itself first, using what your AI learned. Switch one off or swipe to delete it.",
    "files": [
-    "AssistantSafetyViews.swift:477"
+    "AssistantSafetyViews.swift:479"
    ],
    "args": [],
    "targets": [
@@ -2539,6 +2551,30 @@
    ]
   },
   {
+   "key": "Watch 움직임 수집|Watch motion collection",
+   "ko": "Watch 움직임 수집",
+   "en": "Watch motion collection",
+   "files": [
+    "AssistantDataCommands.swift:824"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "Watch 자료 보내기|Watch data sync",
+   "ko": "Watch 자료 보내기",
+   "en": "Watch data sync",
+   "files": [
+    "AssistantDataCommands.swift:825"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "Watch의 움직임 기록을 받고, 건강 앱의 심박·걸음·운동·수면 기록을 함께 읽습니다.|Motion from your Watch, plus heart rate, steps, workouts, and sleep from the Health app.",
    "ko": "Watch의 움직임 기록을 받고, 건강 앱의 심박·걸음·운동·수면 기록을 함께 읽습니다.",
    "en": "Motion from your Watch, plus heart rate, steps, workouts, and sleep from the Health app.",
@@ -2645,6 +2681,18 @@
    "files": [
     "AppModel+Backup.swift:402",
     "AppModel+Backup.swift:407"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "iCloud 동기화 시작|iCloud sync started",
+   "ko": "iCloud 동기화 시작",
+   "en": "iCloud sync started",
+   "files": [
+    "AssistantCommandRunner.swift:617"
    ],
    "args": [],
    "targets": [
@@ -3180,6 +3228,21 @@
    ]
   },
   {
+   "key": "{0} · {1}번째|{0} · #{1}",
+   "ko": "{0} · {1}번째",
+   "en": "{0} · #{1}",
+   "files": [
+    "AssistantDataActions.swift:732"
+   ],
+   "args": [
+    "visible[from].name",
+    "place"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "{0} · 다 같이|{0} · everyone",
    "ko": "{0} · 다 같이",
    "en": "{0} · everyone",
@@ -3283,7 +3346,7 @@
    "ko": "{0} 기상 · {1}시간 잤어요",
    "en": "Up at {0} · slept {1} h",
    "files": [
-    "MapHomeAlarm.swift:245"
+    "MapHomeAlarm.swift:248"
    ],
    "args": [
     "timeText(last.span.end, language: language)",
@@ -4285,7 +4348,7 @@
    "ko": "{0}시간 더 일하면 시급이 기준의 90% 아래로 내려가요.",
    "en": "{0} more hours push your rate under 90% of base.",
    "files": [
-    "MapHomeAlarm.swift:375"
+    "MapHomeAlarm.swift:378"
    ],
    "args": [
     "String(format: \"%.1f\", hours)"
@@ -4363,7 +4426,7 @@
    "ko": "{0}에 {1} 도착 확인",
    "en": "Arrived at {0} at {1}",
    "files": [
-    "MapHomeAlarm.swift:189"
+    "MapHomeAlarm.swift:192"
    ],
    "args": [
     "place.name",
@@ -4378,7 +4441,7 @@
    "ko": "{0}에 {1} 도착",
    "en": "Arrived at {0} at {1}",
    "files": [
-    "MapHomeAlarm.swift:218"
+    "MapHomeAlarm.swift:221"
    ],
    "args": [
     "stay.displayName",
@@ -4393,7 +4456,7 @@
    "ko": "{0}에 {1}에서 출발 확인",
    "en": "Left {0} at {1}",
    "files": [
-    "MapHomeAlarm.swift:196"
+    "MapHomeAlarm.swift:199"
    ],
    "args": [
     "place.name",
@@ -4408,7 +4471,7 @@
    "ko": "{0}에 {1}에서 출발",
    "en": "Left {0} at {1}",
    "files": [
-    "MapHomeAlarm.swift:229"
+    "MapHomeAlarm.swift:232"
    ],
    "args": [
     "stay.displayName",
@@ -4747,6 +4810,20 @@
     "estimate.floor",
     "altitude",
     "accuracy"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "{0}층|Floor {0}",
+   "ko": "{0}층",
+   "en": "Floor {0}",
+   "files": [
+    "AssistantDataActions.swift:699"
+   ],
+   "args": [
+    "$0"
    ],
    "targets": [
     "TaptionPlan"
@@ -21222,8 +21299,8 @@
    "ko": "그 뒤에 바뀐 내용이 있어 되돌리지 못했어요. 앱에서 직접 고쳐 주세요.",
    "en": "It changed afterwards, so it couldn't be undone. Please edit it in the app.",
    "files": [
-    "AssistantActionLog.swift:367",
-    "AssistantActionLog.swift:378"
+    "AssistantActionLog.swift:377",
+    "AssistantActionLog.swift:388"
    ],
    "args": [],
    "targets": [
@@ -33587,7 +33664,7 @@
    "ko": "가게 분류",
    "en": "Shop category",
    "files": [
-    "AssistantSafetyViews.swift:522"
+    "AssistantSafetyViews.swift:524"
    ],
    "args": [],
    "targets": [
@@ -33772,7 +33849,7 @@
    "ko": "가계부에 넣음",
    "en": "Added to the ledger",
    "files": [
-    "LedgerMessageRules.swift:534"
+    "LedgerMessageRules.swift:545"
    ],
    "args": [],
    "targets": [
@@ -33847,7 +33924,7 @@
    "ko": "가림",
    "en": "Hidden",
    "files": [
-    "AssistantCommandEdits.swift:402"
+    "AssistantCommandEdits.swift:404"
    ],
    "args": [],
    "targets": [
@@ -34537,6 +34614,18 @@
    ]
   },
   {
+   "key": "걷기·달리기 추적 끝내기|Stop walk or run tracking",
+   "ko": "걷기·달리기 추적 끝내기",
+   "en": "Stop walk or run tracking",
+   "files": [
+    "AssistantCommandRunner.swift:628"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "걷기·이동·운동·수면을 더 정확히 구분합니다.|Tells walking, travel, workouts, and sleep apart more accurately.",
    "ko": "걷기·이동·운동·수면을 더 정확히 구분합니다.",
    "en": "Tells walking, travel, workouts, and sleep apart more accurately.",
@@ -34830,7 +34919,7 @@
    "ko": "결제 문자 읽기",
    "en": "Reading payment texts",
    "files": [
-    "AssistantSafetyViews.swift:516"
+    "AssistantSafetyViews.swift:518"
    ],
    "args": [],
    "targets": [
@@ -34954,7 +35043,7 @@
    "ko": "결제 알림 앱 스위치 바꾸기",
    "en": "Change payment alert app switches",
    "files": [
-    "LedgerMessageRules.swift:706"
+    "LedgerMessageRules.swift:717"
    ],
    "args": [],
    "targets": [
@@ -34990,7 +35079,7 @@
    "ko": "결제가 아닌 글",
    "en": "Not a payment",
    "files": [
-    "AssistantSafetyViews.swift:518"
+    "AssistantSafetyViews.swift:520"
    ],
    "args": [],
    "targets": [
@@ -35579,6 +35668,18 @@
    ]
   },
   {
+   "key": "고양이 장식 입히기|Dress my cat",
+   "ko": "고양이 장식 입히기",
+   "en": "Dress my cat",
+   "files": [
+    "AssistantDataActions.swift:1003"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "고양이 행진|Cat Parade",
    "ko": "고양이 행진",
    "en": "Cat Parade",
@@ -35595,7 +35696,7 @@
    "ko": "고양이",
    "en": "Cat",
    "files": [
-    "AssistantDataCommands.swift:794"
+    "AssistantDataCommands.swift:820"
    ],
    "args": [],
    "targets": [
@@ -35655,7 +35756,7 @@
    "ko": "고칠 대상을 찾지 못했어요",
    "en": "Couldn't find the item to change",
    "files": [
-    "AssistantActionLog.swift:274"
+    "AssistantActionLog.swift:284"
    ],
    "args": [],
    "targets": [
@@ -35885,7 +35986,7 @@
    "ko": "구간 이동 수단",
    "en": "Travel mode for a route",
    "files": [
-    "AssistantSafetyViews.swift:525"
+    "AssistantSafetyViews.swift:527"
    ],
    "args": [],
    "targets": [
@@ -35985,6 +36086,18 @@
    "en": "Disconnect Google",
    "files": [
     "MapHomeTodayCalendar.swift:313"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "구글 캘린더|Google Calendar",
+   "ko": "구글 캘린더",
+   "en": "Google Calendar",
+   "files": [
+    "AssistantCommandRunner.swift:672"
    ],
    "args": [],
    "targets": [
@@ -36271,8 +36384,8 @@
    "ko": "그 뒤에 바뀐 내용이 있어 되돌리지 못했어요. 앱에서 직접 고쳐 주세요.",
    "en": "It changed afterwards, so it couldn't be undone. Please edit it in the app.",
    "files": [
-    "AssistantActionLog.swift:366",
-    "AssistantActionLog.swift:377"
+    "AssistantActionLog.swift:376",
+    "AssistantActionLog.swift:387"
    ],
    "args": [],
    "targets": [
@@ -36284,7 +36397,7 @@
    "ko": "그 뒤에 바뀐 내용이 있어 되돌리지 못했어요.",
    "en": "It changed afterwards, so it couldn't be undone.",
    "files": [
-    "AssistantSafetyViews.swift:379"
+    "AssistantSafetyViews.swift:381"
    ],
    "args": [],
    "targets": [
@@ -36464,7 +36577,7 @@
    "ko": "근처에 남긴 메모",
    "en": "Memos left nearby",
    "files": [
-    "MapHomeAlarm.swift:556"
+    "MapHomeAlarm.swift:559"
    ],
    "args": [],
    "targets": [
@@ -36574,7 +36687,7 @@
    "ko": "급여 방식",
    "en": "Pay type",
    "files": [
-    "AssistantDataCommands.swift:781"
+    "AssistantDataCommands.swift:807"
    ],
    "args": [],
    "targets": [
@@ -36610,7 +36723,7 @@
    "ko": "급여를 세후로 입력",
    "en": "Pay entered after tax",
    "files": [
-    "AssistantDataCommands.swift:784"
+    "AssistantDataCommands.swift:810"
    ],
    "args": [],
    "targets": [
@@ -36728,6 +36841,18 @@
    ]
   },
   {
+   "key": "기기 캘린더|Device calendars",
+   "ko": "기기 캘린더",
+   "en": "Device calendars",
+   "files": [
+    "AssistantCommandRunner.swift:667"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "기기에 값을 저장하지 못했어요. 잠시 뒤 다시 해 주세요.|Couldn't save on this device. Try again in a moment.",
    "ko": "기기에 값을 저장하지 못했어요. 잠시 뒤 다시 해 주세요.",
    "en": "Couldn't save on this device. Try again in a moment.",
@@ -36836,6 +36961,18 @@
    "files": [
     "MapHomeView+Map.swift:546",
     "MapHomeView+Routes.swift:653"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "기록 새로고침|Records refreshed",
+   "ko": "기록 새로고침",
+   "en": "Records refreshed",
+   "files": [
+    "AssistantCommandRunner.swift:613"
    ],
    "args": [],
    "targets": [
@@ -37366,7 +37503,7 @@
    "ko": "꺼 둔 종류라 하지 않았어요",
    "en": "This kind of edit is switched off",
    "files": [
-    "AssistantActionLog.swift:266"
+    "AssistantActionLog.swift:276"
    ],
    "args": [],
    "targets": [
@@ -37498,9 +37635,9 @@
    "ko": "끔",
    "en": "Off",
    "files": [
-    "LedgerMessageRules.swift:731",
-    "AssistantDataActions.swift:408",
-    "MapHomeAppleWatchMenuItem.swift:132"
+    "LedgerMessageRules.swift:742",
+    "AssistantDataActions.swift:702",
+    "AssistantDataActions.swift:408"
    ],
    "args": [],
    "targets": [
@@ -37785,7 +37922,7 @@
    "ko": "날씨 옆 칸",
    "en": "Weather sidebar",
    "files": [
-    "AssistantDataCommands.swift:792"
+    "AssistantDataCommands.swift:818"
    ],
    "args": [],
    "targets": [
@@ -37797,7 +37934,7 @@
    "ko": "날씨",
    "en": "Weather",
    "files": [
-    "AssistantDataCommands.swift:791",
+    "AssistantDataCommands.swift:817",
     "MapHomeView+Menu.swift:542",
     "StickerArtBasics.swift:7"
    ],
@@ -37966,7 +38103,7 @@
    "ko": "내 계좌 사이 이체",
    "en": "Transfers between my accounts",
    "files": [
-    "AssistantSafetyViews.swift:519"
+    "AssistantSafetyViews.swift:521"
    ],
    "args": [],
    "targets": [
@@ -38026,7 +38163,7 @@
    "ko": "내 계좌 이름",
    "en": "My account names",
    "files": [
-    "AssistantSafetyViews.swift:520",
+    "AssistantSafetyViews.swift:522",
     "LedgerReviewBand.swift:128",
     "LedgerSheet.swift:77"
    ],
@@ -38078,6 +38215,42 @@
    "en": "My income (refund etc.)",
    "files": [
     "LedgerTripView.swift:175"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "내 정류장 고치기|Edit my stations and stops",
+   "ko": "내 정류장 고치기",
+   "en": "Edit my stations and stops",
+   "files": [
+    "AssistantDataActions.swift:851"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "내 정류장 더하기|Add my stations and stops",
+   "ko": "내 정류장 더하기",
+   "en": "Add my stations and stops",
+   "files": [
+    "AssistantDataActions.swift:808"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "내 정류장 지우기|Delete my stations and stops",
+   "ko": "내 정류장 지우기",
+   "en": "Delete my stations and stops",
+   "files": [
+    "AssistantDataActions.swift:886"
    ],
    "args": [],
    "targets": [
@@ -38209,6 +38382,18 @@
    ]
   },
   {
+   "key": "내가 만든 분류 지우기|Delete my categories",
+   "ko": "내가 만든 분류 지우기",
+   "en": "Delete my categories",
+   "files": [
+    "AssistantDataActions.swift:741"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "내가 만든 분류|My categories",
    "ko": "내가 만든 분류",
    "en": "My categories",
@@ -38225,7 +38410,7 @@
    "ko": "내가 정함",
    "en": "Set by me",
    "files": [
-    "AssistantSafetyViews.swift:504"
+    "AssistantSafetyViews.swift:506"
    ],
    "args": [],
    "targets": [
@@ -38393,7 +38578,7 @@
    "ko": "넣지 않을 낱말 고치기",
    "en": "Edit words to skip",
    "files": [
-    "LedgerMessageRules.swift:759"
+    "LedgerMessageRules.swift:770"
    ],
    "args": [],
    "targets": [
@@ -38406,7 +38591,7 @@
    "en": "Words to skip",
    "files": [
     "PaymentAlertSources.swift:185",
-    "AssistantSafetyViews.swift:517"
+    "AssistantSafetyViews.swift:519"
    ],
    "args": [],
    "targets": [
@@ -38567,7 +38752,7 @@
    "ko": "눌러서 보고 저장하거나 공유하세요.",
    "en": "Tap to view, save or share.",
    "files": [
-    "MapHomeAlarm.swift:390"
+    "MapHomeAlarm.swift:393"
    ],
    "args": [],
    "targets": [
@@ -39886,9 +40071,21 @@
    "ko": "되돌리기",
    "en": "Undo",
    "files": [
-    "AssistantSafetyViews.swift:374",
+    "AssistantSafetyViews.swift:376",
     "MapHomeNLEClipEditor.swift:503",
     "MapHomeStickerEditor.swift:332"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "되돌릴 수 없는 일이에요|This can't be undone",
+   "ko": "되돌릴 수 없는 일이에요",
+   "en": "This can't be undone",
+   "files": [
+    "AssistantSafetyViews.swift:374"
    ],
    "args": [],
    "targets": [
@@ -41056,7 +41253,7 @@
    "ko": "메모 표시",
    "en": "Show memos",
    "files": [
-    "AssistantDataCommands.swift:796",
+    "AssistantDataCommands.swift:822",
     "MapHomeView+Menu.swift:550"
    ],
    "args": [],
@@ -41084,7 +41281,7 @@
    "en": "Memos",
    "files": [
     "LedgerMemoPanel.swift:15",
-    "MapHomeAlarm.swift:547",
+    "MapHomeAlarm.swift:550",
     "MapHomeInfoSheets.swift:450"
    ],
    "args": [],
@@ -41221,7 +41418,7 @@
    "ko": "모두 반영",
    "en": "Apply all",
    "files": [
-    "AssistantSafetyViews.swift:432"
+    "AssistantSafetyViews.swift:434"
    ],
    "args": [],
    "targets": [
@@ -41672,7 +41869,7 @@
    "ko": "바꿀 것이 없었어요",
    "en": "There was nothing to change",
    "files": [
-    "AssistantActionLog.swift:271"
+    "AssistantActionLog.swift:281"
    ],
    "args": [],
    "targets": [
@@ -41810,7 +42007,7 @@
    "ko": "반영하지 못했어요 ({0})",
    "en": "Not applied ({0})",
    "files": [
-    "AssistantActionLog.swift:275"
+    "AssistantActionLog.swift:285"
    ],
    "args": [
     "reason"
@@ -41824,7 +42021,7 @@
    "ko": "반영하지 않기",
    "en": "Don't apply",
    "files": [
-    "AssistantSafetyViews.swift:433"
+    "AssistantSafetyViews.swift:435"
    ],
    "args": [],
    "targets": [
@@ -41836,7 +42033,7 @@
    "ko": "반영한 뒤에도 「AI가 한 일」에서 하나씩 되돌릴 수 있어요. 닫으면 다음에 다시 물어요.",
    "en": "You can still undo each one in What the AI did. If you close this, you'll be asked again next time.",
    "files": [
-    "AssistantSafetyViews.swift:435"
+    "AssistantSafetyViews.swift:437"
    ],
    "args": [],
    "targets": [
@@ -41885,7 +42082,7 @@
    "ko": "받은 결제 문자 종류 정하기",
    "en": "Classify received payment texts",
    "files": [
-    "LedgerMessageRules.swift:632"
+    "LedgerMessageRules.swift:643"
    ],
    "args": [],
    "targets": [
@@ -42334,6 +42531,18 @@
    ]
   },
   {
+   "key": "백업에서 복원 화면 열기|Open restore from backup",
+   "ko": "백업에서 복원 화면 열기",
+   "en": "Open restore from backup",
+   "files": [
+    "AssistantCommandRunner.swift:684"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "백업을 다시 읽어 확인된 지난 달만 이 기기에서 지웁니다. 먼저 ‘지금 백업’을 해야 하며, 설정은 지우지 않습니다.|Only past months whose backup was read back and verified are removed from this device. Run ‘Back up now’ first; settings are never removed.",
    "ko": "백업을 다시 읽어 확인된 지난 달만 이 기기에서 지웁니다. 먼저 ‘지금 백업’을 해야 하며, 설정은 지우지 않습니다.",
    "en": "Only past months whose backup was read back and verified are removed from this device. Run ‘Back up now’ first; settings are never removed.",
@@ -42402,7 +42611,7 @@
    "ko": "버림",
    "en": "Discarded",
    "files": [
-    "LedgerMessageRules.swift:527"
+    "LedgerMessageRules.swift:538"
    ],
    "args": [],
    "targets": [
@@ -42492,7 +42701,7 @@
    "ko": "버스·지하철 노선",
    "en": "Bus and subway lines",
    "files": [
-    "AssistantSafetyViews.swift:526"
+    "AssistantSafetyViews.swift:528"
    ],
    "args": [],
    "targets": [
@@ -42930,6 +43139,18 @@
    ]
   },
   {
+   "key": "보폭(cm)|Stride (cm)",
+   "ko": "보폭(cm)",
+   "en": "Stride (cm)",
+   "files": [
+    "AssistantDataCommands.swift:823"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "보호 설정 안 됨|Not configured",
    "ko": "보호 설정 안 됨",
    "en": "Not configured",
@@ -43152,6 +43373,18 @@
    "en": "No category",
    "files": [
     "MapHomeTodayCalendar.swift:57"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "분류 차례 바꾸기|Reorder categories",
+   "ko": "분류 차례 바꾸기",
+   "en": "Reorder categories",
+   "files": [
+    "AssistantDataActions.swift:708"
    ],
    "args": [],
    "targets": [
@@ -43804,6 +44037,18 @@
    ]
   },
   {
+   "key": "사진 보기|Photos",
+   "ko": "사진 보기",
+   "en": "Photos",
+   "files": [
+    "AssistantDataCommands.swift:827"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "사진 수|Photos",
    "ko": "사진 수",
    "en": "Photos",
@@ -44335,6 +44580,18 @@
    "en": "New",
    "files": [
     "AITaskPanel.swift:132"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "새로고침·iCloud 동기화 실행|Refresh or run the iCloud sync",
+   "ko": "새로고침·iCloud 동기화 실행",
+   "en": "Refresh or run the iCloud sync",
+   "files": [
+    "AssistantCommandRunner.swift:594"
    ],
    "args": [],
    "targets": [
@@ -45087,7 +45344,7 @@
    "ko": "세후 금액으로 보기",
    "en": "Show after-tax amounts",
    "files": [
-    "AssistantDataCommands.swift:785"
+    "AssistantDataCommands.swift:811"
    ],
    "args": [],
    "targets": [
@@ -45451,7 +45708,7 @@
    "files": [
     "HealthAndSensorModels.swift:37",
     "WidgetShared.swift:607",
-    "MapHomeAlarm.swift:673"
+    "MapHomeAlarm.swift:676"
    ],
    "args": [],
    "targets": [
@@ -45531,8 +45788,8 @@
    "ko": "수업",
    "en": "Class",
    "files": [
-    "MapHomeAlarm.swift:671",
-    "MapHomeAlarm.swift:672",
+    "MapHomeAlarm.swift:674",
+    "MapHomeAlarm.swift:675",
     "MapHomeLocationPresentation.swift:290"
    ],
    "args": [],
@@ -45584,7 +45841,7 @@
    "ko": "수입",
    "en": "Income",
    "files": [
-    "LedgerMessageRules.swift:732",
+    "LedgerMessageRules.swift:743",
     "PaymentAlertSources.swift:147",
     "PaymentAlertSources.swift:350"
    ],
@@ -46137,7 +46394,7 @@
    "ko": "시간을 확인하고 고쳐 주세요. 확인을 누르면 그 시각부터 기록돼요.",
    "en": "Check the time and edit if needed. Recording starts from this time.",
    "files": [
-    "MapHomeAlarm.swift:642"
+    "MapHomeAlarm.swift:645"
    ],
    "args": [],
    "targets": [
@@ -46187,7 +46444,7 @@
    "ko": "시급 세금 방식",
    "en": "Hourly tax method",
    "files": [
-    "AssistantDataCommands.swift:788"
+    "AssistantDataCommands.swift:814"
    ],
    "args": [],
    "targets": [
@@ -46212,7 +46469,7 @@
    "ko": "시급",
    "en": "Hourly pay",
    "files": [
-    "AssistantDataCommands.swift:786"
+    "AssistantDataCommands.swift:812"
    ],
    "args": [],
    "targets": [
@@ -46249,7 +46506,7 @@
    "ko": "시급을 세후로 입력",
    "en": "Hourly pay entered after tax",
    "files": [
-    "AssistantDataCommands.swift:787"
+    "AssistantDataCommands.swift:813"
    ],
    "args": [],
    "targets": [
@@ -46703,7 +46960,7 @@
    "ko": "아이콘을 고른 지난 위치 메모의 근처에 가면 iOS가 알려요. 메모 글이 잠금 화면에 보여요.",
    "en": "iOS alerts you near past location memos with a chosen icon. Memo text shows on the Lock Screen.",
    "files": [
-    "MapHomeAlarm.swift:581"
+    "MapHomeAlarm.swift:584"
    ],
    "args": [],
    "targets": [
@@ -46755,7 +47012,7 @@
    "ko": "아직 규칙이 없어요.",
    "en": "No rules yet.",
    "files": [
-    "AssistantSafetyViews.swift:469"
+    "AssistantSafetyViews.swift:471"
    ],
    "args": [],
    "targets": [
@@ -47022,7 +47279,7 @@
    "ko": "알림 권한이 꺼져 있어 보내지 않아요.",
    "en": "Off because notifications aren't allowed.",
    "files": [
-    "MapHomeAlarm.swift:575"
+    "MapHomeAlarm.swift:578"
    ],
    "args": [],
    "targets": [
@@ -47035,7 +47292,7 @@
    "en": "Notifications are off · Open Settings",
    "files": [
     "FirstRunTutorialGuides.swift:267",
-    "MapHomeAlarm.swift:492",
+    "MapHomeAlarm.swift:495",
     "FirstRunTutorialGuides.swift:267"
    ],
    "args": [],
@@ -47060,7 +47317,19 @@
    "ko": "알림 앱별 받기",
    "en": "Alerts by app",
    "files": [
-    "AssistantSafetyViews.swift:521"
+    "AssistantSafetyViews.swift:523"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "알림 종류 켜고 끄기|Switch alert kinds on or off",
+   "ko": "알림 종류 켜고 끄기",
+   "en": "Switch alert kinds on or off",
+   "files": [
+    "AssistantDataActions.swift:970"
    ],
    "args": [],
    "targets": [
@@ -47072,7 +47341,7 @@
    "ko": "알림",
    "en": "Alerts",
    "files": [
-    "MapHomeAlarm.swift:479",
+    "MapHomeAlarm.swift:482",
     "MapHomeView+Menu.swift:480"
    ],
    "args": [],
@@ -47098,7 +47367,7 @@
    "en": "Notifications",
    "files": [
     "AppShellView.swift:1091",
-    "AssistantDataCommands.swift:795",
+    "AssistantDataCommands.swift:821",
     "PermissionOnboardingSheet.swift:80"
    ],
    "args": [],
@@ -47614,7 +47883,7 @@
    "ko": "앱에서 저장하지 못했어요",
    "en": "The app couldn't save it",
    "files": [
-    "AssistantActionLog.swift:270"
+    "AssistantActionLog.swift:280"
    ],
    "args": [],
    "targets": [
@@ -47724,7 +47993,7 @@
    "ko": "앱이 기록을 갱신할 때(켜져 있을 때·iOS가 허용한 백그라운드 새로 고침) 찾은 일을 알려요. 위치 '항상 허용'이 있어야 앱이 꺼져 있어도 받을 수 있어요.",
    "en": "Sent when the app refreshes its records (foreground or iOS-allowed background refresh). 'Always' location access lets alerts arrive while closed.",
    "files": [
-    "MapHomeAlarm.swift:481"
+    "MapHomeAlarm.swift:484"
    ],
    "args": [],
    "targets": [
@@ -47797,7 +48066,7 @@
    "ko": "어제 하루 카드가 준비됐어요",
    "en": "Yesterday's card is ready",
    "files": [
-    "MapHomeAlarm.swift:389"
+    "MapHomeAlarm.swift:392"
    ],
    "args": [],
    "targets": [
@@ -47968,8 +48237,8 @@
    "ko": "업무",
    "en": "Work",
    "files": [
-    "MapHomeAlarm.swift:669",
-    "MapHomeAlarm.swift:670",
+    "MapHomeAlarm.swift:672",
+    "MapHomeAlarm.swift:673",
     "MapHomeInteractionPolicy.swift:456"
    ],
    "args": [],
@@ -48021,7 +48290,7 @@
    "ko": "없는 분류예요",
    "en": "That category doesn't exist",
    "files": [
-    "AssistantActionLog.swift:273"
+    "AssistantActionLog.swift:283"
    ],
    "args": [],
    "targets": [
@@ -48234,7 +48503,7 @@
    "ko": "여행 가계부 고치기",
    "en": "Edit trip ledgers",
    "files": [
-    "LedgerMessageRules.swift:835"
+    "LedgerMessageRules.swift:846"
    ],
    "args": [],
    "targets": [
@@ -48246,7 +48515,7 @@
    "ko": "여행 가계부 만들기",
    "en": "Create trip ledgers",
    "files": [
-    "LedgerMessageRules.swift:794"
+    "LedgerMessageRules.swift:805"
    ],
    "args": [],
    "targets": [
@@ -48258,7 +48527,7 @@
    "ko": "여행 가계부 지우기",
    "en": "Delete trip ledgers",
    "files": [
-    "LedgerMessageRules.swift:906"
+    "LedgerMessageRules.swift:917"
    ],
    "args": [],
    "targets": [
@@ -48770,6 +49039,19 @@
    "files": [
     "AssistantSafetyViews.swift:98",
     "AssistantSafetyViews.swift:146"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "연결 끊음|Disconnected",
+   "ko": "연결 끊음",
+   "en": "Disconnected",
+   "files": [
+    "AssistantCommandRunner.swift:667",
+    "AssistantCommandRunner.swift:672"
    ],
    "args": [],
    "targets": [
@@ -49646,7 +49928,7 @@
    "ko": "연봉",
    "en": "Annual pay",
    "files": [
-    "AssistantDataCommands.swift:782"
+    "AssistantDataCommands.swift:808"
    ],
    "args": [],
    "targets": [
@@ -49937,7 +50219,7 @@
    "ko": "영수증 판정",
    "en": "Receipt check",
    "files": [
-    "AssistantSafetyViews.swift:523"
+    "AssistantSafetyViews.swift:525"
    ],
    "args": [],
    "targets": [
@@ -50062,7 +50344,7 @@
    "ko": "예산 없음",
    "en": "No budget",
    "files": [
-    "LedgerMessageRules.swift:487"
+    "LedgerMessageRules.swift:498"
    ],
    "args": [],
    "targets": [
@@ -50876,7 +51158,7 @@
    "ko": "요청 형식이 맞지 않았어요",
    "en": "The request wasn't valid",
    "files": [
-    "AssistantActionLog.swift:268"
+    "AssistantActionLog.swift:278"
    ],
    "args": [],
    "targets": [
@@ -51098,7 +51380,7 @@
    "ko": "움직임 줄이기",
    "en": "Reduce motion",
    "files": [
-    "AssistantDataCommands.swift:790"
+    "AssistantDataCommands.swift:816"
    ],
    "args": [],
    "targets": [
@@ -51233,7 +51515,7 @@
    "ko": "월급",
    "en": "Monthly pay",
    "files": [
-    "AssistantDataCommands.swift:783",
+    "AssistantDataCommands.swift:809",
     "MapHomeSalarySettingsSheet.swift:206"
    ],
    "args": [],
@@ -51372,7 +51654,7 @@
    "ko": "위치 권한이 없어 보내지 않아요.",
    "en": "Off because location isn't allowed.",
    "files": [
-    "MapHomeAlarm.swift:577"
+    "MapHomeAlarm.swift:580"
    ],
    "args": [],
    "targets": [
@@ -51384,7 +51666,7 @@
    "ko": "위치 기록 간격(초)",
    "en": "Location logging interval (s)",
    "files": [
-    "AssistantDataCommands.swift:793"
+    "AssistantDataCommands.swift:819"
    ],
    "args": [],
    "targets": [
@@ -51509,6 +51791,18 @@
    "en": "Open location settings",
    "files": [
     "MapHomeView+Support.swift:453"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "위치 수집|Location logging",
+   "ko": "위치 수집",
+   "en": "Location logging",
+   "files": [
+    "AssistantDataCommands.swift:826"
    ],
    "args": [],
    "targets": [
@@ -52479,7 +52773,7 @@
    "ko": "이 버전의 앱은 아직 쓰지 못해요.",
    "en": "This app version can't use it yet.",
    "files": [
-    "AssistantSafetyViews.swift:507"
+    "AssistantSafetyViews.swift:509"
    ],
    "args": [],
    "targets": [
@@ -53243,7 +53537,7 @@
    "ko": "이미 있는 내용이에요",
    "en": "It was already there",
    "files": [
-    "AssistantActionLog.swift:272"
+    "AssistantActionLog.swift:282"
    ],
    "args": [],
    "targets": [
@@ -53802,7 +54096,7 @@
    "ko": "일정 제목 분류",
    "en": "Calendar title category",
    "files": [
-    "AssistantSafetyViews.swift:524"
+    "AssistantSafetyViews.swift:526"
    ],
    "args": [],
    "targets": [
@@ -54355,6 +54649,18 @@
    "en": "Delete frequent places",
    "files": [
     "AssistantCommandEdits.swift:116"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "자주 가는 장소의 층 정하기|Set floors of frequent places",
+   "ko": "자주 가는 장소의 층 정하기",
+   "en": "Set floors of frequent places",
+   "files": [
+    "AssistantDataActions.swift:773"
    ],
    "args": [],
    "targets": [
@@ -55348,7 +55654,7 @@
    "ko": "정하지 않음",
    "en": "Not set",
    "files": [
-    "LedgerMessageRules.swift:583",
+    "LedgerMessageRules.swift:594",
     "AssistantDataActions.swift:639",
     "TravelNewTripSheet.swift:70"
    ],
@@ -55390,7 +55696,7 @@
    "ko": "정확한 위치가 꺼져 있어 보내지 않아요.",
    "en": "Off because Precise Location is off.",
    "files": [
-    "MapHomeAlarm.swift:579"
+    "MapHomeAlarm.swift:582"
    ],
    "args": [],
    "targets": [
@@ -55814,7 +56120,7 @@
    "ko": "주휴수당 포함",
    "en": "Weekly holiday pay",
    "files": [
-    "AssistantDataCommands.swift:789"
+    "AssistantDataCommands.swift:815"
    ],
    "args": [],
    "targets": [
@@ -55999,7 +56305,7 @@
    "ko": "지금 시급이 기준의 90% 아래예요. 더 일할수록 시급이 내려가요.",
    "en": "Your rate is already under 90% of base; more hours lower it further.",
    "files": [
-    "MapHomeAlarm.swift:374"
+    "MapHomeAlarm.swift:377"
    ],
    "args": [],
    "targets": [
@@ -56725,9 +57031,9 @@
    "ko": "지움",
    "en": "Deleted",
    "files": [
-    "LedgerMessageRules.swift:511",
-    "LedgerMessageRules.swift:517",
-    "LedgerMessageRules.swift:539"
+    "LedgerMessageRules.swift:522",
+    "LedgerMessageRules.swift:528",
+    "LedgerMessageRules.swift:550"
    ],
    "args": [],
    "targets": [
@@ -56779,7 +57085,7 @@
    "ko": "지출",
    "en": "Spending",
    "files": [
-    "LedgerMessageRules.swift:732",
+    "LedgerMessageRules.swift:743",
     "PaymentAlertSources.swift:146",
     "PaymentAlertSources.swift:349"
    ],
@@ -57723,6 +58029,18 @@
    ]
   },
   {
+   "key": "추적 끝냄|Tracking stopped",
+   "ko": "추적 끝냄",
+   "en": "Tracking stopped",
+   "files": [
+    "AssistantCommandRunner.swift:638"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "추정 시급이 3% 이상 움직이면 알려요(30분에 한 번).|When the estimated rate moves 3%+ (max every 30 min).",
    "ko": "추정 시급이 3% 이상 움직이면 알려요(30분에 한 번).",
    "en": "When the estimated rate moves 3%+ (max every 30 min).",
@@ -58032,6 +58350,18 @@
    ]
   },
   {
+   "key": "층 없음|No floor",
+   "ko": "층 없음",
+   "en": "No floor",
+   "files": [
+    "AssistantDataActions.swift:699"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "층 오름/내림 |Floors up/down ",
    "ko": "층 오름/내림 ",
    "en": "Floors up/down ",
@@ -58299,6 +58629,18 @@
    ]
   },
   {
+   "key": "캘린더 연결 끊기|Disconnect calendars",
+   "ko": "캘린더 연결 끊기",
+   "en": "Disconnect calendars",
+   "files": [
+    "AssistantCommandRunner.swift:648"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "캘린더 연결|Calendar",
    "ko": "캘린더 연결",
    "en": "Calendar",
@@ -58532,7 +58874,8 @@
    "ko": "켬",
    "en": "On",
    "files": [
-    "LedgerMessageRules.swift:731",
+    "LedgerMessageRules.swift:742",
+    "AssistantDataActions.swift:702",
     "AssistantDataActions.swift:408"
    ],
    "args": [],
@@ -58922,7 +59265,7 @@
    "ko": "통행료 차종",
    "en": "Toll vehicle",
    "files": [
-    "AssistantDataCommands.swift:780"
+    "AssistantDataCommands.swift:806"
    ],
    "args": [],
    "targets": [
@@ -59597,13 +59940,37 @@
    ]
   },
   {
+   "key": "하루 카드 알림 시각 바꾸기|Change the day card time",
+   "ko": "하루 카드 알림 시각 바꾸기",
+   "en": "Change the day card time",
+   "files": [
+    "AssistantDataActions.swift:939"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "하루 카드 알림 시각|Day card time",
    "ko": "하루 카드 알림 시각",
    "en": "Day card time",
    "files": [
     "FirstRunTutorialGuides.swift:257",
-    "MapHomeAlarm.swift:525",
+    "MapHomeAlarm.swift:528",
     "FirstRunTutorialGuides.swift:257"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "하루 카드 항목 고르기|Choose day card figures",
+   "ko": "하루 카드 항목 고르기",
+   "en": "Choose day card figures",
+   "files": [
+    "AssistantDataActions.swift:910"
    ],
    "args": [],
    "targets": [
@@ -60795,7 +61162,7 @@
    "ko": "확인",
    "en": "Confirm",
    "files": [
-    "MapHomeAlarm.swift:652"
+    "MapHomeAlarm.swift:655"
    ],
    "args": [],
    "targets": [
@@ -60894,7 +61261,7 @@
    "ko": "환율 직접 정하기",
    "en": "Set exchange rates",
    "files": [
-    "LedgerMessageRules.swift:676"
+    "LedgerMessageRules.swift:687"
    ],
    "args": [],
    "targets": [
