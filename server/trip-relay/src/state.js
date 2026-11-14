@@ -234,7 +234,7 @@ const OPS = {
 
   async ruleList(s) {
     const meta = (await s.get("rulesMeta")) ?? { version: 0 };
-    const rules = (await values(s, "rule:")).map(([, r]) => r).sort((a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id));
+    const rules = (await values(s, "rule:")).map(([, r]) => r).sort((a, b) => (a.n ?? 0) - (b.n ?? 0) || a.createdAt - b.createdAt || a.id.localeCompare(b.id));
     return { version: meta.version, updatedAt: meta.updatedAt ?? null, rules, app: meta.app ?? null };
   },
 
@@ -252,7 +252,9 @@ const OPS = {
       if (gone.has(item.id) || (old && old.by === "user" && !master)) { refused.push(item.id); continue; }
       // 사용자가 꺼 둔 규칙은 AI가 다시 올려도 꺼진 채로 둔다(켜려면 enabled를 적어야 한다).
       const enabled = item.enabled ?? old?.enabled ?? true;
-      await s.put("rule:" + item.id, { id: item.id, type: item.type, by: old?.by ?? item.by, keyId: item.keyId ?? old?.keyId ?? null, enabled, createdAt: old?.createdAt ?? now, updatedAt: now, sealed: item.sealed });
+      // n: 넣은 순서. 같은 시각에 넣은 규칙도 순서가 흔들리지 않게 한다.
+      const n = old?.n ?? (meta.seq = (meta.seq ?? 0) + 1);
+      await s.put("rule:" + item.id, { id: item.id, n, type: item.type, by: old?.by ?? item.by, keyId: item.keyId ?? old?.keyId ?? null, enabled, createdAt: old?.createdAt ?? now, updatedAt: now, sealed: item.sealed });
       ids.push(item.id);
     }
     const version = ids.length ? meta.version + 1 : meta.version;
@@ -270,7 +272,8 @@ const OPS = {
         const old = await s.get("rule:" + op.item.id);
         if (!old && (await values(s, "rule:")).length >= LIMITS.rules) return { error: "too_many_rules" };
         const item = op.item;
-        await s.put("rule:" + item.id, { id: item.id, type: item.type, by: old?.by ?? item.by, keyId: old?.keyId ?? item.keyId ?? null, enabled: item.enabled ?? old?.enabled ?? true, createdAt: old?.createdAt ?? now, updatedAt: now, sealed: item.sealed });
+        const n = old?.n ?? (meta.seq = (meta.seq ?? 0) + 1);
+        await s.put("rule:" + item.id, { id: item.id, n, type: item.type, by: old?.by ?? item.by, keyId: old?.keyId ?? item.keyId ?? null, enabled: item.enabled ?? old?.enabled ?? true, createdAt: old?.createdAt ?? now, updatedAt: now, sealed: item.sealed });
         const index = gone.indexOf(item.id);
         if (index >= 0) gone.splice(index, 1);
         changed++;
