@@ -7,6 +7,11 @@
 - CLM1114A01(하루 편집 한도 30 → 100): 서버 `npm test` 116건 통과(옛 숫자에 기대던 시험 5건을 새 한도에 맞게 고침), `wrangler deploy` 완료. 대기열 상한은 50 그대로다(100으로 올리면 다른 시험·읽기 상한까지 바뀌어 이번에는 두었다).
 - OCF1114A01(큰 사진에도 「OCR」 표시)·안내문 숫자: `AssistantCommandEditTests`·`AssistantRelayTests`·`LedgerTests` 62건 통과·실패 0(`build/validation/OCB1114A01/sim-16.xcresult`), 구조 점검 통과. 아직 빌드에 없고 화면 확인도 없다.
 
+## AIB1114A01 · 337 뒤에 넣은 것 2 (2026-11-14 낮, 아직 빌드에 없음)
+
+- AIB1114A01(AI가 검토를 끝낸 영수증 사진에 「AI」 표시)·RDF1114A01(이름표가 근거·교통 지출의 버스 번호를 씀): `LedgerTests`·`AITaskQueueTests`·`AssistantPhase3Tests` 72건 통과·실패 0(`build/validation/OCB1114A01/sim-18.xcresult`), 구조 점검 통과. 앞선 `sim-17`은 같은 일 id가 두 번 오면 사진이 두 번 적히는 결함으로 1건 실패 → 고쳐 통과.
+- 화면·기기 확인은 없다. 대표 기기에서 어제 버스가 「?」였던 원인은 코드로 본 것이다(이름표는 구간별 노선 조회 결과만 보고, AI가 고친 것은 가계부 제목).
+
 ## TFB1114A337 · TestFlight 337 (2026-11-14 낮)
 
 - `bash scripts/testflight/release.sh --yes --request-id TFB1114A337` 종료 코드 0. 기준 커밋 `41f53ca5`.

@@ -55,6 +55,14 @@ final class LedgerTests: XCTestCase {
         let defaults = UserDefaults(suiteName: name)!
         defer { defaults.removePersistentDomain(forName: name) }
         XCTAssertEqual(MapHomeRideLabel.text(for: segment(.bus), defaults: defaults), "?")
+        // 근거에 적힌 노선과, 그 시각 교통 지출에 적힌 번호로도 정한다.
+        var noted = segment(.bus)
+        noted.evidence = ["노선 80·81"]
+        XCTAssertEqual(MapHomeRideLabel.text(for: noted, defaults: defaults), "80·81")
+        let fare = LedgerEntry(occurredAt: span.end.addingTimeInterval(600), amount: 1_500, category: .transport, title: "버스 요금 · 80번")
+        let lunch = LedgerEntry(occurredAt: span.start, amount: 9_000, category: .food, title: "분식 3번 테이블")
+        XCTAssertEqual(MapHomeRideLabel.busNumber(in: [fare, lunch], for: segment(.bus)), "80")
+        XCTAssertNil(MapHomeRideLabel.busNumber(in: [lunch], for: segment(.bus)))
         // 정해 준 노선은 이름표에 나오고, 더는 AI에게 맡길 구간이 아니다.
         let unknownSubway = segment(.subway)
         XCTAssertNotNil(RideLineTasks.candidates(unknownSubway, defaults: defaults))
@@ -79,6 +87,13 @@ final class LedgerTests: XCTestCase {
         XCTAssertFalse(ReceiptPhotoMarks.contains("a", defaults: defaults))
         XCTAssertTrue(ReceiptPhotoMarks.contains("p0", defaults: defaults))
         XCTAssertEqual(defaults.stringArray(forKey: ReceiptPhotoMarks.key)?.count, ReceiptPhotoMarks.limit)
+        // AI가 끝낸 일이 이 사진에서 온 것이면 「AI」 표시가 붙는다.
+        ReceiptPhotoMarks.link("photo-1", task: "task-1", defaults: defaults)
+        ReceiptPhotoMarks.noteReviewed(["other-task"], defaults: defaults)
+        XCTAssertFalse(ReceiptPhotoMarks.isReviewed("photo-1", defaults: defaults))
+        ReceiptPhotoMarks.noteReviewed(["task-1", "task-1"], defaults: defaults)
+        XCTAssertTrue(ReceiptPhotoMarks.isReviewed("photo-1", defaults: defaults))
+        XCTAssertEqual(defaults.stringArray(forKey: ReceiptPhotoMarks.reviewedKey), ["photo-1"])
     }
 
     func testReceiptPhotoJudgementAndEnabling() {

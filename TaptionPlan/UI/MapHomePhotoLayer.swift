@@ -239,7 +239,7 @@ struct MapHomePhotoThumbnail: View {
             if videoDuration != nil { MapHomeVideoBadge(side: side * 0.34) }
         }
         .frame(width: side, height: side)
-        .overlay(alignment: .topLeading) { if isReceipt, side >= 100 { MapHomeReceiptBadge() } }
+        .overlay(alignment: .topLeading) { if isReceipt, side >= 100 { MapHomeReceiptBadge(photoID: localIdentifier) } }
         .clipped()
         .task(id: localIdentifier) {
             if image != nil { image = nil }
@@ -327,19 +327,27 @@ struct MapHomeVideoBadge: View {
     }
 }
 
-/// 글자를 읽어 영수증으로 본 사진의 표시(대표 지시).
+/// 글자를 읽어 영수증으로 본 사진의 표시(대표 지시). AI가 검토를 끝냈으면 「AI」도 붙는다(AIB1114A01).
 struct MapHomeReceiptBadge: View {
+    let photoID: String
     var size: CGFloat = 11
 
     var body: some View {
-        Text(verbatim: "OCR")
+        HStack(spacing: size * 0.35) {
+            pill("OCR")
+            if ReceiptPhotoMarks.isReviewed(photoID) { pill("AI") }
+        }
+        .padding(10)
+    }
+
+    private func pill(_ text: String) -> some View {
+        Text(verbatim: text)
             .font(.system(size: size, weight: .heavy, design: .rounded))
             .foregroundStyle(.white)
             .padding(.horizontal, size * 0.55)
             .padding(.vertical, size * 0.27)
             .background(.black.opacity(0.62), in: Capsule())
-            .padding(10)
-            .accessibilityLabel(Text(verbatim: "OCR"))
+            .accessibilityLabel(Text(verbatim: text))
     }
 }
 
@@ -359,7 +367,7 @@ struct MapHomePhotoFullImage: View {
             } else if let image {
                 Image(uiImage: image).resizable().scaledToFit()
                     // 크게 봐도 읽은 영수증 표시가 사진 왼쪽 위에 남는다(OCF1114A01).
-                    .overlay(alignment: .topLeading) { if ReceiptPhotoMarks.contains(localIdentifier) { MapHomeReceiptBadge(size: 14) } }
+                    .overlay(alignment: .topLeading) { if ReceiptPhotoMarks.contains(localIdentifier) { MapHomeReceiptBadge(photoID: localIdentifier, size: 14) } }
                 if isVideo { videoButton }
             } else {
                 ProgressView().tint(.white)

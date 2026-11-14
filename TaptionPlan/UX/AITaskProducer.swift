@@ -307,7 +307,11 @@ enum ReceiptPhotoScanner {
                                              moment: receiptMoment(lines, day: day), in: LedgerBook.shared.entries)
                     if let match { context["entryId"] = match.id.uuidString }
                 }
-                if AITaskQueue.enqueue(.receiptText, text: lines.joined(separator: "\n"), day: day, context: context, defaults: defaults) { sent += 1 }
+                let taskID = UUID().uuidString
+                if AITaskQueue.enqueue(.receiptText, text: lines.joined(separator: "\n"), day: day, context: context, id: taskID, defaults: defaults) {
+                    ReceiptPhotoMarks.link(asset.localIdentifier, task: taskID, defaults: defaults)
+                    sent += 1
+                }
             }
             defaults.set(created.timeIntervalSince1970, forKey: cursorKey)
         }
@@ -394,5 +398,32 @@ enum ReceiptPhotoMarks {
         guard !ids.contains(id) else { return }
         ids.append(id)
         defaults.set(Array(ids.suffix(limit)), forKey: key)
+    }
+
+    // MARK: AI가 검토를 끝낸 사진 (AIB1114A01)
+
+    static let tasksKey = "receiptPhotoTasks"
+    static let reviewedKey = "receiptPhotoReviewed"
+
+    /// 이 사진의 글자를 맡긴 일의 id를 적어 둔다.
+    static func link(_ id: String, task: String, defaults: UserDefaults = .standard) {
+        var all = (defaults.dictionary(forKey: tasksKey) as? [String: String]) ?? [:]
+        all[task] = id
+        if all.count > limit { all = Dictionary(uniqueKeysWithValues: all.sorted { $0.key > $1.key }.prefix(limit).map { ($0.key, $0.value) }) }
+        defaults.set(all, forKey: tasksKey)
+    }
+
+    /// AI가 끝낸 일 가운데 사진에서 온 것은 그 사진에 표시를 남긴다. 끝난 일을 지워도 표시는 남는다.
+    static func noteReviewed(_ taskIDs: [String], defaults: UserDefaults = .standard) {
+        guard !taskIDs.isEmpty, let all = defaults.dictionary(forKey: tasksKey) as? [String: String] else { return }
+        var reviewed = defaults.stringArray(forKey: reviewedKey) ?? []
+        let before = reviewed.count
+        for photo in taskIDs.compactMap({ all[$0] }) where !reviewed.contains(photo) { reviewed.append(photo) }
+        guard reviewed.count > before else { return }
+        defaults.set(Array(reviewed.suffix(limit)), forKey: reviewedKey)
+    }
+
+    static func isReviewed(_ id: String, defaults: UserDefaults = .standard) -> Bool {
+        defaults.stringArray(forKey: reviewedKey)?.contains(id) ?? false
     }
 }

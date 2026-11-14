@@ -401,17 +401,36 @@ enum MapHomeRideLabel {
         guard let segment = segment(at: date, travel: travel) else { return nil }
         // 고르거나 AI가 정하면 곧 바뀌어야 하니 잠깐만 적어 둔다.
         if let cached, cached.id == segment.id, now.timeIntervalSince(cached.at) < 3 { return cached.text }
-        let text = text(for: segment)
+        var text = text(for: segment)
+        // 노선 조회가 없던 날의 버스도, 그 시각의 교통 지출에 번호가 적혀 있으면(「버스 요금 · 80번」) 그 번호를 쓰고 기억해 둔다(RDF1114A01).
+        if text == unknown, segment.mode == .bus, let number = busNumber(in: LedgerBook.shared.entries, for: segment) {
+            BusRouteCheck.remember(segment, routes: [.init(number: number, kind: "")])
+            text = number
+        }
         cached = (segment.id, text, now)
         return text
+    }
+
+    /// 탄 시각 앞뒤 30분 안의 교통 지출 제목에서 「80번」 같은 번호를 찾는다. 서로 다른 번호가 둘 이상이면 정하지 않는다.
+    nonisolated static func busNumber(in entries: [LedgerEntry], for segment: TravelSegment) -> String? {
+        let window = segment.span.start.addingTimeInterval(-1_800)...segment.span.end.addingTimeInterval(1_800)
+        var numbers: [String] = []
+        for entry in entries where entry.category == .transport && window.contains(entry.occurredAt) {
+            guard let match = entry.title.range(of: #"[0-9A-Za-z가-힣-]{1,8}번"#, options: .regularExpression) else { continue }
+            let number = String(entry.title[match].dropLast())
+            if !numbers.contains(number) { numbers.append(number) }
+        }
+        return numbers.count == 1 ? numbers[0] : nil
     }
 
     /// 버스는 「80」(둘이면 「80·81」), 지하철은 「1호선」(갈아탔으면 「1호선→2호선」), 못 정했으면 「?」.
     nonisolated static func text(for segment: TravelSegment, defaults: UserDefaults = .standard) -> String {
         switch segment.mode {
         case .bus:
-            guard let routes = BusRouteCheck.known(segment, defaults: defaults), (1...2).contains(routes.count) else { return unknown }
-            return routes.map(\.number).joined(separator: "·")
+            if let routes = BusRouteCheck.known(segment, defaults: defaults), (1...2).contains(routes.count) { return routes.map(\.number).joined(separator: "·") }
+            // 판정할 때 근거에 적어 둔 노선(「노선 80」, 「노선 80·81」).
+            let noted = segment.evidence.first { $0.hasPrefix("노선 ") }.map { $0.dropFirst(3).split(separator: "·").map(String.init) } ?? []
+            return (1...2).contains(noted.count) ? noted.joined(separator: "·") : unknown
         case .subway:
             let lines = segment.subwayRoute?.lineNames ?? []
             if !lines.isEmpty { return lines.prefix(3).joined(separator: "→") }

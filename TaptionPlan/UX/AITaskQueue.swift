@@ -84,11 +84,11 @@ enum AITaskQueue {
     /// 넣고 올린다. 연결된 AI가 없으면 넣지 않는다(맡길 곳이 없다).
     @discardableResult
     static func enqueue(_ kind: Kind, text: String, day: Date? = nil, context: [String: String]? = nil,
-                        defaults: UserDefaults = .standard) -> Bool {
+                        id: String = UUID().uuidString, defaults: UserDefaults = .standard) -> Bool {
         let masked = mask(text).trimmingCharacters(in: .whitespacesAndNewlines)
         guard !masked.isEmpty, MemoPolishQueue.hasConnection(defaults) else { return false }
         var list = pendingUploads(defaults)
-        list.append(Upload(id: UUID().uuidString, kind: kind, text: String(masked.prefix(2_000)), date: day.map(dayText), context: context))
+        list.append(Upload(id: id, kind: kind, text: String(masked.prefix(2_000)), date: day.map(dayText), context: context))
         if list.count > uploadLimit { list.removeFirst(list.count - uploadLimit) }
         save(list, defaults)
         TaptionPlanDiagnosticsLogger.shared.record("ai_task_enqueued", fields: ["kind": kind.rawValue])
@@ -128,6 +128,7 @@ enum AITaskQueue {
         if let data = try? encoder.encode(tasks) { env.defaults.set(data, forKey: cacheKey) }
         // 서버 목록에 있는 일은 상태와 상관없이 이미 받은 것이다. 큐에 남아 있으면 지운다.
         acknowledge(tasks.map(\.id), defaults: env.defaults)
+        ReceiptPhotoMarks.noteReviewed(tasks.filter { $0.status == .done }.map(\.id), defaults: env.defaults)
         return tasks
     }
 
