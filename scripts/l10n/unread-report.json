@@ -525,6 +525,12 @@
    "en": "entry.mode.summaryEnglishTitle"
   },
   {
+   "file": "TaptionPlan/UI/MapHomeKakaoSearch.swift",
+   "line": 216,
+   "ko": "displayedLocationDate",
+   "en": "currentDayDataSnapshot?.travel ?? []"
+  },
+  {
    "file": "TaptionPlan/UI/MapHomeLanguage.swift",
    "line": 88,
    "ko": "_ korean: UIPhrase",
@@ -790,7 +796,7 @@
   },
   {
    "file": "TaptionPlan/UI/TravelModeSupport.swift",
-   "line": 812,
+   "line": 820,
    "ko": "planned",
    "en": "language"
   },

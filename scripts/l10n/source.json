@@ -4569,7 +4569,7 @@
    "en": "Day {0}",
    "files": [
     "TravelModeView.swift:956",
-    "TravelModeView.swift:1095"
+    "TravelModeView.swift:1093"
    ],
    "args": [
     "entry.dayNumber ?? 1"
@@ -33828,7 +33828,7 @@
    "ko": "갈 곳을 굵직하게 먼저 더해 보세요. 세부 계획은 나중에 적어도 됩니다.",
    "en": "Add the main stops first. You can fill in details later.",
    "files": [
-    "TravelModeSupport.swift:546"
+    "TravelModeSupport.swift:554"
    ],
    "args": [],
    "targets": [
@@ -35265,7 +35265,7 @@
    "ko": "계획표 내리기",
    "en": "Close plan table",
    "files": [
-    "TravelModeSupport.swift:211"
+    "TravelModeSupport.swift:219"
    ],
    "args": [],
    "targets": [
@@ -35313,7 +35313,7 @@
    "ko": "계획표",
    "en": "Plan table",
    "files": [
-    "TravelModeSupport.swift:241"
+    "TravelModeSupport.swift:249"
    ],
    "args": [],
    "targets": [
@@ -35571,7 +35571,7 @@
    "ko": "곳 더하기",
    "en": "Add a stop",
    "files": [
-    "TravelModeSupport.swift:598",
+    "TravelModeSupport.swift:606",
     "TravelModeView.swift:977"
    ],
    "args": [],
@@ -38597,7 +38597,7 @@
    "ko": "다시 하기",
    "en": "Redo",
    "files": [
-    "TravelModeSupport.swift:412"
+    "TravelModeSupport.swift:420"
    ],
    "args": [],
    "targets": [
@@ -38711,7 +38711,7 @@
    "ko": "다음 일정",
    "en": "Next plan",
    "files": [
-    "TravelModeSupport.swift:623"
+    "TravelModeSupport.swift:631"
    ],
    "args": [],
    "targets": [
@@ -38735,7 +38735,7 @@
    "ko": "다음: {0}",
    "en": "Next: {0}",
    "files": [
-    "TravelModeSupport.swift:809"
+    "TravelModeSupport.swift:817"
    ],
    "args": [
     "$0.title"
@@ -38969,7 +38969,7 @@
    "en": "Day trip",
    "files": [
     "TravelModeView.swift:778",
-    "TravelModeView.swift:1094",
+    "TravelModeView.swift:1092",
     "TravelNewTripSheet.swift:50"
    ],
    "args": [],
@@ -44790,7 +44790,7 @@
    "ko": "세부 더하기",
    "en": "Add detail",
    "files": [
-    "TravelModeSupport.swift:576"
+    "TravelModeSupport.swift:584"
    ],
    "args": [],
    "targets": [
@@ -45076,7 +45076,7 @@
    "ko": "속성",
    "en": "Details",
    "files": [
-    "TravelModeSupport.swift:656",
+    "TravelModeSupport.swift:664",
     "TravelPlanTable.swift:474",
     "TravelQuickEntrySheet.swift:181"
    ],
@@ -46641,7 +46641,7 @@
    "ko": "아직 일정이 없습니다",
    "en": "No plans yet",
    "files": [
-    "TravelModeSupport.swift:809"
+    "TravelModeSupport.swift:817"
    ],
    "args": [],
    "targets": [
@@ -49779,7 +49779,7 @@
    "ko": "예상 {0}",
    "en": "Planned {0}",
    "files": [
-    "TravelModeSupport.swift:813"
+    "TravelModeSupport.swift:821"
    ],
    "args": [
     "plannedText"
@@ -49857,7 +49857,7 @@
    "ko": "예약된 일정이나 잠을 사이에 두고는 순서를 바꿀 수 없습니다.",
    "en": "You can’t reorder across a booked plan or sleep.",
    "files": [
-    "TravelModeSupport.swift:590"
+    "TravelModeSupport.swift:598"
    ],
    "args": [],
    "targets": [
@@ -53056,7 +53056,7 @@
    "ko": "이전 일정",
    "en": "Previous plan",
    "files": [
-    "TravelModeSupport.swift:622"
+    "TravelModeSupport.swift:630"
    ],
    "args": [],
    "targets": [
@@ -53292,7 +53292,7 @@
    "ko": "일정 {0}개",
    "en": "{0} plans",
    "files": [
-    "TravelModeSupport.swift:813"
+    "TravelModeSupport.swift:821"
    ],
    "args": [
     "items.count"
@@ -55913,7 +55913,7 @@
    "ko": "지도 접기",
    "en": "Collapse map",
    "files": [
-    "TravelModeSupport.swift:221"
+    "TravelModeSupport.swift:229"
    ],
    "args": [],
    "targets": [
@@ -55965,7 +55965,7 @@
    "ko": "지도 펼치기",
    "en": "Expand map",
    "files": [
-    "TravelModeSupport.swift:221"
+    "TravelModeSupport.swift:229"
    ],
    "args": [],
    "targets": [
@@ -57800,7 +57800,7 @@
    "ko": "카카오 지도",
    "en": "Kakao map",
    "files": [
-    "MapHomeKakaoSearch.swift:214"
+    "MapHomeKakaoSearch.swift:224"
    ],
    "args": [],
    "targets": [
@@ -58189,7 +58189,7 @@
    "ko": "코스",
    "en": "Course",
    "files": [
-    "TravelModeSupport.swift:240"
+    "TravelModeSupport.swift:248"
    ],
    "args": [],
    "targets": [
