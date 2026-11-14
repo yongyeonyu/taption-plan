@@ -143,45 +143,6 @@ enum AssistantActionToggles {
     }
 }
 
-/// 고칠 일정. `planId`가 없으면 그날 `startTime`에 시작하는 일정을 찾는다.
-struct AssistantPlanTarget: Equatable, Sendable {
-    var planID: String?
-    var startTime: Date?
-}
-
-/// 일정의 분류·중요·상위 루틴(ACT1114A07). nil인 칸은 그대로 둔다. `parentGoalID`가 빈 글이면 루틴에서 뗀다.
-struct AssistantScheduleExtras: Equatable, Sendable {
-    var categoryID: String?
-    var important: Bool?
-    var parentGoalID: String?
-
-    var isEmpty: Bool { self == Self() }
-}
-
-/// 일정의 새 시각. ISO 시각이거나, 그 일정 날의 HH:mm.
-enum AssistantScheduleTime: Equatable, Sendable {
-    case instant(Date)
-    case clock(hour: Int, minute: Int)
-
-    init?(text: String) {
-        if let date = AssistantCommandParser.instant(text) {
-            self = .instant(date)
-            return
-        }
-        let parts = text.split(separator: ":", omittingEmptySubsequences: false).map { Int($0) }
-        guard parts.count == 2, let hour = parts[0], let minute = parts[1],
-              (0..<24).contains(hour), (0..<60).contains(minute) else { return nil }
-        self = .clock(hour: hour, minute: minute)
-    }
-
-    func resolve(on day: Date, calendar: Calendar) -> Date? {
-        switch self {
-        case let .instant(date): date
-        case let .clock(hour, minute): calendar.date(bySettingHour: hour, minute: minute, second: 0, of: day)
-        }
-    }
-}
-
 extension AssistantCommand.Action {
     var kind: AssistantActionKind {
         switch self {

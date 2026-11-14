@@ -32,6 +32,16 @@ if [ -d "$assistant_root" ]; then
     fi
 fi
 
+# 4) 가계부 값 타입 패키지(ADR-005)도 같다. 화면 타깃이 없어 SwiftUI도 쓰지 않는다.
+ledger_root="${repository_root}/Packages/TaptionLedgerCore/Sources"
+if [ -d "$ledger_root" ]; then
+    forbidden_in_ledger='^[[:space:]]*(@_exported[[:space:]]+)?import[[:space:]]+(TaptionPlanEngine|TaptionRouteEngine|TaptionActivityEngine|TaptionClassifierEngine|SwiftUI|UIKit|MapKit|Photos|AppIntents|Vision)([.[:space:]]|$)'
+    if rg -n --glob '*.swift' "$forbidden_in_ledger" "$ledger_root"; then
+        printf '%s\n' 'TaptionLedgerCore sources must not import engines or app-only frameworks.' >&2
+        failed=1
+    fi
+fi
+
 if [ "$failed" -ne 0 ]; then
     exit 1
 fi

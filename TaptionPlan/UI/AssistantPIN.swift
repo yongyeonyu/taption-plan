@@ -1,11 +1,5 @@
 import Foundation
 
-enum AssistantPIN {
-    static func isValid(_ pin: String) -> Bool {
-        pin.count == 6 && pin.unicodeScalars.allSatisfy { ("0"..."9").contains($0) }
-    }
-}
-
 /// PIN은 서버가 비밀 값(pepper)을 섞은 HMAC으로만 확인한다(SEC1110A03). 기기에는 PIN도 검증값도 두지 않고,
 /// 「PIN을 정했다」는 표시만 남긴다. PIN 글자는 시트 상태에만 있다가 TLS로 보낸다.
 @MainActor
