@@ -5717,6 +5717,20 @@
 "|You arrived at a planned place": "Sei arrivato in un luogo pianificato",
 "도착했어요. 눌러서 메모와 체크리스트를 보세요.|You're here. Tap to see your notes and checklist.": "Sei arrivato. Tocca per vedere note e checklist.",
 "|You're here. Tap to see your notes and checklist.": "Sei arrivato. Tocca per vedere note e checklist.",
-"여행 일정에 넣은 곳에 도착하면 메모·세부 계획·예상 지출을 보여요. 앱이 위치를 받는 동안에만 알 수 있고, 일정마다 한 번만 떠요.|Shows notes, sub-plans and planned spend when you reach a place in your trip plan. Works only while the app receives location, once per plan.": "Mostra note, piani dettagliati e spesa prevista quando raggiungi un luogo del tuo piano di viaggio. Funziona solo mentre l’app riceve la posizione, una volta per piano."
+"여행 일정에 넣은 곳에 도착하면 메모·세부 계획·예상 지출을 보여요. 앱이 위치를 받는 동안에만 알 수 있고, 일정마다 한 번만 떠요.|Shows notes, sub-plans and planned spend when you reach a place in your trip plan. Works only while the app receives location, once per plan.": "Mostra note, piani dettagliati e spesa prevista quando raggiungi un luogo del tuo piano di viaggio. Funziona solo mentre l’app riceve la posizione, una volta per piano.",
+"{0} {1}건 ({2})|{0} ×{1} ({2})": "{0} ×{1} ({2})",
+"1건으로 합침 · {0}|Merged into one · {0}": "Unito in uno · {0}",
+"일상 지출|Everyday spending": "Spese quotidiane",
+"여행 지출|Trip spending": "Spese di viaggio",
+"말풍선|Bubbles": "Fumetti",
+"AI가 정리한 {0}건|{0} tidied by AI": "{0} sistemati dall’IA",
+"되돌릴 수 있는 것 {0}건|{0} can be undone": "{0} annullabili",
+"되돌린 것 {0}건|{0} undone": "{0} annullati",
+"되돌릴 수 없는 것 {0}건|{0} can't be undone": "{0} non annullabili",
+"전·후 비교 보기|Show before and after": "Mostra prima e dopo",
+"AI는 표시와 교정만 바꿔요. 센서가 남긴 원본 기록은 그대로 있어요.|The AI only changes labels and corrections. Original sensor records stay as they were.": "L’IA modifica solo etichette e correzioni. Le registrazioni originali dei sensori restano invariate.",
+"전|Before": "Prima",
+"후|After": "Dopo",
+"원래대로 되돌리기|Restore original": "Ripristina l’originale"
 }
 }

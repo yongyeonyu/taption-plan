@@ -5717,6 +5717,20 @@
 "|You arrived at a planned place": "คุณมาถึงสถานที่ในแผนแล้ว",
 "도착했어요. 눌러서 메모와 체크리스트를 보세요.|You're here. Tap to see your notes and checklist.": "คุณมาถึงแล้ว แตะเพื่อดูโน้ตและรายการตรวจสอบ",
 "|You're here. Tap to see your notes and checklist.": "คุณมาถึงแล้ว แตะเพื่อดูโน้ตและรายการตรวจสอบ",
-"여행 일정에 넣은 곳에 도착하면 메모·세부 계획·예상 지출을 보여요. 앱이 위치를 받는 동안에만 알 수 있고, 일정마다 한 번만 떠요.|Shows notes, sub-plans and planned spend when you reach a place in your trip plan. Works only while the app receives location, once per plan.": "แสดงโน้ต แผนย่อย และค่าใช้จ่ายที่คาดไว้เมื่อคุณไปถึงสถานที่ในแผนการเดินทาง ใช้ได้เฉพาะขณะที่แอปได้รับตำแหน่ง และแสดงครั้งเดียวต่อแผน"
+"여행 일정에 넣은 곳에 도착하면 메모·세부 계획·예상 지출을 보여요. 앱이 위치를 받는 동안에만 알 수 있고, 일정마다 한 번만 떠요.|Shows notes, sub-plans and planned spend when you reach a place in your trip plan. Works only while the app receives location, once per plan.": "แสดงโน้ต แผนย่อย และค่าใช้จ่ายที่คาดไว้เมื่อคุณไปถึงสถานที่ในแผนการเดินทาง ใช้ได้เฉพาะขณะที่แอปได้รับตำแหน่ง และแสดงครั้งเดียวต่อแผน",
+"{0} {1}건 ({2})|{0} ×{1} ({2})": "{0} ×{1} ({2})",
+"1건으로 합침 · {0}|Merged into one · {0}": "รวมเป็นรายการเดียว · {0}",
+"일상 지출|Everyday spending": "ค่าใช้จ่ายประจำวัน",
+"여행 지출|Trip spending": "ค่าใช้จ่ายทริป",
+"말풍선|Bubbles": "บับเบิล",
+"AI가 정리한 {0}건|{0} tidied by AI": "AI จัดระเบียบ {0} รายการ",
+"되돌릴 수 있는 것 {0}건|{0} can be undone": "เลิกทำได้ {0} รายการ",
+"되돌린 것 {0}건|{0} undone": "เลิกทำแล้ว {0} รายการ",
+"되돌릴 수 없는 것 {0}건|{0} can't be undone": "เลิกทำไม่ได้ {0} รายการ",
+"전·후 비교 보기|Show before and after": "ดูก่อนและหลัง",
+"AI는 표시와 교정만 바꿔요. 센서가 남긴 원본 기록은 그대로 있어요.|The AI only changes labels and corrections. Original sensor records stay as they were.": "AI เปลี่ยนเฉพาะป้ายกำกับและการแก้ไขเท่านั้น บันทึกต้นฉบับจากเซ็นเซอร์ยังคงเหมือนเดิม",
+"전|Before": "ก่อน",
+"후|After": "หลัง",
+"원래대로 되돌리기|Restore original": "คืนค่าเดิม"
 }
 }

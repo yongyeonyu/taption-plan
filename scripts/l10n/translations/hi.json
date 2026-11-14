@@ -5717,6 +5717,20 @@
 "|You arrived at a planned place": "आप एक नियोजित स्थान पर पहुँच गए हैं",
 "도착했어요. 눌러서 메모와 체크리스트를 보세요.|You're here. Tap to see your notes and checklist.": "आप पहुँच गए हैं। नोट और चेकलिस्ट देखने के लिए टैप करें।",
 "|You're here. Tap to see your notes and checklist.": "आप पहुँच गए हैं। नोट और चेकलिस्ट देखने के लिए टैप करें।",
-"여행 일정에 넣은 곳에 도착하면 메모·세부 계획·예상 지출을 보여요. 앱이 위치를 받는 동안에만 알 수 있고, 일정마다 한 번만 떠요.|Shows notes, sub-plans and planned spend when you reach a place in your trip plan. Works only while the app receives location, once per plan.": "जब आप अपनी यात्रा योजना के किसी स्थान पर पहुँचते हैं, तो नोट, विस्तृत योजनाएँ और अनुमानित खर्च दिखाता है। केवल तब काम करता है जब ऐप को स्थान मिल रहा हो, हर योजना के लिए एक बार।"
+"여행 일정에 넣은 곳에 도착하면 메모·세부 계획·예상 지출을 보여요. 앱이 위치를 받는 동안에만 알 수 있고, 일정마다 한 번만 떠요.|Shows notes, sub-plans and planned spend when you reach a place in your trip plan. Works only while the app receives location, once per plan.": "जब आप अपनी यात्रा योजना के किसी स्थान पर पहुँचते हैं, तो नोट, विस्तृत योजनाएँ और अनुमानित खर्च दिखाता है। केवल तब काम करता है जब ऐप को स्थान मिल रहा हो, हर योजना के लिए एक बार।",
+"{0} {1}건 ({2})|{0} ×{1} ({2})": "{0} ×{1} ({2})",
+"1건으로 합침 · {0}|Merged into one · {0}": "एक में मिलाया गया · {0}",
+"일상 지출|Everyday spending": "रोज़मर्रा का खर्च",
+"여행 지출|Trip spending": "यात्रा का खर्च",
+"말풍선|Bubbles": "बबल",
+"AI가 정리한 {0}건|{0} tidied by AI": "AI ने {0} चीज़ें व्यवस्थित कीं",
+"되돌릴 수 있는 것 {0}건|{0} can be undone": "{0} पूर्ववत किए जा सकते हैं",
+"되돌린 것 {0}건|{0} undone": "{0} पूर्ववत किए गए",
+"되돌릴 수 없는 것 {0}건|{0} can't be undone": "{0} पूर्ववत नहीं किए जा सकते",
+"전·후 비교 보기|Show before and after": "पहले और बाद में देखें",
+"AI는 표시와 교정만 바꿔요. 센서가 남긴 원본 기록은 그대로 있어요.|The AI only changes labels and corrections. Original sensor records stay as they were.": "AI केवल लेबल और सुधार बदलता है। सेंसर के मूल रिकॉर्ड जैसे थे वैसे ही रहते हैं।",
+"전|Before": "पहले",
+"후|After": "बाद",
+"원래대로 되돌리기|Restore original": "मूल स्थिति में लौटाएँ"
 }
 }
