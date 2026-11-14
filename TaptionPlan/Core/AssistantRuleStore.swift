@@ -113,8 +113,9 @@ enum AssistantRuleStore {
 
     /// 보낼 것을 올리고, 서버 버전이 다르면 받아 오고, 받은 버전을 서버에 알린다. 연결된 AI가 없으면 하지 않는다.
     @discardableResult
-    static func sync(env: AssistantRegistration.Environment = .live) async -> Bool {
+    static func sync(env: AssistantRegistration.Environment = .live, logFile: URL? = nil) async -> Bool {
         let defaults = env.defaults
+        var uploaded = Set<String>()
         guard MemoPolishQueue.hasConnection(defaults), let master = env.secrets.read(.master) else { return false }
         migrateIfNeeded(defaults)
         let pending = outbox(defaults)
@@ -123,6 +124,7 @@ enum AssistantRuleStore {
             let request = body.flatMap { TripRelay.relayRequest("/rules/ops", method: "POST", body: $0, token: master, host: env.host) }
             guard let reply = await TripRelay.send(request, session: env.session), (200..<300).contains(reply.status) else { return false }
             // 올리는 사이에 더해진 것은 남긴다.
+            uploaded = Set(pending.filter { $0.op == "put" }.map(\.id))
             let rest = outbox(defaults).filter { !pending.contains($0) }
             if let data = try? JSONEncoder().encode(rest) { defaults.set(data, forKey: outboxKey) }
             defaults.set(true, forKey: migratedKey)
@@ -134,7 +136,12 @@ enum AssistantRuleStore {
         let query = since.map { [URLQueryItem(name: "since", value: $0)] } ?? []
         guard let reply = await TripRelay.send(TripRelay.relayRequest("/rules", method: "GET", query: query, token: master, host: env.host), session: env.session) else { return false }
         if reply.status == 200, let set = try? JSONDecoder().decode(RuleSet.self, from: reply.data), let data = try? JSONEncoder().encode(set) {
+            // 처음 받는 사본은 적지 않는다(연결하기 전부터 있던 규칙이 한꺼번에 쌓이지 않게).
+            let known = defaults.data(forKey: setKey) == nil ? nil : Set(stored(defaults).rules.map(\.id)).union(uploaded)
             defaults.set(data, forKey: setKey)
+            if let known, let file = logFile ?? (defaults === UserDefaults.standard ? AssistantActionLog.url : nil) {
+                AssistantActionLog.append(AssistantRuleLog.entries(for: set.rules.filter { !known.contains($0.id) }, defaults: defaults), to: file)
+            }
         } else if reply.status != 304 {
             return false
         }
@@ -180,5 +187,29 @@ enum AssistantRuleStore {
         var hash: UInt64 = 1_469_598_103_934_665_603
         for byte in text.utf8 { hash = (hash ^ UInt64(byte)) &* 1_099_511_628_211 }
         return String(hash, radix: 36)
+    }
+}
+
+/// 서버에서 새로 들어온 AI 규칙을 「AI가 한 일」에 남긴다(ACT1114A09). 종류는 `rule.<type>`이고, 되돌리기는 그 규칙을 끄는 것이다.
+@MainActor
+enum AssistantRuleLog {
+    nonisolated static let prefix = "rule."
+
+    /// 사용자가 정한 규칙과 꺼진 규칙은 적지 않는다.
+    static func entries(for rules: [Rule], at date: Date = .now, defaults: UserDefaults) -> [AssistantLogEntry] {
+        rules.filter { !$0.isUserMade && $0.enabled }.map { rule in
+            var delta = AssistantEditDelta()
+            delta.appChange = AssistantAppChange(ruleID: rule.id)
+            return AssistantLogEntry(
+                commandID: "rule-\(rule.id)", kind: .operation(prefix + rule.type), appliedAt: date, before: "", after: AssistantRuleListView.summary(rule), delta: delta,
+                keyID: rule.source?.keyId, connection: AssistantConnectionName.name(keyID: rule.source?.keyId, source: nil, defaults: defaults), taskID: rule.source?.taskId
+            )
+        }
+    }
+
+    /// 「AI 규칙 받음 · 가게 분류」. 규칙 기록이 아니면 nil.
+    nonisolated static func title(_ name: String, _ language: MapHomeLanguage) -> String? {
+        guard name.hasPrefix(prefix) else { return nil }
+        return language.text("AI 규칙 받음", "AI rule received") + " · " + AssistantRuleListView.title(String(name.dropFirst(prefix.count)), language)
     }
 }

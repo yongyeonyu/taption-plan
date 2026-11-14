@@ -2458,4 +2458,60 @@ extension AssistantPhase3Tests {
         XCTAssertEqual(MovementCorrectionEngine.applying([], to: [confirmed], places: places, rules: [bus]).first?.mode, .car)
         XCTAssertEqual(Set(MovementCorrectionEngine.ruleModes.keys), Set(RuleShape.modes))
     }
+
+    /// 서버에서 새로 들어온 AI 규칙은 「AI가 한 일」에 남고, 되돌리면 그 규칙이 꺼진다.
+    func testNewAIRulesAreLoggedAndUndoSwitchesThemOff() async throws {
+        let store = defaults()
+        let model = await makeModel()
+        let old = Rule(id: "r0", type: "skip_word", match: ["word": .text("광고")], source: .init(by: "ai"))
+        let learned = Rule(id: "r1", type: "merchant_category", match: ["contains": .list(["빵집"])], result: ["category": .text("cafe")], source: .init(by: "ai", keyId: "aaaa1111", taskId: "t1"))
+        let mine = Rule(id: "r2", type: "skip_word", match: ["word": .text("이벤트")], source: .init(by: "user"))
+        var off = Rule(id: "r3", type: "skip_word", match: ["word": .text("할인")], source: .init(by: "ai"))
+        off.enabled = false
+
+        let entries = AssistantRuleLog.entries(for: [learned, mine, off], defaults: store)
+        XCTAssertEqual(entries.map(\.kind.rawValue), ["rule.merchant_category"], "내가 정한 규칙과 꺼진 규칙은 적지 않는다")
+        let entry = try XCTUnwrap(entries.first)
+        XCTAssertEqual([entry.after, entry.taskID, entry.keyID], ["빵집 → cafe", "t1", "aaaa1111"])
+        XCTAssertEqual(entry.delta.appChange?.ruleID, "r1")
+        XCTAssertEqual(entry.kind.title(.korean), "AI 규칙 받음 · 가게 분류")
+        XCTAssertTrue(AssistantActionToggles.isEnabled(entry.kind, defaults: store))
+        let decoded = try JSONDecoder().decode([AssistantLogEntry].self, from: JSONEncoder().encode(entries))
+        XCTAssertEqual(decoded, entries)
+
+        // 되돌리기 = 그 규칙 끄기. 보낼 것에 남아 서버에도 올라간다.
+        store.set(try JSONEncoder().encode(RuleSet(version: 2, rules: [old, learned, mine])), forKey: AssistantRuleStore.setKey)
+        let undone = await model.undoAssistantEntry(entry, preferences: .test(store))
+        XCTAssertTrue(undone)
+        XCTAssertEqual(AssistantRuleStore.effective(store).rules.first { $0.id == "r1" }?.enabled, false)
+        XCTAssertEqual(AssistantRuleStore.outbox(store), [.init(op: "disable", id: "r1")])
+        XCTAssertEqual(AssistantRuleStore.effective(store).rules.first { $0.id == "r0" }?.enabled, true)
+        let again = await model.undoAssistantEntry(entry, preferences: .test(store))
+        XCTAssertFalse(again, "이미 꺼졌거나 지워진 규칙은 되돌리지 않는다")
+        AssistantRuleSnapshot.set([])
+
+        // 동기화: 전에 받은 사본에 없던 AI 규칙만 적는다. 처음 받는 사본은 적지 않는다.
+        let secrets = AssistantMemorySecrets()
+        _ = secrets.write(String(repeating: "m", count: 43), to: .master)
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("rule-log-\(UUID().uuidString).json")
+        addTeardownBlock { try? FileManager.default.removeItem(at: file) }
+        func sync(_ target: UserDefaults, _ set: RuleSet) async throws -> Bool {
+            let env = environment(secrets, target, status: { _ in 200 })
+            Phase3RelayStub.body = String(decoding: try JSONEncoder().encode(set), as: UTF8.self)
+            return await AssistantRuleStore.sync(env: env, logFile: file)
+        }
+        let fresh = defaults()
+        fresh.set(1, forKey: AssistantKeyLabels.serverCountKey)
+        fresh.set(true, forKey: AssistantRuleStore.migratedKey)
+        let first = try await sync(fresh, RuleSet(version: 1, rules: [old]))
+        XCTAssertTrue(first)
+        XCTAssertTrue(AssistantActionLog.load(from: file).isEmpty)
+        let second = try await sync(fresh, RuleSet(version: 2, rules: [old, learned, mine]))
+        XCTAssertTrue(second)
+        XCTAssertEqual(AssistantActionLog.load(from: file).map(\.kind.rawValue), ["rule.merchant_category"])
+        let third = try await sync(fresh, RuleSet(version: 3, rules: [old, learned, mine]))
+        XCTAssertTrue(third)
+        XCTAssertEqual(AssistantActionLog.load(from: file).count, 1, "이미 있던 규칙은 다시 적지 않는다")
+        AssistantRuleSnapshot.set([])
+    }
 }

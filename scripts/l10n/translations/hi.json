@@ -535,6 +535,7 @@
 "하루 카드 알림 시각 바꾸기|Change the day card time": "दिन कार्ड का समय बदलें",
 "알림 종류 켜고 끄기|Switch alert kinds on or off": "अलर्ट के प्रकार चालू या बंद करें",
 "고양이 장식 입히기|Dress my cat": "मेरी बिल्ली को सजाएँ",
+"AI 규칙 받음|AI rule received": "AI नियम प्राप्त हुआ",
 "                앱 사용 데이터 접근이 승인되지 않았습니다. 순서대로 확인해 주세요.\n                1. 설정 > 스크린 타임을 켭니다.\n                2. 설정 > 스크린 타임 > 앱 및 웹사이트 활동을 켭니다.\n                3. 설정 > 스크린 타임 > 앱 사용 데이터 공유에서 BOKKI Plan을 허용합니다.\n                그래도 같다면 이 Apple 계정에서는 접근이 제한됩니다. 가족 공유의 자녀 계정이거나 일부 국가/지역인 경우가 여기에 해당합니다.|                App usage data access has not been granted. Please check the following in order.\n                1. Turn on Settings > Screen Time.\n                2. Turn on Settings > Screen Time > App & Website Activity.\n                3. Allow BOKKI Plan under Settings > Screen Time > Share App Usage Data.\n                If it still fails, access is restricted for this Apple Account, such as a child account in Family Sharing or an account in some countries or regions.": "                ऐप उपयोग डेटा की अनुमति नहीं मिली है। कृपया क्रम से जाँचें।\n                1. सेटिंग्ज़ > स्क्रीन टाइम चालू करें।\n                2. सेटिंग्ज़ > स्क्रीन टाइम > ऐप और वेबसाइट गतिविधि चालू करें।\n                3. सेटिंग्ज़ > स्क्रीन टाइम > ऐप उपयोग डेटा साझा करें में BOKKI Plan को अनुमति दें।\n                फिर भी न हो, तो इस Apple खाते के लिए पहुँच सीमित है, जैसे फ़ैमिली शेयरिंग का बच्चे का खाता या कुछ देशों/क्षेत्रों का खाता।",
 " | ": " ",
 " · {0}번| · {0}x": " · {0} बार",
