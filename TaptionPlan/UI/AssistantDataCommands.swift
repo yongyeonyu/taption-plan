@@ -7,6 +7,9 @@ enum AssistantDisplayOption: String, CaseIterable, Codable, Sendable {
     case mapPhotos
     case mapRoutes
     case mapFootprints
+    /// ACT1114A07: 시간 사이드바, 탈것 모습.
+    case sidebar
+    case vehicles
 
     /// 지도 화면 `@AppStorage`와 같은 키.
     var defaultsKey: String {
@@ -14,6 +17,8 @@ enum AssistantDisplayOption: String, CaseIterable, Codable, Sendable {
         case .mapPhotos: "mapHomeShowsPhotos"
         case .mapRoutes: "mapHomeShowsRoutes"
         case .mapFootprints: "mapHomeShowsFootprints"
+        case .sidebar: "mapHomeSidebarVisible"
+        case .vehicles: MapHomeStickmanAction.vehicleDisplayKey
         }
     }
 }
@@ -546,6 +551,8 @@ enum AssistantScreen: String, CaseIterable, Codable, Sendable {
     case paymentAutomation, shortcuts, aiConnection, ledger, dataProtection, settings
     // ACC1112A01
     case salary, carAudio, alarm, placeBook, passport, unconfirmedReview, travel
+    // ACT1114A07
+    case dayCard, calendarConnect, categoryAdd, paymentAlerts, aiRules
 
     func title(_ language: MapHomeLanguage) -> String {
         switch self {
@@ -562,6 +569,11 @@ enum AssistantScreen: String, CaseIterable, Codable, Sendable {
         case .passport: language.text("여권", "Passport")
         case .unconfirmedReview: language.text("미확인 시간 검토", "Unconfirmed time review")
         case .travel: language.text("여행 모드", "Travel mode")
+        case .dayCard: language.text("하루 카드", "Day card")
+        case .calendarConnect: language.text("캘린더 연결", "Connect calendar")
+        case .categoryAdd: language.text("분류 더하기", "Add categories")
+        case .paymentAlerts: language.text("결제 알림 받기", "Payment alerts")
+        case .aiRules: language.text("AI 규칙", "AI rules")
         }
     }
 }
@@ -630,6 +642,8 @@ enum AssistantSetting: String, CaseIterable, Codable, Sendable {
     case tollVehicle, salaryMode, annualPay, monthlyPay, payIsNet, showsNetPay, hourlyPay, hourlyPayIsNet, hourlyTax, weeklyHolidayPay
     /// ACC1112A01: 앱 자료에 있는 설정. 화면의 설정 함수로 바꾼다. 알림은 끄기만 받는다(켜기는 iOS 권한 창이 필요하다).
     case reduceMotion, weather, weatherSidebar, gpsIntervalSeconds, cat, notifications
+    /// ACT1114A07: 지도에 보일 메모(지도 화면 `@AppStorage`와 같은 키).
+    case memoDisplay
 
     static let tripTitleLimit = 60
 
@@ -673,6 +687,7 @@ enum AssistantSetting: String, CaseIterable, Codable, Sendable {
         case .hourlyTax: MapHomeSalaryPolicy.hourlyTaxKey
         case .weeklyHolidayPay: MapHomeSalaryPolicy.weeklyHolidayKey
         case .reduceMotion, .weather, .weatherSidebar, .gpsIntervalSeconds, .cat, .notifications: "appSetting.\(rawValue)"
+        case .memoDisplay: "mapHomeMemoDisplay"
         }
     }
 
@@ -689,6 +704,7 @@ enum AssistantSetting: String, CaseIterable, Codable, Sendable {
         case .gpsIntervalSeconds: .count(GPSLoggingPreferences.intervalStepSeconds...1_800, step: GPSLoggingPreferences.intervalStepSeconds)
         case .cat: .choice(CatCoat.characters.map(\.catStyle.rawValue))
         case .notifications: .offOnly
+        case .memoDisplay: .choice(MapHomeMemoDisplayMode.allCases.map(\.rawValue))
         }
     }
 
@@ -777,6 +793,7 @@ enum AssistantSetting: String, CaseIterable, Codable, Sendable {
         case .gpsIntervalSeconds: language.text("위치 기록 간격(초)", "Location logging interval (s)")
         case .cat: language.text("고양이", "Cat")
         case .notifications: language.text("알림", "Notifications")
+        case .memoDisplay: language.text("메모 표시", "Show memos")
         }
     }
 }

@@ -195,3 +195,15 @@ test("actions batch 3: records, more travel modes and memo times", () => {
   assert.equal(isAppState({ format: "bokki-app", version: 1, retentionDays: 7, settings: {}, boarding: "x" }), false);
   assert.deepEqual(cleanAppState({ format: "bokki-app", version: 1, retentionDays: 7, settings: {}, boarding: [{ id: "a" }], secret: 1 }).boarding, [{ id: "a" }]);
 });
+
+test("actions batch 4: more settings, display options, screens and the Kakao map", () => {
+  accepts("setMapStyle", { mapStyle: "kakao" });
+  refuses("setMapStyle", { mapStyle: "google" });
+  for (const option of ["sidebar", "vehicles", "mapPhotos"]) accepts("setDisplayOption", { option, enabled: false });
+  refuses("setDisplayOption", { option: "memos", enabled: false });
+  for (const screen of ["dayCard", "calendarConnect", "categoryAdd", "paymentAlerts", "aiRules", "ledger"]) accepts("openScreen", { screen });
+  refuses("openScreen", { screen: "backup" });
+  accepts("setSetting", { setting: "memoDisplay", value: "located" });
+  refuses("setSetting", { setting: "memoDisplay", value: "none" });
+  refuses("setSetting", { setting: "memoDisplay", value: true });
+});

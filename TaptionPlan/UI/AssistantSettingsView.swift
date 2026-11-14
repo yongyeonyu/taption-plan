@@ -267,6 +267,12 @@ extension MapHomeView {
         case .passport: isPassportPresented = true
         case .unconfirmedReview: isUnconfirmedReviewPresented = true
         case .travel: isTravelHomePresented = true
+        // ACT1114A07
+        case .dayCard: isDailyCardPresented = true
+        case .calendarConnect: isCalendarConnectPresented = true
+        case .categoryAdd: isCategoryAddPresented = true
+        // 이 둘은 `AssistantScreenHost`가 직접 띄운다.
+        case .paymentAlerts, .aiRules: break
         }
     }
 }
@@ -278,6 +284,8 @@ private struct AssistantScreenHost: View {
     let open: (AssistantScreen) -> Void
     @Environment(\.scenePhase) private var scenePhase
     @State private var isTutorialPresented = false
+    /// 지도 화면에 단추가 없는 목록 화면(결제 알림 받기·AI 규칙, ACT1114A07).
+    @State private var list: AssistantScreen?
 
     var body: some View {
         Color.clear
@@ -288,11 +296,21 @@ private struct AssistantScreenHost: View {
             .sheet(isPresented: $isTutorialPresented) {
                 if let link = BokkiPaymentShortcut.automationLink { BokkiPaymentAddPopup(link: link, language: language) }
             }
+            .sheet(isPresented: Binding(get: { list != nil }, set: { if !$0 { list = nil } })) {
+                NavigationStack {
+                    Group {
+                        if list == .aiRules { AssistantRuleListView(language: language) } else { PaymentAlertSourcesView(language: language) }
+                    }
+                    .toolbar { ToolbarItem(placement: .confirmationAction) { Button(language.text("완료", "Done")) { list = nil } } }
+                }
+            }
     }
 
     private func show() {
         guard scenePhase == .active, let screen = AssistantScreenRequest.shared.take() else { return }
-        if screen == .paymentAutomation, BokkiPaymentShortcut.hasAutomationLink { isTutorialPresented = true } else { open(screen) }
+        if screen == .paymentAutomation, BokkiPaymentShortcut.hasAutomationLink { isTutorialPresented = true }
+        else if screen == .paymentAlerts || screen == .aiRules { list = screen }
+        else { open(screen) }
     }
 }
 

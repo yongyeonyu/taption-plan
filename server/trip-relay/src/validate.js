@@ -68,8 +68,11 @@ const distinctIDs = (ids, min, max) => Array.isArray(ids) && ids.length >= min &
 // 설정은 안전한 것만: 언어·테마·지도 모양·표시 켜고 끄기. 값은 앱의 저장값 그대로다.
 export const LANGUAGES = ["automatic", "korean", "english", "ja", "zh-Hans", "zh-Hant", "de", "fr", "it", "es", "pt-BR", "vi", "id", "th", "hi"];
 export const THEMES = ["classic", "navy", "purple", "brown", "ink"];
-export const MAP_STYLES = ["standard", "hybrid", "mapLibreNight", "mapLibreContrast", "mapLibreCasual", "mapLibreRPG", "mapLibreInk", "mapLibrePorcelain"];
-export const DISPLAY_OPTIONS = ["mapPhotos", "mapRoutes", "mapFootprints"];
+export const MAP_STYLES = ["standard", "hybrid", "mapLibreNight", "mapLibreContrast", "mapLibreCasual", "mapLibreRPG", "mapLibreInk", "mapLibrePorcelain",
+  // ACT1114A07: 카카오 지도(앱에 카카오 키가 없으면 앱이 not_available로 거절한다).
+  "kakao"];
+// ACT1114A07: sidebar(시간 사이드바)·vehicles(탈것 모습).
+export const DISPLAY_OPTIONS = ["mapPhotos", "mapRoutes", "mapFootprints", "sidebar", "vehicles"];
 export const TRIP_STATUSES = ["booked", "planned", "tentative"];
 
 const oneOf = (list) => (v) => list.includes(v);
@@ -237,7 +240,9 @@ export const PAYMENT_RULE_KINDS = ["expense", "income", "ignore"];
 // ACX1112A01
 export const SCREENS = ["paymentAutomation", "shortcuts", "aiConnection", "ledger", "dataProtection", "settings",
   // ACC1112A01
-  "salary", "carAudio", "alarm", "placeBook", "passport", "unconfirmedReview", "travel"];
+  "salary", "carAudio", "alarm", "placeBook", "passport", "unconfirmedReview", "travel",
+  // ACT1114A07
+  "dayCard", "calendarConnect", "categoryAdd", "paymentAlerts", "aiRules"];
 export const REVIEW_DECISIONS = ["add", "discard"];
 export const BUDGET_MAX_KRW = 1e12;
 const UUID = /^[0-9A-Fa-f]{8}(?:-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12}$/;
@@ -307,6 +312,8 @@ export const SETTINGS = {
   gpsIntervalSeconds: (v) => Number.isInteger(v) && v >= 30 && v <= 1800 && v % 30 === 0,
   cat: oneOf(CATS),
   notifications: (v) => v === false,
+  // ACT1114A07: 지도에 보일 메모.
+  memoDisplay: oneOf(["all", "located", "hidden"]),
 };
 export const SETTING_NAMES = Object.keys(SETTINGS);
 // ACD1112A01: 승인 요청 종류. 값이 있는 것은 그 값만, 없는 것은 값을 받지 않는다.

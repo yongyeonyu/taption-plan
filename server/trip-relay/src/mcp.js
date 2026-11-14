@@ -271,7 +271,7 @@ const TOOLS = [
     + "currency, 0 clears); payIsNet, hourlyPayIsNet (the amount entered is after tax), showsNetPay (show after-tax amounts), "
     + "hourlyTax threePointThree|fourInsurance|none, weeklyHolidayPay true|false; reduceMotion, weather (weather on the timeline), "
     + "weatherSidebar true|false; gpsIntervalSeconds 30-1800 in steps of 30 (how often location is logged; longer saves battery); "
-    + "cat white|calico|mackerel (the map cat); notifications false only (turning notifications, Health, Photos, Calendar or location ON "
+    + "cat white|calico|mackerel (the map cat); memoDisplay all|located|hidden (which memos show on the map); notifications false only (turning notifications, Health, Photos, Calendar or location ON "
     + "needs an iOS permission prompt the user must answer: use open_screen settings and tell them what to tap). Current values are in "
     + "get_app_state settings.values, pay amounts included (annualPay, monthlyPay, hourlyPay as the user entered them). Undoable.",
     { setting: enumOf("Setting name", SETTING_NAMES), value: { description: "New value: a string, number or boolean as the setting needs" } }, ["setting", "value"]),
@@ -357,7 +357,7 @@ const TOOLS = [
   commandTool("set_language", "setLanguage", "Set app language", "Change the app language.", { language: enumOf("App language", LANGUAGES) }, ["language"]),
   commandTool("set_theme", "setTheme", "Set theme", "Change the app color theme.", { theme: enumOf("Theme", THEMES) }, ["theme"]),
   commandTool("set_map_style", "setMapStyle", "Set map style", "Change the map style.", { mapStyle: enumOf("Map style", MAP_STYLES) }, ["mapStyle"]),
-  commandTool("set_display_option", "setDisplayOption", "Toggle display option", "Turn a map display option on or off: mapPhotos (photos on the map), mapRoutes (route lines), mapFootprints (footprints).",
+  commandTool("set_display_option", "setDisplayOption", "Toggle display option", "Turn a display option on or off: mapPhotos (photos on the map), mapRoutes (route lines), mapFootprints (footprints), sidebar (the time sidebar), vehicles (the cat riding vehicles).",
     { option: enumOf("Display option", DISPLAY_OPTIONS), enabled: { type: "boolean", description: "On or off" } }, ["option", "enabled"]),
   // 규칙 저장소(AIX1114A01 P3).
   readTool("get_rules", "Get rules", "The rules the app applies by itself before asking you: {version, engine, rules:[{id,type,appliesTo,enabled,match,result,source,note}], "
@@ -458,6 +458,7 @@ const RAW_VALUES = {
     .map((k) => [k, oneOf("true", "false")])),
   ...Object.fromEntries(["annualPay", "monthlyPay", "hourlyPay", "gpsIntervalSeconds"].map((k) => [k, (v) => /^\d{1,12}(\.\d{1,2})?$/.test(v)])),
   cat: oneOf("white", "calico", "mackerel"),
+  memoDisplay: oneOf("all", "located", "hidden"),
   hourlyTax: oneOf("threePointThree", "fourInsurance", "none"),
   status: oneOf("applied", "rejected", "running", "completed", ...TRIP_STATUSES, ...TASK_STATUSES, ...ANSWER_STATUSES),
   kind: oneOf(...TASK_KINDS, "expense", "income", "ignore"),

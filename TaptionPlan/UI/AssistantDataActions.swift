@@ -97,6 +97,8 @@ extension AppModel {
             let old = change.before.flatMap(AppLanguagePreference.init(rawValue:))?.displayName ?? ""
             return AssistantEditResult(before: old, after: preference.displayName, preferences: change.before == change.after ? [] : [change])
         case let .setMapStyle(style):
+            // 카카오 지도는 키가 든 빌드에서만 고를 수 있다(화면의 지도 고르기와 같다).
+            if style == .kakao, !KakaoMapAvailability.isAvailable { return .rejected("not_available") }
             let before = snapshot.settings.mapDisplayStyle
             setMapDisplayStyle(style)
             return AssistantEditResult(
@@ -400,6 +402,8 @@ enum AssistantDataText {
         case .mapPhotos: language.text("지도에 사진", "Photos on map")
         case .mapRoutes: language.text("지도에 경로 선", "Route lines on map")
         case .mapFootprints: language.text("지도에 발자국", "Footprints on map")
+        case .sidebar: language.text("시간 사이드바", "Time sidebar")
+        case .vehicles: language.text("탈것 표시", "Show vehicles")
         }
         return "\(name) \(isOn ? language.text("켬", "On") : language.text("끔", "Off"))"
     }

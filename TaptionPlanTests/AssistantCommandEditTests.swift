@@ -1052,6 +1052,78 @@ extension AssistantCommandEditTests {
     }
 }
 
+// MARK: - 4묶음 — 설정 표 (ACT1114A07)
+
+extension AssistantCommandEditTests {
+    func testMoreDisplayOptionsSettingsScreensAndKakaoMap() async throws {
+        let store = defaults()
+        let model = AppModel(repository: InMemoryPlanRepository(snapshot: .empty), cloudSyncService: nil)
+        await model.bootstrap()
+        let preferences = AssistantPreferenceStore.test(store)
+        func entry(_ kind: AssistantActionKind, _ result: AssistantEditResult) -> AssistantLogEntry {
+            var delta = AssistantEditDelta()
+            delta.preferences = result.preferences.isEmpty ? nil : result.preferences
+            delta.appChange = result.appChange
+            return AssistantLogEntry(commandID: UUID().uuidString, kind: kind, appliedAt: .now, before: result.before, after: result.after, delta: delta)
+        }
+
+        let parsed = try batch([
+            command("d1", "setDisplayOption", ["option": "sidebar", "enabled": false]),
+            command("d2", "setDisplayOption", ["option": "vehicles", "enabled": false]),
+            command("d3", "setDisplayOption", ["option": "memos", "enabled": false]),
+            command("s1", "setSetting", ["setting": "memoDisplay", "value": "located"]),
+            command("s2", "setSetting", ["setting": "memoDisplay", "value": "none"]),
+            command("o1", "openScreen", ["screen": "dayCard"]),
+            command("o2", "openScreen", ["screen": "aiRules"]),
+            command("o3", "openScreen", ["screen": "backup"]),
+            command("k1", "setMapStyle", ["mapStyle": "kakao"]),
+        ])
+        XCTAssertEqual(parsed.invalidIDs, ["d3", "s2", "o3"])
+        XCTAssertEqual(parsed.commands.map(\.action), [
+            .setDisplayOption(.sidebar, enabled: false), .setDisplayOption(.vehicles, enabled: false), .setSetting(.memoDisplay, value: "located"),
+            .openScreen(.dayCard), .openScreen(.aiRules), .setMapStyle(.kakao),
+        ])
+        XCTAssertEqual(AssistantDisplayOption.sidebar.defaultsKey, "mapHomeSidebarVisible")
+        XCTAssertEqual(AssistantDisplayOption.vehicles.defaultsKey, MapHomeStickmanAction.vehicleDisplayKey)
+        XCTAssertEqual(AssistantSetting.memoDisplay.key, "mapHomeMemoDisplay")
+        XCTAssertFalse(AssistantScreen.allCases.contains { $0.title(.korean).isEmpty })
+
+        let hidden = await model.applyAssistantAction(.setDisplayOption(.sidebar, enabled: false), preferences: preferences)
+        XCTAssertNil(hidden.reason)
+        XCTAssertEqual(store.object(forKey: "mapHomeSidebarVisible") as? Bool, false)
+        let shown = await model.undoAssistantEntry(entry(.setDisplayOption, hidden), preferences: preferences)
+        XCTAssertTrue(shown)
+        XCTAssertEqual(store.object(forKey: "mapHomeSidebarVisible") as? Bool, true)
+
+        let memos = await model.applyAssistantAction(.setSetting(.memoDisplay, value: "located"), preferences: preferences)
+        XCTAssertNil(memos.reason)
+        XCTAssertEqual(store.string(forKey: "mapHomeMemoDisplay"), MapHomeMemoDisplayMode.located.rawValue)
+        let same = await model.applyAssistantAction(.setSetting(.memoDisplay, value: "located"), preferences: preferences)
+        XCTAssertEqual(same.reason, "no_change")
+        let cleared = await model.undoAssistantEntry(entry(.setSetting, memos), preferences: preferences)
+        XCTAssertTrue(cleared)
+        XCTAssertNil(store.object(forKey: "mapHomeMemoDisplay"), "정하기 전으로 돌아간다")
+
+        let rules = await model.applyAssistantAction(.openScreen(.aiRules), preferences: preferences)
+        XCTAssertNil(rules.reason)
+        XCTAssertEqual(preferences.screens.take(), .aiRules)
+
+        // 카카오 지도는 키가 든 빌드에서만 바뀐다.
+        let kakao = await model.applyAssistantAction(.setMapStyle(.kakao), preferences: preferences)
+        if KakaoMapAvailability.isAvailable {
+            XCTAssertNil(kakao.reason)
+            XCTAssertEqual(model.snapshot.settings.mapDisplayStyle, .kakao)
+        } else {
+            XCTAssertEqual(kakao.reason, "not_available")
+            XCTAssertNotEqual(model.snapshot.settings.mapDisplayStyle, .kakao)
+        }
+
+        let input = await AssistantAppStateSync.input(model: model, preferences: preferences, now: at(15), calendar: calendar)
+        XCTAssertEqual(AssistantAppStateSync.make(input).settings.display.keys.sorted(), ["mapFootprints", "mapPhotos", "mapRoutes", "sidebar", "vehicles"])
+        XCTAssertEqual(AssistantActionKind.setSetting.title(.english), "Change app settings (pay, tolls, weather, alerts…)")
+    }
+}
+
 /// 서버가 뽑아 둔 동작 목록(`server/trip-relay/test/fixtures/actions.json`).
 private struct AssistantActionManifest: Decodable {
     struct Action: Decodable {
