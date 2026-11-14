@@ -303073,79 +303073,79 @@
         }
       }
     },
-    "여행 일정에 넣은 곳에 도착하면 메모·세부 계획·예상 지출을 보여요. 알림과 위치를 허용했으면 앱을 닫아 두어도 그날 일정 장소에서 알림이 올 수 있고, 일정마다 한 번만 떠요.|Shows notes, sub-plans and planned spend when you reach a place in your trip plan. With notifications and location allowed, today's planned places can alert you even when the app is closed, once per plan." : {
+    "여행 일정의 곳이나 일반 일정에 넣은 장소에 도착하면 메모·예상 지출을 보여요(여행 일정은 세부 계획도). 알림과 위치를 허용했으면 앱을 닫아 두어도 그날 일정 장소에서 알림이 올 수 있고, 일정마다 한 번만 떠요.|Shows notes and planned spend when you reach a place from a trip plan or a regular plan (trip plans also show sub-plans). With notifications and location allowed, today's planned places can alert you even when the app is closed, once per plan." : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "旅行の予定に入れた場所に到着すると、メモ・詳細プラン・予想支出を表示します。通知と位置情報を許可していれば、アプリを閉じていてもその日の予定の場所で通知が届くことがあり、予定ごとに1回だけ表示されます。"
+            "value" : "旅行の予定の場所や、通常の予定に入れた場所に到着すると、メモと予想支出を表示します（旅行の予定は詳細プランも）。通知と位置情報を許可していれば、アプリを閉じていてもその日の予定の場所で通知が届くことがあり、予定ごとに1回だけ表示されます。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "到达旅行行程中的地点时，显示备注、详细计划和预计支出。如果已允许通知和位置，即使关闭 App，也可能在当天的行程地点收到通知，每个行程只显示一次。"
+            "value" : "到达旅行行程中的地点或普通日程中添加的地点时，显示备注和预计支出（旅行行程还会显示详细计划）。如果已允许通知和位置，即使关闭 App，也可能在当天的行程地点收到通知，每个行程只显示一次。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "抵達旅行行程中的地點時，顯示備註、詳細計畫和預計支出。如果已允許通知和位置，即使關閉 App，也可能在當天的行程地點收到通知，每個行程只顯示一次。"
+            "value" : "抵達旅行行程中的地點或一般行程中加入的地點時，顯示備註和預計支出（旅行行程還會顯示詳細計畫）。如果已允許通知和位置，即使關閉 App，也可能在當天的行程地點收到通知，每個行程只顯示一次。"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zeigt Notizen, Detailpläne und geplante Ausgaben, wenn du einen Ort aus deinem Reiseplan erreichst. Sind Mitteilungen und Standort erlaubt, können dich die heutigen Orte auch bei geschlossener App benachrichtigen, einmal pro Plan."
+            "value" : "Zeigt Notizen und geplante Ausgaben, wenn du einen Ort aus einem Reiseplan oder einem normalen Plan erreichst (bei Reiseplänen auch Detailpläne). Sind Mitteilungen und Standort erlaubt, können dich die heutigen Orte auch bei geschlossener App benachrichtigen, einmal pro Plan."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Affiche les notes, les sous-plans et les dépenses prévues quand vous atteignez un lieu de votre plan de voyage. Si les notifications et la position sont autorisées, les lieux prévus du jour peuvent vous alerter même quand l’app est fermée, une fois par plan."
+            "value" : "Affiche les notes et les dépenses prévues quand vous atteignez un lieu d’un plan de voyage ou d’un plan ordinaire (les plans de voyage affichent aussi les sous-plans). Si les notifications et la position sont autorisées, les lieux prévus du jour peuvent vous alerter même quand l’app est fermée, une fois par plan."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mostra note, piani dettagliati e spesa prevista quando raggiungi un luogo del tuo piano di viaggio. Con notifiche e posizione consentite, i luoghi previsti per oggi possono avvisarti anche ad app chiusa, una volta per piano."
+            "value" : "Mostra note e spesa prevista quando raggiungi un luogo di un piano di viaggio o di un piano normale (i piani di viaggio mostrano anche i piani dettagliati). Con notifiche e posizione consentite, i luoghi previsti per oggi possono avvisarti anche ad app chiusa, una volta per piano."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Muestra notas, planes detallados y gasto previsto cuando llegas a un lugar de tu plan de viaje. Con las notificaciones y la ubicación permitidas, los lugares previstos para hoy pueden avisarte aunque la app esté cerrada, una vez por plan."
+            "value" : "Muestra notas y gasto previsto cuando llegas a un lugar de un plan de viaje o de un plan normal (los planes de viaje también muestran los planes detallados). Con las notificaciones y la ubicación permitidas, los lugares previstos para hoy pueden avisarte aunque la app esté cerrada, una vez por plan."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mostra notas, planos detalhados e gasto previsto quando você chega a um lugar do seu plano de viagem. Com notificações e localização permitidas, os lugares previstos para hoje podem avisar você mesmo com o app fechado, uma vez por plano."
+            "value" : "Mostra notas e gasto previsto quando você chega a um lugar de um plano de viagem ou de um plano comum (planos de viagem também mostram os planos detalhados). Com notificações e localização permitidas, os lugares previstos para hoje podem avisar você mesmo com o app fechado, uma vez por plano."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hiển thị ghi chú, kế hoạch chi tiết và chi tiêu dự kiến khi bạn đến một địa điểm trong kế hoạch chuyến đi. Nếu đã cho phép thông báo và vị trí, các địa điểm trong kế hoạch hôm nay có thể báo cho bạn ngay cả khi ứng dụng đã đóng, mỗi kế hoạch một lần."
+            "value" : "Hiển thị ghi chú và chi tiêu dự kiến khi bạn đến một địa điểm trong kế hoạch chuyến đi hoặc kế hoạch thông thường (kế hoạch chuyến đi còn hiển thị kế hoạch chi tiết). Nếu đã cho phép thông báo và vị trí, các địa điểm trong kế hoạch hôm nay có thể báo cho bạn ngay cả khi ứng dụng đã đóng, mỗi kế hoạch một lần."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Menampilkan catatan, rencana rinci, dan perkiraan pengeluaran saat Anda tiba di tempat dalam rencana perjalanan. Jika notifikasi dan lokasi diizinkan, tempat yang direncanakan hari ini dapat memberi tahu Anda meski aplikasi ditutup, sekali per rencana."
+            "value" : "Menampilkan catatan dan perkiraan pengeluaran saat Anda tiba di tempat dalam rencana perjalanan atau rencana biasa (rencana perjalanan juga menampilkan rencana rinci). Jika notifikasi dan lokasi diizinkan, tempat yang direncanakan hari ini dapat memberi tahu Anda meski aplikasi ditutup, sekali per rencana."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "แสดงโน้ต แผนย่อย และค่าใช้จ่ายที่คาดไว้เมื่อคุณไปถึงสถานที่ในแผนการเดินทาง หากอนุญาตการแจ้งเตือนและตำแหน่งไว้ สถานที่ในแผนของวันนี้อาจแจ้งเตือนคุณได้แม้ปิดแอปอยู่ และแสดงครั้งเดียวต่อแผน"
+            "value" : "แสดงโน้ตและค่าใช้จ่ายที่คาดไว้เมื่อคุณไปถึงสถานที่ในแผนการเดินทางหรือในแผนทั่วไป (แผนการเดินทางจะแสดงแผนย่อยด้วย) หากอนุญาตการแจ้งเตือนและตำแหน่งไว้ สถานที่ในแผนของวันนี้อาจแจ้งเตือนคุณได้แม้ปิดแอปอยู่ และแสดงครั้งเดียวต่อแผน"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "जब आप अपनी यात्रा योजना के किसी स्थान पर पहुँचते हैं, तो नोट, विस्तृत योजनाएँ और अनुमानित खर्च दिखाता है। सूचनाएँ और स्थान की अनुमति होने पर, ऐप बंद होने पर भी आज की योजना के स्थानों पर सूचना मिल सकती है, हर योजना के लिए एक बार।"
+            "value" : "जब आप किसी यात्रा योजना या सामान्य योजना के स्थान पर पहुँचते हैं, तो नोट और अनुमानित खर्च दिखाता है (यात्रा योजना में विस्तृत योजनाएँ भी)। सूचनाएँ और स्थान की अनुमति होने पर, ऐप बंद होने पर भी आज की योजना के स्थानों पर सूचना मिल सकती है, हर योजना के लिए एक बार।"
           }
         }
       }
@@ -326327,6 +326327,83 @@
         }
       }
     },
+    "이 날의 경로 기록을 다 불러오지 못했습니다.|Couldn't load all of this day's route records." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この日のルート記録をすべて読み込めませんでした。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法加载这一天的全部路线记录。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法載入這一天的全部路線記錄。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Routenaufzeichnungen dieses Tages konnten nicht vollständig geladen werden."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de charger tous les enregistrements d’itinéraire de ce jour."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossibile caricare tutte le registrazioni del percorso di questo giorno."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudieron cargar todos los registros de ruta de este día."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível carregar todos os registros de rota deste dia."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không thể tải đầy đủ bản ghi lộ trình của ngày này."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catatan rute hari ini tidak dapat dimuat seluruhnya."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "โหลดบันทึกเส้นทางของวันนี้ได้ไม่ครบ"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "इस दिन के मार्ग रिकॉर्ड पूरे लोड नहीं हो सके।"
+          }
+        }
+      }
+    },
     "이 날의 기록이 아직 없습니다|No records for this day yet" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -326400,6 +326477,160 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "इस दिन के अभी कोई रिकॉर्ड नहीं"
+          }
+        }
+      }
+    },
+    "이 날의 자료를 불러오지 못했습니다.|Couldn't load this day's data." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この日のデータを読み込めませんでした。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法加载这一天的数据。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法載入這一天的資料。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Daten dieses Tages konnten nicht geladen werden."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de charger les données de ce jour."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossibile caricare i dati di questo giorno."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudieron cargar los datos de este día."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível carregar os dados deste dia."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không thể tải dữ liệu của ngày này."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Data hari ini tidak dapat dimuat."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "โหลดข้อมูลของวันนี้ไม่ได้"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "इस दिन का डेटा लोड नहीं हो सका।"
+          }
+        }
+      }
+    },
+    "이 날이 든 달은 백업한 뒤 이 기기에서 정리해서, 남아 있는 것만 보입니다. 백업 목록에서 다시 불러올 수 있습니다.|This day's month was cleared from this device after backup, so only what remains is shown. You can restore it from the backup list." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この日を含む月はバックアップ後にこのデバイスから整理したため、残っているものだけを表示します。バックアップ一覧から復元できます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这一天所在的月份已在备份后从此设备清理，因此只显示剩余的内容。可以从备份列表中恢复。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這一天所在的月份已在備份後從此裝置清理，因此只顯示剩餘的內容。可以從備份列表中還原。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Monat dieses Tages wurde nach dem Backup von diesem Gerät entfernt, daher wird nur angezeigt, was noch vorhanden ist. Du kannst ihn aus der Backup-Liste wiederherstellen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le mois de ce jour a été retiré de cet appareil après sauvegarde ; seul ce qui reste est affiché. Vous pouvez le restaurer depuis la liste des sauvegardes."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il mese di questo giorno è stato rimosso da questo dispositivo dopo il backup, quindi viene mostrato solo ciò che resta. Puoi ripristinarlo dall’elenco dei backup."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El mes de este día se eliminó de este dispositivo después de la copia de seguridad, así que solo se muestra lo que queda. Puedes restaurarlo desde la lista de copias."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O mês deste dia foi removido deste aparelho após o backup, então só aparece o que restou. Você pode restaurá-lo pela lista de backups."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tháng chứa ngày này đã được dọn khỏi thiết bị sau khi sao lưu, nên chỉ hiển thị những gì còn lại. Bạn có thể khôi phục từ danh sách sao lưu."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bulan dari hari ini sudah dibersihkan dari perangkat ini setelah dicadangkan, jadi hanya yang tersisa yang ditampilkan. Anda dapat memulihkannya dari daftar cadangan."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เดือนของวันนี้ถูกล้างออกจากอุปกรณ์นี้หลังสำรองข้อมูลแล้ว จึงแสดงเฉพาะส่วนที่เหลืออยู่ คุณกู้คืนได้จากรายการข้อมูลสำรอง"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "इस दिन का महीना बैकअप के बाद इस डिवाइस से हटा दिया गया है, इसलिए केवल बचा हुआ डेटा दिखता है। आप इसे बैकअप सूची से फिर से ला सकते हैं।"
           }
         }
       }
@@ -339105,6 +339336,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "अक्सर जाने की जगहें हटाएँ"
+          }
+        }
+      }
+    },
+    "자주 가는 장소의 종류 바꾸기|Change kinds of frequent places" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "よく行く場所の種類を変更"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更改常去地点的类型"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "變更常去地點的類型"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Art häufiger Orte ändern"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modifier le type des lieux fréquents"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cambia il tipo dei luoghi frequenti"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cambiar el tipo de lugares frecuentes"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alterar o tipo de locais frequentes"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đổi loại địa điểm thường đến"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ubah jenis tempat yang sering dikunjungi"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เปลี่ยนประเภทสถานที่ที่ไปบ่อย"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "अक्सर जाने वाली जगहों का प्रकार बदलें"
           }
         }
       }
@@ -352195,6 +352503,83 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "मैप ज़ूम इन करें"
+          }
+        }
+      }
+    },
+    "지도 활동 색 바꾸기|Change map activity colours" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "地図のアクティビティの色を変更"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更改地图活动颜色"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "變更地圖活動顏色"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Farben der Aktivitäten auf der Karte ändern"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modifier les couleurs des activités sur la carte"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cambia i colori delle attività sulla mappa"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cambiar los colores de las actividades del mapa"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alterar as cores das atividades no mapa"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đổi màu hoạt động trên bản đồ"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ubah warna aktivitas di peta"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เปลี่ยนสีกิจกรรมบนแผนที่"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "मानचित्र पर गतिविधियों के रंग बदलें"
           }
         }
       }

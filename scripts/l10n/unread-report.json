@@ -1,5 +1,5 @@
 {
- "ui": 5021,
+ "ui": 5026,
  "catalog": 504,
  "unread": [
   {
@@ -100,25 +100,25 @@
   },
   {
    "file": "TaptionPlan/Core/LedgerMessageRules.swift",
-   "line": 502,
+   "line": 511,
    "ko": "$0",
    "en": "language"
   },
   {
    "file": "TaptionPlan/Core/LedgerMessageRules.swift",
-   "line": 909,
+   "line": 918,
    "ko": "$0",
    "en": "host.language"
   },
   {
    "file": "TaptionPlan/Core/LedgerMessageRules.swift",
-   "line": 710,
+   "line": 719,
    "ko": "value",
    "en": "host.language"
   },
   {
    "file": "TaptionPlan/Core/LedgerMessageRules.swift",
-   "line": 538,
+   "line": 547,
    "ko": "entry.amount",
    "en": "entry.currency"
   },
@@ -166,19 +166,13 @@
   },
   {
    "file": "TaptionPlan/UI/ArrivalCardView.swift",
-   "line": 113,
+   "line": 130,
    "ko": "amount",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/AssistantDataActions.swift",
-   "line": 1020,
-   "ko": "$0.name",
-   "en": "$0.englishName"
-  },
-  {
-   "file": "TaptionPlan/UI/AssistantDataActions.swift",
-   "line": 801,
+   "line": 807,
    "ko": "stop.kind.title",
    "en": "stop.kind.englishTitle"
   },
@@ -193,6 +187,12 @@
    "line": 61,
    "ko": "entry.amount",
    "en": "entry.currency"
+  },
+  {
+   "file": "TaptionPlan/UI/AssistantMoreActions.swift",
+   "line": 118,
+   "ko": "$0.name",
+   "en": "$0.englishName"
   },
   {
    "file": "TaptionPlan/UI/FirstRunGuideStage.swift",
@@ -814,31 +814,31 @@
   },
   {
    "file": "TaptionPlan/UI/PlanRealityGap.swift",
-   "line": 264,
+   "line": 265,
    "ko": "abs(delta)",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/PlanRealityView.swift",
-   "line": 313,
+   "line": 398,
    "ko": "planned",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/PlanRealityView.swift",
-   "line": 317,
+   "line": 402,
    "ko": "spent",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/PlanRealityView.swift",
-   "line": 344,
+   "line": 429,
    "ko": "gap.plannedSoFarKRW",
    "en": "language"
   },
   {
    "file": "TaptionPlan/UI/PlanRealityView.swift",
-   "line": 361,
+   "line": 446,
    "ko": "amount",
    "en": "language"
   },
