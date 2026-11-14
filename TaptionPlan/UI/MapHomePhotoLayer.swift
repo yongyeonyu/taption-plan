@@ -223,6 +223,19 @@ struct MapHomePhotoThumbnail: View {
     var contentMode: ContentMode = .fill
     @State private var image: UIImage?
     @State private var videoDuration: TimeInterval?
+    @State private var isReceipt = false
+
+    /// 글자를 읽어 영수증으로 본 사진(대표 지시).
+    private var receiptBadge: some View {
+        Text(verbatim: "OCR")
+            .font(.system(size: 11, weight: .heavy, design: .rounded))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(.black.opacity(0.62), in: Capsule())
+            .padding(10)
+            .accessibilityLabel(Text(verbatim: "OCR"))
+    }
 
     var body: some View {
         ZStack {
@@ -238,9 +251,12 @@ struct MapHomePhotoThumbnail: View {
             if videoDuration != nil { MapHomeVideoBadge(side: side * 0.34) }
         }
         .frame(width: side, height: side)
+        .overlay(alignment: .topLeading) { if isReceipt, side >= 100 { receiptBadge } }
         .clipped()
         .task(id: localIdentifier) {
             if image != nil { image = nil }
+            let marked = ReceiptPhotoMarks.contains(localIdentifier)
+            if marked != isReceipt { isReceipt = marked }
             let duration = MapHomePhotoImageLoader.shared.videoDuration(localIdentifier: localIdentifier)
             if duration != videoDuration { videoDuration = duration }
             image = await MapHomePhotoImageLoader.shared.image(localIdentifier: localIdentifier, side: side)

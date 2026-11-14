@@ -60,8 +60,8 @@ struct AITaskPanel: View {
         } else if shown.isEmpty, done.isEmpty, AssistantQuestionStore.shared.items.isEmpty {
             note(isLoading ? language.text("불러오는 중…", "Loading…") : language.text("그날 AI에게 맡긴 일이 없어요.", "Nothing was handed to your AI that day."))
         }
-        // 서버는 AI를 깨울 수 없다. 기다리는 일이 있으면 눌러서 연결된 AI 앱을 열고 요청 글을 붙여 넣게 한다(AIG1114A01).
-        if tasks.contains(where: { $0.status == .waiting || $0.status == .processing }) {
+        // 서버는 AI를 깨울 수 없다. 그날 기다리는 일이 있으면 눌러서 연결된 AI 앱을 열고 요청 글을 붙여 넣게 한다(AIG1114A01).
+        if shown.contains(where: { $0.status == .waiting || $0.status == .processing }) {
             Button { requestAI() } label: {
                 Label(language.text("AI에게 요청하기", "Ask your AI now"), systemImage: "paperplane.fill")
                     .font(.taptionStyle(.caption, weight: .semibold))
@@ -85,7 +85,7 @@ struct AITaskPanel: View {
             .frame(maxHeight: 320)
             .refreshable { await reload() }
         }
-        if tasks.contains(where: { $0.status == .done || $0.status == .failed }) {
+        if shown.contains(where: { $0.status == .done || $0.status == .failed }) {
             Button {
                 Task {
                     if await AITaskQueue.deleteFinished() { tasks = Self.merged() }
@@ -132,7 +132,7 @@ struct AITaskPanel: View {
         AssistantClipboard.copy(AITaskRequest.prompt)
         let provider = AITaskRequest.provider()
         requestNote = language.text("요청 글을 복사했어요. \(provider.title(language))에 붙여 넣고 보내 주세요.", "Request copied. Paste it into \(provider.title(language)) and send.")
-        if let url = provider.destination(installed: provider.isInstalled) { openURL(url) }
+        if let url = AITaskRequest.chatURL(provider) ?? provider.destination(installed: provider.isInstalled) { openURL(url) }
     }
 
     private func reload() async {
@@ -489,6 +489,19 @@ struct AssistantQuestionHost: View {
 enum AITaskRequest {
     /// AI가 읽는 글이라 영어로 둔다. 개인 정보는 없다.
     static let prompt = "Check BOKKI Plan now: call get_ai_tasks, handle every task as its kind says, then call complete_ai_task for each one, one at a time. Also check get_polish_requests and get_command_results. Reply in Korean with a short list of what you did."
+
+    /// 요청 글이 채워진 새 대화 주소(앱이 있으면 앱에서, 없으면 웹에서 열린다). 주소가 없는 AI는 nil이라 앱만 연다.
+    static func chatURL(_ provider: AssistantAIProvider, prompt: String = prompt) -> URL? {
+        let base: String
+        switch provider {
+        case .claude: base = "https://claude.ai/new"
+        case .chatGPT: base = "https://chatgpt.com/"
+        default: return nil
+        }
+        var parts = URLComponents(string: base)
+        parts?.queryItems = [URLQueryItem(name: "q", value: prompt)]
+        return parts?.url
+    }
 
     /// 연결된 AI 가운데 앱이 있는 것. 고른 AI → OAuth 앱 이름 순으로 찾고, 없으면 Claude.
     static func provider(defaults: UserDefaults = .standard) -> AssistantAIProvider {

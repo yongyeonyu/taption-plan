@@ -2,6 +2,20 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
+## OCB1114A01 · 335 뒤에 넣은 것 (2026-11-14 오전, 아직 빌드에 없음)
+
+OCB1114A01·KRT1114A01·AIC1114A01·AIK1114A01·AID1114A01·AIS1114A01. 로그는 `build/validation/OCB1114A01/`. 시뮬레이터(BOKKI-STL) 결과이고 실기기 확인은 없다.
+
+| 검증 | 결과 |
+|---|---|
+| `LedgerTests`·`TodoPanelTests`·`AssistantRelayTests`·`AssistantReviewFixTests`·`AssistantPhase3Tests`·`AssistantCommandEditTests`(병렬 끔, `sim-5.xcresult`, 앱 Debug 시험 빌드 포함) | 129건 통과·실패 0 |
+| 앞선 실행 | `sim-1`은 빌드 뒤 시험 실행기가 멈춰 끝냄(시뮬레이터 다시 켬). `sim-3`·`sim-4`는 `testScopedSetupTextNeverCarriesTheMasterKey` 1건 실패 — 맡긴 일 규칙의 `POST /command`가 읽기 전용 키 안내에도 들어감 → 쓰기 키 안내에만 넣도록 고친 뒤 통과 |
+| 구조 점검·`extract.py`·`check.py` | 기준선 통과, 번역 실패 0(긴 문구 3, 새 문구 없음) |
+| 서버 `npm test` | 114건 통과 |
+| 서버 배포(AIS1114A01) | `wrangler deploy` 완료. 배포된 연결 안내문을 읽는 확인은 인증이 필요해 하지 않음(401) |
+
+하지 않은 것: 화면 확인(「OCR」 표시, 스위치와 「연결 끊기」 간격, AI 탭 단추), 기기에서 Claude 앱이 채워진 대화로 열리는지, AI가 실제로 10분 예약을 만드는지.
+
 ## TFB1114A335 · TestFlight 335 (2026-11-14 아침)
 
 - `bash scripts/testflight/release.sh --yes --request-id TFB1114A335` 종료 코드 0. 기준 커밋 `808995f5`.

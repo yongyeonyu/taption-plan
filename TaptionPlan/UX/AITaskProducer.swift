@@ -283,6 +283,7 @@ enum ReceiptPhotoScanner {
         options.predicate = NSPredicate(format: "creationDate > %@ AND mediaType == %d", cursor as NSDate, PHAssetMediaType.image.rawValue)
         options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: true)]
         options.fetchLimit = batchLimit
+        await markEarlier(before: cursor, defaults: defaults)
         let found = PHAsset.fetchAssets(with: options)
         var assets: [PHAsset] = []
         found.enumerateObjects { asset, _, _ in assets.append(asset) }
@@ -297,6 +298,7 @@ enum ReceiptPhotoScanner {
             let lines = await LedgerReceiptReader.recognize(image)
             seen += 1
             if isReceipt(lines) {
+                ReceiptPhotoMarks.add(asset.localIdentifier, defaults: defaults)
                 let day = receiptDay(lines, taken: created)
                 var context = ["from": "photo_album"]
                 // 결제 문자로 이미 들어간 같은 결제가 있으면 새로 넣지 않고 그 기록을 확인만 하게 한다.
@@ -312,6 +314,24 @@ enum ReceiptPhotoScanner {
         }
         if seen > 0 { TaptionPlanDiagnosticsLogger.shared.record("receipt_photo_scan", fields: ["seen": String(seen), "sent": String(sent)]) }
         return sent
+    }
+
+    /// 표시가 생기기 전에 이미 읽은 사진(하루 치)에 한 번만 표시를 채운다. AI에게 다시 보내지 않는다.
+    private static func markEarlier(before cursor: Date, defaults: UserDefaults) async {
+        guard !defaults.bool(forKey: ReceiptPhotoMarks.backfillKey) else { return }
+        let options = PHFetchOptions()
+        options.predicate = NSPredicate(format: "creationDate > %@ AND creationDate <= %@ AND mediaType == %d",
+                                        cursor.addingTimeInterval(-lookback) as NSDate, cursor as NSDate, PHAssetMediaType.image.rawValue)
+        options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        options.fetchLimit = 24
+        var assets: [PHAsset] = []
+        PHAsset.fetchAssets(with: options).enumerateObjects { asset, _, _ in assets.append(asset) }
+        for asset in assets {
+            // 기기가 잠겨 못 읽으면 다음에 다시 한다.
+            guard let image = await image(asset) else { return }
+            if isReceipt(await LedgerReceiptReader.recognize(image)) { ReceiptPhotoMarks.add(asset.localIdentifier, defaults: defaults) }
+        }
+        defaults.set(true, forKey: ReceiptPhotoMarks.backfillKey)
     }
 
     /// 기기에 있는 그림만(아이클라우드에서 받지 않는다). 긴 쪽 1,800점.
@@ -344,5 +364,23 @@ final class ReceiptPhotoWatcher: NSObject, PHPhotoLibraryChangeObserver {
 
     nonisolated func photoLibraryDidChange(_ changeInstance: PHChange) {
         _Concurrency.Task { @MainActor in await ReceiptPhotoScanner.scan() }
+    }
+}
+
+/// 글자를 읽어 영수증으로 본 앨범 사진의 표시. 사진 id만 기기에 적는다.
+enum ReceiptPhotoMarks {
+    static let key = "receiptPhotoMarks"
+    static let backfillKey = "receiptPhotoMarksBackfilled"
+    static let limit = 400
+
+    static func contains(_ id: String, defaults: UserDefaults = .standard) -> Bool {
+        defaults.stringArray(forKey: key)?.contains(id) ?? false
+    }
+
+    static func add(_ id: String, defaults: UserDefaults = .standard) {
+        var ids = defaults.stringArray(forKey: key) ?? []
+        guard !ids.contains(id) else { return }
+        ids.append(id)
+        defaults.set(Array(ids.suffix(limit)), forKey: key)
     }
 }

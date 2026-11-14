@@ -296,6 +296,8 @@ final class AssistantCommandEditTests: XCTestCase {
             }
         }
         XCTAssertFalse(read.contains("POST /command"), "a read-only key gets no write instructions")
+        XCTAssertFalse(read.contains("/tasks/claim"))
+        XCTAssertTrue(write.contains("POST /tasks/claim") && write.contains("POST /tasks/result") && write.contains("every 10 minutes"))
         XCTAssertTrue(read.contains("read-only"))
         let forever = TripRelay.assistantSetupText(host: "relay.example.com", key: scoped, scope: .write, expiresAt: nil, timeZone: zone)
         XCTAssertTrue(forever.contains("does not expire"))

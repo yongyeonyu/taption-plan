@@ -129,6 +129,9 @@ struct AssistantConnectionsSection: View {
                     get: { key.scope == .write },
                     set: { ask(key, scope: $0 ? .write : .read) }
                 ))
+                // 스위치가 줄보다 커서 아래 「연결 끊기」를 덮지 않게 자리를 준다.
+                .frame(minHeight: 40)
+                .padding(.bottom, 6)
             }
             HStack {
                 if copyableIDs.contains(key.id), !expired {

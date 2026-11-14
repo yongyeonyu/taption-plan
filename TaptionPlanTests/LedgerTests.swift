@@ -20,6 +20,28 @@ final class LedgerTests: XCTestCase {
 
     /// 앨범 영수증 자동 확인(RPA1114A01): 영수증만 고르고, 켜면 하루 전부터 본다.
     @MainActor
+    func testAITaskRequestChatURLCarriesPrompt() {
+        let url = AITaskRequest.chatURL(.claude, prompt: "Check now & reply")
+        XCTAssertEqual(url?.host, "claude.ai")
+        XCTAssertEqual(url?.path, "/new")
+        XCTAssertEqual(URLComponents(url: url!, resolvingAgainstBaseURL: false)?.queryItems?.first?.value, "Check now & reply")
+        XCTAssertEqual(AITaskRequest.chatURL(.chatGPT)?.host, "chatgpt.com")
+    }
+
+    func testReceiptPhotoMarksKeepLatestWithinLimit() {
+        let name = "ReceiptPhotoMarks-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        XCTAssertFalse(ReceiptPhotoMarks.contains("a", defaults: defaults))
+        ReceiptPhotoMarks.add("a", defaults: defaults)
+        ReceiptPhotoMarks.add("a", defaults: defaults)
+        XCTAssertEqual(defaults.stringArray(forKey: ReceiptPhotoMarks.key), ["a"])
+        for index in 0..<ReceiptPhotoMarks.limit { ReceiptPhotoMarks.add("p\(index)", defaults: defaults) }
+        XCTAssertFalse(ReceiptPhotoMarks.contains("a", defaults: defaults))
+        XCTAssertTrue(ReceiptPhotoMarks.contains("p0", defaults: defaults))
+        XCTAssertEqual(defaults.stringArray(forKey: ReceiptPhotoMarks.key)?.count, ReceiptPhotoMarks.limit)
+    }
+
     func testReceiptPhotoJudgementAndEnabling() {
         let receipt = ["맛있는식당", "사업자 123-45-67890", "김치찌개 9,000", "공기밥 1,000", "부가세 909", "합계 10,000원", "승인번호 12345678"]
         XCTAssertTrue(ReceiptPhotoScanner.isReceipt(receipt))

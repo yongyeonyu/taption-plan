@@ -674,7 +674,7 @@
    "ko": "AI 비서 요청 확인",
    "en": "Review AI assistant requests",
    "files": [
-    "AssistantSafetyViews.swift:421"
+    "AssistantSafetyViews.swift:424"
    ],
    "args": [],
    "targets": [
@@ -698,7 +698,7 @@
    "ko": "AI 비서가 기존 항목 {0}개를 한꺼번에 바꾸려고 해요. 반영할까요?",
    "en": "The AI assistant wants to change {0} existing items at once. Apply?",
    "files": [
-    "AssistantSafetyViews.swift:402"
+    "AssistantSafetyViews.swift:405"
    ],
    "args": [
     "total"
@@ -787,7 +787,7 @@
    "en": "Add AI connection",
    "files": [
     "AssistantSafetyViews.swift:72",
-    "AssistantSafetyViews.swift:265"
+    "AssistantSafetyViews.swift:268"
    ],
    "args": [],
    "targets": [
@@ -952,7 +952,7 @@
    "en": "What the AI did",
    "files": [
     "AITaskPanel.swift:78",
-    "AssistantSafetyViews.swift:334",
+    "AssistantSafetyViews.swift:337",
     "AssistantSettingsView.swift:32"
    ],
    "args": [],
@@ -965,7 +965,7 @@
    "ko": "AI가 할 수 있는 일",
    "en": "What the AI can do",
    "files": [
-    "AssistantSafetyViews.swift:311",
+    "AssistantSafetyViews.swift:314",
     "AssistantSettingsView.swift:31"
    ],
    "args": [],
@@ -36102,7 +36102,7 @@
    "ko": "그 뒤에 바뀐 내용이 있어 되돌리지 못했어요.",
    "en": "It changed afterwards, so it couldn't be undone.",
    "files": [
-    "AssistantSafetyViews.swift:358"
+    "AssistantSafetyViews.swift:361"
    ],
    "args": [],
    "targets": [
@@ -36705,7 +36705,7 @@
    "files": [
     "AssistantConnectView.swift:234",
     "AssistantSafetyViews.swift:128",
-    "AssistantSafetyViews.swift:250"
+    "AssistantSafetyViews.swift:253"
    ],
    "args": [],
    "targets": [
@@ -37280,7 +37280,7 @@
    "ko": "끈 일은 AI가 보내도 반영하지 않고 거절로 알려요.",
    "en": "Actions you turn off are not applied; the AI is told they were rejected.",
    "files": [
-    "AssistantSafetyViews.swift:302"
+    "AssistantSafetyViews.swift:305"
    ],
    "args": [],
    "targets": [
@@ -39615,7 +39615,7 @@
    "en": "Undone",
    "files": [
     "AITaskPanel.swift:113",
-    "AssistantSafetyViews.swift:351"
+    "AssistantSafetyViews.swift:354"
    ],
    "args": [],
    "targets": [
@@ -39627,7 +39627,7 @@
    "ko": "되돌리기",
    "en": "Undo",
    "files": [
-    "AssistantSafetyViews.swift:353",
+    "AssistantSafetyViews.swift:356",
     "MapHomeNLEClipEditor.swift:503",
     "MapHomeStickerEditor.swift:332"
    ],
@@ -40160,7 +40160,7 @@
    "ko": "만들기",
    "en": "Create",
    "files": [
-    "AssistantSafetyViews.swift:270",
+    "AssistantSafetyViews.swift:273",
     "TravelNewTripSheet.swift:82"
    ],
    "args": [],
@@ -40961,7 +40961,7 @@
    "ko": "모두 반영",
    "en": "Apply all",
    "files": [
-    "AssistantSafetyViews.swift:411"
+    "AssistantSafetyViews.swift:414"
    ],
    "args": [],
    "targets": [
@@ -41526,7 +41526,7 @@
    "ko": "반영하지 않기",
    "en": "Don't apply",
    "files": [
-    "AssistantSafetyViews.swift:412"
+    "AssistantSafetyViews.swift:415"
    ],
    "args": [],
    "targets": [
@@ -41538,7 +41538,7 @@
    "ko": "반영한 뒤에도 「AI가 한 일」에서 하나씩 되돌릴 수 있어요. 닫으면 다음에 다시 물어요.",
    "en": "You can still undo each one in What the AI did. If you close this, you'll be asked again next time.",
    "files": [
-    "AssistantSafetyViews.swift:414"
+    "AssistantSafetyViews.swift:417"
    ],
    "args": [],
    "targets": [
@@ -42436,7 +42436,7 @@
    "ko": "보낸 연결: {0}",
    "en": "From: {0}",
    "files": [
-    "AssistantSafetyViews.swift:348"
+    "AssistantSafetyViews.swift:351"
    ],
    "args": [
     "connection"
@@ -42684,7 +42684,7 @@
    "ko": "복사했어요",
    "en": "Copied",
    "files": [
-    "AssistantSafetyViews.swift:135"
+    "AssistantSafetyViews.swift:138"
    ],
    "args": [],
    "targets": [
@@ -43210,7 +43210,7 @@
    "en": "Valid for",
    "files": [
     "AssistantConnectView.swift:235",
-    "AssistantSafetyViews.swift:251"
+    "AssistantSafetyViews.swift:254"
    ],
    "args": [],
    "targets": [
@@ -43431,7 +43431,7 @@
    "ko": "사진 {0}/{1}, {2}",
    "en": "Photo {0} of {1}, {2}",
    "files": [
-    "MapHomePhotoLayer.swift:663"
+    "MapHomePhotoLayer.swift:679"
    ],
    "args": [
     "index + 1",
@@ -43571,7 +43571,7 @@
    "ko": "사진 접기",
    "en": "Hide photos",
    "files": [
-    "MapHomePhotoLayer.swift:676"
+    "MapHomePhotoLayer.swift:692"
    ],
    "args": [],
    "targets": [
@@ -43583,7 +43583,7 @@
    "ko": "사진 펼치기",
    "en": "Show photos",
    "files": [
-    "MapHomePhotoLayer.swift:721"
+    "MapHomePhotoLayer.swift:737"
    ],
    "args": [],
    "targets": [
@@ -43950,7 +43950,7 @@
    "ko": "새 연결 안내를 복사했어요. 예전 키는 폐기하지 못했으니 목록에서 폐기해 주세요.",
    "en": "New setup copied. The old key couldn't be revoked; revoke it in the list.",
    "files": [
-    "AssistantSafetyViews.swift:195"
+    "AssistantSafetyViews.swift:198"
    ],
    "args": [],
    "targets": [
@@ -44012,7 +44012,7 @@
    "en": "New",
    "files": [
     "AITaskPanel.swift:110",
-    "AssistantSafetyViews.swift:345"
+    "AssistantSafetyViews.swift:348"
    ],
    "args": [],
    "targets": [
@@ -46381,7 +46381,7 @@
    "ko": "아직 AI가 한 일이 없어요",
    "en": "The AI hasn't done anything yet",
    "files": [
-    "AssistantSafetyViews.swift:327"
+    "AssistantSafetyViews.swift:330"
    ],
    "args": [],
    "targets": [
@@ -48312,7 +48312,7 @@
    "en": "Disconnect",
    "files": [
     "AssistantSafetyViews.swift:98",
-    "AssistantSafetyViews.swift:143"
+    "AssistantSafetyViews.swift:146"
    ],
    "args": [],
    "targets": [
@@ -48336,7 +48336,7 @@
    "ko": "연결 목록을 읽지 못했어요.",
    "en": "Couldn't load the connections.",
    "files": [
-    "AssistantSafetyViews.swift:154"
+    "AssistantSafetyViews.swift:157"
    ],
    "args": [],
    "targets": [
@@ -48386,7 +48386,7 @@
    "ko": "연결 안내 복사",
    "en": "Copy setup",
    "files": [
-    "AssistantSafetyViews.swift:135"
+    "AssistantSafetyViews.swift:138"
    ],
    "args": [],
    "targets": [
@@ -48422,7 +48422,7 @@
    "ko": "연결 안내를 복사했어요. AI에 붙여 넣어 주세요.",
    "en": "Setup copied. Paste it into the AI.",
    "files": [
-    "AssistantSafetyViews.swift:198"
+    "AssistantSafetyViews.swift:201"
    ],
    "args": [],
    "targets": [
@@ -48892,7 +48892,7 @@
    "ko": "연결을 끊지 못했어요. 인터넷 연결을 확인하고 다시 해 주세요.",
    "en": "Couldn't disconnect. Check your connection and try again.",
    "files": [
-    "AssistantSafetyViews.swift:224"
+    "AssistantSafetyViews.swift:227"
    ],
    "args": [],
    "targets": [
@@ -48904,7 +48904,7 @@
    "ko": "연결을 만들지 못했어요.",
    "en": "Couldn't create the connection.",
    "files": [
-    "AssistantSafetyViews.swift:185"
+    "AssistantSafetyViews.swift:188"
    ],
    "args": [],
    "targets": [
@@ -48916,7 +48916,7 @@
    "ko": "연결을 바꾸지 못했어요.",
    "en": "Couldn't update the connection.",
    "files": [
-    "AssistantSafetyViews.swift:186"
+    "AssistantSafetyViews.swift:189"
    ],
    "args": [],
    "targets": [
@@ -48928,7 +48928,7 @@
    "ko": "연결을 바꿨어요. AI에 다시 붙여 넣지 않아도 돼요.",
    "en": "Connection updated. No need to paste it again.",
    "files": [
-    "AssistantSafetyViews.swift:192"
+    "AssistantSafetyViews.swift:195"
    ],
    "args": [],
    "targets": [
@@ -49300,7 +49300,7 @@
    "ko": "연장",
    "en": "Extend",
    "files": [
-    "AssistantSafetyViews.swift:140"
+    "AssistantSafetyViews.swift:143"
    ],
    "args": [],
    "targets": [
@@ -49430,7 +49430,7 @@
    "ko": "영상 재생",
    "en": "Play video",
    "files": [
-    "MapHomePhotoLayer.swift:374"
+    "MapHomePhotoLayer.swift:390"
    ],
    "args": [],
    "targets": [
@@ -50803,7 +50803,7 @@
    "ko": "위아래로 쓸어 넘기고, 두 번 눌러 크게 봅니다",
    "en": "Swipe up or down to change, double-tap to enlarge",
    "files": [
-    "MapHomePhotoLayer.swift:667"
+    "MapHomePhotoLayer.swift:683"
    ],
    "args": [],
    "targets": [
@@ -52530,7 +52530,7 @@
    "ko": "이름 (예: 피클, ChatGPT)",
    "en": "Name (e.g. Pickle, ChatGPT)",
    "files": [
-    "AssistantSafetyViews.swift:245"
+    "AssistantSafetyViews.swift:248"
    ],
    "args": [],
    "targets": [
@@ -52567,7 +52567,7 @@
    "en": "Unnamed connection",
    "files": [
     "AssistantSafetyViews.swift:106",
-    "AssistantSafetyViews.swift:172"
+    "AssistantSafetyViews.swift:175"
    ],
    "args": [],
    "targets": [
@@ -52617,7 +52617,7 @@
    "ko": "이름은 20자까지예요.",
    "en": "Names can be up to 20 characters.",
    "files": [
-    "AssistantSafetyViews.swift:247"
+    "AssistantSafetyViews.swift:250"
    ],
    "args": [],
    "targets": [
@@ -52629,7 +52629,7 @@
    "ko": "이름은 이 기기에만 저장돼요.",
    "en": "The name is stored only on this device.",
    "files": [
-    "AssistantSafetyViews.swift:259"
+    "AssistantSafetyViews.swift:262"
    ],
    "args": [],
    "targets": [
@@ -58220,7 +58220,7 @@
    "ko": "키가 새면 직접 폐기해야 해요.",
    "en": "If the key leaks, you have to revoke it yourself.",
    "files": [
-    "AssistantSafetyViews.swift:255"
+    "AssistantSafetyViews.swift:258"
    ],
    "args": [],
    "targets": [
