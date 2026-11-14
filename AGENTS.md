@@ -50,6 +50,7 @@
 - `docs/TRAVEL_MODE_PLAN.md`: 여행 모드 개편 컨셉·화면·단계 T0~T12(TVM1111A01).
 - `docs/COURSE_FIRST_PLAN.md`: 여행 「코스 먼저」 실행 계획 C1~C8과 사진 출처 판단(TVV1113A01).
 - `docs/TRIP_PORT_ANALYSIS.md`: Taption Trip 여행·정산 기능 이식 분석과 단위 U1~U13(TRP1111A01).
+- `docs/AI_RELAY_PLAN.md`: 외부 AI ⇄ 중계 서버 ⇄ 앱 강화 계획 — 패키지 구조, 규칙 저장소, 요청·회신 파이프라인, 동작 확장, 단계 P0~P13, 여행 공유 설계안(AIX1114A01).
 - `docs/ACCURACY_PLAN.md`: 분류 정확도 검토(약한 곳 10가지)와 제안 A~D, 카카오 지도 동일 화면 단계 K1~K5(ACC1114A01).
 - `docs/HOME_EVOLUTION_LIST.md`: 집 성장 366일 건축물 목록(생성물).
 - `docs/CLIENT_REPORT.md`·`docs/UX_ARCHITECTURE.md`·`docs/DESIGN_SYSTEM.md`: 2026-10-24 UX 진단·설계 자료.
