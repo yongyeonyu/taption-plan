@@ -338,6 +338,11 @@ final class AssistantRelayTests: XCTestCase {
         XCTAssertEqual(AssistantQuestionNotice.identifier("q1"), "assistant-question-q1")
         XCTAssertEqual(TripRelay.rotationDeletionPaths, ["/keys", "/activity", "/command", "/plan"])
         XCTAssertEqual(AssistantKeyStore.keyID("abc"), "ba7816bf")
+        XCTAssertEqual(AssistantCommandLedger.defaultsKey, "assistantCommandHandledIDs")
+        XCTAssertEqual(
+            [AssistantCommandJournal.inProgressKey, AssistantCommandJournal.outboxKey, AssistantCommandRunner.backgroundRunKey],
+            ["assistantCommandInProgressID", "assistantCommandPendingResults", "assistantBackgroundRunAt"]
+        )
     }
 
     private func keychainText(service: String, account: String) -> String? {

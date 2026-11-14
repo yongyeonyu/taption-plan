@@ -312,6 +312,12 @@ enum AssistantCommandLedger {
         defaults.set(Array((old + ids).suffix(limit)), forKey: defaultsKey)
     }
 
+    static func forget(_ ids: [String], defaults: UserDefaults = .standard) {
+        defaults.set(handled(defaults).filter { !ids.contains($0) }, forKey: defaultsKey)
+    }
+}
+
+extension AssistantCommandLedger {
     static func unseen(_ batch: AssistantCommandBatch, defaults: UserDefaults = .standard) -> AssistantCommandBatch {
         let seen = Set(handled(defaults))
         return AssistantCommandBatch(
@@ -351,12 +357,15 @@ enum AssistantActivityTarget {
     }
 }
 
+/// 명령 하나를 반영했는지와 못 했으면 그 사유. 서버에 그대로 알린다.
+struct AssistantCommandResult: Equatable, Sendable {
+    var id: String
+    var applied: Bool
+    var reason: String?
+}
+
 struct AssistantCommandOutcome: Equatable, Sendable {
-    struct Result: Equatable, Sendable {
-        var id: String
-        var applied: Bool
-        var reason: String?
-    }
+    typealias Result = AssistantCommandResult
 
     var results: [Result] = []
     var memos = 0
@@ -412,9 +421,10 @@ struct AssistantCommandOutcome: Equatable, Sendable {
     }
 }
 
+/// 명령 큐를 부르는 요청과 결과 알리기·지우기.
 extension TripRelay {
     @MainActor
-    private static func commandRequest(
+    static func commandRequest(
         _ path: String, method: String, query: [URLQueryItem] = [], body: Data? = nil, env: AssistantRegistration.Environment,
         timeout: TimeInterval = 10
     ) -> URLRequest? {
@@ -422,7 +432,9 @@ extension TripRelay {
     }
 
     static let commandFetchTimeout: TimeInterval = 5
+}
 
+extension TripRelay {
     @MainActor
     static func fetchCommands(env: AssistantRegistration.Environment = .live) async -> AssistantCommandBatch? {
         // 화면에서 기다리는 요청이라 5초 안에 끝낸다(SYN1111A01).
@@ -433,10 +445,13 @@ extension TripRelay {
         if response.statusCode == 204 { return AssistantCommandBatch(commands: [], invalidIDs: []) }
         return response.statusCode == 200 ? AssistantCommandParser.parse(data) : nil
     }
+}
 
+/// 명령 결과를 서버에 남기고, 끝난 명령을 큐에서 지운다.
+extension TripRelay {
     /// 결과를 AI가 볼 수 있게 남긴다. 서버가 받았을 때만 true.
     @MainActor
-    static func postResults(_ results: [AssistantCommandOutcome.Result], env: AssistantRegistration.Environment = .live) async -> Bool {
+    static func postResults(_ results: [AssistantCommandResult], env: AssistantRegistration.Environment) async -> Bool {
         let body = try? JSONSerialization.data(withJSONObject: ["results": results.map { result -> [String: String] in
             var value = ["id": result.id, "status": result.applied ? "applied" : "rejected"]
             if let reason = result.reason { value["reason"] = reason }
@@ -447,7 +462,7 @@ extension TripRelay {
     }
 
     @MainActor
-    static func deleteCommands(_ ids: [String], env: AssistantRegistration.Environment = .live) async {
+    static func deleteCommands(_ ids: [String], env: AssistantRegistration.Environment) async {
         guard !ids.isEmpty else { return }
         let query = [URLQueryItem(name: "ids", value: ids.joined(separator: ","))]
         _ = await send(commandRequest("/command", method: "DELETE", query: query, env: env), session: env.session)
@@ -535,8 +550,3 @@ extension MapHomeView {
     }
 }
 
-extension AssistantCommandLedger {
-    static func forget(_ ids: [String], defaults: UserDefaults = .standard) {
-        defaults.set(handled(defaults).filter { !ids.contains($0) }, forKey: defaultsKey)
-    }
-}
