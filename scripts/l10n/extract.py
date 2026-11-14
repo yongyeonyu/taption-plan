@@ -16,6 +16,11 @@ TARGETS = {
     "TaptionPlanWatch": "TaptionPlanWatch",
     "TaptionPlanWatchWidget": "TaptionPlanWatchWidget",
 }
+# 패키지 문구가 들어갈 target. 여기 없는 패키지는 네 target이 함께 쓰는 것으로 보고 모두에 넣는다.
+# AI 패키지는 앱만 링크하므로 그 문구가 위젯·Watch 카탈로그로 새지 않게 한다(PKG1114A19).
+PACKAGE_TARGETS = {
+    "Packages/TaptionAssistant/": ["TaptionPlan"],
+}
 # 영어만 코드에 있고 화면에서 번역 조회를 거치는 표: 파일 이름, 정의 이름.
 EN_TABLES = [
     ("TaptionPlan/UI/MapHomeTimeSidebar.swift", "localizedTitle"),
@@ -202,14 +207,23 @@ def catalogs() -> dict[str, dict]:
     return result
 
 
+def package_reaches(path: str, target: str) -> bool:
+    """패키지 파일의 문구가 이 target에 들어가는가. 패키지 파일이 아니면 False."""
+    if not path.startswith("Packages/"):
+        return False
+    for prefix, targets in PACKAGE_TARGETS.items():
+        if path.startswith(prefix):
+            return target in targets
+    return True
+
+
 def main():
     entries, unread, uses = collect()
     files_by_target = target_files(list(TARGETS))
-    pkg = "Packages/"
     for key, e in entries.items():
         targets = []
         for target, files in files_by_target.items():
-            if any(u.startswith(pkg) or Path(u).name in files for u in uses[key]):
+            if any(package_reaches(u, target) or Path(u).name in files for u in uses[key]):
                 targets.append(target)
         e["targets"] = targets or ["TaptionPlan"]
     source = {
