@@ -118,10 +118,7 @@ enum AssistantAIProvider: String, CaseIterable, Identifiable, Codable, Sendable 
     }
 }
 
-/// 연결 키가 어느 AI 것인지 기기에만 둔다(이름·기간과 같은 자리).
-enum AssistantKeyProviders {
-    static let defaultsKey = "assistantKeyProviders"
-
+extension AssistantKeyProviders {
     static func provider(_ id: String, defaults: UserDefaults = .standard) -> AssistantAIProvider? {
         ((defaults.dictionary(forKey: defaultsKey) as? [String: String])?[id]).flatMap(AssistantAIProvider.init(rawValue:))
     }
@@ -129,12 +126,6 @@ enum AssistantKeyProviders {
     static func save(_ id: String, provider: AssistantAIProvider, defaults: UserDefaults = .standard) {
         var values = defaults.dictionary(forKey: defaultsKey) as? [String: String] ?? [:]
         values[id] = provider.rawValue
-        defaults.set(values, forKey: defaultsKey)
-    }
-
-    static func remove(_ id: String, defaults: UserDefaults = .standard) {
-        var values = defaults.dictionary(forKey: defaultsKey) as? [String: String] ?? [:]
-        values[id] = nil
         defaults.set(values, forKey: defaultsKey)
     }
 
@@ -194,7 +185,7 @@ extension TripRelay {
     static func setupLinkText(for text: String, env: AssistantRegistration.Environment = .live) async -> String? {
         guard let master = env.secrets.read(.master),
               let body = try? JSONSerialization.data(withJSONObject: ["text": text]),
-              let reply = await send(relayRequest("/setup", method: "POST", body: body, token: master, host: env.host), session: env.session),
+              let reply = await send(relayRequest("/setup", method: "POST", body: body, token: master, host: env.host, client: env.client()), session: env.session),
               reply.status == 201,
               let object = (try? JSONSerialization.jsonObject(with: reply.data)) as? [String: Any],
               let url = object["url"] as? String, let host = env.host, url.hasPrefix("https://\(host)/s/") else { return nil }
@@ -227,7 +218,7 @@ extension TripRelay {
     @MainActor
     static func requestOAuthCode(env: AssistantRegistration.Environment = .live, now: Date = .now) async -> OAuthCodeReply {
         guard let master = env.secrets.read(.master) else { return .failed }
-        let request = relayRequest("/oauth/code", method: "POST", body: Data("{}".utf8), token: master, host: env.host)
+        let request = relayRequest("/oauth/code", method: "POST", body: Data("{}".utf8), token: master, host: env.host, client: env.client())
         guard let reply = await send(request, session: env.session) else { return .failed }
         if (200..<300).contains(reply.status) { return AssistantOAuthCode.parse(reply.data, now: now).map(OAuthCodeReply.code) ?? .failed }
         guard AssistantServerRefusal.parse(status: reply.status, data: reply.data)?.kind == .pinNotSet else { return .failed }

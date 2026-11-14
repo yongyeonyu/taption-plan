@@ -319,7 +319,7 @@
    "ko": "1년",
    "en": "1 year",
    "files": [
-    "AssistantKeys.swift:34",
+    "AssistantKeys.swift:19",
     "MapHomePlaybackVideoSheet.swift:393"
    ],
    "args": [],
@@ -368,7 +368,7 @@
    "ko": "1일",
    "en": "1 day",
    "files": [
-    "AssistantRelay.swift:48",
+    "AssistantRelay.swift:17",
     "MapHomePlaybackVideoSheet.swift:390"
    ],
    "args": [],
@@ -489,8 +489,8 @@
    "ko": "30일",
    "en": "30 days",
    "files": [
-    "AssistantKeys.swift:32",
-    "AssistantRelay.swift:50"
+    "AssistantKeys.swift:17",
+    "AssistantRelay.swift:19"
    ],
    "args": [],
    "targets": [
@@ -587,7 +587,7 @@
    "ko": "7일",
    "en": "7 days",
    "files": [
-    "AssistantRelay.swift:49"
+    "AssistantRelay.swift:18"
    ],
    "args": [],
    "targets": [
@@ -611,7 +611,7 @@
    "ko": "90일",
    "en": "90 days",
    "files": [
-    "AssistantKeys.swift:33"
+    "AssistantKeys.swift:18"
    ],
    "args": [],
    "targets": [
@@ -635,7 +635,7 @@
    "ko": "AI 공유 수준 낮추기",
    "en": "Lower AI sharing",
    "files": [
-    "AssistantCommandRunner.swift:655"
+    "AssistantCommandRunner.swift:578"
    ],
    "args": [],
    "targets": [
@@ -647,7 +647,7 @@
    "ko": "AI 공유 수준 높이기",
    "en": "Raise AI sharing",
    "files": [
-    "AssistantCommandRunner.swift:673"
+    "AssistantCommandRunner.swift:596"
    ],
    "args": [],
    "targets": [
@@ -659,7 +659,7 @@
    "ko": "AI 공유 수준을 「{0}」(으)로 바꿀까요?",
    "en": "Change AI sharing to “{0}”?",
    "files": [
-    "AITaskQueue.swift:403"
+    "AITaskQueue.swift:81"
    ],
    "args": [
     "level.title(language)"
@@ -762,7 +762,7 @@
    "ko": "AI 비서 요청을 반영했어요",
    "en": "Applied AI assistant requests",
    "files": [
-    "AssistantCommands.swift:411"
+    "AssistantCommands.swift:394"
    ],
    "args": [],
    "targets": [
@@ -826,7 +826,7 @@
    "files": [
     "AITaskPanel.swift:479",
     "AITaskPanel.swift:534",
-    "AITaskQueue.swift:462"
+    "AITaskQueue.swift:136"
    ],
    "args": [],
    "targets": [
@@ -875,7 +875,7 @@
    "ko": "AI 연결 화면에서 PIN을 바꿀까요?",
    "en": "Change the PIN in AI connections?",
    "files": [
-    "AITaskQueue.swift:411"
+    "AITaskQueue.swift:89"
    ],
    "args": [],
    "targets": [
@@ -977,7 +977,7 @@
    "files": [
     "AITaskPanel.swift:394",
     "AITaskPanel.swift:535",
-    "AITaskQueue.swift:462"
+    "AITaskQueue.swift:136"
    ],
    "args": [],
    "targets": [
@@ -1001,7 +1001,7 @@
    "ko": "AI가 {0}건을 처리했어요",
    "en": "Your AI handled {0} task(s)",
    "files": [
-    "AITaskQueue.swift:507"
+    "AITaskQueue.swift:177"
    ],
    "args": [
     "done"
@@ -1015,7 +1015,7 @@
    "ko": "AI가 끝내지 못한 일이 {0}건 있어요",
    "en": "Your AI couldn't finish {0} task(s)",
    "files": [
-    "AITaskQueue.swift:506"
+    "AITaskQueue.swift:176"
    ],
    "args": [
     "failed"
@@ -2291,7 +2291,7 @@
    "ko": "PIN을 여러 번 틀려 15분 동안 잠겼어요.",
    "en": "Too many wrong PINs. Locked for 15 minutes.",
    "files": [
-    "AssistantPIN.swift:108"
+    "AssistantPIN.swift:22"
    ],
    "args": [],
    "targets": [
@@ -2303,7 +2303,7 @@
    "ko": "PIN을 여러 번 틀려 잠겼어요. {0}분 뒤 다시 해 주세요.",
    "en": "Too many wrong PINs. Try again in {0} min.",
    "files": [
-    "AssistantPIN.swift:107"
+    "AssistantPIN.swift:21"
    ],
    "args": [
     "$0"
@@ -2365,7 +2365,7 @@
    "ko": "PIN이 맞지 않아요. {0}번 더 틀리면 잠겨요.",
    "en": "Wrong PIN. {0} more tries before it locks.",
    "files": [
-    "AssistantPIN.swift:112"
+    "AssistantPIN.swift:26"
    ],
    "args": [
     "remaining"
@@ -2379,7 +2379,7 @@
    "ko": "PIN이 맞지 않아요.",
    "en": "Wrong PIN.",
    "files": [
-    "AssistantPIN.swift:114"
+    "AssistantPIN.swift:28"
    ],
    "args": [],
    "targets": [
@@ -2780,7 +2780,7 @@
    "ko": "iCloud 동기화 시작",
    "en": "iCloud sync started",
    "files": [
-    "AssistantCommandRunner.swift:530"
+    "AssistantCommandRunner.swift:453"
    ],
    "args": [],
    "targets": [
@@ -33843,7 +33843,7 @@
    "ko": "가계부 {0}개",
    "en": "{0} ledger entr(ies)",
    "files": [
-    "AssistantCommands.swift:408"
+    "AssistantCommands.swift:391"
    ],
    "args": [
     "ledger"
@@ -34054,7 +34054,7 @@
    "ko": "가림",
    "en": "Hidden",
    "files": [
-    "AssistantCommandEdits.swift:365"
+    "AssistantCommandEdits.swift:367"
    ],
    "args": [],
    "targets": [
@@ -34602,7 +34602,7 @@
    "ko": "건강 연동 끄기(가져온 기록 삭제)",
    "en": "Turn off Health sync (removes imported records)",
    "files": [
-    "AssistantCommandRunner.swift:726"
+    "AssistantCommandRunner.swift:649"
    ],
    "args": [],
    "targets": [
@@ -34614,7 +34614,7 @@
    "ko": "건강 연동 끔",
    "en": "Health sync off",
    "files": [
-    "AssistantCommandRunner.swift:736"
+    "AssistantCommandRunner.swift:659"
    ],
    "args": [],
    "targets": [
@@ -34626,7 +34626,7 @@
    "ko": "건강 연동을 끌까요?",
    "en": "Turn off Health sync?",
    "files": [
-    "AITaskQueue.swift:407"
+    "AITaskQueue.swift:85"
    ],
    "args": [],
    "targets": [
@@ -34784,7 +34784,7 @@
    "ko": "걷기·달리기 추적 끝내기",
    "en": "Stop walk or run tracking",
    "files": [
-    "AssistantCommandRunner.swift:541"
+    "AssistantCommandRunner.swift:464"
    ],
    "args": [],
    "targets": [
@@ -36327,7 +36327,7 @@
    "ko": "구글 캘린더",
    "en": "Google Calendar",
    "files": [
-    "AssistantCommandRunner.swift:585"
+    "AssistantCommandRunner.swift:508"
    ],
    "args": [],
    "targets": [
@@ -37090,7 +37090,7 @@
    "ko": "기기 캘린더",
    "en": "Device calendars",
    "files": [
-    "AssistantCommandRunner.swift:580"
+    "AssistantCommandRunner.swift:503"
    ],
    "args": [],
    "targets": [
@@ -37217,7 +37217,7 @@
    "ko": "기록 새로고침",
    "en": "Records refreshed",
    "files": [
-    "AssistantCommandRunner.swift:526"
+    "AssistantCommandRunner.swift:449"
    ],
    "args": [],
    "targets": [
@@ -37229,7 +37229,7 @@
    "ko": "기록 수정 {0}개",
    "en": "{0} record edit(s)",
    "files": [
-    "AssistantCommands.swift:405"
+    "AssistantCommands.swift:388"
    ],
    "args": [
     "edits"
@@ -37402,7 +37402,7 @@
    "ko": "기록을 일정·루틴에 잇기",
    "en": "Link records to plans or routines",
    "files": [
-    "AssistantActivitySync.swift:506"
+    "AssistantActivitySync.swift:499"
    ],
    "args": [],
    "targets": [
@@ -41005,7 +41005,7 @@
    "ko": "만료 없음",
    "en": "No expiry",
    "files": [
-    "AssistantKeys.swift:35",
+    "AssistantKeys.swift:20",
     "AssistantSafetyViews.swift:110"
    ],
    "args": [],
@@ -41018,7 +41018,7 @@
    "ko": "말풍선 {0}개",
    "en": "{0} bubble(s)",
    "files": [
-    "AssistantCommands.swift:407"
+    "AssistantCommands.swift:390"
    ],
    "args": [
     "bubbles"
@@ -41164,7 +41164,7 @@
    "ko": "머문 곳 이름과 시각",
    "en": "Place names and times",
    "files": [
-    "AssistantRelay.swift:27"
+    "AssistantRelay.swift:9"
    ],
    "args": [],
    "targets": [
@@ -41214,7 +41214,7 @@
    "ko": "먼저 「AI 연결」에서 PIN을 만들어 주세요.",
    "en": "Set a PIN in AI connections first.",
    "files": [
-    "AssistantPIN.swift:116"
+    "AssistantPIN.swift:30"
    ],
    "args": [],
    "targets": [
@@ -41495,7 +41495,7 @@
    "ko": "메모 {0}개",
    "en": "{0} memo(s)",
    "files": [
-    "AssistantCommands.swift:403"
+    "AssistantCommands.swift:386"
    ],
    "args": [
     "memos"
@@ -41866,7 +41866,7 @@
    "ko": "모든 데이터 삭제 화면을 열까요?",
    "en": "Open the screen to erase all data?",
    "files": [
-    "AITaskQueue.swift:408"
+    "AITaskQueue.swift:86"
    ],
    "args": [],
    "targets": [
@@ -41938,7 +41938,7 @@
    "ko": "못 한 것 {0}개",
    "en": "{0} not done",
    "files": [
-    "AssistantCommands.swift:410"
+    "AssistantCommands.swift:393"
    ],
    "args": [
     "rejected"
@@ -42887,7 +42887,7 @@
    "ko": "백업 화면 열기",
    "en": "Open the backup screen",
    "files": [
-    "AssistantCommandRunner.swift:746"
+    "AssistantCommandRunner.swift:669"
    ],
    "args": [],
    "targets": [
@@ -42899,7 +42899,7 @@
    "ko": "백업 화면을 열까요?",
    "en": "Open the backup screen?",
    "files": [
-    "AITaskQueue.swift:409"
+    "AITaskQueue.swift:87"
    ],
    "args": [],
    "targets": [
@@ -42947,7 +42947,7 @@
    "ko": "백업에서 복원 화면 열기",
    "en": "Open restore from backup",
    "files": [
-    "AssistantCommandRunner.swift:597"
+    "AssistantCommandRunner.swift:520"
    ],
    "args": [],
    "targets": [
@@ -43367,7 +43367,7 @@
    "ko": "보내지 않음",
    "en": "Don't send",
    "files": [
-    "AssistantRelay.swift:25"
+    "AssistantRelay.swift:7"
    ],
    "args": [],
    "targets": [
@@ -43664,7 +43664,7 @@
    "ko": "복원 화면을 열까요?",
    "en": "Open the restore screen?",
    "files": [
-    "AITaskQueue.swift:410"
+    "AITaskQueue.swift:88"
    ],
    "args": [],
    "targets": [
@@ -45005,7 +45005,7 @@
    "ko": "새로고침·iCloud 동기화 실행",
    "en": "Refresh or run the iCloud sync",
    "files": [
-    "AssistantCommandRunner.swift:507"
+    "AssistantCommandRunner.swift:430"
    ],
    "args": [],
    "targets": [
@@ -45180,7 +45180,7 @@
    "ko": "서버 보관 기간 늘리기",
    "en": "Extend server retention",
    "files": [
-    "AssistantCommandRunner.swift:708"
+    "AssistantCommandRunner.swift:631"
    ],
    "args": [],
    "targets": [
@@ -45192,7 +45192,7 @@
    "ko": "서버 보관 기간 줄이기",
    "en": "Shorten server retention",
    "files": [
-    "AssistantCommandRunner.swift:690"
+    "AssistantCommandRunner.swift:613"
    ],
    "args": [],
    "targets": [
@@ -45216,7 +45216,7 @@
    "ko": "서버 보관 기간을 {0}로 바꿀까요?",
    "en": "Change server retention to {0}?",
    "files": [
-    "AITaskQueue.swift:406"
+    "AITaskQueue.swift:84"
    ],
    "args": [
     "days.title(language)"
@@ -45267,7 +45267,7 @@
    "ko": "서버가 아직 이 기능을 모르고 있어요. 앱이나 서버 업데이트가 필요해요.",
    "en": "The server doesn't support this yet. The app or server needs an update.",
    "files": [
-    "AssistantPIN.swift:134"
+    "AssistantPIN.swift:48"
    ],
    "args": [],
    "targets": [
@@ -45454,7 +45454,7 @@
    "ko": "설정 {0}개",
    "en": "{0} setting(s)",
    "files": [
-    "AssistantCommands.swift:406"
+    "AssistantCommands.swift:389"
    ],
    "args": [
     "settings"
@@ -46293,7 +46293,7 @@
    "ko": "수정 가능",
    "en": "Can edit",
    "files": [
-    "AssistantKeys.swift:15"
+    "AssistantKeys.swift:9"
    ],
    "args": [],
    "targets": [
@@ -46589,7 +46589,7 @@
    "ko": "승인하면 건강·Apple Watch에서 가져온 기록이 앱에서 지워집니다.",
    "en": "Approving removes the records brought from Health and Apple Watch from the app.",
    "files": [
-    "AITaskQueue.swift:422"
+    "AITaskQueue.swift:100"
    ],
    "args": [],
    "targets": [
@@ -46601,7 +46601,7 @@
    "ko": "승인하면 그 화면만 엽니다. 실제 실행과 비밀번호 입력은 직접 하세요.",
    "en": "Approving only opens that screen. You do the action and enter any password yourself.",
    "files": [
-    "AITaskQueue.swift:425"
+    "AITaskQueue.swift:103"
    ],
    "args": [],
    "targets": [
@@ -46613,7 +46613,7 @@
    "ko": "승인하면 바로 바뀝니다. 덜 보내거나 기간을 줄이면 서버에 올린 기록을 지웁니다.",
    "en": "It changes as soon as you approve. Sharing less or keeping it shorter deletes what the server holds.",
    "files": [
-    "AITaskQueue.swift:419"
+    "AITaskQueue.swift:97"
    ],
    "args": [],
    "targets": [
@@ -46686,7 +46686,7 @@
    "ko": "시간 있는 여행 일정 고치기",
    "en": "Edit timed trip items",
    "files": [
-    "AssistantActivitySync.swift:383"
+    "AssistantActivitySync.swift:376"
    ],
    "args": [],
    "targets": [
@@ -46698,7 +46698,7 @@
    "ko": "시간 있는 여행 일정 더하기",
    "en": "Add timed trip items",
    "files": [
-    "AssistantActivitySync.swift:341"
+    "AssistantActivitySync.swift:334"
    ],
    "args": [],
    "targets": [
@@ -46710,7 +46710,7 @@
    "ko": "시간 있는 여행 일정 지우기",
    "en": "Delete timed trip items",
    "files": [
-    "AssistantActivitySync.swift:432"
+    "AssistantActivitySync.swift:425"
    ],
    "args": [],
    "targets": [
@@ -47238,7 +47238,7 @@
    "ko": "실패 {0}건",
    "en": "{0} failed",
    "files": [
-    "AITaskQueue.swift:507"
+    "AITaskQueue.swift:177"
    ],
    "args": [
     "failed"
@@ -48411,8 +48411,8 @@
    "ko": "앱에서 확인해 주세요.",
    "en": "Open the app to see it.",
    "files": [
-    "AITaskQueue.swift:463",
-    "AITaskQueue.swift:505"
+    "AITaskQueue.swift:137",
+    "AITaskQueue.swift:175"
    ],
    "args": [],
    "targets": [
@@ -49590,8 +49590,8 @@
    "ko": "연결 끊음",
    "en": "Disconnected",
    "files": [
-    "AssistantCommandRunner.swift:580",
-    "AssistantCommandRunner.swift:585"
+    "AssistantCommandRunner.swift:503",
+    "AssistantCommandRunner.swift:508"
    ],
    "args": [],
    "targets": [
@@ -50171,7 +50171,7 @@
    "ko": "연결은 20개까지예요. 안 쓰는 연결을 끊고 다시 해 주세요.",
    "en": "Up to 20 connections. Cut one you don't use and try again.",
    "files": [
-    "AssistantPIN.swift:124"
+    "AssistantPIN.swift:38"
    ],
    "args": [],
    "targets": [
@@ -51715,7 +51715,7 @@
    "ko": "요청 형식이 맞지 않아요. 앱을 업데이트해 주세요.",
    "en": "The request wasn't accepted. Please update the app.",
    "files": [
-    "AssistantPIN.swift:128"
+    "AssistantPIN.swift:42"
    ],
    "args": [],
    "targets": [
@@ -51752,7 +51752,7 @@
    "ko": "요청이 많아요. {0}초 뒤 다시 해 주세요.",
    "en": "Too many requests. Try again in {0} s.",
    "files": [
-    "AssistantPIN.swift:131"
+    "AssistantPIN.swift:45"
    ],
    "args": [
     "$0"
@@ -51766,7 +51766,7 @@
    "ko": "요청이 많아요. 잠시 뒤 다시 해 주세요.",
    "en": "Too many requests. Try again in a moment.",
    "files": [
-    "AssistantPIN.swift:132"
+    "AssistantPIN.swift:46"
    ],
    "args": [],
    "targets": [
@@ -53113,7 +53113,7 @@
    "ko": "이 기기의 AI 연결 준비가 풀렸어요. 「AI 연결」을 닫았다가 다시 열어 주세요.",
    "en": "This device's AI link needs to be set up again. Close and reopen AI connections.",
    "files": [
-    "AssistantPIN.swift:122"
+    "AssistantPIN.swift:36"
    ],
    "args": [],
    "targets": [
@@ -53600,7 +53600,7 @@
    "ko": "이 키는 쓸 수 없어요. 다시 만들어 주세요.",
    "en": "This key can't be used. Make a new one.",
    "files": [
-    "AssistantPIN.swift:126"
+    "AssistantPIN.swift:40"
    ],
    "args": [],
    "targets": [
@@ -54622,7 +54622,7 @@
    "ko": "일정 {0}개",
    "en": "{0} schedule(s)",
    "files": [
-    "AssistantCommands.swift:404"
+    "AssistantCommands.swift:387"
    ],
    "args": [
     "schedules"
@@ -54725,7 +54725,7 @@
    "ko": "일정 완료·미루기·옮기기",
    "en": "Complete, postpone or move plans",
    "files": [
-    "AssistantActivitySync.swift:282"
+    "AssistantActivitySync.swift:275"
    ],
    "args": [],
    "targets": [
@@ -54909,7 +54909,7 @@
    "ko": "읽기만",
    "en": "Read only",
    "files": [
-    "AssistantKeys.swift:14"
+    "AssistantKeys.swift:8"
    ],
    "args": [],
    "targets": [
@@ -55459,7 +55459,7 @@
    "ko": "잠시 뒤 다시 해 주세요.",
    "en": "Please try again in a moment.",
    "files": [
-    "AssistantPIN.swift:120"
+    "AssistantPIN.swift:34"
    ],
    "args": [],
    "targets": [
@@ -56933,7 +56933,7 @@
    "ko": "지금 PIN을 함께 넣어 주세요.",
    "en": "Enter your current PIN too.",
    "files": [
-    "AssistantPIN.swift:118"
+    "AssistantPIN.swift:32"
    ],
    "args": [],
    "targets": [
@@ -58069,7 +58069,7 @@
    "ko": "직접 넣은 기록 지우기",
    "en": "Delete records I added",
    "files": [
-    "AssistantActivitySync.swift:475"
+    "AssistantActivitySync.swift:468"
    ],
    "args": [],
    "targets": [
@@ -58254,7 +58254,7 @@
    "ko": "질문 {0}개",
    "en": "{0} question(s)",
    "files": [
-    "AssistantCommands.swift:409"
+    "AssistantCommands.swift:392"
    ],
    "args": [
     "questions"
@@ -58826,7 +58826,7 @@
    "ko": "추적 끝냄",
    "en": "Tracking stopped",
    "files": [
-    "AssistantCommandRunner.swift:551"
+    "AssistantCommandRunner.swift:474"
    ],
    "args": [],
    "targets": [
@@ -59426,7 +59426,7 @@
    "ko": "캘린더 연결 끊기",
    "en": "Disconnect calendars",
    "files": [
-    "AssistantCommandRunner.swift:561"
+    "AssistantCommandRunner.swift:484"
    ],
    "args": [],
    "targets": [
@@ -59971,7 +59971,7 @@
    "ko": "탑승 확인·거절",
    "en": "Confirm or reject boardings",
    "files": [
-    "AssistantActivitySync.swift:539"
+    "AssistantActivitySync.swift:532"
    ],
    "args": [],
    "targets": [
@@ -60628,7 +60628,7 @@
    "ko": "하루 요약",
    "en": "Day summary",
    "files": [
-    "AssistantRelay.swift:26",
+    "AssistantRelay.swift:8",
     "FirstRunTutorialGuides.swift:62"
    ],
    "args": [],

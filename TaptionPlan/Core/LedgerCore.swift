@@ -52,7 +52,7 @@ extension LedgerFX {
     @MainActor
     static func fetch(env: AssistantRegistration.Environment = .live) async -> Table? {
         guard let token = await AssistantRegistration.searchToken(),
-              let reply = await TripRelay.send(TripRelay.relayRequest("/fx", method: "GET", token: token, host: env.host), session: env.session),
+              let reply = await TripRelay.send(TripRelay.relayRequest("/fx", method: "GET", token: token, host: env.host, client: env.client()), session: env.session),
               reply.status == 200 else { return nil }
         return parse(reply.data)
     }

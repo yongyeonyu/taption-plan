@@ -125,7 +125,7 @@ enum AssistantActionKind: Hashable, CaseIterable, Identifiable, Codable, Sendabl
         case .setCarAudio: language.text("내 차 등록·빼기", "Register or remove my car")
         case .setCalendarTitleDetail: language.text("일정 제목 분류 정하기", "Classify calendar event titles")
         case .setTripBudget: language.text("여행 예산 정하기", "Set trip budgets")
-        case let .operation(name): AssistantOperations.spec(name)?.title(language) ?? AssistantRuleLog.title(name, language) ?? name
+        case let .operation(name): AssistantOperations.spec(name)?.title(language.resolvedLanguage) ?? AssistantRuleLog.title(name, language) ?? name
         }
     }
 }
@@ -307,7 +307,9 @@ extension AppModel {
         let language = MapHomeLanguage.current
         switch action {
         case let .operation(parsed):
-            return await parsed.operation.apply(host: AssistantOperationHost(model: self, preferences: preferences))
+            // 등록부(`AssistantOperations.all`)는 적용까지 아는 형만 담으므로 늘 맞는다.
+            guard let operation = parsed.operation as? any AssistantOperation else { return .rejected("invalid") }
+            return await operation.apply(host: AssistantOperationHost(model: self, preferences: preferences))
         case let .addMemo(text, at):
             // 서버도 1,000자(메모 저장 한도)로 막는다. 예전 서버 큐에 남은 더 긴 글은 화면 오류 없이 거절로만 알린다.
             guard text.count <= TaptionPlanMemoRecord.maximumTextLength else { return .rejected("memo_too_long") }

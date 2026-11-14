@@ -24,7 +24,7 @@ extension AssistantPINStore {
     /// 서버가 아는 PIN 상태. 기기 표시가 다르면 맞춘다. 닿지 못하면 nil.
     static func status(env: AssistantRegistration.Environment = .live) async -> Status? {
         guard let master = env.secrets.read(.master) else { return nil }
-        let reply = await TripRelay.send(TripRelay.relayRequest("/pin", method: "GET", token: master, host: env.host), session: env.session)
+        let reply = await TripRelay.send(TripRelay.relayRequest("/pin", method: "GET", token: master, host: env.host, client: env.client()), session: env.session)
         guard let reply, reply.status == 200, let status = parseStatus(reply.data) else { return nil }
         mark(isSet: status.isSet, defaults: env.defaults)
         return status
@@ -44,7 +44,7 @@ extension AssistantPINStore {
         guard await authenticator.authenticate(reason: reason) != .failed else { return false }
         guard let master = env.secrets.read(.master) else { return false }
         let reply = await TripRelay.send(
-            TripRelay.relayRequest("/pin/reset", method: "POST", body: Data("{}".utf8), token: master, host: env.host), session: env.session
+            TripRelay.relayRequest("/pin/reset", method: "POST", body: Data("{}".utf8), token: master, host: env.host, client: env.client()), session: env.session
         )
         guard let reply, (200..<300).contains(reply.status),
               ((try? JSONSerialization.jsonObject(with: reply.data)) as? [String: Any])?["reset"] as? Bool == true else { return false }

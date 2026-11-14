@@ -101,7 +101,7 @@ public enum TripRelay {
     }
 }
 
-/// 중계 서버의 다른 경로를 부르는 주소와 보내기(429 다시 보내기 포함). 요청 만들기(`relayRequest`)는 앱 설정을 읽어 앱에 있다.
+/// 중계 서버의 다른 경로를 부르는 주소와 보내기(429 다시 보내기 포함). 요청 만들기(`relayRequest`)는 `AssistantSharing.swift`에 있다.
 extension TripRelay {
     public static func url(_ path: String, query: [URLQueryItem] = [], host: String? = TripRelay.host) -> URL? {
         guard let host else { return nil }

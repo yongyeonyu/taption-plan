@@ -31,7 +31,7 @@ final class AssistantPhase3Tests: XCTestCase {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [Phase3RelayStub.self]
         return AssistantRegistration.Environment(
-            secrets: secrets, defaults: store, session: URLSession(configuration: configuration), host: host, clearConnections: {}
+            secrets: secrets, defaults: store, session: URLSession(configuration: configuration), host: host, clearConnections: {}, client: { .live }
         )
     }
 
@@ -2071,7 +2071,7 @@ final class AssistantAppControlTests: XCTestCase {
         configuration.protocolClasses = [Phase3RelayStub.self]
         let env = AssistantRegistration.Environment(
             secrets: AssistantMemorySecrets([.master: master]), defaults: store, session: URLSession(configuration: configuration),
-            host: "relay.example.com", clearConnections: {}
+            host: "relay.example.com", clearConnections: {}, client: { .live }
         )
         await AssistantAppStateSync.run(model: model, defaults: store, env: env, now: at(11, 12, 10))
         XCTAssertEqual(Phase3RelayStub.requests.map(\.summary), ["POST /app"])

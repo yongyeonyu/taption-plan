@@ -227,48 +227,6 @@ final class AssistantInbox {
     }
 }
 
-/// 앱이 켜져 있는 동안 명령을 확인하는 간격(SYN1111A03, 대표 결정).
-/// AI와 대화 중이면 빠르게(10초, 저전력 20초, 과열 60초), 그 밖에는 5분마다 본다(대표 결정).
-/// 대화 중: AI가 5분 안에 왔고 「대화 끝」을 보내지 않았거나, 앱에서 직접 새로고침한 뒤 2분.
-@MainActor
-enum AssistantCommandPolling {
-    /// 서버가 `GET /command` 응답 머리에 준 값.
-    struct Signal: Equatable {
-        /// AI가 마지막으로 온 지 몇 초. 온 적 없으면 nil.
-        var seenAgo: TimeInterval?
-        var ended: Bool
-        var receivedAt: Date
-    }
-
-    nonisolated static let idleInterval: TimeInterval = 300
-    nonisolated static let aiIdleTimeout: TimeInterval = 300
-    nonisolated static let manualWindow: TimeInterval = 120
-
-    static var signal: Signal?
-    static var manualAt: Date?
-
-    nonisolated static func signal(from response: HTTPURLResponse, now: Date = .now) -> Signal? {
-        guard let text = response.value(forHTTPHeaderField: "x-ai-seen-ago"), let ago = TimeInterval(text) else { return nil }
-        return Signal(seenAgo: ago < 0 ? nil : ago, ended: response.value(forHTTPHeaderField: "x-ai-ended") == "1", receivedAt: now)
-    }
-
-    nonisolated static func isConversation(signal: Signal?, manualAt: Date?, now: Date = .now) -> Bool {
-        if let manualAt, now.timeIntervalSince(manualAt) < manualWindow { return true }
-        guard let signal, !signal.ended, let ago = signal.seenAgo else { return false }
-        return ago + now.timeIntervalSince(signal.receivedAt) < aiIdleTimeout
-    }
-
-    nonisolated static func interval(conversation: Bool, lowPower: Bool, thermal: ProcessInfo.ThermalState) -> TimeInterval {
-        guard conversation else { return idleInterval }
-        if thermal == .serious || thermal == .critical { return 60 }
-        return lowPower ? 20 : 10
-    }
-
-    static func nextInterval(now: Date = .now, info: ProcessInfo = .processInfo) -> TimeInterval {
-        interval(conversation: isConversation(signal: signal, manualAt: manualAt, now: now), lowPower: info.isLowPowerModeEnabled, thermal: info.thermalState)
-    }
-}
-
 /// 주기 확인과 당겨서 새로고침이 함께 쓴다. 지도 화면이 모델을 넣어 둔다(SYN1111A01).
 @MainActor
 enum AssistantCommandRefresh {
@@ -355,7 +313,7 @@ enum AssistantPush {
         }
         requested = false
         guard env.defaults.string(forKey: uploadedKey) != nil, let master = env.secrets.read(.master),
-              let reply = await TripRelay.send(TripRelay.relayRequest("/push/token", method: "DELETE", token: master, host: env.host), session: env.session),
+              let reply = await TripRelay.send(TripRelay.relayRequest("/push/token", method: "DELETE", token: master, host: env.host, client: env.client()), session: env.session),
               (200..<300).contains(reply.status) else { return }
         env.defaults.removeObject(forKey: uploadedKey)
         env.defaults.removeObject(forKey: uploadedAtKey)
@@ -376,7 +334,7 @@ enum AssistantPush {
             payload["build"] = build
         }
         let body = try? JSONSerialization.data(withJSONObject: payload)
-        let request = body.flatMap { TripRelay.relayRequest("/push/token", method: "POST", body: $0, token: master, host: env.host) }
+        let request = body.flatMap { TripRelay.relayRequest("/push/token", method: "POST", body: $0, token: master, host: env.host, client: env.client()) }
         guard let reply = await TripRelay.send(request, session: env.session), (200..<300).contains(reply.status) else { return }
         env.defaults.set("\(environment):\(token)", forKey: uploadedKey)
         env.defaults.set(Date.now.timeIntervalSince1970, forKey: uploadedAtKey)
@@ -410,35 +368,9 @@ enum AssistantPush {
 // (3) 아래 `AssistantOperations.all`에 한 줄. 토글·알림 수·안내문·로그 이름은 `spec`에서 만들어진다.
 // 서버와 이름·칸이 같은지는 `server/trip-relay/test/fixtures/actions.json`으로 시험한다.
 
-/// 동작 하나의 이름표. 서버 등록부와 `name`·`fields`가 같아야 한다.
-struct AssistantOperationSpec: Sendable {
-    /// 「AI 비서 요청을 반영했어요」 알림에서 어느 수에 더할지.
-    enum Counter: Sendable { case memos, schedules, edits, settings, ledger }
-
-    var name: String
-    var fields: [String]
-    var counter: Counter
-    /// 지우는 동작. 「AI가 할 수 있는 일」의 「지우는 일」 묶음에 보인다.
-    var deletes = false
-    /// 사용자가 켜기 전에는 꺼져 있는 동작(ACT1114A09: 백업에서 복원).
-    var startsOff = false
-    /// 바꾸는 기존 항목 수(20개 확인 규칙). 새로 더하기만 하면 0.
-    var changes = 1
-    var title: @Sendable (MapHomeLanguage) -> String
-    /// 연결 안내의 한 줄: 동작 이름 뒤에 오는 칸 보기와 설명.
-    var guide: String
-}
-
-/// 등록부 동작 하나. 읽기(`init?`)에서 서버와 같은 규칙으로 다시 보고, `apply`는 화면이 쓰는 함수를 부른다.
-protocol AssistantOperation: Sendable {
-    static var spec: AssistantOperationSpec { get }
-    init?(fields: AssistantFields)
+/// 등록부 동작 하나. 읽기에 더해 `apply`가 화면이 쓰는 함수를 부른다.
+protocol AssistantOperation: AssistantOperationReading {
     @MainActor func apply(host: AssistantOperationHost) async -> AssistantEditResult
-    var changeCount: Int { get }
-}
-
-extension AssistantOperation {
-    var changeCount: Int { Self.spec.changes }
 }
 
 /// 동작이 쓰는 것들: 앱 모델과 기기 저장소(시험은 따로 만든 것).
@@ -460,15 +392,6 @@ struct AssistantOperationHost {
         guard !AssistantAppChange.Stored.same(before, after) else { return nil }
         return .init(key: key, before: AssistantAppChange.Stored.pack(before), after: AssistantAppChange.Stored.pack(after))
     }
-}
-
-/// 읽어 낸 동작. 같은 이름·같은 칸이면 같은 명령이다.
-struct AssistantParsedOperation: Equatable, Sendable {
-    let name: String
-    let values: [String: AssistantJSON]
-    let operation: any AssistantOperation
-
-    static func == (lhs: Self, rhs: Self) -> Bool { lhs.name == rhs.name && lhs.values == rhs.values }
 }
 
 enum AssistantOperations {

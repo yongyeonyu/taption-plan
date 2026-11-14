@@ -1,3 +1,4 @@
+import Security
 import XCTest
 import TaptionPlanCore
 @testable import TaptionPlan
@@ -69,8 +70,9 @@ final class AssistantRelayTests: XCTestCase {
         // AIL1112A01: 사생활 잠금 중이면 올리기를 쉰다는 표시를 붙인다.
         XCTAssertEqual(TripRelay.clientHeader(model: "iPhone12,3", build: "327", level: .summary, debug: false, locked: true), "iPhone12,3;327;summary;locked")
         XCTAssertEqual(TripRelay.clientHeader(model: "iPhone12,3", build: "327", level: .visits, debug: true, locked: true), "iPhone12,3;327;visits;debug;locked")
-        let request = TripRelay.relayRequest("/command", method: "GET", token: "K", host: "example.com")
-        XCTAssertEqual(request?.value(forHTTPHeaderField: TripRelay.clientHeaderName), TripRelay.clientHeader())
+        let request = TripRelay.relayRequest("/command", method: "GET", token: "K", host: "example.com", client: .live)
+        let live = AssistantClientState.live
+        XCTAssertEqual(request?.value(forHTTPHeaderField: TripRelay.clientHeaderName), TripRelay.clientHeader(level: live.level, debug: live.debug, locked: live.locked))
         XCTAssertFalse(TripRelay.hardwareModel.isEmpty)
     }
 
@@ -302,7 +304,110 @@ final class AssistantRelayTests: XCTestCase {
         let never = HTTPURLResponse(url: URL(string: "https://example.com/command")!, statusCode: 204, httpVersion: nil, headerFields: ["x-ai-seen-ago": "-1"])!
         XCTAssertNil(P.signal(from: never, now: now)?.seenAgo)
         XCTAssertEqual(TripRelay.commandFetchTimeout, 5)
-        XCTAssertEqual(TripRelay.relayRequest("/command", method: "GET", token: "K", host: "example.com", timeout: TripRelay.commandFetchTimeout)?.timeoutInterval, 5)
+        XCTAssertEqual(TripRelay.relayRequest("/command", method: "GET", token: "K", host: "example.com", client: .live, timeout: TripRelay.commandFetchTimeout)?.timeoutInterval, 5)
+    }
+
+    // MARK: - 기존 설치와의 약속 (PKG1114A19) — 코드를 옮겨도 이 글자들은 그대로여야 연결이 유지된다.
+
+    /// 기기 설정 키. 한 글자라도 바뀌면 등록·PIN·연결 이름·맡긴 일·질문이 사라진 것처럼 보인다.
+    @MainActor
+    func testStoredDefaultsKeysAreUnchanged() {
+        XCTAssertEqual(
+            [AssistantRegistration.registeredKey, AssistantRegistration.searchRegisteredKey, AssistantRegistration.rotationKey,
+             AssistantRegistration.rotationTag, AssistantRegistration.reconnectKey],
+            ["assistantRegisteredMasterID", "assistantRegisteredSearchID", "assistantMasterRotation", "SEC1110A02", "assistantNeedsReconnect"]
+        )
+        XCTAssertEqual(AssistantPINStore.setKey, "assistantPINSet")
+        XCTAssertEqual(
+            [AssistantKeyLabels.labelsKey, AssistantKeyLabels.periodsKey, AssistantKeyLabels.serverCountKey, AssistantKeyLabels.clientsKey,
+             AssistantKeyProviders.defaultsKey],
+            ["assistantKeyLabels", "assistantKeyPeriods", "assistantServerKeyCount", "assistantKeyClients", "assistantKeyProviders"]
+        )
+        XCTAssertEqual([AssistantShareLevel.defaultsKey, AssistantRetention.defaultsKey], ["assistantShareLevel", "assistantRetentionDays"])
+        XCTAssertEqual(AssistantShareLevel.allCases.map(\.rawValue), ["off", "summary", "visits"])
+        XCTAssertEqual(AssistantRetention.allCases.map(\.rawValue), [1, 7, 30])
+        XCTAssertEqual(
+            [AssistantActivityUploadGate.defaultsKey, AssistantActivitySync.sharedKey, AssistantActivitySync.pendingClearKey],
+            ["assistantActivityHashes", "assistantActivityShared", "assistantActivityPendingClear"]
+        )
+        XCTAssertEqual(
+            [AITaskQueue.uploadsKey, AITaskQueue.cacheKey, AITaskQueue.ackedKey, AITaskQueue.finishedSeenKey],
+            ["aiTaskUploads", "aiTaskCache", "aiTaskAcked", "aiTaskFinishedSeen"]
+        )
+        XCTAssertEqual([AssistantQuestionStore.key, AssistantQuestionStore.dirtyKey], ["assistantQuestions", "assistantQuestionsDirty"])
+        XCTAssertEqual(AssistantQuestionNotice.identifier("q1"), "assistant-question-q1")
+        XCTAssertEqual(TripRelay.rotationDeletionPaths, ["/keys", "/activity", "/command", "/plan"])
+        XCTAssertEqual(AssistantKeyStore.keyID("abc"), "ba7816bf")
+        XCTAssertEqual(AssistantCommandLedger.defaultsKey, "assistantCommandHandledIDs")
+        XCTAssertEqual(
+            [AssistantCommandJournal.inProgressKey, AssistantCommandJournal.outboxKey, AssistantCommandRunner.backgroundRunKey],
+            ["assistantCommandInProgressID", "assistantCommandPendingResults", "assistantBackgroundRunAt"]
+        )
+    }
+
+    private func keychainText(service: String, account: String) -> String? {
+        var item: CFTypeRef?
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: account,
+            kSecReturnData as String: true,
+        ]
+        guard SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess, let data = item as? Data else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    /// 키체인의 서비스·계정 글자. 주 키·검색 키는 읽기만 하고, 비어 있는 자리와 새 연결 키로만 써 본다.
+    @MainActor
+    func testKeychainServiceAndAccountsAreUnchanged() throws {
+        let service = "com.taption.plan.triprelay"
+        let secrets = AssistantKeychainSecrets.shared
+        XCTAssertEqual(secrets.read(.master), keychainText(service: service, account: "relay-key"))
+        XCTAssertEqual(secrets.read(.search), keychainText(service: service, account: "search-key"))
+        XCTAssertEqual(secrets.read(.pendingMaster), keychainText(service: service, account: "relay-key-pending"))
+        if let master = keychainText(service: service, account: "relay-key"), TripRelay.isValidKey(master) { XCTAssertEqual(TripRelay.key, master) }
+        let token = try XCTUnwrap(TripRelay.randomToken())
+        if secrets.read(.pendingMaster) == nil {
+            guard secrets.write(token, to: .pendingMaster) else { throw XCTSkip("이 시험 환경에서는 키체인에 쓸 수 없다") }
+            XCTAssertEqual(keychainText(service: service, account: "relay-key-pending"), token)
+            secrets.write(nil, to: .pendingMaster)
+            XCTAssertNil(keychainText(service: service, account: "relay-key-pending"))
+        }
+        guard AssistantKeyStore.save(token) else { throw XCTSkip("이 시험 환경에서는 키체인에 쓸 수 없다") }
+        let id = AssistantKeyStore.keyID(token)
+        XCTAssertEqual(keychainText(service: "com.taption.plan.triprelay.scoped", account: id), token)
+        XCTAssertEqual(AssistantKeyStore.token(for: id), token)
+        AssistantKeyStore.remove(id)
+        XCTAssertNil(keychainText(service: "com.taption.plan.triprelay.scoped", account: id))
+    }
+
+    /// 서버가 받는 요청 모양: 주소·방식·헤더 세 개·몸통.
+    func testRelayRequestShapeIsUnchanged() throws {
+        let client = AssistantClientState(level: .visits, debug: false, locked: true)
+        let body = Data(#"{"a":1}"#.utf8)
+        let request = try XCTUnwrap(TripRelay.relayRequest(
+            "/rules", method: "POST", query: [URLQueryItem(name: "since", value: "3")], body: body, token: "KEY", host: "relay.example.com", client: client
+        ))
+        XCTAssertEqual(request.url?.absoluteString, "https://relay.example.com/rules?since=3")
+        XCTAssertEqual(request.httpMethod, "POST")
+        XCTAssertEqual(request.httpBody, body)
+        XCTAssertEqual(request.timeoutInterval, 10)
+        XCTAssertEqual(TripRelay.clientHeaderName, "x-bokki-client")
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? ""
+        XCTAssertEqual(request.allHTTPHeaderFields, [
+            "Authorization": "Bearer KEY", "Content-Type": "application/json", "x-bokki-client": "\(TripRelay.hardwareModel);\(build);visits;locked",
+        ])
+        let plain = try XCTUnwrap(TripRelay.relayRequest("/keys", method: "GET", token: "KEY", host: "relay.example.com", client: client))
+        XCTAssertEqual(plain.url?.absoluteString, "https://relay.example.com/keys")
+        XCTAssertEqual(Set(plain.allHTTPHeaderFields?.keys.map { $0 } ?? []), ["Authorization", "x-bokki-client"])
+        XCTAssertNil(plain.httpBody)
+        // 키 등록 몸통과 일 올리기 본문의 칸 이름.
+        let keys = try XCTUnwrap(TripRelay.keysBody(token: "T", scope: .read, expiresAt: nil, pin: "123456"))
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: keys) as? [String: Any])
+        XCTAssertEqual(object["pin"] as? String, "123456")
+        let key = try XCTUnwrap((object["keys"] as? [[String: Any]])?.first)
+        XCTAssertEqual(Set(key.keys), ["token", "scope", "expiresAt"])
+        XCTAssertEqual(key["scope"] as? String, "read")
+        XCTAssertTrue(key["expiresAt"] is NSNull)
+        XCTAssertEqual(TripRelay.isoText(Date(timeIntervalSince1970: 1_800_000_000)), "2027-01-15T08:00:00Z")
     }
 
     /// PSH1114A06: 푸시 종류 읽기, 기기 토큰 글자, 같은 토큰을 다시 올리지 않기.
@@ -335,7 +440,7 @@ final class AssistantRelayTests: XCTestCase {
         configuration.protocolClasses = [Phase3RelayStub.self]
         let env = AssistantRegistration.Environment(
             secrets: AssistantMemorySecrets([.master: master]), defaults: store, session: URLSession(configuration: configuration),
-            host: "relay.example.com", clearConnections: {}
+            host: "relay.example.com", clearConnections: {}, client: { .live }
         )
         await AssistantPush.upload(token: token, environment: "sandbox", env: env)
         XCTAssertTrue(Phase3RelayStub.requests.isEmpty, "no AI connection, no upload")

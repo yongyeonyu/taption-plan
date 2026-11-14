@@ -121,7 +121,7 @@ enum AssistantRuleStore {
         let pending = outbox(defaults)
         if !pending.isEmpty {
             let body = try? JSONEncoder().encode(OpsBody(baseVersion: stored(defaults).version, ops: pending))
-            let request = body.flatMap { TripRelay.relayRequest("/rules/ops", method: "POST", body: $0, token: master, host: env.host) }
+            let request = body.flatMap { TripRelay.relayRequest("/rules/ops", method: "POST", body: $0, token: master, host: env.host, client: env.client()) }
             guard let reply = await TripRelay.send(request, session: env.session), (200..<300).contains(reply.status) else { return false }
             // 올리는 사이에 더해진 것은 남긴다.
             uploaded = Set(pending.filter { $0.op == "put" }.map(\.id))
@@ -134,7 +134,7 @@ enum AssistantRuleStore {
         let version = stored(defaults).version
         let since = defaults.data(forKey: setKey) == nil || defaults.integer(forKey: ackedKey) < 0 ? nil : String(version)
         let query = since.map { [URLQueryItem(name: "since", value: $0)] } ?? []
-        guard let reply = await TripRelay.send(TripRelay.relayRequest("/rules", method: "GET", query: query, token: master, host: env.host), session: env.session) else { return false }
+        guard let reply = await TripRelay.send(TripRelay.relayRequest("/rules", method: "GET", query: query, token: master, host: env.host, client: env.client()), session: env.session) else { return false }
         if reply.status == 200, let set = try? JSONDecoder().decode(RuleSet.self, from: reply.data), let data = try? JSONEncoder().encode(set) {
             // 처음 받는 사본은 적지 않는다(연결하기 전부터 있던 규칙이 한꺼번에 쌓이지 않게).
             let known = defaults.data(forKey: setKey) == nil ? nil : Set(stored(defaults).rules.map(\.id)).union(uploaded)
@@ -151,7 +151,7 @@ enum AssistantRuleStore {
         let signature = current.version * 1_000 + skipped.count
         guard defaults.integer(forKey: ackedKey) != signature else { return true }
         let ack = try? JSONEncoder().encode(AckBody(version: current.version, engine: RuleEngine.version, skipped: skipped))
-        if let reply = await TripRelay.send(ack.flatMap { TripRelay.relayRequest("/rules/ack", method: "POST", body: $0, token: master, host: env.host) }, session: env.session),
+        if let reply = await TripRelay.send(ack.flatMap { TripRelay.relayRequest("/rules/ack", method: "POST", body: $0, token: master, host: env.host, client: env.client()) }, session: env.session),
            (200..<300).contains(reply.status) {
             defaults.set(signature, forKey: ackedKey)
         }

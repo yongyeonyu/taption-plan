@@ -33,7 +33,7 @@ final class AssistantReviewFixTests: XCTestCase {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [Phase3RelayStub.self]
         return AssistantRegistration.Environment(
-            secrets: secrets, defaults: store, session: URLSession(configuration: configuration), host: host, clearConnections: { cleared?.value += 1 }
+            secrets: secrets, defaults: store, session: URLSession(configuration: configuration), host: host, clearConnections: { cleared?.value += 1 }, client: { .live }
         )
     }
 
@@ -487,7 +487,7 @@ final class AssistantReviewFixTests: XCTestCase {
 
         let env = environment(AssistantMemorySecrets([.master: master]), defaults()) { _ in 429 }
         Phase3RelayStub.retryAfter = "60"
-        let request = TripRelay.relayRequest("/keys", method: "GET", token: master, host: host)
+        let request = TripRelay.relayRequest("/keys", method: "GET", token: master, host: host, client: .live)
         let reply = await TripRelay.send(request, session: env.session)
         XCTAssertEqual(reply?.status, 429)
         XCTAssertEqual(Phase3RelayStub.requests.count, 1)
