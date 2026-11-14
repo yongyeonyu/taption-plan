@@ -170,6 +170,8 @@ export async function saveTasks(ctx, value) {
   let added = 0;
   for (const { id, kind, text, date, context } of value.tasks) {
     if (known.has(id)) continue;
+    // 337 앱이 지난 기록 전체의 노선 확인을 올린다(RDX1114A01). 사흘 넘은 날짜의 것은 받지 않는다.
+    if (kind === "route_check" && context?.moveId && date && ctx.now - Date.parse(date + "T00:00:00Z") > 3 * DAY_MS) continue;
     tasks.push({ id, kind, text, ...(date ? { date } : {}), ...(context ? { context } : {}), status: "waiting", createdAt: iso(ctx.now), updatedAt: iso(ctx.now) });
     added += 1;
   }

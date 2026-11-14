@@ -554,7 +554,11 @@ enum SubwayLineChoice {
 @MainActor
 enum RideLineTasks {
     static let producedKey = "rideLineTaskKeys"
-    static let settleSeconds: TimeInterval = 10 * 60
+    nonisolated static let settleSeconds: TimeInterval = 10 * 60
+    /// 이보다 오래된 구간은 맡기지 않는다. 불러 둔 지난 기록 전체가 한꺼번에 올라가 AI 목록을 채운 적이 있다(RDX1114A01).
+    nonisolated static let recentSeconds: TimeInterval = 36 * 3_600
+    /// 한 번에 맡기는 수.
+    static let batchLimit = 3
 
     /// AI에게 맡길 구간인지와 후보. 버스는 노선을 모르거나 후보가 셋 이상, 지하철은 노선 경로도 정해 준 노선도 없을 때.
     nonisolated static func candidates(_ segment: TravelSegment, defaults: UserDefaults = .standard) -> [String]? {
@@ -573,7 +577,9 @@ enum RideLineTasks {
 
     static func enqueue(_ travel: [TravelSegment], now: Date = .now, defaults: UserDefaults = .standard) {
         var produced = defaults.stringArray(forKey: producedKey) ?? []
-        for segment in travel where now.timeIntervalSince(segment.span.end) >= settleSeconds && segment.span.duration >= RideConfirmation.minimumDuration {
+        var sent = 0
+        for segment in pending(travel, now: now) {
+            guard sent < batchLimit else { break }
             let key = BusRouteCheck.cacheKey(segment)
             guard !produced.contains(key), let candidates = candidates(segment, defaults: defaults) else { continue }
             let time = "\(clock(segment.span.start))–\(clock(segment.span.end))"
@@ -585,10 +591,20 @@ enum RideLineTasks {
                 context["to"] = names.alight
                 text += " · \(names.board) → \(names.alight)"
             }
-            guard AITaskQueue.enqueue(.routeCheck, text: text, day: segment.span.start, context: context, defaults: defaults) else { return }
+            guard AITaskQueue.enqueue(.routeCheck, text: text, day: segment.span.start, context: context, defaults: defaults) else { break }
             produced.append(key)
+            sent += 1
         }
-        defaults.set(Array(produced.suffix(200)), forKey: producedKey)
+        if sent > 0 { defaults.set(Array(produced.suffix(200)), forKey: producedKey) }
+    }
+
+    /// 맡길 만한 구간: 끝난 지 10분은 넘고 36시간은 안 된, 3분 넘는 탑승. 새것부터.
+    nonisolated static func pending(_ travel: [TravelSegment], now: Date) -> [TravelSegment] {
+        travel.filter {
+            let age = now.timeIntervalSince($0.span.end)
+            return age >= settleSeconds && age <= recentSeconds && $0.span.duration >= RideConfirmation.minimumDuration && $0.span.duration <= 4 * 3_600
+        }
+        .sorted { $0.span.end > $1.span.end }
     }
 
     private static func clock(_ date: Date) -> String {

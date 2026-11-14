@@ -73,6 +73,11 @@ final class LedgerTests: XCTestCase {
         BusRouteCheck.remember(segment(.bus), routes: [.init(number: "80", kind: "")], defaults: defaults)
         XCTAssertNil(RideLineTasks.candidates(segment(.bus), defaults: defaults))
         XCTAssertNil(RideLineTasks.candidates(segment(.car), defaults: defaults))
+        // 오래된 구간은 맡기지 않는다: 끝난 지 10분~36시간인 것만.
+        let ride = segment(.bus)
+        XCTAssertTrue(RideLineTasks.pending([ride], now: span.end.addingTimeInterval(300)).isEmpty)
+        XCTAssertEqual(RideLineTasks.pending([ride], now: span.end.addingTimeInterval(3_600)).count, 1)
+        XCTAssertTrue(RideLineTasks.pending([ride], now: span.end.addingTimeInterval(40 * 3_600)).isEmpty)
     }
 
     func testReceiptPhotoMarksKeepLatestWithinLimit() {

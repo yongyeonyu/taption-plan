@@ -144,3 +144,12 @@ test("tasks: a finished task the app deleted is not revived by a re-upload of th
   assert.equal(again.added, 1, "only the new one is added");
   assert.deepEqual((await (await send(env, "/tasks/claim", "POST", undefined, ai)).json()).tasks.map((t) => t.id), [B]);
 });
+
+test("tasks: ride line checks for days long past are not taken (RDX1114A01)", async () => {
+  const { env, master } = await setup();
+  const old = { id: A, kind: "route_check", text: "09:00–10:00 subway ride, line unknown", date: "2026-10-15", context: { moveId: "M1", mode: "subway" } };
+  const fresh = { id: B, kind: "route_check", text: "10:15–10:30 bus ride, route number unknown", date: "2026-11-09", context: { moveId: "M2", mode: "bus" } };
+  const reply = await (await send(env, "/tasks", "POST", upload([old, fresh]), master)).json();
+  assert.equal(reply.added, 1);
+  assert.deepEqual((await (await send(env, "/tasks", "GET", undefined, master)).json()).tasks.map((t) => t.id), [B]);
+});
