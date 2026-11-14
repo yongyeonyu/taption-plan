@@ -141,8 +141,11 @@ enum PaymentInbox {
 
     static func items(_ defaults: UserDefaults = .standard, now: Date = .now) -> [Item] {
         let all = defaults.data(forKey: key).flatMap { try? JSONDecoder().decode([Item].self, from: $0) } ?? []
-        return all.filter { now.timeIntervalSince($0.receivedAt) < lifetime }
+        // 「넣지 않음」으로 정한 글은 보이지 않는다. 지우기 전 빌드에서 정해 남아 있는 것도 여기서 걸러진다(INY1114A01).
+        return all.filter { now.timeIntervalSince($0.receivedAt) < lifetime && !isSkippedByChoice($0) }
     }
+
+    static func isSkippedByChoice(_ item: Item) -> Bool { item.choice == .ignore && item.isInternal != true }
 
     /// 문자함에 남는 모양: 번호를 가리고 1,000자까지.
     @MainActor

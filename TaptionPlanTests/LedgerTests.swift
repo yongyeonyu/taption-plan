@@ -28,6 +28,20 @@ final class LedgerTests: XCTestCase {
         XCTAssertEqual(AITaskRequest.chatURL(.chatGPT)?.host, "chatgpt.com")
     }
 
+    func testPaymentInboxHidesTextsChosenAsSkip() throws {
+        let name = "PaymentInboxSkip-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        var skipped = PaymentInbox.Item(text: "discount notice 1,000", receivedAt: .now, outcome: .skipped, message: "")
+        skipped.choice = .ignore
+        var transfer = PaymentInbox.Item(text: "card top-up 5,000", receivedAt: .now, outcome: .skipped, message: "")
+        transfer.choice = .ignore
+        transfer.isInternal = true
+        let plain = PaymentInbox.Item(text: "shop 3,000", receivedAt: .now, outcome: .unread, message: "")
+        defaults.set(try JSONEncoder().encode([skipped, transfer, plain]), forKey: PaymentInbox.key)
+        XCTAssertEqual(PaymentInbox.items(defaults).map(\.id), [transfer.id, plain.id])
+    }
+
     func testReceiptPhotoMarksKeepLatestWithinLimit() {
         let name = "ReceiptPhotoMarks-\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: name)!

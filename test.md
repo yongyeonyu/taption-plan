@@ -14,6 +14,8 @@ OCB1114A01·KRT1114A01·AIC1114A01·AIK1114A01·AID1114A01·AIS1114A01. 로그�
 | 서버 `npm test` | 114건 통과 |
 | 서버 배포(AIS1114A01) | `wrangler deploy` 완료. 배포된 연결 안내문을 읽는 확인은 인증이 필요해 하지 않음(401) |
 
+INY1114A01(「넣지 않음」 글 거르기): `LedgerTests`·`LedgerMessageAccuracyTests`·`LedgerReviewTests`·`AssistantPhase3Tests` 91건 통과·실패 0(`sim-6.xcresult`), 구조 점검 통과. 대표 기기에서 남아 있던 원인은 재현하지 못했고 추정(예전 빌드에서 정한 글)으로 고쳤다.
+
 하지 않은 것: 화면 확인(「OCR」 표시, 스위치와 「연결 끊기」 간격, AI 탭 단추), 기기에서 Claude 앱이 채워진 대화로 열리는지, AI가 실제로 10분 예약을 만드는지.
 
 ## TFB1114A335 · TestFlight 335 (2026-11-14 아침)
