@@ -586,14 +586,14 @@ enum LedgerNumber {
 
 /// 결제 문자 자동 넣기 안내(LED1111A10, 대표 질문 2026-11-11: 단축어 추가 메뉴가 어디 있나).
 /// 단축어 자동화는 앱이 대신 만들 수 없어 순서를 보여 주고 단축어 앱을 연다.
-/// 가계부 한 달을 날짜별로 묶는다. 날짜도, 같은 날 안도 오래된 것부터 시간순(LDU1111A01).
+/// 가계부 한 달을 날짜별로 묶는다. 날짜도, 같은 날 안도 최신이 위(LDN1114A20, 대표 지시 2026-11-14. 앞선 LDU1111A01의 오래된 것부터를 뒤집음).
 struct LedgerDayGroup: Identifiable, Equatable {
     let day: Date
     let entries: [LedgerEntry]
     var id: Date { day }
 
     static func groups(_ entries: [LedgerEntry], calendar: Calendar = .autoupdatingCurrent) -> [LedgerDayGroup] {
-        let sorted = entries.sorted { $0.occurredAt == $1.occurredAt ? $0.createdAt < $1.createdAt : $0.occurredAt < $1.occurredAt }
+        let sorted = entries.sorted { $0.occurredAt == $1.occurredAt ? $0.createdAt > $1.createdAt : $0.occurredAt > $1.occurredAt }
         var result: [LedgerDayGroup] = []
         var day: Date?, current: [LedgerEntry] = []
         for entry in sorted {

@@ -686,7 +686,7 @@ final class LedgerTests: XCTestCase {
         XCTAssertNil(LedgerReceiptReader.draft(["감사합니다"]))
     }
 
-    /// LDU1111A01: 가계부 한 달은 날짜도, 같은 날 안도 오래된 것부터 시간순으로 묶인다.
+    /// LDN1114A20: 가계부 한 달은 날짜도, 같은 날 안도 최신이 위로 묶인다.
     func testLedgerDayGroupsAreChronological() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
@@ -698,9 +698,9 @@ final class LedgerTests: XCTestCase {
             LedgerEntry(occurredAt: day2, amount: 900, title: "toll"),
         ]
         let groups = LedgerDayGroup.groups(entries, calendar: calendar)
-        XCTAssertEqual(groups.map(\.entries.count), [1, 2])
-        XCTAssertEqual(groups.flatMap(\.entries).map(\.title), ["dinner", "toll", "coffee"])
-        XCTAssertEqual(groups.first?.day, calendar.startOfDay(for: day1))
+        XCTAssertEqual(groups.map(\.entries.count), [2, 1])
+        XCTAssertEqual(groups.flatMap(\.entries).map(\.title), ["coffee", "toll", "dinner"])
+        XCTAssertEqual(groups.first?.day, calendar.startOfDay(for: day2))
     }
 
     /// HWY1111A01: 고속도로 통행료는 노선 번호를 찾는다. 긴 이름이 먼저고, 고속도로 낌새가 없으면 찾지 않는다.
@@ -1755,8 +1755,8 @@ final class LedgerDayGroupingTests: XCTestCase {
             LedgerEntry(occurredAt: day, amount: 1, title: "아홉 시"),
         ]
         let groups = LedgerDayGroup.groups(entries, calendar: calendar)
-        XCTAssertEqual(groups.map { $0.entries.map(\.title) }, [["아홉 시", "열 시"], ["내일"]])
-        XCTAssertEqual(groups.first?.day, calendar.startOfDay(for: day))
+        XCTAssertEqual(groups.map { $0.entries.map(\.title) }, [["내일"], ["열 시", "아홉 시"]])
+        XCTAssertEqual(groups.last?.day, calendar.startOfDay(for: day))
         XCTAssertTrue(LedgerDayGroup.groups([], calendar: calendar).isEmpty)
     }
 }
