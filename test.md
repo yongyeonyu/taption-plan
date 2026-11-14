@@ -18,6 +18,8 @@ INY1114A01(「넣지 않음」 글 거르기): `LedgerTests`·`LedgerMessageAccu
 
 RDL1114A01·AIW1114A01·AIM1114A01: `LedgerTests`·`TodoPanelTests`·`AssistantRelayTests`·`AssistantPhase3Tests`·`AssistantCommandEditTests` 101건 통과·실패 0(`sim-8.xcresult`), 구조 점검 통과(이름표 코드를 작은 파일로 옮긴 뒤), 번역 실패 0. 서버 `npm test` 115건 통과(두 연결이 같은 일을 받지 않음·30분 뒤 넘겨받기 포함), `wrangler deploy` 완료. 이름표·연결 뒤 대화 열기는 화면·기기 확인 없음(시뮬레이터에 버스·지하철 기록이 없음).
 
+TFM1114A01(여행 카드 누르면 아래 단추 바로 바뀜): 앱 Debug 시험 빌드 성공, `TravelMapTests` 16건 통과·실패 0(`sim-10.xcresult`), 구조 점검 통과. 누르는 동작은 화면·기기에서 확인하지 않았다.
+
 하지 않은 것: 화면 확인(「OCR」 표시, 스위치와 「연결 끊기」 간격, AI 탭 단추), 기기에서 Claude 앱이 채워진 대화로 열리는지, AI가 실제로 10분 예약을 만드는지.
 
 ## TFB1114A335 · TestFlight 335 (2026-11-14 아침)

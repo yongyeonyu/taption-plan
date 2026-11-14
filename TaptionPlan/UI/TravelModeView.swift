@@ -374,7 +374,7 @@ struct TravelModeView: View {
             if let focused, openedID != nil {
                 planSheet(focused)
             } else {
-                globeFooter(flight == nil ? focused : nil)
+                globeFooter(focused)
             }
         }
         .confirmationDialog(
@@ -890,6 +890,7 @@ struct TravelModeView: View {
         tableTrips = TravelCoursePlanner.tableTrips(tableTrips, tripID: entry.id, showsCourse: course)
         let destination = TravelModeDestination(trip: entry.trip, stops: model.settings.travelPlanStops)
         if let last = cameras(for: destination).last { camera = last }
+        (flight, flyingID) = (nil, nil) // 도는 중에 눌렀으면 비행을 끝내고 바로 들어간다(TFM1114A01).
         focusedID = entry.id
         openedID = entry.id
         withAnimation(.snappy(duration: 0.25)) { isPlanUp = true }
