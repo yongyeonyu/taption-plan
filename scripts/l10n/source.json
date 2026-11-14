@@ -3565,7 +3565,7 @@
    "ko": "{0} 여행 경비",
    "en": "{0} trip budget",
    "files": [
-    "LedgerTrips.swift:296"
+    "LedgerTrips.swift:54"
    ],
    "args": [
     "trip.name"
@@ -3579,7 +3579,7 @@
    "ko": "{0} 여행 정산",
    "en": "{0} trip refund",
    "files": [
-    "LedgerTrips.swift:305"
+    "LedgerTrips.swift:63"
    ],
    "args": [
     "trip.name"
@@ -3593,7 +3593,7 @@
    "ko": "{0} 여행 추가 경비",
    "en": "{0} extra trip cost",
    "files": [
-    "LedgerTrips.swift:308"
+    "LedgerTrips.swift:66"
    ],
    "args": [
     "trip.name"
@@ -4572,7 +4572,7 @@
    "ko": "{0}원",
    "en": "₩{0}",
    "files": [
-    "LedgerCore.swift:405",
+    "LedgerCore.swift:267",
     "MapHomeCalendarPolicies.swift:433"
    ],
    "args": [
@@ -35175,7 +35175,7 @@
    "ko": "경비 받음",
    "en": "Budget received",
    "files": [
-    "LedgerTrips.swift:296"
+    "LedgerTrips.swift:54"
    ],
    "args": [],
    "targets": [
@@ -35950,7 +35950,7 @@
    "ko": "교육",
    "en": "Education",
    "files": [
-    "LedgerCore.swift:25"
+    "LedgerCore.swift:20"
    ],
    "args": [],
    "targets": [
@@ -35962,7 +35962,7 @@
    "ko": "교통",
    "en": "Transport",
    "files": [
-    "LedgerCore.swift:18"
+    "LedgerCore.swift:13"
    ],
    "args": [],
    "targets": [
@@ -36711,7 +36711,7 @@
    "ko": "급여",
    "en": "Salary",
    "files": [
-    "LedgerCore.swift:27"
+    "LedgerCore.swift:22"
    ],
    "args": [],
    "targets": [
@@ -37432,7 +37432,7 @@
    "ko": "기타",
    "en": "Other",
    "files": [
-    "LedgerCore.swift:28",
+    "LedgerCore.swift:23",
     "AssistantAIProvider.swift:37",
     "MapHomeLaunchPrompts.swift:547"
    ],
@@ -41613,7 +41613,7 @@
    "ko": "문화·여가",
    "en": "Leisure",
    "files": [
-    "LedgerCore.swift:22"
+    "LedgerCore.swift:17"
    ],
    "args": [],
    "targets": [
@@ -44738,7 +44738,7 @@
    "ko": "생활",
    "en": "Living",
    "files": [
-    "LedgerCore.swift:20"
+    "LedgerCore.swift:15"
    ],
    "args": [],
    "targets": [
@@ -44877,7 +44877,7 @@
    "ko": "선물·경조사",
    "en": "Gifts",
    "files": [
-    "LedgerCore.swift:26"
+    "LedgerCore.swift:21"
    ],
    "args": [],
    "targets": [
@@ -45619,7 +45619,7 @@
    "ko": "쇼핑",
    "en": "Shopping",
    "files": [
-    "LedgerCore.swift:19",
+    "LedgerCore.swift:14",
     "TripImportSheet.swift:472"
    ],
    "args": [],
@@ -45916,7 +45916,7 @@
    "ko": "숙소",
    "en": "Lodging",
    "files": [
-    "LedgerCore.swift:24",
+    "LedgerCore.swift:19",
     "TripImportSheet.swift:464"
    ],
    "args": [],
@@ -46621,7 +46621,7 @@
    "ko": "식비",
    "en": "Food",
    "files": [
-    "LedgerCore.swift:16"
+    "LedgerCore.swift:11"
    ],
    "args": [],
    "targets": [
@@ -48929,7 +48929,7 @@
    "ko": "여행",
    "en": "Travel",
    "files": [
-    "LedgerCore.swift:23"
+    "LedgerCore.swift:18"
    ],
    "args": [],
    "targets": [
@@ -52241,7 +52241,7 @@
    "ko": "의료·건강",
    "en": "Health",
    "files": [
-    "LedgerCore.swift:21"
+    "LedgerCore.swift:16"
    ],
    "args": [],
    "targets": [
@@ -55593,7 +55593,7 @@
    "ko": "정산 반납",
    "en": "Returned to daily",
    "files": [
-    "LedgerTrips.swift:305"
+    "LedgerTrips.swift:63"
    ],
    "args": [],
    "targets": [
@@ -57982,7 +57982,7 @@
    "ko": "추가 경비 받음",
    "en": "Extra budget received",
    "files": [
-    "LedgerTrips.swift:308"
+    "LedgerTrips.swift:66"
    ],
    "args": [],
    "targets": [
@@ -58571,7 +58571,7 @@
    "ko": "카페·간식",
    "en": "Cafe",
    "files": [
-    "LedgerCore.swift:17",
+    "LedgerCore.swift:12",
     "StickerArtBasics.swift:10"
    ],
    "args": [],
