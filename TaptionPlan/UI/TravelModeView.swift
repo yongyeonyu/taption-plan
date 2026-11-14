@@ -1,244 +1,6 @@
 import SwiftUI
 import TaptionPlanStore
 
-/// 지구본 그리기. 나라 경계 자료만으로 그려 인터넷 없이도 같은 그림이 나온다.
-enum TravelGlobeRenderer {
-    struct Pin {
-        var longitude: Double
-        var latitude: Double
-        var label: String
-        /// 그 핀의 일정(누르면 그 일정을 연다)과 이름.
-        var id = ""
-        var title = ""
-    }
-
-    struct Flag {
-        var id = ""
-        var longitude: Double
-        var latitude: Double
-        var text: String
-        /// 0 = 아직 없음, 1 = 꽂힘.
-        var progress: Double
-        var color: Color = TravelInk.actual
-        /// 지난 여행은 옅게.
-        var opacity: Double = 1
-        /// 고른 깃발만 D-Day 이름표를 단다.
-        var showsLabel = true
-    }
-
-    /// 그 깃발이 화면에서 꽂힌 자리. 지구 뒤쪽이면 nil.
-    static func foot(of flag: Flag, camera: TravelGlobeCamera, size: CGSize) -> CGPoint? {
-        let (base, front) = point(camera, center(in: size), flag.longitude, flag.latitude)
-        return front ? base : nil
-    }
-
-    static func center(in size: CGSize) -> CGPoint { CGPoint(x: size.width / 2, y: size.height * 0.54) }
-
-    /// 지도 위 캐릭터(재생 헤드의 시각에 있는 자리).
-    struct Actor {
-        var longitude: Double
-        var latitude: Double
-        var image: Image
-        var facesEast: Bool
-    }
-
-    /// `offset`은 지도 가운데를 옮기는 양: 계획표가 올라오면 시트에 가리지 않는 자리의 가운데로 옮긴다.
-    static func draw(
-        _ context: inout GraphicsContext, size: CGSize, camera: TravelGlobeCamera, highlight: Set<String>,
-        flags: [Flag], pins: [Pin], offset: CGSize = .zero, actor: Actor? = nil,
-        home: SIMD2<Double>? = nil, route: [SIMD2<Double>] = []
-    ) {
-        let base = center(in: size)
-        let center = CGPoint(x: base.x + offset.width, y: base.y + offset.height)
-        let radius = camera.radius
-        let covers = radius > hypot(size.width, size.height)
-        context.fill(Path(CGRect(origin: .zero, size: size)), with: .color(covers ? TravelInk.sea : TravelInk.space))
-        if !covers {
-            context.fill(Path(ellipseIn: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2)), with: .color(TravelInk.sea))
-            if radius < 900 { context.stroke(graticule(camera, center: center), with: .color(TravelInk.grid), lineWidth: 0.5) }
-        }
-        let showsProvinces = radius > 1_800
-        var land = Path(), marked = Path()
-        for region in TravelModeRegions.countries where isVisible(region, camera: camera, center: center, size: size) {
-            if highlight.contains(region.code) {
-                add(region, to: &marked, camera: camera, center: center)
-            } else {
-                add(region, to: &land, camera: camera, center: center)
-            }
-        }
-        context.fill(land, with: .color(TravelInk.land))
-        context.stroke(land, with: .color(TravelInk.border), lineWidth: 0.5)
-        context.fill(marked, with: .color(TravelInk.planTint))
-        context.stroke(marked, with: .color(TravelInk.plan), lineWidth: 1.5)
-        if showsProvinces {
-            var plain = Path(), chosen = Path()
-            for region in TravelModeRegions.provinces where isVisible(region, camera: camera, center: center, size: size) {
-                if highlight.contains(region.code) {
-                    add(region, to: &chosen, camera: camera, center: center)
-                } else {
-                    add(region, to: &plain, camera: camera, center: center)
-                }
-            }
-            context.fill(plain, with: .color(TravelInk.land))
-            context.stroke(plain, with: .color(TravelInk.border), lineWidth: 0.5)
-            context.fill(chosen, with: .color(TravelInk.planTint))
-            context.stroke(chosen, with: .color(TravelInk.plan), lineWidth: 1.5)
-        }
-        if let home { drawHome(&context, home: home, flags: flags, camera: camera, center: center) }
-        drawPins(&context, pins: pins, route: route, camera: camera, center: center)
-        if let actor {
-            let (spot, front) = point(camera, center, actor.longitude, actor.latitude)
-            if front {
-                // 발이 그 자리에 오게 위로 올려 그리고, 서쪽으로 갈 때는 좌우를 뒤집는다.
-                var layer = context
-                layer.translateBy(x: spot.x, y: spot.y - 20)
-                if !actor.facesEast { layer.scaleBy(x: -1, y: 1) }
-                layer.draw(actor.image, in: CGRect(x: -24, y: -24, width: 48, height: 48))
-            }
-        }
-        // 이름표를 단 깃발을 맨 위에 그린다.
-        for flag in flags.sorted(by: { !$0.showsLabel && $1.showsLabel }) where flag.progress > 0 {
-            drawFlag(&context, flag: flag, camera: camera, center: center)
-        }
-    }
-
-    private static func point(_ camera: TravelGlobeCamera, _ center: CGPoint, _ longitude: Double, _ latitude: Double) -> (CGPoint, Bool) {
-        let projected = camera.project(longitude: longitude, latitude: latitude)
-        return (CGPoint(x: center.x + projected.point.x, y: center.y + projected.point.y), projected.isFront)
-    }
-
-    /// 지구 뒤쪽이거나 화면 밖인 곳은 그리지 않는다.
-    private static func isVisible(_ region: TravelGlobeRegion, camera: TravelGlobeCamera, center: CGPoint, size: CGSize) -> Bool {
-        let corners = [(region.west, region.south), (region.west, region.north), (region.east, region.south), (region.east, region.north),
-                       (region.center.x, region.center.y), (region.anchor.x, region.anchor.y)]
-        let projected = corners.map { point(camera, center, $0.0, $0.1) }
-        guard projected.contains(where: { $0.1 }) else { return false }
-        // 넓은 나라는 상자 모서리가 모두 화면 밖이어도 화면을 덮을 수 있어, 충분히 확대했을 때만 화면 밖을 거른다.
-        guard camera.radius > 600, region.east - region.west < 40 else { return true }
-        let margin: CGFloat = 80
-        let xs = projected.map(\.0.x), ys = projected.map(\.0.y)
-        return !((xs.max() ?? 0) < -margin || (xs.min() ?? 0) > size.width + margin || (ys.max() ?? 0) < -margin || (ys.min() ?? 0) > size.height + margin)
-    }
-
-    /// 미리 구한 단위 벡터를 화면의 동·북·앞 방향에 내적해 놓는다(`TravelGlobeCamera.project`와 같은 결과).
-    private static func add(_ region: TravelGlobeRegion, to path: inout Path, camera: TravelGlobeCamera, center: CGPoint) {
-        guard let rings = TravelModeRegions.vectors[region.code] else { return }
-        let lambda = camera.longitude * .pi / 180, phi = camera.latitude * .pi / 180
-        let front = SIMD3(cos(phi) * cos(lambda), cos(phi) * sin(lambda), sin(phi))
-        let east = SIMD3(-sin(lambda), cos(lambda), 0)
-        let north = SIMD3(-sin(phi) * cos(lambda), -sin(phi) * sin(lambda), cos(phi))
-        let radius = camera.radius
-        let spans = TravelModeRegions.spans[region.code] ?? []
-        // 화면에서 1.5pt보다 작은 섬은 건너뛴다(지구본일 때 작은 섬 수백 개가 그리는 시간을 차지한다).
-        let smallest = 1.5 / (radius * .pi / 180)
-        for (index, ring) in rings.enumerated() {
-            if index > 0, index < spans.count, spans[index] < smallest { continue }
-            var points: [CGPoint] = []
-            points.reserveCapacity(ring.count)
-            for vector in ring {
-                var x = (vector * east).sum(), y = -(vector * north).sum()
-                if (vector * front).sum() < 0 {
-                    let length = (x * x + y * y).squareRoot()
-                    if length > 0 {
-                        x /= length
-                        y /= length
-                    }
-                }
-                points.append(CGPoint(x: center.x + x * radius, y: center.y + y * radius))
-            }
-            path.addLines(points)
-            path.closeSubpath()
-        }
-    }
-
-    private static func graticule(_ camera: TravelGlobeCamera, center: CGPoint) -> Path {
-        var path = Path()
-        func line(_ points: [(Double, Double)]) {
-            var drawing = false
-            for value in points {
-                let (location, front) = point(camera, center, value.0, value.1)
-                if front {
-                    if drawing { path.addLine(to: location) } else { path.move(to: location); drawing = true }
-                } else {
-                    drawing = false
-                }
-            }
-        }
-        for longitude in stride(from: -180.0, to: 180.0, by: 30) { line(stride(from: -80.0, through: 80.0, by: 5).map { (longitude, $0) }) }
-        for latitude in stride(from: -60.0, through: 60.0, by: 30) { line(stride(from: -180.0, through: 180.0, by: 5).map { ($0, latitude) }) }
-        return path
-    }
-
-    /// 집 자리(집 아이콘)와, 집에서 여행지마다 가는 가는 점선(대표 지시: 점선·1pt·80%).
-    private static func drawHome(_ context: inout GraphicsContext, home: SIMD2<Double>, flags: [Flag], camera: TravelGlobeCamera, center: CGPoint) {
-        let (spot, front) = point(camera, center, home.x, home.y)
-        guard front else { return }
-        for flag in flags {
-            let (end, visible) = point(camera, center, flag.longitude, flag.latitude)
-            guard visible else { continue }
-            var line = Path()
-            line.move(to: spot)
-            line.addLine(to: end)
-            context.stroke(line, with: .color(TravelInk.plan.opacity(0.8)), style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
-        }
-        let rect = CGRect(x: spot.x - 11, y: spot.y - 11, width: 22, height: 22)
-        context.fill(Path(ellipseIn: rect), with: .color(TravelInk.land))
-        context.stroke(Path(ellipseIn: rect), with: .color(TravelInk.plan), lineWidth: 1.5)
-        context.draw(Image(systemName: "house.fill").resizable(), in: rect.insetBy(dx: 5, dy: 5.5), style: FillStyle())
-    }
-
-    /// `route`가 있으면(길찾기로 받은 길) 핀을 곧게 잇는 대신 그 길을 그린다.
-    private static func drawPins(_ context: inout GraphicsContext, pins: [Pin], route points: [SIMD2<Double>] = [], camera: TravelGlobeCamera, center: CGPoint) {
-        let places = pins.map { (point(camera, center, $0.longitude, $0.latitude), $0.label) }.filter { $0.0.1 }
-        guard !places.isEmpty else { return }
-        var route = Path()
-        if points.count > 1 {
-            var isDrawing = false
-            for spot in points {
-                let (projected, front) = point(camera, center, spot.x, spot.y)
-                if front { if isDrawing { route.addLine(to: projected) } else { route.move(to: projected) } }
-                isDrawing = front
-            }
-        } else {
-            for (index, place) in places.enumerated() {
-                if index == 0 { route.move(to: place.0.0) } else { route.addLine(to: place.0.0) }
-            }
-        }
-        context.stroke(route, with: .color(TravelInk.plan), style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round, dash: [6, 5]))
-        for place in places {
-            let rect = CGRect(x: place.0.0.x - 9, y: place.0.0.y - 9, width: 18, height: 18)
-            context.fill(Path(ellipseIn: rect), with: .color(TravelInk.plan))
-            context.stroke(Path(ellipseIn: rect), with: .color(TravelInk.land), lineWidth: 1.5)
-            context.draw(Text(place.1).font(.system(size: 11, weight: .medium)).foregroundStyle(TravelInk.land), at: place.0.0)
-        }
-    }
-
-    private static func drawFlag(_ context: inout GraphicsContext, flag: Flag, camera: TravelGlobeCamera, center: CGPoint) {
-        let (base, front) = point(camera, center, flag.longitude, flag.latitude)
-        guard front else { return }
-        var layer = context
-        layer.opacity = min(1, flag.progress * 2) * flag.opacity
-        let foot = CGPoint(x: base.x, y: base.y - (1 - flag.progress) * 60)
-        var pole = Path()
-        pole.move(to: foot)
-        pole.addLine(to: CGPoint(x: foot.x, y: foot.y - 32))
-        layer.stroke(pole, with: .color(flag.color), lineWidth: 2)
-        var cloth = Path()
-        cloth.move(to: CGPoint(x: foot.x, y: foot.y - 32))
-        cloth.addLine(to: CGPoint(x: foot.x + 20, y: foot.y - 26))
-        cloth.addLine(to: CGPoint(x: foot.x, y: foot.y - 20))
-        cloth.closeSubpath()
-        layer.fill(cloth, with: .color(flag.color))
-        layer.fill(Path(ellipseIn: CGRect(x: foot.x - 3, y: foot.y - 3, width: 6, height: 6)), with: .color(flag.color))
-        guard flag.showsLabel, flag.progress >= 1, !flag.text.isEmpty else { return }
-        let label = layer.resolve(Text(flag.text).font(.system(size: 12, weight: .medium)).foregroundStyle(TravelInk.land))
-        let textSize = label.measure(in: CGSize(width: 200, height: 40))
-        let pill = CGRect(x: foot.x + 24, y: foot.y - 36, width: textSize.width + 16, height: textSize.height + 6)
-        layer.fill(Path(roundedRect: pill, cornerRadius: pill.height / 2), with: .color(flag.color))
-        layer.draw(label, at: CGPoint(x: pill.midX, y: pill.midY))
-    }
-}
-
 /// 여행 모드(TVB1112A01): 지구본과 여행 카드 → 누르면 지구가 돌고 깃발이 꽂히고 확대 → 여행 화면.
 struct TravelModeView: View {
     @Bindable var model: AppModel
@@ -274,6 +36,8 @@ struct TravelModeView: View {
     @State private var placePhotos = TravelPlacePhotoStore()
     @State private var planHistory = TravelPlanHistory()
     @State private var deleteCandidate: TravelTripDirectory.Entry?
+    /// 여행 공유 시트(TSH1114A26). 내용은 `TripShareHost`가 띄운다.
+    @State private var shareRoute: TripShareRoute?
     /// 재생 헤드의 시각(그날 0시부터의 분). nil이면 처음 자리(오늘은 지금, 아니면 첫 일정 시작).
     @State private var playMinute: Int?
     /// 고른 고양이 그림(한 번 만들어 둔다).
@@ -424,6 +188,7 @@ struct TravelModeView: View {
         .sheet(item: $columnsTrip) { TravelColumnEditorSheet(model: model, language: language, trip: $0) }
         .sheet(item: $entryTarget) { target in TravelQuickEntrySheet(model: model, language: language, target: target) { planHistory.record($0) } }
         .sheet(item: $expenseDraft) { draft in LedgerEntryForm(language: language, entry: draft, members: draft.tripID.flatMap(book.trip)?.members) }
+        .tripShare(model: model, language: language, openedID: openedID, route: $shareRoute)
         .preferredColorScheme(openedID == nil && flight == nil ? .dark : .light)
         .accessibilityIdentifier("travelModeScreen")
     }
@@ -798,6 +563,15 @@ struct TravelModeView: View {
                 Text(language.text("여행", "Trips")).font(.headline).padding(.horizontal, 12).frame(height: 34)
                     .background(TravelInk.panel, in: Capsule())
                     .overlay { Capsule().stroke(TravelInk.border, lineWidth: 1) }
+                if TripShareStore.shared.isAvailable {
+                    Button { shareRoute = .join(nil) } label: {
+                        Image(systemName: "person.badge.plus").font(.system(size: 16, weight: .medium)).frame(width: 40, height: 40)
+                            .background(TravelInk.panel, in: Circle())
+                            .overlay { Circle().stroke(TravelInk.border, lineWidth: 1) }
+                    }
+                    .accessibilityLabel(language.text("초대로 참여", "Join with an invite"))
+                    .accessibilityIdentifier("travelShareJoin")
+                }
             }
             ScrollView {
                 VStack(alignment: .leading, spacing: 8) {
@@ -833,6 +607,7 @@ struct TravelModeView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title(entry)).font(.subheadline.weight(.medium)).lineLimit(1)
                     Text(length(entry)).font(.caption).opacity(0.8)
+                    TripShareMemberBadge(tripID: entry.id, language: language)
                     if let money = book.trip(entry.id).map({ TravelPlanSpend.headline(LedgerTripMath.sheet($0, entries: book.entries)) }) {
                         let amount = LedgerMoney.text(money.amount, language: language)
                         Text(money.isLeftover ? language.runtimeText("남은 돈 \(amount)", "Left \(amount)") : language.runtimeText("쓴 돈 \(amount)", "Spent \(amount)"))
@@ -864,7 +639,9 @@ struct TravelModeView: View {
                 Button(language.text("기본 색으로", "Use default color")) { setFlagColor(nil, for: entry) }
                 Divider()
             }
-            Button(language.text("여행 고치기", "Edit trip"), systemImage: "pencil") { newTripDraft = .init(isDayTrip: entry.isDayTrip, editing: entry.trip) }
+            Button(language.text("여행 고치기", "Edit trip"), systemImage: "pencil") {
+                shareEdit(entry, .tripInfo) { newTripDraft = .init(isDayTrip: entry.isDayTrip, editing: entry.trip) }
+            }
             Button(language.text("여행 지우기", "Delete trip"), systemImage: "trash", role: .destructive) { deleteCandidate = entry }
         }
         .accessibilityIdentifier("travelTripCard-\(entry.id)")
@@ -920,7 +697,7 @@ struct TravelModeView: View {
                 .accessibilityLabel(language.text("여행 목록으로", "Back to trips"))
                 .accessibilityIdentifier("travelTripBack")
                 // Trip 원본처럼 여행 이름을 누르면 여행 속성(이름·기간·나라)을 고친다.
-                Button { newTripDraft = .init(isDayTrip: entry.isDayTrip, editing: entry.trip) } label: {
+                Button { shareEdit(entry, .tripInfo) { newTripDraft = .init(isDayTrip: entry.isDayTrip, editing: entry.trip) } } label: {
                     VStack(alignment: .leading, spacing: 1) {
                         Text(title(entry)).font(.headline).lineLimit(1)
                         Text(subtitle(entry)).font(.caption).opacity(0.8)
@@ -930,6 +707,15 @@ struct TravelModeView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityHint(language.text("여행 고치기", "Edit trip"))
+                // 여행 공유(TSH1114A26). 서버 주소가 없는 빌드에서는 숨긴다.
+                if TripShareStore.shared.isAvailable, entry.isStored {
+                    Button { shareRoute = .panel(tripID: entry.id) } label: {
+                        Image(systemName: "person.2.fill").font(.system(size: 15, weight: .medium)).frame(width: 40, height: 40)
+                            .background(TravelInk.land, in: Circle())
+                    }
+                    .accessibilityLabel(language.text("여행 공유", "Share trip"))
+                    .accessibilityIdentifier("travelTripShare")
+                }
                 // 일상 화면으로 바로 나간다.
                 Button { exitToDaily(entry) } label: {
                     Image(systemName: "house.fill").font(.system(size: 16, weight: .medium)).frame(width: 40, height: 40)
@@ -942,6 +728,8 @@ struct TravelModeView: View {
             .background(TravelInk.panel, in: RoundedRectangle(cornerRadius: TaptionCorner.large))
             .overlay { RoundedRectangle(cornerRadius: TaptionCorner.large).stroke(TravelInk.border, lineWidth: 1) }
             moneyBar(entry)
+            TripShareStatusBand(language: language, tripID: entry.id)
+            TripShareNoticeBand(model: model, language: language, tripID: entry.id)
         }
         .foregroundStyle(TravelInk.plan)
         // 넓은 화면에서 줄이 끝까지 늘어나지 않게 왼쪽에 묶는다.
@@ -987,14 +775,21 @@ struct TravelModeView: View {
         let slot = TravelCoursePlanner.nextSlot(blocks: table.blocks, kind: kind.rawValue, nowMinute: table.nowMinute)
         let target = TravelQuickEntrySheet.Target.new(trip: entry.trip, dayKey: key, dayLabel: "", startMinute: slot.start, kind: kind)
         let start = TravelQuickEntrySheet.date(dayKey: key, minute: slot.start, offsetSeconds: target.offsetSeconds)
-        Task {
-            guard let id = await model.addTripItem(
-                tripID: entry.id, kind: kind, title: name, start: start, end: start.addingTimeInterval(TimeInterval(slot.duration * 60)),
-                offsetSeconds: target.offsetSeconds, place: place
-            ), let added = (model.settings.travelTripItems ?? []).first(where: { $0.tripID == entry.id && $0.itemID == id }) else { return }
-            planHistory.record(.existence(added, place: place, exists: true))
-            playMinute = slot.start
+        shareEdit(entry, .addStop(dayKey: key)) {
+            Task {
+                guard let id = await model.addTripItem(
+                    tripID: entry.id, kind: kind, title: name, start: start, end: start.addingTimeInterval(TimeInterval(slot.duration * 60)),
+                    offsetSeconds: target.offsetSeconds, place: place
+                ), let added = (model.settings.travelTripItems ?? []).first(where: { $0.tripID == entry.id && $0.itemID == id }) else { return }
+                planHistory.record(.existence(added, place: place, exists: true))
+                playMinute = slot.start
+            }
         }
+    }
+
+    /// 공유 여행의 편집은 공유 편집기가 먼저 받는다(TSH1114A26). 공유하지 않는 여행은 `local`을 그대로 한다.
+    private func shareEdit(_ entry: TravelTripDirectory.Entry, _ edit: TripSharePlanEdit, _ local: @escaping () -> Void) {
+        TripSharePlanEditor.route(model: model, tripID: entry.id, edit: edit, local: local)
     }
 
     // MARK: 계획표와 시간 막대(같은 날·같은 자료를 본다)
@@ -1041,7 +836,7 @@ struct TravelModeView: View {
                         table: table(entry), items: (model.settings.travelTripItems ?? []).filter { $0.tripID == entry.id }, language: language,
                         playMinute: currentPlayMinute(entry), photos: model.photoService, selectedID: $planSelectedID,
                         onScrub: { playMinute = $0 }, onEdit: { editEntry(entry, itemID: $0.id) }, onAddStop: { courseAdding = entry }, onAddDetail: { addEntry(entry, detailOf: $0) },
-                        onReorder: { step in Task { await model.applyTravelHistory(step); planHistory.record(step) } }, onDelete: { deleteEntry(entry, itemID: $0.id) },
+                        onReorder: { step in shareEdit(entry, .reorder(dayKey: dayKey(entry))) { Task { await model.applyTravelHistory(step); planHistory.record(step) } } }, onDelete: { deleteEntry(entry, itemID: $0.id) },
                         placePhotos: placePhotos.photos
                     )
                     .task(id: model.settings.travelPlanStops.count) {
@@ -1069,7 +864,8 @@ struct TravelModeView: View {
                     .padding(.horizontal, 8)
                 }
             }
-            if isPlanUp, planHistory.tripID == entry.id, planHistory.canUndo || planHistory.canRedo {
+            // 공유 여행에서는 되돌리기를 쓰지 않는다(대표 결정, TSH1114A26).
+            if isPlanUp, planHistory.tripID == entry.id, planHistory.canUndo || planHistory.canRedo, !model.isSharedTrip(entry.id) {
                 TravelPlanHistoryBar(history: planHistory, language: language, onUndo: { applyHistory(planHistory.undo()) }, onRedo: { applyHistory(planHistory.redo()) })
             }
             tripFooter(entry)
@@ -1110,12 +906,12 @@ struct TravelModeView: View {
         target.anchor = TravelModeDestination(trip: entry.trip, stops: model.settings.travelPlanStops).point
         target.duration = detail?.duration ?? cell?.chosenDuration
         target.parentItemID = parent?.id
-        entryTarget = target
+        shareEdit(entry, .add(dayKey: key, parentItemID: parent?.id)) { entryTarget = target }
     }
 
     /// 계획표에서 끌어 옮기거나 길이를 바꾼 것을 저장하고, 되돌릴 수 있게 남긴다.
     private func editTimes(_ entry: TravelTripDirectory.Entry, block: TravelPlanTableModel.Block, move: Int = 0, resize: Int = 0) {
-        Task {
+        shareEdit(entry, move != 0 ? .move(itemID: block.id, minutes: move) : .resize(itemID: block.id, minutes: resize)) { Task {
             let done = move != 0
                 ? await model.moveTripItem(tripID: entry.id, itemID: block.id, by: TimeInterval(move * 60))
                 : await model.resizeTripItem(tripID: entry.id, itemID: block.id, endDelta: TimeInterval(resize * 60))
@@ -1127,18 +923,20 @@ struct TravelModeView: View {
                     summary: block.title + " " + TravelQuickEntrySheet.clock(start) + "–" + TravelQuickEntrySheet.clock(end)
                 ))
             }
-        }
+        } }
     }
 
     /// 되돌리기·다시 하기에서 나온 한 걸음을 저장소에 반영한다.
     private func applyHistory(_ step: TravelPlanHistory.Step?) {
         guard let step else { return }
-        Task { await model.applyTravelHistory(step) }
+        TripSharePlanEditor.route(model: model, tripID: step.tripID, edit: .history) { Task { await model.applyTravelHistory(step) } }
     }
 
     /// 선택 막대에서 지움: 되돌릴 수 있게 그 일정과 장소를 쌓아 둔다.
     private func deleteEntry(_ entry: TravelTripDirectory.Entry, itemID: String) {
-        Task { if let step = await model.deleteTripItemWithDetails(tripID: entry.id, itemID: itemID) { planHistory.record(step) } }
+        shareEdit(entry, .delete(itemID: itemID)) {
+            Task { if let step = await model.deleteTripItemWithDetails(tripID: entry.id, itemID: itemID) { planHistory.record(step) } }
+        }
     }
 
     private func editEntry(_ entry: TravelTripDirectory.Entry, itemID: String) {
@@ -1148,7 +946,7 @@ struct TravelModeView: View {
         if let stop = model.settings.travelPlanStops.first(where: { $0.tripID == entry.id && $0.itemID == itemID }) {
             target.place = TravelItemPlace(name: stop.title, latitude: stop.latitude, longitude: stop.longitude)
         }
-        entryTarget = target
+        shareEdit(entry, .open(itemID: itemID)) { entryTarget = target }
     }
 
     private func dayChips(_ entry: TravelTripDirectory.Entry) -> TravelDayChips {

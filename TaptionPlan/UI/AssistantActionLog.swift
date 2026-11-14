@@ -279,6 +279,7 @@ enum AssistantRejection {
         case "edit_failed", "memo_failed", "schedule_failed", "goal_failed", "trip_failed":
             language.text("앱에서 저장하지 못했어요", "The app couldn't save it")
         case "no_change": language.text("바꿀 것이 없었어요", "There was nothing to change")
+        case "shared_trip": language.text("함께 쓰는 여행이라 AI가 바꾸지 않았어요", "This trip is shared, so the assistant didn't change it")
         case "duplicate": language.text("이미 있는 내용이에요", "It was already there")
         case "unknown_category": language.text("없는 분류예요", "That category doesn't exist")
         case _ where reason.hasPrefix("no_"): language.text("고칠 대상을 찾지 못했어요", "Couldn't find the item to change")

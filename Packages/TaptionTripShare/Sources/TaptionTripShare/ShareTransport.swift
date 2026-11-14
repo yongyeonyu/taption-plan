@@ -117,7 +117,7 @@ public struct URLSessionShareTransport: ShareTransport {
 }
 
 /// `URLSessionWebSocketTask`를 감싼 소켓.
-final class URLSessionShareSocket: ShareSocket, @unchecked Sendable {
+final class URLSessionShareSocket: ShareSocket {
     private let task: URLSessionWebSocketTask
 
     init(task: URLSessionWebSocketTask) { self.task = task }

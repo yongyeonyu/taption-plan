@@ -214,6 +214,7 @@ extension AppModel {
     private func addAssistantTripStop(
         title: String, day: Date, coordinate: AssistantCoordinate?, status: TripItemStatus?, tripID: String?
     ) async -> AssistantEditResult {
+        if let tripID, isSharedTrip(tripID) { return .rejected("shared_trip") }
         let sameTrip = snapshot.settings.travelPlanStops.filter { tripID != nil && $0.tripID == tripID }
         if let tripID, sameTrip.isEmpty, snapshot.settings.travelTripItems?.contains(where: { $0.tripID == tripID }) != true {
             return .rejected("no_trip")
@@ -236,6 +237,7 @@ extension AppModel {
     /// 저장하지 못하면 편집 전으로 돌리고, 바뀐 값을 확인한 뒤에만 반영했다고 알린다(REV1110A06).
     private func updateAssistantTripStop(_ stopID: String, title: String?, day: Date?, order: Int?, status: TripItemStatus?) async -> AssistantEditResult {
         guard acceptsDataMutation(), let stop = assistantStop(stopID) else { return .rejected("no_stop") }
+        if let tripID = stop.tripID, isSharedTrip(tripID) { return .rejected("shared_trip") }
         let calendar = Calendar.autoupdatingCurrent
         let previous = snapshot
         var stops = snapshot.settings.travelPlanStops
@@ -266,6 +268,7 @@ extension AppModel {
     }
 
     private func setAssistantTripStatus(tripID: String, itemID: String, status: TripItemStatus) async -> AssistantEditResult {
+        guard !isSharedTrip(tripID) else { return .rejected("shared_trip") }
         let items = snapshot.settings.travelTripItems ?? []
         guard let item = items.first(where: { $0.tripID == tripID && $0.itemID == itemID }) else { return .rejected("no_trip_item") }
         let before = TripItemStatus(raw: item.status).title(.current)
@@ -519,6 +522,7 @@ extension AppModel {
             return AssistantEditResult(after: describe(trip))
         case let .updateTrip(tripID, title, start, end):
             guard let old = trips.first(where: { $0.id == tripID }) else { return .rejected("no_trip") }
+            guard !isSharedTrip(tripID) else { return .rejected("shared_trip") }
             var trip = old
             if let title { trip.title = title }
             if start != nil || end != nil {
@@ -546,6 +550,7 @@ extension AppModel {
             return AssistantEditResult(before: describe(old), after: describe(trip))
         case let .deleteTrip(tripID):
             guard let old = trips.first(where: { $0.id == tripID }) else { return .rejected("no_trip") }
+            guard !isSharedTrip(tripID) else { return .rejected("shared_trip") }
             guard await deleteTravelTrip(tripID) else { return .rejected("edit_failed") }
             return AssistantEditResult(before: describe(old), after: language.text("지움", "Deleted"))
         default:

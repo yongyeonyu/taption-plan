@@ -80,7 +80,8 @@ extension AppModel {
 
     /// 핀이 없는 일정(수면·좌표 없음)도 일정 번호로 상태를 바꾼다. 이어진 핀이 있으면 함께 바꾼다(REV1110A06).
     func setTripItemStatus(_ status: TripItemStatus, tripID: String, itemID: String) {
-        guard acceptsDataMutation() else { return }
+        // 함께 쓰는 여행의 상태는 공유 편집기로만 바꾼다(TSH1114A26).
+        guard acceptsDataMutation(), !rejectsSharedTripEdit(tripID) else { return }
         var items = snapshot.settings.travelTripItems ?? []
         var stops = snapshot.settings.travelPlanStops
         var changed = false

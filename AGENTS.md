@@ -52,6 +52,7 @@
 - `docs/TRIP_PORT_ANALYSIS.md`: Taption Trip 여행·정산 기능 이식 분석과 단위 U1~U13(TRP1111A01).
 - `docs/AI_RELAY_PLAN.md`: 외부 AI ⇄ 중계 서버 ⇄ 앱 강화 계획 — 패키지 구조, 규칙 저장소, 요청·회신 파이프라인, 동작 확장, 단계 P0~P13과 진행 상태, 패키지 이동의 남은 순서, 여행 공유 설계안(AIX1114A01).
 - `docs/TRIP_SHARE_PROTOCOL.md`: 여행 공유 통신 규약 v1 — 키 유도·시험 벡터, 암호문 형식, HTTP 경로·WebSocket 메시지, 잠금, 권한 표, 한도, 키 교체, 앱 구현 체크리스트(TSH1114A26).
+- `Packages/TaptionTripShare`·`TaptionPlan/Core/TripShare*.swift`: 여행 공유의 기기 쪽 핵심과 앱 토대(창구·곁 파일·변환·가드). 위치는 `DEVELOPMENT.md`의 소스 표 「여행 공유」 줄.
 - `docs/ACCURACY_PLAN.md`: 분류 정확도 검토(약한 곳 10가지)와 제안 A~D, 카카오 지도 동일 화면 단계 K1~K5(ACC1114A01).
 - `docs/HOME_EVOLUTION_LIST.md`: 집 성장 366일 건축물 목록(생성물).
 - `docs/CLIENT_REPORT.md`·`docs/UX_ARCHITECTURE.md`·`docs/DESIGN_SYSTEM.md`: 2026-10-24 UX 진단·설계 자료.

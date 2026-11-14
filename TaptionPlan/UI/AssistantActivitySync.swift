@@ -312,6 +312,7 @@ extension AssistantOperations.AddTripItem: AssistantOperation {
         let known = (settings.travelTrips ?? []).contains { $0.id == tripID } || (settings.travelTripItems ?? []).contains { $0.tripID == tripID }
             || settings.travelPlanStops.contains { $0.tripID == tripID }
         guard known else { return .rejected("no_trip") }
+        guard !model.isSharedTrip(tripID) else { return .rejected("shared_trip") }
         guard let itemID = await model.addTripItem(tripID: tripID, kind: kind, title: title, start: start, end: end, offsetSeconds: offset, note: note),
               let item = model.snapshot.settings.travelTripItems?.first(where: { $0.tripID == tripID && $0.itemID == itemID })
         else { return .rejected("trip_failed") }
@@ -325,6 +326,7 @@ extension AssistantOperations.UpdateTripItem: AssistantOperation {
     func apply(host: AssistantOperationHost) async -> AssistantEditResult {
         let model = host.model
         func current() -> TravelTripItem? { model.snapshot.settings.travelTripItems?.first { $0.tripID == tripID && $0.itemID == itemID } }
+        guard !model.isSharedTrip(tripID) else { return .rejected("shared_trip") }
         guard let item = current() else { return .rejected("no_trip_item") }
         let newStart = start ?? item.start
         let newEnd = end ?? (start == nil ? item.end : newStart.addingTimeInterval(item.end.timeIntervalSince(item.start)))
@@ -343,6 +345,7 @@ extension AssistantOperations.DeleteTripItem: AssistantOperation {
     func apply(host: AssistantOperationHost) async -> AssistantEditResult {
         let model = host.model
         guard let item = model.snapshot.settings.travelTripItems?.first(where: { $0.tripID == tripID && $0.itemID == itemID }) else { return .rejected("no_trip_item") }
+        guard !model.isSharedTrip(tripID) else { return .rejected("shared_trip") }
         guard await model.deleteTripItemWithDetails(tripID: tripID, itemID: itemID) != nil else { return .rejected("trip_failed") }
         return AssistantEditResult(before: AssistantOperations.describe(item), after: host.deleted)
     }

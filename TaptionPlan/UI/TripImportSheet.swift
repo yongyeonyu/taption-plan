@@ -7,7 +7,8 @@ extension AppModel {
     /// 반영하지 못하면 false. 그때는 서버에 도착한 계획을 지우지 않는다(REV1110A06).
     @discardableResult
     func applyTripImport(_ incoming: TripImportPlan) async -> Bool {
-        guard acceptsDataMutation() else { return false }
+        // 함께 쓰는 여행은 통째로 갈아 끼우지 않는다(TSH1114A26).
+        guard acceptsDataMutation(), !rejectsSharedTripEdit(incoming.tripID) else { return false }
         // 다시 가져온 계획에 상태가 없으면 사용자가 정한 상태를 지킨다.
         let plan = incoming.keepingUserStatus(from: snapshot.settings.travelTripItems ?? [])
         // 핀이 없는 일정(수면·좌표 없음)도 계획이 있으니 여행 일정 쪽 planID까지 함께 지운다.
@@ -91,6 +92,8 @@ extension AppModel {
     func shiftTravelTrip(_ tripID: String, byDays days: Int, calendar: Calendar = .autoupdatingCurrent) async -> Bool {
         guard acceptsDataMutation(), !tripID.isEmpty else { return false }
         guard days != 0 else { return true }
+        // 함께 쓰는 여행의 날짜를 통째로 옮기지 않는다(TSH1114A26).
+        guard !rejectsSharedTripEdit(tripID) else { return false }
         let delta = TimeInterval(days * 86_400)
         var items = snapshot.settings.travelTripItems ?? []
         var kept: Set<String> = []
@@ -123,7 +126,8 @@ extension AppModel {
     /// 여행을 지운다: 그 여행의 일정과 일상 쪽 계획 기록, 지도 핀까지. 가계부의 여행 장부는 그대로 둔다.
     @discardableResult
     func deleteTravelTrip(_ tripID: String) async -> Bool {
-        guard acceptsDataMutation(), !tripID.isEmpty else { return false }
+        // 함께 쓰는 여행이면 주인은 방 처리, 참여자는 나가기를 먼저 한다(TSH1114A26).
+        guard acceptsDataMutation(), !tripID.isEmpty, await TripShareOwnerActions.tripWillDelete(model: self, tripID: tripID) else { return false }
         let items = snapshot.settings.travelTripItems ?? []
         let planIDs = Set(items.filter { $0.tripID == tripID }.compactMap(\.planID)
             + snapshot.settings.travelPlanStops.filter { $0.tripID == tripID }.compactMap(\.planID))

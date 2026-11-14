@@ -165,6 +165,11 @@ extension AppModel {
     /// 예전에는 `selectedTab`을 바꿨지만 지도 우선 화면에는 탭이 없다. 지금은
     /// 날짜를 옮기고 `pendingMapHomeRoute`에 "무엇을 열지"를 남긴다.
     func openDeepLink(_ url: URL) async {
+        // 여행 공유 초대(TSH1114A26)는 받은함에 두고 끝낸다. 여행 화면이 꺼내 입장 시트를 연다.
+        if url.host == TripShareEnvironment.inviteHost {
+            if TripShareInbox.shared.receive(url) { detail = nil }
+            return
+        }
         guard let link = TaptionDeepLink(url: url) else { return }
         let planStart: Date?
         if case .plan(let planID) = link {

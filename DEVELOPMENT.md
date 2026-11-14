@@ -36,6 +36,7 @@
 | 분류 알고리즘(분류표 v4·키워드·창 특징·수단 점수·HMM·구간·장소·맥락·수면·파생 지표) | `Packages/TaptionClassifierEngine/`, 앱 쪽 어댑터는 `TaptionActivityEngineAdapter.swift`의 `ClassifierAdapter`·`ClassificationRecomputeCoordinator` |
 | Watch·위젯 | `TaptionPlanWatch/`, `TaptionPlanWidget/`(일정 위젯·`SensorCollectionLiveActivity`·`TaptionPlanLiveActivity`·고양이는 앱 아틀라스), `TaptionPlanWatchWidget/` |
 | 워치 공유 모델·언어 설정 | `Packages/TaptionWatchSync/`(명령 프로토콜·측정값·outbox/spool·행동 규칙·`AppLanguagePreference`, `Core/WatchSyncModels.swift`가 네 target에 다시 내보낸다), CoreML 행동 모델은 `TaptionWatchBehaviorML`(워치 앱만 링크), replay·개인화는 `TaptionPlan/Core/WatchActivityReplay.swift` |
+| 여행 공유(TSH1114A26) | 규약·암호·세션·정산은 `Packages/TaptionTripShare/`(앱·화면·저장소를 모름, 시험용 가짜 서버는 `TaptionTripShareTesting`으로 앱 시험 target에만 링크). 앱 쪽 토대는 `TaptionPlan/Core/TripShareEnvironment.swift`(전송·키체인 `com.taption.plan.tripshare`·앱 키), `TripShareStore.swift`(단일 창구), `TripShareSidecar.swift`(곁 파일 `Application Support/TripShare/<roomId>.json`, 백업 제외), `TripShareMapping.swift`(순수 변환·id), `UX/AppModel+TripShare.swift`(한 번에 투영·`isSharedTrip` 가드). 화면은 `TaptionPlan/UI/TripShare*.swift`. SQLite 스키마·저장 포맷은 바꾸지 않고 좌표는 방에 올리지 않습니다 |
 | 회귀 테스트 | `TaptionPlanTests/`, 각 package의 `Tests/` |
 
 위젯 target은 `PlanningEngine.swift`를 컴파일하지 않습니다. 위젯이 쓰는 엔진은 앱·위젯 공용 `Core/WidgetSharedEngines.swift`에 둡니다. 저장소 소스는 위젯 인텐트가 DB에 직접 쓰므로 위젯에도 컴파일됩니다.

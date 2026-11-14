@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 import TaptionTripShare
 
 /// 시험용 가짜 서버: 메모리 안의 방들. 규약(`docs/TRIP_SHARE_PROTOCOL.md`)의 요청·방송·잠금·권한·충돌을 흉내 낸다.
@@ -624,19 +625,27 @@ public struct ShareFakeTransport: ShareTransport {
 }
 
 /// 가짜 소켓. 서버가 넣은 글자를 기기가 꺼내 간다.
-final class ShareFakeSocket: ShareSocket, @unchecked Sendable {
+final class ShareFakeSocket: ShareSocket {
+    private struct State {
+        var member = 0
+        var queue: [String] = []
+        var waiter: CheckedContinuation<String, any Error>?
+        var closed: ShareSocketClosed?
+    }
+
     private let server: ShareFakeServer
     let roomID: String
-    /// 서버 액터 안에서만 만진다.
-    var member = 0
-    private let lock = NSLock()
-    private var queue: [String] = []
-    private var waiter: CheckedContinuation<String, any Error>?
-    private var closed: ShareSocketClosed?
+    private let state = Mutex(State())
 
     init(server: ShareFakeServer, roomID: String) {
         self.server = server
         self.roomID = roomID
+    }
+
+    /// 서버 액터가 정한다.
+    var member: Int {
+        get { state.withLock { $0.member } }
+        set { state.withLock { $0.member = newValue } }
     }
 
     func send(_ text: String) async throws {
@@ -660,27 +669,27 @@ final class ShareFakeSocket: ShareSocket, @unchecked Sendable {
     }
 
     private var isClosed: Bool {
-        lock.withLock { closed != nil }
+        state.withLock { $0.closed != nil }
     }
 
     /// 쌓인 글자가 있으면 그것을, 닫혔으면 오류를, 아니면 기다리게 해 두고 nil.
     private func take(or continuation: CheckedContinuation<String, any Error>) -> Result<String?, ShareSocketClosed> {
-        lock.withLock {
-            if !queue.isEmpty { return .success(queue.removeFirst()) }
-            if let closed { return .failure(closed) }
-            waiter = continuation
+        state.withLock { state in
+            if !state.queue.isEmpty { return .success(state.queue.removeFirst()) }
+            if let closed = state.closed { return .failure(closed) }
+            state.waiter = continuation
             return .success(nil)
         }
     }
 
     func push(_ text: String) {
-        let waiting: CheckedContinuation<String, any Error>? = lock.withLock {
-            guard closed == nil else { return nil }
-            guard let waiter else {
-                queue.append(text)
+        let waiting: CheckedContinuation<String, any Error>? = state.withLock { state in
+            guard state.closed == nil else { return nil }
+            guard let waiter = state.waiter else {
+                state.queue.append(text)
                 return nil
             }
-            self.waiter = nil
+            state.waiter = nil
             return waiter
         }
         waiting?.resume(returning: text)
@@ -689,11 +698,11 @@ final class ShareFakeSocket: ShareSocket, @unchecked Sendable {
     /// 쌓인 글자는 마저 읽히고, 그다음 읽기가 닫힘으로 끝난다.
     func shut(code: Int) {
         let failure = ShareSocketClosed(code: code)
-        let waiting: CheckedContinuation<String, any Error>? = lock.withLock {
-            guard closed == nil else { return nil }
-            closed = failure
-            defer { waiter = nil }
-            return waiter
+        let waiting: CheckedContinuation<String, any Error>? = state.withLock { state in
+            guard state.closed == nil else { return nil }
+            state.closed = failure
+            defer { state.waiter = nil }
+            return state.waiter
         }
         waiting?.resume(throwing: failure)
     }
