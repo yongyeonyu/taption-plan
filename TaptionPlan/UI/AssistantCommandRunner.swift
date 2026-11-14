@@ -424,21 +424,25 @@ struct AssistantOperationSpec: Sendable {
     var startsOff = false
     /// 바꾸는 기존 항목 수(20개 확인 규칙). 새로 더하기만 하면 0.
     var changes = 1
-    var title: @Sendable (MapHomeLanguage) -> String
+    var title: @Sendable (AppLanguagePreference.ResolvedLanguage) -> String
     /// 연결 안내의 한 줄: 동작 이름 뒤에 오는 칸 보기와 설명.
     var guide: String
 }
 
-/// 등록부 동작 하나. 읽기(`init?`)에서 서버와 같은 규칙으로 다시 보고, `apply`는 화면이 쓰는 함수를 부른다.
-protocol AssistantOperation: Sendable {
+/// 등록부 동작의 읽기 쪽. 읽기(`init?`)에서 서버와 같은 규칙으로 다시 본다. 앱 모델을 모른다.
+protocol AssistantOperationReading: Sendable {
     static var spec: AssistantOperationSpec { get }
     init?(fields: AssistantFields)
-    @MainActor func apply(host: AssistantOperationHost) async -> AssistantEditResult
     var changeCount: Int { get }
 }
 
-extension AssistantOperation {
+extension AssistantOperationReading {
     var changeCount: Int { Self.spec.changes }
+}
+
+/// 등록부 동작 하나. 읽기에 더해 `apply`가 화면이 쓰는 함수를 부른다.
+protocol AssistantOperation: AssistantOperationReading {
+    @MainActor func apply(host: AssistantOperationHost) async -> AssistantEditResult
 }
 
 /// 동작이 쓰는 것들: 앱 모델과 기기 저장소(시험은 따로 만든 것).
@@ -466,7 +470,7 @@ struct AssistantOperationHost {
 struct AssistantParsedOperation: Equatable, Sendable {
     let name: String
     let values: [String: AssistantJSON]
-    let operation: any AssistantOperation
+    let operation: any AssistantOperationReading
 
     static func == (lhs: Self, rhs: Self) -> Bool { lhs.name == rhs.name && lhs.values == rhs.values }
 }
