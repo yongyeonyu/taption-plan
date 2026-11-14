@@ -16,6 +16,8 @@ OCB1114A01·KRT1114A01·AIC1114A01·AIK1114A01·AID1114A01·AIS1114A01. 로그�
 
 INY1114A01(「넣지 않음」 글 거르기): `LedgerTests`·`LedgerMessageAccuracyTests`·`LedgerReviewTests`·`AssistantPhase3Tests` 91건 통과·실패 0(`sim-6.xcresult`), 구조 점검 통과. 대표 기기에서 남아 있던 원인은 재현하지 못했고 추정(예전 빌드에서 정한 글)으로 고쳤다.
 
+RDL1114A01·AIW1114A01·AIM1114A01: `LedgerTests`·`TodoPanelTests`·`AssistantRelayTests`·`AssistantPhase3Tests`·`AssistantCommandEditTests` 101건 통과·실패 0(`sim-8.xcresult`), 구조 점검 통과(이름표 코드를 작은 파일로 옮긴 뒤), 번역 실패 0. 서버 `npm test` 115건 통과(두 연결이 같은 일을 받지 않음·30분 뒤 넘겨받기 포함), `wrangler deploy` 완료. 이름표·연결 뒤 대화 열기는 화면·기기 확인 없음(시뮬레이터에 버스·지하철 기록이 없음).
+
 하지 않은 것: 화면 확인(「OCR」 표시, 스위치와 「연결 끊기」 간격, AI 탭 단추), 기기에서 Claude 앱이 채워진 대화로 열리는지, AI가 실제로 10분 예약을 만드는지.
 
 ## TFB1114A335 · TestFlight 335 (2026-11-14 아침)

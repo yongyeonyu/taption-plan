@@ -45,6 +45,7 @@ final class MapHomeAppleWalkerAnnotation: NSObject, MKAnnotation {
     var stickmanAnimationPhase: Int?
     var speedMetersPerSecond: Double?
     var equippedAccessoryID: String?
+    var rideLabel: String?
 
     init(playback: MapHomeApplePlayback) {
         coordinate = playback.coordinate
@@ -54,6 +55,7 @@ final class MapHomeAppleWalkerAnnotation: NSObject, MKAnnotation {
         phase = playback.phase
         stickmanAnimationPhase = playback.stickmanAnimationPhase
         equippedAccessoryID = playback.equippedAccessoryID
+        rideLabel = playback.rideLabel
         super.init()
     }
 
@@ -70,6 +72,7 @@ final class MapHomeAppleWalkerAnnotation: NSObject, MKAnnotation {
         phase = playback.phase
         stickmanAnimationPhase = playback.stickmanAnimationPhase
         equippedAccessoryID = playback.equippedAccessoryID
+        rideLabel = playback.rideLabel
     }
 }
 

@@ -179,17 +179,25 @@ export async function readTasks(ctx) {
   return tasksReply(await loadTasks(ctx));
 }
 
-// AI가 가져간다. 대기 중인 것을 처리중으로 바꾸고 아직 안 끝난 것을 돌려준다.
+// AI가 가져간다. 대기 중인 것을 처리중으로 바꾸고 이 연결이 맡은 것만 돌려준다.
+// 연결이 여럿이면 먼저 가져간 연결의 일은 다른 연결에게 주지 않는다(AIM1114A01). 30분 넘게 끝내지 않으면 다른 연결이 넘겨받는다.
+export const TASK_CLAIM_MS = 30 * 60_000;
+
 export async function claimTasks(ctx) {
   const tasks = await loadTasks(ctx);
-  const waiting = tasks.filter((task) => task.status === "waiting");
-  if (waiting.length > 0) {
+  const me = ctx.auth?.keyId ?? null;
+  const stale = (task) => ctx.now - Date.parse(task.updatedAt) >= TASK_CLAIM_MS;
+  const mine = tasks.filter((task) => task.status === "waiting"
+    || (task.status === "processing" && (!task.claimedBy || task.claimedBy === me || stale(task))));
+  // 내가 맡은 지 오래된 것도 다시 가져가면 시각을 새로 적는다(그 사이 다른 연결이 넘겨받지 않게).
+  const taken = mine.filter((task) => task.status === "waiting" || task.claimedBy !== me || stale(task));
+  if (taken.length > 0) {
     const charge = await chargeWrites(ctx.env, ctx.state, 1, ctx.now);
     if (!charge.ok) return overBudget(charge);
-    for (const task of waiting) { task.status = "processing"; task.updatedAt = iso(ctx.now); }
+    for (const task of taken) { task.status = "processing"; task.claimedBy = me; task.updatedAt = iso(ctx.now); }
     await storeTasks(ctx, tasks);
   }
-  return tasksReply(tasks.filter(isOpen).map(({ id, kind, text, date, context, status }) => ({ id, kind, text, ...(date ? { date } : {}), ...(context ? { context } : {}), status })));
+  return tasksReply(mine.map(({ id, kind, text, date, context, status }) => ({ id, kind, text, ...(date ? { date } : {}), ...(context ? { context } : {}), status })));
 }
 
 export async function finishTask(ctx, value) {

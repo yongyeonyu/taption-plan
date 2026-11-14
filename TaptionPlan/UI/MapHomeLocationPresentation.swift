@@ -1055,6 +1055,7 @@ struct MapHomeStickmanMarker: View {
     var speedMetersPerSecond: Double? = nil
     var equippedAccessoryID: String? = nil
     var facesLeft = false
+    var rideLabel: String? = nil
     @AppStorage(MapHomeStickmanAction.vehicleDisplayKey) private var showsVehicles = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.isLuminanceReduced) private var isLuminanceReduced
@@ -1115,6 +1116,7 @@ struct MapHomeStickmanMarker: View {
             }
         }
         .frame(width: Self.size.width, height: Self.size.height)
+        .overlay(alignment: .top) { if let rideLabel, scene.isVehicleScene { MapHomeRideLabelBadge(text: rideLabel) } }
         .taptionShadow(.floating)
         .accessibilityHidden(true)
     }

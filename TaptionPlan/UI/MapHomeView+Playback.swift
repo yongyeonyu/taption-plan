@@ -91,7 +91,10 @@ extension MapHomeView {
             equippedAccessoryID: homeGrowthHistory.season.equippedAccessory,
             stickmanAnimationPhase: selectedTimelineMinute == nil
                 ? nil
-                : animationPhase
+                : animationPhase,
+            rideLabel: action == .bus || action == .subway
+                ? MapHomeRideLabel.text(at: displayedLocationDate, travel: currentDayDataSnapshot?.travel ?? [])
+                : nil
         )
     }
 

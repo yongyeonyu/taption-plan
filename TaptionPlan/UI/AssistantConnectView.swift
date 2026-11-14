@@ -559,11 +559,14 @@ struct AssistantProviderView: View {
             openURL(url)
         case .check:
             Task { @MainActor in
+                let wasConnected = store.isConnected(provider)
                 await store.reload()
                 existing = store.token(for: provider)
                 message = store.isConnected(provider)
                     ? language.text("연결됐어요.", "Connected.")
                     : language.text("아직 연결되지 않았어요. 앞 단계를 다시 확인해 주세요.", "Not connected yet. Check the previous steps.")
+                // 방금 연결됐으면 그 AI에서 BOKKI Plan과 이어진 첫 대화를 연다(AIW1114A01).
+                if !wasConnected, store.isConnected(provider) { openChat() }
             }
         }
     }
@@ -590,7 +593,14 @@ struct AssistantProviderView: View {
 
     private func openApp() {
         installed = provider.isInstalled
-        if let url = provider.destination(installed: installed) { openURL(url) }
+        if store.isConnected(provider) { openChat() } else if let url = provider.destination(installed: installed) { openURL(url) }
+    }
+
+    /// 첫 인사 글을 복사하고 그 AI의 새 대화를 연다. 글을 주소로 받는 AI는 채워진 채 열린다.
+    private func openChat() {
+        installed = provider.isInstalled
+        copy(AITaskRequest.welcome)
+        if let url = AITaskRequest.chatURL(provider, prompt: AITaskRequest.welcome) ?? provider.destination(installed: installed) { openURL(url) }
     }
 }
 

@@ -872,7 +872,8 @@ extension MapHomeView {
                         headingDegrees: playback.headingDegrees,
                         cameraHeading: viewport?.heading ?? 0,
                         action: playback.action
-                    )
+                    ),
+                    rideLabel: playback.rideLabel
                     )
                     .catSpeechBubble(
                         action: playback.action,

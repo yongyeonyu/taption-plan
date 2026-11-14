@@ -113,3 +113,20 @@ test("classifyUnconfirmed and setTravelMode: required fields and allowed modes (
   const reply = JSON.stringify(await (await mcp(env, writer, "set_travel_mode", { date: "2026-11-11", moveId: A, mode: "car" })).json());
   assert.doesNotMatch(reply, /isError":true/);
 });
+
+test("tasks: a task claimed by one connection is not handed to another until it goes stale (AIM1114A01)", async () => {
+  const { env, master, ai } = await setup();
+  const other = randomKey();
+  assert.equal((await send(env, "/keys", "POST", { keys: [{ token: other, scope: "read", expiresAt: null }], pin: PIN }, master)).status, 201);
+  assert.equal((await send(env, "/tasks", "POST", upload([{ id: A, kind: "payment_text", text: "shop 1,000" }]), master)).status, 201);
+  assert.deepEqual((await (await send(env, "/tasks/claim", "POST", undefined, ai)).json()).tasks.map((t) => t.id), [A]);
+  assert.equal((await send(env, "/tasks/claim", "POST", undefined, other)).status, 204, "the other connection gets nothing");
+  assert.deepEqual((await (await send(env, "/tasks/claim", "POST", undefined, ai)).json()).tasks.map((t) => t.id), [A], "the claimer still sees it");
+  assert.equal((await send(env, "/tasks", "POST", upload([{ id: B, kind: "payment_text", text: "shop 2,000" }]), master)).status, 201);
+  assert.deepEqual((await (await send(env, "/tasks/claim", "POST", undefined, other)).json()).tasks.map((t) => t.id), [B], "new work goes to whoever asks first");
+
+  const start = env.NOW();
+  env.NOW = () => start + 31 * 60_000;
+  assert.deepEqual((await (await send(env, "/tasks/claim", "POST", undefined, other)).json()).tasks.map((t) => t.id).sort(), [A, B], "a stale claim is taken over");
+  assert.equal((await send(env, "/tasks/claim", "POST", undefined, ai)).status, 204);
+});

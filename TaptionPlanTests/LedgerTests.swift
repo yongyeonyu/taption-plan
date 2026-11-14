@@ -42,6 +42,22 @@ final class LedgerTests: XCTestCase {
         XCTAssertEqual(PaymentInbox.items(defaults).map(\.id), [transfer.id, plain.id])
     }
 
+    func testRideLabelShowsSubwayLinesAndNothingForUnknownBus() {
+        let span = TimeSpan(start: Date(timeIntervalSince1970: 1_800_000_000), end: Date(timeIntervalSince1970: 1_800_001_800))
+        func segment(_ mode: TravelMode) -> TravelSegment {
+            TravelSegment(mode: mode, span: span, distanceMeters: 3_000, confidence: .high, evidence: [])
+        }
+        var subway = segment(.subway)
+        XCTAssertNil(MapHomeRideLabel.text(for: subway))
+        subway.subwayRoute = SubwayRoutePath(stops: [], lineNames: ["1호선", "2호선"], transferStationNames: [])
+        XCTAssertEqual(MapHomeRideLabel.text(for: subway), "1호선→2호선")
+        let name = "RideLabel-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        XCTAssertNil(MapHomeRideLabel.text(for: segment(.bus), defaults: defaults))
+        XCTAssertNil(MapHomeRideLabel.text(for: segment(.car), defaults: defaults))
+    }
+
     func testReceiptPhotoMarksKeepLatestWithinLimit() {
         let name = "ReceiptPhotoMarks-\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: name)!

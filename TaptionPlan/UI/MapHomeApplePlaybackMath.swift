@@ -162,6 +162,7 @@ struct MapHomeApplePlayback {
     let followsUserLocation: Bool
     let equippedAccessoryID: String?
     let stickmanAnimationPhase: Int?
+    var rideLabel: String? = nil
 }
 
 struct MapHomeAppleViewportCommand {
@@ -383,5 +384,54 @@ enum MapHomeApplePlaybackMath {
     ) -> CLLocationDistance {
         CLLocation(latitude: start.latitude, longitude: start.longitude)
             .distance(from: CLLocation(latitude: end.latitude, longitude: end.longitude))
+    }
+}
+
+/// 화랑이가 탄 버스 번호·지하철 노선 글(RDL1114A01). 모르면 nil이라 아무것도 붙지 않는다.
+@MainActor
+enum MapHomeRideLabel {
+    private static var cached: (id: UUID, text: String?)?
+
+    static func text(at date: Date, travel: [TravelSegment]) -> String? {
+        let riding = travel.filter { ($0.mode == .bus || $0.mode == .subway) && $0.span.contains(date) }
+        guard let segment = riding.max(by: { $0.span.start < $1.span.start }) else { return nil }
+        if let cached, cached.id == segment.id { return cached.text }
+        let text = text(for: segment)
+        // 노선을 아직 못 찾은 버스는 적어 두지 않는다(찾으면 바로 보이게).
+        if text != nil || segment.mode == .subway { cached = (segment.id, text) }
+        return text
+    }
+
+    /// 버스는 「80」(둘이면 「80·81」), 지하철은 「1호선」(갈아탔으면 「1호선→2호선」).
+    nonisolated static func text(for segment: TravelSegment, defaults: UserDefaults = .standard) -> String? {
+        switch segment.mode {
+        case .bus:
+            guard let routes = BusRouteCheck.known(segment, defaults: defaults), (1...2).contains(routes.count) else { return nil }
+            return routes.map(\.number).joined(separator: "·")
+        case .subway:
+            let lines = segment.subwayRoute?.lineNames ?? []
+            return lines.isEmpty ? nil : lines.prefix(3).joined(separator: "→")
+        default:
+            return nil
+        }
+    }
+}
+
+/// 탈것 그림 바로 위에 놓이는 번호·노선 이름표.
+struct MapHomeRideLabelBadge: View {
+    let text: String
+
+    var body: some View {
+        Text(verbatim: text)
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .heavy))
+            .monospacedDigit()
+            .lineLimit(1)
+            .fixedSize()
+            .foregroundStyle(Color.tpInk)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Color.tpSurface.opacity(0.98), in: Capsule())
+            .overlay { Capsule().stroke(Color.tpBorder, lineWidth: TaptionBorder.width) }
+            .alignmentGuide(.top) { $0[.bottom] + 2 }
     }
 }

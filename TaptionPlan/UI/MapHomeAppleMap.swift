@@ -825,7 +825,8 @@ struct MapHomeAppleMap: UIViewRepresentable {
                             headingDegrees: annotation.headingDegrees,
                             cameraHeading: cameraHeading,
                             action: annotation.action
-                        )
+                        ),
+                        rideLabel: annotation.rideLabel
                     )
                     .catSpeechBubble(
                         action: annotation.action,

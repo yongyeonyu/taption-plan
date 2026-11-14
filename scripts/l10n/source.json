@@ -609,7 +609,7 @@
    "ko": "AI 고르기",
    "en": "Choose an AI",
    "files": [
-    "AssistantConnectView.swift:611"
+    "AssistantConnectView.swift:621"
    ],
    "args": [],
    "targets": [
@@ -1075,7 +1075,7 @@
    "ko": "AI에게 맡겼어요. 규칙이 오면 이 문자도 다시 읽어 넣어요.",
    "en": "Sent to your AI. When the rule arrives this text is read again.",
    "files": [
-    "LedgerMessageRules.swift:311"
+    "LedgerMessageRules.swift:314"
    ],
    "args": [],
    "targets": [
@@ -1111,7 +1111,7 @@
    "ko": "AI에게 이 형식을 읽는 규칙을 부탁해요",
    "en": "Asks your AI for a rule that reads this format",
    "files": [
-    "LedgerMessageRules.swift:267"
+    "LedgerMessageRules.swift:270"
    ],
    "args": [],
    "targets": [
@@ -1686,7 +1686,7 @@
    "ko": "Claude → 설정 → 커넥터 → 맞춤 커넥터 추가에 주소를 붙여 넣고 인증은 「로그인 없음」을 고르세요. 클립보드는 10분 뒤 지워져요.",
    "en": "In Claude, open Settings → Connectors → Add custom connector, paste the link and choose No sign-in. The clipboard is cleared in 10 minutes.",
    "files": [
-    "AssistantConnectView.swift:631"
+    "AssistantConnectView.swift:641"
    ],
    "args": [],
    "targets": [
@@ -1773,7 +1773,7 @@
    "ko": "Cue 채팅창에 붙여 넣고 보내 주세요. Cue가 주소를 열어 MCP 주소와 키를 받아 가요. 안 되면 아래에서 MCP 주소와 키를 따로 넣어 주세요.",
    "en": "Paste it into the Cue chat and send. Cue opens the link to get the MCP URL and key. If that fails, enter them separately below.",
    "files": [
-    "AssistantConnectView.swift:643"
+    "AssistantConnectView.swift:653"
    ],
    "args": [],
    "targets": [
@@ -3537,7 +3537,7 @@
    "en": "Add {0} location",
    "files": [
     "MapHomeView+Map.swift:519",
-    "MapHomeView+Routes.swift:931"
+    "MapHomeView+Routes.swift:932"
    ],
    "args": [
     "selectedSearchPin.title"
@@ -3694,7 +3694,7 @@
    "ko": "{0} 채팅창에 붙여 넣고 보내 주세요.",
    "en": "Paste it into the {0} chat and send.",
    "files": [
-    "AssistantConnectView.swift:645",
+    "AssistantConnectView.swift:655",
     "TripImportSheet.swift:572"
    ],
    "args": [
@@ -33082,7 +33082,7 @@
    "ko": "~/.gemini/settings.json에 붙여 넣고 gemini를 다시 시작해 주세요.",
    "en": "Paste it into ~/.gemini/settings.json and restart gemini.",
    "files": [
-    "AssistantConnectView.swift:629"
+    "AssistantConnectView.swift:639"
    ],
    "args": [],
    "targets": [
@@ -33467,7 +33467,7 @@
    "ko": "「학습」을 누르면 AI가 이 형식을 읽는 규칙을 보내고, 그 뒤 같은 글은 앱이 스스로 넣어요.",
    "en": "Teach asks your AI for a rule for this format; after that the app reads the same kind of text by itself.",
    "files": [
-    "LedgerMessageRules.swift:275"
+    "LedgerMessageRules.swift:278"
    ],
    "args": [],
    "targets": [
@@ -33652,7 +33652,7 @@
    "ko": "가계부에 넣음",
    "en": "Added to the ledger",
    "files": [
-    "LedgerMessageRules.swift:513"
+    "LedgerMessageRules.swift:516"
    ],
    "args": [],
    "targets": [
@@ -33963,7 +33963,7 @@
    "ko": "개발자에게 반영 요청",
    "en": "Ask the developer to add it",
    "files": [
-    "LedgerMessageRules.swift:279"
+    "LedgerMessageRules.swift:282"
    ],
    "args": [],
    "targets": [
@@ -33987,7 +33987,7 @@
    "ko": "개발자에게 보내면 다음 버전에 모두에게 반영돼요.",
    "en": "Mail the developer to get it built in for everyone.",
    "files": [
-    "LedgerMessageRules.swift:282"
+    "LedgerMessageRules.swift:285"
    ],
    "args": [],
    "targets": [
@@ -35587,7 +35587,7 @@
    "ko": "과거 위치 {0}",
    "en": "Past location {0}",
    "files": [
-    "MapHomeView+Playback.swift:864"
+    "MapHomeView+Playback.swift:867"
    ],
    "args": [
     "time"
@@ -37101,7 +37101,7 @@
    "ko": "기타 AI (웹 요청)",
    "en": "Other AI (web requests)",
    "files": [
-    "AssistantConnectView.swift:608"
+    "AssistantConnectView.swift:618"
    ],
    "args": [],
    "targets": [
@@ -41599,7 +41599,7 @@
    "ko": "받은 결제 문자·알림",
    "en": "Payment texts received",
    "files": [
-    "LedgerMessageRules.swift:196"
+    "LedgerMessageRules.swift:199"
    ],
    "args": [],
    "targets": [
@@ -41623,7 +41623,7 @@
    "ko": "받은 문자",
    "en": "Received text",
    "files": [
-    "LedgerMessageRules.swift:286"
+    "LedgerMessageRules.swift:289"
    ],
    "args": [],
    "targets": [
@@ -42092,7 +42092,7 @@
    "ko": "버림",
    "en": "Discarded",
    "files": [
-    "LedgerMessageRules.swift:506"
+    "LedgerMessageRules.swift:509"
    ],
    "args": [],
    "targets": [
@@ -42246,7 +42246,7 @@
    "ko": "번호는 가려서 이 기기에만 7일 동안 둬요.",
    "en": "Numbers are masked. Kept on this device only, for 7 days.",
    "files": [
-    "LedgerMessageRules.swift:257"
+    "LedgerMessageRules.swift:260"
    ],
    "args": [],
    "targets": [
@@ -43669,7 +43669,7 @@
    "ko": "삭제",
    "en": "Delete",
    "files": [
-    "LedgerMessageRules.swift:268",
+    "LedgerMessageRules.swift:271",
     "MapHomePlaceBookTools.swift:843",
     "MapHomeSettingsSheets.swift:111"
    ],
@@ -44389,7 +44389,7 @@
    "ko": "설명 보기",
    "en": "Show info",
    "files": [
-    "MapHomeView+Routes.swift:896"
+    "MapHomeView+Routes.swift:897"
    ],
    "args": [],
    "targets": [
@@ -46515,7 +46515,7 @@
    "ko": "아직 연결되지 않았어요. 앞 단계를 다시 확인해 주세요.",
    "en": "Not connected yet. Check the previous steps.",
    "files": [
-    "AssistantConnectView.swift:566"
+    "AssistantConnectView.swift:567"
    ],
    "args": [],
    "targets": [
@@ -48446,7 +48446,7 @@
    "ko": "연결 안내를 복사했어요",
    "en": "Setup copied",
    "files": [
-    "AssistantConnectView.swift:621"
+    "AssistantConnectView.swift:631"
    ],
    "args": [],
    "targets": [
@@ -48632,7 +48632,7 @@
    "ko": "연결 키를 복사했어요. GPT 구성 → 작업 → 인증에서 API 키·Bearer를 고르고 붙여 넣어 주세요. 스키마 주소는 이 화면에서 따로 복사해요. 클립보드는 10분 뒤 지워져요.",
    "en": "Key copied. In the GPT's Configure → Actions → Authentication, choose API key and Bearer, then paste it. Copy the schema URL from this screen. The clipboard is cleared in 10 minutes.",
    "files": [
-    "AssistantConnectView.swift:638"
+    "AssistantConnectView.swift:648"
    ],
    "args": [],
    "targets": [
@@ -48707,7 +48707,7 @@
    "ko": "연결됐어요.",
    "en": "Connected.",
    "files": [
-    "AssistantConnectView.swift:565"
+    "AssistantConnectView.swift:566"
    ],
    "args": [],
    "targets": [
@@ -48731,7 +48731,7 @@
    "ko": "연결된 AI가 없어요. 메뉴 › AI 연결에서 먼저 연결해 주세요.",
    "en": "No AI is connected. Connect one in Menu › AI connection first.",
    "files": [
-    "LedgerMessageRules.swift:305"
+    "LedgerMessageRules.swift:308"
    ],
    "args": [],
    "targets": [
@@ -49593,7 +49593,7 @@
    "ko": "예산 없음",
    "en": "No budget",
    "files": [
-    "LedgerMessageRules.swift:466"
+    "LedgerMessageRules.swift:469"
    ],
    "args": [],
    "targets": [
@@ -50266,7 +50266,7 @@
    "ko": "완료",
    "en": "Done",
    "files": [
-    "LedgerMessageRules.swift:288",
+    "LedgerMessageRules.swift:291",
     "PaymentAlertSources.swift:324",
     "AITaskPanel.swift:198"
    ],
@@ -50778,7 +50778,7 @@
    "ko": "웹 요청을 할 수 있는 AI의 채팅창에 붙여 넣고 보내 주세요.",
    "en": "Paste it into the chat of an AI that can make web requests, then send.",
    "files": [
-    "AssistantConnectView.swift:636"
+    "AssistantConnectView.swift:646"
    ],
    "args": [],
    "targets": [
@@ -51455,7 +51455,7 @@
    "ko": "음악을 넣지 못해 음악 없이 저장했습니다.",
    "en": "Couldn't add music, so the video was saved without it.",
    "files": [
-    "MapHomeView+Playback.swift:214"
+    "MapHomeView+Playback.swift:217"
    ],
    "args": [],
    "targets": [
@@ -54820,7 +54820,7 @@
    "ko": "정하지 않음",
    "en": "Not set",
    "files": [
-    "LedgerMessageRules.swift:562",
+    "LedgerMessageRules.swift:565",
     "AssistantDataActions.swift:626",
     "TravelNewTripSheet.swift:70"
    ],
@@ -56185,9 +56185,9 @@
    "ko": "지움",
    "en": "Deleted",
    "files": [
-    "LedgerMessageRules.swift:490",
-    "LedgerMessageRules.swift:496",
-    "LedgerMessageRules.swift:518"
+    "LedgerMessageRules.swift:493",
+    "LedgerMessageRules.swift:499",
+    "LedgerMessageRules.swift:521"
    ],
    "args": [],
    "targets": [
@@ -58159,7 +58159,7 @@
    "ko": "클립보드는 10분 뒤 지워져요.",
    "en": "The clipboard is cleared in 10 minutes.",
    "files": [
-    "AssistantConnectView.swift:647"
+    "AssistantConnectView.swift:657"
    ],
    "args": [],
    "targets": [
@@ -58974,7 +58974,7 @@
    "ko": "하루 재생 일시 정지",
    "en": "Pause day playback",
    "files": [
-    "MapHomeView+Playback.swift:132"
+    "MapHomeView+Playback.swift:135"
    ],
    "args": [],
    "targets": [
@@ -58986,7 +58986,7 @@
    "ko": "하루 재생",
    "en": "Play day",
    "files": [
-    "MapHomeView+Playback.swift:133"
+    "MapHomeView+Playback.swift:136"
    ],
    "args": [],
    "targets": [
@@ -59221,7 +59221,7 @@
    "ko": "학습",
    "en": "Teach",
    "files": [
-    "LedgerMessageRules.swift:264"
+    "LedgerMessageRules.swift:267"
    ],
    "args": [],
    "targets": [

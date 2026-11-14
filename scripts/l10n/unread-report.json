@@ -100,13 +100,13 @@
   },
   {
    "file": "TaptionPlan/Core/LedgerMessageRules.swift",
-   "line": 466,
+   "line": 469,
    "ko": "$0",
    "en": "language"
   },
   {
    "file": "TaptionPlan/Core/LedgerMessageRules.swift",
-   "line": 502,
+   "line": 505,
    "ko": "entry.amount",
    "en": "entry.currency"
   },
@@ -435,6 +435,18 @@
    "en": "language"
   },
   {
+   "file": "TaptionPlan/UI/MapHomeApplePlaybackMath.swift",
+   "line": 395,
+   "ko": "at date: Date",
+   "en": "[TravelSegment]"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeApplePlaybackMath.swift",
+   "line": 406,
+   "ko": "for segment: TravelSegment",
+   "en": "UserDefaults = .standard"
+  },
+  {
    "file": "TaptionPlan/UI/MapHomeCalendarChipValue.swift",
    "line": 8,
    "ko": "MapHomeCalendarTimeKind",
@@ -739,6 +751,12 @@
    "line": 1075,
    "ko": "fogStrength.koreanLabel",
    "en": "fogStrength.englishLabel"
+  },
+  {
+   "file": "TaptionPlan/UI/MapHomeView+Playback.swift",
+   "line": 96,
+   "ko": "displayedLocationDate",
+   "en": "currentDayDataSnapshot?.travel ?? []"
   },
   {
    "file": "TaptionPlan/UI/MapHomeView+Stickman.swift",
