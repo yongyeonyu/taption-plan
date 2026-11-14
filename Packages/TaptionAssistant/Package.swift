@@ -2,7 +2,7 @@
 import PackageDescription
 
 // AI 기능의 패키지(AIX1114A01). 규칙(`TaptionRules`), 명령 값·동작 등록부(읽기 형·목록·종류)(`TaptionAssistantProtocol`),
-// 중계 전송·등록·PIN·연결 키·맡긴 일·질문 저장소(`TaptionAssistantKit`)가 있고, 명령·실행·동기화·화면은 `docs/AI_RELAY_PLAN.md`의 순서로 옮겨 온다.
+// 중계 전송·등록·PIN·연결 키·맡긴 일·질문 저장소(`TaptionAssistantKit`)가 있고, 명령 읽기 본체·실행·동기화·화면은 `docs/AI_RELAY_PLAN.md`의 순서로 옮겨 온다.
 let package = Package(
     name: "TaptionAssistant",
     platforms: [

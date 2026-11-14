@@ -134,7 +134,7 @@
 | P1 서버 등록부 | 끝 | AIX1114A01 | 예전 동작 50개는 아직 `validate.js`에 있음(옮기기는 선택) |
 | P2 일 DO 이전 | 끝 | AIX1114A01, AIP1114A05 | — |
 | P3 규칙 | 끝 | AIX1114A01, ACT1114A09 | `own_account`·`source_switch` 등 종류별 기기 확인 |
-| P4 패키지 이동 | 일부 | PKG1114A10, PKG1114A19 | 아래 「P4의 남은 순서」 |
+| P4 패키지 이동 | 일부 | PKG1114A10, PKG1114A19, RMN1114A25 | 값 타입·동작 읽기 형과 목록·종류·명령 형까지 옮김. 아래 「P4의 남은 순서」 3(읽기 본체)부터 |
 | P5 파이프라인(앱) | 끝 | AIP1114A05, ABA1114A15 | 기기 확인 |
 | P6 푸시 | 코드만 | PSH1114A06, PSH1114A12 | App ID에 푸시 켜기, APNs 키·비밀값 3개, `aps-environment` 되살리기, 기기 확인 |
 | P7~P12 동작 묶음 | 끝 | ACT1114A07, ACT1114A09, AIP1114A08, APV1114A16 | 화면에 부를 함수가 없어 뺀 것(장소 종류 바꾸기·지도 활동 색·근처 메모 알림 스위치·장식 벗기기), 일정의 장소·예상 지출을 AI가 읽고 쓰기 |
@@ -146,11 +146,18 @@
 
 멈춘 이유: 「AI가 한 일」에 저장되는 동작 종류(`AssistantActionKind`)가 앱의 동작 목록을 읽어 복원되므로 등록 순서를 바꾸면 저장 로그 항목이 사라질 수 있고, 적용까지 옮기면 호스트 메서드가 40개를 넘는다.
 
-1. 값 타입 이동: `TripItemStatus`, `AssistantDisplayOption`, `AssistantScreen`, `AssistantSetting`, `AssistantExpenseChange`, `AssistantBubble.Kind`, `LedgerMessageRules.Rule`.
-2. 동작 46개를 읽기 형(패키지)과 적용 extension(앱)으로 가르기 — 문구가 함께 가므로 패키지에서 번역 조회가 되는지 시험이 먼저.
-3. `AssistantCommand`·`AssistantCommandBatch`·명령 읽기 본체.
-4. 좁은 `AssistantCommandHost`(6~8개 메서드) 위에 저널·실행기·기록 파일 입출력.
+1. 값 타입 이동: `TripItemStatus`, `AssistantDisplayOption`, `AssistantScreen`, `AssistantSetting`, `AssistantExpenseChange`, `AssistantBubble.Kind`, `LedgerMessageRules.Rule`. — **끝(RMN1114A25)**
+2. 동작을 읽기 형(패키지)과 적용 extension(앱)으로 가르기. — **끝(RMN1114A25)**: 37개. 목록·종류·켜고 끄기도 패키지 값이라 등록 차례에 기대는 것이 없다.
+3. `AssistantCommand`·`AssistantCommandBatch`·명령 읽기 본체. — **형만 끝(RMN1114A25), 읽기 본체에서 멈춤.**
+4. 좁은 `AssistantCommandHost`(6~8개 메서드) 위에 저널·실행기·기록 파일 입출력. — 안 함.
 5. 적용·되돌리기 본체를 묶음별 호스트로, 마지막에 화면(`TaptionAssistantUI`).
+
+3의 읽기 본체에서 멈춘 까닭(RMN1114A25): 예전 동작 49개의 읽기(`AssistantCommandParser.action`·`editAction`·`dataAction`·`appAction`)가 순수 함수가 아니다. 읽는 도중에 앱 상태와 앱 자료를 본다 —
+`addExpense`의 분류 짐작(`LedgerCategory.guess`: 기기에 받아 둔 AI 규칙 묶음 `AssistantRuleSnapshot`과 낱말 표), `setCalendarTitleDetail`의 상세 분류 표(`RecordClassificationCatalog`), `setSetting`의 값 꼴(통행료 차종·시급 세금·고양이·메모 표시·위치 간격처럼 화면의 형 다섯), `requestApproval`의 카드 문구(공유 수준·보관 기간 이름), `addPaymentRule`의 견본 검사(정규식 엔진), `setBubble`의 글 검사(`AssistantBubbleText`), 예산 한도·달 열쇠(`LedgerBudget`·`LedgerBook`), 내 계좌 이름(`LedgerOwnAccounts`).
+옮기려면 이것들을 한꺼번에 패키지로 옮기거나 「읽기 환경」으로 다섯 개 넘게 주입해야 하고, 서버 명령을 받는 가장 민감한 길이라 한 번에 하기에는 회귀 위험이 크다. 갈 길은 둘 가운데 하나를 대표가 정한다:
+- (가) 예전 동작을 등록부 동작으로 하나씩 바꾼다(서버 `validate.js`의 50개를 `actions.js`로 옮기는 P1의 「선택」과 같은 일). 바꾼 것은 2단계와 같은 꼴로 읽기가 패키지에 들어온다.
+- (나) 읽기 환경(`분류 짐작`·`상세 분류 id`·`설정 값 꼴`·`승인 질문`·`결제 규칙 검사`)을 값으로 주입하고 본체를 그대로 옮긴다.
+4는 읽기가 앱에 남아도 호스트에 「명령 읽기」를 한 메서드로 두면 할 수 있다. 지금 실행기가 앱에 기대는 것은 명령 읽기, `AppModel.applyAssistantCommands`, 「AI가 한 일」 항목 형(`AssistantLogEntry` — 되돌리기 정보가 들어 있어 5단계 것), 하루 기록 올리기, 20개 확인 규칙의 일정 수 세기다.
 
 ## 단계 (각 단계는 TestFlight 빌드 하나 이하)
 
