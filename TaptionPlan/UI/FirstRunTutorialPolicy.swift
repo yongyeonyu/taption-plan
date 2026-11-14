@@ -78,7 +78,22 @@ struct FirstRunTutorialStore {
     static let outcomeKey = "taption.firstRunTutorial.outcome"
     static let stepKey = "taption.firstRunTutorial.step"
 
-    var defaults: UserDefaults = .standard
+    var defaults: UserDefaults = FirstRunTutorialStore.launchDefaults
+
+    /// 화면 시험용(Debug 전용, RMN1114A25): `-firstRunStore <이름>`이면 끝난 결과와 보던 단계를 그 이름의 따로 둔 저장소에 둔다.
+    /// 쓰던 설치에서도 첫 실행처럼 뜨고, 본래 저장소와 기록은 건드리지 않는다.
+    nonisolated(unsafe) static let launchDefaults: UserDefaults = {
+        #if DEBUG
+        let arguments = ProcessInfo.processInfo.arguments
+        if let index = arguments.firstIndex(of: "-firstRunStore"), arguments.indices.contains(index + 1),
+           let suite = UserDefaults(suiteName: "taption.firstRunTutorial." + arguments[index + 1]) {
+            return suite
+        }
+        #endif
+        return .standard
+    }()
+
+    static var usesLaunchStore: Bool { launchDefaults !== UserDefaults.standard }
 
     /// 첫 실행에는 튜토리얼이 권한을 물을 때까지 앱이 먼저 시스템 팝업을 띄우지 않는다.
     var defersPermissionPrompts: Bool {
