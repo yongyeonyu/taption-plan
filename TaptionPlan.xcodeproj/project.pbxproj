@@ -239,6 +239,7 @@
 		A1A1110A0300000000000010 /* AssistantPhase3Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000010 /* AssistantPhase3Tests.swift */; };
 		A1A1110A0600000000000002 /* AssistantReviewFixTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0600000000000002 /* AssistantReviewFixTests.swift */; };
 		A1C1110A0900000000000002 /* TripItemStatusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1C1110A0900000000000002 /* TripItemStatusTests.swift */; };
+		A1D131114000000000000004 /* PlanRealityGapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1D131114000000000000004 /* PlanRealityGapTests.swift */; };
 		A1P1111S0200000000000031 /* LedgerReviewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1P1111S0200000000000031 /* LedgerReviewTests.swift */; };
 		A1P1111S0200000000000021 /* LedgerMessageAccuracyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1P1111S0200000000000021 /* LedgerMessageAccuracyTests.swift */; };
 		A1P1111S0200000000000011 /* GPXTrackExportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1P1111S0200000000000011 /* GPXTrackExportTests.swift */; };
@@ -519,6 +520,9 @@
 		B1080900000000000000A0A7 /* TripImportPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000F0A7 /* TripImportPrompt.swift */; };
 		B1080900000000000000A0A8 /* TripImportSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000F0A8 /* TripImportSheet.swift */; };
 		A1C1110A0900000000000001 /* TripItemStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1C1110A0900000000000001 /* TripItemStatus.swift */; };
+		A1D131114000000000000003 /* PlanRealityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1D131114000000000000003 /* PlanRealityView.swift */; };
+		A1D131114000000000000002 /* PlanRealityMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1D131114000000000000002 /* PlanRealityMap.swift */; };
+		A1D131114000000000000001 /* PlanRealityGap.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1D131114000000000000001 /* PlanRealityGap.swift */; };
 		B1080900000000000000A0AC /* TripRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1080900000000000000F0AC /* TripRelay.swift */; };
 		A1A1110A0100000000000005 /* AssistantSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0100000000000005 /* AssistantSettingsView.swift */; };
 		A1A1110A0100000000000004 /* AssistantCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0100000000000004 /* AssistantCommands.swift */; };
@@ -1009,6 +1013,7 @@
 		F1A1110A0300000000000010 /* AssistantPhase3Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantPhase3Tests.swift; sourceTree = "<group>"; };
 		F1A1110A0600000000000002 /* AssistantReviewFixTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantReviewFixTests.swift; sourceTree = "<group>"; };
 		F1C1110A0900000000000002 /* TripItemStatusTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripItemStatusTests.swift; sourceTree = "<group>"; };
+		F1D131114000000000000004 /* PlanRealityGapTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanRealityGapTests.swift; sourceTree = "<group>"; };
 		F1P1111S0200000000000031 /* LedgerReviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerReviewTests.swift; sourceTree = "<group>"; };
 		F1P1111S0200000000000021 /* LedgerMessageAccuracyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerMessageAccuracyTests.swift; sourceTree = "<group>"; };
 		F1P1111S0200000000000011 /* GPXTrackExportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GPXTrackExportTests.swift; sourceTree = "<group>"; };
@@ -1278,6 +1283,9 @@
 		B1080900000000000000F0A7 /* TripImportPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripImportPrompt.swift; sourceTree = "<group>"; };
 		B1080900000000000000F0A8 /* TripImportSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripImportSheet.swift; sourceTree = "<group>"; };
 		F1C1110A0900000000000001 /* TripItemStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripItemStatus.swift; sourceTree = "<group>"; };
+		F1D131114000000000000003 /* PlanRealityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanRealityView.swift; sourceTree = "<group>"; };
+		F1D131114000000000000002 /* PlanRealityMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanRealityMap.swift; sourceTree = "<group>"; };
+		F1D131114000000000000001 /* PlanRealityGap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanRealityGap.swift; sourceTree = "<group>"; };
 		B1080900000000000000F0AC /* TripRelay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripRelay.swift; sourceTree = "<group>"; };
 		F1A1110A0100000000000005 /* AssistantSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantSettingsView.swift; sourceTree = "<group>"; };
 		F1A1110A0100000000000004 /* AssistantCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantCommands.swift; sourceTree = "<group>"; };
@@ -1663,6 +1671,7 @@
 				F1A1110A0300000000000010 /* AssistantPhase3Tests.swift */,
 				F1A1110A0600000000000002 /* AssistantReviewFixTests.swift */,
 				F1C1110A0900000000000002 /* TripItemStatusTests.swift */,
+				F1D131114000000000000004 /* PlanRealityGapTests.swift */,
 				F1P1111S0200000000000031 /* LedgerReviewTests.swift */,
 				F1P1111S0200000000000021 /* LedgerMessageAccuracyTests.swift */,
 				F1P1111S0200000000000011 /* GPXTrackExportTests.swift */,
@@ -1818,6 +1827,9 @@
 				B1080900000000000000F0A7 /* TripImportPrompt.swift */,
 				B1080900000000000000F0A8 /* TripImportSheet.swift */,
 				F1C1110A0900000000000001 /* TripItemStatus.swift */,
+				F1D131114000000000000003 /* PlanRealityView.swift */,
+				F1D131114000000000000002 /* PlanRealityMap.swift */,
+				F1D131114000000000000001 /* PlanRealityGap.swift */,
 				B1080900000000000000F0AC /* TripRelay.swift */,
 				F1A1110A0100000000000005 /* AssistantSettingsView.swift */,
 				F1A1110A0100000000000004 /* AssistantCommands.swift */,
@@ -2815,6 +2827,9 @@
 				B1080900000000000000A0A7 /* TripImportPrompt.swift in Sources */,
 				B1080900000000000000A0A8 /* TripImportSheet.swift in Sources */,
 				A1C1110A0900000000000001 /* TripItemStatus.swift in Sources */,
+				A1D131114000000000000003 /* PlanRealityView.swift in Sources */,
+				A1D131114000000000000002 /* PlanRealityMap.swift in Sources */,
+				A1D131114000000000000001 /* PlanRealityGap.swift in Sources */,
 				B1080900000000000000A0AC /* TripRelay.swift in Sources */,
 				A1A1110A0100000000000005 /* AssistantSettingsView.swift in Sources */,
 				A1A1110A0100000000000004 /* AssistantCommands.swift in Sources */,
@@ -3201,6 +3216,7 @@
 				A1A1110A0300000000000010 /* AssistantPhase3Tests.swift in Sources */,
 				A1A1110A0600000000000002 /* AssistantReviewFixTests.swift in Sources */,
 				A1C1110A0900000000000002 /* TripItemStatusTests.swift in Sources */,
+				A1D131114000000000000004 /* PlanRealityGapTests.swift in Sources */,
 				A1P1111S0200000000000031 /* LedgerReviewTests.swift in Sources */,
 				A1P1111S0200000000000021 /* LedgerMessageAccuracyTests.swift in Sources */,
 				A1P1111S0200000000000011 /* GPXTrackExportTests.swift in Sources */,

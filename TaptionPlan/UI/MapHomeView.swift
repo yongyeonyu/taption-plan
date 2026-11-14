@@ -81,6 +81,7 @@ struct MapHomeView: View {
 
     @State var isCarAudioSheetPresented = false
     @State var isShortcutsGuidePresented = false
+    @State var isPlanRealityPresented = false
 
     @AppStorage(MapHomeSalaryPolicy.annualKey) var salaryAnnualPay = 0.0
     @AppStorage(MapHomeAllowancePolicy.isSelectedKey) var allowanceIsSelected = false

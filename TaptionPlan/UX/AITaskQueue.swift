@@ -16,6 +16,8 @@ enum AITaskQueue {
         case stayPlace = "stay_place"
         /// 앱이 못 읽은 결제 문자: AI가 읽는 규칙(addPaymentRule)을 보내 달라는 부탁(PRL1112A01).
         case paymentRule = "payment_rule"
+        /// 계획보다 밀렸거나 예산을 넘겨 남은 일정을 다시 짜 달라는 부탁(PVR1114A13).
+        case replan
         case other
 
         /// 서버가 새 종류를 더해도 목록이 깨지지 않게 모르는 값은 `other`로 읽는다(AIP1114A05).
