@@ -3,17 +3,9 @@ import Foundation
 /// AI가 보태는 결제 문자 읽기 규칙(PRL1112A01). 앱이 못 읽는 형식을 AI가 정규식으로 알려 주면 저장해 두고,
 /// 그 뒤 같은 형식의 문자는 앱이 스스로 읽는다. 규칙은 기기에만 있고, 견본 문자와 맞아야 저장한다.
 enum LedgerMessageRules {
-    enum Kind: String, Codable, Sendable { case expense, income, ignore }
-
-    struct Rule: Codable, Equatable, Identifiable, Sendable {
-        var id = UUID()
-        var name: String
-        /// ICU 정규식. 이름 붙은 묶음: amount(필수, ignore는 없어도 됨)·merchant·month·day·hour·minute·currency.
-        var pattern: String
-        var sample: String
-        var kind: Kind
-        var createdAt = Date()
-    }
+    /// 값과 저장 꼴은 `TaptionRules`에 있다(RMN1114A25).
+    typealias Kind = LedgerMessageRule.Kind
+    typealias Rule = LedgerMessageRule
 
     enum Failure: Error, Equatable { case badPattern, noMatch, noAmount, tooLong }
 

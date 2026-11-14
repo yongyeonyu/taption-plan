@@ -2,15 +2,8 @@ import Foundation
 import Observation
 import TaptionPlanCore
 
-/// AI가 켜고 끌 수 있는 표시 설정(AIR1110A03). 이 셋만 받는다.
-enum AssistantDisplayOption: String, CaseIterable, Codable, Sendable {
-    case mapPhotos
-    case mapRoutes
-    case mapFootprints
-    /// ACT1114A07: 시간 사이드바, 탈것 모습.
-    case sidebar
-    case vehicles
-
+/// AI가 켜고 끌 수 있는 표시 설정(AIR1110A03)의 저장 키. 값은 `TaptionAssistantProtocol`에 있다(RMN1114A25).
+extension AssistantDisplayOption {
     /// 지도 화면 `@AppStorage`와 같은 키.
     var defaultsKey: String {
         switch self {
@@ -369,46 +362,8 @@ extension AssistantCommandParser {
     }
 }
 
-/// AI가 고치는 가계부 칸(AIQ1111A01). nil인 칸은 그대로 둔다.
-struct AssistantExpenseChange: Equatable, Sendable {
-    var delete = false
-    var amount: Double?
-    var currency: String?
-    var title: String?
-    var category: LedgerCategory?
-    var kind: LedgerEntry.Kind?
-    /// ACT1114A07: 여행 장부(빈 글이면 일상으로), 몫을 나누는 사람(비면 다 같이), 메모, 새 날짜(`YYYY-MM-DD`)와 시각(자정부터의 분).
-    var tripID: String?
-    var shareNames: [String]?
-    var note: String?
-    var date: String?
-    var minutes: Int?
-
-    var touchesTrip: Bool { tripID != nil || shareNames != nil }
-
-    func applied(to entry: LedgerEntry, calendar: Calendar = .autoupdatingCurrent) -> LedgerEntry {
-        var value = entry
-        if let amount { value.amount = amount }
-        if let currency { value.currency = currency }
-        if let title { value.title = title }
-        if let category { value.category = category }
-        if let kind { value.kind = kind }
-        if let tripID {
-            value.tripID = tripID.isEmpty ? nil : tripID
-            if tripID.isEmpty { value.shareNames = nil }
-        }
-        if let shareNames { value.shareNames = shareNames.isEmpty ? nil : shareNames }
-        if let note { value.note = note }
-        value.occurredAt = AssistantWhenChange(date: date, minutes: minutes).applied(to: entry.occurredAt, calendar: calendar)
-        return value
-    }
-
-    /// 몫을 나누는 사람 이름: 1~30자, 20명까지, 서로 다름. 틀리면 nil.
-    static func sharers(_ names: [String], minimum: Int) -> [String]? {
-        let cleaned = names.compactMap { AssistantCommandParser.clean($0, max: 30) }
-        return cleaned.count == names.count && (minimum...20).contains(names.count) && Set(cleaned).count == cleaned.count ? cleaned : nil
-    }
-
+/// AI가 고치는 가계부 칸(AIQ1111A01). 값과 적용은 `TaptionAssistantProtocol`에 있다(RMN1114A25).
+extension AssistantExpenseChange {
     /// 여행 기록으로 둘 수 없는 까닭: 그 여행 장부가 없거나(`no_trip`), 동행이 아닌 이름으로 나눴다(`no_member`).
     @MainActor
     static func tripProblem(_ entry: LedgerEntry, book: LedgerBook) -> String? {
@@ -518,14 +473,8 @@ struct AssistantPreferenceStore {
     }
 }
 
-/// AI가 열어 달라고 할 수 있는 화면(ACX1112A01). 이 여섯만 받는다. 자료를 바꾸는 화면 동작은 없다.
-enum AssistantScreen: String, CaseIterable, Codable, Sendable {
-    case paymentAutomation, shortcuts, aiConnection, ledger, dataProtection, settings
-    // ACC1112A01
-    case salary, carAudio, alarm, placeBook, passport, unconfirmedReview, travel
-    // ACT1114A07
-    case dayCard, calendarConnect, categoryAdd, paymentAlerts, aiRules
-
+/// AI가 열어 달라고 할 수 있는 화면(ACX1112A01)의 이름. 값은 `TaptionAssistantProtocol`에 있다(RMN1114A25).
+extension AssistantScreen {
     func title(_ language: MapHomeLanguage) -> String {
         switch self {
         case .paymentAutomation: language.text("BOKKI 결제 자동화 안내", "BOKKI Payment automation guide")
@@ -594,49 +543,19 @@ final class AssistantScreenRequest {
     }
 }
 
-/// AI가 바꿀 수 있는 기기 설정(ACB1112A01). 이 이름만 받고, 값은 형과 범위를 본 뒤 정해진 글자 꼴로 다룬다.
-/// 급여 금액도 읽기·바꾸기 모두 된다(대표 결정 2026-11-12, PAY1112A01).
-enum AssistantSetting: String, CaseIterable, Codable, Sendable {
-    case tollVehicle, salaryMode, annualPay, monthlyPay, payIsNet, showsNetPay, hourlyPay, hourlyPayIsNet, hourlyTax, weeklyHolidayPay
-    /// ACC1112A01: 앱 자료에 있는 설정. 화면의 설정 함수로 바꾼다. 알림은 끄기만 받는다(켜기는 iOS 권한 창이 필요하다).
-    case reduceMotion, weather, weatherSidebar, gpsIntervalSeconds, cat, notifications
-    /// ACT1114A07: 지도에 보일 메모(지도 화면 `@AppStorage`와 같은 키).
-    case memoDisplay
-    /// ACT1114A09: 보폭(cm, 보폭 보정 화면과 같은 키), Watch 수집 단계, 위치 수집·사진은 끄기만(켜기는 iOS 권한 창이 필요하다).
-    case strideCentimeters, watchAcceleration, watchDataSync, location, photos
+/// 설정 값의 꼴. 형과 범위를 본다.
+private enum AssistantSettingKind {
+    case choice([String])
+    case amount(Double)
+    case flag
+    /// 정해진 간격의 정수.
+    case count(ClosedRange<Int>, step: Int)
+    /// 끄기만.
+    case offOnly
+}
 
-    static let tripTitleLimit = 60
-    /// Watch 수집 단계 이름. 차례가 `TaptionWatchAccelerationProfile`·`TaptionWatchDataSyncProfile`의 값이다.
-    static let watchProfiles = ["off", "batterySaver", "balanced", "accuracy"]
-
-    private enum Kind {
-        case choice([String])
-        case amount(Double)
-        case flag
-        /// 정해진 간격의 정수.
-        case count(ClosedRange<Int>, step: Int)
-        /// 끄기만.
-        case offOnly
-    }
-
-    /// 급여 쪽 설정. 연봉 카운터의 「AI 연동」을 끄면 올리지도 바꾸지도 않는다(PAY1112A02).
-    var isSalary: Bool {
-        switch self {
-        case .salaryMode, .annualPay, .monthlyPay, .payIsNet, .showsNetPay, .hourlyPay, .hourlyPayIsNet, .hourlyTax, .weeklyHolidayPay: true
-        default: false
-        }
-    }
-
-    /// 앱 자료(`snapshot.settings`)에 있어 모델의 설정 함수로 바꾸는 것.
-    var isModelBacked: Bool {
-        switch self {
-        case .reduceMotion, .weather, .weatherSidebar, .gpsIntervalSeconds, .cat, .notifications: true
-        case .watchAcceleration, .watchDataSync, .location, .photos: true
-        default: false
-        }
-    }
-
-
+/// AI가 바꿀 수 있는 기기 설정(ACB1112A01)의 저장 키·값 꼴·읽고 쓰기. 이름은 `TaptionAssistantProtocol`에 있다(RMN1114A25).
+extension AssistantSetting {
     var key: String {
         switch self {
         case .tollVehicle: LedgerTollDiscount.vehicleKey
@@ -656,7 +575,7 @@ enum AssistantSetting: String, CaseIterable, Codable, Sendable {
         }
     }
 
-    private var kind: Kind {
+    private var kind: AssistantSettingKind {
         switch self {
         case .tollVehicle: .choice(LedgerTollDiscount.Vehicle.allCases.map(\.rawValue))
         case .salaryMode: .choice(["salary", "hourly"])

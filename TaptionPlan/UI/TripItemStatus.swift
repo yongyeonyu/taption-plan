@@ -1,25 +1,8 @@
 import SwiftUI
 import TaptionPlanCore
 
-/// 여행 일정 상태(TRP1110A09). 없거나 모르는 값은 계획이고, 계획은 저장하지 않아 예전 기록 바이트를 지킨다.
-enum TripItemStatus: String, CaseIterable, Identifiable, Hashable {
-    case booked, planned, tentative
-
-    var id: String { rawValue }
-
-    init(raw: String?) {
-        self = raw.flatMap { Self(rawValue: $0.trimmingCharacters(in: .whitespaces).lowercased()) } ?? .planned
-    }
-
-    /// 알아볼 수 있게 적힌 값만 읽는다. 없거나 모르는 값은 nil(REV1110A06).
-    init?(explicit raw: String?) {
-        guard let raw, let value = Self(rawValue: raw.trimmingCharacters(in: .whitespaces).lowercased()) else { return nil }
-        self = value
-    }
-
-    /// 저장 값. 계획은 nil.
-    var stored: String? { self == .planned ? nil : rawValue }
-
+/// 여행 일정 상태(TRP1110A09)의 문구·모양. 값과 저장 꼴은 `TaptionAssistantProtocol`에 있다(RMN1114A25).
+extension TripItemStatus {
     func title(_ language: MapHomeLanguage) -> String {
         switch self {
         case .booked: language.text("예약됨", "Booked")
