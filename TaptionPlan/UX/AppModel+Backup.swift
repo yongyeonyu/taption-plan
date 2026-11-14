@@ -346,6 +346,7 @@ extension AppModel {
         await notificationScheduler.cancelAllPlanReminders()
         GoogleCalendarAccount.shared.disconnect()
         await nearbyMemoScheduler.cancelAll()
+        await ArrivalAlertScheduler.shared.cancelAll()
         var empty = TaptionDataSnapshot.empty
         empty.categories = CategoryCatalog.builtIn
         empty.settings.permissions = snapshot.settings.permissions

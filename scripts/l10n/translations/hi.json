@@ -5717,7 +5717,7 @@
 "|You arrived at a planned place": "आप एक नियोजित स्थान पर पहुँच गए हैं",
 "도착했어요. 눌러서 메모와 체크리스트를 보세요.|You're here. Tap to see your notes and checklist.": "आप पहुँच गए हैं। नोट और चेकलिस्ट देखने के लिए टैप करें।",
 "|You're here. Tap to see your notes and checklist.": "आप पहुँच गए हैं। नोट और चेकलिस्ट देखने के लिए टैप करें।",
-"여행 일정에 넣은 곳에 도착하면 메모·세부 계획·예상 지출을 보여요. 앱이 위치를 받는 동안에만 알 수 있고, 일정마다 한 번만 떠요.|Shows notes, sub-plans and planned spend when you reach a place in your trip plan. Works only while the app receives location, once per plan.": "जब आप अपनी यात्रा योजना के किसी स्थान पर पहुँचते हैं, तो नोट, विस्तृत योजनाएँ और अनुमानित खर्च दिखाता है। केवल तब काम करता है जब ऐप को स्थान मिल रहा हो, हर योजना के लिए एक बार।",
+"여행 일정에 넣은 곳에 도착하면 메모·세부 계획·예상 지출을 보여요. 알림과 위치를 허용했으면 앱을 닫아 두어도 그날 일정 장소에서 알림이 올 수 있고, 일정마다 한 번만 떠요.|Shows notes, sub-plans and planned spend when you reach a place in your trip plan. With notifications and location allowed, today's planned places can alert you even when the app is closed, once per plan.": "जब आप अपनी यात्रा योजना के किसी स्थान पर पहुँचते हैं, तो नोट, विस्तृत योजनाएँ और अनुमानित खर्च दिखाता है। सूचनाएँ और स्थान की अनुमति होने पर, ऐप बंद होने पर भी आज की योजना के स्थानों पर सूचना मिल सकती है, हर योजना के लिए एक बार।",
 "{0} {1}건 ({2})|{0} ×{1} ({2})": "{0} ×{1} ({2})",
 "1건으로 합침 · {0}|Merged into one · {0}": "एक में मिलाया गया · {0}",
 "일상 지출|Everyday spending": "रोज़मर्रा का खर्च",

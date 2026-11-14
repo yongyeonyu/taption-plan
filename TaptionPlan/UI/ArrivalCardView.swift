@@ -135,8 +135,8 @@ struct ArrivalCardSettingRow: View {
                     Text(language.text("일정 장소 도착 카드", "Arrival card for planned places"))
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
                     Text(language.text(
-                        "여행 일정에 넣은 곳에 도착하면 메모·세부 계획·예상 지출을 보여요. 앱이 위치를 받는 동안에만 알 수 있고, 일정마다 한 번만 떠요.",
-                        "Shows notes, sub-plans and planned spend when you reach a place in your trip plan. Works only while the app receives location, once per plan."
+                        "여행 일정에 넣은 곳에 도착하면 메모·세부 계획·예상 지출을 보여요. 알림과 위치를 허용했으면 앱을 닫아 두어도 그날 일정 장소에서 알림이 올 수 있고, 일정마다 한 번만 떠요.",
+                        "Shows notes, sub-plans and planned spend when you reach a place in your trip plan. With notifications and location allowed, today's planned places can alert you even when the app is closed, once per plan."
                     ))
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11))))
                     .foregroundStyle(Color.tpSecondary)
@@ -144,6 +144,7 @@ struct ArrivalCardSettingRow: View {
             }
         }
         .tint(Color.tpAccent)
+        .onChange(of: isEnabled) { _, _ in ArrivalCardManager.shared.scheduleAlertSync() }
         .padding(.vertical, 8)
         .padding(.horizontal, 14)
         .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
