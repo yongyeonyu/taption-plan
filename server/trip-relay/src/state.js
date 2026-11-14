@@ -33,6 +33,8 @@ export const LIMITS = {
   refreshGraceMs: MINUTE_MS,
   lockMs: MINUTE_MS,
   // AI 일 목록(AIX1114A01 P2): 한 사람 100개, 가져간 지 30분 넘으면 대기로, 3번 넘기면 실패, 7일 지나면 만료·삭제.
+  rules: 500,
+  rulesGone: 200,
   tasks: 100,
   taskGone: 300,
   taskClaimMs: 30 * MINUTE_MS,
@@ -226,6 +228,80 @@ const OPS = {
     }
     await s.put("tasksMeta", { gone: [...meta.gone, ...gone].slice(-LIMITS.taskGone), imported: now });
     return { imported };
+  },
+
+  // MARK: 규칙 저장소 (AIX1114A01 P3). 기한 없이 둔다. 바뀔 때마다 버전이 1 오른다.
+
+  async ruleList(s) {
+    const meta = (await s.get("rulesMeta")) ?? { version: 0 };
+    const rules = (await values(s, "rule:")).map(([, r]) => r).sort((a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id));
+    return { version: meta.version, updatedAt: meta.updatedAt ?? null, rules, app: meta.app ?? null };
+  },
+
+  // 더하거나 같은 id를 고친다. 사용자가 지운 id는 받지 않는다(refused). AI는 사용자가 만든 규칙을 고치지 못한다.
+  async rulePut(s, { items, now, master }) {
+    const meta = (await s.get("rulesMeta")) ?? { version: 0 };
+    const gone = new Set((await s.get("rulesGone")) ?? []);
+    const count = (await values(s, "rule:")).length;
+    const fresh = [];
+    for (const item of items) if (!(await s.get("rule:" + item.id)) && !gone.has(item.id)) fresh.push(item.id);
+    if (count + fresh.length > LIMITS.rules) return { error: "too_many_rules" };
+    const ids = [], refused = [];
+    for (const item of items) {
+      const old = await s.get("rule:" + item.id);
+      if (gone.has(item.id) || (old && old.by === "user" && !master)) { refused.push(item.id); continue; }
+      // 사용자가 꺼 둔 규칙은 AI가 다시 올려도 꺼진 채로 둔다(켜려면 enabled를 적어야 한다).
+      const enabled = item.enabled ?? old?.enabled ?? true;
+      await s.put("rule:" + item.id, { id: item.id, type: item.type, by: old?.by ?? item.by, keyId: item.keyId ?? old?.keyId ?? null, enabled, createdAt: old?.createdAt ?? now, updatedAt: now, sealed: item.sealed });
+      ids.push(item.id);
+    }
+    const version = ids.length ? meta.version + 1 : meta.version;
+    if (ids.length) await s.put("rulesMeta", { ...meta, version, updatedAt: now });
+    return { version, ids, refused };
+  },
+
+  // 켜기·끄기·지우기·넣기. onlyAI면 AI가 만든 규칙만 지운다. 지운 id는 기억한다.
+  async ruleOps(s, { ops, now, onlyAI = false }) {
+    const meta = (await s.get("rulesMeta")) ?? { version: 0 };
+    const gone = (await s.get("rulesGone")) ?? [];
+    let changed = 0;
+    for (const op of ops) {
+      if (op.op === "put") {
+        const old = await s.get("rule:" + op.item.id);
+        if (!old && (await values(s, "rule:")).length >= LIMITS.rules) return { error: "too_many_rules" };
+        const item = op.item;
+        await s.put("rule:" + item.id, { id: item.id, type: item.type, by: old?.by ?? item.by, keyId: old?.keyId ?? item.keyId ?? null, enabled: item.enabled ?? old?.enabled ?? true, createdAt: old?.createdAt ?? now, updatedAt: now, sealed: item.sealed });
+        const index = gone.indexOf(item.id);
+        if (index >= 0) gone.splice(index, 1);
+        changed++;
+        continue;
+      }
+      const rule = await s.get("rule:" + op.id);
+      if (!rule) continue;
+      if (op.op === "delete") {
+        if (onlyAI && rule.by === "user") continue;
+        await s.delete("rule:" + op.id);
+        gone.push(op.id);
+        changed++;
+      } else {
+        const enabled = op.op === "enable";
+        if (rule.enabled === enabled) continue;
+        await s.put("rule:" + op.id, { ...rule, enabled, updatedAt: now });
+        changed++;
+      }
+    }
+    const version = changed ? meta.version + 1 : meta.version;
+    if (changed) {
+      await s.put("rulesMeta", { ...meta, version, updatedAt: now });
+      await s.put("rulesGone", gone.slice(-LIMITS.rulesGone));
+    }
+    return { before: meta.version, version, changed };
+  },
+
+  async ruleAck(s, { version, engine, skipped, now }) {
+    const meta = (await s.get("rulesMeta")) ?? { version: 0 };
+    await s.put("rulesMeta", { ...meta, app: { version, engine, skipped, seenAt: now } });
+    return { ok: true };
   },
 
   // MARK: 등록·입장

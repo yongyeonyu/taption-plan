@@ -5,6 +5,7 @@
 // AIR1110A02/SEC1110A01 add scoped AI keys, per-user DEK encryption (v2), summaries, a remote MCP endpoint and OpenAPI.
 // SEC1110A02 requires registration (/register), adds a PIN, a per-master Durable Object (keys, queue, budgets, PIN tries),
 // per-route limits and encrypted metadata. AIR1110A03 adds OAuth 2.1 for MCP connectors and more AI actions.
+import * as rules from "./rules.js";
 import { createSetup, readSetup } from "./setup.js";
 import { fxRoute } from "./fx.js";
 import { open, seal, sha256Hex, storageCryptoKey, vault } from "./crypto.js";
@@ -200,6 +201,18 @@ const ROUTES = {
     GET: ["read", (request, ctx) => store.readTasks(ctx, request)],
     POST: ["master", withBody(store.saveTasks)],
     DELETE: ["master", (request, ctx) => store.deleteFinishedTasks(ctx)],
+  },
+  // 규칙 저장소(AIX1114A01 P3). AI는 읽고 더하고 자기 것을 지운다. 사용자가 고친 것은 앱이 주인 키로 올린다.
+  "/rules": {
+    GET: ["read", (request, ctx) => rules.readRules(ctx, query(request, "since"))],
+    POST: ["write", withBody(rules.putRules)],
+    DELETE: ["write", (request, ctx) => rules.deleteRules(ctx, query(request, "ids"))],
+  },
+  "/rules/ops": {
+    POST: ["master", withBody(rules.applyRuleOps)],
+  },
+  "/rules/ack": {
+    POST: ["master", withBody(rules.ackRules)],
   },
   "/tasks/claim": {
     POST: ["read", (request, ctx) => store.claimTasks(ctx)],

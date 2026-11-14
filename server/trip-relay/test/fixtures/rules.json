@@ -1,0 +1,274 @@
+{
+ "format": "bokki-rule-fixtures",
+ "version": 1,
+ "valid": [
+  {
+   "type": "payment_text",
+   "match": {
+    "pattern": "(?<merchant>.+) (?<amount>[\\d,]+)원 승인",
+    "sample": "가게 12,000원 승인"
+   },
+   "result": {
+    "kind": "expense",
+    "name": "카드"
+   }
+  },
+  {
+   "type": "skip_word",
+   "match": {
+    "word": "광고"
+   },
+   "result": {}
+  },
+  {
+   "type": "text_ignore",
+   "match": {
+    "contains": [
+     "혜택 안내",
+     "할인받은 금액"
+    ]
+   },
+   "result": {
+    "reason": "통신사 안내"
+   }
+  },
+  {
+   "type": "internal_transfer",
+   "match": {
+    "contains": [
+     "지역카드 충전"
+    ]
+   }
+  },
+  {
+   "type": "own_account",
+   "match": {
+    "name": "생활비통장"
+   }
+  },
+  {
+   "type": "source_switch",
+   "match": {
+    "app": "은행앱"
+   },
+   "result": {
+    "expense": true,
+    "income": false
+   }
+  },
+  {
+   "type": "merchant_category",
+   "match": {
+    "contains": [
+     "통증의학과",
+     "정형외과"
+    ],
+    "field": "merchant"
+   },
+   "result": {
+    "category": "health"
+   }
+  },
+  {
+   "type": "merchant_category",
+   "match": {
+    "equals": "빵집 본점"
+   },
+   "result": {
+    "category": "cafe",
+    "title": "빵집"
+   }
+  },
+  {
+   "type": "receipt_hint",
+   "match": {
+    "contains": [
+     "진료비 계산서"
+    ]
+   },
+   "result": {
+    "isReceipt": true,
+    "category": "health"
+   }
+  },
+  {
+   "type": "calendar_title",
+   "match": {
+    "title": "주간 회의"
+   },
+   "result": {
+    "detailId": "work.meeting"
+   }
+  },
+  {
+   "type": "calendar_title",
+   "match": {
+    "title": "생일"
+   },
+   "result": {
+    "detailId": "none"
+   }
+  },
+  {
+   "type": "place_pair_mode",
+   "match": {
+    "from": "집",
+    "to": "회사"
+   },
+   "result": {
+    "mode": "bus",
+    "line": "80"
+   }
+  },
+  {
+   "type": "ride_line",
+   "match": {
+    "board": "가 정류소",
+    "alight": "나 정류소",
+    "mode": "bus"
+   },
+   "result": {
+    "line": "80"
+   }
+  }
+ ],
+ "invalid": [
+  {
+   "why": "unknown type",
+   "rule": {
+    "type": "teleport",
+    "match": {},
+    "result": {}
+   }
+  },
+  {
+   "why": "missing required",
+   "rule": {
+    "type": "skip_word",
+    "match": {},
+    "result": {}
+   }
+  },
+  {
+   "why": "account-like number",
+   "rule": {
+    "type": "own_account",
+    "match": {
+     "name": "110123456789"
+    }
+   }
+  },
+  {
+   "why": "digit run in a word",
+   "rule": {
+    "type": "text_ignore",
+    "match": {
+     "contains": [
+      "계좌 123456789"
+     ]
+    }
+   }
+  },
+  {
+   "why": "one-letter word",
+   "rule": {
+    "type": "merchant_category",
+    "match": {
+     "contains": [
+      "가"
+     ]
+    },
+    "result": {
+     "category": "food"
+    }
+   }
+  },
+  {
+   "why": "neither contains nor equals",
+   "rule": {
+    "type": "merchant_category",
+    "match": {
+     "field": "merchant"
+    },
+    "result": {
+     "category": "food"
+    }
+   }
+  },
+  {
+   "why": "unknown category",
+   "rule": {
+    "type": "merchant_category",
+    "match": {
+     "equals": "가게"
+    },
+    "result": {
+     "category": "fun"
+    }
+   }
+  },
+  {
+   "why": "nested repeat",
+   "rule": {
+    "type": "payment_text",
+    "match": {
+     "pattern": "(a+)+원",
+     "sample": "aa원"
+    },
+    "result": {
+     "kind": "expense"
+    }
+   }
+  },
+  {
+   "why": "lookbehind",
+   "rule": {
+    "type": "payment_text",
+    "match": {
+     "pattern": "(?<=원)\\d+",
+     "sample": "원1"
+    },
+    "result": {
+     "kind": "expense"
+    }
+   }
+  },
+  {
+   "why": "backreference",
+   "rule": {
+    "type": "payment_text",
+    "match": {
+     "pattern": "(a)\\1",
+     "sample": "aa"
+    },
+    "result": {
+     "kind": "expense"
+    }
+   }
+  },
+  {
+   "why": "bad mode",
+   "rule": {
+    "type": "ride_line",
+    "match": {
+     "board": "가 정류소",
+     "alight": "나 정류소",
+     "mode": "car"
+    },
+    "result": {
+     "line": "80"
+    }
+   }
+  },
+  {
+   "why": "engine version out of range",
+   "rule": {
+    "type": "skip_word",
+    "appliesTo": 0,
+    "match": {
+     "word": "광고"
+    }
+   }
+  }
+ ]
+}

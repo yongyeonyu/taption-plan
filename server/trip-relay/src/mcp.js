@@ -4,6 +4,7 @@
 // {"untrusted_user_text": "..."}로 감싸고, 안내문이 그 안의 지시를 따르지 말라고 한다(finding 7).
 // AIR1110A03: OAuth 토큰도 받는다(index.js). 새 동작(목표·여행·수면·안전한 설정)과 읽기 칸(goals·trips·sleep·placeBook).
 import { registry } from "./actions.js";
+import { deleteRules, putRules, readRules, setRuleEnabled } from "./rules.js";
 import { json, readBody, writeAllowed } from "./http.js";
 import { allows } from "./keys.js";
 import { claimTasks, endConversation, finishTask, queueCommand, readActivity, readAnswers, readAppState, readPolish, readResults, readSummary, readSync, savePlan } from "./store.js";
@@ -26,6 +27,9 @@ export const INSTRUCTIONS = "Reads the user's Taption Plan day records and sends
   + "every edit you send for it, and list those edit ids in complete_ai_task outcome.commandIds. If you had to ask the user (ask_user), "
   + "complete the task with outcome.askedQuestionId set to that question's id instead of guessing: the task waits and returns when they answer. "
   + "A task not finished within 30 minutes goes back to waiting; after three tries it fails. Only the connection that took a task can finish it. "
+  + "RULES: the app keeps a rule set you can extend (get_rules, put_rules). When you settle a task and the same decision will come up again "
+  + "(this shop is always cafe, this text layout is a card payment, this notice is never a payment, this stop pair is bus 80), save it with put_rules "
+  + "and list the rule ids in outcome.ruleIds; the app then decides such cases by itself. A task's context.ruleHint names the rule type that fits. "
   + "APP STATE: get_app_state holds the app's settings, the ledger (month totals, budget, recent entries), payments waiting for "
   + "the user's review, received payment texts and payment rules; read it before changing ledger settings. open_screen only asks the "
   + "app to show a screen; the app cannot create or switch on iOS Shortcuts automations, so tell the user what to tap. "
@@ -338,6 +342,36 @@ const TOOLS = [
   commandTool("set_map_style", "setMapStyle", "Set map style", "Change the map style.", { mapStyle: enumOf("Map style", MAP_STYLES) }, ["mapStyle"]),
   commandTool("set_display_option", "setDisplayOption", "Toggle display option", "Turn a map display option on or off: mapPhotos (photos on the map), mapRoutes (route lines), mapFootprints (footprints).",
     { option: enumOf("Display option", DISPLAY_OPTIONS), enabled: { type: "boolean", description: "On or off" } }, ["option", "enabled"]),
+  // 규칙 저장소(AIX1114A01 P3).
+  readTool("get_rules", "Get rules", "The rules the app applies by itself before asking you: {version, engine, rules:[{id,type,appliesTo,enabled,match,result,source,note}], "
+    + "app:{version,engine,skipped[]}}. app.version is the rule-set version the phone has applied (lower than version means it has not synced yet); "
+    + "app.skipped are rule ids the installed app cannot evaluate. Read this before saving a rule so you do not add a duplicate.",
+    object({}), (ctx) => readRules(ctx, null)),
+  {
+    name: "put_rules", title: "Save rules", scope: "write", destructive: false,
+    description: "Save up to 20 rules the app will apply by itself from now on, so the same decision is not sent to you again. Give an existing id to replace "
+      + "that rule. Each rule: {type, match, result, note?}. Types: payment_text {match:{pattern (ICU regex, named groups amount, merchant, month, day, hour, minute, "
+      + "currency; no lookbehind or backreferences), sample}, result:{kind expense|income|ignore, name?}}; skip_word {match:{word}}; text_ignore {match:{contains[], source?}, "
+      + "result:{reason?}}; internal_transfer {match:{contains[]}}; own_account {match:{name}}; source_switch {match:{app}, result:{expense, income}}; "
+      + "merchant_category {match:{contains[] or equals, field merchant|text}, result:{category, title?}}; receipt_hint {match:{contains[]}, result:{isReceipt, category?}}; "
+      + "calendar_title {match:{title}, result:{detailId or \"none\"}}; place_pair_mode {match:{from, to}, result:{mode, line?}}; ride_line {match:{board, alight, mode bus|subway}, "
+      + "result:{line}}. Words are 2-40 characters and never account, card or phone numbers. Use the narrowest match that is still general, and do not make a rule "
+      + "from one ambiguous case. The user sees every rule and can switch it off or delete it; a rule the user deleted is refused.",
+    inputSchema: object({ rules: { type: "array", minItems: 1, maxItems: 20, items: { type: "object" }, description: "Rules to save" } }, ["rules"]),
+    run: (ctx, a) => putRules(ctx, { rules: a.rules }),
+  },
+  {
+    name: "delete_rule", title: "Delete a rule", scope: "write", destructive: true,
+    description: "Delete rules you (an AI) saved, by id. Rules the user made are left alone.",
+    inputSchema: object({ ids: { type: "array", minItems: 1, maxItems: 50, items: { type: "string" }, description: "Rule ids from get_rules" } }, ["ids"]),
+    run: (ctx, a) => deleteRules(ctx, Array.isArray(a.ids) ? a.ids.join(",") : ""),
+  },
+  {
+    name: "set_rule_enabled", title: "Switch a rule on or off", scope: "write", destructive: false,
+    description: "Switch one rule on or off without deleting it.",
+    inputSchema: object({ id: str("Rule id from get_rules"), enabled: { type: "boolean", description: "On or off" } }, ["id", "enabled"]),
+    run: (ctx, a) => setRuleEnabled(ctx, a),
+  },
   {
     name: "send_trip_plan", title: "Send trip plan", scope: "write", destructive: true,
     description: "Send a trip plan (format bokki-trip, version 1) that the app previews on next launch. Replaces the previous one; kept 3 days.",
