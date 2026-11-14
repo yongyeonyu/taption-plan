@@ -71,7 +71,7 @@ extension MapHomeGrowthSeason {
         equipped(MapHomeGrowthAccessoryCatalog.kind(for: accessoryID)) == accessoryID
     }
 
-    mutating func setEquipped(_ accessoryID: String, kind: MapHomeAccessoryKind) {
+    mutating func setEquipped(_ accessoryID: String?, kind: MapHomeAccessoryKind) {
         switch kind {
         case .hat: equippedHat = accessoryID
         case .scarf: equippedScarf = accessoryID
@@ -559,6 +559,14 @@ enum MapHomeGrowthPolicy {
     ) -> Bool {
         guard season.accessories.contains(accessoryID) else { return false }
         season.setEquipped(accessoryID, kind: MapHomeGrowthAccessoryCatalog.kind(for: accessoryID))
+        return true
+    }
+
+    /// 그 자리에 걸친 장식을 벗긴다(RMN1114A22). 받은 장식 목록은 그대로다. 걸친 것이 없으면 false.
+    @discardableResult
+    static func unequip(kind: MapHomeAccessoryKind, in season: inout MapHomeGrowthSeason) -> Bool {
+        guard season.equipped(kind) != nil else { return false }
+        season.setEquipped(nil, kind: kind)
         return true
     }
 

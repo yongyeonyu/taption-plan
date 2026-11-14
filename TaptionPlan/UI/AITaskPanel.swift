@@ -34,6 +34,11 @@ struct AITaskPanel: View {
             log = AssistantActionLog.load()
             await reload()
         }
+        // 「AI가 정리한 N건」 배너가 열려 있는 동안에도 맞게: 기록이 바뀌면 다시 읽는다(RMN1114A22).
+        .onReceive(NotificationCenter.default.publisher(for: AssistantActionLog.didChange)) { _ in
+            let next = AssistantActionLog.load()
+            if next != log { log = next }
+        }
         .sheet(item: $opened, onDismiss: { inbox = PaymentInbox.items().reversed(); tasks = Self.merged() }) {
             PaymentInboxDetail(language: language, item: $0)
         }

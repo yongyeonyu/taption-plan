@@ -652,6 +652,7 @@ extension AppModel {
             let stored = snapshot.settings.calendarTitleDetails[CalendarTitleClassification.key(title.title)]
             if stored == nil || stored?.detailID != title.after { return false }
         }
+        if let color = change?.mapColor, mapActivityColor(for: color.categoryID) != color.after { return false }
         return true
     }
 
@@ -668,16 +669,21 @@ extension AppModel {
                 await clearCalendarTitleDetail(title: title.title, on: selectedDate)
             }
         }
+        // 지도 활동 색(RMN1114A22): 고르기 전 색으로, 고른 적이 없었으면 기본 색으로.
+        if let color = change?.mapColor {
+            if let before = color.before { setMapCategoryColor(before, for: color.categoryID) } else { clearMapCategoryColor(for: color.categoryID) }
+            await persist()
+        }
     }
 }
 
 // MARK: 등록부 동작 5묶음 — 분류·장소·설정 (ACT1114A09). 새 파일을 늘리지 않으려고 여기 둔다.
-// 장소 종류 바꾸기는 화면에 그런 함수가 없어 넣지 않았다. 분류 색은 예전 `updateCategory`의 `color`다.
+// 분류 색은 예전 `updateCategory`의 `color`다. 알림·장식·장소 종류·지도 활동 색은 `AssistantMoreActions.swift`에 있다(RMN1114A22).
 
 extension AssistantOperations {
     static let catalog: [any AssistantOperation.Type] = [
         MoveCategory.self, DeleteCategory.self, SetPlaceFloor.self, AddMyStop.self, UpdateMyStop.self, DeleteMyStop.self,
-        SetDayCardItems.self, SetDayCardTime.self, SetAlert.self, SetCatOutfit.self,
+        SetDayCardItems.self, SetDayCardTime.self, SetAlert.self, SetCatOutfit.self, SetPlaceKind.self, SetMapActivityColor.self,
     ]
 
     /// 알림 종류·하루 카드 시각의 키. 바꾸거나 되돌리면 하루 카드 예약을 다시 맞춘다.
@@ -699,7 +705,7 @@ extension AssistantOperations {
         floor.map { language.text("\($0)층", "Floor \($0)") } ?? language.text("층 없음", "No floor")
     }
 
-    private static func onOff(_ isOn: Bool, _ language: MapHomeLanguage) -> String { isOn ? language.text("켬", "On") : language.text("끔", "Off") }
+    static func onOff(_ isOn: Bool, _ language: MapHomeLanguage) -> String { isOn ? language.text("켬", "On") : language.text("끔", "Off") }
 
     /// 분류 차례 바꾸기(분류 목록을 끌어 옮기는 것과 같은 `moveCategories`). 자리는 「미확인」을 뺀 목록에서 센다(앱 상태의 차례와 같다).
     struct MoveCategory: AssistantOperation {
@@ -959,73 +965,6 @@ extension AssistantOperations {
             if host.preferences.isLive { await MapHomeAlarmCenter.shared.syncDailyCardSchedule(language: host.language) }
             var result = AssistantEditResult(before: before, after: after)
             result.appChange = AssistantAppChange(stored: changes)
-            return result
-        }
-    }
-
-    /// 알림 종류 하나 켜고 끄기(알림 설정의 스위치와 같은 저장 값). iOS 알림 권한은 건드리지 않는다.
-    struct SetAlert: AssistantOperation {
-        static let spec = AssistantOperationSpec(
-            name: "setAlert", fields: ["alert", "enabled"], counter: .settings,
-            title: { $0.text("알림 종류 켜고 끄기", "Switch alert kinds on or off") },
-            guide: #""alert":"\#(MapHomeAlarmKind.allCases.map(\.rawValue).joined(separator: "|"))","enabled":false} (one kind of app alert; those on are in GET /app settings.alertsOn; this does not grant the iOS notification permission)"#
-        )
-
-        let kind: MapHomeAlarmKind
-        let enabled: Bool
-
-        init?(fields: AssistantFields) {
-            guard let kind: MapHomeAlarmKind = fields.choice("alert"), let enabled = fields.flag("enabled") else { return nil }
-            self.kind = kind
-            self.enabled = enabled
-        }
-
-        func apply(host: AssistantOperationHost) async -> AssistantEditResult {
-            let language = host.language
-            var settings = MapHomeAlarmSettings.stored(host.defaults)
-            guard settings.enabled.contains(kind) != enabled else { return .rejected("no_change") }
-            if enabled { settings.enabled.insert(kind) } else { settings.enabled.remove(kind) }
-            guard let change = host.changing(MapHomeAlarmSettings.storageKey, { host.defaults.set(settings.rawValue, forKey: MapHomeAlarmSettings.storageKey) }) else {
-                return .rejected("no_change")
-            }
-            if host.preferences.isLive { await MapHomeAlarmCenter.shared.syncDailyCardSchedule(language: language) }
-            let name = kind.title(language)
-            var result = AssistantEditResult(before: "\(name): \(AssistantOperations.onOff(!enabled, language))", after: "\(name): \(AssistantOperations.onOff(enabled, language))")
-            result.appChange = AssistantAppChange(stored: [change])
-            return result
-        }
-    }
-
-    /// 화랑이 꾸미기: 이미 받은 장식 하나를 입힌다(집 성장 화면의 「착용」과 같은 `equipAccessory`).
-    struct SetCatOutfit: AssistantOperation {
-        static let spec = AssistantOperationSpec(
-            name: "setCatOutfit", fields: ["accessoryId"], counter: .settings,
-            title: { $0.text("고양이 장식 입히기", "Dress my cat") },
-            guide: #""accessoryId":"<settings.outfit.owned[]>"} (puts on one accessory I already earned; one hat, one scarf and one tail ribbon can be worn together; worn ones are in GET /app settings.outfit.worn)"#
-        )
-
-        let accessoryID: String
-
-        init?(fields: AssistantFields) {
-            guard let accessoryID = fields.string("accessoryId", max: 100), accessoryID.hasPrefix("cat.accessory.") else { return nil }
-            self.accessoryID = accessoryID
-        }
-
-        func apply(host: AssistantOperationHost) async -> AssistantEditResult {
-            let language = host.language
-            guard var history = AssistantOperations.growthHistory(host.defaults), history.season.accessories.contains(accessoryID) else { return .rejected("no_accessory") }
-            guard !history.season.isEquipped(accessoryID) else { return .rejected("no_change") }
-            func name(_ id: String?) -> String {
-                guard let id else { return "" }
-                return MapHomeGrowthAccessoryCatalog.landmark(for: id).map { language.runtimeText($0.name, $0.englishName) } ?? id
-            }
-            let before = name(history.season.equipped(MapHomeGrowthAccessoryCatalog.kind(for: accessoryID)))
-            guard MapHomeGrowthPolicy.equipAccessory(accessoryID, in: &history.season), let encoded = try? JSONEncoder().encode(history),
-                  let change = host.changing(MapHomeGrowthPolicy.storageKey, { host.defaults.set(encoded, forKey: MapHomeGrowthPolicy.storageKey) }) else {
-                return .rejected("edit_failed")
-            }
-            var result = AssistantEditResult(before: before, after: name(accessoryID))
-            result.appChange = AssistantAppChange(stored: [change])
             return result
         }
     }

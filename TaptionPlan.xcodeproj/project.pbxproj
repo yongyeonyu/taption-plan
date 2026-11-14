@@ -243,6 +243,7 @@
 		A1A1110A0100000000000009 /* AssistantRelayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0100000000000009 /* AssistantRelayTests.swift */; };
 		A1A1110A0200000000000009 /* AssistantCommandEditTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0200000000000009 /* AssistantCommandEditTests.swift */; };
 		D15ABA1114A1500000000005 /* AssistantDigestTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D15ABA1114A1500000000006 /* AssistantDigestTests.swift */; };
+		D22A1114A220000000000005 /* AssistantMoreActionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D22A1114A220000000000006 /* AssistantMoreActionTests.swift */; };
 		A1A1110A0300000000000010 /* AssistantPhase3Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000010 /* AssistantPhase3Tests.swift */; };
 		D24A00000000000000000001 /* MapHomeLastKnownLocationPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24F00000000000000000001 /* MapHomeLastKnownLocationPolicyTests.swift */; };
 		D24A00000000000000000002 /* MapHomeExpectedRouteRefreshGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24F00000000000000000002 /* MapHomeExpectedRouteRefreshGateTests.swift */; };
@@ -547,6 +548,7 @@
 		A1A1110A0200000000000002 /* AssistantActionLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0200000000000002 /* AssistantActionLog.swift */; };
 		D15ABA1114A1500000000003 /* AssistantBeforeAfterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D15ABA1114A1500000000004 /* AssistantBeforeAfterView.swift */; };
 		D15ABA1114A1500000000001 /* AssistantDigest.swift in Sources */ = {isa = PBXBuildFile; fileRef = D15ABA1114A1500000000002 /* AssistantDigest.swift */; };
+		D22A1114A220000000000001 /* AssistantMoreActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D22A1114A220000000000002 /* AssistantMoreActions.swift */; };
 		A1A1110A0200000000000003 /* AssistantCommandRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0200000000000003 /* AssistantCommandRunner.swift */; };
 		A1A1110A0200000000000004 /* AssistantKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0200000000000004 /* AssistantKeys.swift */; };
 		A1A1110A0300000000000011 /* AssistantBubble.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000011 /* AssistantBubble.swift */; };
@@ -1033,6 +1035,7 @@
 		F1A1110A0100000000000009 /* AssistantRelayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantRelayTests.swift; sourceTree = "<group>"; };
 		F1A1110A0200000000000009 /* AssistantCommandEditTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantCommandEditTests.swift; sourceTree = "<group>"; };
 		D15ABA1114A1500000000006 /* AssistantDigestTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantDigestTests.swift; sourceTree = "<group>"; };
+		D22A1114A220000000000006 /* AssistantMoreActionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantMoreActionTests.swift; sourceTree = "<group>"; };
 		F1A1110A0300000000000010 /* AssistantPhase3Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantPhase3Tests.swift; sourceTree = "<group>"; };
 		D24F00000000000000000001 /* MapHomeLastKnownLocationPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLastKnownLocationPolicyTests.swift; sourceTree = "<group>"; };
 		D24F00000000000000000002 /* MapHomeExpectedRouteRefreshGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeExpectedRouteRefreshGateTests.swift; sourceTree = "<group>"; };
@@ -1326,6 +1329,7 @@
 		F1A1110A0200000000000002 /* AssistantActionLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantActionLog.swift; sourceTree = "<group>"; };
 		D15ABA1114A1500000000004 /* AssistantBeforeAfterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantBeforeAfterView.swift; sourceTree = "<group>"; };
 		D15ABA1114A1500000000002 /* AssistantDigest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantDigest.swift; sourceTree = "<group>"; };
+		D22A1114A220000000000002 /* AssistantMoreActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantMoreActions.swift; sourceTree = "<group>"; };
 		F1A1110A0200000000000003 /* AssistantCommandRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantCommandRunner.swift; sourceTree = "<group>"; };
 		F1A1110A0200000000000004 /* AssistantKeys.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantKeys.swift; sourceTree = "<group>"; };
 		F1A1110A0300000000000011 /* AssistantBubble.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantBubble.swift; sourceTree = "<group>"; };
@@ -1705,6 +1709,7 @@
 				F1A1110A0100000000000009 /* AssistantRelayTests.swift */,
 				F1A1110A0200000000000009 /* AssistantCommandEditTests.swift */,
 				D15ABA1114A1500000000006 /* AssistantDigestTests.swift */,
+				D22A1114A220000000000006 /* AssistantMoreActionTests.swift */,
 				F1A1110A0300000000000010 /* AssistantPhase3Tests.swift */,
 				D24F00000000000000000001 /* MapHomeLastKnownLocationPolicyTests.swift */,
 				D24F00000000000000000002 /* MapHomeExpectedRouteRefreshGateTests.swift */,
@@ -1883,6 +1888,7 @@
 				F1A1110A0200000000000002 /* AssistantActionLog.swift */,
 				D15ABA1114A1500000000004 /* AssistantBeforeAfterView.swift */,
 				D15ABA1114A1500000000002 /* AssistantDigest.swift */,
+				D22A1114A220000000000002 /* AssistantMoreActions.swift */,
 				F1A1110A0200000000000003 /* AssistantCommandRunner.swift */,
 				F1A1110A0200000000000004 /* AssistantKeys.swift */,
 				F1A1110A0300000000000011 /* AssistantBubble.swift */,
@@ -2893,6 +2899,7 @@
 				A1A1110A0200000000000002 /* AssistantActionLog.swift in Sources */,
 				D15ABA1114A1500000000003 /* AssistantBeforeAfterView.swift in Sources */,
 				D15ABA1114A1500000000001 /* AssistantDigest.swift in Sources */,
+				D22A1114A220000000000001 /* AssistantMoreActions.swift in Sources */,
 				A1A1110A0200000000000003 /* AssistantCommandRunner.swift in Sources */,
 				A1A1110A0200000000000004 /* AssistantKeys.swift in Sources */,
 				A1A1110A0300000000000011 /* AssistantBubble.swift in Sources */,
@@ -3273,6 +3280,7 @@
 				A1A1110A0100000000000009 /* AssistantRelayTests.swift in Sources */,
 				A1A1110A0200000000000009 /* AssistantCommandEditTests.swift in Sources */,
 				D15ABA1114A1500000000005 /* AssistantDigestTests.swift in Sources */,
+				D22A1114A220000000000005 /* AssistantMoreActionTests.swift in Sources */,
 				A1A1110A0300000000000010 /* AssistantPhase3Tests.swift in Sources */,
 				D24A00000000000000000001 /* MapHomeLastKnownLocationPolicyTests.swift in Sources */,
 				D24A00000000000000000002 /* MapHomeExpectedRouteRefreshGateTests.swift in Sources */,

@@ -86,6 +86,8 @@ struct AssistantBeforeAfterList: View {
             }
         }
         .onAppear(perform: reload)
+        // 화면이 떠 있는 동안 AI가 더 반영하거나 다른 화면에서 되돌리면 바로 다시 읽는다(RMN1114A22).
+        .onReceive(NotificationCenter.default.publisher(for: AssistantActionLog.didChange)) { _ in reload() }
     }
 
     private func reload() {

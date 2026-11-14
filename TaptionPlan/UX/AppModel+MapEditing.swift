@@ -18,6 +18,18 @@ extension AppModel {
         Task { await persist() }
     }
 
+    /// 지도 활동의 지금 색(RMN1114A22). 기본 분류는 사용자가 고른 색, 없으면 기본 색. 모르는 id면 nil.
+    func mapActivityColor(for categoryID: String) -> String? {
+        if let id = UUID(uuidString: categoryID) { return snapshot.settings.mapUserActivityCategories.first { $0.id == id }?.hex }
+        return MapHomeSidebarMajorCategory.all(categoryColors: snapshot.settings.mapCategoryColors).first { $0.id == categoryID }?.hex
+    }
+
+    /// 기본 분류의 색을 고르기 전(기본 색)으로 돌린다. 되돌리기에서 쓴다.
+    func clearMapCategoryColor(for categoryID: String) {
+        guard snapshot.settings.mapCategoryColors.removeValue(forKey: categoryID) != nil else { return }
+        Task { await persist() }
+    }
+
     @discardableResult
     func addMapUserActivityCategory(
         title: String,

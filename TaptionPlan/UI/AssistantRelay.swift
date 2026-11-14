@@ -88,12 +88,12 @@ extension TripRelay {
         - POST /plan with the "bokki-trip" JSON (format "bokki-trip", version 1) for a trip plan.
         - POST /command with one of:
           \(command)"addMemo","text":"Buy milk","date":"YYYY-MM-DD","time":"HH:mm"} (date and time optional: today, no time)
-          \(command)"addSchedule","title":"Dentist","start":"YYYY-MM-DDTHH:MM\(offset)","end":"YYYY-MM-DDTHH:MM\(offset)","note":"..."} (end and note optional: 1 hour; also optional "categoryId" from categories in GET /app, "important":true and "parentGoalId":"<goals[].id>" to put it under a goal whose dates cover it)
+          \(command)"addSchedule","title":"Dentist","start":"YYYY-MM-DDTHH:MM\(offset)","end":"YYYY-MM-DDTHH:MM\(offset)","note":"..."} (end and note optional: 1 hour; also optional "categoryId" from categories in GET /app, "important":true and "parentGoalId":"<goals[].id>" to put it under a goal whose dates cover it; a place as "placeName" with "latitude" and "longitude", always the three together and never sent back, and "plannedSpend" in KRW)
           \(command)"updateActivity","date":"YYYY-MM-DD","recordId":"<records[].id>","title":"Lunch","categoryId":"eating"} (use startTime "HH:mm" instead of recordId to pick the record covering that time; give title, categoryId or both; categoryId from records[].category.id)
           \(command)"hideRecord","date":"YYYY-MM-DD","recordId":"<records[].id>"} (or startTime "HH:mm"; the record becomes unconfirmed, nothing is deleted)
           \(command)"mergeRecords","date":"YYYY-MM-DD","recordIds":["<id>","<id>"],"title":"Work","categoryId":"work"} (2 to 20 back-to-back records; title and categoryId optional)
           \(command)"updateRecordTime","date":"YYYY-MM-DD","recordId":"<records[].id>","start":"HH:mm","end":"HH:mm"} (start, end or both)
-          \(command)"updateSchedule","planId":"<plans[].id>","title":"Dentist","start":"YYYY-MM-DDTHH:MM\(offset)","end":"YYYY-MM-DDTHH:MM\(offset)","note":"..."} (or "date" and "startTime" "HH:mm" instead of planId; give at least one change; "categoryId", "important" and "parentGoalId" work here too, "parentGoalId":"none" takes it out of its goal)
+          \(command)"updateSchedule","planId":"<plans[].id>","title":"Dentist","start":"YYYY-MM-DDTHH:MM\(offset)","end":"YYYY-MM-DDTHH:MM\(offset)","note":"..."} (or "date" and "startTime" "HH:mm" instead of planId; give at least one change; "categoryId", "important" and "parentGoalId" work here too, "parentGoalId":"none" takes it out of its goal; "placeName"+"latitude"+"longitude" and "plannedSpend" too, "clearPlace":true removes the place)
           \(command)"deleteSchedule","planId":"<plans[].id>"} (or "date" and "startTime")
           \(command)"updateMemo","memoId":"<memos[].id>","text":"...","date":"YYYY-MM-DD","time":"HH:mm"} (text, date, time or any mix: date and time move the memo to another day or time)
           \(command)"deleteMemo","memoId":"<memos[].id>"}

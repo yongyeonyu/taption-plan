@@ -535,6 +535,8 @@
 "{0} · {1}번째|{0} · #{1}": "{0} · thứ {1}",
 "내가 만든 분류 지우기|Delete my categories": "Xóa danh mục của tôi",
 "자주 가는 장소의 층 정하기|Set floors of frequent places": "Đặt tầng cho địa điểm thường đến",
+"자주 가는 장소의 종류 바꾸기|Change kinds of frequent places": "Đổi loại địa điểm thường đến",
+"지도 활동 색 바꾸기|Change map activity colours": "Đổi màu hoạt động trên bản đồ",
 "내 정류장 더하기|Add my stations and stops": "Thêm ga và trạm của tôi",
 "내 정류장 고치기|Edit my stations and stops": "Sửa ga và trạm của tôi",
 "내 정류장 지우기|Delete my stations and stops": "Xóa ga và trạm của tôi",

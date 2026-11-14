@@ -167,6 +167,8 @@ extension AssistantCommandParser {
         let shareNames: [String]?
         // ACT1114A07: addSchedule·updateSchedule의 중요·상위 루틴.
         let important: Bool?, parentGoalId: String?
+        // RMN1114A22: addSchedule·updateSchedule의 장소(이름+좌표)·예상 지출·장소 지우기.
+        let placeName: String?, plannedSpend: Double?, clearPlace: Bool?
     }
 
     /// `{"commands":[...]}`를 읽는다. 서버와 같은 규칙으로 다시 본다.
@@ -280,14 +282,20 @@ extension AssistantCommandParser {
         }
     }
 
-    /// 일정의 분류·중요·상위 루틴(ACT1114A07). 틀린 칸이 있으면 nil. `parentGoalId` "none"은 고칠 때만 받는다.
+    /// 일정의 분류·중요·상위 루틴(ACT1114A07)과 장소·예상 지출(RMN1114A22). 틀린 칸이 있으면 nil. `parentGoalId` "none"은 고칠 때만 받는다.
     private static func scheduleExtras(_ raw: Raw, allowsDetach: Bool) -> AssistantScheduleExtras? {
         if raw.categoryId != nil, clean(raw.categoryId, max: 100) == nil { return nil }
         var parent: String?
         if let text = raw.parentGoalId {
             if allowsDetach, text == "none" { parent = "" } else if UUID(uuidString: text) != nil { parent = text } else { return nil }
         }
-        return AssistantScheduleExtras(categoryID: clean(raw.categoryId, max: 100), important: raw.important, parentGoalID: parent)
+        var extras = AssistantScheduleExtras(categoryID: clean(raw.categoryId, max: 100), important: raw.important, parentGoalID: parent)
+        // RMN1114A22: 장소는 `latitude`·`longitude`만 받는다(`lat`·`lng`는 여행 핀의 옛 이름). 장소 지우기는 고칠 때만.
+        guard extras.readSpot(
+            placeName: raw.placeName, latitude: raw.latitude, longitude: raw.longitude,
+            plannedSpend: raw.plannedSpend, clearPlace: raw.clearPlace, allowsClear: allowsDetach
+        ) else { return nil }
+        return extras
     }
 
     /// `planId`, 없으면 `date`+`startTime`으로 일정을 고른다.

@@ -287,7 +287,12 @@ export const MY_STOP_KINDS = ["subwayStation", "busStop", "trainStation", "airpo
 export const DAY_CARD_ITEMS = ["sleep", "movement", "study", "work", "exercise", "hobby", "distance", "places", "trips", "steps", "photos",
   "walkDistance", "carDistance", "transitDistance", "awayTime", "stepDistance", "calories", "income", "expense", "memos"];
 export const ALERTS = ["arriveCompany", "leaveCompany", "arriveSchool", "leaveSchool", "arriveAcademy", "leaveAcademy", "arriveHome", "leaveHome",
-  "wakeUp", "dailyCard", "rateChange", "breakEven"];
+  "wakeUp", "dailyCard", "rateChange", "breakEven", "nearbyMemo"];
+/** 장소 종류(앱 `FrequentPlaceKind`)와 화랑이 장식 자리(RMN1114A22). */
+export const PLACE_KINDS = ["home", "school", "academy", "company", "hobby", "exercise", "restaurant", "custom"];
+export const OUTFIT_SLOTS = ["hat", "scarf", "ribbon"];
+/** 다음 빌드부터 받는 동작(RMN1114A22). */
+const SINCE_NEXT = 344;
 const floor = (description) => f.integer(FLOORS[0], FLOORS[1], description);
 registry
   .add("moveCategory", {
@@ -358,7 +363,8 @@ registry
   })
   .add("setAlert", {
     tool: "set_alert", title: "Switch one kind of alert on or off", since: SINCE,
-    description: "Switch one kind of app alert on or off (those on are in get_app_state settings.alertsOn). This does not grant the iOS notification "
+    description: "Switch one kind of app alert on or off (those on are in get_app_state settings.alertsOn). nearbyMemo is the alert for a memo the user "
+      + "left near where they are now. This does not grant the iOS notification "
       + "permission: if notifications are not allowed, the user has to allow them. Undoable.",
     fields: {
       alert: f.oneOf(ALERTS, "Kind of alert").required_(),
@@ -367,8 +373,32 @@ registry
   })
   .add("setCatOutfit", {
     tool: "set_cat_outfit", title: "Dress the user's cat", since: SINCE,
-    description: "Put on one accessory the user already earned (get_app_state settings.outfit.owned; one hat, one scarf and one tail ribbon can be worn together). Undoable.",
-    fields: { accessoryId: f.match(/^cat\.accessory\.[\w.-]{1,80}$/, "Accessory id from settings.outfit.owned").required_() },
+    description: "Put on one accessory the user already earned (get_app_state settings.outfit.owned; one hat, one scarf and one tail ribbon can be worn together), "
+      + "or take one off with remove (hat, scarf or ribbon). Give accessoryId or remove, not both. Undoable.",
+    fields: {
+      accessoryId: f.match(/^cat\.accessory\.[\w.-]{1,80}$/, "Accessory id from settings.outfit.owned"),
+      remove: f.oneOf(OUTFIT_SLOTS, "Which worn accessory to take off"),
+    },
+    check: (v) => given(v.accessoryId) !== given(v.remove),
+  })
+  .add("setPlaceKind", {
+    tool: "set_place_kind", title: "Change the kind of a frequent place", since: SINCE_NEXT,
+    description: "Change what kind of place one registered place is (placeId and its kind from get_app_state places): home, school, academy, company, hobby, "
+      + "exercise, restaurant or custom. Every kind except restaurant and custom holds one place: when another place already has it the result is "
+      + "rejected with reason kind_taken. Only when the user asked. Undoable.",
+    fields: {
+      placeId: f.match(UUID, "Place id from get_app_state places").required_(),
+      kind: f.oneOf(PLACE_KINDS, "The new kind").required_(),
+    },
+  })
+  .add("setMapActivityColor", {
+    tool: "set_map_activity_color", title: "Change the colour of an activity on the map", since: SINCE_NEXT,
+    description: "Set the colour the map and the time bar use for one activity (ids and current colours in get_app_state settings.mapColors; "
+      + "custom:true are the user's own activities). Undoable.",
+    fields: {
+      categoryId: f.id("Activity id from settings.mapColors").required_(),
+      color: f.match(/^#[0-9A-Fa-f]{6}$/, "#RRGGBB").required_(),
+    },
   });
 
 // 6묶음: 시스템 (ACT1114A09). 권한 켜기·앱 잠금·PIN·전부 지우기는 넣지 않는다(대표 결정).

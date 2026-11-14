@@ -358,10 +358,37 @@
       "destructive": true,
       "since": 341,
       "fields": [
-        "accessoryId"
+        "accessoryId",
+        "remove"
+      ],
+      "required": []
+    },
+    {
+      "action": "setPlaceKind",
+      "tool": "set_place_kind",
+      "destructive": true,
+      "since": 344,
+      "fields": [
+        "placeId",
+        "kind"
       ],
       "required": [
-        "accessoryId"
+        "placeId",
+        "kind"
+      ]
+    },
+    {
+      "action": "setMapActivityColor",
+      "tool": "set_map_activity_color",
+      "destructive": true,
+      "since": 344,
+      "fields": [
+        "categoryId",
+        "color"
+      ],
+      "required": [
+        "categoryId",
+        "color"
       ]
     },
     {

@@ -190,6 +190,15 @@ struct AssistantAppState: Codable, Equatable, Sendable {
         var dayCard: DayCard?
         var alertsOn: [String]?
         var outfit: Outfit?
+        /// RMN1114A22: 지도 활동마다의 지금 색(기본 분류 id + 사용자 분류 UUID). `setMapActivityColor`의 대상이다.
+        var mapColors: [MapColor]?
+    }
+
+    struct MapColor: Codable, Equatable, Sendable {
+        var id: String
+        var name: String
+        var color: String
+        var custom: Bool
     }
 
     struct MyStop: Codable, Equatable, Sendable {
@@ -409,6 +418,7 @@ enum AssistantAppStateSync {
         var dayCard: AssistantAppState.DayCard?
         var alertsOn: [String]?
         var outfit: AssistantAppState.Outfit?
+        var mapColors: [AssistantAppState.MapColor] = []
     }
 
     static func make(_ input: Input) -> AssistantAppState {
@@ -433,7 +443,8 @@ enum AssistantAppStateSync {
                 myStops: input.shareLevel == .visits && !input.myStops.isEmpty ? input.myStops.prefix(AssistantCatalogLimits.places).map {
                     .init(id: $0.id.uuidString, name: mask($0.name, AssistantCatalogLimits.placeName), kind: $0.kind.rawValue, floor: $0.floor)
                 } : nil,
-                dayCard: input.dayCard, alertsOn: input.alertsOn, outfit: input.outfit
+                dayCard: input.dayCard, alertsOn: input.alertsOn, outfit: input.outfit,
+                mapColors: input.mapColors.isEmpty ? nil : input.mapColors.map { .init(id: $0.id, name: mask($0.name, 20), color: $0.color, custom: $0.custom) }
             ),
             ledger: .init(
                 month: LedgerBook.monthKey(input.now, calendar: input.calendar), budgetKRW: input.budgetKRW,
@@ -559,8 +570,9 @@ enum AssistantAppStateSync {
             boarding: AssistantBoardingCandidates.current,
             myStops: model.snapshot.settings.userTransitLocations,
             dayCard: .init(items: MapHomeCardMetricSelection.load(defaults), time: AssistantOperations.dayCardTime(defaults)),
-            alertsOn: MapHomeAlarmSettings.stored(defaults).enabled.map(\.rawValue).sorted(),
-            outfit: AssistantOperations.growthHistory(defaults).map { .init(owned: $0.season.accessories, worn: [$0.season.equippedHat, $0.season.equippedScarf, $0.season.equippedRibbon].compactMap { $0 }) }
+            alertsOn: AssistantOperations.alertsOn(defaults),
+            outfit: AssistantOperations.growthHistory(defaults).map { .init(owned: $0.season.accessories, worn: [$0.season.equippedHat, $0.season.equippedScarf, $0.season.equippedRibbon].compactMap { $0 }) },
+            mapColors: AssistantOperations.mapColors(model)
         )
     }
 

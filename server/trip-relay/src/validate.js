@@ -83,6 +83,11 @@ const between = (min, max) => (v) => typeof v === "number" && Number.isFinite(v)
 // 보낸 칸은 모두 본다(N10): latitude와 lat을 함께 보내면 둘 다 맞아야 한다.
 const pair = (lat, lng) => (!given(lat) && !given(lng)) || (between(-90, 90)(lat) && between(-180, 180)(lng));
 const coordinates = (v) => pair(v.latitude, v.longitude) && pair(v.lat, v.lng);
+// 일정의 장소(RMN1114A22): 이름·위도·경도 셋이 함께이거나 셋 다 없다. 좌표는 받기만 하고 돌려주지 않는다.
+export const SCHEDULE_PLACE_NAME = 100;
+const schedulePlace = (v) => ([v.placeName, v.latitude, v.longitude].some(given)
+  ? nonEmpty(v.placeName, SCHEDULE_PLACE_NAME) && between(-90, 90)(v.latitude) && between(-180, 180)(v.longitude) : true);
+const plannedSpend = (s) => typeof s === "number" && Number.isFinite(s) && s > 0 && s <= 1e10;
 const goalTarget = (v) => optional(v.goalId, targetID) && optional(v.planId, targetID) && (given(v.goalId) || given(v.planId));
 
 // MARK: 말풍선 (BUB1110A01, REV1110A06 N7)
@@ -165,12 +170,13 @@ export function bubbleText(value) {
 export const COMMAND_FIELDS = {
   addMemo: ["text", "date", "time"],
   // ACT1114A07: categoryId(분류)·important(중요)·parentGoalId(루틴 아래에 두기).
-  addSchedule: ["title", "start", "end", "note", "categoryId", "important", "parentGoalId"],
+  // RMN1114A22: 일정의 장소(이름+좌표 셋이 함께)·예상 지출(원). 옛 앱은 모르는 칸을 무시한다.
+  addSchedule: ["title", "start", "end", "note", "categoryId", "important", "parentGoalId", "placeName", "latitude", "longitude", "plannedSpend"],
   updateActivity: ["date", "recordId", "startTime", "title", "categoryId"],
   hideRecord: ["date", "recordId", "startTime"],
   mergeRecords: ["date", "recordIds", "title", "categoryId"],
   updateRecordTime: ["date", "recordId", "start", "end"],
-  updateSchedule: ["planId", "date", "startTime", "title", "start", "end", "note", "categoryId", "important", "parentGoalId"],
+  updateSchedule: ["planId", "date", "startTime", "title", "start", "end", "note", "categoryId", "important", "parentGoalId", "placeName", "latitude", "longitude", "plannedSpend", "clearPlace"],
   deleteSchedule: ["planId", "date", "startTime"],
   // ACT1114A07: date·time으로 메모의 때를 옮긴다(글 없이 때만 옮겨도 된다).
   updateMemo: ["memoId", "text", "date", "time"],
@@ -382,7 +388,8 @@ export function isCommand(value) {
     case "addSchedule":
       return nonEmpty(v.title, 200) && isInstant(v.start)
         && optional(v.end, (e) => isInstant(e) && Date.parse(e) > Date.parse(v.start)) && optional(v.note, note)
-        && optional(v.categoryId, targetID) && optional(v.important, isBoolean) && optional(v.parentGoalId, uuid);
+        && optional(v.categoryId, targetID) && optional(v.important, isBoolean) && optional(v.parentGoalId, uuid)
+        && schedulePlace(v) && optional(v.plannedSpend, plannedSpend);
     case "updateActivity":
       return recordTarget(v) && optional(v.title, title(100)) && optional(v.categoryId, targetID)
         && (given(v.title) || given(v.categoryId));
@@ -395,7 +402,10 @@ export function isCommand(value) {
         && (given(v.start) || given(v.end)) && !(given(v.start) && v.start === v.end);
     case "updateSchedule":
       return planTarget(v) && optional(v.title, title(200)) && optional(v.start, isClock) && optional(v.end, isClock)
-        && optional(v.note, note) && [v.title, v.start, v.end, v.note, v.categoryId, v.important, v.parentGoalId].some(given)
+        && optional(v.note, note)
+        && [v.title, v.start, v.end, v.note, v.categoryId, v.important, v.parentGoalId, v.placeName, v.plannedSpend, v.clearPlace].some(given)
+        // 장소를 지우는 것과 새로 정하는 것은 함께 보내지 않는다.
+        && schedulePlace(v) && optional(v.plannedSpend, plannedSpend) && optional(v.clearPlace, (c) => c === true && !given(v.placeName))
         // parentGoalId "none"은 루틴에서 떼어 낸다.
         && optional(v.categoryId, targetID) && optional(v.important, isBoolean) && optional(v.parentGoalId, (p) => p === "none" || uuid(p))
         && !(isInstant(v.start) && isInstant(v.end) && Date.parse(v.end) <= Date.parse(v.start));
