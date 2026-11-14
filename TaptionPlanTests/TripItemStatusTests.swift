@@ -742,6 +742,9 @@ final class TravelTripUnitTests: XCTestCase {
             .init(image: try XCTUnwrap(URL(string: "https://img.example.com/good.jpg")), site: "어느 블로그"),
             .init(image: try XCTUnwrap(URL(string: "https://thumb.example.com/t")), site: ""),
         ])
+        // 서버의 사진 중계가 돌려준 것: https 주소만.
+        let relay = #"{"documents":[{"image":"https://img.example.com/s.jpg","site":"Mapillary · walker","page":"https://example.com/p"},{"image":"http://img.example.com/x.jpg","site":"x"},{"site":"no image"}]}"#
+        XCTAssertEqual(TravelWikiPhoto.pickRelay(Data(relay.utf8)), [.init(image: try XCTUnwrap(URL(string: "https://img.example.com/s.jpg")), site: "Mapillary · walker")])
         XCTAssertEqual(TravelPlacePhotoStore.fitted(CGSize(width: 1_600, height: 800), longSide: 640), CGSize(width: 640, height: 320))
         XCTAssertEqual(TravelPlacePhotoStore.fitted(CGSize(width: 300, height: 200), longSide: 640), CGSize(width: 300, height: 200), "small pictures are not enlarged")
     }

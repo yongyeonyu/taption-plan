@@ -1,5 +1,5 @@
 {
- "ui": 4893,
+ "ui": 4912,
  "catalog": 502,
  "unread": [
   {
@@ -94,7 +94,7 @@
   },
   {
    "file": "TaptionPlan/Core/LedgerIntents.swift",
-   "line": 138,
+   "line": 140,
    "ko": "entry.amount",
    "en": "entry.currency"
   },
@@ -523,12 +523,6 @@
    "line": 524,
    "ko": "entry.mode.summaryKoreanTitle",
    "en": "entry.mode.summaryEnglishTitle"
-  },
-  {
-   "file": "TaptionPlan/UI/MapHomeKakaoSearch.swift",
-   "line": 216,
-   "ko": "displayedLocationDate",
-   "en": "currentDayDataSnapshot?.travel ?? []"
   },
   {
    "file": "TaptionPlan/UI/MapHomeLanguage.swift",

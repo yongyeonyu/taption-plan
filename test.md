@@ -7,6 +7,19 @@
 - CLM1114A01(하루 편집 한도 30 → 100): 서버 `npm test` 116건 통과(옛 숫자에 기대던 시험 5건을 새 한도에 맞게 고침), `wrangler deploy` 완료. 대기열 상한은 50 그대로다(100으로 올리면 다른 시험·읽기 상한까지 바뀌어 이번에는 두었다).
 - OCF1114A01(큰 사진에도 「OCR」 표시)·안내문 숫자: `AssistantCommandEditTests`·`AssistantRelayTests`·`LedgerTests` 62건 통과·실패 0(`build/validation/OCB1114A01/sim-16.xcresult`), 구조 점검 통과. 아직 빌드에 없고 화면 확인도 없다.
 
+## AIP1114A05·KMP1114A04·PHS1114A01 · 340 뒤에 합친 것 (2026-11-14 오후, 아직 빌드에 없음)
+
+두 작업은 따로 만든 작업 공간에서 구현해 메인에 합쳤다(충돌 없음). 아래는 합친 뒤 메인에서 다시 돌린 결과다. 시뮬레이터(BOKKI-STL), 실기기 확인 없음.
+
+| 검증 | 결과 |
+|---|---|
+| 합친 코드 전체 빌드 + `AITaskQueueTests`·`LedgerTests`·`AssistantPhase3Tests`·`AssistantReviewFixTests`·`AssistantRelayTests`·`AssistantCommandEditTests`·`LedgerMessageAccuracyTests`·`MapHomeKakaoProjectionTests`·`MapHomePlaybackContinuityTests`·`MapHomeLiveMapTests`·`TripItemStatusTests`·`TravelMapTests`(`build/validation/AIX1114A01/sim-merge-3.xcresult`) | 293건 통과·실패 0. 앞선 `sim-merge-1`·`-2`는 시험 실행기가 연결 전에 멈춤(시뮬레이터 다시 켠 뒤 통과) |
+| PHS1114A01 앱 쪽(`sim-phs-3.xcresult`, `TripItemStatusTests`) | 10건 통과. `sim-phs`·`-2`는 타입 이름을 잘못 써서 빌드 실패 → 고침 |
+| 서버 `npm test` | 135건 통과(세 번 연속 확인, 사진 중계 네 출처 시험 포함) |
+| 구조 점검·경계 검사·번역 | 통과, 번역 실패 0(AIP의 새 문구 19개 포함해 `generate.py` 실행) |
+
+하지 않은 것: 카카오 지도의 실제 화면(키가 든 기기에서만), 알림·일 줄 화면, 사진 출처의 실제 호출(관광공사 주소·응답 모양 포함), 서버 배포(AIP의 쓰기 권한·대기열, PHS의 사진 중계).
+
 ## STV1114A01 · 저장소 시험 실패 원인 (2026-11-14 오후)
 
 - `TaptionStoreV2Tests.testRawEventTableIsPlainSQLAndSurvivesReopen`가 시뮬레이터(BOKKI-STL)에서 계속 죽던 원인: 시험이 쓰는 SQLite에 `json_extract` 함수가 없음(`no such function: json_extract`). 값이 nil인데 강제로 풀어 시험 실행기가 죽었다. 앱 코드는 `json_extract`를 쓰지 않는다(주석에만 있음).

@@ -6,7 +6,7 @@ import TaptionPlanStore
 /// 우리 서버는 없다. 장소 이름과 좌표가 위키미디어로 나가므로, 연락처가 설정돼 있고 사용자가 켜 둔 때만 받는다.
 struct TravelPlacePhoto: Equatable {
     /// 어디서 온 그림인지(PHX1114A01). 웹 검색 사진과 지도 그림은 기기에 오래 두지 않는다.
-    enum Source: String { case wiki, commons, web, map }
+    enum Source: String { case wiki, commons, web, street, map }
 
     var image: UIImage
     /// 저작권 표시(작가 · 라이선스) 또는 출처 사이트. 지도 그림은 비어 있다.
@@ -162,6 +162,15 @@ enum TravelWikiPhoto {
         }
     }
 
+    /// 우리 서버의 사진 중계(`/photo/search`)가 돌려준 것: 사진 주소와 출처 표시(PHS1114A01).
+    static func pickRelay(_ data: Data) -> [WebCandidate] {
+        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any], let documents = root["documents"] as? [[String: Any]] else { return [] }
+        return documents.compactMap { item in
+            guard let link = item["image"] as? String, let url = URL(string: link), url.scheme == "https" else { return nil }
+            return WebCandidate(image: url, site: (item["site"] as? String ?? "").trimmingCharacters(in: .whitespaces))
+        }
+    }
+
     /// 기기 캐시의 파일 이름표: 이름과 좌표 네 자리. 일정이 다른 곳으로 옮겨지면 다시 찾는다.
     static func cacheKey(name: String, latitude: Double, longitude: Double) -> String {
         let text = normalized(name) + String(format: "|%.4f|%.4f", latitude, longitude)
@@ -239,7 +248,7 @@ final class TravelPlacePhotoStore {
             }
             if isRecentMiss(key, in: folder) {
                 // 사진을 못 찾은 곳은 작은 지도 그림으로 채운다(기기에 저장하지 않는다).
-                if let map = await mapPicture(place) { photos[place.itemID] = map }
+                if let picture = await fallbackPicture(place) { photos[place.itemID] = picture }
                 continue
             }
             let fetched = await fetch(place)
@@ -250,7 +259,7 @@ final class TravelPlacePhotoStore {
                 trim(folder)
             } else {
                 try? Data().write(to: folder.appendingPathComponent(key + ".none"))
-                if let map = await mapPicture(place) { photos[place.itemID] = map }
+                if let picture = await fallbackPicture(place) { photos[place.itemID] = picture }
             }
             // 잇달아 물으면 막힌다(429). 한 곳에 요청이 셋까지라 사이를 둔다.
             try? await Task.sleep(for: .milliseconds(1_200))
@@ -291,11 +300,53 @@ final class TravelPlacePhotoStore {
         return data
     }
 
-    /// 차례로 찾는다(PHX1114A01): 위키백과 대표 사진 → 위키미디어 공용의 주변 사진 → 웹 이미지 검색.
+    /// 차례로 찾는다(PHX1114A01·PHS1114A01): 위키백과 대표 사진 → 위키미디어 공용의 주변 사진 → (국내) 관광공사 → 웹 이미지 검색
+    /// → Mapillary 거리 사진 → Unsplash·Pexels. 키가 없는 출처는 서버가 꺼 두어 그냥 지나간다. 그래도 없으면 `load`가 주변 보기·지도 그림으로 채운다.
     private func fetch(_ place: Place) async -> TravelPlacePhoto? {
         if let photo = await wikiPhoto(place) { return photo }
         if let photo = await commonsPhoto(place) { return photo }
-        return await webPhoto(place)
+        let spot = [URLQueryItem(name: "lat", value: String(format: "%.5f", place.latitude)), URLQueryItem(name: "lng", value: String(format: "%.5f", place.longitude))]
+        let name = URLQueryItem(name: "query", value: String(place.name.prefix(100)))
+        if MapHomeKakaoSearch.isInKorea(CLLocationCoordinate2D(latitude: place.latitude, longitude: place.longitude)),
+           let photo = await relayPhoto([.init(name: "source", value: "tour"), name] + spot) { return photo }
+        if let photo = await webPhoto(place) { return photo }
+        if let photo = await relayPhoto([.init(name: "source", value: "mapillary")] + spot) { return photo }
+        for source in ["unsplash", "pexels"] {
+            if let photo = await relayPhoto([.init(name: "source", value: source), name]) { return photo }
+        }
+        return nil
+    }
+
+    /// 우리 서버의 사진 중계에서 받은 첫 장. 사진은 그 출처에서 바로 받는다.
+    private func relayPhoto(_ items: [URLQueryItem]) async -> TravelPlacePhoto? {
+        guard let host = TripRelay.host, let token = await AssistantRegistration.searchToken(), var parts = URLComponents(string: "https://\(host)/photo/search") else { return nil }
+        parts.queryItems = items
+        guard let url = parts.url else { return nil }
+        var request = URLRequest(url: url, timeoutInterval: 10)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        guard let (data, response) = try? await session.data(for: request), (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+        for candidate in TravelWikiPhoto.pickRelay(data).prefix(2) {
+            guard let (bytes, reply) = try? await session.data(from: candidate.image), (reply as? HTTPURLResponse)?.statusCode == 200,
+                  bytes.count <= 4_000_000, let image = UIImage(data: bytes), let small = image.preparingThumbnail(of: Self.fitted(image.size, longSide: 640)) else { continue }
+            return TravelPlacePhoto(image: small, credit: candidate.site.isEmpty ? "web" : candidate.site, source: .web)
+        }
+        return nil
+    }
+
+    /// Apple 「주변 보기」의 거리 풍경 한 컷. 없는 지역이 많다. 그때그때 그리고 기기에 저장하지 않는다.
+    private func streetPicture(_ place: Place) async -> TravelPlacePhoto? {
+        guard abs(place.latitude) <= 90, abs(place.longitude) <= 180, !(place.latitude == 0 && place.longitude == 0),
+              let scene = try? await MKLookAroundSceneRequest(coordinate: CLLocationCoordinate2D(latitude: place.latitude, longitude: place.longitude)).scene else { return nil }
+        let options = MKLookAroundSnapshotter.Options()
+        options.size = CGSize(width: 320, height: 240)
+        guard let snapshot = try? await MKLookAroundSnapshotter(scene: scene, options: options).snapshot else { return nil }
+        return TravelPlacePhoto(image: snapshot.image, credit: "", source: .street)
+    }
+
+    /// 사진을 못 찾은 곳을 채우는 그림: 주변 보기, 없으면 작은 지도.
+    private func fallbackPicture(_ place: Place) async -> TravelPlacePhoto? {
+        if let street = await streetPicture(place) { return street }
+        return await mapPicture(place)
     }
 
     private func wikiPhoto(_ place: Place) async -> TravelPlacePhoto? {
