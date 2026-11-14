@@ -338,8 +338,6 @@ struct MapHomeSecuritySheet: View {
                     developerMailButtons
                 }
 
-                card(language.text("GPS 로그", "GPS log")) { GPXExportCard(model: model, language: language) }
-
                 card(language.text("\(PlanPINVerifier.currentDigits)자리 비밀번호", "\(PlanPINVerifier.currentDigits)-digit password")) {
                     SecureField(hasPIN ? registeredPINDots : language.text("비밀번호", "Password"), text: $pin)
                         .keyboardType(.numberPad)

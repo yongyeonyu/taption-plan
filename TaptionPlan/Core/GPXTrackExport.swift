@@ -1,4 +1,5 @@
 import Foundation
+import simd
 
 /// GPS 로그만 다른 앱이 읽는 GPX 1.1로 내보낸다(PLN1111A01 제안 2-8).
 /// 위도·경도·고도·시각만 담는다. 활동·수단·역 이름·와이파이·건강·가계부·메모는 넣지 않는다.
@@ -85,17 +86,62 @@ extension GPXTrackExport {
     }
 }
 
-extension AppModel {
-    /// 오늘부터 거슬러 `days`일의 위치 기록을 GPX 파일로 만든다. 기기에 남아 있는 기록만 나온다.
-    func exportGPXURL(days: Int, now: Date = .now) async throws -> (url: URL, pointCount: Int) {
-        let calendar = Calendar.autoupdatingCurrent
-        let start = calendar.date(byAdding: .day, value: -(max(1, days) - 1), to: calendar.startOfDay(for: now)) ?? calendar.startOfDay(for: now)
-        let readings = try await sensorService?.archivedRouteReadings(in: TimeSpan(start: start, end: now)) ?? []
+extension GPXTrackExport {
+    /// 고른 기간의 미리보기(GPV1114A01): 점 수, 처음·마지막 시각, 이동 거리, 줄여 담은 자취.
+    struct Preview: Equatable {
+        var pointCount = 0
+        var first: Date?
+        var last: Date?
+        var meters = 0.0
+        /// 구간별 (경도, 위도). 그림용으로 줄인 것이다.
+        var track: [[SIMD2<Double>]] = []
+    }
+
+    static func preview(_ points: [Point], maxPoints: Int = 600) -> Preview {
+        let parts = segments(points)
+        var meters = 0.0
+        for part in parts {
+            for (a, b) in zip(part, part.dropFirst()) { meters += distance(a, b) }
+        }
+        let step = max(1, points.count / max(1, maxPoints))
+        let track = parts.map { part in
+            part.enumerated().filter { $0.offset % step == 0 || $0.offset == part.count - 1 }.map { SIMD2($0.element.longitude, $0.element.latitude) }
+        }
+        return Preview(pointCount: points.count, first: points.first?.time, last: points.last?.time, meters: meters, track: track)
+    }
+
+    private static func distance(_ a: Point, _ b: Point) -> Double {
+        let radians = Double.pi / 180
+        let dLat = (b.latitude - a.latitude) * radians, dLon = (b.longitude - a.longitude) * radians
+        let h = sin(dLat / 2) * sin(dLat / 2) + cos(a.latitude * radians) * cos(b.latitude * radians) * sin(dLon / 2) * sin(dLon / 2)
+        return 6_371_000 * 2 * atan2(sqrt(h), sqrt(1 - h))
+    }
+
+    /// 시작 날 0시부터 끝 날 24시까지(지금을 넘지 않게). 거꾸로 골라도 바로잡는다.
+    static func span(from: Date, to: Date, now: Date, calendar: Calendar = .autoupdatingCurrent) -> TimeSpan {
+        let first = calendar.startOfDay(for: min(from, to))
+        let lastDay = calendar.startOfDay(for: max(from, to))
+        let end = min(now, calendar.date(byAdding: .day, value: 1, to: lastDay) ?? now)
+        return TimeSpan(start: min(first, end), end: end)
+    }
+
+    static func name(_ span: TimeSpan, calendar: Calendar = .autoupdatingCurrent) -> String {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.locale = posix
         formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.timeZone = calendar.timeZone
         formatter.dateFormat = "yyyy-MM-dd"
-        let name = days <= 1 ? formatter.string(from: now) : "\(formatter.string(from: start))_\(formatter.string(from: now))"
-        return try await GPXTrackExport.write(readings, name: name)
+        let first = formatter.string(from: span.start), last = formatter.string(from: span.end.addingTimeInterval(-1))
+        return first == last ? first : "\(first)_\(last)"
+    }
+}
+
+extension AppModel {
+    /// 고른 날짜 기간의 위치 기록을 GPX 파일로 만들고 미리보기를 함께 돌려준다.
+    func exportGPX(from: Date, to: Date, now: Date = .now) async throws -> (url: URL, preview: GPXTrackExport.Preview) {
+        let span = GPXTrackExport.span(from: from, to: to, now: now)
+        let readings = try await sensorService?.archivedRouteReadings(in: span) ?? []
+        let url = try await GPXTrackExport.write(readings, name: GPXTrackExport.name(span)).url
+        return (url, GPXTrackExport.preview(GPXTrackExport.points(from: readings)))
     }
 }

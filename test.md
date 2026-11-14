@@ -22,6 +22,8 @@ TFM1114A01(여행 카드 누르면 아래 단추 바로 바뀜): 앱 Debug 시�
 
 AIU1114A01(끝난 일 재업로드 방지): `AITaskQueueTests`·`LedgerTests`·`AssistantPhase3Tests` 72건 통과·실패 0(`sim-11.xcresult`), 서버 `npm test` 116건 통과(지운 끝난 일의 id를 다시 올려도 되살아나지 않음). 서버 배포는 하지 않았다(권한 검사에 막힘, 대표 지시 대기). 대표 기기에서 실제로 이 경로였는지는 확인하지 못했다.
 
+GPV1114A01·AIH1114A01: `GPXTrackExportTests`·`LedgerTests`·`AssistantCommandEditTests`·`AssistantRelayTests` 68건 통과·실패 0(`sim-13.xcresult`, 미리보기·기간 계산 시험 포함), 구조 점검 통과, 번역 실패 0(새 문구 없음). 서버 `npm test` 116건 통과(안내문 문구를 고친 직후 1건 실패 → 문장 부호를 바로잡아 통과). 서버는 배포하지 않았다. GPS 미리보기 화면은 시뮬레이터·기기에서 보지 않았다.
+
 하지 않은 것: 화면 확인(「OCR」 표시, 스위치와 「연결 끊기」 간격, AI 탭 단추), 기기에서 Claude 앱이 채워진 대화로 열리는지, AI가 실제로 10분 예약을 만드는지.
 
 ## TFB1114A335 · TestFlight 335 (2026-11-14 아침)

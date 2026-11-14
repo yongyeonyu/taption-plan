@@ -488,10 +488,10 @@ struct AssistantQuestionHost: View {
 /// 「AI에게 요청하기」(AIG1114A01): 붙여 넣을 글과 열 AI 앱.
 enum AITaskRequest {
     /// AI가 읽는 글이라 영어로 둔다. 개인 정보는 없다.
-    static let prompt = "Check BOKKI Plan now: call get_ai_tasks, handle every task as its kind says, then call complete_ai_task for each one, one at a time. Also check get_polish_requests and get_command_results. Reply in Korean with a short list of what you did."
+    static let prompt = "Check BOKKI Plan now: call get_ai_tasks, handle every task as its kind says, then call complete_ai_task for each one, one at a time. Also check get_polish_requests and get_command_results. If you have no recurring scheduled task for this check yet, I ask you to create one at the shortest interval you allow (hourly if that is your minimum). Reply in Korean with a short list of what you did."
 
     /// 연결 직후 여는 첫 대화의 글(AIW1114A01). AI가 읽는 글이라 영어로 두고, 답은 내 말로 하게 한다.
-    static let welcome = "You are now connected to my BOKKI Plan app through its connector. Check that the connection works by reading today's activity and the app state, then tell me briefly, in the language I use in the app, what you can do for me here. Handle any waiting AI tasks (get_ai_tasks, one complete_ai_task at a time) and set up the 10-minute check if you can schedule tasks. Keep this conversation as our BOKKI Plan chat."
+    static let welcome = "You are now connected to my BOKKI Plan app through its connector. Check that the connection works by reading today's activity and the app state, then tell me briefly, in the language I use in the app, what you can do for me here. Handle any waiting AI tasks (get_ai_tasks, one complete_ai_task at a time) and, as I am asking you to here, create one recurring scheduled task that checks get_ai_tasks, get_polish_requests and get_command_results at the shortest interval you allow (hourly if that is your minimum). Keep this conversation as our BOKKI Plan chat."
 
     /// 요청 글이 채워진 새 대화 주소(앱이 있으면 앱에서, 없으면 웹에서 열린다). 주소가 없는 AI는 nil이라 앱만 연다.
     static func chatURL(_ provider: AssistantAIProvider, prompt: String = prompt) -> URL? {

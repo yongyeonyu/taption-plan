@@ -227,7 +227,7 @@ extension MapHomeView {
                 .accessibilityLabel(language.text("설정 초기화", "Reset settings"))
                 .padding(.leading, 12)
 
-                gpsLoggingMenuItem.padding(.leading, 12)
+                GPSDataMenuSection(model: model, language: language) { gpsLoggingMenuItem }.padding(.leading, 12)
             }
         }
     }

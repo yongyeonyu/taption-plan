@@ -44,4 +44,31 @@ final class GPXTrackExportTests: XCTestCase {
     func testSameTimestampKeepsOnePoint() {
         XCTAssertEqual(GPXTrackExport.points(from: [reading(0, lat: 37.50), reading(0, lat: 37.50), reading(60, lat: 37.51)]).count, 2)
     }
+
+    func testPreviewCountsPointsDistanceAndKeepsSegments() {
+        // 위도 0.01도는 약 1.11 km. 10분 끊긴 뒤의 점은 다른 구간이고 그 사이 거리는 세지 않는다.
+        let points = GPXTrackExport.points(from: [reading(0), reading(60, lat: 37.51), reading(660, lat: 37.60), reading(720, lat: 37.61)])
+        let preview = GPXTrackExport.preview(points)
+        XCTAssertEqual(preview.pointCount, 4)
+        XCTAssertEqual(preview.first, base)
+        XCTAssertEqual(preview.last, base.addingTimeInterval(720))
+        XCTAssertEqual(preview.meters, 2_224, accuracy: 10)
+        XCTAssertEqual(preview.track.map(\.count), [2, 2])
+        XCTAssertEqual(GPXTrackExport.preview([]).pointCount, 0)
+    }
+
+    func testSpanCoversWholeDaysUpToNowAndFixesReversedDates() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        let now = base.addingTimeInterval(10 * 3_600)
+        let dayStart = calendar.startOfDay(for: now)
+        let earlier = dayStart.addingTimeInterval(-2 * 86_400 + 3_600)
+        let span = GPXTrackExport.span(from: now, to: earlier, now: now, calendar: calendar)
+        XCTAssertEqual(span.start, calendar.startOfDay(for: earlier))
+        XCTAssertEqual(span.end, now)
+        let past = GPXTrackExport.span(from: earlier, to: earlier, now: now, calendar: calendar)
+        XCTAssertEqual(past.end.timeIntervalSince(past.start), 86_400)
+        XCTAssertFalse(GPXTrackExport.name(past, calendar: calendar).contains("_"))
+        XCTAssertTrue(GPXTrackExport.name(span, calendar: calendar).contains("_"))
+    }
 }
