@@ -16,7 +16,7 @@ final class TaptionPlanAllowanceUITests: XCTestCase {
     func testAllowanceInputShowsHourlyRateAndCounterRow() throws {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
         // 부하가 큰 맥에서는 launch()가 프로세스를 못 잡고 실패해, 떠 있는 앱이 있으면 그 앱에 붙는다.
-        if app.state == .notRunning { app.launch() } else { app.activate() }
+        if app.state == .notRunning { app.launchWithoutPrompts() } else { app.activate() }
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
         let decline = springboard.buttons["허용 안 함"]
         while decline.waitForExistence(timeout: 5) { decline.tap() }

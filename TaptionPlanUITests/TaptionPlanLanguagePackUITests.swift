@@ -15,7 +15,7 @@ final class TaptionPlanLanguagePackUITests: XCTestCase {
 
         let app = XCUIApplication()
         app.launchArguments += ["-AppleLanguages", "(\(language))"]
-        app.launch()
+        app.launchWithoutPrompts()
         // 지도 홈(날짜 배지)이나 첫 실행 튜토리얼이 뜰 때까지 기다린다. 메뉴 이름은 언어마다 달라 식별자로 찾는다.
         let home = app.descendants(matching: .any)["mapHomeDateBadge"].firstMatch
         let firstScreen = app.descendants(matching: .any).matching(NSPredicate(format: "identifier IN %@", ["mapHomeDateBadge", "firstRunNext"])).firstMatch

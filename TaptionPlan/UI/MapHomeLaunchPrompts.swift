@@ -191,6 +191,10 @@ extension MapHomeView {
         await checkLocationAlways()
         while !Task.isCancelled, scenePhase == .active {
             // 「나중에 확인」을 누른 날은 더 묻지 않는다. 돋보기 오른쪽 단추로 다시 열 수 있다.
+            #if DEBUG
+            // 화면 시험은 시각·자료에 따라 뜨는 질문에 흔들리지 않게 끈다(RMN1114A25).
+            if ProcessInfo.processInfo.arguments.contains("-noLaunchPrompts") { return }
+            #endif
             if MapHomeLaunchPromptDeferral.isDeferred() { return }
             while isLocationAlwaysPromptPresented || launchPrompt != nil
                 || selectedTransitBoardingCandidate != nil || isUnconfirmedReviewPresented {

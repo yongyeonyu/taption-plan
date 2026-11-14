@@ -67,7 +67,7 @@ final class TaptionPlanFirstRunTutorialUITests: XCTestCase {
     private func launchFresh() -> XCUIApplication {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
         app.launchArguments += ["-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR"]
-        app.launch()
+        app.launchWithoutPrompts()
         XCTAssertTrue(element(app, "firstRunTutorial").waitForExistence(timeout: 60))
         return app
     }
@@ -78,7 +78,7 @@ final class TaptionPlanFirstRunTutorialUITests: XCTestCase {
         XCTAssertFalse(element(app, "firstRunTutorial").exists)
         capture("closed")
         app.terminate()
-        app.launch()
+        app.launchWithoutPrompts()
         XCTAssertTrue(menu.waitForExistence(timeout: 40))
         XCTAssertFalse(element(app, "firstRunTutorial").exists)
         capture("relaunch")
@@ -126,7 +126,7 @@ final class TaptionPlanFirstRunTutorialUITests: XCTestCase {
     private func walkThrough(languageCode: String, locale: String, replay: String, menu: String, settings: String) {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
         app.launchArguments += ["-AppleLanguages", "(\(languageCode))", "-AppleLocale", locale]
-        app.launch()
+        app.launchWithoutPrompts()
         XCTAssertTrue(element(app, "firstRunTutorial").waitForExistence(timeout: 60), "새 설치 첫 화면은 튜토리얼이다")
         // 튜토리얼이 권한을 묻기 전에는 시스템 창이 먼저 뜨지 않는다.
         XCTAssertFalse(springboard.alerts.firstMatch.exists)
@@ -213,7 +213,7 @@ final class TaptionPlanFirstRunTutorialUITests: XCTestCase {
 
         // 다시 실행해도 튜토리얼이 또 뜨지 않는다.
         app.terminate()
-        app.launch()
+        app.launchWithoutPrompts()
         XCTAssertTrue(menuButton.waitForExistence(timeout: 40))
         XCTAssertFalse(element(app, "firstRunTutorial").exists)
         capture("20-relaunch")

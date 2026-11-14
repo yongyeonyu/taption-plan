@@ -14,7 +14,7 @@ final class TaptionPlanSmokeUITests: XCTestCase {
     /// 닫히지 않고 '전체 건너뛰기'로만 닫힌다. 사용자 데이터를 바꾸지 않도록
     /// 허용은 누르지 않고 건너뛰기만 누른다.
     private func launchMapHome(_ app: XCUIApplication) {
-        app.launch()
+        app.launchWithoutPrompts()
         let skip = app.buttons["전체 건너뛰기"]
         if skip.waitForExistence(timeout: 12) {
             skip.tap()
@@ -46,7 +46,7 @@ final class TaptionPlanSmokeUITests: XCTestCase {
 
     func testLaunchShowsHomeWithoutChangingData() throws {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
-        app.launch()
+        app.launchWithoutPrompts()
 
         XCTAssertEqual(app.state, .runningForeground)
 
@@ -68,7 +68,7 @@ final class TaptionPlanSmokeUITests: XCTestCase {
     /// 하단 '달력'을 열어 화면을 남긴다(데이터는 바꾸지 않는다). 달력 숫자가 0으로 나오는지 눈으로 보기 위함.
     func testOpenCalendarAndCaptureForDiagnosis() throws {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
-        app.launch()
+        app.launchWithoutPrompts()
         let calendar = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "달력")).firstMatch
         XCTAssertTrue(calendar.waitForExistence(timeout: 20))
         calendar.tap()
@@ -361,7 +361,7 @@ final class TaptionPlanClipRollUITests: XCTestCase {
     private func launchEditor() -> XCUIApplication {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
         app.launchArguments = ["-nlePreview"]
-        app.launch()
+        app.launchWithoutPrompts()
         XCTAssertTrue(app.staticTexts["클립 편집"].waitForExistence(timeout: 30))
         XCTAssertTrue(app.staticTexts["00:00–07:00"].waitForExistence(timeout: 10))
         return app
@@ -504,7 +504,7 @@ final class TaptionPlanClipEditorToolsUITests: XCTestCase {
     private func launchEditor() -> XCUIApplication {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
         app.launchArguments = ["-nlePreview"]
-        app.launch()
+        app.launchWithoutPrompts()
         XCTAssertTrue(app.staticTexts["클립 편집"].waitForExistence(timeout: 30))
         return app
     }
@@ -590,7 +590,7 @@ final class TaptionPlanPlaybackHUDUITests: XCTestCase {
 
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
         app.launchArguments += ["-slowDayPlayback"]
-        app.launch()
+        app.launchWithoutPrompts()
         let skip = app.buttons["전체 건너뛰기"]
         if skip.waitForExistence(timeout: 12) { skip.tap() }
 
@@ -657,7 +657,7 @@ final class TaptionPlanBottomBarRecordUITests: XCTestCase {
 
     func testRecordSitsInTheBottomBarNextToPlay() throws {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
-        app.launch()
+        app.launchWithoutPrompts()
         let skip = app.buttons["전체 건너뛰기"]
         if skip.waitForExistence(timeout: 12) { skip.tap() }
 
@@ -714,7 +714,7 @@ final class TaptionPlanOverwriteUITests: XCTestCase {
     private func launchEditor() -> XCUIApplication {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
         app.launchArguments = ["-nlePreview"]
-        app.launch()
+        app.launchWithoutPrompts()
         XCTAssertTrue(app.staticTexts["클립 편집"].waitForExistence(timeout: 30))
         return app
     }
@@ -826,7 +826,7 @@ final class TaptionPlanDateStripSwipeUITests: XCTestCase {
     /// 데이터를 바꾸지 않도록 허용은 누르지 않고 '전체 건너뛰기'로만 닫는다.
     private func launch() -> XCUIApplication {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
-        app.launch()
+        app.launchWithoutPrompts()
         let skip = app.buttons["전체 건너뛰기"]
         if skip.waitForExistence(timeout: 20) {
             skip.tap()
@@ -970,7 +970,7 @@ final class TaptionPlanInteractionPerfUITests: XCTestCase {
 
     private func launch() -> XCUIApplication {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
-        app.launch()
+        app.launchWithoutPrompts()
         let skip = app.buttons["전체 건너뛰기"]
         if skip.waitForExistence(timeout: 12) { skip.tap() }
         let menu = button(app, "메뉴")
@@ -1066,7 +1066,7 @@ final class TaptionPlanTravelPlanUITests: XCTestCase {
     func testEmptyCellSelectsThenPlusOpensEntryAndBlockTapShowsSelectionBar() throws {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
         app.launchArguments += ["-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR"]
-        app.launch()
+        app.launchWithoutPrompts()
         let travel = app.buttons["여행 계획"]
         XCTAssertTrue(travel.waitForExistence(timeout: 40))
         let later = app.buttons["나중에 확인"]
@@ -1211,7 +1211,7 @@ final class TaptionPlanTodoListUITests: XCTestCase {
     func testChecklistButtonOpensTodoListAndConfirmAsks() throws {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
         app.launchArguments += ["-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR"]
-        app.launch()
+        app.launchWithoutPrompts()
         let checklist = app.buttons["launchPrompts.deferred"]
         XCTAssertTrue(checklist.waitForExistence(timeout: 40), "체크리스트 단추는 늘 있다")
         let later = app.buttons["나중에 확인"]
@@ -1256,7 +1256,7 @@ final class TaptionPlanTravelScreensUITests: XCTestCase {
     func testTravelScreensForTheRecord() throws {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
         app.launchArguments += ["-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR"]
-        app.launch()
+        app.launchWithoutPrompts()
         let travel = app.buttons["여행 계획"]
         XCTAssertTrue(travel.waitForExistence(timeout: 40))
         let later = app.buttons["나중에 확인"]
@@ -1305,7 +1305,7 @@ final class TaptionPlanTravelScreensUITests: XCTestCase {
     func testMoveItemEditorForTheRecord() throws {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
         app.launchArguments += ["-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR"]
-        app.launch()
+        app.launchWithoutPrompts()
         let travel = app.buttons["여행 계획"]
         XCTAssertTrue(travel.waitForExistence(timeout: 40))
         let later = app.buttons["나중에 확인"]
@@ -1328,7 +1328,7 @@ final class TaptionPlanTravelScreensUITests: XCTestCase {
     func testTravelListForTheRecord() throws {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
         app.launchArguments += ["-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR"]
-        app.launch()
+        app.launchWithoutPrompts()
         let travel = app.buttons["여행 계획"]
         XCTAssertTrue(travel.waitForExistence(timeout: 40))
         let later = app.buttons["나중에 확인"]
@@ -1362,7 +1362,7 @@ final class TaptionPlanPolishScreensUITests: XCTestCase {
     private func launch() -> XCUIApplication {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
         app.launchArguments += ["-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR"]
-        app.launch()
+        app.launchWithoutPrompts()
         XCTAssertTrue(app.buttons["메뉴"].waitForExistence(timeout: 40))
         let later = app.buttons["나중에 확인"]
         if later.waitForExistence(timeout: 3) { later.tap() }

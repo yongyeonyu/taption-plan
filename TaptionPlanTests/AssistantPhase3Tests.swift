@@ -1200,7 +1200,8 @@ final class AssistantAppControlTests: XCTestCase {
         ])
         // 더하기와 화면 열기는 기존 것을 바꾸지 않는다. 지우기·버리기·예산은 20개 확인 규칙에 센다.
         XCTAssertEqual(parsed.commands.map(\.action.existingChangeCount), [1, 1, 0, 1, 1, 1, 1, 1, 0])
-        XCTAssertEqual(Set(AssistantScreen.allCases.map(\.rawValue)), ["paymentAutomation", "shortcuts", "aiConnection", "ledger", "dataProtection", "settings", "salary", "carAudio", "alarm", "placeBook", "passport", "unconfirmedReview", "travel"])
+        XCTAssertEqual(Set(AssistantScreen.allCases.map(\.rawValue)), ["paymentAutomation", "shortcuts", "aiConnection", "ledger", "dataProtection", "settings", "salary", "carAudio", "alarm", "placeBook", "passport", "unconfirmedReview", "travel",
+                                                                         "dayCard", "calendarConnect", "categoryAdd", "paymentAlerts", "aiRules"])
     }
 
     func testOwnAccountsRuleAndInboxCommandsApplyAndUndo() async throws {
@@ -1978,7 +1979,7 @@ final class AssistantAppControlTests: XCTestCase {
         let key = String(repeating: "A", count: 43)
         let write = TripRelay.assistantSetupText(host: "relay.example.com", key: key, timeZone: calendar.timeZone)
         for part in ["GET /app", "get_app_state", "\"setBudget\"", "\"addOwnAccount\"", "removeOwnAccount", "\"deletePaymentRule\"", "\"resolveReview\"", "\"deleteInboxItem\"",
-                     "\"openScreen\",\"screen\":\"paymentAutomation|shortcuts|aiConnection|ledger|dataProtection|settings|salary|carAudio|alarm|placeBook|passport|unconfirmedReview|travel\"",
+                     "\"openScreen\",\"screen\":\"paymentAutomation|shortcuts|aiConnection|ledger|dataProtection|settings|salary|carAudio|alarm|placeBook|passport|unconfirmedReview|travel|",
                      "cannot create or switch on an iOS automation", "turn the switch on myself", "no_review"] {
             XCTAssertTrue(write.contains(part), part)
         }

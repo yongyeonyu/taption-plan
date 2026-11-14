@@ -10,7 +10,7 @@ final class TaptionPlanWideLayoutUITests: XCTestCase {
         // 시뮬레이터 설정에 남은 이전 폭·높이 고정이 다음 실행을 흔들지 않게 항상 값을 준다.
         let viewportResets = ["-debugViewportWidth", "-debugViewportHeight"].filter { !extraArguments.contains($0) }.flatMap { [$0, "0"] }
         app.launchArguments += ["-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR", "-slowDayPlayback"] + viewportResets + extraArguments
-        app.launch()
+        app.launchWithoutPrompts()
         guard waitsForMap else {
             // 시험용 화면이 15초 뒤 열리기 전에 튜토리얼만 걷어 둔다. 그 화면이 메뉴를 덮어도 기다림은 짧게 끝난다.
             UITestWait.reachMapHome(app, menu: menuButton(app), timeout: 12)
@@ -322,5 +322,13 @@ final class TaptionPlanWideLayoutUITests: XCTestCase {
         }
         device.orientation = .portrait
         UITestWait.settled(app)
+    }
+}
+
+extension XCUIApplication {
+    /// 앱을 열 때의 질문(미확인 시간 등)을 끄고 띄운다. 질문은 시각·자료에 따라 떠서 홈을 가린다(RMN1114A25).
+    func launchWithoutPrompts() {
+        if !launchArguments.contains("-noLaunchPrompts") { launchArguments.append("-noLaunchPrompts") }
+        launch()
     }
 }
