@@ -5717,7 +5717,7 @@
 "|You arrived at a planned place": "已抵達行程地點",
 "도착했어요. 눌러서 메모와 체크리스트를 보세요.|You're here. Tap to see your notes and checklist.": "已抵達。點一下查看備註和清單。",
 "|You're here. Tap to see your notes and checklist.": "已抵達。點一下查看備註和清單。",
-"여행 일정에 넣은 곳에 도착하면 메모·세부 계획·예상 지출을 보여요. 앱이 위치를 받는 동안에만 알 수 있고, 일정마다 한 번만 떠요.|Shows notes, sub-plans and planned spend when you reach a place in your trip plan. Works only while the app receives location, once per plan.": "抵達旅行行程中的地點時，顯示備註、詳細計畫和預計支出。僅在 App 接收位置期間可偵測，每個行程只顯示一次。",
+"여행 일정에 넣은 곳에 도착하면 메모·세부 계획·예상 지출을 보여요. 알림과 위치를 허용했으면 앱을 닫아 두어도 그날 일정 장소에서 알림이 올 수 있고, 일정마다 한 번만 떠요.|Shows notes, sub-plans and planned spend when you reach a place in your trip plan. With notifications and location allowed, today's planned places can alert you even when the app is closed, once per plan.": "抵達旅行行程中的地點時，顯示備註、詳細計畫和預計支出。如果已允許通知和位置，即使關閉 App，也可能在當天的行程地點收到通知，每個行程只顯示一次。",
 "{0} {1}건 ({2})|{0} ×{1} ({2})": "{0} {1}筆（{2}）",
 "1건으로 합침 · {0}|Merged into one · {0}": "已合併為1筆 · {0}",
 "일상 지출|Everyday spending": "日常支出",

@@ -403,6 +403,10 @@ final class TaptionPlanAppDelegate:
     ) async -> UNNotificationPresentationOptions {
         // 앱이 앞에 있으면 푸시의 일반 문구는 띄우지 않는다. 받은 내용은 앱이 직접 보인다(PSH1114A06).
         if notification.request.trigger is UNPushNotificationTrigger, AssistantPush.kind(from: notification.request.content.userInfo) != nil { return [] }
+        // 앱이 앞에 열려 있을 때 온 도착 위치 알림은 배너 대신 카드로 보인다(ARN1114A17).
+        if notification.request.trigger is UNLocationNotificationTrigger,
+           let raw = notification.request.content.userInfo[ArrivalCardManager.userInfoStopID] as? String,
+           let stopID = UUID(uuidString: raw), await ArrivalCardManager.shared.showInForeground(stopID: stopID) { return [] }
         MapHomeAlarmDiagnostics.log(MapHomeAlarmDiagnostics.presented(
             kind: notification.request.content.userInfo[MapHomeAlarmCenter.userInfoKind] as? String
         ))

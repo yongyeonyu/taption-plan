@@ -5717,7 +5717,7 @@
 "|You arrived at a planned place": "Sei arrivato in un luogo pianificato",
 "도착했어요. 눌러서 메모와 체크리스트를 보세요.|You're here. Tap to see your notes and checklist.": "Sei arrivato. Tocca per vedere note e checklist.",
 "|You're here. Tap to see your notes and checklist.": "Sei arrivato. Tocca per vedere note e checklist.",
-"여행 일정에 넣은 곳에 도착하면 메모·세부 계획·예상 지출을 보여요. 앱이 위치를 받는 동안에만 알 수 있고, 일정마다 한 번만 떠요.|Shows notes, sub-plans and planned spend when you reach a place in your trip plan. Works only while the app receives location, once per plan.": "Mostra note, piani dettagliati e spesa prevista quando raggiungi un luogo del tuo piano di viaggio. Funziona solo mentre l’app riceve la posizione, una volta per piano.",
+"여행 일정에 넣은 곳에 도착하면 메모·세부 계획·예상 지출을 보여요. 알림과 위치를 허용했으면 앱을 닫아 두어도 그날 일정 장소에서 알림이 올 수 있고, 일정마다 한 번만 떠요.|Shows notes, sub-plans and planned spend when you reach a place in your trip plan. With notifications and location allowed, today's planned places can alert you even when the app is closed, once per plan.": "Mostra note, piani dettagliati e spesa prevista quando raggiungi un luogo del tuo piano di viaggio. Con notifiche e posizione consentite, i luoghi previsti per oggi possono avvisarti anche ad app chiusa, una volta per piano.",
 "{0} {1}건 ({2})|{0} ×{1} ({2})": "{0} ×{1} ({2})",
 "1건으로 합침 · {0}|Merged into one · {0}": "Unito in uno · {0}",
 "일상 지출|Everyday spending": "Spese quotidiane",

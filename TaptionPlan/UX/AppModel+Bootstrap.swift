@@ -508,6 +508,7 @@ extension AppModel {
         isSensorCollecting = false
         await notificationScheduler.cancelAllPlanReminders()
         await nearbyMemoScheduler.cancelAll()
+        await ArrivalAlertScheduler.shared.cancelAll()
 
         let defaults = AppFeatureSettings.defaults
         var reset = snapshot

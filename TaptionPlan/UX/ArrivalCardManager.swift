@@ -23,6 +23,9 @@ final class ArrivalCardManager {
     @ObservationIgnored private var lastEvaluatedAt: Date?
     /// 화면이 꺼져 있거나 잠겨 있어 아직 못 보인 도착. `fromTap`이면 알림을 눌러 연 것이라 시각이 지나도 보인다.
     @ObservationIgnored private var pending: (stopID: UUID, fromTap: Bool)?
+    /// 위치 알림 예약을 다시 맞추는 일(ARN1114A17). 이어진 요청은 마지막 한 번만 돈다.
+    @ObservationIgnored var alertSyncTask: Task<Void, Never>?
+    @ObservationIgnored var dayChangeTask: Task<Void, Never>?
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -76,6 +79,28 @@ final class ArrivalCardManager {
         present(hit, model: model)
     }
 
+    /// 앱이 앞에서 열려 있을 때 온 위치 알림은 배너 대신 카드로 바로 보인다. 보였으면 true.
+    func showInForeground(stopID: UUID) -> Bool {
+        guard isEnabled, let model = AppModel.applicationInstance, model.isBootstrapped, model.isSceneActive,
+              !model.isAppLocked, !TaptionExternalPrivacyStore.isLocked,
+              let hit = candidates(model).first(where: { $0.stopID == stopID }) else { return false }
+        present(hit, model: model)
+        return true
+    }
+
+    /// 이미 보인 일정(1회 기록). 오래된 것은 뺀다.
+    func shownStopIDs(now: Date = .now) -> Set<UUID> {
+        Set(ArrivalDetector.pruned(Self.loadDates(Self.shownKey, defaults: defaults), now: now).keys.compactMap(UUID.init(uuidString:)))
+    }
+
+    /// iOS가 위치 알림으로 먼저 알린 일정을 1회 기록에 넣어 앱이 다시 알리지 않게 한다.
+    func markShown(_ stops: [UUID: Date], now: Date = .now) {
+        guard !stops.isEmpty else { return }
+        var shown = ArrivalDetector.pruned(Self.loadDates(Self.shownKey, defaults: defaults), now: now)
+        for (id, date) in stops where shown[id.uuidString] == nil { shown[id.uuidString] = date }
+        Self.saveDates(shown, key: Self.shownKey, defaults: defaults)
+    }
+
     func dismiss() {
         if card != nil { card = nil }
     }
@@ -88,7 +113,7 @@ final class ArrivalCardManager {
         checked = Set(dates.keys)
     }
 
-    private func candidates(_ model: AppModel) -> [ArrivalCandidate] {
+    func candidates(_ model: AppModel) -> [ArrivalCandidate] {
         ArrivalDetector.candidates(
             stops: model.settings.travelPlanStops,
             items: model.settings.travelTripItems ?? [],
@@ -100,7 +125,12 @@ final class ArrivalCardManager {
         let budget = hit.tripID.flatMap { id in LedgerBook.shared.trips.first { $0.id == id }?.budgetKRW }
         let next = ArrivalCard.make(candidate: hit, items: model.settings.travelTripItems ?? [], tripBudgetKRW: budget)
         if next != card { card = next }
-        UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: [Self.identifierPrefix + hit.stopID.uuidString])
+        // 알림을 눌러 연 카드도 1회 기록에 넣고, 같은 일정의 위치 알림 예약을 지운다.
+        markShown([hit.stopID: .now])
+        let identifier = Self.identifierPrefix + hit.stopID.uuidString
+        UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: [identifier])
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [identifier])
+        scheduleAlertSync(model: model)
     }
 
     /// 알림 권한이 이미 있을 때만 보낸다. 권한을 새로 묻지 않는다.
@@ -108,6 +138,15 @@ final class ArrivalCardManager {
         let center = UNUserNotificationCenter.current()
         let status = await center.notificationSettings().authorizationStatus
         guard status == .authorized || status == .provisional || status == .ephemeral else { return }
+        let identifier = identifierPrefix + hit.stopID.uuidString
+        // iOS가 위치 알림으로 이미 알렸으면 다시 울리지 않는다.
+        guard await !center.deliveredNotifications().contains(where: { $0.request.identifier == identifier }) else { return }
+        // 같은 식별자라 남아 있던 위치 알림 예약은 이 알림으로 바뀐다.
+        try? await center.add(UNNotificationRequest(identifier: identifier, content: content(for: hit, hidesTitle: hidesTitle), trigger: nil))
+    }
+
+    /// 바로 보내는 알림과 위치 알림이 같은 문구를 쓴다.
+    nonisolated static func content(for hit: ArrivalCandidate, hidesTitle: Bool) -> UNMutableNotificationContent {
         let content = UNMutableNotificationContent()
         // 앱 잠금을 켠 사용자에게는 잠금 화면에 장소 이름을 보이지 않는다.
         content.title = hidesTitle
@@ -119,9 +158,7 @@ final class ArrivalCardManager {
         )
         content.sound = .default
         content.userInfo = [userInfoStopID: hit.stopID.uuidString]
-        try? await center.add(UNNotificationRequest(
-            identifier: identifierPrefix + hit.stopID.uuidString, content: content, trigger: nil
-        ))
+        return content
     }
 
     private static func loadDates(_ key: String, defaults: UserDefaults) -> [String: Date] {

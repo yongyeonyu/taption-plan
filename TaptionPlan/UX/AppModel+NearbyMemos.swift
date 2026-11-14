@@ -3,6 +3,8 @@ import Foundation
 extension AppModel {
     /// 저장이 이어져도 마지막 한 번만 맞춘다. 저장을 기다리게 하지 않는다.
     func scheduleNearbyMemoSync() {
+        // 같은 때에 도착 알림 예약도 다시 맞춘다(ARN1114A17).
+        ArrivalCardManager.shared.scheduleAlertSync(model: self)
         nearbyMemoSyncTask?.cancel()
         nearbyMemoSyncTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .seconds(2))
