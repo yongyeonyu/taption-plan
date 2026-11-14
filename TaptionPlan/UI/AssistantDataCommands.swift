@@ -644,8 +644,12 @@ enum AssistantSetting: String, CaseIterable, Codable, Sendable {
     case reduceMotion, weather, weatherSidebar, gpsIntervalSeconds, cat, notifications
     /// ACT1114A07: 지도에 보일 메모(지도 화면 `@AppStorage`와 같은 키).
     case memoDisplay
+    /// ACT1114A09: 보폭(cm, 보폭 보정 화면과 같은 키), Watch 수집 단계, 위치 수집·사진은 끄기만(켜기는 iOS 권한 창이 필요하다).
+    case strideCentimeters, watchAcceleration, watchDataSync, location, photos
 
     static let tripTitleLimit = 60
+    /// Watch 수집 단계 이름. 차례가 `TaptionWatchAccelerationProfile`·`TaptionWatchDataSyncProfile`의 값이다.
+    static let watchProfiles = ["off", "batterySaver", "balanced", "accuracy"]
 
     private enum Kind {
         case choice([String])
@@ -669,6 +673,7 @@ enum AssistantSetting: String, CaseIterable, Codable, Sendable {
     var isModelBacked: Bool {
         switch self {
         case .reduceMotion, .weather, .weatherSidebar, .gpsIntervalSeconds, .cat, .notifications: true
+        case .watchAcceleration, .watchDataSync, .location, .photos: true
         default: false
         }
     }
@@ -687,7 +692,9 @@ enum AssistantSetting: String, CaseIterable, Codable, Sendable {
         case .hourlyTax: MapHomeSalaryPolicy.hourlyTaxKey
         case .weeklyHolidayPay: MapHomeSalaryPolicy.weeklyHolidayKey
         case .reduceMotion, .weather, .weatherSidebar, .gpsIntervalSeconds, .cat, .notifications: "appSetting.\(rawValue)"
+        case .watchAcceleration, .watchDataSync, .location, .photos: "appSetting.\(rawValue)"
         case .memoDisplay: "mapHomeMemoDisplay"
+        case .strideCentimeters: MapHomeStride.storageKey
         }
     }
 
@@ -705,6 +712,9 @@ enum AssistantSetting: String, CaseIterable, Codable, Sendable {
         case .cat: .choice(CatCoat.characters.map(\.catStyle.rawValue))
         case .notifications: .offOnly
         case .memoDisplay: .choice(MapHomeMemoDisplayMode.allCases.map(\.rawValue))
+        case .strideCentimeters: .count(30...150, step: 1)
+        case .watchAcceleration, .watchDataSync: .choice(Self.watchProfiles)
+        case .location, .photos: .offOnly
         }
     }
 
@@ -732,6 +742,10 @@ enum AssistantSetting: String, CaseIterable, Codable, Sendable {
         case .gpsIntervalSeconds: return String(settings.gpsLoggingPreferences.intervalSeconds)
         case .cat: return settings.catStyle.rawValue
         case .notifications: return String(settings.notificationsEnabled)
+        case .watchAcceleration: return Self.watchProfiles.indices.contains(settings.watchAccelerationProfile.rawValue) ? Self.watchProfiles[settings.watchAccelerationProfile.rawValue] : nil
+        case .watchDataSync: return Self.watchProfiles.indices.contains(settings.watchDataSyncProfile.rawValue) ? Self.watchProfiles[settings.watchDataSyncProfile.rawValue] : nil
+        case .location: return String(settings.locationEnabled)
+        case .photos: return String(settings.showsPhotos)
         default: return nil
         }
     }
@@ -746,6 +760,14 @@ enum AssistantSetting: String, CaseIterable, Codable, Sendable {
         case .gpsIntervalSeconds: if let seconds = Int(value) { model.setGPSLoggingIntervalSeconds(seconds) }
         case .cat: if let coat = CatCoat.characters.first(where: { $0.catStyle.rawValue == value }) { model.selectCatCoat(coat) }
         case .notifications: await model.setNotificationsEnabled(value == "true")
+        case .watchAcceleration:
+            if let profile = Self.watchProfiles.firstIndex(of: value).flatMap(TaptionWatchAccelerationProfile.init(rawValue:)) { model.setWatchAccelerationProfile(profile) }
+        case .watchDataSync:
+            if let profile = Self.watchProfiles.firstIndex(of: value).flatMap(TaptionWatchDataSyncProfile.init(rawValue:)) { model.setWatchDataSyncProfile(profile) }
+        // 끄기는 설정의 스위치와 같은 함수. 되돌리기(켜기)는 사용자가 누른 것이라 권한 창이 떠도 된다.
+        case .location:
+            if value == "true" { await model.enableLocationCollection() } else { await model.disableLocationCollection() }
+        case .photos: await model.setPhotosEnabled(value == "true")
         default: break
         }
     }
@@ -753,6 +775,9 @@ enum AssistantSetting: String, CaseIterable, Codable, Sendable {
     /// 지금 값. 한 번도 정하지 않았으면 nil.
     func read(_ defaults: UserDefaults) -> String? {
         guard !isModelBacked, let stored = defaults.object(forKey: key) else { return nil }
+        if self == .strideCentimeters {
+            return (stored as? Double).flatMap { MapHomeStride.allowedRange.contains($0) ? String(Int(($0 * 100).rounded())) : nil }
+        }
         switch kind {
         case .count, .offOnly: return nil
         case .choice where self == .salaryMode: return (stored as? Bool).map { $0 ? "hourly" : "salary" }
@@ -766,6 +791,7 @@ enum AssistantSetting: String, CaseIterable, Codable, Sendable {
     func write(_ value: String?, defaults: UserDefaults) {
         guard !isModelBacked else { return }
         guard let value else { return defaults.removeObject(forKey: key) }
+        if self == .strideCentimeters { return defaults.set((Double(value) ?? 0) / 100, forKey: key) }
         switch kind {
         case .count, .offOnly: break
         case .choice where self == .salaryMode: defaults.set(value == "hourly", forKey: key)
@@ -794,6 +820,11 @@ enum AssistantSetting: String, CaseIterable, Codable, Sendable {
         case .cat: language.text("고양이", "Cat")
         case .notifications: language.text("알림", "Notifications")
         case .memoDisplay: language.text("메모 표시", "Show memos")
+        case .strideCentimeters: language.text("보폭(cm)", "Stride (cm)")
+        case .watchAcceleration: language.text("Watch 움직임 수집", "Watch motion collection")
+        case .watchDataSync: language.text("Watch 자료 보내기", "Watch data sync")
+        case .location: language.text("위치 수집", "Location logging")
+        case .photos: language.text("사진 보기", "Photos")
         }
     }
 }

@@ -507,6 +507,8 @@ struct AssistantOperationSpec: Sendable {
     var counter: Counter
     /// 지우는 동작. 「AI가 할 수 있는 일」의 「지우는 일」 묶음에 보인다.
     var deletes = false
+    /// 사용자가 켜기 전에는 꺼져 있는 동작(ACT1114A09: 백업에서 복원).
+    var startsOff = false
     /// 바꾸는 기존 항목 수(20개 확인 규칙). 새로 더하기만 하면 0.
     var changes = 1
     var title: @Sendable (MapHomeLanguage) -> String
@@ -558,7 +560,7 @@ struct AssistantParsedOperation: Equatable, Sendable {
 
 enum AssistantOperations {
     /// 앱이 아는 등록부 동작 전부. 여기 차례가 「AI가 할 수 있는 일」과 안내문의 차례다.
-    static let all: [any AssistantOperation.Type] = ledger + plans + records + photos
+    static let all: [any AssistantOperation.Type] = ledger + plans + records + photos + catalog + system
 
     private static let byName = Dictionary(all.map { ($0.spec.name, $0) }, uniquingKeysWith: { first, _ in first })
 
@@ -575,6 +577,121 @@ enum AssistantOperations {
 
     /// 연결 안내에 붙는 줄들.
     static func guide(command: String) -> String {
-        all.map { "  \(command)\"\($0.spec.name)\",\($0.spec.guide)" }.joined(separator: "\n")
+        // 칸이 없는 동작의 안내는 `}`로 시작한다.
+        all.map { "  \(command)\"\($0.spec.name)\"\($0.spec.fields.isEmpty ? "" : ",")\($0.spec.guide)" }.joined(separator: "\n")
+    }
+}
+
+// MARK: 등록부 동작 6묶음 — 시스템 (ACT1114A09). 권한 켜기·앱 잠금·PIN·전부 지우기는 넣지 않는다(대표 결정).
+
+extension AssistantOperations {
+    static let system: [any AssistantOperation.Type] = [RefreshNow.self, StopTracking.self, DisconnectCalendar.self, RestoreFromBackup.self]
+
+    /// 새로고침 단추와 iCloud 「지금 동기화」가 하는 일. 바뀌는 설정이 없어 되돌릴 것도 없다.
+    struct RefreshNow: AssistantOperation {
+        static let spec = AssistantOperationSpec(
+            name: "refreshNow", fields: ["target"], counter: .settings, changes: 0,
+            title: { $0.text("새로고침·iCloud 동기화 실행", "Refresh or run the iCloud sync") },
+            guide: #""target":"records|cloud"} (what the refresh buttons do: records re-reads today's connected data, cloud starts an iCloud sync; changes no settings, nothing to undo)"#
+        )
+
+        enum Target: String { case records, cloud }
+        let target: Target
+
+        init?(fields: AssistantFields) {
+            guard let target: Target = fields.choice("target") else { return nil }
+            self.target = target
+        }
+
+        func apply(host: AssistantOperationHost) async -> AssistantEditResult {
+            let language = host.language
+            var result: AssistantEditResult
+            switch target {
+            case .records:
+                // 시험 저장소로는 기기 자료를 다시 읽지 않는다.
+                if host.preferences.isLive { await host.model.refreshConnectedRecordsNow() }
+                result = AssistantEditResult(after: language.text("기록 새로고침", "Records refreshed"))
+            case .cloud:
+                guard host.model.cloudSyncService != nil else { return .rejected("not_available") }
+                host.model.startManualCloudSync()
+                result = AssistantEditResult(after: language.text("iCloud 동기화 시작", "iCloud sync started"))
+            }
+            result.cannotUndo = true
+            return result
+        }
+    }
+
+    /// 걷기·달리기 추적 끝내기(설정과 상세 패널의 「종료」와 같은 함수). 끝낸 기록은 남고 되돌릴 수 없다.
+    struct StopTracking: AssistantOperation {
+        static let spec = AssistantOperationSpec(
+            name: "stopTracking", fields: [], counter: .edits,
+            title: { $0.text("걷기·달리기 추적 끝내기", "Stop walk or run tracking") },
+            guide: #"} (ends the walk or run I am tracking and saves it as a record; only when I asked; cannot be undone)"#
+        )
+
+        init?(fields: AssistantFields) {}
+
+        func apply(host: AssistantOperationHost) async -> AssistantEditResult {
+            guard let session = host.model.activeTrackingSession else { return .rejected("no_tracking") }
+            await host.model.stopTracking()
+            guard host.model.activeTrackingSession == nil else { return .rejected("edit_failed") }
+            var result = AssistantEditResult(before: AssistantEditText.clock(session.startedAt), after: host.language.text("추적 끝냄", "Tracking stopped"))
+            result.cannotUndo = true
+            return result
+        }
+    }
+
+    /// 캘린더 연결 끊기: 기기 캘린더는 설정의 스위치를 끄는 것과, 구글은 「연결 끊기」와 같은 함수. 다시 잇기는 사용자가 한다.
+    struct DisconnectCalendar: AssistantOperation {
+        static let spec = AssistantOperationSpec(
+            name: "disconnectCalendar", fields: ["calendar"], counter: .settings, deletes: true,
+            title: { $0.text("캘린더 연결 끊기", "Disconnect calendars") },
+            guide: #""calendar":"device|google"} (stops reading a calendar: device removes every iOS calendar from the app, google signs my Google account out; the events stay in the calendars; connecting again is done by me in the app; only when I asked; cannot be undone)"#
+        )
+
+        enum Source: String { case device, google }
+        let source: Source
+
+        init?(fields: AssistantFields) {
+            guard let source: Source = fields.choice("calendar") else { return nil }
+            self.source = source
+        }
+
+        func apply(host: AssistantOperationHost) async -> AssistantEditResult {
+            let language = host.language
+            var result: AssistantEditResult
+            switch source {
+            case .device:
+                guard !host.model.settings.selectedCalendarIDs.isEmpty else { return .rejected("no_change") }
+                await host.model.setCalendarEnabled(false)
+                result = AssistantEditResult(before: language.text("기기 캘린더", "Device calendars"), after: language.text("연결 끊음", "Disconnected"))
+            case .google:
+                // 시험 저장소로는 실제 계정을 건드리지 않는다.
+                guard host.preferences.isLive, GoogleCalendarAccount.shared.isConnected else { return .rejected("no_change") }
+                await host.model.disconnectGoogleCalendar()
+                result = AssistantEditResult(before: language.text("구글 캘린더", "Google Calendar"), after: language.text("연결 끊음", "Disconnected"))
+            }
+            result.cannotUndo = true
+            return result
+        }
+    }
+
+    /// 백업에서 복원(대표 결정 2026-11-14): 백업 비밀번호가 필요하므로 AI는 「데이터 보호」 화면만 열고, 복원은 사용자가 그 화면에서 한다.
+    /// 「지우는 일」 묶음에 있고 사용자가 켜기 전에는 꺼져 있다.
+    struct RestoreFromBackup: AssistantOperation {
+        static let spec = AssistantOperationSpec(
+            name: "restoreFromBackup", fields: [], counter: .settings, deletes: true, startsOff: true, changes: 0,
+            title: { $0.text("백업에서 복원 화면 열기", "Open restore from backup") },
+            guide: #"} (opens the data protection screen so I can restore from a backup myself; I type the backup password in the app, never ask me for it; off until I switch it on under what the AI may do)"#
+        )
+
+        init?(fields: AssistantFields) {}
+
+        func apply(host: AssistantOperationHost) async -> AssistantEditResult {
+            host.preferences.screens.request(.dataProtection)
+            var result = AssistantEditResult(after: AssistantScreen.dataProtection.title(host.language))
+            result.appChange = AssistantAppChange(screen: .dataProtection)
+            return result
+        }
     }
 }

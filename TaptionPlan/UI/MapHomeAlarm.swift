@@ -119,8 +119,9 @@ struct MapHomeAlarmSettings: Equatable {
     /// 하루 카드 알림 시각(기본 오전 8시). 사용자가 설정에서 바꾼다.
     static let dailyCardHourKey = "mapHomeDailyCardHour"
     static let dailyCardMinuteKey = "mapHomeDailyCardMinute"
-    static var dailyCardTime: DateComponents {
-        let defaults = UserDefaults.standard
+    static var dailyCardTime: DateComponents { dailyCardTime(.standard) }
+
+    static func dailyCardTime(_ defaults: UserDefaults) -> DateComponents {
         let hasValue = defaults.object(forKey: dailyCardHourKey) != nil
         return DateComponents(
             hour: hasValue ? defaults.integer(forKey: dailyCardHourKey) : 8,
@@ -128,10 +129,12 @@ struct MapHomeAlarmSettings: Equatable {
         )
     }
 
-    static var current: MapHomeAlarmSettings {
-        UserDefaults.standard.object(forKey: storageKey) == nil
+    static var current: MapHomeAlarmSettings { stored(.standard) }
+
+    static func stored(_ defaults: UserDefaults) -> MapHomeAlarmSettings {
+        defaults.object(forKey: storageKey) == nil
             ? MapHomeAlarmSettings()
-            : MapHomeAlarmSettings(rawValue: UserDefaults.standard.string(forKey: storageKey) ?? "")
+            : MapHomeAlarmSettings(rawValue: defaults.string(forKey: storageKey) ?? "")
     }
 }
 

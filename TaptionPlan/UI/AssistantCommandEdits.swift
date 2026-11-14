@@ -130,12 +130,12 @@ enum AssistantActionKind: Hashable, CaseIterable, Identifiable, Codable, Sendabl
     }
 }
 
-/// 종류별 켜기·끄기. 값이 없으면 켠 것으로 본다(AIR1110A02).
+/// 종류별 켜기·끄기. 값이 없으면 켠 것으로 본다(AIR1110A02). `startsOff`인 등록부 동작만 값이 없으면 끈 것으로 본다(ACT1114A09).
 enum AssistantActionToggles {
     static func key(_ kind: AssistantActionKind) -> String { "assistantAction.\(kind.rawValue)" }
 
     static func isEnabled(_ kind: AssistantActionKind, defaults: UserDefaults = .standard) -> Bool {
-        defaults.object(forKey: key(kind)) as? Bool ?? true
+        defaults.object(forKey: key(kind)) as? Bool ?? !(AssistantOperations.spec(kind.rawValue)?.startsOff ?? false)
     }
 
     static func set(_ kind: AssistantActionKind, enabled: Bool, defaults: UserDefaults = .standard) {
@@ -293,6 +293,8 @@ struct AssistantEditResult: Equatable, Sendable {
     var appChange: AssistantAppChange?
     /// 지우면서 「다시 만들지 않기」로 적어 둔 기록(ACT1114A07). 되돌리면 그 표시도 뗀다.
     var suppressedActualIDs: Set<UUID> = []
+    /// 되돌릴 수 없는 일(ACT1114A09: 새로고침·추적 끝내기·캘린더 끊기). 「AI가 한 일」에 되돌리기 단추가 없다.
+    var cannotUndo = false
 
     static func rejected(_ reason: String) -> Self { Self(reason: reason) }
 }

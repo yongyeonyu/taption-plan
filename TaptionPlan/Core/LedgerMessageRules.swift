@@ -474,6 +474,10 @@ struct AssistantAppChange: Codable, Equatable, Sendable {
             if let before = ledgerTrip.before { await preferences.ledger.saveTrip(before) } else { await preferences.ledger.deleteTrip(ledgerTrip.after.id) }
         }
         for value in stored ?? [] { value.undo(preferences.defaults) }
+        // 알림 종류·하루 카드 시각이 돌아갔으면 예약도 맞춘다(화면이 바꿀 때와 같다).
+        if preferences.isLive, (stored ?? []).contains(where: { AssistantOperations.alarmKeys.contains($0.key) }) {
+            await MapHomeAlarmCenter.shared.syncDailyCardSchedule()
+        }
         if let deletedLedgerTrip { await preferences.ledger.saveTrip(deletedLedgerTrip) }
     }
 }

@@ -225,6 +225,184 @@
         "candidateId",
         "decision"
       ]
+    },
+    {
+      "action": "moveCategory",
+      "tool": "move_category",
+      "destructive": true,
+      "since": 341,
+      "fields": [
+        "categoryId",
+        "position"
+      ],
+      "required": [
+        "categoryId",
+        "position"
+      ]
+    },
+    {
+      "action": "deleteCategory",
+      "tool": "delete_category",
+      "destructive": true,
+      "since": 341,
+      "fields": [
+        "categoryId",
+        "moveTo"
+      ],
+      "required": [
+        "categoryId",
+        "moveTo"
+      ]
+    },
+    {
+      "action": "setPlaceFloor",
+      "tool": "set_place_floor",
+      "destructive": true,
+      "since": 341,
+      "fields": [
+        "placeId",
+        "floor"
+      ],
+      "required": [
+        "placeId",
+        "floor"
+      ]
+    },
+    {
+      "action": "addMyStop",
+      "tool": "add_my_stop",
+      "destructive": false,
+      "since": 341,
+      "fields": [
+        "name",
+        "kind",
+        "latitude",
+        "longitude",
+        "floor"
+      ],
+      "required": [
+        "name",
+        "kind",
+        "latitude",
+        "longitude"
+      ]
+    },
+    {
+      "action": "updateMyStop",
+      "tool": "update_my_stop",
+      "destructive": true,
+      "since": 341,
+      "fields": [
+        "stopId",
+        "name",
+        "floor",
+        "clearFloor"
+      ],
+      "required": [
+        "stopId"
+      ]
+    },
+    {
+      "action": "deleteMyStop",
+      "tool": "delete_my_stop",
+      "destructive": true,
+      "since": 341,
+      "fields": [
+        "stopId"
+      ],
+      "required": [
+        "stopId"
+      ]
+    },
+    {
+      "action": "setDayCardItems",
+      "tool": "set_day_card_items",
+      "destructive": true,
+      "since": 341,
+      "fields": [
+        "items"
+      ],
+      "required": [
+        "items"
+      ]
+    },
+    {
+      "action": "setDayCardTime",
+      "tool": "set_day_card_time",
+      "destructive": true,
+      "since": 341,
+      "fields": [
+        "time"
+      ],
+      "required": [
+        "time"
+      ]
+    },
+    {
+      "action": "setAlert",
+      "tool": "set_alert",
+      "destructive": true,
+      "since": 341,
+      "fields": [
+        "alert",
+        "enabled"
+      ],
+      "required": [
+        "alert",
+        "enabled"
+      ]
+    },
+    {
+      "action": "setCatOutfit",
+      "tool": "set_cat_outfit",
+      "destructive": true,
+      "since": 341,
+      "fields": [
+        "accessoryId"
+      ],
+      "required": [
+        "accessoryId"
+      ]
+    },
+    {
+      "action": "refreshNow",
+      "tool": "refresh_now",
+      "destructive": false,
+      "since": 341,
+      "fields": [
+        "target"
+      ],
+      "required": [
+        "target"
+      ]
+    },
+    {
+      "action": "stopTracking",
+      "tool": "stop_tracking",
+      "destructive": true,
+      "since": 341,
+      "fields": [],
+      "required": []
+    },
+    {
+      "action": "disconnectCalendar",
+      "tool": "disconnect_calendar",
+      "destructive": true,
+      "since": 341,
+      "fields": [
+        "calendar"
+      ],
+      "required": [
+        "calendar"
+      ]
+    },
+    {
+      "action": "restoreFromBackup",
+      "tool": "restore_from_backup",
+      "destructive": true,
+      "since": 341,
+      "fields": [],
+      "required": []
     }
   ]
 }

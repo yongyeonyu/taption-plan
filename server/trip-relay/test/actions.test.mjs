@@ -216,3 +216,86 @@ test("actions batch 4: more settings, display options, screens and the Kakao map
   refuses("setSetting", { setting: "memoDisplay", value: "none" });
   refuses("setSetting", { setting: "memoDisplay", value: true });
 });
+
+// MARK: ACT1114A09 — 5묶음(분류·장소·설정), 6묶음(시스템).
+
+test("actions batch 5: categories, place floors, my stops, the day card, alerts, the cat outfit", () => {
+  accepts("moveCategory", { categoryId: "work", position: 1 });
+  refuses("moveCategory", { categoryId: "work", position: 0 });
+  refuses("moveCategory", { categoryId: "work", position: 1.5 });
+  refuses("moveCategory", { position: 1 });
+  accepts("deleteCategory", { categoryId: "custom-1", moveTo: "work" });
+  refuses("deleteCategory", { categoryId: "work", moveTo: "work" });
+  refuses("deleteCategory", { categoryId: "work" });
+  accepts("setPlaceFloor", { placeId: UUID, floor: -2 });
+  accepts("setPlaceFloor", { placeId: UUID, floor: 100 });
+  refuses("setPlaceFloor", { placeId: UUID, floor: 101 });
+  refuses("setPlaceFloor", { placeId: "p1", floor: 2 });
+  const stop = { name: "Home stop", kind: "busStop", latitude: 10.5, longitude: 20.5 };
+  accepts("addMyStop", stop);
+  accepts("addMyStop", { ...stop, kind: "subwayStation", floor: -3 });
+  refuses("addMyStop", { ...stop, kind: "tram" });
+  refuses("addMyStop", { ...stop, latitude: 91 });
+  refuses("addMyStop", { ...stop, longitude: undefined });
+  refuses("addMyStop", { ...stop, floor: 500 });
+  refuses("addMyStop", { ...stop, name: "x".repeat(41) });
+  accepts("updateMyStop", { stopId: UUID, name: "New name" });
+  accepts("updateMyStop", { stopId: UUID, floor: 2 });
+  accepts("updateMyStop", { stopId: UUID, clearFloor: true });
+  refuses("updateMyStop", { stopId: UUID });
+  refuses("updateMyStop", { stopId: UUID, floor: 2, clearFloor: true });
+  refuses("updateMyStop", { stopId: UUID, clearFloor: false });
+  accepts("deleteMyStop", { stopId: UUID });
+  refuses("deleteMyStop", { stopId: "s1" });
+  accepts("setDayCardItems", { items: ["sleep", "steps", "memos"] });
+  accepts("setDayCardItems", { items: [] });
+  refuses("setDayCardItems", { items: ["sleep", "sleep"] });
+  refuses("setDayCardItems", { items: ["sleep", "steps", "memos", "work", "study"] });
+  refuses("setDayCardItems", { items: ["mood"] });
+  refuses("setDayCardItems", {});
+  accepts("setDayCardTime", { time: "07:30" });
+  refuses("setDayCardTime", { time: "24:00" });
+  refuses("setDayCardTime", { time: "7:30" });
+  accepts("setAlert", { alert: "wakeUp", enabled: false });
+  refuses("setAlert", { alert: "nearbyMemo", enabled: true });
+  refuses("setAlert", { alert: "wakeUp" });
+  accepts("setCatOutfit", { accessoryId: "cat.accessory.sample-1" });
+  refuses("setCatOutfit", { accessoryId: "hat" });
+  refuses("setCatOutfit", {});
+  accepts("setSetting", { setting: "strideCentimeters", value: 72 });
+  refuses("setSetting", { setting: "strideCentimeters", value: 20 });
+  refuses("setSetting", { setting: "strideCentimeters", value: 72.5 });
+  for (const setting of ["watchAcceleration", "watchDataSync"]) {
+    accepts("setSetting", { setting, value: "batterySaver" });
+    refuses("setSetting", { setting, value: "max" });
+  }
+  assert.equal(registry.spec("deleteCategory").destructive, true);
+  assert.equal(registry.spec("addMyStop").destructive, false);
+  assert.equal(cleanCommand(cmd("addMyStop", { ...stop, junk: 1 })).junk, undefined);
+  assert.equal(isAppState({ format: "bokki-app", version: 1, retentionDays: 7, settings: { myStops: [{ id: UUID, name: "Home stop", kind: "busStop" }], dayCard: { items: [], time: "08:00" } } }), true);
+});
+
+test("actions batch 6: refresh, tracking, calendars, restore; switching permissions on, the app lock, the PIN and erasing stay out", () => {
+  accepts("refreshNow", { target: "records" });
+  accepts("refreshNow", { target: "cloud" });
+  refuses("refreshNow", { target: "all" });
+  refuses("refreshNow", {});
+  accepts("stopTracking", {});
+  accepts("disconnectCalendar", { calendar: "device" });
+  accepts("disconnectCalendar", { calendar: "google" });
+  refuses("disconnectCalendar", { calendar: "outlook" });
+  accepts("restoreFromBackup", {});
+  assert.equal(cleanCommand(cmd("restoreFromBackup", { password: "123456" })).password, undefined, "a backup password never travels with the command");
+  assert.match(registry.spec("restoreFromBackup").description, /never ask for it/);
+  for (const setting of ["location", "photos", "notifications"]) {
+    accepts("setSetting", { setting, value: false });
+    refuses("setSetting", { setting, value: true });
+  }
+  for (const action of ["setAppLock", "changePin", "eraseAllData", "restoreBackup", "enableLocation"]) {
+    assert.equal(ACTIONS.includes(action), false, action);
+    refuses(action, {});
+  }
+  const tools = registry.tools();
+  assert.deepEqual(tools.find((t) => t.action === "stopTracking").required, []);
+  assert.equal(tools.find((t) => t.action === "refreshNow").destructive, false);
+});
