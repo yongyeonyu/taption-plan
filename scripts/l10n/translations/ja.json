@@ -5742,6 +5742,7 @@
 "계획대로|On plan": "予定どおり",
 "기록 없음|No record": "記録なし",
 "나란히 보기|Side by side": "並べて表示",
+"지금까지 시작한 일정의 계획 {0} 기준|Against {0} planned so far": "ここまでに始めた予定の計画 {0} が基準",
 "남은 일정 AI로 재조정|Replan the rest with AI": "残りの予定をAIで再調整",
 "남은 일정 {0}개|{0} left": "残りの予定 {0}件",
 "남은 일정 재조정|Replan the rest": "残りの予定の再調整",
@@ -5756,7 +5757,6 @@
 "이 날은 비교할 계획이 없습니다.|No plans to compare on this day.": "この日は比較する予定がありません。",
 "일정 시각과 차이, 예산 차이만 AI 할 일로 보냅니다. 좌표와 결제 정보는 보내지 않습니다.|Only schedule times, gaps and the budget gap are sent as an AI task. No coordinates or payment details.": "予定の時刻と差、予算の差だけをAIタスクとして送ります。座標や決済情報は送りません。",
 "지연 {0}|Late {0}": "遅れ {0}",
-"진행 중|ongoing": "進行中",
-"휴식|Rest": "休憩"
+"진행 중|ongoing": "進行中"
 }
 }

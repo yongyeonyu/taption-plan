@@ -1,5 +1,5 @@
 {
- "ui": 4982,
+ "ui": 5009,
  "catalog": 504,
  "unread": [
   {
@@ -766,13 +766,13 @@
   },
   {
    "file": "TaptionPlan/UI/MapHomeView+Menu.swift",
-   "line": 1067,
+   "line": 1069,
    "ko": "strength.koreanLabel",
    "en": "strength.englishLabel"
   },
   {
    "file": "TaptionPlan/UI/MapHomeView+Menu.swift",
-   "line": 1075,
+   "line": 1077,
    "ko": "fogStrength.koreanLabel",
    "en": "fogStrength.englishLabel"
   },
@@ -811,6 +811,36 @@
    "line": 47,
    "ko": "_ mark: Mark",
    "en": "MapHomeLanguage"
+  },
+  {
+   "file": "TaptionPlan/UI/PlanRealityGap.swift",
+   "line": 234,
+   "ko": "abs(delta)",
+   "en": "language"
+  },
+  {
+   "file": "TaptionPlan/UI/PlanRealityView.swift",
+   "line": 304,
+   "ko": "planned",
+   "en": "language"
+  },
+  {
+   "file": "TaptionPlan/UI/PlanRealityView.swift",
+   "line": 308,
+   "ko": "spent",
+   "en": "language"
+  },
+  {
+   "file": "TaptionPlan/UI/PlanRealityView.swift",
+   "line": 335,
+   "ko": "gap.plannedSoFarKRW",
+   "en": "language"
+  },
+  {
+   "file": "TaptionPlan/UI/PlanRealityView.swift",
+   "line": 352,
+   "ko": "amount",
+   "en": "language"
   },
   {
    "file": "TaptionPlan/UI/TravelModeSupport.swift",

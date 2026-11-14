@@ -7,6 +7,17 @@
 - CLM1114A01(하루 편집 한도 30 → 100): 서버 `npm test` 116건 통과(옛 숫자에 기대던 시험 5건을 새 한도에 맞게 고침), `wrangler deploy` 완료. 대기열 상한은 50 그대로다(100으로 올리면 다른 시험·읽기 상한까지 바뀌어 이번에는 두었다).
 - OCF1114A01(큰 사진에도 「OCR」 표시)·안내문 숫자: `AssistantCommandEditTests`·`AssistantRelayTests`·`LedgerTests` 62건 통과·실패 0(`build/validation/OCB1114A01/sim-16.xcresult`), 구조 점검 통과. 아직 빌드에 없고 화면 확인도 없다.
 
+## PVR1114A13·ARC1114A14·ABA1114A15 · 계획과 실제, 도착 카드, AI 전·후 보기 (2026-11-14 밤, 아직 빌드·서버에 없음)
+
+- 세 기능을 따로 만든 작업 공간에서 구현해 메인에 합침. 충돌: 번역 파일 12개(같은 자리에 덧붙임)와 `project.pbxproj` 4곳 → 양쪽 다 살림. 합치며 겹친 번역 키 `휴식|Rest` 하나를 정리. 번역 실패 0, 구조 점검·import 경계 통과.
+- 합친 뒤 메인에서(시뮬레이터 BOKKI-STL, 실기기 확인 없음):
+  - 1차(`build/validation/PVR1114A13/sim-main-1.log`, 시뮬레이터 복제본에서 병렬 실행): 251건 통과, **1건 실패** — `AssistantReviewFixTests.testLoweringTheShareLevelDeletesServerDataBeforeUploadingAgain`(「DELETE /activity」가 먼저 가야 하는데 요청이 없었음).
+  - 2차(`sim-main-2`, 병렬 끔, 예산 기준 한 줄 추가 뒤): `PlanRealityGapTests`·`ArrivalDetectorTests`·`AssistantDigestTests`·`AITaskQueueTests`·`LedgerTests`·`AssistantPhase3Tests`·`AssistantReviewFixTests`·`AssistantRelayTests`·`AssistantCommandEditTests`·`LedgerMessageAccuracyTests`·`LedgerReviewTests`·`MapHomeKakaoProjectionTests`·`TripItemStatusTests`·`TravelMapTests` 268건 통과·실패 0.
+  - 3차(`sim-main-3`): `AssistantReviewFixTests`만 세 번 반복 93건 통과·실패 0. 1차 실패는 다시 나오지 않았고 원인은 확인하지 못함(병렬 실행에서만 한 번 나옴, 이전 실행들은 병렬이 아니었음).
+- 서버 `npm test` 160건 통과(세 번 연속, 새 일 종류 `replan` 시험 포함).
+- 작업 공간에서: PVR 32건·서버 160건×3, 지어낸 하루로 화면 스크린샷(`build/validation/PVR1114A13/plan-reality-top.png`: 뱃지·점선/실선 막대·지도 확인, 「나란히 보기」·재조정 버튼 영역·실제 자료로 여는 경로는 못 봄). ARC 21건(판정·카드 내용·체크 저장만, 매니저·알림 경로와 화면은 시험 없음). ABA 161건(화면은 띄워 보지 않음).
+- 하지 않은 것: 서버 배포(`replan`을 모르는 지금 서버는 그 일이 든 묶음을 422로 거절하므로 다음 빌드보다 **먼저** 배포해야 함), TestFlight, 실기기 전부.
+
 ## TFB1114A341 · 서버 배포와 TestFlight 341 (2026-11-14 밤)
 
 - 서버 배포 한 번(대표 선택 「다 끝난 뒤 한 번에」): AI 동작 등록부 전체, 일 처리 강화(쓰기 권한·`queue_full`), 사진 중계(`/photo/search`, 구글 포함), 푸시(APNs, 비밀값 없으면 건너뜀). 배포 뒤 운영 서버의 `list_actions`가 동작 79개를 돌려주고 `classifyInboxItem`·`setTripItemPhoto`·`moveCategory`·`restoreFromBackup`이 들어 있음을 읽어 확인.

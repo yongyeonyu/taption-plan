@@ -330,6 +330,13 @@ private struct PlanRealityBudgetBars: View {
             }
             line(language.text("계획", "Plan"), gap.plannedKRW, top: top, isPlan: true)
             line(language.text("실제", "Actual"), gap.spentKRW, top: top, isPlan: false)
+            // 뱃지는 하루 전체가 아니라 지금까지 시작한 일정의 계획 지출과 견준 값이다.
+            if gap.plannedSoFarKRW > 0, gap.plannedSoFarKRW != gap.plannedKRW {
+                let soFar = LedgerMoney.text(gap.plannedSoFarKRW, language: language)
+                Text(language.text("지금까지 시작한 일정의 계획 \(soFar) 기준", "Against \(soFar) planned so far"))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.caption), weight: .regular))
+                    .foregroundStyle(.secondary)
+            }
         }
         .padding(10)
         .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionCorner.medium, style: .continuous))

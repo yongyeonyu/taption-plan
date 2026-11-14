@@ -635,11 +635,23 @@
    "ko": "AI 공유 수준을 「{0}」(으)로 바꿀까요?",
    "en": "Change AI sharing to “{0}”?",
    "files": [
-    "AITaskQueue.swift:401"
+    "AITaskQueue.swift:403"
    ],
    "args": [
     "level.title(language)"
    ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "AI 공유가 꺼져 있어 보낼 수 없습니다. AI 연결에서 공유 수준을 바꿔 주세요.|AI sharing is off. Change the share level in AI connections.",
+   "ko": "AI 공유가 꺼져 있어 보낼 수 없습니다. AI 연결에서 공유 수준을 바꿔 주세요.",
+   "en": "AI sharing is off. Change the share level in AI connections.",
+   "files": [
+    "PlanRealityView.swift:93"
+   ],
+   "args": [],
    "targets": [
     "TaptionPlan"
    ]
@@ -788,9 +800,9 @@
    "ko": "AI 승인 요청",
    "en": "AI approval request",
    "files": [
-    "AITaskPanel.swift:477",
-    "AITaskPanel.swift:532",
-    "AITaskQueue.swift:460"
+    "AITaskPanel.swift:479",
+    "AITaskPanel.swift:534",
+    "AITaskQueue.swift:462"
    ],
    "args": [],
    "targets": [
@@ -839,7 +851,7 @@
    "ko": "AI 연결 화면에서 PIN을 바꿀까요?",
    "en": "Change the PIN in AI connections?",
    "files": [
-    "AITaskQueue.swift:409"
+    "AITaskQueue.swift:411"
    ],
    "args": [],
    "targets": [
@@ -939,9 +951,21 @@
    "ko": "AI 질문",
    "en": "AI question",
    "files": [
-    "AITaskPanel.swift:392",
-    "AITaskPanel.swift:533",
-    "AITaskQueue.swift:460"
+    "AITaskPanel.swift:394",
+    "AITaskPanel.swift:535",
+    "AITaskQueue.swift:462"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "AI 할 일에 올렸습니다. AI가 바꾸기 전에 먼저 물어봅니다.|Sent to AI tasks. The AI asks you before changing anything.",
+   "ko": "AI 할 일에 올렸습니다. AI가 바꾸기 전에 먼저 물어봅니다.",
+   "en": "Sent to AI tasks. The AI asks you before changing anything.",
+   "files": [
+    "PlanRealityView.swift:106"
    ],
    "args": [],
    "targets": [
@@ -953,7 +977,7 @@
    "ko": "AI가 {0}건을 처리했어요",
    "en": "Your AI handled {0} task(s)",
    "files": [
-    "AITaskQueue.swift:505"
+    "AITaskQueue.swift:507"
    ],
    "args": [
     "done"
@@ -967,7 +991,7 @@
    "ko": "AI가 끝내지 못한 일이 {0}건 있어요",
    "en": "Your AI couldn't finish {0} task(s)",
    "files": [
-    "AITaskQueue.swift:504"
+    "AITaskQueue.swift:506"
    ],
    "args": [
     "failed"
@@ -1108,7 +1132,7 @@
    "ko": "AI로 만들기",
    "en": "Plan with AI",
    "files": [
-    "MapHomeView+Support.swift:708"
+    "MapHomeView+Support.swift:709"
    ],
    "args": [],
    "targets": [
@@ -3520,7 +3544,7 @@
    "ko": "{0} 상세 분류",
    "en": "{0} details",
    "files": [
-    "MapHomeView+Menu.swift:720"
+    "MapHomeView+Menu.swift:722"
    ],
    "args": [
     "category.localizedTitle(language)"
@@ -3534,8 +3558,8 @@
    "ko": "{0} 색상 팔레트",
    "en": "{0} color palette",
    "files": [
-    "MapHomeView+Menu.swift:749",
-    "MapHomeView+Menu.swift:867"
+    "MapHomeView+Menu.swift:751",
+    "MapHomeView+Menu.swift:869"
    ],
    "args": [
     "category.localizedTitle(language)"
@@ -3549,7 +3573,7 @@
    "ko": "{0} 수정",
    "en": "Edit {0}",
    "files": [
-    "MapHomeView+Menu.swift:852"
+    "MapHomeView+Menu.swift:854"
    ],
    "args": [
     "category.title"
@@ -4353,7 +4377,8 @@
    "ko": "{0}시간 {1}분",
    "en": "{0} h {1} min",
    "files": [
-    "MapHomeCalendarPolicies.swift:486"
+    "MapHomeCalendarPolicies.swift:486",
+    "PlanRealityGap.swift:228"
    ],
    "args": [
     "hours",
@@ -34113,6 +34138,18 @@
    ]
   },
   {
+   "key": "같은 내용을 이미 보냈습니다.|This was already sent.",
+   "ko": "같은 내용을 이미 보냈습니다.",
+   "en": "This was already sent.",
+   "files": [
+    "PlanRealityView.swift:98"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "같은 분류끼리 합치기|Merge same categories",
    "ko": "같은 분류끼리 합치기",
    "en": "Merge same categories",
@@ -34331,7 +34368,7 @@
    "ko": "거절",
    "en": "Decline",
    "files": [
-    "AITaskPanel.swift:492"
+    "AITaskPanel.swift:494"
    ],
    "args": [],
    "targets": [
@@ -34343,7 +34380,7 @@
    "ko": "거절함",
    "en": "Declined",
    "files": [
-    "AITaskPanel.swift:370"
+    "AITaskPanel.swift:372"
    ],
    "args": [],
    "targets": [
@@ -34541,7 +34578,7 @@
    "ko": "건강 연동을 끌까요?",
    "en": "Turn off Health sync?",
    "files": [
-    "AITaskQueue.swift:405"
+    "AITaskQueue.swift:407"
    ],
    "args": [],
    "targets": [
@@ -34596,7 +34633,7 @@
    "ko": "건너뛰기",
    "en": "Skip",
    "files": [
-    "AITaskPanel.swift:416",
+    "AITaskPanel.swift:418",
     "FirstRunTutorialView.swift:82",
     "PermissionOnboardingSheet.swift:280"
    ],
@@ -34610,7 +34647,7 @@
    "ko": "건너뜀",
    "en": "Skipped",
    "files": [
-    "AITaskPanel.swift:368"
+    "AITaskPanel.swift:370"
    ],
    "args": [],
    "targets": [
@@ -35168,6 +35205,18 @@
    ]
   },
   {
+   "key": "겹쳐 보기|Overlay",
+   "ko": "겹쳐 보기",
+   "en": "Overlay",
+   "files": [
+    "PlanRealityView.swift:134"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "경로 불러오는 중…|Loading routes…",
    "ko": "경로 불러오는 중…",
    "en": "Loading routes…",
@@ -35374,6 +35423,20 @@
    ]
   },
   {
+   "key": "계획 {0}|Plan {0}",
+   "ko": "계획 {0}",
+   "en": "Plan {0}",
+   "files": [
+    "PlanRealityView.swift:296"
+   ],
+   "args": [
+    "plan"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "계획 길이를 조절하지 못했습니다.|Could not adjust the plan length.",
    "ko": "계획 길이를 조절하지 못했습니다.",
    "en": "Could not adjust the plan length.",
@@ -35438,6 +35501,19 @@
    ]
   },
   {
+   "key": "계획|Plan",
+   "ko": "계획",
+   "en": "Plan",
+   "files": [
+    "PlanRealityView.swift:215",
+    "PlanRealityView.swift:331"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "계획|Planned",
    "ko": "계획",
    "en": "Planned",
@@ -35454,7 +35530,32 @@
    "ko": "계획과 기록은 삭제되지 않습니다.",
    "en": "Your plans and records will not be deleted.",
    "files": [
-    "MapHomeView+Support.swift:787"
+    "MapHomeView+Support.swift:788"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "계획과 실제|Plan vs actual",
+   "ko": "계획과 실제",
+   "en": "Plan vs actual",
+   "files": [
+    "MapHomeView+Menu.swift:484",
+    "PlanRealityView.swift:47"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "계획대로|On plan",
+   "ko": "계획대로",
+   "en": "On plan",
+   "files": [
+    "PlanRealityView.swift:168"
    ],
    "args": [],
    "targets": [
@@ -37102,6 +37203,18 @@
    ]
   },
   {
+   "key": "기록 없음|No record",
+   "ko": "기록 없음",
+   "en": "No record",
+   "files": [
+    "PlanRealityView.swift:301"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "기록 이름·분류 고치기|Rename or reclassify records",
    "ko": "기록 이름·분류 고치기",
    "en": "Rename or reclassify records",
@@ -37503,7 +37616,7 @@
    "ko": "기타 확인",
    "en": "Other",
    "files": [
-    "AITaskPanel.swift:308"
+    "AITaskPanel.swift:309"
    ],
    "args": [],
    "targets": [
@@ -37782,7 +37895,7 @@
    "ko": "끝난 질문 지우기",
    "en": "Clear answered questions",
    "files": [
-    "AITaskPanel.swift:351"
+    "AITaskPanel.swift:353"
    ],
    "args": [],
    "targets": [
@@ -37887,6 +38000,18 @@
    ]
   },
   {
+   "key": "나란히 보기|Side by side",
+   "ko": "나란히 보기",
+   "en": "Side by side",
+   "files": [
+    "PlanRealityView.swift:135"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "나만|Only me",
    "ko": "나만",
    "en": "Only me",
@@ -37945,7 +38070,7 @@
    "files": [
     "FirstRunTutorialGuides.swift:372",
     "FirstRunTutorialGuides.swift:419",
-    "MapHomeView+Support.swift:702"
+    "MapHomeView+Support.swift:703"
    ],
    "args": [],
    "targets": [
@@ -37957,7 +38082,7 @@
    "ko": "나중에",
    "en": "Not now",
    "files": [
-    "MapHomeView+Support.swift:453"
+    "MapHomeView+Support.swift:454"
    ],
    "args": [],
    "targets": [
@@ -38018,7 +38143,7 @@
    "en": "Weather",
    "files": [
     "AssistantDataCommands.swift:775",
-    "MapHomeView+Menu.swift:542",
+    "MapHomeView+Menu.swift:544",
     "StickerArtBasics.swift:7"
    ],
    "args": [],
@@ -38149,6 +38274,56 @@
    "args": [
     "amount"
    ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "남은 일정 AI로 재조정|Replan the rest with AI",
+   "ko": "남은 일정 AI로 재조정",
+   "en": "Replan the rest with AI",
+   "files": [
+    "PlanRealityView.swift:178"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "남은 일정 {0}개|{0} left",
+   "ko": "남은 일정 {0}개",
+   "en": "{0} left",
+   "files": [
+    "PlanRealityGap.swift:254"
+   ],
+   "args": [
+    "remaining"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "남은 일정 재조정|Replan the rest",
+   "ko": "남은 일정 재조정",
+   "en": "Replan the rest",
+   "files": [
+    "AITaskPanel.swift:308"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "남음|left",
+   "ko": "남음",
+   "en": "left",
+   "files": [
+    "PlanRealityGap.swift:264"
+   ],
+   "args": [],
    "targets": [
     "TaptionPlan"
    ]
@@ -39316,7 +39491,7 @@
    "en": "Calendar",
    "files": [
     "FirstRunGuideStage.swift:643",
-    "MapHomeView+Support.swift:468",
+    "MapHomeView+Support.swift:469",
     "MapHomeView+Support2.swift:393"
    ],
    "args": [],
@@ -39369,7 +39544,7 @@
    "ko": "답하기",
    "en": "Answer",
    "files": [
-    "AITaskPanel.swift:411"
+    "AITaskPanel.swift:413"
    ],
    "args": [],
    "targets": [
@@ -39381,7 +39556,7 @@
    "ko": "답할 질문이 없어요.",
    "en": "No questions to answer.",
    "files": [
-    "AITaskPanel.swift:558"
+    "AITaskPanel.swift:560"
    ],
    "args": [],
    "targets": [
@@ -40345,7 +40520,7 @@
    "ko": "등록된 사용자 위치 {0}개",
    "en": "{0} saved user locations",
    "files": [
-    "MapHomeView+Menu.swift:959"
+    "MapHomeView+Menu.swift:961"
    ],
    "args": [
     "userLocationCount"
@@ -40359,7 +40534,7 @@
    "ko": "등록된 사용자 위치가 없습니다.",
    "en": "No saved user locations.",
    "files": [
-    "MapHomeView+Menu.swift:989"
+    "MapHomeView+Menu.swift:991"
    ],
    "args": [],
    "targets": [
@@ -41128,7 +41303,7 @@
    "ko": "메뉴 > 위치에서 집을 먼저 등록해 주세요.",
    "en": "Add your home in Menu > Location first.",
    "files": [
-    "MapHomeView+Support.swift:456"
+    "MapHomeView+Support.swift:457"
    ],
    "args": [],
    "targets": [
@@ -41404,7 +41579,7 @@
    "en": "Show memos",
    "files": [
     "AssistantDataCommands.swift:780",
-    "MapHomeView+Menu.swift:550"
+    "MapHomeView+Menu.swift:552"
    ],
    "args": [],
    "targets": [
@@ -41628,7 +41803,7 @@
    "ko": "모든 데이터 삭제 화면을 열까요?",
    "en": "Open the screen to erase all data?",
    "files": [
-    "AITaskQueue.swift:406"
+    "AITaskQueue.swift:408"
    ],
    "args": [],
    "targets": [
@@ -42649,7 +42824,7 @@
    "ko": "백업 화면을 열까요?",
    "en": "Open the backup screen?",
    "files": [
-    "AITaskQueue.swift:407"
+    "AITaskQueue.swift:409"
    ],
    "args": [],
    "targets": [
@@ -43414,7 +43589,7 @@
    "ko": "복원 화면을 열까요?",
    "en": "Open the restore screen?",
    "files": [
-    "AITaskQueue.swift:408"
+    "AITaskQueue.swift:410"
    ],
    "args": [],
    "targets": [
@@ -43955,7 +44130,7 @@
    "ko": "사용자 위치 관리",
    "en": "Manage user locations",
    "files": [
-    "MapHomeView+Menu.swift:1008"
+    "MapHomeView+Menu.swift:1010"
    ],
    "args": [],
    "targets": [
@@ -43967,7 +44142,7 @@
    "ko": "사용자 위치 목록",
    "en": "User location list",
    "files": [
-    "MapHomeView+Menu.swift:983"
+    "MapHomeView+Menu.swift:985"
    ],
    "args": [],
    "targets": [
@@ -44017,7 +44192,7 @@
    "ko": "사용자 지정 색상",
    "en": "Custom category color",
    "files": [
-    "MapHomeView+Menu.swift:798"
+    "MapHomeView+Menu.swift:800"
    ],
    "args": [],
    "targets": [
@@ -44029,8 +44204,8 @@
    "ko": "사용자 지정",
    "en": "Custom",
    "files": [
-    "MapHomeView+Menu.swift:781",
-    "MapHomeView+Menu.swift:880"
+    "MapHomeView+Menu.swift:783",
+    "MapHomeView+Menu.swift:882"
    ],
    "args": [],
    "targets": [
@@ -44042,7 +44217,7 @@
    "ko": "사용자 추가",
    "en": "Add custom",
    "files": [
-    "MapHomeView+Menu.swift:821"
+    "MapHomeView+Menu.swift:823"
    ],
    "args": [],
    "targets": [
@@ -44054,7 +44229,7 @@
    "ko": "사용자",
    "en": "User",
    "files": [
-    "MapHomeView+Menu.swift:956"
+    "MapHomeView+Menu.swift:958"
    ],
    "args": [],
    "targets": [
@@ -44114,7 +44289,7 @@
    "ko": "사이드바",
    "en": "Sidebar",
    "files": [
-    "MapHomeView+Menu.swift:539"
+    "MapHomeView+Menu.swift:541"
    ],
    "args": [],
    "targets": [
@@ -44794,7 +44969,7 @@
    "ko": "색상 선택",
    "en": "Choose color",
    "files": [
-    "MapHomeView+Menu.swift:777"
+    "MapHomeView+Menu.swift:779"
    ],
    "args": [],
    "targets": [
@@ -44818,7 +44993,7 @@
    "ko": "색상을 선택하면 즉시 저장됩니다.",
    "en": "Colors save immediately.",
    "files": [
-    "MapHomeView+Menu.swift:903"
+    "MapHomeView+Menu.swift:905"
    ],
    "args": [],
    "targets": [
@@ -44942,7 +45117,7 @@
    "ko": "서버 보관 기간을 {0}로 바꿀까요?",
    "en": "Change server retention to {0}?",
    "files": [
-    "AITaskQueue.swift:404"
+    "AITaskQueue.swift:406"
    ],
    "args": [
     "days.title(language)"
@@ -45247,7 +45422,7 @@
    "files": [
     "MapHomeView+Menu2.swift:210",
     "MapHomeView+Menu2.swift:227",
-    "MapHomeView+Support.swift:781"
+    "MapHomeView+Support.swift:782"
    ],
    "args": [],
    "targets": [
@@ -45321,7 +45496,7 @@
    "ko": "설정을 기본값으로 초기화할까요?",
    "en": "Reset settings to defaults?",
    "files": [
-    "MapHomeView+Support.swift:777"
+    "MapHomeView+Support.swift:778"
    ],
    "args": [],
    "targets": [
@@ -46303,7 +46478,7 @@
    "ko": "승인",
    "en": "Approve",
    "files": [
-    "AITaskPanel.swift:489"
+    "AITaskPanel.swift:491"
    ],
    "args": [],
    "targets": [
@@ -46315,7 +46490,7 @@
    "ko": "승인하면 건강·Apple Watch에서 가져온 기록이 앱에서 지워집니다.",
    "en": "Approving removes the records brought from Health and Apple Watch from the app.",
    "files": [
-    "AITaskQueue.swift:420"
+    "AITaskQueue.swift:422"
    ],
    "args": [],
    "targets": [
@@ -46327,7 +46502,7 @@
    "ko": "승인하면 그 화면만 엽니다. 실제 실행과 비밀번호 입력은 직접 하세요.",
    "en": "Approving only opens that screen. You do the action and enter any password yourself.",
    "files": [
-    "AITaskQueue.swift:423"
+    "AITaskQueue.swift:425"
    ],
    "args": [],
    "targets": [
@@ -46339,7 +46514,7 @@
    "ko": "승인하면 바로 바뀝니다. 덜 보내거나 기간을 줄이면 서버에 올린 기록을 지웁니다.",
    "en": "It changes as soon as you approve. Sharing less or keeping it shorter deletes what the server holds.",
    "files": [
-    "AITaskQueue.swift:417"
+    "AITaskQueue.swift:419"
    ],
    "args": [],
    "targets": [
@@ -46351,7 +46526,7 @@
    "ko": "승인함",
    "en": "Approved",
    "files": [
-    "AITaskPanel.swift:370"
+    "AITaskPanel.swift:372"
    ],
    "args": [],
    "targets": [
@@ -46460,7 +46635,7 @@
    "ko": "시간 표시",
    "en": "Time format",
    "files": [
-    "MapHomeView+Menu.swift:566"
+    "MapHomeView+Menu.swift:568"
    ],
    "args": [],
    "targets": [
@@ -46883,11 +47058,64 @@
    ]
   },
   {
+   "key": "실제 {0} · 진행 중|Actual {0} · ongoing",
+   "ko": "실제 {0} · 진행 중",
+   "en": "Actual {0} · ongoing",
+   "files": [
+    "PlanRealityView.swift:299"
+   ],
+   "args": [
+    "actual"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "실제 {0}|Actual {0}",
+   "ko": "실제 {0}",
+   "en": "Actual {0}",
+   "files": [
+    "PlanRealityView.swift:299"
+   ],
+   "args": [
+    "actual"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "실제 경로 겹쳐 보기|Overlay actual route",
+   "ko": "실제 경로 겹쳐 보기",
+   "en": "Overlay actual route",
+   "files": [
+    "PlanRealityMap.swift:34"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "실제 기록 시간이 루틴 기간 안에 있어야 합니다.|The actual record's time must fall within the routine's period.",
    "ko": "실제 기록 시간이 루틴 기간 안에 있어야 합니다.",
    "en": "The actual record's time must fall within the routine's period.",
    "files": [
     "AppModel+Plans.swift:279"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "실제|Actual",
+   "ko": "실제",
+   "en": "Actual",
+   "files": [
+    "PlanRealityView.swift:219",
+    "PlanRealityView.swift:332"
    ],
    "args": [],
    "targets": [
@@ -46911,7 +47139,7 @@
    "ko": "실패 {0}건",
    "en": "{0} failed",
    "files": [
-    "AITaskQueue.swift:505"
+    "AITaskQueue.swift:507"
    ],
    "args": [
     "failed"
@@ -47001,6 +47229,7 @@
    "ko": "쓴 돈 {0}",
    "en": "Spent {0}",
    "files": [
+    "PlanRealityView.swift:309",
     "TravelModeView.swift:838",
     "TravelPlanSpend.swift:53"
    ],
@@ -47342,6 +47571,18 @@
    ]
   },
   {
+   "key": "아직 전|Not yet",
+   "ko": "아직 전",
+   "en": "Not yet",
+   "files": [
+    "PlanRealityView.swift:301"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "안 됨|Not connected",
    "ko": "안 됨",
    "en": "Not connected",
@@ -47359,7 +47600,7 @@
    "ko": "안개 탐험 선택",
    "en": "Choose fog of exploration",
    "files": [
-    "MapHomeView+Menu.swift:1078"
+    "MapHomeView+Menu.swift:1080"
    ],
    "args": [],
    "targets": [
@@ -47371,7 +47612,7 @@
    "ko": "안개 탐험",
    "en": "Fog of Exploration",
    "files": [
-    "MapHomeView+Menu.swift:1074"
+    "MapHomeView+Menu.swift:1076"
    ],
    "args": [],
    "targets": [
@@ -48071,8 +48312,8 @@
    "ko": "앱에서 확인해 주세요.",
    "en": "Open the app to see it.",
    "files": [
-    "AITaskQueue.swift:461",
-    "AITaskQueue.swift:503"
+    "AITaskQueue.swift:463",
+    "AITaskQueue.swift:505"
    ],
    "args": [],
    "targets": [
@@ -48629,7 +48870,7 @@
    "ko": "여러 개 고를 수 있어요.",
    "en": "You can pick more than one.",
    "files": [
-    "AITaskPanel.swift:400"
+    "AITaskPanel.swift:402"
    ],
    "args": [],
    "targets": [
@@ -48739,7 +48980,7 @@
    "ko": "여행 계획 추가",
    "en": "Add to trip",
    "files": [
-    "MapHomeView+Support.swift:706"
+    "MapHomeView+Support.swift:707"
    ],
    "args": [],
    "targets": [
@@ -49666,6 +49907,18 @@
    ]
   },
   {
+   "key": "연결된 AI가 없습니다. 메뉴의 AI 연결에서 먼저 연결해 주세요.|No AI is connected. Connect one in AI connections first.",
+   "ko": "연결된 AI가 없습니다. 메뉴의 AI 연결에서 먼저 연결해 주세요.",
+   "en": "No AI is connected. Connect one in AI connections first.",
+   "files": [
+    "PlanRealityView.swift:102"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "연결된 AI가 없어요. 메뉴 › AI 연결에서 먼저 연결해 주세요.|No AI is connected. Connect one in Menu › AI connection first.",
    "ko": "연결된 AI가 없어요. 메뉴 › AI 연결에서 먼저 연결해 주세요.",
    "en": "No AI is connected. Connect one in Menu › AI connection first.",
@@ -50521,6 +50774,22 @@
    "args": [
     "LedgerMoney.text(budget, language: language)",
     "LedgerMoney.text(budget - summary.expense, language: language)"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "예산 {0}|Budget {0}",
+   "ko": "예산 {0}",
+   "en": "Budget {0}",
+   "files": [
+    "PlanRealityGap.swift:253",
+    "PlanRealityView.swift:165",
+    "PlanRealityView.swift:305"
+   ],
+   "args": [
+    "over"
    ],
    "targets": [
     "TaptionPlan"
@@ -51890,7 +52159,7 @@
    "ko": "위치 기록을 기다리는 중",
    "en": "Waiting for location",
    "files": [
-    "MapHomeView+Menu.swift:508"
+    "MapHomeView+Menu.swift:510"
    ],
    "args": [],
    "targets": [
@@ -51964,7 +52233,7 @@
    "ko": "위치 목록",
    "en": "Location list",
    "files": [
-    "MapHomeView+Menu.swift:931"
+    "MapHomeView+Menu.swift:933"
    ],
    "args": [],
    "targets": [
@@ -52002,7 +52271,7 @@
    "ko": "위치 설정 열기",
    "en": "Open location settings",
    "files": [
-    "MapHomeView+Support.swift:454"
+    "MapHomeView+Support.swift:455"
    ],
    "args": [],
    "targets": [
@@ -52189,7 +52458,7 @@
    "files": [
     "WidgetShared.swift:603",
     "MapHomeStickerEditor.swift:617",
-    "MapHomeView+Menu.swift:918"
+    "MapHomeView+Menu.swift:920"
    ],
    "args": [],
    "targets": [
@@ -52226,7 +52495,7 @@
    "ko": "위치를 '항상 허용'으로 바꿔 주세요",
    "en": "Set location to Always",
    "files": [
-    "MapHomeView+Support.swift:700"
+    "MapHomeView+Support.swift:701"
    ],
    "args": [],
    "targets": [
@@ -52853,6 +53122,30 @@
    "en": "No Health data for this day, so this is estimated from steps and weight (65 kg if no weight is set).",
    "files": [
     "MapHomeCalendarSheet.swift:109"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "이 날은 계획 경로가 없어 실제 경로만 보입니다.|No planned route for this day, so only the actual route is shown.",
+   "ko": "이 날은 계획 경로가 없어 실제 경로만 보입니다.",
+   "en": "No planned route for this day, so only the actual route is shown.",
+   "files": [
+    "PlanRealityMap.swift:56"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "이 날은 비교할 계획이 없습니다.|No plans to compare on this day.",
+   "ko": "이 날은 비교할 계획이 없습니다.",
+   "en": "No plans to compare on this day.",
+   "files": [
+    "PlanRealityView.swift:129"
    ],
    "args": [],
    "targets": [
@@ -54297,6 +54590,18 @@
    "files": [
     "FirstRunTutorialGuides.swift:587",
     "FirstRunTutorialGuides.swift:587"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "일정 시각과 차이, 예산 차이만 AI 할 일로 보냅니다. 좌표와 결제 정보는 보내지 않습니다.|Only schedule times, gaps and the budget gap are sent as an AI task. No coordinates or payment details.",
+   "ko": "일정 시각과 차이, 예산 차이만 AI 할 일로 보냅니다. 좌표와 결제 정보는 보내지 않습니다.",
+   "en": "Only schedule times, gaps and the budget gap are sent as an AI task. No coordinates or payment details.",
+   "files": [
+    "PlanRealityView.swift:185"
    ],
    "args": [],
    "targets": [
@@ -56694,6 +56999,20 @@
    ]
   },
   {
+   "key": "지금까지 시작한 일정의 계획 {0} 기준|Against {0} planned so far",
+   "ko": "지금까지 시작한 일정의 계획 {0} 기준",
+   "en": "Against {0} planned so far",
+   "files": [
+    "PlanRealityView.swift:336"
+   ],
+   "args": [
+    "soFar"
+   ],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
    "key": "지금은 ‘{0}’({1}부터)로 기록되고 있어요.|Now recorded as “{0}” since {1}.",
    "ko": "지금은 ‘{0}’({1}부터)로 기록되고 있어요.",
    "en": "Now recorded as “{0}” since {1}.",
@@ -56834,7 +57153,7 @@
    "ko": "지도 스타일 선택",
    "en": "Choose map style",
    "files": [
-    "MapHomeView+Menu.swift:1062"
+    "MapHomeView+Menu.swift:1064"
    ],
    "args": [],
    "targets": [
@@ -56846,7 +57165,7 @@
    "ko": "지도 스타일",
    "en": "Map style",
    "files": [
-    "MapHomeView+Menu.swift:1058"
+    "MapHomeView+Menu.swift:1060"
    ],
    "args": [],
    "targets": [
@@ -56933,7 +57252,7 @@
    "en": "Map attribution",
    "files": [
     "MapHomeSupportViews.swift:109",
-    "MapHomeView+Menu.swift:484"
+    "MapHomeView+Menu.swift:486"
    ],
    "args": [],
    "targets": [
@@ -57143,7 +57462,7 @@
    "ko": "지도에 메모 추가",
    "en": "Add map memo",
    "files": [
-    "MapHomeView+Support.swift:684"
+    "MapHomeView+Support.swift:685"
    ],
    "args": [],
    "targets": [
@@ -57267,6 +57586,21 @@
     "TravelNewTripSheet.swift:69"
    ],
    "args": [],
+   "targets": [
+    "TaptionPlan"
+   ]
+  },
+  {
+   "key": "지연 {0}|Late {0}",
+   "ko": "지연 {0}",
+   "en": "Late {0}",
+   "files": [
+    "PlanRealityGap.swift:252",
+    "PlanRealityView.swift:161"
+   ],
+   "args": [
+    "late"
+   ],
    "targets": [
     "TaptionPlan"
    ]
@@ -57611,7 +57945,7 @@
    "ko": "직접 입력",
    "en": "Enter manually",
    "files": [
-    "MapHomeView+Support.swift:707",
+    "MapHomeView+Support.swift:708",
     "TravelMapVideoSection.swift:38"
    ],
    "args": [],
@@ -57636,7 +57970,7 @@
    "ko": "직접 입력",
    "en": "Type your own answer",
    "files": [
-    "AITaskPanel.swift:406"
+    "AITaskPanel.swift:408"
    ],
    "args": [],
    "targets": [
@@ -57739,6 +58073,18 @@
    "args": [],
    "targets": [
     "TaptionPlanWatch"
+   ]
+  },
+  {
+   "key": "진행 중|ongoing",
+   "ko": "진행 중",
+   "en": "ongoing",
+   "files": [
+    "PlanRealityGap.swift:261"
+   ],
+   "args": [],
+   "targets": [
+    "TaptionPlan"
    ]
   },
   {
@@ -57890,7 +58236,7 @@
    "ko": "집이 등록돼 있지 않아요",
    "en": "No home place yet",
    "files": [
-    "MapHomeView+Support.swift:450"
+    "MapHomeView+Support.swift:451"
    ],
    "args": [],
    "targets": [
@@ -59864,7 +60210,7 @@
    "ko": "표시",
    "en": "Display",
    "files": [
-    "MapHomeView+Menu.swift:1030"
+    "MapHomeView+Menu.swift:1032"
    ],
    "args": [],
    "targets": [
@@ -60830,7 +61176,7 @@
    "ko": "행동 분류 목록",
    "en": "Activity category list",
    "files": [
-    "MapHomeView+Menu.swift:683"
+    "MapHomeView+Menu.swift:685"
    ],
    "args": [],
    "targets": [
@@ -60842,7 +61188,7 @@
    "ko": "행동 분류",
    "en": "Activity categories",
    "files": [
-    "MapHomeView+Menu.swift:670"
+    "MapHomeView+Menu.swift:672"
    ],
    "args": [],
    "targets": [
@@ -61030,7 +61376,7 @@
    "ko": "현재 위치 기록 중",
    "en": "Recording current location",
    "files": [
-    "MapHomeView+Menu.swift:509"
+    "MapHomeView+Menu.swift:511"
    ],
    "args": [],
    "targets": [

@@ -5742,6 +5742,7 @@
 "계획대로|On plan": "按计划进行",
 "기록 없음|No record": "无记录",
 "나란히 보기|Side by side": "并排显示",
+"지금까지 시작한 일정의 계획 {0} 기준|Against {0} planned so far": "以目前已开始日程的计划 {0} 为准",
 "남은 일정 AI로 재조정|Replan the rest with AI": "用 AI 重新安排剩余行程",
 "남은 일정 {0}개|{0} left": "剩余 {0} 项",
 "남은 일정 재조정|Replan the rest": "重新安排剩余行程",
@@ -5756,7 +5757,6 @@
 "이 날은 비교할 계획이 없습니다.|No plans to compare on this day.": "这一天没有可比较的计划。",
 "일정 시각과 차이, 예산 차이만 AI 할 일로 보냅니다. 좌표와 결제 정보는 보내지 않습니다.|Only schedule times, gaps and the budget gap are sent as an AI task. No coordinates or payment details.": "仅将行程时间、差异和预算差异作为 AI 任务发送，不发送坐标和支付信息。",
 "지연 {0}|Late {0}": "延迟 {0}",
-"진행 중|ongoing": "进行中",
-"휴식|Rest": "休息"
+"진행 중|ongoing": "进行中"
 }
 }

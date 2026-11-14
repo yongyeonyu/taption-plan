@@ -5742,6 +5742,7 @@
 "계획대로|On plan": "Đúng kế hoạch",
 "기록 없음|No record": "Không có ghi nhận",
 "나란히 보기|Side by side": "Cạnh nhau",
+"지금까지 시작한 일정의 계획 {0} 기준|Against {0} planned so far": "So với {0} đã lên kế hoạch đến lúc này",
 "남은 일정 AI로 재조정|Replan the rest with AI": "Sắp xếp lại phần còn lại bằng AI",
 "남은 일정 {0}개|{0} left": "Còn {0} mục",
 "남은 일정 재조정|Replan the rest": "Sắp xếp lại phần còn lại",
@@ -5756,7 +5757,6 @@
 "이 날은 비교할 계획이 없습니다.|No plans to compare on this day.": "Ngày này không có kế hoạch để so sánh.",
 "일정 시각과 차이, 예산 차이만 AI 할 일로 보냅니다. 좌표와 결제 정보는 보내지 않습니다.|Only schedule times, gaps and the budget gap are sent as an AI task. No coordinates or payment details.": "Chỉ gửi giờ lịch trình, chênh lệch và chênh lệch ngân sách dưới dạng việc của AI. Không gửi tọa độ hay thông tin thanh toán.",
 "지연 {0}|Late {0}": "Trễ {0}",
-"진행 중|ongoing": "đang diễn ra",
-"휴식|Rest": "Nghỉ ngơi"
+"진행 중|ongoing": "đang diễn ra"
 }
 }
