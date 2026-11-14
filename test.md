@@ -2,7 +2,15 @@
 
 이전 기록은 [test_ARCHIVE.md](test_ARCHIVE.md)에 있습니다.
 
-## OCB1114A01 · 335 뒤에 넣은 것 (2026-11-14 오전, 아직 빌드에 없음)
+## TFB1114A336 · TestFlight 336 (2026-11-14 오전)
+
+- `bash scripts/testflight/release.sh --yes --request-id TFB1114A336` 종료 코드 0. 기준 커밋은 언어 팩 재생성 커밋(5f0f4c63 다음).
+- 보고서 `build/validation/TFB1114A336/testflight-report.json`: 빌드 336 처리 상태 `VALID`, `TP Taption Plan 내부 테스트` 그룹 연결 확인, 테스터 노출.
+- 처음 들어간 것: OCB·KRT·AIC·AIK·AID·INY·RDL·AIW·TFM·AIU·GPV·AIH1114A01.
+- 서버(AIS·AIM·AIU·AIH)는 같은 날 `wrangler deploy` 완료.
+- 업로드·처리·그룹 연결만 확인했다. 설치와 실기기 기능 확인은 하지 않았다. 「앨범 영수증 자동 확인」 스위치는 336에 그대로 있다(꺼짐 기본).
+
+## OCB1114A01 · 335 뒤에 넣은 것 (2026-11-14 오전, 336에 들어감)
 
 OCB1114A01·KRT1114A01·AIC1114A01·AIK1114A01·AID1114A01·AIS1114A01. 로그는 `build/validation/OCB1114A01/`. 시뮬레이터(BOKKI-STL) 결과이고 실기기 확인은 없다.
 
