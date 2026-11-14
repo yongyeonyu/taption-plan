@@ -362,7 +362,7 @@ final class TaptionPlanClipRollUITests: XCTestCase {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
         app.launchArguments = ["-nlePreview"]
         app.launchWithoutPrompts()
-        XCTAssertTrue(app.staticTexts["클립 편집"].waitForExistence(timeout: 30))
+        XCTAssertTrue(UITestWait.clipEditorOpened(app), "클립 편집기가 열리지 않았다")
         XCTAssertTrue(app.staticTexts["00:00–07:00"].waitForExistence(timeout: 10))
         return app
     }
@@ -409,7 +409,8 @@ final class TaptionPlanClipRollUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["대분류"].exists, "가운데 줄 이름이 없다")
         XCTAssertTrue(app.staticTexts["장소"].exists, "왼쪽 줄 이름이 없다")
         XCTAssertTrue(app.staticTexts["회사"].waitForExistence(timeout: 5), "장소 줄에 머문 곳이 없다")
-        XCTAssertFalse(app.staticTexts["회의"].exists, "상세 층이 남아 있다")
+        // 상세 활동 줄은 2026-11-05에 다시 들어왔다(NLE1105A01). 센서 원본 줄만 없다.
+        XCTAssertTrue(app.staticTexts["상세 활동"].exists, "오른쪽 줄 이름이 없다")
         XCTAssertFalse(app.staticTexts["정지 · iPhone"].exists, "센서 층이 남아 있다")
         attach(app, name: "three-lanes")
         let frame = handle.frame
@@ -505,7 +506,7 @@ final class TaptionPlanClipEditorToolsUITests: XCTestCase {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
         app.launchArguments = ["-nlePreview"]
         app.launchWithoutPrompts()
-        XCTAssertTrue(app.staticTexts["클립 편집"].waitForExistence(timeout: 30))
+        XCTAssertTrue(UITestWait.clipEditorOpened(app), "클립 편집기가 열리지 않았다")
         return app
     }
 
@@ -715,7 +716,7 @@ final class TaptionPlanOverwriteUITests: XCTestCase {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
         app.launchArguments = ["-nlePreview"]
         app.launchWithoutPrompts()
-        XCTAssertTrue(app.staticTexts["클립 편집"].waitForExistence(timeout: 30))
+        XCTAssertTrue(UITestWait.clipEditorOpened(app), "클립 편집기가 열리지 않았다")
         return app
     }
 
@@ -1195,7 +1196,7 @@ final class TaptionPlanTravelPlanUITests: XCTestCase {
     }
 }
 
-/// TDL1112A01: 체크리스트 단추를 누르면 「확인할 것」 목록이 열리고, 「내가 확인」이 그 질문을 띄운다.
+/// 할 일 판은 늘 왼쪽 위에 펼쳐져 있고(TDW1114A01, 여는 단추는 없어졌다), 「확인」 탭의 「내가 확인」이 그 질문을 띄운다(TDL1112A01).
 final class TaptionPlanTodoListUITests: XCTestCase {
     private func shot(_ name: String) {
         let image = XCUIScreen.main.screenshot()
@@ -1208,29 +1209,26 @@ final class TaptionPlanTodoListUITests: XCTestCase {
         }
     }
 
-    func testChecklistButtonOpensTodoListAndConfirmAsks() throws {
+    func testTodoPanelIsAlwaysThereAndConfirmAsks() throws {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
         app.launchArguments += ["-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR"]
         app.launchWithoutPrompts()
-        let checklist = app.buttons["launchPrompts.deferred"]
-        XCTAssertTrue(checklist.waitForExistence(timeout: 40), "체크리스트 단추는 늘 있다")
-        let later = app.buttons["나중에 확인"]
-        let hadPrompt = later.waitForExistence(timeout: 5)
-        if hadPrompt { later.tap() }
-        XCTAssertTrue(checklist.exists, "미룬 뒤에도 같은 자리에 있다")
-        // 메모·일정 단추는 없어지고 할 일 목록 하나가 패널을 연다(TDP1113A01).
-        checklist.tap()
-        XCTAssertTrue(app.buttons["확인"].waitForExistence(timeout: 10), "확인 탭이 있는 패널이 열린다")
-        XCTAssertTrue(app.buttons["일정"].exists, "일정 탭이 있다")
+        let check = app.buttons["확인"]
+        XCTAssertTrue(check.waitForExistence(timeout: 40), "할 일 판의 확인 탭은 늘 있다")
+        for tab in ["지출", "일정", "메모", "내역", "AI"] {
+            XCTAssertTrue(app.buttons[tab].exists, "\(tab) 탭이 있다")
+        }
         shot("todo-list")
         app.buttons["일정"].tap()
         shot("todo-schedule")
-        app.buttons["전체"].tap()
-        shot("todo-all")
-        app.buttons["확인"].tap()
+        // 「메모」는 하단 막대에도 있다. 판의 탭은 위쪽 것이다.
+        let memoTab = app.buttons.matching(NSPredicate(format: "label == %@", "메모")).allElementsBoundByIndex
+            .min(by: { $0.frame.minY < $1.frame.minY })
+        try XCTUnwrap(memoTab).tap()
+        shot("todo-memos")
+        check.tap()
+        shot("todo-check")
         let confirm = app.buttons["내가 확인"].firstMatch
-        // 방금 미룬 질문이 있었다면 목록에 그 항목이 있어야 한다(빈 목록으로 뜨던 것, TDL1113A02).
-        if hadPrompt { XCTAssertTrue(confirm.waitForExistence(timeout: 3), "미룬 질문이 목록에 보인다") }
         try XCTSkipUnless(confirm.waitForExistence(timeout: 3), "확인할 것이 없는 기기")
         confirm.tap()
         XCTAssertTrue(app.alerts.firstMatch.waitForExistence(timeout: 8) || app.sheets.firstMatch.waitForExistence(timeout: 2), "고른 질문이 뜬다")

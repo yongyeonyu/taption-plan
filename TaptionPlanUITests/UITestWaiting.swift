@@ -34,6 +34,13 @@ enum UITestWait {
         }
     }
 
+    /// 클립 편집기(`-nlePreview`)가 열렸는지 본다. 화면 제목 글자는 2026-11-05쯤 빠져서,
+    /// 편집기에만 있고 늘 그려지는 재생 헤드 식별자를 기다린다(RMN1114A25).
+    static func clipEditorOpened(_ app: XCUIApplication, timeout: TimeInterval = 30) -> Bool {
+        app.descendants(matching: .any).matching(identifier: "nlePlayheadHandle").firstMatch
+            .waitForExistence(timeout: timeout)
+    }
+
     /// 떠 있는 시스템 권한 창을 거절한다. 거절했으면 true.
     @discardableResult
     static func declineSystemAlert() -> Bool {

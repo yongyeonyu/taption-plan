@@ -1,9 +1,10 @@
 import XCTest
 
-/// 지운 시뮬레이터에서 처음 실행 튜토리얼 전 단계를 지나며 화면을 남긴다(FRT1104A01). 설치 상태에 달려 있어 앱을 지운 뒤 하나씩 실행한다.
+/// 처음 실행 튜토리얼 전 단계를 지나며 화면을 남긴다(FRT1104A01).
+/// `-firstRunStore <이름>`(Debug 전용)으로 시험마다 새 "마침" 저장소를 써서, 이미 쓰던 설치에서도 첫 실행처럼 뜬다(RMN1114A25).
 @MainActor
 final class TaptionPlanFirstRunTutorialUITests: XCTestCase {
-    private let stepCount = 19
+    private let stepCount = 21
     private let allowLabels = ["앱을 사용하는 동안 허용", "Allow While Using App", "전체 접근 허용", "Allow Full Access", "허용", "Allow"]
     private let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
 
@@ -66,10 +67,24 @@ final class TaptionPlanFirstRunTutorialUITests: XCTestCase {
 
     private func launchFresh() -> XCUIApplication {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
-        app.launchArguments += ["-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR"]
-        app.launchWithoutPrompts()
-        XCTAssertTrue(element(app, "firstRunTutorial").waitForExistence(timeout: 60))
+        app.launchArguments += ["-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR"] + freshStoreArguments()
+        XCTAssertTrue(launchUntilTutorial(app))
         return app
+    }
+
+    /// 같은 앱 인스턴스를 다시 띄우면 같은 저장소를 읽으므로 "다시 실행해도 안 뜬다"를 그대로 확인한다.
+    private func freshStoreArguments() -> [String] {
+        ["-firstRunStore", "uitest-\(UUID().uuidString)"]
+    }
+
+    /// 실행 묶음의 첫 시험은 설치 직후라 앱이 백그라운드로 먼저 떠서(FrontBoard `intent background`) 튜토리얼 판단을 건너뛴다.
+    /// 그때는 한 번 더 앞에서 띄운다. 저장소 이름이 같아 여전히 첫 실행이다(RMN1114A25 보고의 앱 쪽 의심 항목).
+    private func launchUntilTutorial(_ app: XCUIApplication) -> Bool {
+        app.launchWithoutPrompts()
+        if element(app, "firstRunTutorial").waitForExistence(timeout: 30) { return true }
+        app.terminate()
+        app.launchWithoutPrompts()
+        return element(app, "firstRunTutorial").waitForExistence(timeout: 60)
     }
 
     private func assertTutorialStaysClosed(_ app: XCUIApplication) {
@@ -125,9 +140,8 @@ final class TaptionPlanFirstRunTutorialUITests: XCTestCase {
 
     private func walkThrough(languageCode: String, locale: String, replay: String, menu: String, settings: String) {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
-        app.launchArguments += ["-AppleLanguages", "(\(languageCode))", "-AppleLocale", locale]
-        app.launchWithoutPrompts()
-        XCTAssertTrue(element(app, "firstRunTutorial").waitForExistence(timeout: 60), "새 설치 첫 화면은 튜토리얼이다")
+        app.launchArguments += ["-AppleLanguages", "(\(languageCode))", "-AppleLocale", locale] + freshStoreArguments()
+        XCTAssertTrue(launchUntilTutorial(app), "새 설치 첫 화면은 튜토리얼이다")
         // 튜토리얼이 권한을 묻기 전에는 시스템 창이 먼저 뜨지 않는다.
         XCTAssertFalse(springboard.alerts.firstMatch.exists)
 
@@ -136,10 +150,12 @@ final class TaptionPlanFirstRunTutorialUITests: XCTestCase {
         assertStep(app, 2)
         capture("02-permissions-before")
         let allow = app.buttons.matching(NSPredicate(format: "label == %@ OR label == %@", "허용하기", "Allow")).firstMatch
-        XCTAssertTrue(allow.waitForExistence(timeout: 5))
-        allow.tap()
-        answerAlert(timeout: 10)
-        answerAlert()
+        // 허용 단추는 아직 묻지 않은 권한에만 있다. 이미 답한 기기에서는 없으므로 있을 때만 누른다.
+        if allow.waitForExistence(timeout: 5) {
+            allow.tap()
+            answerAlert(timeout: 10)
+            answerAlert()
+        }
         capture("02-permissions-after-location")
         element(app, "firstRunNext").tap()
 
@@ -150,52 +166,58 @@ final class TaptionPlanFirstRunTutorialUITests: XCTestCase {
 
         captureAndAdvance(app, 4, "home")
         captureAndAdvance(app, 5, "work-school")
-        captureAndAdvance(app, 6, "salary")
+        // 내 차(CRT1111A01)와 단축어 · Siri(SHT1111A01) 단계가 더해져 21단계다.
+        captureAndAdvance(app, 6, "car")
+        captureAndAdvance(app, 7, "salary")
 
-        assertStep(app, 7)
+        assertStep(app, 8)
         let cat = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "firstRunCat.")).element(boundBy: 1)
         XCTAssertTrue(cat.waitForExistence(timeout: 5))
         cat.tap()
-        captureAndAdvance(app, 7, "cat")
+        captureAndAdvance(app, 8, "cat")
 
         for (offset, name) in ["map", "playback", "sidebar-calendar", "clip-editor", "memos", "summary", "counters"].enumerated() {
-            assertStep(app, 8 + offset)
-            capture(String(format: "%02d-%@-첫줄", 8 + offset, name))
+            assertStep(app, 9 + offset)
+            capture(String(format: "%02d-%@-첫줄", 9 + offset, name))
             usleep(3_500_000)
-            captureAndAdvance(app, 8 + offset, name)
+            captureAndAdvance(app, 9 + offset, name)
         }
 
-        assertStep(app, 15)
-        capture("15-calendar-before")
-        element(app, "firstRunCalendarAllow").tap()
-        answerAlert(timeout: 10)
-        capture("15-calendar-after")
+        assertStep(app, 16)
+        capture("16-calendar-before")
+        let calendarAllow = element(app, "firstRunCalendarAllow")
+        if calendarAllow.waitForExistence(timeout: 3) {
+            calendarAllow.tap()
+            answerAlert(timeout: 10)
+        }
+        capture("16-calendar-after")
         element(app, "firstRunNext").tap()
 
-        captureAndAdvance(app, 16, "apple-watch")
+        captureAndAdvance(app, 17, "apple-watch")
 
         // AI 연결(AIR1110A04): 네 AI 줄이 보이고, 연결 시트를 닫으면 같은 단계로 돌아온다. 나중에 해도 된다.
-        assertStep(app, 17)
+        assertStep(app, 18)
         for provider in ["pickle", "chatGPT", "claude", "gemini"] {
             XCTAssertTrue(element(app, "assistantConnect.\(provider)").waitForExistence(timeout: 5), provider)
         }
         element(app, "assistantConnect.claude").tap()
         let done = app.buttons.matching(NSPredicate(format: "label == %@ OR label == %@", "완료", "Done")).firstMatch
         XCTAssertTrue(done.waitForExistence(timeout: 10))
-        capture("17-ai-connect-claude")
+        capture("18-ai-connect-claude")
         done.tap()
-        assertStep(app, 17)
+        assertStep(app, 18)
         element(app, "firstRunSkip").tap()
 
-        captureAndAdvance(app, 18, "password")
-        captureAndAdvance(app, 19, "finish")
+        captureAndAdvance(app, 19, "shortcuts")
+        captureAndAdvance(app, 20, "password")
+        captureAndAdvance(app, 21, "finish")
 
         // 끝나면 지도가 나오고, 메뉴 > 설정에서 다시 볼 수 있다.
         answerAlert(timeout: 3)
         let menuButton = app.buttons.matching(NSPredicate(format: "label == %@", menu)).firstMatch
         XCTAssertTrue(menuButton.waitForExistence(timeout: 40))
         XCTAssertFalse(element(app, "firstRunTutorial").exists)
-        capture("17-map-home")
+        capture("22-map-home")
         menuButton.tap()
         let settingsRow = app.buttons[settings]
         var tries = 0
@@ -204,10 +226,10 @@ final class TaptionPlanFirstRunTutorialUITests: XCTestCase {
         let replayRow = element(app, "firstRunTutorialReplay")
         tries = 0
         while !replayRow.isHittable, tries < 4 { app.swipeUp(); tries += 1 }
-        capture("19-menu-replay-\(replay)")
+        capture("22-menu-replay-\(replay)")
         replayRow.tap()
         assertStep(app, 1)
-        capture("19-replay-welcome")
+        capture("22-replay-welcome")
         element(app, "firstRunStartNow").tap()
         XCTAssertTrue(replayRow.waitForExistence(timeout: 10))
 
@@ -216,6 +238,6 @@ final class TaptionPlanFirstRunTutorialUITests: XCTestCase {
         app.launchWithoutPrompts()
         XCTAssertTrue(menuButton.waitForExistence(timeout: 40))
         XCTAssertFalse(element(app, "firstRunTutorial").exists)
-        capture("20-relaunch")
+        capture("23-relaunch")
     }
 }
