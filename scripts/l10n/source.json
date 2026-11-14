@@ -48771,7 +48771,7 @@
    "ko": "여행 일정 사진 정하기",
    "en": "Set trip item photos",
    "files": [
-    "TravelPlacePhotos.swift:459"
+    "TravelPlacePhotos.swift:461"
    ],
    "args": [],
    "targets": [

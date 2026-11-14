@@ -7,6 +7,13 @@
 - CLM1114A01(하루 편집 한도 30 → 100): 서버 `npm test` 116건 통과(옛 숫자에 기대던 시험 5건을 새 한도에 맞게 고침), `wrangler deploy` 완료. 대기열 상한은 50 그대로다(100으로 올리면 다른 시험·읽기 상한까지 바뀌어 이번에는 두었다).
 - OCF1114A01(큰 사진에도 「OCR」 표시)·안내문 숫자: `AssistantCommandEditTests`·`AssistantRelayTests`·`LedgerTests` 62건 통과·실패 0(`build/validation/OCB1114A01/sim-16.xcresult`), 구조 점검 통과. 아직 빌드에 없고 화면 확인도 없다.
 
+## PKG1114A10·GPH1114A11 · 패키지 이동 1~3단계와 구글 장소 사진 (2026-11-14 밤, 아직 빌드에 없음)
+
+- 패키지 이동은 따로 만든 작업 공간에서 단계마다 커밋해 메인에 합침(충돌 없음). 작업 공간에서: 지정 9개 클래스 197건 통과(단계마다 3회), `swift test`(TaptionAssistant) 5건, `swift build`(TaptionLedgerCore) 성공, Release 구성 빌드 성공(`build/validation/PKG1114A10/` 로그는 그 작업 공간에).
+- 합친 뒤 메인에서(구글 사진 앱 쪽 변경 포함, 시뮬레이터 BOKKI-STL): `AITaskQueueTests`·`LedgerTests`·`AssistantPhase3Tests`·`AssistantReviewFixTests`·`AssistantRelayTests`·`AssistantCommandEditTests`·`LedgerMessageAccuracyTests`·`LedgerReviewTests`·`MapHomeKakaoProjectionTests`·`TripItemStatusTests`·`TravelMapTests`·`FeatureEngineTests` 929건 통과·실패 0(`build/validation/PKG1114A10/sim-main-1.xcresult`).
+- 서버 `npm test` 158건 통과(세 번 연속, 구글 사진 중계 시험 포함). 번역 실패 0, 구조 점검·import 경계 통과.
+- 하지 않은 것: 구글 실제 호출(키 없음), 실기기에서 기존 AI 연결(키체인) 유지 확인, 4단계 이후 이동.
+
 ## ACT1114A09 · AI 동작 묶음 5·6, 장소 쌍 규칙, 규칙 기록 (2026-11-14 밤, 아직 빌드에 없음)
 
 - 따로 만든 작업 공간에서 구현해 메인에 합침(충돌 없음). 번역 다시 생성(실패 0), 구조 점검·import 경계 통과.

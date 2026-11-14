@@ -430,7 +430,7 @@ V2의 쓰기 API에 `@available(*, deprecated)`를 붙이고, 새 호출이 생�
 
 **이 결정이 바꾸는 것.** 「앱 전용 코드와 화면은 패키지로 옮기지 않는다」는 방침에 AI 기능이라는 예외가 생긴다. §8의 「모듈을 20개 넘게 쪼개지 않는다」는 그대로다(패키지 둘, 타깃 다섯).
 
-**순서와 상태.** `docs/AI_RELAY_PLAN.md`의 P0~P13. 지금은 `TaptionRules`만 있다.
+**순서와 상태.** `docs/AI_RELAY_PLAN.md`의 P0~P13. 2026-11-14 기준 `TaptionRules`와, 앱 타입에 기대지 않는 부분만 옮긴 `TaptionAssistantProtocol`(명령 값·순수 읽기 함수)·`TaptionAssistantKit`(중계 키·주소·보내기)·`TaptionLedgerCore`(가계부 값 타입)가 있다. 적용·되돌리기·화면은 호스트 프로토콜을 정의한 뒤 옮긴다(PKG1114A10).
 
 ## 6. 단계별 계획
 
