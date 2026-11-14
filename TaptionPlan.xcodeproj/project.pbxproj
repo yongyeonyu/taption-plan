@@ -245,6 +245,7 @@
 		D15ABA1114A1500000000005 /* AssistantDigestTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D15ABA1114A1500000000006 /* AssistantDigestTests.swift */; };
 		A1A1110A0300000000000010 /* AssistantPhase3Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0300000000000010 /* AssistantPhase3Tests.swift */; };
 		A1A1110A0600000000000002 /* AssistantReviewFixTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1110A0600000000000002 /* AssistantReviewFixTests.swift */; };
+		D16A1114A160000000000001 /* AssistantDirectActionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D16F1114A160000000000001 /* AssistantDirectActionTests.swift */; };
 		A1C1110A0900000000000002 /* TripItemStatusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1C1110A0900000000000002 /* TripItemStatusTests.swift */; };
 		A1D131114000000000000004 /* PlanRealityGapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1D131114000000000000004 /* PlanRealityGapTests.swift */; };
 		A1P1111S0200000000000031 /* LedgerReviewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1P1111S0200000000000031 /* LedgerReviewTests.swift */; };
@@ -1030,6 +1031,7 @@
 		D15ABA1114A1500000000006 /* AssistantDigestTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantDigestTests.swift; sourceTree = "<group>"; };
 		F1A1110A0300000000000010 /* AssistantPhase3Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantPhase3Tests.swift; sourceTree = "<group>"; };
 		F1A1110A0600000000000002 /* AssistantReviewFixTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantReviewFixTests.swift; sourceTree = "<group>"; };
+		D16F1114A160000000000001 /* AssistantDirectActionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantDirectActionTests.swift; sourceTree = "<group>"; };
 		F1C1110A0900000000000002 /* TripItemStatusTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripItemStatusTests.swift; sourceTree = "<group>"; };
 		F1D131114000000000000004 /* PlanRealityGapTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanRealityGapTests.swift; sourceTree = "<group>"; };
 		F1P1111S0200000000000031 /* LedgerReviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerReviewTests.swift; sourceTree = "<group>"; };
@@ -1696,6 +1698,7 @@
 				D15ABA1114A1500000000006 /* AssistantDigestTests.swift */,
 				F1A1110A0300000000000010 /* AssistantPhase3Tests.swift */,
 				F1A1110A0600000000000002 /* AssistantReviewFixTests.swift */,
+				D16F1114A160000000000001 /* AssistantDirectActionTests.swift */,
 				F1C1110A0900000000000002 /* TripItemStatusTests.swift */,
 				F1D131114000000000000004 /* PlanRealityGapTests.swift */,
 				F1P1111S0200000000000031 /* LedgerReviewTests.swift */,
@@ -3259,6 +3262,7 @@
 				D15ABA1114A1500000000005 /* AssistantDigestTests.swift in Sources */,
 				A1A1110A0300000000000010 /* AssistantPhase3Tests.swift in Sources */,
 				A1A1110A0600000000000002 /* AssistantReviewFixTests.swift in Sources */,
+				D16A1114A160000000000001 /* AssistantDirectActionTests.swift in Sources */,
 				A1C1110A0900000000000002 /* TripItemStatusTests.swift in Sources */,
 				A1D131114000000000000004 /* PlanRealityGapTests.swift in Sources */,
 				A1P1111S0200000000000031 /* LedgerReviewTests.swift in Sources */,

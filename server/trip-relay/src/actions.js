@@ -396,3 +396,52 @@ registry
       + "never ask for it or handle it. Nothing is restored until the user does it there. This action is switched off until the user turns it on in the app.",
     fields: {},
   });
+
+// 승인 항목을 바로 실행으로 (APV1114A16). `request_approval`의 종류마다 하나씩이고, 앱의 스위치가 꺼져 있으면 `disabled`로 거절된다.
+// 자료 공유를 넓히거나 보관을 늘리거나 되돌릴 수 없는 것은 사용자가 켜기 전에는 꺼져 있다.
+// 전부 지우기·PIN 바꾸기는 넣지 않는다(대표 결정): 그 둘은 `request_approval`로만 한다. 복원은 위의 `restoreFromBackup`.
+const SINCE_DIRECT = 343;
+const IF_OFF = (request) => ` If the result is rejected with reason disabled, the user switched this action off: use request_approval with request ${request} instead.`;
+const STARTS_OFF = " This action is switched off until the user turns it on in the app.";
+registry
+  .add("lowerShareLevel", {
+    tool: "lower_share_level", title: "Share less with the AI", since: SINCE_DIRECT,
+    description: "Lower how much the app shares with you, right away and without an approval card: summary (day summaries only) or off (nothing). "
+      + "It must be lower than settings.shareLevel in get_app_state, otherwise it is rejected. The days the server holds are deleted and sent again "
+      + "at the new level. Only when the user asked. Undoable." + IF_OFF("shareLevel"),
+    fields: { level: f.oneOf(["off", "summary"], "The new, lower level").required_() },
+  })
+  .add("raiseShareLevel", {
+    tool: "raise_share_level", title: "Share more with the AI", since: SINCE_DIRECT,
+    description: "Raise how much the app shares with you, right away and without an approval card: summary (day summaries) or visits (place names and "
+      + "times too). It must be higher than settings.shareLevel in get_app_state, otherwise it is rejected. Only when the user asked. Undoable."
+      + STARTS_OFF + IF_OFF("shareLevel"),
+    fields: { level: f.oneOf(["summary", "visits"], "The new, higher level").required_() },
+  })
+  .add("shortenRetention", {
+    tool: "shorten_retention", title: "Keep days on the server for a shorter time", since: SINCE_DIRECT,
+    description: "Shorten how long the server keeps the user's days, right away: 1 or 7 days. It must be shorter than settings.retentionDays in "
+      + "get_app_state, otherwise it is rejected. The days the server holds are deleted and sent again. Only when the user asked. Undoable."
+      + IF_OFF("retentionDays"),
+    fields: { days: f.integer(1, 7, "1 or 7").required_() },
+    check: (v) => [1, 7].includes(v.days),
+  })
+  .add("extendRetention", {
+    tool: "extend_retention", title: "Keep days on the server for a longer time", since: SINCE_DIRECT,
+    description: "Extend how long the server keeps the user's days, right away: 7 or 30 days. It must be longer than settings.retentionDays in "
+      + "get_app_state, otherwise it is rejected. Only when the user asked. Undoable." + STARTS_OFF + IF_OFF("retentionDays"),
+    fields: { days: f.integer(7, 30, "7 or 30").required_() },
+    check: (v) => [7, 30].includes(v.days),
+  })
+  .add("turnOffHealth", {
+    tool: "turn_off_health", title: "Turn off Health sync", since: SINCE_DIRECT,
+    description: "Stop the Health sync right away. This removes the records brought from Health and Apple Watch from the app, and turning it on again "
+      + "needs the user in the app. Only when the user asked. Cannot be undone." + STARTS_OFF + IF_OFF("healthOff"),
+    fields: {},
+  })
+  .add("openBackup", {
+    tool: "open_backup", title: "Open the backup screen", destructive: false, since: SINCE_DIRECT,
+    description: "Open the app's data protection screen so the user can make a backup. The backup password is typed by the user in the app; "
+      + "never ask for it or handle it. Nothing is backed up until the user does it there. It changes no data." + IF_OFF("backup"),
+    fields: {},
+  });

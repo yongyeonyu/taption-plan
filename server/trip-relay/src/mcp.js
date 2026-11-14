@@ -306,7 +306,10 @@ const TOOLS = [
     + "how much the app shares with you; lowering it deletes what the server holds), retentionDays (value 1|7|30), healthOff (stop Health sync; "
     + "this removes Health and Watch records from the app), eraseAllData, backup, restore, changePin (for these four the app only opens the "
     + "screen where the user does it themselves; you never see or handle the backup password or PIN). The result comes back in get_answers "
-    + "with choices approved or declined. Send it only when the user asked for that action, and never ask again after declined.",
+    + "with choices approved or declined. Send it only when the user asked for that action, and never ask again after declined. "
+    + "Apps from build 343 can also do some of these right away, each behind a switch the user controls: lower_share_level, raise_share_level, "
+    + "shorten_retention, extend_retention, turn_off_health, open_backup, restore_from_backup. Try those first; when one is rejected with reason "
+    + "disabled or app_too_old, use this tool. eraseAllData and changePin are only ever done through this tool.",
     { request: enumOf("What to approve", APPROVAL_NAMES), value: { description: "shareLevel: off|summary|visits. retentionDays: 1, 7 or 30. Omit for the others" } }, ["request"]),
   addTool("add_schedule", "addSchedule", "Add schedule", "Add a planned activity. Without end it lasts one hour.",
     { title: str("1-200 characters"), start: INSTANT("Start"), end: INSTANT("End, after start"), note: str("Up to 1000 characters"),

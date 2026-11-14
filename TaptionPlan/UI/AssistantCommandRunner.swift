@@ -473,7 +473,7 @@ struct AssistantParsedOperation: Equatable, Sendable {
 
 enum AssistantOperations {
     /// 앱이 아는 등록부 동작 전부. 여기 차례가 「AI가 할 수 있는 일」과 안내문의 차례다.
-    static let all: [any AssistantOperation.Type] = ledger + plans + records + photos + catalog + system
+    static let all: [any AssistantOperation.Type] = ledger + plans + records + photos + catalog + system + direct
 
     private static let byName = Dictionary(all.map { ($0.spec.name, $0) }, uniquingKeysWith: { first, _ in first })
 
@@ -596,6 +596,155 @@ extension AssistantOperations {
             name: "restoreFromBackup", fields: [], counter: .settings, deletes: true, startsOff: true, changes: 0,
             title: { $0.text("백업에서 복원 화면 열기", "Open restore from backup") },
             guide: #"} (opens the data protection screen so I can restore from a backup myself; I type the backup password in the app, never ask me for it; off until I switch it on under what the AI may do)"#
+        )
+
+        init?(fields: AssistantFields) {}
+
+        func apply(host: AssistantOperationHost) async -> AssistantEditResult {
+            host.preferences.screens.request(.dataProtection)
+            var result = AssistantEditResult(after: AssistantScreen.dataProtection.title(host.language))
+            result.appChange = AssistantAppChange(screen: .dataProtection)
+            return result
+        }
+    }
+}
+
+// MARK: 등록부 동작 — 승인 항목을 바로 실행으로 (APV1114A16). 승인 요청(`requestApproval`)의 종류마다 하나씩이고 스위치가 꺼져 있으면 거절된다.
+// 자료 공유를 넓히거나 보관을 늘리거나 되돌릴 수 없는 것은 사용자가 켜기 전에는 꺼져 있다. 전부 지우기·PIN 바꾸기는 승인 요청으로만 한다(대표 결정).
+
+extension AssistantOperations {
+    static let direct: [any AssistantOperation.Type] = [
+        LowerShareLevel.self, RaiseShareLevel.self, ShortenRetention.self, ExtendRetention.self, TurnOffHealth.self, OpenBackup.self,
+    ]
+
+    /// 되돌리면 서버의 날들도 돌아간 설정으로 다시 맞춰야 하는 값.
+    static let sharingKeys: Set<String> = [AssistantShareLevel.defaultsKey, AssistantRetention.defaultsKey]
+
+    private static let ifOff = "if this is rejected as disabled I switched it off, so use requestApproval instead"
+    private static let startsOffNote = "off until I switch it on under what the AI may do"
+
+    /// 공유 수준을 한쪽 방향으로만 바꾼다. 낮추면 서버에 올린 날들을 지우게 적어 둔다(설정 화면·승인과 같다).
+    @MainActor
+    private static func share(_ level: AssistantShareLevel, lowering: Bool, host: AssistantOperationHost) -> AssistantEditResult {
+        let old = AssistantShareLevel.current(host.defaults)
+        guard level != old else { return .rejected("no_change") }
+        guard AssistantShareLevel.isDowngrade(from: old, to: level) == lowering else { return .rejected(lowering ? "not_lower" : "not_higher") }
+        let change = host.changing(AssistantShareLevel.defaultsKey) { host.defaults.set(level.rawValue, forKey: AssistantShareLevel.defaultsKey) }
+        if lowering { AssistantActivitySync.requestClear(defaults: host.defaults) }
+        var result = AssistantEditResult(before: old.title(host.language), after: level.title(host.language))
+        result.appChange = AssistantAppChange(stored: change.map { [$0] } ?? [])
+        return result
+    }
+
+    /// 보관 기간을 한쪽 방향으로만 바꾼다. 줄이면 서버의 날들을 지우고, 늘리면 새 기간으로 다시 올리게 한다.
+    @MainActor
+    private static func retain(_ days: AssistantRetention, shortening: Bool, host: AssistantOperationHost) -> AssistantEditResult {
+        let old = AssistantRetention.current(host.defaults)
+        guard days != old else { return .rejected("no_change") }
+        guard (days.rawValue < old.rawValue) == shortening else { return .rejected(shortening ? "not_shorter" : "not_longer") }
+        let change = host.changing(AssistantRetention.defaultsKey) { host.defaults.set(days.rawValue, forKey: AssistantRetention.defaultsKey) }
+        if shortening { AssistantActivitySync.requestClear(defaults: host.defaults) } else { AssistantActivityUploadGate.reset(defaults: host.defaults) }
+        var result = AssistantEditResult(before: old.title(host.language), after: days.title(host.language))
+        result.appChange = AssistantAppChange(stored: change.map { [$0] } ?? [])
+        return result
+    }
+
+    struct LowerShareLevel: AssistantOperation {
+        static let spec = AssistantOperationSpec(
+            name: "lowerShareLevel", fields: ["level"], counter: .settings,
+            title: { $0.text("AI 공유 수준 낮추기", "Lower AI sharing") },
+            guide: #""level":"off|summary"} (shares less with you right away, no approval card; must be lower than settings.shareLevel; the days the server holds are deleted and sent again at the new level; only when I asked; undoable; \#(ifOff) with request shareLevel)"#
+        )
+
+        let level: AssistantShareLevel
+
+        init?(fields: AssistantFields) {
+            guard let level: AssistantShareLevel = fields.choice("level"), level != .visits else { return nil }
+            self.level = level
+        }
+
+        func apply(host: AssistantOperationHost) async -> AssistantEditResult { AssistantOperations.share(level, lowering: true, host: host) }
+    }
+
+    /// 더 많이 보내게 하는 일이라 사용자가 켜기 전에는 꺼져 있다.
+    struct RaiseShareLevel: AssistantOperation {
+        static let spec = AssistantOperationSpec(
+            name: "raiseShareLevel", fields: ["level"], counter: .settings, startsOff: true,
+            title: { $0.text("AI 공유 수준 높이기", "Raise AI sharing") },
+            guide: #""level":"summary|visits"} (shares more with you right away; must be higher than settings.shareLevel; only when I asked; undoable; \#(startsOffNote); \#(ifOff) with request shareLevel)"#
+        )
+
+        let level: AssistantShareLevel
+
+        init?(fields: AssistantFields) {
+            guard let level: AssistantShareLevel = fields.choice("level"), level != .off else { return nil }
+            self.level = level
+        }
+
+        func apply(host: AssistantOperationHost) async -> AssistantEditResult { AssistantOperations.share(level, lowering: false, host: host) }
+    }
+
+    struct ShortenRetention: AssistantOperation {
+        static let spec = AssistantOperationSpec(
+            name: "shortenRetention", fields: ["days"], counter: .settings,
+            title: { $0.text("서버 보관 기간 줄이기", "Shorten server retention") },
+            guide: #""days":7} (keeps my days on the server for a shorter time, 1 or 7; must be shorter than settings.retentionDays; the days the server holds are deleted and sent again; only when I asked; undoable; \#(ifOff) with request retentionDays)"#
+        )
+
+        let days: AssistantRetention
+
+        init?(fields: AssistantFields) {
+            guard let days = fields.integer("days", in: 1...7).flatMap(AssistantRetention.init(rawValue:)) else { return nil }
+            self.days = days
+        }
+
+        func apply(host: AssistantOperationHost) async -> AssistantEditResult { AssistantOperations.retain(days, shortening: true, host: host) }
+    }
+
+    /// 서버에 더 오래 두는 일이라 사용자가 켜기 전에는 꺼져 있다.
+    struct ExtendRetention: AssistantOperation {
+        static let spec = AssistantOperationSpec(
+            name: "extendRetention", fields: ["days"], counter: .settings, startsOff: true,
+            title: { $0.text("서버 보관 기간 늘리기", "Extend server retention") },
+            guide: #""days":30} (keeps my days on the server for a longer time, 7 or 30; must be longer than settings.retentionDays; only when I asked; undoable; \#(startsOffNote); \#(ifOff) with request retentionDays)"#
+        )
+
+        let days: AssistantRetention
+
+        init?(fields: AssistantFields) {
+            guard let days = fields.integer("days", in: 7...30).flatMap(AssistantRetention.init(rawValue:)) else { return nil }
+            self.days = days
+        }
+
+        func apply(host: AssistantOperationHost) async -> AssistantEditResult { AssistantOperations.retain(days, shortening: false, host: host) }
+    }
+
+    /// 건강 연동 끄기(설정의 스위치와 같은 함수). 가져온 기록이 지워지고 다시 켜기는 사용자가 하므로 되돌릴 수 없다.
+    struct TurnOffHealth: AssistantOperation {
+        static let spec = AssistantOperationSpec(
+            name: "turnOffHealth", fields: [], counter: .settings, deletes: true, startsOff: true,
+            title: { $0.text("건강 연동 끄기(가져온 기록 삭제)", "Turn off Health sync (removes imported records)") },
+            guide: #"} (stops the Health sync right away and removes the records brought from Health and Apple Watch from the app; turning it on again is done by me; only when I asked; cannot be undone; \#(startsOffNote); \#(ifOff) with request healthOff)"#
+        )
+
+        init?(fields: AssistantFields) {}
+
+        func apply(host: AssistantOperationHost) async -> AssistantEditResult {
+            guard host.model.settings.healthEnabled else { return .rejected("no_change") }
+            await host.model.setHealthEnabled(false)
+            guard !host.model.settings.healthEnabled else { return .rejected("edit_failed") }
+            var result = AssistantEditResult(after: host.language.text("건강 연동 끔", "Health sync off"))
+            result.cannotUndo = true
+            return result
+        }
+    }
+
+    /// 백업은 비밀번호가 필요하므로 AI는 「데이터 보호」 화면만 열고, 백업은 사용자가 그 화면에서 한다.
+    struct OpenBackup: AssistantOperation {
+        static let spec = AssistantOperationSpec(
+            name: "openBackup", fields: [], counter: .settings, changes: 0,
+            title: { $0.text("백업 화면 열기", "Open the backup screen") },
+            guide: #"} (opens the data protection screen so I can make a backup myself; I type the backup password in the app, never ask me for it; changes no data; \#(ifOff) with request backup)"#
         )
 
         init?(fields: AssistantFields) {}

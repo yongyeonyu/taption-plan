@@ -117,9 +117,9 @@ final class AssistantCommandEditTests: XCTestCase {
 
     func testActionTogglesDefaultOnAndRejectWhenOff() async throws {
         let store = defaults()
-        // 사용자가 켜기 전에는 꺼져 있는 동작(백업에서 복원)만 빼고 모두 켜져 있다.
+        // 사용자가 켜기 전에는 꺼져 있는 동작(복원, 공유 넓히기·보관 늘리기·건강 끄기)만 빼고 모두 켜져 있다.
         XCTAssertTrue(AssistantActionKind.allCases.allSatisfy { AssistantActionToggles.isEnabled($0, defaults: store) != (AssistantOperations.spec($0.rawValue)?.startsOff ?? false) })
-        XCTAssertEqual(AssistantOperations.all.filter { $0.spec.startsOff }.map { $0.spec.name }, ["restoreFromBackup"])
+        XCTAssertEqual(AssistantOperations.all.filter { $0.spec.startsOff }.map { $0.spec.name }, ["restoreFromBackup", "raiseShareLevel", "extendRetention", "turnOffHealth"])
         AssistantActionToggles.set(.deleteMemo, enabled: false, defaults: store)
         XCTAssertFalse(AssistantActionToggles.isEnabled(.deleteMemo, defaults: store))
         XCTAssertTrue(AssistantActionToggles.isEnabled(.updateMemo, defaults: store))
