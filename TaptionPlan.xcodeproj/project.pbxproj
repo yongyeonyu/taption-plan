@@ -570,6 +570,7 @@
 		A70000000000000000000001 /* TaptionPlanEngine in Frameworks */ = {isa = PBXBuildFile; productRef = X70000000000000000000002 /* TaptionPlanEngine */; };
 		C0FFEE000000000000000011 /* TaptionPlanStore in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000002 /* TaptionPlanStore */; };
 		C0FFEE0000000000000000A3 /* TaptionRules in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE0000000000000000A2 /* TaptionRules */; };
+		C0FFEE0000000000000000A5 /* TaptionAssistantProtocol in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE0000000000000000A4 /* TaptionAssistantProtocol */; };
 		C0FFEE000000000000000013 /* TaptionPlanStore in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000002 /* TaptionPlanStore */; };
 		C0FFEE000000000000000021 /* TaptionWatchSync in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000004 /* TaptionWatchSync */; };
 		C0FFEE000000000000000023 /* TaptionWatchSync in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000004 /* TaptionWatchSync */; };
@@ -1486,6 +1487,7 @@
 				A70000000000000000000001 /* TaptionPlanEngine in Frameworks */,
 				C0FFEE000000000000000011 /* TaptionPlanStore in Frameworks */,
 				C0FFEE0000000000000000A3 /* TaptionRules in Frameworks */,
+				C0FFEE0000000000000000A5 /* TaptionAssistantProtocol in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2331,6 +2333,7 @@
 				X70000000000000000000002 /* TaptionPlanEngine */,
 				C0FFEE000000000000000002 /* TaptionPlanStore */,
 				C0FFEE0000000000000000A2 /* TaptionRules */,
+				C0FFEE0000000000000000A4 /* TaptionAssistantProtocol */,
 				X50000000000000000000002 /* MapLibre */,
 				X50000000000000000000006 /* KakaoMapsSDK_SPM */,
 			);
@@ -3882,6 +3885,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = C0FFEE0000000000000000A1 /* XCLocalSwiftPackageReference "TaptionAssistant" */;
 			productName = TaptionRules;
+		};
+		C0FFEE0000000000000000A4 /* TaptionAssistantProtocol */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C0FFEE0000000000000000A1 /* XCLocalSwiftPackageReference "TaptionAssistant" */;
+			productName = TaptionAssistantProtocol;
 		};
 		C0FFEE000000000000000004 /* TaptionWatchSync */ = {
 			isa = XCSwiftPackageProductDependency;

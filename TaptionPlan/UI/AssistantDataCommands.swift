@@ -369,34 +369,6 @@ extension AssistantCommandParser {
     }
 }
 
-/// 날짜(`YYYY-MM-DD`)·시각(자정부터의 분)을 따로 옮긴다(ACT1114A07). 날짜만 주면 시각을, 시각만 주면 날짜를 그대로 둔다.
-struct AssistantWhenChange: Equatable, Sendable {
-    var date: String?
-    var minutes: Int?
-
-    var isEmpty: Bool { date == nil && minutes == nil }
-
-    init(date: String? = nil, minutes: Int? = nil) {
-        self.date = date
-        self.minutes = minutes
-    }
-
-    /// 명령의 `date`·`time`에서. 준 칸이 틀리면 nil.
-    init?(date: String?, time: String?, calendar: Calendar) {
-        if let date, AssistantCommandParser.day(date, calendar: calendar) == nil { return nil }
-        let minutes = time.flatMap(AssistantCommandParser.minutes)
-        if time != nil, minutes == nil { return nil }
-        self.init(date: date, minutes: minutes)
-    }
-
-    func applied(to instant: Date, calendar: Calendar = .autoupdatingCurrent) -> Date {
-        guard !isEmpty else { return instant }
-        let day = date.flatMap { AssistantCommandParser.day($0, calendar: calendar) } ?? calendar.startOfDay(for: instant)
-        let clock = minutes ?? calendar.component(.hour, from: instant) * 60 + calendar.component(.minute, from: instant)
-        return calendar.date(bySettingHour: clock / 60, minute: clock % 60, second: 0, of: day) ?? instant
-    }
-}
-
 /// AI가 고치는 가계부 칸(AIQ1111A01). nil인 칸은 그대로 둔다.
 struct AssistantExpenseChange: Equatable, Sendable {
     var delete = false
@@ -619,20 +591,6 @@ final class AssistantScreenRequest {
         defaults.removeObject(forKey: Self.key)
         defaults.removeObject(forKey: Self.dateKey)
         pending = nil
-    }
-}
-
-/// 명령의 `value`처럼 글자·숫자·참거짓이 다 올 수 있는 칸(ACB1112A01).
-enum AssistantLooseValue: Decodable, Equatable, Sendable {
-    case flag(Bool)
-    case number(Double)
-    case text(String)
-
-    init(from decoder: Decoder) throws {
-        let value = try decoder.singleValueContainer()
-        if let flag = try? value.decode(Bool.self) { self = .flag(flag) }
-        else if let number = try? value.decode(Double.self) { self = .number(number) }
-        else { self = .text(try value.decode(String.self)) }
     }
 }
 
