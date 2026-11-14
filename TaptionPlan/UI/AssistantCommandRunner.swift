@@ -227,48 +227,6 @@ final class AssistantInbox {
     }
 }
 
-/// 앱이 켜져 있는 동안 명령을 확인하는 간격(SYN1111A03, 대표 결정).
-/// AI와 대화 중이면 빠르게(10초, 저전력 20초, 과열 60초), 그 밖에는 5분마다 본다(대표 결정).
-/// 대화 중: AI가 5분 안에 왔고 「대화 끝」을 보내지 않았거나, 앱에서 직접 새로고침한 뒤 2분.
-@MainActor
-enum AssistantCommandPolling {
-    /// 서버가 `GET /command` 응답 머리에 준 값.
-    struct Signal: Equatable {
-        /// AI가 마지막으로 온 지 몇 초. 온 적 없으면 nil.
-        var seenAgo: TimeInterval?
-        var ended: Bool
-        var receivedAt: Date
-    }
-
-    nonisolated static let idleInterval: TimeInterval = 300
-    nonisolated static let aiIdleTimeout: TimeInterval = 300
-    nonisolated static let manualWindow: TimeInterval = 120
-
-    static var signal: Signal?
-    static var manualAt: Date?
-
-    nonisolated static func signal(from response: HTTPURLResponse, now: Date = .now) -> Signal? {
-        guard let text = response.value(forHTTPHeaderField: "x-ai-seen-ago"), let ago = TimeInterval(text) else { return nil }
-        return Signal(seenAgo: ago < 0 ? nil : ago, ended: response.value(forHTTPHeaderField: "x-ai-ended") == "1", receivedAt: now)
-    }
-
-    nonisolated static func isConversation(signal: Signal?, manualAt: Date?, now: Date = .now) -> Bool {
-        if let manualAt, now.timeIntervalSince(manualAt) < manualWindow { return true }
-        guard let signal, !signal.ended, let ago = signal.seenAgo else { return false }
-        return ago + now.timeIntervalSince(signal.receivedAt) < aiIdleTimeout
-    }
-
-    nonisolated static func interval(conversation: Bool, lowPower: Bool, thermal: ProcessInfo.ThermalState) -> TimeInterval {
-        guard conversation else { return idleInterval }
-        if thermal == .serious || thermal == .critical { return 60 }
-        return lowPower ? 20 : 10
-    }
-
-    static func nextInterval(now: Date = .now, info: ProcessInfo = .processInfo) -> TimeInterval {
-        interval(conversation: isConversation(signal: signal, manualAt: manualAt, now: now), lowPower: info.isLowPowerModeEnabled, thermal: info.thermalState)
-    }
-}
-
 /// 주기 확인과 당겨서 새로고침이 함께 쓴다. 지도 화면이 모델을 넣어 둔다(SYN1111A01).
 @MainActor
 enum AssistantCommandRefresh {

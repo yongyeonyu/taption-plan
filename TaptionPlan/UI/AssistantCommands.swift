@@ -298,25 +298,6 @@ extension AssistantCommandParser {
     }
 }
 
-/// 이미 처리한 명령 id. 서버에서 지운 뒤에도 캐시가 잠깐 예전 목록을 줄 수 있어 두 번 반영하지 않는다.
-enum AssistantCommandLedger {
-    static let defaultsKey = "assistantCommandHandledIDs"
-    static let limit = 200
-
-    static func handled(_ defaults: UserDefaults = .standard) -> [String] {
-        defaults.stringArray(forKey: defaultsKey) ?? []
-    }
-
-    static func remember(_ ids: [String], defaults: UserDefaults = .standard) {
-        let old = handled(defaults).filter { !ids.contains($0) }
-        defaults.set(Array((old + ids).suffix(limit)), forKey: defaultsKey)
-    }
-
-    static func forget(_ ids: [String], defaults: UserDefaults = .standard) {
-        defaults.set(handled(defaults).filter { !ids.contains($0) }, forKey: defaultsKey)
-    }
-}
-
 extension AssistantCommandLedger {
     static func unseen(_ batch: AssistantCommandBatch, defaults: UserDefaults = .standard) -> AssistantCommandBatch {
         let seen = Set(handled(defaults))
@@ -355,13 +336,6 @@ enum AssistantActivityTarget {
             isCustom: false
         )
     }
-}
-
-/// 명령 하나를 반영했는지와 못 했으면 그 사유. 서버에 그대로 알린다.
-struct AssistantCommandResult: Equatable, Sendable {
-    var id: String
-    var applied: Bool
-    var reason: String?
 }
 
 struct AssistantCommandOutcome: Equatable, Sendable {
@@ -421,19 +395,6 @@ struct AssistantCommandOutcome: Equatable, Sendable {
     }
 }
 
-/// 명령 큐를 부르는 요청과 결과 알리기·지우기.
-extension TripRelay {
-    @MainActor
-    static func commandRequest(
-        _ path: String, method: String, query: [URLQueryItem] = [], body: Data? = nil, env: AssistantRegistration.Environment,
-        timeout: TimeInterval = 10
-    ) -> URLRequest? {
-        env.secrets.read(.master).flatMap { relayRequest(path, method: method, query: query, body: body, token: $0, host: env.host, client: env.client(), timeout: timeout) }
-    }
-
-    static let commandFetchTimeout: TimeInterval = 5
-}
-
 extension TripRelay {
     @MainActor
     static func fetchCommands(env: AssistantRegistration.Environment = .live) async -> AssistantCommandBatch? {
@@ -444,28 +405,6 @@ extension TripRelay {
         if let signal = AssistantCommandPolling.signal(from: response) { AssistantCommandPolling.signal = signal }
         if response.statusCode == 204 { return AssistantCommandBatch(commands: [], invalidIDs: []) }
         return response.statusCode == 200 ? AssistantCommandParser.parse(data) : nil
-    }
-}
-
-/// 명령 결과를 서버에 남기고, 끝난 명령을 큐에서 지운다.
-extension TripRelay {
-    /// 결과를 AI가 볼 수 있게 남긴다. 서버가 받았을 때만 true.
-    @MainActor
-    static func postResults(_ results: [AssistantCommandResult], env: AssistantRegistration.Environment) async -> Bool {
-        let body = try? JSONSerialization.data(withJSONObject: ["results": results.map { result -> [String: String] in
-            var value = ["id": result.id, "status": result.applied ? "applied" : "rejected"]
-            if let reason = result.reason { value["reason"] = reason }
-            return value
-        }])
-        let reply = await send(commandRequest("/command/result", method: "POST", body: body, env: env), session: env.session)
-        return reply.map { (200..<300).contains($0.status) } ?? false
-    }
-
-    @MainActor
-    static func deleteCommands(_ ids: [String], env: AssistantRegistration.Environment) async {
-        guard !ids.isEmpty else { return }
-        let query = [URLQueryItem(name: "ids", value: ids.joined(separator: ","))]
-        _ = await send(commandRequest("/command", method: "DELETE", query: query, env: env), session: env.session)
     }
 }
 
